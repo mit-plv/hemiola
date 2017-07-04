@@ -23,8 +23,8 @@ Section Language.
       Variable StateT: Type.
 
       Definition CmdT :=
-        StateT -> option (list IMsg (* internal messages *) *
-                          list IMsg (* external messages *) *
+        StateT -> option (list IMsg (* internal messages out *) *
+                          option IMsg (* optional external out *) *
                           StateT (* next state *)).
       Definition RuleT := IMsg -> CmdT.
 
@@ -60,7 +60,7 @@ Section Language.
     Fixpoint step_rule {StateT} (rules: list (RuleT StateT))
              (imsg: IMsg) (st: StateT) :=
       match rules with
-      | nil => (nil, nil, st)
+      | nil => (nil, None, st)
       | r :: rules' =>
         match r imsg st with 
         | Some mst => mst
@@ -70,7 +70,7 @@ Section Language.
 
     Inductive step_obj {StateT}:
       ObjectState StateT -> InMsgs ->
-      list IMsg -> option IMsg (* external_in *) -> list IMsg (* external_out *) ->
+      list IMsg -> option IMsg (* external_in *) -> option IMsg (* external_out *) ->
       ObjectState StateT -> InMsgs -> Prop :=
     | StepObjInt: forall os imsgs fidx fmsg fmsgs imsgs_to emsgs_to pos,
         step_rule (obj_rules (os_obj os)) (fidx, fmsg) (os_state os) =
@@ -107,26 +107,24 @@ Section Language.
         end
       end.
 
-    (* TODO: request/reqponse vs. called/defined *)
     Inductive step : ObjectStates -> ObjectInMsgs ->
-                     list IMsg (* external *) ->
+                     option IMsg (* external in *) -> option IMsg (* external out *) ->
                      ObjectStates -> ObjectInMsgs -> Prop :=
-    | StepInt: forall oss idx {StateT} (os: ObjectState StateT)
-                      oims imsgs imsgs_to emsgs_out pos pimsgs,
+    | Step: forall oss idx {StateT} (os: ObjectState StateT)
+                   oims imsgs imsgs_to emsg_in emsg_out pos pimsgs,
         find idx oss = Some (existT _ _ os) ->
         find idx oims = Some imsgs -> 
-        step_obj os imsgs imsgs_to None emsgs_out pos pimsgs ->
-        step oss oims emsgs_out
-             (idx_add idx (existT _ _ pos) oss)
-             (distr_msgs idx imsgs_to (idx_add idx pimsgs oims))
-    | StepExt: forall oss idx {StateT} (os: ObjectState StateT)
-                      oims imsgs imsgs_to emsg_in emsgs_out pos pimsgs,
-        find idx oss = Some (existT _ _ os) ->
-        find idx oims = Some imsgs -> 
-        step_obj os imsgs imsgs_to (Some emsg_in) emsgs_out pos pimsgs ->
-        step oss oims (emsgs_out ++ (emsg_in :: nil))
+        step_obj os imsgs imsgs_to emsg_in emsg_out pos pimsgs ->
+        step oss oims emsg_in emsg_out
              (idx_add idx (existT _ _ pos) oss)
              (distr_msgs idx imsgs_to (idx_add idx pimsgs oims)).
+
+    Definition addHistory (om: option IMsg) (hst: list IMsg) :=
+      match om with
+      | Some m => m :: hst
+      | None => hst
+      end.
+    Infix "<::" := addHistory (at level 30, right associativity).
 
     Inductive steps : ObjectStates -> ObjectInMsgs ->
                       list IMsg (* history *) ->
@@ -135,9 +133,9 @@ Section Language.
     | StepsCons:
         forall oss1 oims1 emsgs oss2 oims2,
           steps oss1 oims1 emsgs oss2 oims2 ->
-          forall oss3 emsg oims3,
-            step oss2 oims2 emsg oss3 oims3 ->
-            steps oss1 oims1 (emsg ++ emsgs) oss3 oims3.
+          forall oss3 emsg_in emsg_out oims3,
+            step oss2 oims2 emsg_in emsg_out oss3 oims3 ->
+            steps oss1 oims1 (emsg_out <:: emsg_in <:: emsgs) oss3 oims3.
 
     Fixpoint serial' (hst: list IMsg) (oi: option IdxT) :=
       match hst with
