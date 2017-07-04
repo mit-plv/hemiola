@@ -137,6 +137,21 @@ Section Language.
             step oss2 oims2 emsg_in emsg_out oss3 oims3 ->
             steps oss1 oims1 (emsg_out <:: emsg_in <:: emsgs) oss3 oims3.
 
+    Definition getObjectStateInit {StateT} (obj: Object StateT) :=
+      {| os_obj := obj;
+         os_state := obj_state_init obj |}.
+    Fixpoint getObjectStatesInit (obs: Objects) : ObjectStates :=
+      match obs with
+      | nil => @empty _ _
+      | obj :: obs' =>
+        idx_add (obj_idx (projT2 obj))
+                (existT _ _ (getObjectStateInit (projT2 obj)))
+                (getObjectStatesInit obs')
+      end.
+
+    Definition HistoryOf (obs: Objects) (hst: list IMsg) :=
+      exists oss oims, steps (getObjectStatesInit obs) (@empty _ _) hst oss oims.
+
     Fixpoint serial' (hst: list IMsg) (oi: option IdxT) :=
       match hst with
       | nil => True
@@ -153,11 +168,14 @@ Section Language.
     Definition subHistory (i: IdxT) (hst: list IMsg) :=
       filter (fun e => if eq_nat_dec i (fst e) then true else false) hst.
 
-    Definition Equivalent (tr1 tr2: list IMsg) :=
-      forall i, subHistory i tr1 = subHistory i tr2.
+    Definition Equivalent (hst1 hst2: list IMsg) :=
+      forall i, subHistory i hst1 = subHistory i hst2.
 
-    Definition Serializable (tr: list IMsg) :=
-      exists str, serial str /\ Equivalent tr str.
+    Definition Serializable (hst: list IMsg) :=
+      exists str, serial str /\ Equivalent hst str.
+
+    Definition SerialObjects (obs: Objects) :=
+      forall hst, HistoryOf obs hst -> Serializable hst.
 
   End Semantics.
 
