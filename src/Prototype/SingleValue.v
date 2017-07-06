@@ -83,7 +83,10 @@ Section Impl.
             match ps_request_from st with
             | Some _ => None
             | None => if ps_is_valid st
-                      then Some (nil, Some (efrom, SvmGetResp (ps_value st)), st)
+                      then Some (nil, Some (efrom, SvmGetResp (ps_value st)),
+                                 {| ps_is_valid := false;
+                                    ps_value := ps_value st;
+                                    ps_request_from := ps_request_from st |})
                       else Some ((theOtherChild efrom, SvmInvReq) :: nil, None,
                                  {| ps_is_valid := ps_is_valid st;
                                     ps_value := ps_value st;
@@ -122,7 +125,7 @@ Section Impl.
             | Some (childTo, is_get) =>
               Some ((childTo, if is_get then SvmGetResp v else SvmSetResp) :: nil,
                     None,
-                    {| ps_is_valid := false;
+                    {| ps_is_valid := ps_is_valid st;
                        ps_value := ps_value st;
                        ps_request_from := None |})
             end
@@ -221,10 +224,13 @@ Section Impl.
         match imsg with
         | (parentIdx, SvmInvReq) =>
           fun st =>
-            Some ((parentIdx, SvmInvResp (cs_value st)) :: nil,
-                  None, {| cs_is_valid := false;
-                           cs_value := cs_value st;
-                           cs_request_from := cs_request_from st |})
+            match cs_request_from st with
+            | Some _ => None
+            | None => Some ((parentIdx, SvmInvResp (cs_value st)) :: nil,
+                            None, {| cs_is_valid := false;
+                                     cs_value := cs_value st;
+                                     cs_request_from := cs_request_from st |})
+            end
         | _ => fun _ => None
         end.
 
@@ -253,8 +259,4 @@ Section Impl.
       :: nil.
 
 End Impl.
-
-Theorem impl_serial: SerialObjects svm_is_req impl.
-Proof.
-Admitted.
 
