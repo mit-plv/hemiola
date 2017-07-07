@@ -19,10 +19,8 @@ Section Language.
                   msg_from : IdxT;
                   msg_to : IdxT;
                   msg_content : MsgT }.
-  Definition buildMsg ty fr to co := {| msg_type := ty;
-                                        msg_from := fr;
-                                        msg_to := to;
-                                        msg_content := co |}.
+  Definition buildMsg ty fr to co :=
+    {| msg_type := ty; msg_from := fr; msg_to := to; msg_content := co |}.
   
   Section Syntax.
 
@@ -173,11 +171,6 @@ Section Language.
     Definition HistoryOf (obs: Objects) (hst: list Msg) :=
       exists oss oims, steps (getObjectStatesInit obs) (@empty _ _) hst oss oims.
 
-    (** Now some notions borrowed from linearlizability and serializability.
-     * Definitions need to be much more robust for the real language design.
-     * It's for now a bit informal.
-     *)
-
     (* A maximum subsequence of H consisting only of requests and matching responses. *)
     (* Should be a fancier implementation *)
     Fixpoint complete' (hst: list Msg) : (list Msg * Map (IdxT (* request_from *) *
@@ -202,98 +195,62 @@ Section Language.
     Definition complete (hst: list Msg) := fst (complete' hst).
     Definition Complete (hst: list Msg) := hst = complete hst.
 
-    Fixpoint Serial' (hst: list Msg) (oi: option (IdxT (* request_from *) *
-                                                  IdxT (* request_to *))) :=
+    (* An informal definition of "sequential":
+     * 1) The first message should be a request
+     * 2) A matching response for each request should be right after the request.
+     * 3) There might not be a matching response for the last request.
+     *)
+    Fixpoint Sequential' (hst: list Msg) (oi: option (IdxT (* request_from *) *
+                                                      IdxT (* request_to *))) :=
       match hst with
       | nil => True
       | msg :: hst' =>
         match oi with
         | Some (from, to) => msg_to msg = from /\ msg_from msg = to /\ msg_type msg = Resp /\
-                             Serial' hst' None
-        | None => msg_type msg = Req /\ Serial' hst' (Some (msg_from msg, msg_to msg))
+                             Sequential' hst' None
+        | None => msg_type msg = Req /\ Sequential' hst' (Some (msg_from msg, msg_to msg))
         end
       end.
+    Definition Sequential (hst: list Msg) := Sequential' hst None.
 
-    Definition Serial (hst: list Msg) := Serial' hst None.
-
+    (* In message passing system, "object subhistory" and "process subhistory"
+     * have exactly the same meaning; here an index "i" indicates a single object.
+     * An ambiguity comes when we need to decide whether a req/resp from "i" to "j"
+     * belongs to i's or j's subhistory.
+     * For requests, i's subhistory contains them.
+     * For responses, j's subhistory contains them.
+     *)
     Definition subHistory (i: IdxT) (hst: list Msg) :=
       filter (fun e => if eq_nat_dec i (msg_to e) then true
                        else if eq_nat_dec i (msg_from e) then true
                             else false) hst.
 
+    (* Two histories are equivalent iff any subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
       forall i, subHistory i hst1 = subHistory i hst2.
 
-    Definition Serializable (hst shst: list Msg) :=
-      Serial shst /\ Equivalent (complete hst) shst.
+    Definition Linearlizable' (hst lhst: list Msg) :=
+      Sequential lhst /\ Equivalent (complete hst) lhst.
 
-    Definition SerialObjects (obs: Objects) :=
+    Definition Linearlizable (hst: list Msg) :=
+      exists lhst, Linearlizable' hst lhst.
+
+    (* A system is linear when all possible histories are linearlizable. *)
+    Definition Linear (obs: Objects) :=
       forall hst,
         HistoryOf obs hst ->
-        exists shst, HistoryOf obs shst /\ Serializable hst shst.
+        exists shst, HistoryOf obs shst /\ Linearlizable' hst shst.
 
   End Semantics.
 
   Section Facts.
 
-    Lemma equivalent_refl: forall hst, Equivalent hst hst.
-    Proof.
-      unfold Equivalent; intros; reflexivity.
-    Qed.
-    Hint Immediate equivalent_refl.
-
-    Lemma equivalent_app:
-      forall hst1 hst1' hst2 hst2',
-        Equivalent hst1 hst1' -> Equivalent hst2 hst2' ->
-        Equivalent (hst1 ++ hst2) (hst1' ++ hst2').
+    Theorem linearlizable_local:
+      forall hst,
+        (forall i, Linearlizable (subHistory i hst)) ->
+        Linearlizable hst.
     Proof.
     Admitted.
-
-    Lemma complete_serial: forall hst, Serial hst -> Serial (complete hst).
-    Proof.
-    Admitted.
-    Hint Immediate complete_serial.
-
-    Lemma complete_serial_app:
-      forall hst1,
-        Complete hst1 ->
-        forall hst2, Serial hst2 -> Serial (hst1 ++ hst2).
-    Proof.
-    Admitted.
-    Hint Immediate complete_serial_app.
-
-    Lemma complete_complete_app:
-      forall hst1,
-        Complete hst1 ->
-        forall hst2, complete (hst1 ++ hst2) = complete hst1 ++ complete hst2.
-    Proof.
-    Admitted.
-
-    Lemma complete_equivalent:
-      forall hst, Complete hst -> Equivalent (complete hst) hst.
-    Proof.
-    Admitted.
-    Hint Immediate complete_equivalent.
-      
-    Lemma serial_serializable: forall hst, Serial hst -> Serializable hst (complete hst).
-    Proof.
-      intros; split; eauto.
-    Qed.
-    Hint Immediate serial_serializable.
-
-    Lemma complete_serializable_app:
-      forall hst1,
-        Complete hst1 ->
-        forall hst2 shst2, Serializable hst2 shst2 ->
-                           Serializable (hst1 ++ hst2) (hst1 ++ shst2).
-    Proof.
-      unfold Serializable; intros.
-      destruct H0.
-      split; auto.
-
-      rewrite complete_complete_app by assumption.
-      apply equivalent_app; auto.
-    Qed.
 
   End Facts.
 
