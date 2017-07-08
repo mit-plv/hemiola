@@ -8,21 +8,37 @@ Ltac dest_in :=
     | [H: In _ _ |- _] => inv H
     end.
 
-Theorem impl_linear: ExtLinear impl implIndices.
+Lemma parent_sequential:
+  forall hst,
+    HistoryOf (existT (fun st => Object SingleValueMsg st) ParentState parent :: nil) hst ->
+    Sequential hst.
 Proof.
-  apply linear_extLinear.
-  apply linear_local.
-
-  intros; dest_in.
-
-  - (* parent *)
-    admit.
-  - (* child1 *)
-    admit.
-  - (* child2 *)
-    admit.
+  unfold HistoryOf; intros.
+  destruct H as [oss [oims ?]].
+Admitted.
   
+Lemma parent_linear:
+  Linear (existT (fun st => Object SingleValueMsg st) ParentState parent :: nil).
+Proof.
+  unfold Linear; intros.
+  exists (complete hst); split; auto.
+  - admit. (* HistoryOf hst -> HistoryOf (complete hst) *)
+  - unfold Linearlizable'; split; auto.
+    apply sequential_complete.
+    apply parent_sequential; auto.
 Admitted.
 
+Lemma child_linear: forall i,
+    Linear (existT (fun st => Object SingleValueMsg st) ChildState (child i) :: nil).
+Proof.
+Admitted.
 
+Theorem impl_linear: ExtLinear impl.
+Proof.
+  apply extLinear_local.
+  intros; dest_in.
+  - apply parent_linear.
+  - apply child_linear.
+  - apply child_linear.
+Qed.  
 

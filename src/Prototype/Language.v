@@ -1,4 +1,4 @@
-Require Import List String Peano_dec.
+Require Import Bool List String Peano_dec.
 Require Import FnMap.
 
 Set Implicit Arguments.
@@ -27,9 +27,12 @@ Section Language.
     Section Object.
       Variable StateT: Type.
 
+      (* For output messages, it's more robust to have a type of [set Msg],
+       * but it's fine if no two messages have the same receiver [msg_to].
+       * It's worth considering this condition being the part of well-formedness.
+       *)
       Definition CmdT :=
-        StateT -> option (list Msg (* messages out; the youngest should be the head *) *
-                          StateT (* next state *)).
+        StateT -> option (list Msg (* messages out *) * StateT (* next state *)).
       Definition RuleT := Msg -> CmdT.
 
       Record Object :=
@@ -85,6 +88,10 @@ Section Language.
         end
       end.
 
+    (* Note that [StepObjExt] takes an arbitrary message [emsg_in] as an input
+     * message; the validity for the message is checked at [step], which 
+     * employes this definition.
+     *)
     Inductive step_obj {StateT}:
       ObjectState StateT -> MsgsFrom ->
       Msg (* in *) -> bool (* is_internal *) -> list Msg (* outs *) ->
@@ -118,9 +125,13 @@ Section Language.
                        | Some fromMsgs => fromMsgs ++ (msg :: nil)
                        | None => msg :: nil
                        end in
-          idx_add (msg_to msg) (idx_msgType_add (from, msg_type msg) added toMsgs) msgs
+          idx_add (msg_to msg)
+                  (idx_msgType_add (from, msg_type msg) added toMsgs)
+                  msgs
         | None =>
-          idx_add (msg_to msg) (idx_msgType_add (from, msg_type msg) (msg :: nil) (@empty _ _)) msgs
+          idx_add (msg_to msg)
+                  (idx_msgType_add (from, msg_type msg) (msg :: nil) (@empty _ _))
+                  msgs
         end
       end.
 
@@ -217,19 +228,18 @@ Section Language.
      * For requests, j's subhistory contains them.
      * For responses, i's subhistory contains them.
      *)
-    Definition isObjectMsg (i: IdxT) (e: Msg) :=
-      if idx_msgType_dec (i, Req) (msg_to e, msg_type e) then true
-      else if idx_msgType_dec (i, Resp) (msg_from e, msg_type e) then true
-           else false.
-    Definition objSubHistory (i: IdxT) (hst: list Msg) := filter (isObjectMsg i) hst.
+    Definition isObjectsMsg (obs: list IdxT) (e: Msg) :=
+      (if in_dec idx_msgType_dec (msg_to e, msg_type e)
+                 (map (fun i => (i, Req)) obs) then true else false)
+        || (if in_dec idx_msgType_dec (msg_from e, msg_type e)
+                      (map (fun i => (i, Resp)) obs) then true else false).
+    Definition objSubHistory (i: IdxT) (hst: list Msg) :=
+      filter (isObjectsMsg (i :: nil)) hst.
 
-    Definition isIntMsg (internals: list IdxT) (e: Msg) :=
-      if in_dec idx_msgType_dec (msg_to e, msg_type e) (map (fun i => (i, Req)) internals) then true
-      else if in_dec idx_msgType_dec (msg_from e, msg_type e)
-                     (map (fun i => (i, Resp)) internals) then true
-           else false.
+    Definition intHistory (internals: list IdxT) (hst: list Msg) :=
+      filter (isObjectsMsg internals) hst.
     Definition extHistory (internals: list IdxT) (hst: list Msg) :=
-      filter (fun e => negb (isIntMsg internals e)) hst.
+      filter (fun e => negb (isObjectsMsg internals e)) hst.
 
     (* Two histories are equivalent iff any subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
@@ -241,13 +251,16 @@ Section Language.
     Definition Linearlizable (hst: list Msg) :=
       exists lhst, Linearlizable' hst lhst.
 
-    (* A system is linear when all possible histories are linearlizable. *)
-    Definition ExtLinear (obs: Objects) (internals: list IdxT) :=
+    Definition AbsLinear (obs: Objects) (absF: list Msg -> list Msg) :=
       forall hst,
         HistoryOf obs hst ->
         exists shst, HistoryOf obs shst /\
-                     Linearlizable' (extHistory internals hst) (extHistory internals shst).
+                     Linearlizable' (absF hst) (absF shst).
 
+    Definition ExtLinear (obs: Objects) :=
+      AbsLinear obs (extHistory (getIndices obs)).
+
+    (* A system is linear when all possible histories are linearlizable. *)
     Definition Linear (obs: Objects) :=
       forall hst,
         HistoryOf obs hst ->
@@ -257,41 +270,29 @@ Section Language.
 
   Section Facts.
 
-    Lemma sequential_extHistory:
-      forall hst, Sequential hst ->
-                  forall internals, Sequential (extHistory internals hst).
+    Lemma equivalent_refl: forall hst, Equivalent hst hst.
+    Proof. intros; unfold Equivalent; reflexivity. Qed.
+    Hint Immediate equivalent_refl.
+
+    Lemma sequential_complete: forall hst, Sequential hst -> Sequential (complete hst).
     Proof.
     Admitted.
-
-    Lemma linearizable_extHistory:
-      forall hst shst,
-        Linearlizable' hst shst ->
-        forall internals,
-          Linearlizable' (extHistory internals hst) (extHistory internals shst).
-    Proof.
-      unfold Linearlizable'; intros.
-      destruct H; split.
-      - apply sequential_extHistory; auto.
-      - 
-    Admitted.
-
-    Theorem linear_extLinear: forall obs internals,
-      Linear obs -> ExtLinear obs internals.
-    Proof.
-      unfold Linear, ExtLinear; intros.
-      specialize (H _ H0); destruct H as [shst [? ?]].
-      exists shst; split; auto.
-      apply linearizable_extHistory; auto.
-    Qed.
-
-    Theorem linear_local:
+    
+    (* An important note:
+     * [ExtLinear] is a local property.
+     * However, [Linear] is NOT a local property in this setting, which
+     * contradicts the meaning of conventional linearizability.
+     *)
+    Theorem extLinear_local:
       forall obs,
         (forall obj, In obj obs -> Linear (obj :: nil)) ->
-        Linear obs.
+        ExtLinear obs.
     Proof.
     Admitted.
 
   End Facts.
 
 End Language.
+
+Hint Immediate equivalent_refl.
 
