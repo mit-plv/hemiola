@@ -31,16 +31,16 @@ Section Spec.
   Definition SpecGetReq : RuleT SingleValueMsg SpecState :=
     fun msg =>
       match msg_content msg with
-      | SvmGetReq => fun st => Some (nil, (buildMsg Resp specIdx (msg_from msg)
-                                                    (SvmGetResp st)) :: nil, st)
+      | SvmGetReq => fun st => Some ((buildMsg Resp specIdx (msg_from msg)
+                                               (SvmGetResp st)) :: nil, st)
       | _ => fun _ => None
       end.
 
   Definition SpecSetReq : RuleT SingleValueMsg SpecState :=
     fun msg =>
       match msg_content msg with
-      | SvmSetReq v => fun _ => Some (nil, (buildMsg Resp specIdx (msg_from msg)
-                                                     SvmSetResp) :: nil, v)
+      | SvmSetReq v => fun _ => Some ((buildMsg Resp specIdx (msg_from msg)
+                                                SvmSetResp) :: nil, v)
       | _ => fun _ => None
       end.
 
@@ -86,15 +86,13 @@ Section Impl.
             match ps_request_from st with
             | Some _ => None
             | None => if ps_is_valid st
-                      then Some (nil,
-                                 (buildMsg Resp parentIdx (msg_from msg)
+                      then Some ((buildMsg Resp parentIdx (msg_from msg)
                                            (SvmGetResp (ps_value st))) :: nil,
                                  {| ps_is_valid := false;
                                     ps_value := ps_value st;
                                     ps_request_from := ps_request_from st |})
                       else Some ((buildMsg Req parentIdx (theOtherChild (msg_from msg))
                                            SvmInvReq) :: nil,
-                                 nil,
                                  {| ps_is_valid := ps_is_valid st;
                                     ps_value := ps_value st;
                                     ps_request_from := Some (msg_from msg, true) |})
@@ -110,14 +108,12 @@ Section Impl.
             match ps_request_from st with
             | Some _ => None
             | None => if ps_is_valid st
-                      then Some (nil,
-                                 (buildMsg Resp parentIdx (msg_from msg) SvmSetResp) :: nil,
+                      then Some ((buildMsg Resp parentIdx (msg_from msg) SvmSetResp) :: nil,
                                  {| ps_is_valid := false;
                                     ps_value := ps_value st;
                                     ps_request_from := ps_request_from st |})
                       else Some ((buildMsg Req parentIdx (theOtherChild (msg_from msg))
                                            SvmInvReq) :: nil,
-                                 nil,
                                  {| ps_is_valid := ps_is_valid st;
                                     ps_value := ps_value st;
                                     ps_request_from := Some (msg_from msg, false) |})
@@ -135,7 +131,6 @@ Section Impl.
             | Some (childTo, is_get) =>
               Some ((buildMsg Resp parentIdx childTo
                               (if is_get then SvmGetResp v else SvmSetResp)) :: nil,
-                    nil,
                     {| ps_is_valid := ps_is_valid st;
                        ps_value := ps_value st;
                        ps_request_from := None |})
@@ -165,12 +160,10 @@ Section Impl.
             | Some _ => None
             | None =>
               if cs_is_valid st
-              then Some (nil,
-                         (buildMsg Resp childIdx (msg_from msg)
+              then Some ((buildMsg Resp childIdx (msg_from msg)
                                    (SvmGetResp (cs_value st))) :: nil,
                          st)
               else Some ((buildMsg Req childIdx parentIdx SvmGetReq) :: nil,
-                         nil,
                          {| cs_is_valid := cs_is_valid st;
                             cs_value := cs_value st;
                             cs_request_from := Some (msg_from msg, O) |})
@@ -187,8 +180,7 @@ Section Impl.
             match cs_request_from st with
             | None => None
             | Some (efrom, _) =>
-              Some (nil,
-                    (buildMsg Resp childIdx efrom (SvmGetResp v)) :: nil,
+              Some ((buildMsg Resp childIdx efrom (SvmGetResp v)) :: nil,
                     {| cs_is_valid := true;
                        cs_value := v;
                        cs_request_from := None |})
@@ -206,14 +198,12 @@ Section Impl.
             | Some _ => None
             | None =>
               if cs_is_valid st
-              then Some (nil,
-                         (buildMsg Resp childIdx (msg_from msg)
+              then Some ((buildMsg Resp childIdx (msg_from msg)
                                    SvmSetResp) :: nil,
                          {| cs_is_valid := cs_is_valid st;
                             cs_value := v;
                             cs_request_from := cs_request_from st |})
               else Some ((buildMsg Req childIdx parentIdx (SvmSetReq v)) :: nil,
-                         nil,
                          {| cs_is_valid := cs_is_valid st;
                             cs_value := cs_value st;
                             cs_request_from := Some (msg_from msg, v) |})
@@ -230,8 +220,7 @@ Section Impl.
             match cs_request_from st with
             | None => None
             | Some (efrom, v) =>
-              Some (nil,
-                    (buildMsg Resp childIdx efrom SvmSetResp) :: nil,
+              Some ((buildMsg Resp childIdx efrom SvmSetResp) :: nil,
                     {| cs_is_valid := true;
                        cs_value := v;
                        cs_request_from := None |})
@@ -249,7 +238,6 @@ Section Impl.
             | Some _ => None
             | None => Some ((buildMsg Resp childIdx parentIdx
                                       (SvmInvResp (cs_value st))) :: nil,
-                            nil,
                             {| cs_is_valid := false;
                                cs_value := cs_value st;
                                cs_request_from := cs_request_from st |})

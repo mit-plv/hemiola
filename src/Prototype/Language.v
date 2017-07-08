@@ -28,8 +28,7 @@ Section Language.
       Variable StateT: Type.
 
       Definition CmdT :=
-        StateT -> option (list Msg (* internal messages out *) *
-                          list Msg (* optional external out; the youngest should be the head *) *
+        StateT -> option (list Msg (* messages out; the youngest should be the head *) *
                           StateT (* next state *)).
       Definition RuleT := Msg -> CmdT.
 
@@ -88,22 +87,22 @@ Section Language.
 
     Inductive step_obj {StateT}:
       ObjectState StateT -> MsgsFrom ->
-      list Msg -> option Msg (* (possibly) external_in *) -> list Msg (* external_out *) ->
+      Msg (* in *) -> list Msg (* outs *) ->
       ObjectState StateT -> MsgsFrom -> Prop :=
-    | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs imsgs_to emsgs_to pos,
+    | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs msgs_out pos,
         step_rule (obj_rules (os_obj os)) fmsg (os_state os) =
-        Some (imsgs_to, emsgs_to, pos) ->
+        Some (msgs_out, pos) ->
         find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
         step_obj os msgs_from
-                 imsgs_to None emsgs_to
+                 fmsg msgs_out
                  {| os_obj := os_obj os;
                     os_state := pos |}
                  (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
-    | StepObjExt: forall os msgs_from emsg_in imsgs_to emsgs_to pos,
+    | StepObjExt: forall os msgs_from emsg_in msgs_out pos,
         step_rule (obj_rules (os_obj os)) emsg_in (os_state os) =
-        Some (imsgs_to, emsgs_to, pos) ->
+        Some (msgs_out, pos) ->
         step_obj os msgs_from
-                 imsgs_to (Some emsg_in) emsgs_to
+                 emsg_in msgs_out
                  {| os_obj := os_obj os;
                     os_state := pos |}
                  msgs_from.
@@ -126,24 +125,17 @@ Section Language.
       end.
 
     Inductive step : ObjectStates -> Messages ->
-                     option Msg (* external in *) -> list Msg (* external out *) ->
+                     Msg (* in *) -> list Msg (* outs *) ->
                      ObjectStates -> Messages -> Prop :=
     | Step: forall oss idx {StateT} (os: ObjectState StateT)
-                   oims msgs_from imsgs_to emsg_in emsg_out pos pmsgs_from,
+                   oims msgs_from msg_in msgs_out pos pmsgs_from,
         find idx oss = Some (existT _ _ os) ->
         find idx oims = Some msgs_from -> 
-        step_obj os msgs_from imsgs_to emsg_in emsg_out pos pmsgs_from ->
-        step oss oims emsg_in emsg_out
+        step_obj os msgs_from msg_in msgs_out pos pmsgs_from ->
+        step oss oims
+             msg_in msgs_out
              (idx_add idx (existT _ _ pos) oss)
-             (distr_msgs idx imsgs_to (idx_add idx pmsgs_from oims)).
-
-    (* NOTE: the oldest is the head *)
-    Definition addHistory (om: option Msg) (hst: list Msg) :=
-      match om with
-      | Some m => hst ++ (m :: nil)
-      | None => hst
-      end.
-    Infix "<::" := addHistory (at level 30, right associativity).
+             (distr_msgs idx msgs_out (idx_add idx pmsgs_from oims)).
 
     Inductive steps : ObjectStates -> Messages ->
                       list Msg (* history *) ->
@@ -152,9 +144,9 @@ Section Language.
     | StepsCons:
         forall oss1 oims1 emsgs oss2 oims2,
           steps oss1 oims1 emsgs oss2 oims2 ->
-          forall oss3 emsg_in emsg_out oims3,
-            step oss2 oims2 emsg_in emsg_out oss3 oims3 ->
-            steps oss1 oims1 (emsg_out ++ emsg_in <:: emsgs) oss3 oims3.
+          forall oss3 msg_in msgs_out oims3,
+            step oss2 oims2 msg_in msgs_out oss3 oims3 ->
+            steps oss1 oims1 (msgs_out ++ msg_in :: emsgs) oss3 oims3.
 
     Definition getObjectStateInit {StateT} (obj: Object StateT) :=
       {| os_obj := obj;
@@ -217,12 +209,12 @@ Section Language.
      * have exactly the same meaning; here an index "i" indicates a single object.
      * An ambiguity comes when we need to decide whether a req/resp from "i" to "j"
      * belongs to i's or j's subhistory.
-     * For requests, i's subhistory contains them.
-     * For responses, j's subhistory contains them.
+     * For requests, j's subhistory contains them.
+     * For responses, i's subhistory contains them.
      *)
     Definition subHistory (i: IdxT) (hst: list Msg) :=
-      filter (fun e => if eq_nat_dec i (msg_to e) then true
-                       else if eq_nat_dec i (msg_from e) then true
+      filter (fun e => if idx_msgType_dec (i, Req) (msg_to e, msg_type e) then true
+                       else if idx_msgType_dec (i, Resp) (msg_from e, msg_type e) then true
                             else false) hst.
 
     (* Two histories are equivalent iff any subhistories are equal. *)
@@ -244,13 +236,6 @@ Section Language.
   End Semantics.
 
   Section Facts.
-
-    Theorem linearlizable_local:
-      forall hst,
-        (forall i, Linearlizable (subHistory i hst)) ->
-        Linearlizable hst.
-    Proof.
-    Admitted.
 
   End Facts.
 
