@@ -13,22 +13,22 @@ Section Reduction.
   Lemma reduction_preserves_steps':
     forall msg1 msg2: Msg,
       msg_from msg1 <> msg_from msg2 ->
-      forall oss1 oims1 oss2 oims2 hst2 hst1,
-        steps oss1 oims1 (hst1 ++ msg1 :: msg2 :: hst2) oss2 oims2 ->
-        steps oss1 oims1 (hst1 ++ msg2 :: msg1 :: hst2) oss2 oims2.
+      forall obs oss1 oims1 oss2 oims2 hst2 hst1,
+        steps obs oss1 oims1 (hst1 ++ msg1 :: msg2 :: hst2) oss2 oims2 ->
+        steps obs oss1 oims1 (hst1 ++ msg2 :: msg1 :: hst2) oss2 oims2.
   Proof.
   Admitted.
 
   Theorem reduction_preserves_steps:
-    forall oss1 oims1 hst oss2 oims2,
-      steps oss1 oims1 hst oss2 oims2 ->
+    forall obs oss1 oims1 hst oss2 oims2,
+      steps obs oss1 oims1 hst oss2 oims2 ->
       forall msg1 msg2 hst',
         Reduced hst hst' msg1 msg2 ->
         msg_from msg1 <> msg_from msg2 -> (* Different sources -> 
                                            * Messages were handled by different objects -> 
                                            * Disjoint state transitions!
                                            *)
-        steps oss1 oims1 hst' oss2 oims2.
+        steps obs oss1 oims1 hst' oss2 oims2.
   Proof.
     unfold Reduced; intros.
     destruct H0 as [hst1 [hst2 [? ?]]]; subst.
@@ -43,9 +43,9 @@ Section Reduction.
   Lemma reductions_preserve_steps':
     forall (tmsg: Msg) msgs,
       Forall (fun m => msg_from m <> msg_from tmsg) msgs ->
-      forall oss1 oims1 oss2 oims2 hst2 hst1,
-        steps oss1 oims1 (hst1 ++ msgs ++ tmsg :: hst2) oss2 oims2 ->
-        steps oss1 oims1 (hst1 ++ tmsg :: msgs ++ hst2) oss2 oims2.
+      forall obs oss1 oims1 oss2 oims2 hst2 hst1,
+        steps obs oss1 oims1 (hst1 ++ msgs ++ tmsg :: hst2) oss2 oims2 ->
+        steps obs oss1 oims1 (hst1 ++ tmsg :: msgs ++ hst2) oss2 oims2.
   Proof.
     induction msgs; simpl; intros; auto.
 
@@ -59,12 +59,12 @@ Section Reduction.
   Qed.
 
   Theorem reductions_preserve_steps:
-    forall oss1 oims1 hst oss2 oims2,
-      steps oss1 oims1 hst oss2 oims2 ->
+    forall obs oss1 oims1 hst oss2 oims2,
+      steps obs oss1 oims1 hst oss2 oims2 ->
       forall msgs tmsg hst',
         ReducedM hst hst' msgs tmsg ->
         Forall (fun m => msg_from m <> msg_from tmsg) msgs ->
-        steps oss1 oims1 hst' oss2 oims2.
+        steps obs oss1 oims1 hst' oss2 oims2.
   Proof.
     unfold ReducedM; intros.
     destruct H0 as [hst1 [hst2 [? ?]]]; subst.

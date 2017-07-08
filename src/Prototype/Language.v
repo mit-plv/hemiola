@@ -87,14 +87,14 @@ Section Language.
 
     Inductive step_obj {StateT}:
       ObjectState StateT -> MsgsFrom ->
-      Msg (* in *) -> list Msg (* outs *) ->
+      Msg (* in *) -> bool (* is_internal *) -> list Msg (* outs *) ->
       ObjectState StateT -> MsgsFrom -> Prop :=
     | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs msgs_out pos,
         step_rule (obj_rules (os_obj os)) fmsg (os_state os) =
         Some (msgs_out, pos) ->
         find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
         step_obj os msgs_from
-                 fmsg msgs_out
+                 fmsg true msgs_out
                  {| os_obj := os_obj os;
                     os_state := pos |}
                  (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
@@ -102,7 +102,7 @@ Section Language.
         step_rule (obj_rules (os_obj os)) emsg_in (os_state os) =
         Some (msgs_out, pos) ->
         step_obj os msgs_from
-                 emsg_in msgs_out
+                 emsg_in false msgs_out
                  {| os_obj := os_obj os;
                     os_state := pos |}
                  msgs_from.
@@ -124,29 +124,34 @@ Section Language.
         end
       end.
 
-    Inductive step : ObjectStates -> Messages ->
-                     Msg (* in *) -> list Msg (* outs *) ->
-                     ObjectStates -> Messages -> Prop :=
+    Definition getIndices (obs: Objects) :=
+      map (fun o => obj_idx (projT2 o)) obs.
+
+    Inductive step (obs: Objects) : ObjectStates -> Messages ->
+                                    Msg (* in *) -> list Msg (* outs *) ->
+                                    ObjectStates -> Messages -> Prop :=
     | Step: forall oss idx {StateT} (os: ObjectState StateT)
-                   oims msgs_from msg_in msgs_out pos pmsgs_from,
+                   oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
         find idx oss = Some (existT _ _ os) ->
         find idx oims = Some msgs_from -> 
-        step_obj os msgs_from msg_in msgs_out pos pmsgs_from ->
-        step oss oims
+        step_obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
+        is_internal = (if in_dec eq_nat_dec (msg_to msg_in) (getIndices obs)
+                       then true else false) ->
+        step obs oss oims
              msg_in msgs_out
              (idx_add idx (existT _ _ pos) oss)
              (distr_msgs idx msgs_out (idx_add idx pmsgs_from oims)).
 
-    Inductive steps : ObjectStates -> Messages ->
-                      list Msg (* history *) ->
-                      ObjectStates -> Messages -> Prop :=
-    | StepsNil: forall oss oims, steps oss oims nil oss oims
+    Inductive steps (obs: Objects) : ObjectStates -> Messages ->
+                                     list Msg (* history *) ->
+                                     ObjectStates -> Messages -> Prop :=
+    | StepsNil: forall oss oims, steps obs oss oims nil oss oims
     | StepsCons:
         forall oss1 oims1 emsgs oss2 oims2,
-          steps oss1 oims1 emsgs oss2 oims2 ->
+          steps obs oss1 oims1 emsgs oss2 oims2 ->
           forall oss3 msg_in msgs_out oims3,
-            step oss2 oims2 msg_in msgs_out oss3 oims3 ->
-            steps oss1 oims1 (msgs_out ++ msg_in :: emsgs) oss3 oims3.
+            step obs oss2 oims2 msg_in msgs_out oss3 oims3 ->
+            steps obs oss1 oims1 (msgs_out ++ msg_in :: emsgs) oss3 oims3.
 
     Definition getObjectStateInit {StateT} (obj: Object StateT) :=
       {| os_obj := obj;
@@ -161,7 +166,7 @@ Section Language.
       end.
 
     Definition HistoryOf (obs: Objects) (hst: list Msg) :=
-      exists oss oims, steps (getObjectStatesInit obs) (@empty _ _) hst oss oims.
+      exists oss oims, steps obs (getObjectStatesInit obs) (@empty _ _) hst oss oims.
 
     (* A maximum subsequence of H consisting only of requests and matching responses. *)
     (* Should be a fancier implementation *)
@@ -212,14 +217,23 @@ Section Language.
      * For requests, j's subhistory contains them.
      * For responses, i's subhistory contains them.
      *)
-    Definition subHistory (i: IdxT) (hst: list Msg) :=
-      filter (fun e => if idx_msgType_dec (i, Req) (msg_to e, msg_type e) then true
-                       else if idx_msgType_dec (i, Resp) (msg_from e, msg_type e) then true
-                            else false) hst.
+    Definition isObjectMsg (i: IdxT) (e: Msg) :=
+      if idx_msgType_dec (i, Req) (msg_to e, msg_type e) then true
+      else if idx_msgType_dec (i, Resp) (msg_from e, msg_type e) then true
+           else false.
+    Definition objSubHistory (i: IdxT) (hst: list Msg) := filter (isObjectMsg i) hst.
+
+    Definition isIntMsg (internals: list IdxT) (e: Msg) :=
+      if in_dec idx_msgType_dec (msg_to e, msg_type e) (map (fun i => (i, Req)) internals) then true
+      else if in_dec idx_msgType_dec (msg_from e, msg_type e)
+                     (map (fun i => (i, Resp)) internals) then true
+           else false.
+    Definition extHistory (internals: list IdxT) (hst: list Msg) :=
+      filter (fun e => negb (isIntMsg internals e)) hst.
 
     (* Two histories are equivalent iff any subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
-      forall i, subHistory i hst1 = subHistory i hst2.
+      forall i, objSubHistory i hst1 = objSubHistory i hst2.
 
     Definition Linearlizable' (hst lhst: list Msg) :=
       Sequential lhst /\ Equivalent (complete hst) lhst.
@@ -228,6 +242,12 @@ Section Language.
       exists lhst, Linearlizable' hst lhst.
 
     (* A system is linear when all possible histories are linearlizable. *)
+    Definition ExtLinear (obs: Objects) (internals: list IdxT) :=
+      forall hst,
+        HistoryOf obs hst ->
+        exists shst, HistoryOf obs shst /\
+                     Linearlizable' (extHistory internals hst) (extHistory internals shst).
+
     Definition Linear (obs: Objects) :=
       forall hst,
         HistoryOf obs hst ->
@@ -236,6 +256,40 @@ Section Language.
   End Semantics.
 
   Section Facts.
+
+    Lemma sequential_extHistory:
+      forall hst, Sequential hst ->
+                  forall internals, Sequential (extHistory internals hst).
+    Proof.
+    Admitted.
+
+    Lemma linearizable_extHistory:
+      forall hst shst,
+        Linearlizable' hst shst ->
+        forall internals,
+          Linearlizable' (extHistory internals hst) (extHistory internals shst).
+    Proof.
+      unfold Linearlizable'; intros.
+      destruct H; split.
+      - apply sequential_extHistory; auto.
+      - 
+    Admitted.
+
+    Theorem linear_extLinear: forall obs internals,
+      Linear obs -> ExtLinear obs internals.
+    Proof.
+      unfold Linear, ExtLinear; intros.
+      specialize (H _ H0); destruct H as [shst [? ?]].
+      exists shst; split; auto.
+      apply linearizable_extHistory; auto.
+    Qed.
+
+    Theorem linear_local:
+      forall obs,
+        (forall obj, In obj obs -> Linear (obj :: nil)) ->
+        Linear obs.
+    Proof.
+    Admitted.
 
   End Facts.
 
