@@ -50,7 +50,7 @@ Section Language.
   Section Semantics.
 
     Record ObjectState StateT :=
-      { os_obj: Object StateT;
+      { (* os_obj: Object StateT; *)
         os_state: StateT
       }.
 
@@ -92,26 +92,24 @@ Section Language.
      * message; the validity for the message is checked at [step], which 
      * employes this definition.
      *)
-    Inductive step_obj {StateT}:
+    Inductive step_obj {StateT} (obj: Object StateT):
       ObjectState StateT -> MsgsFrom ->
       Msg (* in *) -> bool (* is_internal *) -> list Msg (* outs *) ->
       ObjectState StateT -> MsgsFrom -> Prop :=
     | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs msgs_out pos,
-        step_rule (obj_rules (os_obj os)) fmsg (os_state os) =
+        step_rule (obj_rules obj) fmsg (os_state os) =
         Some (msgs_out, pos) ->
         find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
-        step_obj os msgs_from
+        step_obj obj os msgs_from
                  fmsg true msgs_out
-                 {| os_obj := os_obj os;
-                    os_state := pos |}
+                 {| os_state := pos |}
                  (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
     | StepObjExt: forall os msgs_from emsg_in msgs_out pos,
-        step_rule (obj_rules (os_obj os)) emsg_in (os_state os) =
+        step_rule (obj_rules obj) emsg_in (os_state os) =
         Some (msgs_out, pos) ->
-        step_obj os msgs_from
+        step_obj obj os msgs_from
                  emsg_in false msgs_out
-                 {| os_obj := os_obj os;
-                    os_state := pos |}
+                 {| os_state := pos |}
                  msgs_from.
 
     Fixpoint distr_msgs (from: IdxT) (to: list Msg)
@@ -141,11 +139,13 @@ Section Language.
     Inductive step (obs: Objects) : ObjectStates -> Messages ->
                                     Msg (* in *) -> list Msg (* outs *) ->
                                     ObjectStates -> Messages -> Prop :=
-    | Step: forall oss idx {StateT} (os: ObjectState StateT)
+    | Step: forall oss idx {StateT} (obj: Object StateT) (os: ObjectState StateT)
                    oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
+        In (existT _ _ obj) obs ->
+        obj_idx obj = idx ->
         find idx oss = Some (existT _ _ os) ->
         find idx oims = Some msgs_from -> 
-        step_obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
+        step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
         is_internal = (if in_dec eq_nat_dec (msg_to msg_in) (getIndices obs)
                        then true else false) ->
         step obs oss oims
@@ -162,11 +162,10 @@ Section Language.
           steps obs oss1 oims1 emsgs oss2 oims2 ->
           forall oss3 msg_in msgs_out oims3,
             step obs oss2 oims2 msg_in msgs_out oss3 oims3 ->
-            steps obs oss1 oims1 (msgs_out ++ msg_in :: emsgs) oss3 oims3.
+            steps obs oss1 oims1 (emsgs ++ msg_in :: msgs_out) oss3 oims3.
 
     Definition getObjectStateInit {StateT} (obj: Object StateT) :=
-      {| os_obj := obj;
-         os_state := obj_state_init obj |}.
+      {| os_state := obj_state_init obj |}.
     Fixpoint getObjectStatesInit (obs: Objects) : ObjectStates :=
       match obs with
       | nil => @empty _ _
@@ -257,6 +256,8 @@ Section Language.
         exists shst, HistoryOf obs shst /\
                      Linearlizable' (absF hst) (absF shst).
 
+    Definition IntLinear (obs: Objects) :=
+      AbsLinear obs (intHistory (getIndices obs)).
     Definition ExtLinear (obs: Objects) :=
       AbsLinear obs (extHistory (getIndices obs)).
 
@@ -277,15 +278,16 @@ Section Language.
     Lemma sequential_complete: forall hst, Sequential hst -> Sequential (complete hst).
     Proof.
     Admitted.
+
+    Lemma intHistory_complete_comm:
+      forall hst internals,
+        intHistory internals (complete hst) = complete (intHistory internals hst).
+    Proof.
+    Admitted.
     
-    (* An important note:
-     * [ExtLinear] is a local property.
-     * However, [Linear] is NOT a local property in this setting, which
-     * contradicts the meaning of conventional linearizability.
-     *)
     Theorem extLinear_local:
       forall obs,
-        (forall obj, In obj obs -> Linear (obj :: nil)) ->
+        (forall obj, In obj obs -> IntLinear (obj :: nil)) ->
         ExtLinear obs.
     Proof.
     Admitted.
