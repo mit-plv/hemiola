@@ -72,8 +72,8 @@ Section ParentSequential.
       + (* getReq *)
         destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
         unfold ParentGetReq in Heqtrs; simpl in Heqtrs.
-        remember (from_external msg_in_from) as msg_in_from_ext.
-        destruct msg_in_from_ext; try discriminate.
+        remember (not_from_children msg_in_from) as msg_in_from_children.
+        destruct msg_in_from_children; try discriminate.
         destruct msg_in_content; try discriminate.
         destruct msg_in_type; try discriminate.
         remember (os_state os) as oss.
@@ -105,16 +105,84 @@ Section ParentSequential.
           }
         
       + (* setReq *)
-        admit.
+        clear Heqtrs; rename Heqtrs0 into Heqtrs.
+        destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
+        unfold ParentSetReq in Heqtrs; simpl in Heqtrs.
+        remember (not_from_children msg_in_from) as msg_in_from_children.
+        destruct msg_in_from_children; try discriminate.
+        destruct msg_in_content; try discriminate.
+        destruct msg_in_type; try discriminate.
+        remember (os_state os) as oss.
+        destruct oss as [oss_is_valid oss_value oss_request_from]; simpl in *.
+        destruct oss_request_from; try discriminate.
+        destruct oss_is_valid; inv Heqtrs; simpl in *.
+        * rewrite intHistory_app; simpl.
+          eapply sequential_app; eauto.
+          simpl; unfold parentRequestFrom; rewrite <-Heqoss; simpl.
+          split; auto.
+          unfold isObjectsMsg, buildMsg; simpl.
+          rewrite orb_true_r; simpl.
+          repeat split.
+        * rewrite intHistory_app; simpl.
+          eapply sequential_app; eauto.
+          simpl; unfold parentRequestFrom; rewrite <-Heqoss; simpl.
+          split; auto.
+          replace (isObjectsMsg
+                     (parentIdx :: nil)
+                     (buildMsg Req parentIdx (theOtherChild msg_in_from) SvmInvReq)) with false.
+          { reflexivity. }
+          { unfold isObjectsMsg, buildMsg.
+            unfold msg_to, msg_type.
+            apply eq_sym, orb_false_iff; split; auto.
+            destruct (in_dec _ _ _); auto.
+            simpl in i; destruct i; inv H4.
+            unfold theOtherChild in H9.
+            destruct (eq_nat_dec _ _) in H9; discriminate.
+          }
 
       + (* invResp *)
-        admit.
+        clear Heqtrs Heqtrs0; rename Heqtrs1 into Heqtrs.
+        destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
+        unfold ParentInvResp in Heqtrs; simpl in Heqtrs.
+        remember (not_from_children msg_in_from) as msg_in_from_children.
+        destruct msg_in_from_children; try discriminate.
+        destruct msg_in_content; try discriminate.
+        destruct msg_in_type; try discriminate.
+        remember (os_state os) as oss.
+        destruct oss as [oss_is_valid oss_value oss_request_from]; simpl in *.
+        destruct oss_request_from; try discriminate.
+        destruct p as [child_to is_get].
+        inv Heqtrs.
+
+        rewrite intHistory_app; simpl.
+        eapply sequential_app; eauto.
+        replace (isObjectsMsg (parentIdx :: nil)
+                              {| msg_type := Resp;
+                                 msg_from := msg_in_from;
+                                 msg_to := parentIdx;
+                                 msg_content := SvmInvResp v |}) with false.
+        * replace (isObjectsMsg (parentIdx :: nil)
+                                (buildMsg Resp parentIdx child_to
+                                          (if is_get then SvmGetResp v else SvmSetResp)))
+          with true.
+          { simpl; unfold parentRequestFrom; rewrite <-Heqoss; simpl.
+            repeat split.
+          }
+          { unfold isObjectsMsg.
+            rewrite orb_true_r; reflexivity.
+          }
+        * unfold isObjectsMsg, buildMsg.
+          unfold msg_to, msg_type.
+          apply eq_sym, orb_false_iff; split; auto.
+          destruct (in_dec _ _ _); auto.
+          simpl in i; destruct i; inv H4.
+          cbv in Heqmsg_in_from_children; discriminate.
 
     - (* external: contradiction *)
-      exfalso; admit.
+      admit.
     
   Admitted.
-  
+
   Lemma parent_intHistory_sequential:
     forall hst,
       HistoryOf parentObj hst ->
@@ -132,7 +200,7 @@ Section ParentSequential.
 End ParentSequential.
   
 Lemma parent_intLinear:
-  IntLinear (existT (fun st => Object SingleValueMsg st) ParentState parent :: nil).
+  IntLinear parentObj.
 Proof.
   unfold IntLinear, AbsLinear; intros.
   exists (complete hst); split; auto.

@@ -155,7 +155,7 @@ Section Language.
         find idx oss = Some (existT _ _ os) ->
         find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
-        is_internal = (if in_dec eq_nat_dec (msg_to msg_in) (getIndices obs)
+        is_internal = (if in_dec eq_nat_dec (msg_from msg_in) (getIndices obs)
                        then true else false) ->
         step obs oss oims
              msg_in msgs_out

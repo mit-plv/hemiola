@@ -71,8 +71,11 @@ Section Impl.
   Definition child1Idx := 1.
   Definition child2Idx := 2.
   Definition implIndices := parentIdx :: child1Idx :: child2Idx :: nil.
+  Definition childrenIndices := child1Idx :: child2Idx :: nil.
   Definition from_external (i: IdxT) :=
     if in_dec eq_nat_dec i implIndices then false else true.
+  Definition not_from_children (i: IdxT) :=
+    if in_dec eq_nat_dec i childrenIndices then false else true.
 
   Definition theOtherChild (idx: nat) :=
     if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
@@ -83,7 +86,7 @@ Section Impl.
 
     Definition ParentGetReq : RuleT SingleValueMsg ParentState :=
       fun msg =>
-        if from_external (msg_from msg) then fun _ => None
+        if not_from_children (msg_from msg) then fun _ => None
         else
           match msg_content msg, msg_type msg with
           | SvmGetReq, Req =>
@@ -107,7 +110,7 @@ Section Impl.
 
     Definition ParentSetReq : RuleT SingleValueMsg ParentState :=
       fun msg =>
-        if from_external (msg_from msg) then fun _ => None
+        if not_from_children (msg_from msg) then fun _ => None
         else
           match msg_content msg, msg_type msg with
           | SvmSetReq _, Req =>
@@ -130,7 +133,7 @@ Section Impl.
 
     Definition ParentInvResp : RuleT SingleValueMsg ParentState :=
       fun msg =>
-        if from_external (msg_from msg) then fun _ => None
+        if not_from_children (msg_from msg) then fun _ => None
         else
           match msg_content msg, msg_type msg with
           | SvmInvResp v, Resp =>
