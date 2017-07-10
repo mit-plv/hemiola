@@ -30,18 +30,18 @@ Section Spec.
 
   Definition SpecGetReq : RuleT SingleValueMsg SpecState :=
     fun msg =>
-      match msg_content msg with
-      | SvmGetReq => fun st => Some ((buildMsg Resp specIdx (msg_from msg)
-                                               (SvmGetResp st)) :: nil, st)
-      | _ => fun _ => None
+      match msg_content msg, msg_type msg with
+      | SvmGetReq, Req => fun st => Some ((buildMsg Resp specIdx (msg_from msg)
+                                                    (SvmGetResp st)) :: nil, st)
+      | _, _ => fun _ => None
       end.
 
   Definition SpecSetReq : RuleT SingleValueMsg SpecState :=
     fun msg =>
-      match msg_content msg with
-      | SvmSetReq v => fun _ => Some ((buildMsg Resp specIdx (msg_from msg)
+      match msg_content msg, msg_type msg with
+      | SvmSetReq v, Req => fun _ => Some ((buildMsg Resp specIdx (msg_from msg)
                                                 SvmSetResp) :: nil, v)
-      | _ => fun _ => None
+      | _, _ => fun _ => None
       end.
 
   Definition singleton : Object SingleValueMsg SpecState :=
@@ -85,8 +85,8 @@ Section Impl.
       fun msg =>
         if from_external (msg_from msg) then fun _ => None
         else
-          match msg_content msg with
-          | SvmGetReq =>
+          match msg_content msg, msg_type msg with
+          | SvmGetReq, Req =>
             fun st =>
               match ps_request_from st with
               | Some _ => None
@@ -102,15 +102,15 @@ Section Impl.
                                       ps_value := ps_value st;
                                       ps_request_from := Some (msg_from msg, true) |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end.
 
     Definition ParentSetReq : RuleT SingleValueMsg ParentState :=
       fun msg =>
         if from_external (msg_from msg) then fun _ => None
         else
-          match msg_content msg with
-          | SvmSetReq _ =>
+          match msg_content msg, msg_type msg with
+          | SvmSetReq _, Req =>
             fun st =>
               match ps_request_from st with
               | Some _ => None
@@ -125,15 +125,15 @@ Section Impl.
                                       ps_value := ps_value st;
                                       ps_request_from := Some (msg_from msg, false) |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end.
 
     Definition ParentInvResp : RuleT SingleValueMsg ParentState :=
       fun msg =>
         if from_external (msg_from msg) then fun _ => None
         else
-          match msg_content msg with
-          | SvmInvResp v =>
+          match msg_content msg, msg_type msg with
+          | SvmInvResp v, Resp =>
             fun st =>
               match ps_request_from st with
               | None => None
@@ -144,7 +144,7 @@ Section Impl.
                          ps_value := ps_value st;
                          ps_request_from := None |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end.
 
     Definition parent : Object SingleValueMsg ParentState :=
@@ -163,8 +163,8 @@ Section Impl.
     Definition ChildGetReq : RuleT SingleValueMsg ChildState :=
       fun msg =>
         if from_external (msg_from msg) then
-          match msg_content msg with
-          | SvmGetReq =>
+          match msg_content msg, msg_type msg with
+          | SvmGetReq, Req =>
             fun st =>
               match cs_request_from st with
               | Some _ => None
@@ -178,7 +178,7 @@ Section Impl.
                               cs_value := cs_value st;
                               cs_request_from := Some (msg_from msg, O) |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end
         else fun _ => None.
 
@@ -187,8 +187,8 @@ Section Impl.
       fun msg =>
         if from_external (msg_from msg) then fun _ => None
         else
-          match msg_content msg with
-          | SvmGetResp v =>
+          match msg_content msg, msg_type msg with
+          | SvmGetResp v, Resp =>
             fun st =>
               match cs_request_from st with
               | None => None
@@ -198,15 +198,15 @@ Section Impl.
                          cs_value := v;
                          cs_request_from := None |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end.
 
     (* from external *)
     Definition ChildSetReq : RuleT SingleValueMsg ChildState :=
       fun msg =>
         if from_external (msg_from msg) then
-          match msg_content msg with
-          | SvmSetReq v =>
+          match msg_content msg, msg_type msg with
+          | SvmSetReq v, Req =>
             fun st =>
               match cs_request_from st with
               | Some _ => None
@@ -222,7 +222,7 @@ Section Impl.
                               cs_value := cs_value st;
                               cs_request_from := Some (msg_from msg, v) |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end
         else fun _ => None.
 
@@ -231,8 +231,8 @@ Section Impl.
       fun msg =>
         if from_external (msg_from msg) then fun _ => None
         else
-          match msg_content msg with
-          | SvmSetResp =>
+          match msg_content msg, msg_type msg with
+          | SvmSetResp, Resp =>
             fun st =>
               match cs_request_from st with
               | None => None
@@ -242,7 +242,7 @@ Section Impl.
                          cs_value := v;
                          cs_request_from := None |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end.
 
     (* from the parent *)
@@ -250,8 +250,8 @@ Section Impl.
       fun msg =>
         if from_external (msg_from msg) then fun _ => None
         else
-          match msg_content msg with
-          | SvmInvReq =>
+          match msg_content msg, msg_type msg with
+          | SvmInvReq, Req =>
             fun st =>
               match cs_request_from st with
               | Some _ => None
@@ -261,7 +261,7 @@ Section Impl.
                                  cs_value := cs_value st;
                                  cs_request_from := cs_request_from st |})
               end
-          | _ => fun _ => None
+          | _, _ => fun _ => None
           end.
 
     Definition child : Object SingleValueMsg ChildState :=

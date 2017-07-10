@@ -97,9 +97,9 @@ Section Language.
       Msg (* in *) -> bool (* is_internal *) -> list Msg (* outs *) ->
       ObjectState StateT -> MsgsFrom -> Prop :=
     | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs msgs_out pos,
-        step_rule (obj_rules obj) fmsg (os_state os) =
-        Some (msgs_out, pos) ->
         find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
+        msg_to fmsg = obj_idx obj ->
+        step_rule (obj_rules obj) fmsg (os_state os) = Some (msgs_out, pos) ->
         step_obj obj os msgs_from
                  fmsg true msgs_out
                  {| os_state := pos |}
@@ -136,11 +136,20 @@ Section Language.
     Definition getIndices (obs: Objects) :=
       map (fun o => obj_idx (projT2 o)) obs.
 
+    Fixpoint StateOf (obs: Objects) (oss: ObjectStates) :=
+      match obs with
+      | nil => True
+      | (existT _ st obj) :: obs' =>
+        (exists os : ObjectState st, find (obj_idx obj) oss = Some (existT _ _ os)) /\
+        StateOf obs' oss
+      end.
+
     Inductive step (obs: Objects) : ObjectStates -> Messages ->
                                     Msg (* in *) -> list Msg (* outs *) ->
                                     ObjectStates -> Messages -> Prop :=
     | Step: forall oss idx {StateT} (obj: Object StateT) (os: ObjectState StateT)
                    oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
+        StateOf obs oss ->
         In (existT _ _ obj) obs ->
         obj_idx obj = idx ->
         find idx oss = Some (existT _ _ os) ->
@@ -207,18 +216,18 @@ Section Language.
      * 2) A matching response for each request should be right after the request.
      * 3) There might not be a matching response for the last request.
      *)
-    Fixpoint Sequential' (hst: list Msg) (oi: option (IdxT (* request_from *) *
-                                                      IdxT (* request_to *))) :=
+    Fixpoint Sequential' (hst: list Msg)
+             (pre post: option (IdxT (* request_from *) * IdxT (* request_to *))) :=
       match hst with
-      | nil => True
+      | nil => pre = post
       | msg :: hst' =>
-        match oi with
+        match pre with
         | Some (from, to) => msg_to msg = from /\ msg_from msg = to /\ msg_type msg = Resp /\
-                             Sequential' hst' None
-        | None => msg_type msg = Req /\ Sequential' hst' (Some (msg_from msg, msg_to msg))
+                             Sequential' hst' None post
+        | None => msg_type msg = Req /\ Sequential' hst' (Some (msg_from msg, msg_to msg)) post
         end
       end.
-    Definition Sequential (hst: list Msg) := Sequential' hst None.
+    Definition Sequential (hst: list Msg) := exists post, Sequential' hst None post.
 
     (* In message passing system, "object subhistory" and "process subhistory"
      * have exactly the same meaning; here an index "i" indicates a single object.
@@ -271,13 +280,62 @@ Section Language.
 
   Section Facts.
 
+    (** About semantics *)
+
+    Lemma step_poststate_valid:
+      forall obs oss1 msgs1 msg_in msgs_out oss2 msgs2,
+        step obs oss1 msgs1 msg_in msgs_out oss2 msgs2 ->
+        StateOf obs oss2.
+    Proof.
+      intros; inversion_clear H; subst.
+    Admitted.
+
+    Lemma steps_poststate_valid:
+      forall obs oss1 msgs1 msgs oss2 msgs2,
+        steps obs oss1 msgs1 msgs oss2 msgs2 ->
+        StateOf obs oss1 -> StateOf obs oss2.
+    Proof.
+      induction 1; simpl; intros; auto.
+      eapply step_poststate_valid; eauto.
+    Qed.
+
+    (** About linearlizability *)
+
     Lemma equivalent_refl: forall hst, Equivalent hst hst.
     Proof. intros; unfold Equivalent; reflexivity. Qed.
     Hint Immediate equivalent_refl.
 
+    Lemma sequential_app:
+      forall hst1 p1 p2,
+        Sequential' hst1 p1 p2 ->
+        forall hst2 p3,
+          Sequential' hst2 p2 p3 ->
+          Sequential' (hst1 ++ hst2) p1 p3.
+    Proof.
+      induction hst1; simpl; intros; subst; auto.
+      destruct p1 as [[ ]|].
+      - destruct H as [? [? [? ?]]]; subst.
+        repeat split; eauto.
+      - destruct H.
+        repeat split; eauto.
+    Qed.
+
     Lemma sequential_complete: forall hst, Sequential hst -> Sequential (complete hst).
     Proof.
     Admitted.
+
+    (* Lemma sequential'_app: *)
+    (*   forall (hst1 hst2: list Msg), *)
+
+    Lemma intHistory_app:
+      forall internals (hst1 hst2: list Msg),
+        intHistory internals (hst1 ++ hst2) =
+        intHistory internals hst1 ++ intHistory internals hst2.
+    Proof.
+      induction hst1; simpl; intros; auto.
+      destruct (isObjectsMsg internals a); simpl; auto.
+      f_equal; auto.
+    Qed.
 
     Lemma intHistory_complete_comm:
       forall hst internals,
