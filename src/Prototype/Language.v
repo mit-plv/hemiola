@@ -343,13 +343,6 @@ Section Language.
     Proof.
     Admitted.
     
-    Theorem extLinear_local:
-      forall obs,
-        (forall obj, In obj obs -> IntLinear (obj :: nil)) ->
-        ExtLinear obs.
-    Proof.
-    Admitted.
-
   End Facts.
 
 End Language.
