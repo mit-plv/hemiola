@@ -105,8 +105,8 @@ Section Language.
                  {| os_state := pos |}
                  (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
     | StepObjExt: forall os msgs_from emsg_in msgs_out pos,
-        step_rule (obj_rules obj) emsg_in (os_state os) =
-        Some (msgs_out, pos) ->
+        msg_to emsg_in = obj_idx obj ->
+        step_rule (obj_rules obj) emsg_in (os_state os) = Some (msgs_out, pos) ->
         step_obj obj os msgs_from
                  emsg_in false msgs_out
                  {| os_state := pos |}

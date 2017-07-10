@@ -74,8 +74,9 @@ Section Impl.
   Definition childrenIndices := child1Idx :: child2Idx :: nil.
   Definition from_external (i: IdxT) :=
     if in_dec eq_nat_dec i implIndices then false else true.
-  Definition not_from_children (i: IdxT) :=
-    if in_dec eq_nat_dec i childrenIndices then false else true.
+  Definition from_children (i: IdxT) :=
+    if eq_nat_dec i child1Idx then true
+    else if eq_nat_dec i child2Idx then true else false.
 
   Definition theOtherChild (idx: nat) :=
     if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
@@ -86,8 +87,8 @@ Section Impl.
 
     Definition ParentGetReq : RuleT SingleValueMsg ParentState :=
       fun msg =>
-        if not_from_children (msg_from msg) then fun _ => None
-        else
+        if from_children (msg_from msg)
+        then
           match msg_content msg, msg_type msg with
           | SvmGetReq, Req =>
             fun st =>
@@ -106,12 +107,12 @@ Section Impl.
                                       ps_request_from := Some (msg_from msg, true) |})
               end
           | _, _ => fun _ => None
-          end.
+          end
+        else fun _ => None.
 
     Definition ParentSetReq : RuleT SingleValueMsg ParentState :=
       fun msg =>
-        if not_from_children (msg_from msg) then fun _ => None
-        else
+        if from_children (msg_from msg) then
           match msg_content msg, msg_type msg with
           | SvmSetReq _, Req =>
             fun st =>
@@ -129,12 +130,12 @@ Section Impl.
                                       ps_request_from := Some (msg_from msg, false) |})
               end
           | _, _ => fun _ => None
-          end.
+          end
+        else fun _ => None.
 
     Definition ParentInvResp : RuleT SingleValueMsg ParentState :=
       fun msg =>
-        if not_from_children (msg_from msg) then fun _ => None
-        else
+        if from_children (msg_from msg) then
           match msg_content msg, msg_type msg with
           | SvmInvResp v, Resp =>
             fun st =>
@@ -148,7 +149,8 @@ Section Impl.
                          ps_request_from := None |})
               end
           | _, _ => fun _ => None
-          end.
+          end
+        else fun _ => None.
 
     Definition parent : Object SingleValueMsg ParentState :=
       {| obj_idx := parentIdx;

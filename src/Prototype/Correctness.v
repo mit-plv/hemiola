@@ -63,7 +63,7 @@ Section ParentSequential.
 
     invert_step.
 
-    - (* internal *)
+    - (* internal: contradiction *)
       dest_in; dest_existT.
       cbv in H2; inv H2; dest_existT.
       specialize (IHsteps _ _ H1 H6).
@@ -72,7 +72,45 @@ Section ParentSequential.
       + (* getReq *)
         destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
         unfold ParentGetReq in Heqtrs; simpl in Heqtrs.
-        remember (not_from_children msg_in_from) as msg_in_from_children.
+        remember (from_children msg_in_from) as msg_in_from_children.
+        destruct msg_in_from_children; try discriminate.
+        unfold from_children in Heqmsg_in_from_children.
+        simpl in Heqmsg_in_from_children.
+        destruct (eq_nat_dec msg_in_from child1Idx); subst; try discriminate.
+        destruct (eq_nat_dec msg_in_from child2Idx); subst; try discriminate.
+          
+      + (* setReq *)
+        clear Heqtrs; rename Heqtrs0 into Heqtrs.
+        destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
+        unfold ParentSetReq in Heqtrs; simpl in Heqtrs.
+        remember (from_children msg_in_from) as msg_in_from_children.
+        destruct msg_in_from_children; try discriminate.
+        unfold from_children in Heqmsg_in_from_children.
+        simpl in Heqmsg_in_from_children.
+        destruct (eq_nat_dec msg_in_from child1Idx); subst; try discriminate.
+        destruct (eq_nat_dec msg_in_from child2Idx); subst; try discriminate.
+
+      + (* invResp *)
+        clear Heqtrs Heqtrs0; rename Heqtrs1 into Heqtrs.
+        destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
+        unfold ParentInvResp in Heqtrs; simpl in Heqtrs.
+        remember (from_children msg_in_from) as msg_in_from_children.
+        destruct msg_in_from_children; try discriminate.
+        unfold from_children in Heqmsg_in_from_children.
+        simpl in Heqmsg_in_from_children.
+        destruct (eq_nat_dec msg_in_from child1Idx); subst; try discriminate.
+        destruct (eq_nat_dec msg_in_from child2Idx); subst; try discriminate.
+      
+    - (* external *)
+      dest_in; dest_existT.
+      cbv in H2; inv H2; dest_existT.
+      specialize (IHsteps _ _ H1 H6).
+      invert_step_rule.
+
+      + (* getReq *)
+        destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
+        unfold ParentGetReq in Heqtrs; simpl in Heqtrs.
+        remember (from_children msg_in_from) as msg_in_from_children.
         destruct msg_in_from_children; try discriminate.
         destruct msg_in_content; try discriminate.
         destruct msg_in_type; try discriminate.
@@ -100,15 +138,15 @@ Section ParentSequential.
             apply eq_sym, orb_false_iff; split; auto.
             destruct (in_dec _ _ _); auto.
             simpl in i; destruct i; inv H4.
-            unfold theOtherChild in H9.
-            destruct (eq_nat_dec _ _) in H9; discriminate.
+            unfold theOtherChild in H8.
+            destruct (eq_nat_dec _ _) in H8; discriminate.
           }
         
       + (* setReq *)
         clear Heqtrs; rename Heqtrs0 into Heqtrs.
         destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
         unfold ParentSetReq in Heqtrs; simpl in Heqtrs.
-        remember (not_from_children msg_in_from) as msg_in_from_children.
+        remember (from_children msg_in_from) as msg_in_from_children.
         destruct msg_in_from_children; try discriminate.
         destruct msg_in_content; try discriminate.
         destruct msg_in_type; try discriminate.
@@ -136,15 +174,15 @@ Section ParentSequential.
             apply eq_sym, orb_false_iff; split; auto.
             destruct (in_dec _ _ _); auto.
             simpl in i; destruct i; inv H4.
-            unfold theOtherChild in H9.
-            destruct (eq_nat_dec _ _) in H9; discriminate.
+            unfold theOtherChild in H8.
+            destruct (eq_nat_dec _ _) in H8; discriminate.
           }
 
       + (* invResp *)
         clear Heqtrs Heqtrs0; rename Heqtrs1 into Heqtrs.
         destruct msg_in as [msg_in_type msg_in_from msg_in_to msg_in_content]; simpl in *.
         unfold ParentInvResp in Heqtrs; simpl in Heqtrs.
-        remember (not_from_children msg_in_from) as msg_in_from_children.
+        remember (from_children msg_in_from) as msg_in_from_children.
         destruct msg_in_from_children; try discriminate.
         destruct msg_in_content; try discriminate.
         destruct msg_in_type; try discriminate.
@@ -177,11 +215,7 @@ Section ParentSequential.
           destruct (in_dec _ _ _); auto.
           simpl in i; destruct i; inv H4.
           cbv in Heqmsg_in_from_children; discriminate.
-
-    - (* external: contradiction *)
-      admit.
-    
-  Admitted.
+  Qed.
 
   Lemma parent_intHistory_sequential:
     forall hst,
