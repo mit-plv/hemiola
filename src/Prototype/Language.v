@@ -253,28 +253,28 @@ Section Language.
     Definition Equivalent (hst1 hst2: list Msg) :=
       forall i, objSubHistory i hst1 = objSubHistory i hst2.
 
-    Definition Linearlizable' (hst lhst: list Msg) :=
+    Definition Linearizable' (hst lhst: list Msg) :=
       Sequential lhst /\ Equivalent (complete hst) lhst.
 
-    Definition Linearlizable (hst: list Msg) :=
-      exists lhst, Linearlizable' hst lhst.
+    Definition Linearizable (hst: list Msg) :=
+      exists lhst, Linearizable' hst lhst.
 
     Definition AbsLinear (obs: Objects) (absF: list Msg -> list Msg) :=
       forall hst,
         HistoryOf obs hst ->
         exists shst, HistoryOf obs shst /\
-                     Linearlizable' (absF hst) (absF shst).
+                     Linearizable' (absF hst) (absF shst).
 
     Definition IntLinear (obs: Objects) :=
       AbsLinear obs (intHistory (getIndices obs)).
     Definition ExtLinear (obs: Objects) :=
       AbsLinear obs (extHistory (getIndices obs)).
 
-    (* A system is linear when all possible histories are linearlizable. *)
+    (* A system is linear when all possible histories are linearizable. *)
     Definition Linear (obs: Objects) :=
       forall hst,
         HistoryOf obs hst ->
-        exists shst, HistoryOf obs shst /\ Linearlizable' hst shst.
+        exists shst, HistoryOf obs shst /\ Linearizable' hst shst.
 
   End Semantics.
 
@@ -299,11 +299,20 @@ Section Language.
       eapply step_poststate_valid; eauto.
     Qed.
 
-    (** About linearlizability *)
+    (** About linearizability *)
 
     Lemma equivalent_refl: forall hst, Equivalent hst hst.
     Proof. intros; unfold Equivalent; reflexivity. Qed.
     Hint Immediate equivalent_refl.
+
+    Lemma equivalent_app:
+      forall hst1 hst2,
+        Equivalent hst1 hst2 ->
+        forall hst3 hst4,
+          Equivalent hst3 hst4 ->
+          Equivalent (hst1 ++ hst3) (hst2 ++ hst4).
+    Proof.
+      
 
     Lemma sequential_app:
       forall hst1 p1 p2,
@@ -342,7 +351,41 @@ Section Language.
         intHistory internals (complete hst) = complete (intHistory internals hst).
     Proof.
     Admitted.
-    
+
+    Lemma complete_sequential_app:
+      forall seq hst,
+        Sequential' seq None None ->
+        complete (seq ++ hst) = seq ++ complete hst.
+    Proof.
+    Admitted.
+
+    Lemma linearizable_sequential_app:
+      forall hst lhst,
+        Linearizable' hst lhst ->
+        forall seq,
+          Sequential' seq None None ->
+          Linearizable' (seq ++ hst) (seq ++ lhst).
+    Proof.
+      unfold Linearizable', Sequential; intros.
+      destruct H as [[post ?] ?].
+      split.
+      - eexists; eapply sequential_app; eauto.
+      - rewrite complete_sequential_app by assumption.
+        
+    Admitted.
+
+    Lemma linearizable_sequential_closed:
+      forall seq hst,
+        Sequential' seq None None ->
+        Linearizable hst ->
+        Linearizable (seq ++ hst).
+    Proof.
+      unfold Linearizable; intros.
+      destruct H0 as [lhst ?].
+      exists (seq ++ lhst).
+      apply linearizable_sequential_app; auto.
+    Qed.
+
   End Facts.
 
 End Language.

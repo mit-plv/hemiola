@@ -16,7 +16,6 @@ Section Reduction.
       forall obs oss1 oims1 oss2 oims2 hst2 hst1,
         steps obs oss1 oims1 (hst1 ++ msg1 :: msg2 :: hst2) oss2 oims2 ->
         steps obs oss1 oims1 (hst1 ++ msg2 :: msg1 :: hst2) oss2 oims2.
-  Proof.
   Admitted.
 
   Theorem reduction_preserves_steps:
