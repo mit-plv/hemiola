@@ -9,56 +9,62 @@ Section Language.
 
   Definition IdxT := nat.
 
-  (* A message is always either a request or a response.
-   * A request indicates a start of a transaction.
-   * A corresponding response indicates the end of the transaction.
-   *)
-  Variable MsgT: Type.
+  (* A message is always either a request or a response. *)
   Inductive MsgType := Req | Resp.
-  Record Msg := { msg_type : MsgType;
-                  msg_from : IdxT;
-                  msg_to : IdxT;
-                  msg_content : MsgT }.
-  Definition buildMsg ty fr to co :=
-    {| msg_type := ty; msg_from := fr; msg_to := to; msg_content := co |}.
-  
-  Section Syntax.
+  Variable MsgT: MsgType -> Type.
 
-    Section Object.
-      Variable StateT: Type.
+  Section Message.
+    
+    Record Msg := { msg_from : IdxT;
+                    msg_to : IdxT;
+                    msg_type : MsgType;
+                    msg_content : MsgT msg_type }.
 
-      (* For output messages, it's more robust to have a type of [set Msg],
-       * but it's fine if no two messages have the same receiver [msg_to].
-       * It's worth considering this condition being the part of well-formedness.
-       *)
-      Definition CmdT :=
-        StateT -> option (list Msg (* messages out *) * StateT (* next state *)).
-      Definition RuleT := Msg -> CmdT.
+    Definition buildMsg fr to {ty} (co: MsgT ty) :=
+      {| msg_from := fr; msg_to := to;
+         msg_type := ty; msg_content := co |}.
 
-      Record Object :=
-        { obj_idx: nat;
-          obj_state_init: StateT;
-          obj_rules: list RuleT;
-        }.
+  End Message.
 
-    End Object.
+  Section Object.
+    Variable StateT: Type.
 
-    Definition Objects := list { st : Type & Object st }.
+    (* For output messages, it's more accurate to have a type of [set Msg],
+     * but it's fine if no two messages have the same receiver [msg_to].
+     * This condition should be the part of well-formedness later.
+     *)
+    Definition CmdT :=
+      StateT -> option (list Msg (* messages out *) * StateT (* next state *)).
+    
+    Definition RuleT := Msg -> CmdT.
 
-  End Syntax.
+    Record Object :=
+      { obj_idx: nat;
+        obj_state_init: StateT;
+        obj_rules: list RuleT;
+      }.
+
+  End Object.
+
+  (* Record PMsg StateT := *)
+  (*   { pmsg_msg: Msg; *)
+  (*     pmsg_precond: StateT -> Prop *)
+  (*     pmsg_postcond: Msg -> StateT -> Prop *)
+  (*   }. *)
+
+  Definition Objects := list { st : Type & Object st }.
 
   Section Semantics.
 
     Record ObjectState StateT :=
-      { (* os_obj: Object StateT; *)
-        os_state: StateT
-      }.
+      { os_state: StateT }.
 
     Definition ObjectStates :=
       Map IdxT { StateT : Type & ObjectState StateT }.
 
-    Definition MsgsFrom := Map (IdxT * MsgType) (* (from, msgType) *) (list Msg).
-    Definition Messages := Map IdxT (* to *) MsgsFrom.
+    Definition MsgsFrom (* Handler's state *) :=
+      Map (IdxT * MsgType) (* (from, msgType) *) (list Msg).
+    Definition Messages (* Handler's state *) := Map IdxT (* to *) MsgsFrom.
 
     Definition idx_add {A} (k: IdxT) (v: A) m := add eq_nat_dec k v m.
     Definition idx_msgType_dec: forall (k1 k2: IdxT * MsgType), {k1 = k2} + {k1 <> k2}.
@@ -305,15 +311,6 @@ Section Language.
     Proof. intros; unfold Equivalent; reflexivity. Qed.
     Hint Immediate equivalent_refl.
 
-    Lemma equivalent_app:
-      forall hst1 hst2,
-        Equivalent hst1 hst2 ->
-        forall hst3 hst4,
-          Equivalent hst3 hst4 ->
-          Equivalent (hst1 ++ hst3) (hst2 ++ hst4).
-    Proof.
-      
-
     Lemma sequential_app:
       forall hst1 p1 p2,
         Sequential' hst1 p1 p2 ->
@@ -332,9 +329,6 @@ Section Language.
     Lemma sequential_complete: forall hst, Sequential hst -> Sequential (complete hst).
     Proof.
     Admitted.
-
-    (* Lemma sequential'_app: *)
-    (*   forall (hst1 hst2: list Msg), *)
 
     Lemma intHistory_app:
       forall internals (hst1 hst2: list Msg),
@@ -371,7 +365,6 @@ Section Language.
       split.
       - eexists; eapply sequential_app; eauto.
       - rewrite complete_sequential_app by assumption.
-        
     Admitted.
 
     Lemma linearizable_sequential_closed:

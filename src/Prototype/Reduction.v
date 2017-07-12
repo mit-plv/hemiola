@@ -2,7 +2,7 @@ Require Import List String Peano_dec.
 Require Import FnMap Language.
 
 Section Reduction.
-  Variable MsgT: Type.
+  Variable MsgT: MsgType -> Type.
   Definition Msg := Msg MsgT.
 
   Definition Reduced (from to: list Msg) (msg1 msg2: Msg) :=
