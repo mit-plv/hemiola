@@ -33,38 +33,30 @@ Section Language.
      * but it's fine if no two messages have the same receiver [msg_to].
      * This condition should be the part of well-formedness later.
      *)
-    Definition CmdT :=
-      StateT -> option (list Msg (* messages out *) * StateT (* next state *)).
-    
-    Definition RuleT := Msg -> CmdT.
+    Record Rule :=
+      { rule_precond: StateT -> Prop;
+        rule_body: Msg -> StateT ->
+                   option (list Msg (* messages out *) * StateT (* next state *))
+      }.
 
     Record Object :=
       { obj_idx: nat;
         obj_state_init: StateT;
-        obj_rules: list RuleT;
+        obj_rules: list Rule;
       }.
 
   End Object.
-
-  (* Record PMsg StateT := *)
-  (*   { pmsg_msg: Msg; *)
-  (*     pmsg_precond: StateT -> Prop *)
-  (*     pmsg_postcond: Msg -> StateT -> Prop *)
-  (*   }. *)
 
   Definition Objects := list { st : Type & Object st }.
 
   Section Semantics.
 
-    Record ObjectState StateT :=
-      { os_state: StateT }.
-
     Definition ObjectStates :=
-      Map IdxT { StateT : Type & ObjectState StateT }.
+      Map IdxT { StateT : Type & StateT }.
 
-    Definition MsgsFrom (* Handler's state *) :=
+    Definition MsgsFrom :=
       Map (IdxT * MsgType) (* (from, msgType) *) (list Msg).
-    Definition Messages (* Handler's state *) := Map IdxT (* to *) MsgsFrom.
+    Definition Messages := Map IdxT (* to *) MsgsFrom.
 
     Definition idx_add {A} (k: IdxT) (v: A) m := add eq_nat_dec k v m.
     Definition idx_msgType_dec: forall (k1 k2: IdxT * MsgType), {k1 = k2} + {k1 <> k2}.
@@ -82,41 +74,31 @@ Section Language.
     Definition idx_idx_add {A} (k: IdxT * IdxT) (v: A) m :=
       add idx_idx_dec k v m.
 
-    (* Return the result handled meaningfully first by a rule. *)
-    Fixpoint step_rule {StateT} (rules: list (RuleT StateT))
-             (imsg: Msg) (st: StateT) :=
-      match rules with
-      | nil => None
-      | r :: rules' =>
-        match r imsg st with 
-        | Some mst => Some mst
-        | None => step_rule rules' imsg st
-        end
-      end.
-
     (* Note that [StepObjExt] takes an arbitrary message [emsg_in] as an input
      * message; the validity for the message is checked at [step], which 
      * employes this definition.
      *)
     Inductive step_obj {StateT} (obj: Object StateT):
-      ObjectState StateT -> MsgsFrom ->
+      StateT -> MsgsFrom ->
       Msg (* in *) -> bool (* is_internal *) -> list Msg (* outs *) ->
-      ObjectState StateT -> MsgsFrom -> Prop :=
-    | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs msgs_out pos,
+      StateT -> MsgsFrom -> Prop :=
+    | StepObjInt: forall os msgs_from fidx fmsgT fmsg fmsgs msgs_out pos rule,
         find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
         msg_to fmsg = obj_idx obj ->
-        step_rule (obj_rules obj) fmsg (os_state os) = Some (msgs_out, pos) ->
+        In rule (obj_rules obj) ->
+        rule_precond rule os ->
+        rule_body rule fmsg os = Some (msgs_out, pos) ->
         step_obj obj os msgs_from
                  fmsg true msgs_out
-                 {| os_state := pos |}
-                 (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
-    | StepObjExt: forall os msgs_from emsg_in msgs_out pos,
+                 pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
+    | StepObjExt: forall os msgs_from emsg_in msgs_out pos rule,
         msg_to emsg_in = obj_idx obj ->
-        step_rule (obj_rules obj) emsg_in (os_state os) = Some (msgs_out, pos) ->
+        In rule (obj_rules obj) ->
+        rule_precond rule os -> 
+        rule_body rule emsg_in os = Some (msgs_out, pos) ->
         step_obj obj os msgs_from
                  emsg_in false msgs_out
-                 {| os_state := pos |}
-                 msgs_from.
+                 pos msgs_from.
 
     Fixpoint distr_msgs (from: IdxT) (to: list Msg)
              (msgs: Messages): Messages :=
@@ -146,14 +128,14 @@ Section Language.
       match obs with
       | nil => True
       | (existT _ st obj) :: obs' =>
-        (exists os : ObjectState st, find (obj_idx obj) oss = Some (existT _ _ os)) /\
+        (exists os : st, find (obj_idx obj) oss = Some (existT _ _ os)) /\
         StateOf obs' oss
       end.
 
     Inductive step (obs: Objects) : ObjectStates -> Messages ->
                                     Msg (* in *) -> list Msg (* outs *) ->
                                     ObjectStates -> Messages -> Prop :=
-    | Step: forall oss idx {StateT} (obj: Object StateT) (os: ObjectState StateT)
+    | Step: forall oss idx {StateT} (obj: Object StateT) (os: StateT)
                    oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
         StateOf obs oss ->
         In (existT _ _ obj) obs ->
@@ -179,14 +161,12 @@ Section Language.
             step obs oss2 oims2 msg_in msgs_out oss3 oims3 ->
             steps obs oss1 oims1 (emsgs ++ msg_in :: msgs_out) oss3 oims3.
 
-    Definition getObjectStateInit {StateT} (obj: Object StateT) :=
-      {| os_state := obj_state_init obj |}.
     Fixpoint getObjectStatesInit (obs: Objects) : ObjectStates :=
       match obs with
       | nil => @empty _ _
-      | obj :: obs' =>
-        idx_add (obj_idx (projT2 obj))
-                (existT _ _ (getObjectStateInit (projT2 obj)))
+      | (existT _ st obj) :: obs' =>
+        idx_add (obj_idx obj)
+                (existT _ st (obj_state_init obj))
                 (getObjectStatesInit obs')
       end.
 
