@@ -7,13 +7,13 @@ Open Scope list.
 
 Inductive SingleValueMsg : MsgType -> Set :=
 (* external *)
-| SvmGetReq : SingleValueMsg Req
-| SvmGetResp (v: nat) : SingleValueMsg Resp
-| SvmSetReq (v: nat) : SingleValueMsg Req
-| SvmSetResp : SingleValueMsg Resp
+| GetReq : SingleValueMsg Rq
+| GetResp (v: nat) : SingleValueMsg Rs
+| SetReq (v: nat) : SingleValueMsg Rq
+| SetResp : SingleValueMsg Rs
 (* internal *)
-| SvmInvReq : SingleValueMsg Req
-| SvmInvResp (v: nat) : SingleValueMsg Resp.
+| InvReq : SingleValueMsg Rq
+| InvResp (v: nat) : SingleValueMsg Rs.
 
 Notation "'T'" := (fun _ => True) (at level 30).
 
@@ -23,23 +23,25 @@ Section Spec.
   Definition specIdx := 0.
 
   Definition SpecGetReq : Rule SingleValueMsg SpecState :=
-    {| rule_precond := T;
+    {| rule_precond_rqs := T;
        rule_body :=
          fun msg st =>
            match msg_content msg with
-           | SvmGetReq => Some ((buildMsg _ specIdx (msg_from msg)
-                                          (SvmGetResp st)) :: nil, st)
+           | GetReq => Some ({| pm_msg := buildMsg _ (msg_rq msg) (msg_rs msg) (GetResp st);
+                                pm_rs_precond := T |} :: nil,
+                             st)
            | _ => None
            end
     |}.
 
   Definition SpecSetReq : Rule SingleValueMsg SpecState :=
-    {| rule_precond := T;
+    {| rule_precond_rqs := T;
        rule_body :=
          fun msg st =>
            match msg_content msg with
-           | SvmSetReq v => Some ((buildMsg _ specIdx (msg_from msg)
-                                            SvmSetResp) :: nil, v)
+           | SetReq v => Some ({| pm_msg := buildMsg _ (msg_rq msg) (msg_rs msg) SetResp;
+                                  pm_rs_precond := T |} :: nil,
+                               v)
            | _ => None
            end
     |}.
@@ -49,9 +51,8 @@ Section Spec.
        obj_state_init := 0;
        obj_rules := SpecGetReq :: SpecSetReq :: nil |}.
 
-  Definition spec : Objects SingleValueMsg :=
-    (existT (fun st => Object SingleValueMsg st) SpecState singleton)
-      :: nil.
+  Definition spec : Objects SingleValueMsg SpecState :=
+    singleton :: nil.
 
 End Spec.
 
@@ -60,24 +61,23 @@ Section Impl.
   Record ParentState :=
     { ps_is_valid : bool;
       ps_value : nat;
-      ps_request_from : option (IdxT * bool) (* is_get *)
+      (* ps_request_from : option (IdxT * bool) (* is_get *) *)
     }.
   Record ChildState :=
     { cs_is_valid : bool;
       cs_value : nat;
-      cs_request_from : option (IdxT * nat) }.
+      (* cs_request_from : option (IdxT * nat) *)
+    }.
 
   Definition parentIdx := 0.
   Definition child1Idx := 1.
   Definition child2Idx := 2.
   Definition implIndices := parentIdx :: child1Idx :: child2Idx :: nil.
-  Definition childrenIndices := child1Idx :: child2Idx :: nil.
   Definition from_external (i: IdxT) :=
     if in_dec eq_nat_dec i implIndices then false else true.
   Definition from_children (i: IdxT) :=
     if eq_nat_dec i child1Idx then true
     else if eq_nat_dec i child2Idx then true else false.
-
   Definition theOtherChild (idx: nat) :=
     if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
 
@@ -86,10 +86,10 @@ Section Impl.
     (* All messages are from children. *)
 
     Definition ParentGetReq : Rule SingleValueMsg ParentState :=
-      {| rule_precond := fun st => ps_request_from st = None;
+      {| rule_precond_rqs := fun rqs => rqs <> nil;
          rule_body :=
            fun msg st =>
-             if from_children (msg_from msg) then
+             if from_children (msg_rq msg) then
                match msg_content msg with
                | SvmGetReq =>
                  if ps_is_valid st
@@ -98,8 +98,8 @@ Section Impl.
                             {| ps_is_valid := false;
                                ps_value := ps_value st;
                                ps_request_from := ps_request_from st |})
-                 else Some ((buildMsg _ parentIdx (theOtherChild (msg_from msg))
-                                      SvmInvReq) :: nil,
+                 else Some ((buildMsg _ parentIdx (theOtherChild (msg_rq msg))
+                                      InvReq) :: nil,
                             {| ps_is_valid := ps_is_valid st;
                                ps_value := ps_value st;
                                ps_request_from := Some (msg_from msg, true) |})
