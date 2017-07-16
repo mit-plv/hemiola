@@ -11,6 +11,23 @@ Section Language.
 
   (* A message is always either a request or a response. *)
   Inductive MsgType := Rq | Rs.
+  
+  (** Utilities *)
+  Definition idx_add {A} (k: IdxT) (v: A) m := add eq_nat_dec k v m.
+  Definition idx_msgType_dec: forall (k1 k2: IdxT * MsgType), {k1 = k2} + {k1 <> k2}.
+  Proof.
+    decide equality.
+    - decide equality.
+    - apply eq_nat_dec.
+  Defined.
+  Definition idx_msgType_add {A} (k: IdxT * MsgType) (v: A) m :=
+    add idx_msgType_dec k v m.
+  Definition idx_idx_dec: forall (k1 k2: IdxT * IdxT), {k1 = k2} + {k1 <> k2}.
+  Proof.
+    decide equality; apply eq_nat_dec.
+  Defined.
+  Definition idx_idx_add {A} (k: IdxT * IdxT) (v: A) m :=
+    add idx_idx_dec k v m.
 
   (* Used in a whole system *)
   Variable MsgT: MsgType -> Type.
@@ -26,8 +43,14 @@ Section Language.
   Inductive TLock ValueT :=
   | TUnlocked : TLock ValueT
   | TLocked : ValueT -> TLock ValueT.
-  Definition TrsLock := { valT : Type & TLock valT }.
-  Definition TrsLocks := list { valT : Type & TLock valT }.
+
+  Record LockElts :=
+    { le_idx : IdxT;
+      le_val : nat;
+      le_flag : bool
+    }.
+  Definition TrsLock := TLock LockElts. (* TODO: need to generalize *)
+  Definition TrsLocks := Map (IdxT (* rq *) * IdxT (* rs *)) TrsLock.
 
   Section Message.
     Record Msg := { msg_rq : IdxT; (* an object that requests this message *)
@@ -51,24 +74,40 @@ Section Language.
       {| msg_rq := rq; msg_rs := rs;
          msg_type := ty; msg_content := co |}.
 
-    Record PredMsg := { pm_msg : Msg;
-                        pm_trs_lock : TrsLock;
-                        pm_rs_precond : StateT -> Prop;
-                      }.
+    Inductive PredMsg :=
+    | PmRq: forall (msg: Msg)
+                   (* Right after the request is sent, this lock is activated. *)
+                   (olock: option TrsLock)
+                   (* In order to handle the request, [precond] should be satisfied. *)
+                   (precond: StateT -> TrsLocks -> Prop), PredMsg
+    | PmRs: forall (msg: Msg) , PredMsg.
+
+    Definition msgOf (pmsg: PredMsg) :=
+      match pmsg with
+      | PmRq msg _ _ => msg
+      | PmRs msg => msg
+      end.
+
+    Definition precondOf (pmsg: PredMsg) :=
+      match pmsg with
+      | PmRq _ _ precond => precond
+      | PmRs _ => fun _ _ => True
+      end.
 
   End Message.
 
   Section Object.
     
-    (* For output messages, it's more accurate to have a type of [set Msg],
-     * but it's fine if no two messages have the same receiver [msg_to].
-     * This condition should be the part of well-formedness later.
+    (* About rules:
+     * 1) For output messages, it's more accurate to have a type of [set Msg],
+     *    but it's fine if no two messages have the same receiver [msg_to].
+     *    This condition should be the part of well-formedness later.
+     * 2) A rule doesn't need to give the post [TrsLocks] state, locks are 
+     *    automatically held/released by transactions.
      *)
-    Record Rule :=
-      { rule_precond_rqs : list PredMsg -> Prop;
-        rule_body : Msg -> StateT ->
-                    option (list PredMsg (* messages out *) * StateT (* next state *))
-      }.
+    Definition Rule :=
+      Msg -> TrsLocks -> StateT ->
+      option (list PredMsg (* messages out *) * StateT (* next state *)).
 
     Record Object :=
       { obj_idx: nat;
@@ -84,8 +123,14 @@ Section Language.
 
     Record ObjectState :=
       { os_st: StateT;
-        os_rqs: list PredMsg;
+        (* list of (request, lock) *)
+        os_trs_locks: list (Msg * TrsLock)
       }.
+    Fixpoint locksOf (ls: list (Msg * TrsLock)) :=
+      match ls with
+      | nil => @empty _ _
+      | (msg, l) :: ls' => idx_idx_add (msg_rq msg, msg_rs msg) l (locksOf ls')
+      end.
 
     Definition isPair (m1 m2: Msg) :=
       (if eq_nat_dec (msg_rq m1) (msg_rq m2) then true else false)
@@ -96,11 +141,31 @@ Section Language.
             | _, _ => false
             end).
 
-    Fixpoint removeRq (rs: PredMsg) (rqs: list PredMsg) :=
-      match rqs with
+    Fixpoint addLocks (msgs_out: list PredMsg) (locks: list (Msg * TrsLock)) :=
+      match msgs_out with
+      | nil => locks
+      | msg_out :: msgs_out' =>
+        match msg_out with
+        | PmRq msg (Some lock) precond => addLocks msgs_out' ((msg, lock) :: locks)
+        | _ => addLocks msgs_out' locks
+        end
+      end.
+
+    Fixpoint removeLock (rs: Msg) (locks: list (Msg * TrsLock)) :=
+      match locks with
       | nil => nil
-      | rq :: rqs =>
-        if isPair (pm_msg rs) (pm_msg rq) then rqs else rq :: (removeRq rs rqs)
+      | (rq, lock) :: locks =>
+        if isPair rs rq
+        then locks
+        else (rq, lock) :: (removeLock rs locks)
+      end.
+
+    Definition manageLock (msg_in: PredMsg) (msgs_out: list PredMsg)
+               (locks: list (Msg * TrsLock)) (st: StateT) :=
+      let alocks := addLocks msgs_out locks in
+      match msg_in with
+      | PmRs msg => removeLock msg alocks
+      | _ => alocks
       end.
 
     Definition ObjectStates := Map IdxT ObjectState.
@@ -108,22 +173,6 @@ Section Language.
     Definition MsgsFrom :=
       Map (IdxT * MsgType) (* (from, msgType) *) (list PredMsg).
     Definition Messages := Map IdxT (* to *) MsgsFrom.
-
-    Definition idx_add {A} (k: IdxT) (v: A) m := add eq_nat_dec k v m.
-    Definition idx_msgType_dec: forall (k1 k2: IdxT * MsgType), {k1 = k2} + {k1 <> k2}.
-    Proof.
-      decide equality.
-      - decide equality.
-      - apply eq_nat_dec.
-    Defined.
-    Definition idx_msgType_add {A} (k: IdxT * MsgType) (v: A) m :=
-      add idx_msgType_dec k v m.
-    Definition idx_idx_dec: forall (k1 k2: IdxT * IdxT), {k1 = k2} + {k1 <> k2}.
-    Proof.
-      decide equality; apply eq_nat_dec.
-    Defined.
-    Definition idx_idx_add {A} (k: IdxT * IdxT) (v: A) m :=
-      add idx_idx_dec k v m.
 
     (* Note that [StepObjExt] takes an arbitrary message [emsg_in] as an input
      * message; the validity for the message is checked at [step], which 
@@ -135,29 +184,29 @@ Section Language.
       ObjectState -> MsgsFrom -> Prop :=
     | StepObjInt: forall os msgs_from fidx fpmsgT fpmsg fpmsgs msgs_out pos rule,
         find (fidx, fpmsgT) msgs_from = Some (fpmsg :: fpmsgs) ->
-        msgTo (pm_msg fpmsg) = obj_idx obj ->
-        pm_rs_precond fpmsg (os_st os) ->
+        msgTo (msgOf fpmsg) = obj_idx obj ->
+        precondOf fpmsg (os_st os) (locksOf (os_trs_locks os)) ->
         In rule (obj_rules obj) ->
-        rule_precond_rqs rule (os_rqs os) ->
-        rule_body rule (pm_msg fpmsg) (os_st os) = Some (msgs_out, pos) ->
+        rule (msgOf fpmsg) (locksOf (os_trs_locks os)) (os_st os) = Some (msgs_out, pos) ->
         step_obj obj os msgs_from
                  fpmsg true msgs_out
-                 {| os_st := pos; os_rqs := removeRq fpmsg (os_rqs os) |}
+                 {| os_st := pos;
+                    os_trs_locks := manageLock fpmsg msgs_out (os_trs_locks os) (os_st os) |}
                  (idx_msgType_add (fidx, fpmsgT) fpmsgs msgs_from)
     | StepObjExt: forall os msgs_from epmsg msgs_out pos rule,
-        msgTo (pm_msg epmsg) = obj_idx obj ->
-        pm_rs_precond epmsg (os_st os) ->
+        msgTo (msgOf epmsg) = obj_idx obj ->
+        precondOf epmsg (os_st os) (locksOf (os_trs_locks os)) ->
         In rule (obj_rules obj) ->
-        rule_precond_rqs rule (os_rqs os) -> 
-        rule_body rule (pm_msg epmsg) (os_st os) = Some (msgs_out, pos) ->
+        rule (msgOf epmsg) (locksOf (os_trs_locks os)) (os_st os) = Some (msgs_out, pos) ->
         step_obj obj os msgs_from
                  epmsg false msgs_out
-                 {| os_st := pos; os_rqs := removeRq epmsg (os_rqs os) |}
+                 {| os_st := pos;
+                    os_trs_locks := manageLock epmsg msgs_out (os_trs_locks os) (os_st os) |}
                  msgs_from.
 
     Definition distributeMsg (from: IdxT) (pmsg: PredMsg)
                (msgs: Messages): Messages :=
-      let msg := pm_msg pmsg in
+      let msg := msgOf pmsg in
       let to := msgTo msg in
       match find to msgs with
       | Some toMsgs =>
@@ -189,7 +238,7 @@ Section Language.
         find idx oss = Some os ->
         find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
-        is_internal = (if in_dec eq_nat_dec (msgFrom (pm_msg msg_in)) (getIndices obs)
+        is_internal = (if in_dec eq_nat_dec (msgFrom (msgOf msg_in)) (getIndices obs)
                        then true else false) ->
         step obs oss oims
              msg_in msgs_out
@@ -212,7 +261,7 @@ Section Language.
       | nil => @empty _ _
       | obj :: obs' =>
         idx_add (obj_idx obj)
-                {| os_st := obj_state_init obj; os_rqs := nil |}
+                {| os_st := obj_state_init obj; os_trs_locks := nil |}
                 (getObjectStatesInit obs')
       end.
 
@@ -220,7 +269,7 @@ Section Language.
     | History:
         forall obs oss oims phst,
           steps obs (getObjectStatesInit obs) (@empty _ _) phst oss oims ->
-          HistoryOf obs (map pm_msg phst).
+          HistoryOf obs (map msgOf phst).
 
     (* A maximum subsequence of H consisting only of requests and matching responses. *)
     (** TODO: Should be a fancier implementation *)

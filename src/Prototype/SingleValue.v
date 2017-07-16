@@ -1,5 +1,5 @@
 Require Import List String Peano_dec.
-Require Import Language.
+Require Import FnMap Language.
 
 Set Implicit Arguments.
 
@@ -15,36 +15,31 @@ Inductive SingleValueMsg : MsgType -> Set :=
 | InvReq : SingleValueMsg Rq
 | InvResp (v: nat) : SingleValueMsg Rs.
 
-Notation "'T'" := (fun _ => True) (at level 30).
-
 Section Spec.
 
   Definition SpecState := nat. (* a single value *)
   Definition specIdx := 0.
 
+  Definition pmsgGetResp rq rs v : PredMsg SingleValueMsg SpecState :=
+    PmRs _ (buildMsg _ rq rs (GetResp v)).
+  Definition pmsgSetResp rq rs : PredMsg SingleValueMsg SpecState :=
+    PmRs _ (buildMsg _ rq rs SetResp).
+
   Definition SpecGetReq : Rule SingleValueMsg SpecState :=
-    {| rule_precond_rqs := T;
-       rule_body :=
-         fun msg st =>
-           match msg_content msg with
-           | GetReq => Some ({| pm_msg := buildMsg _ (msg_rq msg) (msg_rs msg) (GetResp st);
-                                pm_rs_precond := T |} :: nil,
-                             st)
-           | _ => None
-           end
-    |}.
+    fun msg _ st =>
+      match msg_content msg with
+      | GetReq => Some ((pmsgGetResp (msg_rq msg) (msg_rs msg) st) :: nil,
+                        st)
+      | _ => None
+      end.
 
   Definition SpecSetReq : Rule SingleValueMsg SpecState :=
-    {| rule_precond_rqs := T;
-       rule_body :=
-         fun msg st =>
-           match msg_content msg with
-           | SetReq v => Some ({| pm_msg := buildMsg _ (msg_rq msg) (msg_rs msg) SetResp;
-                                  pm_rs_precond := T |} :: nil,
-                               v)
-           | _ => None
-           end
-    |}.
+    fun msg _ st =>
+      match msg_content msg with
+      | SetReq v => Some ((pmsgSetResp (msg_rq msg) (msg_rs msg)) :: nil,
+                          v)
+      | _ => None
+      end.
 
   Definition singleton : Object SingleValueMsg SpecState :=
     {| obj_idx := 0;
@@ -58,15 +53,9 @@ End Spec.
 
 Section Impl.
 
-  Record ParentState :=
-    { ps_is_valid : bool;
-      ps_value : nat;
-      (* ps_request_from : option (IdxT * bool) (* is_get *) *)
-    }.
-  Record ChildState :=
-    { cs_is_valid : bool;
-      cs_value : nat;
-      (* cs_request_from : option (IdxT * nat) *)
+  Record ImplState :=
+    { impl_is_valid : bool;
+      impl_value : nat;
     }.
 
   Definition parentIdx := 0.
@@ -81,81 +70,93 @@ Section Impl.
   Definition theOtherChild (idx: nat) :=
     if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
 
+  Section PredMsgs.
+
+    Definition pmsgParentGetReq rq rs : PredMsg SingleValueMsg ImplState :=
+      PmRq (buildMsg _ rq rs GetReq)
+           (Some (TLocked {| le_idx := rq; le_val := O; le_flag := false |}))
+           (fun st locks => locks = @empty _ _).
+    Definition pmsgParentGetResp rq rs v : PredMsg SingleValueMsg ImplState :=
+      PmRs _ (buildMsg _ rq rs (GetResp v)).
+    
+    Definition pmsgParentSetReq rq rs v : PredMsg SingleValueMsg ImplState :=
+      PmRq (buildMsg _ rq rs (SetReq v))
+           (Some (TLocked {| le_idx := rq; le_val := v; le_flag := false |}))
+           (fun st locks => locks = @empty _ _).
+    Definition pmsgParentSetResp rq rs : PredMsg SingleValueMsg ImplState :=
+      PmRs _ (buildMsg _ rq rs SetResp).
+
+    Definition pmsgChildGetReq := pmsgParentGetReq.
+    Definition pmsgChildGetResp := pmsgParentGetResp.
+    Definition pmsgChildSetReq := pmsgParentSetReq.
+    Definition pmsgChildSetResp := pmsgParentSetResp.
+    Definition pmsgChildInvReq rq rs (is_get: bool) : PredMsg SingleValueMsg ImplState :=
+      PmRq (buildMsg _ rq rs InvReq)
+           (Some (TLocked {| le_idx := rq; le_val := O; le_flag := is_get |}))
+           (fun st locks => impl_is_valid st = true).
+    Definition pmsgChildInvResp rq rs v : PredMsg SingleValueMsg ImplState :=
+      PmRs _ (buildMsg _ rq rs (InvResp v)).
+
+  End PredMsgs.
+
   Section Parent.
 
-    (* All messages are from children. *)
+    (** All messages are from children. *)
 
-    Definition ParentGetReq : Rule SingleValueMsg ParentState :=
-      {| rule_precond_rqs := fun rqs => rqs <> nil;
-         rule_body :=
-           fun msg st =>
-             if from_children (msg_rq msg) then
-               match msg_content msg with
-               | SvmGetReq =>
-                 if ps_is_valid st
-                 then Some ((buildMsg _ parentIdx (msg_from msg)
-                                      (SvmGetResp (ps_value st))) :: nil,
-                            {| ps_is_valid := false;
-                               ps_value := ps_value st;
-                               ps_request_from := ps_request_from st |})
-                 else Some ((buildMsg _ parentIdx (theOtherChild (msg_rq msg))
-                                      InvReq) :: nil,
-                            {| ps_is_valid := ps_is_valid st;
-                               ps_value := ps_value st;
-                               ps_request_from := Some (msg_from msg, true) |})
-               | _ => None
-               end
-             else None
-      |}.
+    Definition ParentGetReq : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_children (msg_rq msg) then
+          match msg_content msg with
+          | GetReq =>
+            if impl_is_valid st
+            then Some ((pmsgParentGetResp (msg_rq msg) (msg_rs msg) (impl_value st)) :: nil,
+                       {| impl_is_valid := false;
+                          impl_value := impl_value st |})
+            else Some ((pmsgChildInvReq parentIdx (theOtherChild (msg_rq msg)) true) :: nil,
+                       {| impl_is_valid := impl_is_valid st;
+                          impl_value := impl_value st |})
+          | _ => None
+          end
+        else None.
 
-    Definition ParentSetReq : Rule SingleValueMsg ParentState :=
-      {| rule_precond := fun st => ps_request_from st = None;
-         rule_body :=
-           fun msg st =>
-             if from_children (msg_from msg) then
-               match msg_content msg with
-               | SvmSetReq _ =>
-                 if ps_is_valid st
-                 then Some ((buildMsg _ parentIdx (msg_from msg) SvmSetResp) :: nil,
-                            {| ps_is_valid := false;
-                               ps_value := ps_value st;
-                               ps_request_from := ps_request_from st |})
-                 else Some ((buildMsg _ parentIdx (theOtherChild (msg_from msg))
-                                      SvmInvReq) :: nil,
-                            {| ps_is_valid := ps_is_valid st;
-                               ps_value := ps_value st;
-                               ps_request_from := Some (msg_from msg, false) |})
-               | _ => None
-               end
-             else None
-      |}.
+    Definition ParentSetReq : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_children (msg_rq msg) then
+          match msg_content msg with
+          | SetReq _ =>
+            if impl_is_valid st
+            then Some ((pmsgParentSetResp (msg_rq msg) (msg_rs msg)) :: nil,
+                       {| impl_is_valid := false;
+                          impl_value := impl_value st |})
+            else Some ((pmsgChildInvReq parentIdx (theOtherChild (msg_rq msg)) true) :: nil,
+                       {| impl_is_valid := impl_is_valid st;
+                          impl_value := impl_value st |})
+          | _ => None
+          end
+        else None.
 
-    Definition ParentInvResp : Rule SingleValueMsg ParentState :=
-      {| rule_precond := fun st => ps_request_from st <> None;
-         rule_body :=
-           fun msg st =>
-             if from_children (msg_from msg) then
-               match msg_content msg with
-               | SvmInvResp v =>
-                 match ps_request_from st with
-                 | None => None
-                 | Some (childTo, is_get) =>
-                   Some ((buildMsg _ parentIdx childTo
-                                   (if is_get then SvmGetResp v else SvmSetResp)) :: nil,
-                         {| ps_is_valid := ps_is_valid st;
-                            ps_value := ps_value st;
-                            ps_request_from := None |})
-                 end
-               | _ => None
-               end
-             else None
-      |}.
+    Definition ParentInvResp : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_children (msg_rs msg) then
+          match msg_content msg with
+          | InvResp v =>
+            match find (msg_rq msg, msg_rs msg) locks with
+            | Some (TLocked {| le_idx := childTo; le_flag := is_get |}) =>
+              Some ((if is_get
+                     then pmsgParentGetResp childTo parentIdx v
+                     else pmsgParentSetResp childTo parentIdx) :: nil,
+                    {| impl_is_valid := impl_is_valid st;
+                       impl_value := impl_value st |})
+            | _ => None
+            end
+          | _ => None
+          end
+        else None.
 
-    Definition parent : Object SingleValueMsg ParentState :=
+    Definition parent : Object SingleValueMsg ImplState :=
       {| obj_idx := parentIdx;
-         obj_state_init := {| ps_is_valid := true;
-                              ps_value := 0;
-                              ps_request_from := None |};
+         obj_state_init := {| impl_is_valid := true;
+                              impl_value := 0 |};
          obj_rules := ParentGetReq :: ParentSetReq :: ParentInvResp :: nil |}.
 
   End Parent.
@@ -164,124 +165,96 @@ Section Impl.
     Variable childIdx : nat.
 
     (* from external *)
-    Definition ChildGetReq : Rule SingleValueMsg ChildState :=
-      {| rule_precond := fun st => cs_request_from st = None;
-         rule_body :=
-           fun msg st =>
-             if from_external (msg_from msg) then
-               match msg_content msg with
-               | SvmGetReq =>
-                 if cs_is_valid st
-                 then Some ((buildMsg _ childIdx (msg_from msg)
-                                      (SvmGetResp (cs_value st))) :: nil,
-                            st)
-                 else Some ((buildMsg _ childIdx parentIdx SvmGetReq) :: nil,
-                            {| cs_is_valid := cs_is_valid st;
-                               cs_value := cs_value st;
-                               cs_request_from := Some (msg_from msg, O) |})
-               | _ => None
-               end
-             else None
-      |}.
+    Definition ChildGetReq : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_external (msg_rq msg) then
+          match msg_content msg with
+          | GetReq =>
+            if impl_is_valid st
+            then Some ((pmsgChildGetResp (msg_rq msg) (msg_rs msg) (impl_value st)) :: nil,
+                       st)
+            else Some ((pmsgParentGetReq childIdx parentIdx) :: nil,
+                       {| impl_is_valid := impl_is_valid st;
+                          impl_value := impl_value st |})
+          | _ => None
+          end
+        else None.
 
     (* from the parent *)
-    Definition ChildGetResp : Rule SingleValueMsg ChildState :=
-      {| rule_precond := fun st => cs_request_from st <> None;
-         rule_body :=
-           fun msg st =>
-             if from_external (msg_from msg) then None
-             else
-               match msg_content msg with
-               | SvmGetResp v =>
-                 match cs_request_from st with
-                 | None => None
-                 | Some (efrom, _) =>
-                   Some ((buildMsg _ childIdx efrom (SvmGetResp v)) :: nil,
-                         {| cs_is_valid := true;
-                            cs_value := v;
-                            cs_request_from := None |})
-                 end
-               | _ => None
-               end
-      |}.
+    Definition ChildGetResp : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_external (msg_rs msg) then None
+        else
+          match msg_content msg with
+          | GetResp v =>
+            match find (msg_rq msg, msg_rs msg) locks with
+            | Some (TLocked {| le_idx := efrom |}) =>
+              Some ((pmsgChildGetResp efrom childIdx v) :: nil,
+                    {| impl_is_valid := true;
+                       impl_value := v |})
+            | _ => None
+            end
+          | _ => None
+          end.
 
     (* from external *)
-    Definition ChildSetReq : Rule SingleValueMsg ChildState :=
-      {| rule_precond := fun st => cs_request_from st = None;
-         rule_body :=
-           fun msg st =>
-             if from_external (msg_from msg) then
-               match msg_content msg with
-               | SvmSetReq v =>
-                 if cs_is_valid st
-                 then Some ((buildMsg _ childIdx (msg_from msg)
-                                      SvmSetResp) :: nil,
-                            {| cs_is_valid := cs_is_valid st;
-                               cs_value := v;
-                               cs_request_from := cs_request_from st |})
-                 else Some ((buildMsg _ childIdx parentIdx (SvmSetReq v)) :: nil,
-                            {| cs_is_valid := cs_is_valid st;
-                               cs_value := cs_value st;
-                               cs_request_from := Some (msg_from msg, v) |})
-               | _ => None
-               end
-             else None
-      |}.
+    Definition ChildSetReq : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_external (msg_rq msg) then
+          match msg_content msg with
+          | SetReq v =>
+            if impl_is_valid st
+            then Some ((pmsgChildSetResp (msg_rq msg) (msg_rs msg)) :: nil,
+                       {| impl_is_valid := impl_is_valid st;
+                          impl_value := v |})
+            else Some ((pmsgParentSetReq childIdx parentIdx v) :: nil,
+                       {| impl_is_valid := impl_is_valid st;
+                          impl_value := impl_value st |})
+          | _ => None
+          end
+        else None.
 
     (* from the parent *)
-    Definition ChildSetResp : Rule SingleValueMsg ChildState :=
-      {| rule_precond := fun st => cs_request_from st <> None;
-         rule_body :=
-           fun msg st =>
-             if from_external (msg_from msg) then None
-             else
-               match msg_content msg with
-               | SvmSetResp =>
-                 match cs_request_from st with
-                 | None => None
-                 | Some (efrom, v) =>
-                   Some ((buildMsg _ childIdx efrom SvmSetResp) :: nil,
-                         {| cs_is_valid := true;
-                            cs_value := v;
-                            cs_request_from := None |})
-                 end
-               | _ => None
-               end
-      |}.
+    Definition ChildSetResp : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_external (msg_rs msg) then None
+        else
+          match msg_content msg with
+          | SetResp =>
+            match find (msg_rq msg, msg_rs msg) locks with
+            | Some (TLocked {| le_idx := efrom; le_val := v |}) =>
+              Some ((pmsgChildSetResp efrom childIdx) :: nil,
+                    {| impl_is_valid := true;
+                       impl_value := v |})
+            | _ => None
+            end
+          | _ => None
+          end.
 
     (* from the parent *)
-    Definition ChildInvReq : Rule SingleValueMsg ChildState :=
-      {| rule_precond := fun st => cs_is_valid st = true;
-         rule_body :=
-           fun msg st =>
-             if from_external (msg_from msg) then None
-             else
-               match msg_content msg with
-               | SvmInvReq =>
-                 Some ((buildMsg _ childIdx parentIdx
-                                 (SvmInvResp (cs_value st))) :: nil,
-                       {| cs_is_valid := false;
-                          cs_value := cs_value st;
-                          cs_request_from := cs_request_from st |})
-               | _ => None
-               end
-      |}.
+    Definition ChildInvReq : Rule SingleValueMsg ImplState :=
+      fun msg locks st =>
+        if from_external (msg_rq msg) then None
+        else
+          match msg_content msg with
+          | InvReq =>
+            Some ((pmsgChildInvResp (msg_rq msg) (msg_rs msg) (impl_value st)) :: nil,
+                  {| impl_is_valid := false;
+                     impl_value := impl_value st |})
+          | _ => None
+          end.
 
-    Definition child : Object SingleValueMsg ChildState :=
+    Definition child : Object SingleValueMsg ImplState :=
       {| obj_idx := childIdx;
-         obj_state_init := {| cs_is_valid := false;
-                              cs_value := 0;
-                              cs_request_from := None |};
+         obj_state_init := {| impl_is_valid := false;
+                              impl_value := 0 |};
          obj_rules := ChildGetReq :: ChildGetResp :: ChildSetReq :: ChildSetResp
                                   :: ChildInvReq :: nil |}.
 
   End Child.
 
-  Definition impl : Objects SingleValueMsg :=
-    (existT (fun st => Object SingleValueMsg st) _ parent)
-      :: (existT (fun st => Object SingleValueMsg st) _ (child child1Idx))
-      :: (existT (fun st => Object SingleValueMsg st) _ (child child2Idx))
-      :: nil.
+  Definition impl : Objects SingleValueMsg ImplState :=
+    parent :: (child child1Idx) :: (child child2Idx) :: nil.
 
 End Impl.
 
