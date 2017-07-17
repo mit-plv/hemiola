@@ -44,6 +44,10 @@ Section Language.
   | TUnlocked : TLock ValueT
   | TLocked : ValueT -> TLock ValueT.
 
+  (* Big TODO: need to generalize below fixed record type. 
+   * When the language is designed and following semantics are defined as a state
+   * transition relation, then each lock may be able to have its own type.
+   *)
   Record LockElts :=
     { le_idx : IdxT;
       le_val : nat;
@@ -80,7 +84,7 @@ Section Language.
                    (olock: option TrsLock)
                    (* In order to handle the request, [precond] should be satisfied. *)
                    (precond: StateT -> TrsLocks -> Prop), PredMsg
-    | PmRs: forall (msg: Msg) , PredMsg.
+    | PmRs: forall (msg: Msg), PredMsg.
 
     Definition msgOf (pmsg: PredMsg) :=
       match pmsg with
@@ -245,6 +249,7 @@ Section Language.
              (idx_add idx pos oss)
              (distributeMsgs idx msgs_out (idx_add idx pmsgs_from oims)).
 
+    (* Head is the oldest message. *)
     Inductive steps (obs: Objects) : ObjectStates -> Messages ->
                                      list PredMsg (* history *) ->
                                      ObjectStates -> Messages -> Prop :=
@@ -265,54 +270,48 @@ Section Language.
                 (getObjectStatesInit obs')
       end.
 
-    Inductive HistoryOf : Objects -> list Msg -> Prop :=
+    Inductive HistoryOf : Objects -> list PredMsg -> Prop :=
     | History:
         forall obs oss oims phst,
           steps obs (getObjectStatesInit obs) (@empty _ _) phst oss oims ->
-          HistoryOf obs (map msgOf phst).
+          HistoryOf obs phst.
 
-    (* A maximum subsequence of H consisting only of requests and matching responses. *)
-    (** TODO: Should be a fancier implementation *)
-    Fixpoint complete' (hst: list Msg) : (list Msg * Map (IdxT (* request_from *) *
-                                                          IdxT (* request_to *)) nat) :=
-      match hst with
-      | nil => (nil, @empty _ _)
-      | msg :: hst' =>
-        let (chst, rs) := complete' hst' in
-        if msg_type msg then (* request *)
-          match find (msgFrom msg, msgTo msg) rs with
-          | Some (S n) => (msg :: chst, idx_idx_add (msgFrom msg, msgTo msg) n rs)
-          | _ => (chst, rs)
-          end
-        else (* response *)
-          (msg :: chst, idx_idx_add (msgTo msg, msgFrom msg)
-                                    (match find (msgTo msg, msgFrom msg) rs with
-                                     | Some n => S n
-                                     | None => 1
-                                     end) rs)
-      end.
-
-    Definition complete (hst: list Msg) := fst (complete' hst).
-    Definition Complete (hst: list Msg) := hst = complete hst.
+    (* A history consisting only of requests and matching responses. *)
+    (** TODO: better definition? *)
+    Inductive Complete: list Msg -> Prop :=
+    | CplNil: Complete nil
+    | CplAdd:
+        forall hst1 hst2 hst3,
+          Complete (hst1 ++ hst2 ++ hst3) ->
+          forall rq rs,
+            isPair rq rs = true ->
+            forall chst,
+              chst = hst1 ++ rq :: hst2 ++ rs :: hst3 ->
+              Complete chst.
 
     (* An informal definition of "sequential":
      * 1) The first message should be a request
      * 2) A matching response for each request should be right after the request.
      * 3) There might not be a matching response for the last request.
      *)
-    Fixpoint Sequential' (hst: list Msg)
-             (pre post: option (IdxT (* requester *) *
-                                IdxT (* responder *))) :=
-      match hst with
-      | nil => pre = post
-      | msg :: hst' =>
-        match pre with
-        | Some (rq, rs) => msg_rq msg = rq /\ msg_rs msg = rs /\ msg_type msg = Rs /\
-                           Sequential' hst' None post
-        | None => msg_type msg = Rq /\ Sequential' hst' (Some (msg_rq msg, msg_rs msg)) post
-        end
-      end.
-    Definition Sequential (hst: list Msg) := exists post, Sequential' hst None post.
+    Inductive CSequential: list Msg -> Prop :=
+    | CseqNil: CSequential nil
+    | CseqAdd:
+        forall hst,
+          CSequential hst ->
+          forall rq rs,
+            isPair rq rs = true ->
+            forall chst,
+              chst = hst ++ rq :: rs :: nil ->
+              CSequential chst.
+
+    Inductive Sequential: list Msg -> Prop :=
+    | SeqCompl: forall hst, CSequential hst -> Sequential hst
+    | SeqIncom:
+        forall hst,
+          CSequential hst ->
+          forall rq, msg_type rq = Rq ->
+                     Sequential (hst ++ rq :: nil).
 
     (* In message passing system, "object subhistory" and "process subhistory"
      * have exactly the same meaning; here an index "i" indicates a single object.
@@ -334,12 +333,17 @@ Section Language.
     Definition extHistory (internals: list IdxT) (hst: list Msg) :=
       filter (fun e => negb (isObjectsMsg internals e)) hst.
 
-    (* Two histories are equivalent iff any subhistories are equal. *)
+    (* Two histories are equivalent iff any object subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
       forall i, objSubHistory i hst1 = objSubHistory i hst2.
 
+    (* TODO: this is actually not a fully correct definition:
+     * 1) Instead of [Equivalent hst lhst], we need [Equivalent (complete hst) lhst]
+     * 2) Linearizability requires one more condition: any _strict_ transaction
+     *    orders are preserved by [lhst].
+     *)
     Definition Linearizable' (hst lhst: list Msg) :=
-      Sequential lhst /\ Equivalent (complete hst) lhst.
+      Sequential lhst /\ Equivalent hst lhst.
 
     Definition Linearizable (hst: list Msg) :=
       exists lhst, Linearizable' hst lhst.
@@ -348,7 +352,7 @@ Section Language.
       forall hst,
         HistoryOf obs hst ->
         exists shst, HistoryOf obs shst /\
-                     Linearizable' (absF hst) (absF shst).
+                     Linearizable' (absF (map msgOf hst)) (absF (map msgOf shst)).
 
     Definition IntLinear (obs: Objects) :=
       AbsLinear obs (intHistory (getIndices obs)).
@@ -359,7 +363,8 @@ Section Language.
     Definition Linear (obs: Objects) :=
       forall hst,
         HistoryOf obs hst ->
-        exists shst, HistoryOf obs shst /\ Linearizable' hst shst.
+        exists shst, HistoryOf obs shst /\
+                     Linearizable' (map msgOf hst) (map msgOf shst).
 
   End Semantics.
 
@@ -368,74 +373,6 @@ Section Language.
     Lemma equivalent_refl: forall hst, Equivalent hst hst.
     Proof. intros; unfold Equivalent; reflexivity. Qed.
     Hint Immediate equivalent_refl.
-
-    Lemma sequential_app:
-      forall hst1 p1 p2,
-        Sequential' hst1 p1 p2 ->
-        forall hst2 p3,
-          Sequential' hst2 p2 p3 ->
-          Sequential' (hst1 ++ hst2) p1 p3.
-    Proof.
-      induction hst1; simpl; intros; subst; auto.
-      destruct p1 as [[ ]|].
-      - destruct H as [? [? [? ?]]]; subst.
-        repeat split; eauto.
-      - destruct H.
-        repeat split; eauto.
-    Qed.
-
-    Lemma sequential_complete: forall hst, Sequential hst -> Sequential (complete hst).
-    Proof.
-    Admitted.
-
-    Lemma intHistory_app:
-      forall internals (hst1 hst2: list Msg),
-        intHistory internals (hst1 ++ hst2) =
-        intHistory internals hst1 ++ intHistory internals hst2.
-    Proof.
-      induction hst1; simpl; intros; auto.
-      destruct (isObjectsMsg internals a); simpl; auto.
-      f_equal; auto.
-    Qed.
-
-    Lemma intHistory_complete_comm:
-      forall hst internals,
-        intHistory internals (complete hst) = complete (intHistory internals hst).
-    Proof.
-    Admitted.
-
-    Lemma complete_sequential_app:
-      forall seq hst,
-        Sequential' seq None None ->
-        complete (seq ++ hst) = seq ++ complete hst.
-    Proof.
-    Admitted.
-
-    Lemma linearizable_sequential_app:
-      forall hst lhst,
-        Linearizable' hst lhst ->
-        forall seq,
-          Sequential' seq None None ->
-          Linearizable' (seq ++ hst) (seq ++ lhst).
-    Proof.
-      unfold Linearizable', Sequential; intros.
-      destruct H as [[post ?] ?].
-      split.
-      - eexists; eapply sequential_app; eauto.
-      - rewrite complete_sequential_app by assumption.
-    Admitted.
-
-    Lemma linearizable_sequential_closed:
-      forall seq hst,
-        Sequential' seq None None ->
-        Linearizable hst ->
-        Linearizable (seq ++ hst).
-    Proof.
-      unfold Linearizable; intros.
-      destruct H0 as [lhst ?].
-      exists (seq ++ lhst).
-      apply linearizable_sequential_app; auto.
-    Qed.
 
   End Facts.
 
