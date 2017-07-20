@@ -53,44 +53,38 @@ Section Language.
   Definition buildMsgId rq rs rr ty :=
     {| msg_rq := rq; msg_rs := rs; msg_rqrs := rr; msg_type := ty |}.
 
-  (* [PmIn] represents messages both from external world and the internal system.
-   * [PmExtOut] is only for external requests/responses.
-   *)
   Inductive PMsg :=
-  | PmIn: forall (msg: MsgId)
+  | Pmsg: forall (msg: MsgId)
                  (precond: StateT -> Prop)
-                 (outs: StateT -> list PMsg)
-                 (postcond: StateT -> Prop), PMsg
-  | PmExtOut: forall (msg: MsgId), PMsg.
+                 (outs: StateT -> list MsgId)
+                 (postcond: StateT (* prestate *) ->
+                            StateT (* poststate *) -> Prop), PMsg.
 
   Definition midOf (pmsg: PMsg) :=
     match pmsg with
-    | PmIn msg _ _ _ => msg
-    | PmExtOut msg => msg
+    | Pmsg msg _ _ _ => msg
     end.
 
   Definition precondOf (pmsg: PMsg) :=
     match pmsg with
-    | PmIn _ precond _ _ => precond
-    | PmExtOut _ => fun _ => True
+    | Pmsg _ precond _ _ => precond
     end.
 
   Definition outsOf (pmsg: PMsg) :=
     match pmsg with
-    | PmIn _ _ outs _ => outs
-    | PmExtOut _ => fun _ => nil
+    | Pmsg _ _ outs _ => outs
     end.
 
   Definition postcondOf (pmsg: PMsg) :=
     match pmsg with
-    | PmIn _ _ _ postcond => postcond
-    | PmExtOut _ => fun _ => True
+    | Pmsg _ _ _ postcond => postcond
     end.
 
   Record Object :=
     { obj_idx: nat;
       obj_state_init: StateT;
-      obj_exts_allowed: MsgId -> Prop (* external messages that this object can handle *)
+      obj_pmsg_ints: PMsg -> Prop;
+      obj_pmsg_exts: PMsg -> Prop
     }.
 
   Definition Objects := list Object.
@@ -112,7 +106,7 @@ Section Language.
     Definition ObjectStates := Map IdxT ObjectState.
 
     Definition MsgsFrom :=
-      Map (IdxT * RqRs) (* (from, msgType) *) (list PMsg).
+      Map (IdxT * RqRs) (* (from, msgType) *) (list MsgId).
     Definition Messages := Map IdxT (* to *) MsgsFrom.
 
     (* Note that [StepObjExt] takes an arbitrary message [emsg_in] as an input
@@ -121,62 +115,75 @@ Section Language.
      *)
     Inductive step_obj (obj: Object):
       ObjectState -> MsgsFrom ->
-      PMsg (* in *) -> bool (* is_internal *) -> list PMsg (* outs *) ->
+      MsgId (* in *) -> bool (* is_internal *) -> list MsgId (* outs *) ->
       ObjectState -> MsgsFrom -> Prop :=
-    | StepObjInt: forall os msgs_from fidx fpmsgT fpmsg fpmsgs pos,
-        find (fidx, fpmsgT) msgs_from = Some (fpmsg :: fpmsgs) ->
-        msgTo (midOf fpmsg) = obj_idx obj ->
+    | StepObjInt: forall os msgs_from fidx fmsgT fmsg fpmsg fmsgs pos,
+        (* always choose the head, which is the oldest *)
+        find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
+
+        (* nondeterministically tries to find a predicated message for [fmsg],
+         * which satisfies the precondition and postcondition.
+         *)
+        msgTo fmsg = obj_idx obj ->
+        obj_pmsg_ints obj fpmsg -> midOf fpmsg = fmsg ->
         precondOf fpmsg (os_st os) ->
-        postcondOf fpmsg pos ->
+        postcondOf fpmsg (os_st os) pos ->
+        (* done! *)
         step_obj obj os msgs_from
-                 fpmsg true (outsOf fpmsg (os_st os))
+                 fmsg true (outsOf fpmsg (os_st os))
                  {| os_st := pos |}
-                 (idx_msgType_add (fidx, fpmsgT) fpmsgs msgs_from)
-    | StepObjExt: forall os msgs_from epmsg pos,
-        obj_exts_allowed obj (midOf epmsg) ->
-        msgTo (midOf epmsg) = obj_idx obj ->
+                 (* [fmsg] removed from the queue, which was (fmsg :: fmsgs) *)
+                 (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
+                 
+    | StepObjExt: forall os msgs_from emsg epmsg pos,
+        (* nondeterministically tries to find a predicated message for [emsg],
+         * which satisfies the precondition and postcondition.
+         *)
+        msgTo emsg = obj_idx obj ->
+        obj_pmsg_exts obj epmsg -> midOf epmsg = emsg ->
         precondOf epmsg (os_st os) ->
-        postcondOf epmsg pos ->
+        postcondOf epmsg (os_st os) pos ->
+        (* done! *)
         step_obj obj os msgs_from
-                 epmsg false (outsOf epmsg (os_st os))
+                 emsg false (outsOf epmsg (os_st os))
                  {| os_st := pos |}
                  msgs_from.
 
-    Definition distributeMsg (from: IdxT) (pmsg: PMsg)
+    Definition distributeMsg (from: IdxT) (msg: MsgId)
                (msgs: Messages): Messages :=
-      let msg := midOf pmsg in
       let to := msgTo msg in
       match find to msgs with
       | Some toMsgs =>
         let added := match toMsgs (from, msg_rqrs msg) with
-                     | Some fromMsgs => fromMsgs ++ (pmsg :: nil)
-                     | None => pmsg :: nil
+                       (* should be added last, since the head is the oldest *)
+                     | Some fromMsgs => fromMsgs ++ (msg :: nil)
+                     | None => msg :: nil
                      end in
         idx_add to (idx_msgType_add (from, msg_rqrs msg) added toMsgs) msgs
       | None =>
-        idx_add to (idx_msgType_add (from, msg_rqrs msg) (pmsg :: nil) (@empty _ _)) msgs
+        idx_add to (idx_msgType_add (from, msg_rqrs msg) (msg :: nil) (@empty _ _)) msgs
       end.
 
-    Fixpoint distributeMsgs (from: IdxT) (pmsgs: list PMsg)
+    Fixpoint distributeMsgs (from: IdxT) (nmsgs: list MsgId)
              (msgs: Messages): Messages :=
-      match pmsgs with
+      match nmsgs with
       | nil => msgs
-      | pmsg :: pmsgs' => distributeMsgs from pmsgs' (distributeMsg from pmsg msgs)
+      | msg :: nmsgs' => distributeMsgs from nmsgs' (distributeMsg from msg msgs)
       end.
 
     Definition getIndices (obs: Objects) := map (fun o => obj_idx o) obs.
 
-    Definition isExternal (indices: list nat) (pmsg: PMsg) :=
-      if in_dec eq_nat_dec (msgFrom (midOf pmsg)) indices
+    Definition isExternal (indices: list nat) (msg: MsgId) :=
+      if in_dec eq_nat_dec (msgFrom msg) indices
       then false else true.
 
-    Definition getExt (indices: list nat) (pmsg: PMsg) :=
-      if isExternal indices pmsg then Some pmsg else None.
-    Definition getExts (indices: list nat) (msgs: list PMsg) :=
+    Definition getExt (indices: list nat) (msg: MsgId) :=
+      if isExternal indices msg then Some msg else None.
+    Definition getExts (indices: list nat) (msgs: list MsgId) :=
       filter (fun pm => isExternal indices pm) msgs.
 
     Inductive step (obs: Objects) : ObjectStates -> Messages ->
-                                    option PMsg (* ext_in *) -> list PMsg (* ext_outs *) ->
+                                    option MsgId (* ext_in *) -> list MsgId (* ext_outs *) ->
                                     ObjectStates -> Messages -> Prop :=
     | Step: forall oss idx (obj: Object) (os: ObjectState)
                    oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
@@ -201,7 +208,7 @@ Section Language.
 
     (* Head is the oldest message. *)
     Inductive steps (obs: Objects) : ObjectStates -> Messages ->
-                                     list PMsg (* history *) ->
+                                     list MsgId (* history *) ->
                                      ObjectStates -> Messages -> Prop :=
     | StepsNil: forall oss oims, steps obs oss oims nil oss oims
     | StepsCons:
@@ -220,7 +227,7 @@ Section Language.
                 (getObjectStatesInit obs')
       end.
 
-    Inductive HistoryOf : Objects -> list PMsg -> Prop :=
+    Inductive HistoryOf : Objects -> list MsgId -> Prop :=
     | History:
         forall obs oss oims phst,
           steps obs (getObjectStatesInit obs) (@empty _ _) phst oss oims ->
@@ -313,7 +320,7 @@ Section Language.
       forall hst,
         HistoryOf obs hst ->
         exists shst, HistoryOf obs shst /\
-                     Linearizable' (absF (map midOf hst)) (absF (map midOf shst)).
+                     Linearizable' (absF hst) (absF shst).
 
     Definition IntLinear (obs: Objects) :=
       AbsLinear obs (intHistory (getIndices obs)).
@@ -325,7 +332,7 @@ Section Language.
       forall hst,
         HistoryOf obs hst ->
         exists shst, HistoryOf obs shst /\
-                     Linearizable' (map midOf hst) (map midOf shst).
+                     Linearizable' hst shst.
 
   End Semantics.
 

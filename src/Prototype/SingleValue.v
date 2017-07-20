@@ -16,6 +16,7 @@ Inductive SingleValueMsg : Set :=
 | InvResp (v: nat) : SingleValueMsg.
 
 Notation "'T'" := (fun _ => True).
+Notation "'TT'" := (fun pre post => pre = post).
 
 Section System.
   Variables extIdx1 extIdx2: nat.
@@ -25,32 +26,25 @@ Section System.
     Definition SpecState := nat. (* a single value *)
     Definition specIdx := 0.
 
-    Definition specGetResp eidx v : PMsg SingleValueMsg SpecState :=
-      PmExtOut _ (buildMsgId eidx specIdx Rs (GetResp v)).
     Definition specGetReq eidx : PMsg SingleValueMsg SpecState :=
-      PmIn (buildMsgId eidx specIdx Rq GetReq)
-           T (fun st => (specGetResp eidx st) :: nil) T.
+      Pmsg (buildMsgId eidx specIdx Rq GetReq)
+           T (fun st => (buildMsgId eidx specIdx Rs (GetResp st)) :: nil) TT.
 
-    Definition specSetResp eidx : PMsg SingleValueMsg SpecState :=
-      PmExtOut _ (buildMsgId eidx specIdx Rs SetResp).
     Definition specSetReq eidx v : PMsg SingleValueMsg SpecState :=
-      PmIn (buildMsgId eidx specIdx Rq (SetReq v))
-           T (fun st => (specSetResp eidx) :: nil)
-           (fun st => st = v).
+      Pmsg (buildMsgId eidx specIdx Rq (SetReq v))
+           T (fun st => (buildMsgId eidx specIdx Rs SetResp) :: nil)
+           (fun _ st => st = v).
 
     Definition specSingleton : Object SingleValueMsg SpecState :=
       {| obj_idx := 0;
          obj_state_init := 0;
-         obj_exts_allowed :=
+         obj_pmsg_ints := fun _ => False;
+         obj_pmsg_exts := 
            fun msg =>
-             (exists v, msg = (midOf (specGetResp extIdx1 v))) \/
-             (msg = midOf (specGetReq extIdx1)) \/
-             (msg = midOf (specSetResp extIdx1)) \/
-             (exists v, msg = (midOf (specSetReq extIdx1 v))) \/
-             (exists v, msg = (midOf (specGetResp extIdx2 v))) \/
-             (msg = midOf (specGetReq extIdx2)) \/
-             (msg = midOf (specSetResp extIdx2)) \/
-             (exists v, msg = (midOf (specSetReq extIdx2 v)))
+             (msg = specGetReq extIdx1) \/
+             (exists v, msg = specSetReq extIdx1 v) \/
+             (msg = specGetReq extIdx2) \/
+             (exists v, msg = specSetReq extIdx2 v)
       |}.
 
     Definition spec : Objects SingleValueMsg SpecState :=
@@ -60,10 +54,16 @@ Section System.
 
   Section Impl.
 
-    Inductive ValStatus := Invalid | Transient | Valid.
+    Inductive ValStatus :=
+    | Invalid
+    | Transient (* only for children *)
+    | Valid
+    | GetWait (* only for parent *)
+    | SetWait (* only for parent *).
 
     Record ImplState :=
       { impl_status : ValStatus;
+        impl_value_trs : nat;
         impl_value : nat
       }.
 
@@ -75,76 +75,141 @@ Section System.
     Definition getExtIdx (idx: nat) :=
       if eq_nat_dec idx child1Idx then extIdx1 else extIdx2.
 
-    Section Messages.
+    Section Child.
+      Variable childIdx: nat.
 
-      Definition ecGetResp childIdx v : PMsg SingleValueMsg ImplState :=
-        PmExtOut _ (buildMsgId (getExtIdx childIdx) childIdx Rs (GetResp v)).
+      Definition ecGetReqM := buildMsgId (getExtIdx childIdx) childIdx Rq GetReq.
+      Definition ecGetRespM v := buildMsgId (getExtIdx childIdx) childIdx Rs (GetResp v).
+      Definition ecSetReqM v := buildMsgId (getExtIdx childIdx) childIdx Rq (SetReq v).
+      Definition ecSetRespM := buildMsgId (getExtIdx childIdx) childIdx Rs SetResp.
+      Definition cpGetReqM := buildMsgId childIdx parentIdx Rq GetReq.
+      Definition cpGetRespM v := buildMsgId childIdx parentIdx Rs (GetResp v).
+      Definition cpSetReqM v := buildMsgId childIdx parentIdx Rq (SetReq v).
+      Definition cpSetRespM := buildMsgId childIdx parentIdx Rs SetResp.
+      Definition pcInvReqM := buildMsgId parentIdx childIdx Rq InvReq.
+      Definition pcInvRespM v := buildMsgId parentIdx childIdx Rs (InvResp v).
 
-      Definition cpGetResp childIdx v : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId childIdx parentIdx Rs (GetResp v))
-             T
-             (fun st => (ecGetResp childIdx v) :: nil)
-             (fun st => impl_status st = Valid /\
-                        impl_value st = v).
-
-      Definition pcInvResp childIdx v : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId parentIdx childIdx Rs (InvResp v))
-             T
-             (fun st => (cpGetResp (theOtherChild childIdx) v) :: nil)
-             (fun st => impl_status st = Invalid).
-
-      Definition pcInvReq childIdx : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId parentIdx childIdx Rq InvReq)
+      Definition ecGetReqValid: PMsg SingleValueMsg ImplState :=
+        Pmsg ecGetReqM
              (fun st => impl_status st = Valid)
-             (fun st => (pcInvResp childIdx (impl_value st)) :: nil)
-             (fun st => impl_status st = Invalid).
-
-      Definition cpGetReqValid childIdx : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId childIdx parentIdx Rq GetReq)
-             (fun st => impl_status st = Valid)
-             (fun st => (cpGetResp childIdx (impl_value st)) :: nil)
-             (fun st => impl_status st = Invalid).
-
-      Definition cpGetReqInvalid childIdx : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId childIdx parentIdx Rq GetReq)
-             (fun st => impl_status st = Invalid)
-             (fun st => (pcInvReq (theOtherChild childIdx)) :: nil)
-             (fun st => impl_status st = Transient).
-
-      Definition ecGetReqValid childIdx : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId (getExtIdx childIdx) childIdx Rq GetReq)
-             (fun st => impl_status st = Valid)
-             (fun st => (ecGetResp childIdx (impl_value st)) :: nil)
-             (fun st => True).
-
-      (* TODO: a child doesn't know the state of parent, so it should send
-       * all possible predicated messages for each precondition, which is weird.
-       *)
-      Definition ecGetReqInvalid childIdx : PMsg SingleValueMsg ImplState :=
-        PmIn (buildMsgId (getExtIdx childIdx) childIdx Rq GetReq)
-             (fun st => impl_status st = Invalid)
-             (fun st => (cpGetReqInvalid childIdx) :: (cpGetReqValid childIdx) :: nil)
-             (fun st => impl_status st = Transient).
-
-      (* TODO: for "set" requests/responses, we may need "prestate" 
-       * to state postconditions.
-       *)
+             (fun st => ecGetRespM (impl_value st) :: nil)
+             TT.
       
-    End Messages.
+      Definition ecGetReqInvalid: PMsg SingleValueMsg ImplState :=
+        Pmsg ecGetReqM
+             (fun st => impl_status st = Invalid)
+             (fun st => cpGetReqM :: nil)
+             (fun pre post => impl_status post = Transient).
 
-    Definition parent : Object SingleValueMsg ImplState :=
-      {| obj_idx := parentIdx;
-         obj_state_init := {| impl_status := Valid;
-                              impl_value := 0 |};
-         obj_exts_allowed := fun _ => False
-      |}.
+      Definition ecSetReqValid v: PMsg SingleValueMsg ImplState :=
+        Pmsg (ecSetReqM v)
+             (fun st => impl_status st = Valid)
+             (fun st => ecSetRespM :: nil)
+             (fun pre post => impl_status post = Valid /\
+                              impl_value post = v).
 
-    Definition child childIdx : Object SingleValueMsg ImplState :=
-      {| obj_idx := childIdx;
-         obj_state_init := {| impl_status := Invalid;
-                              impl_value := 0 |};
-         obj_exts_allowed := fun msg => True (* TODO *)
-      |}.
+      Definition ecSetReqInvalid v: PMsg SingleValueMsg ImplState :=
+        Pmsg (ecSetReqM v)
+             (fun st => impl_status st = Invalid)
+             (fun st => cpSetReqM v :: nil)
+             (fun pre post => impl_status post = Transient /\
+                              impl_value_trs post = v).
+
+      Definition cpGetResp v: PMsg SingleValueMsg ImplState :=
+        Pmsg (cpGetRespM v)
+             T
+             (fun st => ecGetRespM v :: nil)
+             (fun pre post => impl_status post = Valid /\
+                              impl_value post = v).
+
+      Definition cpSetResp: PMsg SingleValueMsg ImplState :=
+        Pmsg cpSetRespM
+             T
+             (fun st => ecSetRespM :: nil)
+             (fun pre post => impl_status post = Valid /\
+                              impl_value post = impl_value_trs pre).
+
+      Definition pcInvReq: PMsg SingleValueMsg ImplState :=
+        Pmsg pcInvReqM
+             (fun st => impl_status st = Valid)
+             (fun st => pcInvRespM (impl_value st) :: nil)
+             (fun pre post => impl_status post = Invalid).
+
+      Definition child: Object SingleValueMsg ImplState :=
+        {| obj_idx := childIdx;
+           obj_state_init := {| impl_status := Invalid;
+                                impl_value_trs := 0;
+                                impl_value := 0 |};
+           obj_pmsg_ints := fun msg =>
+                              (exists v, msg = cpGetResp v) \/
+                              (msg = cpSetResp) \/
+                              (msg = pcInvReq);
+           obj_pmsg_exts := fun msg =>
+                              (msg = ecGetReqValid) \/
+                              (msg = ecGetReqInvalid) \/
+                              (exists v, msg = ecSetReqValid v) \/
+                              (exists v, msg = ecSetReqInvalid v)
+        |}.
+
+    End Child.
+
+    Section Parent.
+
+      Definition cpGetReqValid childIdx: PMsg SingleValueMsg ImplState :=
+        Pmsg (cpGetReqM childIdx)
+             (fun st => impl_status st = Valid)
+             (fun st => cpGetRespM childIdx (impl_value st) :: nil)
+             (fun pre post => impl_status post = Invalid).
+      Definition cpGetReqInvalid childIdx: PMsg SingleValueMsg ImplState :=
+        Pmsg (cpGetReqM childIdx)
+             (fun st => impl_status st = Invalid)
+             (fun st => pcInvReqM childIdx :: nil)
+             (fun pre post => impl_status post = Transient).
+
+      Definition cpSetReqValid childIdx v: PMsg SingleValueMsg ImplState :=
+        Pmsg (cpSetReqM childIdx v)
+             (fun st => impl_status st = Valid)
+             (fun st => cpSetRespM childIdx :: nil)
+             (fun pre post => impl_status post = Invalid).
+      Definition cpSetReqInvalid childIdx v: PMsg SingleValueMsg ImplState :=
+        Pmsg (cpSetReqM childIdx v)
+             (fun st => impl_status st = Invalid)
+             (fun st => pcInvReqM childIdx :: nil)
+             (fun pre post => impl_status post = Transient).
+
+      Definition pcInvRespGet childIdx v: PMsg SingleValueMsg ImplState :=
+        Pmsg (pcInvRespM childIdx v)
+             (fun st => impl_status st = GetWait)
+             (fun st => cpGetRespM childIdx v :: nil)
+             (fun pre post => impl_status post = Invalid).
+      Definition pcInvRespSet childIdx v: PMsg SingleValueMsg ImplState :=
+        Pmsg (pcInvRespM childIdx v)
+             (fun st => impl_status st = SetWait)
+             (fun st => cpSetRespM childIdx :: nil)
+             (fun pre post => impl_status post = Invalid).
+
+      Definition parent : Object SingleValueMsg ImplState :=
+        {| obj_idx := parentIdx;
+           obj_state_init := {| impl_status := Valid;
+                                impl_value_trs := 0;
+                                impl_value := 0 |};
+           obj_pmsg_ints := fun msg =>
+                              (msg = cpGetReqValid child1Idx) \/
+                              (msg = cpGetReqInvalid child1Idx) \/
+                              (exists v, msg = cpSetReqValid child1Idx v) \/
+                              (exists v, msg = cpSetReqInvalid child1Idx v) \/
+                              (exists v, msg = pcInvRespGet child1Idx v) \/
+                              (exists v, msg = pcInvRespSet child1Idx v) \/
+                              (msg = cpGetReqValid child2Idx) \/
+                              (msg = cpGetReqInvalid child2Idx) \/
+                              (exists v, msg = cpSetReqValid child2Idx v) \/
+                              (exists v, msg = cpSetReqInvalid child2Idx v) \/
+                              (exists v, msg = pcInvRespGet child2Idx v) \/
+                              (exists v, msg = pcInvRespSet child2Idx v);
+           obj_pmsg_exts := fun _ => False
+        |}.
+
+    End Parent.
 
     Definition impl : Objects SingleValueMsg ImplState :=
       parent :: (child child1Idx) :: (child child2Idx) :: nil.
