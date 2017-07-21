@@ -87,19 +87,21 @@ Section Language.
       obj_pmsg_exts: PMsg -> Prop
     }.
 
+  Definition pmsgOf (obj: Object) (pmsg: PMsg) :=
+    obj_pmsg_ints obj pmsg \/ obj_pmsg_exts obj pmsg.
+
   Definition Objects := list Object.
 
   Section Semantics.
 
     (* Has a record structure in case of more elements are required. *)
     Record ObjectState := { os_st: StateT }.
-    
-    Definition isPair (m1 m2: MsgId) :=
-      (if eq_nat_dec (msg_rq m1) (msg_rq m2) then true else false)
-        && (if eq_nat_dec (msg_rs m1) (msg_rs m2) then true else false)
-        && (match msg_rqrs m1, msg_rqrs m2 with
+
+    Definition isTrsPair (rq rs: MsgId) :=
+      (if eq_nat_dec (msg_rq rq) (msg_rq rs) then true else false)
+        && (if eq_nat_dec (msg_rs rq) (msg_rs rs) then true else false)
+        && (match msg_rqrs rq, msg_rqrs rs with
             | Rq, Rs => true
-            | Rs, Rq => true
             | _, _ => false
             end).
 
@@ -240,7 +242,7 @@ Section Language.
         forall hst1 hst2 hst3,
           Complete (hst1 ++ hst2 ++ hst3) ->
           forall rq rs,
-            isPair rq rs = true ->
+            isTrsPair rq rs = true ->
             forall chst,
               chst = hst1 ++ rq :: hst2 ++ rs :: hst3 ->
               Complete chst.
@@ -265,7 +267,7 @@ Section Language.
         forall hst,
           CSequential hst ->
           forall rq rs,
-            isPair rq rs = true ->
+            isTrsPair rq rs = true ->
             forall chst,
               chst = hst ++ rq :: rs :: nil ->
               CSequential chst.
@@ -293,11 +295,6 @@ Section Language.
     Definition objSubHistory (i: IdxT) (hst: list MsgId) :=
       filter (isObjectsMsg (i :: nil)) hst.
 
-    Definition intHistory (internals: list IdxT) (hst: list MsgId) :=
-      filter (isObjectsMsg internals) hst.
-    Definition extHistory (internals: list IdxT) (hst: list MsgId) :=
-      filter (fun e => negb (isObjectsMsg internals e)) hst.
-
     (* Two histories are equivalent iff any object subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list MsgId) :=
       forall i, objSubHistory i hst1 = objSubHistory i hst2.
@@ -315,17 +312,6 @@ Section Language.
 
     Definition Linearizable (hst: list MsgId) :=
       exists lhst, Linearizable' hst lhst.
-
-    Definition AbsLinear (obs: Objects) (absF: list MsgId -> list MsgId) :=
-      forall hst,
-        HistoryOf obs hst ->
-        exists shst, HistoryOf obs shst /\
-                     Linearizable' (absF hst) (absF shst).
-
-    Definition IntLinear (obs: Objects) :=
-      AbsLinear obs (intHistory (getIndices obs)).
-    Definition ExtLinear (obs: Objects) :=
-      AbsLinear obs (extHistory (getIndices obs)).
 
     (* A system is linear when all possible histories are linearizable. *)
     Definition Linear (obs: Objects) :=
