@@ -6,6 +6,12 @@ Section System.
 
   Theorem impl_linear: Linear (impl extIdx1 extIdx2).
   Proof.
+    apply locally_disjoint_linear.
+    repeat constructor.
+
+    - (* parent *) admit.
+    - (* child1 *) admit.
+    - (* child2 *) admit.
   Admitted.
 
 End System.
