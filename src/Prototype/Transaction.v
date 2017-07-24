@@ -40,28 +40,30 @@ Section System.
         Transaction rq rsr rs ->
         exists trsinv, TransactionInv rq trsinv rsr.
 
-    (* NOTE: this well-formedness for [PMsg] is a bit narrow.
-     * Should be extended for real systems.
+    (* NOTE: this well-formedness for [PMsg] is too narrow.
+     * Should be extended enough to cover practical protocols.
      *)
     Inductive WfPMsg: PMsg MsgT StateT -> Prop :=
     | WpRqRq:
         forall pmsg,
           msg_rqrs (midOf pmsg) = Rq ->
-          forall st,
-            Forall (fun msg_out =>
-                      msg_rqrs msg_out = Rq /\
-                      (* need this? *) msg_rs (midOf pmsg) = msg_rq msg_out /\
-                      msg_rq (midOf pmsg) <> msg_rs msg_out) (outsOf pmsg st) ->
-            WfPMsg pmsg
+          (forall st,
+              exists msg_out,
+                outsOf pmsg st = msg_out :: nil /\
+                msg_rqrs msg_out = Rq /\
+                (* need this? *) msg_rs (midOf pmsg) = msg_rq msg_out /\
+                msg_rq (midOf pmsg) <> msg_rs msg_out) ->
+          WfPMsg pmsg
     | WpRqRs:
         forall pmsg,
           msg_rqrs (midOf pmsg) = Rq ->
-          forall msg_out,
-            (forall st, outsOf pmsg st = msg_out :: nil) ->
-            msg_rqrs msg_out = Rs ->
-            msg_rq (midOf pmsg) = msg_rq msg_out ->
-            msg_rs (midOf pmsg) = msg_rs msg_out ->
-            WfPMsg pmsg
+          (forall st,
+              exists msg_out,
+                outsOf pmsg st = msg_out :: nil /\
+                msg_rqrs msg_out = Rs /\
+                msg_rq (midOf pmsg) = msg_rq msg_out /\
+                msg_rs (midOf pmsg) = msg_rs msg_out) ->
+          WfPMsg pmsg
     | WpRs:
         forall pmsg,
           msg_rqrs (midOf pmsg) = Rs ->
@@ -73,12 +75,16 @@ Section System.
 
   End PerObject.
 
+  Variable makeComplete: list (MsgId MsgT) -> list (MsgId MsgT).
+
   Theorem locally_disjoint_linear:
     forall obs,
       Forall (fun obj => WfObj obj) obs ->
       Forall (fun obj => LocallyDisjoint obj) obs ->
       Linear obs.
   Proof.
+    unfold Linear, Linearizable; intros.
+    eexists; repeat split.
   Admitted.
   
 End System.

@@ -251,10 +251,29 @@ Section Language.
     | SlNil: SubList nil nil
     | SlAdd: forall l1 l2, SubList l1 l2 -> forall a, SubList (a :: l1) (a :: l2)
     | SlSkip: forall l1 l2, SubList l1 l2 -> forall a, SubList l1 (a :: l2).
+    
+    Definition ExtList {A} (l el: list A): Prop :=
+      exists e, el = l ++ e.
 
-    Definition complete (hst chst: list MsgId): Prop :=
-      Complete chst /\ SubList chst hst /\
-      (* maximal *) forall hst', Complete hst' -> SubList hst' hst -> ~ SubList chst hst'.
+    (* TODO: define it *)
+    Definition complete (hst: list MsgId): list MsgId.
+    Admitted.
+
+    Lemma complete_subList: forall hst, SubList (complete hst) hst.
+    Proof.
+    Admitted.
+    
+    Lemma complete_complete: forall hst, Complete (complete hst).
+    Proof.
+    Admitted.
+
+    Lemma complete_maximal:
+      forall hst chst,
+        chst <> complete hst ->
+        SubList chst hst -> Complete chst ->
+        ~ SubList (complete hst) chst.
+    Proof.
+    Admitted.
 
     (* An informal definition of "sequential":
      * 1) The first message should be a request
@@ -300,29 +319,31 @@ Section Language.
       forall i, objSubHistory i hst1 = objSubHistory i hst2.
 
     (* TODO: this is actually not a fully correct definition:
-     * 1) [complete] definition is a bit different to the one in original
-     * definition, but I think it's enough. Need to confirm whether it's indeed
-     * the right definition.
-     * 2) Linearizability requires one more condition: any _strict_ transaction
+     * Linearizability requires one more condition: any _strict_ transaction
      * orders are preserved by [lhst].
      *)
-    Definition Linearizable' (hst lhst: list MsgId) :=
-      Sequential lhst /\
-      exists chst, complete hst chst /\ Equivalent chst lhst.
-
-    Definition Linearizable (hst: list MsgId) :=
-      exists lhst, Linearizable' hst lhst.
+    Definition Linearizable (hst lhst: list MsgId) :=
+      exists ehst,
+        ExtList hst ehst /\
+        Sequential lhst /\
+        Equivalent (complete ehst) lhst.
 
     (* A system is linear when all possible histories are linearizable. *)
     Definition Linear (obs: Objects) :=
       forall hst,
         HistoryOf obs hst ->
-        exists shst, HistoryOf obs shst /\
-                     Linearizable' hst shst.
+        exists lhst, HistoryOf obs lhst /\
+                     Linearizable hst lhst.
 
   End Semantics.
 
   Section Facts.
+
+    Lemma sublist_refl: forall {A} (l: list A), SubList l l.
+    Proof.
+      induction l; simpl; intros; constructor; auto.
+    Qed.
+    Hint Immediate sublist_refl.
 
     Lemma equivalent_refl: forall hst, Equivalent hst hst.
     Proof.
@@ -334,5 +355,5 @@ Section Language.
 
 End Language.
 
-Hint Immediate equivalent_refl.
+Hint Immediate sublist_refl equivalent_refl.
 
