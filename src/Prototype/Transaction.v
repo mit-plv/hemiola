@@ -2,8 +2,7 @@ Require Import Bool List String Peano_dec.
 Require Import FnMap Language.
 
 Section System.
-  Variable MsgT: Type.
-  Variable StateT: Type.
+  Context {MsgT StateT: Type}.
 
   Definition CondT := StateT -> Prop.
   Definition condImp (c1 c2: CondT) := forall st, c1 st -> c2 st.
@@ -40,52 +39,34 @@ Section System.
         Transaction rq rsr rs ->
         exists trsinv, TransactionInv rq trsinv rsr.
 
-    (* NOTE: this well-formedness for [PMsg] is too narrow.
-     * Should be extended enough to cover practical protocols.
-     *)
-    Inductive WfPMsg: PMsg MsgT StateT -> Prop :=
-    | WpRqRq:
-        forall pmsg,
-          msg_rqrs (midOf pmsg) = Rq ->
-          (forall st,
-              exists msg_out,
-                outsOf pmsg st = msg_out :: nil /\
-                msg_rqrs msg_out = Rq /\
-                (* need this? *) msg_rs (midOf pmsg) = msg_rq msg_out /\
-                msg_rq (midOf pmsg) <> msg_rs msg_out) ->
-          WfPMsg pmsg
-    | WpRqRs:
-        forall pmsg,
-          msg_rqrs (midOf pmsg) = Rq ->
-          (forall st,
-              exists msg_out,
-                outsOf pmsg st = msg_out :: nil /\
-                msg_rqrs msg_out = Rs /\
-                msg_rq (midOf pmsg) = msg_rq msg_out /\
-                msg_rs (midOf pmsg) = msg_rs msg_out) ->
-          WfPMsg pmsg
-    | WpRs:
-        forall pmsg,
-          msg_rqrs (midOf pmsg) = Rs ->
-          WfPMsg pmsg.
+    Definition MonotonePMsg (pmsg: PMsg MsgT StateT) :=
+      match pmsg with
+      | Pmsg msg _ outs _ =>
+        msg_rqrs msg = Rs ->
+        forall st, Forall (fun m => msg_rqrs m = Rs) (outs st) (* shouldn't be [Rq] *)
+      end.
 
-    Definition WfObj (obj: Object MsgT StateT) :=
-      (forall pmsg, obj_pmsg_ints obj pmsg -> WfPMsg pmsg) /\
-      (forall pmsg, obj_pmsg_exts obj pmsg -> WfPMsg pmsg).
+    Definition Monotone :=
+      forall pmsg, pmsgOf obj pmsg -> MonotonePMsg pmsg.
 
   End PerObject.
 
-  Variable makeComplete: list (MsgId MsgT) -> list (MsgId MsgT).
-
   Theorem locally_disjoint_linear:
-    forall obs,
-      Forall (fun obj => WfObj obj) obs ->
-      Forall (fun obj => LocallyDisjoint obj) obs ->
+    forall obj, LocallyDisjoint obj -> Linear (obj :: nil).
+  Proof.
+  Admitted.
+
+End System.
+
+Section Compositional.
+
+  Theorem linear_compositional:
+    forall {MsgT StateT} (obs: Objects MsgT StateT),
+      Forall (fun obj => Monotone obj) obs ->
+      Forall (fun obj => Linear (obj :: nil)) obs ->
       Linear obs.
   Proof.
-    unfold Linear, Linearizable; intros.
-    eexists; repeat split.
   Admitted.
-  
-End System.
+
+End Compositional.
 
