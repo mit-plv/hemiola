@@ -171,17 +171,28 @@ Section Language.
 
     Definition getIndices (obs: Objects) := map (fun o => obj_idx o) obs.
 
+    Definition isInternal (indices: list nat) (msg: MsgId) :=
+      if in_dec eq_nat_dec (msgFrom msg) indices
+      then true else false.
     Definition isExternal (indices: list nat) (msg: MsgId) :=
       if in_dec eq_nat_dec (msgFrom msg) indices
       then false else true.
+
+    Definition getInt (indices: list nat) (msg: MsgId) :=
+      if isInternal indices msg then Some msg else None.
+    Definition getInts (indices: list nat) (msgs: list MsgId) :=
+      filter (fun pm => isInternal indices pm) msgs.
 
     Definition getExt (indices: list nat) (msg: MsgId) :=
       if isExternal indices msg then Some msg else None.
     Definition getExts (indices: list nat) (msgs: list MsgId) :=
       filter (fun pm => isExternal indices pm) msgs.
 
+    Record Label := { lbl_in: MsgId;
+                      lbl_outs: list MsgId }.
+
     Inductive step (obs: Objects) : ObjectStates -> Messages ->
-                                    option MsgId (* ext_in *) -> list MsgId (* ext_outs *) ->
+                                    Label ->
                                     ObjectStates -> Messages -> Prop :=
     | Step: forall oss idx (obj: Object) (os: ObjectState)
                    oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
@@ -192,8 +203,7 @@ Section Language.
         step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
         is_internal = negb (isExternal (getIndices obs) msg_in) ->
         step obs oss oims
-             (getExt (getIndices obs) msg_in)
-             (getExts (getIndices obs) msgs_out)
+             {| lbl_in := msg_in; lbl_outs := msgs_out |}
              (idx_add idx pos oss)
              (distributeMsgs idx msgs_out (idx_add idx pmsgs_from oims)).
 
@@ -204,17 +214,17 @@ Section Language.
       end.
     Infix "::>" := ocons (at level 0).
 
-    (* Head is the oldest message. *)
+    (* NOTE: head is the youngest *)
     Inductive steps (obs: Objects) : ObjectStates -> Messages ->
-                                     list MsgId (* history *) ->
+                                     list Label ->
                                      ObjectStates -> Messages -> Prop :=
     | StepsNil: forall oss oims, steps obs oss oims nil oss oims
     | StepsCons:
-        forall oss1 oims1 emsgs oss2 oims2,
-          steps obs oss1 oims1 emsgs oss2 oims2 ->
-          forall oss3 msg_in msgs_out oims3,
-            step obs oss2 oims2 msg_in msgs_out oss3 oims3 ->
-            steps obs oss1 oims1 (emsgs ++ msg_in ::> msgs_out) oss3 oims3.
+        forall oss1 oims1 msgs oss2 oims2,
+          steps obs oss1 oims1 msgs oss2 oims2 ->
+          forall oss3 lbl oims3,
+            step obs oss2 oims2 lbl oss3 oims3 ->
+            steps obs oss1 oims1 (lbl :: msgs) oss3 oims3.
 
     Fixpoint getObjectStatesInit (obs: Objects) : ObjectStates :=
       match obs with
@@ -225,11 +235,19 @@ Section Language.
                 (getObjectStatesInit obs')
       end.
 
-    Inductive HistoryOf : Objects -> list MsgId -> Prop :=
+    Fixpoint behaviorOf (obs: Objects) (l: list Label) :=
+      match l with
+      | nil => nil
+      | {| lbl_in := min; lbl_outs := mouts |} :: l' =>
+        ((getExt (getIndices obs) min) ::> (getExts (getIndices obs) mouts))
+          ++ (behaviorOf obs l')
+      end.
+
+    Inductive Behavior : Objects -> list MsgId -> Prop :=
     | History:
-        forall obs oss oims phst,
-          steps obs (getObjectStatesInit obs) (@empty _ _) phst oss oims ->
-          HistoryOf obs phst.
+        forall obs oss oims hst,
+          steps obs (getObjectStatesInit obs) (@empty _ _) hst oss oims ->
+          Behavior obs (behaviorOf obs hst).
 
     (* A history consisting only of requests and matching responses. *)
     Inductive Complete: list MsgId -> Prop :=
@@ -337,7 +355,7 @@ Section Language.
 
     (* A system is sequential when all possible histories are sequential. *)
     Definition SequentialObs (obs: Objects) :=
-      forall hst, HistoryOf obs hst -> Sequential hst.
+      forall hst, Behavior obs hst -> Sequential (rev hst).
     
     (* In message passing system, "object subhistory" and "process subhistory"
      * have exactly the same meaning; here an index "i" indicates a single object.
@@ -371,9 +389,9 @@ Section Language.
     (* A system is linear when all possible histories are linearizable. *)
     Definition Linear (obs: Objects) :=
       forall hst,
-        HistoryOf obs hst ->
-        exists lhst, HistoryOf obs lhst /\
-                     Linearizable hst lhst.
+        Behavior obs hst ->
+        exists lhst, Behavior obs lhst /\
+                     Linearizable (rev hst) (rev lhst).
 
   End Semantics.
 
