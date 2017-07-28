@@ -38,8 +38,7 @@ Section System.
     Definition specSingleton : Object SingleValueMsg SpecState :=
       {| obj_idx := 0;
          obj_state_init := 0;
-         obj_pmsg_ints := fun _ => False;
-         obj_pmsg_exts := 
+         obj_pmsgs := 
            fun msg =>
              (msg = specGetReq extIdx1) \/
              (exists v, msg = specSetReq extIdx1 v) \/
@@ -140,15 +139,14 @@ Section System.
            obj_state_init := {| impl_status := Invalid;
                                 impl_value_trs := 0;
                                 impl_value := 0 |};
-           obj_pmsg_ints := fun msg =>
-                              (exists v, msg = cpGetResp v) \/
-                              (msg = cpSetResp) \/
-                              (msg = pcInvReq);
-           obj_pmsg_exts := fun msg =>
-                              (msg = ecGetReqValid) \/
-                              (msg = ecGetReqInvalid) \/
-                              (exists v, msg = ecSetReqValid v) \/
-                              (exists v, msg = ecSetReqInvalid v)
+           obj_pmsgs := fun msg =>
+                          (exists v, msg = cpGetResp v) \/
+                          (msg = cpSetResp) \/
+                          (msg = pcInvReq) \/
+                          (msg = ecGetReqValid) \/
+                          (msg = ecGetReqInvalid) \/
+                          (exists v, msg = ecSetReqValid v) \/
+                          (exists v, msg = ecSetReqInvalid v)
         |}.
 
     End Child.
@@ -193,20 +191,19 @@ Section System.
            obj_state_init := {| impl_status := Valid;
                                 impl_value_trs := 0;
                                 impl_value := 0 |};
-           obj_pmsg_ints := fun msg =>
-                              (msg = cpGetReqValid child1Idx) \/
-                              (msg = cpGetReqInvalid child1Idx) \/
-                              (exists v, msg = cpSetReqValid child1Idx v) \/
-                              (exists v, msg = cpSetReqInvalid child1Idx v) \/
-                              (exists v, msg = pcInvRespGet child1Idx v) \/
-                              (exists v, msg = pcInvRespSet child1Idx v) \/
-                              (msg = cpGetReqValid child2Idx) \/
-                              (msg = cpGetReqInvalid child2Idx) \/
-                              (exists v, msg = cpSetReqValid child2Idx v) \/
-                              (exists v, msg = cpSetReqInvalid child2Idx v) \/
-                              (exists v, msg = pcInvRespGet child2Idx v) \/
-                              (exists v, msg = pcInvRespSet child2Idx v);
-           obj_pmsg_exts := fun _ => False
+           obj_pmsgs := fun msg =>
+                          (msg = cpGetReqValid child1Idx) \/
+                          (msg = cpGetReqInvalid child1Idx) \/
+                          (exists v, msg = cpSetReqValid child1Idx v) \/
+                          (exists v, msg = cpSetReqInvalid child1Idx v) \/
+                          (exists v, msg = pcInvRespGet child1Idx v) \/
+                          (exists v, msg = pcInvRespSet child1Idx v) \/
+                          (msg = cpGetReqValid child2Idx) \/
+                          (msg = cpGetReqInvalid child2Idx) \/
+                          (exists v, msg = cpSetReqValid child2Idx v) \/
+                          (exists v, msg = cpSetReqInvalid child2Idx v) \/
+                          (exists v, msg = pcInvRespGet child2Idx v) \/
+                          (exists v, msg = pcInvRespSet child2Idx v)
         |}.
 
     End Parent.

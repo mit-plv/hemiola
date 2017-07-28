@@ -83,12 +83,8 @@ Section Language.
   Record Object :=
     { obj_idx: nat;
       obj_state_init: StateT;
-      obj_pmsg_ints: PMsg -> Prop;
-      obj_pmsg_exts: PMsg -> Prop
+      obj_pmsgs: PMsg -> Prop;
     }.
-
-  Definition pmsgOf (obj: Object) (pmsg: PMsg) :=
-    obj_pmsg_ints obj pmsg \/ obj_pmsg_exts obj pmsg.
 
   Definition Objects := list Object.
 
@@ -127,7 +123,7 @@ Section Language.
          * which satisfies the precondition and postcondition.
          *)
         msgTo fmsg = obj_idx obj ->
-        obj_pmsg_ints obj fpmsg -> midOf fpmsg = fmsg ->
+        obj_pmsgs obj fpmsg -> midOf fpmsg = fmsg ->
         precondOf fpmsg (os_st os) ->
         postcondOf fpmsg (os_st os) pos ->
         (* done! *)
@@ -142,7 +138,7 @@ Section Language.
          * which satisfies the precondition and postcondition.
          *)
         msgTo emsg = obj_idx obj ->
-        obj_pmsg_exts obj epmsg -> midOf epmsg = emsg ->
+        obj_pmsgs obj epmsg -> midOf epmsg = emsg ->
         precondOf epmsg (os_st os) ->
         postcondOf epmsg (os_st os) pos ->
         (* done! *)
@@ -247,19 +243,54 @@ Section Language.
               chst = hst1 ++ rq :: hst2 ++ rs :: hst3 ->
               Complete chst.
 
-    Inductive SubList {A}: list A -> list A -> Prop :=
-    | SlNil: SubList nil nil
-    | SlAdd: forall l1 l2, SubList l1 l2 -> forall a, SubList (a :: l1) (a :: l2)
-    | SlSkip: forall l1 l2, SubList l1 l2 -> forall a, SubList l1 (a :: l2).
+    Inductive SubHistory {A}: list A -> list A -> Prop :=
+    | SlNil: SubHistory nil nil
+    | SlAdd: forall l1 l2, SubHistory l1 l2 -> forall a, SubHistory (a :: l1) (a :: l2)
+    | SlSkip: forall l1 l2, SubHistory l1 l2 -> forall a, SubHistory l1 (a :: l2).
     
-    Definition ExtList {A} (l el: list A): Prop :=
+    Definition ExtHistory {A} (l el: list A): Prop :=
       exists e, el = l ++ e.
 
-    (* TODO: define it *)
-    Definition complete (hst: list MsgId): list MsgId.
-    Admitted.
+    Fixpoint matchTrsPair (rq: MsgId) (rss: list MsgId) :=
+      match rss with
+      | nil => None
+      | rs :: rss' =>
+        if isTrsPair rq rs then Some rss'
+        else match matchTrsPair rq rss' with
+             | Some nrss => Some (rs :: nrss)
+             | None => None
+             end
+      end.
 
-    Lemma complete_subList: forall hst, SubList (complete hst) hst.
+    (* Assuming the history is well-formed. *)
+    Fixpoint complete' (hst rss: list MsgId): list MsgId * list MsgId :=
+      match hst with
+      | nil => (nil, rss)
+      | msg :: hst' =>
+        match msg_rqrs msg with
+        | Rq => let (phst, prss) := complete' hst' rss in
+                match matchTrsPair msg prss with
+                | Some nrss => (msg :: phst, nrss)
+                | None => (phst, prss)
+                end
+        | Rs => let (phst, prss) := complete' hst' rss in
+                (msg :: phst, msg :: prss)
+        end
+      end.
+
+    (* Axiom exMsgT: MsgT. *)
+    (* Example exMsg1 := {| msg_rq := 1; msg_rs := 2; msg_rqrs := Rq; msg_type := exMsgT |}. *)
+    (* Example exMsg2 := {| msg_rq := 1; msg_rs := 2; msg_rqrs := Rs; msg_type := exMsgT |}. *)
+    (* Example exMsg3 := {| msg_rq := 3; msg_rs := 4; msg_rqrs := Rq; msg_type := exMsgT |}. *)
+    (* Example exMsg4 := {| msg_rq := 3; msg_rs := 4; msg_rqrs := Rs; msg_type := exMsgT |}. *)
+    (* Eval compute in (complete' (exMsg1 :: exMsg2 :: nil) nil). *)
+    (* Eval compute in (complete' (exMsg2 :: exMsg1 :: nil) nil). *)
+    (* Eval compute in (complete' (exMsg1 :: exMsg3 :: exMsg4 :: exMsg2 :: nil) nil). *)
+
+    Definition complete (hst: list MsgId) := fst (complete' hst nil).
+    Definition WellFormed (hst: list MsgId) := snd (complete' hst nil) = nil.
+
+    Lemma complete_subList: forall hst, SubHistory (complete hst) hst.
     Proof.
     Admitted.
     
@@ -270,8 +301,8 @@ Section Language.
     Lemma complete_maximal:
       forall hst chst,
         chst <> complete hst ->
-        SubList chst hst -> Complete chst ->
-        ~ SubList (complete hst) chst.
+        SubHistory chst hst -> Complete chst ->
+        ~ SubHistory (complete hst) chst.
     Proof.
     Admitted.
 
@@ -280,25 +311,34 @@ Section Language.
      * 2) A matching response for each request should be right after the request.
      * 3) There might not be a matching response for the last request.
      *)
-    Inductive CSequential: list MsgId -> Prop :=
-    | CseqNil: CSequential nil
-    | CseqAdd:
-        forall hst,
-          CSequential hst ->
-          forall rq rs,
-            isTrsPair rq rs = true ->
-            forall chst,
-              chst = hst ++ rq :: rs :: nil ->
-              CSequential chst.
+    Fixpoint Sequential' (hst: list MsgId) (orq: option MsgId) :=
+      match hst with
+      | nil => true
+      | msg :: hst' =>
+        match orq with
+        | Some rq => isTrsPair rq msg && Sequential' hst' None
+        | None => match msg_rqrs msg with
+                  | Rq => Sequential' hst' (Some msg)
+                  | Rs => false
+                  end
+        end
+      end.
+    Definition Sequential (hst: list MsgId) := Sequential' hst None = true.
+    Definition Concurrent (hst: list MsgId) := ~ Sequential hst.
 
-    Inductive Sequential: list MsgId -> Prop :=
-    | SeqCompl: forall hst, CSequential hst -> Sequential hst
-    | SeqIncom:
-        forall hst,
-          CSequential hst ->
-          forall rq, msg_rqrs rq = Rq ->
-                     Sequential (hst ++ rq :: nil).
+    Definition sequential_concurrent_dec:
+      forall hst, {Sequential hst} + {Concurrent hst}.
+    Proof.
+      unfold Concurrent, Sequential; intros.
+      destruct (Sequential' hst None).
+      - left; reflexivity.
+      - right; discriminate.
+    Defined.
 
+    (* A system is sequential when all possible histories are sequential. *)
+    Definition SequentialObs (obs: Objects) :=
+      forall hst, HistoryOf obs hst -> Sequential hst.
+    
     (* In message passing system, "object subhistory" and "process subhistory"
      * have exactly the same meaning; here an index "i" indicates a single object.
      * An ambiguity comes when we need to decide whether a req/resp from "i" to "j"
@@ -324,7 +364,7 @@ Section Language.
      *)
     Definition Linearizable (hst lhst: list MsgId) :=
       exists ehst,
-        ExtList hst ehst /\
+        ExtHistory hst ehst /\
         Sequential lhst /\
         Equivalent (complete ehst) lhst.
 
@@ -339,11 +379,20 @@ Section Language.
 
   Section Facts.
 
-    Lemma sublist_refl: forall {A} (l: list A), SubList l l.
+    Lemma subHistory_refl: forall {A} (l: list A), SubHistory l l.
     Proof.
       induction l; simpl; intros; constructor; auto.
     Qed.
-    Hint Immediate sublist_refl.
+    Hint Immediate subHistory_refl.
+
+    Lemma extHistory_trans:
+      forall {A} (l1 l2 l3: list A),
+        ExtHistory l1 l2 -> ExtHistory l2 l3 -> ExtHistory l1 l3.
+    Proof.
+      unfold ExtHistory; intros.
+      destruct H, H0; subst.
+      eexists; rewrite <-app_assoc; reflexivity.
+    Qed.
 
     Lemma equivalent_refl: forall hst, Equivalent hst hst.
     Proof.
@@ -355,5 +404,5 @@ Section Language.
 
 End Language.
 
-Hint Immediate sublist_refl equivalent_refl.
+Hint Immediate subHistory_refl extHistory_trans equivalent_refl.
 

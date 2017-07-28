@@ -2,18 +2,19 @@ Require Import List String Peano_dec.
 Require Import FnMap Language.
 
 Section Reduction.
-  (* Variable MsgT: MsgType -> Type. *)
-  (* Definition Msg := Msg MsgT. *)
+  (* Variable MsgT StateT: Type. *)
 
-  (* Definition Reduced (from to: list Msg) (msg1 msg2: Msg) := *)
+  (* Local Notation MsgId := (MsgId MsgT). *)
+
+  (* Definition Reduced (from to: list MsgId) (msg1 msg2: MsgId) := *)
   (*   exists hst1 hst2, *)
   (*     from = hst1 ++ msg1 :: msg2 :: hst2 /\ *)
   (*     to = hst1 ++ msg2 :: msg1 :: hst2. *)
 
   (* Lemma reduction_preserves_steps': *)
-  (*   forall {StateT} (msg1 msg2: PredMsg MsgT StateT), *)
-  (*     msgFrom (msgOf msg1) <> msgFrom (msgOf msg2) -> *)
-  (*     forall obs oss1 oims1 oss2 oims2 hst2 hst1, *)
+  (*   forall {StateT} (msg1 msg2: MsgId), *)
+  (*     (* msgFrom (msgOf msg1) <> msgFrom (msgOf msg2) -> *) *)
+  (*     forall (obs: Objects MsgT StateT) oss1 oims1 oss2 oims2 hst2 hst1, *)
   (*       steps obs oss1 oims1 (hst1 ++ msg1 :: msg2 :: hst2) oss2 oims2 -> *)
   (*       steps obs oss1 oims1 (hst1 ++ msg2 :: msg1 :: hst2) oss2 oims2. *)
   (* Admitted. *)
@@ -23,10 +24,10 @@ Section Reduction.
   (*     steps obs oss1 oims1 hst oss2 oims2 -> *)
   (*     forall msg1 msg2 hst', *)
   (*       Reduced hst hst' msg1 msg2 -> *)
-  (*       (* Different sources ->  *)
-  (*        * Messages were handled by different objects ->  *)
-  (*        * Disjoint state transitions! *)
-  (*        *) *)
+  (*       (* Different sources ->  *) *)
+  (* (*        * Messages were handled by different objects ->  *) *)
+  (* (*        * Disjoint state transitions! *) *)
+  (* (*        *) *)
   (*       msgFrom (msgOf msg1) <> msgFrom (msgOf msg2) -> *)
   (*       steps obs oss1 oims1 hst' oss2 oims2. *)
   (* Proof. *)
