@@ -1,11 +1,15 @@
 Require Import List String Peano_dec.
 Require Import FnMap Language.
 
+Set Implicit Arguments.
+
 Section Reduction.
   Variable MsgT StateT: Type.
 
   Local Notation MsgId := (MsgId MsgT).
   Local Notation Label := (Label MsgT).
+
+  (** Utilities end *)
 
   Definition Reduced (from to: list Label) (lbl1 lbl2: Label) :=
     exists hst1 hst2,
@@ -13,7 +17,7 @@ Section Reduction.
       to = hst1 ++ lbl2 :: lbl1 :: hst2.
 
   Lemma reduction_preserves_steps'':
-    forall {StateT} (lbl1 lbl2: Label),
+    forall lbl1 lbl2: Label,
       msgTo (lbl_in lbl1) <> msgFrom (lbl_in lbl2) ->
       msgTo (lbl_in lbl1) <> msgTo (lbl_in lbl2) ->
       forall (obs: Objects MsgT StateT) oss1 oims1 oss2 oims2 hst,
@@ -21,13 +25,45 @@ Section Reduction.
         steps obs oss1 oims1 (lbl2 :: lbl1 :: hst) oss2 oims2.
   Proof.
     intros.
-    inversion_clear H1; inversion_clear H2.
+    inv H1; inv H6.
+    inv H9; inv H10.
 
-    repeat econstructor; try eassumption; clear H1.
-  Admitted.
+    simpl in *.
+    pose proof (step_obj_idx H6).
+    pose proof (step_obj_idx H11).
+    rewrite H7, H10 in H0.
+
+    rewrite idx_add_comm by assumption.
+    rewrite <-distributeMsgs_idx_add_comm; [|exact StateT|auto].
+    rewrite distributeMsgs_comm by assumption.
+    rewrite idx_add_comm with (k1 := obj_idx obj) by assumption.
+    rewrite distributeMsgs_idx_add_comm; [|exact StateT|assumption].
+
+    econstructor; [econstructor|]; try eassumption; clear H5.
+    - econstructor.
+      + exact H1.
+      + reflexivity.
+      + rewrite find_idx_add_neq in H3 by assumption.
+        eassumption.
+      + rewrite find_distributeMsgs_neq in H4 by assumption.
+        rewrite find_idx_add_neq in H4 by assumption.
+        eassumption.
+      + eassumption.
+      + reflexivity.
+    - econstructor.
+      + exact H2.
+      + reflexivity.
+      + rewrite find_idx_add_neq by auto.
+        eassumption.
+      + rewrite find_distributeMsgs_neq by auto.
+        rewrite find_idx_add_neq by auto.
+        eassumption.
+      + eassumption.
+      + reflexivity.
+  Qed.
   
   Lemma reduction_preserves_steps':
-    forall {StateT} (lbl1 lbl2: Label),
+    forall lbl1 lbl2: Label,
       msgTo (lbl_in lbl1) <> msgFrom (lbl_in lbl2) ->
       msgTo (lbl_in lbl1) <> msgTo (lbl_in lbl2) ->
       forall (obs: Objects MsgT StateT) hst1 oss1 oims1 oss2 oims2 hst2,

@@ -1,9 +1,11 @@
 Require Import Bool List String Peano_dec.
-Require Import FnMap.
+Require Import FnMap FunctionalExtensionality.
 
 Set Implicit Arguments.
 
 Open Scope list.
+
+Ltac inv H := inversion H; subst; clear H.
 
 Section Language.
 
@@ -397,6 +399,67 @@ Section Language.
 
   Section Facts.
 
+    Lemma step_obj_idx:
+      forall obj os1 msgs1 min isint mouts os2 msgs2,
+        step_obj obj os1 msgs1 min isint mouts os2 msgs2 ->
+        msgTo min = obj_idx obj.
+    Proof.
+      intros; inv H; auto.
+    Qed.
+
+    Lemma find_idx_add_eq:
+      forall {A} (m: Map nat A) (k: nat) (v: A),
+        find k (idx_add k v m) = Some v.
+    Proof.
+      unfold find, idx_add, add; intros.
+      destruct (eq_nat_dec k k); auto.
+      elim n; reflexivity.
+    Qed.
+
+    Lemma find_idx_add_neq:
+      forall {A} (m: Map nat A) (k1 k2: nat) (v: A),
+        k1 <> k2 ->
+        find k1 (idx_add k2 v m) = find k1 m.
+    Proof.
+      unfold find, idx_add, add; intros.
+      destruct (eq_nat_dec k2 k1); auto; subst.
+      elim H; reflexivity.
+    Qed.
+
+    Lemma idx_add_comm:
+      forall {A} (m: Map nat A) (k1 k2: nat) (v1 v2: A),
+        k1 <> k2 ->
+        idx_add k1 v1 (idx_add k2 v2 m) = idx_add k2 v2 (idx_add k1 v1 m).
+    Proof.
+      unfold idx_add, add; intros.
+      extensionality x.
+      destruct (eq_nat_dec k1 x), (eq_nat_dec k2 x); subst; auto.
+      elim H; reflexivity.
+    Qed.
+
+    Lemma find_distributeMsgs_neq:
+      forall from1 from2 nmsgs msgs,
+        from1 <> from2 ->
+        find from1 (distributeMsgs from2 nmsgs msgs) = find from1 msgs.
+    Proof.
+    Admitted.
+
+    Lemma distributeMsgs_comm:
+      forall from1 nmsgs1 from2 nmsgs2 msgs,
+        from1 <> from2 ->
+        distributeMsgs from1 nmsgs1 (distributeMsgs from2 nmsgs2 msgs) =
+        distributeMsgs from2 nmsgs2 (distributeMsgs from1 nmsgs1 msgs).
+    Proof.
+    Admitted.
+
+    Lemma distributeMsgs_idx_add_comm:
+      forall from1 nmsgs1 from2 fmsgs2 msgs,
+        from1 <> from2 ->
+        distributeMsgs from1 nmsgs1 (idx_add from2 fmsgs2 msgs) =
+        idx_add from2 fmsgs2 (distributeMsgs from1 nmsgs1 msgs).
+    Proof.
+    Admitted.
+    
     Lemma subHistory_refl: forall {A} (l: list A), SubHistory l l.
     Proof.
       induction l; simpl; intros; constructor; auto.
@@ -423,4 +486,5 @@ Section Language.
 End Language.
 
 Hint Immediate subHistory_refl extHistory_trans equivalent_refl.
+
 
