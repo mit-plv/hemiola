@@ -4,7 +4,20 @@ Require Import FnMap Language.
 Section History.
   Variables MsgT StateT: Type.
 
-  Definition Nonlinearizable (hst: list (MsgId MsgT)) :=
+  Local Notation MsgId := (MsgId MsgT).
+  Local Notation Object := (Object MsgT StateT).
+  Local Notation Objects := (Objects MsgT StateT).
+
+  (* Inductive Transactional: Objects -> list MsgId -> Prop := *)
+  (* | TrsBase: *)
+  (*     forall obs erq ers, *)
+  (*       msg_rqrs erq = Rq -> *)
+  (*       isTrsPair erq ers = true -> *)
+  (*       isExternal (getIndices obs) (msgFrom erq) = true -> *)
+  (*       isExternal (getIndices obs) (msgTo ers) = true -> *)
+  (*       Transactional obs (ers :: erq :: nil) *)
+
+  Definition Nonlinearizable (hst: list MsgId) :=
     forall ehst,
       ExtHistory hst ehst ->
       forall lhst,

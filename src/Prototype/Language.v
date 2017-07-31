@@ -109,45 +109,48 @@ Section Language.
       Map (IdxT * RqRs) (* (from, msgType) *) (list MsgId).
     Definition Messages := Map IdxT (* to *) MsgsFrom.
 
-    (* Note that [StepObjExt] takes an arbitrary message [emsg_in] as an input
+    Definition ValidOuts (idx: IdxT) (msgs: list MsgId) :=
+      Forall (fun m => msgFrom m = idx) msgs.
+
+    (* Note that [SofExt] takes an arbitrary message [emsg] as an input
      * message; the validity for the message is checked at [step], which 
      * employes this definition.
      *)
+    Inductive step_obj_from (obj: Object):
+      MsgsFrom (* prev message queue state *) ->
+      MsgId (* in *) -> bool (* is_internal *) ->
+      MsgsFrom (* post message queue state *) -> Prop :=
+    | SofInt:
+        forall msgs_from fidx fmsgT fmsg fmsgs,
+          (* always choose the head, which is the oldest *)
+          find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
+          step_obj_from obj msgs_from fmsg true (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
+    | SofExt:
+        forall msgs_from emsg,
+          step_obj_from obj msgs_from emsg false msgs_from.
+    
     Inductive step_obj (obj: Object):
       ObjectState -> MsgsFrom ->
       MsgId (* in *) -> bool (* is_internal *) -> list MsgId (* outs *) ->
       ObjectState -> MsgsFrom -> Prop :=
-    | StepObjInt: forall os msgs_from fidx fmsgT fmsg fpmsg fmsgs pos,
-        (* always choose the head, which is the oldest *)
-        find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
+    | StepObj: forall os msgs_from fmsg is_internal fpmsg pmsgs_from pos,
+        (* 1) pick a message to process *)
+        step_obj_from obj msgs_from fmsg is_internal pmsgs_from ->
 
-        (* nondeterministically tries to find a predicated message for [fmsg],
+        (* 2) nondeterministically tries to find a predicated message for [fmsg],
          * which satisfies the precondition and postcondition.
          *)
         msgTo fmsg = obj_idx obj ->
         obj_pmsgs obj fpmsg -> midOf fpmsg = fmsg ->
         precondOf fpmsg (os_st os) ->
         postcondOf fpmsg (os_st os) pos ->
-        (* done! *)
+
+        (* -) later syntax should care [ValidOuts] *)
+        ValidOuts (obj_idx obj) (outsOf fpmsg (os_st os)) ->
+        
         step_obj obj os msgs_from
-                 fmsg true (outsOf fpmsg (os_st os))
-                 {| os_st := pos |}
-                 (* [fmsg] removed from the queue, which was (fmsg :: fmsgs) *)
-                 (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
-                 
-    | StepObjExt: forall os msgs_from emsg epmsg pos,
-        (* nondeterministically tries to find a predicated message for [emsg],
-         * which satisfies the precondition and postcondition.
-         *)
-        msgTo emsg = obj_idx obj ->
-        obj_pmsgs obj epmsg -> midOf epmsg = emsg ->
-        precondOf epmsg (os_st os) ->
-        postcondOf epmsg (os_st os) pos ->
-        (* done! *)
-        step_obj obj os msgs_from
-                 emsg false (outsOf epmsg (os_st os))
-                 {| os_st := pos |}
-                 msgs_from.
+                 fmsg is_internal (outsOf fpmsg (os_st os))
+                 {| os_st := pos |} pmsgs_from.
 
     Definition distributeMsg (from: IdxT) (msg: MsgId)
                (msgs: Messages): Messages :=
@@ -155,7 +158,7 @@ Section Language.
       match find to msgs with
       | Some toMsgs =>
         let added := match toMsgs (from, msg_rqrs msg) with
-                       (* should be added last, since the head is the oldest *)
+                     (* should be added last, since the head is the oldest *)
                      | Some fromMsgs => fromMsgs ++ (msg :: nil)
                      | None => msg :: nil
                      end in
@@ -173,22 +176,28 @@ Section Language.
 
     Definition getIndices (obs: Objects) := map (fun o => obj_idx o) obs.
 
-    Definition isInternal (indices: list nat) (msg: MsgId) :=
-      if in_dec eq_nat_dec (msgFrom msg) indices
-      then true else false.
-    Definition isExternal (indices: list nat) (msg: MsgId) :=
-      if in_dec eq_nat_dec (msgFrom msg) indices
-      then false else true.
+    Definition isInternal (indices: list nat) (idx: IdxT) :=
+      if in_dec eq_nat_dec idx indices then true else false.
+    Definition isExternal (indices: list nat) (idx: IdxT) :=
+      if in_dec eq_nat_dec idx indices then false else true.
 
-    Definition getInt (indices: list nat) (msg: MsgId) :=
-      if isInternal indices msg then Some msg else None.
-    Definition getInts (indices: list nat) (msgs: list MsgId) :=
-      filter (fun pm => isInternal indices pm) msgs.
+    Definition fromInt (indices: list nat) (msg: MsgId) :=
+      if isInternal indices (msgFrom msg) then Some msg else None.
+    Definition fromInts (indices: list nat) (msgs: list MsgId) :=
+      filter (fun pm => isInternal indices (msgFrom pm)) msgs.
+    Definition fromExt (indices: list nat) (msg: MsgId) :=
+      if isExternal indices (msgFrom msg) then Some msg else None.
+    Definition fromExts (indices: list nat) (msgs: list MsgId) :=
+      filter (fun pm => isExternal indices (msgFrom pm)) msgs.
 
-    Definition getExt (indices: list nat) (msg: MsgId) :=
-      if isExternal indices msg then Some msg else None.
-    Definition getExts (indices: list nat) (msgs: list MsgId) :=
-      filter (fun pm => isExternal indices pm) msgs.
+    Definition toInt (indices: list nat) (msg: MsgId) :=
+      if isInternal indices (msgTo msg) then Some msg else None.
+    Definition toInts (indices: list nat) (msgs: list MsgId) :=
+      filter (fun pm => isInternal indices (msgTo pm)) msgs.
+    Definition toExt (indices: list nat) (msg: MsgId) :=
+      if isExternal indices (msgTo msg) then Some msg else None.
+    Definition toExts (indices: list nat) (msgs: list MsgId) :=
+      filter (fun pm => isExternal indices (msgTo pm)) msgs.
 
     Record Label := { lbl_in: MsgId;
                       lbl_outs: list MsgId }.
@@ -203,7 +212,7 @@ Section Language.
         find idx oss = Some os ->
         find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
-        is_internal = negb (isExternal (getIndices obs) msg_in) ->
+        is_internal = isInternal (getIndices obs) (msgFrom msg_in) ->
         step obs oss oims
              {| lbl_in := msg_in; lbl_outs := msgs_out |}
              (idx_add idx pos oss)
@@ -241,8 +250,8 @@ Section Language.
       match l with
       | nil => nil
       | {| lbl_in := min; lbl_outs := mouts |} :: l' =>
-        ((getExt (getIndices obs) min) ::> (getExts (getIndices obs) mouts))
-          ++ (behaviorOf obs l')
+        (toExts (getIndices obs) mouts)
+          ++ ((fromExt (getIndices obs) min) ::> (behaviorOf obs l'))
       end.
 
     Inductive Behavior : Objects -> list MsgId -> Prop :=
@@ -407,6 +416,14 @@ Section Language.
       intros; inv H; auto.
     Qed.
 
+    Lemma step_obj_validOuts:
+      forall obj os1 msgs1 min isint mouts os2 msgs2,
+        step_obj obj os1 msgs1 min isint mouts os2 msgs2 ->
+        ValidOuts (obj_idx obj) mouts.
+    Proof.
+      intros; inv H; auto.
+    Qed.
+
     Lemma find_idx_add_eq:
       forall {A} (m: Map nat A) (k: nat) (v: A),
         find k (idx_add k v m) = Some v.
@@ -437,29 +454,6 @@ Section Language.
       elim H; reflexivity.
     Qed.
 
-    Lemma find_distributeMsgs_neq:
-      forall from1 from2 nmsgs msgs,
-        from1 <> from2 ->
-        find from1 (distributeMsgs from2 nmsgs msgs) = find from1 msgs.
-    Proof.
-    Admitted.
-
-    Lemma distributeMsgs_comm:
-      forall from1 nmsgs1 from2 nmsgs2 msgs,
-        from1 <> from2 ->
-        distributeMsgs from1 nmsgs1 (distributeMsgs from2 nmsgs2 msgs) =
-        distributeMsgs from2 nmsgs2 (distributeMsgs from1 nmsgs1 msgs).
-    Proof.
-    Admitted.
-
-    Lemma distributeMsgs_idx_add_comm:
-      forall from1 nmsgs1 from2 fmsgs2 msgs,
-        from1 <> from2 ->
-        distributeMsgs from1 nmsgs1 (idx_add from2 fmsgs2 msgs) =
-        idx_add from2 fmsgs2 (distributeMsgs from1 nmsgs1 msgs).
-    Proof.
-    Admitted.
-    
     Lemma subHistory_refl: forall {A} (l: list A), SubHistory l l.
     Proof.
       induction l; simpl; intros; constructor; auto.
