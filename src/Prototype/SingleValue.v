@@ -46,7 +46,7 @@ Section System.
              (exists v, msg = specSetReq extIdx2 v)
       |}.
 
-    Definition spec : Objects SingleValueMsg SpecState :=
+    Definition spec : System SingleValueMsg SpecState :=
       specSingleton :: nil.
 
   End Spec.
@@ -208,7 +208,7 @@ Section System.
 
     End Parent.
 
-    Definition impl : Objects SingleValueMsg ImplState :=
+    Definition impl : System SingleValueMsg ImplState :=
       parent :: (child child1Idx) :: (child child2Idx) :: nil.
 
   End Impl.

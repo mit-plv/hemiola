@@ -42,6 +42,26 @@ Section System.
         exists trsinv,
           TransactionInv rq trsinv rsr.
 
+    (* Inductive MonotonePMsgs: list (PMsg MsgT StateT) -> Prop := *)
+    (* | MpImm: *)
+    (*     forall rq, *)
+    (*       msg_rqrs (midOf rq) = Rq -> *)
+    (*       (forall st, exists rs, *)
+    (*             outsOf rq st = rs :: nil /\ *)
+    (*             isTrsPair (midOf rq) rs = true) -> *)
+    (*       MonotonePMsgs (rq :: nil) *)
+    (* | MpRqRs: *)
+    (*     forall rq1 rs2, *)
+    (*       msg_rqrs (midOf rq1) = Rq -> *)
+    (*       msg_rqrs (midOf rs2) = Rs -> *)
+    (*       (forall st, exists rq2, *)
+    (*             outsOf rq1 st = rq2 :: nil /\ *)
+    (*             isTrsPair rq2 (midOf rs2) = true) -> *)
+    (*       (forall st, exists rs1, *)
+    (*             outsOf rs2 st = rs1 :: nil /\ *)
+    (*             isTrsPair (midOf rq1) rs1 = true) -> *)
+    (*       MonotonePMsgs (rq1 :: rs2 :: nil). *)
+
     Definition MonotonePMsg (pmsg: PMsg MsgT StateT) :=
       match pmsg with
       | Pmsg msg _ outs _ =>
@@ -55,16 +75,16 @@ Section System.
   End PerObject.
 
   Section PerSystem.
-    Variable obs: Objects MsgT StateT.
+    Variable sys: System MsgT StateT.
 
-    Theorem sequential_linear: SequentialObs obs -> Linear obs.
+    Theorem sequential_linear: SequentialSys sys -> Linear sys.
     Proof.
     Admitted.
     
   End PerSystem.
 
   Theorem locally_disjoint_sequential:
-    forall obj, LocallyDisjoint obj -> SequentialObs (obj :: nil).
+    forall obj, LocallyDisjoint obj -> SequentialSys (obj :: nil).
   Proof.
   Admitted.
 
@@ -79,18 +99,18 @@ End System.
 Section Compositional.
 
   Theorem linear_sequential_compositional:
-    forall {MsgT StateT} (obs: Objects MsgT StateT),
-      Forall Monotone obs ->
-      Forall (fun obj => SequentialObs (obj :: nil)) obs ->
-      Linear obs.
+    forall {MsgT StateT} (sys: System MsgT StateT),
+      Forall Monotone sys ->
+      Forall (fun obj => SequentialSys (obj :: nil)) sys ->
+      Linear sys.
   Proof.
   Admitted.
 
   Corollary disjoint_linear:
-    forall {MsgT StateT} (obs: Objects MsgT StateT),
-      Forall Monotone obs ->
-      Forall LocallyDisjoint obs ->
-      Linear obs.
+    forall {MsgT StateT} (sys: System MsgT StateT),
+      Forall Monotone sys ->
+      Forall LocallyDisjoint sys ->
+      Linear sys.
   Proof.
     intros; apply linear_sequential_compositional; auto.
     apply Forall_impl with (P:= LocallyDisjoint); auto.

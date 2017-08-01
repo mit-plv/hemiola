@@ -88,7 +88,7 @@ Section Language.
       obj_pmsgs: PMsg -> Prop;
     }.
 
-  Definition Objects := list Object.
+  Definition System := list Object.
 
   Section Semantics.
 
@@ -116,26 +116,26 @@ Section Language.
      * message; the validity for the message is checked at [step], which 
      * employes this definition.
      *)
-    Inductive step_obj_from (obj: Object):
+    Inductive step_obj_msgs (obj: Object):
       MsgsFrom (* prev message queue state *) ->
       MsgId (* in *) -> bool (* is_internal *) ->
       MsgsFrom (* post message queue state *) -> Prop :=
-    | SofInt:
+    | SomInt:
         forall msgs_from fidx fmsgT fmsg fmsgs,
           (* always choose the head, which is the oldest *)
           find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
-          step_obj_from obj msgs_from fmsg true (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
-    | SofExt:
+          step_obj_msgs obj msgs_from fmsg true (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
+    | SomExt:
         forall msgs_from emsg,
-          step_obj_from obj msgs_from emsg false msgs_from.
-    
+          step_obj_msgs obj msgs_from emsg false msgs_from.
+
     Inductive step_obj (obj: Object):
       ObjectState -> MsgsFrom ->
       MsgId (* in *) -> bool (* is_internal *) -> list MsgId (* outs *) ->
       ObjectState -> MsgsFrom -> Prop :=
     | StepObj: forall os msgs_from fmsg is_internal fpmsg pmsgs_from pos,
         (* 1) pick a message to process *)
-        step_obj_from obj msgs_from fmsg is_internal pmsgs_from ->
+        step_obj_msgs obj msgs_from fmsg is_internal pmsgs_from ->
 
         (* 2) nondeterministically tries to find a predicated message for [fmsg],
          * which satisfies the precondition and postcondition.
@@ -174,7 +174,7 @@ Section Language.
       | msg :: nmsgs' => distributeMsgs from nmsgs' (distributeMsg from msg msgs)
       end.
 
-    Definition getIndices (obs: Objects) := map (fun o => obj_idx o) obs.
+    Definition getIndices (sys: System) := map (fun o => obj_idx o) sys.
 
     Definition isInternal (indices: list nat) (idx: IdxT) :=
       if in_dec eq_nat_dec idx indices then true else false.
@@ -202,21 +202,22 @@ Section Language.
     Record Label := { lbl_in: MsgId;
                       lbl_outs: list MsgId }.
 
-    Inductive step (obs: Objects) : ObjectStates -> Messages ->
-                                    Label ->
-                                    ObjectStates -> Messages -> Prop :=
+    Record State := { st_oss: ObjectStates;
+                      st_msgs: Messages }.
+
+    Inductive step (sys: System) : State -> Label -> State -> Prop :=
     | Step: forall oss idx (obj: Object) (os: ObjectState)
                    oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
-        In obj obs ->
+        In obj sys ->
         obj_idx obj = idx ->
         find idx oss = Some os ->
         find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
-        is_internal = isInternal (getIndices obs) (msgFrom msg_in) ->
-        step obs oss oims
+        is_internal = isInternal (getIndices sys) (msgFrom msg_in) ->
+        step sys {| st_oss := oss; st_msgs := oims |}
              {| lbl_in := msg_in; lbl_outs := msgs_out |}
-             (idx_add idx pos oss)
-             (distributeMsgs idx msgs_out (idx_add idx pmsgs_from oims)).
+             {| st_oss := idx_add idx pos oss;
+                st_msgs := distributeMsgs idx msgs_out (idx_add idx pmsgs_from oims) |}.
 
     Definition ocons {A} (oa: option A) (l: list A) :=
       match oa with
@@ -226,39 +227,73 @@ Section Language.
     Infix "::>" := ocons (at level 0).
 
     (* NOTE: head is the youngest *)
-    Inductive steps (obs: Objects) : ObjectStates -> Messages ->
-                                     list Label ->
-                                     ObjectStates -> Messages -> Prop :=
-    | StepsNil: forall oss oims, steps obs oss oims nil oss oims
+    Inductive steps (sys: System) : State -> list Label -> State -> Prop :=
+    | StepsNil: forall st, steps sys st nil st
     | StepsCons:
-        forall oss1 oims1 msgs oss2 oims2,
-          steps obs oss1 oims1 msgs oss2 oims2 ->
-          forall oss3 lbl oims3,
-            step obs oss2 oims2 lbl oss3 oims3 ->
-            steps obs oss1 oims1 (lbl :: msgs) oss3 oims3.
+        forall st1 msgs st2,
+          steps sys st1 msgs st2 ->
+          forall lbl st3,
+            step sys st2 lbl st3 ->
+            steps sys st1 (lbl :: msgs) st3.
 
-    Fixpoint getObjectStatesInit (obs: Objects) : ObjectStates :=
-      match obs with
+    Fixpoint getObjectStatesInit (sys: System) : ObjectStates :=
+      match sys with
       | nil => @empty _ _
-      | obj :: obs' =>
+      | obj :: sys' =>
         idx_add (obj_idx obj)
                 {| os_st := obj_state_init obj |}
-                (getObjectStatesInit obs')
+                (getObjectStatesInit sys')
       end.
 
-    Fixpoint behaviorOf (obs: Objects) (l: list Label) :=
+    (** Now about refinements *)
+
+    Record BLabel :=
+      { blbl_in: option MsgId;
+        blbl_outs: list MsgId }.
+
+    Definition getBLabel (sys: System) (lbl: Label) :=
+      match lbl with
+      | {| lbl_in := min; lbl_outs := mouts |} =>
+        let ein := fromExt (getIndices sys) min in
+        let eouts := toExts (getIndices sys) mouts in
+        match ein, eouts with
+        | None, nil => None
+        | _, _ => Some {| blbl_in := ein; blbl_outs := eouts |}
+        end
+      end.
+
+    Fixpoint behaviorOf (sys: System) (l: list Label) :=
+      match l with
+      | nil => nil
+      | lbl :: l' => (getBLabel sys lbl) ::> (behaviorOf sys l')
+      end.
+
+    Inductive Behavior: System -> list BLabel -> Prop :=
+    | Behv: forall sys hst st,
+        steps sys {| st_oss := getObjectStatesInit sys;
+                     st_msgs := @empty _ _ |} hst st ->
+        forall bhst,
+          bhst = behaviorOf sys hst ->
+          Behavior sys bhst.
+
+    Definition Refines (impl spec: System) :=
+      forall hst, Behavior impl hst -> Behavior spec hst.
+
+    (** Now about linearizability *)
+
+    Fixpoint historyOf (sys: System) (l: list Label) :=
       match l with
       | nil => nil
       | {| lbl_in := min; lbl_outs := mouts |} :: l' =>
-        (toExts (getIndices obs) mouts)
-          ++ ((fromExt (getIndices obs) min) ::> (behaviorOf obs l'))
+        (toExts (getIndices sys) mouts)
+          ++ ((fromExt (getIndices sys) min) ::> (historyOf sys l'))
       end.
 
-    Inductive Behavior : Objects -> list MsgId -> Prop :=
-    | History:
-        forall obs oss oims hst,
-          steps obs (getObjectStatesInit obs) (@empty _ _) hst oss oims ->
-          Behavior obs (behaviorOf obs hst).
+    Inductive History : System -> list MsgId -> Prop :=
+    | Hist: forall sys hst st,
+        steps sys {| st_oss := getObjectStatesInit sys;
+                     st_msgs := @empty _ _ |} hst st ->
+        History sys (historyOf sys hst).
 
     (* A history consisting only of requests and matching responses. *)
     Inductive Complete: list MsgId -> Prop :=
@@ -365,8 +400,8 @@ Section Language.
     Defined.
 
     (* A system is sequential when all possible histories are sequential. *)
-    Definition SequentialObs (obs: Objects) :=
-      forall hst, Behavior obs hst -> Sequential (rev hst).
+    Definition SequentialSys (sys: System) :=
+      forall hst, History sys hst -> Sequential (rev hst).
     
     (* In message passing system, "object subhistory" and "process subhistory"
      * have exactly the same meaning; here an index "i" indicates a single object.
@@ -375,13 +410,13 @@ Section Language.
      * For requests, j's subhistory contains them.
      * For responses, i's subhistory contains them.
      *)
-    Definition isObjectsMsg (obs: list IdxT) (e: MsgId) :=
+    Definition isSystemMsg (sys: list IdxT) (e: MsgId) :=
       (if in_dec idx_msgType_dec (msg_rq e, msg_rqrs e)
-                 (map (fun i => (i, Rq)) obs) then true else false)
-        || (if in_dec idx_msgType_dec (msg_rs e, msg_rqrs e)
-                      (map (fun i => (i, Rs)) obs) then true else false).
+                 (map (fun i => (i, Rq)) sys) then true else false)
+      || (if in_dec idx_msgType_dec (msg_rs e, msg_rqrs e)
+                    (map (fun i => (i, Rs)) sys) then true else false).
     Definition objSubHistory (i: IdxT) (hst: list MsgId) :=
-      filter (isObjectsMsg (i :: nil)) hst.
+      filter (isSystemMsg (i :: nil)) hst.
 
     (* Two histories are equivalent iff any object subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list MsgId) :=
@@ -398,10 +433,10 @@ Section Language.
         Equivalent (complete ehst) lhst.
 
     (* A system is linear when all possible histories are linearizable. *)
-    Definition Linear (obs: Objects) :=
+    Definition Linear (sys: System) :=
       forall hst,
-        Behavior obs hst ->
-        exists lhst, Behavior obs lhst /\
+        History sys hst ->
+        exists lhst, History sys lhst /\
                      Linearizable (rev hst) (rev lhst).
 
   End Semantics.

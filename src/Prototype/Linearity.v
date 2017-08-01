@@ -6,16 +6,7 @@ Section History.
 
   Local Notation MsgId := (MsgId MsgT).
   Local Notation Object := (Object MsgT StateT).
-  Local Notation Objects := (Objects MsgT StateT).
-
-  (* Inductive Transactional: Objects -> list MsgId -> Prop := *)
-  (* | TrsBase: *)
-  (*     forall obs erq ers, *)
-  (*       msg_rqrs erq = Rq -> *)
-  (*       isTrsPair erq ers = true -> *)
-  (*       isExternal (getIndices obs) (msgFrom erq) = true -> *)
-  (*       isExternal (getIndices obs) (msgTo ers) = true -> *)
-  (*       Transactional obs (ers :: erq :: nil) *)
+  Local Notation System := (System MsgT StateT).
 
   Definition Nonlinearizable (hst: list MsgId) :=
     forall ehst,
