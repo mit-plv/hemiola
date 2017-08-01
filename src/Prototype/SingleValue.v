@@ -23,35 +23,50 @@ Section System.
 
   Section Spec.
 
-    Definition SpecState := nat. (* a single value *)
     Definition specIdx := 0.
+    Definition SpecState := nat. (* a single value *)
 
-    Definition specGetReq eidx : PMsg SingleValueMsg SpecState :=
-      Pmsg (buildMsgId eidx specIdx Rq GetReq)
-           T (fun st => (buildMsgId eidx specIdx Rs (GetResp st)) :: nil) TT.
+    Section PerExt.
+      Variable extIdx: nat.
 
-    Definition specSetReq eidx v : PMsg SingleValueMsg SpecState :=
-      Pmsg (buildMsgId eidx specIdx Rq (SetReq v))
-           T (fun st => (buildMsgId eidx specIdx Rs SetResp) :: nil)
-           (fun _ st => st = v).
+      Definition getReqM := buildMsgId extIdx specIdx Rq GetReq.
+      Definition getRespM v := buildMsgId extIdx specIdx Rs (GetResp v).
+      Definition setReqM v := buildMsgId extIdx specIdx Rq (SetReq v).
+      Definition setRespM := buildMsgId extIdx specIdx Rs SetResp.
 
-    Definition specSingleton : Object SingleValueMsg SpecState :=
+      Definition specGetReq: PMsg SingleValueMsg SpecState :=
+        Pmsg getReqM
+             T (fun st => (getRespM st) :: nil) TT.
+      Definition specSetReq v: PMsg SingleValueMsg SpecState :=
+        Pmsg (setReqM v)
+             T (fun st => setRespM :: nil) TT.
+
+    End PerExt.
+
+    Definition specObj: Object SingleValueMsg SpecState :=
       {| obj_idx := 0;
          obj_state_init := 0;
-         obj_pmsgs := 
+         obj_pmsgs :=
            fun msg =>
              (msg = specGetReq extIdx1) \/
              (exists v, msg = specSetReq extIdx1 v) \/
              (msg = specGetReq extIdx2) \/
              (exists v, msg = specSetReq extIdx2 v)
       |}.
-
-    Definition spec : System SingleValueMsg SpecState :=
-      specSingleton :: nil.
+    
+    Definition spec : System SingleValueMsg SpecState := specObj :: nil.
 
   End Spec.
 
   Section Impl.
+
+    Definition parentIdx := 0.
+    Definition child1Idx := 1.
+    Definition child2Idx := 2.
+    Definition theOtherChild (idx: nat) :=
+      if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
+    Definition getExtIdx (idx: nat) :=
+      if eq_nat_dec idx child1Idx then extIdx1 else extIdx2.
 
     Inductive ValStatus :=
     | Invalid
@@ -65,14 +80,6 @@ Section System.
         impl_value_trs : nat;
         impl_value : nat
       }.
-
-    Definition parentIdx := 0.
-    Definition child1Idx := 1.
-    Definition child2Idx := 2.
-    Definition theOtherChild (idx: nat) :=
-      if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
-    Definition getExtIdx (idx: nat) :=
-      if eq_nat_dec idx child1Idx then extIdx1 else extIdx2.
 
     Section Child.
       Variable childIdx: nat.

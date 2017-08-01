@@ -2,13 +2,15 @@ Require Import Bool List String Peano_dec.
 Require Import FnMap Language.
 
 Section Simulation.
-  Context {MsgT StateT: Type}.
-  Local Notation State := (State MsgT StateT).
+  Context {MsgT IStateT SStateT: Type}.
+  Local Notation IState := (State MsgT IStateT).
+  Local Notation SState := (State MsgT SStateT).
 
-  Variable sim: State -> State -> Prop.
+  Variable sim: IState -> SState -> Prop.
   Local Infix "≈" := sim (at level 30).
 
-  Variables impl spec: System MsgT StateT.
+  Variables (impl: System MsgT IStateT)
+            (spec: System MsgT SStateT).
 
   Definition Simulates :=
     forall ist1 sst1,

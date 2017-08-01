@@ -92,9 +92,6 @@ Section Language.
 
   Section Semantics.
 
-    (* Has a record structure in case of more elements are required. *)
-    Record ObjectState := { os_st: StateT }.
-
     Definition isTrsPair (rq rs: MsgId) :=
       (if eq_nat_dec (msg_rq rq) (msg_rq rs) then true else false)
         && (if eq_nat_dec (msg_rs rq) (msg_rs rs) then true else false)
@@ -103,7 +100,7 @@ Section Language.
             | _, _ => false
             end).
 
-    Definition ObjectStates := Map IdxT ObjectState.
+    Definition ObjectStates := Map IdxT StateT.
 
     Definition MsgsFrom :=
       Map (IdxT * RqRs) (* (from, msgType) *) (list MsgId).
@@ -112,45 +109,33 @@ Section Language.
     Definition ValidOuts (idx: IdxT) (msgs: list MsgId) :=
       Forall (fun m => msgFrom m = idx) msgs.
 
-    (* Note that [SofExt] takes an arbitrary message [emsg] as an input
-     * message; the validity for the message is checked at [step], which 
-     * employes this definition.
-     *)
-    Inductive step_obj_msgs (obj: Object):
-      MsgsFrom (* prev message queue state *) ->
-      MsgId (* in *) -> bool (* is_internal *) ->
-      MsgsFrom (* post message queue state *) -> Prop :=
-    | SomInt:
-        forall msgs_from fidx fmsgT fmsg fmsgs,
-          (* always choose the head, which is the oldest *)
-          find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
-          step_obj_msgs obj msgs_from fmsg true (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
-    | SomExt:
-        forall msgs_from emsg,
-          step_obj_msgs obj msgs_from emsg false msgs_from.
-
+    (*! A new version *)
     Inductive step_obj (obj: Object):
-      ObjectState -> MsgsFrom ->
-      MsgId (* in *) -> bool (* is_internal *) -> list MsgId (* outs *) ->
-      ObjectState -> MsgsFrom -> Prop :=
-    | StepObj: forall os msgs_from fmsg is_internal fpmsg pmsgs_from pos,
-        (* 1) pick a message to process *)
-        step_obj_msgs obj msgs_from fmsg is_internal pmsgs_from ->
+      StateT -> MsgsFrom ->
+      option MsgId (* internal in? *) -> list MsgId (* outs *) ->
+      StateT -> MsgsFrom -> Prop :=
+    | SoInt: forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos,
+        (* 1) pick an internal message to process *)
+        find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
 
         (* 2) nondeterministically tries to find a predicated message for [fmsg],
          * which satisfies the precondition and postcondition.
          *)
         msgTo fmsg = obj_idx obj ->
         obj_pmsgs obj fpmsg -> midOf fpmsg = fmsg ->
-        precondOf fpmsg (os_st os) ->
-        postcondOf fpmsg (os_st os) pos ->
+        precondOf fpmsg os ->
+        postcondOf fpmsg os pos ->
 
         (* -) later syntax should care [ValidOuts] *)
-        ValidOuts (obj_idx obj) (outsOf fpmsg (os_st os)) ->
-        
+        ValidOuts (obj_idx obj) (outsOf fpmsg os) ->
+
         step_obj obj os msgs_from
-                 fmsg is_internal (outsOf fpmsg (os_st os))
-                 {| os_st := pos |} pmsgs_from.
+                 (Some fmsg) (outsOf fpmsg os)
+                 pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
+    | SoExt: forall os msgs_from emsg emsgs,
+        find (msgFrom emsg, msg_rqrs emsg) msgs_from = Some emsgs ->
+        msgTo emsg = obj_idx obj ->
+        step_obj obj os msgs_from None (emsg :: nil) os msgs_from.
 
     Definition distributeMsg (from: IdxT) (msg: MsgId)
                (msgs: Messages): Messages :=
@@ -181,39 +166,35 @@ Section Language.
     Definition isExternal (indices: list nat) (idx: IdxT) :=
       if in_dec eq_nat_dec idx indices then false else true.
 
-    Definition fromInt (indices: list nat) (msg: MsgId) :=
-      if isInternal indices (msgFrom msg) then Some msg else None.
-    Definition fromInts (indices: list nat) (msgs: list MsgId) :=
-      filter (fun pm => isInternal indices (msgFrom pm)) msgs.
-    Definition fromExt (indices: list nat) (msg: MsgId) :=
-      if isExternal indices (msgFrom msg) then Some msg else None.
-    Definition fromExts (indices: list nat) (msgs: list MsgId) :=
-      filter (fun pm => isExternal indices (msgFrom pm)) msgs.
-
-    Definition toInt (indices: list nat) (msg: MsgId) :=
-      if isInternal indices (msgTo msg) then Some msg else None.
-    Definition toInts (indices: list nat) (msgs: list MsgId) :=
-      filter (fun pm => isInternal indices (msgTo pm)) msgs.
-    Definition toExt (indices: list nat) (msg: MsgId) :=
-      if isExternal indices (msgTo msg) then Some msg else None.
+    Definition fromExt (indices: list nat) (omsg: option MsgId) :=
+      match omsg with
+      | Some msg => if isExternal indices (msgFrom msg) then Some msg else None
+      | None => None
+      end.
     Definition toExts (indices: list nat) (msgs: list MsgId) :=
       filter (fun pm => isExternal indices (msgTo pm)) msgs.
 
-    Record Label := { lbl_in: MsgId;
+    Record Label := { lbl_in: option MsgId;
                       lbl_outs: list MsgId }.
 
     Record State := { st_oss: ObjectStates;
                       st_msgs: Messages }.
 
     Inductive step (sys: System) : State -> Label -> State -> Prop :=
-    | Step: forall oss idx (obj: Object) (os: ObjectState)
-                   oims msgs_from msg_in is_internal msgs_out pos pmsgs_from,
+    | Step: forall oss idx (obj: Object) (os: StateT)
+                   oims msgs_from msg_in msgs_out pos pmsgs_from,
         In obj sys ->
         obj_idx obj = idx ->
         find idx oss = Some os ->
         find idx oims = Some msgs_from -> 
-        step_obj obj os msgs_from msg_in is_internal msgs_out pos pmsgs_from ->
-        is_internal = isInternal (getIndices sys) (msgFrom msg_in) ->
+        step_obj obj os msgs_from msg_in msgs_out pos pmsgs_from ->
+        match msg_in with
+        | Some msg => isInternal (getIndices sys) (msgFrom msg) = true
+        | None => match msgs_out with
+                  | msg :: _ => isExternal (getIndices sys) (msgFrom msg) = true
+                  | _ => False
+                  end
+        end ->
         step sys {| st_oss := oss; st_msgs := oims |}
              {| lbl_in := msg_in; lbl_outs := msgs_out |}
              {| st_oss := idx_add idx pos oss;
@@ -241,11 +222,9 @@ Section Language.
       | nil => @empty _ _
       | obj :: sys' =>
         idx_add (obj_idx obj)
-                {| os_st := obj_state_init obj |}
+                (obj_state_init obj)
                 (getObjectStatesInit sys')
       end.
-
-    (** Now about refinements *)
 
     Record BLabel :=
       { blbl_in: option MsgId;
@@ -275,9 +254,6 @@ Section Language.
         forall bhst,
           bhst = behaviorOf sys hst ->
           Behavior sys bhst.
-
-    Definition Refines (impl spec: System) :=
-      forall hst, Behavior impl hst -> Behavior spec hst.
 
     (** Now about linearizability *)
 
@@ -443,22 +419,6 @@ Section Language.
 
   Section Facts.
 
-    Lemma step_obj_idx:
-      forall obj os1 msgs1 min isint mouts os2 msgs2,
-        step_obj obj os1 msgs1 min isint mouts os2 msgs2 ->
-        msgTo min = obj_idx obj.
-    Proof.
-      intros; inv H; auto.
-    Qed.
-
-    Lemma step_obj_validOuts:
-      forall obj os1 msgs1 min isint mouts os2 msgs2,
-        step_obj obj os1 msgs1 min isint mouts os2 msgs2 ->
-        ValidOuts (obj_idx obj) mouts.
-    Proof.
-      intros; inv H; auto.
-    Qed.
-
     Lemma find_idx_add_eq:
       forall {A} (m: Map nat A) (k: nat) (v: A),
         find k (idx_add k v m) = Some v.
@@ -514,6 +474,9 @@ Section Language.
 
 End Language.
 
-Hint Immediate subHistory_refl extHistory_trans equivalent_refl.
+Definition Refines {MsgT IStateT SStateT}
+           (impl: System MsgT IStateT) (spec: System MsgT SStateT) :=
+  forall hst, Behavior impl hst -> Behavior spec hst.
 
+Hint Immediate subHistory_refl extHistory_trans equivalent_refl.
 
