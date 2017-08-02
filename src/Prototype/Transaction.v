@@ -7,8 +7,8 @@ Section System.
   Definition CondT := StateT -> Prop.
   Definition condImp (c1 c2: CondT) := forall st, c1 st -> c2 st.
   Infix "-->" := condImp (at level 30).
-  Definition postOf (postcond: StateT -> StateT -> Prop): CondT :=
-    fun post => forall pre, postcond pre post.
+  Definition postOf (postcond: StateT -> MsgT -> StateT -> Prop): CondT :=
+    fun post => forall pre mt, postcond pre mt post.
 
   Definition Disjoint (c1 c2: CondT) := forall st, c1 st -> c2 st -> False.
   Infix "-*-" := Disjoint (at level 30).
@@ -16,10 +16,10 @@ Section System.
   Section PerObject.
     Variable obj: Object MsgT StateT.
 
-    Definition Transaction (rq rsr: PMsg MsgT StateT) (rs: MsgId MsgT) :=
-      obj_pmsgs obj rq /\ obj_pmsgs obj rsr /\
-      (exists st, In rs (outsOf rsr st)) /\
-      isTrsPair (midOf rq) rs = true.
+    Definition Transaction (rq rsr: PMsg MsgT StateT) (rs: Msg MsgT) :=
+      In rq (obj_pmsgs obj) /\ In rsr (obj_pmsgs obj) /\
+      (exists st mt, In rs (outsOf rsr st mt)) /\
+      isTrsPair (midOf rq) (msg_id rs) = true.
 
     (* A VERY SUBTLE POINT:
      * [rsr] is not a [PMsg] that handles the response,
@@ -31,7 +31,7 @@ Section System.
     | TrsInv: forall rq rsr trsinv,
         postOf (postcondOf rq) --> trsinv ->
         trsinv --> precondOf rsr ->
-        (forall pmsg, obj_pmsgs obj pmsg ->
+        (forall pmsg, In pmsg (obj_pmsgs obj) ->
                       pmsg <> rsr ->
                       (precondOf pmsg) -*- trsinv) ->
         TransactionInv rq trsinv rsr.
@@ -42,35 +42,41 @@ Section System.
         exists trsinv,
           TransactionInv rq trsinv rsr.
 
-    (* Inductive MonotonePMsgs: list (PMsg MsgT StateT) -> Prop := *)
-    (* | MpImm: *)
-    (*     forall rq, *)
-    (*       msg_rqrs (midOf rq) = Rq -> *)
-    (*       (forall st, exists rs, *)
-    (*             outsOf rq st = rs :: nil /\ *)
-    (*             isTrsPair (midOf rq) rs = true) -> *)
-    (*       MonotonePMsgs (rq :: nil) *)
-    (* | MpRqRs: *)
-    (*     forall rq1 rs2, *)
-    (*       msg_rqrs (midOf rq1) = Rq -> *)
-    (*       msg_rqrs (midOf rs2) = Rs -> *)
-    (*       (forall st, exists rq2, *)
-    (*             outsOf rq1 st = rq2 :: nil /\ *)
-    (*             isTrsPair rq2 (midOf rs2) = true) -> *)
-    (*       (forall st, exists rs1, *)
-    (*             outsOf rs2 st = rs1 :: nil /\ *)
-    (*             isTrsPair (midOf rq1) rs1 = true) -> *)
-    (*       MonotonePMsgs (rq1 :: rs2 :: nil). *)
+    Definition Immediate (rq: PMsg MsgT StateT) :=
+      msg_rqrs (midOf rq) = Rq /\
+      forall st mt, exists rs,
+          outsOf rq st mt = rs :: nil /\
+          isTrsPair (midOf rq) (msg_id rs) = true.
 
-    Definition MonotonePMsg (pmsg: PMsg MsgT StateT) :=
-      match pmsg with
-      | Pmsg msg _ outs _ =>
-        msg_rqrs msg = Rs ->
-        forall st, Forall (fun m => msg_rqrs m = Rs) (outs st) (* shouldn't be [Rq] *)
-      end.
+    Definition Forwarding (rq1 rs2: PMsg MsgT StateT) :=
+      msg_rqrs (midOf rq1) = Rq /\
+      msg_rqrs (midOf rs2) = Rs /\
+      (forall st mt, exists rq2,
+            outsOf rq1 st mt = rq2 :: nil /\
+            isTrsPair (msg_id rq2) (midOf rs2) = true) /\
+      (forall st mt, exists rs1,
+            outsOf rs2 st mt = rs1 :: nil /\
+            isTrsPair (midOf rq1) (msg_id rs1) = true).
 
-    Definition Monotone :=
-      forall pmsg, obj_pmsgs obj pmsg -> MonotonePMsg pmsg.
+    Definition UniqueHandler (pmsgs: list (PMsg MsgT StateT))
+               (pmsg: PMsg MsgT StateT) :=
+      In pmsg pmsgs /\
+      forall pmsg', In pmsg' pmsgs -> midOf pmsg <> midOf pmsg'.
+    
+    (* Monotonicity is one of key factors whether a given protocol in a 
+     * message-passing system is linearizable or not. It basically requires the
+     * whole system always performs a "monotone" transaction; informally, an 
+     * object is monotone if there is no predicated message that
+     * receives a response and sends some requests.
+     *)
+    Definition MonotonePMsgs (pmsgs: list (PMsg MsgT StateT)): Prop :=
+      forall pmsg,
+        In pmsg pmsgs ->
+        (Immediate pmsg \/
+         (exists rs, Forwarding pmsg rs /\ UniqueHandler pmsgs rs) \/
+         (exists rq, Forwarding rq pmsg /\ UniqueHandler pmsgs pmsg)).
+
+    Definition Monotone := MonotonePMsgs (obj_pmsgs obj).
 
   End PerObject.
 

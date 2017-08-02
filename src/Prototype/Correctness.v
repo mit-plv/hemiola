@@ -28,6 +28,7 @@ Section System.
     destruct ist as [ioss imsgs].
     refine (exists iosp iosc1 iosc2,
                ioss = [][child2Idx <- iosc2][child1Idx <- iosc1][parentIdx <- iosp] /\ _).
+
     refine (match validValue iosp iosc1 iosc2 with
             | Some v => _
             | None => _

@@ -36,9 +36,12 @@ Section Language.
 
   Record MsgId := { msg_rq : IdxT; (* an object that requests this message *)
                     msg_rs : IdxT; (* an object that responses this message *)
-                    msg_rqrs : RqRs;
-                    msg_type : MsgT
+                    msg_rqrs : RqRs
                   }.
+
+  Record Msg :=
+    { msg_id: MsgId;
+      msg_content: MsgT }.
 
   Definition msgFrom (msg: MsgId) :=
     match msg_rqrs msg with
@@ -52,21 +55,24 @@ Section Language.
     | Rs => msg_rq msg
     end.
 
-  Definition buildMsgId rq rs rr ty :=
-    {| msg_rq := rq; msg_rs := rs; msg_rqrs := rr; msg_type := ty |}.
+  Definition buildMsgId rq rs rr :=
+    {| msg_rq := rq; msg_rs := rs; msg_rqrs := rr |}.
 
   Inductive PMsg :=
-  | Pmsg: forall (msg: MsgId)
+  | Pmsg: forall (mid: MsgId)
                  (precond: StateT -> Prop)
-                 (outs: StateT -> list MsgId)
+                 (outs: StateT ->
+                        MsgT (* message being handled *) ->
+                        list Msg)
                  (postcond: StateT (* prestate *) ->
+                            MsgT (* message being handled *) ->
                             StateT (* poststate *) -> Prop), PMsg.
 
   Definition midOf (pmsg: PMsg) :=
     match pmsg with
-    | Pmsg msg _ _ _ => msg
+    | Pmsg mid _ _ _ => mid
     end.
-
+  
   Definition precondOf (pmsg: PMsg) :=
     match pmsg with
     | Pmsg _ precond _ _ => precond
@@ -85,7 +91,7 @@ Section Language.
   Record Object :=
     { obj_idx: nat;
       obj_state_init: StateT;
-      obj_pmsgs: PMsg -> Prop;
+      obj_pmsgs: list PMsg
     }.
 
   Definition System := list Object.
@@ -103,16 +109,16 @@ Section Language.
     Definition ObjectStates := Map IdxT StateT.
 
     Definition MsgsFrom :=
-      Map (IdxT * RqRs) (* (from, msgType) *) (list MsgId).
+      Map (IdxT * RqRs) (* (from, msgType) *) (list Msg).
     Definition Messages := Map IdxT (* to *) MsgsFrom.
 
-    Definition ValidOuts (idx: IdxT) (msgs: list MsgId) :=
-      Forall (fun m => msgFrom m = idx) msgs.
+    Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
+      Forall (fun m => msgFrom (msg_id m) = idx) msgs.
 
     (*! A new version *)
     Inductive step_obj (obj: Object):
       StateT -> MsgsFrom ->
-      option MsgId (* internal in? *) -> list MsgId (* outs *) ->
+      option Msg (* internal in? *) -> list Msg (* outs *) ->
       StateT -> MsgsFrom -> Prop :=
     | SoInt: forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos,
         (* 1) pick an internal message to process *)
@@ -121,38 +127,38 @@ Section Language.
         (* 2) nondeterministically tries to find a predicated message for [fmsg],
          * which satisfies the precondition and postcondition.
          *)
-        msgTo fmsg = obj_idx obj ->
-        obj_pmsgs obj fpmsg -> midOf fpmsg = fmsg ->
+        msgTo (msg_id fmsg) = obj_idx obj ->
+        In fpmsg (obj_pmsgs obj) -> msg_id fmsg = midOf fpmsg ->
         precondOf fpmsg os ->
-        postcondOf fpmsg os pos ->
+        postcondOf fpmsg os (msg_content fmsg) pos ->
 
         (* -) later syntax should care [ValidOuts] *)
-        ValidOuts (obj_idx obj) (outsOf fpmsg os) ->
+        ValidOuts (obj_idx obj) (outsOf fpmsg os (msg_content fmsg)) ->
 
         step_obj obj os msgs_from
-                 (Some fmsg) (outsOf fpmsg os)
+                 (Some fmsg) (outsOf fpmsg os (msg_content fmsg))
                  pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
     | SoExt: forall os msgs_from emsg emsgs,
-        find (msgFrom emsg, msg_rqrs emsg) msgs_from = Some emsgs ->
-        msgTo emsg = obj_idx obj ->
+        find (msgFrom (msg_id emsg), msg_rqrs (msg_id emsg)) msgs_from = Some emsgs ->
+        msgTo (msg_id emsg) = obj_idx obj ->
         step_obj obj os msgs_from None (emsg :: nil) os msgs_from.
 
-    Definition distributeMsg (from: IdxT) (msg: MsgId)
+    Definition distributeMsg (from: IdxT) (msg: Msg)
                (msgs: Messages): Messages :=
-      let to := msgTo msg in
+      let to := msgTo (msg_id msg) in
       match find to msgs with
       | Some toMsgs =>
-        let added := match toMsgs (from, msg_rqrs msg) with
+        let added := match toMsgs (from, msg_rqrs (msg_id msg)) with
                      (* should be added last, since the head is the oldest *)
                      | Some fromMsgs => fromMsgs ++ (msg :: nil)
                      | None => msg :: nil
                      end in
-        idx_add to (idx_msgType_add (from, msg_rqrs msg) added toMsgs) msgs
+        idx_add to (idx_msgType_add (from, msg_rqrs (msg_id msg)) added toMsgs) msgs
       | None =>
-        idx_add to (idx_msgType_add (from, msg_rqrs msg) (msg :: nil) (@empty _ _)) msgs
+        idx_add to (idx_msgType_add (from, msg_rqrs (msg_id msg)) (msg :: nil) (@empty _ _)) msgs
       end.
 
-    Fixpoint distributeMsgs (from: IdxT) (nmsgs: list MsgId)
+    Fixpoint distributeMsgs (from: IdxT) (nmsgs: list Msg)
              (msgs: Messages): Messages :=
       match nmsgs with
       | nil => msgs
@@ -166,16 +172,16 @@ Section Language.
     Definition isExternal (indices: list nat) (idx: IdxT) :=
       if in_dec eq_nat_dec idx indices then false else true.
 
-    Definition fromExt (indices: list nat) (omsg: option MsgId) :=
+    Definition fromExt (indices: list nat) (omsg: option Msg) :=
       match omsg with
-      | Some msg => if isExternal indices (msgFrom msg) then Some msg else None
+      | Some msg => if isExternal indices (msgFrom (msg_id msg)) then Some msg else None
       | None => None
       end.
-    Definition toExts (indices: list nat) (msgs: list MsgId) :=
-      filter (fun pm => isExternal indices (msgTo pm)) msgs.
+    Definition toExts (indices: list nat) (msgs: list Msg) :=
+      filter (fun pm => isExternal indices (msgTo (msg_id pm))) msgs.
 
-    Record Label := { lbl_in: option MsgId;
-                      lbl_outs: list MsgId }.
+    Record Label := { lbl_in: option Msg;
+                      lbl_outs: list Msg }.
 
     Record State := { st_oss: ObjectStates;
                       st_msgs: Messages }.
@@ -189,9 +195,9 @@ Section Language.
         find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in msgs_out pos pmsgs_from ->
         match msg_in with
-        | Some msg => isInternal (getIndices sys) (msgFrom msg) = true
+        | Some msg => isInternal (getIndices sys) (msgFrom (msg_id msg)) = true
         | None => match msgs_out with
-                  | msg :: _ => isExternal (getIndices sys) (msgFrom msg) = true
+                  | msg :: _ => isExternal (getIndices sys) (msgFrom (msg_id msg)) = true
                   | _ => False
                   end
         end ->
@@ -227,8 +233,8 @@ Section Language.
       end.
 
     Record BLabel :=
-      { blbl_in: option MsgId;
-        blbl_outs: list MsgId }.
+      { blbl_in: option Msg;
+        blbl_outs: list Msg }.
 
     Definition getBLabel (sys: System) (lbl: Label) :=
       match lbl with
@@ -265,20 +271,20 @@ Section Language.
           ++ ((fromExt (getIndices sys) min) ::> (historyOf sys l'))
       end.
 
-    Inductive History : System -> list MsgId -> Prop :=
+    Inductive History : System -> list Msg -> Prop :=
     | Hist: forall sys hst st,
         steps sys {| st_oss := getObjectStatesInit sys;
                      st_msgs := @empty _ _ |} hst st ->
         History sys (historyOf sys hst).
 
     (* A history consisting only of requests and matching responses. *)
-    Inductive Complete: list MsgId -> Prop :=
+    Inductive Complete: list Msg -> Prop :=
     | CplNil: Complete nil
     | CplAdd:
         forall hst1 hst2 hst3,
           Complete (hst1 ++ hst2 ++ hst3) ->
           forall rq rs,
-            isTrsPair rq rs = true ->
+            isTrsPair (msg_id rq) (msg_id rs) = true ->
             forall chst,
               chst = hst1 ++ rq :: hst2 ++ rs :: hst3 ->
               Complete chst.
@@ -291,11 +297,11 @@ Section Language.
     Definition ExtHistory {A} (l el: list A): Prop :=
       exists e, el = l ++ e.
 
-    Fixpoint matchTrsPair (rq: MsgId) (rss: list MsgId) :=
+    Fixpoint matchTrsPair (rq: Msg) (rss: list Msg) :=
       match rss with
       | nil => None
       | rs :: rss' =>
-        if isTrsPair rq rs then Some rss'
+        if isTrsPair (msg_id rq) (msg_id rs) then Some rss'
         else match matchTrsPair rq rss' with
              | Some nrss => Some (rs :: nrss)
              | None => None
@@ -303,11 +309,11 @@ Section Language.
       end.
 
     (* Assuming the history is well-formed. *)
-    Fixpoint complete' (hst rss: list MsgId): list MsgId * list MsgId :=
+    Fixpoint complete' (hst rss: list Msg): list Msg * list Msg :=
       match hst with
       | nil => (nil, rss)
       | msg :: hst' =>
-        match msg_rqrs msg with
+        match msg_rqrs (msg_id msg) with
         | Rq => let (phst, prss) := complete' hst' rss in
                 match matchTrsPair msg prss with
                 | Some nrss => (msg :: phst, nrss)
@@ -318,17 +324,8 @@ Section Language.
         end
       end.
 
-    (* Axiom exMsgT: MsgT. *)
-    (* Example exMsg1 := {| msg_rq := 1; msg_rs := 2; msg_rqrs := Rq; msg_type := exMsgT |}. *)
-    (* Example exMsg2 := {| msg_rq := 1; msg_rs := 2; msg_rqrs := Rs; msg_type := exMsgT |}. *)
-    (* Example exMsg3 := {| msg_rq := 3; msg_rs := 4; msg_rqrs := Rq; msg_type := exMsgT |}. *)
-    (* Example exMsg4 := {| msg_rq := 3; msg_rs := 4; msg_rqrs := Rs; msg_type := exMsgT |}. *)
-    (* Eval compute in (complete' (exMsg1 :: exMsg2 :: nil) nil). *)
-    (* Eval compute in (complete' (exMsg2 :: exMsg1 :: nil) nil). *)
-    (* Eval compute in (complete' (exMsg1 :: exMsg3 :: exMsg4 :: exMsg2 :: nil) nil). *)
-
-    Definition complete (hst: list MsgId) := fst (complete' hst nil).
-    Definition WellFormed (hst: list MsgId) := snd (complete' hst nil) = nil.
+    Definition complete (hst: list Msg) := fst (complete' hst nil).
+    Definition WellFormed (hst: list Msg) := snd (complete' hst nil) = nil.
 
     Lemma complete_subList: forall hst, SubHistory (complete hst) hst.
     Proof.
@@ -351,20 +348,20 @@ Section Language.
      * 2) A matching response for each request should be right after the request.
      * 3) There might not be a matching response for the last request.
      *)
-    Fixpoint Sequential' (hst: list MsgId) (orq: option MsgId) :=
+    Fixpoint Sequential' (hst: list Msg) (orq: option Msg) :=
       match hst with
       | nil => true
       | msg :: hst' =>
         match orq with
-        | Some rq => isTrsPair rq msg && Sequential' hst' None
-        | None => match msg_rqrs msg with
+        | Some rq => isTrsPair (msg_id rq) (msg_id msg) && Sequential' hst' None
+        | None => match msg_rqrs (msg_id msg) with
                   | Rq => Sequential' hst' (Some msg)
                   | Rs => false
                   end
         end
       end.
-    Definition Sequential (hst: list MsgId) := Sequential' hst None = true.
-    Definition Concurrent (hst: list MsgId) := ~ Sequential hst.
+    Definition Sequential (hst: list Msg) := Sequential' hst None = true.
+    Definition Concurrent (hst: list Msg) := ~ Sequential hst.
 
     Definition sequential_concurrent_dec:
       forall hst, {Sequential hst} + {Concurrent hst}.
@@ -386,23 +383,23 @@ Section Language.
      * For requests, j's subhistory contains them.
      * For responses, i's subhistory contains them.
      *)
-    Definition isSystemMsg (sys: list IdxT) (e: MsgId) :=
-      (if in_dec idx_msgType_dec (msg_rq e, msg_rqrs e)
+    Definition isSystemMsg (sys: list IdxT) (e: Msg) :=
+      (if in_dec idx_msgType_dec (msg_rq (msg_id e), msg_rqrs (msg_id e))
                  (map (fun i => (i, Rq)) sys) then true else false)
-      || (if in_dec idx_msgType_dec (msg_rs e, msg_rqrs e)
+      || (if in_dec idx_msgType_dec (msg_rs (msg_id e), msg_rqrs (msg_id e))
                     (map (fun i => (i, Rs)) sys) then true else false).
-    Definition objSubHistory (i: IdxT) (hst: list MsgId) :=
+    Definition objSubHistory (i: IdxT) (hst: list Msg) :=
       filter (isSystemMsg (i :: nil)) hst.
 
     (* Two histories are equivalent iff any object subhistories are equal. *)
-    Definition Equivalent (hst1 hst2: list MsgId) :=
+    Definition Equivalent (hst1 hst2: list Msg) :=
       forall i, objSubHistory i hst1 = objSubHistory i hst2.
 
     (* TODO: this is actually not a fully correct definition:
      * Linearizability requires one more condition: any _strict_ transaction
      * orders are preserved by [lhst].
      *)
-    Definition Linearizable (hst lhst: list MsgId) :=
+    Definition Linearizable (hst lhst: list Msg) :=
       exists ehst,
         ExtHistory hst ehst /\
         Sequential lhst /\
