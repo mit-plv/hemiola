@@ -376,24 +376,26 @@ Section Language.
     Definition SequentialSys (sys: System) :=
       forall hst, History sys hst -> Sequential (rev hst).
     
-    (* In message passing system, "object subhistory" and "process subhistory"
-     * have exactly the same meaning; here an index "i" indicates a single object.
-     * An ambiguity comes when we need to decide whether a req/resp from "i" to "j"
-     * belongs to i's or j's subhistory.
-     * For requests, j's subhistory contains them.
-     * For responses, i's subhistory contains them.
+    (* In message passing system, a "process" refers to a "requester" and an 
+     * "object" refers to a "requestee".
+     * Thus, for a given message {| msg_rq := i; msg_rs := j; msg_rqrs := _ |},
+     * its requester (process) is "i" and the (target) object is "j".
      *)
-    Definition isSystemMsg (sys: list IdxT) (e: Msg) :=
-      (if in_dec idx_msgType_dec (msg_rq (msg_id e), msg_rqrs (msg_id e))
-                 (map (fun i => (i, Rq)) sys) then true else false)
-      || (if in_dec idx_msgType_dec (msg_rs (msg_id e), msg_rqrs (msg_id e))
-                    (map (fun i => (i, Rs)) sys) then true else false).
-    Definition objSubHistory (i: IdxT) (hst: list Msg) :=
-      filter (isSystemMsg (i :: nil)) hst.
+    Definition isProcessOf (obj: Object) (msg: Msg) :=
+      if eq_nat_dec (obj_idx obj) (msg_rq (msg_id msg)) then true else false.
 
-    (* Two histories are equivalent iff any object subhistories are equal. *)
+    Definition isObjectOf (obj: Object) (msg: Msg) :=
+      if eq_nat_dec (obj_idx obj) (msg_rs (msg_id msg)) then true else false.
+
+    Definition objSubHistory (obj: Object) (hst: list Msg) :=
+      filter (isObjectOf obj) hst.
+
+    Definition procSubHistory (obj: Object) (hst: list Msg) :=
+      filter (isProcessOf obj) hst.
+
+    (* Two histories are equivalent iff any process subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
-      forall i, objSubHistory i hst1 = objSubHistory i hst2.
+      forall i, procSubHistory i hst1 = procSubHistory i hst2.
 
     (* TODO: this is actually not a fully correct definition:
      * Linearizability requires one more condition: any _strict_ transaction
