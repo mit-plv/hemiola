@@ -65,42 +65,58 @@ Section System.
     (* TODO: formalize *)
 
     (*! Monotonicity *)
-    
+
+    (* A predicated message is [Immediate] if it handles a request and immediately
+     * sends the response of it.
+     *)
     Definition Immediate (rq: PMsg MvalT StateT) :=
       msg_rqrs (pmsg_mid rq) = Rq /\
       forall st mt, exists rs,
           pmsg_outs rq st mt = rs :: nil /\
           isTrsPair (pmsg_mid rq) (msg_id rs) = true.
 
+    (* A pair of predicated messages [rq1] and [rs2] is [Forwarding] if
+     * 1) [rq1] handles a request,
+     * 2) [rs2] handles a response (NOT the response of [rq1]),
+     * 3) [rq1] sends a request [rq2] which matches with [rs2], and
+     * 4) [rs2] sends a response [rs1] which matches with [rq1].
+     *)
     Definition Forwarding (rq1 rs2: PMsg MvalT StateT) :=
       msg_rqrs (pmsg_mid rq1) = Rq /\
       msg_rqrs (pmsg_mid rs2) = Rs /\
       (forall st mt, exists rq2,
             pmsg_outs rq1 st mt = rq2 :: nil /\
+            msgTo (msg_id rq2) <> msgFrom (pmsg_mid rq1) /\
             isTrsPair (msg_id rq2) (pmsg_mid rs2) = true) /\
       (forall st mt, exists rs1,
             pmsg_outs rs2 st mt = rs1 :: nil /\
             isTrsPair (pmsg_mid rq1) (msg_id rs1) = true).
 
+    (* A predicated message [pmsg] is a unique handler in [pmsgs] if it is
+     * the only one handling a certain [MsgId].
+     *)
     Definition UniqueHandler (pmsgs: list (PMsg MvalT StateT))
                (pmsg: PMsg MvalT StateT) :=
       In pmsg pmsgs /\
       forall pmsg', In pmsg' pmsgs -> (pmsg_mid pmsg) <> (pmsg_mid pmsg').
-    
-    (* Monotonicity is one of key factors whether a given protocol in a 
-     * message-passing system is linearizable or not. It basically requires the
-     * whole system always performs a "monotone" transaction; informally, an 
-     * object is monotone if there is no predicated message that
-     * receives a response and sends some requests.
+
+    (* Monotonicity regulates the form of how requests are handled in a whole
+     * message-passing system. It basically requires that the system always 
+     * performs a "monotone" transaction. Informally, predicated messages in an
+     * object is monotone if they are composed only of [Immediate] or 
+     * [Forwarding] messages.
      *)
     Definition MonotonePMsgs (pmsgs: list (PMsg MvalT StateT)): Prop :=
       forall (pmsg: PMsg MvalT StateT),
         In pmsg pmsgs ->
         (Immediate pmsg \/
          (exists (rs: PMsg MvalT StateT),
-             Forwarding pmsg rs /\ UniqueHandler pmsgs rs) \/
+             In rs pmsgs /\
+             Forwarding pmsg rs) \/
          (exists (rq: PMsg MvalT StateT),
-             Forwarding rq pmsg /\ UniqueHandler pmsgs pmsg)).
+             In rq pmsgs /\
+             Forwarding rq pmsg /\
+             UniqueHandler pmsgs pmsg)).
 
     Definition Monotone := MonotonePMsgs (obj_pmsgs obj).
 
