@@ -4,10 +4,12 @@ Require Import FnMap Language.
 Set Implicit Arguments.
 
 Section Reduction.
-  Variable MsgT StateT: Type.
+  Context {MsgT IStateT SStateT: Type}.
+  Context {MvalT: MsgT -> RqRs -> Type}.
+  Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
 
   Local Notation MsgId := (MsgId MsgT).
-  Local Notation Label := (Label MsgT).
+  Local Notation Label := (Label MvalT).
 
   Definition Reduced (from to: list Label) (lbl1 lbl2: Label) :=
     exists hst1 hst2,

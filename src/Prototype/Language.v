@@ -32,16 +32,20 @@ Section Language.
     add idx_idx_dec k v m.
 
   Variable MsgT: Type.
+  Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
+  Variable MvalT: MsgT -> RqRs -> Type.
   Variable StateT: Type.
 
   Record MsgId := { msg_rq : IdxT; (* an object that requests this message *)
                     msg_rs : IdxT; (* an object that responses this message *)
+                    msg_type : MsgT;
                     msg_rqrs : RqRs
                   }.
 
   Record Msg :=
     { msg_id: MsgId;
-      msg_content: MsgT }.
+      msg_value: MvalT (msg_type msg_id) (msg_rqrs msg_id)
+    }.
 
   Definition msgFrom (msg: MsgId) :=
     match msg_rqrs msg with
@@ -55,38 +59,19 @@ Section Language.
     | Rs => msg_rq msg
     end.
 
-  Definition buildMsgId rq rs rr :=
-    {| msg_rq := rq; msg_rs := rs; msg_rqrs := rr |}.
+  Definition buildMsgId rq rs ty rr :=
+    {| msg_rq := rq; msg_rs := rs; msg_type := ty; msg_rqrs := rr |}.
 
-  Inductive PMsg :=
-  | Pmsg: forall (mid: MsgId)
-                 (precond: StateT -> Prop)
-                 (outs: StateT ->
-                        MsgT (* message being handled *) ->
-                        list Msg)
-                 (postcond: StateT (* prestate *) ->
-                            MsgT (* message being handled *) ->
-                            StateT (* poststate *) -> Prop), PMsg.
-
-  Definition midOf (pmsg: PMsg) :=
-    match pmsg with
-    | Pmsg mid _ _ _ => mid
-    end.
-  
-  Definition precondOf (pmsg: PMsg) :=
-    match pmsg with
-    | Pmsg _ precond _ _ => precond
-    end.
-
-  Definition outsOf (pmsg: PMsg) :=
-    match pmsg with
-    | Pmsg _ _ outs _ => outs
-    end.
-
-  Definition postcondOf (pmsg: PMsg) :=
-    match pmsg with
-    | Pmsg _ _ _ postcond => postcond
-    end.
+  Record PMsg :=
+    { pmsg_mid: MsgId;
+      pmsg_precond: StateT -> Prop;
+      pmsg_outs: StateT ->
+                 MvalT (msg_type pmsg_mid) (msg_rqrs pmsg_mid) ->
+                 list Msg;
+      pmsg_postcond: StateT (* prestate *) ->
+                     MvalT (msg_type pmsg_mid) (msg_rqrs pmsg_mid) ->
+                     StateT (* poststate *) -> Prop
+    }.
 
   Record Object :=
     { obj_idx: nat;
@@ -101,6 +86,7 @@ Section Language.
     Definition isTrsPair (rq rs: MsgId) :=
       (if eq_nat_dec (msg_rq rq) (msg_rq rs) then true else false)
         && (if eq_nat_dec (msg_rs rq) (msg_rs rs) then true else false)
+        && (if msgT_dec (msg_type rq) (msg_type rs) then true else false)
         && (match msg_rqrs rq, msg_rqrs rs with
             | Rq, Rs => true
             | _, _ => false
@@ -127,17 +113,20 @@ Section Language.
         (* 2) nondeterministically tries to find a predicated message for [fmsg],
          * which satisfies the precondition and postcondition.
          *)
-        msgTo (msg_id fmsg) = obj_idx obj ->
-        In fpmsg (obj_pmsgs obj) -> msg_id fmsg = midOf fpmsg ->
-        precondOf fpmsg os ->
-        postcondOf fpmsg os (msg_content fmsg) pos ->
-
-        (* -) later syntax should care [ValidOuts] *)
-        ValidOuts (obj_idx obj) (outsOf fpmsg os (msg_content fmsg)) ->
-
-        step_obj obj os msgs_from
-                 (Some fmsg) (outsOf fpmsg os (msg_content fmsg))
-                 pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
+        forall (Hm: msg_id fmsg = pmsg_mid fpmsg)
+               (fvalue: MvalT (msg_type (pmsg_mid fpmsg)) (msg_rqrs (pmsg_mid fpmsg))),
+          fvalue = match Hm with eq_refl => msg_value fmsg end ->
+          msgTo (msg_id fmsg) = obj_idx obj ->
+          In fpmsg (obj_pmsgs obj) ->
+          pmsg_precond fpmsg os ->
+          pmsg_postcond fpmsg os fvalue pos ->
+          
+          (* -) later syntax should care [ValidOuts] *)
+          ValidOuts (obj_idx obj) (pmsg_outs fpmsg os fvalue) ->
+          
+          step_obj obj os msgs_from
+                   (Some fmsg) (pmsg_outs fpmsg os fvalue)
+                   pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
     | SoExt: forall os msgs_from emsg emsgs,
         find (msgFrom (msg_id emsg), msg_rqrs (msg_id emsg)) msgs_from = Some emsgs ->
         msgTo (msg_id emsg) = obj_idx obj ->
@@ -473,8 +462,8 @@ Section Language.
 
 End Language.
 
-Definition Refines {MsgT IStateT SStateT}
-           (impl: System MsgT IStateT) (spec: System MsgT SStateT) :=
+Definition Refines {MsgT} {MvalT: MsgT -> RqRs -> Type} {IStateT SStateT}
+           (impl: System MvalT IStateT) (spec: System MvalT SStateT) :=
   forall hst, Behavior impl hst -> Behavior spec hst.
 
 Hint Immediate subHistory_refl extHistory_trans equivalent_refl.

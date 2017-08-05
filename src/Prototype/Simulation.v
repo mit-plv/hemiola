@@ -3,14 +3,16 @@ Require Import FnMap Language.
 
 Section Simulation.
   Context {MsgT IStateT SStateT: Type}.
-  Local Notation IState := (State MsgT IStateT).
-  Local Notation SState := (State MsgT SStateT).
+  Context {MvalT: MsgT -> RqRs -> Type}.
+  Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
+  Local Notation IState := (State MvalT IStateT).
+  Local Notation SState := (State MvalT SStateT).
 
   Variable sim: IState -> SState -> Prop.
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl: System MsgT IStateT)
-            (spec: System MsgT SStateT).
+  Variables (impl: System MvalT IStateT)
+            (spec: System MvalT SStateT).
 
   Definition Simulates :=
     forall ist1 sst1,
