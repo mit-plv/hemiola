@@ -53,16 +53,36 @@ Section System.
           TransactionInv rq trsinv rsr /\
           DisjointTrsInv rsr trsinv.
 
-    (*! Restricted interference *)
+    (*! Prioritized interference *)
 
-    (* Interferences are allowed only by prioritizers. Specifically, during a 
-     * given transaction handling a request from a process (object) with index "i":
+    (* [LocallyDisjoint] is too strong for practical protocol designs. It is
+     * quite easy to think a deadlock condition because of this condition:
+     * 
+     *  rq    /--(rq)->\    rq
+     * [O1] -x          x- [O2]
+     *        \<-(rq)--/
+     *
+     * If two objects, [O1] and [O2], are handling requests respectively and
+     * forward requests to each other, then because of the [LocallyDisjoint] 
+     * conditions for [O1] and [O2], a deadlock occurs -- [O1] is waiting for
+     * the response from [O2], while [O2] is waiting for the response from [O1].
+     *
+     * However, if we allow arbitrary interleavings among transactions, then
+     * even a simple case is not linearizable anymore. In the above example, if
+     * [O1] and [O2] handle the request from the each other at the same time,
+     * the system is not linearizable.
+     *
+     * Prioritized interference allows certain interleavings. Basically, only
+     * "prioritized" processes can interleave. Specifically, during a given
+     * transaction that handles a request from a process (object) with index "i":
      * 1) Any other transactions with indices >= i should be disjoint.
      * 2) Transactions with indices < i are allowed to interleave, but they should
      *    be locally linearizable.
      *)
 
     (* TODO: formalize *)
+    Definition PrioritizedInterf :=
+      obj_idx obj >= O. (* meaningless, just to involve [obj] *)
 
     (*! Monotonicity *)
 
@@ -122,32 +142,31 @@ Section System.
 
   End PerObject.
 
-  Section PerSystem.
-    Variable sys: System MvalT StateT.
+End System.
 
-    Theorem sequential_linear: SequentialSys msgT_dec sys -> Linear msgT_dec sys.
-    Proof.
-    Admitted.
-    
-  End PerSystem.
+Section Facts.
+  Context {MsgT StateT: Type}.
+  Context {MvalT: MsgT -> RqRs -> Type}.
+  Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
+
+  Theorem sequential_linear:
+    forall sys: System MvalT StateT,
+      SequentialSys msgT_dec sys -> Linear msgT_dec sys.
+  Proof.
+  Admitted.
 
   Theorem locally_disjoint_sequential:
-    forall obj, LocallyDisjoint obj -> SequentialSys msgT_dec (obj :: nil).
+    forall obj: Object MvalT StateT,
+      LocallyDisjoint msgT_dec obj -> SequentialSys msgT_dec (obj :: nil).
   Proof.
   Admitted.
 
   Corollary locally_disjoint_linear:
-    forall obj, LocallyDisjoint obj -> Linear msgT_dec (obj :: nil).
+    forall obj: Object MvalT StateT,
+      LocallyDisjoint msgT_dec obj -> Linear msgT_dec (obj :: nil).
   Proof.
     intros; apply sequential_linear, locally_disjoint_sequential; auto.
   Qed.
-
-End System.
-
-Section Compositional.
-  Context {MsgT StateT: Type}.
-  Context {MvalT: MsgT -> RqRs -> Type}.
-  Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
 
   Theorem linear_sequential_compositional:
     forall (sys: System MvalT StateT),
@@ -168,5 +187,5 @@ Section Compositional.
     intros; apply locally_disjoint_sequential; auto.
   Qed.
 
-End Compositional.
+End Facts.
 
