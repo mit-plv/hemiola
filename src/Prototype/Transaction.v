@@ -22,13 +22,16 @@ Section System.
 
     (*! Transaction *)
 
+    Definition Responder (rsr: PMsg MvalT StateT) (rs: Msg MvalT) :=
+      exists st mt, In rs (pmsg_outs rsr st mt).
+
     (* A VERY SUBTLE POINT:
      * [rsr] is not a [PMsg] that handles the response,
      * but a [PMsg] that _sends_ the response.
      *)
     Definition Transaction (rq rsr: PMsg MvalT StateT) (rs: Msg MvalT) :=
       In rq (obj_pmsgs obj) /\ In rsr (obj_pmsgs obj) /\
-      (exists st mt, In rs (pmsg_outs rsr st mt)) /\
+      Responder rsr rs /\
       isTrsPair (pmsg_mid rq) (msg_id rs) = true.
 
     Inductive TransactionInv: PMsg MvalT StateT (* request *) ->
@@ -80,9 +83,23 @@ Section System.
      *    be locally linearizable.
      *)
 
-    (* TODO: formalize *)
-    Definition PrioritizedInterf :=
-      obj_idx obj >= O. (* meaningless, just to involve [obj] *)
+    (* TODO: better definition? *)
+    Definition PDisjointTrsInv (rq rsr: PMsg MvalT StateT) (trsinv: CondT) :=
+      forall pmsg, In pmsg (obj_pmsgs obj) ->
+                   pmsg <> rsr ->
+                   (msg_rqrs (pmsg_mid pmsg) = Rq ->
+                    msg_rq (pmsg_mid pmsg) >= msg_rq (pmsg_mid rq)) ->
+                   (msg_rqrs (pmsg_mid pmsg) = Rs ->
+                    forall rs, Responder pmsg rs ->
+                               msg_rs (msg_id rs) >= msg_rq (pmsg_mid rq)) ->
+                   (pmsg_precond pmsg) -*- trsinv.
+
+    Definition PInterfering :=
+      forall rq rsr rs,
+        Transaction rq rsr rs ->
+        exists trsinv,
+          TransactionInv rq trsinv rsr /\
+          PDisjointTrsInv rq rsr trsinv.
 
     (*! Monotonicity *)
 
@@ -186,6 +203,15 @@ Section Facts.
     apply Forall_impl with (P:= LocallyDisjoint msgT_dec); auto.
     intros; apply locally_disjoint_sequential; auto.
   Qed.
+
+  Theorem prioritized_interf_linear_compositional:
+    forall (sys: System MvalT StateT),
+      Forall (Monotone msgT_dec) sys ->
+      Forall (fun obj => Linear msgT_dec (obj :: nil)) sys ->
+      Forall (PInterfering msgT_dec) sys ->
+      Linear msgT_dec sys.
+  Proof.
+  Admitted.
 
 End Facts.
 
