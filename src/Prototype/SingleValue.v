@@ -5,23 +5,28 @@ Set Implicit Arguments.
 
 Open Scope list.
 
-Inductive SingleValueMsgType :=
+Inductive SVMType :=
 | SvmGet
 | SvmSet
 | SvmInv.
 
-Definition svm_dec: forall m1 m2: SingleValueMsgType, {m1 = m2} + {m1 <> m2}.
+Definition svmT_dec: forall m1 m2: SVMType, {m1 = m2} + {m1 <> m2}.
 Proof.
   decide equality.
 Defined.
 
-Inductive SingleValueMsg : SingleValueMsgType -> RqRs -> Set :=
-| GetReq : SingleValueMsg SvmGet Rq
-| GetResp (v: nat) : SingleValueMsg SvmGet Rs
-| SetReq (v: nat) : SingleValueMsg SvmSet Rq
-| SetResp : SingleValueMsg SvmSet Rs
-| InvReq : SingleValueMsg SvmInv Rq
-| InvResp (v: nat) : SingleValueMsg SvmInv Rs.
+Inductive SVM : Set :=
+| GetReq
+| GetResp (v: nat)
+| SetReq (v: nat)
+| SetResp
+| InvReq
+| InvResp (v: nat).
+
+Definition svm_dec: forall m1 m2: SVM, {m1 = m2} + {m1 <> m2}.
+Proof.
+  repeat decide equality.
+Defined.
 
 Notation "'T'" := (fun _ => True).
 Notation "'TT'" := (fun pre _ post => pre = post).
@@ -42,7 +47,7 @@ Section System.
       Definition setReqM := buildMsgId extIdx specIdx SvmSet Rq.
       Definition setRespM := buildMsgId extIdx specIdx SvmSet Rs.
 
-      Definition specGetReq: PMsg SingleValueMsg SpecState :=
+      Definition specGetReq: PMsg SVMType SVM SpecState :=
         {| pmsg_mid := getReqM;
            pmsg_precond := T;
            pmsg_outs :=
@@ -51,19 +56,19 @@ Section System.
              fun pre msg post => pre = post
         |}.
 
-      Definition specSetReq: PMsg SingleValueMsg SpecState :=
+      Definition specSetReq: PMsg SVMType SVM SpecState :=
         {| pmsg_mid := setReqM;
            pmsg_precond := T;
            pmsg_outs :=
              fun st _ => {| msg_id := setRespM; msg_value := SetResp |} :: nil;
            pmsg_postcond :=
-             fun pre (msg : SingleValueMsg (msg_type setReqM) (msg_rqrs setReqM)) post =>
+             fun pre msg post =>
                exists v : nat, msg = SetReq v /\ post = v
         |}.
 
     End PerExt.
 
-    Definition specObj: Object SingleValueMsg SpecState :=
+    Definition specObj: Object SVMType SVM SpecState :=
       {| obj_idx := 0;
          obj_state_init := 0;
          obj_pmsgs :=
@@ -73,7 +78,7 @@ Section System.
              :: (specSetReq extIdx2) :: nil
       |}.
     
-    Definition spec : System SingleValueMsg SpecState := specObj :: nil.
+    Definition spec : System SVMType SVM SpecState := specObj :: nil.
 
   End Spec.
 
@@ -114,42 +119,42 @@ Section System.
       Definition pcInvReqM := buildMsgId parentIdx childIdx SvmInv Rq.
       Definition pcInvRespM := buildMsgId parentIdx childIdx SvmInv Rs.
 
-      Definition ecGetReqValid: PMsg SingleValueMsg ImplState :=
+      Definition ecGetReqValid: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := ecGetReqM;
            pmsg_precond := fun st => impl_status st = Valid;
            pmsg_outs :=
              fun st _ => {| msg_id := ecGetRespM;
                             msg_value := GetResp (impl_value st) |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type ecGetReqM) (msg_rqrs ecGetReqM)) post =>
+             fun pre msg post =>
                msg = GetReq /\ pre = post
         |}.
       
-      Definition ecGetReqInvalid: PMsg SingleValueMsg ImplState :=
+      Definition ecGetReqInvalid: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := ecGetReqM;
            pmsg_precond := fun st => impl_status st = Invalid;
            pmsg_outs :=
              fun st _ => {| msg_id := cpGetReqM;
                             msg_value := GetReq |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type ecGetReqM) (msg_rqrs ecGetReqM)) post =>
+             fun pre msg post =>
                msg = GetReq /\ impl_status post = Transient
       |}.
 
-      Definition ecSetReqValid: PMsg SingleValueMsg ImplState :=
+      Definition ecSetReqValid: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := ecSetReqM;
            pmsg_precond := fun st => impl_status st = Valid;
            pmsg_outs :=
              fun st _ => {| msg_id := ecSetRespM;
                             msg_value := SetResp |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type ecSetReqM) (msg_rqrs ecSetReqM)) post =>
+             fun pre msg post =>
                exists v, msg = SetReq v /\
                          impl_status post = Valid /\
                          impl_value post = v
         |}.
 
-      Definition ecSetReqInvalid: PMsg SingleValueMsg ImplState :=
+      Definition ecSetReqInvalid: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := ecSetReqM;
            pmsg_precond := fun st => impl_status st = Invalid;
            pmsg_outs :=
@@ -160,13 +165,13 @@ Section System.
                | _ => nil
                end;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type ecSetReqM) (msg_rqrs ecSetReqM)) post =>
+             fun pre msg post =>
                exists v, msg = SetReq v /\
                          impl_status post = Transient /\
                          impl_value_trs post = v
         |}.
 
-      Definition cpGetResp: PMsg SingleValueMsg ImplState :=
+      Definition cpGetResp: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := cpGetRespM;
            pmsg_precond := T;
            pmsg_outs :=
@@ -177,37 +182,37 @@ Section System.
                | _ => nil
                end;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type cpGetRespM) (msg_rqrs cpGetRespM)) post =>
+             fun pre msg post =>
                exists v, msg = GetResp v /\
                          impl_status post = Valid /\
                          impl_value post = v
         |}.
 
-      Definition cpSetResp: PMsg SingleValueMsg ImplState :=
+      Definition cpSetResp: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := cpSetRespM;
            pmsg_precond := T;
            pmsg_outs :=
              fun st _ => {| msg_id := ecSetRespM;
                             msg_value := SetResp |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type cpSetRespM) (msg_rqrs cpSetRespM)) post =>
+             fun pre msg post =>
                msg = SetResp /\
                impl_status post = Valid /\
                impl_value post = impl_value_trs pre
         |}.
 
-      Definition pcInvReq: PMsg SingleValueMsg ImplState :=
+      Definition pcInvReq: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := pcInvReqM;
            pmsg_precond := fun st => impl_status st = Valid;
            pmsg_outs :=
              fun st _ => {| msg_id := pcInvRespM;
                             msg_value := InvResp (impl_value st) |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type pcInvReqM) (msg_rqrs pcInvReqM)) post =>
+             fun pre msg post =>
                msg = InvReq /\ impl_status post = Invalid
         |}.
 
-      Definition child: Object SingleValueMsg ImplState :=
+      Definition child: Object SVMType SVM ImplState :=
         {| obj_idx := childIdx;
            obj_state_init := {| impl_status := Invalid;
                                 impl_value_trs := 0;
@@ -225,57 +230,53 @@ Section System.
 
     Section Parent.
 
-      Definition cpGetReqValid childIdx: PMsg SingleValueMsg ImplState :=
+      Definition cpGetReqValid childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := cpGetReqM childIdx;
            pmsg_precond := fun st => impl_status st = Valid;
            pmsg_outs :=
              fun st _ => {| msg_id := cpGetRespM childIdx;
                             msg_value := GetResp (impl_value st) |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type (cpGetReqM childIdx))
-                                          (msg_rqrs (cpGetReqM childIdx))) post =>
+             fun pre msg post =>
                msg = GetReq /\ impl_status post = Invalid
         |}.
       
-      Definition cpGetReqInvalid childIdx: PMsg SingleValueMsg ImplState :=
+      Definition cpGetReqInvalid childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := cpGetReqM childIdx;
            pmsg_precond := fun st => impl_status st = Invalid;
            pmsg_outs :=
              fun st _ => {| msg_id := pcInvReqM childIdx;
                             msg_value := InvReq |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type (cpGetReqM childIdx))
-                                          (msg_rqrs (cpGetReqM childIdx))) post =>
+             fun pre msg post =>
                msg = GetReq /\ impl_status post = Transient
         |}.
 
-      Definition cpSetReqValid childIdx: PMsg SingleValueMsg ImplState :=
+      Definition cpSetReqValid childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := cpSetReqM childIdx;
            pmsg_precond := fun st => impl_status st = Valid;
            pmsg_outs :=
              fun st _ => {| msg_id := cpSetRespM childIdx;
                             msg_value := SetResp |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type (cpSetReqM childIdx))
-                                          (msg_rqrs (cpSetReqM childIdx))) post =>
+             fun pre msg post =>
                exists v, msg = SetReq v /\
                          impl_status post = Invalid
         |}.
       
-      Definition cpSetReqInvalid childIdx: PMsg SingleValueMsg ImplState :=
+      Definition cpSetReqInvalid childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := cpSetReqM childIdx;
            pmsg_precond := fun st => impl_status st = Invalid;
            pmsg_outs :=
              fun st _ => {| msg_id := pcInvReqM childIdx;
                             msg_value := InvReq |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type (cpSetReqM childIdx))
-                                          (msg_rqrs (cpSetReqM childIdx))) post =>
+             fun pre msg post =>
                exists v, msg = SetReq v /\
                          impl_status post = Transient
         |}.
 
-      Definition pcInvRespGet childIdx: PMsg SingleValueMsg ImplState :=
+      Definition pcInvRespGet childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := pcInvRespM childIdx;
            pmsg_precond := fun st => impl_status st = GetWait;
            pmsg_outs :=
@@ -286,26 +287,24 @@ Section System.
                | _ => nil
                end;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type (pcInvRespM childIdx))
-                                          (msg_rqrs (pcInvRespM childIdx))) post =>
+             fun pre msg post =>
                exists v, msg = InvResp v /\
                          impl_status post = Invalid
         |}.
       
-      Definition pcInvRespSet childIdx: PMsg SingleValueMsg ImplState :=
+      Definition pcInvRespSet childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := pcInvRespM childIdx;
            pmsg_precond := fun st => impl_status st = SetWait;
            pmsg_outs :=
              fun st _ => {| msg_id := cpSetRespM childIdx;
                             msg_value := SetResp |} :: nil;
            pmsg_postcond :=
-             fun pre (msg: SingleValueMsg (msg_type (pcInvRespM childIdx))
-                                          (msg_rqrs (pcInvRespM childIdx))) post =>
+             fun pre msg post =>
                exists v, msg = InvResp v /\
                          impl_status post = Invalid
         |}.
 
-      Definition parent : Object SingleValueMsg ImplState :=
+      Definition parent : Object SVMType SVM ImplState :=
         {| obj_idx := parentIdx;
            obj_state_init := {| impl_status := Valid;
                                 impl_value_trs := 0;
@@ -327,7 +326,7 @@ Section System.
 
     End Parent.
 
-    Definition impl : System SingleValueMsg ImplState :=
+    Definition impl : System SVMType SVM ImplState :=
       parent :: (child child1Idx) :: (child child2Idx) :: nil.
 
   End Impl.

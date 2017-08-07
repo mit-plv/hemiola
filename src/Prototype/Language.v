@@ -20,7 +20,9 @@ Section Language.
 
   Variable MsgT: Type.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
-  Variable MvalT: MsgT -> RqRs -> Type.
+  Variable ValT: Type.
+  Hypothesis (valT_dec: forall m1 m2: ValT, {m1 = m2} + {m1 <> m2}).
+  
   Variable StateT: Type.
 
   Record MsgId := { msg_rq : IdxT; (* an object that requests this message *)
@@ -28,11 +30,16 @@ Section Language.
                     msg_type : MsgT;
                     msg_rqrs : RqRs
                   }.
+  Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
+  Proof. repeat decide equality. Defined.
 
   Record Msg :=
     { msg_id: MsgId;
-      msg_value: MvalT (msg_type msg_id) (msg_rqrs msg_id)
+      msg_value: ValT
     }.
+
+  Definition msg_dec: forall m1 m2: Msg, {m1 = m2} + {m1 <> m2}.
+  Proof. repeat decide equality. Defined.
 
   Definition msgFrom (msg: MsgId) :=
     match msg_rqrs msg with
@@ -52,12 +59,8 @@ Section Language.
   Record PMsg :=
     { pmsg_mid: MsgId;
       pmsg_precond: StateT -> Prop;
-      pmsg_outs: StateT ->
-                 MvalT (msg_type pmsg_mid) (msg_rqrs pmsg_mid) ->
-                 list Msg;
-      pmsg_postcond: StateT (* prestate *) ->
-                     MvalT (msg_type pmsg_mid) (msg_rqrs pmsg_mid) ->
-                     StateT (* poststate *) -> Prop
+      pmsg_outs: StateT -> ValT -> list Msg;
+      pmsg_postcond: StateT (* prestate *) -> ValT -> StateT (* poststate *) -> Prop
     }.
 
   Record Object :=
@@ -119,18 +122,16 @@ Section Language.
       Msg (* in *) -> list Msg (* outs *) ->
       StateT -> MsgsFrom -> Prop :=
     | SoInt:
-        forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos
-               (Hm: msg_id fmsg = pmsg_mid fpmsg)
-               (fvalue: MvalT (msg_type (pmsg_mid fpmsg)) (msg_rqrs (pmsg_mid fpmsg))),
+        forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos,
           findMsgF fidx fmsgT msgs_from = Some (fmsg :: fmsgs) ->
-          fvalue = match Hm with eq_refl => msg_value fmsg end ->
+          msg_id fmsg = pmsg_mid fpmsg ->
           msgTo (msg_id fmsg) = obj_idx obj ->
           In fpmsg (obj_pmsgs obj) ->
           pmsg_precond fpmsg os ->
-          pmsg_postcond fpmsg os fvalue pos ->
-          ValidOuts (obj_idx obj) (pmsg_outs fpmsg os fvalue) ->
+          pmsg_postcond fpmsg os (msg_value fmsg) pos ->
+          ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
           step_obj obj os msgs_from
-                   fmsg (pmsg_outs fpmsg os fvalue)
+                   fmsg (pmsg_outs fpmsg os (msg_value fmsg))
                    pos (addMsgF fidx fmsgT fmsgs msgs_from).
 
     Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
@@ -219,18 +220,22 @@ Section Language.
 
     Definition DisjointLabel (lbl1 lbl2: Label) :=
       match lbl_in lbl1, lbl_in lbl2 with
-      | Some _, None => forall msg, In msg (lbl_outs lbl2) -> In msg (lbl_outs lbl1)
-      | None, Some _ => forall msg, In msg (lbl_outs lbl1) -> In msg (lbl_outs lbl2)
+      | Some _, None => SubList (lbl_outs lbl2) (lbl_outs lbl1)
+      | None, Some _ => SubList (lbl_outs lbl1) (lbl_outs lbl2)
       | None, None => True
       | _, _ => False
       end.
 
+    (* ms1 - ms2 *)
+    Definition subtractMsgs (ms1 ms2: list Msg) :=
+      filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
+
     Definition combineLabel (lbl1 lbl2: Label) :=
       match lbl_in lbl1, lbl_in lbl2 with
       | Some _, None => {| lbl_in := lbl_in lbl1;
-                           lbl_outs := lbl_outs lbl1 (* -- (lbl_outs lbl2), TODO *) |}
+                           lbl_outs := subtractMsgs (lbl_outs lbl1) (lbl_outs lbl2) |}
       | None, Some _ => {| lbl_in := lbl_in lbl2;
-                           lbl_outs := lbl_outs lbl2 (* -- (lbl_outs lbl1), TODO *) |}
+                           lbl_outs := subtractMsgs (lbl_outs lbl2) (lbl_outs lbl1) |}
       | None, None => {| lbl_in := None;
                          lbl_outs := (lbl_outs lbl1) ++ (lbl_outs lbl2) |}
       | _, _ => {| lbl_in := None; lbl_outs := nil |}
@@ -481,9 +486,12 @@ Section Language.
 
 End Language.
 
-Definition Refines {MsgT} {MvalT: MsgT -> RqRs -> Type} {IStateT SStateT}
-           (impl: System MvalT IStateT) (spec: System MvalT SStateT) :=
-  forall hst, Behavior impl hst -> Behavior spec hst.
+Definition Refines {MsgT ValT} {IStateT SStateT}
+           (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
+           (valT_dec: forall m1 m2: ValT, {m1 = m2} + {m1 <> m2})
+           (impl: System MsgT ValT IStateT) (spec: System MsgT ValT SStateT) :=
+  forall hst, Behavior msgT_dec valT_dec impl hst ->
+              Behavior msgT_dec valT_dec spec hst.
 
 Hint Immediate subHistory_refl extHistory_trans equivalent_refl.
 

@@ -4,13 +4,13 @@ Require Import FMap Language Transaction.
 Set Implicit Arguments.
 
 Section Reduction.
-  Context {MsgT StateT: Type}.
-  Context {MvalT: MsgT -> RqRs -> Type}.
+  Context {MsgT ValT StateT: Type}.
   Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
+  Hypothesis (valT_dec : forall v1 v2 : ValT, {v1 = v2} + {v1 <> v2}).
 
-  Local Notation Msg := (Msg MvalT).
+  Local Notation Msg := (Msg MsgT ValT).
   Local Notation MsgId := (MsgId MsgT).
-  Local Notation Label := (Label MvalT).
+  Local Notation Label := (Label MsgT ValT).
 
   Definition History4 (hst: list Msg) (msg1 msg2 msg3 msg4: Msg)
              (shst1 shst2 shst3 shst4 shst5: list Msg) :=
@@ -39,13 +39,13 @@ Section Reduction.
     isTrsPair msgT_dec (msg_id rq2) (msg_id rs2) = true /\
     History4 hst rq1 rs1 rq2 rs2 shst1 shst2 shst3 shst4 shst5.
 
-  Definition Reducible2 (sys: System MvalT StateT) :=
+  Definition Reducible2 (sys: System MsgT ValT StateT) :=
     forall hst,
-      History sys hst ->
+      History msgT_dec valT_dec sys hst ->
       forall rq1 rs1 rq2 rs2 shst1 shst2 shst3 shst4 shst5,
         Interleaving2 hst rq1 rs1 rq2 rs2 shst1 shst2 shst3 shst4 shst5 ->
         exists hst',
-          History sys hst' /\
+          History msgT_dec valT_dec sys hst' /\
           Sequential2 hst' rq1 rs1 rq2 rs2 shst1 shst2 shst3 shst4 shst5.
 
   Section Facts.
@@ -53,7 +53,7 @@ Section Reduction.
     Lemma singleton_reducible_linear:
       forall obj,
         Reducible2 (obj :: nil) ->
-        Linear msgT_dec (obj :: nil).
+        Linear msgT_dec valT_dec (obj :: nil).
     Proof.
     Admitted.
 

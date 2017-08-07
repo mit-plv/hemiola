@@ -2,30 +2,30 @@ Require Import Bool List String Peano_dec.
 Require Import Tactics FMap Language.
 
 Section Simulation.
-  Context {MsgT IStateT SStateT: Type}.
-  Context {MvalT: MsgT -> RqRs -> Type}.
+  Context {MsgT ValT IStateT SStateT: Type}.
   Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
-  Local Notation IState := (State MvalT IStateT).
-  Local Notation SState := (State MvalT SStateT).
+  Hypothesis (valT_dec : forall v1 v2 : ValT, {v1 = v2} + {v1 <> v2}).
+  Local Notation IState := (State MsgT ValT IStateT).
+  Local Notation SState := (State MsgT ValT SStateT).
 
   Variable sim: IState -> SState -> Prop.
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl: System MvalT IStateT)
-            (spec: System MvalT SStateT).
+  Variables (impl: System MsgT ValT IStateT)
+            (spec: System MsgT ValT SStateT).
 
   Definition Simulates :=
     forall ist1 sst1,
       ist1 ≈ sst1 ->
       forall ilbl ist2,
-        step impl ist1 ilbl ist2 ->
+        step msgT_dec valT_dec impl ist1 ilbl ist2 ->
         match getLabel impl ilbl with
         | Some b =>
-          exists sst2 slbl, step spec sst1 slbl sst2 /\
+          exists sst2 slbl, step msgT_dec valT_dec spec sst1 slbl sst2 /\
                             getLabel spec slbl = Some b /\
                             ist2 ≈ sst2
         | None =>
-          (exists sst2 slbl, step spec sst1 slbl sst2 /\
+          (exists sst2 slbl, step msgT_dec valT_dec spec sst1 slbl sst2 /\
                              getLabel spec slbl = None /\
                              ist2 ≈ sst2) \/
           ist2 ≈ sst1
@@ -37,10 +37,10 @@ Section Simulation.
     forall ist1 sst1,
       ist1 ≈ sst1 ->
       forall ihst ist2,
-        steps impl ist1 ihst ist2 ->
+        steps msgT_dec valT_dec impl ist1 ihst ist2 ->
         exists sst2 shst,
           behaviorOf impl ihst = behaviorOf spec shst /\
-          steps spec sst1 shst sst2 /\
+          steps msgT_dec valT_dec spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
@@ -68,7 +68,7 @@ Section Simulation.
                          {| st_oss := getObjectStatesInit spec; st_msgs := M.empty _ |}).
 
   Theorem simulation_implies_refinement:
-    Refines impl spec.
+    Refines msgT_dec valT_dec impl spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.
