@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import FnMap Language.
+Require Import Tactics FMap Language.
 
 Section Simulation.
   Context {MsgT IStateT SStateT: Type}.
@@ -64,8 +64,8 @@ Section Simulation.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
-  Hypothesis (Hsimi: sim {| st_oss := getObjectStatesInit impl; st_msgs := @empty _ _ |}
-                         {| st_oss := getObjectStatesInit spec; st_msgs := @empty _ _ |}).
+  Hypothesis (Hsimi: sim {| st_oss := getObjectStatesInit impl; st_msgs := M.empty _ |}
+                         {| st_oss := getObjectStatesInit spec; st_msgs := M.empty _ |}).
 
   Theorem simulation_implies_refinement:
     Refines impl spec.

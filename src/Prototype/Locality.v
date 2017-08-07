@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import FnMap Language Transaction.
+Require Import FMap Language Transaction.
 
 Section History.
   Variables MsgT StateT: Type.

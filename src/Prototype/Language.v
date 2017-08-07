@@ -1,11 +1,10 @@
 Require Import Bool List String Peano_dec.
-Require Import FnMap FunctionalExtensionality.
+Require Import FunctionalExtensionality.
+Require Import Tactics FMap.
 
 Set Implicit Arguments.
 
 Open Scope list.
-
-Ltac inv H := inversion H; subst; clear H.
 
 Section Language.
 
@@ -13,23 +12,11 @@ Section Language.
 
   (* A message is always either a request or a response. *)
   Inductive RqRs := Rq | Rs.
-
-  (** Utilities *)
-  Definition idx_add {A} (k: IdxT) (v: A) m := add eq_nat_dec k v m.
-  Definition idx_msgType_dec: forall (k1 k2: IdxT * RqRs), {k1 = k2} + {k1 <> k2}.
-  Proof.
-    decide equality.
-    - decide equality.
-    - apply eq_nat_dec.
-  Defined.
-  Definition idx_msgType_add {A} (k: IdxT * RqRs) (v: A) m :=
-    add idx_msgType_dec k v m.
-  Definition idx_idx_dec: forall (k1 k2: IdxT * IdxT), {k1 = k2} + {k1 <> k2}.
-  Proof.
-    decide equality; apply eq_nat_dec.
-  Defined.
-  Definition idx_idx_add {A} (k: IdxT * IdxT) (v: A) m :=
-    add idx_idx_dec k v m.
+  Definition rrToNat (rr: RqRs) :=
+    match rr with
+    | Rq => 0
+    | Rs => 1
+    end.
 
   Variable MsgT: Type.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
@@ -92,11 +79,26 @@ Section Language.
             | _, _ => false
             end).
 
-    Definition ObjectStates := Map IdxT StateT.
+    Definition ObjectStates := M.t StateT.
 
-    Definition MsgsFrom :=
-      Map (IdxT * RqRs) (* (from, msgType) *) (list Msg).
-    Definition Messages := Map IdxT (* to *) MsgsFrom.
+    Definition MsgsFrom := M.t (* from *) (M.t (* rq(0) or rs(1) *) (list Msg)).
+
+    Definition findMsgF (idx: IdxT) (rr: RqRs) (mf: MsgsFrom) :=
+      match M.find idx mf with
+      | Some m => match M.find (rrToNat rr) m with
+                  | Some msgs => Some msgs
+                  | None => None
+                  end
+      | None => None
+      end.
+
+    Definition addMsgF (idx: IdxT) (rr: RqRs) (msgs: list Msg) (mf: MsgsFrom) :=
+      match M.find idx mf with
+      | Some m => M.add idx (M.add (rrToNat rr) msgs m) mf
+      | None => M.add idx (M.add (rrToNat rr) msgs (M.empty _)) mf
+      end.
+
+    Definition Messages := M.t (* to *) MsgsFrom.
 
     (* A set of output messages are valid if
      * 1) they are from the same source [idx] and
@@ -120,7 +122,7 @@ Section Language.
         forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos
                (Hm: msg_id fmsg = pmsg_mid fpmsg)
                (fvalue: MvalT (msg_type (pmsg_mid fpmsg)) (msg_rqrs (pmsg_mid fpmsg))),
-          find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
+          findMsgF fidx fmsgT msgs_from = Some (fmsg :: fmsgs) ->
           fvalue = match Hm with eq_refl => msg_value fmsg end ->
           msgTo (msg_id fmsg) = obj_idx obj ->
           In fpmsg (obj_pmsgs obj) ->
@@ -129,21 +131,21 @@ Section Language.
           ValidOuts (obj_idx obj) (pmsg_outs fpmsg os fvalue) ->
           step_obj obj os msgs_from
                    fmsg (pmsg_outs fpmsg os fvalue)
-                   pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from).
+                   pos (addMsgF fidx fmsgT fmsgs msgs_from).
 
     Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
       let from := msgFrom (msg_id msg) in
       let to := msgTo (msg_id msg) in
-      match find to msgs with
+      match M.find to msgs with
       | Some toMsgs =>
-        let added := match toMsgs (from, msg_rqrs (msg_id msg)) with
+        let added := match findMsgF from (msg_rqrs (msg_id msg)) toMsgs with
                      (* should be added last, since the head is the oldest *)
                      | Some fromMsgs => fromMsgs ++ (msg :: nil)
                      | None => msg :: nil
                      end in
-        idx_add to (idx_msgType_add (from, msg_rqrs (msg_id msg)) added toMsgs) msgs
+        M.add to (addMsgF from (msg_rqrs (msg_id msg)) added toMsgs) msgs
       | None =>
-        idx_add to (idx_msgType_add (from, msg_rqrs (msg_id msg)) (msg :: nil) (@empty _ _)) msgs
+        M.add to (addMsgF from (msg_rqrs (msg_id msg)) (msg :: nil) (M.empty _)) msgs
       end.
 
     Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages): Messages :=
@@ -186,16 +188,16 @@ Section Language.
                     oims msgs_from msg_in msgs_out pos pmsgs_from,
         In obj sys ->
         obj_idx obj = idx ->
-        find idx oss = Some os ->
-        find idx oims = Some msgs_from -> 
+        M.find idx oss = Some os ->
+        M.find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in msgs_out pos pmsgs_from ->
         isInternal (getIndices sys) (msgFrom (msg_id msg_in)) = true ->
         step_sys sys {| st_oss := oss; st_msgs := oims |}
                  {| lbl_in := Some msg_in;
                     lbl_outs := toExts sys msgs_out |}
-                 {| st_oss := idx_add idx pos oss;
+                 {| st_oss := M.add idx pos oss;
                     st_msgs := distributeMsgs (toInts sys msgs_out)
-                                              (idx_add idx pmsgs_from oims) |}
+                                              (M.add idx pmsgs_from oims) |}
     | SsExt: forall oss oims emsg_in emsgs_out,
         isExternal (getIndices sys) (msgTo (msg_id emsg_in)) = true ->
         Forall (fun emsg => isExternal
@@ -212,8 +214,8 @@ Section Language.
     Definition combineSystem (sys1 sys2: System) := sys1 ++ sys2.
 
     Definition combineState (st1 st2: State) :=
-      {| st_oss := union (st_oss st1) (st_oss st2);
-         st_msgs := union (st_msgs st1) (st_msgs st2) |}.
+      {| st_oss := M.union (st_oss st1) (st_oss st2);
+         st_msgs := M.union (st_msgs st1) (st_msgs st2) |}.
 
     Definition DisjointLabel (lbl1 lbl2: Label) :=
       match lbl_in lbl1, lbl_in lbl2 with
@@ -268,11 +270,11 @@ Section Language.
 
     Fixpoint getObjectStatesInit (sys: System) : ObjectStates :=
       match sys with
-      | nil => @empty _ _
+      | nil => M.empty _
       | obj :: sys' =>
-        idx_add (obj_idx obj)
-                (obj_state_init obj)
-                (getObjectStatesInit sys')
+        M.add (obj_idx obj)
+              (obj_state_init obj)
+              (getObjectStatesInit sys')
       end.
 
     Definition getLabel (sys: System) (lbl: Label) :=
@@ -294,7 +296,7 @@ Section Language.
     Inductive Behavior: System -> list Label -> Prop :=
     | Behv: forall sys hst st,
         steps sys {| st_oss := getObjectStatesInit sys;
-                     st_msgs := @empty _ _ |} hst st ->
+                     st_msgs := M.empty _ |} hst st ->
         forall bhst,
           bhst = behaviorOf sys hst ->
           Behavior sys bhst.
@@ -453,36 +455,6 @@ Section Language.
   End Semantics.
 
   Section Facts.
-
-    Lemma find_idx_add_eq:
-      forall {A} (m: Map nat A) (k: nat) (v: A),
-        find k (idx_add k v m) = Some v.
-    Proof.
-      unfold find, idx_add, add; intros.
-      destruct (eq_nat_dec k k); auto.
-      elim n; reflexivity.
-    Qed.
-
-    Lemma find_idx_add_neq:
-      forall {A} (m: Map nat A) (k1 k2: nat) (v: A),
-        k1 <> k2 ->
-        find k1 (idx_add k2 v m) = find k1 m.
-    Proof.
-      unfold find, idx_add, add; intros.
-      destruct (eq_nat_dec k2 k1); auto; subst.
-      elim H; reflexivity.
-    Qed.
-
-    Lemma idx_add_comm:
-      forall {A} (m: Map nat A) (k1 k2: nat) (v1 v2: A),
-        k1 <> k2 ->
-        idx_add k1 v1 (idx_add k2 v2 m) = idx_add k2 v2 (idx_add k1 v1 m).
-    Proof.
-      unfold idx_add, add; intros.
-      extensionality x.
-      destruct (eq_nat_dec k1 x), (eq_nat_dec k2 x); subst; auto.
-      elim H; reflexivity.
-    Qed.
 
     Lemma subHistory_refl: forall {A} (l: list A), SubHistory l l.
     Proof.

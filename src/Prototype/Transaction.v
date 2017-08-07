@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import FnMap Language.
+Require Import FMap Language.
 
 Section System.
   Context {MsgT StateT: Type}.

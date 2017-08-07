@@ -1,5 +1,5 @@
 Require Import List String Peano_dec.
-Require Import FnMap Language Transaction.
+Require Import FMap Language Transaction.
 
 Set Implicit Arguments.
 

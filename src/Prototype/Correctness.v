@@ -1,6 +1,8 @@
 Require Import Bool List String Peano_dec Eqdep.
-Require Import FnMap Language SingleValue Transaction Simulation.
+Require Import FMap Language SingleValue Transaction Simulation.
 Require Import FunctionalExtensionality.
+
+Open Scope fmap.
 
 Section System.
   Variables extIdx1 extIdx2: nat.
@@ -20,20 +22,17 @@ Section System.
            end
     end.
 
-  Notation " [ ] " := (@empty _ _).
-  Notation " m [ k <- v ] " := (idx_add k v m) (at level 30).
-
   Local Definition sim (ist: IState) (sst: SState): Prop.
   Proof.
     destruct ist as [ioss imsgs].
     refine (exists iosp iosc1 iosc2,
-               ioss = [][child2Idx <- iosc2][child1Idx <- iosc1][parentIdx <- iosp] /\ _).
+               ioss = []+[child2Idx <- iosc2]+[child1Idx <- iosc1]+[parentIdx <- iosp] /\ _).
 
     refine (match validValue iosp iosc1 iosc2 with
             | Some v => _
             | None => _
             end).
-    - exact (sst = {| st_oss := [][specIdx <- v];
+    - exact (sst = {| st_oss := []+[specIdx <- v];
                       st_msgs := imsgs |}).
     - exact True. (* TODO *)
   Defined.
