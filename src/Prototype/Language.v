@@ -98,42 +98,41 @@ Section Language.
       Map (IdxT * RqRs) (* (from, msgType) *) (list Msg).
     Definition Messages := Map IdxT (* to *) MsgsFrom.
 
+    (* A set of output messages are valid if
+     * 1) they are from the same source [idx] and
+     * 2) all targets are different to each others.
+     * TODO? syntax may have to ensure [ValidOuts], or by well-formedness.
+     *)
     Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
-      Forall (fun m => msgFrom (msg_id m) = idx) msgs.
+      Forall (fun m => msgFrom (msg_id m) = idx) msgs /\
+      NoDup (map (fun m => msgTo (msg_id m)) msgs).
 
-    (*! A new version *)
+    (* [step_obj] is for a step by an object that handles an internal message:
+     * 1) First, an internal message is nondeterministically picked, and
+     * 2) A predicated message for [fmsg], which satisfies its precondition and
+     *    postcondition, is nondeterministically picked to take a step.
+     *)
     Inductive step_obj (obj: Object):
       StateT -> MsgsFrom ->
-      option Msg (* internal in? *) -> list Msg (* outs *) ->
+      Msg (* in *) -> list Msg (* outs *) ->
       StateT -> MsgsFrom -> Prop :=
-    | SoInt: forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos,
-        (* 1) pick an internal message to process *)
-        find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
-
-        (* 2) nondeterministically tries to find a predicated message for [fmsg],
-         * which satisfies the precondition and postcondition.
-         *)
-        forall (Hm: msg_id fmsg = pmsg_mid fpmsg)
+    | SoInt:
+        forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos
+               (Hm: msg_id fmsg = pmsg_mid fpmsg)
                (fvalue: MvalT (msg_type (pmsg_mid fpmsg)) (msg_rqrs (pmsg_mid fpmsg))),
+          find (fidx, fmsgT) msgs_from = Some (fmsg :: fmsgs) ->
           fvalue = match Hm with eq_refl => msg_value fmsg end ->
           msgTo (msg_id fmsg) = obj_idx obj ->
           In fpmsg (obj_pmsgs obj) ->
           pmsg_precond fpmsg os ->
           pmsg_postcond fpmsg os fvalue pos ->
-          
-          (* -) later syntax should care [ValidOuts] *)
           ValidOuts (obj_idx obj) (pmsg_outs fpmsg os fvalue) ->
-          
           step_obj obj os msgs_from
-                   (Some fmsg) (pmsg_outs fpmsg os fvalue)
-                   pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from)
-    | SoExt: forall os msgs_from emsg emsgs,
-        find (msgFrom (msg_id emsg), msg_rqrs (msg_id emsg)) msgs_from = Some emsgs ->
-        msgTo (msg_id emsg) = obj_idx obj ->
-        step_obj obj os msgs_from None (emsg :: nil) os msgs_from.
+                   fmsg (pmsg_outs fpmsg os fvalue)
+                   pos (idx_msgType_add (fidx, fmsgT) fmsgs msgs_from).
 
-    Definition distributeMsg (from: IdxT) (msg: Msg)
-               (msgs: Messages): Messages :=
+    Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
+      let from := msgFrom (msg_id msg) in
       let to := msgTo (msg_id msg) in
       match find to msgs with
       | Some toMsgs =>
@@ -147,11 +146,11 @@ Section Language.
         idx_add to (idx_msgType_add (from, msg_rqrs (msg_id msg)) (msg :: nil) (@empty _ _)) msgs
       end.
 
-    Fixpoint distributeMsgs (from: IdxT) (nmsgs: list Msg)
-             (msgs: Messages): Messages :=
+    Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages): Messages :=
       match nmsgs with
       | nil => msgs
-      | msg :: nmsgs' => distributeMsgs from nmsgs' (distributeMsg from msg msgs)
+      | msg :: nmsgs' =>
+        distributeMsgs nmsgs' (distributeMsg msg msgs)
       end.
 
     Definition getIndices (sys: System) := map (fun o => obj_idx o) sys.
@@ -161,39 +160,94 @@ Section Language.
     Definition isExternal (indices: list nat) (idx: IdxT) :=
       if in_dec eq_nat_dec idx indices then false else true.
 
-    Definition fromExt (indices: list nat) (omsg: option Msg) :=
+    Definition fromExt (sys: System) (omsg: option Msg) :=
       match omsg with
-      | Some msg => if isExternal indices (msgFrom (msg_id msg)) then Some msg else None
+      | Some msg => if isExternal (getIndices sys) (msgFrom (msg_id msg))
+                    then Some msg else None
       | None => None
       end.
-    Definition toExts (indices: list nat) (msgs: list Msg) :=
-      filter (fun pm => isExternal indices (msgTo (msg_id pm))) msgs.
+    Definition toInts (sys: System) (msgs: list Msg) :=
+      filter (fun pm => isInternal (getIndices sys) (msgTo (msg_id pm))) msgs.
+    Definition toExts (sys: System) (msgs: list Msg) :=
+      filter (fun pm => isExternal (getIndices sys) (msgTo (msg_id pm))) msgs.
 
+    (* [lbl_in] is [None] if a step is taken externally. *)
     Record Label := { lbl_in: option Msg;
                       lbl_outs: list Msg }.
 
     Record State := { st_oss: ObjectStates;
                       st_msgs: Messages }.
 
-    Inductive step (sys: System) : State -> Label -> State -> Prop :=
-    | Step: forall oss idx (obj: Object) (os: StateT)
-                   oims msgs_from msg_in msgs_out pos pmsgs_from,
+    (* [step_sys] covers an internal and external step in terms of a given 
+     * system.
+     *)
+    Inductive step_sys (sys: System) : State -> Label -> State -> Prop :=
+    | SsInt: forall oss idx (obj: Object) (os: StateT)
+                    oims msgs_from msg_in msgs_out pos pmsgs_from,
         In obj sys ->
         obj_idx obj = idx ->
         find idx oss = Some os ->
         find idx oims = Some msgs_from -> 
         step_obj obj os msgs_from msg_in msgs_out pos pmsgs_from ->
-        match msg_in with
-        | Some msg => isInternal (getIndices sys) (msgFrom (msg_id msg)) = true
-        | None => match msgs_out with
-                  | msg :: _ => isExternal (getIndices sys) (msgFrom (msg_id msg)) = true
-                  | _ => False
-                  end
-        end ->
-        step sys {| st_oss := oss; st_msgs := oims |}
-             {| lbl_in := msg_in; lbl_outs := msgs_out |}
-             {| st_oss := idx_add idx pos oss;
-                st_msgs := distributeMsgs idx msgs_out (idx_add idx pmsgs_from oims) |}.
+        isInternal (getIndices sys) (msgFrom (msg_id msg_in)) = true ->
+        step_sys sys {| st_oss := oss; st_msgs := oims |}
+                 {| lbl_in := Some msg_in;
+                    lbl_outs := toExts sys msgs_out |}
+                 {| st_oss := idx_add idx pos oss;
+                    st_msgs := distributeMsgs (toInts sys msgs_out)
+                                              (idx_add idx pmsgs_from oims) |}
+    | SsExt: forall oss oims emsg_in emsgs_out,
+        isExternal (getIndices sys) (msgTo (msg_id emsg_in)) = true ->
+        Forall (fun emsg => isExternal
+                              (getIndices sys)
+                              (msgFrom (msg_id emsg)) = true) emsgs_out ->
+        step_sys sys {| st_oss := oss; st_msgs := oims |}
+                 {| lbl_in := None;
+                    lbl_outs := emsgs_out |}
+                 {| st_oss := oss;
+                    st_msgs := distributeMsgs emsgs_out oims |}.
+
+    Definition DisjointSystem (sys1 sys2: System) :=
+      NoDup (map (fun obj => obj_idx obj) sys1 ++ map (fun obj => obj_idx obj) sys2).
+    Definition combineSystem (sys1 sys2: System) := sys1 ++ sys2.
+
+    Definition combineState (st1 st2: State) :=
+      {| st_oss := union (st_oss st1) (st_oss st2);
+         st_msgs := union (st_msgs st1) (st_msgs st2) |}.
+
+    Definition DisjointLabel (lbl1 lbl2: Label) :=
+      match lbl_in lbl1, lbl_in lbl2 with
+      | Some _, None => forall msg, In msg (lbl_outs lbl2) -> In msg (lbl_outs lbl1)
+      | None, Some _ => forall msg, In msg (lbl_outs lbl1) -> In msg (lbl_outs lbl2)
+      | None, None => True
+      | _, _ => False
+      end.
+
+    Definition combineLabel (lbl1 lbl2: Label) :=
+      match lbl_in lbl1, lbl_in lbl2 with
+      | Some _, None => {| lbl_in := lbl_in lbl1;
+                           lbl_outs := lbl_outs lbl1 (* -- (lbl_outs lbl2), TODO *) |}
+      | None, Some _ => {| lbl_in := lbl_in lbl2;
+                           lbl_outs := lbl_outs lbl2 (* -- (lbl_outs lbl1), TODO *) |}
+      | None, None => {| lbl_in := None;
+                         lbl_outs := (lbl_outs lbl1) ++ (lbl_outs lbl2) |}
+      | _, _ => {| lbl_in := None; lbl_outs := nil |}
+      end.
+
+    Inductive step : System -> State -> Label -> State -> Prop :=
+    | StepLift:
+        forall sys st1 lbl st2,
+          step_sys sys st1 lbl st2 ->
+          step sys st1 lbl st2
+    | StepComb:
+        forall sys1 st11 lbl1 st12,
+          step sys1 st11 lbl1 st12 ->
+          forall sys2 st21 lbl2 st22,
+            step sys2 st21 lbl2 st22 ->
+            step (combineSystem sys1 sys2)
+                 (combineState st11 st21)
+                 (combineLabel lbl1 lbl2)
+                 (combineState st12 st22).
 
     Definition ocons {A} (oa: option A) (l: list A) :=
       match oa with
@@ -202,7 +256,7 @@ Section Language.
       end.
     Infix "::>" := ocons (at level 0).
 
-    (* NOTE: head is the youngest *)
+    (* Note that the head is the youngest *)
     Inductive steps (sys: System) : State -> list Label -> State -> Prop :=
     | StepsNil: forall st, steps sys st nil st
     | StepsCons:
@@ -221,28 +275,23 @@ Section Language.
                 (getObjectStatesInit sys')
       end.
 
-    Record BLabel :=
-      { blbl_in: option Msg;
-        blbl_outs: list Msg }.
-
-    Definition getBLabel (sys: System) (lbl: Label) :=
+    Definition getLabel (sys: System) (lbl: Label) :=
       match lbl with
       | {| lbl_in := min; lbl_outs := mouts |} =>
-        let ein := fromExt (getIndices sys) min in
-        let eouts := toExts (getIndices sys) mouts in
-        match ein, eouts with
+        let ein := fromExt sys min in
+        match ein, mouts with
         | None, nil => None
-        | _, _ => Some {| blbl_in := ein; blbl_outs := eouts |}
+        | _, _ => Some {| lbl_in := ein; lbl_outs := mouts |}
         end
       end.
 
     Fixpoint behaviorOf (sys: System) (l: list Label) :=
       match l with
       | nil => nil
-      | lbl :: l' => (getBLabel sys lbl) ::> (behaviorOf sys l')
+      | lbl :: l' => (getLabel sys lbl) ::> (behaviorOf sys l')
       end.
 
-    Inductive Behavior: System -> list BLabel -> Prop :=
+    Inductive Behavior: System -> list Label -> Prop :=
     | Behv: forall sys hst st,
         steps sys {| st_oss := getObjectStatesInit sys;
                      st_msgs := @empty _ _ |} hst st ->
@@ -256,14 +305,12 @@ Section Language.
       match l with
       | nil => nil
       | {| lbl_in := min; lbl_outs := mouts |} :: l' =>
-        (toExts (getIndices sys) mouts)
-          ++ ((fromExt (getIndices sys) min) ::> (historyOf sys l'))
+        mouts ++ min ::> (historyOf sys l')
       end.
 
     Inductive History : System -> list Msg -> Prop :=
-    | Hist: forall sys hst st,
-        steps sys {| st_oss := getObjectStatesInit sys;
-                     st_msgs := @empty _ _ |} hst st ->
+    | Hist: forall sys hst,
+        Behavior sys hst ->
         History sys (historyOf sys hst).
 
     (* A history consisting only of requests and matching responses. *)
