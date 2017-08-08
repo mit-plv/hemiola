@@ -101,6 +101,15 @@ Section Language.
       | None => M.add idx (M.add (rrToNat rr) msgs (M.empty _)) mf
       end.
 
+    Definition addMsg (idx: IdxT) (rr: RqRs) (msg: Msg) (mf: MsgsFrom) :=
+      match M.find idx mf with
+      | Some idxm => match M.find (rrToNat rr) idxm with
+                     | Some rrm => M.add idx (M.add (rrToNat rr) (msg :: rrm) idxm) mf
+                     | None => M.add idx (M.add (rrToNat rr) (msg :: nil) idxm) mf
+                     end
+      | None => M.add idx (M.add (rrToNat rr) (msg :: nil) (M.empty _)) mf
+      end.
+
     Definition Messages := M.t (* to *) MsgsFrom.
 
     (* A set of output messages are valid if
@@ -112,14 +121,18 @@ Section Language.
       Forall (fun m => msgFrom (msg_id m) = idx) msgs /\
       NoDup (map (fun m => msgTo (msg_id m)) msgs).
 
-    (* [step_obj] is for a step by an object that handles an internal message:
-     * 1) First, an internal message is nondeterministically picked, and
-     * 2) A predicated message for [fmsg], which satisfies its precondition and
+    (* [step_obj] is for a step by a single object that either handles an 
+     * internal message, or receives an external message.
+     * For an internal message:
+     * 1) the message is nondeterministically picked, and
+     * 2) a predicated message for [fmsg], which satisfies its precondition and
      *    postcondition, is nondeterministically picked to take a step.
+     * For an external message: it just receives the message and add it to a 
+     * proper queue.
      *)
     Inductive step_obj (obj: Object):
       StateT -> MsgsFrom ->
-      Msg (* in *) -> list Msg (* outs *) ->
+      option Msg (* external in? *) -> option Msg (* handling *) -> list Msg (* outs *) ->
       StateT -> MsgsFrom -> Prop :=
     | SoInt:
         forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos,
@@ -131,8 +144,16 @@ Section Language.
           pmsg_postcond fpmsg os (msg_value fmsg) pos ->
           ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
           step_obj obj os msgs_from
-                   fmsg (pmsg_outs fpmsg os (msg_value fmsg))
-                   pos (addMsgF fidx fmsgT fmsgs msgs_from).
+                   None (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg))
+                   pos (addMsgF fidx fmsgT fmsgs msgs_from)
+    | SoExt:
+        forall os msgs_from emsg,
+          msgTo (msg_id emsg) = obj_idx obj ->
+          step_obj obj os msgs_from
+                   (Some emsg) None nil
+                   os (addMsg (msgFrom (msg_id emsg))
+                              (msg_rqrs (msg_id emsg))
+                              emsg msgs_from).
 
     Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
       let from := msgFrom (msg_id msg) in
@@ -174,46 +195,18 @@ Section Language.
     Definition toExts (sys: System) (msgs: list Msg) :=
       filter (fun pm => isExternal (getIndices sys) (msgTo (msg_id pm))) msgs.
 
-    (* [lbl_in] is [None] if a step is taken externally. *)
-    Record Label := { lbl_in: option Msg;
+    (* Comparing with the Kami label:
+     * - [lbl_ins] corresponds to [enq] defined methods of fifos.
+     * - [lbl_hdl] corresponds to a rule handling a message, which implicitly
+     *   calls [deq] to fetch the message.
+     * - [lbl_outs] corresponds to [enq] called methods to fifos.
+     *)
+    Record Label := { lbl_ins: list Msg;
+                      lbl_hdl: option Msg;
                       lbl_outs: list Msg }.
 
     Record State := { st_oss: ObjectStates;
                       st_msgs: Messages }.
-
-    (* [step_sys] covers an internal and external step in terms of a given 
-     * system.
-     *)
-    Inductive step_sys (sys: System) : State -> Label -> State -> Prop :=
-    | SsInt: forall oss idx (obj: Object) (os: StateT)
-                    oims msgs_from msg_in msgs_out pos pmsgs_from,
-        In obj sys ->
-        obj_idx obj = idx ->
-        M.find idx oss = Some os ->
-        M.find idx oims = Some msgs_from -> 
-        step_obj obj os msgs_from msg_in msgs_out pos pmsgs_from ->
-        isInternal (getIndices sys) (msgFrom (msg_id msg_in)) = true ->
-        step_sys sys {| st_oss := oss; st_msgs := oims |}
-                 {| lbl_in := Some msg_in;
-                    lbl_outs := toExts sys msgs_out |}
-                 {| st_oss := M.add idx pos oss;
-                    st_msgs := distributeMsgs (toInts sys msgs_out)
-                                              (M.add idx pmsgs_from oims) |}
-    | SsExt: forall oss oims efrom emsgs_out,
-        Forall (fun emsg => msgFrom (msg_id emsg) = efrom /\
-                            isInternal (getIndices sys) (msgTo (msg_id emsg)) = true)
-               emsgs_out ->
-        isExternal (getIndices sys) efrom = true ->
-        step_sys sys {| st_oss := oss; st_msgs := oims |}
-                 {| lbl_in := None;
-                    lbl_outs := emsgs_out |}
-                 {| st_oss := oss;
-                    st_msgs := distributeMsgs emsgs_out oims |}.
-
-    Definition DisjointSystem (sys1 sys2: System) :=
-      NoDup (map (fun obj => obj_idx obj) sys1 ++ map (fun obj => obj_idx obj) sys2).
-    Definition combineSystem (sys1 sys2: System) := sys1 ++ sys2.
-    Infix "+o" := combineSystem (at level 30).
 
     Definition combineState (st1 st2: State) :=
       {| st_oss := M.union (st_oss st1) (st_oss st2);
@@ -221,10 +214,10 @@ Section Language.
     Infix "+s" := combineState (at level 30).
 
     Definition DisjointLabel (lbl1 lbl2: Label) :=
-      match lbl_in lbl1, lbl_in lbl2 with
-      | Some _, None => SubList (lbl_outs lbl2) (lbl_outs lbl1)
-      | None, Some _ => SubList (lbl_outs lbl1) (lbl_outs lbl2)
-      | None, None => True
+      match lbl_hdl lbl1, lbl_hdl lbl2 with
+      | Some _, None => SubList (lbl_ins lbl2) (lbl_outs lbl1)
+      | None, Some _ => SubList (lbl_ins lbl1) (lbl_outs lbl2)
+      | None, None => NoDup (map (fun m => msgTo (msg_id m)) (lbl_ins lbl1 ++ lbl_ins lbl2))
       | _, _ => False
       end.
 
@@ -233,38 +226,63 @@ Section Language.
       filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
 
     Definition combineLabel (lbl1 lbl2: Label) :=
-      match lbl_in lbl1, lbl_in lbl2 with
-      | Some _, None => {| lbl_in := lbl_in lbl1;
-                           lbl_outs := subtractMsgs (lbl_outs lbl1) (lbl_outs lbl2) |}
-      | None, Some _ => {| lbl_in := lbl_in lbl2;
-                           lbl_outs := subtractMsgs (lbl_outs lbl2) (lbl_outs lbl1) |}
-      | None, None => {| lbl_in := None;
-                         lbl_outs := (lbl_outs lbl1) ++ (lbl_outs lbl2) |}
-      | _, _ => {| lbl_in := None; lbl_outs := nil |}
+      match lbl_hdl lbl1, lbl_hdl lbl2 with
+      | Some _, None => {| lbl_ins := nil;
+                           lbl_hdl := lbl_hdl lbl1;
+                           lbl_outs := subtractMsgs (lbl_outs lbl1) (lbl_ins lbl2) |}
+      | None, Some _ => {| lbl_ins := nil;
+                           lbl_hdl := lbl_hdl lbl2;
+                           lbl_outs := subtractMsgs (lbl_outs lbl2) (lbl_ins lbl1) |}
+      | None, None => {| lbl_ins := (lbl_ins lbl1) ++ (lbl_ins lbl2);
+                         lbl_hdl := None;
+                         lbl_outs := nil |}
+      | _, _ => {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |}
       end.
     Infix "+l" := combineLabel (at level 30).
 
+    Definition emptyLabel :=
+      {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |}.
+
+    (* [step_sys] either lifts a step by [step_obj] to a given system, or
+     * combines two steps.
+     *)
+    Inductive step_sys (sys: System) : State -> Label -> State -> Prop :=
+    | SsLift: forall oss idx (obj: Object) (os: StateT)
+                     oims msgs_from msg_in msg_hdl msgs_out pos pmsgs_from,
+        In obj sys ->
+        obj_idx obj = idx ->
+        M.find idx oss = Some os ->
+        M.find idx oims = Some msgs_from -> 
+        step_obj obj os msgs_from msg_in msg_hdl msgs_out pos pmsgs_from ->
+        step_sys sys {| st_oss := oss; st_msgs := oims |}
+                 {| lbl_ins := o2l msg_in;
+                    lbl_hdl := msg_hdl;
+                    lbl_outs := msgs_out |}
+                 {| st_oss := M.add idx pos oss;
+                    st_msgs := M.add idx pmsgs_from oims |}
+    | SsComb:
+        forall st11 lbl1 st12 st21 lbl2 st22,
+          step_sys sys st11 lbl1 st12 ->
+          step_sys sys st21 lbl2 st22 ->
+          step_sys sys (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
+
+    Definition ValidLabel (lbl: Label) :=
+      match lbl_hdl lbl with
+      | Some _ => lbl_ins lbl = nil
+      | None => lbl_outs lbl = nil
+      end.
+
     Inductive step : System -> State -> Label -> State -> Prop :=
-    | StepLift:
+    | Step:
         forall sys st1 lbl st2,
           step_sys sys st1 lbl st2 ->
-          step sys st1 lbl st2
-    | StepComb:
-        forall sys1 st11 lbl1 st12,
-          step sys1 st11 lbl1 st12 ->
-          forall sys2 st21 lbl2 st22,
-            step sys2 st21 lbl2 st22 ->
-            step (sys1 +o sys2) (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
+          ValidLabel lbl ->
+          step sys st1 lbl st2.
 
-    Definition ocons {A} (oa: option A) (l: list A) :=
-      match oa with
-      | Some a => a :: l
-      | None => l
-      end.
-    Infix "::>" := ocons (at level 0).
+    Definition Trace := list Label.
 
     (* Note that the head is the youngest *)
-    Inductive steps (sys: System) : State -> list Label -> State -> Prop :=
+    Inductive steps (sys: System) : State -> Trace -> State -> Prop :=
     | StepsNil: forall st, steps sys st nil st
     | StepsCons:
         forall st1 msgs st2,
@@ -282,20 +300,16 @@ Section Language.
               (getObjectStatesInit sys')
       end.
 
-    Definition getLabel (sys: System) (lbl: Label) :=
+    Definition getLabel (lbl: Label) :=
       match lbl with
-      | {| lbl_in := min; lbl_outs := mouts |} =>
-        let ein := fromExt sys min in
-        match ein, mouts with
-        | None, nil => None
-        | _, _ => Some {| lbl_in := ein; lbl_outs := mouts |}
-        end
+      | {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |} => None
+      | _ => Some lbl
       end.
 
-    Fixpoint behaviorOf (sys: System) (l: list Label) :=
+    Fixpoint behaviorOf (l: Trace) :=
       match l with
       | nil => nil
-      | lbl :: l' => (getLabel sys lbl) ::> (behaviorOf sys l')
+      | lbl :: l' => (getLabel lbl) ::> (behaviorOf l')
       end.
 
     Inductive Behavior: System -> list Label -> Prop :=
@@ -303,22 +317,22 @@ Section Language.
         steps sys {| st_oss := getObjectStatesInit sys;
                      st_msgs := M.empty _ |} hst st ->
         forall bhst,
-          bhst = behaviorOf sys hst ->
+          bhst = behaviorOf hst ->
           Behavior sys bhst.
 
     (** Now about linearizability *)
 
-    Fixpoint historyOf (sys: System) (l: list Label) :=
+    Fixpoint historyOf (l: list Label) :=
       match l with
       | nil => nil
-      | {| lbl_in := min; lbl_outs := mouts |} :: l' =>
-        mouts ++ min ::> (historyOf sys l')
+      | {| lbl_ins := _; lbl_hdl := hdl; lbl_outs := outs |} :: l' =>
+        outs ++ hdl ::> (historyOf l')
       end.
 
     Inductive History : System -> list Msg -> Prop :=
     | Hist: forall sys hst,
         Behavior sys hst ->
-        History sys (historyOf sys hst).
+        History sys (historyOf hst).
 
     (* A history consisting only of requests and matching responses. *)
     Inductive Complete: list Msg -> Prop :=

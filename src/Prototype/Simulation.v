@@ -19,14 +19,14 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         step msgT_dec valT_dec impl ist1 ilbl ist2 ->
-        match getLabel impl ilbl with
+        match getLabel ilbl with
         | Some b =>
           exists sst2 slbl, step msgT_dec valT_dec spec sst1 slbl sst2 /\
-                            getLabel spec slbl = Some b /\
+                            getLabel slbl = Some b /\
                             ist2 ≈ sst2
         | None =>
           (exists sst2 slbl, step msgT_dec valT_dec spec sst1 slbl sst2 /\
-                             getLabel spec slbl = None /\
+                             getLabel slbl = None /\
                              ist2 ≈ sst2) \/
           ist2 ≈ sst1
         end.
@@ -39,7 +39,7 @@ Section Simulation.
       forall ihst ist2,
         steps msgT_dec valT_dec impl ist1 ihst ist2 ->
         exists sst2 shst,
-          behaviorOf impl ihst = behaviorOf spec shst /\
+          behaviorOf ihst = behaviorOf shst /\
           steps msgT_dec valT_dec spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
@@ -50,7 +50,7 @@ Section Simulation.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H1; [|exact H4].
-    remember (getLabel impl lbl) as blbl; destruct blbl as [blbl|]; simpl.
+    remember (getLabel lbl) as blbl; destruct blbl as [blbl|]; simpl.
 
     - destruct H1 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (slbl :: _); repeat split; eauto.

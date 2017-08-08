@@ -18,5 +18,14 @@ Ltac find_if_inside :=
     | [ H : context[if ?X then _ else _] |- _ ]=> destruct X
   end.
 
+Definition ocons {A} (oa: option A) (l: list A) :=
+  match oa with
+  | Some a => a :: l
+  | None => l
+  end.
+Infix "::>" := ocons (at level 0).
+
+Definition o2l {A} (oa: option A): list A := ocons oa nil.
+
 Axiom cheat: forall t, t.
 
