@@ -199,11 +199,11 @@ Section Language.
                  {| st_oss := M.add idx pos oss;
                     st_msgs := distributeMsgs (toInts sys msgs_out)
                                               (M.add idx pmsgs_from oims) |}
-    | SsExt: forall oss oims emsg_in emsgs_out,
-        isExternal (getIndices sys) (msgTo (msg_id emsg_in)) = true ->
-        Forall (fun emsg => isExternal
-                              (getIndices sys)
-                              (msgFrom (msg_id emsg)) = true) emsgs_out ->
+    | SsExt: forall oss oims efrom emsgs_out,
+        Forall (fun emsg => msgFrom (msg_id emsg) = efrom /\
+                            isInternal (getIndices sys) (msgTo (msg_id emsg)) = true)
+               emsgs_out ->
+        isExternal (getIndices sys) efrom = true ->
         step_sys sys {| st_oss := oss; st_msgs := oims |}
                  {| lbl_in := None;
                     lbl_outs := emsgs_out |}
@@ -213,10 +213,12 @@ Section Language.
     Definition DisjointSystem (sys1 sys2: System) :=
       NoDup (map (fun obj => obj_idx obj) sys1 ++ map (fun obj => obj_idx obj) sys2).
     Definition combineSystem (sys1 sys2: System) := sys1 ++ sys2.
+    Infix "+o" := combineSystem (at level 30).
 
     Definition combineState (st1 st2: State) :=
       {| st_oss := M.union (st_oss st1) (st_oss st2);
          st_msgs := M.union (st_msgs st1) (st_msgs st2) |}.
+    Infix "+s" := combineState (at level 30).
 
     Definition DisjointLabel (lbl1 lbl2: Label) :=
       match lbl_in lbl1, lbl_in lbl2 with
@@ -240,6 +242,7 @@ Section Language.
                          lbl_outs := (lbl_outs lbl1) ++ (lbl_outs lbl2) |}
       | _, _ => {| lbl_in := None; lbl_outs := nil |}
       end.
+    Infix "+l" := combineLabel (at level 30).
 
     Inductive step : System -> State -> Label -> State -> Prop :=
     | StepLift:
@@ -251,10 +254,7 @@ Section Language.
           step sys1 st11 lbl1 st12 ->
           forall sys2 st21 lbl2 st22,
             step sys2 st21 lbl2 st22 ->
-            step (combineSystem sys1 sys2)
-                 (combineState st11 st21)
-                 (combineLabel lbl1 lbl2)
-                 (combineState st12 st22).
+            step (sys1 +o sys2) (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
 
     Definition ocons {A} (oa: option A) (l: list A) :=
       match oa with
