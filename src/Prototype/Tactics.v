@@ -27,5 +27,8 @@ Infix "::>" := ocons (at level 0).
 
 Definition o2l {A} (oa: option A): list A := ocons oa nil.
 
+Infix "==n" := eq_nat_dec (at level 30).
+Infix "?<n" := (in_dec eq_nat_dec) (at level 30).
+
 Axiom cheat: forall t, t.
 

@@ -70,12 +70,13 @@ Section Language.
     }.
 
   Definition System := list Object.
+  Definition indicesOf (sys: System) := map (fun o => obj_idx o) sys.
 
   Section Semantics.
 
     Definition isTrsPair (rq rs: MsgId) :=
-      (if eq_nat_dec (msg_rq rq) (msg_rq rs) then true else false)
-        && (if eq_nat_dec (msg_rs rq) (msg_rs rs) then true else false)
+      (if msg_rq rq ==n msg_rq rs then true else false)
+        && (if msg_rs rq ==n msg_rs rs then true else false)
         && (if msgT_dec (msg_type rq) (msg_type rs) then true else false)
         && (match msg_rqrs rq, msg_rqrs rs with
             | Rq, Rs => true
@@ -180,9 +181,9 @@ Section Language.
     Definition getIndices (sys: System) := map (fun o => obj_idx o) sys.
 
     Definition isInternal (indices: list nat) (idx: IdxT) :=
-      if in_dec eq_nat_dec idx indices then true else false.
+      if idx ?<n indices then true else false.
     Definition isExternal (indices: list nat) (idx: IdxT) :=
-      if in_dec eq_nat_dec idx indices then false else true.
+      if idx ?<n indices then false else true.
 
     Definition fromExt (sys: System) (omsg: option Msg) :=
       match omsg with
@@ -207,6 +208,10 @@ Section Language.
 
     Record State := { st_oss: ObjectStates;
                       st_msgs: Messages }.
+
+    Definition DisjointState (st1 st2: State) :=
+      M.Disj (st_oss st1) (st_oss st2) /\
+      M.Disj (st_msgs st1) (st_msgs st2).
 
     Definition combineState (st1 st2: State) :=
       {| st_oss := M.union (st_oss st1) (st_oss st2);
@@ -264,20 +269,24 @@ Section Language.
         forall st11 lbl1 st12 st21 lbl2 st22,
           step_sys sys st11 lbl1 st12 ->
           step_sys sys st21 lbl2 st22 ->
+          DisjointState st11 st21 -> DisjointState st12 st22 ->
+          DisjointLabel lbl1 lbl2 ->
           step_sys sys (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
 
-    Definition ValidLabel (lbl: Label) :=
-      match lbl_hdl lbl with
-      | Some _ => lbl_ins lbl = nil
-      | None => lbl_outs lbl = nil
+    Definition Hidden (sys: System) (l: Label) :=
+      match lbl_hdl l with
+      | Some _ => Forall (fun m => isExternal (getIndices sys) (msgTo (msg_id m)) = true)
+                         (lbl_outs l)
+      | _ => Forall (fun m => isExternal (getIndices sys) (msgFrom (msg_id m)) = true)
+                    (lbl_ins l)
       end.
 
     Inductive step : System -> State -> Label -> State -> Prop :=
     | Step:
-        forall sys st1 lbl st2,
-          step_sys sys st1 lbl st2 ->
-          ValidLabel lbl ->
-          step sys st1 lbl st2.
+        forall sys st1 l st2,
+          step_sys sys st1 l st2 ->
+          Hidden sys l ->
+          step sys st1 l st2.
 
     Definition Trace := list Label.
 
@@ -300,39 +309,63 @@ Section Language.
               (getObjectStatesInit sys')
       end.
 
-    Definition getLabel (lbl: Label) :=
-      match lbl with
-      | {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |} => None
-      | _ => Some lbl
-      end.
-
-    Fixpoint behaviorOf (l: Trace) :=
+    Definition getLabel (l: Label) :=
       match l with
-      | nil => nil
-      | lbl :: l' => (getLabel lbl) ::> (behaviorOf l')
+      | {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |} => None
+      | _ => Some l
       end.
 
-    Inductive Behavior: System -> list Label -> Prop :=
-    | Behv: forall sys hst st,
+    Fixpoint behaviorOf (tr: Trace): Trace :=
+      match tr with
+      | nil => nil
+      | l :: tr' => (getLabel l) ::> (behaviorOf tr')
+      end.
+
+    Inductive Behavior: System -> Trace -> Prop :=
+    | Behv: forall sys tr st,
         steps sys {| st_oss := getObjectStatesInit sys;
-                     st_msgs := M.empty _ |} hst st ->
-        forall bhst,
-          bhst = behaviorOf hst ->
-          Behavior sys bhst.
+                     st_msgs := M.empty _ |} tr st ->
+        forall btr,
+          btr = behaviorOf tr ->
+          Behavior sys btr.
 
     (** Now about linearizability *)
 
-    Fixpoint historyOf (l: list Label) :=
-      match l with
+    (* In message passing system, a "process" refers to a "requester" and an 
+     * "object" refers to a "requestee".
+     * Thus, for a given message {| msg_rq := i; msg_rs := j; msg_rqrs := _ |},
+     * its requester (process) is "i" and the (target) object is "j".
+     *)
+    Definition isProcessOf (sys: System) (msg: Msg) :=
+      if msg_rq (msg_id msg) ?<n (indicesOf sys) then true else false.
+    Definition isObjectOf (sys: System) (msg: Msg) :=
+      if msg_rs (msg_id msg) ?<n (indicesOf sys) then true else false.
+
+    Definition objSubHistory (sys: System) (hst: list Msg) :=
+      filter (isObjectOf sys) hst.
+    Definition procSubHistory (sys: System) (hst: list Msg) :=
+      filter (isProcessOf sys) hst.
+
+    Definition extHandler (sys: System) (hdl: option Msg) :=
+      match hdl with
+      | Some m => if isExternal (getIndices sys) (msgFrom (msg_id m)) then hdl else None
+      | None => None
+      end.
+
+    (* For a given system [sys] and its trace [tr], the history of [tr] is an
+     * object subhistory with respect to [sys], where [lbl_ins] is ignored.
+     *)
+    Fixpoint historyOf (sys: System) (tr: Trace) :=
+      match tr with
       | nil => nil
-      | {| lbl_ins := _; lbl_hdl := hdl; lbl_outs := outs |} :: l' =>
-        outs ++ hdl ::> (historyOf l')
+      | {| lbl_ins := _; lbl_hdl := hdl; lbl_outs := outs |} :: tr' =>
+        (objSubHistory sys (outs ++ o2l (extHandler sys hdl))) ++ (historyOf sys tr')
       end.
 
     Inductive History : System -> list Msg -> Prop :=
     | Hist: forall sys hst,
         Behavior sys hst ->
-        History sys (historyOf hst).
+        History sys (historyOf sys hst).
 
     (* A history consisting only of requests and matching responses. *)
     Inductive Complete: list Msg -> Prop :=
@@ -432,27 +465,10 @@ Section Language.
     (* A system is sequential when all possible histories are sequential. *)
     Definition SequentialSys (sys: System) :=
       forall hst, History sys hst -> Sequential (rev hst).
-    
-    (* In message passing system, a "process" refers to a "requester" and an 
-     * "object" refers to a "requestee".
-     * Thus, for a given message {| msg_rq := i; msg_rs := j; msg_rqrs := _ |},
-     * its requester (process) is "i" and the (target) object is "j".
-     *)
-    Definition isProcessOf (obj: Object) (msg: Msg) :=
-      if eq_nat_dec (obj_idx obj) (msg_rq (msg_id msg)) then true else false.
-
-    Definition isObjectOf (obj: Object) (msg: Msg) :=
-      if eq_nat_dec (obj_idx obj) (msg_rs (msg_id msg)) then true else false.
-
-    Definition objSubHistory (obj: Object) (hst: list Msg) :=
-      filter (isObjectOf obj) hst.
-
-    Definition procSubHistory (obj: Object) (hst: list Msg) :=
-      filter (isProcessOf obj) hst.
 
     (* Two histories are equivalent iff any process subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
-      forall i, procSubHistory i hst1 = procSubHistory i hst2.
+      forall i, procSubHistory (i :: nil) hst1 = procSubHistory (i :: nil) hst2.
 
     (* TODO: this is actually not a fully correct definition:
      * Linearizability requires one more condition: any _strict_ transaction
