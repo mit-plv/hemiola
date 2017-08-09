@@ -64,8 +64,7 @@ Section Simulation.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
-  Hypothesis (Hsimi: sim {| st_oss := getObjectStatesInit impl; st_msgs := M.empty _ |}
-                         {| st_oss := getObjectStatesInit spec; st_msgs := M.empty _ |}).
+  Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).
 
   Theorem simulation_implies_refinement:
     Refines msgT_dec valT_dec impl spec.

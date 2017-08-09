@@ -30,5 +30,12 @@ Definition o2l {A} (oa: option A): list A := ocons oa nil.
 Infix "==n" := eq_nat_dec (at level 30).
 Infix "?<n" := (in_dec eq_nat_dec) (at level 30).
 
+Definition bind {A B} (oa: option A) (f: A -> option B): option B :=
+  match oa with
+  | Some a => f a
+  | None => None
+  end.
+Infix ">>=" := bind (at level 0).
+  
 Axiom cheat: forall t, t.
 

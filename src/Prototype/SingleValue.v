@@ -4,6 +4,7 @@ Require Import FMap Language.
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope fmap.
 
 Inductive SVMType :=
 | SvmGet
@@ -31,21 +32,25 @@ Defined.
 Notation "'T'" := (fun _ => True).
 Notation "'TT'" := (fun pre _ post => pre = post).
 
+Definition msgsInit {MsgT ValT}: M.t (list (Msg MsgT ValT)) :=
+  [] +[rrToNat Rq <- nil]+[rrToNat Rs <- nil].
+
 Section System.
   Variables extIdx1 extIdx2: nat.
 
   Section Spec.
 
     Definition specIdx := 0.
+    Definition specChn := 0. (* A single channel is enough. *)
     Definition SpecState := nat. (* a single value *)
 
     Section PerExt.
       Variable extIdx: nat.
 
-      Definition getReqM := buildMsgId extIdx specIdx SvmGet Rq.
-      Definition getRespM := buildMsgId extIdx specIdx SvmGet Rs.
-      Definition setReqM := buildMsgId extIdx specIdx SvmSet Rq.
-      Definition setRespM := buildMsgId extIdx specIdx SvmSet Rs.
+      Definition getReqM := buildMsgId extIdx specIdx SvmGet Rq specChn.
+      Definition getRespM := buildMsgId extIdx specIdx SvmGet Rs specChn.
+      Definition setReqM := buildMsgId extIdx specIdx SvmSet Rq specChn.
+      Definition setRespM := buildMsgId extIdx specIdx SvmSet Rs specChn.
 
       Definition specGetReq: PMsg SVMType SVM SpecState :=
         {| pmsg_mid := getReqM;
@@ -69,7 +74,7 @@ Section System.
     End PerExt.
 
     Definition specObj: Object SVMType SVM SpecState :=
-      {| obj_idx := 0;
+      {| obj_idx := specIdx;
          obj_state_init := 0;
          obj_pmsgs :=
            (specGetReq extIdx1)
@@ -87,20 +92,18 @@ Section System.
     Definition parentIdx := 0.
     Definition child1Idx := 1.
     Definition child2Idx := 2.
+    Definition implChn := 0. (* A single channel is enough..? *)
     Definition theOtherChild (idx: nat) :=
       if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
     Definition getExtIdx (idx: nat) :=
       if eq_nat_dec idx child1Idx then extIdx1 else extIdx2.
 
-    Inductive ValStatus :=
-    | Invalid
-    | Transient (* only for children *)
-    | Valid
-    | GetWait (* only for parent *)
-    | SetWait (* only for parent *).
+    Inductive ValStatus := Valid | Invalid.
+    Inductive TrsStatus := NoTrs | Trs (isGet: bool).
 
     Record ImplState :=
       { impl_status : ValStatus;
+        impl_trs : TrsStatus;
         impl_value_trs : nat;
         impl_value : nat
       }.
@@ -108,16 +111,16 @@ Section System.
     Section Child.
       Variable childIdx: nat.
 
-      Definition ecGetReqM := buildMsgId (getExtIdx childIdx) childIdx SvmGet Rq.
-      Definition ecGetRespM := buildMsgId (getExtIdx childIdx) childIdx SvmGet Rs.
-      Definition ecSetReqM := buildMsgId (getExtIdx childIdx) childIdx SvmSet Rq.
-      Definition ecSetRespM := buildMsgId (getExtIdx childIdx) childIdx SvmSet Rs.
-      Definition cpGetReqM := buildMsgId childIdx parentIdx SvmGet Rq.
-      Definition cpGetRespM := buildMsgId childIdx parentIdx SvmGet Rs.
-      Definition cpSetReqM := buildMsgId childIdx parentIdx SvmSet Rq.
-      Definition cpSetRespM := buildMsgId childIdx parentIdx SvmSet Rs.
-      Definition pcInvReqM := buildMsgId parentIdx childIdx SvmInv Rq.
-      Definition pcInvRespM := buildMsgId parentIdx childIdx SvmInv Rs.
+      Definition ecGetReqM := buildMsgId (getExtIdx childIdx) childIdx SvmGet Rq implChn.
+      Definition ecGetRespM := buildMsgId (getExtIdx childIdx) childIdx SvmGet Rs implChn.
+      Definition ecSetReqM := buildMsgId (getExtIdx childIdx) childIdx SvmSet Rq implChn.
+      Definition ecSetRespM := buildMsgId (getExtIdx childIdx) childIdx SvmSet Rs implChn.
+      Definition cpGetReqM := buildMsgId childIdx parentIdx SvmGet Rq implChn.
+      Definition cpGetRespM := buildMsgId childIdx parentIdx SvmGet Rs implChn.
+      Definition cpSetReqM := buildMsgId childIdx parentIdx SvmSet Rq implChn.
+      Definition cpSetRespM := buildMsgId childIdx parentIdx SvmSet Rs implChn.
+      Definition pcInvReqM := buildMsgId parentIdx childIdx SvmInv Rq implChn.
+      Definition pcInvRespM := buildMsgId parentIdx childIdx SvmInv Rs implChn.
 
       Definition ecGetReqValid: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := ecGetReqM;
@@ -138,7 +141,7 @@ Section System.
                             msg_value := GetReq |} :: nil;
            pmsg_postcond :=
              fun pre msg post =>
-               msg = GetReq /\ impl_status post = Transient
+               msg = GetReq /\ impl_trs post = Trs true
       |}.
 
       Definition ecSetReqValid: PMsg SVMType SVM ImplState :=
@@ -167,7 +170,7 @@ Section System.
            pmsg_postcond :=
              fun pre msg post =>
                exists v, msg = SetReq v /\
-                         impl_status post = Transient /\
+                         impl_trs post = Trs false /\
                          impl_value_trs post = v
         |}.
 
@@ -215,6 +218,7 @@ Section System.
       Definition child: Object SVMType SVM ImplState :=
         {| obj_idx := childIdx;
            obj_state_init := {| impl_status := Invalid;
+                                impl_trs := NoTrs;
                                 impl_value_trs := 0;
                                 impl_value := 0 |};
            obj_pmsgs := cpGetResp
@@ -249,7 +253,7 @@ Section System.
                             msg_value := InvReq |} :: nil;
            pmsg_postcond :=
              fun pre msg post =>
-               msg = GetReq /\ impl_status post = Transient
+               msg = GetReq /\ impl_trs post = Trs true
         |}.
 
       Definition cpSetReqValid childIdx: PMsg SVMType SVM ImplState :=
@@ -273,12 +277,12 @@ Section System.
            pmsg_postcond :=
              fun pre msg post =>
                exists v, msg = SetReq v /\
-                         impl_status post = Transient
+                         impl_trs post = Trs false
         |}.
 
       Definition pcInvRespGet childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := pcInvRespM childIdx;
-           pmsg_precond := fun st => impl_status st = GetWait;
+           pmsg_precond := fun st => impl_trs st = Trs true;
            pmsg_outs :=
              fun st msg =>
                match msg with
@@ -294,7 +298,7 @@ Section System.
       
       Definition pcInvRespSet childIdx: PMsg SVMType SVM ImplState :=
         {| pmsg_mid := pcInvRespM childIdx;
-           pmsg_precond := fun st => impl_status st = SetWait;
+           pmsg_precond := fun st => impl_trs st = Trs false;
            pmsg_outs :=
              fun st _ => {| msg_id := cpSetRespM childIdx;
                             msg_value := SetResp |} :: nil;
@@ -307,6 +311,7 @@ Section System.
       Definition parent : Object SVMType SVM ImplState :=
         {| obj_idx := parentIdx;
            obj_state_init := {| impl_status := Valid;
+                                impl_trs := NoTrs;
                                 impl_value_trs := 0;
                                 impl_value := 0 |};
            obj_pmsgs :=

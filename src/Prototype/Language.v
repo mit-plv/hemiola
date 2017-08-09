@@ -5,6 +5,7 @@ Require Import Tactics FMap.
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope fmap.
 
 Section Language.
 
@@ -28,7 +29,8 @@ Section Language.
   Record MsgId := { msg_rq : IdxT; (* an object that requests this message *)
                     msg_rs : IdxT; (* an object that responses this message *)
                     msg_type : MsgT;
-                    msg_rqrs : RqRs
+                    msg_rqrs : RqRs;
+                    msg_chn : IdxT (* which channel (queue) to use *)
                   }.
   Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
   Proof. repeat decide equality. Defined.
@@ -53,8 +55,8 @@ Section Language.
     | Rs => msg_rq msg
     end.
 
-  Definition buildMsgId rq rs ty rr :=
-    {| msg_rq := rq; msg_rs := rs; msg_type := ty; msg_rqrs := rr |}.
+  Definition buildMsgId rq rs ty rr cn :=
+    {| msg_rq := rq; msg_rs := rs; msg_type := ty; msg_rqrs := rr; msg_chn := cn |}.
 
   Record PMsg :=
     { pmsg_mid: MsgId;
@@ -68,6 +70,58 @@ Section Language.
       obj_state_init: StateT;
       obj_pmsgs: list PMsg
     }.
+
+  Section Messages.
+    
+    Definition Queue := list Msg.
+    Definition Channels := M.t (* channel index *) Queue.
+    Definition MsgsFrom := M.t (* from *) Channels.
+    Definition Messages := M.t (* to *) MsgsFrom.
+
+    Definition firstQ (q: Queue) := hd_error q.
+    Definition deq (q: Queue): Queue := tl q.
+    Definition enq (m: Msg) (q: Queue): Queue := q ++ (m :: nil).
+
+    Definition firstC (chn: IdxT) (cs: Channels) :=
+      cs@[chn] >>= (fun q => firstQ q).
+    Definition deqC (chn: IdxT) (cs: Channels): Channels :=
+      match cs@[chn] with
+      | Some q => cs +[chn <- deq q]
+      | None => cs
+      end.
+    Definition enqC (chn: IdxT) (m: Msg) (cs: Channels): Channels :=
+      match cs@[chn] with
+      | Some q => cs +[chn <- enq m q]
+      | None => cs +[chn <- enq m nil]
+      end.
+    
+    Definition firstMF (from chn: IdxT) (mf: MsgsFrom) :=
+      mf@[from] >>= (fun cs => firstC chn cs).
+    Definition deqMF (from chn: IdxT) (mf: MsgsFrom): MsgsFrom :=
+      match mf@[from] with
+      | Some cs => mf +[from <- deqC chn cs]
+      | None => mf
+      end.
+    Definition enqMF (from chn: IdxT) (m: Msg) (mf: MsgsFrom): MsgsFrom :=
+      match mf@[from] with
+      | Some cs => mf +[from <- enqC chn m cs]
+      | None => mf +[from <- enqC chn m (M.empty _)]
+      end.
+
+    Definition firstM (from to chn: IdxT) (msgs: Messages) :=
+      msgs@[to] >>= (fun froms => firstMF from chn froms).
+    Definition deqM (from to chn: IdxT) (msgs: Messages): Messages :=
+      match msgs@[to] with
+      | Some froms => msgs +[to <- deqMF from chn froms]
+      | None => msgs
+      end.
+    Definition enqM (from to chn: IdxT) (m: Msg) (msgs: Messages): Messages :=
+      match msgs@[to] with
+      | Some froms => msgs +[to <- enqMF from chn m froms]
+      | None => msgs +[to <- enqMF from chn m (M.empty _)]
+      end.
+
+  End Messages.
 
   Definition System := list Object.
   Definition indicesOf (sys: System) := map (fun o => obj_idx o) sys.
@@ -84,34 +138,6 @@ Section Language.
             end).
 
     Definition ObjectStates := M.t StateT.
-
-    Definition MsgsFrom := M.t (* from *) (M.t (* rq(0) or rs(1) *) (list Msg)).
-
-    Definition findMsgF (idx: IdxT) (rr: RqRs) (mf: MsgsFrom) :=
-      match M.find idx mf with
-      | Some m => match M.find (rrToNat rr) m with
-                  | Some msgs => Some msgs
-                  | None => None
-                  end
-      | None => None
-      end.
-
-    Definition addMsgF (idx: IdxT) (rr: RqRs) (msgs: list Msg) (mf: MsgsFrom) :=
-      match M.find idx mf with
-      | Some m => M.add idx (M.add (rrToNat rr) msgs m) mf
-      | None => M.add idx (M.add (rrToNat rr) msgs (M.empty _)) mf
-      end.
-
-    Definition addMsg (idx: IdxT) (rr: RqRs) (msg: Msg) (mf: MsgsFrom) :=
-      match M.find idx mf with
-      | Some idxm => match M.find (rrToNat rr) idxm with
-                     | Some rrm => M.add idx (M.add (rrToNat rr) (msg :: rrm) idxm) mf
-                     | None => M.add idx (M.add (rrToNat rr) (msg :: nil) idxm) mf
-                     end
-      | None => M.add idx (M.add (rrToNat rr) (msg :: nil) (M.empty _)) mf
-      end.
-
-    Definition Messages := M.t (* to *) MsgsFrom.
 
     (* A set of output messages are valid if
      * 1) they are from the same source [idx] and
@@ -136,8 +162,8 @@ Section Language.
       option Msg (* external in? *) -> option Msg (* handling *) -> list Msg (* outs *) ->
       StateT -> MsgsFrom -> Prop :=
     | SoInt:
-        forall os msgs_from fidx fmsgT fmsg fmsgs fpmsg pos,
-          findMsgF fidx fmsgT msgs_from = Some (fmsg :: fmsgs) ->
+        forall os msgs_from fidx fchn fmsg fpmsg pos,
+          firstMF fidx fchn msgs_from = Some fmsg ->
           msg_id fmsg = pmsg_mid fpmsg ->
           msgTo (msg_id fmsg) = obj_idx obj ->
           In fpmsg (obj_pmsgs obj) ->
@@ -146,39 +172,24 @@ Section Language.
           ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
           step_obj obj os msgs_from
                    None (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg))
-                   pos (addMsgF fidx fmsgT fmsgs msgs_from)
+                   pos (deqMF fidx fchn msgs_from)
     | SoExt:
         forall os msgs_from emsg,
           msgTo (msg_id emsg) = obj_idx obj ->
           step_obj obj os msgs_from
                    (Some emsg) None nil
-                   os (addMsg (msgFrom (msg_id emsg))
-                              (msg_rqrs (msg_id emsg))
-                              emsg msgs_from).
+                   os (enqMF (msgFrom (msg_id emsg))
+                             (msg_chn (msg_id emsg))
+                             emsg msgs_from).
 
     Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
-      let from := msgFrom (msg_id msg) in
-      let to := msgTo (msg_id msg) in
-      match M.find to msgs with
-      | Some toMsgs =>
-        let added := match findMsgF from (msg_rqrs (msg_id msg)) toMsgs with
-                     (* should be added last, since the head is the oldest *)
-                     | Some fromMsgs => fromMsgs ++ (msg :: nil)
-                     | None => msg :: nil
-                     end in
-        M.add to (addMsgF from (msg_rqrs (msg_id msg)) added toMsgs) msgs
-      | None =>
-        M.add to (addMsgF from (msg_rqrs (msg_id msg)) (msg :: nil) (M.empty _)) msgs
-      end.
-
+      enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (msg_chn (msg_id msg)) msg msgs.
     Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages): Messages :=
       match nmsgs with
       | nil => msgs
       | msg :: nmsgs' =>
         distributeMsgs nmsgs' (distributeMsg msg msgs)
       end.
-
-    Definition getIndices (sys: System) := map (fun o => obj_idx o) sys.
 
     Definition isInternal (indices: list nat) (idx: IdxT) :=
       if idx ?<n indices then true else false.
@@ -187,14 +198,14 @@ Section Language.
 
     Definition fromExt (sys: System) (omsg: option Msg) :=
       match omsg with
-      | Some msg => if isExternal (getIndices sys) (msgFrom (msg_id msg))
+      | Some msg => if isExternal (indicesOf sys) (msgFrom (msg_id msg))
                     then Some msg else None
       | None => None
       end.
     Definition toInts (sys: System) (msgs: list Msg) :=
-      filter (fun pm => isInternal (getIndices sys) (msgTo (msg_id pm))) msgs.
+      filter (fun pm => isInternal (indicesOf sys) (msgTo (msg_id pm))) msgs.
     Definition toExts (sys: System) (msgs: list Msg) :=
-      filter (fun pm => isExternal (getIndices sys) (msgTo (msg_id pm))) msgs.
+      filter (fun pm => isExternal (indicesOf sys) (msgTo (msg_id pm))) msgs.
 
     (* Comparing with the Kami label:
      * - [lbl_ins] corresponds to [enq] defined methods of fifos.
@@ -275,9 +286,9 @@ Section Language.
 
     Definition Hidden (sys: System) (l: Label) :=
       match lbl_hdl l with
-      | Some _ => Forall (fun m => isExternal (getIndices sys) (msgTo (msg_id m)) = true)
+      | Some _ => Forall (fun m => isExternal (indicesOf sys) (msgTo (msg_id m)) = true)
                          (lbl_outs l)
-      | _ => Forall (fun m => isExternal (getIndices sys) (msgFrom (msg_id m)) = true)
+      | _ => Forall (fun m => isExternal (indicesOf sys) (msgFrom (msg_id m)) = true)
                     (lbl_ins l)
       end.
 
@@ -300,14 +311,18 @@ Section Language.
             step sys st2 lbl st3 ->
             steps sys st1 (lbl :: msgs) st3.
 
-    Fixpoint getObjectStatesInit (sys: System) : ObjectStates :=
-      match sys with
+    Fixpoint getObjectStatesInit (obs: list Object) : ObjectStates :=
+      match obs with
       | nil => M.empty _
       | obj :: sys' =>
         M.add (obj_idx obj)
               (obj_state_init obj)
               (getObjectStatesInit sys')
       end.
+
+    Definition getStateInit (sys: System) :=
+      {| st_oss := getObjectStatesInit sys;
+         st_msgs := M.empty _ |}.
 
     Definition getLabel (l: Label) :=
       match l with
@@ -323,8 +338,7 @@ Section Language.
 
     Inductive Behavior: System -> Trace -> Prop :=
     | Behv: forall sys tr st,
-        steps sys {| st_oss := getObjectStatesInit sys;
-                     st_msgs := M.empty _ |} tr st ->
+        steps sys (getStateInit sys) tr st ->
         forall btr,
           btr = behaviorOf tr ->
           Behavior sys btr.
@@ -348,7 +362,7 @@ Section Language.
 
     Definition extHandler (sys: System) (hdl: option Msg) :=
       match hdl with
-      | Some m => if isExternal (getIndices sys) (msgFrom (msg_id m)) then hdl else None
+      | Some m => if isExternal (indicesOf sys) (msgFrom (msg_id m)) then hdl else None
       | None => None
       end.
 
@@ -468,7 +482,8 @@ Section Language.
 
     (* Two histories are equivalent iff any process subhistories are equal. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
-      forall i, procSubHistory (i :: nil) hst1 = procSubHistory (i :: nil) hst2.
+      forall i, procSubHistory (i :: nil) hst1 =
+                procSubHistory (i :: nil) hst2.
 
     (* TODO: this is actually not a fully correct definition:
      * Linearizability requires one more condition: any _strict_ transaction
