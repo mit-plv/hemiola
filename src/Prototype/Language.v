@@ -82,6 +82,8 @@ Section Language.
     Definition deq (q: Queue): Queue := tl q.
     Definition enq (m: Msg) (q: Queue): Queue := q ++ (m :: nil).
 
+    Definition findC (chn: IdxT) (cs: Channels): Queue :=
+      ol2l cs@[chn].
     Definition firstC (chn: IdxT) (cs: Channels) :=
       cs@[chn] >>= (fun q => firstQ q).
     Definition deqC (chn: IdxT) (cs: Channels): Channels :=
@@ -94,7 +96,9 @@ Section Language.
       | Some q => cs +[chn <- enq m q]
       | None => cs +[chn <- enq m nil]
       end.
-    
+
+    Definition findMF (from chn: IdxT) (mf: MsgsFrom): Queue :=
+      ol2l (mf@[from] >>= (fun cs => cs@[chn])).
     Definition firstMF (from chn: IdxT) (mf: MsgsFrom) :=
       mf@[from] >>= (fun cs => firstC chn cs).
     Definition deqMF (from chn: IdxT) (mf: MsgsFrom): MsgsFrom :=
@@ -108,6 +112,8 @@ Section Language.
       | None => mf +[from <- enqC chn m (M.empty _)]
       end.
 
+    Definition findM (from to chn: IdxT) (msgs: Messages): Queue :=
+      ol2l (msgs@[to] >>= (fun froms => froms@[from] >>= (fun cs => cs@[chn]))). 
     Definition firstM (from to chn: IdxT) (msgs: Messages) :=
       msgs@[to] >>= (fun froms => firstMF from chn froms).
     Definition deqM (from to chn: IdxT) (msgs: Messages): Messages :=
