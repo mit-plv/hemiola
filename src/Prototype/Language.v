@@ -373,13 +373,14 @@ Section Language.
       end.
 
     (* For a given system [sys] and its trace [tr], the history of [tr] is an
-     * object subhistory with respect to [sys], where [lbl_ins] is ignored.
+     * object subhistory with respect to [sys], where [lbl_hdl] is ignored.
      *)
     Fixpoint historyOf (sys: System) (tr: Trace) :=
       match tr with
       | nil => nil
-      | {| lbl_ins := _; lbl_hdl := hdl; lbl_outs := outs |} :: tr' =>
-        (objSubHistory sys (outs ++ o2l (extHandler sys hdl))) ++ (historyOf sys tr')
+      | {| lbl_ins := ins; lbl_hdl := _; lbl_outs := outs |} :: tr' =>
+        (objSubHistory sys (outs (* ++ o2l (extHandler sys hdl) *) ++ ins))
+          ++ (historyOf sys tr')
       end.
 
     Inductive History : System -> list Msg -> Prop :=
