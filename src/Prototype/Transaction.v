@@ -22,17 +22,16 @@ Section System.
 
     (*! Transaction *)
 
+    Definition RqHandler (rqh: PMsg MsgT ValT StateT) (rq: Msg MsgT ValT) :=
+      pmsg_mid rqh = msg_id rq.
+
     Definition Responder (rsr: PMsg MsgT ValT StateT) (rs: Msg MsgT ValT) :=
       exists st mt, In rs (pmsg_outs rsr st mt).
 
-    (* A VERY SUBTLE POINT:
-     * [rsr] is not a [PMsg] that handles the response,
-     * but a [PMsg] that _sends_ the response.
-     *)
-    Definition Transaction (rq rsr: PMsg MsgT ValT StateT) (rs: Msg MsgT ValT) :=
-      In rq (obj_pmsgs obj) /\ In rsr (obj_pmsgs obj) /\
-      Responder rsr rs /\
-      isTrsPair (pmsg_mid rq) (msg_id rs) = true.
+    Definition Transaction (rq rs: Msg MsgT ValT) (rqh rsr: PMsg MsgT ValT StateT) :=
+      In rqh (obj_pmsgs obj) /\ In rsr (obj_pmsgs obj) /\
+      RqHandler rqh rq /\ Responder rsr rs /\
+      isTrsPair (msg_id rq) (msg_id rs) = true.
 
     Inductive TransactionInv: PMsg MsgT ValT StateT (* request *) ->
                               CondT ->
@@ -50,10 +49,10 @@ Section System.
                    (pmsg_precond pmsg) -*- trsinv.
 
     Definition LocallyDisjoint :=
-      forall rq rsr rs,
-        Transaction rq rsr rs ->
+      forall rq rs rqh rsr,
+        Transaction rq rs rqh rsr ->
         exists trsinv,
-          TransactionInv rq trsinv rsr /\
+          TransactionInv rqh trsinv rsr /\
           DisjointTrsInv rsr trsinv.
 
     (*! Prioritized interference *)
@@ -95,11 +94,11 @@ Section System.
                    (pmsg_precond pmsg) -*- trsinv.
 
     Definition PInterfering :=
-      forall rq rsr rs,
-        Transaction rq rsr rs ->
+      forall rq rs rqh rsr,
+        Transaction rq rs rqh rsr ->
         exists trsinv,
-          TransactionInv rq trsinv rsr /\
-          PDisjointTrsInv rq rsr trsinv.
+          TransactionInv rqh trsinv rsr /\
+          PDisjointTrsInv rqh rsr trsinv.
 
     (*! Monotonicity *)
 

@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import FunctionalExtensionality.
+Require Import FunctionalExtensionality Permutation.
 Require Import Tactics FMap.
 
 Set Implicit Arguments.
@@ -351,26 +351,16 @@ Section Language.
 
     (** Now about linearizability *)
 
-    (* In message passing system, a "process" refers to a "requester" and an 
-     * "object" refers to a "requestee".
-     * Thus, for a given message {| msg_rq := i; msg_rs := j; msg_rqrs := _ |},
-     * its requester (process) is "i" and the (target) object is "j".
-     *)
-    Definition isProcessOf (sys: System) (msg: Msg) :=
-      if msg_rq (msg_id msg) ?<n (indicesOf sys) then true else false.
-    Definition isObjectOf (sys: System) (msg: Msg) :=
+    Definition belongsTo (sys: System) (msg: Msg) :=
       if msg_rs (msg_id msg) ?<n (indicesOf sys) then true else false.
+    Definition sysSubHistory (sys: System) (hst: list Msg) :=
+      filter (belongsTo sys) hst.
 
-    Definition objSubHistory (sys: System) (hst: list Msg) :=
-      filter (isObjectOf sys) hst.
-    Definition procSubHistory (sys: System) (hst: list Msg) :=
-      filter (isProcessOf sys) hst.
-
-    Definition extHandler (sys: System) (hdl: option Msg) :=
-      match hdl with
-      | Some m => if isExternal (indicesOf sys) (msgFrom (msg_id m)) then hdl else None
-      | None => None
-      end.
+    (* Definition extHandler (sys: System) (hdl: option Msg) := *)
+    (*   match hdl with *)
+    (*   | Some m => if isExternal (indicesOf sys) (msgFrom (msg_id m)) then hdl else None *)
+    (*   | None => None *)
+    (*   end. *)
 
     (* For a given system [sys] and its trace [tr], the history of [tr] is an
      * object subhistory with respect to [sys], where [lbl_hdl] is ignored.
@@ -379,7 +369,7 @@ Section Language.
       match tr with
       | nil => nil
       | {| lbl_ins := ins; lbl_hdl := _; lbl_outs := outs |} :: tr' =>
-        (objSubHistory sys (outs (* ++ o2l (extHandler sys hdl) *) ++ ins))
+        (sysSubHistory sys (outs (* ++ o2l (extHandler sys hdl) *) ++ ins))
           ++ (historyOf sys tr')
       end.
 
@@ -487,14 +477,15 @@ Section Language.
     Definition SequentialSys (sys: System) :=
       forall hst, History sys hst -> Sequential (rev hst).
 
-    (* Two histories are equivalent iff any process subhistories are equal. *)
+    (* Two histories are equivalent iff one history is a permutation of the other. *)
     Definition Equivalent (hst1 hst2: list Msg) :=
-      forall i, procSubHistory (i :: nil) hst1 =
-                procSubHistory (i :: nil) hst2.
+      Permutation hst1 hst2.
 
     (* TODO: this is actually not a fully correct definition:
      * Linearizability requires one more condition: any _strict_ transaction
      * orders are preserved by [lhst].
+     * I'm currently not sure if we need the second condition for 
+     * message-passing systems.
      *)
     Definition Linearizable (hst lhst: list Msg) :=
       exists ehst,
