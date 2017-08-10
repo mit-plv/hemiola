@@ -351,16 +351,22 @@ Section Language.
 
     (** Now about linearizability *)
 
-    Definition belongsTo (sys: System) (msg: Msg) :=
-      if msg_rs (msg_id msg) ?<n (indicesOf sys) then true else false.
-    Definition sysSubHistory (sys: System) (hst: list Msg) :=
-      filter (belongsTo sys) hst.
+    (* In message passing system, a "process" (or "thread") refers to a 
+     * "requester" and an "objects" (or "system") refers to a "requestee".
+     * Thus, for a given message {| msg_rq := i; msg_rs := j; msg_rqrs := _ |},
+     * its requester (process) is "i" and the (target) object is "j".
+     *)
 
-    (* Definition extHandler (sys: System) (hdl: option Msg) := *)
-    (*   match hdl with *)
-    (*   | Some m => if isExternal (indicesOf sys) (msgFrom (msg_id m)) then hdl else None *)
-    (*   | None => None *)
-    (*   end. *)
+    (* [sys] acts as a processor for [msg]. *)
+    Definition asProcessor (sys: System) (msg: Msg) :=
+      if msg_rq (msg_id msg) ?<n (indicesOf sys) then true else false.
+    Definition asSystem (sys: System) (msg: Msg) :=
+      if msg_rs (msg_id msg) ?<n (indicesOf sys) then true else false.
+
+    Definition sysSubHistory (sys: System) (hst: list Msg) :=
+      filter (asSystem sys) hst.
+    Definition procSubHistory (sys: System) (hst: list Msg) :=
+      filter (asProcessor sys) hst.
 
     (* For a given system [sys] and its trace [tr], the history of [tr] is an
      * object subhistory with respect to [sys], where [lbl_hdl] is ignored.
@@ -369,8 +375,7 @@ Section Language.
       match tr with
       | nil => nil
       | {| lbl_ins := ins; lbl_hdl := _; lbl_outs := outs |} :: tr' =>
-        (sysSubHistory sys (outs (* ++ o2l (extHandler sys hdl) *) ++ ins))
-          ++ (historyOf sys tr')
+        (sysSubHistory sys (outs ++ ins)) ++ (historyOf sys tr')
       end.
 
     Inductive History : System -> list Msg -> Prop :=
@@ -477,11 +482,22 @@ Section Language.
     Definition SequentialSys (sys: System) :=
       forall hst, History sys hst -> Sequential (rev hst).
 
-    (* Two histories are equivalent iff one history is a permutation of the other. *)
-    Definition Equivalent (hst1 hst2: list Msg) :=
-      Permutation hst1 hst2.
+    Definition requestsOf (hst: list Msg) :=
+      filter (fun m => match msg_rqrs (msg_id m) with
+                       | Rq => true
+                       | _ => false
+                       end) hst.
 
-    (* TODO: this is actually not a fully correct definition:
+    (* Two histories are equivalent if
+     * 1) one history is a permutation of the other, and
+     * 2) they have the same request orders per a process.
+     *)
+    Definition Equivalent (hst1 hst2: list Msg) :=
+      Permutation hst1 hst2 /\
+      forall obj, requestsOf (procSubHistory (obj :: nil) hst1) =
+                  requestsOf (procSubHistory (obj :: nil) hst2).
+
+    (* NOTE: this is actually not a fully correct definition:
      * Linearizability requires one more condition: any _strict_ transaction
      * orders are preserved by [lhst].
      * I'm currently not sure if we need the second condition for 
@@ -521,7 +537,7 @@ Section Language.
 
     Lemma equivalent_refl: forall hst, Equivalent hst hst.
     Proof.
-      intros; unfold Equivalent; reflexivity.
+      intros; unfold Equivalent; split; intros; reflexivity.
     Qed.
     Hint Immediate equivalent_refl.
 
