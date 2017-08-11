@@ -9,6 +9,7 @@ Section System.
 
   Local Definition IState := State SVMType SVM ImplState.
   Local Definition SState := State SVMType SVM SpecState.
+  Local Definition Msg := Msg SVMType SVM.
 
   (* The first intuition: if one of [ValStatus]s in objects is [Valid], then
    * that object has the value that should be mapped to the spec.
@@ -29,7 +30,7 @@ Section System.
   (* We will give a simulation relation that ignores all "unfinished transactions",
    * thus the [Messages]-mapping should be just about external incoming queues.
    *)
-  Definition specMsgs (eToC1 eToC2: Queue SVMType SVM): Messages SVMType SVM :=
+  Definition specMsgs (eToC1 eToC2: Queue Msg): Messages Msg :=
     match eToC1 with
     | nil =>
       match eToC2 with

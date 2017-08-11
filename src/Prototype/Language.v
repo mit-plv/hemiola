@@ -35,6 +35,15 @@ Section Language.
   Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
   Proof. repeat decide equality. Defined.
 
+  Definition isTrsPair (rq rs: MsgId) :=
+    (if msg_rq rq ==n msg_rq rs then true else false)
+      && (if msg_rs rq ==n msg_rs rs then true else false)
+      && (if msgT_dec (msg_type rq) (msg_type rs) then true else false)
+      && (match msg_rqrs rq, msg_rqrs rs with
+          | Rq, Rs => true
+          | _, _ => false
+          end).
+
   Record Msg :=
     { msg_id: MsgId;
       msg_value: ValT
@@ -71,16 +80,22 @@ Section Language.
       obj_pmsgs: list PMsg
     }.
 
+  Definition System := list Object.
+  Definition indicesOf (sys: System) := map (fun o => obj_idx o) sys.
+
+  (*! Now about semantics *)
+
   Section Messages.
+    Variable MEltT: Type.
     
-    Definition Queue := list Msg.
+    Definition Queue := list MEltT.
     Definition Channels := M.t (* channel index *) Queue.
     Definition MsgsFrom := M.t (* from *) Channels.
     Definition Messages := M.t (* to *) MsgsFrom.
 
     Definition firstQ (q: Queue) := hd_error q.
     Definition deq (q: Queue): Queue := tl q.
-    Definition enq (m: Msg) (q: Queue): Queue := q ++ (m :: nil).
+    Definition enq (m: MEltT) (q: Queue): Queue := q ++ (m :: nil).
 
     Definition findC (chn: IdxT) (cs: Channels): Queue :=
       ol2l cs@[chn].
@@ -91,7 +106,7 @@ Section Language.
       | Some q => cs +[chn <- deq q]
       | None => cs
       end.
-    Definition enqC (chn: IdxT) (m: Msg) (cs: Channels): Channels :=
+    Definition enqC (chn: IdxT) (m: MEltT) (cs: Channels): Channels :=
       match cs@[chn] with
       | Some q => cs +[chn <- enq m q]
       | None => cs +[chn <- enq m nil]
@@ -106,7 +121,7 @@ Section Language.
       | Some cs => mf +[from <- deqC chn cs]
       | None => mf
       end.
-    Definition enqMF (from chn: IdxT) (m: Msg) (mf: MsgsFrom): MsgsFrom :=
+    Definition enqMF (from chn: IdxT) (m: MEltT) (mf: MsgsFrom): MsgsFrom :=
       match mf@[from] with
       | Some cs => mf +[from <- enqC chn m cs]
       | None => mf +[from <- enqC chn m (M.empty _)]
@@ -121,7 +136,7 @@ Section Language.
       | Some froms => msgs +[to <- deqMF from chn froms]
       | None => msgs
       end.
-    Definition enqM (from to chn: IdxT) (m: Msg) (msgs: Messages): Messages :=
+    Definition enqM (from to chn: IdxT) (m: MEltT) (msgs: Messages): Messages :=
       match msgs@[to] with
       | Some froms => msgs +[to <- enqMF from chn m froms]
       | None => msgs +[to <- enqMF from chn m (M.empty _)]
@@ -129,19 +144,7 @@ Section Language.
 
   End Messages.
 
-  Definition System := list Object.
-  Definition indicesOf (sys: System) := map (fun o => obj_idx o) sys.
-
   Section Semantics.
-
-    Definition isTrsPair (rq rs: MsgId) :=
-      (if msg_rq rq ==n msg_rq rs then true else false)
-        && (if msg_rs rq ==n msg_rs rs then true else false)
-        && (if msgT_dec (msg_type rq) (msg_type rs) then true else false)
-        && (match msg_rqrs rq, msg_rqrs rs with
-            | Rq, Rs => true
-            | _, _ => false
-            end).
 
     Definition ObjectStates := M.t StateT.
 
@@ -164,9 +167,9 @@ Section Language.
      * proper queue.
      *)
     Inductive step_obj (obj: Object):
-      StateT -> MsgsFrom ->
+      StateT -> MsgsFrom Msg ->
       option Msg (* external in? *) -> option Msg (* handling *) -> list Msg (* outs *) ->
-      StateT -> MsgsFrom -> Prop :=
+      StateT -> MsgsFrom Msg -> Prop :=
     | SoInt:
         forall os msgs_from fidx fchn fmsg fpmsg pos,
           firstMF fidx fchn msgs_from = Some fmsg ->
@@ -188,9 +191,9 @@ Section Language.
                              (msg_chn (msg_id emsg))
                              emsg msgs_from).
 
-    Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
+    Definition distributeMsg (msg: Msg) (msgs: Messages Msg): Messages Msg :=
       enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (msg_chn (msg_id msg)) msg msgs.
-    Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages): Messages :=
+    Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages Msg): Messages Msg :=
       match nmsgs with
       | nil => msgs
       | msg :: nmsgs' =>
@@ -222,9 +225,12 @@ Section Language.
     Record Label := { lbl_ins: list Msg;
                       lbl_hdl: option Msg;
                       lbl_outs: list Msg }.
+    Definition buildLabel ins hdl outs := {| lbl_ins := ins;
+                                             lbl_hdl := hdl;
+                                             lbl_outs := outs |}.
 
     Record State := { st_oss: ObjectStates;
-                      st_msgs: Messages }.
+                      st_msgs: Messages Msg }.
 
     Definition DisjointState (st1 st2: State) :=
       M.Disj (st_oss st1) (st_oss st2) /\
