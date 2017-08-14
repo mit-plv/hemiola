@@ -23,20 +23,6 @@ Section Facts.
   Lemma step_sys_validLabel:
     forall (sys: System) st1 l st2, step_sys sys st1 l st2 -> ValidLabel l.
   Proof.
-    induction 1; simpl; intros.
-    - inv H3.
-      + split; [reflexivity|].
-        simpl; rewrite H6; assumption.
-      + cbv; auto.
-    - unfold ValidLabel in *.
-      destruct lbl1 as [ins1 hdl1 outs1], lbl2 as [ins2 hdl2 outs2]; simpl in *.
-      destruct hdl1 as [hdl1|], hdl2 as [hdl2|].
-      + simpl; reflexivity.
-      + simpl; split; [reflexivity|].
-        admit.
-      + simpl; split; [reflexivity|].
-        admit.
-      + simpl; reflexivity.
   Admitted.
 
 End Facts.

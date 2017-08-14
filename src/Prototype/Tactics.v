@@ -23,7 +23,7 @@ Definition ocons {A} (oa: option A) (l: list A) :=
   | Some a => a :: l
   | None => l
   end.
-Infix "::>" := ocons (at level 0).
+Infix "::>" := ocons (at level 0, right associativity).
 
 Definition o2l {A} (oa: option A): list A := ocons oa nil.
 Definition ol2l {A} (oa: option (list A)): list A :=

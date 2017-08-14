@@ -32,6 +32,10 @@ Section Language.
                     msg_rqrs : RqRs;
                     msg_chn : IdxT (* which channel (queue) to use *)
                   }.
+
+  Definition buildMsgId rq rs ty rr cn :=
+    {| msg_rq := rq; msg_rs := rs; msg_type := ty; msg_rqrs := rr; msg_chn := cn |}.
+
   Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
   Proof. repeat decide equality. Defined.
 
@@ -64,8 +68,14 @@ Section Language.
     | Rs => msg_rq msg
     end.
 
-  Definition buildMsgId rq rs ty rr cn :=
-    {| msg_rq := rq; msg_rs := rs; msg_type := ty; msg_rqrs := rr; msg_chn := cn |}.
+  (* A set of output messages are valid if
+   * 1) they are from the same source [idx] and
+   * 2) all targets are different to each others.
+   * TODO? syntax may have to ensure [ValidOuts], or by well-formedness.
+   *)
+  Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
+    Forall (fun m => msgFrom (msg_id m) = idx) msgs /\
+    NoDup (map (fun m => msgTo (msg_id m)) msgs).
 
   Record PMsg :=
     { pmsg_mid: MsgId;
@@ -148,15 +158,6 @@ Section Language.
 
     Definition ObjectStates := M.t StateT.
 
-    (* A set of output messages are valid if
-     * 1) they are from the same source [idx] and
-     * 2) all targets are different to each others.
-     * TODO? syntax may have to ensure [ValidOuts], or by well-formedness.
-     *)
-    Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
-      Forall (fun m => msgFrom (msg_id m) = idx) msgs /\
-      NoDup (map (fun m => msgTo (msg_id m)) msgs).
-
     (* [step_obj] is for a step by a single object that either handles an 
      * internal message, or receives an external message.
      * For an internal message:
@@ -170,29 +171,29 @@ Section Language.
       StateT -> MsgsFrom Msg ->
       option Msg (* external in? *) -> option Msg (* handling *) -> list Msg (* outs *) ->
       StateT -> MsgsFrom Msg -> Prop :=
-    | SoInt:
-        forall os msgs_from fidx fchn fmsg fpmsg pos,
-          firstMF fidx fchn msgs_from = Some fmsg ->
-          msg_id fmsg = pmsg_mid fpmsg ->
-          msgTo (msg_id fmsg) = obj_idx obj ->
-          In fpmsg (obj_pmsgs obj) ->
-          pmsg_precond fpmsg os ->
-          pmsg_postcond fpmsg os (msg_value fmsg) pos ->
-          ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
-          step_obj obj os msgs_from
-                   None (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg))
-                   pos (deqMF fidx fchn msgs_from)
-    | SoExt:
-        forall os msgs_from emsg,
-          msgTo (msg_id emsg) = obj_idx obj ->
-          step_obj obj os msgs_from
-                   (Some emsg) None nil
-                   os (enqMF (msgFrom (msg_id emsg))
-                             (msg_chn (msg_id emsg))
-                             emsg msgs_from).
+    | SoSlt: forall os mf, step_obj obj os mf None None nil os mf
+    | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
+        firstMF fidx fchn mf = Some fmsg ->
+        msg_id fmsg = pmsg_mid fpmsg ->
+        msgTo (msg_id fmsg) = obj_idx obj ->
+        In fpmsg (obj_pmsgs obj) ->
+        pmsg_precond fpmsg os ->
+        pmsg_postcond fpmsg os (msg_value fmsg) pos ->
+        ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
+        step_obj obj os mf
+                 None (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg))
+                 pos (deqMF fidx fchn mf)
+    | SoExt: forall os mf emsg,
+        msgTo (msg_id emsg) = obj_idx obj ->
+        step_obj obj os mf
+                 (Some emsg) None nil
+                 os (enqMF (msgFrom (msg_id emsg))
+                           (msg_chn (msg_id emsg))
+                           emsg mf).
 
     Definition distributeMsg (msg: Msg) (msgs: Messages Msg): Messages Msg :=
       enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (msg_chn (msg_id msg)) msg msgs.
+    
     Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages Msg): Messages Msg :=
       match nmsgs with
       | nil => msgs
@@ -200,37 +201,21 @@ Section Language.
         distributeMsgs nmsgs' (distributeMsg msg msgs)
       end.
 
-    Definition isInternal (indices: list nat) (idx: IdxT) :=
-      if idx ?<n indices then true else false.
-    Definition isExternal (indices: list nat) (idx: IdxT) :=
-      if idx ?<n indices then false else true.
-
-    Definition fromExt (sys: System) (omsg: option Msg) :=
-      match omsg with
-      | Some msg => if isExternal (indicesOf sys) (msgFrom (msg_id msg))
-                    then Some msg else None
-      | None => None
-      end.
-    Definition toInts (sys: System) (msgs: list Msg) :=
-      filter (fun pm => isInternal (indicesOf sys) (msgTo (msg_id pm))) msgs.
-    Definition toExts (sys: System) (msgs: list Msg) :=
-      filter (fun pm => isExternal (indicesOf sys) (msgTo (msg_id pm))) msgs.
-
     (* Comparing with the Kami label:
      * - [lbl_ins] corresponds to [enq] defined methods of fifos.
      * - [lbl_hdl] corresponds to a rule handling a message, which implicitly
      *   calls [deq] to fetch the message.
      * - [lbl_outs] corresponds to [enq] called methods to fifos.
      *)
-    Record Label := { lbl_ins: list Msg;
-                      lbl_hdl: option Msg;
-                      lbl_outs: list Msg }.
-    Definition buildLabel ins hdl outs := {| lbl_ins := ins;
-                                             lbl_hdl := hdl;
-                                             lbl_outs := outs |}.
+    Record Label :=
+      { lbl_ins: list Msg;
+        lbl_hdl: option Msg;
+        lbl_outs: list Msg }.
+    
+    Definition buildLabel ins hdl outs :=
+      {| lbl_ins := ins; lbl_hdl := hdl; lbl_outs := outs |}.
 
-    Record State := { st_oss: ObjectStates;
-                      st_msgs: Messages Msg }.
+    Record State := { st_oss: ObjectStates; st_msgs: Messages Msg }.
 
     Definition DisjointState (st1 st2: State) :=
       M.Disj (st_oss st1) (st_oss st2) /\
@@ -249,7 +234,6 @@ Section Language.
       | _, _ => False
       end.
 
-    (* ms1 - ms2 *)
     Definition subtractMsgs (ms1 ms2: list Msg) :=
       filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
 
@@ -296,12 +280,15 @@ Section Language.
           DisjointLabel lbl1 lbl2 ->
           step_sys sys (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
 
+    Definition isExternal (sys: System) (idx: IdxT) :=
+      if idx ?<n (indicesOf sys) then false else true.
+    Definition isInternal (sys: System) (idx: IdxT) :=
+      if idx ?<n (indicesOf sys) then true else false.
+
     Definition Hidden (sys: System) (l: Label) :=
       match lbl_hdl l with
-      | Some _ => Forall (fun m => isExternal (indicesOf sys) (msgTo (msg_id m)) = true)
-                         (lbl_outs l)
-      | _ => Forall (fun m => isExternal (indicesOf sys) (msgFrom (msg_id m)) = true)
-                    (lbl_ins l)
+      | Some _ => Forall (fun m => isExternal sys (msgTo (msg_id m)) = true) (lbl_outs l)
+      | _ => Forall (fun m => isExternal sys (msgFrom (msg_id m)) = true) (lbl_ins l)
       end.
 
     Inductive step : System -> State -> Label -> State -> Prop :=

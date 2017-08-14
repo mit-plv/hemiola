@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import FMap Language.
+Require Import Tactics FMap Language.
 
 Section System.
   Context {MsgT ValT StateT: Type}.
@@ -11,23 +11,33 @@ Section System.
   Local Notation System := (System MsgT ValT StateT).
   Local Notation MsgId := (MsgId MsgT).
   Local Notation Msg := (Msg MsgT ValT).
+  Local Notation msg_dec := (msg_dec msgT_dec valT_dec). 
   Local Notation PMsg := (PMsg MsgT ValT StateT).
   Local Notation Label := (Label MsgT ValT).
   Local Notation isTrsPair := (isTrsPair msgT_dec).
 
+  Local Notation ObjectStates := (ObjectStates StateT).
   Local Notation State := (State MsgT ValT StateT).
   Local Notation steps := (steps msgT_dec valT_dec).
 
   (*! Now about monotonicity *)
+
+  Definition FromExt (sys: System) (m: Msg) :=
+    isExternal sys (msgFrom (msg_id m)) = true /\
+    isInternal sys (msgTo (msg_id m)) = true.
+
+  Definition ToExt (sys: System) (m: Msg) :=
+    isExternal sys (msgTo (msg_id m)) = true /\
+    isInternal sys (msgFrom (msg_id m)) = true.
   
   (* A pair of labels is [ImmediateL] if one handles a request and the other 
    * sends the response of it.
    *)
-  Definition ImmediateL (rql rsl: Label) :=
-    exists rq rs: Msg,
-      rql = buildLabel (rq :: nil) None nil /\
-      rsl = buildLabel nil (Some rq) (rs :: nil) /\
-      isTrsPair (msg_id rq) (msg_id rs) = true.
+  Definition ImmediateL (obj: Object) (rql rsl: Label) (rq rs: Msg) :=
+    rql = buildLabel (rq :: nil) None nil /\
+    rsl = buildLabel nil (Some rq) (rs :: nil) /\
+    FromExt (obj :: nil) rq /\ ToExt (obj :: nil) rs /\
+    isTrsPair (msg_id rq) (msg_id rs) = true.
 
   (* "Four labels" [rq1], [rq2], [rs1], and [rs2] are [ForwardingL] if
    * 1) [rq1] comes as a request,
@@ -35,36 +45,50 @@ Section System.
    * 3) [rs2] comes as a response for [rq2], and
    * 4) [rs2] is handled and finally [rs1] is sent as a response for [rs1].
    *)
-  Definition ForwardingL (rql1 rql2 rsl1 rsl2: Label) (rq1 rq2 rs1 rs2: Msg) :=
+  Definition ForwardingL (obj: Object) (rql1 rql2 rsl1 rsl2: Label) (rq1 rq2 rs1 rs2: Msg) :=
     rql1 = buildLabel (rq1 :: nil) None nil /\
     rql2 = buildLabel nil (Some rq1) (rq2 :: nil) /\
     rsl2 = buildLabel (rs2 :: nil) None nil /\
     rsl1 = buildLabel nil (Some rs2) (rs1 :: nil) /\
+    FromExt (obj :: nil) rq1 /\ ToExt (obj :: nil) rq2 /\
+    FromExt (obj :: nil) rs2 /\ ToExt (obj :: nil) rs1 /\
     isTrsPair (msg_id rq1) (msg_id rs1) = true /\
     isTrsPair (msg_id rq2) (msg_id rs2) = true.
-
+    
   (* A monotone transaction [MTransaction] is a sequence of label explicitly
    * indicating the start of a request and the out of corresponding response.
    * The sequence is composed of an [Immediate] labels as a base case, and
    * some [Forwarding] labels inductively chained.
    *)
-  Inductive MTrs: Label (* start (request in) *) ->
-                  list Label (* intermediate trace (w/o the start and end) *) ->
-                  Label (* end (response out) *) -> Prop :=
-  | TrsImm: forall rql rsl,
-      ImmediateL rql rsl ->
-      MTrs rql nil rsl
-  | TrsFwd: forall rin ll rout,
-      MTrs rin ll rout ->
-      forall rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2,
-        ForwardingL rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2 ->
-        lbl_ins rin = lbl_outs rql2 -> lbl_outs rout = lbl_ins rsl2 ->
-        MTrs rql1 ((buildLabel nil (Some rq2) nil)
-                     :: ll ++ (buildLabel nil (Some rq1) nil) :: nil) rsl1.
+  Inductive MTrs: System ->
+                  Label (* start of a request *) ->
+                  list Label (* intermediate request trace (w/o the start) *) ->
+                  option Label (* end of a request *) ->
+                  option Label (* start of a response *) ->
+                  list Label (* intermediate response trace (w/o the end) *) ->
+                  Label (* end of a response *) -> Prop :=
+  | MTrsImm: forall obj rql rsl erq ers,
+      ImmediateL obj rql rsl erq ers ->
+      MTrs (obj :: nil) rql nil None None nil rsl
+  | MTrsFwd: forall obj rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2,
+      ForwardingL obj rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2 ->
+      MTrs (obj :: nil) rql1 nil (Some rql2) (Some rsl2) nil rsl1
+  | MTrsCom:
+      forall sys1 rqin1 rqll1 rqout1 rsin1 rsll1 rsout1,
+        MTrs sys1 rqin1 rqll1 rqout1 rsin1 rsll1 rsout1 ->
+        forall sys2 rqin2 rqll2 rqout2 rsin2 rsll2 rsout2,
+          MTrs sys2 rqin2 rqll2 (Some rqout2) (Some rsin2) rsll2 rsout2 ->
+          lbl_outs rqout2 = lbl_ins rqin1 -> lbl_ins rsin2 = lbl_outs rsout1 ->
+          Forall (FromExt (sys1 ++ sys2)) (lbl_ins rqin2) ->
+          Forall (ToExt (sys1 ++ sys2)) (lbl_outs rsout2) ->
+          MTrs (sys1 ++ sys2)
+               rqin2 (rqll1 ++ (buildLabel nil (lbl_hdl rqout2) nil) :: rqll2) rqout1
+               rsin1 (rsll2 ++ (buildLabel nil (lbl_hdl rsout1) nil) :: rsll1) rsout2.
 
-  Definition MTransaction (ll: list Label) :=
-    exists rin rout ill, ll = rout :: ill ++ rin :: nil /\
-                         MTrs rin ill rout.
+  Definition MTransaction (sys: System) (ll: list Label) :=
+    exists rqin rqll rqout rsin rsll rsout,
+      ll = rsout :: rsll ++ rsin ::> rqout ::> rqll ++ rqin :: nil /\
+      MTrs sys rqin rqll rqout rsin rsll rsout.
 
   Section PerObject.
     Variable obj: Object.
@@ -98,9 +122,10 @@ Section System.
     (* A predicated message [pmsg] is a unique handler in [pmsgs] if it is
      * the only one handling a certain [MsgId].
      *)
-    Definition UniqueHandler (pmsgs: list PMsg) (pmsg: PMsg) :=
-      In pmsg pmsgs /\
-      forall pmsg', In pmsg' pmsgs -> (pmsg_mid pmsg) <> (pmsg_mid pmsg').
+    (* NOTE: Do we need this? *)
+    (* Definition UniqueHandler (pmsgs: list PMsg) (pmsg: PMsg) := *)
+    (*   In pmsg pmsgs /\ *)
+    (*   forall pmsg', In pmsg' pmsgs -> (pmsg_mid pmsg) <> (pmsg_mid pmsg'). *)
 
     (* Monotonicity regulates the form of how requests are handled in a whole
      * message-passing system. It basically requires that the system always 
@@ -117,8 +142,8 @@ Section System.
              ForwardingP pmsg rs) \/
          (exists rq: PMsg,
              In rq pmsgs /\
-             ForwardingP rq pmsg /\
-             UniqueHandler pmsgs pmsg)).
+             ForwardingP rq pmsg
+        (* UniqueHandler pmsgs pmsg *))).
 
     Definition MonotoneObj := MonotonePMsgs (obj_pmsgs obj).
 
@@ -139,7 +164,7 @@ Section System.
       forall ll st,
         steps sys (getStateInit sys) ll st ->
         exists mtrsl: list (list Label),
-          Forall MTransaction mtrsl /\
+          Forall (MTransaction sys) mtrsl /\
           Interleaving ll mtrsl.
   Proof.
   Admitted.
