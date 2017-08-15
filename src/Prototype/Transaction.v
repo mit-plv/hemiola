@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import FMap Language Monotone.
+Require Import FMap Language.
 
 Section System.
   Context {MsgT ValT StateT: Type}.
@@ -18,18 +18,29 @@ Section System.
   Section PerObject.
     Variable obj: Object.
 
+    (* A predicated message [pmsg] is a unique handler in [pmsgs] if it is
+     * the only one handling a certain message type (MsgT).
+     *)
+    Definition UniqueHandler (pmsg: PMsg) :=
+      forall pmsg', In pmsg' (obj_pmsgs obj) ->
+                    msg_type (pmsg_mid pmsg) <> msg_type (pmsg_mid pmsg').
+
     (*! Transaction *)
 
-    Definition RqHandler (rqh: PMsg) (rq: Msg) :=
-      pmsg_mid rqh = msg_id rq.
+    Definition RqHandler (rqh: PMsg) :=
+      msg_rqrs (pmsg_mid rqh) = Rq.
 
-    Definition Responder (rsr: PMsg) (rs: Msg) :=
-      exists st mt, In rs (pmsg_outs rsr st mt).
+    Definition Responder (rsr: PMsg) (rs: MsgId) :=
+      msg_rqrs rs = Rs /\
+      forall st v, exists mrs,
+          pmsg_outs rsr st v = mrs :: nil /\
+          msg_id mrs = rs.
 
-    Definition Transaction (rq rs: Msg) (rqh rsr: PMsg) :=
+    Definition Transaction (rqh rsr: PMsg) :=
       In rqh (obj_pmsgs obj) /\ In rsr (obj_pmsgs obj) /\
-      RqHandler rqh rq /\ Responder rsr rs /\
-      isTrsPair (msg_id rq) (msg_id rs) = true.
+      exists rs,
+        Responder rsr rs /\
+        isTrsPair (pmsg_mid rqh) rs = true.
 
     Inductive TransactionInv: PMsg (* request *) -> CondT -> PMsg (* response *) -> Prop :=
     | TrsInv: forall rq rsr trsinv,
@@ -37,7 +48,21 @@ Section System.
         trsinv --> pmsg_precond rsr ->
         TransactionInv rq trsinv rsr.
 
-    (*! LocallyDisjoint *)
+    (*! Stable transactions *)
+    
+    (* A transaction is stable if 
+     * 1) the target object has a unique responder for this transaction and
+     * 2) a transaction invariant is disjoint to the precondition of the 
+     *    request handler, so that there is no interleaving between the same
+     *    transactions.
+     *)
+    Definition StableTransaction (rqh rsr: PMsg) :=
+      UniqueHandler rsr /\ Transaction rqh rsr /\
+      exists trsinv,
+        TransactionInv rqh trsinv rsr /\
+        pmsg_precond rqh -*- trsinv.
+
+    (*! Locally-disjoint transactions *)
 
     Definition DisjointTrsInv (rsr: PMsg) (trsinv: CondT) :=
       forall pmsg, In pmsg (obj_pmsgs obj) ->
@@ -45,8 +70,8 @@ Section System.
                    (pmsg_precond pmsg) -*- trsinv.
 
     Definition LocallyDisjoint :=
-      forall rq rs rqh rsr,
-        Transaction rq rs rqh rsr ->
+      forall rqh rsr,
+        Transaction rqh rsr ->
         exists trsinv,
           TransactionInv rqh trsinv rsr /\
           DisjointTrsInv rsr trsinv.
@@ -86,12 +111,12 @@ Section System.
                     msg_rq (pmsg_mid pmsg) >= msg_rq (pmsg_mid rq)) ->
                    (msg_rqrs (pmsg_mid pmsg) = Rs ->
                     forall rs, Responder pmsg rs ->
-                               msg_rs (msg_id rs) >= msg_rq (pmsg_mid rq)) ->
+                               msg_rs rs >= msg_rq (pmsg_mid rq)) ->
                    (pmsg_precond pmsg) -*- trsinv.
 
     Definition PInterfering :=
-      forall rq rs rqh rsr,
-        Transaction rq rs rqh rsr ->
+      forall rqh rsr,
+        Transaction rqh rsr ->
         exists trsinv,
           TransactionInv rqh trsinv rsr /\
           PDisjointTrsInv rqh rsr trsinv.
@@ -117,34 +142,6 @@ Section System.
     Proof.
       intros; apply sequential_linear, locally_disjoint_sequential; auto.
     Qed.
-
-    Theorem linear_sequential_compositional:
-      forall sys: System,
-        MonotoneSys msgT_dec sys ->
-        Forall (fun obj => SequentialSys msgT_dec valT_dec (obj :: nil)) sys ->
-        Linear msgT_dec valT_dec sys.
-    Proof.
-    Admitted.
-
-    Corollary disjoint_linear:
-      forall sys: System,
-        MonotoneSys msgT_dec sys ->
-        Forall LocallyDisjoint sys ->
-        Linear msgT_dec valT_dec sys.
-    Proof.
-      intros; apply linear_sequential_compositional; auto.
-      apply Forall_impl with (P:= LocallyDisjoint); auto.
-      intros; apply locally_disjoint_sequential; auto.
-    Qed.
-
-    Theorem prioritized_interf_linear_compositional:
-      forall sys: System,
-        MonotoneSys msgT_dec sys ->
-        Forall (fun obj => Linear msgT_dec valT_dec (obj :: nil)) sys ->
-        Forall PInterfering sys ->
-        Linear msgT_dec valT_dec sys.
-    Proof.
-    Admitted.
 
   End Facts.
 

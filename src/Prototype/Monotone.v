@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Tactics FMap Language.
+Require Import Tactics FMap Language Transaction.
 
 Section System.
   Context {MsgT ValT StateT: Type}.
@@ -19,6 +19,8 @@ Section System.
   Local Notation ObjectStates := (ObjectStates StateT).
   Local Notation State := (State MsgT ValT StateT).
   Local Notation steps := (steps msgT_dec valT_dec).
+
+  Local Notation StableTransaction := (StableTransaction msgT_dec).
 
   (*! Dynamic notion of monotone histories *)
 
@@ -109,48 +111,19 @@ Section System.
     (* A predicated message is [ImmediateP] if it handles a request and immediately
      * sends the response of it.
      *)
-    Definition ImmediateP (rq: PMsg) :=
-      In rq (obj_pmsgs obj) /\
-      msg_rqrs (pmsg_mid rq) = Rq /\
-      forall st mt, exists rs,
-          pmsg_outs rq st mt = rs :: nil /\
-          isTrsPair (pmsg_mid rq) (msg_id rs) = true.
+    Definition ImmediateP (rr: PMsg) :=
+      StableTransaction obj rr rr.
 
     (* A pair of predicated messages [rq1] and [rs2] is [ForwardingP] if
-     * 1) [rq1] handles a request,
-     * 2) [rs2] handles a response (NOT the response of [rq1]),
-     * 3) [rq1] sends a request [rq2] which matches with [rs2], and
-     * 4) [rs2] sends a response [rs1] which matches with [rq1].
-     * 5) There exists [bInv: StateT -> bool] such that
-     *    a) bInv (obj_state_init obj) = true
-     *    b) ∀st. pmsg_precond rq1 st -> bInv st = true
-     *    b) ∀st. postOf rq1 st -> bInv st = false
-     *    c) ∀st. pmsg_precond rs2 st -> bInv st = false
-     *    d) ∀st. postOf rs2 st -> bInv st = true
+     * 1) [rq1] and [rs2] form a stable transaction and
+     * 2) [rq1] sends a request [rq2] which matches with [rs2].
      *)
     Definition ForwardingP (rq1 rs2: PMsg) :=
-      In rq1 (obj_pmsgs obj) /\ In rs2 (obj_pmsgs obj) /\
-      (exists bInv, bInv (obj_state_init obj) = true /\
-                    pmsg_precond rq1 --> (fun st => bInv st = true) /\
-                    postOf rq1 --> (fun st => bInv st = false) /\
-                    pmsg_precond rs2 --> (fun st => bInv st = false) /\
-                    postOf rs2 --> (fun st => bInv st = true)) /\
-      msg_rqrs (pmsg_mid rq1) = Rq /\
-      msg_rqrs (pmsg_mid rs2) = Rs /\
+      StableTransaction obj rq1 rs2 /\
       (forall st mt, exists rq2,
             pmsg_outs rq1 st mt = rq2 :: nil /\
             msgTo (msg_id rq2) <> msgFrom (pmsg_mid rq1) /\
-            isTrsPair (msg_id rq2) (pmsg_mid rs2) = true) /\
-      (forall st mt, exists rs1,
-            pmsg_outs rs2 st mt = rs1 :: nil /\
-            isTrsPair (pmsg_mid rq1) (msg_id rs1) = true).
-
-    (* A predicated message [pmsg] is a unique handler in [pmsgs] if it is
-     * the only one handling a certain [MsgId].
-     *)
-    Definition UniqueHandler (pmsgs: list PMsg) (pmsg: PMsg) :=
-      In pmsg pmsgs /\
-      forall pmsg', In pmsg' pmsgs -> (pmsg_mid pmsg) <> (pmsg_mid pmsg').
+            isTrsPair (msg_id rq2) (pmsg_mid rs2) = true).
 
     (* Monotonicity regulates the form of how requests are handled in a whole
      * message-passing system. It basically requires that the system always 
@@ -163,9 +136,7 @@ Section System.
         In pmsg pmsgs ->
         (ImmediateP pmsg \/
          (exists rs: PMsg, ForwardingP pmsg rs) \/
-         (exists rq: PMsg, ForwardingP rq pmsg)
-        (* NOTE: Do we need this? *)
-        (* UniqueHandler pmsgs pmsg *)).
+         (exists rq: PMsg, ForwardingP rq pmsg)).
 
     Definition MonotoneObj := MonotonePMsgs (obj_pmsgs obj).
 
