@@ -11,17 +11,9 @@ Section System.
   Local Notation MsgId := (MsgId MsgT).
   Local Notation Msg := (Msg MsgT ValT).
   Local Notation PMsg := (PMsg MsgT ValT StateT).
+  Local Notation CondT := (CondT StateT).
   Local Notation Label := (Label MsgT ValT).
   Local Notation isTrsPair := (isTrsPair msgT_dec).
-
-  Definition CondT := StateT -> Prop.
-  Definition condImp (c1 c2: CondT) := forall st, c1 st -> c2 st.
-  Infix "-->" := condImp (at level 30).
-  Definition postOf (pmsg: PMsg): CondT :=
-    fun post => forall pre mt, pmsg_postcond pmsg pre mt post.
-
-  Definition Disjoint (c1 c2: CondT) := forall st, c1 st -> c2 st -> False.
-  Infix "-*-" := Disjoint (at level 30).
 
   Section PerObject.
     Variable obj: Object.

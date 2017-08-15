@@ -20,7 +20,7 @@ Section System.
   Local Notation State := (State MsgT ValT StateT).
   Local Notation steps := (steps msgT_dec valT_dec).
 
-  (*! Now about monotonicity *)
+  (*! Dynamic notion of monotone histories *)
 
   Definition FromExt (sys: System) (m: Msg) :=
     isExternal sys (msgFrom (msg_id m)) = true /\
@@ -54,12 +54,21 @@ Section System.
     FromExt (obj :: nil) rs2 /\ ToExt (obj :: nil) rs1 /\
     isTrsPair (msg_id rq1) (msg_id rs1) = true /\
     isTrsPair (msg_id rq2) (msg_id rs2) = true.
-    
-  (* A monotone transaction [MTransaction] is a sequence of label explicitly
-   * indicating the start of a request and the out of corresponding response.
-   * The sequence is composed of an [Immediate] labels as a base case, and
-   * some [Forwarding] labels inductively chained.
-   *)
+
+  Inductive MTrsObj: Object ->
+                     Label (* start of a request *) ->
+                     list Label (* intermediate request trace (w/o the start) *) ->
+                     option Label (* end of a request *) ->
+                     option Label (* start of a response *) ->
+                     list Label (* intermediate response trace (w/o the end) *) ->
+                     Label (* end of a response *) -> Prop :=
+  | MtoImm: forall obj rql rsl erq ers,
+      ImmediateL obj rql rsl erq ers ->
+      MTrsObj obj rql nil None None nil rsl
+  | MtoFwd: forall obj rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2,
+      ForwardingL obj rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2 ->
+      MTrsObj obj rql1 nil (Some rql2) (Some rsl2) nil rsl1.
+
   Inductive MTrs: System ->
                   Label (* start of a request *) ->
                   list Label (* intermediate request trace (w/o the start) *) ->
@@ -67,12 +76,9 @@ Section System.
                   option Label (* start of a response *) ->
                   list Label (* intermediate response trace (w/o the end) *) ->
                   Label (* end of a response *) -> Prop :=
-  | MTrsImm: forall obj rql rsl erq ers,
-      ImmediateL obj rql rsl erq ers ->
-      MTrs (obj :: nil) rql nil None None nil rsl
-  | MTrsFwd: forall obj rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2,
-      ForwardingL obj rql1 rql2 rsl1 rsl2 rq1 rq2 rs1 rs2 ->
-      MTrs (obj :: nil) rql1 nil (Some rql2) (Some rsl2) nil rsl1
+  | MTrsLift: forall obj rqin rqll rqout rsin rsll rsout,
+      MTrsObj obj rqin rqll rqout rsin rsll rsout ->
+      MTrs (obj :: nil) rqin rqll rqout rsin rsll rsout
   | MTrsCom:
       forall sys1 rqin1 rqll1 rqout1 rsin1 rsll1 rsout1,
         MTrs sys1 rqin1 rqll1 rqout1 rsin1 rsll1 rsout1 ->
@@ -85,10 +91,17 @@ Section System.
                rqin2 (rqll1 ++ (buildLabel nil (lbl_hdl rqout2) nil) :: rqll2) rqout1
                rsin1 (rsll2 ++ (buildLabel nil (lbl_hdl rsout1) nil) :: rsll1) rsout2.
 
+  Definition MTransactionO (obj: Object) (ll: list Label) :=
+    exists rqin rqll rqout rsin rsll rsout,
+      ll = rsout :: rsll ++ rsin ::> rqout ::> rqll ++ rqin :: nil /\
+      MTrsObj obj rqin rqll rqout rsin rsll rsout.
+  
   Definition MTransaction (sys: System) (ll: list Label) :=
     exists rqin rqll rqout rsin rsll rsout,
       ll = rsout :: rsll ++ rsin ::> rqout ::> rqll ++ rqin :: nil /\
       MTrs sys rqin rqll rqout rsin rsll rsout.
+
+  (*! Static notion of monotone objects. *)
 
   Section PerObject.
     Variable obj: Object.
@@ -97,6 +110,7 @@ Section System.
      * sends the response of it.
      *)
     Definition ImmediateP (rq: PMsg) :=
+      In rq (obj_pmsgs obj) /\
       msg_rqrs (pmsg_mid rq) = Rq /\
       forall st mt, exists rs,
           pmsg_outs rq st mt = rs :: nil /\
@@ -107,8 +121,20 @@ Section System.
      * 2) [rs2] handles a response (NOT the response of [rq1]),
      * 3) [rq1] sends a request [rq2] which matches with [rs2], and
      * 4) [rs2] sends a response [rs1] which matches with [rq1].
+     * 5) There exists [bInv: StateT -> bool] such that
+     *    a) bInv (obj_state_init obj) = true
+     *    b) ∀st. pmsg_precond rq1 st -> bInv st = true
+     *    b) ∀st. postOf rq1 st -> bInv st = false
+     *    c) ∀st. pmsg_precond rs2 st -> bInv st = false
+     *    d) ∀st. postOf rs2 st -> bInv st = true
      *)
     Definition ForwardingP (rq1 rs2: PMsg) :=
+      In rq1 (obj_pmsgs obj) /\ In rs2 (obj_pmsgs obj) /\
+      (exists bInv, bInv (obj_state_init obj) = true /\
+                    pmsg_precond rq1 --> (fun st => bInv st = true) /\
+                    postOf rq1 --> (fun st => bInv st = false) /\
+                    pmsg_precond rs2 --> (fun st => bInv st = false) /\
+                    postOf rs2 --> (fun st => bInv st = true)) /\
       msg_rqrs (pmsg_mid rq1) = Rq /\
       msg_rqrs (pmsg_mid rs2) = Rs /\
       (forall st mt, exists rq2,
@@ -122,10 +148,9 @@ Section System.
     (* A predicated message [pmsg] is a unique handler in [pmsgs] if it is
      * the only one handling a certain [MsgId].
      *)
-    (* NOTE: Do we need this? *)
-    (* Definition UniqueHandler (pmsgs: list PMsg) (pmsg: PMsg) := *)
-    (*   In pmsg pmsgs /\ *)
-    (*   forall pmsg', In pmsg' pmsgs -> (pmsg_mid pmsg) <> (pmsg_mid pmsg'). *)
+    Definition UniqueHandler (pmsgs: list PMsg) (pmsg: PMsg) :=
+      In pmsg pmsgs /\
+      forall pmsg', In pmsg' pmsgs -> (pmsg_mid pmsg) <> (pmsg_mid pmsg').
 
     (* Monotonicity regulates the form of how requests are handled in a whole
      * message-passing system. It basically requires that the system always 
@@ -137,13 +162,10 @@ Section System.
       forall pmsg: PMsg,
         In pmsg pmsgs ->
         (ImmediateP pmsg \/
-         (exists rs: PMsg,
-             In rs pmsgs /\
-             ForwardingP pmsg rs) \/
-         (exists rq: PMsg,
-             In rq pmsgs /\
-             ForwardingP rq pmsg
-        (* UniqueHandler pmsgs pmsg *))).
+         (exists rs: PMsg, ForwardingP pmsg rs) \/
+         (exists rq: PMsg, ForwardingP rq pmsg)
+        (* NOTE: Do we need this? *)
+        (* UniqueHandler pmsgs pmsg *)).
 
     Definition MonotoneObj := MonotonePMsgs (obj_pmsgs obj).
 
@@ -157,6 +179,17 @@ Section System.
       forall ll sll lll1 lll2,
         Interleaving ll (lll1 ++ sll :: lll2) ->
         forall l, Interleaving (l :: ll) (lll1 ++ (l :: sll) :: lll2).
+
+  Lemma monotoneObj_monotone:
+    forall obj,
+      MonotoneObj obj ->
+      forall ll st,
+        steps (obj :: nil) (getStateInit (obj :: nil)) ll st ->
+        exists mtrsl: list (list Label),
+          Forall (MTransactionO obj) mtrsl /\
+          Interleaving ll mtrsl.
+  Proof.
+  Admitted.
 
   Theorem monotoneSys_monotone:
     forall sys,

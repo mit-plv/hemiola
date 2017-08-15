@@ -84,6 +84,12 @@ Section Language.
       pmsg_postcond: StateT (* prestate *) -> ValT -> StateT (* poststate *) -> Prop
     }.
 
+  Definition CondT := StateT -> Prop.
+  Definition CondImp (c1 c2: CondT) := forall st, c1 st -> c2 st.
+  Definition postOf (pmsg: PMsg): CondT :=
+    fun post => forall pre mt, pmsg_postcond pmsg pre mt post.
+  Definition Disjoint (c1 c2: CondT) := forall st, c1 st -> c2 st -> False.
+
   Record Object :=
     { obj_idx: nat;
       obj_state_init: StateT;
@@ -545,5 +551,6 @@ Definition Refines {MsgT ValT} {IStateT SStateT}
   forall hst, Behavior msgT_dec valT_dec impl hst ->
               Behavior msgT_dec valT_dec spec hst.
 
-Hint Immediate subHistory_refl extHistory_trans equivalent_refl.
+Infix "-->" := CondImp (at level 30).
+Infix "-*-" := Disjoint (at level 30).
 
