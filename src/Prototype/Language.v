@@ -69,12 +69,13 @@ Section Language.
     end.
 
   (* A set of output messages are valid if
-   * 1) they are from the same source [idx] and
+   * 1) they are from the same source [idx],
+   * 2) each target is not the source, and
    * 2) all targets are different to each others.
    * TODO? syntax may have to ensure [ValidOuts], or by well-formedness.
    *)
   Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
-    Forall (fun m => msgFrom (msg_id m) = idx) msgs /\
+    Forall (fun m => msgFrom (msg_id m) = idx /\ msgTo (msg_id m) <> idx) msgs /\
     NoDup (map (fun m => msgTo (msg_id m)) msgs).
 
   Record PMsg :=
@@ -162,51 +163,6 @@ Section Language.
 
   Section Semantics.
 
-    Definition ObjectStates := M.t StateT.
-
-    (* [step_obj] is for a step by a single object that either handles an 
-     * internal message, or receives an external message.
-     * For an internal message:
-     * 1) the message is nondeterministically picked, and
-     * 2) a predicated message for [fmsg], which satisfies its precondition and
-     *    postcondition, is nondeterministically picked to take a step.
-     * For an external message: it just receives the message and add it to a 
-     * proper queue.
-     *)
-    Inductive step_obj (obj: Object):
-      StateT -> MsgsFrom Msg ->
-      option Msg (* external in? *) -> option Msg (* handling *) -> list Msg (* outs *) ->
-      StateT -> MsgsFrom Msg -> Prop :=
-    | SoSlt: forall os mf, step_obj obj os mf None None nil os mf
-    | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
-        firstMF fidx fchn mf = Some fmsg ->
-        msg_id fmsg = pmsg_mid fpmsg ->
-        msgTo (msg_id fmsg) = obj_idx obj ->
-        In fpmsg (obj_pmsgs obj) ->
-        pmsg_precond fpmsg os ->
-        pmsg_postcond fpmsg os (msg_value fmsg) pos ->
-        ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
-        step_obj obj os mf
-                 None (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg))
-                 pos (deqMF fidx fchn mf)
-    | SoExt: forall os mf emsg,
-        msgTo (msg_id emsg) = obj_idx obj ->
-        step_obj obj os mf
-                 (Some emsg) None nil
-                 os (enqMF (msgFrom (msg_id emsg))
-                           (msg_chn (msg_id emsg))
-                           emsg mf).
-
-    Definition distributeMsg (msg: Msg) (msgs: Messages Msg): Messages Msg :=
-      enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (msg_chn (msg_id msg)) msg msgs.
-    
-    Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages Msg): Messages Msg :=
-      match nmsgs with
-      | nil => msgs
-      | msg :: nmsgs' =>
-        distributeMsgs nmsgs' (distributeMsg msg msgs)
-      end.
-
     (* Comparing with the Kami label:
      * - [lbl_ins] corresponds to [enq] defined methods of fifos.
      * - [lbl_hdl] corresponds to a rule handling a message, which implicitly
@@ -221,6 +177,49 @@ Section Language.
     Definition buildLabel ins hdl outs :=
       {| lbl_ins := ins; lbl_hdl := hdl; lbl_outs := outs |}.
 
+    Definition ObjectStates := M.t StateT.
+
+    (* [step_obj] is for a step by a single object that either handles an 
+     * internal message, or receives an external message.
+     * For an internal message:
+     * 1) the message is nondeterministically picked, and
+     * 2) a predicated message for [fmsg], which satisfies its precondition and
+     *    postcondition, is nondeterministically picked to take a step.
+     * For an external message: it just receives the message and add it to a 
+     * proper queue.
+     *)
+    Inductive step_obj (obj: Object): StateT -> MsgsFrom Msg -> Label ->
+                                      StateT -> MsgsFrom Msg -> Prop :=
+    | SoSlt: forall os mf, step_obj obj os mf (buildLabel nil None nil) os mf
+    | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
+        firstMF fidx fchn mf = Some fmsg ->
+        msg_id fmsg = pmsg_mid fpmsg ->
+        msgTo (msg_id fmsg) = obj_idx obj ->
+        In fpmsg (obj_pmsgs obj) ->
+        pmsg_precond fpmsg os ->
+        pmsg_postcond fpmsg os (msg_value fmsg) pos ->
+        ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
+        step_obj obj os mf
+                 (buildLabel nil (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg)))
+                 pos (deqMF fidx fchn mf)
+    | SoExt: forall os mf emsg,
+        msgTo (msg_id emsg) = obj_idx obj ->
+        step_obj obj os mf
+                 (buildLabel (o2l (Some emsg)) None nil)
+                 os (enqMF (msgFrom (msg_id emsg))
+                           (msg_chn (msg_id emsg))
+                           emsg mf).
+
+    Definition distributeMsg (msg: Msg) (msgs: Messages Msg): Messages Msg :=
+      enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (msg_chn (msg_id msg)) msg msgs.
+    
+    Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages Msg): Messages Msg :=
+      match nmsgs with
+      | nil => msgs
+      | msg :: nmsgs' =>
+        distributeMsgs nmsgs' (distributeMsg msg msgs)
+      end.
+
     Record State := { st_oss: ObjectStates; st_msgs: Messages Msg }.
 
     Definition DisjointState (st1 st2: State) :=
@@ -232,7 +231,7 @@ Section Language.
          st_msgs := M.union (st_msgs st1) (st_msgs st2) |}.
     Infix "+s" := combineState (at level 30).
 
-    Definition DisjointLabel (lbl1 lbl2: Label) :=
+    Definition CombinableLabel (lbl1 lbl2: Label) :=
       match lbl_hdl lbl1, lbl_hdl lbl2 with
       | Some _, None => SubList (lbl_ins lbl2) (lbl_outs lbl1)
       | None, Some _ => SubList (lbl_ins lbl1) (lbl_outs lbl2)
@@ -242,6 +241,12 @@ Section Language.
 
     Definition subtractMsgs (ms1 ms2: list Msg) :=
       filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
+
+    Definition ValidLabel (l: Label) :=
+      match lbl_hdl l with
+      | Some _ => lbl_ins l = nil
+      | None => lbl_outs l = nil
+      end.
 
     Definition combineLabel (lbl1 lbl2: Label) :=
       match lbl_hdl lbl1, lbl_hdl lbl2 with
@@ -266,24 +271,21 @@ Section Language.
      *)
     Inductive step_sys (sys: System) : State -> Label -> State -> Prop :=
     | SsLift: forall oss idx (obj: Object) (os: StateT)
-                     oims msgs_from msg_in msg_hdl msgs_out pos pmsgs_from,
+                     oims mf lbl pos pmf,
         In obj sys ->
         obj_idx obj = idx ->
         M.find idx oss = Some os ->
-        M.find idx oims = Some msgs_from -> 
-        step_obj obj os msgs_from msg_in msg_hdl msgs_out pos pmsgs_from ->
-        step_sys sys {| st_oss := oss; st_msgs := oims |}
-                 {| lbl_ins := o2l msg_in;
-                    lbl_hdl := msg_hdl;
-                    lbl_outs := msgs_out |}
+        M.find idx oims = Some mf -> 
+        step_obj obj os mf lbl pos pmf ->
+        step_sys sys {| st_oss := oss; st_msgs := oims |} lbl
                  {| st_oss := M.add idx pos oss;
-                    st_msgs := M.add idx pmsgs_from oims |}
+                    st_msgs := M.add idx pmf oims |}
     | SsComb:
         forall st11 lbl1 st12 st21 lbl2 st22,
           step_sys sys st11 lbl1 st12 ->
           step_sys sys st21 lbl2 st22 ->
           DisjointState st11 st21 -> DisjointState st12 st22 ->
-          DisjointLabel lbl1 lbl2 ->
+          CombinableLabel lbl1 lbl2 ->
           step_sys sys (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
 
     Definition isExternal (sys: System) (idx: IdxT) :=
@@ -553,4 +555,9 @@ Definition Refines {MsgT ValT} {IStateT SStateT}
 
 Infix "-->" := CondImp (at level 30).
 Infix "-*-" := Disjoint (at level 30).
+
+Definition singleton {MsgT ValT StateT} (obj: Object MsgT ValT StateT)
+  : System MsgT ValT StateT := obj :: nil.
+
+Notation "[ obj ]" := (singleton obj).
 

@@ -1,6 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Tactics FMap Language Transaction.
+Require Import FMap Tactics Language LanguageFacts Transaction.
+
+Set Implicit Arguments.
 
 Section System.
   Context {MsgT ValT StateT: Type}.
@@ -14,6 +16,7 @@ Section System.
   Local Notation msg_dec := (msg_dec msgT_dec valT_dec). 
   Local Notation PMsg := (PMsg MsgT ValT StateT).
   Local Notation Label := (Label MsgT ValT).
+  Local Notation emptyLabel := (emptyLabel MsgT ValT).
   Local Notation isTrsPair := (isTrsPair msgT_dec).
 
   Local Notation ObjectStates := (ObjectStates StateT).
@@ -38,7 +41,7 @@ Section System.
   Definition ImmediateL (obj: Object) (rql rsl: Label) (rq rs: Msg) :=
     rql = buildLabel (rq :: nil) None nil /\
     rsl = buildLabel nil (Some rq) (rs :: nil) /\
-    FromExt (obj :: nil) rq /\ ToExt (obj :: nil) rs /\
+    FromExt [obj] rq /\ ToExt [obj] rs /\
     isTrsPair (msg_id rq) (msg_id rs) = true.
 
   (* "Four labels" [rq1], [rq2], [rs1], and [rs2] are [ForwardingL] if
@@ -52,8 +55,8 @@ Section System.
     rql2 = buildLabel nil (Some rq1) (rq2 :: nil) /\
     rsl2 = buildLabel (rs2 :: nil) None nil /\
     rsl1 = buildLabel nil (Some rs2) (rs1 :: nil) /\
-    FromExt (obj :: nil) rq1 /\ ToExt (obj :: nil) rq2 /\
-    FromExt (obj :: nil) rs2 /\ ToExt (obj :: nil) rs1 /\
+    FromExt [obj] rq1 /\ ToExt [obj] rq2 /\
+    FromExt [obj] rs2 /\ ToExt [obj] rs1 /\
     isTrsPair (msg_id rq1) (msg_id rs1) = true /\
     isTrsPair (msg_id rq2) (msg_id rs2) = true.
 
@@ -80,7 +83,7 @@ Section System.
                   Label (* end of a response *) -> Prop :=
   | MTrsLift: forall obj rqin rqll rqout rsin rsll rsout,
       MTrsObj obj rqin rqll rqout rsin rsll rsout ->
-      MTrs (obj :: nil) rqin rqll rqout rsin rsll rsout
+      MTrs [obj] rqin rqll rqout rsin rsll rsout
   | MTrsCom:
       forall sys1 rqin1 rqll1 rqout1 rsin1 rsll1 rsout1,
         MTrs sys1 rqin1 rqll1 rqout1 rsin1 rsll1 rsout1 ->
@@ -102,6 +105,9 @@ Section System.
     exists rqin rqll rqout rsin rsll rsout,
       ll = rsout :: rsll ++ rsin ::> rqout ::> rqll ++ rqin :: nil /\
       MTrs sys rqin rqll rqout rsin rsll rsout.
+
+  Definition EmptyLabels (ll: list Label) :=
+    Forall (fun l => l = emptyLabel) ll.
 
   (*! Static notion of monotone objects. *)
 
@@ -149,17 +155,54 @@ Section System.
   | ItlCons:
       forall ll sll lll1 lll2,
         Interleaving ll (lll1 ++ sll :: lll2) ->
-        forall l, Interleaving (l :: ll) (lll1 ++ (l :: sll) :: lll2).
+        forall l,
+          Interleaving (l :: ll) (lll1 ++ (l :: sll) :: lll2).
 
   Lemma monotoneObj_monotone:
-    forall obj,
+    forall obj ist,
       MonotoneObj obj ->
+      ist = getStateInit [obj] ->
       forall ll st,
-        steps (obj :: nil) (getStateInit (obj :: nil)) ll st ->
-        exists mtrsl: list (list Label),
+        steps [obj] ist ll st ->
+        exists (ell: list Label) (mtrsl: list (list Label)),
+          EmptyLabels ell /\
           Forall (MTransactionO obj) mtrsl /\
-          Interleaving ll mtrsl.
+          exists ill,
+            Interleaving ill (ell :: mtrsl) /\
+            SubList (rev ll) ill.
   Proof.
+    induction 3; simpl; intros.
+
+    - do 2 eexists; repeat split; try constructor.
+      eexists; split.
+      + constructor.
+      + apply SubList_nil.
+
+    - subst; specialize (IHsteps eq_refl).
+      destruct IHsteps as [pell [pmtrsl ?]]; dest.
+      inv H2; clear H7.
+      apply step_sys_singleton_step_obj in H6; dest.
+
+      inv H9.
+      
+      + exists (emptyLabel :: pell), pmtrsl.
+        repeat split; auto; [constructor; auto|].
+        exists (emptyLabel :: x); split.
+        * change ((emptyLabel :: pell) :: pmtrsl)
+          with (nil ++ (emptyLabel :: pell) :: pmtrsl).
+          constructor; auto.
+        * apply SubList_app_3.
+          { apply SubList_cons_right; auto. }
+          { apply SubList_cons.
+            { left; reflexivity. }
+            { apply SubList_nil. }
+          }
+
+      + exists pell, pmtrsl.
+        repeat split; auto.
+        admit.
+
+      + admit.
   Admitted.
 
   Theorem monotoneSys_monotone:
