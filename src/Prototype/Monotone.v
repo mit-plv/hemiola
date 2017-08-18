@@ -100,7 +100,7 @@ Section System.
     exists rqin rqll rqout rsin rsll rsout,
       ll = rsout :: rsll ++ rsin ::> rqout ::> rqll ++ rqin :: nil /\
       MTrsObj obj rqin rqll rqout rsin rsll rsout.
-  
+
   Definition MTransaction (sys: System) (ll: list Label) :=
     exists rqin rqll rqout rsin rsll rsout,
       ll = rsout :: rsll ++ rsin ::> rqout ::> rqll ++ rqin :: nil /\

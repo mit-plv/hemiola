@@ -204,6 +204,7 @@ Section Language.
                  pos (deqMF fidx fchn mf)
     | SoExt: forall os mf emsg,
         msgTo (msg_id emsg) = obj_idx obj ->
+        msgFrom (msg_id emsg) <> obj_idx obj ->
         step_obj obj os mf
                  (buildLabel (o2l (Some emsg)) None nil)
                  os (enqMF (msgFrom (msg_id emsg))
@@ -235,7 +236,7 @@ Section Language.
       match lbl_hdl lbl1, lbl_hdl lbl2 with
       | Some _, None => SubList (lbl_ins lbl2) (lbl_outs lbl1)
       | None, Some _ => SubList (lbl_ins lbl1) (lbl_outs lbl2)
-      | None, None => NoDup (map (fun m => msgTo (msg_id m)) (lbl_ins lbl1 ++ lbl_ins lbl2))
+      | None, None => exists from, ValidOuts from (lbl_ins lbl1 ++ lbl_ins lbl2)
       | _, _ => False
       end.
 
@@ -244,8 +245,8 @@ Section Language.
 
     Definition ValidLabel (l: Label) :=
       match lbl_hdl l with
-      | Some _ => lbl_ins l = nil
-      | None => lbl_outs l = nil
+      | Some hmsg => lbl_ins l = nil /\ ValidOuts (msgTo (msg_id hmsg)) (lbl_outs l)
+      | None => lbl_outs l = nil /\ exists from, ValidOuts from (lbl_ins l)
       end.
 
     Definition combineLabel (lbl1 lbl2: Label) :=
@@ -505,10 +506,8 @@ Section Language.
      * message-passing systems.
      *)
     Definition Linearizable (hst lhst: list Msg) :=
-      exists ehst,
-        ExtHistory hst ehst /\
-        Sequential lhst /\
-        Equivalent (complete ehst) lhst.
+      Sequential lhst /\
+      Equivalent (complete hst) lhst.
 
     (* A system is linear when all possible histories are linearizable. *)
     Definition Linear (sys: System) :=

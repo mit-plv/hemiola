@@ -34,23 +34,51 @@ Section Label.
   Local Notation emptyLabel := (emptyLabel MsgT ValT).
   Local Notation combineLabel := (combineLabel msgT_dec valT_dec).
 
+  Local Notation subtractMsgs := (subtractMsgs msgT_dec valT_dec).
   Local Notation step_sys := (step_sys msgT_dec valT_dec).
+
+  Lemma validOuts_nil:
+    forall from, ValidOuts (MsgT:= MsgT) (ValT:= ValT) from nil.
+  Proof.
+    intros; split; constructor.
+  Qed.
+
+  Lemma validOuts_subtractMsgs:
+    forall from sl l1,
+      ValidOuts from l1 -> ValidOuts from (subtractMsgs l1 sl).
+  Proof.
+  Admitted.
 
   Lemma step_obj_validLabel:
     forall (obj: Object) st1 mf1 lbl st2 mf2,
       step_obj obj st1 mf1 lbl st2 mf2 -> ValidLabel lbl.
   Proof.
-    intros; inv H; cbn; auto.
+    intros; inv H; cbn.
+    - split; [reflexivity|].
+      exists O; apply validOuts_nil.
+    - split; [reflexivity|].
+      rewrite H2; auto.
+    - split; [reflexivity|].
+      eexists; split.
+      + repeat constructor.
+        rewrite H0; auto.
+      + repeat constructor.
+        intro Hx; dest_in.
   Qed.
 
   Lemma combineLabel_validLabel:
     forall lbl1 lbl2,
+      CombinableLabel lbl1 lbl2 ->
       ValidLabel lbl1 -> ValidLabel lbl2 ->
       ValidLabel (combineLabel lbl1 lbl2).
   Proof.
     unfold ValidLabel, combineLabel;
       destruct lbl1 as [ins1 hdl1 outs1], lbl2 as [ins2 hdl2 outs2]; simpl; intros.
-    destruct hdl1, hdl2; subst; simpl; reflexivity.
+    destruct hdl1, hdl2; subst; simpl; split; try reflexivity.
+    - exists 0; apply validOuts_nil.
+    - dest; apply validOuts_subtractMsgs; auto.
+    - dest; apply validOuts_subtractMsgs; auto.
+    - auto.
   Qed.
 
   Lemma step_sys_validLabel:
@@ -66,9 +94,9 @@ Section Label.
     forall l, ValidLabel l -> combineLabel emptyLabel l = l.
   Proof.
     unfold ValidLabel; destruct l as [ins hdl outs]; cbn; intros.
-    destruct hdl; subst; auto.
+    destruct hdl; dest; subst; auto.
     f_equal.
-    induction outs; simpl; auto.
+    clear H0; induction outs; simpl; auto.
     f_equal; auto.
   Qed.
   
@@ -76,9 +104,9 @@ Section Label.
     forall l, ValidLabel l -> combineLabel l emptyLabel = l.
   Proof.
     unfold ValidLabel, combineLabel; destruct l as [ins hdl outs]; cbn; intros.
-    destruct hdl; subst; auto.
+    destruct hdl; dest; subst; auto.
     - f_equal.
-      induction outs; simpl; auto.
+      clear H0; induction outs; simpl; auto.
       f_equal; auto.
     - rewrite app_nil_r; reflexivity.
   Qed.
@@ -148,19 +176,20 @@ Section Singleton.
       destruct H7.
       eapply Forall_forall in H0; eauto.
       destruct H0.
-      rewrite H in H8; elim H8; reflexivity.
+      elim H8; auto.
     - inv H0; [tauto| |].
       + right; right.
         cbn; intro Hx.
         specialize (Hx emsg (or_introl eq_refl)).
-        destruct H7.
+        destruct H8.
         eapply Forall_forall in H0; eauto.
         destruct H0.
-        rewrite H1 in H8; elim H8; reflexivity.
+        elim H9; auto.
       + right; right.
         cbn; intro Hx.
-        rewrite H, H1 in Hx.
-        inv Hx; elim H3.
+        unfold ValidOuts in Hx; dest.
+        inv H4; elim H7.
+        rewrite H, H1.
         left; reflexivity.
   Qed.
 
@@ -180,26 +209,26 @@ Section Singleton.
     unfold ValidLabel in *;
       destruct lbl1 as [ins1 hdl1 outs1], lbl2 as [ins2 hdl2 outs2]; simpl in *.
 
-    destruct hdl1; subst.
-    - destruct hdl2; subst; auto.
+    destruct hdl1; dest; subst.
+    - destruct hdl2; dest; subst; auto.
       destruct ins2; auto.
       right; right; cbn.
       intro Hx; apply SubList_cons_inv in Hx; dest.
       eapply Forall_forall in H6; eauto.
-      inv H4; rewrite H9 in H6; auto.
+      inv H4; elim H6; auto.
     - destruct ins1; auto.
-      destruct hdl2; subst.
+      destruct hdl2; dest; subst.
       + right; right; cbn.
         intro Hx; apply SubList_cons_inv in Hx; dest.
         eapply Forall_forall in H5; eauto.
-        inv H3; rewrite H9 in H5; auto.
+        inv H3; elim H5; auto.
       + destruct ins2; auto.
         right; right; cbn.
         inv H3; inv H4.
-        intro Hx; inv Hx; elim H4.
+        unfold ValidOuts; intro Hx; dest; inv H3; elim H13.
         rewrite map_app; simpl; apply in_or_app.
         right; left.
-        rewrite H3, H7; reflexivity.
+        rewrite H8, H9; reflexivity.
   Qed.
       
   Lemma step_obj_singleton_step_sys:
