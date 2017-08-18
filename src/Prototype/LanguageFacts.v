@@ -20,6 +20,16 @@ Proof.
   inv H; constructor; auto.
 Qed.
 
+Lemma forall_sublist:
+  forall {A} P (l1 l2: list A),
+    Forall P l1 -> SubList l2 l1 -> Forall P l2.
+Proof.
+  induction l2; intros; auto.
+  apply SubList_cons_inv in H0; dest.
+  constructor; auto.
+  eapply Forall_forall in H; eauto.
+Qed.
+
 Section Label.
   Variable MsgT: Type.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
@@ -36,6 +46,9 @@ Section Label.
 
   Local Notation subtractMsgs := (subtractMsgs msgT_dec valT_dec).
   Local Notation step_sys := (step_sys msgT_dec valT_dec).
+  Local Notation step := (step msgT_dec valT_dec).
+  Local Notation steps := (steps msgT_dec valT_dec).
+  Local Notation Behavior := (Behavior msgT_dec valT_dec).
 
   Lemma validOuts_nil:
     forall from, ValidOuts (MsgT:= MsgT) (ValT:= ValT) from nil.
@@ -88,6 +101,46 @@ Section Label.
     induction 1; simpl; intros.
     - eapply step_obj_validLabel; eauto.
     - apply combineLabel_validLabel; auto.
+  Qed.
+
+  Lemma step_validLabel:
+    forall (sys: System) st1 lbl st2,
+      step sys st1 lbl st2 -> ValidLabel lbl.
+  Proof.
+    intros; inv H.
+    eauto using step_sys_validLabel.
+  Qed.
+
+  Lemma steps_validLabel:
+    forall (sys: System) st1 tr st2,
+      steps sys st1 tr st2 -> Forall (@ValidLabel _ _) tr.
+  Proof.
+    induction 1; auto.
+    constructor; auto.
+    eauto using step_validLabel.
+  Qed.
+
+  Lemma behaviorOf_sublist:
+    forall tr: Trace MsgT ValT, SubList (behaviorOf tr) tr.
+  Proof.
+    induction tr; intros; simpl; [apply SubList_nil|].
+    destruct a as [ins hdl outs]; cbn.
+    destruct ins; cbn.
+    - destruct hdl; cbn.
+      + apply SubList_cons; [left; reflexivity|apply SubList_cons_right; auto].
+      + destruct outs; cbn.
+        * apply SubList_cons_right; auto.
+        * apply SubList_cons; [left; reflexivity|apply SubList_cons_right; auto].
+    - apply SubList_cons; [left; reflexivity|apply SubList_cons_right; auto].
+  Qed.
+
+  Lemma behavior_validLabel:
+    forall (sys: System) tr,
+      Behavior sys tr -> Forall (@ValidLabel _ _) tr.
+  Proof.
+    intros; inv H.
+    apply steps_validLabel in H0.
+    eauto using forall_sublist, behaviorOf_sublist.
   Qed.
   
   Lemma combineLabel_emptyLabel_1:
