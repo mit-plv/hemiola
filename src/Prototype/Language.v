@@ -332,16 +332,16 @@ Section Language.
       {| st_oss := getObjectStatesInit sys;
          st_msgs := M.empty _ |}.
 
-    Definition getLabel (l: Label) :=
+    Definition activeLabel (l: Label) :=
       match l with
-      | {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |} => None
+      | {| lbl_ins := nil; lbl_hdl := _; lbl_outs := nil |} => None
       | _ => Some l
       end.
 
     Fixpoint behaviorOf (tr: Trace): Trace :=
       match tr with
       | nil => nil
-      | l :: tr' => (getLabel l) ::> (behaviorOf tr')
+      | l :: tr' => (activeLabel l) ::> (behaviorOf tr')
       end.
 
     Inductive Behavior: System -> Trace -> Prop :=

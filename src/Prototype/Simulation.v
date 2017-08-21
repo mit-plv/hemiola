@@ -19,14 +19,14 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         step msgT_dec valT_dec impl ist1 ilbl ist2 ->
-        match getLabel ilbl with
+        match activeLabel ilbl with
         | Some b =>
           exists sst2 slbl, step msgT_dec valT_dec spec sst1 slbl sst2 /\
-                            getLabel slbl = Some b /\
+                            activeLabel slbl = Some b /\
                             ist2 ≈ sst2
         | None =>
           (exists sst2 slbl, step msgT_dec valT_dec spec sst1 slbl sst2 /\
-                             getLabel slbl = None /\
+                             activeLabel slbl = None /\
                              ist2 ≈ sst2) \/
           ist2 ≈ sst1
         end.
@@ -50,7 +50,7 @@ Section Simulation.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H1; [|exact H4].
-    remember (getLabel lbl) as blbl; destruct blbl as [blbl|]; simpl.
+    remember (activeLabel lbl) as blbl; destruct blbl as [blbl|]; simpl.
 
     - destruct H1 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (slbl :: _); repeat split; eauto.

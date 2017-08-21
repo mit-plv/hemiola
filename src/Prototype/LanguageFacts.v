@@ -126,11 +126,9 @@ Section Label.
     induction tr; intros; simpl; [apply SubList_nil|].
     destruct a as [ins hdl outs]; cbn.
     destruct ins; cbn.
-    - destruct hdl; cbn.
+    - destruct outs; cbn.
+      + apply SubList_cons_right; auto.
       + apply SubList_cons; [left; reflexivity|apply SubList_cons_right; auto].
-      + destruct outs; cbn.
-        * apply SubList_cons_right; auto.
-        * apply SubList_cons; [left; reflexivity|apply SubList_cons_right; auto].
     - apply SubList_cons; [left; reflexivity|apply SubList_cons_right; auto].
   Qed.
 
