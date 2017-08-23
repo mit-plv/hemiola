@@ -103,12 +103,12 @@ Before we discuss various cases, we define some notions about transaction.
   than the request of the other. It not, they are concurrent (interleaving).
 \end{definition}
 
-\subsection{Serial Cases}
+\subsection{Serial Cases}\label{serial-cases}
 
 Now let's take a look at some simple cases first, where interleavings do not
 happen.
 
-\paragraph{Case 1}\label{serial-case1}
+\paragraph{Case 1}
 When a precondition for a request holds, then corresponding state transition
 happens immediately; \eg{}, for a request $\objGetRq{C_1}$ with an initial
 state:
@@ -119,7 +119,7 @@ state:
   immediately responds with
 \end{enumerate}
 
-\paragraph{Case 2}\label{serial-case2}
+\paragraph{Case 2}
 If a precondition does not hold, then an object makes additional requests to
 other objects. Right after it gets a corresponding response, a state transition
 happens. Here is a scenario for a request $\objSetRq{C_1}{47}$:
@@ -130,14 +130,15 @@ happens. Here is a scenario for a request $\objSetRq{C_1}{47}$:
   \refInv{inv3}.
 \item A predicated message is generated: $\{ C_1: \stOf{C_1} = M; C_2:
   \stOf{C_2} = I; P: \stOf{P} = M \}$.
-\item $C_1$ holds this message to decide whether to handle other messages or
-  not. Now it requests a new predicated message to $P$ (by the topology), where
-  the new message does not contain predicate for $C_1$. We just leave a small
-  annotation about $C_1$; the reason will be discussed later. Hence the new
-  message is: $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item $C_1$ holds this message as a transaction predicate to decide whether to
+  handle other messages or not. Now it requests a new predicated message to $P$
+  (by the topology), where the new message does not contain predicate for
+  $C_1$. We just leave a small annotation about $C_1$; the reason will be
+  discussed later. Hence the new message is: $\{ C_1: \bot; C_2: \stOf{C_2} = I;
+  P: \stOf{P} = M \}$.
 \item $P$ receives the message from $C_1$. It sees that there is a requirement
   for $C_2$, which implies an additional request is needed. Thus, it holds the
-  message, generates a new message $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot
+  predicate, generates a new message $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot
   \}$, and sends it to $C_2$.
 \item $C_2$ receives the message from $P$. It changes its status to $I$
   immediately, and responds to $P$.
@@ -147,6 +148,61 @@ happens. Here is a scenario for a request $\objSetRq{C_1}{47}$:
   precondition holds, finally it executes $\objSetRq{C_1}{47}$.
 \end{enumerate}
 
-\subsection{Interleaving Cases}
+\subsection{Concurrent Cases}\label{concurrent-cases}
+
+In this section, we study how predicated messages and transaction notions help
+us find correct interleavings. One of most important reasonings about
+transactions is whether to allow interleavings among them. It is directly
+related to the correctness of a protocol, since the specification is usually
+serial. If we are too strict to allow interleavings, it might be easy to prove
+refinements, but implementations may have deadlocks. Conversely, if we are too
+loose to allow interleavings, implementations would not be correct.
+
+Let's start with a very naive approach: whenever an object holds a predicate --
+meaning that it requested something and is waiting for the response -- it
+refuses to handle any other messages except the response.
+
+\paragraph{Case 1}\label{concurrent-case1}
+When $C_1$ and $C_2$ request to set data at the same time, a problem arises.
+
+\begin{enumerate}
+\item $m_1 = \objSetRq{C_1}{47}$ is requested.
+\item $m_2 = \objSetRq{C_2}{23}$ is requested.
+\item By $m_1$, a predicated message is generated: $\{ C_1: \stOf{C_1} = M; C_2:
+  \stOf{C_2} = I; P: \stOf{P} = M \}$. This is held by $C_1$, and it requests to
+  $P$ with $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item By $m_2$, a predicated message is generated: $\{ C_1: \stOf{C_1} = I; C_2:
+  \stOf{C_2} = M; P: \stOf{P} = M \}$. This is held by $C_2$, and it requests to
+  $P$ with $\{ C_1: \stOf{C_1} = I; C_2: \bot; P: \stOf{P} = M \}$.
+\item $P$ (nondeterministically) decides to handle a request by $C_1$ first. As
+  seen in serial cases, it holds $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P}
+  = M \}$ and requests $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot \}$ to $C_2$.
+\end{enumerate}
+
+Below figure describes the status between $P$ and $C_2$ after (5). Since both
+$P$ and $C_2$ hold predicates, they refuse to handle any other messages -- a
+deadlock happens.
+
+\begin{figure}[h]
+  \begin{math}
+    \begin{array}{c}
+      P\ (\textrm{holding}\ \{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}) \\
+      \{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot \} \downarrow
+      \uparrow \{ C_1: \stOf{C_1} = I; C_2: \bot; P: \stOf{P} = M \} \\
+      C_2\ (\textrm{holding}\ \{ C_1: \stOf{C_1} = I; C_2: \stOf{C_2} = M; P: \stOf{P} = M) \}
+    \end{array}
+  \end{math}
+  \caption{$P$ and $C_2$ both handling transactions}
+\end{figure}
+
+How can we solve this deadlock case? Either $P$ or $C_2$ must allow an
+interleaving even if it is handling a transaction.
+
+By carefully looking at transaction predicates each object is holding, we can
+decide which object should handle a request. \emph{TODO: describe}.
+
+\section{Synthesis with Predicated Messages}
+
+\section{Proving the Correctness of Synthesis}
 
 \end{document}
