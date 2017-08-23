@@ -1,0 +1,152 @@
+\documentclass[format=manuscript]{acmart}
+
+\usepackage{amssymb}
+\usepackage{textcomp}
+
+\begin{document}
+\title{Protocol Synthesis - Brainstorming}
+
+%% Preprocessing
+% To remove citation information below abstract
+\settopmatter{printacmref=false}
+% To remove DOI information
+\makeatletter
+\renewcommand\@formatdoi[1]{\ignorespaces}
+\makeatother
+% To remove copyright information
+\setcopyright{none}
+
+\maketitle
+
+%% Commands
+
+\newcommand{\valOf}[1]{\ensuremath{#1.\texttt{v}}}
+\newcommand{\stOf}[1]{\ensuremath{#1.\texttt{st}}}
+\newcommand{\objGetRq}[1]{\ensuremath{#1.\texttt{getRq()}}}
+\newcommand{\objGetRs}[2]{\ensuremath{#1:\texttt{getRs(}#2\texttt{)}}}
+\newcommand{\objSetRq}[2]{\ensuremath{#1.\texttt{setRq(}#2\texttt{)}}}
+\newcommand{\objSetRs}[1]{\ensuremath{#1:\texttt{setRs()}}}
+
+\newcommand{\refInv}[1]{[Invariant~\ref{#1}]}
+\newcommand{\refTrs}[1]{[Transition~\ref{#1}]}
+
+\newcommand{\eg}{\emph{e.g.}}
+\newcommand{\ie}{\emph{i.e.}}
+
+\section{User Inputs}
+
+In order to synthesize a protocol, a user should provide following information:
+
+\begin{itemize}
+\item A topology among objects, including the number of channels between any two
+  objects.
+\item Type of the whole state (and corresponding initial value)
+\item State invariants ($\textsf{State} \to \textsf{Prop}$)
+\item State transitions (by external interfaces) ($\textsf{State} \to
+  \textsf{State} \to \textsf{Prop}$)
+\end{itemize}
+
+Our running example is a two-level cache structure with a parent and two
+children, using an MSI protocol. Each object $O$ has just a single value
+\valOf{O} and its status \stOf{O}.
+
+\paragraph{Example} User inputs for our running example is as follows:
+\begin{itemize}
+\item Topology
+  \begin{itemize}
+  \item Objects: $P$, $C_1$, and $C_2$
+  \item Channels: ...
+  \end{itemize}
+\item State type: $P(0, S), C_1(0, S), C_2(0, S)$.
+\item State invariants:
+  \begin{align}
+    \stOf{C_1} = M \to \stOf{C_2} = I \label{inv1} \\
+    \stOf{C_2} = M \to \stOf{C_1} = I \label{inv2} \\
+    \stOf{P} \geq \texttt{max}(\stOf{C_1}, \stOf{C_2}) \label{inv3}
+  \end{align}
+\item State transitions:
+  \begin{eqnarray}
+    \{ \stOf{C_i} \geq S \}
+    & \objGetRq{C_i}
+    & \{ \objGetRs{C_i}{\valOf{C_i}}, \top \} \label{trs1} \\
+    \{ \stOf{C_i} = M \}
+    & \objSetRq{C_i}{v}
+    & \{ \objSetRs{C_i}, \valOf{C_i} = v \} \label{trs2}
+  \end{eqnarray}
+\end{itemize}
+
+\section{Non-executable Protocol by Predicated Messages}
+
+We give some examples to see how predicated messages are generated and induce
+state transitions.
+
+\subsection{Transactions}
+
+Before we discuss various cases, we define some notions about transaction.
+
+\begin{definition}[Transaction]
+  A transaction is a pair, consisting of a request and a response. It starts
+  when an object \emph{passes a predicated message} (requests) to another
+  object. It ends when the object gets the response, indicating that the
+  predicate holds now. Certainly a request happens earlier than the response in
+  terms of timeline.
+\end{definition}
+
+\begin{definition}[Transaction Predicate]
+  A transaction predicate is a predicate that an object requested to
+  others. When an object requests, it is holding the request to see whether it
+  is fine to process some other requests/responses before it gets the response.
+\end{definition}
+
+\begin{definition}
+  Two transactions are serial if a response of one transaction happens earlier
+  than the request of the other. It not, they are concurrent (interleaving).
+\end{definition}
+
+\subsection{Serial Cases}
+
+Now let's take a look at some simple cases first, where interleavings do not
+happen.
+
+\paragraph{Case 1}\label{serial-case1}
+When a precondition for a request holds, then corresponding state transition
+happens immediately; \eg{}, for a request $\objGetRq{C_1}$ with an initial
+state:
+
+\begin{enumerate}
+\item It requires $\stOf{C_1} \geq S$ by \refTrs{trs2}.
+\item The precondition already holds since $\stOf{C_1} = S$, thus $C_1$
+  immediately responds with
+\end{enumerate}
+
+\paragraph{Case 2}\label{serial-case2}
+If a precondition does not hold, then an object makes additional requests to
+other objects. Right after it gets a corresponding response, a state transition
+happens. Here is a scenario for a request $\objSetRq{C_1}{47}$:
+
+\begin{enumerate}
+\item It requires $\stOf{C_1} = M$ by \refTrs{trs1}.
+\item We need $\stOf{C_2} = I$ by \refInv{inv1} and $\stOf{P} = M$ by
+  \refInv{inv3}.
+\item A predicated message is generated: $\{ C_1: \stOf{C_1} = M; C_2:
+  \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item $C_1$ holds this message to decide whether to handle other messages or
+  not. Now it requests a new predicated message to $P$ (by the topology), where
+  the new message does not contain predicate for $C_1$. We just leave a small
+  annotation about $C_1$; the reason will be discussed later. Hence the new
+  message is: $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item $P$ receives the message from $C_1$. It sees that there is a requirement
+  for $C_2$, which implies an additional request is needed. Thus, it holds the
+  message, generates a new message $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot
+  \}$, and sends it to $C_2$.
+\item $C_2$ receives the message from $P$. It changes its status to $I$
+  immediately, and responds to $P$.
+\item $P$ receives the response. Now it finds out the only obligation is about
+  itself. It changes its status to $M$, and responds to $C_1$.
+\item $C_1$ receives the response. It changes its status to $M$. Since the
+  precondition holds, finally it executes $\objSetRq{C_1}{47}$.
+\end{enumerate}
+
+\subsection{Interleaving Cases}
+
+\end{document}
