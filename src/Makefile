@@ -1,5 +1,4 @@
-FILES:=$(wildcard Prototype/*.v)
-ARGS := -R Prototype Prototype
+FILES:=$(wildcard *.v)
 
 .PHONY: all clean
 
@@ -11,5 +10,5 @@ Makefile.coq: Makefile $(FILES)
 
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
-	rm -f */.*.aux */*.v.d */*.glob */*.vo */*~ *~
+	rm -f .*.aux *.v.d *.glob *.vo *~
 	rm -f Makefile.coq
