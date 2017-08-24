@@ -29,6 +29,7 @@
 
 \newcommand{\refInv}[1]{[Invariant~\ref{#1}]}
 \newcommand{\refTrs}[1]{[Transition~\ref{#1}]}
+\newcommand{\refFig}[1]{[Figure~\ref{#1}]}
 
 \newcommand{\eg}{\emph{e.g.}}
 \newcommand{\ie}{\emph{i.e.}}
@@ -130,20 +131,19 @@ happens. Here is a scenario for a request $\objSetRq{C_1}{47}$:
   \refInv{inv3}.
 \item A predicated message is generated: $\{ C_1: \stOf{C_1} = M; C_2:
   \stOf{C_2} = I; P: \stOf{P} = M \}$.
-\item $C_1$ holds this message as a transaction predicate to decide whether to
-  handle other messages or not. Now it requests a new predicated message to $P$
-  (by the topology), where the new message does not contain predicate for
-  $C_1$. We just leave a small annotation about $C_1$; the reason will be
-  discussed later. Hence the new message is: $\{ C_1: \bot; C_2: \stOf{C_2} = I;
-  P: \stOf{P} = M \}$.
+\item $C_1$ holds this message as a transaction predicate to claim it is during
+  a certain transaction. Now it requests a new predicated message to $P$ (by the
+  topology), where to new message does not contain predicates about $C_1$.
+  Hence the new message is: $\{ C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
 \item $P$ receives the message from $C_1$. It sees that there is a requirement
   for $C_2$, which implies an additional request is needed. Thus, it holds the
-  predicate, generates a new message $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot
-  \}$, and sends it to $C_2$.
+  predicate, generates a new message $\{ C_2: \stOf{C_2} = I \}$, and sends it
+  to $C_2$.
 \item $C_2$ receives the message from $P$. It changes its status to $I$
   immediately, and responds to $P$.
-\item $P$ receives the response. Now it finds out the only obligation is about
-  itself. It changes its status to $M$, and responds to $C_1$.
+\item $P$ receives the response. Looking at its transaction predicate, now it
+  finds out the only obligation is about itself. It changes its status to $M$,
+  and responds to $C_1$.
 \item $C_1$ receives the response. It changes its status to $M$. Since the
   precondition holds, finally it executes $\objSetRq{C_1}{47}$.
 \end{enumerate}
@@ -162,7 +162,7 @@ Let's start with a very naive approach: whenever an object holds a predicate --
 meaning that it requested something and is waiting for the response -- it
 refuses to handle any other messages except the response.
 
-\paragraph{Case 1}\label{concurrent-case1}
+\paragraph{Case 1 \& 2}\label{concurrent-case12}
 When $C_1$ and $C_2$ request to set data at the same time, a problem arises.
 
 \begin{enumerate}
@@ -170,13 +170,13 @@ When $C_1$ and $C_2$ request to set data at the same time, a problem arises.
 \item $m_2 = \objSetRq{C_2}{23}$ is requested.
 \item By $m_1$, a predicated message is generated: $\{ C_1: \stOf{C_1} = M; C_2:
   \stOf{C_2} = I; P: \stOf{P} = M \}$. This is held by $C_1$, and it requests to
-  $P$ with $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+  $P$ with $\{ C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
 \item By $m_2$, a predicated message is generated: $\{ C_1: \stOf{C_1} = I; C_2:
   \stOf{C_2} = M; P: \stOf{P} = M \}$. This is held by $C_2$, and it requests to
-  $P$ with $\{ C_1: \stOf{C_1} = I; C_2: \bot; P: \stOf{P} = M \}$.
+  $P$ with $\{ C_1: \stOf{C_1} = I; P: \stOf{P} = M \}$.
 \item $P$ (nondeterministically) decides to handle a request by $C_1$ first. As
-  seen in serial cases, it holds $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P}
-  = M \}$ and requests $\{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot \}$ to $C_2$.
+  seen in serial cases, it holds $\{ C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$
+  and requests $\{ C_2: \stOf{C_2} = I; \}$ to $C_2$.
 \end{enumerate}
 
 Below figure describes the status between $P$ and $C_2$ after (5). Since both
@@ -186,23 +186,75 @@ deadlock happens.
 \begin{figure}[h]
   \begin{math}
     \begin{array}{c}
-      P\ (\textrm{holding}\ \{ C_1: \bot; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}) \\
-      \{ C_1: \bot; C_2: \stOf{C_2} = I; P: \bot \} \downarrow
-      \uparrow \{ C_1: \stOf{C_1} = I; C_2: \bot; P: \stOf{P} = M \} \\
-      C_2\ (\textrm{holding}\ \{ C_1: \stOf{C_1} = I; C_2: \stOf{C_2} = M; P: \stOf{P} = M) \}
+      P \{ C_2: \stOf{C_2} = I; P: \stOf{P} = M \} \\
+      \{ C_1: \stOf{C_1} = I; P: \stOf{P} = M \} \uparrow
+      \downarrow \{ C_2: \stOf{C_2} = I; \} \\
+      C_2 \{ C_1: \stOf{C_1} = I; C_2: \stOf{C_2} = M; P: \stOf{P} = M \}
     \end{array}
   \end{math}
   \caption{$P$ and $C_2$ both handling transactions}
 \end{figure}
 
-How can we solve this deadlock case? Either $P$ or $C_2$ must allow an
-interleaving even if it is handling a transaction.
+How can we solve this deadlock case? Note that in this case whichever message is
+chosen, we can design a correct protocol. But a deadlock issue still remains
+when we choose to handle the message from $C_2$. After $P$ handling $\{ C_1:
+\stOf{C_1} = I; P: \stOf{P} = M \}$, $P$ should send $\{ C_1: \stOf{C_1} = I \}$
+to $C_1$. However, since $C_1$ is holding $\{ C_1: \stOf{C_1} = M; C_2:
+\stOf{C_2} = I; P: \stOf{P} = M \}$, it refuses to handle the message similar to
+$C_2$. Thus, in order to avoid deadlocks, we should choose $C_2$ to handle the
+message from $P$.
 
-By carefully looking at transaction predicates each object is holding, we can
-decide which object should handle a request. \emph{TODO: describe}.
+We will discuss various deadlock cases in later sections (this is certainly
+related to correctness of synthesis).
+
+Let's continue the scenario after (5):
+
+\begin{enumerate}
+  \setcounter{enumi}{5}
+\item $C_2$ handles $\{ C_2: \stOf{C_2} = I \}$. It changes its status to $I$
+  immediately, and responds to $P$.
+\item $P$ receives the response. Looking at its transaction predicate, now it
+  finds out the only obligation is about itself. It changes its status to $M$,
+  and responds to $C_1$.
+\item (\emph{Before $C_1$ handles the response above}) Now $P$ does not have any
+  transaction predicates. Thus it handles the message from $C_2$, holds $\{ C_1:
+  \stOf{C_1} = I; P: \stOf{P} = M \}$, and requests $\{ C_1: \stOf{C_1} = I; \}$
+  to $C_1$.
+\item $C_1$ handles the response from (7) first; it changes its status to $M$,
+  and executes $\objSetRq{C_1}{47}$.
+\item Next $C_1$ handles the request from (8). It changes its status to $I$
+  immediately, and responds to $P$.
+\item $P$ receives the response (from $C_1$). Looking at its transaction
+  predicate, now it finds out the only obligation is about itself. It changes
+  its status to $M$, and responds to $C_2$.
+\item $C_2$ handles the response; it changes its status to $M$, and executes
+  $\objSetRq{C_2}{23}$.
+\end{enumerate}
+
+There are a number of caveats from (6) to (12):
+
+\begin{itemize}
+\item At (7), we assume that two separate channels exist from $C_2$ to $P$ --
+  one for requests and the other for responses. It implies that \emph{a topology
+    given by a user affects deadlocks/livelocks}.
+\item By (7) and (8), there are two messages from $P$ to $C_1$. At (9), $C_1$
+  choose the response to handle, which came earlier than the request from (8).
+  If a user gave the topology with two separate channels from $P$ to $C_1$, it
+  is possible to design an incorrect protocols (when $C_1$ decides to handle the
+  message from (8) first). It implies that \emph{a topology given by a user also
+    affects the correctness of the protocol}.
+\end{itemize}
+
+\subsection{Safe Interleavings}
+
+TBD.
 
 \section{Synthesis with Predicated Messages}
 
+TBD.
+
 \section{Proving the Correctness of Synthesis}
+
+TBD.
 
 \end{document}
