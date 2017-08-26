@@ -2,6 +2,8 @@
 
 \usepackage{amssymb}
 \usepackage{textcomp}
+\usepackage{mathtools}
+\usepackage{proof}
 
 \begin{document}
 \title{Protocol Synthesis - Brainstorming}
@@ -26,7 +28,12 @@
 \newcommand{\objGetRs}[2]{\ensuremath{#1:\texttt{getRs(}#2\texttt{)}}}
 \newcommand{\objSetRq}[2]{\ensuremath{#1.\texttt{setRq(}#2\texttt{)}}}
 \newcommand{\objSetRs}[1]{\ensuremath{#1:\texttt{setRs()}}}
+\newcommand{\intGetRq}[2]{\ensuremath{#1.\texttt{getRq()}:#2}}
+\newcommand{\intSetRq}[2]{\ensuremath{#1.\texttt{setRq()}:#2}}
 
+\newcommand{\msgrule}[4]{\ensuremath{#1: \{ #2 \} \xrightarrow{#3} \{ #4 \}}}
+
+\newcommand{\refSec}[1]{[Section~\ref{#1}]}
 \newcommand{\refInv}[1]{[Invariant~\ref{#1}]}
 \newcommand{\refTrs}[1]{[Transition~\ref{#1}]}
 \newcommand{\refFig}[1]{[Figure~\ref{#1}]}
@@ -162,7 +169,7 @@ Let's start with a very naive approach: whenever an object holds a predicate --
 meaning that it requested something and is waiting for the response -- it
 refuses to handle any other messages except the response.
 
-\paragraph{Case 1 \& 2}\label{concurrent-case12}
+\paragraph{Case 1 \& 2}
 When $C_1$ and $C_2$ request to set data at the same time, a problem arises.
 
 \begin{enumerate}
@@ -193,6 +200,7 @@ deadlock happens.
     \end{array}
   \end{math}
   \caption{$P$ and $C_2$ both handling transactions}
+  \label{fig:deadlock}
 \end{figure}
 
 How can we solve this deadlock case? Note that in this case whichever message is
@@ -245,13 +253,82 @@ There are a number of caveats from (6) to (12):
     affects the correctness of the protocol}.
 \end{itemize}
 
-\subsection{Safe Interleavings}
-
-TBD.
-
 \section{Synthesis with Predicated Messages}
 
-TBD.
+Based on the information that a user gives, we here try to synthesize an
+executable protocol.
+
+\subsection{Requests and Responses}
+
+\begin{itemize}
+\item A request message is synthesized \emph{when an object passes a predicated
+  message to another object}.
+\item A response message -- to the object that requested a task (predicates) --
+  is synthesized \emph{when an object finds that its transaction predicate
+    holds}.
+\end{itemize}
+
+Note that the state of an object changes \emph{only when} it sends a response.
+Forwarding requests does not involve any state changes.
+
+\subsection{Safe Interleavings = Correct Preconditions for Rules}
+
+As seen in \refFig{fig:deadlock}, for the sake of safe interleavings, an object
+sometimes refuses to handle messages, especially when it is currently handling a
+message (holding a transaction predicate). During synthesis, transaction
+predicates are turned into \emph{preconditions}: each message handler (rule) has
+its own precondition -- whether to execute the rule or not -- where its
+transaction predicate is given as an argument.
+
+One of very strong precondition would say that any rules cannot be executed when
+the object holds a predicate. However, as discussed in
+\refSec{concurrent-cases}, the synthesis would be correct but may induce
+deadlocks.
+
+\subsection{A Case Study}
+
+Let's synthesize a protocol for our running example. We first synthesize message
+handlers (rules) not worrying about interleavings (transaction predicates).
+
+\paragraph{Starting with State Transitions}
+
+We begin by synthesizing trivial rules that implement the state transitions
+given by a user. For $i = 1, 2$:
+
+\begin{itemize}
+\item \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top}
+\item \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
+\end{itemize}
+
+\paragraph{Handling Other Preconditions}
+
+By looking at the rule for \objGetRq{C_1}, we can deterministically know we need
+an additional rule when $\stOf{C_1} < S$. In this case, a predicated message $\{
+\stOf{C_1} = S; \stOf{C_2} \neq M; \stOf{P} \geq S \}$ is generated (why?). By
+the topology, it is sent to $P$. Similar reasoning applies to $C_2$ by symmetry.
+
+\begin{itemize}
+\item \msgrule{\objGetRq{C_1}}{\stOf{C_1} < S}{\intGetRq{C_1}{P}}{\top}, where
+  $\intGetRq{C_1}{P}$ is mapped to $\{ \stOf{C_2} \neq M; \stOf{P} \geq S \}$.
+\item \msgrule{\objGetRq{C_2}}{\stOf{C_2} < S}{\intGetRq{C_2}{P}}{\top}, where
+  $\intGetRq{C_2}{P}$ is mapped to $\{ \stOf{C_1} \neq M; \stOf{P} \geq S \}$.
+\end{itemize}
+
+We synthesize other rules for ``set'' similarly:
+
+\begin{itemize}
+\item \msgrule{\objSetRq{C_1}{v}}{\stOf{C_1} \neq M}{\intSetRq{C_1}{P}}{\top},
+  where $\intSetRq{C_1}{P}$ is mapped to $\{ \stOf{C_2} = I; \stOf{P} = M \}$.
+\item \msgrule{\objSetRq{C_2}{v}}{\stOf{C_2} \neq M}{\intSetRq{C_2}{P}}{\top},
+  where $\intSetRq{C_2}{P}$ is mapped to $\{ \stOf{C_1} = I; \stOf{P} = M \}$.
+\end{itemize}
+
+Following the topology, it is now time to synthesize rules for $P$; we have to
+synthesize four rules corresponding to \intGetRq{C_i}{P} and \intSetRq{C_i}{P}
+(for $i = 1, 2$), which are generated when synthesizing \objGetRq{C_i} and
+\objSetRq{C_i}{v} above.
+
+TODO: continue describing the case.
 
 \section{Proving the Correctness of Synthesis}
 
