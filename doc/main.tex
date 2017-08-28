@@ -6,7 +6,8 @@
 \usepackage{proof}
 
 \begin{document}
-\title{Protocol Synthesis - Brainstorming}
+\title{Synthesizing Protocols for Message-Passing Systems}
+\subtitle{A brief note about syntheses and proofs}
 
 %% Preprocessing
 % To remove citation information below abstract
@@ -24,14 +25,21 @@
 
 \newcommand{\valOf}[1]{\ensuremath{#1.\texttt{v}}}
 \newcommand{\stOf}[1]{\ensuremath{#1.\texttt{st}}}
+\newcommand{\trsOf}[1]{\ensuremath{#1.\texttt{trs}}}
+\newcommand{\trsYes}{\ensuremath{\top}}
+\newcommand{\trsNo}{\ensuremath{\bot}}
+
 \newcommand{\objGetRq}[1]{\ensuremath{#1.\texttt{getRq()}}}
 \newcommand{\objGetRs}[2]{\ensuremath{#1:\texttt{getRs(}#2\texttt{)}}}
 \newcommand{\objSetRq}[2]{\ensuremath{#1.\texttt{setRq(}#2\texttt{)}}}
 \newcommand{\objSetRs}[1]{\ensuremath{#1:\texttt{setRs()}}}
-\newcommand{\intGetRq}[2]{\ensuremath{#1.\texttt{getRq()}:#2}}
-\newcommand{\intSetRq}[2]{\ensuremath{#1.\texttt{setRq()}:#2}}
 
-\newcommand{\msgrule}[4]{\ensuremath{#1: \{ #2 \} \xrightarrow{#3} \{ #4 \}}}
+\newcommand{\intSetRq}[2]{\ensuremath{#1 \leadsto #2.\texttt{setRq()}}}
+\newcommand{\intSetRs}[2]{\ensuremath{#1 \leadsto #2.\texttt{setRs()}}}
+\newcommand{\intInvRq}[2]{\ensuremath{#1 \leadsto #2.\texttt{invRq()}}}
+\newcommand{\intInvRs}[2]{\ensuremath{#1 \leadsto #2.\texttt{invRs()}}}
+
+\newcommand{\msgrule}[4]{\ensuremath{#1\vdash \{ #2 \} \xrightarrow{#3} \{ #4 \}}}
 
 \newcommand{\refSec}[1]{[Section~\ref{#1}]}
 \newcommand{\refInv}[1]{[Invariant~\ref{#1}]}
@@ -49,23 +57,29 @@ In order to synthesize a protocol, a user should provide following information:
 \item A topology among objects, including the number of channels between any two
   objects.
 \item Type of the whole state (and corresponding initial value)
-\item State invariants ($\textsf{State} \to \textsf{Prop}$)
-\item State transitions (by external interfaces) ($\textsf{State} \to
-  \textsf{State} \to \textsf{Prop}$)
+\item State invariants
+\item State transitions (by external interfaces)
 \end{itemize}
 
 Our running example is a two-level cache structure with a parent and two
-children, using an MSI protocol. Each object $O$ has just a single value
-\valOf{O} and its status \stOf{O}.
+children, using an MSI protocol. Each object $O$ has a single value \valOf{O}
+and its status \stOf{O}.
 
-\paragraph{Example} User inputs for our running example is as follows:
+User inputs for our running example is as follows:
+
 \begin{itemize}
 \item Topology
   \begin{itemize}
   \item Objects: $P$, $C_1$, and $C_2$
-  \item Channels: ...
+  \item Channels: $\{ i = 1,2\ |\ \cdot \rightarrow C_i, C_i \rightarrow \cdot,
+    C_i \xrightarrow{\texttt{rq}} P, C_i \xrightarrow{\texttt{rs}} P, P
+    \rightarrow C_i \}$ (``$\cdot$'' indicates an external interface)
   \end{itemize}
-\item State type: $P(0, S), C_1(0, S), C_2(0, S)$.
+\item State type and initial values
+  \begin{itemize}
+  \item $P, C_1, C_2: \{ \texttt{v}: \mathbb{N};\ \texttt{st}: \{M, S, I\} \}$.
+  \item Initial values: $P(0, S), C_1(0, S), C_2(0, S)$.
+  \end{itemize}
 \item State invariants:
   \begin{align}
     \stOf{C_1} = M \to \stOf{C_2} = I \label{inv1} \\
@@ -74,36 +88,29 @@ children, using an MSI protocol. Each object $O$ has just a single value
   \end{align}
 \item State transitions:
   \begin{eqnarray}
-    \{ \stOf{C_i} \geq S \}
-    & \objGetRq{C_i}
-    & \{ \objGetRs{C_i}{\valOf{C_i}}, \top \} \label{trs1} \\
-    \{ \stOf{C_i} = M \}
-    & \objSetRq{C_i}{v}
-    & \{ \objSetRs{C_i}, \valOf{C_i} = v \} \label{trs2}
+    \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \label{trs1} \\
+    \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \label{trs2}
   \end{eqnarray}
 \end{itemize}
 
-\section{Non-executable Protocol by Predicated Messages}
-
-We give some examples to see how predicated messages are generated and induce
-state transitions.
+\section{Non-executable Protocol Design by Predicated Messages}
 
 \subsection{Transactions}
-
-Before we discuss various cases, we define some notions about transaction.
 
 \begin{definition}[Transaction]
   A transaction is a pair, consisting of a request and a response. It starts
   when an object \emph{passes a predicated message} (requests) to another
   object. It ends when the object gets the response, indicating that the
-  predicate holds now. Certainly a request happens earlier than the response in
-  terms of timeline.
+  predicate should be satisfiable now. Certainly a request happens earlier than
+  the response in terms of timeline.
 \end{definition}
 
 \begin{definition}[Transaction Predicate]
   A transaction predicate is a predicate that an object requested to
-  others. When an object requests, it is holding the request to see whether it
-  is fine to process some other requests/responses before it gets the response.
+  others. When an object requests, it holds the request (1) to check the request
+  is finally handled by all related other objects so it can respond back, and
+  (2) to ensure whether it is safe to process some other requests/responses
+  \emph{before} it receives the response (to ensure safe interleavings).
 \end{definition}
 
 \begin{definition}
@@ -113,64 +120,64 @@ Before we discuss various cases, we define some notions about transaction.
 
 \subsection{Serial Cases}\label{serial-cases}
 
-Now let's take a look at some simple cases first, where interleavings do not
-happen.
+Let's take a look at some simple cases first, where interleavings do not happen.
 
 \paragraph{Case 1}
-When a precondition for a request holds, then corresponding state transition
+If a precondition for a request holds, then corresponding state transition
 happens immediately; \eg{}, for a request $\objGetRq{C_1}$ with an initial
 state:
 
 \begin{enumerate}
 \item It requires $\stOf{C_1} \geq S$ by \refTrs{trs2}.
 \item The precondition already holds since $\stOf{C_1} = S$, thus $C_1$
-  immediately responds with
+  immediately responds.
 \end{enumerate}
 
 \paragraph{Case 2}
 If a precondition does not hold, then an object makes additional requests to
-other objects. Right after it gets a corresponding response, a state transition
-happens. Here is a scenario for a request $\objSetRq{C_1}{47}$:
+other objects. Right after it receives a corresponding response, a state
+transition happens. Below is a scenario for a request $\objSetRq{C_1}{47}$:
 
 \begin{enumerate}
-\item It requires $\stOf{C_1} = M$ by \refTrs{trs1}.
-\item We need $\stOf{C_2} = I$ by \refInv{inv1} and $\stOf{P} = M$ by
+\item $\stOf{C_1} = M$ is required by \refTrs{trs1}.
+\item $\stOf{C_2} = I$ and $\stOf{P} = M$ are also required by \refInv{inv1} and
   \refInv{inv3}.
-\item A predicated message is generated: $\{ C_1: \stOf{C_1} = M; C_2:
-  \stOf{C_2} = I; P: \stOf{P} = M \}$.
-\item $C_1$ holds this message as a transaction predicate to claim it is during
-  a certain transaction. Now it requests a new predicated message to $P$ (by the
-  topology), where to new message does not contain predicates about $C_1$.
-  Hence the new message is: $\{ C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
-\item $P$ receives the message from $C_1$. It sees that there is a requirement
+\item Above reasoning generates a predicated message: $\{ C_1: \stOf{C_1} = M;
+  C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item $C_1$ holds this message \emph{as a transaction predicate}. Now it
+  requests a new predicated message to $P$ (by the topology), where the new
+  message does not contain predicates about $C_1$. Hence the new message is: $\{
+  C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item $P$ receives the message from $C_1$. It finds that there is a requirement
   for $C_2$, which implies an additional request is needed. Thus, it holds the
-  predicate, generates a new message $\{ C_2: \stOf{C_2} = I \}$, and sends it
-  to $C_2$.
-\item $C_2$ receives the message from $P$. It changes its status to $I$
-  immediately, and responds to $P$.
+  message (as a transaction predicate), generates a new message $\{ C_2:
+  \stOf{C_2} = I \}$, and sends it to $C_2$.
+\item $C_2$ receives the message from $P$. Since there are no other obligations
+  for other objects, it immediately changes its status to $I$ and responds to
+  $P$.
 \item $P$ receives the response. Looking at its transaction predicate, now it
-  finds out the only obligation is about itself. It changes its status to $M$,
-  and responds to $C_1$.
+  finds out the only remaining obligation is about itself. It changes its status
+  to $M$, and responds to $C_1$.
 \item $C_1$ receives the response. It changes its status to $M$. Since the
   precondition holds, finally it executes $\objSetRq{C_1}{47}$.
 \end{enumerate}
 
 \subsection{Concurrent Cases}\label{concurrent-cases}
 
-In this section, we study how predicated messages and transaction notions help
-us find correct interleavings. One of most important reasonings about
-transactions is whether to allow interleavings among them. It is directly
-related to the correctness of a protocol, since the specification is usually
-serial. If we are too strict to allow interleavings, it might be easy to prove
-refinements, but implementations may have deadlocks. Conversely, if we are too
-loose to allow interleavings, implementations would not be correct.
+We now explore how predicated messages help us ensure safe interleavings. The
+only question we should answer is when it is fine to allow interleavings. It is
+directly related to the correctness of a protocol, since the specification is
+serial.
+
+If a protocol is too strict to allow interleavings, it might be easy to prove
+refinements, but implementations may have \emph{deadlocks}. Conversely, if a
+protocol is too loose, an implementation would not be correct.
 
 Let's start with a very naive approach: whenever an object holds a predicate --
 meaning that it requested something and is waiting for the response -- it
 refuses to handle any other messages except the response.
 
-\paragraph{Case 1 \& 2}
-When $C_1$ and $C_2$ request to set data at the same time, a problem arises.
+A problem occurs when $C_1$ and $C_2$ request to set data at the same time.
 
 \begin{enumerate}
 \item $m_1 = \objSetRq{C_1}{47}$ is requested.
@@ -186,9 +193,9 @@ When $C_1$ and $C_2$ request to set data at the same time, a problem arises.
   and requests $\{ C_2: \stOf{C_2} = I; \}$ to $C_2$.
 \end{enumerate}
 
-Below figure describes the status between $P$ and $C_2$ after (5). Since both
-$P$ and $C_2$ hold predicates, they refuse to handle any other messages -- a
-deadlock happens.
+\refFig{fig:deadlock} describes the status between $P$ and $C_2$ after
+(5). Since both $P$ and $C_2$ hold predicates, they refuse to handle any other
+messages -- a deadlock happens.
 
 \begin{figure}[h]
   \begin{math}
@@ -203,11 +210,11 @@ deadlock happens.
   \label{fig:deadlock}
 \end{figure}
 
-How can we solve this deadlock case? Note that in this case whichever message is
-chosen, we can design a correct protocol. But a deadlock issue still remains
-when we choose to handle the message from $C_2$. After $P$ handling $\{ C_1:
-\stOf{C_1} = I; P: \stOf{P} = M \}$, $P$ should send $\{ C_1: \stOf{C_1} = I \}$
-to $C_1$. However, since $C_1$ is holding $\{ C_1: \stOf{C_1} = M; C_2:
+How can we solve this deadlock case? First note that in this case whichever
+message is chosen, we can design a correct protocol. But a deadlock issue still
+remains when we choose to handle the message from $C_2$. After $P$ handling $\{
+C_1: \stOf{C_1} = I; P: \stOf{P} = M \}$, $P$ should send $\{ C_1: \stOf{C_1} =
+I \}$ to $C_1$. However, since $C_1$ is holding $\{ C_1: \stOf{C_1} = M; C_2:
 \stOf{C_2} = I; P: \stOf{P} = M \}$, it refuses to handle the message similar to
 $C_2$. Thus, in order to avoid deadlocks, we should choose $C_2$ to handle the
 message from $P$.
@@ -243,62 +250,62 @@ There are a number of caveats from (6) to (12):
 
 \begin{itemize}
 \item At (7), we assume that two separate channels exist from $C_2$ to $P$ --
-  one for requests and the other for responses. It implies that \emph{a topology
-    given by a user affects deadlocks/livelocks}.
+  one for requests and the other for responses. It means that \emph{a topology
+    given by a user may cause deadlocks/livelocks}.
 \item By (7) and (8), there are two messages from $P$ to $C_1$. At (9), $C_1$
   choose the response to handle, which came earlier than the request from (8).
   If a user gave the topology with two separate channels from $P$ to $C_1$, it
   is possible to design an incorrect protocols (when $C_1$ decides to handle the
-  message from (8) first). It implies that \emph{a topology given by a user also
-    affects the correctness of the protocol}.
+  message from (8) first). It means that \emph{a topology given by a user may
+    also cause an incorrect protocol}.
 \end{itemize}
 
-\section{Synthesis with Predicated Messages}
+To emphasize the fact again: a user should design a topology carefully both for
+correctness and liveness.
 
-Based on the information that a user gives, we here try to synthesize an
-executable protocol.
+\section{Synthesis with Predicated Messages}
 
 \subsection{Requests and Responses}
 
 \begin{itemize}
 \item A request message is synthesized \emph{when an object passes a predicated
   message to another object}.
-\item A response message -- to the object that requested a task (predicates) --
-  is synthesized \emph{when an object finds that its transaction predicate
-    holds}.
+\item A response message -- to the object that originally requested -- is
+  synthesized \emph{when an object finds that its transaction predicate is
+    satisfied}.
 \end{itemize}
 
-Note that the state of an object changes \emph{only when} it sends a response.
-Forwarding requests does not involve any state changes.
+According to the definitions of requests and responses, an object state changes
+\emph{only when} it sends a response. Forwarding requests does not involve any
+state changes.
 
 \subsection{Safe Interleavings = Correct Preconditions for Rules}
 
 As seen in \refFig{fig:deadlock}, for the sake of safe interleavings, an object
-sometimes refuses to handle messages, especially when it is currently handling a
-message (holding a transaction predicate). During synthesis, transaction
-predicates are turned into \emph{preconditions}: each message handler (rule) has
-its own precondition -- whether to execute the rule or not -- where its
-transaction predicate is given as an argument.
+sometimes refuses to handle messages. During synthesis, transaction predicates
+are turned into \emph{preconditions}: each message handler (rule) has its own
+precondition -- whether to execute the rule or not -- where its transaction
+predicate is given as an argument.
 
-One of very strong precondition would say that any rules cannot be executed when
-the object holds a predicate. However, as discussed in
-\refSec{concurrent-cases}, the synthesis would be correct but may induce
+One of very strong preconditions would say that any rules cannot be executed
+when the target object holds a predicate. However, as discussed in
+\refSec{concurrent-cases}, a synthesized protocol would be correct but may cause
 deadlocks.
 
 \subsection{A Case Study}
 
-Let's synthesize a protocol for our running example. We first synthesize message
-handlers (rules) not worrying about interleavings (transaction predicates).
+Here we synthesize a protocol for our running example, particularly for ``set.''
+Let's first synthesize message handlers (rules) not worrying about
+interleavings.
 
 \paragraph{Starting with State Transitions}
 
 We begin by synthesizing trivial rules that implement the state transitions
 given by a user. For $i = 1, 2$:
 
-\begin{itemize}
-\item \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top}
-\item \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
-\end{itemize}
+\begin{center}
+  \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
+\end{center}
 
 \paragraph{Handling Other Preconditions}
 
@@ -306,32 +313,91 @@ By looking at the rule for \objGetRq{C_1}, we can deterministically know we need
 an additional rule when $\stOf{C_1} < S$. In this case, a predicated message $\{
 \stOf{C_1} = S; \stOf{C_2} \neq M; \stOf{P} \geq S \}$ is generated (why?). By
 the topology, it is sent to $P$. Similar reasoning applies to $C_2$ by symmetry.
+For $\{i, j\} = \{1, 2\}, i \neq j$:
 
-\begin{itemize}
-\item \msgrule{\objGetRq{C_1}}{\stOf{C_1} < S}{\intGetRq{C_1}{P}}{\top}, where
-  $\intGetRq{C_1}{P}$ is mapped to $\{ \stOf{C_2} \neq M; \stOf{P} \geq S \}$.
-\item \msgrule{\objGetRq{C_2}}{\stOf{C_2} < S}{\intGetRq{C_2}{P}}{\top}, where
-  $\intGetRq{C_2}{P}$ is mapped to $\{ \stOf{C_1} \neq M; \stOf{P} \geq S \}$.
-\end{itemize}
-
-We synthesize other rules for ``set'' similarly:
-
-\begin{itemize}
-\item \msgrule{\objSetRq{C_1}{v}}{\stOf{C_1} \neq M}{\intSetRq{C_1}{P}}{\top},
-  where $\intSetRq{C_1}{P}$ is mapped to $\{ \stOf{C_2} = I; \stOf{P} = M \}$.
-\item \msgrule{\objSetRq{C_2}{v}}{\stOf{C_2} \neq M}{\intSetRq{C_2}{P}}{\top},
-  where $\intSetRq{C_2}{P}$ is mapped to $\{ \stOf{C_1} = I; \stOf{P} = M \}$.
-\end{itemize}
+\begin{center}
+  \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} \neq M}{\intSetRq{C_i}{P}}{\top}, where
+  \intSetRq{C_i}{P} is mapped to $\{ \stOf{C_j} = I; \stOf{P} = M \}$.
+\end{center}
 
 Following the topology, it is now time to synthesize rules for $P$; we have to
-synthesize four rules corresponding to \intGetRq{C_i}{P} and \intSetRq{C_i}{P}
-(for $i = 1, 2$), which are generated when synthesizing \objGetRq{C_i} and
-\objSetRq{C_i}{v} above.
+synthesize two rules corresponding to \intSetRq{C_i}{P}, which are generated
+while synthesizing \objSetRq{C_i}{v} above.
 
-TODO: continue describing the case.
+\begin{center}
+  \msgrule{\intSetRq{C_i}{P}}{\top}{\intInvRq{P}{C_j}}{\top}, where
+  \intInvRq{P}{C_j} is mapped to $\{ \stOf{C_j} = I \}$.
+\end{center}
+
+Lastly, (request) rules for $C_j$ are synthesized as below.
+
+\begin{center}
+  \msgrule{\intInvRq{P}{C_j}}{\top}{\intInvRs{C_j}{P}}{\stOf{C_j} = I}
+\end{center}
+
+Synthesizing response rules is quite trivial; when an object receives a
+response, it checks its current transaction predicate and decides whether to
+forward the response or not. Basically, an object forwards a response when it
+confirms all related transaction predicates are satisfied.
+
+\begin{center}
+  \msgrule{\intInvRs{C_j}{P}}{\top}{\intSetRs{P}{C_i}}{\stOf{P} = M}
+\end{center}
+
+\begin{center}
+  \msgrule{\intSetRs{P}{C_i}}{\top}{\objSetRs{C_i}}{\stOf{C_i} = M \wedge
+    \valOf{C_i} = v}
+\end{center}
+
+Note that $v$ in \intSetRs{P}{C_i} comes from the original request; we should
+hold the value in the object ($C_i$) until it receives the response.
+
+\refFig{fig:synthesized-rules-naive} is the synthesized rules, without
+considering safe interleavings:
+
+\begin{figure}[h]
+  \begin{eqnarray*}
+    C_i\ \textrm{handles}: &
+    \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \\
+    & \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} \neq M}{\intSetRq{C_i}{P}}{\top} \\
+    & \msgrule{\intInvRq{P}{C_i}}{\top}{\intInvRs{C_i}{P}}{\stOf{C_i} = I} \\
+    & \msgrule{\intSetRs{P}{C_i}}{\top}{\objSetRs{C_i}}{\stOf{C_i} = M \wedge \valOf{C_i} = v} \\
+    P\ \textrm{handles}: &
+    \msgrule{\intInvRs{C_j}{P}}{\top}{\intSetRs{P}{C_i}}{\stOf{P} = M} \\
+    & \msgrule{\intSetRq{C_i}{P}}{\top}{\intInvRq{P}{C_j}}{\top} \\
+  \end{eqnarray*}
+  \caption{Synthesized rules without considering safe interleavings}
+  \label{fig:synthesized-rules-naive}
+\end{figure}
+
+\subsection{Synthesizing Preconditions}
+
+Based on the rules described in \refFig{fig:synthesized-rules-naive}, let's put
+some preconditions for safe interleavings.
+
+\begin{figure}[h]
+  \begin{eqnarray*}
+    C_i\ \textrm{handles}: &
+    \msgrule{\objSetRq{C_i}{v}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \\
+    & \msgrule{\objSetRq{C_i}{v}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} \neq M}{\intSetRq{C_i}{P}}{\underline{\trsOf{C_i} = \trsYes{}}} \\
+    & \msgrule{\intInvRq{P}{C_i}}{\top}{\intInvRs{C_i}{P}}{\stOf{C_i} = I} \\
+    & \msgrule{\intSetRs{P}{C_i}}{\top}{\objSetRs{C_i}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = M \wedge \valOf{C_i} = v} \\
+    P\ \textrm{handles}: &
+    \msgrule{\intInvRs{C_j}{P}}{\top}{\intSetRs{P}{C_i}}{\underline{\trsOf{P} = \trsNo{}} \wedge \stOf{P} = M} \\
+    & \msgrule{\intSetRq{C_i}{P}}{\underline{\trsOf{P} = \trsNo{}}}{\intInvRq{P}{C_j}}{\underline{\trsOf{P} = \trsYes{}}} \\
+  \end{eqnarray*}
+  \caption{Synthesized rules}
+  \label{fig:synthesized-rules}
+\end{figure}
+
+\refFig{fig:synthesized-rules} shows final synthesized rules. \trsOf{\cdot} is
+\trsYes{} if the target object holds a predicate. Remind that the precondition
+of \intInvRq{P}{C_i} does not have a predicate about \trsOf{C_i}; if the object
+has it, a deadlock occurs.
 
 \section{Proving the Correctness of Synthesis}
 
 TBD.
 
 \end{document}
+

@@ -1520,7 +1520,8 @@ Computing Machinery]
      \@copyrightyear.\
     \fi
     \if@ACM@manuscript
-      Manuscript submitted to ACM\\
+      %% Manuscript submitted to ACM
+      \\
     \else
       \if@ACM@authorversion
           This is the author's version of the work. It is posted here for
@@ -2129,7 +2130,8 @@ Computing Machinery]
     \fancyhead[RO]{\if@ACM@printfolios\thepage\fi}%
     \fancyhead[RE]{\@shortauthors}%
     \fancyhead[LO]{\ACM@linecountL\shorttitle}%
-    \fancyfoot[RO,LE]{\footnotesize Manuscript submitted to ACM}%
+    \fancyfoot[RO,LE]{\footnotesize %% Manuscript submitted to ACM
+    }%
   \or % acmsmall
     \fancyhead[LE]{\ACM@linecountL\@headfootfont\@acmArticle\if@ACM@printfolios:\thepage\fi}%
     \fancyhead[RO]{\@headfootfont\@acmArticle\if@ACM@printfolios:\thepage\fi}%
@@ -2218,7 +2220,8 @@ Computing Machinery]
   \relax % manuscript
     \fancyhead[L]{\ACM@linecountL}%
     \fancyfoot[RO,LE]{\if@ACM@printfolios\small\thepage\fi}%
-    \fancyfoot[RE,LO]{\footnotesize Manuscript submitted to ACM}%
+    \fancyfoot[RE,LO]{\footnotesize %% Manuscript submitted to ACM
+    }%
   \or % acmsmall
     \fancyfoot[RO,LE]{\footnotesize \@journalName, Vol. \@acmVolume, No.
     \@acmNumber, Article \@acmArticle.  Publication date:
@@ -2249,7 +2252,8 @@ Computing Machinery]
   \if@ACM@timestamp
     \ifnum\ACM@format@nr=0\relax % Manuscript
     \fancyfoot[LO,RE]{\ACM@timestamp\quad
-      \footnotesize Manuscript submitted to ACM}
+      \footnotesize %% Manuscript submitted to ACM
+    }
     \else
     \fancyfoot[LO,RE]{\ACM@timestamp}
     \fi
