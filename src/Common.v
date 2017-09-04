@@ -41,6 +41,13 @@ Definition bind {A B} (oa: option A) (f: A -> option B): option B :=
   | None => None
   end.
 Infix ">>=" := bind (at level 0).
+
+Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
+  match oa with
+  | Some a => f a
+  | None => nb
+  end.
+Notation "OA >>=[ NB ] F" := (tbind NB OA F) (at level 0).
   
 Axiom cheat: forall t, t.
 
