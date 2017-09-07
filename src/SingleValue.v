@@ -73,7 +73,7 @@ Section System.
 
   End Spec.
 
-  Section ImplInit.
+  Section Impl0.
 
     Definition parentIdx := 0.
     Definition child1Idx := 1.
@@ -94,7 +94,7 @@ Section System.
     Definition stS := 1.
     Definition stI := 0.
 
-    Section ChildInit.
+    Section Child0.
       Variable childIdx: nat.
 
       Definition ecGetReqM := buildMsgId (getExtIdx childIdx) childIdx "SvmGet" Rq chnImpl.
@@ -133,26 +133,26 @@ Section System.
                exists n, v = VNat n /\
                          post = pre +[ valueIdx <- VNat n] |}.
 
-      Definition child: Object :=
+      Definition child0: Object :=
         {| obj_idx := childIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
            obj_trs := ecGetReqOk :: ecSetReqOk :: nil
         |}.
 
-    End ChildInit.
+    End Child0.
 
-    Section ParentInit.
+    Section Parent0.
 
-      Definition parent : Object :=
+      Definition parent0 : Object :=
         {| obj_idx := parentIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
            obj_trs := nil
         |}.
 
-    End ParentInit.
+    End Parent0.
 
-    Definition implInit : System :=
-      {| sys_objs := parent :: (child child1Idx) :: (child child2Idx) :: nil;
+    Definition impl0 : System :=
+      {| sys_objs := parent0 :: (child0 child1Idx) :: (child0 child2Idx) :: nil;
          sys_chns :=
            (buildChannel extIdx1 child1Idx chnImpl)
              :: (buildChannel extIdx2 child2Idx chnImpl)
@@ -165,8 +165,12 @@ Section System.
              :: nil
       |}.
 
-  End ImplInit.
+  End Impl0.
 
 End System.
 
+
+Section Simulation.
+
+End Simulation.
 

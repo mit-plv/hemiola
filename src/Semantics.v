@@ -215,17 +215,15 @@ Section Semantics.
         Hidden sys l ->
         step sys st1 l st2.
 
-  Definition Trace := list Label.
-
   (* Note that the head is the youngest *)
-  Inductive steps (sys: System) : State -> Trace -> State -> Prop :=
+  Inductive steps (sys: System) : State -> list Label -> State -> Prop :=
   | StepsNil: forall st, steps sys st nil st
   | StepsCons:
-      forall st1 msgs st2,
-        steps sys st1 msgs st2 ->
+      forall st1 ll st2,
+        steps sys st1 ll st2 ->
         forall lbl st3,
           step sys st2 lbl st3 ->
-          steps sys st1 (lbl :: msgs) st3.
+          steps sys st1 (lbl :: ll) st3.
 
   Fixpoint getObjectStatesInit {Trs} (obs: list (ObjectFrame Trs)) : ObjectStates :=
     match obs with
@@ -240,16 +238,23 @@ Section Semantics.
     {| st_oss := getObjectStatesInit (sys_objs sys);
        st_msgs := M.empty _ |}.
 
-  Definition activeLabel (l: Label) :=
+  Record ELabel :=
+    { elbl_ins : list Msg;
+      elbl_outs : list Msg
+    }.
+
+  Definition toELabel (l: Label): option ELabel :=
     match l with
-    | {| lbl_ins := nil; lbl_hdl := _; lbl_outs := nil |} => None
-    | _ => Some l
+    | {| lbl_ins := nil; lbl_outs := nil |} => None
+    | _ => Some {| elbl_ins := lbl_ins l; elbl_outs := lbl_outs l |}
     end.
 
-  Fixpoint behaviorOf (tr: Trace): Trace :=
-    match tr with
+  Definition Trace := list ELabel.
+
+  Fixpoint behaviorOf (ll: list Label): Trace :=
+    match ll with
     | nil => nil
-    | l :: tr' => (activeLabel l) ::> (behaviorOf tr')
+    | l :: tr' => (toELabel l) ::> (behaviorOf tr')
     end.
 
   Inductive Behavior: System -> Trace -> Prop :=
@@ -264,4 +269,7 @@ Section Semantics.
                 Behavior spec hst.
 
 End Semantics.
+
+Infix "<=" := Refines.
+Infix "⊑" := Refines (at level 0).
 

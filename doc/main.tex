@@ -51,46 +51,87 @@
 
 \section{User Inputs}
 
-In order to synthesize a protocol, a user should provide following information:
+In order to synthesize a protocol, a user should provide $(\mathcal{I}_0,
+\mathcal{S}, R)$:
 
 \begin{itemize}
-\item A topology among objects, including the number of channels between any two
-  objects.
-\item Type of the whole state (and corresponding initial value)
-\item State invariants
-\item State transitions (by external interfaces)
+\item $\mathcal{I}_0$ is an initial system, consisting of
+  \begin{enumerate}
+  \item A topology among objects, including the number of channels between any
+    two objects.
+  \item Type of the whole state (and corresponding initial value)
+  \item Initial state transitions (by external interfaces)
+  \end{enumerate}
+\item $\mathcal{S}$ is the target specification system.
+\item $R: \textsf{State} \to \textsf{State} \to \textsf{Prop}$ is a simulation
+  relation that \emph{contains invariants of desired implementations}.
 \end{itemize}
 
+\paragraph{About User Inputs}
+Expecting $\mathcal{I}_0$ and $\mathcal{S}$ from users is natural. Whether users
+should provide $R$ explicitly worths discussing. Maybe it is fine if a user just
+give a set of invariants just about a desired implementation
+$\mathcal{I}$. However, here I claim that generally it is easier for users to
+provide the relation between $\mathcal{I}$ and $\mathcal{S}$ than to provide the
+complete set of invariants (enough to prove the correctness) just about
+$\mathcal{I}$.
+
+\paragraph{Inputs for the Running Example}
 Our running example is a two-level cache structure with a parent and two
 children, using an MSI protocol. Each object $O$ has a single value \valOf{O}
 and its status \stOf{O}.
 
-User inputs for our running example is as follows:
+User inputs are as follows:
 
 \begin{itemize}
-\item Topology
+\item For $\mathcal{I}_0$:
+  \begin{enumerate}
+  \item Topology
+    \begin{itemize}
+    \item Objects: $P$, $C_1$, and $C_2$
+    \item Channels: $\{ i = 1,2\ |\ e_i \rightarrow C_i, C_i \rightarrow e_i,
+      C_i \xrightarrow{\texttt{rq}} P, C_i \xrightarrow{\texttt{rs}} P, P
+      \rightarrow C_i \}$ (``$e_i$'' indicates an external interface)
+    \end{itemize}
+  \item State type and initial values
+    \begin{itemize}
+    \item $P, C_1, C_2: \{ \texttt{v}: \mathbb{N};\ \texttt{st}: \{M, S, I\} \}$.
+    \item Initial values: $P(0, S), C_1(0, S), C_2(0, S)$.
+    \end{itemize}
+  \item Initial state transitions:
+    \begin{eqnarray}
+      \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \label{trs1} \\
+      \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \label{trs2}
+    \end{eqnarray}
+  \end{enumerate}
+\item For $\mathcal{S}$:
+  \begin{enumerate}
+  \item Topology
+    \begin{itemize}
+    \item Objects: $S$
+    \item Channels: $\{ i = 1,2\ |\ e_i \rightarrow S, S \rightarrow e_i \}$.
+    \end{itemize}
+  \item State type and initial values
+    \begin{itemize}
+    \item $S: \{ \texttt{v}: \mathbb{N} \}$.
+    \item Initial values: $S(0)$.
+    \end{itemize}
+  \item State transitions:
+    \begin{eqnarray}
+      \msgrule{\objGetRq{S}}{\top}{\objGetRs{S}{\valOf{S}}}{\top} \label{trs3} \\
+      \msgrule{\objSetRq{S}{v}}{\top}{\objSetRs{S}}{\valOf{S} = v} \label{trs4}
+    \end{eqnarray}
+  \end{enumerate}
+\item For $R$:
   \begin{itemize}
-  \item Objects: $P$, $C_1$, and $C_2$
-  \item Channels: $\{ i = 1,2\ |\ \cdot \rightarrow C_i, C_i \rightarrow \cdot,
-    C_i \xrightarrow{\texttt{rq}} P, C_i \xrightarrow{\texttt{rs}} P, P
-    \rightarrow C_i \}$ (``$\cdot$'' indicates an external interface)
+  \item Invariants:
+    \begin{align}
+      \stOf{C_1} = M \to \stOf{C_2} = I \label{inv1} \\
+      \stOf{C_2} = M \to \stOf{C_1} = I \label{inv2} \\
+      \stOf{P} \geq \texttt{max}(\stOf{C_1}, \stOf{C_2}) \label{inv3}
+    \end{align}
+  \item Simulation: TBD.
   \end{itemize}
-\item State type and initial values
-  \begin{itemize}
-  \item $P, C_1, C_2: \{ \texttt{v}: \mathbb{N};\ \texttt{st}: \{M, S, I\} \}$.
-  \item Initial values: $P(0, S), C_1(0, S), C_2(0, S)$.
-  \end{itemize}
-\item State invariants:
-  \begin{align}
-    \stOf{C_1} = M \to \stOf{C_2} = I \label{inv1} \\
-    \stOf{C_2} = M \to \stOf{C_1} = I \label{inv2} \\
-    \stOf{P} \geq \texttt{max}(\stOf{C_1}, \stOf{C_2}) \label{inv3}
-  \end{align}
-\item State transitions:
-  \begin{eqnarray}
-    \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \label{trs1} \\
-    \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \label{trs2}
-  \end{eqnarray}
 \end{itemize}
 
 \section{Non-executable Protocol Design by Predicated Messages}
@@ -400,28 +441,23 @@ has it, a deadlock occurs.
 \subsection{Proof Sketch}
 
 \begin{enumerate}
-\item We begin by proving \emph{the validness of state invariants}. Informally,
-  we should be able to prove that for any implementation $\mathcal{I}$, if
-  $\mathcal{I}$ satisfies the state invariants given by a user, then
-  $\mathcal{I} \sqsubseteq \mathcal{S}$ holds ($\mathcal{S}$ is the spec).
-\item Next we prove \emph{the validness of (initial) state transitions}, saying
-  that the state transitions given by a user preserves the state invariants.
-  Considering with (1), in other words, we should be able to prove
-  $\mathcal{I}_0 \sqsubseteq \mathcal{S}$, where $\mathcal{I}_0$ is the
-  implementation just with the initial state transitions. Rephrasing this fact
-  again, with the initial setting, the correctness should be provable, while the
-  liveness might not be provable (no rules to proceed).
-\item Now we prove that any rules (state transitions) generated by synthesis
-  process preserve the state invariants. This is the most crucial (hence
-  difficult) step. We keep executing synthesis process until it generates no
-  more rules.
-\item By (1) and (3), we see that synthesis process preserves the refinement
-  condition. Note again that correctness is orthogonal to liveness.
+\item Initial correctness: we begin by proving the correctness of
+  $\mathcal{I}_0$. Formally, we prove $\mathcal{I}_0 \sqsubseteq
+  \mathcal{S}$. It is immediately proven when we show that $R$ is a
+  \emph{simulation} between $\mathcal{I}_0$ and $\mathcal{S}$. Note that we
+  indeed expect a user provides $R$ enough to prove the correctness. Moreover,
+  even with the initial system $\mathcal{I}_0$, the correctness should be
+  provable, while the liveness might not be provable (no rules to proceed).
+\item Preservation: now we prove that any rules $\{ r_j \}$ (state transitions)
+  generated by a synthesis step ($\hookrightarrow$) preserve $R$. This is the
+  most crucial (hence difficult) step. Letting $\mathcal{I}_{i+1} \triangleq
+  \mathcal{I}_i + \{ r_j \}$, we should be able to prove $\mathcal{I}_i
+  \sqsubseteq \mathcal{S} \to \mathcal{I}_{i+1} \sqsubseteq \mathcal{S}$, by
+  using the fact that the rules $\{ r_j \}$ preserve $R$.
+\item The fixpoint: we keep executing synthesis steps until it generates no more
+  rules. By (1) and (2), we finally show $\mathcal{I}_\infty \sqsubseteq
+  \mathcal{S}$, where $\mathcal{I}_\infty$ is the final synthesized system.
 \end{enumerate}
-
-\subsection{Proving the Preservation of Invariants}
-
-TBD.
 
 \end{document}
 
