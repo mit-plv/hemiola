@@ -38,10 +38,12 @@
 \newcommand{\objSetRq}[2]{\ensuremath{#1.\texttt{setRq(}#2\texttt{)}}}
 \newcommand{\objSetRs}[1]{\ensuremath{#1:\texttt{setRs()}}}
 
+\newcommand{\intGetRq}[2]{\ensuremath{#1 \leadsto #2.\texttt{getRq()}}}
+\newcommand{\intGetRs}[3]{\ensuremath{#1 \leadsto #2.\texttt{getRs(}#3\texttt{)}}}
 \newcommand{\intSetRq}[2]{\ensuremath{#1 \leadsto #2.\texttt{setRq()}}}
 \newcommand{\intSetRs}[2]{\ensuremath{#1 \leadsto #2.\texttt{setRs()}}}
 \newcommand{\intInvRq}[2]{\ensuremath{#1 \leadsto #2.\texttt{invRq()}}}
-\newcommand{\intInvRs}[2]{\ensuremath{#1 \leadsto #2.\texttt{invRs()}}}
+\newcommand{\intInvRs}[3]{\ensuremath{#1 \leadsto #2.\texttt{invRs(}#3\texttt{)}}}
 
 \newcommand{\msgrule}[4]{\ensuremath{#1\vdash \{ #2 \} \xrightarrow{#3} \{ #4 \}}}
 
@@ -154,20 +156,19 @@ User inputs are as follows:
 Let's take a look at some simple cases first, where interleavings do not happen.
 
 \paragraph{Case 1}
-If a precondition for a request holds, then corresponding state transition
-happens immediately; \eg{}, for a request $\objGetRq{C_1}$ with an initial
-state:
+The first case is about when a local state is in a good shape enough to respond
+immediately. For a request $\objGetRq{C_1}$ with the initial state:
 
 \begin{enumerate}
-\item Initially (currently) $\stOf{C_1} = S$, and we assume that the whole state
-  is stable now. Based on this assumption, we infer the whole state as detailed
-  as possible. By the definition of $R_0$, we are currently on $\{ P(\cdot, S);
-  C_1(v, S); C_2(v, S) \}\ R_0\ S(v)$ for some $v$.
-\item Now let's draw a commutative diagram (about $R_0$) for the transition:
+\item Initially $\stOf{C_1} = S$, and we assume that the current state is stable
+  now. Based on this assumption, we \emph{infer} the whole state as detailed as
+  possible. By the definition of $R_0$, the state should have a shape of $\{
+  P(\cdot, S); C_1(v, S); C_2(v, S) \}\ R_0\ S(v)$ for some $v$.
+\item Now let's draw a commutative simulation diagram for the transition:
   \begin{figure}[h]
     \begin{tikzcd}[column sep=huge]
       \{ P(\cdot, S); C_1(v, S); C_2(v, S) \}
-      \arrow[r, "\objGetRs{S}{v}"] \arrow[d, dash, "R_0"] &
+      \arrow[r, "\objGetRs{C_1}{v}"] \arrow[d, dash, "R_0"] &
       \{ P(?, ?); C_1(?, ?); C_2(?, ?) \} \arrow[d, dash, "R_0"] \\
       S(v) \arrow[r, "\objGetRs{S}{v}"] &
       S(v)
@@ -180,24 +181,25 @@ state:
   C_2(?, ?) \}$ (\emph{note}: when we define $R_0$ as an inductive relation,
   hopefully Coq's $\texttt{eauto}$ would find the answer).
 \item In this case, we can simply fill $\{ P(\cdot, S); C_1(v, S); C_2(v, S) \}$
-  to satisfy the commutativity. There is no need for additional requests to
-  others, so we give the immediate response.
+  to satisfy the commutativity (by Coq's $\texttt{eassumption}$?). This is a
+  silent step, so there is no need for additional requests to others; we give
+  the immediate response.
 \end{enumerate}
 
 \paragraph{Case 2}
-If a precondition does not hold, then the object has to make additional requests
-to other objects. Right after it receives corresponding responses, a state
-transition happens. Below is a scenario for a request $\objSetRq{C_1}{47}$:
+The second case is about when additional requests are required to make the local
+state in a good shape. Below is a scenario for a request $\objSetRq{C_1}{47}$
+with the initial state:
 
 \begin{enumerate}
 \item As we did in Case 1, given the current state $\stOf{C_1} = S$, we infer
-  the whole state using $R_0$. We get $\{ P(?, S); C_1(v, S); C_2(v, S) \}$ for
-  some $v$.
+  the whole state using $R_0$. We get $\{ P(\cdot, S); C_1(v, S); C_2(v, S) \}$
+  for some $v$.
 \item Below is the diagram for the case:
   \begin{figure}[h]
     \begin{tikzcd}[column sep=huge]
       \{ P(\cdot, S); C_1(v, S); C_2(v, S) \}
-      \arrow[r, Rightarrow, "\objSetRs{S}"] \arrow[d, dash, "R_0"] &
+      \arrow[r, Rightarrow, "\objSetRs{C_1}"] \arrow[d, dash, "R_0"] &
       \{ P(?, ?); C_1(?, ?); C_2(?, ?) \} \arrow[d, dash, "R_0"] \\
       S(v) \arrow[r, "\objSetRs{S}"] &
       S(47)
@@ -205,11 +207,15 @@ transition happens. Below is a scenario for a request $\objSetRq{C_1}{47}$:
     \caption{A commutative diagram for $\objSetRq{C_1}{47}$}
     \label{fig:comm-diagram-setrq}
   \end{figure}
-\item While there are a number of possible instances to fill $\{ P(?, ?); C_1(?,
-  ?); C_2(?, ?) \}$, let's assume for now we automatically chose $\{ P(\cdot,
-  M); C_1(47, M); C_2(\cdot, I) \}$. We will discuss this in later sections.
-\item Now a predicated message is generated: $\{ C_1: \stOf{C_1} = M \wedge
-  \valOf{C_1} = 47; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item We have to fill the unknowns (``$?$'') using the only information we have:
+  $\{ P(?, ?); C_1(?, ?); C_2(?, ?) \}\ R_0\ S(47)$. While there are a number of
+  possible instances, let's assume for now we automatically chose $\{ P(\cdot,
+  M); C_1(47, M); C_2(\cdot, I) \}$. Note that $\{ P(\cdot, S); C_1(47, S);
+  C_2(47, S) \}\ R_0\ S(47)$ is also possible (and synthesizable!), so the
+  question here is how to choose a ``good'' instance.
+\item Now we generate a predicated message to make a request to others: $\{ C_1:
+  \stOf{C_1} = M \wedge \valOf{C_1} = 47; C_2: \stOf{C_2} = I; P: \stOf{P} = M
+  \}$.
 \item $C_1$ holds this message \emph{as a transaction predicate}. Now it
   requests a new predicated message to $P$ (by the topology), where the new
   message does not contain predicates about $C_1$. Hence the new message is: $\{
@@ -346,7 +352,7 @@ According to the definitions of requests and responses, an object state changes
 \emph{only when} it sends a response. Forwarding requests does not involve any
 state changes.
 
-\subsection{Safe Interleavings = Correct Preconditions for Rules}
+\subsection{Correct Preconditions for Rules For Safe Interleavings}
 
 As seen in \refFig{fig:deadlock}, for the sake of safe interleavings, an object
 sometimes refuses to handle messages. During synthesis, transaction predicates
@@ -376,40 +382,77 @@ following three cases:
 \end{enumerate}
 
 For each case, we will synthesize state transitions triggered by external
-requests.
+requests. WLOG, by symmetry, we deal only with (1) and (3).
 
-\todo{describe}
+\begin{figure}
+  \begin{tikzcd}[column sep=huge]
+    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \}
+    \arrow[r, "\objGetRs{C_1}{v}"] \arrow[d, dash, "R_0"] &
+    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \} \arrow[d, dash, "R_0"] \\
+    S(v) \arrow[r, "\objGetRs{S}{v}"] &
+    S(v)
+  \end{tikzcd}
+  \begin{tikzcd}[column sep=huge]
+    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \}
+    \arrow[r, "\objSetRs{C_1}"] \arrow[d, dash, "R_0"] &
+    \{ P(\cdot, M); C_1(v', M); C_2(\cdot, I) \} \arrow[d, dash, "R_0"] \\
+    S(v) \arrow[r, "\objSetRs{S}"] &
+    S(v')
+  \end{tikzcd}
+  \caption{Commutative diagrams when $\stOf{C_1} = M$}
+  \label{fig:comm-diagram-status-m}
+\end{figure}
 
-\iffalse %% Below code fragment is commented out
+Let's consider possible requests to $C_1$ when the whole state has a form of
+(1). \refFig{fig:comm-diagram-status-m} shows that we can respond immediately
+both for $\objGetRq{C_1}$ and $\objSetRq{C_1}{v}$. Thus we can synthesize
+following rules (state transitions):
+
+\begin{center}
+  \msgrule{\objGetRq{C_1}}{\stOf{C_1} = M}{\objGetRs{C_1}{\valOf{C_1}}}{\top}
+\end{center}
 
 \begin{center}
   \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
 \end{center}
 
-By looking at the rule for \objGetRq{C_1}, we can deterministically know we need
-an additional rule when $\stOf{C_1} < S$. In this case, a predicated message $\{
-\stOf{C_1} = S; \stOf{C_2} \neq M; \stOf{P} \geq S \}$ is generated (why?). By
-the topology, it is sent to $P$. Similar reasoning applies to $C_2$ by symmetry.
-For $\{i, j\} = \{1, 2\}, i \neq j$:
+Next we consider the cases for $C_2$, where $\stOf{C_2} = I$.
+
+\begin{figure}[h]
+  \begin{tikzcd}[column sep=huge]
+    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \}
+    \arrow[r, Rightarrow, "\objGetRs{C_2}{v}"] \arrow[d, dash, "R_0"] &
+    \{ P(?, ?); C_1(?, ?); C_2(?, ?) \} \arrow[d, dash, "R_0"] \\
+    S(v) \arrow[r, "\objGetRs{S}{v}"] &
+    S(v)
+  \end{tikzcd}
+  \caption{A commutative diagram when $\stOf{C_2} = I$}
+  \label{fig:comm-diagram-status-i}
+\end{figure}
+
+As discussed with \refFig{fig:comm-diagram-setrq}, let's assume we automatically
+chose the instance $\{ P(\cdot, S); C_1(v, S); C_2(v, S) \}$. It is required to
+change the states of $P$ and $C_1$, thus we synthesize a rule that sends a
+message to others. In this case, by the topology, the message is sent to $P$.
 
 \begin{center}
-  \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} \neq M}{\intSetRq{C_i}{P}}{\top}, where
-  \intSetRq{C_i}{P} is mapped to $\{ \stOf{C_j} = I; \stOf{P} = M \}$.
+  \msgrule{\objGetRq{C_2}}{\stOf{C_2} = I}{\intGetRq{C_2}{P}}{\top}, where
+  \intGetRq{C_2}{P} is mapped to $\{ \stOf{C_1} = I; \stOf{P} = M \}$.
 \end{center}
 
-Following the topology, it is now time to synthesize rules for $P$; we have to
-synthesize two rules corresponding to \intSetRq{C_i}{P}, which are generated
-while synthesizing \objSetRq{C_i}{v} above.
+Following the topology, it is now time to synthesize a rule for $P$; we have to
+synthesize two rules corresponding to \intGetRq{C_2}{P}, which are generated
+while synthesizing \objGetRq{C_2} above.
 
 \begin{center}
-  \msgrule{\intSetRq{C_i}{P}}{\top}{\intInvRq{P}{C_j}}{\top}, where
-  \intInvRq{P}{C_j} is mapped to $\{ \stOf{C_j} = I \}$.
+  \msgrule{\intGetRq{C_2}{P}}{\top}{\intInvRq{P}{C_1}}{\top}, where
+  \intInvRq{P}{C_1} is mapped to $\{ \stOf{C_1} = I \}$.
 \end{center}
 
-Lastly, (request) rules for $C_j$ are synthesized as below.
+Lastly, a rule for $C_1$ is synthesized as below:
 
 \begin{center}
-  \msgrule{\intInvRq{P}{C_j}}{\top}{\intInvRs{C_j}{P}}{\stOf{C_j} = I}
+  \msgrule{\intInvRq{P}{C_1}}{\top}{\intInvRs{C_1}{P}{\valOf{C_1}}}{\stOf{C_1} = S}
 \end{center}
 
 Synthesizing response rules is quite trivial; when an object receives a
@@ -418,34 +461,33 @@ forward the response or not. Basically, an object forwards a response when it
 confirms all related transaction predicates are satisfied.
 
 \begin{center}
-  \msgrule{\intInvRs{C_j}{P}}{\top}{\intSetRs{P}{C_i}}{\stOf{P} = M}
+  \msgrule{\intInvRs{C_1}{P}{v}}{\top}{\intGetRs{P}{C_2}{v}}{\stOf{P} = S}
 \end{center}
 
 \begin{center}
-  \msgrule{\intSetRs{P}{C_i}}{\top}{\objSetRs{C_i}}{\stOf{C_i} = M \wedge
-    \valOf{C_i} = v}
+  \msgrule{\intGetRs{P}{C_2}{v}}{\top}{\objGetRs{C_2}{v}}{\stOf{C_2} = S \wedge
+    \valOf{C_2} = v}
 \end{center}
 
-Note that $v$ in \intSetRs{P}{C_i} comes from the original request; we should
-hold the value in the object ($C_i$) until it receives the response.
-
-\refFig{fig:synthesized-rules-naive} is the synthesized rules, without
-considering safe interleavings:
-
-\begin{figure}[h]
+\begin{figure}
   \begin{eqnarray*}
     C_i\ \textrm{handles}: &
-    \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \\
-    & \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} \neq M}{\intSetRq{C_i}{P}}{\top} \\
-    & \msgrule{\intInvRq{P}{C_i}}{\top}{\intInvRs{C_i}{P}}{\stOf{C_i} = I} \\
-    & \msgrule{\intSetRs{P}{C_i}}{\top}{\objSetRs{C_i}}{\stOf{C_i} = M \wedge \valOf{C_i} = v} \\
+    \msgrule{\objGetRq{C_i}}{\stOf{C_i} = S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \\
+    & \msgrule{\objGetRq{C_i}}{\stOf{C_i} = M}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \\
+    & \msgrule{\objGetRq{C_i}}{\stOf{C_i} = I}{\intGetRq{C_i}{P}}{\top} \\
+    & \msgrule{\intInvRq{P}{C_i}}{\top}{\intInvRs{C_i}{P}{\valOf{C_i}}}{\stOf{C_i} = I} \\
+    & \msgrule{\intGetRs{P}{C_i}{v}}{\top}{\objGetRs{C_i}{v}}{\stOf{C_i} = S \wedge \valOf{C_i} = v} \\
     P\ \textrm{handles}: &
-    \msgrule{\intInvRs{C_j}{P}}{\top}{\intSetRs{P}{C_i}}{\stOf{P} = M} \\
-    & \msgrule{\intSetRq{C_i}{P}}{\top}{\intInvRq{P}{C_j}}{\top} \\
+    \msgrule{\intInvRs{C_j}{P}{v}}{\top}{\intGetRs{P}{C_i}{v}}{\stOf{P} = S} \\
+    & \msgrule{\intGetRq{C_i}{P}}{\top}{\intInvRq{P}{C_j}}{\top} \\
   \end{eqnarray*}
   \caption{Synthesized rules without considering safe interleavings}
   \label{fig:synthesized-rules-naive}
 \end{figure}
+
+\refFig{fig:synthesized-rules-naive} is the synthesized rules so far, without
+considering safe interleavings. All other rules (including a series of rules for
+``set'') can be synthesized in a very similar way.
 
 \subsection{Synthesizing Preconditions}
 
@@ -455,13 +497,14 @@ some preconditions for safe interleavings.
 \begin{figure}[h]
   \begin{eqnarray*}
     C_i\ \textrm{handles}: &
-    \msgrule{\objSetRq{C_i}{v}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \\
-    & \msgrule{\objSetRq{C_i}{v}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} \neq M}{\intSetRq{C_i}{P}}{\underline{\trsOf{C_i} = \trsYes{}}} \\
-    & \msgrule{\intInvRq{P}{C_i}}{\top}{\intInvRs{C_i}{P}}{\stOf{C_i} = I} \\
-    & \msgrule{\intSetRs{P}{C_i}}{\top}{\objSetRs{C_i}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = M \wedge \valOf{C_i} = v} \\
+    \msgrule{\objGetRq{C_i}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \\
+    & \msgrule{\objGetRq{C_i}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = M}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \\
+    & \msgrule{\objGetRq{C_i}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = I}{\intGetRq{C_i}{P}}{\underline{\trsOf{C_i} = \trsYes{}}} \\
+    & \msgrule{\intInvRq{P}{C_i}}{\top}{\intInvRs{C_i}{P}{\valOf{C_i}}}{\stOf{C_i} = I} \\
+    & \msgrule{\intGetRs{P}{C_i}{v}}{\top}{\objGetRs{C_i}{v}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{C_i} = S \wedge \valOf{C_i} = v} \\
     P\ \textrm{handles}: &
-    \msgrule{\intInvRs{C_j}{P}}{\top}{\intSetRs{P}{C_i}}{\underline{\trsOf{P} = \trsNo{}} \wedge \stOf{P} = M} \\
-    & \msgrule{\intSetRq{C_i}{P}}{\underline{\trsOf{P} = \trsNo{}}}{\intInvRq{P}{C_j}}{\underline{\trsOf{P} = \trsYes{}}} \\
+    \msgrule{\intInvRs{C_j}{P}{v}}{\top}{\intGetRs{P}{C_i}{v}}{\underline{\trsOf{C_i} = \trsNo{}} \wedge \stOf{P} = S} \\
+    & \msgrule{\intGetRq{C_i}{P}}{\underline{\trsOf{C_i} = \trsNo{}}}{\intInvRq{P}{C_j}}{\underline{\trsOf{C_i} = \trsYes{}}} \\
   \end{eqnarray*}
   \caption{Synthesized rules}
   \label{fig:synthesized-rules}
@@ -471,8 +514,6 @@ some preconditions for safe interleavings.
 \trsYes{} if the target object holds a predicate. Remind that the precondition
 of \intInvRq{P}{C_i} does not have a predicate about \trsOf{C_i}; if the object
 has it, a deadlock occurs.
-
-\fi %% The comment ends here.
 
 \section{Proving the Correctness of Synthesis}
 

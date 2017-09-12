@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics Synthesis.
+Require Import Common FMap Syntax Semantics Simulation.
 
 Set Implicit Arguments.
 
@@ -170,7 +170,55 @@ Section System.
 End System.
 
 
-Section Simulation.
+Section Sim.
+  Variables extIdx1 extIdx2: nat.
 
-End Simulation.
+  Inductive ValidValue: State -> Value -> Prop :=
+  | VVM1: forall s ost vv,
+      (st_oss s)@[child1Idx] = Some ost ->
+      ost@[statusIdx] = Some (VNat stM) ->
+      ost@[valueIdx] = Some vv ->
+      ValidValue s vv
+  | VVM2: forall s ost vv,
+      (st_oss s)@[child2Idx] = Some ost ->
+      ost@[statusIdx] = Some (VNat stM) ->
+      ost@[valueIdx] = Some vv ->
+      ValidValue s vv
+  | VVS: forall s ost1 ost2 vv,
+      (st_oss s)@[child1Idx] = Some ost1 ->
+      (st_oss s)@[child2Idx] = Some ost2 ->
+      ost1@[statusIdx] = Some (VNat stS) ->
+      ost2@[statusIdx] = Some (VNat stS) ->
+      ost1@[valueIdx] = Some vv ->
+      ost2@[valueIdx] = Some vv ->
+      ValidValue s vv.
+
+  Inductive SvmR: State -> State -> Prop :=
+  | SvmRIntro: forall ist sst st v,
+      (st_oss sst)@[specIdx] = Some st ->
+      st@[valueIdx] = Some v ->
+      ValidValue ist v ->
+      SvmR ist sst.
+
+  Theorem svm_simulation_init:
+     SvmR (getStateInit (impl0 extIdx1 extIdx2))
+          (getStateInit (spec extIdx1 extIdx2)).
+  Proof.
+    econstructor; try reflexivity.
+    eapply VVS; reflexivity.
+  Qed.
+  Hint Resolve svm_simulation_init.
+
+  Theorem svm_simulation: Simulates SvmR (impl0 extIdx1 extIdx2) (spec extIdx1 extIdx2).
+  Proof.
+    unfold Simulates; intros.
+  Admitted.
+  Hint Resolve svm_simulation.
+
+  Theorem impl0_refines_spec: (impl0 extIdx1 extIdx2) ⊑ (spec extIdx1 extIdx2).
+  Proof.
+    apply simulation_implies_refinement with (sim:= SvmR); auto.
+  Qed.
+
+End Sim.
 
