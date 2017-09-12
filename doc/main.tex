@@ -4,6 +4,8 @@
 \usepackage{textcomp}
 \usepackage{mathtools}
 \usepackage{proof}
+\usepackage{tikz} \usetikzlibrary{cd}
+\usepackage{color}
 
 \begin{document}
 \title{Synthesizing Protocols for Message-Passing Systems}
@@ -22,6 +24,8 @@
 \maketitle
 
 %% Commands
+
+\newcommand{\todo}[1]{\textcolor{red}{TODO}: #1}
 
 \newcommand{\valOf}[1]{\ensuremath{#1.\texttt{v}}}
 \newcommand{\stOf}[1]{\ensuremath{#1.\texttt{st}}}
@@ -52,7 +56,7 @@
 \section{User Inputs}
 
 In order to synthesize a protocol, a user should provide $(\mathcal{I}_0,
-\mathcal{S}, R)$:
+\mathcal{S}, R_0)$:
 
 \begin{itemize}
 \item $\mathcal{I}_0$ is an initial system, consisting of
@@ -60,21 +64,16 @@ In order to synthesize a protocol, a user should provide $(\mathcal{I}_0,
   \item A topology among objects, including the number of channels between any
     two objects.
   \item Type of the whole state (and corresponding initial value)
-  \item Initial state transitions (by external interfaces)
+  \item \emph{No state transitions}!
   \end{enumerate}
 \item $\mathcal{S}$ is the target specification system.
-\item $R: \textsf{State} \to \textsf{State} \to \textsf{Prop}$ is a simulation
-  relation that \emph{contains invariants of desired implementations}.
+\item $R_0: \textsf{State} \to \textsf{State} \to \textsf{Prop}$ is a simulation
+  relation connecting \emph{only the stable states of implementations} to their
+  corresponding states of the spec. In other words, $R_0$ does not include
+  relations about \emph{transient states} in implementations. We will eventually
+  prove that during a synthesis process $R_0$ always holds for each stable
+  state, while the relation may not hold for transient states.
 \end{itemize}
-
-\paragraph{About User Inputs}
-Expecting $\mathcal{I}_0$ and $\mathcal{S}$ from users is natural. Whether users
-should provide $R$ explicitly worths discussing. Maybe it is fine if a user just
-give a set of invariants just about a desired implementation
-$\mathcal{I}$. However, here I claim that generally it is easier for users to
-provide the relation between $\mathcal{I}$ and $\mathcal{S}$ than to provide the
-complete set of invariants (enough to prove the correctness) just about
-$\mathcal{I}$.
 
 \paragraph{Inputs for the Running Example}
 Our running example is a two-level cache structure with a parent and two
@@ -98,11 +97,6 @@ User inputs are as follows:
     \item $P, C_1, C_2: \{ \texttt{v}: \mathbb{N};\ \texttt{st}: \{M, S, I\} \}$.
     \item Initial values: $P(0, S), C_1(0, S), C_2(0, S)$.
     \end{itemize}
-  \item Initial state transitions:
-    \begin{eqnarray}
-      \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \label{trs1} \\
-      \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \label{trs2}
-    \end{eqnarray}
   \end{enumerate}
 \item For $\mathcal{S}$:
   \begin{enumerate}
@@ -122,15 +116,11 @@ User inputs are as follows:
       \msgrule{\objSetRq{S}{v}}{\top}{\objSetRs{S}}{\valOf{S} = v} \label{trs4}
     \end{eqnarray}
   \end{enumerate}
-\item For $R$:
+\item For $R_0$:
   \begin{itemize}
-  \item Invariants:
-    \begin{align}
-      \stOf{C_1} = M \to \stOf{C_2} = I \label{inv1} \\
-      \stOf{C_2} = M \to \stOf{C_1} = I \label{inv2} \\
-      \stOf{P} \geq \texttt{max}(\stOf{C_1}, \stOf{C_2}) \label{inv3}
-    \end{align}
-  \item Simulation: TBD.
+  \item $\{ v\ |\ (\{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \},\ S(v)) \} \subset R_0$
+  \item $\{ v\ |\ (\{ P(\cdot, M); C_1(\cdot, I); C_2(v, M) \},\ S(v)) \} \subset R_0$
+  \item $\{ v\ |\ (\{ P(\cdot, S); C_1(v, S); C_2(v, S) \},\ S(v)) \} \subset R_0$
   \end{itemize}
 \end{itemize}
 
@@ -169,22 +159,57 @@ happens immediately; \eg{}, for a request $\objGetRq{C_1}$ with an initial
 state:
 
 \begin{enumerate}
-\item It requires $\stOf{C_1} \geq S$ by \refTrs{trs2}.
-\item The precondition already holds since $\stOf{C_1} = S$, thus $C_1$
-  immediately responds.
+\item Initially (currently) $\stOf{C_1} = S$, and we assume that the whole state
+  is stable now. Based on this assumption, we infer the whole state as detailed
+  as possible. By the definition of $R_0$, we are currently on $\{ P(\cdot, S);
+  C_1(v, S); C_2(v, S) \}\ R_0\ S(v)$ for some $v$.
+\item Now let's draw a commutative diagram (about $R_0$) for the transition:
+  \begin{figure}[h]
+    \begin{tikzcd}[column sep=huge]
+      \{ P(\cdot, S); C_1(v, S); C_2(v, S) \}
+      \arrow[r, "\objGetRs{S}{v}"] \arrow[d, dash, "R_0"] &
+      \{ P(?, ?); C_1(?, ?); C_2(?, ?) \} \arrow[d, dash, "R_0"] \\
+      S(v) \arrow[r, "\objGetRs{S}{v}"] &
+      S(v)
+    \end{tikzcd}
+    \caption{A commutative diagram for $\objGetRq{C_1}$}
+    \label{fig:comm-diagram-getrq}
+  \end{figure}
+  
+  Our mission here is to (automatically) find entries of $\{ P(?, ?); C_1(?, ?);
+  C_2(?, ?) \}$ (\emph{note}: when we define $R_0$ as an inductive relation,
+  hopefully Coq's $\texttt{eauto}$ would find the answer).
+\item In this case, we can simply fill $\{ P(\cdot, S); C_1(v, S); C_2(v, S) \}$
+  to satisfy the commutativity. There is no need for additional requests to
+  others, so we give the immediate response.
 \end{enumerate}
 
 \paragraph{Case 2}
-If a precondition does not hold, then an object makes additional requests to
-other objects. Right after it receives a corresponding response, a state
+If a precondition does not hold, then the object has to make additional requests
+to other objects. Right after it receives corresponding responses, a state
 transition happens. Below is a scenario for a request $\objSetRq{C_1}{47}$:
 
 \begin{enumerate}
-\item $\stOf{C_1} = M$ is required by \refTrs{trs1}.
-\item $\stOf{C_2} = I$ and $\stOf{P} = M$ are also required by \refInv{inv1} and
-  \refInv{inv3}.
-\item Above reasoning generates a predicated message: $\{ C_1: \stOf{C_1} = M;
-  C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
+\item As we did in Case 1, given the current state $\stOf{C_1} = S$, we infer
+  the whole state using $R_0$. We get $\{ P(?, S); C_1(v, S); C_2(v, S) \}$ for
+  some $v$.
+\item Below is the diagram for the case:
+  \begin{figure}[h]
+    \begin{tikzcd}[column sep=huge]
+      \{ P(\cdot, S); C_1(v, S); C_2(v, S) \}
+      \arrow[r, Rightarrow, "\objSetRs{S}"] \arrow[d, dash, "R_0"] &
+      \{ P(?, ?); C_1(?, ?); C_2(?, ?) \} \arrow[d, dash, "R_0"] \\
+      S(v) \arrow[r, "\objSetRs{S}"] &
+      S(47)
+    \end{tikzcd}
+    \caption{A commutative diagram for $\objSetRq{C_1}{47}$}
+    \label{fig:comm-diagram-setrq}
+  \end{figure}
+\item While there are a number of possible instances to fill $\{ P(?, ?); C_1(?,
+  ?); C_2(?, ?) \}$, let's assume for now we automatically chose $\{ P(\cdot,
+  M); C_1(47, M); C_2(\cdot, I) \}$. We will discuss this in later sections.
+\item Now a predicated message is generated: $\{ C_1: \stOf{C_1} = M \wedge
+  \valOf{C_1} = 47; C_2: \stOf{C_2} = I; P: \stOf{P} = M \}$.
 \item $C_1$ holds this message \emph{as a transaction predicate}. Now it
   requests a new predicated message to $P$ (by the topology), where the new
   message does not contain predicates about $C_1$. Hence the new message is: $\{
@@ -199,8 +224,9 @@ transition happens. Below is a scenario for a request $\objSetRq{C_1}{47}$:
 \item $P$ receives the response. Looking at its transaction predicate, now it
   finds out the only remaining obligation is about itself. It changes its status
   to $M$, and responds to $C_1$.
-\item $C_1$ receives the response. It changes its status to $M$. Since the
-  precondition holds, finally it executes $\objSetRq{C_1}{47}$.
+\item $C_1$ receives the response. Finally it makes the state transition,
+  changing its status to $M$ and its value to $47$, with a label
+  $\objSetRq{C_1}{47}$.
 \end{enumerate}
 
 \subsection{Concurrent Cases}\label{concurrent-cases}
@@ -335,20 +361,30 @@ deadlocks.
 
 \subsection{A Case Study}
 
-Here we synthesize a protocol for our running example, particularly for ``set.''
-Let's first synthesize message handlers (rules) not worrying about
-interleavings.
+Here we synthesize a protocol for our running example. Let's first synthesize
+message handlers (rules) not worrying about interleavings.
 
-\paragraph{Starting with State Transitions}
+\paragraph{Starting by Looking at Stable States}
 
-We begin by synthesizing trivial rules that implement the state transitions
-given by a user. For $i = 1, 2$:
+According to the definition of $R_0$, the whole state always belongs to
+following three cases:
+
+\begin{enumerate}
+\item $\{ v\ |\ (\{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \},\ S(v)) \}$
+\item $\{ v\ |\ (\{ P(\cdot, M); C_1(\cdot, I); C_2(v, M) \},\ S(v)) \}$
+\item $\{ v\ |\ (\{ P(\cdot, S); C_1(v, S); C_2(v, S) \},\ S(v)) \}$
+\end{enumerate}
+
+For each case, we will synthesize state transitions triggered by external
+requests.
+
+\todo{describe}
+
+\iffalse %% Below code fragment is commented out
 
 \begin{center}
   \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
 \end{center}
-
-\paragraph{Handling Other Preconditions}
 
 By looking at the rule for \objGetRq{C_1}, we can deterministically know we need
 an additional rule when $\stOf{C_1} < S$. In this case, a predicated message $\{
@@ -435,6 +471,8 @@ some preconditions for safe interleavings.
 \trsYes{} if the target object holds a predicate. Remind that the precondition
 of \intInvRq{P}{C_i} does not have a predicate about \trsOf{C_i}; if the object
 has it, a deadlock occurs.
+
+\fi %% The comment ends here.
 
 \section{Proving the Correctness of Synthesis}
 
