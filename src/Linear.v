@@ -22,17 +22,17 @@ Definition procSubHistory (sys: System) (hst: list Msg) :=
 (* For a given system [sys] and its trace [tr], the history of [tr] is an
  * object subhistory with respect to [sys], where [lbl_hdl] is ignored.
  *)
-Fixpoint historyOf (sys: System) (tr: Trace) :=
+Fixpoint historyOf (sys: System) (tr: list Label) :=
   match tr with
   | nil => nil
-  | {| elbl_ins := ins; elbl_outs := outs |} :: tr' =>
+  | {| lbl_ins := ins; lbl_outs := outs |} :: tr' =>
     (sysSubHistory sys (outs ++ ins)) ++ (historyOf sys tr')
   end.
 
 Inductive History : System -> list Msg -> Prop :=
-| Hist: forall sys hst,
-    Behavior sys hst ->
-    History sys (historyOf sys hst).
+| Hist: forall sys ll st,
+    steps sys (getStateInit sys) ll st ->
+    History sys (historyOf sys ll).
 
 (* A history consisting only of requests and matching responses. *)
 Inductive Complete: list Msg -> Prop :=

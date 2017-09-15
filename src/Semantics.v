@@ -75,17 +75,20 @@ Section Semantics.
   Definition buildLabel ins hdl outs :=
     {| lbl_ins := ins; lbl_hdl := hdl; lbl_outs := outs |}.
 
+  Definition emptyLabel :=
+    {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |}.
+
   Definition ObjectStates := M.t StateT.
 
   (* A set of messages are "valid outputs" if
    * 1) they are from the same source [idx],
    * 2) each target is not the source, and
-   * 3) all targets are different to each others.
+   * 3) all targets (pair of msgTo and channel) are different to each others.
    * TODO? syntax may have to ensure [ValidOuts], or by well-formedness.
    *)
   Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
     Forall (fun m => msgFrom (msg_id m) = idx /\ msgTo (msg_id m) <> idx) msgs /\
-    NoDup (map (fun m => msgTo (msg_id m)) msgs).
+    NoDup (map (fun m => (msgTo (msg_id m), mid_chn (msg_id m))) msgs).
 
   (* [step_obj] is for a step by a single object that either handles an 
    * internal message, or receives an external message.
@@ -98,7 +101,7 @@ Section Semantics.
    *)
   Inductive step_obj (obj: Object): StateT -> MsgsFrom -> Label ->
                                     StateT -> MsgsFrom -> Prop :=
-  | SoSlt: forall os mf, step_obj obj os mf (buildLabel nil None nil) os mf
+  | SoSlt: forall os mf, step_obj obj os mf emptyLabel os mf
   | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
       firstMF fidx fchn mf = Some fmsg ->
       msg_id fmsg = pmsg_mid fpmsg ->
@@ -118,16 +121,6 @@ Section Semantics.
                os (enqMF (msgFrom (msg_id emsg))
                          (mid_chn (msg_id emsg))
                          emsg mf).
-
-  Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
-    enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (mid_chn (msg_id msg)) msg msgs.
-  
-  Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages): Messages :=
-    match nmsgs with
-    | nil => msgs
-    | msg :: nmsgs' =>
-      distributeMsgs nmsgs' (distributeMsg msg msgs)
-    end.
 
   Record State := { st_oss: ObjectStates; st_msgs: Messages }.
 
@@ -172,9 +165,6 @@ Section Semantics.
     end.
   Infix "+l" := combineLabel (at level 30).
 
-  Definition emptyLabel :=
-    {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |}.
-
   (* [step_sys] either lifts a step by [step_obj] to a given system, or
    * combines two steps.
    *)
@@ -183,12 +173,12 @@ Section Semantics.
                    oims mf lbl pos pmf,
       In obj (sys_objs sys) ->
       obj_idx obj = idx ->
-      M.find idx oss = Some os ->
-      M.find idx oims = Some mf -> 
+      oss@[idx] = Some os ->
+      oims@[idx] = Some mf -> 
       step_obj obj os mf lbl pos pmf ->
       step_sys sys {| st_oss := oss; st_msgs := oims |} lbl
-               {| st_oss := M.add idx pos oss;
-                  st_msgs := M.add idx pmf oims |}
+               {| st_oss := oss +[idx <- pos];
+                  st_msgs := oims +[idx <- pmf] |}
   | SsComb:
       forall st11 lbl1 st12 st21 lbl2 st22,
         step_sys sys st11 lbl1 st12 ->
@@ -215,6 +205,61 @@ Section Semantics.
         Hidden sys l ->
         step sys st1 l st2.
 
+  Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
+    enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (mid_chn (msg_id msg)) msg msgs.
+  
+  Fixpoint distributeMsgs (nmsgs: list Msg) (msgs: Messages): Messages :=
+    match nmsgs with
+    | nil => msgs
+    | msg :: nmsgs' =>
+      distributeMsgs nmsgs' (distributeMsg msg msgs)
+    end.
+  
+  Definition intOuts (sys: System) (outs: list Msg) :=
+    filter (fun m => isInternal sys (msgTo (msg_id m))) outs.
+  Definition extOuts (sys: System) (outs: list Msg) :=
+    filter (fun m => isExternal sys (msgTo (msg_id m))) outs.
+
+  Inductive step_det (sys: System) : State -> Label -> State -> Prop :=
+  | SsdSlt: forall s, step_det sys s emptyLabel s
+  | SsdInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
+      In obj (sys_objs sys) ->
+      idx = obj_idx obj ->
+      oss@[idx] = Some os ->
+      oims@[idx] = Some mf ->
+
+      firstMF fidx fchn mf = Some fmsg ->
+      msg_id fmsg = pmsg_mid fpmsg ->
+      msgTo (msg_id fmsg) = idx ->
+      In fpmsg (obj_trs obj) ->
+      pmsg_precond fpmsg os ->
+      pmsg_postcond fpmsg os (msg_value fmsg) pos ->
+      outs = pmsg_outs fpmsg os (msg_value fmsg) ->
+      ValidOuts idx outs ->
+
+      step_det sys {| st_oss := oss; st_msgs := oims |}
+               (buildLabel nil (Some fmsg) (extOuts sys outs))
+               {| st_oss := oss +[ idx <- pos ];
+                  st_msgs := distributeMsgs (intOuts sys outs) oims |}
+  | SsdExt: forall from emsgs oss oims,
+      ~ In from (indicesOf sys) ->
+      emsgs <> nil ->
+      ValidOuts from emsgs ->
+      SubList (map (fun m => msgTo (msg_id m)) emsgs) (indicesOf sys) ->
+      step_det sys {| st_oss := oss; st_msgs := oims |}
+               (buildLabel emsgs None nil)
+               {| st_oss := oss; st_msgs := distributeMsgs emsgs oims |}.
+
+  Theorem step_step_det:
+    forall sys s1 l s2, step sys s1 l s2 -> step_det sys s1 l s2.
+  Proof.
+  Admitted.
+
+  Theorem step_det_step:
+    forall sys s1 l s2, step_det sys s1 l s2 -> step sys s1 l s2.
+  Proof.
+  Admitted.
+
   (* Note that the head is the youngest *)
   Inductive steps (sys: System) : State -> list Label -> State -> Prop :=
   | StepsNil: forall st, steps sys st nil st
@@ -228,26 +273,47 @@ Section Semantics.
   Fixpoint getObjectStatesInit {Trs} (obs: list (ObjectFrame Trs)) : ObjectStates :=
     match obs with
     | nil => M.empty _
-    | obj :: sys' =>
-      M.add (obj_idx obj)
-            (obj_state_init obj)
-            (getObjectStatesInit sys')
+    | obj :: sys' => (getObjectStatesInit sys') +[obj_idx obj <- obj_state_init obj]
     end.
 
   Definition getStateInit {Trs} (sys: SystemFrame Trs) :=
     {| st_oss := getObjectStatesInit (sys_objs sys);
-       st_msgs := M.empty _ |}.
+       st_msgs := [] |}.
 
   Record ELabel :=
-    { elbl_ins : list Msg;
-      elbl_outs : list Msg
+    { elbl_ins : list Value;
+      elbl_outs : list Value
     }.
 
   Definition toELabel (l: Label): option ELabel :=
     match l with
     | {| lbl_ins := nil; lbl_outs := nil |} => None
-    | _ => Some {| elbl_ins := lbl_ins l; elbl_outs := lbl_outs l |}
+    | _ => Some {| elbl_ins := map msg_value (lbl_ins l);
+                   elbl_outs := map msg_value (lbl_outs l) |}
     end.
+
+  Lemma toELabel_Some_1:
+    forall ins hdl outs,
+      ins <> nil ->
+      toELabel (buildLabel ins hdl outs) =
+      Some {| elbl_ins := map msg_value ins;
+              elbl_outs := map msg_value outs |}.
+  Proof.
+    simpl; intros.
+    destruct ins; intuition idtac.
+  Qed.
+
+  Lemma toELabel_Some_2:
+    forall ins hdl outs,
+      outs <> nil ->
+      toELabel (buildLabel ins hdl outs) =
+      Some {| elbl_ins := map msg_value ins;
+              elbl_outs := map msg_value outs |}.
+  Proof.
+    simpl; intros.
+    destruct ins; intuition idtac.
+    destruct outs; intuition idtac.
+  Qed.
 
   Definition Trace := list ELabel.
 
