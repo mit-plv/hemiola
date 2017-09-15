@@ -224,27 +224,20 @@ Section Sim.
     {| msg_id := svmMsgIdF (msg_id imsg);
        msg_value := msg_value imsg |}.
 
-  Lemma svmMsgF_value:
-    forall m, msg_value (svmMsgF m) = msg_value m.
-  Proof. reflexivity. Qed.
-
   Definition svmMsgsF (imsgs: list Msg): list Msg :=
     map svmMsgF imsgs.
 
-  Lemma svmMsgsF_value:
-    forall msgs, map msg_value (svmMsgsF msgs) = map msg_value msgs.
-  Proof.
-    induction msgs; simpl; intros; auto.
-    rewrite IHmsgs; reflexivity.
-  Qed.
+  Definition svmP (b: BLabel) :=
+    {| blbl_ins := svmMsgsF (blbl_ins b);
+       blbl_outs := svmMsgsF (blbl_outs b) |}.
 
-  Lemma svmMsgsF_validOuts:
-    forall from msgs, ValidOuts from msgs ->
-                      ValidOuts from (svmMsgsF msgs).
-  Proof.
-  Admitted.
+  (* Lemma svmMsgsF_validOuts: *)
+  (*   forall from msgs, ValidOuts from msgs -> *)
+  (*                     ValidOuts from (svmMsgsF msgs). *)
+  (* Proof. *)
+  (* Admitted. *)
 
-  Theorem svm_simulation: Simulates SvmR (impl0 extIdx1 extIdx2) (spec extIdx1 extIdx2).
+  Theorem svm_simulation: Simulates SvmR svmP (impl0 extIdx1 extIdx2) (spec extIdx1 extIdx2).
   Proof.
     unfold Simulates; intros.
 
@@ -256,7 +249,7 @@ Section Sim.
       admit.
 
     - (* external *)
-      rewrite toELabel_Some_1 by assumption.
+      rewrite toBLabel_Some_1 by assumption.
       exists {| st_oss := st_oss sst1;
                 st_msgs := distributeMsgs (svmMsgsF emsgs) (st_msgs sst1) |}.
       exists {| lbl_ins := svmMsgsF emsgs; lbl_hdl := None; lbl_outs := nil |}.
@@ -268,11 +261,10 @@ Section Sim.
           Common.dest_in; simpl; tauto.
         * destruct emsgs; auto.
           discriminate.
-        * apply svmMsgsF_validOuts; auto.
-        * clear; induction emsgs; simpl; [apply SubList_nil|].
-          admit.
-      + rewrite toELabel_Some_1 by (destruct emsgs; [auto|discriminate]).
-        rewrite svmMsgsF_value; reflexivity.
+        * admit.
+        * admit.
+      + rewrite toBLabel_Some_1 by (destruct emsgs; [auto|discriminate]).
+        reflexivity.
       + inv H.
         econstructor; eauto.
         inv H6; [eapply VVM1; eauto|eapply VVM2; eauto|eapply VVS; eauto].

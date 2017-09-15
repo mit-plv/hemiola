@@ -3,7 +3,9 @@ Require Import Common FMap Syntax Semantics.
 
 Section Simulation.
 
-  Variable sim: State -> State -> Prop.
+  Variables (sim: State -> State -> Prop)
+            (p: BLabel -> BLabel).
+
   Local Infix "≈" := sim (at level 30).
 
   Variables (impl spec: System).
@@ -13,14 +15,14 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         step impl ist1 ilbl ist2 ->
-        match toELabel ilbl with
+        match toBLabel ilbl with
         | Some b =>
           exists sst2 slbl, step spec sst1 slbl sst2 /\
-                            toELabel slbl = Some b /\
+                            toBLabel slbl = Some (p b) /\
                             ist2 ≈ sst2
         | None =>
           (exists sst2 slbl, step spec sst1 slbl sst2 /\
-                             toELabel slbl = None /\
+                             toBLabel slbl = None /\
                              ist2 ≈ sst2) \/
           ist2 ≈ sst1
         end.
@@ -33,7 +35,7 @@ Section Simulation.
       forall ihst ist2,
         steps impl ist1 ihst ist2 ->
         exists sst2 shst,
-          behaviorOf ihst = behaviorOf shst /\
+          map p (behaviorOf ihst) = behaviorOf shst /\
           steps spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
@@ -44,7 +46,7 @@ Section Simulation.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H1; [|exact H4].
-    remember (toELabel lbl) as blbl; destruct blbl as [blbl|]; simpl.
+    remember (toBLabel lbl) as blbl; destruct blbl as [blbl|]; simpl.
 
     - destruct H1 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (slbl :: _); repeat split; eauto.
@@ -60,7 +62,7 @@ Section Simulation.
 
   Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).
 
-  Theorem simulation_implies_refinement: impl ⊑ spec.
+  Theorem simulation_implies_refinement: impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.

@@ -280,47 +280,45 @@ Section Semantics.
     {| st_oss := getObjectStatesInit (sys_objs sys);
        st_msgs := [] |}.
 
-  Record ELabel :=
-    { elbl_ins : list Value;
-      elbl_outs : list Value
+  Record BLabel :=
+    { blbl_ins : list Msg;
+      blbl_outs : list Msg
     }.
 
-  Definition toELabel (l: Label): option ELabel :=
+  Definition toBLabel (l: Label): option BLabel :=
     match l with
     | {| lbl_ins := nil; lbl_outs := nil |} => None
-    | _ => Some {| elbl_ins := map msg_value (lbl_ins l);
-                   elbl_outs := map msg_value (lbl_outs l) |}
+    | _ => Some {| blbl_ins := lbl_ins l;
+                   blbl_outs := lbl_outs l |}
     end.
 
-  Lemma toELabel_Some_1:
+  Lemma toBLabel_Some_1:
     forall ins hdl outs,
       ins <> nil ->
-      toELabel (buildLabel ins hdl outs) =
-      Some {| elbl_ins := map msg_value ins;
-              elbl_outs := map msg_value outs |}.
+      toBLabel (buildLabel ins hdl outs) =
+      Some {| blbl_ins := ins; blbl_outs := outs |}.
   Proof.
     simpl; intros.
     destruct ins; intuition idtac.
   Qed.
 
-  Lemma toELabel_Some_2:
+  Lemma toBLabel_Some_2:
     forall ins hdl outs,
       outs <> nil ->
-      toELabel (buildLabel ins hdl outs) =
-      Some {| elbl_ins := map msg_value ins;
-              elbl_outs := map msg_value outs |}.
+      toBLabel (buildLabel ins hdl outs) =
+      Some {| blbl_ins := ins; blbl_outs := outs |}.
   Proof.
     simpl; intros.
     destruct ins; intuition idtac.
     destruct outs; intuition idtac.
   Qed.
 
-  Definition Trace := list ELabel.
+  Definition Trace := list BLabel.
 
   Fixpoint behaviorOf (ll: list Label): Trace :=
     match ll with
     | nil => nil
-    | l :: tr' => (toELabel l) ::> (behaviorOf tr')
+    | l :: tr' => (toBLabel l) ::> (behaviorOf tr')
     end.
 
   Inductive Behavior: System -> Trace -> Prop :=
@@ -330,12 +328,12 @@ Section Semantics.
         btr = behaviorOf tr ->
         Behavior sys btr.
 
-  Definition Refines (impl spec: System) :=
+  Definition Refines (p: BLabel -> BLabel) (impl spec: System) :=
     forall hst, Behavior impl hst ->
-                Behavior spec hst.
+                Behavior spec (map p hst).
 
 End Semantics.
 
-Infix "<=" := Refines.
-Infix "⊑" := Refines (at level 0).
+Notation "I <=[ P ] S" := (Refines P I S) (at level 30).
+Notation "I ⊑[ P ] S" := (Refines P I S) (at level 30).
 
