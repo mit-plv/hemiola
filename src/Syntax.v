@@ -90,13 +90,11 @@ Section PMsg.
 
 End PMsg.
 
-Record ObjectFrame (TrsT: Type) :=
+Record Object :=
   { obj_idx: nat;
     obj_state_init: StateT;
-    obj_trs: list TrsT;
+    obj_trs: list PMsg;
   }.
-
-Definition Object := ObjectFrame PMsg.
 
 Record Channel :=
   { chn_from: IdxT;
@@ -107,12 +105,10 @@ Record Channel :=
 Definition buildChannel from to idx :=
   {| chn_from := from; chn_to := to; chn_idx := idx |}.
 
-Record SystemFrame (TrsT: Type) :=
-  { sys_objs: list (ObjectFrame TrsT);
+Record System :=
+  { sys_objs: list Object;
     sys_chns: list Channel
   }.
-
-Definition System := SystemFrame PMsg.
 
 Definition indicesOf (sys: System) := map (fun o => obj_idx o) (sys_objs sys).
 Definition singleton (obj: Object): System :=

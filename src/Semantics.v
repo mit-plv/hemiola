@@ -27,6 +27,15 @@ Section Messages.
     | None => cs +[chn <- enq m nil]
     end.
 
+  Lemma firstC_Some_inv:
+    forall chn cs m, firstC chn cs = Some m ->
+                     exists q, cs@[chn] = Some q /\ firstQ q = Some m.
+  Proof.
+    unfold firstC; intros.
+    destruct cs@[chn]; simpl in *; [|discriminate].
+    eexists; split; auto.
+  Qed.
+
   Definition findMF (from chn: IdxT) (mf: MsgsFrom): Queue :=
     ol2l (mf@[from] >>= (fun cs => cs@[chn])).
   Definition firstMF (from chn: IdxT) (mf: MsgsFrom) :=
@@ -42,6 +51,15 @@ Section Messages.
     | None => mf +[from <- enqC chn m (M.empty _)]
     end.
 
+  Lemma firstMF_Some_inv:
+    forall from chn mf m, firstMF from chn mf = Some m ->
+                          exists cs, mf@[from] = Some cs /\ firstC chn cs = Some m.
+  Proof.
+    unfold firstMF; intros.
+    destruct mf@[from]; simpl in *; [|discriminate].
+    eexists; split; auto.
+  Qed.
+
   Definition findM (from to chn: IdxT) (msgs: Messages): Queue :=
     ol2l (msgs@[to] >>= (fun froms => froms@[from] >>= (fun cs => cs@[chn]))). 
   Definition firstM (from to chn: IdxT) (msgs: Messages) :=
@@ -56,6 +74,15 @@ Section Messages.
     | Some froms => msgs +[to <- enqMF from chn m froms]
     | None => msgs +[to <- enqMF from chn m (M.empty _)]
     end.
+
+  Lemma firstM_Some_inv:
+    forall from to chn msgs m, firstM from to chn msgs = Some m ->
+                               exists mf, msgs@[to] = Some mf /\ firstMF from chn mf = Some m.
+  Proof.
+    unfold firstM; intros.
+    destruct msgs@[to]; simpl in *; [|discriminate].
+    eexists; split; auto.
+  Qed.
 
 End Messages.
 
@@ -80,11 +107,16 @@ Section Semantics.
 
   Definition ObjectStates := M.t StateT.
 
+  Definition ValidMsgId (from to chn: IdxT) (msg: Msg) :=
+    msgFrom (msg_id msg) = from /\
+    msgTo (msg_id msg) = to /\
+    mid_chn (msg_id msg) = chn.
+
   (* A set of messages are "valid outputs" if
    * 1) they are from the same source [idx],
    * 2) each target is not the source, and
    * 3) all targets (pair of msgTo and channel) are different to each others.
-   * TODO? syntax may have to ensure [ValidOuts], or by well-formedness.
+   * TODO: syntax has to ensure [ValidOuts], or by well-formedness.
    *)
   Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
     Forall (fun m => msgFrom (msg_id m) = idx /\ msgTo (msg_id m) <> idx) msgs /\
@@ -104,12 +136,12 @@ Section Semantics.
   | SoSlt: forall os mf, step_obj obj os mf emptyLabel os mf
   | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
       firstMF fidx fchn mf = Some fmsg ->
+      ValidMsgId fidx (obj_idx obj) fchn fmsg ->
       msg_id fmsg = pmsg_mid fpmsg ->
-      msgTo (msg_id fmsg) = obj_idx obj ->
       In fpmsg (obj_trs obj) ->
       pmsg_precond fpmsg os ->
       pmsg_postcond fpmsg os (msg_value fmsg) pos ->
-      ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
+      (* ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) -> *)
       step_obj obj os mf
                (buildLabel nil (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg)))
                pos (deqMF fidx fchn mf)
@@ -137,18 +169,18 @@ Section Semantics.
     match lbl_hdl lbl1, lbl_hdl lbl2 with
     | Some _, None => SubList (lbl_ins lbl2) (lbl_outs lbl1)
     | None, Some _ => SubList (lbl_ins lbl1) (lbl_outs lbl2)
-    | None, None => exists from, ValidOuts from (lbl_ins lbl1 ++ lbl_ins lbl2)
+    | None, None => True (* exists from, ValidOuts from (lbl_ins lbl1 ++ lbl_ins lbl2) *)
     | _, _ => False
     end.
 
   Definition subtractMsgs (ms1 ms2: list Msg) :=
     filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
 
-  Definition ValidLabel (l: Label) :=
-    match lbl_hdl l with
-    | Some hmsg => lbl_ins l = nil /\ ValidOuts (msgTo (msg_id hmsg)) (lbl_outs l)
-    | None => lbl_outs l = nil /\ exists from, ValidOuts from (lbl_ins l)
-    end.
+  (* Definition ValidLabel (l: Label) := *)
+  (*   match lbl_hdl l with *)
+  (*   | Some hmsg => lbl_ins l = nil /\ ValidOuts (msgTo (msg_id hmsg)) (lbl_outs l) *)
+  (*   | None => lbl_outs l = nil /\ exists from, ValidOuts from (lbl_ins l) *)
+  (*   end. *)
 
   Definition combineLabel (lbl1 lbl2: Label) :=
     match lbl_hdl lbl1, lbl_hdl lbl2 with
@@ -230,12 +262,12 @@ Section Semantics.
 
       firstMF fidx fchn mf = Some fmsg ->
       msg_id fmsg = pmsg_mid fpmsg ->
-      msgTo (msg_id fmsg) = idx ->
+      ValidMsgId fidx idx fchn fmsg ->
       In fpmsg (obj_trs obj) ->
       pmsg_precond fpmsg os ->
       pmsg_postcond fpmsg os (msg_value fmsg) pos ->
       outs = pmsg_outs fpmsg os (msg_value fmsg) ->
-      ValidOuts idx outs ->
+      (* ValidOuts idx outs -> *)
 
       step_det sys {| st_oss := oss; st_msgs := oims |}
                (buildLabel nil (Some fmsg) (extOuts sys outs))
@@ -244,7 +276,7 @@ Section Semantics.
   | SsdExt: forall from emsgs oss oims,
       ~ In from (indicesOf sys) ->
       emsgs <> nil ->
-      ValidOuts from emsgs ->
+      (* ValidOuts from emsgs -> *)
       SubList (map (fun m => msgTo (msg_id m)) emsgs) (indicesOf sys) ->
       step_det sys {| st_oss := oss; st_msgs := oims |}
                (buildLabel emsgs None nil)
@@ -270,13 +302,13 @@ Section Semantics.
           step sys st2 lbl st3 ->
           steps sys st1 (lbl :: ll) st3.
 
-  Fixpoint getObjectStatesInit {Trs} (obs: list (ObjectFrame Trs)) : ObjectStates :=
+  Fixpoint getObjectStatesInit (obs: list Object): ObjectStates :=
     match obs with
     | nil => M.empty _
     | obj :: sys' => (getObjectStatesInit sys') +[obj_idx obj <- obj_state_init obj]
     end.
 
-  Definition getStateInit {Trs} (sys: SystemFrame Trs) :=
+  Definition getStateInit (sys: System) :=
     {| st_oss := getObjectStatesInit (sys_objs sys);
        st_msgs := [] |}.
 
@@ -291,6 +323,10 @@ Section Semantics.
     | _ => Some {| blbl_ins := lbl_ins l;
                    blbl_outs := lbl_outs l |}
     end.
+
+  Lemma toBLabel_None:
+    forall hdl, toBLabel (buildLabel nil hdl nil) = None.
+  Proof. auto. Qed.
 
   Lemma toBLabel_Some_1:
     forall ins hdl outs,
@@ -336,4 +372,6 @@ End Semantics.
 
 Notation "I <=[ P ] S" := (Refines P I S) (at level 30).
 Notation "I ⊑[ P ] S" := (Refines P I S) (at level 30).
+
+Global Opaque toBLabel.
 

@@ -2,37 +2,33 @@ Require Import Bool List String Peano_dec.
 Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
 
-(* In message passing system, a "process" (or "thread") refers to a 
- * "requester" and an "objects" (or "system") refers to a "requestee".
- * Thus, for a given message {| mid_rq := i; mid_rs := j; mid_rqrs := _ |},
- * its requester (process) is "i" and the (target) object is "j".
- *)
-
-(* [sys] acts as a processor for [msg]. *)
-Definition asProcessor (sys: System) (msg: Msg) :=
+(* [sys] as a requester for [msg] *)
+Definition asRequester (sys: System) (msg: Msg) :=
   if mid_rq (msg_id msg) ?<n (indicesOf sys) then true else false.
-Definition asSystem (sys: System) (msg: Msg) :=
+
+(* [sys] as a responder for [msg] *)
+Definition asResponder (sys: System) (msg: Msg) :=
   if mid_rs (msg_id msg) ?<n (indicesOf sys) then true else false.
 
-Definition sysSubHistory (sys: System) (hst: list Msg) :=
-  filter (asSystem sys) hst.
-Definition procSubHistory (sys: System) (hst: list Msg) :=
-  filter (asProcessor sys) hst.
+Definition rqSubHistory (sys: System) (hst: list Msg) :=
+  filter (asRequester sys) hst.
+Definition rsSubHistory (sys: System) (hst: list Msg) :=
+  filter (asResponder sys) hst.
 
-(* For a given system [sys] and its trace [tr], the history of [tr] is an
- * object subhistory with respect to [sys], where [lbl_hdl] is ignored.
+(* For a given system [sys] and its trace [tr], the history of [tr] is a request
+ * subhistory with respect to [sys], where [lbl_hdl] is ignored.
  *)
-Fixpoint historyOf (sys: System) (tr: list Label) :=
+Fixpoint historyOf (sys: System) (tr: list BLabel) :=
   match tr with
   | nil => nil
-  | {| lbl_ins := ins; lbl_outs := outs |} :: tr' =>
-    (sysSubHistory sys (outs ++ ins)) ++ (historyOf sys tr')
+  | {| blbl_ins := ins; blbl_outs := outs |} :: tr' =>
+    (rsSubHistory sys (outs ++ ins)) ++ (historyOf sys tr')
   end.
 
 Inductive History : System -> list Msg -> Prop :=
-| Hist: forall sys ll st,
-    steps sys (getStateInit sys) ll st ->
-    History sys (historyOf sys ll).
+| Hist: forall sys tr,
+    Behavior sys tr ->
+    History sys (historyOf sys tr).
 
 (* A history consisting only of requests and matching responses. *)
 Inductive Complete: list Msg -> Prop :=
@@ -46,10 +42,10 @@ Inductive Complete: list Msg -> Prop :=
           chst = hst1 ++ rq :: hst2 ++ rs :: hst3 ->
           Complete chst.
 
-Inductive SubHistory {A}: list A -> list A -> Prop :=
-| SlNil: SubHistory nil nil
-| SlAdd: forall l1 l2, SubHistory l1 l2 -> forall a, SubHistory (a :: l1) (a :: l2)
-| SlSkip: forall l1 l2, SubHistory l1 l2 -> forall a, SubHistory l1 (a :: l2).
+Inductive SubHistory: list Msg -> list Msg -> Prop :=
+| ShNil: SubHistory nil nil
+| ShAdd: forall l1 l2, SubHistory l1 l2 -> forall a, SubHistory (a :: l1) (a :: l2)
+| ShSkip: forall l1 l2, SubHistory l1 l2 -> forall a, SubHistory l1 (a :: l2).
 
 Definition ExtHistory {A} (l el: list A): Prop :=
   exists e, el = l ++ e.
@@ -65,7 +61,6 @@ Fixpoint matchTrsPair (rq: Msg) (rss: list Msg) :=
          end
   end.
 
-(* Assuming the history is well-formed. *)
 Fixpoint complete' (hst rss: list Msg): list Msg * list Msg :=
   match hst with
   | nil => (nil, rss)
@@ -100,10 +95,10 @@ Lemma complete_maximal:
 Proof.
 Admitted.
 
-(* An informal definition of "sequential":
- * 1) The first message should be a request
- * 2) A matching response for each request should be right after the request.
- * 3) There might not be a matching response for the last request.
+(* A history [hst] is [Sequential] if:
+ * 1) the first message is a request,
+ * 2) a matching response for each request is right after the request, and
+ * 3) there might not be a matching response for the last request.
  *)
 Fixpoint Sequential' (hst: list Msg) (orq: option Msg) :=
   match hst with
@@ -145,23 +140,23 @@ Definition requestsOf (hst: list Msg) :=
  *)
 Definition Equivalent (hst1 hst2: list Msg) :=
   Permutation hst1 hst2 /\
-  forall obj, requestsOf (procSubHistory [obj] hst1) =
-              requestsOf (procSubHistory [obj] hst2).
+  forall obj, requestsOf (rqSubHistory [obj] hst1) =
+              requestsOf (rqSubHistory [obj] hst2).
 
-(* NOTE: this is actually not a fully correct definition:
- * Linearizability requires one more condition: any _strict_ transaction
- * orders are preserved by [lhst].
- * I'm currently not sure if we need the second condition for 
- * message-passing systems.
+(* NOTE: this may not be a complete definition:
+ * Strict serializability (in concurrent system) requires one more condition: 
+ * any _strict_ transaction orders are preserved by the serial history [shst].
+ * I'm currently not sure if we need the second condition for message-passing 
+ * systems.
  *)
-Definition Linearizable (hst lhst: list Msg) :=
-  Sequential lhst /\
-  Equivalent (complete hst) lhst.
+Definition Serializable (hst shst: list Msg) :=
+  Sequential shst /\
+  Equivalent (complete hst) shst.
 
-(* A system is linear when all possible histories are linearizable. *)
-Definition Linear (sys: System) :=
+(* A system is [Serial] when all possible histories are [Serializable]. *)
+Definition Serial (sys: System) :=
   forall hst,
     History sys hst ->
     exists lhst, History sys lhst /\
-                 Linearizable (rev hst) (rev lhst).
+                 Serializable (rev hst) (rev lhst).
 
