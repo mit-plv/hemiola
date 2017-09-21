@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics Simulation.
+Require Import Common FMap Syntax Semantics SemDet Simulation.
 
 Set Implicit Arguments.
 
@@ -307,11 +307,11 @@ Section Sim.
     unfold isExternal, svmIdxF in *; destruct (extIdx2 ?<n _); [discriminate|auto].
   Qed.
 
-  Theorem svm_simulation: Simulates SvmR svmP impl0 spec.
+  Theorem svm_simulation: Simulates step_mod SvmR svmP impl0 spec.
   Proof.
     unfold Simulates; intros.
 
-    apply step_step_det in H0; inv H0.
+    apply step_mod_step_det in H0; inv H0.
 
     - (* silent *)
       unfold emptyLabel; rewrite toBLabel_None.
@@ -333,8 +333,8 @@ Section Sim.
         
         rewrite toBLabel_Some_2 by (inv H15; rewriter; cbn; rewrite Hiext1; discriminate).
         do 2 eexists; split.
-        * apply step_det_step.
-          eapply SsdInt; try reflexivity.
+        * apply step_det_step_mod.
+          eapply SdInt; try reflexivity.
           { left; reflexivity. }
           { eassumption. }
           { simpl; cbn in Heqt0; rewriter; reflexivity. }
@@ -370,9 +370,9 @@ Section Sim.
                 st_msgs := distributeMsgs (svmMsgsF emsgs) (st_msgs sst1) |}.
       exists {| lbl_ins := svmMsgsF emsgs; lbl_hdl := None; lbl_outs := nil |}.
       split; [|split].
-      + apply step_det_step.
+      + apply step_det_step_mod.
         destruct sst1 as [oss1 oims1]; simpl.
-        eapply SsdExt with (from:= from); eauto.
+        eapply SdExt with (from:= from); eauto.
         * intro Hx; elim H1; clear H1.
           Common.dest_in; simpl; tauto.
         * destruct emsgs; auto.
@@ -391,7 +391,7 @@ Section Sim.
   Admitted.
   Hint Resolve svm_simulation.
 
-  Theorem impl0_refines_spec: impl0 ⊑[svmP] spec.
+  Theorem impl0_refines_spec: step_mod |-- impl0 ⊑[svmP] spec.
   Proof.
     apply simulation_implies_refinement with (sim:= SvmR); auto.
   Qed.

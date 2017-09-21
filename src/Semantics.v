@@ -2,7 +2,7 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax.
 
 Section Messages.
-  
+
   Definition Queue := list Msg.
   Definition Channels := M.t (* channel index *) Queue.
   Definition MsgsFrom := M.t (* from *) Channels.
@@ -11,6 +11,7 @@ Section Messages.
   Definition firstQ (q: Queue) := hd_error q.
   Definition deq (q: Queue): Queue := tl q.
   Definition enq (m: Msg) (q: Queue): Queue := q ++ (m :: nil).
+  Definition EmptyQ (q: Queue) := q = nil.
 
   Definition findC (chn: IdxT) (cs: Channels): Queue :=
     ol2l cs@[chn].
@@ -26,6 +27,7 @@ Section Messages.
     | Some q => cs +[chn <- enq m q]
     | None => cs +[chn <- enq m nil]
     end.
+  Definition EmptyC (cs: Channels) := forall chn, EmptyQ (findC chn cs).
 
   Lemma firstC_Some_inv:
     forall chn cs m, firstC chn cs = Some m ->
@@ -50,6 +52,8 @@ Section Messages.
     | Some cs => mf +[from <- enqC chn m cs]
     | None => mf +[from <- enqC chn m (M.empty _)]
     end.
+  Definition EmptyMF (mf: MsgsFrom) :=
+    forall from chn, EmptyQ (findMF from chn mf).
 
   Lemma firstMF_Some_inv:
     forall from chn mf m, firstMF from chn mf = Some m ->
@@ -74,6 +78,8 @@ Section Messages.
     | Some froms => msgs +[to <- enqMF from chn m froms]
     | None => msgs +[to <- enqMF from chn m (M.empty _)]
     end.
+  Definition EmptyM (msgs: Messages) :=
+    forall from to chn, EmptyQ (findM from to chn msgs).
 
   Lemma firstM_Some_inv:
     forall from to chn msgs m, firstM from to chn msgs = Some m ->
@@ -230,12 +236,12 @@ Section Semantics.
     | _ => Forall (fun m => isExternal sys (msgFrom (msg_id m)) = true) (lbl_ins l)
     end.
 
-  Inductive step : System -> State -> Label -> State -> Prop :=
-  | Step:
+  Inductive step_mod : System -> State -> Label -> State -> Prop :=
+  | StepMod:
       forall sys st1 l st2,
         step_sys sys st1 l st2 ->
         Hidden sys l ->
-        step sys st1 l st2.
+        step_mod sys st1 l st2.
 
   Definition distributeMsg (msg: Msg) (msgs: Messages): Messages :=
     enqM (msgFrom (msg_id msg)) (msgTo (msg_id msg)) (mid_chn (msg_id msg)) msg msgs.
@@ -252,55 +258,18 @@ Section Semantics.
   Definition extOuts (sys: System) (outs: list Msg) :=
     filter (fun m => isExternal sys (msgTo (msg_id m))) outs.
 
-  Inductive step_det (sys: System) : State -> Label -> State -> Prop :=
-  | SsdSlt: forall s, step_det sys s emptyLabel s
-  | SsdInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
-      In obj (sys_objs sys) ->
-      idx = obj_idx obj ->
-      oss@[idx] = Some os ->
-      oims@[idx] = Some mf ->
-
-      firstMF fidx fchn mf = Some fmsg ->
-      msg_id fmsg = pmsg_mid fpmsg ->
-      ValidMsgId fidx idx fchn fmsg ->
-      In fpmsg (obj_trs obj) ->
-      pmsg_precond fpmsg os ->
-      pmsg_postcond fpmsg os (msg_value fmsg) pos ->
-      outs = pmsg_outs fpmsg os (msg_value fmsg) ->
-      (* ValidOuts idx outs -> *)
-
-      step_det sys {| st_oss := oss; st_msgs := oims |}
-               (buildLabel nil (Some fmsg) (extOuts sys outs))
-               {| st_oss := oss +[ idx <- pos ];
-                  st_msgs := distributeMsgs (intOuts sys outs) oims |}
-  | SsdExt: forall from emsgs oss oims,
-      ~ In from (indicesOf sys) ->
-      emsgs <> nil ->
-      (* ValidOuts from emsgs -> *)
-      SubList (map (fun m => msgTo (msg_id m)) emsgs) (indicesOf sys) ->
-      step_det sys {| st_oss := oss; st_msgs := oims |}
-               (buildLabel emsgs None nil)
-               {| st_oss := oss; st_msgs := distributeMsgs emsgs oims |}.
-
-  Theorem step_step_det:
-    forall sys s1 l s2, step sys s1 l s2 -> step_det sys s1 l s2.
-  Proof.
-  Admitted.
-
-  Theorem step_det_step:
-    forall sys s1 l s2, step_det sys s1 l s2 -> step sys s1 l s2.
-  Proof.
-  Admitted.
-
-  (* Note that the head is the youngest *)
-  Inductive steps (sys: System) : State -> list Label -> State -> Prop :=
-  | StepsNil: forall st, steps sys st nil st
+  (* NOTE: the head is the youngest *)
+  Inductive steps (step: System -> State -> Label -> State -> Prop)
+            (sys: System) : State -> list Label -> State -> Prop :=
+  | StepsNil: forall st, steps step sys st nil st
   | StepsCons:
       forall st1 ll st2,
-        steps sys st1 ll st2 ->
+        steps step sys st1 ll st2 ->
         forall lbl st3,
           step sys st2 lbl st3 ->
-          steps sys st1 (lbl :: ll) st3.
+          steps step sys st1 (lbl :: ll) st3.
+
+  Definition steps_mod := steps step_mod.
 
   Fixpoint getObjectStatesInit (obs: list Object): ObjectStates :=
     match obs with
@@ -357,21 +326,24 @@ Section Semantics.
     | l :: tr' => (toBLabel l) ::> (behaviorOf tr')
     end.
 
-  Inductive Behavior: System -> Trace -> Prop :=
+  Inductive Behavior (step: System -> State -> Label -> State -> Prop)
+    : System -> Trace -> Prop :=
   | Behv: forall sys tr st,
-      steps sys (getStateInit sys) tr st ->
+      steps step sys (getStateInit sys) tr st ->
       forall btr,
         btr = behaviorOf tr ->
-        Behavior sys btr.
+        Behavior step sys btr.
 
-  Definition Refines (p: BLabel -> BLabel) (impl spec: System) :=
-    forall hst, Behavior impl hst ->
-                Behavior spec (map p hst).
+  Definition Refines (step: System -> State -> Label -> State -> Prop)
+             (p: BLabel -> BLabel) (impl spec: System) :=
+    forall hst, Behavior step impl hst ->
+                Behavior step spec (map p hst).
 
 End Semantics.
 
-Notation "I <=[ P ] S" := (Refines P I S) (at level 30).
-Notation "I ⊑[ P ] S" := (Refines P I S) (at level 30).
+Notation "St |-- I <=[ P ] S" := (Refines St P I S) (at level 30).
+Notation "St |-- I ⊑[ P ] S" := (Refines St P I S) (at level 30).
 
+(* NOTE: use inversion lemmas instead of [unfold]. *)
 Global Opaque toBLabel.
 

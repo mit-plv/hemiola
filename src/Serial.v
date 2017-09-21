@@ -15,20 +15,23 @@ Definition rqSubHistory (sys: System) (hst: list Msg) :=
 Definition rsSubHistory (sys: System) (hst: list Msg) :=
   filter (asResponder sys) hst.
 
+Definition History := list Msg.
+
 (* For a given system [sys] and its trace [tr], the history of [tr] is a request
  * subhistory with respect to [sys], where [lbl_hdl] is ignored.
  *)
-Fixpoint historyOf (sys: System) (tr: list BLabel) :=
+Fixpoint historyOf (sys: System) (tr: list BLabel): History :=
   match tr with
   | nil => nil
   | {| blbl_ins := ins; blbl_outs := outs |} :: tr' =>
     (rsSubHistory sys (outs ++ ins)) ++ (historyOf sys tr')
   end.
 
-Inductive History : System -> list Msg -> Prop :=
+Inductive HistoryOf (step: System -> State -> Label -> State -> Prop)
+  : System -> History -> Prop :=
 | Hist: forall sys tr,
-    Behavior sys tr ->
-    History sys (historyOf sys tr).
+    Behavior step sys tr ->
+    HistoryOf step sys (historyOf sys tr).
 
 (* A history consisting only of requests and matching responses. *)
 Inductive Complete: list Msg -> Prop :=
@@ -125,8 +128,9 @@ Proof.
 Defined.
 
 (* A system is sequential when all possible histories are sequential. *)
-Definition SequentialSys (sys: System) :=
-  forall hst, History sys hst -> Sequential (rev hst).
+Definition SequentialSys (step: System -> State -> Label -> State -> Prop)
+           (sys: System) :=
+  forall hst, HistoryOf step sys hst -> Sequential (rev hst).
 
 Definition requestsOf (hst: list Msg) :=
   filter (fun m => match mid_rqrs (msg_id m) with
@@ -154,9 +158,10 @@ Definition Serializable (hst shst: list Msg) :=
   Equivalent (complete hst) shst.
 
 (* A system is [Serial] when all possible histories are [Serializable]. *)
-Definition Serial (sys: System) :=
+Definition Serial (step: System -> State -> Label -> State -> Prop)
+           (sys: System) :=
   forall hst,
-    History sys hst ->
-    exists lhst, History sys lhst /\
+    HistoryOf step sys hst ->
+    exists lhst, HistoryOf step sys lhst /\
                  Serializable (rev hst) (rev lhst).
 

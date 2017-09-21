@@ -3,7 +3,8 @@ Require Import Common FMap Syntax Semantics.
 
 Section Simulation.
 
-  Variables (sim: State -> State -> Prop)
+  Variables (step: System -> State -> Label -> State -> Prop)
+            (sim: State -> State -> Prop)
             (p: BLabel -> BLabel).
 
   Local Infix "≈" := sim (at level 30).
@@ -33,10 +34,10 @@ Section Simulation.
     forall ist1 sst1,
       ist1 ≈ sst1 ->
       forall ihst ist2,
-        steps impl ist1 ihst ist2 ->
+        steps step impl ist1 ihst ist2 ->
         exists sst2 shst,
           map p (behaviorOf ihst) = behaviorOf shst /\
-          steps spec sst1 shst sst2 /\
+          steps step spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
@@ -62,7 +63,7 @@ Section Simulation.
 
   Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).
 
-  Theorem simulation_implies_refinement: impl ⊑[p] spec.
+  Theorem simulation_implies_refinement: step |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.
