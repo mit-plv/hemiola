@@ -307,7 +307,7 @@ Section Sim.
     unfold isExternal, svmIdxF in *; destruct (extIdx2 ?<n _); [discriminate|auto].
   Qed.
 
-  Theorem svm_simulation: Simulates step_mod SvmR svmP impl0 spec.
+  Theorem svm_simulation: Simulates step_mod step_mod SvmR svmP impl0 spec.
   Proof.
     unfold Simulates; intros.
 
@@ -391,7 +391,7 @@ Section Sim.
   Admitted.
   Hint Resolve svm_simulation.
 
-  Theorem impl0_refines_spec: step_mod |-- impl0 ⊑[svmP] spec.
+  Theorem impl0_refines_spec: step_mod # step_mod |-- impl0 ⊑[svmP] spec.
   Proof.
     apply simulation_implies_refinement with (sim:= SvmR); auto.
   Qed.

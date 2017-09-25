@@ -334,15 +334,15 @@ Section Semantics.
         btr = behaviorOf tr ->
         Behavior step sys btr.
 
-  Definition Refines (step: System -> State -> Label -> State -> Prop)
+  Definition Refines (stepI stepS: System -> State -> Label -> State -> Prop)
              (p: BLabel -> BLabel) (impl spec: System) :=
-    forall hst, Behavior step impl hst ->
-                Behavior step spec (map p hst).
+    forall hst, Behavior stepI impl hst ->
+                Behavior stepS spec (map p hst).
 
 End Semantics.
 
-Notation "St |-- I <=[ P ] S" := (Refines St P I S) (at level 30).
-Notation "St |-- I ⊑[ P ] S" := (Refines St P I S) (at level 30).
+Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
+Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
 
 (* NOTE: use inversion lemmas instead of [unfold]. *)
 Global Opaque toBLabel.

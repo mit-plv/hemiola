@@ -2,6 +2,18 @@ Require Import Bool List String Peano_dec.
 Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
 
+Definition NoInternalsQ (sys: System) (q: Queue) :=
+  Forall (fun m => isInternal sys (msgFrom (msg_id m)) = false) q.
+
+Definition NoInternalsC (sys: System) (c: Channels) :=
+  forall cidx, c@[cidx] >>=[True] (fun q => NoInternalsQ sys q).
+
+Definition NoInternalsMF (sys: System) (mf: MsgsFrom) :=
+  forall fr, mf@[fr] >>=[True] (fun c => NoInternalsC sys c).
+
+Definition NoInternalsM (sys: System) (msgs: Messages) :=
+  forall to, msgs@[to] >>=[True] (fun mf => NoInternalsMF sys mf).
+
 Inductive step_seq (sys: System) : State -> Label -> State -> Prop :=
 | SsSlt: forall s, step_seq sys s emptyLabel s
 | SsInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
@@ -18,6 +30,12 @@ Inductive step_seq (sys: System) : State -> Label -> State -> Prop :=
     pmsg_postcond fpmsg os (msg_value fmsg) pos ->
     outs = pmsg_outs fpmsg os (msg_value fmsg) ->
 
+    (* This is the only one additional condition compared with [step_mod];
+     * The system starts handling external messages only when there are no internal
+     * messages.
+     *)
+    (isExternal sys fidx = true -> NoInternalsM sys oims) ->
+
     step_seq sys {| st_oss := oss; st_msgs := oims |}
              (buildLabel nil (Some fmsg) (extOuts sys outs))
              {| st_oss := oss +[ idx <- pos ];
@@ -26,13 +44,7 @@ Inductive step_seq (sys: System) : State -> Label -> State -> Prop :=
     ~ In from (indicesOf sys) ->
     emsgs <> nil ->
     SubList (map (fun m => msgTo (msg_id m)) emsgs) (indicesOf sys) ->
-    (* The only difference is here: a system accepts external messages only if
-     * it has no internal messages.
-     *)
-    EmptyM oims ->
     step_seq sys {| st_oss := oss; st_msgs := oims |}
              (buildLabel emsgs None nil)
              {| st_oss := oss; st_msgs := distributeMsgs emsgs oims |}.
-
-Definition steps_seq := steps step_seq.
 

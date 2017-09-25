@@ -140,7 +140,7 @@ Definition requestsOf (hst: list Msg) :=
 
 (* Two histories are equivalent if
  * 1) one history is a permutation of the other, and
- * 2) they have the same request orders per a process.
+ * 2) they have the same request orders per an object.
  *)
 Definition Equivalent (hst1 hst2: list Msg) :=
   Permutation hst1 hst2 /\

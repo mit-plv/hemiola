@@ -5,14 +5,14 @@ Section Synthesis.
 
   (** Requirements *)
   Variables
-    (step: System -> State -> Label -> State -> Prop)
+    (stepI stepS: System -> State -> Label -> State -> Prop)
     (impl0 spec: System) (* an initial system and the spec *)
     (R: State -> State -> Prop)
     (P: BLabel -> BLabel)
     (Hrinit: R (getStateInit impl0) (getStateInit spec))
-    (Hsim: Simulates step R P impl0 spec). (* a simulation relation *)
+    (Hsim: Simulates stepI stepS R P impl0 spec). (* a simulation relation *)
 
-  Lemma impl0_ok: step |-- impl0 ⊑[P] spec.
+  Lemma impl0_ok: stepI # stepS |-- impl0 ⊑[P] spec.
   Proof.
     eapply simulation_implies_refinement; eauto.
   Qed.

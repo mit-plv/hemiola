@@ -66,7 +66,9 @@ In order to synthesize a protocol, a user should provide $(\mathcal{I}_0,
   \item A topology among objects, including the number of channels between any
     two objects.
   \item Type of the whole state (and corresponding initial value)
-  \item \emph{No state transitions}!
+  \item Initial state transitions, which contains transitions that do not
+    require additional requests to others. In other words, these transitions
+    respond immediately for given requests.
   \end{enumerate}
 \item $\mathcal{S}$ is the target specification system.
 \item $R_0: \textsf{State} \to \textsf{State} \to \textsf{Prop}$ is a simulation
@@ -99,6 +101,11 @@ User inputs are as follows:
     \item $P, C_1, C_2: \{ \texttt{v}: \mathbb{N};\ \texttt{st}: \{M, S, I\} \}$.
     \item Initial values: $P(0, S), C_1(0, S), C_2(0, S)$.
     \end{itemize}
+  \item Initial state transitions:
+    \begin{eqnarray}
+      \textrm{For}\ i=1,2: \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \label{trs1} \\
+      \textrm{For}\ i=1,2: \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v} \label{trs2}
+    \end{eqnarray}
   \end{enumerate}
 \item For $\mathcal{S}$:
   \begin{enumerate}
@@ -212,7 +219,8 @@ with the initial state:
   possible instances, let's assume for now we automatically chose $\{ P(\cdot,
   M); C_1(47, M); C_2(\cdot, I) \}$. Note that $\{ P(\cdot, S); C_1(47, S);
   C_2(47, S) \}\ R_0\ S(47)$ is also possible (and synthesizable!), so the
-  question here is how to choose a ``good'' instance.
+  question here is how to choose a ``good'' instance. Later sections will discuss
+  this issue.
 \item Now we generate a predicated message to make a request to others: $\{ C_1:
   \stOf{C_1} = M \wedge \valOf{C_1} = 47; C_2: \stOf{C_2} = I; P: \stOf{P} = M
   \}$.
@@ -336,7 +344,7 @@ There are a number of caveats from (6) to (12):
 To emphasize the fact again: a user should design a topology carefully both for
 correctness and liveness.
 
-\section{Synthesis with Predicated Messages}
+\section{Synthesis by Predicated Messages}
 
 \subsection{Requests and Responses}
 
@@ -370,7 +378,25 @@ deadlocks.
 Here we synthesize a protocol for our running example. Let's first synthesize
 message handlers (rules) not worrying about interleavings.
 
-\paragraph{Starting by Looking at Stable States}
+\paragraph{Starting by Looking at Initial State Transitions}
+
+We already have some state transitions given by users, which are now the
+starting points to synthesize other rules:
+
+\begin{eqnarray*}
+  \textrm{For}\ i=1,2: \msgrule{\objGetRq{C_i}}{\stOf{C_i} \geq S}{\objGetRs{C_i}{\valOf{C_i}}}{\top} \\
+  \textrm{For}\ i=1,2: \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
+\end{eqnarray*}
+
+For each case, we will synthesize state transitions that fill other possible
+preconditions. WLOG, by symmetry, we describe the case when $i = 1$.
+
+\paragraph{Handling Other Preconditions}
+
+Let's try to synthesize rules for \objGetRq{C_1} first. Looking at the initial
+state transition for the request. We can \emph{decide} that we need an
+additional rule with the precondition $\stOf{C_1} < S (\Leftrightarrow
+\stOf{C_1} = I)$.
 
 According to the definition of $R_0$, the whole state always belongs to
 following three cases:
@@ -381,78 +407,44 @@ following three cases:
 \item $\{ v\ |\ (\{ P(\cdot, S); C_1(v, S); C_2(v, S) \},\ S(v)) \}$
 \end{enumerate}
 
-For each case, we will synthesize state transitions triggered by external
-requests. WLOG, by symmetry, we deal only with (1) and (3).
-
-\begin{figure}
-  \begin{tikzcd}[column sep=huge]
-    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \}
-    \arrow[r, "\objGetRs{C_1}{v}"] \arrow[d, dash, "R_0"] &
-    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \} \arrow[d, dash, "R_0"] \\
-    S(v) \arrow[r, "\objGetRs{S}{v}"] &
-    S(v)
-  \end{tikzcd}
-  \begin{tikzcd}[column sep=huge]
-    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \}
-    \arrow[r, "\objSetRs{C_1}"] \arrow[d, dash, "R_0"] &
-    \{ P(\cdot, M); C_1(v', M); C_2(\cdot, I) \} \arrow[d, dash, "R_0"] \\
-    S(v) \arrow[r, "\objSetRs{S}"] &
-    S(v')
-  \end{tikzcd}
-  \caption{Commutative diagrams when $\stOf{C_1} = M$}
-  \label{fig:comm-diagram-status-m}
-\end{figure}
-
-Let's consider possible requests to $C_1$ when the whole state has a form of
-(1). \refFig{fig:comm-diagram-status-m} shows that we can respond immediately
-both for $\objGetRq{C_1}$ and $\objSetRq{C_1}{v}$. Thus we can synthesize
-following rules (state transitions):
-
-\begin{center}
-  \msgrule{\objGetRq{C_1}}{\stOf{C_1} = M}{\objGetRs{C_1}{\valOf{C_1}}}{\top}
-\end{center}
-
-\begin{center}
-  \msgrule{\objSetRq{C_i}{v}}{\stOf{C_i} = M}{\objSetRs{C_i}}{\valOf{C_i} = v}
-\end{center}
-
-Next we consider the cases for $C_2$, where $\stOf{C_2} = I$.
+Therefore, we can draw a commutative diagram when $\stOf{C_1} = I$:
 
 \begin{figure}[h]
   \begin{tikzcd}[column sep=huge]
-    \{ P(\cdot, M); C_1(v, M); C_2(\cdot, I) \}
-    \arrow[r, Rightarrow, "\objGetRs{C_2}{v}"] \arrow[d, dash, "R_0"] &
-    \{ P(?, ?); C_1(?, ?); C_2(?, ?) \} \arrow[d, dash, "R_0"] \\
+    \{ P(\cdot, M); C_1(\cdot, I); C_2(v, M) \}
+    \arrow[r, Rightarrow, "\objGetRs{C_1}{v}"] \arrow[d, dash, "R_0"] &
+    \{ P(\cdot, S); C_1(v, S); C_2(v, S) \} \arrow[d, dash, "R_0"] \\
     S(v) \arrow[r, "\objGetRs{S}{v}"] &
     S(v)
   \end{tikzcd}
-  \caption{A commutative diagram when $\stOf{C_2} = I$}
+  \caption{A commutative diagram when $\stOf{C_1} = I$}
   \label{fig:comm-diagram-status-i}
 \end{figure}
 
-As discussed with \refFig{fig:comm-diagram-setrq}, let's assume we automatically
-chose the instance $\{ P(\cdot, S); C_1(v, S); C_2(v, S) \}$. It is required to
-change the states of $P$ and $C_1$, thus we synthesize a rule that sends a
-message to others. In this case, by the topology, the message is sent to $P$.
+Thanks to the initial state transition for \objGetRq{C_1}, we get a hint that
+$C_1$ eventually should have a state with $C_1(v, S)$. According to the possible
+whole states again, the instance $\{ P(\cdot, S); C_1(v, S); C_2(v, S) \}$ is
+chosen as a target state. It is required to change the states of $P$ and $C_2$,
+thus we synthesize a rule that sends a message to others. In this case, by the
+topology, the message is sent to $P$.
 
 \begin{center}
-  \msgrule{\objGetRq{C_2}}{\stOf{C_2} = I}{\intGetRq{C_2}{P}}{\top}, where
-  \intGetRq{C_2}{P} is mapped to $\{ \stOf{C_1} = I; \stOf{P} = M \}$.
+  \msgrule{\objGetRq{C_1}}{\stOf{C_1} = I}{\intGetRq{C_1}{P}}{\top}, where
+  \intGetRq{C_1}{P} is mapped to $\{ \stOf{C_2} = S; \stOf{P} = S \}$.
 \end{center}
 
-Following the topology, it is now time to synthesize a rule for $P$; we have to
-synthesize two rules corresponding to \intGetRq{C_2}{P}, which are generated
-while synthesizing \objGetRq{C_2} above.
+Following the topology, a rule for $P$ should be synthesized next, which is for
+\intGetRq{C_1}{P}.
 
 \begin{center}
-  \msgrule{\intGetRq{C_2}{P}}{\top}{\intInvRq{P}{C_1}}{\top}, where
-  \intInvRq{P}{C_1} is mapped to $\{ \stOf{C_1} = I \}$.
+  \msgrule{\intGetRq{C_1}{P}}{\top}{\intInvRq{P}{C_2}}{\top}, where
+  \intInvRq{P}{C_2} is mapped to $\{ \stOf{C_2} = S \}$.
 \end{center}
 
-Lastly, a rule for $C_1$ is synthesized as below:
+Lastly, a rule for $C_2$ is synthesized as below:
 
 \begin{center}
-  \msgrule{\intInvRq{P}{C_1}}{\top}{\intInvRs{C_1}{P}{\valOf{C_1}}}{\stOf{C_1} = S}
+  \msgrule{\intInvRq{P}{C_2}}{\top}{\intInvRs{C_2}{P}{\valOf{C_2}}}{\stOf{C_2} = S}
 \end{center}
 
 Synthesizing response rules is quite trivial; when an object receives a
@@ -461,12 +453,12 @@ forward the response or not. Basically, an object forwards a response when it
 confirms all related transaction predicates are satisfied.
 
 \begin{center}
-  \msgrule{\intInvRs{C_1}{P}{v}}{\top}{\intGetRs{P}{C_2}{v}}{\stOf{P} = S}
+  \msgrule{\intInvRs{C_2}{P}{v}}{\top}{\intGetRs{P}{C_1}{v}}{\stOf{P} = S}
 \end{center}
 
 \begin{center}
-  \msgrule{\intGetRs{P}{C_2}{v}}{\top}{\objGetRs{C_2}{v}}{\stOf{C_2} = S \wedge
-    \valOf{C_2} = v}
+  \msgrule{\intGetRs{P}{C_1}{v}}{\top}{\objGetRs{C_1}{v}}{\stOf{C_1} = S \wedge
+    \valOf{C_1} = v}
 \end{center}
 
 \begin{figure}
@@ -528,19 +520,45 @@ has it, a deadlock occurs.
   even with the initial system $\mathcal{I}_0$, the correctness should be
   provable, while the liveness might not be provable (no rules to proceed).
 \item Preservation: now we prove that some rules $\{ r_j \}$ (state transitions)
-  generated by a synthesis step ($\hookrightarrow$) preserve $R$. This is the
-  most crucial (hence difficult) step. Letting $\mathcal{I}_{i+1} \triangleq
-  \mathcal{I}_i + \{ r_j \}$, we should be able to prove $\mathcal{I}_i
-  \sqsubseteq \mathcal{S} \to \mathcal{I}_{i+1} \sqsubseteq \mathcal{S}$, by
-  using the fact that the rules $\{ r_j \}$ preserve $R$.
+  generated by a synthesis step preserve $R$. This is the most crucial (hence
+  difficult) step. Letting $\mathcal{I}_{i+1} \triangleq \mathcal{I}_i + \{ r_j
+  \}$, we should be able to prove $\mathcal{I}_i \sqsubseteq \mathcal{S} \to
+  \mathcal{I}_{i+1} \sqsubseteq \mathcal{S}$, by using the fact that the rules
+  $\{ r_j \}$ preserve $R$.
 \item The fixpoint: we keep executing synthesis steps until it generates no more
   rules. By (1) and (2), we finally show $\mathcal{I}_\infty \sqsubseteq
   \mathcal{S}$, where $\mathcal{I}_\infty$ is the final synthesized system.
 \end{enumerate}
 
+Steps (1) and (3) are quite trivial to prove. Next subsections discuss mostly
+about (2): what the rules $\{r_j\}$ generated by a synthesis step are and how to
+prove the correctness of them.
+
 \subsection{Proving Simulation for Serial State Transitions}
 
+Not considering interleavings, proving the simulation for \emph{serial} state
+transitions is straightforward by the synthesis process itself.
 
+\begin{figure}[h]
+  \begin{tikzcd}[row sep=large, column sep=large]
+    \{ P(\cdot, M); C_1(\cdot, I); C_2(v, M) \}
+    \arrow[d, "\intGetRq{C_1}{P}"] \arrow[r, dash, "R_0"] &
+    S(v) \arrow["\objGetRs{S}{v}"]{6-2} \\
+    \cdot \arrow[d, "\intInvRq{P}{C_2}"] & \\
+    \cdot \arrow[d, "\intInvRs{C_2}{P}{v}"] & \\
+    \cdot \arrow[d, "\intGetRs{P}{C_1}{v}"] & \\
+    \cdot \arrow[d, "\objGetRs{C_1}{v}"] & \\
+    \{ P(\cdot, S); C_1(v, S); C_2(v, S) \}
+    \arrow[r, dash, "R_0"] & S(v)
+  \end{tikzcd}
+  \caption{A complete sequence of state transitions when $\stOf{C_1} = I$}
+  \label{fig:complete-transitions-i}
+\end{figure}
+
+\refFig{fig:complete-transitions-i} presents the complete sequence of state
+transitions for \objGetRq{C_1} with the precondition $\stOf{C_1} = I$.
+
+\subsection{Proving Safe Interleavings}
 
 \end{document}
 
