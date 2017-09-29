@@ -5,9 +5,8 @@ Theorem refines_refl:
   forall step sys, step # step |-- sys ⊑[id] sys.
 Proof.
   unfold Refines; intros.
-  replace (map id hst) with hst; [assumption|].
-  clear; induction hst; simpl; auto.
-  f_equal; auto.
+  rewrite map_id.
+  assumption.
 Qed.
 
 Theorem refines_trans:
@@ -18,8 +17,8 @@ Theorem refines_trans:
 Proof.
   unfold Refines; intros.
   specialize (H0 _ (H _ H1)).
-  replace (map _ hst) with (map q (map p hst)); [assumption|].
-  clear; induction hst; simpl; auto.
+  replace (map _ ll) with (map q (map p ll)); [assumption|].
+  clear; induction ll; simpl; auto.
   f_equal; auto.
 Qed.
   

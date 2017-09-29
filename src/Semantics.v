@@ -328,18 +328,25 @@ Section Semantics.
 
   Inductive Behavior (step: System -> State -> Label -> State -> Prop)
     : System -> Trace -> Prop :=
-  | Behv: forall sys tr st,
-      steps step sys (getStateInit sys) tr st ->
-      forall btr,
-        btr = behaviorOf tr ->
-        Behavior step sys btr.
+  | Behv: forall sys ll st,
+      steps step sys (getStateInit sys) ll st ->
+      forall tr,
+        tr = behaviorOf ll ->
+        Behavior step sys tr.
 
   Definition Refines (stepI stepS: System -> State -> Label -> State -> Prop)
              (p: BLabel -> BLabel) (impl spec: System) :=
-    forall hst, Behavior stepI impl hst ->
-                Behavior stepS spec (map p hst).
+    forall ll, Behavior stepI impl ll ->
+               Behavior stepS spec (map p ll).
 
 End Semantics.
+
+Lemma map_id:
+  forall {A} (l: list A), map id l = l.
+Proof.
+  induction l; simpl; auto.
+  rewrite IHl; auto.
+Qed.
 
 Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
 Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
