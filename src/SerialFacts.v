@@ -4,13 +4,50 @@ Require Import Common FMap Syntax Semantics SemDet SemSeq Serial.
 
 Set Implicit Arguments.
 
-Lemma steps_history:
-  forall sys step tr st,
-    steps step sys (getStateInit sys) tr st ->
-    HistoryOf sys step (historyOf tr).
+Lemma equiv_history_behavior:
+  forall sys lla sta llb stb,
+    steps step_mod sys (getStateInit sys) lla sta ->
+    steps step_mod sys (getStateInit sys) llb stb ->
+    historyOf lla ≡ historyOf llb ->
+    exists ll,
+      steps step_mod sys (getStateInit sys) ll stb /\
+      historyOf ll = historyOf llb /\
+      behaviorOf ll = behaviorOf lla.
 Proof.
-  intros.
-  econstructor; eauto.
+Admitted.
+
+Lemma sequential_steps:
+  forall sys ll st,
+    Sequential sys (historyOf ll) ->
+    steps step_mod sys (getStateInit sys) ll st ->
+    steps step_seq sys (getStateInit sys) ll st.
+Proof.
+  unfold Sequential; intros.
+  destruct H as [trs [? ?]].
+
+  (* This is currently WRONG since the requirement of sequential
+   * semantics (no internal messages to allow an external request)
+   * does not work for any [IncompleteTrs] transactions.
+   *)
+  
+Admitted.
+
+Theorem serializable_step_seq:
+  forall sys ll st,
+    steps step_mod sys (getStateInit sys) ll st ->
+    Serializable sys step_mod ll ->
+    Behavior step_seq sys (behaviorOf ll).
+Proof.
+  unfold Serializable; intros.
+  destruct H0 as [sll [sst [? [? ?]]]].
+
+  pose proof (equiv_history_behavior H H0 H2) as Hnll.
+  destruct Hnll as [nll [? [? ?]]].
+
+  eapply Behv with (st:= sst) (ll:= nll); eauto.
+
+  rewrite <-H4 in H1.
+  auto using sequential_steps.
 Qed.
 
 Theorem sequential_step_seq:
@@ -20,10 +57,7 @@ Proof.
   unfold Serial, Refines; intros.
   rewrite map_id.
   inv H0; rename ll0 into ill. (* ill: the interleaving label sequence *)
-  pose proof (steps_history H1); clear H1 st.
-  specialize (H _ H0); destruct H as [shst [? ?]]; clear H0.
-
-  inv H.
-  inv H1.
-Admitted.
+  specialize (H _ _ H1).
+  eauto using serializable_step_seq.
+Qed.
 

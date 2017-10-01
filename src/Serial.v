@@ -76,13 +76,18 @@ Definition Equivalent (hst1 hst2: History) :=
 
 Infix "≡" := Equivalent (at level 30).
 
-Definition Serializable (sys: System) (hst shst: History) :=
-  Sequential sys shst /\ Equivalent hst shst.
+Definition Serializable (sys: System)
+           (step: System -> State -> Label -> State -> Prop)
+           (ll: list Label) :=
+  exists sll sst,
+    steps step sys (getStateInit sys) sll sst /\
+    Sequential sys (historyOf sll) /\
+    (* behaviorOf ll = behaviorOf sll /\ *)
+    Equivalent (historyOf ll) (historyOf sll).
 
-(* A system is [Serial] when all possible histories are [Serializable]. *)
+(* A system is [Serial] when all possible behaviors are [Serializable]. *)
 Definition Serial (sys: System) (step: System -> State -> Label -> State -> Prop) :=
-  forall hst,
-    HistoryOf sys step hst ->
-    exists shst, HistoryOf sys step shst /\
-                 Serializable sys hst shst.
+  forall ll st,
+    steps step sys (getStateInit sys) ll st ->
+    Serializable sys step ll.
 
