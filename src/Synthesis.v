@@ -5,9 +5,9 @@ Section Synthesis.
 
   (** Requirements *)
   Variables
-    (stepI stepS: System -> State -> Label -> State -> Prop)
+    (stepI stepS: Step Msg)
     (impl0 spec: System) (* an initial system and the spec *)
-    (R: State -> State -> Prop)
+    (R: State Msg -> State Msg -> Prop)
     (P: BLabel -> BLabel)
     (Hrinit: R (getStateInit impl0) (getStateInit spec))
     (Hsim: Simulates stepI stepS R P impl0 spec). (* a simulation relation *)

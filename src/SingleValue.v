@@ -23,6 +23,9 @@ Defined.
 Section System.
   Variables extIdx1 extIdx2: nat.
 
+  Definition SvmGetE: IdxT := 0.
+  Definition SvmSetE: IdxT := 1.
+
   Section Spec.
 
     Definition specIdx := 0.
@@ -36,10 +39,10 @@ Section System.
     Section PerChn.
       Variable chnIdx: nat.
 
-      Definition getReqM := buildMsgId (getSpecExtIdx chnIdx) specIdx "SvmGet" Rq chnIdx.
-      Definition getRespM := buildMsgId (getSpecExtIdx chnIdx) specIdx "SvmGet" Rs chnIdx.
-      Definition setReqM := buildMsgId (getSpecExtIdx chnIdx) specIdx "SvmSet" Rq chnIdx.
-      Definition setRespM := buildMsgId (getSpecExtIdx chnIdx) specIdx "SvmSet" Rs chnIdx.
+      Definition getReqM := buildMsgId SvmGetE (getSpecExtIdx chnIdx) specIdx chnIdx.
+      Definition getRespM := buildMsgId SvmGetE specIdx (getSpecExtIdx chnIdx) chnIdx.
+      Definition setReqM := buildMsgId SvmSetE (getSpecExtIdx chnIdx) specIdx chnIdx.
+      Definition setRespM := buildMsgId SvmSetE specIdx (getSpecExtIdx chnIdx) chnIdx.
 
       Definition specGetReq: PMsg :=
         {| pmsg_mid := getReqM;
@@ -101,10 +104,10 @@ Section System.
     Section Child0.
       Variable childIdx: nat.
 
-      Definition ecGetReqM := buildMsgId (getImplExtIdx childIdx) childIdx "SvmGet" Rq chnImpl.
-      Definition ecGetRespM := buildMsgId (getImplExtIdx childIdx) childIdx "SvmGet" Rs chnImpl.
-      Definition ecSetReqM := buildMsgId (getImplExtIdx childIdx) childIdx "SvmSet" Rq chnImpl.
-      Definition ecSetRespM := buildMsgId (getImplExtIdx childIdx) childIdx "SvmSet" Rs chnImpl.
+      Definition ecGetReqM := buildMsgId SvmGetE (getImplExtIdx childIdx) childIdx chnImpl.
+      Definition ecGetRespM := buildMsgId SvmGetE childIdx (getImplExtIdx childIdx) chnImpl.
+      Definition ecSetReqM := buildMsgId SvmSetE (getImplExtIdx childIdx) childIdx chnImpl.
+      Definition ecSetRespM := buildMsgId SvmSetE childIdx (getImplExtIdx childIdx) chnImpl.
 
       Definition ecGetReqOk: PMsg :=
         {| pmsg_mid := ecGetReqM;
@@ -188,11 +191,10 @@ Section Sim.
     if idx ?<n (indicesOf impl0) then specIdx else idx.
 
   Definition svmMsgIdF (imid: MsgId): MsgId :=
-    {| mid_rq := svmIdxF (mid_rq imid);
-       mid_rs := svmIdxF (mid_rs imid);
-       mid_type := mid_type imid;
-       mid_rqrs := mid_rqrs imid;
-       mid_chn := mid_rs imid |}.
+    {| mid_type := mid_type imid;
+       mid_from := svmIdxF (mid_from imid);
+       mid_to := svmIdxF (mid_to imid);
+       mid_chn := mid_to imid |}.
 
   Definition svmMsgF (imsg: Msg): Msg :=
     {| msg_id := svmMsgIdF (msg_id imsg);
@@ -242,7 +244,7 @@ Section Sim.
         ValidValue ist v ->
         SvmStR ist sst.
 
-  Definition SvmMsgsR (imsgs smsgs: Messages) :=
+  Definition SvmMsgsR (imsgs smsgs: Messages Msg) :=
     forall to,
       imsgs@[to] >>=[True]
       (fun imf =>
@@ -258,7 +260,7 @@ Section Sim.
                       (fun schn =>
                          schn@[to] >>=[False] (fun sq => sq = svmMsgsF iq)))))).
 
-  Definition SvmR (ist sst: State) :=
+  Definition SvmR (ist sst: State Msg) :=
     SvmStR (st_oss ist) (st_oss sst) /\ SvmMsgsR (st_msgs ist) (st_msgs sst).
 
   Theorem svm_simulation_init:
@@ -321,7 +323,7 @@ Section Sim.
       destruct H; inv H; unfold st_oss, st_msgs in *.
       destruct sst1 as [ost1 msgs1].
       Common.dest_in.
-      + destruct fmsg as [[frq frs fty frr fch] fval]; simpl in *.
+      + destruct fmsg as [[fty ffr fto fch] fval]; simpl in *.
         inv H6; inv H7; simpl in *.
         cbn in H1, H5; dest; subst.
         specialize (H0 child1Idx); rewriter.
@@ -373,7 +375,9 @@ Section Sim.
       + apply step_det_step_mod.
         destruct sst1 as [oss1 oims1]; simpl.
         eapply SdExt with (from:= from); eauto.
-        * intro Hx; elim H1; clear H1.
+        * unfold isExternal; find_if_inside; auto.
+          unfold isExternal in H1; find_if_inside; auto.
+          elim n; clear n.
           Common.dest_in; simpl; tauto.
         * destruct emsgs; auto.
           discriminate.
@@ -381,13 +385,13 @@ Section Sim.
           apply SubList_cons_inv in H3; dest.
           apply SubList_cons; auto.
           clear -H.
-          Common.dest_in;
-            destruct a as [[mrq mrs mty [|] mch] ?];
-            unfold svmMsgIdF, msgTo in *; simpl in *; subst; auto.
+          Common.dest_in; destruct a as [[mty mfr mto mch] ?];
+            simpl in *; subst; auto.
       + rewrite toBLabel_Some_1 by (destruct emsgs; [auto|discriminate]).
         reflexivity.
-      + inv H.
-        econstructor; eauto.
+      + inv H; econstructor; eauto.
+        simpl in *; clear -H4.
+        admit.
   Admitted.
   Hint Resolve svm_simulation.
 

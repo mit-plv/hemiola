@@ -2,9 +2,9 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics.
 
 Section Simulation.
-
-  Variables (stepI stepS: System -> State -> Label -> State -> Prop)
-            (sim: State -> State -> Prop)
+  Context {MsgI MsgS: Type}.
+  Variables (stepI: Step MsgI) (stepS: Step MsgS)
+            (sim: State MsgI -> State MsgS -> Prop)
             (p: BLabel -> BLabel).
 
   Local Infix "≈" := sim (at level 30).

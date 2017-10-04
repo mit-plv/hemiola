@@ -4,7 +4,7 @@ Require Import Common FMap Syntax Semantics.
 
 Section PerSystem.
   Variable sys: System.
-  Variable step: System -> State -> Label -> State -> Prop.
+  Variable step: Step Msg.
 
   Record HLabel :=
     { hlbl_hdl : Msg;
@@ -44,6 +44,11 @@ Section PerSystem.
           Atomic min ({| hlbl_hdl := hdl; hlbl_outs := houts |} :: hst)
                  (List.remove msg_dec hdl mouts ++ houts).
 
+  Definition isTrsPair (rq rs: MsgId) :=
+    (if mid_from rq ==n mid_to rs then true else false)
+      && (if mid_to rq ==n mid_from rs then true else false)
+      && (if mid_type rq ==n mid_type rs then true else false).
+
   Definition AtomicTrs (hst: History) :=
     exists min mout,
       isTrsPair (msg_id min) (msg_id mout) = true /\
@@ -51,7 +56,7 @@ Section PerSystem.
 
   Definition IncompleteTrs (hst: History) :=
     exists min mouts,
-      Forall (fun m => isInternal sys (msgTo (msg_id m)) = true) mouts /\
+      Forall (fun m => isInternal sys (mid_to (msg_id m)) = true) mouts /\
       Atomic min hst mouts.
 
   Definition Sequential (hst: History) :=
@@ -63,7 +68,7 @@ End PerSystem.
 
 Definition insOf (obj: Object) (hst: History) :=
   filter (fun hl =>
-            if obj_idx obj ==n msgFrom (msg_id (hlbl_hdl hl))
+            if obj_idx obj ==n mid_from (msg_id (hlbl_hdl hl))
             then true else false) hst.
 
 (* Two histories are equivalent if
@@ -76,9 +81,7 @@ Definition Equivalent (hst1 hst2: History) :=
 
 Infix "≡" := Equivalent (at level 30).
 
-Definition Serializable (sys: System)
-           (step: System -> State -> Label -> State -> Prop)
-           (ll: list Label) :=
+Definition Serializable (sys: System) (step: Step Msg) (ll: list Label) :=
   exists sll sst,
     steps step sys (getStateInit sys) sll sst /\
     Sequential sys (historyOf sll) /\
@@ -86,7 +89,7 @@ Definition Serializable (sys: System)
     Equivalent (historyOf ll) (historyOf sll).
 
 (* A system is [Serial] when all possible behaviors are [Serializable]. *)
-Definition Serial (sys: System) (step: System -> State -> Label -> State -> Prop) :=
+Definition Serial (sys: System) (step: Step Msg) :=
   forall ll st,
     steps step sys (getStateInit sys) ll st ->
     Serializable sys step ll.

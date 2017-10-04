@@ -2,7 +2,7 @@ Require Import Bool List String Peano_dec.
 Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
 
-Inductive step_det (sys: System) : State -> Label -> State -> Prop :=
+Inductive step_det (sys: System) : State Msg -> Label -> State Msg -> Prop :=
 | SdSlt: forall s, step_det sys s emptyLabel s
 | SdInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
     In obj (sys_objs sys) ->
@@ -23,9 +23,9 @@ Inductive step_det (sys: System) : State -> Label -> State -> Prop :=
              {| st_oss := oss +[ idx <- pos ];
                 st_msgs := distributeMsgs (intOuts sys outs) oims |}
 | SdExt: forall from emsgs oss oims,
-    ~ In from (indicesOf sys) ->
+    isExternal sys from = true ->
     emsgs <> nil ->
-    SubList (map (fun m => msgTo (msg_id m)) emsgs) (indicesOf sys) ->
+    SubList (map (fun m => mid_to (msg_id m)) emsgs) (indicesOf sys) ->
     step_det sys {| st_oss := oss; st_msgs := oims |}
              (buildLabel emsgs None nil)
              {| st_oss := oss; st_msgs := distributeMsgs emsgs oims |}.
