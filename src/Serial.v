@@ -44,25 +44,35 @@ Section PerSystem.
           Atomic min ({| hlbl_hdl := hdl; hlbl_outs := houts |} :: hst)
                  (List.remove msg_dec hdl mouts ++ houts).
 
-  Definition isTrsPair (rq rs: MsgId) :=
-    (if mid_from rq ==n mid_to rs then true else false)
-      && (if mid_to rq ==n mid_from rs then true else false)
-      && (if mid_type rq ==n mid_type rs then true else false).
+  (* Definition isTrsPair (rq rs: MsgId) := *)
+  (*   (if mid_from rq ==n mid_to rs then true else false) *)
+  (*     && (if mid_to rq ==n mid_from rs then true else false) *)
+  (*     && (if mid_type rq ==n mid_type rs then true else false). *)
 
-  Definition AtomicTrs (hst: History) :=
-    exists min mout,
-      isTrsPair (msg_id min) (msg_id mout) = true /\
-      Atomic min hst (mout :: nil).
+  (* Definition AtomicTrs (hst: History) := *)
+  (*   exists min mout, *)
+  (*     isExternal sys (mid_from (msg_id min)) = true /\ *)
+  (*     isTrsPair (msg_id min) (msg_id mout) = true /\ *)
+  (*     Atomic min hst (mout :: nil). *)
 
-  Definition IncompleteTrs (hst: History) :=
-    exists min mouts,
-      Forall (fun m => isInternal sys (mid_to (msg_id m)) = true) mouts /\
-      Atomic min hst mouts.
+  (* Definition IncompleteTrs (hst: History) := *)
+  (*   exists min mouts, *)
+  (*     isExternal sys (mid_from (msg_id min)) = true /\ *)
+  (*     Forall (fun m => isInternal sys (mid_to (msg_id m)) = true) mouts /\ *)
+  (*     Atomic min hst mouts. *)
+
+  (* Definition Transactional (hst: History) := *)
+  (*   AtomicTrs hst \/ IncompleteTrs hst. *)
+
+  Definition Transactional (hst: History) :=
+    hst = nil \/
+    (exists min mouts,
+        isExternal sys (mid_from (msg_id min)) = true /\
+        Atomic min hst mouts).
 
   Definition Sequential (hst: History) :=
     exists (trs: list History),
-      Forall (fun h => AtomicTrs h \/ IncompleteTrs h) trs /\
-      hst = concat trs.
+      Forall Transactional trs /\ hst = concat trs.
 
 End PerSystem.
 

@@ -2435,6 +2435,18 @@ Module LeibnizFacts (M : MapLeibniz).
     unfold KeysSubset, DomainSubset; auto.
   Qed.
 
+  Lemma map_empty:
+    forall {A B} (f: A -> B),
+      map f (empty _) = empty _.
+  Proof.
+    intros; ext y.
+    rewrite find_empty.
+    apply P.F.not_find_in_iff.
+    intro Hx.
+    apply map_2 in Hx.
+    exfalso; eapply P.F.empty_in_iff; eauto.
+  Qed.
+
 End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
@@ -2562,6 +2574,8 @@ Ltac mred_unit :=
     match type of c with
     | {_ = _} + {_ <> _} => destruct c; [subst|]
     end
+  | [H: context [M.map _ (M.empty _)] |- _] =>
+    rewrite M.map_empty in H
   (* goal reduction *)
   | [ |- context [M.find _ (M.empty _)] ] =>
     rewrite M.find_empty
@@ -2598,6 +2612,9 @@ Ltac mred_unit :=
     rewrite M.restrict_in_find by auto
   | [ |- context [M.find ?y (M.subtractKV _ ?m1 ?m2)] ] =>
     rewrite M.subtractKV_find
+  | [ |- context [M.map _ (M.empty _)] ] =>
+    rewrite M.map_empty
+
   | [ |- context [if ?c then _ else _] ] =>
     match type of c with
     | {_ = _} + {_ <> _} => destruct c; [subst|]

@@ -10,10 +10,42 @@ Record AtomicMsg :=
 Instance AtomicMsg_HasMsg : HasMsg AtomicMsg :=
   { getMsg := atm_msg }.
 
-Definition toAtomicMsgs (active: bool) (msgs: list Msg) :=
-  map (fun m => {| atm_msg := m; atm_active := active |}) msgs.
-Definition toAtomicMsgsT := toAtomicMsgs true.
-Definition toAtomicMsgsF := toAtomicMsgs false.
+Section ToAtomicMsg.
+
+  Definition toAtomicMsgs (active: bool) (msgs: list Msg) :=
+    map (fun m => {| atm_msg := m; atm_active := active |}) msgs.
+
+  Definition toAtomicMsgsT := toAtomicMsgs true.
+  Definition toAtomicMsgsF := toAtomicMsgs false.
+
+  Definition toAtomicQ (active: bool) (q: Queue Msg) := toAtomicMsgs active q.
+  Definition toAtomicC (active: bool) (cs: Channels Msg) :=
+    M.map (toAtomicQ active) cs.
+  Definition toAtomicMF (active: bool) (mf: MsgsFrom Msg) :=
+    M.map (toAtomicC active) mf.
+  Definition toAtomicM (active: bool) (msgs: Messages Msg) :=
+    M.map (toAtomicMF active) msgs.
+
+  Definition toAtomicState (active: bool) (st: State Msg) :=
+    {| st_oss := st_oss st; st_msgs := toAtomicM active (st_msgs st) |}.
+
+  Definition toAtomicStateT := toAtomicState true.
+  Definition toAtomicStateF := toAtomicState false.
+
+End ToAtomicMsg.
+
+Section ToMsg.
+
+  Definition atm2Msg (am: AtomicMsg) := getMsg am.
+  Definition atm2Q (q: Queue AtomicMsg) := map atm2Msg q.
+  Definition atm2C (cs: Channels AtomicMsg) := M.map atm2Q cs.
+  Definition atm2MF (mf: MsgsFrom AtomicMsg) := M.map atm2C mf.
+  Definition atm2M (msgs: Messages AtomicMsg) := M.map atm2MF msgs.
+
+  Definition atm2State (st: State AtomicMsg) :=
+    {| st_oss := st_oss st; st_msgs := atm2M (st_msgs st) |}.
+
+End ToMsg.
 
 Section Deactivation.
 

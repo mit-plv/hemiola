@@ -1,8 +1,55 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics SemDet SemSeq Serial.
+Require Import Common FMap Syntax Semantics SemFacts SemDet SemSeq Serial.
 
 Set Implicit Arguments.
+
+Definition NonActive (ll: list Label) :=
+  Forall (fun l => lbl_hdl l = None) ll.
+
+Lemma historyOf_nil:
+  forall ll,
+    historyOf ll = nil <-> NonActive ll.
+Proof.
+  unfold NonActive; intros; split.
+  - induction ll; intros; [auto|].
+    destruct a as [ins [|] outs]; simpl in H; [discriminate|].
+    constructor; auto.
+  - induction ll; intros; [auto|].
+    inv H.
+    destruct a as [ins [|] outs]; simpl in *; [discriminate|].
+    auto.
+Qed.
+
+Lemma historyOf_app:
+  forall ll hst1 hst2,
+    historyOf ll = hst1 ++ hst2 ->
+    exists ll1 ll2,
+      ll = ll1 ++ ll2 /\ historyOf ll1 = hst1 /\ historyOf ll2 = hst2.
+Proof.
+  induction ll; simpl; intros.
+  - apply eq_sym, app_eq_nil in H; dest; subst.
+    do 2 (exists nil); auto.
+  - destruct a as [ins [|] outs]; simpl in *.
+    + destruct hst1 as [|hst1].
+      * simpl in H; subst.
+        exists nil; eexists; repeat split.
+      * simpl in H; inv H.
+        specialize (IHll _ _ H2); dest; subst.
+        eexists (_ :: _), _; repeat split.
+    + specialize (IHll _ _ H); dest; subst.
+      eexists (_ :: _), _; repeat split.
+Qed.
+
+Lemma nonActive_transactional:
+  forall sys ll,
+    NonActive ll -> Transactional sys (historyOf ll).
+Proof.
+  intros.
+  apply historyOf_nil in H.
+  rewrite H.
+  left; reflexivity.
+Qed.
 
 Lemma equiv_history_behavior:
   forall sys lla sta llb stb,
@@ -16,16 +63,85 @@ Lemma equiv_history_behavior:
 Proof.
 Admitted.
 
-(* Lemma sequential_steps: *)
-(*   forall sys ll st, *)
-(*     Sequential sys (historyOf ll) -> *)
-(*     steps step_mod sys (getStateInit sys) ll st -> *)
-(*     steps step_seq sys (getStateInit sys) ll st. *)
-(* Proof. *)
-(*   unfold Sequential; intros. *)
-(*   destruct H as [trs [? ?]]. *)
+Lemma transactional_steps_seq:
+  forall sys ll,
+    Transactional sys (historyOf ll) ->
+    forall st1 st2,
+      steps step_mod sys st1 ll st2 ->
+      forall ast1,
+        atm2State ast1 = st1 ->
+        exists ast2,
+          atm2State ast2 = st2 /\
+          steps step_seq sys ast1 ll ast2.
+Proof.
+Admitted.
 
-(* Admitted. *)
+Corollary nonActive_steps_seq:
+  forall ll,
+    NonActive ll ->
+    forall sys st1 st2,
+      steps step_mod sys st1 ll st2 ->
+      forall ast1,
+        atm2State ast1 = st1 ->
+        exists ast2,
+          atm2State ast2 = st2 /\
+          steps step_seq sys ast1 ll ast2.
+Proof.
+  intros.
+  apply nonActive_transactional with (sys:= sys) in H.
+  eauto using transactional_steps_seq.
+Qed.
+
+Lemma sequential_steps':
+  forall sys trs,
+    Forall (Transactional sys) trs ->
+    forall ll,
+      historyOf ll = concat trs ->
+      forall st,
+        steps step_mod sys (getStateInit sys) ll st ->
+        exists ast,
+          atm2State ast = st /\
+          steps step_seq sys (getStateInit sys) ll ast.
+Proof.
+  induction trs; intros.
+
+  - simpl in H0; apply historyOf_nil in H0.
+    eapply nonActive_steps_seq; eauto.
+    unfold atm2State, atm2M, getStateInit; simpl.
+    mred.
+
+  - inv H.
+    specialize (IHtrs H5); clear H5.
+
+    simpl in H0.
+    apply historyOf_app in H0.
+    destruct H0 as [ll2 [ll1 [? [? ?]]]]; subst.
+
+    eapply steps_split in H1; [|reflexivity].
+    destruct H1 as [sti [? ?]].
+    specialize (IHtrs _ H2 _ H); clear H H2.
+    destruct IHtrs as [past [? ?]]; subst.
+
+    pose proof (transactional_steps_seq H4 H0 eq_refl) as Hseq2.
+    destruct Hseq2 as [ast2 [? ?]]; subst.
+
+    eexists; split; [reflexivity|].
+    eauto using steps_append.
+Qed.
+
+Lemma sequential_steps:
+  forall sys ll,
+    Sequential sys (historyOf ll) ->
+    forall st,
+      steps step_mod sys (getStateInit sys) ll st ->
+      exists ast,
+        atm2State ast = st /\
+        steps step_seq sys (getStateInit sys) ll ast.
+Proof.
+  unfold Sequential; intros.
+  destruct H as [trs [? ?]].
+  eauto using sequential_steps'.
+Qed.
 
 Theorem serializable_step_seq:
   forall sys ll st,
@@ -33,17 +149,18 @@ Theorem serializable_step_seq:
     Serializable sys step_mod ll ->
     Behavior step_seq sys (behaviorOf ll).
 Proof.
-  (* unfold Serializable; intros. *)
-  (* destruct H0 as [sll [sst [? [? ?]]]]. *)
+  unfold Serializable; intros.
+  destruct H0 as [sll [sst [? [? ?]]]].
 
-  (* pose proof (equiv_history_behavior H H0 H2) as Hnll. *)
-  (* destruct Hnll as [nll [? [? ?]]]. *)
+  pose proof (equiv_history_behavior H H0 H2) as Hnll.
+  destruct Hnll as [nll [? [? ?]]].
 
-  (* eapply Behv with (st:= sst) (ll:= nll); eauto. *)
+  rewrite <-H4 in H1.
+  pose proof (sequential_steps H1 H3) as Hseq.
+  destruct Hseq as [ast [? ?]]; subst.
 
-  (* rewrite <-H4 in H1. *)
-  (* auto using sequential_steps. *)
-Admitted.
+  eapply Behv; eauto.
+Qed.
 
 Theorem sequential_step_seq:
   forall sys,
