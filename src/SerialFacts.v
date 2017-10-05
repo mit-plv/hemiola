@@ -88,6 +88,35 @@ Proof.
   eauto using transactional_cons_inv.
 Qed.
 
+Lemma step_seq_ins:
+  forall sys ins st1 st2,
+    step_mod sys st1 (LblIns ins) st2 ->
+    forall ast1,
+      atm2State ast1 = st1 ->
+      exists ast2,
+        atm2State ast2 = st2 /\
+        step_seq sys ast1 (LblIns ins) ast2.
+Proof.
+  intros; subst.
+  apply step_mod_step_det in H.
+  inv H.
+
+  exists {| st_oss := st_oss ast1;
+            st_msgs := distributeMsgs (toAtomicMsgsF ins) (st_msgs ast1) |}.
+  split.
+  - unfold atm2State; simpl.
+    f_equal.
+
+    clear.
+    induction ins; [reflexivity|].
+    simpl; rewrite <-IHins; clear.
+    remember (distributeMsgs (toAtomicMsgsF ins) (st_msgs ast1)) as msgs; clear Heqmsgs.
+    admit. (* trivial but very tedious *)
+    
+  - destruct ast1 as [oss1 msgs1]; simpl.
+    econstructor; eauto.
+Admitted.
+
 Lemma transactional_steps_seq:
   forall sys ll,
     Transactional sys (historyOf ll) ->
@@ -103,14 +132,27 @@ Proof.
     [inv H0; eexists; repeat split; constructor|].
 
   (* NOTE: [l] is the youngest label. *)
-
   inv H0.
   specialize (IHll (transactional_ocons_inv _ _ H) _ _ H4 _ eq_refl).
   destruct IHll as [past2 [? ?]]; subst.
+  destruct l; simpl in H.
 
-  (* TODO: Do a case analysis on [l] *)
+  - (* LblEmpty *)
+    apply step_mod_step_det in H6; inv H6.
+    eexists; repeat split.
+    econstructor; eauto.
+    econstructor.
 
-  eexists; split; [|econstructor; [eassumption|]].
+  - (* LblIns *)
+    eapply step_seq_ins in H6; [|reflexivity].
+    destruct H6 as [ast2 [? ?]]; subst.
+    eexists; repeat split.
+    econstructor; eauto.
+    
+  - (* LblHdl *)
+    admit.
+    (* eexists; split; [|econstructor; [eassumption|]]. *)
+
 Admitted.
 
 Corollary nonActive_steps_seq:

@@ -109,7 +109,7 @@ Section Messages.
     match nmsgs with
     | nil => msgs
     | msg :: nmsgs' =>
-      distributeMsgs nmsgs' (distributeMsg msg msgs)
+      distributeMsg msg (distributeMsgs nmsgs' msgs)
     end.
   
 End Messages.
