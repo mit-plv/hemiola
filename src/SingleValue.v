@@ -204,8 +204,10 @@ Section Sim.
     map svmMsgF imsgs.
 
   Definition svmP (b: BLabel) :=
-    {| blbl_ins := svmMsgsF (blbl_ins b);
-       blbl_outs := svmMsgsF (blbl_outs b) |}.
+    match b with
+    | BlblIns ins => BlblIns (svmMsgsF ins)
+    | BlblOuts outs => BlblOuts (svmMsgsF outs)
+    end.
 
   Definition SvmWf (os: StateT) v stt :=
     os@[valueIdx] = Some v /\ os@[statusIdx] = Some stt.
@@ -313,12 +315,9 @@ Section Sim.
   Proof.
     unfold Simulates; intros.
 
-    apply step_mod_step_det in H0; inv H0.
+    apply step_mod_step_det in H0; inv H0; simpl.
 
-    - (* silent *)
-      unfold emptyLabel; rewrite toBLabel_None.
-      simpl; eauto.
-
+    - (* silent *) eauto.
     - (* internal *)
       destruct H; inv H; unfold st_oss, st_msgs in *.
       destruct sst1 as [ost1 msgs1].
@@ -333,7 +332,6 @@ Section Sim.
         destruct x0 as [|ffq fq]; [discriminate|]; simpl in H5; inv H5.
         inv H6.
         
-        rewrite toBLabel_Some_2 by (inv H15; rewriter; cbn; rewrite Hiext1; discriminate).
         do 2 eexists; split.
         * apply step_det_step_mod.
           eapply SdInt; try reflexivity.
@@ -359,18 +357,16 @@ Section Sim.
           { left; reflexivity. }
           { simpl; auto. }
           { simpl; reflexivity. }
-        * rewrite toBLabel_Some_2 by (cbn; rewriter; cbn; rewrite Hsext1; discriminate).
-          admit.
+        * admit.
           
       + admit.
       + admit.
       + admit.
         
     - (* external *)
-      rewrite toBLabel_Some_1 by assumption.
       exists {| st_oss := st_oss sst1;
                 st_msgs := distributeMsgs (svmMsgsF emsgs) (st_msgs sst1) |}.
-      exists {| lbl_ins := svmMsgsF emsgs; lbl_hdl := None; lbl_outs := nil |}.
+      exists (LblIns (svmMsgsF emsgs)).
       split; [|split].
       + apply step_det_step_mod.
         destruct sst1 as [oss1 oims1]; simpl.
@@ -387,8 +383,7 @@ Section Sim.
           clear -H.
           Common.dest_in; destruct a as [[mty mfr mto mch] ?];
             simpl in *; subst; auto.
-      + rewrite toBLabel_Some_1 by (destruct emsgs; [auto|discriminate]).
-        reflexivity.
+      + reflexivity.
       + inv H; econstructor; eauto.
         simpl in *; clear -H4.
         admit.

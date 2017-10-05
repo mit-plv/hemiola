@@ -13,9 +13,8 @@ Section PerSystem.
 
   Definition toHLabel (l: Label): option HLabel :=
     match l with
-    | {| lbl_hdl := None |} => None
-    | {| lbl_hdl := Some h; lbl_outs := outs |} =>
-      Some {| hlbl_hdl := h; hlbl_outs := outs |}
+    | LblHdl hdl outs => Some {| hlbl_hdl := hdl; hlbl_outs := outs |}
+    | _ => None
     end.
 
   Definition History := list HLabel.

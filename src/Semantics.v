@@ -116,22 +116,28 @@ End Messages.
 
 Section Semantics.
 
-  (* Comparing with the Kami label:
-   * - [lbl_ins] corresponds to [enq] defined methods of fifos.
-   * - [lbl_hdl] corresponds to a rule handling a message, which implicitly
-   *   calls [deq] to fetch the message.
-   * - [lbl_outs] corresponds to [enq] called methods to fifos.
-   *)
-  Record Label :=
-    { lbl_ins: list Msg;
-      lbl_hdl: option Msg;
-      lbl_outs: list Msg }.
-  
-  Definition buildLabel ins hdl outs :=
-    {| lbl_ins := ins; lbl_hdl := hdl; lbl_outs := outs |}.
+  Inductive Label :=
+  | LblEmpty: Label
+  | LblIns (ins: list Msg): Label
+  | LblHdl (hdl: Msg) (outs: list Msg): Label.
 
-  Definition emptyLabel :=
-    {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |}.
+  Definition lblIns (l: Label) :=
+    match l with
+    | LblIns ins => ins
+    | _ => nil
+    end.
+
+  Definition lblHdl (l: Label) :=
+    match l with
+    | LblHdl hdl _ => Some hdl
+    | _ => None
+    end.
+
+  Definition lblOuts (l: Label) :=
+    match l with
+    | LblHdl _ outs => outs
+    | _ => nil
+    end.
 
   Definition ObjectStates := M.t StateT.
 
@@ -161,7 +167,7 @@ Section Semantics.
    *)
   Inductive step_obj (obj: Object): StateT -> MsgsFrom Msg -> Label ->
                                     StateT -> MsgsFrom Msg -> Prop :=
-  | SoSlt: forall os mf, step_obj obj os mf emptyLabel os mf
+  | SoSlt: forall os mf, step_obj obj os mf LblEmpty os mf
   | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
       firstMF fidx fchn mf = Some fmsg ->
       ValidMsgId fidx (obj_idx obj) fchn fmsg ->
@@ -171,13 +177,13 @@ Section Semantics.
       pmsg_postcond fpmsg os (msg_value fmsg) pos ->
       (* ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) -> *)
       step_obj obj os mf
-               (buildLabel nil (Some fmsg) (pmsg_outs fpmsg os (msg_value fmsg)))
+               (LblHdl fmsg (pmsg_outs fpmsg os (msg_value fmsg)))
                pos (deqMF fidx fchn mf)
   | SoExt: forall os mf emsg,
       mid_to (msg_id emsg) = obj_idx obj ->
       mid_from (msg_id emsg) <> obj_idx obj ->
       step_obj obj os mf
-               (buildLabel (o2l (Some emsg)) None nil)
+               (LblIns (emsg :: nil))
                os (enqMF (mid_from (msg_id emsg))
                          (mid_chn (msg_id emsg))
                          emsg mf).
@@ -197,11 +203,13 @@ Section Semantics.
   Infix "+s" := combineState (at level 30).
 
   Definition CombinableLabel (lbl1 lbl2: Label) :=
-    match lbl_hdl lbl1, lbl_hdl lbl2 with
-    | Some _, None => SubList (lbl_ins lbl2) (lbl_outs lbl1)
-    | None, Some _ => SubList (lbl_ins lbl1) (lbl_outs lbl2)
-    | None, None => True (* exists from, ValidOuts from (lbl_ins lbl1 ++ lbl_ins lbl2) *)
-    | _, _ => False
+    match lbl1, lbl2 with
+    | LblHdl _ _, LblHdl _ _ => False
+    | LblHdl _ outs1, LblIns ins2 => SubList ins2 outs1
+    | LblIns ins1, LblHdl _ outs2 => SubList ins1 outs2
+    | LblIns ins1, LblIns ins2 =>
+      True (* exists from, ValidOuts from (lbl_ins lbl1 ++ lbl_ins lbl2) *)
+    | _, _ => True
     end.
 
   Definition subtractMsgs (ms1 ms2: list Msg) :=
@@ -214,17 +222,13 @@ Section Semantics.
   (*   end. *)
 
   Definition combineLabel (lbl1 lbl2: Label) :=
-    match lbl_hdl lbl1, lbl_hdl lbl2 with
-    | Some _, None => {| lbl_ins := nil;
-                         lbl_hdl := lbl_hdl lbl1;
-                         lbl_outs := subtractMsgs (lbl_outs lbl1) (lbl_ins lbl2) |}
-    | None, Some _ => {| lbl_ins := nil;
-                         lbl_hdl := lbl_hdl lbl2;
-                         lbl_outs := subtractMsgs (lbl_outs lbl2) (lbl_ins lbl1) |}
-    | None, None => {| lbl_ins := (lbl_ins lbl1) ++ (lbl_ins lbl2);
-                       lbl_hdl := None;
-                       lbl_outs := nil |}
-    | _, _ => {| lbl_ins := nil; lbl_hdl := None; lbl_outs := nil |}
+    match lbl1, lbl2 with
+    | LblHdl _ _, LblHdl _ _ => LblEmpty (* should not happen *)
+    | LblHdl hdl1 outs1, LblIns ins2 => LblHdl hdl1 (subtractMsgs outs1 ins2)
+    | LblIns ins1, LblHdl hdl2 outs2 => LblHdl hdl2 (subtractMsgs outs2 ins1)
+    | LblIns ins1, LblIns ins2 => LblIns (ins1 ++ ins2)
+    | LblEmpty, _ => lbl2
+    | _, LblEmpty => lbl1
     end.
   Infix "+l" := combineLabel (at level 30).
 
@@ -256,9 +260,10 @@ Section Semantics.
     if idx ?<n (indicesOf sys) then true else false.
 
   Definition Hidden (sys: System) (l: Label) :=
-    match lbl_hdl l with
-    | Some _ => Forall (fun m => isExternal sys (mid_to (msg_id m)) = true) (lbl_outs l)
-    | _ => Forall (fun m => isExternal sys (mid_from (msg_id m)) = true) (lbl_ins l)
+    match l with
+    | LblEmpty => True
+    | LblIns ins => Forall (fun m => isExternal sys (mid_from (msg_id m)) = true) ins
+    | LblHdl _ outs => Forall (fun m => isExternal sys (mid_to (msg_id m)) = true) outs
     end.
 
   Inductive step_mod : System -> State Msg -> Label -> State Msg -> Prop :=
@@ -298,42 +303,16 @@ Section Semantics.
     {| st_oss := getObjectStatesInit (sys_objs sys);
        st_msgs := [] |}.
 
-  Record BLabel :=
-    { blbl_ins : list Msg;
-      blbl_outs : list Msg
-    }.
+  Inductive BLabel :=
+  | BlblIns (ins: list Msg): BLabel
+  | BlblOuts (outs: list Msg): BLabel.
 
   Definition toBLabel (l: Label): option BLabel :=
     match l with
-    | {| lbl_ins := nil; lbl_outs := nil |} => None
-    | _ => Some {| blbl_ins := lbl_ins l;
-                   blbl_outs := lbl_outs l |}
+    | LblEmpty => None
+    | LblIns ins => Some (BlblIns ins)
+    | LblHdl _ outs => Some (BlblOuts outs)
     end.
-
-  Lemma toBLabel_None:
-    forall hdl, toBLabel (buildLabel nil hdl nil) = None.
-  Proof. auto. Qed.
-
-  Lemma toBLabel_Some_1:
-    forall ins hdl outs,
-      ins <> nil ->
-      toBLabel (buildLabel ins hdl outs) =
-      Some {| blbl_ins := ins; blbl_outs := outs |}.
-  Proof.
-    simpl; intros.
-    destruct ins; intuition idtac.
-  Qed.
-
-  Lemma toBLabel_Some_2:
-    forall ins hdl outs,
-      outs <> nil ->
-      toBLabel (buildLabel ins hdl outs) =
-      Some {| blbl_ins := ins; blbl_outs := outs |}.
-  Proof.
-    simpl; intros.
-    destruct ins; intuition idtac.
-    destruct outs; intuition idtac.
-  Qed.
 
   Definition Trace := list BLabel.
 
@@ -367,7 +346,4 @@ Qed.
 
 Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
 Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
-
-(* NOTE: use inversion lemmas instead of [unfold]. *)
-Global Opaque toBLabel.
 

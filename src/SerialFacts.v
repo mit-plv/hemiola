@@ -5,7 +5,10 @@ Require Import Common FMap Syntax Semantics SemFacts SemDet SemSeq Serial.
 Set Implicit Arguments.
 
 Definition NonActive (ll: list Label) :=
-  Forall (fun l => lbl_hdl l = None) ll.
+  Forall (fun l => match l with
+                   | LblHdl _ _ => False
+                   | _ => True
+                   end) ll.
 
 Lemma historyOf_nil:
   forall ll,
@@ -13,12 +16,10 @@ Lemma historyOf_nil:
 Proof.
   unfold NonActive; intros; split.
   - induction ll; intros; [auto|].
-    destruct a as [ins [|] outs]; simpl in H; [discriminate|].
-    constructor; auto.
+    destruct a; simpl in H; [auto|auto|discriminate].
   - induction ll; intros; [auto|].
     inv H.
-    destruct a as [ins [|] outs]; simpl in *; [discriminate|].
-    auto.
+    destruct a; simpl in *; intuition auto.
 Qed.
 
 Lemma historyOf_app:
@@ -30,15 +31,17 @@ Proof.
   induction ll; simpl; intros.
   - apply eq_sym, app_eq_nil in H; dest; subst.
     do 2 (exists nil); auto.
-  - destruct a as [ins [|] outs]; simpl in *.
+  - destruct a; simpl in *.
+    + specialize (IHll _ _ H); dest; subst.
+      eexists (_ :: _), _; repeat split.
+    + specialize (IHll _ _ H); dest; subst.
+      eexists (_ :: _), _; repeat split.
     + destruct hst1 as [|hst1].
       * simpl in H; subst.
         exists nil; eexists; repeat split.
       * simpl in H; inv H.
         specialize (IHll _ _ H2); dest; subst.
         eexists (_ :: _), _; repeat split.
-    + specialize (IHll _ _ H); dest; subst.
-      eexists (_ :: _), _; repeat split.
 Qed.
 
 Lemma nonActive_transactional:
@@ -63,6 +66,28 @@ Lemma equiv_history_behavior:
 Proof.
 Admitted.
 
+Lemma transactional_cons_inv:
+  forall sys a ll,
+    Transactional sys (a :: ll) ->
+    Transactional sys ll.
+Proof.
+  unfold Transactional; intros.
+  destruct H; [discriminate|].
+  destruct H as [pmin [pmouts [? ?]]].
+  remember (a :: ll) as all; inv H0; [inv H3; auto|].
+  inv H4.
+  right; eauto.
+Qed.
+
+Corollary transactional_ocons_inv:
+  forall sys oa ll,
+    Transactional sys (oa ::> ll) ->
+    Transactional sys ll.
+Proof.
+  destruct oa as [a|]; simpl; intros; auto.
+  eauto using transactional_cons_inv.
+Qed.
+
 Lemma transactional_steps_seq:
   forall sys ll,
     Transactional sys (historyOf ll) ->
@@ -74,6 +99,18 @@ Lemma transactional_steps_seq:
           atm2State ast2 = st2 /\
           steps step_seq sys ast1 ll ast2.
 Proof.
+  induction ll as [|l ll]; simpl; intros; subst;
+    [inv H0; eexists; repeat split; constructor|].
+
+  (* NOTE: [l] is the youngest label. *)
+
+  inv H0.
+  specialize (IHll (transactional_ocons_inv _ _ H) _ _ H4 _ eq_refl).
+  destruct IHll as [past2 [? ?]]; subst.
+
+  (* TODO: Do a case analysis on [l] *)
+
+  eexists; split; [|econstructor; [eassumption|]].
 Admitted.
 
 Corollary nonActive_steps_seq:

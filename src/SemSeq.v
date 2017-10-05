@@ -59,7 +59,7 @@ Section Deactivation.
 End Deactivation.
 
 Inductive step_seq (sys: System) : State AtomicMsg -> Label -> State AtomicMsg -> Prop :=
-| SsSlt: forall s, step_seq sys s emptyLabel s
+| SsSlt: forall s, step_seq sys s LblEmpty s
 | SsInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
     In obj (sys_objs sys) ->
     idx = obj_idx obj ->
@@ -76,7 +76,7 @@ Inductive step_seq (sys: System) : State AtomicMsg -> Label -> State AtomicMsg -
     pmsg_postcond fpmsg os (msg_value (getMsg fmsg)) pos ->
     outs = pmsg_outs fpmsg os (msg_value (getMsg fmsg)) ->
     step_seq sys {| st_oss := oss; st_msgs := oims |}
-             (buildLabel nil (Some (getMsg fmsg)) (extOuts sys outs))
+             (LblHdl (getMsg fmsg) (extOuts sys outs))
              {| st_oss := oss +[ idx <- pos ];
                 st_msgs := distributeMsgs (toAtomicMsgsT (intOuts sys outs))
                                           (if isExternal sys fidx
@@ -87,6 +87,6 @@ Inductive step_seq (sys: System) : State AtomicMsg -> Label -> State AtomicMsg -
     emsgs <> nil ->
     SubList (map (fun m => mid_to (msg_id m)) emsgs) (indicesOf sys) ->
     step_seq sys {| st_oss := oss; st_msgs := oims |}
-             (buildLabel emsgs None nil)
+             (LblIns emsgs)
              {| st_oss := oss; st_msgs := distributeMsgs (toAtomicMsgsF emsgs) oims |}.
 
