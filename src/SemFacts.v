@@ -1,5 +1,56 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics.
+Require Import Common ListSupport FMap Syntax Semantics SemDet.
+
+Lemma internal_not_external:
+  forall sys idx,
+    isInternal sys idx = true -> isExternal sys idx = false.
+Proof.
+  unfold isInternal, isExternal; intros.
+  find_if_inside; auto.
+Qed.
+
+Lemma external_not_internal:
+  forall sys idx,
+    isExternal sys idx = true -> isInternal sys idx = false.
+Proof.
+  unfold isInternal, isExternal; intros.
+  find_if_inside; auto.
+Qed.
+  
+Lemma step_mod_hdl_internal:
+  forall sys st1 hdl outs st2,
+    step_mod sys st1 (LblHdl hdl outs) st2 ->
+    isInternal sys (mid_to (msg_id hdl)) = true.
+Proof.
+  intros; apply step_mod_step_det in H.
+  inv H.
+  destruct hdl as [hmid hmv]; simpl in *; subst.
+  destruct H8 as [? [? ?]]; simpl in *; subst.
+  rewrite H0.
+  unfold isInternal; find_if_inside; auto.
+  elim n; apply in_map; assumption.
+Qed.
+
+Lemma step_mod_outs_internal:
+  forall sys st1 hdl outs st2,
+    step_mod sys st1 (LblHdl hdl outs) st2 ->
+    Forall (fun m => isInternal sys (mid_from (msg_id m)) = true) outs.
+Proof.
+  intros; apply step_mod_step_det in H.
+  inv H.
+  destruct hdl as [hmid hmv]; simpl in *; subst.
+  apply Forall_filter.
+  destruct H15.
+
+  clear -H H2.
+  remember (pmsg_outs _ _ _) as outs; clear Heqouts.
+  induction outs; simpl; intros; [constructor|].
+  inv H; dest.
+  constructor; auto.
+  rewrite H.
+  unfold isInternal; find_if_inside; auto.
+  elim n; apply in_map; assumption.
+Qed.
 
 Lemma steps_split:
   forall {MsgT} (step: Step MsgT) sys st1 st2 ll,

@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics SemFacts SemDet SemSeq Serial.
+Require Import Common ListSupport FMap Syntax Semantics SemFacts SemDet SemSeq Serial.
 
 Set Implicit Arguments.
 
@@ -88,6 +88,23 @@ Proof.
   eauto using transactional_cons_inv.
 Qed.
 
+Lemma atm2M_distributeMsg_comm:
+  forall am aa msgs,
+    atm2M (distributeMsg {| atm_msg := am; atm_active := aa |} msgs) =
+    distributeMsg am (atm2M msgs).
+Proof. (* trivial but very tedious *)
+Admitted.
+
+Lemma atm2M_distributeMsgs_comm:
+  forall ins msgs,
+    atm2M (distributeMsgs (toAtomicMsgsF ins) msgs) =
+    distributeMsgs ins (atm2M msgs).
+Proof.
+  induction ins; intros; [reflexivity|].
+  simpl; rewrite <-IHins.
+  apply atm2M_distributeMsg_comm.
+Qed.
+
 Lemma step_seq_ins:
   forall sys ins st1 st2,
     step_mod sys st1 (LblIns ins) st2 ->
@@ -105,16 +122,100 @@ Proof.
             st_msgs := distributeMsgs (toAtomicMsgsF ins) (st_msgs ast1) |}.
   split.
   - unfold atm2State; simpl.
-    f_equal.
-
-    clear.
-    induction ins; [reflexivity|].
-    simpl; rewrite <-IHins; clear.
-    remember (distributeMsgs (toAtomicMsgsF ins) (st_msgs ast1)) as msgs; clear Heqmsgs.
-    admit. (* trivial but very tedious *)
-    
+    rewrite atm2M_distributeMsgs_comm.
+    reflexivity.
   - destruct ast1 as [oss1 msgs1]; simpl.
     econstructor; eauto.
+Qed.
+
+Lemma atomic_mouts_internal:
+  forall sys st1 ll st2,
+    steps step_mod sys st1 ll st2 ->
+    forall min mouts,
+      Atomic min (historyOf ll) mouts ->
+      Forall (fun m => isInternal sys (mid_from (msg_id m)) = true) mouts.
+Proof.
+  induction 1; simpl; intros; [inv H|].
+
+  destruct lbl; eauto.
+
+  simpl in H1; inv H1.
+  - inv H6.
+    apply step_mod_outs_internal in H0; auto.
+  - apply Forall_app.
+    + apply Forall_remove; eauto.
+    + apply step_mod_outs_internal in H0; auto.
+Qed.
+
+Lemma atomic_internals:
+  forall sys min mouts hll,
+    Atomic min hll mouts ->
+    forall ll st1 st2,
+      hll = historyOf ll ->
+      steps step_mod sys st1 ll st2 ->
+      Forall (fun hl => isInternal sys (mid_from (msg_id (hlbl_hdl hl))) = true)
+             (tl (rev hll)).
+Proof.
+  induction 1; simpl; intros; subst; [constructor|].
+
+  destruct hst as [|hl hst]; [constructor|].
+  rewrite tl_app by (simpl; destruct (rev hst); discriminate).
+
+  rewrite cons_app in H1.
+  apply eq_sym, historyOf_app in H1.
+  destruct H1 as [ll1 [ll2 [? [? ?]]]]; subst.
+
+  eapply steps_split in H2; [|reflexivity].
+  destruct H2 as [sti [? ?]].
+
+  apply Forall_app; eauto.
+
+  clear IHAtomic.
+  repeat constructor.
+  simpl.
+  rewrite <-H4 in H.
+  eapply atomic_mouts_internal in H1; [|eassumption].
+  eapply Forall_forall in H1; eauto.
+Qed.
+
+Lemma step_seq_hdl:
+  forall sys hdl outs ll,
+    Transactional sys ({| hlbl_hdl := hdl; hlbl_outs := outs |} :: historyOf ll) ->
+    forall ast1 ast2 st1 st2 st3,
+      atm2State ast1 = st1 ->
+      atm2State ast2 = st2 ->
+      steps step_mod sys st1 ll st2 ->
+      steps step_seq sys ast1 ll ast2 ->
+      step_mod sys st2 (LblHdl hdl outs) st3 ->
+      exists ast3,
+        atm2State ast3 = st3 /\
+        step_seq sys ast2 (LblHdl hdl outs) ast3.
+Proof.
+  intros; subst.
+  inv H; [discriminate|].
+  destruct H0 as [min [mouts [? ?]]].
+
+  destruct ast2 as [oss2 amsgs2].
+  apply step_mod_step_det in H4; inv H4.
+
+  inv H0.
+  - admit.
+  - exists {| st_oss := oss2 +[obj_idx obj <- pos];
+              st_msgs := distributeMsgs
+                           (toAtomicMsgsF (intOuts sys (pmsg_outs fpmsg os (msg_value hdl))))
+                           (if isExternal sys fidx then deactivateM amsgs2 else amsgs2) |}.
+    split.
+    + unfold atm2State; simpl.
+      rewrite <-atm2M_distributeMsgs_comm.
+      eapply atomic_mouts_internal in H9; [|eassumption].
+      eapply Forall_forall in H9; [|eassumption].
+      destruct H14 as [? [? ?]]; subst.
+      apply internal_not_external in H9; rewrite H9.
+      reflexivity.
+    + change hdl with (getMsg {| atm_msg := hdl; atm_active := true |}).
+      eapply SsInt; try reflexivity; try eassumption; eauto.
+      * admit.
+      * admit.
 Admitted.
 
 Lemma transactional_steps_seq:
@@ -136,24 +237,22 @@ Proof.
   specialize (IHll (transactional_ocons_inv _ _ H) _ _ H4 _ eq_refl).
   destruct IHll as [past2 [? ?]]; subst.
   destruct l; simpl in H.
-
   - (* LblEmpty *)
     apply step_mod_step_det in H6; inv H6.
     eexists; repeat split.
     econstructor; eauto.
     econstructor.
-
   - (* LblIns *)
     eapply step_seq_ins in H6; [|reflexivity].
     destruct H6 as [ast2 [? ?]]; subst.
     eexists; repeat split.
     econstructor; eauto.
-    
   - (* LblHdl *)
-    admit.
-    (* eexists; split; [|econstructor; [eassumption|]]. *)
-
-Admitted.
+    eapply step_seq_hdl in H; eauto.
+    destruct H as [ast3 [? ?]]; subst.
+    eexists; repeat split.
+    econstructor; eauto.
+Qed.
 
 Corollary nonActive_steps_seq:
   forall ll,

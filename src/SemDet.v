@@ -9,7 +9,7 @@ Inductive step_det (sys: System) : State Msg -> Label -> State Msg -> Prop :=
     idx = obj_idx obj ->
     oss@[idx] = Some os ->
     oims@[idx] = Some mf ->
-
+    
     firstMF fidx fchn mf = Some fmsg ->
     msg_id fmsg = pmsg_mid fpmsg ->
     ValidMsgId fidx idx fchn fmsg ->
@@ -17,6 +17,7 @@ Inductive step_det (sys: System) : State Msg -> Label -> State Msg -> Prop :=
     pmsg_precond fpmsg os ->
     pmsg_postcond fpmsg os (msg_value fmsg) pos ->
     outs = pmsg_outs fpmsg os (msg_value fmsg) ->
+    ValidOuts (obj_idx obj) outs ->
 
     step_det sys {| st_oss := oss; st_msgs := oims |}
              (LblHdl fmsg (extOuts sys outs))

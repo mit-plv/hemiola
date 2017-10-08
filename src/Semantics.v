@@ -150,7 +150,6 @@ Section Semantics.
    * 1) they are from the same source [idx],
    * 2) each target is not the source, and
    * 3) all targets (pair of msgTo and channel) are different to each others.
-   * TODO: syntax has to ensure [ValidOuts], or by well-formedness.
    *)
   Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
     Forall (fun m => mid_from (msg_id m) = idx /\ mid_to (msg_id m) <> idx) msgs /\
@@ -175,7 +174,7 @@ Section Semantics.
       In fpmsg (obj_trs obj) ->
       pmsg_precond fpmsg os ->
       pmsg_postcond fpmsg os (msg_value fmsg) pos ->
-      (* ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) -> *)
+      ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
       step_obj obj os mf
                (LblHdl fmsg (pmsg_outs fpmsg os (msg_value fmsg)))
                pos (deqMF fidx fchn mf)
@@ -214,12 +213,6 @@ Section Semantics.
 
   Definition subtractMsgs (ms1 ms2: list Msg) :=
     filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
-
-  (* Definition ValidLabel (l: Label) := *)
-  (*   match lbl_hdl l with *)
-  (*   | Some hmsg => lbl_ins l = nil /\ ValidOuts (mid_to (msg_id hmsg)) (lbl_outs l) *)
-  (*   | None => lbl_outs l = nil /\ exists from, ValidOuts from (lbl_ins l) *)
-  (*   end. *)
 
   Definition combineLabel (lbl1 lbl2: Label) :=
     match lbl1, lbl2 with

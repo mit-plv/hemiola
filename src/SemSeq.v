@@ -60,7 +60,7 @@ End Deactivation.
 
 Inductive step_seq (sys: System) : State AtomicMsg -> Label -> State AtomicMsg -> Prop :=
 | SsSlt: forall s, step_seq sys s LblEmpty s
-| SsInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
+| SsInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs poss,
     In obj (sys_objs sys) ->
     idx = obj_idx obj ->
     oss@[idx] = Some os ->
@@ -75,13 +75,15 @@ Inductive step_seq (sys: System) : State AtomicMsg -> Label -> State AtomicMsg -
     pmsg_precond fpmsg os ->
     pmsg_postcond fpmsg os (msg_value (getMsg fmsg)) pos ->
     outs = pmsg_outs fpmsg os (msg_value (getMsg fmsg)) ->
+    ValidOuts (obj_idx obj) outs ->
+    poss = {| st_oss := oss +[ idx <- pos ];
+              st_msgs := distributeMsgs (toAtomicMsgsT (intOuts sys outs))
+                                        (if isExternal sys fidx
+                                         then deactivateM oims
+                                         else oims) |} ->
     step_seq sys {| st_oss := oss; st_msgs := oims |}
-             (LblHdl (getMsg fmsg) (extOuts sys outs))
-             {| st_oss := oss +[ idx <- pos ];
-                st_msgs := distributeMsgs (toAtomicMsgsT (intOuts sys outs))
-                                          (if isExternal sys fidx
-                                           then deactivateM oims
-                                           else oims) |}
+             (LblHdl (getMsg fmsg) (extOuts sys outs)) poss
+
 | SsExt: forall from emsgs oss oims,
     isExternal sys from = true ->
     emsgs <> nil ->
