@@ -2447,6 +2447,18 @@ Module LeibnizFacts (M : MapLeibniz).
     exfalso; eapply P.F.empty_in_iff; eauto.
   Qed.
 
+  Lemma map_add:
+    forall {A B} (f: A -> B) k v m,
+      map f (add k v m) = add k (f v) (map f m).
+  Proof.
+    intros; ext y.
+    rewrite P.F.map_o.
+    cmp y k.
+    - do 2 rewrite find_add_1; reflexivity.
+    - do 2 rewrite find_add_2 by assumption.
+      rewrite P.F.map_o; reflexivity.
+  Qed.
+
 End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.

@@ -88,12 +88,73 @@ Proof.
   eauto using transactional_cons_inv.
 Qed.
 
+Lemma atm2Q_enq_comm:
+  forall am aa q,
+    atm2Q (enq {| atm_msg := am; atm_active := aa |} q) =
+    enq am (atm2Q q).
+Proof.
+  unfold atm2Q, enq; intros.
+  apply map_app.
+Qed.
+
+Lemma atm2Q_find:
+  forall chn cs,
+    (M.map atm2Q cs)@[chn] = cs@[chn] >>= (fun q => Some (atm2Q q)).
+Proof.
+  intros; rewrite M.F.P.F.map_o; reflexivity.
+Qed.
+
+Lemma atm2C_enqC_comm:
+  forall am aa chn cs,
+    atm2C (enqC chn {| atm_msg := am; atm_active := aa |} cs) =
+    enqC chn am (atm2C cs).
+Proof.
+  unfold atm2C, enqC; intros.
+  rewrite atm2Q_find.
+  destruct (cs@[chn]); simpl;
+    try (rewrite M.map_add, atm2Q_enq_comm; reflexivity).
+Qed.
+
+Lemma atm2C_find:
+  forall from mf,
+    (M.map atm2C mf)@[from] = mf@[from] >>= (fun cs => Some (atm2C cs)).
+Proof.
+  intros; rewrite M.F.P.F.map_o; reflexivity.
+Qed.
+
+Lemma atm2MF_enqMF_comm:
+  forall am aa from chn mf,
+    atm2MF (enqMF from chn {| atm_msg := am; atm_active := aa |} mf) =
+    enqMF from chn am (atm2MF mf).
+Proof.
+  unfold atm2MF, enqMF; intros.
+  rewrite atm2C_find.
+  destruct (mf@[from]); simpl.
+  - rewrite M.map_add, atm2C_enqC_comm; reflexivity.
+  - rewrite M.map_add, atm2C_enqC_comm.
+    unfold atm2C; rewrite M.map_empty; reflexivity.
+Qed.
+
+Lemma atm2MF_find:
+  forall to msgs,
+    (M.map atm2MF msgs)@[to] = msgs@[to] >>= (fun mf => Some (atm2MF mf)).
+Proof.
+  intros; rewrite M.F.P.F.map_o; reflexivity.
+Qed.
+
 Lemma atm2M_distributeMsg_comm:
   forall am aa msgs,
     atm2M (distributeMsg {| atm_msg := am; atm_active := aa |} msgs) =
     distributeMsg am (atm2M msgs).
-Proof. (* trivial but very tedious *)
-Admitted.
+Proof.
+  destruct am as [[mty mfr mto mch] mv]; intros.
+  unfold atm2M, distributeMsg, enqM; simpl.
+  rewrite atm2MF_find.
+  destruct (msgs@[mto]); simpl.
+  - rewrite M.map_add, atm2MF_enqMF_comm; reflexivity.
+  - rewrite M.map_add, atm2MF_enqMF_comm.
+    unfold atm2MF; rewrite M.map_empty; reflexivity.
+Qed.
 
 Lemma atm2M_distributeMsgs_comm:
   forall ins msgs,
