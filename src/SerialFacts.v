@@ -104,6 +104,13 @@ Proof.
   intros; rewrite M.F.P.F.map_o; reflexivity.
 Qed.
 
+Lemma atm2Q_deactivate:
+  forall q, atm2Q q = atm2Q (map deactivate q).
+Proof.
+  induction q; simpl; intros; auto.
+  rewrite IHq; reflexivity.
+Qed.
+
 Lemma atm2C_enqC_comm:
   forall am aa chn cs,
     atm2C (enqC chn {| atm_msg := am; atm_active := aa |} cs) =
@@ -120,6 +127,17 @@ Lemma atm2C_find:
     (M.map atm2C mf)@[from] = mf@[from] >>= (fun cs => Some (atm2C cs)).
 Proof.
   intros; rewrite M.F.P.F.map_o; reflexivity.
+Qed.
+
+Lemma atm2C_deactivateC:
+  forall cs, atm2C cs = atm2C (deactivateC cs).
+Proof.
+  unfold atm2C, deactivateC; intros.
+  M.ext chn.
+  do 2 rewrite atm2Q_find.
+  rewrite M.F.P.F.map_o.
+  destruct (cs@[chn]); simpl; [|reflexivity].
+  rewrite atm2Q_deactivate; reflexivity.
 Qed.
 
 Lemma atm2MF_enqMF_comm:
@@ -142,6 +160,17 @@ Proof.
   intros; rewrite M.F.P.F.map_o; reflexivity.
 Qed.
 
+Lemma atm2MF_deactivateMF:
+  forall mf, atm2MF mf = atm2MF (deactivateMF mf).
+Proof.
+  unfold atm2MF, deactivateMF; intros.
+  M.ext from.
+  do 2 rewrite atm2C_find.
+  rewrite M.F.P.F.map_o.
+  destruct (mf@[from]); simpl; [|reflexivity].
+  rewrite atm2C_deactivateC; reflexivity.
+Qed.
+
 Lemma atm2M_distributeMsg_comm:
   forall am aa msgs,
     atm2M (distributeMsg {| atm_msg := am; atm_active := aa |} msgs) =
@@ -156,7 +185,28 @@ Proof.
     unfold atm2MF; rewrite M.map_empty; reflexivity.
 Qed.
 
-Lemma atm2M_distributeMsgs_comm:
+Lemma atm2M_deactivateM:
+  forall msgs, atm2M msgs = atm2M (deactivateM msgs).
+Proof.
+  unfold atm2M, deactivateM; intros.
+  M.ext to.
+  do 2 rewrite atm2MF_find.
+  rewrite M.F.P.F.map_o.
+  destruct (msgs@[to]); simpl; [|reflexivity].
+  rewrite atm2MF_deactivateMF; reflexivity.
+Qed.
+
+Lemma atm2M_distributeMsgs_active_comm:
+  forall ins msgs,
+    atm2M (distributeMsgs (toAtomicMsgsT ins) msgs) =
+    distributeMsgs ins (atm2M msgs).
+Proof.
+  induction ins; intros; [reflexivity|].
+  simpl; rewrite <-IHins.
+  apply atm2M_distributeMsg_comm.
+Qed.
+
+Lemma atm2M_distributeMsgs_inactive_comm:
   forall ins msgs,
     atm2M (distributeMsgs (toAtomicMsgsF ins) msgs) =
     distributeMsgs ins (atm2M msgs).
@@ -183,7 +233,7 @@ Proof.
             st_msgs := distributeMsgs (toAtomicMsgsF ins) (st_msgs ast1) |}.
   split.
   - unfold atm2State; simpl.
-    rewrite atm2M_distributeMsgs_comm.
+    rewrite atm2M_distributeMsgs_inactive_comm.
     reflexivity.
   - destruct ast1 as [oss1 msgs1]; simpl.
     econstructor; eauto.
@@ -259,15 +309,27 @@ Proof.
   destruct ast2 as [oss2 amsgs2].
   apply step_mod_step_det in H4; inv H4.
 
+  exists {| st_oss := oss2 +[obj_idx obj <- pos];
+            st_msgs := distributeMsgs
+                         (toAtomicMsgsT (intOuts sys (pmsg_outs fpmsg os (msg_value hdl))))
+                         (if isExternal sys fidx then deactivateM amsgs2 else amsgs2) |}.
   inv H0.
-  - admit.
-  - exists {| st_oss := oss2 +[obj_idx obj <- pos];
-              st_msgs := distributeMsgs
-                           (toAtomicMsgsF (intOuts sys (pmsg_outs fpmsg os (msg_value hdl))))
-                           (if isExternal sys fidx then deactivateM amsgs2 else amsgs2) |}.
+  - inv H7.
     split.
     + unfold atm2State; simpl.
-      rewrite <-atm2M_distributeMsgs_comm.
+      rewrite atm2M_distributeMsgs_active_comm.
+      destruct H14 as [? [? ?]]; subst.
+      rewrite H.
+      rewrite <-atm2M_deactivateM.
+      reflexivity.
+    + change min with (getMsg {| atm_msg := min; atm_active := false |}).
+      eapply SsInt; try reflexivity; try eassumption; eauto.
+      * admit.
+      * destruct H14 as [? [? ?]]; subst; auto.
+      * admit.
+  - split.
+    + unfold atm2State; simpl.
+      rewrite atm2M_distributeMsgs_active_comm.
       eapply atomic_mouts_internal in H9; [|eassumption].
       eapply Forall_forall in H9; [|eassumption].
       destruct H14 as [? [? ?]]; subst.
