@@ -25,7 +25,7 @@ Proof.
   intros; apply step_mod_step_det in H.
   inv H.
   destruct hdl as [hmid hmv]; simpl in *; subst.
-  destruct H8 as [? [? ?]]; simpl in *; subst.
+  destruct H7 as [? [? ?]]; simpl in *; subst.
   rewrite H0.
   unfold isInternal; find_if_inside; auto.
   elim n; apply in_map; assumption.
@@ -40,7 +40,7 @@ Proof.
   inv H.
   destruct hdl as [hmid hmv]; simpl in *; subst.
   apply Forall_filter.
-  destruct H15.
+  destruct H14.
 
   clear -H H2.
   remember (pmsg_outs _ _ _) as outs; clear Heqouts.

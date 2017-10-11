@@ -4,13 +4,12 @@ Require Import Common FMap Syntax Semantics.
 
 Inductive step_det (sys: System) : State Msg -> Label -> State Msg -> Prop :=
 | SdSlt: forall s, step_det sys s LblEmpty s
-| SdInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs,
+| SdInt: forall oss oims obj idx os pos fmsg fpmsg fidx fchn outs,
     In obj (sys_objs sys) ->
     idx = obj_idx obj ->
     oss@[idx] = Some os ->
-    oims@[idx] = Some mf ->
-    
-    firstMF fidx fchn mf = Some fmsg ->
+
+    firstM fidx idx fchn oims = Some fmsg -> 
     msg_id fmsg = pmsg_mid fpmsg ->
     ValidMsgId fidx idx fchn fmsg ->
     In fpmsg (obj_trs obj) ->

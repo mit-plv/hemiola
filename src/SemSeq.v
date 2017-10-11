@@ -60,15 +60,14 @@ End Deactivation.
 
 Inductive step_seq (sys: System) : State AtomicMsg -> Label -> State AtomicMsg -> Prop :=
 | SsSlt: forall s, step_seq sys s LblEmpty s
-| SsInt: forall oss oims obj idx mf os pos fmsg fpmsg fidx fchn outs poss,
+| SsInt: forall oss oims obj idx os pos fmsg fpmsg fidx fchn outs poss,
     In obj (sys_objs sys) ->
     idx = obj_idx obj ->
     oss@[idx] = Some os ->
-    oims@[idx] = Some mf ->
 
     (atm_active fmsg = true \/ isExternal sys fidx = true) ->
-    
-    firstMF fidx fchn mf = Some fmsg ->
+
+    firstM fidx idx fchn oims = Some fmsg -> 
     msg_id (getMsg fmsg) = pmsg_mid fpmsg ->
     ValidMsgId fidx idx fchn (getMsg fmsg) ->
     In fpmsg (obj_trs obj) ->

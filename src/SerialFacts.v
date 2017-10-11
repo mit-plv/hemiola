@@ -305,40 +305,43 @@ Proof.
   intros; subst.
   inv H; [discriminate|].
   destruct H0 as [min [mouts [? ?]]].
-
   destruct ast2 as [oss2 amsgs2].
   apply step_mod_step_det in H4; inv H4.
-
   exists {| st_oss := oss2 +[obj_idx obj <- pos];
             st_msgs := distributeMsgs
                          (toAtomicMsgsT (intOuts sys (pmsg_outs fpmsg os (msg_value hdl))))
                          (if isExternal sys fidx then deactivateM amsgs2 else amsgs2) |}.
   inv H0.
+
   - inv H7.
     split.
     + unfold atm2State; simpl.
       rewrite atm2M_distributeMsgs_active_comm.
-      destruct H14 as [? [? ?]]; subst.
+      destruct H13 as [? [? ?]]; subst.
       rewrite H.
       rewrite <-atm2M_deactivateM.
       reflexivity.
     + change min with (getMsg {| atm_msg := min; atm_active := false |}).
       eapply SsInt; try reflexivity; try eassumption; eauto.
+      * destruct H13 as [? [? ?]]; subst; auto.
       * admit.
-      * destruct H14 as [? [? ?]]; subst; auto.
-      * admit.
+
   - split.
     + unfold atm2State; simpl.
       rewrite atm2M_distributeMsgs_active_comm.
       eapply atomic_mouts_internal in H9; [|eassumption].
       eapply Forall_forall in H9; [|eassumption].
-      destruct H14 as [? [? ?]]; subst.
+      destruct H13 as [? [? ?]]; subst.
       apply internal_not_external in H9; rewrite H9.
       reflexivity.
     + change hdl with (getMsg {| atm_msg := hdl; atm_active := true |}).
       eapply SsInt; try reflexivity; try eassumption; eauto.
-      * admit.
-      * admit.
+
+      destruct ast1 as [oss1 amsgs1]; simpl in *.
+      unfold atm2State in H2; simpl in H2.
+      
+      admit.
+
 Admitted.
 
 Lemma transactional_steps_seq:
