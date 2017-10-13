@@ -323,26 +323,24 @@ Section Sim.
       destruct sst1 as [ost1 msgs1].
       Common.dest_in.
       + destruct fmsg as [[fty ffr fto fch] fval]; simpl in *.
-        inv H6; inv H7; simpl in *.
-        cbn in H1, H5; dest; subst.
-        specialize (H0 child1Idx); rewriter.
-        specialize (H0 extIdx1); apply firstMF_Some_inv in H5; dest; rewriter.
-        specialize (H0 chnImpl); apply firstC_Some_inv in H5; dest; rewriter.
+        destruct H6 as [? [? ?]]; simpl in *; subst.
+        specialize (H0 child1Idx); apply firstM_Some_inv in H4; dest; rewriter.
+        specialize (H0 fidx); apply firstMF_Some_inv in H1; dest; rewriter.
+        specialize (H0 fchn); apply firstC_Some_inv in H4; dest; rewriter.
         subst.
-        destruct x0 as [|ffq fq]; [discriminate|]; simpl in H5; inv H5.
-        inv H6.
+        destruct x1 as [|ffq fq]; [discriminate|]; simpl in H5; inv H6.
+        inv H5.
         
         do 2 eexists; split.
         * apply step_det_step_mod.
           eapply SdInt; try reflexivity.
           { left; reflexivity. }
           { eassumption. }
-          { simpl; cbn in Heqt0; rewriter; reflexivity. }
           { instantiate (3:= extIdx1).
             instantiate (2:= child1Idx).
-            unfold firstMF.
-            rewrite svmIdxF_extIdx1 in Heqt1; rewrite <-Heqt1; simpl.
-            unfold firstC; rewrite <-Heqt2; simpl.
+            cbn; cbn in Heqt0, Heqt1.
+            rewrite svmIdxF_extIdx1 in Heqt1.
+            unfold firstM, firstMF, firstC; rewriter.
             reflexivity.
           }
           { instantiate (1:= specGetReq extIdx1 extIdx2 specChn1).
