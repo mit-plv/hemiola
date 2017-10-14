@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics SemDet.
+Require Import Common ListSupport FMap Syntax Semantics StepDet.
 
 Lemma internal_not_external:
   forall sys idx,
@@ -17,13 +17,12 @@ Proof.
   find_if_inside; auto.
 Qed.
   
-Lemma step_mod_hdl_internal:
+Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
-    step_mod sys st1 (LblHdl hdl outs) st2 ->
-    isInternal sys (mid_to (msg_id hdl)) = true.
+    step_det sys st1 (IlblInt (Some hdl) outs) st2 ->
+    isInternal sys (mid_to (msg_id (getMsg hdl))) = true.
 Proof.
-  intros; apply step_mod_step_det in H.
-  inv H.
+  intros; inv H.
   destruct hdl as [hmid hmv]; simpl in *; subst.
   destruct H7 as [? [? ?]]; simpl in *; subst.
   rewrite H0.
@@ -31,29 +30,40 @@ Proof.
   elim n; apply in_map; assumption.
 Qed.
 
-Lemma step_mod_outs_internal:
-  forall sys st1 hdl outs st2,
-    step_mod sys st1 (LblHdl hdl outs) st2 ->
-    Forall (fun m => isInternal sys (mid_from (msg_id m)) = true) outs.
+Lemma step_det_outs_internal:
+  forall sys st1 ilbl st2,
+    step_det sys st1 ilbl st2 ->
+    Forall (fun m: TMsg => isInternal sys (mid_from (msg_id (getMsg m))) = true)
+           (iLblOuts ilbl).
 Proof.
-  intros; apply step_mod_step_det in H.
-  inv H.
-  destruct hdl as [hmid hmv]; simpl in *; subst.
-  apply Forall_filter.
-  destruct H14.
-
-  clear -H H2.
-  remember (pmsg_outs _ _ _) as outs; clear Heqouts.
-  induction outs; simpl; intros; [constructor|].
-  inv H; dest.
-  constructor; auto.
-  rewrite H.
-  unfold isInternal; find_if_inside; auto.
-  elim n; apply in_map; assumption.
+  intros; inv H.
+  - constructor.
+  - simpl.
+    apply Forall_filter.
+    destruct H10.
+    clear -H H0.
+    remember (pmsg_outs _ _ _) as outs; clear Heqouts.
+    induction outs; simpl; intros; [constructor|].
+    inv H; dest.
+    constructor; auto.
+    simpl; simpl in H; unfold id in H; rewrite H.
+    unfold isInternal; find_if_inside; auto.
+    elim n; apply in_map; assumption.
+  - simpl.
+    apply Forall_filter.
+    destruct H9.
+    clear -H H0.
+    remember (pmsg_outs _ _ _) as outs; clear Heqouts.
+    induction outs; simpl; intros; [constructor|].
+    inv H; dest.
+    constructor; auto.
+    simpl; simpl in H; unfold id in H; rewrite H.
+    unfold isInternal; find_if_inside; auto.
+    elim n; apply in_map; assumption.
 Qed.
 
 Lemma steps_split:
-  forall {MsgT} (step: Step MsgT) sys st1 st2 ll,
+  forall {StateT LabelT} (step: Step StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
     forall ll1 ll2,
       ll = ll2 ++ ll1 ->
@@ -67,7 +77,7 @@ Proof.
   - destruct ll2.
     + simpl in H1; subst.
       specialize (IHsteps ll nil eq_refl).
-      destruct IHsteps as [sti [? ?]].
+      destruct IHsteps as [tsi [? ?]].
       inv H2.
       eexists; split.
       * econstructor; eauto.
@@ -80,7 +90,7 @@ Proof.
 Qed.
 
 Lemma steps_append:
-  forall {MsgT} (step: Step MsgT) sys st1 ll1 st2,
+  forall {StateT LabelT} (step: Step StateT LabelT) sys st1 ll1 st2,
     steps step sys st1 ll1 st2 ->
     forall ll2 st3,
       steps step sys st2 ll2 st3 ->
@@ -90,8 +100,24 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma map_id:
+  forall {A} (l: list A), map id l = l.
+Proof.
+  induction l; simpl; auto.
+  rewrite IHl; reflexivity.
+Qed.
+
+Lemma map_trans:
+  forall {A B C} (l: list A) (p: A -> B) (q: B -> C),
+    map q (map p l) = map (fun a => q (p a)) l.
+Proof.
+  induction l; simpl; intros; auto.
+  rewrite IHl; reflexivity.
+Qed.
+
 Theorem refines_refl:
-  forall (step: Step Msg) sys, step # step |-- sys ⊑[id] sys.
+  forall {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
+         (step: Step StateT LabelT) sys, step # step |-- sys ⊑[id] sys.
 Proof.
   unfold Refines; intros.
   rewrite map_id.
@@ -99,15 +125,15 @@ Proof.
 Qed.
 
 Theorem refines_trans:
-  forall (step1 step2 step3: Step Msg) s1 s2 s3 p q,
+  forall {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
+         (step1 step2 step3: Step StateT LabelT) p q s1 s2 s3,
     step1 # step2 |-- s1 ⊑[p] s2 ->
     step2 # step3 |-- s2 ⊑[q] s3 ->
     step1 # step3 |-- s1 ⊑[fun l => q (p l)] s3.
 Proof.
   unfold Refines; intros.
-  specialize (H0 _ (H _ H1)).
-  replace (map _ ll) with (map q (map p ll)); [assumption|].
-  clear; induction ll; simpl; auto.
-  f_equal; auto.
+  specialize (H2 _ (H1 _ H3)).
+  rewrite map_trans in H2.
+  assumption.
 Qed.
   

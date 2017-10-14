@@ -88,6 +88,11 @@ Definition singleton (obj: Object): System :=
      sys_chns := nil
   |}.
 
+Definition isExternal (sys: System) (idx: IdxT) :=
+  if idx ?<n (indicesOf sys) then false else true.
+Definition isInternal (sys: System) (idx: IdxT) :=
+  if idx ?<n (indicesOf sys) then true else false.
+
 Notation "'T'" := (fun _ => True).
 Infix "-->" := CondImp (at level 30).
 Infix "-*-" := Disjoint (at level 30).

@@ -3,11 +3,19 @@ Require Import Common FMap Syntax.
 
 Set Implicit Arguments.
 
-Class HasMsg (MsgT: Type) :=
-  { getMsg : MsgT -> Msg }.
+Section HasMsg.
+  Class HasMsg (MsgT: Type) :=
+    { getMsg : MsgT -> Msg }.
 
-Instance Msg_HasMsg : HasMsg Msg :=
-  { getMsg := id }.
+  Global Instance Msg_HasMsg : HasMsg Msg :=
+    { getMsg := id }.
+
+End HasMsg.
+
+Definition intOuts {MsgT} `{HasMsg MsgT} (sys: System) (outs: list MsgT) :=
+  filter (fun m => isInternal sys (mid_to (msg_id (getMsg m)))) outs.
+Definition extOuts {MsgT} `{HasMsg MsgT} (sys: System) (outs: list MsgT) :=
+  filter (fun m => isExternal sys (mid_to (msg_id (getMsg m)))) outs.
 
 Section Messages.
   Variable (MsgT: Type).
@@ -114,168 +122,62 @@ Section Messages.
   
 End Messages.
 
-Section Semantics.
+Section Validness.
 
-  Inductive Label :=
-  | LblEmpty: Label
-  | LblIns (ins: list Msg): Label
-  | LblHdl (hdl: Msg) (outs: list Msg): Label.
-
-  Definition lblIns (l: Label) :=
-    match l with
-    | LblIns ins => ins
-    | _ => nil
-    end.
-
-  Definition lblHdl (l: Label) :=
-    match l with
-    | LblHdl hdl _ => Some hdl
-    | _ => None
-    end.
-
-  Definition lblOuts (l: Label) :=
-    match l with
-    | LblHdl _ outs => outs
-    | _ => nil
-    end.
-
-  Definition ObjectStates := M.t StateT.
-
-  Definition ValidMsgId (from to chn: IdxT) (msg: Msg) :=
-    mid_from (msg_id msg) = from /\
-    mid_to (msg_id msg) = to /\
-    mid_chn (msg_id msg) = chn.
+  Definition ValidMsgId (from to chn: IdxT) {MsgT} `{HasMsg MsgT} (msg: MsgT) :=
+    mid_from (msg_id (getMsg msg)) = from /\
+    mid_to (msg_id (getMsg msg)) = to /\
+    mid_chn (msg_id (getMsg msg)) = chn.
 
   (* A set of messages are "valid outputs" if
    * 1) they are from the same source [idx],
    * 2) each target is not the source, and
    * 3) all targets (pair of msgTo and channel) are different to each others.
    *)
-  Definition ValidOuts (idx: IdxT) (msgs: list Msg) :=
-    Forall (fun m => mid_from (msg_id m) = idx /\ mid_to (msg_id m) <> idx) msgs /\
-    NoDup (map (fun m => (mid_to (msg_id m), mid_chn (msg_id m))) msgs).
+  Definition ValidOuts (idx: IdxT) {MsgT} `{HasMsg MsgT} (msgs: list MsgT) :=
+    Forall (fun m => mid_from (msg_id (getMsg m)) = idx /\
+                     mid_to (msg_id (getMsg m)) <> idx) msgs /\
+    NoDup (map (fun m => (mid_to (msg_id (getMsg m)), mid_chn (msg_id (getMsg m)))) msgs).
 
-  (* [step_obj] is for a step by a single object that either handles an 
-   * internal message, or receives an external message.
-   * For an internal message:
-   * 1) the message is nondeterministically picked, and
-   * 2) a predicated message for [fmsg], which satisfies its precondition and
-   *    postcondition, is nondeterministically picked to take a step.
-   * For an external message: it just receives the message and add it to a 
-   * proper queue.
-   *)
-  Inductive step_obj (obj: Object): StateT -> MsgsFrom Msg -> Label ->
-                                    StateT -> MsgsFrom Msg -> Prop :=
-  | SoSlt: forall os mf, step_obj obj os mf LblEmpty os mf
-  | SoInt: forall os mf fidx fchn fmsg fpmsg pos,
-      firstMF fidx fchn mf = Some fmsg ->
-      ValidMsgId fidx (obj_idx obj) fchn fmsg ->
-      msg_id fmsg = pmsg_mid fpmsg ->
-      In fpmsg (obj_trs obj) ->
-      pmsg_precond fpmsg os ->
-      pmsg_postcond fpmsg os (msg_value fmsg) pos ->
-      ValidOuts (obj_idx obj) (pmsg_outs fpmsg os (msg_value fmsg)) ->
-      step_obj obj os mf
-               (LblHdl fmsg (pmsg_outs fpmsg os (msg_value fmsg)))
-               pos (deqMF fidx fchn mf)
-  | SoExt: forall os mf emsg,
-      mid_to (msg_id emsg) = obj_idx obj ->
-      mid_from (msg_id emsg) <> obj_idx obj ->
-      step_obj obj os mf
-               (LblIns (emsg :: nil))
-               os (enqMF (mid_from (msg_id emsg))
-                         (mid_chn (msg_id emsg))
-                         emsg mf).
+End Validness.
 
-  Record State MsgT :=
-    { st_oss: ObjectStates;
-      st_msgs: Messages MsgT
-    }.
+Section HasLabel.
 
-  Definition DisjointState {MsgT} (st1 st2: State MsgT) :=
-    M.Disj (st_oss st1) (st_oss st2) /\
-    M.Disj (st_msgs st1) (st_msgs st2).
+  Inductive Label :=
+  | Lbl (min: option Msg) (mouts: list Msg): Label.
 
-  Definition combineState {MsgT} (st1 st2: State MsgT) :=
-    {| st_oss := M.union (st_oss st1) (st_oss st2);
-       st_msgs := M.union (st_msgs st1) (st_msgs st2) |}.
-  Infix "+s" := combineState (at level 30).
+  Class HasLabel (LabelT: Type) :=
+    { getLabel: LabelT -> Label }.
 
-  Definition CombinableLabel (lbl1 lbl2: Label) :=
-    match lbl1, lbl2 with
-    | LblHdl _ _, LblHdl _ _ => False
-    | LblHdl _ outs1, LblIns ins2 => SubList ins2 outs1
-    | LblIns ins1, LblHdl _ outs2 => SubList ins1 outs2
-    | LblIns ins1, LblIns ins2 =>
-      True (* exists from, ValidOuts from (lbl_ins lbl1 ++ lbl_ins lbl2) *)
-    | _, _ => True
-    end.
+  Definition emptyLabel := Lbl None nil.
 
-  Definition subtractMsgs (ms1 ms2: list Msg) :=
-    filter (fun msg => if in_dec msg_dec msg ms2 then false else true) ms1.
+  Definition isEmptyLabel: forall l, {l = emptyLabel} + {l <> emptyLabel}.
+  Proof.
+    destruct l as [min mouts].
+    destruct min; [right; discriminate|].
+    destruct mouts; [|right; discriminate].
+    left; reflexivity.
+  Defined.
 
-  Definition combineLabel (lbl1 lbl2: Label) :=
-    match lbl1, lbl2 with
-    | LblHdl _ _, LblHdl _ _ => LblEmpty (* should not happen *)
-    | LblHdl hdl1 outs1, LblIns ins2 => LblHdl hdl1 (subtractMsgs outs1 ins2)
-    | LblIns ins1, LblHdl hdl2 outs2 => LblHdl hdl2 (subtractMsgs outs2 ins1)
-    | LblIns ins1, LblIns ins2 => LblIns (ins1 ++ ins2)
-    | LblEmpty, _ => lbl2
-    | _, LblEmpty => lbl1
-    end.
-  Infix "+l" := combineLabel (at level 30).
+  Definition extLabel (l: Label) :=
+    if isEmptyLabel l then None else Some l.
 
-  (* [step_sys] either lifts a step by [step_obj] to a given system, or
-   * combines two steps.
-   *)
-  Inductive step_sys (sys: System) : State Msg -> Label -> State Msg -> Prop :=
-  | SsLift: forall oss idx (obj: Object) (os: StateT)
-                   oims mf lbl pos pmf,
-      In obj (sys_objs sys) ->
-      obj_idx obj = idx ->
-      oss@[idx] = Some os ->
-      oims@[idx] = Some mf -> 
-      step_obj obj os mf lbl pos pmf ->
-      step_sys sys {| st_oss := oss; st_msgs := oims |} lbl
-               {| st_oss := oss +[idx <- pos];
-                  st_msgs := oims +[idx <- pmf] |}
-  | SsComb:
-      forall st11 lbl1 st12 st21 lbl2 st22,
-        step_sys sys st11 lbl1 st12 ->
-        step_sys sys st21 lbl2 st22 ->
-        DisjointState st11 st21 -> DisjointState st12 st22 ->
-        CombinableLabel lbl1 lbl2 ->
-        step_sys sys (st11 +s st21) (lbl1 +l lbl2) (st12 +s st22).
+End HasLabel.
 
-  Definition isExternal (sys: System) (idx: IdxT) :=
-    if idx ?<n (indicesOf sys) then false else true.
-  Definition isInternal (sys: System) (idx: IdxT) :=
-    if idx ?<n (indicesOf sys) then true else false.
+Section HasInit.
 
-  Definition Hidden (sys: System) (l: Label) :=
-    match l with
-    | LblEmpty => True
-    | LblIns ins => Forall (fun m => isExternal sys (mid_from (msg_id m)) = true) ins
-    | LblHdl _ outs => Forall (fun m => isExternal sys (mid_to (msg_id m)) = true) outs
-    end.
+  Class HasInit (StateT: Type) :=
+    { getStateInit: System -> StateT }.
 
-  Inductive step_mod : System -> State Msg -> Label -> State Msg -> Prop :=
-  | StepMod:
-      forall sys st1 l st2,
-        step_sys sys st1 l st2 ->
-        Hidden sys l ->
-        step_mod sys st1 l st2.
+End HasInit.
 
-  Definition intOuts (sys: System) (outs: list Msg) :=
-    filter (fun m => isInternal sys (mid_to (msg_id m))) outs.
-  Definition extOuts (sys: System) (outs: list Msg) :=
-    filter (fun m => isExternal sys (mid_to (msg_id m))) outs.
+Section Transition.
 
-  Definition Step MsgT := System -> State MsgT -> Label -> State MsgT -> Prop.
+  Definition Step StateT LabelT := System -> StateT -> LabelT -> StateT -> Prop.
   
   (* NOTE: the head is the youngest *)
-  Inductive steps {MsgT} (step: Step MsgT)
-            (sys: System) : State MsgT -> list Label -> State MsgT -> Prop :=
+  Inductive steps {StateT LabelT} (step: Step StateT LabelT)
+            (sys: System) : StateT -> list LabelT -> StateT -> Prop :=
   | StepsNil: forall st, steps step sys st nil st
   | StepsCons:
       forall st1 ll st2,
@@ -284,7 +186,39 @@ Section Semantics.
           step sys st2 lbl st3 ->
           steps step sys st1 (lbl :: ll) st3.
 
-  Definition steps_mod := steps step_mod.
+  Definition Trace := list Label.
+
+  Fixpoint behaviorOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
+    match ll with
+    | nil => nil
+    | l :: tr' => (extLabel (getLabel l)) ::> (behaviorOf tr')
+    end.
+
+  Inductive Behavior {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
+            (step: Step StateT LabelT) : System -> Trace -> Prop :=
+  | Behv: forall sys ll st,
+      steps step sys (getStateInit sys) ll st ->
+      forall tr,
+        tr = behaviorOf ll ->
+        Behavior step sys tr.
+
+  Definition Refines {StateI LabelI StateS LabelS}
+             `{HasInit StateI} `{HasLabel LabelI} `{HasInit StateS} `{HasLabel LabelS}
+             (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
+             (p: Label -> Label) (impl spec: System) :=
+    forall ll, Behavior stepI impl ll ->
+               Behavior stepS spec (map p ll).
+
+End Transition.
+
+Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
+Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
+
+(** Some concrete state and label definitions *)
+
+Section OState.
+
+  Definition ObjectStates := M.t StateT.
 
   Fixpoint getObjectStatesInit (obs: list Object): ObjectStates :=
     match obs with
@@ -292,51 +226,97 @@ Section Semantics.
     | obj :: sys' => (getObjectStatesInit sys') +[obj_idx obj <- obj_state_init obj]
     end.
 
-  Definition getStateInit {MsgT} (sys: System): State MsgT :=
+  Record OState MsgT :=
+    { st_oss: ObjectStates;
+      st_msgs: Messages MsgT
+    }.
+
+  Definition getOStateInit {MsgT} (sys: System): OState MsgT :=
     {| st_oss := getObjectStatesInit (sys_objs sys);
        st_msgs := [] |}.
 
-  Inductive BLabel :=
-  | BlblIns (ins: list Msg): BLabel
-  | BlblOuts (outs: list Msg): BLabel.
+  Global Instance OState_HasInit {MsgT} : HasInit (OState MsgT) :=
+    { getStateInit := getOStateInit }.
 
-  Definition toBLabel (l: Label): option BLabel :=
+End OState.
+
+(* [ILabel] represents "internal labels" that reveal 
+ * which message is being handled now.
+ *)
+Section ILabel.
+
+  Inductive ILabel MsgT :=
+  | IlblExt (mhdl: MsgT) (mouts: list MsgT): ILabel MsgT
+  | IlblInt (mhdl: option MsgT) (mouts: list MsgT): ILabel MsgT.
+
+  Definition iLblHdl {MsgT} (l: ILabel MsgT) :=
     match l with
-    | LblEmpty => None
-    | LblIns ins => Some (BlblIns ins)
-    | LblHdl _ outs => Some (BlblOuts outs)
+    | IlblExt mhdl _ => Some mhdl
+    | IlblInt mhdl _ => mhdl
     end.
 
-  Definition Trace := list BLabel.
-
-  Fixpoint behaviorOf (ll: list Label): Trace :=
-    match ll with
-    | nil => nil
-    | l :: tr' => (toBLabel l) ::> (behaviorOf tr')
+  Definition iLblOuts {MsgT} (l: ILabel MsgT) :=
+    match l with
+    | IlblExt _ outs => outs
+    | IlblInt _ outs => outs
     end.
 
-  Inductive Behavior {MsgT} (step: Step MsgT) : System -> Trace -> Prop :=
-  | Behv: forall sys ll st,
-      steps step sys (getStateInit sys) ll st ->
-      forall tr,
-        tr = behaviorOf ll ->
-        Behavior step sys tr.
+  Definition iToLabel {MsgT} `{HasMsg MsgT}
+             (l: ILabel MsgT): Label :=
+    match l with
+    | IlblExt mhdl mouts => Lbl (Some (getMsg mhdl)) (map getMsg mouts)
+    | IlblInt _ mouts => Lbl None (map getMsg mouts)
+    end.
 
-  Definition Refines {MsgI MsgS} (stepI: Step MsgI) (stepS: Step MsgS)
-             (p: BLabel -> BLabel)
-             (impl spec: System) :=
-    forall ll, Behavior stepI impl ll ->
-               Behavior stepS spec (map p ll).
+  Global Instance ILabel_HasLabel {MsgT} `{HasMsg MsgT}: HasLabel (ILabel MsgT) :=
+    { getLabel := iToLabel }.
 
-End Semantics.
+  Definition emptyILabel {MsgT} := IlblInt (MsgT:= MsgT) None nil.
 
-Lemma map_id:
-  forall {A} (l: list A), map id l = l.
-Proof.
-  induction l; simpl; auto.
-  rewrite IHl; auto.
-Qed.
+End ILabel.
 
-Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
-Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
+Section TMsg.
+
+  Definition TrsId := nat.
+  Definition trsIdInit: TrsId := 0.
+
+  Record TMsg :=
+    { tmsg_msg : Msg;
+      tmsg_tid : TrsId (* a unique transaction id *)
+    }.
+
+  Definition toTMsg tid m := {| tmsg_msg := m; tmsg_tid := tid |}.
+  Definition toTMsgs tid msgs := map (toTMsg tid) msgs.
+
+  Global Instance TMsg_HsgMsg : HasMsg TMsg :=
+    { getMsg := tmsg_msg }.
+
+  Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
+  Proof.
+    decide equality.
+    - decide equality.
+    - apply msg_dec.
+  Defined.
+
+  Definition TLabel := ILabel TMsg.
+
+End TMsg.
+
+Section TState.
+
+  Record TState :=
+    { tst_oss: ObjectStates;
+      tst_msgs: Messages TMsg;
+      tst_tid: TrsId
+    }.
+
+  Definition getTStateInit (sys: System): TState :=
+    {| tst_oss := getObjectStatesInit (sys_objs sys);
+       tst_msgs := [];
+       tst_tid := trsIdInit |}.
+
+  Global Instance TState_HasInit: HasInit TState :=
+    { getStateInit := getTStateInit }.
+
+End TState.
 

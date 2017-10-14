@@ -2,10 +2,12 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics.
 
 Section Simulation.
-  Context {MsgI MsgS: Type}.
-  Variables (stepI: Step MsgI) (stepS: Step MsgS)
-            (sim: State MsgI -> State MsgS -> Prop)
-            (p: BLabel -> BLabel).
+  Context {StateI LabelI StateS LabelS: Type}
+          `{HasInit StateI} `{HasLabel LabelI}
+          `{HasInit StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
+            (sim: StateI -> StateS -> Prop)
+            (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
 
@@ -16,17 +18,16 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         stepI impl ist1 ilbl ist2 ->
-        match toBLabel ilbl with
-        | Some b =>
+        if isEmptyLabel (getLabel ilbl)
+        then (exists sst2 slbl, stepS spec sst1 slbl sst2 /\
+                                getLabel slbl = emptyLabel /\
+                                ist2 ≈ sst2) \/
+             ist2 ≈ sst1
+        else
           exists sst2 slbl, stepS spec sst1 slbl sst2 /\
-                            toBLabel slbl = Some (p b) /\
-                            ist2 ≈ sst2
-        | None =>
-          (exists sst2 slbl, stepS spec sst1 slbl sst2 /\
-                             toBLabel slbl = None /\
-                             ist2 ≈ sst2) \/
-          ist2 ≈ sst1
-        end.
+                            getLabel slbl <> emptyLabel /\
+                            getLabel slbl = p (getLabel ilbl) /\
+                            ist2 ≈ sst2.
 
   Hypothesis (Hsim: Simulates).
 
@@ -43,22 +44,28 @@ Section Simulation.
     induction 2; simpl; intros;
       [exists sst1, nil; repeat split; auto; constructor|].
 
-    specialize (IHsteps H).
+    specialize (IHsteps H3).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H1; [|exact H4].
-    remember (toBLabel lbl) as blbl; destruct blbl as [blbl|]; simpl.
+    eapply Hsim in H5; [|exact H8].
+    remember (getLabel lbl) as ilbl; clear Heqilbl.
+    unfold extLabel.
+    destruct (isEmptyLabel ilbl); subst.
 
-    - destruct H1 as [sst3 [slbl [? [? ?]]]].
-      eexists; eexists (slbl :: _); repeat split; eauto.
-      + simpl; rewrite H2, H5; simpl; reflexivity.
-      + econstructor; eauto.
-    - destruct H1.
-      * destruct H1 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5.
+      * destruct H5 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
-        -- simpl; rewrite H2, H5; simpl; reflexivity.
+        -- simpl; rewrite H6, H9; simpl; reflexivity.
         -- econstructor; eauto.
       * exists sst2, shst; repeat split; auto.
+    - destruct H5 as [sst3 [slbl [? [? [? ?]]]]].
+      eexists; eexists (_ :: _); repeat split; eauto.
+      + simpl; rewrite H6, H10; simpl.
+        unfold extLabel.
+        destruct (isEmptyLabel (p ilbl)).
+        * elim H9; rewrite H10; auto.
+        * reflexivity.
+      + econstructor; eauto.
   Qed.
 
   Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).
@@ -66,9 +73,9 @@ Section Simulation.
   Theorem simulation_implies_refinement: stepI # stepS |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
-    inv H.
-    eapply simulation_steps in H0; [|exact Hsimi].
-    destruct H0 as [? [? [? [? ?]]]].
+    inv H3.
+    eapply simulation_steps in H4; [|exact Hsimi].
+    destruct H4 as [sst2 [shst [? [? ?]]]].
     econstructor; eauto.
   Qed.
 

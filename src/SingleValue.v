@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics SemDet Simulation.
+Require Import Common FMap Syntax Semantics StepDet Simulation.
 
 Set Implicit Arguments.
 
@@ -203,196 +203,15 @@ Section Sim.
   Definition svmMsgsF (imsgs: list Msg): list Msg :=
     map svmMsgF imsgs.
 
-  Definition svmP (b: BLabel) :=
-    match b with
-    | BlblIns ins => BlblIns (svmMsgsF ins)
-    | BlblOuts outs => BlblOuts (svmMsgsF outs)
+  Definition svmP (l: Label) :=
+    match l with
+    | Lbl min mouts => Lbl min (svmMsgsF mouts)
     end.
 
-  Definition SvmWf (os: StateT) v stt :=
-    os@[valueIdx] = Some v /\ os@[statusIdx] = Some stt.
-
-  Inductive ValidValue: ObjectStates -> Value -> Prop :=
-  | VVM1: forall s ost vv,
-      s@[child1Idx] = Some ost ->
-      ost@[statusIdx] = Some (VNat stM) ->
-      ost@[valueIdx] = Some vv ->
-      ValidValue s vv
-  | VVM2: forall s ost vv,
-      s@[child2Idx] = Some ost ->
-      ost@[statusIdx] = Some (VNat stM) ->
-      ost@[valueIdx] = Some vv ->
-      ValidValue s vv
-  | VVS: forall s ost1 ost2 vv,
-      s@[child1Idx] = Some ost1 ->
-      s@[child2Idx] = Some ost2 ->
-      ost1@[statusIdx] = Some (VNat stS) ->
-      ost2@[statusIdx] = Some (VNat stS) ->
-      ost1@[valueIdx] = Some vv ->
-      ost2@[valueIdx] = Some vv ->
-      ValidValue s vv.
-
-  Inductive SvmStR: ObjectStates -> ObjectStates -> Prop :=
-  | SvmStRIntro:
-      forall ist sst sost v iost1 iost2 iostp v1 stt1 v2 stt2 vp sttp,
-        sst@[specIdx] = Some sost ->
-        sost@[valueIdx] = Some v ->
-        ist@[child1Idx] = Some iost1 ->
-        ist@[child2Idx] = Some iost2 ->
-        ist@[parentIdx] = Some iostp ->
-        SvmWf iost1 v1 stt1 ->
-        SvmWf iost2 v2 stt2 ->
-        SvmWf iostp vp sttp ->
-        ValidValue ist v ->
-        SvmStR ist sst.
-
-  Definition SvmMsgsR (imsgs smsgs: Messages Msg) :=
-    forall to,
-      imsgs@[to] >>=[True]
-      (fun imf =>
-         forall from,
-           imf@[from] >>=[True]
-           (fun ichn =>
-              forall cidx,
-                ichn@[cidx] >>=[True]
-                (fun iq =>
-                   smsgs@[svmIdxF to] >>=[False]
-                   (fun smf =>
-                      smf@[svmIdxF from] >>=[False]
-                      (fun schn =>
-                         schn@[to] >>=[False] (fun sq => sq = svmMsgsF iq)))))).
-
-  Definition SvmR (ist sst: State Msg) :=
-    SvmStR (st_oss ist) (st_oss sst) /\ SvmMsgsR (st_msgs ist) (st_msgs sst).
-
-  Theorem svm_simulation_init:
-     SvmR (getStateInit impl0) (getStateInit spec).
+  Theorem impl0_refines_spec: step_det # step_det |-- impl0 ⊑[svmP] spec.
   Proof.
-    econstructor; try (split; reflexivity).
-    econstructor; try reflexivity; try (split; reflexivity).
-    eapply VVS; reflexivity.
-  Qed.
-  Hint Resolve svm_simulation_init.
-
-  Ltac rewriter :=
-    repeat
-      match goal with
-      | [H: True |- _] => clear H
-      | [H: False |- _] => elim H
-      | [H: Some _ = Some _ |- _] => inv H
-      | [H: Some _ = None |- _] => discriminate
-      | [H: None = Some _ |- _] => discriminate
-
-      | [H: M.find ?k ?m = Some _ |- context[M.find ?k ?m] ] => rewrite H; simpl
-      | [H: M.find ?k ?m = None |- context[M.find ?k ?m] ] => rewrite H; simpl
-      | [H: Some _ = M.find ?k ?m |- context[M.find ?k ?m] ] => rewrite <-H; simpl
-      | [H: None = M.find ?k ?m |- context[M.find ?k ?m] ] => rewrite <-H; simpl
-      | [H1: M.find ?k ?m = Some _, H2: context[M.find ?k ?m] |- _] =>
-        rewrite H1 in H2; simpl in H2
-      | [H1: M.find ?k ?m = None, H2: context[M.find ?k ?m] |- _] =>
-        rewrite H1 in H2; simpl in H2
-      | [H1: Some _ = M.find ?k ?m, H2: context[M.find ?k ?m] |- _] =>
-        rewrite <-H1 in H2; simpl in H2
-      | [H1: None = M.find ?k ?m, H2: context[M.find ?k ?m] |- _] =>
-        rewrite <-H1 in H2; simpl in H2
-
-      | [H: ?te >>=[False] _ |- _] =>
-        let t := fresh "t" in
-        remember te as t; destruct t; simpl in H
-      end.
-
-  Lemma svmIdxF_extIdx1: svmIdxF extIdx1 = extIdx1.
-  Proof.
-    unfold isExternal, svmIdxF in *; destruct (extIdx1 ?<n _); [discriminate|auto].
-  Qed.
-
-  Lemma svmIdxF_extIdx2: svmIdxF extIdx2 = extIdx2.
-  Proof.
-    unfold isExternal, svmIdxF in *; destruct (extIdx2 ?<n _); [discriminate|auto].
-  Qed.
-
-  Theorem svm_simulation: Simulates step_mod step_mod SvmR svmP impl0 spec.
-  Proof.
-    unfold Simulates; intros.
-
-    apply step_mod_step_det in H0; inv H0; simpl.
-
-    - (* silent *) eauto.
-    - (* internal *)
-      destruct H; inv H; unfold st_oss, st_msgs in *.
-      destruct sst1 as [ost1 msgs1].
-      Common.dest_in.
-      + destruct fmsg as [[fty ffr fto fch] fval]; simpl in *.
-        destruct H6 as [? [? ?]]; simpl in *; subst.
-        specialize (H0 child1Idx); apply firstM_Some_inv in H4; dest; rewriter.
-        specialize (H0 fidx); apply firstMF_Some_inv in H1; dest; rewriter.
-        specialize (H0 fchn); apply firstC_Some_inv in H4; dest; rewriter.
-        subst.
-        destruct x1 as [|ffq fq]; [discriminate|]; simpl in H5; inv H6.
-        inv H5.
-        
-        do 2 eexists; split.
-        * apply step_det_step_mod.
-          eapply SdInt; try reflexivity.
-          { left; reflexivity. }
-          { eassumption. }
-          { instantiate (3:= extIdx1).
-            instantiate (2:= child1Idx).
-            cbn; cbn in Heqt0, Heqt1.
-            rewrite svmIdxF_extIdx1 in Heqt1.
-            unfold firstM, firstMF, firstC; rewriter.
-            reflexivity.
-          }
-          { instantiate (1:= specGetReq extIdx1 extIdx2 specChn1).
-            unfold svmMsgF, svmMsgIdF; cbn.
-            rewrite svmIdxF_extIdx1.
-            reflexivity.
-          }
-          { unfold svmMsgF, svmMsgIdF; cbn.
-            repeat split; cbn.
-            apply svmIdxF_extIdx1.
-          }
-          { left; reflexivity. }
-          { simpl; auto. }
-          { simpl; reflexivity. }
-          { admit. }
-        * admit.
-          
-      + admit.
-      + admit.
-      + admit.
-        
-    - (* external *)
-      exists {| st_oss := st_oss sst1;
-                st_msgs := distributeMsgs (svmMsgsF emsgs) (st_msgs sst1) |}.
-      exists (LblIns (svmMsgsF emsgs)).
-      split; [|split].
-      + apply step_det_step_mod.
-        destruct sst1 as [oss1 oims1]; simpl.
-        eapply SdExt with (from:= from); eauto.
-        * unfold isExternal; find_if_inside; auto.
-          unfold isExternal in H1; find_if_inside; auto.
-          elim n; clear n.
-          Common.dest_in; simpl; tauto.
-        * destruct emsgs; auto.
-          discriminate.
-        * clear -H3; induction emsgs; simpl; [apply SubList_nil|].
-          apply SubList_cons_inv in H3; dest.
-          apply SubList_cons; auto.
-          clear -H.
-          Common.dest_in; destruct a as [[mty mfr mto mch] ?];
-            simpl in *; subst; auto.
-      + reflexivity.
-      + inv H; econstructor; eauto.
-        simpl in *; clear -H4.
-        admit.
+    (* eapply simulation_implies_refinement. *)
   Admitted.
-  Hint Resolve svm_simulation.
-
-  Theorem impl0_refines_spec: step_mod # step_mod |-- impl0 ⊑[svmP] spec.
-  Proof.
-    apply simulation_implies_refinement with (sim:= SvmR); auto.
-  Qed.
 
 End Sim.
 
