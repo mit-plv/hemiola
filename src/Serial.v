@@ -15,9 +15,8 @@ Section PerSystem.
 
   Inductive Atomic: TMsg -> History -> list TMsg -> Prop :=
   | AtomicBase:
-      forall min hlbl,
-        iLblHdl hlbl = Some min ->
-        Atomic min (hlbl :: nil) (iLblOuts hlbl)
+      forall hdl outs,
+        Atomic hdl (IlblExt hdl outs :: nil) outs
   | AtomicCons:
       forall min hst mouts,
         Atomic min hst mouts ->

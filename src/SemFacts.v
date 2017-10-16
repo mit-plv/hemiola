@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepDet.
+Require Import Common ListSupport FMap Syntax Semantics StepDet StepSeq.
 
 Lemma internal_not_external:
   forall sys idx,
@@ -16,6 +16,14 @@ Proof.
   unfold isInternal, isExternal; intros.
   find_if_inside; auto.
 Qed.
+
+Lemma internal_external_false:
+  forall sys idx,
+    isInternal sys idx = true -> isExternal sys idx = true -> False.
+Proof.
+  unfold isInternal, isExternal; intros.
+  find_if_inside; intuition.
+Qed.
   
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
@@ -24,7 +32,7 @@ Lemma step_det_int_internal:
 Proof.
   intros; inv H.
   destruct hdl as [hmid hmv]; simpl in *; subst.
-  destruct H7 as [? [? ?]]; simpl in *; subst.
+  destruct H6 as [? [? ?]]; simpl in *; subst.
   rewrite H0.
   unfold isInternal; find_if_inside; auto.
   elim n; apply in_map; assumption.
@@ -40,7 +48,7 @@ Proof.
   - constructor.
   - simpl.
     apply Forall_filter.
-    destruct H10.
+    destruct H11.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
     induction outs; simpl; intros; [constructor|].
@@ -60,6 +68,52 @@ Proof.
     simpl; simpl in H; unfold id in H; rewrite H.
     unfold isInternal; find_if_inside; auto.
     elim n; apply in_map; assumption.
+Qed.
+
+Lemma step_seq_tid:
+  forall sys ats1 l ats2,
+    step_seq sys ats1 l ats2 ->
+    forall hdl,
+      iLblHdl l = Some hdl ->
+      Forall (fun tmsg => tmsg_tid tmsg = tmsg_tid hdl) (iLblOuts l).
+Proof.
+  intros; inv H.
+  - discriminate.
+  - simpl in H0; inv H0.
+    clear; simpl.
+    induction (pmsg_outs _ _ _); simpl; auto.
+    find_if_inside; auto.
+  - simpl in H0; inv H0.
+    clear; simpl.
+    induction (pmsg_outs _ _ _); simpl; auto.
+    find_if_inside; auto.
+Qed.
+
+Lemma step_seq_outs_tid:
+  forall sys st1 l st2,
+    step_seq sys st1 l st2 ->
+    forall tmsg,
+      In tmsg (iLblOuts l) ->
+      tmsg_tid tmsg = tst_tid st2.
+Proof.
+  intros; inv H.
+  - inv H0.
+  - simpl; simpl in H0.
+    unfold extOuts in H0; apply filter_In in H0; dest.
+    unfold toTMsgs in H; apply in_map_iff in H; dest.
+    subst; reflexivity.
+  - simpl; simpl in H0.
+    unfold extOuts in H0; apply filter_In in H0; dest.
+    unfold toTMsgs in H; apply in_map_iff in H; dest.
+    subst; reflexivity.
+Qed.
+
+Lemma step_seq_internal_tid_intact:
+  forall sys st1 hdl outs st2,
+    step_seq sys st1 (IlblInt hdl outs) st2 ->
+    tst_tid st1 = tst_tid st2.
+Proof.
+  intros; inv H; reflexivity.
 Qed.
 
 Lemma steps_split:

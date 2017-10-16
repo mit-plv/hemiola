@@ -12,7 +12,7 @@ Proof.
   unfold Transactional; intros.
   destruct H; [discriminate|].
   destruct H as [pmin [pmouts [? ?]]].
-  remember (a :: ll) as all; inv H0; [inv H3; auto|].
+  remember (a :: ll) as all; inv H0; [inv H2; auto|].
   inv H4.
   right; eauto.
 Qed.
@@ -26,35 +26,44 @@ Proof.
   eauto using transactional_cons_inv.
 Qed.
 
+Lemma steps_seq_atomic_tid:
+  forall sys st1 ll st2,
+    steps step_seq sys st1 ll st2 ->
+    forall ts,
+      tst_tid st2 = ts ->
+      forall tmsg min mouts,
+        Atomic min ll mouts ->
+        In tmsg mouts ->
+        tmsg_tid tmsg = ts.
+Proof.
+  induction 1; simpl; intros; [inv H0|].
+  inv H2.
+  - eauto using step_seq_outs_tid.
+  - apply in_app_or in H3; destruct H3.
+    + eapply IHsteps; eauto.
+      * eauto using step_seq_internal_tid_intact.
+      * eauto using in_remove.
+    + eapply step_seq_outs_tid; eauto.
+Qed.
+
 Lemma transactional_steps_seq:
   forall sys ll,
     Transactional sys ll ->
     forall st1 st2,
       steps step_det sys st1 ll st2 ->
-      forall ast1,
-        at2TState ast1 = st1 ->
-        exists ast2,
-          at2TState ast2 = st2 /\
-          steps step_seq sys ast1 ll ast2.
+      steps step_seq sys st1 ll st2.
 Proof.
-  induction ll as [|l ll]; simpl; intros; subst;
-    [inv H0; eexists; repeat split; constructor|].
+  induction ll as [|l ll]; simpl; intros; subst; [inv H0; constructor|].
 
   (* NOTE: [l] is the youngest label. *)
   inv H0.
-  specialize (IHll (transactional_cons_inv H) _ _ H4 _ eq_refl).
-  destruct IHll as [past2 [? ?]]; subst.
-
+  specialize (IHll (transactional_cons_inv H) _ _ H4).
   destruct l.
 
   - (* IlblExt *)
     inv H; [discriminate|].
     destruct H0 as [trin [trouts [? ?]]].
     inv H6.
-    destruct past2 as [oss2 amsgs2 tid2 tcur2]; unfold at2TState in *; simpl in *.
-    eexists {| atst_cur := nts |}.
-
-    split; [reflexivity|].
     econstructor; [eassumption|].
     econstructor; eauto.
 
@@ -62,19 +71,11 @@ Proof.
     inv H; [discriminate|].
     destruct H0 as [trin [trouts [? ?]]].
     inv H6; [inv H0; discriminate|].
-    destruct past2 as [oss2 amsgs2 tid2 tcur2]; unfold at2TState in *; simpl in *.
-    eexists {| atst_cur := tcur2 |}.
-
-    split; [reflexivity|].
     econstructor; [eassumption|].
     econstructor; eauto.
-
     inv H0.
-    (* + exfalso. *)
-    (*   simpl in H7; inv H7. *)
-    (*   (* [fidx] should be an internal index *) *)
-    (* +  *)
-Admitted.
+    eauto using steps_seq_atomic_tid.
+Qed.
 
 Lemma sequential_steps':
   forall sys trs,
@@ -83,31 +84,20 @@ Lemma sequential_steps':
       ll = concat trs ->
       forall st,
         steps step_det sys (getStateInit sys) ll st ->
-        exists ast,
-          at2TState ast = st /\
-          steps step_seq sys (getStateInit sys) ll ast.
+        steps step_seq sys (getStateInit sys) ll st.
 Proof.
   induction trs; intros.
 
   - simpl in H0; subst.
-    inv H1.
-    exists (getStateInit sys); split.
-    + reflexivity.
-    + constructor.
+    inv H1; constructor.
 
   - inv H.
     specialize (IHtrs H5); clear H5.
-
     simpl in H1.
     eapply steps_split in H1; [|reflexivity].
     destruct H1 as [sti [? ?]].
     specialize (IHtrs _ eq_refl _ H); clear H.
-    destruct IHtrs as [past [? ?]]; subst.
-
-    pose proof (transactional_steps_seq H4 H0 eq_refl) as Hseq2.
-    destruct Hseq2 as [ast2 [? ?]]; subst.
-
-    eexists; split; [reflexivity|].
+    pose proof (transactional_steps_seq H4 H0).
     simpl; eauto using steps_append.
 Qed.
 
@@ -116,9 +106,7 @@ Lemma sequential_steps:
     Sequential sys ll ->
     forall st,
       steps step_det sys (getStateInit sys) ll st ->
-      exists ast,
-        at2TState ast = st /\
-        steps step_seq sys (getStateInit sys) ll ast.
+      steps step_seq sys (getStateInit sys) ll st.
 Proof.
   unfold Sequential; intros.
   destruct H as [trs [? ?]]; subst.
@@ -133,10 +121,7 @@ Theorem serializable_step_seq:
 Proof.
   unfold Serializable; intros.
   destruct H0 as [sll [sst [? [? ?]]]].
-
   pose proof (sequential_steps H1 H0) as Hseq.
-  destruct Hseq as [ast [? ?]]; subst.
-  
   eapply Behv; eauto.
   destruct H2; assumption.
 Qed.

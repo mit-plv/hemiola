@@ -41,3 +41,13 @@ Proof.
   destruct (f a); auto.
 Qed.
 
+Lemma in_remove:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a x: A) (l: list A),
+    In a (remove eq_dec x l) -> In a l.
+Proof.
+  induction l; simpl; intros; auto.
+  destruct (eq_dec _ _); subst; auto.
+  destruct H; auto.
+Qed.
+
