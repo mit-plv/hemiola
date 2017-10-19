@@ -213,6 +213,8 @@ End Transition.
 
 Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
 Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
+Notation "StI # StS |-- I <= S" := (Refines StI StS id I S) (at level 30).
+Notation "StI # StS |-- I ⊑ S" := (Refines StI StS id I S) (at level 30).
 
 (** Some concrete state and label definitions *)
 

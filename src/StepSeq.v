@@ -2,28 +2,6 @@ Require Import Bool List String Peano_dec.
 Require Import Permutation.
 Require Import Common FMap Syntax Semantics StepDet Serial.
 
-(* Record ATState : Type := *)
-(*   { atst_oss : ObjectStates; *)
-(*     atst_msgs : Messages TMsg; *)
-(*     atst_tid : TrsId; *)
-(*     atst_cur : TrsId *)
-(*   }. *)
-
-(* Definition getATStateInit (sys: System): ATState := *)
-(*   {| atst_oss := getObjectStatesInit (sys_objs sys); *)
-(*      atst_msgs := []; *)
-(*      atst_tid := trsIdInit; *)
-(*      atst_cur := trsIdInit *)
-(*   |}. *)
-
-(* Instance ATState_HasInit: HasInit ATState := *)
-(*   { getStateInit := getATStateInit }. *)
-
-(* Definition at2TState (ats: ATState) := *)
-(*   {| tst_oss := atst_oss ats; *)
-(*      tst_msgs := atst_msgs ats; *)
-(*      tst_tid := atst_tid ats |}. *)
-
 Inductive step_seq (sys: System) : TState -> TLabel -> TState -> Prop :=
 | SsSlt: forall st, step_seq sys st emptyILabel st
 | SsInt: forall ts oss oims obj idx os pos (fmsg: TMsg) fpmsg fidx fchn outs,
