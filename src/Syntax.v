@@ -28,10 +28,16 @@ Section Msg.
   | VUnit
   | VBool (b: bool)
   | VNat (n: nat)
-  | VPair (v1 v2: Value).
+  | VPair (v1 v2: Value)
+  | VList (vl: list Value).
 
-  Definition value_dec: forall v1 v2: Value, {v1 = v2} + {v1 <> v2}.
-  Proof. repeat decide equality. Defined.
+  Fixpoint value_dec (v1 v2: Value): {v1 = v2} + {v1 <> v2}.
+  Proof.
+    decide equality.
+    - repeat decide equality.
+    - repeat decide equality.
+    - decide equality.
+  Defined.
 
   Record Msg :=
     { msg_id: MsgId;
@@ -39,7 +45,11 @@ Section Msg.
     }.
 
   Definition msg_dec: forall m1 m2: Msg, {m1 = m2} + {m1 <> m2}.
-  Proof. repeat decide equality. Defined.
+  Proof.
+    decide equality.
+    - apply value_dec.
+    - apply msgId_dec.
+  Defined.
 
 End Msg.
 
@@ -47,18 +57,24 @@ Section PMsg.
 
   Definition StateT := M.t Value.
 
-  Record PMsg :=
-    { pmsg_mid: MsgId;
-      pmsg_precond: StateT -> Prop;
-      pmsg_outs: StateT -> Value -> list Msg;
-      pmsg_postcond: StateT (* prestate *) -> Value -> StateT (* poststate *) -> Prop
+  Record TrsHelperUnit :=
+    { tst_rqfrom: IdxT;
+      tst_rqfwds: list (IdxT * bool)
+    }.
+  Definition TrsHelper := M.t (* transaction index *) TrsHelperUnit.
+  Definition trsHelperInit: TrsHelper := M.empty _.
+
+  Record OState :=
+    { ost_st: StateT;
+      ost_tst: TrsHelper
     }.
 
-  Definition CondT := StateT -> Prop.
-  Definition CondImp (c1 c2: CondT) := forall st, c1 st -> c2 st.
-  Definition postOf (pmsg: PMsg): CondT :=
-    fun post => forall pre mt, pmsg_postcond pmsg pre mt post.
-  Definition Disjoint (c1 c2: CondT) := forall st, c1 st -> c2 st -> False.
+  Record PMsg :=
+    { pmsg_mid: MsgId;
+      pmsg_precond: OState -> Prop;
+      pmsg_outs: OState -> Value -> list Msg;
+      pmsg_postcond: OState (* prestate *) -> Value -> OState (* poststate *) -> Prop
+    }.
 
 End PMsg.
 
@@ -94,7 +110,5 @@ Definition isInternal (sys: System) (idx: IdxT) :=
   if idx ?<n (indicesOf sys) then true else false.
 
 Notation "'T'" := (fun _ => True).
-Infix "-->" := CondImp (at level 30).
-Infix "-*-" := Disjoint (at level 30).
 Notation "[ obj ]" := (singleton obj).
 

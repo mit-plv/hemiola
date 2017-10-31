@@ -6,7 +6,7 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
 | SdInt: forall ts oss oims obj oidx os pos (fmsg: TMsg) fpmsg fidx fchn outs,
     In obj (sys_objs sys) ->
     oidx = obj_idx obj ->
-    oss@[oidx] = Some os ->
+    (oss)@[oidx] = Some os ->
 
     isInternal sys (mid_from (msg_id (getMsg fmsg))) = true ->
 

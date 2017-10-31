@@ -1,6 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics StepDet Simulation.
+Require Import Common FMap Syntax Semantics.
+Require Import StepDet StepSeq Simulation Synthesis.
 
 Set Implicit Arguments.
 
@@ -49,8 +50,8 @@ Section System.
            pmsg_precond := T;
            pmsg_outs :=
              fun st _ =>
-               st@[valueIdx] >>=[nil]
-                 (fun v => {| msg_id := getRespM; msg_value := v |} :: nil);
+               (ost_st st)@[valueIdx] >>=[nil]
+               (fun v => {| msg_id := getRespM; msg_value := v |} :: nil);
            pmsg_postcond :=
              fun pre _ post => pre = post
         |}.
@@ -61,7 +62,7 @@ Section System.
            pmsg_outs :=
              fun st _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil;
            pmsg_postcond :=
-             fun pre v post => exists n, v = VNat n /\ post@[valueIdx] = Some (VNat n)
+             fun pre v post => exists n, v = VNat n /\ (ost_st post)@[valueIdx] = Some (VNat n)
         |}.
 
     End PerChn.
@@ -112,15 +113,15 @@ Section System.
       Definition ecGetReqOk: PMsg :=
         {| pmsg_mid := ecGetReqM;
            pmsg_precond :=
-             fun st => st@[statusIdx] >>=[False] 
-                         (fun stt => match stt with
-                                     | VNat n => n >= stS
-                                     | _ => False
-                                     end);
+             fun st => (ost_st st)@[statusIdx] >>=[False] 
+                       (fun stt => match stt with
+                                   | VNat n => n >= stS
+                                   | _ => False
+                                   end);
            pmsg_outs :=
              fun st _ =>
-               st@[valueIdx] >>=[nil]
-                 (fun v => {| msg_id := ecGetRespM; msg_value := v |} :: nil);
+               (ost_st st)@[valueIdx] >>=[nil]
+               (fun v => {| msg_id := ecGetRespM; msg_value := v |} :: nil);
            pmsg_postcond :=
              fun pre _ post => pre = post
         |}.
@@ -128,17 +129,17 @@ Section System.
       Definition ecSetReqOk: PMsg :=
         {| pmsg_mid := ecSetReqM;
            pmsg_precond :=
-             fun st => st@[statusIdx] >>=[False] 
-                         (fun stt => match stt with
-                                     | VNat n => n = stM
-                                     | _ => False
-                                     end);
+             fun st => (ost_st st)@[statusIdx] >>=[False] 
+                       (fun stt => match stt with
+                                   | VNat n => n = stM
+                                   | _ => False
+                                   end);
            pmsg_outs :=
              fun st _ => {| msg_id := ecSetRespM; msg_value := VUnit |} :: nil;
            pmsg_postcond :=
              fun pre v post =>
                exists n, v = VNat n /\
-                         post = pre +[ valueIdx <- VNat n] |}.
+                         ost_st post = (ost_st pre) +[ valueIdx <- VNat n] |}.
 
       Definition child0: Object :=
         {| obj_idx := childIdx;
@@ -187,6 +188,41 @@ Section Sim.
   Local Notation impl0 := (impl0 extIdx1 extIdx2).
   Local Notation spec := (spec extIdx1 extIdx2).
 
+  Inductive ValidValueImpl: ObjectStates -> Value -> Prop :=
+  | VVIS: forall s ost1 ost2 vv,
+      s@[child1Idx] = Some ost1 ->
+      s@[child2Idx] = Some ost2 ->
+      (ost_st ost1)@[statusIdx] = Some (VNat stS) ->
+      (ost_st ost2)@[statusIdx] = Some (VNat stS) ->
+      (ost_st ost1)@[valueIdx] = Some vv ->
+      (ost_st ost2)@[valueIdx] = Some vv ->
+      ValidValueImpl s vv
+  | VVIM1: forall s ost vv,
+      s@[child1Idx] = Some ost ->
+      (ost_st ost)@[statusIdx] = Some (VNat stM) ->
+      (ost_st ost)@[valueIdx] = Some vv ->
+      ValidValueImpl s vv
+  | VVIM2: forall s ost vv,
+      s@[child2Idx] = Some ost ->
+      (ost_st ost)@[statusIdx] = Some (VNat stM) ->
+      (ost_st ost)@[valueIdx] = Some vv ->
+      ValidValueImpl s vv.
+
+  Inductive ValidValueSpec: ObjectStates -> Value -> Prop :=
+  | VVS: forall sst sost v,
+      sst@[specIdx] = Some sost ->
+      (ost_st sost)@[valueIdx] = Some v ->
+      ValidValueSpec sst v.
+
+  Inductive SvmStR: ObjectStates -> ObjectStates -> Prop :=
+  | SvmStRIntro:
+      forall ist sst v,
+        ValidValueImpl ist v ->
+        ValidValueSpec sst v ->
+        SvmStR ist sst.
+
+  Definition SvmR (ist sst: TState) := SvmStR (tst_oss ist) (tst_oss sst).
+
   Definition svmIdxF (idx: IdxT): IdxT :=
     if idx ?<n (indicesOf impl0) then specIdx else idx.
 
@@ -208,9 +244,12 @@ Section Sim.
     | Lbl min mouts => Lbl min (svmMsgsF mouts)
     end.
 
-  Theorem impl0_refines_spec: step_det # step_det |-- impl0 ⊑[svmP] spec.
+  Theorem impl0_ok: SynthOk spec SvmR svmP impl0.
   Proof.
-    (* eapply simulation_implies_refinement. *)
+    repeat split.
+    - admit.
+    - repeat econstructor.
+    - admit.
   Admitted.
 
 End Sim.

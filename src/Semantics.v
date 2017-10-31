@@ -218,29 +218,34 @@ Notation "StI # StS |-- I ⊑ S" := (Refines StI StS id I S) (at level 30).
 
 (** Some concrete state and label definitions *)
 
-Section OState.
+Section SState.
 
-  Definition ObjectStates := M.t StateT.
+  Definition ObjectStates := M.t OState.
+
+  Definition getObjectStateInit (obj: Object): OState :=
+    {| ost_st := obj_state_init obj;
+       ost_tst := trsHelperInit |}.
 
   Fixpoint getObjectStatesInit (obs: list Object): ObjectStates :=
     match obs with
     | nil => M.empty _
-    | obj :: sys' => (getObjectStatesInit sys') +[obj_idx obj <- obj_state_init obj]
+    | obj :: sys' => (getObjectStatesInit sys')
+                     +[obj_idx obj <- getObjectStateInit obj]
     end.
 
-  Record OState MsgT :=
+  Record SState MsgT :=
     { st_oss: ObjectStates;
       st_msgs: Messages MsgT
     }.
 
-  Definition getOStateInit {MsgT} (sys: System): OState MsgT :=
+  Definition getSStateInit {MsgT} (sys: System): SState MsgT :=
     {| st_oss := getObjectStatesInit (sys_objs sys);
        st_msgs := [] |}.
 
-  Global Instance OState_HasInit {MsgT} : HasInit (OState MsgT) :=
-    { getStateInit := getOStateInit }.
+  Global Instance SState_HasInit {MsgT} : HasInit (SState MsgT) :=
+    { getStateInit := getSStateInit }.
 
-End OState.
+End SState.
 
 (* [ILabel] represents "internal labels" that reveal 
  * which message is being handled now.

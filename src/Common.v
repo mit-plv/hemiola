@@ -48,6 +48,23 @@ Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
   | None => nb
   end.
 Notation "OA >>=[ NB ] F" := (tbind NB OA F) (at level 0).
-  
+
+Fixpoint replicate {A} (a: A) (sz: nat): list A :=
+  match sz with
+  | O => nil
+  | S sz' => a :: replicate a sz'
+  end.
+
+Definition trues (sz: nat) := replicate true sz.
+Definition falses (sz: nat) := replicate false sz.
+
+Fixpoint findAt (v: nat) (l: list nat) :=
+  match l with
+  | nil => None
+  | n :: l' =>
+    if v ==n n then Some O
+    else (findAt v l') >>=[None] (fun o => Some (S o))
+  end.
+
 Axiom cheat: forall t, t.
 
