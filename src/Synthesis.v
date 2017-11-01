@@ -62,14 +62,17 @@ Section SynPerObj.
   Variables (trsIdx: IdxT)
             (this: IdxT).
 
-  Definition synPMsgOuts (tos: list IdxT) (val: Value) :=
-    map (fun to => {| msg_id := {| mid_type := trsIdx;
-                                   mid_from := this;
-                                   mid_to := to;
-                                   mid_chn := 0; (* TODO: how to decide a channel to use *)
-                                |};
-                      msg_value := val
-                   |}) tos.
+  Definition rqChn: IdxT := 0.
+  Definition rsChn: IdxT := 1.
+
+  Definition synPMsgOuts (tochns: list (IdxT * IdxT)) (val: Value) :=
+    map (fun tochn => {| msg_id := {| mid_type := trsIdx;
+                                      mid_from := this;
+                                      mid_to := fst tochn;
+                                      mid_chn := snd tochn
+                                   |};
+                         msg_value := val
+                      |}) tochns.
 
   Section Request.
     Variables (rqfrom: IdxT) (fwds: list IdxT).
@@ -90,7 +93,8 @@ Section SynPerObj.
                         mid_to := this;
                         mid_chn := chn |};
          pmsg_precond := synPMsgRqPrecond;
-         pmsg_outs := fun _ val => synPMsgOuts fwds val;
+         pmsg_outs :=
+           fun _ val => synPMsgOuts (map (fun to => (to, rqChn)) fwds) val;
          pmsg_postcond := synPMsgRqPostcond |}.
 
   End Request.
@@ -98,7 +102,7 @@ Section SynPerObj.
   Section Response.
     Variable rsFrom: IdxT.
 
-    (* TODO: pre/postconditions for safe interleavings *)
+    (* TODO: correct preconditions for safe interleavings *)
     Definition synPMsgRsPrecond (st: OState) :=
       True.
 
@@ -134,29 +138,28 @@ Section SynPerObj.
       Responded pre post /\
       WhenAllResponded oinv val pre post.
 
-    (* TODO: how to decide a channel [chn] to use *)
-    Definition synPMsgRs (chn: IdxT) (oinv: OInv): PMsg :=
+    Definition synPMsgRs (oinv: OInv): PMsg :=
       {| pmsg_mid := {| mid_type := trsIdx;
                         mid_from := rsFrom;
                         mid_to := this;
-                        mid_chn := chn |};
+                        mid_chn := rsChn |};
          pmsg_precond := synPMsgRsPrecond;
          pmsg_outs :=
            fun st val =>
              (ost_tst st)@[trsIdx] >>=[nil]
              (fun trsh =>
                 if allResponded (tst_rqfwds trsh)
-                then synPMsgOuts (tst_rqfrom trsh :: nil) val
+                then synPMsgOuts ((tst_rqfrom trsh, rsChn) :: nil) val
                 else nil);
          pmsg_postcond := synPMsgRsPostcond oinv |}.
 
-    Definition synPMsgImm (chn: IdxT) (oinv: OInv): PMsg :=
+    Definition synPMsgImm (oinv: OInv): PMsg :=
       {| pmsg_mid := {| mid_type := trsIdx;
                         mid_from := rsFrom;
                         mid_to := this;
-                        mid_chn := chn |};
+                        mid_chn := rqChn |};
          pmsg_precond := fun _ => True;
-         pmsg_outs := fun _ val => synPMsgOuts (rsFrom :: nil) val;
+         pmsg_outs := fun _ val => synPMsgOuts ((rsFrom, rsChn) :: nil) val;
          pmsg_postcond := synPMsgRsPostcond oinv |}.
 
   End Response.
@@ -202,14 +205,8 @@ Section SynPerTrs.
         preds@[oidx] = Some oinv ->
         fwds = idxInter (getTos oidx topo) targetObjs ->
         synrq = synPMsgRq trsIdx oidx (mid_from mid) fwds (mid_chn mid) ->
-        synrss = map (fun ridx =>
-                        synPMsgRs trsIdx oidx ridx O (* TODO: channel... *)
-                                  oinv
-                     )
-                     fwds ->
-        mouts = synPMsgOuts oidx trsIdx
-                            (idxInter (getTos oidx topo) targetObjs)
-                            trsVal ->
+        synrss = map (fun ridx => synPMsgRs trsIdx oidx ridx oinv) fwds ->
+        mouts = synPMsgOuts oidx trsIdx (map (fun i => (i, rqChn)) fwds) trsVal ->
         nobj = {| obj_idx := obj_idx obj;
                   obj_state_init := obj_state_init obj;
                   obj_trs := synrq :: synrss ++ obj_trs obj |} ->
@@ -225,7 +222,7 @@ Section SynPerTrs.
         oidx = obj_idx obj ->
         preds@[oidx] = Some oinv ->
         idxInter (getTos oidx topo) targetObjs = nil ->
-        synimm = synPMsgImm trsIdx oidx (mid_from mid) (mid_chn mid) oinv ->
+        synimm = synPMsgImm trsIdx oidx (mid_from mid) oinv ->
         nobj = {| obj_idx := obj_idx obj;
                   obj_state_init := obj_state_init obj;
                   obj_trs := synimm :: obj_trs obj |} ->
