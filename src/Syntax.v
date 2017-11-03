@@ -59,7 +59,7 @@ Section PMsg.
 
   Record TrsHelperUnit :=
     { tst_rqfrom: IdxT;
-      tst_rqfwds: list (IdxT * bool)
+      tst_rqfwds: list (IdxT * option Value)
     }.
   Definition TrsHelper := M.t (* transaction index *) TrsHelperUnit.
   Definition trsHelperInit: TrsHelper := M.empty _.
@@ -69,11 +69,16 @@ Section PMsg.
       ost_tst: TrsHelper
     }.
 
+  Definition PreCond := OState -> Prop.
+  Definition PostCond :=
+    OState (* prestate *) -> Value -> OState (* poststate *) -> Prop.
+  Definition MsgOuts := OState -> Value -> list Msg.
+
   Record PMsg :=
     { pmsg_mid: MsgId;
-      pmsg_precond: OState -> Prop;
-      pmsg_outs: OState -> Value -> list Msg;
-      pmsg_postcond: OState (* prestate *) -> Value -> OState (* poststate *) -> Prop
+      pmsg_precond: PreCond;
+      pmsg_outs: MsgOuts;
+      pmsg_postcond: PostCond
     }.
 
 End PMsg.

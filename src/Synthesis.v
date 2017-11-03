@@ -58,192 +58,170 @@ Section SimP.
 
 End SimP.
 
-Section SynPerObj.
+Section SynTrs.
   Variables (trsIdx: IdxT)
             (this: IdxT).
 
   Definition rqChn: IdxT := 0.
   Definition rsChn: IdxT := 1.
 
-  Definition synPMsgOuts (tochns: list (IdxT * IdxT)) (val: Value) :=
-    map (fun tochn => {| msg_id := {| mid_type := trsIdx;
-                                      mid_from := this;
-                                      mid_to := fst tochn;
-                                      mid_chn := snd tochn
-                                   |};
-                         msg_value := val
-                      |}) tochns.
+  Definition TPMsg mid outs postcond :=
+    {| pmsg_mid := mid;
+       pmsg_precond := fun _ => True;
+       pmsg_outs := outs;
+       pmsg_postcond := postcond |}.
 
-  Section Request.
+  Section Immediate.
+
+    Definition synRqOuts (tochns: list (IdxT * IdxT)) (val: Value) :=
+      map (fun tochn => {| msg_id := {| mid_type := trsIdx;
+                                        mid_from := this;
+                                        mid_to := fst tochn;
+                                        mid_chn := snd tochn
+                                     |};
+                           msg_value := val
+                        |}) tochns.
+
+    Definition synImm (rqfrom: IdxT) (postcond: PostCond)
+               (valOut: StateT -> Value -> Value) :=
+      TPMsg {| mid_type := trsIdx;
+               mid_from := rqfrom;
+               mid_to := this;
+               mid_chn := rqChn |}
+            (fun st val => synRqOuts ((rqfrom, rsChn) :: nil) (valOut (ost_st st) val))
+            postcond.
+
+  End Immediate.
+
+  Section RequestFwd.
     Variables (rqfrom: IdxT) (fwds: list IdxT).
 
-    (* TODO: correct preconditions for safe interleavings *)
-    Definition synPMsgRqPrecond (st: OState) := True.
-
-    Definition synPMsgRqPostcond (pre: OState) (val: Value) (post: OState) :=
+    Definition synRqPostcond (pre: OState) (val: Value) (post: OState) :=
       post = {| ost_st := ost_st pre;
                 ost_tst := (ost_tst pre)
                            +[ trsIdx <- {| tst_rqfrom := rqfrom;
-                                           tst_rqfwds := map (fun idx => (idx, false)) fwds |}]
+                                           tst_rqfwds := map (fun idx => (idx, None)) fwds |}]
              |}.
 
-    Definition synPMsgRq (chn: IdxT): PMsg :=
-      {| pmsg_mid := {| mid_type := trsIdx;
-                        mid_from := rqfrom;
-                        mid_to := this;
-                        mid_chn := chn |};
-         pmsg_precond := synPMsgRqPrecond;
-         pmsg_outs :=
-           fun _ val => synPMsgOuts (map (fun to => (to, rqChn)) fwds) val;
-         pmsg_postcond := synPMsgRqPostcond |}.
+    Definition synRq :=
+      TPMsg {| mid_type := trsIdx;
+               mid_from := rqfrom;
+               mid_to := this;
+               mid_chn := rqChn |}
+            (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val)
+            synRqPostcond.
 
-  End Request.
+  End RequestFwd.
 
-  Section Response.
+  Section ResponseBack.
     Variable rsFrom: IdxT.
 
-    (* TODO: correct preconditions for safe interleavings *)
-    Definition synPMsgRsPrecond (st: OState) :=
-      True.
-
-    Fixpoint addResponse (fwds: list (IdxT * bool)) :=
-      match fwds with
+    Fixpoint checkResponded (rss: list (IdxT * option Value)) (rsVal: Value) :=
+      match rss with
       | nil => nil
-      | (idx, b) :: fwds' =>
+      | (idx, ov) :: rss' =>
         if idx ==n rsFrom
-        then (idx, true) :: fwds'
-        else (idx, b) :: (addResponse fwds')
+        then (idx, Some rsVal) :: rss'
+        else (idx, ov) :: (checkResponded rss' rsVal)
       end.
 
-    Definition Responded (pre: OState) (post: OState) :=
+    Definition Responded (pre: OState) (rsVal: Value) (post: OState) :=
       (ost_tst pre)@[trsIdx] >>=[False]
       (fun preth =>
          (ost_tst post)@[trsIdx] >>=[False]
          (fun postth =>
             postth = {| tst_rqfrom := tst_rqfrom preth;
-                        tst_rqfwds := addResponse (tst_rqfwds preth) |})).
+                        tst_rqfwds := checkResponded (tst_rqfwds preth) rsVal |})).
 
-    Definition allResponded (fwds: list (IdxT * bool)) :=
-      forallb (fun ib => snd ib) fwds.
+    Definition allResponded (fwds: list (IdxT * option Value)) :=
+      forallb (fun ib => match snd ib with
+                         | Some _ => true
+                         | _ => false
+                         end) fwds.
 
-    Definition WhenAllResponded (oinv: OInv) (val: Value)
-               (pre post: OState) :=
+    Definition WhenAllResponded (postcond: PostCond)
+               (pre: OState) (val: Value) (post: OState) :=
       (ost_tst post)@[trsIdx] >>=[False]
       (fun trsh =>
          if allResponded (tst_rqfwds trsh)
          then pre = post
-         else oinv post val).
+         else postcond pre val post).
 
-    Definition synPMsgRsPostcond (oinv: OInv) (pre: OState) (val: Value) (post: OState) :=
-      Responded pre post /\
-      WhenAllResponded oinv val pre post.
+    Definition synRsPostcond (postcond: PostCond)
+               (pre: OState) (val: Value) (post: OState) :=
+      Responded pre val post /\
+      WhenAllResponded postcond pre val post.
 
-    Definition synPMsgRs (oinv: OInv): PMsg :=
-      {| pmsg_mid := {| mid_type := trsIdx;
-                        mid_from := rsFrom;
-                        mid_to := this;
-                        mid_chn := rsChn |};
-         pmsg_precond := synPMsgRsPrecond;
-         pmsg_outs :=
-           fun st val =>
-             (ost_tst st)@[trsIdx] >>=[nil]
-             (fun trsh =>
-                if allResponded (tst_rqfwds trsh)
-                then synPMsgOuts ((tst_rqfrom trsh, rsChn) :: nil) val
-                else nil);
-         pmsg_postcond := synPMsgRsPostcond oinv |}.
+    Definition synRsOuts (rsOut: StateT -> list (IdxT * option Value) -> Value) :=
+      fun st val =>
+        (ost_tst st)@[trsIdx] >>=[nil]
+        (fun trsh =>
+           let rss := checkResponded (tst_rqfwds trsh) val in
+           if allResponded rss
+           then {| msg_id := {| mid_type := trsIdx;
+                                mid_from := this;
+                                mid_to := tst_rqfrom trsh;
+                                mid_chn := rsChn |};
+                   msg_value := rsOut (ost_st st) rss |} :: nil
+           else nil).
 
-    Definition synPMsgImm (oinv: OInv): PMsg :=
-      {| pmsg_mid := {| mid_type := trsIdx;
-                        mid_from := rsFrom;
-                        mid_to := this;
-                        mid_chn := rqChn |};
-         pmsg_precond := fun _ => True;
-         pmsg_outs := fun _ val => synPMsgOuts ((rsFrom, rsChn) :: nil) val;
-         pmsg_postcond := synPMsgRsPostcond oinv |}.
+    (* NOTE: [postcond] is a desired postcondition treating the transaction 
+     * is atomic.
+     *)
+    Definition synRs (postcond: PostCond)
+               (rsOut: StateT -> list (IdxT * option Value) -> Value) :=
+      TPMsg {| mid_type := trsIdx;
+               mid_from := rsFrom;
+               mid_to := this;
+               mid_chn := rsChn |}
+            (synRsOuts rsOut)
+            (synRsPostcond postcond).
 
-  End Response.
+  End ResponseBack.
+
+  Section ByTrsPred.
+
+    Variables (tp: TrsPred)
+              (* where the request came from, and which object handles it *)
+              (efrom hdl: IdxT)
+              (* a target system topology *)
+              (objs: list Object)
+              (topo: list Channel).
+    
+    Fixpoint getForwards (me: IdxT) (chns: list Channel) :=
+      match chns with
+      | nil => nil
+      | chn :: t =>
+        if me ==n chn_from chn
+        then chn_to chn :: getForwards me t
+        else getForwards me t
+      end.
+
+    Fixpoint idxInter (li1 li2: list IdxT) :=
+      filter (fun idx => if idx ?<n li2 then true else false) li1.
+
+    Definition addPMsgO (pmsg: PMsg) (obj: Object) :=
+      {| obj_idx := obj_idx obj;
+         obj_state_init := obj_state_init obj;
+         obj_trs := pmsg :: obj_trs obj |}.
+
+    Fixpoint addPMsg (pmsg: PMsg) (objs: list Object) :=
+      match objs with
+      | nil => nil
+      | obj :: objs' =>
+        if obj_idx obj ==n mid_to (pmsg_mid pmsg)
+        then addPMsgO pmsg obj :: objs'
+        else obj :: (addPMsg pmsg objs')
+      end.
+
+    Fixpoint addPMsgs (pmsgs: list PMsg) (objs: list Object) :=
+      match pmsgs with
+      | nil => objs
+      | pmsg :: pmsgs' =>
+        addPMsgs pmsgs' (addPMsg pmsg objs)
+      end.
+
+  End ByTrsPred.
   
-End SynPerObj.
-
-Section SynPerTrs.
-
-  Variables
-    (* A transaction index uniquely assigned for this transaction *)
-    (trsIdx: IdxT)
-    (trsVal: Value)
-    (* A transaction predicate *)
-    (trspred: Pred).
-
-  Local Definition targetObjs := map fst (M.elements trspred).
-
-  Fixpoint getTos (me: IdxT) (topo: list Channel) :=
-    match topo with
-    | nil => nil
-    | chn :: t =>
-      if me ==n chn_from chn
-      then chn_to chn :: getTos me t
-      else getTos me t
-    end.
-
-  Fixpoint idxInter (li1 li2: list IdxT) :=
-    filter (fun idx => if idx ?<n li2 then true else false) li1.
-
-  Inductive SynTrs (efrom hdl: IdxT) (topo: list Channel):
-    list MsgId (* currently synthesizable messages *) ->
-    Pred (* current transaction predicate *) ->
-    list Object (* synthesized objects *) -> Prop :=
-  | SynTrsStart:
-      forall objs chn mid,
-        mid = {| mid_type := trsIdx; mid_from := efrom; mid_to := hdl; mid_chn := chn |} ->
-        SynTrs efrom hdl topo (mid :: nil) trspred objs
-  | SynTrsStep:
-      forall oidx mids1 mid mids2 preds objs1 obj objs2 oinv fwds synrq synrss mouts nobj,
-        SynTrs efrom hdl topo (mids1 ++ mid :: mids2) preds (objs1 ++ obj :: objs2) ->
-        oidx = mid_to mid ->
-        oidx = obj_idx obj ->
-        preds@[oidx] = Some oinv ->
-        fwds = idxInter (getTos oidx topo) targetObjs ->
-        synrq = synPMsgRq trsIdx oidx (mid_from mid) fwds (mid_chn mid) ->
-        synrss = map (fun ridx => synPMsgRs trsIdx oidx ridx oinv) fwds ->
-        mouts = synPMsgOuts oidx trsIdx (map (fun i => (i, rqChn)) fwds) trsVal ->
-        nobj = {| obj_idx := obj_idx obj;
-                  obj_state_init := obj_state_init obj;
-                  obj_trs := synrq :: synrss ++ obj_trs obj |} ->
-        forall nmids npreds nobjs,
-          nmids = mids1 ++ mids2 ++ map msg_id mouts ->
-          npreds = M.remove oidx preds ->
-          nobjs = objs1 ++ nobj :: objs2 ->
-          SynTrs efrom hdl topo nmids npreds nobjs
-  | SynTrsEnd:
-      forall oidx mids1 mid mids2 preds objs1 obj objs2 oinv synimm nobj,
-        SynTrs efrom hdl topo (mids1 ++ mid :: mids2) preds (objs1 ++ obj :: objs2) ->
-        oidx = mid_to mid ->
-        oidx = obj_idx obj ->
-        preds@[oidx] = Some oinv ->
-        idxInter (getTos oidx topo) targetObjs = nil ->
-        synimm = synPMsgImm trsIdx oidx (mid_from mid) oinv ->
-        nobj = {| obj_idx := obj_idx obj;
-                  obj_state_init := obj_state_init obj;
-                  obj_trs := synimm :: obj_trs obj |} ->
-        forall nmids npreds nobjs,
-          nmids = mids1 ++ mids2 ->
-          npreds = M.remove oidx preds ->
-          nobjs = objs1 ++ nobj :: objs2 ->
-          SynTrs efrom hdl topo nmids npreds nobjs.
-
-  Definition SynTrsFinished (efrom hdl: IdxT) (topo: list Channel) (objs: list Object) :=
-    SynTrs efrom hdl topo nil (M.empty _) objs.
-
-End SynPerTrs.
-
-Section Synthesizer.
-
-  (* A target system *)
-  Variable sys: System.
-
-  Local Definition objs := sys_objs sys.
-  Local Definition topo := sys_chns sys.
-
-End Synthesizer.
+End SynTrs.
 
