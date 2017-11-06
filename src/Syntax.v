@@ -69,7 +69,8 @@ Section PMsg.
       ost_tst: TrsHelper
     }.
 
-  Definition PreCond := OState -> Prop.
+  Definition Cond := OState -> Prop.
+  Definition PreCond := Cond.
   Definition PostCond :=
     OState (* prestate *) -> Value -> OState (* poststate *) -> Prop.
   Definition MsgOuts := OState -> Value -> list Msg.

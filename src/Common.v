@@ -18,6 +18,31 @@ Ltac find_if_inside :=
     | [ H : context[if ?X then _ else _] |- _ ]=> destruct X
   end.
 
+Ltac is_equal t1 t2 :=
+  let Heq := fresh "Heq" in
+  assert (Heq: t1 = t2) by reflexivity;
+  clear Heq.
+
+Ltac is_pure_const t :=
+  tryif is_var t
+  then fail
+  else lazymatch t with
+       | ?t1 ?t2 =>
+         tryif is_pure_const t1
+         then is_pure_const t2 else fail
+       | _ => idtac
+       end.
+
+Ltac not_pure_const t :=
+  tryif is_var t
+  then idtac
+  else lazymatch t with
+       | ?t1 ?t2 =>
+         tryif not_pure_const t1
+         then idtac else not_pure_const t2
+       | _ => fail
+       end.
+
 Definition ocons {A} (oa: option A) (l: list A) :=
   match oa with
   | Some a => a :: l

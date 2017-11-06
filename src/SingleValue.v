@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
-Require Import StepDet StepSeq Simulation Synthesis.
+Require Import StepDet StepSeq Simulation Predicate Synthesis.
 
 Set Implicit Arguments.
 
@@ -62,7 +62,7 @@ Section System.
            pmsg_outs :=
              fun st _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil;
            pmsg_postcond :=
-             fun pre v post => exists n, v = VNat n /\ (ost_st post)@[valueIdx] = Some (VNat n)
+             fun pre v post => (ost_st post)@[valueIdx] = Some v
         |}.
 
     End PerChn.
@@ -197,15 +197,19 @@ Section Sim.
       (ost_st ost1)@[valueIdx] = Some vv ->
       (ost_st ost2)@[valueIdx] = Some vv ->
       ValidValueImpl s vv
-  | VVIM1: forall s ost vv,
-      s@[child1Idx] = Some ost ->
-      (ost_st ost)@[statusIdx] = Some (VNat stM) ->
-      (ost_st ost)@[valueIdx] = Some vv ->
+  | VVIM1: forall s ost1 ost2 vv,
+      s@[child1Idx] = Some ost1 ->
+      s@[child2Idx] = Some ost2 ->
+      (ost_st ost1)@[statusIdx] = Some (VNat stM) ->
+      (ost_st ost1)@[valueIdx] = Some vv ->
+      (ost_st ost2)@[statusIdx] = Some (VNat stI) ->
       ValidValueImpl s vv
-  | VVIM2: forall s ost vv,
-      s@[child2Idx] = Some ost ->
-      (ost_st ost)@[statusIdx] = Some (VNat stM) ->
-      (ost_st ost)@[valueIdx] = Some vv ->
+  | VVIM2: forall s ost1 ost2 vv,
+      s@[child1Idx] = Some ost1 ->
+      s@[child2Idx] = Some ost2 ->
+      (ost_st ost1)@[statusIdx] = Some (VNat stI) ->
+      (ost_st ost2)@[statusIdx] = Some (VNat stM) ->
+      (ost_st ost2)@[valueIdx] = Some vv ->
       ValidValueImpl s vv.
 
   Inductive ValidValueSpec: ObjectStates -> Value -> Prop :=
@@ -217,8 +221,8 @@ Section Sim.
   Inductive SvmStR: ObjectStates -> ObjectStates -> Prop :=
   | SvmStRIntro:
       forall ist sst v,
-        ValidValueImpl ist v ->
-        ValidValueSpec sst v ->
+        (Invertible ValidValueImpl) ist v ->
+        (Invertible ValidValueSpec) sst v ->
         SvmStR ist sst.
 
   Definition SvmR (ist sst: TState) := SvmStR (tst_oss ist) (tst_oss sst).
@@ -252,5 +256,30 @@ Section Sim.
     - admit.
   Admitted.
 
+
+  (* Goal (forall (soss1 soss2: ObjectStates) (sost1 sost2: OState) (setV: Value), *)
+  (*          soss1@[specIdx] = Some sost1 -> *)
+  (*          soss2@[specIdx] = Some sost2 -> *)
+  (*          pmsg_postcond (specSetReq extIdx1 extIdx2 child1Idx) sost1 setV sost2 -> *)
+
+  (*          StateSimCond *)
+  (*            SvmStR soss1 child1Idx *)
+  (*            (fun ost => *)
+  (*               (ost_st ost)@[statusIdx] = Some (VNat stS)) -> *)
+
+  (*          StateSimCond *)
+  (*            SvmStR soss2 child1Idx *)
+  (*            (fun ost => *)
+  (*               (ost_st ost)@[statusIdx] = Some (VNat stM)) -> *)
+
+  (*          list PMsg). *)
+  (* Proof. *)
+  (*   ssp. *)
+
+  (*   collect_vloc. *)
+  (*   simpl_postcond. *)
+  (*   collect_diff ioss0 ioss. *)
+  (* Abort. *)
+  
 End Sim.
 
