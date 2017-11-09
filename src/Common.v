@@ -1,5 +1,8 @@
 Require Import Bool Ascii String List Eqdep Omega.
 Require Import Logic.FunctionalExtensionality.
+Require Import ssreflect.
+
+Open Scope GEN_IF.
 
 Ltac inv H := inversion H; subst; clear H.
 Ltac dest :=
@@ -72,7 +75,8 @@ Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
   | Some a => f a
   | None => nb
   end.
-Notation "OA >>=[ NB ] F" := (tbind NB OA F) (at level 0).
+Notation "OA >>=[ NB ] F" :=
+  (tbind NB OA F) (at level 0, format "OA  '>>=[' NB ] '/' F").
 
 Fixpoint replicate {A} (a: A) (sz: nat): list A :=
   match sz with
