@@ -31,22 +31,6 @@ Definition Pred := Inv.
 
 (** Notion of transaction predicates *)
 
-Inductive VLoc :=
-| VFromState: forall (oidx kidx: IdxT), VLoc
-| VFromMsg: VLoc.
-
-Inductive VDiff :=
-| ConstDiff:
-    forall (target: VLoc) (const: Value), VDiff
-| FuncDiff:
-    forall (target: VLoc)
-           (operands: list VLoc)
-           (* Note that [Value] can take multiple [Value]s inductively *)
-           (func: Value -> Value), VDiff.
-
-Definition VMoved (from to: VLoc): VDiff :=
-  FuncDiff to (from :: nil) id.
-
 Definition SimR := ObjectStates -> ObjectStates -> Prop.
 
 Definition LiftCond (oidx: IdxT) (cond: Cond) :=

@@ -179,26 +179,7 @@ Section SynTrs.
 
   End ResponseBack.
 
-  Section ByTrsPred.
-
-    Variables (tp: TrsPred)
-              (* where the request came from, and which object handles it *)
-              (efrom hdl: IdxT)
-              (* a target system topology *)
-              (objs: list Object)
-              (topo: list Channel).
-    
-    Fixpoint getForwards (me: IdxT) (chns: list Channel) :=
-      match chns with
-      | nil => nil
-      | chn :: t =>
-        if me ==n chn_from chn
-        then chn_to chn :: getForwards me t
-        else getForwards me t
-      end.
-
-    Fixpoint idxInter (li1 li2: list IdxT) :=
-      filter (fun idx => if idx ?<n li2 then true else false) li1.
+  Section AddPMsgs.
 
     Definition addPMsgO (pmsg: PMsg) (obj: Object) :=
       {| obj_idx := obj_idx obj;
@@ -221,7 +202,12 @@ Section SynTrs.
         addPMsgs pmsgs' (addPMsg pmsg objs)
       end.
 
-  End ByTrsPred.
+  End AddPMsgs.
+
+  Definition idxInter (li1 li2: list IdxT) :=
+    filter (fun idx => if idx ?<n li2 then true else false) li1.
+  Definition idxSubtract (li1 li2: list IdxT) :=
+    filter (fun idx => if idx ?<n li2 then false else true) li1.
   
 End SynTrs.
 

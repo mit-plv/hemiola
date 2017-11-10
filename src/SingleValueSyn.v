@@ -93,34 +93,32 @@ Section Impl.
             let invs := (eval hnf in svmImplChild1Inv) in
             find_new_prec tgt invs).
 
-    Ltac find_state_sim oidx oinv sims :=
-      match sims with
-      | nil => fail
-      | ?sim :: ?sims' =>
-        tryif (inv_not_compatible oinv
-                                  (fun iost => exists ist sst,
-                                       ist@[oidx] = Some iost /\ sim ist sst))
-        then find_state_sim oidx oinv sims'
-        else exact sim
-      end.
+    (* Ltac find_state_sim oidx oinv sims := *)
+    (*   match sims with *)
+    (*   | nil => fail *)
+    (*   | ?sim :: ?sims' => *)
+    (*     tryif (inv_not_compatible oinv *)
+    (*                               (fun iost => exists ist sst, *)
+    (*                                    ist@[oidx] = Some iost /\ sim ist sst)) *)
+    (*     then find_state_sim oidx oinv sims' *)
+    (*     else exact sim *)
+    (*   end. *)
 
-    Local Definition newStateInv: ObjectStates -> ObjectStates -> Prop :=
-      ltac:(let tgt := (eval hnf in newPrec) in
-            let sims := (eval hnf in svmR) in
-            find_state_sim child1Idx tgt sims).
+    (* Local Definition newStateInv: ObjectStates -> ObjectStates -> Prop := *)
+    (*   ltac:(let tgt := (eval hnf in newPrec) in *)
+    (*         let sims := (eval hnf in svmR) in *)
+    (*         find_state_sim child1Idx tgt sims). *)
 
-    Local Definition targetStateInv: ObjectStates -> ObjectStates -> Prop :=
-      ltac:(let tgt := (eval hnf in targetPrec) in
-            let sims := (eval hnf in svmR) in
-            find_state_sim child1Idx tgt sims).
+    (* Local Definition targetStateInv: ObjectStates -> ObjectStates -> Prop := *)
+    (*   ltac:(let tgt := (eval hnf in targetPrec) in *)
+    (*         let sims := (eval hnf in svmR) in *)
+    (*         find_state_sim child1Idx tgt sims). *)
 
-    Local Definition diffs: list VDiff.
+    Local Definition synTrs:
+      { impl1: System &
+               SynthOk spec SvmSim svmP impl1 }.
     Proof.
-      pose newStateInv as pre; hnf in pre.
-      pose targetStateInv as post; hnf in post.
-
     Abort.
-    
     
     (* Ltac no_vloc_st oss oidx kidx := *)
     (*   lazymatch goal with *)
