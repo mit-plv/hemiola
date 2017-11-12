@@ -144,17 +144,17 @@ End Validness.
 Section HasLabel.
 
   Inductive Label :=
-  | Lbl (min: option Msg) (mouts: list Msg): Label.
+  | LblIn (min: Msg): Label
+  | LblOuts (mouts: list Msg): Label.
 
   Class HasLabel (LabelT: Type) :=
     { getLabel: LabelT -> Label }.
 
-  Definition emptyLabel := Lbl None nil.
+  Definition emptyLabel := LblOuts nil.
 
   Definition isEmptyLabel: forall l, {l = emptyLabel} + {l <> emptyLabel}.
   Proof.
-    destruct l as [min mouts].
-    destruct min; [right; discriminate|].
+    destruct l; [right; discriminate|].
     destruct mouts; [|right; discriminate].
     left; reflexivity.
   Defined.
@@ -253,32 +253,32 @@ End SState.
 Section ILabel.
 
   Inductive ILabel MsgT :=
-  | IlblExt (mhdl: MsgT) (mouts: list MsgT): ILabel MsgT
-  | IlblInt (mhdl: option MsgT) (mouts: list MsgT): ILabel MsgT.
+  | IlblIn (min: MsgT): ILabel MsgT
+  | IlblOuts (mhdl: option MsgT) (mouts: list MsgT): ILabel MsgT.
 
   Definition iLblHdl {MsgT} (l: ILabel MsgT) :=
     match l with
-    | IlblExt mhdl _ => Some mhdl
-    | IlblInt mhdl _ => mhdl
+    | IlblIn _ => None
+    | IlblOuts mhdl _ => mhdl
     end.
 
   Definition iLblOuts {MsgT} (l: ILabel MsgT) :=
     match l with
-    | IlblExt _ outs => outs
-    | IlblInt _ outs => outs
+    | IlblIn _ => nil
+    | IlblOuts _ mouts => mouts
     end.
 
   Definition iToLabel {MsgT} `{HasMsg MsgT}
              (l: ILabel MsgT): Label :=
     match l with
-    | IlblExt mhdl mouts => Lbl (Some (getMsg mhdl)) (map getMsg mouts)
-    | IlblInt _ mouts => Lbl None (map getMsg mouts)
+    | IlblIn min => LblIn (getMsg min)
+    | IlblOuts _ mouts => LblOuts (map getMsg mouts)
     end.
 
   Global Instance ILabel_HasLabel {MsgT} `{HasMsg MsgT}: HasLabel (ILabel MsgT) :=
     { getLabel := iToLabel }.
 
-  Definition emptyILabel {MsgT} := IlblInt (MsgT:= MsgT) None nil.
+  Definition emptyILabel {MsgT} := IlblOuts (MsgT:= MsgT) None nil.
 
 End ILabel.
 
@@ -289,11 +289,14 @@ Section TMsg.
 
   Record TMsg :=
     { tmsg_msg : Msg;
-      tmsg_tid : TrsId (* a unique transaction id *)
+      (* a unique transaction id, assigned when the transaction starts. *)
+      tmsg_tid : option TrsId
     }.
 
-  Definition toTMsg tid m := {| tmsg_msg := m; tmsg_tid := tid |}.
+  Definition toTMsg tid m := {| tmsg_msg := m; tmsg_tid := Some tid |}.
   Definition toTMsgs tid msgs := map (toTMsg tid) msgs.
+
+  Definition toTMsgU m := {| tmsg_msg := m; tmsg_tid := None |}.
 
   Global Instance TMsg_HsgMsg : HasMsg TMsg :=
     { getMsg := tmsg_msg }.
@@ -301,7 +304,7 @@ Section TMsg.
   Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
   Proof.
     decide equality.
-    - decide equality.
+    - repeat decide equality.
     - apply msg_dec.
   Defined.
 

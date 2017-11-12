@@ -1,6 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common ListSupport FMap Syntax Semantics SemFacts StepDet StepSeq Serial.
+Require Import Common ListSupport FMap.
+Require Import Syntax Semantics SemFacts StepDet StepSeq Serial.
 
 Set Implicit Arguments.
 
@@ -10,11 +11,9 @@ Lemma transactional_cons_inv:
     Transactional sys ll.
 Proof.
   unfold Transactional; intros.
-  destruct H; [discriminate|].
-  destruct H as [pmin [pmouts [? ?]]].
-  remember (a :: ll) as all; inv H0; [inv H2; auto|].
-  inv H4.
-  right; eauto.
+  destruct H as [ptid [pmin [pmouts [? ?]]]].
+  inv H0.
+  do 3 eexists; split; eauto.
 Qed.
 
 Corollary transactional_ocons_inv:
@@ -26,24 +25,59 @@ Proof.
   eauto using transactional_cons_inv.
 Qed.
 
-Lemma steps_seq_atomic_tid:
-  forall sys st1 ll st2,
-    steps step_seq sys st1 ll st2 ->
-    forall ts,
-      tst_tid st2 = ts ->
-      forall tmsg min mouts,
-        Atomic min ll mouts ->
-        In tmsg mouts ->
-        tmsg_tid tmsg = ts.
+Lemma atomic_nil_in:
+  forall tid min mouts,
+    Atomic tid min nil mouts ->
+    forall msg,
+      In msg mouts ->
+      msg = min.
 Proof.
-  induction 1; simpl; intros; [inv H0|].
-  inv H2.
-  - eauto using step_seq_outs_tid.
-  - apply in_app_or in H3; destruct H3.
-    + eapply IHsteps; eauto.
-      * eauto using step_seq_internal_tid_intact.
-      * eauto using in_remove.
-    + eapply step_seq_outs_tid; eauto.
+  intros; inv H.
+  Common.dest_in.
+  reflexivity.
+Qed.
+
+Lemma step_det_seq_in:
+  forall sys st1 msg st2,
+    step_det sys st1 (IlblIn msg) st2 ->
+    step_seq sys st1 (IlblIn msg) st2.
+Proof.
+  intros; inv H.
+  constructor; auto.
+Qed.
+
+Lemma steps_det_atomic_outs_ts:
+  forall tid min ll mouts,
+    Atomic tid min ll mouts ->
+    forall sys st1 st2,
+      steps step_det sys st1 ll st2 ->
+      Forall (fun tmsg => tmsg_tid tmsg = Some tid) mouts.
+Proof.
+  induction 1; simpl; intros.
+  - repeat constructor; auto.
+  - inv H1; apply Forall_app.
+    + apply Forall_remove; eauto.
+    + apply step_det_outs_tid in H7; dest; auto.
+      specialize (IHAtomic _ _ _ H5).
+      eapply Forall_forall in IHAtomic; [|eassumption].
+      rewrite <-IHAtomic; auto.
+Qed.
+
+Lemma steps_det_atomic_outs_fwd_tid:
+  forall tid min ll mouts,
+    Atomic tid min ll mouts ->
+    forall sys st1 st2,
+      steps step_det sys st1 ll st2 ->
+      Forall (fun l => match l with
+                       | IlblOuts (Some hdl) _ => tmsg_tid hdl = Some tid
+                       | _ => False
+                       end) ll.
+Proof.
+  induction 1; simpl; intros; [constructor|].
+  inv H1.
+  constructor; eauto.
+  eapply steps_det_atomic_outs_ts in H; [|eassumption].
+  eapply Forall_forall in H; eauto.
 Qed.
 
 Lemma transactional_steps_seq:
@@ -53,52 +87,44 @@ Lemma transactional_steps_seq:
       steps step_det sys st1 ll st2 ->
       steps step_seq sys st1 ll st2.
 Proof.
-  induction ll as [|l ll]; simpl; intros; subst; [inv H0; constructor|].
+  induction ll as [|l ll]; simpl; intros; subst;
+    [inv H0; constructor|].
 
-  (* NOTE: [l] is the youngest label. *)
+  specialize (IHll (transactional_cons_inv H)).
+
+  destruct H as [tid [trin [trouts [? ?]]]].
+  pose proof (steps_det_atomic_outs_fwd_tid H1 H0).
+
   inv H0.
-  specialize (IHll (transactional_cons_inv H) _ _ H4).
-  destruct l.
+  specialize (IHll _ _ H6).
+  econstructor; eauto.
 
-  - (* IlblExt *)
-    inv H; [discriminate|].
-    destruct H0 as [trin [trouts [? ?]]].
-    inv H6.
-    econstructor; [eassumption|].
-    econstructor; eauto.
+  inv H2.
+  destruct l; [intuition idtac|].
+  destruct mhdl; [|intuition idtac].
 
-  - (* IlblInt *)
-    inv H; [discriminate|].
-    destruct H0 as [trin [trouts [? ?]]].
-    inv H6; [inv H0; discriminate|].
-    econstructor; [eassumption|].
-    econstructor; eauto.
-    inv H0.
-    eauto using steps_seq_atomic_tid.
-Qed.
-
-Lemma sequential_steps':
-  forall sys trs,
-    Forall (Transactional sys) trs ->
-    forall ll,
-      ll = concat trs ->
-      forall st,
-        steps step_det sys (getStateInit sys) ll st ->
-        steps step_seq sys (getStateInit sys) ll st.
-Proof.
-  induction trs; intros.
-
-  - simpl in H0; subst.
-    inv H1; constructor.
-
-  - inv H.
-    specialize (IHtrs H5); clear H5.
-    simpl in H1.
-    eapply steps_split in H1; [|reflexivity].
-    destruct H1 as [sti [? ?]].
-    specialize (IHtrs _ eq_refl _ H); clear H.
-    pose proof (transactional_steps_seq H4 H0).
-    simpl; eauto using steps_append.
+  destruct ll.
+  - inv H1; inv H11; inv H6.
+    Common.dest_in.
+    inv H8.
+    + exfalso; simpl in H9; eauto using internal_external_false.
+    + econstructor; eauto.
+  - inv H1; inv H11; inv H5.
+    inv H8.
+    + assert (ts = mts); subst.
+      { inv IHll.
+        apply step_seq_outs_tid in H22; simpl in H22; dest.
+        rewrite H14 in H4; inv H4.
+        rewrite H0 in H2; inv H2.
+        reflexivity.
+      }
+      econstructor; eauto.
+    + exfalso.
+      inv IHll.
+      apply step_seq_outs_tid in H22; simpl in H22; dest.
+      simpl in H4; inv H4.
+      rewrite H0 in H2; inv H2.
+      intuition.
 Qed.
 
 Lemma sequential_steps:
@@ -108,9 +134,15 @@ Lemma sequential_steps:
       steps step_det sys (getStateInit sys) ll st ->
       steps step_seq sys (getStateInit sys) ll st.
 Proof.
-  unfold Sequential; intros.
-  destruct H as [trs [? ?]]; subst.
-  eauto using sequential_steps'.
+  induction 1; simpl; intros; subst.
+  - inv H; constructor.
+  - inv H1.
+    econstructor; eauto.
+    apply step_det_seq_in; auto.
+  - eapply steps_split in H1; [|reflexivity].
+    destruct H1 as [sti ?]; dest.
+    apply steps_append with (st2:= sti); auto.
+    auto using transactional_steps_seq.
 Qed.
 
 Theorem serializable_step_seq:
@@ -123,7 +155,6 @@ Proof.
   destruct H0 as [sll [sst [? [? ?]]]].
   pose proof (sequential_steps H1 H0) as Hseq.
   eapply Behv; eauto.
-  destruct H2; assumption.
 Qed.
 
 Theorem sequential_step_seq:

@@ -13,33 +13,48 @@ Section PerSystem.
       steps step sys (getStateInit sys) ll st ->
       HistoryOf ll.
 
-  Inductive Atomic: TMsg -> History -> list TMsg -> Prop :=
+  (* Note that due to the definition of [TMsg], it is guaranteed that
+   * an [Atomic] history is about a single transaction.
+   * [TMsg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
+   * ensures that the history is for a single transaction.
+   *)
+  Inductive Atomic: IdxT -> TMsg -> History -> list TMsg -> Prop :=
   | AtomicBase:
-      forall hdl outs,
-        Atomic hdl (IlblExt hdl outs :: nil) outs
+      forall hdl tid,
+        tmsg_tid hdl = Some tid ->
+        Atomic tid hdl nil (hdl :: nil)
   | AtomicCons:
-      forall min hst mouts,
-        Atomic min hst mouts ->
+      forall tid min hst mouts,
+        Atomic tid min hst mouts ->
         forall hdl houts,
           In hdl mouts ->
-          Atomic min (IlblInt (Some hdl) houts :: hst)
+          Atomic tid min (IlblOuts (Some hdl) houts :: hst)
                  (List.remove tmsg_dec hdl mouts ++ houts).
 
   Definition Transactional (hst: History) :=
-    hst = nil \/
-    (exists min mouts,
-        isExternal sys (mid_from (msg_id (tmsg_msg min))) = true /\
-        Atomic min hst mouts).
+    exists tid min mouts,
+      isExternal sys (mid_from (msg_id (tmsg_msg min))) = true /\
+      Atomic tid min hst mouts.
 
-  Definition Sequential (hst: History) :=
-    exists (trs: list History),
-      Forall Transactional trs /\ hst = concat trs.
+  Inductive Sequential: History -> Prop :=
+  | SeqNil: Sequential nil
+  | SeqIn:
+      forall hst,
+        Sequential hst ->
+        forall msg tin,
+          tin = IlblIn (toTMsgU msg) ->
+          Sequential (tin :: hst)
+  | SeqSeq:
+      forall hst,
+        Sequential hst ->
+        forall trs,
+          Transactional trs ->
+          Sequential (trs ++ hst).
 
 End PerSystem.
 
 Definition Equivalent {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
-  Permutation ll1 ll2 /\ behaviorOf ll1 = behaviorOf ll2.
-
+  behaviorOf ll1 = behaviorOf ll2.
 Infix "≡" := Equivalent (at level 30).
 
 Definition Serializable {StateT} `{HasInit StateT}

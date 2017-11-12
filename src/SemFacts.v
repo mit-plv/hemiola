@@ -27,28 +27,33 @@ Qed.
   
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
-    step_det sys st1 (IlblInt (Some hdl) outs) st2 ->
+    step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
     isInternal sys (mid_to (msg_id (getMsg hdl))) = true.
 Proof.
   intros; inv H.
-  destruct hdl as [hmid hmv]; simpl in *; subst.
-  destruct H6 as [? [? ?]]; simpl in *; subst.
-  rewrite H0.
-  unfold isInternal; find_if_inside; auto.
-  elim n; apply in_map; assumption.
+  - destruct hdl as [hmid hmv]; simpl in *; subst.
+    destruct H7 as [? [? ?]]; simpl in *; subst.
+    rewrite H0.
+    unfold isInternal; find_if_inside; auto.
+    elim n; apply in_map; assumption.
+  - destruct fmsg as [fmsg fts]; simpl in *.
+    destruct fmsg as [hmid hmv]; simpl in *; subst.
+    destruct H7 as [? [? ?]]; simpl in *; subst.
+    rewrite H0.
+    unfold isInternal; find_if_inside; auto.
+    elim n; apply in_map; assumption.
 Qed.
 
-Lemma step_det_outs_internal:
+Lemma step_det_outs_from_internal:
   forall sys st1 ilbl st2,
     step_det sys st1 ilbl st2 ->
     Forall (fun m: TMsg => isInternal sys (mid_from (msg_id (getMsg m))) = true)
            (iLblOuts ilbl).
 Proof.
-  intros; inv H.
-  - constructor.
+  intros; inv H; try (constructor; fail).
   - simpl.
     apply Forall_filter.
-    destruct H11.
+    destruct H12.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
     induction outs; simpl; intros; [constructor|].
@@ -59,7 +64,7 @@ Proof.
     elim n; apply in_map; assumption.
   - simpl.
     apply Forall_filter.
-    destruct H9.
+    destruct H12.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
     induction outs; simpl; intros; [constructor|].
@@ -70,50 +75,39 @@ Proof.
     elim n; apply in_map; assumption.
 Qed.
 
-Lemma step_seq_tid:
-  forall sys ats1 l ats2,
-    step_seq sys ats1 l ats2 ->
-    forall hdl,
-      iLblHdl l = Some hdl ->
-      Forall (fun tmsg => tmsg_tid tmsg = tmsg_tid hdl) (iLblOuts l).
+Lemma step_det_outs_tid:
+  forall sys st1 hdl outs st2,
+    step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
+    Forall (fun m => tmsg_tid m = tmsg_tid hdl) outs.
 Proof.
   intros; inv H.
-  - discriminate.
-  - simpl in H0; inv H0.
-    clear; simpl.
-    induction (pmsg_outs _ _ _); simpl; auto.
-    find_if_inside; auto.
-  - simpl in H0; inv H0.
-    clear; simpl.
-    induction (pmsg_outs _ _ _); simpl; auto.
-    find_if_inside; auto.
+  - simpl; rewrite H6.
+    unfold extOuts; apply Forall_filter.
+    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
+      constructor; auto.
+  - simpl.
+    unfold extOuts; apply Forall_filter.
+    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
+      constructor; auto.
 Qed.
 
 Lemma step_seq_outs_tid:
-  forall sys st1 l st2,
-    step_seq sys st1 l st2 ->
-    forall tmsg,
-      In tmsg (iLblOuts l) ->
-      tmsg_tid tmsg = tst_tid st2.
+  forall sys st1 hdl outs st2,
+    step_seq sys st1 (IlblOuts (Some hdl) outs) st2 ->
+    tmsg_tid hdl = Some (tst_tid st2) /\
+    Forall (fun m => tmsg_tid m = tmsg_tid hdl) outs.
 Proof.
   intros; inv H.
-  - inv H0.
-  - simpl; simpl in H0.
-    unfold extOuts in H0; apply filter_In in H0; dest.
-    unfold toTMsgs in H; apply in_map_iff in H; dest.
-    subst; reflexivity.
-  - simpl; simpl in H0.
-    unfold extOuts in H0; apply filter_In in H0; dest.
-    unfold toTMsgs in H; apply in_map_iff in H; dest.
-    subst; reflexivity.
-Qed.
-
-Lemma step_seq_internal_tid_intact:
-  forall sys st1 hdl outs st2,
-    step_seq sys st1 (IlblInt hdl outs) st2 ->
-    tst_tid st1 = tst_tid st2.
-Proof.
-  intros; inv H; reflexivity.
+  - simpl; rewrite H6.
+    split; [reflexivity|].
+    unfold extOuts; apply Forall_filter.
+    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
+      constructor; auto.
+  - simpl.
+    split; [reflexivity|].
+    unfold extOuts; apply Forall_filter.
+    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
+      constructor; auto.
 Qed.
 
 Lemma steps_split:
@@ -152,21 +146,6 @@ Lemma steps_append:
 Proof.
   induction 2; simpl; intros; [auto|].
   econstructor; eauto.
-Qed.
-
-Lemma map_id:
-  forall {A} (l: list A), map id l = l.
-Proof.
-  induction l; simpl; auto.
-  rewrite IHl; reflexivity.
-Qed.
-
-Lemma map_trans:
-  forall {A B C} (l: list A) (p: A -> B) (q: B -> C),
-    map q (map p l) = map (fun a => q (p a)) l.
-Proof.
-  induction l; simpl; intros; auto.
-  rewrite IHl; reflexivity.
 Qed.
 
 Theorem refines_refl:

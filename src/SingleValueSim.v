@@ -148,7 +148,8 @@ Section Sim.
 
   Definition svmP (l: Label) :=
     match l with
-    | Lbl min mouts => Lbl min (svmMsgsF mouts)
+    | LblIn min => LblIn (svmMsgF min)
+    | LblOuts mouts => LblOuts (svmMsgsF mouts)
     end.
   
 End Sim.

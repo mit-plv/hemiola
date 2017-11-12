@@ -51,3 +51,18 @@ Proof.
   destruct H; auto.
 Qed.
 
+Lemma map_id:
+  forall {A} (l: list A), map id l = l.
+Proof.
+  induction l; simpl; auto.
+  rewrite IHl; reflexivity.
+Qed.
+
+Lemma map_trans:
+  forall {A B C} (l: list A) (p: A -> B) (q: B -> C),
+    map q (map p l) = map (fun a => q (p a)) l.
+Proof.
+  induction l; simpl; intros; auto.
+  rewrite IHl; reflexivity.
+Qed.
+
