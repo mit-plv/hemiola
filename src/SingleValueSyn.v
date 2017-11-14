@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
-Require Import StepDet StepSeq Serial Predicate Synthesis.
+Require Import StepDet StepSeq Serial Predicate Synthesis SynthesisFacts.
 
 Require Import SingleValue SingleValueSim.
 
@@ -93,87 +93,24 @@ Section Impl.
             let invs := (eval hnf in svmImplChild1Inv) in
             find_new_prec tgt invs).
 
-    (* Ltac find_state_sim oidx oinv sims := *)
-    (*   match sims with *)
-    (*   | nil => fail *)
-    (*   | ?sim :: ?sims' => *)
-    (*     tryif (inv_not_compatible oinv *)
-    (*                               (fun iost => exists ist sst, *)
-    (*                                    ist@[oidx] = Some iost /\ sim ist sst)) *)
-    (*     then find_state_sim oidx oinv sims' *)
-    (*     else exact sim *)
-    (*   end. *)
+    Ltac syn_step_init pimpl pimpl_ok :=
+      econstructor;
+      instantiate (1:= addPMsgsSys _ pimpl);
+      split; [|split]; (* [SynthOk] consist of 3 conditions. *)
+      [|rewrite addPMsgsSys_init; apply pimpl_ok|].
 
-    (* Local Definition newStateInv: ObjectStates -> ObjectStates -> Prop := *)
-    (*   ltac:(let tgt := (eval hnf in newPrec) in *)
-    (*         let sims := (eval hnf in svmR) in *)
-    (*         find_state_sim child1Idx tgt sims). *)
-
-    (* Local Definition targetStateInv: ObjectStates -> ObjectStates -> Prop := *)
-    (*   ltac:(let tgt := (eval hnf in targetPrec) in *)
-    (*         let sims := (eval hnf in svmR) in *)
-    (*         find_state_sim child1Idx tgt sims). *)
-
-    Local Definition synTrs:
-      { impl1: System &
-               SynthOk spec SvmSim svmP impl1 }.
+    Definition synTrs:
+      { impl1: System & SynthOk spec SvmSim svmP impl1 }.
     Proof.
-    Abort.
-    
-    (* Ltac no_vloc_st oss oidx kidx := *)
-    (*   lazymatch goal with *)
-    (*   | [vloc := (oss, VFromState oidx kidx, _) |- _] => fail *)
-    (*   | _ => idtac *)
-    (*   end. *)
+      syn_step_init impl0 impl0_ok.
+      
+      - (* serializability *) admit.
+      - (* simulation *)
 
-    (* (* NOTE: there's only one [VFromMsg] information per a transaction. *) *)
-    (* Ltac no_vloc_msg := *)
-    (*   lazymatch goal with *)
-    (*   | [vloc := (VFromMsg, _) |- _] => fail *)
-    (*   | _ => idtac *)
-    (*   end. *)
+            
 
-    (* Ltac collect_vloc := *)
-    (*   repeat *)
-    (*     match goal with *)
-    (*     | [H1: M.find ?oidx ?oss = Some ?ost, H2: M.find ?kidx (ost_st ?ost) = Some ?v |- _] => *)
-    (*       no_vloc_st oss oidx kidx; *)
-    (*       let vloc := fresh "vloc" in *)
-    (*       set (oss, VFromState oidx kidx, v) as vloc *)
-    (*     | [H: pmsg_postcond _ _ ?v _ |- _] => *)
-    (*       no_vloc_msg; *)
-    (*       let vloc := fresh "vloc" in *)
-    (*       set (VFromMsg, v) as vloc *)
-    (*     end. *)
-
-    (* Ltac simpl_postcond := *)
-    (*   repeat *)
-    (*     match goal with *)
-    (*     | [H: pmsg_postcond _ _ _ _ |- _] => simpl in H; mv_rewriter *)
-    (*     end. *)
-
-    (* Ltac no_diff sdf := *)
-    (*   lazymatch goal with *)
-    (*   | [df := sdf |- _] => fail *)
-    (*   | _ => idtac *)
-    (*   end. *)
-
-    (* Ltac collect_diff oss1 oss2 := *)
-    (*   repeat *)
-    (*     match goal with *)
-    (*     | [vloc := (oss2, ?wh, ?v) |- _] => *)
-    (*       is_pure_const v; *)
-    (*       no_diff (ConstDiff wh v); *)
-    (*       let df := fresh "df" in *)
-    (*       pose (ConstDiff wh v) as df *)
-    (*     | [vloc1 := (oss1, ?wh1, ?v), vloc2 := (oss2, ?wh2, ?v) |- _] => *)
-    (*       not_pure_const v; *)
-    (*       first [is_equal wh1 wh2 | *)
-    (*              no_diff (VMoved wh1 wh2); *)
-    (*              let df := fresh "df" in *)
-    (*              pose (VMoved wh1 wh2) as df] *)
-    (*     end. *)
-
+        admit.
+    Admitted.
     
   End SynStep.
 

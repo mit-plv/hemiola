@@ -181,6 +181,18 @@ Section SynTrs.
 
   Section AddPMsgs.
 
+    Definition buildRawObj (oidx: nat) (sinit: StateT) :=
+      {| obj_idx := oidx;
+         obj_state_init := sinit;
+         obj_trs := nil |}.
+
+    Definition buildRawObjs (iis: list (nat * StateT)): list Object :=
+      map (fun ii => buildRawObj (fst ii) (snd ii)) iis.
+
+    Definition buildRawSys iis chns :=
+      {| sys_objs := buildRawObjs iis;
+         sys_chns := chns |}.
+
     Definition addPMsgO (pmsg: PMsg) (obj: Object) :=
       {| obj_idx := obj_idx obj;
          obj_state_init := obj_state_init obj;
@@ -202,6 +214,10 @@ Section SynTrs.
         addPMsgs pmsgs' (addPMsg pmsg objs)
       end.
 
+    Definition addPMsgsSys (pmsgs: list PMsg) (sys: System) :=
+      {| sys_objs := addPMsgs pmsgs (sys_objs sys);
+         sys_chns := sys_chns sys |}.
+    
   End AddPMsgs.
 
   Definition idxInter (li1 li2: list IdxT) :=
@@ -210,4 +226,4 @@ Section SynTrs.
     filter (fun idx => if idx ?<n li2 then false else true) li1.
   
 End SynTrs.
-
+    

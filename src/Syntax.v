@@ -104,7 +104,51 @@ Record System :=
     sys_chns: list Channel
   }.
 
-Definition indicesOf (sys: System) := map (fun o => obj_idx o) (sys_objs sys).
+Definition indicesOf (sys: System) :=
+  map (fun o => obj_idx o) (sys_objs sys).
+Definition initsOf (sys: System) :=
+  map (fun o => obj_state_init o) (sys_objs sys).
+Definition iisOf (sys: System) :=
+  map (fun o => (obj_idx o, obj_state_init o)) (sys_objs sys).
+Definition pmsgsOf (sys: System): list PMsg :=
+  concat (map (fun o => obj_trs o) (sys_objs sys)).
+
+Lemma iisOf_initsOf:
+  forall sys1 sys2,
+    iisOf sys1 = iisOf sys2 -> initsOf sys1 = initsOf sys2.
+Proof.
+  unfold iisOf, initsOf; intros.
+  remember (sys_objs sys1) as obs1; clear Heqobs1.
+  remember (sys_objs sys2) as obs2; clear Heqobs2.
+  clear sys1 sys2.
+  generalize dependent obs2.
+  induction obs1 as [|obj1 obs1]; simpl; intros.
+  - apply eq_sym, map_eq_nil in H.
+    subst; reflexivity.
+  - destruct obs2 as [|obj2 obs2]; [discriminate|].
+    simpl in H; inv H.
+    simpl; erewrite IHobs1 by eassumption.
+    rewrite H2; reflexivity.
+Qed.
+
+Lemma iisOf_indicesOf:
+  forall sys1 sys2,
+    iisOf sys1 = iisOf sys2 -> indicesOf sys1 = indicesOf sys2.
+Proof.
+  unfold iisOf, indicesOf; intros.
+  remember (sys_objs sys1) as obs1; clear Heqobs1.
+  remember (sys_objs sys2) as obs2; clear Heqobs2.
+  clear sys1 sys2.
+  generalize dependent obs2.
+  induction obs1 as [|obj1 obs1]; simpl; intros.
+  - apply eq_sym, map_eq_nil in H.
+    subst; reflexivity.
+  - destruct obs2 as [|obj2 obs2]; [discriminate|].
+    simpl in H; inv H.
+    simpl; erewrite IHobs1 by eassumption.
+    rewrite H1; reflexivity.
+Qed.
+  
 Definition singleton (obj: Object): System :=
   {| sys_objs := obj :: nil;
      sys_chns := nil

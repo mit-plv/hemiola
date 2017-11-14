@@ -110,6 +110,62 @@ Proof.
       constructor; auto.
 Qed.
 
+Lemma pmsgsOf_in:
+  forall obj sys,
+    In obj (sys_objs sys) ->
+    forall pmsg,
+      In pmsg (obj_trs obj) ->
+      In pmsg (pmsgsOf sys).
+Proof.
+  unfold pmsgsOf; intros.
+  induction (sys_objs sys); [inv H|].
+  destruct H; subst; simpl;
+    apply in_or_app; auto.
+Qed.
+
+Lemma step_det_pmsgs_in:
+  forall sys st1 lbl st2,
+    step_det sys st1 lbl st2 ->
+    match iLblHdl lbl with
+    | Some hdl => exists hpmsg,
+                  In hpmsg (pmsgsOf sys) /\
+                  msg_id (getMsg hdl) = pmsg_mid hpmsg
+    | None => True
+    end.
+Proof.
+  intros; inv H; simpl; auto.
+  - simpl in H7; rewrite H7.
+    eexists; split; [|reflexivity].
+    eauto using pmsgsOf_in.
+  - simpl in H7; rewrite H7.
+    eexists; split; [|reflexivity].
+    eauto using pmsgsOf_in.
+Qed.
+
+Lemma step_det_in_pmsgs_weakening:
+  forall sys st1 emsg st2,
+    step_det sys st1 (IlblIn emsg) st2 ->
+    forall wsys,
+      indicesOf wsys = indicesOf sys ->
+      step_det wsys st1 (IlblIn emsg) st2.
+Proof.
+  intros; inv H.
+  constructor; auto.
+  - unfold isExternal in *; rewrite H0; assumption.
+  - unfold isInternal in *; rewrite H0; assumption.
+Qed.
+
+Lemma step_det_silent_pmsgs_weakening:
+  forall sys st1 mouts st2,
+    step_det sys st1 (IlblOuts None mouts) st2 ->
+    forall wsys,
+      indicesOf wsys = indicesOf sys ->
+      step_det wsys st1 (IlblOuts None mouts) st2.
+Proof.
+  intros; inv H.
+  constructor.
+Qed.
+
 Lemma steps_split:
   forall {StateT LabelT} (step: Step StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
