@@ -134,6 +134,30 @@ Proof.
   - unfold isInternal in *; rewrite H0; assumption.
 Qed.
 
+Lemma step_seq_silent_pmsgs_weakening:
+  forall sys st1 mouts st2,
+    step_seq sys st1 (IlblOuts None mouts) st2 ->
+    forall wsys,
+      indicesOf wsys = indicesOf sys ->
+      step_seq wsys st1 (IlblOuts None mouts) st2.
+Proof.
+  intros; inv H.
+  constructor.
+Qed.
+
+Lemma step_seq_in_pmsgs_weakening:
+  forall sys st1 emsg st2,
+    step_seq sys st1 (IlblIn emsg) st2 ->
+    forall wsys,
+      indicesOf wsys = indicesOf sys ->
+      step_seq wsys st1 (IlblIn emsg) st2.
+Proof.
+  intros; inv H.
+  constructor; auto.
+  - unfold isExternal in *; rewrite H0; assumption.
+  - unfold isInternal in *; rewrite H0; assumption.
+Qed.
+
 Lemma steps_split:
   forall {StateT LabelT} (step: Step StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->

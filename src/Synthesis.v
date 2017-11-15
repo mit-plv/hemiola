@@ -58,6 +58,33 @@ Section SimP.
 
 End SimP.
 
+Section SimTrs.
+
+  Definition NoTrs (ioss: ObjectStates) :=
+    forall oidx,
+      match ioss@[oidx] with
+      | Some os => ost_tst os = M.empty _
+      | None => True
+      end.
+
+  Inductive SimTrsO (R: ObjectStates -> ObjectStates -> Prop):
+    ObjectStates -> ObjectStates -> Prop :=
+  | SimTrsStable:
+      forall ioss soss,
+        R ioss soss ->
+        NoTrs ioss ->
+        SimTrsO R ioss soss
+  | SimTrsTrs:
+      forall ioss soss,
+        ~ NoTrs ioss ->
+        SimTrsO R ioss soss.
+
+  Definition SimTrs (R: ObjectStates -> ObjectStates -> Prop)
+             (ioss soss: TState): Prop :=
+    SimTrsO R (tst_oss ioss) (tst_oss soss).
+
+End SimTrs.
+
 Section SynTrs.
   Variables (trsIdx: IdxT)
             (this: IdxT).
@@ -141,16 +168,19 @@ Section SynTrs.
 
     Definition WhenAllResponded (postcond: PostCond)
                (pre: OState) (val: Value) (post: OState) :=
-      (ost_tst post)@[trsIdx] >>=[False]
+      (ost_tst pre)@[trsIdx] >>=[False]
       (fun trsh =>
          if allResponded (tst_rqfwds trsh)
-         then pre = post
-         else postcond pre val post).
+         then postcond pre val post /\
+              ost_tst post = M.remove trsIdx (ost_tst pre)
+         else True).
 
     Definition synRsPostcond (postcond: PostCond)
                (pre: OState) (val: Value) (post: OState) :=
       Responded pre val post /\
-      WhenAllResponded postcond pre val post.
+      (exists post',
+          Responded pre val post' /\
+          WhenAllResponded postcond post' val post).
 
     Definition synRsOuts (rsOut: StateT -> list (IdxT * option Value) -> Value) :=
       fun st val =>
@@ -165,8 +195,8 @@ Section SynTrs.
                    msg_value := rsOut (ost_st st) rss |} :: nil
            else nil).
 
-    (* NOTE: [postcond] is a desired postcondition treating the transaction 
-     * is atomic.
+    (* NOTE: [postcond] is a desired postcondition when assuming 
+     * the transaction is atomic.
      *)
     Definition synRs (postcond: PostCond)
                (rsOut: StateT -> list (IdxT * option Value) -> Value) :=

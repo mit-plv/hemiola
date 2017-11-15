@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Permutation.
-Require Import Common FMap Syntax Semantics.
-Require Import StepDet StepSeq Serial Predicate Synthesis SynthesisFacts.
+Require Import Common FMap Syntax Semantics StepDet StepSeq.
+Require Import Simulation Serial Predicate Synthesis SynthesisFacts.
 
 Require Import SingleValue SingleValueSim.
 
@@ -23,11 +23,12 @@ Section Impl.
   Local Definition svmP := svmP extIdx1 extIdx2.
 
   (** First, prove that the initial system is provided properly. *)
-  Theorem impl0_ok: SynthOk spec SvmSim svmP impl0.
+  Theorem impl0_ok: SynthOk spec (SimTrs SvmR) svmP impl0.
   Proof.
     repeat split.
     - admit.
     - repeat econstructor.
+      apply noTrs_init.
     - admit.
   Admitted.
   
@@ -99,13 +100,19 @@ Section Impl.
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [|rewrite addPMsgsSys_init; apply pimpl_ok|].
 
+    Ltac syn_step_sim pimpl_ok :=
+      apply simulation_pmsgs_added;
+      [apply pimpl_ok|].
+
     Definition synTrs:
-      { impl1: System & SynthOk spec SvmSim svmP impl1 }.
+      { impl1: System & SynthOk spec (SimTrs SvmR) svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
-      
+
       - (* serializability *) admit.
-      - (* simulation *) admit.
+      - (* simulation *)
+        syn_step_sim impl0_ok.
+        unfold Simulates; intros.
     Admitted.
     
   End SynStep.

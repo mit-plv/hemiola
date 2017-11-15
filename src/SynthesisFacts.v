@@ -2,6 +2,19 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Wf Semantics SemFacts StepDet StepSeq.
 Require Import Serial SerialFacts Simulation Predicate Synthesis.
 
+Lemma noTrs_init:
+  forall sys,
+    NoTrs (tst_oss (getStateInit sys)).
+Proof.
+  simpl; intros.
+  remember (sys_objs sys) as obs; clear Heqobs sys.
+  induction obs; [constructor; fail|].
+
+  unfold NoTrs in *; simpl; intros.
+  mred.
+  apply IHobs.
+Qed.
+  
 Lemma addPMsgs_init:
   forall pmsgs objs,
     getObjectStatesInit (addPMsgs pmsgs objs) =
@@ -46,8 +59,8 @@ Theorem simulation_pmsgs_compositional:
          (stepS: Step StateS LabelS)
          impl1 impl2 spec simR simP
          (Hidx: indicesOf impl1 = indicesOf impl2)
-         (Hsim1: Simulates step_det stepS simR simP impl1 spec)
-         (Hsim2: Simulates step_det stepS simR simP impl2 spec)
+         (Hsim1: Simulates step_seq stepS simR simP impl1 spec)
+         (Hsim2: Simulates step_seq stepS simR simP impl2 spec)
          impl (Hii: indicesOf impl = indicesOf impl1)
          (Himplp:
             forall pmsg iobj,
@@ -57,20 +70,20 @@ Theorem simulation_pmsgs_compositional:
                 obj_idx obj = obj_idx iobj /\
                 In pmsg (obj_trs obj) /\
                 In obj (sys_objs impl1 ++ sys_objs impl2)),
-    Simulates step_det stepS simR simP impl spec.
+    Simulates step_seq stepS simR simP impl spec.
 Proof.
   unfold Simulates; intros.
   specialize (Hsim1 ist1 sst1 H1 ilbl ist2).
   specialize (Hsim2 ist1 sst1 H1 ilbl ist2).
 
   destruct ilbl as [|[hdl|]];
-    [apply Hsim1; eapply step_det_in_pmsgs_weakening; eauto|
+    [apply Hsim1; eapply step_seq_in_pmsgs_weakening; eauto|
      |inv H2; apply Hsim1; constructor].
   
   match goal with
   | [ |- ?g ] =>
-    assert (Hsp: step_det impl1 ist1 (IlblOuts (Some hdl) mouts) ist2 \/
-                 step_det impl2 ist1 (IlblOuts (Some hdl) mouts) ist2 -> g)
+    assert (Hsp: step_seq impl1 ist1 (IlblOuts (Some hdl) mouts) ist2 \/
+                 step_seq impl2 ist1 (IlblOuts (Some hdl) mouts) ist2 -> g)
       by (intro Hsp; destruct Hsp; [apply Hsim1; assumption|apply Hsim2; assumption])
   end.
   apply Hsp; clear Hsp Hsim1 Hsim2.
@@ -83,14 +96,14 @@ Proof.
         by (unfold extOuts, isExternal; rewrite Hii; reflexivity).
       replace (intOuts impl) with (intOuts impl1)
         by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
-      eapply SdIntFwd; eauto.
+      eapply SsIntFwd; eauto.
       unfold isInternal; rewrite <-Hii; assumption.
     + right.
       replace (extOuts impl) with (extOuts impl2)
         by (unfold extOuts, isExternal; rewrite Hii, Hidx; reflexivity).
       replace (intOuts impl) with (intOuts impl2)
         by (unfold intOuts, isInternal; rewrite Hii, Hidx; reflexivity).
-      eapply SdIntFwd; eauto.
+      eapply SsIntFwd; eauto.
       unfold isInternal; rewrite <-Hidx, <-Hii; assumption.
 
   - specialize (Himplp _ _ H13 H5); destruct Himplp as [iobj [? [? ?]]].
@@ -100,14 +113,14 @@ Proof.
         by (unfold extOuts, isExternal; rewrite Hii; reflexivity).
       replace (intOuts impl) with (intOuts impl1)
         by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
-      eapply SdIntInit; eauto.
+      eapply SsIntInit; eauto.
       unfold isInternal; rewrite <-Hii; assumption.
     + right.
       replace (extOuts impl) with (extOuts impl2)
         by (unfold extOuts, isExternal; rewrite Hii, Hidx; reflexivity).
       replace (intOuts impl) with (intOuts impl2)
         by (unfold intOuts, isInternal; rewrite Hii, Hidx; reflexivity).
-      eapply SdIntInit; eauto.
+      eapply SsIntInit; eauto.
       unfold isInternal; rewrite <-Hidx, <-Hii; assumption.
 Qed.
 
@@ -169,10 +182,10 @@ Corollary simulation_pmsgs_added:
   forall {StateS LabelS: Type} `{HasInit StateS} `{HasLabel LabelS}
          (stepS: Step StateS LabelS)
          impl pmsgs spec simR simP
-         (Hsim1: Simulates step_det stepS simR simP impl spec)
-         (Hsim2: Simulates step_det stepS simR simP
+         (Hsim1: Simulates step_seq stepS simR simP impl spec)
+         (Hsim2: Simulates step_seq stepS simR simP
                            (addPMsgsSys pmsgs (buildRawSys impl)) spec),
-    Simulates step_det stepS simR simP (addPMsgsSys pmsgs impl) spec.
+    Simulates step_seq stepS simR simP (addPMsgsSys pmsgs impl) spec.
 Proof.
   intros.
   eapply simulation_pmsgs_compositional
