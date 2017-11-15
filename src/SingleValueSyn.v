@@ -105,11 +105,7 @@ Section Impl.
       syn_step_init impl0 impl0_ok.
       
       - (* serializability *) admit.
-      - (* simulation *)
-
-            
-
-        admit.
+      - (* simulation *) admit.
     Admitted.
     
   End SynStep.

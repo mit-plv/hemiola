@@ -1,8 +1,5 @@
 Require Import Bool Ascii String List Eqdep Omega.
 Require Import Logic.FunctionalExtensionality.
-Require Import ssreflect.
-
-Open Scope GEN_IF.
 
 Ltac inv H := inversion H; subst; clear H.
 Ltac dest :=

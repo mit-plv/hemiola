@@ -113,6 +113,11 @@ Definition iisOf (sys: System) :=
 Definition pmsgsOf (sys: System): list PMsg :=
   concat (map (fun o => obj_trs o) (sys_objs sys)).
 
+Definition objOf (sys: System) (oidx: IdxT): option Object :=
+  find (fun o => if obj_idx o ==n oidx then true else false) (sys_objs sys).
+Definition objPMsgsOf (sys: System) (oidx: IdxT) :=
+  (objOf sys oidx) >>=[nil] (fun obj => obj_trs obj).
+
 Lemma iisOf_initsOf:
   forall sys1 sys2,
     iisOf sys1 = iisOf sys2 -> initsOf sys1 = initsOf sys2.

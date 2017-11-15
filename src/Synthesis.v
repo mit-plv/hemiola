@@ -181,37 +181,29 @@ Section SynTrs.
 
   Section AddPMsgs.
 
-    Definition buildRawObj (oidx: nat) (sinit: StateT) :=
-      {| obj_idx := oidx;
-         obj_state_init := sinit;
-         obj_trs := nil |}.
+    Definition buildRawObjs (oobs: list Object): list Object :=
+      map (fun obj => {| obj_idx := obj_idx obj;
+                         obj_state_init := obj_state_init obj;
+                         obj_trs := nil |}) oobs.
 
-    Definition buildRawObjs (iis: list (nat * StateT)): list Object :=
-      map (fun ii => buildRawObj (fst ii) (snd ii)) iis.
+    Definition buildRawSys (osys: System) :=
+      {| sys_objs := buildRawObjs (sys_objs osys);
+         sys_chns := sys_chns osys |}.
 
-    Definition buildRawSys iis chns :=
-      {| sys_objs := buildRawObjs iis;
-         sys_chns := chns |}.
-
-    Definition addPMsgO (pmsg: PMsg) (obj: Object) :=
+    Definition addPMsgsO (pmsgs: list PMsg) (obj: Object) :=
       {| obj_idx := obj_idx obj;
          obj_state_init := obj_state_init obj;
-         obj_trs := pmsg :: obj_trs obj |}.
-
-    Fixpoint addPMsg (pmsg: PMsg) (objs: list Object) :=
-      match objs with
-      | nil => nil
-      | obj :: objs' =>
-        if obj_idx obj ==n mid_to (pmsg_mid pmsg)
-        then addPMsgO pmsg obj :: objs'
-        else obj :: (addPMsg pmsg objs')
-      end.
+         obj_trs :=
+           (filter (fun pmsg =>
+                      if mid_to (pmsg_mid pmsg) ==n obj_idx obj
+                      then true else false) pmsgs)
+             ++ obj_trs obj |}.
 
     Fixpoint addPMsgs (pmsgs: list PMsg) (objs: list Object) :=
-      match pmsgs with
-      | nil => objs
-      | pmsg :: pmsgs' =>
-        addPMsgs pmsgs' (addPMsg pmsg objs)
+      match objs with
+      | nil => nil
+      | obj :: obs' =>
+        (addPMsgsO pmsgs obj) :: (addPMsgs pmsgs obs')
       end.
 
     Definition addPMsgsSys (pmsgs: list PMsg) (sys: System) :=
