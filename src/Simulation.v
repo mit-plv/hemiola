@@ -100,29 +100,28 @@ Section SimMap.
   Lemma validMsgMap_from_isExternal:
     forall impl spec,
       ValidMsgMap impl spec ->
-      forall msg,
-        isExternal impl (mid_from (msg_id msg)) =
-        isExternal spec (mid_from (msg_id (mmap msg))).
+      forall msg b,
+        isExternal impl (mid_from (msg_id msg)) = b ->
+        isExternal spec (mid_from (msg_id (mmap msg))) = b.
   Proof.
     unfold ValidMsgMap; intros.
+    rewrite <-H0.
     specialize (H msg); dest.
     do 2 rewrite internal_external_negb in H.
     destruct (isExternal _ _);
       destruct (isExternal _ _); auto.
   Qed.
 
-  Lemma validMsgMap_to_isExternal:
+  Lemma validMsgMap_to_isInternal:
     forall impl spec,
       ValidMsgMap impl spec ->
-      forall msg,
-        isExternal impl (mid_to (msg_id msg)) =
-        isExternal spec (mid_to (msg_id (mmap msg))).
+      forall msg b,
+        isInternal impl (mid_to (msg_id msg)) = b ->
+        isInternal spec (mid_to (msg_id (mmap msg))) = b.
   Proof.
     unfold ValidMsgMap; intros.
-    specialize (H msg); dest.
-    do 2 rewrite internal_external_negb in H0.
-    destruct (isExternal _ _);
-      destruct (isExternal _ _); auto.
+    rewrite <-H0.
+    specialize (H msg); dest; auto.
   Qed.
 
 End SimMap.

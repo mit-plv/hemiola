@@ -125,42 +125,67 @@ Section Impl.
     Ltac simulates_silent :=
       simpl; right; assumption.
 
+    Ltac simulates_lbl_in validMsgMap_proven :=
+      simpl;
+      repeat
+        match goal with
+        | [H: context[isExternal (addPMsgsSys _ _)] |- _] =>
+          rewrite addPMsgsSys_isExternal in H
+        | [H: context[isInternal (addPMsgsSys _ _)] |- _] =>
+          rewrite addPMsgsSys_isInternal in H
+        | [H: context[isExternal (buildRawSys _)] |- _] =>
+          rewrite buildRawSys_isExternal in H
+        | [H: context[isInternal (buildRawSys _)] |- _] =>
+          rewrite buildRawSys_isInternal in H
+        | [ |- exists _ _, step_det _ ?sst1 _ _ /\ _] =>
+          is_var sst1;
+          let soss1 := fresh "soss1" in
+          let smsgs1 := fresh "smsgs1" in
+          let sts := fresh "sts" in
+          destruct sst1 as [soss1 smsgs1 sts];
+          eexists {| tst_oss := soss1;
+                     tst_msgs := distributeMsg (toTMsgU _) smsgs1;
+                     tst_tid := sts |};
+          eexists (IlblIn (toTMsgU _))
+        | [ |- _ /\ _] => split
+        | [ |- _ <> emptyLabel] => discriminate
+        | [ |- SimTrs _ _ _] => assumption
+        | [ |- _ = ?t ] =>
+          match type of t with
+          | Label => reflexivity
+          end
+        | [ |- step_det _ _ _ _] => constructor
+        | [H: isExternal _ (mid_from (msg_id _)) = true |-
+           isExternal _ (mid_from (msg_id _)) = true] =>
+          eapply validMsgMap_from_isExternal;
+          [exact validMsgMap_proven|eassumption]
+        | [H: isInternal _ (mid_to (msg_id _)) = true |-
+           isInternal _ (mid_to (msg_id _)) = true] =>
+          eapply validMsgMap_to_isInternal;
+          [exact validMsgMap_proven|eassumption]
+        end.
+
     Definition synTrs:
       { impl1: System & SynthOk spec (SimTrs SvmR) svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
-      - (* serializability *) admit.
-      - (* simulation *)
+      - (** serializability *) admit.
+      - (** simulation *)
         syn_step_sim impl0_ok.
         inv_step_seq.
 
-        + (* silent *) simulates_silent.
-        + (* external message-in *)
-          (** TODO: Ltac simulates_lbl_in := (... below ...) *)
-          rewrite addPMsgsSys_isExternal, buildRawSys_isExternal in H1.
-          rewrite addPMsgsSys_isInternal, buildRawSys_isInternal in H2.
-          simpl; destruct sst1 as [soss1 smsgs1 sts].
-          eexists {| tst_oss := soss1;
-                     tst_msgs := distributeMsg (toTMsgU _) smsgs1;
-                     tst_tid := sts |}.
-          eexists (IlblIn (toTMsgU _)).
-          repeat split;
-            [|discriminate (* IlblIn _ <> emptyLabel *)
-             |assumption (* States don't change 
-                          * when external messages are added *)
-            ].
-          econstructor.
-          * pose proof (validMsgMap_from_isExternal _ _ _ svmMsgF_ValidMsgMap).
-            rewrite <-H0; auto.
-          * pose proof svmMsgF_ValidMsgMap.
-            specialize (H0 emsg); dest.
-            rewrite <-H3; auto.
-
-        + (* internal transaction started *)
+        + (** silent *)
+          simulates_silent.
+        + (** external message-in *)
+          simulates_lbl_in svmMsgF_ValidMsgMap.
+        + (** internal forwarding *)
           admit.
-
-        + (* internal forwarding *)
+        + (** internal transaction started *)
+          (* 1) Prove [In fpmsg ?pmsgs]
+           * 2) ?pmsgs = ?pmsg :: ?pmsgs',
+           *    where ?pmsg is the only one that requires a stable state.
+           *)
           admit.
 
     Admitted.
