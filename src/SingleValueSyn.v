@@ -58,22 +58,6 @@ Section Impl.
   
   Section SynStep.
 
-    Ltac get_target_trs impl oidx tidx pname :=
-      let oobj := (eval cbn in (nth_error (sys_objs impl) oidx)) in
-      match oobj with
-      | Some ?obj =>
-        let otrs := (eval cbn in (nth_error (obj_trs obj) tidx)) in
-        match otrs with
-        | Some ?trs => pose trs as pname
-        end
-      end.
-
-    Ltac cbner t tn := let ct := (eval cbn in t) in pose ct as tn.
-    Ltac hnfer t tn := let ht := (eval hnf in t) in pose ht as tn.
-
-    Ltac get_precond trs pname :=
-      cbner (pmsg_precond trs) pname.
-
     Ltac mv_rewriter :=
       repeat
         match goal with
@@ -85,8 +69,8 @@ Section Impl.
           rewrite H1 in H2; discriminate
         end.
 
-    (* If it succeeds, then provably [inv1] and [inv2] are not compatible 
-     * for all state.
+    (* If this Ltac succeeds, then provably [inv1] and [inv2] are 
+     * not compatible for all state.
      * If it fails, then there's no information.
      *)
     Ltac inv_not_compatible inv1 inv2 :=
@@ -108,7 +92,7 @@ Section Impl.
 
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      instantiate (1:= addPMsgsSys _ pimpl);
+      instantiate (1:= addPMsgsSys (_ :: _) pimpl);
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [|rewrite addPMsgsSys_init; apply pimpl_ok|].
 
@@ -182,9 +166,17 @@ Section Impl.
         + (** internal forwarding *)
           admit.
         + (** internal transaction started *)
-          (* 1) Prove [In fpmsg ?pmsgs]
-           * 2) ?pmsgs = ?pmsg :: ?pmsgs',
-           *    where ?pmsg is the only one that requires a stable state.
+
+          (* 1) Prove [In fpmsg (?a :: ?l)]: easy
+           * 2) Synthesize ?a as the only [PMsg] accepting 
+           *    the target external request.
+           * 3) Synthesize ?l for any internal requests.
+           * 4) Since [fpmsg] here is for the external request,
+           *    we get fpmsg = ?a.
+           * 5) Due to [pmsg_precond fpmsg os], now we can take
+           *    the specific precondition for [os].
+           * 6) By using [H: SimTrs ...] and the precondition of [os],
+           *    we can guess the entire state invariant.
            *)
           admit.
 
