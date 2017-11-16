@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics.
+Require Import Common FMap Syntax Semantics SemFacts.
 
 Section Simulation.
   Context {StateI LabelI StateS LabelS: Type}
@@ -80,4 +80,50 @@ Section Simulation.
   Qed.
 
 End Simulation.
+
+Section SimMap.
+  Variable (mmap: Msg -> Msg).
+
+  Definition LabelMap (il: Label) :=
+    match il with
+    | LblIn imsg => LblIn (mmap imsg)
+    | LblOuts outs => LblOuts (map mmap outs)
+    end.
+
+  Definition ValidMsgMap (impl spec: System) :=
+    forall msg,
+      isInternal impl (mid_from (msg_id msg)) =
+      isInternal spec (mid_from (msg_id (mmap msg))) /\
+      isInternal impl (mid_to (msg_id msg)) =
+      isInternal spec (mid_to (msg_id (mmap msg))).
+
+  Lemma validMsgMap_from_isExternal:
+    forall impl spec,
+      ValidMsgMap impl spec ->
+      forall msg,
+        isExternal impl (mid_from (msg_id msg)) =
+        isExternal spec (mid_from (msg_id (mmap msg))).
+  Proof.
+    unfold ValidMsgMap; intros.
+    specialize (H msg); dest.
+    do 2 rewrite internal_external_negb in H.
+    destruct (isExternal _ _);
+      destruct (isExternal _ _); auto.
+  Qed.
+
+  Lemma validMsgMap_to_isExternal:
+    forall impl spec,
+      ValidMsgMap impl spec ->
+      forall msg,
+        isExternal impl (mid_to (msg_id msg)) =
+        isExternal spec (mid_to (msg_id (mmap msg))).
+  Proof.
+    unfold ValidMsgMap; intros.
+    specialize (H msg); dest.
+    do 2 rewrite internal_external_negb in H0.
+    destruct (isExternal _ _);
+      destruct (isExternal _ _); auto.
+  Qed.
+
+End SimMap.
 

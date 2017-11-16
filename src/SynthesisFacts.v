@@ -54,6 +54,26 @@ Proof.
   apply addPMsgs_indices.
 Qed.
 
+Corollary addPMsgsSys_isExternal:
+  forall pmsgs sys,
+    isExternal (addPMsgsSys pmsgs sys) =
+    isExternal sys.
+Proof.
+  unfold isExternal; intros.
+  rewrite addPMsgsSys_indices.
+  reflexivity.
+Qed.
+  
+Corollary addPMsgsSys_isInternal:
+  forall pmsgs sys,
+    isInternal (addPMsgsSys pmsgs sys) =
+    isInternal sys.
+Proof.
+  unfold isInternal; intros.
+  rewrite addPMsgsSys_indices.
+  reflexivity.
+Qed.
+
 Theorem simulation_pmsgs_compositional:
   forall {StateS LabelS: Type} `{HasInit StateS} `{HasLabel LabelS}
          (stepS: Step StateS LabelS)
@@ -131,6 +151,26 @@ Proof.
   unfold indicesOf, buildRawSys; simpl.
   clear chns; induction obs; [reflexivity|].
   simpl; rewrite IHobs; reflexivity.
+Qed.
+
+Corollary buildRawSys_isExternal:
+  forall sys,
+    isExternal (buildRawSys sys) =
+    isExternal sys.
+Proof.
+  unfold isExternal; intros.
+  rewrite <-buildRawSys_indicesOf.
+  reflexivity.
+Qed.
+
+Corollary buildRawSys_isInternal:
+  forall sys,
+    isInternal (buildRawSys sys) =
+    isInternal sys.
+Proof.
+  unfold isInternal; intros.
+  rewrite <-buildRawSys_indicesOf.
+  reflexivity.
 Qed.
 
 Lemma addPMsgs_pmsg_in:

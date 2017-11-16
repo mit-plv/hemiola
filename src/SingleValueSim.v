@@ -143,14 +143,7 @@ Section Sim.
     {| msg_id := svmMsgIdF (msg_id imsg);
        msg_value := msg_value imsg |}.
 
-  Definition svmMsgsF (imsgs: list Msg): list Msg :=
-    map svmMsgF imsgs.
-
-  Definition svmP (l: Label) :=
-    match l with
-    | LblIn min => LblIn (svmMsgF min)
-    | LblOuts mouts => LblOuts (svmMsgsF mouts)
-    end.
+  Definition svmP := LabelMap svmMsgF.
   
 End Sim.
 

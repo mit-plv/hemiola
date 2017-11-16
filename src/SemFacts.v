@@ -1,6 +1,14 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepDet StepSeq.
 
+Lemma internal_external_negb:
+  forall sys idx,
+    isInternal sys idx = negb (isExternal sys idx).
+Proof.
+  unfold isInternal, isExternal; intros.
+  find_if_inside; auto.
+Qed.
+  
 Lemma internal_not_external:
   forall sys idx,
     isInternal sys idx = true -> isExternal sys idx = false.
