@@ -46,7 +46,7 @@ Proof.
     elim n; apply in_map; assumption.
   - destruct fmsg as [fmsg fts]; simpl in *.
     destruct fmsg as [hmid hmv]; simpl in *; subst.
-    destruct H7 as [? [? ?]]; simpl in *; subst.
+    destruct H6 as [? [? ?]]; simpl in *; subst.
     rewrite H0.
     unfold isInternal; find_if_inside; auto.
     elim n; apply in_map; assumption.
@@ -72,7 +72,7 @@ Proof.
     elim n; apply in_map; assumption.
   - simpl.
     apply Forall_filter.
-    destruct H12.
+    destruct H11.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
     induction outs; simpl; intros; [constructor|].

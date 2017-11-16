@@ -45,7 +45,6 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
     oidx = obj_idx obj ->
     (oss)@[oidx] = Some os ->
 
-    isInternal sys (mid_from (msg_id (getMsg fmsg))) = true ->
     tmsg_tid fmsg = None ->
 
     ValidMsgId fidx oidx fchn fmsg ->

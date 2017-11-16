@@ -121,7 +121,7 @@ Proof.
       econstructor; eauto.
     + exfalso.
       inv IHll.
-      apply step_seq_outs_tid in H22; simpl in H22; dest.
+      apply step_seq_outs_tid in H21; simpl in H21; dest.
       simpl in H4; inv H4.
       rewrite H0 in H2; inv H2.
       intuition.

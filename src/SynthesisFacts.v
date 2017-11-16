@@ -126,7 +126,7 @@ Proof.
       eapply SsIntFwd; eauto.
       unfold isInternal; rewrite <-Hidx, <-Hii; assumption.
 
-  - specialize (Himplp _ _ H13 H5); destruct Himplp as [iobj [? [? ?]]].
+  - specialize (Himplp _ _ H12 H5); destruct Himplp as [iobj [? [? ?]]].
     apply in_app_or in H4; destruct H4.
     + left.
       replace (extOuts impl) with (extOuts impl1)
@@ -134,14 +134,12 @@ Proof.
       replace (intOuts impl) with (intOuts impl1)
         by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
       eapply SsIntInit; eauto.
-      unfold isInternal; rewrite <-Hii; assumption.
     + right.
       replace (extOuts impl) with (extOuts impl2)
         by (unfold extOuts, isExternal; rewrite Hii, Hidx; reflexivity).
       replace (intOuts impl) with (intOuts impl2)
         by (unfold intOuts, isInternal; rewrite Hii, Hidx; reflexivity).
       eapply SsIntInit; eauto.
-      unfold isInternal; rewrite <-Hidx, <-Hii; assumption.
 Qed.
 
 Lemma buildRawSys_indicesOf:
