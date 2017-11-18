@@ -1,5 +1,4 @@
 Require Import Bool List String Peano_dec.
-Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
 
 Section PerSystem.
@@ -64,8 +63,8 @@ Definition Serializable {StateT} `{HasInit StateT}
     (* 2) sequential *) Sequential sys sll /\
     (* 3) equivalent *) ll ≡ sll.
 
-(* A system is [Serial] when all possible behaviors are [Serializable]. *)
-Definition Serial {StateT} `{HasInit StateT}
+(* A system is serializable when all possible behaviors are [Serializable]. *)
+Definition SerializableSys {StateT} `{HasInit StateT}
            (sys: System) (step: Step StateT TLabel) :=
   forall ll st,
     steps step sys (getStateInit sys) ll st ->

@@ -1,5 +1,4 @@
 Require Import Bool List String Peano_dec.
-Require Import Permutation.
 Require Import Common FMap Syntax Semantics.
 Require Import StepDet StepSeq.
 

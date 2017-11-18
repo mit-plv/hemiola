@@ -11,7 +11,7 @@ Section SimP.
     (p: Label -> Label).
 
   Definition SynthOk (s: System) :=
-    Serial s step_det /\
+    SerializableSys s step_det /\
     R (getStateInit s) (getStateInit spec) /\
     Simulates step_seq step_det R p s spec.
 
@@ -29,8 +29,8 @@ Section SimP.
      *)
     Hypotheses (Hsyn_init: forall s s', syn s s' -> getStateInit s' = getStateInit s)
                (Hsyn_serial:
-                  forall s, Serial s step_det ->
-                            forall s', syn s s' -> Serial s' step_det)
+                  forall s, SerializableSys s step_det ->
+                            forall s', syn s s' -> SerializableSys s' step_det)
                (Hsyn_sim:
                   forall s, Simulates step_seq step_det R p s spec ->
                             forall s', syn s s' ->
@@ -130,13 +130,15 @@ Section SynTrs.
                                            tst_rqfwds := map (fun idx => (idx, None)) fwds |}]
              |}.
 
-    Definition synRq :=
-      TPMsg {| mid_type := trsIdx;
-               mid_from := rqfrom;
-               mid_to := this;
-               mid_chn := rqChn |}
-            (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val)
-            synRqPostcond.
+    Definition synRq (prec: PreCond) :=
+      {| pmsg_mid := {| mid_type := trsIdx;
+                        mid_from := rqfrom;
+                        mid_to := this;
+                        mid_chn := rqChn |};
+         pmsg_precond := prec;
+         pmsg_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
+         pmsg_postcond := synRqPostcond
+      |}.
 
   End RequestFwd.
 

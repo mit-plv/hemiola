@@ -116,6 +116,23 @@ Proof.
         by (unfold extOuts, isExternal; rewrite Hii; reflexivity).
       replace (intOuts impl) with (intOuts impl1)
         by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
+      eapply SsIntInit; eauto.
+      unfold isExternal in *; rewrite <-Hii; assumption.
+    + right.
+      replace (extOuts impl) with (extOuts impl2)
+        by (unfold extOuts, isExternal; rewrite Hii, Hidx; reflexivity).
+      replace (intOuts impl) with (intOuts impl2)
+        by (unfold intOuts, isInternal; rewrite Hii, Hidx; reflexivity).
+      eapply SsIntInit; eauto.
+      unfold isExternal in *; rewrite <-Hidx, <-Hii; assumption.
+
+  - specialize (Himplp _ _ H13 H5); destruct Himplp as [iobj [? [? ?]]].
+    apply in_app_or in H4; destruct H4.
+    + left.
+      replace (extOuts impl) with (extOuts impl1)
+        by (unfold extOuts, isExternal; rewrite Hii; reflexivity).
+      replace (intOuts impl) with (intOuts impl1)
+        by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
       eapply SsIntFwd; eauto.
       unfold isInternal; rewrite <-Hii; assumption.
     + right.
@@ -125,21 +142,6 @@ Proof.
         by (unfold intOuts, isInternal; rewrite Hii, Hidx; reflexivity).
       eapply SsIntFwd; eauto.
       unfold isInternal; rewrite <-Hidx, <-Hii; assumption.
-
-  - specialize (Himplp _ _ H12 H5); destruct Himplp as [iobj [? [? ?]]].
-    apply in_app_or in H4; destruct H4.
-    + left.
-      replace (extOuts impl) with (extOuts impl1)
-        by (unfold extOuts, isExternal; rewrite Hii; reflexivity).
-      replace (intOuts impl) with (intOuts impl1)
-        by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
-      eapply SsIntInit; eauto.
-    + right.
-      replace (extOuts impl) with (extOuts impl2)
-        by (unfold extOuts, isExternal; rewrite Hii, Hidx; reflexivity).
-      replace (intOuts impl) with (intOuts impl2)
-        by (unfold intOuts, isInternal; rewrite Hii, Hidx; reflexivity).
-      eapply SsIntInit; eauto.
 Qed.
 
 Lemma buildRawSys_indicesOf:
@@ -235,3 +237,22 @@ Proof.
     apply addPMsgsSys_pmsg_in; auto.
 Qed.
 
+Lemma addPMsgsSys_buildRawSys_sublist:
+  forall pmsgs sys,
+    SubList (pmsgsOf (addPMsgsSys pmsgs (buildRawSys sys)))
+            pmsgs.
+Proof.
+  unfold pmsgsOf; intros; simpl.
+  induction (sys_objs sys); clear sys;
+    [simpl; apply SubList_nil|].
+
+  simpl.
+  apply SubList_app_3; [|assumption].
+  apply SubList_app_3; [|apply SubList_nil].
+  clear; induction pmsgs; [apply SubList_nil|].
+  simpl; find_if_inside.
+  - apply SubList_cons; [left; reflexivity|].
+    apply SubList_cons_right; assumption.
+  - apply SubList_cons_right; assumption.
+Qed.
+  

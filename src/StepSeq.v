@@ -1,5 +1,4 @@
 Require Import Bool List String Peano_dec.
-Require Import Permutation.
 Require Import Common FMap Syntax Semantics StepDet.
 
 Inductive step_seq (sys: System) : TState -> TLabel -> TState -> Prop :=
@@ -13,6 +12,32 @@ Inductive step_seq (sys: System) : TState -> TLabel -> TState -> Prop :=
              {| tst_oss := oss;
                 tst_msgs := distributeMsg (toTMsgU emsg) oims;
                 tst_tid := ts
+             |}
+| SsIntInit: forall ts nts (Hts: nts > ts) oss oims obj oidx os pos
+                    (fmsg: TMsg) fpmsg fidx fchn outs,
+    In obj (sys_objs sys) ->
+    oidx = obj_idx obj ->
+    (oss)@[oidx] = Some os ->
+
+    isExternal sys (mid_from (msg_id (getMsg fmsg))) = true ->
+    tmsg_tid fmsg = None ->
+
+    ValidMsgId fidx oidx fchn fmsg ->
+    firstM fidx oidx fchn oims = Some fmsg -> 
+
+    msg_id (getMsg fmsg) = pmsg_mid fpmsg ->
+    In fpmsg (obj_trs obj) ->
+    pmsg_precond fpmsg os ->
+    pmsg_postcond fpmsg os (msg_value (getMsg fmsg)) pos ->
+    outs = pmsg_outs fpmsg os (msg_value (getMsg fmsg)) ->
+    ValidOuts oidx outs ->
+
+    step_seq sys
+             {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |}
+             (IlblOuts (Some (toTMsg nts (getMsg fmsg))) (extOuts sys (toTMsgs nts outs)))
+             {| tst_oss := oss +[ oidx <- pos ];
+                tst_msgs := distributeMsgs (intOuts sys (toTMsgs nts outs)) oims;
+                tst_tid := nts
              |}
 | SsIntFwd: forall ts oss oims obj oidx os pos
                    (fmsg: TMsg) fpmsg fidx fchn outs,
@@ -43,30 +68,5 @@ Inductive step_seq (sys: System) : TState -> TLabel -> TState -> Prop :=
              {| tst_oss := oss +[ oidx <- pos ];
                 tst_msgs := distributeMsgs (intOuts sys (toTMsgs ts outs)) oims;
                 tst_tid := ts
-             |}
-| SsIntInit: forall ts nts (Hts: nts > ts) oss oims obj oidx os pos
-                   (fmsg: TMsg) fpmsg fidx fchn outs,
-    In obj (sys_objs sys) ->
-    oidx = obj_idx obj ->
-    (oss)@[oidx] = Some os ->
-
-    tmsg_tid fmsg = None ->
-
-    ValidMsgId fidx oidx fchn fmsg ->
-    firstM fidx oidx fchn oims = Some fmsg -> 
-
-    msg_id (getMsg fmsg) = pmsg_mid fpmsg ->
-    In fpmsg (obj_trs obj) ->
-    pmsg_precond fpmsg os ->
-    pmsg_postcond fpmsg os (msg_value (getMsg fmsg)) pos ->
-    outs = pmsg_outs fpmsg os (msg_value (getMsg fmsg)) ->
-    ValidOuts oidx outs ->
-
-    step_seq sys
-             {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |}
-             (IlblOuts (Some (toTMsg nts (getMsg fmsg))) (extOuts sys (toTMsgs nts outs)))
-             {| tst_oss := oss +[ oidx <- pos ];
-                tst_msgs := distributeMsgs (intOuts sys (toTMsgs nts outs)) oims;
-                tst_tid := nts
              |}.
 

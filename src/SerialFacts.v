@@ -1,5 +1,4 @@
 Require Import Bool List String Peano_dec.
-Require Import Permutation.
 Require Import Common ListSupport FMap.
 Require Import Syntax Semantics SemFacts StepDet StepSeq Serial.
 
@@ -107,10 +106,16 @@ Proof.
   - inv H1; inv H11; inv H6.
     Common.dest_in.
     inv H8.
-    + exfalso; simpl in H9; eauto using internal_external_false.
     + econstructor; eauto.
+    + exfalso; simpl in H9; eauto using internal_external_false.
   - inv H1; inv H11; inv H5.
     inv H8.
+    + exfalso.
+      inv IHll.
+      apply step_seq_outs_tid in H22; simpl in H22; dest.
+      simpl in H4; inv H4.
+      rewrite H0 in H2; inv H2.
+      intuition.
     + assert (ts = mts); subst.
       { inv IHll.
         apply step_seq_outs_tid in H22; simpl in H22; dest.
@@ -119,12 +124,6 @@ Proof.
         reflexivity.
       }
       econstructor; eauto.
-    + exfalso.
-      inv IHll.
-      apply step_seq_outs_tid in H21; simpl in H21; dest.
-      simpl in H4; inv H4.
-      rewrite H0 in H2; inv H2.
-      intuition.
 Qed.
 
 Lemma sequential_steps:
@@ -159,9 +158,10 @@ Qed.
 
 Theorem sequential_step_seq:
   forall sys,
-    Serial sys step_det -> step_det # step_seq |-- sys ⊑[id] sys.
+    SerializableSys sys step_det ->
+    step_det # step_seq |-- sys ⊑[id] sys.
 Proof.
-  unfold Serial, Refines; intros.
+  unfold SerializableSys, Refines; intros.
   inv H0; rename ll0 into ill. (* ill: the interleaving label sequence *)
   specialize (H _ _ H1).
   rewrite map_id.

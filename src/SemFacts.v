@@ -39,14 +39,14 @@ Lemma step_det_int_internal:
     isInternal sys (mid_to (msg_id (getMsg hdl))) = true.
 Proof.
   intros; inv H.
-  - destruct hdl as [hmid hmv]; simpl in *; subst.
+  - destruct fmsg as [fmsg fts]; simpl in *.
+    destruct fmsg as [hmid hmv]; simpl in *; subst.
     destruct H7 as [? [? ?]]; simpl in *; subst.
     rewrite H0.
     unfold isInternal; find_if_inside; auto.
     elim n; apply in_map; assumption.
-  - destruct fmsg as [fmsg fts]; simpl in *.
-    destruct fmsg as [hmid hmv]; simpl in *; subst.
-    destruct H6 as [? [? ?]]; simpl in *; subst.
+  - destruct hdl as [hmid hmv]; simpl in *; subst.
+    destruct H7 as [? [? ?]]; simpl in *; subst.
     rewrite H0.
     unfold isInternal; find_if_inside; auto.
     elim n; apply in_map; assumption.
@@ -72,7 +72,7 @@ Proof.
     elim n; apply in_map; assumption.
   - simpl.
     apply Forall_filter.
-    destruct H11.
+    destruct H12.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
     induction outs; simpl; intros; [constructor|].
@@ -89,13 +89,13 @@ Lemma step_det_outs_tid:
     Forall (fun m => tmsg_tid m = tmsg_tid hdl) outs.
 Proof.
   intros; inv H.
-  - simpl; rewrite H6.
-    unfold extOuts; apply Forall_filter.
-    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
-      constructor; auto.
   - simpl.
     unfold extOuts; apply Forall_filter.
     clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
+      constructor; auto.
+  - simpl; rewrite H6.
+    unfold extOuts; apply Forall_filter.
+    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
       constructor; auto.
 Qed.
 
@@ -106,15 +106,15 @@ Lemma step_seq_outs_tid:
     Forall (fun m => tmsg_tid m = tmsg_tid hdl) outs.
 Proof.
   intros; inv H.
-  - simpl; rewrite H6.
-    split; [reflexivity|].
-    unfold extOuts; apply Forall_filter.
-    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
-      constructor; auto.
   - simpl.
     split; [reflexivity|].
     unfold extOuts; apply Forall_filter.
     clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
+      constructor; auto.
+  - simpl; rewrite H6.
+    split; [reflexivity|].
+    unfold extOuts; apply Forall_filter.
+    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
       constructor; auto.
 Qed.
 

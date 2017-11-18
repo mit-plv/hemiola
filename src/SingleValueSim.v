@@ -1,7 +1,6 @@
 Require Import Bool List String Peano_dec.
-Require Import Permutation.
-Require Import Common FMap Syntax Semantics.
-Require Import StepDet StepSeq Predicate Simulation.
+Require Import Common FMap Syntax Semantics StepDet StepSeq.
+Require Import Predicate Simulation.
 
 Require Import SingleValue.
 
@@ -144,6 +143,6 @@ Section Sim.
        msg_value := msg_value imsg |}.
 
   Definition svmP := LabelMap svmMsgF.
-  
+
 End Sim.
 

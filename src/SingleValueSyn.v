@@ -1,6 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Permutation.
-Require Import Common FMap Syntax Semantics StepDet StepSeq.
+Require Import Common FMap Syntax Semantics StepDet StepSeq SemFacts.
 Require Import Simulation Serial Predicate Synthesis SynthesisFacts.
 
 Require Import SingleValue SingleValueSim.
@@ -46,17 +45,34 @@ Section Impl.
         simpl; tauto.
   Qed.
 
-  (** First, prove that the initial system is provided properly. *)
   Theorem impl0_ok: SynthOk spec (SimTrs SvmR) svmP impl0.
   Proof.
     repeat split.
-    - admit.
+    - (* serializability *) admit.
     - repeat econstructor.
       apply noTrs_init.
-    - admit.
+    - (* simulation *) admit.
   Admitted.
-  
+
   Section SynStep.
+
+    Ltac get_target_trs impl oidx tidx pname :=
+      let oobj := (eval cbn in (nth_error (sys_objs impl) oidx)) in
+      match oobj with
+      | Some ?obj =>
+        let otrs := (eval cbn in (nth_error (obj_trs obj) tidx)) in
+        match otrs with
+        | Some ?trs => pose trs as pname
+        end
+      end.
+
+    Ltac cbner t tn := let ct := (eval cbn in t) in pose ct as tn.
+    Ltac hnfer t tn := let ht := (eval hnf in t) in pose ht as tn.
+
+    Ltac get_pmsg_from trs pname :=
+      cbner (mid_from (pmsg_mid trs)) pname.
+    Ltac get_pmsg_precond trs pname :=
+      cbner (pmsg_precond trs) pname.
 
     Ltac mv_rewriter :=
       repeat
@@ -90,9 +106,50 @@ Section Impl.
         else find_new_prec hcprec invs'
       end.
 
+    Section Internalize.
+      Variable sys: System.
+      
+      Definition makeIdxInternal (idx: IdxT): IdxT :=
+        if isInternal sys idx
+        then idx
+        else (hd 0 (map obj_idx (sys_objs sys))).
+      
+      Definition makeMsgIdInternal (mid: MsgId): MsgId :=
+        {| mid_type := mid_type mid;
+           mid_from := makeIdxInternal (mid_from mid);
+           mid_to := mid_to mid;
+           mid_chn := mid_chn mid
+        |}.
+      
+      Definition makePMsgInternal (pmsg: PMsg): PMsg :=
+        {| pmsg_mid := makeMsgIdInternal (pmsg_mid pmsg);
+           pmsg_precond := pmsg_precond pmsg;
+           pmsg_outs := pmsg_outs pmsg;
+           pmsg_postcond := pmsg_postcond pmsg
+        |}.
+
+      Lemma makePMsgInternal_in_internal:
+        sys_objs sys <> nil ->
+        forall tpmsg pmsgs,
+          In tpmsg (map makePMsgInternal pmsgs) ->
+          isInternal sys (mid_from (pmsg_mid tpmsg)) = true.
+      Proof.
+        induction pmsgs as [|pmsg pmsgs]; simpl; intros; [intuition idtac|].
+        destruct H0; subst; auto.
+        unfold makePMsgInternal; simpl.
+        unfold makeIdxInternal.
+        remember (isInternal sys (mid_from (pmsg_mid pmsg))) as ii.
+        find_if_inside; auto.
+        unfold isInternal, indicesOf.
+        destruct (sys_objs sys) as [|hobj tobs]; [elim H; reflexivity|].
+        simpl; destruct (_ ==n _); auto.
+      Qed.
+
+    End Internalize.
+
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      instantiate (1:= addPMsgsSys (_ :: _) pimpl);
+      instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl);
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [|rewrite addPMsgsSys_init; apply pimpl_ok|].
 
@@ -149,9 +206,18 @@ Section Impl.
           [exact validMsgMap_proven|eassumption]
         end.
 
-    Definition synTrs:
+    Definition svmTrsIdx0 := 0.
+    Definition svmTargetOIdx0 := child1Idx.
+    Definition svmTargetPMsgIdx0 := 0.
+    
+    Definition svmSynTrs0:
       { impl1: System & SynthOk spec (SimTrs SvmR) svmP impl1 }.
     Proof.
+      get_target_trs impl0 svmTargetOIdx0 svmTargetPMsgIdx0 ttrs.
+      get_pmsg_from ttrs tfrom.
+      get_pmsg_precond ttrs tprec.
+      find_new_prec tprec svmImplChild1Inv nprec.
+
       syn_step_init impl0 impl0_ok.
 
       - (** serializability *) admit.
@@ -163,21 +229,34 @@ Section Impl.
           simulates_silent.
         + (** external message-in *)
           simulates_lbl_in svmMsgF_ValidMsgMap.
-        + (** internal forwarding *)
-          admit.
+
         + (** internal transaction started *)
 
-          (* 1) Prove [In fpmsg (?a :: ?l)]: easy
-           * 2) Synthesize ?a as the only [PMsg] accepting 
-           *    the target external request.
-           * 3) Synthesize ?l for any internal requests.
-           * 4) Since [fpmsg] here is for the external request,
-           *    we get fpmsg = ?a.
-           * 5) Due to [pmsg_precond fpmsg os], now we can take
-           *    the specific precondition for [os].
-           * 6) By using [H: SimTrs ...] and the precondition of [os],
-           *    we can guess the entire state invariant.
-           *)
+          (* 1) Prove [In fpmsg (?a :: ?l)]; this is easy. *)
+          pose proof (pmsgsOf_in _ _ H1 _ H9).
+          apply addPMsgsSys_buildRawSys_sublist in H0.
+          
+          (* 2) Synthesize [?a] as the only [PMsg] 
+           *    accepting the target external request. *)
+          instantiate (2:= synRq svmTrsIdx0 svmTargetOIdx0 tfrom _ nprec).
+
+          (* 3) Since [fpmsg] here is for the external request,
+           *    we get fpmsg = ?a. *)
+          inv H0;
+            [|apply makePMsgInternal_in_internal in H2; [|discriminate];
+              rewrite <-H8 in H2;
+              rewrite addPMsgsSys_isExternal, buildRawSys_isExternal in H4;
+              exfalso; eapply internal_external_false; eauto].
+
+          (* 4) Due to [pmsg_precond fpmsg os], now we can take
+           *    the specific precondition for [os]. *)
+          simpl in H10.
+
+          (* 5) By using [H: SimTrs ...] and the precondition of [os],
+           *    we can guess the entire state invariant. *)
+          admit.
+
+        + (** internal forwarding *)
           admit.
 
     Admitted.

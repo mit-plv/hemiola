@@ -118,6 +118,20 @@ Definition objOf (sys: System) (oidx: IdxT): option Object :=
 Definition objPMsgsOf (sys: System) (oidx: IdxT) :=
   (objOf sys oidx) >>=[nil] (fun obj => obj_trs obj).
 
+Lemma pmsgsOf_in:
+  forall obj sys,
+    In obj (sys_objs sys) ->
+    forall pmsg,
+      In pmsg (obj_trs obj) ->
+      In pmsg (pmsgsOf sys).
+Proof.
+  unfold pmsgsOf; intros.
+  remember (sys_objs sys) as obs; clear Heqobs sys.
+  induction obs; simpl; intros; [inv H|].
+  apply in_or_app.
+  inv H; auto.
+Qed.
+
 Lemma iisOf_initsOf:
   forall sys1 sys2,
     iisOf sys1 = iisOf sys2 -> initsOf sys1 = initsOf sys2.
