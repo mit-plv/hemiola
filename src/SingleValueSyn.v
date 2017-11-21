@@ -49,8 +49,10 @@ Section Impl.
   Proof.
     repeat split.
     - (* serializability *) admit.
-    - repeat econstructor.
-      apply noTrs_init.
+    - econstructor.
+      + apply simEquiv_refl.
+      + apply simEquiv_refl.
+      + repeat econstructor.
     - (* simulation *) admit.
   Admitted.
 
@@ -209,7 +211,7 @@ Section Impl.
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
     Definition svmTargetPMsgIdx0 := 0.
-    
+
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec (SimTrs SvmR) svmP impl1 }.
     Proof.
@@ -251,6 +253,8 @@ Section Impl.
           (* 4) Due to [pmsg_precond fpmsg os], now we can take
            *    the specific precondition for [os]. *)
           simpl in H10.
+
+          
 
           (* 5) By using [H: SimTrs ...] and the precondition of [os],
            *    we can guess the entire state invariant. *)

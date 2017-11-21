@@ -60,24 +60,27 @@ End SimP.
 
 Section SimTrs.
 
-  Definition NoTrs (ioss: ObjectStates) :=
+  Definition SimEquivO (ost1 ost2: OState) :=
+    ost_tst ost1 = ost_tst ost2 /\
+    (ost_tst ost1 = [] -> ost_st ost1 = ost_st ost2).
+
+  Definition SimEquiv (os1 os2: ObjectStates) :=
     forall oidx,
-      match ioss@[oidx] with
-      | Some os => ost_tst os = M.empty _
-      | None => True
+      match os1@[oidx], os2@[oidx] with
+      | Some ost1, Some ost2 => SimEquivO ost1 ost2
+      | None, None => True
+      | _, _ => False
       end.
 
   Inductive SimTrsO (R: ObjectStates -> ObjectStates -> Prop):
     ObjectStates -> ObjectStates -> Prop :=
-  | SimTrsStable:
-      forall ioss soss,
-        R ioss soss ->
-        NoTrs ioss ->
-        SimTrsO R ioss soss
-  | SimTrsTrs:
-      forall ioss soss,
-        ~ NoTrs ioss ->
-        SimTrsO R ioss soss.
+  | SimTrsOIntro:
+      forall ioss rioss,
+        SimEquiv ioss rioss ->
+        forall soss rsoss,
+          SimEquiv soss rsoss ->
+          R rioss rsoss ->
+          SimTrsO R ioss soss.
 
   Definition SimTrs (R: ObjectStates -> ObjectStates -> Prop)
              (ioss soss: TState): Prop :=

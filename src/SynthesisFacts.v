@@ -2,19 +2,14 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Wf Semantics SemFacts StepDet StepSeq.
 Require Import Serial SerialFacts Simulation Predicate Synthesis.
 
-Lemma noTrs_init:
-  forall sys,
-    NoTrs (tst_oss (getStateInit sys)).
+Lemma simEquiv_refl:
+  forall os, SimEquiv os os.
 Proof.
-  simpl; intros.
-  remember (sys_objs sys) as obs; clear Heqobs sys.
-  induction obs; [constructor; fail|].
-
-  unfold NoTrs in *; simpl; intros.
+  unfold SimEquiv; intros.
   mred.
-  apply IHobs.
+  constructor; intros; auto.
 Qed.
-  
+      
 Lemma addPMsgs_init:
   forall pmsgs objs,
     getObjectStatesInit (addPMsgs pmsgs objs) =
