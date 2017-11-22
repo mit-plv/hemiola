@@ -9,7 +9,24 @@ Proof.
   mred.
   constructor; intros; auto.
 Qed.
-      
+
+Lemma simEquiv_OState_eq:
+  forall oss1 oss2,
+    SimEquiv oss1 oss2 ->
+    forall oidx ost,
+      oss1@[oidx] = Some ost ->
+      ost_tst ost = [] ->
+      oss2@[oidx] = Some ost.
+Proof.
+  intros.
+  specialize (H oidx).
+  rewrite H0 in H.
+  destruct (oss2@[oidx]); [|exfalso; assumption].
+  destruct H.
+  specialize (H2 H1).
+  destruct o, ost; simpl in *; subst; reflexivity.
+Qed.
+
 Lemma addPMsgs_init:
   forall pmsgs objs,
     getObjectStatesInit (addPMsgs pmsgs objs) =

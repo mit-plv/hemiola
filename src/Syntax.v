@@ -118,6 +118,9 @@ Definition objOf (sys: System) (oidx: IdxT): option Object :=
 Definition objPMsgsOf (sys: System) (oidx: IdxT) :=
   (objOf sys oidx) >>=[nil] (fun obj => obj_trs obj).
 
+Fixpoint getForwards (topo: list Channel) (oidx: IdxT) :=
+  map chn_to (filter (fun c => if chn_from c ==n oidx then true else false) topo).
+
 Lemma pmsgsOf_in:
   forall obj sys,
     In obj (sys_objs sys) ->

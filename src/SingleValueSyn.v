@@ -51,7 +51,6 @@ Section Impl.
     - (* serializability *) admit.
     - econstructor.
       + apply simEquiv_refl.
-      + apply simEquiv_refl.
       + repeat econstructor.
     - (* simulation *) admit.
   Admitted.
@@ -242,25 +241,65 @@ Section Impl.
            *    accepting the target external request. *)
           instantiate (2:= synRq svmTrsIdx0 svmTargetOIdx0 tfrom _ nprec).
 
-          (* 3) Since [fpmsg] here is for the external request,
-           *    we get fpmsg = ?a. *)
+          (* 3-1) Since [fpmsg] here is for the external request,
+           *      we get fpmsg = ?a. *)
           inv H0;
             [|apply makePMsgInternal_in_internal in H2; [|discriminate];
               rewrite <-H8 in H2;
               rewrite addPMsgsSys_isExternal, buildRawSys_isExternal in H4;
               exfalso; eapply internal_external_false; eauto].
 
+          (* 3-2) Now we can extract some information 
+           *      about the external request.
+           *)
+          clear H1 H9. (* Do we still need these? *)
+          destruct fmsg as [[fmid fval] ftid].
+          simpl in H8; subst.
+          destruct H6 as [? [? ?]]; simpl in *; subst.
+
           (* 4) Due to [pmsg_precond fpmsg os], now we can take
            *    the specific precondition for [os]. *)
-          simpl in H10.
-
-          
+          destruct H10; hnf in H0.
 
           (* 5) By using [H: SimTrs ...] and the precondition of [os],
            *    we can guess the entire state invariant. *)
+          inv H; simpl in H5.
+          pose proof (simEquiv_OState_eq _ _ H5 _ _ H3 H2).
+          rewrite <-H1 in H; unfold svmTargetOIdx0 in *.
+          inv H6; try (mv_rewriter; fail).
+
+          (* 6) Prove the existence of a poststate for the target
+           *    transaction, in order to build some postcondition.
+           *)
+          assert (exists poss post,
+                     (tst_oss poss)@[child1Idx] = Some post /\
+                     (fun st =>
+                        (ost_st st) @[ statusIdx] = Some (VNat stS)) post /\
+                     SvmR (tst_oss poss) (tst_oss sst1)).
+          { admit. }
+          destruct H6 as [poss [post ?]]; dest.
+          inv H18; try (mv_rewriter; fail).
+
+          (* 7) Now we have enough information about prestate and
+           *    poststate! Let's use an Ltac to generate a "diff"
+           *    between two states, in order to synthesize [?fwds]
+           *    and [?l].
+           *)
+          destruct poss as [poss pmsgs ptid]; simpl in *.
+          mv_rewriter.
+          collect_vloc.
+
+          collect_diff rioss poss.
+          pose {| vchg_consts := (existT _ _ df) :: (existT _ _ df0) :: nil;
+                  vchg_moved := Some (existT _ _ df1) |} as vchgs.
+          subst df df0 df1.
+          pose (getChangeTargets vchgs) as tgts; cbn in tgts.
+          instantiate (1:= child1Idx :: child2Idx :: nil).
+
           admit.
 
         + (** internal forwarding *)
+          
           admit.
 
     Admitted.

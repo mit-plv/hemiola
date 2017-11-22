@@ -2,6 +2,8 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics SemFacts.
 Require Import StepDet StepSeq Serial SerialFacts Simulation Predicate.
 
+Set Implicit Arguments.
+
 Section SimP.
 
   (** User inputs *)
@@ -77,9 +79,8 @@ Section SimTrs.
   | SimTrsOIntro:
       forall ioss rioss,
         SimEquiv ioss rioss ->
-        forall soss rsoss,
-          SimEquiv soss rsoss ->
-          R rioss rsoss ->
+        forall soss,
+          R rioss soss ->
           SimTrsO R ioss soss.
 
   Definition SimTrs (R: ObjectStates -> ObjectStates -> Prop)
@@ -138,7 +139,11 @@ Section SynTrs.
                         mid_from := rqfrom;
                         mid_to := this;
                         mid_chn := rqChn |};
-         pmsg_precond := prec;
+         pmsg_precond :=
+           fun ost =>
+             prec ost /\
+             (** FIXME: need a more fine-grained lock condition *)
+             ost_tst ost = [];
          pmsg_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
          pmsg_postcond := synRqPostcond
       |}.
@@ -180,12 +185,28 @@ Section SynTrs.
               ost_tst post = M.remove trsIdx (ost_tst pre)
          else True).
 
+    Fixpoint getFwdValue (vals: list (IdxT * option Value)) :=
+      match vals with
+      | nil => VUnit
+      | (_, Some v) :: vals' =>
+        match v with
+        | VUnit => getFwdValue vals'
+        | _ => v
+        end
+      | (_, None) :: vals' => getFwdValue vals'
+      end.
+
+    Definition rsFwdValue (post: OState) :=
+      (ost_tst post)@[trsIdx] >>=[VUnit]
+      (fun trsh =>
+         getFwdValue (tst_rqfwds trsh)).
+         
     Definition synRsPostcond (postcond: PostCond)
                (pre: OState) (val: Value) (post: OState) :=
       Responded pre val post /\
       (exists post',
           Responded pre val post' /\
-          WhenAllResponded postcond post' val post).
+          WhenAllResponded postcond post' (rsFwdValue post') post).
 
     Definition synRsOuts (rsOut: StateT -> list (IdxT * option Value) -> Value) :=
       fun st val =>
@@ -253,4 +274,175 @@ Section SynTrs.
     filter (fun idx => if idx ?<n li2 then false else true) li1.
   
 End SynTrs.
-    
+
+Section VChange.
+  
+  Inductive VLoc :=
+  | VLocState: forall (oidx kidx: IdxT), VLoc
+  | VLocMsg: VLoc.
+
+  Inductive VConst: IdxT -> Set :=
+  | VConstIntro: forall (oidx kidx: IdxT) (const: Value), VConst oidx.
+
+  Inductive VMoved: IdxT -> Set :=
+  | VMovedIntro: forall (source: VLoc) (oidx kidx: IdxT), VMoved oidx.
+
+  Record VChanges :=
+    { vchg_consts: list { targetIdx: IdxT & VConst targetIdx };
+      vchg_moved: option { targetIdx: IdxT & VMoved targetIdx}
+    }.
+
+  Fixpoint getTargetConsts (chgs: list { targetIdx: IdxT & VConst targetIdx })
+           (tidx: IdxT): list (VConst tidx) :=
+    match chgs with
+    | nil => nil
+    | (existT _ idx const) :: chgs' =>
+      (match idx ==n tidx with
+       | left Heq => match Heq with
+                     | eq_refl => Some const
+                     end
+       | _ => None
+       end) ::> (getTargetConsts chgs' tidx)
+    end.
+
+  Definition getTargetMoved (omv: option { targetIdx: IdxT & VMoved targetIdx })
+             (tidx: IdxT): option (VMoved tidx) :=
+    omv >>= (fun moved =>
+               match moved with
+               | existT _ idx mv =>
+                 match idx ==n tidx with
+                 | left Heq => match Heq with
+                               | eq_refl => Some mv
+                               end
+                 | _ => None
+                 end
+               end).
+
+  Definition getChangeTargets (chgs: VChanges): list IdxT :=
+    ((vchg_moved chgs) >>= (fun mv => Some (projT1 mv)))
+      ::> (map (projT1 (P:= VConst)) (vchg_consts chgs)).
+
+End VChange.
+
+Section SynByVChanges.
+  Variables trsIdx: IdxT.
+
+  Section PerTarget.
+    Context {targetIdx: IdxT}.
+
+    Section Immediate.
+
+      (** TODO: define *)
+
+    End Immediate.
+
+    Section RequestFwd.
+      Variable topo: list Channel.
+
+      Definition synRqVChanges (rqFrom: IdxT) (remChgs: VChanges) (prec: PreCond) :=
+        synRq trsIdx targetIdx rqFrom
+              (idxInter (getChangeTargets remChgs) (getForwards topo targetIdx))
+              prec.
+
+    End RequestFwd.
+
+    Section ResponseBack.
+      
+      Fixpoint constUpdatesOf (consts: list (VConst targetIdx))
+               (pre: StateT) :=
+        match consts with
+        | nil => pre
+        | (VConstIntro _ kidx val) :: chgs' =>
+          constUpdatesOf chgs' (pre +[kidx <- val])
+        end.
+
+      Definition movedUpdatedOf (mv: option (VMoved targetIdx)) (val: Value)
+                 (pre: StateT) :=
+        match mv with
+        | Some (VMovedIntro _ _ kidx) => pre +[kidx <- val]
+        | _ => pre
+        end.
+
+      Definition updatesOf (consts: list (VConst targetIdx)) (mv: option (VMoved targetIdx)) :=
+        fun pre val post =>
+          ost_st post = movedUpdatedOf
+                          mv val
+                          (constUpdatesOf consts (ost_st pre)).
+
+      Definition rsPostcondVChanges (chgs: VChanges) :=
+        updatesOf (getTargetConsts (vchg_consts chgs) targetIdx)
+                  (getTargetMoved (vchg_moved chgs) targetIdx).
+
+      Definition rsOutsVChanges (vmoved: option (VMoved targetIdx))
+                 (pre: StateT) (rss: list (IdxT * option Value)) :=
+        match vmoved with
+        | Some _ => VUnit (* nothing to forward, since the target is the destination. *)
+        | None => getFwdValue rss
+        end.
+
+      Definition synRsVChanges (rsFrom: IdxT) (chgs: VChanges) :=
+        synRs trsIdx targetIdx rsFrom 
+              (rsPostcondVChanges chgs)
+              (rsOutsVChanges (getTargetMoved (vchg_moved chgs) targetIdx)).
+
+    End ResponseBack.
+
+  End PerTarget.
+
+  (** TODO: define *)
+  (* Inductive SynVChanges: list PMsg -> VChanges -> Prop := *)
+  (* | SynVChangeInit: *)
+
+End SynByVChanges.
+
+(** Some tactics about [VLoc] and [VChange] *)
+
+Ltac no_vloc_st oss oidx kidx :=
+  lazymatch goal with
+  | [vloc := (oss, VLocState oidx kidx, _) |- _] => fail
+  | _ => idtac
+  end.
+
+(* NOTE: there's only one [VLocMsg] information per a transaction. *)
+Ltac no_vloc_msg :=
+  lazymatch goal with
+  | [vloc := (VLocMsg, _) |- _] => fail
+  | _ => idtac
+  end.
+
+Ltac collect_vloc :=
+  repeat
+    match goal with
+    | [H1: M.find ?oidx ?oss = Some ?ost, H2: M.find ?kidx (ost_st ?ost) = Some ?v |- _] =>
+      no_vloc_st oss oidx kidx;
+      let vloc := fresh "vloc" in
+      set (oss, VLocState oidx kidx, v) as vloc
+    | [H: pmsg_postcond _ _ ?v _ |- _] =>
+      no_vloc_msg;
+      let vloc := fresh "vloc" in
+      set (VLocMsg, v) as vloc
+    end.
+
+Ltac no_diff sdf :=
+  lazymatch goal with
+  | [df := sdf |- _] => fail
+  | _ => idtac
+  end.
+
+Ltac collect_diff oss1 oss2 :=
+  repeat
+    match goal with
+    | [vloc := (oss2, VLocState ?oidx ?kidx, ?v) |- _] =>
+      is_pure_const v;
+      no_diff (VConstIntro oidx kidx v);
+      let df := fresh "df" in
+      pose (VConstIntro oidx kidx v) as df
+    | [vloc1 := (oss1, ?wh1, ?v),
+       vloc2 := (oss2, VLocState ?oidx2 ?kidx2, ?v) |- _] =>
+      not_pure_const v;
+      first [is_equal wh1 (VLocState oidx2 kidx2) |
+             no_diff (VMovedIntro wh1 oidx2 kidx2);
+             let df := fresh "df" in
+             pose (VMovedIntro wh1 oidx2 kidx2) as df]
+    end.
+

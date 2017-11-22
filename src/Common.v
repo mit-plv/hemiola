@@ -43,6 +43,17 @@ Ltac not_pure_const t :=
        | _ => fail
        end.
 
+Ltac collect_of_type_helper ty ls :=
+  match goal with
+  | [v: ty |- _]
+    => lazymatch ls with
+       | context[cons v _] => fail
+       | _ => collect_of_type_helper ty (cons v ls)
+       end
+  | _ => ls
+  end.
+Ltac collect_of_type ty := collect_of_type_helper ty (@nil ty).
+
 Definition ocons {A} (oa: option A) (l: list A) :=
   match oa with
   | Some a => a :: l
