@@ -59,7 +59,8 @@ Section PMsg.
 
   Record TrsHelperUnit :=
     { tst_rqfrom: IdxT;
-      tst_rqfwds: list (IdxT * option Value)
+      tst_rqval: Value;
+      tst_rss: list (IdxT * option Value)
     }.
   Definition TrsHelper := M.t (* transaction index *) TrsHelperUnit.
   Definition trsHelperInit: TrsHelper := M.empty _.

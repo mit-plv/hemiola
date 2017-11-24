@@ -89,61 +89,68 @@ Section SimTrs.
 
 End SimTrs.
 
+Section TrsLocker.
+
+  Definition alwaysLock (trsh: TrsHelper) := trsh = [].
+
+End TrsLocker.
+
 Section SynTrs.
   Variables (trsIdx: IdxT)
-            (this: IdxT).
+            (this: IdxT)
+            (trsLocker: TrsHelper -> Prop).
+
+  Definition liftTrsLocker (os: OState): Prop := trsLocker (ost_tst os).
 
   Definition rqChn: IdxT := 0.
   Definition rsChn: IdxT := 1.
 
-  Definition TPMsg mid outs postcond :=
-    {| pmsg_mid := mid;
-       pmsg_precond := fun _ => True;
-       pmsg_outs := outs;
-       pmsg_postcond := postcond |}.
+  Definition msgValOut (val: Value) (tochn: IdxT * IdxT) :=
+    {| msg_id := {| mid_type := trsIdx;
+                    mid_from := this;
+                    mid_to := fst tochn;
+                    mid_chn := snd tochn |};
+       msg_value := val
+    |}.
 
   Section Immediate.
 
-    Definition synRqOuts (tochns: list (IdxT * IdxT)) (val: Value) :=
-      map (fun tochn => {| msg_id := {| mid_type := trsIdx;
-                                        mid_from := this;
-                                        mid_to := fst tochn;
-                                        mid_chn := snd tochn
-                                     |};
-                           msg_value := val
-                        |}) tochns.
-
-    Definition synImm (rqfrom: IdxT) (postcond: PostCond)
-               (valOut: StateT -> Value -> Value) :=
-      TPMsg {| mid_type := trsIdx;
-               mid_from := rqfrom;
-               mid_to := this;
-               mid_chn := rqChn |}
-            (fun st val => synRqOuts ((rqfrom, rsChn) :: nil) (valOut (ost_st st) val))
-            postcond.
+    Definition synImm (prec: PreCond) (rqFrom: IdxT) (postcond: PostCond)
+               (valOut: StateT -> Value) :=
+      {| pmsg_mid := {| mid_type := trsIdx;
+                        mid_from := rqFrom;
+                        mid_to := this;
+                        mid_chn := rqChn |};
+         pmsg_precond := fun ost => prec ost /\ liftTrsLocker ost;
+         pmsg_outs := fun st val =>
+                        msgValOut (valOut (ost_st st)) (rqFrom, rsChn) :: nil;
+         pmsg_postcond := postcond
+      |}.
 
   End Immediate.
 
   Section RequestFwd.
-    Variables (rqfrom: IdxT) (fwds: list IdxT).
+    Variables (rqFrom: IdxT) (fwds: list IdxT).
+
+    Definition synRqOuts (tochns: list (IdxT * IdxT)) (val: Value) :=
+      map (msgValOut val) tochns.
 
     Definition synRqPostcond (pre: OState) (val: Value) (post: OState) :=
       post = {| ost_st := ost_st pre;
                 ost_tst := (ost_tst pre)
-                           +[ trsIdx <- {| tst_rqfrom := rqfrom;
-                                           tst_rqfwds := map (fun idx => (idx, None)) fwds |}]
+                           +[ trsIdx <-
+                              {| tst_rqfrom := rqFrom;
+                                 tst_rqval := val; (* store the request value *)
+                                 tst_rss := map (fun idx => (idx, None)) fwds |}]
              |}.
 
     Definition synRq (prec: PreCond) :=
       {| pmsg_mid := {| mid_type := trsIdx;
-                        mid_from := rqfrom;
+                        mid_from := rqFrom;
                         mid_to := this;
                         mid_chn := rqChn |};
-         pmsg_precond :=
-           fun ost =>
-             prec ost /\
-             (** FIXME: need a more fine-grained lock condition *)
-             ost_tst ost = [];
+         pmsg_precond := fun pre => prec pre /\ liftTrsLocker pre;
+         (* forward the request value *)
          pmsg_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
          pmsg_postcond := synRqPostcond
       |}.
@@ -153,13 +160,13 @@ Section SynTrs.
   Section ResponseBack.
     Variable rsFrom: IdxT.
 
-    Fixpoint checkResponded (rss: list (IdxT * option Value)) (rsVal: Value) :=
+    Fixpoint markResponded (rss: list (IdxT * option Value)) (rsVal: Value) :=
       match rss with
       | nil => nil
       | (idx, ov) :: rss' =>
         if idx ==n rsFrom
         then (idx, Some rsVal) :: rss'
-        else (idx, ov) :: (checkResponded rss' rsVal)
+        else (idx, ov) :: (markResponded rss' rsVal)
       end.
 
     Definition Responded (pre: OState) (rsVal: Value) (post: OState) :=
@@ -168,7 +175,8 @@ Section SynTrs.
          (ost_tst post)@[trsIdx] >>=[False]
          (fun postth =>
             postth = {| tst_rqfrom := tst_rqfrom preth;
-                        tst_rqfwds := checkResponded (tst_rqfwds preth) rsVal |})).
+                        tst_rqval := tst_rqval preth;
+                        tst_rss := markResponded (tst_rss preth) rsVal |})).
 
     Definition allResponded (fwds: list (IdxT * option Value)) :=
       forallb (fun ib => match snd ib with
@@ -176,12 +184,16 @@ Section SynTrs.
                          | _ => false
                          end) fwds.
 
-    Definition WhenAllResponded (postcond: PostCond)
-               (pre: OState) (val: Value) (post: OState) :=
+    (* NOTE: prestate already contains the request value and all the responded
+     * values in [TrsHelperUnit], thus we don't need [Value] to define
+     * [postcond].
+     *)
+    Definition WhenAllResponded (postcond: OState -> OState -> Prop)
+               (pre: OState) (post: OState) :=
       (ost_tst pre)@[trsIdx] >>=[False]
       (fun trsh =>
-         if allResponded (tst_rqfwds trsh)
-         then postcond pre val post /\
+         if allResponded (tst_rss trsh)
+         then postcond pre post /\
               ost_tst post = M.remove trsIdx (ost_tst pre)
          else True).
 
@@ -198,40 +210,39 @@ Section SynTrs.
 
     Definition rsFwdValue (post: OState) :=
       (ost_tst post)@[trsIdx] >>=[VUnit]
-      (fun trsh =>
-         getFwdValue (tst_rqfwds trsh)).
+      (fun trsh => getFwdValue (tst_rss trsh)).
          
-    Definition synRsPostcond (postcond: PostCond)
+    Definition synRsPostcond (postcond: OState -> OState -> Prop)
                (pre: OState) (val: Value) (post: OState) :=
-      Responded pre val post /\
-      (exists post',
-          Responded pre val post' /\
-          WhenAllResponded postcond post' (rsFwdValue post') post).
+      exists allResp,
+        Responded pre val allResp /\
+        WhenAllResponded postcond allResp post.
 
-    Definition synRsOuts (rsOut: StateT -> list (IdxT * option Value) -> Value) :=
+    Definition synRsOuts (rsOut: StateT -> TrsHelperUnit -> Value) :=
       fun st val =>
         (ost_tst st)@[trsIdx] >>=[nil]
         (fun trsh =>
-           let rss := checkResponded (tst_rqfwds trsh) val in
+           let rss := markResponded (tst_rss trsh) val in
            if allResponded rss
            then {| msg_id := {| mid_type := trsIdx;
                                 mid_from := this;
                                 mid_to := tst_rqfrom trsh;
                                 mid_chn := rsChn |};
-                   msg_value := rsOut (ost_st st) rss |} :: nil
+                   msg_value := rsOut (ost_st st) trsh |} :: nil
            else nil).
 
     (* NOTE: [postcond] is a desired postcondition when assuming 
      * the transaction is atomic.
      *)
-    Definition synRs (postcond: PostCond)
-               (rsOut: StateT -> list (IdxT * option Value) -> Value) :=
-      TPMsg {| mid_type := trsIdx;
-               mid_from := rsFrom;
-               mid_to := this;
-               mid_chn := rsChn |}
-            (synRsOuts rsOut)
-            (synRsPostcond postcond).
+    Definition synRs (postcond: OState -> OState -> Prop)
+               (rsOut: StateT -> TrsHelperUnit -> Value) :=
+      {| pmsg_mid := {| mid_type := trsIdx;
+                        mid_from := rsFrom;
+                        mid_to := this;
+                        mid_chn := rsChn |};
+         pmsg_precond := T;
+         pmsg_outs := synRsOuts rsOut;
+         pmsg_postcond := synRsPostcond postcond |}.
 
   End ResponseBack.
 
@@ -268,9 +279,9 @@ Section SynTrs.
     
   End AddPMsgs.
 
-  Definition idxInter (li1 li2: list IdxT) :=
+  Definition idxInter (li1 li2: list IdxT): list IdxT :=
     filter (fun idx => if idx ?<n li2 then true else false) li1.
-  Definition idxSubtract (li1 li2: list IdxT) :=
+  Definition idxSubtract (li1 li2: list IdxT): list IdxT :=
     filter (fun idx => if idx ?<n li2 then false else true) li1.
   
 End SynTrs.
@@ -328,70 +339,142 @@ Section SynByVChanges.
   Variables trsIdx: IdxT.
 
   Section PerTarget.
-    Context {targetIdx: IdxT}.
+    Variable targetIdx: IdxT.
+
+    Fixpoint constUpdatesOf (consts: list (VConst targetIdx))
+             (pre: StateT) :=
+      match consts with
+      | nil => pre
+      | (VConstIntro _ kidx val) :: chgs' =>
+        constUpdatesOf chgs' (pre +[kidx <- val])
+      end.
+
+    Definition movedUpdateOf (mv: option (VMoved targetIdx))
+               (rqVal fwdVal: Value) (pre: StateT) :=
+      match mv with
+      | Some (VMovedIntro vloc _ kidx) =>
+        match vloc with
+        | VLocState _ _ => pre +[kidx <- fwdVal]
+        | VLocMsg => pre +[kidx <- rqVal]
+        end
+      | _ => pre
+      end.
 
     Section Immediate.
 
-      (** TODO: define *)
+      (* If an object handles the request immediately, the only case that
+       * it has to send a certain value is when it is the source.
+       *)
+      Definition valOutVChanges (chgs: VChanges) (pre: StateT): Value :=
+        match vchg_moved chgs with
+        | Some (existT _ _ (VMovedIntro (VLocState oidx kidx) _ _)) =>
+          if oidx ==n targetIdx
+          then (pre@[kidx]) >>=[VUnit] (fun val => val)
+          else VUnit
+        | _ => VUnit
+        end.
 
+      Definition vChangesImmUpdatesOf (consts: list (VConst targetIdx))
+                 (mv: option (VMoved targetIdx))
+                 (rqVal: Value) :=
+        fun pre post =>
+          (ost_tst pre)@[trsIdx] >>=[False]
+                       (fun trsh =>
+                          ost_st post = movedUpdateOf
+                                          mv rqVal
+                                          VUnit (* value forwarding cannot happen 
+                                                 * in the immediate case. *)
+                                          (constUpdatesOf consts (ost_st pre))).
+
+      Definition postcondImmVChanges (chgs: VChanges) (rqVal: Value) :=
+        vChangesImmUpdatesOf (getTargetConsts (vchg_consts chgs) targetIdx)
+                             (getTargetMoved (vchg_moved chgs) targetIdx)
+                             rqVal.
+
+      Definition synImmVChanges (rqFrom: IdxT) (prec: PreCond) (chgs: VChanges) :=
+        synImm trsIdx targetIdx alwaysLock prec
+               rqFrom
+               (fun pre val post => postcondImmVChanges chgs val pre post)
+               (valOutVChanges chgs).
+      
     End Immediate.
 
     Section RequestFwd.
-      Variable topo: list Channel.
 
-      Definition synRqVChanges (rqFrom: IdxT) (remChgs: VChanges) (prec: PreCond) :=
-        synRq trsIdx targetIdx rqFrom
-              (idxInter (getChangeTargets remChgs) (getForwards topo targetIdx))
-              prec.
+      Definition synRqVChanges (rqFrom: IdxT) (fwds: list IdxT) (prec: PreCond) :=
+        synRq trsIdx targetIdx alwaysLock rqFrom fwds prec.
 
     End RequestFwd.
 
     Section ResponseBack.
+
+      Definition vChangesRsUpdatesOf (consts: list (VConst targetIdx))
+                 (mv: option (VMoved targetIdx)) :=
+        fun pre post =>
+          (ost_tst pre)@[trsIdx] >>=[False]
+                       (fun trsh =>
+                          ost_st post = movedUpdateOf
+                                          mv (tst_rqval trsh) (getFwdValue (tst_rss trsh))
+                                          (constUpdatesOf consts (ost_st pre))).
+
+      Definition postcondRsVChanges (chgs: VChanges) :=
+        vChangesRsUpdatesOf (getTargetConsts (vchg_consts chgs) targetIdx)
+                            (getTargetMoved (vchg_moved chgs) targetIdx).
       
-      Fixpoint constUpdatesOf (consts: list (VConst targetIdx))
-               (pre: StateT) :=
-        match consts with
-        | nil => pre
-        | (VConstIntro _ kidx val) :: chgs' =>
-          constUpdatesOf chgs' (pre +[kidx <- val])
-        end.
-
-      Definition movedUpdatedOf (mv: option (VMoved targetIdx)) (val: Value)
-                 (pre: StateT) :=
-        match mv with
-        | Some (VMovedIntro _ _ kidx) => pre +[kidx <- val]
-        | _ => pre
-        end.
-
-      Definition updatesOf (consts: list (VConst targetIdx)) (mv: option (VMoved targetIdx)) :=
-        fun pre val post =>
-          ost_st post = movedUpdatedOf
-                          mv val
-                          (constUpdatesOf consts (ost_st pre)).
-
-      Definition rsPostcondVChanges (chgs: VChanges) :=
-        updatesOf (getTargetConsts (vchg_consts chgs) targetIdx)
-                  (getTargetMoved (vchg_moved chgs) targetIdx).
-
-      Definition rsOutsVChanges (vmoved: option (VMoved targetIdx))
-                 (pre: StateT) (rss: list (IdxT * option Value)) :=
+      Definition rsOutsVChanges (vmoved: option {targetIdx : IdxT & VMoved targetIdx})
+                 (pre: StateT) (trsh: TrsHelperUnit) :=
         match vmoved with
-        | Some _ => VUnit (* nothing to forward, since the target is the destination. *)
-        | None => getFwdValue rss
+        | Some (existT _ _ (VMovedIntro (VLocState oidx kidx) _ _)) =>
+          if oidx ==n targetIdx
+          then (pre@[kidx]) >>=[VUnit] (fun val => val)
+          else VUnit
+        | _ =>
+          match getTargetMoved vmoved targetIdx with
+          | Some _ => VUnit (* nothing to forward, since the target is the destination. *)
+          | None => getFwdValue (tst_rss trsh)
+          end
         end.
 
       Definition synRsVChanges (rsFrom: IdxT) (chgs: VChanges) :=
         synRs trsIdx targetIdx rsFrom 
-              (rsPostcondVChanges chgs)
-              (rsOutsVChanges (getTargetMoved (vchg_moved chgs) targetIdx)).
+              (postcondRsVChanges chgs)
+              (rsOutsVChanges (vchg_moved chgs)).
 
     End ResponseBack.
 
   End PerTarget.
 
-  (** TODO: define *)
-  (* Inductive SynVChanges: list PMsg -> VChanges -> Prop := *)
-  (* | SynVChangeInit: *)
+  Section GivenVChanges.
+    
+    Variables (topo: list Channel)
+              (chgs: VChanges).
+
+    Inductive SynVChanges:
+      list (IdxT * IdxT) (* currently synthesizing object index pairs (from, to) *) ->
+      list IdxT (* synthesized object indices *) ->
+      list PMsg (* synthesized [PMsg]s *) ->
+      Prop :=
+    | SynVChangeInit: forall erqFrom hdl, SynVChanges ((erqFrom, hdl) :: nil) nil nil
+    | SynVChangeImm:
+        forall rqFrom oidx oinds sinds smsgs,
+          SynVChanges ((rqFrom, oidx) :: oinds) sinds smsgs ->
+          idxSubtract (getForwards topo oidx) sinds = nil ->
+          SynVChanges oinds (oidx :: sinds)
+                      (synImmVChanges oidx rqFrom T (** precondition? *) chgs :: smsgs)
+    | SynVChangeFwd:
+        forall rqFrom oidx oinds sinds smsgs,
+          SynVChanges ((rqFrom, oidx) :: oinds) sinds smsgs ->
+          forall fwds,
+            fwds = idxSubtract (nodup eq_nat_dec (getForwards topo oidx)) sinds ->
+            fwds <> nil ->
+            forall rqFwd rss,
+              rqFwd = synRqVChanges oidx rqFrom fwds T (** precondition? *) ->
+              rss = map (fun rsFrom => synRsVChanges oidx rsFrom chgs) fwds ->
+              SynVChanges (oinds ++ (map (fun to => (oidx, to)) fwds))
+                          (oidx :: sinds)
+                          (rqFwd :: rss ++ smsgs).
+    
+  End GivenVChanges.
 
 End SynByVChanges.
 

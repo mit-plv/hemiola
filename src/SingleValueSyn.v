@@ -10,7 +10,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section Impl.
-  Variables extIdx1 extIdx2: nat.
+  Definition extIdx1 := 3.
+  Definition extIdx2 := 4.
+  (* Variables extIdx1 extIdx2: nat. *)
   Hypotheses (Hiext1: isExternal (impl0 extIdx1 extIdx2) extIdx1 = true)
              (Hiext2: isExternal (impl0 extIdx1 extIdx2) extIdx2 = true)
              (Hsext1: isExternal (spec extIdx1 extIdx2) extIdx1 = true)
@@ -207,6 +209,40 @@ Section Impl.
           [exact validMsgMap_proven|eassumption]
         end.
 
+    Ltac syn_trs_init trsIdx topo chgs rqFrom rqTo :=
+      assert (SynVChanges
+                trsIdx topo chgs
+                ((rqFrom, rqTo) :: nil) nil nil) by constructor;
+      subst chgs.
+
+    Ltac syn_trs_step :=
+      let cur := fresh "cur" in
+      let inds := fresh "inds" in
+      let msgs := fresh "msgs" in
+      evar (cur: list (IdxT * IdxT));
+      evar (inds: list IdxT);
+      evar (msgs: list PMsg);
+      match goal with
+      | [H: SynVChanges ?trsIdx ?topo ?chgs ?pcur ?pinds ?pmsgs |- _] =>
+        assert (SynVChanges trsIdx topo chgs cur inds msgs)
+          by (subst cur inds msgs;
+              first [eapply SynVChangeFwd;
+                     try eassumption; try reflexivity; try discriminate; fail
+                    |eapply SynVChangeImm;
+                     try eassumption; try reflexivity; try discriminate; fail]);
+        clear H
+      end;
+      simpl in cur, inds, msgs;
+      subst cur inds msgs.
+
+    Ltac syn_trs_rep := repeat syn_trs_step.
+
+    Ltac syn_trs_ins :=
+      match goal with
+      | [H: SynVChanges _ _ _ _ _ ?pmsgs |- _] =>
+        instantiate (1:= pmsgs); clear H
+      end.
+
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
     Definition svmTargetPMsgIdx0 := 0.
@@ -239,7 +275,7 @@ Section Impl.
           
           (* 2) Synthesize [?a] as the only [PMsg] 
            *    accepting the target external request. *)
-          instantiate (2:= synRq svmTrsIdx0 svmTargetOIdx0 tfrom _ nprec).
+          instantiate (2:= synRq svmTrsIdx0 svmTargetOIdx0 alwaysLock tfrom _ nprec).
 
           (* 3-1) Since [fpmsg] here is for the external request,
            *      we get fpmsg = ?a. *)
@@ -296,10 +332,16 @@ Section Impl.
           pose (getChangeTargets vchgs) as tgts; cbn in tgts.
           instantiate (1:= child1Idx :: child2Idx :: nil).
 
+          (* 8) Let's synthesize [?l] !! *)
+          syn_trs_init svmTrsIdx0 (sys_chns impl0) vchgs tfrom child1Idx.
+          syn_trs_rep.
+          syn_trs_ins.
+
+          (* 9) All [PMsg]s are synthesized! Ready to prove the simulation. *)
+          simpl.
           admit.
 
         + (** internal forwarding *)
-          
           admit.
 
     Admitted.
