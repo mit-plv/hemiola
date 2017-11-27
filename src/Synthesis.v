@@ -63,8 +63,8 @@ End SimP.
 Section SimTrs.
 
   Definition SimEquivO (ost1 ost2: OState) :=
-    ost_tst ost1 = ost_tst ost2 /\
-    (ost_tst ost1 = [] -> ost_st ost1 = ost_st ost2).
+    (ost_tst ost1 = [] \/ ost_tst ost2 = []) ->
+    ost_st ost1 = ost_st ost2.
 
   Definition SimEquiv (os1 os2: ObjectStates) :=
     forall oidx,
@@ -504,6 +504,12 @@ Ltac collect_vloc :=
       no_vloc_msg;
       let vloc := fresh "vloc" in
       set (VLocMsg, v) as vloc
+    end.
+
+Ltac clear_vloc :=
+  repeat
+    match goal with
+    | [vloc := _ : _ * VLoc * _ |- _] => clear vloc
     end.
 
 Ltac no_diff sdf :=

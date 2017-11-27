@@ -10,21 +10,38 @@ Proof.
   constructor; intros; auto.
 Qed.
 
-Lemma simEquiv_OState_eq:
+Lemma simEquiv_OState_eq_1:
   forall oss1 oss2,
     SimEquiv oss1 oss2 ->
-    forall oidx ost,
-      oss1@[oidx] = Some ost ->
-      ost_tst ost = [] ->
-      oss2@[oidx] = Some ost.
+    forall oidx ost1,
+      oss1@[oidx] = Some ost1 -> ost_tst ost1 = [] ->
+      exists ost2,
+        oss2@[oidx] = Some ost2 /\ ost_st ost2 = ost_st ost1.
 Proof.
   intros.
   specialize (H oidx).
   rewrite H0 in H.
-  destruct (oss2@[oidx]); [|exfalso; assumption].
-  destruct H.
-  specialize (H2 H1).
-  destruct o, ost; simpl in *; subst; reflexivity.
+  destruct (oss2@[oidx]); [|exfalso; auto].
+  specialize (H (or_introl H1)).
+  destruct o, ost1; simpl in *; subst.
+  eexists; eauto.
+Qed.
+
+Lemma simEquiv_OState_eq_2:
+  forall oss1 oss2,
+    SimEquiv oss1 oss2 ->
+    forall oidx ost2,
+      oss2@[oidx] = Some ost2 -> ost_tst ost2 = [] ->
+      exists ost1,
+        oss1@[oidx] = Some ost1 /\ ost_st ost1 = ost_st ost2.
+Proof.
+  intros.
+  specialize (H oidx).
+  rewrite H0 in H.
+  destruct (oss1@[oidx]); [|exfalso; auto].
+  specialize (H (or_intror H1)).
+  destruct o, ost2; simpl in *; subst.
+  eexists; eauto.
 Qed.
 
 Lemma addPMsgs_init:
@@ -268,3 +285,31 @@ Proof.
   - apply SubList_cons_right; assumption.
 Qed.
   
+Lemma simTrs_preserved_lock_added:
+  forall R oss oims ts sst,
+    SimTrs R {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |} sst ->
+    forall noidx pos,
+      oss@[noidx] = Some pos ->
+      forall nos ntrsIdx ntrs,
+        nos = {| ost_st := ost_st pos;
+                 ost_tst := (ost_tst pos) +[ntrsIdx <- ntrs]
+              |} ->
+        forall nmsgs nts,
+          SimTrs R {| tst_oss := oss +[noidx <- nos];
+                      tst_msgs := nmsgs;
+                      tst_tid := nts |} sst.
+Proof.
+  intros; subst.
+  inv H; econstructor; eauto.
+  simpl in *.
+  unfold SimEquiv in *; intros.
+  specialize (H1 oidx).
+  findeq.
+  - unfold SimEquivO in *; simpl; intros.
+    rewrite H0 in H1.
+    destruct H.
+    + exfalso; eapply M.add_empty_neq; eauto.
+    + apply H1; auto.
+  - rewrite H0 in H1; auto.
+Qed.
+

@@ -79,14 +79,14 @@ Section Impl.
 
     Ltac mv_rewriter :=
       repeat
-        match goal with
-        | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
-        | [H: None = M.find _ _ |- _] => apply eq_sym in H
-        | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
-          rewrite H1 in H2; inv H2
-        | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
-          rewrite H1 in H2; discriminate
-        end.
+        (match goal with
+         | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
+         | [H: None = M.find _ _ |- _] => apply eq_sym in H
+         | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
+           rewrite H1 in H2; inv H2
+         | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
+           rewrite H1 in H2; discriminate
+         end; simpl in *).
 
     (* If this Ltac succeeds, then provably [inv1] and [inv2] are 
      * not compatible for all state.
@@ -237,10 +237,20 @@ Section Impl.
 
     Ltac syn_trs_rep := repeat syn_trs_step.
 
-    Ltac syn_trs_ins :=
+    Fixpoint removeEntry efrom hdl pmsgs :=
+      match pmsgs with
+      | nil => nil
+      | pmsg :: pmsgs' =>
+        if (if mid_from (pmsg_mid pmsg) ==n efrom then true else false)
+             && (if mid_to (pmsg_mid pmsg) ==n hdl then true else false)
+        then pmsgs'
+        else pmsg :: (removeEntry efrom hdl pmsgs')
+      end.
+
+    Ltac syn_trs_ins efrom hdl :=
       match goal with
       | [H: SynVChanges _ _ _ _ _ ?pmsgs |- _] =>
-        instantiate (1:= pmsgs); clear H
+        instantiate (1:= removeEntry efrom hdl pmsgs); clear H
       end.
 
     Definition svmTrsIdx0 := 0.
@@ -299,9 +309,12 @@ Section Impl.
 
           (* 5) By using [H: SimTrs ...] and the precondition of [os],
            *    we can guess the entire state invariant. *)
+          pose proof H as Hsim.
           inv H; simpl in H5.
-          pose proof (simEquiv_OState_eq _ _ H5 _ _ H3 H2).
+          pose proof (simEquiv_OState_eq_1 _ _ H5 _ _ H3 H2).
+          destruct H as [ost2 [? ?]].
           rewrite <-H1 in H; unfold svmTargetOIdx0 in *.
+          destruct ost2 as [ost2 trsh2], os as [ost trsh]; simpl in *; subst.
           inv H6; try (mv_rewriter; fail).
 
           (* 6) Prove the existence of a poststate for the target
@@ -324,22 +337,29 @@ Section Impl.
           destruct poss as [poss pmsgs ptid]; simpl in *.
           mv_rewriter.
           collect_vloc.
-
           collect_diff rioss poss.
+          clear_vloc.
           pose {| vchg_consts := (existT _ _ df) :: (existT _ _ df0) :: nil;
                   vchg_moved := Some (existT _ _ df1) |} as vchgs.
           subst df df0 df1.
           pose (getChangeTargets vchgs) as tgts; cbn in tgts.
+          clear tgts.
           instantiate (1:= child1Idx :: child2Idx :: nil).
 
           (* 8) Let's synthesize [?l] !! *)
           syn_trs_init svmTrsIdx0 (sys_chns impl0) vchgs tfrom child1Idx.
           syn_trs_rep.
-          syn_trs_ins.
+          syn_trs_ins tfrom child1Idx.
 
           (* 9) All [PMsg]s are synthesized! Ready to prove the simulation. *)
           simpl.
-          admit.
+          left.
+          do 2 eexists.
+          repeat split.
+          * apply SdSlt.
+          * reflexivity.
+          * unfold synRqPostcond in H11; subst.
+            eapply simTrs_preserved_lock_added; eauto.
 
         + (** internal forwarding *)
           admit.
