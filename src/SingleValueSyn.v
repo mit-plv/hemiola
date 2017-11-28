@@ -253,6 +253,10 @@ Section Impl.
         instantiate (1:= removeEntry efrom hdl pmsgs); clear H
       end.
 
+    Ltac sim_spec_silent :=
+      left; do 2 eexists; repeat split;
+      [apply SdSlt|reflexivity|].
+
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
     Definition svmTargetPMsgIdx0 := 0.
@@ -353,16 +357,55 @@ Section Impl.
 
           (* 9) All [PMsg]s are synthesized! Ready to prove the simulation. *)
           simpl.
-          left.
-          do 2 eexists.
-          repeat split.
-          * apply SdSlt.
-          * reflexivity.
-          * unfold synRqPostcond in H11; subst.
-            eapply simTrs_preserved_lock_added; eauto.
+          sim_spec_silent.
+          unfold synRqPostcond in H11; subst.
+          eapply simTrs_preserved_lock_added; eauto.
 
         + (** internal forwarding *)
-          admit.
+          Common.dest_in.
+          * (* a request case *)
+            simpl in *.
+            unfold makeMsgIdInternal in H8; cbn in H8.
+            destruct fmsg as [[fmid fval] ftid]; simpl in *.
+            subst; simpl in *.
+            cbn in H4.
+            destruct H6 as [? [? ?]]; simpl in *; subst.
+            simpl.
+            sim_spec_silent.
+            unfold synRqPostcond in H11; subst.
+            eapply simTrs_preserved_lock_added; eauto.
+          * (* a response case *)
+            simpl in *.
+            unfold makeMsgIdInternal in H8; cbn in H8.
+            destruct fmsg as [[fmid fval] ftid]; simpl in *.
+            subst; simpl in *.
+            cbn in H4.
+            destruct H6 as [? [? ?]]; simpl in *; subst.
+
+            remember (map tmsg_msg _) as outs.
+            destruct outs.
+            { left.
+              do 2 eexists.
+              repeat split; [apply SdSlt|reflexivity|].
+              admit.
+            }
+            { exfalso.
+              admit.
+            }
+
+          * (* the initiating [PMsg] does not belong to
+             * internal forwarding cases. *)
+            simpl in *.
+            destruct fmsg as [[fmid fval] ftid]; simpl in *.
+            subst; simpl in *.
+            cbn in H4.
+            discriminate.
+
+          * (* a response case *)
+            admit.
+
+          * (* an immediate response case *)
+            admit.
 
     Admitted.
     

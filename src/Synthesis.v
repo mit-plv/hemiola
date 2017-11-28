@@ -169,14 +169,16 @@ Section SynTrs.
         else (idx, ov) :: (markResponded rss' rsVal)
       end.
 
+    Definition markRespondedTrs (trsh: TrsHelperUnit) (rsVal: Value) :=
+      {| tst_rqfrom := tst_rqfrom trsh;
+         tst_rqval := tst_rqval trsh;
+         tst_rss := markResponded (tst_rss trsh) rsVal |}.
+
     Definition Responded (pre: OState) (rsVal: Value) (post: OState) :=
       (ost_tst pre)@[trsIdx] >>=[False]
       (fun preth =>
          (ost_tst post)@[trsIdx] >>=[False]
-         (fun postth =>
-            postth = {| tst_rqfrom := tst_rqfrom preth;
-                        tst_rqval := tst_rqval preth;
-                        tst_rss := markResponded (tst_rss preth) rsVal |})).
+         (fun postth => postth = markRespondedTrs preth rsVal)).
 
     Definition allResponded (fwds: list (IdxT * option Value)) :=
       forallb (fun ib => match snd ib with
@@ -228,7 +230,8 @@ Section SynTrs.
                                 mid_from := this;
                                 mid_to := tst_rqfrom trsh;
                                 mid_chn := rsChn |};
-                   msg_value := rsOut (ost_st st) trsh |} :: nil
+                   msg_value := rsOut (ost_st st) (markRespondedTrs trsh val)
+                |} :: nil
            else nil).
 
     (* NOTE: [postcond] is a desired postcondition when assuming 
@@ -295,6 +298,7 @@ Section VChange.
   Inductive VConst: IdxT -> Set :=
   | VConstIntro: forall (oidx kidx: IdxT) (const: Value), VConst oidx.
 
+  (** TODO: need an interface to move a value to the response message. *)
   Inductive VMoved: IdxT -> Set :=
   | VMovedIntro: forall (source: VLoc) (oidx kidx: IdxT), VMoved oidx.
 
@@ -429,10 +433,8 @@ Section SynByVChanges.
           then (pre@[kidx]) >>=[VUnit] (fun val => val)
           else VUnit
         | _ =>
-          match getTargetMoved vmoved targetIdx with
-          | Some _ => VUnit (* nothing to forward, since the target is the destination. *)
-          | None => getFwdValue (tst_rss trsh)
-          end
+          (* Forward the value even after it reaches the destination. *)
+          getFwdValue (tst_rss trsh)
         end.
 
       Definition synRsVChanges (rsFrom: IdxT) (chgs: VChanges) :=
@@ -447,7 +449,9 @@ Section SynByVChanges.
   Section GivenVChanges.
     
     Variables (topo: list Channel)
-              (chgs: VChanges).
+              (chgs: VChanges)
+              (erqFrom: IdxT).
+    (* (rsOutVal: StateT -> TrsHelperUnit -> Value). *)
 
     Inductive SynVChanges:
       list (IdxT * IdxT) (* currently synthesizing object index pairs (from, to) *) ->
