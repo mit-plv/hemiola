@@ -47,13 +47,11 @@ Section Impl.
         simpl; tauto.
   Qed.
 
-  Theorem impl0_ok: SynthOk spec (SimTrs SvmR) svmP impl0.
+  Theorem impl0_ok: SynthOk spec SvmSim svmP impl0.
   Proof.
     repeat split.
     - (* serializability *) admit.
-    - econstructor.
-      + apply simEquiv_refl.
-      + repeat econstructor.
+    - eapply SvmSSS; econstructor.
     - (* simulation *) admit.
   Admitted.
 
@@ -193,7 +191,10 @@ Section Impl.
           eexists (IlblIn (toTMsgU _))
         | [ |- _ /\ _] => split
         | [ |- _ <> emptyLabel] => discriminate
-        | [ |- SimTrs _ _ _] => assumption
+        | [ |- ?R _ _] =>
+          match type of R with
+          | (TState -> TState -> Prop) => assumption
+          end
         | [ |- _ = ?t ] =>
           match type of t with
           | Label => reflexivity
@@ -209,60 +210,12 @@ Section Impl.
           [exact validMsgMap_proven|eassumption]
         end.
 
-    Ltac syn_trs_init trsIdx topo chgs rqFrom rqTo :=
-      assert (SynVChanges
-                trsIdx topo chgs
-                ((rqFrom, rqTo) :: nil) nil nil) by constructor;
-      subst chgs.
-
-    Ltac syn_trs_step :=
-      let cur := fresh "cur" in
-      let inds := fresh "inds" in
-      let msgs := fresh "msgs" in
-      evar (cur: list (IdxT * IdxT));
-      evar (inds: list IdxT);
-      evar (msgs: list PMsg);
-      match goal with
-      | [H: SynVChanges ?trsIdx ?topo ?chgs ?pcur ?pinds ?pmsgs |- _] =>
-        assert (SynVChanges trsIdx topo chgs cur inds msgs)
-          by (subst cur inds msgs;
-              first [eapply SynVChangeFwd;
-                     try eassumption; try reflexivity; try discriminate; fail
-                    |eapply SynVChangeImm;
-                     try eassumption; try reflexivity; try discriminate; fail]);
-        clear H
-      end;
-      simpl in cur, inds, msgs;
-      subst cur inds msgs.
-
-    Ltac syn_trs_rep := repeat syn_trs_step.
-
-    Fixpoint removeEntry efrom hdl pmsgs :=
-      match pmsgs with
-      | nil => nil
-      | pmsg :: pmsgs' =>
-        if (if mid_from (pmsg_mid pmsg) ==n efrom then true else false)
-             && (if mid_to (pmsg_mid pmsg) ==n hdl then true else false)
-        then pmsgs'
-        else pmsg :: (removeEntry efrom hdl pmsgs')
-      end.
-
-    Ltac syn_trs_ins efrom hdl :=
-      match goal with
-      | [H: SynVChanges _ _ _ _ _ ?pmsgs |- _] =>
-        instantiate (1:= removeEntry efrom hdl pmsgs); clear H
-      end.
-
-    Ltac sim_spec_silent :=
-      left; do 2 eexists; repeat split;
-      [apply SdSlt|reflexivity|].
-
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
     Definition svmTargetPMsgIdx0 := 0.
 
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec (SimTrs SvmR) svmP impl1 }.
+      { impl1: System & SynthOk spec SvmSim svmP impl1 }.
     Proof.
       get_target_trs impl0 svmTargetOIdx0 svmTargetPMsgIdx0 ttrs.
       get_pmsg_from ttrs tfrom.
@@ -282,130 +235,10 @@ Section Impl.
           simulates_lbl_in svmMsgF_ValidMsgMap.
 
         + (** internal transaction started *)
-
-          (* 1) Prove [In fpmsg (?a :: ?l)]; this is easy. *)
-          pose proof (pmsgsOf_in _ _ H1 _ H9).
-          apply addPMsgsSys_buildRawSys_sublist in H0.
-          
-          (* 2) Synthesize [?a] as the only [PMsg] 
-           *    accepting the target external request. *)
-          instantiate (2:= synRq svmTrsIdx0 svmTargetOIdx0 alwaysLock tfrom _ nprec).
-
-          (* 3-1) Since [fpmsg] here is for the external request,
-           *      we get fpmsg = ?a. *)
-          inv H0;
-            [|apply makePMsgInternal_in_internal in H2; [|discriminate];
-              rewrite <-H8 in H2;
-              rewrite addPMsgsSys_isExternal, buildRawSys_isExternal in H4;
-              exfalso; eapply internal_external_false; eauto].
-
-          (* 3-2) Now we can extract some information 
-           *      about the external request.
-           *)
-          clear H1 H9. (* Do we still need these? *)
-          destruct fmsg as [[fmid fval] ftid].
-          simpl in H8; subst.
-          destruct H6 as [? [? ?]]; simpl in *; subst.
-
-          (* 4) Due to [pmsg_precond fpmsg os], now we can take
-           *    the specific precondition for [os]. *)
-          destruct H10; hnf in H0.
-
-          (* 5) By using [H: SimTrs ...] and the precondition of [os],
-           *    we can guess the entire state invariant. *)
-          pose proof H as Hsim.
-          inv H; simpl in H5.
-          pose proof (simEquiv_OState_eq_1 _ _ H5 _ _ H3 H2).
-          destruct H as [ost2 [? ?]].
-          rewrite <-H1 in H; unfold svmTargetOIdx0 in *.
-          destruct ost2 as [ost2 trsh2], os as [ost trsh]; simpl in *; subst.
-          inv H6; try (mv_rewriter; fail).
-
-          (* 6) Prove the existence of a poststate for the target
-           *    transaction, in order to build some postcondition.
-           *)
-          assert (exists poss post,
-                     (tst_oss poss)@[child1Idx] = Some post /\
-                     (fun st =>
-                        (ost_st st) @[ statusIdx] = Some (VNat stS)) post /\
-                     SvmR (tst_oss poss) (tst_oss sst1)).
-          { admit. }
-          destruct H6 as [poss [post ?]]; dest.
-          inv H18; try (mv_rewriter; fail).
-
-          (* 7) Now we have enough information about prestate and
-           *    poststate! Let's use an Ltac to generate a "diff"
-           *    between two states, in order to synthesize [?fwds]
-           *    and [?l].
-           *)
-          destruct poss as [poss pmsgs ptid]; simpl in *.
-          mv_rewriter.
-          collect_vloc.
-          collect_diff rioss poss.
-          clear_vloc.
-          pose {| vchg_consts := (existT _ _ df) :: (existT _ _ df0) :: nil;
-                  vchg_moved := Some (existT _ _ df1) |} as vchgs.
-          subst df df0 df1.
-          pose (getChangeTargets vchgs) as tgts; cbn in tgts.
-          clear tgts.
-          instantiate (1:= child1Idx :: child2Idx :: nil).
-
-          (* 8) Let's synthesize [?l] !! *)
-          syn_trs_init svmTrsIdx0 (sys_chns impl0) vchgs tfrom child1Idx.
-          syn_trs_rep.
-          syn_trs_ins tfrom child1Idx.
-
-          (* 9) All [PMsg]s are synthesized! Ready to prove the simulation. *)
-          simpl.
-          sim_spec_silent.
-          unfold synRqPostcond in H11; subst.
-          eapply simTrs_preserved_lock_added; eauto.
+          admit.
 
         + (** internal forwarding *)
-          Common.dest_in.
-          * (* a request case *)
-            simpl in *.
-            unfold makeMsgIdInternal in H8; cbn in H8.
-            destruct fmsg as [[fmid fval] ftid]; simpl in *.
-            subst; simpl in *.
-            cbn in H4.
-            destruct H6 as [? [? ?]]; simpl in *; subst.
-            simpl.
-            sim_spec_silent.
-            unfold synRqPostcond in H11; subst.
-            eapply simTrs_preserved_lock_added; eauto.
-          * (* a response case *)
-            simpl in *.
-            unfold makeMsgIdInternal in H8; cbn in H8.
-            destruct fmsg as [[fmid fval] ftid]; simpl in *.
-            subst; simpl in *.
-            cbn in H4.
-            destruct H6 as [? [? ?]]; simpl in *; subst.
-
-            remember (map tmsg_msg _) as outs.
-            destruct outs.
-            { left.
-              do 2 eexists.
-              repeat split; [apply SdSlt|reflexivity|].
-              admit.
-            }
-            { exfalso.
-              admit.
-            }
-
-          * (* the initiating [PMsg] does not belong to
-             * internal forwarding cases. *)
-            simpl in *.
-            destruct fmsg as [[fmid fval] ftid]; simpl in *.
-            subst; simpl in *.
-            cbn in H4.
-            discriminate.
-
-          * (* a response case *)
-            admit.
-
-          * (* an immediate response case *)
-            admit.
+          admit.
 
     Admitted.
     

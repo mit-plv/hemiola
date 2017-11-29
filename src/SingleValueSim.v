@@ -31,60 +31,37 @@ Section Sim.
       :: (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stM))
       :: nil.
 
-  Definition svmImplInv: list (ObjectStates -> Prop) :=
-    (fun ioss =>
-       exists iost1 iost2,
-         ioss@[child1Idx] = Some iost1 /\
-         (ost_st iost1)@[statusIdx] = Some (VNat stS) /\
-         ioss@[child2Idx] = Some iost2 /\
-         (ost_st iost2)@[statusIdx] = Some (VNat stS))
-      :: (fun ioss =>
-            exists iost1 iost2,
-              ioss@[child1Idx] = Some iost1 /\
-              (ost_st iost1)@[statusIdx] = Some (VNat stM) /\
-              ioss@[child2Idx] = Some iost2 /\
-              (ost_st iost2)@[statusIdx] = Some (VNat stI))
-      :: (fun ioss =>
-            exists iost1 iost2,
-              ioss@[child1Idx] = Some iost1 /\
-              (ost_st iost1)@[statusIdx] = Some (VNat stI) /\
-              ioss@[child2Idx] = Some iost2 /\
-              (ost_st iost2)@[statusIdx] = Some (VNat stM))
-      :: nil.
-
-  Definition svmR: list (ObjectStates -> ObjectStates -> Prop) :=
-    (fun ioss soss =>
-       exists iost1 iost2 sost v,
-         ioss@[child1Idx] = Some iost1 /\
-         (ost_st iost1)@[statusIdx] = Some (VNat stS) /\
-         (ost_st iost1)@[valueIdx] = Some v /\
-         ioss@[child2Idx] = Some iost2 /\
-         (ost_st iost2)@[statusIdx] = Some (VNat stS) /\
-         (ost_st iost2)@[valueIdx] = Some v /\
-         soss@[specIdx] = Some sost /\
-         (ost_st sost)@[valueIdx] = Some v)
-      :: (fun ioss soss =>
-            exists iost1 iost2 sost v,
-              ioss@[child1Idx] = Some iost1 /\
-              (ost_st iost1)@[statusIdx] = Some (VNat stM) /\
-              (ost_st iost1)@[valueIdx] = Some v /\
-              ioss@[child2Idx] = Some iost2 /\
-              (ost_st iost2)@[statusIdx] = Some (VNat stI) /\
-              soss@[specIdx] = Some sost /\
-              (ost_st sost)@[valueIdx] = Some v)
-      :: (fun ioss soss =>
-            exists iost1 iost2 sost v,
-              ioss@[child1Idx] = Some iost1 /\
-              (ost_st iost1)@[statusIdx] = Some (VNat stI) /\
-              ioss@[child2Idx] = Some iost2 /\
-              (ost_st iost2)@[statusIdx] = Some (VNat stM) /\
-              (ost_st iost2)@[valueIdx] = Some v /\
-              soss@[specIdx] = Some sost /\
-              (ost_st sost)@[valueIdx] = Some v)
-      :: nil.
-
   Inductive SvmR: ObjectStates -> ObjectStates -> Prop :=
-  | SvmSS: forall ioss soss iost1 iost2 sost v,
+  | SvmSSI: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[parentIdx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
+      (ost_st iostp)@[valueIdx] = Some v ->
+      ioss@[child1Idx] = Some iost1 ->
+      (ost_st iost1)@[statusIdx] = Some (VNat stS) ->
+      (ost_st iost1)@[valueIdx] = Some v ->
+      ioss@[child2Idx] = Some iost2 ->
+      (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
+      soss@[specIdx] = Some sost ->
+      (ost_st sost)@[valueIdx] = Some v ->
+      SvmR ioss soss
+
+  | SvmSIS: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[parentIdx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
+      (ost_st iostp)@[valueIdx] = Some v ->
+      ioss@[child1Idx] = Some iost1 ->
+      (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
+      ioss@[child2Idx] = Some iost2 ->
+      (ost_st iost2)@[statusIdx] = Some (VNat stS) ->
+      (ost_st iost2)@[valueIdx] = Some v ->
+      soss@[specIdx] = Some sost ->
+      (ost_st sost)@[valueIdx] = Some v ->
+      SvmR ioss soss
+
+  | SvmSSS: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[child2Idx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
+      (ost_st iostp)@[valueIdx] = Some v ->
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stS) ->
       (ost_st iost1)@[valueIdx] = Some v ->
@@ -94,7 +71,10 @@ Section Sim.
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
-  | SvmIM1: forall ioss soss iost1 iost2 sost v,
+
+  | SvmMMI: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[child1Idx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stM) ->
       (ost_st iost1)@[valueIdx] = Some v ->
@@ -103,7 +83,10 @@ Section Sim.
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
-  | SvmIM2: forall ioss soss iost1 iost2 sost v,
+
+  | SvmMIM: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[child1Idx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
       ioss@[child2Idx] = Some iost2 ->
@@ -112,20 +95,6 @@ Section Sim.
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss.
-
-  Lemma svmR_svmR:
-    forall ioss soss,
-      SvmR ioss soss ->
-      exists n, nth n svmR (fun _ _ => False) ioss soss.
-  Proof.
-    intros; inv H.
-    - exists 0; cbn.
-      repeat eexists; eauto.
-    - exists 1; cbn.
-      repeat eexists; eauto.
-    - exists 2; cbn.
-      repeat eexists; eauto.
-  Qed.      
 
   Definition SvmSim (ist sst: TState) := SvmR (tst_oss ist) (tst_oss sst).
 

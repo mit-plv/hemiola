@@ -295,47 +295,52 @@ Section VChange.
   | VLocState: forall (oidx kidx: IdxT), VLoc
   | VLocMsg: VLoc.
 
-  Inductive VConst: IdxT -> Set :=
-  | VConstIntro: forall (oidx kidx: IdxT) (const: Value), VConst oidx.
+  Inductive VChgConst :=
+  | VccIntro: forall (target: VLoc) (const: Value), VChgConst.
 
-  (** TODO: need an interface to move a value to the response message. *)
-  Inductive VMoved: IdxT -> Set :=
-  | VMovedIntro: forall (source: VLoc) (oidx kidx: IdxT), VMoved oidx.
+  Inductive VChgMove :=
+  | VcmIntro: forall (source: VLoc) (targets: list VLoc), VChgMove.
 
+  (* Currently [VChanges] is defined restrictively in that only one 
+   * value move is allowed per a transaction.
+   *)
   Record VChanges :=
-    { vchg_consts: list { targetIdx: IdxT & VConst targetIdx };
-      vchg_moved: option { targetIdx: IdxT & VMoved targetIdx}
+    { vchg_consts: list VChgConst;
+      vchg_move: option VChgMove
     }.
 
-  Fixpoint getTargetConsts (chgs: list { targetIdx: IdxT & VConst targetIdx })
-           (tidx: IdxT): list (VConst tidx) :=
-    match chgs with
-    | nil => nil
-    | (existT _ idx const) :: chgs' =>
-      (match idx ==n tidx with
-       | left Heq => match Heq with
-                     | eq_refl => Some const
-                     end
-       | _ => None
-       end) ::> (getTargetConsts chgs' tidx)
+  Definition getVLocValue (vloc: VLoc) (oss: ObjectStates) (mval: Value) :=
+    match vloc with
+    | VLocState oidx kidx =>
+      oss@[oidx] >>= (fun ost => (ost_st ost)@[kidx])
+    | VLocMsg => Some mval
     end.
 
-  Definition getTargetMoved (omv: option { targetIdx: IdxT & VMoved targetIdx })
-             (tidx: IdxT): option (VMoved tidx) :=
-    omv >>= (fun moved =>
-               match moved with
-               | existT _ idx mv =>
-                 match idx ==n tidx with
-                 | left Heq => match Heq with
-                               | eq_refl => Some mv
-                               end
-                 | _ => None
-                 end
-               end).
+  Definition SemVChgConst (vcc: VChgConst)
+             (pre post: ObjectStates) (rqV rsV: Value) :=
+    match vcc with
+    | VccIntro tgt c => getVLocValue tgt post rsV = Some c
+    end.
 
-  Definition getChangeTargets (chgs: VChanges): list IdxT :=
-    ((vchg_moved chgs) >>= (fun mv => Some (projT1 mv)))
-      ::> (map (projT1 (P:= VConst)) (vchg_consts chgs)).
+  Definition SemVChgMove (vcm: VChgMove)
+             (pre post: ObjectStates) (rqV rsV: Value) :=
+    match vcm with
+    | VcmIntro src tgts =>
+      Forall (fun tgt =>
+                match getVLocValue src pre rqV,
+                      getVLocValue tgt post rsV with
+                | Some sv, Some tv => sv = tv
+                | _, _ => False
+                end) tgts
+    end.
+
+  Definition SemVChanges (vchs: VChanges)
+             (pre post: ObjectStates) (rqV rsV: Value) :=
+    match vchs with
+    | {| vchg_consts := vccs; vchg_move := ovcm |} =>
+      Forall (fun vcc => SemVChgConst vcc pre post rqV rsV) vccs /\
+      ovcm >>=[True] (fun vcm => SemVChgMove vcm pre post rqV rsV)
+    end.
 
 End VChange.
 
@@ -345,23 +350,48 @@ Section SynByVChanges.
   Section PerTarget.
     Variable targetIdx: IdxT.
 
-    Fixpoint constUpdatesOf (consts: list (VConst targetIdx))
+    (* Applies only the proper updates in terms of the given [targetIdx] *)
+    Fixpoint constUpdatesOf (consts: list VChgConst)
              (pre: StateT) :=
       match consts with
       | nil => pre
-      | (VConstIntro _ kidx val) :: chgs' =>
-        constUpdatesOf chgs' (pre +[kidx <- val])
+      | (VccIntro vloc val) :: chgs' =>
+        match vloc with
+        | VLocState oidx kidx =>
+          if oidx ==n targetIdx
+          then constUpdatesOf chgs' (pre +[kidx <- val])
+          else constUpdatesOf chgs' pre
+        | _ => constUpdatesOf chgs' pre
+        end
       end.
 
-    Definition movedUpdateOf (mv: option (VMoved targetIdx))
-               (rqVal fwdVal: Value) (pre: StateT) :=
-      match mv with
-      | Some (VMovedIntro vloc _ kidx) =>
-        match vloc with
-        | VLocState _ _ => pre +[kidx <- fwdVal]
-        | VLocMsg => pre +[kidx <- rqVal]
+    Fixpoint getVLocTarget (tgts: list VLoc) :=
+      match tgts with
+      | nil => None
+      | tgt :: tgts' =>
+        match tgt with
+        | VLocState oidx kidx =>
+          if oidx ==n targetIdx
+          then Some kidx
+          else getVLocTarget tgts'
+        | _ => getVLocTarget tgts'
         end
-      | _ => pre
+      end.
+
+    (* Applies only the proper updates in terms of the given [targetIdx] *)
+    Definition movedUpdateOf (omv: option VChgMove)
+               (rqVal fwdVal: Value) (pre: StateT) :=
+      match omv with
+      | Some (VcmIntro src tgts) =>
+        match getVLocTarget tgts with
+        | Some kidx =>
+          match src with
+          | VLocState _ _ => pre +[kidx <- fwdVal]
+          | VLocMsg => pre +[kidx <- rqVal]
+          end
+        | None => pre
+        end
+      | None => pre
       end.
 
     Section Immediate.
@@ -370,29 +400,27 @@ Section SynByVChanges.
        * it has to send a certain value is when it is the source.
        *)
       Definition valOutVChanges (chgs: VChanges) (pre: StateT): Value :=
-        match vchg_moved chgs with
-        | Some (existT _ _ (VMovedIntro (VLocState oidx kidx) _ _)) =>
+        match vchg_move chgs with
+        | Some (VcmIntro (VLocState oidx kidx) _) =>
           if oidx ==n targetIdx
           then (pre@[kidx]) >>=[VUnit] (fun val => val)
           else VUnit
         | _ => VUnit
         end.
 
-      Definition vChangesImmUpdatesOf (consts: list (VConst targetIdx))
-                 (mv: option (VMoved targetIdx))
+      Definition vChangesImmUpdatesOf
+                 (consts: list VChgConst) (mv: option VChgMove)
                  (rqVal: Value) :=
         fun pre post =>
           (ost_tst pre)@[trsIdx] >>=[False]
-                       (fun trsh =>
-                          ost_st post = movedUpdateOf
-                                          mv rqVal
-                                          VUnit (* value forwarding cannot happen 
-                                                 * in the immediate case. *)
-                                          (constUpdatesOf consts (ost_st pre))).
+          (fun trsh =>
+             ost_st post = movedUpdateOf
+                             mv rqVal rqVal
+                             (constUpdatesOf consts (ost_st pre))).
 
       Definition postcondImmVChanges (chgs: VChanges) (rqVal: Value) :=
-        vChangesImmUpdatesOf (getTargetConsts (vchg_consts chgs) targetIdx)
-                             (getTargetMoved (vchg_moved chgs) targetIdx)
+        vChangesImmUpdatesOf (vchg_consts chgs)
+                             (vchg_move chgs)
                              rqVal.
 
       Definition synImmVChanges (rqFrom: IdxT) (prec: PreCond) (chgs: VChanges) :=
@@ -412,23 +440,23 @@ Section SynByVChanges.
 
     Section ResponseBack.
 
-      Definition vChangesRsUpdatesOf (consts: list (VConst targetIdx))
-                 (mv: option (VMoved targetIdx)) :=
+      Definition vChangesRsUpdatesOf (consts: list VChgConst)
+                 (mv: option VChgMove) :=
         fun pre post =>
           (ost_tst pre)@[trsIdx] >>=[False]
-                       (fun trsh =>
-                          ost_st post = movedUpdateOf
-                                          mv (tst_rqval trsh) (getFwdValue (tst_rss trsh))
-                                          (constUpdatesOf consts (ost_st pre))).
+          (fun trsh =>
+             ost_st post = movedUpdateOf
+                             mv (tst_rqval trsh) (getFwdValue (tst_rss trsh))
+                             (constUpdatesOf consts (ost_st pre))).
 
       Definition postcondRsVChanges (chgs: VChanges) :=
-        vChangesRsUpdatesOf (getTargetConsts (vchg_consts chgs) targetIdx)
-                            (getTargetMoved (vchg_moved chgs) targetIdx).
-      
-      Definition rsOutsVChanges (vmoved: option {targetIdx : IdxT & VMoved targetIdx})
+        vChangesRsUpdatesOf (vchg_consts chgs)
+                            (vchg_move chgs).
+
+      Definition rsOutsVChanges (vmoved: option VChgMove)
                  (pre: StateT) (trsh: TrsHelperUnit) :=
         match vmoved with
-        | Some (existT _ _ (VMovedIntro (VLocState oidx kidx) _ _)) =>
+        | Some (VcmIntro (VLocState oidx kidx) _) =>
           if oidx ==n targetIdx
           then (pre@[kidx]) >>=[VUnit] (fun val => val)
           else VUnit
@@ -440,18 +468,16 @@ Section SynByVChanges.
       Definition synRsVChanges (rsFrom: IdxT) (chgs: VChanges) :=
         synRs trsIdx targetIdx rsFrom 
               (postcondRsVChanges chgs)
-              (rsOutsVChanges (vchg_moved chgs)).
+              (rsOutsVChanges (vchg_move chgs)).
 
     End ResponseBack.
 
   End PerTarget.
 
   Section GivenVChanges.
-    
     Variables (topo: list Channel)
               (chgs: VChanges)
               (erqFrom: IdxT).
-    (* (rsOutVal: StateT -> TrsHelperUnit -> Value). *)
 
     Inductive SynVChanges:
       list (IdxT * IdxT) (* currently synthesizing object index pairs (from, to) *) ->
@@ -480,7 +506,22 @@ Section SynByVChanges.
     
   End GivenVChanges.
 
+  Section Correctness.
+    Variables (topo: list Channel)
+              (chgs: VChanges)
+              (erqFrom: IdxT).
+    
+    Variables (pre post: ObjectStates)
+              (rqV rsV: Value).
+    Hypothesis (Hchgs: SemVChanges chgs pre post rqV rsV).
+
+    (* Lemma *)
+
+  End Correctness.
+
 End SynByVChanges.
+
+
 
 (** Some tactics about [VLoc] and [VChange] *)
 
@@ -527,15 +568,15 @@ Ltac collect_diff oss1 oss2 :=
     match goal with
     | [vloc := (oss2, VLocState ?oidx ?kidx, ?v) |- _] =>
       is_pure_const v;
-      no_diff (VConstIntro oidx kidx v);
+      no_diff (VccIntro oidx kidx v);
       let df := fresh "df" in
-      pose (VConstIntro oidx kidx v) as df
+      pose (VccIntro oidx kidx v) as df
     | [vloc1 := (oss1, ?wh1, ?v),
        vloc2 := (oss2, VLocState ?oidx2 ?kidx2, ?v) |- _] =>
       not_pure_const v;
       first [is_equal wh1 (VLocState oidx2 kidx2) |
-             no_diff (VMovedIntro wh1 oidx2 kidx2);
+             no_diff (VcmIntro wh1 oidx2 kidx2);
              let df := fresh "df" in
-             pose (VMovedIntro wh1 oidx2 kidx2) as df]
+             pose (VcmIntro wh1 oidx2 kidx2) as df]
     end.
 
