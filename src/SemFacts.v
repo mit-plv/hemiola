@@ -60,7 +60,6 @@ Lemma step_det_outs_from_internal:
 Proof.
   intros; inv H; try (constructor; fail).
   - simpl.
-    apply Forall_filter.
     destruct H12.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
@@ -71,7 +70,6 @@ Proof.
     unfold isInternal; find_if_inside; auto.
     elim n; apply in_map; assumption.
   - simpl.
-    apply Forall_filter.
     destruct H12.
     clear -H H0.
     remember (pmsg_outs _ _ _) as outs; clear Heqouts.
@@ -90,11 +88,9 @@ Lemma step_det_outs_tid:
 Proof.
   intros; inv H.
   - simpl.
-    unfold extOuts; apply Forall_filter.
     clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
       constructor; auto.
   - simpl; rewrite H6.
-    unfold extOuts; apply Forall_filter.
     clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
       constructor; auto.
 Qed.
@@ -108,12 +104,10 @@ Proof.
   intros; inv H.
   - simpl.
     split; [reflexivity|].
-    unfold extOuts; apply Forall_filter.
     clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
       constructor; auto.
   - simpl; rewrite H6.
     split; [reflexivity|].
-    unfold extOuts; apply Forall_filter.
     clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
       constructor; auto.
 Qed.
@@ -140,17 +134,6 @@ Proof.
   constructor; auto.
   - unfold isExternal in *; rewrite H0; assumption.
   - unfold isInternal in *; rewrite H0; assumption.
-Qed.
-
-Lemma step_seq_silent_pmsgs_weakening:
-  forall sys st1 mouts st2,
-    step_seq sys st1 (IlblOuts None mouts) st2 ->
-    forall wsys,
-      indicesOf wsys = indicesOf sys ->
-      step_seq wsys st1 (IlblOuts None mouts) st2.
-Proof.
-  intros; inv H.
-  constructor.
 Qed.
 
 Lemma step_seq_in_pmsgs_weakening:

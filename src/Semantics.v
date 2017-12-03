@@ -159,9 +159,6 @@ Section HasLabel.
     left; reflexivity.
   Defined.
 
-  Definition extLabel (l: Label) :=
-    if isEmptyLabel l then None else Some l.
-
 End HasLabel.
 
 Section HasInit.
@@ -173,7 +170,8 @@ End HasInit.
 
 Section Transition.
 
-  Definition Step StateT LabelT := System -> StateT -> LabelT -> StateT -> Prop.
+  Definition Step StateT LabelT :=
+    System -> StateT -> LabelT -> StateT -> Prop.
   
   (* NOTE: the head is the youngest *)
   Inductive steps {StateT LabelT} (step: Step StateT LabelT)
@@ -186,12 +184,23 @@ Section Transition.
           step sys st2 lbl st3 ->
           steps step sys st1 (lbl :: ll) st3.
 
+  Definition extLabel (sys: System) (l: Label) :=
+    match l with
+    | LblIn _ => Some l
+    | LblOuts mouts =>
+      match extOuts sys mouts with
+      | nil => None
+      | _ => Some (LblOuts (extOuts sys mouts))
+      end
+    end.
+
   Definition Trace := list Label.
 
-  Fixpoint behaviorOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
+  Fixpoint behaviorOf (sys: System)
+           {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
     match ll with
     | nil => nil
-    | l :: tr' => (extLabel (getLabel l)) ::> (behaviorOf tr')
+    | l :: ll' => (extLabel sys (getLabel l)) ::> (behaviorOf sys ll')
     end.
 
   Inductive Behavior {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
@@ -199,7 +208,7 @@ Section Transition.
   | Behv: forall sys ll st,
       steps step sys (getStateInit sys) ll st ->
       forall tr,
-        tr = behaviorOf ll ->
+        tr = behaviorOf sys ll ->
         Behavior step sys tr.
 
   Definition Refines {StateI LabelI StateS LabelS}

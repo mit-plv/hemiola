@@ -13,6 +13,7 @@ Section Impl.
   Definition extIdx1 := 3.
   Definition extIdx2 := 4.
   (* Variables extIdx1 extIdx2: nat. *)
+
   Hypotheses (Hiext1: isExternal (impl0 extIdx1 extIdx2) extIdx1 = true)
              (Hiext2: isExternal (impl0 extIdx1 extIdx2) extIdx2 = true)
              (Hsext1: isExternal (spec extIdx1 extIdx2) extIdx1 = true)
@@ -154,11 +155,6 @@ Section Impl.
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [|rewrite addPMsgsSys_init; apply pimpl_ok|].
 
-    Ltac syn_step_sim pimpl_ok :=
-      apply simulation_pmsgs_added;
-      [apply pimpl_ok|];
-      unfold Simulates; intros.
-
     Ltac inv_step_seq :=
       match goal with
       | [H: step_seq _ _ _ _ |- _] => inv H
@@ -225,21 +221,7 @@ Section Impl.
       syn_step_init impl0 impl0_ok.
 
       - (** serializability *) admit.
-      - (** simulation *)
-        syn_step_sim impl0_ok.
-        inv_step_seq.
-
-        + (** silent *)
-          simulates_silent.
-        + (** external message-in *)
-          simulates_lbl_in svmMsgF_ValidMsgMap.
-
-        + (** internal transaction started *)
-          admit.
-
-        + (** internal forwarding *)
-          admit.
-
+      - (** simulation *) admit.
     Admitted.
     
   End SynStep.

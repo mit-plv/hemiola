@@ -7,11 +7,6 @@ Section PerSystem.
 
   Definition History := list TLabel.
 
-  Inductive HistoryOf: History -> Prop :=
-  | Hist: forall ll st,
-      steps step sys (getStateInit sys) ll st ->
-      HistoryOf ll.
-
   (* Note that due to the definition of [TMsg], it is guaranteed that
    * an [Atomic] history is about a single transaction.
    * [TMsg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
@@ -52,16 +47,16 @@ Section PerSystem.
 
 End PerSystem.
 
-Definition Equivalent {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
-  behaviorOf ll1 = behaviorOf ll2.
-Infix "≡" := Equivalent (at level 30).
+Definition Equivalent (sys: System)
+           {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
+  behaviorOf sys ll1 = behaviorOf sys ll2.
 
 Definition Serializable {StateT} `{HasInit StateT}
            (sys: System) (step: Step StateT TLabel) (ll: History) :=
   exists sll sst,
     (* 1) legal *) steps step sys (getStateInit sys) sll sst /\
     (* 2) sequential *) Sequential sys sll /\
-    (* 3) equivalent *) ll ≡ sll.
+    (* 3) equivalent *) Equivalent sys ll sll.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys {StateT} `{HasInit StateT}

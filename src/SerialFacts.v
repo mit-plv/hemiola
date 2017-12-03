@@ -148,7 +148,7 @@ Theorem serializable_step_seq:
   forall sys ll st,
     steps step_det sys (getStateInit sys) ll st ->
     Serializable sys step_det ll ->
-    Behavior step_seq sys (behaviorOf ll).
+    Behavior step_seq sys (behaviorOf sys ll).
 Proof.
   unfold Serializable; intros.
   destruct H0 as [sll [sst [? [? ?]]]].

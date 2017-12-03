@@ -18,16 +18,19 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         stepI impl ist1 ilbl ist2 ->
-        if isEmptyLabel (getLabel ilbl)
-        then (exists sst2 slbl, stepS spec sst1 slbl sst2 /\
-                                getLabel slbl = emptyLabel /\
-                                ist2 ≈ sst2) \/
-             ist2 ≈ sst1
-        else
-          exists sst2 slbl, stepS spec sst1 slbl sst2 /\
-                            getLabel slbl <> emptyLabel /\
-                            getLabel slbl = p (getLabel ilbl) /\
-                            ist2 ≈ sst2.
+        match extLabel impl (getLabel ilbl) with
+        | None =>
+          (exists sst2 slbl,
+              stepS spec sst1 slbl sst2 /\
+              extLabel spec (getLabel slbl) = None /\
+              ist2 ≈ sst2) \/
+          ist2 ≈ sst1
+        | Some elbl =>
+          (exists sst2 slbl,
+              stepS spec sst1 slbl sst2 /\
+              extLabel spec (getLabel slbl) = Some (p elbl) /\
+              ist2 ≈ sst2)
+        end.
 
   Hypothesis (Hsim: Simulates).
 
@@ -37,7 +40,7 @@ Section Simulation.
       forall ihst ist2,
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
-          map p (behaviorOf ihst) = behaviorOf shst /\
+          map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           steps stepS spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
@@ -48,24 +51,20 @@ Section Simulation.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H5; [|exact H8].
-    remember (getLabel lbl) as ilbl; clear Heqilbl.
-    unfold extLabel.
-    destruct (isEmptyLabel ilbl); subst.
+    remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
+    destruct ilbl as [elbl|].
 
+    - destruct H5 as [sst3 [slbl [? [? ?]]]].
+      eexists; eexists (_ :: _); repeat split; eauto.
+      + simpl; erewrite H6, H9; simpl.
+        reflexivity.
+      + econstructor; eauto.
     - destruct H5.
       * destruct H5 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
         -- simpl; rewrite H6, H9; simpl; reflexivity.
         -- econstructor; eauto.
       * exists sst2, shst; repeat split; auto.
-    - destruct H5 as [sst3 [slbl [? [? [? ?]]]]].
-      eexists; eexists (_ :: _); repeat split; eauto.
-      + simpl; rewrite H6, H10; simpl.
-        unfold extLabel.
-        destruct (isEmptyLabel (p ilbl)).
-        * elim H9; rewrite H10; auto.
-        * reflexivity.
-      + econstructor; eauto.
   Qed.
 
   Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).

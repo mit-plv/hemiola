@@ -34,7 +34,7 @@ Inductive step_seq (sys: System) : TState -> TLabel -> TState -> Prop :=
 
     step_seq sys
              {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |}
-             (IlblOuts (Some (toTMsg nts (getMsg fmsg))) (extOuts sys (toTMsgs nts outs)))
+             (IlblOuts (Some (toTMsg nts (getMsg fmsg))) (toTMsgs nts outs))
              {| tst_oss := oss +[ oidx <- pos ];
                 tst_msgs := distributeMsgs (intOuts sys (toTMsgs nts outs)) oims;
                 tst_tid := nts
@@ -64,7 +64,7 @@ Inductive step_seq (sys: System) : TState -> TLabel -> TState -> Prop :=
 
     step_seq sys
              {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |}
-             (IlblOuts (Some fmsg) (extOuts sys (toTMsgs ts outs)))
+             (IlblOuts (Some fmsg) (toTMsgs ts outs))
              {| tst_oss := oss +[ oidx <- pos ];
                 tst_msgs := distributeMsgs (intOuts sys (toTMsgs ts outs)) oims;
                 tst_tid := ts
