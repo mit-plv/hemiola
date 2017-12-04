@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepDet StepSeq SemFacts.
+Require Import Common FMap Syntax Semantics StepDet SemFacts.
 Require Import Simulation Serial Predicate Synthesis SynthesisFacts.
 
 Require Import SingleValue SingleValueSim.
@@ -154,11 +154,6 @@ Section Impl.
       instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl);
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [|rewrite addPMsgsSys_init; apply pimpl_ok|].
-
-    Ltac inv_step_seq :=
-      match goal with
-      | [H: step_seq _ _ _ _ |- _] => inv H
-      end.
 
     Ltac simulates_silent :=
       simpl; right; assumption.

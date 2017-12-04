@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepDet StepSeq.
+Require Import Common FMap Syntax Semantics StepDet.
 Require Import Predicate Simulation.
 
 Require Import SingleValue.

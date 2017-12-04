@@ -69,7 +69,8 @@ Section Simulation.
 
   Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).
 
-  Theorem simulation_implies_refinement: stepI # stepS |-- impl ⊑[p] spec.
+  Theorem simulation_implies_refinement:
+    (steps stepI) # (steps stepS) |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H3.

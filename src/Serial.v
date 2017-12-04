@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics.
+Require Import Common FMap Syntax Semantics StepDet.
 
 Section PerSystem.
   Variable sys: System.
@@ -15,6 +15,7 @@ Section PerSystem.
   Inductive Atomic: IdxT -> TMsg -> History -> list TMsg -> Prop :=
   | AtomicBase:
       forall hdl tid,
+        isExternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
         tmsg_tid hdl = Some tid ->
         Atomic tid hdl nil (hdl :: nil)
   | AtomicCons:
@@ -25,43 +26,49 @@ Section PerSystem.
           Atomic tid min (IlblOuts (Some hdl) houts :: hst)
                  (List.remove tmsg_dec hdl mouts ++ houts).
 
-  Definition Transactional (hst: History) :=
-    exists tid min mouts,
-      isExternal sys (mid_from (msg_id (tmsg_msg min))) = true /\
-      Atomic tid min hst mouts.
-
-  Inductive Sequential: History -> Prop :=
-  | SeqNil: Sequential nil
-  | SeqIn:
-      forall hst,
-        Sequential hst ->
+  Inductive Transactional: History -> Prop :=
+  | TrsSlt:
+      forall hst1 hst2,
+        Transactional (hst1 ++ hst2) ->
+        Transactional (hst1 ++ emptyILabel :: hst2)
+  | TrsIn:
+      forall hst1 hst2,
+        Transactional (hst1 ++ hst2) ->
         forall msg tin,
           tin = IlblIn (toTMsgU msg) ->
-          Sequential (tin :: hst)
-  | SeqSeq:
-      forall hst,
-        Sequential hst ->
-        forall trs,
-          Transactional trs ->
-          Sequential (trs ++ hst).
+          Transactional (hst1 ++ tin :: hst2)
+  | TrsAtomic:
+      forall tid min hst mouts,
+        Atomic tid min hst mouts ->
+        Transactional hst.
+
+  Definition Sequential (hst: History) :=
+    exists trss: list History,
+      Forall Transactional trss /\
+      hst = concat trss.
 
 End PerSystem.
+
+Definition trsSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
+  steps_det sys st1 hst st2 /\
+  Transactional sys hst.
+
+Definition seqSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
+  steps_det sys st1 hst st2 /\
+  Sequential sys hst.
 
 Definition Equivalent (sys: System)
            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
   behaviorOf sys ll1 = behaviorOf sys ll2.
 
-Definition Serializable {StateT} `{HasInit StateT}
-           (sys: System) (step: Step StateT TLabel) (ll: History) :=
+Definition Serializable (sys: System) (ll: History) :=
   exists sll sst,
-    (* 1) legal *) steps step sys (getStateInit sys) sll sst /\
-    (* 2) sequential *) Sequential sys sll /\
+    (* 1) legal and sequential *) seqSteps sys (getStateInit sys) sll sst /\
     (* 3) equivalent *) Equivalent sys ll sll.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
-Definition SerializableSys {StateT} `{HasInit StateT}
-           (sys: System) (step: Step StateT TLabel) :=
+Definition SerializableSys (sys: System) :=
   forall ll st,
-    steps step sys (getStateInit sys) ll st ->
-    Serializable sys step ll.
+    steps_det sys (getStateInit sys) ll st ->
+    Serializable sys ll.
 

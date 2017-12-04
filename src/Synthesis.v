@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics SemFacts.
-Require Import StepDet StepSeq Serial SerialFacts Simulation Predicate.
+Require Import StepDet Serial SerialFacts TrsSim Predicate.
 
 Set Implicit Arguments.
 
@@ -13,9 +13,9 @@ Section SimP.
     (p: Label -> Label).
 
   Definition SynthOk (s: System) :=
-    SerializableSys s step_det /\
+    SerializableSys s /\
     R (getStateInit s) (getStateInit spec) /\
-    Simulates step_seq step_det R p s spec.
+    TrsSimulates R p s spec.
 
   Hypothesis (Hinit_ok: SynthOk impl0).
 
@@ -31,21 +31,21 @@ Section SimP.
      *)
     Hypotheses (Hsyn_init: forall s s', syn s s' -> getStateInit s' = getStateInit s)
                (Hsyn_serial:
-                  forall s, SerializableSys s step_det ->
-                            forall s', syn s s' -> SerializableSys s' step_det)
+                  forall s, SerializableSys s ->
+                            forall s', syn s s' -> SerializableSys s')
                (Hsyn_sim:
-                  forall s, Simulates step_seq step_det R p s spec ->
+                  forall s, TrsSimulates R p s spec ->
                             forall s', syn s s' ->
-                                       Simulates step_seq step_det R p s' spec).
+                                       TrsSimulates R p s' spec).
 
     Lemma synthOk_refinement:
-      forall s, SynthOk s -> step_det # step_det |-- s ⊑[p] spec.
+      forall s, SynthOk s -> steps_det # steps_det |-- s ⊑[p] spec.
     Proof.
       unfold SynthOk; intros; dest.
       eapply refines_trans.
-      - apply sequential_step_seq.
-        eauto using Hsyn_serial.
-      - apply simulation_implies_refinement with (sim:= R); assumption.
+      - apply serializable_seqSteps_refines in H.
+        eassumption.
+      - eapply sequential_simulation_implies_refinement; eauto.
     Qed.
 
     Lemma synthOk_preserved:

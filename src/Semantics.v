@@ -172,7 +172,10 @@ Section Transition.
 
   Definition Step StateT LabelT :=
     System -> StateT -> LabelT -> StateT -> Prop.
-  
+
+  Definition Steps StateT LabelT :=
+    System -> StateT -> list LabelT -> StateT -> Prop.
+
   (* NOTE: the head is the youngest *)
   Inductive steps {StateT LabelT} (step: Step StateT LabelT)
             (sys: System) : StateT -> list LabelT -> StateT -> Prop :=
@@ -183,6 +186,12 @@ Section Transition.
         forall lbl st3,
           step sys st2 lbl st3 ->
           steps step sys st1 (lbl :: ll) st3.
+
+  Definition psteps {StateT LabelT} (step: Step StateT LabelT)
+             (P: StateT -> list LabelT -> StateT -> Prop)
+             (sys: System) (st1: StateT) (ll: list LabelT) (st2: StateT) :=
+    steps step sys st1 ll st2 /\
+    P st1 ll st2.
 
   Definition extLabel (sys: System) (l: Label) :=
     match l with
@@ -204,19 +213,19 @@ Section Transition.
     end.
 
   Inductive Behavior {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
-            (step: Step StateT LabelT) : System -> Trace -> Prop :=
+            (ss: Steps StateT LabelT) : System -> Trace -> Prop :=
   | Behv: forall sys ll st,
-      steps step sys (getStateInit sys) ll st ->
+      ss sys (getStateInit sys) ll st ->
       forall tr,
         tr = behaviorOf sys ll ->
-        Behavior step sys tr.
+        Behavior ss sys tr.
 
   Definition Refines {StateI LabelI StateS LabelS}
              `{HasInit StateI} `{HasLabel LabelI} `{HasInit StateS} `{HasLabel LabelS}
-             (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
+             (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS)
              (p: Label -> Label) (impl spec: System) :=
-    forall ll, Behavior stepI impl ll ->
-               Behavior stepS spec (map p ll).
+    forall ll, Behavior ssI impl ll ->
+               Behavior ssS spec (map p ll).
 
 End Transition.
 

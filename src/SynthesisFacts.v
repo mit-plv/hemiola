@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Wf Semantics SemFacts StepDet StepSeq.
+Require Import Common FMap Syntax Wf Semantics SemFacts StepDet.
 Require Import Serial SerialFacts Simulation Predicate Synthesis.
 
 Lemma simEquiv_refl:

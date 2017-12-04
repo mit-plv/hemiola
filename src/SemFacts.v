@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepDet StepSeq.
+Require Import Common ListSupport FMap Syntax Semantics StepDet.
 
 Lemma internal_external_negb:
   forall sys idx,
@@ -95,23 +95,6 @@ Proof.
       constructor; auto.
 Qed.
 
-Lemma step_seq_outs_tid:
-  forall sys st1 hdl outs st2,
-    step_seq sys st1 (IlblOuts (Some hdl) outs) st2 ->
-    tmsg_tid hdl = Some (tst_tid st2) /\
-    Forall (fun m => tmsg_tid m = tmsg_tid hdl) outs.
-Proof.
-  intros; inv H.
-  - simpl.
-    split; [reflexivity|].
-    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
-      constructor; auto.
-  - simpl; rewrite H6.
-    split; [reflexivity|].
-    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
-      constructor; auto.
-Qed.
-
 Lemma step_det_silent_pmsgs_weakening:
   forall sys st1 mouts st2,
     step_det sys st1 (IlblOuts None mouts) st2 ->
@@ -129,19 +112,6 @@ Lemma step_det_in_pmsgs_weakening:
     forall wsys,
       indicesOf wsys = indicesOf sys ->
       step_det wsys st1 (IlblIn emsg) st2.
-Proof.
-  intros; inv H.
-  constructor; auto.
-  - unfold isExternal in *; rewrite H0; assumption.
-  - unfold isInternal in *; rewrite H0; assumption.
-Qed.
-
-Lemma step_seq_in_pmsgs_weakening:
-  forall sys st1 emsg st2,
-    step_seq sys st1 (IlblIn emsg) st2 ->
-    forall wsys,
-      indicesOf wsys = indicesOf sys ->
-      step_seq wsys st1 (IlblIn emsg) st2.
 Proof.
   intros; inv H.
   constructor; auto.
@@ -187,9 +157,19 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma behaviorOf_app:
+  forall {LabelT} `{HasLabel LabelT} sys (hst1 hst2: list LabelT),
+    behaviorOf sys (hst1 ++ hst2) =
+    behaviorOf sys hst1 ++ behaviorOf sys hst2.
+Proof.
+  induction hst1; simpl; intros; auto.
+  destruct (extLabel sys (getLabel a)); simpl; auto.
+  f_equal; auto.
+Qed.
+
 Theorem refines_refl:
   forall {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
-         (step: Step StateT LabelT) sys, step # step |-- sys ⊑[id] sys.
+         (ss: Steps StateT LabelT) sys, ss # ss |-- sys ⊑[id] sys.
 Proof.
   unfold Refines; intros.
   rewrite map_id.
@@ -198,10 +178,10 @@ Qed.
 
 Theorem refines_trans:
   forall {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
-         (step1 step2 step3: Step StateT LabelT) p q s1 s2 s3,
-    step1 # step2 |-- s1 ⊑[p] s2 ->
-    step2 # step3 |-- s2 ⊑[q] s3 ->
-    step1 # step3 |-- s1 ⊑[fun l => q (p l)] s3.
+         (ss1 ss2 ss3: Steps StateT LabelT) p q s1 s2 s3,
+    ss1 # ss2 |-- s1 ⊑[p] s2 ->
+    ss2 # ss3 |-- s2 ⊑[q] s3 ->
+    ss1 # ss3 |-- s1 ⊑[fun l => q (p l)] s3.
 Proof.
   unfold Refines; intros.
   specialize (H2 _ (H1 _ H3)).

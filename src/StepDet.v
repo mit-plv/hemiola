@@ -66,5 +66,5 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
                 tst_tid := ts
              |}.
 
-Definition steps_det := steps step_det.
+Definition steps_det: Steps TState TLabel := steps step_det.
 
