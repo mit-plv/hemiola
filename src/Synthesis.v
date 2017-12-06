@@ -13,9 +13,9 @@ Section SimP.
     (p: Label -> Label).
 
   Definition SynthOk (s: System) :=
-    SerializableSys s /\
     R (getStateInit s) (getStateInit spec) /\
-    TrsSimulates R p s spec.
+    TrsSimulates R p s spec /\
+    SerializableSys s.
 
   Hypothesis (Hinit_ok: SynthOk impl0).
 
@@ -43,7 +43,7 @@ Section SimP.
     Proof.
       unfold SynthOk; intros; dest.
       eapply refines_trans.
-      - apply serializable_seqSteps_refines in H.
+      - apply serializable_seqSteps_refines in H1.
         eassumption.
       - eapply sequential_simulation_implies_refinement; eauto.
     Qed.
@@ -59,35 +59,6 @@ Section SimP.
   End SynthesisStep.
 
 End SimP.
-
-Section SimTrs.
-
-  Definition SimEquivO (ost1 ost2: OState) :=
-    (ost_tst ost1 = [] \/ ost_tst ost2 = []) ->
-    ost_st ost1 = ost_st ost2.
-
-  Definition SimEquiv (os1 os2: ObjectStates) :=
-    forall oidx,
-      match os1@[oidx], os2@[oidx] with
-      | Some ost1, Some ost2 => SimEquivO ost1 ost2
-      | None, None => True
-      | _, _ => False
-      end.
-
-  Inductive SimTrsO (R: ObjectStates -> ObjectStates -> Prop):
-    ObjectStates -> ObjectStates -> Prop :=
-  | SimTrsOIntro:
-      forall ioss rioss,
-        SimEquiv ioss rioss ->
-        forall soss,
-          R rioss soss ->
-          SimTrsO R ioss soss.
-
-  Definition SimTrs (R: ObjectStates -> ObjectStates -> Prop)
-             (ioss soss: TState): Prop :=
-    SimTrsO R (tst_oss ioss) (tst_oss soss).
-
-End SimTrs.
 
 Section TrsLocker.
 

@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
-Require Import Simulation Serial Predicate Synthesis SynthesisFacts.
+Require Import Simulation TrsSim Serial Predicate Synthesis SynthesisFacts.
 
 Require Import SingleValue SingleValueSim.
 
@@ -51,9 +51,9 @@ Section Impl.
   Theorem impl0_ok: SynthOk spec SvmSim svmP impl0.
   Proof.
     repeat split.
-    - (* serializability *) admit.
     - eapply SvmSSS; econstructor.
     - (* simulation *) admit.
+    - (* serializability *) admit.
   Admitted.
 
   Section SynStep.
@@ -151,9 +151,10 @@ Section Impl.
 
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl);
+      (* instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl); *)
+      instantiate (1:= addPMsgsSys _ pimpl);
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
-      [|rewrite addPMsgsSys_init; apply pimpl_ok|].
+      [rewrite addPMsgsSys_init; apply pimpl_ok| |].
 
     Ltac simulates_silent :=
       simpl; right; assumption.
@@ -215,8 +216,29 @@ Section Impl.
 
       syn_step_init impl0 impl0_ok.
 
-      - (** serializability *) admit.
-      - (** simulation *) admit.
+      - (** simulation *)
+        apply trsSimulates_pmsgs_added.
+        + apply impl0_ok.
+        + repeat constructor.
+          * unfold mtPreservingPMsg; cbn; intros.
+            destruct ((ost_st pre)@[valueIdx]); simpl.
+            { repeat constructor. }
+            { repeat constructor. }
+          * unfold mtPreservingPMsg; cbn; intros.
+            destruct ((ost_st pre)@[valueIdx]); simpl.
+            { repeat constructor. }
+            { repeat constructor. }
+
+
+        + (** simulation for newly added [PMsg]s *)
+          unfold TrsSimulates; intros.
+          admit.
+        + admit.
+        + admit.
+            
+      - (** serializability *)
+        admit.
+        
     Admitted.
     
   End SynStep.

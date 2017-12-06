@@ -32,7 +32,7 @@ Proof.
   unfold isInternal, isExternal; intros.
   find_if_inside; intuition.
 Qed.
-  
+
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
     step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
@@ -79,6 +79,18 @@ Proof.
     simpl; simpl in H; unfold id in H; rewrite H.
     unfold isInternal; find_if_inside; auto.
     elim n; apply in_map; assumption.
+Qed.
+
+Lemma extLabel_preserved:
+  forall impl1 impl2,
+    indicesOf impl1 = indicesOf impl2 ->
+    forall l,
+      extLabel impl1 l = extLabel impl2 l.
+Proof.
+  intros; destruct l; simpl; [reflexivity|].
+  unfold extOuts, isExternal.
+  rewrite H.
+  reflexivity.
 Qed.
 
 Lemma step_det_outs_tid:
@@ -157,6 +169,17 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma steps_det_silent:
+  forall sys hst1 hst2 st1 st2,
+    steps_det sys st1 (hst1 ++ emptyILabel :: hst2) st2 ->
+    steps_det sys st1 (hst1 ++ hst2) st2.
+Proof.
+  intros.
+  eapply steps_split in H; [|reflexivity]; destruct H as [sti [? ?]].
+  inv H; inv H6.
+  eapply steps_append; eauto.
+Qed.
+
 Lemma behaviorOf_app:
   forall {LabelT} `{HasLabel LabelT} sys (hst1 hst2: list LabelT),
     behaviorOf sys (hst1 ++ hst2) =
@@ -165,6 +188,17 @@ Proof.
   induction hst1; simpl; intros; auto.
   destruct (extLabel sys (getLabel a)); simpl; auto.
   f_equal; auto.
+Qed.
+
+Lemma behaviorOf_preserved:
+  forall impl1 impl2,
+    indicesOf impl1 = indicesOf impl2 ->
+    forall hst,
+      behaviorOf impl1 hst = behaviorOf impl2 hst.
+Proof.
+  induction hst; simpl; intros; [reflexivity|].
+  rewrite extLabel_preserved with (impl2:= impl2) by assumption.
+  rewrite IHhst; reflexivity.
 Qed.
 
 Theorem refines_refl:

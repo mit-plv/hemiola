@@ -16,6 +16,20 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma atomic_preserved:
+  forall impl1 tid min hst mouts,
+    Atomic impl1 tid min hst mouts ->
+    forall impl2,
+      indicesOf impl1 = indicesOf impl2 ->
+      Atomic impl2 tid min hst mouts.
+Proof.
+  induction 1; simpl; intros.
+  - constructor; auto.
+    unfold isExternal in *.
+    rewrite H1 in H; assumption.
+  - constructor; auto.
+Qed.
+
 Lemma steps_det_atomic_outs_ts:
   forall sys tid min ll mouts,
     Atomic sys tid min ll mouts ->

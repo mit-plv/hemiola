@@ -28,15 +28,11 @@ Section PerSystem.
 
   Inductive Transactional: History -> Prop :=
   | TrsSlt:
-      forall hst1 hst2,
-        Transactional (hst1 ++ hst2) ->
-        Transactional (hst1 ++ emptyILabel :: hst2)
+      Transactional (emptyILabel :: nil)
   | TrsIn:
-      forall hst1 hst2,
-        Transactional (hst1 ++ hst2) ->
-        forall msg tin,
-          tin = IlblIn (toTMsgU msg) ->
-          Transactional (hst1 ++ tin :: hst2)
+      forall msg tin,
+        tin = IlblIn (toTMsgU msg) ->
+        Transactional (tin :: nil)
   | TrsAtomic:
       forall tid min hst mouts,
         Atomic tid min hst mouts ->

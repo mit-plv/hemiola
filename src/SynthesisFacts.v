@@ -1,48 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Wf Semantics SemFacts StepDet.
-Require Import Serial SerialFacts Simulation Predicate Synthesis.
-
-Lemma simEquiv_refl:
-  forall os, SimEquiv os os.
-Proof.
-  unfold SimEquiv; intros.
-  mred.
-  constructor; intros; auto.
-Qed.
-
-Lemma simEquiv_OState_eq_1:
-  forall oss1 oss2,
-    SimEquiv oss1 oss2 ->
-    forall oidx ost1,
-      oss1@[oidx] = Some ost1 -> ost_tst ost1 = [] ->
-      exists ost2,
-        oss2@[oidx] = Some ost2 /\ ost_st ost2 = ost_st ost1.
-Proof.
-  intros.
-  specialize (H oidx).
-  rewrite H0 in H.
-  destruct (oss2@[oidx]); [|exfalso; auto].
-  specialize (H (or_introl H1)).
-  destruct o, ost1; simpl in *; subst.
-  eexists; eauto.
-Qed.
-
-Lemma simEquiv_OState_eq_2:
-  forall oss1 oss2,
-    SimEquiv oss1 oss2 ->
-    forall oidx ost2,
-      oss2@[oidx] = Some ost2 -> ost_tst ost2 = [] ->
-      exists ost1,
-        oss1@[oidx] = Some ost1 /\ ost_st ost1 = ost_st ost2.
-Proof.
-  intros.
-  specialize (H oidx).
-  rewrite H0 in H.
-  destruct (oss1@[oidx]); [|exfalso; auto].
-  specialize (H (or_intror H1)).
-  destruct o, ost2; simpl in *; subst.
-  eexists; eauto.
-Qed.
+Require Import Serial SerialFacts Simulation TrsSim Predicate Synthesis.
 
 Lemma addPMsgs_init:
   forall pmsgs objs,
@@ -196,31 +154,25 @@ Proof.
   - apply SubList_cons_right; assumption.
 Qed.
   
-Lemma simTrs_preserved_lock_added:
-  forall R oss oims ts sst,
-    SimTrs R {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |} sst ->
-    forall noidx pos,
-      oss@[noidx] = Some pos ->
-      forall nos ntrsIdx ntrs,
-        nos = {| ost_st := ost_st pos;
-                 ost_tst := (ost_tst pos) +[ntrsIdx <- ntrs]
-              |} ->
-        forall nmsgs nts,
-          SimTrs R {| tst_oss := oss +[noidx <- nos];
-                      tst_msgs := nmsgs;
-                      tst_tid := nts |} sst.
+Corollary trsSimulates_pmsgs_added:
+  forall impl pmsgs spec simR simP
+         (Hsim1: TrsSimulates simR simP impl spec)
+         (Hmt1: mtPreservingSys impl)
+         (Hsim2: TrsSimulates simR simP (addPMsgsSys pmsgs (buildRawSys impl)) spec)
+         (Hmt2: mtPreservingSys (addPMsgsSys pmsgs (buildRawSys impl)))
+         (Hmtdisj: MTypeDisj (pmsgsOf impl) pmsgs),
+    TrsSimulates simR simP (addPMsgsSys pmsgs impl) spec.
 Proof.
-  intros; subst.
-  inv H; econstructor; eauto.
-  simpl in *.
-  unfold SimEquiv in *; intros.
-  specialize (H1 oidx).
-  findeq.
-  - unfold SimEquivO in *; simpl; intros.
-    rewrite H0 in H1.
-    destruct H.
-    + exfalso; eapply M.add_empty_neq; eauto.
-    + apply H1; auto.
-  - rewrite H0 in H1; auto.
-Qed.
+  intros.
+  eapply trsSimulates_compositional
+    with (impl1:= impl) (impl2:= addPMsgsSys pmsgs (buildRawSys impl)); eauto.
+  - rewrite addPMsgsSys_indices.
+    apply buildRawSys_indicesOf.
+  - unfold MTypeDisjSys.
+    eapply MTypeDisj_SubList_2; eauto.
+    apply addPMsgsSys_buildRawSys_sublist.
+  - admit. (* should be easily derivable from [Hmt1] and [Hmt2] *)
+  - apply addPMsgsSys_indices.
+  - apply addPMsgsSys_pmsg_in; auto.
+Admitted.
 

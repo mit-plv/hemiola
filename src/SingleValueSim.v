@@ -36,11 +36,14 @@ Section Sim.
       ioss@[parentIdx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
       (ost_st iostp)@[valueIdx] = Some v ->
+
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stS) ->
       (ost_st iost1)@[valueIdx] = Some v ->
+
       ioss@[child2Idx] = Some iost2 ->
       (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
+
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
@@ -49,11 +52,14 @@ Section Sim.
       ioss@[parentIdx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
       (ost_st iostp)@[valueIdx] = Some v ->
+
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
+
       ioss@[child2Idx] = Some iost2 ->
       (ost_st iost2)@[statusIdx] = Some (VNat stS) ->
       (ost_st iost2)@[valueIdx] = Some v ->
+
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
@@ -62,12 +68,30 @@ Section Sim.
       ioss@[child2Idx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
       (ost_st iostp)@[valueIdx] = Some v ->
+
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stS) ->
       (ost_st iost1)@[valueIdx] = Some v ->
+
       ioss@[child2Idx] = Some iost2 ->
       (ost_st iost2)@[statusIdx] = Some (VNat stS) ->
       (ost_st iost2)@[valueIdx] = Some v ->
+
+      soss@[specIdx] = Some sost ->
+      (ost_st sost)@[valueIdx] = Some v ->
+      SvmR ioss soss
+
+  | SvmMII: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[child1Idx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
+      (ost_st iostp)@[valueIdx] = Some v ->
+      
+      ioss@[child1Idx] = Some iost1 ->
+      (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
+
+      ioss@[child2Idx] = Some iost2 ->
+      (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
+
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
@@ -75,11 +99,15 @@ Section Sim.
   | SvmMMI: forall ioss soss iostp iost1 iost2 sost v,
       ioss@[child1Idx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
+      (ost_st iostp)@[valueIdx] = Some v ->
+
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stM) ->
       (ost_st iost1)@[valueIdx] = Some v ->
+
       ioss@[child2Idx] = Some iost2 ->
       (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
+
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
@@ -87,11 +115,15 @@ Section Sim.
   | SvmMIM: forall ioss soss iostp iost1 iost2 sost v,
       ioss@[child1Idx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
+      (ost_st iostp)@[valueIdx] = Some v ->
+
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
+
       ioss@[child2Idx] = Some iost2 ->
       (ost_st iost2)@[statusIdx] = Some (VNat stM) ->
       (ost_st iost2)@[valueIdx] = Some v ->
+
       soss@[specIdx] = Some sost ->
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss.
