@@ -156,52 +156,69 @@ Section Impl.
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [rewrite addPMsgsSys_init; apply pimpl_ok| |].
 
-    Ltac simulates_silent :=
-      simpl; right; assumption.
-
-    Ltac simulates_lbl_in validMsgMap_proven :=
-      simpl;
+    Ltac trsSimulates_init :=
+      unfold TrsSimulates; intros;
       repeat
         match goal with
-        | [H: context[isExternal (addPMsgsSys _ _)] |- _] =>
-          rewrite addPMsgsSys_isExternal in H
-        | [H: context[isInternal (addPMsgsSys _ _)] |- _] =>
-          rewrite addPMsgsSys_isInternal in H
-        | [H: context[isExternal (buildRawSys _)] |- _] =>
-          rewrite buildRawSys_isExternal in H
-        | [H: context[isInternal (buildRawSys _)] |- _] =>
-          rewrite buildRawSys_isInternal in H
-        | [ |- exists _ _, step_det _ ?sst1 _ _ /\ _] =>
-          is_var sst1;
-          let soss1 := fresh "soss1" in
-          let smsgs1 := fresh "smsgs1" in
-          let sts := fresh "sts" in
-          destruct sst1 as [soss1 smsgs1 sts];
-          eexists {| tst_oss := soss1;
-                     tst_msgs := distributeMsg (toTMsgU _) smsgs1;
-                     tst_tid := sts |};
-          eexists (IlblIn (toTMsgU _))
-        | [ |- _ /\ _] => split
-        | [ |- _ <> emptyLabel] => discriminate
-        | [ |- ?R _ _] =>
-          match type of R with
-          | (TState -> TState -> Prop) => assumption
-          end
-        | [ |- _ = ?t ] =>
-          match type of t with
-          | Label => reflexivity
-          end
-        | [ |- step_det _ _ _ _] => constructor
-        | [H: isExternal _ (mid_from (msg_id _)) = true |-
-           isExternal _ (mid_from (msg_id _)) = true] =>
-          eapply validMsgMap_from_isExternal;
-          [exact validMsgMap_proven|eassumption]
-        | [H: isInternal _ (mid_to (msg_id _)) = true |-
-           isInternal _ (mid_to (msg_id _)) = true] =>
-          eapply validMsgMap_to_isInternal;
-          [exact validMsgMap_proven|eassumption]
+        | [H: trsSteps _ _ _ _ |- _] => destruct H
+        | [H: Transactional _ _ |- _] => inv H
         end.
 
+    Ltac trsSimulates_case_silent :=
+      repeat
+        match goal with
+        | [H: steps_det _ _ (_ :: nil) _ |- _] => inv H
+        | [H: steps _ _ _ nil _ |- _] => inv H
+        | [H: step_det _ _ emptyILabel _ |- _] => inv H
+        end;
+      simpl; do 2 eexists; repeat split;
+      try eassumption; try econstructor; reflexivity.
+
+    Ltac trsSimulates_case_in msgF :=
+      (** instantiation *)
+      simpl;
+      match goal with
+      | [H: context[IlblIn (toTMsgU ?min)] |- context[steps_det _ ?st1 _ _] ] =>
+        let soss := fresh "soss" in
+        let sims := fresh "sims" in
+        let sts := fresh "sts" in
+        destruct st1 as [soss sims sts];
+        exists {| tst_oss:= soss;
+                  tst_msgs:= distributeMsg (toTMsgU (msgF min)) sims;
+                  tst_tid:= sts |};
+        exists (IlblIn (toTMsgU (msgF min)) :: nil)
+      end;
+      (** some inversions *)
+      repeat
+        match goal with
+        | [H: steps_det _ _ (_ :: nil) _ |- _] => inv H
+        | [H: steps _ _ _ nil _ |- _] => inv H
+        | [H: step_det _ _ (IlblIn _) _ |- _] => inv H
+        end;
+      (** construction *)
+      repeat split;
+      [|assumption (* simulation relation should be maintained *)];
+      repeat econstructor;
+      repeat
+        match goal with
+        | [H: isExternal _ (mid_from (msg_id _)) = true |-
+           isExternal _ (mid_from (msg_id _)) = true] =>
+          eapply validMsgMap_from_isExternal; [|eassumption]
+        | [H: isInternal _ (mid_to (msg_id _)) = true |-
+           isInternal _ (mid_to (msg_id _)) = true] =>
+          eapply validMsgMap_to_isInternal; [|eassumption]
+        | [ |- ValidMsgMap _ (addPMsgsSys _ (buildRawSys ?imp)) _ ] =>
+          apply validMsgMap_same_indices with (impl1:= imp);
+          [apply svmMsgF_ValidMsgMap
+          |rewrite addPMsgsSys_indices, buildRawSys_indicesOf; reflexivity]
+        end.
+
+    Ltac trsSimulates_obvious msgF :=
+      trsSimulates_init;
+      [trsSimulates_case_silent
+      |trsSimulates_case_in msgF
+      |].
+    
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
     Definition svmTargetPMsgIdx0 := 0.
@@ -229,13 +246,18 @@ Section Impl.
             { repeat constructor. }
             { repeat constructor. }
 
-
         + (** simulation for newly added [PMsg]s *)
-          unfold TrsSimulates; intros.
+
+          (* This ltac handles trivial [Transactional] cases.
+           * After then we only need to deal with [Atomic] histories.
+           *)
+          trsSimulates_obvious (svmMsgF extIdx1 extIdx2).
+
           admit.
+
         + admit.
         + admit.
-            
+
       - (** serializability *)
         admit.
         

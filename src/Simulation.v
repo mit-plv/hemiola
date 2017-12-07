@@ -124,5 +124,16 @@ Section SimMap.
     specialize (H msg); dest; auto.
   Qed.
 
+  Lemma validMsgMap_same_indices:
+    forall impl1 spec,
+      ValidMsgMap impl1 spec ->
+      forall impl2,
+        indicesOf impl1 = indicesOf impl2 ->
+        ValidMsgMap impl2 spec.
+  Proof.
+    unfold ValidMsgMap, isExternal, isInternal; intros.
+    rewrite <-H0; auto.
+  Qed.
+  
 End SimMap.
 
