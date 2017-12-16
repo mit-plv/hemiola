@@ -31,6 +31,32 @@ Section Sim.
       :: (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stM))
       :: nil.
 
+  Definition svmImplOstRepr (iost: OState) :=
+    match (ost_st iost)@[statusIdx] with
+    | Some (VNat st) => st
+    | _ => 0
+    end.
+
+  Definition SvmImplCoord := (nat * nat * nat)%type.
+
+  Definition dist (n1 n2: nat) :=
+    if Nat.leb n1 n2 then (n2 - n1) * (n2 - n1) else (n1 - n2) * (n1 - n2).
+
+  Definition svmImplRepDist (c1 c2: SvmImplCoord) :=
+    dist (fst (fst c1)) (fst (fst c2)) +
+    dist (snd (fst c1)) (snd (fst c2)) +
+    dist (snd c1) (snd c2).
+
+  Definition svmImplRepr (ioss: ObjectStates): SvmImplCoord :=
+    match ioss@[parentIdx], ioss@[child1Idx], ioss@[child2Idx] with
+    | Some ostp, Some ost1, Some ost2 =>
+      (svmImplOstRepr ostp, svmImplOstRepr ost1, svmImplOstRepr ost2)
+    | _, _, _ => (0, 0, 0) (* never happens *)
+    end.
+
+  Definition svmImplDist (ioss1 ioss2: ObjectStates): nat :=
+    svmImplRepDist (svmImplRepr ioss1) (svmImplRepr ioss2).
+
   Inductive SvmR: ObjectStates -> ObjectStates -> Prop :=
   | SvmSSI: forall ioss soss iostp iost1 iost2 sost v,
       ioss@[parentIdx] = Some iostp ->
@@ -65,7 +91,7 @@ Section Sim.
       SvmR ioss soss
 
   | SvmSSS: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[child2Idx] = Some iostp ->
+      ioss@[parentIdx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
       (ost_st iostp)@[valueIdx] = Some v ->
 
@@ -82,7 +108,7 @@ Section Sim.
       SvmR ioss soss
 
   | SvmMII: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[child1Idx] = Some iostp ->
+      ioss@[parentIdx] = Some iostp ->
       (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
       (ost_st iostp)@[valueIdx] = Some v ->
       
@@ -96,10 +122,9 @@ Section Sim.
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
 
-  | SvmMMI: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[child1Idx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
-      (ost_st iostp)@[valueIdx] = Some v ->
+  | SvmIMI: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[parentIdx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stI) ->
 
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stM) ->
@@ -112,10 +137,9 @@ Section Sim.
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss
 
-  | SvmMIM: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[child1Idx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
-      (ost_st iostp)@[valueIdx] = Some v ->
+  | SvmIIM: forall ioss soss iostp iost1 iost2 sost v,
+      ioss@[parentIdx] = Some iostp ->
+      (ost_st iostp)@[statusIdx] = Some (VNat stI) ->
 
       ioss@[child1Idx] = Some iost1 ->
       (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
@@ -146,4 +170,11 @@ Section Sim.
   Definition svmP := LabelMap svmMsgF.
 
 End Sim.
+
+Lemma SvmR_EquivPreservingR:
+  EquivPreservingR SvmR.
+Proof.
+Admitted.
+
+
 

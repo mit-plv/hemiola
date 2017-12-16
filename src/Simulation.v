@@ -137,3 +137,25 @@ Section SimMap.
   
 End SimMap.
 
+Section StateEquiv.
+
+  Definition StateEquivO (ost1 ost2: OState) :=
+    ost_st ost1 = ost_st ost2.
+
+  Definition StateEquivOS (os1 os2: ObjectStates) :=
+    forall oidx,
+      match os1@[oidx], os2@[oidx] with
+      | Some ost1, Some ost2 => StateEquivO ost1 ost2
+      | None, None => True
+      | _, _ => False
+      end.
+
+  Definition EquivPreservingR (R: ObjectStates -> ObjectStates -> Prop) :=
+    forall ioss1 soss,
+      R ioss1 soss ->
+      forall ioss2,
+        StateEquivOS ioss1 ioss2 ->
+        R ioss2 soss.
+
+End StateEquiv.
+

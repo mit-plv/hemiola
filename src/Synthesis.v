@@ -60,13 +60,13 @@ Section SimP.
 
 End SimP.
 
-Section TrsLocker.
+Section TrsLock.
 
   Definition alwaysLock (trsh: TrsHelper) := trsh = [].
 
-End TrsLocker.
+End TrsLock.
 
-Section SynTrs.
+Section SynRqRsImm.
   Variables (trsIdx: IdxT)
             (this: IdxT)
             (trsLocker: TrsHelper -> Prop).
@@ -92,7 +92,7 @@ Section SynTrs.
                         mid_from := rqFrom;
                         mid_to := this;
                         mid_chn := rqChn |};
-         pmsg_precond := fun ost => prec ost /\ liftTrsLocker ost;
+         pmsg_precond := prec;
          pmsg_outs := fun st val =>
                         msgValOut (valOut (ost_st st)) (rqFrom, rsChn) :: nil;
          pmsg_postcond := postcond
@@ -258,13 +258,16 @@ Section SynTrs.
   Definition idxSubtract (li1 li2: list IdxT): list IdxT :=
     filter (fun idx => if idx ?<n li2 then false else true) li1.
   
-End SynTrs.
+End SynRqRsImm.
 
 Section VChange.
   
   Inductive VLoc :=
   | VLocState: forall (oidx kidx: IdxT), VLoc
   | VLocMsg: VLoc.
+
+  Inductive VIntact :=
+  | Vintact: forall (target: VLoc), VIntact.
 
   Inductive VChgConst :=
   | VccIntro: forall (target: VLoc) (const: Value), VChgConst.
@@ -395,7 +398,7 @@ Section SynByVChanges.
                              rqVal.
 
       Definition synImmVChanges (rqFrom: IdxT) (prec: PreCond) (chgs: VChanges) :=
-        synImm trsIdx targetIdx alwaysLock prec
+        synImm trsIdx targetIdx prec
                rqFrom
                (fun pre val post => postcondImmVChanges chgs val pre post)
                (valOutVChanges chgs).
@@ -445,6 +448,9 @@ Section SynByVChanges.
 
   End PerTarget.
 
+  
+  
+
   Section GivenVChanges.
     Variables (topo: list Channel)
               (chgs: VChanges)
@@ -477,22 +483,7 @@ Section SynByVChanges.
     
   End GivenVChanges.
 
-  Section Correctness.
-    Variables (topo: list Channel)
-              (chgs: VChanges)
-              (erqFrom: IdxT).
-    
-    Variables (pre post: ObjectStates)
-              (rqV rsV: Value).
-    Hypothesis (Hchgs: SemVChanges chgs pre post rqV rsV).
-
-    (* Lemma *)
-
-  End Correctness.
-
 End SynByVChanges.
-
-
 
 (** Some tactics about [VLoc] and [VChange] *)
 
@@ -508,6 +499,21 @@ Ltac no_vloc_msg :=
   | [vloc := (VLocMsg, _) |- _] => fail
   | _ => idtac
   end.
+
+Ltac no_intact itct :=
+  lazymatch goal with
+  | [_ := itct |- _] => fail
+  | _ => idtac
+  end.
+
+Ltac collect_intact oss1 oss2 :=
+  repeat
+    match goal with
+    | [vloc1 := (oss1, ?wh, ?v), vloc2 := (oss2, ?wh, ?v) |- _] =>
+      no_intact (Vintact wh);
+      let itct := fresh "itct" in
+      pose (Vintact wh) as itct
+    end.
 
 Ltac collect_vloc :=
   repeat
@@ -528,26 +534,39 @@ Ltac clear_vloc :=
     | [vloc := _ : _ * VLoc * _ |- _] => clear vloc
     end.
 
-Ltac no_diff sdf :=
+Ltac no_diff df :=
   lazymatch goal with
-  | [df := sdf |- _] => fail
+  | [_ := df |- _] => fail
+  | _ => idtac
+  end.
+  
+Ltac no_diff_to vloc :=
+  lazymatch goal with
+  | [_ := VcmIntro _ (vloc :: nil) |- _] => fail
   | _ => idtac
   end.
 
 Ltac collect_diff oss1 oss2 :=
   repeat
     match goal with
-    | [vloc := (oss2, VLocState ?oidx ?kidx, ?v) |- _] =>
-      is_pure_const v;
-      no_diff (VccIntro oidx kidx v);
-      let df := fresh "df" in
-      pose (VccIntro oidx kidx v) as df
+    | [vloc1 := (oss1, VLocState ?oidx ?kidx, ?v1),
+       vloc2 := (oss2, VLocState ?oidx ?kidx, ?v2) |- _] =>
+      is_pure_const v2;
+      tryif is_equal v1 v2
+      then fail 
+      else
+        (no_diff (VccIntro (VLocState oidx kidx) v2);
+         let df := fresh "df" in
+         pose (VccIntro (VLocState oidx kidx) v2) as df)
     | [vloc1 := (oss1, ?wh1, ?v),
        vloc2 := (oss2, VLocState ?oidx2 ?kidx2, ?v) |- _] =>
       not_pure_const v;
-      first [is_equal wh1 (VLocState oidx2 kidx2) |
-             no_diff (VcmIntro wh1 oidx2 kidx2);
-             let df := fresh "df" in
-             pose (VcmIntro wh1 oidx2 kidx2) as df]
+      no_intact (Vintact (VLocState oidx2 kidx2));
+      tryif is_equal wh1 (VLocState oidx2 kidx2)
+      then fail
+      else
+        (no_diff_to (VLocState oidx2 kidx2);
+         let df := fresh "df" in
+         pose (VcmIntro wh1 (VLocState oidx2 kidx2 :: nil)) as df)
     end.
 

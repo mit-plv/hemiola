@@ -1,6 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
-Require Import Simulation TrsSim Serial Predicate Synthesis SynthesisFacts.
+Require Import Simulation TrsSim Serial SerialFacts Predicate Synthesis SynthesisFacts.
+Require Import AtomicSteps.
 
 Require Import SingleValue SingleValueSim.
 
@@ -149,50 +150,36 @@ Section Impl.
 
     End Internalize.
 
+    Definition addPreCond (pmsg: PMsg) (mid: MsgId) (prec: PreCond) :=
+      {| pmsg_mid := mid;
+         pmsg_precond := fun ost => pmsg_precond pmsg ost /\ prec ost;
+         pmsg_outs := pmsg_outs pmsg;
+         pmsg_postcond := pmsg_postcond pmsg |}.
+
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      (* instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl); *)
-      instantiate (1:= addPMsgsSys _ pimpl);
+      instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl);
+      (* instantiate (1:= addPMsgsSys _ pimpl); *)
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [rewrite addPMsgsSys_init; apply pimpl_ok| |].
 
-    Ltac trsSimulates_init :=
-      unfold TrsSimulates; intros;
-      repeat
-        match goal with
-        | [H: trsSteps _ _ _ _ |- _] => destruct H
-        | [H: Transactional _ _ |- _] => inv H
-        end.
-
-    Ltac trsSimulates_case_silent :=
-      repeat
-        match goal with
-        | [H: steps_det _ _ (_ :: nil) _ |- _] => inv H
-        | [H: steps _ _ _ nil _ |- _] => inv H
-        | [H: step_det _ _ emptyILabel _ |- _] => inv H
-        end;
-      simpl; do 2 eexists; repeat split;
-      try eassumption; try econstructor; reflexivity.
-
     Ltac trsSimulates_case_in msgF :=
       (** instantiation *)
-      simpl;
+      unfold TrsSimStepMsgIn; intros; simpl;
       match goal with
-      | [H: context[IlblIn (toTMsgU ?min)] |- context[steps_det _ ?st1 _ _] ] =>
+      | [H: context[IlblIn ?min] |- context[step_det _ ?st1 _ _] ] =>
         let soss := fresh "soss" in
         let sims := fresh "sims" in
         let sts := fresh "sts" in
         destruct st1 as [soss sims sts];
+        exists (toTMsgU (msgF (getMsg min)));
         exists {| tst_oss:= soss;
-                  tst_msgs:= distributeMsg (toTMsgU (msgF min)) sims;
-                  tst_tid:= sts |};
-        exists (IlblIn (toTMsgU (msgF min)) :: nil)
+                  tst_msgs:= distributeMsg (toTMsgU (msgF (getMsg min))) sims;
+                  tst_tid:= sts |}
       end;
       (** some inversions *)
       repeat
         match goal with
-        | [H: steps_det _ _ (_ :: nil) _ |- _] => inv H
-        | [H: steps _ _ _ nil _ |- _] => inv H
         | [H: step_det _ _ (IlblIn _) _ |- _] => inv H
         end;
       (** construction *)
@@ -213,15 +200,41 @@ Section Impl.
           |rewrite addPMsgsSys_indices, buildRawSys_indicesOf; reflexivity]
         end.
 
-    Ltac trsSimulates_obvious msgF :=
-      trsSimulates_init;
-      [trsSimulates_case_silent
-      |trsSimulates_case_in msgF
-      |].
-    
+    (* This ltac handles trivial [Transactional] cases.
+     * After then we only need to deal with [Atomic] histories.
+     *)
+    Ltac trsSimulates_trivial msgF :=
+      apply trs_sim_in_atm_simulates;
+      [unfold TrsSimStepMsgIn; intros; trsSimulates_case_in msgF|].
+
+    Ltac trsSimulates_atomic_trivial :=
+      unfold TrsSimStepAtomic; intros;
+      match goal with
+      | [H: step_det _ _ _ _ |- _] => inv H
+      end; [exfalso; eapply atomic_emptyILabel_not_in; eauto
+           |exfalso; eapply atomic_iLblIn_not_in; eauto
+           | |].
+
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
     Definition svmTargetPMsgIdx0 := 0.
+
+    Definition svmRq0 (val: Value) :=
+      {| msg_id := {| mid_type := svmTrsIdx0;
+                      mid_from := extIdx1;
+                      mid_to := child1Idx;
+                      mid_chn := rqChn |};
+         msg_value := val |}.
+
+    Definition atomicSteps_svmSynTrs0:
+      { pmsgs1: list PMsg &
+        forall ioss soss,
+          SvmR ioss soss ->
+          CompleteAtomicSteps (addPMsgsSys pmsgs1 (buildRawSys impl0))
+                              SvmR ioss soss (svmRq0 VUnit)
+      }.
+    Proof.
+    Admitted.
 
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec SvmSim svmP impl1 }.
@@ -247,14 +260,11 @@ Section Impl.
             { repeat constructor. }
 
         + (** simulation for newly added [PMsg]s *)
-
-          (* This ltac handles trivial [Transactional] cases.
-           * After then we only need to deal with [Atomic] histories.
-           *)
-          trsSimulates_obvious (svmMsgF extIdx1 extIdx2).
-
-          admit.
-
+          trsSimulates_trivial (svmMsgF extIdx1 extIdx2).
+          trsSimulates_atomic_trivial.
+          * admit.
+          * admit.
+          
         + admit.
         + admit.
 

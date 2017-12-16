@@ -16,6 +16,29 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma atomic_emptyILabel_not_in:
+  forall sys tid min hst mouts,
+    Atomic sys tid min hst mouts ->
+    ~ In emptyILabel hst.
+Proof.
+  induction 1; simpl; intros; [auto|].
+  intro Hx; elim IHAtomic; destruct Hx.
+  - discriminate.
+  - assumption.
+Qed.
+
+Lemma atomic_iLblIn_not_in:
+  forall sys tid min hst mouts,
+    Atomic sys tid min hst mouts ->
+    forall msg,
+      ~ In (IlblIn msg) hst.
+Proof.
+  induction 1; simpl; intros; [auto|].
+  intro Hx; destruct Hx.
+  - discriminate.
+  - firstorder.
+Qed.
+
 Lemma atomic_preserved:
   forall impl1 tid min hst mouts,
     Atomic impl1 tid min hst mouts ->
