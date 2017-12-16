@@ -36,49 +36,33 @@ Qed.
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
     step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
-    isInternal sys (mid_to (msg_id (getMsg hdl))) = true.
+    isInternal sys (mid_to (msg_id hdl)) = true.
 Proof.
   intros; inv H.
-  - destruct fmsg as [fmsg fts]; simpl in *.
-    destruct fmsg as [hmid hmv]; simpl in *; subst.
-    destruct H7 as [? [? ?]]; simpl in *; subst.
-    rewrite H0.
-    unfold isInternal; find_if_inside; auto.
-    elim n; apply in_map; assumption.
-  - destruct hdl as [hmid hmv]; simpl in *; subst.
-    destruct H7 as [? [? ?]]; simpl in *; subst.
-    rewrite H0.
-    unfold isInternal; find_if_inside; auto.
-    elim n; apply in_map; assumption.
+  destruct hdl as [hmid hmv]; simpl in *; subst.
+  destruct H6 as [? [? ?]]; simpl in *; subst.
+  rewrite H0.
+  unfold isInternal; find_if_inside; auto.
+  elim n; apply in_map; assumption.
 Qed.
 
 Lemma step_det_outs_from_internal:
   forall sys st1 ilbl st2,
     step_det sys st1 ilbl st2 ->
-    Forall (fun m: TMsg => isInternal sys (mid_from (msg_id (getMsg m))) = true)
+    Forall (fun m: Msg => isInternal sys (mid_from (msg_id m)) = true)
            (iLblOuts ilbl).
 Proof.
   intros; inv H; try (constructor; fail).
-  - simpl.
-    destruct H12.
-    clear -H H0.
-    remember (pmsg_outs _ _ _) as outs; clear Heqouts.
-    induction outs; simpl; intros; [constructor|].
-    inv H; dest.
-    constructor; auto.
-    simpl; simpl in H; unfold id in H; rewrite H.
-    unfold isInternal; find_if_inside; auto.
-    elim n; apply in_map; assumption.
-  - simpl.
-    destruct H12.
-    clear -H H0.
-    remember (pmsg_outs _ _ _) as outs; clear Heqouts.
-    induction outs; simpl; intros; [constructor|].
-    inv H; dest.
-    constructor; auto.
-    simpl; simpl in H; unfold id in H; rewrite H.
-    unfold isInternal; find_if_inside; auto.
-    elim n; apply in_map; assumption.
+  simpl.
+  destruct H11.
+  clear -H H0.
+  remember (pmsg_outs _ _ _) as outs; clear Heqouts.
+  induction outs; simpl; intros; [constructor|].
+  inv H; dest.
+  constructor; auto.
+  simpl; simpl in H; unfold id in H; rewrite H.
+  unfold isInternal; find_if_inside; auto.
+  elim n; apply in_map; assumption.
 Qed.
 
 Lemma extLabel_preserved:
@@ -91,20 +75,6 @@ Proof.
   unfold extOuts, isExternal.
   rewrite H.
   reflexivity.
-Qed.
-
-Lemma step_det_outs_tid:
-  forall sys st1 hdl outs st2,
-    step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
-    Forall (fun m => tmsg_tid m = tmsg_tid hdl) outs.
-Proof.
-  intros; inv H.
-  - simpl.
-    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg fmsg)));
-      constructor; auto.
-  - simpl; rewrite H6.
-    clear; induction (pmsg_outs fpmsg os (msg_value (tmsg_msg hdl)));
-      constructor; auto.
 Qed.
 
 Lemma step_det_silent_pmsgs_weakening:
@@ -222,4 +192,4 @@ Proof.
   rewrite map_trans in H2.
   assumption.
 Qed.
-  
+

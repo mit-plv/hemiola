@@ -152,7 +152,7 @@ Section Sim.
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss.
 
-  Definition SvmSim (ist sst: TState) := SvmR (tst_oss ist) (tst_oss sst).
+  Definition SvmSim (ist sst: MState) := SvmR (st_oss ist) (st_oss sst).
 
   Definition svmIdxF (idx: IdxT): IdxT :=
     if idx ?<n (indicesOf impl0) then specIdx else idx.
@@ -175,6 +175,4 @@ Lemma SvmR_EquivPreservingR:
   EquivPreservingR SvmR.
 Proof.
 Admitted.
-
-
 

@@ -170,12 +170,10 @@ Section Impl.
       | [H: context[IlblIn ?min] |- context[step_det _ ?st1 _ _] ] =>
         let soss := fresh "soss" in
         let sims := fresh "sims" in
-        let sts := fresh "sts" in
-        destruct st1 as [soss sims sts];
-        exists (toTMsgU (msgF (getMsg min)));
-        exists {| tst_oss:= soss;
-                  tst_msgs:= distributeMsg (toTMsgU (msgF (getMsg min))) sims;
-                  tst_tid:= sts |}
+        destruct st1 as [soss sims];
+        exists (msgF min);
+        exists {| st_oss:= soss;
+                  st_msgs:= distributeMsg (msgF min) sims |}
       end;
       (** some inversions *)
       repeat
@@ -213,7 +211,7 @@ Section Impl.
       | [H: step_det _ _ _ _ |- _] => inv H
       end; [exfalso; eapply atomic_emptyILabel_not_in; eauto
            |exfalso; eapply atomic_iLblIn_not_in; eauto
-           | |].
+           |].
 
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
@@ -262,8 +260,7 @@ Section Impl.
         + (** simulation for newly added [PMsg]s *)
           trsSimulates_trivial (svmMsgF extIdx1 extIdx2).
           trsSimulates_atomic_trivial.
-          * admit.
-          * admit.
+          admit.
           
         + admit.
         + admit.

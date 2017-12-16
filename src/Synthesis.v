@@ -9,7 +9,7 @@ Section SimP.
   (** User inputs *)
   Variables
     (impl0 spec: System)
-    (R: TState -> TState -> Prop)
+    (R: MState -> MState -> Prop)
     (p: Label -> Label).
 
   Definition SynthOk (s: System) :=
@@ -29,7 +29,10 @@ Section SimP.
      * 2) serializability
      * 3) simulation on sequential semantics
      *)
-    Hypotheses (Hsyn_init: forall s s', syn s s' -> getStateInit s' = getStateInit s)
+    Hypotheses (Hsyn_init:
+                  forall s s', syn s s' ->
+                               getStateInit (StateT:= MState) s' =
+                               getStateInit (StateT:= MState) s)
                (Hsyn_serial:
                   forall s, SerializableSys s ->
                             forall s', syn s s' -> SerializableSys s')

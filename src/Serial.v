@@ -3,39 +3,38 @@ Require Import Common FMap Syntax Semantics StepDet.
 
 Section PerSystem.
   Variable sys: System.
-  Variable step: Step TState TLabel.
+  Variable step: Step MState MLabel.
 
-  Definition History := list TLabel.
+  Definition History := list MLabel.
 
-  (* Note that due to the definition of [TMsg], it is guaranteed that
+  (* Note that due to the definition of [Msg], it is guaranteed that
    * an [Atomic] history is about a single transaction.
-   * [TMsg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
+   * [Msg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
    * ensures that the history is for a single transaction.
    *)
-  Inductive Atomic: IdxT -> TMsg -> History -> list TMsg -> Prop :=
+  Inductive Atomic: Msg -> History -> list Msg -> Prop :=
   | AtomicBase:
-      forall hdl tid,
-        isExternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
-        tmsg_tid hdl = Some tid ->
-        Atomic tid hdl nil (hdl :: nil)
+      forall hdl,
+        isExternal sys (mid_from (msg_id hdl)) = true ->
+        Atomic hdl nil (hdl :: nil)
   | AtomicCons:
-      forall tid min hst mouts,
-        Atomic tid min hst mouts ->
+      forall min hst mouts,
+        Atomic min hst mouts ->
         forall hdl houts,
           In hdl mouts ->
-          Atomic tid min (IlblOuts (Some hdl) houts :: hst)
-                 (List.remove tmsg_dec hdl mouts ++ houts).
+          Atomic min (IlblOuts (Some hdl) houts :: hst)
+                 (List.remove msg_dec hdl mouts ++ houts).
 
   Inductive Transactional: History -> Prop :=
   | TrsSlt:
       Transactional (emptyILabel :: nil)
   | TrsIn:
       forall msg tin,
-        tin = IlblIn (toTMsgU msg) ->
+        tin = IlblIn msg ->
         Transactional (tin :: nil)
   | TrsAtomic:
-      forall tid min hst mouts,
-        Atomic tid min hst mouts ->
+      forall min hst mouts,
+        Atomic min hst mouts ->
         Transactional hst.
 
   Definition Sequential (hst: History) :=
@@ -45,11 +44,11 @@ Section PerSystem.
 
 End PerSystem.
 
-Definition trsSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
+Definition trsSteps (sys: System) (st1: MState) (hst: History) (st2: MState) :=
   steps_det sys st1 hst st2 /\
   Transactional sys hst.
 
-Definition seqSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
+Definition seqSteps (sys: System) (st1: MState) (hst: History) (st2: MState) :=
   steps_det sys st1 hst st2 /\
   Sequential sys hst.
 

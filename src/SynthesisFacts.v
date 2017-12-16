@@ -14,10 +14,11 @@ Qed.
 
 Lemma addPMsgsSys_init:
   forall pmsgs sys,
-    getStateInit (addPMsgsSys pmsgs sys) = getStateInit sys.
+    getStateInit (StateT:= MState) (addPMsgsSys pmsgs sys) =
+    getStateInit (StateT:= MState) sys.
 Proof.
   unfold addPMsgsSys; simpl; intros.
-  unfold getTStateInit; simpl.
+  unfold getSStateInit; simpl.
   rewrite addPMsgs_init.
   reflexivity.
 Qed.

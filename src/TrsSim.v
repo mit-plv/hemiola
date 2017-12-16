@@ -7,7 +7,7 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Section TrsSim.
-  Variables (sim: TState -> TState -> Prop)
+  Variables (sim: MState -> MState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
@@ -86,7 +86,7 @@ Section TrsSim.
 End TrsSim.
 
 Section TrsSimStep.
-  Variables (sim: TState -> TState -> Prop)
+  Variables (sim: MState -> MState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
@@ -106,8 +106,8 @@ Section TrsSimStep.
   Definition TrsSimStepAtomic :=
     forall ist1 sst1,
       ist1 ≈ sst1 ->
-      forall tid min hst mouts,
-        Atomic impl tid min hst mouts ->
+      forall min hst mouts,
+        Atomic impl min hst mouts ->
         forall ists istf,
           steps_det impl ists hst istf ->
           forall ilbl ist2,
@@ -133,8 +133,8 @@ Section TrsSimStep.
   Lemma trs_sim_step_steps_atomic:
     forall ist1 sst1,
       ist1 ≈ sst1 ->
-      forall tid min ihst mouts,
-        Atomic impl tid min ihst mouts ->
+      forall min ihst mouts,
+        Atomic impl min ihst mouts ->
         forall ist2,
           steps_det impl ist1 ihst ist2 ->
           exists sst2 shst,
@@ -143,10 +143,10 @@ Section TrsSimStep.
             ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
-      [inv H2; eexists; exists nil; repeat split; [econstructor|assumption]|].
+      [inv H1; eexists; exists nil; repeat split; [econstructor|assumption]|].
 
-    assert (Atomic impl tid min (IlblOuts (Some hdl) houts :: hst)
-                   (remove tmsg_dec hdl mouts ++ houts))
+    assert (Atomic impl min (IlblOuts (Some hdl) houts :: hst)
+                   (remove msg_dec hdl mouts ++ houts))
       by (constructor; auto).
 
     pose proof H2.
@@ -158,7 +158,7 @@ Section TrsSimStep.
     specialize (H3 _ _ H4 _ _ H10 (or_introl eq_refl)).
     simpl in H3.
 
-    destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
+    destruct (extOuts impl (map id houts)) as [|eout eouts].
     - simpl; destruct H3.
       + eexists; exists shsti; repeat split; eauto.
       + destruct H3 as [slbl [sst2 [? [? ?]]]].
@@ -269,16 +269,16 @@ End MTypeDisj.
 Lemma mtPreservineSys_atomic_same_msg_type:
   forall sys,
     mtPreservingSys sys ->
-    forall tid min mty hst mouts,
-      Atomic sys tid min hst mouts ->
-      mty = mid_type (msg_id (tmsg_msg min)) ->
+    forall min mty hst mouts,
+      Atomic sys min hst mouts ->
+      mty = mid_type (msg_id min) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
-        Forall (fun msg => mid_type (msg_id (tmsg_msg msg)) = mty) mouts /\
+        Forall (fun msg => mid_type (msg_id msg) = mty) mouts /\
         Forall (fun tl =>
                   match tl with
-                  | IlblIn msg => mid_type (msg_id (tmsg_msg msg)) = mty
-                  | IlblOuts (Some hdl) _ => mid_type (msg_id (tmsg_msg hdl)) = mty
+                  | IlblIn msg => mid_type (msg_id msg) = mty
+                  | IlblOuts (Some hdl) _ => mid_type (msg_id hdl) = mty
                   | IlblOuts None _ => True
                   end) hst.
 Proof.
@@ -295,30 +295,18 @@ Proof.
       (* NOTE: extract as a lemma? *)
       clear -H H9.
       inv H9.
-      * unfold mtPreservingSys, mtPreservingObs in H.
-        eapply Forall_forall in H; eauto.
-        unfold mtPreservingObj in H.
-        eapply Forall_forall in H; eauto.
-        unfold mtPreservingPMsg in H.
-        clear -H H10.
-        specialize (H os (msg_value (getMsg fmsg))).
-        induction (pmsg_outs fpmsg os (msg_value (getMsg fmsg))); [constructor|].
-        simpl in *.
-        inv H; constructor; auto.
-        simpl; rewrite H10, H2.
-        reflexivity.
-      * unfold mtPreservingSys, mtPreservingObs in H.
-        eapply Forall_forall in H; eauto.
-        unfold mtPreservingObj in H.
-        eapply Forall_forall in H; eauto.
-        unfold mtPreservingPMsg in H.
-        clear -H H10.
-        specialize (H os (msg_value (getMsg hdl))).
-        induction (pmsg_outs fpmsg os (msg_value (getMsg hdl))); [constructor|].
-        simpl in *.
-        inv H; constructor; auto.
-        simpl; rewrite H10, H2.
-        reflexivity.
+      unfold mtPreservingSys, mtPreservingObs in H.
+      eapply Forall_forall in H; eauto.
+      unfold mtPreservingObj in H.
+      eapply Forall_forall in H; eauto.
+      unfold mtPreservingPMsg in H.
+      clear -H H8.
+      specialize (H os (msg_value hdl)).
+      induction (pmsg_outs fpmsg os (msg_value hdl)); [constructor|].
+      simpl in *.
+      inv H; constructor; auto.
+      rewrite H8, H2.
+      reflexivity.
       
   - constructor; auto.
     eapply Forall_forall in H2; eauto.
@@ -327,7 +315,7 @@ Qed.
 Section Compositionality.
 
   Variables (impl1 impl2 spec: System)
-            (simR: TState -> TState -> Prop)
+            (simR: MState -> MState -> Prop)
             (simP: Label -> Label).
 
   Local Infix "≈" := simR (at level 30).
@@ -405,13 +393,13 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps_det impl ist1 hst ist2 ->
-      forall tid min mouts,
-        Atomic impl tid min hst mouts ->
+      forall min mouts,
+        Atomic impl min hst mouts ->
         steps_det impl1 ist1 hst ist2 \/
         steps_det impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (MTypeDisjSys_distr_same_type (mid_type (msg_id (tmsg_msg min)))).
+    pose proof (MTypeDisjSys_distr_same_type (mid_type (msg_id min))).
     pose proof (mtPreservineSys_atomic_same_msg_type Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.
@@ -427,22 +415,14 @@ Section Compositionality.
       + constructor.
         * unfold isExternal in *; rewrite <-Hii; assumption.
         * unfold isInternal in *; rewrite <-Hii; assumption.
-      + simpl in H5, H9; rewrite H9 in H5.
-        specialize (H1 _ H5 _ H10 H).
+      + simpl in H5, H8; rewrite H8 in H5.
+        specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs nts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
-          with (intOuts impl1 (toTMsgs nts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+        replace (intOuts impl (pmsg_outs fpmsg os (msg_value fmsg)))
+          with (intOuts impl1 (pmsg_outs fpmsg os (msg_value fmsg)))
           by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
         econstructor; eauto.
         unfold isExternal in *; rewrite <-Hii; assumption.
-      + simpl in H5, H9; rewrite H9 in H5.
-        specialize (H1 _ H5 _ H10 H).
-        destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs mts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
-          with (intOuts impl1 (toTMsgs mts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
-          by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
-        econstructor; eauto.
-        unfold isInternal in *; rewrite <-Hii; assumption.
 
     - right.
       assert (indicesOf impl = indicesOf impl2) as Hii2 by (rewrite Hii; auto).
@@ -456,22 +436,14 @@ Section Compositionality.
       + constructor.
         * unfold isExternal in *; rewrite <-Hii2; assumption.
         * unfold isInternal in *; rewrite <-Hii2; assumption.
-      + simpl in H5, H9; rewrite H9 in H5.
-        specialize (H1 _ H5 _ H10 H).
+      + simpl in H5, H8; rewrite H8 in H5.
+        specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs nts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
-          with (intOuts impl2 (toTMsgs nts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+        replace (intOuts impl (pmsg_outs fpmsg os (msg_value fmsg)))
+          with (intOuts impl2 (pmsg_outs fpmsg os (msg_value fmsg)))
           by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
         econstructor; eauto.
         unfold isExternal in *; rewrite <-Hii2; assumption.
-      + simpl in H5, H9; rewrite H9 in H5.
-        specialize (H1 _ H5 _ H10 H).
-        destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs mts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
-          with (intOuts impl2 (toTMsgs mts (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
-          by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
-        econstructor; eauto.
-        unfold isInternal in *; rewrite <-Hii2; assumption.
   Qed.
   
   Lemma transactional_steps_compositional:
@@ -481,7 +453,7 @@ Section Compositionality.
         ist1 ≈ sst1 ->
         forall ist2,
           steps_det impl ist1 ihst ist2 ->
-          exists (sst2 : TState) (shst : list TLabel),
+          exists (sst2 : MState) (shst : list MLabel),
             steps_det spec sst1 shst sst2 /\
             map simP (behaviorOf impl ihst) = behaviorOf spec shst /\
             ist2 ≈ sst2.
@@ -493,7 +465,7 @@ Section Compositionality.
       + constructor.
       + assumption.
 
-    - assert (trsSteps impl1 ist1 (IlblIn (toTMsgU msg) :: nil) ist2).
+    - assert (trsSteps impl1 ist1 (IlblIn msg :: nil) ist2).
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H1; inv H4; inv H6.

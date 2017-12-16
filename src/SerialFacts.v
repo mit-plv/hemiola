@@ -5,8 +5,8 @@ Require Import Syntax Semantics SemFacts StepDet Serial.
 Set Implicit Arguments.
 
 Lemma atomic_nil_in:
-  forall sys tid min mouts,
-    Atomic sys tid min nil mouts ->
+  forall sys min mouts,
+    Atomic sys min nil mouts ->
     forall msg,
       In msg mouts ->
       msg = min.
@@ -17,8 +17,8 @@ Proof.
 Qed.
 
 Lemma atomic_emptyILabel_not_in:
-  forall sys tid min hst mouts,
-    Atomic sys tid min hst mouts ->
+  forall sys min hst mouts,
+    Atomic sys min hst mouts ->
     ~ In emptyILabel hst.
 Proof.
   induction 1; simpl; intros; [auto|].
@@ -28,8 +28,8 @@ Proof.
 Qed.
 
 Lemma atomic_iLblIn_not_in:
-  forall sys tid min hst mouts,
-    Atomic sys tid min hst mouts ->
+  forall sys min hst mouts,
+    Atomic sys min hst mouts ->
     forall msg,
       ~ In (IlblIn msg) hst.
 Proof.
@@ -40,51 +40,17 @@ Proof.
 Qed.
 
 Lemma atomic_preserved:
-  forall impl1 tid min hst mouts,
-    Atomic impl1 tid min hst mouts ->
+  forall impl1 min hst mouts,
+    Atomic impl1 min hst mouts ->
     forall impl2,
       indicesOf impl1 = indicesOf impl2 ->
-      Atomic impl2 tid min hst mouts.
+      Atomic impl2 min hst mouts.
 Proof.
   induction 1; simpl; intros.
   - constructor; auto.
     unfold isExternal in *.
-    rewrite H1 in H; assumption.
+    rewrite H0 in H; assumption.
   - constructor; auto.
-Qed.
-
-Lemma steps_det_atomic_outs_ts:
-  forall sys tid min ll mouts,
-    Atomic sys tid min ll mouts ->
-    forall st1 st2,
-      steps_det sys st1 ll st2 ->
-      Forall (fun tmsg => tmsg_tid tmsg = Some tid) mouts.
-Proof.
-  induction 1; simpl; intros.
-  - repeat constructor; auto.
-  - inv H1; apply Forall_app.
-    + apply Forall_remove; eauto.
-    + apply step_det_outs_tid in H7; dest; auto.
-      specialize (IHAtomic _ _ H5).
-      eapply Forall_forall in IHAtomic; [|eassumption].
-      rewrite <-IHAtomic; auto.
-Qed.
-
-Lemma steps_det_atomic_outs_fwd_tid:
-  forall sys tid min ll mouts,
-    Atomic sys tid min ll mouts ->
-    forall st1 st2,
-      steps_det sys st1 ll st2 ->
-      Forall (fun l => match l with
-                       | IlblOuts (Some hdl) _ => tmsg_tid hdl = Some tid
-                       | _ => False
-                       end) ll.
-Proof.
-  induction 1; simpl; intros; [constructor|].
-  inv H1.
-  constructor; eauto.
-  eapply steps_det_atomic_outs_ts in H; [|eassumption].
-  eapply Forall_forall in H; eauto.
 Qed.
 
 Theorem serializable_seqSteps_refines:

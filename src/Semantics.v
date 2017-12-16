@@ -265,6 +265,8 @@ Section SState.
 
 End SState.
 
+Definition MState := SState Msg.
+
 (* [ILabel] represents "internal labels" that reveal 
  * which message is being handled now.
  *)
@@ -300,51 +302,5 @@ Section ILabel.
 
 End ILabel.
 
-Section TMsg.
-
-  Definition TrsId := nat.
-  Definition trsIdInit: TrsId := 0.
-
-  Record TMsg :=
-    { tmsg_msg : Msg;
-      (* a unique transaction id, assigned when the transaction starts. *)
-      tmsg_tid : option TrsId
-    }.
-
-  Definition toTMsg tid m := {| tmsg_msg := m; tmsg_tid := Some tid |}.
-  Definition toTMsgs tid msgs := map (toTMsg tid) msgs.
-
-  Definition toTMsgU m := {| tmsg_msg := m; tmsg_tid := None |}.
-
-  Global Instance TMsg_HsgMsg : HasMsg TMsg :=
-    { getMsg := tmsg_msg }.
-
-  Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
-  Proof.
-    decide equality.
-    - repeat decide equality.
-    - apply msg_dec.
-  Defined.
-
-  Definition TLabel := ILabel TMsg.
-
-End TMsg.
-
-Section TState.
-
-  Record TState :=
-    { tst_oss: ObjectStates;
-      tst_msgs: Messages TMsg;
-      tst_tid: TrsId
-    }.
-
-  Definition getTStateInit (sys: System): TState :=
-    {| tst_oss := getObjectStatesInit (sys_objs sys);
-       tst_msgs := [];
-       tst_tid := trsIdInit |}.
-
-  Global Instance TState_HasInit: HasInit TState :=
-    { getStateInit := getTStateInit }.
-
-End TState.
+Definition MLabel := ILabel Msg.
 
