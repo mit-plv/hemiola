@@ -12,14 +12,14 @@ Section Msg.
   Definition IdxT := nat.
 
   Record MsgId :=
-    { mid_type : IdxT;
+    { mid_tid : IdxT; (* a transaction id *)
       mid_from : IdxT; (* an object that requests this message *)
       mid_to : IdxT; (* an object that responses this message *)
       mid_chn : IdxT (* which channel (queue) to use *)
     }.
 
-  Definition buildMsgId ty fr to cn :=
-    {| mid_type := ty; mid_from := fr; mid_to := to; mid_chn := cn |}.
+  Definition buildMsgId tid fr to cn :=
+    {| mid_tid := tid; mid_from := fr; mid_to := to; mid_chn := cn |}.
 
   Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
   Proof. repeat decide equality. Defined.

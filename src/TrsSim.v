@@ -211,7 +211,7 @@ Section MTypePreserving.
 
   Definition mtPreservingPMsg (pmsg: PMsg) :=
     forall pre val,
-      Forall (fun mout => mid_type (msg_id mout) = mid_type (pmsg_mid pmsg))
+      Forall (fun mout => mid_tid (msg_id mout) = mid_tid (pmsg_mid pmsg))
              (pmsg_outs pmsg pre val).
 
   Definition mtPreservingObj (obj: Object) :=
@@ -231,7 +231,7 @@ Section MTypeDisj.
     forall pmsg1 pmsg2,
       In pmsg1 pmsgs1 ->
       In pmsg2 pmsgs2 ->
-      mid_type (pmsg_mid pmsg1) <> mid_type (pmsg_mid pmsg2).
+      mid_tid (pmsg_mid pmsg1) <> mid_tid (pmsg_mid pmsg2).
 
   Definition MTypeDisjSys (sys1 sys2: System) :=
     MTypeDisj (pmsgsOf sys1) (pmsgsOf sys2).
@@ -271,14 +271,14 @@ Lemma mtPreservineSys_atomic_same_msg_type:
     mtPreservingSys sys ->
     forall min mty hst mouts,
       Atomic sys min hst mouts ->
-      mty = mid_type (msg_id min) ->
+      mty = mid_tid (msg_id min) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
-        Forall (fun msg => mid_type (msg_id msg) = mty) mouts /\
+        Forall (fun msg => mid_tid (msg_id msg) = mty) mouts /\
         Forall (fun tl =>
                   match tl with
-                  | IlblIn msg => mid_type (msg_id msg) = mty
-                  | IlblOuts (Some hdl) _ => mid_type (msg_id hdl) = mty
+                  | IlblIn msg => mid_tid (msg_id msg) = mty
+                  | IlblOuts (Some hdl) _ => mid_tid (msg_id hdl) = mty
                   | IlblOuts None _ => True
                   end) hst.
 Proof.
@@ -342,14 +342,14 @@ Section Compositionality.
   Lemma MTypeDisjSys_distr_same_type:
     forall mty,
       (forall pmsg,
-          mid_type (pmsg_mid pmsg) = mty ->
+          mid_tid (pmsg_mid pmsg) = mty ->
           forall iobj,
             In pmsg (obj_trs iobj) -> In iobj (sys_objs impl) ->
             exists obj : Object,
               obj_idx obj = obj_idx iobj /\ In pmsg (obj_trs obj) /\
               In obj (sys_objs impl1)) \/
       (forall pmsg,
-          mid_type (pmsg_mid pmsg) = mty ->
+          mid_tid (pmsg_mid pmsg) = mty ->
           forall iobj,
             In pmsg (obj_trs iobj) -> In iobj (sys_objs impl) ->
             exists obj : Object,
@@ -357,7 +357,7 @@ Section Compositionality.
               In obj (sys_objs impl2)).
   Proof.
     intros.
-    destruct (mty ?<n (map (fun pmsg => mid_type (pmsg_mid pmsg)) (pmsgsOf impl1))).
+    destruct (mty ?<n (map (fun pmsg => mid_tid (pmsg_mid pmsg)) (pmsgsOf impl1))).
     - left; intros.
       pose proof (Himpl _ _ H0 H1).
       destruct H2 as [obj [? [? ?]]].
@@ -365,7 +365,7 @@ Section Compositionality.
       + exists obj; repeat split; assumption.
       + exfalso.
         pose proof (pmsgsOf_in _ _ H4 _ H3).
-        assert (exists mpmsg, mid_type (pmsg_mid mpmsg) = mty /\ In mpmsg (pmsgsOf impl1)).
+        assert (exists mpmsg, mid_tid (pmsg_mid mpmsg) = mty /\ In mpmsg (pmsgsOf impl1)).
         { clear -i.
           induction (pmsgsOf impl1); [inv i|].
           inv i.
@@ -385,7 +385,7 @@ Section Compositionality.
       apply in_app_or in H4; destruct H4.
       + elim n; clear n.
         pose proof (pmsgsOf_in _ _ H4 _ H3).
-        apply in_map with (f:= fun pmsg => mid_type (pmsg_mid pmsg)) in H5.
+        apply in_map with (f:= fun pmsg => mid_tid (pmsg_mid pmsg)) in H5.
         rewrite H in H5; assumption.
       + exists obj; repeat split; assumption.
   Qed.
@@ -399,7 +399,7 @@ Section Compositionality.
         steps_det impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (MTypeDisjSys_distr_same_type (mid_type (msg_id min))).
+    pose proof (MTypeDisjSys_distr_same_type (mid_tid (msg_id min))).
     pose proof (mtPreservineSys_atomic_same_msg_type Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.

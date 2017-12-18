@@ -119,7 +119,7 @@ Section Impl.
         else idx.
       
       Definition makeMsgIdExternal (mid: MsgId): MsgId :=
-        {| mid_type := mid_type mid;
+        {| mid_tid := mid_tid mid;
            mid_from := mid_from mid;
            mid_to := makeIdxExternal (mid_to mid);
            mid_chn := mid_chn mid
@@ -241,7 +241,7 @@ Section Impl.
     Definition svmTargetPMsgIdx0 := 0.
 
     Definition svmRq0 (val: Value) :=
-      {| msg_id := {| mid_type := svmTrsIdx0;
+      {| msg_id := {| mid_tid := svmTrsIdx0;
                       mid_from := extIdx1;
                       mid_to := child1Idx;
                       mid_chn := rqChn |};

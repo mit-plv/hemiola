@@ -158,7 +158,7 @@ Section Sim.
     if idx ?<n (indicesOf impl0) then specIdx else idx.
 
   Definition svmMsgIdF (imid: MsgId): MsgId :=
-    {| mid_type := mid_type imid;
+    {| mid_tid := mid_tid imid;
        mid_from := svmIdxF (mid_from imid);
        mid_to := svmIdxF (mid_to imid);
        mid_chn := mid_to imid |}.

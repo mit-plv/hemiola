@@ -80,7 +80,7 @@ Section SynRqRsImm.
   Definition rsChn: IdxT := 1.
 
   Definition msgValOut (val: Value) (tochn: IdxT * IdxT) :=
-    {| msg_id := {| mid_type := trsIdx;
+    {| msg_id := {| mid_tid := trsIdx;
                     mid_from := this;
                     mid_to := fst tochn;
                     mid_chn := snd tochn |};
@@ -91,7 +91,7 @@ Section SynRqRsImm.
 
     Definition synImm (prec: PreCond) (rqFrom: IdxT) (postcond: PostCond)
                (valOut: StateT -> Value) :=
-      {| pmsg_mid := {| mid_type := trsIdx;
+      {| pmsg_mid := {| mid_tid := trsIdx;
                         mid_from := rqFrom;
                         mid_to := this;
                         mid_chn := rqChn |};
@@ -119,7 +119,7 @@ Section SynRqRsImm.
              |}.
 
     Definition synRq (prec: PreCond) :=
-      {| pmsg_mid := {| mid_type := trsIdx;
+      {| pmsg_mid := {| mid_tid := trsIdx;
                         mid_from := rqFrom;
                         mid_to := this;
                         mid_chn := rqChn |};
@@ -200,7 +200,7 @@ Section SynRqRsImm.
         (fun trsh =>
            let rss := markResponded (tst_rss trsh) val in
            if allResponded rss
-           then {| msg_id := {| mid_type := trsIdx;
+           then {| msg_id := {| mid_tid := trsIdx;
                                 mid_from := this;
                                 mid_to := tst_rqfrom trsh;
                                 mid_chn := rsChn |};
@@ -213,7 +213,7 @@ Section SynRqRsImm.
      *)
     Definition synRs (postcond: OState -> OState -> Prop)
                (rsOut: StateT -> TrsHelperUnit -> Value) :=
-      {| pmsg_mid := {| mid_type := trsIdx;
+      {| pmsg_mid := {| mid_tid := trsIdx;
                         mid_from := rsFrom;
                         mid_to := this;
                         mid_chn := rsChn |};
