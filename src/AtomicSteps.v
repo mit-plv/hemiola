@@ -50,38 +50,45 @@ Section AtomicSteps.
 
   Inductive AtomicSteps:
     StepCond (* impl precondition *) ->
-    ObjectStates (* impl state *) ->
-    ObjectStates (* spec state *) ->
     list Msg (* output messages *) -> Prop :=
-  | AstNil: forall stc ioss soss, AtomicSteps stc ioss soss nil
+  | AstNil: forall stc, AtomicSteps stc nil
   | AstSpecSilent:
-      forall pre pioss soss msg curs1 curs2 curs,
-        R pioss soss ->
+      forall pre msg curs1 curs2 curs,
         curs = curs1 ++ msg :: curs2 ->
 
-        (forall pmsg obj ostc stc piost niost nioss,
+        (forall pioss piost pmsg oidx obj nioss niost soss,
+            R pioss soss ->
             msg_id msg = pmsg_mid pmsg ->
             In pmsg (obj_trs obj) ->
             In obj (sys_objs impl) ->
-            StepCondHolds stc (msg_value msg) pioss ->
-            pioss@[obj_idx obj] = Some piost ->
-            (OstCondHolds ostc niost ->
-             pmsg_postcond pmsg niost (msg_value msg) niost) ->
-            nioss = pioss +[obj_idx obj <- niost] ->
-            R nioss soss /\
-            AtomicSteps (updateOstCond (obj_idx obj) ostc stc)
-                        nioss soss
-                        (curs ++ pmsg_outs pmsg piost (msg_value msg))) ->
+            oidx = obj_idx obj ->
+            oidx = mid_to (msg_id msg) ->
 
-        AtomicSteps pre pioss soss curs.
+            StepCondHolds pre (msg_value msg) pioss ->
+            pioss@[oidx] = Some piost ->
+            pmsg_precond pmsg piost ->
+            pmsg_postcond pmsg piost (msg_value msg) niost ->
+
+            nioss = pioss +[oidx <- niost] ->
+
+            exists ostc,
+              (forall post val nost,
+                  pmsg_precond pmsg post ->
+                  pmsg_postcond pmsg post val nost ->
+                  OstCondHolds ostc nost) /\
+              R nioss soss /\
+              AtomicSteps (updateOstCond oidx ostc pre)
+                          (curs1 ++ curs2 ++ pmsg_outs pmsg piost (msg_value msg))) ->
+
+        AtomicSteps pre curs.
   (* TODO: | AstSpecStep: ... *)
 
-  Definition CompleteAtomicSteps (ioss soss: ObjectStates) (rqin: Msg) :=
-    AtomicSteps stepCondTop ioss soss (rqin :: nil).
+  Definition CompleteAtomicSteps (rqin: Msg) :=
+    AtomicSteps stepCondTop (rqin :: nil).
 
   Theorem atomicSteps_trsSimStepAtomic:
+    AtomicSteps stepCondTop (rqImpl :: nil) ->
     forall ioss soss,
-      AtomicSteps stepCondTop ioss soss (rqImpl :: nil) ->
       ioss ≈ soss ->
       forall ist1 sst1,
         st_oss ist1 = ioss ->

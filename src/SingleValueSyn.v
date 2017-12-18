@@ -109,46 +109,70 @@ Section Impl.
         else find_new_prec hcprec invs'
       end.
 
-    Section Internalize.
-      Variable sys: System.
+    Section MakeExternal.
+      Variables (targetIdx diffIdx: IdxT)
+                (Hdiff: targetIdx <> diffIdx).
       
-      Definition makeIdxInternal (idx: IdxT): IdxT :=
-        if isInternal sys idx
-        then idx
-        else (hd 0 (map obj_idx (sys_objs sys))).
+      Definition makeIdxExternal (idx: IdxT): IdxT :=
+        if idx ==n targetIdx
+        then diffIdx 
+        else idx.
       
-      Definition makeMsgIdInternal (mid: MsgId): MsgId :=
+      Definition makeMsgIdExternal (mid: MsgId): MsgId :=
         {| mid_type := mid_type mid;
-           mid_from := makeIdxInternal (mid_from mid);
-           mid_to := mid_to mid;
+           mid_from := mid_from mid;
+           mid_to := makeIdxExternal (mid_to mid);
            mid_chn := mid_chn mid
         |}.
       
-      Definition makePMsgInternal (pmsg: PMsg): PMsg :=
-        {| pmsg_mid := makeMsgIdInternal (pmsg_mid pmsg);
+      Definition makePMsgExternal (pmsg: PMsg): PMsg :=
+        {| pmsg_mid := makeMsgIdExternal (pmsg_mid pmsg);
            pmsg_precond := pmsg_precond pmsg;
            pmsg_outs := pmsg_outs pmsg;
            pmsg_postcond := pmsg_postcond pmsg
         |}.
 
-      Lemma makePMsgInternal_in_internal:
-        sys_objs sys <> nil ->
-        forall tpmsg pmsgs,
-          In tpmsg (map makePMsgInternal pmsgs) ->
-          isInternal sys (mid_from (pmsg_mid tpmsg)) = true.
+      Lemma makePMsgExternal_pmsg_in:
+        forall pmsg pmsgs1 pmsgs2,
+          mid_to (pmsg_mid pmsg) = targetIdx ->
+          In pmsg (pmsgs1 ++ map makePMsgExternal pmsgs2) ->
+          In pmsg pmsgs1.
       Proof.
-        induction pmsgs as [|pmsg pmsgs]; simpl; intros; [intuition idtac|].
-        destruct H0; subst; auto.
-        unfold makePMsgInternal; simpl.
-        unfold makeIdxInternal.
-        remember (isInternal sys (mid_from (pmsg_mid pmsg))) as ii.
+        intros.
+        apply in_app_or in H0; destruct H0; auto.
+        exfalso; clear -H H0 Hdiff.
+        induction pmsgs2; [auto|].
+        destruct H0; auto.
+        subst pmsg.
+        simpl in H; unfold makeIdxExternal in H.
         find_if_inside; auto.
-        unfold isInternal, indicesOf.
-        destruct (sys_objs sys) as [|hobj tobs]; [elim H; reflexivity|].
-        simpl; destruct (_ ==n _); auto.
       Qed.
 
-    End Internalize.
+    End MakeExternal.
+
+    Section MakePreCondDisj.
+      Variable (prec: PreCond).
+
+      Definition makePreCondDisj (pmsg: PMsg): PMsg :=
+        {| pmsg_mid := pmsg_mid pmsg;
+           pmsg_precond := fun ost => ~ (prec ost) /\ pmsg_precond pmsg ost;
+           pmsg_outs := pmsg_outs pmsg;
+           pmsg_postcond := pmsg_postcond pmsg
+        |}.
+
+      Lemma makePreCondDisj_pmsg_in:
+        forall pmsg ost,
+          pmsg_precond pmsg ost ->
+          forall pmsgs,
+            In pmsg (map makePreCondDisj pmsgs) ->
+            ~ prec ost.
+      Proof.
+        induction pmsgs; intros; [auto|].
+        destruct H0; subst; auto.
+        simpl in H; destruct H; auto.
+      Qed.
+
+    End MakePreCondDisj.
 
     Definition addPreCond (pmsg: PMsg) (mid: MsgId) (prec: PreCond) :=
       {| pmsg_mid := mid;
@@ -158,8 +182,7 @@ Section Impl.
 
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      instantiate (1:= addPMsgsSys (_ :: map (makePMsgInternal pimpl) _) pimpl);
-      (* instantiate (1:= addPMsgsSys _ pimpl); *)
+      instantiate (1:= addPMsgsSys _ pimpl);
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [rewrite addPMsgsSys_init; apply pimpl_ok| |].
 
@@ -224,14 +247,80 @@ Section Impl.
                       mid_chn := rqChn |};
          msg_value := val |}.
 
+    Ltac completeAtomicSteps_init :=
+      econstructor; [rewrite app_nil_l; reflexivity|];
+      intros; subst.
+
     Definition atomicSteps_svmSynTrs0:
       { pmsgs1: list PMsg &
-        forall ioss soss,
-          SvmR ioss soss ->
-          CompleteAtomicSteps (addPMsgsSys pmsgs1 (buildRawSys impl0))
-                              SvmR ioss soss (svmRq0 VUnit)
+        CompleteAtomicSteps (addPMsgsSys pmsgs1 (buildRawSys impl0))
+                            SvmR (svmRq0 VUnit)
       }.
     Proof.
+      eexists; intros.
+      completeAtomicSteps_init.
+
+      (* 1) Separate [PMsg]s for the current target index and the others. *)
+      pose proof (pmsgsOf_in _ _ H2 _ H1); clear H1 H2.
+      apply addPMsgsSys_buildRawSys_sublist in H3.
+      instantiate (1:= _ ++ (map (makePMsgExternal child1Idx child2Idx) _)).
+      apply makePMsgExternal_pmsg_in in H3; [|discriminate|rewrite <-H0; reflexivity].
+
+      (* 2) Case analyses with respect to the value of [C1.st] *)
+      remember (pioss@[child1Idx]) as oiost1.
+      destruct oiost1 as [iost1|]; [|exfalso; inv H; mv_rewriter].
+      remember ((ost_st iost1)@[statusIdx]) as ostt1.
+      destruct ostt1 as [stt1|]; [|exfalso; inv H; mv_rewriter].
+      
+      destruct (value_dec stt1 (VNat stI));
+        [|destruct (value_dec stt1 (VNat stS));
+          [|destruct (value_dec stt1 (VNat stM));
+            [|inv H; mv_rewriter; try (exfalso; auto)]]]; subst.
+
+      { (* 3) When [C1.st = I]: separate [PMsg]s for this case and the others. *)
+        instantiate (2:= _ ++ (map (makePreCondDisj
+                                      (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)))
+                                   _)).
+        simpl in H4; rewrite H4 in H6.
+        apply in_app_or in H3; destruct H3;
+          [|exfalso; eapply makePreCondDisj_pmsg_in; eauto;
+            simpl; mv_rewriter; auto].
+
+        (* 4) Synthesize [PMsg]s for C1 when [C1.st = I]! *)
+        instantiate (3:= (synRq svmTrsIdx0 child1Idx alwaysLock extIdx1 (parentIdx :: nil)
+                                (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)))
+                           :: (synRs svmTrsIdx0 child1Idx parentIdx
+                                     (fun post nost =>
+                                        ost_st nost = (ost_st post)
+                                                      +[valueIdx <- rsFwdValue svmTrsIdx0 post]
+                                                      +[statusIdx <- VNat stS])
+                                     (fun post ptrsu => getFwdValue (tst_rss ptrsu)))
+                           :: nil).
+        Common.dest_in; try discriminate.
+
+        (* 5) It's quite easy to prove simulation preservation for requests. *)
+        exists (fun st => st@[statusIdx] = Some (VNat stI), T).
+        repeat split.
+        { simpl; simpl in H1, H2.
+          unfold synRqPostcond in H2; subst; simpl.
+          destruct H1; assumption.
+        }
+        { eapply SvmR_EquivPreservingR; [eassumption|].
+          simpl in H8.
+          unfold synRqPostcond in H8; subst; simpl.
+          unfold StateEquivOS; intros.
+          findeq.
+          { unfold StateEquivO; simpl.
+            rewrite H4 in Heqv; mv_rewriter.
+            reflexivity.
+          }
+          { rewrite H4 in Heqv; mv_rewriter. }
+        }
+        { admit. }
+      }
+      { admit. }
+      { admit. }
+
     Admitted.
 
     Definition svmSynTrs0:

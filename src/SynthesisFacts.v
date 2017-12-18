@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Wf Semantics SemFacts StepDet.
+Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet.
 Require Import Serial SerialFacts Simulation TrsSim Predicate Synthesis.
 
 Lemma addPMsgs_init:
@@ -121,6 +121,33 @@ Proof.
     apply in_app_or in H3; destruct H3.
     + left; assumption.
     + right; right; auto.
+Qed.
+
+Lemma addPMsgsO_app:
+  forall obj pmsgs1 pmsgs2,
+    addPMsgsO (pmsgs1 ++ pmsgs2) obj = addPMsgsO pmsgs1 (addPMsgsO pmsgs2 obj).
+Proof.
+  unfold addPMsgsO; intros; simpl; f_equal.
+  rewrite filter_app.
+  apply eq_sym, app_assoc.
+Qed.
+  
+Lemma addPMsgs_app:
+  forall obs pmsgs1 pmsgs2,
+    addPMsgs (pmsgs1 ++ pmsgs2) obs =
+    addPMsgs pmsgs1 (addPMsgs pmsgs2 obs).
+Proof.
+  induction obs; simpl; intros; [reflexivity|].
+  rewrite addPMsgsO_app, IHobs; reflexivity.
+Qed.
+
+Lemma addPMsgsSys_app:
+  forall sys pmsgs1 pmsgs2,
+    addPMsgsSys (pmsgs1 ++ pmsgs2) sys =
+    addPMsgsSys pmsgs1 (addPMsgsSys pmsgs2 sys).
+Proof.
+  unfold addPMsgsSys; intros; simpl; f_equal.
+  rewrite addPMsgs_app; reflexivity.
 Qed.
 
 Lemma addPMsgsSys_pmsg_in:

@@ -41,6 +41,14 @@ Proof.
   destruct (f a); auto.
 Qed.
 
+Lemma filter_app:
+  forall {A} f (l1 l2: list A),
+    filter f (l1 ++ l2) = filter f l1 ++ filter f l2.
+Proof.
+  induction l1; simpl; intros; [reflexivity|].
+  rewrite IHl1; destruct (f a); auto.
+Qed.
+
 Lemma in_remove:
   forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
          (a x: A) (l: list A),
