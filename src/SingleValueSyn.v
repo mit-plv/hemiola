@@ -193,10 +193,13 @@ Section Impl.
       | [H: context[IlblIn ?min] |- context[step_det _ ?st1 _ _] ] =>
         let soss := fresh "soss" in
         let sims := fresh "sims" in
-        destruct st1 as [soss sims];
-        exists (msgF min);
-        exists {| st_oss:= soss;
-                  st_msgs:= distributeMsg (msgF min) sims |}
+        let sts := fresh "sts" in
+        destruct st1 as [soss sims sts];
+        exists (toTMsgU (msgF (getMsg min)));
+        exists {| tst_oss:= soss;
+                  tst_msgs:= distributeMsg (toTMsgU (msgF (getMsg min))) sims;
+                  tst_tid:= sts;
+               |}
       end;
       (** some inversions *)
       repeat

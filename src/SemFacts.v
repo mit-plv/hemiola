@@ -36,10 +36,11 @@ Qed.
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
     step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
-    isInternal sys (mid_to (msg_id hdl)) = true.
+    isInternal sys (mid_to (msg_id (getMsg hdl))) = true.
 Proof.
   intros; inv H.
-  destruct hdl as [hmid hmv]; simpl in *; subst.
+  destruct fmsg as [fmsg fts]; simpl in *.
+  destruct fmsg as [hmid hmv]; simpl in *; subst.
   destruct H6 as [? [? ?]]; simpl in *; subst.
   rewrite H0.
   unfold isInternal; find_if_inside; auto.
@@ -49,7 +50,7 @@ Qed.
 Lemma step_det_outs_from_internal:
   forall sys st1 ilbl st2,
     step_det sys st1 ilbl st2 ->
-    Forall (fun m: Msg => isInternal sys (mid_from (msg_id m)) = true)
+    Forall (fun m: TMsg => isInternal sys (mid_from (msg_id (getMsg m))) = true)
            (iLblOuts ilbl).
 Proof.
   intros; inv H; try (constructor; fail).

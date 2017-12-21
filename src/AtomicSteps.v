@@ -86,22 +86,5 @@ Section AtomicSteps.
   Definition CompleteAtomicSteps (rqin: Msg) :=
     AtomicSteps stepCondTop (rqin :: nil).
 
-  Theorem atomicSteps_trsSimStepAtomic:
-    AtomicSteps stepCondTop (rqImpl :: nil) ->
-    forall ioss soss,
-      ioss ≈ soss ->
-      forall ist1 sst1,
-        st_oss ist1 = ioss ->
-        st_oss sst1 = soss ->
-        forall ihst ist2 mouts,
-          steps_det impl ist1 ihst ist2 ->
-          Atomic impl rqImpl ihst mouts ->
-          exists sst2 shst,
-            steps_det spec sst1 shst sst2 /\
-            map p (behaviorOf impl ihst) = behaviorOf spec shst /\
-            st_oss ist2 ≈ st_oss sst2.
-  Proof.
-  Admitted.
-
 End AtomicSteps.
 

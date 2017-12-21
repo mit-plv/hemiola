@@ -3,19 +3,19 @@ Require Import Common FMap Syntax Semantics StepDet.
 
 Section PerSystem.
   Variable sys: System.
-  Variable step: Step MState MLabel.
+  Variable step: Step TState TLabel.
 
-  Definition History := list MLabel.
+  Definition History := list TLabel.
 
   (* Note that due to the definition of [Msg], it is guaranteed that
    * an [Atomic] history is about a single transaction.
    * [Msg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
    * ensures that the history is for a single transaction.
    *)
-  Inductive Atomic: Msg -> History -> list Msg -> Prop :=
+  Inductive Atomic: TMsg -> History -> list TMsg -> Prop :=
   | AtomicBase:
       forall hdl,
-        isExternal sys (mid_from (msg_id hdl)) = true ->
+        isExternal sys (mid_from (msg_id (getMsg hdl))) = true ->
         Atomic hdl nil (hdl :: nil)
   | AtomicCons:
       forall min hst mouts,
@@ -23,7 +23,7 @@ Section PerSystem.
         forall hdl houts,
           In hdl mouts ->
           Atomic min (IlblOuts (Some hdl) houts :: hst)
-                 (List.remove msg_dec hdl mouts ++ houts).
+                 (List.remove tmsg_dec hdl mouts ++ houts).
 
   Inductive Transactional: History -> Prop :=
   | TrsSlt:
@@ -44,11 +44,11 @@ Section PerSystem.
 
 End PerSystem.
 
-Definition trsSteps (sys: System) (st1: MState) (hst: History) (st2: MState) :=
+Definition trsSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
   steps_det sys st1 hst st2 /\
   Transactional sys hst.
 
-Definition seqSteps (sys: System) (st1: MState) (hst: History) (st2: MState) :=
+Definition seqSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
   steps_det sys st1 hst st2 /\
   Sequential sys hst.
 

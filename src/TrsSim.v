@@ -7,7 +7,7 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Section TrsSim.
-  Variables (sim: MState -> MState -> Prop)
+  Variables (sim: TState -> TState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
@@ -86,7 +86,7 @@ Section TrsSim.
 End TrsSim.
 
 Section TrsSimStep.
-  Variables (sim: MState -> MState -> Prop)
+  Variables (sim: TState -> TState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
@@ -146,7 +146,7 @@ Section TrsSimStep.
       [inv H1; eexists; exists nil; repeat split; [econstructor|assumption]|].
 
     assert (Atomic impl min (IlblOuts (Some hdl) houts :: hst)
-                   (remove msg_dec hdl mouts ++ houts))
+                   (remove tmsg_dec hdl mouts ++ houts))
       by (constructor; auto).
 
     pose proof H2.
@@ -158,7 +158,7 @@ Section TrsSimStep.
     specialize (H3 _ _ H4 _ _ H10 (or_introl eq_refl)).
     simpl in H3.
 
-    destruct (extOuts impl (map id houts)) as [|eout eouts].
+    destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
     - simpl; destruct H3.
       + eexists; exists shsti; repeat split; eauto.
       + destruct H3 as [slbl [sst2 [? [? ?]]]].
@@ -271,14 +271,14 @@ Lemma mtPreservineSys_atomic_same_msg_type:
     mtPreservingSys sys ->
     forall min mty hst mouts,
       Atomic sys min hst mouts ->
-      mty = mid_tid (msg_id min) ->
+      mty = mid_tid (msg_id (getMsg min)) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
-        Forall (fun msg => mid_tid (msg_id msg) = mty) mouts /\
+        Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mty) mouts /\
         Forall (fun tl =>
                   match tl with
-                  | IlblIn msg => mid_tid (msg_id msg) = mty
-                  | IlblOuts (Some hdl) _ => mid_tid (msg_id hdl) = mty
+                  | IlblIn msg => mid_tid (msg_id (getMsg msg)) = mty
+                  | IlblOuts (Some hdl) _ => mid_tid (msg_id (getMsg hdl)) = mty
                   | IlblOuts None _ => True
                   end) hst.
 Proof.
@@ -301,11 +301,11 @@ Proof.
       eapply Forall_forall in H; eauto.
       unfold mtPreservingPMsg in H.
       clear -H H8.
-      specialize (H os (msg_value hdl)).
-      induction (pmsg_outs fpmsg os (msg_value hdl)); [constructor|].
+      specialize (H os (msg_value (getMsg fmsg))).
+      induction (pmsg_outs fpmsg os (msg_value (getMsg fmsg))); [constructor|].
       simpl in *.
       inv H; constructor; auto.
-      rewrite H8, H2.
+      simpl; rewrite H8, H2.
       reflexivity.
       
   - constructor; auto.
@@ -315,7 +315,7 @@ Qed.
 Section Compositionality.
 
   Variables (impl1 impl2 spec: System)
-            (simR: MState -> MState -> Prop)
+            (simR: TState -> TState -> Prop)
             (simP: Label -> Label).
 
   Local Infix "≈" := simR (at level 30).
@@ -399,7 +399,7 @@ Section Compositionality.
         steps_det impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (MTypeDisjSys_distr_same_type (mid_tid (msg_id min))).
+    pose proof (MTypeDisjSys_distr_same_type (mid_tid (msg_id (getMsg min)))).
     pose proof (mtPreservineSys_atomic_same_msg_type Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.
@@ -418,8 +418,14 @@ Section Compositionality.
       + simpl in H5, H8; rewrite H8 in H5.
         specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (pmsg_outs fpmsg os (msg_value fmsg)))
-          with (intOuts impl1 (pmsg_outs fpmsg os (msg_value fmsg)))
+        replace (intOuts impl (toTMsgs match tmsg_tid fmsg with
+                                       | Some tid => tid
+                                       | None => nts
+                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+          with (intOuts impl1 (toTMsgs match tmsg_tid fmsg with
+                                       | Some tid => tid
+                                       | None => nts
+                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
         econstructor; eauto.
         unfold isExternal in *; rewrite <-Hii; assumption.
@@ -439,8 +445,14 @@ Section Compositionality.
       + simpl in H5, H8; rewrite H8 in H5.
         specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (pmsg_outs fpmsg os (msg_value fmsg)))
-          with (intOuts impl2 (pmsg_outs fpmsg os (msg_value fmsg)))
+        replace (intOuts impl (toTMsgs match tmsg_tid fmsg with
+                                       | Some tid => tid
+                                       | None => nts
+                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+          with (intOuts impl2 (toTMsgs match tmsg_tid fmsg with
+                                       | Some tid => tid
+                                       | None => nts
+                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
         econstructor; eauto.
         unfold isExternal in *; rewrite <-Hii2; assumption.
@@ -453,7 +465,7 @@ Section Compositionality.
         ist1 ≈ sst1 ->
         forall ist2,
           steps_det impl ist1 ihst ist2 ->
-          exists (sst2 : MState) (shst : list MLabel),
+          exists (sst2 : TState) (shst : list TLabel),
             steps_det spec sst1 shst sst2 /\
             map simP (behaviorOf impl ihst) = behaviorOf spec shst /\
             ist2 ≈ sst2.
