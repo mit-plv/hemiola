@@ -93,7 +93,7 @@ Section TrsSimStep.
 
   Variables (impl spec: System).
 
-  Definition TrsSimStepMsgIn :=
+  Definition TrsSimSteruleIn :=
     forall ist1 sst1,
       ist1 ≈ sst1 ->
       forall imin ist2,
@@ -127,7 +127,7 @@ Section TrsSimStep.
                  ist2 ≈ sst2)
             end.
 
-  Hypotheses (HsimIn: TrsSimStepMsgIn)
+  Hypotheses (HsimIn: TrsSimSteruleIn)
              (HsimAtm: TrsSimStepAtomic).
 
   Lemma trs_sim_step_steps_atomic:
@@ -209,13 +209,13 @@ End TrsSimStep.
 
 Section MTypePreserving.
 
-  Definition mtPreservingPMsg (pmsg: PMsg) :=
+  Definition mtPreservingRule (rule: Rule) :=
     forall pre val,
-      Forall (fun mout => mid_tid (msg_id mout) = mid_tid (pmsg_mid pmsg))
-             (pmsg_outs pmsg pre val).
+      Forall (fun mout => mid_tid (msg_id mout) = mid_tid (rule_mid rule))
+             (rule_outs rule pre val).
 
   Definition mtPreservingObj (obj: Object) :=
-    Forall mtPreservingPMsg (obj_trs obj).
+    Forall mtPreservingRule (obj_rules obj).
 
   Definition mtPreservingObs (obs: list Object) :=
     Forall mtPreservingObj obs.
@@ -227,14 +227,14 @@ End MTypePreserving.
 
 Section MTypeDisj.
 
-  Definition MTypeDisj (pmsgs1 pmsgs2: list PMsg) :=
-    forall pmsg1 pmsg2,
-      In pmsg1 pmsgs1 ->
-      In pmsg2 pmsgs2 ->
-      mid_tid (pmsg_mid pmsg1) <> mid_tid (pmsg_mid pmsg2).
+  Definition MTypeDisj (rules1 rules2: list Rule) :=
+    forall rule1 rule2,
+      In rule1 rules1 ->
+      In rule2 rules2 ->
+      mid_tid (rule_mid rule1) <> mid_tid (rule_mid rule2).
 
   Definition MTypeDisjSys (sys1 sys2: System) :=
-    MTypeDisj (pmsgsOf sys1) (pmsgsOf sys2).
+    MTypeDisj (rulesOf sys1) (rulesOf sys2).
 
   Lemma MTypeDisj_sym:
     forall ms1 ms2,
@@ -299,10 +299,10 @@ Proof.
       eapply Forall_forall in H; eauto.
       unfold mtPreservingObj in H.
       eapply Forall_forall in H; eauto.
-      unfold mtPreservingPMsg in H.
+      unfold mtPreservingRule in H.
       clear -H H8.
       specialize (H os (msg_value (getMsg fmsg))).
-      induction (pmsg_outs fpmsg os (msg_value (getMsg fmsg))); [constructor|].
+      induction (rule_outs frule os (msg_value (getMsg fmsg))); [constructor|].
       simpl in *.
       inv H; constructor; auto.
       simpl; rewrite H8, H2.
@@ -331,43 +331,43 @@ Section Compositionality.
   Hypotheses (Hmt: mtPreservingSys impl)
              (Hii: indicesOf impl = indicesOf impl1)
              (Himpl:
-                forall pmsg iobj,
-                  In pmsg (obj_trs iobj) ->
+                forall rule iobj,
+                  In rule (obj_rules iobj) ->
                   In iobj (sys_objs impl) ->
                   exists obj,
                     obj_idx obj = obj_idx iobj /\
-                    In pmsg (obj_trs obj) /\
+                    In rule (obj_rules obj) /\
                     In obj (sys_objs impl1 ++ sys_objs impl2)).
 
   Lemma MTypeDisjSys_distr_same_type:
     forall mty,
-      (forall pmsg,
-          mid_tid (pmsg_mid pmsg) = mty ->
+      (forall rule,
+          mid_tid (rule_mid rule) = mty ->
           forall iobj,
-            In pmsg (obj_trs iobj) -> In iobj (sys_objs impl) ->
+            In rule (obj_rules iobj) -> In iobj (sys_objs impl) ->
             exists obj : Object,
-              obj_idx obj = obj_idx iobj /\ In pmsg (obj_trs obj) /\
+              obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
               In obj (sys_objs impl1)) \/
-      (forall pmsg,
-          mid_tid (pmsg_mid pmsg) = mty ->
+      (forall rule,
+          mid_tid (rule_mid rule) = mty ->
           forall iobj,
-            In pmsg (obj_trs iobj) -> In iobj (sys_objs impl) ->
+            In rule (obj_rules iobj) -> In iobj (sys_objs impl) ->
             exists obj : Object,
-              obj_idx obj = obj_idx iobj /\ In pmsg (obj_trs obj) /\
+              obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
               In obj (sys_objs impl2)).
   Proof.
     intros.
-    destruct (mty ?<n (map (fun pmsg => mid_tid (pmsg_mid pmsg)) (pmsgsOf impl1))).
+    destruct (mty ?<n (map (fun rule => mid_tid (rule_mid rule)) (rulesOf impl1))).
     - left; intros.
       pose proof (Himpl _ _ H0 H1).
       destruct H2 as [obj [? [? ?]]].
       apply in_app_or in H4; destruct H4.
       + exists obj; repeat split; assumption.
       + exfalso.
-        pose proof (pmsgsOf_in _ _ H4 _ H3).
-        assert (exists mpmsg, mid_tid (pmsg_mid mpmsg) = mty /\ In mpmsg (pmsgsOf impl1)).
+        pose proof (rulesOf_in _ _ H4 _ H3).
+        assert (exists mrule, mid_tid (rule_mid mrule) = mty /\ In mrule (rulesOf impl1)).
         { clear -i.
-          induction (pmsgsOf impl1); [inv i|].
+          induction (rulesOf impl1); [inv i|].
           inv i.
           { exists a; split; intuition. }
           { specialize (IHl H); dest.
@@ -375,7 +375,7 @@ Section Compositionality.
             right; auto.
           }
         }
-        destruct H6 as [mpmsg [? ?]].
+        destruct H6 as [mrule [? ?]].
         specialize (Hmtdisj _ _ H7 H5).
         rewrite H, H6 in Hmtdisj; auto.
       
@@ -384,8 +384,8 @@ Section Compositionality.
       destruct H2 as [obj [? [? ?]]].
       apply in_app_or in H4; destruct H4.
       + elim n; clear n.
-        pose proof (pmsgsOf_in _ _ H4 _ H3).
-        apply in_map with (f:= fun pmsg => mid_tid (pmsg_mid pmsg)) in H5.
+        pose proof (rulesOf_in _ _ H4 _ H3).
+        apply in_map with (f:= fun rule => mid_tid (rule_mid rule)) in H5.
         rewrite H in H5; assumption.
       + exists obj; repeat split; assumption.
   Qed.
@@ -421,11 +421,11 @@ Section Compositionality.
         replace (intOuts impl (toTMsgs match tmsg_tid fmsg with
                                        | Some tid => tid
                                        | None => nts
-                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
           with (intOuts impl1 (toTMsgs match tmsg_tid fmsg with
                                        | Some tid => tid
                                        | None => nts
-                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
         econstructor; eauto.
         unfold isExternal in *; rewrite <-Hii; assumption.
@@ -448,11 +448,11 @@ Section Compositionality.
         replace (intOuts impl (toTMsgs match tmsg_tid fmsg with
                                        | Some tid => tid
                                        | None => nts
-                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
           with (intOuts impl2 (toTMsgs match tmsg_tid fmsg with
                                        | Some tid => tid
                                        | None => nts
-                                       end (pmsg_outs fpmsg os (msg_value (getMsg fmsg)))))
+                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
         econstructor; eauto.
         unfold isExternal in *; rewrite <-Hii2; assumption.

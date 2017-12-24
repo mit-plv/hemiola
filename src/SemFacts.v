@@ -57,7 +57,7 @@ Proof.
   simpl.
   destruct H11.
   clear -H H0.
-  remember (pmsg_outs _ _ _) as outs; clear Heqouts.
+  remember (rule_outs _ _ _) as outs; clear Heqouts.
   induction outs; simpl; intros; [constructor|].
   inv H; dest.
   constructor; auto.
@@ -78,7 +78,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma step_det_silent_pmsgs_weakening:
+Lemma step_det_silent_rules_weakening:
   forall sys st1 mouts st2,
     step_det sys st1 (IlblOuts None mouts) st2 ->
     forall wsys,
@@ -89,7 +89,7 @@ Proof.
   constructor.
 Qed.
 
-Lemma step_det_in_pmsgs_weakening:
+Lemma step_det_in_rules_weakening:
   forall sys st1 emsg st2,
     step_det sys st1 (IlblIn emsg) st2 ->
     forall wsys,

@@ -91,14 +91,14 @@ Section SynRqRsImm.
 
     Definition synImm (prec: PreCond) (rqFrom: IdxT) (postcond: PostCond)
                (valOut: StateT -> Value) :=
-      {| pmsg_mid := {| mid_tid := trsIdx;
+      {| rule_mid := {| mid_tid := trsIdx;
                         mid_from := rqFrom;
                         mid_to := this;
                         mid_chn := rqChn |};
-         pmsg_precond := prec;
-         pmsg_outs := fun st val =>
+         rule_precond := prec;
+         rule_outs := fun st val =>
                         msgValOut (valOut (ost_st st)) (rqFrom, rsChn) :: nil;
-         pmsg_postcond := postcond
+         rule_postcond := postcond
       |}.
 
   End Immediate.
@@ -119,14 +119,14 @@ Section SynRqRsImm.
              |}.
 
     Definition synRq (prec: PreCond) :=
-      {| pmsg_mid := {| mid_tid := trsIdx;
+      {| rule_mid := {| mid_tid := trsIdx;
                         mid_from := rqFrom;
                         mid_to := this;
                         mid_chn := rqChn |};
-         pmsg_precond := fun pre => prec pre /\ liftTrsLocker pre;
+         rule_precond := fun pre => prec pre /\ liftTrsLocker pre;
          (* forward the request value *)
-         pmsg_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
-         pmsg_postcond := synRqPostcond
+         rule_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
+         rule_postcond := synRqPostcond
       |}.
 
   End RequestFwd.
@@ -213,48 +213,48 @@ Section SynRqRsImm.
      *)
     Definition synRs (postcond: OState -> OState -> Prop)
                (rsOut: StateT -> TrsHelperUnit -> Value) :=
-      {| pmsg_mid := {| mid_tid := trsIdx;
+      {| rule_mid := {| mid_tid := trsIdx;
                         mid_from := rsFrom;
                         mid_to := this;
                         mid_chn := rsChn |};
-         pmsg_precond := T;
-         pmsg_outs := synRsOuts rsOut;
-         pmsg_postcond := synRsPostcond postcond |}.
+         rule_precond := T;
+         rule_outs := synRsOuts rsOut;
+         rule_postcond := synRsPostcond postcond |}.
 
   End ResponseBack.
 
-  Section AddPMsgs.
+  Section AddRules.
 
     Definition buildRawObjs (oobs: list Object): list Object :=
       map (fun obj => {| obj_idx := obj_idx obj;
                          obj_state_init := obj_state_init obj;
-                         obj_trs := nil |}) oobs.
+                         obj_rules := nil |}) oobs.
 
     Definition buildRawSys (osys: System) :=
       {| sys_objs := buildRawObjs (sys_objs osys);
          sys_chns := sys_chns osys |}.
 
-    Definition addPMsgsO (pmsgs: list PMsg) (obj: Object) :=
+    Definition addRulesO (rules: list Rule) (obj: Object) :=
       {| obj_idx := obj_idx obj;
          obj_state_init := obj_state_init obj;
-         obj_trs :=
-           (filter (fun pmsg =>
-                      if mid_to (pmsg_mid pmsg) ==n obj_idx obj
-                      then true else false) pmsgs)
-             ++ obj_trs obj |}.
+         obj_rules :=
+           (filter (fun rule =>
+                      if mid_to (rule_mid rule) ==n obj_idx obj
+                      then true else false) rules)
+             ++ obj_rules obj |}.
 
-    Fixpoint addPMsgs (pmsgs: list PMsg) (objs: list Object) :=
+    Fixpoint addRules (rules: list Rule) (objs: list Object) :=
       match objs with
       | nil => nil
       | obj :: obs' =>
-        (addPMsgsO pmsgs obj) :: (addPMsgs pmsgs obs')
+        (addRulesO rules obj) :: (addRules rules obs')
       end.
 
-    Definition addPMsgsSys (pmsgs: list PMsg) (sys: System) :=
-      {| sys_objs := addPMsgs pmsgs (sys_objs sys);
+    Definition addRulesSys (rules: list Rule) (sys: System) :=
+      {| sys_objs := addRules rules (sys_objs sys);
          sys_chns := sys_chns sys |}.
     
-  End AddPMsgs.
+  End AddRules.
 
   Definition idxInter (li1 li2: list IdxT): list IdxT :=
     filter (fun idx => if idx ?<n li2 then true else false) li1.
@@ -462,7 +462,7 @@ Section SynByVChanges.
     Inductive SynVChanges:
       list (IdxT * IdxT) (* currently synthesizing object index pairs (from, to) *) ->
       list IdxT (* synthesized object indices *) ->
-      list PMsg (* synthesized [PMsg]s *) ->
+      list Rule (* synthesized [Rule]s *) ->
       Prop :=
     | SynVChangeInit: forall erqFrom hdl, SynVChanges ((erqFrom, hdl) :: nil) nil nil
     | SynVChangeImm:
@@ -525,7 +525,7 @@ Ltac collect_vloc :=
       no_vloc_st oss oidx kidx;
       let vloc := fresh "vloc" in
       set (oss, VLocState oidx kidx, v) as vloc
-    | [H: pmsg_postcond _ _ ?v _ |- _] =>
+    | [H: rule_postcond _ _ ?v _ |- _] =>
       no_vloc_msg;
       let vloc := fresh "vloc" in
       set (VLocMsg, v) as vloc

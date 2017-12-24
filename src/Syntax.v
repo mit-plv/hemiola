@@ -53,7 +53,7 @@ Section Msg.
 
 End Msg.
 
-Section PMsg.
+Section Rule.
 
   Definition StateT := M.t Value.
 
@@ -76,19 +76,19 @@ Section PMsg.
     OState (* prestate *) -> Value -> OState (* poststate *) -> Prop.
   Definition MsgOuts := OState -> Value -> list Msg.
 
-  Record PMsg :=
-    { pmsg_mid: MsgId;
-      pmsg_precond: PreCond;
-      pmsg_outs: MsgOuts;
-      pmsg_postcond: PostCond
+  Record Rule :=
+    { rule_mid: MsgId;
+      rule_precond: PreCond;
+      rule_outs: MsgOuts;
+      rule_postcond: PostCond
     }.
 
-End PMsg.
+End Rule.
 
 Record Object :=
   { obj_idx: nat;
     obj_state_init: StateT;
-    obj_trs: list PMsg;
+    obj_rules: list Rule;
   }.
 
 Record Channel :=
@@ -111,25 +111,25 @@ Definition initsOf (sys: System) :=
   map (fun o => obj_state_init o) (sys_objs sys).
 Definition iisOf (sys: System) :=
   map (fun o => (obj_idx o, obj_state_init o)) (sys_objs sys).
-Definition pmsgsOf (sys: System): list PMsg :=
-  concat (map (fun o => obj_trs o) (sys_objs sys)).
+Definition rulesOf (sys: System): list Rule :=
+  concat (map (fun o => obj_rules o) (sys_objs sys)).
 
 Definition objOf (sys: System) (oidx: IdxT): option Object :=
   find (fun o => if obj_idx o ==n oidx then true else false) (sys_objs sys).
-Definition objPMsgsOf (sys: System) (oidx: IdxT) :=
-  (objOf sys oidx) >>=[nil] (fun obj => obj_trs obj).
+Definition objRulesOf (sys: System) (oidx: IdxT) :=
+  (objOf sys oidx) >>=[nil] (fun obj => obj_rules obj).
 
 Fixpoint getForwards (topo: list Channel) (oidx: IdxT) :=
   map chn_to (filter (fun c => if chn_from c ==n oidx then true else false) topo).
 
-Lemma pmsgsOf_in:
+Lemma rulesOf_in:
   forall obj sys,
     In obj (sys_objs sys) ->
-    forall pmsg,
-      In pmsg (obj_trs obj) ->
-      In pmsg (pmsgsOf sys).
+    forall rule,
+      In rule (obj_rules obj) ->
+      In rule (rulesOf sys).
 Proof.
-  unfold pmsgsOf; intros.
+  unfold rulesOf; intros.
   remember (sys_objs sys) as obs; clear Heqobs sys.
   induction obs; simpl; intros; [inv H|].
   apply in_or_app.

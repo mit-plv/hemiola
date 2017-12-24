@@ -43,23 +43,23 @@ Section System.
       Definition setReqM := buildMsgId SvmSetE (getSpecExtIdx chnIdx) specIdx chnIdx.
       Definition setRespM := buildMsgId SvmSetE specIdx (getSpecExtIdx chnIdx) chnIdx.
 
-      Definition specGetReq: PMsg :=
-        {| pmsg_mid := getReqM;
-           pmsg_precond := T;
-           pmsg_outs :=
+      Definition specGetReq: Rule :=
+        {| rule_mid := getReqM;
+           rule_precond := T;
+           rule_outs :=
              fun st _ =>
                (ost_st st)@[valueIdx] >>=[nil]
                (fun v => {| msg_id := getRespM; msg_value := v |} :: nil);
-           pmsg_postcond :=
+           rule_postcond :=
              fun pre _ post => pre = post
         |}.
 
-      Definition specSetReq: PMsg :=
-        {| pmsg_mid := setReqM;
-           pmsg_precond := T;
-           pmsg_outs :=
+      Definition specSetReq: Rule :=
+        {| rule_mid := setReqM;
+           rule_precond := T;
+           rule_outs :=
              fun st _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil;
-           pmsg_postcond :=
+           rule_postcond :=
              fun pre v post => (ost_st post)@[valueIdx] = Some v
         |}.
 
@@ -68,7 +68,7 @@ Section System.
     Definition specObj: Object :=
       {| obj_idx := specIdx;
          obj_state_init := [valueIdx <- VNat 0];
-         obj_trs :=
+         obj_rules :=
            (specGetReq specChn1)
              :: (specSetReq specChn1)
              :: (specGetReq specChn2)
@@ -108,26 +108,26 @@ Section System.
       Definition ecSetReqM := buildMsgId SvmSetE (getImplExtIdx childIdx) childIdx chnImpl.
       Definition ecSetRespM := buildMsgId SvmSetE childIdx (getImplExtIdx childIdx) chnImpl.
 
-      Definition ecGetReqOk: PMsg :=
-        {| pmsg_mid := ecGetReqM;
-           pmsg_precond :=
+      Definition ecGetReqOk: Rule :=
+        {| rule_mid := ecGetReqM;
+           rule_precond :=
              fun st => (ost_st st)@[statusIdx] = Some (VNat stS) \/
                        (ost_st st)@[statusIdx] = Some (VNat stM);
-           pmsg_outs :=
+           rule_outs :=
              fun st _ =>
                (ost_st st)@[valueIdx] >>=[nil]
                           (fun v => {| msg_id := ecGetRespM; msg_value := v |} :: nil);
-           pmsg_postcond :=
+           rule_postcond :=
              fun pre _ post => pre = post
         |}.
 
-      Definition ecSetReqOk: PMsg :=
-        {| pmsg_mid := ecSetReqM;
-           pmsg_precond :=
+      Definition ecSetReqOk: Rule :=
+        {| rule_mid := ecSetReqM;
+           rule_precond :=
              fun st => (ost_st st)@[statusIdx] = Some (VNat stM);
-           pmsg_outs :=
+           rule_outs :=
              fun st _ => {| msg_id := ecSetRespM; msg_value := VUnit |} :: nil;
-           pmsg_postcond :=
+           rule_postcond :=
              fun pre v post =>
                exists n, v = VNat n /\
                          ost_st post = (ost_st pre) +[ valueIdx <- VNat n] |}.
@@ -135,7 +135,8 @@ Section System.
       Definition child0: Object :=
         {| obj_idx := childIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
-           obj_trs := ecGetReqOk :: ecSetReqOk :: nil
+           (* obj_rules := ecGetReqOk :: ecSetReqOk :: nil *)
+           obj_rules := nil
         |}.
 
     End Child0.
@@ -145,7 +146,7 @@ Section System.
       Definition parent0 : Object :=
         {| obj_idx := parentIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
-           obj_trs := nil
+           obj_rules := nil
         |}.
 
     End Parent0.

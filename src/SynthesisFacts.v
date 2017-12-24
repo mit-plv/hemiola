@@ -2,9 +2,9 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet.
 Require Import Serial SerialFacts Simulation TrsSim Predicate Synthesis.
 
-Lemma addPMsgs_init:
-  forall pmsgs objs,
-    getObjectStatesInit (addPMsgs pmsgs objs) =
+Lemma addRules_init:
+  forall rules objs,
+    getObjectStatesInit (addRules rules objs) =
     getObjectStatesInit objs.
 Proof.
   induction objs; simpl; intros; [reflexivity|].
@@ -12,20 +12,20 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma addPMsgsSys_init:
-  forall pmsgs sys,
-    getStateInit (StateT:= TState) (addPMsgsSys pmsgs sys) =
+Lemma addRulesSys_init:
+  forall rules sys,
+    getStateInit (StateT:= TState) (addRulesSys rules sys) =
     getStateInit (StateT:= TState) sys.
 Proof.
-  unfold addPMsgsSys; simpl; intros.
+  unfold addRulesSys; simpl; intros.
   unfold getTStateInit; simpl.
-  rewrite addPMsgs_init.
+  rewrite addRules_init.
   reflexivity.
 Qed.
 
-Lemma addPMsgs_indices:
-  forall pmsgs objs,
-    map (fun o => obj_idx o) (addPMsgs pmsgs objs) =
+Lemma addRules_indices:
+  forall rules objs,
+    map (fun o => obj_idx o) (addRules rules objs) =
     map (fun o => obj_idx o) objs.
 Proof.
   induction objs; simpl; intros; [reflexivity|].
@@ -33,32 +33,32 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma addPMsgsSys_indices:
-  forall pmsgs sys,
-    indicesOf (addPMsgsSys pmsgs sys) = indicesOf sys.
+Lemma addRulesSys_indices:
+  forall rules sys,
+    indicesOf (addRulesSys rules sys) = indicesOf sys.
 Proof.
-  unfold addPMsgsSys; simpl; intros.
+  unfold addRulesSys; simpl; intros.
   unfold indicesOf; simpl.
-  apply addPMsgs_indices.
+  apply addRules_indices.
 Qed.
 
-Corollary addPMsgsSys_isExternal:
-  forall pmsgs sys,
-    isExternal (addPMsgsSys pmsgs sys) =
+Corollary addRulesSys_isExternal:
+  forall rules sys,
+    isExternal (addRulesSys rules sys) =
     isExternal sys.
 Proof.
   unfold isExternal; intros.
-  rewrite addPMsgsSys_indices.
+  rewrite addRulesSys_indices.
   reflexivity.
 Qed.
   
-Corollary addPMsgsSys_isInternal:
-  forall pmsgs sys,
-    isInternal (addPMsgsSys pmsgs sys) =
+Corollary addRulesSys_isInternal:
+  forall rules sys,
+    isInternal (addRulesSys rules sys) =
     isInternal sys.
 Proof.
   unfold isInternal; intros.
-  rewrite addPMsgsSys_indices.
+  rewrite addRulesSys_indices.
   reflexivity.
 Qed.
 
@@ -91,24 +91,24 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma addPMsgs_pmsg_in:
-  forall pmsg pmsgs obs iobj,
-    In pmsg (obj_trs iobj) ->
-    In iobj (addPMsgs pmsgs obs) ->
+Lemma addRules_rule_in:
+  forall rule rules obs iobj,
+    In rule (obj_rules iobj) ->
+    In iobj (addRules rules obs) ->
     exists obj : Object,
       obj_idx obj = obj_idx iobj /\
-      In pmsg (obj_trs obj) /\
-      In obj (obs ++ addPMsgs pmsgs (buildRawObjs obs)).
+      In rule (obj_rules obj) /\
+      In obj (obs ++ addRules rules (buildRawObjs obs)).
 Proof.
   induction obs; simpl; intros; [intuition idtac|].
   destruct H0; subst.
   - clear IHobs.
-    unfold addPMsgsO in H; simpl in H.
+    unfold addRulesO in H; simpl in H.
     apply in_app_or in H; destruct H.
-    + exists (addPMsgsO pmsgs
+    + exists (addRulesO rules
                         {| obj_idx := obj_idx a;
                            obj_state_init := obj_state_init a;
-                           obj_trs := nil |}); simpl; repeat split.
+                           obj_rules := nil |}); simpl; repeat split.
       * rewrite app_nil_r; assumption.
       * right; apply in_or_app; right.
         left; reflexivity.
@@ -123,84 +123,84 @@ Proof.
     + right; right; auto.
 Qed.
 
-Lemma addPMsgsO_app:
-  forall obj pmsgs1 pmsgs2,
-    addPMsgsO (pmsgs1 ++ pmsgs2) obj = addPMsgsO pmsgs1 (addPMsgsO pmsgs2 obj).
+Lemma addRulesO_app:
+  forall obj rules1 rules2,
+    addRulesO (rules1 ++ rules2) obj = addRulesO rules1 (addRulesO rules2 obj).
 Proof.
-  unfold addPMsgsO; intros; simpl; f_equal.
+  unfold addRulesO; intros; simpl; f_equal.
   rewrite filter_app.
   apply eq_sym, app_assoc.
 Qed.
   
-Lemma addPMsgs_app:
-  forall obs pmsgs1 pmsgs2,
-    addPMsgs (pmsgs1 ++ pmsgs2) obs =
-    addPMsgs pmsgs1 (addPMsgs pmsgs2 obs).
+Lemma addRules_app:
+  forall obs rules1 rules2,
+    addRules (rules1 ++ rules2) obs =
+    addRules rules1 (addRules rules2 obs).
 Proof.
   induction obs; simpl; intros; [reflexivity|].
-  rewrite addPMsgsO_app, IHobs; reflexivity.
+  rewrite addRulesO_app, IHobs; reflexivity.
 Qed.
 
-Lemma addPMsgsSys_app:
-  forall sys pmsgs1 pmsgs2,
-    addPMsgsSys (pmsgs1 ++ pmsgs2) sys =
-    addPMsgsSys pmsgs1 (addPMsgsSys pmsgs2 sys).
+Lemma addRulesSys_app:
+  forall sys rules1 rules2,
+    addRulesSys (rules1 ++ rules2) sys =
+    addRulesSys rules1 (addRulesSys rules2 sys).
 Proof.
-  unfold addPMsgsSys; intros; simpl; f_equal.
-  rewrite addPMsgs_app; reflexivity.
+  unfold addRulesSys; intros; simpl; f_equal.
+  rewrite addRules_app; reflexivity.
 Qed.
 
-Lemma addPMsgsSys_pmsg_in:
-  forall sys pmsgs pmsg iobj,
-    In pmsg (obj_trs iobj) ->
-    In iobj (sys_objs (addPMsgsSys pmsgs sys)) ->
+Lemma addRulesSys_rule_in:
+  forall sys rules rule iobj,
+    In rule (obj_rules iobj) ->
+    In iobj (sys_objs (addRulesSys rules sys)) ->
     exists obj : Object,
       obj_idx obj = obj_idx iobj /\
-      In pmsg (obj_trs obj) /\
-      In obj (sys_objs sys ++ sys_objs (addPMsgsSys pmsgs (buildRawSys sys))).
+      In rule (obj_rules obj) /\
+      In obj (sys_objs sys ++ sys_objs (addRulesSys rules (buildRawSys sys))).
 Proof.
   intros; destruct sys as [obs chns]; simpl in *.
-  apply addPMsgs_pmsg_in; auto.
+  apply addRules_rule_in; auto.
 Qed.
 
-Lemma addPMsgsSys_buildRawSys_sublist:
-  forall pmsgs sys,
-    SubList (pmsgsOf (addPMsgsSys pmsgs (buildRawSys sys)))
-            pmsgs.
+Lemma addRulesSys_buildRawSys_sublist:
+  forall rules sys,
+    SubList (rulesOf (addRulesSys rules (buildRawSys sys)))
+            rules.
 Proof.
-  unfold pmsgsOf; intros; simpl.
+  unfold rulesOf; intros; simpl.
   induction (sys_objs sys); clear sys;
     [simpl; apply SubList_nil|].
 
   simpl.
   apply SubList_app_3; [|assumption].
   apply SubList_app_3; [|apply SubList_nil].
-  clear; induction pmsgs; [apply SubList_nil|].
+  clear; induction rules; [apply SubList_nil|].
   simpl; find_if_inside.
   - apply SubList_cons; [left; reflexivity|].
     apply SubList_cons_right; assumption.
   - apply SubList_cons_right; assumption.
 Qed.
   
-Corollary trsSimulates_pmsgs_added:
-  forall impl pmsgs spec simR simP
+Corollary trsSimulates_rules_added:
+  forall impl rules spec simR simP
          (Hsim1: TrsSimulates simR simP impl spec)
          (Hmt1: mtPreservingSys impl)
-         (Hsim2: TrsSimulates simR simP (addPMsgsSys pmsgs (buildRawSys impl)) spec)
-         (Hmt2: mtPreservingSys (addPMsgsSys pmsgs (buildRawSys impl)))
-         (Hmtdisj: MTypeDisj (pmsgsOf impl) pmsgs),
-    TrsSimulates simR simP (addPMsgsSys pmsgs impl) spec.
+         (Hsim2: TrsSimulates simR simP (addRulesSys rules (buildRawSys impl)) spec)
+         (Hmt2: mtPreservingSys (addRulesSys rules (buildRawSys impl)))
+         (Hmtdisj: MTypeDisj (rulesOf impl) rules),
+    TrsSimulates simR simP (addRulesSys rules impl) spec.
 Proof.
   intros.
   eapply trsSimulates_compositional
-    with (impl1:= impl) (impl2:= addPMsgsSys pmsgs (buildRawSys impl)); eauto.
-  - rewrite addPMsgsSys_indices.
+    with (impl1:= impl) (impl2:= addRulesSys rules (buildRawSys impl)); eauto.
+  - rewrite addRulesSys_indices.
     apply buildRawSys_indicesOf.
   - unfold MTypeDisjSys.
     eapply MTypeDisj_SubList_2; eauto.
-    apply addPMsgsSys_buildRawSys_sublist.
+    apply addRulesSys_buildRawSys_sublist.
   - admit. (* should be easily derivable from [Hmt1] and [Hmt2] *)
-  - apply addPMsgsSys_indices.
-  - apply addPMsgsSys_pmsg_in; auto.
+  - apply addRulesSys_indices.
+  - apply addRulesSys_rule_in; auto.
 Admitted.
 

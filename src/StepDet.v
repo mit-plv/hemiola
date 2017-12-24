@@ -17,7 +17,7 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
                 tst_tid := ts
              |}
 | SdInt: forall ts nts (Hts: nts > ts) tts
-                oss oims obj oidx os pos fmsg fpmsg fidx fchn outs,
+                oss oims obj oidx os pos fmsg frule fidx fchn outs,
     In obj (sys_objs sys) ->
     oidx = obj_idx obj ->
     (oss)@[oidx] = Some os ->
@@ -27,11 +27,11 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
     ValidMsgId fidx oidx fchn (getMsg fmsg) ->
     firstM fidx oidx fchn oims = Some fmsg -> 
 
-    msg_id (getMsg fmsg) = pmsg_mid fpmsg ->
-    In fpmsg (obj_trs obj) ->
-    pmsg_precond fpmsg os ->
-    pmsg_postcond fpmsg os (msg_value (getMsg fmsg)) pos ->
-    outs = pmsg_outs fpmsg os (msg_value (getMsg fmsg)) ->
+    msg_id (getMsg fmsg) = rule_mid frule ->
+    In frule (obj_rules obj) ->
+    rule_precond frule os ->
+    rule_postcond frule os (msg_value (getMsg fmsg)) pos ->
+    outs = rule_outs frule os (msg_value (getMsg fmsg)) ->
     ValidOuts oidx outs ->
 
     tts = match tmsg_tid fmsg with

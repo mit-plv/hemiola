@@ -36,10 +36,10 @@ Section AtomicSteps.
   Variables (trsIdx: IdxT)
             (rqImpl rqSpec: Msg).
 
-  Variable (spec: System) (sobj: Object) (spmsg: PMsg)
+  Variable (spec: System) (sobj: Object) (srule: Rule)
            (Hsobj: sys_objs spec = sobj :: nil)
-           (HspmsgIn: In spmsg (obj_trs sobj))
-           (Hspmsg: pmsg_mid spmsg = msg_id rqSpec).
+           (HsruleIn: In srule (obj_rules sobj))
+           (Hsrule: rule_mid srule = msg_id rqSpec).
 
   Variables (impl: System)
             (R: ObjectStates -> ObjectStates -> Prop)
@@ -56,29 +56,29 @@ Section AtomicSteps.
       forall pre msg curs1 curs2 curs,
         curs = curs1 ++ msg :: curs2 ->
 
-        (forall pioss piost pmsg oidx obj nioss niost soss,
+        (forall pioss piost rule oidx obj nioss niost soss,
             R pioss soss ->
-            msg_id msg = pmsg_mid pmsg ->
-            In pmsg (obj_trs obj) ->
+            msg_id msg = rule_mid rule ->
+            In rule (obj_rules obj) ->
             In obj (sys_objs impl) ->
             oidx = obj_idx obj ->
             oidx = mid_to (msg_id msg) ->
 
             StepCondHolds pre (msg_value msg) pioss ->
             pioss@[oidx] = Some piost ->
-            pmsg_precond pmsg piost ->
-            pmsg_postcond pmsg piost (msg_value msg) niost ->
+            rule_precond rule piost ->
+            rule_postcond rule piost (msg_value msg) niost ->
 
             nioss = pioss +[oidx <- niost] ->
 
             exists ostc,
               (forall post val nost,
-                  pmsg_precond pmsg post ->
-                  pmsg_postcond pmsg post val nost ->
+                  rule_precond rule post ->
+                  rule_postcond rule post val nost ->
                   OstCondHolds ostc nost) /\
               R nioss soss /\
               AtomicSteps (updateOstCond oidx ostc pre)
-                          (curs1 ++ curs2 ++ pmsg_outs pmsg piost (msg_value msg))) ->
+                          (curs1 ++ curs2 ++ rule_outs rule piost (msg_value msg))) ->
 
         AtomicSteps pre curs.
   (* TODO: | AstSpecStep: ... *)

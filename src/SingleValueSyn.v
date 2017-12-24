@@ -63,7 +63,7 @@ Section Impl.
       let oobj := (eval cbn in (nth_error (sys_objs impl) oidx)) in
       match oobj with
       | Some ?obj =>
-        let otrs := (eval cbn in (nth_error (obj_trs obj) tidx)) in
+        let otrs := (eval cbn in (nth_error (obj_rules obj) tidx)) in
         match otrs with
         | Some ?trs => pose trs as pname
         end
@@ -72,10 +72,10 @@ Section Impl.
     Ltac cbner t tn := let ct := (eval cbn in t) in pose ct as tn.
     Ltac hnfer t tn := let ht := (eval hnf in t) in pose ht as tn.
 
-    Ltac get_pmsg_from trs pname :=
-      cbner (mid_from (pmsg_mid trs)) pname.
-    Ltac get_pmsg_precond trs pname :=
-      cbner (pmsg_precond trs) pname.
+    Ltac get_rule_from trs pname :=
+      cbner (mid_from (rule_mid trs)) pname.
+    Ltac get_rule_precond trs pname :=
+      cbner (rule_precond trs) pname.
 
     Ltac mv_rewriter :=
       repeat
@@ -125,25 +125,25 @@ Section Impl.
            mid_chn := mid_chn mid
         |}.
       
-      Definition makePMsgExternal (pmsg: PMsg): PMsg :=
-        {| pmsg_mid := makeMsgIdExternal (pmsg_mid pmsg);
-           pmsg_precond := pmsg_precond pmsg;
-           pmsg_outs := pmsg_outs pmsg;
-           pmsg_postcond := pmsg_postcond pmsg
+      Definition makeRuleExternal (rule: Rule): Rule :=
+        {| rule_mid := makeMsgIdExternal (rule_mid rule);
+           rule_precond := rule_precond rule;
+           rule_outs := rule_outs rule;
+           rule_postcond := rule_postcond rule
         |}.
 
-      Lemma makePMsgExternal_pmsg_in:
-        forall pmsg pmsgs1 pmsgs2,
-          mid_to (pmsg_mid pmsg) = targetIdx ->
-          In pmsg (pmsgs1 ++ map makePMsgExternal pmsgs2) ->
-          In pmsg pmsgs1.
+      Lemma makeRuleExternal_rule_in:
+        forall rule rules1 rules2,
+          mid_to (rule_mid rule) = targetIdx ->
+          In rule (rules1 ++ map makeRuleExternal rules2) ->
+          In rule rules1.
       Proof.
         intros.
         apply in_app_or in H0; destruct H0; auto.
         exfalso; clear -H H0 Hdiff.
-        induction pmsgs2; [auto|].
+        induction rules2; [auto|].
         destruct H0; auto.
-        subst pmsg.
+        subst rule.
         simpl in H; unfold makeIdxExternal in H.
         find_if_inside; auto.
       Qed.
@@ -153,42 +153,42 @@ Section Impl.
     Section MakePreCondDisj.
       Variable (prec: PreCond).
 
-      Definition makePreCondDisj (pmsg: PMsg): PMsg :=
-        {| pmsg_mid := pmsg_mid pmsg;
-           pmsg_precond := fun ost => ~ (prec ost) /\ pmsg_precond pmsg ost;
-           pmsg_outs := pmsg_outs pmsg;
-           pmsg_postcond := pmsg_postcond pmsg
+      Definition makePreCondDisj (rule: Rule): Rule :=
+        {| rule_mid := rule_mid rule;
+           rule_precond := fun ost => ~ (prec ost) /\ rule_precond rule ost;
+           rule_outs := rule_outs rule;
+           rule_postcond := rule_postcond rule
         |}.
 
-      Lemma makePreCondDisj_pmsg_in:
-        forall pmsg ost,
-          pmsg_precond pmsg ost ->
-          forall pmsgs,
-            In pmsg (map makePreCondDisj pmsgs) ->
+      Lemma makePreCondDisj_rule_in:
+        forall rule ost,
+          rule_precond rule ost ->
+          forall rules,
+            In rule (map makePreCondDisj rules) ->
             ~ prec ost.
       Proof.
-        induction pmsgs; intros; [auto|].
+        induction rules; intros; [auto|].
         destruct H0; subst; auto.
         simpl in H; destruct H; auto.
       Qed.
 
     End MakePreCondDisj.
 
-    Definition addPreCond (pmsg: PMsg) (mid: MsgId) (prec: PreCond) :=
-      {| pmsg_mid := mid;
-         pmsg_precond := fun ost => pmsg_precond pmsg ost /\ prec ost;
-         pmsg_outs := pmsg_outs pmsg;
-         pmsg_postcond := pmsg_postcond pmsg |}.
+    Definition addPreCond (rule: Rule) (mid: MsgId) (prec: PreCond) :=
+      {| rule_mid := mid;
+         rule_precond := fun ost => rule_precond rule ost /\ prec ost;
+         rule_outs := rule_outs rule;
+         rule_postcond := rule_postcond rule |}.
 
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      instantiate (1:= addPMsgsSys _ pimpl);
+      instantiate (1:= addRulesSys _ pimpl);
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
-      [rewrite addPMsgsSys_init; apply pimpl_ok| |].
+      [rewrite addRulesSys_init; apply pimpl_ok| |].
 
     Ltac trsSimulates_case_in msgF :=
       (** instantiation *)
-      unfold TrsSimStepMsgIn; intros; simpl;
+      unfold TrsSimSteruleIn; intros; simpl;
       match goal with
       | [H: context[IlblIn ?min] |- context[step_det _ ?st1 _ _] ] =>
         let soss := fresh "soss" in
@@ -218,10 +218,10 @@ Section Impl.
         | [H: isInternal _ (mid_to (msg_id _)) = true |-
            isInternal _ (mid_to (msg_id _)) = true] =>
           eapply validMsgMap_to_isInternal; [|eassumption]
-        | [ |- ValidMsgMap _ (addPMsgsSys _ (buildRawSys ?imp)) _ ] =>
+        | [ |- ValidMsgMap _ (addRulesSys _ (buildRawSys ?imp)) _ ] =>
           apply validMsgMap_same_indices with (impl1:= imp);
           [apply svmMsgF_ValidMsgMap
-          |rewrite addPMsgsSys_indices, buildRawSys_indicesOf; reflexivity]
+          |rewrite addRulesSys_indices, buildRawSys_indicesOf; reflexivity]
         end.
 
     (* This ltac handles trivial [Transactional] cases.
@@ -229,7 +229,7 @@ Section Impl.
      *)
     Ltac trsSimulates_trivial msgF :=
       apply trs_sim_in_atm_simulates;
-      [unfold TrsSimStepMsgIn; intros; trsSimulates_case_in msgF|].
+      [unfold TrsSimSteruleIn; intros; trsSimulates_case_in msgF|].
 
     Ltac trsSimulates_atomic_trivial :=
       unfold TrsSimStepAtomic; intros;
@@ -241,7 +241,7 @@ Section Impl.
 
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
-    Definition svmTargetPMsgIdx0 := 0.
+    Definition svmTargetRuleIdx0 := 0.
 
     Definition svmRq0 (val: Value) :=
       {| msg_id := {| mid_tid := svmTrsIdx0;
@@ -250,106 +250,65 @@ Section Impl.
                       mid_chn := rqChn |};
          msg_value := val |}.
 
-    Ltac completeAtomicSteps_init :=
-      econstructor; [rewrite app_nil_l; reflexivity|];
-      intros; subst.
-
-    Definition atomicSteps_svmSynTrs0:
-      { pmsgs1: list PMsg &
-        CompleteAtomicSteps (addPMsgsSys pmsgs1 (buildRawSys impl0))
-                            SvmR (svmRq0 VUnit)
+    Record MsgInv :=
+      { mi_from: IdxT;
+        mi_to: IdxT;
+        mi_chn: IdxT;
+        mi_tid: IdxT;
+        mi_inv: ObjectStates -> Prop
       }.
-    Proof.
-      eexists; intros.
-      completeAtomicSteps_init.
 
-      (* 1) Separate [PMsg]s for the current target index and the others. *)
-      pose proof (pmsgsOf_in _ _ H2 _ H1); clear H1 H2.
-      apply addPMsgsSys_buildRawSys_sublist in H3.
-      instantiate (1:= _ ++ (map (makePMsgExternal child1Idx child2Idx) _)).
-      apply makePMsgExternal_pmsg_in in H3; [|discriminate|rewrite <-H0; reflexivity].
+    Definition buildMsgInv from to chn tid inv :=
+      {| mi_from:= from;
+         mi_to:= to;
+         mi_chn:= chn;
+         mi_tid:= tid;
+         mi_inv:= inv |}.
 
-      (* 2) Case analyses with respect to the value of [C1.st] *)
-      remember (pioss@[child1Idx]) as oiost1.
-      destruct oiost1 as [iost1|]; [|exfalso; inv H; mv_rewriter].
-      remember ((ost_st iost1)@[statusIdx]) as ostt1.
-      destruct ostt1 as [stt1|]; [|exfalso; inv H; mv_rewriter].
-      
-      destruct (value_dec stt1 (VNat stI));
-        [|destruct (value_dec stt1 (VNat stS));
-          [|destruct (value_dec stt1 (VNat stM));
-            [|inv H; mv_rewriter; try (exfalso; auto)]]]; subst.
+    Definition MsgInvs := list MsgInv.
 
-      { (* 3) When [C1.st = I]: separate [PMsg]s for this case and the others. *)
-        instantiate (2:= _ ++ (map (makePreCondDisj
-                                      (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)))
-                                   _)).
-        simpl in H4; rewrite H4 in H6.
-        apply in_app_or in H3; destruct H3;
-          [|exfalso; eapply makePreCondDisj_pmsg_in; eauto;
-            simpl; mv_rewriter; auto].
+    Definition MsgInvHolds (mi: MsgInv) (st: TState) :=
+      forall q msg,
+        findM (mi_from mi) (mi_to mi) (mi_chn mi) (tst_msgs st) = q ->
+        In msg q ->
+        tmsg_tid msg = Some (mi_tid mi) ->
+        mi_inv mi (tst_oss st).
 
-        (* 4) Synthesize [PMsg]s for C1 when [C1.st = I]! *)
-        instantiate (3:= (synRq svmTrsIdx0 child1Idx alwaysLock extIdx1 (parentIdx :: nil)
-                                (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)))
-                           :: (synRs svmTrsIdx0 child1Idx parentIdx
-                                     (fun post nost =>
-                                        ost_st nost = (ost_st post)
-                                                      +[valueIdx <- rsFwdValue svmTrsIdx0 post]
-                                                      +[statusIdx <- VNat stS])
-                                     (fun post ptrsu => getFwdValue (tst_rss ptrsu)))
-                           :: nil).
-        Common.dest_in; try discriminate.
+    Definition MsgInvsHold (mis: MsgInvs) (st: TState) :=
+      Forall (fun mi => MsgInvHolds mi st) mis.
 
-        (* 5) It's quite easy to prove simulation preservation for requests. *)
-        exists (fun st => st@[statusIdx] = Some (VNat stI), T).
-        repeat split.
-        { simpl; simpl in H1, H2.
-          unfold synRqPostcond in H2; subst; simpl.
-          destruct H1; assumption.
-        }
-        { eapply SvmR_EquivPreservingR; [eassumption|].
-          simpl in H8.
-          unfold synRqPostcond in H8; subst; simpl.
-          unfold StateEquivOS; intros.
-          findeq.
-          { unfold StateEquivO; simpl.
-            rewrite H4 in Heqv; mv_rewriter.
-            reflexivity.
-          }
-          { rewrite H4 in Heqv; mv_rewriter. }
-        }
-        { admit. }
-      }
-      { admit. }
-      { admit. }
-
-    Admitted.
+    Definition InvR0 (tid: IdxT): MsgInvs :=
+      (buildMsgInv child1Idx parentIdx rsChn tid
+                   (fun st =>
+                      exists ost1,
+                        st@[child1Idx] = Some ost1 /\
+                        (ost_st ost1)@[statusIdx] = Some (VNat stI)))
+        :: (buildMsgInv child2Idx parentIdx rsChn tid
+                        (fun st =>
+                           exists ost2,
+                             st@[child2Idx] = Some ost2 /\
+                             (ost_st ost2)@[statusIdx] = Some (VNat stI)))
+        :: (buildMsgInv parentIdx child1Idx rsChn tid
+                        (fun st =>
+                           exists ost1 ost2,
+                             st@[child1Idx] = Some ost1 /\
+                             ((ost_st ost1)@[statusIdx] = Some (VNat stI) \/
+                              (ost_st ost1)@[statusIdx] = Some (VNat stS)) /\
+                             st@[child2Idx] = Some ost2 /\
+                             ((ost_st ost2)@[statusIdx] = Some (VNat stI) \/
+                              (ost_st ost2)@[statusIdx] = Some (VNat stS))))
+        :: nil.
 
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec SvmSim svmP impl1 }.
     Proof.
-      get_target_trs impl0 svmTargetOIdx0 svmTargetPMsgIdx0 ttrs.
-      get_pmsg_from ttrs tfrom.
-      get_pmsg_precond ttrs tprec.
-      find_new_prec tprec svmImplChild1Inv nprec.
-
       syn_step_init impl0 impl0_ok.
 
       - (** simulation *)
-        apply trsSimulates_pmsgs_added.
+        apply trsSimulates_rules_added.
         + apply impl0_ok.
         + repeat constructor.
-          * unfold mtPreservingPMsg; cbn; intros.
-            destruct ((ost_st pre)@[valueIdx]); simpl.
-            { repeat constructor. }
-            { repeat constructor. }
-          * unfold mtPreservingPMsg; cbn; intros.
-            destruct ((ost_st pre)@[valueIdx]); simpl.
-            { repeat constructor. }
-            { repeat constructor. }
-
-        + (** simulation for newly added [PMsg]s *)
+        + (** simulation for newly added [Rule]s *)
           trsSimulates_trivial (svmMsgF extIdx1 extIdx2).
           trsSimulates_atomic_trivial.
           admit.
