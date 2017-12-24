@@ -163,13 +163,17 @@ Section Impl.
       Lemma makePreCondDisj_rule_in:
         forall rule ost,
           rule_precond rule ost ->
-          forall rules,
-            In rule (map makePreCondDisj rules) ->
-            ~ prec ost.
+          prec ost ->
+          forall rules1 rules2,
+            In rule (rules1 ++ map makePreCondDisj rules2) ->
+            In rule rules1.
       Proof.
-        induction rules; intros; [auto|].
-        destruct H0; subst; auto.
-        simpl in H; destruct H; auto.
+        intros.
+        apply in_app_or in H1; destruct H1; auto.
+        exfalso; clear -H H0 H1.
+        induction rules2; [auto|].
+        destruct H1; auto.
+        subst; cbn in H; destruct H; auto.
       Qed.
 
     End MakePreCondDisj.
@@ -186,9 +190,36 @@ Section Impl.
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [rewrite addRulesSys_init; apply pimpl_ok| |].
 
+    Record MsgInv :=
+      { mi_from: IdxT;
+        mi_to: IdxT;
+        mi_chn: IdxT;
+        mi_tid: IdxT;
+        mi_inv: ObjectStates -> Value (* msg value *) -> Prop
+      }.
+
+    Definition buildMsgInv from to chn tid inv :=
+      {| mi_from:= from;
+         mi_to:= to;
+         mi_chn:= chn;
+         mi_tid:= tid;
+         mi_inv:= inv |}.
+
+    Definition MsgInvs := list MsgInv.
+
+    Definition MsgInvHolds (mi: MsgInv) (st: TState) :=
+      forall q msg,
+        findM (mi_from mi) (mi_to mi) (mi_chn mi) (tst_msgs st) = q ->
+        In msg q ->
+        tmsg_tid msg = Some (mi_tid mi) ->
+        mi_inv mi (tst_oss st) (msg_value (tmsg_msg msg)).
+
+    Definition MsgInvsHold (mis: MsgInvs) (st: TState) :=
+      Forall (fun mi => MsgInvHolds mi st) mis.
+
     Ltac trsSimulates_case_in msgF :=
       (** instantiation *)
-      unfold TrsSimSteruleIn; intros; simpl;
+      unfold TrsSimStepMsgIn; intros; simpl;
       match goal with
       | [H: context[IlblIn ?min] |- context[step_det _ ?st1 _ _] ] =>
         let soss := fresh "soss" in
@@ -227,9 +258,9 @@ Section Impl.
     (* This ltac handles trivial [Transactional] cases.
      * After then we only need to deal with [Atomic] histories.
      *)
-    Ltac trsSimulates_trivial msgF :=
-      apply trs_sim_in_atm_simulates;
-      [unfold TrsSimSteruleIn; intros; trsSimulates_case_in msgF|].
+    Ltac trsSimulates_trivial msgF trsInv :=
+      apply trs_sim_in_atm_simulates with (ainv:= fun tid ist => MsgInvsHold (trsInv tid) ist);
+      [unfold TrsSimStepMsgIn; intros; trsSimulates_case_in msgF| |].
 
     Ltac trsSimulates_atomic_trivial :=
       unfold TrsSimStepAtomic; intros;
@@ -250,54 +281,35 @@ Section Impl.
                       mid_chn := rqChn |};
          msg_value := val |}.
 
-    Record MsgInv :=
-      { mi_from: IdxT;
-        mi_to: IdxT;
-        mi_chn: IdxT;
-        mi_tid: IdxT;
-        mi_inv: ObjectStates -> Prop
-      }.
-
-    Definition buildMsgInv from to chn tid inv :=
-      {| mi_from:= from;
-         mi_to:= to;
-         mi_chn:= chn;
-         mi_tid:= tid;
-         mi_inv:= inv |}.
-
-    Definition MsgInvs := list MsgInv.
-
-    Definition MsgInvHolds (mi: MsgInv) (st: TState) :=
-      forall q msg,
-        findM (mi_from mi) (mi_to mi) (mi_chn mi) (tst_msgs st) = q ->
-        In msg q ->
-        tmsg_tid msg = Some (mi_tid mi) ->
-        mi_inv mi (tst_oss st).
-
-    Definition MsgInvsHold (mis: MsgInvs) (st: TState) :=
-      Forall (fun mi => MsgInvHolds mi st) mis.
-
-    Definition InvR0 (tid: IdxT): MsgInvs :=
-      (buildMsgInv child1Idx parentIdx rsChn tid
-                   (fun st =>
-                      exists ost1,
-                        st@[child1Idx] = Some ost1 /\
-                        (ost_st ost1)@[statusIdx] = Some (VNat stI)))
-        :: (buildMsgInv child2Idx parentIdx rsChn tid
-                        (fun st =>
-                           exists ost2,
-                             st@[child2Idx] = Some ost2 /\
-                             (ost_st ost2)@[statusIdx] = Some (VNat stI)))
+    Definition trsInv0 (tid: IdxT): MsgInvs :=
+      (buildMsgInv child2Idx parentIdx rsChn tid
+                   (fun st val =>
+                      exists ost2,
+                        st@[child2Idx] = Some ost2 /\
+                        (ost_st ost2)@[statusIdx] = Some (VNat stS) /\
+                        (ost_st ost2)@[valueIdx] = Some val))
         :: (buildMsgInv parentIdx child1Idx rsChn tid
-                        (fun st =>
-                           exists ost1 ost2,
-                             st@[child1Idx] = Some ost1 /\
-                             ((ost_st ost1)@[statusIdx] = Some (VNat stI) \/
-                              (ost_st ost1)@[statusIdx] = Some (VNat stS)) /\
+                        (fun st val =>
+                           exists ostp ost2,
+                             st@[parentIdx] = Some ostp /\
+                             (ost_st ostp)@[statusIdx] = Some (VNat stS) /\
+                             (ost_st ostp)@[valueIdx] = Some val /\
                              st@[child2Idx] = Some ost2 /\
-                             ((ost_st ost2)@[statusIdx] = Some (VNat stI) \/
-                              (ost_st ost2)@[statusIdx] = Some (VNat stS))))
+                             (ost_st ost2)@[statusIdx] = Some (VNat stS) /\
+                             (ost_st ost2)@[valueIdx] = Some val))
         :: nil.
+
+    Lemma SvmR_status_cases_1:
+      forall ioss soss,
+        SvmR ioss soss ->
+        exists iost1,
+          ioss@[child1Idx] = Some iost1 /\
+          ((ost_st iost1)@[statusIdx] = Some (VNat stI) \/
+           (ost_st iost1)@[statusIdx] = Some (VNat stS) \/
+           (ost_st iost1)@[statusIdx] = Some (VNat stM)).
+    Proof.
+      intros; inv H; eexists; eauto.
+    Qed.
 
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec SvmSim svmP impl1 }.
@@ -309,15 +321,57 @@ Section Impl.
         + apply impl0_ok.
         + repeat constructor.
         + (** simulation for newly added [Rule]s *)
-          trsSimulates_trivial (svmMsgF extIdx1 extIdx2).
+          trsSimulates_trivial (svmMsgF extIdx1 extIdx2) trsInv0;
+            [|admit (* TODO: later; need a lemma saying that a starting state of
+                     * [Atomic] steps has no messages with [tmsg_tid _ = tid]. *)].
           trsSimulates_atomic_trivial.
-          admit.
-          
-        + admit.
-        + admit.
 
-      - (** serializability *)
-        admit.
+          (* +) some basic work *)
+          pose proof (rulesOf_in _ _ H5 _ H12); clear H5 H12.
+          apply addRulesSys_buildRawSys_sublist in H3.
+          destruct fmsg as [[[mtid mfrom mto mchn] fval] ftid].
+          destruct H9 as [? [? ?]]; simpl in *; subst.
+          rewrite addRulesSys_isExternal in H8.
+          
+          (* 0) separate rules; one for c1, another for the others *)
+          instantiate (1:= _ ++ (map (makeRuleExternal child1Idx child2Idx) _)).
+
+          (* 1) case analysis on c1 status *)
+          rename oss into ioss1.
+          rename oims into imsgs1.
+          rename ts into its1.
+          destruct sst1 as [soss1 smsgs1 sts1].
+          unfold SvmSim in H0; simpl in H0.
+          pose proof (SvmR_status_cases_1 H0).
+          destruct H5 as [iost1 [? ?]].
+          destruct H6; [|destruct H6].
+
+          * (* 2-1) When C1.st = I *)
+            instantiate (2:= _ ++ (map (makePreCondDisj
+                                          (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)))
+                                       _)).
+
+            (* 2-2) Synthesize rules for C1, with [C1.st = I] as a precondition. *)
+            destruct (obj_idx obj ==n child1Idx).
+            { rewrite e in *.
+              apply makeRuleExternal_rule_in in H3; [|discriminate|rewrite <-H11; reflexivity].
+              eapply makePreCondDisj_rule_in in H3; [|eassumption|mv_rewriter; assumption].
+
+              (* Try to synthesize an immediate transaction;
+               * it fails since it cannot have a mechanism to bring the 
+               * representative value from the other objects.
+               * When the trial fails, nothing is synthesized.
+               *)
+              try
+                (instantiate (3:= synImm svmTrsIdx0 child1Idx
+                                         (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI))
+                                         extIdx1 _ _ :: nil);
+                 Common.dest_in;
+                 fail).
+
+              (* Now try to synthesize "request-forwarding" and corresponding
+               * "responses-receiving" rules.
+               *)
         
     Admitted.
     

@@ -12,17 +12,18 @@ Section PerSystem.
    * [Msg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
    * ensures that the history is for a single transaction.
    *)
-  Inductive Atomic: TMsg -> History -> list TMsg -> Prop :=
+  Inductive Atomic: IdxT -> TMsg -> History -> list TMsg -> Prop :=
   | AtomicBase:
-      forall hdl,
+      forall hdl tid,
         isExternal sys (mid_from (msg_id (getMsg hdl))) = true ->
-        Atomic hdl nil (hdl :: nil)
+        tmsg_tid hdl = Some tid ->
+        Atomic tid hdl nil (hdl :: nil)
   | AtomicCons:
-      forall min hst mouts,
-        Atomic min hst mouts ->
+      forall tid min hst mouts,
+        Atomic tid min hst mouts ->
         forall hdl houts,
           In hdl mouts ->
-          Atomic min (IlblOuts (Some hdl) houts :: hst)
+          Atomic tid min (IlblOuts (Some hdl) houts :: hst)
                  (List.remove tmsg_dec hdl mouts ++ houts).
 
   Inductive Transactional: History -> Prop :=
@@ -33,8 +34,8 @@ Section PerSystem.
         tin = IlblIn msg ->
         Transactional (tin :: nil)
   | TrsAtomic:
-      forall min hst mouts,
-        Atomic min hst mouts ->
+      forall tid min hst mouts,
+        Atomic tid min hst mouts ->
         Transactional hst.
 
   Definition Sequential (hst: History) :=
