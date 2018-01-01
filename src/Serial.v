@@ -7,6 +7,9 @@ Section PerSystem.
 
   Definition History := list TLabel.
 
+  Definition SubHistory (shst hst: History) :=
+    exists nhst, hst = nhst ++ shst.
+
   (* Note that due to the definition of [Msg], it is guaranteed that
    * an [Atomic] history is about a single transaction.
    * [Msg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
@@ -36,6 +39,7 @@ Section PerSystem.
   | TrsAtomic:
       forall tid min hst mouts,
         Atomic tid min hst mouts ->
+        hst <> nil ->
         Transactional hst.
 
   Definition Sequential (hst: History) :=

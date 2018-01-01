@@ -4,6 +4,29 @@ Require Import Syntax Semantics SemFacts StepDet Serial.
 
 Set Implicit Arguments.
 
+Lemma SubHistory_refl:
+  forall hst, SubHistory hst hst.
+Proof.
+  intros; exists nil; reflexivity.
+Qed.
+
+Lemma SubHistory_cons:
+  forall l hst, SubHistory hst (l :: hst).
+Proof.
+  intros; exists (l :: nil); reflexivity.
+Qed.
+
+Lemma SubHistory_In:
+  forall l hst1 hst2,
+    In l hst1 ->
+    SubHistory hst1 hst2 ->
+    In l hst2.
+Proof.
+  unfold SubHistory; intros.
+  destruct H0 as [nhsg ?]; subst.
+  apply in_or_app; auto.
+Qed.
+
 Lemma atomic_emptyILabel_not_in:
   forall sys tid min hst mouts,
     Atomic sys tid min hst mouts ->

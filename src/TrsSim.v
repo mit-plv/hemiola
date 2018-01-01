@@ -87,7 +87,7 @@ End TrsSim.
 
 Section TrsSimStep.
   Variables (sim: TState -> TState -> Prop)
-            (ainv: IdxT (* trsIdx *) -> TState -> Prop)
+            (hinv: History -> TState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
@@ -101,87 +101,82 @@ Section TrsSimStep.
         step_det impl ist1 (IlblIn imin) ist2 ->
         exists smin sst2,
           step_det spec sst1 (IlblIn smin) sst2 /\
-          extLabel spec (getLabel (IlblIn smin)) = Some (p (getLabel (IlblIn imin))) /\
+          extLabel spec (getLabel (IlblIn smin)) =
+          Some (p (getLabel (IlblIn imin))) /\
           ist2 ≈ sst2.
-
+  
   Definition TrsSimStepAtomic :=
     forall tid min hst mouts,
       Atomic impl tid min hst mouts ->
-      forall ist1 sst1,
-        ist1 ≈ sst1 ->
-        ainv tid ist1 ->
-        forall ists istf,
-          steps_det impl ists hst istf ->
-          forall ilbl ist2,
-            step_det impl ist1 ilbl ist2 ->
-            In ilbl hst ->
-            (ainv tid ist2 /\
+      forall pist phst iist,
+        steps_det impl pist phst iist ->
+        forall sst1,
+          iist ≈ sst1 ->
+          hinv phst iist ->
+          forall ilbl nist,
+            step_det impl iist ilbl nist ->
+            SubHistory (ilbl :: phst) hst ->
+            (hinv (ilbl :: phst) nist /\
              match extLabel impl (getLabel ilbl) with
              | Some ielbl =>
                exists slbl sst2,
                step_det spec sst1 slbl sst2 /\
                extLabel spec (getLabel slbl) = Some (p ielbl) /\
-               ist2 ≈ sst2
+               nist ≈ sst2
              | None =>
-               (ist2 ≈ sst1 \/
+               (nist ≈ sst1 \/
                 exists slbl sst2,
                   step_det spec sst1 slbl sst2 /\
                   extLabel spec (getLabel slbl) = None /\
-                  ist2 ≈ sst2)
+                  nist ≈ sst2)
              end).
-
-  Definition TrsSimStepAtomicInv :=
-    forall tid min hst mouts,
-      Atomic impl tid min hst mouts ->
-      forall ist1 ist2,
-        steps_det impl ist1 hst ist2 ->
-        ainv tid ist1.
 
   Hypotheses (HsimIn: TrsSimStepMsgIn)
              (HsimAtm: TrsSimStepAtomic)
-             (HsimAtmInv: TrsSimStepAtomicInv).
+             (HhinvInit: forall st, hinv nil st).
 
   Lemma trs_sim_step_steps_atomic:
     forall tid min ihst mouts,
       Atomic impl tid min ihst mouts ->
       forall ist1 sst1,
-        ist1 ≈ sst1 -> ainv tid ist1 ->
+        ist1 ≈ sst1 ->
         forall ist2,
           steps_det impl ist1 ihst ist2 ->
           exists sst2 shst,
             steps_det spec sst1 shst sst2 /\
             map p (behaviorOf impl ihst) = behaviorOf spec shst /\
-            ist2 ≈ sst2 /\ ainv tid ist2.
+            ist2 ≈ sst2 /\
+            hinv ihst ist2.
   Proof.
     induction 1; simpl; intros;
-      [inv H3; eexists; exists nil; repeat split; [econstructor|assumption|assumption]|].
+      [inv H2; eexists; exists nil; repeat split;
+       [econstructor|assumption|apply HhinvInit]|].
 
     assert (Atomic impl tid min (IlblOuts (Some hdl) houts :: hst)
                    (remove tmsg_dec hdl mouts ++ houts))
       by (constructor; auto).
 
-    pose proof H3.
-    inv H3.
-    specialize (IHAtomic _ _ H1 H2 _ H9).
+    pose proof H2; inv H2.
+    specialize (IHAtomic _ _ H1 _ H8).
     destruct IHAtomic as [ssti [shsti [? [? [? ?]]]]].
 
-    eapply HsimAtm in H4.
-    specialize (H4 _ _ H7 H8 _ _ H5 _ _ H11 (or_introl eq_refl)).
-    simpl in H4; destruct H4.
+    eapply HsimAtm in H3.
+    specialize (H3 _ _ _ H8 _ H6 H7 _ _ H10 (SubHistory_refl _)).
+    destruct H3; simpl in H9.
 
     destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
-    - simpl; destruct H10.
+    - simpl; destruct H9.
       + eexists; exists shsti; repeat split; eauto.
-      + destruct H10 as [slbl [sst2 [? [? ?]]]].
+      + destruct H9 as [slbl [sst2 [? [? ?]]]].
         eexists; eexists (_ :: _); repeat split.
         * econstructor; eassumption.
-        * simpl; rewrite H12; simpl; assumption.
+        * simpl; rewrite H11; simpl; assumption.
         * assumption.
         * assumption.
-    - destruct H10 as [slbl [sst2 [? [? ?]]]].
+    - destruct H9 as [slbl [sst2 [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split.
       + econstructor; eassumption.
-      + simpl; rewrite H6, H12; reflexivity.
+      + simpl; rewrite H5, H11; reflexivity.
       + assumption.
       + assumption.
   Qed.
@@ -208,8 +203,7 @@ Section TrsSimStep.
       + simpl; simpl in H1; inv H1; reflexivity.
       + assumption.
     - eapply trs_sim_step_steps_atomic in H0; eauto.
-      destruct H0 as [sst2 [shst [? [? [? ?]]]]].
-      do 2 eexists; repeat split; eassumption.
+      dest; eauto.
   Qed.
 
   Lemma trs_sim_in_atm_simulates:
@@ -507,20 +501,20 @@ Section Compositionality.
       pose proof (Hsim1 H0 H).
       simpl; simpl in H2; assumption.
       
-    - pose proof (atomic_steps_compositional H1 H); destruct H2.
+    - pose proof (atomic_steps_compositional H2 H); destruct H3.
       + assert (Transactional impl1 hst).
-        { econstructor.
+        { econstructor; eauto.
           eapply atomic_preserved; eauto.
         }
-        pose proof (Hsim1 H0 (conj H2 H3)).
+        pose proof (Hsim1 H1 (conj H3 H4)).
         rewrite behaviorOf_preserved with (impl2:= impl1) by assumption.
         assumption.
       + assert (Transactional impl2 hst).
-        { econstructor.
+        { econstructor; eauto.
           eapply atomic_preserved; eauto.
           rewrite Hii; assumption.
         }
-        pose proof (Hsim2 H0 (conj H2 H3)).
+        pose proof (Hsim2 H1 (conj H3 H4)).
         rewrite behaviorOf_preserved with (impl2:= impl2) by (rewrite Hii; assumption).
         assumption.
   Qed.

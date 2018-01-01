@@ -190,32 +190,51 @@ Section Impl.
       split; [|split]; (* [SynthOk] consist of 3 conditions. *)
       [rewrite addRulesSys_init; apply pimpl_ok| |].
 
-    Record MsgInv :=
-      { mi_from: IdxT;
-        mi_to: IdxT;
-        mi_chn: IdxT;
-        mi_tid: IdxT;
-        mi_inv: ObjectStates -> Value (* msg value *) -> Prop
+    Record RuleInv :=
+      { ri_from: IdxT;
+        ri_to: IdxT;
+        ri_chn: IdxT;
+        ri_inv: ObjectStates -> Prop
       }.
 
-    Definition buildMsgInv from to chn tid inv :=
-      {| mi_from:= from;
-         mi_to:= to;
-         mi_chn:= chn;
-         mi_tid:= tid;
-         mi_inv:= inv |}.
+    Definition buildRuleInv from to chn inv :=
+      {| ri_from:= from;
+         ri_to:= to;
+         ri_chn:= chn;
+         ri_inv:= inv |}.
 
-    Definition MsgInvs := list MsgInv.
+    Definition RuleInvs := list RuleInv.
 
-    Definition MsgInvHolds (mi: MsgInv) (st: TState) :=
-      forall q msg,
-        findM (mi_from mi) (mi_to mi) (mi_chn mi) (tst_msgs st) = q ->
-        In msg q ->
-        tmsg_tid msg = Some (mi_tid mi) ->
-        mi_inv mi (tst_oss st) (msg_value (tmsg_msg msg)).
+    Fixpoint RuleExecuted (mfr mto mchn: IdxT) (hst: History) :=
+      match hst with
+      | nil => False
+      | IlblOuts (Some hdl) _ :: hst' =>
+        if mfr ==n mid_from (msg_id (tmsg_msg hdl))
+        then if mto ==n mid_to (msg_id (tmsg_msg hdl))
+             then if mchn ==n mid_chn (msg_id (tmsg_msg hdl))
+                  then True
+                  else RuleExecuted mfr mto mchn hst'
+             else RuleExecuted mfr mto mchn hst'
+        else RuleExecuted mfr mto mchn hst'
+      | _ :: hst' => RuleExecuted mfr mto mchn hst'
+      end.
 
-    Definition MsgInvsHold (mis: MsgInvs) (st: TState) :=
-      Forall (fun mi => MsgInvHolds mi st) mis.
+    Definition RuleInvHolds (ri: RuleInv) (hst: History) (tst: TState) :=
+      RuleExecuted (ri_from ri) (ri_to ri) (ri_chn ri) hst ->
+      ri_inv ri (tst_oss tst).
+
+    Definition RuleInvsHold (ris: RuleInvs) (hst: History) (tst: TState) :=
+      Forall (fun ri => RuleInvHolds ri hst tst) ris.
+
+    Lemma RuleInvsHold_nil:
+      forall ris tst, RuleInvsHold ris nil tst.
+    Proof.
+      induction ris; intros; [constructor|].
+      constructor; auto.
+      - unfold RuleInvHolds; intros.
+        exfalso; auto.
+      - apply IHris.
+    Qed.
 
     Ltac trsSimulates_case_in msgF :=
       (** instantiation *)
@@ -258,16 +277,19 @@ Section Impl.
     (* This ltac handles trivial [Transactional] cases.
      * After then we only need to deal with [Atomic] histories.
      *)
-    Ltac trsSimulates_trivial msgF trsInv :=
-      apply trs_sim_in_atm_simulates with (ainv:= fun tid ist => MsgInvsHold (trsInv tid) ist);
-      [unfold TrsSimStepMsgIn; intros; trsSimulates_case_in msgF| |].
+    Ltac trsSimulates_trivial histInv msgF :=
+      apply trs_sim_in_atm_simulates with (hinv:= histInv);
+      [unfold TrsSimStepMsgIn; intros; trsSimulates_case_in msgF
+      | |apply RuleInvsHold_nil].
 
     Ltac trsSimulates_atomic_trivial :=
       unfold TrsSimStepAtomic; intros;
       match goal with
       | [H: step_det _ _ _ _ |- _] => inv H
-      end; [exfalso; eapply atomic_emptyILabel_not_in; eauto
-           |exfalso; eapply atomic_iLblIn_not_in; eauto
+      end; [exfalso; eapply atomic_emptyILabel_not_in; eauto;
+            eapply SubHistory_In; [firstorder|eauto]
+           |exfalso; eapply atomic_iLblIn_not_in; eauto;
+            eapply SubHistory_In; [firstorder|eauto]
            |].
 
     Definition svmTrsIdx0 := 0.
@@ -281,22 +303,22 @@ Section Impl.
                       mid_chn := rqChn |};
          msg_value := val |}.
 
-    Definition trsInv0 (tid: IdxT): MsgInvs :=
-      (buildMsgInv child2Idx parentIdx rsChn tid
-                   (fun st val =>
-                      exists ost2,
-                        st@[child2Idx] = Some ost2 /\
-                        (ost_st ost2)@[statusIdx] = Some (VNat stS) /\
-                        (ost_st ost2)@[valueIdx] = Some val))
-        :: (buildMsgInv parentIdx child1Idx rsChn tid
-                        (fun st val =>
-                           exists ostp ost2,
-                             st@[parentIdx] = Some ostp /\
-                             (ost_st ostp)@[statusIdx] = Some (VNat stS) /\
-                             (ost_st ostp)@[valueIdx] = Some val /\
-                             st@[child2Idx] = Some ost2 /\
-                             (ost_st ost2)@[statusIdx] = Some (VNat stS) /\
-                             (ost_st ost2)@[valueIdx] = Some val))
+    Definition trsInv0: RuleInvs :=
+      (buildRuleInv child2Idx parentIdx rsChn
+                    (fun st =>
+                       exists ost2,
+                         st@[child2Idx] = Some ost2 /\
+                         (ost_st ost2)@[statusIdx] = Some (VNat stS) /\
+                         (ost_st ost2)@[valueIdx] = Some VUnit))
+        :: (buildRuleInv parentIdx child1Idx rsChn
+                         (fun st =>
+                            exists ostp ost2,
+                              st@[parentIdx] = Some ostp /\
+                              (ost_st ostp)@[statusIdx] = Some (VNat stS) /\
+                              (ost_st ostp)@[valueIdx] = Some VUnit /\
+                              st@[child2Idx] = Some ost2 /\
+                              (ost_st ost2)@[statusIdx] = Some (VNat stS) /\
+                              (ost_st ost2)@[valueIdx] = Some VUnit))
         :: nil.
 
     Lemma SvmR_status_cases_1:
@@ -321,9 +343,7 @@ Section Impl.
         + apply impl0_ok.
         + repeat constructor.
         + (** simulation for newly added [Rule]s *)
-          trsSimulates_trivial (svmMsgF extIdx1 extIdx2) trsInv0;
-            [|admit (* TODO: later; need a lemma saying that a starting state of
-                     * [Atomic] steps has no messages with [tmsg_tid _ = tid]. *)].
+          trsSimulates_trivial (RuleInvsHold trsInv0) (svmMsgF extIdx1 extIdx2).
           trsSimulates_atomic_trivial.
 
           (* +) some basic work *)
@@ -341,8 +361,8 @@ Section Impl.
           rename oims into imsgs1.
           rename ts into its1.
           destruct sst1 as [soss1 smsgs1 sts1].
-          unfold SvmSim in H0; simpl in H0.
-          pose proof (SvmR_status_cases_1 H0).
+          unfold SvmSim in H1; simpl in H1.
+          pose proof (SvmR_status_cases_1 H1).
           destruct H5 as [iost1 [? ?]].
           destruct H6; [|destruct H6].
 
