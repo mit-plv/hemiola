@@ -116,8 +116,7 @@ Section TrsSimStep.
           forall ilbl nist,
             step_det impl iist ilbl nist ->
             SubHistory (ilbl :: phst) hst ->
-            (hinv (ilbl :: phst) nist /\
-             match extLabel impl (getLabel ilbl) with
+            (match extLabel impl (getLabel ilbl) with
              | Some ielbl =>
                exists slbl sst2,
                step_det spec sst1 slbl sst2 /\
@@ -129,7 +128,8 @@ Section TrsSimStep.
                   step_det spec sst1 slbl sst2 /\
                   extLabel spec (getLabel slbl) = None /\
                   nist ≈ sst2)
-             end).
+             end /\
+             hinv (ilbl :: phst) nist).
 
   Hypotheses (HsimIn: TrsSimStepMsgIn)
              (HsimAtm: TrsSimStepAtomic)
@@ -162,18 +162,18 @@ Section TrsSimStep.
 
     eapply HsimAtm in H3.
     specialize (H3 _ _ _ H8 _ H6 H7 _ _ H10 (SubHistory_refl _)).
-    destruct H3; simpl in H9.
+    destruct H3; simpl in H3.
 
     destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
-    - simpl; destruct H9.
+    - simpl; destruct H3.
       + eexists; exists shsti; repeat split; eauto.
-      + destruct H9 as [slbl [sst2 [? [? ?]]]].
+      + destruct H3 as [slbl [sst2 [? [? ?]]]].
         eexists; eexists (_ :: _); repeat split.
         * econstructor; eassumption.
         * simpl; rewrite H11; simpl; assumption.
         * assumption.
         * assumption.
-    - destruct H9 as [slbl [sst2 [? [? ?]]]].
+    - destruct H3 as [slbl [sst2 [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split.
       + econstructor; eassumption.
       + simpl; rewrite H5, H11; reflexivity.
@@ -437,7 +437,7 @@ Section Compositionality.
                                        end (rule_outs frule os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
         econstructor; eauto.
-        unfold isExternal in *; rewrite <-Hii; assumption.
+        unfold isInternal in *; rewrite <-Hii; assumption.
 
     - right.
       assert (indicesOf impl = indicesOf impl2) as Hii2 by (rewrite Hii; auto).
@@ -464,7 +464,7 @@ Section Compositionality.
                                        end (rule_outs frule os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
         econstructor; eauto.
-        unfold isExternal in *; rewrite <-Hii2; assumption.
+        unfold isInternal in *; rewrite <-Hii2; assumption.
   Qed.
   
   Lemma transactional_steps_compositional:

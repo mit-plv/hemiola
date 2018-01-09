@@ -87,7 +87,7 @@ Section System.
     Definition chnImpl := 0.
     Definition chnC2PRq := 1.
     Definition chnC2PRs := 2.
-    
+
     Definition theOtherChild (idx: nat) :=
       if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
     Definition getImplExtIdx (idx: nat) :=
@@ -103,39 +103,9 @@ Section System.
     Section Child0.
       Variable childIdx: nat.
 
-      Definition ecGetReqM := buildMsgId SvmGetE (getImplExtIdx childIdx) childIdx chnImpl.
-      Definition ecGetRespM := buildMsgId SvmGetE childIdx (getImplExtIdx childIdx) chnImpl.
-      Definition ecSetReqM := buildMsgId SvmSetE (getImplExtIdx childIdx) childIdx chnImpl.
-      Definition ecSetRespM := buildMsgId SvmSetE childIdx (getImplExtIdx childIdx) chnImpl.
-
-      Definition ecGetReqOk: Rule :=
-        {| rule_mid := ecGetReqM;
-           rule_precond :=
-             fun st => (ost_st st)@[statusIdx] = Some (VNat stS) \/
-                       (ost_st st)@[statusIdx] = Some (VNat stM);
-           rule_outs :=
-             fun st _ =>
-               (ost_st st)@[valueIdx] >>=[nil]
-                          (fun v => {| msg_id := ecGetRespM; msg_value := v |} :: nil);
-           rule_postcond :=
-             fun pre _ post => pre = post
-        |}.
-
-      Definition ecSetReqOk: Rule :=
-        {| rule_mid := ecSetReqM;
-           rule_precond :=
-             fun st => (ost_st st)@[statusIdx] = Some (VNat stM);
-           rule_outs :=
-             fun st _ => {| msg_id := ecSetRespM; msg_value := VUnit |} :: nil;
-           rule_postcond :=
-             fun pre v post =>
-               exists n, v = VNat n /\
-                         ost_st post = (ost_st pre) +[ valueIdx <- VNat n] |}.
-
       Definition child0: Object :=
         {| obj_idx := childIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
-           (* obj_rules := ecGetReqOk :: ecSetReqOk :: nil *)
            obj_rules := nil
         |}.
 

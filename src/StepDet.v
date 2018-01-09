@@ -22,7 +22,7 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
     oidx = obj_idx obj ->
     (oss)@[oidx] = Some os ->
 
-    isExternal sys (mid_from (msg_id (getMsg fmsg))) = true ->
+    isInternal sys (mid_to (msg_id (getMsg fmsg))) = true ->
 
     ValidMsgId fidx oidx fchn (getMsg fmsg) ->
     firstM fidx oidx fchn oims = Some fmsg -> 

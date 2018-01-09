@@ -131,6 +131,43 @@ Section SynRqRsImm.
 
   End RequestFwd.
 
+  (* FIXME: preconditions in [synRsSingle] and [synRs] are currently just [T],
+   * which is incorrect. For the serializability proof, we need correct ones.
+   *)
+
+  Section SingleResponseBack.
+    Variable rsFrom: IdxT.
+
+    Definition synRsOutsSingle (rsOut: StateT -> Value -> Value): MsgOuts :=
+      (fun pre v =>
+         (ost_tst pre)@[trsIdx] >>=[nil]
+         (fun trsh =>
+            {| msg_id := {| mid_tid := trsIdx;
+                            mid_from := this;
+                            mid_to := tst_rqfrom trsh;
+                            mid_chn := rsChn |};
+               msg_value := rsOut (ost_st pre) v |} :: nil)).
+
+    Definition synRsPostcondSingle (postcond: PostCond) :=
+      (fun pre v post =>
+         postcond pre v post /\
+         (ost_tst pre)@[trsIdx] >>=[False]
+         (fun trsh =>
+            ost_tst post = M.remove trsIdx (ost_tst pre))).
+    
+    Definition synRsSingle (postcond: PostCond)
+               (rsOut: StateT -> Value -> Value) :=
+      {| rule_mid := {| mid_tid := trsIdx;
+                        mid_from := rsFrom;
+                        mid_to := this;
+                        mid_chn := rsChn |};
+         rule_precond := T;
+         rule_outs := synRsOutsSingle rsOut;
+         rule_postcond := synRsPostcondSingle postcond
+      |}.
+
+  End SingleResponseBack.
+
   Section ResponseBack.
     Variable rsFrom: IdxT.
 
