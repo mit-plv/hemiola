@@ -28,8 +28,8 @@ Proof.
 Qed.
 
 Lemma atomic_emptyILabel_not_in:
-  forall sys tid min hst mouts,
-    Atomic sys tid min hst mouts ->
+  forall sys rqin hst mouts,
+    Atomic sys rqin hst mouts ->
     ~ In emptyILabel hst.
 Proof.
   induction 1; simpl; intros; [auto|].
@@ -39,8 +39,8 @@ Proof.
 Qed.
 
 Lemma atomic_iLblIn_not_in:
-  forall sys tid min hst mouts,
-    Atomic sys tid min hst mouts ->
+  forall sys rqin hst mouts,
+    Atomic sys rqin hst mouts ->
     forall msg,
       ~ In (IlblIn msg) hst.
 Proof.
@@ -51,16 +51,16 @@ Proof.
 Qed.
 
 Lemma atomic_preserved:
-  forall impl1 tid min hst mouts,
-    Atomic impl1 tid min hst mouts ->
+  forall impl1 min hst mouts,
+    Atomic impl1 min hst mouts ->
     forall impl2,
       indicesOf impl1 = indicesOf impl2 ->
-      Atomic impl2 tid min hst mouts.
+      Atomic impl2 min hst mouts.
 Proof.
   induction 1; simpl; intros.
   - constructor; auto.
     unfold isExternal in *.
-    rewrite H1 in H; assumption.
+    rewrite H0 in H; assumption.
   - constructor; auto.
 Qed.
 

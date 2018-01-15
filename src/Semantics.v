@@ -307,16 +307,22 @@ Section TMsg.
   Definition TrsId := nat.
   Definition trsIdInit: TrsId := 0.
 
-  Record TMsg :=
-    { tmsg_msg : Msg;
-      (* a unique transaction id, assigned when the transaction starts. *)
-      tmsg_tid : option TrsId
+  Record TInfo :=
+    { tinfo_tid : TrsId; (* a unique transaction id, assigned when the transaction starts. *)
+      tinfo_rqin : Msg
     }.
 
-  Definition toTMsg tid m := {| tmsg_msg := m; tmsg_tid := Some tid |}.
-  Definition toTMsgs tid msgs := map (toTMsg tid) msgs.
+  Record TMsg :=
+    { tmsg_msg : Msg;
+      tmsg_info : option TInfo;
+    }.
 
-  Definition toTMsgU m := {| tmsg_msg := m; tmsg_tid := None |}.
+  Definition toTMsg tinfo m :=
+    {| tmsg_msg := m;
+       tmsg_info := Some tinfo |}.
+  Definition toTMsgs tinfo msgs := map (toTMsg tinfo) msgs.
+
+  Definition toTMsgU m := {| tmsg_msg := m; tmsg_info := None |}.
 
   Global Instance TMsg_HsgMsg : HasMsg TMsg :=
     { getMsg := tmsg_msg }.
@@ -324,7 +330,9 @@ Section TMsg.
   Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
   Proof.
     decide equality.
-    - repeat decide equality.
+    - do 2 decide equality.
+      + apply msg_dec.
+      + decide equality.
     - apply msg_dec.
   Defined.
 

@@ -106,8 +106,8 @@ Section TrsSimStep.
           ist2 ≈ sst2.
   
   Definition TrsSimStepAtomic :=
-    forall tid min hst mouts,
-      Atomic impl tid min hst mouts ->
+    forall min hst mouts,
+      Atomic impl min hst mouts ->
       forall pist phst iist,
         steps_det impl pist phst iist ->
         forall sst1,
@@ -136,8 +136,8 @@ Section TrsSimStep.
              (HhinvInit: forall st, hinv nil st).
 
   Lemma trs_sim_step_steps_atomic:
-    forall tid min ihst mouts,
-      Atomic impl tid min ihst mouts ->
+    forall min ihst mouts,
+      Atomic impl min ihst mouts ->
       forall ist1 sst1,
         ist1 ≈ sst1 ->
         forall ist2,
@@ -149,10 +149,10 @@ Section TrsSimStep.
             hinv ihst ist2.
   Proof.
     induction 1; simpl; intros;
-      [inv H2; eexists; exists nil; repeat split;
+      [inv H1; eexists; exists nil; repeat split;
        [econstructor|assumption|apply HhinvInit]|].
 
-    assert (Atomic impl tid min (IlblOuts (Some hdl) houts :: hst)
+    assert (Atomic impl rqin (IlblOuts (Some hdl) houts :: hst)
                    (remove tmsg_dec hdl mouts ++ houts))
       by (constructor; auto).
 
@@ -278,8 +278,8 @@ End MTypeDisj.
 Lemma mtPreservineSys_atomic_same_msg_type:
   forall sys,
     mtPreservingSys sys ->
-    forall tid min mty hst mouts,
-      Atomic sys tid min hst mouts ->
+    forall min mty hst mouts,
+      Atomic sys min hst mouts ->
       mty = mid_tid (msg_id (getMsg min)) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
@@ -402,8 +402,8 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps_det impl ist1 hst ist2 ->
-      forall tid min mouts,
-        Atomic impl tid min hst mouts ->
+      forall min mouts,
+        Atomic impl min hst mouts ->
         steps_det impl1 ist1 hst ist2 \/
         steps_det impl2 ist1 hst ist2.
   Proof.
@@ -427,13 +427,15 @@ Section Compositionality.
       + simpl in H5, H8; rewrite H8 in H5.
         specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs match tmsg_tid fmsg with
-                                       | Some tid => tid
-                                       | None => nts
+        replace (intOuts impl (toTMsgs match tmsg_info fmsg with
+                                       | Some tinfo => tinfo
+                                       | None => {| tinfo_tid := nts;
+                                                    tinfo_rqin := tmsg_msg fmsg |}
                                        end (rule_outs frule os (msg_value (getMsg fmsg)))))
-          with (intOuts impl1 (toTMsgs match tmsg_tid fmsg with
-                                       | Some tid => tid
-                                       | None => nts
+          with (intOuts impl1 (toTMsgs match tmsg_info fmsg with
+                                       | Some tinfo => tinfo
+                                       | None => {| tinfo_tid := nts;
+                                                    tinfo_rqin := tmsg_msg fmsg |} 
                                        end (rule_outs frule os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
         econstructor; eauto.
@@ -454,13 +456,15 @@ Section Compositionality.
       + simpl in H5, H8; rewrite H8 in H5.
         specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs match tmsg_tid fmsg with
-                                       | Some tid => tid
-                                       | None => nts
+        replace (intOuts impl (toTMsgs match tmsg_info fmsg with
+                                       | Some tinfo => tinfo
+                                       | None => {| tinfo_tid := nts;
+                                                    tinfo_rqin := tmsg_msg fmsg |}
                                        end (rule_outs frule os (msg_value (getMsg fmsg)))))
-          with (intOuts impl2 (toTMsgs match tmsg_tid fmsg with
-                                       | Some tid => tid
-                                       | None => nts
+          with (intOuts impl2 (toTMsgs match tmsg_info fmsg with
+                                       | Some tinfo => tinfo
+                                       | None => {| tinfo_tid := nts;
+                                                    tinfo_rqin := tmsg_msg fmsg |}
                                        end (rule_outs frule os (msg_value (getMsg fmsg)))))
           by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
         econstructor; eauto.

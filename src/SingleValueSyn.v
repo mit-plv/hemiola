@@ -380,8 +380,8 @@ Section Impl.
         end
       end.
 
-    Ltac synth_rq_correct :=
-      (* Polish some hypotheses *)
+    Ltac synth_rq_correct sim_rq_tac :=
+      (* To polish some hypotheses *)
       repeat
         match goal with
         | [H: rule_postcond (synRq _ _ _ _ _ _) _ _ _ |- _] =>
@@ -391,7 +391,15 @@ Section Impl.
         end;
       (* Request-forwardings always correspond to silent steps
        * in spec. *)
-      simpl; left.
+      simpl; left;
+      (* To apply a custom Ltac to prove simulation *)
+      sim_rq_tac.
+
+    Ltac svmSim_rq_next :=
+      hnf; simpl in *;
+      eapply SvmR_EquivPreservingR; eauto;
+      unfold StateEquivOS; intros;
+      findeq.
 
     Ltac validOuts_tac :=
       simpl;
@@ -476,11 +484,7 @@ Section Impl.
                      (ost_st post)@[valueIdx] = Some v)
                   (fun (st: StateT) (v: Value) => v).
                 { (* 2-2-1: request-forwarding for C1 *)
-                  synth_rq_correct.
-                  hnf; simpl.
-                  eapply SvmR_EquivPreservingR; eauto.
-                  unfold StateEquivOS; intros.
-                  simpl in *; findeq.
+                  synth_rq_correct svmSim_rq_next.
                 }
                 { (* 2-2-2: responses-back for C1 *)
                   simpl in *; inv H11.

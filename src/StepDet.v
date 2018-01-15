@@ -16,7 +16,7 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
                 tst_msgs := distributeMsg (toTMsgU emsg) oims;
                 tst_tid := ts
              |}
-| SdInt: forall ts nts (Hts: nts > ts) tts
+| SdInt: forall ts nts (Hts: nts > ts) tinfo
                 oss oims obj oidx os pos fmsg frule fidx fchn outs,
     In obj (sys_objs sys) ->
     oidx = obj_idx obj ->
@@ -34,9 +34,10 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
     outs = rule_outs frule os (msg_value (getMsg fmsg)) ->
     ValidOuts oidx outs ->
 
-    tts = match tmsg_tid fmsg with
-          | Some tid => tid
-          | None => nts
+    tinfo = match tmsg_info fmsg with
+          | Some finfo => finfo
+          | None => {| tinfo_tid := nts;
+                       tinfo_rqin := tmsg_msg fmsg |}
           end ->
 
     step_det sys
@@ -44,10 +45,10 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
                 tst_msgs := oims;
                 tst_tid := ts
              |}
-             (IlblOuts (Some (toTMsg tts (getMsg fmsg))) (toTMsgs tts outs))
+             (IlblOuts (Some (toTMsg tinfo (getMsg fmsg))) (toTMsgs tinfo outs))
              {| tst_oss := oss +[ oidx <- pos ];
-                tst_msgs := distributeMsgs (intOuts sys (toTMsgs tts outs)) oims;
-                tst_tid := match tmsg_tid fmsg with
+                tst_msgs := distributeMsgs (intOuts sys (toTMsgs tinfo outs)) oims;
+                tst_tid := match tmsg_info fmsg with
                            | Some _ => ts
                            | None => nts
                            end
