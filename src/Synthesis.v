@@ -80,10 +80,7 @@ Section SynRqRsImm.
   Definition rsChn: IdxT := 1.
 
   Definition msgValOut (val: Value) (tochn: IdxT * IdxT) :=
-    {| msg_id := {| mid_tid := trsIdx;
-                    mid_from := this;
-                    mid_to := fst tochn;
-                    mid_chn := snd tochn |};
+    {| msg_id := buildMsgId trsIdx this (fst tochn) (snd tochn);
        msg_value := val
     |}.
 
@@ -91,10 +88,7 @@ Section SynRqRsImm.
 
     Definition synImm (prec: PreCond) (rqFrom: IdxT) (postcond: PostCond)
                (valOut: StateT -> Value) :=
-      {| rule_mid := {| mid_tid := trsIdx;
-                        mid_from := rqFrom;
-                        mid_to := this;
-                        mid_chn := rqChn |};
+      {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
          rule_precond := prec;
          rule_outs := fun st val =>
                         msgValOut (valOut (ost_st st)) (rqFrom, rsChn) :: nil;
@@ -119,10 +113,7 @@ Section SynRqRsImm.
              |}.
 
     Definition synRq (prec: PreCond) :=
-      {| rule_mid := {| mid_tid := trsIdx;
-                        mid_from := rqFrom;
-                        mid_to := this;
-                        mid_chn := rqChn |};
+      {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
          rule_precond := fun pre => prec pre /\ liftTrsLocker pre;
          (* forward the request value *)
          rule_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
@@ -142,10 +133,7 @@ Section SynRqRsImm.
       (fun pre v =>
          (ost_tst pre)@[trsIdx] >>=[nil]
          (fun trsh =>
-            {| msg_id := {| mid_tid := trsIdx;
-                            mid_from := this;
-                            mid_to := tst_rqfrom trsh;
-                            mid_chn := rsChn |};
+            {| msg_id := buildMsgId trsIdx this (tst_rqfrom trsh) rsChn;
                msg_value := rsOut (ost_st pre) v |} :: nil)).
 
     Definition synRsPostcondSingle (postcond: PostCond) :=
@@ -157,10 +145,7 @@ Section SynRqRsImm.
     
     Definition synRsSingle (postcond: PostCond)
                (rsOut: StateT -> Value -> Value) :=
-      {| rule_mid := {| mid_tid := trsIdx;
-                        mid_from := rsFrom;
-                        mid_to := this;
-                        mid_chn := rsChn |};
+      {| rule_mid := buildMsgId trsIdx rsFrom this rsChn;
          rule_precond := T;
          rule_outs := synRsOutsSingle rsOut;
          rule_postcond := synRsPostcondSingle postcond
@@ -237,10 +222,7 @@ Section SynRqRsImm.
         (fun trsh =>
            let rss := markResponded (tst_rss trsh) val in
            if allResponded rss
-           then {| msg_id := {| mid_tid := trsIdx;
-                                mid_from := this;
-                                mid_to := tst_rqfrom trsh;
-                                mid_chn := rsChn |};
+           then {| msg_id := buildMsgId trsIdx this (tst_rqfrom trsh) rsChn;
                    msg_value := rsOut (ost_st st) (markRespondedTrs trsh val)
                 |} :: nil
            else nil).
@@ -250,10 +232,7 @@ Section SynRqRsImm.
      *)
     Definition synRs (postcond: OState -> OState -> Prop)
                (rsOut: StateT -> TrsHelperUnit -> Value) :=
-      {| rule_mid := {| mid_tid := trsIdx;
-                        mid_from := rsFrom;
-                        mid_to := this;
-                        mid_chn := rsChn |};
+      {| rule_mid := buildMsgId trsIdx rsFrom this rsChn;
          rule_precond := T;
          rule_outs := synRsOuts rsOut;
          rule_postcond := synRsPostcond postcond |}.
@@ -487,9 +466,6 @@ Section SynByVChanges.
     End ResponseBack.
 
   End PerTarget.
-
-  
-  
 
   Section GivenVChanges.
     Variables (topo: list Channel)

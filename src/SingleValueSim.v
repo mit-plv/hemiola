@@ -158,10 +158,10 @@ Section Sim.
     if idx ?<n (indicesOf impl0) then specIdx else idx.
 
   Definition svmMsgIdF (imid: MsgId): MsgId :=
-    {| mid_tid := mid_tid imid;
-       mid_from := svmIdxF (mid_from imid);
-       mid_to := svmIdxF (mid_to imid);
-       mid_chn := mid_to imid |}.
+    {| mid_addr := {| ma_from := svmIdxF (mid_from imid);
+                      ma_to := svmIdxF (mid_to imid);
+                      ma_chn := mid_to imid |};
+       mid_tid := mid_tid imid |}.
 
   Definition svmMsgF (imsg: Msg): Msg :=
     {| msg_id := svmMsgIdF (msg_id imsg);

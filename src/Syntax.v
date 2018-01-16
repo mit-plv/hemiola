@@ -11,18 +11,42 @@ Section Msg.
 
   Definition IdxT := nat.
 
-  Record MsgId :=
-    { mid_tid : IdxT; (* a transaction id *)
-      mid_from : IdxT; (* an object that requests this message *)
-      mid_to : IdxT; (* an object that responses this message *)
-      mid_chn : IdxT (* which channel (queue) to use *)
+  (* Semantically, there is an 1-1 correspondence between [MsgAddr] and a
+   * channel (≈ queue, fifo) in a target system.
+   *)
+  Record MsgAddr :=
+    { ma_from : IdxT; (* an object that requests this message *)
+      ma_to : IdxT; (* an object that responses this message *)
+      ma_chn : IdxT (* which channel to use *)
     }.
 
+  (* NOTE: [mid_tid] is a "transaction" id; all messages representing a certain
+   * transaction have the same [mid_tid]. Such messages are still 
+   * distinguishable by [mid_addr]. It is generally assumed that each channel is
+   * used at most once during the transaction.
+   *)
+  Record MsgId :=
+    { mid_addr : MsgAddr;
+      mid_tid : IdxT; (* a transaction id *)
+    }.
+
+  Definition mid_from := fun mid => ma_from (mid_addr mid).
+  Definition mid_to := fun mid => ma_to (mid_addr mid).
+  Definition mid_chn := fun mid => ma_chn (mid_addr mid).
+
   Definition buildMsgId tid fr to cn :=
-    {| mid_tid := tid; mid_from := fr; mid_to := to; mid_chn := cn |}.
+    {| mid_addr := {| ma_from := fr; ma_to := to; ma_chn := cn |};
+       mid_tid := tid |}.
+
+  Definition msgAddr_dec: forall m1 m2: MsgAddr, {m1 = m2} + {m1 <> m2}.
+  Proof. repeat decide equality. Defined.
 
   Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
-  Proof. repeat decide equality. Defined.
+  Proof.
+    decide equality.
+    - decide equality.
+    - apply msgAddr_dec.
+  Defined.
 
   Inductive Value :=
   | VUnit

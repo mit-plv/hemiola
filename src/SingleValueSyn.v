@@ -34,19 +34,27 @@ Section Impl.
     unfold impl0.
     split.
     - find_if_inside.
-      + reflexivity.
+      + Common.dest_in; cbn.
+        * rewrite <-H; reflexivity.
+        * rewrite <-H0; reflexivity.
+        * rewrite <-H; reflexivity.
       + find_if_inside; auto.
         elim n; clear n.
         Common.dest_in.
-        rewrite <-H.
-        simpl; tauto.
+        cbn in *.
+        unfold svmIdxF in H.
+        find_if_inside; auto.
     - find_if_inside.
-      + reflexivity.
+      + Common.dest_in; cbn.
+        * rewrite <-H; auto.
+        * rewrite <-H0; auto.
+        * rewrite <-H; auto.
       + find_if_inside; auto.
         elim n; clear n.
         Common.dest_in.
-        rewrite <-H.
-        simpl; tauto.
+        cbn in *.
+        unfold svmIdxF in H.
+        find_if_inside; auto.
   Qed.
 
   Theorem impl0_ok: SynthOk spec SvmSim svmP impl0.
@@ -119,11 +127,7 @@ Section Impl.
         else idx.
       
       Definition makeMsgIdExternal (mid: MsgId): MsgId :=
-        {| mid_tid := mid_tid mid;
-           mid_from := mid_from mid;
-           mid_to := makeIdxExternal (mid_to mid);
-           mid_chn := mid_chn mid
-        |}.
+        buildMsgId (mid_tid mid) (mid_from mid) (makeIdxExternal (mid_to mid)) (mid_chn mid).
       
       Definition makeRuleExternal (rule: Rule): Rule :=
         {| rule_mid := makeMsgIdExternal (rule_mid rule);
@@ -144,7 +148,7 @@ Section Impl.
         induction rules2; [auto|].
         destruct H0; auto.
         subst rule.
-        simpl in H; unfold makeIdxExternal in H.
+        cbn in H; unfold makeIdxExternal in H.
         find_if_inside; auto.
       Qed.
 
@@ -251,10 +255,7 @@ Section Impl.
     Definition svmTargetRuleIdx0 := 0.
 
     Definition svmRq0 (val: Value) :=
-      {| msg_id := {| mid_tid := svmTrsIdx0;
-                      mid_from := extIdx1;
-                      mid_to := child1Idx;
-                      mid_chn := rqChn |};
+      {| msg_id := buildMsgId svmTrsIdx0 extIdx1 child1Idx rqChn;
          msg_value := val |}.
 
     Lemma SvmR_status_cases_1:
@@ -295,7 +296,7 @@ Section Impl.
         let imchn := fresh "imchn" in
         let imval := fresh "imval" in
         let itid := fresh "itid" in
-        destruct imsg as [[[imtid imfrom imto imchn] imval] itid];
+        destruct imsg as [[[[imfrom imto imchn] imtid] imval] itid];
         let Hfrom := fresh "Hfrom" in
         let Hto := fresh "Hto" in
         let Hchn := fresh "Hchn" in
@@ -505,10 +506,7 @@ Section Impl.
                   do 2 eexists; split.
                   { synth_spec_step
                       (svmMsgF extIdx1 extIdx2)
-                      {| msg_id := {| mid_tid := svmTrsIdx0;
-                                      mid_from := extIdx1;
-                                      mid_to := child1Idx;
-                                      mid_chn := rsChn |};
+                      {| msg_id := buildMsgId svmTrsIdx0 extIdx1 child1Idx rsChn;
                          msg_value := imval |}
                       (specGetReq extIdx1 extIdx2 specChn1).
 
