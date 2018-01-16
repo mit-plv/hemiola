@@ -45,6 +45,24 @@ Proof.
   rewrite internal_not_external by assumption; auto.
 Qed.
 
+Lemma extOuts_same_indicesOf:
+  forall sys1 sys2 {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
+    indicesOf sys1 = indicesOf sys2 ->
+    extOuts sys1 msgs = extOuts sys2 msgs.
+Proof.
+  unfold extOuts, isExternal; intros.
+  rewrite H0; reflexivity.
+Qed.
+
+Lemma intOuts_same_indicesOf:
+  forall sys1 sys2 {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
+    indicesOf sys1 = indicesOf sys2 ->
+    intOuts sys1 msgs = intOuts sys2 msgs.
+Proof.
+  unfold intOuts, isInternal; intros.
+  rewrite H0; reflexivity.
+Qed.
+
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
     step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->

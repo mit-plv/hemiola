@@ -87,7 +87,7 @@ End TrsSim.
 
 Section TrsSimStep.
   Variables (sim: TState -> TState -> Prop)
-            (hinv: History -> TState -> Prop)
+            (linv: History -> TState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
@@ -112,7 +112,7 @@ Section TrsSimStep.
         steps_det impl pist hst iist ->
         forall sst1,
           iist ≈ sst1 ->
-          hinv hst iist ->
+          linv hst iist ->
           forall nist,
             step_det impl iist ilbl nist ->
             (match extLabel impl (getLabel ilbl) with
@@ -123,11 +123,11 @@ Section TrsSimStep.
                nist ≈ sst2
              | None => nist ≈ sst1
              end /\
-             hinv (ilbl :: hst) nist).
+             linv (ilbl :: hst) nist).
 
   Hypotheses (HsimIn: TrsSimStepMsgIn)
              (HsimAtm: TrsSimStepAtomic)
-             (HhinvInit: forall st, hinv nil st).
+             (HlinvInit: forall st, linv nil st).
 
   Lemma trs_sim_step_steps_atomic:
     forall min ihst mouts,
@@ -140,11 +140,11 @@ Section TrsSimStep.
             steps_det spec sst1 shst sst2 /\
             map p (behaviorOf impl ihst) = behaviorOf spec shst /\
             ist2 ≈ sst2 /\
-            hinv ihst ist2.
+            linv ihst ist2.
   Proof.
     induction 1; simpl; intros;
       [inv H1; eexists; exists nil; repeat split;
-       [econstructor|assumption|apply HhinvInit]|].
+       [econstructor|assumption|apply HlinvInit]|].
 
     assert (Atomic impl rqin (IlblOuts (Some hdl) houts :: hst)
                    (remove tmsg_dec hdl mouts ++ houts))
@@ -203,83 +203,106 @@ Section TrsSimStep.
 
 End TrsSimStep.
 
-Section MTypePreserving.
+Section TrsPreserving.
 
-  Definition mtPreservingRule (rule: Rule) :=
+  Definition trsPreservingRule (rule: Rule) :=
     forall pre val,
       Forall (fun mout => mid_tid (msg_id mout) = mid_tid (rule_mid rule))
              (rule_outs rule pre val).
 
-  Definition mtPreservingObj (obj: Object) :=
-    Forall mtPreservingRule (obj_rules obj).
+  Definition trsPreservingObj (obj: Object) :=
+    Forall trsPreservingRule (obj_rules obj).
 
-  Definition mtPreservingObs (obs: list Object) :=
-    Forall mtPreservingObj obs.
+  Definition trsPreservingObs (obs: list Object) :=
+    Forall trsPreservingObj obs.
 
-  Definition mtPreservingSys (sys: System) :=
-    mtPreservingObs (sys_objs sys).
+  Definition trsPreservingSys (sys: System) :=
+    trsPreservingObs (sys_objs sys).
 
-End MTypePreserving.
+End TrsPreserving.
 
-Section MTypeDisj.
+Section TrsDisj.
 
-  Definition MTypeDisj (rules1 rules2: list Rule) :=
+  Definition TrsDisj (rules1 rules2: list Rule) :=
     forall rule1 rule2,
       In rule1 rules1 ->
       In rule2 rules2 ->
       mid_tid (rule_mid rule1) <> mid_tid (rule_mid rule2).
 
-  Definition MTypeDisjSys (sys1 sys2: System) :=
-    MTypeDisj (rulesOf sys1) (rulesOf sys2).
+  Definition TrsDisjSys (sys1 sys2: System) :=
+    TrsDisj (rulesOf sys1) (rulesOf sys2).
 
-  Lemma MTypeDisj_sym:
+  Lemma TrsDisj_sym:
     forall ms1 ms2,
-      MTypeDisj ms1 ms2 ->
-      MTypeDisj ms2 ms1.
+      TrsDisj ms1 ms2 ->
+      TrsDisj ms2 ms1.
   Proof.
-    unfold MTypeDisj; intros; firstorder.
+    unfold TrsDisj; intros; firstorder.
   Qed.
 
-  Lemma MTypeDisj_SubList_1:
+  Lemma TrsDisj_SubList_1:
     forall ms1 ms2,
-      MTypeDisj ms1 ms2 ->
+      TrsDisj ms1 ms2 ->
       forall ms3,
         SubList ms3 ms1 ->
-        MTypeDisj ms3 ms2.
+        TrsDisj ms3 ms2.
   Proof.
-    unfold MTypeDisj; intros; auto.
+    unfold TrsDisj; intros; auto.
   Qed.
 
-  Lemma MTypeDisj_SubList_2:
+  Lemma TrsDisj_SubList_2:
     forall ms1 ms2,
-      MTypeDisj ms1 ms2 ->
+      TrsDisj ms1 ms2 ->
       forall ms3,
         SubList ms3 ms2 ->
-        MTypeDisj ms1 ms3.
+        TrsDisj ms1 ms3.
   Proof.
-    unfold MTypeDisj; intros; auto.
+    unfold TrsDisj; intros; auto.
   Qed.
 
-End MTypeDisj.
+End TrsDisj.
 
-Lemma mtPreservineSys_atomic_same_msg_type:
+Lemma trsPreservingSys_outs_same_tid:
   forall sys,
-    mtPreservingSys sys ->
-    forall min mty hst mouts,
+    trsPreservingSys sys ->
+    forall st1 st2 hdl houts,
+      step_det sys st1 (IlblOuts (Some hdl) houts) st2 ->
+      Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) =
+                         mid_tid (msg_id (getMsg hdl))) houts.
+Proof.
+  intros; inv H0.
+  unfold trsPreservingSys, trsPreservingObs in H.
+  eapply Forall_forall in H; eauto.
+  unfold trsPreservingObj in H.
+  eapply Forall_forall in H; eauto.
+  unfold trsPreservingRule in H.
+
+  clear -H H9.
+  specialize (H os (msg_value (getMsg fmsg))).
+  induction (rule_outs frule os (msg_value (getMsg fmsg))); [constructor|].
+  simpl in *.
+  inv H; constructor; auto.
+  simpl; rewrite H9, H2.
+  reflexivity.
+Qed.  
+
+Lemma trsPreservineSys_atomic_same_tid:
+  forall sys,
+    trsPreservingSys sys ->
+    forall min mtid hst mouts,
       Atomic sys min hst mouts ->
-      mty = mid_tid (msg_id (getMsg min)) ->
+      mtid = mid_tid (msg_id (getMsg min)) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
-        Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mty) mouts /\
+        Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
         Forall (fun tl =>
                   match tl with
-                  | IlblIn msg => mid_tid (msg_id (getMsg msg)) = mty
-                  | IlblOuts (Some hdl) _ => mid_tid (msg_id (getMsg hdl)) = mty
+                  | IlblIn msg => mid_tid (msg_id (getMsg msg)) = mtid
+                  | IlblOuts (Some hdl) _ => mid_tid (msg_id (getMsg hdl)) = mtid
                   | IlblOuts None _ => True
                   end) hst.
 Proof.
   induction 2; simpl; intros; [split; repeat constructor; auto|].
-
   inv H3.
   specialize (IHAtomic eq_refl _ _ H7); dest.
   split.
@@ -287,23 +310,7 @@ Proof.
     + apply Forall_remove; assumption.
     + eapply Forall_forall in H2; eauto.
       rewrite <-H2.
-
-      (* NOTE: extract as a lemma? *)
-      clear -H H9.
-      inv H9.
-      unfold mtPreservingSys, mtPreservingObs in H.
-      eapply Forall_forall in H; eauto.
-      unfold mtPreservingObj in H.
-      eapply Forall_forall in H; eauto.
-      unfold mtPreservingRule in H.
-      clear -H H8.
-      specialize (H os (msg_value (getMsg fmsg))).
-      induction (rule_outs frule os (msg_value (getMsg fmsg))); [constructor|].
-      simpl in *.
-      inv H; constructor; auto.
-      simpl; rewrite H8, H2.
-      reflexivity.
-      
+      eauto using trsPreservingSys_outs_same_tid.
   - constructor; auto.
     eapply Forall_forall in H2; eauto.
 Qed.
@@ -312,19 +319,19 @@ Section Compositionality.
 
   Variables (impl1 impl2 spec: System)
             (simR: TState -> TState -> Prop)
-            (simP: Label -> Label).
+            (p: Label -> Label).
 
   Local Infix "≈" := simR (at level 30).
 
   Hypotheses (Hidx: indicesOf impl1 = indicesOf impl2)
-             (Hmt1: mtPreservingSys impl1)
-             (Hmt2: mtPreservingSys impl2)
-             (Hmtdisj: MTypeDisjSys impl1 impl2)
-             (Hsim1: TrsSimulates simR simP impl1 spec)
-             (Hsim2: TrsSimulates simR simP impl2 spec).
+             (Hmt1: trsPreservingSys impl1)
+             (Hmt2: trsPreservingSys impl2)
+             (Hmtdisj: TrsDisjSys impl1 impl2)
+             (Hsim1: TrsSimulates simR p impl1 spec)
+             (Hsim2: TrsSimulates simR p impl2 spec).
 
   Variable (impl: System).
-  Hypotheses (Hmt: mtPreservingSys impl)
+  Hypotheses (Hmt: trsPreservingSys impl)
              (Hii: indicesOf impl = indicesOf impl1)
              (Himpl:
                 forall rule iobj,
@@ -335,17 +342,17 @@ Section Compositionality.
                     In rule (obj_rules obj) /\
                     In obj (sys_objs impl1 ++ sys_objs impl2)).
 
-  Lemma MTypeDisjSys_distr_same_type:
-    forall mty,
+  Lemma TrsDisjSys_distr_same_tid:
+    forall mtid,
       (forall rule,
-          mid_tid (rule_mid rule) = mty ->
+          mid_tid (rule_mid rule) = mtid ->
           forall iobj,
             In rule (obj_rules iobj) -> In iobj (sys_objs impl) ->
             exists obj : Object,
               obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
               In obj (sys_objs impl1)) \/
       (forall rule,
-          mid_tid (rule_mid rule) = mty ->
+          mid_tid (rule_mid rule) = mtid ->
           forall iobj,
             In rule (obj_rules iobj) -> In iobj (sys_objs impl) ->
             exists obj : Object,
@@ -353,7 +360,7 @@ Section Compositionality.
               In obj (sys_objs impl2)).
   Proof.
     intros.
-    destruct (mty ?<n (map (fun rule => mid_tid (rule_mid rule)) (rulesOf impl1))).
+    destruct (mtid ?<n (map (fun rule => mid_tid (rule_mid rule)) (rulesOf impl1))).
     - left; intros.
       pose proof (Himpl _ _ H0 H1).
       destruct H2 as [obj [? [? ?]]].
@@ -361,7 +368,7 @@ Section Compositionality.
       + exists obj; repeat split; assumption.
       + exfalso.
         pose proof (rulesOf_in _ _ H4 _ H3).
-        assert (exists mrule, mid_tid (rule_mid mrule) = mty /\ In mrule (rulesOf impl1)).
+        assert (exists mrule, mid_tid (rule_mid mrule) = mtid /\ In mrule (rulesOf impl1)).
         { clear -i.
           induction (rulesOf impl1); [inv i|].
           inv i.
@@ -395,8 +402,8 @@ Section Compositionality.
         steps_det impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (MTypeDisjSys_distr_same_type (mid_tid (msg_id (getMsg min)))).
-    pose proof (mtPreservineSys_atomic_same_msg_type Hmt H0 eq_refl H).
+    pose proof (TrsDisjSys_distr_same_tid (mid_tid (msg_id (getMsg min)))).
+    pose proof (trsPreservineSys_atomic_same_tid Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.
 
@@ -414,17 +421,7 @@ Section Compositionality.
       + simpl in H5, H8; rewrite H8 in H5.
         specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs match tmsg_info fmsg with
-                                       | Some tinfo => tinfo
-                                       | None => {| tinfo_tid := nts;
-                                                    tinfo_rqin := tmsg_msg fmsg |}
-                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
-          with (intOuts impl1 (toTMsgs match tmsg_info fmsg with
-                                       | Some tinfo => tinfo
-                                       | None => {| tinfo_tid := nts;
-                                                    tinfo_rqin := tmsg_msg fmsg |} 
-                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
-          by (unfold intOuts, isInternal; rewrite Hii; reflexivity).
+        rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
         econstructor; eauto.
         unfold isInternal in *; rewrite <-Hii; assumption.
 
@@ -443,17 +440,7 @@ Section Compositionality.
       + simpl in H5, H8; rewrite H8 in H5.
         specialize (H1 _ H5 _ H9 H).
         destruct H1 as [obj1 [? [? ?]]].
-        replace (intOuts impl (toTMsgs match tmsg_info fmsg with
-                                       | Some tinfo => tinfo
-                                       | None => {| tinfo_tid := nts;
-                                                    tinfo_rqin := tmsg_msg fmsg |}
-                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
-          with (intOuts impl2 (toTMsgs match tmsg_info fmsg with
-                                       | Some tinfo => tinfo
-                                       | None => {| tinfo_tid := nts;
-                                                    tinfo_rqin := tmsg_msg fmsg |}
-                                       end (rule_outs frule os (msg_value (getMsg fmsg)))))
-          by (unfold intOuts, isInternal; rewrite Hii2; reflexivity).
+        rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
         econstructor; eauto.
         unfold isInternal in *; rewrite <-Hii2; assumption.
   Qed.
@@ -467,7 +454,7 @@ Section Compositionality.
           steps_det impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
             steps_det spec sst1 shst sst2 /\
-            map simP (behaviorOf impl ihst) = behaviorOf spec shst /\
+            map p (behaviorOf impl ihst) = behaviorOf spec shst /\
             ist2 ≈ sst2.
   Proof.
     induction 1; simpl; intros; subst.
@@ -510,7 +497,7 @@ Section Compositionality.
         assumption.
   Qed.
 
-  Theorem trsSimulates_compositional: TrsSimulates simR simP impl spec.
+  Theorem trsSimulates_compositional: TrsSimulates simR p impl spec.
   Proof.
     unfold TrsSimulates, trsSteps in *; intros.
     destruct H0.

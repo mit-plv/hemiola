@@ -10,14 +10,7 @@ Section HasMsg.
   Global Instance Msg_HasMsg : HasMsg Msg :=
     { getMsg := id }.
 
-  Definition MEquiv {MsgT} `{HasMsg MsgT} (m1 m2: MsgT) :=
-    mid_from (msg_id (getMsg m1)) = mid_from (msg_id (getMsg m1)) /\
-    mid_to (msg_id (getMsg m1)) = mid_to (msg_id (getMsg m1)) /\
-    mid_chn (msg_id (getMsg m1)) = mid_chn (msg_id (getMsg m1)).
-  
 End HasMsg.
-
-Infix "≡m" := MEquiv (at level 30).
 
 Definition intOuts {MsgT} `{HasMsg MsgT} (sys: System) (outs: list MsgT) :=
   filter (fun m => isInternal sys (mid_to (msg_id (getMsg m)))) outs.

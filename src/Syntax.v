@@ -115,18 +115,9 @@ Record Object :=
     obj_rules: list Rule;
   }.
 
-Record Channel :=
-  { chn_from: IdxT;
-    chn_to: IdxT;
-    chn_idx: IdxT (* same [chn_from] and [chn_to], but may require multiple channels *)
-  }.
-
-Definition buildChannel from to idx :=
-  {| chn_from := from; chn_to := to; chn_idx := idx |}.
-
 Record System :=
   { sys_objs: list Object;
-    sys_chns: list Channel
+    sys_chns: list MsgAddr;
   }.
 
 Definition indicesOf (sys: System) :=
@@ -143,8 +134,8 @@ Definition objOf (sys: System) (oidx: IdxT): option Object :=
 Definition objRulesOf (sys: System) (oidx: IdxT) :=
   (objOf sys oidx) >>=[nil] (fun obj => obj_rules obj).
 
-Fixpoint getForwards (topo: list Channel) (oidx: IdxT) :=
-  map chn_to (filter (fun c => if chn_from c ==n oidx then true else false) topo).
+Fixpoint getForwards (topo: list MsgAddr) (oidx: IdxT) :=
+  map ma_to (filter (fun c => if ma_from c ==n oidx then true else false) topo).
 
 Lemma rulesOf_in:
   forall obj sys,
