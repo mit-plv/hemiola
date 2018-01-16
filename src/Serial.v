@@ -3,12 +3,6 @@ Require Import Common FMap Syntax Semantics StepDet.
 
 Section PerSystem.
   Variable sys: System.
-  Variable step: Step TState TLabel.
-
-  Definition History := list TLabel.
-
-  Definition SubHistory (shst hst: History) :=
-    exists nhst, hst = nhst ++ shst.
 
   (* Note that due to the definition of [Msg], it is guaranteed that
    * an [Atomic] history is about a single transaction.

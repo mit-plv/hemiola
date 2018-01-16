@@ -10,7 +10,14 @@ Section HasMsg.
   Global Instance Msg_HasMsg : HasMsg Msg :=
     { getMsg := id }.
 
+  Definition MEquiv {MsgT} `{HasMsg MsgT} (m1 m2: MsgT) :=
+    mid_from (msg_id (getMsg m1)) = mid_from (msg_id (getMsg m1)) /\
+    mid_to (msg_id (getMsg m1)) = mid_to (msg_id (getMsg m1)) /\
+    mid_chn (msg_id (getMsg m1)) = mid_chn (msg_id (getMsg m1)).
+  
 End HasMsg.
+
+Infix "≡m" := MEquiv (at level 30).
 
 Definition intOuts {MsgT} `{HasMsg MsgT} (sys: System) (outs: list MsgT) :=
   filter (fun m => isInternal sys (mid_to (msg_id (getMsg m)))) outs.
@@ -96,8 +103,11 @@ Section Messages.
     | Some froms => msgs +[to <- enqMF from chn m froms]
     | None => msgs +[to <- enqMF from chn m (M.empty _)]
     end.
+  
   Definition EmptyM (msgs: Messages) :=
     forall from to chn, EmptyQ (findM from to chn msgs).
+  Definition InM (msg: MsgT) (msgs: Messages) :=
+    exists from to chn, In msg (findM from to chn msgs).
 
   Lemma firstM_Some_inv:
     forall from to chn msgs m, firstM from to chn msgs = Some m ->
@@ -220,6 +230,12 @@ Section Transition.
         tr = behaviorOf sys ll ->
         Behavior ss sys tr.
 
+  Inductive Reachable {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
+            (ss: Steps StateT LabelT) : System -> StateT -> Prop :=
+  | Rch: forall sys ll st,
+      ss sys (getStateInit sys) ll st ->
+      Reachable ss sys st.
+
   Definition Refines {StateI LabelI StateS LabelS}
              `{HasInit StateI} `{HasLabel LabelI} `{HasInit StateS} `{HasLabel LabelS}
              (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS)
@@ -337,6 +353,11 @@ Section TMsg.
   Defined.
 
   Definition TLabel := ILabel TMsg.
+
+  Definition History := list TLabel.
+
+  Definition SubHistory (shst hst: History) :=
+    exists nhst, hst = nhst ++ shst.
 
 End TMsg.
 

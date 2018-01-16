@@ -33,6 +33,18 @@ Proof.
   find_if_inside; intuition.
 Qed.
 
+Lemma internal_extOuts_nil:
+  forall sys {MsgT} `{HasMsg MsgT} (mouts: list MsgT),
+    Forall
+      (fun tmsg => isInternal sys (mid_to (msg_id (getMsg tmsg))) =
+                   true) mouts ->
+    extOuts sys (map getMsg mouts) = nil.
+Proof.
+  induction mouts; simpl; intros; [reflexivity|].
+  inv H0; unfold id.
+  rewrite internal_not_external by assumption; auto.
+Qed.
+
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
     step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
