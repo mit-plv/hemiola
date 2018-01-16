@@ -244,10 +244,8 @@ Section Impl.
       unfold TrsSimStepAtomic; intros;
       match goal with
       | [H: step_det _ _ _ _ |- _] => inv H
-      end; [exfalso; eapply atomic_emptyILabel_not_in; eauto;
-            eapply SubHistory_In; [firstorder|eauto]
-           |exfalso; eapply atomic_iLblIn_not_in; eauto;
-            eapply SubHistory_In; [firstorder|eauto]
+      end; [exfalso; eapply atomic_emptyILabel_not_in; eauto; simpl; tauto
+           |exfalso; eapply atomic_iLblIn_not_in; eauto; simpl; tauto
            |split].
 
     Definition svmTrsIdx0 := 0.
@@ -390,9 +388,8 @@ Section Impl.
         | [H: msg_id _ = rule_mid _ |- _] =>
           simpl in H; inv H
         end;
-      (* Request-forwardings always correspond to silent steps
-       * in spec. *)
-      simpl; left;
+      (* Request-forwardings always correspond to silent steps in spec. *)
+      simpl;
       (* To apply a custom Ltac to prove simulation *)
       sim_rq_tac.
 
@@ -488,20 +485,20 @@ Section Impl.
                   synth_rq_correct svmSim_rq_next.
                 }
                 { (* 2-2-2: responses-back for C1 *)
-                  simpl in *; inv H11.
+                  simpl in *; inv H10.
                   unfold synRsOutsSingle.
                   remember ((ost_tst os)@[svmTrsIdx0]) as otrsh.
                   destruct otrsh;
                     [simpl|exfalso; admit (* need an invariant *)].
                   assert (tst_rqfrom t = extIdx1)
                     by admit. (* need an invariant *)
-                  rewrite H6; simpl.
+                  rewrite H5; simpl.
 
                   assert (exists sost,
                              soss1@[specIdx] = Some sost /\
                              (ost_st sost)@[valueIdx] = Some imval).
                   { admit. (* need an invariant *) }
-                  destruct H9 as [sost [? ?]].
+                  destruct H8 as [sost [? ?]].
 
                   do 2 eexists; split.
                   { synth_spec_step
@@ -510,11 +507,10 @@ Section Impl.
                          msg_value := imval |}
                       (specGetReq extIdx1 extIdx2 specChn1).
 
-                    admit. (* need an invariant;
-                            * about [firstM] in [spec]. *)
+                    admit. (* need an invariant; * about [firstM] in [spec]. *)
                   }
                   { instantiate (1:= None); simpl.
-                    rewrite H11; simpl.
+                    rewrite H10; simpl.
                     split.
                     { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; simpl.
                       admit. (* FIXME: specChn1 <> extIdx1 *)

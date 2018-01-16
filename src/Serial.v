@@ -1,13 +1,15 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet.
 
+(** [Atomic] and [Transactional] histories *)
+
 Section PerSystem.
   Variable sys: System.
 
-  (* Note that due to the definition of [Msg], it is guaranteed that
-   * an [Atomic] history is about a single transaction.
-   * [Msg] contains [tmsg_tid], and [In hdl mouts] in [AtomicCons]
-   * ensures that the history is for a single transaction.
+  (* Note that due to the definition of [TMsg], it is guaranteed that an
+   * [Atomic] history is about a single transaction. [TMsg] contains
+   * [tmsg_tid], and [In hdl mouts] in [AtomicCons] ensures that the history is
+   * for a single transaction.
    *)
   Inductive Atomic: TMsg -> History -> list TMsg -> Prop :=
   | AtomicBase:
@@ -41,6 +43,8 @@ Section PerSystem.
       hst = concat trss.
 
 End PerSystem.
+
+(** Serializability *)
 
 Definition trsSteps (sys: System) (st1: TState) (hst: History) (st2: TState) :=
   steps_det sys st1 hst st2 /\

@@ -106,30 +106,24 @@ Section TrsSimStep.
           ist2 ≈ sst2.
   
   Definition TrsSimStepAtomic :=
-    forall min hst mouts,
-      Atomic impl min hst mouts ->
-      forall pist phst iist,
-        steps_det impl pist phst iist ->
+    forall min ilbl hst mouts,
+      Atomic impl min (ilbl :: hst) mouts ->
+      forall pist iist,
+        steps_det impl pist hst iist ->
         forall sst1,
           iist ≈ sst1 ->
-          hinv phst iist ->
-          forall ilbl nist,
+          hinv hst iist ->
+          forall nist,
             step_det impl iist ilbl nist ->
-            SubHistory (ilbl :: phst) hst ->
             (match extLabel impl (getLabel ilbl) with
              | Some ielbl =>
                exists slbl sst2,
                step_det spec sst1 slbl sst2 /\
                extLabel spec (getLabel slbl) = Some (p ielbl) /\
                nist ≈ sst2
-             | None =>
-               (nist ≈ sst1 \/
-                exists slbl sst2,
-                  step_det spec sst1 slbl sst2 /\
-                  extLabel spec (getLabel slbl) = None /\
-                  nist ≈ sst2)
+             | None => nist ≈ sst1
              end /\
-             hinv (ilbl :: phst) nist).
+             hinv (ilbl :: hst) nist).
 
   Hypotheses (HsimIn: TrsSimStepMsgIn)
              (HsimAtm: TrsSimStepAtomic)
@@ -161,18 +155,11 @@ Section TrsSimStep.
     destruct IHAtomic as [ssti [shsti [? [? [? ?]]]]].
 
     eapply HsimAtm in H3.
-    specialize (H3 _ _ _ H8 _ H6 H7 _ _ H10 (SubHistory_refl _)).
+    specialize (H3 _ _ H8 _ H6 H7 _ H10).
     destruct H3; simpl in H3.
 
     destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
-    - simpl; destruct H3.
-      + eexists; exists shsti; repeat split; eauto.
-      + destruct H3 as [slbl [sst2 [? [? ?]]]].
-        eexists; eexists (_ :: _); repeat split.
-        * econstructor; eassumption.
-        * simpl; rewrite H11; simpl; assumption.
-        * assumption.
-        * assumption.
+    - simpl; eexists; exists shsti; repeat split; eauto.
     - destruct H3 as [slbl [sst2 [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split.
       + econstructor; eassumption.
