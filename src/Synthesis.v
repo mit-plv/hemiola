@@ -10,11 +10,16 @@ Section SimP.
   Variables
     (impl0 spec: System)
     (R: TState -> TState -> Prop)
+    (ginv: TState -> Prop)
     (p: Label -> Label).
 
+  (* NOTE: the order here matters. [Rule]s are synthesized during the simulation
+   * proof. Invariants are proven after all [Rule]s are synthesized.
+   *)
   Definition SynthOk (s: System) :=
     R (getStateInit s) (getStateInit spec) /\
-    TrsSimulates R p s spec /\
+    ginv (getStateInit s) /\
+    (TrsSimulates R ginv p s spec /\ TrsInvHolds ginv s) /\
     SerializableSys s.
 
   Hypothesis (Hinit_ok: SynthOk impl0).
@@ -28,25 +33,28 @@ Section SimP.
      * 1) initial state
      * 2) serializability
      * 3) simulation on sequential semantics
+     * 4) global invariants
      *)
-    Hypotheses (Hsyn_init:
+    Hypotheses (HsynInit:
                   forall s s', syn s s' ->
                                getStateInit (StateT:= TState) s' =
                                getStateInit (StateT:= TState) s)
-               (Hsyn_serial:
+               (HsynSerial:
                   forall s, SerializableSys s ->
                             forall s', syn s s' -> SerializableSys s')
-               (Hsyn_sim:
-                  forall s, TrsSimulates R p s spec ->
-                            forall s', syn s s' ->
-                                       TrsSimulates R p s' spec).
+               (HsynSim:
+                  forall s, TrsSimulates R ginv p s spec ->
+                            forall s', syn s s' -> TrsSimulates R ginv p s' spec)
+               (HsynInv:
+                  forall s, TrsInvHolds ginv s ->
+                            forall s', syn s s' -> TrsInvHolds ginv s').
 
     Lemma synthOk_refinement:
       forall s, SynthOk s -> steps_det # steps_det |-- s ⊑[p] spec.
     Proof.
       unfold SynthOk; intros; dest.
       eapply refines_trans.
-      - apply serializable_seqSteps_refines in H1.
+      - apply serializable_seqSteps_refines in H2.
         eassumption.
       - eapply sequential_simulation_implies_refinement; eauto.
     Qed.
@@ -56,7 +64,8 @@ Section SimP.
     Proof.
       unfold SynthOk; intros; dest.
       repeat split; eauto.
-      erewrite Hsyn_init; eauto.
+      - erewrite HsynInit; eauto.
+      - erewrite HsynInit; eauto.
     Qed.
 
   End SynthesisStep.
@@ -468,7 +477,7 @@ Section SynByVChanges.
   End PerTarget.
 
   Section GivenVChanges.
-    Variables (topo: list Channel)
+    Variables (topo: list MsgAddr)
               (chgs: VChanges)
               (erqFrom: IdxT).
 

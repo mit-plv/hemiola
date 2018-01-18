@@ -124,14 +124,14 @@ Section System.
     Definition impl0 : System :=
       {| sys_objs := parent0 :: (child0 child1Idx) :: (child0 child2Idx) :: nil;
          sys_chns :=
-           (buildChannel extIdx1 child1Idx chnImpl)
-             :: (buildChannel extIdx2 child2Idx chnImpl)
-             :: (buildChannel child1Idx parentIdx chnC2PRq)
-             :: (buildChannel child1Idx parentIdx chnC2PRs)
-             :: (buildChannel child2Idx parentIdx chnC2PRq)
-             :: (buildChannel child2Idx parentIdx chnC2PRs)
-             :: (buildChannel parentIdx child1Idx chnImpl)
-             :: (buildChannel parentIdx child2Idx chnImpl)
+           (buildMsgAddr extIdx1 child1Idx chnImpl)
+             :: (buildMsgAddr extIdx2 child2Idx chnImpl)
+             :: (buildMsgAddr child1Idx parentIdx chnC2PRq)
+             :: (buildMsgAddr child1Idx parentIdx chnC2PRs)
+             :: (buildMsgAddr child2Idx parentIdx chnC2PRq)
+             :: (buildMsgAddr child2Idx parentIdx chnC2PRs)
+             :: (buildMsgAddr parentIdx child1Idx chnImpl)
+             :: (buildMsgAddr parentIdx child2Idx chnImpl)
              :: nil
       |}.
 

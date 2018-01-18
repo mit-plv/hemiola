@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
 Require Import Simulation TrsSim Serial SerialFacts Predicate Synthesis SynthesisFacts.
-Require Import AtomicSteps.
+Require Import Blocking.
 
 Require Import SingleValue SingleValueSim.
 
@@ -57,11 +57,12 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Theorem impl0_ok: SynthOk spec SvmSim svmP impl0.
+  Theorem impl0_ok: SynthOk spec SvmSim BlockedInv svmP impl0.
   Proof.
-    repeat split.
+    split; [|split; [|split]].
     - eapply SvmSSS; econstructor.
-    - (* simulation *) admit.
+    - vm_compute; intros; dest; exfalso; auto.
+    - (* simulation & invariant *) admit.
     - (* serializability *) admit.
   Admitted.
 
@@ -191,12 +192,12 @@ Section Impl.
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
       instantiate (1:= addRulesSys _ pimpl);
-      split; [|split]; (* [SynthOk] consist of 3 conditions. *)
-      [rewrite addRulesSys_init; apply pimpl_ok| |].
+      split; [|split; [|split]]; (* [SynthOk] consist of 5 conditions. *)
+      try (rewrite addRulesSys_init; apply pimpl_ok; fail).
 
     Ltac trsSimulates_case_in msgF :=
       (** instantiation *)
-      unfold TrsSimStepMsgIn; intros; simpl;
+      unfold TrsSimSepIn; intros; simpl;
       match goal with
       | [H: context[IlblIn ?min] |- context[step_det _ ?ist1 _ _] ] =>
         let ioss1 := fresh "ioss1" in
@@ -237,16 +238,15 @@ Section Impl.
      *)
     Ltac trsSimulates_trivial msgF :=
       eapply trs_sim_in_atm_simulates;
-      [unfold TrsSimStepMsgIn; intros; trsSimulates_case_in msgF
-      | |].
+      [trsSimulates_case_in msgF| | | | |].
 
     Ltac trsSimulates_atomic_trivial :=
-      unfold TrsSimStepAtomic; intros;
+      unfold TrsSimSepAtomic; intros;
       match goal with
       | [H: step_det _ _ _ _ |- _] => inv H
       end; [exfalso; eapply atomic_emptyILabel_not_in; eauto; simpl; tauto
            |exfalso; eapply atomic_iLblIn_not_in; eauto; simpl; tauto
-           |split].
+           |].
 
     Definition svmTrsIdx0 := 0.
     Definition svmTargetOIdx0 := child1Idx.
@@ -435,19 +435,21 @@ Section Impl.
       ].
 
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec SvmSim svmP impl1 }.
+      { impl1: System & SynthOk spec SvmSim BlockedInv svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
       - (** simulation *)
-        apply trsSimulates_rules_added.
-        + apply impl0_ok.
-        + repeat constructor.
-        + (** simulation for newly added [Rule]s *)
-          trsSimulates_trivial (svmMsgF extIdx1 extIdx2); [|admit].
-          trsSimulates_atomic_trivial.
+        apply trsSimulates_trsInvHolds_rules_added;
+          [apply impl0_ok|apply impl0_ok|repeat constructor| | | |].
 
-          * (* 0) some initial simplification *)
+        + (** [TrsSimulates] for newly added [Rule]s *)
+          trsSimulates_trivial (svmMsgF extIdx1 extIdx2).
+
+          * (** [TrsSimulates] for [Atomic] steps *)
+            trsSimulates_atomic_trivial.
+
+            (* 0) some initial simplification *)
             synth_init_simpl.
 
             (* 1) case analysis for each object; first for C1 *)
@@ -485,20 +487,20 @@ Section Impl.
                   synth_rq_correct svmSim_rq_next.
                 }
                 { (* 2-2-2: responses-back for C1 *)
-                  simpl in *; inv H10.
+                  simpl in *; inv H11.
                   unfold synRsOutsSingle.
                   remember ((ost_tst os)@[svmTrsIdx0]) as otrsh.
                   destruct otrsh;
                     [simpl|exfalso; admit (* need an invariant *)].
                   assert (tst_rqfrom t = extIdx1)
                     by admit. (* need an invariant *)
-                  rewrite H5; simpl.
+                  rewrite H6; simpl.
 
                   assert (exists sost,
                              soss1@[specIdx] = Some sost /\
                              (ost_st sost)@[valueIdx] = Some imval).
                   { admit. (* need an invariant *) }
-                  destruct H8 as [sost [? ?]].
+                  destruct H9 as [sost [? ?]].
 
                   do 2 eexists; split.
                   { synth_spec_step
@@ -507,10 +509,16 @@ Section Impl.
                          msg_value := imval |}
                       (specGetReq extIdx1 extIdx2 specChn1).
 
-                    admit. (* need an invariant; * about [firstM] in [spec]. *)
+                    (* TODO:
+                     * 1) Define simulation for [Messages] -- draining wrt. [tinfo_rqin].
+                     * 2) Use the simulation and [BlockedInv] to prove this
+                     *    ([firstM] to [firstM]).
+                     *)
+                    simpl.
+                    admit.
                   }
                   { instantiate (1:= None); simpl.
-                    rewrite H10; simpl.
+                    rewrite H11; simpl.
                     split.
                     { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; simpl.
                       admit. (* FIXME: specChn1 <> extIdx1 *)
@@ -526,12 +534,29 @@ Section Impl.
             }
             { (* For P and C2 *) admit. }
 
-          * admit.
+          * (** Global invariants hold for message-in steps. *)
+            apply BlockedInv_in.
 
-        + admit.
-        + admit.
+          * (** Global invariants hold for [Atomic] steps. *)
+            admit.
 
-      - admit.
+          * (** Local invariant holds for the initial state. *)
+            admit.
+
+          * (** Local invariant holds for [Atomic] steps. *)
+            admit.
+
+        + (** Global invariants hold *)
+          admit.
+        + (** [trsPreservingSys]; to prove the synthesized rules are about a 
+           *  single transaction.  *)
+          admit.
+        + (** [TrsDisj]; to prove the synthesized rules are disjoint with 
+           *  previously synthesized rules. *)
+          admit.
+
+      - (** serializability *)
+        admit.
 
     Admitted.
     

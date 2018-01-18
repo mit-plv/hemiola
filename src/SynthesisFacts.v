@@ -181,23 +181,26 @@ Proof.
     apply SubList_cons_right; assumption.
   - apply SubList_cons_right; assumption.
 Qed.
-  
-Corollary trsSimulates_rules_added:
-  forall impl rules spec simR simP
-         (Hsim1: TrsSimulates simR simP impl spec)
-         (Hmt1: mtPreservingSys impl)
-         (Hsim2: TrsSimulates simR simP (addRulesSys rules (buildRawSys impl)) spec)
-         (Hmt2: mtPreservingSys (addRulesSys rules (buildRawSys impl)))
-         (Hmtdisj: MTypeDisj (rulesOf impl) rules),
-    TrsSimulates simR simP (addRulesSys rules impl) spec.
+
+Corollary trsSimulates_trsInvHolds_rules_added:
+  forall impl rules spec simR ginv simP
+         (Hsim1: TrsSimulates simR ginv simP impl spec)
+         (Hinv1: TrsInvHolds ginv impl)
+         (Hmt1: trsPreservingSys impl)
+         (Hsim2: TrsSimulates simR ginv simP (addRulesSys rules (buildRawSys impl)) spec)
+         (Hinv1: TrsInvHolds ginv (addRulesSys rules (buildRawSys impl)))
+         (Hmt2: trsPreservingSys (addRulesSys rules (buildRawSys impl)))
+         (Hmtdisj: TrsDisj (rulesOf impl) rules),
+    TrsSimulates simR ginv simP (addRulesSys rules impl) spec /\
+    TrsInvHolds ginv (addRulesSys rules impl).
 Proof.
   intros.
-  eapply trsSimulates_compositional
+  eapply trsSimulates_trsInvHolds_compositional
     with (impl1:= impl) (impl2:= addRulesSys rules (buildRawSys impl)); eauto.
   - rewrite addRulesSys_indices.
     apply buildRawSys_indicesOf.
-  - unfold MTypeDisjSys.
-    eapply MTypeDisj_SubList_2; eauto.
+  - unfold TrsDisjSys.
+    eapply TrsDisj_SubList_2; eauto.
     apply addRulesSys_buildRawSys_sublist.
   - admit. (* should be easily derivable from [Hmt1] and [Hmt2] *)
   - apply addRulesSys_indices.

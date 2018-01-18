@@ -20,6 +20,9 @@ Section Msg.
       ma_chn : IdxT (* which channel to use *)
     }.
 
+  Definition buildMsgAddr fr to cn :=
+    {| ma_from := fr; ma_to := to; ma_chn := cn |}.
+
   (* NOTE: [mid_tid] is a "transaction" id; all messages representing a certain
    * transaction have the same [mid_tid]. Such messages are still 
    * distinguishable by [mid_addr]. It is generally assumed that each channel is
