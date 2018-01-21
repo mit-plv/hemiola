@@ -28,40 +28,55 @@ Proof.
 Qed.
 
 Lemma atomic_emptyILabel_not_in:
-  forall sys rqin hst mouts,
-    Atomic sys rqin hst mouts ->
+  forall sys rqin hst mouts orsout,
+    Atomic sys rqin hst mouts orsout ->
     ~ In emptyILabel hst.
 Proof.
-  induction 1; simpl; intros; [auto|].
-  intro Hx; elim IHAtomic; destruct Hx.
-  - discriminate.
-  - assumption.
+  induction 1; simpl; intros; [auto| |];
+    try (intro Hx; elim IHAtomic; destruct Hx;
+         [discriminate|assumption]).
 Qed.
 
 Lemma atomic_iLblIn_not_in:
-  forall sys rqin hst mouts,
-    Atomic sys rqin hst mouts ->
+  forall sys rqin hst mouts orsout,
+    Atomic sys rqin hst mouts orsout ->
     forall msg,
       ~ In (IlblIn msg) hst.
 Proof.
-  induction 1; simpl; intros; [auto|].
-  intro Hx; destruct Hx.
-  - discriminate.
-  - firstorder.
+  induction 1; simpl; intros; [auto| |];
+    try (intro Hx; destruct Hx;
+         [discriminate|firstorder]).
 Qed.
 
 Lemma atomic_preserved:
-  forall impl1 min hst mouts,
-    Atomic impl1 min hst mouts ->
+  forall impl1 rqin hst mouts orsout,
+    Atomic impl1 rqin hst mouts orsout ->
     forall impl2,
       indicesOf impl1 = indicesOf impl2 ->
-      Atomic impl2 min hst mouts.
+      Atomic impl2 rqin hst mouts orsout.
 Proof.
   induction 1; simpl; intros.
   - constructor; auto.
     unfold isExternal in *.
     rewrite H0 in H; assumption.
   - constructor; auto.
+    unfold isInternal in *.
+    rewrite H2 in H1; assumption.
+  - constructor; auto.
+    unfold isExternal in *.
+    rewrite H1 in H0; assumption.
+Qed.
+
+Lemma atomic_ext_out:
+  forall sys rqin hdl rsout hst mouts orsout,
+    Atomic sys rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst) mouts orsout ->
+    isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
+    mouts = nil /\ orsout = Some rsout.
+Proof.
+  intros; inv H.
+  - exfalso; inv H9.
+    eapply internal_external_false; eauto.
+  - auto.
 Qed.
 
 Theorem serializable_seqSteps_refines:
@@ -72,10 +87,8 @@ Proof.
   unfold SerializableSys, Refines; intros.
   inv H0; rename ll0 into ill.
   specialize (H _ _ H1).
-
   unfold Serializable in H.
   destruct H as [sll [sst [? ?]]].
-
   rewrite H0.
   econstructor; eauto.
   apply map_id.

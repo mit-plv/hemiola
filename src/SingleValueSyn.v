@@ -509,16 +509,11 @@ Section Impl.
                          msg_value := imval |}
                       (specGetReq extIdx1 extIdx2 specChn1).
 
-                    (* TODO:
-                     * 1) Define simulation for [Messages] -- draining wrt. [tinfo_rqin].
-                     * 2) Use the simulation and [BlockedInv] to prove this
-                     *    ([firstM] to [firstM]).
-                     *)
-                    simpl.
-                    admit.
+                    cbn; cbn in H10.
+                    instantiate (1:= None).
+                    admit. (* about [firstM] in [impl] and [spec]. *)
                   }
-                  { instantiate (1:= None); simpl.
-                    rewrite H11; simpl.
+                  { simpl; rewrite H11; simpl.
                     split.
                     { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; simpl.
                       admit. (* FIXME: specChn1 <> extIdx1 *)

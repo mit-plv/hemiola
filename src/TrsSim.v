@@ -130,8 +130,8 @@ Section TrsSimSep.
           ist2 ≈ sst2.
 
   Definition TrsSimSepGInvAtomic :=
-    forall min ilbl hst mouts,
-      Atomic impl min (ilbl :: hst) mouts ->
+    forall min ilbl hst mouts orsout,
+      Atomic impl min (ilbl :: hst) mouts orsout ->
       forall pist ist1 ist2,
         steps_det impl pist hst ist1 ->
         ginv ist1 ->
@@ -139,8 +139,8 @@ Section TrsSimSep.
         ginv ist2.
 
   Definition TrsSimSepLInvAtomic :=
-    forall min ilbl hst mouts,
-      Atomic impl min (ilbl :: hst) mouts ->
+    forall min ilbl hst mouts orsout,
+      Atomic impl min (ilbl :: hst) mouts orsout ->
       forall pist ist1 ist2,
         steps_det impl pist hst ist1 ->
         linv hst ist1 ->
@@ -148,8 +148,8 @@ Section TrsSimSep.
         linv (ilbl :: hst) ist2.
   
   Definition TrsSimSepAtomic :=
-    forall min ilbl hst mouts,
-      Atomic impl min (ilbl :: hst) mouts ->
+    forall min ilbl hst mouts orsout,
+      Atomic impl min (ilbl :: hst) mouts orsout ->
       forall pist iist,
         steps_det impl pist hst iist ->
         forall sst1,
@@ -178,8 +178,8 @@ Section TrsSimSep.
     (HlinvAtm: TrsSimSepLInvAtomic).
 
   Lemma trs_sim_step_steps_atomic:
-    forall min ihst mouts,
-      Atomic impl min ihst mouts ->
+    forall min ihst mouts orsout,
+      Atomic impl min ihst mouts orsout ->
       forall ist1 sst1,
         ist1 ≈ sst1 ->
         ginv ist1 ->
@@ -201,7 +201,28 @@ Section TrsSimSep.
       + assumption.
 
     - assert (Atomic impl rqin (IlblOuts (Some hdl) houts :: hst)
-                     (remove tmsg_dec hdl mouts ++ houts))
+                     (remove tmsg_dec hdl mouts ++ houts) None)
+        by (constructor; auto).
+
+      pose proof H4; inv H4.
+      specialize (IHAtomic _ _ H2 H3 _ H10).
+      destruct IHAtomic as [ssti [shsti [? [? [? [? ?]]]]]].
+
+      pose proof H5; eapply HsimAtm in H5.
+      specialize (H5 _ _ H10 _ H8 H9 H11 _ H12).
+      simpl in H5.
+
+      destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
+      + simpl; eexists; exists shsti; repeat split; eauto.
+      + destruct H5 as [slbl [sst2 [? [? ?]]]].
+        eexists; eexists (_ :: _); repeat split.
+        * econstructor; eassumption.
+        * simpl; rewrite H7, H14; reflexivity.
+        * assumption.
+        * eapply HlinvAtm; eauto.
+        * eapply HginvAtm; eauto.
+
+    - assert (Atomic impl rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst) nil (Some rsout))
         by (constructor; auto).
 
       pose proof H3; inv H3.
@@ -212,8 +233,7 @@ Section TrsSimSep.
       specialize (H4 _ _ H9 _ H7 H8 H10 _ H11).
       simpl in H4.
 
-      destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
-      + simpl; eexists; exists shsti; repeat split; eauto.
+      destruct (isExternal impl (mid_to (msg_id (id (tmsg_msg rsout))))).
       + destruct H4 as [slbl [sst2 [? [? ?]]]].
         eexists; eexists (_ :: _); repeat split.
         * econstructor; eassumption.
@@ -221,6 +241,7 @@ Section TrsSimSep.
         * assumption.
         * eapply HlinvAtm; eauto.
         * eapply HginvAtm; eauto.
+      + simpl; eexists; exists shsti; repeat split; eauto.
   Qed.
 
   Lemma trs_sim_step_steps_trs:
@@ -348,8 +369,8 @@ Qed.
 Lemma trsPreservineSys_atomic_same_tid:
   forall sys,
     trsPreservingSys sys ->
-    forall min mtid hst mouts,
-      Atomic sys min hst mouts ->
+    forall min mtid hst mouts orsout,
+      Atomic sys min hst mouts orsout ->
       mtid = mid_tid (msg_id (getMsg min)) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
@@ -361,17 +382,23 @@ Lemma trsPreservineSys_atomic_same_tid:
                   | IlblOuts None _ => True
                   end) hst.
 Proof.
-  induction 2; simpl; intros; [split; repeat constructor; auto|].
-  inv H3.
-  specialize (IHAtomic eq_refl _ _ H7); dest.
-  split.
-  - apply Forall_app.
-    + apply Forall_remove; assumption.
-    + eapply Forall_forall in H2; eauto.
-      rewrite <-H2.
-      eauto using trsPreservingSys_outs_same_tid.
-  - constructor; auto.
-    eapply Forall_forall in H2; eauto.
+  induction 2; simpl; intros; [split; repeat constructor; auto| |].
+  - inv H4.
+    specialize (IHAtomic eq_refl _ _ H8); dest.
+    split.
+    + apply Forall_app.
+      * apply Forall_remove; assumption.
+      * eapply Forall_forall in H3; eauto.
+        rewrite <-H3.
+        eauto using trsPreservingSys_outs_same_tid.
+    + constructor; auto.
+      eapply Forall_forall in H3; eauto.
+  - inv H3.
+    specialize (IHAtomic eq_refl _ _ H7); dest.
+    split.
+    + constructor.
+    + constructor; auto.
+      inv H2; assumption.
 Qed.
 
 Section Compositionality.
@@ -458,8 +485,8 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps_det impl ist1 hst ist2 ->
-      forall min mouts,
-        Atomic impl min hst mouts ->
+      forall min mouts orsout,
+        Atomic impl min hst mouts orsout ->
         steps_det impl1 ist1 hst ist2 \/
         steps_det impl2 ist1 hst ist2.
   Proof.

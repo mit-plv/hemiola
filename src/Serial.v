@@ -11,18 +11,26 @@ Section PerSystem.
    * [tmsg_tid], and [In hdl mouts] in [AtomicCons] ensures that the history is
    * for a single transaction.
    *)
-  Inductive Atomic: TMsg -> History -> list TMsg -> Prop :=
+  Inductive Atomic: TMsg -> History -> list TMsg -> option TMsg -> Prop :=
   | AtomicBase:
       forall hdl,
         isExternal sys (mid_from (msg_id (getMsg hdl))) = true ->
-        Atomic hdl nil (hdl :: nil)
-  | AtomicCons:
+        Atomic hdl nil (hdl :: nil) None
+  | AtomicCont:
       forall rqin hst mouts,
-        Atomic rqin hst mouts ->
+        Atomic rqin hst mouts None ->
         forall hdl houts,
           In hdl mouts ->
+          Forall (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg)))
+                              = true) houts ->
           Atomic rqin (IlblOuts (Some hdl) houts :: hst)
-                 (List.remove tmsg_dec hdl mouts ++ houts).
+                 (List.remove tmsg_dec hdl mouts ++ houts) None
+  | AtomicFin:
+      forall rqin hst hdl rsout,
+        Atomic rqin hst (hdl :: nil) None ->
+        isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
+        Atomic rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst)
+               nil (Some rsout).
 
   Inductive Transactional: History -> Prop :=
   | TrsSlt:
@@ -32,8 +40,8 @@ Section PerSystem.
         tin = IlblIn msg ->
         Transactional (tin :: nil)
   | TrsAtomic:
-      forall rqin hst mouts,
-        Atomic rqin hst mouts ->
+      forall rqin hst mouts orsout,
+        Atomic rqin hst mouts orsout ->
         hst <> nil ->
         Transactional hst.
 
