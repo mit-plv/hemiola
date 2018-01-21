@@ -13,7 +13,7 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
              |}
              (IlblIn (toTMsgU emsg))
              {| tst_oss := oss;
-                tst_msgs := distributeMsg (toTMsgU emsg) oims;
+                tst_msgs := enqMP (toTMsgU emsg) oims;
                 tst_tid := ts
              |}
 | SdInt: forall ts nts (Hts: nts > ts) tinfo
@@ -23,9 +23,7 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
     (oss)@[oidx] = Some os ->
 
     isInternal sys (mid_to (msg_id (getMsg fmsg))) = true ->
-
-    ValidMsgId fidx oidx fchn (getMsg fmsg) ->
-    firstM fidx oidx fchn oims = Some fmsg -> 
+    firstMP fidx oidx fchn oims = Some fmsg -> 
 
     msg_id (getMsg fmsg) = rule_mid frule ->
     In frule (obj_rules obj) ->

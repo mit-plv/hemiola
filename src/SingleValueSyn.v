@@ -206,7 +206,7 @@ Section Impl.
         destruct ist1 as [ioss1 imsgs1 its1];
         exists (toTMsgU (msgF (getMsg min)));
         exists {| tst_oss:= ioss1;
-                  tst_msgs:= distributeMsg (toTMsgU (msgF (getMsg min))) imsgs1;
+                  tst_msgs:= enqMP (toTMsgU (msgF (getMsg min))) imsgs1;
                   tst_tid:= its1;
                |}
       end;
@@ -287,14 +287,16 @@ Section Impl.
 
     Ltac dest_ValidMsgId :=
       match goal with
-      | [H: ValidMsgId _ _ _ (getMsg ?imsg) |- _] =>
+      | [Hf: firstMP _ _ _ _ = Some ?tmsg |- _] =>
+        let H := fresh "H" in
+        pose proof (firstMP_ValidMsgId _ _ _ _ Hf) as H;
         let imtid := fresh "imtid" in
         let imfrom := fresh "imfrom" in
         let imto := fresh "imto" in
         let imchn := fresh "imchn" in
         let imval := fresh "imval" in
         let itid := fresh "itid" in
-        destruct imsg as [[[[imfrom imto imchn] imtid] imval] itid];
+        destruct tmsg as [[[[imfrom imto imchn] imtid] imval] itid];
         let Hfrom := fresh "Hfrom" in
         let Hto := fresh "Hto" in
         let Hchn := fresh "Hchn" in
@@ -423,8 +425,7 @@ Section Impl.
       |simpl; eassumption (* [spec] object should exist *)
       |instantiate (1:= {| tmsg_msg := p imsg |});
        reflexivity
-      |repeat split (* [ValidMsgId] *)
-      |
+      | (* [firstMP] to [firstMP] *)
       |instantiate (1:= specRule); simpl; reflexivity
       |simpl; tauto (* [specRule] exists *)
       |auto (* [specRule] precondition is usually [True] *)
@@ -487,7 +488,7 @@ Section Impl.
                   synth_rq_correct svmSim_rq_next.
                 }
                 { (* 2-2-2: responses-back for C1 *)
-                  simpl in *; inv H11.
+                  simpl in *; inv H10.
                   unfold synRsOutsSingle.
                   remember ((ost_tst os)@[svmTrsIdx0]) as otrsh.
                   destruct otrsh;
@@ -500,7 +501,7 @@ Section Impl.
                              soss1@[specIdx] = Some sost /\
                              (ost_st sost)@[valueIdx] = Some imval).
                   { admit. (* need an invariant *) }
-                  destruct H9 as [sost [? ?]].
+                  destruct H10 as [sost [? ?]].
 
                   do 2 eexists; split.
                   { synth_spec_step
@@ -509,9 +510,9 @@ Section Impl.
                          msg_value := imval |}
                       (specGetReq extIdx1 extIdx2 specChn1).
 
-                    cbn; cbn in H10.
+                    cbn; cbn in H9.
                     instantiate (1:= None).
-                    admit. (* about [firstM] in [impl] and [spec]. *)
+                    admit. (* about [firstMP] in [impl] and [spec]. *)
                   }
                   { simpl; rewrite H11; simpl.
                     split.

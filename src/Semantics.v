@@ -17,113 +17,40 @@ Definition intOuts {MsgT} `{HasMsg MsgT} (sys: System) (outs: list MsgT) :=
 Definition extOuts {MsgT} `{HasMsg MsgT} (sys: System) (outs: list MsgT) :=
   filter (fun m => isExternal sys (mid_to (msg_id (getMsg m)))) outs.
 
-Section Messages.
+Section MessagePool.
   Variable (MsgT: Type).
   Context `{HasMsg MsgT}.
 
   Definition Queue := list MsgT.
-  Definition Channels := M.t (* channel index *) Queue.
-  Definition MsgsFrom := M.t (* from *) Channels.
-  Definition Messages := M.t (* to *) MsgsFrom.
+  Definition MessagePool := list MsgT.
 
-  Definition firstQ (q: Queue) := hd_error q.
-  Definition deq (q: Queue): Queue := tl q.
-  Definition enq (m: MsgT) (q: Queue): Queue := q ++ (m :: nil).
-  Definition EmptyQ (q: Queue) := q = nil.
+  Definition findMP (from to chn: IdxT) (mp: MessagePool): Queue :=
+    filter (fun msg =>
+              if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
+              then true
+              else false) mp.
 
-  Definition findC (chn: IdxT) (cs: Channels): Queue :=
-    ol2l cs@[chn].
-  Definition firstC (chn: IdxT) (cs: Channels) :=
-    cs@[chn] >>= (fun q => firstQ q).
-  Definition deqC (chn: IdxT) (cs: Channels): Channels :=
-    match cs@[chn] with
-    | Some q => cs +[chn <- deq q]
-    | None => cs
-    end.
-  Definition enqC (chn: IdxT) (m: MsgT) (cs: Channels): Channels :=
-    match cs@[chn] with
-    | Some q => cs +[chn <- enq m q]
-    | None => cs +[chn <- enq m nil]
-    end.
-  Definition EmptyC (cs: Channels) := forall chn, EmptyQ (findC chn cs).
+  Definition firstMP (from to chn: IdxT) (mp: MessagePool) :=
+    hd_error (findMP from to chn mp).
 
-  Lemma firstC_Some_inv:
-    forall chn cs m, firstC chn cs = Some m ->
-                     exists q, cs@[chn] = Some q /\ firstQ q = Some m.
-  Proof.
-    unfold firstC; intros.
-    destruct cs@[chn]; simpl in *; [|discriminate].
-    eexists; split; auto.
-  Qed.
+  Fixpoint deqMP (from to chn: IdxT) (mp: MessagePool): MessagePool :=
+    match mp with
+    | nil => nil
+    | msg :: mp' =>
+      if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
+      then mp'
+      else msg :: deqMP from to chn mp'
+    end.
 
-  Definition findMF (from chn: IdxT) (mf: MsgsFrom): Queue :=
-    ol2l (mf@[from] >>= (fun cs => cs@[chn])).
-  Definition firstMF (from chn: IdxT) (mf: MsgsFrom) :=
-    mf@[from] >>= (fun cs => firstC chn cs).
-  Definition deqMF (from chn: IdxT) (mf: MsgsFrom): MsgsFrom :=
-    match mf@[from] with
-    | Some cs => mf +[from <- deqC chn cs]
-    | None => mf
-    end.
-  Definition enqMF (from chn: IdxT) (m: MsgT) (mf: MsgsFrom): MsgsFrom :=
-    match mf@[from] with
-    | Some cs => mf +[from <- enqC chn m cs]
-    | None => mf +[from <- enqC chn m (M.empty _)]
-    end.
-  Definition EmptyMF (mf: MsgsFrom) :=
-    forall from chn, EmptyQ (findMF from chn mf).
-
-  Lemma firstMF_Some_inv:
-    forall from chn mf m, firstMF from chn mf = Some m ->
-                          exists cs, mf@[from] = Some cs /\ firstC chn cs = Some m.
-  Proof.
-    unfold firstMF; intros.
-    destruct mf@[from]; simpl in *; [|discriminate].
-    eexists; split; auto.
-  Qed.
-
-  Definition findM (from to chn: IdxT) (msgs: Messages): Queue :=
-    ol2l (msgs@[to] >>= (fun froms => froms@[from] >>= (fun cs => cs@[chn]))). 
-  Definition firstM (from to chn: IdxT) (msgs: Messages) :=
-    msgs@[to] >>= (fun froms => firstMF from chn froms).
-  Definition deqM (from to chn: IdxT) (msgs: Messages): Messages :=
-    match msgs@[to] with
-    | Some froms => msgs +[to <- deqMF from chn froms]
-    | None => msgs
-    end.
-  Definition enqM (from to chn: IdxT) (m: MsgT) (msgs: Messages): Messages :=
-    match msgs@[to] with
-    | Some froms => msgs +[to <- enqMF from chn m froms]
-    | None => msgs +[to <- enqMF from chn m (M.empty _)]
-    end.
+  Definition enqMP (m: MsgT) (mp: MessagePool): MessagePool := mp ++ (m :: nil).
   
-  Definition EmptyM (msgs: Messages) :=
-    forall from to chn, EmptyQ (findM from to chn msgs).
-  Definition InM (msg: MsgT) (msgs: Messages) :=
-    exists from to chn, In msg (findM from to chn msgs).
+  Definition EmptyMP (mp: MessagePool) := mp = nil.
+  Definition InMP (msg: MsgT) (mp: MessagePool) := In msg mp.
 
-  Lemma firstM_Some_inv:
-    forall from to chn msgs m, firstM from to chn msgs = Some m ->
-                               exists mf, msgs@[to] = Some mf /\ firstMF from chn mf = Some m.
-  Proof.
-    unfold firstM; intros.
-    destruct msgs@[to]; simpl in *; [|discriminate].
-    eexists; split; auto.
-  Qed.
-
-  Definition distributeMsg (msg: MsgT) (msgs: Messages): Messages :=
-    enqM (mid_from (msg_id (getMsg msg)))
-         (mid_to (msg_id (getMsg msg)))
-         (mid_chn (msg_id (getMsg msg))) msg msgs.
-
-  Fixpoint distributeMsgs (nmsgs: list MsgT) (msgs: Messages): Messages :=
-    match nmsgs with
-    | nil => msgs
-    | msg :: nmsgs' =>
-      distributeMsg msg (distributeMsgs nmsgs' msgs)
-    end.
+  Fixpoint distributeMsgs (nmsgs: list MsgT) (mp: MessagePool): MessagePool :=
+    mp ++ nmsgs.
   
-End Messages.
+End MessagePool.
 
 Section Validness.
 
@@ -262,12 +189,12 @@ Section SState.
 
   Record SState MsgT :=
     { st_oss: ObjectStates;
-      st_msgs: Messages MsgT
+      st_msgs: MessagePool MsgT
     }.
 
   Definition getSStateInit {MsgT} (sys: System): SState MsgT :=
     {| st_oss := getObjectStatesInit (sys_objs sys);
-       st_msgs := [] |}.
+       st_msgs := nil |}.
 
   Global Instance SState_HasInit {MsgT} : HasInit (SState MsgT) :=
     { getStateInit := getSStateInit }.
@@ -358,13 +285,13 @@ Section TState.
 
   Record TState :=
     { tst_oss: ObjectStates;
-      tst_msgs: Messages TMsg;
+      tst_msgs: MessagePool TMsg;
       tst_tid: TrsId
     }.
 
   Definition getTStateInit (sys: System): TState :=
     {| tst_oss := getObjectStatesInit (sys_objs sys);
-       tst_msgs := [];
+       tst_msgs := nil;
        tst_tid := trsIdInit |}.
 
   Global Instance TState_HasInit: HasInit TState :=

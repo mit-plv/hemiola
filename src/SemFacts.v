@@ -1,6 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepDet.
 
+Set Implicit Arguments.
+
 Lemma internal_external_negb:
   forall sys idx,
     isInternal sys idx = negb (isExternal sys idx).
@@ -63,6 +65,19 @@ Proof.
   rewrite H0; reflexivity.
 Qed.
 
+Lemma firstMP_ValidMsgId:
+  forall from to chn {MsgT} `{HasMsg MsgT} (msg: MsgT) mp,
+    firstMP from to chn mp = Some msg ->
+    ValidMsgId from to chn msg.
+Proof.
+  induction mp; unfold firstMP in *; simpl; intros; [discriminate|].
+  destruct (msgAddr_dec (mid_addr (msg_id (getMsg a))) (buildMsgAddr from to chn)); auto.
+  simpl in H0; inv H0.
+  unfold ValidMsgId.
+  destruct (getMsg msg) as [mid mv]; destruct mid; simpl in *.
+  subst; auto.
+Qed.
+
 Lemma step_det_int_internal:
   forall sys st1 hdl outs st2,
     step_det sys st1 (IlblOuts (Some hdl) outs) st2 ->
@@ -71,7 +86,8 @@ Proof.
   intros; inv H.
   destruct fmsg as [fmsg fts]; simpl in *.
   destruct fmsg as [hmid hmv]; simpl in *; subst.
-  destruct H6 as [? [? ?]]; simpl in *; subst.
+  pose proof (firstMP_ValidMsgId _ _ _ _ H6).
+  destruct H as [? [? ?]]; simpl in *; subst.
   rewrite H0.
   unfold isInternal; find_if_inside; auto.
   elim n; apply in_map; assumption.
@@ -85,7 +101,7 @@ Lemma step_det_outs_from_internal:
 Proof.
   intros; inv H; try (constructor; fail).
   simpl.
-  destruct H11.
+  destruct H10.
   clear -H H0.
   remember (rule_outs _ _ _) as outs; clear Heqouts.
   induction outs; simpl; intros; [constructor|].

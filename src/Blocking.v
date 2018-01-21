@@ -17,9 +17,9 @@ Require Import Syntax Semantics StepDet.
  * Note that [TInfo] contains both static transaction id ([mid_tid] of
  * [tinfo_rqin]) and dynamic transaction id ([tinfo_tid]).
  *)
-Definition Blocked (msgs: Messages TMsg) :=
+Definition Blocked (msgs: MessagePool TMsg) :=
   forall m1 m2 ti1 ti2,
-    InM m1 msgs -> InM m2 msgs ->
+    InMP m1 msgs -> InMP m2 msgs ->
     tmsg_info m1 = Some ti1 ->
     tmsg_info m2 = Some ti2 ->
     mid_addr (msg_id (tinfo_rqin ti1)) = mid_addr (msg_id (tinfo_rqin ti2)) ->

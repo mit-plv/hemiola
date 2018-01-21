@@ -357,12 +357,12 @@ Proof.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
 
-  clear -H H9.
+  clear -H H8.
   specialize (H os (msg_value (getMsg fmsg))).
   induction (rule_outs frule os (msg_value (getMsg fmsg))); [constructor|].
   simpl in *.
   inv H; constructor; auto.
-  simpl; rewrite H9, H2.
+  simpl; rewrite H8, H2.
   reflexivity.
 Qed.  
 
@@ -507,8 +507,8 @@ Section Compositionality.
       + constructor.
         * unfold isExternal in *; rewrite <-Hii; assumption.
         * unfold isInternal in *; rewrite <-Hii; assumption.
-      + simpl in H5, H8; rewrite H8 in H5.
-        specialize (H1 _ H5 _ H9 H).
+      + simpl in H5, H7; rewrite H7 in H5.
+        specialize (H1 _ H5 _ H8 H).
         destruct H1 as [obj1 [? [? ?]]].
         rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
         econstructor; eauto.
@@ -526,8 +526,8 @@ Section Compositionality.
       + constructor.
         * unfold isExternal in *; rewrite <-Hii2; assumption.
         * unfold isInternal in *; rewrite <-Hii2; assumption.
-      + simpl in H5, H8; rewrite H8 in H5.
-        specialize (H1 _ H5 _ H9 H).
+      + simpl in H5, H7; rewrite H7 in H5.
+        specialize (H1 _ H5 _ H8 H).
         destruct H1 as [obj1 [? [? ?]]].
         rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
         econstructor; eauto.
