@@ -11,11 +11,12 @@ Section PerSystem.
    * [tmsg_tid], and [In hdl mouts] in [AtomicCons] ensures that the history is
    * for a single transaction.
    *)
-  Inductive Atomic: TMsg -> History -> list TMsg -> option TMsg -> Prop :=
+  Inductive Atomic: TInfo -> History -> list TMsg -> option TMsg -> Prop :=
   | AtomicBase:
-      forall hdl,
-        isExternal sys (mid_from (msg_id (getMsg hdl))) = true ->
-        Atomic hdl nil (hdl :: nil) None
+      forall tid rqin tinfo,
+        isExternal sys (mid_from (msg_id (getMsg rqin))) = true ->
+        tinfo = {| tinfo_tid := tid; tinfo_rqin := rqin |} ->
+        Atomic tinfo nil (toTMsg tinfo rqin :: nil) None
   | AtomicCont:
       forall rqin hst mouts,
         Atomic rqin hst mouts None ->
@@ -51,6 +52,15 @@ Section PerSystem.
       hst = concat trss.
 
 End PerSystem.
+
+(** Transaction messages in [MessagePool] *)
+
+Definition trsMessages (trsInfo: TInfo) (mp: MessagePool TMsg) : list TMsg :=
+  filter (fun tmsg =>
+            match tmsg_info tmsg with
+            | Some tinfo => if tinfo_dec tinfo trsInfo then true else false
+            | None => false
+            end) mp.
 
 (** Serializability *)
 

@@ -193,7 +193,7 @@ Section TrsSimSep.
   Proof.
     induction 1; simpl; intros.
 
-    - inv H2.
+    - inv H3.
       eexists; exists nil; repeat split.
       + econstructor.
       + assumption.
@@ -369,9 +369,9 @@ Qed.
 Lemma trsPreservineSys_atomic_same_tid:
   forall sys,
     trsPreservingSys sys ->
-    forall min mtid hst mouts orsout,
-      Atomic sys min hst mouts orsout ->
-      mtid = mid_tid (msg_id (getMsg min)) ->
+    forall rqin mtid hst mouts orsout,
+      Atomic sys rqin hst mouts orsout ->
+      mtid = mid_tid (msg_id (tinfo_rqin rqin)) ->
       forall ist1 ist2,
         steps_det sys ist1 hst ist2 ->
         Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
@@ -382,7 +382,7 @@ Lemma trsPreservineSys_atomic_same_tid:
                   | IlblOuts None _ => True
                   end) hst.
 Proof.
-  induction 2; simpl; intros; [split; repeat constructor; auto| |].
+  induction 2; simpl; intros; [split; repeat constructor; subst; auto| |].
   - inv H4.
     specialize (IHAtomic eq_refl _ _ H8); dest.
     split.
@@ -485,13 +485,13 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps_det impl ist1 hst ist2 ->
-      forall min mouts orsout,
-        Atomic impl min hst mouts orsout ->
+      forall rqin mouts orsout,
+        Atomic impl rqin hst mouts orsout ->
         steps_det impl1 ist1 hst ist2 \/
         steps_det impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (TrsDisjSys_distr_same_tid (mid_tid (msg_id (getMsg min)))).
+    pose proof (TrsDisjSys_distr_same_tid (mid_tid (msg_id (tinfo_rqin rqin)))).
     pose proof (trsPreservineSys_atomic_same_tid Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.

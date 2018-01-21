@@ -47,7 +47,7 @@ Section MessagePool.
   Definition EmptyMP (mp: MessagePool) := mp = nil.
   Definition InMP (msg: MsgT) (mp: MessagePool) := In msg mp.
 
-  Fixpoint distributeMsgs (nmsgs: list MsgT) (mp: MessagePool): MessagePool :=
+  Definition distributeMsgs (nmsgs: list MsgT) (mp: MessagePool): MessagePool :=
     mp ++ nmsgs.
   
 End MessagePool.
@@ -248,10 +248,25 @@ Section TMsg.
       tinfo_rqin : Msg
     }.
 
+  Definition tinfo_dec : forall ti1 ti2: TInfo, {ti1 = ti2} + {ti1 <> ti2}.
+  Proof.
+    decide equality.
+    - apply msg_dec.
+    - decide equality.
+  Defined.
+
   Record TMsg :=
     { tmsg_msg : Msg;
       tmsg_info : option TInfo;
     }.
+
+  Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
+  Proof.
+    decide equality.
+    - decide equality.
+      apply tinfo_dec.
+    - apply msg_dec.
+  Defined.
 
   Definition toTMsg tinfo m :=
     {| tmsg_msg := m;
@@ -262,15 +277,6 @@ Section TMsg.
 
   Global Instance TMsg_HsgMsg : HasMsg TMsg :=
     { getMsg := tmsg_msg }.
-
-  Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
-  Proof.
-    decide equality.
-    - do 2 decide equality.
-      + apply msg_dec.
-      + decide equality.
-    - apply msg_dec.
-  Defined.
 
   Definition TLabel := ILabel TMsg.
 

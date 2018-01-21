@@ -45,7 +45,8 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
              |}
              (IlblOuts (Some (toTMsg tinfo (getMsg fmsg))) (toTMsgs tinfo outs))
              {| tst_oss := oss +[ oidx <- pos ];
-                tst_msgs := distributeMsgs (intOuts sys (toTMsgs tinfo outs)) oims;
+                tst_msgs := distributeMsgs (intOuts sys (toTMsgs tinfo outs))
+                                           (deqMP fidx oidx fchn oims);
                 tst_tid := match tmsg_info fmsg with
                            | Some _ => ts
                            | None => nts

@@ -56,9 +56,9 @@ Lemma atomic_preserved:
       Atomic impl2 rqin hst mouts orsout.
 Proof.
   induction 1; simpl; intros.
-  - constructor; auto.
+  - econstructor; eauto.
     unfold isExternal in *.
-    rewrite H0 in H; assumption.
+    rewrite H1 in H; assumption.
   - constructor; auto.
     unfold isInternal in *.
     rewrite H2 in H1; assumption.
@@ -67,7 +67,7 @@ Proof.
     rewrite H1 in H0; assumption.
 Qed.
 
-Lemma atomic_ext_out:
+Lemma atomic_rs_out:
   forall sys rqin hdl rsout hst mouts orsout,
     Atomic sys rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst) mouts orsout ->
     isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
@@ -78,6 +78,35 @@ Proof.
     eapply internal_external_false; eauto.
   - auto.
 Qed.
+
+Lemma trsMessages_app:
+  forall ti mp1 mp2,
+    trsMessages ti (mp1 ++ mp2) =
+    trsMessages ti mp1 ++ trsMessages ti mp2.
+Proof.
+  intros; apply filter_app.
+Qed.
+
+Lemma atomic_outs:
+  forall sys rqin hst mouts orsout,
+    Atomic sys rqin hst mouts orsout ->
+    hst <> nil ->
+    forall st1 st2,
+      steps_det sys st1 hst st2 ->
+      trsMessages rqin (tst_msgs st2) = mouts.
+Proof.
+  induction 1; simpl; intros; [intuition idtac| |].
+  - inv H3.
+    inv H9; simpl in *.
+    unfold distributeMsgs.
+    rewrite trsMessages_app.
+
+    (* Hint: case analysis on [hst]:
+     * - nil: invert H
+     * - cons: use IHAtomic
+     *)
+    
+Admitted.
 
 Theorem serializable_seqSteps_refines:
   forall sys,
