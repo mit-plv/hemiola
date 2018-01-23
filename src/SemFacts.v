@@ -3,6 +3,149 @@ Require Import Common ListSupport FMap Syntax Semantics StepDet.
 
 Set Implicit Arguments.
 
+Section MessagePoolFacts.
+  Variable (MsgT: Type).
+  Context `{HasMsg MsgT}.
+
+  Lemma firstMP_app_or:
+    forall (msg: MsgT) from to chn mp1 mp2,
+      firstMP from to chn (mp1 ++ mp2) = Some msg ->
+      firstMP from to chn mp1 = Some msg \/
+      firstMP from to chn mp2 = Some msg.
+  Proof.
+    induction mp1; intros; auto.
+    unfold firstMP in *; simpl in *.
+    destruct (msgAddr_dec _ _).
+    - left; inv H0; reflexivity.
+    - auto.
+  Qed.
+
+  Lemma firstMP_enqMP_or:
+    forall (msg nmsg: MsgT) from to chn mp,
+      firstMP from to chn (enqMP nmsg mp) = Some msg ->
+      msg = nmsg \/ firstMP from to chn mp = Some msg.
+  Proof.
+    intros.
+    apply firstMP_app_or in H0; destruct H0; auto.
+    unfold firstMP in H0; cbn in H0.
+    destruct (msgAddr_dec _ _); [|discriminate].
+    inv H0; auto.
+  Qed.
+
+  Lemma firstMP_distributeMsgs_or:
+    forall (msg: MsgT) from to chn nmsgs mp,
+      firstMP from to chn (distributeMsgs nmsgs mp) = Some msg ->
+      firstMP from to chn mp = Some msg \/
+      firstMP from to chn nmsgs = Some msg.
+  Proof.
+    intros.
+    apply firstMP_app_or; auto.
+  Qed.
+
+  Lemma inMP_enqMP_or:
+    forall (msg: MsgT) nmsg mp,
+      InMP msg (enqMP nmsg mp) ->
+      msg = nmsg \/ InMP msg mp.
+  Proof.
+    intros.
+    apply in_app_or in H0; destruct H0; auto.
+    Common.dest_in; auto.
+  Qed.
+
+  Lemma inMP_deqMP:
+    forall (msg: MsgT) from to chn mp,
+      InMP msg (deqMP from to chn mp) ->
+      InMP msg mp.
+  Proof.
+    induction mp; simpl; intros; auto.
+    find_if_inside; auto.
+    inv H0; auto.
+  Qed.
+
+  Lemma inMP_distributeMsgs_or:
+    forall (msg: MsgT) nmsgs mp,
+      InMP msg (distributeMsgs nmsgs mp) ->
+      In msg nmsgs \/ InMP msg mp.
+  Proof.
+    intros; apply in_app_or in H0; destruct H0; auto.
+  Qed.
+
+  Lemma firstMP_inMP:
+    forall (msg: MsgT) from to chn mp,
+      firstMP from to chn mp = Some msg ->
+      InMP msg mp.
+  Proof.
+    induction mp; simpl; intros; [discriminate|].
+    unfold firstMP in H0; simpl in H0.
+    destruct (msgAddr_dec _ _).
+    - inv H0; auto.
+    - right; apply IHmp; auto.
+  Qed.
+
+  Lemma ForallMP_forall:
+    forall P mp,
+      ForallMP P mp <->
+      (forall msg: MsgT, InMP msg mp -> P msg).
+  Proof.
+    intros; apply Forall_forall.
+  Qed.
+
+  Lemma ForallMP_enqMP:
+    forall (P: MsgT -> Prop) (msg: MsgT) mp,
+      ForallMP P mp ->
+      P msg ->
+      ForallMP P (enqMP msg mp).
+  Proof.
+    intros.
+    apply Forall_app; auto.
+  Qed.
+
+  Lemma ForallMP_deqMP:
+    forall (P: MsgT -> Prop) from to chn mp,
+      ForallMP P mp ->
+      ForallMP P (deqMP from to chn mp).
+  Proof.
+    induction mp; simpl; intros; auto.
+    inv H0.
+    find_if_inside; auto.
+    constructor; auto.
+    apply IHmp; auto.
+  Qed.
+
+  Lemma ForallMP_distributeMsgs:
+    forall (P: MsgT -> Prop) (nmsgs: list MsgT) mp,
+      ForallMP P mp ->
+      ForallMP P nmsgs ->
+      ForallMP P (distributeMsgs nmsgs mp).
+  Proof.
+    intros.
+    apply Forall_app; auto.
+  Qed.
+
+  Lemma deqMP_SubList:
+    forall from to chn mp,
+      SubList (deqMP from to chn mp) mp.
+  Proof.
+    induction mp; simpl; intros; [apply SubList_nil|].
+    find_if_inside.
+    - right; auto.
+    - apply SubList_cons; [left; reflexivity|].
+      apply SubList_cons_right; auto.
+  Qed.
+
+End MessagePoolFacts.
+
+Lemma obj_in_sys_idx_internal:
+  forall obj sys,
+    In obj (sys_objs sys) ->
+    isInternal sys (obj_idx obj) = true.
+Proof.
+  unfold isInternal; intros.
+  find_if_inside; auto.
+  elim n.
+  apply in_map; auto.
+Qed.
+
 Lemma internal_external_negb:
   forall sys idx,
     isInternal sys idx = negb (isExternal sys idx).
@@ -65,6 +208,17 @@ Proof.
   rewrite H0; reflexivity.
 Qed.
 
+Lemma intOuts_Forall:
+  forall sys {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
+    Forall (fun msg => isInternal sys (mid_to (msg_id (getMsg msg))) = true) msgs ->
+    intOuts sys msgs = msgs.
+Proof.
+  induction msgs; simpl; intros; [reflexivity|].
+  inv H0; rewrite H3.
+  rewrite IHmsgs by assumption.
+  reflexivity.
+Qed.
+
 Lemma firstMP_ValidMsgId:
   forall from to chn {MsgT} `{HasMsg MsgT} (msg: MsgT) mp,
     firstMP from to chn mp = Some msg ->
@@ -87,10 +241,10 @@ Proof.
   destruct fmsg as [fmsg fts]; simpl in *.
   destruct fmsg as [hmid hmv]; simpl in *; subst.
   pose proof (firstMP_ValidMsgId _ _ _ _ H6).
-  destruct H as [? [? ?]]; simpl in *; subst.
-  rewrite H0.
+  destruct (rule_mid frule) as [[from to chn] tid].
+  inv H; simpl in *.
   unfold isInternal; find_if_inside; auto.
-  elim n; apply in_map; assumption.
+  cbn in n; elim n; apply in_map; assumption.
 Qed.
 
 Lemma step_det_outs_from_internal:

@@ -11,24 +11,30 @@ Section PerSystem.
    * [tmsg_tid], and [In hdl mouts] in [AtomicCons] ensures that the history is
    * for a single transaction.
    *)
-  Inductive Atomic: TInfo -> History -> list TMsg -> option TMsg -> Prop :=
-  | AtomicBase:
+  Inductive Atomic: TInfo -> History -> MessagePool TMsg -> option TMsg -> Prop :=
+  | AtomicStart:
       forall tid rqin tinfo,
         isExternal sys (mid_from (msg_id (getMsg rqin))) = true ->
         tinfo = {| tinfo_tid := tid; tinfo_rqin := rqin |} ->
-        Atomic tinfo nil (toTMsg tinfo rqin :: nil) None
+        Atomic tinfo nil (enqMP (toTMsg tinfo rqin) nil) None
   | AtomicCont:
       forall rqin hst mouts,
         Atomic rqin hst mouts None ->
         forall hdl houts,
-          In hdl mouts ->
-          Forall (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg)))
-                              = true) houts ->
-          Atomic rqin (IlblOuts (Some hdl) houts :: hst)
-                 (List.remove tmsg_dec hdl mouts ++ houts) None
+          InMP hdl mouts ->
+          isInternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
+          ForallMP (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg))) = true) houts ->
+          (* When coupled with [steps_det], we can prove that
+           * [deqMP from to chn mouts] dequeues [hdl].
+           *)
+          forall from to chn,
+            firstMP from to chn mouts = Some hdl ->
+            Atomic rqin (IlblOuts (Some hdl) houts :: hst)
+                   (distributeMsgs houts (deqMP from to chn mouts)) None
   | AtomicFin:
       forall rqin hst hdl rsout,
         Atomic rqin hst (hdl :: nil) None ->
+        isInternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
         isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
         Atomic rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst)
                nil (Some rsout).

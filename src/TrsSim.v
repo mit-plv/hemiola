@@ -201,7 +201,28 @@ Section TrsSimSep.
       + assumption.
 
     - assert (Atomic impl rqin (IlblOuts (Some hdl) houts :: hst)
-                     (remove tmsg_dec hdl mouts ++ houts) None)
+                     (distributeMsgs houts (deqMP from to chn mouts)) None)
+        by (constructor; auto).
+
+      pose proof H6; inv H6.
+      specialize (IHAtomic _ _ H4 H5 _ H12).
+      destruct IHAtomic as [ssti [shsti [? [? [? [? ?]]]]]].
+
+      pose proof H7; eapply HsimAtm in H7.
+      specialize (H7 _ _ H12 _ H10 H11 H13 _ H14).
+      simpl in H7.
+
+      destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
+      + simpl; eexists; exists shsti; repeat split; eauto.
+      + destruct H7 as [slbl [sst2 [? [? ?]]]].
+        eexists; eexists (_ :: _); repeat split.
+        * econstructor; eassumption.
+        * simpl; rewrite H9, H16; reflexivity.
+        * assumption.
+        * eapply HlinvAtm; eauto.
+        * eapply HginvAtm; eauto.
+
+    - assert (Atomic impl rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst) nil (Some rsout))
         by (constructor; auto).
 
       pose proof H4; inv H4.
@@ -212,32 +233,11 @@ Section TrsSimSep.
       specialize (H5 _ _ H10 _ H8 H9 H11 _ H12).
       simpl in H5.
 
-      destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
-      + simpl; eexists; exists shsti; repeat split; eauto.
+      destruct (isExternal impl (mid_to (msg_id (id (tmsg_msg rsout))))).
       + destruct H5 as [slbl [sst2 [? [? ?]]]].
         eexists; eexists (_ :: _); repeat split.
         * econstructor; eassumption.
         * simpl; rewrite H7, H14; reflexivity.
-        * assumption.
-        * eapply HlinvAtm; eauto.
-        * eapply HginvAtm; eauto.
-
-    - assert (Atomic impl rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst) nil (Some rsout))
-        by (constructor; auto).
-
-      pose proof H3; inv H3.
-      specialize (IHAtomic _ _ H1 H2 _ H9).
-      destruct IHAtomic as [ssti [shsti [? [? [? [? ?]]]]]].
-
-      pose proof H4; eapply HsimAtm in H4.
-      specialize (H4 _ _ H9 _ H7 H8 H10 _ H11).
-      simpl in H4.
-
-      destruct (isExternal impl (mid_to (msg_id (id (tmsg_msg rsout))))).
-      + destruct H4 as [slbl [sst2 [? [? ?]]]].
-        eexists; eexists (_ :: _); repeat split.
-        * econstructor; eassumption.
-        * simpl; rewrite H6, H13; reflexivity.
         * assumption.
         * eapply HlinvAtm; eauto.
         * eapply HginvAtm; eauto.
@@ -383,22 +383,22 @@ Lemma trsPreservineSys_atomic_same_tid:
                   end) hst.
 Proof.
   induction 2; simpl; intros; [split; repeat constructor; subst; auto| |].
+  - inv H6.
+    specialize (IHAtomic eq_refl _ _ H10); dest.
+    split.
+    + apply Forall_app.
+      * apply ForallMP_deqMP; assumption.
+      * eapply Forall_forall in H5; eauto.
+        rewrite <-H5.
+        eauto using trsPreservingSys_outs_same_tid.
+    + constructor; auto.
+      eapply Forall_forall in H5; eauto.
   - inv H4.
     specialize (IHAtomic eq_refl _ _ H8); dest.
     split.
-    + apply Forall_app.
-      * apply Forall_remove; assumption.
-      * eapply Forall_forall in H3; eauto.
-        rewrite <-H3.
-        eauto using trsPreservingSys_outs_same_tid.
-    + constructor; auto.
-      eapply Forall_forall in H3; eauto.
-  - inv H3.
-    specialize (IHAtomic eq_refl _ _ H7); dest.
-    split.
     + constructor.
     + constructor; auto.
-      inv H2; assumption.
+      inv H3; assumption.
 Qed.
 
 Section Compositionality.

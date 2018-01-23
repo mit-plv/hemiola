@@ -24,6 +24,14 @@ Proof.
   inv H; constructor; auto.
 Qed.
 
+Lemma Forall_app_inv:
+  forall {A} (l1 l2: list A) P,
+    Forall P (l1 ++ l2) -> Forall P l1 /\ Forall P l2.
+Proof.
+  induction l1; simpl; intros; auto.
+  inv H; specialize (IHl1 _ _ H3); dest; auto.
+Qed.
+
 Lemma Forall_remove:
   forall {A} dec P (a: A) (l: list A),
     Forall P l -> Forall P (remove dec a l).
@@ -57,6 +65,16 @@ Proof.
   induction l; simpl; intros; auto.
   destruct (eq_dec _ _); subst; auto.
   destruct H; auto.
+Qed.
+
+Lemma remove_cons:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (l: list A),
+    remove eq_dec a (a :: l) = remove eq_dec a l.
+Proof.
+  intros; simpl.
+  destruct (eq_dec _ _); auto.
+  elim n; auto.
 Qed.
 
 Lemma map_id:

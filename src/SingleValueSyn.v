@@ -300,8 +300,7 @@ Section Impl.
         let Hfrom := fresh "Hfrom" in
         let Hto := fresh "Hto" in
         let Hchn := fresh "Hchn" in
-        destruct H as [Hfrom [Hto Hchn]];
-        simpl in Hfrom, Hto, Hchn; subst
+        inv H
       end.
 
     Ltac synth_init_simpl :=

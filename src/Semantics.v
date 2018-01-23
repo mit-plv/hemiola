@@ -47,6 +47,9 @@ Section MessagePool.
   Definition EmptyMP (mp: MessagePool) := mp = nil.
   Definition InMP (msg: MsgT) (mp: MessagePool) := In msg mp.
 
+  Definition ForallMP (P: MsgT -> Prop) (mp: MessagePool) :=
+    Forall P mp.
+
   Definition distributeMsgs (nmsgs: list MsgT) (mp: MessagePool): MessagePool :=
     mp ++ nmsgs.
   
@@ -55,9 +58,7 @@ End MessagePool.
 Section Validness.
 
   Definition ValidMsgId (from to chn: IdxT) {MsgT} `{HasMsg MsgT} (msg: MsgT) :=
-    mid_from (msg_id (getMsg msg)) = from /\
-    mid_to (msg_id (getMsg msg)) = to /\
-    mid_chn (msg_id (getMsg msg)) = chn.
+    mid_addr (msg_id (getMsg msg)) = buildMsgAddr from to chn.
 
   (* A set of messages are "valid outputs" if
    * 1) they are from the same source [idx],
