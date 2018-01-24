@@ -92,3 +92,29 @@ Proof.
   rewrite IHl; reflexivity.
 Qed.
 
+Fixpoint noDup {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (l: list A) :=
+  match l with
+  | nil => nil
+  | a :: l' => if in_dec eq_dec a l' then noDup eq_dec l' else a :: noDup eq_dec l'
+  end.
+
+Lemma noDup_In:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y}) (a: A) (l: list A),
+    In a (noDup eq_dec l) -> In a l.
+Proof.
+  induction l; simpl; intros; auto.
+  destruct (in_dec eq_dec a0 l); auto.
+  inv H; auto.
+Qed.
+
+Lemma noDup_NoDup:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y}) (l: list A),
+    NoDup (noDup eq_dec l).
+Proof.
+  induction l; simpl; intros; [constructor|].
+  destruct (in_dec eq_dec a l); auto.
+  constructor; auto.
+  intro Hx; elim n; eapply noDup_In; eauto.
+Qed.
+

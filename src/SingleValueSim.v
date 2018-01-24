@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet.
-Require Import Predicate Simulation.
+Require Import Predicate Simulation Synthesis.
 
 Require Import SingleValue.
 
@@ -18,6 +18,25 @@ Section Sim.
 
   Local Notation impl0 := (impl0 extIdx1 extIdx2).
   Local Notation spec := (spec extIdx1 extIdx2).
+
+  (** Label mapping *)
+  
+  Definition svmIdxF (idx: IdxT): IdxT :=
+    if idx ?<n (indicesOf impl0) then specIdx else idx.
+
+  Definition svmMsgIdF (imid: MsgId): MsgId :=
+    {| mid_addr := {| ma_from := svmIdxF (mid_from imid);
+                      ma_to := svmIdxF (mid_to imid);
+                      ma_chn := mid_to imid |};
+       mid_tid := mid_tid imid |}.
+
+  Definition svmMsgF (imsg: Msg): Msg :=
+    {| msg_id := svmMsgIdF (msg_id imsg);
+       msg_value := msg_value imsg |}.
+
+  Definition svmP := LabelMap svmMsgF.
+
+  (** Simulation between [TState]s *)
 
   Definition svmImplChild1Inv: list (OState -> Prop) :=
     (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stI))
@@ -152,22 +171,9 @@ Section Sim.
       (ost_st sost)@[valueIdx] = Some v ->
       SvmR ioss soss.
 
-  Definition SvmSim (ist sst: TState) := SvmR (tst_oss ist) (tst_oss sst).
-
-  Definition svmIdxF (idx: IdxT): IdxT :=
-    if idx ?<n (indicesOf impl0) then specIdx else idx.
-
-  Definition svmMsgIdF (imid: MsgId): MsgId :=
-    {| mid_addr := {| ma_from := svmIdxF (mid_from imid);
-                      ma_to := svmIdxF (mid_to imid);
-                      ma_chn := mid_to imid |};
-       mid_tid := mid_tid imid |}.
-
-  Definition svmMsgF (imsg: Msg): Msg :=
-    {| msg_id := svmMsgIdF (msg_id imsg);
-       msg_value := msg_value imsg |}.
-
-  Definition svmP := LabelMap svmMsgF.
+  Definition SvmSim (ist sst: TState) :=
+    SvmR (tst_oss ist) (tst_oss sst) /\
+    SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
 
 End Sim.
 

@@ -182,6 +182,30 @@ Proof.
   - apply SubList_cons_right; assumption.
 Qed.
 
+Lemma rqinOf_enqMP_toTMsgU:
+  forall (mp: Msg -> Msg) (msgs: MessagePool TMsg) (emsg: Msg) rqs,
+    enqMP (toTMsgU (mp emsg)) (map (fun msg : Msg => toTMsgU (mp msg)) (rqinOf' rqs msgs)) =
+    map (fun msg : Msg => toTMsgU (mp msg)) (rqinOf' rqs (enqMP (toTMsgU emsg) msgs)).
+Proof.
+  induction msgs; simpl; intros.
+  - unfold enqMP, extRqAdd.
+    rewrite map_app.
+    reflexivity.
+  - destruct (tmsg_info a); eauto.
+Qed.
+
+Lemma SimMP_ext_msg_in:
+  forall (mp: Msg -> Msg) imsgs smsgs,
+    SimMP mp imsgs smsgs ->
+    forall emsg,
+      SimMP mp (enqMP (toTMsgU emsg) imsgs)
+            (enqMP (toTMsgU (mp emsg)) smsgs).
+Proof.
+  unfold SimMP; intros; subst.
+  unfold rqinOf.
+  apply rqinOf_enqMP_toTMsgU.
+Qed.
+
 Corollary trsSimulates_trsInvHolds_rules_added:
   forall impl rules spec simR ginv simP
          (Hsim1: TrsSimulates simR ginv simP impl spec)

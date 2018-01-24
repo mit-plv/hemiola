@@ -57,66 +57,18 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Theorem impl0_ok: SynthOk spec SvmSim BlockedInv svmP impl0.
+  Theorem impl0_ok: SynthOk spec (SvmSim extIdx1 extIdx2) BlockedInv svmP impl0.
   Proof.
     split; [|split; [|split]].
-    - eapply SvmSSS; econstructor.
+    - split.
+      + eapply SvmSSS; econstructor.
+      + constructor.
     - vm_compute; intros; dest; exfalso; auto.
     - (* simulation & invariant *) admit.
     - (* serializability *) admit.
   Admitted.
 
   Section SynStep.
-
-    Ltac get_target_trs impl oidx tidx pname :=
-      let oobj := (eval cbn in (nth_error (sys_objs impl) oidx)) in
-      match oobj with
-      | Some ?obj =>
-        let otrs := (eval cbn in (nth_error (obj_rules obj) tidx)) in
-        match otrs with
-        | Some ?trs => pose trs as pname
-        end
-      end.
-
-    Ltac cbner t tn := let ct := (eval cbn in t) in pose ct as tn.
-    Ltac hnfer t tn := let ht := (eval hnf in t) in pose ht as tn.
-
-    Ltac get_rule_from trs pname :=
-      cbner (mid_from (rule_mid trs)) pname.
-    Ltac get_rule_precond trs pname :=
-      cbner (rule_precond trs) pname.
-
-    Ltac mv_rewriter :=
-      repeat
-        (match goal with
-         | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
-         | [H: None = M.find _ _ |- _] => apply eq_sym in H
-         | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
-           rewrite H1 in H2; inv H2
-         | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
-           rewrite H1 in H2; discriminate
-         end; simpl in *).
-
-    (* If this Ltac succeeds, then provably [inv1] and [inv2] are 
-     * not compatible for all state.
-     * If it fails, then there's no information.
-     *)
-    Ltac inv_not_compatible inv1 inv2 :=
-      let Hnc := fresh "Hnc" in
-      assert (forall st, inv1 st -> inv2 st -> False)
-        as Hnc by (cbn; intros; dest; intuition mv_rewriter);
-      clear Hnc.
-
-    Ltac find_new_prec cprec invs pname :=
-      let hcprec := (eval hnf in cprec) in
-      let hinvs := (eval hnf in invs) in
-      match hinvs with
-      | nil => fail
-      | ?inv :: ?invs' =>
-        tryif (inv_not_compatible hcprec inv)
-        then (pose inv as pname)
-        else find_new_prec hcprec invs'
-      end.
 
     Section MakeExternal.
       Variables (targetIdx diffIdx: IdxT)
@@ -183,19 +135,13 @@ Section Impl.
 
     End MakePreCondDisj.
 
-    Definition addPreCond (rule: Rule) (mid: MsgId) (prec: PreCond) :=
-      {| rule_mid := mid;
-         rule_precond := fun ost => rule_precond rule ost /\ prec ost;
-         rule_outs := rule_outs rule;
-         rule_postcond := rule_postcond rule |}.
-
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
       instantiate (1:= addRulesSys _ pimpl);
       split; [|split; [|split]]; (* [SynthOk] consist of 5 conditions. *)
       try (rewrite addRulesSys_init; apply pimpl_ok; fail).
 
-    Ltac trsSimulates_case_in msgF :=
+    Ltac trsSimulates_case_in msgF sim :=
       (** instantiation *)
       unfold TrsSimSepIn; intros; simpl;
       match goal with
@@ -214,10 +160,12 @@ Section Impl.
       repeat
         match goal with
         | [H: step_det _ _ (IlblIn _) _ |- _] => inv H
+        | [H: sim _ _ |- _] => inv H
         end;
       (** construction *)
       repeat split;
-      [|assumption (* simulation relation should be maintained *)];
+      [|assumption (* simulation relation should be maintained *)
+       |simpl; apply SimMP_ext_msg_in; auto];
       repeat econstructor;
       repeat
         match goal with
@@ -232,13 +180,13 @@ Section Impl.
           [apply svmMsgF_ValidMsgMap
           |rewrite addRulesSys_indices, buildRawSys_indicesOf; reflexivity]
         end.
-
+    
     (* This ltac handles trivial [Transactional] cases.
      * After then we only need to deal with [Atomic] histories.
      *)
-    Ltac trsSimulates_trivial msgF :=
+    Ltac trsSimulates_trivial msgF sim :=
       eapply trs_sim_in_atm_simulates;
-      [trsSimulates_case_in msgF| | | | |].
+      [trsSimulates_case_in msgF sim| | | | |].
 
     Ltac trsSimulates_atomic_trivial :=
       unfold TrsSimSepAtomic; intros;
@@ -249,12 +197,6 @@ Section Impl.
            |].
 
     Definition svmTrsIdx0 := 0.
-    Definition svmTargetOIdx0 := child1Idx.
-    Definition svmTargetRuleIdx0 := 0.
-
-    Definition svmRq0 (val: Value) :=
-      {| msg_id := buildMsgId svmTrsIdx0 extIdx1 child1Idx rqChn;
-         msg_value := val |}.
 
     Lemma SvmR_status_cases_1:
       forall ioss soss,
@@ -269,12 +211,6 @@ Section Impl.
     Qed.
     Ltac svmR_child1_status_case_tac Hcase :=
       destruct Hcase as [iost1 [? [|[|]]]].
-
-    (* Ltac build_rulesOf := *)
-    (*   match goal with *)
-    (*   | [H1: In ?obj (sys_objs _), H2: In _ (obj_rules ?obj) |- _] => *)
-    (*     pose proof (rulesOf_in _ _ H1 _ H2) *)
-    (*   end. *)
 
     Ltac simpl_addRulesSys :=
       repeat
@@ -304,7 +240,6 @@ Section Impl.
       end.
 
     Ltac synth_init_simpl :=
-      (* build_rulesOf; *)
       simpl_addRulesSys;
       dest_ValidMsgId.
 
@@ -344,7 +279,7 @@ Section Impl.
           is_evar rules;
           instantiate (1:= _ ++ (map (makePreCondDisj prec) _)) in H;
           eapply addRulesO_makePreCondDisj in H;
-          [|eassumption|mv_rewriter; eassumption]
+          [|eassumption|mred_find; eassumption]
         end
       end.
 
@@ -357,7 +292,9 @@ Section Impl.
           let sts1 := fresh "sts1" in
           is_var sst1;
           destruct sst1 as [soss1 smsgs1 sts1];
-          unfold sim in H; simpl in H
+          let H1 := fresh "H" in
+          let H2 := fresh "H" in
+          destruct H as [H1 H2]; simpl in H1, H2
         | [H: rel _ _ |- _] =>
           let Hcase := fresh "Hcase" in
           pose proof H as Hcase;
@@ -435,7 +372,7 @@ Section Impl.
       ].
 
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec SvmSim BlockedInv svmP impl1 }.
+      { impl1: System & SynthOk spec (SvmSim extIdx1 extIdx2) BlockedInv svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
@@ -444,7 +381,7 @@ Section Impl.
           [apply impl0_ok|apply impl0_ok|repeat constructor| | | |].
 
         + (** [TrsSimulates] for newly added [Rule]s *)
-          trsSimulates_trivial (svmMsgF extIdx1 extIdx2).
+          trsSimulates_trivial (svmMsgF extIdx1 extIdx2) (SvmSim extIdx1 extIdx2).
 
           * (** [TrsSimulates] for [Atomic] steps *)
             trsSimulates_atomic_trivial.
@@ -460,7 +397,7 @@ Section Impl.
 
               (* 1-2) case analysis on c1 status *)
               synth_obj_case_analysis
-                SvmSim SvmR SvmR_status_cases_1
+                (SvmSim extIdx1 extIdx2) SvmR SvmR_status_cases_1
                 svmR_child1_status_case_tac.
               { (* 1-2-1) When C1.st = I *)
                 synth_sep_rules_prec
@@ -484,7 +421,9 @@ Section Impl.
                      (ost_st post)@[valueIdx] = Some v)
                   (fun (st: StateT) (v: Value) => v).
                 { (* 2-2-1: request-forwarding for C1 *)
-                  synth_rq_correct svmSim_rq_next.
+                  (*! TODO: [SimMP] preservation for request-forwarding cases. *)
+                  Fail synth_rq_correct svmSim_rq_next.
+                  admit.
                 }
                 { (* 2-2-2: responses-back for C1 *)
                   simpl in *; inv H10.
@@ -494,13 +433,13 @@ Section Impl.
                     [simpl|exfalso; admit (* need an invariant *)].
                   assert (tst_rqfrom t = extIdx1)
                     by admit. (* need an invariant *)
-                  rewrite H6; simpl.
+                  rewrite H10; simpl.
 
                   assert (exists sost,
                              soss1@[specIdx] = Some sost /\
                              (ost_st sost)@[valueIdx] = Some imval).
                   { admit. (* need an invariant *) }
-                  destruct H10 as [sost [? ?]].
+                  destruct H11 as [sost [? ?]].
 
                   do 2 eexists; split.
                   { synth_spec_step
@@ -513,7 +452,7 @@ Section Impl.
                     instantiate (1:= None).
                     admit. (* about [firstMP] in [impl] and [spec]. *)
                   }
-                  { simpl; rewrite H11; simpl.
+                  { simpl; rewrite H14; simpl.
                     split.
                     { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; simpl.
                       admit. (* FIXME: specChn1 <> extIdx1 *)

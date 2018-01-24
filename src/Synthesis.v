@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics SemFacts.
+Require Import Common ListSupport FMap Syntax Semantics SemFacts.
 Require Import StepDet Serial SerialFacts TrsSim Predicate.
 
 Set Implicit Arguments.
@@ -71,6 +71,30 @@ Section SimP.
   End SynthesisStep.
 
 End SimP.
+
+Section SimMP.
+  Variable msgP: Msg -> Msg.
+
+  Definition intRqAdd (rq: Msg) (rqs: list Msg) :=
+    if in_dec msg_dec rq rqs then rqs else rqs ++ (rq :: nil).
+  Definition extRqAdd (rq: Msg) (rqs: list Msg) := rqs ++ (rq :: nil).
+  
+  Fixpoint rqinOf' (rqs: list Msg) (mp: MessagePool TMsg) :=
+    match mp with
+    | nil => rqs
+    | tmsg :: mp' =>
+      match tmsg_info tmsg with
+      | Some tinfo => rqinOf' (intRqAdd (tinfo_rqin tinfo) rqs) mp'
+      | None => rqinOf' (extRqAdd (tmsg_msg tmsg) rqs) mp'
+      end
+    end.
+
+  Definition rqinOf (mp: MessagePool TMsg): list Msg := rqinOf' nil mp.
+
+  Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
+    smsgs = map (fun msg => toTMsgU (msgP msg)) (rqinOf imsgs).
+
+End SimMP.
 
 Section TrsLock.
 
