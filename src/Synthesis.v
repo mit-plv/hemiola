@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics SemFacts.
-Require Import StepDet Serial SerialFacts TrsSim Predicate.
+Require Import StepDet Serial SerialFacts TrsInv TrsSim Predicate.
 
 Set Implicit Arguments.
 
@@ -19,7 +19,7 @@ Section SimP.
   Definition SynthOk (s: System) :=
     R (getStateInit s) (getStateInit spec) /\
     ginv (getStateInit s) /\
-    (TrsSimulates R ginv p s spec /\ TrsInvHolds ginv s) /\
+    (TrsSimulates R ginv p s spec /\ TrsInv s ginv) /\
     SerializableSys s.
 
   Hypothesis (Hinit_ok: SynthOk impl0).
@@ -46,8 +46,8 @@ Section SimP.
                   forall s, TrsSimulates R ginv p s spec ->
                             forall s', syn s s' -> TrsSimulates R ginv p s' spec)
                (HsynInv:
-                  forall s, TrsInvHolds ginv s ->
-                            forall s', syn s s' -> TrsInvHolds ginv s').
+                  forall s, TrsInv s ginv ->
+                            forall s', syn s s' -> TrsInv s' ginv).
 
     Lemma synthOk_refinement:
       forall s, SynthOk s -> steps_det # steps_det |-- s ⊑[p] spec.
@@ -75,24 +75,49 @@ End SimP.
 Section SimMP.
   Variable msgP: Msg -> Msg.
 
-  Definition intRqAdd (rq: Msg) (rqs: list Msg) :=
-    if in_dec msg_dec rq rqs then rqs else rqs ++ (rq :: nil).
-  Definition extRqAdd (rq: Msg) (rqs: list Msg) := rqs ++ (rq :: nil).
+  (* Assume [rb] is already ordered in terms of [tinfo_tid]. *)
+  Fixpoint addActive (amsg: Msg) (atinfo: TInfo) (rb: MessagePool TMsg) :=
+    match rb with
+    | nil => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: nil
+    | tmsg :: rb' =>
+      match tmsg_info tmsg with
+      | Some tinfo =>
+        if tinfo_tid atinfo <n tinfo_tid tinfo
+        then {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
+        else if tinfo_tid atinfo ==n tinfo_tid tinfo
+             then rb
+             else tmsg :: addActive amsg atinfo rb'
+      | None => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
+      end
+    end.
   
-  Fixpoint rqinOf' (rqs: list Msg) (mp: MessagePool TMsg) :=
+  Fixpoint addInactive (iam: TMsg) (rb: MessagePool TMsg) :=
+    rb ++ iam :: nil.
+
+  (* [rollback] basically rolls back all active messages (executing 
+   * transactions) in a given [MessagePool].
+   *)
+  Fixpoint rollbacked (rb mp: MessagePool TMsg) :=
     match mp with
-    | nil => rqs
+    | nil => rb
     | tmsg :: mp' =>
       match tmsg_info tmsg with
-      | Some tinfo => rqinOf' (intRqAdd (tinfo_rqin tinfo) rqs) mp'
-      | None => rqinOf' (extRqAdd (tmsg_msg tmsg) rqs) mp'
+      | Some tinfo => rollbacked (addActive (tmsg_msg tmsg) tinfo rb) mp'
+      | None => rollbacked (addInactive tmsg rb) mp'
       end
     end.
 
-  Definition rqinOf (mp: MessagePool TMsg): list Msg := rqinOf' nil mp.
+  Definition rollback (mp: MessagePool TMsg) := rollbacked nil mp.
 
+  Definition deinitialize (mp: MessagePool TMsg) :=
+    map (fun tmsg =>
+           toTMsgU (msgP (match tmsg_info tmsg with
+                          | Some tinfo => tinfo_rqin tinfo
+                          | None => tmsg_msg tmsg
+                          end))) mp.
+  
   Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
-    smsgs = map (fun msg => toTMsgU (msgP msg)) (rqinOf imsgs).
+    smsgs = deinitialize (rollback imsgs).
 
 End SimMP.
 

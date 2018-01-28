@@ -28,30 +28,5 @@ Definition Blocked (msgs: MessagePool TMsg) :=
 Definition BlockedInv (tst: TState) :=
   Blocked (tst_msgs tst).
 
-(* When two messages in the same channel are handled, [steps_det] ensures that 
- * the two messages have different [tinfo_tid]s. Thus, if a target [System] has 
- * a blocking property, then any reachable states should be [Blocked].
- *)
-Definition Blocking (sys: System) :=
-  forall st: TState,
-    Reachable steps_det sys st ->
-    Blocked (tst_msgs st).
-
 Require Import TrsSim.
-
-Section Facts.
-
-  Lemma BlockedInv_in:
-    forall sys, TrsSimSepGInvIn BlockedInv sys.
-  Proof.
-    unfold TrsSimSepGInvIn; intros.
-    inv H0.
-    unfold BlockedInv, Blocked in *; simpl in *; intros.
-  Admitted.
-
-  (* TODO: define a simulation for {impl, spec} messages;
-   * prove [Blocked .. -> Simulation .. -> (relation between [firstM])
-   *)
-
-End Facts.
 

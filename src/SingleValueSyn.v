@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
-Require Import Simulation TrsSim Serial SerialFacts Predicate Synthesis SynthesisFacts.
-Require Import Blocking.
+Require Import Simulation Serial SerialFacts Predicate TrsInv TrsSim.
+Require Import Synthesis SynthesisFacts Blocking.
 
 Require Import SingleValue SingleValueSim.
 
@@ -143,7 +143,7 @@ Section Impl.
 
     Ltac trsSimulates_case_in msgF sim :=
       (** instantiation *)
-      unfold TrsSimSepIn; intros; simpl;
+      unfold TrsSimIn; intros; simpl;
       match goal with
       | [H: context[IlblIn ?min] |- context[step_det _ ?ist1 _ _] ] =>
         let ioss1 := fresh "ioss1" in
@@ -186,10 +186,17 @@ Section Impl.
      *)
     Ltac trsSimulates_trivial msgF sim :=
       eapply trs_sim_in_atm_simulates;
-      [trsSimulates_case_in msgF sim| | | | |].
+      [trsSimulates_case_in msgF sim|].
 
     Ltac trsSimulates_atomic_trivial :=
-      unfold TrsSimSepAtomic; intros;
+      unfold TrsSimAtomic; intros;
+      match goal with
+      | [H: Atomic _ _ _ _ _ |- _] =>
+        let Hn := fresh "H" in
+        (* pose proof H as Hn; eapply atomic_hst_tinfo in Hn; eauto; *)
+        (* [|econstructor; eauto]; *)
+        inv Hn
+      end;
       match goal with
       | [H: step_det _ _ _ _ |- _] => inv H
       end; [exfalso; eapply atomic_emptyILabel_not_in; eauto; simpl; tauto
@@ -383,108 +390,119 @@ Section Impl.
         + (** [TrsSimulates] for newly added [Rule]s *)
           trsSimulates_trivial (svmMsgF extIdx1 extIdx2) (SvmSim extIdx1 extIdx2).
 
-          * (** [TrsSimulates] for [Atomic] steps *)
-            trsSimulates_atomic_trivial.
+          (** [TrsSimulates] for [Atomic] steps *)
+          trsSimulates_atomic_trivial.
 
-            (* 0) some initial simplification *)
-            synth_init_simpl.
+          (* 0) some initial simplification *)
+          synth_init_simpl.
 
-            (* 1) case analysis for each object; first for C1 *)
-            destruct (obj_idx obj ==n child1Idx);
-              [Common.dest_in; try discriminate|].
-            { (* 1-1) separate rules; one for c1, another for the others *)
-              synth_sep_rules_obj child1Idx child2Idx.
+          (* 1) case analysis for each object; first for C1 *)
+          destruct (obj_idx obj ==n child1Idx);
+            [Common.dest_in; try discriminate|].
+          { (* 1-1) separate rules; one for c1, another for the others *)
+            synth_sep_rules_obj child1Idx child2Idx.
 
-              (* 1-2) case analysis on c1 status *)
-              synth_obj_case_analysis
-                (SvmSim extIdx1 extIdx2) SvmR SvmR_status_cases_1
-                svmR_child1_status_case_tac.
-              { (* 1-2-1) When C1.st = I *)
-                synth_sep_rules_prec
-                  (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)).
+            (* 1-2) case analysis on c1 status *)
+            synth_obj_case_analysis
+              (SvmSim extIdx1 extIdx2) SvmR SvmR_status_cases_1
+              svmR_child1_status_case_tac.
+            { (* 1-2-1) When C1.st = I *)
+              synth_sep_rules_prec
+                (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)).
+              
+              (* TODO: try to synthesize an immediate transaction;
+               * it should fail since it cannot have a mechanism to bring the 
+               * representative value from the other objects.
+               * When the trial fails, nothing is synthesized.
+               *)
+              idtac.
+
+              (* 1-2-2) Now try to synthesize "request-forwarding" and
+               * corresponding "responses-receiving" rules.
+               *)
+              synth_rq_rs_single
+                svmTrsIdx0 extIdx1 child1Idx parentIdx
+                (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI))
+                (fun (pre: OState) v post =>
+                   (ost_st post)@[statusIdx] = Some (VNat stS) /\
+                   (ost_st post)@[valueIdx] = Some v)
+                (fun (st: StateT) (v: Value) => v).
+              { (* 2-2-1: request-forwarding for C1 *)
+                (*! TODO: [SimMP] preservation for request-forwarding cases. *)
+
+                repeat
+                  match goal with
+                  | [H: rule_postcond (synRq _ _ _ _ _ _) _ _ _ |- _] =>
+                    simpl in H; unfold synRqPostcond in H; simpl in H; subst
+                  | [H: msg_id _ = rule_mid _ |- _] =>
+                    simpl in H; inv H
+                  end;
+                  (* Request-forwardings always correspond to silent steps in spec. *)
+                  simpl.
+
+                hnf; simpl in *.
+                split;
+                  [eapply SvmR_EquivPreservingR; eauto;
+                   unfold StateEquivOS; intros;
+                   findeq|].
+
+                simpl.
                 
-                (* TODO: try to synthesize an immediate transaction;
-                 * it should fail since it cannot have a mechanism to bring the 
-                 * representative value from the other objects.
-                 * When the trial fails, nothing is synthesized.
-                 *)
-                idtac.
+                (* eapply SimMP_int_msg_fwd; eauto. *)
+                
+                (* synth_rq_correct svmSim_rq_next. *)
+                admit.
+              }
+              { (* 2-2-2: responses-back for C1 *)
+                simpl in *; inv H10.
+                unfold synRsOutsSingle.
+                remember ((ost_tst os)@[svmTrsIdx0]) as otrsh.
+                destruct otrsh;
+                  [simpl|exfalso; admit (* need an invariant *)].
+                assert (tst_rqfrom t = extIdx1)
+                  by admit. (* need an invariant *)
+                rewrite H10; simpl.
 
-                (* 1-2-2) Now try to synthesize "request-forwarding" and
-                 * corresponding "responses-receiving" rules.
-                 *)
-                synth_rq_rs_single
-                  svmTrsIdx0 extIdx1 child1Idx parentIdx
-                  (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI))
-                  (fun (pre: OState) v post =>
-                     (ost_st post)@[statusIdx] = Some (VNat stS) /\
-                     (ost_st post)@[valueIdx] = Some v)
-                  (fun (st: StateT) (v: Value) => v).
-                { (* 2-2-1: request-forwarding for C1 *)
-                  (*! TODO: [SimMP] preservation for request-forwarding cases. *)
-                  Fail synth_rq_correct svmSim_rq_next.
-                  admit.
+                assert (exists sost,
+                           soss1@[specIdx] = Some sost /\
+                           (ost_st sost)@[valueIdx] = Some imval).
+                { admit. (* need an invariant *) }
+                destruct H11 as [sost [? ?]].
+
+                do 2 eexists; split.
+                { synth_spec_step
+                    (svmMsgF extIdx1 extIdx2)
+                    {| msg_id := buildMsgId svmTrsIdx0 extIdx1 child1Idx rsChn;
+                       msg_value := imval |}
+                    (specGetReq extIdx1 extIdx2 specChn1).
+
+                  cbn; cbn in H9.
+                  instantiate (1:= None).
+                  admit. (* about [firstMP] in [impl] and [spec]. *)
                 }
-                { (* 2-2-2: responses-back for C1 *)
-                  simpl in *; inv H10.
-                  unfold synRsOutsSingle.
-                  remember ((ost_tst os)@[svmTrsIdx0]) as otrsh.
-                  destruct otrsh;
-                    [simpl|exfalso; admit (* need an invariant *)].
-                  assert (tst_rqfrom t = extIdx1)
-                    by admit. (* need an invariant *)
-                  rewrite H10; simpl.
-
-                  assert (exists sost,
-                             soss1@[specIdx] = Some sost /\
-                             (ost_st sost)@[valueIdx] = Some imval).
-                  { admit. (* need an invariant *) }
-                  destruct H11 as [sost [? ?]].
-
-                  do 2 eexists; split.
-                  { synth_spec_step
-                      (svmMsgF extIdx1 extIdx2)
-                      {| msg_id := buildMsgId svmTrsIdx0 extIdx1 child1Idx rsChn;
-                         msg_value := imval |}
-                      (specGetReq extIdx1 extIdx2 specChn1).
-
-                    cbn; cbn in H9.
-                    instantiate (1:= None).
-                    admit. (* about [firstMP] in [impl] and [spec]. *)
+                { simpl; rewrite H14; simpl.
+                  split.
+                  { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; simpl.
+                    admit. (* FIXME: specChn1 <> extIdx1 *)
                   }
-                  { simpl; rewrite H14; simpl.
-                    split.
-                    { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; simpl.
-                      admit. (* FIXME: specChn1 <> extIdx1 *)
-                    }
-                    { unfold SvmSim; simpl.
-                      admit. (* need invariants *)
-                    }
+                  { unfold SvmSim; simpl.
+                    admit. (* need invariants *)
                   }
                 }
               }
-              { (* 1-2-2) When C1.st = S *) admit. }
-              { (* 1-2-2) When C1.st = M *) admit. }
             }
-            { (* For P and C2 *) admit. }
-
-          * (** Global invariants hold for message-in steps. *)
-            apply BlockedInv_in.
-
-          * (** Global invariants hold for [Atomic] steps. *)
-            admit.
-
-          * (** Local invariant holds for the initial state. *)
-            admit.
-
-          * (** Local invariant holds for [Atomic] steps. *)
-            admit.
+            { (* 1-2-2) When C1.st = S *) admit. }
+            { (* 1-2-2) When C1.st = M *) admit. }
+          }
+          { (* For P and C2 *) admit. }
 
         + (** Global invariants hold *)
           admit.
+          
         + (** [trsPreservingSys]; to prove the synthesized rules are about a 
            *  single transaction.  *)
           admit.
+          
         + (** [TrsDisj]; to prove the synthesized rules are disjoint with 
            *  previously synthesized rules. *)
           admit.

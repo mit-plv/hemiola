@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet.
-Require Import Serial SerialFacts Simulation TrsSim Predicate Synthesis.
+Require Import Serial SerialFacts Simulation TrsInv TrsSim Predicate Synthesis.
 
 Lemma addRules_init:
   forall rules objs,
@@ -182,14 +182,14 @@ Proof.
   - apply SubList_cons_right; assumption.
 Qed.
 
-Lemma rqinOf_enqMP_toTMsgU:
-  forall (mp: Msg -> Msg) (msgs: MessagePool TMsg) (emsg: Msg) rqs,
-    enqMP (toTMsgU (mp emsg)) (map (fun msg : Msg => toTMsgU (mp msg)) (rqinOf' rqs msgs)) =
-    map (fun msg : Msg => toTMsgU (mp msg)) (rqinOf' rqs (enqMP (toTMsgU emsg) msgs)).
+Lemma rollbacked_enqMP_toTMsgU:
+  forall (mp: Msg -> Msg) msgs emsg rb,
+    enqMP (toTMsgU (mp emsg)) (deinitialize mp (rollbacked rb msgs)) =
+    deinitialize mp (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
 Proof.
   induction msgs; simpl; intros.
-  - unfold enqMP, extRqAdd.
-    rewrite map_app.
+  - unfold deinitialize, enqMP.
+    rewrite map_app; simpl.
     reflexivity.
   - destruct (tmsg_info a); eauto.
 Qed.
@@ -202,21 +202,54 @@ Lemma SimMP_ext_msg_in:
             (enqMP (toTMsgU (mp emsg)) smsgs).
 Proof.
   unfold SimMP; intros; subst.
-  unfold rqinOf.
-  apply rqinOf_enqMP_toTMsgU.
+  unfold rollback.
+  apply rollbacked_enqMP_toTMsgU.
 Qed.
+
+Lemma rollbacked_app:
+  forall mp1 rb mp2,
+    rollbacked rb (mp1 ++ mp2) =
+    rollbacked (rollbacked rb mp1) mp2.
+Proof.
+  induction mp1; simpl; intros; [reflexivity|].
+  destruct (tmsg_info a); auto.
+Qed.
+
+Lemma deinitialize_addActive_diff_msgs:
+  forall mp msg1 msg2 tinfo rb,
+    deinitialize mp (addActive msg1 tinfo rb) =
+    deinitialize mp (addActive msg2 tinfo rb).
+Proof.
+  induction rb; simpl; intros; [reflexivity|].
+  destruct (tmsg_info a); auto.
+  find_if_inside; auto.
+  find_if_inside; auto.
+  simpl; rewrite IHrb; reflexivity.
+Qed.
+
+Lemma SimMP_int_msg_fwd:
+  forall (mp: Msg -> Msg) imsgs smsgs,
+    SimMP mp imsgs smsgs ->
+    forall from to chn imsg tinfo,
+      firstMP from to chn imsgs = Some {| tmsg_msg := imsg; tmsg_info := Some tinfo |} ->
+      forall mouts,
+        mouts <> nil ->
+        Forall (fun tmsg => tmsg_info tmsg = Some tinfo) mouts ->
+        SimMP mp (distributeMsgs mouts (deqMP from to chn imsgs)) smsgs.
+Proof.
+Admitted.
 
 Corollary trsSimulates_trsInvHolds_rules_added:
   forall impl rules spec simR ginv simP
          (Hsim1: TrsSimulates simR ginv simP impl spec)
-         (Hinv1: TrsInvHolds ginv impl)
+         (Hinv1: TrsInv impl ginv)
          (Hmt1: trsPreservingSys impl)
          (Hsim2: TrsSimulates simR ginv simP (addRulesSys rules (buildRawSys impl)) spec)
-         (Hinv1: TrsInvHolds ginv (addRulesSys rules (buildRawSys impl)))
+         (Hinv1: TrsInv (addRulesSys rules (buildRawSys impl)) ginv)
          (Hmt2: trsPreservingSys (addRulesSys rules (buildRawSys impl)))
          (Hmtdisj: TrsDisj (rulesOf impl) rules),
     TrsSimulates simR ginv simP (addRulesSys rules impl) spec /\
-    TrsInvHolds ginv (addRulesSys rules impl).
+    TrsInv (addRulesSys rules impl) ginv.
 Proof.
   intros.
   eapply trsSimulates_trsInvHolds_compositional

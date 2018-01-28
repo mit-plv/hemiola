@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Semantics StepDet SemFacts.
-Require Import Simulation Serial SerialFacts.
+Require Import Simulation Serial SerialFacts TrsInv.
 
 Require Import Omega.
 
@@ -15,12 +15,8 @@ Section TrsSim.
 
   Variables (impl spec: System).
 
-  Definition TrsInvHolds :=
-    forall ist1,
-      ginv ist1 ->
-      forall ihst ist2,
-        trsSteps impl ist1 ihst ist2 ->
-        ginv ist2.
+  Definition TrsSimInit :=
+    sim (getStateInit impl) (getStateInit spec).
 
   Definition TrsSimulates :=
     forall ist1 sst1,
@@ -34,10 +30,10 @@ Section TrsSim.
           ist2 ≈ sst2.
 
   Hypotheses
-    (Hsimi: sim (getStateInit impl) (getStateInit spec))
+    (Hsimi: TrsSimInit)
     (Hsim: TrsSimulates)
-    (Hginvi: ginv (getStateInit impl))
-    (Hginv: TrsInvHolds).
+    (Hginvi: TrsInvInit impl ginv)
+    (Hginv: TrsInv impl ginv).
 
   Lemma trs_simulation_steps:
     forall ist1 sst1,
@@ -103,21 +99,13 @@ End TrsSim.
 Section TrsSimSep.
   Variables (sim: TState -> TState -> Prop)
             (ginv: TState -> Prop)
-            (linv: History -> TState -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
 
   Variables (impl spec: System).
 
-  Definition TrsSimSepGInvIn :=
-    forall ist1,
-      ginv ist1 ->
-      forall imin ist2,
-        step_det impl ist1 (IlblIn imin) ist2 ->
-        ginv ist2.
-
-  Definition TrsSimSepIn :=
+  Definition TrsSimIn :=
     forall ist1 sst1,
       ist1 ≈ sst1 ->
       ginv ist1 ->
@@ -129,120 +117,27 @@ Section TrsSimSep.
           Some (p (getLabel (IlblIn imin))) /\
           ist2 ≈ sst2.
 
-  Definition TrsSimSepGInvAtomic :=
-    forall min ilbl hst mouts orsout,
-      Atomic impl min (ilbl :: hst) mouts orsout ->
-      forall pist ist1 ist2,
-        steps_det impl pist hst ist1 ->
+  Definition TrsSimAtomic :=
+    forall ti hst mouts orsout,
+      Atomic impl ti hst mouts orsout ->
+      forall ist1,
         ginv ist1 ->
-        step_det impl ist1 ilbl ist2 ->
-        ginv ist2.
-
-  Definition TrsSimSepLInvAtomic :=
-    forall min ilbl hst mouts orsout,
-      Atomic impl min (ilbl :: hst) mouts orsout ->
-      forall pist ist1 ist2,
-        steps_det impl pist hst ist1 ->
-        linv hst ist1 ->
-        step_det impl ist1 ilbl ist2 ->
-        linv (ilbl :: hst) ist2.
-  
-  Definition TrsSimSepAtomic :=
-    forall min ilbl hst mouts orsout,
-      Atomic impl min (ilbl :: hst) mouts orsout ->
-      forall pist iist,
-        steps_det impl pist hst iist ->
         forall sst1,
-          iist ≈ sst1 ->
-          linv hst iist ->
-          ginv iist ->
-          forall nist,
-            step_det impl iist ilbl nist ->
-            match extLabel impl (getLabel ilbl) with
-            | Some ielbl =>
-              exists slbl sst2,
-              step_det spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = Some (p ielbl) /\
-              nist ≈ sst2
-            | None => nist ≈ sst1
-            end.
+          ist1 ≈ sst1 ->
+          forall ist2,
+            steps_det impl ist1 hst ist2 ->
+            exists sst2 shst,
+              steps_det spec sst1 shst sst2 /\
+              map p (behaviorOf impl hst) = behaviorOf spec shst /\
+              ist2 ≈ sst2.
 
   Hypotheses
-    (Hsimi: sim (getStateInit impl) (getStateInit spec))
-    (HsimIn: TrsSimSepIn)
-    (HsimAtm: TrsSimSepAtomic)
-    (Hginvi: ginv (getStateInit impl))
-    (HginvIn: TrsSimSepGInvIn)
-    (HginvAtm: TrsSimSepGInvAtomic)
-    (Hlinvi: forall st, linv nil st)
-    (HlinvAtm: TrsSimSepLInvAtomic).
-
-  Lemma trs_sim_step_steps_atomic:
-    forall min ihst mouts orsout,
-      Atomic impl min ihst mouts orsout ->
-      forall ist1 sst1,
-        ist1 ≈ sst1 ->
-        ginv ist1 ->
-        forall ist2,
-          steps_det impl ist1 ihst ist2 ->
-          exists sst2 shst,
-            steps_det spec sst1 shst sst2 /\
-            map p (behaviorOf impl ihst) = behaviorOf spec shst /\
-            ist2 ≈ sst2 /\
-            linv ihst ist2 /\ ginv ist2.
-  Proof.
-    induction 1; simpl; intros.
-
-    - inv H3.
-      eexists; exists nil; repeat split.
-      + econstructor.
-      + assumption.
-      + apply Hlinvi.
-      + assumption.
-
-    - assert (Atomic impl rqin (IlblOuts (Some hdl) houts :: hst)
-                     (distributeMsgs houts (deqMP from to chn mouts)) None)
-        by (constructor; auto).
-
-      pose proof H6; inv H6.
-      specialize (IHAtomic _ _ H4 H5 _ H12).
-      destruct IHAtomic as [ssti [shsti [? [? [? [? ?]]]]]].
-
-      pose proof H7; eapply HsimAtm in H7.
-      specialize (H7 _ _ H12 _ H10 H11 H13 _ H14).
-      simpl in H7.
-
-      destruct (extOuts impl (map tmsg_msg houts)) as [|eout eouts].
-      + simpl; eexists; exists shsti; repeat split; eauto.
-      + destruct H7 as [slbl [sst2 [? [? ?]]]].
-        eexists; eexists (_ :: _); repeat split.
-        * econstructor; eassumption.
-        * simpl; rewrite H9, H16; reflexivity.
-        * assumption.
-        * eapply HlinvAtm; eauto.
-        * eapply HginvAtm; eauto.
-
-    - assert (Atomic impl rqin (IlblOuts (Some hdl) (rsout :: nil) :: hst) nil (Some rsout))
-        by (constructor; auto).
-
-      pose proof H4; inv H4.
-      specialize (IHAtomic _ _ H2 H3 _ H10).
-      destruct IHAtomic as [ssti [shsti [? [? [? [? ?]]]]]].
-
-      pose proof H5; eapply HsimAtm in H5.
-      specialize (H5 _ _ H10 _ H8 H9 H11 _ H12).
-      simpl in H5.
-
-      destruct (isExternal impl (mid_to (msg_id (id (tmsg_msg rsout))))).
-      + destruct H5 as [slbl [sst2 [? [? ?]]]].
-        eexists; eexists (_ :: _); repeat split.
-        * econstructor; eassumption.
-        * simpl; rewrite H7, H14; reflexivity.
-        * assumption.
-        * eapply HlinvAtm; eauto.
-        * eapply HginvAtm; eauto.
-      + simpl; eexists; exists shsti; repeat split; eauto.
-  Qed.
+    (Hsimi: TrsSimInit sim impl spec)
+    (HsimIn: TrsSimIn)
+    (HsimAtm: TrsSimAtomic)
+    (Hinvi: TrsInvInit impl ginv)
+    (HinvIn: TrsInvIn impl ginv)
+    (HinvAtm: TrsInvAtomic impl ginv).
 
   Lemma trs_sim_step_steps_trs:
     forall ist1 sst1,
@@ -254,22 +149,20 @@ Section TrsSimSep.
         exists sst2 shst,
           steps_det spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
-          ist2 ≈ sst2 /\ ginv ist2.
+          ist2 ≈ sst2.
   Proof.
     destruct 3; simpl; intros; subst.
     - inv H1; inv H5; inv H7.
       do 2 eexists; repeat split; try econstructor; assumption.
     - inv H2; inv H5.
-      pose proof H7; eapply HsimIn in H7; eauto.
-      eapply HginvIn in H1; eauto.
+      eapply HsimIn in H7; eauto.
       destruct H7 as [smin [sst2 [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split.
       + econstructor; [econstructor|eassumption].
-      + simpl; simpl in H3; inv H3; reflexivity.
+      + simpl; simpl in H2; inv H2; reflexivity.
       + assumption.
-      + assumption.
-    - eapply trs_sim_step_steps_atomic in H1; eauto.
-      dest; eauto 6.
+    - pose proof (HsimAtm H1 H0 H H2).
+      dest; eauto.
   Qed.
 
   Lemma trs_sim_in_atm_simulates:
@@ -278,7 +171,6 @@ Section TrsSimSep.
     unfold TrsSimulates; intros.
     destruct H1.
     eapply trs_sim_step_steps_trs in H2; eauto.
-    dest; eauto.
   Qed.
 
 End TrsSimSep.
@@ -358,8 +250,8 @@ Proof.
   unfold trsPreservingRule in H.
 
   clear -H H8.
-  specialize (H os (msg_value (getMsg fmsg))).
-  induction (rule_outs frule os (msg_value (getMsg fmsg))); [constructor|].
+  specialize (H os (msg_value (getMsg hdl))).
+  induction (rule_outs frule os (msg_value (getMsg hdl))); [constructor|].
   simpl in *.
   inv H; constructor; auto.
   simpl; rewrite H8, H2.
@@ -369,36 +261,38 @@ Qed.
 Lemma trsPreservineSys_atomic_same_tid:
   forall sys,
     trsPreservingSys sys ->
-    forall rqin mtid hst mouts orsout,
-      Atomic sys rqin hst mouts orsout ->
-      mtid = mid_tid (msg_id (tinfo_rqin rqin)) ->
-      forall ist1 ist2,
-        steps_det sys ist1 hst ist2 ->
-        Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
-        Forall (fun tl =>
-                  match tl with
-                  | IlblIn msg => mid_tid (msg_id (getMsg msg)) = mtid
-                  | IlblOuts (Some hdl) _ => mid_tid (msg_id (getMsg hdl)) = mtid
-                  | IlblOuts None _ => True
-                  end) hst.
+    forall ti hst mouts orsout,
+      Atomic sys ti hst mouts orsout ->
+      forall mtid,
+        mtid = mid_tid (msg_id (tinfo_rqin ti)) ->
+        forall ist1 ist2,
+          steps_det sys ist1 hst ist2 ->
+          Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
+          Forall (fun tl =>
+                    match tl with
+                    | IlblIn msg => mid_tid (msg_id (getMsg msg)) = mtid
+                    | IlblOuts (Some hdl) _ => mid_tid (msg_id (getMsg hdl)) = mtid
+                    | IlblOuts None _ => True
+                    end) hst.
 Proof.
-  induction 2; simpl; intros; [split; repeat constructor; subst; auto| |].
-  - inv H6.
-    specialize (IHAtomic eq_refl _ _ H10); dest.
+  induction 2; simpl; intros;
+    [split; repeat constructor; subst; auto| |].
+  - inv H4.
+    specialize (IHAtomic _ eq_refl _ _ H8); dest.
     split.
     + apply Forall_app.
-      * apply ForallMP_deqMP; assumption.
-      * eapply Forall_forall in H5; eauto.
-        rewrite <-H5.
-        eauto using trsPreservingSys_outs_same_tid.
+      * apply ForallMP_removeOnce; assumption.
+      * eapply Forall_forall in H3; eauto.
+        rewrite <-H3.
+        eapply trsPreservingSys_outs_same_tid; eauto.
     + constructor; auto.
-      eapply Forall_forall in H5; eauto.
-  - inv H4.
-    specialize (IHAtomic eq_refl _ _ H8); dest.
+      eapply Forall_forall in H3; eauto.
+  - inv H3.
+    specialize (IHAtomic _ eq_refl _ _ H7); dest.
     split.
     + constructor.
     + constructor; auto.
-      inv H3; assumption.
+      inv H2; assumption.
 Qed.
 
 Section Compositionality.
@@ -416,8 +310,8 @@ Section Compositionality.
              (Hmtdisj: TrsDisjSys impl1 impl2)
              (Hsim1: TrsSimulates simR ginv p impl1 spec)
              (Hsim2: TrsSimulates simR ginv p impl2 spec)
-             (Hginv1: TrsInvHolds ginv impl1)
-             (Hginv2: TrsInvHolds ginv impl2).
+             (Hginv1: TrsInv impl1 ginv)
+             (Hginv2: TrsInv impl2 ginv).
 
   Variable (impl: System).
   Hypotheses (Hmt: trsPreservingSys impl)
@@ -562,18 +456,18 @@ Section Compositionality.
       pose proof (Hginv1 H0 H).
       assumption.
       
-    - pose proof (atomic_steps_compositional H2 H); destruct H3.
+    - pose proof (atomic_steps_compositional H1 H); destruct H2.
       + assert (Transactional impl1 hst).
         { econstructor; eauto.
           eapply atomic_preserved; eauto.
         }
-        exact (Hginv1 H1 (conj H3 H4)).
+        exact (Hginv1 H0 (conj H2 H3)).
       + assert (Transactional impl2 hst).
         { econstructor; eauto.
           eapply atomic_preserved; eauto.
           rewrite Hii; assumption.
         }
-        exact (Hginv2 H1 (conj H3 H4)).
+        exact (Hginv2 H0 (conj H2 H3)).
   Qed.
 
   Lemma trsSimulates_transactional_compositional:
@@ -610,12 +504,12 @@ Section Compositionality.
       }
       exact (Hsim1 H0 H1 H).
       
-    - pose proof (atomic_steps_compositional H3 H); destruct H4.
+    - pose proof (atomic_steps_compositional H2 H); destruct H3.
       + assert (Transactional impl1 hst).
         { econstructor; eauto.
           eapply atomic_preserved; eauto.
         }
-        pose proof (Hsim1 H1 H2 (conj H4 H5)).
+        pose proof (Hsim1 H0 H1 (conj H3 H4)).
         rewrite behaviorOf_preserved with (impl2:= impl1) by assumption.
         assumption.
       + assert (Transactional impl2 hst).
@@ -623,14 +517,14 @@ Section Compositionality.
           eapply atomic_preserved; eauto.
           rewrite Hii; assumption.
         }
-        pose proof (Hsim2 H1 H2 (conj H4 H5)).
+        pose proof (Hsim2 H0 H1 (conj H3 H4)).
         rewrite behaviorOf_preserved with (impl2:= impl2) by (rewrite Hii; assumption).
         assumption.
   Qed.
 
-  Theorem trsInvHolds_compositional: TrsInvHolds ginv impl.
+  Theorem trsInvHolds_compositional: TrsInv impl ginv.
   Proof.
-    unfold TrsInvHolds in *; intros.
+    unfold TrsInv in *; intros.
     destruct H0.
     eapply trsInvHolds_transactional_compositional; eauto.
   Qed.
@@ -643,7 +537,7 @@ Section Compositionality.
   Qed.
 
   Corollary trsSimulates_trsInvHolds_compositional:
-    TrsSimulates simR ginv p impl spec /\ TrsInvHolds ginv impl.
+    TrsSimulates simR ginv p impl spec /\ TrsInv impl ginv.
   Proof.
     split.
     - apply trsSimulates_compositional.

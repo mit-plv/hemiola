@@ -69,6 +69,10 @@ Definition ol2l {A} (oa: option (list A)): list A :=
   end.
 
 Infix "==n" := eq_nat_dec (at level 30).
+Infix "<=n" := le_dec (at level 30).
+Infix "<n" := lt_dec (at level 30).
+Infix ">=n" := ge_dec (at level 30).
+Infix ">n" := gt_dec (at level 30).
 Infix "?<n" := (in_dec eq_nat_dec) (at level 30).
 
 Definition bind {A B} (oa: option A) (f: A -> option B): option B :=

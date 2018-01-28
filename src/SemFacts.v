@@ -1,6 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepDet.
 
+Require Import Omega.
+
 Set Implicit Arguments.
 
 Section MessagePoolFacts.
@@ -135,6 +137,18 @@ Section MessagePoolFacts.
 
 End MessagePoolFacts.
 
+Lemma ForallMP_removeOnce:
+  forall (P: TMsg -> Prop) tmsg mp,
+    ForallMP P mp ->
+    ForallMP P (removeOnce tmsg_dec tmsg mp).
+Proof.
+  induction mp; simpl; intros; auto.
+  inv H.
+  find_if_inside; auto.
+  constructor; auto.
+  apply IHmp; auto.
+Qed.
+
 Lemma obj_in_sys_idx_internal:
   forall obj sys,
     In obj (sys_objs sys) ->
@@ -238,7 +252,7 @@ Lemma step_det_int_internal:
     isInternal sys (mid_to (msg_id (getMsg hdl))) = true.
 Proof.
   intros; inv H.
-  destruct fmsg as [fmsg fts]; simpl in *.
+  destruct hdl as [fmsg fts]; simpl in *.
   destruct fmsg as [hmid hmv]; simpl in *; subst.
   pose proof (firstMP_ValidMsgId _ _ _ _ H6).
   destruct (rule_mid frule) as [[from to chn] tid].
@@ -300,6 +314,53 @@ Proof.
   constructor; auto.
   - unfold isExternal in *; rewrite H0; assumption.
   - unfold isInternal in *; rewrite H0; assumption.
+Qed.
+
+Definition ValidTidState (tst: TState) :=
+  ForallMP (fun tmsg =>
+              match tmsg_info tmsg with
+              | Some ti => tinfo_tid ti <= tst_tid tst
+              | None => True
+              end) (tst_msgs tst).
+
+Lemma step_det_tid:
+  forall st1,
+    ValidTidState st1 ->
+    forall sys lbl st2,
+      step_det sys st1 lbl st2 ->
+      ValidTidState st2.
+Proof.
+  unfold ValidTidState; intros; inv H0; auto.
+  - simpl; simpl in H.
+    apply ForallMP_enqMP; auto.
+    simpl; auto.
+  - simpl; simpl in H.
+    apply ForallMP_distributeMsgs.
+    + apply ForallMP_deqMP.
+      clear -H Hts.
+      induction oims; simpl; [constructor|].
+      inv H; constructor.
+      * destruct (tmsg_info a); auto.
+        destruct (tmsg_info fmsg); omega.
+      * apply IHoims; auto.
+    + apply firstMP_inMP in H5.
+      eapply ForallMP_forall in H; eauto.
+      clear -Hts H.
+      apply Forall_filter.
+      induction (rule_outs _ _ _); [constructor|].
+      constructor; auto.
+      simpl; destruct (tmsg_info fmsg); auto.
+Qed.
+
+Lemma steps_det_tid:
+  forall st1,
+    ValidTidState st1 ->
+    forall sys hst st2,
+      steps_det sys st1 hst st2 ->
+      ValidTidState st2.
+Proof.
+  induction 2; simpl; intros; auto.
+  apply step_det_tid in H1; auto.
 Qed.
 
 Lemma steps_split:

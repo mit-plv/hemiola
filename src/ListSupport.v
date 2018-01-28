@@ -2,6 +2,13 @@ Require Import Common List.
 
 Set Implicit Arguments.
 
+Fixpoint removeOnce {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
+         (a: A) (l: list A) :=
+  match l with
+  | nil => nil
+  | h :: t => if eq_dec a h then t else h :: removeOnce eq_dec a t
+  end.
+
 Lemma tl_app:
   forall {A} (l1 l2: list A),
     l1 <> nil -> tl (l1 ++ l2) = (tl l1) ++ l2.

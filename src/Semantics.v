@@ -151,12 +151,6 @@ Section Transition.
         tr = behaviorOf sys ll ->
         Behavior ss sys tr.
 
-  Inductive Reachable {StateT LabelT} `{HasInit StateT} `{HasLabel LabelT}
-            (ss: Steps StateT LabelT) : System -> StateT -> Prop :=
-  | Rch: forall sys ll st,
-      ss sys (getStateInit sys) ll st ->
-      Reachable ss sys st.
-
   Definition Refines {StateI LabelI StateS LabelS}
              `{HasInit StateI} `{HasLabel LabelI} `{HasInit StateS} `{HasLabel LabelS}
              (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS)
@@ -249,6 +243,9 @@ Section TMsg.
       tinfo_rqin : Msg
     }.
 
+  Definition buildTInfo tid rqin :=
+    {| tinfo_tid := tid; tinfo_rqin := rqin |}.
+
   Definition tinfo_dec : forall ti1 ti2: TInfo, {ti1 = ti2} + {ti1 <> ti2}.
   Proof.
     decide equality.
@@ -282,9 +279,6 @@ Section TMsg.
   Definition TLabel := ILabel TMsg.
 
   Definition History := list TLabel.
-
-  Definition SubHistory (shst hst: History) :=
-    exists nhst, hst = nhst ++ shst.
 
 End TMsg.
 
