@@ -117,8 +117,8 @@ Section TrsSimSep.
           Some (p (getLabel (IlblIn imin))) /\
           ist2 ≈ sst2.
 
-  Definition TrsSimAtomic :=
-    forall ti hst mouts orsout,
+  Definition TrsSimAtomic ti :=
+    forall hst mouts orsout,
       Atomic impl ti hst mouts orsout ->
       forall ist1,
         ginv ist1 ->
@@ -134,7 +134,7 @@ Section TrsSimSep.
   Hypotheses
     (Hsimi: TrsSimInit sim impl spec)
     (HsimIn: TrsSimIn)
-    (HsimAtm: TrsSimAtomic)
+    (HsimAtm: forall ti, TrsSimAtomic ti)
     (Hinvi: TrsInvInit impl ginv)
     (HinvIn: TrsInvIn impl ginv)
     (HinvAtm: TrsInvAtomic impl ginv).
@@ -174,6 +174,116 @@ Section TrsSimSep.
   Qed.
 
 End TrsSimSep.
+
+Section TrsSimAtomic.
+  Variables (sim: TState -> TState -> Prop)
+            (ginv: TState -> Prop)
+            (ainv: TInfo -> History -> MessagePool TMsg -> TState -> Prop)
+            (p: Label -> Label).
+
+  Local Infix "≈" := sim (at level 30).
+
+  Variables (impl spec: System) (ti: TInfo).
+
+  Definition TrsSimAtomicImm :=
+    forall ist1,
+      ginv ist1 ->
+      forall sst1,
+        ist1 ≈ sst1 ->
+        forall rsout ist2,
+          step_det impl ist1 (IlblOuts (Some (toTMsgU (tinfo_rqin ti))) (rsout :: nil)) ist2 ->
+          exists slbl sst2,
+            step_det spec sst1 slbl sst2 /\
+            extLabel spec (getLabel slbl) = Some (p (LblOuts (tmsg_msg rsout :: nil))) /\
+            ist2 ≈ sst2.
+
+  Definition TrsSimAtomicAInv :=
+    forall hst mouts orsout,
+      Atomic impl ti hst mouts orsout ->
+      forall ist1,
+        ginv ist1 ->
+        ainv ti hst mouts ist1 ->
+        forall sst1,
+          ist1 ≈ sst1 ->
+          forall ihdl,
+            In ihdl mouts ->
+            forall imouts ist2,
+              step_det impl ist1 (IlblOuts (Some ihdl) imouts) ist2 ->
+              match extLabel impl (getLabel (IlblOuts (Some ihdl) imouts)) with
+              | Some elbl =>
+                (exists slbl sst2,
+                    step_det spec sst1 slbl sst2 /\
+                    extLabel spec (getLabel slbl) = Some (p elbl) /\
+                    ist2 ≈ sst2)
+              | None => ist2 ≈ sst1
+              end.
+
+  Hypotheses (Hginv: TrsInv impl ginv)
+             (Hainv: TrsAInv impl ginv ainv)
+             (Hasimi: TrsSimAtomicImm)
+             (Hasim: TrsSimAtomicAInv).
+
+  Lemma trs_sim_ainv:
+    TrsSimAtomic sim ginv p impl spec ti.
+  Proof.
+    unfold TrsSimAtomic, TrsSimAtomicImm, TrsSimAtomicAInv in *; intros.
+    generalize dependent ist2.
+    induction H; intros.
+
+    - inv H3; inv H7.
+      eapply Hasimi in H9; eauto.
+      destruct H9 as [islbl [isst [? [? ?]]]].
+      do 2 eexists; split; [|split].
+      + eapply StepsCons; eauto.
+        econstructor.
+      + cbn; rewrite H2.
+        cbn; simpl in H4; rewrite H4.
+        reflexivity.
+      + assumption.
+
+    - specialize (IHAtomic Hasimi Hasim).
+      inv H4; specialize (IHAtomic _ H8).
+      destruct IHAtomic as [isst [ishst [? [? ?]]]].
+      specialize (Hainv H H8 H0).
+
+      assert (Transactional impl hst) by (econstructor; eauto).
+      specialize (Hginv H0 (conj H8 H7)).
+      specialize (Hasim H Hginv Hainv H6 H2 H10).
+
+      remember (extLabel impl (getLabel (IlblOuts (Some hdl) houts))) as ielbl; destruct ielbl.
+      + destruct Hasim as [nslbl [nsst [? [? ?]]]].
+        do 2 eexists; split; [|split].
+        * eapply StepsCons; eauto.
+        * cbn in Heqielbl; cbn; rewrite <-Heqielbl.
+          cbn; cbn in H11; rewrite H11, <-H5.
+          reflexivity.
+        * assumption.
+      + do 2 eexists; split; [|split].
+        * eassumption.
+        * cbn; cbn in Heqielbl; rewrite <-Heqielbl.
+          cbn; assumption.
+        * assumption.
+
+    - specialize (IHAtomic Hasimi Hasim).
+      inv H3; specialize (IHAtomic _ H7).
+      destruct IHAtomic as [isst [ishst [? [? ?]]]].
+      specialize (Hainv H H7 H0).
+
+      assert (Transactional impl hst) by (econstructor; eauto).
+      specialize (Hginv H0 (conj H7 H6)).
+      specialize (Hasim H Hginv Hainv H5 (or_introl eq_refl) H9).
+      cbn in Hasim; rewrite H2 in Hasim.
+      destruct Hasim as [nslbl [nsst [? [? ?]]]].
+
+      do 2 eexists; split; [|split].
+      + eapply StepsCons; eauto.
+      + cbn; cbn in H10; rewrite H10, <-H4, H2.
+        reflexivity.
+      + assumption.
+
+  Qed.
+
+End TrsSimAtomic.
 
 Section TrsPreserving.
 
