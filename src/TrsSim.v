@@ -218,11 +218,12 @@ Section TrsSimAtomic.
               | None => ist2 ≈ sst1
               end.
 
-  Hypotheses (Hginv: TrsInv impl ginv)
-             (Hainv: TrsAInv impl ginv ainv)
-             (Hasimi: TrsSimAtomicImm)
-             (Hasim: TrsSimAtomicAInv).
-
+  Hypotheses
+    (Hasimi: TrsSimAtomicImm)
+    (Hasim: TrsSimAtomicAInv)
+    (Hainv: TrsAInv impl ginv ainv)
+    (Hginv: TrsInv impl ginv).
+             
   Lemma trs_sim_ainv:
     TrsSimAtomic sim ginv p impl spec ti.
   Proof.
