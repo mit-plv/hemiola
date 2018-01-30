@@ -14,6 +14,7 @@ Lemma atomic_emptyILabel_not_in:
 Proof.
   induction 1; simpl; intros.
   - intro Hx; destruct Hx; [discriminate|auto].
+  - intro Hx; destruct Hx; [discriminate|auto].
   - intro Hx; elim IHAtomic; destruct Hx; [discriminate|assumption].
   - intro Hx; elim IHAtomic; destruct Hx; [discriminate|assumption].
 Qed.
@@ -24,7 +25,7 @@ Lemma atomic_iLblIn_not_in:
     forall msg,
       ~ In (IlblIn msg) hst.
 Proof.
-  induction 1; simpl; intros; [auto| |];
+  induction 1; simpl; intros; [auto| | |];
     try (intro Hx; destruct Hx;
          [discriminate|firstorder]).
 Qed.
@@ -43,11 +44,20 @@ Proof.
     + unfold isExternal in *.
       rewrite H1 in H0; assumption.
   - econstructor; eauto.
-    unfold isInternal in *.
-    rewrite H2 in H1; assumption.
+    + unfold isExternal in *.
+      rewrite H1 in H; assumption.
+    + unfold isInternal in *.
+      rewrite H1 in H0; assumption.
   - econstructor; eauto.
-    unfold isExternal in *.
-    rewrite H1 in H0; assumption.
+    + unfold isInternal in *.
+      rewrite H3 in H0; assumption.
+    + unfold isInternal in *.
+      rewrite H3 in H2; assumption.
+  - econstructor; eauto.
+    + unfold isInternal in *.
+      rewrite H2 in H0; assumption.
+    + unfold isExternal in *.
+      rewrite H2 in H1; assumption.
 Qed.
 
 Lemma atomic_rs_out_1:
@@ -57,9 +67,10 @@ Lemma atomic_rs_out_1:
     mouts = nil /\ orsout = Some rsout.
 Proof.
   intros; inv H; auto.
-  exfalso.
-  inv H9.
-  eapply internal_external_false; eauto.
+  - exfalso; inv H8; dest.
+    eapply internal_external_false; eauto.
+  - exfalso; inv H10; dest.
+    eapply internal_external_false; eauto.
 Qed.
 
 Lemma atomic_rs_out_2:
@@ -74,81 +85,86 @@ Proof.
     try (repeat split; eauto; discriminate).
 Qed.
 
-(* Lemma atomic_tinfo: *)
-(*   forall sys ti hst mouts orsout, *)
-(*     Atomic sys ti hst mouts orsout -> *)
-(*     forall st1 st2, *)
-(*       steps_det sys st1 hst st2 -> *)
-(*       Forall (fun lbl => match lbl with *)
-(*                          | IlblOuts (Some hdl) _ => *)
-(*                            tmsg_info hdl = Some ti *)
-(*                          | _ => False *)
-(*                          end) hst /\ *)
-(*       ForallMP (fun tmsg => tmsg_info tmsg = Some ti) mouts. *)
-(* Proof. *)
-(*   induction 1; simpl; intros. *)
-(*   - discriminate. *)
-(*   - inv H3; inv H4. *)
-(*     destruct otid as [tid|]. *)
-(*     + destruct H0; [discriminate|inv H0]. *)
-(*       specialize (IHAtomic _ eq_refl _ _ H7); destruct IHAtomic. *)
-(*       inv H9. *)
-(*       split. *)
-(*       * eapply ForallMP_forall in H3; [|exact H1]. *)
-(*         eauto. *)
-(*       * apply ForallMP_distributeMsgs. *)
-(*         { eapply ForallMP_removeOnce; eauto. } *)
-(*         { clear; induction (rule_outs _ _ _); [constructor|]. *)
-(*           constructor; auto. *)
-(*         } *)
-(*     + inv H. *)
-(*       Common.dest_in. *)
-(*       split; auto. *)
-(*       unfold enqMP; rewrite app_nil_l. *)
-(*       unfold removeOnce. *)
-(*       destruct (tmsg_dec _ _); [|elim n; reflexivity]. *)
-(*       simpl. *)
-(*       inv H9. *)
-(*       clear; induction (rule_outs _ _ _); [constructor|]. *)
-(*       constructor; auto. *)
+Lemma atomic_tinfo:
+  forall sys ti hst mouts orsout,
+    Atomic sys ti hst mouts orsout ->
+    forall st1 st2,
+      steps_det sys st1 hst st2 ->
+      Forall (fun lbl => match lbl with
+                         | IlblOuts (Some hdl) _ =>
+                           tmsg_info hdl =
+                           if isInternal sys (mid_from (msg_id (tmsg_msg hdl)))
+                           then Some ti else None
+                         | _ => False
+                         end) hst /\
+      ForallMP (fun tmsg => tmsg_info tmsg = Some ti) mouts.
+Proof.
+  induction 1; simpl; intros.
 
-(*   - split; [|constructor]. *)
-(*     inv H2; inv H3. *)
-(*     destruct otid as [tid|]. *)
-(*     + destruct H0; [discriminate|inv H0]. *)
-(*       specialize (IHAtomic _ eq_refl _ _ H6); destruct IHAtomic. *)
-(*       constructor; auto. *)
-(*     + inv H. *)
-(*       constructor; auto. *)
-(* Qed. *)
+  - split; [|constructor].
+    constructor; auto.
+    rewrite external_not_internal by assumption.
+    reflexivity.
 
-(* Corollary atomic_hst_tinfo: *)
-(*   forall sys tid rqin hst mouts orsout, *)
-(*     Atomic sys (Some tid) rqin hst mouts orsout -> *)
-(*     forall st1 st2, *)
-(*       steps_det sys st1 hst st2 -> *)
-(*       Forall (fun lbl => match lbl with *)
-(*                          | IlblOuts (Some hdl) _ => *)
-(*                            tmsg_info hdl = Some (buildTInfo tid rqin) *)
-(*                          | _ => False *)
-(*                          end) hst. *)
-(* Proof. *)
-(*   intros. *)
-(*   eapply atomic_tinfo in H; eauto. *)
-(*   destruct H; auto. *)
-(* Qed. *)
+  - split.
+    + constructor; auto.
+      rewrite external_not_internal by assumption.
+      reflexivity.
+    + inv H1; inv H5; inv H7.
+      clear -H0.
+      eapply Forall_impl; eauto.
+      intros; simpl in H; dest; auto.
 
-(* Corollary atomic_mouts_tinfo: *)
-(*   forall sys tid rqin hst mouts orsout, *)
-(*     Atomic sys (Some tid) rqin hst mouts orsout -> *)
-(*     forall st1 st2, *)
-(*       steps_det sys st1 hst st2 -> *)
-(*       ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo tid rqin)) mouts. *)
-(* Proof. *)
-(*   intros. *)
-(*   eapply atomic_tinfo in H; eauto. *)
-(*   destruct H; auto. *)
-(* Qed. *)
+  - inv H3.
+    specialize (IHAtomic _ _ H7); destruct IHAtomic.
+    split.
+    + constructor; auto.
+      rewrite H0.
+      eapply Forall_forall in H4; eauto.
+    + apply ForallMP_distributeMsgs.
+      * apply ForallMP_removeOnce; auto.
+      * eapply Forall_forall in H4; eauto.
+        inv H9; rewrite H4.
+        clear; induction (rule_outs _ _ _); [constructor|].
+        constructor; auto.
+
+  - split; [|constructor].
+    inv H2.
+    specialize (IHAtomic _ _ H6); destruct IHAtomic.
+    constructor; auto.
+    rewrite H0.
+    inv H3; auto.
+Qed.
+
+Corollary atomic_hst_tinfo:
+  forall sys ti hst mouts orsout,
+    Atomic sys ti hst mouts orsout ->
+    forall st1 st2,
+      steps_det sys st1 hst st2 ->
+      Forall (fun lbl => match lbl with
+                         | IlblOuts (Some hdl) _ =>
+                           tmsg_info hdl =
+                           if isInternal sys (mid_from (msg_id (tmsg_msg hdl)))
+                           then Some ti else None
+                         | _ => False
+                         end) hst.
+Proof.
+  intros.
+  eapply atomic_tinfo in H; eauto.
+  destruct H; auto.
+Qed.
+
+Corollary atomic_mouts_tinfo:
+  forall sys ti hst mouts orsout,
+    Atomic sys ti hst mouts orsout ->
+    forall st1 st2,
+      steps_det sys st1 hst st2 ->
+      ForallMP (fun tmsg => tmsg_info tmsg = Some ti) mouts.
+Proof.
+  intros.
+  eapply atomic_tinfo in H; eauto.
+  destruct H; auto.
+Qed.
 
 Lemma trsMessages_app:
   forall ti mp1 mp2,

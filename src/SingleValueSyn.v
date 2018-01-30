@@ -5,6 +5,8 @@ Require Import Synthesis SynthesisFacts Blocking.
 
 Require Import SingleValue SingleValueSim.
 
+Require Import Omega.
+
 Set Implicit Arguments.
 
 Open Scope list.
@@ -192,8 +194,8 @@ Section Impl.
       eapply trs_sim_in_atm_simulates;
       [trsSimulates_case_in msgF sim|].
 
-    Ltac trsSimAtomic_init aInv :=
-      intros; apply trs_sim_ainv with (ainv:= aInv).
+    Ltac trsSimAtomic_init :=
+      intros; eapply trs_sim_ainv.
 
     Definition svmTrsIdx0 := 0.
 
@@ -374,8 +376,6 @@ Section Impl.
       |reflexivity (* about the [spec] timestamp *)
       ].
 
-    Definition svmAInv1: AInv := AtomicOutsAInv.
-
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec (SvmSim extIdx1 extIdx2) svmInv svmP impl1 }.
     Proof.
@@ -389,12 +389,12 @@ Section Impl.
           trsSimulates_trivial (svmMsgF extIdx1 extIdx2) (SvmSim extIdx1 extIdx2).
 
           (** [TrsSimulates] for [Atomic] steps *)
-          trsSimAtomic_init svmAInv1.
+          trsSimAtomic_init.
 
-          * (** [TrsSimAtomic] for immediate cases *)
+          * (** [TrsSimAtomic] for starting cases *)
             admit.
 
-          * (** [TrsSimAtomic] for non-immediate cases 
+          * (** [TrsSimAtomic] for intermediate cases 
              * (i.e., request-forwarding and responses-back) *)
 
             (* 0) some initial simplification *)
@@ -432,7 +432,8 @@ Section Impl.
                      (ost_st post)@[valueIdx] = Some v)
                   (fun (st: StateT) (v: Value) => v).
                 { (* 2-2-1: request-forwarding for C1 *)
-                  (*! TODO: [SimMP] preservation for request-forwarding cases. *)
+
+                  (*! TODO: recover [synth_rq_correct] *)
 
                   repeat
                     match goal with
@@ -442,18 +443,32 @@ Section Impl.
                       simpl in H; inv H
                     end;
                     (* Request-forwardings always correspond to silent steps in spec. *)
-                    simpl.
+                    hnf; simpl in *.
 
-                  hnf; simpl in *.
+                  (* Need a lemma stating that the simulation is equivalence-preserving,
+                   * i.e., [EquivPreservingR SvmR].
+                   *)
                   split;
                     [eapply SvmR_EquivPreservingR; eauto;
                      unfold StateEquivOS; intros;
                      findeq|].
 
-                  (* eapply SimMP_int_msg_fwd; eauto. *)
-                  
-                  (* synth_rq_correct svmSim_rq_next. *)
-                  admit.
+                  (* Proving [SimMP] should be fully automated. *)
+                  destruct itid as [nti|].
+                  { exfalso.
+                    pose proof (atomic_mouts_tinfo H H0).
+                    eapply Forall_forall in H8; eauto.
+                    admit.
+                  }
+                  { eapply SimMP_int_msg_begin with (tid:= nts); eauto.
+                    { unfold svmInv, invAnd in H1; destruct H1.
+                      eapply Forall_impl; [|exact H8].
+                      intros; simpl in H9.
+                      destruct (tmsg_info a); auto.
+                      omega.
+                    }
+                    { discriminate. }
+                  }
                 }
                 { (* 2-2-2: responses-back for C1 *)
                   simpl in *; inv H12.
@@ -463,13 +478,13 @@ Section Impl.
                     [simpl|exfalso; admit (* need an invariant *)].
                   assert (tst_rqfrom t = extIdx1)
                     by admit. (* need an invariant *)
-                  rewrite H7; simpl.
+                  rewrite H8; simpl.
 
                   assert (exists sost,
                              soss1@[specIdx] = Some sost /\
                              (ost_st sost)@[valueIdx] = Some imval).
                   { admit. (* need an invariant *) }
-                  destruct H8 as [sost [? ?]].
+                  destruct H12 as [sost [? ?]].
 
                   do 2 eexists; split.
                   { synth_spec_step
@@ -482,7 +497,7 @@ Section Impl.
                     instantiate (1:= None).
                     admit. (* about [firstMP] in [impl] and [spec]. *)
                   }
-                  { simpl; rewrite H12; simpl.
+                  { simpl; rewrite H14; simpl.
                     split.
                     { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; cbn.
                       admit. (* FIXME: specChn1 <> extIdx1 *)
@@ -499,8 +514,7 @@ Section Impl.
             { (* For P and C2 *) admit. }
 
           * (** Local invariants hold *)
-            eapply trsAInv_ginv_weaken; [|apply inv_proj2].
-            eapply atomic_outs.
+            admit.
 
           * (** Global invariants hold *)
             admit.

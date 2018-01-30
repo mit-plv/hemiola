@@ -28,9 +28,17 @@ Section PerSystem.
         Atomic (buildTInfo tid rqin)
                (IlblOuts (Some (toTMsgU rqin)) (rsout :: nil) :: nil)
                nil (Some rsout)
+  | AtomicStart:
+      forall tid (rqin: Msg) houts,
+        isExternal sys (mid_from (msg_id rqin)) = true ->
+        ForallMP (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg))) = true /\
+                              tmsg_info tmsg = Some (buildTInfo tid rqin)) houts ->
+        Atomic (buildTInfo tid rqin)
+               (IlblOuts (Some (toTMsgU rqin)) houts :: nil) houts None
   | AtomicCont:
       forall ti hst mouts hdl houts,
         Atomic ti hst mouts None ->
+        isInternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
         In hdl mouts ->
         ForallMP (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg))) = true) houts ->
         Atomic ti (IlblOuts (Some hdl) houts :: hst)
@@ -38,6 +46,7 @@ Section PerSystem.
   | AtomicFin:
       forall ti hst hdl rsout,
         Atomic ti hst (hdl :: nil) None ->
+        isInternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
         isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
         Atomic ti (IlblOuts (Some hdl) (rsout :: nil) :: hst)
                nil (Some rsout).

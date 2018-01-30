@@ -363,6 +363,63 @@ Proof.
   apply step_det_tid in H1; auto.
 Qed.
 
+Definition TInfoExists (sys: System) (tst: TState) :=
+  ForallMP (fun tmsg =>
+              if isInternal sys (mid_from (msg_id (tmsg_msg tmsg)))
+              then tmsg_info tmsg <> None
+              else tmsg_info tmsg = None) (tst_msgs tst).
+
+Lemma validOuts_from_internal:
+  forall sys idx,
+    isInternal sys idx = true ->
+    forall mouts,
+      ValidOuts idx mouts ->
+      ForallMP (fun msg => isInternal sys (mid_from (msg_id msg)) = true) mouts.
+Proof.
+  induction mouts; simpl; intros; [constructor|].
+  destruct H0; inv H0; inv H1; dest.
+  constructor.
+  - simpl in H0; unfold id in H0; rewrite H0; assumption.
+  - apply IHmouts; split; auto.
+Qed.
+
+Lemma step_det_tinfo:
+  forall sys st1,
+    TInfoExists sys st1 ->
+    forall lbl st2,
+      step_det sys st1 lbl st2 ->
+      TInfoExists sys st2.
+Proof.
+  unfold TInfoExists; intros; inv H0; auto.
+  - simpl; simpl in H.
+    apply ForallMP_enqMP; auto.
+    simpl.
+    rewrite external_not_internal by assumption; reflexivity.
+  - simpl; simpl in H.
+    apply ForallMP_distributeMsgs.
+    + apply ForallMP_deqMP; auto.
+    + pose proof (obj_in_sys_idx_internal _ _ H1).
+      eapply validOuts_from_internal in H11; eauto.
+      clear -H11; simpl in H11.
+      induction (rule_outs frule os (msg_value (tmsg_msg fmsg))); [constructor|].
+      inv H11.
+      simpl; destruct (isInternal sys (mid_to (msg_id a))); auto.
+      constructor; cbn.
+      * rewrite H1; discriminate.
+      * apply IHl; auto.
+Qed.
+
+Lemma steps_det_tinfo:
+  forall sys st1,
+    TInfoExists sys st1 ->
+    forall hst st2,
+      steps_det sys st1 hst st2 ->
+      TInfoExists sys st2.
+Proof.
+  induction 2; simpl; intros; auto.
+  apply step_det_tinfo in H1; auto.
+Qed.
+
 Lemma steps_split:
   forall {StateT LabelT} (step: Step StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
