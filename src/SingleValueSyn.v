@@ -59,87 +59,22 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Definition svmInv: Inv := BlockedInv /\i ValidTidState.
+  Definition SvmInv1: Inv := SvmInv /\i BlockedInv /\i ValidTidState.
+  Ltac dest_SvmInv1 :=
+    match goal with
+    | [H: SvmInv1 _ |- _] => destruct H as [[? ?] ?]
+    end.
 
-  Theorem impl0_ok: SynthOk spec (SvmSim extIdx1 extIdx2) svmInv svmP impl0.
+  Theorem impl0_ok: SynthOk spec (SvmSim extIdx1 extIdx2) SvmInv1 svmP impl0.
   Proof.
     split; [|split; [|split]].
-    - split.
-      + eapply SvmSSS; econstructor.
-      + constructor.
-    - vm_compute; intros; split; intros.
-      + exfalso; auto.
-      + constructor.
+    - (* simulation for the initial states *) admit.
+    - (* invariant holds for the initial states *) admit.
     - (* simulation & invariant *) admit.
     - (* serializability *) admit.
   Admitted.
 
   Section SynStep.
-
-    Section MakeExternal.
-      Variables (targetIdx diffIdx: IdxT)
-                (Hdiff: targetIdx <> diffIdx).
-      
-      Definition makeIdxExternal (idx: IdxT): IdxT :=
-        if idx ==n targetIdx
-        then diffIdx 
-        else idx.
-      
-      Definition makeMsgIdExternal (mid: MsgId): MsgId :=
-        buildMsgId (mid_tid mid) (mid_from mid) (makeIdxExternal (mid_to mid)) (mid_chn mid).
-      
-      Definition makeRuleExternal (rule: Rule): Rule :=
-        {| rule_mid := makeMsgIdExternal (rule_mid rule);
-           rule_precond := rule_precond rule;
-           rule_outs := rule_outs rule;
-           rule_postcond := rule_postcond rule
-        |}.
-
-      Lemma makeRuleExternal_rule_in:
-        forall rule rules1 rules2,
-          mid_to (rule_mid rule) = targetIdx ->
-          In rule (rules1 ++ map makeRuleExternal rules2) ->
-          In rule rules1.
-      Proof.
-        intros.
-        apply in_app_or in H0; destruct H0; auto.
-        exfalso; clear -H H0 Hdiff.
-        induction rules2; [auto|].
-        destruct H0; auto.
-        subst rule.
-        cbn in H; unfold makeIdxExternal in H.
-        find_if_inside; auto.
-      Qed.
-
-    End MakeExternal.
-
-    Section MakePreCondDisj.
-      Variable (prec: PreCond).
-
-      Definition makePreCondDisj (rule: Rule): Rule :=
-        {| rule_mid := rule_mid rule;
-           rule_precond := fun ost => ~ (prec ost) /\ rule_precond rule ost;
-           rule_outs := rule_outs rule;
-           rule_postcond := rule_postcond rule
-        |}.
-
-      Lemma makePreCondDisj_rule_in:
-        forall rule ost,
-          rule_precond rule ost ->
-          prec ost ->
-          forall rules1 rules2,
-            In rule (rules1 ++ map makePreCondDisj rules2) ->
-            In rule rules1.
-      Proof.
-        intros.
-        apply in_app_or in H1; destruct H1; auto.
-        exfalso; clear -H H0 H1.
-        induction rules2; [auto|].
-        destruct H1; auto.
-        subst; cbn in H; destruct H; auto.
-      Qed.
-
-    End MakePreCondDisj.
 
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
@@ -147,7 +82,11 @@ Section Impl.
       split; [|split; [|split]]; (* [SynthOk] consist of 5 conditions. *)
       try (rewrite addRulesSys_init; apply pimpl_ok; fail).
 
-    Ltac trsSimulates_case_in msgF sim :=
+    Ltac trs_sim_init pimpl_ok :=
+      apply trsSimulates_trsInvHolds_rules_added;
+      [apply pimpl_ok|apply pimpl_ok|repeat constructor| | | |].
+
+    Ltac trs_simulates_case_in msgF sim :=
       (** instantiation *)
       unfold TrsSimIn; intros; simpl;
       match goal with
@@ -190,80 +129,9 @@ Section Impl.
     (* This ltac handles trivial [Transactional] cases.
      * After then we only need to deal with [Atomic] histories.
      *)
-    Ltac trsSimulates_trivial msgF sim :=
+    Ltac trs_simulates_trivial msgF sim :=
       eapply trs_sim_in_atm_simulates;
-      [trsSimulates_case_in msgF sim|].
-
-    Ltac trsSimAtomic_init :=
-      intros; eapply trs_sim_ainv.
-
-    Definition svmTrsIdx0 := 0.
-
-    Lemma SvmR_status_cases_1:
-      forall ioss soss,
-        SvmR ioss soss ->
-        exists iost1,
-          ioss@[child1Idx] = Some iost1 /\
-          ((ost_st iost1)@[statusIdx] = Some (VNat stI) \/
-           (ost_st iost1)@[statusIdx] = Some (VNat stS) \/
-           (ost_st iost1)@[statusIdx] = Some (VNat stM)).
-    Proof.
-      intros; inv H; eexists; eauto.
-    Qed.
-    Ltac svmR_child1_status_case_tac Hcase :=
-      destruct Hcase as [iost1 [? [|[|]]]].
-
-    Ltac simpl_addRulesSys :=
-      repeat
-        match goal with
-        | [H: In _ (rulesOf (addRulesSys _ (buildRawSys _))) |- _] =>
-          apply addRulesSys_buildRawSys_sublist in H
-        | [H: context[isInternal (addRulesSys _ _)] |- _] =>
-          rewrite addRulesSys_isInternal in H
-        end.
-
-    Ltac dest_ValidMsgId :=
-      match goal with
-      | [Hf: firstMP _ _ _ _ = Some ?tmsg |- _] =>
-        let H := fresh "H" in
-        pose proof (firstMP_ValidMsgId _ _ _ _ Hf) as H;
-        let imtid := fresh "imtid" in
-        let imfrom := fresh "imfrom" in
-        let imto := fresh "imto" in
-        let imchn := fresh "imchn" in
-        let imval := fresh "imval" in
-        let itid := fresh "itid" in
-        destruct tmsg as [[[[imfrom imto imchn] imtid] imval] itid];
-        let Hfrom := fresh "Hfrom" in
-        let Hto := fresh "Hto" in
-        let Hchn := fresh "Hchn" in
-        inv H
-      end.
-
-    Ltac trsSimAtomic_non_imm_init :=
-      unfold TrsSimAtomicAInv; intros;
-      match goal with
-      | [H: step_det _ _ _ _ |- _] => inv H
-      end;
-      simpl_addRulesSys;
-      dest_ValidMsgId.
-
-    Lemma addRulesO_makeRuleExternal:
-      forall rs1 rs2 obj oidx eidx,
-        oidx = obj_idx obj ->
-        addRulesO (rs1 ++ map (makeRuleExternal oidx eidx) rs2) obj =
-        addRulesO rs1 obj.
-    Proof.
-    Admitted.
-
-    Lemma addRulesO_makePreCondDisj:
-      forall rs1 rs2 obj rule (prec: PreCond) ost,
-        rule_precond rule ost ->
-        prec ost ->
-        In rule (obj_rules (addRulesO (rs1 ++ map (makePreCondDisj prec) rs2) obj)) ->
-        In rule (obj_rules (addRulesO rs1 obj)).
-    Proof.
-    Admitted.
+      [trs_simulates_case_in msgF sim|].
 
     Ltac synth_sep_rules_obj tgt ext :=
       match goal with
@@ -274,251 +142,31 @@ Section Impl.
           instantiate (1:= _ ++ (map (makeRuleExternal tgt ext) _)) in H
         end
       end;
-      rewrite addRulesO_makeRuleExternal in * by reflexivity.
-
-    Ltac synth_sep_rules_prec prec :=
-      match goal with
-      | [H: context[In ?rule (obj_rules (addRulesO ?rules _))] |- _] =>
-        match type of rule with
-        | Rule =>
-          is_evar rules;
-          instantiate (1:= _ ++ (map (makePreCondDisj prec) _)) in H;
-          eapply addRulesO_makePreCondDisj in H;
-          [|eassumption|mred_find; eassumption]
-        end
-      end.
-
-    Ltac synth_obj_case_analysis sim rel caseF caseTac :=
-      repeat
-        match goal with
-        | [H: sim _ ?sst1 |- _] =>
-          let soss1 := fresh "soss1" in
-          let smsgs1 := fresh "smsgs1" in
-          let sts1 := fresh "sts1" in
-          is_var sst1;
-          destruct sst1 as [soss1 smsgs1 sts1];
-          let H1 := fresh "H" in
-          let H2 := fresh "H" in
-          destruct H as [H1 H2]; simpl in H1, H2
-        | [H: rel _ _ |- _] =>
-          let Hcase := fresh "Hcase" in
-          pose proof H as Hcase;
-          apply caseF in Hcase;
-          caseTac Hcase
-        end.
-
-    Ltac synth_rq_rs_single trsIdx fromIdx curIdx toIdx rqPre rsPost rsOut :=
-      match goal with
-      | [H: context[In ?rule (obj_rules (addRulesO ?rules _))] |- _] =>
-        match type of rule with
-        | Rule =>
-          is_evar rules;
-          instantiate
-            (1:= (synRq trsIdx curIdx alwaysLock fromIdx
-                        (toIdx :: nil) rqPre)
-                   :: (synRsSingle trsIdx curIdx toIdx rsPost rsOut)
-                   :: nil) in H;
-          Common.dest_in
-        end
-      end.
-
-    Ltac synth_rq_correct sim_rq_tac :=
-      (* To polish some hypotheses *)
-      repeat
-        match goal with
-        | [H: rule_postcond (synRq _ _ _ _ _ _) _ _ _ |- _] =>
-          simpl in H; unfold synRqPostcond in H; simpl in H; subst
-        | [H: msg_id _ = rule_mid _ |- _] =>
-          simpl in H; inv H
-        end;
-      (* Request-forwardings always correspond to silent steps in spec. *)
-      simpl;
-      (* To apply a custom Ltac to prove simulation *)
-      sim_rq_tac.
-
-    Ltac svmSim_rq_next :=
-      hnf; simpl in *;
-      eapply SvmR_EquivPreservingR; eauto;
-      unfold StateEquivOS; intros;
-      findeq.
-
-    Ltac validOuts_tac :=
-      simpl;
-      repeat
-        match goal with
-        | [ |- context[?ov >>=[nil] _] ] => destruct ov; simpl
-        | [ |- ValidOuts _ _ ] => split
-        | [ |- Forall _ _] => constructor
-        | [ |- NoDup _] => constructor
-        | [ |- ~ In _ nil] => simpl; auto
-        | [ |- _ /\ _] => split
-        | [ |- _ = _] => reflexivity
-        | [ |- _ <> _] => discriminate
-        end.
-
-    Ltac synth_spec_step p imsg specRule :=
-      eapply SdInt;
-      [auto (* [?nts > sts1] by setting a new timestamp
-             * to [S sts1] *)
-      |left; reflexivity (* [In ?obj spec]; [spec] usually
-                          * has a single object *)
-      |reflexivity
-      |simpl; eassumption (* [spec] object should exist *)
-      |instantiate (1:= {| tmsg_msg := p imsg |});
-       reflexivity
-      | (* [firstMP] to [firstMP] *)
-      |instantiate (1:= specRule); simpl; reflexivity
-      |simpl; tauto (* [specRule] exists *)
-      |auto (* [specRule] precondition is usually [True] *)
-      |simpl; reflexivity (* [specRule] postcondition *)
-      |reflexivity (* [specRule] outs *)
-      |validOuts_tac (* [ValidOuts] *)
-      |reflexivity (* about the [spec] timestamp *)
-      ].
-
+      rewrite addRulesO_makeRuleExternal in * by (discriminate || reflexivity).
+    
+    Definition svmTrsIdx0: TrsId := SvmGetE.
+    Definition svmTrsRqIn0: MsgId :=
+      {| mid_addr := {| ma_from := extIdx1;
+                        ma_to := child1Idx;
+                        ma_chn := rqChn |};
+         mid_tid := svmTrsIdx0 |}.
+    Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1.
+    
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec (SvmSim extIdx1 extIdx2) svmInv svmP impl1 }.
+      { impl1: System & SynthOk spec (SvmSim extIdx1 extIdx2) SvmInv1 svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
       - (** simulation *)
-        apply trsSimulates_trsInvHolds_rules_added;
-          [apply impl0_ok|apply impl0_ok|repeat constructor| | | |].
+        trs_sim_init impl0_ok.
 
         + (** [TrsSimulates] for newly added [Rule]s *)
-          trsSimulates_trivial (svmMsgF extIdx1 extIdx2) (SvmSim extIdx1 extIdx2).
+          trs_simulates_trivial (svmMsgF extIdx1 extIdx2) (SvmSim extIdx1 extIdx2).
 
           (** [TrsSimulates] for [Atomic] steps *)
-          trsSimAtomic_init.
-
-          * (** [TrsSimAtomic] for starting cases *)
-            admit.
-
-          * (** [TrsSimAtomic] for intermediate cases 
-             * (i.e., request-forwarding and responses-back) *)
-
-            (* 0) some initial simplification *)
-            trsSimAtomic_non_imm_init.
-
-            (* 1) case analysis for each object; first for C1 *)
-            destruct (obj_idx obj ==n child1Idx);
-              [Common.dest_in; try discriminate|].
-            { (* 1-1) separate rules; one for c1, another for the others *)
-              synth_sep_rules_obj child1Idx child2Idx.
-
-              (* 1-2) case analysis on c1 status *)
-              synth_obj_case_analysis
-                (SvmSim extIdx1 extIdx2) SvmR SvmR_status_cases_1
-                svmR_child1_status_case_tac.
-              { (* 1-2-1) When C1.st = I *)
-                synth_sep_rules_prec
-                  (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI)).
-                
-                (* TODO: try to synthesize an immediate transaction;
-                 * it should fail since it cannot have a mechanism to bring the 
-                 * representative value from the other objects.
-                 * When the trial fails, nothing is synthesized.
-                 *)
-                idtac.
-
-                (* 1-2-2) Now try to synthesize "request-forwarding" and
-                 * corresponding "responses-receiving" rules.
-                 *)
-                synth_rq_rs_single
-                  svmTrsIdx0 extIdx1 child1Idx parentIdx
-                  (fun ost => (ost_st ost)@[statusIdx] = Some (VNat stI))
-                  (fun (pre: OState) v post =>
-                     (ost_st post)@[statusIdx] = Some (VNat stS) /\
-                     (ost_st post)@[valueIdx] = Some v)
-                  (fun (st: StateT) (v: Value) => v).
-                { (* 2-2-1: request-forwarding for C1 *)
-
-                  (*! TODO: recover [synth_rq_correct] *)
-
-                  repeat
-                    match goal with
-                    | [H: rule_postcond (synRq _ _ _ _ _ _) _ _ _ |- _] =>
-                      simpl in H; unfold synRqPostcond in H; simpl in H; subst
-                    | [H: msg_id _ = rule_mid _ |- _] =>
-                      simpl in H; inv H
-                    end;
-                    (* Request-forwardings always correspond to silent steps in spec. *)
-                    hnf; simpl in *.
-
-                  (* Need a lemma stating that the simulation is equivalence-preserving,
-                   * i.e., [EquivPreservingR SvmR].
-                   *)
-                  split;
-                    [eapply SvmR_EquivPreservingR; eauto;
-                     unfold StateEquivOS; intros;
-                     findeq|].
-
-                  (* Proving [SimMP] should be fully automated. *)
-                  destruct itid as [nti|].
-                  { exfalso.
-                    pose proof (atomic_mouts_tinfo H H0).
-                    eapply Forall_forall in H8; eauto.
-                    admit.
-                  }
-                  { eapply SimMP_int_msg_begin with (tid:= nts); eauto.
-                    { unfold svmInv, invAnd in H1; destruct H1.
-                      eapply Forall_impl; [|exact H8].
-                      intros; simpl in H9.
-                      destruct (tmsg_info a); auto.
-                      omega.
-                    }
-                    { discriminate. }
-                  }
-                }
-                { (* 2-2-2: responses-back for C1 *)
-                  simpl in *; inv H12.
-                  unfold synRsOutsSingle.
-                  remember ((ost_tst os)@[svmTrsIdx0]) as otrsh.
-                  destruct otrsh;
-                    [simpl|exfalso; admit (* need an invariant *)].
-                  assert (tst_rqfrom t = extIdx1)
-                    by admit. (* need an invariant *)
-                  rewrite H8; simpl.
-
-                  assert (exists sost,
-                             soss1@[specIdx] = Some sost /\
-                             (ost_st sost)@[valueIdx] = Some imval).
-                  { admit. (* need an invariant *) }
-                  destruct H12 as [sost [? ?]].
-
-                  do 2 eexists; split.
-                  { synth_spec_step
-                      (svmMsgF extIdx1 extIdx2)
-                      {| msg_id := buildMsgId svmTrsIdx0 extIdx1 child1Idx rsChn;
-                         msg_value := imval |}
-                      (specGetReq extIdx1 extIdx2 specChn1).
-
-                    cbn; cbn in H9.
-                    instantiate (1:= None).
-                    admit. (* about [firstMP] in [impl] and [spec]. *)
-                  }
-                  { simpl; rewrite H14; simpl.
-                    split.
-                    { unfold svmMsgF, getRespM, svmMsgIdF, buildMsgId; cbn.
-                      admit. (* FIXME: specChn1 <> extIdx1 *)
-                    }
-                    { unfold SvmSim; simpl.
-                      admit. (* need invariants *)
-                    }
-                  }
-                }
-              }
-              { (* 1-2-2) When C1.st = S *) admit. }
-              { (* 1-2-2) When C1.st = M *) admit. }
-            }
-            { (* For P and C2 *) admit. }
-
-          * (** Local invariants hold *)
-            admit.
-
-          * (** Global invariants hold *)
-            admit.
-
+          unfold TrsSimAtomic; intros.
+          admit.
+          
         + (** Global invariants hold *)
           admit.
           

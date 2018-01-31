@@ -145,11 +145,11 @@ Section SynRqRsImm.
   Section Immediate.
 
     Definition synImm (prec: PreCond) (rqFrom: IdxT) (postcond: PostCond)
-               (valOut: StateT -> Value) :=
+               (valOut: Value -> StateT -> Value) :=
       {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
          rule_precond := prec;
          rule_outs := fun st val =>
-                        msgValOut (valOut (ost_st st)) (rqFrom, rsChn) :: nil;
+                        msgValOut (valOut val (ost_st st)) (rqFrom, rsChn) :: nil;
          rule_postcond := postcond
       |}.
 
@@ -450,7 +450,7 @@ Section SynByVChanges.
       (* If an object handles the request immediately, the only case that
        * it has to send a certain value is when it is the source.
        *)
-      Definition valOutVChanges (chgs: VChanges) (pre: StateT): Value :=
+      Definition valOutVChanges (chgs: VChanges) (_: Value) (pre: StateT): Value :=
         match vchg_move chgs with
         | Some (VcmIntro (VLocState oidx kidx) _) =>
           if oidx ==n targetIdx
@@ -558,6 +558,92 @@ Section SynByVChanges.
   End GivenVChanges.
 
 End SynByVChanges.
+
+Section Manipulation.
+
+  Section MakeExternal.
+    Variables (targetIdx diffIdx: IdxT)
+              (Hdiff: targetIdx <> diffIdx).
+    
+    Definition makeIdxExternal (idx: IdxT): IdxT :=
+      if idx ==n targetIdx
+      then diffIdx 
+      else idx.
+    
+    Definition makeMsgIdExternal (mid: MsgId): MsgId :=
+      buildMsgId (mid_tid mid) (mid_from mid) (makeIdxExternal (mid_to mid)) (mid_chn mid).
+    
+    Definition makeRuleExternal (rule: Rule): Rule :=
+      {| rule_mid := makeMsgIdExternal (rule_mid rule);
+         rule_precond := rule_precond rule;
+         rule_outs := rule_outs rule;
+         rule_postcond := rule_postcond rule
+      |}.
+
+    Lemma makeRuleExternal_rule_in:
+      forall rule rules1 rules2,
+        mid_to (rule_mid rule) = targetIdx ->
+        In rule (rules1 ++ map makeRuleExternal rules2) ->
+        In rule rules1.
+    Proof.
+      intros.
+      apply in_app_or in H0; destruct H0; auto.
+      exfalso; clear -H H0 Hdiff.
+      induction rules2; [auto|].
+      destruct H0; auto.
+      subst rule.
+      cbn in H; unfold makeIdxExternal in H.
+      find_if_inside; auto.
+    Qed.
+
+    Lemma addRulesO_makeRuleExternal:
+      forall rs1 rs2 obj,
+        obj_idx obj = targetIdx ->
+        addRulesO (rs1 ++ map makeRuleExternal rs2) obj =
+        addRulesO rs1 obj.
+    Proof.
+    Admitted.
+
+  End MakeExternal.
+
+  Section MakePreCondDisj.
+    Variable (prec: PreCond).
+
+    Definition makePreCondDisj (rule: Rule): Rule :=
+      {| rule_mid := rule_mid rule;
+         rule_precond := fun ost => ~ (prec ost) /\ rule_precond rule ost;
+         rule_outs := rule_outs rule;
+         rule_postcond := rule_postcond rule
+      |}.
+
+    Lemma makePreCondDisj_rule_in:
+      forall rule ost,
+        rule_precond rule ost ->
+        prec ost ->
+        forall rules1 rules2,
+          In rule (rules1 ++ map makePreCondDisj rules2) ->
+          In rule rules1.
+    Proof.
+      intros.
+      apply in_app_or in H1; destruct H1; auto.
+      exfalso; clear -H H0 H1.
+      induction rules2; [auto|].
+      destruct H1; auto.
+      subst; cbn in H; destruct H; auto.
+    Qed.
+
+    Lemma addRulesO_makePreCondDisj:
+      forall rs1 rs2 obj rule ost,
+        rule_precond rule ost ->
+        prec ost ->
+        In rule (obj_rules (addRulesO (rs1 ++ map makePreCondDisj rs2) obj)) ->
+        In rule (obj_rules (addRulesO rs1 obj)).
+    Proof.
+    Admitted.
+
+  End MakePreCondDisj.
+
+End Manipulation.
 
 (** Some tactics about [VLoc] and [VChange] *)
 

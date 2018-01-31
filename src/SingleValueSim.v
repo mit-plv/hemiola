@@ -9,6 +9,27 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
+Section Inv.
+
+  Definition SvmInv (ist: TState) :=
+    (exists post pstt pv,
+        (tst_oss ist)@[parentIdx] = Some post /\
+        (ost_st post)@[statusIdx] = Some (VNat pstt) /\
+        (pstt = stI \/ pstt = stS \/ pstt = stM) /\
+        (ost_st post)@[valueIdx] = Some pv) /\
+    (exists c1ost c1stt c1v,
+        (tst_oss ist)@[child1Idx] = Some c1ost /\
+        (ost_st c1ost)@[statusIdx] = Some (VNat c1stt) /\
+        (c1stt = stI \/ c1stt = stS \/ c1stt = stM) /\
+        (ost_st c1ost)@[valueIdx] = Some c1v) /\
+    (exists c2ost c2stt c2v,
+        (tst_oss ist)@[child2Idx] = Some c2ost /\
+        (ost_st c2ost)@[statusIdx] = Some (VNat c2stt) /\
+        (c2stt = stI \/ c2stt = stS \/ c2stt = stM) /\
+        (ost_st c2ost)@[valueIdx] = Some c2v).
+
+End Inv.
+
 Section Sim.
   Variables extIdx1 extIdx2: nat.
   Hypotheses (Hiext1: isExternal (impl0 extIdx1 extIdx2) extIdx1 = true)
@@ -38,138 +59,44 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
-  Definition svmImplChild1Inv: list (OState -> Prop) :=
-    (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stI))
-      :: (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stS)) 
-      :: (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stM))
-      :: nil.
+  Definition ImplStatusMI (ioss: ObjectStates) (v: Value) :=
+    exists midx most v,
+      ioss@[midx] = Some most /\
+      (ost_st most)@[statusIdx] = Some (VNat stM) /\
+      (ost_st most)@[valueIdx] = Some v /\
+      (forall oidx ost stt,
+          oidx <> midx ->
+          ioss@[oidx] = Some ost ->
+          (ost_st ost)@[statusIdx] = Some (VNat stt) ->
+          stt = stI).
 
-  Definition svmImplChild2Inv: list (OState -> Prop) :=
-    (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stI))
-      :: (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stS)) 
-      :: (fun iost1 => (ost_st iost1)@[statusIdx] = Some (VNat stM))
-      :: nil.
+  Definition ImplStatusSI (ioss: ObjectStates) (v: Value) :=
+    forall oidx ost stt,
+      ioss@[oidx] = Some ost ->
+      (ost_st ost)@[statusIdx] = Some (VNat stt) ->
+      match stt with
+      | 0 (* stI *) => True
+      | 1 (* stS *) => (ost_st ost)@[valueIdx] = Some v
+      | 2 (* stM *) => False
+      | _ => False
+      end.
 
-  Definition svmImplOstRepr (iost: OState) :=
-    match (ost_st iost)@[statusIdx] with
-    | Some (VNat st) => st
-    | _ => 0
-    end.
-
-  Definition SvmImplCoord := (nat * nat * nat)%type.
-
-  Definition dist (n1 n2: nat) :=
-    if Nat.leb n1 n2 then (n2 - n1) * (n2 - n1) else (n1 - n2) * (n1 - n2).
-
-  Definition svmImplRepDist (c1 c2: SvmImplCoord) :=
-    dist (fst (fst c1)) (fst (fst c2)) +
-    dist (snd (fst c1)) (snd (fst c2)) +
-    dist (snd c1) (snd c2).
-
-  Definition svmImplRepr (ioss: ObjectStates): SvmImplCoord :=
-    match ioss@[parentIdx], ioss@[child1Idx], ioss@[child2Idx] with
-    | Some ostp, Some ost1, Some ost2 =>
-      (svmImplOstRepr ostp, svmImplOstRepr ost1, svmImplOstRepr ost2)
-    | _, _, _ => (0, 0, 0) (* never happens *)
-    end.
-
-  Definition svmImplDist (ioss1 ioss2: ObjectStates): nat :=
-    svmImplRepDist (svmImplRepr ioss1) (svmImplRepr ioss2).
+  Definition SpecState (soss: ObjectStates) (v: Value) :=
+    exists sost,
+      soss@[specIdx] = Some sost /\
+      (ost_st sost)@[valueIdx] = Some v.
 
   Inductive SvmR: ObjectStates -> ObjectStates -> Prop :=
-  | SvmSSI: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[parentIdx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iostp)@[valueIdx] = Some v ->
-
-      ioss@[child1Idx] = Some iost1 ->
-      (ost_st iost1)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iost1)@[valueIdx] = Some v ->
-
-      ioss@[child2Idx] = Some iost2 ->
-      (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
-
-      soss@[specIdx] = Some sost ->
-      (ost_st sost)@[valueIdx] = Some v ->
-      SvmR ioss soss
-
-  | SvmSIS: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[parentIdx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iostp)@[valueIdx] = Some v ->
-
-      ioss@[child1Idx] = Some iost1 ->
-      (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
-
-      ioss@[child2Idx] = Some iost2 ->
-      (ost_st iost2)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iost2)@[valueIdx] = Some v ->
-
-      soss@[specIdx] = Some sost ->
-      (ost_st sost)@[valueIdx] = Some v ->
-      SvmR ioss soss
-
-  | SvmSSS: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[parentIdx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iostp)@[valueIdx] = Some v ->
-
-      ioss@[child1Idx] = Some iost1 ->
-      (ost_st iost1)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iost1)@[valueIdx] = Some v ->
-
-      ioss@[child2Idx] = Some iost2 ->
-      (ost_st iost2)@[statusIdx] = Some (VNat stS) ->
-      (ost_st iost2)@[valueIdx] = Some v ->
-
-      soss@[specIdx] = Some sost ->
-      (ost_st sost)@[valueIdx] = Some v ->
-      SvmR ioss soss
-
-  | SvmMII: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[parentIdx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stM) ->
-      (ost_st iostp)@[valueIdx] = Some v ->
-      
-      ioss@[child1Idx] = Some iost1 ->
-      (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
-
-      ioss@[child2Idx] = Some iost2 ->
-      (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
-
-      soss@[specIdx] = Some sost ->
-      (ost_st sost)@[valueIdx] = Some v ->
-      SvmR ioss soss
-
-  | SvmIMI: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[parentIdx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stI) ->
-
-      ioss@[child1Idx] = Some iost1 ->
-      (ost_st iost1)@[statusIdx] = Some (VNat stM) ->
-      (ost_st iost1)@[valueIdx] = Some v ->
-
-      ioss@[child2Idx] = Some iost2 ->
-      (ost_st iost2)@[statusIdx] = Some (VNat stI) ->
-
-      soss@[specIdx] = Some sost ->
-      (ost_st sost)@[valueIdx] = Some v ->
-      SvmR ioss soss
-
-  | SvmIIM: forall ioss soss iostp iost1 iost2 sost v,
-      ioss@[parentIdx] = Some iostp ->
-      (ost_st iostp)@[statusIdx] = Some (VNat stI) ->
-
-      ioss@[child1Idx] = Some iost1 ->
-      (ost_st iost1)@[statusIdx] = Some (VNat stI) ->
-
-      ioss@[child2Idx] = Some iost2 ->
-      (ost_st iost2)@[statusIdx] = Some (VNat stM) ->
-      (ost_st iost2)@[valueIdx] = Some v ->
-
-      soss@[specIdx] = Some sost ->
-      (ost_st sost)@[valueIdx] = Some v ->
-      SvmR ioss soss.
+  | SvmMI:
+      forall ioss soss v,
+        ImplStatusMI ioss v ->
+        SpecState soss v ->
+        SvmR ioss soss
+  | SvmSI:
+      forall ioss soss v,
+        ImplStatusSI ioss v ->
+        SpecState soss v ->
+        SvmR ioss soss.
 
   Definition SvmSim (ist sst: TState) :=
     SvmR (tst_oss ist) (tst_oss sst) /\

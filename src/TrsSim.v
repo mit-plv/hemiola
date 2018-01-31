@@ -186,6 +186,7 @@ Section TrsSimAtomic.
   Variables (impl spec: System) (ti: TInfo).
 
   Definition TrsSimAtomicStart :=
+    isExternal impl (mid_from (msg_id (tinfo_rqin ti))) = true ->
     forall ist1,
       ginv ist1 ->
       forall sst1,
