@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet.
-Require Import Serial SerialFacts Simulation TrsInv TrsSim Predicate Synthesis.
+Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet Synthesis.
+Require Import Serial SerialFacts Simulation TrsInv TrsSim.
 
 Lemma addRules_init:
   forall rules objs,

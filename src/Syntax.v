@@ -71,6 +71,9 @@ Section Msg.
       msg_value: Value
     }.
 
+  Definition buildMsg mid v :=
+    {| msg_id := mid; msg_value := v |}.
+
   Definition msg_dec: forall m1 m2: Msg, {m1 = m2} + {m1 <> m2}.
   Proof.
     decide equality.
@@ -201,5 +204,7 @@ Definition isInternal (sys: System) (idx: IdxT) :=
   if idx ?<n (indicesOf sys) then true else false.
 
 Notation "'T'" := (fun _ => True).
+Notation "'TT'" := (fun _ _ _ => True).
+Notation "'TT='" := (fun pre v post => pre = post).
 Notation "[ obj ]" := (singleton obj).
 

@@ -4,7 +4,11 @@ Require Import Simulation Serial.
 
 Set Implicit Arguments.
 
+Definition OInv := OState -> Prop.
 Definition Inv := TState -> Prop.
+
+Definition liftOInv (oidx: IdxT) (oinv: OInv): Inv :=
+  fun tst => (tst_oss tst)@[oidx] >>=[True] (fun ost => oinv ost).
 
 Definition invAnd (inv1 inv2: Inv) :=
   fun tst => inv1 tst /\ inv2 tst.

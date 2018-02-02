@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
-Require Import Simulation Serial SerialFacts Predicate TrsInv TrsSim.
+Require Import Simulation Serial SerialFacts TrsInv TrsSim.
 Require Import Synthesis SynthesisFacts Blocking.
 
 Require Import SingleValue SingleValueSim.

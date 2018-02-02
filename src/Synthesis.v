@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics SemFacts.
-Require Import StepDet Serial SerialFacts TrsInv TrsSim Predicate.
+Require Import StepDet Serial SerialFacts TrsInv TrsSim.
 
 Set Implicit Arguments.
 
