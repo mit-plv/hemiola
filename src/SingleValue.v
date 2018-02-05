@@ -45,22 +45,19 @@ Section System.
 
       Definition specGetReq: Rule :=
         {| rule_mid := getReqM;
-           rule_precond := T;
-           rule_outs :=
-             fun st _ =>
-               (ost_st st)@[valueIdx] >>=[nil]
-               (fun v => {| msg_id := getRespM; msg_value := v |} :: nil);
+           rule_precond := ⊤;
            rule_postcond :=
-             fun pre _ post => pre = post
+             rpostOf ⊤⊤= (fun pre _ =>
+                            (ost_st pre)@[valueIdx] >>=[nil]
+                            (fun v => {| msg_id := getRespM; msg_value := v |} :: nil));
         |}.
 
       Definition specSetReq: Rule :=
         {| rule_mid := setReqM;
-           rule_precond := T;
-           rule_outs :=
-             fun st _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil;
+           rule_precond := ⊤;
            rule_postcond :=
-             fun pre v post => (ost_st post)@[valueIdx] = Some v
+             rpostOf (fun pre v post => (ost_st post)@[valueIdx] = Some v)
+                     (fun _ _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil)
         |}.
 
     End PerChn.
@@ -122,18 +119,7 @@ Section System.
     End Parent0.
 
     Definition impl0 : System :=
-      {| sys_objs := parent0 :: (child0 child1Idx) :: (child0 child2Idx) :: nil;
-         sys_chns :=
-           (buildMsgAddr extIdx1 child1Idx chnImpl)
-             :: (buildMsgAddr extIdx2 child2Idx chnImpl)
-             :: (buildMsgAddr child1Idx parentIdx chnC2PRq)
-             :: (buildMsgAddr child1Idx parentIdx chnC2PRs)
-             :: (buildMsgAddr child2Idx parentIdx chnC2PRq)
-             :: (buildMsgAddr child2Idx parentIdx chnC2PRs)
-             :: (buildMsgAddr parentIdx child1Idx chnImpl)
-             :: (buildMsgAddr parentIdx child2Idx chnImpl)
-             :: nil
-      |}.
+      parent0 :: (child0 child1Idx) :: (child0 child2Idx) :: nil.
 
   End Impl0.
 

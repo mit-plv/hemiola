@@ -151,7 +151,7 @@ Qed.
 
 Lemma obj_in_sys_idx_internal:
   forall obj sys,
-    In obj (sys_objs sys) ->
+    In obj sys ->
     isInternal sys (obj_idx obj) = true.
 Proof.
   unfold isInternal; intros.
@@ -254,7 +254,7 @@ Proof.
   intros; inv H.
   destruct hdl as [fmsg fts]; simpl in *.
   destruct fmsg as [hmid hmv]; simpl in *; subst.
-  pose proof (firstMP_ValidMsgId _ _ _ _ H6).
+  pose proof (firstMP_ValidMsgId _ _ _ _ H5).
   destruct (rule_mid frule) as [[from to chn] tid].
   inv H; simpl in *.
   unfold isInternal; find_if_inside; auto.
@@ -269,9 +269,8 @@ Lemma step_det_outs_from_internal:
 Proof.
   intros; inv H; try (constructor; fail).
   simpl.
-  destruct H10.
+  destruct H8.
   clear -H H0.
-  remember (rule_outs _ _ _) as outs; clear Heqouts.
   induction outs; simpl; intros; [constructor|].
   inv H; dest.
   constructor; auto.
@@ -343,11 +342,11 @@ Proof.
       * destruct (tmsg_info a); auto.
         destruct (tmsg_info fmsg); omega.
       * apply IHoims; auto.
-    + apply firstMP_inMP in H5.
+    + apply firstMP_inMP in H4.
       eapply ForallMP_forall in H; eauto.
       clear -Hts H.
       apply Forall_filter.
-      induction (rule_outs _ _ _); [constructor|].
+      induction outs; [constructor|].
       constructor; auto.
       simpl; destruct (tmsg_info fmsg); auto.
 Qed.
@@ -399,14 +398,14 @@ Proof.
     apply ForallMP_distributeMsgs.
     + apply ForallMP_deqMP; auto.
     + pose proof (obj_in_sys_idx_internal _ _ H1).
-      eapply validOuts_from_internal in H11; eauto.
-      clear -H11; simpl in H11.
-      induction (rule_outs frule os (msg_value (tmsg_msg fmsg))); [constructor|].
-      inv H11.
+      eapply validOuts_from_internal in H9; eauto.
+      clear -H9; simpl in H9.
+      induction outs; [constructor|].
+      inv H9.
       simpl; destruct (isInternal sys (mid_to (msg_id a))); auto.
       constructor; cbn.
       * rewrite H1; discriminate.
-      * apply IHl; auto.
+      * apply IHouts; auto.
 Qed.
 
 Lemma steps_det_tinfo:

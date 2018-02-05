@@ -6,50 +6,27 @@ Require Import Common ListSupport FMap Syntax Semantics StepDet.
 Section PerSystem.
   Variable sys: System.
 
-  (* A history is [Atomic] if it satisfies the following conditions:
-   * 0) The history can be either an incomplete or a complete transaction. 
-   * 1) Each label in the history has a form of [IlblOuts (Some hdl) _],
+  (* A history is [Atomic] if it satisfies following conditions:
+   * 1) The history can be either an incomplete or a complete transaction.
+   * 2) The history always begins by handling an external message.
+   * 3) Each label in the history has a form of [IlblOuts (Some hdl) _],
    *    and all [hdl]s have the same [tinfo_tid]. It means that the history is
    *    for a single transaction.
-   * 2) No external output messages are generated until the transaction ends.
-   *    (Reflected in [AtomicCont])
-   * 3) When the transaction ends, it outputs a single external message, which
-   *    is the response of the original request.
-   *    (Reflected in [AtomicFin])
-   * 4) When the transaction ends, no internal messages about the transaction 
-   *    are left. We ensure it by just tracking the internal messages about
-   *    the transaction ([mouts]).
    *)
-  Inductive Atomic: TInfo -> History -> MessagePool TMsg -> option TMsg -> Prop :=
-  | AtomicImm:
-      forall tid (rqin: Msg) rsout,
-        isExternal sys (mid_from (msg_id rqin)) = true ->
-        isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
-        Atomic (buildTInfo tid rqin)
-               (IlblOuts (Some (toTMsgU rqin)) (rsout :: nil) :: nil)
-               nil (Some rsout)
+  Inductive Atomic: TInfo -> History -> MessagePool TMsg -> Prop :=
   | AtomicStart:
       forall tid (rqin: Msg) houts,
         isExternal sys (mid_from (msg_id rqin)) = true ->
-        ForallMP (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg))) = true /\
-                              tmsg_info tmsg = Some (buildTInfo tid rqin)) houts ->
+        ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo tid rqin)) houts ->
         Atomic (buildTInfo tid rqin)
-               (IlblOuts (Some (toTMsgU rqin)) houts :: nil) houts None
+               (IlblOuts (Some (toTMsgU rqin)) houts :: nil)
+               houts
   | AtomicCont:
       forall ti hst mouts hdl houts,
-        Atomic ti hst mouts None ->
-        isInternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
+        Atomic ti hst mouts ->
         In hdl mouts ->
-        ForallMP (fun tmsg => isInternal sys (mid_to (msg_id (tmsg_msg tmsg))) = true) houts ->
         Atomic ti (IlblOuts (Some hdl) houts :: hst)
-               (distributeMsgs houts (removeOnce tmsg_dec hdl mouts)) None
-  | AtomicFin:
-      forall ti hst hdl rsout,
-        Atomic ti hst (hdl :: nil) None ->
-        isInternal sys (mid_from (msg_id (tmsg_msg hdl))) = true ->
-        isExternal sys (mid_to (msg_id (tmsg_msg rsout))) = true ->
-        Atomic ti (IlblOuts (Some hdl) (rsout :: nil) :: hst)
-               nil (Some rsout).
+               (distributeMsgs houts (removeOnce tmsg_dec hdl mouts)).
 
   Inductive Transactional: History -> Prop :=
   | TrsSlt:
@@ -59,8 +36,8 @@ Section PerSystem.
         tin = IlblIn msg ->
         Transactional (tin :: nil)
   | TrsAtomic:
-      forall ti hst mouts orsout,
-        Atomic ti hst mouts orsout ->
+      forall ti hst mouts,
+        Atomic ti hst mouts ->
         Transactional hst.
 
   Definition Sequential (hst: History) :=

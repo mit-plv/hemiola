@@ -118,8 +118,8 @@ Section TrsSimSep.
           ist2 ≈ sst2.
 
   Definition TrsSimAtomic ti :=
-    forall hst mouts orsout,
-      Atomic impl ti hst mouts orsout ->
+    forall hst mouts,
+      Atomic impl ti hst mouts ->
       forall ist1,
         ginv ist1 ->
         forall sst1,
@@ -203,8 +203,8 @@ Section TrsSimAtomic.
           end.
 
   Definition TrsSimAtomicAInv :=
-    forall hst mouts orsout,
-      Atomic impl ti hst mouts orsout ->
+    forall hst mouts,
+      Atomic impl ti hst mouts ->
       forall pist ist1,
         steps_det impl pist hst ist1 ->
         ginv ist1 ->
@@ -239,18 +239,6 @@ Section TrsSimAtomic.
 
     - inv H3; inv H7.
       eapply Hasimi in H9; eauto.
-      simpl in H9; unfold id in H9; rewrite H2 in H9.
-      destruct H9 as [islbl [isst [? [? ?]]]].
-      do 2 eexists; split; [|split].
-      + eapply StepsCons; eauto.
-        econstructor.
-      + cbn; rewrite H2.
-        cbn; simpl in H4; rewrite H4.
-        reflexivity.
-      + assumption.
-
-    - inv H3; inv H7.
-      eapply Hasimi in H9; eauto.
       simpl; simpl in H9.
       destruct (extOuts impl (map tmsg_msg houts)).
       + do 2 eexists; split; [|split].
@@ -266,20 +254,21 @@ Section TrsSimAtomic.
         * assumption.
         
     - specialize (IHAtomic Hasimi Hasim).
-      inv H5; specialize (IHAtomic _ H9).
+      inv H3; specialize (IHAtomic _ H7).
       destruct IHAtomic as [isst [ishst [? [? ?]]]].
-      specialize (Hainv H H9 H0).
+      specialize (Hainv H H7 H0).
 
       assert (Transactional impl hst) by (econstructor; eauto).
-      specialize (Hginv H0 (conj H9 H8)).
-      specialize (Hasim H H9 Hginv Hainv H7 H3 H11).
+      specialize (Hginv H0 (conj H7 H6)).
+      specialize (Hasim H H7 Hginv Hainv H5 H2 H9).
 
-      remember (extLabel impl (getLabel (IlblOuts (Some hdl) houts))) as ielbl; destruct ielbl.
+      remember (extLabel impl (getLabel (IlblOuts (Some hdl) houts))) as ielbl;
+        destruct ielbl.
       + destruct Hasim as [nslbl [nsst [? [? ?]]]].
         do 2 eexists; split; [|split].
         * eapply StepsCons; eauto.
         * cbn in Heqielbl; cbn; rewrite <-Heqielbl.
-          cbn; cbn in H12; rewrite H12, <-H6.
+          cbn; cbn in H10; rewrite H10, <-H4.
           reflexivity.
         * assumption.
       + do 2 eexists; split; [|split].
@@ -287,24 +276,6 @@ Section TrsSimAtomic.
         * cbn; cbn in Heqielbl; rewrite <-Heqielbl.
           cbn; assumption.
         * assumption.
-
-    - specialize (IHAtomic Hasimi Hasim).
-      inv H4; specialize (IHAtomic _ H8).
-      destruct IHAtomic as [isst [ishst [? [? ?]]]].
-      specialize (Hainv H H8 H0).
-
-      assert (Transactional impl hst) by (econstructor; eauto).
-      specialize (Hginv H0 (conj H8 H7)).
-      specialize (Hasim H H8 Hginv Hainv H6 (or_introl eq_refl) H10).
-      cbn in Hasim; rewrite H3 in Hasim.
-      destruct Hasim as [nslbl [nsst [? [? ?]]]].
-
-      do 2 eexists; split; [|split].
-      + eapply StepsCons; eauto.
-      + cbn; cbn in H11; rewrite H11, <-H5, H3.
-        reflexivity.
-      + assumption.
-
   Qed.
 
 End TrsSimAtomic.
@@ -312,18 +283,15 @@ End TrsSimAtomic.
 Section TrsPreserving.
 
   Definition trsPreservingRule (rule: Rule) :=
-    forall pre val,
-      Forall (fun mout => mid_tid (msg_id mout) = mid_tid (rule_mid rule))
-             (rule_outs rule pre val).
+    forall pre val post outs,
+      rule_postcond rule pre val post outs ->
+      Forall (fun mout => mid_tid (msg_id mout) = mid_tid (rule_mid rule)) outs.
 
   Definition trsPreservingObj (obj: Object) :=
     Forall trsPreservingRule (obj_rules obj).
 
-  Definition trsPreservingObs (obs: list Object) :=
-    Forall trsPreservingObj obs.
-
   Definition trsPreservingSys (sys: System) :=
-    trsPreservingObs (sys_objs sys).
+    Forall trsPreservingObj sys.
 
 End TrsPreserving.
 
@@ -377,26 +345,25 @@ Lemma trsPreservingSys_outs_same_tid:
                          mid_tid (msg_id (getMsg hdl))) houts.
 Proof.
   intros; inv H0.
-  unfold trsPreservingSys, trsPreservingObs in H.
+  unfold trsPreservingSys in H.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingObj in H.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
 
-  clear -H H8.
-  specialize (H os (msg_value (getMsg hdl))).
-  induction (rule_outs frule os (msg_value (getMsg hdl))); [constructor|].
+  specialize (H _ _ _ _ H10); clear -H H7.
+  induction outs; [constructor|].
   simpl in *.
   inv H; constructor; auto.
-  simpl; rewrite H8, H2.
+  simpl; rewrite H2, H7.
   reflexivity.
 Qed.  
 
 Lemma trsPreservineSys_atomic_same_tid:
   forall sys,
     trsPreservingSys sys ->
-    forall ti hst mouts orsout,
-      Atomic sys ti hst mouts orsout ->
+    forall ti hst mouts,
+      Atomic sys ti hst mouts ->
       forall mtid,
         mtid = mid_tid (msg_id (tinfo_rqin ti)) ->
         forall ist1 ist2,
@@ -410,27 +377,20 @@ Lemma trsPreservineSys_atomic_same_tid:
                     end) hst.
 Proof.
   induction 2; simpl; intros.
-  - split; repeat constructor; subst; auto.
   - subst; constructor; auto.
     inv H3.
     change rqin with (tmsg_msg (toTMsgU rqin)).
     eapply trsPreservingSys_outs_same_tid; eauto.
-  - inv H5.
-    specialize (IHAtomic _ eq_refl _ _ H9); dest.
+  - inv H3.
+    specialize (IHAtomic _ eq_refl _ _ H7); dest.
     split.
     + apply Forall_app.
       * apply ForallMP_removeOnce; assumption.
-      * eapply Forall_forall in H4; eauto.
-        rewrite <-H4.
+      * eapply Forall_forall in H2; eauto.
+        rewrite <-H2.
         eapply trsPreservingSys_outs_same_tid; eauto.
     + constructor; auto.
-      eapply Forall_forall in H4; eauto.
-  - inv H4.
-    specialize (IHAtomic _ eq_refl _ _ H8); dest.
-    split.
-    + constructor.
-    + constructor; auto.
-      inv H3; assumption.
+      eapply Forall_forall in H2; eauto.
 Qed.
 
 Section Compositionality.
@@ -457,28 +417,28 @@ Section Compositionality.
              (Himpl:
                 forall rule iobj,
                   In rule (obj_rules iobj) ->
-                  In iobj (sys_objs impl) ->
+                  In iobj impl ->
                   exists obj,
                     obj_idx obj = obj_idx iobj /\
                     In rule (obj_rules obj) /\
-                    In obj (sys_objs impl1 ++ sys_objs impl2)).
+                    In obj (impl1 ++ impl2)).
 
   Lemma TrsDisjSys_distr_same_tid:
     forall mtid,
       (forall rule,
           mid_tid (rule_mid rule) = mtid ->
           forall iobj,
-            In rule (obj_rules iobj) -> In iobj (sys_objs impl) ->
+            In rule (obj_rules iobj) -> In iobj impl ->
             exists obj : Object,
               obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
-              In obj (sys_objs impl1)) \/
+              In obj impl1) \/
       (forall rule,
           mid_tid (rule_mid rule) = mtid ->
           forall iobj,
-            In rule (obj_rules iobj) -> In iobj (sys_objs impl) ->
+            In rule (obj_rules iobj) -> In iobj impl ->
             exists obj : Object,
               obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
-              In obj (sys_objs impl2)).
+              In obj impl2).
   Proof.
     intros.
     destruct (mtid ?<n (map (fun rule => mid_tid (rule_mid rule)) (rulesOf impl1))).
@@ -517,8 +477,8 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps_det impl ist1 hst ist2 ->
-      forall rqin mouts orsout,
-        Atomic impl rqin hst mouts orsout ->
+      forall rqin mouts,
+        Atomic impl rqin hst mouts ->
         steps_det impl1 ist1 hst ist2 \/
         steps_det impl2 ist1 hst ist2.
   Proof.
@@ -539,12 +499,11 @@ Section Compositionality.
       + constructor.
         * unfold isExternal in *; rewrite <-Hii; assumption.
         * unfold isInternal in *; rewrite <-Hii; assumption.
-      + simpl in H5, H7; rewrite H7 in H5.
-        specialize (H1 _ H5 _ H8 H).
+      + simpl in H5, H6; rewrite H6 in H5.
+        specialize (H1 _ H5 _ H7 H).
         destruct H1 as [obj1 [? [? ?]]].
         rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
         econstructor; eauto.
-        unfold isInternal in *; rewrite <-Hii; assumption.
 
     - right.
       assert (indicesOf impl = indicesOf impl2) as Hii2 by (rewrite Hii; auto).
@@ -558,12 +517,11 @@ Section Compositionality.
       + constructor.
         * unfold isExternal in *; rewrite <-Hii2; assumption.
         * unfold isInternal in *; rewrite <-Hii2; assumption.
-      + simpl in H5, H7; rewrite H7 in H5.
-        specialize (H1 _ H5 _ H8 H).
+      + simpl in H5, H6; rewrite H6 in H5.
+        specialize (H1 _ H5 _ H7 H).
         destruct H1 as [obj1 [? [? ?]]].
         rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
         econstructor; eauto.
-        unfold isInternal in *; rewrite <-Hii2; assumption.
   Qed.
 
   Lemma trsInvHolds_transactional_compositional:

@@ -18,18 +18,16 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
              |}
 | SdInt: forall ts nts (Hts: nts > ts) tinfo
                 oss oims obj oidx os pos fmsg frule fidx fchn outs,
-    In obj (sys_objs sys) ->
+    In obj sys ->
     oidx = obj_idx obj ->
     (oss)@[oidx] = Some os ->
 
-    isInternal sys (mid_to (msg_id (getMsg fmsg))) = true ->
     firstMP fidx oidx fchn oims = Some fmsg -> 
 
     msg_id (getMsg fmsg) = rule_mid frule ->
     In frule (obj_rules obj) ->
-    rule_precond frule os ->
-    rule_postcond frule os (msg_value (getMsg fmsg)) pos ->
-    outs = rule_outs frule os (msg_value (getMsg fmsg)) ->
+    rule_precond frule os (msg_value (getMsg fmsg)) ->
+    rule_postcond frule os (msg_value (getMsg fmsg)) pos outs ->
     ValidOuts oidx outs ->
 
     tinfo = match tmsg_info fmsg with

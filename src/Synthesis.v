@@ -144,13 +144,14 @@ Section SynRqRsImm.
 
   Section Immediate.
 
-    Definition synImm (prec: PreCond) (rqFrom: IdxT) (postcond: PostCond)
+    Definition synImm (prec: RPrecond) (rqFrom: IdxT) (postc: PostcondSt)
                (valOut: Value -> StateT -> Value) :=
       {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
          rule_precond := prec;
-         rule_outs := fun st val =>
-                        msgValOut (valOut val (ost_st st)) (rqFrom, rsChn) :: nil;
-         rule_postcond := postcond
+         rule_postcond :=
+           rpostOf postc
+                   (fun pre val =>
+                      msgValOut (valOut val (ost_st pre)) (rqFrom, rsChn) :: nil)
       |}.
 
   End Immediate.
@@ -165,54 +166,25 @@ Section SynRqRsImm.
       post = {| ost_st := ost_st pre;
                 ost_tst := (ost_tst pre)
                            +[ trsIdx <-
-                              {| tst_rqfrom := rqFrom;
-                                 tst_rqval := val; (* store the request value *)
+                              {| tst_rqval := val; (* store the request value *)
                                  tst_rss := map (fun idx => (idx, None)) fwds |}]
              |}.
 
-    Definition synRq (prec: PreCond) :=
+    Definition synRq (prec: RPrecond) :=
       {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
-         rule_precond := fun pre => prec pre /\ liftTrsLocker pre;
-         (* forward the request value *)
-         rule_outs := fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val;
-         rule_postcond := synRqPostcond
+         rule_precond := fun pre val => prec pre val /\ liftTrsLocker pre;
+         rule_postcond :=
+           rpostOf synRqPostcond
+                   (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val)
       |}.
 
   End RequestFwd.
 
-  (* FIXME: preconditions in [synRsSingle] and [synRs] are currently just [T],
+  (** FIXME: preconditions in [synRsSingle] and [synRs] are currently just [T],
    * which is incorrect. For the serializability proof, we need correct ones.
    *)
-
-  Section SingleResponseBack.
-    Variable rsFrom: IdxT.
-
-    Definition synRsOutsSingle (rsOut: StateT -> Value -> Value): MsgOuts :=
-      (fun pre v =>
-         (ost_tst pre)@[trsIdx] >>=[nil]
-         (fun trsh =>
-            {| msg_id := buildMsgId trsIdx this (tst_rqfrom trsh) rsChn;
-               msg_value := rsOut (ost_st pre) v |} :: nil)).
-
-    Definition synRsPostcondSingle (postcond: PostCond) :=
-      (fun pre v post =>
-         postcond pre v post /\
-         (ost_tst pre)@[trsIdx] >>=[False]
-         (fun trsh =>
-            ost_tst post = M.remove trsIdx (ost_tst pre))).
-    
-    Definition synRsSingle (postcond: PostCond)
-               (rsOut: StateT -> Value -> Value) :=
-      {| rule_mid := buildMsgId trsIdx rsFrom this rsChn;
-         rule_precond := T;
-         rule_outs := synRsOutsSingle rsOut;
-         rule_postcond := synRsPostcondSingle postcond
-      |}.
-
-  End SingleResponseBack.
-
   Section ResponseBack.
-    Variable rsFrom: IdxT.
+    Variables (rsFrom rsBack: IdxT).
 
     Fixpoint markResponded (rss: list (IdxT * option Value)) (rsVal: Value) :=
       match rss with
@@ -224,8 +196,7 @@ Section SynRqRsImm.
       end.
 
     Definition markRespondedTrs (trsh: TrsHelperUnit) (rsVal: Value) :=
-      {| tst_rqfrom := tst_rqfrom trsh;
-         tst_rqval := tst_rqval trsh;
+      {| tst_rqval := tst_rqval trsh;
          tst_rss := markResponded (tst_rss trsh) rsVal |}.
 
     Definition Responded (pre: OState) (rsVal: Value) (post: OState) :=
@@ -280,7 +251,7 @@ Section SynRqRsImm.
         (fun trsh =>
            let rss := markResponded (tst_rss trsh) val in
            if allResponded rss
-           then {| msg_id := buildMsgId trsIdx this (tst_rqfrom trsh) rsChn;
+           then {| msg_id := buildMsgId trsIdx this rsBack rsChn;
                    msg_value := rsOut (ost_st st) (markRespondedTrs trsh val)
                 |} :: nil
            else nil).
@@ -291,9 +262,8 @@ Section SynRqRsImm.
     Definition synRs (postcond: OState -> OState -> Prop)
                (rsOut: StateT -> TrsHelperUnit -> Value) :=
       {| rule_mid := buildMsgId trsIdx rsFrom this rsChn;
-         rule_precond := T;
-         rule_outs := synRsOuts rsOut;
-         rule_postcond := synRsPostcond postcond |}.
+         rule_precond := ⊤;
+         rule_postcond := rpostOf (synRsPostcond postcond) (synRsOuts rsOut) |}.
 
   End ResponseBack.
 
@@ -305,8 +275,7 @@ Section SynRqRsImm.
                          obj_rules := nil |}) oobs.
 
     Definition buildRawSys (osys: System) :=
-      {| sys_objs := buildRawObjs (sys_objs osys);
-         sys_chns := sys_chns osys |}.
+      buildRawObjs osys.
 
     Definition addRulesO (rules: list Rule) (obj: Object) :=
       {| obj_idx := obj_idx obj;
@@ -325,8 +294,7 @@ Section SynRqRsImm.
       end.
 
     Definition addRulesSys (rules: list Rule) (sys: System) :=
-      {| sys_objs := addRules rules (sys_objs sys);
-         sys_chns := sys_chns sys |}.
+      addRules rules sys.
     
   End AddRules.
 
@@ -336,228 +304,6 @@ Section SynRqRsImm.
     filter (fun idx => if idx ?<n li2 then false else true) li1.
   
 End SynRqRsImm.
-
-Section VChange.
-  
-  Inductive VLoc :=
-  | VLocState: forall (oidx kidx: IdxT), VLoc
-  | VLocMsg: VLoc.
-
-  Inductive VIntact :=
-  | Vintact: forall (target: VLoc), VIntact.
-
-  Inductive VChgConst :=
-  | VccIntro: forall (target: VLoc) (const: Value), VChgConst.
-
-  Inductive VChgMove :=
-  | VcmIntro: forall (source: VLoc) (targets: list VLoc), VChgMove.
-
-  (* Currently [VChanges] is defined restrictively in that only one 
-   * value move is allowed per a transaction.
-   *)
-  Record VChanges :=
-    { vchg_consts: list VChgConst;
-      vchg_move: option VChgMove
-    }.
-
-  Definition getVLocValue (vloc: VLoc) (oss: ObjectStates) (mval: Value) :=
-    match vloc with
-    | VLocState oidx kidx =>
-      oss@[oidx] >>= (fun ost => (ost_st ost)@[kidx])
-    | VLocMsg => Some mval
-    end.
-
-  Definition SemVChgConst (vcc: VChgConst)
-             (pre post: ObjectStates) (rqV rsV: Value) :=
-    match vcc with
-    | VccIntro tgt c => getVLocValue tgt post rsV = Some c
-    end.
-
-  Definition SemVChgMove (vcm: VChgMove)
-             (pre post: ObjectStates) (rqV rsV: Value) :=
-    match vcm with
-    | VcmIntro src tgts =>
-      Forall (fun tgt =>
-                match getVLocValue src pre rqV,
-                      getVLocValue tgt post rsV with
-                | Some sv, Some tv => sv = tv
-                | _, _ => False
-                end) tgts
-    end.
-
-  Definition SemVChanges (vchs: VChanges)
-             (pre post: ObjectStates) (rqV rsV: Value) :=
-    match vchs with
-    | {| vchg_consts := vccs; vchg_move := ovcm |} =>
-      Forall (fun vcc => SemVChgConst vcc pre post rqV rsV) vccs /\
-      ovcm >>=[True] (fun vcm => SemVChgMove vcm pre post rqV rsV)
-    end.
-
-End VChange.
-
-Section SynByVChanges.
-  Variables trsIdx: IdxT.
-
-  Section PerTarget.
-    Variable targetIdx: IdxT.
-
-    (* Applies only the proper updates in terms of the given [targetIdx] *)
-    Fixpoint constUpdatesOf (consts: list VChgConst)
-             (pre: StateT) :=
-      match consts with
-      | nil => pre
-      | (VccIntro vloc val) :: chgs' =>
-        match vloc with
-        | VLocState oidx kidx =>
-          if oidx ==n targetIdx
-          then constUpdatesOf chgs' (pre +[kidx <- val])
-          else constUpdatesOf chgs' pre
-        | _ => constUpdatesOf chgs' pre
-        end
-      end.
-
-    Fixpoint getVLocTarget (tgts: list VLoc) :=
-      match tgts with
-      | nil => None
-      | tgt :: tgts' =>
-        match tgt with
-        | VLocState oidx kidx =>
-          if oidx ==n targetIdx
-          then Some kidx
-          else getVLocTarget tgts'
-        | _ => getVLocTarget tgts'
-        end
-      end.
-
-    (* Applies only the proper updates in terms of the given [targetIdx] *)
-    Definition movedUpdateOf (omv: option VChgMove)
-               (rqVal fwdVal: Value) (pre: StateT) :=
-      match omv with
-      | Some (VcmIntro src tgts) =>
-        match getVLocTarget tgts with
-        | Some kidx =>
-          match src with
-          | VLocState _ _ => pre +[kidx <- fwdVal]
-          | VLocMsg => pre +[kidx <- rqVal]
-          end
-        | None => pre
-        end
-      | None => pre
-      end.
-
-    Section Immediate.
-
-      (* If an object handles the request immediately, the only case that
-       * it has to send a certain value is when it is the source.
-       *)
-      Definition valOutVChanges (chgs: VChanges) (_: Value) (pre: StateT): Value :=
-        match vchg_move chgs with
-        | Some (VcmIntro (VLocState oidx kidx) _) =>
-          if oidx ==n targetIdx
-          then (pre@[kidx]) >>=[VUnit] (fun val => val)
-          else VUnit
-        | _ => VUnit
-        end.
-
-      Definition vChangesImmUpdatesOf
-                 (consts: list VChgConst) (mv: option VChgMove)
-                 (rqVal: Value) :=
-        fun pre post =>
-          (ost_tst pre)@[trsIdx] >>=[False]
-          (fun trsh =>
-             ost_st post = movedUpdateOf
-                             mv rqVal rqVal
-                             (constUpdatesOf consts (ost_st pre))).
-
-      Definition postcondImmVChanges (chgs: VChanges) (rqVal: Value) :=
-        vChangesImmUpdatesOf (vchg_consts chgs)
-                             (vchg_move chgs)
-                             rqVal.
-
-      Definition synImmVChanges (rqFrom: IdxT) (prec: PreCond) (chgs: VChanges) :=
-        synImm trsIdx targetIdx prec
-               rqFrom
-               (fun pre val post => postcondImmVChanges chgs val pre post)
-               (valOutVChanges chgs).
-      
-    End Immediate.
-
-    Section RequestFwd.
-
-      Definition synRqVChanges (rqFrom: IdxT) (fwds: list IdxT) (prec: PreCond) :=
-        synRq trsIdx targetIdx alwaysLock rqFrom fwds prec.
-
-    End RequestFwd.
-
-    Section ResponseBack.
-
-      Definition vChangesRsUpdatesOf (consts: list VChgConst)
-                 (mv: option VChgMove) :=
-        fun pre post =>
-          (ost_tst pre)@[trsIdx] >>=[False]
-          (fun trsh =>
-             ost_st post = movedUpdateOf
-                             mv (tst_rqval trsh) (getFwdValue (tst_rss trsh))
-                             (constUpdatesOf consts (ost_st pre))).
-
-      Definition postcondRsVChanges (chgs: VChanges) :=
-        vChangesRsUpdatesOf (vchg_consts chgs)
-                            (vchg_move chgs).
-
-      Definition rsOutsVChanges (vmoved: option VChgMove)
-                 (pre: StateT) (trsh: TrsHelperUnit) :=
-        match vmoved with
-        | Some (VcmIntro (VLocState oidx kidx) _) =>
-          if oidx ==n targetIdx
-          then (pre@[kidx]) >>=[VUnit] (fun val => val)
-          else VUnit
-        | _ =>
-          (* Forward the value even after it reaches the destination. *)
-          getFwdValue (tst_rss trsh)
-        end.
-
-      Definition synRsVChanges (rsFrom: IdxT) (chgs: VChanges) :=
-        synRs trsIdx targetIdx rsFrom 
-              (postcondRsVChanges chgs)
-              (rsOutsVChanges (vchg_move chgs)).
-
-    End ResponseBack.
-
-  End PerTarget.
-
-  Section GivenVChanges.
-    Variables (topo: list MsgAddr)
-              (chgs: VChanges)
-              (erqFrom: IdxT).
-
-    Inductive SynVChanges:
-      list (IdxT * IdxT) (* currently synthesizing object index pairs (from, to) *) ->
-      list IdxT (* synthesized object indices *) ->
-      list Rule (* synthesized [Rule]s *) ->
-      Prop :=
-    | SynVChangeInit: forall erqFrom hdl, SynVChanges ((erqFrom, hdl) :: nil) nil nil
-    | SynVChangeImm:
-        forall rqFrom oidx oinds sinds smsgs,
-          SynVChanges ((rqFrom, oidx) :: oinds) sinds smsgs ->
-          idxSubtract (getForwards topo oidx) sinds = nil ->
-          SynVChanges oinds (oidx :: sinds)
-                      (synImmVChanges oidx rqFrom T (** precondition? *) chgs :: smsgs)
-    | SynVChangeFwd:
-        forall rqFrom oidx oinds sinds smsgs,
-          SynVChanges ((rqFrom, oidx) :: oinds) sinds smsgs ->
-          forall fwds,
-            fwds = idxSubtract (nodup eq_nat_dec (getForwards topo oidx)) sinds ->
-            fwds <> nil ->
-            forall rqFwd rss,
-              rqFwd = synRqVChanges oidx rqFrom fwds T (** precondition? *) ->
-              rss = map (fun rsFrom => synRsVChanges oidx rsFrom chgs) fwds ->
-              SynVChanges (oinds ++ (map (fun to => (oidx, to)) fwds))
-                          (oidx :: sinds)
-                          (rqFwd :: rss ++ smsgs).
-    
-  End GivenVChanges.
-
-End SynByVChanges.
 
 Section Manipulation.
 
@@ -576,7 +322,6 @@ Section Manipulation.
     Definition makeRuleExternal (rule: Rule): Rule :=
       {| rule_mid := makeMsgIdExternal (rule_mid rule);
          rule_precond := rule_precond rule;
-         rule_outs := rule_outs rule;
          rule_postcond := rule_postcond rule
       |}.
 
@@ -607,19 +352,18 @@ Section Manipulation.
   End MakeExternal.
 
   Section MakePreCondDisj.
-    Variable (prec: PreCond).
+    Variable (prec: Precond).
 
     Definition makePreCondDisj (rule: Rule): Rule :=
       {| rule_mid := rule_mid rule;
-         rule_precond := fun ost => ~ (prec ost) /\ rule_precond rule ost;
-         rule_outs := rule_outs rule;
+         rule_precond := fun pre val => ~ (prec pre val) /\ rule_precond rule pre val;
          rule_postcond := rule_postcond rule
       |}.
 
     Lemma makePreCondDisj_rule_in:
-      forall rule ost,
-        rule_precond rule ost ->
-        prec ost ->
+      forall rule pre val,
+        rule_precond rule pre val ->
+        prec pre val ->
         forall rules1 rules2,
           In rule (rules1 ++ map makePreCondDisj rules2) ->
           In rule rules1.
@@ -633,9 +377,9 @@ Section Manipulation.
     Qed.
 
     Lemma addRulesO_makePreCondDisj:
-      forall rs1 rs2 obj rule ost,
-        rule_precond rule ost ->
-        prec ost ->
+      forall rs1 rs2 obj rule pre val,
+        rule_precond rule pre val ->
+        prec pre val ->
         In rule (obj_rules (addRulesO (rs1 ++ map makePreCondDisj rs2) obj)) ->
         In rule (obj_rules (addRulesO rs1 obj)).
     Proof.
@@ -644,89 +388,4 @@ Section Manipulation.
   End MakePreCondDisj.
 
 End Manipulation.
-
-(** Some tactics about [VLoc] and [VChange] *)
-
-Ltac no_vloc_st oss oidx kidx :=
-  lazymatch goal with
-  | [vloc := (oss, VLocState oidx kidx, _) |- _] => fail
-  | _ => idtac
-  end.
-
-(* NOTE: there's only one [VLocMsg] information per a transaction. *)
-Ltac no_vloc_msg :=
-  lazymatch goal with
-  | [vloc := (VLocMsg, _) |- _] => fail
-  | _ => idtac
-  end.
-
-Ltac no_intact itct :=
-  lazymatch goal with
-  | [_ := itct |- _] => fail
-  | _ => idtac
-  end.
-
-Ltac collect_intact oss1 oss2 :=
-  repeat
-    match goal with
-    | [vloc1 := (oss1, ?wh, ?v), vloc2 := (oss2, ?wh, ?v) |- _] =>
-      no_intact (Vintact wh);
-      let itct := fresh "itct" in
-      pose (Vintact wh) as itct
-    end.
-
-Ltac collect_vloc :=
-  repeat
-    match goal with
-    | [H1: M.find ?oidx ?oss = Some ?ost, H2: M.find ?kidx (ost_st ?ost) = Some ?v |- _] =>
-      no_vloc_st oss oidx kidx;
-      let vloc := fresh "vloc" in
-      set (oss, VLocState oidx kidx, v) as vloc
-    | [H: rule_postcond _ _ ?v _ |- _] =>
-      no_vloc_msg;
-      let vloc := fresh "vloc" in
-      set (VLocMsg, v) as vloc
-    end.
-
-Ltac clear_vloc :=
-  repeat
-    match goal with
-    | [vloc := _ : _ * VLoc * _ |- _] => clear vloc
-    end.
-
-Ltac no_diff df :=
-  lazymatch goal with
-  | [_ := df |- _] => fail
-  | _ => idtac
-  end.
-  
-Ltac no_diff_to vloc :=
-  lazymatch goal with
-  | [_ := VcmIntro _ (vloc :: nil) |- _] => fail
-  | _ => idtac
-  end.
-
-Ltac collect_diff oss1 oss2 :=
-  repeat
-    match goal with
-    | [vloc1 := (oss1, VLocState ?oidx ?kidx, ?v1),
-       vloc2 := (oss2, VLocState ?oidx ?kidx, ?v2) |- _] =>
-      is_pure_const v2;
-      tryif is_equal v1 v2
-      then fail 
-      else
-        (no_diff (VccIntro (VLocState oidx kidx) v2);
-         let df := fresh "df" in
-         pose (VccIntro (VLocState oidx kidx) v2) as df)
-    | [vloc1 := (oss1, ?wh1, ?v),
-       vloc2 := (oss2, VLocState ?oidx2 ?kidx2, ?v) |- _] =>
-      not_pure_const v;
-      no_intact (Vintact (VLocState oidx2 kidx2));
-      tryif is_equal wh1 (VLocState oidx2 kidx2)
-      then fail
-      else
-        (no_diff_to (VLocState oidx2 kidx2);
-         let df := fresh "df" in
-         pose (VcmIntro wh1 (VLocState oidx2 kidx2 :: nil)) as df)
-    end.
 

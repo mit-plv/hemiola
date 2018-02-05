@@ -88,8 +88,7 @@ Section Rule.
   Definition StateT := M.t Value.
 
   Record TrsHelperUnit :=
-    { tst_rqfrom: IdxT;
-      tst_rqval: Value;
+    { tst_rqval: Value;
       tst_rss: list (IdxT * option Value)
     }.
   Definition TrsHelper := M.t (* transaction index *) TrsHelperUnit.
@@ -100,20 +99,64 @@ Section Rule.
       ost_tst: TrsHelper
     }.
 
-  Definition Cond := OState -> Prop.
-  Definition PreCond := Cond.
-  Definition PostCond :=
-    OState (* prestate *) -> Value -> OState (* poststate *) -> Prop.
-  Definition MsgOuts := OState -> Value -> list Msg.
+  Definition RPrecond := OState -> Value (* input *) -> Prop.
+  Definition RPostcond :=
+    OState (* prestate *) -> Value (* input value *) ->
+    OState (* poststate *) -> list Msg (* output messages *) -> Prop.
 
   Record Rule :=
     { rule_mid: MsgId;
-      rule_precond: PreCond;
-      rule_outs: MsgOuts;
-      rule_postcond: PostCond
+      rule_precond: RPrecond;
+      rule_postcond: RPostcond;
     }.
 
 End Rule.
+
+Section Conditions.
+
+  Definition Precond := OState -> Value (* input *) -> Prop.
+  Definition Postcond := OState -> list Msg -> Prop.
+
+  Definition impRPost (rpostc: RPostcond) (postc: Postcond) :=
+    forall pre val post outs,
+      rpostc pre val post outs -> postc post outs.
+
+  Definition MsgOuts :=
+    OState (* prestate *) -> Value (* input value *) -> list Msg.
+  Definition PostcondSt :=
+    OState (* prestate *) -> Value (* input value *) -> OState (* poststate *) -> Prop.
+
+  Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond :=
+    fun pre val post outs =>
+      pst pre val post /\ outs = mouts pre val.
+
+  Definition impPre (pre1 pre2: Precond) :=
+    forall pre val, pre1 pre val -> pre2 pre val.
+
+  Definition impPost (post1 post2: Postcond) :=
+    forall post outs, post1 post outs -> post2 post outs.
+
+  Fact impPre_refl: forall pre, impPre pre pre.
+  Proof. unfold impPre; auto. Qed.
+
+  Fact impPre_trans:
+    forall pre1 pre2 pre3, impPre pre1 pre2 -> impPre pre2 pre3 -> impPre pre1 pre3.
+  Proof. unfold impPre; auto. Qed.
+
+  Fact impPost_refl: forall post, impPost post post.
+  Proof. unfold impPost; auto. Qed.
+
+  Fact impPost_trans:
+    forall post1 post2 post3, impPost post1 post2 -> impPost post2 post3 -> impPost post1 post3.
+  Proof. unfold impPost; auto. Qed.
+
+End Conditions.
+
+Infix "-->" := impPre (at level 30).
+Infix "==>" := impPost (at level 30).
+Infix "~~>" := impRPost (at level 30).
+
+Hint Resolve impPre_refl impPre_trans impPost_refl impPost_trans.
 
 Record Object :=
   { obj_idx: nat;
@@ -121,22 +164,19 @@ Record Object :=
     obj_rules: list Rule;
   }.
 
-Record System :=
-  { sys_objs: list Object;
-    sys_chns: list MsgAddr;
-  }.
+Definition System := list Object.
 
 Definition indicesOf (sys: System) :=
-  map (fun o => obj_idx o) (sys_objs sys).
+  map (fun o => obj_idx o) sys.
 Definition initsOf (sys: System) :=
-  map (fun o => obj_state_init o) (sys_objs sys).
+  map (fun o => obj_state_init o) sys.
 Definition iisOf (sys: System) :=
-  map (fun o => (obj_idx o, obj_state_init o)) (sys_objs sys).
+  map (fun o => (obj_idx o, obj_state_init o)) sys.
 Definition rulesOf (sys: System): list Rule :=
-  concat (map (fun o => obj_rules o) (sys_objs sys)).
+  concat (map (fun o => obj_rules o) sys).
 
 Definition objOf (sys: System) (oidx: IdxT): option Object :=
-  find (fun o => if obj_idx o ==n oidx then true else false) (sys_objs sys).
+  find (fun o => if obj_idx o ==n oidx then true else false) sys.
 Definition objRulesOf (sys: System) (oidx: IdxT) :=
   (objOf sys oidx) >>=[nil] (fun obj => obj_rules obj).
 
@@ -145,14 +185,13 @@ Fixpoint getForwards (topo: list MsgAddr) (oidx: IdxT) :=
 
 Lemma rulesOf_in:
   forall obj sys,
-    In obj (sys_objs sys) ->
+    In obj sys ->
     forall rule,
       In rule (obj_rules obj) ->
       In rule (rulesOf sys).
 Proof.
   unfold rulesOf; intros.
-  remember (sys_objs sys) as obs; clear Heqobs sys.
-  induction obs; simpl; intros; [inv H|].
+  induction sys; simpl; intros; [inv H|].
   apply in_or_app.
   inv H; auto.
 Qed.
@@ -162,16 +201,13 @@ Lemma iisOf_initsOf:
     iisOf sys1 = iisOf sys2 -> initsOf sys1 = initsOf sys2.
 Proof.
   unfold iisOf, initsOf; intros.
-  remember (sys_objs sys1) as obs1; clear Heqobs1.
-  remember (sys_objs sys2) as obs2; clear Heqobs2.
-  clear sys1 sys2.
-  generalize dependent obs2.
-  induction obs1 as [|obj1 obs1]; simpl; intros.
+  generalize dependent sys2.
+  induction sys1 as [|obj1 sys1]; simpl; intros.
   - apply eq_sym, map_eq_nil in H.
     subst; reflexivity.
-  - destruct obs2 as [|obj2 obs2]; [discriminate|].
+  - destruct sys2 as [|obj2 sys2]; [discriminate|].
     simpl in H; inv H.
-    simpl; erewrite IHobs1 by eassumption.
+    simpl; erewrite IHsys1 by eassumption.
     rewrite H2; reflexivity.
 Qed.
 
@@ -180,31 +216,25 @@ Lemma iisOf_indicesOf:
     iisOf sys1 = iisOf sys2 -> indicesOf sys1 = indicesOf sys2.
 Proof.
   unfold iisOf, indicesOf; intros.
-  remember (sys_objs sys1) as obs1; clear Heqobs1.
-  remember (sys_objs sys2) as obs2; clear Heqobs2.
-  clear sys1 sys2.
-  generalize dependent obs2.
-  induction obs1 as [|obj1 obs1]; simpl; intros.
+  generalize dependent sys2.
+  induction sys1 as [|obj1 sys1]; simpl; intros.
   - apply eq_sym, map_eq_nil in H.
     subst; reflexivity.
-  - destruct obs2 as [|obj2 obs2]; [discriminate|].
+  - destruct sys2 as [|obj2 sys2]; [discriminate|].
     simpl in H; inv H.
-    simpl; erewrite IHobs1 by eassumption.
+    simpl; erewrite IHsys1 by eassumption.
     rewrite H1; reflexivity.
 Qed.
   
-Definition singleton (obj: Object): System :=
-  {| sys_objs := obj :: nil;
-     sys_chns := nil
-  |}.
+Definition singleton (obj: Object): System := obj :: nil.
 
 Definition isExternal (sys: System) (idx: IdxT) :=
   if idx ?<n (indicesOf sys) then false else true.
 Definition isInternal (sys: System) (idx: IdxT) :=
   if idx ?<n (indicesOf sys) then true else false.
 
-Notation "'T'" := (fun _ => True).
-Notation "'TT'" := (fun _ _ _ => True).
-Notation "'TT='" := (fun pre v post => pre = post).
+Notation "'⊤'" := (fun _ _ => True).
+Notation "'⊤⊤'" := (fun _ _ _ => True).
+Notation "'⊤⊤='" := (fun pre v post => pre = post).
 Notation "[ obj ]" := (singleton obj).
 

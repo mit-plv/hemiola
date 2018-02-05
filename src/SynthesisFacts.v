@@ -65,10 +65,9 @@ Qed.
 Lemma buildRawSys_indicesOf:
   forall sys, indicesOf sys = indicesOf (buildRawSys sys).
 Proof.
-  intros; destruct sys as [obs chns].
-  unfold indicesOf, buildRawSys; simpl.
-  clear chns; induction obs; [reflexivity|].
-  simpl; rewrite IHobs; reflexivity.
+  intros; unfold indicesOf, buildRawSys; simpl.
+  induction sys; [reflexivity|].
+  simpl; rewrite IHsys; reflexivity.
 Qed.
 
 Corollary buildRawSys_isExternal:
@@ -146,20 +145,20 @@ Lemma addRulesSys_app:
     addRulesSys (rules1 ++ rules2) sys =
     addRulesSys rules1 (addRulesSys rules2 sys).
 Proof.
-  unfold addRulesSys; intros; simpl; f_equal.
+  unfold addRulesSys; intros; simpl.
   rewrite addRules_app; reflexivity.
 Qed.
 
 Lemma addRulesSys_rule_in:
   forall sys rules rule iobj,
     In rule (obj_rules iobj) ->
-    In iobj (sys_objs (addRulesSys rules sys)) ->
+    In iobj (addRulesSys rules sys) ->
     exists obj : Object,
       obj_idx obj = obj_idx iobj /\
       In rule (obj_rules obj) /\
-      In obj (sys_objs sys ++ sys_objs (addRulesSys rules (buildRawSys sys))).
+      In obj (sys ++ (addRulesSys rules (buildRawSys sys))).
 Proof.
-  intros; destruct sys as [obs chns]; simpl in *.
+  intros; simpl in *.
   apply addRules_rule_in; auto.
 Qed.
 
@@ -169,8 +168,7 @@ Lemma addRulesSys_buildRawSys_sublist:
             rules.
 Proof.
   unfold rulesOf; intros; simpl.
-  induction (sys_objs sys); clear sys;
-    [simpl; apply SubList_nil|].
+  induction sys; [simpl; apply SubList_nil|].
 
   simpl.
   apply SubList_app_3; [|assumption].

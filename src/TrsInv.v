@@ -59,8 +59,8 @@ Section Impl.
         ginv ist2.
 
   Definition TrsInvAtomic (ginv: Inv) :=
-    forall ti hst mouts orsout,
-      Atomic impl ti hst mouts orsout ->
+    forall ti hst mouts,
+      Atomic impl ti hst mouts ->
       forall ist1,
         ginv ist1 ->
         forall ist2,
@@ -68,8 +68,8 @@ Section Impl.
           ginv ist2.
 
   Definition TrsAInv (ginv: Inv) (ainv: AInv) :=
-    forall ti hst mouts orsout,
-      Atomic impl ti hst mouts orsout ->
+    forall ti hst mouts,
+      Atomic impl ti hst mouts ->
       forall ist1 ist2,
         steps_det impl ist1 hst ist2 ->
         ginv ist1 ->

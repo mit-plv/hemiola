@@ -17,18 +17,16 @@ Section Impl.
   Definition extIdx2 := 4.
   (* Variables extIdx1 extIdx2: nat. *)
 
-  Hypotheses (Hiext1: isExternal (impl0 extIdx1 extIdx2) extIdx1 = true)
-             (Hiext2: isExternal (impl0 extIdx1 extIdx2) extIdx2 = true)
+  Hypotheses (Hiext1: isExternal impl0 extIdx1 = true)
+             (Hiext2: isExternal impl0 extIdx2 = true)
              (Hsext1: isExternal (spec extIdx1 extIdx2) extIdx1 = true)
              (Hsext2: isExternal (spec extIdx1 extIdx2) extIdx2 = true).
 
   Local Definition spec := spec extIdx1 extIdx2.
   Local Definition specObj := specObj extIdx1 extIdx2.
-  Local Definition impl0 := impl0 extIdx1 extIdx2.
-  Local Definition svmP := svmP extIdx1 extIdx2.
 
   Lemma svmMsgF_ValidMsgMap:
-    ValidMsgMap (svmMsgF extIdx1 extIdx2) impl0 spec.
+    ValidMsgMap svmMsgF impl0 spec.
   Proof.
     unfold ValidMsgMap; intros.
     unfold svmMsgF; simpl.
@@ -65,7 +63,7 @@ Section Impl.
     | [H: SvmInv1 _ |- _] => destruct H as [[? ?] ?]
     end.
 
-  Theorem impl0_ok: SynthOk spec (SvmSim extIdx1 extIdx2) SvmInv1 svmP impl0.
+  Theorem impl0_ok: SynthOk spec SvmSim SvmInv1 svmP impl0.
   Proof.
     split; [|split; [|split]].
     - (* simulation for the initial states *) admit.
@@ -153,7 +151,7 @@ Section Impl.
     Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1.
     
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec (SvmSim extIdx1 extIdx2) SvmInv1 svmP impl1 }.
+      { impl1: System & SynthOk spec SvmSim SvmInv1 svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
@@ -161,7 +159,7 @@ Section Impl.
         trs_sim_init impl0_ok.
 
         + (** [TrsSimulates] for newly added [Rule]s *)
-          trs_simulates_trivial (svmMsgF extIdx1 extIdx2) (SvmSim extIdx1 extIdx2).
+          trs_simulates_trivial svmMsgF SvmSim.
 
           (** [TrsSimulates] for [Atomic] steps *)
           unfold TrsSimAtomic; intros.

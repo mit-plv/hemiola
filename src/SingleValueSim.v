@@ -32,12 +32,11 @@ End Inv.
 
 Section Sim.
   Variables extIdx1 extIdx2: nat.
-  Hypotheses (Hiext1: isExternal (impl0 extIdx1 extIdx2) extIdx1 = true)
-             (Hiext2: isExternal (impl0 extIdx1 extIdx2) extIdx2 = true)
+  Hypotheses (Hiext1: isExternal impl0 extIdx1 = true)
+             (Hiext2: isExternal impl0 extIdx2 = true)
              (Hsext1: isExternal (spec extIdx1 extIdx2) extIdx1 = true)
              (Hsext2: isExternal (spec extIdx1 extIdx2) extIdx2 = true).
 
-  Local Notation impl0 := (impl0 extIdx1 extIdx2).
   Local Notation spec := (spec extIdx1 extIdx2).
 
   (** Label mapping *)

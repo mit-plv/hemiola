@@ -43,7 +43,11 @@ Section MessagePool.
     end.
 
   Definition enqMP (m: MsgT) (mp: MessagePool): MessagePool := mp ++ (m :: nil).
-  
+
+  Definition FirstMP (mp: MessagePool) (m: MsgT) :=
+    let mid := msg_id (getMsg m) in
+    firstMP (mid_from mid) (mid_to mid) (mid_chn mid) mp = Some m.
+             
   Definition EmptyMP (mp: MessagePool) := mp = nil.
   Definition InMP (msg: MsgT) (mp: MessagePool) := In msg mp.
 
@@ -188,7 +192,7 @@ Section SState.
     }.
 
   Definition getSStateInit {MsgT} (sys: System): SState MsgT :=
-    {| st_oss := getObjectStatesInit (sys_objs sys);
+    {| st_oss := getObjectStatesInit sys;
        st_msgs := nil |}.
 
   Global Instance SState_HasInit {MsgT} : HasInit (SState MsgT) :=
@@ -291,7 +295,7 @@ Section TState.
     }.
 
   Definition getTStateInit (sys: System): TState :=
-    {| tst_oss := getObjectStatesInit (sys_objs sys);
+    {| tst_oss := getObjectStatesInit sys;
        tst_msgs := nil;
        tst_tid := trsIdInit |}.
 
