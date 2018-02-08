@@ -180,7 +180,7 @@ Section SynRqRsImm.
 
   End RequestFwd.
 
-  (** FIXME: preconditions in [synRsSingle] and [synRs] are currently just [T],
+  (** FIXME: preconditions in [synRsSingle] and [synRs] are currently just [⊤],
    * which is incorrect. For the serializability proof, we need correct ones.
    *)
   Section ResponseBack.
@@ -215,7 +215,10 @@ Section SynRqRsImm.
      * values in [TrsHelperUnit], thus we don't need [Value] to define
      * [postcond].
      *)
-    Definition WhenAllResponded (postcond: OState -> OState -> Prop)
+    Definition RsPostcond := OState -> OState -> Prop.
+    Definition RsOut := StateT -> TrsHelperUnit -> Value.
+    
+    Definition WhenAllResponded (postcond: RsPostcond)
                (pre: OState) (post: OState) :=
       (ost_tst pre)@[trsIdx] >>=[False]
       (fun trsh =>
@@ -239,13 +242,13 @@ Section SynRqRsImm.
       (ost_tst post)@[trsIdx] >>=[VUnit]
       (fun trsh => getFwdValue (tst_rss trsh)).
          
-    Definition synRsPostcond (postcond: OState -> OState -> Prop)
+    Definition synRsPostcond (postcond: RsPostcond)
                (pre: OState) (val: Value) (post: OState) :=
       exists allResp,
         Responded pre val allResp /\
         WhenAllResponded postcond allResp post.
 
-    Definition synRsOuts (rsOut: StateT -> TrsHelperUnit -> Value) :=
+    Definition synRsOuts (rsOut: RsOut) :=
       fun st val =>
         (ost_tst st)@[trsIdx] >>=[nil]
         (fun trsh =>
@@ -256,16 +259,21 @@ Section SynRqRsImm.
                 |} :: nil
            else nil).
 
-    (* NOTE: [postcond] is a desired postcondition when assuming 
-     * the transaction is atomic.
-     *)
-    Definition synRs (postcond: OState -> OState -> Prop)
-               (rsOut: StateT -> TrsHelperUnit -> Value) :=
+    Definition synRs (postcond: RsPostcond) (rsOut: RsOut) :=
       {| rule_mid := buildMsgId trsIdx rsFrom this rsChn;
          rule_precond := ⊤;
          rule_postcond := rpostOf (synRsPostcond postcond) (synRsOuts rsOut) |}.
 
   End ResponseBack.
+
+  Fixpoint synRss (rss: list IdxT) (rsBack: IdxT)
+           (postcond: RsPostcond) (rsOut: StateT -> TrsHelperUnit -> Value): list Rule :=
+    map (fun rsFrom => synRs rsFrom rsBack postcond rsOut) rss.
+
+  Definition synRqRss (rqFrom: IdxT) (fwds: list IdxT)
+             (rqPre: RPrecond) (rsPost: RsPostcond) (rsOut: RsOut) :=
+    (synRq rqFrom fwds rqPre)
+      :: (synRss fwds rqFrom rsPost rsOut).
 
   Section AddRules.
 

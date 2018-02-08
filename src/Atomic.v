@@ -2,204 +2,241 @@ Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepDet Serial.
 Require Import Synthesis TrsInv TrsSim.
 
+Set Implicit Arguments.
+
 (* Want:
  * 1) [AtomicRules] -> [Atomic] -> [steps_det] -> [CompAtomic].
  * 2) [CompAtomic] is compositional.
  *)
 
-Section HoareTriple.
+Definition DisjSys (sys1 sys2: System) :=
+  DisjList (map obj_idx sys1) (map obj_idx sys2).
 
-  Inductive HoareTriple (obj: Object): Precond -> Rule -> Postcond -> Prop :=
-  | HTRule:
-      forall rule postc,
-        In rule (obj_rules obj) ->
-        (rule_postcond rule) ~~> postc ->
-        HoareTriple obj (rule_precond rule) rule postc
-  | HTWeaken:
-      forall prec rule postc,
-        HoareTriple obj prec rule postc ->
-        forall wprec wpostc,
-          wprec --> prec ->
-          postc ==> wpostc ->
-          HoareTriple obj wprec rule wpostc.
-
-  Corollary HTPreWeaken:
-    forall obj prec rule postc,
-      HoareTriple obj prec rule postc ->
-      forall wprec,
-        wprec --> prec ->
-        HoareTriple obj wprec rule postc.
-  Proof.
-    intros.
-    eapply HTWeaken; eauto.
-  Qed.
-
-  Corollary HTPostWeaken:
-    forall obj prec rule postc,
-      HoareTriple obj prec rule postc ->
-      forall wpostc,
-        postc ==> wpostc ->
-        HoareTriple obj prec rule wpostc.
-  Proof.
-    intros.
-    eapply HTWeaken; eauto.
-  Qed.
-
-  Definition GPrecond := TState -> Value -> Prop.
-  Definition GPostcond := TState -> list Msg -> Prop.
-
-  Definition liftPre (oidx: IdxT) (pre: Precond): GPrecond :=
-    fun prest val =>
-      (tst_oss prest)@[oidx] >>=[True] (* [True] or [False]? *)
-      (fun preost => pre preost val).
-
-  Definition liftPost (oidx: IdxT) (post: Postcond): GPostcond :=
-    fun postst outs =>
-      (tst_oss postst)@[oidx] >>=[True]
-      (fun postost => post postost outs).
-
-  
-  
-End HoareTriple.
+Definition DisjSyss (syss: list System) :=
+  forall sys1 sys2,
+    In sys1 syss -> In sys2 syss -> sys1 <> sys2 ->
+    DisjSys sys1 sys2.
 
 Section AtomicRules.
   
   Variable (tid: IdxT).
 
-  (* Inductive AtomicRules: MsgId -> System -> Prop := *)
-  (* | ARImm: *)
-  (*     forall oidx oinit immr, *)
-  (*       ImmRule oidx immr -> *)
-  (*       AtomicRules (rule_mid immr) *)
-  (*                   [{| obj_idx := oidx; *)
-  (*                       obj_state_init := oinit; *)
-  (*                       obj_rules := immr :: nil |}] *)
-  (* | ARRqRs: *)
-  (*     forall oidx oinit fwds rqr rsb syss, *)
-  (*       RqRsRules tid oidx fwds rqr rsb -> *)
-  (*       Forall (fun systo => AtomicRules (buildMsgId tid oidx (snd systo) rqChn) *)
-  (*                                        (fst systo)) *)
-  (*              (combine syss fwds) -> *)
-  (*       AtomicRules (rule_mid rqr) *)
-  (*                   ({| obj_idx := oidx; *)
-  (*                       obj_state_init := oinit; *)
-  (*                       obj_rules := rqr :: rsb |} *)
-  (*                      :: concat syss). *)
+  Inductive AtomicRules: MsgId -> System -> Prop :=
+  | ARImm:
+      forall oidx oinit prec rqFrom postc valOut immr,
+        immr = synImm tid oidx prec rqFrom postc valOut ->
+        AtomicRules (rule_mid immr)
+                    [{| obj_idx := oidx;
+                        obj_state_init := oinit;
+                        obj_rules := immr :: nil |}]
+                    
+  | ARRqRs:
+      forall oidx oinit locker rqFrom fwds rqPre rsPost rsOut rqf rss syss,
+        rqf = synRq tid oidx locker rqFrom fwds rqPre ->
+        rss = synRss tid oidx fwds rqFrom rsPost rsOut ->
+        DisjSyss syss ->
+        Forall (fun systo => AtomicRules (buildMsgId tid oidx (snd systo) rqChn)
+                                         (fst systo))
+               (combine syss fwds) ->
+        AtomicRules (rule_mid rqf)
+                    ({| obj_idx := oidx;
+                        obj_state_init := oinit;
+                        obj_rules := rqf :: rss |}
+                       :: concat syss).
 
 End AtomicRules.
 
-Section CompAtomic.
+Section GTree.
+
+  Inductive GTree :=
+  | GTreeEmpty
+  | GTreeNode: IdxT (* index *) ->
+               bool (* growing? *) ->
+               list GTree (* children *) ->
+               GTree.
   
-  (* Here are necessary requirements of [CompAtomic], moved from [Serial]:
-   * 1) No external output messages are generated until the transaction ends.
-   * 2) When the transaction ends, it outputs a single external message, which
-   *    is the response of the original request.
+  Fixpoint elementsOf (tr: GTree): list IdxT :=
+    match tr with
+    | GTreeEmpty => nil
+    | GTreeNode idx _ chd => idx :: (concat (map elementsOf chd))
+    end.
+
+  Definition WfGTree (tr: GTree) := NoDup (elementsOf tr).
+
+  Definition bud (idx: IdxT) :=
+    GTreeNode idx true nil.
+  Definition buds (inds: list IdxT) :=
+    map bud inds.
+
+  Definition deadleaf (idx: IdxT) :=
+    GTreeNode idx false nil.
+  Definition deadleaves (inds: list IdxT) :=
+    map deadleaf inds.
+
+  Fixpoint isLeaf (idx: IdxT) (tr: GTree): bool :=
+    match tr with
+    | GTreeEmpty => false
+    | GTreeNode a gr nil =>
+      if a ==n idx then true else false
+    | GTreeNode a gr chd =>
+      if a ==n idx then false
+      else
+        (fix isLeafL (trs: list GTree) :=
+           match trs with
+           | nil => false
+           | tr :: trs' => (isLeaf idx tr) || (isLeafL trs')
+           end) chd
+    end.
+
+  Fixpoint sprout (to: IdxT) (inds: list IdxT) (tr: GTree): option GTree :=
+    match tr with
+    | GTreeEmpty => None
+    | GTreeNode a gr chd =>
+      if a ==n to then
+        if gr then
+          match chd with
+          | nil => Some (GTreeNode a gr (buds inds))
+          | _ => None
+          end
+        else None
+      else
+        (fix sproutL (trs: list GTree) :=
+           match trs with
+           | nil => None
+           | tr :: trs' =>
+             match sprout to inds tr with
+             | Some ntr => Some ntr
+             | None => sproutL trs'
+             end
+           end) chd
+    end.
+
+  Fixpoint prune (trs: list GTree) :=
+    match trs with
+    | nil => nil
+    | GTreeEmpty :: trs' => prune trs'
+    | tr :: trs' => tr :: prune trs'
+    end.
+
+  Fixpoint pruneIdx (idx: IdxT) (tr: GTree): option GTree :=
+    match tr with
+    | GTreeEmpty => None
+    | GTreeNode a gr nil =>
+      if a ==n idx
+      then if gr then None else Some GTreeEmpty
+      else None
+    | GTreeNode a gr chd =>
+      let ortrs := (fix pruneIdxL (trs: list GTree): option (list GTree) :=
+                      match trs with
+                      | nil => None
+                      | tr :: trs' =>
+                        match pruneIdx idx tr with
+                        | Some rtr => Some (rtr :: trs')
+                        | None =>
+                          match pruneIdxL trs' with
+                          | Some rtrs' => Some (tr :: rtrs')
+                          | None => None
+                          end
+                        end
+                      end) chd in
+      match ortrs with
+      | Some rtrs =>
+        Some (match prune rtrs with
+              | nil => GTreeNode a false nil
+              | _ => GTreeNode a gr rtrs
+              end)
+      | None => None
+      end
+    end.
+
+  Fixpoint hinder (idx: IdxT) (tr: GTree): GTree :=
+    match tr with
+    | GTreeEmpty => GTreeEmpty
+    | GTreeNode a gr chd =>
+      GTreeNode a (if a ==n idx then false else gr)
+                 (map (hinder idx) chd)
+    end.
+
+  Example sprout_hinder_prune:
+    match sprout 1 (2 :: nil) (bud 1) with
+    | Some atr => pruneIdx 2 (hinder 2 atr)
+    | None => None
+    end = Some (GTreeNode 1 false nil) := eq_refl.
+  
+End GTree.
+
+Definition DualMsg {MsgT} `{HasMsg MsgT} (rq rs: MsgT) :=
+  mid_tid (msg_id (getMsg rq)) = mid_tid (msg_id (getMsg rs)) /\
+  mid_from (msg_id (getMsg rq)) = mid_to (msg_id (getMsg rs)) /\
+  mid_to (msg_id (getMsg rq)) = mid_from (msg_id (getMsg rs)).
+
+Inductive Combined {A}: list A -> list (list A) -> Prop :=
+| CombinedNil: Combined nil nil
+| CombinedCons:
+    forall a cmb l ll1 ll2,
+      Combined cmb (ll1 ++ l :: ll2) ->
+      Combined (a :: cmb) (ll1 ++ (a :: l) :: ll2).
+
+Section CompAtomic.
+
+  (* Thanks to [GTree], we get following properties:
+   * 1) (TODO!) No external output messages are generated until the transaction
+   *    ends.
+   * 2) (TODO!) When the transaction ends, it outputs a single external message,
+   *    which is the response of the original request.
    * 3) When the transaction ends, no internal messages about the transaction 
-   *    are left. We ensure it by just tracking the internal messages about
+   *    are left. We ensure this by checking if the [GTree] is empty in 
+   *    [CAtomicDone].
    *)
 
-  (* Inductive CompAtomic: *)
-  (*   System -> *)
-  (*   Inv (* precondition *) -> *)
-  (*   TInfo -> *)
-  (*   History -> *)
-  (*   MessagePool TMsg -> *)
-  (*   Inv (* postcondition *) -> *)
-  (*   option TMsg -> Prop := *)
-  (* | CAtomicImm: *)
-  (*     forall sys tid rqin rsout prec postc, *)
-  (*       Atomic sys (buildTInfo tid rqin) *)
-  (*              (IlblOuts (Some (toTMsgU rqin)) (rsout :: nil) :: nil) *)
-  (*              (rsout :: nil) -> *)
-  (*       isExternal sys (mid_from (msg_id (tmsg_msg rsout))) = true -> *)
-  (*       CompAtomic sys prec (buildTInfo tid rqin) *)
-  (*                  (IlblOuts (Some (toTMsgU rqin)) (rsout :: nil) :: nil) *)
-  (*                  nil postc (Some rsout) *)
+  (** Wants (informally):
+   * 1) [AtomicRules sys] -> [Atomic hst] -> [steps_det hst] ->
+   *    [CompAtomic sys (rqin.to :: nil) hst].
+   * 2) [CompAtomic] is compositional.
+   *)
+
+  Inductive CompAtomic:
+    GTree ->
+    History (* head is the _oldest_; 
+             * reverse of a history defined in [steps]. *) ->
+    GTree ->
+    Prop :=
+  | CAtomicNil:
+      forall tid, CompAtomic (bud tid) nil (bud tid)
+  | CAtomicImm:
+      forall tid rqin rsout,
+        tid = mid_to (msg_id (tmsg_msg rqin)) ->
+        DualMsg rqin rsout ->
+        CompAtomic (bud tid)
+                   (IlblOuts (Some rqin) (rsout :: nil) :: nil)
+                   (deadleaf tid)
+  | CAtomicRqF:
+      forall tid fwds rqin rqfwds hst ltr,
+        tid = mid_to (msg_id (tmsg_msg rqin)) ->
+        fwds = map (fun tmsg => mid_to (msg_id (tmsg_msg tmsg))) rqfwds ->
+        CompAtomic (GTreeNode tid true (buds fwds)) hst ltr ->
+        CompAtomic (bud tid) (IlblOuts (Some rqin) rqfwds :: hst) ltr
+  | CAtomicRqCont:
+      forall tid fwds shsts rqhst rqtrs hst ltr,
+        Forall (fun tht => CompAtomic (bud (fst (fst tht)))
+                                      (snd (fst tht))
+                                      (snd tht))
+               (combine (combine fwds shsts) rqtrs) ->
+        CompAtomic (GTreeNode tid true rqtrs) hst ltr ->
+        Combined rqhst shsts ->
+        CompAtomic (GTreeNode tid true (buds fwds)) (rqhst ++ hst) ltr.
+  (* | CAtomicRsB: *)
+  (*     forall tid, *)
+  (*       CompAtomic (GTreeNode tid true (deadleaves rss)) *)
+  (*                  (IlblOuts (rss) (rsout :: nil) :: nil) *)
+  (*                  (deadleaf tid). *)
+
+  (** TODO: add the concept of external invariants, pre/postconditions 
+   * to [CompAtomic]. *)
 
 End CompAtomic.
 
 Section Compositionality.
-
-  Variables
-    (rqin: MsgId)
-    (rqfwds: list MsgId)
-    (rsbacks: list MsgId)
-    (rsout: MsgId)
-
-    (rqfwdR: Rule)
-    (rssbRs: list Rule)
-    (subRs: list Rule)
-    
-    (sim: TState -> TState -> Prop)
-    (p: Label -> Label)
-
-    (spec: System).
-
-  (* FIXME: remove [sys] and [ssys], and replace all uses with appropriate systems. *)
-  Variables (sys ssys: System).
-
-  Local Infix "≈" := sim (at level 30).
-
-  Local Definition rqfwdTMsgs (v: Value) (ti: TInfo) :=
-    map (fun mid => toTMsg ti {| msg_id := mid; msg_value := v |}) rqfwds.
-
-  Definition SimRqF :=
-    forall ist1 sst1,
-      ist1 ≈ sst1 ->
-      forall ist2 v ti,
-        step_det sys ist1 (IlblOuts (Some (toTMsgU (buildMsg rqin v)))
-                                    (rqfwdTMsgs v ti)) ist2 ->
-        ist2 ≈ sst1.
-
-  Definition SimRs :=
-    forall ist1 sst1,
-      ist1 ≈ sst1 ->
-      forall ti rsb rsv ist2,
-        In rsb rsbacks ->
-        step_det sys ist1 (IlblOuts (Some (toTMsg ti (buildMsg rsb rsv))) nil) ist2 ->
-        ist2 ≈ ist1.
-
-  Definition SimRsB :=
-    forall ist1 sst1,
-      ist1 ≈ sst1 ->
-      forall ti rsb rsv ist2,
-        In rsb rsbacks ->
-        step_det sys ist1 (IlblOuts (Some (toTMsg ti (buildMsg rsb rsv)))
-                                    (toTMsg ti (buildMsg rsb rsv) :: nil)) ist2 ->
-        exists slbl sst2,
-          step_det spec sst1 slbl sst2 /\
-          extLabel spec (getLabel slbl) =
-          Some (p (LblOuts (buildMsg rsb rsv :: nil))) /\
-          ist2 ≈ sst2.
-
-  Definition SubAtomicSim :=
-    forall ti hst mouts,
-      Atomic ssys ti hst mouts ->
-      forall ist1 sst1,
-        ist1 ≈ sst1 ->
-        forall ist2,
-          steps_det ssys ist1 hst ist2 ->
-          exists (sst2 : TState) (shst : list TLabel),
-            steps_det spec sst1 shst sst2 /\
-            map p (behaviorOf ssys hst) = behaviorOf spec shst /\
-            ist2 ≈ sst2.
-
-  Hypotheses (Hrqf: SimRqF) (Hrs: SimRs) (Hrsb: SimRsB)
-             (Hsub: SubAtomicSim).
-
-  Theorem atomic_sim_compositional:
-    forall ti hst mouts,
-      Atomic sys ti hst mouts ->
-      forall ist1 sst1,
-        ist1 ≈ sst1 ->
-        forall ist2,
-          steps_det ssys ist1 hst ist2 ->
-          exists (sst2 : TState) (shst : list TLabel),
-            steps_det spec sst1 shst sst2 /\
-            map p (behaviorOf ssys hst) = behaviorOf spec shst /\
-            ist2 ≈ sst2.
-  Proof.
-  Admitted.
 
 End Compositionality.
 
