@@ -44,6 +44,10 @@ Section MessagePool.
 
   Definition enqMP (m: MsgT) (mp: MessagePool): MessagePool := mp ++ (m :: nil).
 
+  Definition removeMP (m: MsgT) (mp: MessagePool): MessagePool :=
+    let mid := msg_id (getMsg m) in
+    deqMP (mid_from mid) (mid_to mid) (mid_chn mid) mp.
+
   Definition FirstMP (mp: MessagePool) (m: MsgT) :=
     let mid := msg_id (getMsg m) in
     firstMP (mid_from mid) (mid_to mid) (mid_chn mid) mp = Some m.
@@ -56,6 +60,13 @@ Section MessagePool.
 
   Definition distributeMsgs (nmsgs: list MsgT) (mp: MessagePool): MessagePool :=
     mp ++ nmsgs.
+
+  Fixpoint removeMsgs (dmsgs: list MsgT) (mp: MessagePool): MessagePool :=
+    match dmsgs with
+    | nil => mp
+    | dmsg :: dmsgs' =>
+      removeMsgs dmsgs' (removeMP dmsg mp)
+    end.
   
 End MessagePool.
 
@@ -209,12 +220,12 @@ Section ILabel.
 
   Inductive ILabel MsgT :=
   | IlblIn (min: MsgT): ILabel MsgT
-  | IlblOuts (mhdl: option MsgT) (mouts: list MsgT): ILabel MsgT.
+  | IlblOuts (mins: list MsgT) (mouts: list MsgT): ILabel MsgT.
 
-  Definition iLblHdl {MsgT} (l: ILabel MsgT) :=
+  Definition iLblIns {MsgT} (l: ILabel MsgT) :=
     match l with
-    | IlblIn _ => None
-    | IlblOuts mhdl _ => mhdl
+    | IlblIn _ => nil
+    | IlblOuts mins _ => mins
     end.
 
   Definition iLblOuts {MsgT} (l: ILabel MsgT) :=
@@ -233,7 +244,7 @@ Section ILabel.
   Global Instance ILabel_HasLabel {MsgT} `{HasMsg MsgT}: HasLabel (ILabel MsgT) :=
     { getLabel := iToLabel }.
 
-  Definition emptyILabel {MsgT} := IlblOuts (MsgT:= MsgT) None nil.
+  Definition emptyILabel {MsgT} := IlblOuts (MsgT:= MsgT) nil nil.
 
 End ILabel.
 
@@ -243,8 +254,9 @@ Section TMsg.
   Definition trsIdInit: TrsId := 0.
 
   Record TInfo :=
-    { tinfo_tid : TrsId; (* a unique transaction id, assigned when the transaction starts. *)
-      tinfo_rqin : Msg
+    { (* a unique transaction id, assigned when the transaction starts. *)
+      tinfo_tid : TrsId; 
+      tinfo_rqin : list Msg
     }.
 
   Definition buildTInfo tid rqin :=
@@ -253,7 +265,8 @@ Section TMsg.
   Definition tinfo_dec : forall ti1 ti2: TInfo, {ti1 = ti2} + {ti1 <> ti2}.
   Proof.
     decide equality.
-    - apply msg_dec.
+    - decide equality.
+      apply msg_dec.
     - decide equality.
   Defined.
 

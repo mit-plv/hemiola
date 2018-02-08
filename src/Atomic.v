@@ -25,23 +25,23 @@ Section AtomicRules.
   | ARImm:
       forall oidx oinit prec rqFrom postc valOut immr,
         immr = synImm tid oidx prec rqFrom postc valOut ->
-        AtomicRules (rule_mid immr)
+        AtomicRules (buildMsgId tid rqFrom oidx rqChn)
                     [{| obj_idx := oidx;
                         obj_state_init := oinit;
                         obj_rules := immr :: nil |}]
                     
   | ARRqRs:
-      forall oidx oinit locker rqFrom fwds rqPre rsPost rsOut rqf rss syss,
+      forall oidx oinit locker rqFrom fwds rqPre rsPost rsOut rqf rsb syss,
         rqf = synRq tid oidx locker rqFrom fwds rqPre ->
-        rss = synRss tid oidx fwds rqFrom rsPost rsOut ->
+        rsb = synRs tid oidx fwds rqFrom rsPost rsOut ->
         DisjSyss syss ->
         Forall (fun systo => AtomicRules (buildMsgId tid oidx (snd systo) rqChn)
                                          (fst systo))
                (combine syss fwds) ->
-        AtomicRules (rule_mid rqf)
+        AtomicRules (buildMsgId tid rqFrom oidx rqChn)
                     ({| obj_idx := oidx;
                         obj_state_init := oinit;
-                        obj_rules := rqf :: rss |}
+                        obj_rules := rqf :: rsb :: nil |}
                        :: concat syss).
 
 End AtomicRules.
@@ -208,14 +208,14 @@ Section CompAtomic.
         tid = mid_to (msg_id (tmsg_msg rqin)) ->
         DualMsg rqin rsout ->
         CompAtomic (bud tid)
-                   (IlblOuts (Some rqin) (rsout :: nil) :: nil)
+                   (IlblOuts (rqin :: nil) (rsout :: nil) :: nil)
                    (deadleaf tid)
   | CAtomicRqF:
       forall tid fwds rqin rqfwds hst ltr,
         tid = mid_to (msg_id (tmsg_msg rqin)) ->
         fwds = map (fun tmsg => mid_to (msg_id (tmsg_msg tmsg))) rqfwds ->
         CompAtomic (GTreeNode tid true (buds fwds)) hst ltr ->
-        CompAtomic (bud tid) (IlblOuts (Some rqin) rqfwds :: hst) ltr
+        CompAtomic (bud tid) (IlblOuts (rqin :: nil) rqfwds :: hst) ltr
   | CAtomicRqCont:
       forall tid fwds shsts rqhst rqtrs hst ltr,
         Forall (fun tht => CompAtomic (bud (fst (fst tht)))

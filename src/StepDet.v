@@ -1,6 +1,16 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics.
 
+Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
+  match tmsgs with
+  | nil => None
+  | tmsg :: tmsgs' =>
+    match tmsg_info tmsg with
+    | Some ti => Some ti
+    | None => getTMsgsTInfo tmsgs'
+    end
+  end.
+
 Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
 | SdSlt: forall st, step_det sys st emptyILabel st
 | SdExt: forall ts oss oims emsg,
@@ -17,36 +27,35 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
                 tst_tid := ts
              |}
 | SdInt: forall ts nts (Hts: nts > ts) tinfo
-                oss oims obj oidx os pos fmsg frule fidx fchn outs,
+                oss oims obj oidx os pos msgs rule outs,
     In obj sys ->
     oidx = obj_idx obj ->
     (oss)@[oidx] = Some os ->
 
-    firstMP fidx oidx fchn oims = Some fmsg -> 
-
-    msg_id (getMsg fmsg) = rule_mid frule ->
-    In frule (obj_rules obj) ->
-    rule_precond frule os (msg_value (getMsg fmsg)) ->
-    rule_postcond frule os (msg_value (getMsg fmsg)) pos outs ->
+    Forall (FirstMP oims) msgs ->
+    ValidMsgsIn oidx (map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs) ->
+    map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs = rule_mids rule ->
+    In rule (obj_rules obj) ->
+    rule_precond rule os (map tmsg_msg msgs) ->
+    rule_postcond rule os (map tmsg_msg msgs) pos outs ->
     ValidOuts oidx outs ->
 
-    tinfo = match tmsg_info fmsg with
-          | Some finfo => finfo
-          | None => {| tinfo_tid := nts;
-                       tinfo_rqin := tmsg_msg fmsg |}
-          end ->
+    tinfo = match getTMsgsTInfo msgs with
+            | Some ti => ti
+            | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg msgs |}
+            end ->
 
     step_det sys
              {| tst_oss := oss;
                 tst_msgs := oims;
                 tst_tid := ts
              |}
-             (IlblOuts (Some fmsg) (toTMsgs tinfo outs))
+             (IlblOuts msgs (toTMsgs tinfo outs))
              {| tst_oss := oss +[ oidx <- pos ];
                 tst_msgs := distributeMsgs
                               (intOuts sys (toTMsgs tinfo outs))
-                              (deqMP fidx oidx fchn oims);
-                tst_tid := match tmsg_info fmsg with
+                              (removeMsgs msgs oims);
+                tst_tid := match getTMsgsTInfo msgs with
                            | Some _ => ts
                            | None => nts
                            end

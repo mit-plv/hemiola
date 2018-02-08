@@ -112,7 +112,13 @@ Section SimMP.
   Definition deinitialize (mp: MessagePool TMsg) :=
     map (fun tmsg =>
            toTMsgU (msgP (match tmsg_info tmsg with
-                          | Some tinfo => tinfo_rqin tinfo
+                          | Some tinfo =>
+                            (* NOTE: any rules built by the synthesizer do not
+                             * generate a message where [tinfo_rqin tinfo] is
+                             * [nil]. Actually, it is always a singleton, i.e.,
+                             * a single request.
+                             *)
+                            hd (tmsg_msg tmsg) (tinfo_rqin tinfo)
                           | None => tmsg_msg tmsg
                           end))) mp.
   
@@ -137,6 +143,20 @@ Section SynRqRsImm.
   Definition rqChn: IdxT := 0.
   Definition rsChn: IdxT := 1.
 
+  Definition SingleRqPostcondSt (mout: OState -> Value -> OState -> Prop): PostcondSt :=
+    fun pre ins post =>
+      match ins with
+      | {| msg_value := val |} :: nil => mout pre val post
+      | _ => False
+      end.
+
+  Definition SingleRqMsgOuts (mout: OState -> Value -> list Msg): MsgOuts :=
+    fun pre ins =>
+      match ins with
+      | {| msg_value := val |} :: nil => mout pre val
+      | _ => nil
+      end.
+
   Definition msgValOut (val: Value) (tochn: IdxT * IdxT) :=
     {| msg_id := buildMsgId trsIdx this (fst tochn) (snd tochn);
        msg_value := val
@@ -146,12 +166,13 @@ Section SynRqRsImm.
 
     Definition synImm (prec: RPrecond) (rqFrom: IdxT) (postc: PostcondSt)
                (valOut: Value -> StateT -> Value) :=
-      {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
+      {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil;
          rule_precond := prec;
          rule_postcond :=
            rpostOf postc
-                   (fun pre val =>
-                      msgValOut (valOut val (ost_st pre)) (rqFrom, rsChn) :: nil)
+                   (SingleRqMsgOuts
+                      (fun pre val =>
+                         msgValOut (valOut val (ost_st pre)) (rqFrom, rsChn) :: nil))
       |}.
 
   End Immediate.
@@ -166,16 +187,17 @@ Section SynRqRsImm.
       post = {| ost_st := ost_st pre;
                 ost_tst := (ost_tst pre)
                            +[ trsIdx <-
-                              {| tst_rqval := val; (* store the request value *)
-                                 tst_rss := map (fun idx => (idx, None)) fwds |}]
+                              {| (* store the request value *)
+                                 tst_rqval := val |}]
              |}.
 
     Definition synRq (prec: RPrecond) :=
-      {| rule_mid := buildMsgId trsIdx rqFrom this rqChn;
+      {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil;
          rule_precond := fun pre val => prec pre val /\ liftTrsLocker pre;
          rule_postcond :=
-           rpostOf synRqPostcond
-                   (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val)
+           rpostOf (SingleRqPostcondSt synRqPostcond)
+                   (SingleRqMsgOuts
+                      (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val))
       |}.
 
   End RequestFwd.
@@ -184,96 +206,23 @@ Section SynRqRsImm.
    * which is incorrect. For the serializability proof, we need correct ones.
    *)
   Section ResponseBack.
-    Variables (rsFrom rsBack: IdxT).
+    Variables (rsFroms: list IdxT)
+              (rsBack: IdxT).
 
-    Fixpoint markResponded (rss: list (IdxT * option Value)) (rsVal: Value) :=
-      match rss with
-      | nil => nil
-      | (idx, ov) :: rss' =>
-        if idx ==n rsFrom
-        then (idx, Some rsVal) :: rss'
-        else (idx, ov) :: (markResponded rss' rsVal)
-      end.
-
-    Definition markRespondedTrs (trsh: TrsHelperUnit) (rsVal: Value) :=
-      {| tst_rqval := tst_rqval trsh;
-         tst_rss := markResponded (tst_rss trsh) rsVal |}.
-
-    Definition Responded (pre: OState) (rsVal: Value) (post: OState) :=
-      (ost_tst pre)@[trsIdx] >>=[False]
-      (fun preth =>
-         (ost_tst post)@[trsIdx] >>=[False]
-         (fun postth => postth = markRespondedTrs preth rsVal)).
-
-    Definition allResponded (fwds: list (IdxT * option Value)) :=
-      forallb (fun ib => match snd ib with
-                         | Some _ => true
-                         | _ => false
-                         end) fwds.
-
-    (* NOTE: prestate already contains the request value and all the responded
-     * values in [TrsHelperUnit], thus we don't need [Value] to define
-     * [postcond].
-     *)
-    Definition RsPostcond := OState -> OState -> Prop.
-    Definition RsOut := StateT -> TrsHelperUnit -> Value.
+    Definition RsOut := StateT -> list Msg -> Value (* request value *) -> Value.
     
-    Definition WhenAllResponded (postcond: RsPostcond)
-               (pre: OState) (post: OState) :=
-      (ost_tst pre)@[trsIdx] >>=[False]
-      (fun trsh =>
-         if allResponded (tst_rss trsh)
-         then postcond pre post /\
-              ost_tst post = M.remove trsIdx (ost_tst pre)
-         else True).
+    Definition synRsOuts (rsout: RsOut): MsgOuts :=
+      fun pre ins =>
+        (ost_tst pre)@[trsIdx] >>=[nil]
+        (fun trsh => {| msg_id := buildMsgId trsIdx this rsBack rsChn;
+                        msg_value := rsout (ost_st pre) ins (tst_rqval trsh) |} :: nil).
 
-    Fixpoint getFwdValue (vals: list (IdxT * option Value)) :=
-      match vals with
-      | nil => VUnit
-      | (_, Some v) :: vals' =>
-        match v with
-        | VUnit => getFwdValue vals'
-        | _ => v
-        end
-      | (_, None) :: vals' => getFwdValue vals'
-      end.
-
-    Definition rsFwdValue (post: OState) :=
-      (ost_tst post)@[trsIdx] >>=[VUnit]
-      (fun trsh => getFwdValue (tst_rss trsh)).
-         
-    Definition synRsPostcond (postcond: RsPostcond)
-               (pre: OState) (val: Value) (post: OState) :=
-      exists allResp,
-        Responded pre val allResp /\
-        WhenAllResponded postcond allResp post.
-
-    Definition synRsOuts (rsOut: RsOut) :=
-      fun st val =>
-        (ost_tst st)@[trsIdx] >>=[nil]
-        (fun trsh =>
-           let rss := markResponded (tst_rss trsh) val in
-           if allResponded rss
-           then {| msg_id := buildMsgId trsIdx this rsBack rsChn;
-                   msg_value := rsOut (ost_st st) (markRespondedTrs trsh val)
-                |} :: nil
-           else nil).
-
-    Definition synRs (postcond: RsPostcond) (rsOut: RsOut) :=
-      {| rule_mid := buildMsgId trsIdx rsFrom this rsChn;
+    Definition synRs (postc: PostcondSt) (rsout: RsOut) :=
+      {| rule_mids := map (fun rsFrom => buildMsgId trsIdx rsFrom this rsChn) rsFroms;
          rule_precond := ⊤;
-         rule_postcond := rpostOf (synRsPostcond postcond) (synRsOuts rsOut) |}.
+         rule_postcond := rpostOf postc (synRsOuts rsout) |}.
 
   End ResponseBack.
-
-  Fixpoint synRss (rss: list IdxT) (rsBack: IdxT)
-           (postcond: RsPostcond) (rsOut: StateT -> TrsHelperUnit -> Value): list Rule :=
-    map (fun rsFrom => synRs rsFrom rsBack postcond rsOut) rss.
-
-  Definition synRqRss (rqFrom: IdxT) (fwds: list IdxT)
-             (rqPre: RPrecond) (rsPost: RsPostcond) (rsOut: RsOut) :=
-    (synRq rqFrom fwds rqPre)
-      :: (synRss fwds rqFrom rsPost rsOut).
 
   Section AddRules.
 
@@ -290,8 +239,9 @@ Section SynRqRsImm.
          obj_state_init := obj_state_init obj;
          obj_rules :=
            (filter (fun rule =>
-                      if mid_to (rule_mid rule) ==n obj_idx obj
-                      then true else false) rules)
+                      forallb (fun mid =>
+                                 if mid_to mid ==n obj_idx obj
+                                 then true else false) (rule_mids rule)) rules)
              ++ obj_rules obj |}.
 
     Fixpoint addRules (rules: list Rule) (objs: list Object) :=
@@ -328,24 +278,30 @@ Section Manipulation.
       buildMsgId (mid_tid mid) (mid_from mid) (makeIdxExternal (mid_to mid)) (mid_chn mid).
     
     Definition makeRuleExternal (rule: Rule): Rule :=
-      {| rule_mid := makeMsgIdExternal (rule_mid rule);
+      {| rule_mids := map makeMsgIdExternal (rule_mids rule);
          rule_precond := rule_precond rule;
          rule_postcond := rule_postcond rule
       |}.
 
     Lemma makeRuleExternal_rule_in:
       forall rule rules1 rules2,
-        mid_to (rule_mid rule) = targetIdx ->
+        rule_mids rule <> nil ->
+        Forall (fun mid => mid_to mid = targetIdx) (rule_mids rule) ->
         In rule (rules1 ++ map makeRuleExternal rules2) ->
         In rule rules1.
     Proof.
       intros.
-      apply in_app_or in H0; destruct H0; auto.
-      exfalso; clear -H H0 Hdiff.
+      apply in_app_or in H1; destruct H1; auto.
+      exfalso; clear -H H0 H1 Hdiff.
       induction rules2; [auto|].
-      destruct H0; auto.
+      destruct H1; auto.
       subst rule.
-      cbn in H; unfold makeIdxExternal in H.
+      cbn in H0; unfold makeIdxExternal in H0.
+      destruct a as [rmids rprec rpost]; simpl in *.
+      destruct rmids; [elim H; reflexivity|].
+      inv H0.
+      unfold makeMsgIdExternal, makeIdxExternal in *.
+      cbn in *.
       find_if_inside; auto.
     Qed.
 
@@ -363,7 +319,7 @@ Section Manipulation.
     Variable (prec: Precond).
 
     Definition makePreCondDisj (rule: Rule): Rule :=
-      {| rule_mid := rule_mid rule;
+      {| rule_mids := rule_mids rule;
          rule_precond := fun pre val => ~ (prec pre val) /\ rule_precond rule pre val;
          rule_postcond := rule_postcond rule
       |}.

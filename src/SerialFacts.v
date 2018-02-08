@@ -8,18 +8,19 @@ Require Import Program.Equality.
 Set Implicit Arguments.
 
 Lemma atomic_emptyILabel_not_in:
-  forall sys ti hst mouts,
-    Atomic sys ti hst mouts ->
+  forall sys ts rq hst mouts,
+    Atomic sys ts rq hst mouts ->
     ~ In emptyILabel hst.
 Proof.
   induction 1; simpl; intros.
   - intro Hx; destruct Hx; [discriminate|auto].
-  - intro Hx; destruct Hx; [discriminate|auto].
+  - intro Hx; destruct Hx; auto.
+    inv H2; elim H0; reflexivity.
 Qed.
 
 Lemma atomic_iLblIn_not_in:
-  forall sys ti hst mouts,
-    Atomic sys ti hst mouts ->
+  forall sys ts rq hst mouts,
+    Atomic sys ts rq hst mouts ->
     forall msg,
       ~ In (IlblIn msg) hst.
 Proof.
@@ -29,11 +30,11 @@ Proof.
 Qed.
 
 Lemma atomic_preserved:
-  forall impl1 ti hst mouts,
-    Atomic impl1 ti hst mouts ->
+  forall impl1 ts rq hst mouts,
+    Atomic impl1 ts rq hst mouts ->
     forall impl2,
       indicesOf impl1 = indicesOf impl2 ->
-      Atomic impl2 ti hst mouts.
+      Atomic impl2 ts rq hst mouts.
 Proof.
   induction 1; simpl; intros.
   - econstructor; eauto.
@@ -43,55 +44,60 @@ Proof.
 Qed.
 
 Lemma atomic_tinfo:
-  forall sys ti hst mouts,
-    Atomic sys ti hst mouts ->
+  forall sys ts rq hst mouts,
+    Atomic sys ts rq hst mouts ->
     forall st1 st2,
       steps_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | IlblOuts (Some hdl) _ =>
-                           match tmsg_info hdl with
-                           | Some hti => hti = ti
-                           | None => True
-                           end
+                         | IlblOuts ins _ =>
+                           Forall (fun tmsg =>
+                                     match tmsg_info tmsg with
+                                     | Some hti => hti = buildTInfo ts (rq :: nil)
+                                     | None => True
+                                     end) ins
                          | _ => False
                          end) hst /\
-      ForallMP (fun tmsg => tmsg_info tmsg = Some ti) mouts.
+      ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo ts (rq :: nil))) mouts.
 Proof.
   induction 1; simpl; intros.
 
   - split.
     + constructor; auto.
-      cbn; auto.
+      constructor; cbn; auto.
     + inv H1; inv H5; inv H7.
       clear -H0.
       eapply Forall_impl; eauto.
       intros; simpl in H; dest; auto.
 
-  - inv H1.
-    specialize (IHAtomic _ _ H5); destruct IHAtomic.
+  - inv H2.
+    specialize (IHAtomic _ _ H6); destruct IHAtomic.
     split.
     + constructor; auto.
-      eapply Forall_forall in H2; eauto.
-      rewrite H2; reflexivity.
+      eapply ForallMP_SubList in H1; eauto.
+      eapply Forall_impl; eauto.
+      simpl; intros; rewrite H4; reflexivity.
     + apply ForallMP_distributeMsgs.
-      * apply ForallMP_removeOnce; auto.
-      * eapply Forall_forall in H2; eauto.
-        inv H7; rewrite H2.
+      * apply ForallMP_removeMsgs; auto.
+      * eapply ForallMP_SubList in H1; eauto.
+        inv H8; [constructor|].
+        destruct msgs as [|msg msgs]; [elim H0; reflexivity|].
+        inv H1; cbn; rewrite H8.
         clear; induction outs; [constructor|].
         constructor; auto.
 Qed.
 
 Corollary atomic_hst_tinfo:
-  forall sys ti hst mouts,
-    Atomic sys ti hst mouts ->
+  forall sys ts rq hst mouts,
+    Atomic sys ts rq hst mouts ->
     forall st1 st2,
       steps_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | IlblOuts (Some hdl) _ =>
-                           match tmsg_info hdl with
-                           | Some hti => hti = ti
-                           | None => True
-                           end
+                         | IlblOuts ins _ =>
+                           Forall (fun tmsg =>
+                                     match tmsg_info tmsg with
+                                     | Some hti => hti = buildTInfo ts (rq :: nil)
+                                     | None => True
+                                     end) ins
                          | _ => False
                          end) hst.
 Proof.
@@ -101,11 +107,11 @@ Proof.
 Qed.
 
 Corollary atomic_mouts_tinfo:
-  forall sys ti hst mouts,
-    Atomic sys ti hst mouts ->
+  forall sys ts rq hst mouts,
+    Atomic sys ts rq hst mouts ->
     forall st1 st2,
       steps_det sys st1 hst st2 ->
-      ForallMP (fun tmsg => tmsg_info tmsg = Some ti) mouts.
+      ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo ts (rq :: nil))) mouts.
 Proof.
   intros.
   eapply atomic_tinfo in H; eauto.

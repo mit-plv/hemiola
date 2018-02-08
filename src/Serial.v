@@ -13,20 +13,20 @@ Section PerSystem.
    *    and all [hdl]s have the same [tinfo_tid]. It means that the history is
    *    for a single transaction.
    *)
-  Inductive Atomic: TInfo -> History -> MessagePool TMsg -> Prop :=
+  Inductive Atomic: TrsId -> Msg -> History -> MessagePool TMsg -> Prop :=
   | AtomicStart:
-      forall tid (rqin: Msg) houts,
-        isExternal sys (mid_from (msg_id rqin)) = true ->
-        ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo tid rqin)) houts ->
-        Atomic (buildTInfo tid rqin)
-               (IlblOuts (Some (toTMsgU rqin)) houts :: nil)
-               houts
+      forall ts rq houts,
+        isExternal sys (mid_from (msg_id rq)) = true ->
+        ForallMP (fun tmsg => tmsg_info tmsg =
+                              Some (buildTInfo ts (rq :: nil))) houts ->
+        Atomic ts rq (IlblOuts (toTMsgU rq :: nil) houts :: nil) houts
   | AtomicCont:
-      forall ti hst mouts hdl houts,
-        Atomic ti hst mouts ->
-        In hdl mouts ->
-        Atomic ti (IlblOuts (Some hdl) houts :: hst)
-               (distributeMsgs houts (removeOnce tmsg_dec hdl mouts)).
+      forall ts rq hst msgs mouts houts,
+        Atomic ts rq hst mouts ->
+        msgs <> nil ->
+        SubList msgs mouts ->
+        Atomic ts rq (IlblOuts msgs houts :: hst)
+               (distributeMsgs houts (removeMsgs msgs mouts)).
 
   Inductive Transactional: History -> Prop :=
   | TrsSlt:
@@ -36,8 +36,8 @@ Section PerSystem.
         tin = IlblIn msg ->
         Transactional (tin :: nil)
   | TrsAtomic:
-      forall ti hst mouts,
-        Atomic ti hst mouts ->
+      forall ts rq hst mouts,
+        Atomic ts rq hst mouts ->
         Transactional hst.
 
   Definition Sequential (hst: History) :=

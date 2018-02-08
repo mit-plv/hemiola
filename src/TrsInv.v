@@ -23,14 +23,14 @@ Proof. firstorder. Qed.
 Lemma inv_proj2: forall inv1 inv2, inv1 /\i inv2 ->i inv2.
 Proof. firstorder. Qed.
 
-Definition AInv := TInfo -> History -> MessagePool TMsg -> TState -> Prop.
+Definition AInv := TrsId -> Msg -> History -> MessagePool TMsg -> TState -> Prop.
 Definition ainvAnd (ainv1 ainv2: AInv) :=
-  fun ti hst mouts tst =>
-    ainv1 ti hst mouts tst /\ ainv2 ti hst mouts tst.
+  fun ts rq hst mouts tst =>
+    ainv1 ts rq hst mouts tst /\ ainv2 ts rq hst mouts tst.
 Infix "/\a" := ainvAnd (at level 80).
 Definition ainvImp (ainv1 ainv2: AInv) :=
-  forall ti hst mouts tst,
-    ainv1 ti hst mouts tst -> ainv2 ti hst mouts tst.
+  forall ts rq hst mouts tst,
+    ainv1 ts rq hst mouts tst -> ainv2 ts rq hst mouts tst.
 Infix "->a" := ainvImp (at level 99).
 
 Lemma ainv_proj1: forall ainv1 ainv2, ainv1 /\a ainv2 ->a ainv1.
@@ -59,8 +59,8 @@ Section Impl.
         ginv ist2.
 
   Definition TrsInvAtomic (ginv: Inv) :=
-    forall ti hst mouts,
-      Atomic impl ti hst mouts ->
+    forall ts rq hst mouts,
+      Atomic impl ts rq hst mouts ->
       forall ist1,
         ginv ist1 ->
         forall ist2,
@@ -68,12 +68,12 @@ Section Impl.
           ginv ist2.
 
   Definition TrsAInv (ginv: Inv) (ainv: AInv) :=
-    forall ti hst mouts,
-      Atomic impl ti hst mouts ->
+    forall ts rq hst mouts,
+      Atomic impl ts rq hst mouts ->
       forall ist1 ist2,
         steps_det impl ist1 hst ist2 ->
         ginv ist1 ->
-        ainv ti hst mouts ist2.
+        ainv ts rq hst mouts ist2.
 
 End Impl.
 

@@ -129,7 +129,11 @@ Section Impl.
      *)
     Ltac trs_simulates_trivial msgF sim :=
       eapply trs_sim_in_atm_simulates;
-      [trs_simulates_case_in msgF sim|].
+      [admit (* TODO: the silent case; should be able to prove it to force that
+              * synthesized rules never introduce silent steps.
+              *)
+      |trs_simulates_case_in msgF sim
+      |].
 
     Ltac synth_sep_rules_obj tgt ext :=
       match goal with

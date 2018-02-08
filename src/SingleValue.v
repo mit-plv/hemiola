@@ -1,5 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet.
+Require Import Synthesis.
 
 Set Implicit Arguments.
 
@@ -44,7 +45,7 @@ Section System.
       Definition setRespM := buildMsgId SvmSetE specIdx (getSpecExtIdx chnIdx) chnIdx.
 
       Definition specGetReq: Rule :=
-        {| rule_mid := getReqM;
+        {| rule_mids := getReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
              rpostOf ⊤⊤= (fun pre _ =>
@@ -53,10 +54,11 @@ Section System.
         |}.
 
       Definition specSetReq: Rule :=
-        {| rule_mid := setReqM;
+        {| rule_mids := setReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
-             rpostOf (fun pre v post => (ost_st post)@[valueIdx] = Some v)
+             rpostOf (SingleRqPostcondSt
+                        (fun pre v post => (ost_st post)@[valueIdx] = Some v))
                      (fun _ _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil)
         |}.
 

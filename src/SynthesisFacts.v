@@ -213,48 +213,6 @@ Proof.
   destruct (tmsg_info a); auto.
 Qed.
 
-Lemma deinitialize_addActive_diff_msgs:
-  forall mp msg1 msg2 tinfo rb,
-    deinitialize mp (addActive msg1 tinfo rb) =
-    deinitialize mp (addActive msg2 tinfo rb).
-Proof.
-  induction rb; simpl; intros; [reflexivity|].
-  destruct (tmsg_info a); auto.
-  find_if_inside; auto.
-  find_if_inside; auto.
-  simpl; rewrite IHrb; reflexivity.
-Qed.
-
-Lemma SimMP_int_msg_begin:
-  forall (mp: Msg -> Msg) imsgs smsgs,
-    SimMP mp imsgs smsgs ->
-    forall from to chn rqin,
-      firstMP from to chn imsgs = Some {| tmsg_msg := rqin; tmsg_info := None |} ->
-      forall tid,
-        ForallMP (fun tmsg =>
-                    match tmsg_info tmsg with
-                    | Some ti => tinfo_tid ti < tid
-                    | None => True
-                    end) imsgs ->
-        forall mouts,
-          mouts <> nil ->
-          Forall (fun tmsg => tmsg_info tmsg = Some {| tinfo_tid := tid; tinfo_rqin := rqin |}) mouts ->
-          SimMP mp (distributeMsgs mouts (deqMP from to chn imsgs)) smsgs.
-Proof.
-Admitted.
-
-Lemma SimMP_int_msg_fwd:
-  forall (mp: Msg -> Msg) imsgs smsgs,
-    SimMP mp imsgs smsgs ->
-    forall from to chn imsg ti,
-      firstMP from to chn imsgs = Some {| tmsg_msg := imsg; tmsg_info := Some ti |} ->
-      forall mouts,
-        mouts <> nil ->
-        Forall (fun tmsg => tmsg_info tmsg = Some ti) mouts ->
-        SimMP mp (distributeMsgs mouts (deqMP from to chn imsgs)) smsgs.
-Proof.
-Admitted.
-
 Corollary trsSimulates_trsInvHolds_rules_added:
   forall impl rules spec simR ginv simP
          (Hsim1: TrsSimulates simR ginv simP impl spec)

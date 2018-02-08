@@ -74,6 +74,16 @@ Section Msg.
   Definition buildMsg mid v :=
     {| msg_id := mid; msg_value := v |}.
 
+  Fixpoint buildMsgs mids vals :=
+    match mids with
+    | nil => nil
+    | mid :: mids' =>
+      match vals with
+      | nil => nil
+      | val :: vals' => (buildMsg mid val) :: (buildMsgs mids' vals')
+      end
+    end.
+
   Definition msg_dec: forall m1 m2: Msg, {m1 = m2} + {m1 <> m2}.
   Proof.
     decide equality.
@@ -88,9 +98,7 @@ Section Rule.
   Definition StateT := M.t Value.
 
   Record TrsHelperUnit :=
-    { tst_rqval: Value;
-      tst_rss: list (IdxT * option Value)
-    }.
+    { tst_rqval: Value }.
   Definition TrsHelper := M.t (* transaction index *) TrsHelperUnit.
   Definition trsHelperInit: TrsHelper := M.empty _.
 
@@ -99,22 +107,25 @@ Section Rule.
       ost_tst: TrsHelper
     }.
 
-  Definition RPrecond := OState -> Value (* input *) -> Prop.
+  Definition RPrecond := OState -> list Msg (* input messages *) -> Prop.
   Definition RPostcond :=
-    OState (* prestate *) -> Value (* input value *) ->
+    OState (* prestate *) -> list Msg (* input messages *) ->
     OState (* poststate *) -> list Msg (* output messages *) -> Prop.
 
   Record Rule :=
-    { rule_mid: MsgId;
+    { rule_mids: list MsgId;
       rule_precond: RPrecond;
       rule_postcond: RPostcond;
     }.
+
+  Definition ValidMsgsIn (oidx: IdxT) (mids: list MsgId) :=
+    Forall (fun mid => mid_to mid = oidx) mids.
 
 End Rule.
 
 Section Conditions.
 
-  Definition Precond := OState -> Value (* input *) -> Prop.
+  Definition Precond := OState -> list Msg -> Prop.
   Definition Postcond := OState -> list Msg -> Prop.
 
   Definition impRPost (rpostc: RPostcond) (postc: Postcond) :=
@@ -122,16 +133,16 @@ Section Conditions.
       rpostc pre val post outs -> postc post outs.
 
   Definition MsgOuts :=
-    OState (* prestate *) -> Value (* input value *) -> list Msg.
+    OState (* prestate *) -> list Msg (* input messages *) -> list Msg.
   Definition PostcondSt :=
-    OState (* prestate *) -> Value (* input value *) -> OState (* poststate *) -> Prop.
+    OState (* prestate *) -> list Msg (* input messages *) -> OState (* poststate *) -> Prop.
 
   Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond :=
-    fun pre val post outs =>
-      pst pre val post /\ outs = mouts pre val.
+    fun pre ins post outs =>
+      pst pre ins post /\ outs = mouts pre ins.
 
   Definition impPre (pre1 pre2: Precond) :=
-    forall pre val, pre1 pre val -> pre2 pre val.
+    forall pre ins, pre1 pre ins -> pre2 pre ins.
 
   Definition impPost (post1 post2: Postcond) :=
     forall post outs, post1 post outs -> post2 post outs.
