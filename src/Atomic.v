@@ -4,48 +4,43 @@ Require Import Synthesis TrsInv TrsSim.
 
 Set Implicit Arguments.
 
-(* Want:
- * 1) [AtomicRules] -> [Atomic] -> [steps_det] -> [CompAtomic].
- * 2) [CompAtomic] is compositional.
- *)
-
-Definition DisjSys (sys1 sys2: System) :=
-  DisjList (map obj_idx sys1) (map obj_idx sys2).
-
-Definition DisjSyss (syss: list System) :=
-  forall sys1 sys2,
-    In sys1 syss -> In sys2 syss -> sys1 <> sys2 ->
-    DisjSys sys1 sys2.
-
-Section AtomicRules.
+(** Compositionally transactional rules. *)
+Section CompTrsRules.
   
   Variable (tid: IdxT).
 
-  Inductive AtomicRules: MsgId -> System -> Prop :=
+  Inductive CompTrsRules: MsgId -> System -> Prop :=
   | ARImm:
       forall oidx oinit prec rqFrom postc valOut immr,
+        (* Just to make sure the message is valid; from the external world. *)
+        rqFrom <> oidx ->
         immr = synImm tid oidx prec rqFrom postc valOut ->
-        AtomicRules (buildMsgId tid rqFrom oidx rqChn)
-                    [{| obj_idx := oidx;
-                        obj_state_init := oinit;
-                        obj_rules := immr :: nil |}]
-                    
+        CompTrsRules (buildMsgId tid rqFrom oidx rqChn)
+                     [{| obj_idx := oidx;
+                         obj_state_init := oinit;
+                         obj_rules := immr :: nil |}]
   | ARRqRs:
-      forall oidx oinit locker rqFrom fwds rqPre rsPost rsOut rqf rsb syss,
+      forall oidx oinit locker rqFrom fwds rqPre rsPost rsOut rqf rsb (syss: list System),
+
         rqf = synRq tid oidx locker rqFrom fwds rqPre ->
         rsb = synRs tid oidx fwds rqFrom rsPost rsOut ->
-        DisjSyss syss ->
-        Forall (fun systo => AtomicRules (buildMsgId tid oidx (snd systo) rqChn)
-                                         (fst systo))
+
+        (* Each object index is unique. *)
+        NoDup (oidx :: concat (map (map obj_idx) syss)) ->
+        
+        Forall (fun systo => CompTrsRules (buildMsgId tid oidx (snd systo) rqChn)
+                                          (fst systo))
                (combine syss fwds) ->
-        AtomicRules (buildMsgId tid rqFrom oidx rqChn)
-                    ({| obj_idx := oidx;
-                        obj_state_init := oinit;
-                        obj_rules := rqf :: rsb :: nil |}
-                       :: concat syss).
+        
+        CompTrsRules (buildMsgId tid rqFrom oidx rqChn)
+                     ({| obj_idx := oidx;
+                         obj_state_init := oinit;
+                         obj_rules := rqf :: rsb :: nil |}
+                        :: concat syss).
 
-End AtomicRules.
+End CompTrsRules.
 
+(** Growing trees: each branch can grow only once. *)
 Section GTree.
 
   Inductive GTree :=
@@ -177,7 +172,7 @@ Inductive Combined {A}: list A -> list (list A) -> Prop :=
       Combined cmb (ll1 ++ l :: ll2) ->
       Combined (a :: cmb) (ll1 ++ (a :: l) :: ll2).
 
-Section CompAtomic.
+Section CompTrsHst.
 
   (* Thanks to [GTree], we get following properties:
    * 1) (TODO!) No external output messages are generated until the transaction
@@ -186,57 +181,58 @@ Section CompAtomic.
    *    which is the response of the original request.
    * 3) When the transaction ends, no internal messages about the transaction 
    *    are left. We ensure this by checking if the [GTree] is empty in 
-   *    [CAtomicDone].
+   *    [CTHDone].
    *)
-
-  (** Wants (informally):
-   * 1) [AtomicRules sys] -> [Atomic hst] -> [steps_det hst] ->
-   *    [CompAtomic sys (rqin.to :: nil) hst].
-   * 2) [CompAtomic] is compositional.
-   *)
-
-  Inductive CompAtomic:
+  (** TODO: add the concept of external invariants, pre/postconditions 
+   * to [CompTrsHst]. *)
+  Inductive CompTrsHst:
     GTree ->
     History (* head is the _oldest_; 
              * reverse of a history defined in [steps]. *) ->
     GTree ->
     Prop :=
-  | CAtomicNil:
-      forall tid, CompAtomic (bud tid) nil (bud tid)
-  | CAtomicImm:
-      forall tid rqin rsout,
-        tid = mid_to (msg_id (tmsg_msg rqin)) ->
+  | CTHNil:
+      forall oidx, CompTrsHst (bud oidx) nil (bud oidx)
+  | CTHImm:
+      forall oidx rqin rsout,
+        oidx = mid_to (msg_id (tmsg_msg rqin)) ->
         DualMsg rqin rsout ->
-        CompAtomic (bud tid)
+        CompTrsHst (bud oidx)
                    (IlblOuts (rqin :: nil) (rsout :: nil) :: nil)
-                   (deadleaf tid)
-  | CAtomicRqF:
-      forall tid fwds rqin rqfwds hst ltr,
-        tid = mid_to (msg_id (tmsg_msg rqin)) ->
+                   (deadleaf oidx)
+  | CTHRqF:
+      forall oidx fwds rqin rqfwds hst ltr,
+        oidx = mid_to (msg_id (tmsg_msg rqin)) ->
         fwds = map (fun tmsg => mid_to (msg_id (tmsg_msg tmsg))) rqfwds ->
-        CompAtomic (GTreeNode tid true (buds fwds)) hst ltr ->
-        CompAtomic (bud tid) (IlblOuts (rqin :: nil) rqfwds :: hst) ltr
-  | CAtomicRqCont:
-      forall tid fwds shsts rqhst rqtrs hst ltr,
-        Forall (fun tht => CompAtomic (bud (fst (fst tht)))
+        CompTrsHst (GTreeNode oidx true (buds fwds)) hst ltr ->
+        CompTrsHst (bud oidx) (IlblOuts (rqin :: nil) rqfwds :: hst) ltr
+  | CTHRqCont:
+      forall oidx fwds shsts rqhst rqtrs hst ltr,
+        Forall (fun tht => CompTrsHst (bud (fst (fst tht)))
                                       (snd (fst tht))
                                       (snd tht))
                (combine (combine fwds shsts) rqtrs) ->
-        CompAtomic (GTreeNode tid true rqtrs) hst ltr ->
+        CompTrsHst (GTreeNode oidx true rqtrs) hst ltr ->
         Combined rqhst shsts ->
-        CompAtomic (GTreeNode tid true (buds fwds)) (rqhst ++ hst) ltr.
-  (* | CAtomicRsB: *)
-  (*     forall tid, *)
-  (*       CompAtomic (GTreeNode tid true (deadleaves rss)) *)
-  (*                  (IlblOuts (rss) (rsout :: nil) :: nil) *)
-  (*                  (deadleaf tid). *)
+        CompTrsHst (GTreeNode oidx true (buds fwds)) (rqhst ++ hst) ltr
+  | CTHRsB:
+      forall oidx rss rsfroms rsback,
+        rss = map (fun tmsg => mid_from (msg_id (tmsg_msg tmsg))) rsfroms ->
+        CompTrsHst (GTreeNode oidx true (deadleaves rss))
+                   (IlblOuts rsfroms (rsback :: nil) :: nil)
+                   (deadleaf oidx).
 
-  (** TODO: add the concept of external invariants, pre/postconditions 
-   * to [CompAtomic]. *)
+End CompTrsHst.
 
-End CompAtomic.
+Section Facts.
 
-Section Compositionality.
+  Theorem compTrsRules_atomic_compTrsHst:
+    forall sys tid ts rq v hst mouts gtr,
+      CompTrsRules tid rq sys ->
+      Atomic sys ts (buildMsg rq v) hst mouts ->
+      CompTrsHst (bud (mid_to rq)) (rev hst) gtr.
+  Proof.
+  Admitted.
 
-End Compositionality.
+End Facts.
 
