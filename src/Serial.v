@@ -15,17 +15,17 @@ Section PerSystem.
    *)
   Inductive Atomic: TrsId -> Msg -> History -> MessagePool TMsg -> Prop :=
   | AtomicStart:
-      forall ts rq houts,
+      forall ts rqr rq houts,
         isExternal sys (mid_from (msg_id rq)) = true ->
         ForallMP (fun tmsg => tmsg_info tmsg =
                               Some (buildTInfo ts (rq :: nil))) houts ->
-        Atomic ts rq (IlblOuts (toTMsgU rq :: nil) houts :: nil) houts
+        Atomic ts rq (IlblOuts (Some rqr) (toTMsgU rq :: nil) houts :: nil) houts
   | AtomicCont:
-      forall ts rq hst msgs mouts houts,
+      forall ts rq hst rule msgs mouts houts,
         Atomic ts rq hst mouts ->
         msgs <> nil ->
         SubList msgs mouts ->
-        Atomic ts rq (IlblOuts msgs houts :: hst)
+        Atomic ts rq (IlblOuts (Some rule) msgs houts :: hst)
                (distributeMsgs houts (removeMsgs msgs mouts)).
 
   Inductive Transactional: History -> Prop :=

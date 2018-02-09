@@ -220,31 +220,31 @@ Section ILabel.
 
   Inductive ILabel MsgT :=
   | IlblIn (min: MsgT): ILabel MsgT
-  | IlblOuts (mins: list MsgT) (mouts: list MsgT): ILabel MsgT.
+  | IlblOuts (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): ILabel MsgT.
 
   Definition iLblIns {MsgT} (l: ILabel MsgT) :=
     match l with
     | IlblIn _ => nil
-    | IlblOuts mins _ => mins
+    | IlblOuts _ mins _ => mins
     end.
 
   Definition iLblOuts {MsgT} (l: ILabel MsgT) :=
     match l with
     | IlblIn _ => nil
-    | IlblOuts _ mouts => mouts
+    | IlblOuts _ _ mouts => mouts
     end.
 
   Definition iToLabel {MsgT} `{HasMsg MsgT}
              (l: ILabel MsgT): Label :=
     match l with
     | IlblIn min => LblIn (getMsg min)
-    | IlblOuts _ mouts => LblOuts (map getMsg mouts)
+    | IlblOuts _ _ mouts => LblOuts (map getMsg mouts)
     end.
 
   Global Instance ILabel_HasLabel {MsgT} `{HasMsg MsgT}: HasLabel (ILabel MsgT) :=
     { getLabel := iToLabel }.
 
-  Definition emptyILabel {MsgT} := IlblOuts (MsgT:= MsgT) nil nil.
+  Definition emptyILabel {MsgT} := IlblOuts (MsgT:= MsgT) None nil nil.
 
 End ILabel.
 

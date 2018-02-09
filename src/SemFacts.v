@@ -268,7 +268,7 @@ Fact SdIntSingle:
                 tst_msgs := oims;
                 tst_tid := ts
              |}
-             (IlblOuts (fmsg :: nil) (toTMsgs tinfo outs))
+             (IlblOuts (Some frule) (fmsg :: nil) (toTMsgs tinfo outs))
              {| tst_oss := oss +[ oidx <- pos ];
                 tst_msgs := distributeMsgs
                               (intOuts sys (toTMsgs tinfo outs))
@@ -410,14 +410,14 @@ Proof.
 Qed.
 
 Lemma step_det_int_internal:
-  forall sys st1 ins outs st2,
-    step_det sys st1 (IlblOuts ins outs) st2 ->
+  forall sys st1 orule ins outs st2,
+    step_det sys st1 (IlblOuts orule ins outs) st2 ->
     Forall (fun msg => isInternal sys (mid_to (msg_id (getMsg msg))) = true) ins.
 Proof.
   intros; inv H; [constructor|].
-  clear -H2 H6.
+  clear -H3 H7.
   induction ins; [constructor|].
-  inv H6.
+  inv H7.
   constructor; auto.
   simpl; rewrite H1.
   apply obj_in_sys_idx_internal; auto.

@@ -194,18 +194,18 @@ Section CompTrsHst.
   | CTHNil:
       forall oidx, CompTrsHst (bud oidx) nil (bud oidx)
   | CTHImm:
-      forall oidx rqin rsout,
+      forall oidx immr rqin rsout,
         oidx = mid_to (msg_id (tmsg_msg rqin)) ->
         DualMsg rqin rsout ->
         CompTrsHst (bud oidx)
-                   (IlblOuts (rqin :: nil) (rsout :: nil) :: nil)
+                   (IlblOuts (Some immr) (rqin :: nil) (rsout :: nil) :: nil)
                    (deadleaf oidx)
   | CTHRqF:
-      forall oidx fwds rqin rqfwds hst ltr,
+      forall oidx rqfr fwds rqin rqfwds hst ltr,
         oidx = mid_to (msg_id (tmsg_msg rqin)) ->
         fwds = map (fun tmsg => mid_to (msg_id (tmsg_msg tmsg))) rqfwds ->
         CompTrsHst (GTreeNode oidx true (buds fwds)) hst ltr ->
-        CompTrsHst (bud oidx) (IlblOuts (rqin :: nil) rqfwds :: hst) ltr
+        CompTrsHst (bud oidx) (IlblOuts (Some rqfr) (rqin :: nil) rqfwds :: hst) ltr
   | CTHRqCont:
       forall oidx fwds shsts rqhst rqtrs hst ltr,
         Forall (fun tht => CompTrsHst (bud (fst (fst tht)))
@@ -216,10 +216,10 @@ Section CompTrsHst.
         Combined rqhst shsts ->
         CompTrsHst (GTreeNode oidx true (buds fwds)) (rqhst ++ hst) ltr
   | CTHRsB:
-      forall oidx rss rsfroms rsback,
+      forall oidx rsbr rss rsfroms rsback,
         rss = map (fun tmsg => mid_from (msg_id (tmsg_msg tmsg))) rsfroms ->
         CompTrsHst (GTreeNode oidx true (deadleaves rss))
-                   (IlblOuts rsfroms (rsback :: nil) :: nil)
+                   (IlblOuts (Some rsbr) rsfroms (rsback :: nil) :: nil)
                    (deadleaf oidx).
 
 End CompTrsHst.

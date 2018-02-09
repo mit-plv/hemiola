@@ -49,7 +49,7 @@ Lemma atomic_tinfo:
     forall st1 st2,
       steps_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | IlblOuts ins _ =>
+                         | IlblOuts _ ins _ =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti => hti = buildTInfo ts (rq :: nil)
@@ -79,9 +79,9 @@ Proof.
     + apply ForallMP_distributeMsgs.
       * apply ForallMP_removeMsgs; auto.
       * eapply ForallMP_SubList in H1; eauto.
-        inv H8; [constructor|].
+        inv H8.
         destruct msgs as [|msg msgs]; [elim H0; reflexivity|].
-        inv H1; cbn; rewrite H8.
+        inv H1; cbn; rewrite H7.
         clear; induction outs; [constructor|].
         constructor; auto.
 Qed.
@@ -92,7 +92,7 @@ Corollary atomic_hst_tinfo:
     forall st1 st2,
       steps_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | IlblOuts ins _ =>
+                         | IlblOuts _ ins _ =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti => hti = buildTInfo ts (rq :: nil)
