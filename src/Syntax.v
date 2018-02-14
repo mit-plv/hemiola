@@ -246,6 +246,7 @@ Definition isInternal (sys: System) (idx: IdxT) :=
 
 Notation "'⊤'" := (fun _ _ => True).
 Notation "'⊤⊤'" := (fun _ _ _ => True).
+Notation "'⊤⊤⊤'" := (fun _ _ _ _ => True).
 Notation "'⊤⊤='" := (fun pre v post => pre = post).
 Notation "[ obj ]" := (singleton obj).
 
