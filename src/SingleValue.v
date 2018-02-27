@@ -44,27 +44,27 @@ Section System.
       Definition setReqM := buildMsgId SvmSetE (getSpecExtIdx chnIdx) specIdx chnIdx.
       Definition setRespM := buildMsgId SvmSetE specIdx (getSpecExtIdx chnIdx) chnIdx.
 
-      Definition specGetReq: Rule :=
+      Definition specGetReq: Rule OrdOState :=
         {| rule_mids := getReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
              rpostOf ⊤⊤= (fun pre _ =>
-                            (ost_st pre)@[valueIdx] >>=[nil]
+                            pre@[valueIdx] >>=[nil]
                             (fun v => {| msg_id := getRespM; msg_value := v |} :: nil));
         |}.
 
-      Definition specSetReq: Rule :=
+      Definition specSetReq: Rule OrdOState :=
         {| rule_mids := setReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
              rpostOf (SingleRqPostcondSt
-                        (fun pre v post => (ost_st post)@[valueIdx] = Some v))
+                        (fun pre v post => post@[valueIdx] = Some v))
                      (fun _ _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil)
         |}.
 
     End PerChn.
 
-    Definition specObj: Object :=
+    Definition specObj: Object OrdOState :=
       {| obj_idx := specIdx;
          obj_state_init := [valueIdx <- VNat 0];
          obj_rules :=
@@ -74,7 +74,7 @@ Section System.
              :: (specSetReq specChn2) :: nil
       |}.
     
-    Definition spec : System := singleton specObj.
+    Definition spec : System OrdOState := singleton specObj.
 
   End Spec.
 
@@ -102,7 +102,7 @@ Section System.
     Section Child0.
       Variable childIdx: nat.
 
-      Definition child0: Object :=
+      Definition child0: Object OrdOState :=
         {| obj_idx := childIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
            obj_rules := nil
@@ -112,7 +112,7 @@ Section System.
 
     Section Parent0.
 
-      Definition parent0 : Object :=
+      Definition parent0 : Object OrdOState :=
         {| obj_idx := parentIdx;
            obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
            obj_rules := nil
@@ -120,7 +120,7 @@ Section System.
 
     End Parent0.
 
-    Definition impl0 : System :=
+    Definition impl0 : System OrdOState :=
       parent0 :: (child0 child1Idx) :: (child0 child2Idx) :: nil.
 
   End Impl0.

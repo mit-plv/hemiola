@@ -91,21 +91,16 @@ Section Msg.
     - apply msgId_dec.
   Defined.
 
+  Class HasMsg (MsgT: Type) :=
+    { getMsg : MsgT -> Msg }.
+
+  Global Instance Msg_HasMsg : HasMsg Msg :=
+    { getMsg := id }.
+
 End Msg.
 
 Section Rule.
-
-  Definition StateT := M.t Value.
-
-  Record TrsHelperUnit :=
-    { tst_rqval: Value }.
-  Definition TrsHelper := M.t (* transaction index *) TrsHelperUnit.
-  Definition trsHelperInit: TrsHelper := M.empty _.
-
-  Record OState :=
-    { ost_st: StateT;
-      ost_tst: TrsHelper
-    }.
+  Variable OState: Type.
 
   Definition RPrecond := OState -> list Msg (* input messages *) -> Prop.
   Definition RPostcond :=
@@ -118,17 +113,19 @@ Section Rule.
       rule_postcond: RPostcond;
     }.
 
-  Definition ValidMsgsIn (oidx: IdxT) (mids: list MsgId) :=
-    Forall (fun mid => mid_to mid = oidx) mids.
+  Definition ValidMsgsIn (oidx: IdxT) {MsgT} `{HasMsg MsgT}
+             (msgs: list MsgT) :=
+    Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx) msgs.
 
 End Rule.
 
 Section Conditions.
+  Variable OState: Type.
 
   Definition Precond := OState -> list Msg -> Prop.
   Definition Postcond := OState -> list Msg -> Prop.
 
-  Definition impRPost (rpostc: RPostcond) (postc: Postcond) :=
+  Definition impRPost (rpostc: RPostcond OState) (postc: Postcond) :=
     forall pre val post outs,
       rpostc pre val post outs -> postc post outs.
 
@@ -137,7 +134,7 @@ Section Conditions.
   Definition PostcondSt :=
     OState (* prestate *) -> list Msg (* input messages *) -> OState (* poststate *) -> Prop.
 
-  Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond :=
+  Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond OState :=
     fun pre ins post outs =>
       pst pre ins post /\ outs = mouts pre ins.
 
@@ -163,90 +160,71 @@ Section Conditions.
 
 End Conditions.
 
-Infix "-->" := impPre (at level 30).
-Infix "==>" := impPost (at level 30).
-Infix "~~>" := impRPost (at level 30).
+Section Object.
+  Variable OState: Type.
 
-Hint Resolve impPre_refl impPre_trans impPost_refl impPost_trans.
+  Record Object :=
+    { obj_idx: IdxT;
+      obj_state_init: OState;
+      obj_rules: list (Rule OState)
+    }.
 
-Record Object :=
-  { obj_idx: nat;
-    obj_state_init: StateT;
-    obj_rules: list Rule;
-  }.
+  Class IsObject (ObjT: Type) :=
+    { getIndex : ObjT -> IdxT;
+      getOStateInit : ObjT -> OState }.
 
-Definition System := list Object.
+  Global Instance Object_IsObject : IsObject Object :=
+    {| getIndex := obj_idx;
+       getOStateInit := obj_state_init |}.
 
-Definition indicesOf (sys: System) :=
-  map (fun o => obj_idx o) sys.
-Definition initsOf (sys: System) :=
-  map (fun o => obj_state_init o) sys.
-Definition iisOf (sys: System) :=
-  map (fun o => (obj_idx o, obj_state_init o)) sys.
-Definition rulesOf (sys: System): list Rule :=
-  concat (map (fun o => obj_rules o) sys).
+  Class HasObjects (ObjT: Type) `{IsObject ObjT} (SysT: Type) :=
+    { getObjects : SysT -> list ObjT }.
 
-Definition objOf (sys: System) (oidx: IdxT): option Object :=
-  find (fun o => if obj_idx o ==n oidx then true else false) sys.
-Definition objRulesOf (sys: System) (oidx: IdxT) :=
-  (objOf sys oidx) >>=[nil] (fun obj => obj_rules obj).
+End Object.
 
-Fixpoint getForwards (topo: list MsgAddr) (oidx: IdxT) :=
-  map ma_to (filter (fun c => if ma_from c ==n oidx then true else false) topo).
+Definition indicesOf {OState ObjT SysT} `{HasObjects OState ObjT SysT} (sys: SysT) :=
+  map (fun o => getIndex o) (getObjects sys).
+Definition initsOf {OState ObjT SysT} `{HasObjects OState ObjT SysT} (sys: SysT) :=
+  map (fun o => getOStateInit o) (getObjects sys).
+Definition objOf {OState ObjT} `{IsObject OState ObjT}
+           (sys: list ObjT) (oidx: IdxT): option ObjT :=
+  find (fun o => if getIndex o ==n oidx then true else false) sys.
 
-Lemma rulesOf_in:
-  forall obj sys,
-    In obj sys ->
-    forall rule,
-      In rule (obj_rules obj) ->
-      In rule (rulesOf sys).
-Proof.
-  unfold rulesOf; intros.
-  induction sys; simpl; intros; [inv H|].
-  apply in_or_app.
-  inv H; auto.
-Qed.
-
-Lemma iisOf_initsOf:
-  forall sys1 sys2,
-    iisOf sys1 = iisOf sys2 -> initsOf sys1 = initsOf sys2.
-Proof.
-  unfold iisOf, initsOf; intros.
-  generalize dependent sys2.
-  induction sys1 as [|obj1 sys1]; simpl; intros.
-  - apply eq_sym, map_eq_nil in H.
-    subst; reflexivity.
-  - destruct sys2 as [|obj2 sys2]; [discriminate|].
-    simpl in H; inv H.
-    simpl; erewrite IHsys1 by eassumption.
-    rewrite H2; reflexivity.
-Qed.
-
-Lemma iisOf_indicesOf:
-  forall sys1 sys2,
-    iisOf sys1 = iisOf sys2 -> indicesOf sys1 = indicesOf sys2.
-Proof.
-  unfold iisOf, indicesOf; intros.
-  generalize dependent sys2.
-  induction sys1 as [|obj1 sys1]; simpl; intros.
-  - apply eq_sym, map_eq_nil in H.
-    subst; reflexivity.
-  - destruct sys2 as [|obj2 sys2]; [discriminate|].
-    simpl in H; inv H.
-    simpl; erewrite IHsys1 by eassumption.
-    rewrite H1; reflexivity.
-Qed.
-  
-Definition singleton (obj: Object): System := obj :: nil.
-
-Definition isExternal (sys: System) (idx: IdxT) :=
+Definition isExternal {OState ObjT SysT} `{HasObjects OState ObjT SysT}
+           (sys: SysT) (idx: IdxT) :=
   if idx ?<n (indicesOf sys) then false else true.
-Definition isInternal (sys: System) (idx: IdxT) :=
+Definition isInternal {OState ObjT SysT} `{HasObjects OState ObjT SysT}
+           (sys: SysT) (idx: IdxT) :=
   if idx ?<n (indicesOf sys) then true else false.
 
-Notation "'⊤'" := (fun _ _ => True).
-Notation "'⊤⊤'" := (fun _ _ _ => True).
-Notation "'⊤⊤⊤'" := (fun _ _ _ _ => True).
-Notation "'⊤⊤='" := (fun pre v post => pre = post).
-Notation "[ obj ]" := (singleton obj).
+Section System.
+  Variable OState: Type.
+
+  Definition System := list (Object OState).
+
+  Global Instance System_HasObjects : HasObjects System :=
+    {| getObjects := id |}.
+
+  Definition rulesOf (sys: System): list (Rule OState) :=
+    concat (map (fun o => obj_rules o) sys).
+
+  Definition objRulesOf (sys: System) (oidx: IdxT) :=
+    (objOf sys oidx) >>=[nil] (fun obj => obj_rules obj).
+
+  Lemma rulesOf_in:
+    forall obj sys,
+      In obj sys ->
+      forall rule,
+        In rule (obj_rules obj) ->
+        In rule (rulesOf sys).
+  Proof.
+    unfold rulesOf; intros.
+    induction sys; simpl; intros; [inv H|].
+    apply in_or_app.
+    inv H; auto.
+  Qed.
+  
+  Definition singleton (obj: Object OState): System := obj :: nil.
+
+End System.
 

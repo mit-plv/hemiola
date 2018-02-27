@@ -10,7 +10,7 @@ Set Implicit Arguments.
 Lemma atomic_emptyILabel_not_in:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
-    ~ In emptyILabel hst.
+    ~ In emptyRLabel hst.
 Proof.
   induction 1; simpl; intros.
   - intro Hx; destruct Hx; [discriminate|auto].

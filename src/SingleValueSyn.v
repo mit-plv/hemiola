@@ -26,7 +26,7 @@ Section Impl.
   Local Definition specObj := specObj extIdx1 extIdx2.
 
   Lemma svmMsgF_ValidMsgMap:
-    ValidMsgMap svmMsgF impl0 spec.
+    ValidMsgMap OrdOState svmMsgF impl0 spec.
   Proof.
     unfold ValidMsgMap; intros.
     unfold svmMsgF; simpl.
@@ -118,7 +118,7 @@ Section Impl.
         | [H: isInternal _ (mid_to (msg_id _)) = true |-
            isInternal _ (mid_to (msg_id _)) = true] =>
           eapply validMsgMap_to_isInternal; [|eassumption]
-        | [ |- ValidMsgMap _ (addRulesSys _ (buildRawSys ?imp)) _ ] =>
+        | [ |- ValidMsgMap _ _ (addRulesSys _ (buildRawSys ?imp)) _ ] =>
           apply validMsgMap_same_indices with (impl1:= imp);
           [apply svmMsgF_ValidMsgMap
           |rewrite addRulesSys_indices, buildRawSys_indicesOf; reflexivity]
@@ -155,7 +155,7 @@ Section Impl.
     Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1.
     
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec SvmSim SvmInv1 svmP impl1 }.
+      { impl1: System OrdOState & SynthOk spec SvmSim SvmInv1 svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 

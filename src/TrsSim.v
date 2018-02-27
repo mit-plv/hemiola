@@ -13,7 +13,7 @@ Section TrsSim.
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: System).
+  Variables (impl spec: System OrdOState).
 
   Definition TrsSimInit :=
     sim (getStateInit impl) (getStateInit spec).
@@ -103,16 +103,16 @@ Section TrsSimSep.
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: System).
+  Variables (impl spec: System OrdOState).
 
   Definition TrsSimSilent :=
     forall ist1 sst1,
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall ist2,
-        step_det impl ist1 emptyILabel ist2 ->
+        step_det impl ist1 emptyRLabel ist2 ->
         exists sst2,
-          step_det spec sst1 emptyILabel sst2 /\
+          step_det spec sst1 emptyRLabel sst2 /\
           ist2 ≈ sst2.
 
   Definition TrsSimIn :=
@@ -193,24 +193,24 @@ End TrsSimSep.
 
 Section TrsPreserving.
 
-  Definition trsPreservingRule (rule: Rule) :=
+  Definition trsPreservingRule (rule: Rule OrdOState) :=
     exists tid,
       Forall (fun mid => mid_tid mid = tid) (rule_mids rule) /\
       forall pre ins post outs,
         rule_postcond rule pre ins post outs ->
         Forall (fun mout => mid_tid (msg_id mout) = tid) outs.
 
-  Definition trsPreservingObj (obj: Object) :=
+  Definition trsPreservingObj (obj: Object OrdOState) :=
     Forall trsPreservingRule (obj_rules obj).
 
-  Definition trsPreservingSys (sys: System) :=
+  Definition trsPreservingSys (sys: System OrdOState) :=
     Forall trsPreservingObj sys.
 
 End TrsPreserving.
 
 Section TrsDisj.
 
-  Definition TrsDisj (rules1 rules2: list Rule) :=
+  Definition TrsDisj (rules1 rules2: list (Rule OrdOState)) :=
     forall rule1 rule2,
       In rule1 rules1 ->
       In rule2 rules2 ->
@@ -219,7 +219,7 @@ Section TrsDisj.
         In tid2 (map mid_tid (rule_mids rule2)) ->
         tid1 <> tid2.
 
-  Definition TrsDisjSys (sys1 sys2: System) :=
+  Definition TrsDisjSys (sys1 sys2: System OrdOState) :=
     TrsDisj (rulesOf sys1) (rulesOf sys2).
 
   Lemma TrsDisj_sym:
@@ -324,7 +324,7 @@ Proof.
 Qed.
 
 Lemma rule_mids_tid_In:
-  forall tid rules r,
+  forall tid (rules: list (Rule OrdOState)) r,
     In tid (map mid_tid (rule_mids r)) ->
     In r rules ->
     In tid (concat (map (fun rule => map mid_tid (rule_mids rule)) rules)).
@@ -337,7 +337,7 @@ Qed.
 
 Section Compositionality.
 
-  Variables (impl1 impl2 spec: System)
+  Variables (impl1 impl2 spec: System OrdOState)
             (simR: TState -> TState -> Prop)
             (ginv: TState -> Prop)
             (p: Label -> Label).
@@ -353,7 +353,7 @@ Section Compositionality.
              (Hginv1: TrsInv impl1 ginv)
              (Hginv2: TrsInv impl2 ginv).
 
-  Variable (impl: System).
+  Variable (impl: System OrdOState).
   Hypotheses (Hmt: trsPreservingSys impl)
              (Hii: indicesOf impl = indicesOf impl1)
              (Himpl:
@@ -372,7 +372,7 @@ Section Compositionality.
           Forall (fun mid => mid_tid mid = mtid) (rule_mids rule) ->
           forall iobj,
             In rule (obj_rules iobj) -> In iobj impl ->
-            exists obj : Object,
+            exists obj : Object OrdOState,
               obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
               In obj impl1) \/
       (forall rule,
@@ -380,7 +380,7 @@ Section Compositionality.
           Forall (fun mid => mid_tid mid = mtid) (rule_mids rule) ->
           forall iobj,
             In rule (obj_rules iobj) -> In iobj impl ->
-            exists obj : Object,
+            exists obj : Object OrdOState,
               obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
               In obj impl2).
   Proof.
@@ -607,7 +607,7 @@ Section Compositionality.
           eapply atomic_preserved; eauto.
         }
         pose proof (Hsim1 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl2:= impl1) by assumption.
+        rewrite behaviorOf_preserved with (impl4:= impl1) by assumption.
         assumption.
       + assert (Transactional impl2 hst).
         { econstructor; eauto.
@@ -615,7 +615,7 @@ Section Compositionality.
           rewrite Hii; assumption.
         }
         pose proof (Hsim2 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl2:= impl2) by (rewrite Hii; assumption).
+        rewrite behaviorOf_preserved with (impl4:= impl2) by (rewrite Hii; assumption).
         assumption.
   Qed.
 

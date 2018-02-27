@@ -14,19 +14,19 @@ Section Inv.
   Definition SvmInv (ist: TState) :=
     (exists post pstt pv,
         (tst_oss ist)@[parentIdx] = Some post /\
-        (ost_st post)@[statusIdx] = Some (VNat pstt) /\
+        post@[statusIdx] = Some (VNat pstt) /\
         (pstt = stI \/ pstt = stS \/ pstt = stM) /\
-        (ost_st post)@[valueIdx] = Some pv) /\
+        post@[valueIdx] = Some pv) /\
     (exists c1ost c1stt c1v,
         (tst_oss ist)@[child1Idx] = Some c1ost /\
-        (ost_st c1ost)@[statusIdx] = Some (VNat c1stt) /\
+        c1ost@[statusIdx] = Some (VNat c1stt) /\
         (c1stt = stI \/ c1stt = stS \/ c1stt = stM) /\
-        (ost_st c1ost)@[valueIdx] = Some c1v) /\
+        c1ost@[valueIdx] = Some c1v) /\
     (exists c2ost c2stt c2v,
         (tst_oss ist)@[child2Idx] = Some c2ost /\
-        (ost_st c2ost)@[statusIdx] = Some (VNat c2stt) /\
+        c2ost@[statusIdx] = Some (VNat c2stt) /\
         (c2stt = stI \/ c2stt = stS \/ c2stt = stM) /\
-        (ost_st c2ost)@[valueIdx] = Some c2v).
+        c2ost@[valueIdx] = Some c2v).
 
 End Inv.
 
@@ -58,34 +58,34 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
-  Definition ImplStatusMI (ioss: ObjectStates) (v: Value) :=
+  Definition ImplStatusMI (ioss: ObjectStates OrdOState) (v: Value) :=
     exists midx most v,
       ioss@[midx] = Some most /\
-      (ost_st most)@[statusIdx] = Some (VNat stM) /\
-      (ost_st most)@[valueIdx] = Some v /\
+      most@[statusIdx] = Some (VNat stM) /\
+      most@[valueIdx] = Some v /\
       (forall oidx ost stt,
           oidx <> midx ->
           ioss@[oidx] = Some ost ->
-          (ost_st ost)@[statusIdx] = Some (VNat stt) ->
+          ost@[statusIdx] = Some (VNat stt) ->
           stt = stI).
 
-  Definition ImplStatusSI (ioss: ObjectStates) (v: Value) :=
+  Definition ImplStatusSI (ioss: ObjectStates OrdOState) (v: Value) :=
     forall oidx ost stt,
       ioss@[oidx] = Some ost ->
-      (ost_st ost)@[statusIdx] = Some (VNat stt) ->
+      ost@[statusIdx] = Some (VNat stt) ->
       match stt with
       | 0 (* stI *) => True
-      | 1 (* stS *) => (ost_st ost)@[valueIdx] = Some v
+      | 1 (* stS *) => ost@[valueIdx] = Some v
       | 2 (* stM *) => False
       | _ => False
       end.
 
-  Definition SpecState (soss: ObjectStates) (v: Value) :=
+  Definition SpecState (soss: ObjectStates OrdOState) (v: Value) :=
     exists sost,
       soss@[specIdx] = Some sost /\
-      (ost_st sost)@[valueIdx] = Some v.
+      sost@[valueIdx] = Some v.
 
-  Inductive SvmR: ObjectStates -> ObjectStates -> Prop :=
+  Inductive SvmR: ObjectStates OrdOState -> ObjectStates OrdOState -> Prop :=
   | SvmMI:
       forall ioss soss v,
         ImplStatusMI ioss v ->
@@ -102,9 +102,4 @@ Section Sim.
     SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
 
 End Sim.
-
-Lemma SvmR_EquivPreservingR:
-  EquivPreservingR SvmR.
-Proof.
-Admitted.
 

@@ -11,8 +11,8 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
     end
   end.
 
-Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
-| SdSlt: forall st, step_det sys st emptyILabel st
+Inductive step_det (sys: System OrdOState): TState -> TLabel -> TState -> Prop :=
+| SdSlt: forall st, step_det sys st emptyRLabel st
 | SdExt: forall ts oss oims emsg,
     isExternal sys (mid_from (msg_id emsg)) = true ->
     isInternal sys (mid_to (msg_id emsg)) = true ->
@@ -33,12 +33,12 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
     (oss)@[oidx] = Some os ->
 
     Forall (FirstMP oims) msgs ->
-    ValidMsgsIn oidx (map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs) ->
+    ValidMsgsIn oidx msgs ->
     map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs = rule_mids rule ->
     In rule (obj_rules obj) ->
     rule_precond rule os (map tmsg_msg msgs) ->
     rule_postcond rule os (map tmsg_msg msgs) pos outs ->
-    ValidOuts oidx outs ->
+    ValidMsgOuts oidx outs ->
 
     tinfo = match getTMsgsTInfo msgs with
             | Some ti => ti
@@ -61,5 +61,5 @@ Inductive step_det (sys: System) : TState -> TLabel -> TState -> Prop :=
                            end
              |}.
 
-Definition steps_det: Steps TState TLabel := steps step_det.
+Definition steps_det: Steps (System OrdOState) TState TLabel := steps step_det.
 

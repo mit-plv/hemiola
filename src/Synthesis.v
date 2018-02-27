@@ -8,7 +8,7 @@ Section SimP.
 
   (** User inputs *)
   Variables
-    (impl0 spec: System)
+    (impl0 spec: System OrdOState)
     (R: TState -> TState -> Prop)
     (ginv: TState -> Prop)
     (p: Label -> Label).
@@ -16,7 +16,7 @@ Section SimP.
   (* NOTE: the order here matters. [Rule]s are synthesized during the simulation
    * proof. Invariants are proven after all [Rule]s are synthesized.
    *)
-  Definition SynthOk (s: System) :=
+  Definition SynthOk (s: System OrdOState) :=
     R (getStateInit s) (getStateInit spec) /\
     ginv (getStateInit s) /\
     (TrsSimulates R ginv p s spec /\ TrsInv s ginv) /\
@@ -26,7 +26,7 @@ Section SimP.
 
   Section SynthesisStep.
 
-    Definition SynT := System -> System -> Prop.
+    Definition SynT := System OrdOState -> System OrdOState -> Prop.
     Variable syn: SynT.
 
     (** The synthesizer [syn] should "preserve" three conditions:
@@ -127,30 +127,31 @@ Section SimMP.
 
 End SimMP.
 
-Section TrsLock.
+(* Section TrsLock. *)
 
-  Definition alwaysLock (trsh: TrsHelper) := trsh = [].
+(*   Definition alwaysLock (trsh: TrsHelper) := trsh = []. *)
 
-End TrsLock.
+(* End TrsLock. *)
 
 Section SynRqRsImm.
   Variables (trsIdx: IdxT)
-            (this: IdxT)
-            (trsLocker: TrsHelper -> Prop).
+            (this: IdxT).
+            (* (trsLocker: TrsHelper -> Prop). *)
 
-  Definition liftTrsLocker (os: OState): Prop := trsLocker (ost_tst os).
+  (* Definition liftTrsLocker (os: OState OrdOState): Prop := trsLocker (ost_tst os). *)
 
   Definition rqChn: IdxT := 0.
   Definition rsChn: IdxT := 1.
 
-  Definition SingleRqPostcondSt (mout: OState -> Value -> OState -> Prop): PostcondSt :=
+  Definition SingleRqPostcondSt (mout: OrdOState -> Value -> OrdOState -> Prop)
+    : PostcondSt OrdOState :=
     fun pre ins post =>
       match ins with
       | {| msg_value := val |} :: nil => mout pre val post
       | _ => False
       end.
 
-  Definition SingleRqMsgOuts (mout: OState -> Value -> list Msg): MsgOuts :=
+  Definition SingleRqMsgOuts (mout: OrdOState -> Value -> list Msg): MsgOuts OrdOState :=
     fun pre ins =>
       match ins with
       | {| msg_value := val |} :: nil => mout pre val
@@ -162,106 +163,106 @@ Section SynRqRsImm.
        msg_value := val
     |}.
 
-  Section Immediate.
+(*   Section Immediate. *)
 
-    Definition synImm (prec: RPrecond) (rqFrom: IdxT) (postc: PostcondSt)
-               (valOut: Value -> StateT -> Value) :=
-      {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil;
-         rule_precond := prec;
-         rule_postcond :=
-           rpostOf postc
-                   (SingleRqMsgOuts
-                      (fun pre val =>
-                         msgValOut (valOut val (ost_st pre)) (rqFrom, rsChn) :: nil))
-      |}.
+(*     Definition synImm (prec: RPrecond) (rqFrom: IdxT) (postc: PostcondSt) *)
+(*                (valOut: Value -> StateT -> Value) := *)
+(*       {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil; *)
+(*          rule_precond := prec; *)
+(*          rule_postcond := *)
+(*            rpostOf postc *)
+(*                    (SingleRqMsgOuts *)
+(*                       (fun pre val => *)
+(*                          msgValOut (valOut val (ost_st pre)) (rqFrom, rsChn) :: nil)) *)
+(*       |}. *)
 
-  End Immediate.
+(*   End Immediate. *)
 
-  Section RequestFwd.
-    Variables (rqFrom: IdxT) (fwds: list IdxT).
+(*   Section RequestFwd. *)
+(*     Variables (rqFrom: IdxT) (fwds: list IdxT). *)
 
-    Definition synRqOuts (tochns: list (IdxT * IdxT)) (val: Value) :=
-      map (msgValOut val) tochns.
+(*     Definition synRqOuts (tochns: list (IdxT * IdxT)) (val: Value) := *)
+(*       map (msgValOut val) tochns. *)
 
-    Definition synRqPostcond (pre: OState) (val: Value) (post: OState) :=
-      post = {| ost_st := ost_st pre;
-                ost_tst := (ost_tst pre)
-                           +[ trsIdx <-
-                              {| (* store the request value *)
-                                 tst_rqval := val |}]
-             |}.
+(*     Definition synRqPostcond (pre: OState) (val: Value) (post: OState) := *)
+(*       post = {| ost_st := ost_st pre; *)
+(*                 ost_tst := (ost_tst pre) *)
+(*                            +[ trsIdx <- *)
+(*                               {| (* store the request value *) *)
+(*                                  tst_rqval := val |}] *)
+(*              |}. *)
 
-    Definition synRq (prec: RPrecond) :=
-      {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil;
-         rule_precond := fun pre val => prec pre val /\ liftTrsLocker pre;
-         rule_postcond :=
-           rpostOf (SingleRqPostcondSt synRqPostcond)
-                   (SingleRqMsgOuts
-                      (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val))
-      |}.
+(*     Definition synRq (prec: RPrecond) := *)
+(*       {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil; *)
+(*          rule_precond := fun pre val => prec pre val /\ liftTrsLocker pre; *)
+(*          rule_postcond := *)
+(*            rpostOf (SingleRqPostcondSt synRqPostcond) *)
+(*                    (SingleRqMsgOuts *)
+(*                       (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val)) *)
+(*       |}. *)
 
-  End RequestFwd.
+(*   End RequestFwd. *)
 
-  (** FIXME: preconditions in [synRsSingle] and [synRs] are currently just [⊤],
-   * which is incorrect. For the serializability proof, we need correct ones.
-   *)
-  Section ResponseBack.
-    Variables (rsFroms: list IdxT)
-              (rsBack: IdxT).
+(*   (** FIXME: preconditions in [synRsSingle] and [synRs] are currently just [⊤], *)
+(*    * which is incorrect. For the serializability proof, we need correct ones. *)
+(*    *) *)
+(*   Section ResponseBack. *)
+(*     Variables (rsFroms: list IdxT) *)
+(*               (rsBack: IdxT). *)
 
-    Definition RsOut := StateT -> list Msg -> Value (* request value *) -> Value.
+(*     Definition RsOut := StateT -> list Msg -> Value (* request value *) -> Value. *)
     
-    Definition synRsOuts (rsout: RsOut): MsgOuts :=
-      fun pre ins =>
-        (ost_tst pre)@[trsIdx] >>=[nil]
-        (fun trsh => {| msg_id := buildMsgId trsIdx this rsBack rsChn;
-                        msg_value := rsout (ost_st pre) ins (tst_rqval trsh) |} :: nil).
+(*     Definition synRsOuts (rsout: RsOut): MsgOuts := *)
+(*       fun pre ins => *)
+(*         (ost_tst pre)@[trsIdx] >>=[nil] *)
+(*         (fun trsh => {| msg_id := buildMsgId trsIdx this rsBack rsChn; *)
+(*                         msg_value := rsout (ost_st pre) ins (tst_rqval trsh) |} :: nil). *)
 
-    Definition synRs (postc: PostcondSt) (rsout: RsOut) :=
-      {| rule_mids := map (fun rsFrom => buildMsgId trsIdx rsFrom this rsChn) rsFroms;
-         rule_precond := ⊤;
-         rule_postcond := rpostOf postc (synRsOuts rsout) |}.
+(*     Definition synRs (postc: PostcondSt) (rsout: RsOut) := *)
+(*       {| rule_mids := map (fun rsFrom => buildMsgId trsIdx rsFrom this rsChn) rsFroms; *)
+(*          rule_precond := ⊤; *)
+(*          rule_postcond := rpostOf postc (synRsOuts rsout) |}. *)
 
-  End ResponseBack.
-
-  Section AddRules.
-
-    Definition buildRawObjs (oobs: list Object): list Object :=
-      map (fun obj => {| obj_idx := obj_idx obj;
-                         obj_state_init := obj_state_init obj;
-                         obj_rules := nil |}) oobs.
-
-    Definition buildRawSys (osys: System) :=
-      buildRawObjs osys.
-
-    Definition addRulesO (rules: list Rule) (obj: Object) :=
-      {| obj_idx := obj_idx obj;
-         obj_state_init := obj_state_init obj;
-         obj_rules :=
-           (filter (fun rule =>
-                      forallb (fun mid =>
-                                 if mid_to mid ==n obj_idx obj
-                                 then true else false) (rule_mids rule)) rules)
-             ++ obj_rules obj |}.
-
-    Fixpoint addRules (rules: list Rule) (objs: list Object) :=
-      match objs with
-      | nil => nil
-      | obj :: obs' =>
-        (addRulesO rules obj) :: (addRules rules obs')
-      end.
-
-    Definition addRulesSys (rules: list Rule) (sys: System) :=
-      addRules rules sys.
-    
-  End AddRules.
-
-  Definition idxInter (li1 li2: list IdxT): list IdxT :=
-    filter (fun idx => if idx ?<n li2 then true else false) li1.
-  Definition idxSubtract (li1 li2: list IdxT): list IdxT :=
-    filter (fun idx => if idx ?<n li2 then false else true) li1.
+(*   End ResponseBack. *)
   
 End SynRqRsImm.
+
+Section AddRules.
+
+  Definition buildRawObjs (oobs: list (Object OrdOState)): list (Object OrdOState) :=
+    map (fun obj => {| obj_idx := obj_idx obj;
+                       obj_state_init := obj_state_init obj;
+                       obj_rules := nil |}) oobs.
+
+  Definition buildRawSys (osys: System OrdOState) :=
+    buildRawObjs osys.
+
+  Definition addRulesO (rules: list (Rule OrdOState)) (obj: Object OrdOState) :=
+    {| obj_idx := obj_idx obj;
+       obj_state_init := obj_state_init obj;
+       obj_rules :=
+         (filter (fun rule =>
+                    forallb (fun mid =>
+                               if mid_to mid ==n obj_idx obj
+                               then true else false) (rule_mids rule)) rules)
+           ++ obj_rules obj |}.
+
+  Fixpoint addRules (rules: list (Rule OrdOState)) (objs: list (Object OrdOState)) :=
+    match objs with
+    | nil => nil
+    | obj :: obs' =>
+      (addRulesO rules obj) :: (addRules rules obs')
+    end.
+
+  Definition addRulesSys (rules: list (Rule OrdOState)) (sys: System OrdOState) :=
+    addRules rules sys.
+  
+End AddRules.
+
+Definition idxInter (li1 li2: list IdxT): list IdxT :=
+  filter (fun idx => if idx ?<n li2 then true else false) li1.
+Definition idxSubtract (li1 li2: list IdxT): list IdxT :=
+  filter (fun idx => if idx ?<n li2 then false else true) li1.
 
 Section Manipulation.
 
@@ -277,7 +278,7 @@ Section Manipulation.
     Definition makeMsgIdExternal (mid: MsgId): MsgId :=
       buildMsgId (mid_tid mid) (mid_from mid) (makeIdxExternal (mid_to mid)) (mid_chn mid).
     
-    Definition makeRuleExternal (rule: Rule): Rule :=
+    Definition makeRuleExternal (rule: Rule OrdOState): Rule OrdOState :=
       {| rule_mids := map makeMsgIdExternal (rule_mids rule);
          rule_precond := rule_precond rule;
          rule_postcond := rule_postcond rule
@@ -306,7 +307,7 @@ Section Manipulation.
     Qed.
 
     Lemma addRulesO_makeRuleExternal:
-      forall rs1 rs2 obj,
+      forall (rs1 rs2: list (Rule OrdOState)) obj,
         obj_idx obj = targetIdx ->
         addRulesO (rs1 ++ map makeRuleExternal rs2) obj =
         addRulesO rs1 obj.
@@ -316,9 +317,9 @@ Section Manipulation.
   End MakeExternal.
 
   Section MakePreCondDisj.
-    Variable (prec: Precond).
+    Variable (prec: Precond OrdOState).
 
-    Definition makePreCondDisj (rule: Rule): Rule :=
+    Definition makePreCondDisj (rule: Rule OrdOState): Rule OrdOState :=
       {| rule_mids := rule_mids rule;
          rule_precond := fun pre val => ~ (prec pre val) /\ rule_precond rule pre val;
          rule_postcond := rule_postcond rule

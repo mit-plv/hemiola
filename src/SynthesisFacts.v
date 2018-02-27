@@ -67,6 +67,7 @@ Lemma buildRawSys_indicesOf:
 Proof.
   intros; unfold indicesOf, buildRawSys; simpl.
   induction sys; [reflexivity|].
+  unfold id in *.
   simpl; rewrite IHsys; reflexivity.
 Qed.
 
@@ -94,7 +95,7 @@ Lemma addRules_rule_in:
   forall rule rules obs iobj,
     In rule (obj_rules iobj) ->
     In iobj (addRules rules obs) ->
-    exists obj : Object,
+    exists obj : Object OrdOState,
       obj_idx obj = obj_idx iobj /\
       In rule (obj_rules obj) /\
       In obj (obs ++ addRules rules (buildRawObjs obs)).
@@ -153,7 +154,7 @@ Lemma addRulesSys_rule_in:
   forall sys rules rule iobj,
     In rule (obj_rules iobj) ->
     In iobj (addRulesSys rules sys) ->
-    exists obj : Object,
+    exists obj : Object OrdOState,
       obj_idx obj = obj_idx iobj /\
       In rule (obj_rules obj) /\
       In obj (sys ++ (addRulesSys rules (buildRawSys sys))).

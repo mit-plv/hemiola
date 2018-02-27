@@ -1,5 +1,9 @@
 Require Import Bool Ascii String List Eqdep Omega.
-Require Import Logic.FunctionalExtensionality.
+
+Notation "[ ]" := nil (format "[ ]").
+Notation "[ x ]" := (cons x nil).
+Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)).
+Notation "[ x ; .. ; y ]" := (cons x .. (cons y nil) ..).
 
 Ltac inv H := inversion H; subst; clear H.
 Ltac dest :=
@@ -106,6 +110,11 @@ Fixpoint findAt (v: nat) (l: list nat) :=
     if v ==n n then Some O
     else (findAt v l') >>=[None] (fun o => Some (S o))
   end.
+
+Notation "'⊤'" := (fun _ _ => True).
+Notation "'⊤⊤'" := (fun _ _ _ => True).
+Notation "'⊤⊤⊤'" := (fun _ _ _ _ => True).
+Notation "'⊤⊤='" := (fun pre _ post => pre = post).
 
 Axiom cheat: forall t, t.
 

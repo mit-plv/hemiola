@@ -2,16 +2,17 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics SemFacts.
 
 Section Simulation.
-  Context {StateI LabelI StateS LabelS: Type}
-          `{HasInit StateI} `{HasLabel LabelI}
-          `{HasInit StateS} `{HasLabel LabelS}.
-  Variables (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
+  Context {OState ObjT SysT StateI LabelI StateS LabelS: Type}
+          `{HasObjects OState ObjT SysT}
+          `{HasInit SysT StateI} `{HasLabel LabelI}
+          `{HasInit SysT StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step SysT StateI LabelI) (stepS: Step SysT StateS LabelS)
             (sim: StateI -> StateS -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: System).
+  Variables (impl spec: SysT).
 
   Definition Simulates :=
     forall ist1 sst1,
@@ -47,22 +48,22 @@ Section Simulation.
     induction 2; simpl; intros;
       [exists sst1, nil; repeat split; auto; constructor|].
 
-    specialize (IHsteps H3).
+    specialize (IHsteps H5).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H5; [|exact H8].
+    eapply Hsim in H7; [|exact H10].
     remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
     destruct ilbl as [elbl|].
 
-    - destruct H5 as [sst3 [slbl [? [? ?]]]].
+    - destruct H7 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
-      + simpl; erewrite H6, H9; simpl.
+      + simpl; erewrite H8, H11; simpl.
         reflexivity.
       + econstructor; eauto.
-    - destruct H5.
-      * destruct H5 as [sst3 [slbl [? [? ?]]]].
+    - destruct H7.
+      * destruct H7 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
-        -- simpl; rewrite H6, H9; simpl; reflexivity.
+        -- simpl; rewrite H8, H11; simpl; reflexivity.
         -- econstructor; eauto.
       * exists sst2, shst; repeat split; auto.
   Qed.
@@ -73,15 +74,16 @@ Section Simulation.
     (steps stepI) # (steps stepS) |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
-    inv H3.
-    eapply simulation_steps in H4; [|exact Hsimi].
-    destruct H4 as [sst2 [shst [? [? ?]]]].
+    inv H5.
+    eapply simulation_steps in H6; [|exact Hsimi].
+    destruct H6 as [sst2 [shst [? [? ?]]]].
     econstructor; eauto.
   Qed.
 
 End Simulation.
 
 Section SimMap.
+  Variable OState: Type.
   Variable (mmap: Msg -> Msg).
 
   Definition LabelMap (il: Label) :=
@@ -90,7 +92,7 @@ Section SimMap.
     | LblOuts outs => LblOuts (map mmap outs)
     end.
 
-  Definition ValidMsgMap (impl spec: System) :=
+  Definition ValidMsgMap (impl spec: System OState) :=
     forall msg,
       isInternal impl (mid_from (msg_id msg)) =
       isInternal spec (mid_from (msg_id (mmap msg))) /\
@@ -136,27 +138,4 @@ Section SimMap.
   Qed.
   
 End SimMap.
-
-Section StateEquiv.
-
-  Definition StateEquivO (ost1 ost2: OState) :=
-    ost_st ost1 = ost_st ost2.
-
-  Definition StateEquivOS (os1 os2: ObjectStates) :=
-    forall oidx,
-      match os1@[oidx], os2@[oidx] with
-      | Some ost1, Some ost2 => StateEquivO ost1 ost2
-      | None, None => True
-      | _, _ => False
-      end.
-
-  Definition EquivPreservingR (R: ObjectStates -> ObjectStates -> Prop) :=
-    forall ioss1 soss,
-      R ioss1 soss ->
-      forall ioss2,
-        StateEquivOS ioss1 ioss2 ->
-        R ioss2 soss.
-
-End StateEquiv.
-
   
