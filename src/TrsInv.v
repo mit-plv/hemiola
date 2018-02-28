@@ -4,7 +4,7 @@ Require Import Simulation Serial.
 
 Set Implicit Arguments.
 
-Definition OInv := OrdOState -> Prop.
+Definition OInv := OState -> Prop.
 Definition Inv := TState -> Prop.
 
 Definition liftOInv (oidx: IdxT) (oinv: OInv): Inv :=
@@ -39,10 +39,10 @@ Lemma ainv_proj2: forall ainv1 ainv2, ainv1 /\a ainv2 ->a ainv2.
 Proof. firstorder. Qed.
 
 Section Impl.
-  Variable (impl: System OrdOState).
+  Variable (impl: System).
 
   Definition TrsInvInit (ginv: Inv) :=
-    ginv (getStateInit impl).
+    ginv (initsOf impl).
 
   Definition TrsInv (ginv: Inv) :=
     forall ist1,

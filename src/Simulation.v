@@ -2,10 +2,9 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics SemFacts.
 
 Section Simulation.
-  Context {OState ObjT SysT StateI LabelI StateS LabelS: Type}
-          `{HasObjects OState ObjT SysT}
-          `{HasInit SysT StateI} `{HasLabel LabelI}
-          `{HasInit SysT StateS} `{HasLabel LabelS}.
+  Context {SysT StateI LabelI StateS LabelS: Type}
+          `{IsSystem SysT StateI} `{HasLabel LabelI}
+          `{IsSystem SysT StateS} `{HasLabel LabelS}.
   Variables (stepI: Step SysT StateI LabelI) (stepS: Step SysT StateS LabelS)
             (sim: StateI -> StateS -> Prop)
             (p: Label -> Label).
@@ -19,17 +18,17 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         stepI impl ist1 ilbl ist2 ->
-        match extLabel impl (getLabel ilbl) with
+        match extLabel (StateT:= StateI) impl (getLabel ilbl) with
         | None =>
           (exists sst2 slbl,
               stepS spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = None /\
+              extLabel (StateT:= StateS) spec (getLabel slbl) = None /\
               ist2 ≈ sst2) \/
           ist2 ≈ sst1
         | Some elbl =>
           (exists sst2 slbl,
               stepS spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = Some (p elbl) /\
+              extLabel (StateT:= StateS) spec (getLabel slbl) = Some (p elbl) /\
               ist2 ≈ sst2)
         end.
 
@@ -41,49 +40,49 @@ Section Simulation.
       forall ihst ist2,
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
-          map p (behaviorOf impl ihst) = behaviorOf spec shst /\
+          map p (behaviorOf (StateT:= StateI) impl ihst) =
+          behaviorOf (StateT:= StateS) spec shst /\
           steps stepS spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
       [exists sst1, nil; repeat split; auto; constructor|].
 
-    specialize (IHsteps H5).
+    specialize (IHsteps H3).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H7; [|exact H10].
+    eapply Hsim in H5; [|exact H8].
     remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
     destruct ilbl as [elbl|].
 
-    - destruct H7 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
-      + simpl; erewrite H8, H11; simpl.
+      + simpl; erewrite H6, H9; simpl.
         reflexivity.
       + econstructor; eauto.
-    - destruct H7.
-      * destruct H7 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5.
+      * destruct H5 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
-        -- simpl; rewrite H8, H11; simpl; reflexivity.
+        -- simpl; rewrite H6, H9; simpl; reflexivity.
         -- econstructor; eauto.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
-  Hypothesis (Hsimi: sim (getStateInit impl) (getStateInit spec)).
+  Hypothesis (Hsimi: sim (initsOf impl) (initsOf spec)).
 
   Theorem simulation_implies_refinement:
     (steps stepI) # (steps stepS) |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
-    inv H5.
-    eapply simulation_steps in H6; [|exact Hsimi].
-    destruct H6 as [sst2 [shst [? [? ?]]]].
+    inv H3.
+    eapply simulation_steps in H4; [|exact Hsimi].
+    destruct H4 as [sst2 [shst [? [? ?]]]].
     econstructor; eauto.
   Qed.
 
 End Simulation.
 
 Section SimMap.
-  Variable OState: Type.
   Variable (mmap: Msg -> Msg).
 
   Definition LabelMap (il: Label) :=
@@ -92,7 +91,7 @@ Section SimMap.
     | LblOuts outs => LblOuts (map mmap outs)
     end.
 
-  Definition ValidMsgMap (impl spec: System OState) :=
+  Definition ValidMsgMap (impl spec: System) :=
     forall msg,
       isInternal impl (mid_from (msg_id msg)) =
       isInternal spec (mid_from (msg_id (mmap msg))) /\

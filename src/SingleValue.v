@@ -44,7 +44,7 @@ Section System.
       Definition setReqM := buildMsgId SvmSetE (getSpecExtIdx chnIdx) specIdx chnIdx.
       Definition setRespM := buildMsgId SvmSetE specIdx (getSpecExtIdx chnIdx) chnIdx.
 
-      Definition specGetReq: Rule OrdOState :=
+      Definition specGetReq: Rule :=
         {| rule_mids := getReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
@@ -53,7 +53,7 @@ Section System.
                             (fun v => {| msg_id := getRespM; msg_value := v |} :: nil));
         |}.
 
-      Definition specSetReq: Rule OrdOState :=
+      Definition specSetReq: Rule :=
         {| rule_mids := setReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
@@ -64,17 +64,15 @@ Section System.
 
     End PerChn.
 
-    Definition specObj: Object OrdOState :=
-      {| obj_idx := specIdx;
-         obj_state_init := [valueIdx <- VNat 0];
-         obj_rules :=
+    Definition spec: System :=
+      {| sys_inds := specIdx :: nil;
+         sys_inits := [specIdx <- [valueIdx <- VNat 0]];
+         sys_rules :=
            (specGetReq specChn1)
              :: (specSetReq specChn1)
              :: (specGetReq specChn2)
              :: (specSetReq specChn2) :: nil
       |}.
-    
-    Definition spec : System OrdOState := singleton specObj.
 
   End Spec.
 
@@ -99,29 +97,12 @@ Section System.
     Definition stS := 1.
     Definition stI := 0.
 
-    Section Child0.
-      Variable childIdx: nat.
-
-      Definition child0: Object OrdOState :=
-        {| obj_idx := childIdx;
-           obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
-           obj_rules := nil
-        |}.
-
-    End Child0.
-
-    Section Parent0.
-
-      Definition parent0 : Object OrdOState :=
-        {| obj_idx := parentIdx;
-           obj_state_init := [valueIdx <- VNat 0] +[statusIdx <- VNat stS];
-           obj_rules := nil
-        |}.
-
-    End Parent0.
-
-    Definition impl0 : System OrdOState :=
-      parent0 :: (child0 child1Idx) :: (child0 child2Idx) :: nil.
+    Definition impl0: System :=
+      {| sys_inds := parentIdx :: child1Idx :: child2Idx :: nil;
+         sys_inits := [parentIdx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
+                      +[child1Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
+                      +[child2Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]];
+         sys_rules := nil |}.
 
   End Impl0.
 

@@ -4,7 +4,7 @@ Require Import Common ListSupport FMap Syntax Semantics StepDet.
 (** [Atomic] and [Transactional] histories *)
 
 Section PerSystem.
-  Variable sys: System OrdOState.
+  Variable sys: System.
 
   (* A history is [Atomic] if it satisfies following conditions:
    * 1) The history can be either an incomplete or a complete transaction.
@@ -58,26 +58,26 @@ Definition trsMessages (trsInfo: TInfo) (mp: MessagePool TMsg) : list TMsg :=
 
 (** Serializability *)
 
-Definition trsSteps (sys: System OrdOState) (st1: TState) (hst: THistory) (st2: TState) :=
+Definition trsSteps (sys: System) (st1: TState) (hst: THistory) (st2: TState) :=
   steps_det sys st1 hst st2 /\
   Transactional sys hst.
 
-Definition seqSteps (sys: System OrdOState) (st1: TState) (hst: THistory) (st2: TState) :=
+Definition seqSteps (sys: System) (st1: TState) (hst: THistory) (st2: TState) :=
   steps_det sys st1 hst st2 /\
   Sequential sys hst.
 
-Definition Equivalent (sys: System OrdOState)
+Definition Equivalent (sys: System)
            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
   behaviorOf sys ll1 = behaviorOf sys ll2.
 
-Definition Serializable (sys: System OrdOState) (ll: THistory) :=
+Definition Serializable (sys: System) (ll: THistory) :=
   exists sll sst,
-    (* 1) legal and sequential *) seqSteps sys (getStateInit sys) sll sst /\
+    (* 1) legal and sequential *) seqSteps sys (initsOf sys) sll sst /\
     (* 3) equivalent *) Equivalent sys ll sll.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
-Definition SerializableSys (sys: System OrdOState) :=
+Definition SerializableSys (sys: System) :=
   forall ll st,
-    steps_det sys (getStateInit sys) ll st ->
+    steps_det sys (initsOf sys) ll st ->
     Serializable sys ll.
 

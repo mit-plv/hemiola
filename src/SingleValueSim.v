@@ -58,7 +58,7 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
-  Definition ImplStatusMI (ioss: ObjectStates OrdOState) (v: Value) :=
+  Definition ImplStatusMI (ioss: OStates) (v: Value) :=
     exists midx most v,
       ioss@[midx] = Some most /\
       most@[statusIdx] = Some (VNat stM) /\
@@ -69,7 +69,7 @@ Section Sim.
           ost@[statusIdx] = Some (VNat stt) ->
           stt = stI).
 
-  Definition ImplStatusSI (ioss: ObjectStates OrdOState) (v: Value) :=
+  Definition ImplStatusSI (ioss: OStates) (v: Value) :=
     forall oidx ost stt,
       ioss@[oidx] = Some ost ->
       ost@[statusIdx] = Some (VNat stt) ->
@@ -80,12 +80,12 @@ Section Sim.
       | _ => False
       end.
 
-  Definition SpecState (soss: ObjectStates OrdOState) (v: Value) :=
+  Definition SpecState (soss: OStates) (v: Value) :=
     exists sost,
       soss@[specIdx] = Some sost /\
       sost@[valueIdx] = Some v.
 
-  Inductive SvmR: ObjectStates OrdOState -> ObjectStates OrdOState -> Prop :=
+  Inductive SvmR: OStates -> OStates -> Prop :=
   | SvmMI:
       forall ioss soss v,
         ImplStatusMI ioss v ->

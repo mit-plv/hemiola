@@ -3,10 +3,10 @@ Require Import Common FMap Syntax.
 
 Set Implicit Arguments.
 
-Definition intOuts {OState ObjT SysT MsgT} `{HasObjects OState ObjT SysT} `{HasMsg MsgT}
+Definition intOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
            (sys: SysT) (outs: list MsgT) :=
   filter (fun m => isInternal sys (mid_to (msg_id (getMsg m)))) outs.
-Definition extOuts {OState ObjT SysT MsgT} `{HasObjects OState ObjT SysT} `{HasMsg MsgT}
+Definition extOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
            (sys: SysT) (outs: list MsgT) :=
   filter (fun m => isExternal sys (mid_to (msg_id (getMsg m)))) outs.
 
@@ -68,6 +68,10 @@ Section Validness.
   Definition ValidMsgId (from to chn: IdxT) {MsgT} `{HasMsg MsgT} (msg: MsgT) :=
     mid_addr (msg_id (getMsg msg)) = buildMsgAddr from to chn.
 
+  Definition ValidMsgsIn (oidx: IdxT) {MsgT} `{HasMsg MsgT}
+             (msgs: list MsgT) :=
+    Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx) msgs.
+
   (* A set of messages are "valid outputs" if
    * 1) they are from the same source [idx],
    * 2) each target is not the source, and
@@ -100,27 +104,6 @@ Section HasLabel.
 
 End HasLabel.
 
-Section HasInit.
-  Variable OState: Type.
-
-  Class HasInit (SysT: Type) (StateT: Type) :=
-    { getStateInit: SysT -> StateT }.
-
-  Definition ObjectStates := M.t OState.
-
-  Fixpoint getObjectStatesInit {ObjT} `{IsObject OState ObjT}
-           (obs: list ObjT): ObjectStates :=
-    match obs with
-    | nil => M.empty _
-    | obj :: obs' => (getObjectStatesInit obs') +[getIndex obj <- getOStateInit obj]
-    end.
-
-  Global Instance HasObjects_HasInit {ObjT SysT} `{HasObjects OState ObjT SysT}
-    : HasInit SysT ObjectStates :=
-    {| getStateInit := fun sys => getObjectStatesInit (getObjects sys) |}.
-
-End HasInit.
-
 Section Transition.
 
   Definition Step SysT StateT LabelT :=
@@ -130,7 +113,7 @@ Section Transition.
     SysT -> StateT -> list LabelT -> StateT -> Prop.
 
   (* NOTE: the head is the youngest *)
-  Inductive steps {SysT StateT LabelT} `{HasInit SysT StateT}
+  Inductive steps {SysT StateT LabelT}
             (step: Step SysT StateT LabelT)
             (sys: SysT) : StateT -> list LabelT -> StateT -> Prop :=
   | StepsNil: forall st, steps step sys st nil st
@@ -141,15 +124,14 @@ Section Transition.
           step sys st2 lbl st3 ->
           steps step sys st1 (lbl :: ll) st3.
 
-  Definition psteps {SysT StateT LabelT} `{HasInit SysT StateT}
+  Definition psteps {SysT StateT LabelT}
              (step: Step SysT StateT LabelT)
              (P: StateT -> list LabelT -> StateT -> Prop)
              (sys: SysT) (st1: StateT) (ll: list LabelT) (st2: StateT) :=
     steps step sys st1 ll st2 /\
     P st1 ll st2.
 
-  Definition extLabel {OState ObjT SysT} `{HasObjects OState ObjT SysT}
-             (sys: SysT) (l: Label) :=
+  Definition extLabel {SysT} `{IsSystem SysT} (sys: SysT) (l: Label) :=
     match l with
     | LblIn _ => Some l
     | LblOuts mouts =>
@@ -161,26 +143,24 @@ Section Transition.
 
   Definition Trace := list Label.
 
-  Fixpoint behaviorOf {OState ObjT SysT} `{HasObjects OState ObjT SysT} (sys: SysT)
+  Fixpoint behaviorOf {SysT} `{IsSystem SysT} (sys: SysT)
            {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
     match ll with
     | nil => nil
     | l :: ll' => (extLabel sys (getLabel l)) ::> (behaviorOf sys ll')
     end.
 
-  Inductive Behavior {OState ObjT SysT StateT LabelT}
-            `{HasObjects OState ObjT SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
+  Inductive Behavior {SysT StateT LabelT} `{IsSystem SysT StateT} `{HasLabel LabelT}
             (ss: Steps SysT StateT LabelT) : SysT -> Trace -> Prop :=
   | Behv: forall sys ll st,
-      ss sys (getStateInit sys) ll st ->
+      ss sys (initsOf sys) ll st ->
       forall tr,
         tr = behaviorOf sys ll ->
         Behavior ss sys tr.
 
-  Definition Refines {OState ObjT SysT StateI LabelI StateS LabelS}
-             `{HasObjects OState ObjT SysT}
-             `{HasInit SysT StateI} `{HasLabel LabelI}
-             `{HasInit SysT StateS} `{HasLabel LabelS}
+  Definition Refines {SysT StateI LabelI StateS LabelS}
+             `{IsSystem SysT StateI} `{HasLabel LabelI}
+             `{IsSystem SysT StateS} `{HasLabel LabelS}
              (ssI: Steps SysT StateI LabelI) (ssS: Steps SysT StateS LabelS)
              (p: Label -> Label) (impl spec: SysT) :=
     forall ll, Behavior ssI impl ll ->
@@ -195,26 +175,25 @@ Notation "StI # StS |-- I ⊑ S" := (Refines StI StS id I S) (at level 30).
 
 (** Some concrete state and label definitions *)
 
-(* Ordinary states with [Msg]s. *)
-Section OrdState.
+(* A basis state with [Msg]s. *)
+Section BState.
 
-  Definition OrdOState := M.t Value.
-
-  Record OrdState MsgT :=
-    { mst_oss: ObjectStates OrdOState;
+  Record BState MsgT :=
+    { mst_oss: OStates;
       mst_msgs: MessagePool MsgT
     }.
 
-  Definition getOrdStateInit {MsgT} (sys: System OrdOState): OrdState MsgT :=
-    {| mst_oss := getObjectStatesInit sys;
+  Definition getBStateInit {MsgT} (sys: System): BState MsgT :=
+    {| mst_oss := initsOf sys;
        mst_msgs := nil |}.
 
-  Global Instance OrdState_HasInit {MsgT} : HasInit (System OrdOState) (OrdState MsgT) :=
-    { getStateInit := getOrdStateInit }.
+  Global Instance System_BState_IsSystem {MsgT} : IsSystem System (BState MsgT) :=
+    {| indicesOf := sys_inds;
+       initsOf := getBStateInit |}.
 
-End OrdState.
+End BState.
 
-Definition MState := OrdState Msg.
+Definition MState := BState Msg.
 
 (* [RLabel] represents "internal rule-driven labels" that reveal which message 
  * is being handled now.
@@ -223,7 +202,7 @@ Section RLabel.
 
   Inductive RLabel MsgT :=
   | IlblIn (min: MsgT): RLabel MsgT
-  | IlblOuts (hdl: option (Rule OrdOState)) (mins: list MsgT) (mouts: list MsgT): RLabel MsgT.
+  | IlblOuts (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): RLabel MsgT.
 
   Definition iLblIns {MsgT} (l: RLabel MsgT) :=
     match l with
@@ -304,18 +283,19 @@ End TMsg.
 Section TState.
 
   Record TState :=
-    { tst_oss: ObjectStates OrdOState;
+    { tst_oss: OStates;
       tst_msgs: MessagePool TMsg;
       tst_tid: TrsId
     }.
 
-  Definition getTStateInit (sys: System OrdOState): TState :=
-    {| tst_oss := getObjectStatesInit sys;
+  Definition getTStateInit (sys: System): TState :=
+    {| tst_oss := initsOf sys;
        tst_msgs := nil;
        tst_tid := trsIdInit |}.
 
-  Global Instance TState_HasInit: HasInit (System OrdOState) TState :=
-    { getStateInit := getTStateInit }.
+  Global Instance System_TState_IsSystem: IsSystem System TState :=
+    {| indicesOf := sys_inds;
+       initsOf := getTStateInit |}.
 
 End TState.
 

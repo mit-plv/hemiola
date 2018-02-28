@@ -13,10 +13,9 @@ Section TrsSim.
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: System OrdOState).
+  Variables (impl spec: System).
 
-  Definition TrsSimInit :=
-    sim (getStateInit impl) (getStateInit spec).
+  Definition TrsSimInit := sim (initsOf impl) (initsOf spec).
 
   Definition TrsSimulates :=
     forall ist1 sst1,
@@ -103,7 +102,7 @@ Section TrsSimSep.
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: System OrdOState).
+  Variables (impl spec: System).
 
   Definition TrsSimSilent :=
     forall ist1 sst1,
@@ -193,24 +192,21 @@ End TrsSimSep.
 
 Section TrsPreserving.
 
-  Definition trsPreservingRule (rule: Rule OrdOState) :=
+  Definition trsPreservingRule (rule: Rule) :=
     exists tid,
       Forall (fun mid => mid_tid mid = tid) (rule_mids rule) /\
       forall pre ins post outs,
         rule_postcond rule pre ins post outs ->
         Forall (fun mout => mid_tid (msg_id mout) = tid) outs.
 
-  Definition trsPreservingObj (obj: Object OrdOState) :=
-    Forall trsPreservingRule (obj_rules obj).
-
-  Definition trsPreservingSys (sys: System OrdOState) :=
-    Forall trsPreservingObj sys.
+  Definition trsPreservingSys (sys: System) :=
+    Forall trsPreservingRule (sys_rules sys).
 
 End TrsPreserving.
 
 Section TrsDisj.
 
-  Definition TrsDisj (rules1 rules2: list (Rule OrdOState)) :=
+  Definition TrsDisj (rules1 rules2: list Rule) :=
     forall rule1 rule2,
       In rule1 rules1 ->
       In rule2 rules2 ->
@@ -219,7 +215,7 @@ Section TrsDisj.
         In tid2 (map mid_tid (rule_mids rule2)) ->
         tid1 <> tid2.
 
-  Definition TrsDisjSys (sys1 sys2: System OrdOState) :=
+  Definition TrsDisjSys (sys1 sys2: System) :=
     TrsDisj (rulesOf sys1) (rulesOf sys2).
 
   Lemma TrsDisj_sym:
@@ -272,13 +268,11 @@ Proof.
   intros; inv H0; [(* anything *) exists 0; split; constructor|].
   unfold trsPreservingSys in H.
   eapply Forall_forall in H; eauto.
-  unfold trsPreservingObj in H.
-  eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
   destruct H as [tid [? ?]].
-  specialize (H0 _ _ _ _ H13).
+  specialize (H0 _ _ _ _ H12).
   exists tid; split; auto.
-  - rewrite <-H9 in H.
+  - rewrite <-H8 in H.
     clear -H; induction hins; [constructor|].
     inv H; constructor; auto.
   - clear -H0; induction outs; [constructor|].
@@ -324,7 +318,7 @@ Proof.
 Qed.
 
 Lemma rule_mids_tid_In:
-  forall tid (rules: list (Rule OrdOState)) r,
+  forall tid (rules: list Rule) r,
     In tid (map mid_tid (rule_mids r)) ->
     In r rules ->
     In tid (concat (map (fun rule => map mid_tid (rule_mids rule)) rules)).
@@ -337,7 +331,7 @@ Qed.
 
 Section Compositionality.
 
-  Variables (impl1 impl2 spec: System OrdOState)
+  Variables (impl1 impl2 spec: System)
             (simR: TState -> TState -> Prop)
             (ginv: TState -> Prop)
             (p: Label -> Label).
@@ -353,103 +347,61 @@ Section Compositionality.
              (Hginv1: TrsInv impl1 ginv)
              (Hginv2: TrsInv impl2 ginv).
 
-  Variable (impl: System OrdOState).
+  Variable (impl: System).
   Hypotheses (Hmt: trsPreservingSys impl)
              (Hii: indicesOf impl = indicesOf impl1)
              (Himpl:
-                forall rule iobj,
-                  In rule (obj_rules iobj) ->
-                  In iobj impl ->
-                  exists obj,
-                    obj_idx obj = obj_idx iobj /\
-                    In rule (obj_rules obj) /\
-                    In obj (impl1 ++ impl2)).
+                forall rule,
+                  In rule (sys_rules impl) ->
+                  In rule (sys_rules impl1 ++ sys_rules impl2)).
 
   Lemma TrsDisjSys_distr_same_tid:
     forall mtid,
       (forall rule,
           rule_mids rule <> nil ->
           Forall (fun mid => mid_tid mid = mtid) (rule_mids rule) ->
-          forall iobj,
-            In rule (obj_rules iobj) -> In iobj impl ->
-            exists obj : Object OrdOState,
-              obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
-              In obj impl1) \/
+          In rule (sys_rules impl) ->
+          In rule (sys_rules impl1)) \/
       (forall rule,
           rule_mids rule <> nil ->
           Forall (fun mid => mid_tid mid = mtid) (rule_mids rule) ->
-          forall iobj,
-            In rule (obj_rules iobj) -> In iobj impl ->
-            exists obj : Object OrdOState,
-              obj_idx obj = obj_idx iobj /\ In rule (obj_rules obj) /\
-              In obj impl2).
+          In rule (sys_rules impl) ->
+          In rule (sys_rules impl2)).
   Proof.
     intros.
     destruct (mtid ?<n concat (map (fun rule => (map mid_tid (rule_mids rule)))
-                                   (rulesOf impl1))).
+                                   (sys_rules impl1))).
     - left; intros.
-      pose proof (Himpl _ _ H1 H2).
-      destruct H3 as [obj [? [? ?]]].
-      apply in_app_or in H5; destruct H5.
-      + exists obj; repeat split; assumption.
-      + exfalso.
-        pose proof (rulesOf_in _ _ H5 _ H4).
-        assert (exists mrule, In mtid (map mid_tid (rule_mids mrule)) /\
-                              In mrule (rulesOf impl1)).
-        { clear -i.
-          induction (rulesOf impl1); [inv i|].
-          simpl in i; apply in_app_or in i; destruct i.
-          { exists a; split; intuition. }
-          { specialize (IHl H); dest.
-            eexists; repeat split; eauto.
-            right; auto.
-          }
+      pose proof (Himpl _ H1).
+      apply in_app_or in H2; destruct H2; [assumption|].
+      exfalso.
+      assert (exists mrule, In mtid (map mid_tid (rule_mids mrule)) /\
+                            In mrule (sys_rules impl1)).
+      { clear -i.
+        induction (sys_rules impl1); [inv i|].
+        simpl in i; apply in_app_or in i; destruct i.
+        { exists a; split; intuition. }
+        { specialize (IHl H); dest.
+          eexists; repeat split; eauto.
+          right; auto.
         }
-        assert (In mtid (map mid_tid (rule_mids rule))).
-        { clear -H H0; destruct (rule_mids rule); [elim H; reflexivity|].
-          inv H0; left; reflexivity.
-        }
-        destruct H7 as [mrule [? ?]].
-        specialize (Hmtdisj _ _ H9 H6 H7 H8).
-        elim Hmtdisj; reflexivity.
+      }
+      assert (In mtid (map mid_tid (rule_mids rule))).
+      { clear -H H0; destruct (rule_mids rule); [elim H; reflexivity|].
+        inv H0; left; reflexivity.
+      }
+      destruct H3 as [mrule [? ?]].
+      specialize (Hmtdisj _ _ H5 H2 H3 H4).
+      elim Hmtdisj; reflexivity.
       
     - right; intros.
-      pose proof (Himpl _ _ H1 H2).
-      destruct H3 as [obj [? [? ?]]].
-      apply in_app_or in H5; destruct H5.
-      + elim n; clear n.
-        pose proof (rulesOf_in _ _ H5 _ H4).
-        eapply rule_mids_tid_In; eauto.
-        clear -H H0; destruct (rule_mids rule); [elim H; reflexivity|].
-        inv H0; left; reflexivity.
-      + exists obj; repeat split; assumption.
+      pose proof (Himpl _ H1).
+      apply in_app_or in H2; destruct H2; [|assumption].
+      elim n; clear n.
+      eapply rule_mids_tid_In; eauto.
+      clear -H H0; destruct (rule_mids rule); [elim H; reflexivity|].
+      inv H0; left; reflexivity.
   Qed.
-
-  (* Lemma silent_steps_compositional: *)
-  (*   forall ist1 ist2, *)
-  (*     steps_det impl ist1 (emptyILabel :: nil) ist2 -> *)
-  (*     steps_det impl1 ist1 (emptyILabel :: nil) ist2 \/ *)
-  (*     steps_det impl2 ist1 (emptyILabel :: nil) ist2. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   inv H; inv H3; inv H5; [left; repeat econstructor|]. *)
-  (*   specialize (Himpl _ _ H8 H1). *)
-  (*   destruct Himpl as [cobj [? [? ?]]]. *)
-  (*   apply in_app_or in H5; destruct H5. *)
-  (*   + left. *)
-  (*     econstructor; [econstructor|]. *)
-  (*     rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption. *)
-  (*     replace emptyILabel with (IlblOuts (toTMsgs tinfo outs) (toTMsgs tinfo outs)) *)
-  (*       by (rewrite H0; reflexivity). *)
-  (*     eapply SdInt; eauto. *)
-  (*   + right. *)
-  (*     econstructor; [econstructor|]. *)
-  (*     assert (indicesOf impl = indicesOf impl2) as Hii2 by (rewrite Hii; auto). *)
-  (*     rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption. *)
-  (*     replace emptyILabel with (IlblOuts (toTMsgs tinfo outs) (toTMsgs tinfo outs)) *)
-  (*       by (rewrite H0; reflexivity). *)
-  (*     eapply SdInt; eauto. *)
-  (* Qed.     *)
 
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
@@ -471,29 +423,27 @@ Section Compositionality.
       + inv H3; inv H7; inv H9.
         econstructor; [econstructor|].
         rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
-        assert (rule_mids rqr <> nil) by (rewrite <-H12; discriminate).
+        assert (rule_mids rqr <> nil) by (rewrite <-H11; discriminate).
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rqr))
-          by (rewrite <-H12; constructor; auto).
-        specialize (H1 _ H3 H4 _ H13 H6).
-        destruct H1 as [obj1 [? [? ?]]].
+          by (rewrite <-H11; constructor; auto).
         econstructor; eauto.
+        rewrite <-Hii; auto.
       + inv H2; inv H4.
         specialize (IHAtomic H1 H8 _ H9).
         econstructor; eauto.
         inv H11.
         rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
         assert (rule_mids rule <> nil).
-        { rewrite <-H15; clear -H.
+        { rewrite <-H14; clear -H.
           destruct msgs; [elim H; reflexivity|discriminate].
         }
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rule)).
-        { rewrite <-H15.
+        { rewrite <-H14.
           clear -H7; induction msgs; [constructor|].
           inv H7; constructor; auto.
         }
-        specialize (H1 _ H2 H4 _ H16 H6).
-        destruct H1 as [obj1 [? [? ?]]].
         econstructor; eauto.
+        rewrite <-Hii; auto.
 
     - right.
       assert (indicesOf impl = indicesOf impl2) as Hii2 by (rewrite Hii; auto).
@@ -502,29 +452,27 @@ Section Compositionality.
       + inv H3; inv H7; inv H9.
         econstructor; [econstructor|].
         rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
-        assert (rule_mids rqr <> nil) by (rewrite <-H12; discriminate).
+        assert (rule_mids rqr <> nil) by (rewrite <-H11; discriminate).
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rqr))
-          by (rewrite <-H12; constructor; auto).
-        specialize (H1 _ H3 H4 _ H13 H6).
-        destruct H1 as [obj1 [? [? ?]]].
+          by (rewrite <-H11; constructor; auto).
         econstructor; eauto.
+        rewrite <-Hii2; auto.
       + inv H2; inv H4.
         specialize (IHAtomic H1 H8 _ H9).
         econstructor; eauto.
         inv H11.
         rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
         assert (rule_mids rule <> nil).
-        { rewrite <-H15; clear -H.
+        { rewrite <-H14; clear -H.
           destruct msgs; [elim H; reflexivity|discriminate].
         }
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rule)).
-        { rewrite <-H15.
+        { rewrite <-H14.
           clear -H7; induction msgs; [constructor|].
           inv H7; constructor; auto.
         }
-        specialize (H1 _ H2 H4 _ H16 H6).
-        destruct H1 as [obj1 [? [? ?]]].
         econstructor; eauto.
+        rewrite <-Hii2; auto.
   Qed.
 
   Lemma trsInvHolds_transactional_compositional:
@@ -607,7 +555,7 @@ Section Compositionality.
           eapply atomic_preserved; eauto.
         }
         pose proof (Hsim1 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl4:= impl1) by assumption.
+        rewrite behaviorOf_preserved with (impl2:= impl1) by assumption.
         assumption.
       + assert (Transactional impl2 hst).
         { econstructor; eauto.
@@ -615,7 +563,7 @@ Section Compositionality.
           rewrite Hii; assumption.
         }
         pose proof (Hsim2 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl4:= impl2) by (rewrite Hii; assumption).
+        rewrite behaviorOf_preserved with (impl2:= impl2) by (rewrite Hii; assumption).
         assumption.
   Qed.
 

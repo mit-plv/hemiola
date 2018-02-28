@@ -23,10 +23,9 @@ Section Impl.
              (Hsext2: isExternal (spec extIdx1 extIdx2) extIdx2 = true).
 
   Local Definition spec := spec extIdx1 extIdx2.
-  Local Definition specObj := specObj extIdx1 extIdx2.
 
   Lemma svmMsgF_ValidMsgMap:
-    ValidMsgMap OrdOState svmMsgF impl0 spec.
+    ValidMsgMap svmMsgF impl0 spec.
   Proof.
     unfold ValidMsgMap; intros.
     unfold svmMsgF; simpl.
@@ -76,9 +75,9 @@ Section Impl.
 
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
-      instantiate (1:= addRulesSys _ pimpl);
+      instantiate (1:= addRules _ pimpl);
       split; [|split; [|split]]; (* [SynthOk] consist of 5 conditions. *)
-      try (rewrite addRulesSys_init; apply pimpl_ok; fail).
+      try (rewrite addRules_init; apply pimpl_ok; fail).
 
     Ltac trs_sim_init pimpl_ok :=
       apply trsSimulates_trsInvHolds_rules_added;
@@ -118,10 +117,10 @@ Section Impl.
         | [H: isInternal _ (mid_to (msg_id _)) = true |-
            isInternal _ (mid_to (msg_id _)) = true] =>
           eapply validMsgMap_to_isInternal; [|eassumption]
-        | [ |- ValidMsgMap _ _ (addRulesSys _ (buildRawSys ?imp)) _ ] =>
+        | [ |- ValidMsgMap _ (addRules _ (buildRawSys ?imp)) _ ] =>
           apply validMsgMap_same_indices with (impl1:= imp);
           [apply svmMsgF_ValidMsgMap
-          |rewrite addRulesSys_indices, buildRawSys_indicesOf; reflexivity]
+          |rewrite addRules_indices, buildRawSys_indicesOf; reflexivity]
         end.
     
     (* This ltac handles trivial [Transactional] cases.
@@ -135,17 +134,6 @@ Section Impl.
       |trs_simulates_case_in msgF sim
       |].
 
-    Ltac synth_sep_rules_obj tgt ext :=
-      match goal with
-      | [H: context[In ?rule (obj_rules (addRulesO ?rules _))] |- _] =>
-        match type of rule with
-        | Rule =>
-          is_evar rules;
-          instantiate (1:= _ ++ (map (makeRuleExternal tgt ext) _)) in H
-        end
-      end;
-      rewrite addRulesO_makeRuleExternal in * by (discriminate || reflexivity).
-    
     Definition svmTrsIdx0: TrsId := SvmGetE.
     Definition svmTrsRqIn0: MsgId :=
       {| mid_addr := {| ma_from := extIdx1;
@@ -155,7 +143,7 @@ Section Impl.
     Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1.
     
     Definition svmSynTrs0:
-      { impl1: System OrdOState & SynthOk spec SvmSim SvmInv1 svmP impl1 }.
+      { impl1: System & SynthOk spec SvmSim SvmInv1 svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 

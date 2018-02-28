@@ -7,208 +7,185 @@ Set Implicit Arguments.
 Inductive RqRs := Rq | Rs.
 
 Definition OPred :=
-  Value (* input *) -> OrdOState -> Value (* output *) -> Prop.
+  Value (* input *) -> OState -> Value (* output *) -> Prop.
 
-Definition Pred :=
-  Value (* input *) -> ObjectStates OrdOState -> Value (* output *) -> Prop.
+Definition Pred := M.t OPred.
 
-Record OTrs :=
-  { otrs_rqval: Value;
-    otrs_rqpred: Pred;
-    otrs_opred: OPred;
-    otrs_rsbf: list Value -> OrdOState -> Value }.
+Definition PredOk (pred: Pred) (rqv: Value) (oss: OStates) (rsv: Value) :=
+  forall oidx,
+    pred@[oidx] >>=[True]
+        (fun opred =>
+           oss@[oidx] >>=[False] (fun ost => opred rqv ost rsv)).
 
-Inductive PMsg : RqRs -> Type :=
-| PMsgIntro: forall (mid: MsgId) (rr: RqRs) (val: Value) (pred: Pred), PMsg rr.
+(* Need to check if [pmsg_val] can be removed, to make [pmsg_pred] have enough
+ * information instead.
+ *)
+Record PMsg (rr: RqRs) :=
+  { pmsg_mid: MsgId;
+    pmsg_val: Value;
+    pmsg_pred: Pred }.
 
-Definition midOfPMsg {rr} (pmsg: PMsg rr): MsgId :=
-  match pmsg with
-  | PMsgIntro mid _ _ _ => mid
-  end.
+(* From the perspective of correctness, [mid_chn] is only about liveness. *)
+Definition DualMid (rq rs: MsgId) :=
+  mid_tid rq = mid_tid rs /\
+  mid_from rq = mid_to rs /\
+  mid_to rq = mid_from rs.
 
-Definition valOfPMsg {rr} (pmsg: PMsg rr): Value :=
-  match pmsg with
-  | PMsgIntro _ _ val _ => val
-  end.
+Definition DualPMsg (rq: PMsg Rq) (rs: PMsg Rs) :=
+  DualMid (pmsg_mid rq) (pmsg_mid rs) /\
+  pmsg_pred rq = pmsg_pred rs.
 
-Definition predOfPMsg {rr} (pmsg: PMsg rr): Pred :=
-  match pmsg with
-  | PMsgIntro _ _ _ pred => pred
-  end.
+Definition PMsgSig := { rr : RqRs & PMsg rr }.
+
+Definition msgOfPMsg {rr} (pmsg: PMsg rr) :=
+  buildMsg (pmsg_mid pmsg) (pmsg_val pmsg).
 
 Global Instance PMsg_HasMsg (rr: RqRs): HasMsg (PMsg rr) :=
-  {| getMsg := fun pmsg =>
-                 match pmsg with
-                 | PMsgIntro mid rr val pred => buildMsg mid val
-                 end |}.
+  {| getMsg := msgOfPMsg |}.
 
-Global Instance PMsg_sigT_HasMsg : HasMsg { rr : RqRs & PMsg rr } :=
-  {| getMsg := fun pmsg =>
-                 match projT2 pmsg with
-                 | PMsgIntro mid rr val pred => buildMsg mid val
-                 end |}.
+Global Instance PMsgSig_HasMsg : HasMsg PMsgSig :=
+  {| getMsg := fun pmsg => msgOfPMsg (projT2 pmsg) |}.
+
+(* Note that a precondition of [PRule] is nothing to do with predicates of
+ * input [PMsg]s. Even if the same [PMsg]s are requested, different transitions
+ * are required wrt. different situations (preconditions).
+ *)
+Definition PRPrecond := OState -> list Msg -> Prop.
+Definition PROuts := list PMsgSig -> OState -> list PMsgSig.
+
+Inductive PRule: RqRs -> Type :=
+| PRuleImm: forall (rq: MsgId) (prec: PRPrecond), PRule Rq
+| PRuleRqFwd:
+    forall (rq: MsgId) (prec: PRPrecond)
+           (fwds: PMsg Rq -> OState -> list (PMsg Rq)), PRule Rq
+| PRuleRsBack:
+    forall (rss: list MsgId) (prec: PRPrecond)
+           (rsb: list (PMsg Rs) -> OState -> PMsg Rs), PRule Rs.
+
+Definition PRuleSig := { rr : RqRs & PRule rr }.
+
+(* Record PRule := *)
+(*   { rule_mids: list MsgId; *)
+(*     rule_precond: PRPrecond; *)
+(*     rule_outs: PROuts }. *)
 
 Section PLabel.
 
   Inductive PLabel :=
-  | PlblEmpty: PLabel
-  | PlblIn (min: PMsg Rq): PLabel
-  | PlblImm (min: PMsg Rq) (mout: PMsg Rs): PLabel
-  | PlblRqFwd (min: PMsg Rq) (mfwds: list (PMsg Rq)): PLabel
-  | PlblRsBack (mins: list (PMsg Rs)) (mback: PMsg Rs): PLabel.
+  | PlblIn {rr} (min: PMsg rr): PLabel
+  | PlblOuts (hdl: option { rr : RqRs & PRule rr })
+             (mins: list PMsgSig) (mouts: list PMsgSig): PLabel.
+
+  Definition pLblIns (l: PLabel) :=
+    match l with
+    | PlblIn _ => nil
+    | PlblOuts _ mins _ => mins
+    end.
+
+  Definition pLblOuts (l: PLabel) :=
+    match l with
+    | PlblIn _ => nil
+    | PlblOuts _ _ mouts => mouts
+    end.
 
   Definition pToLabel (l: PLabel): Label :=
     match l with
-    | PlblEmpty => LblOuts nil
     | PlblIn min => LblIn (getMsg min)
-    | PlblImm min mout => LblOuts (getMsg mout :: nil)
-    | PlblRqFwd min mfwds => LblOuts (map getMsg mfwds)
-    | PlblRsBack mins mback => LblOuts (getMsg mback :: nil)
+    | PlblOuts _ _ mouts => LblOuts (map getMsg mouts)
     end.
 
   Global Instance PLabel_HasLabel: HasLabel PLabel :=
     { getLabel := pToLabel }.
 
+  Definition emptyPLabel := PlblOuts None nil nil.
+
 End PLabel.
 
-Record PObject :=
-  { pobj_idx: nat;
-    pobj_state_init: OrdOState
-  }.
-
-Global Instance PObject_IsObject : IsObject OrdOState PObject :=
-  {| getIndex := pobj_idx;
-     getOStateInit := pobj_state_init |}.
-
-Definition Topo := list MsgAddr.
-
 Record PSystem :=
-  { psys_topo: Topo;
-    psys_obs: list PObject }.
+  { psys_inds: list IdxT;
+    psys_inits: OStates;
+    psys_rules: list PRuleSig }.
 
-Global Instance PSystem_HasObjects : HasObjects PSystem :=
-  {| getObjects := psys_obs |}.
+Record OTrs :=
+  { otrs_rqval: Value;
+    otrs_pred: Pred;
+    otrs_opred: OPred;
+    otrs_rsb: list Value -> OState -> Value }.
 
 Record PState :=
-  { pst_oss: ObjectStates OrdOState;
-    pst_otrs: M.t OTrs;
-    pst_msgs: MessagePool { rr: RqRs & PMsg rr }
+  { pst_oss: OStates;
+    pst_otrss: M.t OTrs;
+    pst_msgs: MessagePool PMsgSig
   }.
 
+Global Instance PSystem_OStates_IsSystem : IsSystem PSystem OStates :=
+  {| indicesOf := psys_inds;
+     initsOf := psys_inits |}.
+
 Definition getPStateInit (psys: PSystem): PState :=
-  {| pst_oss := getObjectStatesInit (psys_obs psys);
-     pst_otrs := [];
+  {| pst_oss := initsOf psys;
+     pst_otrss := [];
      pst_msgs := nil |}.
 
-Global Instance PState_HasInit: HasInit PSystem PState :=
-  { getStateInit := getPStateInit }.
-
-(* Definition PHistory := list PLabel. *)
-
-(* Inductive step_pred: PSystem -> PState -> PHistory -> PState -> Prop := *)
-(* | SpDone: forall psys st, step_pred psys st nil st *)
-(* | SpSlt: forall psys st1 st2 hst, *)
-(*     step_pred psys st1 hst st2 -> *)
-(*     step_pred psys st1 (PlblEmpty :: hst) st2 *)
-
-(* | SpIn: *)
-(*     forall psys mid val pred oss otrs msgs phst pst, *)
-(*       isExternal psys (mid_from mid) = true -> *)
-(*       isInternal psys (mid_to mid) = true -> *)
-
-(*       step_pred psys *)
-(*                 {| pst_oss := oss; *)
-(*                    pst_otrs := otrs; *)
-(*                    pst_msgs := enqMP (existT _ _ (PMsgIntro mid Rq val pred)) msgs *)
-(*                 |} *)
-(*                 phst pst -> *)
-
-(*       step_pred psys *)
-(*                 {| pst_oss := oss; pst_otrs := otrs; pst_msgs := msgs |} *)
-(*                 (PlblIn (PMsgIntro mid Rq val pred) :: phst) *)
-(*                 pst. *)
+Global Instance PSystem_PState_IsSystem : IsSystem PSystem PState :=
+  {| indicesOf := psys_inds;
+     initsOf := getPStateInit |}.
 
 Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
-| SpSlt: forall st, step_pred psys st PlblEmpty st
+| SpSlt: forall st, step_pred psys st emptyPLabel st
 
-| SpIn:
-    forall mid val pred oss otrs msgs,
-      isExternal psys (mid_from mid) = true ->
-      isInternal psys (mid_to mid) = true ->
+| SpExt:
+    forall oss oims otrss (emsg: PMsg Rq),
+      isExternal psys (mid_from (msg_id (getMsg emsg))) = true ->
+      isInternal psys (mid_to (msg_id (getMsg emsg))) = true ->
       step_pred psys
-                {| pst_oss := oss; pst_otrs := otrs; pst_msgs := msgs |}
-                (PlblIn (PMsgIntro mid Rq val pred))
+                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+                (PlblIn emsg)
                 {| pst_oss := oss;
-                   pst_otrs := otrs;
-                   pst_msgs := enqMP (existT _ _ (PMsgIntro mid Rq val pred)) msgs
+                   pst_otrss := otrss;
+                   pst_msgs := enqMP (existT _ _ emsg) oims
                 |}
 
 | SpImm:
-    forall mid rq rs rqVal rsVal pred oidx nos oss otrs msgs,
-      rq = PMsgIntro mid Rq rqVal pred ->
-      rs = PMsgIntro mid Rs rsVal pred ->
-
-      FirstMP msgs (existT _ _ rq) ->
+    forall oss oidx pos nos otrss oims (immr: PRule Rq) prec (rq: PMsg Rq) (rs: PMsg Rs),
+      In oidx (indicesOf psys) ->
+      In (existT _ _ immr) (psys_rules psys) ->
+      immr = PRuleImm (msg_id (getMsg rq)) prec ->
+      DualPMsg rq rs ->
       ValidMsgsIn oidx (rq :: nil) ->
-      ValidMsgOuts oidx (rs :: nil) ->
-      pred rqVal (oss +[oidx <- nos]) rsVal ->
+
+      oss@[oidx] = Some pos ->
+      prec pos (getMsg rq :: nil) ->
+      PredOk (pmsg_pred rq) (pmsg_val rq) (oss +[ oidx <- nos ]) (pmsg_val rs) ->
 
       step_pred psys
-                {| pst_oss := oss; pst_otrs := otrs; pst_msgs := msgs |}
-                (PlblImm rq rs)
+                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+                (PlblOuts (Some (existT _ _ immr))
+                          (existT _ _ rq :: nil)
+                          (existT _ _ rs :: nil))
                 {| pst_oss := oss +[ oidx <- nos ];
-                   pst_otrs := otrs;
+                   pst_otrss := otrss;
                    pst_msgs := distributeMsgs
                                  (intOuts psys (existT _ _ rs :: nil))
-                                 (removeMP (existT _ _ rq) msgs) |}
+                                 (removeMP (existT _ _ rq) oims)
+                |}
 
-| SpRqFwd:
-    forall oidx rq fwds oss otrs opred rsbf msgs,
-      FirstMP msgs (existT _ _ rq) ->
-      ValidMsgsIn oidx (rq :: nil) ->
-      ValidMsgOuts oidx fwds ->
-      Forall (fun pmsg =>
-                isInternal psys (mid_to (msg_id (getMsg pmsg))) = true) fwds ->
-      
-      step_pred psys
-                {| pst_oss := oss; pst_otrs := otrs; pst_msgs := msgs |}
-                (PlblRqFwd rq fwds)
-                {| pst_oss := oss;
-                   pst_otrs := otrs +[ oidx <- {| otrs_rqval := valOfPMsg rq;
-                                                  otrs_rqpred := predOfPMsg rq;
-                                                  otrs_opred := opred;
-                                                  otrs_rsbf := rsbf |} ];
-                   pst_msgs := distributeMsgs
-                                 (map (fun pmsg => existT _ _ pmsg) fwds)
-                                 (removeMP (existT _ _ rq) msgs) |}
+| SRqFwd:
+    forall oss otrss (* oidx *) (* otrs *) oims (rqfwdr: PRule Rq) prec outf
+           (rq: PMsg Rq) (fwds: list (PMsg Rq)),
+      rqfwdr = PRuleRqFwd (msg_id (getMsg rq)) prec outf ->
 
-| SpRsBack:
-    forall oidx rss rsb otrs ootrs oss msgs,
-      Forall (FirstMP msgs) (map (existT _ _) rss) ->
-      ValidMsgsIn oidx rss ->
-      ValidMsgOuts oidx (rsb :: nil) ->
-      Forall (fun pmsg =>
-                isInternal psys (mid_from (msg_id (getMsg pmsg))) = true) rss ->
-
-      otrs@[oidx] = Some ootrs ->
-      
-      (* predOfPMsg rsb (otrs_rqval rqval) (oss +[oidx <- nos]) (valOfPMsg rsb) *)
+      (* TODOs: conditions *)
 
       step_pred psys
-                {| pst_oss := oss; pst_otrs := otrs; pst_msgs := msgs |}
-                (PlblRsBack rss rsb)
+                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+                (PlblOuts (Some (existT _ _ rqfwdr))
+                          (existT _ _ rq :: nil)
+                          (map (existT _ _) fwds))
                 {| pst_oss := oss;
-                   pst_otrs := M.remove oidx otrs;
+                   pst_otrss := otrss; (* TODO: otrss +[ oidx <- ... ] *)
                    pst_msgs := distributeMsgs
-                                 (intOuts psys (existT _ _ rsb :: nil))
-                                 (removeMsgs (map (existT _ _) rss) msgs) |}.
-
-(** What we want, informally:
- * - [step_det] with particular rules -> [step_pred]
- * - [step_det] with particular rules -> [Transactional] history ->
- *   postconditions in [step_pred] are preserved.
- *
- * - Do we need to specify preconditions in [step_pred]? I think no, because
- *   those are only about "sate interleavings", i.e., serializability.
-*)
+                                 (map (existT _ _) fwds)
+                                 (removeMP (existT _ _ rq) oims)
+                |}.
 

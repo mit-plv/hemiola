@@ -99,8 +99,10 @@ Section Msg.
 
 End Msg.
 
+Definition OState := M.t Value.
+Definition OStates := M.t OState.
+
 Section Rule.
-  Variable OState: Type.
 
   Definition RPrecond := OState -> list Msg (* input messages *) -> Prop.
   Definition RPostcond :=
@@ -113,19 +115,14 @@ Section Rule.
       rule_postcond: RPostcond;
     }.
 
-  Definition ValidMsgsIn (oidx: IdxT) {MsgT} `{HasMsg MsgT}
-             (msgs: list MsgT) :=
-    Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx) msgs.
-
 End Rule.
 
 Section Conditions.
-  Variable OState: Type.
 
   Definition Precond := OState -> list Msg -> Prop.
   Definition Postcond := OState -> list Msg -> Prop.
 
-  Definition impRPost (rpostc: RPostcond OState) (postc: Postcond) :=
+  Definition impRPost (rpostc: RPostcond) (postc: Postcond) :=
     forall pre val post outs,
       rpostc pre val post outs -> postc post outs.
 
@@ -134,7 +131,7 @@ Section Conditions.
   Definition PostcondSt :=
     OState (* prestate *) -> list Msg (* input messages *) -> OState (* poststate *) -> Prop.
 
-  Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond OState :=
+  Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond :=
     fun pre ins post outs =>
       pst pre ins post /\ outs = mouts pre ins.
 
@@ -160,71 +157,27 @@ Section Conditions.
 
 End Conditions.
 
-Section Object.
-  Variable OState: Type.
-
-  Record Object :=
-    { obj_idx: IdxT;
-      obj_state_init: OState;
-      obj_rules: list (Rule OState)
-    }.
-
-  Class IsObject (ObjT: Type) :=
-    { getIndex : ObjT -> IdxT;
-      getOStateInit : ObjT -> OState }.
-
-  Global Instance Object_IsObject : IsObject Object :=
-    {| getIndex := obj_idx;
-       getOStateInit := obj_state_init |}.
-
-  Class HasObjects (ObjT: Type) `{IsObject ObjT} (SysT: Type) :=
-    { getObjects : SysT -> list ObjT }.
-
-End Object.
-
-Definition indicesOf {OState ObjT SysT} `{HasObjects OState ObjT SysT} (sys: SysT) :=
-  map (fun o => getIndex o) (getObjects sys).
-Definition initsOf {OState ObjT SysT} `{HasObjects OState ObjT SysT} (sys: SysT) :=
-  map (fun o => getOStateInit o) (getObjects sys).
-Definition objOf {OState ObjT} `{IsObject OState ObjT}
-           (sys: list ObjT) (oidx: IdxT): option ObjT :=
-  find (fun o => if getIndex o ==n oidx then true else false) sys.
-
-Definition isExternal {OState ObjT SysT} `{HasObjects OState ObjT SysT}
-           (sys: SysT) (idx: IdxT) :=
-  if idx ?<n (indicesOf sys) then false else true.
-Definition isInternal {OState ObjT SysT} `{HasObjects OState ObjT SysT}
-           (sys: SysT) (idx: IdxT) :=
-  if idx ?<n (indicesOf sys) then true else false.
-
 Section System.
-  Variable OState: Type.
 
-  Definition System := list (Object OState).
+  Class IsSystem (SysT: Type) (StateT: Type) :=
+    { indicesOf: SysT -> list IdxT;
+      initsOf: SysT -> StateT }.
 
-  Global Instance System_HasObjects : HasObjects System :=
-    {| getObjects := id |}.
+  Definition isExternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
+    if idx ?<n (indicesOf sys) then false else true.
+  Definition isInternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
+    if idx ?<n (indicesOf sys) then true else false.
 
-  Definition rulesOf (sys: System): list (Rule OState) :=
-    concat (map (fun o => obj_rules o) sys).
+  Record System :=
+    { sys_inds: list IdxT;
+      sys_inits: OStates;
+      sys_rules: list Rule }.
 
-  Definition objRulesOf (sys: System) (oidx: IdxT) :=
-    (objOf sys oidx) >>=[nil] (fun obj => obj_rules obj).
+  Global Instance System_OStates_IsSystem : IsSystem System OStates :=
+    {| indicesOf := sys_inds;
+       initsOf := sys_inits |}.
 
-  Lemma rulesOf_in:
-    forall obj sys,
-      In obj sys ->
-      forall rule,
-        In rule (obj_rules obj) ->
-        In rule (rulesOf sys).
-  Proof.
-    unfold rulesOf; intros.
-    induction sys; simpl; intros; [inv H|].
-    apply in_or_app.
-    inv H; auto.
-  Qed.
-  
-  Definition singleton (obj: Object OState): System := obj :: nil.
+  Definition rulesOf := sys_rules.
 
 End System.
 

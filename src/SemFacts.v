@@ -244,15 +244,14 @@ Qed.
 
 Fact SdIntSingle:
   forall sys ts nts (Hts: nts > ts) tinfo
-         oss oims obj oidx os pos fmsg frule fidx fchn outs,
-    In obj sys ->
-    oidx = obj_idx obj ->
+         oss oims oidx os pos fmsg frule fidx fchn outs,
+    In oidx (indicesOf sys) ->
     (oss)@[oidx] = Some os ->
     
     firstMP fidx oidx fchn oims = Some fmsg -> 
     
     msg_id (getMsg fmsg) :: nil = rule_mids frule ->
-    In frule (obj_rules obj) ->
+    In frule (sys_rules sys) ->
     rule_precond frule os (tmsg_msg fmsg :: nil) ->
     rule_postcond frule os (tmsg_msg fmsg :: nil) pos outs ->
     ValidMsgOuts oidx outs ->
@@ -284,18 +283,18 @@ Proof.
     by (simpl; destruct (tmsg_info fmsg); reflexivity).
   replace (deqMP fidx oidx fchn oims) with (removeMsgs (fmsg :: nil) oims)
     by (cbn; erewrite removeMP_deqMP by reflexivity;
-        apply firstMP_MsgAddr in H2;
+        apply firstMP_MsgAddr in H1;
         destruct (msg_id (getMsg fmsg)) as [[ ]]; subst; simpl in *;
-        inv H2; cbn; reflexivity).
+        inv H1; cbn; reflexivity).
   change (msg_value (tmsg_msg fmsg) :: nil) with
       (map (fun tmsg => msg_value (tmsg_msg tmsg)) (fmsg :: nil)).
   eapply SdInt; eauto.
   - repeat constructor.
     eapply firstMP_FirstMP; eauto.
   - repeat constructor.
-    apply firstMP_MsgAddr in H2.
-    simpl; simpl in H2; destruct (msg_id (tmsg_msg fmsg)) as [[ ]].
-    inv H2; reflexivity.
+    apply firstMP_MsgAddr in H1.
+    simpl; simpl in H1; destruct (msg_id (tmsg_msg fmsg)) as [[ ]].
+    inv H1; reflexivity.
   - simpl; subst.
     destruct (tmsg_info fmsg); reflexivity.
 Qed.
@@ -313,19 +312,7 @@ Proof.
 Qed.
 
 Section System.
-  Variable OState: Type.
-  Variable sys: System OState.
-
-  Lemma obj_in_sys_idx_internal:
-    forall obj,
-      In obj sys ->
-      isInternal sys (obj_idx obj) = true.
-  Proof.
-    unfold isInternal; intros.
-    find_if_inside; auto.
-    elim n.
-    apply in_map; auto.
-  Qed.
+  Variable sys: System.
 
   Lemma internal_external_negb:
     forall idx,
@@ -361,9 +348,8 @@ Section System.
 
   Lemma internal_extOuts_nil:
     forall {MsgT} `{HasMsg MsgT} (mouts: list MsgT),
-      Forall
-        (fun tmsg => isInternal sys (mid_to (msg_id (getMsg tmsg))) =
-                     true) mouts ->
+      Forall (fun tmsg => isInternal sys (mid_to (msg_id (getMsg tmsg))) =
+                          true) mouts ->
       extOuts sys (map getMsg mouts) = nil.
   Proof.
     induction mouts; simpl; intros; [reflexivity|].
@@ -385,7 +371,7 @@ Section System.
 End System.
 
 Lemma extOuts_same_indicesOf:
-  forall {OState} (sys1 sys2: System OState) {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
+  forall (sys1 sys2: System) {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
     indicesOf sys1 = indicesOf sys2 ->
     extOuts sys1 msgs = extOuts sys2 msgs.
 Proof.
@@ -394,7 +380,7 @@ Proof.
 Qed.
 
 Lemma intOuts_same_indicesOf:
-  forall {OState} (sys1 sys2: System OState) {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
+  forall (sys1 sys2: System) {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
     indicesOf sys1 = indicesOf sys2 ->
     intOuts sys1 msgs = intOuts sys2 msgs.
 Proof.
@@ -415,18 +401,26 @@ Proof.
   subst; auto.
 Qed.
 
+Lemma idx_in_sys_internal:
+  forall oidx {SysT StateT} `{IsSystem SysT StateT} (sys: SysT),
+    In oidx (indicesOf sys) ->
+    isInternal sys oidx = true.
+Proof.
+  unfold isInternal; intros.
+  find_if_inside; auto.
+Qed.
+
 Lemma step_det_int_internal:
   forall sys st1 orule ins outs st2,
     step_det sys st1 (IlblOuts orule ins outs) st2 ->
     Forall (fun msg => isInternal sys (mid_to (msg_id (getMsg msg))) = true) ins.
 Proof.
   intros; inv H; [constructor|].
-  clear -H3 H7.
+  clear -H3 H6.
   induction ins; [constructor|].
-  inv H7.
+  inv H6.
   constructor; auto.
-  rewrite H1.
-  apply obj_in_sys_idx_internal; auto.
+  apply idx_in_sys_internal; auto.  
 Qed.
 
 Lemma step_det_outs_from_internal:
@@ -437,18 +431,17 @@ Lemma step_det_outs_from_internal:
 Proof.
   intros; inv H; try (constructor; fail).
   simpl.
-  destruct H9.
+  destruct H8.
   clear -H H0.
   induction outs; simpl; intros; [constructor|].
   inv H; dest.
   constructor; auto.
   simpl; simpl in H; unfold id in H; rewrite H.
   unfold isInternal; find_if_inside; auto.
-  elim n; apply in_map; assumption.
 Qed.
 
 Lemma extLabel_preserved:
-  forall {OState} (impl1 impl2: System OState),
+  forall (impl1 impl2: System),
     indicesOf impl1 = indicesOf impl2 ->
     forall l,
       extLabel impl1 l = extLabel impl2 l.
@@ -499,12 +492,12 @@ Proof.
       * destruct (tmsg_info a); auto.
         destruct (getTMsgsTInfo msgs); omega.
       * apply IHoims; auto.
-    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H4;
+    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H3;
         [|intros; eapply FirstMP_InMP; eauto].
-      apply ForallMP_InMP_SubList in H4.
-      eapply ForallMP_SubList in H4; eauto.
+      apply ForallMP_InMP_SubList in H3.
+      eapply ForallMP_SubList in H3; eauto.
 
-      clear -Hts H4.
+      clear -Hts H3.
       apply Forall_filter.
       induction outs; [constructor|].
       constructor; auto.
@@ -512,8 +505,8 @@ Proof.
       simpl; remember (getTMsgsTInfo msgs) as ti; destruct ti; auto.
       apply eq_sym, getTMsgsTInfo_Some in Heqti.
       destruct Heqti as [tmsg [? ?]].
-      eapply ForallMP_forall in H4; eauto.
-      rewrite H0 in H4; auto.
+      eapply ForallMP_forall in H3; eauto.
+      rewrite H0 in H3; auto.
 Qed.
 
 Lemma steps_det_tid:
@@ -527,14 +520,14 @@ Proof.
   apply step_det_tid in H1; auto.
 Qed.
 
-Definition TInfoExists (sys: System OrdOState) (tst: TState) :=
+Definition TInfoExists (sys: System) (tst: TState) :=
   ForallMP (fun tmsg =>
               if isInternal sys (mid_from (msg_id (tmsg_msg tmsg)))
               then tmsg_info tmsg <> None
               else tmsg_info tmsg = None) (tst_msgs tst).
 
 Lemma validMsgOuts_from_internal:
-  forall {OState} (sys: System OState) idx,
+  forall sys idx,
     isInternal sys idx = true ->
     forall mouts,
       ValidMsgOuts idx mouts ->
@@ -562,11 +555,11 @@ Proof.
   - simpl; simpl in H.
     apply ForallMP_distributeMsgs.
     + apply ForallMP_removeMsgs; auto.
-    + pose proof (obj_in_sys_idx_internal _ _ H1).
-      eapply validMsgOuts_from_internal in H10; eauto.
-      clear -H10; simpl in H10.
+    + pose proof (idx_in_sys_internal _ _ H1).
+      eapply validMsgOuts_from_internal in H9; eauto.
+      clear -H9; simpl in H9.
       induction outs; [constructor|].
-      inv H10.
+      inv H9.
       simpl; destruct (isInternal sys (mid_to (msg_id a))); auto.
       constructor; cbn.
       * rewrite H1; discriminate.
@@ -585,7 +578,7 @@ Proof.
 Qed.
 
 Lemma steps_split:
-  forall {SysT StateT LabelT} `{HasInit SysT StateT}
+  forall {SysT StateT LabelT} `{IsSystem SysT StateT}
          (step: Step SysT StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
     forall ll1 ll2,
@@ -594,7 +587,7 @@ Lemma steps_split:
         steps step sys st1 ll1 sti /\
         steps step sys sti ll2 st2.
 Proof.
-  induction 1; simpl; intros.
+  induction 2; simpl; intros.
   - apply eq_sym, app_eq_nil in H0; dest; subst.
     eexists; split; econstructor.
   - destruct ll2.
@@ -613,19 +606,19 @@ Proof.
 Qed.
 
 Lemma steps_append:
-  forall {SysT StateT LabelT} `{HasInit SysT StateT}
+  forall {SysT StateT LabelT} `{IsSystem SysT StateT}
          (step: Step SysT StateT LabelT) sys st1 ll1 st2,
     steps step sys st1 ll1 st2 ->
     forall ll2 st3,
       steps step sys st2 ll2 st3 ->
       steps step sys st1 (ll2 ++ ll1) st3.
 Proof.
-  induction 2; simpl; intros; [auto|].
+  induction 3; simpl; intros; [auto|].
   econstructor; eauto.
 Qed.
 
 Lemma behaviorOf_app:
-  forall {OState} (sys: System OState)
+  forall (sys: System)
          {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT),
     behaviorOf sys (hst1 ++ hst2) =
     behaviorOf sys hst1 ++ behaviorOf sys hst2.
@@ -636,19 +629,18 @@ Proof.
 Qed.
 
 Lemma behaviorOf_preserved:
-  forall {OState} (impl1 impl2: System OState),
+  forall (impl1 impl2: System),
     indicesOf impl1 = indicesOf impl2 ->
     forall hst,
       behaviorOf impl1 hst = behaviorOf impl2 hst.
 Proof.
   induction hst; simpl; intros; [reflexivity|].
-  rewrite extLabel_preserved with (impl4:= impl2) by assumption.
+  rewrite extLabel_preserved with (impl2:= impl2) by assumption.
   rewrite IHhst; reflexivity.
 Qed.
 
 Theorem refines_refl:
-  forall {OState ObjT SysT StateT LabelT} `{HasObjects OState ObjT SysT}
-         `{HasInit SysT StateT} `{HasLabel LabelT}
+  forall {SysT StateT LabelT} `{IsSystem SysT StateT} `{HasLabel LabelT}
          (ss: Steps SysT StateT LabelT) sys, ss # ss |-- sys ⊑[id] sys.
 Proof.
   unfold Refines; intros.
@@ -657,16 +649,15 @@ Proof.
 Qed.
 
 Theorem refines_trans:
-  forall {OState ObjT SysT StateT LabelT}
-         `{HasObjects OState ObjT SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
+  forall {SysT StateT LabelT} `{IsSystem SysT StateT} `{HasLabel LabelT}
          (ss1 ss2 ss3: Steps SysT StateT LabelT) p q s1 s2 s3,
     ss1 # ss2 |-- s1 ⊑[p] s2 ->
     ss2 # ss3 |-- s2 ⊑[q] s3 ->
     ss1 # ss3 |-- s1 ⊑[fun l => q (p l)] s3.
 Proof.
   unfold Refines; intros.
-  specialize (H4 _ (H3 _ H5)).
-  rewrite map_trans in H4.
+  specialize (H2 _ (H1 _ H3)).
+  rewrite map_trans in H2.
   assumption.
 Qed.
 
