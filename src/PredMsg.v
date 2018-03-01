@@ -111,7 +111,17 @@ Record PSystem :=
 
 Record OTrs :=
   { otrs_rq: PMsg Rq;
-    otrs_opred: OPred }.
+    otrs_opred: OPred;
+    otrs_fwds: list Pred;
+    otrs_rsbf: list Msg -> OState -> Value;
+    otrs_pred_ok:
+      forall oss ost rss,
+        Forall (fun rs: PMsg Rs =>
+                  PredOk (pmsg_pred rs) (pmsg_val otrs_rq) oss (pmsg_val rs)) rss ->
+        oss@[mid_to (pmsg_mid otrs_rq)] = Some ost ->
+        otrs_opred (pmsg_val otrs_rq) ost (otrs_rsbf (map getMsg rss) ost) ->
+        PredOk (pmsg_pred otrs_rq) (pmsg_val otrs_rq) oss (otrs_rsbf (map getMsg rss) ost)
+  }.
 
 Record PState :=
   { pst_oss: OStates;
@@ -172,8 +182,8 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                 |}
 
 | SRqFwd:
-    forall oss otrss oidx pos notrs oims (rqfwdr: PRule) prec outf
-           (rq: PMsg Rq) (fwds: list (PMsg Rq)),
+    forall oss otrss oidx pos opred rsbf oims (rqfwdr: PRule) prec outf
+           (rq: PMsg Rq) (fwds: list (PMsg Rq)) pred_ok,
       In oidx (indicesOf psys) ->
       In rqfwdr (psys_rules psys) ->
       rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec outf ->
@@ -189,7 +199,11 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                           (existT _ _ rq :: nil)
                           (map (existT _ _) fwds))
                 {| pst_oss := oss;
-                   pst_otrss := otrss +[ oidx <- notrs ];
+                   pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
+                                                    otrs_opred := opred;
+                                                    otrs_fwds := map pmsg_pred fwds;
+                                                    otrs_rsbf := rsbf;
+                                                    otrs_pred_ok := pred_ok |} ];
                    pst_msgs := distributeMsgs
                                  (map (existT _ _) fwds)
                                  (removeMP (existT _ _ rq) oims)
@@ -207,10 +221,15 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       oss@[oidx] = Some pos ->
       otrss@[oidx] = Some otrs ->
 
-      (* All predicates in the response messages are satisfied. *)
+      (* NOTE: Because of the requirements below, the original requested 
+       * predicate is guaranteed.
+       * TODO: Better if we have a single predicate merging all 
+       * conditions of [OTrs] below. *)
       Forall (fun pmsg => PredOk (pmsg_pred pmsg)
                                  (pmsg_val (otrs_rq otrs)) oss (pmsg_val pmsg)) rss ->
       otrs_opred otrs (pmsg_val (otrs_rq otrs)) nos (pmsg_val rsb) ->
+      otrs_fwds otrs = map pmsg_pred rss ->
+      otrs_rsbf otrs = rsbf ->
 
       DualPMsg (otrs_rq otrs) rsb ->
       pmsg_val rsb = rsbf (map getMsg rss) pos ->
