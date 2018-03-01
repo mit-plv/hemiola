@@ -20,10 +20,17 @@ Definition PredOk (pred: Pred) (rqv: Value) (oss: OStates) (rsv: Value) :=
 (* Need to check if [pmsg_val] can be removed, to make [pmsg_pred] have enough
  * information instead.
  *)
+
+Record PMsgId :=
+  { pmid_mid: MsgId;
+    pmid_pred: Pred }.
+
 Record PMsg (rr: RqRs) :=
-  { pmsg_mid: MsgId;
-    pmsg_val: Value;
-    pmsg_pred: Pred }.
+  { pmsg_pmid: PMsgId;
+    pmsg_val: Value }.
+
+Definition pmsg_mid {rr} (pmsg: PMsg rr) := pmid_mid (pmsg_pmid pmsg).
+Definition pmsg_pred {rr} (pmsg: PMsg rr) := pmid_pred (pmsg_pmid pmsg).
 
 (* From the perspective of correctness, [mid_chn] is only about liveness. *)
 Definition DualMid (rq rs: MsgId) :=
@@ -53,19 +60,16 @@ Global Instance PMsgSig_HasMsg : HasMsg PMsgSig :=
 Definition PRPrecond := OState -> list Msg -> Prop.
 Definition PROuts := list PMsgSig -> OState -> list PMsgSig.
 
-Inductive PRule: RqRs -> Type :=
-| PRuleImm: forall (rq: MsgId) (prec: PRPrecond), PRule Rq
+Inductive PRule :=
+| PRuleImm: forall (rq: PMsgId) (prec: PRPrecond), PRule 
 | PRuleRqFwd:
-    forall (rq: MsgId) (prec: PRPrecond)
-           (fwds: PMsg Rq -> OState -> list (PMsg Rq)), PRule Rq
+    forall (rq: PMsgId) (prec: PRPrecond)
+           (fwds: PMsg Rq -> OState -> list (PMsg Rq)), PRule
 | PRuleRsBack:
-    forall (rss: list MsgId) (prec: PRPrecond)
-           (rsb: list (PMsg Rs) -> OState -> PMsg Rs), PRule Rs.
-
-Definition PRuleSig := { rr : RqRs & PRule rr }.
+    forall (rss: list PMsgId) (rsbf: list Msg -> OState -> Value), PRule.
 
 (* Record PRule := *)
-(*   { rule_mids: list MsgId; *)
+(*   { rule_mids: list PMsgId; *)
 (*     rule_precond: PRPrecond; *)
 (*     rule_outs: PROuts }. *)
 
@@ -73,8 +77,7 @@ Section PLabel.
 
   Inductive PLabel :=
   | PlblIn {rr} (min: PMsg rr): PLabel
-  | PlblOuts (hdl: option { rr : RqRs & PRule rr })
-             (mins: list PMsgSig) (mouts: list PMsgSig): PLabel.
+  | PlblOuts (hdl: option PRule) (mins: list PMsgSig) (mouts: list PMsgSig): PLabel.
 
   Definition pLblIns (l: PLabel) :=
     match l with
@@ -104,13 +107,11 @@ End PLabel.
 Record PSystem :=
   { psys_inds: list IdxT;
     psys_inits: OStates;
-    psys_rules: list PRuleSig }.
+    psys_rules: list PRule }.
 
 Record OTrs :=
-  { otrs_rqval: Value;
-    otrs_pred: Pred;
-    otrs_opred: OPred;
-    otrs_rsb: list Value -> OState -> Value }.
+  { otrs_rq: PMsg Rq;
+    otrs_opred: OPred }.
 
 Record PState :=
   { pst_oss: OStates;
@@ -147,10 +148,10 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                 |}
 
 | SpImm:
-    forall oss oidx pos nos otrss oims (immr: PRule Rq) prec (rq: PMsg Rq) (rs: PMsg Rs),
+    forall oss oidx pos nos otrss oims (immr: PRule) prec (rq: PMsg Rq) (rs: PMsg Rs),
       In oidx (indicesOf psys) ->
-      In (existT _ _ immr) (psys_rules psys) ->
-      immr = PRuleImm (msg_id (getMsg rq)) prec ->
+      In immr (psys_rules psys) ->
+      immr = PRuleImm (pmsg_pmid rq) prec ->
       DualPMsg rq rs ->
       ValidMsgsIn oidx (rq :: nil) ->
 
@@ -160,7 +161,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
 
       step_pred psys
                 {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
-                (PlblOuts (Some (existT _ _ immr))
+                (PlblOuts (Some immr)
                           (existT _ _ rq :: nil)
                           (existT _ _ rs :: nil))
                 {| pst_oss := oss +[ oidx <- nos ];
@@ -171,21 +172,65 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                 |}
 
 | SRqFwd:
-    forall oss otrss (* oidx *) (* otrs *) oims (rqfwdr: PRule Rq) prec outf
+    forall oss otrss oidx pos notrs oims (rqfwdr: PRule) prec outf
            (rq: PMsg Rq) (fwds: list (PMsg Rq)),
-      rqfwdr = PRuleRqFwd (msg_id (getMsg rq)) prec outf ->
+      In oidx (indicesOf psys) ->
+      In rqfwdr (psys_rules psys) ->
+      rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec outf ->
+      ValidMsgsIn oidx (rq :: nil) ->
+      ValidMsgOuts oidx fwds ->
 
-      (* TODOs: conditions *)
+      oss@[oidx] = Some pos ->
+      prec pos (getMsg rq :: nil) ->
 
       step_pred psys
                 {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
-                (PlblOuts (Some (existT _ _ rqfwdr))
+                (PlblOuts (Some rqfwdr)
                           (existT _ _ rq :: nil)
                           (map (existT _ _) fwds))
                 {| pst_oss := oss;
-                   pst_otrss := otrss; (* TODO: otrss +[ oidx <- ... ] *)
+                   pst_otrss := otrss +[ oidx <- notrs ];
                    pst_msgs := distributeMsgs
                                  (map (existT _ _) fwds)
                                  (removeMP (existT _ _ rq) oims)
+                |}
+
+| SRsBack:
+    forall oss otrss oidx pos nos otrs oims (rsbackr: PRule) rsbf
+           (rss: list (PMsg Rs)) (rsb: PMsg Rs),
+      In oidx (indicesOf psys) ->
+      In rsbackr (psys_rules psys) ->
+      rsbackr = PRuleRsBack (map (@pmsg_pmid _) rss) rsbf ->
+      ValidMsgsIn oidx rss ->
+      ValidMsgOuts oidx (rsb :: nil) ->
+
+      oss@[oidx] = Some pos ->
+      otrss@[oidx] = Some otrs ->
+
+      (* All predicates in the response messages are satisfied. *)
+      Forall (fun pmsg => PredOk (pmsg_pred pmsg)
+                                 (pmsg_val (otrs_rq otrs)) oss (pmsg_val pmsg)) rss ->
+      otrs_opred otrs (pmsg_val (otrs_rq otrs)) nos (pmsg_val rsb) ->
+
+      DualPMsg (otrs_rq otrs) rsb ->
+      pmsg_val rsb = rsbf (map getMsg rss) pos ->
+
+      step_pred psys
+                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+                (PlblOuts (Some rsbackr)
+                          (map (existT _ _) rss)
+                          (existT _ _ rsb :: nil))
+                {| pst_oss := oss +[ oidx <- nos ];
+                   pst_otrss := M.remove oidx otrss;
+                   pst_msgs := enqMP (existT _ _ rsb)
+                                     (removeMsgs (map (existT _ _) rss) oims)
                 |}.
+
+Definition steps_pred: Steps PSystem PState PLabel := steps step_pred.
+
+(**
+ * Informal TODOs:
+ * 1) To prove [steps_det -> Transactional -> steps_pred]
+ * 2) To check [steps_pred] is indeed useful for syntheses.
+ *)
 
