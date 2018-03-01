@@ -17,10 +17,6 @@ Definition PredOk (pred: Pred) (rqv: Value) (oss: OStates) (rsv: Value) :=
         (fun opred =>
            oss@[oidx] >>=[False] (fun ost => opred rqv ost rsv)).
 
-(* Need to check if [pmsg_val] can be removed, to make [pmsg_pred] have enough
- * information instead.
- *)
-
 Record PMsgId :=
   { pmid_mid: MsgId;
     pmid_pred: Pred }.
@@ -32,7 +28,7 @@ Record PMsg (rr: RqRs) :=
 Definition pmsg_mid {rr} (pmsg: PMsg rr) := pmid_mid (pmsg_pmid pmsg).
 Definition pmsg_pred {rr} (pmsg: PMsg rr) := pmid_pred (pmsg_pmid pmsg).
 
-(* From the perspective of correctness, [mid_chn] is only about liveness. *)
+(* No conditions about [mid_chn]; it's only about liveness. *)
 Definition DualMid (rq rs: MsgId) :=
   mid_tid rq = mid_tid rs /\
   mid_from rq = mid_to rs /\
@@ -60,18 +56,13 @@ Global Instance PMsgSig_HasMsg : HasMsg PMsgSig :=
 Definition PRPrecond := OState -> list Msg -> Prop.
 Definition PROuts := list PMsgSig -> OState -> list PMsgSig.
 
-Inductive PRule :=
-| PRuleImm: forall (rq: PMsgId) (prec: PRPrecond), PRule 
-| PRuleRqFwd:
-    forall (rq: PMsgId) (prec: PRPrecond)
-           (fwds: PMsg Rq -> OState -> list (PMsg Rq)), PRule
-| PRuleRsBack:
-    forall (rss: list PMsgId) (rsbf: list Msg -> OState -> Value), PRule.
+Definition RqFwdF := PMsg Rq -> OState -> list (PMsg Rq).
+Definition RsBackF := list Msg -> OState -> Value.
 
-(* Record PRule := *)
-(*   { rule_mids: list PMsgId; *)
-(*     rule_precond: PRPrecond; *)
-(*     rule_outs: PROuts }. *)
+Inductive PRule :=
+| PRuleImm: forall (rq: PMsgId) (prec: PRPrecond), PRule
+| PRuleRqFwd: forall (rq: PMsgId) (prec: PRPrecond) (fwds: RqFwdF), PRule
+| PRuleRsBack: forall (rss: list PMsgId) (rsbf: RsBackF), PRule.
 
 Section PLabel.
 
@@ -109,18 +100,19 @@ Record PSystem :=
     psys_inits: OStates;
     psys_rules: list PRule }.
 
+Definition ForwardingOk (rq: PMsg Rq) (opred: OPred) (rsbf: RsBackF) :=
+  forall oss ost rss,
+    Forall (fun rs: PMsg Rs =>
+              PredOk (pmsg_pred rs) (pmsg_val rq) oss (pmsg_val rs)) rss ->
+    oss@[mid_to (pmsg_mid rq)] = Some ost ->
+    opred (pmsg_val rq) ost (rsbf (map getMsg rss) ost) ->
+    PredOk (pmsg_pred rq) (pmsg_val rq) oss (rsbf (map getMsg rss) ost).
+
 Record OTrs :=
   { otrs_rq: PMsg Rq;
     otrs_opred: OPred;
-    otrs_fwds: list Pred;
-    otrs_rsbf: list Msg -> OState -> Value;
-    otrs_pred_ok:
-      forall oss ost rss,
-        Forall (fun rs: PMsg Rs =>
-                  PredOk (pmsg_pred rs) (pmsg_val otrs_rq) oss (pmsg_val rs)) rss ->
-        oss@[mid_to (pmsg_mid otrs_rq)] = Some ost ->
-        otrs_opred (pmsg_val otrs_rq) ost (otrs_rsbf (map getMsg rss) ost) ->
-        PredOk (pmsg_pred otrs_rq) (pmsg_val otrs_rq) oss (otrs_rsbf (map getMsg rss) ost)
+    otrs_rsbf: RsBackF;
+    otrs_pred_ok: ForwardingOk otrs_rq otrs_opred otrs_rsbf
   }.
 
 Record PState :=
@@ -201,7 +193,6 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                 {| pst_oss := oss;
                    pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
                                                     otrs_opred := opred;
-                                                    otrs_fwds := map pmsg_pred fwds;
                                                     otrs_rsbf := rsbf;
                                                     otrs_pred_ok := pred_ok |} ];
                    pst_msgs := distributeMsgs
@@ -221,16 +212,11 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       oss@[oidx] = Some pos ->
       otrss@[oidx] = Some otrs ->
 
-      (* NOTE: Because of the requirements below, the original requested 
-       * predicate is guaranteed.
-       * TODO: Better if we have a single predicate merging all 
-       * conditions of [OTrs] below. *)
-      Forall (fun pmsg => PredOk (pmsg_pred pmsg)
-                                 (pmsg_val (otrs_rq otrs)) oss (pmsg_val pmsg)) rss ->
+      Forall (fun pmsg => PredOk
+                            (pmsg_pred pmsg)
+                            (pmsg_val (otrs_rq otrs)) oss (pmsg_val pmsg)) rss ->
       otrs_opred otrs (pmsg_val (otrs_rq otrs)) nos (pmsg_val rsb) ->
-      otrs_fwds otrs = map pmsg_pred rss ->
       otrs_rsbf otrs = rsbf ->
-
       DualPMsg (otrs_rq otrs) rsb ->
       pmsg_val rsb = rsbf (map getMsg rss) pos ->
 
