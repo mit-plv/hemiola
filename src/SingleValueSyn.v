@@ -1,6 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
 Require Import Simulation Serial SerialFacts TrsInv TrsSim.
+Require Import PredMsg StepPred PredMsgFacts.
 Require Import Synthesis SynthesisFacts Blocking.
 
 Require Import SingleValue SingleValueSim.
@@ -56,13 +57,7 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Definition SvmInv1: Inv := SvmInv /\i BlockedInv /\i ValidTidState.
-  Ltac dest_SvmInv1 :=
-    match goal with
-    | [H: SvmInv1 _ |- _] => destruct H as [[? ?] ?]
-    end.
-
-  Theorem impl0_ok: SynthOk spec SvmSim SvmInv1 svmP impl0.
+  Theorem impl0_ok: SynthOk spec SvmSim SvmInv svmP impl0.
   Proof.
     split; [|split; [|split]].
     - (* simulation for the initial states *) admit.
@@ -143,11 +138,11 @@ Section Impl.
     Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1.
     
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec SvmSim SvmInv1 svmP impl1 }.
+      { impl1: System & SynthOk spec SvmSim SvmInv svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
-      - (** simulation *)
+      - (** Simulation and preservation of global invariants. *)
         trs_sim_init impl0_ok.
 
         + (** [TrsSimulates] for newly added [Rule]s *)
@@ -155,6 +150,9 @@ Section Impl.
 
           (** [TrsSimulates] for [Atomic] steps *)
           unfold TrsSimAtomic; intros.
+
+          (* Convert an [Atomic] [steps_det] into [steps_pred]. *)
+          (* eapply steps_pred_ok in H2; eauto. *)
           admit.
           
         + (** Global invariants hold *)
