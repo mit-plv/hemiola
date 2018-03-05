@@ -2,16 +2,16 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics SemFacts.
 
 Section Simulation.
-  Context {SysT StateI LabelI StateS LabelS: Type}
-          `{IsSystem SysT StateI} `{HasLabel LabelI}
-          `{IsSystem SysT StateS} `{HasLabel LabelS}.
-  Variables (stepI: Step SysT StateI LabelI) (stepS: Step SysT StateS LabelS)
+  Context {SysI SysS StateI LabelI StateS LabelS: Type}
+          `{IsSystem SysI StateI} `{HasLabel LabelI}
+          `{IsSystem SysS StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
             (sim: StateI -> StateS -> Prop)
             (p: Label -> Label).
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: SysT).
+  Variables (impl: SysI) (spec: SysS).
 
   Definition Simulates :=
     forall ist1 sst1,
@@ -40,9 +40,9 @@ Section Simulation.
       forall ihst ist2,
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
+          steps stepS spec sst1 shst sst2 /\
           map p (behaviorOf (StateT:= StateI) impl ihst) =
           behaviorOf (StateT:= StateS) spec shst /\
-          steps stepS spec sst1 shst sst2 /\
           ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
@@ -57,14 +57,14 @@ Section Simulation.
 
     - destruct H5 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
-      + simpl; erewrite H6, H9; simpl.
-        reflexivity.
       + econstructor; eauto.
+      + simpl; erewrite H7, H9; simpl.
+        reflexivity.
     - destruct H5.
       * destruct H5 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
-        -- simpl; rewrite H6, H9; simpl; reflexivity.
         -- econstructor; eauto.
+        -- simpl; rewrite H7, H9; simpl; reflexivity.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
@@ -138,3 +138,11 @@ Section SimMap.
   
 End SimMap.
   
+Definition LiftSimL {StateI1 StateS} (sim: StateI1 -> StateS -> Prop)
+           {StateI2} (f: StateI2 -> StateI1): StateI2 -> StateS -> Prop :=
+  fun sti2 sts => sim (f sti2) sts.
+
+Definition LiftSimR {StateI StateS1} (sim: StateI -> StateS1 -> Prop)
+           {StateS2} (f: StateS2 -> StateS1): StateI -> StateS2 -> Prop :=
+  fun sti sts2 => sim sti (f sts2).
+

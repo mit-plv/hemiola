@@ -82,7 +82,7 @@ Section Impl.
       (** instantiation *)
       unfold TrsSimIn; intros; simpl;
       match goal with
-      | [H: context[IlblIn ?min] |- context[step_det _ ?ist1 _ _] ] =>
+      | [H: context[RlblIn ?min] |- context[step_det _ ?ist1 _ _] ] =>
         let ioss1 := fresh "ioss1" in
         let imsgs1 := fresh "imsgs1" in
         let its1 := fresh "its1" in
@@ -96,7 +96,7 @@ Section Impl.
       (** some inversions *)
       repeat
         match goal with
-        | [H: step_det _ _ (IlblIn _) _ |- _] => inv H
+        | [H: step_det _ _ (RlblIn _) _ |- _] => inv H
         | [H: sim _ _ |- _] => inv H
         end;
       (** construction *)
@@ -152,8 +152,27 @@ Section Impl.
           unfold TrsSimAtomic; intros.
 
           (* Convert an [Atomic] [steps_det] into [steps_pred]. *)
-          (* eapply steps_pred_ok in H2; eauto. *)
-          admit.
+          eapply steps_pred_ok in H2; eauto.
+
+          * (* In this subgoal it suffices to synthesize [PRules]. *)
+            clear H. (* Atomicity is no longer needed *)
+            destruct H2 as [pst1 [phst [pst2 [? [? [? ?]]]]]].
+            rewrite <-H3; clear H3; subst.
+
+            (* Reduction to the simulation proof. *)
+            eapply simulation_steps
+              with (stepS:= step_det) (sim:= LiftSimL SvmSim (pToTState ts rq))
+              in H4; eauto.
+            clear H4.
+            unfold Simulates; intros.
+
+            (* For each case of [step_pred], *)
+            (* inv H2. *)
+            admit.
+
+          * (* Now ready to synthesize (ordinary) [Rule]s 
+             * based on the synthesized [PRule]s. *)
+            admit.
           
         + (** Global invariants hold *)
           admit.

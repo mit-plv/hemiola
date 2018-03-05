@@ -86,6 +86,13 @@ Definition bind {A B} (oa: option A) (f: A -> option B): option B :=
   end.
 Infix ">>=" := bind (at level 0).
 
+Definition lift {A B} (f: A -> B): option A -> option B :=
+  fun oa =>
+    match oa with
+    | Some a => Some (f a)
+    | None => None
+    end.
+
 Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
   match oa with
   | Some a => f a

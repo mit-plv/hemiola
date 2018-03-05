@@ -22,7 +22,7 @@ Lemma atomic_iLblIn_not_in:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall msg,
-      ~ In (IlblIn msg) hst.
+      ~ In (RlblIn msg) hst.
 Proof.
   induction 1; simpl; intros; [auto|];
     try (intro Hx; destruct Hx;
@@ -49,7 +49,7 @@ Lemma atomic_tinfo:
     forall st1 st2,
       steps_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | IlblOuts _ ins _ =>
+                         | RlblOuts _ ins _ =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti => hti = buildTInfo ts (rq :: nil)
@@ -92,7 +92,7 @@ Corollary atomic_hst_tinfo:
     forall st1 st2,
       steps_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | IlblOuts _ ins _ =>
+                         | RlblOuts _ ins _ =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti => hti = buildTInfo ts (rq :: nil)

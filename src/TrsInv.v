@@ -55,7 +55,7 @@ Section Impl.
     forall ist1,
       ginv ist1 ->
       forall imin ist2,
-        step_det impl ist1 (IlblIn imin) ist2 ->
+        step_det impl ist1 (RlblIn imin) ist2 ->
         ginv ist2.
 
   Definition TrsInvAtomic (ginv: Inv) :=

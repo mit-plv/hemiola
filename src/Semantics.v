@@ -158,11 +158,11 @@ Section Transition.
         tr = behaviorOf sys ll ->
         Behavior ss sys tr.
 
-  Definition Refines {SysT StateI LabelI StateS LabelS}
-             `{IsSystem SysT StateI} `{HasLabel LabelI}
-             `{IsSystem SysT StateS} `{HasLabel LabelS}
-             (ssI: Steps SysT StateI LabelI) (ssS: Steps SysT StateS LabelS)
-             (p: Label -> Label) (impl spec: SysT) :=
+  Definition Refines {SysI SysS StateI LabelI StateS LabelS}
+             `{IsSystem SysI StateI} `{HasLabel LabelI}
+             `{IsSystem SysS StateS} `{HasLabel LabelS}
+             (ssI: Steps SysI StateI LabelI) (ssS: Steps SysS StateS LabelS)
+             (p: Label -> Label) (impl: SysI) (spec: SysS) :=
     forall ll, Behavior ssI impl ll ->
                Behavior ssS spec (map p ll).
 
@@ -201,32 +201,32 @@ Definition MState := BState Msg.
 Section RLabel.
 
   Inductive RLabel MsgT :=
-  | IlblIn (min: MsgT): RLabel MsgT
-  | IlblOuts (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): RLabel MsgT.
+  | RlblIn (min: MsgT): RLabel MsgT
+  | RlblOuts (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): RLabel MsgT.
 
   Definition iLblIns {MsgT} (l: RLabel MsgT) :=
     match l with
-    | IlblIn _ => nil
-    | IlblOuts _ mins _ => mins
+    | RlblIn _ => nil
+    | RlblOuts _ mins _ => mins
     end.
 
   Definition iLblOuts {MsgT} (l: RLabel MsgT) :=
     match l with
-    | IlblIn _ => nil
-    | IlblOuts _ _ mouts => mouts
+    | RlblIn _ => nil
+    | RlblOuts _ _ mouts => mouts
     end.
 
   Definition iToLabel {MsgT} `{HasMsg MsgT}
              (l: RLabel MsgT): Label :=
     match l with
-    | IlblIn min => LblIn (getMsg min)
-    | IlblOuts _ _ mouts => LblOuts (map getMsg mouts)
+    | RlblIn min => LblIn (getMsg min)
+    | RlblOuts _ _ mouts => LblOuts (map getMsg mouts)
     end.
 
   Global Instance RLabel_HasLabel {MsgT} `{HasMsg MsgT}: HasLabel (RLabel MsgT) :=
     { getLabel := iToLabel }.
 
-  Definition emptyRLabel {MsgT} := IlblOuts (MsgT:= MsgT) None nil nil.
+  Definition emptyRLabel {MsgT} := RlblOuts (MsgT:= MsgT) None nil nil.
 
 End RLabel.
 

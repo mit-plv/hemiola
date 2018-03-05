@@ -9,7 +9,7 @@ Section PerSystem.
   (* A history is [Atomic] if it satisfies following conditions:
    * 1) The history can be either an incomplete or a complete transaction.
    * 2) The history always begins by handling an external message.
-   * 3) Each label in the history has a form of [IlblOuts (Some hdl) _],
+   * 3) Each label in the history has a form of [RlblOuts (Some hdl) _],
    *    and all [hdl]s have the same [tinfo_tid]. It means that the history is
    *    for a single transaction.
    *)
@@ -19,13 +19,13 @@ Section PerSystem.
         isExternal sys (mid_from (msg_id rq)) = true ->
         ForallMP (fun tmsg => tmsg_info tmsg =
                               Some (buildTInfo ts (rq :: nil))) houts ->
-        Atomic ts rq (IlblOuts (Some rqr) (toTMsgU rq :: nil) houts :: nil) houts
+        Atomic ts rq (RlblOuts (Some rqr) (toTMsgU rq :: nil) houts :: nil) houts
   | AtomicCont:
       forall ts rq hst rule msgs mouts houts,
         Atomic ts rq hst mouts ->
         msgs <> nil ->
         SubList msgs mouts ->
-        Atomic ts rq (IlblOuts (Some rule) msgs houts :: hst)
+        Atomic ts rq (RlblOuts (Some rule) msgs houts :: hst)
                (distributeMsgs houts (removeMsgs msgs mouts)).
 
   Inductive Transactional: THistory -> Prop :=
@@ -33,7 +33,7 @@ Section PerSystem.
       Transactional (emptyRLabel :: nil)
   | TrsIn:
       forall msg tin,
-        tin = IlblIn msg ->
+        tin = RlblIn msg ->
         Transactional (tin :: nil)
   | TrsAtomic:
       forall ts rq hst mouts,

@@ -119,11 +119,11 @@ Section TrsSimSep.
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall imin ist2,
-        step_det impl ist1 (IlblIn imin) ist2 ->
+        step_det impl ist1 (RlblIn imin) ist2 ->
         exists smin sst2,
-          step_det spec sst1 (IlblIn smin) sst2 /\
-          extLabel spec (getLabel (IlblIn smin)) =
-          Some (p (getLabel (IlblIn imin))) /\
+          step_det spec sst1 (RlblIn smin) sst2 /\
+          extLabel spec (getLabel (RlblIn smin)) =
+          Some (p (getLabel (RlblIn imin))) /\
           ist2 ≈ sst2.
 
   Definition TrsSimAtomic ts rq :=
@@ -260,7 +260,7 @@ Lemma trsPreservingSys_ins_outs_same_tid:
   forall sys,
     trsPreservingSys sys ->
     forall st1 st2 orule hins houts,
-      step_det sys st1 (IlblOuts orule hins houts) st2 ->
+      step_det sys st1 (RlblOuts orule hins houts) st2 ->
       exists tid,
         Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) = tid) hins /\
         Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) = tid) houts.
@@ -291,8 +291,8 @@ Lemma trsPreservineSys_atomic_same_tid:
           Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
           Forall (fun tl =>
                     match tl with
-                    | IlblIn msg => mid_tid (msg_id (getMsg msg)) = mtid
-                    | IlblOuts _ ins _ =>
+                    | RlblIn msg => mid_tid (msg_id (getMsg msg)) = mtid
+                    | RlblOuts _ ins _ =>
                       Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) ins
                     end) hst.
 Proof.
@@ -488,7 +488,7 @@ Section Compositionality.
 
     - inv H0; inv H4; inv H6; assumption.
 
-    - assert (trsSteps impl1 ist1 (IlblIn msg :: nil) ist2).
+    - assert (trsSteps impl1 ist1 (RlblIn msg :: nil) ist2).
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H1; inv H4; inv H6.
@@ -535,7 +535,7 @@ Section Compositionality.
     - inv H1; inv H5; inv H7.
       exists sst1, nil; repeat split; [constructor|assumption].
 
-    - assert (trsSteps impl1 ist1 (IlblIn msg :: nil) ist2).
+    - assert (trsSteps impl1 ist1 (RlblIn msg :: nil) ist2).
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.

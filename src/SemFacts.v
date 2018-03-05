@@ -267,7 +267,7 @@ Fact SdIntSingle:
                 tst_msgs := oims;
                 tst_tid := ts
              |}
-             (IlblOuts (Some frule) (fmsg :: nil) (toTMsgs tinfo outs))
+             (RlblOuts (Some frule) (fmsg :: nil) (toTMsgs tinfo outs))
              {| tst_oss := oss +[ oidx <- pos ];
                 tst_msgs := distributeMsgs
                               (intOuts sys (toTMsgs tinfo outs))
@@ -412,7 +412,7 @@ Qed.
 
 Lemma step_det_int_internal:
   forall sys st1 orule ins outs st2,
-    step_det sys st1 (IlblOuts orule ins outs) st2 ->
+    step_det sys st1 (RlblOuts orule ins outs) st2 ->
     Forall (fun msg => isInternal sys (mid_to (msg_id (getMsg msg))) = true) ins.
 Proof.
   intros; inv H; [constructor|].
@@ -454,10 +454,10 @@ Qed.
 
 Lemma step_det_in_rules_weakening:
   forall sys st1 emsg st2,
-    step_det sys st1 (IlblIn emsg) st2 ->
+    step_det sys st1 (RlblIn emsg) st2 ->
     forall wsys,
       indicesOf wsys = indicesOf sys ->
-      step_det wsys st1 (IlblIn emsg) st2.
+      step_det wsys st1 (RlblIn emsg) st2.
 Proof.
   intros; inv H.
   constructor; auto.
