@@ -5,6 +5,92 @@ Require Import Omega.
 
 Set Implicit Arguments.
 
+Lemma addRules_init:
+  forall rules sys,
+    initsOf (StateT:= TState) (addRules rules sys) =
+    initsOf (StateT:= TState) sys.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma addRules_indices:
+  forall rules sys,
+    indicesOf (addRules rules sys) = indicesOf sys.
+Proof.
+  reflexivity.
+Qed.
+
+Corollary addRules_isExternal:
+  forall rules sys,
+    isExternal (addRules rules sys) =
+    isExternal sys.
+Proof.
+  unfold isExternal; intros.
+  rewrite addRules_indices.
+  reflexivity.
+Qed.
+  
+Corollary addRules_isInternal:
+  forall rules sys,
+    isInternal (addRules rules sys) =
+    isInternal sys.
+Proof.
+  unfold isInternal; intros.
+  rewrite addRules_indices.
+  reflexivity.
+Qed.
+
+Corollary addRules_behaviorOf:
+  forall sys rules hst,
+    behaviorOf (addRules rules sys) hst = behaviorOf sys hst.
+Proof.
+  induction hst; [reflexivity|].
+  simpl; rewrite IHhst; reflexivity.
+Qed.
+
+Lemma buildRawSys_indicesOf:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    indicesOf sys = indicesOf (buildRawSys sys).
+Proof.
+  intros; unfold indicesOf, buildRawSys; simpl.
+  reflexivity.
+Qed.
+
+Corollary buildRawSys_isExternal:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    isExternal (buildRawSys sys) = isExternal sys.
+Proof.
+  unfold isExternal; intros.
+  rewrite <-buildRawSys_indicesOf.
+  reflexivity.
+Qed.
+
+Corollary buildRawSys_isInternal:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    isInternal (buildRawSys sys) =
+    isInternal sys.
+Proof.
+  unfold isInternal; intros.
+  rewrite <-buildRawSys_indicesOf.
+  reflexivity.
+Qed.
+
+Lemma addRules_app:
+  forall sys rules1 rules2,
+    addRules (rules1 ++ rules2) sys =
+    addRules rules2 (addRules rules1 sys).
+Proof.
+  unfold addRules; simpl; intros.
+  rewrite app_assoc; reflexivity.
+Qed.
+
+Lemma addRulesSys_buildRawSys:
+  forall rules sys,
+    rulesOf (addRules rules (buildRawSys sys)) = rules.
+Proof.
+  reflexivity.
+Qed.
+
 Section MessagePoolFacts.
   Variable (MsgT: Type).
   Context `{HasMsg MsgT}.
@@ -441,14 +527,16 @@ Proof.
 Qed.
 
 Lemma extLabel_preserved:
-  forall (impl1 impl2: System),
+  forall {SysT1 SysT2 StateT1 StateT2}
+         `{IsSystem SysT1 StateT1} `{IsSystem SysT2 StateT2}
+         (impl1: SysT1) (impl2: SysT2),
     indicesOf impl1 = indicesOf impl2 ->
     forall l,
       extLabel impl1 l = extLabel impl2 l.
 Proof.
   intros; destruct l; simpl; [reflexivity|].
   unfold extOuts, isExternal.
-  rewrite H.
+  rewrite H1.
   reflexivity.
 Qed.
 
@@ -629,13 +717,15 @@ Proof.
 Qed.
 
 Lemma behaviorOf_preserved:
-  forall (impl1 impl2: System),
+  forall {SysT1 SysT2 StateT1 StateT2}
+         `{IsSystem SysT1 StateT1} `{IsSystem SysT2 StateT2}
+         (impl1: SysT1) (impl2: SysT2),
     indicesOf impl1 = indicesOf impl2 ->
     forall hst,
       behaviorOf impl1 hst = behaviorOf impl2 hst.
 Proof.
   induction hst; simpl; intros; [reflexivity|].
-  rewrite extLabel_preserved with (impl2:= impl2) by assumption.
+  rewrite extLabel_preserved with (impl4:= impl2) by assumption.
   rewrite IHhst; reflexivity.
 Qed.
 

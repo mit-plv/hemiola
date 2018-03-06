@@ -115,7 +115,7 @@ Section Impl.
         | [ |- ValidMsgMap _ (addRules _ (buildRawSys ?imp)) _ ] =>
           apply validMsgMap_same_indices with (impl1:= imp);
           [apply svmMsgF_ValidMsgMap
-          |rewrite addRules_indices, buildRawSys_indicesOf; reflexivity]
+          |rewrite addRules_indices, <-buildRawSys_indicesOf; reflexivity]
         end.
     
     (* This ltac handles trivial [Transactional] cases.
@@ -151,24 +151,64 @@ Section Impl.
           (** [TrsSimulates] for [Atomic] steps *)
           unfold TrsSimAtomic; intros.
 
+          (* Build an essential property of an atomic history. *)
+          pose proof (atomic_hst_tinfo H H2).
+
           (* Convert an [Atomic] [steps_det] into [steps_pred]. *)
-          eapply steps_pred_ok in H2; eauto.
+          eapply steps_pred_ok
+            with (psys:= addPRules _ (buildRawPSys impl0)) in H2; eauto.
 
           * (* In this subgoal it suffices to synthesize [PRules]. *)
-            clear H. (* Atomicity is no longer needed *)
+            clear H. (* Atomicity is no longer needed. *)
             destruct H2 as [pst1 [phst [pst2 [? [? [? ?]]]]]].
-            rewrite <-H3; clear H3; subst.
+            subst.
 
             (* Reduction to the simulation proof. *)
-            eapply simulation_steps
+            assert (Forall (fun lbl =>
+                              match lbl with
+                              | PlblIn _ => False
+                              | PlblOuts _ _ _ => True
+                              end) phst).
+            { clear -H3; induction phst; simpl; intros; [constructor|].
+              inv H3; constructor; auto.
+              destruct a; auto.
+            }
+            clear H3.
+
+            eapply label_inv_simulation_steps
               with (stepS:= step_det) (sim:= LiftSimL SvmSim (pToTState ts rq))
-              in H4; eauto.
-            clear H4.
-            unfold Simulates; intros.
+              in H5; eauto.
+            { destruct H5 as [sst2 [shst [? [? ?]]]].
+              exists sst2, shst.
+              split; [|split]; eauto.
+
+              rewrite addPRules_behaviorOf in H3.
+              rewrite addRules_behaviorOf.
+              rewrite <-buildRawPSys_pToSystem_buildRawSys.
+              rewrite <-pToTHistory_behaviorOf.
+              eassumption.
+            }
 
             (* For each case of [step_pred], *)
-            (* inv H2. *)
-            admit.
+            clear H5. (* [steps_pred] is no longer needed. *)
+            unfold LInvSim; intros.
+            inv H4.
+
+            { (* SpSlt *) simpl; auto. }
+
+            { (* SpExt *) intuition idtac. }
+
+            { (* SpImm *)
+              admit.
+            }
+
+            { (* SpRqFwd *)
+              admit.
+            }
+
+            { (* SpRsBack *)
+              admit.
+            }
 
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)

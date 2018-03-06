@@ -82,6 +82,79 @@ Section Simulation.
 
 End Simulation.
 
+Section LInvSim.
+  Context {SysI SysS StateI LabelI StateS LabelS: Type}
+          `{IsSystem SysI StateI} `{HasLabel LabelI}
+          `{IsSystem SysS StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
+            (sim: StateI -> StateS -> Prop)
+            (p: Label -> Label)
+            (linv: LabelI -> Prop).
+
+  Local Infix "≈" := sim (at level 30).
+
+  Variables (impl: SysI) (spec: SysS).
+
+  Definition LInvSim :=
+    forall ist1 sst1,
+      ist1 ≈ sst1 ->
+      forall ilbl ist2,
+        linv ilbl ->
+        stepI impl ist1 ilbl ist2 ->
+        match extLabel (StateT:= StateI) impl (getLabel ilbl) with
+        | None =>
+          (exists sst2 slbl,
+              stepS spec sst1 slbl sst2 /\
+              extLabel (StateT:= StateS) spec (getLabel slbl) = None /\
+              ist2 ≈ sst2) \/
+          ist2 ≈ sst1
+        | Some elbl =>
+          (exists sst2 slbl,
+              stepS spec sst1 slbl sst2 /\
+              extLabel (StateT:= StateS) spec (getLabel slbl) = Some (p elbl) /\
+              ist2 ≈ sst2)
+        end.
+
+  Hypothesis (Hsim: LInvSim).
+
+  Lemma label_inv_simulation_steps:
+    forall ist1 sst1,
+      ist1 ≈ sst1 ->
+      forall ihst ist2,
+        Forall linv ihst ->
+        steps stepI impl ist1 ihst ist2 ->
+        exists sst2 shst,
+          steps stepS spec sst1 shst sst2 /\
+          map p (behaviorOf (StateT:= StateI) impl ihst) =
+          behaviorOf (StateT:= StateS) spec shst /\
+          ist2 ≈ sst2.
+  Proof.
+    induction 3; simpl; intros;
+      [exists sst1, nil; repeat split; auto; constructor|].
+
+    inv H4.
+    specialize (IHsteps H3 H10).
+    destruct IHsteps as [sst2 [shst [? [? ?]]]].
+
+    eapply Hsim in H6; [|exact H8|exact H9].
+    remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
+    destruct ilbl as [elbl|].
+
+    - destruct H6 as [sst3 [slbl [? [? ?]]]].
+      eexists; eexists (_ :: _); repeat split; eauto.
+      + econstructor; eauto.
+      + simpl; erewrite H7, H11; simpl.
+        reflexivity.
+    - destruct H6.
+      * destruct H6 as [sst3 [slbl [? [? ?]]]].
+        eexists; eexists (slbl :: _); repeat split; eauto.
+        -- econstructor; eauto.
+        -- simpl; rewrite H7, H11; simpl; reflexivity.
+      * exists sst2, shst; repeat split; auto.
+  Qed.
+
+End LInvSim.
+
 Section SimMap.
   Variable (mmap: Msg -> Msg).
 

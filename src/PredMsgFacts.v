@@ -3,42 +3,132 @@ Require Import Common FMap Syntax Semantics StepDet.
 Require Import PredMsg StepPred.
 Require Import Serial.
 
-(** Conversion from [PSystem] to [System] *)
+Lemma buildRawPSys_indicesOf:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    indicesOf sys = indicesOf (buildRawPSys sys).
+Proof.
+  reflexivity.
+Qed.
 
-Definition pToRule (prule: PRule): Rule :=
-  {| rule_mids := midsOfPRule prule;
-     rule_precond := precOfPRule prule;
-     (** * TODO: how to convert? *)
-     rule_postcond := ⊤⊤⊤ |}.
+Corollary buildRawPSys_isExternal:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    isExternal (buildRawPSys sys) = isExternal sys.
+Proof.
+  unfold isExternal; intros.
+  rewrite <-buildRawPSys_indicesOf.
+  reflexivity.
+Qed.
 
-Definition pToSystem (psys: PSystem): System :=
-  {| sys_inds := psys_inds psys;
-     sys_inits := psys_inits psys;
-     sys_rules := map pToRule (psys_rules psys) |}.
+Corollary buildRawPSys_isInternal:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    isInternal (buildRawPSys sys) = isInternal sys.
+Proof.
+  unfold isInternal; intros.
+  rewrite <-buildRawPSys_indicesOf.
+  reflexivity.
+Qed.
 
-Definition pToTMsg (ts: TrsId) (rqin: Msg) (pmsg: PMsgSig): TMsg :=
-  {| tmsg_msg := {| msg_id := pmsg_mid (projT2 pmsg);
-                    msg_value := pmsg_val (projT2 pmsg)
-                 |};
-     tmsg_info := Some {| tinfo_tid := ts; tinfo_rqin := rqin :: nil |}
-  |}.
+Lemma buildRawPSys_pToSystem_buildRawSys:
+  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+    pToSystem (buildRawPSys sys) = buildRawSys sys.
+Proof.
+  reflexivity.
+Qed.
 
-Definition pToTState (ts: TrsId) (rqin: Msg) (pst: PState): TState :=
-  {| tst_oss := pst_oss pst;
-     tst_msgs := map (pToTMsg ts rqin) (pst_msgs pst);
-     tst_tid := ts |}.
+Lemma addPRules_init:
+  forall rules sys,
+    initsOf (StateT:= OStates) (addPRules rules sys) =
+    initsOf (StateT:= OStates) sys.
+Proof.
+  reflexivity.
+Qed.
 
-Definition pToTLabel (ts: TrsId) (rqin: Msg) (plbl: PLabel): TLabel :=
-  match plbl with
-  | PlblIn min => RlblIn (pToTMsg ts rqin (existT _ _ min))
-  | PlblOuts oprule mins mouts =>
-    RlblOuts (lift pToRule oprule)
-             (map (pToTMsg ts rqin) mins)
-             (map (pToTMsg ts rqin) mouts)
-  end.
+Lemma addPRules_indices:
+  forall rules sys,
+    indicesOf (addPRules rules sys) = indicesOf sys.
+Proof.
+  reflexivity.
+Qed.
 
-Definition pToTHistory (ts: TrsId) (rqin: Msg) (phst: PHistory): THistory :=
-  map (pToTLabel ts rqin) phst.
+Corollary addPRules_isExternal:
+  forall rules sys,
+    isExternal (addPRules rules sys) =
+    isExternal sys.
+Proof.
+  unfold isExternal; intros.
+  rewrite addPRules_indices.
+  reflexivity.
+Qed.
+
+Corollary addPRules_isInternal:
+  forall rules sys,
+    isInternal (addPRules rules sys) =
+    isInternal sys.
+Proof.
+  unfold isInternal; intros.
+  rewrite addPRules_indices.
+  reflexivity.
+Qed.
+
+Corollary addPRules_behaviorOf:
+  forall psys prules phst,
+    behaviorOf (addPRules prules psys) phst = behaviorOf psys phst.
+Proof.
+  induction phst; [reflexivity|].
+  simpl; rewrite IHphst; reflexivity.
+Qed.
+
+Lemma pToSystem_indices:
+  forall psys, indicesOf psys = indicesOf (pToSystem psys).
+Proof.
+  reflexivity.
+Qed.
+
+Corollary pToSystem_isExternal:
+  forall psys idx,
+    isExternal psys idx = isExternal (pToSystem psys) idx.
+Proof.
+  unfold isExternal; intros.
+  rewrite pToSystem_indices; reflexivity.
+Qed.
+
+Corollary pToSystem_isInternal:
+  forall psys idx,
+    isInternal psys idx = isInternal (pToSystem psys) idx.
+Proof.
+  unfold isInternal; intros.
+  rewrite pToSystem_indices; reflexivity.
+Qed.
+
+Lemma pToTMsg_extOuts:
+  forall psys ts rqin msgs,
+    extOuts psys (map (fun pmsg => msgOfPMsg (projT2 pmsg)) msgs) =
+    extOuts (pToSystem psys) (map tmsg_msg (map (pToTMsg ts rqin) msgs)).
+Proof.
+  induction msgs; simpl; intros; [reflexivity|].
+  rewrite pToSystem_isExternal, IHmsgs.
+  reflexivity.
+Qed.
+
+Lemma pToLabel_extLabel:
+  forall psys ts rqin l,
+    extLabel psys (pToLabel l) =
+    extLabel (pToSystem psys) (iToLabel (pToTLabel ts rqin l)).
+Proof.
+  unfold extLabel; simpl; intros.
+  destruct l; cbn.
+  - reflexivity.
+  - rewrite <-pToTMsg_extOuts; reflexivity.
+Qed.
+
+Lemma pToTHistory_behaviorOf:
+  forall psys ts rqin phst,
+    behaviorOf psys phst =
+    behaviorOf (pToSystem psys) (pToTHistory ts rqin phst).
+Proof.
+  induction phst; simpl; intros; [reflexivity|].
+  rewrite IHphst, <-pToLabel_extLabel; reflexivity.
+Qed.
 
 Theorem steps_pred_ok:
   forall sys st1 thst st2 ts rqin mouts,
@@ -49,7 +139,7 @@ Theorem steps_pred_ok:
       exists pst1 phst pst2,
         pToTState ts rqin pst1 = st1 /\
         pToTState ts rqin pst2 = st2 /\
-        behaviorOf psys phst = behaviorOf sys thst /\
+        pToTHistory ts rqin phst = thst /\
         steps_pred psys pst1 phst pst2.
 Proof.
 Admitted.

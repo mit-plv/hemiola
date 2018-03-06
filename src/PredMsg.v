@@ -150,3 +150,55 @@ Global Instance PSystem_PState_IsSystem : IsSystem PSystem PState :=
   {| indicesOf := psys_inds;
      initsOf := getPStateInit |}.
 
+(** Conversion from [PSystem] to [System] *)
+
+Definition pToRule (prule: PRule): Rule :=
+  {| rule_mids := midsOfPRule prule;
+     rule_precond := precOfPRule prule;
+     (** * TODO: how to convert? *)
+     rule_postcond := ⊤⊤⊤ |}.
+
+Definition pToSystem (psys: PSystem): System :=
+  {| sys_inds := psys_inds psys;
+     sys_inits := psys_inits psys;
+     sys_rules := map pToRule (psys_rules psys) |}.
+
+Definition pToTMsg (ts: TrsId) (rqin: Msg) (pmsg: PMsgSig): TMsg :=
+  {| tmsg_msg := {| msg_id := pmsg_mid (projT2 pmsg);
+                    msg_value := pmsg_val (projT2 pmsg)
+                 |};
+     tmsg_info := Some {| tinfo_tid := ts; tinfo_rqin := rqin :: nil |}
+  |}.
+
+Definition pToTState (ts: TrsId) (rqin: Msg) (pst: PState): TState :=
+  {| tst_oss := pst_oss pst;
+     tst_msgs := map (pToTMsg ts rqin) (pst_msgs pst);
+     tst_tid := ts |}.
+
+Definition pToTLabel (ts: TrsId) (rqin: Msg) (plbl: PLabel): TLabel :=
+  match plbl with
+  | PlblIn min => RlblIn (pToTMsg ts rqin (existT _ _ min))
+  | PlblOuts oprule mins mouts =>
+    RlblOuts (lift pToRule oprule)
+             (map (pToTMsg ts rqin) mins)
+             (map (pToTMsg ts rqin) mouts)
+  end.
+
+Definition pToTHistory (ts: TrsId) (rqin: Msg) (phst: PHistory): THistory :=
+  map (pToTLabel ts rqin) phst.
+
+Section RuleAdder.
+  Context {SysT: Type} `{IsSystem SysT OStates}.
+
+  Definition buildRawPSys (osys: SysT) :=
+    {| psys_inds := indicesOf osys;
+       psys_inits := initsOf osys;
+       psys_rules := nil |}.
+
+  Definition addPRules (rules: list PRule) (sys: PSystem) :=
+    {| psys_inds := psys_inds sys;
+       psys_inits := psys_inits sys;
+       psys_rules := psys_rules sys ++ rules |}.
+
+End RuleAdder.
+

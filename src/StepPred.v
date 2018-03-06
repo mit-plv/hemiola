@@ -43,7 +43,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                                  (removeMP (existT _ _ rq) oims)
                 |}
 
-| SRqFwd:
+| SpRqFwd:
     forall oss otrss oidx pos opred rsbf oims (rqfwdr: PRule) prec outf
            (rq: PMsg Rq) (fwds: list (PMsg Rq)) pred_ok,
       In oidx (indicesOf psys) ->
@@ -70,7 +70,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                                  (removeMP (existT _ _ rq) oims)
                 |}
 
-| SRsBack:
+| SpRsBack:
     forall oss otrss oidx pos nos otrs oims (rsbackr: PRule) rsbf
            (rss: list (PMsg Rs)) (rsb: PMsg Rs),
       In oidx (indicesOf psys) ->

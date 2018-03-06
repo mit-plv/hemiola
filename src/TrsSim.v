@@ -555,7 +555,7 @@ Section Compositionality.
           eapply atomic_preserved; eauto.
         }
         pose proof (Hsim1 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl2:= impl1) by assumption.
+        rewrite behaviorOf_preserved with (impl4:= impl1) by assumption.
         assumption.
       + assert (Transactional impl2 hst).
         { econstructor; eauto.
@@ -563,7 +563,7 @@ Section Compositionality.
           rewrite Hii; assumption.
         }
         pose proof (Hsim2 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl2:= impl2) by (rewrite Hii; assumption).
+        rewrite behaviorOf_preserved with (impl4:= impl2) by (rewrite Hii; assumption).
         assumption.
   Qed.
 

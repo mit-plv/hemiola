@@ -226,20 +226,6 @@ Section SynRqRsImm.
   
 End SynRqRsImm.
 
-Section AddRules.
-
-  Definition buildRawSys (osys: System) :=
-    {| sys_inds := sys_inds osys;
-       sys_inits := sys_inits osys;
-       sys_rules := nil |}.
-
-  Definition addRules (rules: list Rule) (sys: System) :=
-    {| sys_inds := sys_inds sys;
-       sys_inits := sys_inits sys;
-       sys_rules := sys_rules sys ++ rules |}.
-  
-End AddRules.
-
 Definition idxInter (li1 li2: list IdxT): list IdxT :=
   filter (fun idx => if idx ?<n li2 then true else false) li1.
 Definition idxSubtract (li1 li2: list IdxT): list IdxT :=

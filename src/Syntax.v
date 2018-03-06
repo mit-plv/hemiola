@@ -181,3 +181,18 @@ Section System.
 
 End System.
 
+Section RuleAdder.
+  Context {SysT: Type} `{IsSystem SysT OStates}.
+
+  Definition buildRawSys (osys: SysT): System :=
+    {| sys_inds := indicesOf osys;
+       sys_inits := initsOf osys;
+       sys_rules := nil |}.
+
+  Definition addRules (rules: list Rule) (sys: System) :=
+    {| sys_inds := sys_inds sys;
+       sys_inits := sys_inits sys;
+       sys_rules := sys_rules sys ++ rules |}.
+
+End RuleAdder.
+

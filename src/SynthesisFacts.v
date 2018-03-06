@@ -1,84 +1,8 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet Synthesis.
-Require Import Serial SerialFacts Simulation TrsInv TrsSim.
+Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet.
+Require Import Synthesis Serial SerialFacts Simulation TrsInv TrsSim.
 
-Lemma addRules_init:
-  forall rules sys,
-    initsOf (StateT:= TState) (addRules rules sys) =
-    initsOf (StateT:= TState) sys.
-Proof.
-  reflexivity.
-Qed.
-
-Lemma addRules_indices:
-  forall rules sys,
-    indicesOf (addRules rules sys) = indicesOf sys.
-Proof.
-  reflexivity.
-Qed.
-
-Corollary addRules_isExternal:
-  forall rules sys,
-    isExternal (addRules rules sys) =
-    isExternal sys.
-Proof.
-  unfold isExternal; intros.
-  rewrite addRules_indices.
-  reflexivity.
-Qed.
-  
-Corollary addRules_isInternal:
-  forall rules sys,
-    isInternal (addRules rules sys) =
-    isInternal sys.
-Proof.
-  unfold isInternal; intros.
-  rewrite addRules_indices.
-  reflexivity.
-Qed.
-
-Lemma buildRawSys_indicesOf:
-  forall sys, indicesOf sys = indicesOf (buildRawSys sys).
-Proof.
-  intros; unfold indicesOf, buildRawSys; simpl.
-  reflexivity.
-Qed.
-
-Corollary buildRawSys_isExternal:
-  forall sys,
-    isExternal (buildRawSys sys) =
-    isExternal sys.
-Proof.
-  unfold isExternal; intros.
-  rewrite <-buildRawSys_indicesOf.
-  reflexivity.
-Qed.
-
-Corollary buildRawSys_isInternal:
-  forall sys,
-    isInternal (buildRawSys sys) =
-    isInternal sys.
-Proof.
-  unfold isInternal; intros.
-  rewrite <-buildRawSys_indicesOf.
-  reflexivity.
-Qed.
-
-Lemma addRules_app:
-  forall sys rules1 rules2,
-    addRules (rules1 ++ rules2) sys =
-    addRules rules2 (addRules rules1 sys).
-Proof.
-  unfold addRules; simpl; intros.
-  rewrite app_assoc; reflexivity.
-Qed.
-
-Lemma addRulesSys_buildRawSys:
-  forall rules sys,
-    rulesOf (addRules rules (buildRawSys sys)) = rules.
-Proof.
-  reflexivity.
-Qed.
+Set Implicit Arguments.
 
 Lemma rollbacked_enqMP_toTMsgU:
   forall (mp: Msg -> Msg) msgs emsg rb,
