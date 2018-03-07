@@ -127,18 +127,10 @@ Section SimMP.
 
 End SimMP.
 
-(* Section TrsLock. *)
-
-(*   Definition alwaysLock (trsh: TrsHelper) := trsh = []. *)
-
-(* End TrsLock. *)
-
 Section SynRqRsImm.
   Variables (trsIdx: IdxT)
             (this: IdxT).
             (* (trsLocker: TrsHelper -> Prop). *)
-
-  (* Definition liftTrsLocker (os: OState OrdOState): Prop := trsLocker (ost_tst os). *)
 
   Definition rqChn: IdxT := 0.
   Definition rsChn: IdxT := 1.
@@ -162,68 +154,6 @@ Section SynRqRsImm.
        msg_value := val
     |}.
 
-(*   Section Immediate. *)
-
-(*     Definition synImm (prec: RPrecond) (rqFrom: IdxT) (postc: PostcondSt) *)
-(*                (valOut: Value -> StateT -> Value) := *)
-(*       {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil; *)
-(*          rule_precond := prec; *)
-(*          rule_postcond := *)
-(*            rpostOf postc *)
-(*                    (SingleRqMsgOuts *)
-(*                       (fun pre val => *)
-(*                          msgValOut (valOut val (ost_st pre)) (rqFrom, rsChn) :: nil)) *)
-(*       |}. *)
-
-(*   End Immediate. *)
-
-(*   Section RequestFwd. *)
-(*     Variables (rqFrom: IdxT) (fwds: list IdxT). *)
-
-(*     Definition synRqOuts (tochns: list (IdxT * IdxT)) (val: Value) := *)
-(*       map (msgValOut val) tochns. *)
-
-(*     Definition synRqPostcond (pre: OState) (val: Value) (post: OState) := *)
-(*       post = {| ost_st := ost_st pre; *)
-(*                 ost_tst := (ost_tst pre) *)
-(*                            +[ trsIdx <- *)
-(*                               {| (* store the request value *) *)
-(*                                  tst_rqval := val |}] *)
-(*              |}. *)
-
-(*     Definition synRq (prec: RPrecond) := *)
-(*       {| rule_mids := buildMsgId trsIdx rqFrom this rqChn :: nil; *)
-(*          rule_precond := fun pre val => prec pre val /\ liftTrsLocker pre; *)
-(*          rule_postcond := *)
-(*            rpostOf (SingleRqPostcondSt synRqPostcond) *)
-(*                    (SingleRqMsgOuts *)
-(*                       (fun _ val => synRqOuts (map (fun to => (to, rqChn)) fwds) val)) *)
-(*       |}. *)
-
-(*   End RequestFwd. *)
-
-(*   (** FIXME: preconditions in [synRsSingle] and [synRs] are currently just [⊤], *)
-(*    * which is incorrect. For the serializability proof, we need correct ones. *)
-(*    *) *)
-(*   Section ResponseBack. *)
-(*     Variables (rsFroms: list IdxT) *)
-(*               (rsBack: IdxT). *)
-
-(*     Definition RsOut := StateT -> list Msg -> Value (* request value *) -> Value. *)
-    
-(*     Definition synRsOuts (rsout: RsOut): MsgOuts := *)
-(*       fun pre ins => *)
-(*         (ost_tst pre)@[trsIdx] >>=[nil] *)
-(*         (fun trsh => {| msg_id := buildMsgId trsIdx this rsBack rsChn; *)
-(*                         msg_value := rsout (ost_st pre) ins (tst_rqval trsh) |} :: nil). *)
-
-(*     Definition synRs (postc: PostcondSt) (rsout: RsOut) := *)
-(*       {| rule_mids := map (fun rsFrom => buildMsgId trsIdx rsFrom this rsChn) rsFroms; *)
-(*          rule_precond := ⊤; *)
-(*          rule_postcond := rpostOf postc (synRsOuts rsout) |}. *)
-
-(*   End ResponseBack. *)
-  
 End SynRqRsImm.
 
 Definition idxInter (li1 li2: list IdxT): list IdxT :=

@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet.
-Require Import Simulation Synthesis.
+Require Import Simulation Synthesis PredMsg.
 
 Require Import SingleValue.
 
@@ -29,6 +29,16 @@ Section Inv.
         c2ost@[valueIdx] = Some c2v).
 
 End Inv.
+
+Section Predicates.
+
+  (** --(.)--> MSI(v) --(v)--> *)
+  (* Definition getPred: Pred := *)
+
+  (** --(v)--> MSI(v) --(.)--> *)
+  (* Definition setPred: Pred := *)
+
+End Predicates.
 
 Section Sim.
   Variables extIdx1 extIdx2: nat.

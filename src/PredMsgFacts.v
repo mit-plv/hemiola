@@ -130,6 +130,10 @@ Proof.
   rewrite IHphst, <-pToLabel_extLabel; reflexivity.
 Qed.
 
+(** TODO: The current statement is wrong;
+ * [psys] should have some more restrictions for the correctness of
+ * _global_ preconditions wrt. the original system [sys].
+ *)
 Theorem steps_pred_ok:
   forall sys st1 thst st2 ts rqin mouts,
     steps_det sys st1 thst st2 ->

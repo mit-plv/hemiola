@@ -148,10 +148,8 @@ Section Impl.
         + (** [TrsSimulates] for newly added [Rule]s *)
           trs_simulates_trivial svmMsgF SvmSim.
 
-          (** [TrsSimulates] for [Atomic] steps *)
+          (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps *)
           unfold TrsSimAtomic; intros.
-
-          (* Build an essential property of an atomic history. *)
           pose proof (atomic_hst_tinfo H H2).
 
           (* Convert an [Atomic] [steps_det] into [steps_pred]. *)
@@ -192,23 +190,31 @@ Section Impl.
             (* For each case of [step_pred], *)
             clear H5. (* [steps_pred] is no longer needed. *)
             unfold LInvSim; intros.
-            inv H4.
+            clear mouts.
+            destruct ilbl as [|orule mins mouts]; [intuition idtac|clear H3].
+            clear H phst.
 
-            { (* SpSlt *) simpl; auto. }
+            (* Use a stack to track which rules should be synthesized now. *)
+            Record PStackElt :=
+              { pste_rr: RqRs;
+                pste_pmsg: PMsg pste_rr;
+                pste_prec: PRPrecond }.
 
-            { (* SpExt *) intuition idtac. }
+            Ltac pstack_empty :=
+              set (nil (A:= PStackElt)) as stack.
 
-            { (* SpImm *)
-              admit.
-            }
+            pstack_empty.
 
-            { (* SpRqFwd *)
-              admit.
-            }
+            (* Add initial requests *)
 
-            { (* SpRsBack *)
-              admit.
-            }
+            Ltac pstack_enq elt :=
+              match goal with
+              | [st: list PStackElt |- _] =>
+                let stack := fresh "stack" in
+                set (elt :: st) as stack; subst st
+              end.
+
+            admit.
 
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
