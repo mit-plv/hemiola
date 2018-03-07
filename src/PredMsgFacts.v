@@ -148,3 +148,43 @@ Theorem steps_pred_ok:
 Proof.
 Admitted.
 
+Lemma step_pred_rules_split:
+  forall inds inits prules1 prules2 pst1 plbl pst2,
+    step_pred {| psys_inds := inds;
+                 psys_inits := inits;
+                 psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
+    step_pred {| psys_inds := inds;
+                 psys_inits := inits;
+                 psys_rules := prules1 |} pst1 plbl pst2 \/
+    step_pred {| psys_inds := inds;
+                 psys_inits := inits;
+                 psys_rules := prules2 |} pst1 plbl pst2.
+Proof.
+  intros.
+  inv H.
+  - left; constructor.
+  - left; constructor; auto.
+  - simpl in *.
+    apply in_app_or in H1; destruct H1.
+    + left; econstructor; eauto.
+    + right; econstructor; eauto.
+  - simpl in *.
+    apply in_app_or in H1; destruct H1.
+    + left; econstructor; eauto.
+    + right; econstructor; eauto.
+  - simpl in *.
+    apply in_app_or in H1; destruct H1.
+    + left; econstructor; eauto.
+    + right; econstructor; eauto.
+Qed.
+
+Corollary step_pred_rules_split_addPRules:
+  forall psys prule prules pst1 plbl pst2,
+    step_pred (addPRules (prule :: prules) (buildRawPSys psys)) pst1 plbl pst2 ->
+    step_pred (addPRules [prule] (buildRawPSys psys)) pst1 plbl pst2 \/
+    step_pred (addPRules prules (buildRawPSys psys)) pst1 plbl pst2.
+Proof.
+  intros.
+  apply step_pred_rules_split; auto.
+Qed.
+

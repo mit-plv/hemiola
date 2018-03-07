@@ -9,13 +9,8 @@ Inductive RqRs := Rq | Rs.
 Definition OPred :=
   Value (* input *) -> OState -> Value (* output *) -> Prop.
 
-Definition Pred := M.t OPred.
-
-Definition PredOk (pred: Pred) (rqv: Value) (oss: OStates) (rsv: Value) :=
-  forall oidx,
-    pred@[oidx] >>=[True]
-        (fun opred =>
-           oss@[oidx] >>=[False] (fun ost => opred rqv ost rsv)).
+Definition Pred :=
+  Value (* input *) -> OStates -> Value (* output *) -> Prop.
 
 Record PMsgId :=
   { pmid_mid: MsgId;
@@ -119,10 +114,10 @@ Record PSystem :=
 Definition ForwardingOk (rq: PMsg Rq) (opred: OPred) (rsbf: RsBackF) :=
   forall oss ost rss,
     Forall (fun rs: PMsg Rs =>
-              PredOk (pmsg_pred rs) (pmsg_val rq) oss (pmsg_val rs)) rss ->
+              (pmsg_pred rs) (pmsg_val rq) oss (pmsg_val rs)) rss ->
     oss@[mid_to (pmsg_mid rq)] = Some ost ->
     opred (pmsg_val rq) ost (rsbf (map getMsg rss) ost) ->
-    PredOk (pmsg_pred rq) (pmsg_val rq) oss (rsbf (map getMsg rss) ost).
+    (pmsg_pred rq) (pmsg_val rq) oss (rsbf (map getMsg rss) ost).
 
 Record OTrs :=
   { otrs_rq: PMsg Rq;

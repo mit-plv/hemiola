@@ -30,13 +30,50 @@ Section Inv.
 
 End Inv.
 
+Section RPreconds.
+
+  Definition ImplOStatusM: RPrecond :=
+    fun ost _ => ost@[statusIdx] = Some (VNat stM).
+
+  Definition ImplOStatusS: RPrecond :=
+    fun ost _ => ost@[statusIdx] = Some (VNat stS).
+  
+  Definition ImplOStatusI: RPrecond :=
+    fun ost _ => ost@[statusIdx] = Some (VNat stI).
+
+End RPreconds.
+             
 Section Predicates.
 
-  (** --(.)--> MSI(v) --(v)--> *)
-  (* Definition getPred: Pred := *)
+  Definition ImplStatusMI (ioss: OStates) (v: Value) :=
+    exists midx most v,
+      ioss@[midx] = Some most /\
+      most@[statusIdx] = Some (VNat stM) /\
+      most@[valueIdx] = Some v /\
+      (forall oidx ost stt,
+          oidx <> midx ->
+          ioss@[oidx] = Some ost ->
+          ost@[statusIdx] = Some (VNat stt) ->
+          stt = stI).
 
-  (** --(v)--> MSI(v) --(.)--> *)
-  (* Definition setPred: Pred := *)
+  Definition ImplStatusSI (ioss: OStates) (v: Value) :=
+    forall oidx ost stt,
+      ioss@[oidx] = Some ost ->
+      ost@[statusIdx] = Some (VNat stt) ->
+      match stt with
+      | 0 (* stI *) => True
+      | 1 (* stS *) => ost@[valueIdx] = Some v
+      | 2 (* stM *) => False
+      | _ => False
+      end.
+
+  (** --(.)--> SI(v) --(v)--> *)
+  Definition getPred: Pred :=
+    fun inv oss outv => ImplStatusSI oss outv.
+
+  (** --(v)--> MI(v) --(.)--> *)
+  Definition setPred: Pred :=
+    fun inv oss outv => ImplStatusMI oss inv.
 
 End Predicates.
 
@@ -67,28 +104,6 @@ Section Sim.
   Definition svmP := LabelMap svmMsgF.
 
   (** Simulation between [TState]s *)
-
-  Definition ImplStatusMI (ioss: OStates) (v: Value) :=
-    exists midx most v,
-      ioss@[midx] = Some most /\
-      most@[statusIdx] = Some (VNat stM) /\
-      most@[valueIdx] = Some v /\
-      (forall oidx ost stt,
-          oidx <> midx ->
-          ioss@[oidx] = Some ost ->
-          ost@[statusIdx] = Some (VNat stt) ->
-          stt = stI).
-
-  Definition ImplStatusSI (ioss: OStates) (v: Value) :=
-    forall oidx ost stt,
-      ioss@[oidx] = Some ost ->
-      ost@[statusIdx] = Some (VNat stt) ->
-      match stt with
-      | 0 (* stI *) => True
-      | 1 (* stS *) => ost@[valueIdx] = Some v
-      | 2 (* stM *) => False
-      | _ => False
-      end.
 
   Definition SpecState (soss: OStates) (v: Value) :=
     exists sost,

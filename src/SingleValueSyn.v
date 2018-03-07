@@ -130,12 +130,12 @@ Section Impl.
       |].
 
     Definition svmTrsIdx0: TrsId := SvmGetE.
-    Definition svmTrsRqIn0: MsgId :=
-      {| mid_addr := {| ma_from := extIdx1;
-                        ma_to := child1Idx;
-                        ma_chn := rqChn |};
-         mid_tid := svmTrsIdx0 |}.
-    Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1.
+    (* Definition svmTrsRqIn0: MsgId := *)
+    (*   {| mid_addr := {| ma_from := extIdx1; *)
+    (*                     ma_to := child1Idx; *)
+    (*                     ma_chn := rqChn |}; *)
+    (*      mid_tid := svmTrsIdx0 |}. *)
+    (* Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1. *)
     
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec SvmSim SvmInv svmP impl1 }.
@@ -192,12 +192,14 @@ Section Impl.
             unfold LInvSim; intros.
             clear mouts.
             destruct ilbl as [|orule mins mouts]; [intuition idtac|clear H3].
+            destruct orule as [rule|]; [|inv H4; simpl; right; auto].
+            
             clear H phst.
 
             (* Use a stack to track which rules should be synthesized now. *)
             Record PStackElt :=
               { pste_rr: RqRs;
-                pste_pmsg: PMsg pste_rr;
+                pste_pmid: PMsgId;
                 pste_prec: PRPrecond }.
 
             Ltac pstack_empty :=
@@ -207,11 +209,52 @@ Section Impl.
 
             (* Add initial requests *)
 
-            Ltac pstack_enq elt :=
+            Ltac pstack_enq tid rr from to chn prec pred :=
               match goal with
               | [st: list PStackElt |- _] =>
                 let stack := fresh "stack" in
-                set (elt :: st) as stack; subst st
+                set ({| pste_rr := rr;
+                        pste_pmid :=
+                          {| pmid_mid :=
+                               {| mid_addr :=
+                                    {| ma_from := from;
+                                       ma_to := to;
+                                       ma_chn := chn |};
+                                  mid_tid := tid |};
+                             pmid_pred := pred
+                          |};
+                        pste_prec := prec |} :: st) as stack; subst st
+              end.
+
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
+                       ImplOStatusM getPred.
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
+                       ImplOStatusS getPred.
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
+                       ImplOStatusI getPred.
+
+            Ltac pstack_first :=
+              match goal with
+              | [st:= ?hd :: _ : list PStackElt |- _] =>
+                constr:(hd)
+              end.
+
+            Ltac pstack_deq :=
+              match goal with
+              | [st:= _ :: ?tl : list PStackElt |- _] =>
+                let stack := fresh "stack" in
+                set tl as stack; subst st
+              end.
+
+            Definition buildPRuleImm (pste: PStackElt) :=
+              PRuleImm (pste_pmid pste) (pste_prec pste).
+
+            Ltac synth_prule :=
+              match goal with
+              | [H: step_pred (addPRules ?rules _) _ _ _ |- _] =>
+                is_evar rules; instantiate (1:= _ :: _);
+                apply step_pred_rules_split_addPRules in H;
+                destruct H
               end.
 
             admit.
