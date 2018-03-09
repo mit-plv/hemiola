@@ -270,7 +270,7 @@ Proof.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
   destruct H as [tid [? ?]].
-  specialize (H0 _ _ _ _ H12).
+  specialize (H0 _ _ _ _ H11).
   exists tid; split; auto.
   - rewrite <-H8 in H.
     clear -H; induction hins; [constructor|].
@@ -492,12 +492,12 @@ Section Compositionality.
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H1; inv H4; inv H6.
-        eapply SdExt.
+        eapply SdExt; try reflexivity.
         { unfold isExternal in *.
           rewrite Hii in H1; assumption.
         }
         { unfold isInternal in *.
-          rewrite Hii in H3; assumption.
+          rewrite Hii in H2; assumption.
         }
       }
       pose proof (Hginv1 H0 H).
@@ -539,12 +539,12 @@ Section Compositionality.
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.
-        eapply SdExt.
+        eapply SdExt; try reflexivity.
         { unfold isExternal in *.
           rewrite Hii in H2; assumption.
         }
         { unfold isInternal in *.
-          rewrite Hii in H4; assumption.
+          rewrite Hii in H3; assumption.
         }
       }
       exact (Hsim1 H0 H1 H).

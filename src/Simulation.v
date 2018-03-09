@@ -155,6 +155,14 @@ Section LInvSim.
 
 End LInvSim.
 
+Definition LiftSimL {StateI1 StateS} (sim: StateI1 -> StateS -> Prop)
+           {StateI2} (f: StateI2 -> StateI1): StateI2 -> StateS -> Prop :=
+  fun sti2 sts => sim (f sti2) sts.
+
+Definition LiftSimR {StateI StateS1} (sim: StateI -> StateS1 -> Prop)
+           {StateS2} (f: StateS2 -> StateS1): StateI -> StateS2 -> Prop :=
+  fun sti sts2 => sim sti (f sts2).
+
 Section SimMap.
   Variable (mmap: Msg -> Msg).
 
@@ -210,12 +218,104 @@ Section SimMap.
   Qed.
   
 End SimMap.
-  
-Definition LiftSimL {StateI1 StateS} (sim: StateI1 -> StateS -> Prop)
-           {StateI2} (f: StateI2 -> StateI1): StateI2 -> StateS -> Prop :=
-  fun sti2 sts => sim (f sti2) sts.
 
-Definition LiftSimR {StateI StateS1} (sim: StateI -> StateS1 -> Prop)
-           {StateS2} (f: StateS2 -> StateS1): StateI -> StateS2 -> Prop :=
-  fun sti sts2 => sim sti (f sts2).
+(** [SimMP] defines a standard simulation between two [MessagePool]s of 
+ * implementation and spec. It's basically rollback of all ongoing transactions.
+ *)
+Section SimMP.
+  Variable msgP: Msg -> Msg.
+
+  (* Assume [rb] is already ordered in terms of [tinfo_tid], which is uniquely 
+   * assigned to each transaction.
+   *)
+  Fixpoint addActive (amsg: Msg) (atinfo: TInfo) (rb: MessagePool TMsg) :=
+    match rb with
+    | nil => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: nil
+    | tmsg :: rb' =>
+      match tmsg_info tmsg with
+      | Some tinfo =>
+        if tinfo_tid atinfo <n tinfo_tid tinfo
+        then {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
+        else if tinfo_tid atinfo ==n tinfo_tid tinfo
+             then rb
+             else tmsg :: addActive amsg atinfo rb'
+      | None => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
+      end
+    end.
+  
+  Fixpoint addInactive (iam: TMsg) (rb: MessagePool TMsg) :=
+    rb ++ iam :: nil.
+
+  Fixpoint rollbacked (rb mp: MessagePool TMsg) :=
+    match mp with
+    | nil => rb
+    | tmsg :: mp' =>
+      match tmsg_info tmsg with
+      | Some tinfo => rollbacked (addActive (tmsg_msg tmsg) tinfo rb) mp'
+      | None => rollbacked (addInactive tmsg rb) mp'
+      end
+    end.
+
+  (* [rollback], as the name says, rolls back all active messages
+   * in a given [MessagePool].
+   *)
+  Definition rollback (mp: MessagePool TMsg) := rollbacked nil mp.
+
+  (* [deinitialize] makes all messages in a given [MessagePool] uninitialized,
+   * meaning that the messages are requests in which the corresponding 
+   * transactions are not started yet.
+   *
+   * Each message in [mp] is assumed to be unique 
+   * in terms of [TInfo] it carries.
+   *)
+  Definition deinitialize (mp: MessagePool TMsg) :=
+    map (fun tmsg =>
+           toTMsgU (msgP (match tmsg_info tmsg with
+                          | Some tinfo =>
+                            (* NOTE: any rules built by the synthesizer do not
+                             * generate a message where [tinfo_rqin tinfo] is
+                             * [nil]. Actually, it is always a singleton, i.e.,
+                             * a single request.
+                             *)
+                            hd (tmsg_msg tmsg) (tinfo_rqin tinfo)
+                          | None => tmsg_msg tmsg
+                          end))) mp.
+  
+  Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
+    smsgs = deinitialize (rollback imsgs).
+
+  Lemma rollbacked_enqMP_toTMsgU:
+    forall msgs emsg rb,
+      enqMP (toTMsgU (msgP emsg)) (deinitialize (rollbacked rb msgs)) =
+      deinitialize (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
+  Proof.
+    induction msgs; simpl; intros.
+    - unfold deinitialize, enqMP.
+      rewrite map_app; simpl.
+      reflexivity.
+    - destruct (tmsg_info a); eauto.
+  Qed.
+
+  Lemma rollbacked_app:
+    forall mp1 rb mp2,
+      rollbacked rb (mp1 ++ mp2) =
+      rollbacked (rollbacked rb mp1) mp2.
+  Proof.
+    induction mp1; simpl; intros; [reflexivity|].
+    destruct (tmsg_info a); auto.
+  Qed.
+
+  Lemma SimMP_ext_msg_in:
+    forall imsgs smsgs,
+      SimMP imsgs smsgs ->
+      forall emsg,
+        SimMP (enqMP (toTMsgU emsg) imsgs)
+              (enqMP (toTMsgU (msgP emsg)) smsgs).
+  Proof.
+    unfold SimMP; intros; subst.
+    unfold rollback.
+    apply rollbacked_enqMP_toTMsgU.
+  Qed.
+
+End SimMP.
 

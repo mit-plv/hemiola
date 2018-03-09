@@ -4,39 +4,6 @@ Require Import Synthesis Serial SerialFacts Simulation TrsInv TrsSim.
 
 Set Implicit Arguments.
 
-Lemma rollbacked_enqMP_toTMsgU:
-  forall (mp: Msg -> Msg) msgs emsg rb,
-    enqMP (toTMsgU (mp emsg)) (deinitialize mp (rollbacked rb msgs)) =
-    deinitialize mp (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
-Proof.
-  induction msgs; simpl; intros.
-  - unfold deinitialize, enqMP.
-    rewrite map_app; simpl.
-    reflexivity.
-  - destruct (tmsg_info a); eauto.
-Qed.
-
-Lemma SimMP_ext_msg_in:
-  forall (mp: Msg -> Msg) imsgs smsgs,
-    SimMP mp imsgs smsgs ->
-    forall emsg,
-      SimMP mp (enqMP (toTMsgU emsg) imsgs)
-            (enqMP (toTMsgU (mp emsg)) smsgs).
-Proof.
-  unfold SimMP; intros; subst.
-  unfold rollback.
-  apply rollbacked_enqMP_toTMsgU.
-Qed.
-
-Lemma rollbacked_app:
-  forall mp1 rb mp2,
-    rollbacked rb (mp1 ++ mp2) =
-    rollbacked (rollbacked rb mp1) mp2.
-Proof.
-  induction mp1; simpl; intros; [reflexivity|].
-  destruct (tmsg_info a); auto.
-Qed.
-
 Corollary trsSimulates_trsInvHolds_rules_added:
   forall impl rules spec simR ginv simP
          (Hsim1: TrsSimulates simR ginv simP impl spec)

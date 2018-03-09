@@ -548,7 +548,7 @@ Lemma step_det_in_rules_weakening:
       step_det wsys st1 (RlblIn emsg) st2.
 Proof.
   intros; inv H.
-  constructor; auto.
+  econstructor; auto.
   - unfold isExternal in *; rewrite H0; assumption.
   - unfold isInternal in *; rewrite H0; assumption.
 Qed.

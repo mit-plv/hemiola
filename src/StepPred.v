@@ -8,19 +8,19 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
 | SpSlt: forall st, step_pred psys st emptyPLabel st
 
 | SpExt:
-    forall oss oims otrss (emsg: PMsg Rq),
+    forall pst nst oss oims otrss (emsg: PMsg Rq),
       isExternal psys (mid_from (msg_id (getMsg emsg))) = true ->
       isInternal psys (mid_to (msg_id (getMsg emsg))) = true ->
-      step_pred psys
-                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
-                (PlblIn emsg)
-                {| pst_oss := oss;
-                   pst_otrss := otrss;
-                   pst_msgs := enqMP (existT _ _ emsg) oims
-                |}
+      pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
+      nst = {| pst_oss := oss;
+               pst_otrss := otrss;
+               pst_msgs := enqMP (existT _ _ emsg) oims
+            |} ->
+      step_pred psys pst (PlblIn emsg) nst
 
 | SpImm:
-    forall oss oidx pos nos otrss oims (immr: PRule) prec (rq: PMsg Rq) (rs: PMsg Rs),
+    forall pst nst oss oidx pos nos otrss oims
+           (immr: PRule) prec (rq: PMsg Rq) (rs: PMsg Rs),
       In oidx (indicesOf psys) ->
       In immr (psys_rules psys) ->
       immr = PRuleImm (pmsg_pmid rq) prec ->
@@ -31,20 +31,21 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       prec pos (getMsg rq :: nil) ->
       (pmsg_pred rq) (pmsg_val rq) (oss +[ oidx <- nos ]) (pmsg_val rs) ->
 
-      step_pred psys
-                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+      pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
+      nst = {| pst_oss := oss +[ oidx <- nos ];
+               pst_otrss := otrss;
+               pst_msgs := distributeMsgs
+                             (intOuts psys (existT _ _ rs :: nil))
+                             (removeMP (existT _ _ rq) oims)
+            |} ->
+
+      step_pred psys pst
                 (PlblOuts (Some immr)
                           (existT _ _ rq :: nil)
-                          (existT _ _ rs :: nil))
-                {| pst_oss := oss +[ oidx <- nos ];
-                   pst_otrss := otrss;
-                   pst_msgs := distributeMsgs
-                                 (intOuts psys (existT _ _ rs :: nil))
-                                 (removeMP (existT _ _ rq) oims)
-                |}
-
+                          (existT _ _ rs :: nil)) nst
+                
 | SpRqFwd:
-    forall oss otrss oidx pos opred rsbf oims (rqfwdr: PRule) prec outf
+    forall pst nst oss otrss oidx pos opred rsbf oims (rqfwdr: PRule) prec outf
            (rq: PMsg Rq) (fwds: list (PMsg Rq)) pred_ok,
       In oidx (indicesOf psys) ->
       In rqfwdr (psys_rules psys) ->
@@ -55,23 +56,24 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       oss@[oidx] = Some pos ->
       prec pos (getMsg rq :: nil) ->
 
-      step_pred psys
-                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+      pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
+      nst = {| pst_oss := oss;
+               pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
+                                                otrs_opred := opred;
+                                                otrs_rsbf := rsbf;
+                                                otrs_pred_ok := pred_ok |} ];
+               pst_msgs := distributeMsgs
+                             (map (existT _ _) fwds)
+                             (removeMP (existT _ _ rq) oims)
+            |} ->
+
+      step_pred psys pst
                 (PlblOuts (Some rqfwdr)
                           (existT _ _ rq :: nil)
-                          (map (existT _ _) fwds))
-                {| pst_oss := oss;
-                   pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
-                                                    otrs_opred := opred;
-                                                    otrs_rsbf := rsbf;
-                                                    otrs_pred_ok := pred_ok |} ];
-                   pst_msgs := distributeMsgs
-                                 (map (existT _ _) fwds)
-                                 (removeMP (existT _ _ rq) oims)
-                |}
+                          (map (existT _ _) fwds)) nst
 
 | SpRsBack:
-    forall oss otrss oidx pos nos otrs oims (rsbackr: PRule) rsbf
+    forall pst nst oss otrss oidx pos nos otrs oims (rsbackr: PRule) rsbf
            (rss: list (PMsg Rs)) (rsb: PMsg Rs),
       In oidx (indicesOf psys) ->
       In rsbackr (psys_rules psys) ->
@@ -89,16 +91,17 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       DualPMsg (otrs_rq otrs) rsb ->
       pmsg_val rsb = rsbf (map getMsg rss) pos ->
 
-      step_pred psys
-                {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |}
+      pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
+      nst = {| pst_oss := oss +[ oidx <- nos ];
+               pst_otrss := M.remove oidx otrss;
+               pst_msgs := enqMP (existT _ _ rsb)
+                                 (removeMsgs (map (existT _ _) rss) oims)
+            |} ->
+
+      step_pred psys pst
                 (PlblOuts (Some rsbackr)
                           (map (existT _ _) rss)
-                          (existT _ _ rsb :: nil))
-                {| pst_oss := oss +[ oidx <- nos ];
-                   pst_otrss := M.remove oidx otrss;
-                   pst_msgs := enqMP (existT _ _ rsb)
-                                     (removeMsgs (map (existT _ _) rss) oims)
-                |}.
+                          (existT _ _ rsb :: nil)) nst.
 
 Definition steps_pred: Steps PSystem PState PLabel := steps step_pred.
 

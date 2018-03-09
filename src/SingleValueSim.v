@@ -45,7 +45,7 @@ End RPreconds.
              
 Section Predicates.
 
-  Definition ImplStatusMI (ioss: OStates) (v: Value) :=
+  Definition ImplStateMI (ioss: OStates) (v: Value) :=
     exists midx most v,
       ioss@[midx] = Some most /\
       most@[statusIdx] = Some (VNat stM) /\
@@ -56,7 +56,7 @@ Section Predicates.
           ost@[statusIdx] = Some (VNat stt) ->
           stt = stI).
 
-  Definition ImplStatusSI (ioss: OStates) (v: Value) :=
+  Definition ImplStateSI (ioss: OStates) (v: Value) :=
     forall oidx ost stt,
       ioss@[oidx] = Some ost ->
       ost@[statusIdx] = Some (VNat stt) ->
@@ -69,11 +69,11 @@ Section Predicates.
 
   (** --(.)--> SI(v) --(v)--> *)
   Definition getPred: Pred :=
-    fun inv oss outv => ImplStatusSI oss outv.
+    fun inv oss outv => ImplStateSI oss outv.
 
   (** --(v)--> MI(v) --(.)--> *)
   Definition setPred: Pred :=
-    fun inv oss outv => ImplStatusMI oss inv.
+    fun inv oss outv => ImplStateMI oss inv.
 
 End Predicates.
 
@@ -105,22 +105,17 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
+  Definition ImplState (ioss: OStates) (v: Value) :=
+    ImplStateSI ioss v \/ ImplStateMI ioss v.
+
   Definition SpecState (soss: OStates) (v: Value) :=
     exists sost,
       soss@[specIdx] = Some sost /\
       sost@[valueIdx] = Some v.
 
-  Inductive SvmR: OStates -> OStates -> Prop :=
-  | SvmMI:
-      forall ioss soss v,
-        ImplStatusMI ioss v ->
-        SpecState soss v ->
-        SvmR ioss soss
-  | SvmSI:
-      forall ioss soss v,
-        ImplStatusSI ioss v ->
-        SpecState soss v ->
-        SvmR ioss soss.
+  Definition SvmR (ioss soss: OStates): Prop :=
+    exists cv,
+      ImplState ioss cv /\ SpecState soss cv.
 
   Definition SvmSim (ist sst: TState) :=
     SvmR (tst_oss ist) (tst_oss sst) /\

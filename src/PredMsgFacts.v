@@ -163,7 +163,7 @@ Proof.
   intros.
   inv H.
   - left; constructor.
-  - left; constructor; auto.
+  - left; econstructor; auto.
   - simpl in *.
     apply in_app_or in H1; destruct H1.
     + left; econstructor; eauto.

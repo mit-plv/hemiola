@@ -4,7 +4,7 @@ Require Import StepDet Serial SerialFacts TrsInv TrsSim.
 
 Set Implicit Arguments.
 
-Section SimP.
+Section SynthOk.
 
   (** User inputs *)
   Variables
@@ -70,62 +70,7 @@ Section SimP.
 
   End SynthesisStep.
 
-End SimP.
-
-Section SimMP.
-  Variable msgP: Msg -> Msg.
-
-  (* Assume [rb] is already ordered in terms of [tinfo_tid]. *)
-  Fixpoint addActive (amsg: Msg) (atinfo: TInfo) (rb: MessagePool TMsg) :=
-    match rb with
-    | nil => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: nil
-    | tmsg :: rb' =>
-      match tmsg_info tmsg with
-      | Some tinfo =>
-        if tinfo_tid atinfo <n tinfo_tid tinfo
-        then {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
-        else if tinfo_tid atinfo ==n tinfo_tid tinfo
-             then rb
-             else tmsg :: addActive amsg atinfo rb'
-      | None => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
-      end
-    end.
-  
-  Fixpoint addInactive (iam: TMsg) (rb: MessagePool TMsg) :=
-    rb ++ iam :: nil.
-
-  (* [rollback] basically rolls back all active messages (executing 
-   * transactions) in a given [MessagePool].
-   *)
-  Fixpoint rollbacked (rb mp: MessagePool TMsg) :=
-    match mp with
-    | nil => rb
-    | tmsg :: mp' =>
-      match tmsg_info tmsg with
-      | Some tinfo => rollbacked (addActive (tmsg_msg tmsg) tinfo rb) mp'
-      | None => rollbacked (addInactive tmsg rb) mp'
-      end
-    end.
-
-  Definition rollback (mp: MessagePool TMsg) := rollbacked nil mp.
-
-  Definition deinitialize (mp: MessagePool TMsg) :=
-    map (fun tmsg =>
-           toTMsgU (msgP (match tmsg_info tmsg with
-                          | Some tinfo =>
-                            (* NOTE: any rules built by the synthesizer do not
-                             * generate a message where [tinfo_rqin tinfo] is
-                             * [nil]. Actually, it is always a singleton, i.e.,
-                             * a single request.
-                             *)
-                            hd (tmsg_msg tmsg) (tinfo_rqin tinfo)
-                          | None => tmsg_msg tmsg
-                          end))) mp.
-  
-  Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
-    smsgs = deinitialize (rollback imsgs).
-
-End SimMP.
+End SynthOk.
 
 Section SynRqRsImm.
   Variables (trsIdx: IdxT)

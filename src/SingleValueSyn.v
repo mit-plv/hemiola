@@ -57,7 +57,9 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Theorem impl0_ok: SynthOk spec SvmSim SvmInv svmP impl0.
+  Definition SvmInvs := SvmInv /\i BlockedInv.
+
+  Theorem impl0_ok: SynthOk spec SvmSim SvmInvs svmP impl0.
   Proof.
     split; [|split; [|split]].
     - (* simulation for the initial states *) admit.
@@ -78,6 +80,15 @@ Section Impl.
       apply trsSimulates_trsInvHolds_rules_added;
       [apply pimpl_ok|apply pimpl_ok|repeat constructor| | | |].
 
+    Ltac trs_simulates_case_slt :=
+      unfold TrsSimSilent; intros;
+      (** inversions *)
+      match goal with
+      | [H: step_det _ _ emptyRLabel _ |- _] => inv H
+      end;
+      (** constructions *)
+      eexists; split; [econstructor|assumption].
+
     Ltac trs_simulates_case_in msgF sim :=
       (** instantiation *)
       unfold TrsSimIn; intros; simpl;
@@ -93,13 +104,13 @@ Section Impl.
                   tst_tid:= its1;
                |}
       end;
-      (** some inversions *)
+      (** inversions *)
       repeat
         match goal with
         | [H: step_det _ _ (RlblIn _) _ |- _] => inv H
         | [H: sim _ _ |- _] => inv H
         end;
-      (** construction *)
+      (** constructions *)
       repeat split;
       [|assumption (* simulation relation should be maintained *)
        |simpl; apply SimMP_ext_msg_in; auto];
@@ -123,22 +134,14 @@ Section Impl.
      *)
     Ltac trs_simulates_trivial msgF sim :=
       eapply trs_sim_in_atm_simulates;
-      [admit (* TODO: the silent case; should be able to prove it to force that
-              * synthesized rules never introduce silent steps.
-              *)
+      [trs_simulates_case_slt
       |trs_simulates_case_in msgF sim
       |].
 
     Definition svmTrsIdx0: TrsId := SvmGetE.
-    (* Definition svmTrsRqIn0: MsgId := *)
-    (*   {| mid_addr := {| ma_from := extIdx1; *)
-    (*                     ma_to := child1Idx; *)
-    (*                     ma_chn := rqChn |}; *)
-    (*      mid_tid := svmTrsIdx0 |}. *)
-    (* Definition svmTrsSpecRule0 := specGetReq extIdx1 extIdx2 specChn1. *)
     
     Definition svmSynTrs0:
-      { impl1: System & SynthOk spec SvmSim SvmInv svmP impl1 }.
+      { impl1: System & SynthOk spec SvmSim SvmInvs svmP impl1 }.
     Proof.
       syn_step_init impl0 impl0_ok.
 
@@ -193,7 +196,6 @@ Section Impl.
             clear mouts.
             destruct ilbl as [|orule mins mouts]; [intuition idtac|clear H3].
             destruct orule as [rule|]; [|inv H4; simpl; right; auto].
-            
             clear H phst.
 
             (* Use a stack to track which rules should be synthesized now. *)
@@ -227,11 +229,11 @@ Section Impl.
               end.
 
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
-                       ImplOStatusM getPred.
+                       ImplOStatusI getPred.
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
                        ImplOStatusS getPred.
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
-                       ImplOStatusI getPred.
+                       ImplOStatusM getPred.
 
             Ltac pstack_first :=
               match goal with
@@ -246,6 +248,11 @@ Section Impl.
                 set tl as stack; subst st
               end.
 
+            Ltac pstack_clear :=
+              match goal with
+              | [st: list PStackElt |- _] => clear st
+              end.
+
             Definition buildPRuleImm (pste: PStackElt) :=
               PRuleImm (pste_pmid pste) (pste_prec pste).
 
@@ -257,8 +264,109 @@ Section Impl.
                 destruct H
               end.
 
-            admit.
+            (* Dequeue the first element of [pstack]; try to synthesize
+             * an immediate [PRule]. 
+             *)
+            synth_prule; [|pstack_deq].
+            {
+              match goal with
+              | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+                is_evar rule;
+                  let pfst := pstack_first in
+                  instantiate (1:= buildPRuleImm pfst) in H
+              end.
+              pstack_clear.
+              
+              inv H;
+                [|exfalso; clear -H7; Common.dest_in; discriminate
+                 |exfalso; clear -H7; Common.dest_in; discriminate].
 
+              (* TODO: need an Ltac checker to check this immediate rule can 
+               * handle the current request or not.
+               *)
+              inv H7; [|inv H].
+              destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
+              destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
+              inv H; cbn in *.
+
+              (* Reduce [ValidMsgsIn] *)
+              inv H10; inv H5; cbn in *.
+              clear H6.
+
+              (* Reduce [DualPMsg] *)
+              destruct H9; cbn in *; subst.
+              hnf in H; cbn in *; dest; subst.
+
+              (** Construction for spec *)
+              rewrite addPRules_isExternal; cbn.
+
+              (* TODO: how can we know this? *)
+              exists sst0. (* <-- this is wrong. *)
+              destruct sst0 as [soss smsgs stid].
+              destruct H2; cbn in *.
+              destruct H as [cv [? ?]].
+              destruct H3 as [sost [? ?]].
+              
+              eexists (RlblOuts
+                         (Some (specGetReq extIdx1 extIdx2 specChn1))
+                         (toTMsgs {| tinfo_tid := stid;
+                                     tinfo_rqin :=
+                                       {| msg_id :=
+                                            {| mid_addr :=
+                                                 {| ma_from := extIdx1;
+                                                    ma_to := child1Idx;
+                                                    ma_chn := rqChn |};
+                                               mid_tid := svmTrsIdx0 |};
+                                          msg_value := rqval |} :: nil
+                                  |}
+                                  ({| msg_id :=
+                                        {| mid_addr :=
+                                             {| ma_from := extIdx1;
+                                                ma_to := child1Idx;
+                                                ma_chn := rqChn |};
+                                           mid_tid := svmTrsIdx0 |};
+                                      msg_value := rqval |} :: nil)) _).
+              split; [|split];
+                [|unfold svmMsgF, svmMsgIdF; cbn;
+                  match goal with
+                  | [ |- _ = Some (LblOuts ?outs) ] =>
+                    instantiate (1:= toTMsgs _ outs)
+                  end;
+                  reflexivity
+                 |].
+
+              { econstructor; try reflexivity.
+                { auto. }
+                { simpl; tauto. }
+                { eassumption. }
+                { (* need to use [SimMP] *)
+                  (* destruct H0. *)
+                  (* eapply blocked_SimMP_FirstMP_map; eauto. *)
+                  admit.
+                }
+                { repeat constructor.
+                  (* FIXME: indices do not match :( *)
+                  admit.
+                }
+                { (* FIXME: indices do not match :( *)
+                  admit.
+                }
+                { simpl; tauto. }
+                { (* FIXME: indices do not match :( *)
+                  admit.
+                }
+                { repeat constructor.
+                  discriminate.
+                  intro Hx; Common.dest_in.
+                }
+                { admit. }
+              }
+              { admit. }              
+            }
+
+            { admit.
+            }
+            
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
             admit.

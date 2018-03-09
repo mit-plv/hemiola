@@ -278,6 +278,12 @@ Section TMsg.
   Definition TLabel := RLabel TMsg.
   Definition THistory := list TLabel.
 
+  Definition liftMsgP (msgP: Msg -> Msg): TMsg -> TMsg :=
+    fun tmsg =>
+      {| tmsg_msg := msgP (tmsg_msg tmsg);
+         tmsg_info := tmsg_info tmsg
+      |}.
+
 End TMsg.
 
 Section TState.

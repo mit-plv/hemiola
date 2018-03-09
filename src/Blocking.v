@@ -1,18 +1,19 @@
 Require Import List.
 
 Require Import Common.
-Require Import Syntax Semantics StepDet.
+Require Import Syntax Semantics StepDet Simulation.
 
 (* Below we describe a semantic interpretation of a system which has a
  * blocking property.
  *
- * There can be some static conditions for a target [System] to be [Blocking], 
- * for instance, each rule handling messages from a specific external channel 
+ * There can be some static conditions for a target [System] to be [Blocking].
+ * For instance, each rule handling messages from a specific external channel 
  * has its own flag to block additional messages from the channel when it is
  * currently handling a certain message from that channel.
  *)
 
-(* A message pool [msgs] is [Blocked] if any two messages in [msgs] whose 
+(* A possible semantic interpretation of a blocking system is:
+ * A message pool [msgs] is [Blocked] if any two messages in [msgs] whose 
  * original requests [tinfo_rqin] are equivalent (≡m), i.e., from the same
  * external channel, have the same [TInfo].
  *
@@ -30,4 +31,31 @@ Definition Blocked (msgs: MessagePool TMsg) :=
 
 Definition BlockedInv (tst: TState) :=
   Blocked (tst_msgs tst).
+
+Theorem blocked_SimMP_FirstMP:
+  forall ist,
+    Blocked ist ->
+    forall msgP sst,
+      SimMP msgP ist sst ->
+      forall msg,
+        FirstMP ist msg ->
+        FirstMP sst (liftMsgP msgP msg).
+Proof.
+Admitted.
+
+Corollary blocked_SimMP_FirstMP_map:
+  forall ist,
+    Blocked ist ->
+    forall msgP sst,
+      SimMP msgP ist sst ->
+      forall imsgs,
+        Forall (FirstMP ist) imsgs ->
+        forall smsgs,
+          smsgs = map (liftMsgP msgP) imsgs ->
+          Forall (FirstMP sst) smsgs.
+Proof.
+  induction imsgs; intros; subst; [constructor|].
+  inv H1; constructor; eauto.
+  eapply blocked_SimMP_FirstMP; eauto.
+Qed.
 
