@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepDet Invariant.
+Require Import Common FMap Syntax Semantics SemFacts StepDet Invariant.
 Require Import Serial.
 Require Import PredMsg StepPred.
 
@@ -98,6 +98,14 @@ Corollary pToSystem_isInternal:
 Proof.
   unfold isInternal; intros.
   rewrite pToSystem_indices; reflexivity.
+Qed.
+
+Lemma pToTMsg_FirstMP:
+  forall ts rq mp msg,
+    FirstMP mp msg ->
+    FirstMP (map (pToTMsg ts rq) mp) (pToTMsg ts rq msg).
+Proof.
+  intros; eapply mmap_FirstMP; eauto.
 Qed.
 
 Lemma pToTMsg_extOuts:

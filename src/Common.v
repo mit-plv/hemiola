@@ -93,6 +93,13 @@ Definition lift {A B} (f: A -> B): option A -> option B :=
     | None => None
     end.
 
+Lemma lift_hd_error:
+  forall {A B} (f: A -> B) (l: list A),
+    lift f (hd_error l) = hd_error (map f l).
+Proof.
+  induction l; simpl; intros; auto.
+Qed.
+
 Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
   match oa with
   | Some a => f a

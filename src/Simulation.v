@@ -269,36 +269,35 @@ Section SimMP.
    *)
   Definition rollback (mp: MessagePool TMsg) := rollbacked nil mp.
 
-  (* [deinitialize] makes all messages in a given [MessagePool] uninitialized,
-   * meaning that the messages are requests in which the corresponding 
-   * transactions are not started yet.
-   *
-   * Each message in [mp] is assumed to be unique 
-   * in terms of [TInfo] it carries.
+  (* [deinitialize] makes a message uninitialized. *)
+  Definition deinitialize (tmsg: TMsg): TMsg :=
+    toTMsgU (msgP (match tmsg_info tmsg with
+                   | Some tinfo =>
+                     (* NOTE: any rules built by the synthesizer do not
+                      * generate a message where [tinfo_rqin tinfo] is
+                      * [nil]. Actually, it is always a singleton, i.e.,
+                      * a single request.
+                      *)
+                     hd (tmsg_msg tmsg) (tinfo_rqin tinfo)
+                   | None => tmsg_msg tmsg
+                   end)).
+
+  (* NOTE: Each message in [mp] is assumed to be unique in terms of
+   * [TInfo] it carries.
    *)
-  Definition deinitialize (mp: MessagePool TMsg) :=
-    map (fun tmsg =>
-           toTMsgU (msgP (match tmsg_info tmsg with
-                          | Some tinfo =>
-                            (* NOTE: any rules built by the synthesizer do not
-                             * generate a message where [tinfo_rqin tinfo] is
-                             * [nil]. Actually, it is always a singleton, i.e.,
-                             * a single request.
-                             *)
-                            hd (tmsg_msg tmsg) (tinfo_rqin tinfo)
-                          | None => tmsg_msg tmsg
-                          end))) mp.
+  Definition deinitializeMP (mp: MessagePool TMsg) :=
+    map deinitialize mp.
   
   Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
-    smsgs = deinitialize (rollback imsgs).
+    smsgs = deinitializeMP (rollback imsgs).
 
   Lemma rollbacked_enqMP_toTMsgU:
     forall msgs emsg rb,
-      enqMP (toTMsgU (msgP emsg)) (deinitialize (rollbacked rb msgs)) =
-      deinitialize (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
+      enqMP (toTMsgU (msgP emsg)) (deinitializeMP (rollbacked rb msgs)) =
+      deinitializeMP (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
   Proof.
     induction msgs; simpl; intros.
-    - unfold deinitialize, enqMP.
+    - unfold deinitializeMP, enqMP.
       rewrite map_app; simpl.
       reflexivity.
     - destruct (tmsg_info a); eauto.

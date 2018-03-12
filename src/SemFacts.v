@@ -314,6 +314,48 @@ Section MessagePoolFacts.
 
 End MessagePoolFacts.
 
+Section MessagePoolMap.
+  Variables (MsgT1 MsgT2: Type).
+  Context `{HasMsg MsgT1} `{HasMsg MsgT2}.
+
+  Variable (mmap: MsgT1 -> MsgT2).
+  Hypothesis (Hmmap: forall msg, getMsg (mmap msg) = getMsg msg).
+
+  Lemma mmap_findMP:
+    forall from to chn mp,
+      findMP from to chn (map mmap mp) =
+      map mmap (findMP from to chn mp).
+  Proof.
+    induction mp; simpl; intros; auto.
+    rewrite IHmp.
+    rewrite Hmmap.
+    destruct (msgAddr_dec _ _); auto.
+  Qed.
+
+  Lemma mmap_firstMP:
+    forall from to chn mp,
+      firstMP from to chn (map mmap mp) =
+      lift mmap (firstMP from to chn mp).
+  Proof.
+    unfold firstMP; intros.
+    rewrite mmap_findMP.
+    apply eq_sym, lift_hd_error.
+  Qed.
+
+  Lemma mmap_FirstMP:
+    forall mp msg,
+      FirstMP mp msg ->
+      FirstMP (map mmap mp) (mmap msg).
+  Proof.
+    unfold FirstMP; intros.
+    rewrite mmap_firstMP.
+    rewrite Hmmap.
+    rewrite H1.
+    reflexivity.
+  Qed.
+
+End MessagePoolMap.
+
 Lemma getTMsgsTInfo_Some:
   forall tmsgs ti,
     getTMsgsTInfo tmsgs = Some ti ->

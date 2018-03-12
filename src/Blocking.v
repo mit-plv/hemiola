@@ -40,7 +40,7 @@ Theorem blocked_SimMP_FirstMP:
       forall imsg,
         FirstMP ist imsg ->
         forall smsg,
-          smsg = liftMsgP msgP imsg ->
+          smsg = deinitialize msgP imsg ->
           FirstMP sst smsg.
 Proof.
 Admitted.
@@ -53,7 +53,7 @@ Corollary blocked_SimMP_FirstMP_map:
       forall imsgs,
         Forall (FirstMP ist) imsgs ->
         forall smsgs,
-          smsgs = map (liftMsgP msgP) imsgs ->
+          smsgs = deinitializeMP msgP imsgs ->
           Forall (FirstMP sst) smsgs.
 Proof.
   induction imsgs; intros; subst; [constructor|].

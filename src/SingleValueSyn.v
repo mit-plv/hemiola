@@ -160,6 +160,9 @@ Section Impl.
             with (psys:= addPRules _ (buildRawPSys impl0)) in H3; eauto.
 
           * (** In this subgoal it suffices to synthesize [PRules]. *)
+
+            (** * TODO: need to derive that 
+             * [rq = (the request of current synthesis)] *)
             clear H0. (* Atomicity is no longer needed. *)
             clear H. (* The invariant in [step_det] transition is also no longer needed. *)
             destruct H3 as [? [pst1 [phst [pst2 [? [? [? ?]]]]]]].
@@ -303,30 +306,21 @@ Section Impl.
 
               (* TODO: how can we know this? *)
               destruct sst0 as [soss smsgs stid].
-              eexists {| tst_oss := soss; tst_msgs := _; tst_tid := stid |}.
+              eexists {| tst_oss := soss; tst_msgs := _; tst_tid := _ |}.
               destruct H3; cbn in *.
               destruct s as [cv [? ?]].
               destruct s as [sost [? ?]].
               
               eexists (RlblOuts
                          (Some (specGetReq extIdx1 extIdx2 specChn1))
-                         (toTMsgs {| tinfo_tid := stid;
-                                     tinfo_rqin :=
-                                       {| msg_id :=
-                                            {| mid_addr :=
-                                                 {| ma_from := extIdx1;
-                                                    ma_to := child1Idx;
-                                                    ma_chn := rqChn |};
-                                               mid_tid := svmTrsIdx0 |};
-                                          msg_value := rqval |} :: nil
-                                  |}
-                                  ({| msg_id :=
-                                        {| mid_addr :=
-                                             {| ma_from := extIdx1;
-                                                ma_to := child1Idx;
-                                                ma_chn := rqChn |};
-                                           mid_tid := svmTrsIdx0 |};
-                                      msg_value := rqval |} :: nil)) _).
+                         (toTMsgU {| msg_id :=
+                                       svmMsgIdF
+                                         {| mid_addr :=
+                                              {| ma_from := extIdx1;
+                                                 ma_to := child1Idx;
+                                                 ma_chn := rqChn |};
+                                            mid_tid := svmTrsIdx0 |};
+                                     msg_value := rqval |} :: nil) _).
               split; [|split];
                 [|unfold svmMsgF, svmMsgIdF; cbn;
                   match goal with
@@ -341,32 +335,28 @@ Section Impl.
                 { simpl; tauto. }
                 { eassumption. }
                 { repeat constructor.
-
-                  (* TODO: The "[FirstMP] to [FirstMP]" proof requires 
-                   * "rollback", which only can be defined for [MessagePool TMsg].
-                   * Predicate messages do not have a notion of timestamp,
-                   * so it's not possible to define such a notion.
-                   *)
-                  admit.
-                  (* eapply blocked_SimMP_FirstMP; eauto. *)
-                  (* { destruct H4; assumption. } *)
+                  eapply blocked_SimMP_FirstMP; eauto.
+                  { destruct H4; eassumption. }
+                  { apply pToTMsg_FirstMP; eassumption. }
+                  { unfold deinitialize; cbn.
+                    admit.
+                  }
                 }
-                { repeat constructor.
-                  (* FIXME: indices do not match :( *)
-                  admit.
-                }
-                { (* FIXME: indices do not match :( *)
-                  admit.
-                }
+                { repeat constructor. }
                 { simpl; tauto. }
-                { (* FIXME: indices do not match :( *)
+                { repeat constructor.
+                  rewrite e0; cbn.
+                  (* TODO: Indices still don't match. *)
                   admit.
                 }
                 { repeat constructor.
-                  discriminate.
-                  intro Hx; Common.dest_in.
+                  { discriminate. }
+                  { intro Hx; Common.dest_in. }
                 }
-                { admit. }
+                { assert (soss = soss +[ specIdx <- sost]) by admit.
+                  rewrite <-H0.
+                  reflexivity.
+                }
               }
               { admit. }              
             }
