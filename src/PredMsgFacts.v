@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepDet.
-Require Import PredMsg StepPred.
+Require Import Common FMap Syntax Semantics StepDet Invariant.
 Require Import Serial.
+Require Import PredMsg StepPred.
 
 Lemma buildRawPSys_indicesOf:
   forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
@@ -130,16 +130,22 @@ Proof.
   rewrite IHphst, <-pToLabel_extLabel; reflexivity.
 Qed.
 
-(** TODO: The current statement is wrong;
+Definition toPInv (ts: TrsId) (rqin: Msg)
+           (ginv: Invariant TState): Invariant PState :=
+  fun pst => ginv (pToTState ts rqin pst).
+
+(** FIXME: This statement is wrong;
  * [psys] should have some more restrictions for the correctness of
  * _global_ preconditions wrt. the original system [sys].
  *)
 Theorem steps_pred_ok:
-  forall sys st1 thst st2 ts rqin mouts,
+  forall sys ginv st1 thst st2 ts rqin mouts,
+    InvStep sys step_det ginv ->
     steps_det sys st1 thst st2 ->
     Atomic sys ts rqin thst mouts ->
     forall psys,
       pToSystem psys = sys ->
+      InvStep psys step_pred (toPInv ts rqin ginv) /\
       exists pst1 phst pst2,
         pToTState ts rqin pst1 = st1 /\
         pToTState ts rqin pst2 = st2 /\

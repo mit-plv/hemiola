@@ -1,5 +1,7 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics SemFacts.
+Require Import Common FMap Syntax Semantics SemFacts Invariant.
+
+Set Implicit Arguments.
 
 Section Simulation.
   Context {SysI SysS StateI LabelI StateS LabelS: Type}
@@ -82,11 +84,12 @@ Section Simulation.
 
 End Simulation.
 
-Section LInvSim.
+Section InvSim.
   Context {SysI SysS StateI LabelI StateS LabelS: Type}
           `{IsSystem SysI StateI} `{HasLabel LabelI}
           `{IsSystem SysS StateS} `{HasLabel LabelS}.
   Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
+            (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop)
             (p: Label -> Label)
             (linv: LabelI -> Prop).
@@ -95,9 +98,10 @@ Section LInvSim.
 
   Variables (impl: SysI) (spec: SysS).
 
-  Definition LInvSim :=
+  Definition InvSim :=
     forall ist1 sst1,
       ist1 ≈ sst1 ->
+      ginv ist1 ->
       forall ilbl ist2,
         linv ilbl ->
         stepI impl ist1 ilbl ist2 ->
@@ -115,11 +119,13 @@ Section LInvSim.
               ist2 ≈ sst2)
         end.
 
-  Hypothesis (Hsim: LInvSim).
+  Hypothesis (Hsim: InvSim)
+             (Hinv: InvStep impl stepI ginv).
 
-  Lemma label_inv_simulation_steps:
+  Lemma inv_simulation_steps:
     forall ist1 sst1,
       ist1 ≈ sst1 ->
+      ginv ist1 ->
       forall ihst ist2,
         Forall linv ihst ->
         steps stepI impl ist1 ihst ist2 ->
@@ -129,31 +135,33 @@ Section LInvSim.
           behaviorOf (StateT:= StateS) spec shst /\
           ist2 ≈ sst2.
   Proof.
-    induction 3; simpl; intros;
+    induction 4; simpl; intros;
       [exists sst1, nil; repeat split; auto; constructor|].
 
-    inv H4.
-    specialize (IHsteps H3 H10).
+    inv H5.
+    specialize (IHsteps H3 H4 H11).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H6; [|exact H8|exact H9].
+    eapply Hsim in H7;
+      [|exact H9|eapply inv_steps; eauto|exact H10].
+    
     remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
     destruct ilbl as [elbl|].
 
-    - destruct H6 as [sst3 [slbl [? [? ?]]]].
+    - destruct H7 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
       + econstructor; eauto.
-      + simpl; erewrite H7, H11; simpl.
+      + simpl; erewrite H8, H12; simpl.
         reflexivity.
-    - destruct H6.
-      * destruct H6 as [sst3 [slbl [? [? ?]]]].
+    - destruct H7.
+      * destruct H7 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
         -- econstructor; eauto.
-        -- simpl; rewrite H7, H11; simpl; reflexivity.
+        -- simpl; rewrite H8, H12; simpl; reflexivity.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
-End LInvSim.
+End InvSim.
 
 Definition LiftSimL {StateI1 StateS} (sim: StateI1 -> StateS -> Prop)
            {StateI2} (f: StateI2 -> StateI1): StateI2 -> StateS -> Prop :=

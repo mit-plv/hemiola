@@ -1,20 +1,23 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Wf Semantics SemFacts StepDet.
-Require Import Synthesis Serial SerialFacts Simulation TrsInv TrsSim.
+Require Import Synthesis Serial SerialFacts Simulation Invariant TrsSim.
 
 Set Implicit Arguments.
 
 Corollary trsSimulates_trsInvHolds_rules_added:
   forall impl rules spec simR ginv simP
-         (Hsim1: TrsSimulates simR ginv simP impl spec)
-         (Hinv1: TrsInv impl ginv)
+         (Hsim1: InvStep impl step_det ginv ->
+                 TrsSimulates simR ginv simP impl spec)
+         (Hinv1: InvStep impl step_det ginv)
          (Hmt1: trsPreservingSys impl)
-         (Hsim2: TrsSimulates simR ginv simP (addRules rules (buildRawSys impl)) spec)
-         (Hinv1: TrsInv (addRules rules (buildRawSys impl)) ginv)
+         (Hsim2: InvStep (addRules rules (buildRawSys impl)) step_det ginv ->
+                 TrsSimulates simR ginv simP
+                              (addRules rules (buildRawSys impl)) spec)
+         (Hinv1: InvStep (addRules rules (buildRawSys impl)) step_det ginv)
          (Hmt2: trsPreservingSys (addRules rules (buildRawSys impl)))
          (Hmtdisj: TrsDisj (rulesOf impl) rules),
     TrsSimulates simR ginv simP (addRules rules impl) spec /\
-    TrsInv (addRules rules impl) ginv.
+    InvStep (addRules rules impl) step_det ginv.
 Proof.
   intros.
   eapply trsSimulates_trsInvHolds_compositional

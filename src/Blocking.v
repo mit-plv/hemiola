@@ -37,9 +37,11 @@ Theorem blocked_SimMP_FirstMP:
     Blocked ist ->
     forall msgP sst,
       SimMP msgP ist sst ->
-      forall msg,
-        FirstMP ist msg ->
-        FirstMP sst (liftMsgP msgP msg).
+      forall imsg,
+        FirstMP ist imsg ->
+        forall smsg,
+          smsg = liftMsgP msgP imsg ->
+          FirstMP sst smsg.
 Proof.
 Admitted.
 

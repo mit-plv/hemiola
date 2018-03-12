@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Semantics StepDet SemFacts.
-Require Import Simulation Serial SerialFacts TrsInv.
+Require Import Simulation Serial SerialFacts Invariant.
 
 Require Import Omega.
 
@@ -31,8 +31,8 @@ Section TrsSim.
   Hypotheses
     (Hsimi: TrsSimInit)
     (Hsim: TrsSimulates)
-    (Hginvi: TrsInvInit impl ginv)
-    (Hginv: TrsInv impl ginv).
+    (Hginvi: InvInit impl ginv)
+    (Hginv: InvStep impl step_det ginv).
 
   Lemma trs_simulation_steps:
     forall ist1 sst1,
@@ -58,7 +58,8 @@ Section TrsSim.
       specialize (IHtrss _ _ H6 eq_refl H1).
       destruct IHtrss as [isst [ishst [? [? [? ?]]]]].
       pose proof (Hsim H7 H8 (conj H2 H5)); destruct H9 as [sst2 [shst [? [? ?]]]].
-      pose proof (Hginv H8 (conj H2 H5)).
+
+      pose proof (inv_steps Hginv H8 H2).
       do 2 eexists; repeat split.
       + eapply steps_append; eauto.
       + do 2 rewrite behaviorOf_app.
@@ -144,10 +145,7 @@ Section TrsSimSep.
     (Hsimi: TrsSimInit sim impl spec)
     (HsimSlt: TrsSimSilent)
     (HsimIn: TrsSimIn)
-    (HsimAtm: forall ts rq, TrsSimAtomic ts rq)
-    (Hinvi: TrsInvInit impl ginv)
-    (HinvIn: TrsInvIn impl ginv)
-    (HinvAtm: TrsInvAtomic impl ginv).
+    (HsimAtm: forall ts rq, TrsSimAtomic ts rq).
 
   Lemma trs_sim_step_steps_trs:
     forall ist1 sst1,
@@ -331,21 +329,11 @@ Qed.
 
 Section Compositionality.
 
-  Variables (impl1 impl2 spec: System)
-            (simR: TState -> TState -> Prop)
-            (ginv: TState -> Prop)
-            (p: Label -> Label).
-
-  Local Infix "≈" := simR (at level 30).
-
+  Variables (impl1 impl2 spec: System).
   Hypotheses (Hidx: indicesOf impl1 = indicesOf impl2)
              (Hmt1: trsPreservingSys impl1)
              (Hmt2: trsPreservingSys impl2)
-             (Hmtdisj: TrsDisjSys impl1 impl2)
-             (Hsim1: TrsSimulates simR ginv p impl1 spec)
-             (Hsim2: TrsSimulates simR ginv p impl2 spec)
-             (Hginv1: TrsInv impl1 ginv)
-             (Hginv2: TrsInv impl2 ginv).
+             (Hmtdisj: TrsDisjSys impl1 impl2).
 
   Variable (impl: System).
   Hypotheses (Hmt: trsPreservingSys impl)
@@ -354,6 +342,40 @@ Section Compositionality.
                 forall rule,
                   In rule (sys_rules impl) ->
                   In rule (sys_rules impl1 ++ sys_rules impl2)).
+
+  Variables (ginv: TState -> Prop)
+            (simR: TState -> TState -> Prop)
+            (p: Label -> Label).
+  
+  Local Infix "≈" := simR (at level 30).
+  
+  Hypotheses (Hinv1: InvStep impl1 step_det ginv)
+             (Hinv2: InvStep impl2 step_det ginv).
+
+  Lemma invariant_compositional:
+    InvStep impl step_det ginv.
+  Proof.
+    unfold InvStep; intros.
+    inv H0.
+    - assumption.
+    - eapply Hinv1; eauto.
+      econstructor; try reflexivity.
+      + unfold isExternal in *; rewrite <-Hii; assumption.
+      + unfold isInternal in *; rewrite <-Hii; assumption.
+    - specialize (Himpl _ H6).
+      apply in_app_or in Himpl; destruct Himpl.
+      + eapply Hinv1; eauto.
+        eapply SdInt; try reflexivity; try eassumption.
+        * rewrite <-Hii; assumption.
+        * erewrite intOuts_same_indicesOf by eassumption.
+          reflexivity.
+      + eapply Hinv2; eauto.
+        eapply SdInt; try reflexivity; try eassumption.
+        * rewrite <-Hidx, <-Hii; assumption.
+        * erewrite intOuts_same_indicesOf
+            by (rewrite <-Hidx, <-Hii; reflexivity).
+          reflexivity.
+  Qed.
 
   Lemma TrsDisjSys_distr_same_tid:
     forall mtid,
@@ -475,47 +497,8 @@ Section Compositionality.
         rewrite <-Hii2; auto.
   Qed.
 
-  Lemma trsInvHolds_transactional_compositional:
-    forall ihst,
-      Transactional impl ihst ->
-      forall ist1,
-        ginv ist1 ->
-        forall ist2,
-          steps_det impl ist1 ihst ist2 ->
-          ginv ist2.
-  Proof.
-    destruct 1; simpl; intros; subst.
-
-    - inv H0; inv H4; inv H6; assumption.
-
-    - assert (trsSteps impl1 ist1 (RlblIn msg :: nil) ist2).
-      { split; [|econstructor; reflexivity].
-        econstructor; [econstructor|].
-        inv H1; inv H4; inv H6.
-        eapply SdExt; try reflexivity.
-        { unfold isExternal in *.
-          rewrite Hii in H1; assumption.
-        }
-        { unfold isInternal in *.
-          rewrite Hii in H2; assumption.
-        }
-      }
-      pose proof (Hginv1 H0 H).
-      assumption.
-      
-    - pose proof (atomic_steps_compositional H1 H); destruct H2.
-      + assert (Transactional impl1 hst).
-        { econstructor; eauto.
-          eapply atomic_preserved; eauto.
-        }
-        exact (Hginv1 H0 (conj H2 H3)).
-      + assert (Transactional impl2 hst).
-        { econstructor; eauto.
-          eapply atomic_preserved; eauto.
-          rewrite Hii; assumption.
-        }
-        exact (Hginv2 H0 (conj H2 H3)).
-  Qed.
+  Hypotheses (Hsim1: TrsSimulates simR ginv p impl1 spec)
+             (Hsim2: TrsSimulates simR ginv p impl2 spec).
 
   Lemma trsSimulates_transactional_compositional:
     forall ihst,
@@ -563,15 +546,9 @@ Section Compositionality.
           rewrite Hii; assumption.
         }
         pose proof (Hsim2 H0 H1 (conj H3 H4)).
-        rewrite behaviorOf_preserved with (impl4:= impl2) by (rewrite Hii; assumption).
+        rewrite behaviorOf_preserved with (impl4:= impl2)
+          by (rewrite Hii; assumption).
         assumption.
-  Qed.
-
-  Theorem trsInvHolds_compositional: TrsInv impl ginv.
-  Proof.
-    unfold TrsInv in *; intros.
-    destruct H0.
-    eapply trsInvHolds_transactional_compositional; eauto.
   Qed.
 
   Theorem trsSimulates_compositional: TrsSimulates simR ginv p impl spec.
@@ -582,12 +559,12 @@ Section Compositionality.
   Qed.
 
   Corollary trsSimulates_trsInvHolds_compositional:
-    TrsSimulates simR ginv p impl spec /\ TrsInv impl ginv.
+    TrsSimulates simR ginv p impl spec /\ InvStep impl step_det ginv.
   Proof.
     split.
     - apply trsSimulates_compositional.
-    - apply trsInvHolds_compositional.
+    - apply invariant_compositional.
   Qed.
-    
+
 End Compositionality.
 

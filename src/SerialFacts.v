@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap.
-Require Import Syntax Semantics SemFacts StepDet Serial TrsInv.
+Require Import Syntax Semantics SemFacts StepDet Serial Invariant.
 
 Require Import Omega.
 Require Import Program.Equality.

@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet SemFacts.
-Require Import Simulation Serial SerialFacts TrsInv TrsSim.
+Require Import Simulation Serial SerialFacts Invariant TrsSim.
 Require Import PredMsg StepPred PredMsgFacts.
 Require Import Synthesis SynthesisFacts Blocking.
 
@@ -77,7 +77,7 @@ Section Impl.
       try (rewrite addRules_init; apply pimpl_ok; fail).
 
     Ltac trs_sim_init pimpl_ok :=
-      apply trsSimulates_trsInvHolds_rules_added;
+      apply trsSimulates_trsInvHolds_rules_added; intros;
       [apply pimpl_ok|apply pimpl_ok|repeat constructor| | | |].
 
     Ltac trs_simulates_case_slt :=
@@ -153,37 +153,38 @@ Section Impl.
 
           (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps *)
           unfold TrsSimAtomic; intros.
-          pose proof (atomic_hst_tinfo H H2).
+          pose proof (atomic_hst_tinfo H0 H3).
 
-          (* Convert an [Atomic] [steps_det] into [steps_pred]. *)
+          (** Convert an [Atomic] [steps_det] into [steps_pred]. *)
           eapply steps_pred_ok
-            with (psys:= addPRules _ (buildRawPSys impl0)) in H2; eauto.
+            with (psys:= addPRules _ (buildRawPSys impl0)) in H3; eauto.
 
-          * (* In this subgoal it suffices to synthesize [PRules]. *)
-            clear H. (* Atomicity is no longer needed. *)
-            destruct H2 as [pst1 [phst [pst2 [? [? [? ?]]]]]].
+          * (** In this subgoal it suffices to synthesize [PRules]. *)
+            clear H0. (* Atomicity is no longer needed. *)
+            clear H. (* The invariant in [step_det] transition is also no longer needed. *)
+            destruct H3 as [? [pst1 [phst [pst2 [? [? [? ?]]]]]]].
             subst.
 
-            (* Reduction to the simulation proof. *)
+            (** Reduction to a (step-)simulation proof. *)
             assert (Forall (fun lbl =>
                               match lbl with
                               | PlblIn _ => False
                               | PlblOuts _ _ _ => True
                               end) phst).
-            { clear -H3; induction phst; simpl; intros; [constructor|].
-              inv H3; constructor; auto.
+            { clear -H4; induction phst; simpl; intros; [constructor|].
+              inv H4; constructor; auto.
               destruct a; auto.
             }
-            clear H3.
+            clear H4.
 
-            eapply label_inv_simulation_steps
+            eapply inv_simulation_steps
               with (stepS:= step_det) (sim:= LiftSimL SvmSim (pToTState ts rq))
-              in H5; eauto.
-            { destruct H5 as [sst2 [shst [? [? ?]]]].
+              in H6; eauto.
+            { destruct H6 as [sst2 [shst [? [? ?]]]].
               exists sst2, shst.
               split; [|split]; eauto.
 
-              rewrite addPRules_behaviorOf in H3.
+              rewrite addPRules_behaviorOf in H4.
               rewrite addRules_behaviorOf.
               rewrite <-buildRawPSys_pToSystem_buildRawSys.
               rewrite <-pToTHistory_behaviorOf.
@@ -191,12 +192,12 @@ Section Impl.
             }
 
             (* For each case of [step_pred], *)
-            clear H5. (* [steps_pred] is no longer needed. *)
-            unfold LInvSim; intros.
+            clear H6. (* [steps_pred] is no longer needed. *)
+            unfold InvSim; intros.
             clear mouts.
-            destruct ilbl as [|orule mins mouts]; [intuition idtac|clear H3].
-            destruct orule as [rule|]; [|inv H4; simpl; right; auto].
-            clear H phst.
+            destruct ilbl as [|orule mins mouts]; [intuition idtac|clear H5].
+            destruct orule as [rule|]; [|inv H6; simpl; right; auto].
+            clear H0 phst.
 
             (* Use a stack to track which rules should be synthesized now. *)
             Record PStackElt :=
@@ -277,35 +278,35 @@ Section Impl.
               end.
               pstack_clear.
               
-              inv H;
-                [|exfalso; clear -H7; Common.dest_in; discriminate
-                 |exfalso; clear -H7; Common.dest_in; discriminate].
+              inv H0;
+                [|exfalso; clear -H9; Common.dest_in; discriminate
+                 |exfalso; clear -H9; Common.dest_in; discriminate].
 
               (* TODO: need an Ltac checker to check this immediate rule can 
                * handle the current request or not.
                *)
-              inv H7; [|inv H].
+              inv H9; [|inv H0].
               destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
               destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
-              inv H; cbn in *.
+              inv H0; cbn in *.
 
               (* Reduce [ValidMsgsIn] *)
-              inv H10; inv H5; cbn in *.
-              clear H6.
+              inv H13; inv H7; cbn in *.
+              clear H8.
 
               (* Reduce [DualPMsg] *)
-              destruct H9; cbn in *; subst.
-              hnf in H; cbn in *; dest; subst.
+              destruct H11; cbn in *; subst.
+              hnf in H0; cbn in *; dest; subst.
 
               (** Construction for spec *)
               rewrite addPRules_isExternal; cbn.
 
               (* TODO: how can we know this? *)
-              exists sst0. (* <-- this is wrong. *)
               destruct sst0 as [soss smsgs stid].
-              destruct H2; cbn in *.
-              destruct H as [cv [? ?]].
-              destruct H3 as [sost [? ?]].
+              eexists {| tst_oss := soss; tst_msgs := _; tst_tid := stid |}.
+              destruct H3; cbn in *.
+              destruct s as [cv [? ?]].
+              destruct s as [sost [? ?]].
               
               eexists (RlblOuts
                          (Some (specGetReq extIdx1 extIdx2 specChn1))
@@ -339,10 +340,16 @@ Section Impl.
                 { auto. }
                 { simpl; tauto. }
                 { eassumption. }
-                { (* need to use [SimMP] *)
-                  (* destruct H0. *)
-                  (* eapply blocked_SimMP_FirstMP_map; eauto. *)
+                { repeat constructor.
+
+                  (* TODO: The "[FirstMP] to [FirstMP]" proof requires 
+                   * "rollback", which only can be defined for [MessagePool TMsg].
+                   * Predicate messages do not have a notion of timestamp,
+                   * so it's not possible to define such a notion.
+                   *)
                   admit.
+                  (* eapply blocked_SimMP_FirstMP; eauto. *)
+                  (* { destruct H4; assumption. } *)
                 }
                 { repeat constructor.
                   (* FIXME: indices do not match :( *)
@@ -364,8 +371,7 @@ Section Impl.
               { admit. }              
             }
 
-            { admit.
-            }
+            { admit. }
             
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)

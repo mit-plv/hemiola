@@ -25,6 +25,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       In immr (psys_rules psys) ->
       immr = PRuleImm (pmsg_pmid rq) prec ->
       DualPMsg rq rs ->
+      FirstMP oims (existT _ _ rq) ->
       ValidMsgsIn oidx (rq :: nil) ->
 
       oss@[oidx] = Some pos ->
@@ -50,6 +51,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       In oidx (indicesOf psys) ->
       In rqfwdr (psys_rules psys) ->
       rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec outf ->
+      FirstMP oims (existT _ _ rq) ->
       ValidMsgsIn oidx (rq :: nil) ->
       ValidMsgOuts oidx fwds ->
 
@@ -78,6 +80,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       In oidx (indicesOf psys) ->
       In rsbackr (psys_rules psys) ->
       rsbackr = PRuleRsBack (map (@pmsg_pmid _) rss) rsbf ->
+      Forall (FirstMP oims) (map (existT _ _) rss) ->
       ValidMsgsIn oidx rss ->
       ValidMsgOuts oidx (rsb :: nil) ->
 
