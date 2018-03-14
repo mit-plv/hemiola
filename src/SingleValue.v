@@ -29,20 +29,24 @@ Section System.
   Section Spec.
 
     Definition specIdx := 0.
-    Definition specChn1 := 1.
-    Definition specChn2 := 2.
+
+    Definition specRqChn (chnIdx: nat) := rqChn + numChns * chnIdx.
+    Definition specRsChn (chnIdx: nat) := rsChn + numChns * chnIdx.
+    Definition chnIdx0 := 0.
+    Definition chnIdx1 := 1.
+    
     Definition valueIdx := 0.
 
-    Definition getSpecExtIdx (idx: nat) :=
-      if eq_nat_dec idx specChn1 then extIdx1 else extIdx2.
+    Definition getChnIdx (eidx: nat) :=
+      if eq_nat_dec eidx extIdx1 then chnIdx0 else chnIdx1.
     
     Section PerChn.
-      Variable chnIdx: nat.
+      Variable eidx: nat.
 
-      Definition getReqM := buildMsgId SvmGetE (getSpecExtIdx chnIdx) specIdx chnIdx.
-      Definition getRespM := buildMsgId SvmGetE specIdx (getSpecExtIdx chnIdx) chnIdx.
-      Definition setReqM := buildMsgId SvmSetE (getSpecExtIdx chnIdx) specIdx chnIdx.
-      Definition setRespM := buildMsgId SvmSetE specIdx (getSpecExtIdx chnIdx) chnIdx.
+      Definition getReqM := buildMsgId SvmGetE eidx specIdx (specRqChn (getChnIdx eidx)).
+      Definition getRespM := buildMsgId SvmGetE specIdx eidx (specRsChn (getChnIdx eidx)).
+      Definition setReqM := buildMsgId SvmSetE eidx specIdx (specRqChn (getChnIdx eidx)).
+      Definition setRespM := buildMsgId SvmSetE specIdx eidx (specRsChn (getChnIdx eidx)).
 
       Definition specGetReq: Rule :=
         {| rule_mids := getReqM :: nil;
@@ -68,10 +72,10 @@ Section System.
       {| sys_inds := specIdx :: nil;
          sys_inits := [specIdx <- [valueIdx <- VNat 0]];
          sys_rules :=
-           (specGetReq specChn1)
-             :: (specSetReq specChn1)
-             :: (specGetReq specChn2)
-             :: (specSetReq specChn2) :: nil
+           (specGetReq extIdx1)
+             :: (specSetReq extIdx1)
+             :: (specGetReq extIdx2)
+             :: (specSetReq extIdx2) :: nil
       |}.
 
   End Spec.
@@ -81,10 +85,10 @@ Section System.
     Definition parentIdx := 0.
     Definition child1Idx := 1.
     Definition child2Idx := 2.
-    Definition chnImpl := 0.
-    Definition chnC2PRq := 1.
-    Definition chnC2PRs := 2.
 
+    Definition valid_child1Idx: child1Idx = chnIdx0 + 1 := eq_refl.
+    Definition valid_child2Idx: child2Idx = chnIdx1 + 1 := eq_refl.
+    
     Definition theOtherChild (idx: nat) :=
       if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
     Definition getImplExtIdx (idx: nat) :=

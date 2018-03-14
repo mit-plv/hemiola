@@ -53,7 +53,7 @@ Lemma atomic_tinfo:
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti => hti = buildTInfo ts (rq :: nil)
-                                     | None => True
+                                     | None => tmsg_msg tmsg = rq
                                      end) ins
                          | _ => False
                          end) hst /\
@@ -96,7 +96,7 @@ Corollary atomic_hst_tinfo:
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti => hti = buildTInfo ts (rq :: nil)
-                                     | None => True
+                                     | None => tmsg_msg tmsg = rq
                                      end) ins
                          | _ => False
                          end) hst.

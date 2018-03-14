@@ -24,6 +24,10 @@ Section Impl.
              (Hsext2: isExternal (spec extIdx1 extIdx2) extIdx2 = true).
 
   Local Definition spec := spec extIdx1 extIdx2.
+  Local Definition svmMsgIdF := svmMsgIdF extIdx1.
+  Local Definition svmMsgF := svmMsgF extIdx1.
+  Local Definition svmP := svmP extIdx1.
+  Local Definition SvmSim := SvmSim extIdx1.
 
   Lemma svmMsgF_ValidMsgMap:
     ValidMsgMap svmMsgF impl0 spec.
@@ -169,6 +173,9 @@ Section Impl.
             subst.
 
             (** Reduction to a (step-)simulation proof. *)
+            (* TODO: need to formalize that if the label is for handling
+             * external requests, then it is indeed [rq].
+             *)
             assert (Forall (fun lbl =>
                               match lbl with
                               | PlblIn _ => False
@@ -289,6 +296,8 @@ Section Impl.
                * handle the current request or not.
                *)
               inv H9; [|inv H0].
+
+              (* TODO: need to know that [rschn = rsChn] *)
               destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
               destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
               inv H0; cbn in *.
@@ -310,9 +319,9 @@ Section Impl.
               destruct H3; cbn in *.
               destruct s as [cv [? ?]].
               destruct s as [sost [? ?]].
-              
+
               eexists (RlblOuts
-                         (Some (specGetReq extIdx1 extIdx2 specChn1))
+                         (Some (specGetReq extIdx1 extIdx1))
                          (toTMsgU {| msg_id :=
                                        svmMsgIdF
                                          {| mid_addr :=
@@ -346,7 +355,6 @@ Section Impl.
                 { simpl; tauto. }
                 { repeat constructor.
                   rewrite e0; cbn.
-                  (* TODO: Indices still don't match. *)
                   admit.
                 }
                 { repeat constructor.

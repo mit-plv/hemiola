@@ -94,7 +94,13 @@ Section Sim.
   Definition svmMsgIdF (imid: MsgId): MsgId :=
     {| mid_addr := {| ma_from := svmIdxF (mid_from imid);
                       ma_to := svmIdxF (mid_to imid);
-                      ma_chn := mid_to imid |};
+                      ma_chn :=
+                        (mid_chn imid) + (if mid_from imid ==n extIdx1
+                                          then 0
+                                          else if mid_to imid ==n extIdx1
+                                               then 0
+                                               else numChns)
+                   |};
        mid_tid := mid_tid imid |}.
 
   Definition svmMsgF (imsg: Msg): Msg :=

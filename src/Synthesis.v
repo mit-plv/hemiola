@@ -79,6 +79,7 @@ Section SynRqRsImm.
 
   Definition rqChn: IdxT := 0.
   Definition rsChn: IdxT := 1.
+  Definition numChns := S rsChn.
 
   Definition SingleRqPostcondSt (mout: OState -> Value -> OState -> Prop): PostcondSt :=
     fun pre ins post =>
