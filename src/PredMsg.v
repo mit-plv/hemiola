@@ -55,20 +55,20 @@ Definition RqFwdF := PMsg Rq -> OState -> list (PMsg Rq).
 Definition RsBackF := list Msg -> OState -> Value.
 
 Inductive PRule :=
-| PRuleImm: forall (rq: PMsgId) (prec: PRPrecond), PRule
+| PRuleImm: forall (rq rs: PMsgId) (prec: PRPrecond), PRule
 | PRuleRqFwd: forall (rq: PMsgId) (prec: PRPrecond) (fwds: RqFwdF), PRule
 | PRuleRsBack: forall (rss: list PMsgId) (rsbf: RsBackF), PRule.
 
 Definition midsOfPRule (prule: PRule) :=
   match prule with
-  | PRuleImm rq _ => pmid_mid rq :: nil
+  | PRuleImm rq _ _ => pmid_mid rq :: nil
   | PRuleRqFwd rq _ _ => pmid_mid rq :: nil
   | PRuleRsBack rss _ => map pmid_mid rss
   end.
 
 Definition precOfPRule (prule: PRule) :=
   match prule with
-  | PRuleImm _ prec => prec
+  | PRuleImm _ _ prec => prec
   | PRuleRqFwd _ prec _ => prec
   | PRuleRsBack _ _ => ⊤
   end.

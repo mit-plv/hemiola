@@ -23,7 +23,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
            (immr: PRule) prec (rq: PMsg Rq) (rs: PMsg Rs),
       In oidx (indicesOf psys) ->
       In immr (psys_rules psys) ->
-      immr = PRuleImm (pmsg_pmid rq) prec ->
+      immr = PRuleImm (pmsg_pmid rq) (pmsg_pmid rs) prec ->
       DualPMsg rq rs ->
       FirstMP oims (existT _ _ rq) ->
       ValidMsgsIn oidx (rq :: nil) ->

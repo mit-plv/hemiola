@@ -264,8 +264,20 @@ Section Impl.
               | [st: list PStackElt |- _] => clear st
               end.
 
-            Definition buildPRuleImm (pste: PStackElt) :=
-              PRuleImm (pste_pmid pste) (pste_prec pste).
+            Definition dualOf (mid: MsgId) (dchn: IdxT) :=
+              {| mid_addr := {| ma_from := ma_to (mid_addr mid);
+                                ma_to := ma_from (mid_addr mid);
+                                ma_chn := dchn |};
+                 mid_tid := mid_tid mid |}.
+
+            Definition dualOfP (pmid: PMsgId) (dchn: IdxT) :=
+              {| pmid_mid := dualOf (pmid_mid pmid) dchn;
+                 pmid_pred := pmid_pred pmid |}.
+
+            Definition buildPRuleImm (pste: PStackElt) (dchn: IdxT) :=
+              PRuleImm (pste_pmid pste)
+                       (dualOfP (pste_pmid pste) dchn)
+                       (pste_prec pste).
 
             Ltac synth_prule :=
               match goal with
@@ -284,7 +296,7 @@ Section Impl.
               | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
                 is_evar rule;
                   let pfst := pstack_first in
-                  instantiate (1:= buildPRuleImm pfst) in H
+                  instantiate (1:= buildPRuleImm pfst rsChn) in H
               end.
               pstack_clear.
               
@@ -297,7 +309,6 @@ Section Impl.
                *)
               inv H9; [|inv H0].
 
-              (* TODO: need to know that [rschn = rsChn] *)
               destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
               destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
               inv H0; cbn in *.
@@ -311,7 +322,6 @@ Section Impl.
               hnf in H0; cbn in *; dest; subst.
 
               (** Construction for spec *)
-              rewrite addPRules_isExternal; cbn.
 
               (* TODO: how can we know this? *)
               destruct sst0 as [soss smsgs stid].
@@ -355,14 +365,17 @@ Section Impl.
                 { simpl; tauto. }
                 { repeat constructor.
                   rewrite e0; cbn.
-                  admit.
+                  vm_compute.
+                  repeat f_equal.
+                  admit. (* the coherent value matches between impl. and spec;
+                          * easy, but tedious. *)
                 }
                 { repeat constructor.
                   { discriminate. }
                   { intro Hx; Common.dest_in. }
                 }
                 { assert (soss = soss +[ specIdx <- sost]) by admit.
-                  rewrite <-H0.
+                  rewrite <-H3.
                   reflexivity.
                 }
               }
