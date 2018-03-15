@@ -143,7 +143,7 @@ Section Impl.
       |].
 
     Definition svmTrsIdx0: TrsId := SvmGetE.
-    
+
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec SvmSim SvmInvs svmP impl1 }.
     Proof.
@@ -164,33 +164,30 @@ Section Impl.
             with (psys:= addPRules _ (buildRawPSys impl0)) in H3; eauto.
 
           * (** In this subgoal it suffices to synthesize [PRules]. *)
-
-            (** * TODO: need to derive that 
-             * [rq = (the request of current synthesis)] *)
-            clear H0. (* Atomicity is no longer needed. *)
             clear H. (* The invariant in [step_det] transition is also no longer needed. *)
             destruct H3 as [? [pst1 [phst [pst2 [? [? [? ?]]]]]]].
             subst.
 
             (** Reduction to a (step-)simulation proof. *)
-            (* TODO: need to formalize that if the label is for handling
-             * external requests, then it is indeed [rq].
-             *)
+            (* TODO: extract a lemma for the below assertion. *)
             assert (Forall (fun lbl =>
                               match lbl with
                               | PlblIn _ => False
-                              | PlblOuts _ _ _ => True
-                              end) phst).
-            { clear -H4; induction phst; simpl; intros; [constructor|].
-              inv H4; constructor; auto.
-              destruct a; auto.
-            }
+                              | PlblOuts _ pins _ =>
+                                Forall (fun psig =>
+                                          let msg := getMsg (projT2 psig) in
+                                          if isExternal impl0 (mid_from (msg_id msg))
+                                          then msg = rq
+                                          else True
+                                       ) pins
+                              end) phst) by admit.
+            clear H0. (* Atomicity is no longer needed. *)
             clear H4.
 
             eapply inv_simulation_steps
               with (stepS:= step_det) (sim:= LiftSimL SvmSim (pToTState ts rq))
-              in H6; eauto.
-            { destruct H6 as [sst2 [shst [? [? ?]]]].
+              in H7; eauto.
+            { destruct H7 as [sst2 [shst [? [? ?]]]].
               exists sst2, shst.
               split; [|split]; eauto.
 
@@ -202,12 +199,12 @@ Section Impl.
             }
 
             (* For each case of [step_pred], *)
-            clear H6. (* [steps_pred] is no longer needed. *)
+            clear H7. (* [steps_pred] is no longer needed. *)
             unfold InvSim; intros.
             clear mouts.
-            destruct ilbl as [|orule mins mouts]; [intuition idtac|clear H5].
+            destruct ilbl as [|orule mins mouts]; [intuition idtac|].
             destruct orule as [rule|]; [|inv H6; simpl; right; auto].
-            clear H0 phst.
+            clear H3 phst.
 
             (* Use a stack to track which rules should be synthesized now. *)
             Record PStackElt :=
@@ -300,33 +297,34 @@ Section Impl.
               end.
               pstack_clear.
               
-              inv H0;
-                [|exfalso; clear -H9; Common.dest_in; discriminate
-                 |exfalso; clear -H9; Common.dest_in; discriminate].
+              inv H3;
+                [|exfalso; clear -H10; Common.dest_in; discriminate
+                 |exfalso; clear -H10; Common.dest_in; discriminate].
 
               (* TODO: need an Ltac checker to check this immediate rule can 
                * handle the current request or not.
                *)
-              inv H9; [|inv H0].
+              inv H10; [|inv H3].
+              inv H5; inv H10.
 
               destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
               destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
-              inv H0; cbn in *.
+              inv H3; cbn in *.
 
               (* Reduce [ValidMsgsIn] *)
-              inv H13; inv H7; cbn in *.
-              clear H8.
+              inv H14; inv H7; cbn in *.
+              clear H9.
 
               (* Reduce [DualPMsg] *)
-              destruct H11; cbn in *; subst.
-              hnf in H0; cbn in *; dest; subst.
+              destruct H12; cbn in *; subst.
+              hnf in H3; cbn in *; dest; subst.
 
               (** Construction for spec *)
 
               (* TODO: how can we know this? *)
               destruct sst0 as [soss smsgs stid].
               eexists {| tst_oss := soss; tst_msgs := _; tst_tid := _ |}.
-              destruct H3; cbn in *.
+              destruct H0; cbn in *.
               destruct s as [cv [? ?]].
               destruct s as [sost [? ?]].
 
@@ -357,9 +355,7 @@ Section Impl.
                   eapply blocked_SimMP_FirstMP; eauto.
                   { destruct H4; eassumption. }
                   { apply pToTMsg_FirstMP; eassumption. }
-                  { unfold deinitialize; cbn.
-                    admit.
-                  }
+                  { reflexivity. }
                 }
                 { repeat constructor. }
                 { simpl; tauto. }
@@ -367,23 +363,31 @@ Section Impl.
                   rewrite e0; cbn.
                   vm_compute.
                   repeat f_equal.
-                  admit. (* the coherent value matches between impl. and spec;
+                  admit. (* TODO: the coherent value should match between impl. and spec;
                           * easy, but tedious. *)
                 }
                 { repeat constructor.
                   { discriminate. }
                   { intro Hx; Common.dest_in. }
                 }
-                { assert (soss = soss +[ specIdx <- sost]) by admit.
-                  rewrite <-H3.
+                { assert (soss = soss +[ specIdx <- sost]) by meq.
+                  rewrite <-H0.
                   reflexivity.
                 }
               }
-              { admit. }              
+              { cbn; split; cbn.
+                { (* TODO: the coherent value should match between impl. and spec;
+                   * easy, but tedious. *)
+                  admit.
+                }
+                { (* TODO: [SimMP] should be preserved by [removeMP] *)
+                  admit.
+                }
+              }
             }
 
             { admit. }
-            
+
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
             admit.
