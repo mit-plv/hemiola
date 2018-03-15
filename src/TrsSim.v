@@ -360,8 +360,8 @@ Section Compositionality.
     - assumption.
     - eapply Hinv1; eauto.
       econstructor; try reflexivity.
-      + unfold isExternal in *; rewrite <-Hii; assumption.
-      + unfold isInternal in *; rewrite <-Hii; assumption.
+      + unfold fromExternal, isExternal in *; rewrite <-Hii; assumption.
+      + unfold toInternal, isInternal in *; rewrite <-Hii; assumption.
     - specialize (Himpl _ H6).
       apply in_app_or in Himpl; destruct Himpl.
       + eapply Hinv1; eauto.
@@ -523,10 +523,10 @@ Section Compositionality.
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.
         eapply SdExt; try reflexivity.
-        { unfold isExternal in *.
+        { unfold fromExternal, isExternal in *.
           rewrite Hii in H2; assumption.
         }
-        { unfold isInternal in *.
+        { unfold toInternal, isInternal in *.
           rewrite Hii in H3; assumption.
         }
       }

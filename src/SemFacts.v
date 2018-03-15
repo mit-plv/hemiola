@@ -370,6 +370,16 @@ Proof.
     exists tmsg; intuition idtac.
 Qed.
 
+Lemma getTMsgsTInfo_Forall_Some:
+  forall tmsgs ti,
+    tmsgs <> nil ->
+    Forall (fun tmsg => tmsg_info tmsg = Some ti) tmsgs ->
+    getTMsgsTInfo tmsgs = Some ti.
+Proof.
+  induction tmsgs; simpl; intros; [elim H; reflexivity|].
+  inv H0; rewrite H3; reflexivity.
+Qed.
+
 Fact SdIntSingle:
   forall sys ts nts (Hts: nts > ts) tinfo
          oss oims oidx os pos fmsg frule fidx fchn outs,
@@ -476,18 +486,17 @@ Section System.
 
   Lemma internal_extOuts_nil:
     forall {MsgT} `{HasMsg MsgT} (mouts: list MsgT),
-      Forall (fun tmsg => isInternal sys (mid_to (msg_id (getMsg tmsg))) =
-                          true) mouts ->
+      Forall (fun tmsg => toInternal sys tmsg = true) mouts ->
       extOuts sys (map getMsg mouts) = nil.
   Proof.
     induction mouts; simpl; intros; [reflexivity|].
-    inv H0; unfold id.
+    inv H0; unfold id, toExternal in *.
     rewrite internal_not_external by assumption; auto.
   Qed.
 
   Lemma intOuts_Forall:
     forall {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
-      Forall (fun msg => isInternal sys (mid_to (msg_id (getMsg msg))) = true) msgs ->
+      Forall (fun msg => toInternal sys msg = true) msgs ->
       intOuts sys msgs = msgs.
   Proof.
     induction msgs; simpl; intros; [reflexivity|].
@@ -503,7 +512,7 @@ Lemma extOuts_same_indicesOf:
     indicesOf sys1 = indicesOf sys2 ->
     extOuts sys1 msgs = extOuts sys2 msgs.
 Proof.
-  unfold extOuts, isExternal; intros.
+  unfold extOuts, toExternal, isExternal; intros.
   rewrite H0; reflexivity.
 Qed.
 
@@ -512,7 +521,7 @@ Lemma intOuts_same_indicesOf:
     indicesOf sys1 = indicesOf sys2 ->
     intOuts sys1 msgs = intOuts sys2 msgs.
 Proof.
-  unfold intOuts, isInternal; intros.
+  unfold intOuts, toInternal, isInternal; intros.
   rewrite H0; reflexivity.
 Qed.
 
@@ -541,7 +550,7 @@ Qed.
 Lemma step_det_int_internal:
   forall sys st1 orule ins outs st2,
     step_det sys st1 (RlblOuts orule ins outs) st2 ->
-    Forall (fun msg => isInternal sys (mid_to (msg_id (getMsg msg))) = true) ins.
+    Forall (fun msg => toInternal sys msg = true) ins.
 Proof.
   intros; inv H; [constructor|].
   clear -H3 H6.
@@ -554,7 +563,7 @@ Qed.
 Lemma step_det_outs_from_internal:
   forall sys st1 ilbl st2,
     step_det sys st1 ilbl st2 ->
-    Forall (fun m: TMsg => isInternal sys (mid_from (msg_id (getMsg m))) = true)
+    Forall (fun m: TMsg => fromInternal sys m = true)
            (iLblOuts ilbl).
 Proof.
   intros; inv H; try (constructor; fail).
@@ -564,7 +573,8 @@ Proof.
   induction outs; simpl; intros; [constructor|].
   inv H; dest.
   constructor; auto.
-  simpl; simpl in H; unfold id in H; rewrite H.
+  simpl in H; unfold id in H.
+  unfold fromInternal; simpl; rewrite H.
   unfold isInternal; find_if_inside; auto.
 Qed.
 
@@ -577,7 +587,7 @@ Lemma extLabel_preserved:
       extLabel impl1 l = extLabel impl2 l.
 Proof.
   intros; destruct l; simpl; [reflexivity|].
-  unfold extOuts, isExternal.
+  unfold extOuts, toExternal, isExternal.
   rewrite H1.
   reflexivity.
 Qed.
@@ -591,8 +601,8 @@ Lemma step_det_in_rules_weakening:
 Proof.
   intros; inv H.
   econstructor; auto.
-  - unfold isExternal in *; rewrite H0; assumption.
-  - unfold isInternal in *; rewrite H0; assumption.
+  - unfold fromExternal, isExternal in *; rewrite H0; assumption.
+  - unfold toInternal, isInternal in *; rewrite H0; assumption.
 Qed.
 
 Definition ValidTidState (tst: TState) :=
@@ -652,21 +662,22 @@ Qed.
 
 Definition TInfoExists (sys: System) (tst: TState) :=
   ForallMP (fun tmsg =>
-              if isInternal sys (mid_from (msg_id (tmsg_msg tmsg)))
+              if fromInternal sys tmsg
               then tmsg_info tmsg <> None
               else tmsg_info tmsg = None) (tst_msgs tst).
 
 Lemma validMsgOuts_from_internal:
-  forall sys idx,
+  forall {MsgT} `{HasMsg MsgT} sys idx,
     isInternal sys idx = true ->
-    forall mouts,
+    forall mouts: list MsgT,
       ValidMsgOuts idx mouts ->
-      ForallMP (fun msg => isInternal sys (mid_from (msg_id msg)) = true) mouts.
+      ForallMP (fun msg => fromInternal sys msg = true) mouts.
 Proof.
   induction mouts; simpl; intros; [constructor|].
-  destruct H0; inv H0; inv H1; dest.
+  destruct H1; inv H1; inv H2; inv H5; dest.
   constructor.
-  - simpl in H0; unfold id in H0; rewrite H0; assumption.
+  - simpl in H0; unfold id in H0.
+    unfold fromInternal; simpl; rewrite H0; reflexivity.
   - apply IHmouts; split; auto.
 Qed.
 
@@ -680,7 +691,7 @@ Proof.
   unfold TInfoExists; intros; inv H0; auto.
   - simpl; simpl in H.
     apply ForallMP_enqMP; auto.
-    simpl.
+    unfold fromInternal; simpl.
     rewrite external_not_internal by assumption; reflexivity.
   - simpl; simpl in H.
     apply ForallMP_distributeMsgs.
@@ -690,9 +701,11 @@ Proof.
       clear -H9; simpl in H9.
       induction outs; [constructor|].
       inv H9.
-      simpl; destruct (isInternal sys (mid_to (msg_id a))); auto.
+      simpl; unfold toInternal; simpl.
+      destruct (isInternal sys (mid_to (msg_id a))); auto.
       constructor; cbn.
-      * rewrite H1; discriminate.
+      * unfold fromInternal in *; cbn in *.
+        unfold id in H1; rewrite H1; discriminate.
       * apply IHouts; auto.
 Qed.
 

@@ -114,6 +114,7 @@ Lemma pToTMsg_extOuts:
     extOuts (pToSystem psys) (map tmsg_msg (map (pToTMsg ts rqin) msgs)).
 Proof.
   induction msgs; simpl; intros; [reflexivity|].
+  unfold toExternal.
   rewrite pToSystem_isExternal, IHmsgs.
   reflexivity.
 Qed.

@@ -34,14 +34,14 @@ Section Impl.
   Proof.
     unfold ValidMsgMap; intros.
     unfold svmMsgF; simpl.
-    unfold svmIdxF, isInternal.
+    unfold svmIdxF, fromInternal, toInternal, isInternal.
     unfold impl0.
     split.
     - find_if_inside.
-      + Common.dest_in; cbn.
-        * rewrite <-H; reflexivity.
-        * rewrite <-H0; reflexivity.
-        * rewrite <-H; reflexivity.
+      + Common.dest_in; cbn in *.
+        * unfold id in H; rewrite <-H; reflexivity.
+        * unfold id in H0; rewrite <-H0; reflexivity.
+        * unfold id in H; rewrite <-H; reflexivity.
       + find_if_inside; auto.
         elim n; clear n.
         Common.dest_in.
@@ -49,10 +49,10 @@ Section Impl.
         unfold svmIdxF in H.
         find_if_inside; auto.
     - find_if_inside.
-      + Common.dest_in; cbn.
-        * rewrite <-H; auto.
-        * rewrite <-H0; auto.
-        * rewrite <-H; auto.
+      + Common.dest_in; cbn in *.
+        * unfold id in H; rewrite <-H; auto.
+        * unfold id in H0; rewrite <-H0; auto.
+        * unfold id in H; rewrite <-H; auto.
       + find_if_inside; auto.
         elim n; clear n.
         Common.dest_in.
@@ -119,6 +119,7 @@ Section Impl.
       [|assumption (* simulation relation should be maintained *)
        |simpl; apply SimMP_ext_msg_in; auto];
       repeat econstructor;
+      unfold fromExternal, toInternal in *;
       repeat
         match goal with
         | [H: isExternal _ (mid_from (msg_id _)) = true |-
@@ -176,7 +177,7 @@ Section Impl.
                               | PlblOuts _ pins _ =>
                                 Forall (fun psig =>
                                           let msg := getMsg (projT2 psig) in
-                                          if isExternal impl0 (mid_from (msg_id msg))
+                                          if fromExternal impl0 msg
                                           then msg = rq
                                           else True
                                        ) pins

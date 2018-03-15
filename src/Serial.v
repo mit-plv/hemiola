@@ -16,7 +16,7 @@ Section PerSystem.
   Inductive Atomic: TrsId -> Msg -> THistory -> MessagePool TMsg -> Prop :=
   | AtomicStart:
       forall ts rqr rq houts,
-        isExternal sys (mid_from (msg_id rq)) = true ->
+        fromExternal sys rq = true ->
         ForallMP (fun tmsg => tmsg_info tmsg =
                               Some (buildTInfo ts (rq :: nil))) houts ->
         Atomic ts rq (RlblOuts (Some rqr) (toTMsgU rq :: nil) houts :: nil) houts

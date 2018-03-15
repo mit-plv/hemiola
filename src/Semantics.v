@@ -5,10 +5,10 @@ Set Implicit Arguments.
 
 Definition intOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
            (sys: SysT) (outs: list MsgT) :=
-  filter (fun m => isInternal sys (mid_to (msg_id (getMsg m)))) outs.
+  filter (fun m => toInternal sys m) outs.
 Definition extOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
            (sys: SysT) (outs: list MsgT) :=
-  filter (fun m => isExternal sys (mid_to (msg_id (getMsg m)))) outs.
+  filter (fun m => toExternal sys m) outs.
 
 Section MessagePool.
   Variable (MsgT: Type).

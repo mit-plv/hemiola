@@ -9,8 +9,8 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
 
 | SpExt:
     forall pst nst oss oims otrss (emsg: PMsg Rq),
-      isExternal psys (mid_from (msg_id (getMsg emsg))) = true ->
-      isInternal psys (mid_to (msg_id (getMsg emsg))) = true ->
+      fromExternal psys emsg = true ->
+      toInternal psys emsg = true ->
       pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
       nst = {| pst_oss := oss;
                pst_otrss := otrss;

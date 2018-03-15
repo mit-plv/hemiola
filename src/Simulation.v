@@ -182,21 +182,22 @@ Section SimMap.
 
   Definition ValidMsgMap (impl spec: System) :=
     forall msg,
-      isInternal impl (mid_from (msg_id msg)) =
-      isInternal spec (mid_from (msg_id (mmap msg))) /\
-      isInternal impl (mid_to (msg_id msg)) =
-      isInternal spec (mid_to (msg_id (mmap msg))).
+      fromInternal impl msg =
+      fromInternal spec (mmap msg) /\
+      toInternal impl msg =
+      toInternal spec (mmap msg).
 
   Lemma validMsgMap_from_isExternal:
     forall impl spec,
       ValidMsgMap impl spec ->
       forall msg b,
-        isExternal impl (mid_from (msg_id msg)) = b ->
-        isExternal spec (mid_from (msg_id (mmap msg))) = b.
+        fromExternal impl msg = b ->
+        fromExternal spec (mmap msg) = b.
   Proof.
     unfold ValidMsgMap; intros.
     rewrite <-H0.
     specialize (H msg); dest.
+    unfold fromInternal, fromExternal in *.
     do 2 rewrite internal_external_negb in H.
     destruct (isExternal _ _);
       destruct (isExternal _ _); auto.
@@ -206,8 +207,8 @@ Section SimMap.
     forall impl spec,
       ValidMsgMap impl spec ->
       forall msg b,
-        isInternal impl (mid_to (msg_id msg)) = b ->
-        isInternal spec (mid_to (msg_id (mmap msg))) = b.
+        toInternal impl msg = b ->
+        toInternal spec (mmap msg) = b.
   Proof.
     unfold ValidMsgMap; intros.
     rewrite <-H0.
@@ -221,7 +222,7 @@ Section SimMap.
         indicesOf impl1 = indicesOf impl2 ->
         ValidMsgMap impl2 spec.
   Proof.
-    unfold ValidMsgMap, isExternal, isInternal; intros.
+    unfold ValidMsgMap, fromInternal, toInternal, isExternal, isInternal; intros.
     rewrite <-H0; auto.
   Qed.
   

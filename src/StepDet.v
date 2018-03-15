@@ -14,8 +14,8 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
 Inductive step_det (sys: System): TState -> TLabel -> TState -> Prop :=
 | SdSlt: forall st, step_det sys st emptyRLabel st
 | SdExt: forall ts pst nst oss oims emsg,
-    isExternal sys (mid_from (msg_id emsg)) = true ->
-    isInternal sys (mid_to (msg_id emsg)) = true ->
+    fromExternal sys emsg = true ->
+    toInternal sys emsg = true ->
     pst = {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |} ->
     nst = {| tst_oss := oss;
              tst_msgs := enqMP (toTMsgU emsg) oims;

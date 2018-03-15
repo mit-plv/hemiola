@@ -168,6 +168,20 @@ Section System.
   Definition isInternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
     if idx ?<n (indicesOf sys) then true else false.
 
+  Definition fromExternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
+             (sys: SysT) (msg: MsgT) :=
+    isExternal sys (mid_from (msg_id (getMsg msg))).
+  Definition fromInternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
+             (sys: SysT) (msg: MsgT) :=
+    isInternal sys (mid_from (msg_id (getMsg msg))).
+
+  Definition toExternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
+             (sys: SysT) (msg: MsgT) :=
+    isExternal sys (mid_to (msg_id (getMsg msg))).
+  Definition toInternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
+             (sys: SysT) (msg: MsgT) :=
+    isInternal sys (mid_to (msg_id (getMsg msg))).
+  
   Record System :=
     { sys_inds: list IdxT;
       sys_inits: OStates;
