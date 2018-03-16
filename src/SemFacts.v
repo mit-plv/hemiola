@@ -484,8 +484,74 @@ Section System.
     find_if_inside; intuition.
   Qed.
 
+  Context {MsgT: Type} `{HasMsg MsgT}.
+
+  Lemma fromInternal_fromExternal_negb:
+    forall msg: MsgT,
+      fromInternal sys msg = negb (fromExternal sys msg).
+  Proof.
+    unfold fromInternal, fromExternal; intros.
+    apply internal_external_negb.
+  Qed.
+  
+  Lemma fromInternal_not_fromExternal:
+    forall msg: MsgT,
+      fromInternal sys msg = true -> fromExternal sys msg = false.
+  Proof.
+    unfold fromInternal, fromExternal; intros.
+    apply internal_not_external; auto.
+  Qed.
+
+  Lemma fromExternal_not_fromInternal:
+    forall msg: MsgT,
+      fromExternal sys msg = true -> fromInternal sys msg = false.
+  Proof.
+    unfold fromInternal, fromExternal; intros.
+    apply external_not_internal; auto.
+  Qed.
+
+  Lemma fromInternal_fromExternal_false:
+    forall msg: MsgT,
+      fromInternal sys msg = true -> fromExternal sys msg = true -> False.
+  Proof.
+    unfold fromInternal, fromExternal; intros.
+    eapply internal_external_false; eauto.
+  Qed.
+
+  Lemma toInternal_toExternal_negb:
+    forall msg: MsgT,
+      toInternal sys msg = negb (toExternal sys msg).
+  Proof.
+    unfold toInternal, toExternal; intros.
+    apply internal_external_negb.
+  Qed.
+  
+  Lemma toInternal_not_toExternal:
+    forall msg: MsgT,
+      toInternal sys msg = true -> toExternal sys msg = false.
+  Proof.
+    unfold toInternal, toExternal; intros.
+    apply internal_not_external; auto.
+  Qed.
+
+  Lemma toExternal_not_toInternal:
+    forall msg: MsgT,
+      toExternal sys msg = true -> toInternal sys msg = false.
+  Proof.
+    unfold toInternal, toExternal; intros.
+    apply external_not_internal; auto.
+  Qed.
+
+  Lemma toInternal_toExternal_false:
+    forall msg: MsgT,
+      toInternal sys msg = true -> toExternal sys msg = true -> False.
+  Proof.
+    unfold toInternal, toExternal; intros.
+    eapply internal_external_false; eauto.
+  Qed.
+
   Lemma internal_extOuts_nil:
-    forall {MsgT} `{HasMsg MsgT} (mouts: list MsgT),
+    forall (mouts: list MsgT),
       Forall (fun tmsg => toInternal sys tmsg = true) mouts ->
       extOuts sys (map getMsg mouts) = nil.
   Proof.
@@ -495,7 +561,7 @@ Section System.
   Qed.
 
   Lemma intOuts_Forall:
-    forall {MsgT} `{HasMsg MsgT} (msgs: list MsgT),
+    forall (msgs: list MsgT),
       Forall (fun msg => toInternal sys msg = true) msgs ->
       intOuts sys msgs = msgs.
   Proof.

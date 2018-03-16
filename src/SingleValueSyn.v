@@ -159,6 +159,7 @@ Section Impl.
           (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps *)
           unfold TrsSimAtomic; intros.
           pose proof (atomic_hst_tinfo H0 H3).
+          pose proof (atomic_history_pred_start H0 H3).
 
           (** Convert an [Atomic] [steps_det] into [steps_pred]. *)
           eapply steps_pred_ok
@@ -170,29 +171,18 @@ Section Impl.
             subst.
 
             (** Reduction to a (step-)simulation proof. *)
-            (* TODO: extract a lemma for the below assertion. *)
-            assert (Forall (fun lbl =>
-                              match lbl with
-                              | PlblIn _ => False
-                              | PlblOuts _ pins _ =>
-                                Forall (fun psig =>
-                                          let msg := getMsg (projT2 psig) in
-                                          if fromExternal impl0 msg
-                                          then msg = rq
-                                          else True
-                                       ) pins
-                              end) phst) by admit.
+            specialize (H5 _ eq_refl).
             clear H0. (* Atomicity is no longer needed. *)
             clear H4.
 
             eapply inv_simulation_steps
               with (stepS:= step_det) (sim:= LiftSimL SvmSim (pToTState ts rq))
-              in H7; eauto.
-            { destruct H7 as [sst2 [shst [? [? ?]]]].
+              in H8; eauto.
+            { destruct H8 as [sst2 [shst [? [? ?]]]].
               exists sst2, shst.
               split; [|split]; eauto.
 
-              rewrite addPRules_behaviorOf in H4.
+              rewrite addPRules_behaviorOf in H3.
               rewrite addRules_behaviorOf.
               rewrite <-buildRawPSys_pToSystem_buildRawSys.
               rewrite <-pToTHistory_behaviorOf.
@@ -200,12 +190,12 @@ Section Impl.
             }
 
             (* For each case of [step_pred], *)
-            clear H7. (* [steps_pred] is no longer needed. *)
+            clear H8. (* [steps_pred] is no longer needed. *)
             unfold InvSim; intros.
             clear mouts.
             destruct ilbl as [|orule mins mouts]; [intuition idtac|].
             destruct orule as [rule|]; [|inv H6; simpl; right; auto].
-            clear H3 phst.
+            clear H5 phst.
 
             (* Use a stack to track which rules should be synthesized now. *)
             Record PStackElt :=
@@ -298,19 +288,20 @@ Section Impl.
               end.
               pstack_clear.
               
-              inv H3;
+              inv H5;
                 [|exfalso; clear -H10; Common.dest_in; discriminate
                  |exfalso; clear -H10; Common.dest_in; discriminate].
 
               (* TODO: need an Ltac checker to check this immediate rule can 
                * handle the current request or not.
                *)
-              inv H10; [|inv H3].
-              inv H5; inv H10.
+              inv H10; [|inv H5].
+              inv H5.
 
               destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
               destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
-              inv H3; cbn in *.
+              inv H4; inv H11; cbn in *.
+              inv H7; inv H8; cbn in *.
 
               (* Reduce [ValidMsgsIn] *)
               inv H14; inv H7; cbn in *.
@@ -318,7 +309,7 @@ Section Impl.
 
               (* Reduce [DualPMsg] *)
               destruct H12; cbn in *; subst.
-              hnf in H3; cbn in *; dest; subst.
+              hnf in H4; cbn in *; dest; subst.
 
               (** Construction for spec *)
 
@@ -354,7 +345,7 @@ Section Impl.
                 { eassumption. }
                 { repeat constructor.
                   eapply blocked_SimMP_FirstMP; eauto.
-                  { destruct H4; eassumption. }
+                  { destruct H3; eassumption. }
                   { apply pToTMsg_FirstMP; eassumption. }
                   { reflexivity. }
                 }

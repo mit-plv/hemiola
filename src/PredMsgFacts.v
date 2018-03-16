@@ -1,7 +1,9 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics SemFacts StepDet Invariant.
-Require Import Serial.
+Require Import Serial SerialFacts.
 Require Import PredMsg StepPred.
+
+Set Implicit Arguments.
 
 Lemma buildRawPSys_indicesOf:
   forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
@@ -137,6 +139,47 @@ Lemma pToTHistory_behaviorOf:
 Proof.
   induction phst; simpl; intros; [reflexivity|].
   rewrite IHphst, <-pToLabel_extLabel; reflexivity.
+Qed.
+
+Lemma atomic_history_pred_start:
+  forall sys ts rq hst mouts,
+    Atomic sys ts rq hst mouts ->
+    forall st1 st2,
+      steps_det sys st1 hst st2 ->
+      forall phst,
+        pToTHistory ts rq phst = hst ->
+        Forall
+          (fun lbl =>
+             match lbl with
+             | PlblIn _ => False
+             | PlblOuts _ pins _ =>
+               Forall
+                 (fun psig =>
+                    let msg := getMsg (projT2 psig) in
+                    if fromExternal sys msg then msg = rq else True)
+                 pins
+             end) phst.
+Proof.
+  intros.
+  eapply atomic_hst_tinfo in H; eauto; subst.
+
+  clear -H.
+  induction phst; [constructor|].
+  inv H; specialize (IHphst H3).
+  constructor; auto.
+  destruct a; auto.
+
+  simpl in H2; clear -H2.
+  induction mins; [constructor|].
+  inv H2; specialize (IHmins H3).
+  constructor; auto.
+  
+  simpl in *; destruct H1.
+  clear -H0.
+  destruct a as [rr [pmid val]].
+  unfold fromInternal, pToTMsg, pmsg_mid in H0; cbn in H0.
+  unfold fromExternal, msgOfPMsg, pmsg_mid; cbn.
+  rewrite internal_not_external; auto.
 Qed.
 
 Definition toPInv (ts: TrsId) (rqin: Msg)
