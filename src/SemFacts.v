@@ -719,7 +719,7 @@ Lemma steps_det_tid:
   forall st1,
     ValidTidState st1 ->
     forall sys hst st2,
-      steps_det sys st1 hst st2 ->
+      steps step_det sys st1 hst st2 ->
       ValidTidState st2.
 Proof.
   induction 2; simpl; intros; auto.
@@ -779,7 +779,7 @@ Lemma steps_det_tinfo:
   forall sys st1,
     TInfoExists sys st1 ->
     forall hst st2,
-      steps_det sys st1 hst st2 ->
+      steps step_det sys st1 hst st2 ->
       TInfoExists sys st2.
 Proof.
   induction 2; simpl; intros; auto.

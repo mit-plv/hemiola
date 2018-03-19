@@ -1,5 +1,6 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics SemFacts StepDet Invariant.
+Require Import Common FMap Syntax Semantics SemFacts StepDet.
+Require Import Invariant Simulation.
 Require Import Serial SerialFacts.
 Require Import PredMsg StepPred.
 
@@ -145,7 +146,7 @@ Lemma atomic_history_pred_start:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps_det sys st1 hst st2 ->
+      steps step_det sys st1 hst st2 ->
       forall phst,
         pToTHistory ts rq phst = hst ->
         Forall
@@ -182,10 +183,6 @@ Proof.
   rewrite internal_not_external; auto.
 Qed.
 
-Definition toPInv (ts: TrsId) (rqin: Msg)
-           (ginv: Invariant TState): Invariant PState :=
-  fun pst => ginv (pToTState ts rqin pst).
-
 (** FIXME: This statement is wrong;
  * [psys] should have some more restrictions for the correctness of
  * _global_ preconditions wrt. the original system [sys].
@@ -193,16 +190,16 @@ Definition toPInv (ts: TrsId) (rqin: Msg)
 Theorem steps_pred_ok:
   forall sys ginv st1 thst st2 ts rqin mouts,
     InvStep sys step_det ginv ->
-    steps_det sys st1 thst st2 ->
+    steps step_det sys st1 thst st2 ->
     Atomic sys ts rqin thst mouts ->
     forall psys,
       pToSystem psys = sys ->
-      InvStep psys step_pred (toPInv ts rqin ginv) /\
+      InvStep psys step_pred (LiftInv (pToTState ts rqin) ginv) /\
       exists pst1 phst pst2,
         pToTState ts rqin pst1 = st1 /\
         pToTState ts rqin pst2 = st2 /\
         pToTHistory ts rqin phst = thst /\
-        steps_pred psys pst1 phst pst2.
+        steps step_pred psys pst1 phst pst2.
 Proof.
 Admitted.
 

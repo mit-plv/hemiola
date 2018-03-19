@@ -33,6 +33,16 @@ Definition DualPMsg (rq: PMsg Rq) (rs: PMsg Rs) :=
   DualMid (pmsg_mid rq) (pmsg_mid rs) /\
   pmsg_pred rq = pmsg_pred rs.
 
+Definition dualOf (mid: MsgId) (dchn: IdxT) :=
+  {| mid_addr := {| ma_from := ma_to (mid_addr mid);
+                    ma_to := ma_from (mid_addr mid);
+                    ma_chn := dchn |};
+     mid_tid := mid_tid mid |}.
+
+Definition dualOfP (pmid: PMsgId) (dchn: IdxT) :=
+  {| pmid_mid := dualOf (pmid_mid pmid) dchn;
+     pmid_pred := pmid_pred pmid |}.
+
 Definition PMsgSig := { rr : RqRs & PMsg rr }.
 
 Definition msgOfPMsg {rr} (pmsg: PMsg rr) :=

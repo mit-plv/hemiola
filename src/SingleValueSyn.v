@@ -63,6 +63,26 @@ Section Impl.
 
   Definition SvmInvs := SvmInv /\i BlockedInv.
 
+  Ltac red_SvmInvs :=
+    repeat 
+      match goal with
+      | [H: SvmInvs _ |- _] => inv H
+      end.
+
+  Ltac red_SvmSim :=
+    repeat
+      match goal with
+      | [H: SvmSim _ _ |- _] => destruct H
+      | [H: SvmR _ _ |- _] =>
+        let cv := fresh "cv" in
+        destruct H as [cv [? ?]]
+      | [H: SpecState _ _ |- _] =>
+        let sost := fresh "sost" in
+        destruct H as [sost [? ?]]
+      end.
+
+  Ltac red_svm := red_SvmInvs; red_SvmSim.
+
   Theorem impl0_ok: SynthOk spec SvmSim SvmInvs svmP impl0.
   Proof.
     split; [|split; [|split]].
@@ -143,6 +163,309 @@ Section Impl.
       |trs_simulates_case_in msgF sim
       |].
 
+    Ltac clear_atomic_hyps :=
+      repeat
+        match goal with
+        | [H: Atomic _ _ _ _ ?mouts |- _] => clear H; clear mouts
+        | [H: InvStep _ step_det _ |- _] => clear H
+        end.
+
+    Ltac reduce_invstep_pred :=
+      repeat
+        match goal with
+        | [H: InvStep _ step_pred _ /\ _ |- _] => destruct H
+        | [H: exists (_: PState) (_: PHistory) (_: PState), _ |- _] =>
+          let pst1 := fresh "pst1" in
+          let phst := fresh "phst" in
+          let pst2 := fresh "pst2" in
+          destruct H as [pst1 [phst [pst2 ?]]]; dest; subst
+        | [H: forall _, _ = _ -> _ |- _] => specialize (H _ eq_refl)
+        end.
+    
+    Ltac trs_simulates_atomic_to_steps_pred :=
+      unfold TrsSimAtomic; intros;
+      match goal with
+      | [H1: Atomic _ _ _ ?hst _, H2: steps step_det _ _ ?hst _ |- _] =>
+        pose proof (atomic_history_pred_start H1 H2)
+      end;
+      match goal with
+      | [H: steps step_det (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
+        eapply steps_pred_ok with (psys:= addPRules _ (buildRawPSys implTopo)) in H;
+        eauto; [clear_atomic_hyps; reduce_invstep_pred|]
+      end.
+
+    Ltac inv_lift inv :=
+      match goal with
+      | [H: inv (?f ?ist) |- _] =>
+        change (inv (f ist)) with (LiftInv f inv ist) in H
+      end.
+
+    Ltac sim_liftL sim :=
+      match goal with
+      | [H: sim (?f ?ist) ?sst |- _] =>
+        change (sim (f ist) sst) with (LiftSimL f sim ist sst) in H
+      end.
+
+    Ltac reduce_addPRules :=
+      repeat
+        match goal with
+        | [ |- context[initsOf (addPRules _ _)] ] =>
+          rewrite addPRules_init
+        | [ |- context[indicesOf (addPRules _ _)] ] =>
+          rewrite addPRules_indices
+        | [ |- context[isExternal (addPRules _ _)] ] =>
+          rewrite addPRules_isExternal
+        | [ |- context[isInternal (addPRules _ _)] ] =>
+          rewrite addPRules_isInternal
+        | [ |- context[behaviorOf (addPRules _ _)] ] =>
+          rewrite addPRules_behaviorOf
+        | [H: context[initsOf (addPRules _ _)] |- _] =>
+          rewrite addPRules_init in H
+        | [H: context[indicesOf (addPRules _ _)] |- _] =>
+          rewrite addPRules_indices in H
+        | [H: context[isExternal (addPRules _ _)] |- _] =>
+          rewrite addPRules_isExternal in H
+        | [H: context[isInternal (addPRules _ _)] |- _] =>
+          rewrite addPRules_isInternal in H
+        | [H: context[behaviorOf (addPRules _ _)] |- _] =>
+          rewrite addPRules_behaviorOf in H
+        end.
+
+    Ltac reduce_addRules :=
+      repeat
+        match goal with
+        | [ |- context[initsOf (addRules _ _)] ] =>
+          rewrite addRules_init
+        | [ |- context[indicesOf (addRules _ _)] ] =>
+          rewrite addRules_indices
+        | [ |- context[isExternal (addRules _ _)] ] =>
+          rewrite addRules_isExternal
+        | [ |- context[isInternal (addRules _ _)] ] =>
+          rewrite addRules_isInternal
+        | [ |- context[behaviorOf (addRules _ _)] ] =>
+          rewrite addRules_behaviorOf
+        | [H: context[initsOf (addRules _ _)] |- _] =>
+          rewrite addRules_init in H
+        | [H: context[indicesOf (addRules _ _)] |- _] =>
+          rewrite addRules_indices in H
+        | [H: context[isExternal (addRules _ _)] |- _] =>
+          rewrite addRules_isExternal in H
+        | [H: context[isInternal (addRules _ _)] |- _] =>
+          rewrite addRules_isInternal in H
+        | [H: context[behaviorOf (addRules _ _)] |- _] =>
+          rewrite addRules_behaviorOf in H
+        end.
+
+    Ltac reduce_sim_steps_to_step_proof :=
+      repeat
+        (match goal with
+         | [H: exists _ _, _ |- exists _ _, _] =>
+           let sst2 := fresh "sst2" in
+           let shst := fresh "shst" in
+           destruct H as [sst2 [shst ?]]; dest;
+           exists sst2, shst
+         | [ |- _ /\ _] => split; eauto
+         | [H: map _ (behaviorOf (buildRawPSys ?implTopo) _) = ?lhs |-
+            map _ (behaviorOf (buildRawSys ?implTopo) _) = ?lhs] =>
+           rewrite <-buildRawPSys_pToSystem_buildRawSys, <-pToTHistory_behaviorOf;
+           eassumption
+         end; reduce_addPRules; reduce_addRules).
+
+    Ltac reduce_sim_steps_to_step_clear tinv tsim :=
+      repeat
+        match goal with
+        | [H: steps _ _ _ _ _ |- _] => clear H
+        | [H: Forall _ ?hst |- _] =>
+          (* This might be too strong; would there be a better match? *)
+          clear H; try clear hst
+        | [H: tinv _ |- _] => clear H
+        | [H: tsim _ _ |- _] => clear H
+        end.
+
+    Ltac reduce_sim_steps_to_step tinv tsim :=
+      match goal with
+      | [H: steps ?stI _ _ _ _ |- context[steps ?stS _ _ _ _] ] =>
+        eapply inv_simulation_steps
+          with (stepS:= stS) (ginv:= tinv) (sim:= tsim) in H; eauto;
+        [reduce_sim_steps_to_step_proof|reduce_sim_steps_to_step_clear tinv tsim]
+      end.
+
+    Ltac inv_sim_init stepI :=
+      unfold InvSim; intros;
+      repeat
+        match goal with
+        | [H: stepI _ _ ?ilbl _ |- _] =>
+          is_var ilbl;
+          let orule := fresh "orule" in
+          let mins := fresh "mins" in
+          let mouts := fresh "mouts" in
+          destruct ilbl as [|orule mins mouts];
+          (* Each label from an [Atomic] history cannot be a [LblIn] case. *)
+          [intuition idtac|]
+        end.
+
+    Ltac sim_pred_silent :=
+      repeat
+        match goal with
+        | [H: step_pred _ _ (PlblOuts ?orule _ _) _ |- _] =>
+          is_var orule;
+          let rule := fresh "rule" in destruct orule as [rule|]
+        | [H: step_pred _ _ (PlblOuts None _ _) _ |- _] =>
+          inv H; simpl; auto
+        end.
+
+    Record PStackElt :=
+      { pste_rr: RqRs;
+        pste_pmid: PMsgId;
+        pste_prec: PRPrecond }.
+
+    Ltac pstack_empty :=
+      set (nil (A:= PStackElt)) as stack.
+
+    Ltac pstack_enq tid rr from to chn prec pred :=
+      match goal with
+      | [st: list PStackElt |- _] =>
+        let stack := fresh "stack" in
+        set ({| pste_rr := rr;
+                pste_pmid :=
+                  {| pmid_mid :=
+                       {| mid_addr :=
+                            {| ma_from := from;
+                               ma_to := to;
+                               ma_chn := chn |};
+                          mid_tid := tid |};
+                     pmid_pred := pred
+                  |};
+                pste_prec := prec |} :: st) as stack; subst st
+      end.
+
+    Ltac pstack_first :=
+      match goal with
+      | [st:= ?hd :: _ : list PStackElt |- _] =>
+        constr:(hd)
+      end.
+
+    Ltac pstack_deq :=
+      match goal with
+      | [st:= _ :: ?tl : list PStackElt |- _] =>
+        let stack := fresh "stack" in
+        set tl as stack; subst st
+      end.
+
+    Ltac pstack_clear :=
+      match goal with
+      | [st: list PStackElt |- _] => clear st
+      end.
+
+    Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) :=
+      PRuleImm (pste_pmid pste)
+               (dualOfP (pste_pmid pste) dchn)
+               (pste_prec pste).
+
+    Ltac synth_prule :=
+      match goal with
+      | [H: step_pred (addPRules ?rules _) _ _ _ |- _] =>
+        is_evar rules; instantiate (1:= _ :: _);
+        apply step_pred_rules_split_addPRules in H;
+        destruct H
+      end.
+
+    Ltac pstack_deq_instantiate_imm_prule :=
+      match goal with
+      | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+        is_evar rule;
+        let pfst := pstack_first in
+        instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H;
+        pstack_clear
+      end.
+
+    Ltac step_pred_invert_imm :=
+      repeat
+        match goal with
+        | [H: step_pred _ _ (PlblOuts (Some _) _ _) _ |- _] => inv H
+        | [H: In _ (psys_rules _) |- _] => inv H; try discriminate
+        | [H: In _ nil |- _] => inv H
+        | [H: ?rule = _ |- _] =>
+          match type of rule with
+          | PRule => inv H
+          end
+        end.
+
+    Ltac step_pred_invert_dest_pmsg :=
+      repeat
+        match goal with
+        | [H: DualPMsg ?rq ?rs |- _] =>
+          is_var rq; is_var rs;
+          let rqfrom := fresh "rqfrom" in
+          let rqto := fresh "rqto" in
+          let rqchn := fresh "rqchn" in
+          let rqtid := fresh "rqtid" in
+          let rqpred := fresh "rqpred" in
+          let rqval := fresh "rqval" in
+          let rsfrom := fresh "rsfrom" in
+          let rsto := fresh "rsto" in
+          let rschn := fresh "rschn" in
+          let rstid := fresh "rstid" in
+          let rspred := fresh "rspred" in
+          let rsval := fresh "rsval" in
+          destruct rq as [[[[rqfrom rqto rqchn] rqtid] rqpred] rqval];
+          destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval];
+          cbn in *
+        | [H: {| pmid_mid := _; pmid_pred := _ |} = _ |- _] => inv H
+        | [H: _ = {| pmid_mid := _; pmid_pred := _ |} |- _] => inv H
+        end.
+
+    Ltac red_forall :=
+      repeat
+        match goal with
+        | [H: Forall _ nil |- _] => inv H
+        | [H: Forall _ (_ :: nil) |- _] => inv H
+        end.
+
+    Ltac red_ValidMsgsIn :=
+      repeat
+        match goal with
+        | [H: ValidMsgsIn _ _ |- _] => inv H
+        end.
+
+    Ltac step_pred_invert_DualPMsg :=
+      repeat
+        match goal with
+        | [H: DualPMsg {| pmsg_pmid := _; pmsg_val := _ |}
+                       {| pmsg_pmid := _; pmsg_val := _ |} |- _] => inv H
+        | [H: DualMid {| mid_addr := _; mid_tid := _ |}
+                      {| mid_addr := _; mid_tid := _ |} |- _] => inv H
+        end.
+
+    Ltac clear_useless :=
+      repeat
+        match goal with
+        | [H: ?t = ?t |- _ ] => clear H
+        end.
+
+    Ltac red_LiftInv :=
+      repeat 
+        match goal with
+        | [H: LiftInv _ _ _ |- _] => hnf in H
+        end.
+
+    Ltac red_LiftSimL :=
+      repeat
+        match goal with
+        | [H: LiftSimL _ _ _ _ |- _] => hnf in H
+        end.
+
+    Ltac step_pred_invert_red red_custom :=
+      repeat (step_pred_invert_dest_pmsg;
+              step_pred_invert_DualPMsg;
+              red_forall;
+              red_ValidMsgsIn;
+              red_LiftInv;
+              red_LiftSimL;
+              clear_useless;
+              red_custom;
+              dest; cbn in *; subst).
+
     Definition svmTrsIdx0: TrsId := SvmGetE.
 
     Definition svmSynTrs0:
@@ -156,170 +479,80 @@ Section Impl.
         + (** [TrsSimulates] for newly added [Rule]s *)
           trs_simulates_trivial svmMsgF SvmSim.
 
-          (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps *)
-          unfold TrsSimAtomic; intros.
-          pose proof (atomic_hst_tinfo H0 H3).
-          pose proof (atomic_history_pred_start H0 H3).
+          (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps. *)
+          (* Now convert the target [Atomic] [steps_det] into [steps_pred].
+           * We will have two subgoals, one for synthesizing predicate rules
+           * and the other for synthesizing actual executable rules, using
+           * already-synthesized predicate rules.
+           *)
+          trs_simulates_atomic_to_steps_pred.
 
-          (** Convert an [Atomic] [steps_det] into [steps_pred]. *)
-          eapply steps_pred_ok
-            with (psys:= addPRules _ (buildRawPSys impl0)) in H3; eauto.
+          * (** Synthesis of [PRules]. *)
 
-          * (** In this subgoal it suffices to synthesize [PRules]. *)
-            clear H. (* The invariant in [step_det] transition is also no longer needed. *)
-            destruct H3 as [? [pst1 [phst [pst2 [? [? [? ?]]]]]]].
-            subst.
+            (* Reduce steps-to-steps to a step-to-step proof. *)
+            inv_lift SvmInvs.
+            sim_liftL SvmSim.
+            reduce_sim_steps_to_step
+              (LiftInv (pToTState ts rq) SvmInvs)
+              (LiftSimL (pToTState ts rq) SvmSim).
 
-            (** Reduction to a (step-)simulation proof. *)
-            specialize (H5 _ eq_refl).
-            clear H0. (* Atomicity is no longer needed. *)
-            clear H4.
+            (** Prove [InvSim], a (step-)simulation from [step_pred] to [step_det]: *)
+            inv_sim_init step_pred.
 
-            eapply inv_simulation_steps
-              with (stepS:= step_det) (sim:= LiftSimL SvmSim (pToTState ts rq))
-              in H8; eauto.
-            { destruct H8 as [sst2 [shst [? [? ?]]]].
-              exists sst2, shst.
-              split; [|split]; eauto.
+            (* Prove simulation for silent steps, which is trivial. *)
+            sim_pred_silent.
 
-              rewrite addPRules_behaviorOf in H3.
-              rewrite addRules_behaviorOf.
-              rewrite <-buildRawPSys_pToSystem_buildRawSys.
-              rewrite <-pToTHistory_behaviorOf.
-              eassumption.
-            }
+            (* Prove simulation for internal steps, 
+             * and synthesize predicate rules simultaneously.
+             *)
 
-            (* For each case of [step_pred], *)
-            clear H8. (* [steps_pred] is no longer needed. *)
-            unfold InvSim; intros.
-            clear mouts.
-            destruct ilbl as [|orule mins mouts]; [intuition idtac|].
-            destruct orule as [rule|]; [|inv H6; simpl; right; auto].
-            clear H5 phst.
-
-            (* Use a stack to track which rules should be synthesized now. *)
-            Record PStackElt :=
-              { pste_rr: RqRs;
-                pste_pmid: PMsgId;
-                pste_prec: PRPrecond }.
-
-            Ltac pstack_empty :=
-              set (nil (A:= PStackElt)) as stack.
-
+            (* A job stack will be used to track 
+             * which rules should be synthesized now. *)
             pstack_empty.
 
-            (* Add initial requests *)
+            (* Add initial requests. *)
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI getPred.
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS getPred.
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM getPred.
 
-            Ltac pstack_enq tid rr from to chn prec pred :=
-              match goal with
-              | [st: list PStackElt |- _] =>
-                let stack := fresh "stack" in
-                set ({| pste_rr := rr;
-                        pste_pmid :=
-                          {| pmid_mid :=
-                               {| mid_addr :=
-                                    {| ma_from := from;
-                                       ma_to := to;
-                                       ma_chn := chn |};
-                                  mid_tid := tid |};
-                             pmid_pred := pred
-                          |};
-                        pste_prec := prec |} :: st) as stack; subst st
-              end.
-
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
-                       ImplOStatusI getPred.
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
-                       ImplOStatusS getPred.
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn
-                       ImplOStatusM getPred.
-
-            Ltac pstack_first :=
-              match goal with
-              | [st:= ?hd :: _ : list PStackElt |- _] =>
-                constr:(hd)
-              end.
-
-            Ltac pstack_deq :=
-              match goal with
-              | [st:= _ :: ?tl : list PStackElt |- _] =>
-                let stack := fresh "stack" in
-                set tl as stack; subst st
-              end.
-
-            Ltac pstack_clear :=
-              match goal with
-              | [st: list PStackElt |- _] => clear st
-              end.
-
-            Definition dualOf (mid: MsgId) (dchn: IdxT) :=
-              {| mid_addr := {| ma_from := ma_to (mid_addr mid);
-                                ma_to := ma_from (mid_addr mid);
-                                ma_chn := dchn |};
-                 mid_tid := mid_tid mid |}.
-
-            Definition dualOfP (pmid: PMsgId) (dchn: IdxT) :=
-              {| pmid_mid := dualOf (pmid_mid pmid) dchn;
-                 pmid_pred := pmid_pred pmid |}.
-
-            Definition buildPRuleImm (pste: PStackElt) (dchn: IdxT) :=
-              PRuleImm (pste_pmid pste)
-                       (dualOfP (pste_pmid pste) dchn)
-                       (pste_prec pste).
-
-            Ltac synth_prule :=
-              match goal with
-              | [H: step_pred (addPRules ?rules _) _ _ _ |- _] =>
-                is_evar rules; instantiate (1:= _ :: _);
-                apply step_pred_rules_split_addPRules in H;
-                destruct H
-              end.
-
-            (* Dequeue the first element of [pstack]; try to synthesize
-             * an immediate [PRule]. 
+            (* Dequeue the first element of [list PStackElt] and
+             * try to synthesize an immediate [PRule].
              *)
             synth_prule; [|pstack_deq].
-            {
-              match goal with
-              | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
-                is_evar rule;
-                  let pfst := pstack_first in
-                  instantiate (1:= buildPRuleImm pfst rsChn) in H
-              end.
-              pstack_clear.
-              
-              inv H5;
-                [|exfalso; clear -H10; Common.dest_in; discriminate
-                 |exfalso; clear -H10; Common.dest_in; discriminate].
-
+            { (** Try to synthesize an immediate [PRule]. *)
               (* TODO: need an Ltac checker to check this immediate rule can 
                * handle the current request or not.
                *)
-              inv H10; [|inv H5].
-              inv H5.
+              pstack_deq_instantiate_imm_prule.
 
-              destruct rq0 as [[rqmid rqpred] rqval]; cbn in *.
-              destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval]; cbn in *.
-              inv H4; inv H11; cbn in *.
-              inv H7; inv H8; cbn in *.
+              (** Inversion of a step by impl. *)
 
-              (* Reduce [ValidMsgsIn] *)
-              inv H14; inv H7; cbn in *.
-              clear H9.
+              (* Since the target rule is immediate, inversion of a step should
+               * generate only one subgoal.
+               *)
+              step_pred_invert_imm.
 
-              (* Reduce [DualPMsg] *)
-              destruct H12; cbn in *; subst.
-              hnf in H4; cbn in *; dest; subst.
+              (* After inverting a step, lots of reductions are required 
+               * to prove the simulation. 
+               *)
+              step_pred_invert_red red_svm.
 
-              (** Construction for spec *)
+              (** Construction of a step by spec *)
 
-              (* TODO: how can we know this? *)
-              destruct sst0 as [soss smsgs stid].
-              eexists {| tst_oss := soss; tst_msgs := _; tst_tid := _ |}.
-              destruct H0; cbn in *.
-              destruct s as [cv [? ?]].
-              destruct s as [sost [? ?]].
+              Ltac sim_spec_constr_init :=
+                repeat
+                  match goal with
+                  | [ |- context[step_det _ ?sst _ _] ] =>
+                    is_var sst;
+                    let soss := fresh "soss" in
+                    let smsgs := fresh "smsgs" in
+                    let stid := fresh "stid" in
+                    destruct sst as [soss smsgs stid]
+                  end.
 
+              sim_spec_constr_init.
+
+              eexists.
               eexists (RlblOuts
                          (Some (specGetReq extIdx1 extIdx1))
                          (toTMsgU {| msg_id :=
@@ -330,6 +563,7 @@ Section Impl.
                                                  ma_chn := rqChn |};
                                             mid_tid := svmTrsIdx0 |};
                                      msg_value := rqval |} :: nil) _).
+              
               split; [|split];
                 [|unfold svmMsgF, svmMsgIdF; cbn;
                   match goal with
@@ -345,14 +579,13 @@ Section Impl.
                 { eassumption. }
                 { repeat constructor.
                   eapply blocked_SimMP_FirstMP; eauto.
-                  { destruct H3; eassumption. }
                   { apply pToTMsg_FirstMP; eassumption. }
                   { reflexivity. }
                 }
                 { repeat constructor. }
                 { simpl; tauto. }
                 { repeat constructor.
-                  rewrite e0; cbn.
+                  rewrite H4; cbn.
                   vm_compute.
                   repeat f_equal.
                   admit. (* TODO: the coherent value should match between impl. and spec;
@@ -361,10 +594,6 @@ Section Impl.
                 { repeat constructor.
                   { discriminate. }
                   { intro Hx; Common.dest_in. }
-                }
-                { assert (soss = soss +[ specIdx <- sost]) by meq.
-                  rewrite <-H0.
-                  reflexivity.
                 }
               }
               { cbn; split; cbn.

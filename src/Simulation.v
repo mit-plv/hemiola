@@ -163,12 +163,16 @@ Section InvSim.
 
 End InvSim.
 
-Definition LiftSimL {StateI1 StateS} (sim: StateI1 -> StateS -> Prop)
-           {StateI2} (f: StateI2 -> StateI1): StateI2 -> StateS -> Prop :=
+Definition LiftInv {StateT1 StateT2} (f: StateT2 -> StateT1)
+           (inv: StateT1 -> Prop): StateT2 -> Prop :=
+  fun st2 => inv (f st2).
+  
+Definition LiftSimL {StateI1 StateI2} (f: StateI2 -> StateI1)
+           {StateS} (sim: StateI1 -> StateS -> Prop): StateI2 -> StateS -> Prop :=
   fun sti2 sts => sim (f sti2) sts.
 
-Definition LiftSimR {StateI StateS1} (sim: StateI -> StateS1 -> Prop)
-           {StateS2} (f: StateS2 -> StateS1): StateI -> StateS2 -> Prop :=
+Definition LiftSimR {StateS1 StateS2} (f: StateS2 -> StateS1)
+           {StateI} (sim: StateI -> StateS1 -> Prop): StateI -> StateS2 -> Prop :=
   fun sti sts2 => sim sti (f sts2).
 
 Section SimMap.

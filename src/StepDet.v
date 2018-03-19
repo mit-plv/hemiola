@@ -52,5 +52,3 @@ Inductive step_det (sys: System): TState -> TLabel -> TState -> Prop :=
 
     step_det sys pst (RlblOuts (Some rule) msgs (toTMsgs tinfo outs)) nst.
 
-Definition steps_det: Steps System TState TLabel := steps step_det.
-

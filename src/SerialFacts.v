@@ -47,7 +47,7 @@ Lemma atomic_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps_det sys st1 hst st2 ->
+      steps step_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
                          | RlblOuts _ ins _ =>
                            Forall (fun tmsg =>
@@ -106,7 +106,7 @@ Corollary atomic_hst_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps_det sys st1 hst st2 ->
+      steps step_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
                          | RlblOuts _ ins _ =>
                            Forall (fun tmsg =>
@@ -130,7 +130,7 @@ Corollary atomic_mouts_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps_det sys st1 hst st2 ->
+      steps step_det sys st1 hst st2 ->
       ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo ts (rq :: nil)) /\
                             fromInternal sys tmsg = true) mouts.
 Proof.
@@ -229,7 +229,7 @@ Qed.
 Theorem serializable_seqSteps_refines:
   forall sys,
     SerializableSys sys ->
-    steps_det # seqSteps |-- sys ⊑[id] sys.
+    steps step_det # seqSteps |-- sys ⊑[id] sys.
 Proof.
   unfold SerializableSys, Refines; intros.
   inv H0; rename ll0 into ill.

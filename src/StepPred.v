@@ -106,5 +106,3 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
                           (map (existT _ _) rss)
                           (existT _ _ rsb :: nil)) nst.
 
-Definition steps_pred: Steps PSystem PState PLabel := steps step_pred.
-

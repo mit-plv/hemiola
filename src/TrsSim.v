@@ -24,7 +24,7 @@ Section TrsSim.
       forall ihst ist2,
         trsSteps impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps_det spec sst1 shst sst2 /\
+          steps step_det spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2.
 
@@ -41,9 +41,9 @@ Section TrsSim.
       forall trss ihst ist2,
         Forall (Transactional impl) trss ->
         ihst = concat trss ->
-        steps_det impl ist1 ihst ist2 ->
+        steps step_det impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps_det spec sst1 shst sst2 /\
+          steps step_det spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
@@ -76,7 +76,7 @@ Section TrsSim.
       forall ihst ist2,
         seqSteps impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps_det spec sst1 shst sst2 /\
+          steps step_det spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
@@ -85,7 +85,7 @@ Section TrsSim.
   Qed.
 
   Theorem sequential_simulation_implies_refinement:
-    seqSteps # steps_det |-- impl ⊑[p] spec.
+    seqSteps # steps step_det |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.
@@ -135,9 +135,9 @@ Section TrsSimSep.
         forall sst1,
           ist1 ≈ sst1 ->
           forall ist2,
-            steps_det impl ist1 hst ist2 ->
+            steps step_det impl ist1 hst ist2 ->
             exists sst2 shst,
-              steps_det spec sst1 shst sst2 /\
+              steps step_det spec sst1 shst sst2 /\
               map p (behaviorOf impl hst) = behaviorOf spec shst /\
               ist2 ≈ sst2.
 
@@ -153,9 +153,9 @@ Section TrsSimSep.
       ginv ist1 ->
       forall ihst ist2,
         Transactional impl ihst ->
-        steps_det impl ist1 ihst ist2 ->
+        steps step_det impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps_det spec sst1 shst sst2 /\
+          steps step_det spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2.
   Proof.
@@ -285,7 +285,7 @@ Lemma trsPreservineSys_atomic_same_tid:
       forall mtid,
         mtid = mid_tid (msg_id rq) ->
         forall ist1 ist2,
-          steps_det sys ist1 hst ist2 ->
+          steps step_det sys ist1 hst ist2 ->
           Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
           Forall (fun tl =>
                     match tl with
@@ -427,11 +427,11 @@ Section Compositionality.
 
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
-      steps_det impl ist1 hst ist2 ->
+      steps step_det impl ist1 hst ist2 ->
       forall ts rq mouts,
         Atomic impl ts rq hst mouts ->
-        steps_det impl1 ist1 hst ist2 \/
-        steps_det impl2 ist1 hst ist2.
+        steps step_det impl1 ist1 hst ist2 \/
+        steps step_det impl2 ist1 hst ist2.
   Proof.
     intros.
     pose proof (TrsDisjSys_distr_same_tid (mid_tid (msg_id rq))).
@@ -507,9 +507,9 @@ Section Compositionality.
         ist1 ≈ sst1 ->
         ginv ist1 ->
         forall ist2,
-          steps_det impl ist1 ihst ist2 ->
+          steps step_det impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
-            steps_det spec sst1 shst sst2 /\
+            steps step_det spec sst1 shst sst2 /\
             map p (behaviorOf impl ihst) = behaviorOf spec shst /\
             ist2 ≈ sst2.
   Proof.

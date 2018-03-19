@@ -50,7 +50,7 @@ Section SynthOk.
                             forall s', syn s s' -> InvStep s' step_det ginv).
 
     Lemma synthOk_refinement:
-      forall s, SynthOk s -> steps_det # steps_det |-- s ⊑[p] spec.
+      forall s, SynthOk s -> steps step_det # steps step_det |-- s ⊑[p] spec.
     Proof.
       unfold SynthOk; intros; dest.
       eapply refines_trans.
