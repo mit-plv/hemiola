@@ -7,10 +7,12 @@ Set Implicit Arguments.
 Inductive RqRs := Rq | Rs.
 
 Definition OPred :=
-  Value (* input *) -> OState -> Value (* output *) -> Prop.
+  Value (* input *) -> OState (* prestate *) ->
+  Value (* output *) -> OState (* poststate *) -> Prop.
 
 Definition Pred :=
-  Value (* input *) -> OStates -> Value (* output *) -> Prop.
+  Value (* input *) -> OStates (* prestate *) ->
+  Value (* output *) -> OStates (* poststate *) -> Prop.
 
 Record PMsgId :=
   { pmid_mid: MsgId;
@@ -122,12 +124,13 @@ Record PSystem :=
     psys_rules: list PRule }.
 
 Definition ForwardingOk (rq: PMsg Rq) (opred: OPred) (rsbf: RsBackF) :=
-  forall oss ost rss,
+  forall poss noss post nost rss,
     Forall (fun rs: PMsg Rs =>
-              (pmsg_pred rs) (pmsg_val rq) oss (pmsg_val rs)) rss ->
-    oss@[mid_to (pmsg_mid rq)] = Some ost ->
-    opred (pmsg_val rq) ost (rsbf (map getMsg rss) ost) ->
-    (pmsg_pred rq) (pmsg_val rq) oss (rsbf (map getMsg rss) ost).
+              (pmsg_pred rs) (pmsg_val rq) poss (pmsg_val rs) noss) rss ->
+    poss@[mid_to (pmsg_mid rq)] = Some post ->
+    noss@[mid_to (pmsg_mid rq)] = Some nost ->
+    opred (pmsg_val rq) post (rsbf (map getMsg rss) nost) nost ->
+    (pmsg_pred rq) (pmsg_val rq) poss (rsbf (map getMsg rss) nost) noss.
 
 Record OTrs :=
   { otrs_rq: PMsg Rq;

@@ -46,7 +46,7 @@ End RPreconds.
 Section Predicates.
 
   Definition ImplStateMI (ioss: OStates) (v: Value) :=
-    exists midx most v,
+    exists midx most,
       ioss@[midx] = Some most /\
       most@[statusIdx] = Some (VNat stM) /\
       most@[valueIdx] = Some v /\
@@ -57,23 +57,34 @@ Section Predicates.
           stt = stI).
 
   Definition ImplStateSI (ioss: OStates) (v: Value) :=
-    forall oidx ost stt,
-      ioss@[oidx] = Some ost ->
-      ost@[statusIdx] = Some (VNat stt) ->
-      match stt with
-      | 0 (* stI *) => True
-      | 1 (* stS *) => ost@[valueIdx] = Some v
-      | 2 (* stM *) => False
-      | _ => False
-      end.
+    (exists midx most,
+        ioss@[midx] = Some most /\
+        most@[statusIdx] = Some (VNat stS)) /\
+    (forall oidx ost stt,
+        ioss@[oidx] = Some ost ->
+        ost@[statusIdx] = Some (VNat stt) ->
+        match stt with
+        | 0 (* stI *) => True
+        | 1 (* stS *) => ost@[valueIdx] = Some v
+        | 2 (* stM *) => False
+        | _ => False
+        end).
 
-  (** --(.)--> SI(v) --(v)--> *)
+  Definition ImplStateMSI (ioss: OStates) (v: Value) :=
+    ImplStateMI ioss v \/ ImplStateSI ioss v.
+
+  (* NOTE: Here indeed binary predicates are required; if the predicate only
+   * takes a poststate, then we cannot specify that the coherence value should
+   * not be changed.
+   *)
+  (** --(.)--> [MSI(v) -> MSI(v)] --(v)--> *)
   Definition getPred: Pred :=
-    fun inv oss outv => ImplStateSI oss outv.
+    fun inv poss outv noss =>
+      poss = noss /\ ImplStateMSI poss outv.
 
-  (** --(v)--> MI(v) --(.)--> *)
+  (** --(v)--> [. -> MSI(v)] --(.)--> *)
   Definition setPred: Pred :=
-    fun inv oss outv => ImplStateMI oss inv.
+    fun inv poss outv noss => ImplStateMI noss inv.
 
 End Predicates.
 
@@ -111,9 +122,6 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
-  Definition ImplState (ioss: OStates) (v: Value) :=
-    ImplStateSI ioss v \/ ImplStateMI ioss v.
-
   Definition SpecState (soss: OStates) (v: Value) :=
     exists sost,
       soss@[specIdx] = Some sost /\
@@ -121,11 +129,67 @@ Section Sim.
 
   Definition SvmR (ioss soss: OStates): Prop :=
     exists cv,
-      ImplState ioss cv /\ SpecState soss cv.
+      ImplStateMSI ioss cv /\ SpecState soss cv.
 
   Definition SvmSim (ist sst: TState) :=
     SvmR (tst_oss ist) (tst_oss sst) /\
     SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
 
 End Sim.
+
+Section Facts.
+
+  Lemma impl_state_MI_SI_contra:
+    forall ioss v1 v2,
+      ImplStateMI ioss v1 ->
+      ImplStateSI ioss v2 ->
+      False.
+  Proof.
+    unfold ImplStateMI, ImplStateSI; intros; dest.
+    specialize (H1 _ _ _ H H3); auto.
+  Qed.
+
+  Lemma impl_state_SI_value_eq:
+    forall ioss v1,
+      ImplStateSI ioss v1 ->
+      forall v2,
+        ImplStateSI ioss v2 ->
+        v1 = v2.
+  Proof.
+    unfold ImplStateSI; intros; dest.
+    specialize (H2 _ _ _ H H4).
+    specialize (H1 _ _ _ H H4).
+    simpl in *; mred_find.
+    reflexivity.
+  Qed.
+
+  Lemma impl_state_MI_value_eq:
+    forall ioss v1,
+      ImplStateMI ioss v1 ->
+      forall v2,
+        ImplStateMI ioss v2 ->
+        v1 = v2.
+  Proof.
+    unfold ImplStateMI; intros; dest.
+    destruct (x ==n x1); subst.
+    - mred_find; reflexivity.
+    - specialize (H6 _ _ _ n H0 H1); discriminate.
+  Qed.
+
+  Lemma impl_state_MSI_value_eq:
+    forall ioss v1,
+      ImplStateMSI ioss v1 ->
+      forall v2,
+        ImplStateMSI ioss v2 ->
+        v1 = v2.
+  Proof.
+    unfold ImplStateMSI; intros.
+    destruct H, H0.
+    - eauto using impl_state_MI_value_eq.
+    - exfalso; eauto using impl_state_MI_SI_contra.
+    - exfalso; eauto using impl_state_MI_SI_contra.
+    - eauto using impl_state_SI_value_eq.
+  Qed.
+
+End Facts.
 

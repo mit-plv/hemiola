@@ -30,7 +30,7 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
 
       oss@[oidx] = Some pos ->
       prec pos (getMsg rq :: nil) ->
-      (pmsg_pred rq) (pmsg_val rq) (oss +[ oidx <- nos ]) (pmsg_val rs) ->
+      (pmsg_pred rq) (pmsg_val rq) oss (pmsg_val rs) (oss +[ oidx <- nos ]) ->
 
       pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
       nst = {| pst_oss := oss +[ oidx <- nos ];
@@ -88,8 +88,9 @@ Inductive step_pred (psys: PSystem): PState -> PLabel -> PState -> Prop :=
       otrss@[oidx] = Some otrs ->
 
       Forall (fun pmsg => (pmsg_pred pmsg)
-                            (pmsg_val (otrs_rq otrs)) oss (pmsg_val pmsg)) rss ->
-      otrs_opred otrs (pmsg_val (otrs_rq otrs)) nos (pmsg_val rsb) ->
+                            (pmsg_val (otrs_rq otrs)) oss
+                            (pmsg_val pmsg) (oss +[ oidx <- nos ])) rss ->
+      otrs_opred otrs (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
       otrs_rsbf otrs = rsbf ->
       DualPMsg (otrs_rq otrs) rsb ->
       pmsg_val rsb = rsbf (map getMsg rss) pos ->

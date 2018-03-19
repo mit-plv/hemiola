@@ -79,6 +79,8 @@ Section Impl.
       | [H: SpecState _ _ |- _] =>
         let sost := fresh "sost" in
         destruct H as [sost [? ?]]
+      | [H1: ImplStateMSI ?ioss ?v1, H2: ImplStateMSI ?ioss ?v2 |- _] =>
+        assert (v1 = v2) by eauto using impl_state_MSI_value_eq; subst v1
       end.
 
   Ltac red_svm := red_SvmInvs; red_SvmSim.
@@ -455,6 +457,15 @@ Section Impl.
         | [H: LiftSimL _ _ _ _ |- _] => hnf in H
         end.
 
+    Ltac red_pred :=
+      repeat
+        match goal with
+        | [H: ?pred _ _ _ _ |- _] =>
+          match type of pred with
+          | Pred => hnf in H
+          end
+        end.
+
     Ltac step_pred_invert_red red_custom :=
       repeat (step_pred_invert_dest_pmsg;
               step_pred_invert_DualPMsg;
@@ -462,6 +473,7 @@ Section Impl.
               red_ValidMsgsIn;
               red_LiftInv;
               red_LiftSimL;
+              red_pred;
               clear_useless;
               red_custom;
               dest; cbn in *; subst).
@@ -586,10 +598,7 @@ Section Impl.
                 { simpl; tauto. }
                 { repeat constructor.
                   rewrite H4; cbn.
-                  vm_compute.
-                  repeat f_equal.
-                  admit. (* TODO: the coherent value should match between impl. and spec;
-                          * easy, but tedious. *)
+                  reflexivity.
                 }
                 { repeat constructor.
                   { discriminate. }
