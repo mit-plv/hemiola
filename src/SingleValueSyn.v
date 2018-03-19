@@ -606,11 +606,17 @@ Section Impl.
                 }
               }
               { cbn; split; cbn.
-                { (* TODO: the coherent value should match between impl. and spec;
-                   * easy, but tedious. *)
-                  admit.
+                { exists rsval; split.
+                  { rewrite <-H2; assumption. }
+                  { exists sost; split; auto.
+                    findeq.
+                  }
                 }
-                { (* TODO: [SimMP] should be preserved by [removeMP] *)
+                { (* TODO: [SimMP] should be preserved by [removeMP], 
+                   * assuming [Blocked]?
+                   *)
+                  unfold distributeMsgs.
+                  do 2 rewrite app_nil_r.
                   admit.
                 }
               }
