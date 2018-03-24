@@ -478,6 +478,64 @@ Section Impl.
               red_custom;
               dest; cbn in *; subst).
 
+    Ltac sim_spec_constr_init ruleS :=
+      repeat
+        match goal with
+        | [ |- context[step_det _ ?sst _ _] ] =>
+          is_var sst;
+          let soss := fresh "soss" in
+          let smsgs := fresh "smsgs" in
+          let stid := fresh "stid" in
+          destruct sst as [soss smsgs stid]
+        | [ |- exists (sst: TState), _] => eexists
+        | [ |- exists (slbl: TLabel), _] =>
+          eexists (RlblOuts (Some ruleS) (toTMsgU _ :: nil) _)
+        end.
+
+    Ltac sim_spec_constr_split :=
+      repeat
+        match goal with
+        | [ |- _ /\ _] => split
+        end.
+
+    Ltac sim_spec_constr_step :=
+      repeat
+        (try match goal with
+             | [ |- step_det _ _ _ _] => econstructor
+             | [ |- _ > _] => auto
+             | [ |- In _ _] => simpl; tauto
+             | [ |- ~ In _ nil] =>
+               let Hx := fresh "Hx" in
+               intro Hx; elim Hx
+             | [ |- Forall _ (_ :: _)] => constructor
+             | [ |- Forall _ nil] => constructor
+             | [ |- FirstMP _ _] =>
+               eapply blocked_SimMP_FirstMP; eauto;
+               [apply pToTMsg_FirstMP; eassumption|reflexivity]
+             | [ |- ValidMsgsIn _ _] => repeat constructor
+             | [ |- ValidMsgOuts _ _] => repeat constructor
+             | [ |- rule_postcond _ _ _ _ _] => repeat constructor
+             end;
+         try reflexivity;
+         try discriminate;
+         try eassumption;
+         mred_find).
+
+    Ltac sim_spec_constr_extLabel_eq :=
+      match goal with
+      | [ |- _ = Some (LblOuts ?outs) ] =>
+        instantiate (1:= toTMsgs _ outs)
+      end;
+      reflexivity.
+
+    Ltac sim_spec_constr srule :=
+      sim_spec_constr_init srule;
+      sim_spec_constr_split;
+      (* Prove the external label equality first, *)
+      [|sim_spec_constr_extLabel_eq|];
+      (* and then the actual step relation. *)
+      [sim_spec_constr_step|].
+    
     Definition svmTrsIdx0: TrsId := SvmGetE.
 
     Definition svmSynTrs0:
@@ -550,75 +608,41 @@ Section Impl.
               step_pred_invert_red red_svm.
 
               (** Construction of a step by spec *)
-
-              Ltac sim_spec_constr_init :=
-                repeat
-                  match goal with
-                  | [ |- context[step_det _ ?sst _ _] ] =>
-                    is_var sst;
-                    let soss := fresh "soss" in
-                    let smsgs := fresh "smsgs" in
-                    let stid := fresh "stid" in
-                    destruct sst as [soss smsgs stid]
-                  end.
-
-              sim_spec_constr_init.
-
-              eexists.
-              eexists (RlblOuts
-                         (Some (specGetReq extIdx1 extIdx1))
-                         (toTMsgU {| msg_id :=
-                                       svmMsgIdF
-                                         {| mid_addr :=
-                                              {| ma_from := extIdx1;
-                                                 ma_to := child1Idx;
-                                                 ma_chn := rqChn |};
-                                            mid_tid := svmTrsIdx0 |};
-                                     msg_value := rqval |} :: nil) _).
               
-              split; [|split];
-                [|unfold svmMsgF, svmMsgIdF; cbn;
-                  match goal with
-                  | [ |- _ = Some (LblOuts ?outs) ] =>
-                    instantiate (1:= toTMsgs _ outs)
-                  end;
-                  reflexivity
-                 |].
-
-              { econstructor; try reflexivity.
-                { auto. }
-                { simpl; tauto. }
-                { eassumption. }
-                { repeat constructor.
-                  eapply blocked_SimMP_FirstMP; eauto.
-                  { apply pToTMsg_FirstMP; eassumption. }
-                  { reflexivity. }
-                }
-                { repeat constructor. }
-                { simpl; tauto. }
-                { repeat constructor.
-                  rewrite H4; cbn.
-                  reflexivity.
-                }
-                { repeat constructor.
-                  { discriminate. }
-                  { intro Hx; Common.dest_in. }
-                }
+              sim_spec_constr (specGetReq extIdx1 extIdx1).
+              
+              cbn; split; cbn.
+              { exists rsval; split.
+                { rewrite <-H2; assumption. }
+                { exists sost; split; auto; findeq. }
               }
-              { cbn; split; cbn.
-                { exists rsval; split.
-                  { rewrite <-H2; assumption. }
-                  { exists sost; split; auto.
-                    findeq.
-                  }
-                }
-                { (* TODO: [SimMP] should be preserved by [removeMP], 
-                   * assuming [Blocked]?
-                   *)
-                  unfold distributeMsgs.
-                  do 2 rewrite app_nil_r.
-                  admit.
-                }
+              { (* TODO: [SimMP] should be preserved by [removeMP];
+                 * but just found that this preservation requires that no 
+                 * internal messages remain when the target transaction ends.
+                 * How can we ensure this property?
+                 *)
+                unfold distributeMsgs.
+                do 2 rewrite app_nil_r.
+
+                clear -H6.
+                simpl in H6.
+                remember (msgOfPMsg
+                            {| pmsg_pmid :=
+                                 {| pmid_mid :=
+                                      {| mid_addr :=
+                                           {| ma_from := extIdx1;
+                                              ma_to := child1Idx;
+                                              ma_chn := rqChn |};
+                                         mid_tid := svmTrsIdx0 |};
+                                    pmid_pred := getPred |};
+                               pmsg_val := rqval |}) as msg; clear Heqmsg.
+
+                (* Maybe need to use the information that all the messages
+                 * in implementation MP is about a single transaction?
+                 * Given the atomicity...
+                 *)
+                
+                admit.
               }
             }
 

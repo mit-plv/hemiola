@@ -2638,14 +2638,16 @@ Ltac mred := repeat mred_unit.
 
 Ltac mred_find :=
   repeat
-    (match goal with
-     | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
-     | [H: None = M.find _ _ |- _] => apply eq_sym in H
-     | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
-       rewrite H1 in H2; inv H2
-     | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
-       rewrite H1 in H2; discriminate
-     end; simpl in *).
+    match goal with
+    | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
+    | [H: None = M.find _ _ |- _] => apply eq_sym in H
+    | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
+      rewrite H1 in H2; inv H2
+    | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
+      rewrite H1 in H2; discriminate
+    | [H: M.find ?m ?k = Some _ |- context[M.find ?m ?k] ] => rewrite H
+    | [H: M.find ?m ?k = None |- context[M.find ?m ?k] ] => rewrite H
+    end.
 
 Ltac mcontra :=
   repeat
