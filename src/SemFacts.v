@@ -5,14 +5,6 @@ Require Import Omega.
 
 Set Implicit Arguments.
 
-Lemma addRules_init:
-  forall rules sys,
-    initsOf (StateT:= TState) (addRules rules sys) =
-    initsOf (StateT:= TState) sys.
-Proof.
-  reflexivity.
-Qed.
-
 Lemma addRules_indices:
   forall rules sys,
     indicesOf (addRules rules sys) = indicesOf sys.
@@ -49,7 +41,7 @@ Proof.
 Qed.
 
 Lemma buildRawSys_indicesOf:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+  forall {SysT} `{IsSystem SysT} (sys: SysT),
     indicesOf sys = indicesOf (buildRawSys sys).
 Proof.
   intros; unfold indicesOf, buildRawSys; simpl.
@@ -57,7 +49,7 @@ Proof.
 Qed.
 
 Corollary buildRawSys_isExternal:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
+  forall {SysT} `{IsSystem SysT} (sys: SysT),
     isExternal (buildRawSys sys) = isExternal sys.
 Proof.
   unfold isExternal; intros.
@@ -66,9 +58,8 @@ Proof.
 Qed.
 
 Corollary buildRawSys_isInternal:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
-    isInternal (buildRawSys sys) =
-    isInternal sys.
+  forall {SysT} `{IsSystem SysT} (sys: SysT),
+    isInternal (buildRawSys sys) = isInternal sys.
 Proof.
   unfold isInternal; intros.
   rewrite <-buildRawSys_indicesOf.
@@ -605,7 +596,7 @@ Proof.
 Qed.
 
 Lemma idx_in_sys_internal:
-  forall oidx {SysT StateT} `{IsSystem SysT StateT} (sys: SysT),
+  forall oidx {SysT} `{IsSystem SysT} (sys: SysT),
     In oidx (indicesOf sys) ->
     isInternal sys oidx = true.
 Proof.
@@ -645,8 +636,7 @@ Proof.
 Qed.
 
 Lemma extLabel_preserved:
-  forall {SysT1 SysT2 StateT1 StateT2}
-         `{IsSystem SysT1 StateT1} `{IsSystem SysT2 StateT2}
+  forall {SysT1 SysT2} `{IsSystem SysT1} `{IsSystem SysT2}
          (impl1: SysT1) (impl2: SysT2),
     indicesOf impl1 = indicesOf impl2 ->
     forall l,
@@ -787,7 +777,7 @@ Proof.
 Qed.
 
 Lemma steps_split:
-  forall {SysT StateT LabelT} `{IsSystem SysT StateT}
+  forall {SysT StateT LabelT} `{IsSystem SysT}
          (step: Step SysT StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
     forall ll1 ll2,
@@ -815,7 +805,7 @@ Proof.
 Qed.
 
 Lemma steps_append:
-  forall {SysT StateT LabelT} `{IsSystem SysT StateT}
+  forall {SysT StateT LabelT} `{IsSystem SysT}
          (step: Step SysT StateT LabelT) sys st1 ll1 st2,
     steps step sys st1 ll1 st2 ->
     forall ll2 st3,
@@ -838,8 +828,7 @@ Proof.
 Qed.
 
 Lemma behaviorOf_preserved:
-  forall {SysT1 SysT2 StateT1 StateT2}
-         `{IsSystem SysT1 StateT1} `{IsSystem SysT2 StateT2}
+  forall {SysT1 SysT2} `{IsSystem SysT1} `{IsSystem SysT2}
          (impl1: SysT1) (impl2: SysT2),
     indicesOf impl1 = indicesOf impl2 ->
     forall hst,
@@ -851,7 +840,7 @@ Proof.
 Qed.
 
 Theorem refines_refl:
-  forall {SysT StateT LabelT} `{IsSystem SysT StateT} `{HasLabel LabelT}
+  forall {SysT StateT LabelT} `{IsSystem SysT} `{HasInit StateT} `{HasLabel LabelT}
          (ss: Steps SysT StateT LabelT) sys, ss # ss |-- sys ⊑[id] sys.
 Proof.
   unfold Refines; intros.
@@ -860,15 +849,15 @@ Proof.
 Qed.
 
 Theorem refines_trans:
-  forall {SysT StateT LabelT} `{IsSystem SysT StateT} `{HasLabel LabelT}
+  forall {SysT StateT LabelT} `{IsSystem SysT} `{HasInit StateT} `{HasLabel LabelT}
          (ss1 ss2 ss3: Steps SysT StateT LabelT) p q s1 s2 s3,
     ss1 # ss2 |-- s1 ⊑[p] s2 ->
     ss2 # ss3 |-- s2 ⊑[q] s3 ->
     ss1 # ss3 |-- s1 ⊑[fun l => q (p l)] s3.
 Proof.
   unfold Refines; intros.
-  specialize (H2 _ (H1 _ H3)).
-  rewrite map_trans in H2.
+  specialize (H3 _ (H2 _ H4)).
+  rewrite map_trans in H3.
   assumption.
 Qed.
 

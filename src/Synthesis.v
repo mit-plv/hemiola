@@ -17,8 +17,8 @@ Section SynthOk.
    * proof. Invariants are proven after all [Rule]s are synthesized.
    *)
   Definition SynthOk (s: System) :=
-    R (initsOf s) (initsOf spec) /\
-    ginv (initsOf s) /\
+    R initsOf initsOf /\
+    ginv initsOf /\
     (TrsSimulates R ginv p s spec /\ InvStep s step_det ginv) /\
     SerializableSys s.
 
@@ -35,11 +35,7 @@ Section SynthOk.
      * 3) simulation on sequential semantics
      * 4) global invariants
      *)
-    Hypotheses (HsynInit:
-                  forall s s', syn s s' ->
-                               initsOf (StateT:= TState) s' =
-                               initsOf (StateT:= TState) s)
-               (HsynSerial:
+    Hypotheses (HsynSerial:
                   forall s, SerializableSys s ->
                             forall s', syn s s' -> SerializableSys s')
                (HsynSim:
@@ -64,8 +60,6 @@ Section SynthOk.
     Proof.
       unfold SynthOk; intros; dest.
       repeat split; eauto.
-      - erewrite HsynInit; eauto.
-      - erewrite HsynInit; eauto.
     Qed.
 
   End SynthesisStep.

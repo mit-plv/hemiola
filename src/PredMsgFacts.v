@@ -6,140 +6,137 @@ Require Import PredMsg StepPred.
 
 Set Implicit Arguments.
 
-Lemma buildRawPSys_indicesOf:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
-    indicesOf sys = indicesOf (buildRawPSys sys).
-Proof.
-  reflexivity.
-Qed.
+Section GivenMsg.
+  Variable (MsgT SysT: Type).
+  Context `{HasMsg MsgT} `{IsSystem SysT}.
 
-Corollary buildRawPSys_isExternal:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
-    isExternal (buildRawPSys sys) = isExternal sys.
-Proof.
-  unfold isExternal; intros.
-  rewrite <-buildRawPSys_indicesOf.
-  reflexivity.
-Qed.
+  Lemma buildRawPSys_indicesOf:
+    forall (sys: SysT), indicesOf sys = indicesOf (buildRawPSys MsgT sys).
+  Proof.
+    reflexivity.
+  Qed.
 
-Corollary buildRawPSys_isInternal:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
-    isInternal (buildRawPSys sys) = isInternal sys.
-Proof.
-  unfold isInternal; intros.
-  rewrite <-buildRawPSys_indicesOf.
-  reflexivity.
-Qed.
+  Corollary buildRawPSys_isExternal:
+    forall (sys: SysT), isExternal (buildRawPSys MsgT sys) = isExternal sys.
+  Proof.
+    unfold isExternal; intros.
+    rewrite <-buildRawPSys_indicesOf.
+    reflexivity.
+  Qed.
 
-Lemma buildRawPSys_pToSystem_buildRawSys:
-  forall {SysT} `{IsSystem SysT OStates} (sys: SysT),
-    pToSystem (buildRawPSys sys) = buildRawSys sys.
-Proof.
-  reflexivity.
-Qed.
+  Corollary buildRawPSys_isInternal:
+    forall (sys: SysT), isInternal (buildRawPSys MsgT sys) = isInternal sys.
+  Proof.
+    unfold isInternal; intros.
+    rewrite <-buildRawPSys_indicesOf.
+    reflexivity.
+  Qed.
 
-Lemma addPRules_init:
-  forall rules sys,
-    initsOf (StateT:= OStates) (addPRules rules sys) =
-    initsOf (StateT:= OStates) sys.
-Proof.
-  reflexivity.
-Qed.
+  Lemma buildRawPSys_pToSystem_buildRawSys:
+    forall (sys: SysT), pToSystem (buildRawPSys MsgT sys) = buildRawSys sys.
+  Proof.
+    reflexivity.
+  Qed.
 
-Lemma addPRules_indices:
-  forall rules sys,
-    indicesOf (addPRules rules sys) = indicesOf sys.
-Proof.
-  reflexivity.
-Qed.
+  Lemma addPRules_indices:
+    forall rules sys,
+      indicesOf (addPRules (MsgT:= MsgT) rules sys) =
+      indicesOf sys.
+  Proof.
+    reflexivity.
+  Qed.
 
-Corollary addPRules_isExternal:
-  forall rules sys,
-    isExternal (addPRules rules sys) =
-    isExternal sys.
-Proof.
-  unfold isExternal; intros.
-  rewrite addPRules_indices.
-  reflexivity.
-Qed.
+  Corollary addPRules_isExternal:
+    forall rules sys,
+      isExternal (addPRules (MsgT:= MsgT) rules sys) =
+      isExternal sys.
+  Proof.
+    unfold isExternal; intros.
+    rewrite addPRules_indices.
+    reflexivity.
+  Qed.
 
-Corollary addPRules_isInternal:
-  forall rules sys,
-    isInternal (addPRules rules sys) =
-    isInternal sys.
-Proof.
-  unfold isInternal; intros.
-  rewrite addPRules_indices.
-  reflexivity.
-Qed.
+  Corollary addPRules_isInternal:
+    forall rules sys,
+      isInternal (addPRules (MsgT:= MsgT) rules sys) =
+      isInternal sys.
+  Proof.
+    unfold isInternal; intros.
+    rewrite addPRules_indices.
+    reflexivity.
+  Qed.
 
-Corollary addPRules_behaviorOf:
-  forall psys prules phst,
-    behaviorOf (addPRules prules psys) phst = behaviorOf psys phst.
-Proof.
-  induction phst; [reflexivity|].
-  simpl; rewrite IHphst; reflexivity.
-Qed.
+  Corollary addPRules_behaviorOf:
+    forall psys prules phst,
+      behaviorOf (addPRules (MsgT:= MsgT) prules psys) phst =
+      behaviorOf psys phst.
+  Proof.
+    induction phst; [reflexivity|].
+    simpl; rewrite IHphst; reflexivity.
+  Qed.
 
-Lemma pToSystem_indices:
-  forall psys, indicesOf psys = indicesOf (pToSystem psys).
-Proof.
-  reflexivity.
-Qed.
+  Lemma pToSystem_indices:
+    forall psys, indicesOf psys = indicesOf (pToSystem (MsgT:= MsgT) psys).
+  Proof.
+    reflexivity.
+  Qed.
 
-Corollary pToSystem_isExternal:
-  forall psys idx,
-    isExternal psys idx = isExternal (pToSystem psys) idx.
-Proof.
-  unfold isExternal; intros.
-  rewrite pToSystem_indices; reflexivity.
-Qed.
+  Corollary pToSystem_isExternal:
+    forall psys idx,
+      isExternal psys idx = isExternal (pToSystem (MsgT:= MsgT) psys) idx.
+  Proof.
+    unfold isExternal; intros.
+    rewrite pToSystem_indices; reflexivity.
+  Qed.
 
-Corollary pToSystem_isInternal:
-  forall psys idx,
-    isInternal psys idx = isInternal (pToSystem psys) idx.
-Proof.
-  unfold isInternal; intros.
-  rewrite pToSystem_indices; reflexivity.
-Qed.
+  Corollary pToSystem_isInternal:
+    forall psys idx,
+      isInternal psys idx = isInternal (pToSystem (MsgT:= MsgT) psys) idx.
+  Proof.
+    unfold isInternal; intros.
+    rewrite pToSystem_indices; reflexivity.
+  Qed.
 
-Lemma pToTMsg_FirstMP:
-  forall ts rq mp msg,
+  Lemma pmsg_omsg_extOuts:
+    forall psys msgs,
+      extOuts psys (map (fun pmsg => tmsg_msg (pmsg_omsg pmsg)) msgs) =
+      extOuts (pToSystem (MsgT:= MsgT) psys)
+              (map tmsg_msg (map (@pmsg_omsg _) msgs)).
+  Proof.
+    induction msgs; simpl; intros; [reflexivity|].
+    unfold toExternal.
+    rewrite pToSystem_isExternal, IHmsgs.
+    reflexivity.
+  Qed.
+
+  Lemma pToLabel_extLabel:
+    forall psys l,
+      extLabel psys (pToLabel l) =
+      extLabel (pToSystem (MsgT:= MsgT) psys) (iToLabel (pToTLabel l)).
+  Proof.
+    unfold extLabel; simpl; intros.
+    destruct l; cbn.
+    - reflexivity.
+    - rewrite <-pmsg_omsg_extOuts; reflexivity.
+  Qed.
+
+  Lemma pToTHistory_behaviorOf:
+    forall psys phst,
+      behaviorOf psys phst =
+      behaviorOf (pToSystem (MsgT:= MsgT) psys) (pToTHistory phst).
+  Proof.
+    induction phst; simpl; intros; [reflexivity|].
+    rewrite IHphst, <-pToLabel_extLabel; reflexivity.
+  Qed.
+
+End GivenMsg.
+
+Lemma pmsg_omsg_FirstMP:
+  forall mp msg,
     FirstMP mp msg ->
-    FirstMP (map (pToTMsg ts rq) mp) (pToTMsg ts rq msg).
+    FirstMP (map (@pmsg_omsg _) mp) (pmsg_omsg msg).
 Proof.
   intros; eapply mmap_FirstMP; eauto.
-Qed.
-
-Lemma pToTMsg_extOuts:
-  forall psys ts rqin msgs,
-    extOuts psys (map (fun pmsg => msgOfPMsg (projT2 pmsg)) msgs) =
-    extOuts (pToSystem psys) (map tmsg_msg (map (pToTMsg ts rqin) msgs)).
-Proof.
-  induction msgs; simpl; intros; [reflexivity|].
-  unfold toExternal.
-  rewrite pToSystem_isExternal, IHmsgs.
-  reflexivity.
-Qed.
-
-Lemma pToLabel_extLabel:
-  forall psys ts rqin l,
-    extLabel psys (pToLabel l) =
-    extLabel (pToSystem psys) (iToLabel (pToTLabel ts rqin l)).
-Proof.
-  unfold extLabel; simpl; intros.
-  destruct l; cbn.
-  - reflexivity.
-  - rewrite <-pToTMsg_extOuts; reflexivity.
-Qed.
-
-Lemma pToTHistory_behaviorOf:
-  forall psys ts rqin phst,
-    behaviorOf psys phst =
-    behaviorOf (pToSystem psys) (pToTHistory ts rqin phst).
-Proof.
-  induction phst; simpl; intros; [reflexivity|].
-  rewrite IHphst, <-pToLabel_extLabel; reflexivity.
 Qed.
 
 Lemma atomic_history_pred_start:
@@ -148,17 +145,21 @@ Lemma atomic_history_pred_start:
     forall st1 st2,
       steps step_det sys st1 hst st2 ->
       forall phst,
-        pToTHistory ts rq phst = hst ->
+        pToTHistory phst = hst ->
         Forall
           (fun lbl =>
              match lbl with
              | PlblIn _ => False
              | PlblOuts _ pins _ =>
-               Forall
-                 (fun psig =>
-                    let msg := getMsg (projT2 psig) in
-                    if fromExternal sys msg then msg = rq else True)
-                 pins
+               Forall (fun pmsg =>
+                         let tmsg := pmsg_omsg pmsg in
+                         let msg := tmsg_msg tmsg in
+                         if fromExternal sys msg then
+                           msg = rq /\ tmsg_info tmsg = None
+                         else
+                           tmsg_info tmsg = Some (buildTInfo ts [rq])
+                      )
+                      pins
              end) phst.
 Proof.
   intros.
@@ -174,15 +175,14 @@ Proof.
   induction mins; [constructor|].
   inv H2; specialize (IHmins H3).
   constructor; auto.
-  
-  simpl in *; destruct H1.
-  clear -H0.
-  destruct a as [rr [pmid val]].
-  unfold fromInternal, pToTMsg, pmsg_mid in H0; cbn in H0.
-  unfold fromExternal, msgOfPMsg, pmsg_mid; cbn.
-  rewrite internal_not_external; auto.
-Qed.
 
+  destruct a as [[msg oti] pred]; simpl in *.
+  destruct oti; dest;
+    unfold fromInternal, fromExternal in *; simpl in *; subst.
+  - rewrite internal_not_external; auto.
+  - unfold id; rewrite H0; auto.
+Qed.
+  
 (** FIXME: This statement is wrong;
  * [psys] should have some more restrictions for the correctness of
  * _global_ preconditions wrt. the original system [sys].
@@ -194,26 +194,27 @@ Theorem steps_pred_ok:
     Atomic sys ts rqin thst mouts ->
     forall psys,
       pToSystem psys = sys ->
-      InvStep psys step_pred (LiftInv (pToTState ts rqin) ginv) /\
+      InvStep psys (step_pred (MsgT:= TMsg) (StateT:= TState))
+              (LiftInv pToTState ginv) /\
       exists pst1 phst pst2,
-        pToTState ts rqin pst1 = st1 /\
-        pToTState ts rqin pst2 = st2 /\
-        pToTHistory ts rqin phst = thst /\
-        steps step_pred psys pst1 phst pst2.
+        pToTState pst1 = st1 /\
+        pToTState pst2 = st2 /\
+        pToTHistory phst = thst /\
+        steps (step_pred (MsgT:= TMsg) (StateT:= TState)) psys pst1 phst pst2.
 Proof.
 Admitted.
 
 Lemma step_pred_rules_split:
-  forall inds inits prules1 prules2 pst1 plbl pst2,
-    step_pred {| psys_inds := inds;
-                 psys_inits := inits;
-                 psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
-    step_pred {| psys_inds := inds;
-                 psys_inits := inits;
-                 psys_rules := prules1 |} pst1 plbl pst2 \/
-    step_pred {| psys_inds := inds;
-                 psys_inits := inits;
-                 psys_rules := prules2 |} pst1 plbl pst2.
+  forall {StateT} inds inits prules1 prules2 pst1 plbl pst2,
+    step_pred (StateT:= StateT) {| psys_inds := inds;
+                                   psys_inits := inits;
+                                   psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
+    step_pred (StateT:= StateT) {| psys_inds := inds;
+                                   psys_inits := inits;
+                                   psys_rules := prules1 |} pst1 plbl pst2 \/
+    step_pred (StateT:= StateT) {| psys_inds := inds;
+                                   psys_inits := inits;
+                                   psys_rules := prules2 |} pst1 plbl pst2.
 Proof.
   intros.
   inv H.
@@ -234,10 +235,10 @@ Proof.
 Qed.
 
 Corollary step_pred_rules_split_addPRules:
-  forall psys prule prules pst1 plbl pst2,
-    step_pred (addPRules (prule :: prules) (buildRawPSys psys)) pst1 plbl pst2 ->
-    step_pred (addPRules [prule] (buildRawPSys psys)) pst1 plbl pst2 \/
-    step_pred (addPRules prules (buildRawPSys psys)) pst1 plbl pst2.
+  forall {StateT} (psys: PSystem TMsg) prule prules pst1 plbl pst2,
+    step_pred (StateT:= StateT) (addPRules (prule :: prules) (buildRawPSys _ psys)) pst1 plbl pst2 ->
+    step_pred (StateT:= StateT) (addPRules [prule] (buildRawPSys _ psys)) pst1 plbl pst2 \/
+    step_pred (StateT:= StateT) (addPRules prules (buildRawPSys _ psys)) pst1 plbl pst2.
 Proof.
   intros.
   apply step_pred_rules_split; auto.

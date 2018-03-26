@@ -35,7 +35,7 @@ Section Msg.
 
   Definition mid_from := fun mid => ma_from (mid_addr mid).
   Definition mid_to := fun mid => ma_to (mid_addr mid).
-  Definition mid_chn := fun mid => ma_chn (mid_addr mid).
+  Definition mid_chn := fun mid => ma_chn (mid_addr mid).  
 
   Definition buildMsgId tid fr to cn :=
     {| mid_addr := {| ma_from := fr; ma_to := to; ma_chn := cn |};
@@ -50,6 +50,18 @@ Section Msg.
     - decide equality.
     - apply msgAddr_dec.
   Defined.
+
+  (* No conditions about [mid_chn]; it's only about liveness. *)
+  Definition DualMid (rq rs: MsgId) :=
+    mid_tid rq = mid_tid rs /\
+    mid_from rq = mid_to rs /\
+    mid_to rq = mid_from rs.
+
+  Definition dualOf (mid: MsgId) (dchn: IdxT) :=
+    {| mid_addr := {| ma_from := ma_to (mid_addr mid);
+                      ma_to := ma_from (mid_addr mid);
+                      ma_chn := dchn |};
+       mid_tid := mid_tid mid |}.
 
   Inductive Value :=
   | VUnit
@@ -99,8 +111,14 @@ Section Msg.
 
 End Msg.
 
+Class HasInit (StateT: Type) :=
+  { initsOf: StateT }.
+
 Definition OState := M.t Value.
 Definition OStates := M.t OState.
+
+Global Instance OStates_HasInit: HasInit OStates :=
+  {| initsOf := [] |}.
 
 Section Rule.
 
@@ -159,9 +177,8 @@ End Conditions.
 
 Section System.
 
-  Class IsSystem (SysT: Type) (StateT: Type) :=
-    { indicesOf: SysT -> list IdxT;
-      initsOf: SysT -> StateT }.
+  Class IsSystem (SysT: Type) :=
+    { indicesOf: SysT -> list IdxT }.
 
   Definition isExternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
     if idx ?<n (indicesOf sys) then false else true.
@@ -187,20 +204,19 @@ Section System.
       sys_inits: OStates;
       sys_rules: list Rule }.
 
-  Global Instance System_OStates_IsSystem : IsSystem System OStates :=
-    {| indicesOf := sys_inds;
-       initsOf := sys_inits |}.
+  Global Instance System_IsSystem : IsSystem System :=
+    {| indicesOf := sys_inds |}.
 
   Definition rulesOf := sys_rules.
 
 End System.
 
 Section RuleAdder.
-  Context {SysT: Type} `{IsSystem SysT OStates}.
+  Context {SysT: Type} `{IsSystem SysT}.
 
   Definition buildRawSys (osys: SysT): System :=
     {| sys_inds := indicesOf osys;
-       sys_inits := initsOf osys;
+       sys_inits := initsOf;
        sys_rules := nil |}.
 
   Definition addRules (rules: list Rule) (sys: System) :=

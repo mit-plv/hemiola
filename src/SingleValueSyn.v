@@ -99,8 +99,8 @@ Section Impl.
     Ltac syn_step_init pimpl pimpl_ok :=
       econstructor;
       instantiate (1:= addRules _ pimpl);
-      split; [|split; [|split]]; (* [SynthOk] consist of 5 conditions. *)
-      try (rewrite addRules_init; apply pimpl_ok; fail).
+      split; [|split; [|split]]; (* [SynthOk] consist of 4 conditions. *)
+      [apply pimpl_ok|apply pimpl_ok| |].
 
     Ltac trs_sim_init pimpl_ok :=
       apply trsSimulates_trsInvHolds_rules_added; intros;
@@ -175,8 +175,8 @@ Section Impl.
     Ltac reduce_invstep_pred :=
       repeat
         match goal with
-        | [H: InvStep _ step_pred _ /\ _ |- _] => destruct H
-        | [H: exists (_: PState) (_: PHistory) (_: PState), _ |- _] =>
+        | [H: InvStep _ (step_pred (StateT:= TState)) _ /\ _ |- _] => destruct H
+        | [H: exists (_: PTState) (_: PHistory TMsg) (_: PTState), _ |- _] =>
           let pst1 := fresh "pst1" in
           let phst := fresh "phst" in
           let pst2 := fresh "pst2" in
@@ -192,7 +192,7 @@ Section Impl.
       end;
       match goal with
       | [H: steps step_det (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
-        eapply steps_pred_ok with (psys:= addPRules _ (buildRawPSys implTopo)) in H;
+        eapply steps_pred_ok with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
         eauto; [clear_atomic_hyps; reduce_invstep_pred|]
       end.
 
@@ -211,8 +211,6 @@ Section Impl.
     Ltac reduce_addPRules :=
       repeat
         match goal with
-        | [ |- context[initsOf (addPRules _ _)] ] =>
-          rewrite addPRules_init
         | [ |- context[indicesOf (addPRules _ _)] ] =>
           rewrite addPRules_indices
         | [ |- context[isExternal (addPRules _ _)] ] =>
@@ -221,8 +219,6 @@ Section Impl.
           rewrite addPRules_isInternal
         | [ |- context[behaviorOf (addPRules _ _)] ] =>
           rewrite addPRules_behaviorOf
-        | [H: context[initsOf (addPRules _ _)] |- _] =>
-          rewrite addPRules_init in H
         | [H: context[indicesOf (addPRules _ _)] |- _] =>
           rewrite addPRules_indices in H
         | [H: context[isExternal (addPRules _ _)] |- _] =>
@@ -236,8 +232,6 @@ Section Impl.
     Ltac reduce_addRules :=
       repeat
         match goal with
-        | [ |- context[initsOf (addRules _ _)] ] =>
-          rewrite addRules_init
         | [ |- context[indicesOf (addRules _ _)] ] =>
           rewrite addRules_indices
         | [ |- context[isExternal (addRules _ _)] ] =>
@@ -246,8 +240,6 @@ Section Impl.
           rewrite addRules_isInternal
         | [ |- context[behaviorOf (addRules _ _)] ] =>
           rewrite addRules_behaviorOf
-        | [H: context[initsOf (addRules _ _)] |- _] =>
-          rewrite addRules_init in H
         | [H: context[indicesOf (addRules _ _)] |- _] =>
           rewrite addRules_indices in H
         | [H: context[isExternal (addRules _ _)] |- _] =>
@@ -267,9 +259,9 @@ Section Impl.
            destruct H as [sst2 [shst ?]]; dest;
            exists sst2, shst
          | [ |- _ /\ _] => split; eauto
-         | [H: map _ (behaviorOf (buildRawPSys ?implTopo) _) = ?lhs |-
+         | [H: map _ (behaviorOf (buildRawPSys _ ?implTopo) _) = ?lhs |-
             map _ (behaviorOf (buildRawSys ?implTopo) _) = ?lhs] =>
-           rewrite <-buildRawPSys_pToSystem_buildRawSys, <-pToTHistory_behaviorOf;
+           erewrite <-buildRawPSys_pToSystem_buildRawSys, <-pToTHistory_behaviorOf;
            eassumption
          end; reduce_addPRules; reduce_addRules).
 
@@ -360,7 +352,7 @@ Section Impl.
       end.
 
     Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) :=
-      PRuleImm (pste_pmid pste)
+      PRuleImm TMsg (pste_pmid pste)
                (dualOfP (pste_pmid pste) dchn)
                (pste_prec pste).
 
@@ -389,7 +381,7 @@ Section Impl.
         | [H: In _ nil |- _] => inv H
         | [H: ?rule = _ |- _] =>
           match type of rule with
-          | PRule => inv H
+          | PRule _ => inv H
           end
         end.
 
@@ -410,11 +402,18 @@ Section Impl.
           let rstid := fresh "rstid" in
           let rspred := fresh "rspred" in
           let rsval := fresh "rsval" in
-          destruct rq as [[[[rqfrom rqto rqchn] rqtid] rqpred] rqval];
-          destruct rs as [[[[rsfrom rsto rschn] rstid] rspred] rsval];
+          destruct rq as [[[[[rqfrom rqto rqchn] rqtid] rqval] rqinfo] rqpred];
+          destruct rs as [[[[[rsfrom rsto rschn] rstid] rsval] rsinfo] rspred];
           cbn in *
+        | [H: DualPMsg {| pmsg_omsg := _; pmsg_pred := _ |}
+                       {| pmsg_omsg := _; pmsg_pred := _ |} |- _] => inv H
+        | [H: DualMid {| mid_addr := _; mid_tid := _ |}
+                      {| mid_addr := _; mid_tid := _ |} |- _] => inv H
+        | [H: dualOf _ _ = _ |- _] => inv H
         | [H: {| pmid_mid := _; pmid_pred := _ |} = _ |- _] => inv H
         | [H: _ = {| pmid_mid := _; pmid_pred := _ |} |- _] => inv H
+        | [H: {| mid_addr := _; mid_tid := _ |} = _ |- _] => inv H
+        | [H: _ = {| mid_addr := _; mid_tid := _ |} |- _] => inv H
         end.
 
     Ltac red_forall :=
@@ -428,15 +427,6 @@ Section Impl.
       repeat
         match goal with
         | [H: ValidMsgsIn _ _ |- _] => inv H
-        end.
-
-    Ltac step_pred_invert_DualPMsg :=
-      repeat
-        match goal with
-        | [H: DualPMsg {| pmsg_pmid := _; pmsg_val := _ |}
-                       {| pmsg_pmid := _; pmsg_val := _ |} |- _] => inv H
-        | [H: DualMid {| mid_addr := _; mid_tid := _ |}
-                      {| mid_addr := _; mid_tid := _ |} |- _] => inv H
         end.
 
     Ltac clear_useless :=
@@ -468,7 +458,6 @@ Section Impl.
 
     Ltac step_pred_invert_red red_custom :=
       repeat (step_pred_invert_dest_pmsg;
-              step_pred_invert_DualPMsg;
               red_forall;
               red_ValidMsgsIn;
               red_LiftInv;
@@ -511,7 +500,7 @@ Section Impl.
              | [ |- Forall _ nil] => constructor
              | [ |- FirstMP _ _] =>
                eapply blocked_SimMP_FirstMP; eauto;
-               [apply pToTMsg_FirstMP; eassumption|reflexivity]
+               [apply pmsg_omsg_FirstMP; eassumption|reflexivity]
              | [ |- ValidMsgsIn _ _] => repeat constructor
              | [ |- ValidMsgOuts _ _] => repeat constructor
              | [ |- rule_postcond _ _ _ _ _] => repeat constructor
@@ -563,11 +552,11 @@ Section Impl.
             inv_lift SvmInvs.
             sim_liftL SvmSim.
             reduce_sim_steps_to_step
-              (LiftInv (pToTState ts rq) SvmInvs)
-              (LiftSimL (pToTState ts rq) SvmSim).
+              (LiftInv pToTState SvmInvs)
+              (LiftSimL pToTState SvmSim).
 
             (** Prove [InvSim], a (step-)simulation from [step_pred] to [step_det]: *)
-            inv_sim_init step_pred.
+            inv_sim_init (step_pred (StateT:= TState)).
 
             (* Prove simulation for silent steps, which is trivial. *)
             sim_pred_silent.
@@ -608,9 +597,8 @@ Section Impl.
               step_pred_invert_red red_svm.
 
               (** Construction of a step by spec *)
-              
               sim_spec_constr (specGetReq extIdx1 extIdx1).
-              
+
               cbn; split; cbn.
               { exists rsval; split.
                 { rewrite <-H2; assumption. }
@@ -624,24 +612,10 @@ Section Impl.
                 unfold distributeMsgs.
                 do 2 rewrite app_nil_r.
 
-                clear -H6.
-                simpl in H6.
-                remember (msgOfPMsg
-                            {| pmsg_pmid :=
-                                 {| pmid_mid :=
-                                      {| mid_addr :=
-                                           {| ma_from := extIdx1;
-                                              ma_to := child1Idx;
-                                              ma_chn := rqChn |};
-                                         mid_tid := svmTrsIdx0 |};
-                                    pmid_pred := getPred |};
-                               pmsg_val := rqval |}) as msg; clear Heqmsg.
-
                 (* Maybe need to use the information that all the messages
                  * in implementation MP is about a single transaction?
                  * Given the atomicity...
                  *)
-                
                 admit.
               }
             }

@@ -72,12 +72,12 @@ Definition Equivalent (sys: System)
 
 Definition Serializable (sys: System) (ll: THistory) :=
   exists sll sst,
-    (* 1) legal and sequential *) seqSteps sys (initsOf sys) sll sst /\
+    (* 1) legal and sequential *) seqSteps sys initsOf sll sst /\
     (* 3) equivalent *) Equivalent sys ll sll.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys (sys: System) :=
   forall ll st,
-    steps step_det sys (initsOf sys) ll st ->
+    steps step_det sys initsOf ll st ->
     Serializable sys ll.
 
