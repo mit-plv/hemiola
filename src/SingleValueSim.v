@@ -45,6 +45,12 @@ End RPreconds.
              
 Section Predicates.
 
+  Definition ImplStateI (ioss: OStates) :=
+    forall oidx ost stt,
+      ioss@[oidx] = Some ost ->
+      ost@[statusIdx] = Some (VNat stt) ->
+      stt = stI.
+
   Definition ImplStateMI (ioss: OStates) (v: Value) :=
     exists midx most,
       ioss@[midx] = Some most /\
@@ -78,13 +84,24 @@ Section Predicates.
    * not be changed.
    *)
   (** --(.)--> [MSI(v) -> MSI(v)] --(v)--> *)
-  Definition GetPredOS: PredOS :=
+  Definition PredGet: PredOS :=
     fun inv poss outv noss =>
       poss = noss /\ ImplStateMSI poss outv.
 
   (** --(v)--> [. -> MSI(v)] --(.)--> *)
-  Definition SetPredOS: PredOS :=
+  Definition PredSet: PredOS :=
     fun inv poss outv noss => ImplStateMI noss inv.
+
+  (** --(.)--> [SI(v)|{tinds} -> SI(v)|{tinds}] --(v)--> *)
+  Definition PredGetSI (tinds: list IdxT): PredOS :=
+    fun inv poss outv noss =>
+      M.restrict poss tinds = M.restrict noss tinds /\
+      ImplStateSI (M.restrict poss tinds) outv.
+
+  (** --(.)--> [. -> I|{tinds}] --(v)--> *)
+  Definition PredSetI (tinds: list IdxT): PredOS :=
+    fun _ _ _ noss =>
+      ImplStateI (M.restrict noss tinds).
 
 End Predicates.
 

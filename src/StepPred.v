@@ -66,6 +66,7 @@ Section GivenMsg.
         FirstMP oims rq ->
         ValidMsgsIn oidx (rq :: nil) ->
         ValidMsgOuts oidx fwds ->
+        outf (msg_value (getMsg rq)) pos = fwds ->
 
         oss@[oidx] = Some pos ->
         prec pos (getMsg rq :: nil) ->
@@ -104,7 +105,7 @@ Section GivenMsg.
         otrs_opred otrs (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
         otrs_rsbf otrs = rsbf ->
         DualPMsg (otrs_rq otrs) rsb ->
-        pmsg_val rsb = rsbf (map getMsg rss) pos ->
+        pmsg_val rsb = rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
 
         pst = {| pst_oss := oss;
                  pst_otrss := otrss;

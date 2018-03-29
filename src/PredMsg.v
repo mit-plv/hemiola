@@ -63,8 +63,8 @@ Section GivenMsg.
   Definition PRPrecond := OState -> list Msg -> Prop.
   Definition PROuts := list PMsg -> OState -> list PMsg.
 
-  Definition RqFwdF := PMsg -> OState -> list PMsg.
-  Definition RsBackF := list Msg -> OState -> Value.
+  Definition RqFwdF := Value -> OState -> list PMsg.
+  Definition RsBackF := list Value -> OState -> Value.
 
   Inductive PRule :=
   | PRuleImm:
@@ -136,8 +136,10 @@ Section GivenMsg.
              rss ->
       poss@[mid_to (pmsg_mid rq)] = Some post ->
       noss@[mid_to (pmsg_mid rq)] = Some nost ->
-      opred (pmsg_val rq) post (rsbf (map getMsg rss) nost) nost ->
-      (pred_os (pmsg_pred rq) (pmsg_val rq) poss (rsbf (map getMsg rss) nost)) noss.
+      opred (pmsg_val rq) post
+            (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost) nost ->
+      (pred_os (pmsg_pred rq) (pmsg_val rq) poss
+               (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost)) noss.
 
   Record OTrs :=
     { otrs_rq: PMsg;

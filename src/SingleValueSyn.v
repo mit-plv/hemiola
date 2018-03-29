@@ -85,7 +85,7 @@ Section Impl.
 
   Ltac red_svm := red_SvmInvs; red_SvmSim.
 
-  Ltac constr_SvmSim :=
+  Ltac constr_sim_svm :=
     repeat
       (try match goal with
            | [ |- SvmR _ _ ] => eexists; split
@@ -95,7 +95,7 @@ Section Impl.
            end;
        try findeq; try reflexivity; try eassumption).
 
-  Ltac constr_SimMP :=
+  Ltac constr_sim_mp :=
     repeat
       match goal with
       | [ |- context[distributeMsgs nil _] ] => unfold distributeMsgs
@@ -383,6 +383,11 @@ Section Impl.
                (dualOfP (pste_pmid pste) dchn)
                (pste_prec pste).
 
+    Definition buildPRuleRqRwdFromPStack (pste: PStackElt) (fwdf: RqFwdF TMsg) :=
+      PRuleRqFwd (pste_pmid pste)
+                 (pste_prec pste)
+                 fwdf.
+
     Ltac synth_prule :=
       match goal with
       | [H: step_pred (addPRules ?rules _) _ _ _ |- _] =>
@@ -397,6 +402,15 @@ Section Impl.
         is_evar rule;
         let pfst := pstack_first in
         instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H;
+        pstack_clear
+      end.
+
+    Ltac pstack_deq_instantiate_rqfwd_prule fwdf :=
+      match goal with
+      | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+        is_evar rule;
+        let pfst := pstack_first in
+        instantiate (1:= buildPRuleImmFromPStack pfst fwdf) in H;
         pstack_clear
       end.
 
@@ -564,6 +578,20 @@ Section Impl.
       [sim_spec_constr_step|];
       (* 3) Prove the preservation of simulation. *)
       sim_spec_constr_sim ssim msim.
+
+    (* Try to synthesize an immediate [PRule]. *)
+    Ltac synth_imm_prule srule red_sim constr_sim_os constr_sim_mp :=
+      pstack_deq_instantiate_imm_prule;
+      (* Since the target rule is immediate, inversion of a step should
+       * generate only one subgoal.
+       *)
+      step_pred_invert_imm;
+      (* After inverting a step, lots of reductions are required 
+       * to prove the simulation. 
+       *)
+      step_pred_invert_red red_sim;
+      (* Construction of a step by spec *)
+      sim_spec_constr srule constr_sim_os constr_sim_mp.
     
     Definition svmTrsIdx0: TrsId := SvmGetE.
 
@@ -611,39 +639,54 @@ Section Impl.
 
             (* Add initial requests. *)
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
-                       {| pred_os := GetPredOS; pred_mp := PredMPTrue |}.
+                       {| pred_os := PredGet; pred_mp := PredMPTrue |}.
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
-                       {| pred_os := GetPredOS; pred_mp := PredMPTrue |}.
+                       {| pred_os := PredGet; pred_mp := PredMPTrue |}.
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
-                       {| pred_os := GetPredOS; pred_mp := PredMPTrue |}.
+                       {| pred_os := PredGet; pred_mp := PredMPTrue |}.
 
-            (* Dequeue the first element of [list PStackElt] and
-             * try to synthesize an immediate [PRule].
+            (** Dequeue the first element of [list PStackElt] and
+             * try to synthesize a [PRule]. Always try to synthesize
+             * an immediate rule [PRuleImm] first.
+             *)
+
+            (* Should succeed when {C1.st = M} *)
+            try (synth_prule;
+                 [synth_imm_prule (specGetReq extIdx1 extIdx1)
+                                  red_svm constr_sim_svm constr_sim_mp
+                 |pstack_deq]).
+
+            (* Should succeed when {C1.st = S} *)
+            try (synth_prule;
+                 [synth_imm_prule (specGetReq extIdx1 extIdx1)
+                                  red_svm constr_sim_svm constr_sim_mp
+                 |pstack_deq]).
+
+            (* Should fail when {C1.st = I}:
+             * TODO: need an Ltac to heuristically check that it is feasible
+             * to have the next [OState] using a target rule being synthesized 
+             * now.
+             *)
+            try (synth_prule;
+                 [fail (* TODO: [synth_imm_prule] should fail here. *)
+                 |pstack_deq]).
+
+            (** If synthesizing the immediate rule fails,
+             * synthesize a request-forwarding rule and 
+             * the dual response-back rule.
              *)
             synth_prule; [|pstack_deq].
-            { (** Try to synthesize an immediate [PRule]. *)
-              (* TODO: need an Ltac checker to check this immediate rule can 
-               * handle the current request or not.
-               *)
-              pstack_deq_instantiate_imm_prule.
+            {
 
-              (** Inversion of a step by impl. *)
+              (* pstack_deq_instantiate_imm_prule; *)
+              (*   step_pred_invert_imm; *)
+              (*   step_pred_invert_red red_sim; *)
+              (*   sim_spec_constr srule constr_sim_os constr_sim_mp. *)
 
-              (* Since the target rule is immediate, inversion of a step should
-               * generate only one subgoal.
-               *)
-              step_pred_invert_imm.
+              (* How to know proper "objects" and "predicates" to forward? *)
+              admit.
 
-              (* After inverting a step, lots of reductions are required 
-               * to prove the simulation. 
-               *)
-              step_pred_invert_red red_svm.
-
-              (** Construction of a step by spec *)
-              sim_spec_constr (specGetReq extIdx1 extIdx1)
-                              constr_SvmSim constr_SimMP.
             }
-
             { admit. }
 
           * (* Now ready to synthesize (ordinary) [Rule]s 
