@@ -310,7 +310,7 @@ Section Impl.
 
     Record PStackElt :=
       { pste_rr: RqRs;
-        pste_pmid: PMsgId;
+        pste_pmid: PMsgId TMsg;
         pste_prec: PRPrecond }.
 
     Ltac pstack_empty :=
@@ -352,7 +352,7 @@ Section Impl.
       end.
 
     Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) :=
-      PRuleImm TMsg (pste_pmid pste)
+      PRuleImm (pste_pmid pste)
                (dualOfP (pste_pmid pste) dchn)
                (pste_prec pste).
 
@@ -450,9 +450,13 @@ Section Impl.
     Ltac red_pred :=
       repeat
         match goal with
-        | [H: ?pred _ _ _ _ |- _] =>
-          match type of pred with
-          | Pred => hnf in H
+        | [H: ?predos _ _ _ _ |- _] =>
+          match type of predos with
+          | PredOS => hnf in H
+          end
+        | [H: ?predmp _ _ _ |- _] =>
+          match type of predmp with
+          | PredMP _ => hnf in H
           end
         end.
 
@@ -570,9 +574,13 @@ Section Impl.
             pstack_empty.
 
             (* Add initial requests. *)
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI getPred.
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS getPred.
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM getPred.
+
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
+                       {| pred_os := GetPredOS; pred_mp := NoMsgsTs ts |}.
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
+                       {| pred_os := GetPredOS; pred_mp := NoMsgsTs ts |}.
+            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
+                       {| pred_os := GetPredOS; pred_mp := NoMsgsTs ts |}.
 
             (* Dequeue the first element of [list PStackElt] and
              * try to synthesize an immediate [PRule].
@@ -611,6 +619,16 @@ Section Impl.
                  *)
                 unfold distributeMsgs.
                 do 2 rewrite app_nil_r.
+
+                simpl in H6.
+                remember
+                  {| msg_id :=
+                       {| mid_addr :=
+                            {| ma_from := extIdx1;
+                               ma_to := child1Idx;
+                               ma_chn := rqChn |};
+                          mid_tid := svmTrsIdx0 |};
+                     msg_value := rqval |} as msg; clear Heqmsg.
 
                 (* Maybe need to use the information that all the messages
                  * in implementation MP is about a single transaction?

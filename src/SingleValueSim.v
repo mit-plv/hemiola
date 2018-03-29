@@ -78,12 +78,12 @@ Section Predicates.
    * not be changed.
    *)
   (** --(.)--> [MSI(v) -> MSI(v)] --(v)--> *)
-  Definition getPred: Pred :=
+  Definition GetPredOS: PredOS :=
     fun inv poss outv noss =>
       poss = noss /\ ImplStateMSI poss outv.
 
   (** --(v)--> [. -> MSI(v)] --(.)--> *)
-  Definition setPred: Pred :=
+  Definition SetPredOS: PredOS :=
     fun inv poss outv noss => ImplStateMI noss inv.
 
 End Predicates.

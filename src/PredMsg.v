@@ -10,9 +10,17 @@ Definition OPred :=
   Value (* input *) -> OState (* prestate *) ->
   Value (* output *) -> OState (* poststate *) -> Prop.
 
-Definition Pred :=
+Definition PredOS :=
   Value (* input *) -> OStates (* prestate *) ->
   Value (* output *) -> OStates (* poststate *) -> Prop.
+
+Definition PredMP (MsgT: Type) :=
+  MessagePool MsgT (* prestate *) ->
+  MessagePool MsgT (* poststate *) -> Prop.
+
+Record Pred (MsgT: Type) :=
+  { pred_os: PredOS;
+    pred_mp: PredMP MsgT }.
 
 Section GivenMsg.
   Variable (MsgT: Type).
@@ -20,11 +28,11 @@ Section GivenMsg.
 
   Record PMsg :=
     { pmsg_omsg: MsgT;
-      pmsg_pred: Pred }.
+      pmsg_pred: Pred MsgT }.
 
   Record PMsgId :=
     { pmid_mid: MsgId;
-      pmid_pred: Pred }.
+      pmid_pred: Pred MsgT }.
 
   Definition pmsg_mid (pmsg: PMsg) := msg_id (getMsg (pmsg_omsg pmsg)).
   Definition pmsg_val (pmsg: PMsg) := msg_value (getMsg (pmsg_omsg pmsg)).
@@ -124,12 +132,12 @@ Section GivenMsg.
   Definition ForwardingOk (rq: PMsg) (opred: OPred) (rsbf: RsBackF) :=
     forall poss noss post nost rss,
       Forall (fun rs =>
-                (pmsg_pred rs) (pmsg_val rq) poss (pmsg_val rs) noss)
+                (pred_os (pmsg_pred rs) (pmsg_val rq) poss (pmsg_val rs) noss))
              rss ->
       poss@[mid_to (pmsg_mid rq)] = Some post ->
       noss@[mid_to (pmsg_mid rq)] = Some nost ->
       opred (pmsg_val rq) post (rsbf (map getMsg rss) nost) nost ->
-      (pmsg_pred rq) (pmsg_val rq) poss (rsbf (map getMsg rss) nost) noss.
+      (pred_os (pmsg_pred rq) (pmsg_val rq) poss (rsbf (map getMsg rss) nost)) noss.
 
   Record OTrs :=
     { otrs_rq: PMsg;
@@ -175,6 +183,8 @@ Section GivenMsg.
 
 End GivenMsg.
 
+(** Instantiated with [TMsg] *)
+
 Definition PTMsg := PMsg TMsg.
 Definition PTState := @PState TMsg _ TState.
 
@@ -210,4 +220,10 @@ Section RuleAdder.
        psys_rules := psys_rules sys ++ rules |}.
 
 End RuleAdder.
+
+Definition NoMsgsTs (ts: TrsId): PredMP TMsg :=
+  fun pmsgs nmsgs =>
+    ForallMP (fun tmsg =>
+                (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts))
+             nmsgs.
 

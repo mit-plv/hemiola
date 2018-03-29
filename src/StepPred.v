@@ -8,6 +8,9 @@ Section GivenMsg.
   Variable (MsgT StateT: Type).
   Context `{HasMsg MsgT}.
 
+  Definition toOrigMP (mp: MessagePool (PMsg MsgT)): MessagePool MsgT :=
+    map (@pmsg_omsg _) mp.
+
   Inductive step_pred (psys: PSystem MsgT):
     @PState MsgT _ StateT -> PLabel MsgT ->
     @PState MsgT _ StateT -> Prop :=
@@ -29,29 +32,27 @@ Section GivenMsg.
         step_pred psys pst (PlblIn emsg) nst
 
   | SpImm:
-      forall pst nst oss oidx pos nos otrss oims porig norig
+      forall pst nst poss noss oidx pos nos otrss poims noims porig norig
              (immr: PRule MsgT) prec (rq: PMsg MsgT) (rs: PMsg MsgT),
         In oidx (indicesOf psys) ->
         In immr (psys_rules psys) ->
-        immr = PRuleImm _ (pmsg_pmid rq) (pmsg_pmid rs) prec ->
+        immr = PRuleImm (pmsg_pmid rq) (pmsg_pmid rs) prec ->
         DualPMsg rq rs ->
-        FirstMP oims rq ->
+        FirstMP poims rq ->
         ValidMsgsIn oidx (rq :: nil) ->
 
-        oss@[oidx] = Some pos ->
+        poss@[oidx] = Some pos ->
         prec pos (getMsg rq :: nil) ->
-        (pmsg_pred rq) (pmsg_val rq) oss (pmsg_val rs) (oss +[ oidx <- nos ]) ->
+        pred_os (pmsg_pred rq) (pmsg_val rq) poss (pmsg_val rs) noss ->
+        pred_mp (pmsg_pred rq) (toOrigMP poims) (toOrigMP noims) ->
 
-        pst = {| pst_oss := oss;
-                 pst_otrss := otrss;
-                 pst_msgs := oims;
-                 pst_orig := porig |} ->
-        nst = {| pst_oss := oss +[ oidx <- nos ];
-                 pst_otrss := otrss;
-                 pst_msgs := distributeMsgs
-                               (intOuts psys (rs :: nil))
-                               (removeMP rq oims);
-                 pst_orig := norig |} ->
+        noss = poss +[ oidx <- nos ] ->
+        noims = distributeMsgs (intOuts psys (rs :: nil)) (removeMP rq poims) ->
+
+        pst = {| pst_oss := poss; pst_otrss := otrss;
+                 pst_msgs := poims; pst_orig := porig |} ->
+        nst = {| pst_oss := noss; pst_otrss := otrss;
+                 pst_msgs := noims; pst_orig := norig |} ->
 
         step_pred psys pst (PlblOuts (Some immr) (rq :: nil) (rs :: nil)) nst
                   
@@ -69,10 +70,8 @@ Section GivenMsg.
         oss@[oidx] = Some pos ->
         prec pos (getMsg rq :: nil) ->
 
-        pst = {| pst_oss := oss;
-                 pst_otrss := otrss;
-                 pst_msgs := oims;
-                 pst_orig := porig |} ->
+        pst = {| pst_oss := oss; pst_otrss := otrss;
+                 pst_msgs := oims; pst_orig := porig |} ->
         nst = {| pst_oss := oss;
                  pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
                                                   otrs_opred := opred;
@@ -89,7 +88,7 @@ Section GivenMsg.
              (rss: list (PMsg MsgT)) (rsb: PMsg MsgT),
         In oidx (indicesOf psys) ->
         In rsbackr (psys_rules psys) ->
-        rsbackr = PRuleRsBack _ (map (@pmsg_pmid _ _) rss) rsbf ->
+        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) rsbf ->
         Forall (FirstMP oims) rss ->
         ValidMsgsIn oidx rss ->
         ValidMsgOuts oidx (rsb :: nil) ->
@@ -97,9 +96,11 @@ Section GivenMsg.
         oss@[oidx] = Some pos ->
         otrss@[oidx] = Some otrs ->
 
-        Forall (fun pmsg => (pmsg_pred pmsg)
-                              (pmsg_val (otrs_rq otrs)) oss
-                              (pmsg_val pmsg) (oss +[ oidx <- nos ])) rss ->
+        Forall (fun pmsg =>
+                  pred_os (pmsg_pred pmsg) (pmsg_val (otrs_rq otrs)) oss
+                          (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
+                  pred_mp (pmsg_pred pmsg) (toOrigMP oims)
+                          (toOrigMP (enqMP rsb (removeMsgs rss oims)))) rss ->
         otrs_opred otrs (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
         otrs_rsbf otrs = rsbf ->
         DualPMsg (otrs_rq otrs) rsb ->
