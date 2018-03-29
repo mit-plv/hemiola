@@ -345,6 +345,27 @@ Section MessagePoolMap.
     reflexivity.
   Qed.
 
+  Lemma mmap_deqMP:
+    forall mp from to chn,
+      map mmap (deqMP from to chn mp) =
+      deqMP from to chn (map mmap mp).
+  Proof.
+    induction mp; simpl; intros; auto.
+    rewrite Hmmap.
+    destruct (msgAddr_dec _ _); auto.
+    simpl; rewrite IHmp; auto.
+  Qed.
+    
+  Lemma mmap_removeMP:
+    forall mp msg,
+      map mmap (removeMP msg mp) =
+      removeMP (mmap msg) (map mmap mp).
+  Proof.
+    unfold removeMP; intros.
+    rewrite Hmmap.
+    apply mmap_deqMP.
+  Qed.
+    
 End MessagePoolMap.
 
 Lemma getTMsgsTInfo_Some:

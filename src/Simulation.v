@@ -329,5 +329,15 @@ Section SimMP.
     apply rollbacked_enqMP_toTMsgU.
   Qed.
 
+  Lemma SimMP_ext_msg_immediate_out:
+    forall imsgs smsgs,
+      SimMP imsgs smsgs ->
+      forall emsg,
+        FirstMP imsgs (toTMsgU emsg) ->
+        SimMP (removeMP (toTMsgU emsg) imsgs)
+              (removeMP (toTMsgU (msgP emsg)) smsgs).
+  Proof.
+  Admitted.
+
 End SimMP.
 

@@ -221,6 +221,9 @@ Section RuleAdder.
 
 End RuleAdder.
 
+Definition PredMPTrue: PredMP TMsg :=
+  fun _ _ => True.
+
 Definition NoMsgsTs (ts: TrsId): PredMP TMsg :=
   fun pmsgs nmsgs =>
     ForallMP (fun tmsg =>

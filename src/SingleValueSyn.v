@@ -85,6 +85,33 @@ Section Impl.
 
   Ltac red_svm := red_SvmInvs; red_SvmSim.
 
+  Ltac constr_SvmSim :=
+    repeat
+      (try match goal with
+           | [ |- SvmR _ _ ] => eexists; split
+           | [H: ImplStateMSI ?ioss1 _ |- ImplStateMSI ?ioss2 _ ] =>
+             replace ioss2 with ioss1; eassumption
+           | [ |- SpecState _ _ ] => eexists; split
+           end;
+       try findeq; try reflexivity; try eassumption).
+
+  Ltac constr_SimMP :=
+    repeat
+      match goal with
+      | [ |- context[distributeMsgs nil _] ] => unfold distributeMsgs
+      | [ |- context[_ ++ nil] ] => rewrite app_nil_r
+      | [ |- context[map _ (removeMP _ _)] ] =>
+        erewrite mmap_removeMP by reflexivity
+      | [H: context[map _ (removeMP _ _)] |- _] =>
+        erewrite mmap_removeMP in H by reflexivity
+      | [H: context[distributeMsgs nil _] |- _] => unfold distributeMsgs in H
+      | [H: context[_ ++ nil] |- _] => rewrite app_nil_r in H
+      | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
+        apply SimMP_ext_msg_immediate_out; auto
+      | [H: FirstMP ?imsgs _ |- FirstMP (map ?f ?imsgs) _ ] =>
+        eapply mmap_FirstMP with (mmap:= f) in H; eauto
+      end.
+  
   Theorem impl0_ok: SynthOk spec SvmSim SvmInvs svmP impl0.
   Proof.
     split; [|split; [|split]].
@@ -454,7 +481,7 @@ Section Impl.
           match type of predos with
           | PredOS => hnf in H
           end
-        | [H: ?predmp _ _ _ |- _] =>
+        | [H: ?predmp _ _ |- _] =>
           match type of predmp with
           | PredMP _ => hnf in H
           end
@@ -521,13 +548,22 @@ Section Impl.
       end;
       reflexivity.
 
-    Ltac sim_spec_constr srule :=
+    Ltac sim_spec_constr_sim ssim msim :=
+      repeat
+        match goal with
+        | [ |- LiftSimL _ _ _ _ ] => hnf
+        | [ |- _ /\ _ ] => split; cbn
+        end; [ssim|msim].
+
+    Ltac sim_spec_constr srule ssim msim :=
       sim_spec_constr_init srule;
       sim_spec_constr_split;
-      (* Prove the external label equality first, *)
+      (* 1) Prove the external label equality first, *)
       [|sim_spec_constr_extLabel_eq|];
-      (* and then the actual step relation. *)
-      [sim_spec_constr_step|].
+      (* 2) Prove the actual step relation, and *)
+      [sim_spec_constr_step|];
+      (* 3) Prove the preservation of simulation. *)
+      sim_spec_constr_sim ssim msim.
     
     Definition svmTrsIdx0: TrsId := SvmGetE.
 
@@ -574,13 +610,12 @@ Section Impl.
             pstack_empty.
 
             (* Add initial requests. *)
-
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
-                       {| pred_os := GetPredOS; pred_mp := NoMsgsTs ts |}.
+                       {| pred_os := GetPredOS; pred_mp := PredMPTrue |}.
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
-                       {| pred_os := GetPredOS; pred_mp := NoMsgsTs ts |}.
+                       {| pred_os := GetPredOS; pred_mp := PredMPTrue |}.
             pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
-                       {| pred_os := GetPredOS; pred_mp := NoMsgsTs ts |}.
+                       {| pred_os := GetPredOS; pred_mp := PredMPTrue |}.
 
             (* Dequeue the first element of [list PStackElt] and
              * try to synthesize an immediate [PRule].
@@ -605,37 +640,8 @@ Section Impl.
               step_pred_invert_red red_svm.
 
               (** Construction of a step by spec *)
-              sim_spec_constr (specGetReq extIdx1 extIdx1).
-
-              cbn; split; cbn.
-              { exists rsval; split.
-                { rewrite <-H2; assumption. }
-                { exists sost; split; auto; findeq. }
-              }
-              { (* TODO: [SimMP] should be preserved by [removeMP];
-                 * but just found that this preservation requires that no 
-                 * internal messages remain when the target transaction ends.
-                 * How can we ensure this property?
-                 *)
-                unfold distributeMsgs.
-                do 2 rewrite app_nil_r.
-
-                simpl in H6.
-                remember
-                  {| msg_id :=
-                       {| mid_addr :=
-                            {| ma_from := extIdx1;
-                               ma_to := child1Idx;
-                               ma_chn := rqChn |};
-                          mid_tid := svmTrsIdx0 |};
-                     msg_value := rqval |} as msg; clear Heqmsg.
-
-                (* Maybe need to use the information that all the messages
-                 * in implementation MP is about a single transaction?
-                 * Given the atomicity...
-                 *)
-                admit.
-              }
+              sim_spec_constr (specGetReq extIdx1 extIdx1)
+                              constr_SvmSim constr_SimMP.
             }
 
             { admit. }
