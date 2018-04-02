@@ -339,5 +339,17 @@ Section SimMP.
   Proof.
   Admitted.
 
+  Lemma SimMP_ext_msg_rq_forwarding:
+    forall imsgs smsgs,
+      SimMP imsgs smsgs ->
+      forall emsg fwds tinfo,
+        tmsg_info emsg = None ->
+        Forall (fun tmsg => tmsg_info tmsg = Some tinfo) fwds ->
+        FirstMP imsgs emsg ->
+        TidLtMP imsgs (tinfo_tid tinfo) ->
+        SimMP (distributeMsgs fwds (removeMP emsg imsgs)) smsgs.
+  Proof.
+  Admitted.
+
 End SimMP.
 

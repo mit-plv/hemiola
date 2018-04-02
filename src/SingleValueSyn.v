@@ -103,12 +103,22 @@ Section Impl.
       | [ |- context[_ ++ nil] ] => rewrite app_nil_r
       | [ |- context[map _ (removeMP _ _)] ] =>
         erewrite mmap_removeMP by reflexivity
+      | [ |- context[map _ (distributeMsgs _ _)] ] =>
+        rewrite mmap_distributeMsgs
+
       | [H: context[map _ (removeMP _ _)] |- _] =>
         erewrite mmap_removeMP in H by reflexivity
       | [H: context[distributeMsgs nil _] |- _] => unfold distributeMsgs in H
       | [H: context[_ ++ nil] |- _] => rewrite app_nil_r in H
+      | [H: context[map _ (distributeMsgs _ _)] |- _] =>
+        rewrite mmap_distributeMsgs in H
+
       | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
         apply SimMP_ext_msg_immediate_out; auto
+      | [ |- SimMP _ (distributeMsgs _ (removeMP _ _)) _ ] =>
+        eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
+      | [ |- Forall (fun tmsg => tmsg_info tmsg = Some _) _ ] =>
+        constructor; simpl; try reflexivity
       | [H: FirstMP ?imsgs _ |- FirstMP (map ?f ?imsgs) _ ] =>
         eapply mmap_FirstMP with (mmap:= f) in H; eauto
       end.
@@ -406,6 +416,15 @@ Section Impl.
         pstack_clear
       end.
 
+    Ltac pstack_deq_instantiate_rqfwd_prule opred rqff rsbf :=
+      match goal with
+      | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+        is_evar rule;
+        let pfst := pstack_first in
+        instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H;
+        pstack_clear
+      end.
+
     Ltac step_pred_invert_init :=
       repeat
         match goal with
@@ -528,7 +547,13 @@ Section Impl.
               red_custom;
               dest; cbn in *; subst).
 
-    Ltac sim_spec_constr_init ruleS :=
+    Ltac sim_spec_constr_silent_init :=
+      repeat
+        match goal with
+        | [ |- _ \/ _ ] => right (* make a silent step for the spec *)
+        end.
+
+    Ltac sim_spec_constr_step_init ruleS :=
       repeat
         match goal with
         | [ |- context[step_det _ ?sst _ _] ] =>
@@ -586,7 +611,7 @@ Section Impl.
         end; [ssim|msim].
 
     Ltac sim_spec_constr srule ssim msim :=
-      sim_spec_constr_init srule;
+      sim_spec_constr_step_init srule;
       sim_spec_constr_split;
       (* 1) Prove the external label equality first, *)
       [|sim_spec_constr_extLabel_eq|];
@@ -694,51 +719,19 @@ Section Impl.
             synth_prule; [|pstack_deq].
             {
 
-              Definition getRqFwdF (topo: Tree unit): RqFwdF TMsg :=
-                fun rqpmid =>
-                  let from := mid_from (pmid_mid rqpmid) in
-                  let this := mid_to (pmid_mid rqpmid) in
-                  map (fun tofwds =>
-                         {| pmid_mid :=
-                              {| mid_addr :=
-                                   {| ma_from := this;
-                                      ma_to := fst tofwds;
-                                      ma_chn := rqChn |};
-                                 mid_tid := svmTrsIdx0 |};
-                            pmid_pred :=
-                              {| pred_os := PredGetSI (snd tofwds);
-                                 pred_mp := ⊤ |}
-                         |})
-                      (getFwds topo from this).
-
-              Ltac pstack_deq_instantiate_rqfwd_prule opred rqff rsbf :=
-                match goal with
-                | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
-                  is_evar rule;
-                  let pfst := pstack_first in
-                  instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H;
-                  pstack_clear
-                end.
-
               pstack_deq_instantiate_rqfwd_prule
-                OPredGetS
-                (getRqFwdF implTopo)
-                rsBackFDefault.
+                OPredGetS (getRqFwdF implTopo svmTrsIdx0) rsBackFDefault.
 
               step_pred_invert_init.
               step_pred_invert_red red_svm.
 
-              Ltac sim_spec_constr_silent_init :=
-                repeat
-                  match goal with
-                  | [ |- _ \/ _ ] => right (* make a silent step for the spec *)
-                  end.
-
               sim_spec_constr_silent_init.
               sim_spec_constr_sim constr_sim_svm constr_sim_mp.
-              
-              
-              admit.
+
+              (* TODO: must have the [TidLtMP] predicate as an invariant
+               * for [MessagePool].
+               *)
+              admit. 
             }
             { admit. }
 

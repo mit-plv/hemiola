@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepDet.
+Require Import Common FMap Syntax Topology Semantics StepDet.
 Require Import Simulation Synthesis PredMsg.
 
 Require Import SingleValue.
@@ -108,6 +108,23 @@ Section Predicates.
       nost@[statusIdx] = Some (VNat stS) /\
       nost@[valueIdx] = Some outv.
 
+  Definition getRqFwdF (topo: Tree unit) (trsid: IdxT): RqFwdF TMsg :=
+    fun rqpmid =>
+      let from := mid_from (pmid_mid rqpmid) in
+      let this := mid_to (pmid_mid rqpmid) in
+      map (fun tofwds =>
+             {| pmid_mid :=
+                  {| mid_addr :=
+                       {| ma_from := this;
+                          ma_to := fst tofwds;
+                          ma_chn := rqChn |};
+                     mid_tid := trsid |};
+                pmid_pred :=
+                  {| pred_os := PredGetSI (snd tofwds);
+                     pred_mp := ⊤ |}
+             |})
+          (getFwds topo from this).
+  
 End Predicates.
 
 Section Sim.

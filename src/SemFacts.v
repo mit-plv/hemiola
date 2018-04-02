@@ -365,6 +365,15 @@ Section MessagePoolMap.
     rewrite Hmmap.
     apply mmap_deqMP.
   Qed.
+
+  Lemma mmap_distributeMsgs:
+    forall mp msgs,
+      map mmap (distributeMsgs msgs mp) =
+      distributeMsgs (map mmap msgs) (map mmap mp).
+  Proof.
+    unfold distributeMsgs; intros.
+    apply map_app.
+  Qed.
     
 End MessagePoolMap.
 
@@ -682,12 +691,22 @@ Proof.
   - unfold toInternal, isInternal in *; rewrite H0; assumption.
 Qed.
 
-Definition ValidTidState (tst: TState) :=
+Definition TidLeMP (tmsgs: MessagePool TMsg) (tid: TrsId) :=
   ForallMP (fun tmsg =>
               match tmsg_info tmsg with
-              | Some ti => tinfo_tid ti <= tst_tid tst
+              | Some ti => tinfo_tid ti <= tid
               | None => True
-              end) (tst_msgs tst).
+              end) tmsgs.
+
+Definition TidLtMP (tmsgs: MessagePool TMsg) (tid: TrsId) :=
+  ForallMP (fun tmsg =>
+              match tmsg_info tmsg with
+              | Some ti => tinfo_tid ti < tid
+              | None => True
+              end) tmsgs.
+
+Definition ValidTidState (tst: TState) :=
+  TidLeMP (tst_msgs tst) (tst_tid tst).
 
 Lemma step_det_tid:
   forall st1,
