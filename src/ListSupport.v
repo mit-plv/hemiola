@@ -9,6 +9,13 @@ Fixpoint removeOnce {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
   | h :: t => if eq_dec a h then t else h :: removeOnce eq_dec a t
   end.
 
+Fixpoint removeL {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
+         (l1 l2: list A) :=
+  match l2 with
+  | nil => l1
+  | h :: t => removeL eq_dec (removeOnce eq_dec h l1) t
+  end.
+
 Lemma tl_app:
   forall {A} (l1 l2: list A),
     l1 <> nil -> tl (l1 ++ l2) = (tl l1) ++ l2.

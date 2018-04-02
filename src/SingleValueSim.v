@@ -103,6 +103,11 @@ Section Predicates.
     fun _ _ _ noss =>
       ImplStateI (M.restrict noss tinds).
 
+  Definition OPredGetS: OPred :=
+    fun inv post outv nost =>
+      nost@[statusIdx] = Some (VNat stS) /\
+      nost@[valueIdx] = Some outv.
+
 End Predicates.
 
 Section Sim.

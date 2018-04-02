@@ -1,6 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepDet.
 Require Import Synthesis.
+Require Import Topology.
 
 Set Implicit Arguments.
 
@@ -107,6 +108,10 @@ Section System.
                       +[child1Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
                       +[child2Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]];
          sys_rules := nil |}.
+
+    Definition implTopo: Tree unit :=
+      Node parentIdx tt
+           [Node child1Idx tt nil; Node child2Idx tt nil].
 
   End Impl0.
 

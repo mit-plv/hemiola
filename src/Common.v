@@ -1,5 +1,7 @@
 Require Import Bool Ascii String List Eqdep Omega.
 
+Definition IdxT := nat.
+
 Notation "[ ]" := nil (format "[ ]").
 Notation "[ x ]" := (cons x nil).
 Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)).

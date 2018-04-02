@@ -3,6 +3,7 @@ Require Import Common FMap Syntax Semantics StepDet SemFacts.
 Require Import Simulation Serial SerialFacts Invariant TrsSim.
 Require Import PredMsg StepPred PredMsgFacts.
 Require Import Synthesis SynthesisFacts Blocking.
+Require Import Topology.
 
 Require Import SingleValue SingleValueSim.
 
@@ -383,10 +384,10 @@ Section Impl.
                (dualOfP (pste_pmid pste) dchn)
                (pste_prec pste).
 
-    Definition buildPRuleRqRwdFromPStack (pste: PStackElt) (fwdf: RqFwdF TMsg) :=
-      PRuleRqFwd (pste_pmid pste)
-                 (pste_prec pste)
-                 fwdf.
+    Definition buildPRuleRqFwdFromPStack (pste: PStackElt)
+               (opred: OPred) (rqff: RqFwdF TMsg) (rsbf: RsBackF) :=
+      PRuleRqFwd (pste_pmid pste) (pste_prec pste)
+                 opred rqff rsbf.
 
     Ltac synth_prule :=
       match goal with
@@ -405,16 +406,7 @@ Section Impl.
         pstack_clear
       end.
 
-    Ltac pstack_deq_instantiate_rqfwd_prule fwdf :=
-      match goal with
-      | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
-        is_evar rule;
-        let pfst := pstack_first in
-        instantiate (1:= buildPRuleImmFromPStack pfst fwdf) in H;
-        pstack_clear
-      end.
-
-    Ltac step_pred_invert_imm :=
+    Ltac step_pred_invert_init :=
       repeat
         match goal with
         | [H: step_pred _ _ (PlblOuts (Some _) _ _) _ |- _] => inv H
@@ -426,35 +418,59 @@ Section Impl.
           end
         end.
 
+    Ltac dest_pmsg_rq rq :=
+      let rqfrom := fresh "rqfrom" in
+      let rqto := fresh "rqto" in
+      let rqchn := fresh "rqchn" in
+      let rqtid := fresh "rqtid" in
+      let rqpred := fresh "rqpred" in
+      let rqval := fresh "rqval" in
+      destruct rq as [[[[[rqfrom rqto rqchn] rqtid] rqval] rqinfo] rqpred].
+      
+    Ltac dest_pmsg_rs rs :=
+      let rsfrom := fresh "rsfrom" in
+      let rsto := fresh "rsto" in
+      let rschn := fresh "rschn" in
+      let rstid := fresh "rstid" in
+      let rspred := fresh "rspred" in
+      let rsval := fresh "rsval" in
+      destruct rs as [[[[[rsfrom rsto rschn] rstid] rsval] rsinfo] rspred].
+
     Ltac step_pred_invert_dest_pmsg :=
       repeat
         match goal with
+        (* For immediate [PMsg]s *)
         | [H: DualPMsg ?rq ?rs |- _] =>
-          is_var rq; is_var rs;
-          let rqfrom := fresh "rqfrom" in
-          let rqto := fresh "rqto" in
-          let rqchn := fresh "rqchn" in
-          let rqtid := fresh "rqtid" in
-          let rqpred := fresh "rqpred" in
-          let rqval := fresh "rqval" in
-          let rsfrom := fresh "rsfrom" in
-          let rsto := fresh "rsto" in
-          let rschn := fresh "rschn" in
-          let rstid := fresh "rstid" in
-          let rspred := fresh "rspred" in
-          let rsval := fresh "rsval" in
-          destruct rq as [[[[[rqfrom rqto rqchn] rqtid] rqval] rqinfo] rqpred];
-          destruct rs as [[[[[rsfrom rsto rschn] rstid] rsval] rsinfo] rspred];
+          is_var rq; dest_pmsg_rq rq;
+          is_var rs; dest_pmsg_rs rs;
           cbn in *
         | [H: DualPMsg {| pmsg_omsg := _; pmsg_pred := _ |}
                        {| pmsg_omsg := _; pmsg_pred := _ |} |- _] => inv H
         | [H: DualMid {| mid_addr := _; mid_tid := _ |}
                       {| mid_addr := _; mid_tid := _ |} |- _] => inv H
         | [H: dualOf _ _ = _ |- _] => inv H
-        | [H: {| pmid_mid := _; pmid_pred := _ |} = _ |- _] => inv H
-        | [H: _ = {| pmid_mid := _; pmid_pred := _ |} |- _] => inv H
-        | [H: {| mid_addr := _; mid_tid := _ |} = _ |- _] => inv H
-        | [H: _ = {| mid_addr := _; mid_tid := _ |} |- _] => inv H
+
+        (* For request-forwarding [PMsg]s *)
+        | [H: ?fwdf (pmsg_pmid ?rq) = map (@pmsg_pmid _ _) ?rqfwds |- _] =>
+          dest_pmsg_rq rq
+        | [H: ?lfwd :: ?lfwds = map (@pmsg_pmid _ _) ?rfwds |- _] =>
+          let rqfwd := fresh "rqfwd" in
+          let rqfwds := fresh "rqfwds" in
+          destruct rfwds as [|rqfwd rqfwds]; [discriminate|];
+          dest_pmsg_rq rqfwd;
+          inv H
+        | [H: nil = map (@pmsg_pmid _ _) ?rfwds |- _] =>
+          destruct rfwds; [clear H|discriminate]
+
+        (* General *)
+        | [H: {| pmid_mid := _; pmid_pred := _ |} = ?rhs |- _] => is_var rhs; inv H
+        | [H: ?lhs = {| pmid_mid := _; pmid_pred := _ |} |- _] => is_var lhs; inv H
+        | [H: {| pmid_mid := _; pmid_pred := _ |} =
+              {| pmid_mid := _; pmid_pred := _ |} |- _] => inv H
+        | [H: {| mid_addr := _; mid_tid := _ |} = ?rhs |- _] => is_var rhs; inv H
+        | [H: ?lhs = {| mid_addr := _; mid_tid := _ |} |- _] => is_var lhs; inv H
+        | [H: {| mid_addr := _; mid_tid := _ |} =
+              {| mid_addr := _; mid_tid := _ |} |- _] => inv H
         end.
 
     Ltac red_forall :=
@@ -585,7 +601,7 @@ Section Impl.
       (* Since the target rule is immediate, inversion of a step should
        * generate only one subgoal.
        *)
-      step_pred_invert_imm;
+      step_pred_invert_init;
       (* After inverting a step, lots of reductions are required 
        * to prove the simulation. 
        *)
@@ -678,14 +694,50 @@ Section Impl.
             synth_prule; [|pstack_deq].
             {
 
-              (* pstack_deq_instantiate_imm_prule; *)
-              (*   step_pred_invert_imm; *)
-              (*   step_pred_invert_red red_sim; *)
-              (*   sim_spec_constr srule constr_sim_os constr_sim_mp. *)
+              Definition getRqFwdF (topo: Tree unit): RqFwdF TMsg :=
+                fun rqpmid =>
+                  let from := mid_from (pmid_mid rqpmid) in
+                  let this := mid_to (pmid_mid rqpmid) in
+                  map (fun tofwds =>
+                         {| pmid_mid :=
+                              {| mid_addr :=
+                                   {| ma_from := this;
+                                      ma_to := fst tofwds;
+                                      ma_chn := rqChn |};
+                                 mid_tid := svmTrsIdx0 |};
+                            pmid_pred :=
+                              {| pred_os := PredGetSI (snd tofwds);
+                                 pred_mp := ⊤ |}
+                         |})
+                      (getFwds topo from this).
 
-              (* How to know proper "objects" and "predicates" to forward? *)
+              Ltac pstack_deq_instantiate_rqfwd_prule opred rqff rsbf :=
+                match goal with
+                | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+                  is_evar rule;
+                  let pfst := pstack_first in
+                  instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H;
+                  pstack_clear
+                end.
+
+              pstack_deq_instantiate_rqfwd_prule
+                OPredGetS
+                (getRqFwdF implTopo)
+                rsBackFDefault.
+
+              step_pred_invert_init.
+              step_pred_invert_red red_svm.
+
+              Ltac sim_spec_constr_silent_init :=
+                repeat
+                  match goal with
+                  | [ |- _ \/ _ ] => right (* make a silent step for the spec *)
+                  end.
+
+              sim_spec_constr_silent_init.
+              sim_spec_constr_sim constr_sim_svm constr_sim_mp.
+              
               admit.
-
             }
             { admit. }
 

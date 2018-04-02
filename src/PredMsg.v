@@ -63,29 +63,30 @@ Section GivenMsg.
   Definition PRPrecond := OState -> list Msg -> Prop.
   Definition PROuts := list PMsg -> OState -> list PMsg.
 
-  Definition RqFwdF := Value -> OState -> list PMsg.
+  Definition RqFwdF := PMsgId -> list PMsgId.
   Definition RsBackF := list Value -> OState -> Value.
 
   Inductive PRule :=
   | PRuleImm:
       forall (rq rs: PMsgId) (prec: PRPrecond), PRule
   | PRuleRqFwd:
-      forall (rq: PMsgId) (prec: PRPrecond) (fwds: RqFwdF), PRule
+      forall (rq: PMsgId) (prec: PRPrecond)
+             (opred: OPred) (rqff: RqFwdF) (rsbf: RsBackF), PRule
   | PRuleRsBack:
-      forall (rss: list PMsgId) (rsbf: RsBackF), PRule.
+      forall (rss: list PMsgId), PRule.
 
   Definition midsOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm rq _ _ => pmid_mid rq :: nil
-    | PRuleRqFwd rq _ _ => pmid_mid rq :: nil
-    | PRuleRsBack rss _ => map pmid_mid rss
+    | PRuleRqFwd rq _ _ _ _ => pmid_mid rq :: nil
+    | PRuleRsBack rss => map pmid_mid rss
     end.
 
   Definition precOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm _ _ prec => prec
-    | PRuleRqFwd _ prec _ => prec
-    | PRuleRsBack _ _ => ⊤
+    | PRuleRqFwd _ prec _ _ _ => prec
+    | PRuleRsBack _ => ⊤
     end.
 
   Section PLabel.
@@ -144,8 +145,7 @@ Section GivenMsg.
   Record OTrs :=
     { otrs_rq: PMsg;
       otrs_opred: OPred;
-      otrs_rsbf: RsBackF;
-      otrs_pred_ok: ForwardingOk otrs_rq otrs_opred otrs_rsbf
+      otrs_rsbf: RsBackF
     }.
 
   Section GivenState.
@@ -188,7 +188,7 @@ End GivenMsg.
 (** Instantiated with [TMsg] *)
 
 Definition PTMsg := PMsg TMsg.
-Definition PTState := @PState TMsg _ TState.
+Definition PTState := @PState TMsg TState.
 
 Definition pToTState (pst: PTState): TState :=
   {| tst_oss := pst_oss pst;
@@ -222,6 +222,16 @@ Section RuleAdder.
        psys_rules := psys_rules sys ++ rules |}.
 
 End RuleAdder.
+
+Fixpoint firstNonUnit (vs: list Value) :=
+  match vs with
+  | nil => VUnit
+  | VUnit :: vs => firstNonUnit vs
+  | v :: vs => v
+  end.
+
+Definition rsBackFDefault: RsBackF :=
+  fun vs ost => firstNonUnit vs.
 
 Definition PredMPTrue: PredMP TMsg :=
   fun _ _ => True.

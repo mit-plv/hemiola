@@ -12,8 +12,8 @@ Section GivenMsg.
     map (@pmsg_omsg _) mp.
 
   Inductive step_pred (psys: PSystem MsgT):
-    @PState MsgT _ StateT -> PLabel MsgT ->
-    @PState MsgT _ StateT -> Prop :=
+    @PState MsgT StateT -> PLabel MsgT ->
+    @PState MsgT StateT -> Prop :=
 
   | SpSlt: forall st, step_pred psys st (emptyPLabel MsgT) st
 
@@ -58,15 +58,18 @@ Section GivenMsg.
                   
   | SpRqFwd:
       forall pst nst oss otrss oidx pos opred rsbf oims porig norig
-             (rqfwdr: PRule MsgT) prec outf
-             (rq: PMsg MsgT) (fwds: list (PMsg MsgT)) pred_ok,
+             (rqfwdr: PRule MsgT) prec rqff
+             (** TODO: need to know that [pmsg_omsg]s are 
+              * related in terms of the original state transition rules.
+              *)
+             (rq: PMsg MsgT) (fwds: list (PMsg MsgT)),
         In oidx (indicesOf psys) ->
         In rqfwdr (psys_rules psys) ->
-        rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec outf ->
+        rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec opred rqff rsbf ->
         FirstMP oims rq ->
         ValidMsgsIn oidx (rq :: nil) ->
         ValidMsgOuts oidx fwds ->
-        outf (msg_value (getMsg rq)) pos = fwds ->
+        rqff (pmsg_pmid rq) = map (@pmsg_pmid _ _) fwds ->
 
         oss@[oidx] = Some pos ->
         prec pos (getMsg rq :: nil) ->
@@ -76,8 +79,7 @@ Section GivenMsg.
         nst = {| pst_oss := oss;
                  pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
                                                   otrs_opred := opred;
-                                                  otrs_rsbf := rsbf;
-                                                  otrs_pred_ok := pred_ok |} ];
+                                                  otrs_rsbf := rsbf |} ];
                  pst_msgs := distributeMsgs fwds (removeMP rq oims);
                  pst_orig := norig |} ->
 
@@ -85,11 +87,10 @@ Section GivenMsg.
 
   | SpRsBack:
       forall pst nst oss otrss oidx pos nos otrs oims porig norig
-             (rsbackr: PRule MsgT) rsbf
-             (rss: list (PMsg MsgT)) (rsb: PMsg MsgT),
+             (rsbackr: PRule MsgT) (rss: list (PMsg MsgT)) (rsb: PMsg MsgT),
         In oidx (indicesOf psys) ->
         In rsbackr (psys_rules psys) ->
-        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) rsbf ->
+        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) ->
         Forall (FirstMP oims) rss ->
         ValidMsgsIn oidx rss ->
         ValidMsgOuts oidx (rsb :: nil) ->
@@ -103,9 +104,8 @@ Section GivenMsg.
                   pred_mp (pmsg_pred pmsg) (toOrigMP oims)
                           (toOrigMP (enqMP rsb (removeMsgs rss oims)))) rss ->
         otrs_opred otrs (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
-        otrs_rsbf otrs = rsbf ->
         DualPMsg (otrs_rq otrs) rsb ->
-        pmsg_val rsb = rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
+        pmsg_val rsb = otrs_rsbf otrs (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
 
         pst = {| pst_oss := oss;
                  pst_otrss := otrss;

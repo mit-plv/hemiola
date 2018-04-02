@@ -9,8 +9,6 @@ Open Scope fmap.
 
 Section Msg.
 
-  Definition IdxT := nat.
-
   (* Semantically, there is an 1-1 correspondence between [MsgAddr] and a
    * channel (≈ queue, fifo) in a target system.
    *)
