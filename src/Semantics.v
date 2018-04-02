@@ -180,13 +180,13 @@ Notation "StI # StS |-- I ⊑ S" := (Refines StI StS id I S) (at level 30).
 Section BState.
 
   Record BState MsgT :=
-    { mst_oss: OStates;
-      mst_msgs: MessagePool MsgT
+    { bst_oss: OStates;
+      bst_msgs: MessagePool MsgT
     }.
 
   Definition getBStateInit {MsgT}: BState MsgT :=
-    {| mst_oss := initsOf;
-       mst_msgs := nil |}.
+    {| bst_oss := initsOf;
+       bst_msgs := nil |}.
 
   Global Instance BState_HasInit {MsgT}: HasInit (BState MsgT) :=
     {| initsOf := getBStateInit |}.

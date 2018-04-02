@@ -216,7 +216,7 @@ Section Impl.
       unfold TrsSimAtomic; intros;
       match goal with
       | [H1: Atomic _ _ _ ?hst _, H2: steps step_det _ _ ?hst _ |- _] =>
-        pose proof (atomic_history_pred_start H1 H2)
+        pose proof (atomic_history_pred_tinfo H1 H2)
       end;
       match goal with
       | [H: steps step_det (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
@@ -736,6 +736,7 @@ Section Impl.
 
               sim_spec_constr_silent_init.
               sim_spec_constr_sim constr_sim_svm constr_sim_mp.
+              
               
               admit.
             }

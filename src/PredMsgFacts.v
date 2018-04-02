@@ -139,7 +139,7 @@ Proof.
   intros; eapply mmap_FirstMP; eauto.
 Qed.
 
-Lemma atomic_history_pred_start:
+Lemma atomic_history_pred_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
@@ -150,7 +150,7 @@ Lemma atomic_history_pred_start:
           (fun lbl =>
              match lbl with
              | PlblIn _ => False
-             | PlblOuts _ pins _ =>
+             | PlblOuts _ pins pouts =>
                Forall (fun pmsg =>
                          let tmsg := pmsg_omsg pmsg in
                          let msg := tmsg_msg tmsg in
@@ -158,8 +158,9 @@ Lemma atomic_history_pred_start:
                            msg = rq /\ tmsg_info tmsg = None
                          else
                            tmsg_info tmsg = Some (buildTInfo ts [rq])
-                      )
-                      pins
+                      ) pins /\
+               Forall (fun pmsg =>
+                         tmsg_info (pmsg_omsg pmsg) = Some (buildTInfo ts [rq])) pouts
              end) phst.
 Proof.
   intros.
@@ -170,17 +171,24 @@ Proof.
   inv H; specialize (IHphst H3).
   constructor; auto.
   destruct a; auto.
+  
+  simpl in H2; clear -H2; destruct H2.
+  split.
 
-  simpl in H2; clear -H2.
-  induction mins; [constructor|].
-  inv H2; specialize (IHmins H3).
-  constructor; auto.
+  - clear -H.
+    induction mins; [constructor|].
+    inv H; specialize (IHmins H3).
+    constructor; auto.
 
-  destruct a as [[msg oti] pred]; simpl in *.
-  destruct oti; dest;
-    unfold fromInternal, fromExternal in *; simpl in *; subst.
-  - rewrite internal_not_external; auto.
-  - unfold id; rewrite H0; auto.
+    destruct a as [[msg oti] pred]; simpl in *.
+    destruct oti; dest;
+      unfold fromInternal, fromExternal in *; simpl in *; subst.
+    + rewrite internal_not_external; auto.
+    + unfold id; rewrite H0; auto.
+
+  - clear -H0.
+    induction mouts; [constructor|].
+    inv H0; constructor; auto.
 Qed.
   
 (** FIXME: This statement is wrong;

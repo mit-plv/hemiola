@@ -49,26 +49,29 @@ Lemma atomic_tinfo:
     forall st1 st2,
       steps step_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | RlblOuts _ ins _ =>
+                         | RlblOuts _ ins outs =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti =>
-                                       hti = buildTInfo ts (rq :: nil) /\
+                                       hti = buildTInfo ts [rq] /\
                                        fromInternal sys tmsg = true
                                      | None =>
                                        tmsg_msg tmsg = rq /\
                                        fromExternal sys tmsg = true
-                                     end) ins
+                                     end) ins /\
+                           Forall (fun tmsg =>
+                                     tmsg_info tmsg = Some (buildTInfo ts [rq])) outs
                          | _ => False
                          end) hst /\
       ForallMP (fun tmsg =>
-                  tmsg_info tmsg = Some (buildTInfo ts (rq :: nil)) /\
+                  tmsg_info tmsg = Some (buildTInfo ts [rq]) /\
                   fromInternal sys tmsg = true) mouts.
 Proof.
   induction 1; simpl; intros.
 
   - split.
     + constructor; auto.
+      split; auto.
       constructor; cbn; auto.
     + inv H1; inv H5; inv H7.
       apply idx_in_sys_internal in H4.
@@ -83,10 +86,25 @@ Proof.
     specialize (IHAtomic _ _ H6); destruct IHAtomic.
     split.
     + constructor; auto.
-      eapply ForallMP_SubList in H1; eauto.
-      eapply Forall_impl; eauto.
-      simpl; intros.
-      destruct H4; rewrite H4, H5; auto.
+      assert (Forall (fun tmsg =>
+                        tmsg_info tmsg = Some (buildTInfo ts [rq]) /\
+                        fromInternal sys tmsg = true) msgs).
+      { eapply ForallMP_SubList; eauto. }
+      
+      split.
+      * clear -H4; eapply Forall_impl; eauto.
+        simpl; intros.
+        destruct H; rewrite H, H0; auto.
+      * inv H8.
+        assert (Forall (fun tmsg : TMsg =>
+                          tmsg_info tmsg = Some (buildTInfo ts [rq])) msgs).
+        { clear -H4; eapply Forall_impl; eauto.
+          simpl; intros.
+          destruct H; auto.
+        }
+        erewrite getTMsgsTInfo_Forall_Some; eauto.
+        clear; induction outs; constructor; auto.
+        
     + apply ForallMP_distributeMsgs.
       * apply ForallMP_removeMsgs; auto.
       * eapply ForallMP_SubList in H1; eauto.
@@ -108,7 +126,7 @@ Corollary atomic_hst_tinfo:
     forall st1 st2,
       steps step_det sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | RlblOuts _ ins _ =>
+                         | RlblOuts _ ins outs =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti =>
@@ -117,7 +135,9 @@ Corollary atomic_hst_tinfo:
                                      | None =>
                                        tmsg_msg tmsg = rq /\
                                        fromExternal sys tmsg = true
-                                     end) ins
+                                     end) ins /\
+                           Forall (fun tmsg =>
+                                     tmsg_info tmsg = Some (buildTInfo ts [rq])) outs
                          | _ => False
                          end) hst.
 Proof.
