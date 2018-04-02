@@ -62,7 +62,7 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Definition SvmInvs := SvmInv /\i BlockedInv.
+  Definition SvmInvs := SvmInv /\i BlockedInv /\i ValidTidState.
 
   Ltac red_SvmInvs :=
     repeat 
@@ -399,7 +399,7 @@ Section Impl.
       PRuleRqFwd (pste_pmid pste) (pste_prec pste)
                  opred rqff rsbf.
 
-    Ltac synth_prule :=
+    Ltac synth_prule_single :=
       match goal with
       | [H: step_pred (addPRules ?rules _) _ _ _ |- _] =>
         is_evar rules; instantiate (1:= _ :: _);
@@ -692,13 +692,13 @@ Section Impl.
              *)
 
             (* Should succeed when {C1.st = M} *)
-            try (synth_prule;
+            try (synth_prule_single;
                  [synth_imm_prule (specGetReq extIdx1 extIdx1)
                                   red_svm constr_sim_svm constr_sim_mp
                  |pstack_deq]).
 
             (* Should succeed when {C1.st = S} *)
-            try (synth_prule;
+            try (synth_prule_single;
                  [synth_imm_prule (specGetReq extIdx1 extIdx1)
                                   red_svm constr_sim_svm constr_sim_mp
                  |pstack_deq]).
@@ -708,7 +708,7 @@ Section Impl.
              * to have the next [OState] using a target rule being synthesized 
              * now.
              *)
-            try (synth_prule;
+            try (synth_prule_single;
                  [fail (* TODO: [synth_imm_prule] should fail here. *)
                  |pstack_deq]).
 
@@ -716,7 +716,7 @@ Section Impl.
              * synthesize a request-forwarding rule and 
              * the dual response-back rule.
              *)
-            synth_prule; [|pstack_deq].
+            synth_prule_single; [|pstack_deq].
             {
 
               pstack_deq_instantiate_rqfwd_prule
@@ -728,10 +728,7 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim constr_sim_svm constr_sim_mp.
 
-              (* TODO: must have the [TidLtMP] predicate as an invariant
-               * for [MessagePool].
-               *)
-              admit. 
+              admit.
             }
             { admit. }
 

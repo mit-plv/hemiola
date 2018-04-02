@@ -401,6 +401,15 @@ Proof.
   inv H0; rewrite H3; reflexivity.
 Qed.
 
+Lemma getTMsgsTInfo_Forall_None:
+  forall tmsgs,
+    Forall (fun tmsg => tmsg_info tmsg = None) tmsgs ->
+    getTMsgsTInfo tmsgs = None.
+Proof.
+  induction tmsgs; simpl; intros; [reflexivity|].
+  inv H; rewrite H2; auto.
+Qed.
+
 Fact SdIntSingle:
   forall sys ts nts (Hts: nts > ts) tinfo
          oss oims oidx os pos fmsg frule fidx fchn outs,
@@ -705,10 +714,16 @@ Definition TidLtMP (tmsgs: MessagePool TMsg) (tid: TrsId) :=
               | None => True
               end) tmsgs.
 
-Definition ValidTidState (tst: TState) :=
-  TidLeMP (tst_msgs tst) (tst_tid tst).
+Definition TidLe (tid: TrsId) (tst: TState) :=
+  TidLeMP (tst_msgs tst) tid.
 
-Lemma step_det_tid:
+Definition TidLt (tid: TrsId) (tst: TState) :=
+  TidLtMP (tst_msgs tst) tid.
+
+Definition ValidTidState (tst: TState) :=
+  TidLe (tst_tid tst) tst.
+
+Lemma step_det_ValidTidState:
   forall st1,
     ValidTidState st1 ->
     forall sys lbl st2,
@@ -745,7 +760,7 @@ Proof.
       rewrite H0 in H3; auto.
 Qed.
 
-Lemma steps_det_tid:
+Lemma steps_det_ValidTidState:
   forall st1,
     ValidTidState st1 ->
     forall sys hst st2,
@@ -753,7 +768,34 @@ Lemma steps_det_tid:
       ValidTidState st2.
 Proof.
   induction 2; simpl; intros; auto.
-  apply step_det_tid in H1; auto.
+  apply step_det_ValidTidState in H1; auto.
+Qed.
+
+Lemma TidLe_TidLt:
+  forall ts nts tst,
+    TidLe ts tst ->
+    nts > ts ->
+    TidLt nts tst.
+Proof.
+  unfold TidLe, TidLt, TidLeMP, TidLtMP; intros.
+  eapply Forall_impl; eauto.
+  simpl; intros.
+  destruct (tmsg_info a); auto.
+  omega.
+Qed.
+
+Lemma step_det_TidLt:
+  forall st1,
+    ValidTidState st1 ->
+    forall sys orule mins mouts st2,
+      mins <> nil ->
+      step_det sys st1 (RlblOuts orule mins mouts) st2 ->
+      Forall (fun tmsg => tmsg_info tmsg = None) mins ->
+      TidLt (tst_tid st2) st1.
+Proof.
+  intros; inv H1; [elim H0; reflexivity|].
+  simpl; rewrite getTMsgsTInfo_Forall_None by assumption.
+  eapply TidLe_TidLt; eauto.
 Qed.
 
 Definition TInfoExists (sys: System) (tst: TState) :=
