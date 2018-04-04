@@ -1,7 +1,7 @@
 Require Import List.
 
 Require Import Common.
-Require Import Syntax Semantics StepDet Simulation.
+Require Import Syntax Semantics StepT Simulation.
 
 (* Below we describe a semantic interpretation of a system which has a
  * blocking property.

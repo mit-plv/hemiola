@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepDet.
+Require Import Common ListSupport FMap Syntax Semantics StepT.
 
 (** [Atomic] and [Transactional] histories *)
 
@@ -59,11 +59,11 @@ Definition trsMessages (trsInfo: TInfo) (mp: MessagePool TMsg) : list TMsg :=
 (** Serializability *)
 
 Definition trsSteps (sys: System) (st1: TState) (hst: THistory) (st2: TState) :=
-  steps step_det sys st1 hst st2 /\
+  steps step_t sys st1 hst st2 /\
   Transactional sys hst.
 
 Definition seqSteps (sys: System) (st1: TState) (hst: THistory) (st2: TState) :=
-  steps step_det sys st1 hst st2 /\
+  steps step_t sys st1 hst st2 /\
   Sequential sys hst.
 
 Definition Equivalent (sys: System)
@@ -78,6 +78,6 @@ Definition Serializable (sys: System) (ll: THistory) :=
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys (sys: System) :=
   forall ll st,
-    steps step_det sys initsOf ll st ->
+    steps step_t sys initsOf ll st ->
     Serializable sys ll.
 

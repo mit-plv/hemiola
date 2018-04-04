@@ -1,5 +1,7 @@
 Require Import Bool Ascii String List Eqdep Omega.
 
+Require Export ProofIrrelevance.
+
 Definition IdxT := nat.
 
 Notation "[ ]" := nil (format "[ ]").

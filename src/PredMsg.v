@@ -148,52 +148,36 @@ Section GivenMsg.
       otrs_rsbf: RsBackF
     }.
 
-  Section GivenState.
-    Variable (StateT: Type).
-    Context `{HasInit StateT}.
+  Record PState :=
+    { pst_oss: OStates;
+      pst_otrss: M.t OTrs;
+      pst_msgs: MessagePool PMsg
+    }.
 
-    Record PState :=
-      { pst_oss: OStates;
-        pst_otrss: M.t OTrs;
-        pst_msgs: MessagePool PMsg;
-        pst_orig: StateT
-      }.
+  Definition getPStateInit: PState :=
+    {| pst_oss := initsOf;
+       pst_otrss := [];
+       pst_msgs := nil |}.
 
-    Definition getPStateInit: PState :=
-      {| pst_oss := initsOf;
-         pst_otrss := [];
-         pst_msgs := nil;
-         pst_orig := initsOf |}.
+  Global Instance PState_HasInit : HasInit PState :=
+    {| initsOf := getPStateInit |}.
 
-    Global Instance PState_HasInit : HasInit PState :=
-      {| initsOf := getPStateInit |}.
+  (** Conversion from [PSystem] to [System] *)
 
-    (** Conversion from [PSystem] to [System] *)
+  Definition pToRule (prule: PRule): Rule :=
+    {| rule_mids := midsOfPRule prule;
+       rule_precond := precOfPRule prule;
+       (** * TODO: how to convert? *)
+       rule_postcond := ⊤⊤⊤ |}.
 
-    Definition pToRule (prule: PRule): Rule :=
-      {| rule_mids := midsOfPRule prule;
-         rule_precond := precOfPRule prule;
-         (** * TODO: how to convert? *)
-         rule_postcond := ⊤⊤⊤ |}.
-
-    Definition pToSystem (psys: PSystem): System :=
-      {| sys_inds := psys_inds psys;
-         sys_inits := psys_inits psys;
-         sys_rules := map pToRule (psys_rules psys) |}.
-
-  End GivenState.
+  Definition pToSystem (psys: PSystem): System :=
+    {| sys_inds := psys_inds psys;
+       sys_inits := psys_inits psys;
+       sys_rules := map pToRule (psys_rules psys) |}.
 
 End GivenMsg.
 
-(** Instantiated with [TMsg] *)
-
-Definition PTMsg := PMsg TMsg.
-Definition PTState := @PState TMsg TState.
-
-Definition pToTState (pst: PTState): TState :=
-  {| tst_oss := pst_oss pst;
-     tst_msgs := map (@pmsg_omsg _) (pst_msgs pst);
-     tst_tid := tst_tid (pst_orig pst) |}.
+(** An instantiation with [TMsg] *)
 
 Definition pToTLabel (plbl: PLabel TMsg): TLabel :=
   match plbl with
@@ -206,6 +190,10 @@ Definition pToTLabel (plbl: PLabel TMsg): TLabel :=
 
 Definition pToTHistory (phst: PHistory TMsg): THistory :=
   map pToTLabel phst.
+
+Definition PTStateR (tst: TState) (pst: PState TMsg) :=
+  tst_oss tst = pst_oss pst /\
+  tst_msgs tst = map (@pmsg_omsg _) (pst_msgs pst).
 
 Section RuleAdder.
   Context {SysT: Type} `{IsSystem SysT}.

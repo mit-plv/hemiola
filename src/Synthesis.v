@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics SemFacts.
-Require Import StepDet Serial SerialFacts Invariant TrsSim.
+Require Import StepT Serial SerialFacts Invariant TrsSim.
 
 Set Implicit Arguments.
 
@@ -19,7 +19,7 @@ Section SynthOk.
   Definition SynthOk (s: System) :=
     R initsOf initsOf /\
     ginv initsOf /\
-    (TrsSimulates R ginv p s spec /\ InvStep s step_det ginv) /\
+    (TrsSimulates R ginv p s spec /\ InvStep s step_t ginv) /\
     SerializableSys s.
 
   Hypothesis (Hinit_ok: SynthOk impl0).
@@ -42,11 +42,11 @@ Section SynthOk.
                   forall s, TrsSimulates R ginv p s spec ->
                             forall s', syn s s' -> TrsSimulates R ginv p s' spec)
                (HsynInv:
-                  forall s, InvStep s step_det ginv ->
-                            forall s', syn s s' -> InvStep s' step_det ginv).
+                  forall s, InvStep s step_t ginv ->
+                            forall s', syn s s' -> InvStep s' step_t ginv).
 
     Lemma synthOk_refinement:
-      forall s, SynthOk s -> steps step_det # steps step_det |-- s ⊑[p] spec.
+      forall s, SynthOk s -> steps step_t # steps step_t |-- s ⊑[p] spec.
     Proof.
       unfold SynthOk; intros; dest.
       eapply refines_trans.

@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap.
-Require Import Syntax Semantics SemFacts StepDet Serial Invariant.
+Require Import Syntax Semantics SemFacts StepT Serial Invariant.
 
 Require Import Omega.
 Require Import Program.Equality.
@@ -47,7 +47,7 @@ Lemma atomic_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps step_det sys st1 hst st2 ->
+      steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
                          | RlblOuts _ ins outs =>
                            Forall (fun tmsg =>
@@ -124,7 +124,7 @@ Corollary atomic_hst_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps step_det sys st1 hst st2 ->
+      steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
                          | RlblOuts _ ins outs =>
                            Forall (fun tmsg =>
@@ -150,7 +150,7 @@ Corollary atomic_mouts_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps step_det sys st1 hst st2 ->
+      steps step_t sys st1 hst st2 ->
       ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo ts (rq :: nil)) /\
                             fromInternal sys tmsg = true) mouts.
 Proof.
@@ -249,7 +249,7 @@ Qed.
 Theorem serializable_seqSteps_refines:
   forall sys,
     SerializableSys sys ->
-    steps step_det # seqSteps |-- sys ⊑[id] sys.
+    steps step_t # seqSteps |-- sys ⊑[id] sys.
 Proof.
   unfold SerializableSys, Refines; intros.
   inv H0; rename ll0 into ill.

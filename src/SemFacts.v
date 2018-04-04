@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepDet.
+Require Import Common ListSupport FMap Syntax Semantics StepT.
 
 Require Import Omega.
 
@@ -430,7 +430,7 @@ Fact SdIntSingle:
                          tinfo_rqin := tmsg_msg fmsg :: nil |}
             end ->
     
-    step_det sys
+    step_t sys
              {| tst_oss := oss;
                 tst_msgs := oims;
                 tst_tid := ts
@@ -643,9 +643,9 @@ Proof.
   find_if_inside; auto.
 Qed.
 
-Lemma step_det_int_internal:
+Lemma step_t_int_internal:
   forall sys st1 orule ins outs st2,
-    step_det sys st1 (RlblOuts orule ins outs) st2 ->
+    step_t sys st1 (RlblOuts orule ins outs) st2 ->
     Forall (fun msg => toInternal sys msg = true) ins.
 Proof.
   intros; inv H; [constructor|].
@@ -656,9 +656,9 @@ Proof.
   apply idx_in_sys_internal; auto.  
 Qed.
 
-Lemma step_det_outs_from_internal:
+Lemma step_t_outs_from_internal:
   forall sys st1 ilbl st2,
-    step_det sys st1 ilbl st2 ->
+    step_t sys st1 ilbl st2 ->
     Forall (fun m: TMsg => fromInternal sys m = true)
            (iLblOuts ilbl).
 Proof.
@@ -687,12 +687,12 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma step_det_in_rules_weakening:
+Lemma step_t_in_rules_weakening:
   forall sys st1 emsg st2,
-    step_det sys st1 (RlblIn emsg) st2 ->
+    step_t sys st1 (RlblIn emsg) st2 ->
     forall wsys,
       indicesOf wsys = indicesOf sys ->
-      step_det wsys st1 (RlblIn emsg) st2.
+      step_t wsys st1 (RlblIn emsg) st2.
 Proof.
   intros; inv H.
   econstructor; auto.
@@ -723,11 +723,11 @@ Definition TidLt (tid: TrsId) (tst: TState) :=
 Definition ValidTidState (tst: TState) :=
   TidLe (tst_tid tst) tst.
 
-Lemma step_det_ValidTidState:
+Lemma step_t_ValidTidState:
   forall st1,
     ValidTidState st1 ->
     forall sys lbl st2,
-      step_det sys st1 lbl st2 ->
+      step_t sys st1 lbl st2 ->
       ValidTidState st2.
 Proof.
   unfold ValidTidState; intros; inv H0; auto.
@@ -764,11 +764,11 @@ Lemma steps_det_ValidTidState:
   forall st1,
     ValidTidState st1 ->
     forall sys hst st2,
-      steps step_det sys st1 hst st2 ->
+      steps step_t sys st1 hst st2 ->
       ValidTidState st2.
 Proof.
   induction 2; simpl; intros; auto.
-  apply step_det_ValidTidState in H1; auto.
+  apply step_t_ValidTidState in H1; auto.
 Qed.
 
 Lemma TidLe_TidLt:
@@ -784,12 +784,12 @@ Proof.
   omega.
 Qed.
 
-Lemma step_det_TidLt:
+Lemma step_t_TidLt:
   forall st1,
     ValidTidState st1 ->
     forall sys orule mins mouts st2,
       mins <> nil ->
-      step_det sys st1 (RlblOuts orule mins mouts) st2 ->
+      step_t sys st1 (RlblOuts orule mins mouts) st2 ->
       Forall (fun tmsg => tmsg_info tmsg = None) mins ->
       TidLt (tst_tid st2) st1.
 Proof.
@@ -819,11 +819,11 @@ Proof.
   - apply IHmouts; split; auto.
 Qed.
 
-Lemma step_det_tinfo:
+Lemma step_t_tinfo:
   forall sys st1,
     TInfoExists sys st1 ->
     forall lbl st2,
-      step_det sys st1 lbl st2 ->
+      step_t sys st1 lbl st2 ->
       TInfoExists sys st2.
 Proof.
   unfold TInfoExists; intros; inv H0; auto.
@@ -847,15 +847,37 @@ Proof.
       * apply IHouts; auto.
 Qed.
 
+Lemma step_t_rules_split:
+  forall inds inits rules1 rules2 st1 lbl st2,
+    step_t {| sys_inds := inds;
+                sys_inits := inits;
+                sys_rules := rules1 ++ rules2 |} st1 lbl st2 ->
+    step_t {| sys_inds := inds;
+                sys_inits := inits;
+                sys_rules := rules1 |} st1 lbl st2 \/
+    step_t {| sys_inds := inds;
+                sys_inits := inits;
+                sys_rules := rules2 |} st1 lbl st2.
+Proof.
+  intros.
+  inv H.
+  - left; constructor.
+  - left; econstructor; eauto.
+  - simpl in *.
+    apply in_app_or in H5; destruct H5.
+    + left; econstructor; eauto.
+    + right; econstructor; eauto.
+Qed.
+
 Lemma steps_det_tinfo:
   forall sys st1,
     TInfoExists sys st1 ->
     forall hst st2,
-      steps step_det sys st1 hst st2 ->
+      steps step_t sys st1 hst st2 ->
       TInfoExists sys st2.
 Proof.
   induction 2; simpl; intros; auto.
-  apply step_det_tinfo in H1; auto.
+  apply step_t_tinfo in H1; auto.
 Qed.
 
 Lemma steps_split:

@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepDet SemFacts.
+Require Import Common FMap Syntax Semantics StepT SemFacts.
 Require Import Simulation Serial SerialFacts Invariant TrsSim.
 Require Import PredMsg StepPred PredMsgFacts.
 Require Import Synthesis SynthesisFacts Blocking.
@@ -67,7 +67,8 @@ Section Impl.
   Ltac red_SvmInvs :=
     repeat 
       match goal with
-      | [H: SvmInvs _ |- _] => inv H
+      | [H: SvmInvs _ |- _] => destruct H
+      | [H: (_ /\i _) _ |- _] => destruct H
       end.
 
   Ltac red_SvmSim :=
@@ -94,7 +95,7 @@ Section Impl.
              replace ioss2 with ioss1; eassumption
            | [ |- SpecState _ _ ] => eexists; split
            end;
-       try findeq; try reflexivity; try eassumption).
+       try (findeq; fail); try reflexivity; try eassumption).
 
   Ltac constr_sim_mp :=
     repeat
@@ -148,7 +149,7 @@ Section Impl.
       unfold TrsSimSilent; intros;
       (** inversions *)
       match goal with
-      | [H: step_det _ _ emptyRLabel _ |- _] => inv H
+      | [H: step_t _ _ emptyRLabel _ |- _] => inv H
       end;
       (** constructions *)
       eexists; split; [econstructor|assumption].
@@ -157,7 +158,7 @@ Section Impl.
       (** instantiation *)
       unfold TrsSimIn; intros; simpl;
       match goal with
-      | [H: context[RlblIn ?min] |- context[step_det _ ?ist1 _ _] ] =>
+      | [H: context[RlblIn ?min] |- context[step_t _ ?ist1 _ _] ] =>
         let ioss1 := fresh "ioss1" in
         let imsgs1 := fresh "imsgs1" in
         let its1 := fresh "its1" in
@@ -171,7 +172,7 @@ Section Impl.
       (** inversions *)
       repeat
         match goal with
-        | [H: step_det _ _ (RlblIn _) _ |- _] => inv H
+        | [H: step_t _ _ (RlblIn _) _ |- _] => inv H
         | [H: sim _ _ |- _] => inv H
         end;
       (** constructions *)
@@ -207,30 +208,31 @@ Section Impl.
       repeat
         match goal with
         | [H: Atomic _ _ _ _ ?mouts |- _] => clear H; clear mouts
-        | [H: InvStep _ step_det _ |- _] => clear H
+        | [H: InvStep _ step_t _ |- _] => clear H
         end.
 
     Ltac reduce_invstep_pred :=
       repeat
         match goal with
-        | [H: InvStep _ (step_pred (StateT:= TState)) _ /\ _ |- _] => destruct H
-        | [H: exists (_: PTState) (_: PHistory TMsg) (_: PTState), _ |- _] =>
-          let pst1 := fresh "pst1" in
+        | [H: InvStep _ step_pred_t _ /\ _ |- _] => destruct H
+        | [H: exists (_: PStateEx _) (_: PHistory TMsg) (_: PStateEx _), _ |- _] =>
+          let pstx1 := fresh "pstx1" in
           let phst := fresh "phst" in
-          let pst2 := fresh "pst2" in
-          destruct H as [pst1 [phst [pst2 ?]]]; dest; subst
+          let pstx2 := fresh "pstx2" in
+          destruct H as [pstx1 [phst [pstx2 ?]]]; dest; subst
         | [H: forall _, _ = _ -> _ |- _] => specialize (H _ eq_refl)
         end.
     
     Ltac trs_simulates_atomic_to_steps_pred :=
       unfold TrsSimAtomic; intros;
       match goal with
-      | [H1: Atomic _ _ _ ?hst _, H2: steps step_det _ _ ?hst _ |- _] =>
+      | [H1: Atomic _ _ _ ?hst _, H2: steps step_t _ _ ?hst _ |- _] =>
         pose proof (atomic_history_pred_tinfo H1 H2)
       end;
       match goal with
-      | [H: steps step_det (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
-        eapply steps_pred_ok with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
+      | [H: steps step_t (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
+        eapply atomic_steps_pred_ok
+          with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
         eauto; [clear_atomic_hyps; reduce_invstep_pred|]
       end.
 
@@ -319,7 +321,8 @@ Section Impl.
       | [H: steps ?stI _ _ _ _ |- context[steps ?stS _ _ _ _] ] =>
         eapply inv_simulation_steps
           with (stepS:= stS) (ginv:= tinv) (sim:= tsim) in H; eauto;
-        [reduce_sim_steps_to_step_proof|reduce_sim_steps_to_step_clear tinv tsim]
+        [reduce_sim_steps_to_step_proof
+        |reduce_sim_steps_to_step_clear tinv tsim]
       end.
 
     Ltac inv_sim_init stepI :=
@@ -337,14 +340,24 @@ Section Impl.
         end.
 
     Ltac sim_pred_silent :=
-      repeat
-        match goal with
-        | [H: step_pred _ _ (PlblOuts ?orule _ _) _ |- _] =>
-          is_var orule;
-          let rule := fresh "rule" in destruct orule as [rule|]
-        | [H: step_pred _ _ (PlblOuts None _ _) _ |- _] =>
-          inv H; simpl; auto
-        end.
+      match goal with
+      | [H: step_pred_t _ _ (PlblOuts ?orule _ _) _ |- _] =>
+        is_var orule;
+        let rule := fresh "rule" in destruct orule as [rule|]
+      end;
+      [|repeat
+          match goal with
+          | [H: step_pred_t _ _ _ _ |- _] => inv H
+          | [H: step_pred0 _ _ (PlblOuts ?orule _ _) _ |- _] =>
+            is_var orule;
+            let rule := fresh "rule" in destruct orule as [rule|]
+          | [H: step_pred0 _ _ (PlblOuts None _ _) _ |- _] => inv H; simpl in *
+          | [H: step_t _ _ (RlblOuts None _ _) _ |- _] => inv H; simpl in *
+          | [ |- _ \/ _ ] => right
+          | [H1: pstx_st ?ist1 = pstx_st ?ist2, H2: pstx_pst ?ist1 = pstx_pst ?ist2 |- _] =>
+            pose proof (PStateEx_ext _ _ H1 H2); subst; clear H1 H2
+          | [H: ?t |- ?t] => assumption
+          end].
 
     Record PStackElt :=
       { pste_rr: RqRs;
@@ -401,7 +414,7 @@ Section Impl.
 
     Ltac synth_prule_single :=
       match goal with
-      | [H: step_pred (addPRules ?rules _) _ _ _ |- _] =>
+      | [H: step_pred_t (addPRules ?rules _) _ _ _ |- _] =>
         is_evar rules; instantiate (1:= _ :: _);
         apply step_pred_rules_split_addPRules in H;
         destruct H
@@ -409,7 +422,7 @@ Section Impl.
 
     Ltac pstack_deq_instantiate_imm_prule :=
       match goal with
-      | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+      | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
         is_evar rule;
         let pfst := pstack_first in
         instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H;
@@ -418,7 +431,7 @@ Section Impl.
 
     Ltac pstack_deq_instantiate_rqfwd_prule opred rqff rsbf :=
       match goal with
-      | [H: step_pred (addPRules [?rule] _) _ _ _ |- _] =>
+      | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
         is_evar rule;
         let pfst := pstack_first in
         instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H;
@@ -428,7 +441,8 @@ Section Impl.
     Ltac step_pred_invert_init :=
       repeat
         match goal with
-        | [H: step_pred _ _ (PlblOuts (Some _) _ _) _ |- _] => inv H
+        | [H: step_pred_t _ _ (PlblOuts (Some _) _ _) _ |- _] => inv H
+        | [H: step_pred0 _ _ (PlblOuts (Some _) _ _) _ |- _] => inv H
         | [H: In _ (psys_rules _) |- _] => inv H; try discriminate
         | [H: In _ nil |- _] => inv H
         | [H: ?rule = _ |- _] =>
@@ -454,6 +468,23 @@ Section Impl.
       let rspred := fresh "rspred" in
       let rsval := fresh "rsval" in
       destruct rs as [[[[[rsfrom rsto rschn] rstid] rsval] rsinfo] rspred].
+
+    Ltac dest_PStateEx pstx :=
+      let toss := fresh "toss" in
+      let tmsgs := fresh "tmsgs" in
+      let tid := fresh "tid" in
+      let pst := fresh "pst" in
+      let str := fresh "str" in
+      destruct pstx as [[toss tmsgs tid] pst str];
+      hnf in str.
+
+    Ltac step_pred_invert_dest_state :=
+      repeat
+        match goal with
+        | [H: step_t _ (pstx_st ?ist1) _ (pstx_st ?ist2) |- _] =>
+          is_var ist1; dest_PStateEx ist1;
+          is_var ist2; dest_PStateEx ist2
+        end.
 
     Ltac step_pred_invert_dest_pmsg :=
       repeat
@@ -537,7 +568,8 @@ Section Impl.
         end.
 
     Ltac step_pred_invert_red red_custom :=
-      repeat (step_pred_invert_dest_pmsg;
+      repeat (step_pred_invert_dest_state;
+              step_pred_invert_dest_pmsg;
               red_forall;
               red_ValidMsgsIn;
               red_LiftInv;
@@ -556,7 +588,7 @@ Section Impl.
     Ltac sim_spec_constr_step_init ruleS :=
       repeat
         match goal with
-        | [ |- context[step_det _ ?sst _ _] ] =>
+        | [ |- context[step_t _ ?sst _ _] ] =>
           is_var sst;
           let soss := fresh "soss" in
           let smsgs := fresh "smsgs" in
@@ -576,7 +608,7 @@ Section Impl.
     Ltac sim_spec_constr_step :=
       repeat
         (try match goal with
-             | [ |- step_det _ _ _ _] => econstructor
+             | [ |- step_t _ _ _ _] => econstructor
              | [ |- _ > _] => auto
              | [ |- In _ _] => simpl; tauto
              | [ |- ~ In _ nil] =>
@@ -644,7 +676,7 @@ Section Impl.
       - (** Simulation and preservation of global invariants. *)
         trs_sim_init impl0_ok.
 
-        + (** [TrsSimulates] for newly added [Rule]s *)
+        + (** [TrsSimulates] for newly added [Rule]s *)          
           trs_simulates_trivial svmMsgF SvmSim.
 
           (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps. *)
@@ -661,11 +693,11 @@ Section Impl.
             inv_lift SvmInvs.
             sim_liftL SvmSim.
             reduce_sim_steps_to_step
-              (LiftInv pToTState SvmInvs)
-              (LiftSimL pToTState SvmSim).
+              (LiftInv (pstx_st (stR:= PTStateR)) SvmInvs)
+              (LiftSimL (pstx_st (stR:= PTStateR)) SvmSim).
 
-            (** Prove [InvSim], a (step-)simulation from [step_pred] to [step_det]: *)
-            inv_sim_init (step_pred (StateT:= TState)).
+            (** Prove [InvSim], a (step-)simulation from [step_pred] to [step_t]: *)
+            inv_sim_init step_pred_t.
 
             (* Prove simulation for silent steps, which is trivial. *)
             sim_pred_silent.
@@ -690,7 +722,6 @@ Section Impl.
              * try to synthesize a [PRule]. Always try to synthesize
              * an immediate rule [PRuleImm] first.
              *)
-
             (* Should succeed when {C1.st = M} *)
             try (synth_prule_single;
                  [synth_imm_prule (specGetReq extIdx1 extIdx1)
@@ -728,6 +759,11 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim constr_sim_svm constr_sim_mp.
 
+              (** TODO: use [step_t_TidLt] to prove the last admit below *)
+              (* simpl. *)
+              (* apply step_t_TidLt in H4; [|assumption|discriminate|repeat constructor]. *)
+              (* simpl in H4. *)
+              (* unfold TidLt in H4; simpl in H4. *)
               admit.
             }
             { admit. }

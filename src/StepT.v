@@ -11,8 +11,8 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
     end
   end.
 
-Inductive step_det (sys: System): TState -> TLabel -> TState -> Prop :=
-| SdSlt: forall st, step_det sys st emptyRLabel st
+Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
+| SdSlt: forall st, step_t sys st emptyRLabel st
 | SdExt: forall ts pst nst oss oims emsg,
     fromExternal sys emsg = true ->
     toInternal sys emsg = true ->
@@ -21,7 +21,7 @@ Inductive step_det (sys: System): TState -> TLabel -> TState -> Prop :=
              tst_msgs := enqMP (toTMsgU emsg) oims;
              tst_tid := ts
           |} ->
-    step_det sys pst (RlblIn (toTMsgU emsg)) nst
+    step_t sys pst (RlblIn (toTMsgU emsg)) nst
 | SdInt: forall ts pst nst nts (Hts: nts > ts) tinfo
                 oss oims oidx os pos msgs rule outs,
     In oidx (indicesOf sys) ->
@@ -50,5 +50,5 @@ Inductive step_det (sys: System): TState -> TLabel -> TState -> Prop :=
                         end
           |} ->
 
-    step_det sys pst (RlblOuts (Some rule) msgs (toTMsgs tinfo outs)) nst.
+    step_t sys pst (RlblOuts (Some rule) msgs (toTMsgs tinfo outs)) nst.
 

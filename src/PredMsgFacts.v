@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics SemFacts StepDet.
+Require Import Common FMap Syntax Semantics SemFacts StepT.
 Require Import Invariant Simulation.
 Require Import Serial SerialFacts.
 Require Import PredMsg StepPred.
@@ -143,7 +143,7 @@ Lemma atomic_history_pred_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
-      steps step_det sys st1 hst st2 ->
+      steps step_t sys st1 hst st2 ->
       forall phst,
         pToTHistory phst = hst ->
         Forall
@@ -190,63 +190,45 @@ Proof.
     induction mouts; [constructor|].
     inv H0; constructor; auto.
 Qed.
-  
-(** FIXME: This statement is wrong;
- * [psys] should have some more restrictions for the correctness of
- * _global_ preconditions wrt. the original system [sys].
- *)
-Theorem steps_pred_ok:
+
+Definition step_pred_t :=
+  step_pred (stR:= PTStateR) step_t (@pToSystem TMsg) pToTLabel.
+
+Theorem atomic_steps_pred_ok:
   forall sys ginv st1 thst st2 ts rqin mouts,
-    InvStep sys step_det ginv ->
-    steps step_det sys st1 thst st2 ->
+    InvStep sys step_t ginv ->
+    steps step_t sys st1 thst st2 ->
     Atomic sys ts rqin thst mouts ->
-    forall psys,
+    forall psys: PSystem TMsg,
       pToSystem psys = sys ->
-      InvStep psys (step_pred (MsgT:= TMsg) (StateT:= TState))
-              (LiftInv pToTState ginv) /\
+      InvStep psys step_pred_t (LiftInv (@pstx_st _ _ PTStateR) ginv) /\
       exists pst1 phst pst2,
-        pToTState pst1 = st1 /\
-        pToTState pst2 = st2 /\
         pToTHistory phst = thst /\
-        steps (step_pred (MsgT:= TMsg) (StateT:= TState)) psys pst1 phst pst2.
+        pstx_st pst1 = st1 /\
+        pstx_st pst2 = st2 /\
+        steps step_pred_t psys pst1 phst pst2.
 Proof.
 Admitted.
 
 Lemma step_pred_rules_split:
-  forall {StateT} inds inits prules1 prules2 pst1 plbl pst2,
-    step_pred (StateT:= StateT) {| psys_inds := inds;
-                                   psys_inits := inits;
-                                   psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
-    step_pred (StateT:= StateT) {| psys_inds := inds;
-                                   psys_inits := inits;
-                                   psys_rules := prules1 |} pst1 plbl pst2 \/
-    step_pred (StateT:= StateT) {| psys_inds := inds;
-                                   psys_inits := inits;
-                                   psys_rules := prules2 |} pst1 plbl pst2.
+  forall inds inits prules1 prules2 pst1 plbl pst2,
+    step_pred_t {| psys_inds := inds;
+                   psys_inits := inits;
+                   psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
+    step_pred_t {| psys_inds := inds;
+                   psys_inits := inits;
+                   psys_rules := prules1 |} pst1 plbl pst2 \/
+    step_pred_t {| psys_inds := inds;
+                   psys_inits := inits;
+                   psys_rules := prules2 |} pst1 plbl pst2.
 Proof.
-  intros.
-  inv H.
-  - left; constructor.
-  - left; econstructor; auto.
-  - simpl in *.
-    apply in_app_or in H1; destruct H1.
-    + left; econstructor; eauto.
-    + right; econstructor; eauto.
-  - simpl in *.
-    apply in_app_or in H1; destruct H1.
-    + left; econstructor; eauto.
-    + right; econstructor; eauto.
-  - simpl in *.
-    apply in_app_or in H1; destruct H1.
-    + left; econstructor; eauto.
-    + right; econstructor; eauto.
-Qed.
+Admitted.
 
 Corollary step_pred_rules_split_addPRules:
-  forall {StateT} (psys: PSystem TMsg) prule prules pst1 plbl pst2,
-    step_pred (StateT:= StateT) (addPRules (prule :: prules) (buildRawPSys _ psys)) pst1 plbl pst2 ->
-    step_pred (StateT:= StateT) (addPRules [prule] (buildRawPSys _ psys)) pst1 plbl pst2 \/
-    step_pred (StateT:= StateT) (addPRules prules (buildRawPSys _ psys)) pst1 plbl pst2.
+  forall (psys: PSystem TMsg) prule prules pst1 plbl pst2,
+    step_pred_t (addPRules (prule :: prules) (buildRawPSys _ psys)) pst1 plbl pst2 ->
+    step_pred_t (addPRules [prule] (buildRawPSys _ psys)) pst1 plbl pst2 \/
+    step_pred_t (addPRules prules (buildRawPSys _ psys)) pst1 plbl pst2.
 Proof.
   intros.
   apply step_pred_rules_split; auto.

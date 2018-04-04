@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap ListSupport Syntax Semantics StepDet SemFacts.
+Require Import Common FMap ListSupport Syntax Semantics StepT SemFacts.
 Require Import Simulation Serial SerialFacts Invariant.
 
 Require Import Omega.
@@ -24,7 +24,7 @@ Section TrsSim.
       forall ihst ist2,
         trsSteps impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps step_det spec sst1 shst sst2 /\
+          steps step_t spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2.
 
@@ -32,7 +32,7 @@ Section TrsSim.
     (Hsimi: TrsSimInit)
     (Hsim: TrsSimulates)
     (Hginvi: InvInit ginv)
-    (Hginv: InvStep impl step_det ginv).
+    (Hginv: InvStep impl step_t ginv).
 
   Lemma trs_simulation_steps:
     forall ist1 sst1,
@@ -41,9 +41,9 @@ Section TrsSim.
       forall trss ihst ist2,
         Forall (Transactional impl) trss ->
         ihst = concat trss ->
-        steps step_det impl ist1 ihst ist2 ->
+        steps step_t impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps step_det spec sst1 shst sst2 /\
+          steps step_t spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
@@ -76,7 +76,7 @@ Section TrsSim.
       forall ihst ist2,
         seqSteps impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps step_det spec sst1 shst sst2 /\
+          steps step_t spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
@@ -85,7 +85,7 @@ Section TrsSim.
   Qed.
 
   Theorem sequential_simulation_implies_refinement:
-    seqSteps # steps step_det |-- impl ⊑[p] spec.
+    seqSteps # steps step_t |-- impl ⊑[p] spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.
@@ -110,9 +110,9 @@ Section TrsSimSep.
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall ist2,
-        step_det impl ist1 emptyRLabel ist2 ->
+        step_t impl ist1 emptyRLabel ist2 ->
         exists sst2,
-          step_det spec sst1 emptyRLabel sst2 /\
+          step_t spec sst1 emptyRLabel sst2 /\
           ist2 ≈ sst2.
 
   Definition TrsSimIn :=
@@ -120,9 +120,9 @@ Section TrsSimSep.
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall imin ist2,
-        step_det impl ist1 (RlblIn imin) ist2 ->
+        step_t impl ist1 (RlblIn imin) ist2 ->
         exists smin sst2,
-          step_det spec sst1 (RlblIn smin) sst2 /\
+          step_t spec sst1 (RlblIn smin) sst2 /\
           extLabel spec (getLabel (RlblIn smin)) =
           Some (p (getLabel (RlblIn imin))) /\
           ist2 ≈ sst2.
@@ -135,9 +135,9 @@ Section TrsSimSep.
         forall sst1,
           ist1 ≈ sst1 ->
           forall ist2,
-            steps step_det impl ist1 hst ist2 ->
+            steps step_t impl ist1 hst ist2 ->
             exists sst2 shst,
-              steps step_det spec sst1 shst sst2 /\
+              steps step_t spec sst1 shst sst2 /\
               map p (behaviorOf impl hst) = behaviorOf spec shst /\
               ist2 ≈ sst2.
 
@@ -153,9 +153,9 @@ Section TrsSimSep.
       ginv ist1 ->
       forall ihst ist2,
         Transactional impl ihst ->
-        steps step_det impl ist1 ihst ist2 ->
+        steps step_t impl ist1 ihst ist2 ->
         exists sst2 shst,
-          steps step_det spec sst1 shst sst2 /\
+          steps step_t spec sst1 shst sst2 /\
           map p (behaviorOf impl ihst) = behaviorOf spec shst /\
           ist2 ≈ sst2.
   Proof.
@@ -258,7 +258,7 @@ Lemma trsPreservingSys_ins_outs_same_tid:
   forall sys,
     trsPreservingSys sys ->
     forall st1 st2 orule hins houts,
-      step_det sys st1 (RlblOuts orule hins houts) st2 ->
+      step_t sys st1 (RlblOuts orule hins houts) st2 ->
       exists tid,
         Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) = tid) hins /\
         Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) = tid) houts.
@@ -285,7 +285,7 @@ Lemma trsPreservineSys_atomic_same_tid:
       forall mtid,
         mtid = mid_tid (msg_id rq) ->
         forall ist1 ist2,
-          steps step_det sys ist1 hst ist2 ->
+          steps step_t sys ist1 hst ist2 ->
           Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
           Forall (fun tl =>
                     match tl with
@@ -349,11 +349,11 @@ Section Compositionality.
   
   Local Infix "≈" := simR (at level 30).
   
-  Hypotheses (Hinv1: InvStep impl1 step_det ginv)
-             (Hinv2: InvStep impl2 step_det ginv).
+  Hypotheses (Hinv1: InvStep impl1 step_t ginv)
+             (Hinv2: InvStep impl2 step_t ginv).
 
   Lemma invariant_compositional:
-    InvStep impl step_det ginv.
+    InvStep impl step_t ginv.
   Proof.
     unfold InvStep; intros.
     inv H0.
@@ -427,11 +427,11 @@ Section Compositionality.
 
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
-      steps step_det impl ist1 hst ist2 ->
+      steps step_t impl ist1 hst ist2 ->
       forall ts rq mouts,
         Atomic impl ts rq hst mouts ->
-        steps step_det impl1 ist1 hst ist2 \/
-        steps step_det impl2 ist1 hst ist2.
+        steps step_t impl1 ist1 hst ist2 \/
+        steps step_t impl2 ist1 hst ist2.
   Proof.
     intros.
     pose proof (TrsDisjSys_distr_same_tid (mid_tid (msg_id rq))).
@@ -507,9 +507,9 @@ Section Compositionality.
         ist1 ≈ sst1 ->
         ginv ist1 ->
         forall ist2,
-          steps step_det impl ist1 ihst ist2 ->
+          steps step_t impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
-            steps step_det spec sst1 shst sst2 /\
+            steps step_t spec sst1 shst sst2 /\
             map p (behaviorOf impl ihst) = behaviorOf spec shst /\
             ist2 ≈ sst2.
   Proof.
@@ -559,7 +559,7 @@ Section Compositionality.
   Qed.
 
   Corollary trsSimulates_trsInvHolds_compositional:
-    TrsSimulates simR ginv p impl spec /\ InvStep impl step_det ginv.
+    TrsSimulates simR ginv p impl spec /\ InvStep impl step_t ginv.
   Proof.
     split.
     - apply trsSimulates_compositional.
