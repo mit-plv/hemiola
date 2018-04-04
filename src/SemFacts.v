@@ -700,6 +700,29 @@ Proof.
   - unfold toInternal, isInternal in *; rewrite H0; assumption.
 Qed.
 
+Lemma step_t_tid_next:
+  forall sys st1 orule ins outs ts st2,
+    step_t sys st1 (RlblOuts orule ins outs) st2 ->
+    outs <> nil ->
+    Forall (fun tmsg => tmsg_info tmsg = None) ins ->
+    Forall (fun tmsg => match tmsg_info tmsg with
+                        | Some ti => tinfo_tid ti = ts
+                        | None => True
+                        end) outs ->
+    tst_tid st2 = ts.
+Proof.
+  intros.
+  inv H.
+  - elim H0; reflexivity.
+  - simpl.
+    apply getTMsgsTInfo_Forall_None in H1.
+    rewrite H1 in *.
+    clear -H0 H2.
+    destruct outs0 as [|out ?].
+    + elim H0; reflexivity.
+    + inv H2; simpl in H3; auto.
+Qed.
+
 Definition TidLeMP (tmsgs: MessagePool TMsg) (tid: TrsId) :=
   ForallMP (fun tmsg =>
               match tmsg_info tmsg with

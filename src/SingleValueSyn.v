@@ -759,12 +759,18 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim constr_sim_svm constr_sim_mp.
 
-              (** TODO: use [step_t_TidLt] to prove the last admit below *)
-              (* simpl. *)
-              (* apply step_t_TidLt in H4; [|assumption|discriminate|repeat constructor]. *)
-              (* simpl in H4. *)
-              (* unfold TidLt in H4; simpl in H4. *)
-              admit.
+              (** TODO: automate below *)
+              simpl.
+              pose proof H4 as Htid.
+              eapply step_t_tid_next in Htid;
+                [|discriminate|repeat constructor|repeat constructor].
+              simpl in Htid; subst.
+              pose proof H4 as HtidLt.
+              apply step_t_TidLt in HtidLt;
+                [|assumption|discriminate|repeat constructor].
+              simpl in HtidLt.
+              unfold TidLt in HtidLt; simpl in HtidLt.
+              assumption.
             }
             { admit. }
 
