@@ -783,7 +783,7 @@ Proof.
       rewrite H0 in H3; auto.
 Qed.
 
-Lemma steps_det_ValidTidState:
+Lemma steps_t_ValidTidState:
   forall st1,
     ValidTidState st1 ->
     forall sys hst st2,
@@ -808,17 +808,34 @@ Proof.
 Qed.
 
 Lemma step_t_TidLt:
-  forall st1,
+  forall st1 sys orule mins mouts st2,
     ValidTidState st1 ->
-    forall sys orule mins mouts st2,
-      mins <> nil ->
-      step_t sys st1 (RlblOuts orule mins mouts) st2 ->
-      Forall (fun tmsg => tmsg_info tmsg = None) mins ->
-      TidLt (tst_tid st2) st1.
+    mins <> nil ->
+    step_t sys st1 (RlblOuts orule mins mouts) st2 ->
+    Forall (fun tmsg => tmsg_info tmsg = None) mins ->
+    TidLt (tst_tid st2) st1.
 Proof.
   intros; inv H1; [elim H0; reflexivity|].
   simpl; rewrite getTMsgsTInfo_Forall_None by assumption.
   eapply TidLe_TidLt; eauto.
+Qed.
+
+Corollary step_t_tid_next_TidLt:
+  forall sys st1 orule ins outs ts st2,
+    ValidTidState st1 ->
+    step_t sys st1 (RlblOuts orule ins outs) st2 ->
+    ins <> nil -> outs <> nil ->
+    Forall (fun tmsg => tmsg_info tmsg = None) ins ->
+    Forall (fun tmsg => match tmsg_info tmsg with
+                        | Some ti => tinfo_tid ti = ts
+                        | None => True
+                        end) outs ->
+    TidLt ts st1.
+Proof.
+  intros.
+  replace ts with (tst_tid st2).
+  - eauto using step_t_TidLt.
+  - eauto using step_t_tid_next.
 Qed.
 
 Definition TInfoExists (sys: System) (tst: TState) :=
@@ -892,7 +909,7 @@ Proof.
     + right; econstructor; eauto.
 Qed.
 
-Lemma steps_det_tinfo:
+Lemma steps_t_tinfo:
   forall sys st1,
     TInfoExists sys st1 ->
     forall hst st2,

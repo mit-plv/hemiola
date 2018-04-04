@@ -118,6 +118,14 @@ Section Impl.
         apply SimMP_ext_msg_immediate_out; auto
       | [ |- SimMP _ (distributeMsgs _ (removeMP _ _)) _ ] =>
         eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
+      | [ |- TidLtMP _ _ ] => progress simpl
+      | [H1: ValidTidState {| tst_msgs := ?msgs |}, H2: step_t _ _ _ _
+         |- TidLtMP ?msgs _ ] =>
+        eapply step_t_tid_next_TidLt in H2;
+        [|eassumption|discriminate|discriminate
+         |repeat constructor|repeat constructor];
+        assumption
+                                                               
       | [ |- Forall (fun tmsg => tmsg_info tmsg = Some _) _ ] =>
         constructor; simpl; try reflexivity
       | [H: FirstMP ?imsgs _ |- FirstMP (map ?f ?imsgs) _ ] =>
@@ -605,7 +613,7 @@ Section Impl.
         | [ |- _ /\ _] => split
         end.
 
-    Ltac sim_spec_constr_step :=
+    Ltac sim_spec_constr_step_t :=
       repeat
         (try match goal with
              | [ |- step_t _ _ _ _] => econstructor
@@ -642,30 +650,35 @@ Section Impl.
         | [ |- _ /\ _ ] => split; cbn
         end; [ssim|msim].
 
-    Ltac sim_spec_constr srule ssim msim :=
+    Ltac sim_spec_constr_step srule ssim msim :=
       sim_spec_constr_step_init srule;
       sim_spec_constr_split;
       (* 1) Prove the external label equality first, *)
       [|sim_spec_constr_extLabel_eq|];
       (* 2) Prove the actual step relation, and *)
-      [sim_spec_constr_step|];
+      [sim_spec_constr_step_t|];
       (* 3) Prove the preservation of simulation. *)
       sim_spec_constr_sim ssim msim.
 
-    (* Try to synthesize an immediate [PRule]. *)
+    Ltac sim_spec_constr_silent constr_sim_os constr_sim_mp :=
+      sim_spec_constr_silent_init;
+      (* It suffices to prove simulation, due to the silent step. *)
+      sim_spec_constr_sim constr_sim_svm constr_sim_mp.
+
+    (** Try to synthesize an immediate [PRule]. *)
     Ltac synth_imm_prule srule red_sim constr_sim_os constr_sim_mp :=
       pstack_deq_instantiate_imm_prule;
-      (* Since the target rule is immediate, inversion of a step should
-       * generate only one subgoal.
-       *)
       step_pred_invert_init;
-      (* After inverting a step, lots of reductions are required 
-       * to prove the simulation. 
-       *)
       step_pred_invert_red red_sim;
-      (* Construction of a step by spec *)
-      sim_spec_constr srule constr_sim_os constr_sim_mp.
-    
+      sim_spec_constr_step srule constr_sim_os constr_sim_mp.
+
+    (** Try to synthesize a request-forwarding [PRule]. *)
+    Ltac synth_rqfwd_prule opred rqff rsbf red_sim constr_sim_os constr_sim_mp :=
+      pstack_deq_instantiate_rqfwd_prule opred rqff rsbf;
+      step_pred_invert_init;
+      step_pred_invert_red red_sim;
+      sim_spec_constr_silent constr_sim_os constr_sim_mp.
+
     Definition svmTrsIdx0: TrsId := SvmGetE.
 
     Definition svmSynTrs0:
@@ -680,7 +693,7 @@ Section Impl.
           trs_simulates_trivial svmMsgF SvmSim.
 
           (** [TrsSimAtomic]: [TrsSimulates] for [Atomic] steps. *)
-          (* Now convert the target [Atomic] [steps_det] into [steps_pred].
+          (* Now convert the target [Atomic] [steps_t] into [steps_pred].
            * We will have two subgoals, one for synthesizing predicate rules
            * and the other for synthesizing actual executable rules, using
            * already-synthesized predicate rules.
@@ -749,28 +762,18 @@ Section Impl.
              *)
             synth_prule_single; [|pstack_deq].
             {
+              synth_rqfwd_prule 
+                OPredGetS (getRqFwdF implTopo svmTrsIdx0) rsBackFDefault
+                red_svm constr_sim_svm constr_sim_mp.
 
-              pstack_deq_instantiate_rqfwd_prule
-                OPredGetS (getRqFwdF implTopo svmTrsIdx0) rsBackFDefault.
-
-              step_pred_invert_init.
-              step_pred_invert_red red_svm.
-
-              sim_spec_constr_silent_init.
-              sim_spec_constr_sim constr_sim_svm constr_sim_mp.
-
-              (** TODO: automate below *)
-              simpl.
-              pose proof H4 as Htid.
-              eapply step_t_tid_next in Htid;
-                [|discriminate|repeat constructor|repeat constructor].
-              simpl in Htid; subst.
-              pose proof H4 as HtidLt.
-              apply step_t_TidLt in HtidLt;
-                [|assumption|discriminate|repeat constructor].
-              simpl in HtidLt.
-              unfold TidLt in HtidLt; simpl in HtidLt.
-              assumption.
+              (* TODOs:
+               * - Synthesize the dual responses-back rule 
+               *   when synthesizing a request-forwarding rule.
+               * - Enqueue forwarded messages into the [list PStackElt].
+               *
+               * - Fix: some immediate rules do not generate any external labels.
+               * - Fix: some responses-back rules generate external labels.
+               *)
             }
             { admit. }
 
