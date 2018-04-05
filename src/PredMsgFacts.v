@@ -237,10 +237,12 @@ Qed.
 Corollary step_pred_rules_split_addPRules_2:
   forall (psys: PSystem TMsg) prule1 prule2 prules pst1 plbl pst2,
     step_pred_t (addPRules (prule1 :: prule2 :: prules) (buildRawPSys _ psys)) pst1 plbl pst2 ->
-    step_pred_t (addPRules [prule1; prule2] (buildRawPSys _ psys)) pst1 plbl pst2 \/
+    step_pred_t (addPRules [prule1] (buildRawPSys _ psys)) pst1 plbl pst2 \/
+    step_pred_t (addPRules [prule2] (buildRawPSys _ psys)) pst1 plbl pst2 \/
     step_pred_t (addPRules prules (buildRawPSys _ psys)) pst1 plbl pst2.
 Proof.
   intros.
-  apply step_pred_rules_split; auto.
+  apply step_pred_rules_split_addPRules_1 in H; destruct H; auto.
+  apply step_pred_rules_split_addPRules_1 in H; destruct H; auto.
 Qed.
 

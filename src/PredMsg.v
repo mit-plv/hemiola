@@ -63,30 +63,28 @@ Section GivenMsg.
   Definition PRPrecond := OState -> list Msg -> Prop.
   Definition PROuts := list PMsg -> OState -> list PMsg.
 
-  Definition RqFwdF := PMsgId -> list PMsgId.
   Definition RsBackF := list Value -> OState -> Value.
 
   Inductive PRule :=
   | PRuleImm:
       forall (rq rs: PMsgId) (prec: PRPrecond), PRule
   | PRuleRqFwd:
-      forall (rq: PMsgId) (prec: PRPrecond)
-             (opred: OPred) (rqff: RqFwdF) (rsbf: RsBackF), PRule
+      forall (rq: PMsgId) (prec: PRPrecond) (rqf: list PMsgId), PRule
   | PRuleRsBack:
-      forall (rss: list PMsgId), PRule.
+      forall (rss: list PMsgId) (opred: OPred) (rsbf: RsBackF), PRule.
 
   Definition midsOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm rq _ _ => pmid_mid rq :: nil
-    | PRuleRqFwd rq _ _ _ _ => pmid_mid rq :: nil
-    | PRuleRsBack rss => map pmid_mid rss
+    | PRuleRqFwd rq _ _ => pmid_mid rq :: nil
+    | PRuleRsBack rss _ _ => map pmid_mid rss
     end.
 
   Definition precOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm _ _ prec => prec
-    | PRuleRqFwd _ prec _ _ _ => prec
-    | PRuleRsBack _ => ⊤
+    | PRuleRqFwd _ prec _ => prec
+    | PRuleRsBack _ _ _ => ⊤
     end.
 
   Section PLabel.
@@ -130,23 +128,20 @@ Section GivenMsg.
   Global Instance PSystem_IsSystem: IsSystem PSystem :=
     {| indicesOf := psys_inds |}.
 
-  Definition ForwardingOk (rq: PMsg) (opred: OPred) (rsbf: RsBackF) :=
-    forall poss noss post nost rss,
-      Forall (fun rs =>
-                (pred_os (pmsg_pred rs) (pmsg_val rq) poss (pmsg_val rs) noss))
-             rss ->
-      poss@[mid_to (pmsg_mid rq)] = Some post ->
-      noss@[mid_to (pmsg_mid rq)] = Some nost ->
-      opred (pmsg_val rq) post
-            (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost) nost ->
-      (pred_os (pmsg_pred rq) (pmsg_val rq) poss
-               (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost)) noss.
+  (* Definition ForwardingOk (rq: PMsg) (opred: OPred) (rsbf: RsBackF) := *)
+  (*   forall poss noss post nost rss, *)
+  (*     Forall (fun rs => *)
+  (*               (pred_os (pmsg_pred rs) (pmsg_val rq) poss (pmsg_val rs) noss)) *)
+  (*            rss -> *)
+  (*     poss@[mid_to (pmsg_mid rq)] = Some post -> *)
+  (*     noss@[mid_to (pmsg_mid rq)] = Some nost -> *)
+  (*     opred (pmsg_val rq) post *)
+  (*           (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost) nost -> *)
+  (*     (pred_os (pmsg_pred rq) (pmsg_val rq) poss *)
+  (*              (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost)) noss. *)
 
   Record OTrs :=
-    { otrs_rq: PMsg;
-      otrs_opred: OPred;
-      otrs_rsbf: RsBackF
-    }.
+    { otrs_rq: PMsg }.
 
   Record PState :=
     { pst_oss: OStates;

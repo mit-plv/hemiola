@@ -453,9 +453,12 @@ Section Impl.
                (pste_prec pste).
 
     Definition buildPRuleRqFwdFromPStack (pste: PStackElt)
-               (opred: OPred) (rqff: RqFwdF TMsg) (rsbf: RsBackF) :=
-      PRuleRqFwd (pste_pmid pste) (pste_prec pste)
-                 opred rqff rsbf.
+               (rqff: PMsgId TMsg -> list (PMsgId TMsg)) :=
+      PRuleRqFwd (pste_pmid pste) (pste_prec pste) (rqff (pste_pmid pste)).
+
+    Definition buildPRuleRsBackFromPStack (pstes: list PStackElt)
+               (opred: OPred) (rsbf: RsBackF) :=
+      PRuleRsBack (map pste_pmid pstes) opred rsbf.
 
     Ltac synth_prule_imm :=
       match goal with
@@ -463,6 +466,14 @@ Section Impl.
         is_evar rules; instantiate (1:= _ :: _);
         apply step_pred_rules_split_addPRules_1 in H;
         destruct H
+      end.
+
+    Ltac synth_prules_rqf_rsb :=
+      match goal with
+      | [H: step_pred_t (addPRules ?rules _) _ _ _ |- _] =>
+        is_evar rules; instantiate (1:= _ :: _ :: _);
+        apply step_pred_rules_split_addPRules_2 in H;
+        destruct H as [|[|]]
       end.
 
     Ltac pstack_first_instantiate_imm_prule :=
@@ -473,12 +484,12 @@ Section Impl.
         instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H
       end.
 
-    Ltac pstack_first_instantiate_rqfwd_prule opred rqff rsbf :=
+    Ltac pstack_first_instantiate_rqfwd_prule rqff :=
       match goal with
       | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
         is_evar rule;
         let pfst := pstack_first in
-        instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H
+        instantiate (1:= buildPRuleRqFwdFromPStack pfst rqff) in H
       end.
 
     Ltac step_pred_invert_init :=
@@ -544,7 +555,7 @@ Section Impl.
         | [H: dualOf _ _ = _ |- _] => inv H
 
         (* For request-forwarding [PMsg]s *)
-        | [H: ?fwdf (pmsg_pmid ?rq) = map (@pmsg_pmid _ _) ?rqfwds |- _] =>
+        | [H: {| mid_addr := _; mid_tid := _ |} = pmsg_mid ?rq |- _] =>
           dest_pmsg_rq rq
         | [H: ?lfwd :: ?lfwds = map (@pmsg_pmid _ _) ?rfwds |- _] =>
           let rqfwd := fresh "rqfwd" in
@@ -702,14 +713,16 @@ Section Impl.
 
     (** Try to synthesize an immediate [PRule]. *)
     Ltac synth_imm_prule srule red_sim constr_sim_os constr_sim_mp :=
-      pstack_first_instantiate_imm_prule; pstack_pop;
+      pstack_first_instantiate_imm_prule;
+      pstack_pop;
       step_pred_invert_init;
       step_pred_invert_red red_sim;
       sim_spec_constr_step srule constr_sim_os constr_sim_mp.
 
     (** Try to synthesize a request-forwarding [PRule]. *)
-    Ltac synth_rqfwd_prule opred rqff rsbf red_sim constr_sim_os constr_sim_mp :=
-      pstack_first_instantiate_rqfwd_prule opred rqff rsbf; pstack_pop;
+    Ltac synth_rqfwd_prule rqff red_sim constr_sim_os constr_sim_mp :=
+      pstack_first_instantiate_rqfwd_prule rqff;
+      pstack_pop;
       step_pred_invert_init;
       step_pred_invert_red red_sim;
       sim_spec_constr_silent constr_sim_os constr_sim_mp.
@@ -793,12 +806,12 @@ Section Impl.
              * synthesize a request-forwarding rule and 
              * the dual response-back rule.
              *)
-            synth_prule_imm.
+            synth_prules_rqf_rsb.
             {
               synth_rqfwd_prule
-                OPredGetS (getRqFwdF implTopo svmTrsIdx0) rsBackFDefault
-                red_svm constr_sim_svm constr_sim_mp.
-
+                (getRqFwdF implTopo) red_svm constr_sim_svm constr_sim_mp.
+            }
+            {
               (* TODOs:
                * - Synthesize the dual responses-back rule 
                *   when synthesizing a request-forwarding rule.
@@ -807,6 +820,7 @@ Section Impl.
                * - Fix: some immediate rules do not generate any external labels.
                * - Fix: some responses-back rules generate external labels.
                *)
+              admit.
             }
             { admit. }
 

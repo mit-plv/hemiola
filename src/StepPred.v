@@ -51,35 +51,32 @@ Section GivenMsg.
         step_pred0 psys pst (PlblOuts (Some immr) (rq :: nil) (rs :: nil)) nst
 
   | SpRqFwd:
-      forall pst nst oss otrss oidx pos opred rsbf oims
-             (rqfwdr: PRule MsgT) prec rqff
+      forall pst nst oss otrss oidx pos oims
+             (rqfwdr: PRule MsgT) prec
              (rq: PMsg MsgT) (fwds: list (PMsg MsgT)),
         In oidx (indicesOf psys) ->
         In rqfwdr (psys_rules psys) ->
-        rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec opred rqff rsbf ->
+        rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec (map (@pmsg_pmid _ _) fwds) ->
         FirstMP oims rq ->
         ValidMsgsIn oidx (rq :: nil) ->
         ValidMsgOuts oidx fwds ->
-        rqff (pmsg_pmid rq) = map (@pmsg_pmid _ _) fwds ->
 
         oss@[oidx] = Some pos ->
         prec pos (getMsg rq :: nil) ->
 
         pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
         nst = {| pst_oss := oss;
-                 pst_otrss := otrss +[ oidx <- {| otrs_rq := rq;
-                                                  otrs_opred := opred;
-                                                  otrs_rsbf := rsbf |} ];
+                 pst_otrss := otrss +[ oidx <- {| otrs_rq := rq |} ];
                  pst_msgs := distributeMsgs fwds (removeMP rq oims) |} ->
 
         step_pred0 psys pst (PlblOuts (Some rqfwdr) (rq :: nil) fwds) nst
 
   | SpRsBack:
-      forall pst nst oss otrss oidx pos nos otrs oims
+      forall pst nst oss otrss oidx pos nos otrs oims opred rsbf
              (rsbackr: PRule MsgT) (rss: list (PMsg MsgT)) (rsb: PMsg MsgT),
         In oidx (indicesOf psys) ->
         In rsbackr (psys_rules psys) ->
-        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) ->
+        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) opred rsbf ->
         Forall (FirstMP oims) rss ->
         ValidMsgsIn oidx rss ->
         ValidMsgOuts oidx (rsb :: nil) ->
@@ -92,9 +89,9 @@ Section GivenMsg.
                           (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
                   pred_mp (pmsg_pred pmsg) (toOrigMP oims)
                           (toOrigMP (enqMP rsb (removeMsgs rss oims)))) rss ->
-        otrs_opred otrs (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
+        opred (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
         DualPMsg (otrs_rq otrs) rsb ->
-        pmsg_val rsb = otrs_rsbf otrs (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
+        pmsg_val rsb = rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
 
         pst = {| pst_oss := oss;
                  pst_otrss := otrss;

@@ -108,22 +108,21 @@ Section Predicates.
       nost@[statusIdx] = Some (VNat stS) /\
       nost@[valueIdx] = Some outv.
 
-  Definition getRqFwdF (topo: Tree unit) (trsid: IdxT): RqFwdF TMsg :=
-    fun rqpmid =>
-      let from := mid_from (pmid_mid rqpmid) in
-      let this := mid_to (pmid_mid rqpmid) in
-      map (fun tofwds =>
-             {| pmid_mid :=
-                  {| mid_addr :=
-                       {| ma_from := this;
-                          ma_to := fst tofwds;
-                          ma_chn := rqChn |};
-                     mid_tid := trsid |};
-                pmid_pred :=
-                  {| pred_os := PredGetSI (snd tofwds);
-                     pred_mp := ⊤ |}
-             |})
-          (getFwds topo from this).
+  Definition getRqFwdF (topo: Tree unit) (rqpmid: PMsgId TMsg): list (PMsgId TMsg) :=
+    let from := mid_from (pmid_mid rqpmid) in
+    let this := mid_to (pmid_mid rqpmid) in
+    map (fun tofwds =>
+           {| pmid_mid :=
+                {| mid_addr :=
+                     {| ma_from := this;
+                        ma_to := fst tofwds;
+                        ma_chn := rqChn |};
+                   mid_tid := mid_tid (pmid_mid rqpmid) |};
+              pmid_pred :=
+                {| pred_os := PredGetSI (snd tofwds);
+                   pred_mp := ⊤ |}
+           |})
+        (getFwds topo from this).
   
 End Predicates.
 
