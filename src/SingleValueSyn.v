@@ -373,41 +373,78 @@ Section Impl.
         pste_prec: PRPrecond }.
 
     Ltac pstack_empty :=
-      set (nil (A:= PStackElt)) as stack.
+      let stack := fresh "stack" in
+      evar (stack: list (option PStackElt)).
 
-    Ltac pstack_enq tid rr from to chn prec pred :=
-      match goal with
-      | [st: list PStackElt |- _] =>
-        let stack := fresh "stack" in
-        set ({| pste_rr := rr;
-                pste_pmid :=
-                  {| pmid_mid :=
-                       {| mid_addr :=
-                            {| ma_from := from;
-                               ma_to := to;
-                               ma_chn := chn |};
-                          mid_tid := tid |};
-                     pmid_pred := pred
-                  |};
-                pste_prec := prec |} :: st) as stack; subst st
+    Ltac pstack_instance_fix st :=
+      match st with
+      | ?hd :: ?tl =>
+        let tins := pstack_instance_fix tl in
+        constr:(tins ++ hd :: nil)
+      | _ => constr:(nil (A:= option PStackElt))
       end.
+
+    Ltac pstack_instance :=
+      match goal with
+      | [st := ?stack : list (option PStackElt) |- _] =>
+        let ins := pstack_instance_fix stack in
+        let v := eval cbn in ins in v
+      end.
+
+    Ltac pstack_push e :=
+      match goal with
+      | [st := ?stack : list (option PStackElt) |- _] =>
+        has_evar stack;
+        instantiate (1:= Some e :: _) in (Value of st)
+      end.
+
+    Ltac pstack_push_ tid rr from to chn prec pred :=
+      pstack_push {| pste_rr := rr;
+                     pste_pmid :=
+                       {| pmid_mid :=
+                            {| mid_addr :=
+                                 {| ma_from := from;
+                                    ma_to := to;
+                                    ma_chn := chn |};
+                               mid_tid := tid |};
+                          pmid_pred := pred
+                       |};
+                     pste_prec := prec |}.
+
+    Fixpoint evalPStackFirstFix (st: list (option PStackElt)) (n: nat) :=
+      match st with
+      | nil => None
+      | None :: st' => evalPStackFirstFix st' (S n)
+      | Some v :: st' =>
+        match n with
+        | O => Some v
+        | S n' => evalPStackFirstFix st' n'
+        end
+      end.
+
+    Definition evalPStackFirst (st: list (option PStackElt)) :=
+      evalPStackFirstFix st O.
 
     Ltac pstack_first :=
-      match goal with
-      | [st:= ?hd :: _ : list PStackElt |- _] =>
-        constr:(hd)
+      let ins := pstack_instance in
+      let fst := (eval cbn in (evalPStackFirst ins)) in
+      match fst with
+      | Some ?v => v
       end.
 
-    Ltac pstack_deq :=
+    Ltac pstack_pop :=
       match goal with
-      | [st:= _ :: ?tl : list PStackElt |- _] =>
-        let stack := fresh "stack" in
-        set tl as stack; subst st
+      | [st:= ?stack : list (option PStackElt) |- _] =>
+        has_evar stack;
+        instantiate (1:= None :: _) in (Value of st)
       end.
 
     Ltac pstack_clear :=
       match goal with
-      | [st: list PStackElt |- _] => clear st
+      | [st := ?stack : list (option PStackElt) |- _] =>
+        has_evar stack;
+        instantiate (1:= nil) in (Value of st);
+        clear st
       end.
 
     Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) :=
@@ -420,30 +457,28 @@ Section Impl.
       PRuleRqFwd (pste_pmid pste) (pste_prec pste)
                  opred rqff rsbf.
 
-    Ltac synth_prule_single :=
+    Ltac synth_prule_imm :=
       match goal with
       | [H: step_pred_t (addPRules ?rules _) _ _ _ |- _] =>
         is_evar rules; instantiate (1:= _ :: _);
-        apply step_pred_rules_split_addPRules in H;
+        apply step_pred_rules_split_addPRules_1 in H;
         destruct H
       end.
 
-    Ltac pstack_deq_instantiate_imm_prule :=
+    Ltac pstack_first_instantiate_imm_prule :=
       match goal with
       | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
         is_evar rule;
         let pfst := pstack_first in
-        instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H;
-        pstack_clear
+        instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H
       end.
 
-    Ltac pstack_deq_instantiate_rqfwd_prule opred rqff rsbf :=
+    Ltac pstack_first_instantiate_rqfwd_prule opred rqff rsbf :=
       match goal with
       | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
         is_evar rule;
         let pfst := pstack_first in
-        instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H;
-        pstack_clear
+        instantiate (1:= buildPRuleRqFwdFromPStack pfst opred rqff rsbf) in H
       end.
 
     Ltac step_pred_invert_init :=
@@ -667,14 +702,14 @@ Section Impl.
 
     (** Try to synthesize an immediate [PRule]. *)
     Ltac synth_imm_prule srule red_sim constr_sim_os constr_sim_mp :=
-      pstack_deq_instantiate_imm_prule;
+      pstack_first_instantiate_imm_prule; pstack_pop;
       step_pred_invert_init;
       step_pred_invert_red red_sim;
       sim_spec_constr_step srule constr_sim_os constr_sim_mp.
 
     (** Try to synthesize a request-forwarding [PRule]. *)
     Ltac synth_rqfwd_prule opred rqff rsbf red_sim constr_sim_os constr_sim_mp :=
-      pstack_deq_instantiate_rqfwd_prule opred rqff rsbf;
+      pstack_first_instantiate_rqfwd_prule opred rqff rsbf; pstack_pop;
       step_pred_invert_init;
       step_pred_invert_red red_sim;
       sim_spec_constr_silent constr_sim_os constr_sim_mp.
@@ -719,50 +754,48 @@ Section Impl.
              * and synthesize predicate rules simultaneously.
              *)
 
-            (* A job stack will be used to track 
-             * which rules should be synthesized now. *)
+            (* A job stack will be used to track which rules
+             * should be synthesized now. *)
             pstack_empty.
 
             (* Add initial requests. *)
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
-                       {| pred_os := PredGet; pred_mp := PredMPTrue |}.
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
-                       {| pred_os := PredGet; pred_mp := PredMPTrue |}.
-            pstack_enq svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
-                       {| pred_os := PredGet; pred_mp := PredMPTrue |}.
+
+            pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
+                         {| pred_os := PredGet; pred_mp := PredMPTrue |}.
+            pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
+                         {| pred_os := PredGet; pred_mp := PredMPTrue |}.
+            pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
+                         {| pred_os := PredGet; pred_mp := PredMPTrue |}.
 
             (** Dequeue the first element of [list PStackElt] and
              * try to synthesize a [PRule]. Always try to synthesize
              * an immediate rule [PRuleImm] first.
              *)
             (* Should succeed when {C1.st = M} *)
-            try (synth_prule_single;
+            try (synth_prule_imm;
                  [synth_imm_prule (specGetReq extIdx1 extIdx1)
-                                  red_svm constr_sim_svm constr_sim_mp
-                 |pstack_deq]).
+                                  red_svm constr_sim_svm constr_sim_mp|]).
 
             (* Should succeed when {C1.st = S} *)
-            try (synth_prule_single;
+            try (synth_prule_imm;
                  [synth_imm_prule (specGetReq extIdx1 extIdx1)
-                                  red_svm constr_sim_svm constr_sim_mp
-                 |pstack_deq]).
+                                  red_svm constr_sim_svm constr_sim_mp|]).
 
             (* Should fail when {C1.st = I}:
              * TODO: need an Ltac to heuristically check that it is feasible
              * to have the next [OState] using a target rule being synthesized 
              * now.
              *)
-            try (synth_prule_single;
-                 [fail (* TODO: [synth_imm_prule] should fail here. *)
-                 |pstack_deq]).
+            try (synth_prule_imm;
+                 [fail (* TODO: [synth_imm_prule] should fail here. *)|]).
 
             (** If synthesizing the immediate rule fails,
              * synthesize a request-forwarding rule and 
              * the dual response-back rule.
              *)
-            synth_prule_single; [|pstack_deq].
+            synth_prule_imm.
             {
-              synth_rqfwd_prule 
+              synth_rqfwd_prule
                 OPredGetS (getRqFwdF implTopo svmTrsIdx0) rsBackFDefault
                 red_svm constr_sim_svm constr_sim_mp.
 
