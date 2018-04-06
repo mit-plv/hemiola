@@ -83,6 +83,10 @@ Section Impl.
         destruct H as [sost [? ?]]
       | [H1: ImplStateMSI ?ioss ?v1, H2: ImplStateMSI ?ioss ?v2 |- _] =>
         assert (v1 = v2) by eauto using impl_state_MSI_value_eq; subst v1
+      | [H1: ImplStateMSI ?ioss ?v1, H2: ImplStateSI (M.restrict ?ioss _) ?v2 |- _] =>
+        assert (v1 = v2)
+          by (eapply impl_state_MSI_restrict_SI_value_eq; eauto; discriminate);
+        subst v1
       end.
 
   Ltac red_svm := red_SvmInvs; red_SvmSim.
@@ -367,10 +371,19 @@ Section Impl.
           | [H: ?t |- ?t] => assumption
           end].
 
+    (** [PStack] (= [list PStackElt]), a job stack to figure out
+     * which rule should be should be synthesized at the current point.
+     *)
+    
     Record PStackElt :=
       { pste_rr: RqRs;
         pste_pmid: PMsgId TMsg;
         pste_prec: PRPrecond }.
+
+    Definition dualOfPStackElt (chn: IdxT) (pste: PStackElt) :=
+      {| pste_rr := pste_rr pste;
+         pste_pmid := dualOfP (pste_pmid pste) chn;
+         pste_prec := pste_prec pste |}.
 
     Ltac pstack_empty :=
       let stack := fresh "stack" in
@@ -411,26 +424,42 @@ Section Impl.
                        |};
                      pste_prec := prec |}.
 
-    Fixpoint evalPStackFirstFix (st: list (option PStackElt)) (n: nat) :=
+    Fixpoint evalStackInstanceFix
+             (st: list (option PStackElt)) (n: nat) :=
       match st with
-      | nil => None
-      | None :: st' => evalPStackFirstFix st' (S n)
+      | nil => nil
+      | None :: st' => evalStackInstanceFix st' (S n)
       | Some v :: st' =>
         match n with
-        | O => Some v
-        | S n' => evalPStackFirstFix st' n'
+        | O => evalStackInstanceFix st' n ++ v :: nil
+        | S n' => evalStackInstanceFix st' n'
         end
       end.
 
-    Definition evalPStackFirst (st: list (option PStackElt)) :=
-      evalPStackFirstFix st O.
+    Fixpoint evalStackInstance (st: list (option PStackElt)) :=
+      evalStackInstanceFix st O.
 
     Ltac pstack_first :=
       let ins := pstack_instance in
-      let fst := (eval cbn in (evalPStackFirst ins)) in
-      match fst with
-      | Some ?v => v
+      let v := (eval cbn in (evalStackInstance ins)) in
+      match v with
+      | ?v :: _ => v
       end.
+
+    Fixpoint stackFirstN (n: nat) (st: list PStackElt) :=
+      match n with
+      | O => nil
+      | S n' =>
+        match st with
+        | nil => nil
+        | v :: st' => v :: stackFirstN n' st'
+        end
+      end.
+
+    Ltac pstack_first_n n :=
+      let ins := pstack_instance in
+      let v := (eval cbn in (evalStackInstance ins)) in
+      constr:(stackFirstN n v).
 
     Ltac pstack_pop :=
       match goal with
@@ -447,6 +476,41 @@ Section Impl.
         clear st
       end.
 
+    (** End of [PStack]-related definitions *)
+
+    (** [PRqRs], a record to track the target predicate messages
+     * between a request-forwarding rule and its dual responses-back rule.
+     *)
+
+    Record PRqRs :=
+      { prr_rq: PMsgId TMsg;
+        prr_fwds: list (PMsgId TMsg)
+      }.
+
+    Ltac declare_prr :=
+      let prr := fresh "prr" in
+      evar (prr: PRqRs).
+
+    Ltac get_prr :=
+      match goal with
+      | [p := ?prr : PRqRs |- _] => prr
+      end.
+
+    Ltac set_prr rq fwds :=
+      match goal with
+      | [p := ?prr : PRqRs |- _] =>
+        is_evar prr;
+        instantiate (1:= {| prr_rq := rq; prr_fwds := fwds |})
+          in (Value of p)
+      end.
+
+    Ltac clear_prr :=
+      match goal with
+      | [p := _ : PRqRs |- _] => clear p
+      end.
+
+    (** End of [PRqRs] *)
+
     Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) :=
       PRuleImm (pste_pmid pste)
                (dualOfP (pste_pmid pste) dchn)
@@ -456,9 +520,12 @@ Section Impl.
                (rqff: PMsgId TMsg -> list (PMsgId TMsg)) :=
       PRuleRqFwd (pste_pmid pste) (pste_prec pste) (rqff (pste_pmid pste)).
 
-    Definition buildPRuleRsBackFromPStack (pstes: list PStackElt)
-               (opred: OPred) (rsbf: RsBackF) :=
-      PRuleRsBack (map pste_pmid pstes) opred rsbf.
+    Ltac set_prr_rqf :=
+      match goal with
+      | [H: context[buildPRuleRqFwdFromPStack
+                      {| pste_pmid := ?rq |} ?rqff] |- _] =>
+        set_prr rq (rqff rq)
+      end.
 
     Ltac synth_prule_imm :=
       match goal with
@@ -472,6 +539,7 @@ Section Impl.
       match goal with
       | [H: step_pred_t (addPRules ?rules _) _ _ _ |- _] =>
         is_evar rules; instantiate (1:= _ :: _ :: _);
+        declare_prr;
         apply step_pred_rules_split_addPRules_2 in H;
         destruct H as [|[|]]
       end.
@@ -490,6 +558,18 @@ Section Impl.
         is_evar rule;
         let pfst := pstack_first in
         instantiate (1:= buildPRuleRqFwdFromPStack pfst rqff) in H
+      end.
+
+    Ltac prr_instantiate_rsback_prule opred rsbf :=
+      match goal with
+      | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
+        is_evar rule;
+        let prr := get_prr in
+        let rq := (eval cbn in (prr_rq prr)) in
+        let rqf := (eval cbn in (prr_fwds prr)) in
+        let rsb := (eval cbn in (dualOfP rq rsChn)) in
+        let rss := (eval cbn in (map (fun pmid => dualOfP pmid rsChn) rqf)) in
+        instantiate (1:= PRuleRsBack rss opred rsb rsbf) in H
       end.
 
     Ltac step_pred_invert_init :=
@@ -552,7 +632,7 @@ Section Impl.
                        {| pmsg_omsg := _; pmsg_pred := _ |} |- _] => inv H
         | [H: DualMid {| mid_addr := _; mid_tid := _ |}
                       {| mid_addr := _; mid_tid := _ |} |- _] => inv H
-        | [H: dualOf _ _ = _ |- _] => inv H
+        | [H: dualOf _ _ = {| mid_addr := _; mid_tid := _ |} |- _] => inv H
 
         (* For request-forwarding [PMsg]s *)
         | [H: {| mid_addr := _; mid_tid := _ |} = pmsg_mid ?rq |- _] =>
@@ -566,6 +646,10 @@ Section Impl.
         | [H: nil = map (@pmsg_pmid _ _) ?rfwds |- _] =>
           destruct rfwds; [clear H|discriminate]
 
+        (* For responses-back [PMsg]s *)
+        | [H: dualOf {| mid_addr := _; mid_tid := _ |} _ = pmsg_mid ?rs |- _] =>
+          dest_pmsg_rs rs
+                            
         (* General *)
         | [H: {| pmid_mid := _; pmid_pred := _ |} = ?rhs |- _] => is_var rhs; inv H
         | [H: ?lhs = {| pmid_mid := _; pmid_pred := _ |} |- _] => is_var lhs; inv H
@@ -613,12 +697,14 @@ Section Impl.
         match goal with
         | [H: ?predos _ _ _ _ |- _] =>
           match type of predos with
-          | PredOS => hnf in H
+          | PredOS => red in H
           end
         | [H: ?predmp _ _ |- _] =>
           match type of predmp with
-          | PredMP _ => hnf in H
+          | PredMP _ => red in H
           end
+        | [H: context[rsBackFDefault (?v :: nil) ?o] |- _] =>
+          rewrite rsBackFDefault_singleton with (val:= v) (ost:= o) in *
         end.
 
     Ltac step_pred_invert_red red_custom :=
@@ -709,7 +795,7 @@ Section Impl.
     Ltac sim_spec_constr_silent constr_sim_os constr_sim_mp :=
       sim_spec_constr_silent_init;
       (* It suffices to prove simulation, due to the silent step. *)
-      sim_spec_constr_sim constr_sim_svm constr_sim_mp.
+      sim_spec_constr_sim constr_sim_os constr_sim_mp.
 
     (** Try to synthesize an immediate [PRule]. *)
     Ltac synth_imm_prule srule red_sim constr_sim_os constr_sim_mp :=
@@ -723,9 +809,13 @@ Section Impl.
     Ltac synth_rqfwd_prule rqff red_sim constr_sim_os constr_sim_mp :=
       pstack_first_instantiate_rqfwd_prule rqff;
       pstack_pop;
+      set_prr_rqf;
       step_pred_invert_init;
       step_pred_invert_red red_sim;
       sim_spec_constr_silent constr_sim_os constr_sim_mp.
+
+    (** Try to synthesize a responses-back [PRule]. *)
+    (* Ltac synth_rsback_prule := *)
 
     Definition svmTrsIdx0: TrsId := SvmGetE.
 
@@ -806,23 +896,38 @@ Section Impl.
              * synthesize a request-forwarding rule and 
              * the dual response-back rule.
              *)
+            (* TODOs:
+             * - Fix: some immediate rules do not generate any external labels.
+             * - Fix: some responses-back rules generate external labels.
+             *)
             synth_prules_rqf_rsb.
-            {
-              synth_rqfwd_prule
+            { synth_rqfwd_prule
                 (getRqFwdF implTopo) red_svm constr_sim_svm constr_sim_mp.
             }
             {
-              (* TODOs:
-               * - Synthesize the dual responses-back rule 
-               *   when synthesizing a request-forwarding rule.
-               * - Enqueue forwarded messages into the [list PStackElt].
-               *
-               * - Fix: some immediate rules do not generate any external labels.
-               * - Fix: some responses-back rules generate external labels.
-               *)
-              admit.
+
+              prr_instantiate_rsback_prule OPredGetS rsBackFDefault.
+              clear_prr.
+              step_pred_invert_init.
+
+              step_pred_invert_red red_svm.
+
+              sim_spec_constr_step_init (specGetReq extIdx1 extIdx1).
+              sim_spec_constr_split;
+                [|sim_spec_constr_extLabel_eq|].
+              {
+                sim_spec_constr_step_t.
+                { admit. }
+                { admit. }
+              }
+              { (* TODO: May have to use [ResponsesOk] and [PredGetSI]. *)
+                sim_spec_constr_sim constr_sim_svm constr_sim_mp.
+                { admit. }
+                { admit. }
+              }
             }
-            { admit. }
+
+            admit.
 
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)

@@ -191,6 +191,14 @@ Proof.
     inv H0; constructor; auto.
 Qed.
 
+Lemma rsBackFDefault_singleton:
+  forall val ost,
+    rsBackFDefault [val] ost = val.
+Proof.
+  simpl; intros.
+  destruct val; reflexivity.
+Qed.
+
 Definition step_pred_t :=
   step_pred (stR:= PTStateR) step_t (@pToSystem TMsg) pToTLabel.
 

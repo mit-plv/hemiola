@@ -9,6 +9,12 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
+(* [M.restrict] is used to define some predicates and we don't want it to be
+ * unfolded during reductions. When [M.restrict] is applied to finite maps,
+ * reduction tactics like [cbn] reduce it too much.
+ *)
+Global Opaque M.restrict.
+
 Section Inv.
 
   Definition SvmInv (ist: TState) :=
@@ -187,6 +193,24 @@ Section Facts.
     specialize (H1 _ _ _ H H3); auto.
   Qed.
 
+  Lemma impl_state_MI_restrict_SI_contra:
+    forall ioss v1 v2 dom,
+      dom <> nil ->
+      ImplStateMI ioss v1 ->
+      ImplStateSI (M.restrict ioss dom) v2 ->
+      False.
+  Proof.
+    unfold ImplStateMI, ImplStateSI; intros; dest.
+    assert (ioss@[x] = Some x0).
+    { rewrite M.restrict_find in H1; findeq.
+      { destruct (in_dec _ _ _); [auto|discriminate]. }
+      { destruct (in_dec _ _ _); discriminate. }
+    }
+    destruct (x ==n x1); subst.
+    - mred_find.
+    - specialize (H6 _ _ _ n H7 H3); discriminate.
+  Qed.
+
   Lemma impl_state_SI_value_eq:
     forall ioss v1,
       ImplStateSI ioss v1 ->
@@ -197,6 +221,26 @@ Section Facts.
     unfold ImplStateSI; intros; dest.
     specialize (H2 _ _ _ H H4).
     specialize (H1 _ _ _ H H4).
+    simpl in *; mred_find.
+    reflexivity.
+  Qed.
+
+  Lemma impl_state_restrict_SI_value_eq:
+    forall ioss v1,
+      ImplStateSI ioss v1 ->
+      forall dom v2,
+        dom <> nil ->
+        ImplStateSI (M.restrict ioss dom) v2 ->
+        v1 = v2.
+  Proof.
+    unfold ImplStateSI; intros; dest.
+    assert (ioss@[x] = Some x0).
+    { rewrite M.restrict_find in H1; findeq.
+      { destruct (in_dec _ _ _); [auto|discriminate]. }
+      { destruct (in_dec _ _ _); discriminate. }
+    }
+    specialize (H2 _ _ _ H1 H4).
+    specialize (H3 _ _ _ H6 H4).
     simpl in *; mred_find.
     reflexivity.
   Qed.
@@ -229,5 +273,19 @@ Section Facts.
     - eauto using impl_state_SI_value_eq.
   Qed.
 
+  Lemma impl_state_MSI_restrict_SI_value_eq:
+    forall ioss v1,
+      ImplStateMSI ioss v1 ->
+      forall dom v2,
+        dom <> nil ->
+        ImplStateSI (M.restrict ioss dom) v2 ->
+        v1 = v2.
+  Proof.
+    unfold ImplStateMSI (* ImplStateMI, ImplStateSI *); intros.
+    destruct H.
+    - exfalso; eauto using impl_state_MI_restrict_SI_contra.
+    - eauto using impl_state_restrict_SI_value_eq.
+  Qed.
+  
 End Facts.
 

@@ -71,20 +71,21 @@ Section GivenMsg.
   | PRuleRqFwd:
       forall (rq: PMsgId) (prec: PRPrecond) (rqf: list PMsgId), PRule
   | PRuleRsBack:
-      forall (rss: list PMsgId) (opred: OPred) (rsbf: RsBackF), PRule.
+      forall (rss: list PMsgId) (opred: OPred)
+             (rsb: PMsgId) (rsbf: RsBackF), PRule.
 
   Definition midsOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm rq _ _ => pmid_mid rq :: nil
     | PRuleRqFwd rq _ _ => pmid_mid rq :: nil
-    | PRuleRsBack rss _ _ => map pmid_mid rss
+    | PRuleRsBack rss _ _ _ => map pmid_mid rss
     end.
 
   Definition precOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm _ _ prec => prec
     | PRuleRqFwd _ prec _ => prec
-    | PRuleRsBack _ _ _ => ⊤
+    | PRuleRsBack _ _ _ _ => ⊤
     end.
 
   Section PLabel.
@@ -127,18 +128,6 @@ Section GivenMsg.
 
   Global Instance PSystem_IsSystem: IsSystem PSystem :=
     {| indicesOf := psys_inds |}.
-
-  (* Definition ForwardingOk (rq: PMsg) (opred: OPred) (rsbf: RsBackF) := *)
-  (*   forall poss noss post nost rss, *)
-  (*     Forall (fun rs => *)
-  (*               (pred_os (pmsg_pred rs) (pmsg_val rq) poss (pmsg_val rs) noss)) *)
-  (*            rss -> *)
-  (*     poss@[mid_to (pmsg_mid rq)] = Some post -> *)
-  (*     noss@[mid_to (pmsg_mid rq)] = Some nost -> *)
-  (*     opred (pmsg_val rq) post *)
-  (*           (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost) nost -> *)
-  (*     (pred_os (pmsg_pred rq) (pmsg_val rq) poss *)
-  (*              (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost)) noss. *)
 
   Record OTrs :=
     { otrs_rq: PMsg }.
@@ -215,6 +204,11 @@ Fixpoint firstNonUnit (vs: list Value) :=
 
 Definition rsBackFDefault: RsBackF :=
   fun vs ost => firstNonUnit vs.
+
+(* Instead of directly dealing with [rsBackFDefault], 
+ * use reduction lemmas in [PredMsgFacts.v].
+ *)
+Global Opaque rsBackFDefault.
 
 Definition PredMPTrue: PredMP TMsg :=
   fun _ _ => True.

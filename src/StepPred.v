@@ -8,6 +8,19 @@ Section GivenMsg.
   Variable (MsgT StateT LabelT: Type).
   Context `{HasMsg MsgT} `{HasLabel LabelT}.
 
+  Definition ResponsesOk (origRq: PMsg MsgT)
+             (rss: list (PMsg MsgT)) (opred: OPred) (rsbf: RsBackF) :=
+    forall poss noss post nost,
+      Forall (fun rs =>
+                (pred_os (pmsg_pred rs) (pmsg_val origRq) poss (pmsg_val rs) noss))
+             rss ->
+      poss@[mid_to (pmsg_mid origRq)] = Some post ->
+      noss@[mid_to (pmsg_mid origRq)] = Some nost ->
+      opred (pmsg_val origRq) post
+            (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost) nost ->
+      (pred_os (pmsg_pred origRq) (pmsg_val origRq) poss
+               (rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) nost)) noss.
+
   Definition toOrigMP (mp: MessagePool (PMsg MsgT)): MessagePool MsgT :=
     map (@pmsg_omsg _) mp.
 
@@ -76,7 +89,8 @@ Section GivenMsg.
              (rsbackr: PRule MsgT) (rss: list (PMsg MsgT)) (rsb: PMsg MsgT),
         In oidx (indicesOf psys) ->
         In rsbackr (psys_rules psys) ->
-        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) opred rsbf ->
+        rsbackr = PRuleRsBack (map (@pmsg_pmid _ _) rss) opred
+                              (pmsg_pmid rsb) rsbf  ->
         Forall (FirstMP oims) rss ->
         ValidMsgsIn oidx rss ->
         ValidMsgOuts oidx (rsb :: nil) ->
@@ -84,14 +98,20 @@ Section GivenMsg.
         oss@[oidx] = Some pos ->
         otrss@[oidx] = Some otrs ->
 
+        (* Backing responses are all valid. *)
         Forall (fun pmsg =>
                   pred_os (pmsg_pred pmsg) (pmsg_val (otrs_rq otrs)) oss
                           (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
                   pred_mp (pmsg_pred pmsg) (toOrigMP oims)
                           (toOrigMP (enqMP rsb (removeMsgs rss oims)))) rss ->
         opred (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
-        DualPMsg (otrs_rq otrs) rsb ->
         pmsg_val rsb = rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
+
+        (* Using such responses, we should be able to prove 
+         * the original request predicate.
+         *)
+        DualPMsg (otrs_rq otrs) rsb ->
+        ResponsesOk (otrs_rq otrs) rss opred rsbf ->
 
         pst = {| pst_oss := oss;
                  pst_otrss := otrss;
