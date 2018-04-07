@@ -1663,9 +1663,11 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition KeysSubset {A} (m: t A) (d: list E.t) := forall k, In k m -> List.In k d.
   Definition KeysSupset {A} (m: t A) (d: list E.t) := forall k, List.In k d -> In k m.
   Definition KeysDisj {A} (m: t A) (d: list E.t) := forall k, List.In k d -> ~ In k m.
-  Definition KeysEq {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
+  Definition KeysEquiv {A} (m: t A) (d: list E.t) := forall k, In k m <-> List.In k d.
+  Definition KeysEq {A} (m: t A) (d: list E.t) := List.map fst (elements m) = d.
 
-  Hint Unfold Equal Disj Sub DomainSubset KeysSubset KeysSupset KeysDisj KeysEq : MapDefs.
+  Hint Unfold Equal Disj Sub DomainSubset
+       KeysSubset KeysSupset KeysDisj KeysEquiv KeysEq : MapDefs.
 
   Lemma Sub_union_2:
     forall {A} (m1 m2: t A), Disj m1 m2 -> Sub m2 (union m1 m2).
@@ -1908,6 +1910,15 @@ Module LeibnizFacts (M : MapLeibniz).
       inv H; intuition.
       specialize (H0 _ H).
       apply eq_sym, P.F.not_find_in_iff in Heqov; intuition.
+  Qed.
+
+  Lemma KeysEquiv_EquivList:
+    forall {A} (m: t A) (d1 d2: list E.t),
+      KeysEquiv m d1 -> EquivList d1 d2 -> KeysEquiv m d2.
+  Proof.
+    mintros; split; intros.
+    - eapply H0; eapply H; eauto.
+    - eapply H; eapply H0; eauto.
   Qed.
 
   Lemma subtractKV_KeysDisj_1:

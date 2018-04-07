@@ -113,6 +113,9 @@ Section System.
       Node parentIdx tt
            [Node child1Idx tt nil; Node child2Idx tt nil].
 
+    Definition implIndices: list IdxT :=
+      ltac:(evalIndicesOf impl0).
+    
   End Impl0.
 
 End System.

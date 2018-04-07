@@ -62,7 +62,8 @@ Section Impl.
         find_if_inside; auto.
   Qed.
 
-  Definition SvmInvs := SvmInv /\i BlockedInv /\i ValidTidState.
+  Definition SvmInvs :=
+    SvmInv /\i BlockedInv /\i ValidTidState /\i (WfDomTState implIndices).
 
   Ltac red_SvmInvs :=
     repeat 
@@ -93,13 +94,22 @@ Section Impl.
 
   Ltac constr_sim_svm :=
     repeat
-      (try match goal with
-           | [ |- SvmR _ _ ] => eexists; split
-           | [H: ImplStateMSI ?ioss1 _ |- ImplStateMSI ?ioss2 _ ] =>
-             replace ioss2 with ioss1; eassumption
-           | [ |- SpecState _ _ ] => eexists; split
-           end;
-       try (findeq; fail); try reflexivity; try eassumption).
+      (repeat (match goal with
+               | [ |- SvmR _ _ ] => eexists; split
+               | [H: ImplStateMSI ?ioss1 _ |- ImplStateMSI ?ioss2 _ ] =>
+                 replace ioss2 with ioss1; eassumption
+               | [H1: WfDomTState _ {| tst_oss := ?ioss |},
+                  H2: ImplStateSI (M.restrict ?ioss _) ?cv,
+                  H3: OPredGetS _ _ ?cv ?nos
+                  |- ImplStateMSI (M.add ?oidx ?nos ?ioss) ?cv] =>
+                 right;
+                 eapply impl_state_OPredGetS_restrict_SI; eauto;
+                 eapply M.KeysEquiv_EquivList; eauto;
+                 clear; firstorder
+               | [ |- SpecState _ _ ] => eexists; split
+               end);
+       try (findeq; fail); try reflexivity; try eassumption
+      ).
 
   Ltac constr_sim_mp :=
     repeat
@@ -795,12 +805,15 @@ Section Impl.
       end;
       reflexivity.
 
-    Ltac sim_spec_constr_sim ssim msim :=
+    Ltac sim_spec_constr_sim_init :=
       repeat
         match goal with
         | [ |- LiftSimL _ _ _ _ ] => hnf
         | [ |- _ /\ _ ] => split; cbn
-        end; [ssim|msim].
+        end.
+    
+    Ltac sim_spec_constr_sim ssim msim :=
+      sim_spec_constr_sim_init; [ssim|msim].
 
     Ltac sim_spec_constr_step srule ssim msim :=
       sim_spec_constr_step_init srule;
@@ -930,22 +943,20 @@ Section Impl.
                                 red_svm constr_sim_svm constr_sim_mp.
             }
             {
-              
               prr_instantiate_rsback_prule OPredGetS rsBackFDefault.
               clear_prr.
               step_pred_invert_init.
-
               step_pred_invert_red svmTrsRq0 red_svm.
-
               sim_spec_constr_step_init (specGetReq extIdx1 extIdx1).
 
               sim_spec_constr_split;
                 [|sim_spec_constr_extLabel_eq|];
                 [sim_spec_constr_step_t|].
-
-              (* TODO: May have to use [ResponsesOk] and [PredGetSI]. *)
-              (* sim_spec_constr_sim constr_sim_svm constr_sim_mp. *)
-              admit.
+              sim_spec_constr_sim_init.
+              { constr_sim_svm. }
+              { (* TODO: may need a predicate for [MessagePool] from the responses. *)
+                admit.
+              }
             }
 
             admit.

@@ -111,7 +111,6 @@ Section GivenMsg.
          * the original request predicate.
          *)
         DualPMsg (otrs_rq otrs) rsb ->
-        ResponsesOk (otrs_rq otrs) rss opred rsbf ->
 
         pst = {| pst_oss := oss;
                  pst_otrss := otrss;

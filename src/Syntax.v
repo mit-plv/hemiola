@@ -219,6 +219,9 @@ Section System.
 
 End System.
 
+Ltac evalIndicesOf sys :=
+  let indices := eval cbn in (sys_inds sys) in exact indices.
+
 Section RuleAdder.
   Context {SysT: Type} `{IsSystem SysT}.
 

@@ -286,6 +286,40 @@ Section Facts.
     - exfalso; eauto using impl_state_MI_restrict_SI_contra.
     - eauto using impl_state_restrict_SI_value_eq.
   Qed.
+
+  Lemma impl_state_OPredGetS_restrict_SI:
+    forall ioss dom rqval,
+      ImplStateSI (M.restrict ioss dom) rqval ->
+      forall oidx inv pos nos,
+        M.KeysEquiv ioss (oidx :: dom) ->
+        OPredGetS inv pos rqval nos ->
+        ImplStateSI (ioss +[oidx <- nos]) rqval.
+  Proof.
+    unfold ImplStateSI, OPredGetS; simpl; intros.
+    dest; split.
+    - destruct (oidx ==n x); subst.
+      + exists x, nos; split; auto.
+        findeq.
+      + exists x, x0; split; auto.
+        rewrite M.restrict_find in H.
+        destruct (in_dec _ _ _); [|discriminate].
+        findeq.
+    - intros.
+      destruct (oidx ==n oidx0); subst.
+      + mred; mred_find.
+        reflexivity.
+      + rewrite M.find_add_2 in H5 by auto.
+        assert (M.In oidx0 ioss).
+        { apply M.Map.Facts.P.F.in_find_iff.
+          rewrite H5; discriminate.
+        }
+        apply H0 in H7; inv H7.
+        * elim n; reflexivity.
+        * eapply H3 with (oidx:= oidx0); eauto.
+          rewrite M.restrict_find.
+          destruct (in_dec _ _ _); auto.
+          elim n0; assumption.
+  Qed.
   
 End Facts.
 

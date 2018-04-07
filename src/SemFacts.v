@@ -723,6 +723,12 @@ Proof.
     + inv H2; simpl in H3; auto.
 Qed.
 
+Definition WfDomOStates (dom: list IdxT) (oss: OStates) :=
+  M.KeysEquiv oss dom.
+
+Definition WfDomTState (dom: list IdxT) (tst: TState) :=
+  WfDomOStates dom (tst_oss tst).
+
 Definition TidLeMP (tmsgs: MessagePool TMsg) (tid: TrsId) :=
   ForallMP (fun tmsg =>
               match tmsg_info tmsg with
