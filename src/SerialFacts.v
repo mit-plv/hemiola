@@ -159,6 +159,17 @@ Proof.
   destruct H; auto.
 Qed.
 
+Lemma atomic_extHandles:
+  forall sys erqs,
+    ExtHandles sys erqs ->
+    forall ts rq hst mouts,
+      Atomic sys ts rq hst mouts ->
+      forall st1 st2,
+        steps step_t sys st1 hst st2 ->
+        In (msg_id rq) erqs.
+Proof.
+Admitted.
+
 Lemma trsMessages_app:
   forall ti mp1 mp2,
     trsMessages ti (mp1 ++ mp2) =

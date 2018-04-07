@@ -207,6 +207,16 @@ Section System.
 
   Definition rulesOf := sys_rules.
 
+  Definition handlersOf (rules: list Rule): list MsgId :=
+    concat (map rule_mids rules).
+
+  Definition extHandlersOf (sys: System): list MsgId :=
+    filter (fun mid => isExternal sys (mid_from mid))
+           (handlersOf (sys_rules sys)).
+
+  Definition ExtHandles (sys: System) (erqs: list MsgId) :=
+    extHandlersOf sys = erqs.
+
 End System.
 
 Section RuleAdder.

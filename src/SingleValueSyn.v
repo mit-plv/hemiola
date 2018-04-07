@@ -235,18 +235,28 @@ Section Impl.
         | [H: forall _, _ = _ -> _ |- _] => specialize (H _ eq_refl)
         end.
     
-    Ltac trs_simulates_atomic_to_steps_pred :=
+    Ltac trs_simulates_atomic_to_steps_pred rqmid :=
       unfold TrsSimAtomic; intros;
       match goal with
-      | [H1: Atomic _ _ _ ?hst _, H2: steps step_t _ _ ?hst _ |- _] =>
-        pose proof (atomic_history_pred_tinfo H1 H2)
+      | [H: Atomic ?sys _ _ _ _ |- _] =>
+        assert_later (ExtHandles sys [rqmid])
       end;
-      match goal with
-      | [H: steps step_t (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
-        eapply atomic_steps_pred_ok
-          with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
-        eauto; [clear_atomic_hyps; reduce_invstep_pred|]
-      end.
+      repeat
+        match goal with
+        | [H: ExtHandles _ _ |- _] =>
+          eapply atomic_extHandles in H; eauto
+        | [H: In _ _ |- _] => Common.dest_in
+        end;
+      [match goal with
+       | [H1: Atomic _ _ _ ?hst _, H2: steps step_t _ _ ?hst _ |- _] =>
+         pose proof (atomic_history_pred_tinfo H1 H2)
+       end;
+       match goal with
+       | [H: steps step_t (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
+         eapply atomic_steps_pred_ok
+           with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
+         eauto; [clear_atomic_hyps; reduce_invstep_pred|]
+       end|].
 
     Ltac inv_lift inv :=
       match goal with
@@ -620,9 +630,19 @@ Section Impl.
           is_var ist2; dest_PStateEx ist2
         end.
 
-    Ltac step_pred_invert_dest_pmsg :=
+    Ltac step_pred_invert_dest_pmsg origRq :=
       repeat
         match goal with
+        (* For the original request *)
+        | [H: origRq = msg_id ?rq |- _] =>
+          let orqfrom := fresh "orqfrom" in
+          let orqto := fresh "orqto" in
+          let orqchn := fresh "orqchn" in
+          let orqtid := fresh "orqtid" in
+          let orqval := fresh "orqval" in
+          destruct rq as [[[orqfrom orqto orqchn] orqtid] orqval];
+          unfold origRq in H
+
         (* For immediate [PMsg]s *)
         | [H: DualPMsg ?rq ?rs |- _] =>
           is_var rq; dest_pmsg_rq rq;
@@ -707,9 +727,9 @@ Section Impl.
           rewrite rsBackFDefault_singleton with (val:= v) (ost:= o) in *
         end.
 
-    Ltac step_pred_invert_red red_custom :=
+    Ltac step_pred_invert_red origRq red_custom :=
       repeat (step_pred_invert_dest_state;
-              step_pred_invert_dest_pmsg;
+              step_pred_invert_dest_pmsg origRq;
               red_forall;
               red_ValidMsgsIn;
               red_LiftInv;
@@ -798,27 +818,32 @@ Section Impl.
       sim_spec_constr_sim constr_sim_os constr_sim_mp.
 
     (** Try to synthesize an immediate [PRule]. *)
-    Ltac synth_imm_prule srule red_sim constr_sim_os constr_sim_mp :=
+    Ltac synth_imm_prule origRq srule red_sim constr_sim_os constr_sim_mp :=
       pstack_first_instantiate_imm_prule;
       pstack_pop;
       step_pred_invert_init;
-      step_pred_invert_red red_sim;
+      step_pred_invert_red origRq red_sim;
       sim_spec_constr_step srule constr_sim_os constr_sim_mp.
 
     (** Try to synthesize a request-forwarding [PRule]. *)
-    Ltac synth_rqfwd_prule rqff red_sim constr_sim_os constr_sim_mp :=
+    Ltac synth_rqfwd_prule origRq rqff red_sim constr_sim_os constr_sim_mp :=
       pstack_first_instantiate_rqfwd_prule rqff;
       pstack_pop;
       set_prr_rqf;
       step_pred_invert_init;
-      step_pred_invert_red red_sim;
+      step_pred_invert_red origRq red_sim;
       sim_spec_constr_silent constr_sim_os constr_sim_mp.
 
     (** Try to synthesize a responses-back [PRule]. *)
     (* Ltac synth_rsback_prule := *)
 
     Definition svmTrsIdx0: TrsId := SvmGetE.
-
+    Definition svmTrsRq0: MsgId :=
+      {| mid_addr := {| ma_from := extIdx1;
+                        ma_to := child1Idx;
+                        ma_chn := rqChn |};
+         mid_tid := svmTrsIdx0 |}.
+    
     Definition svmSynTrs0:
       { impl1: System & SynthOk spec SvmSim SvmInvs svmP impl1 }.
     Proof.
@@ -836,7 +861,7 @@ Section Impl.
            * and the other for synthesizing actual executable rules, using
            * already-synthesized predicate rules.
            *)
-          trs_simulates_atomic_to_steps_pred.
+          trs_simulates_atomic_to_steps_pred svmTrsRq0.
 
           * (** Synthesis of [PRules]. *)
 
@@ -876,12 +901,12 @@ Section Impl.
              *)
             (* Should succeed when {C1.st = M} *)
             try (synth_prule_imm;
-                 [synth_imm_prule (specGetReq extIdx1 extIdx1)
+                 [synth_imm_prule svmTrsRq0 (specGetReq extIdx1 extIdx1)
                                   red_svm constr_sim_svm constr_sim_mp|]).
 
             (* Should succeed when {C1.st = S} *)
             try (synth_prule_imm;
-                 [synth_imm_prule (specGetReq extIdx1 extIdx1)
+                 [synth_imm_prule svmTrsRq0 (specGetReq extIdx1 extIdx1)
                                   red_svm constr_sim_svm constr_sim_mp|]).
 
             (* Should fail when {C1.st = I}:
@@ -901,30 +926,26 @@ Section Impl.
              * - Fix: some responses-back rules generate external labels.
              *)
             synth_prules_rqf_rsb.
-            { synth_rqfwd_prule
-                (getRqFwdF implTopo) red_svm constr_sim_svm constr_sim_mp.
+            { synth_rqfwd_prule svmTrsRq0 (getRqFwdF implTopo)
+                                red_svm constr_sim_svm constr_sim_mp.
             }
             {
-
+              
               prr_instantiate_rsback_prule OPredGetS rsBackFDefault.
               clear_prr.
               step_pred_invert_init.
 
-              step_pred_invert_red red_svm.
+              step_pred_invert_red svmTrsRq0 red_svm.
 
               sim_spec_constr_step_init (specGetReq extIdx1 extIdx1).
+
               sim_spec_constr_split;
-                [|sim_spec_constr_extLabel_eq|].
-              {
-                sim_spec_constr_step_t.
-                { admit. }
-                { admit. }
-              }
-              { (* TODO: May have to use [ResponsesOk] and [PredGetSI]. *)
-                sim_spec_constr_sim constr_sim_svm constr_sim_mp.
-                { admit. }
-                { admit. }
-              }
+                [|sim_spec_constr_extLabel_eq|];
+                [sim_spec_constr_step_t|].
+
+              (* TODO: May have to use [ResponsesOk] and [PredGetSI]. *)
+              (* sim_spec_constr_sim constr_sim_svm constr_sim_mp. *)
+              admit.
             }
 
             admit.
@@ -932,7 +953,11 @@ Section Impl.
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
             admit.
-          
+
+          * (* Additionally need to show some static properties about 
+             * the synthesized [Rule]s. *)
+            admit.
+
         + (** Global invariants hold *)
           admit.
           

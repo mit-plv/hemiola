@@ -9,6 +9,15 @@ Notation "[ x ]" := (cons x nil).
 Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)).
 Notation "[ x ; .. ; y ]" := (cons x .. (cons y nil) ..).
 
+Theorem tautology_0:
+  forall (P Q: Prop), (P -> Q) -> P -> Q.
+Proof.
+  tauto.
+Qed.
+
+Ltac assert_later asrt :=
+  apply tautology_0 with (P:= asrt); [intros|].
+
 Ltac inv H := inversion H; subst; clear H.
 Ltac dest :=
   repeat (match goal with
