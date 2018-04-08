@@ -80,7 +80,9 @@ Section GivenMsg.
         pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
         nst = {| pst_oss := oss;
                  pst_otrss := otrss +[ oidx <- {| otrs_rq := rq |} ];
-                 pst_msgs := distributeMsgs fwds (removeMP rq oims) |} ->
+                 pst_msgs := distributeMsgs
+                               (intOuts psys fwds)
+                               (removeMP rq oims) |} ->
 
         step_pred0 psys pst (PlblOuts (Some rqfwdr) (rq :: nil) fwds) nst
 
@@ -117,7 +119,9 @@ Section GivenMsg.
                  pst_msgs := oims |} ->
         nst = {| pst_oss := oss +[ oidx <- nos ];
                  pst_otrss := M.remove oidx otrss;
-                 pst_msgs := enqMP rsb (removeMsgs rss oims) |} ->
+                 pst_msgs := distributeMsgs
+                               (intOuts psys (rsb :: nil))
+                               (removeMsgs rss oims) |} ->
 
         step_pred0 psys pst (PlblOuts (Some rsbackr) rss (rsb :: nil)) nst.
 

@@ -900,7 +900,6 @@ Section Impl.
             pstack_empty.
 
             (* Add initial requests. *)
-
             pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
                          {| pred_os := PredGet; pred_mp := PredMPTrue |}.
             pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
@@ -954,7 +953,8 @@ Section Impl.
                 [sim_spec_constr_step_t|].
               sim_spec_constr_sim_init.
               { constr_sim_svm. }
-              { (* TODO: may need a predicate for [MessagePool] from the responses. *)
+              { constr_sim_mp.
+                (* TODO: may need a predicate for [MessagePool] from the responses. *)
                 admit.
               }
             }
