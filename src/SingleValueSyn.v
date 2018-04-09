@@ -346,6 +346,7 @@ Section Impl.
         | [H: Forall _ ?hst |- _] =>
           (* This might be too strong; would there be a better match? *)
           clear H; try clear hst
+        | [H: InvStep _ _ tinv |- _] => clear H
         | [H: tinv _ |- _] => clear H
         | [H: tsim _ _ |- _] => clear H
         end.
@@ -893,6 +894,16 @@ Section Impl.
       step_pred_invert_red origRq red_sim;
       sim_spec_constr_step srule constr_sim_os constr_sim_mp.
 
+    Ltac synth_done :=
+      repeat 
+        match goal with
+        | [H: step_pred_t _ _ _ _ |- _] =>
+          instantiate (1:= nil) in H;
+          exfalso; clear -H; inv H
+        | [H: step_t _ _ _ _ |- _] => inv H
+        | [H: In _ (sys_rules _) |- _] => destruct H
+        end.
+    
     Definition svmTrsIdx0: TrsId := SvmGetE.
     Definition svmTrsRq0: MsgId :=
       {| mid_addr := {| ma_from := extIdx1;
@@ -987,7 +998,9 @@ Section Impl.
                 [ImplOStatusM; ImplOStatusS; ImplOStatusI].
             }
 
-            admit.
+            (* TODO: still need to synthesize more. *)
+
+            synth_done.
             
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
