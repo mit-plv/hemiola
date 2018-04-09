@@ -101,8 +101,8 @@ Section Predicates.
   (** --(.)--> [SI(v)|{tinds} -> SI(v)|{tinds}] --(v)--> *)
   Definition PredGetSI (tinds: list IdxT): PredOS :=
     fun inv poss outv noss =>
-      M.restrict poss tinds = M.restrict noss tinds /\
-      ImplStateSI (M.restrict poss tinds) outv.
+      ImplStateSI (M.restrict poss tinds) outv /\
+      ImplStateSI (M.restrict noss tinds) outv.
 
   (** --(.)--> [. -> I|{tinds}] --(v)--> *)
   Definition PredSetI (tinds: list IdxT): PredOS :=
@@ -320,6 +320,6 @@ Section Facts.
           destruct (in_dec _ _ _); auto.
           elim n0; assumption.
   Qed.
-  
+
 End Facts.
 

@@ -463,7 +463,7 @@ Section Impl.
       | None :: st' => evalStackInstanceFix st' (S n)
       | Some v :: st' =>
         match n with
-        | O => evalStackInstanceFix st' n ++ v :: nil
+        | O => v :: evalStackInstanceFix st' n
         | S n' => evalStackInstanceFix st' n'
         end
       end.
@@ -995,7 +995,7 @@ Section Impl.
             { synth_rsback_prule
                 svmTrsRq0 (specGetReq extIdx1 extIdx1) OPredGetS rsBackFDefault
                 red_svm constr_sim_svm constr_sim_mp
-                [ImplOStatusM; ImplOStatusS; ImplOStatusI].
+                [ImplOStatusI; ImplOStatusS; ImplOStatusM].
             }
 
             (* TODO: still need to synthesize more. *)
