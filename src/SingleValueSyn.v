@@ -130,6 +130,8 @@ Section Impl.
 
       | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
         apply SimMP_ext_msg_immediate_out; auto
+      | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
+        eapply SimMP_response_back_ext_out; eauto; repeat constructor
       | [ |- SimMP _ (distributeMsgs _ (removeMP _ _)) _ ] =>
         eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
       | [ |- TidLtMP _ _ ] => progress simpl
@@ -830,6 +832,11 @@ Section Impl.
       (* It suffices to prove simulation, due to the silent step. *)
       sim_spec_constr_sim constr_sim_os constr_sim_mp.
 
+    (** FIXME:
+     * - Some immediate rules do not generate external labels.
+     * - Some responses-back rules do not generate external labels.
+     *)
+    
     (** Try to synthesize an immediate [PRule]. *)
     Ltac synth_imm_prule origRq srule red_sim constr_sim_os constr_sim_mp :=
       pstack_first_instantiate_imm_prule;
@@ -848,7 +855,12 @@ Section Impl.
       sim_spec_constr_silent constr_sim_os constr_sim_mp.
 
     (** Try to synthesize a responses-back [PRule]. *)
-    (* Ltac synth_rsback_prule := *)
+    Ltac synth_rsback_prule origRq srule opred rsbf red_sim constr_sim_os constr_sim_mp :=
+      prr_instantiate_rsback_prule opred rsbf;
+      clear_prr;
+      step_pred_invert_init;
+      step_pred_invert_red origRq red_sim;
+      sim_spec_constr_step srule constr_sim_os constr_sim_mp.
 
     Definition svmTrsIdx0: TrsId := SvmGetE.
     Definition svmTrsRq0: MsgId :=
@@ -933,34 +945,19 @@ Section Impl.
              * synthesize a request-forwarding rule and 
              * the dual response-back rule.
              *)
-            (* TODOs:
-             * - Fix: some immediate rules do not generate any external labels.
-             * - Fix: some responses-back rules generate external labels.
-             *)
-            synth_prules_rqf_rsb.
-            { synth_rqfwd_prule svmTrsRq0 (getRqFwdF implTopo)
-                                red_svm constr_sim_svm constr_sim_mp.
+            synth_prules_rqf_rsb; [| |clear_prr].
+            { synth_rqfwd_prule
+                svmTrsRq0 (getRqFwdF implTopo)
+                red_svm constr_sim_svm constr_sim_mp.
             }
-            {
-              prr_instantiate_rsback_prule OPredGetS rsBackFDefault.
-              clear_prr.
-              step_pred_invert_init.
-              step_pred_invert_red svmTrsRq0 red_svm.
-              sim_spec_constr_step_init (specGetReq extIdx1 extIdx1).
-
-              sim_spec_constr_split;
-                [|sim_spec_constr_extLabel_eq|];
-                [sim_spec_constr_step_t|].
-              sim_spec_constr_sim_init.
-              { constr_sim_svm. }
-              { constr_sim_mp.
-                (* eapply SimMP_response_back_ext_out; eauto. *)
-                admit.
-              }
+            { (* TODO: move [prr] forwarding messages to the stack 
+               * for further syntheses. 
+               *)
+              synth_rsback_prule
+                svmTrsRq0 (specGetReq extIdx1 extIdx1) OPredGetS rsBackFDefault
+                red_svm constr_sim_svm constr_sim_mp.
             }
-
-            admit.
-
+            
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
             admit.

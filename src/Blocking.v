@@ -32,6 +32,13 @@ Definition Blocked (msgs: MessagePool TMsg) :=
 Definition BlockedInv (tst: TState) :=
   Blocked (tst_msgs tst).
 
+(* This statement looks a bit weird at first glance, since the "first-to-first"
+ * property is applied for all internal messages for which [FirstMP] holds.
+ * However, it's true since [Blocked] guarantees that given a certain channel 
+ * only a single set of messages (originated from the channel) are in
+ * [MessagePool]. And those messages are the oldest ones for each channel,
+ * which are mapped to the "first" message in spec.
+ *)
 Theorem blocked_SimMP_FirstMP:
   forall ist,
     Blocked ist ->
