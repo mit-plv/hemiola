@@ -351,5 +351,40 @@ Section SimMP.
   Proof.
   Admitted.
 
+  Lemma SimMP_responses_back_ext_out:
+    forall imsgs smsgs,
+      SimMP imsgs smsgs ->
+      forall rq ts,
+        TidLeMP imsgs ts ->
+        forall rss,
+          Forall (fun tmsg =>
+                    (tmsg_info tmsg) >>=[False] (fun tinfo => tinfo = buildTInfo ts [rq]))
+                 rss ->
+          ForallMP (fun tmsg =>
+                      (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts))
+                   (removeMsgs rss imsgs) ->
+          SimMP (removeMsgs rss imsgs)
+                (removeMP (toTMsgU (msgP rq)) smsgs).
+  Proof.
+  Admitted.
+
+  Corollary SimMP_response_back_ext_out:
+    forall imsgs smsgs,
+      SimMP imsgs smsgs ->
+      forall rq ts,
+        TidLeMP imsgs ts ->
+        forall rs,
+          Forall (fun tmsg =>
+                    (tmsg_info tmsg) >>=[False] (fun tinfo => tinfo = buildTInfo ts [rq]))
+                 [rs] ->
+          ForallMP (fun tmsg =>
+                      (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts))
+                   (removeMP rs imsgs) ->
+          SimMP (removeMP rs imsgs)
+                (removeMP (toTMsgU (msgP rq)) smsgs).
+  Proof.
+    intros; eapply SimMP_responses_back_ext_out in H1; eauto.
+  Qed.
+  
 End SimMP.
 

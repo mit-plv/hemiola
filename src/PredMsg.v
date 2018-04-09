@@ -130,7 +130,7 @@ Section GivenMsg.
     {| indicesOf := psys_inds |}.
 
   Record OTrs :=
-    { otrs_rq: PMsg }.
+    { otrs_rq_val: Value }.
 
   Record PState :=
     { pst_oss: OStates;

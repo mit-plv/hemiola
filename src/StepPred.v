@@ -79,7 +79,7 @@ Section GivenMsg.
 
         pst = {| pst_oss := oss; pst_otrss := otrss; pst_msgs := oims |} ->
         nst = {| pst_oss := oss;
-                 pst_otrss := otrss +[ oidx <- {| otrs_rq := rq |} ];
+                 pst_otrss := otrss +[ oidx <- {| otrs_rq_val := msg_value (getMsg rq) |} ];
                  pst_msgs := distributeMsgs
                                (intOuts psys fwds)
                                (removeMP rq oims) |} ->
@@ -87,7 +87,7 @@ Section GivenMsg.
         step_pred0 psys pst (PlblOuts (Some rqfwdr) (rq :: nil) fwds) nst
 
   | SpRsBack:
-      forall pst nst oss otrss oidx pos nos otrs oims opred rsbf
+      forall pst nst oss otrss oidx pos nos otrs oims noss noims opred rsbf
              (rsbackr: PRule MsgT) (rss: list (PMsg MsgT)) (rsb: PMsg MsgT),
         In oidx (indicesOf psys) ->
         In rsbackr (psys_rules psys) ->
@@ -100,28 +100,32 @@ Section GivenMsg.
         oss@[oidx] = Some pos ->
         otrss@[oidx] = Some otrs ->
 
+        noss = oss +[ oidx <- nos ] ->
+        noims = distributeMsgs
+                  (intOuts psys (rsb :: nil))
+                  (removeMsgs rss oims) ->
+        
         (* Backing responses are all valid. *)
         Forall (fun pmsg =>
-                  pred_os (pmsg_pred pmsg) (pmsg_val (otrs_rq otrs)) oss
+                  pred_os (pmsg_pred pmsg) (otrs_rq_val otrs) oss
                           (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
                   pred_mp (pmsg_pred pmsg) (toOrigMP oims)
                           (toOrigMP (enqMP rsb (removeMsgs rss oims)))) rss ->
-        opred (pmsg_val (otrs_rq otrs)) pos (pmsg_val rsb) nos ->
+        opred (otrs_rq_val otrs) pos (pmsg_val rsb) nos ->
         pmsg_val rsb = rsbf (map (fun pmsg => msg_value (getMsg pmsg)) rss) pos ->
 
         (* Using such responses, we should be able to prove 
          * the original request predicate.
          *)
-        DualPMsg (otrs_rq otrs) rsb ->
+        pred_os (pmsg_pred rsb) (otrs_rq_val otrs) oss (pmsg_val rsb) noss ->
+        pred_mp (pmsg_pred rsb) (toOrigMP oims) (toOrigMP noims) ->
 
         pst = {| pst_oss := oss;
                  pst_otrss := otrss;
                  pst_msgs := oims |} ->
-        nst = {| pst_oss := oss +[ oidx <- nos ];
+        nst = {| pst_oss := noss;
                  pst_otrss := M.remove oidx otrss;
-                 pst_msgs := distributeMsgs
-                               (intOuts psys (rsb :: nil))
-                               (removeMsgs rss oims) |} ->
+                 pst_msgs := noims |} ->
 
         step_pred0 psys pst (PlblOuts (Some rsbackr) rss (rsb :: nil)) nst.
 

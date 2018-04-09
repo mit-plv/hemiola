@@ -630,7 +630,7 @@ Section Impl.
       let pst := fresh "pst" in
       let str := fresh "str" in
       destruct pstx as [[toss tmsgs tid] pst str];
-      hnf in str.
+      red in str.
 
     Ltac step_pred_invert_dest_state :=
       repeat
@@ -713,13 +713,13 @@ Section Impl.
     Ltac red_LiftInv :=
       repeat 
         match goal with
-        | [H: LiftInv _ _ _ |- _] => hnf in H
+        | [H: LiftInv _ _ _ |- _] => red in H
         end.
 
     Ltac red_LiftSimL :=
       repeat
         match goal with
-        | [H: LiftSimL _ _ _ _ |- _] => hnf in H
+        | [H: LiftSimL _ _ _ _ |- _] => red in H
         end.
 
     Ltac red_pred :=
@@ -901,11 +901,11 @@ Section Impl.
 
             (* Add initial requests. *)
             pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
-                         {| pred_os := PredGet; pred_mp := PredMPTrue |}.
+                         {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
             pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
-                         {| pred_os := PredGet; pred_mp := PredMPTrue |}.
+                         {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
             pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
-                         {| pred_os := PredGet; pred_mp := PredMPTrue |}.
+                         {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
 
             (** Dequeue the first element of [list PStackElt] and
              * try to synthesize a [PRule]. Always try to synthesize
@@ -954,7 +954,7 @@ Section Impl.
               sim_spec_constr_sim_init.
               { constr_sim_svm. }
               { constr_sim_mp.
-                (* TODO: may need a predicate for [MessagePool] from the responses. *)
+                (* eapply SimMP_response_back_ext_out; eauto. *)
                 admit.
               }
             }

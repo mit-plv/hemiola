@@ -92,7 +92,7 @@ Section Predicates.
   (** --(.)--> [MSI(v) -> MSI(v)] --(v)--> *)
   Definition PredGet: PredOS :=
     fun inv poss outv noss =>
-      poss = noss /\ ImplStateMSI poss outv.
+      ImplStateMSI poss outv /\ ImplStateMSI noss outv.
 
   (** --(v)--> [. -> MSI(v)] --(.)--> *)
   Definition PredSet: PredOS :=
