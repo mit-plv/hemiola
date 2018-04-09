@@ -398,13 +398,11 @@ Section Impl.
      *)
     
     Record PStackElt :=
-      { pste_rr: RqRs;
-        pste_pmid: PMsgId TMsg;
+      { pste_pmid: PMsgId TMsg;
         pste_prec: PRPrecond }.
 
     Definition dualOfPStackElt (chn: IdxT) (pste: PStackElt) :=
-      {| pste_rr := pste_rr pste;
-         pste_pmid := dualOfP (pste_pmid pste) chn;
+      {| pste_pmid := dualOfP (pste_pmid pste) chn;
          pste_prec := pste_prec pste |}.
 
     Ltac pstack_empty :=
@@ -433,9 +431,20 @@ Section Impl.
         instantiate (1:= Some e :: _) in (Value of st)
       end.
 
-    Ltac pstack_push_ tid rr from to chn prec pred :=
-      pstack_push {| pste_rr := rr;
-                     pste_pmid :=
+    Ltac pstack_push_pp pmid prec :=
+      pstack_push {| pste_pmid := pmid;
+                     pste_prec := prec |}.
+
+    Ltac pstack_push_pmids pmids prec :=
+      match pmids with
+      | nil => idtac
+      | ?pmid :: ?pmids' =>
+        pstack_push_pp pmid prec;
+        pstack_push_pmids pmids' prec
+      end.
+
+    Ltac pstack_push_a tid from to chn prec pred :=
+      pstack_push {| pste_pmid :=
                        {| pmid_mid :=
                             {| mid_addr :=
                                  {| ma_from := from;
@@ -529,6 +538,26 @@ Section Impl.
     Ltac clear_prr :=
       match goal with
       | [p := _ : PRqRs |- _] => clear p
+      end.
+
+    Ltac pstack_push_from_prr_prec prec :=
+      match goal with
+      | [prr := {| prr_fwds := ?pmids |} |- _] =>
+        pstack_push_pmids pmids prec
+      end.
+
+    Ltac pstack_push_from_prr_precs precs :=
+      match precs with
+      | nil => idtac
+      | ?prec :: ?precs' =>
+        pstack_push_from_prr_prec prec;
+        pstack_push_from_prr_precs precs'
+      end.
+
+    Ltac pstack_push_from_prr precs :=
+      match goal with
+      | [p := _ : PRqRs |- _] =>
+        cbn in p; pstack_push_from_prr_precs precs
       end.
 
     (** End of [PRqRs] *)
@@ -855,8 +884,10 @@ Section Impl.
       sim_spec_constr_silent constr_sim_os constr_sim_mp.
 
     (** Try to synthesize a responses-back [PRule]. *)
-    Ltac synth_rsback_prule origRq srule opred rsbf red_sim constr_sim_os constr_sim_mp :=
+    Ltac synth_rsback_prule origRq srule opred rsbf
+         red_sim constr_sim_os constr_sim_mp precs :=
       prr_instantiate_rsback_prule opred rsbf;
+      pstack_push_from_prr precs;
       clear_prr;
       step_pred_invert_init;
       step_pred_invert_red origRq red_sim;
@@ -912,12 +943,12 @@ Section Impl.
             pstack_empty.
 
             (* Add initial requests. *)
-            pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusI
-                         {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
-            pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusS
-                         {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
-            pstack_push_ svmTrsIdx0 Rq extIdx1 child1Idx rqChn ImplOStatusM
-                         {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
+            pstack_push_a svmTrsIdx0 extIdx1 child1Idx rqChn ImplOStatusI
+                          {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
+            pstack_push_a svmTrsIdx0 extIdx1 child1Idx rqChn ImplOStatusS
+                          {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
+            pstack_push_a svmTrsIdx0 extIdx1 child1Idx rqChn ImplOStatusM
+                          {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
 
             (** Dequeue the first element of [list PStackElt] and
              * try to synthesize a [PRule]. Always try to synthesize
@@ -950,13 +981,13 @@ Section Impl.
                 svmTrsRq0 (getRqFwdF implTopo)
                 red_svm constr_sim_svm constr_sim_mp.
             }
-            { (* TODO: move [prr] forwarding messages to the stack 
-               * for further syntheses. 
-               *)
-              synth_rsback_prule
+            { synth_rsback_prule
                 svmTrsRq0 (specGetReq extIdx1 extIdx1) OPredGetS rsBackFDefault
-                red_svm constr_sim_svm constr_sim_mp.
+                red_svm constr_sim_svm constr_sim_mp
+                [ImplOStatusM; ImplOStatusS; ImplOStatusI].
             }
+
+            admit.
             
           * (* Now ready to synthesize (ordinary) [Rule]s 
              * based on the synthesized [PRule]s. *)
