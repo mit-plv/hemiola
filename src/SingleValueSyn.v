@@ -63,7 +63,7 @@ Section Impl.
   Qed.
 
   Definition SvmInvs :=
-    SvmInv /\i BlockedInv /\i ValidTidState /\i (WfDomTState implIndices).
+    BlockedInv /\i ValidTidState /\i (WfDomTState implIndices).
 
   Ltac red_SvmInvs :=
     repeat 
@@ -100,10 +100,11 @@ Section Impl.
                  replace ioss2 with ioss1; eassumption
                | [H1: WfDomTState _ {| tst_oss := ?ioss |},
                   H2: ImplStateSI (M.restrict ?ioss _) ?cv,
-                  H3: OPredGetS _ _ ?cv ?nos
+                  H3: ?nos@[statusIdx] = Some (VNat stS),
+                  H4: ?nos@[valueIdx] = Some ?cv
                   |- ImplStateMSI (M.add ?oidx ?nos ?ioss) ?cv] =>
                  right;
-                 eapply impl_state_OPredGetS_restrict_SI; eauto;
+                 eapply impl_state_status_S_restrict_SI; eauto;
                  eapply M.KeysEquiv_EquivList; eauto;
                  clear; firstorder
                | [ |- SpecState _ _ ] => eexists; split
@@ -113,40 +114,48 @@ Section Impl.
 
   Ltac constr_sim_mp :=
     repeat
-      match goal with
-      | [ |- context[distributeMsgs nil _] ] => unfold distributeMsgs
-      | [ |- context[_ ++ nil] ] => rewrite app_nil_r
-      | [ |- context[map _ (removeMP _ _)] ] =>
-        erewrite mmap_removeMP by reflexivity
-      | [ |- context[map _ (distributeMsgs _ _)] ] =>
-        rewrite mmap_distributeMsgs
+      (try match goal with
+           | [ |- context[distributeMsgs nil _] ] => unfold distributeMsgs
+           | [ |- context[_ ++ nil] ] => rewrite app_nil_r
+           | [ |- context[map _ (removeMP _ _)] ] =>
+             erewrite mmap_removeMP by reflexivity
+           | [ |- context[map _ (distributeMsgs _ _)] ] =>
+             rewrite mmap_distributeMsgs
 
-      | [H: context[map _ (removeMP _ _)] |- _] =>
-        erewrite mmap_removeMP in H by reflexivity
-      | [H: context[distributeMsgs nil _] |- _] => unfold distributeMsgs in H
-      | [H: context[_ ++ nil] |- _] => rewrite app_nil_r in H
-      | [H: context[map _ (distributeMsgs _ _)] |- _] =>
-        rewrite mmap_distributeMsgs in H
+           | [H: context[map _ (removeMP _ _)] |- _] =>
+             erewrite mmap_removeMP in H by reflexivity
+           | [H: context[distributeMsgs nil _] |- _] => unfold distributeMsgs in H
+           | [H: context[_ ++ nil] |- _] => rewrite app_nil_r in H
+           | [H: context[map _ (distributeMsgs _ _)] |- _] =>
+             rewrite mmap_distributeMsgs in H
 
-      | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
-        apply SimMP_ext_msg_immediate_out; auto
-      | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
-        eapply SimMP_response_back_ext_out; eauto; repeat constructor
-      | [ |- SimMP _ (distributeMsgs _ (removeMP _ _)) _ ] =>
-        eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
-      | [ |- TidLtMP _ _ ] => progress simpl
-      | [H1: ValidTidState {| tst_msgs := ?msgs |}, H2: step_t _ _ _ _
-         |- TidLtMP ?msgs _ ] =>
-        eapply step_t_tid_next_TidLt in H2;
-        [|eassumption|discriminate|discriminate
-         |repeat constructor|repeat constructor];
-        assumption
-                                                               
-      | [ |- Forall (fun tmsg => tmsg_info tmsg = Some _) _ ] =>
-        constructor; simpl; try reflexivity
-      | [H: FirstMP ?imsgs _ |- FirstMP (map ?f ?imsgs) _ ] =>
-        eapply mmap_FirstMP with (mmap:= f) in H; eauto
-      end.
+           | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
+             apply SimMP_ext_msg_immediate_out; auto
+           | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
+             eapply SimMP_response_back_ext_out; eauto; repeat constructor
+           | [ |- SimMP _ (distributeMsgs _ (removeMP ?emsg _)) _ ] =>
+             let Hchk := fresh "Hchk" in
+             assert (tmsg_info emsg = None) as Hchk by reflexivity; clear Hchk;
+             eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
+           | [ |- SimMP _ (distributeMsgs [?rs] (removeMP ?rq _)) _ ] =>
+             let Hchk := fresh "Hchk" in
+             assert (tmsg_info rq = tmsg_info rs) as Hchk by reflexivity; clear Hchk;
+             eapply SimMP_int_msg_immediate; try reflexivity; auto
+
+           | [ |- TidLtMP _ _ ] => progress simpl
+           | [H1: ValidTidState {| tst_msgs := ?msgs |}, H2: step_t _ _ _ _
+              |- TidLtMP ?msgs _ ] =>
+             eapply step_t_tid_next_TidLt in H2;
+             [|eassumption|discriminate|discriminate
+              |repeat constructor|repeat constructor];
+             assumption
+               
+           | [ |- Forall (fun tmsg => tmsg_info tmsg = Some _) _ ] =>
+             constructor; simpl; try reflexivity
+           | [H: FirstMP ?imsgs _ |- FirstMP (map ?f ?imsgs) _ ] =>
+             eapply mmap_FirstMP with (mmap:= f) in H; eauto
+           end;
+       cbn).
   
   Theorem impl0_ok: SynthOk spec SvmSim SvmInvs svmP impl0.
   Proof.
@@ -471,6 +480,14 @@ Section Impl.
     Fixpoint evalStackInstance (st: list (option PStackElt)) :=
       evalStackInstanceFix st O.
 
+    Ltac pstack_is_empty :=
+      let ins := pstack_instance in
+      let v := (eval cbn in (evalStackInstance ins)) in
+      match v with
+      | nil => idtac
+      | _ :: _ => fail
+      end.
+    
     Ltac pstack_first :=
       let ins := pstack_instance in
       let v := (eval cbn in (evalStackInstance ins)) in
@@ -765,6 +782,14 @@ Section Impl.
           match type of predmp with
           | PredMP _ => red in H
           end
+        | [H: ?opred _ _ _ _ |- _] =>
+          match type of opred with
+          | OPred => red in H
+          end
+        | [H: ?rprec _ _ |- _] =>
+          match type of rprec with
+          | RPrecond => red in H
+          end
         | [H: context[rsBackFDefault (?v :: nil) ?o] |- _] =>
           rewrite rsBackFDefault_singleton with (val:= v) (ost:= o) in *
         end.
@@ -895,6 +920,9 @@ Section Impl.
       sim_spec_constr_step srule constr_sim_os constr_sim_mp.
 
     Ltac synth_done :=
+      (tryif pstack_is_empty
+        then idtac
+        else idtac "Warning: the job stack is not empty!");
       repeat 
         match goal with
         | [H: step_pred_t _ _ _ _ |- _] =>
@@ -998,8 +1026,85 @@ Section Impl.
                 [ImplOStatusI; ImplOStatusS; ImplOStatusM].
             }
 
-            (* TODO: still need to synthesize more. *)
+            synth_prule_imm.
+            { pstack_first_instantiate_imm_prule.
+              pstack_pop.
+              step_pred_invert_init.
+              step_pred_invert_red svmTrsRq0 red_svm.
+              sim_spec_constr_silent_init.
+              sim_spec_constr_sim_init.
+              { constr_sim_svm.
+                (* clear -H H5 H10 H11 H13 H14 H15 H16. *)
+                admit.
+              }
+              { constr_sim_mp. }
+            }
 
+            synth_prule_imm.
+            { pstack_first_instantiate_imm_prule.
+              pstack_pop.
+              step_pred_invert_init.
+              step_pred_invert_red svmTrsRq0 red_svm.
+              sim_spec_constr_silent_init.
+              sim_spec_constr_sim_init.
+              { constr_sim_svm.
+                admit.
+              }
+              { constr_sim_mp. }
+            }
+
+            synth_prules_rqf_rsb; [| |clear_prr].
+            { pstack_first_instantiate_rqfwd_prule (getRqFwdF implTopo).
+              pstack_pop.
+              set_prr_rqf.
+              step_pred_invert_init.
+              step_pred_invert_red svmSynRq0 red_svm.
+              sim_spec_constr_silent constr_sim_svm constr_sim_mp.
+            }
+            { prr_instantiate_rsback_prule OPredGetS rsBackFDefault.
+              pstack_push_from_prr [ImplOStatusI; ImplOStatusS; ImplOStatusM].
+              clear_prr.
+              step_pred_invert_init.
+              step_pred_invert_red svmSynRq0 red_svm.
+              sim_spec_constr_silent_init.
+              sim_spec_constr_sim_init.
+              { constr_sim_svm.
+                admit.
+              }
+              { (* Check: why [distributeMsgs] is unfolded here? *)
+                admit.
+              }
+            }
+
+            synth_prule_imm.
+            { pstack_first_instantiate_imm_prule.
+              pstack_pop.
+              step_pred_invert_init.
+              step_pred_invert_red svmTrsRq0 red_svm.
+              sim_spec_constr_silent_init.
+              sim_spec_constr_sim_init.
+              { constr_sim_svm.
+                admit.
+              }
+              { constr_sim_mp. }
+            }
+            
+            synth_prule_imm.
+            { pstack_first_instantiate_imm_prule.
+              pstack_pop.
+              step_pred_invert_init.
+              step_pred_invert_red svmTrsRq0 red_svm.
+              sim_spec_constr_silent_init.
+              sim_spec_constr_sim_init.
+              { constr_sim_svm.
+                admit.
+              }
+              { constr_sim_mp. }
+            }
+
+            try (synth_prule_imm; [fail|]).
+            pstack_pop.
+            
             synth_done.
             
           * (* Now ready to synthesize (ordinary) [Rule]s 

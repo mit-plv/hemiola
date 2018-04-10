@@ -15,27 +15,6 @@ Open Scope fmap.
  *)
 Global Opaque M.restrict.
 
-Section Inv.
-
-  Definition SvmInv (ist: TState) :=
-    (exists post pstt pv,
-        (tst_oss ist)@[parentIdx] = Some post /\
-        post@[statusIdx] = Some (VNat pstt) /\
-        (pstt = stI \/ pstt = stS \/ pstt = stM) /\
-        post@[valueIdx] = Some pv) /\
-    (exists c1ost c1stt c1v,
-        (tst_oss ist)@[child1Idx] = Some c1ost /\
-        c1ost@[statusIdx] = Some (VNat c1stt) /\
-        (c1stt = stI \/ c1stt = stS \/ c1stt = stM) /\
-        c1ost@[valueIdx] = Some c1v) /\
-    (exists c2ost c2stt c2v,
-        (tst_oss ist)@[child2Idx] = Some c2ost /\
-        c2ost@[statusIdx] = Some (VNat c2stt) /\
-        (c2stt = stI \/ c2stt = stS \/ c2stt = stM) /\
-        c2ost@[valueIdx] = Some c2v).
-
-End Inv.
-
 Section RPreconds.
 
   Definition ImplOStatusM: RPrecond :=
@@ -287,15 +266,16 @@ Section Facts.
     - eauto using impl_state_restrict_SI_value_eq.
   Qed.
 
-  Lemma impl_state_OPredGetS_restrict_SI:
-    forall ioss dom rqval,
-      ImplStateSI (M.restrict ioss dom) rqval ->
-      forall oidx inv pos nos,
+  Lemma impl_state_status_S_restrict_SI:
+    forall ioss dom cv,
+      ImplStateSI (M.restrict ioss dom) cv ->
+      forall oidx nos,
         M.KeysEquiv ioss (oidx :: dom) ->
-        OPredGetS inv pos rqval nos ->
-        ImplStateSI (ioss +[oidx <- nos]) rqval.
+        nos@[statusIdx] = Some (VNat stS) ->
+        nos@[valueIdx] = Some cv ->
+        ImplStateSI (ioss +[oidx <- nos]) cv.
   Proof.
-    unfold ImplStateSI, OPredGetS; simpl; intros.
+    unfold ImplStateSI; simpl; intros.
     dest; split.
     - destruct (oidx ==n x); subst.
       + exists x, nos; split; auto.
@@ -319,6 +299,58 @@ Section Facts.
           rewrite M.restrict_find.
           destruct (in_dec _ _ _); auto.
           elim n0; assumption.
+  Qed.
+
+  Lemma impl_state_status_I_restrict_SI:
+    forall ioss dom cv,
+      ImplStateSI (M.restrict ioss dom) cv ->
+      forall oidx nos,
+        M.KeysEquiv ioss (oidx :: dom) ->
+        ioss@[oidx] = Some nos ->
+        nos@[statusIdx] = Some (VNat stI) ->
+        nos@[valueIdx] = Some cv ->
+        ImplStateSI ioss cv.
+  Proof.
+    unfold ImplStateSI; simpl; intros.
+    dest; split.
+    - exists x, x0; split; auto.
+      rewrite M.restrict_find in H.
+      destruct (in_dec _ _ _); [|discriminate].
+      findeq.
+    - intros.
+      destruct (oidx ==n oidx0); subst.
+      + mred; mred_find.
+        simpl; auto.
+      + eapply H4 with (oidx:= oidx0); eauto.
+        rewrite M.restrict_find.
+        destruct (in_dec _ _ _); auto.
+        elim n0; clear n0.
+        assert (In oidx0 (oidx :: dom)).
+        { apply H0, M.Map.Facts.P.F.in_find_iff.
+          rewrite H6; discriminate.
+        }
+        destruct H8; auto.
+        elim n; assumption.
+  Qed.
+
+  Lemma impl_state_status_M_restrict_I:
+    forall ioss cv,
+      ImplStateMI ioss cv ->
+      forall oidx dom nos,
+        ~ In oidx dom ->
+        ioss@[oidx] = Some nos ->
+        nos@[statusIdx] = Some (VNat stM) ->
+        ImplStateI (M.restrict ioss dom).
+  Proof.
+    unfold ImplStateMI, ImplStateI; intros; dest.
+    rewrite M.restrict_find in H3.
+    destruct (in_dec _ _ _); [|discriminate].
+    destruct (oidx ==n x); subst.
+    - destruct (oidx0 ==n x); subst.
+      + elim H0; assumption.
+      + eapply H7; eauto.
+    - specialize (H7 _ _ _ n H1 H2).
+      discriminate.
   Qed.
 
 End Facts.

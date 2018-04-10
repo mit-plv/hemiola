@@ -339,6 +339,16 @@ Section SimMP.
   Proof.
   Admitted.
 
+  Lemma SimMP_int_msg_immediate:
+    forall imsgs smsgs,
+      SimMP imsgs smsgs ->
+      forall rq rs tinfo,
+        tmsg_info rq = Some tinfo ->
+        tmsg_info rs = Some tinfo ->
+        SimMP (distributeMsgs [rs] (removeMP rq imsgs)) smsgs.
+  Proof.
+  Admitted.
+
   Lemma SimMP_ext_msg_rq_forwarding:
     forall imsgs smsgs,
       SimMP imsgs smsgs ->
