@@ -121,6 +121,8 @@ Section Impl.
              erewrite mmap_removeMP by reflexivity
            | [ |- context[map _ (distributeMsgs _ _)] ] =>
              rewrite mmap_distributeMsgs
+           | [ |- context[map _ (_ ++ _)] ] =>
+             rewrite map_app
 
            | [H: context[map _ (removeMP _ _)] |- _] =>
              erewrite mmap_removeMP in H by reflexivity
@@ -128,6 +130,8 @@ Section Impl.
            | [H: context[_ ++ nil] |- _] => rewrite app_nil_r in H
            | [H: context[map _ (distributeMsgs _ _)] |- _] =>
              rewrite mmap_distributeMsgs in H
+           | [H: context[map _ (_ ++ _)] |- _] =>
+             rewrite map_app in H
 
            | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
              apply SimMP_ext_msg_immediate_out; auto
@@ -137,7 +141,16 @@ Section Impl.
              let Hchk := fresh "Hchk" in
              assert (tmsg_info emsg = None) as Hchk by reflexivity; clear Hchk;
              eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
+           | [ |- SimMP _ ((removeMP ?emsg _) ++ _) _ ] =>
+             let Hchk := fresh "Hchk" in
+             assert (tmsg_info emsg = None) as Hchk by reflexivity; clear Hchk;
+             eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
+                                                                    
            | [ |- SimMP _ (distributeMsgs [?rs] (removeMP ?rq _)) _ ] =>
+             let Hchk := fresh "Hchk" in
+             assert (tmsg_info rq = tmsg_info rs) as Hchk by reflexivity; clear Hchk;
+             eapply SimMP_int_msg_immediate; try reflexivity; auto
+           | [ |- SimMP _ ((removeMP ?rq _) ++ [?rs]) _ ] =>
              let Hchk := fresh "Hchk" in
              assert (tmsg_info rq = tmsg_info rs) as Hchk by reflexivity; clear Hchk;
              eapply SimMP_int_msg_immediate; try reflexivity; auto
@@ -1034,7 +1047,8 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                (* clear -H H5 H10 H11 H13 H14 H15 H16. *)
+
+                clear -H H5 H10 H11 H13 H14 H15 H16.
                 admit.
               }
               { constr_sim_mp. }
@@ -1071,9 +1085,7 @@ Section Impl.
               { constr_sim_svm.
                 admit.
               }
-              { (* Check: why [distributeMsgs] is unfolded here? *)
-                admit.
-              }
+              { constr_sim_mp. }
             }
 
             synth_prule_imm.
