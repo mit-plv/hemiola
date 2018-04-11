@@ -28,7 +28,7 @@ Section Impl.
   Local Definition svmMsgIdF := svmMsgIdF extIdx1.
   Local Definition svmMsgF := svmMsgF extIdx1.
   Local Definition svmP := svmP extIdx1.
-  Local Definition SvmSim := SvmSim extIdx1.
+  Local Definition SvmSim := SvmSim extIdx1 implIndices.
 
   Lemma svmMsgF_ValidMsgMap:
     ValidMsgMap svmMsgF impl0 spec.
@@ -63,7 +63,7 @@ Section Impl.
   Qed.
 
   Definition SvmInvs :=
-    BlockedInv /\i ValidTidState /\i (WfDomTState implIndices).
+    BlockedInv /\i ValidTidState.
 
   Ltac red_SvmInvs :=
     repeat 
@@ -76,17 +76,19 @@ Section Impl.
     repeat
       match goal with
       | [H: SvmSim _ _ |- _] => destruct H
-      | [H: SvmR _ _ |- _] =>
+      | [H: SvmR _ _ _ |- _] =>
         let cv := fresh "cv" in
         destruct H as [cv [? ?]]
       | [H: SpecState _ _ |- _] =>
         let sost := fresh "sost" in
         destruct H as [sost [? ?]]
-      | [H1: ImplStateMSI ?v1 ?ioss, H2: ImplStateMSI ?v2 ?ioss |- _] =>
+      | [H1: ImplStateMSI ?v1 ?tinds ?ioss, H2: ImplStateMSI ?v2 ?tinds ?ioss |- _] =>
         assert (v1 = v2) by eauto using impl_state_MSI_value_eq; subst v1
-      | [H1: ImplStateMSI ?v1 ?ioss, H2: ImplStateSI ?v2 (M.restrict ?ioss _) |- _] =>
+      | [H1: ImplStateMSI ?v1 ?tinds1 ?ioss, H2: ImplStateSI ?v2 ?tinds2 ?ioss |- _] =>
         assert (v1 = v2)
-          by (eapply impl_state_MSI_restrict_SI_value_eq; eauto; discriminate);
+          by (eapply impl_state_MSI_restrict_SI_value_eq; eauto;
+              [discriminate|subList_app_tac]
+             );
         subst v1
       end.
 
@@ -95,8 +97,8 @@ Section Impl.
   Ltac constr_sim_svm :=
     repeat
       (repeat (match goal with
-               | [ |- SvmR _ _ ] => eexists; split
-               | [H: ImplStateMSI _ ?ioss1 |- ImplStateMSI _ ?ioss2 ] =>
+               | [ |- SvmR _ _ _ ] => eexists; split
+               | [H: ImplStateMSI _ _ ?ioss1 |- ImplStateMSI _ _ ?ioss2 ] =>
                  replace ioss2 with ioss1; eassumption
                | [ |- SpecState _ _ ] => eexists; split
                end);
@@ -987,11 +989,11 @@ Section Impl.
 
             (* Add initial requests. *)
             pstack_push_a svmTrsIdx0 extIdx1 child1Idx rqChn ImplOStatusI
-                          {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
+                          {| pred_os := PredGet implIndices; pred_mp := NoMsgsTs ts |}.
             pstack_push_a svmTrsIdx0 extIdx1 child1Idx rqChn ImplOStatusS
-                          {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
+                          {| pred_os := PredGet implIndices; pred_mp := NoMsgsTs ts |}.
             pstack_push_a svmTrsIdx0 extIdx1 child1Idx rqChn ImplOStatusM
-                          {| pred_os := PredGet; pred_mp := NoMsgsTs ts |}.
+                          {| pred_os := PredGet implIndices; pred_mp := NoMsgsTs ts |}.
 
             (** Dequeue the first element of [list PStackElt] and
              * try to synthesize a [PRule]. Always try to synthesize
@@ -1038,7 +1040,7 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                clear -H H5 H10 H11 H13 H14 H15 H16.
+                clear -H H5 H10 H11 H13 H14 H15.
                 admit.
               }
               { constr_sim_mp. }

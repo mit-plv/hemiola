@@ -1921,6 +1921,25 @@ Module LeibnizFacts (M : MapLeibniz).
     - eapply H; eapply H0; eauto.
   Qed.
 
+  Lemma KeysEquiv_add:
+    forall {A} (m: t A) (k: E.t) (v: A) (d: list E.t),
+      KeysEquiv m d -> List.In k d ->
+      KeysEquiv (M.add k v m) d.
+  Proof.
+    mintros; split; intros.
+    - apply P.F.in_find_iff in H1.
+      cmp k0 k; auto.
+      rewrite find_add_2 in H1 by assumption.
+      eapply H.
+      apply P.F.in_find_iff; assumption.
+    - apply P.F.in_find_iff.
+      cmp k0 k.
+      + rewrite find_add_1; discriminate.
+      + rewrite find_add_2 by assumption.
+        apply P.F.in_find_iff.
+        apply H; assumption.
+  Qed.
+
   Lemma subtractKV_KeysDisj_1:
     forall {A} deceqA (m1 m2: t A) d,
       KeysDisj m1 d -> KeysDisj (subtractKV deceqA m1 m2) d.
@@ -2656,6 +2675,10 @@ Ltac mred_find :=
       rewrite H1 in H2; inv H2
     | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
       rewrite H1 in H2; discriminate
+    | [H1: M.find ?m ?k = Some _, H2: context[M.find ?m ?k] |- _] =>
+      rewrite H1 in H2; simpl in H2
+    | [H1: M.find ?m ?k = None, H2: context[M.find ?m ?k] |- _] =>
+      rewrite H1 in H2; simpl in H2
     | [H: M.find ?m ?k = Some _ |- context[M.find ?m ?k] ] => rewrite H
     | [H: M.find ?m ?k = None |- context[M.find ?m ?k] ] => rewrite H
     end.
