@@ -203,15 +203,36 @@ Ltac ostatesfp_apply Hin Hfa :=
 
 Ltac ostatesfp_red :=
   repeat
-    (try match goal with
-         | [H: forall _, _ = _ -> _ |- _] =>
-           specialize (H _ eq_refl); simpl in H
-         | [H1: ?t, H2: ?t -> _ |- _] =>
-           specialize (H2 H1); simpl in H2
-         | [H: _ = _ |- _] => discriminate
-         | [H: Some _ = Some _ |- _] => inv H
-         end;
-     mred_find; auto).
+    (repeat match goal with
+            | [H: forall _, _ = _ -> _ |- _] =>
+              specialize (H _ eq_refl); simpl in H
+            | [H: ?idx1 <> ?idx2 -> _ |- _] =>
+              let Hne := fresh "Hne" in
+              assert (idx1 <> idx2) as Hne by discriminate;
+              specialize (H Hne); clear Hne
+            | [H: ?idx <> ?idx -> _ |- _] => clear H
+            | [H1: ?idx1 <> ?idx2, H2: ?idx1 <> ?idx2 -> _ |- _] =>
+              specialize (H2 H1); simpl in H2
+            | [H: _ = _ |- _] => discriminate
+            | [H: Some _ = Some _ |- _] => inv H
+
+            | [ |- (Some _) >>=[_] _ ] => simpl; intros
+            | [ |- None >>=[_] _ ] => simpl; intros
+            end;
+     mred_find;
+     repeat match goal with
+            | [H: (?ot) >>=[False] _ |- _] =>
+              let ox := fresh "ox" in
+              let x := fresh "x" in
+              remember ot as ox; destruct ox as [x|];
+              [simpl in H|simpl in H; exfalso; auto]
+            end;
+     auto).
+
+Ltac ostatesfp_red_ex :=
+  repeat (ostatesfp_red; mred;
+          intros; simpl in *; subst; auto; try reflexivity).
+
 
 Section Facts.
 

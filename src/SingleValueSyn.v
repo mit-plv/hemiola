@@ -105,6 +105,15 @@ Section Impl.
        try (findeq; fail); try reflexivity; try eassumption
       ).
 
+  Ltac svm_pred_ok_init :=
+    repeat
+      (try match goal with
+           | [H: ImplStateMSI _ _ _ |- _] => destruct H
+           | [H: ImplStateMI _ _ _ |- _] => hnf in H
+           | [H: ImplStateSI _ _ _ |- _] => hnf in H
+           | [H: ImplStateI _ _ |- _] => hnf in H
+           end; dest).
+
   Ltac constr_sim_mp :=
     repeat
       (try match goal with
@@ -800,6 +809,24 @@ Section Impl.
           rewrite rsBackFDefault_singleton with (val:= v) (ost:= o) in *
         end.
 
+    Ltac pred_ok_init custom_init :=
+      custom_init;
+      repeat
+        match goal with
+        | [H: OStateExistsP _ _ _ |- _] => red in H; dest
+        | [H: OStateForallP _ _ _ |- _] => red in H; dest
+        | [H: Forall _ _ |- _] => inv H
+        end.
+
+    Ltac pred_ok_forall :=
+      Common.dest_in; ostatesfp_red_ex; hnf;
+      repeat
+        (repeat match goal with
+                | [ |- OStateForallP _ _ _ ] => red
+                | [ |- _ /\ _ ] => split
+                | [ |- Forall _ _ ] => constructor
+                end; ostatesfp_red_ex).
+
     Ltac step_pred_invert_red origRq red_custom :=
       repeat (step_pred_invert_dest_state;
               step_pred_invert_dest_pmsg origRq;
@@ -937,6 +964,7 @@ Section Impl.
         | [H: step_t _ _ _ _ |- _] => inv H
         | [H: In _ (sys_rules _) |- _] => destruct H
         end.
+
     
     Definition svmTrsIdx0: TrsId := SvmGetE.
     Definition svmTrsRq0: MsgId :=
@@ -1040,8 +1068,12 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                clear -H H5 H10 H11 H13 H14 H15.
-                admit.
+
+                right; split.
+                { admit. }
+                { pred_ok_init svm_pred_ok_init;
+                    pred_ok_forall.
+                }
               }
               { constr_sim_mp. }
             }
@@ -1054,7 +1086,12 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                admit.
+
+                right; split.
+                { admit. }
+                { pred_ok_init svm_pred_ok_init;
+                    pred_ok_forall.
+                }
               }
               { constr_sim_mp. }
             }

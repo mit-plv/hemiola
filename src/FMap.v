@@ -2587,10 +2587,7 @@ Ltac mred_unit :=
     rewrite <-H1 in H2
   | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
     rewrite <-H1 in H2
-  | [ |- context [M.find ?y ?m] ] =>
-    (is_var m;
-     let v := fresh "v" in
-     remember (M.find y m) as v; destruct v)
+
   (* hypothesis reduction *)
   | [H: context [M.find _ (M.empty _)] |- _] =>
     rewrite M.find_empty in H
@@ -2612,12 +2609,9 @@ Ltac mred_unit :=
     rewrite M.restrict_in_find in H2 by auto
   | [H: context [M.find ?y (M.subtractKV _ ?m1 ?m2)] |- _] =>
     rewrite M.subtractKV_find in H
-  | [H: context [if ?c then _ else _] |- _] =>
-    match type of c with
-    | {_ = _} + {_ <> _} => destruct c; [subst|]
-    end
   | [H: context [M.map _ (M.empty _)] |- _] =>
     rewrite M.map_empty in H
+
   (* goal reduction *)
   | [ |- context [M.find _ (M.empty _)] ] =>
     rewrite M.find_empty
@@ -2656,11 +2650,6 @@ Ltac mred_unit :=
     rewrite M.subtractKV_find
   | [ |- context [M.map _ (M.empty _)] ] =>
     rewrite M.map_empty
-
-  | [ |- context [if ?c then _ else _] ] =>
-    match type of c with
-    | {_ = _} + {_ <> _} => destruct c; [subst|]
-    end
   end;
   try discriminate; try reflexivity; try (intuition idtac; fail).
 
