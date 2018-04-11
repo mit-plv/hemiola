@@ -27,42 +27,104 @@ Section RPreconds.
     fun ost _ => ost@[statusIdx] = Some (VNat stI).
 
 End RPreconds.
-             
+
+Section OStatesP.
+
+  Definition OStatesP := OStates -> Prop.
+  Definition OStateP := IdxT -> OState -> Prop.
+
+  Definition OStateForallP (ostp: OStateP): OStatesP :=
+    fun oss =>
+      forall oidx,
+        oss@[oidx] >>=[True] (fun ost => ostp oidx ost).
+
+  Definition OStateExistsP (ostp: OStateP) (oidx: IdxT): OStatesP :=
+    fun oss =>
+      exists ost,
+        oss@[oidx] = Some ost /\ ostp oidx ost.
+
+  Theorem OStateForallP_reflect_1:
+    forall oss dom,
+      M.KeysEquiv oss dom ->
+      forall ostp,
+        OStateForallP ostp oss ->
+        Forall (fun oidx =>
+                  exists ost,
+                    oss@[oidx] = Some ost /\ ostp oidx ost) dom.
+  Proof.
+    intros.
+    apply Forall_forall; intros.
+    eapply H in H1.
+    apply M.F.P.F.in_find_iff in H1.
+    specialize (H0 x).
+    remember (oss@[x]) as oost.
+    destruct oost as [ost|]; [|exfalso; auto].
+    eauto.
+  Qed.
+  
+  Theorem OStateForallP_reflect_2:
+    forall oss dom,
+      M.KeysEquiv oss dom ->
+      forall ostp,
+        Forall (fun oidx =>
+                  oss@[oidx] >>=[True] (fun ost => ostp oidx ost)) dom ->
+        OStateForallP ostp oss.
+  Proof.
+    intros; red; intros.
+    remember (oss@[oidx]) as oost.
+    destruct oost as [ost|]; simpl; auto.
+    assert (M.In oidx oss).
+    { apply M.F.P.F.in_find_iff.
+      rewrite <-Heqoost; discriminate.
+    }
+    eapply H in H1.
+    eapply Forall_forall in H0; eauto.
+    rewrite <-Heqoost in H0; auto.
+  Qed.
+
+End OStatesP.
+
 Section Predicates.
 
-  Definition ImplStateI (ioss: OStates) :=
-    forall oidx ost stt,
-      ioss@[oidx] = Some ost ->
-      ost@[statusIdx] = Some (VNat stt) ->
-      stt = stI.
+  Definition ImplStateI: OStatesP :=
+    OStateForallP
+      (fun oidx ost =>
+         forall stt, 
+           ost@[statusIdx] = Some (VNat stt) ->
+           stt = stI).
 
-  Definition ImplStateMI (ioss: OStates) (v: Value) :=
-    exists midx most,
-      ioss@[midx] = Some most /\
-      most@[statusIdx] = Some (VNat stM) /\
-      most@[valueIdx] = Some v /\
-      (forall oidx ost stt,
-          oidx <> midx ->
-          ioss@[oidx] = Some ost ->
-          ost@[statusIdx] = Some (VNat stt) ->
-          stt = stI).
+  Definition ImplStateMI (v: Value): OStatesP :=
+    fun ioss =>
+      exists midx,
+        OStateExistsP
+          (fun oidx ost =>
+             ost@[statusIdx] = Some (VNat stM) /\
+             ost@[valueIdx] = Some v) midx ioss /\
+        OStateForallP
+          (fun oidx ost =>
+             oidx <> midx ->
+             forall stt,
+               ost@[statusIdx] = Some (VNat stt) ->
+               stt = stI) ioss.
 
-  Definition ImplStateSI (ioss: OStates) (v: Value) :=
-    (exists midx most,
-        ioss@[midx] = Some most /\
-        most@[statusIdx] = Some (VNat stS)) /\
-    (forall oidx ost stt,
-        ioss@[oidx] = Some ost ->
-        ost@[statusIdx] = Some (VNat stt) ->
-        match stt with
-        | 0 (* stI *) => True
-        | 1 (* stS *) => ost@[valueIdx] = Some v
-        | 2 (* stM *) => False
-        | _ => False
-        end).
+  Definition ImplStateSI (v: Value): OStatesP :=
+    fun ioss =>
+      exists midx,
+        OStateExistsP
+          (fun oidx ost => ost@[statusIdx] = Some (VNat stS)) midx ioss /\
+        OStateForallP
+          (fun oidx ost =>
+             forall stt,
+               ost@[statusIdx] = Some (VNat stt) ->
+               match stt with
+               | 0 (* stI *) => True
+               | 1 (* stS *) => ost@[valueIdx] = Some v
+               | 2 (* stM *) => False
+               | _ => False
+               end) ioss.
 
-  Definition ImplStateMSI (ioss: OStates) (v: Value) :=
-    ImplStateMI ioss v \/ ImplStateSI ioss v.
+  Definition ImplStateMSI (v: Value): OStatesP :=
+    fun ioss => ImplStateMI v ioss \/ ImplStateSI v ioss.
 
   (* NOTE: Here indeed binary predicates are required; if the predicate only
    * takes a poststate, then we cannot specify that the coherence value should
@@ -71,17 +133,17 @@ Section Predicates.
   (** --(.)--> [MSI(v) -> MSI(v)] --(v)--> *)
   Definition PredGet: PredOS :=
     fun inv poss outv noss =>
-      ImplStateMSI poss outv /\ ImplStateMSI noss outv.
+      ImplStateMSI outv poss /\ ImplStateMSI outv noss.
 
   (** --(v)--> [. -> MSI(v)] --(.)--> *)
   Definition PredSet: PredOS :=
-    fun inv poss outv noss => ImplStateMI noss inv.
+    fun inv poss outv noss => ImplStateMI inv noss.
 
   (** --(.)--> [SI(v)|{tinds} -> SI(v)|{tinds}] --(v)--> *)
   Definition PredGetSI (tinds: list IdxT): PredOS :=
     fun inv poss outv noss =>
-      ImplStateSI (M.restrict poss tinds) outv /\
-      ImplStateSI (M.restrict noss tinds) outv.
+      ImplStateSI outv (M.restrict poss tinds) /\
+      ImplStateSI outv (M.restrict noss tinds).
 
   (** --(.)--> [. -> I|{tinds}] --(v)--> *)
   Definition PredSetI (tinds: list IdxT): PredOS :=
@@ -145,14 +207,14 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
-  Definition SpecState (soss: OStates) (v: Value) :=
+  Definition SpecState (v: Value) (soss: OStates) :=
     exists sost,
       soss@[specIdx] = Some sost /\
       sost@[valueIdx] = Some v.
 
   Definition SvmR (ioss soss: OStates): Prop :=
     exists cv,
-      ImplStateMSI ioss cv /\ SpecState soss cv.
+      ImplStateMSI cv ioss /\ SpecState cv soss.
 
   Definition SvmSim (ist sst: TState) :=
     SvmR (tst_oss ist) (tst_oss sst) /\
@@ -164,87 +226,100 @@ Section Facts.
 
   Lemma impl_state_MI_SI_contra:
     forall ioss v1 v2,
-      ImplStateMI ioss v1 ->
-      ImplStateSI ioss v2 ->
+      ImplStateMI v1 ioss ->
+      ImplStateSI v2 ioss ->
       False.
   Proof.
-    unfold ImplStateMI, ImplStateSI; intros; dest.
-    specialize (H1 _ _ _ H H3); auto.
+    unfold ImplStateMI, ImplStateSI; intros.
+    dest; hnf in *; dest.
+    specialize (H1 x0); rewrite H in H1; simpl in H1.
+    specialize (H1 _ H4); auto.
   Qed.
 
   Lemma impl_state_MI_restrict_SI_contra:
     forall ioss v1 v2 dom,
       dom <> nil ->
-      ImplStateMI ioss v1 ->
-      ImplStateSI (M.restrict ioss dom) v2 ->
+      ImplStateMI v1 ioss ->
+      ImplStateSI v2 (M.restrict ioss dom) ->
       False.
   Proof.
-    unfold ImplStateMI, ImplStateSI; intros; dest.
-    assert (ioss@[x] = Some x0).
+    unfold ImplStateMI, ImplStateSI; intros.
+    dest; hnf in *; dest.
+    assert (ioss@[x] = Some x1).
     { rewrite M.restrict_find in H1; findeq.
       { destruct (in_dec _ _ _); [auto|discriminate]. }
       { destruct (in_dec _ _ _); discriminate. }
     }
-    destruct (x ==n x1); subst.
+    destruct (x ==n x0); subst.
     - mred_find.
-    - specialize (H6 _ _ _ n H7 H3); discriminate.
+    - specialize (H3 x); rewrite H7 in H3; simpl in H3.
+      specialize (H3 n _ H4); discriminate.
   Qed.
-
+  
   Lemma impl_state_SI_value_eq:
     forall ioss v1,
-      ImplStateSI ioss v1 ->
+      ImplStateSI v1 ioss ->
       forall v2,
-        ImplStateSI ioss v2 ->
+        ImplStateSI v2 ioss ->
         v1 = v2.
   Proof.
-    unfold ImplStateSI; intros; dest.
-    specialize (H2 _ _ _ H H4).
-    specialize (H1 _ _ _ H H4).
+    unfold ImplStateSI; intros.
+    dest; hnf in *; dest.
+    specialize (H2 x); rewrite H0 in H2; simpl in H2.
+    specialize (H2 _ H3).
+    specialize (H1 x); rewrite H0 in H1; simpl in H1.
+    specialize (H1 _ H3).
     simpl in *; mred_find.
     reflexivity.
   Qed.
 
   Lemma impl_state_restrict_SI_value_eq:
     forall ioss v1,
-      ImplStateSI ioss v1 ->
+      ImplStateSI v1 ioss ->
       forall dom v2,
         dom <> nil ->
-        ImplStateSI (M.restrict ioss dom) v2 ->
+        ImplStateSI v2 (M.restrict ioss dom) ->
         v1 = v2.
   Proof.
-    unfold ImplStateSI; intros; dest.
-    assert (ioss@[x] = Some x0).
+    unfold ImplStateSI; intros.
+    dest; hnf in *; dest.
+    assert (ioss@[x] = Some x1).
     { rewrite M.restrict_find in H1; findeq.
       { destruct (in_dec _ _ _); [auto|discriminate]. }
       { destruct (in_dec _ _ _); discriminate. }
     }
-    specialize (H2 _ _ _ H1 H4).
-    specialize (H3 _ _ _ H6 H4).
+    specialize (H2 x); rewrite H1 in H2; simpl in H2.
+    specialize (H2 _ H4).
+    specialize (H3 x); rewrite H6 in H3; simpl in H3.
+    specialize (H3 _ H4).
     simpl in *; mred_find.
     reflexivity.
   Qed.
 
   Lemma impl_state_MI_value_eq:
     forall ioss v1,
-      ImplStateMI ioss v1 ->
+      ImplStateMI v1 ioss ->
       forall v2,
-        ImplStateMI ioss v2 ->
+        ImplStateMI v2 ioss ->
         v1 = v2.
   Proof.
-    unfold ImplStateMI; intros; dest.
-    destruct (x ==n x1); subst.
+    unfold ImplStateMI; intros.
+    dest; hnf in *; dest.
+    destruct (x0 ==n x); subst.
     - mred_find; reflexivity.
-    - specialize (H6 _ _ _ n H0 H1); discriminate.
+    - specialize (H1 x0); rewrite H in H1; simpl in H1.
+      specialize (H1 n _ H5); discriminate.
   Qed.
 
   Lemma impl_state_MSI_value_eq:
     forall ioss v1,
-      ImplStateMSI ioss v1 ->
+      ImplStateMSI v1 ioss ->
       forall v2,
-        ImplStateMSI ioss v2 ->
+        ImplStateMSI v2 ioss ->
         v1 = v2.
   Proof.
     unfold ImplStateMSI; intros.
+    dest; hnf in *; dest.
     destruct H, H0.
     - eauto using impl_state_MI_value_eq.
     - exfalso; eauto using impl_state_MI_SI_contra.
@@ -254,103 +329,16 @@ Section Facts.
 
   Lemma impl_state_MSI_restrict_SI_value_eq:
     forall ioss v1,
-      ImplStateMSI ioss v1 ->
+      ImplStateMSI v1 ioss ->
       forall dom v2,
         dom <> nil ->
-        ImplStateSI (M.restrict ioss dom) v2 ->
+        ImplStateSI v2 (M.restrict ioss dom) ->
         v1 = v2.
   Proof.
-    unfold ImplStateMSI (* ImplStateMI, ImplStateSI *); intros.
+    unfold ImplStateMSI; intros.
     destruct H.
     - exfalso; eauto using impl_state_MI_restrict_SI_contra.
     - eauto using impl_state_restrict_SI_value_eq.
-  Qed.
-
-  Lemma impl_state_status_S_restrict_SI:
-    forall ioss dom cv,
-      ImplStateSI (M.restrict ioss dom) cv ->
-      forall oidx nos,
-        M.KeysEquiv ioss (oidx :: dom) ->
-        nos@[statusIdx] = Some (VNat stS) ->
-        nos@[valueIdx] = Some cv ->
-        ImplStateSI (ioss +[oidx <- nos]) cv.
-  Proof.
-    unfold ImplStateSI; simpl; intros.
-    dest; split.
-    - destruct (oidx ==n x); subst.
-      + exists x, nos; split; auto.
-        findeq.
-      + exists x, x0; split; auto.
-        rewrite M.restrict_find in H.
-        destruct (in_dec _ _ _); [|discriminate].
-        findeq.
-    - intros.
-      destruct (oidx ==n oidx0); subst.
-      + mred; mred_find.
-        reflexivity.
-      + rewrite M.find_add_2 in H5 by auto.
-        assert (M.In oidx0 ioss).
-        { apply M.Map.Facts.P.F.in_find_iff.
-          rewrite H5; discriminate.
-        }
-        apply H0 in H7; inv H7.
-        * elim n; reflexivity.
-        * eapply H3 with (oidx:= oidx0); eauto.
-          rewrite M.restrict_find.
-          destruct (in_dec _ _ _); auto.
-          elim n0; assumption.
-  Qed.
-
-  Lemma impl_state_status_I_restrict_SI:
-    forall ioss dom cv,
-      ImplStateSI (M.restrict ioss dom) cv ->
-      forall oidx nos,
-        M.KeysEquiv ioss (oidx :: dom) ->
-        ioss@[oidx] = Some nos ->
-        nos@[statusIdx] = Some (VNat stI) ->
-        nos@[valueIdx] = Some cv ->
-        ImplStateSI ioss cv.
-  Proof.
-    unfold ImplStateSI; simpl; intros.
-    dest; split.
-    - exists x, x0; split; auto.
-      rewrite M.restrict_find in H.
-      destruct (in_dec _ _ _); [|discriminate].
-      findeq.
-    - intros.
-      destruct (oidx ==n oidx0); subst.
-      + mred; mred_find.
-        simpl; auto.
-      + eapply H4 with (oidx:= oidx0); eauto.
-        rewrite M.restrict_find.
-        destruct (in_dec _ _ _); auto.
-        elim n0; clear n0.
-        assert (In oidx0 (oidx :: dom)).
-        { apply H0, M.Map.Facts.P.F.in_find_iff.
-          rewrite H6; discriminate.
-        }
-        destruct H8; auto.
-        elim n; assumption.
-  Qed.
-
-  Lemma impl_state_status_M_restrict_I:
-    forall ioss cv,
-      ImplStateMI ioss cv ->
-      forall oidx dom nos,
-        ~ In oidx dom ->
-        ioss@[oidx] = Some nos ->
-        nos@[statusIdx] = Some (VNat stM) ->
-        ImplStateI (M.restrict ioss dom).
-  Proof.
-    unfold ImplStateMI, ImplStateI; intros; dest.
-    rewrite M.restrict_find in H3.
-    destruct (in_dec _ _ _); [|discriminate].
-    destruct (oidx ==n x); subst.
-    - destruct (oidx0 ==n x); subst.
-      + elim H0; assumption.
-      + eapply H7; eauto.
-    - specialize (H7 _ _ _ n H1 H2).
-      discriminate.
   Qed.
 
 End Facts.

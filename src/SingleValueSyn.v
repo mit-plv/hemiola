@@ -82,9 +82,9 @@ Section Impl.
       | [H: SpecState _ _ |- _] =>
         let sost := fresh "sost" in
         destruct H as [sost [? ?]]
-      | [H1: ImplStateMSI ?ioss ?v1, H2: ImplStateMSI ?ioss ?v2 |- _] =>
+      | [H1: ImplStateMSI ?v1 ?ioss, H2: ImplStateMSI ?v2 ?ioss |- _] =>
         assert (v1 = v2) by eauto using impl_state_MSI_value_eq; subst v1
-      | [H1: ImplStateMSI ?ioss ?v1, H2: ImplStateSI (M.restrict ?ioss _) ?v2 |- _] =>
+      | [H1: ImplStateMSI ?v1 ?ioss, H2: ImplStateSI ?v2 (M.restrict ?ioss _) |- _] =>
         assert (v1 = v2)
           by (eapply impl_state_MSI_restrict_SI_value_eq; eauto; discriminate);
         subst v1
@@ -96,17 +96,8 @@ Section Impl.
     repeat
       (repeat (match goal with
                | [ |- SvmR _ _ ] => eexists; split
-               | [H: ImplStateMSI ?ioss1 _ |- ImplStateMSI ?ioss2 _ ] =>
+               | [H: ImplStateMSI _ ?ioss1 |- ImplStateMSI _ ?ioss2 ] =>
                  replace ioss2 with ioss1; eassumption
-               | [H1: WfDomTState _ {| tst_oss := ?ioss |},
-                  H2: ImplStateSI (M.restrict ?ioss _) ?cv,
-                  H3: ?nos@[statusIdx] = Some (VNat stS),
-                  H4: ?nos@[valueIdx] = Some ?cv
-                  |- ImplStateMSI (M.add ?oidx ?nos ?ioss) ?cv] =>
-                 right;
-                 eapply impl_state_status_S_restrict_SI; eauto;
-                 eapply M.KeysEquiv_EquivList; eauto;
-                 clear; firstorder
                | [ |- SpecState _ _ ] => eexists; split
                end);
        try (findeq; fail); try reflexivity; try eassumption
@@ -1047,7 +1038,6 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-
                 clear -H H5 H10 H11 H13 H14 H15 H16.
                 admit.
               }
