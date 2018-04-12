@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Topology Semantics StepT.
-Require Import Simulation Synthesis PredMsg.
+Require Import Simulation Synthesis SynthesisTactics PredMsg.
 
 Require Import SingleValue.
 
@@ -27,26 +27,6 @@ Section RPreconds.
     fun ost _ => ost@[statusIdx] = Some (VNat stI).
 
 End RPreconds.
-
-Section OStatesP.
-
-  Definition OStatesP := OStates -> Prop.
-  Definition OStateP := IdxT -> OState -> Prop.
-
-  Definition OStatesFP := list IdxT -> OStatesP.
-  Definition OStatesEP := IdxT -> OStatesP.
-
-  Definition OStateForallP (ostp: OStateP): OStatesFP :=
-    fun inds oss =>
-      Forall (fun oidx =>
-                oss@[oidx] >>=[False] (fun ost => ostp oidx ost)) inds.
-
-  Definition OStateExistsP (ostp: OStateP): OStatesEP :=
-    fun oidx oss =>
-      exists ost,
-        oss@[oidx] = Some ost /\ ostp oidx ost.
-
-End OStatesP.
 
 Section Predicates.
 
@@ -189,50 +169,6 @@ Section Sim.
       SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
   
 End Sim.
-
-Ltac ostatesfp_apply Hin Hfa :=
-  match type of Hin with
-  | In ?tidx ?tinds1 =>
-    match type of Hfa with
-    | Forall _ ?tinds2 =>
-      let H := fresh "H" in
-      pose proof Hfa as H;
-      eapply Forall_forall with (x:= tidx) in H; eauto
-    end
-  end.
-
-Ltac ostatesfp_red :=
-  repeat
-    (repeat match goal with
-            | [H: forall _, _ = _ -> _ |- _] =>
-              specialize (H _ eq_refl); simpl in H
-            | [H: ?idx1 <> ?idx2 -> _ |- _] =>
-              let Hne := fresh "Hne" in
-              assert (idx1 <> idx2) as Hne by discriminate;
-              specialize (H Hne); clear Hne
-            | [H: ?idx <> ?idx -> _ |- _] => clear H
-            | [H1: ?idx1 <> ?idx2, H2: ?idx1 <> ?idx2 -> _ |- _] =>
-              specialize (H2 H1); simpl in H2
-            | [H: _ = _ |- _] => discriminate
-            | [H: Some _ = Some _ |- _] => inv H
-
-            | [ |- (Some _) >>=[_] _ ] => simpl; intros
-            | [ |- None >>=[_] _ ] => simpl; intros
-            end;
-     mred_find;
-     repeat match goal with
-            | [H: (?ot) >>=[False] _ |- _] =>
-              let ox := fresh "ox" in
-              let x := fresh "x" in
-              remember ot as ox; destruct ox as [x|];
-              [simpl in H|simpl in H; exfalso; auto]
-            end;
-     auto).
-
-Ltac ostatesfp_red_ex :=
-  repeat (ostatesfp_red; mred;
-          intros; simpl in *; subst; auto; try reflexivity).
-
 
 Section Facts.
 

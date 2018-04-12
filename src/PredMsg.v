@@ -219,3 +219,23 @@ Definition NoMsgsTs (ts: TrsId): PredMP TMsg :=
                 (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts))
              nmsgs.
 
+Section OStatesP.
+
+  Definition OStatesP := OStates -> Prop.
+  Definition OStateP := IdxT -> OState -> Prop.
+
+  Definition OStatesFP := list IdxT -> OStatesP.
+  Definition OStatesEP := IdxT -> OStatesP.
+
+  Definition OStateForallP (ostp: OStateP): OStatesFP :=
+    fun inds oss =>
+      Forall (fun oidx =>
+                oss@[oidx] >>=[False] (fun ost => ostp oidx ost)) inds.
+
+  Definition OStateExistsP (ostp: OStateP): OStatesEP :=
+    fun oidx oss =>
+      exists ost,
+        oss@[oidx] = Some ost /\ ostp oidx ost.
+
+End OStatesP.
+

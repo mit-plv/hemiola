@@ -62,8 +62,8 @@ Section System.
         {| rule_mids := setReqM :: nil;
            rule_precond := ⊤;
            rule_postcond :=
-             rpostOf (SingleRqPostcondSt
-                        (fun pre v post => post@[valueIdx] = Some v))
+             rpostOf (fun pre ins post =>
+                        (hd_error ins) >>=[False] (fun msg => post@[valueIdx] = Some (msg_value msg)))
                      (fun _ _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil)
         |}.
 
