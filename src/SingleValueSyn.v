@@ -827,6 +827,27 @@ Section Impl.
                 | [ |- Forall _ _ ] => constructor
                 end; ostatesfp_red_ex).
 
+    Ltac pred_ok_exists :=
+      repeat
+        (repeat
+           match goal with
+           | [ |- exists _, _ ] => eexists
+           | [ |- _ /\ _ ] => split
+           | [ |- In ?idx _ ] =>
+             tryif is_evar idx
+             then idtac else (simpl; tauto)
+           | [ |- OStateExistsP _ _ _ ] => red
+           | [ |- ?m @[?k] = Some _ ] =>
+             tryif is_evar k
+             then idtac else (eassumption || findeq; fail)
+           end;
+         repeat
+           match goal with
+           | [ |- ?m @[?k] = Some _ ] => eassumption || findeq; fail
+           | [H: In ?x _ |- In ?x _ ] =>
+             eassumption || (clear -H; firstorder; fail)
+           end).
+
     Ltac step_pred_invert_red origRq red_custom :=
       repeat (step_pred_invert_dest_state;
               step_pred_invert_dest_pmsg origRq;
@@ -964,7 +985,6 @@ Section Impl.
         | [H: step_t _ _ _ _ |- _] => inv H
         | [H: In _ (sys_rules _) |- _] => destruct H
         end.
-
     
     Definition svmTrsIdx0: TrsId := SvmGetE.
     Definition svmTrsRq0: MsgId :=
@@ -1068,12 +1088,9 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-
                 right; split.
-                { admit. }
-                { pred_ok_init svm_pred_ok_init;
-                    pred_ok_forall.
-                }
+                { pred_ok_init svm_pred_ok_init; pred_ok_exists. }
+                { pred_ok_init svm_pred_ok_init; pred_ok_forall. }
               }
               { constr_sim_mp. }
             }
@@ -1086,12 +1103,9 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-
                 right; split.
-                { admit. }
-                { pred_ok_init svm_pred_ok_init;
-                    pred_ok_forall.
-                }
+                { pred_ok_init svm_pred_ok_init; pred_ok_exists. }
+                { pred_ok_init svm_pred_ok_init; pred_ok_forall. }
               }
               { constr_sim_mp. }
             }
@@ -1112,7 +1126,9 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                admit.
+                right; split.
+                { pred_ok_init svm_pred_ok_init; pred_ok_exists. }
+                { pred_ok_init svm_pred_ok_init; pred_ok_forall. }
               }
               { constr_sim_mp. }
             }
@@ -1125,7 +1141,9 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                admit.
+                right; split.
+                { pred_ok_init svm_pred_ok_init; pred_ok_exists. }
+                { pred_ok_init svm_pred_ok_init; pred_ok_forall. }
               }
               { constr_sim_mp. }
             }
@@ -1138,7 +1156,9 @@ Section Impl.
               sim_spec_constr_silent_init.
               sim_spec_constr_sim_init.
               { constr_sim_svm.
-                admit.
+                right; split.
+                { pred_ok_init svm_pred_ok_init; pred_ok_exists. }
+                { pred_ok_init svm_pred_ok_init; pred_ok_forall. }
               }
               { constr_sim_mp. }
             }
