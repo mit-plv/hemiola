@@ -953,10 +953,11 @@ Section Impl.
         | [ |- _ /\ _ ] => split; cbn
         end.
     
-    Ltac sim_spec_constr_sim ssim msim :=
-      sim_spec_constr_sim_init; [ssim|msim].
+    Ltac sim_spec_constr_sim ssim msim ssim_ok msim_ok :=
+      sim_spec_constr_sim_init;
+      [ssim; ssim_ok|msim; msim_ok].
 
-    Ltac sim_spec_constr_step srule ssim msim :=
+    Ltac sim_spec_constr_step srule ssim msim ssim_ok msim_ok :=
       sim_spec_constr_step_init srule;
       sim_spec_constr_split;
       (* 1) Prove the external label equality first, *)
@@ -964,12 +965,12 @@ Section Impl.
       (* 2) Prove the actual step relation, and *)
       [sim_spec_constr_step_t|];
       (* 3) Prove the preservation of simulation. *)
-      sim_spec_constr_sim ssim msim.
+      sim_spec_constr_sim ssim msim ssim_ok msim_ok.
 
-    Ltac sim_spec_constr_silent constr_sim_os constr_sim_mp :=
+    Ltac sim_spec_constr_silent ssim msim ssim_ok msim_ok :=
       sim_spec_constr_silent_init;
       (* It suffices to prove simulation, due to the silent step. *)
-      sim_spec_constr_sim constr_sim_os constr_sim_mp.
+      sim_spec_constr_sim ssim msim ssim_ok msim_ok.
 
     (** FIXME:
      * - Some immediate rules do not generate external labels.
@@ -977,31 +978,31 @@ Section Impl.
      *)
     
     (** Try to synthesize an immediate [PRule]. *)
-    Ltac synth_imm_prule origRq srule red_sim constr_sim_os constr_sim_mp :=
+    Ltac synth_imm_prule origRq srule red_sim ssim msim ssim_ok msim_ok :=
       pstack_first_instantiate_imm_prule;
       pstack_pop;
       step_pred_invert_init;
       step_pred_invert_red origRq red_sim;
-      sim_spec_constr_step srule constr_sim_os constr_sim_mp.
+      sim_spec_constr_step srule ssim msim ssim_ok msim_ok.
 
     (** Try to synthesize a request-forwarding [PRule]. *)
-    Ltac synth_rqfwd_prule origRq rqff red_sim constr_sim_os constr_sim_mp :=
+    Ltac synth_rqfwd_prule origRq rqff red_sim ssim msim ssim_ok msim_ok :=
       pstack_first_instantiate_rqfwd_prule rqff;
       pstack_pop;
       set_prr_rqf;
       step_pred_invert_init;
       step_pred_invert_red origRq red_sim;
-      sim_spec_constr_silent constr_sim_os constr_sim_mp.
+      sim_spec_constr_silent ssim msim ssim_ok msim_ok.
 
     (** Try to synthesize a responses-back [PRule]. *)
     Ltac synth_rsback_prule origRq srule opred rsbf
-         red_sim constr_sim_os constr_sim_mp precs :=
+         red_sim ssim msim ssim_ok msim_ok precs :=
       prr_instantiate_rsback_prule opred rsbf;
       pstack_push_from_prr precs;
       clear_prr;
       step_pred_invert_init;
       step_pred_invert_red origRq red_sim;
-      sim_spec_constr_step srule constr_sim_os constr_sim_mp.
+      sim_spec_constr_step srule ssim msim ssim_ok msim_ok.
 
     Ltac synth_done :=
       (tryif pstack_is_empty
@@ -1080,12 +1081,14 @@ Section Impl.
             (* Should succeed when {C1.st = M} *)
             try (synth_prule_imm;
                  [synth_imm_prule svmTrsRq0 (specGetReq extIdx1 extIdx1)
-                                  red_svm constr_sim_svm constr_sim_mp|]).
+                                  red_svm constr_sim_svm constr_sim_mp
+                                  nothing nothing|]).
 
             (* Should succeed when {C1.st = S} *)
             try (synth_prule_imm;
                  [synth_imm_prule svmTrsRq0 (specGetReq extIdx1 extIdx1)
-                                  red_svm constr_sim_svm constr_sim_mp|]).
+                                  red_svm constr_sim_svm constr_sim_mp
+                                  nothing nothing|]).
 
             (* Should fail when {C1.st = I}:
              * TODO: need an Ltac to heuristically check that it is feasible
@@ -1102,11 +1105,11 @@ Section Impl.
             synth_prules_rqf_rsb; [| |clear_prr].
             { synth_rqfwd_prule
                 svmTrsRq0 (getRqFwdF implTopo)
-                red_svm constr_sim_svm constr_sim_mp.
+                red_svm constr_sim_svm constr_sim_mp nothing nothing.
             }
             { synth_rsback_prule
                 svmTrsRq0 (specGetReq extIdx1 extIdx1) OPredGetS rsBackFDefault
-                red_svm constr_sim_svm constr_sim_mp
+                red_svm constr_sim_svm constr_sim_mp nothing nothing
                 [ImplOStatusI; ImplOStatusS; ImplOStatusM].
             }
 
@@ -1142,7 +1145,7 @@ Section Impl.
               set_prr_rqf.
               step_pred_invert_init.
               step_pred_invert_red svmSynRq0 red_svm.
-              sim_spec_constr_silent constr_sim_svm constr_sim_mp.
+              sim_spec_constr_silent constr_sim_svm constr_sim_mp nothing nothing.
             }
             { prr_instantiate_rsback_prule OPredGetS rsBackFDefault.
               pstack_push_from_prr [ImplOStatusI; ImplOStatusS; ImplOStatusM].

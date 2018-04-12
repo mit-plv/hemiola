@@ -15,6 +15,8 @@ Proof.
   tauto.
 Qed.
 
+Ltac nothing := idtac.
+
 Ltac assert_later asrt :=
   apply tautology_0 with (P:= asrt); [intros|].
 
