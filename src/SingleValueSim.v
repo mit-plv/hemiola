@@ -167,6 +167,42 @@ Section Sim.
     fun ist sst =>
       SvmR tinds (tst_oss ist) (tst_oss sst) /\
       SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
+
+  Section Facts.
+
+    Lemma svmMsgF_ValidMsgMap:
+      ValidMsgMap svmMsgF impl0 spec.
+    Proof.
+      unfold ValidMsgMap; intros.
+      unfold svmMsgF; simpl.
+      unfold svmIdxF, fromInternal, toInternal, isInternal.
+      unfold impl0.
+      split.
+      - find_if_inside.
+        + Common.dest_in; cbn in *.
+          * unfold id in H; rewrite <-H; reflexivity.
+          * unfold id in H0; rewrite <-H0; reflexivity.
+          * unfold id in H; rewrite <-H; reflexivity.
+        + find_if_inside; auto.
+          elim n; clear n.
+          Common.dest_in.
+          cbn in *.
+          unfold svmIdxF in H.
+          find_if_inside; auto.
+      - find_if_inside.
+        + Common.dest_in; cbn in *.
+          * unfold id in H; rewrite <-H; auto.
+          * unfold id in H0; rewrite <-H0; auto.
+          * unfold id in H; rewrite <-H; auto.
+        + find_if_inside; auto.
+          elim n; clear n.
+          Common.dest_in.
+          cbn in *.
+          unfold svmIdxF in H.
+          find_if_inside; auto.
+    Qed.
+
+  End Facts.
   
 End Sim.
 
