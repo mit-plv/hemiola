@@ -151,17 +151,17 @@ Section Transition.
     end.
 
   Inductive Behavior {SysT StateT LabelT}
-            `{IsSystem SysT} `{HasInit StateT} `{HasLabel LabelT}
+            `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
             (ss: Steps SysT StateT LabelT) : SysT -> Trace -> Prop :=
   | Behv: forall sys ll st,
-      ss sys initsOf ll st ->
+      ss sys (initsOf sys) ll st ->
       forall tr,
         tr = behaviorOf sys ll ->
         Behavior ss sys tr.
 
   Definition Refines {SysI SysS StateI LabelI StateS LabelS}
-             `{IsSystem SysI} `{HasInit StateI} `{HasLabel LabelI}
-             `{IsSystem SysS} `{HasInit StateS} `{HasLabel LabelS}
+             `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
+             `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}
              (ssI: Steps SysI StateI LabelI) (ssS: Steps SysS StateS LabelS)
              (p: Label -> Label) (impl: SysI) (spec: SysS) :=
     forall ll, Behavior ssI impl ll ->
@@ -184,11 +184,14 @@ Section BState.
       bst_msgs: MessagePool MsgT
     }.
 
-  Definition getBStateInit {MsgT}: BState MsgT :=
-    {| bst_oss := initsOf;
+  Context {SysT: Type} `{HasInit SysT OStates}
+          {MsgT: Type}.
+
+  Definition getBStateInit (sys: SysT): BState MsgT :=
+    {| bst_oss := initsOf sys;
        bst_msgs := nil |}.
 
-  Global Instance BState_HasInit {MsgT}: HasInit (BState MsgT) :=
+  Global Instance BState_HasInit: HasInit SysT (BState MsgT) :=
     {| initsOf := getBStateInit |}.
 
 End BState.
@@ -294,12 +297,14 @@ Section TState.
       tst_tid: TrsId
     }.
 
-  Definition getTStateInit: TState :=
-    {| tst_oss := initsOf;
+  Context {SysT: Type} `{HasInit SysT OStates}.
+
+  Definition getTStateInit (sys: SysT): TState :=
+    {| tst_oss := initsOf sys;
        tst_msgs := nil;
        tst_tid := trsIdInit |}.
 
-  Global Instance TState_HasInit: HasInit TState :=
+  Global Instance TState_HasInit: HasInit SysT TState :=
     {| initsOf := getTStateInit |}.
 
 End TState.

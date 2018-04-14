@@ -17,8 +17,8 @@ Section SynthOk.
    * proof. Invariants are proven after all [Rule]s are synthesized.
    *)
   Definition SynthOk (s: System) :=
-    R initsOf initsOf /\
-    ginv initsOf /\
+    R (initsOf s) (initsOf spec) /\
+    ginv (initsOf s) /\
     (TrsSimulates R ginv p s spec /\ InvStep s step_t ginv) /\
     SerializableSys s.
 
@@ -35,15 +35,18 @@ Section SynthOk.
      * 3) simulation on sequential semantics
      * 4) global invariants
      *)
-    Hypotheses (HsynSerial:
-                  forall s, SerializableSys s ->
-                            forall s', syn s s' -> SerializableSys s')
-               (HsynSim:
-                  forall s, TrsSimulates R ginv p s spec ->
-                            forall s', syn s s' -> TrsSimulates R ginv p s' spec)
-               (HsynInv:
-                  forall s, InvStep s step_t ginv ->
-                            forall s', syn s s' -> InvStep s' step_t ginv).
+    Hypotheses
+      (HsynInit: forall s s', syn s s' -> initsOf (StateT:= TState) s =
+                                          initsOf (StateT:= TState) s')
+      (HsynSerial:
+         forall s, SerializableSys s ->
+                   forall s', syn s s' -> SerializableSys s')
+      (HsynSim:
+         forall s, TrsSimulates R ginv p s spec ->
+                   forall s', syn s s' -> TrsSimulates R ginv p s' spec)
+      (HsynInv:
+         forall s, InvStep s step_t ginv ->
+                   forall s', syn s s' -> InvStep s' step_t ginv).
 
     Lemma synthOk_refinement:
       forall s, SynthOk s -> steps step_t # steps step_t |-- s ⊑[p] spec.
@@ -60,6 +63,8 @@ Section SynthOk.
     Proof.
       unfold SynthOk; intros; dest.
       repeat split; eauto.
+      - erewrite <-HsynInit; eauto.
+      - erewrite <-HsynInit; eauto.
     Qed.
 
   End SynthesisStep.

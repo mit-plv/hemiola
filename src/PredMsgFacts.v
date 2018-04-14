@@ -8,7 +8,7 @@ Set Implicit Arguments.
 
 Section GivenMsg.
   Variable (MsgT SysT: Type).
-  Context `{HasMsg MsgT} `{IsSystem SysT}.
+  Context `{HasMsg MsgT} `{IsSystem SysT} `{HasInit SysT OStates}.
 
   Lemma buildRawPSys_indicesOf:
     forall (sys: SysT), indicesOf sys = indicesOf (buildRawPSys MsgT sys).

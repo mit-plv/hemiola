@@ -15,7 +15,7 @@ Section TrsSim.
 
   Variables (impl spec: System).
 
-  Definition TrsSimInit := sim initsOf initsOf.
+  Definition TrsSimInit := sim (initsOf impl) (initsOf spec).
  
   Definition TrsSimulates :=
     forall ist1 sst1,
@@ -31,7 +31,7 @@ Section TrsSim.
   Hypotheses
     (Hsimi: TrsSimInit)
     (Hsim: TrsSimulates)
-    (Hginvi: InvInit ginv)
+    (Hginvi: InvInit impl ginv)
     (Hginv: InvStep impl step_t ginv).
 
   Lemma trs_simulation_steps:
@@ -142,7 +142,7 @@ Section TrsSimSep.
               ist2 ≈ sst2.
 
   Hypotheses
-    (Hsimi: TrsSimInit sim)
+    (Hsimi: TrsSimInit sim impl spec)
     (HsimSlt: TrsSimSilent)
     (HsimIn: TrsSimIn)
     (HsimAtm: forall ts rq, TrsSimAtomic ts rq).

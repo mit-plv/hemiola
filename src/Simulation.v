@@ -5,8 +5,8 @@ Set Implicit Arguments.
 
 Section Simulation.
   Context {SysI SysS StateI LabelI StateS LabelS: Type}
-          `{IsSystem SysI} `{HasInit StateI} `{HasLabel LabelI}
-          `{IsSystem SysS} `{HasInit StateS} `{HasLabel LabelS}.
+          `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
+          `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}.
   Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
             (sim: StateI -> StateS -> Prop)
             (p: Label -> Label).
@@ -70,7 +70,7 @@ Section Simulation.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
-  Hypothesis (Hsimi: sim initsOf initsOf).
+  Hypothesis (Hsimi: sim (initsOf impl) (initsOf spec)).
 
   Theorem simulation_implies_refinement:
     (steps stepI) # (steps stepS) |-- impl ⊑[p] spec.
@@ -86,8 +86,8 @@ End Simulation.
 
 Section InvSim.
   Context {SysI SysS StateI LabelI StateS LabelS: Type}
-          `{IsSystem SysI} `{HasInit StateI} `{HasLabel LabelI}
-          `{IsSystem SysS} `{HasInit StateS} `{HasLabel LabelS}.
+          `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
+          `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}.
   Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
             (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop)
@@ -95,7 +95,7 @@ Section InvSim.
             (linv: LabelI -> Prop).
 
   Local Infix "≈" := sim (at level 30).
-
+  
   Variables (impl: SysI) (spec: SysS).
 
   Definition InvSim :=

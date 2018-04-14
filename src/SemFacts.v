@@ -41,7 +41,7 @@ Proof.
 Qed.
 
 Lemma buildRawSys_indicesOf:
-  forall {SysT} `{IsSystem SysT} (sys: SysT),
+  forall {SysT} `{IsSystem SysT} `{HasInit SysT OStates} (sys: SysT),
     indicesOf sys = indicesOf (buildRawSys sys).
 Proof.
   intros; unfold indicesOf, buildRawSys; simpl.
@@ -49,7 +49,7 @@ Proof.
 Qed.
 
 Corollary buildRawSys_isExternal:
-  forall {SysT} `{IsSystem SysT} (sys: SysT),
+  forall {SysT} `{IsSystem SysT} `{HasInit SysT OStates} (sys: SysT),
     isExternal (buildRawSys sys) = isExternal sys.
 Proof.
   unfold isExternal; intros.
@@ -58,7 +58,7 @@ Proof.
 Qed.
 
 Corollary buildRawSys_isInternal:
-  forall {SysT} `{IsSystem SysT} (sys: SysT),
+  forall {SysT} `{IsSystem SysT} `{HasInit SysT OStates} (sys: SysT),
     isInternal (buildRawSys sys) = isInternal sys.
 Proof.
   unfold isInternal; intros.
@@ -990,7 +990,7 @@ Proof.
 Qed.
 
 Theorem refines_refl:
-  forall {SysT StateT LabelT} `{IsSystem SysT} `{HasInit StateT} `{HasLabel LabelT}
+  forall {SysT StateT LabelT} `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
          (ss: Steps SysT StateT LabelT) sys, ss # ss |-- sys ⊑[id] sys.
 Proof.
   unfold Refines; intros.
@@ -999,7 +999,7 @@ Proof.
 Qed.
 
 Theorem refines_trans:
-  forall {SysT StateT LabelT} `{IsSystem SysT} `{HasInit StateT} `{HasLabel LabelT}
+  forall {SysT StateT LabelT} `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
          (ss1 ss2 ss3: Steps SysT StateT LabelT) p q s1 s2 s3,
     ss1 # ss2 |-- s1 ⊑[p] s2 ->
     ss2 # ss3 |-- s2 ⊑[q] s3 ->

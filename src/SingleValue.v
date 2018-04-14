@@ -69,9 +69,11 @@ Section System.
 
     End PerChn.
 
+    Definition specInit: OStates := [specIdx <- [valueIdx <- VNat 0]].
+
     Definition spec: System :=
       {| sys_inds := specIdx :: nil;
-         sys_inits := [specIdx <- [valueIdx <- VNat 0]];
+         sys_inits := specInit;
          sys_rules :=
            (specGetReq extIdx1)
              :: (specSetReq extIdx1)
@@ -102,11 +104,14 @@ Section System.
     Definition stS := 1.
     Definition stI := 0.
 
+    Definition implInit: OStates :=
+      [parentIdx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
+      +[child1Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
+      +[child2Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]].
+
     Definition impl0: System :=
       {| sys_inds := parentIdx :: child1Idx :: child2Idx :: nil;
-         sys_inits := [parentIdx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
-                      +[child1Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
-                      +[child2Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]];
+         sys_inits := implInit;
          sys_rules := nil |}.
 
     Definition implTopo: Tree unit :=

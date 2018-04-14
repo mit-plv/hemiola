@@ -6,7 +6,7 @@ Set Implicit Arguments.
 
 Section Invariant.
   Variables (SysI StateI LabelI: Type).
-  Context `{IsSystem SysI} `{HasInit StateI} `{HasLabel LabelI}.
+  Context `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}.
 
   Variable (impl: SysI).
 
@@ -15,7 +15,7 @@ Section Invariant.
 
   Definition Invariant := StateI -> Prop.
 
-  Definition InvInit := ginv initsOf.
+  Definition InvInit := ginv (initsOf impl).
 
   Definition InvStep :=
     forall ist1,

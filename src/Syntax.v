@@ -109,14 +109,11 @@ Section Msg.
 
 End Msg.
 
-Class HasInit (StateT: Type) :=
-  { initsOf: StateT }.
+Class HasInit (SysT StateT: Type) :=
+  { initsOf: SysT -> StateT }.
 
 Definition OState := M.t Value.
 Definition OStates := M.t OState.
-
-Global Instance OStates_HasInit: HasInit OStates :=
-  {| initsOf := [] |}.
 
 Section Rule.
 
@@ -205,6 +202,9 @@ Section System.
   Global Instance System_IsSystem : IsSystem System :=
     {| indicesOf := sys_inds |}.
 
+  Global Instance System_OStates_HasInit : HasInit System OStates :=
+    {| initsOf := sys_inits |}.
+
   Definition rulesOf := sys_rules.
 
   Definition handlersOf (rules: list Rule): list MsgId :=
@@ -223,11 +223,12 @@ Ltac evalIndicesOf sys :=
   let indices := eval cbn in (sys_inds sys) in exact indices.
 
 Section RuleAdder.
-  Context {SysT: Type} `{IsSystem SysT}.
+  Context {SysT: Type}
+          `{IsSystem SysT} `{HasInit SysT OStates}.
 
   Definition buildRawSys (osys: SysT): System :=
     {| sys_inds := indicesOf osys;
-       sys_inits := initsOf;
+       sys_inits := initsOf osys;
        sys_rules := nil |}.
 
   Definition addRules (rules: list Rule) (sys: System) :=

@@ -129,6 +129,9 @@ Section GivenMsg.
   Global Instance PSystem_IsSystem: IsSystem PSystem :=
     {| indicesOf := psys_inds |}.
 
+  Global Instance PSystem_OStates_HasInit: HasInit PSystem OStates :=
+    {| initsOf := psys_inits |}.
+
   Record OTrs :=
     { otrs_rq_val: Value }.
 
@@ -138,12 +141,12 @@ Section GivenMsg.
       pst_msgs: MessagePool PMsg
     }.
 
-  Definition getPStateInit: PState :=
-    {| pst_oss := initsOf;
+  Definition getPStateInit (psys: PSystem): PState :=
+    {| pst_oss := initsOf psys;
        pst_otrss := [];
        pst_msgs := nil |}.
 
-  Global Instance PState_HasInit : HasInit PState :=
+  Global Instance PState_PState_HasInit : HasInit PSystem PState :=
     {| initsOf := getPStateInit |}.
 
   (** Conversion from [PSystem] to [System] *)
@@ -180,12 +183,12 @@ Definition PTStateR (tst: TState) (pst: PState TMsg) :=
   tst_msgs tst = map (@pmsg_omsg _) (pst_msgs pst).
 
 Section RuleAdder.
-  Context {SysT: Type} `{IsSystem SysT}.
+  Context {SysT: Type} `{IsSystem SysT} `{HasInit SysT OStates}.
   Variable (MsgT: Type).
 
   Definition buildRawPSys (osys: SysT): PSystem MsgT :=
     {| psys_inds := indicesOf osys;
-       psys_inits := initsOf;
+       psys_inits := initsOf osys;
        psys_rules := nil |}.
 
   Definition addPRules (rules: list (PRule MsgT)) (sys: PSystem MsgT) :=
