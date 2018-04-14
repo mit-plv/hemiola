@@ -68,11 +68,14 @@ Ltac constr_sim_mp :=
          end;
      cbn).
 
+Ltac synthOk_init :=
+  (* [SynthOk] consist of 4 conditions. *)
+  split; [|split; [|split]].
+
 Ltac syn_step_init pimpl pimpl_ok :=
   econstructor;
   instantiate (1:= addRules _ pimpl);
-  split; [|split; [|split]]; (* [SynthOk] consist of 4 conditions. *)
-  [apply pimpl_ok|apply pimpl_ok| |].
+  synthOk_init; [apply pimpl_ok|apply pimpl_ok| |].
 
 Ltac trs_sim_init pimpl_ok :=
   apply trsSimulates_trsInvHolds_rules_added; intros;

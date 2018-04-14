@@ -2,7 +2,7 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepT SemFacts.
 Require Import Simulation Serial SerialFacts Invariant TrsSim.
 Require Import PredMsg StepPred PredMsgFacts.
-Require Import Synthesis SynthesisFacts SynthesisTactics Blocking.
+Require Import Synthesis SynthesisFacts SynthesisTactics.
 Require Import Topology.
 
 Require Import SingleValue SingleValueSim.
@@ -23,9 +23,6 @@ Section Impl.
   Local Definition SvmSim := SvmSim extIdx1 implIndices.
 
   (*! Customized reduction and construction tactics *)
-  
-  Definition SvmInvs :=
-    BlockedInv /\i ValidTidState.
 
   Ltac red_SvmInvs :=
     repeat 
@@ -83,9 +80,9 @@ Section Impl.
   
   Theorem impl0_ok: SynthOk spec SvmSim SvmInvs svmP impl0.
   Proof.
-    split; [|split; [|split]].
-    - (* simulation for the initial states *) admit.
-    - (* invariant holds for the initial states *) admit.
+    synthOk_init.
+    - apply SvmSim_init.
+    - apply SvmInvs_init.
     - (* simulation & invariants *) admit.
     - (* serializability *) admit.
   Admitted.

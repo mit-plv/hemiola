@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Topology Semantics StepT.
-Require Import Simulation Synthesis SynthesisTactics PredMsg.
+Require Import Common FMap Syntax Topology Semantics SemFacts StepT.
+Require Import Invariant Simulation Synthesis SynthesisTactics PredMsg Blocking.
 
 Require Import SingleValue.
 
@@ -151,6 +151,11 @@ Section Sim.
 
   Definition svmP := LabelMap svmMsgF.
 
+  (** Global invariants *)
+
+  Definition SvmInvs :=
+    BlockedInv /\i ValidTidState.
+
   (** Simulation between [TState]s *)
 
   Definition SpecState (v: Value) (soss: OStates) :=
@@ -200,6 +205,25 @@ Section Sim.
           cbn in *.
           unfold svmIdxF in H.
           find_if_inside; auto.
+    Qed.
+
+    Lemma SvmSim_init:
+      SvmSim implIndices (initsOf impl0) (initsOf spec).
+    Proof.
+      split.
+      - eexists; split.
+        + right; repeat econstructor;
+            cbn; intros; inv H; cbn; reflexivity.
+        + repeat econstructor.
+      - repeat constructor.
+    Qed.
+
+    Lemma SvmInvs_init:
+      SvmInvs (initsOf impl0).
+    Proof.
+      repeat constructor.
+      hnf; intros.
+      elim H.
     Qed.
 
   End Facts.
