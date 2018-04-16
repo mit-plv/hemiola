@@ -327,6 +327,50 @@ Proof.
   - apply in_or_app; right; eauto.
 Qed.
 
+Lemma steps_simulation_no_rules:
+  forall (sim: TState -> TState -> Prop) msgF impl spec,
+    ValidMsgMap msgF impl spec ->
+    MsgInSim msgF sim ->
+    sys_rules impl = nil ->
+    forall ist1 sst1,
+      sim ist1 sst1 ->
+      forall ihst ist2,
+        steps step_t impl ist1 ihst ist2 ->
+        exists (sst2 : TState) (shst : list TLabel),
+          steps step_t spec sst1 shst sst2 /\
+          map (LabelMap msgF) (behaviorOf impl ihst) = behaviorOf spec shst /\ sim ist2 sst2.
+Proof.
+  induction 5; simpl; intros;
+    [do 2 eexists; repeat split; [constructor|reflexivity|assumption]|].
+  
+  specialize (IHsteps H2); dest.
+  inv H4.
+  - do 2 eexists; repeat split; eauto.
+  - destruct x as [noss norqs nmsgs ntid].
+    do 2 eexists; repeat split.
+    + eapply StepsCons.
+      * eassumption.
+      * eapply SdExt; try reflexivity.
+        -- eapply validMsgMap_from_isExternal; eauto.
+        -- eapply validMsgMap_to_isInternal; eauto.
+    + simpl; rewrite <-H6; reflexivity.
+    + apply H0; auto.
+  - exfalso.
+    rewrite H1 in H14; elim H14.
+Qed.
+
+Lemma TrsSimulates_no_rules:
+  forall sim msgF ginv impl spec,
+    ValidMsgMap msgF impl spec ->
+    MsgInSim msgF sim ->
+    sys_rules impl = nil ->
+    TrsSimulates sim ginv (LabelMap msgF) impl spec.
+Proof.
+  intros; hnf; intros.
+  inv H4.
+  eapply steps_simulation_no_rules; eauto.
+Qed.
+
 Section Compositionality.
 
   Variables (impl1 impl2 spec: System).

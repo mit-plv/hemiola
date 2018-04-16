@@ -232,6 +232,15 @@ Section SimMap.
   
 End SimMap.
 
+Definition MsgInSim (msgF: Msg -> Msg) (sim: TState -> TState -> Prop) :=
+  forall ioss iorqs imsgs its soss sorqs smsgs sts emsg,
+    sim {| tst_oss := ioss; tst_orqs := iorqs; tst_msgs := imsgs; tst_tid := its |}
+        {| tst_oss := soss; tst_orqs := sorqs; tst_msgs := smsgs; tst_tid := sts |} ->
+    sim {| tst_oss := ioss; tst_orqs := iorqs;
+           tst_msgs := enqMP (toTMsgU emsg) imsgs; tst_tid := its |}
+        {| tst_oss := soss; tst_orqs := sorqs;
+           tst_msgs := enqMP (toTMsgU (msgF emsg)) smsgs; tst_tid := sts |}.
+
 (** [SimMP] defines a standard simulation between two [MessagePool]s of 
  * implementation and spec. It's basically rollback of all ongoing transactions.
  *)

@@ -75,7 +75,9 @@ Ltac synthOk_init :=
 Ltac syn_step_init pimpl pimpl_ok :=
   econstructor;
   instantiate (1:= addRules _ pimpl);
-  synthOk_init; [apply pimpl_ok|apply pimpl_ok| |].
+  synthOk_init;
+  try rewrite addRules_TState_inits;
+  [apply pimpl_ok|apply pimpl_ok| |].
 
 Ltac trs_sim_init pimpl_ok :=
   apply trsSimulates_trsInvHolds_rules_added; intros;
@@ -90,19 +92,21 @@ Ltac trs_simulates_case_slt :=
   (** constructions *)
   eexists; split; [econstructor|assumption].
 
-Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=
+Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=    
   (** instantiation *)
   unfold TrsSimIn; intros; simpl;
   match goal with
-  | [H: context[RlblIn ?min] |- context[step_t _ ?ist1 _ _] ] =>
-    let ioss1 := fresh "ioss1" in
-    let imsgs1 := fresh "imsgs1" in
-    let its1 := fresh "its1" in
-    destruct ist1 as [ioss1 imsgs1 its1];
+  | [H: context[RlblIn ?min] |- context[step_t _ ?ist _ _] ] =>
+    let ioss := fresh "ioss" in
+    let iorqs := fresh "iorqs" in
+    let imsgs := fresh "imsgs" in
+    let its := fresh "its" in
+    destruct ist as [ioss iorqs imsgs its];
     exists (toTMsgU (msgF (getMsg min)));
-    exists {| tst_oss:= ioss1;
-              tst_msgs:= enqMP (toTMsgU (msgF (getMsg min))) imsgs1;
-              tst_tid:= its1;
+    exists {| tst_oss:= ioss;
+              tst_orqs:= iorqs;
+              tst_msgs:= enqMP (toTMsgU (msgF (getMsg min))) imsgs;
+              tst_tid:= its;
            |}
   end;
 
@@ -110,12 +114,13 @@ Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=
   repeat
     match goal with
     | [H: step_t _ _ (RlblIn _) _ |- _] => inv H
-    | [H: sim _ _ |- _] => inv H
+    | [H: sim _ _ |- _] => destruct H as [? [? ?]]
     end;
-
+  
   (** constructions *)
   repeat split;
   [|assumption (* simulation relation should be maintained *)
+   |assumption
    |simpl; apply SimMP_ext_msg_in; auto];
   repeat econstructor;
   unfold fromExternal, toInternal in *;
@@ -832,9 +837,10 @@ Ltac sim_spec_constr_step_init ruleS :=
     | [ |- context[step_t _ ?sst _ _] ] =>
       is_var sst;
       let soss := fresh "soss" in
+      let sorqs := fresh "sorqs" in
       let smsgs := fresh "smsgs" in
       let stid := fresh "stid" in
-      destruct sst as [soss smsgs stid]
+      destruct sst as [soss sorqs smsgs stid]
     | [ |- exists (sst: TState), _] => eexists
     | [ |- exists (slbl: TLabel), _] =>
       eexists (RlblOuts (Some ruleS) (toTMsgU _ :: nil) _)
@@ -845,6 +851,8 @@ Ltac sim_spec_constr_split :=
     match goal with
     | [ |- _ /\ _] => split
     end.
+
+Require Import Blocking.
 
 Ltac sim_spec_constr_step_t :=
   repeat
@@ -862,7 +870,7 @@ Ltac sim_spec_constr_step_t :=
            [apply pmsg_omsg_FirstMP; eassumption|reflexivity]
          | [ |- ValidMsgsIn _ _] => repeat constructor
          | [ |- ValidMsgOuts _ _] => repeat constructor
-         | [ |- rule_postcond _ _ _ _ _] => repeat constructor
+         | [ |- rule_postcond _ _ _ _ _ _ _] => repeat constructor
          end;
      try reflexivity;
      try discriminate;
@@ -885,7 +893,7 @@ Ltac sim_spec_constr_sim_init :=
 
 Ltac sim_spec_constr_sim ssim msim ssim_ok msim_ok :=
   sim_spec_constr_sim_init;
-  [ssim; ssim_ok|msim; msim_ok].
+  [ssim; ssim_ok|ssim; ssim_ok|msim; msim_ok].
 
 Ltac sim_spec_constr_step srule ssim msim ssim_ok msim_ok :=
   sim_spec_constr_step_init srule;
