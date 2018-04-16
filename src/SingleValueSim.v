@@ -18,13 +18,13 @@ Open Scope fmap.
 Section RPreconds.
 
   Definition ImplOStatusM: RPrecond :=
-    fun ost _ => ost@[statusIdx] = Some (VNat stM).
+    fun ost _ _ => ost@[statusIdx] = Some (VNat stM).
 
   Definition ImplOStatusS: RPrecond :=
-    fun ost _ => ost@[statusIdx] = Some (VNat stS).
+    fun ost _ _ => ost@[statusIdx] = Some (VNat stS).
   
   Definition ImplOStatusI: RPrecond :=
-    fun ost _ => ost@[statusIdx] = Some (VNat stI).
+    fun ost _ _ => ost@[statusIdx] = Some (VNat stI).
 
 End RPreconds.
 
@@ -158,7 +158,7 @@ Section Sim.
 
   (** Simulation between [TState]s *)
 
-  Definition SpecState (v: Value) (soss: OStates) :=
+  Definition SvmSpecState (v: Value) (soss: OStates) :=
     exists sost,
       soss@[specIdx] = Some sost /\
       sost@[valueIdx] = Some v.
@@ -166,11 +166,16 @@ Section Sim.
   Definition SvmR (tinds: list IdxT): OStates -> OStates -> Prop :=
     fun ioss soss =>
       exists cv,
-        ImplStateMSI cv tinds ioss /\ SpecState cv soss.
+        ImplStateMSI cv tinds ioss /\ SvmSpecState cv soss.
+
+  Definition SvmSpecORqs (sorqs: ORqs TMsg) :=
+    exists sorq,
+      sorqs@[specIdx] = Some sorq.
 
   Definition SvmSim (tinds: list IdxT): TState -> TState -> Prop :=
     fun ist sst =>
       SvmR tinds (tst_oss ist) (tst_oss sst) /\
+      SvmSpecORqs (tst_orqs sst) /\
       SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
 
   Section Facts.
@@ -210,12 +215,9 @@ Section Sim.
     Lemma SvmSim_init:
       SvmSim implIndices (initsOf impl0) (initsOf spec).
     Proof.
-      split.
-      - eexists; split.
-        + right; repeat econstructor;
-            cbn; intros; inv H; cbn; reflexivity.
-        + repeat econstructor.
-      - repeat constructor.
+      repeat esplit.
+      right; repeat econstructor;
+        cbn; intros; inv H; cbn; reflexivity.
     Qed.
 
     Lemma SvmInvs_init:

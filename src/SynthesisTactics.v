@@ -314,7 +314,7 @@ Ltac sim_pred_silent :=
 
 Record PStackElt :=
   { pste_pmid: PMsgId TMsg;
-    pste_prec: PRPrecond }.
+    pste_prec: RPrecond }.
 
 Definition dualOfPStackElt (chn: IdxT) (pste: PStackElt) :=
   {| pste_pmid := dualOfP (pste_pmid pste) chn;

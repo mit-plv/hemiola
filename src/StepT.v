@@ -13,25 +13,28 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
 
 Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 | SdSlt: forall st, step_t sys st emptyRLabel st
-| SdExt: forall ts pst nst oss oims emsg,
+| SdExt: forall ts pst nst oss orqs oims emsg,
     fromExternal sys emsg = true ->
     toInternal sys emsg = true ->
-    pst = {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |} ->
+    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := oims; tst_tid := ts |} ->
     nst = {| tst_oss := oss;
+             tst_orqs := orqs;
              tst_msgs := enqMP (toTMsgU emsg) oims;
              tst_tid := ts
           |} ->
     step_t sys pst (RlblIn (toTMsgU emsg)) nst
 | SdInt: forall ts pst nst nts (Hts: nts > ts) tinfo
-                oss oims oidx os pos msgs rule outs,
+                oss orqs oims oidx os orq pos porq msgs rule outs,
     In oidx (indicesOf sys) ->
-    (oss)@[oidx] = Some os ->
+    oss@[oidx] = Some os ->
+    orqs@[oidx] = Some orq ->
     Forall (FirstMP oims) msgs ->
     ValidMsgsIn oidx msgs ->
     map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs = rule_mids rule ->
     In rule (sys_rules sys) ->
-    rule_precond rule os (map tmsg_msg msgs) ->
-    rule_postcond rule os (map tmsg_msg msgs) pos outs ->
+    rule_precond rule os (map tmsg_msg orq) (map tmsg_msg msgs) ->
+    rule_postcond rule os (map tmsg_msg orq) (map tmsg_msg msgs)
+                  pos (map tmsg_msg porq) outs ->
     ValidMsgOuts oidx outs ->
 
     tinfo = match getTMsgsTInfo msgs with
@@ -39,8 +42,9 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
             | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg msgs |}
             end ->
 
-    pst = {| tst_oss := oss; tst_msgs := oims; tst_tid := ts |} ->
+    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := oims; tst_tid := ts |} ->
     nst = {| tst_oss := oss +[ oidx <- pos ];
+             tst_orqs := orqs +[ oidx <- porq ];
              tst_msgs := distributeMsgs
                            (intOuts sys (toTMsgs tinfo outs))
                            (removeMsgs msgs oims);

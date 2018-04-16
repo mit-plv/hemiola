@@ -12,6 +12,20 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma addRules_OStates_inits:
+  forall rules sys,
+    initsOf (StateT:= OStates) (addRules rules sys) = initsOf sys.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma addRules_TState_inits:
+  forall rules sys,
+    initsOf (StateT:= TState) (addRules rules sys) = initsOf sys.
+Proof.
+  reflexivity.
+Qed.
+
 Corollary addRules_isExternal:
   forall rules sys,
     isExternal (addRules rules sys) =
@@ -410,63 +424,6 @@ Proof.
   inv H; rewrite H2; auto.
 Qed.
 
-Fact SdIntSingle:
-  forall sys ts nts (Hts: nts > ts) tinfo
-         oss oims oidx os pos fmsg frule fidx fchn outs,
-    In oidx (indicesOf sys) ->
-    (oss)@[oidx] = Some os ->
-    
-    firstMP fidx oidx fchn oims = Some fmsg -> 
-    
-    msg_id (getMsg fmsg) :: nil = rule_mids frule ->
-    In frule (sys_rules sys) ->
-    rule_precond frule os (tmsg_msg fmsg :: nil) ->
-    rule_postcond frule os (tmsg_msg fmsg :: nil) pos outs ->
-    ValidMsgOuts oidx outs ->
-    
-    tinfo = match tmsg_info fmsg with
-            | Some finfo => finfo
-            | None => {| tinfo_tid := nts;
-                         tinfo_rqin := tmsg_msg fmsg :: nil |}
-            end ->
-    
-    step_t sys
-             {| tst_oss := oss;
-                tst_msgs := oims;
-                tst_tid := ts
-             |}
-             (RlblOuts (Some frule) (fmsg :: nil) (toTMsgs tinfo outs))
-             {| tst_oss := oss +[ oidx <- pos ];
-                tst_msgs := distributeMsgs
-                              (intOuts sys (toTMsgs tinfo outs))
-                              (deqMP fidx oidx fchn oims);
-                tst_tid := match tmsg_info fmsg with
-                           | Some _ => ts
-                           | None => nts
-                           end
-             |}.
-Proof.
-  intros.
-  replace (tmsg_info fmsg) with (getTMsgsTInfo (fmsg :: nil))
-    by (simpl; destruct (tmsg_info fmsg); reflexivity).
-  replace (deqMP fidx oidx fchn oims) with (removeMsgs (fmsg :: nil) oims)
-    by (cbn; erewrite removeMP_deqMP by reflexivity;
-        apply firstMP_MsgAddr in H1;
-        destruct (msg_id (getMsg fmsg)) as [[ ]]; subst; simpl in *;
-        inv H1; cbn; reflexivity).
-  change (msg_value (tmsg_msg fmsg) :: nil) with
-      (map (fun tmsg => msg_value (tmsg_msg tmsg)) (fmsg :: nil)).
-  eapply SdInt; eauto.
-  - repeat constructor.
-    eapply firstMP_FirstMP; eauto.
-  - repeat constructor.
-    apply firstMP_MsgAddr in H1.
-    simpl; simpl in H1; destruct (msg_id (tmsg_msg fmsg)) as [[ ]].
-    inv H1; reflexivity.
-  - simpl; subst.
-    destruct (tmsg_info fmsg); reflexivity.
-Qed.
-
 Lemma ForallMP_removeOnce:
   forall (P: TMsg -> Prop) tmsg mp,
     ForallMP P mp ->
@@ -649,9 +606,9 @@ Lemma step_t_int_internal:
     Forall (fun msg => toInternal sys msg = true) ins.
 Proof.
   intros; inv H; [constructor|].
-  clear -H3 H6.
+  clear -H3 H7.
   induction ins; [constructor|].
-  inv H6.
+  inv H7.
   constructor; auto.
   apply idx_in_sys_internal; auto.  
 Qed.
@@ -664,7 +621,7 @@ Lemma step_t_outs_from_internal:
 Proof.
   intros; inv H; try (constructor; fail).
   simpl.
-  destruct H8.
+  destruct H9.
   clear -H H0.
   induction outs; simpl; intros; [constructor|].
   inv H; dest.
@@ -772,12 +729,12 @@ Proof.
       * destruct (tmsg_info a); auto.
         destruct (getTMsgsTInfo msgs); omega.
       * apply IHoims; auto.
-    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H3;
+    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H4;
         [|intros; eapply FirstMP_InMP; eauto].
-      apply ForallMP_InMP_SubList in H3.
-      eapply ForallMP_SubList in H3; eauto.
+      apply ForallMP_InMP_SubList in H4.
+      eapply ForallMP_SubList in H4; eauto.
 
-      clear -Hts H3.
+      clear -Hts H4.
       apply Forall_filter.
       induction outs; [constructor|].
       constructor; auto.
@@ -785,8 +742,8 @@ Proof.
       simpl; remember (getTMsgsTInfo msgs) as ti; destruct ti; auto.
       apply eq_sym, getTMsgsTInfo_Some in Heqti.
       destruct Heqti as [tmsg [? ?]].
-      eapply ForallMP_forall in H3; eauto.
-      rewrite H0 in H3; auto.
+      eapply ForallMP_forall in H4; eauto.
+      rewrite H0 in H4; auto.
 Qed.
 
 Lemma steps_t_ValidTidState:
@@ -881,10 +838,10 @@ Proof.
     apply ForallMP_distributeMsgs.
     + apply ForallMP_removeMsgs; auto.
     + pose proof (idx_in_sys_internal _ _ H1).
-      eapply validMsgOuts_from_internal in H9; eauto.
-      clear -H9; simpl in H9.
+      eapply validMsgOuts_from_internal in H10; eauto.
+      clear -H10; simpl in H10.
       induction outs; [constructor|].
-      inv H9.
+      inv H10.
       simpl; unfold toInternal; simpl.
       destruct (isInternal sys (mid_to (msg_id a))); auto.
       constructor; cbn.
@@ -910,7 +867,7 @@ Proof.
   - left; constructor.
   - left; econstructor; eauto.
   - simpl in *.
-    apply in_app_or in H5; destruct H5.
+    apply in_app_or in H6; destruct H6.
     + left; econstructor; eauto.
     + right; econstructor; eauto.
 Qed.

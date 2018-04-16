@@ -538,6 +538,12 @@ Module LeibnizFacts (M : MapLeibniz).
     fold (fun k v m' =>
             if in_dec E.eq_dec k d then m' else add k v m') m (empty _).
 
+  Fixpoint replicate {A} (d: list E.t) (v: A): t A :=
+    match d with
+    | nil => empty _
+    | k :: d' => M.add k v (replicate d' v)
+    end.
+
   (* NOTE: do not add [subtractKV], [restrict], and [complement] to below *)
   Hint Unfold update Sub subtract : MapDefs.
   Hint Unfold E.eq.

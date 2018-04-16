@@ -181,14 +181,16 @@ Section BState.
 
   Record BState MsgT :=
     { bst_oss: OStates;
+      bst_orqs: ORqs MsgT;
       bst_msgs: MessagePool MsgT
     }.
 
-  Context {SysT: Type} `{HasInit SysT OStates}
+  Context {SysT: Type} `{IsSystem SysT} `{HasInit SysT OStates}
           {MsgT: Type}.
 
   Definition getBStateInit (sys: SysT): BState MsgT :=
     {| bst_oss := initsOf sys;
+       bst_orqs := initsOf sys;
        bst_msgs := nil |}.
 
   Global Instance BState_HasInit: HasInit SysT (BState MsgT) :=
@@ -293,14 +295,16 @@ Section TState.
 
   Record TState :=
     { tst_oss: OStates;
+      tst_orqs: ORqs TMsg;
       tst_msgs: MessagePool TMsg;
       tst_tid: TrsId
     }.
 
-  Context {SysT: Type} `{HasInit SysT OStates}.
+  Context {SysT: Type} `{IsSystem SysT} `{HasInit SysT OStates}.
 
   Definition getTStateInit (sys: SysT): TState :=
     {| tst_oss := initsOf sys;
+       tst_orqs := initsOf sys;
        tst_msgs := nil;
        tst_tid := trsIdInit |}.
 

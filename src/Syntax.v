@@ -115,12 +115,35 @@ Class HasInit (SysT StateT: Type) :=
 Definition OState := M.t Value.
 Definition OStates := M.t OState.
 
+(* A request holder [ORq] holds all requests that 
+ * the target object is handling now.
+ *)
+Definition ORq (MsgT: Type) := list MsgT.
+Definition ORqs (MsgT: Type) := M.t (ORq MsgT).
+
+Definition addRq {MsgT} (orq: ORq MsgT) (rq: MsgT): ORq MsgT :=
+  rq :: orq.
+
+Fixpoint getRq {MsgT} (idxf: MsgT -> IdxT) (orq: ORq MsgT) (idx: IdxT) :=
+  match orq with
+  | nil => None
+  | rq :: orq' =>
+    if idxf rq ==n idx then Some rq else getRq idxf orq' idx
+  end.
+
+Fixpoint removeRq {MsgT} (idxf: MsgT -> IdxT) (orq: ORq MsgT) (ridx: IdxT) :=
+  match orq with
+  | nil => nil
+  | rq :: orq' =>
+    if idxf rq ==n ridx then orq' else rq :: removeRq idxf orq' ridx
+  end.
+
 Section Rule.
 
-  Definition RPrecond := OState -> list Msg (* input messages *) -> Prop.
+  Definition RPrecond := OState -> ORq Msg -> list Msg (* input messages *) -> Prop.
   Definition RPostcond :=
-    OState (* prestate *) -> list Msg (* input messages *) ->
-    OState (* poststate *) -> list Msg (* output messages *) -> Prop.
+    OState -> ORq Msg (* prestates *) -> list Msg (* input messages *) ->
+    OState -> ORq Msg (* poststates *) -> list Msg (* output messages *) -> Prop.
 
   Record Rule :=
     { rule_mids: list MsgId;
@@ -132,41 +155,18 @@ End Rule.
 
 Section Conditions.
 
-  Definition Precond := OState -> list Msg -> Prop.
-  Definition Postcond := OState -> list Msg -> Prop.
-
-  Definition impRPost (rpostc: RPostcond) (postc: Postcond) :=
-    forall pre val post outs,
-      rpostc pre val post outs -> postc post outs.
-
   Definition MsgOuts :=
     OState (* prestate *) -> list Msg (* input messages *) -> list Msg.
   Definition PostcondSt :=
     OState (* prestate *) -> list Msg (* input messages *) -> OState (* poststate *) -> Prop.
+  Definition PostcondORq :=
+    ORq Msg -> list Msg (* input messages *) -> ORq Msg -> Prop.
 
-  Definition rpostOf (pst: PostcondSt) (mouts: MsgOuts): RPostcond :=
-    fun pre ins post outs =>
-      pst pre ins post /\ outs = mouts pre ins.
-
-  Definition impPre (pre1 pre2: Precond) :=
-    forall pre ins, pre1 pre ins -> pre2 pre ins.
-
-  Definition impPost (post1 post2: Postcond) :=
-    forall post outs, post1 post outs -> post2 post outs.
-
-  Fact impPre_refl: forall pre, impPre pre pre.
-  Proof. unfold impPre; auto. Qed.
-
-  Fact impPre_trans:
-    forall pre1 pre2 pre3, impPre pre1 pre2 -> impPre pre2 pre3 -> impPre pre1 pre3.
-  Proof. unfold impPre; auto. Qed.
-
-  Fact impPost_refl: forall post, impPost post post.
-  Proof. unfold impPost; auto. Qed.
-
-  Fact impPost_trans:
-    forall post1 post2 post3, impPost post1 post2 -> impPost post2 post3 -> impPost post1 post3.
-  Proof. unfold impPost; auto. Qed.
+  Definition rpostOf (pcondSt: PostcondSt) (pcondORq: PostcondORq) (mouts: MsgOuts): RPostcond :=
+    fun post porq ins nost norq outs =>
+      pcondSt post ins nost /\
+      pcondORq porq ins norq /\
+      outs = mouts post ins.
 
 End Conditions.
 
@@ -174,6 +174,10 @@ Section System.
 
   Class IsSystem (SysT: Type) :=
     { indicesOf: SysT -> list IdxT }.
+
+  Global Instance IsSystem_ORqs_HasInit
+         {SysT MsgT} `{IsSystem SysT} : HasInit SysT (ORqs MsgT) :=
+    {| initsOf := fun sys => M.replicate (indicesOf sys) (@nil _) |}.
 
   Definition isExternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
     if idx ?<n (indicesOf sys) then false else true.

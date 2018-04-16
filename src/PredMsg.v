@@ -60,16 +60,13 @@ Section GivenMsg.
    * input [PMsg]s. Even if the same [PMsg]s are requested, different transitions
    * are required wrt. different situations (preconditions).
    *)
-  Definition PRPrecond := OState -> list Msg -> Prop.
-  Definition PROuts := list PMsg -> OState -> list PMsg.
-
   Definition RsBackF := list Value -> OState -> Value.
 
   Inductive PRule :=
   | PRuleImm:
-      forall (rq rs: PMsgId) (prec: PRPrecond), PRule
+      forall (rq rs: PMsgId) (prec: RPrecond), PRule
   | PRuleRqFwd:
-      forall (rq: PMsgId) (prec: PRPrecond) (rqf: list PMsgId), PRule
+      forall (rq: PMsgId) (prec: RPrecond) (rqf: list PMsgId), PRule
   | PRuleRsBack:
       forall (rss: list PMsgId) (opred: OPred)
              (rsb: PMsgId) (rsbf: RsBackF), PRule.
@@ -85,7 +82,7 @@ Section GivenMsg.
     match prule with
     | PRuleImm _ _ prec => prec
     | PRuleRqFwd _ prec _ => prec
-    | PRuleRsBack _ _ _ _ => ⊤
+    | PRuleRsBack _ _ _ _ => ⊤⊤
     end.
 
   Section PLabel.
@@ -132,18 +129,15 @@ Section GivenMsg.
   Global Instance PSystem_OStates_HasInit: HasInit PSystem OStates :=
     {| initsOf := psys_inits |}.
 
-  Record OTrs :=
-    { otrs_rq_val: Value }.
-
   Record PState :=
     { pst_oss: OStates;
-      pst_otrss: M.t OTrs;
+      pst_orqs: ORqs PMsg;
       pst_msgs: MessagePool PMsg
     }.
 
   Definition getPStateInit (psys: PSystem): PState :=
     {| pst_oss := initsOf psys;
-       pst_otrss := [];
+       pst_orqs := [];
        pst_msgs := nil |}.
 
   Global Instance PState_PState_HasInit : HasInit PSystem PState :=
@@ -153,9 +147,9 @@ Section GivenMsg.
 
   Definition pToRule (prule: PRule): Rule :=
     {| rule_mids := midsOfPRule prule;
-       rule_precond := precOfPRule prule;
-       (** * TODO: how to convert? *)
-       rule_postcond := ⊤⊤⊤ |}.
+       (** TODO: how to convert? *)
+       rule_precond := fun _ _ _ => True;
+       rule_postcond := fun _ _ _ _ _ _ => True |}.
 
   Definition pToSystem (psys: PSystem): System :=
     {| sys_inds := psys_inds psys;
@@ -180,6 +174,7 @@ Definition pToTHistory (phst: PHistory TMsg): THistory :=
 
 Definition PTStateR (tst: TState) (pst: PState TMsg) :=
   tst_oss tst = pst_oss pst /\
+  tst_orqs tst = M.map (map (@pmsg_omsg _)) (pst_orqs pst) /\
   tst_msgs tst = map (@pmsg_omsg _) (pst_msgs pst).
 
 Section RuleAdder.

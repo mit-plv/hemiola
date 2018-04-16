@@ -51,19 +51,22 @@ Section System.
 
       Definition specGetReq: Rule :=
         {| rule_mids := getReqM :: nil;
-           rule_precond := ⊤;
+           rule_precond := ⊤⊤;
            rule_postcond :=
-             rpostOf ⊤⊤= (fun pre _ =>
-                            pre@[valueIdx] >>=[nil]
-                            (fun v => {| msg_id := getRespM; msg_value := v |} :: nil));
+             rpostOf ⊤⊤= ⊤⊤=
+                     (fun pre _ =>
+                        pre@[valueIdx] >>=[nil]
+                           (fun v => {| msg_id := getRespM; msg_value := v |} :: nil));
         |}.
 
       Definition specSetReq: Rule :=
         {| rule_mids := setReqM :: nil;
-           rule_precond := ⊤;
+           rule_precond := ⊤⊤;
            rule_postcond :=
              rpostOf (fun pre ins post =>
-                        (hd_error ins) >>=[False] (fun msg => post@[valueIdx] = Some (msg_value msg)))
+                        (hd_error ins) >>=[False]
+                        (fun msg => post@[valueIdx] = Some (msg_value msg)))
+                     ⊤⊤=
                      (fun _ _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil)
         |}.
 

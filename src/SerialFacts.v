@@ -75,10 +75,10 @@ Proof.
       constructor; cbn; auto.
     + inv H1; inv H5; inv H7.
       apply idx_in_sys_internal in H4.
-      apply validMsgOuts_from_internal with (sys0:= sys) in H13; [|assumption].
-      clear -H0 H13.
+      apply validMsgOuts_from_internal with (sys0:= sys) in H14; [|assumption].
+      clear -H0 H14.
       induction outs; simpl; [constructor|].
-      inv H0; inv H13.
+      inv H0; inv H14.
       constructor; auto.
       eapply IHouts; eauto.
 
@@ -112,10 +112,10 @@ Proof.
         destruct msgs as [|msg msgs]; [elim H0; reflexivity|].
         inv H1; cbn; destruct H7; rewrite H1.
         apply idx_in_sys_internal in H9.
-        apply validMsgOuts_from_internal with (sys0:= sys) in H17; [|assumption].
-        clear -H17.
+        apply validMsgOuts_from_internal with (sys0:= sys) in H18; [|assumption].
+        clear -H18.
         induction outs; [constructor|].
-        inv H17.
+        inv H18.
         constructor; auto.
         eapply IHouts; eauto.
 Qed.
