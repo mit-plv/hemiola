@@ -1,7 +1,7 @@
 Require Import List.
 
 Require Import Common.
-Require Import Syntax Semantics StepT Simulation.
+Require Import Syntax Semantics StepT Invariant Simulation.
 
 (* Below we describe a semantic interpretation of a system which has a
  * blocking property.
@@ -66,5 +66,18 @@ Proof.
   induction imsgs; intros; subst; [constructor|].
   inv H1; constructor; eauto.
   eapply blocked_SimMP_FirstMP; eauto.
+Qed.
+
+Lemma BlockedInv_MsgInInv:
+  MsgInInv BlockedInv.
+Proof.
+  hnf; intros.
+  hnf; hnf in H; intros.
+  cbn in *.
+  apply in_app_or in H0; destruct H0;
+    [|Common.dest_in; discriminate].
+  apply in_app_or in H1; destruct H1;
+    [|Common.dest_in; discriminate].
+  eauto.
 Qed.
 

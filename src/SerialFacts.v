@@ -272,3 +272,112 @@ Proof.
   apply map_id.
 Qed.
 
+Lemma sequential_nil:
+  forall sys, Sequential sys nil.
+Proof.
+  intros; hnf; intros.
+  exists nil.
+  split.
+  - constructor.
+  - reflexivity.
+Qed.
+
+Lemma sequential_silent:
+  forall sys ll,
+    Sequential sys ll ->
+    Sequential sys (emptyRLabel :: ll).
+Proof.
+  intros.
+  hnf; hnf in H; dest.
+  eexists ([emptyRLabel] :: _); split.
+  - constructor; [|eassumption].
+    constructor.
+  - subst; reflexivity.
+Qed.
+
+Lemma sequential_msg_in:
+  forall sys ll emsg,
+    Sequential sys ll ->
+    Sequential sys (RlblIn emsg :: ll).
+Proof.
+  intros.
+  hnf; hnf in H; dest.
+  eexists ([RlblIn emsg] :: _); split.
+  - constructor; [|eassumption].
+    econstructor; reflexivity.
+  - subst; reflexivity.
+Qed.
+
+Lemma serializable_nil:
+  forall sys, Serializable sys nil.
+Proof.
+  intros; hnf; intros.
+  exists nil; eexists.
+  split.
+  - split.
+    + constructor.
+    + apply sequential_nil.
+  - reflexivity.
+Qed.
+
+Lemma serializable_silent:
+  forall sys ll,
+    Serializable sys ll ->
+    Serializable sys (emptyRLabel :: ll).
+Proof.
+  intros.
+  hnf; hnf in H; intros; dest.
+  do 2 eexists; split.
+  - destruct H; split.
+    + eapply StepsCons.
+      * eassumption.
+      * eapply SdSlt.
+    + apply sequential_silent; auto.
+  - assumption.
+Qed.
+
+Lemma serializable_msg_in:
+  forall sys ll emsg,
+    Serializable sys ll ->
+    fromExternal sys emsg = true ->
+    toInternal sys emsg = true ->
+    Serializable sys (RlblIn (toTMsgU emsg) :: ll).
+Proof.
+  intros.
+  hnf; hnf in H; intros; dest.
+  destruct x0 as [oss orqs msgs ts].
+  exists (RlblIn (toTMsgU emsg) :: x); eexists; split.
+  - destruct H; split.
+    + econstructor.
+      * eassumption.
+      * econstructor; eauto.
+    + apply sequential_msg_in; auto.
+  - hnf; cbn; rewrite H2; reflexivity.
+Qed.
+
+Lemma serializable_steps_no_rules:
+  forall sys,
+    sys_rules sys = nil ->
+    forall ll st1 st2,
+      steps step_t sys st1 ll st2 ->
+      Serializable sys ll.
+Proof.
+  induction 2; simpl; intros.
+  - apply serializable_nil.
+  - inv H1.
+    + apply serializable_silent; auto.
+    + apply serializable_msg_in; auto.
+    + exfalso.
+      rewrite H in H8.
+      elim H8.
+Qed.
+                           
+Lemma serializable_no_rules:
+  forall sys,
+    sys_rules sys = nil ->
+    SerializableSys sys.
+Proof.
+  intros; hnf; intros.
+  eapply serializable_steps_no_rules; eauto.
+Qed.
+

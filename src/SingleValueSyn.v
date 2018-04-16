@@ -3,7 +3,7 @@ Require Import Common FMap Syntax Semantics StepT SemFacts.
 Require Import Simulation Serial SerialFacts Invariant TrsSim.
 Require Import PredMsg StepPred PredMsgFacts.
 Require Import Synthesis SynthesisFacts SynthesisTactics.
-Require Import Topology.
+Require Import Blocking Topology.
 
 Require Import SingleValue SingleValueSim.
 
@@ -88,17 +88,19 @@ Section Impl.
     - apply SvmSim_init.
     - apply SvmInvs_init.
     - split.
-      + apply TrsSimulates_no_rules.
+      + apply TrsSimulates_no_rules; [| |reflexivity].
         * apply svmMsgF_ValidMsgMap.
         * hnf; intros.
           destruct H; destruct H0.
           simpl in *.
           repeat split; simpl; auto.
           apply SimMP_ext_msg_in; auto.
-        * reflexivity.
-      + (* invariants *) admit.
-    - (* serializability *) admit.
-  Admitted.
+      + apply InvStep_no_rules; [|reflexivity].
+        apply MsgInInv_invAnd.
+        * apply BlockedInv_MsgInInv.
+        * apply ValidTidState_MsgInInv.
+    - apply serializable_no_rules; auto.
+  Qed.
 
   (*! Synthesis to build a single transaction  *)
 
