@@ -1,6 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax.
 
+Require Export MessagePool.
+
 Set Implicit Arguments.
 
 Definition intOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
@@ -9,59 +11,6 @@ Definition intOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
 Definition extOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
            (sys: SysT) (outs: list MsgT) :=
   filter (fun m => toExternal sys m) outs.
-
-Section MessagePool.
-  Variable (MsgT: Type).
-  Context `{HasMsg MsgT}.
-
-  Definition Queue := list MsgT.
-  Definition MessagePool := list MsgT.
-
-  Definition findMP (from to chn: IdxT) (mp: MessagePool): Queue :=
-    filter (fun msg =>
-              if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
-              then true
-              else false) mp.
-
-  Definition firstMP (from to chn: IdxT) (mp: MessagePool) :=
-    hd_error (findMP from to chn mp).
-
-  Fixpoint deqMP (from to chn: IdxT) (mp: MessagePool): MessagePool :=
-    match mp with
-    | nil => nil
-    | msg :: mp' =>
-      if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
-      then mp'
-      else msg :: deqMP from to chn mp'
-    end.
-
-  Definition enqMP (m: MsgT) (mp: MessagePool): MessagePool := mp ++ (m :: nil).
-
-  Definition removeMP (m: MsgT) (mp: MessagePool): MessagePool :=
-    let mid := msg_id (getMsg m) in
-    deqMP (mid_from mid) (mid_to mid) (mid_chn mid) mp.
-
-  Definition FirstMP (mp: MessagePool) (m: MsgT) :=
-    let mid := msg_id (getMsg m) in
-    firstMP (mid_from mid) (mid_to mid) (mid_chn mid) mp = Some m.
-             
-  Definition EmptyMP (mp: MessagePool) := mp = nil.
-  Definition InMP (msg: MsgT) (mp: MessagePool) := In msg mp.
-
-  Definition ForallMP (P: MsgT -> Prop) (mp: MessagePool) :=
-    Forall P mp.
-
-  Definition distributeMsgs (nmsgs: list MsgT) (mp: MessagePool): MessagePool :=
-    mp ++ nmsgs.
-
-  Fixpoint removeMsgs (dmsgs: list MsgT) (mp: MessagePool): MessagePool :=
-    match dmsgs with
-    | nil => mp
-    | dmsg :: dmsgs' =>
-      removeMsgs dmsgs' (removeMP dmsg mp)
-    end.
-  
-End MessagePool.
 
 Section Validness.
 
