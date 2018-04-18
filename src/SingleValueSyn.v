@@ -80,28 +80,6 @@ Section Impl.
            | [ |- context[ImplStateI _ _] ] => unfold ImplStateI
            end; dest).
 
-  (*! Correctness of the initial system *)
-  
-  Theorem impl0_ok: SynthOk spec SvmSim SvmInvs svmP impl0.
-  Proof.
-    synthOk_init.
-    - apply SvmSim_init.
-    - apply SvmInvs_init.
-    - split.
-      + apply TrsSimulates_no_rules; [| |reflexivity].
-        * apply svmMsgF_ValidMsgMap.
-        * hnf; intros.
-          destruct H; destruct H0.
-          simpl in *.
-          repeat split; simpl; auto.
-          apply SimMP_ext_msg_in; auto.
-      + apply InvStep_no_rules; [|reflexivity].
-        apply MsgInInv_invAnd.
-        * apply BlockedInv_MsgInInv.
-        * apply ValidTidState_MsgInInv.
-    - apply serializable_no_rules; auto.
-  Qed.
-
   (*! Synthesis to build a single transaction  *)
 
   Definition svmTrsIdx0: TrsId := SvmGetE.
@@ -114,10 +92,10 @@ Section Impl.
   Definition svmSynTrs0:
     { impl1: System | SynthOk spec SvmSim SvmInvs svmP impl1 }.
   Proof.
-    syn_step_init impl0 impl0_ok.
+    syn_step_init impl0 (impl0_ok extIdx1 extIdx2).
 
     - (** Simulation and preservation of global invariants. *)
-      trs_sim_init impl0_ok.
+      trs_sim_init (impl0_ok extIdx1 extIdx2).
 
       + (** [TrsSimulates] for newly added [Rule]s *)
         trs_simulates_trivial svmMsgF svmMsgF_ValidMsgMap SvmSim.

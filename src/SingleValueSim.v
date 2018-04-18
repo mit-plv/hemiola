@@ -1,6 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Topology Semantics SemFacts StepT.
-Require Import Invariant Simulation Synthesis SynthesisTactics PredMsg Blocking.
+Require Import Invariant Simulation TrsSim SerialFacts.
+Require Import Synthesis SynthesisTactics PredMsg Blocking.
 
 Require Import SingleValue.
 
@@ -228,6 +229,28 @@ Section Sim.
       elim H.
     Qed.
 
+    (*! Correctness of the initial system *)
+
+    Theorem impl0_ok: SynthOk spec (SvmSim implIndices) SvmInvs svmP impl0.
+    Proof.
+      synthOk_init.
+      - apply SvmSim_init.
+      - apply SvmInvs_init.
+      - split.
+        + apply TrsSimulates_no_rules; [| |reflexivity].
+          * apply svmMsgF_ValidMsgMap.
+          * hnf; intros.
+            destruct H; destruct H0.
+            simpl in *.
+            repeat split; simpl; auto.
+            apply SimMP_ext_msg_in; auto.
+        + apply InvStep_no_rules; [|reflexivity].
+          apply MsgInInv_invAnd.
+          * apply BlockedInv_MsgInInv.
+          * apply ValidTidState_MsgInInv.
+      - apply serializable_no_rules; auto.
+    Qed.
+    
   End Facts.
   
 End Sim.

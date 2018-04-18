@@ -24,17 +24,17 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
           |} ->
     step_t sys pst (RlblIn (toTMsgU emsg)) nst
 | SdInt: forall ts pst nst nts (Hts: nts > ts) tinfo
-                oss orqs oims oidx os orq pos porq msgs rule outs,
+                oss orqs oims oidx os porq pos norq msgs rule outs,
     In oidx (indicesOf sys) ->
     oss@[oidx] = Some os ->
-    orqs@[oidx] = Some orq ->
+    orqs@[oidx] = Some porq ->
     Forall (FirstMP oims) msgs ->
     ValidMsgsIn oidx msgs ->
     map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs = rule_mids rule ->
     In rule (sys_rules sys) ->
-    rule_precond rule os (map tmsg_msg orq) (map tmsg_msg msgs) ->
-    rule_postcond rule os (map tmsg_msg orq) (map tmsg_msg msgs)
-                  pos (map tmsg_msg porq) outs ->
+    rule_precond rule os (map tmsg_msg porq) (map tmsg_msg msgs) ->
+    rule_postcond rule os (map tmsg_msg porq) (map tmsg_msg msgs)
+                  pos (map tmsg_msg norq) outs ->
     ValidMsgOuts oidx outs ->
 
     tinfo = match getTMsgsTInfo msgs with
@@ -44,7 +44,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 
     pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := oims; tst_tid := ts |} ->
     nst = {| tst_oss := oss +[ oidx <- pos ];
-             tst_orqs := orqs +[ oidx <- porq ];
+             tst_orqs := orqs +[ oidx <- norq ];
              tst_msgs := distributeMsgs
                            (intOuts sys (toTMsgs tinfo outs))
                            (removeMsgs msgs oims);

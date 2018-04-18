@@ -145,6 +145,20 @@ Section Rule.
     OState -> ORq Msg (* prestates *) -> list Msg (* input messages *) ->
     OState -> ORq Msg (* poststates *) -> list Msg (* output messages *) -> Prop.
 
+  Definition RPrecAnd (p1 p2: RPrecond): RPrecond :=
+    fun ost orq ins => p1 ost orq ins /\ p2 ost orq ins.
+
+  Definition RPrecImp (p1 p2: RPrecond): Prop :=
+    forall ost orq ins, p1 ost orq ins -> p2 ost orq ins.
+
+  Definition RPostAnd (p1 p2: RPostcond): RPostcond :=
+    fun post porq ins nost norq outs =>
+      p1 post porq ins nost norq outs /\ p2 post porq ins nost norq outs.
+
+  Definition RPostImp (p1 p2: RPostcond): Prop :=
+    forall post porq ins nost norq outs,
+      p1 post porq ins nost norq outs -> p2 post porq ins nost norq outs.
+
   Record Rule :=
     { rule_mids: list MsgId;
       rule_precond: RPrecond;
@@ -152,6 +166,11 @@ Section Rule.
     }.
 
 End Rule.
+
+Infix "/\rprec" := RPrecAnd (at level 80).
+Infix "->rprec" := RPrecImp (at level 99).
+Infix "/\rpost" := RPostAnd (at level 80).
+Infix "->rpost" := RPostImp (at level 99).
 
 Section Conditions.
 

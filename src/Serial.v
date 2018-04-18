@@ -66,14 +66,14 @@ Definition seqSteps (sys: System) (st1: TState) (hst: THistory) (st2: TState) :=
   steps step_t sys st1 hst st2 /\
   Sequential sys hst.
 
-Definition Equivalent (sys: System)
+Definition BEquivalent (sys: System)
            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
   behaviorOf sys ll1 = behaviorOf sys ll2.
 
 Definition Serializable (sys: System) (ll: THistory) :=
   exists sll sst,
     (* 1) legal and sequential *) seqSteps sys (initsOf sys) sll sst /\
-    (* 3) equivalent *) Equivalent sys ll sll.
+    (* 3) equivalent *) BEquivalent sys ll sll.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys (sys: System) :=
@@ -81,3 +81,26 @@ Definition SerializableSys (sys: System) :=
     steps step_t sys (initsOf sys) ll st ->
     Serializable sys ll.
 
+
+(** Let's start (experimentally) with an obvious condition 
+ * that ensures [SerializableSys] 
+ *)
+
+Definition TotallyBlockingPrec: RPrecond :=
+  fun ost orq ins =>
+    SubList (map (fun msg => mid_tid (msg_id msg)) ins)
+            (map (fun msg => mid_tid (msg_id msg)) orq).
+
+Definition TotallyBlockingRule (rule: Rule) :=
+  (rule_precond rule) ->rprec TotallyBlockingPrec.
+
+Definition TotallyBlockingSys (sys: System) :=
+  Forall TotallyBlockingRule (sys_rules sys).
+
+Theorem TotallyBlockingSys_SerializableSys:
+  forall sys, TotallyBlockingSys sys -> SerializableSys sys.
+Proof.
+  unfold SerializableSys, Serializable; intros.
+  eexists; exists st; split; [split|].
+Admitted.
+  
