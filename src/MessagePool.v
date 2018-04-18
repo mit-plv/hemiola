@@ -10,11 +10,13 @@ Section MessagePool.
   Definition Queue := list MsgT.
   Definition MessagePool := list MsgT.
 
+  Definition isAddrOf (from to chn: IdxT) (msg: MsgT) :=
+    if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
+    then true
+    else false.
+
   Definition findMP (from to chn: IdxT) (mp: MessagePool): Queue :=
-    filter (fun msg =>
-              if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
-              then true
-              else false) mp.
+    filter (fun msg => isAddrOf from to chn msg) mp.
 
   Definition firstMP (from to chn: IdxT) (mp: MessagePool) :=
     hd_error (findMP from to chn mp).
@@ -23,11 +25,12 @@ Section MessagePool.
     match mp with
     | nil => nil
     | msg :: mp' =>
-      if msgAddr_dec (mid_addr (msg_id (getMsg msg))) (buildMsgAddr from to chn)
+      if isAddrOf from to chn msg
       then mp'
       else msg :: deqMP from to chn mp'
     end.
 
+  (* NOTE: the head is the oldest one. *)
   Definition enqMP (m: MsgT) (mp: MessagePool): MessagePool := mp ++ (m :: nil).
 
   Definition removeMP (m: MsgT) (mp: MessagePool): MessagePool :=
@@ -68,7 +71,7 @@ Section Facts.
   Proof.
     induction mp1; intros; auto.
     unfold firstMP in *; simpl in *.
-    destruct (msgAddr_dec _ _).
+    destruct (isAddrOf _ _ _ _).
     - left; inv H0; reflexivity.
     - auto.
   Qed.
@@ -81,7 +84,7 @@ Section Facts.
     intros.
     apply firstMP_app_or in H0; destruct H0; auto.
     unfold firstMP in H0; cbn in H0.
-    destruct (msgAddr_dec _ _); [|discriminate].
+    destruct (isAddrOf _ _ _ _); [|discriminate].
     inv H0; auto.
   Qed.
 
@@ -130,7 +133,7 @@ Section Facts.
   Proof.
     induction mp; simpl; intros; [discriminate|].
     unfold firstMP in H0; simpl in H0.
-    destruct (msgAddr_dec _ _).
+    destruct (isAddrOf _ _ _ _).
     - inv H0; auto.
     - right; apply IHmp; auto.
   Qed.
@@ -203,7 +206,7 @@ Section Facts.
   Proof.
     induction mp; simpl; intros; auto.
     inv H0.
-    cbn; destruct (msgAddr_dec _ _); auto.
+    cbn; destruct (isAddrOf _ _ _ _); auto.
     constructor; auto.
     apply ForallMP_deqMP; auto.
   Qed.
@@ -258,6 +261,7 @@ Section Facts.
       mid_addr (msg_id (getMsg msg)) = buildMsgAddr from to chn.
   Proof.
     induction mp; simpl; intros; [discriminate|].
+    unfold isAddrOf in H0.
     destruct (msgAddr_dec _ _); auto.
     inv H0; auto.
   Qed.
@@ -305,6 +309,7 @@ Section Map.
       map mmap (findMP from to chn mp).
   Proof.
     induction mp; simpl; intros; auto.
+    unfold isAddrOf in *.
     rewrite IHmp.
     rewrite Hmmap.
     destruct (msgAddr_dec _ _); auto.
@@ -338,6 +343,7 @@ Section Map.
       deqMP from to chn (map mmap mp).
   Proof.
     induction mp; simpl; intros; auto.
+    unfold isAddrOf in *.
     rewrite Hmmap.
     destruct (msgAddr_dec _ _); auto.
     simpl; rewrite IHmp; auto.
@@ -363,4 +369,15 @@ Section Map.
   Qed.
   
 End Map.
+
+Section Equivalence.
+  Variable (MsgT: Type).
+  Context `{HasMsg MsgT}.
+  
+  (* Every [Queue] is equal. *)
+  Definition EquivMP (m1 m2: MessagePool MsgT) :=
+    forall from to chn,
+      findMP from to chn m1 = findMP from to chn m2.
+
+End Equivalence.
 

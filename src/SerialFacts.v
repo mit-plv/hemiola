@@ -245,15 +245,16 @@ Lemma trsMessages_deqMP_comm:
 Proof.
   induction mp; simpl; intros; [reflexivity|].
   unfold firstMP in H; simpl in H.
+  unfold isAddrOf in *.
   destruct (msgAddr_dec _ _).
   - inv H; rewrite H0.
     destruct (tinfo_dec _ _); [|elim n; reflexivity].
-    simpl; destruct (msgAddr_dec _ _); [|elim n; assumption].
+    simpl; unfold isAddrOf; destruct (msgAddr_dec _ _); [|elim n; assumption].
     reflexivity.
   - specialize (IHmp _ H H0).
     simpl; destruct (tmsg_info a); [|assumption].
     destruct (tinfo_dec _ _); subst; [|assumption].
-    simpl; destruct (msgAddr_dec _ _); [elim n; assumption|].
+    simpl; unfold isAddrOf; destruct (msgAddr_dec _ _); [elim n; assumption|].
     rewrite IHmp; reflexivity.
 Qed.
 

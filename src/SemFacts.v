@@ -277,6 +277,7 @@ Lemma firstMP_ValidMsgId:
     ValidMsgId from to chn msg.
 Proof.
   induction mp; unfold firstMP in *; simpl; intros; [discriminate|].
+  unfold isAddrOf in H0.
   destruct (msgAddr_dec (mid_addr (msg_id (getMsg a))) (buildMsgAddr from to chn)); auto.
   simpl in H0; inv H0.
   unfold ValidMsgId.
