@@ -354,6 +354,15 @@ Section EquivMPFacts.
     rewrite H0, H1; reflexivity.
   Qed.
 
+  Lemma EquivMP_MsgAddr_NoDup_EquivList:
+    forall mp1 mp2,
+      NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mp1) ->
+      NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mp2) ->
+      EquivList mp1 mp2 ->
+      EquivMP mp1 mp2.
+  Proof.
+  Admitted.
+
 End EquivMPFacts.
 
 Definition EquivTState (tst1 tst2: TState) :=
@@ -502,10 +511,59 @@ Proof.
         do 2 rewrite <-app_assoc.
         apply EquivMP_app.
         { apply EquivMP_removeMsgs; auto. }
-        { admit. }
+        { assert (NoDup
+                    (map (fun msg => mid_addr (msg_id (getMsg msg)))
+                         (intOuts
+                            sys
+                            (toTMsgs match getTMsgsTInfo mins with
+                                     | Some ti => ti
+                                     | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg mins |}
+                                     end outs)))).
+          { apply NoDup_map_filter.
+            apply MsgAddr_NoDup_toTMsg.
+            eapply ValidMsgOuts_MsgAddr_NoDup; eauto.
+          }
+          assert (NoDup ((map (fun msg : TMsg => mid_addr (msg_id (getMsg msg)))
+                              [toTMsgU emsg0]))) by (repeat constructor; auto).
+          assert (DisjList
+                    (map (fun msg => mid_addr (msg_id (getMsg msg)))
+                         (intOuts
+                            sys
+                            (toTMsgs match getTMsgsTInfo mins with
+                                     | Some ti => ti
+                                     | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg mins |}
+                                     end outs)))
+                    (map (fun msg : TMsg => mid_addr (msg_id (getMsg msg))) [toTMsgU emsg0])).
+          { assert (mid_from (msg_id (getMsg emsg0)) <> oidx).
+            { unfold fromExternal, isExternal in H2.
+              intro Hx; rewrite Hx in H2.
+              destruct (oidx ?<n indicesOf sys); [discriminate|auto].
+            }
+            destruct H15.
+
+            clear -H8 H15.
+            induction outs; [apply DisjList_nil_1|].
+            inv H15; specialize (IHouts H2); dest.
+            unfold DisjList in *; intros.
+            specialize (IHouts e); destruct IHouts; auto.
+            destruct (ma_from e ==n oidx).
+            { right; intro Hx; Common.dest_in; auto. }
+            { left; intro Hx; simpl in Hx.
+              destruct (toInternal sys _); auto.
+              inv Hx; auto.
+            }
+          }
+
+          apply EquivMP_MsgAddr_NoDup_EquivList.
+          { rewrite map_app; apply NoDup_DisjList; auto. }
+          { rewrite map_app; apply NoDup_DisjList; auto.
+            apply DisjList_comm; auto.
+          }
+          { apply EquivList_app_comm. }
+        }
       * eapply ValidMsgsIn_MsgAddr_NoDup; eauto.        
       * eapply EquivMP_Forall_FirstMP; eauto.
-Admitted.
+Qed.
 
 Lemma msg_in_reduced:
   forall sys st1 emsg hst2 st2,

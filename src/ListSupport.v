@@ -106,6 +106,36 @@ Proof.
   rewrite IHl; reflexivity.
 Qed.
 
+Lemma NoDup_filter:
+  forall {A} (l: list A),
+    NoDup l ->
+    forall f,
+      NoDup (filter f l).
+Proof.
+  induction l; simpl; intros; [constructor|].
+  inv H.
+  destruct (f a); auto.
+  constructor; auto.
+  intro Hx; elim H2.
+  apply filter_In in Hx; dest; auto.
+Qed.
+
+Lemma NoDup_map_filter:
+  forall {A B} (l: list A) (p: A -> B) (f: A -> bool),
+    NoDup (map p l) ->
+    NoDup (map p (filter f l)).
+Proof.
+  induction l; simpl; intros; [constructor|].
+  inv H.
+  destruct (f a); simpl; auto.
+  constructor; auto.
+  intro Hx; elim H2; clear -Hx.
+  induction l; [elim Hx|].
+  simpl in *.
+  destruct (f a0); auto.
+  inv Hx; auto.
+Qed.
+
 Fixpoint noDup {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
          (l: list A) :=
   match l with

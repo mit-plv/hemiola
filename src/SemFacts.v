@@ -289,6 +289,38 @@ Proof.
   auto.
 Qed.
 
+Lemma ValidMsgOuts_MsgAddr_NoDup:
+  forall {MsgT} `{HasMsg MsgT} oidx (mouts: list MsgT),
+    ValidMsgOuts oidx mouts ->
+    NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mouts).
+Proof.
+  intros; destruct H0.
+  clear -H1; induction mouts; [constructor|].
+  inv H1.
+  simpl; constructor; auto.
+  intro Hx; elim H3; clear -Hx.
+  induction mouts; [elim Hx|].
+  simpl in *; destruct Hx; auto.
+  destruct (getMsg a0) as [[[from1 to1 chn1] tid1] val1].
+  destruct (getMsg a) as [[[from2 to2 chn2] tid2] val2].
+  cbn in *; inv H0.
+  auto.
+Qed.
+
+Lemma MsgAddr_NoDup_toTMsg:
+  forall (msgs: list Msg),
+    NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) msgs) ->
+    forall ti,
+      NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) (toTMsgs ti msgs)).
+Proof.
+  induction msgs; simpl; intros; [constructor|].
+  inv H.
+  constructor; auto.
+  intro Hx; elim H2; clear -Hx.
+  induction msgs; [elim Hx|].
+  simpl in *; destruct Hx; auto.
+Qed.
+
 Lemma firstMP_ValidMsgId:
   forall from to chn {MsgT} `{HasMsg MsgT} (msg: MsgT) mp,
     firstMP from to chn mp = Some msg ->
