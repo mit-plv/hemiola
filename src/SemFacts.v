@@ -271,6 +271,24 @@ Proof.
   rewrite H0; reflexivity.
 Qed.
 
+Lemma ValidMsgsIn_MsgAddr_NoDup:
+  forall {MsgT} `{HasMsg MsgT} oidx (mins: list MsgT),
+    ValidMsgsIn oidx mins ->
+    NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mins).
+Proof.
+  intros; destruct H0.
+  clear -H1; induction mins; [constructor|].
+  inv H1.
+  simpl; constructor; auto.
+  intro Hx; elim H3; clear -Hx.
+  induction mins; [elim Hx|].
+  simpl in *; destruct Hx; auto.
+  destruct (getMsg a0) as [[[from1 to1 chn1] tid1] val1].
+  destruct (getMsg a) as [[[from2 to2 chn2] tid2] val2].
+  cbn in *; inv H0.
+  auto.
+Qed.
+
 Lemma firstMP_ValidMsgId:
   forall from to chn {MsgT} `{HasMsg MsgT} (msg: MsgT) mp,
     firstMP from to chn mp = Some msg ->
@@ -302,9 +320,11 @@ Proof.
   intros; inv H; [constructor|].
   clear -H3 H7.
   induction ins; [constructor|].
-  inv H7.
+  assert (ValidMsgsIn oidx ins)
+    by (destruct H7; inv H; inv H0; split; auto).
   constructor; auto.
-  apply idx_in_sys_internal; auto.  
+  destruct H7; inv H0; dest; subst.
+  apply idx_in_sys_internal; auto.
 Qed.
 
 Lemma step_t_outs_from_internal:

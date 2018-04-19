@@ -107,7 +107,22 @@ Section Facts.
         deqMP from to chn (mp1 ++ mp2) =
         deqMP from to chn mp1 ++ mp2.
   Proof.
-  Admitted.
+    induction mp1; simpl; intros; [elim H0; reflexivity|].
+    unfold isAddrOf; destruct (msgAddr_dec _ _); auto.
+    simpl; rewrite IHmp1; [reflexivity|].
+    assert (exists v, firstMP from to chn ([a] ++ mp1) = Some v).
+    { simpl.
+      destruct (firstMP from to chn (a :: mp1)); [|exfalso; auto].
+      eexists; reflexivity.
+    }
+    destruct H1 as [v ?].
+    apply firstMP_app_or in H1; destruct H1.
+    - exfalso.
+      unfold firstMP, findMP, isAddrOf in H1; simpl in H1.
+      destruct (msgAddr_dec _ _); auto.
+      discriminate.
+    - rewrite H1; discriminate.
+  Qed.
 
   Lemma FirstMP_deqMP_enqMP_comm:
     forall mp from to chn emsg,
@@ -131,21 +146,91 @@ Section Facts.
     rewrite H0; discriminate.
   Qed.
 
+  Lemma firstMP'_firstMP'_removeMP:
+    forall mp from1 to1 chn1 msg1 from2 to2 chn2 msg2,
+      buildMsgAddr from1 to1 chn1 <> buildMsgAddr from2 to2 chn2 ->
+      firstMP' from1 to1 chn1 mp = Some msg1 ->
+      firstMP' from2 to2 chn2 mp = Some msg2 ->
+      firstMP' from2 to2 chn2 (removeMP msg1 mp) = Some msg2.
+  Proof.
+    intros.
+    pose proof H1; rewrite <-firstMP_firstMP' in H3.
+    apply firstMP_MsgAddr in H3.
+    pose proof H2; rewrite <-firstMP_firstMP' in H4.
+    apply firstMP_MsgAddr in H4.
+    induction mp; simpl; intros; [discriminate|].
+    cbn in *.
+    remember (getMsg msg1) as m1.
+    destruct m1 as [[[mfrom1 mto1 mchn1] mtid1] mval1]; cbn in *.
+    remember (getMsg msg2) as m2.
+    destruct m2 as [[[mfrom2 mto2 mchn2] mtid2] mval2]; cbn in *.
+    inv H3; inv H4.
+    unfold isAddrOf in *.
+    destruct (msgAddr_dec _ _).
+    - destruct (msgAddr_dec _ _); auto.
+      exfalso; inv H1; inv H2.
+      rewrite e in e0; auto.
+    - simpl; unfold isAddrOf.
+      destruct (msgAddr_dec _ _); auto.
+      specialize (IHmp H1 H2).
+      erewrite removeMP_deqMP in IHmp by reflexivity.
+      rewrite <-Heqm1 in IHmp.
+      assumption.
+  Qed.
+    
+  Lemma FirstMP_FirstMP_removeMP:
+    forall mp msg1 msg2,
+      mid_addr (msg_id (getMsg msg1)) <> mid_addr (msg_id (getMsg msg2)) ->
+      FirstMP mp msg1 ->
+      FirstMP mp msg2 ->
+      FirstMP (removeMP msg1 mp) msg2.
+  Proof.
+    unfold FirstMP; intros.
+    rewrite firstMP_firstMP' in *.
+    induction mp; simpl; intros; [inv H1|].
+    inv H1.
+    unfold FirstMP in *; intros.
+    eapply firstMP'_firstMP'_removeMP; eauto.
+    destruct (getMsg msg1) as [[[mfrom1 mto1 mchn1] mtid1] mval1]; cbn in *.
+    destruct (getMsg msg2) as [[[mfrom2 mto2 mchn2] mtid2] mval2]; cbn in *.
+    auto.
+  Qed.
+
+  Corollary FirstMP_Forall_FirstMP_removeMP:
+    forall mp msg1 msgs2,
+      Forall (fun msg2 => mid_addr (msg_id (getMsg msg1)) <>
+                          mid_addr (msg_id (getMsg msg2))) msgs2 ->
+      FirstMP mp msg1 ->
+      Forall (FirstMP mp) msgs2 ->
+      Forall (FirstMP (removeMP msg1 mp)) msgs2.
+  Proof.
+    induction msgs2; simpl; intros; [constructor|].
+    inv H0; inv H2.
+    constructor; auto.
+    apply FirstMP_FirstMP_removeMP; auto.
+  Qed.
+
   Lemma FirstMP_removeMsgs_enqMP_comm:
     forall msgs mp,
+      NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) msgs) ->
       Forall (FirstMP mp) msgs ->
       forall msg,
         removeMsgs msgs (enqMP msg mp) =
         enqMP msg (removeMsgs msgs mp).
   Proof.
     induction msgs; simpl; intros; [reflexivity|].
-    inv H0.
+    inv H0; inv H1.
     rewrite FirstMP_removeMP_enqMP_comm by assumption.
-    rewrite <-IHmsgs; [reflexivity|].
+    rewrite <-IHmsgs; [reflexivity|assumption|].
+    apply FirstMP_Forall_FirstMP_removeMP; auto.
 
-    (* TODO *)
-    clear -H3 H4.
-  Admitted.
+    clear -H4.
+    induction msgs; [constructor|].
+    constructor.
+    - intro Hx; elim H4; left; auto.
+    - eapply IHmsgs.
+      intro Hx; elim H4; right; auto.
+  Qed.
 
 End Facts.
 
@@ -412,13 +497,14 @@ Proof.
           eapply EquivMP_FirstMP; eauto.
         }
     + repeat split; simpl.
-      rewrite FirstMP_removeMsgs_enqMP_comm
-        by (eapply EquivMP_Forall_FirstMP; eauto).
-      unfold enqMP, distributeMsgs.
-      do 2 rewrite <-app_assoc.
-      apply EquivMP_app.
-      * apply EquivMP_removeMsgs; auto.
-      * admit.
+      rewrite FirstMP_removeMsgs_enqMP_comm.
+      * unfold enqMP, distributeMsgs.
+        do 2 rewrite <-app_assoc.
+        apply EquivMP_app.
+        { apply EquivMP_removeMsgs; auto. }
+        { admit. }
+      * eapply ValidMsgsIn_MsgAddr_NoDup; eauto.        
+      * eapply EquivMP_Forall_FirstMP; eauto.
 Admitted.
 
 Lemma msg_in_reduced:

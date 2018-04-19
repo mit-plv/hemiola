@@ -21,6 +21,15 @@ Section MessagePool.
   Definition firstMP (from to chn: IdxT) (mp: MessagePool) :=
     hd_error (findMP from to chn mp).
 
+  Fixpoint firstMP' (from to chn: IdxT) (mp: MessagePool) :=
+    match mp with
+    | nil => None
+    | msg :: mp' =>
+      if isAddrOf from to chn msg
+      then Some msg
+      else firstMP' from to chn mp'
+    end.
+
   Fixpoint deqMP (from to chn: IdxT) (mp: MessagePool): MessagePool :=
     match mp with
     | nil => nil
@@ -62,6 +71,15 @@ End MessagePool.
 Section Facts.
   Variable (MsgT: Type).
   Context `{HasMsg MsgT}.
+
+  Lemma firstMP_firstMP':
+    forall from to chn mp,
+      firstMP from to chn mp = firstMP' from to chn mp.
+  Proof.
+    induction mp; simpl; intros; [reflexivity|].
+    unfold firstMP, findMP; simpl.
+    destruct (isAddrOf _ _ _ _); auto.
+  Qed.
 
   Lemma firstMP_app_or:
     forall (msg: MsgT) from to chn mp1 mp2,

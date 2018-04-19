@@ -17,18 +17,25 @@ Section Validness.
   Definition ValidMsgId (from to chn: IdxT) {MsgT} `{HasMsg MsgT} (msg: MsgT) :=
     mid_addr (msg_id (getMsg msg)) = buildMsgAddr from to chn.
 
+  (* A set of messages are "valid inputs" iff
+   * 1) they have the same target [oidx],
+   * 2) each source is not the target, and
+   * 3) all sources (pair of msgTo and channel) are different from each others.
+   *)
   Definition ValidMsgsIn (oidx: IdxT) {MsgT} `{HasMsg MsgT}
              (msgs: list MsgT) :=
-    Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx) msgs.
+    Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx /\
+                       mid_from (msg_id (getMsg msg)) <> oidx) msgs /\
+    NoDup (map (fun m => (mid_from (msg_id (getMsg m)), mid_chn (msg_id (getMsg m)))) msgs).
 
-  (* A set of messages are "valid outputs" if
+  (* A set of messages are "valid outputs" iff
    * 1) they are from the same source [idx],
    * 2) each target is not the source, and
-   * 3) all targets (pair of msgTo and channel) are different to each others.
+   * 3) all targets (pair of msgTo and channel) are different from each others.
    *)
-  Definition ValidMsgOuts (idx: IdxT) {MsgT} `{HasMsg MsgT} (msgs: list MsgT) :=
-    Forall (fun m => mid_from (msg_id (getMsg m)) = idx /\
-                     mid_to (msg_id (getMsg m)) <> idx) msgs /\
+  Definition ValidMsgOuts (oidx: IdxT) {MsgT} `{HasMsg MsgT} (msgs: list MsgT) :=
+    Forall (fun m => mid_from (msg_id (getMsg m)) = oidx /\
+                     mid_to (msg_id (getMsg m)) <> oidx) msgs /\
     NoDup (map (fun m => (mid_to (msg_id (getMsg m)), mid_chn (msg_id (getMsg m)))) msgs).
 
 End Validness.
