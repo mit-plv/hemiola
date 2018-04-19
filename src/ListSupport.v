@@ -136,6 +136,23 @@ Proof.
   inv Hx; auto.
 Qed.
 
+Lemma NoDup_map_In:
+  forall {A B} (p: A -> B) (l: list A),
+    NoDup (map p l) ->
+    forall a1 a2,
+      In a1 l -> In a2 l ->
+      p a1 = p a2 ->
+      a1 = a2.
+Proof.
+  induction l; simpl; intros; [elim H0|].
+  inv H.
+  destruct H0, H1; subst; auto.
+  - rewrite H2 in H5; elim H5.
+    apply in_map; auto.
+  - rewrite <-H2 in H5; elim H5.
+    apply in_map; auto.
+Qed.
+
 Fixpoint noDup {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
          (l: list A) :=
   match l with
@@ -160,5 +177,16 @@ Proof.
   destruct (in_dec eq_dec a l); auto.
   constructor; auto.
   intro Hx; elim n; eapply noDup_In; eauto.
+Qed.
+
+Lemma hd_error_Some_app:
+  forall {A} (l1: list A) v,
+    hd_error l1 = Some v ->
+    forall l2,
+      hd_error (l1 ++ l2) = Some v.
+Proof.
+  destruct l1; intros; [discriminate|].
+  simpl in H; inv H.
+  reflexivity.
 Qed.
 
