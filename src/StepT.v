@@ -25,6 +25,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     step_t sys pst (RlblIn (toTMsgU emsg)) nst
 | SdInt: forall ts pst nst nts (Hts: nts > ts) tinfo
                 oss orqs oims oidx os porq pos norq msgs rule outs,
+    oidx = rule_oidx rule ->
     In oidx (indicesOf sys) ->
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->

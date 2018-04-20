@@ -112,8 +112,8 @@ Section Facts.
     intros; hnf; intros.
     inv H2; auto.
     exfalso.
-    rewrite H0 in H9.
-    elim H9.
+    rewrite H0 in H10.
+    elim H10.
   Qed.
   
 End Facts.
@@ -179,12 +179,12 @@ Proof.
       * destruct (tmsg_info a); auto.
         destruct (getTMsgsTInfo msgs); omega.
       * apply IHoims; auto.
-    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H4;
+    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H5;
         [|intros; eapply FirstMP_InMP; eauto].
-      apply ForallMP_InMP_SubList in H4.
-      eapply ForallMP_SubList in H4; eauto.
+      apply ForallMP_InMP_SubList in H5.
+      eapply ForallMP_SubList in H5; eauto.
 
-      clear -Hts H4.
+      clear -Hts H5.
       apply Forall_filter.
       induction outs; [constructor|].
       constructor; auto.
@@ -192,8 +192,8 @@ Proof.
       simpl; remember (getTMsgsTInfo msgs) as ti; destruct ti; auto.
       apply eq_sym, getTMsgsTInfo_Some in Heqti.
       destruct Heqti as [tmsg [? ?]].
-      eapply ForallMP_forall in H4; eauto.
-      rewrite H0 in H4; auto.
+      eapply ForallMP_forall in H5; eauto.
+      rewrite H0 in H5; auto.
 Qed.
 
 Lemma steps_t_ValidTidState:
@@ -287,11 +287,11 @@ Proof.
   - simpl; simpl in H.
     apply ForallMP_distributeMsgs.
     + apply ForallMP_removeMsgs; auto.
-    + pose proof (idx_in_sys_internal _ _ H1).
-      eapply validMsgOuts_from_internal in H10; eauto.
-      clear -H10; simpl in H10.
+    + pose proof (idx_in_sys_internal _ _ H2).
+      eapply validMsgOuts_from_internal in H11; eauto.
+      clear -H11; simpl in H11.
       induction outs; [constructor|].
-      inv H10.
+      inv H11.
       simpl; unfold toInternal; simpl.
       destruct (isInternal sys (mid_to (msg_id a))); auto.
       constructor; cbn.
@@ -317,7 +317,7 @@ Proof.
   - left; constructor.
   - left; econstructor; eauto.
   - simpl in *.
-    apply in_app_or in H6; destruct H6.
+    apply in_app_or in H7; destruct H7.
     + left; econstructor; eauto.
     + right; econstructor; eauto.
 Qed.

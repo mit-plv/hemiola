@@ -160,7 +160,8 @@ Section Rule.
       p1 post porq ins nost norq outs -> p2 post porq ins nost norq outs.
 
   Record Rule :=
-    { rule_mids: list MsgId;
+    { rule_oidx: IdxT;
+      rule_mids: list MsgId;
       rule_precond: RPrecond;
       rule_postcond: RPostcond;
     }.

@@ -50,7 +50,8 @@ Section System.
       Definition setRespM := buildMsgId SvmSetE specIdx eidx (specRsChn (getChnIdx eidx)).
 
       Definition specGetReq: Rule :=
-        {| rule_mids := getReqM :: nil;
+        {| rule_oidx := specIdx;
+           rule_mids := getReqM :: nil;
            rule_precond := ⊤⊤;
            rule_postcond :=
              rpostOf ⊤⊤= ⊤⊤=
@@ -60,7 +61,8 @@ Section System.
         |}.
 
       Definition specSetReq: Rule :=
-        {| rule_mids := setReqM :: nil;
+        {| rule_oidx := specIdx;
+           rule_mids := setReqM :: nil;
            rule_precond := ⊤⊤;
            rule_postcond :=
              rpostOf (fun pre ins post =>

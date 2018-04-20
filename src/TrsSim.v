@@ -268,9 +268,9 @@ Proof.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
   destruct H as [tid [? ?]].
-  specialize (H0 _ _ _ _ _ _ H12).
+  specialize (H0 _ _ _ _ _ _ H13).
   exists tid; split; auto.
-  - rewrite <-H9 in H.
+  - rewrite <-H10 in H.
     clear -H; induction hins; [constructor|].
     inv H; constructor; auto.
   - clear -H0; induction outs; [constructor|].
@@ -356,7 +356,7 @@ Proof.
     + simpl; rewrite <-H6; reflexivity.
     + apply H0; auto.
   - exfalso.
-    rewrite H1 in H14; elim H14.
+    rewrite H1 in H15; elim H15.
 Qed.
 
 Lemma TrsSimulates_no_rules:
@@ -406,7 +406,7 @@ Section Compositionality.
       econstructor; try reflexivity.
       + unfold fromExternal, isExternal in *; rewrite <-Hii; assumption.
       + unfold toInternal, isInternal in *; rewrite <-Hii; assumption.
-    - specialize (Himpl _ H7).
+    - specialize (Himpl _ H8).
       apply in_app_or in Himpl; destruct Himpl.
       + eapply Hinv1; eauto.
         eapply SdInt; try reflexivity; try eassumption.
@@ -489,9 +489,9 @@ Section Compositionality.
       + inv H3; inv H7; inv H9.
         econstructor; [econstructor|].
         rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
-        assert (rule_mids rqr <> nil) by (rewrite <-H12; discriminate).
+        assert (rule_mids rqr <> nil) by (rewrite <-H13; discriminate).
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rqr))
-          by (rewrite <-H12; constructor; auto).
+          by (rewrite <-H13; constructor; auto).
         econstructor; eauto.
         rewrite <-Hii; auto.
       + inv H2; inv H4.
@@ -500,11 +500,11 @@ Section Compositionality.
         inv H11.
         rewrite intOuts_same_indicesOf with (sys2:= impl1) by assumption.
         assert (rule_mids rule <> nil).
-        { rewrite <-H15; clear -H.
+        { rewrite <-H16; clear -H.
           destruct msgs; [elim H; reflexivity|discriminate].
         }
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rule)).
-        { rewrite <-H15.
+        { rewrite <-H16.
           clear -H7; induction msgs; [constructor|].
           inv H7; constructor; auto.
         }
@@ -518,9 +518,9 @@ Section Compositionality.
       + inv H3; inv H7; inv H9.
         econstructor; [econstructor|].
         rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
-        assert (rule_mids rqr <> nil) by (rewrite <-H12; discriminate).
+        assert (rule_mids rqr <> nil) by (rewrite <-H13; discriminate).
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rqr))
-          by (rewrite <-H12; constructor; auto).
+          by (rewrite <-H13; constructor; auto).
         econstructor; eauto.
         rewrite <-Hii2; auto.
       + inv H2; inv H4.
@@ -529,11 +529,11 @@ Section Compositionality.
         inv H11.
         rewrite intOuts_same_indicesOf with (sys2:= impl2) by assumption.
         assert (rule_mids rule <> nil).
-        { rewrite <-H15; clear -H.
+        { rewrite <-H16; clear -H.
           destruct msgs; [elim H; reflexivity|discriminate].
         }
         assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rule)).
-        { rewrite <-H15.
+        { rewrite <-H16.
           clear -H7; induction msgs; [constructor|].
           inv H7; constructor; auto.
         }

@@ -1,8 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepT SemFacts.
 
-(*! TODO: move the below section to MessagePool.v *)
-
 Set Implicit Arguments.
 
 Definition EquivTState (tst1 tst2: TState) :=
@@ -94,6 +92,9 @@ Proof.
     + assumption.
 Qed.
 
+Definition msgAddrOf {MsgT} `{HasMsg MsgT} (msg: MsgT) :=
+  mid_addr (msg_id (getMsg msg)).
+
 Definition NonSilentHistory (hst: THistory) :=
   Forall (fun tlbl => tlbl <> emptyRLabel) hst.
 
@@ -131,13 +132,13 @@ Proof.
     + dest_equivT.
       repeat split.
       apply EquivMP_enqMP; auto.
-  - inv H8.
+  - inv H4.
     dest_equivT.
     eexists; split.
     + econstructor.
       * repeat econstructor; eauto.
       * econstructor; try reflexivity; try eassumption.
-        clear -H7 H9; eapply Forall_impl.
+        clear -H4 H10; eapply Forall_impl.
         { clear; intros; simpl in H.
           apply FirstMP_enqMP; eassumption.
         }
@@ -152,41 +153,40 @@ Proof.
         apply EquivMP_app.
         { apply EquivMP_removeMsgs; auto. }
         { assert (NoDup
-                    (map (fun msg => mid_addr (msg_id (getMsg msg)))
+                    (map msgAddrOf
                          (intOuts
-                            sys
-                            (toTMsgs match getTMsgsTInfo mins with
-                                     | Some ti => ti
-                                     | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg mins |}
-                                     end outs)))).
+                            sys (toTMsgs match getTMsgsTInfo mins with
+                                         | Some ti => ti
+                                         | None => {| tinfo_tid := nts;
+                                                      tinfo_rqin := map tmsg_msg mins |}
+                                         end outs)))).
           { apply NoDup_map_filter.
             apply MsgAddr_NoDup_toTMsg.
             eapply ValidMsgOuts_MsgAddr_NoDup; eauto.
           }
-          assert (NoDup ((map (fun msg : TMsg => mid_addr (msg_id (getMsg msg)))
-                              [toTMsgU emsg0]))) by (repeat constructor; auto).
+          assert (NoDup ((map msgAddrOf [toTMsgU emsg0]))) by (repeat constructor; auto).
           assert (DisjList
-                    (map (fun msg => mid_addr (msg_id (getMsg msg)))
+                    (map msgAddrOf
                          (intOuts
-                            sys
-                            (toTMsgs match getTMsgsTInfo mins with
-                                     | Some ti => ti
-                                     | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg mins |}
-                                     end outs)))
-                    (map (fun msg : TMsg => mid_addr (msg_id (getMsg msg))) [toTMsgU emsg0])).
-          { assert (mid_from (msg_id (getMsg emsg0)) <> oidx).
+                            sys (toTMsgs match getTMsgsTInfo mins with
+                                         | Some ti => ti
+                                         | None => {| tinfo_tid := nts;
+                                                      tinfo_rqin := map tmsg_msg mins |}
+                                         end outs)))
+                    (map msgAddrOf [toTMsgU emsg0])).
+          { assert (mid_from (msg_id (getMsg emsg0)) <> rule_oidx rule).
             { unfold fromExternal, isExternal in H2.
               intro Hx; rewrite Hx in H2.
-              destruct (oidx ?<n indicesOf sys); [discriminate|auto].
+              destruct (rule_oidx rule ?<n indicesOf sys); [discriminate|auto].
             }
-            destruct H15.
+            destruct H16.
 
-            clear -H8 H15.
+            clear -H7 H8.
             induction outs; [apply DisjList_nil_1|].
-            inv H15; specialize (IHouts H2); dest.
+            inv H8; specialize (IHouts H2); dest.
             unfold DisjList in *; intros.
             specialize (IHouts e); destruct IHouts; auto.
-            destruct (ma_from e ==n oidx).
+            destruct (ma_from e ==n rule_oidx rule).
             { right; intro Hx; Common.dest_in; auto. }
             { left; intro Hx; simpl in Hx.
               destruct (toInternal sys _); auto.
@@ -262,3 +262,18 @@ Proof.
   - assumption.
 Qed.
 
+(* Lemma msg_outs_commutes: *)
+(*   forall sys st1 orule1 mins1 mouts1 orule2 mins2 mouts2 st2, *)
+(*     steps step_t sys st1 [RlblOuts orule1 mins1 mouts1; *)
+(*                             RlblOuts orule2 mins2 mouts2] st2 -> *)
+    
+(*     DisjList (map msgAddrOf mouts2) (map msgAddrOf mins1) -> *)
+(*     forall cst1, *)
+(*       EquivTState st1 cst1 -> *)
+(*       exists cst2, *)
+(*         steps step_t sys cst1 [RlblOuts orule2 mins2 mouts2; *)
+(*                                  RlblOuts orule1 mins1 mouts1] cst2 /\ *)
+(*         EquivTState st2 cst2. *)
+(* Proof. *)
+(* Qed. *)
+  

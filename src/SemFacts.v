@@ -350,12 +350,13 @@ Lemma step_t_int_internal:
     Forall (fun msg => toInternal sys msg = true) ins.
 Proof.
   intros; inv H; [constructor|].
-  clear -H3 H7.
+  clear -H4 H8.
   induction ins; [constructor|].
-  assert (ValidMsgsIn oidx ins)
-    by (destruct H7; inv H; inv H0; split; auto).
+  assert (ValidMsgsIn (rule_oidx rule) ins)
+    by (destruct H8; inv H; inv H0; split; auto).
   constructor; auto.
-  destruct H7; inv H0; dest; subst.
+  destruct H8; inv H0; dest; subst.
+  rewrite <-H0 in H4.
   apply idx_in_sys_internal; auto.
 Qed.
 
@@ -367,8 +368,8 @@ Lemma step_t_outs_from_internal:
 Proof.
   intros; inv H; try (constructor; fail).
   simpl.
-  destruct H9.
-  clear -H H0.
+  destruct H10.
+  clear -H H1.
   induction outs; simpl; intros; [constructor|].
   inv H; dest.
   constructor; auto.

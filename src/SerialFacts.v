@@ -74,11 +74,11 @@ Proof.
       split; auto.
       constructor; cbn; auto.
     + inv H1; inv H5; inv H7.
-      apply idx_in_sys_internal in H4.
-      apply validMsgOuts_from_internal with (sys0:= sys) in H14; [|assumption].
-      clear -H0 H14.
+      apply idx_in_sys_internal in H5.
+      apply validMsgOuts_from_internal with (sys0:= sys) in H15; [|assumption].
+      clear -H0 H15.
       induction outs; simpl; [constructor|].
-      inv H0; inv H14.
+      inv H0; inv H15.
       constructor; auto.
       eapply IHouts; eauto.
 
@@ -111,11 +111,11 @@ Proof.
         inv H8.
         destruct msgs as [|msg msgs]; [elim H0; reflexivity|].
         inv H1; cbn; destruct H7; rewrite H1.
-        apply idx_in_sys_internal in H9.
-        apply validMsgOuts_from_internal with (sys0:= sys) in H18; [|assumption].
-        clear -H18.
+        apply idx_in_sys_internal in H10.
+        apply validMsgOuts_from_internal with (sys0:= sys) in H19; [|assumption].
+        clear -H19.
         induction outs; [constructor|].
-        inv H18.
+        inv H19.
         constructor; auto.
         eapply IHouts; eauto.
 Qed.
@@ -369,8 +369,8 @@ Proof.
     + apply serializable_silent; auto.
     + apply serializable_msg_in; auto.
     + exfalso.
-      rewrite H in H8.
-      elim H8.
+      rewrite H in H9.
+      elim H9.
 Qed.
                            
 Lemma serializable_no_rules:

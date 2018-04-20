@@ -71,6 +71,13 @@ Section GivenMsg.
       forall (rss: list PMsgId) (opred: OPred)
              (rsb: PMsgId) (rsbf: RsBackF), PRule.
 
+  Definition oidxOfPRule (prule: PRule) :=
+    match prule with
+    | PRuleImm rq _ _ => mid_to (pmid_mid rq)
+    | PRuleRqFwd rq _ _ => mid_to (pmid_mid rq)
+    | PRuleRsBack _ _ rsb _ => mid_from (pmid_mid rsb)
+    end.
+
   Definition midsOfPRule (prule: PRule) :=
     match prule with
     | PRuleImm rq _ _ => pmid_mid rq :: nil
@@ -146,7 +153,8 @@ Section GivenMsg.
   (** Conversion from [PSystem] to [System] *)
 
   Definition pToRule (prule: PRule): Rule :=
-    {| rule_mids := midsOfPRule prule;
+    {| rule_oidx := oidxOfPRule prule; 
+       rule_mids := midsOfPRule prule;
        (** TODO: how to convert? *)
        rule_precond := fun _ _ _ => True;
        rule_postcond := fun _ _ _ _ _ _ => True |}.
