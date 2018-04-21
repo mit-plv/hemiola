@@ -3,6 +3,13 @@ Require Import Common ListSupport FMap Syntax Semantics StepT SemFacts.
 
 Set Implicit Arguments.
 
+Ltac dest_step_t :=
+  repeat match goal with
+         | [H: steps step_t _ _ _ _ |- _] => inv H
+         | [H: step_t _ _ _ _ |- _] => inv H
+         | [H: {| tst_oss := _ |} = {| tst_oss := _ |} |- _] => inv H
+         end; simpl in *.
+
 Definition EquivTState (tst1 tst2: TState) :=
   tst_oss tst1 = tst_oss tst2 /\
   tst_orqs tst1 = tst_orqs tst2 /\
@@ -107,12 +114,6 @@ Definition NotMsgIn {MsgT} (lbl: RLabel MsgT) :=
 Definition NonMsgInHistory (hst: THistory) :=
   Forall (fun tlbl => NotMsgIn tlbl) hst.
 
-Ltac dest_step_t :=
-  repeat match goal with
-         | [H: steps step_t _ _ _ _ |- _] => inv H
-         | [H: step_t _ _ _ _ |- _] => inv H
-         end; simpl in *.
-
 Lemma msg_in_commutes:
   forall sys st1 emsg tlbl st2,
     NotMsgIn tlbl ->
@@ -132,8 +133,7 @@ Proof.
     + dest_equivT.
       repeat split.
       apply EquivMP_enqMP; auto.
-  - inv H4.
-    dest_equivT.
+  - dest_equivT.
     eexists; split.
     + econstructor.
       * repeat econstructor; eauto.
@@ -262,18 +262,27 @@ Proof.
   - assumption.
 Qed.
 
-(* Lemma msg_outs_commutes: *)
-(*   forall sys st1 orule1 mins1 mouts1 orule2 mins2 mouts2 st2, *)
-(*     steps step_t sys st1 [RlblOuts orule1 mins1 mouts1; *)
-(*                             RlblOuts orule2 mins2 mouts2] st2 -> *)
-    
-(*     DisjList (map msgAddrOf mouts2) (map msgAddrOf mins1) -> *)
-(*     forall cst1, *)
-(*       EquivTState st1 cst1 -> *)
-(*       exists cst2, *)
-(*         steps step_t sys cst1 [RlblOuts orule2 mins2 mouts2; *)
-(*                                  RlblOuts orule1 mins1 mouts1] cst2 /\ *)
-(*         EquivTState st2 cst2. *)
-(* Proof. *)
-(* Qed. *)
-  
+Lemma msg_outs_commutes:
+  forall sys st1 rule1 mins1 mouts1 rule2 mins2 mouts2 st2,
+    steps step_t sys st1 [RlblOuts (Some rule1) mins1 mouts1;
+                            RlblOuts (Some rule2) mins2 mouts2] st2 ->
+    rule_oidx rule1 <> rule_oidx rule2 ->
+    DisjList (map msgAddrOf mouts2) (map msgAddrOf mins1) ->
+    forall cst1,
+      EquivTState st1 cst1 ->
+      exists cst2,
+        steps step_t sys cst1 [RlblOuts (Some rule2) mins2 mouts2;
+                                 RlblOuts (Some rule1) mins1 mouts1] cst2 /\
+        EquivTState st2 cst2.
+Proof.
+  (* intros. *)
+  (* destruct cst1 as [coss1 corqs1 cmsgs1 cts1]. *)
+  (* dest_step_t. *)
+  (* eexists; split. *)
+  (* - dest_equivT. *)
+  (*   econstructor. *)
+  (*   + econstructor. *)
+  (*     * econstructor. *)
+  (*     *  *)
+Admitted.
+
