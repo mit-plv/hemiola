@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics.
+Require Import Common FMap Syntax Semantics StepM.
 
 Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
   match tmsgs with
@@ -12,8 +12,8 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
   end.
 
 Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
-| SdSlt: forall st, step_t sys st emptyRLabel st
-| SdExt: forall ts pst nst oss orqs oims emsg,
+| StSlt: forall st, step_t sys st emptyRLabel st
+| StExt: forall ts pst nst oss orqs oims emsg,
     fromExternal sys emsg = true ->
     toInternal sys emsg = true ->
     pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := oims; tst_tid := ts |} ->
@@ -23,7 +23,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
              tst_tid := ts
           |} ->
     step_t sys pst (RlblIn (toTMsgU emsg)) nst
-| SdInt: forall ts pst nst nts (Hts: nts > ts) tinfo
+| StInt: forall ts pst nst nts (Hts: nts > ts) tinfo
                 oss orqs oims oidx os porq pos norq msgs rule outs,
     oidx = rule_oidx rule ->
     In oidx (indicesOf sys) ->
@@ -56,4 +56,27 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
           |} ->
 
     step_t sys pst (RlblOuts (Some rule) msgs (toTMsgs tinfo outs)) nst.
+
+Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
+  forall oidx,
+    match torqs@[oidx], orqs@[oidx] with
+    | Some torq, Some orq => map tmsg_msg torq = orq
+    | None, None => True
+    | _, _ => False
+    end.
+
+Definition TMsgsRel (tmsgs: MessagePool TMsg) (msgs: MessagePool Msg) :=
+  map tmsg_msg tmsgs = msgs.
+
+Definition TStateRel (tst: TState) (st: MState) :=
+  tst_oss tst = bst_oss st /\
+  TORqsRel (tst_orqs tst) (bst_orqs st) /\
+  TMsgsRel (tst_msgs tst) (bst_msgs st).
+
+Definition tToMLabel (tlbl: TLabel) :=
+  match tlbl with
+  | RlblIn ein => RlblIn (tmsg_msg ein)
+  | RlblOuts orule mins mouts =>
+    RlblOuts orule (map tmsg_msg mins) (map tmsg_msg mouts)
+  end.
 

@@ -332,7 +332,7 @@ Proof.
   - destruct H; split.
     + eapply StepsCons.
       * eassumption.
-      * eapply SdSlt.
+      * eapply StSlt.
     + apply sequential_silent; auto.
   - assumption.
 Qed.

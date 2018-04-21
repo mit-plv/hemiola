@@ -350,7 +350,7 @@ Proof.
     do 2 eexists; repeat split.
     + eapply StepsCons.
       * eassumption.
-      * eapply SdExt; try reflexivity.
+      * eapply StExt; try reflexivity.
         -- eapply validMsgMap_from_isExternal; eauto.
         -- eapply validMsgMap_to_isInternal; eauto.
     + simpl; rewrite <-H6; reflexivity.
@@ -409,12 +409,12 @@ Section Compositionality.
     - specialize (Himpl _ H8).
       apply in_app_or in Himpl; destruct Himpl.
       + eapply Hinv1; eauto.
-        eapply SdInt; try reflexivity; try eassumption.
+        eapply StInt; try reflexivity; try eassumption.
         * rewrite <-Hii; assumption.
         * erewrite intOuts_same_indicesOf by eassumption.
           reflexivity.
       + eapply Hinv2; eauto.
-        eapply SdInt; try reflexivity; try eassumption.
+        eapply StInt; try reflexivity; try eassumption.
         * rewrite <-Hidx, <-Hii; assumption.
         * erewrite intOuts_same_indicesOf
             by (rewrite <-Hidx, <-Hii; reflexivity).
@@ -566,7 +566,7 @@ Section Compositionality.
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.
-        eapply SdExt; try reflexivity.
+        eapply StExt; try reflexivity.
         { unfold fromExternal, isExternal in *.
           rewrite Hii in H2; assumption.
         }

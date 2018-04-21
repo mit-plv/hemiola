@@ -191,6 +191,9 @@ Section RLabel.
 
 End RLabel.
 
+Definition MLabel := RLabel Msg.
+Definition History := list MLabel.
+
 Section TMsg.
 
   Definition TrsId := nat.

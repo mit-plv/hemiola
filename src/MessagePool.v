@@ -597,6 +597,17 @@ Section Map.
     apply mmap_deqMP.
   Qed.
 
+  Lemma mmap_removeMsgs:
+    forall msgs mp,
+      map mmap (removeMsgs msgs mp) =
+      removeMsgs (map mmap msgs) (map mmap mp).
+  Proof.
+    induction msgs; simpl; intros; auto.
+    rewrite IHmsgs.
+    rewrite mmap_removeMP.
+    reflexivity.
+  Qed.
+
   Lemma mmap_distributeMsgs:
     forall mp msgs,
       map mmap (distributeMsgs msgs mp) =

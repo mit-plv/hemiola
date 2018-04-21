@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepT.
+Require Import Common ListSupport FMap Syntax Semantics StepT StepM.
 
 Require Import Omega.
 
@@ -271,6 +271,78 @@ Proof.
   rewrite H0; reflexivity.
 Qed.
 
+Lemma ValidMsgsIn_getMsg_eq_part_1:
+  forall {MsgT1} `{HasMsg MsgT1} oidx (mins1: list MsgT1),
+    Forall
+      (fun msg: MsgT1 => mid_to (msg_id (getMsg msg)) = oidx /\
+                         mid_from (msg_id (getMsg msg)) <> oidx) mins1 ->
+    forall {MsgT2} `{HasMsg MsgT2} (mins2: list MsgT2),
+      map getMsg mins1 = map getMsg mins2 ->
+      Forall
+        (fun msg: MsgT2 =>
+           mid_to (msg_id (getMsg msg)) = oidx /\
+           mid_from (msg_id (getMsg msg)) <> oidx) mins2.
+Proof.
+  induction mins1; simpl; intros.
+  - apply eq_sym, map_eq_nil in H2; subst.
+    constructor.
+  - destruct mins2 as [|b mins2]; [discriminate|].
+    simpl in H2; inv H2.
+    inv H0.
+    constructor; auto.
+    rewrite <-H4; auto.
+Qed.
+
+Lemma ValidMsgsIn_getMsg_eq_part_2:
+  forall {MsgT1} `{HasMsg MsgT1} (mins1: list MsgT1),
+    NoDup (map (fun m: MsgT1 => (mid_from (msg_id (getMsg m)),
+                                 mid_chn (msg_id (getMsg m)))) mins1) ->
+    forall {MsgT2} `{HasMsg MsgT2} (mins2: list MsgT2),
+      map getMsg mins1 = map getMsg mins2 ->
+      NoDup (map (fun m: MsgT2 => (mid_from (msg_id (getMsg m)),
+                                   mid_chn (msg_id (getMsg m)))) mins2).
+Proof.
+  induction mins1; simpl; intros.
+  - apply eq_sym, map_eq_nil in H2; subst.
+    constructor.
+  - destruct mins2 as [|b mins2]; [discriminate|].
+    simpl in H2; inv H2.
+    inv H0.
+    simpl; constructor; auto.
+
+    assert (map (fun m: MsgT1 => (mid_from (msg_id (getMsg m)),
+                                  mid_chn (msg_id (getMsg m)))) mins1 =
+            map (fun m: MsgT2 => (mid_from (msg_id (getMsg m)),
+                                  mid_chn (msg_id (getMsg m)))) mins2).
+    { clear -H5.
+      generalize dependent mins2.
+      induction mins1; simpl; intros.
+      { apply eq_sym, map_eq_nil in H5; subst; auto. }
+      { destruct mins2 as [|b mins2]; [discriminate|].
+        simpl in H5; inv H5.
+        simpl.
+        erewrite IHmins1 by eassumption.
+        rewrite H2; reflexivity.
+      }
+    }
+    
+    rewrite <-H4, <-H0; assumption.
+Qed.
+
+Lemma ValidMsgsIn_getMsg_eq:
+  forall {MsgT1} `{HasMsg MsgT1} oidx (mins1: list MsgT1),
+    ValidMsgsIn oidx mins1 ->
+    forall {MsgT2} `{HasMsg MsgT2} (mins2: list MsgT2),
+      map getMsg mins1 = map getMsg mins2 ->
+      ValidMsgsIn oidx mins2.
+Proof.
+  intros; destruct H0; split.
+  - eapply ValidMsgsIn_getMsg_eq_part_1 in H0; [|eassumption].
+    assumption.
+  - eapply ValidMsgsIn_getMsg_eq_part_2 in H3; [|eassumption].
+    assumption.
+Qed.
+
 Lemma ValidMsgsIn_MsgAddr_NoDup:
   forall {MsgT} `{HasMsg MsgT} oidx (mins: list MsgT),
     ValidMsgsIn oidx mins ->
@@ -426,6 +498,80 @@ Proof.
     + elim H0; reflexivity.
     + inv H2; simpl in H3; auto.
 Qed.
+
+Theorem step_t_sound:
+  forall sys pst lbl nst,
+    step_m sys pst lbl nst ->
+    forall ptst,
+      TStateRel ptst pst ->
+      exists ntst tlbl,
+        step_t sys ptst tlbl ntst /\
+        tToMLabel tlbl = lbl /\
+        TStateRel ntst nst.
+Proof.
+  intros.
+  destruct ptst as [poss porqs pmsgs ptid].
+  destruct H0 as [? [? ?]]; simpl in *.
+  inv H.
+  - do 2 eexists; repeat econstructor; eauto.
+  - eexists; exists (RlblIn (toTMsgU emsg)).
+    split; [|split].
+    + econstructor; eauto.
+    + reflexivity.
+    + repeat split; simpl; auto.
+      red in H2; simpl in H2; subst.
+      clear; red.
+      apply map_app.
+  - red in H2; simpl in H2; subst.
+    red in H1; simpl in H1.
+
+    assert (exists tmsgs,
+               map tmsg_msg tmsgs = msgs /\
+               Forall (FirstMP pmsgs) tmsgs).
+    { admit. }
+    destruct H as [tmsgs [? ?]]; subst.
+
+    eexists.
+    eexists (RlblOuts (Some rule) _ _).
+    split; [|split].
+    + remember (porqs @[rule_oidx rule]) as oorq.
+      destruct oorq as [orq|];
+        [|specialize (H1 (rule_oidx rule));
+          rewrite <-Heqoorq, H6 in H1; exfalso; auto].
+      apply eq_sym in Heqoorq.
+
+      econstructor; try reflexivity; try eassumption.
+      * auto.
+      * eapply ValidMsgsIn_getMsg_eq
+          with (mins1:= map tmsg_msg tmsgs); [assumption|].
+        clear; induction tmsgs; auto.
+        simpl in *.
+        rewrite IHtmsgs; reflexivity.
+      * rewrite <-H9.
+        clear; induction tmsgs; simpl; auto.
+        rewrite IHtmsgs; reflexivity.
+      * specialize (H1 (rule_oidx rule)).
+        rewrite Heqoorq, H6 in H1; subst.
+        assumption.
+      * instantiate (2:= pos).
+        admit.
+    + clear.
+      cbn; f_equal.
+      induction outs; simpl; auto.
+      rewrite IHouts; reflexivity.
+    + split; [|split]; simpl; auto.
+      * admit.
+      * red; unfold distributeMsgs.
+        rewrite map_app; f_equal.
+        { apply mmap_removeMsgs.
+          intros; reflexivity.
+        }
+        { clear; induction outs; simpl; auto.
+          destruct (toInternal _ _); auto.
+          simpl; rewrite IHouts; reflexivity.
+        }
+        
+Admitted.
 
 Lemma steps_split:
   forall {SysT StateT LabelT} `{IsSystem SysT}
