@@ -15,27 +15,27 @@ Definition EquivMState (st1 st2: MState) :=
   bst_orqs st1 = bst_orqs st2 /\
   EquivMP (bst_msgs st1) (bst_msgs st2).
 
-Ltac dest_equivT :=
+Ltac dest_equivM :=
   repeat
     match goal with
     | [H: EquivMState _ _ |- _] => red in H; dest; simpl in *; subst
     | [H: ?t = ?t |- _] => clear H
     end.
 
-Ltac split_equivT :=
+Ltac split_equivM :=
   split; [|split]; simpl.
 
 Lemma EquivMState_refl:
   forall st, EquivMState st st.
 Proof.
-  intros; split_equivT; auto.
+  intros; split_equivM; auto.
   apply EquivMP_refl.
 Qed.
 
 Lemma EquivMState_sym:
   forall st1 st2, EquivMState st1 st2 -> EquivMState st2 st1.
 Proof.
-  intros; dest_equivT; split_equivT; auto.
+  intros; dest_equivM; split_equivM; auto.
   apply EquivMP_sym; auto.
 Qed.
 
@@ -45,7 +45,7 @@ Lemma EquivMState_trans:
     EquivMState st2 st3 ->
     EquivMState st1 st3.
 Proof.
-  intros; dest_equivT; split_equivT.
+  intros; dest_equivM; split_equivM.
   - rewrite H; auto.
   - rewrite H3; auto.
   - eapply EquivMP_trans; eauto.
@@ -64,15 +64,15 @@ Proof.
   - exists cst1; split; auto.
     constructor.
   - destruct cst1 as [coss1 corqs1 cmsgs1].
-    dest_equivT; eexists; split.
+    dest_equivM; eexists; split.
     + econstructor; eauto.
-    + split_equivT; auto.
+    + split_equivM; auto.
       apply EquivMP_enqMP; auto.
   - destruct cst1 as [coss1 corqs1 cmsgs1].
-    dest_equivT; eexists; split.
+    dest_equivM; eexists; split.
     + econstructor; try reflexivity; try eassumption.
       eapply EquivMP_Forall_FirstMP; eauto.
-    + split_equivT; auto.
+    + split_equivM; auto.
       apply EquivMP_distributeMsgs.
       apply EquivMP_removeMsgs.
       auto.
@@ -128,10 +128,10 @@ Proof.
   dest_step_m.
   - eexists; split.
     + repeat econstructor; eauto.
-    + dest_equivT.
+    + dest_equivM.
       repeat split.
       apply EquivMP_enqMP; auto.
-  - dest_equivT.
+  - dest_equivM.
     eexists; split.
     + econstructor.
       * repeat econstructor; eauto.
@@ -207,7 +207,7 @@ Proof.
     exists {| bst_oss := coss1; bst_orqs := corqs1;
               bst_msgs := enqMP emsg cmsgs1 |}; split.
     + repeat econstructor; eauto.
-    + dest_equivT; split_equivT; auto.
+    + dest_equivM; split_equivM; auto.
       apply EquivMP_enqMP; auto.
       
   - inv H0.
@@ -261,14 +261,26 @@ Lemma msg_outs_commutes:
                                  RlblOuts (Some rule1) mins1 mouts1] cst2 /\
         EquivMState st2 cst2.
 Proof.
-  (* intros. *)
-  (* destruct cst1 as [coss1 corqs1 cmsgs1 cts1]. *)
-  (* dest_step_m. *)
-  (* eexists; split. *)
-  (* - dest_equivT. *)
-  (*   econstructor. *)
-  (*   + econstructor. *)
-  (*     * econstructor. *)
-  (*     *  *)
+  intros.
+  destruct cst1 as [coss1 corqs1 cmsgs1].
+  dest_step_m.
+  dest_equivM.
+  eexists; split.
+  - econstructor.
+    + econstructor.
+      * econstructor.
+      * econstructor; try reflexivity; try eassumption.
+        { findeq. }
+        { findeq. }
+        { admit. }
+    + econstructor; try reflexivity; try eassumption.
+      { findeq. }
+      { findeq. }
+      { admit. }
+  - split_equivM.
+    + meq.
+    + meq.
+    + admit.
+        
 Admitted.
 

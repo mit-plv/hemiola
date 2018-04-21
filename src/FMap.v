@@ -2640,16 +2640,16 @@ Ltac mred_unit :=
   | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
   | [ |- context [M.find ?y (M.add ?k _ _)] ] => rewrite M.find_add_2 by discriminate
   | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition idtac
+    rewrite M.find_add_2 by intuition auto
   | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition idtac
+    rewrite M.find_add_2 by intuition auto
   | [H: ?y = ?k -> False |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition idtac
+    rewrite M.find_add_2 by intuition auto
   | [H: ?k = ?y -> False |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition idtac
+    rewrite M.find_add_2 by intuition auto
   | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
     M.cmp y k; [rewrite M.find_add_1|
-                rewrite M.find_add_2 by intuition idtac]
+                rewrite M.find_add_2 by intuition auto]
   | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
     rewrite M.restrict_in_find by auto
   | [ |- context [M.find ?y (M.subtractKV _ ?m1 ?m2)] ] =>
