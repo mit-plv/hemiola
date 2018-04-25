@@ -248,12 +248,17 @@ Proof.
   - assumption.
 Qed.
 
+Definition NonInterfering (rule1 rule2: Rule)
+           (mins1 mins2 mouts1 mouts2: list Msg) :=
+  rule_oidx rule1 <> rule_oidx rule2 /\
+  DisjList (map msgAddrOf mins1) (map msgAddrOf mins2) /\
+  DisjList (map msgAddrOf mouts1) (map msgAddrOf mins2).
+
 Lemma msg_outs_commutes:
   forall sys st1 rule1 mins1 mouts1 rule2 mins2 mouts2 st2,
     steps step_m sys st1 [RlblOuts (Some rule1) mins1 mouts1;
                             RlblOuts (Some rule2) mins2 mouts2] st2 ->
-    rule_oidx rule1 <> rule_oidx rule2 ->
-    DisjList (map msgAddrOf mouts2) (map msgAddrOf mins1) ->
+    NonInterfering rule1 rule2 mins1 mins2 mouts1 mouts2 ->
     forall cst1,
       EquivMState st1 cst1 ->
       exists cst2,
@@ -265,6 +270,7 @@ Proof.
   destruct cst1 as [coss1 corqs1 cmsgs1].
   dest_step_m.
   dest_equivM.
+  destruct H0 as [? [? ?]].
   eexists; split.
   - econstructor.
     + econstructor.
@@ -283,4 +289,6 @@ Proof.
     + admit.
         
 Admitted.
+
+
 
