@@ -43,7 +43,7 @@ Section PerSystem.
   Definition Sequential (hst: THistory) :=
     exists trss: list THistory,
       Forall Transactional trss /\
-      hst = concat trss.
+      hst = List.concat trss.
 
 End PerSystem.
 

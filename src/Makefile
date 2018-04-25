@@ -11,4 +11,4 @@ Makefile.coq: Makefile $(FILES)
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	rm -f .*.aux *.v.d *.glob *.vo *~
-	rm -f Makefile.coq
+	rm -f Makefile.coq .coqdeps.d

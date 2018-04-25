@@ -265,7 +265,7 @@ Section SimMP.
       end
     end.
   
-  Fixpoint addInactive (iam: TMsg) (rb: MessagePool TMsg) :=
+  Definition addInactive (iam: TMsg) (rb: MessagePool TMsg) :=
     rb ++ iam :: nil.
 
   Fixpoint rollbacked (rb mp: MessagePool TMsg) :=
@@ -311,7 +311,7 @@ Section SimMP.
       deinitializeMP (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
   Proof.
     induction msgs; simpl; intros.
-    - unfold deinitializeMP, enqMP.
+    - unfold deinitializeMP, enqMP, addInactive.
       rewrite map_app; simpl.
       reflexivity.
     - destruct (tmsg_info a); eauto.

@@ -40,7 +40,7 @@ Section TrsSim.
       ginv ist1 ->
       forall trss ihst ist2,
         Forall (Transactional impl) trss ->
-        ihst = concat trss ->
+        ihst = List.concat trss ->
         steps step_t impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
@@ -319,7 +319,7 @@ Lemma rule_mids_tid_In:
   forall tid (rules: list Rule) r,
     In tid (map mid_tid (rule_mids r)) ->
     In r rules ->
-    In tid (concat (map (fun rule => map mid_tid (rule_mids rule)) rules)).
+    In tid (List.concat (map (fun rule => map mid_tid (rule_mids rule)) rules)).
 Proof.
   induction rules; simpl; intros; auto.
   destruct H0; subst.
@@ -435,8 +435,8 @@ Section Compositionality.
           In rule (sys_rules impl2)).
   Proof.
     intros.
-    destruct (mtid ?<n concat (map (fun rule => (map mid_tid (rule_mids rule)))
-                                   (sys_rules impl1))).
+    destruct (mtid ?<n List.concat (map (fun rule => (map mid_tid (rule_mids rule)))
+                                        (sys_rules impl1))).
     - left; intros.
       pose proof (Himpl _ H1).
       apply in_app_or in H2; destruct H2; [assumption|].
