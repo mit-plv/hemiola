@@ -19,22 +19,26 @@ Section PerSystem.
         fromExternal sys rq = true ->
         ForallMP (fun tmsg => tmsg_info tmsg =
                               Some (buildTInfo ts (rq :: nil))) houts ->
-        Atomic ts rq (RlblOuts (Some rqr) (toTMsgU rq :: nil) houts :: nil) houts
+        Atomic ts rq (RlblInt (Some rqr) (toTMsgU rq :: nil) houts :: nil) houts
   | AtomicCont:
       forall ts rq hst rule msgs mouts houts,
         Atomic ts rq hst mouts ->
         msgs <> nil ->
         SubList msgs mouts ->
-        Atomic ts rq (RlblOuts (Some rule) msgs houts :: hst)
+        Atomic ts rq (RlblInt (Some rule) msgs houts :: hst)
                (distributeMsgs houts (removeMsgs msgs mouts)).
 
   Inductive Transactional: THistory -> Prop :=
   | TrsSlt:
-      Transactional (emptyRLabel :: nil)
-  | TrsIn:
-      forall msg tin,
-        tin = RlblIn msg ->
+      Transactional (emptyRLabel _ :: nil)
+  | TrsIns:
+      forall eins tin,
+        tin = RlblIns eins ->
         Transactional (tin :: nil)
+  | TrsOuts:
+      forall eouts tout,
+        tout = RlblOuts eouts ->
+        Transactional (tout :: nil)
   | TrsAtomic:
       forall ts rq hst mouts,
         Atomic ts rq hst mouts ->
@@ -72,15 +76,14 @@ Definition BEquivalent (sys: System)
 
 Definition Serializable (sys: System) (ll: THistory) :=
   exists sll sst,
-    (* 1) legal and sequential *) seqSteps sys (initsOf sys) sll sst /\
-    (* 3) equivalent *) BEquivalent sys ll sll.
+    (* 1) legal, 2) sequential, and *) seqSteps sys (initsOf sys) sll sst /\
+    (* 3) behavior-equivalent *) BEquivalent sys ll sll.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys (sys: System) :=
   forall ll st,
     steps step_t sys (initsOf sys) ll st ->
     Serializable sys ll.
-
 
 (** Let's start (experimentally) with an obvious condition 
  * that ensures [SerializableSys] 

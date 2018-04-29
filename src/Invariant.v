@@ -84,47 +84,86 @@ Ltac split_inv := apply inv_split.
 Infix "/\i" := invAnd (at level 80).
 Infix "->i" := invImp (at level 99).
 
-Definition MsgInInv (inv: TState -> Prop) :=
-  forall oss orqs msgs ts emsg,
+(*! Some generic invariants *)
+
+Definition MsgsInInv (inv: TState -> Prop) :=
+  forall oss orqs msgs ts eins,
     inv {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
     inv {| tst_oss := oss; tst_orqs := orqs;
-           tst_msgs := enqMP (toTMsgU emsg) msgs; tst_tid := ts |}.
+           tst_msgs := distributeMsgs (toTMsgsU eins) msgs; tst_tid := ts |}.
+
+Definition MsgsOutInv (inv: TState -> Prop) :=
+  forall oss orqs msgs ts eouts,
+    inv {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
+    inv {| tst_oss := oss; tst_orqs := orqs;
+           tst_msgs := removeMsgs eouts msgs; tst_tid := ts |}.
+
+Definition MsgsInv := MsgsInInv /\i MsgsOutInv.
 
 Section Facts.
 
-  Lemma MsgInInv_invAnd:
+  Lemma MsgsInInv_invAnd:
     forall ginv1 ginv2,
-      MsgInInv ginv1 ->
-      MsgInInv ginv2 ->
-      MsgInInv (ginv1 /\i ginv2).
+      MsgsInInv ginv1 ->
+      MsgsInInv ginv2 ->
+      MsgsInInv (ginv1 /\i ginv2).
   Proof.
     intros; hnf in *.
     intros; destruct H1.
     split; eauto.
   Qed.
-    
+
+  Lemma MsgsOutInv_invAnd:
+    forall ginv1 ginv2,
+      MsgsOutInv ginv1 ->
+      MsgsOutInv ginv2 ->
+      MsgsOutInv (ginv1 /\i ginv2).
+  Proof.
+    intros; hnf in *.
+    intros; destruct H1.
+    split; eauto.
+  Qed.
+
+  Lemma MsgsInv_invAnd:
+    forall ginv1 ginv2,
+      MsgsInv ginv1 ->
+      MsgsInv ginv2 ->
+      MsgsInv (ginv1 /\i ginv2).
+  Proof.
+    intros; simpl.
+    destruct H, H0.
+    split.
+    - apply MsgsInInv_invAnd; auto.
+    - apply MsgsOutInv_invAnd; auto.
+  Qed.
+
   Lemma InvStep_no_rules:
     forall impl ginv,
-      MsgInInv ginv ->
+      MsgsInv ginv ->
       sys_rules impl = nil ->
       InvStep impl step_t ginv.
   Proof.
     intros; hnf; intros.
+    destruct H.
     inv H2; auto.
     exfalso.
-    rewrite H0 in H10.
-    elim H10.
+    rewrite H0 in H11.
+    elim H11.
   Qed.
   
 End Facts.
-
-(*! Some general invariants *)
 
 Definition WfDomOStates (dom: list IdxT) (oss: OStates) :=
   M.KeysEquiv oss dom.
 
 Definition WfDomTState (dom: list IdxT) (tst: TState) :=
   WfDomOStates dom (tst_oss tst).
+
+Definition TInfoExists (sys: System) (tst: TState) :=
+  ForallMP (fun tmsg =>
+              if fromInternal sys tmsg
+              then tmsg_info tmsg <> None
+              else tmsg_info tmsg = None) (tst_msgs tst).
 
 Definition TidLeMP (tmsgs: MessagePool TMsg) (tid: TrsId) :=
   ForallMP (fun tmsg =>
@@ -149,14 +188,26 @@ Definition TidLt (tid: TrsId) (tst: TState) :=
 Definition ValidTidState (tst: TState) :=
   TidLe (tst_tid tst) tst.
 
-Lemma ValidTidState_MsgInInv:
-  MsgInInv ValidTidState.
+Definition NoExtOutsMP (sys: System) (tmsgs: MessagePool TMsg) :=
+  Forall (fun tmsg => toExternal sys tmsg = false) tmsgs.
+
+Definition NoExtOuts (sys: System) (tst: TState) :=
+  NoExtOutsMP sys (tst_msgs tst).
+
+Lemma ValidTidState_MsgsInv:
+  MsgsInv ValidTidState.
 Proof.
   hnf; intros.
-  hnf; hnf in H; intros.
-  cbn in *.
-  apply Forall_app; auto.
-  repeat constructor.
+  split.
+  - hnf; intros; hnf in H; intros.
+    cbn in *.
+    apply Forall_app; auto.
+    clear; induction eins; [constructor|].
+    simpl; constructor; simpl; auto.
+  - hnf; intros; hnf in H; intros.
+    cbn in *.
+    hnf; cbn.
+    apply ForallMP_removeMsgs; auto.
 Qed.
 
 Lemma step_t_ValidTidState:
@@ -168,28 +219,30 @@ Lemma step_t_ValidTidState:
 Proof.
   unfold ValidTidState; intros; inv H0; auto.
   - simpl; simpl in H.
-    apply ForallMP_enqMP; auto.
-    simpl; auto.
+    apply ForallMP_distributeMsgs; auto.
+    clear; induction eins; [constructor|].
+    constructor; simpl; auto.
+  - simpl; simpl in H.
+    apply ForallMP_removeMsgs; auto.
   - simpl; simpl in H.
     apply ForallMP_distributeMsgs.
     + apply ForallMP_removeMsgs.
       clear -H Hts.
-      induction oims; simpl; [constructor|].
+      induction msgs; simpl; [constructor|].
       inv H; constructor.
       * destruct (tmsg_info a); auto.
-        destruct (getTMsgsTInfo msgs); omega.
-      * apply IHoims; auto.
-    + apply Forall_impl with (Q:= fun msg => InMP msg oims) in H5;
+        destruct (getTMsgsTInfo ins); omega.
+      * apply IHmsgs; auto.
+    + apply Forall_impl with (Q:= fun msg => InMP msg msgs) in H5;
         [|intros; eapply FirstMP_InMP; eauto].
       apply ForallMP_InMP_SubList in H5.
       eapply ForallMP_SubList in H5; eauto.
 
       clear -Hts H5.
-      apply Forall_filter.
       induction outs; [constructor|].
       constructor; auto.
 
-      simpl; remember (getTMsgsTInfo msgs) as ti; destruct ti; auto.
+      simpl; remember (getTMsgsTInfo ins) as ti; destruct ti; auto.
       apply eq_sym, getTMsgsTInfo_Some in Heqti.
       destruct Heqti as [tmsg [? ?]].
       eapply ForallMP_forall in H5; eauto.
@@ -224,7 +277,7 @@ Lemma step_t_TidLt:
   forall st1 sys orule mins mouts st2,
     ValidTidState st1 ->
     mins <> nil ->
-    step_t sys st1 (RlblOuts orule mins mouts) st2 ->
+    step_t sys st1 (RlblInt orule mins mouts) st2 ->
     Forall (fun tmsg => tmsg_info tmsg = None) mins ->
     TidLt (tst_tid st2) st1.
 Proof.
@@ -236,7 +289,7 @@ Qed.
 Corollary step_t_tid_next_TidLt:
   forall sys st1 orule ins outs ts st2,
     ValidTidState st1 ->
-    step_t sys st1 (RlblOuts orule ins outs) st2 ->
+    step_t sys st1 (RlblInt orule ins outs) st2 ->
     ins <> nil -> outs <> nil ->
     Forall (fun tmsg => tmsg_info tmsg = None) ins ->
     Forall (fun tmsg => match tmsg_info tmsg with
@@ -251,17 +304,11 @@ Proof.
   - eauto using step_t_tid_next.
 Qed.
 
-Definition TInfoExists (sys: System) (tst: TState) :=
-  ForallMP (fun tmsg =>
-              if fromInternal sys tmsg
-              then tmsg_info tmsg <> None
-              else tmsg_info tmsg = None) (tst_msgs tst).
-
 Lemma validMsgOuts_from_internal:
   forall {MsgT} `{HasMsg MsgT} sys idx,
     isInternal sys idx = true ->
     forall mouts: list MsgT,
-      ValidMsgOuts idx mouts ->
+      ValidMsgsOut idx mouts ->
       ForallMP (fun msg => fromInternal sys msg = true) mouts.
 Proof.
   induction mouts; simpl; intros; [constructor|].
@@ -281,9 +328,16 @@ Lemma step_t_tinfo:
 Proof.
   unfold TInfoExists; intros; inv H0; auto.
   - simpl; simpl in H.
-    apply ForallMP_enqMP; auto.
-    unfold fromInternal; simpl.
+    apply ForallMP_distributeMsgs; auto.
+    destruct H2.
+    clear -H0; induction eins; [constructor|].
+    inv H0; dest.
+    specialize (IHeins H3).
+    simpl; constructor; auto.
+    unfold fromInternal, fromExternal in *; simpl.
     rewrite external_not_internal by assumption; reflexivity.
+  - simpl; simpl in H.
+    apply ForallMP_removeMsgs; auto.
   - simpl; simpl in H.
     apply ForallMP_distributeMsgs.
     + apply ForallMP_removeMsgs; auto.
@@ -292,11 +346,10 @@ Proof.
       clear -H11; simpl in H11.
       induction outs; [constructor|].
       inv H11.
-      simpl; unfold toInternal; simpl.
-      destruct (isInternal sys (mid_to (msg_id a))); auto.
-      constructor; cbn.
-      * unfold fromInternal in *; cbn in *.
-        unfold id in H1; rewrite H1; discriminate.
+      simpl; constructor; cbn.
+      * unfold fromInternal in *; simpl in *.
+        unfold id in H1; rewrite H1.
+        discriminate.
       * apply IHouts; auto.
 Qed.
 
@@ -316,6 +369,7 @@ Proof.
   inv H.
   - left; constructor.
   - left; econstructor; eauto.
+  - left; econstructor; eauto.
   - simpl in *.
     apply in_app_or in H7; destruct H7.
     + left; econstructor; eauto.
@@ -333,3 +387,53 @@ Proof.
   apply step_t_tinfo in H1; auto.
 Qed.
 
+Lemma step_t_no_rules_NoExtOuts:
+  forall sys,
+    sys_rules sys = nil ->
+    forall st1,
+      NoExtOuts sys st1 ->
+      forall lbl st2,
+        step_t sys st1 lbl st2 ->
+        NoExtOuts sys st2.
+Proof.
+  unfold NoExtOuts, NoExtOutsMP; intros.
+  inv H1; simpl in *; auto.
+  - apply ForallMP_distributeMsgs; auto.
+    destruct H3.
+    clear -H1; induction eins; simpl; [constructor|].
+    inv H1; dest.
+    constructor.
+    + unfold toInternal, toExternal in *; simpl in *.
+      unfold id in H0.
+      apply internal_not_external; auto.
+    + apply IHeins; auto.
+  - apply ForallMP_removeMsgs; auto.
+  - exfalso.
+    rewrite H in H9; elim H9.
+Qed.
+
+Lemma steps_t_no_rules_NoExtOuts:
+  forall sys,
+    sys_rules sys = nil ->
+    forall st1,
+      NoExtOuts sys st1 ->
+      forall ll st2,
+        steps step_t sys st1 ll st2 ->
+        NoExtOuts sys st2.
+Proof.
+  induction 3; simpl; intros; auto.
+  eapply step_t_no_rules_NoExtOuts with (st1 := st2); eauto.
+Qed.
+
+Corollary behavior_no_rules_NoExtOuts:
+  forall sys,
+    sys_rules sys = nil ->
+    forall ll st,
+      steps step_t sys (initsOf sys) ll st ->
+      NoExtOuts sys st.
+Proof.
+  intros.
+  eapply steps_t_no_rules_NoExtOuts; eauto.
+  constructor.
+Qed.
+  

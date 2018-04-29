@@ -65,7 +65,7 @@ Section MessagePool.
     | dmsg :: dmsgs' =>
       removeMsgs dmsgs' (removeMP dmsg mp)
     end.
-  
+
 End MessagePool.
 
 Section Facts.
@@ -368,6 +368,17 @@ Section Facts.
     apply hd_error_Some_app; auto.
   Qed.
 
+  Lemma FirstMP_distributeMsgs:
+    forall mp msg,
+      FirstMP mp msg ->
+      forall eins,
+        FirstMP (distributeMsgs eins mp) msg.
+  Proof.
+    unfold FirstMP, firstMP, distributeMsgs; intros.
+    rewrite findMP_app.
+    apply hd_error_Some_app; auto.
+  Qed.
+
   Lemma findMP_deqMP_eq:
     forall from to chn mp,
       findMP from to chn (deqMP from to chn mp) =
@@ -432,7 +443,17 @@ Section Facts.
   Proof.
     unfold enqMP; intros.
     apply firstMP_deqMP_app; auto.
-  Qed.    
+  Qed.
+
+  Lemma FirstMP_deqMP_distributeMsgs_comm:
+    forall mp from to chn mins,
+      firstMP from to chn mp <> None ->
+      deqMP from to chn (distributeMsgs mins mp) =
+      distributeMsgs mins (deqMP from to chn mp).
+  Proof.
+    unfold enqMP; intros.
+    apply firstMP_deqMP_app; auto.
+  Qed.
 
   Lemma FirstMP_removeMP_enqMP_comm:
     forall mp rmsg,
@@ -443,6 +464,18 @@ Section Facts.
   Proof.
     unfold removeMP; intros.
     apply FirstMP_deqMP_enqMP_comm.
+    rewrite H0; discriminate.
+  Qed.
+
+  Lemma FirstMP_removeMP_distributeMsgs_comm:
+    forall mp rmsg,
+      FirstMP mp rmsg ->
+      forall mins,
+        removeMP rmsg (distributeMsgs mins mp) =
+        distributeMsgs mins (removeMP rmsg mp).
+  Proof.
+    unfold removeMP; intros.
+    apply FirstMP_deqMP_distributeMsgs_comm.
     rewrite H0; discriminate.
   Qed.
 
@@ -521,6 +554,28 @@ Section Facts.
     induction msgs; simpl; intros; [reflexivity|].
     inv H0; inv H1.
     rewrite FirstMP_removeMP_enqMP_comm by assumption.
+    rewrite <-IHmsgs; [reflexivity|assumption|].
+    apply FirstMP_Forall_FirstMP_removeMP; auto.
+
+    clear -H4.
+    induction msgs; [constructor|].
+    constructor.
+    - intro Hx; elim H4; left; auto.
+    - eapply IHmsgs.
+      intro Hx; elim H4; right; auto.
+  Qed.
+
+  Lemma FirstMP_removeMsgs_distributeMsgs_comm:
+    forall msgs mp,
+      NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) msgs) ->
+      Forall (FirstMP mp) msgs ->
+      forall mins,
+        removeMsgs msgs (distributeMsgs mins mp) =
+        distributeMsgs mins (removeMsgs msgs mp).
+  Proof.
+    induction msgs; simpl; intros; [reflexivity|].
+    inv H0; inv H1.
+    rewrite FirstMP_removeMP_distributeMsgs_comm by assumption.
     rewrite <-IHmsgs; [reflexivity|assumption|].
     apply FirstMP_Forall_FirstMP_removeMP; auto.
 

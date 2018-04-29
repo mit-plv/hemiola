@@ -94,9 +94,9 @@ Ltac trs_simulates_case_slt :=
 
 Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=    
   (** instantiation *)
-  unfold TrsSimIn; intros; simpl;
+  unfold TrsSimIns; intros; simpl;
   match goal with
-  | [H: context[RlblIn ?min] |- context[step_t _ ?ist _ _] ] =>
+  | [H: context[RlblIns ?min] |- context[step_t _ ?ist _ _] ] =>
     let ioss := fresh "ioss" in
     let iorqs := fresh "iorqs" in
     let imsgs := fresh "imsgs" in
@@ -113,7 +113,7 @@ Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=
   (** inversions *)
   repeat
     match goal with
-    | [H: step_t _ _ (RlblIn _) _ |- _] => inv H
+    | [H: step_t _ _ (RlblIns _) _ |- _] => inv H
     | [H: sim _ _ |- _] => destruct H as [? [? ?]]
     end;
   
@@ -869,7 +869,7 @@ Ltac sim_spec_constr_step_t :=
            eapply blocked_SimMP_FirstMP; eauto;
            [apply pmsg_omsg_FirstMP; eassumption|reflexivity]
          | [ |- ValidMsgsIn _ _] => repeat constructor
-         | [ |- ValidMsgOuts _ _] => repeat constructor
+         | [ |- ValidMsgsOut _ _] => repeat constructor
          | [ |- rule_postcond _ _ _ _ _ _ _] => repeat constructor
          end;
      try reflexivity;

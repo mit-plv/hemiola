@@ -20,18 +20,16 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         stepI impl ist1 ilbl ist2 ->
-        match extLabel impl (getLabel ilbl) with
-        | None =>
-          (exists sst2 slbl,
-              stepS spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = None /\
-              ist2 ≈ sst2) \/
-          ist2 ≈ sst1
-        | Some elbl =>
-          (exists sst2 slbl,
-              stepS spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = Some (p elbl) /\
-              ist2 ≈ sst2)
+        match getLabel ilbl with
+        | None => (exists sst2 slbl,
+                      stepS spec sst1 slbl sst2 /\
+                      getLabel slbl = None /\
+                      ist2 ≈ sst2) \/
+                  ist2 ≈ sst1
+        | Some elbl => (exists sst2 slbl,
+                           stepS spec sst1 slbl sst2 /\
+                           getLabel slbl = Some (p elbl) /\
+                           ist2 ≈ sst2)
         end.
 
   Hypothesis (Hsim: Simulates).
@@ -54,8 +52,7 @@ Section Simulation.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H7; [|exact H10].
-    remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
-    destruct ilbl as [elbl|].
+    destruct (getLabel lbl) as [elbl|].
 
     - destruct H7 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
@@ -105,17 +102,17 @@ Section InvSim.
       forall ilbl ist2,
         linv ilbl ->
         stepI impl ist1 ilbl ist2 ->
-        match extLabel impl (getLabel ilbl) with
+        match getLabel ilbl with
         | None =>
           (exists sst2 slbl,
               stepS spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = None /\
+              getLabel slbl = None /\
               ist2 ≈ sst2) \/
           ist2 ≈ sst1
         | Some elbl =>
           (exists sst2 slbl,
               stepS spec sst1 slbl sst2 /\
-              extLabel spec (getLabel slbl) = Some (p elbl) /\
+              getLabel slbl = Some (p elbl) /\
               ist2 ≈ sst2)
         end.
 
@@ -145,8 +142,7 @@ Section InvSim.
     eapply Hsim in H9;
       [|exact H11|eapply inv_steps; eauto|exact H12].
     
-    remember (extLabel impl (getLabel lbl)) as ilbl; clear Heqilbl.
-    destruct ilbl as [elbl|].
+    destruct (getLabel lbl) as [elbl|].
 
     - destruct H9 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
@@ -180,16 +176,16 @@ Section SimMap.
 
   Definition LabelMap (il: Label) :=
     match il with
-    | LblIn imsg => LblIn (mmap imsg)
+    | LblIns ins => LblIns (map mmap ins)
     | LblOuts outs => LblOuts (map mmap outs)
     end.
 
   Definition ValidMsgMap (impl spec: System) :=
-    forall msg,
-      fromInternal impl msg =
-      fromInternal spec (mmap msg) /\
-      toInternal impl msg =
-      toInternal spec (mmap msg).
+    (forall msg,
+        fromInternal impl msg = fromInternal spec (mmap msg) /\
+        toInternal impl msg = toInternal spec (mmap msg)) /\
+    (forall eins, WellDistrMsgsIn eins -> WellDistrMsgsIn (map mmap eins)) /\
+    (forall eouts, WellDistrMsgsOut eouts -> WellDistrMsgsOut (map mmap eouts)).
 
   Lemma validMsgMap_from_isExternal:
     forall impl spec,
@@ -198,7 +194,7 @@ Section SimMap.
         fromExternal impl msg = b ->
         fromExternal spec (mmap msg) = b.
   Proof.
-    unfold ValidMsgMap; intros.
+    unfold ValidMsgMap; intros; dest.
     rewrite <-H0.
     specialize (H msg); dest.
     unfold fromInternal, fromExternal in *.
@@ -214,7 +210,7 @@ Section SimMap.
         toInternal impl msg = b ->
         toInternal spec (mmap msg) = b.
   Proof.
-    unfold ValidMsgMap; intros.
+    unfold ValidMsgMap; intros; dest.
     rewrite <-H0.
     specialize (H msg); dest; auto.
   Qed.
@@ -229,20 +225,98 @@ Section SimMap.
     unfold ValidMsgMap, fromInternal, toInternal, isExternal, isInternal; intros.
     rewrite <-H0; auto.
   Qed.
-  
+
+  (** TODO: need one more condition for [ValidMsgMap];
+   * it should be one-to-one to ensure [WellDistrMsgsIn] and [WellDistrMsgsOut]
+   *)
+  Lemma validMsgMap_ValidMsgsExtIn:
+    forall impl spec,
+      ValidMsgMap impl spec ->
+      forall eins,
+        ValidMsgsExtIn impl eins ->
+        ValidMsgsExtIn spec (map mmap eins).
+  Proof.
+    intros.
+    destruct H0; split.
+    - clear -H H0; induction eins; simpl; [constructor|].
+      inv H0; constructor; auto.
+      red in H; dest; split.
+      + apply negb_false_iff.
+        rewrite <-fromInternal_fromExternal_negb.
+        apply negb_false_iff in H0.
+        rewrite <-fromInternal_fromExternal_negb in H0.
+        specialize (H a); dest.
+        rewrite <-H; auto.
+      + specialize (H a); dest.
+        rewrite <-H5; auto.
+    - apply H; auto.
+  Qed.
+
+  Lemma validMsgMap_ValidMsgsExtOut:
+    forall impl spec,
+      ValidMsgMap impl spec ->
+      forall eouts,
+        ValidMsgsExtOut impl eouts ->
+        ValidMsgsExtOut spec (map mmap eouts).
+  Proof.
+    intros.
+    destruct H0; split.
+    - clear -H H0; induction eouts; simpl; [constructor|].
+      inv H0; constructor; auto.
+      red in H; dest; split.
+      + specialize (H a); dest.
+        rewrite <-H; auto.
+      + apply negb_false_iff.
+        rewrite <-toInternal_toExternal_negb.
+        apply negb_false_iff in H1.
+        rewrite <-toInternal_toExternal_negb in H1.
+        specialize (H a); dest.
+        rewrite <-H5; auto.
+    - apply H; auto.
+  Qed.
+
 End SimMap.
 
-Definition MsgInSim (msgF: Msg -> Msg) (sim: TState -> TState -> Prop) :=
-  forall ioss iorqs imsgs its soss sorqs smsgs sts emsg,
+Section RqRsMP.
+  Context {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}.
+
+  Definition requestsOfMP (sys: SysT) (mp: MessagePool MsgT) :=
+    filter (fun msg => fromExternal sys msg) mp.
+
+  (* NOTE: this definition includes external responses. *)
+  Definition nonrequestsOfMP (sys: SysT) (mp: MessagePool MsgT) :=
+    filter (fun msg => fromInternal sys msg) mp.
+
+  Definition responsesOfMP (sys: SysT) (mp: MessagePool MsgT) :=
+    filter (fun msg => toExternal sys msg) mp.
+
+  (* NOTE: this definition includes external requests. *)
+  Definition nonresponsesOfMP (sys: SysT) (mp: MessagePool MsgT) :=
+    filter (fun msg => toInternal sys msg) mp.
+
+End RqRsMP.
+
+Definition MsgsInSim (msgF: Msg -> Msg) (sim: TState -> TState -> Prop) :=
+  forall ioss iorqs imsgs its soss sorqs smsgs sts eins,
     sim {| tst_oss := ioss; tst_orqs := iorqs; tst_msgs := imsgs; tst_tid := its |}
         {| tst_oss := soss; tst_orqs := sorqs; tst_msgs := smsgs; tst_tid := sts |} ->
     sim {| tst_oss := ioss; tst_orqs := iorqs;
-           tst_msgs := enqMP (toTMsgU emsg) imsgs; tst_tid := its |}
+           tst_msgs := distributeMsgs (toTMsgsU eins) imsgs; tst_tid := its |}
         {| tst_oss := soss; tst_orqs := sorqs;
-           tst_msgs := enqMP (toTMsgU (msgF emsg)) smsgs; tst_tid := sts |}.
+           tst_msgs := distributeMsgs (toTMsgsU (map msgF eins)) smsgs; tst_tid := sts |}.
+
+Definition MsgsOutSim (msgF: TMsg -> TMsg) (sim: TState -> TState -> Prop) :=
+  forall ioss iorqs imsgs its soss sorqs smsgs sts eouts,
+    sim {| tst_oss := ioss; tst_orqs := iorqs; tst_msgs := imsgs; tst_tid := its |}
+        {| tst_oss := soss; tst_orqs := sorqs; tst_msgs := smsgs; tst_tid := sts |} ->
+    sim {| tst_oss := ioss; tst_orqs := iorqs;
+           tst_msgs := removeMsgs eouts imsgs; tst_tid := its |}
+        {| tst_oss := soss; tst_orqs := sorqs;
+           tst_msgs := removeMsgs (map msgF eouts) smsgs; tst_tid := sts |}.
 
 (** [SimMP] defines a standard simulation between two [MessagePool]s of 
- * implementation and spec. It's basically rollback of all ongoing transactions.
+ * implementation and spec. It's basically 1) rollbacking all live transactions
+ * to their original external requests and 2) to keep all external responses.
  *)
 Section SimMP.
   Variable msgP: Msg -> Msg.
@@ -301,9 +375,13 @@ Section SimMP.
    *)
   Definition deinitializeMP (mp: MessagePool TMsg) :=
     map deinitialize mp.
-  
+
+  Context {SysT} `{IsSystem SysT}.
+  Variable impl: SysT.
+
   Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
-    smsgs = deinitializeMP (rollback imsgs).
+    smsgs = (deinitializeMP (rollback (nonresponsesOfMP impl imsgs)))
+              ++ (map (liftMsgP msgP) (responsesOfMP impl imsgs)).
 
   Lemma rollbacked_enqMP_toTMsgU:
     forall msgs emsg rb,
@@ -333,10 +411,7 @@ Section SimMP.
         SimMP (enqMP (toTMsgU emsg) imsgs)
               (enqMP (toTMsgU (msgP emsg)) smsgs).
   Proof.
-    unfold SimMP; intros; subst.
-    unfold rollback.
-    apply rollbacked_enqMP_toTMsgU.
-  Qed.
+  Admitted.
 
   Lemma SimMP_ext_msg_immediate_out:
     forall imsgs smsgs,
@@ -399,6 +474,7 @@ Section SimMP.
               (removeMP (toTMsgU (msgP origRq)) smsgs).
   Proof.
     intros; eapply SimMP_responses_back_ext_out in H0; eauto.
+    simpl in H0; assumption.
   Qed.
   
 End SimMP.

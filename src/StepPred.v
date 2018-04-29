@@ -28,17 +28,29 @@ Section GivenMsg.
     PState MsgT -> PLabel MsgT -> PState MsgT -> Prop :=
   | SpSlt: forall st, step_pred0 psys st (emptyPLabel MsgT) st
 
-  | SpExt:
-      forall pst nst oss oims orqs (emsg: PMsg MsgT),
-        fromExternal psys emsg = true ->
-        toInternal psys emsg = true ->
+  | SpIns:
+      forall pst nst oss oims orqs (eins: list (PMsg MsgT)),
+        eins <> nil ->
+        ValidMsgsExtIn psys eins ->
         pst = {| pst_oss := oss;
                  pst_orqs := orqs;
                  pst_msgs := oims |} ->
         nst = {| pst_oss := oss;
                  pst_orqs := orqs;
-                 pst_msgs := enqMP emsg oims |} ->
-        step_pred0 psys pst (PlblIn emsg) nst
+                 pst_msgs := distributeMsgs eins oims |} ->
+        step_pred0 psys pst (PlblIns eins) nst
+
+  | SpOuts:
+      forall pst nst oss oims orqs (eouts: list (PMsg MsgT)),
+        eouts <> nil ->
+        ValidMsgsExtOut psys eouts ->
+        pst = {| pst_oss := oss;
+                 pst_orqs := orqs;
+                 pst_msgs := oims |} ->
+        nst = {| pst_oss := oss;
+                 pst_orqs := orqs;
+                 pst_msgs := removeMsgs eouts oims |} ->
+        step_pred0 psys pst (PlblOuts eouts) nst
 
   | SpImm:
       forall pst nst poss noss oidx pos nos orqs porq poims noims
@@ -62,7 +74,7 @@ Section GivenMsg.
         pst = {| pst_oss := poss; pst_orqs := orqs; pst_msgs := poims |} ->
         nst = {| pst_oss := noss; pst_orqs := orqs; pst_msgs := noims |} ->
 
-        step_pred0 psys pst (PlblOuts (Some immr) (rq :: nil) (rs :: nil)) nst
+        step_pred0 psys pst (PlblInt (Some immr) (rq :: nil) (rs :: nil)) nst
 
   | SpRqFwd:
       forall pst nst oss porq orqs oidx pos oims
@@ -73,7 +85,7 @@ Section GivenMsg.
         rqfwdr = PRuleRqFwd (pmsg_pmid rq) prec (map (@pmsg_pmid _ _) fwds) ->
         FirstMP oims rq ->
         ValidMsgsIn oidx (rq :: nil) ->
-        ValidMsgOuts oidx fwds ->
+        ValidMsgsOut oidx fwds ->
 
         oss@[oidx] = Some pos ->
         prec pos (map (fun pmsg => getMsg (pmsg_omsg pmsg)) porq) (getMsg rq :: nil) ->
@@ -87,7 +99,7 @@ Section GivenMsg.
                                (intOuts psys fwds)
                                (removeMP rq oims) |} ->
 
-        step_pred0 psys pst (PlblOuts (Some rqfwdr) (rq :: nil) fwds) nst
+        step_pred0 psys pst (PlblInt (Some rqfwdr) (rq :: nil) fwds) nst
 
   | SpRsBack:
       forall pst nst oss orqs oidx pos nos orq origRq oims noss noims opred rsbf
@@ -98,7 +110,7 @@ Section GivenMsg.
                               (pmsg_pmid rsb) rsbf  ->
         Forall (FirstMP oims) rss ->
         ValidMsgsIn oidx rss ->
-        ValidMsgOuts oidx (rsb :: nil) ->
+        ValidMsgsOut oidx (rsb :: nil) ->
 
         oss@[oidx] = Some pos ->
         orqs@[oidx] = Some orq ->
@@ -133,7 +145,7 @@ Section GivenMsg.
                  pst_orqs := M.remove oidx orqs;
                  pst_msgs := noims |} ->
 
-        step_pred0 psys pst (PlblOuts (Some rsbackr) rss (rsb :: nil)) nst.
+        step_pred0 psys pst (PlblInt (Some rsbackr) rss (rsb :: nil)) nst.
 
   Variables (SysT: Type)
             (ostep: Step SysT StateT LabelT)

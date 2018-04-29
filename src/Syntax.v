@@ -107,6 +107,9 @@ Section Msg.
   Global Instance Msg_HasMsg : HasMsg Msg :=
     { getMsg := id }.
 
+  Definition msgAddrOf (msg: Msg) :=
+    mid_addr (msg_id msg).
+
 End Msg.
 
 Class HasInit (SysT StateT: Type) :=

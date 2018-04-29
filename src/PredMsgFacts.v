@@ -109,24 +109,20 @@ Section GivenMsg.
     reflexivity.
   Qed.
 
-  Lemma pToLabel_extLabel:
-    forall psys l,
-      extLabel psys (pToLabel l) =
-      extLabel (pToSystem (MsgT:= MsgT) psys) (iToLabel (pToTLabel l)).
-  Proof.
-    unfold extLabel; simpl; intros.
-    destruct l; cbn.
-    - reflexivity.
-    - rewrite <-pmsg_omsg_extOuts; reflexivity.
-  Qed.
-
   Lemma pToTHistory_behaviorOf:
     forall psys phst,
       behaviorOf psys phst =
       behaviorOf (pToSystem (MsgT:= MsgT) psys) (pToTHistory phst).
   Proof.
     induction phst; simpl; intros; [reflexivity|].
-    rewrite IHphst, <-pToLabel_extLabel; reflexivity.
+    rewrite IHphst; f_equal.
+    clear; destruct a; simpl; auto.
+    - repeat f_equal.
+      induction mins; simpl; auto.
+      congruence.
+    - repeat f_equal.
+      induction mouts; simpl; auto.
+      congruence.
   Qed.
 
 End GivenMsg.
@@ -149,8 +145,7 @@ Lemma atomic_history_pred_tinfo:
         Forall
           (fun lbl =>
              match lbl with
-             | PlblIn _ => False
-             | PlblOuts _ pins pouts =>
+             | PlblInt _ pins pouts =>
                Forall (fun pmsg =>
                          let tmsg := pmsg_omsg pmsg in
                          let msg := tmsg_msg tmsg in
@@ -161,6 +156,7 @@ Lemma atomic_history_pred_tinfo:
                       ) pins /\
                Forall (fun pmsg =>
                          tmsg_info (pmsg_omsg pmsg) = Some (buildTInfo ts [rq])) pouts
+             | _ => False
              end) phst.
 Proof.
   intros.

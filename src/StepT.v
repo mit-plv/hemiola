@@ -12,50 +12,59 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
   end.
 
 Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
-| StSlt: forall st, step_t sys st emptyRLabel st
-| StExt: forall ts pst nst oss orqs oims emsg,
-    fromExternal sys emsg = true ->
-    toInternal sys emsg = true ->
-    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := oims; tst_tid := ts |} ->
+| StSlt: forall st, step_t sys st (emptyRLabel _) st
+| StIns: forall ts pst nst oss orqs msgs eins,
+    eins <> nil ->
+    ValidMsgsExtIn sys eins ->
+    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
     nst = {| tst_oss := oss;
              tst_orqs := orqs;
-             tst_msgs := enqMP (toTMsgU emsg) oims;
+             tst_msgs := distributeMsgs (toTMsgsU eins) msgs;
              tst_tid := ts
           |} ->
-    step_t sys pst (RlblIn (toTMsgU emsg)) nst
+    step_t sys pst (RlblIns (toTMsgsU eins)) nst
+| StOuts: forall ts pst nst oss orqs msgs eouts,
+    eouts <> nil ->
+    Forall (FirstMP msgs) eouts ->
+    ValidMsgsExtOut sys eouts ->
+    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
+    nst = {| tst_oss := oss;
+             tst_orqs := orqs;
+             tst_msgs := removeMsgs eouts msgs;
+             tst_tid := ts
+          |} ->
+    step_t sys pst (RlblOuts eouts) nst
 | StInt: forall ts pst nst nts (Hts: nts > ts) tinfo
-                oss orqs oims oidx os porq pos norq msgs rule outs,
+                oss orqs msgs oidx os porq pos norq ins rule outs,
     oidx = rule_oidx rule ->
     In oidx (indicesOf sys) ->
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
-    Forall (FirstMP oims) msgs ->
-    ValidMsgsIn oidx msgs ->
-    map (fun tmsg => msg_id (tmsg_msg tmsg)) msgs = rule_mids rule ->
+    Forall (FirstMP msgs) ins ->
+    ValidMsgsIn oidx ins ->
+    map (fun tmsg => msg_id (tmsg_msg tmsg)) ins = rule_mids rule ->
     In rule (sys_rules sys) ->
-    rule_precond rule os (map tmsg_msg porq) (map tmsg_msg msgs) ->
-    rule_postcond rule os (map tmsg_msg porq) (map tmsg_msg msgs)
+    rule_precond rule os (map tmsg_msg porq) (map tmsg_msg ins) ->
+    rule_postcond rule os (map tmsg_msg porq) (map tmsg_msg ins)
                   pos (map tmsg_msg norq) outs ->
-    ValidMsgOuts oidx outs ->
+    ValidMsgsOut oidx outs ->
 
-    tinfo = match getTMsgsTInfo msgs with
+    tinfo = match getTMsgsTInfo ins with
             | Some ti => ti
-            | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg msgs |}
+            | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg ins |}
             end ->
 
-    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := oims; tst_tid := ts |} ->
+    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
     nst = {| tst_oss := oss +[ oidx <- pos ];
              tst_orqs := orqs +[ oidx <- norq ];
-             tst_msgs := distributeMsgs
-                           (intOuts sys (toTMsgs tinfo outs))
-                           (removeMsgs msgs oims);
-             tst_tid := match getTMsgsTInfo msgs with
+             tst_msgs := distributeMsgs (toTMsgs tinfo outs) (removeMsgs ins msgs);
+             tst_tid := match getTMsgsTInfo ins with
                         | Some _ => ts
                         | None => nts
                         end
           |} ->
 
-    step_t sys pst (RlblOuts (Some rule) msgs (toTMsgs tinfo outs)) nst.
+    step_t sys pst (RlblInt (Some rule) ins (toTMsgs tinfo outs)) nst.
 
 Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
   forall oidx,
@@ -75,8 +84,9 @@ Definition TStateRel (tst: TState) (st: MState) :=
 
 Definition tToMLabel (tlbl: TLabel) :=
   match tlbl with
-  | RlblIn ein => RlblIn (tmsg_msg ein)
-  | RlblOuts orule mins mouts =>
-    RlblOuts orule (map tmsg_msg mins) (map tmsg_msg mouts)
+  | RlblIns eins => RlblIns (map tmsg_msg eins)
+  | RlblOuts eouts => RlblOuts (map tmsg_msg eouts)
+  | RlblInt orule mins mouts =>
+    RlblInt orule (map tmsg_msg mins) (map tmsg_msg mouts)
   end.
 

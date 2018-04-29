@@ -271,7 +271,81 @@ Proof.
   rewrite H0; reflexivity.
 Qed.
 
-Lemma ValidMsgsIn_getMsg_eq_part_1:
+Lemma WellDistrMsgsIn_NoDup_msgAddrOf:
+  forall mins,
+    WellDistrMsgsIn mins ->
+    NoDup (map msgAddrOf mins).
+Proof.
+  intros; hnf in H.
+  induction mins; simpl; intros; [constructor|].
+  inv H.
+  constructor; auto.
+  intro Hx; elim H2.
+  destruct a as [[[from1 to1 chn1] tid1] val1]; cbn in *.
+  clear -Hx; induction mins; [elim Hx|].
+  inv Hx.
+  - destruct a as [[[from2 to2 chn2] tid2] val2]; cbn in *.
+    inv H; auto.
+  - right; auto.
+Qed.
+
+Lemma WellDistrMsgsOut_NoDup_msgAddrOf:
+  forall mouts,
+    WellDistrMsgsOut mouts ->
+    NoDup (map msgAddrOf mouts).
+Proof.
+  intros; hnf in H.
+  induction mouts; simpl; intros; [constructor|].
+  inv H.
+  constructor; auto.
+  intro Hx; elim H2.
+  destruct a as [[[from1 to1 chn1] tid1] val1]; cbn in *.
+  clear -Hx; induction mouts; [elim Hx|].
+  inv Hx.
+  - destruct a as [[[from2 to2 chn2] tid2] val2]; cbn in *.
+    inv H; auto.
+  - right; auto.
+Qed.
+
+Lemma ValidMsgsOut_ValidMsgsExtIn_DisjList:
+  forall oidx sys,
+    In oidx (sys_inds sys) ->
+    forall eins mouts,
+      ValidMsgsOut oidx mouts ->
+      ValidMsgsExtIn sys eins ->
+      DisjList (map msgAddrOf mouts) (map msgAddrOf eins).
+Proof.
+  intros.
+  destruct H0, H1.
+  clear H2 H3.
+
+  assert (forall ma, In ma (map msgAddrOf mouts) -> isInternal sys (ma_from ma) = true).
+  { intros.
+    clear -H H0 H2; induction mouts; [elim H2|].
+    inv H0; inv H2; auto.
+    dest; unfold isInternal.
+    destruct a as [[[from to chn] tid] val]; simpl; cbn in H0; subst.
+    destruct (_ ?<n _); auto.
+  }
+
+  assert (forall ma, In ma (map msgAddrOf eins) -> isInternal sys (ma_from ma) = false).
+  { intros.
+    clear -H1 H3; induction eins; [elim H3|].
+    inv H1; inv H3; auto.
+    dest.
+    unfold fromExternal in H.
+    destruct a as [[[from to chn] tid] val]; simpl; cbn in *.
+    apply external_not_internal; auto.
+  }
+
+  red; intros.
+  destruct (in_dec msgAddr_dec e (map msgAddrOf mouts)); auto.
+  destruct (in_dec msgAddr_dec e (map msgAddrOf eins)); auto.
+  exfalso; specialize (H2 _ i); specialize (H3 _ i0).
+  congruence.
+Qed.
+
+Lemma ValidMsgsIn_getMsg_eq_from_to:
   forall {MsgT1} `{HasMsg MsgT1} oidx (mins1: list MsgT1),
     Forall
       (fun msg: MsgT1 => mid_to (msg_id (getMsg msg)) = oidx /\
@@ -293,16 +367,14 @@ Proof.
     rewrite <-H4; auto.
 Qed.
 
-Lemma ValidMsgsIn_getMsg_eq_part_2:
+Lemma ValidMsgsIn_getMsg_eq_WellDistrMsgsIn:
   forall {MsgT1} `{HasMsg MsgT1} (mins1: list MsgT1),
-    NoDup (map (fun m: MsgT1 => (mid_from (msg_id (getMsg m)),
-                                 mid_chn (msg_id (getMsg m)))) mins1) ->
+    WellDistrMsgsIn mins1 ->
     forall {MsgT2} `{HasMsg MsgT2} (mins2: list MsgT2),
       map getMsg mins1 = map getMsg mins2 ->
-      NoDup (map (fun m: MsgT2 => (mid_from (msg_id (getMsg m)),
-                                   mid_chn (msg_id (getMsg m)))) mins2).
+      WellDistrMsgsIn mins2.
 Proof.
-  induction mins1; simpl; intros.
+  unfold WellDistrMsgsIn; induction mins1; simpl; intros.
   - apply eq_sym, map_eq_nil in H2; subst.
     constructor.
   - destruct mins2 as [|b mins2]; [discriminate|].
@@ -337,11 +409,51 @@ Lemma ValidMsgsIn_getMsg_eq:
       ValidMsgsIn oidx mins2.
 Proof.
   intros; destruct H0; split.
-  - eapply ValidMsgsIn_getMsg_eq_part_1 in H0; [|eassumption].
+  - eapply ValidMsgsIn_getMsg_eq_from_to in H0; [|eassumption].
     assumption.
-  - eapply ValidMsgsIn_getMsg_eq_part_2 in H3; [|eassumption].
+  - eapply ValidMsgsIn_getMsg_eq_WellDistrMsgsIn in H3; [|eassumption].
     assumption.
 Qed.
+
+Lemma ValidMsgsExtIn_same_indices:
+  forall {SysT} `{IsSystem SysT} (impl1 impl2: SysT),
+    indicesOf impl1 = indicesOf impl2 ->
+    forall {MsgT} `{HasMsg MsgT} (eins: list MsgT),
+      ValidMsgsExtIn impl1 eins ->
+      ValidMsgsExtIn impl2 eins.
+Proof.
+  intros.
+  destruct H2; split; auto.
+  clear H3.
+  induction eins; simpl; [constructor|].
+  inv H2; dest.
+  constructor; auto.
+  split.
+  - unfold fromExternal, isExternal in *.
+    rewrite <-H0; assumption.
+  - unfold toInternal, isInternal in *.
+    rewrite <-H0; assumption.
+Qed.    
+
+Lemma ValidMsgsExtOut_same_indices:
+  forall {SysT} `{IsSystem SysT} (impl1 impl2: SysT),
+    indicesOf impl1 = indicesOf impl2 ->
+    forall {MsgT} `{HasMsg MsgT} (eouts: list MsgT),
+      ValidMsgsExtOut impl1 eouts ->
+      ValidMsgsExtOut impl2 eouts.
+Proof.
+  intros.
+  destruct H2; split; auto.
+  clear H3.
+  induction eouts; simpl; [constructor|].
+  inv H2; dest.
+  constructor; auto.
+  split.
+  - unfold fromInternal, isInternal in *.
+    rewrite <-H0; assumption.
+  - unfold toExternal, isExternal in *.
+    rewrite <-H0; assumption.
+Qed.    
 
 Lemma ValidMsgsIn_MsgAddr_NoDup:
   forall {MsgT} `{HasMsg MsgT} oidx (mins: list MsgT),
@@ -361,9 +473,9 @@ Proof.
   auto.
 Qed.
 
-Lemma ValidMsgOuts_MsgAddr_NoDup:
+Lemma ValidMsgsOut_MsgAddr_NoDup:
   forall {MsgT} `{HasMsg MsgT} oidx (mouts: list MsgT),
-    ValidMsgOuts oidx mouts ->
+    ValidMsgsOut oidx mouts ->
     NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mouts).
 Proof.
   intros; destruct H0.
@@ -393,20 +505,6 @@ Proof.
   simpl in *; destruct Hx; auto.
 Qed.
 
-Lemma firstMP_ValidMsgId:
-  forall from to chn {MsgT} `{HasMsg MsgT} (msg: MsgT) mp,
-    firstMP from to chn mp = Some msg ->
-    ValidMsgId from to chn msg.
-Proof.
-  induction mp; unfold firstMP in *; simpl; intros; [discriminate|].
-  unfold isAddrOf in H0.
-  destruct (msgAddr_dec (mid_addr (msg_id (getMsg a))) (buildMsgAddr from to chn)); auto.
-  simpl in H0; inv H0.
-  unfold ValidMsgId.
-  destruct (getMsg msg) as [mid mv]; destruct mid; simpl in *.
-  subst; auto.
-Qed.
-
 Lemma idx_in_sys_internal:
   forall oidx {SysT} `{IsSystem SysT} (sys: SysT),
     In oidx (indicesOf sys) ->
@@ -418,7 +516,7 @@ Qed.
 
 Lemma step_t_int_internal:
   forall sys st1 orule ins outs st2,
-    step_t sys st1 (RlblOuts orule ins outs) st2 ->
+    step_t sys st1 (RlblInt orule ins outs) st2 ->
     Forall (fun msg => toInternal sys msg = true) ins.
 Proof.
   intros; inv H; [constructor|].
@@ -432,53 +530,9 @@ Proof.
   apply idx_in_sys_internal; auto.
 Qed.
 
-Lemma step_t_outs_from_internal:
-  forall sys st1 ilbl st2,
-    step_t sys st1 ilbl st2 ->
-    Forall (fun m: TMsg => fromInternal sys m = true)
-           (iLblOuts ilbl).
-Proof.
-  intros; inv H; try (constructor; fail).
-  simpl.
-  destruct H10.
-  clear -H H1.
-  induction outs; simpl; intros; [constructor|].
-  inv H; dest.
-  constructor; auto.
-  simpl in H; unfold id in H.
-  unfold fromInternal; simpl; rewrite H.
-  unfold isInternal; find_if_inside; auto.
-Qed.
-
-Lemma extLabel_preserved:
-  forall {SysT1 SysT2} `{IsSystem SysT1} `{IsSystem SysT2}
-         (impl1: SysT1) (impl2: SysT2),
-    indicesOf impl1 = indicesOf impl2 ->
-    forall l,
-      extLabel impl1 l = extLabel impl2 l.
-Proof.
-  intros; destruct l; simpl; [reflexivity|].
-  unfold extOuts, toExternal, isExternal.
-  rewrite H1.
-  reflexivity.
-Qed.
-
-Lemma step_t_in_rules_weakening:
-  forall sys st1 emsg st2,
-    step_t sys st1 (RlblIn emsg) st2 ->
-    forall wsys,
-      indicesOf wsys = indicesOf sys ->
-      step_t wsys st1 (RlblIn emsg) st2.
-Proof.
-  intros; inv H.
-  econstructor; auto.
-  - unfold fromExternal, isExternal in *; rewrite H0; assumption.
-  - unfold toInternal, isInternal in *; rewrite H0; assumption.
-Qed.
-
 Lemma step_t_tid_next:
   forall sys st1 orule ins outs ts st2,
-    step_t sys st1 (RlblOuts orule ins outs) st2 ->
+    step_t sys st1 (RlblInt orule ins outs) st2 ->
     outs <> nil ->
     Forall (fun tmsg => tmsg_info tmsg = None) ins ->
     Forall (fun tmsg => match tmsg_info tmsg with
@@ -514,25 +568,32 @@ Proof.
   destruct H0 as [? [? ?]]; simpl in *.
   inv H.
   - do 2 eexists; repeat econstructor; eauto.
-  - eexists; exists (RlblIn (toTMsgU emsg)).
+  - eexists; exists (RlblIns (toTMsgsU eins)).
     split; [|split].
     + econstructor; eauto.
-    + reflexivity.
+    + simpl; f_equal.
+      clear; induction eins; auto.
+      simpl; rewrite IHeins; reflexivity.
     + repeat split; simpl; auto.
       red in H2; simpl in H2; subst.
       clear; red.
-      apply map_app.
+      unfold distributeMsgs; simpl.
+      rewrite map_app.
+      f_equal.
+      clear; induction eins; auto.
+      simpl; rewrite IHeins; reflexivity.
+  - admit.
   - red in H2; simpl in H2; subst.
     red in H1; simpl in H1.
 
     assert (exists tmsgs,
-               map tmsg_msg tmsgs = msgs /\
+               map tmsg_msg tmsgs = ins /\
                Forall (FirstMP pmsgs) tmsgs).
     { admit. }
     destruct H as [tmsgs [? ?]]; subst.
 
     eexists.
-    eexists (RlblOuts (Some rule) _ _).
+    eexists (RlblInt (Some rule) _ _).
     split; [|split].
     + remember (porqs @[rule_oidx rule]) as oorq.
       destruct oorq as [orq|];
@@ -557,8 +618,8 @@ Proof.
         admit.
     + clear.
       cbn; f_equal.
-      induction outs; simpl; auto.
-      rewrite IHouts; reflexivity.
+      induction iouts; simpl; auto.
+      rewrite IHiouts; reflexivity.
     + split; [|split]; simpl; auto.
       * admit.
       * red; unfold distributeMsgs.
@@ -566,9 +627,8 @@ Proof.
         { apply mmap_removeMsgs.
           intros; reflexivity.
         }
-        { clear; induction outs; simpl; auto.
-          destruct (toInternal _ _); auto.
-          simpl; rewrite IHouts; reflexivity.
+        { clear; induction iouts; simpl; auto.
+          rewrite IHiouts; reflexivity.
         }
         
 Admitted.
@@ -620,8 +680,8 @@ Lemma behaviorOf_app:
     behaviorOf sys hst1 ++ behaviorOf sys hst2.
 Proof.
   induction hst1; simpl; intros; auto.
-  destruct (extLabel sys (getLabel a)); simpl; auto.
-  f_equal; auto.
+  rewrite IHhst1.
+  destruct (getLabel a); reflexivity.
 Qed.
 
 Lemma behaviorOf_preserved:
@@ -632,7 +692,6 @@ Lemma behaviorOf_preserved:
       behaviorOf impl1 hst = behaviorOf impl2 hst.
 Proof.
   induction hst; simpl; intros; [reflexivity|].
-  rewrite extLabel_preserved with (impl4:= impl2) by assumption.
   rewrite IHhst; reflexivity.
 Qed.
 

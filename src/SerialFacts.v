@@ -10,7 +10,7 @@ Set Implicit Arguments.
 Lemma atomic_emptyILabel_not_in:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
-    ~ In emptyRLabel hst.
+    ~ In (emptyRLabel _) hst.
 Proof.
   induction 1; simpl; intros.
   - intro Hx; destruct Hx; [discriminate|auto].
@@ -22,7 +22,7 @@ Lemma atomic_iLblIn_not_in:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall msg,
-      ~ In (RlblIn msg) hst.
+      ~ In (RlblIns [msg]) hst.
 Proof.
   induction 1; simpl; intros; [auto|];
     try (intro Hx; destruct Hx;
@@ -49,7 +49,7 @@ Lemma atomic_tinfo:
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | RlblOuts _ ins outs =>
+                         | RlblInt _ ins outs =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti =>
@@ -126,7 +126,7 @@ Corollary atomic_hst_tinfo:
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
-                         | RlblOuts _ ins outs =>
+                         | RlblInt _ ins outs =>
                            Forall (fun tmsg =>
                                      match tmsg_info tmsg with
                                      | Some hti =>
@@ -286,26 +286,39 @@ Qed.
 Lemma sequential_silent:
   forall sys ll,
     Sequential sys ll ->
-    Sequential sys (emptyRLabel :: ll).
+    Sequential sys (emptyRLabel _ :: ll).
 Proof.
   intros.
   hnf; hnf in H; dest.
-  eexists ([emptyRLabel] :: _); split.
+  eexists ([emptyRLabel _] :: _); split.
   - constructor; [|eassumption].
     constructor.
   - subst; reflexivity.
 Qed.
 
-Lemma sequential_msg_in:
-  forall sys ll emsg,
+Lemma sequential_msg_ins:
+  forall sys ll eins,
     Sequential sys ll ->
-    Sequential sys (RlblIn emsg :: ll).
+    Sequential sys (RlblIns eins :: ll).
 Proof.
   intros.
   hnf; hnf in H; dest.
-  eexists ([RlblIn emsg] :: _); split.
+  eexists ([RlblIns eins] :: _); split.
   - constructor; [|eassumption].
-    econstructor; reflexivity.
+    eapply TrsIns; reflexivity.
+  - subst; reflexivity.
+Qed.
+
+Lemma sequential_msg_outs:
+  forall sys ll eouts,
+    Sequential sys ll ->
+    Sequential sys (RlblOuts eouts :: ll).
+Proof.
+  intros.
+  hnf; hnf in H; dest.
+  eexists ([RlblOuts eouts] :: _); split.
+  - constructor; [|eassumption].
+    eapply TrsOuts; reflexivity.
   - subst; reflexivity.
 Qed.
 
@@ -324,7 +337,7 @@ Qed.
 Lemma serializable_silent:
   forall sys ll,
     Serializable sys ll ->
-    Serializable sys (emptyRLabel :: ll).
+    Serializable sys (emptyRLabel _ :: ll).
 Proof.
   intros.
   hnf; hnf in H; intros; dest.
@@ -337,37 +350,67 @@ Proof.
   - assumption.
 Qed.
 
-Lemma serializable_msg_in:
-  forall sys ll emsg,
+Lemma serializable_msg_ins:
+  forall sys ll eins,
     Serializable sys ll ->
-    fromExternal sys emsg = true ->
-    toInternal sys emsg = true ->
-    Serializable sys (RlblIn (toTMsgU emsg) :: ll).
+    eins <> nil ->
+    ValidMsgsExtIn sys eins ->
+    Serializable sys (RlblIns (toTMsgsU eins) :: ll).
 Proof.
   intros.
   hnf; hnf in H; intros; dest.
   destruct x0 as [oss orqs msgs ts].
-  exists (RlblIn (toTMsgU emsg) :: x); eexists; split.
+  exists (RlblIns (toTMsgsU eins) :: x); eexists; split.
   - destruct H; split.
     + econstructor.
       * eassumption.
       * econstructor; eauto.
-    + apply sequential_msg_in; auto.
+    + apply sequential_msg_ins; auto.
   - hnf; cbn; rewrite H2; reflexivity.
 Qed.
+
+(* Lemma serializable_msg_outs: *)
+(*   forall sys ll eouts, *)
+(*     Serializable sys ll -> *)
+(*     ValidMsgsExtOut sys eouts -> *)
+(*     Serializable sys (RlblOuts eouts :: ll). *)
+(* Proof. *)
+(*   intros. *)
+(*   hnf; hnf in H; intros; dest. *)
+(*   destruct x0 as [oss orqs msgs ts]. *)
+(*   exists (RlblOuts eouts :: x); eexists; split. *)
+(*   - destruct H; split. *)
+(*     + econstructor. *)
+(*       * eassumption. *)
+(*       * econstructor; eauto. *)
+(*     + apply sequential_msg_outs; auto. *)
+(*   - hnf; cbn; rewrite H1; reflexivity. *)
+(* Qed. *)
 
 Lemma serializable_steps_no_rules:
   forall sys,
     sys_rules sys = nil ->
-    forall ll st1 st2,
-      steps step_t sys st1 ll st2 ->
-      Serializable sys ll.
+    forall st1,
+      st1 = initsOf sys ->
+      forall ll st2,
+        steps step_t sys st1 ll st2 ->
+        Serializable sys ll.
 Proof.
-  induction 2; simpl; intros.
+  induction 3; simpl; intros.
   - apply serializable_nil.
-  - inv H1.
+  - specialize (IHsteps H0); subst.
+    inv H2.
     + apply serializable_silent; auto.
-    + apply serializable_msg_in; auto.
+    + apply serializable_msg_ins; auto.
+    + exfalso.
+      eapply behavior_no_rules_NoExtOuts in H1; eauto.
+      red in H1; simpl in H1.
+      destruct eouts as [|eout eouts]; auto.
+      inv H3.
+      destruct H4; inv H2; dest.
+      apply FirstMP_InMP in H6.
+      eapply ForallMP_forall in H1; eauto.
+      congruence.
     + exfalso.
       rewrite H in H9.
       elim H9.

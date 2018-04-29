@@ -95,31 +95,21 @@ Section GivenMsg.
   Section PLabel.
 
     Inductive PLabel :=
-    | PlblIn (min: PMsg): PLabel
-    | PlblOuts (hdl: option PRule) (mins: list PMsg) (mouts: list PMsg): PLabel.
-
-    Definition pLblIns (l: PLabel) :=
+    | PlblIns (mins: list PMsg): PLabel
+    | PlblInt (hdl: option PRule) (mins: list PMsg) (mouts: list PMsg): PLabel
+    | PlblOuts (mouts: list PMsg): PLabel.
+ 
+    Definition pToLabel (l: PLabel): option Label :=
       match l with
-      | PlblIn _ => nil
-      | PlblOuts _ mins _ => mins
-      end.
-
-    Definition pLblOuts (l: PLabel) :=
-      match l with
-      | PlblIn _ => nil
-      | PlblOuts _ _ mouts => mouts
-      end.
-
-    Definition pToLabel (l: PLabel): Label :=
-      match l with
-      | PlblIn min => LblIn (getMsg min)
-      | PlblOuts _ _ mouts => LblOuts (map getMsg mouts)
+      | PlblIns mins => Some (LblIns (map getMsg mins))
+      | PlblInt _ _ _ => None
+      | PlblOuts mouts => Some (LblOuts (map getMsg mouts))
       end.
 
     Global Instance PLabel_HasLabel: HasLabel PLabel :=
       { getLabel := pToLabel }.
 
-    Definition emptyPLabel := PlblOuts None nil nil.
+    Definition emptyPLabel := PlblInt None nil nil.
 
   End PLabel.
 
@@ -170,11 +160,12 @@ End GivenMsg.
 
 Definition pToTLabel (plbl: PLabel TMsg): TLabel :=
   match plbl with
-  | PlblIn min => RlblIn (pmsg_omsg min)
-  | PlblOuts oprule mins mouts =>
-    RlblOuts (lift (@pToRule TMsg) oprule)
-             (map (@pmsg_omsg _) mins)
-             (map (@pmsg_omsg _) mouts)
+  | PlblIns mins => RlblIns (map (@pmsg_omsg _) mins)
+  | PlblInt oprule mins mouts =>
+    RlblInt (lift (@pToRule TMsg) oprule)
+            (map (@pmsg_omsg _) mins)
+            (map (@pmsg_omsg _) mouts)
+  | PlblOuts mouts => RlblOuts (map (@pmsg_omsg _) mouts)
   end.
 
 Definition pToTHistory (phst: PHistory TMsg): THistory :=

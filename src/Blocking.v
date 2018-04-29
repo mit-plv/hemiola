@@ -42,8 +42,8 @@ Definition BlockedInv (tst: TState) :=
 Theorem blocked_SimMP_FirstMP:
   forall ist,
     Blocked ist ->
-    forall msgP sst,
-      SimMP msgP ist sst ->
+    forall (impl: System) msgP sst,
+      SimMP msgP impl ist sst ->
       forall imsg,
         FirstMP ist imsg ->
         forall smsg,
@@ -55,8 +55,8 @@ Admitted.
 Corollary blocked_SimMP_FirstMP_map:
   forall ist,
     Blocked ist ->
-    forall msgP sst,
-      SimMP msgP ist sst ->
+    forall (impl: System) msgP sst,
+      SimMP msgP impl ist sst ->
       forall imsgs,
         Forall (FirstMP ist) imsgs ->
         forall smsgs,
@@ -69,15 +69,21 @@ Proof.
 Qed.
 
 Lemma BlockedInv_MsgInInv:
-  MsgInInv BlockedInv.
+  MsgsInInv BlockedInv.
 Proof.
   hnf; intros.
   hnf; hnf in H; intros.
   cbn in *.
-  apply in_app_or in H0; destruct H0;
-    [|Common.dest_in; discriminate].
-  apply in_app_or in H1; destruct H1;
-    [|Common.dest_in; discriminate].
-  eauto.
+  apply in_app_or in H0; destruct H0.
+  - apply in_app_or in H1; destruct H1.
+    + eauto.
+    + exfalso; clear -H1 H3.
+      induction eins; simpl; auto.
+      inv H1; auto.
+      discriminate.
+  - exfalso; clear -H0 H2.
+    induction eins; simpl; auto.
+    inv H0; auto.
+    discriminate.
 Qed.
 

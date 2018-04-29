@@ -67,7 +67,13 @@ Proof.
     dest_equivM; eexists; split.
     + econstructor; eauto.
     + split_equivM; auto.
-      apply EquivMP_enqMP; auto.
+      apply EquivMP_distributeMsgs; auto.
+  - destruct cst1 as [coss1 corqs1 cmsgs1].
+    dest_equivM; eexists; split.
+    + eapply SmOuts; try reflexivity; eauto.
+      eapply EquivMP_Forall_FirstMP; eauto.
+    + split_equivM; auto.
+      apply EquivMP_removeMsgs; auto.
   - destruct cst1 as [coss1 corqs1 cmsgs1].
     dest_equivM; eexists; split.
     + econstructor; try reflexivity; try eassumption.
@@ -97,124 +103,131 @@ Proof.
     + assumption.
 Qed.
 
-Definition msgAddrOf (msg: Msg) :=
-  mid_addr (msg_id msg).
-
 Definition NonSilentHistory (hst: History) :=
-  Forall (fun lbl => lbl <> emptyRLabel) hst.
+  Forall (fun lbl => lbl <> emptyRLabel _) hst.
 
 Definition NotMsgIn (lbl: MLabel) :=
   match lbl with
-  | RlblIn _ => False
+  | RlblIns _ => False
   | _ => True
   end.
 
 Definition NonMsgInHistory (hst: History) :=
   Forall (fun tlbl => NotMsgIn tlbl) hst.
 
-Lemma msg_in_commutes:
-  forall sys st1 emsg lbl st2,
+Lemma msg_ins_commutes:
+  forall sys st1 eins lbl st2,
     NotMsgIn lbl ->
-    steps step_m sys st1 [RlblIn emsg; lbl] st2 ->
+    steps step_m sys st1 [RlblIns eins; lbl] st2 ->
     forall cst1,
       EquivMState st1 cst1 ->
       exists cst2,
-        steps step_m sys cst1 [lbl; RlblIn emsg] cst2 /\
+        steps step_m sys cst1 [lbl; RlblIns eins] cst2 /\
         EquivMState st2 cst2.
 Proof.
   intros.
-  destruct lbl as [|hdl mins mouts]; [elim H|].
-  destruct cst1 as [coss1 corqs1 cmsgs1].
-  dest_step_m.
-  - eexists; split.
-    + repeat econstructor; eauto.
+  destruct lbl as [|hdl mins mouts|]; [elim H| |].
+  - destruct cst1 as [coss1 corqs1 cmsgs1].
+    dest_step_m.
+    + eexists; split.
+      * econstructor.
+        { econstructor.
+          { econstructor. }
+          { econstructor; eauto. }
+        }
+        { econstructor. }
+      * dest_equivM.
+        repeat split.
+        apply EquivMP_distributeMsgs; auto.
     + dest_equivM.
-      repeat split.
-      apply EquivMP_enqMP; auto.
-  - dest_equivM.
+      eexists; split.
+      * econstructor.
+        { econstructor.
+          { econstructor. }
+          { econstructor; eauto. }
+        }
+        { econstructor; try reflexivity; try eassumption.
+          clear -H4 H10; eapply Forall_impl.
+          { clear; intros; simpl in H.
+            apply FirstMP_distributeMsgs; eassumption.
+          }
+          { eapply Forall_impl; [|eassumption].
+            intros.
+            eapply EquivMP_FirstMP; eauto.
+          }
+        }
+      * repeat split; simpl.
+        rewrite FirstMP_removeMsgs_distributeMsgs_comm.
+        { unfold enqMP, distributeMsgs.
+          do 2 rewrite <-app_assoc.
+          apply EquivMP_app.
+          { apply EquivMP_removeMsgs; auto. }
+          { assert (NoDup (map msgAddrOf mouts)).
+            { eapply ValidMsgsOut_MsgAddr_NoDup in H17; eauto. }
+            assert (NoDup ((map msgAddrOf eins))).
+            { destruct H3.
+              apply WellDistrMsgsIn_NoDup_msgAddrOf; auto.
+            }
+            pose proof (ValidMsgsOut_ValidMsgsExtIn_DisjList H5 H17 H3).
+
+            apply EquivMP_MsgAddr_NoDup_EquivList.
+            { rewrite map_app; apply NoDup_DisjList; auto. }
+            { rewrite map_app; apply NoDup_DisjList; auto.
+              apply DisjList_comm; auto.
+            }
+            { apply EquivList_app_comm. }
+          }
+        }
+        { eapply ValidMsgsIn_MsgAddr_NoDup; eauto. }
+        { eapply EquivMP_Forall_FirstMP; eauto. }
+  - destruct cst1 as [coss1 corqs1 cmsgs1].
+    dest_step_m.
+    dest_equivM.
     eexists; split.
     + econstructor.
-      * repeat econstructor; eauto.
+      * econstructor.
+        { econstructor. }
+        { econstructor; eauto. }
       * econstructor; try reflexivity; try eassumption.
-        clear -H4 H10; eapply Forall_impl.
-        { clear; intros; simpl in H.
-          apply FirstMP_enqMP; eassumption.
-        }
-        { eapply Forall_impl; [|eassumption].
-          intros.
-          eapply EquivMP_FirstMP; eauto.
-        }
+        clear -H3 H7; eapply Forall_impl; [|eassumption].
+        intros; apply FirstMP_distributeMsgs.
+        eapply EquivMP_FirstMP; eauto.
     + repeat split; simpl.
-      rewrite FirstMP_removeMsgs_enqMP_comm.
-      * unfold enqMP, distributeMsgs.
-        do 2 rewrite <-app_assoc.
-        apply EquivMP_app.
-        { apply EquivMP_removeMsgs; auto. }
-        { assert (NoDup (map msgAddrOf (intOuts sys mouts))).
-          { apply NoDup_map_filter.
-            eapply ValidMsgOuts_MsgAddr_NoDup in H17; eauto.
-          }
-          assert (NoDup ((map msgAddrOf [emsg])))
-            by (repeat constructor; auto).
-          assert (DisjList
-                    (map msgAddrOf (intOuts sys mouts))
-                    (map msgAddrOf [emsg])).
-          { assert (mid_from (msg_id emsg) <> rule_oidx rule).
-            { unfold fromExternal, isExternal in H2.
-              simpl in H2; unfold id in H2.
-              intro Hx; rewrite Hx in H2.
-              destruct (rule_oidx rule ?<n sys_inds sys); [discriminate|auto].
-            }
-            destruct H17.
-
-            clear -H7 H8.
-            induction mouts; [apply DisjList_nil_1|].
-            inv H8; specialize (IHmouts H2); dest.
-            unfold DisjList in *; intros.
-            specialize (IHmouts e); destruct IHmouts; auto.
-            destruct (ma_from e ==n rule_oidx rule).
-            { right; intro Hx; Common.dest_in; auto. }
-            { left; intro Hx; simpl in Hx.
-              destruct (toInternal sys _); auto.
-              inv Hx; auto.
-            }
-          }
-
-          apply EquivMP_MsgAddr_NoDup_EquivList.
-          { rewrite map_app; apply NoDup_DisjList; auto. }
-          { rewrite map_app; apply NoDup_DisjList; auto.
-            apply DisjList_comm; auto.
-          }
-          { apply EquivList_app_comm. }
-        }
-      * eapply ValidMsgsIn_MsgAddr_NoDup; eauto.        
-      * eapply EquivMP_Forall_FirstMP; eauto.
+      rewrite FirstMP_removeMsgs_distributeMsgs_comm.
+      { apply EquivMP_distributeMsgs.
+        apply EquivMP_removeMsgs.
+        assumption.
+      }
+      { destruct H4; apply WellDistrMsgsOut_NoDup_msgAddrOf; auto. }
+      { eapply EquivMP_Forall_FirstMP; eauto. }
 Qed.
 
 Lemma msg_in_reduced:
-  forall sys st1 emsg hst2 st2,
-    steps step_m sys st1 (RlblIn emsg :: hst2) st2 ->
+  forall sys st1 eins hst2 st2,
+    steps step_m sys st1 (RlblIns eins :: hst2) st2 ->
     NonMsgInHistory hst2 ->
     forall cst1,
       EquivMState st1 cst1 ->
       exists cst2,
-        steps step_m sys cst1 (hst2 ++ [RlblIn emsg]) cst2 /\
+        steps step_m sys cst1 (hst2 ++ [RlblIns eins]) cst2 /\
         EquivMState st2 cst2.
 Proof.
   induction hst2 as [|lbl ?]; simpl; intros.
   - dest_step_m.
     destruct cst1 as [coss1 corqs1 cmsgs1].
     exists {| bst_oss := coss1; bst_orqs := corqs1;
-              bst_msgs := enqMP emsg cmsgs1 |}; split.
-    + repeat econstructor; eauto.
+              bst_msgs := distributeMsgs eins cmsgs1 |}; split.
+    + econstructor.
+      * econstructor.
+      * econstructor; eauto.
     + dest_equivM; split_equivM; auto.
-      apply EquivMP_enqMP; auto.
+      apply EquivMP_distributeMsgs; auto.
       
   - inv H0.
-    change (RlblIn emsg :: lbl :: hst2) with ([RlblIn emsg; lbl] ++ hst2) in H.
+    change (RlblIns eins :: lbl :: hst2) with ([RlblIns eins; lbl] ++ hst2) in H.
     eapply steps_split in H; [|reflexivity].
     destruct H as [sti [? ?]].
-    eapply msg_in_commutes in H0; [|assumption|apply EquivMState_refl].
+    eapply msg_ins_commutes in H0; [|assumption|apply EquivMState_refl].
     destruct H0 as [cst2 [? ?]].
     pose proof (steps_append H H0); inv H3.
     specialize (IHhst2 _ H9 H5 _ H1).
@@ -227,13 +240,13 @@ Proof.
 Qed.
 
 Lemma msg_in_reduced_app:
-  forall sys st1 hst1 emsg hst2 st2,
-    steps step_m sys st1 (hst1 ++ RlblIn emsg :: hst2) st2 ->
+  forall sys st1 hst1 eins hst2 st2,
+    steps step_m sys st1 (hst1 ++ RlblIns eins :: hst2) st2 ->
     NonMsgInHistory hst2 ->
     forall cst1,
       EquivMState st1 cst1 ->
       exists cst2,
-        steps step_m sys cst1 (hst1 ++ hst2 ++ [RlblIn emsg]) cst2 /\
+        steps step_m sys cst1 (hst1 ++ hst2 ++ [RlblIns eins]) cst2 /\
         EquivMState st2 cst2.
 Proof.
   intros.
@@ -253,42 +266,4 @@ Definition NonInterfering (rule1 rule2: Rule)
   rule_oidx rule1 <> rule_oidx rule2 /\
   DisjList (map msgAddrOf mins1) (map msgAddrOf mins2) /\
   DisjList (map msgAddrOf mouts1) (map msgAddrOf mins2).
-
-Lemma msg_outs_commutes:
-  forall sys st1 rule1 mins1 mouts1 rule2 mins2 mouts2 st2,
-    steps step_m sys st1 [RlblOuts (Some rule1) mins1 mouts1;
-                            RlblOuts (Some rule2) mins2 mouts2] st2 ->
-    NonInterfering rule1 rule2 mins1 mins2 mouts1 mouts2 ->
-    forall cst1,
-      EquivMState st1 cst1 ->
-      exists cst2,
-        steps step_m sys cst1 [RlblOuts (Some rule2) mins2 mouts2;
-                                 RlblOuts (Some rule1) mins1 mouts1] cst2 /\
-        EquivMState st2 cst2.
-Proof.
-  intros.
-  destruct cst1 as [coss1 corqs1 cmsgs1].
-  dest_step_m.
-  dest_equivM.
-  destruct H0 as [? [? ?]].
-  eexists; split.
-  - econstructor.
-    + econstructor.
-      * econstructor.
-      * econstructor; try reflexivity; try eassumption.
-        { findeq. }
-        { findeq. }
-        { admit. }
-    + econstructor; try reflexivity; try eassumption.
-      { findeq. }
-      { findeq. }
-      { admit. }
-  - split_equivM.
-    + meq.
-    + meq.
-    + admit.
-        
-Admitted.
-
-
 

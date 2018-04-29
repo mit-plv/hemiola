@@ -13,50 +13,76 @@ Definition extOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
   filter (fun m => toExternal sys m) outs.
 
 Section Validness.
+  Context {MsgT} `{HasMsg MsgT}.
 
-  Definition ValidMsgId (from to chn: IdxT) {MsgT} `{HasMsg MsgT} (msg: MsgT) :=
-    mid_addr (msg_id (getMsg msg)) = buildMsgAddr from to chn.
+  (* A set of "incoming" messages are "well-distributed" iff
+   * all sources (pair of [mid_from] and [mid_chn]) are different from 
+   * each others. 
+   *)
+  Definition WellDistrMsgsIn (msgs: list MsgT) :=
+    NoDup (map (fun m => (mid_from (msg_id (getMsg m)),
+                          mid_chn (msg_id (getMsg m)))) msgs).
+
+  (* A set of "outgoing" messages are "well-distributed" iff
+   * all targets (pair of [mid_to] and [mid_chn]) are different from 
+   * each others. 
+   *)
+  Definition WellDistrMsgsOut (msgs: list MsgT) :=
+    NoDup (map (fun m => (mid_to (msg_id (getMsg m)),
+                          mid_chn (msg_id (getMsg m)))) msgs).
 
   (* A set of messages are "valid inputs" iff
    * 1) they have the same target [oidx],
    * 2) each source is not the target, and
-   * 3) all sources (pair of msgTo and channel) are different from each others.
+   * 3) they are well-distributed.
    *)
-  Definition ValidMsgsIn (oidx: IdxT) {MsgT} `{HasMsg MsgT}
-             (msgs: list MsgT) :=
+  Definition ValidMsgsIn (oidx: IdxT) (msgs: list MsgT) :=
     Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx /\
                        mid_from (msg_id (getMsg msg)) <> oidx) msgs /\
-    NoDup (map (fun m => (mid_from (msg_id (getMsg m)), mid_chn (msg_id (getMsg m)))) msgs).
+    WellDistrMsgsIn msgs.
 
   (* A set of messages are "valid outputs" iff
-   * 1) they are from the same source [idx],
+   * 1) they are from the same source [oidx],
    * 2) each target is not the source, and
-   * 3) all targets (pair of msgTo and channel) are different from each others.
+   * 3) they are well-distributed.
    *)
-  Definition ValidMsgOuts (oidx: IdxT) {MsgT} `{HasMsg MsgT} (msgs: list MsgT) :=
+  Definition ValidMsgsOut (oidx: IdxT) (msgs: list MsgT) :=
     Forall (fun m => mid_from (msg_id (getMsg m)) = oidx /\
                      mid_to (msg_id (getMsg m)) <> oidx) msgs /\
-    NoDup (map (fun m => (mid_to (msg_id (getMsg m)), mid_chn (msg_id (getMsg m)))) msgs).
+    WellDistrMsgsOut msgs.
+
+  Context {SysT} `{IsSystem SysT}.
+  
+  (* A set of messages are "valid external inputs" iff
+   * 1) each source is external,
+   * 2) each target is internal, and
+   * 3) they are well-distributed.
+   *)
+  Definition ValidMsgsExtIn (sys: SysT) (msgs: list MsgT) :=
+    Forall (fun msg => fromExternal sys msg = true /\
+                       toInternal sys msg = true) msgs /\
+    WellDistrMsgsIn msgs.
+
+  (* A set of messages are "valid external outputs" iff
+   * 1) each source is internal,
+   * 2) each target is external, and
+   * 3) they are well-distributed.
+   *)
+  Definition ValidMsgsExtOut (sys: SysT) (msgs: list MsgT) :=
+    Forall (fun msg => fromInternal sys msg = true /\
+                       toExternal sys msg = true) msgs /\
+    WellDistrMsgsOut msgs.
 
 End Validness.
 
 Section HasLabel.
 
   Inductive Label :=
-  | LblIn (min: Msg): Label
+  | LblIns (mins: list Msg): Label
   | LblOuts (mouts: list Msg): Label.
 
   Class HasLabel (LabelT: Type) :=
-    { getLabel: LabelT -> Label }.
-
-  Definition emptyLabel := LblOuts nil.
-
-  Definition isEmptyLabel: forall l, {l = emptyLabel} + {l <> emptyLabel}.
-  Proof.
-    destruct l; [right; discriminate|].
-    destruct mouts; [|right; discriminate].
-    left; reflexivity.
-  Defined.
+    { getLabel: LabelT -> option Label }.
 
 End HasLabel.
 
@@ -87,23 +113,13 @@ Section Transition.
     steps step sys st1 ll st2 /\
     P st1 ll st2.
 
-  Definition extLabel {SysT} `{IsSystem SysT} (sys: SysT) (l: Label) :=
-    match l with
-    | LblIn _ => Some l
-    | LblOuts mouts =>
-      match extOuts sys mouts with
-      | nil => None
-      | _ => Some (LblOuts (extOuts sys mouts))
-      end
-    end.
-
   Definition Trace := list Label.
 
   Fixpoint behaviorOf {SysT} `{IsSystem SysT} (sys: SysT)
            {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
     match ll with
     | nil => nil
-    | l :: ll' => (extLabel sys (getLabel l)) ::> (behaviorOf sys ll')
+    | l :: ll' => (getLabel l) ::> (behaviorOf sys ll')
     end.
 
   Inductive Behavior {SysT StateT LabelT}
@@ -160,34 +176,25 @@ Definition MState := BState Msg.
  * is being handled now.
  *)
 Section RLabel.
+  Variable MsgT: Type.
+  Context `{HasMsg MsgT}.
 
-  Inductive RLabel MsgT :=
-  | RlblIn (min: MsgT): RLabel MsgT
-  | RlblOuts (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): RLabel MsgT.
+  Inductive RLabel :=
+  | RlblIns (mins: list MsgT): RLabel
+  | RlblInt (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): RLabel
+  | RlblOuts (mouts: list MsgT): RLabel.
 
-  Definition iLblIns {MsgT} (l: RLabel MsgT) :=
+  Definition emptyRLabel := RlblInt None nil nil.
+  
+  Definition rToLabel (l: RLabel): option Label :=
     match l with
-    | RlblIn _ => nil
-    | RlblOuts _ mins _ => mins
+    | RlblIns mins => Some (LblIns (map getMsg mins))
+    | RlblInt _ _ _ => None
+    | RlblOuts mouts => Some (LblOuts (map getMsg mouts))
     end.
 
-  Definition iLblOuts {MsgT} (l: RLabel MsgT) :=
-    match l with
-    | RlblIn _ => nil
-    | RlblOuts _ _ mouts => mouts
-    end.
-
-  Definition iToLabel {MsgT} `{HasMsg MsgT}
-             (l: RLabel MsgT): Label :=
-    match l with
-    | RlblIn min => LblIn (getMsg min)
-    | RlblOuts _ _ mouts => LblOuts (map getMsg mouts)
-    end.
-
-  Global Instance RLabel_HasLabel {MsgT} `{HasMsg MsgT}: HasLabel (RLabel MsgT) :=
-    { getLabel := iToLabel }.
-
-  Definition emptyRLabel {MsgT} := RlblOuts (MsgT:= MsgT) None nil nil.
+  Global Instance RLabel_HasLabel: HasLabel RLabel :=
+    { getLabel := rToLabel }.
 
 End RLabel.
 
@@ -235,6 +242,7 @@ Section TMsg.
   Definition toTMsgs tinfo msgs := map (toTMsg tinfo) msgs.
 
   Definition toTMsgU m := {| tmsg_msg := m; tmsg_info := None |}.
+  Definition toTMsgsU msgs := map toTMsgU msgs.
 
   Global Instance TMsg_HsgMsg : HasMsg TMsg :=
     { getMsg := tmsg_msg }.
