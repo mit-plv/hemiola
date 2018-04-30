@@ -345,66 +345,18 @@ Proof.
   - apply in_or_app; right; eauto.
 Qed.
 
-Lemma steps_simulation_no_rules:
-  forall (sim: TState -> TState -> Prop) msgF impl spec,
-    ValidMsgMap msgF impl spec ->
-    MsgsInSim msgF sim ->
-    MsgsOutSim (liftMsgP msgF) sim ->
-    sys_rules impl = nil ->
-    forall ist1 sst1,
-      sim ist1 sst1 ->
-      NoExtOuts impl ist1 ->
-      forall ihst ist2,
-        steps step_t impl ist1 ihst ist2 ->
-        exists (sst2 : TState) (shst : list TLabel),
-          steps step_t spec sst1 shst sst2 /\
-          map (LabelMap msgF) (behaviorOf impl ihst) = behaviorOf spec shst /\
-          sim ist2 sst2.
-Proof.
-  induction 7; simpl; intros;
-    [do 2 eexists; repeat split; [constructor|reflexivity|assumption]|].
-
-  specialize (IHsteps H3 H4); dest.
-  inv H6.
-  - do 2 eexists; repeat split; eauto.
-  - destruct x as [noss norqs nmsgs ntid].
-    do 2 eexists; repeat split.
-    + eapply StepsCons.
-      * eassumption.
-      * eapply StIns; try reflexivity.
-        { instantiate (1:= map msgF eins).
-          destruct eins; [exfalso; auto|discriminate].
-        }
-        { eapply validMsgMap_ValidMsgsExtIn; eauto. }
-    + simpl; rewrite <-H8; repeat f_equal.
-      clear; induction eins; simpl; auto.
-      rewrite IHeins; reflexivity.
-    + apply H0; auto.
-  - exfalso.
-    eapply steps_t_no_rules_NoExtOuts in H5; eauto.
-    hnf in H5; simpl in H5.
-    destruct eouts as [|eout eouts]; auto.
-    inv H11.
-    apply FirstMP_InMP in H14.
-    eapply Forall_forall in H5; eauto.
-    destruct H12; inv H6; dest.
-    congruence.
-  - exfalso.
-    rewrite H2 in H17; elim H17.
-Qed.
-
 Lemma TrsSimulates_no_rules:
   forall sim msgF ginv impl spec,
     ValidMsgMap msgF impl spec ->
     MsgsInSim msgF sim ->
-    MsgsOutSim (liftMsgP msgF) sim ->
+    MsgsOutSim impl (liftMsgP msgF) sim ->
+    ImpliesSimMP impl msgF sim ->
     sys_rules impl = nil ->
-    (ginv ->i NoExtOuts impl) ->
     TrsSimulates sim ginv (LabelMap msgF) impl spec.
 Proof.
   intros; hnf; intros.
   inv H6.
-  eapply steps_simulation_no_rules; eauto.
+  eapply steps_simulation_BlockedInv_SimMP_no_rules; eauto.
 Qed.
 
 Section Compositionality.

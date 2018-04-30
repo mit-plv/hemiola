@@ -175,6 +175,34 @@ Section Facts.
     apply SubList_cons; auto.
   Qed.
 
+  Lemma InMP_deqMP:
+    forall msg from to chn mp,
+      InMP msg (deqMP from to chn mp) ->
+      InMP msg mp.
+  Proof.
+    induction mp; simpl; intros; auto.
+    destruct (isAddrOf _ _ _ _); auto.
+    inv H0; auto.
+  Qed.
+
+  Lemma InMP_removeMP:
+    forall msg rmsg mp,
+      InMP msg (removeMP rmsg mp) ->
+      InMP msg mp.
+  Proof.
+    unfold removeMP; intros.
+    eapply InMP_deqMP; eauto.
+  Qed.
+
+  Lemma InMP_removeMsgs:
+    forall msg rmsgs mp,
+      InMP msg (removeMsgs rmsgs mp) ->
+      InMP msg mp.
+  Proof.
+    induction rmsgs; simpl; intros; auto.
+    eapply InMP_removeMP; eauto.
+  Qed.
+
   Lemma ForallMP_forall:
     forall P mp,
       ForallMP P mp <->

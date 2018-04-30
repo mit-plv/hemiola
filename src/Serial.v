@@ -89,21 +89,20 @@ Definition SerializableSys (sys: System) :=
  * that ensures [SerializableSys] 
  *)
 
-Definition TotallyBlockingPrec: RPrecond :=
-  fun ost orq ins =>
-    SubList (map (fun msg => mid_tid (msg_id msg)) ins)
-            (map (fun msg => mid_tid (msg_id msg)) orq).
+(* Definition TotallyBlockingPrec: RPrecond := *)
+(*   fun ost orq ins => *)
+(*     SubList (map (fun msg => mid_tid (msg_id msg)) ins) *)
+(*             (map (fun msg => mid_tid (msg_id msg)) orq). *)
 
-Definition TotallyBlockingRule (rule: Rule) :=
-  (rule_precond rule) ->rprec TotallyBlockingPrec.
+(* Definition TotallyBlockingRule (rule: Rule) := *)
+(*   (rule_precond rule) ->rprec TotallyBlockingPrec. *)
 
-Definition TotallyBlockingSys (sys: System) :=
-  Forall TotallyBlockingRule (sys_rules sys).
+(* Definition TotallyBlockingSys (sys: System) := *)
+(*   Forall TotallyBlockingRule (sys_rules sys). *)
 
-Theorem TotallyBlockingSys_SerializableSys:
-  forall sys, TotallyBlockingSys sys -> SerializableSys sys.
-Proof.
-  unfold SerializableSys, Serializable; intros.
-  eexists; exists st; split; [split|].
-Admitted.
+(* Theorem TotallyBlockingSys_SerializableSys: *)
+(*   forall sys, TotallyBlockingSys sys -> SerializableSys sys. *)
+(* Proof. *)
+(*   unfold SerializableSys, Serializable; intros. *)
+(*   eexists; exists st; split; [split|]. *)
   

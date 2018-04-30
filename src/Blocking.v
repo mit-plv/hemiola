@@ -3,6 +3,8 @@ Require Import List.
 Require Import Common.
 Require Import Syntax Semantics StepT Invariant Simulation.
 
+Set Implicit Arguments.
+
 (* Below we describe a semantic interpretation of a system which has a
  * blocking property.
  *
@@ -39,12 +41,13 @@ Definition BlockedInv (tst: TState) :=
  * [MessagePool]. And those messages are the oldest ones for each channel,
  * which are mapped to the "first" message in spec.
  *)
-Theorem blocked_SimMP_FirstMP:
+Theorem blocked_int_SimMP_FirstMP:
   forall ist,
     Blocked ist ->
     forall (impl: System) msgP sst,
       SimMP msgP impl ist sst ->
       forall imsg,
+        toInternal impl imsg = true ->
         FirstMP ist imsg ->
         forall smsg,
           smsg = deinitialize msgP imsg ->
@@ -58,32 +61,40 @@ Corollary blocked_SimMP_FirstMP_map:
     forall (impl: System) msgP sst,
       SimMP msgP impl ist sst ->
       forall imsgs,
+        Forall (fun msg => toInternal impl msg = true) imsgs ->
         Forall (FirstMP ist) imsgs ->
         forall smsgs,
           smsgs = deinitializeMP msgP imsgs ->
           Forall (FirstMP sst) smsgs.
 Proof.
   induction imsgs; intros; subst; [constructor|].
-  inv H1; constructor; eauto.
-  eapply blocked_SimMP_FirstMP; eauto.
+  inv H1; inv H2; constructor; eauto.
+  eapply blocked_int_SimMP_FirstMP; eauto.
 Qed.
 
-Lemma BlockedInv_MsgInInv:
-  MsgsInInv BlockedInv.
+Lemma BlockedInv_MsgsInv:
+  MsgsInv BlockedInv.
 Proof.
-  hnf; intros.
-  hnf; hnf in H; intros.
-  cbn in *.
-  apply in_app_or in H0; destruct H0.
-  - apply in_app_or in H1; destruct H1.
-    + eauto.
-    + exfalso; clear -H1 H3.
+  split.
+  - hnf; intros.
+    hnf; hnf in H; intros.
+    cbn in *.
+    apply in_app_or in H0; destruct H0.
+    + apply in_app_or in H1; destruct H1.
+      * eauto.
+      * exfalso; clear -H1 H3.
+        induction eins; simpl; auto.
+        inv H1; auto.
+        discriminate.
+    + exfalso; clear -H0 H2.
       induction eins; simpl; auto.
-      inv H1; auto.
+      inv H0; auto.
       discriminate.
-  - exfalso; clear -H0 H2.
-    induction eins; simpl; auto.
-    inv H0; auto.
-    discriminate.
+  - hnf; intros.
+    hnf; hnf in H; intros.
+    cbn in *.
+    apply InMP_removeMsgs in H0.
+    apply InMP_removeMsgs in H1.
+    eauto.
 Qed.
 

@@ -33,8 +33,8 @@ Ltac constr_sim_mp :=
 
          | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
            apply SimMP_ext_msg_immediate_out; auto
-         | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
-           eapply SimMP_response_back_ext_out; eauto; repeat constructor
+         (* | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] => *)
+         (*   eapply SimMP_response_back_ext_out; eauto; repeat constructor *)
          | [ |- SimMP _ (distributeMsgs _ (removeMP ?emsg _)) _ ] =>
            let Hchk := fresh "Hchk" in
            assert (tmsg_info emsg = None) as Hchk by reflexivity; clear Hchk;
@@ -121,7 +121,7 @@ Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=
   repeat split;
   [|assumption (* simulation relation should be maintained *)
    |assumption
-   |simpl; apply SimMP_ext_msg_in; auto];
+   |simpl; apply SimMP_ext_msg_ins; auto];
   repeat econstructor;
   unfold fromExternal, toInternal in *;
   repeat
@@ -866,7 +866,7 @@ Ltac sim_spec_constr_step_t :=
          | [ |- Forall _ (_ :: _)] => constructor
          | [ |- Forall _ nil] => constructor
          | [ |- FirstMP _ _] =>
-           eapply blocked_SimMP_FirstMP; eauto;
+           eapply blocked_int_SimMP_FirstMP; eauto;
            [apply pmsg_omsg_FirstMP; eassumption|reflexivity]
          | [ |- ValidMsgsIn _ _] => repeat constructor
          | [ |- ValidMsgsOut _ _] => repeat constructor

@@ -122,10 +122,6 @@ End Predicates.
 
 Section Sim.
   Variables extIdx1 extIdx2: nat.
-  Hypotheses (Hiext1: isExternal impl0 extIdx1 = true)
-             (Hiext2: isExternal impl0 extIdx2 = true)
-             (Hsext1: isExternal (spec extIdx1 extIdx2) extIdx1 = true)
-             (Hsext2: isExternal (spec extIdx1 extIdx2) extIdx2 = true).
 
   Local Notation spec := (spec extIdx1 extIdx2).
 
@@ -173,11 +169,11 @@ Section Sim.
     exists sorq,
       sorqs@[specIdx] = Some sorq.
 
-  Definition SvmSim (tinds: list IdxT): TState -> TState -> Prop :=
+  Definition SvmSim {SysT} `{IsSystem SysT} (impl: SysT): TState -> TState -> Prop :=
     fun ist sst =>
-      SvmR tinds (tst_oss ist) (tst_oss sst) /\
+      SvmR (indicesOf impl) (tst_oss ist) (tst_oss sst) /\
       SvmSpecORqs (tst_orqs sst) /\
-      SimMP svmMsgF (tst_msgs ist) (tst_msgs sst).
+      SimMP svmMsgF impl (tst_msgs ist) (tst_msgs sst).
 
   Section Facts.
 
@@ -185,40 +181,61 @@ Section Sim.
       ValidMsgMap svmMsgF impl0 spec.
     Proof.
       unfold ValidMsgMap; intros.
-      unfold svmMsgF; simpl.
-      unfold svmIdxF, fromInternal, toInternal, isInternal.
-      unfold impl0.
-      split.
-      - find_if_inside.
-        + Common.dest_in; cbn in *.
-          * unfold id in H; rewrite <-H; reflexivity.
-          * unfold id in H0; rewrite <-H0; reflexivity.
-          * unfold id in H; rewrite <-H; reflexivity.
-        + find_if_inside; auto.
-          elim n; clear n.
-          Common.dest_in.
-          cbn in *.
-          unfold svmIdxF in H.
-          find_if_inside; auto.
-      - find_if_inside.
-        + Common.dest_in; cbn in *.
-          * unfold id in H; rewrite <-H; auto.
-          * unfold id in H0; rewrite <-H0; auto.
-          * unfold id in H; rewrite <-H; auto.
-        + find_if_inside; auto.
-          elim n; clear n.
-          Common.dest_in.
-          cbn in *.
-          unfold svmIdxF in H.
-          find_if_inside; auto.
-    Qed.
+      split; [|split].
+      - unfold svmMsgF; simpl.
+        unfold svmIdxF, fromInternal, toInternal, isInternal.
+        unfold impl0.
+        split.
+        + find_if_inside.
+          * Common.dest_in; cbn in *.
+            { unfold id in H; rewrite <-H; reflexivity. }
+            { unfold id in H0; rewrite <-H0; reflexivity. }
+            { unfold id in H; rewrite <-H; reflexivity. }
+          * find_if_inside; auto.
+            elim n; clear n.
+            Common.dest_in.
+            cbn in *.
+            unfold svmIdxF in H.
+            find_if_inside; auto.
+        + find_if_inside.
+          * Common.dest_in; cbn in *.
+            { unfold id in H; rewrite <-H; auto. }
+            { unfold id in H0; rewrite <-H0; auto. }
+            { unfold id in H; rewrite <-H; auto. }
+          * find_if_inside; auto.
+            elim n; clear n.
+            Common.dest_in.
+            cbn in *.
+            unfold svmIdxF in H.
+            find_if_inside; auto.
+      - admit.
+      - admit.
+    Admitted.
 
     Lemma SvmSim_init:
-      SvmSim implIndices (initsOf impl0) (initsOf spec).
+      SvmSim impl0 (initsOf impl0) (initsOf spec).
     Proof.
       repeat esplit.
       right; repeat econstructor;
         cbn; intros; inv H; cbn; reflexivity.
+    Qed.
+
+    Lemma SvmSim_MsgsInSim:
+      MsgsInSim svmMsgF (SvmSim impl0).
+    Proof.
+      hnf; intros.
+      hnf in *; cbn in *; dest.
+      split; [|split]; auto.
+      apply SimMP_ext_msg_ins; auto.
+    Qed.
+      
+    Lemma SvmSim_MsgsOutSim:
+      MsgsOutSim impl0 (liftMsgP svmMsgF) (SvmSim impl0).
+    Proof.
+      hnf; intros.
+      hnf; hnf in H0; cbn in *; dest.
+      split; [|split]; auto.
+      apply SimMP_ext_msg_outs; auto.
     Qed.
 
     Lemma SvmInvs_init:
@@ -231,24 +248,38 @@ Section Sim.
 
     (*! Correctness of the initial system *)
 
-    Theorem impl0_ok: SynthOk spec (SvmSim implIndices) SvmInvs svmP impl0.
+    Theorem impl0_synth_ok:
+      SynthOk spec (SvmSim impl0) SvmInvs svmP impl0.
     Proof.
       synthOk_init.
       - apply SvmSim_init.
       - apply SvmInvs_init.
       - split.
-        + apply TrsSimulates_no_rules; [| |reflexivity].
+        + apply TrsSimulates_no_rules.
           * apply svmMsgF_ValidMsgMap.
           * hnf; intros.
-            destruct H; destruct H0.
-            simpl in *.
+            hnf; hnf in H; cbn in *; dest.
             repeat split; simpl; auto.
-            apply SimMP_ext_msg_in; auto.
+            apply SimMP_ext_msg_ins; auto.
+          * hnf; intros.
+            hnf; hnf in H0; cbn in *; dest.
+            repeat split; simpl; auto.
+            apply SimMP_ext_msg_outs; auto.
+          * hnf; intros.
+            hnf in H; dest; auto.
+          * reflexivity.
         + apply InvStep_no_rules; [|reflexivity].
-          apply MsgInInv_invAnd.
-          * apply BlockedInv_MsgInInv.
-          * apply ValidTidState_MsgInInv.
-      - apply serializable_no_rules; auto.
+          apply MsgsInv_invAnd.
+          * apply BlockedInv_MsgsInv.
+          * apply ValidTidState_MsgsInv.
+      - apply serializable_no_rules; reflexivity.
+    Qed.
+
+    Theorem impl0_ok:
+      (steps step_t) # (steps step_t) |-- impl0 <=[ svmP ] spec.
+    Proof.
+      eapply synthOk_refinement.
+      eapply impl0_synth_ok.
     Qed.
     
   End Facts.

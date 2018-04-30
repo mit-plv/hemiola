@@ -20,7 +20,7 @@ Section Impl.
   Local Definition svmMsgIdF := svmMsgIdF extIdx1.
   Local Definition svmMsgF := svmMsgF extIdx1.
   Local Definition svmP := svmP extIdx1.
-  Local Definition SvmSim := SvmSim extIdx1 implIndices.
+  Local Definition SvmSim := SvmSim extIdx1 impl0.
 
   (*! Customized reduction and construction tactics *)
 
@@ -92,10 +92,10 @@ Section Impl.
   Definition svmSynTrs0:
     { impl1: System | SynthOk spec SvmSim SvmInvs svmP impl1 }.
   Proof.
-    syn_step_init impl0 (impl0_ok extIdx1 extIdx2).
+    syn_step_init impl0 (impl0_synth_ok extIdx1 extIdx2).
 
     - (** Simulation and preservation of global invariants. *)
-      trs_sim_init (impl0_ok extIdx1 extIdx2).
+      trs_sim_init (impl0_synth_ok extIdx1 extIdx2).
 
       + (** [TrsSimulates] for newly added [Rule]s *)
         trs_simulates_trivial svmMsgF svmMsgF_ValidMsgMap SvmSim.

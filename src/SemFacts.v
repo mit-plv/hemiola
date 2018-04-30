@@ -453,7 +453,7 @@ Proof.
     rewrite <-H0; assumption.
   - unfold toExternal, isExternal in *.
     rewrite <-H0; assumption.
-Qed.    
+Qed.
 
 Lemma ValidMsgsIn_MsgAddr_NoDup:
   forall {MsgT} `{HasMsg MsgT} oidx (mins: list MsgT),
