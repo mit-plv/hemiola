@@ -12,8 +12,24 @@ Definition extOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
            (sys: SysT) (outs: list MsgT) :=
   filter (fun m => toExternal sys m) outs.
 
+Ltac unfold_idx :=
+  cbv [intOuts extOuts
+       isInternal isExternal
+       fromInternal fromExternal
+       toInternal toExternal
+       maFromInternal maFromExternal
+       maToInternal maToExternal
+       msgAddrOf mid_from mid_to mid_chn id] in *;
+  intros.
+
 Section Validness.
   Context {MsgT} `{HasMsg MsgT}.
+
+  (* A set of messages are "well-distributed" iff the addresses of
+   * all messages are different from each others.
+   *)
+  Definition WellDistrMsgs (msgs: list MsgT) :=
+    NoDup (map (fun m => msgAddrOf (getMsg m)) msgs).
 
   (* A set of "incoming" messages are "well-distributed" iff
    * all sources (pair of [mid_from] and [mid_chn]) are different from 
@@ -61,7 +77,7 @@ Section Validness.
   Definition ValidMsgsExtIn (sys: SysT) (msgs: list MsgT) :=
     Forall (fun msg => fromExternal sys msg = true /\
                        toInternal sys msg = true) msgs /\
-    WellDistrMsgsIn msgs.
+    WellDistrMsgs msgs.
 
   (* A set of messages are "valid external outputs" iff
    * 1) each source is internal,
@@ -71,7 +87,7 @@ Section Validness.
   Definition ValidMsgsExtOut (sys: SysT) (msgs: list MsgT) :=
     Forall (fun msg => fromInternal sys msg = true /\
                        toExternal sys msg = true) msgs /\
-    WellDistrMsgsOut msgs.
+    WellDistrMsgs msgs.
 
 End Validness.
 
@@ -250,9 +266,9 @@ Section TMsg.
   Definition TLabel := RLabel TMsg.
   Definition THistory := list TLabel.
 
-  Definition liftMsgP (msgP: Msg -> Msg): TMsg -> TMsg :=
+  Definition liftTmap (mmap: Msg -> Msg): TMsg -> TMsg :=
     fun tmsg =>
-      {| tmsg_msg := msgP (tmsg_msg tmsg);
+      {| tmsg_msg := mmap (tmsg_msg tmsg);
          tmsg_info := tmsg_info tmsg
       |}.
 

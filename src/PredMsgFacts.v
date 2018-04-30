@@ -104,7 +104,7 @@ Section GivenMsg.
               (map tmsg_msg (map (@pmsg_omsg _) msgs)).
   Proof.
     induction msgs; simpl; intros; [reflexivity|].
-    unfold toExternal.
+    unfold toExternal, maToExternal.
     rewrite pToSystem_isExternal, IHmsgs.
     reflexivity.
   Qed.
@@ -177,10 +177,9 @@ Proof.
     constructor; auto.
 
     destruct a as [[msg oti] pred]; simpl in *.
-    destruct oti; dest;
-      unfold fromInternal, fromExternal in *; simpl in *; subst.
-    + rewrite internal_not_external; auto.
-    + unfold id; rewrite H0; auto.
+    destruct oti; dest; simpl in *; unfold_idx; subst.
+    + destruct (ma_from _ ?<n _); congruence.
+    + destruct (ma_from _ ?<n _); [congruence|auto].
 
   - clear -H0.
     induction mouts; [constructor|].

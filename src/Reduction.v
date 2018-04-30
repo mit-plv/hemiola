@@ -165,9 +165,7 @@ Proof.
           { assert (NoDup (map msgAddrOf mouts)).
             { eapply ValidMsgsOut_MsgAddr_NoDup in H17; eauto. }
             assert (NoDup ((map msgAddrOf eins))).
-            { destruct H3.
-              apply WellDistrMsgsIn_NoDup_msgAddrOf; auto.
-            }
+            { destruct H3; assumption. }
             pose proof (ValidMsgsOut_ValidMsgsExtIn_DisjList H5 H17 H3).
 
             apply EquivMP_MsgAddr_NoDup_EquivList.
@@ -198,7 +196,7 @@ Proof.
         apply EquivMP_removeMsgs.
         assumption.
       }
-      { destruct H4; apply WellDistrMsgsOut_NoDup_msgAddrOf; auto. }
+      { destruct H4; assumption. }
       { eapply EquivMP_Forall_FirstMP; eauto. }
 Qed.
 

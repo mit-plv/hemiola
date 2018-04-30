@@ -236,7 +236,7 @@ Section System.
       extOuts sys (map getMsg mouts) = nil.
   Proof.
     induction mouts; simpl; intros; [reflexivity|].
-    inv H0; unfold id, toExternal in *.
+    inv H0; unfold id, toExternal, maToExternal in *.
     rewrite internal_not_external by assumption; auto.
   Qed.
 
@@ -258,7 +258,7 @@ Lemma extOuts_same_indicesOf:
     indicesOf sys1 = indicesOf sys2 ->
     extOuts sys1 msgs = extOuts sys2 msgs.
 Proof.
-  unfold extOuts, toExternal, isExternal; intros.
+  unfold_idx.
   rewrite H0; reflexivity.
 Qed.
 
@@ -267,7 +267,7 @@ Lemma intOuts_same_indicesOf:
     indicesOf sys1 = indicesOf sys2 ->
     intOuts sys1 msgs = intOuts sys2 msgs.
 Proof.
-  unfold intOuts, toInternal, isInternal; intros.
+  unfold_idx.
   rewrite H0; reflexivity.
 Qed.
 
@@ -429,9 +429,9 @@ Proof.
   inv H2; dest.
   constructor; auto.
   split.
-  - unfold fromExternal, isExternal in *.
+  - unfold_idx.
     rewrite <-H0; assumption.
-  - unfold toInternal, isInternal in *.
+  - unfold_idx.
     rewrite <-H0; assumption.
 Qed.    
 
@@ -449,9 +449,9 @@ Proof.
   inv H2; dest.
   constructor; auto.
   split.
-  - unfold fromInternal, isInternal in *.
+  - unfold_idx.
     rewrite <-H0; assumption.
-  - unfold toExternal, isExternal in *.
+  - unfold_idx.
     rewrite <-H0; assumption.
 Qed.
 

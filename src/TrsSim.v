@@ -346,13 +346,13 @@ Proof.
 Qed.
 
 Lemma TrsSimulates_no_rules:
-  forall sim msgF ginv impl spec,
-    ValidMsgMap msgF impl spec ->
-    MsgsInSim msgF sim ->
-    MsgsOutSim impl (liftMsgP msgF) sim ->
-    ImpliesSimMP impl msgF sim ->
+  forall sim mamap ginv impl spec,
+    ValidMsgMap mamap impl spec ->
+    MsgsInSim (liftMmap mamap) sim ->
+    MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
+    ImpliesSimMP impl (liftMmap mamap) sim ->
     sys_rules impl = nil ->
-    TrsSimulates sim ginv (LabelMap msgF) impl spec.
+    TrsSimulates sim ginv (liftLmap (liftMmap mamap)) impl spec.
 Proof.
   intros; hnf; intros.
   inv H6.

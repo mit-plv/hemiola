@@ -202,24 +202,35 @@ Section System.
          {SysT MsgT} `{IsSystem SysT} : HasInit SysT (ORqs MsgT) :=
     {| initsOf := fun sys => M.replicate (indicesOf sys) (@nil _) |}.
 
-  Definition isExternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
+  Context {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}.
+
+  Definition isExternal (sys: SysT) (idx: IdxT) :=
     if idx ?<n (indicesOf sys) then false else true.
-  Definition isInternal {SysT} `{IsSystem SysT} (sys: SysT) (idx: IdxT) :=
+  Definition isInternal (sys: SysT) (idx: IdxT) :=
     if idx ?<n (indicesOf sys) then true else false.
 
-  Definition fromExternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
-             (sys: SysT) (msg: MsgT) :=
-    isExternal sys (mid_from (msg_id (getMsg msg))).
-  Definition fromInternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
-             (sys: SysT) (msg: MsgT) :=
-    isInternal sys (mid_from (msg_id (getMsg msg))).
+  Definition maFromExternal (sys: SysT) (ma: MsgAddr) :=
+    isExternal sys (ma_from ma).
+  Definition maFromInternal (sys: SysT) (ma: MsgAddr) :=
+    isInternal sys (ma_from ma).
 
-  Definition toExternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
-             (sys: SysT) (msg: MsgT) :=
-    isExternal sys (mid_to (msg_id (getMsg msg))).
-  Definition toInternal {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
-             (sys: SysT) (msg: MsgT) :=
-    isInternal sys (mid_to (msg_id (getMsg msg))).
+  Definition maToExternal (sys: SysT) (ma: MsgAddr) :=
+    isExternal sys (ma_to ma).
+  Definition maToInternal (sys: SysT) (ma: MsgAddr) :=
+    isInternal sys (ma_to ma).
+
+  Definition maExternal (sys: SysT) (ma: MsgAddr) :=
+    maFromExternal sys ma || maToExternal sys ma.
+
+  Definition fromExternal (sys: SysT) (msg: MsgT) :=
+    maFromExternal sys (msgAddrOf (getMsg msg)).
+  Definition fromInternal (sys: SysT) (msg: MsgT) :=
+    maFromInternal sys (msgAddrOf (getMsg msg)).
+
+  Definition toExternal (sys: SysT) (msg: MsgT) :=
+    maToExternal sys (msgAddrOf (getMsg msg)).
+  Definition toInternal (sys: SysT) (msg: MsgT) :=
+    maToInternal sys (msgAddrOf (getMsg msg)).
   
   Record System :=
     { sys_inds: list IdxT;
@@ -234,17 +245,17 @@ Section System.
 
   Definition rulesOf := sys_rules.
 
-  Definition handlersOf (rules: list Rule): list MsgId :=
-    List.concat (map rule_mids rules).
-
-  Definition extHandlersOf (sys: System): list MsgId :=
-    filter (fun mid => isExternal sys (mid_from mid))
-           (handlersOf (sys_rules sys)).
-
-  Definition ExtHandles (sys: System) (erqs: list MsgId) :=
-    extHandlersOf sys = erqs.
-
 End System.
+
+Definition handlersOf (rules: list Rule): list MsgId :=
+  List.concat (map rule_mids rules).
+
+Definition extHandlersOf (sys: System): list MsgId :=
+  filter (fun mid => isExternal sys (mid_from mid))
+         (handlersOf (sys_rules sys)).
+
+Definition ExtHandles (sys: System) (erqs: list MsgId) :=
+  extHandlersOf sys = erqs.
 
 Ltac evalIndicesOf sys :=
   let indices := eval cbn in (sys_inds sys) in exact indices.

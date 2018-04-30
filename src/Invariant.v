@@ -314,8 +314,8 @@ Proof.
   induction mouts; simpl; intros; [constructor|].
   destruct H1; inv H1; inv H2; inv H5; dest.
   constructor.
-  - simpl in H0; unfold id in H0.
-    unfold fromInternal; simpl; rewrite H0; reflexivity.
+  - simpl in H0; unfold_idx.
+    rewrite H0; reflexivity.
   - apply IHmouts; split; auto.
 Qed.
 
@@ -334,8 +334,8 @@ Proof.
     inv H0; dest.
     specialize (IHeins H3).
     simpl; constructor; auto.
-    unfold fromInternal, fromExternal in *; simpl.
-    rewrite external_not_internal by assumption; reflexivity.
+    unfold_idx; simpl.
+    destruct (ma_from _ ?<n _); congruence.
   - simpl; simpl in H.
     apply ForallMP_removeMsgs; auto.
   - simpl; simpl in H.

@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String Peano_dec FinFun.
 Require Import Common FMap Syntax Semantics SemFacts Invariant StepT.
 
 Set Implicit Arguments.
@@ -171,21 +171,45 @@ Definition LiftSimR {StateS1 StateS2} (f: StateS2 -> StateS1)
            {StateI} (sim: StateI -> StateS1 -> Prop): StateI -> StateS2 -> Prop :=
   fun sti sts2 => sim sti (f sts2).
 
-Section SimMap.
-  Variable (mmap: Msg -> Msg).
+Definition liftLmap (mmap: Msg -> Msg) (il: Label) :=
+  match il with
+  | LblIns ins => LblIns (map mmap ins)
+  | LblOuts outs => LblOuts (map mmap outs)
+  end.
 
-  Definition LabelMap (il: Label) :=
-    match il with
-    | LblIns ins => LblIns (map mmap ins)
-    | LblOuts outs => LblOuts (map mmap outs)
-    end.
+Section SimMap.
+  Variable (mamap: MsgAddr -> MsgAddr).
+
+  Definition liftMmap (msg: Msg) :=
+    {| msg_id := {| mid_addr := mamap (mid_addr (msg_id msg));
+                    mid_tid := mid_tid (msg_id msg) |};
+       msg_value := msg_value msg |}.
+
+  Local Notation mmap := liftMmap.
+
+  Definition ExtInjective (impl: System) :=
+    forall (ma1 ma2: MsgAddr),
+      maExternal impl ma1 = true ->
+      maExternal impl ma2 = true ->
+      mamap ma1 = mamap ma2 -> ma1 = ma2.
 
   Definition ValidMsgMap (impl spec: System) :=
     (forall msg,
         fromInternal impl msg = fromInternal spec (mmap msg) /\
         toInternal impl msg = toInternal spec (mmap msg)) /\
-    (forall eins, WellDistrMsgsIn eins -> WellDistrMsgsIn (map mmap eins)) /\
-    (forall eouts, WellDistrMsgsOut eouts -> WellDistrMsgsOut (map mmap eouts)).
+    ExtInjective impl.
+
+  Lemma ExtInjective_same_indices:
+    forall impl1 impl2,
+      indicesOf impl1 = indicesOf impl2 ->
+      ExtInjective impl1 ->
+      ExtInjective impl2.
+  Proof.
+    unfold ExtInjective, maExternal; intros.
+    apply H0; auto.
+    - unfold_idx; rewrite H; auto.
+    - unfold_idx; rewrite H; auto.
+  Qed.
 
   Lemma validMsgMap_from_isExternal:
     forall impl spec,
@@ -197,10 +221,9 @@ Section SimMap.
     unfold ValidMsgMap; intros; dest.
     rewrite <-H0.
     specialize (H msg); dest.
-    unfold fromInternal, fromExternal in *.
-    do 2 rewrite internal_external_negb in H.
-    destruct (isExternal _ _);
-      destruct (isExternal _ _); auto.
+    unfold_idx.
+    destruct (ma_from _ ?<n _);
+      destruct (ma_from _ ?<n _); auto.
   Qed.
 
   Lemma validMsgMap_to_isInternal:
@@ -222,8 +245,10 @@ Section SimMap.
         indicesOf impl1 = indicesOf impl2 ->
         ValidMsgMap impl2 spec.
   Proof.
-    unfold ValidMsgMap, fromInternal, toInternal, isExternal, isInternal; intros.
-    rewrite <-H0; auto.
+    unfold ValidMsgMap; unfold_idx; intros; dest.
+    split.
+    - rewrite <-H0; auto.
+    - eapply ExtInjective_same_indices; eauto.
   Qed.
 
   Lemma validMsgMap_ValidMsgsExtIn:
@@ -245,8 +270,25 @@ Section SimMap.
         specialize (H a); dest.
         rewrite <-H; auto.
       + specialize (H a); dest.
-        rewrite <-H5; auto.
-    - apply H; auto.
+        rewrite <-H3; auto.
+    - destruct H; clear H.
+      unfold WellDistrMsgs in *.
+      induction eins; simpl; intros; auto.
+      unfold id in *; inv H0; inv H1; dest.
+      constructor; auto.
+      intro Hx; elim H3; clear -H H2 H5 Hx.
+      induction eins; [elim Hx|].
+      inv H5; inv Hx; dest.
+      + assert (maExternal impl (msgAddrOf a) = true).
+        { apply orb_true_intro; left; assumption. }
+        assert (maExternal impl (msgAddrOf a0) = true).
+        { apply orb_true_intro; left; assumption. }
+        destruct a as [[[from1 to1 chn1] tid1] val1].
+        destruct a0 as [[[from2 to2 chn2] tid2] val2].
+        cbn in *.
+        specialize (H2 _ _ H6 H5 H0); inv H2.
+        left; auto.
+      + right; auto.
   Qed.
 
   Lemma validMsgMap_ValidMsgsExtOut:
@@ -268,11 +310,52 @@ Section SimMap.
         apply negb_false_iff in H1.
         rewrite <-toInternal_toExternal_negb in H1.
         specialize (H a); dest.
-        rewrite <-H5; auto.
-    - apply H; auto.
+        rewrite <-H3; auto.
+    - destruct H; clear H.
+      unfold WellDistrMsgs in *.
+      induction eouts; simpl; intros; auto.
+      unfold id in *; inv H0; inv H1; dest.
+      constructor; auto.
+      intro Hx; elim H3; clear -H0 H2 H5 Hx.
+      induction eouts; [elim Hx|].
+      inv H5; inv Hx; dest.
+      + assert (maExternal impl (msgAddrOf a) = true).
+        { apply orb_true_intro; right; assumption. }
+        assert (maExternal impl (msgAddrOf a0) = true).
+        { apply orb_true_intro; right; assumption. }
+        destruct a as [[[from1 to1 chn1] tid1] val1].
+        destruct a0 as [[[from2 to2 chn2] tid2] val2].
+        cbn in *.
+        specialize (H2 _ _ H6 H5 H); inv H2.
+        left; auto.
+      + right; auto.
   Qed.
 
 End SimMap.
+
+(* Lemma validMsgMap_liftTmap_ValidMsgsExtOut: *)
+(*   forall impl spec msgP, *)
+(*     ValidMsgMap msgP impl spec -> *)
+(*     forall (eouts: list TMsg), *)
+(*       ValidMsgsExtOut impl eouts -> *)
+(*       ValidMsgsExtOut spec (map (liftTmap msgP) eouts). *)
+(* Proof. *)
+(*   intros. *)
+(*   destruct H0; split. *)
+(*   - clear -H H0; induction eouts; simpl; [constructor|]. *)
+(*     inv H0; constructor; auto. *)
+(*     red in H; dest. *)
+(*     unfold fromInternal, toInternal, toExternal in *. *)
+(*     destruct a as [msg ti]; cbn in *; unfold id in *. *)
+(*     split. *)
+(*     + specialize (H msg); dest. *)
+(*       rewrite <-H; auto. *)
+(*     + apply negb_false_iff. *)
+(*       rewrite <-internal_external_negb. *)
+(*       apply negb_false_iff in H1. *)
+(*       rewrite <-internal_external_negb in H1. *)
+(*       specialize (H msg); dest. *)
+(*       rewrite <-H3; auto. *)
 
 Section RqRsMP.
   Context {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}.
@@ -380,7 +463,7 @@ Section SimMP.
 
   Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
     smsgs = (deinitializeMP (rollback (nonresponsesOfMP impl imsgs)))
-              ++ (map (liftMsgP msgP) (responsesOfMP impl imsgs)).
+              ++ (map (liftTmap msgP) (responsesOfMP impl imsgs)).
 
   Lemma rollbacked_enqMP_toTMsgU:
     forall msgs emsg rb,
@@ -410,7 +493,7 @@ Section SimMP.
         toExternal impl imsg = true ->
         FirstMP ist imsg ->
         forall smsg,
-          smsg = liftMsgP msgP imsg ->
+          smsg = liftTmap msgP imsg ->
           FirstMP sst smsg.
   Proof.
   Admitted.
@@ -422,7 +505,7 @@ Section SimMP.
         Forall (fun imsg => toExternal impl imsg = true) imsgs ->
         Forall (FirstMP ist) imsgs ->
         forall smsgs,
-          smsgs = map (liftMsgP msgP) imsgs ->
+          smsgs = map (liftTmap msgP) imsgs ->
           Forall (FirstMP sst) smsgs.
   Proof.
     induction imsgs; simpl; intros; subst; [constructor|].
@@ -445,7 +528,7 @@ Section SimMP.
       forall eouts,
         ValidMsgsExtOut impl eouts ->
         SimMP (removeMsgs eouts imsgs)
-              (removeMsgs (map (liftMsgP msgP) eouts) smsgs).
+              (removeMsgs (map (liftTmap msgP) eouts) smsgs).
   Proof.
   Admitted.
 
@@ -523,10 +606,10 @@ Definition ImpliesSimMP {SysT} `{IsSystem SysT} (impl: SysT)
 Section NoRules.
 
   Lemma steps_simulation_NoExtOuts_no_rules:
-    forall (sim: TState -> TState -> Prop) msgF impl spec,
-      ValidMsgMap msgF impl spec ->
-      MsgsInSim msgF sim ->
-      MsgsOutSim impl (liftMsgP msgF) sim ->
+    forall (sim: TState -> TState -> Prop) mamap impl spec,
+      ValidMsgMap mamap impl spec ->
+      MsgsInSim (liftMmap mamap) sim ->
+      MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
       sys_rules impl = nil ->
       forall ist1 sst1,
         sim ist1 sst1 ->
@@ -535,7 +618,8 @@ Section NoRules.
           steps step_t impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
             steps step_t spec sst1 shst sst2 /\
-            map (LabelMap msgF) (behaviorOf impl ihst) = behaviorOf spec shst /\
+            map (liftLmap (liftMmap mamap)) (behaviorOf impl ihst) =
+            behaviorOf spec shst /\
             sim ist2 sst2.
   Proof.
     induction 7; simpl; intros;
@@ -549,7 +633,7 @@ Section NoRules.
       + eapply StepsCons.
         * eassumption.
         * eapply StIns; try reflexivity.
-          { instantiate (1:= map msgF eins).
+          { instantiate (1:= map (liftMmap mamap) eins).
             destruct eins; [exfalso; auto|discriminate].
           }
           { eapply validMsgMap_ValidMsgsExtIn; eauto. }
@@ -571,13 +655,13 @@ Section NoRules.
   Qed.
 
   Corollary refines_no_rules:
-    forall (sim: TState -> TState -> Prop) msgF impl spec,
+    forall (sim: TState -> TState -> Prop) mamap impl spec,
       sim (initsOf impl) (initsOf spec) ->
-      ValidMsgMap msgF impl spec ->
-      MsgsInSim msgF sim ->
-      MsgsOutSim impl (liftMsgP msgF) sim ->
+      ValidMsgMap mamap impl spec ->
+      MsgsInSim (liftMmap mamap) sim ->
+      MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
       sys_rules impl = nil ->
-      (steps step_t) # (steps step_t) |-- impl <=[ LabelMap msgF ] spec.
+      (steps step_t) # (steps step_t) |-- impl <=[ liftLmap (liftMmap mamap) ] spec.
   Proof.
     unfold Refines; intros.
     inv H4.
@@ -587,11 +671,11 @@ Section NoRules.
   Qed.
 
   Lemma steps_simulation_BlockedInv_SimMP_no_rules:
-    forall (sim: TState -> TState -> Prop) msgF impl spec,
-      ValidMsgMap msgF impl spec ->
-      MsgsInSim msgF sim ->
-      MsgsOutSim impl (liftMsgP msgF) sim ->
-      ImpliesSimMP impl msgF sim ->
+    forall (sim: TState -> TState -> Prop) mamap impl spec,
+      ValidMsgMap mamap impl spec ->
+      MsgsInSim (liftMmap mamap) sim ->
+      MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
+      ImpliesSimMP impl (liftMmap mamap) sim ->
       sys_rules impl = nil ->
       forall ist1 sst1,
         sim ist1 sst1 ->
@@ -599,7 +683,8 @@ Section NoRules.
           steps step_t impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
             steps step_t spec sst1 shst sst2 /\
-            map (LabelMap msgF) (behaviorOf impl ihst) = behaviorOf spec shst /\
+            map (liftLmap (liftMmap mamap)) (behaviorOf impl ihst) =
+            behaviorOf spec shst /\
             sim ist2 sst2.
   Proof.
     induction 7; simpl; intros;
@@ -613,7 +698,7 @@ Section NoRules.
       + eapply StepsCons.
         * eassumption.
         * eapply StIns; try reflexivity.
-          { instantiate (1:= map msgF eins).
+          { instantiate (1:= map (liftMmap mamap) eins).
             destruct eins; [exfalso; auto|discriminate].
           }
           { eapply validMsgMap_ValidMsgsExtIn; eauto. }
@@ -626,7 +711,7 @@ Section NoRules.
       + eapply StepsCons.
         * eassumption.
         * eapply StOuts; try reflexivity.
-          { instantiate (1:= map (liftMsgP msgF) eouts).
+          { instantiate (1:= map (liftTmap (liftMmap mamap)) eouts).
             destruct eouts; [exfalso; auto|discriminate].
           }
           { specialize (H2 _ _ H9); simpl in H2.
@@ -635,9 +720,7 @@ Section NoRules.
             inv H6; constructor; auto.
             dest; auto.
           }
-          { (* eapply validMsgMap_ValidMsgsExtOut; eauto. *)
-            admit.
-          }
+          { admit. }
       + simpl; rewrite <-H8; repeat f_equal.
         clear; induction eouts; simpl; auto.
         rewrite IHeouts; reflexivity.

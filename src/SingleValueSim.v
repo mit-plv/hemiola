@@ -130,23 +130,19 @@ Section Sim.
   Definition svmIdxF (idx: IdxT): IdxT :=
     if idx ?<n (indicesOf impl0) then specIdx else idx.
 
-  Definition svmMsgIdF (imid: MsgId): MsgId :=
-    {| mid_addr := {| ma_from := svmIdxF (mid_from imid);
-                      ma_to := svmIdxF (mid_to imid);
-                      ma_chn :=
-                        (mid_chn imid) + (if mid_from imid ==n extIdx1
-                                          then 0
-                                          else if mid_to imid ==n extIdx1
-                                               then 0
-                                               else numChns)
-                   |};
-       mid_tid := mid_tid imid |}.
+  Definition svmMamap (ima: MsgAddr): MsgAddr :=
+    {| ma_from := svmIdxF (ma_from ima);
+       ma_to := svmIdxF (ma_to ima);
+       ma_chn :=
+         (if ma_to ima ==n child1Idx
+          then 0
+          else if ma_from ima ==n child1Idx
+               then 0
+               else numChns) + (ma_chn ima)
+    |}.
 
-  Definition svmMsgF (imsg: Msg): Msg :=
-    {| msg_id := svmMsgIdF (msg_id imsg);
-       msg_value := msg_value imsg |}.
-
-  Definition svmP := LabelMap svmMsgF.
+  Definition svmMsgF := liftMmap svmMamap.
+  Definition svmP := liftLmap svmMsgF.
 
   (** Global invariants *)
 
@@ -177,13 +173,26 @@ Section Sim.
 
   Section Facts.
 
-    Lemma svmMsgF_ValidMsgMap:
-      ValidMsgMap svmMsgF impl0 spec.
+    Lemma svmMamap_ExtInjective:
+      ExtInjective svmMamap impl0.
+    Proof.
+      (* red; intros. *)
+      (* destruct ma1 as [from1 to1 chn1], ma2 as [from2 to2 chn2]. *)
+      (* unfold svmMamap in H1; simpl in H1; inv H1. *)
+      (* unfold maExternal, svmIdxF in *. *)
+      (* unfold_idx; unfold ma_from, ma_to in *. *)
+      (* destruct (from1 ?<n _); destruct (to1 ?<n _); *)
+      (*   destruct (from2 ?<n _); destruct (to2 ?<n _); *)
+      (*     subst; simpl in *; *)
+      (*       try congruence. *)
+    Admitted.
+
+    Lemma svmMamap_ValidMsgMap:
+      ValidMsgMap svmMamap impl0 spec.
     Proof.
       unfold ValidMsgMap; intros.
-      split; [|split].
-      - unfold svmMsgF; simpl.
-        unfold svmIdxF, fromInternal, toInternal, isInternal.
+      split.
+      - unfold_idx.
         unfold impl0.
         split.
         + find_if_inside.
@@ -208,9 +217,8 @@ Section Sim.
             cbn in *.
             unfold svmIdxF in H.
             find_if_inside; auto.
-      - admit.
-      - admit.
-    Admitted.
+      - apply svmMamap_ExtInjective.
+    Qed.
 
     Lemma SvmSim_init:
       SvmSim impl0 (initsOf impl0) (initsOf spec).
@@ -230,7 +238,7 @@ Section Sim.
     Qed.
       
     Lemma SvmSim_MsgsOutSim:
-      MsgsOutSim impl0 (liftMsgP svmMsgF) (SvmSim impl0).
+      MsgsOutSim impl0 (liftTmap svmMsgF) (SvmSim impl0).
     Proof.
       hnf; intros.
       hnf; hnf in H0; cbn in *; dest.
@@ -256,7 +264,7 @@ Section Sim.
       - apply SvmInvs_init.
       - split.
         + apply TrsSimulates_no_rules.
-          * apply svmMsgF_ValidMsgMap.
+          * apply svmMamap_ValidMsgMap.
           * hnf; intros.
             hnf; hnf in H; cbn in *; dest.
             repeat split; simpl; auto.

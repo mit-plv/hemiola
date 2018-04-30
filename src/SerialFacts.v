@@ -38,7 +38,7 @@ Lemma atomic_preserved:
 Proof.
   induction 1; simpl; intros.
   - econstructor; eauto.
-    unfold fromExternal, isExternal in *; simpl in *.
+    unfold_idx; simpl in *.
     rewrite H1 in H; assumption.
   - econstructor; eauto.
 Qed.
