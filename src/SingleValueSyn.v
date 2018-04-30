@@ -17,10 +17,7 @@ Section Impl.
   Definition extIdx2 := 4.
 
   Local Definition spec := spec extIdx1 extIdx2.
-  Local Definition svmMsgIdF := svmMsgIdF extIdx1.
-  Local Definition svmMsgF := svmMsgF extIdx1.
-  Local Definition svmP := svmP extIdx1.
-  Local Definition SvmSim := SvmSim extIdx1 impl0.
+  Local Definition SvmSim := SvmSim impl0.
 
   (*! Customized reduction and construction tactics *)
 

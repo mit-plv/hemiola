@@ -128,12 +128,12 @@ Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=
     match goal with
     | [H: isExternal _ (mid_from (msg_id _)) = true |-
        isExternal _ (mid_from (msg_id _)) = true] =>
-      eapply validMsgMap_from_isExternal; [|eassumption]
+      eapply validMaMap_maFromExternal; [|eassumption]
     | [H: isInternal _ (mid_to (msg_id _)) = true |-
        isInternal _ (mid_to (msg_id _)) = true] =>
-      eapply validMsgMap_to_isInternal; [|eassumption]
-    | [ |- ValidMsgMap _ (addRules _ (buildRawSys ?imp)) _ ] =>
-      apply validMsgMap_same_indices with (impl1:= imp);
+      eapply validMaMap_maToInternal; [|eassumption]
+    | [ |- ValidMaMap _ (addRules _ (buildRawSys ?imp)) _ ] =>
+      apply validMaMap_same_indices with (impl1:= imp);
       [apply msgF_ValidMsgMap
       |rewrite addRules_indices, <-buildRawSys_indicesOf; reflexivity]
     end.

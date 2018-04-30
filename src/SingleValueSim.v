@@ -188,9 +188,8 @@ Section Sim.
     Admitted.
 
     Lemma svmMamap_ValidMsgMap:
-      ValidMsgMap svmMamap impl0 spec.
+      ValidMaMap svmMamap impl0 spec.
     Proof.
-      unfold ValidMsgMap; intros.
       split.
       - unfold_idx.
         unfold impl0.

@@ -347,7 +347,7 @@ Qed.
 
 Lemma TrsSimulates_no_rules:
   forall sim mamap ginv impl spec,
-    ValidMsgMap mamap impl spec ->
+    ValidMaMap mamap impl spec ->
     MsgsInSim (liftMmap mamap) sim ->
     MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
     ImpliesSimMP impl (liftMmap mamap) sim ->

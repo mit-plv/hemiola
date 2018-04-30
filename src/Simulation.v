@@ -180,24 +180,45 @@ Definition liftLmap (mmap: Msg -> Msg) (il: Label) :=
 Section SimMap.
   Variable (mamap: MsgAddr -> MsgAddr).
 
-  Definition liftMmap (msg: Msg) :=
-    {| msg_id := {| mid_addr := mamap (mid_addr (msg_id msg));
-                    mid_tid := mid_tid (msg_id msg) |};
-       msg_value := msg_value msg |}.
-
-  Local Notation mmap := liftMmap.
-
   Definition ExtInjective (impl: System) :=
     forall (ma1 ma2: MsgAddr),
       maExternal impl ma1 = true ->
       maExternal impl ma2 = true ->
       mamap ma1 = mamap ma2 -> ma1 = ma2.
 
-  Definition ValidMsgMap (impl spec: System) :=
-    (forall msg,
-        fromInternal impl msg = fromInternal spec (mmap msg) /\
-        toInternal impl msg = toInternal spec (mmap msg)) /\
+  Definition ValidMaMap (impl spec: System) :=
+    (forall ma,
+        maFromInternal impl ma = maFromInternal spec (mamap ma) /\
+        maToInternal impl ma = maToInternal spec (mamap ma)) /\
     ExtInjective impl.
+
+  Lemma validMaMap_maFromExternal:
+    forall impl spec,
+      ValidMaMap impl spec ->
+      forall ma b,
+        maFromExternal impl ma = b ->
+        maFromExternal spec (mamap ma) = b.
+  Proof.
+    unfold ValidMaMap; intros; dest.
+    specialize (H ma); dest.
+    unfold_idx.
+    destruct (ma_from _ ?<n _);
+      destruct (ma_from _ ?<n _); subst; auto.
+  Qed.
+
+  Lemma validMaMap_maToInternal:
+    forall impl spec,
+      ValidMaMap impl spec ->
+      forall ma b,
+        maToInternal impl ma = b ->
+        maToInternal spec (mamap ma) = b.
+  Proof.
+    unfold ValidMaMap; intros; dest.
+    specialize (H ma); dest.
+    unfold_idx.
+    destruct (ma_to _ ?<n _);
+      destruct (ma_to _ ?<n _); subst; auto.
+  Qed.
 
   Lemma ExtInjective_same_indices:
     forall impl1 impl2,
@@ -211,151 +232,134 @@ Section SimMap.
     - unfold_idx; rewrite H; auto.
   Qed.
 
-  Lemma validMsgMap_from_isExternal:
-    forall impl spec,
-      ValidMsgMap impl spec ->
-      forall msg b,
-        fromExternal impl msg = b ->
-        fromExternal spec (mmap msg) = b.
-  Proof.
-    unfold ValidMsgMap; intros; dest.
-    rewrite <-H0.
-    specialize (H msg); dest.
-    unfold_idx.
-    destruct (ma_from _ ?<n _);
-      destruct (ma_from _ ?<n _); auto.
-  Qed.
-
-  Lemma validMsgMap_to_isInternal:
-    forall impl spec,
-      ValidMsgMap impl spec ->
-      forall msg b,
-        toInternal impl msg = b ->
-        toInternal spec (mmap msg) = b.
-  Proof.
-    unfold ValidMsgMap; intros; dest.
-    rewrite <-H0.
-    specialize (H msg); dest; auto.
-  Qed.
-
-  Lemma validMsgMap_same_indices:
+  Lemma validMaMap_same_indices:
     forall impl1 spec,
-      ValidMsgMap impl1 spec ->
+      ValidMaMap impl1 spec ->
       forall impl2,
         indicesOf impl1 = indicesOf impl2 ->
-        ValidMsgMap impl2 spec.
+        ValidMaMap impl2 spec.
   Proof.
-    unfold ValidMsgMap; unfold_idx; intros; dest.
+    unfold ValidMaMap; unfold_idx; intros; dest.
     split.
     - rewrite <-H0; auto.
     - eapply ExtInjective_same_indices; eauto.
   Qed.
 
-  Lemma validMsgMap_ValidMsgsExtIn:
+  Context {MsgT1 MsgT2} `{HasMsg MsgT1} `{HasMsg MsgT2}.
+
+  Variable (mmap: MsgT1 -> MsgT2).
+  Hypothesis (Hmmap: forall m: MsgT1,
+                 mamap (msgAddrOf (getMsg m)) = msgAddrOf (getMsg (mmap m))).
+
+  Lemma validMaMap_ValidMsgsExtIn:
     forall impl spec,
-      ValidMsgMap impl spec ->
+      ValidMaMap impl spec ->
       forall eins,
         ValidMsgsExtIn impl eins ->
         ValidMsgsExtIn spec (map mmap eins).
   Proof.
     intros.
-    destruct H0; split.
-    - clear -H H0; induction eins; simpl; [constructor|].
-      inv H0; constructor; auto.
-      red in H; dest; split.
+    destruct H2; split.
+    - clear -Hmmap H1 H2; induction eins; simpl; [constructor|].
+      inv H2; constructor; auto.
+      red in H1; dest; split.
       + apply negb_false_iff.
         rewrite <-fromInternal_fromExternal_negb.
-        apply negb_false_iff in H0.
-        rewrite <-fromInternal_fromExternal_negb in H0.
-        specialize (H a); dest.
-        rewrite <-H; auto.
-      + specialize (H a); dest.
-        rewrite <-H3; auto.
-    - destruct H; clear H.
+        apply negb_false_iff in H2.
+        rewrite <-fromInternal_fromExternal_negb in H2.
+        specialize (H1 (msgAddrOf (getMsg a))); dest.
+        unfold_idx.
+        rewrite <-Hmmap, <-H1; auto.
+      + specialize (H1 (msgAddrOf (getMsg a))); dest.
+        unfold_idx.
+        rewrite <-Hmmap, <-H5; auto.
+    - destruct H1; clear H1.
       unfold WellDistrMsgs in *.
       induction eins; simpl; intros; auto.
-      unfold id in *; inv H0; inv H1; dest.
+      unfold id in *; inv H2; inv H3; dest.
       constructor; auto.
-      intro Hx; elim H3; clear -H H2 H5 Hx.
+      intro Hx; elim H5; clear -Hmmap H1 H4 H7 Hx.
       induction eins; [elim Hx|].
-      inv H5; inv Hx; dest.
-      + assert (maExternal impl (msgAddrOf a) = true).
+      inv H7; inv Hx; dest.
+      + assert (maExternal impl (msgAddrOf (getMsg a)) = true).
         { apply orb_true_intro; left; assumption. }
-        assert (maExternal impl (msgAddrOf a0) = true).
+        assert (maExternal impl (msgAddrOf (getMsg a0)) = true).
         { apply orb_true_intro; left; assumption. }
-        destruct a as [[[from1 to1 chn1] tid1] val1].
-        destruct a0 as [[[from2 to2 chn2] tid2] val2].
+        do 2 rewrite <-Hmmap in H2.
         cbn in *.
-        specialize (H2 _ _ H6 H5 H0); inv H2.
+        destruct (getMsg a) as [[[from1 to1 chn1] tid1] val1].
+        destruct (getMsg a0) as [[[from2 to2 chn2] tid2] val2].
+        cbn in *.
+        specialize (H4 _ _ H8 H7 H2); inv H4.
         left; auto.
       + right; auto.
   Qed.
 
-  Lemma validMsgMap_ValidMsgsExtOut:
+  Lemma validMaMap_ValidMsgsExtOut:
     forall impl spec,
-      ValidMsgMap impl spec ->
+      ValidMaMap impl spec ->
       forall eouts,
         ValidMsgsExtOut impl eouts ->
         ValidMsgsExtOut spec (map mmap eouts).
   Proof.
     intros.
-    destruct H0; split.
-    - clear -H H0; induction eouts; simpl; [constructor|].
-      inv H0; constructor; auto.
-      red in H; dest; split.
-      + specialize (H a); dest.
-        rewrite <-H; auto.
+    destruct H2; split.
+    - clear -Hmmap H1 H2; induction eouts; simpl; [constructor|].
+      inv H2; constructor; auto.
+      red in H1; dest; split.
+      + specialize (H1 (msgAddrOf (getMsg a))); dest.
+        unfold_idx.
+        rewrite <-Hmmap, <-H1; auto.
       + apply negb_false_iff.
         rewrite <-toInternal_toExternal_negb.
-        apply negb_false_iff in H1.
-        rewrite <-toInternal_toExternal_negb in H1.
-        specialize (H a); dest.
-        rewrite <-H3; auto.
-    - destruct H; clear H.
+        apply negb_false_iff in H3.
+        rewrite <-toInternal_toExternal_negb in H3.
+        specialize (H1 (msgAddrOf (getMsg a))); dest.
+        unfold_idx.
+        rewrite <-Hmmap, <-H5; auto.
+    - destruct H1; clear H1.
       unfold WellDistrMsgs in *.
       induction eouts; simpl; intros; auto.
-      unfold id in *; inv H0; inv H1; dest.
+      unfold id in *; inv H2; inv H3; dest.
       constructor; auto.
-      intro Hx; elim H3; clear -H0 H2 H5 Hx.
+      intro Hx; elim H5; clear -Hmmap H2 H4 H7 Hx.
       induction eouts; [elim Hx|].
-      inv H5; inv Hx; dest.
-      + assert (maExternal impl (msgAddrOf a) = true).
+      inv H7; inv Hx; dest.
+      + assert (maExternal impl (msgAddrOf (getMsg a)) = true).
         { apply orb_true_intro; right; assumption. }
-        assert (maExternal impl (msgAddrOf a0) = true).
+        assert (maExternal impl (msgAddrOf (getMsg a0)) = true).
         { apply orb_true_intro; right; assumption. }
-        destruct a as [[[from1 to1 chn1] tid1] val1].
-        destruct a0 as [[[from2 to2 chn2] tid2] val2].
+        do 2 rewrite <-Hmmap in H1.
         cbn in *.
-        specialize (H2 _ _ H6 H5 H); inv H2.
+        destruct (getMsg a) as [[[from1 to1 chn1] tid1] val1].
+        destruct (getMsg a0) as [[[from2 to2 chn2] tid2] val2].
+        cbn in *.
+        specialize (H4 _ _ H8 H7 H1); inv H4.
         left; auto.
       + right; auto.
   Qed.
 
 End SimMap.
 
-(* Lemma validMsgMap_liftTmap_ValidMsgsExtOut: *)
-(*   forall impl spec msgP, *)
-(*     ValidMsgMap msgP impl spec -> *)
-(*     forall (eouts: list TMsg), *)
-(*       ValidMsgsExtOut impl eouts -> *)
-(*       ValidMsgsExtOut spec (map (liftTmap msgP) eouts). *)
-(* Proof. *)
-(*   intros. *)
-(*   destruct H0; split. *)
-(*   - clear -H H0; induction eouts; simpl; [constructor|]. *)
-(*     inv H0; constructor; auto. *)
-(*     red in H; dest. *)
-(*     unfold fromInternal, toInternal, toExternal in *. *)
-(*     destruct a as [msg ti]; cbn in *; unfold id in *. *)
-(*     split. *)
-(*     + specialize (H msg); dest. *)
-(*       rewrite <-H; auto. *)
-(*     + apply negb_false_iff. *)
-(*       rewrite <-internal_external_negb. *)
-(*       apply negb_false_iff in H1. *)
-(*       rewrite <-internal_external_negb in H1. *)
-(*       specialize (H msg); dest. *)
-(*       rewrite <-H3; auto. *)
+Definition liftMmap (mamap: MsgAddr -> MsgAddr): Msg -> Msg :=
+  fun msg =>
+    {| msg_id := {| mid_addr := mamap (mid_addr (msg_id msg));
+                    mid_tid := mid_tid (msg_id msg) |};
+       msg_value := msg_value msg |}.
+
+Lemma liftMmap_valid:
+  forall (mamap: MsgAddr -> MsgAddr) (m: Msg),
+    mamap (msgAddrOf (getMsg m)) = msgAddrOf (getMsg (liftMmap mamap m)).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma liftTmap_valid:
+  forall (mamap: MsgAddr -> MsgAddr) (m: TMsg),
+    mamap (msgAddrOf (getMsg m)) = msgAddrOf (getMsg (liftTmap (liftMmap mamap) m)).
+Proof.
+  reflexivity.
+Qed.
 
 Section RqRsMP.
   Context {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}.
@@ -607,7 +611,7 @@ Section NoRules.
 
   Lemma steps_simulation_NoExtOuts_no_rules:
     forall (sim: TState -> TState -> Prop) mamap impl spec,
-      ValidMsgMap mamap impl spec ->
+      ValidMaMap mamap impl spec ->
       MsgsInSim (liftMmap mamap) sim ->
       MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
       sys_rules impl = nil ->
@@ -636,7 +640,9 @@ Section NoRules.
           { instantiate (1:= map (liftMmap mamap) eins).
             destruct eins; [exfalso; auto|discriminate].
           }
-          { eapply validMsgMap_ValidMsgsExtIn; eauto. }
+          { eapply validMaMap_ValidMsgsExtIn; eauto.
+            apply liftMmap_valid.
+          }
       + simpl; rewrite <-H8; repeat f_equal.
         clear; induction eins; simpl; auto.
         rewrite IHeins; reflexivity.
@@ -657,7 +663,7 @@ Section NoRules.
   Corollary refines_no_rules:
     forall (sim: TState -> TState -> Prop) mamap impl spec,
       sim (initsOf impl) (initsOf spec) ->
-      ValidMsgMap mamap impl spec ->
+      ValidMaMap mamap impl spec ->
       MsgsInSim (liftMmap mamap) sim ->
       MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
       sys_rules impl = nil ->
@@ -672,7 +678,7 @@ Section NoRules.
 
   Lemma steps_simulation_BlockedInv_SimMP_no_rules:
     forall (sim: TState -> TState -> Prop) mamap impl spec,
-      ValidMsgMap mamap impl spec ->
+      ValidMaMap mamap impl spec ->
       MsgsInSim (liftMmap mamap) sim ->
       MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
       ImpliesSimMP impl (liftMmap mamap) sim ->
@@ -701,7 +707,9 @@ Section NoRules.
           { instantiate (1:= map (liftMmap mamap) eins).
             destruct eins; [exfalso; auto|discriminate].
           }
-          { eapply validMsgMap_ValidMsgsExtIn; eauto. }
+          { eapply validMaMap_ValidMsgsExtIn; eauto.
+            apply liftMmap_valid.
+          }
       + simpl; rewrite <-H8; repeat f_equal.
         clear; induction eins; simpl; auto.
         rewrite IHeins; reflexivity.
@@ -720,14 +728,16 @@ Section NoRules.
             inv H6; constructor; auto.
             dest; auto.
           }
-          { admit. }
+          { eapply validMaMap_ValidMsgsExtOut; eauto.
+            apply liftTmap_valid.
+          }
       + simpl; rewrite <-H8; repeat f_equal.
         clear; induction eouts; simpl; auto.
         rewrite IHeouts; reflexivity.
       + apply H1; auto.
     - exfalso.
       rewrite H3 in H17; elim H17.
-  Admitted.
+  Qed.
 
 End NoRules.
 
