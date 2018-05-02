@@ -9,38 +9,38 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
     nst = {| bst_oss := oss;
              bst_orqs := orqs;
-             bst_msgs := distributeMsgs eins msgs
+             bst_msgs := enqMsgs eins msgs
           |} ->
     step_m sys pst (RlblIns eins) nst
 | SmOuts: forall pst nst oss orqs msgs eouts,
     eouts <> nil ->
-    Forall (FirstMP msgs) eouts ->
+    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) eouts ->
     ValidMsgsExtOut sys eouts ->
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
     nst = {| bst_oss := oss;
              bst_orqs := orqs;
-             bst_msgs := removeMsgs eouts msgs
+             bst_msgs := deqMsgs (idsOf eouts) msgs
           |} ->
     step_m sys pst (RlblOuts eouts) nst
 | SmInt: forall pst nst oss orqs msgs oidx os porq pos norq ins rule iouts,
     oidx = rule_oidx rule ->
-    In oidx (indicesOf sys) ->
+    In oidx (oindsOf sys) ->
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
 
-    Forall (FirstMP msgs) ins ->
-    ValidMsgsIn oidx ins ->
-    map (fun tmsg => msg_id tmsg) ins = rule_mids rule ->
+    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) ins ->
+    ValidMsgsIn sys ins ->
+    idsOf ins = rule_minds rule ->
 
     In rule (sys_rules sys) ->
     rule_precond rule os porq ins ->
     rule_postcond rule os porq ins pos norq iouts ->
-    ValidMsgsOut oidx iouts ->
+    ValidMsgsOut iouts ->
 
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
     nst = {| bst_oss := oss +[ oidx <- pos ];
              bst_orqs := orqs +[ oidx <- norq ];
-             bst_msgs := distributeMsgs iouts (removeMsgs ins msgs)
+             bst_msgs := enqMsgs iouts (deqMsgs (idsOf ins) msgs)
           |} ->
 
     step_m sys pst (RlblInt (Some rule) ins iouts) nst.

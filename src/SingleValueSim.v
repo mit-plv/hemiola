@@ -10,12 +10,6 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-(* [M.restrict] is used to define some predicates and we don't want it to be
- * unfolded during reductions. When [M.restrict] is applied to finite maps,
- * reduction tactics like [cbn] reduce it too much.
- *)
-(* Global Opaque M.restrict. *)
-
 Section RPreconds.
 
   Definition ImplOStatusM: RPrecond :=

@@ -23,12 +23,11 @@ Set Implicit Arguments.
  * [tinfo_rqin]) and dynamic transaction id ([tinfo_tid]).
  *)
 Definition Blocked (msgs: MessagePool TMsg) :=
-  forall m1 m2 ti1 ti2,
-    InMP m1 msgs -> InMP m2 msgs ->
+  forall i1 m1 i2 m2 ti1 ti2,
+    InMP i1 m1 msgs -> InMP i2 m2 msgs ->
     tmsg_info m1 = Some ti1 ->
     tmsg_info m2 = Some ti2 ->
-    map (fun msg => mid_addr (msg_id msg)) (tinfo_rqin ti1) =
-    map (fun msg => mid_addr (msg_id msg)) (tinfo_rqin ti2) ->
+    tinfo_rqin ti1 = tinfo_rqin ti2 ->
     ti1 = ti2.
 
 Definition BlockedInv (tst: TState) :=
@@ -44,7 +43,7 @@ Definition BlockedInv (tst: TState) :=
 Theorem blocked_int_SimMP_FirstMP:
   forall ist,
     Blocked ist ->
-    forall (impl: System) msgP sst,
+    forall (impl: System) sst,
       SimMP msgP impl ist sst ->
       forall imsg,
         toInternal impl imsg = true ->

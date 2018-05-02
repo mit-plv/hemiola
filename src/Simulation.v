@@ -8,8 +8,7 @@ Section Simulation.
           `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
           `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}.
   Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
-            (sim: StateI -> StateS -> Prop)
-            (p: Label -> Label).
+            (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
 
@@ -28,7 +27,7 @@ Section Simulation.
                   ist2 ≈ sst1
         | Some elbl => (exists sst2 slbl,
                            stepS spec sst1 slbl sst2 /\
-                           getLabel slbl = Some (p elbl) /\
+                           getLabel slbl = Some elbl /\
                            ist2 ≈ sst2)
         end.
 
@@ -41,8 +40,7 @@ Section Simulation.
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps stepS spec sst1 shst sst2 /\
-          map p (behaviorOf impl ihst) =
-          behaviorOf spec shst /\
+          behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
@@ -70,7 +68,7 @@ Section Simulation.
   Hypothesis (Hsimi: sim (initsOf impl) (initsOf spec)).
 
   Theorem simulation_implies_refinement:
-    (steps stepI) # (steps stepS) |-- impl ⊑[p] spec.
+    (steps stepI) # (steps stepS) |-- impl ⊑ spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H5.
@@ -88,7 +86,6 @@ Section InvSim.
   Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
             (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop)
-            (p: Label -> Label)
             (linv: LabelI -> Prop).
 
   Local Infix "≈" := sim (at level 30).
@@ -112,7 +109,7 @@ Section InvSim.
         | Some elbl =>
           (exists sst2 slbl,
               stepS spec sst1 slbl sst2 /\
-              getLabel slbl = Some (p elbl) /\
+              getLabel slbl = Some elbl /\
               ist2 ≈ sst2)
         end.
 
@@ -128,8 +125,7 @@ Section InvSim.
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps stepS spec sst1 shst sst2 /\
-          map p (behaviorOf impl ihst) =
-          behaviorOf spec shst /\
+          behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2.
   Proof.
     induction 4; simpl; intros;
@@ -171,517 +167,31 @@ Definition LiftSimR {StateS1 StateS2} (f: StateS2 -> StateS1)
            {StateI} (sim: StateI -> StateS1 -> Prop): StateI -> StateS2 -> Prop :=
   fun sti sts2 => sim sti (f sts2).
 
-Definition liftLmap (mmap: Msg -> Msg) (il: Label) :=
-  match il with
-  | LblIns ins => LblIns (map mmap ins)
-  | LblOuts outs => LblOuts (map mmap outs)
-  end.
-
-Section SimMap.
-  Variable (mamap: MsgAddr -> MsgAddr).
-
-  Definition ExtInjective (impl: System) :=
-    forall (ma1 ma2: MsgAddr),
-      maExternal impl ma1 = true ->
-      maExternal impl ma2 = true ->
-      mamap ma1 = mamap ma2 -> ma1 = ma2.
-
-  Definition ValidMaMap (impl spec: System) :=
-    (forall ma,
-        maFromInternal impl ma = maFromInternal spec (mamap ma) /\
-        maToInternal impl ma = maToInternal spec (mamap ma)) /\
-    ExtInjective impl.
-
-  Lemma validMaMap_maFromExternal:
-    forall impl spec,
-      ValidMaMap impl spec ->
-      forall ma b,
-        maFromExternal impl ma = b ->
-        maFromExternal spec (mamap ma) = b.
-  Proof.
-    unfold ValidMaMap; intros; dest.
-    specialize (H ma); dest.
-    unfold_idx.
-    destruct (ma_from _ ?<n _);
-      destruct (ma_from _ ?<n _); subst; auto.
-  Qed.
-
-  Lemma validMaMap_maToInternal:
-    forall impl spec,
-      ValidMaMap impl spec ->
-      forall ma b,
-        maToInternal impl ma = b ->
-        maToInternal spec (mamap ma) = b.
-  Proof.
-    unfold ValidMaMap; intros; dest.
-    specialize (H ma); dest.
-    unfold_idx.
-    destruct (ma_to _ ?<n _);
-      destruct (ma_to _ ?<n _); subst; auto.
-  Qed.
-
-  Lemma ExtInjective_same_indices:
-    forall impl1 impl2,
-      indicesOf impl1 = indicesOf impl2 ->
-      ExtInjective impl1 ->
-      ExtInjective impl2.
-  Proof.
-    unfold ExtInjective, maExternal; intros.
-    apply H0; auto.
-    - unfold_idx; rewrite H; auto.
-    - unfold_idx; rewrite H; auto.
-  Qed.
-
-  Lemma validMaMap_same_indices:
-    forall impl1 spec,
-      ValidMaMap impl1 spec ->
-      forall impl2,
-        indicesOf impl1 = indicesOf impl2 ->
-        ValidMaMap impl2 spec.
-  Proof.
-    unfold ValidMaMap; unfold_idx; intros; dest.
-    split.
-    - rewrite <-H0; auto.
-    - eapply ExtInjective_same_indices; eauto.
-  Qed.
-
-  Context {MsgT1 MsgT2} `{HasMsg MsgT1} `{HasMsg MsgT2}.
-
-  Variable (mmap: MsgT1 -> MsgT2).
-  Hypothesis (Hmmap: forall m: MsgT1,
-                 mamap (msgAddrOf (getMsg m)) = msgAddrOf (getMsg (mmap m))).
-
-  Lemma validMaMap_ValidMsgsExtIn:
-    forall impl spec,
-      ValidMaMap impl spec ->
-      forall eins,
-        ValidMsgsExtIn impl eins ->
-        ValidMsgsExtIn spec (map mmap eins).
-  Proof.
-    intros.
-    destruct H2; split.
-    - clear -Hmmap H1 H2; induction eins; simpl; [constructor|].
-      inv H2; constructor; auto.
-      red in H1; dest; split.
-      + apply negb_false_iff.
-        rewrite <-fromInternal_fromExternal_negb.
-        apply negb_false_iff in H2.
-        rewrite <-fromInternal_fromExternal_negb in H2.
-        specialize (H1 (msgAddrOf (getMsg a))); dest.
-        unfold_idx.
-        rewrite <-Hmmap, <-H1; auto.
-      + specialize (H1 (msgAddrOf (getMsg a))); dest.
-        unfold_idx.
-        rewrite <-Hmmap, <-H5; auto.
-    - destruct H1; clear H1.
-      unfold WellDistrMsgs in *.
-      induction eins; simpl; intros; auto.
-      unfold id in *; inv H2; inv H3; dest.
-      constructor; auto.
-      intro Hx; elim H5; clear -Hmmap H1 H4 H7 Hx.
-      induction eins; [elim Hx|].
-      inv H7; inv Hx; dest.
-      + assert (maExternal impl (msgAddrOf (getMsg a)) = true).
-        { apply orb_true_intro; left; assumption. }
-        assert (maExternal impl (msgAddrOf (getMsg a0)) = true).
-        { apply orb_true_intro; left; assumption. }
-        do 2 rewrite <-Hmmap in H2.
-        cbn in *.
-        destruct (getMsg a) as [[[from1 to1 chn1] tid1] val1].
-        destruct (getMsg a0) as [[[from2 to2 chn2] tid2] val2].
-        cbn in *.
-        specialize (H4 _ _ H8 H7 H2); inv H4.
-        left; auto.
-      + right; auto.
-  Qed.
-
-  Lemma validMaMap_ValidMsgsExtOut:
-    forall impl spec,
-      ValidMaMap impl spec ->
-      forall eouts,
-        ValidMsgsExtOut impl eouts ->
-        ValidMsgsExtOut spec (map mmap eouts).
-  Proof.
-    intros.
-    destruct H2; split.
-    - clear -Hmmap H1 H2; induction eouts; simpl; [constructor|].
-      inv H2; constructor; auto.
-      red in H1; dest; split.
-      + specialize (H1 (msgAddrOf (getMsg a))); dest.
-        unfold_idx.
-        rewrite <-Hmmap, <-H1; auto.
-      + apply negb_false_iff.
-        rewrite <-toInternal_toExternal_negb.
-        apply negb_false_iff in H3.
-        rewrite <-toInternal_toExternal_negb in H3.
-        specialize (H1 (msgAddrOf (getMsg a))); dest.
-        unfold_idx.
-        rewrite <-Hmmap, <-H5; auto.
-    - destruct H1; clear H1.
-      unfold WellDistrMsgs in *.
-      induction eouts; simpl; intros; auto.
-      unfold id in *; inv H2; inv H3; dest.
-      constructor; auto.
-      intro Hx; elim H5; clear -Hmmap H2 H4 H7 Hx.
-      induction eouts; [elim Hx|].
-      inv H7; inv Hx; dest.
-      + assert (maExternal impl (msgAddrOf (getMsg a)) = true).
-        { apply orb_true_intro; right; assumption. }
-        assert (maExternal impl (msgAddrOf (getMsg a0)) = true).
-        { apply orb_true_intro; right; assumption. }
-        do 2 rewrite <-Hmmap in H1.
-        cbn in *.
-        destruct (getMsg a) as [[[from1 to1 chn1] tid1] val1].
-        destruct (getMsg a0) as [[[from2 to2 chn2] tid2] val2].
-        cbn in *.
-        specialize (H4 _ _ H8 H7 H1); inv H4.
-        left; auto.
-      + right; auto.
-  Qed.
-
-End SimMap.
-
-Definition liftMmap (mamap: MsgAddr -> MsgAddr): Msg -> Msg :=
-  fun msg =>
-    {| msg_id := {| mid_addr := mamap (mid_addr (msg_id msg));
-                    mid_tid := mid_tid (msg_id msg) |};
-       msg_value := msg_value msg |}.
-
-Lemma liftMmap_valid:
-  forall (mamap: MsgAddr -> MsgAddr) (m: Msg),
-    mamap (msgAddrOf (getMsg m)) = msgAddrOf (getMsg (liftMmap mamap m)).
-Proof.
-  reflexivity.
-Qed.
-
-Lemma liftTmap_valid:
-  forall (mamap: MsgAddr -> MsgAddr) (m: TMsg),
-    mamap (msgAddrOf (getMsg m)) = msgAddrOf (getMsg (liftTmap (liftMmap mamap) m)).
-Proof.
-  reflexivity.
-Qed.
-
-Section RqRsMP.
-  Context {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}.
-
-  Definition requestsOfMP (sys: SysT) (mp: MessagePool MsgT) :=
-    filter (fun msg => fromExternal sys msg) mp.
-
-  (* NOTE: this definition includes external responses. *)
-  Definition nonrequestsOfMP (sys: SysT) (mp: MessagePool MsgT) :=
-    filter (fun msg => fromInternal sys msg) mp.
-
-  Definition responsesOfMP (sys: SysT) (mp: MessagePool MsgT) :=
-    filter (fun msg => toExternal sys msg) mp.
-
-  (* NOTE: this definition includes external requests. *)
-  Definition nonresponsesOfMP (sys: SysT) (mp: MessagePool MsgT) :=
-    filter (fun msg => toInternal sys msg) mp.
-
-End RqRsMP.
-
-Definition MsgsInSim (msgF: Msg -> Msg) (sim: TState -> TState -> Prop) :=
-  forall ioss iorqs imsgs its soss sorqs smsgs sts eins,
-    sim {| tst_oss := ioss; tst_orqs := iorqs; tst_msgs := imsgs; tst_tid := its |}
-        {| tst_oss := soss; tst_orqs := sorqs; tst_msgs := smsgs; tst_tid := sts |} ->
+Definition MsgsSim (sim: TState -> TState -> Prop) :=
+  forall ioss iorqs imsgs imsgs' itrss itrss' its
+         soss sorqs smsgs smsgs' strss strss' sts,
     sim {| tst_oss := ioss; tst_orqs := iorqs;
-           tst_msgs := distributeMsgs (toTMsgsU eins) imsgs; tst_tid := its |}
+           tst_msgs := imsgs; tst_trss := itrss; tst_tid := its |}
         {| tst_oss := soss; tst_orqs := sorqs;
-           tst_msgs := distributeMsgs (toTMsgsU (map msgF eins)) smsgs; tst_tid := sts |}.
-
-Definition MsgsOutSim {SysT} `{IsSystem SysT} (impl: SysT)
-           (msgF: TMsg -> TMsg) (sim: TState -> TState -> Prop) :=
-  forall ioss iorqs imsgs its soss sorqs smsgs sts eouts,
-    ValidMsgsExtOut impl eouts ->
-    sim {| tst_oss := ioss; tst_orqs := iorqs; tst_msgs := imsgs; tst_tid := its |}
-        {| tst_oss := soss; tst_orqs := sorqs; tst_msgs := smsgs; tst_tid := sts |} ->
+           tst_msgs := smsgs; tst_trss := strss; tst_tid := sts |} ->
     sim {| tst_oss := ioss; tst_orqs := iorqs;
-           tst_msgs := removeMsgs eouts imsgs; tst_tid := its |}
+           tst_msgs := imsgs'; tst_trss := itrss'; tst_tid := its |}
         {| tst_oss := soss; tst_orqs := sorqs;
-           tst_msgs := removeMsgs (map msgF eouts) smsgs; tst_tid := sts |}.
+           tst_msgs := smsgs'; tst_trss := strss'; tst_tid := sts |}.
 
-(** [SimMP] defines a standard simulation between two [MessagePool]s of 
- * implementation and spec. It's basically 1) rollbacking all live transactions
- * to their original external requests and 2) to keep all external responses.
- *)
-Section SimMP.
-  Variable msgP: Msg -> Msg.
-
-  (* Assume [rb] is already ordered in terms of [tinfo_tid], which is uniquely 
-   * assigned to each transaction.
-   *)
-  Fixpoint addActive (amsg: Msg) (atinfo: TInfo) (rb: MessagePool TMsg) :=
-    match rb with
-    | nil => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: nil
-    | tmsg :: rb' =>
-      match tmsg_info tmsg with
-      | Some tinfo =>
-        if tinfo_tid atinfo <n tinfo_tid tinfo
-        then {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
-        else if tinfo_tid atinfo ==n tinfo_tid tinfo
-             then rb
-             else tmsg :: addActive amsg atinfo rb'
-      | None => {| tmsg_msg := amsg; tmsg_info := Some atinfo |} :: rb
-      end
-    end.
-  
-  Definition addInactive (iam: TMsg) (rb: MessagePool TMsg) :=
-    rb ++ iam :: nil.
-
-  Fixpoint rollbacked (rb mp: MessagePool TMsg) :=
-    match mp with
-    | nil => rb
-    | tmsg :: mp' =>
-      match tmsg_info tmsg with
-      | Some tinfo => rollbacked (addActive (tmsg_msg tmsg) tinfo rb) mp'
-      | None => rollbacked (addInactive tmsg rb) mp'
-      end
-    end.
-
-  (* [rollback], as the name says, rolls back all active messages
-   * in a given [MessagePool].
-   *)
-  Definition rollback (mp: MessagePool TMsg) := rollbacked nil mp.
-
-  (* [deinitialize] makes a message uninitialized. *)
-  Definition deinitialize (tmsg: TMsg): TMsg :=
-    toTMsgU (msgP (match tmsg_info tmsg with
-                   | Some tinfo =>
-                     (* NOTE: any rules built by the synthesizer do not
-                      * generate a message where [tinfo_rqin tinfo] is
-                      * [nil]. Actually, it is always a singleton, i.e.,
-                      * a single request.
-                      *)
-                     hd (tmsg_msg tmsg) (tinfo_rqin tinfo)
-                   | None => tmsg_msg tmsg
-                   end)).
-
-  (* NOTE: Each message in [mp] is assumed to be unique in terms of
-   * [TInfo] it carries.
-   *)
-  Definition deinitializeMP (mp: MessagePool TMsg) :=
-    map deinitialize mp.
-
-  Context {SysT} `{IsSystem SysT}.
-  Variable impl: SysT.
-
-  Definition SimMP (imsgs smsgs: MessagePool TMsg) :=
-    smsgs = (deinitializeMP (rollback (nonresponsesOfMP impl imsgs)))
-              ++ (map (liftTmap msgP) (responsesOfMP impl imsgs)).
-
-  Lemma rollbacked_enqMP_toTMsgU:
-    forall msgs emsg rb,
-      enqMP (toTMsgU (msgP emsg)) (deinitializeMP (rollbacked rb msgs)) =
-      deinitializeMP (rollbacked rb (enqMP (toTMsgU emsg) msgs)).
-  Proof.
-    induction msgs; simpl; intros.
-    - unfold deinitializeMP, enqMP, addInactive.
-      rewrite map_app; simpl.
-      reflexivity.
-    - destruct (tmsg_info a); eauto.
-  Qed.
-
-  Lemma rollbacked_app:
-    forall mp1 rb mp2,
-      rollbacked rb (mp1 ++ mp2) =
-      rollbacked (rollbacked rb mp1) mp2.
-  Proof.
-    induction mp1; simpl; intros; [reflexivity|].
-    destruct (tmsg_info a); auto.
-  Qed.
-
-  Theorem ext_outs_SimMP_FirstMP:
-    forall ist sst,
-      SimMP ist sst ->
-      forall imsg,
-        toExternal impl imsg = true ->
-        FirstMP ist imsg ->
-        forall smsg,
-          smsg = liftTmap msgP imsg ->
-          FirstMP sst smsg.
-  Proof.
-  Admitted.
-
-  Corollary ext_outs_SimMP_FirstMP_map:
-    forall ist sst,
-      SimMP ist sst ->
-      forall imsgs,
-        Forall (fun imsg => toExternal impl imsg = true) imsgs ->
-        Forall (FirstMP ist) imsgs ->
-        forall smsgs,
-          smsgs = map (liftTmap msgP) imsgs ->
-          Forall (FirstMP sst) smsgs.
-  Proof.
-    induction imsgs; simpl; intros; subst; [constructor|].
-    inv H1; inv H2; constructor; auto.
-    eapply ext_outs_SimMP_FirstMP; eauto.
-  Qed.
-
-  Lemma SimMP_ext_msg_ins:
-    forall imsgs smsgs,
-      SimMP imsgs smsgs ->
-      forall eins,
-        SimMP (distributeMsgs (toTMsgsU eins) imsgs)
-              (distributeMsgs (toTMsgsU (map msgP eins)) smsgs).
-  Proof.
-  Admitted.
-
-  Lemma SimMP_ext_msg_outs:
-    forall imsgs smsgs,
-      SimMP imsgs smsgs ->
-      forall eouts,
-        ValidMsgsExtOut impl eouts ->
-        SimMP (removeMsgs eouts imsgs)
-              (removeMsgs (map (liftTmap msgP) eouts) smsgs).
-  Proof.
-  Admitted.
-
-  Lemma SimMP_ext_msg_immediate_out:
-    forall imsgs smsgs,
-      SimMP imsgs smsgs ->
-      forall emsg,
-        FirstMP imsgs (toTMsgU emsg) ->
-        SimMP (removeMP (toTMsgU emsg) imsgs)
-              (removeMP (toTMsgU (msgP emsg)) smsgs).
-  Proof.
-  Admitted.
-
-  Lemma SimMP_int_msg_immediate:
-    forall imsgs smsgs,
-      SimMP imsgs smsgs ->
-      forall rq rs tinfo,
-        tmsg_info rq = Some tinfo ->
-        tmsg_info rs = Some tinfo ->
-        SimMP (distributeMsgs [rs] (removeMP rq imsgs)) smsgs.
-  Proof.
-  Admitted.
-
-  Lemma SimMP_ext_msg_rq_forwarding:
-    forall imsgs smsgs,
-      SimMP imsgs smsgs ->
-      forall emsg fwds tinfo,
-        tmsg_info emsg = None ->
-        Forall (fun tmsg => tmsg_info tmsg = Some tinfo) fwds ->
-        FirstMP imsgs emsg ->
-        TidLtMP imsgs (tinfo_tid tinfo) ->
-        SimMP (distributeMsgs fwds (removeMP emsg imsgs)) smsgs.
-  Proof.
-  Admitted.
-
-  (* Lemma SimMP_responses_back_ext_out: *)
-  (*   forall imsgs smsgs, *)
-  (*     SimMP imsgs smsgs -> *)
-  (*     forall origRq ts rss, *)
-  (*       Forall (fun tmsg => *)
-  (*                 (tmsg_info tmsg) >>=[False] (fun tinfo => tinfo = buildTInfo ts [origRq])) *)
-  (*              rss -> *)
-  (*       ForallMP (fun tmsg => *)
-  (*                   (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts)) *)
-  (*                (removeMsgs rss imsgs) -> *)
-  (*       SimMP (removeMsgs rss imsgs) *)
-  (*             (removeMP (toTMsgU (msgP origRq)) smsgs). *)
-  (* Proof. *)
-
-  (* Corollary SimMP_response_back_ext_out: *)
-  (*   forall imsgs smsgs, *)
-  (*     SimMP imsgs smsgs -> *)
-  (*     forall origRq ts rs, *)
-  (*       Forall (fun tmsg => *)
-  (*                 (tmsg_info tmsg) >>=[False] (fun tinfo => tinfo = buildTInfo ts [origRq])) *)
-  (*              [rs] -> *)
-  (*       ForallMP (fun tmsg => *)
-  (*                   (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts)) *)
-  (*                (removeMP rs imsgs) -> *)
-  (*       SimMP (removeMP rs imsgs) *)
-  (*             (removeMP (toTMsgU (msgP origRq)) smsgs). *)
-  (* Proof. *)
-  (*   intros; eapply SimMP_responses_back_ext_out in H0; eauto. *)
-  (*   simpl in H0; assumption. *)
-  (* Qed. *)
-  
-End SimMP.
-
-Definition ImpliesSimMP {SysT} `{IsSystem SysT} (impl: SysT)
-           (msgP: Msg -> Msg) (sim: TState -> TState -> Prop) :=
+Definition ImpliesSimMP (sim: TState -> TState -> Prop) :=
   forall ist sst,
     sim ist sst ->
-    SimMP msgP impl (tst_msgs ist) (tst_msgs sst).
+    tst_msgs sst = tst_trss ist.
 
 Section NoRules.
 
-  Lemma steps_simulation_NoExtOuts_no_rules:
-    forall (sim: TState -> TState -> Prop) mamap impl spec,
-      ValidMaMap mamap impl spec ->
-      MsgsInSim (liftMmap mamap) sim ->
-      MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
-      sys_rules impl = nil ->
-      forall ist1 sst1,
-        sim ist1 sst1 ->
-        NoExtOuts impl ist1 ->
-        forall ihst ist2,
-          steps step_t impl ist1 ihst ist2 ->
-          exists (sst2 : TState) (shst : list TLabel),
-            steps step_t spec sst1 shst sst2 /\
-            map (liftLmap (liftMmap mamap)) (behaviorOf impl ihst) =
-            behaviorOf spec shst /\
-            sim ist2 sst2.
-  Proof.
-    induction 7; simpl; intros;
-      [do 2 eexists; repeat split; [constructor|reflexivity|assumption]|].
-
-    specialize (IHsteps H3 H4); dest.
-    inv H6.
-    - do 2 eexists; repeat split; eauto.
-    - destruct x as [noss norqs nmsgs ntid].
-      do 2 eexists; repeat split.
-      + eapply StepsCons.
-        * eassumption.
-        * eapply StIns; try reflexivity.
-          { instantiate (1:= map (liftMmap mamap) eins).
-            destruct eins; [exfalso; auto|discriminate].
-          }
-          { eapply validMaMap_ValidMsgsExtIn; eauto.
-            apply liftMmap_valid.
-          }
-      + simpl; rewrite <-H8; repeat f_equal.
-        clear; induction eins; simpl; auto.
-        rewrite IHeins; reflexivity.
-      + apply H0; auto.
-    - exfalso.
-      eapply steps_t_no_rules_NoExtOuts in H5; eauto.
-      hnf in H5; simpl in H5.
-      destruct eouts as [|eout eouts]; auto.
-      inv H11.
-      apply FirstMP_InMP in H14.
-      eapply Forall_forall in H5; eauto.
-      destruct H12; inv H6; dest.
-      congruence.
-    - exfalso.
-      rewrite H2 in H17; elim H17.
-  Qed.
-
-  Corollary refines_no_rules:
-    forall (sim: TState -> TState -> Prop) mamap impl spec,
-      sim (initsOf impl) (initsOf spec) ->
-      ValidMaMap mamap impl spec ->
-      MsgsInSim (liftMmap mamap) sim ->
-      MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
-      sys_rules impl = nil ->
-      (steps step_t) # (steps step_t) |-- impl <=[ liftLmap (liftMmap mamap) ] spec.
-  Proof.
-    unfold Refines; intros.
-    inv H4.
-    eapply steps_simulation_NoExtOuts_no_rules in H5; eauto.
-    - dest; econstructor; eauto.
-    - hnf; cbn; constructor.
-  Qed.
-
   Lemma steps_simulation_BlockedInv_SimMP_no_rules:
-    forall (sim: TState -> TState -> Prop) mamap impl spec,
-      ValidMaMap mamap impl spec ->
-      MsgsInSim (liftMmap mamap) sim ->
-      MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
-      ImpliesSimMP impl (liftMmap mamap) sim ->
+    forall (sim: TState -> TState -> Prop) impl spec,
+      merqsOf impl = merqsOf spec ->
+      merssOf impl = merssOf spec ->
+      MsgsSim sim ->
+      ImpliesSimMP sim ->
       sys_rules impl = nil ->
       forall ist1 sst1,
         sim ist1 sst1 ->
@@ -689,8 +199,7 @@ Section NoRules.
           steps step_t impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
             steps step_t spec sst1 shst sst2 /\
-            map (liftLmap (liftMmap mamap)) (behaviorOf impl ihst) =
-            behaviorOf spec shst /\
+            behaviorOf impl ihst = behaviorOf spec shst /\
             sim ist2 sst2.
   Proof.
     induction 7; simpl; intros;
@@ -703,41 +212,24 @@ Section NoRules.
       do 2 eexists; repeat split.
       + eapply StepsCons.
         * eassumption.
-        * eapply StIns; try reflexivity.
-          { instantiate (1:= map (liftMmap mamap) eins).
-            destruct eins; [exfalso; auto|discriminate].
-          }
-          { eapply validMaMap_ValidMsgsExtIn; eauto.
-            apply liftMmap_valid.
-          }
-      + simpl; rewrite <-H8; repeat f_equal.
-        clear; induction eins; simpl; auto.
-        rewrite IHeins; reflexivity.
-      + apply H0; auto.
+        * eapply StIns; eauto.
+          eapply ValidMsgsExtIn_merqsOf; eauto.
+      + simpl; rewrite <-H8; reflexivity.
+      + eapply H1; eauto.
     - destruct x as [noss norqs nmsgs ntid].
       do 2 eexists; repeat split.
       + eapply StepsCons.
         * eassumption.
-        * eapply StOuts; try reflexivity.
-          { instantiate (1:= map (liftTmap (liftMmap mamap)) eouts).
-            destruct eouts; [exfalso; auto|discriminate].
+        * eapply StOuts; try reflexivity; try eassumption.
+          { (* first-to-first: requires an invariant about [SimMP] *)
+            admit.
           }
-          { specialize (H2 _ _ H9); simpl in H2.
-            eapply ext_outs_SimMP_FirstMP_map; try eassumption; try reflexivity.
-            destruct H12; clear -H6; induction eouts; simpl; auto.
-            inv H6; constructor; auto.
-            dest; auto.
-          }
-          { eapply validMaMap_ValidMsgsExtOut; eauto.
-            apply liftTmap_valid.
-          }
-      + simpl; rewrite <-H8; repeat f_equal.
-        clear; induction eouts; simpl; auto.
-        rewrite IHeouts; reflexivity.
-      + apply H1; auto.
+          { eapply ValidMsgsExtOut_merssOf; eauto. }
+      + simpl; rewrite <-H8; reflexivity.
+      + eapply H1; eauto.
     - exfalso.
       rewrite H3 in H17; elim H17.
-  Qed.
+  Admitted.
 
 End NoRules.
 

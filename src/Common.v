@@ -4,6 +4,16 @@ Require Export ProofIrrelevance.
 
 Definition IdxT := nat.
 
+Definition Id (A: Type) := (IdxT * A)%type.
+Definition liftI {A B: Type} (f: A -> B) (ida: Id A): Id B :=
+  (fst ida, f (snd ida)).
+Definition imap {A B: Type} (f: A -> B) (ias: list (Id A)): list (Id B) :=
+  map (liftI f) ias.
+Definition idOf {A} (ida: Id A) := fst ida.
+Definition valOf {A} (ida: Id A) := snd ida.
+Definition idsOf {A} (ias: list (Id A)) := map fst ias.
+Definition valsOf {A} (ias: list (Id A)) := map snd ias.
+
 Notation "[ ]" := nil (format "[ ]").
 Notation "[ x ]" := (cons x nil).
 Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)).

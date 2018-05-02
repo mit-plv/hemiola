@@ -13,58 +13,67 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
 
 Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 | StSlt: forall st, step_t sys st (emptyRLabel _) st
-| StIns: forall ts pst nst oss orqs msgs eins,
+| StIns: forall ts pst nst oss orqs msgs trss eins,
     eins <> nil ->
     ValidMsgsExtIn sys eins ->
-    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
-    nst = {| tst_oss := oss;
-             tst_orqs := orqs;
-             tst_msgs := distributeMsgs (toTMsgsU eins) msgs;
+    pst = {| tst_oss := oss; tst_orqs := orqs;
+             tst_msgs := msgs; tst_trss := trss; tst_tid := ts |} ->
+    nst = {| tst_oss := oss; tst_orqs := orqs;
+             tst_msgs := enqMsgs (imap toTMsgU eins) msgs;
+             tst_trss := enqMsgs (imap toTMsgU eins) trss;
              tst_tid := ts
           |} ->
-    step_t sys pst (RlblIns (toTMsgsU eins)) nst
-| StOuts: forall ts pst nst oss orqs msgs eouts,
+    step_t sys pst (RlblIns (imap toTMsgU eins)) nst
+| StOuts: forall ts pst nst oss orqs msgs trss eouts,
     eouts <> nil ->
-    Forall (FirstMP msgs) eouts ->
+    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) eouts ->
     ValidMsgsExtOut sys eouts ->
-    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
+    pst = {| tst_oss := oss; tst_orqs := orqs;
+             tst_msgs := msgs; tst_trss := trss; tst_tid := ts |} ->
     nst = {| tst_oss := oss;
              tst_orqs := orqs;
-             tst_msgs := removeMsgs eouts msgs;
+             tst_msgs := deqMsgs (idsOf eouts) msgs;
+             tst_trss := deqMsgs (idsOf eouts) trss;
              tst_tid := ts
           |} ->
     step_t sys pst (RlblOuts eouts) nst
 | StInt: forall ts pst nst nts (Hts: nts > ts) tinfo
-                oss orqs msgs oidx os porq pos norq ins rule outs,
+                oss orqs msgs trss oidx os porq pos norq ins rule outs,
     oidx = rule_oidx rule ->
-    In oidx (indicesOf sys) ->
+    In oidx (oindsOf sys) ->
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
-    Forall (FirstMP msgs) ins ->
-    ValidMsgsIn oidx ins ->
-    map (fun tmsg => msg_id (tmsg_msg tmsg)) ins = rule_mids rule ->
+    
+    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) ins ->
+    ValidMsgsIn sys ins ->
+    idsOf ins = rule_minds rule ->
+    
     In rule (sys_rules sys) ->
-    rule_precond rule os (map tmsg_msg porq) (map tmsg_msg ins) ->
-    rule_postcond rule os (map tmsg_msg porq) (map tmsg_msg ins)
+    rule_precond rule os (map tmsg_msg porq) (imap tmsg_msg ins) ->
+    rule_postcond rule os (map tmsg_msg porq) (imap tmsg_msg ins)
                   pos (map tmsg_msg norq) outs ->
-    ValidMsgsOut oidx outs ->
+    ValidMsgsOut outs ->
 
-    tinfo = match getTMsgsTInfo ins with
+    tinfo = match getTMsgsTInfo (valsOf ins) with
             | Some ti => ti
-            | None => {| tinfo_tid := nts; tinfo_rqin := map tmsg_msg ins |}
+            | None => {| tinfo_tid := nts;
+                         tinfo_rqin := imap tmsg_msg ins |}
             end ->
 
-    pst = {| tst_oss := oss; tst_orqs := orqs; tst_msgs := msgs; tst_tid := ts |} ->
+    pst = {| tst_oss := oss; tst_orqs := orqs;
+             tst_msgs := msgs; tst_trss := trss; tst_tid := ts |} ->
     nst = {| tst_oss := oss +[ oidx <- pos ];
              tst_orqs := orqs +[ oidx <- norq ];
-             tst_msgs := distributeMsgs (toTMsgs tinfo outs) (removeMsgs ins msgs);
-             tst_tid := match getTMsgsTInfo ins with
+             tst_msgs := enqMsgs (imap (toTMsg tinfo) outs)
+                                 (deqMsgs (idsOf ins) msgs);
+             tst_trss := trss; (* FIXME *)
+             tst_tid := match getTMsgsTInfo (valsOf ins) with
                         | Some _ => ts
                         | None => nts
                         end
           |} ->
 
-    step_t sys pst (RlblInt (Some rule) ins (toTMsgs tinfo outs)) nst.
+    step_t sys pst (RlblInt (Some rule) ins (imap (toTMsg tinfo) outs)) nst.
 
 Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
   forall oidx,
@@ -75,7 +84,8 @@ Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
     end.
 
 Definition TMsgsRel (tmsgs: MessagePool TMsg) (msgs: MessagePool Msg) :=
-  map tmsg_msg tmsgs = msgs.
+  forall midx,
+    map tmsg_msg (findQ midx tmsgs) = findQ midx msgs.
 
 Definition TStateRel (tst: TState) (st: MState) :=
   tst_oss tst = bst_oss st /\
@@ -84,9 +94,9 @@ Definition TStateRel (tst: TState) (st: MState) :=
 
 Definition tToMLabel (tlbl: TLabel) :=
   match tlbl with
-  | RlblIns eins => RlblIns (map tmsg_msg eins)
-  | RlblOuts eouts => RlblOuts (map tmsg_msg eouts)
+  | RlblIns eins => RlblIns (imap tmsg_msg eins)
+  | RlblOuts eouts => RlblOuts (imap tmsg_msg eouts)
   | RlblInt orule mins mouts =>
-    RlblInt orule (map tmsg_msg mins) (map tmsg_msg mouts)
+    RlblInt orule (imap tmsg_msg mins) (imap tmsg_msg mouts)
   end.
 

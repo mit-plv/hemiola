@@ -9,58 +9,6 @@ Open Scope fmap.
 
 Section Msg.
 
-  (* Semantically, there is an 1-1 correspondence between [MsgAddr] and a
-   * channel (≈ queue, fifo) in a target system.
-   *)
-  Record MsgAddr :=
-    { ma_from : IdxT; (* an object that requests this message *)
-      ma_to : IdxT; (* an object that responses this message *)
-      ma_chn : IdxT (* which channel to use *)
-    }.
-
-  Definition buildMsgAddr fr to cn :=
-    {| ma_from := fr; ma_to := to; ma_chn := cn |}.
-
-  (* NOTE: [mid_tid] is a "transaction" id; all messages representing a certain
-   * transaction have the same [mid_tid]. Such messages are still 
-   * distinguishable by [mid_addr]. It is generally assumed that each channel is
-   * used at most once during the transaction.
-   *)
-  Record MsgId :=
-    { mid_addr : MsgAddr;
-      mid_tid : IdxT; (* a transaction id *)
-    }.
-
-  Definition mid_from := fun mid => ma_from (mid_addr mid).
-  Definition mid_to := fun mid => ma_to (mid_addr mid).
-  Definition mid_chn := fun mid => ma_chn (mid_addr mid).  
-
-  Definition buildMsgId tid fr to cn :=
-    {| mid_addr := {| ma_from := fr; ma_to := to; ma_chn := cn |};
-       mid_tid := tid |}.
-
-  Definition msgAddr_dec: forall m1 m2: MsgAddr, {m1 = m2} + {m1 <> m2}.
-  Proof. repeat decide equality. Defined.
-
-  Definition msgId_dec: forall m1 m2: MsgId, {m1 = m2} + {m1 <> m2}.
-  Proof.
-    decide equality.
-    - decide equality.
-    - apply msgAddr_dec.
-  Defined.
-
-  (* No conditions about [mid_chn]; it's only about liveness. *)
-  Definition DualMid (rq rs: MsgId) :=
-    mid_tid rq = mid_tid rs /\
-    mid_from rq = mid_to rs /\
-    mid_to rq = mid_from rs.
-
-  Definition dualOf (mid: MsgId) (dchn: IdxT) :=
-    {| mid_addr := {| ma_from := ma_to (mid_addr mid);
-                      ma_to := ma_from (mid_addr mid);
-                      ma_chn := dchn |};
-       mid_tid := mid_tid mid |}.
-
   Inductive Value :=
   | VUnit
   | VBool (b: bool)
@@ -77,7 +25,7 @@ Section Msg.
   Defined.
 
   Record Msg :=
-    { msg_id: MsgId;
+    { msg_id: IdxT;
       msg_value: Value
     }.
 
@@ -98,7 +46,7 @@ Section Msg.
   Proof.
     decide equality.
     - apply value_dec.
-    - apply msgId_dec.
+    - apply eq_nat_dec.
   Defined.
 
   Class HasMsg (MsgT: Type) :=
@@ -106,9 +54,6 @@ Section Msg.
 
   Global Instance Msg_HasMsg : HasMsg Msg :=
     { getMsg := id }.
-
-  Definition msgAddrOf (msg: Msg) :=
-    mid_addr (msg_id msg).
 
 End Msg.
 
@@ -143,10 +88,11 @@ Fixpoint removeRq {MsgT} (idxf: MsgT -> IdxT) (orq: ORq MsgT) (ridx: IdxT) :=
 
 Section Rule.
 
-  Definition RPrecond := OState -> ORq Msg -> list Msg (* input messages *) -> Prop.
+  Definition RPrecond := OState -> ORq Msg ->
+                         list (Id Msg) (* input messages *) -> Prop.
   Definition RPostcond :=
-    OState -> ORq Msg (* prestates *) -> list Msg (* input messages *) ->
-    OState -> ORq Msg (* poststates *) -> list Msg (* output messages *) -> Prop.
+    OState -> ORq Msg (* prestates *) -> list (Id Msg) (* input messages *) ->
+    OState -> ORq Msg (* poststates *) -> list (Id Msg) (* output messages *) -> Prop.
 
   Definition RPrecAnd (p1 p2: RPrecond): RPrecond :=
     fun ost orq ins => p1 ost orq ins /\ p2 ost orq ins.
@@ -164,7 +110,7 @@ Section Rule.
 
   Record Rule :=
     { rule_oidx: IdxT;
-      rule_mids: list MsgId;
+      rule_minds: list IdxT;
       rule_precond: RPrecond;
       rule_postcond: RPostcond;
     }.
@@ -179,13 +125,16 @@ Infix "->rpost" := RPostImp (at level 99).
 Section Conditions.
 
   Definition MsgOuts :=
-    OState (* prestate *) -> list Msg (* input messages *) -> list Msg.
+    OState (* prestate *) -> list (Id Msg) (* input messages *) ->
+    list (Id Msg).
   Definition PostcondSt :=
-    OState (* prestate *) -> list Msg (* input messages *) -> OState (* poststate *) -> Prop.
+    OState (* prestate *) -> list (Id Msg) (* input messages *) ->
+    OState (* poststate *) -> Prop.
   Definition PostcondORq :=
-    ORq Msg -> list Msg (* input messages *) -> ORq Msg -> Prop.
+    ORq Msg -> list (Id Msg) (* input messages *) -> ORq Msg -> Prop.
 
-  Definition rpostOf (pcondSt: PostcondSt) (pcondORq: PostcondORq) (mouts: MsgOuts): RPostcond :=
+  Definition rpostOf (pcondSt: PostcondSt)
+             (pcondORq: PostcondORq) (mouts: MsgOuts): RPostcond :=
     fun post porq ins nost norq outs =>
       pcondSt post ins nost /\
       pcondORq porq ins norq /\
@@ -196,81 +145,61 @@ End Conditions.
 Section System.
 
   Class IsSystem (SysT: Type) :=
-    { indicesOf: SysT -> list IdxT }.
+    { oindsOf: SysT -> list IdxT;
+      mindsOf: SysT -> list IdxT;
+      merqsOf: SysT -> list IdxT;
+      merssOf: SysT -> list IdxT
+    }.
 
   Global Instance IsSystem_ORqs_HasInit
          {SysT MsgT} `{IsSystem SysT} : HasInit SysT (ORqs MsgT) :=
-    {| initsOf := fun sys => M.replicate (indicesOf sys) (@nil _) |}.
+    {| initsOf := fun sys => M.replicate (oindsOf sys) (@nil _) |}.
 
   Context {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}.
 
-  Definition isExternal (sys: SysT) (idx: IdxT) :=
-    if idx ?<n (indicesOf sys) then false else true.
-  Definition isInternal (sys: SysT) (idx: IdxT) :=
-    if idx ?<n (indicesOf sys) then true else false.
-
-  Definition maFromExternal (sys: SysT) (ma: MsgAddr) :=
-    isExternal sys (ma_from ma).
-  Definition maFromInternal (sys: SysT) (ma: MsgAddr) :=
-    isInternal sys (ma_from ma).
-
-  Definition maToExternal (sys: SysT) (ma: MsgAddr) :=
-    isExternal sys (ma_to ma).
-  Definition maToInternal (sys: SysT) (ma: MsgAddr) :=
-    isInternal sys (ma_to ma).
-
-  Definition maExternal (sys: SysT) (ma: MsgAddr) :=
-    maFromExternal sys ma || maToExternal sys ma.
-
-  Definition fromExternal (sys: SysT) (msg: MsgT) :=
-    maFromExternal sys (msgAddrOf (getMsg msg)).
-  Definition fromInternal (sys: SysT) (msg: MsgT) :=
-    maFromInternal sys (msgAddrOf (getMsg msg)).
-
-  Definition toExternal (sys: SysT) (msg: MsgT) :=
-    maToExternal sys (msgAddrOf (getMsg msg)).
-  Definition toInternal (sys: SysT) (msg: MsgT) :=
-    maToInternal sys (msgAddrOf (getMsg msg)).
-  
   Record System :=
-    { sys_inds: list IdxT;
+    { sys_oinds: list IdxT;
+      sys_minds: list IdxT;
+      sys_merqs: list IdxT;
+      sys_merss: list IdxT;
       sys_inits: OStates;
       sys_rules: list Rule }.
 
   Global Instance System_IsSystem : IsSystem System :=
-    {| indicesOf := sys_inds |}.
+    {| oindsOf := sys_oinds;
+       mindsOf := sys_minds;
+       merqsOf := sys_merqs;
+       merssOf := sys_merss
+    |}.
 
   Global Instance System_OStates_HasInit : HasInit System OStates :=
     {| initsOf := sys_inits |}.
 
-  Definition rulesOf := sys_rules.
-
 End System.
 
-Definition handlersOf (rules: list Rule): list MsgId :=
-  List.concat (map rule_mids rules).
+Ltac evalOIndsOf sys :=
+  let indices := eval cbn in (sys_oinds sys) in exact indices.
 
-Definition extHandlersOf (sys: System): list MsgId :=
-  filter (fun mid => isExternal sys (mid_from mid))
-         (handlersOf (sys_rules sys)).
-
-Definition ExtHandles (sys: System) (erqs: list MsgId) :=
-  extHandlersOf sys = erqs.
-
-Ltac evalIndicesOf sys :=
-  let indices := eval cbn in (sys_inds sys) in exact indices.
+Ltac evalMIndsOf sys :=
+  let indices := eval cbn in (sys_minds sys) in exact indices.
 
 Section RuleAdder.
   Context {SysT: Type}
           `{IsSystem SysT} `{HasInit SysT OStates}.
 
   Definition buildRawSys (osys: SysT): System :=
-    {| sys_inds := indicesOf osys;
+    {| sys_oinds := oindsOf osys;
+       sys_minds := mindsOf osys;
+       sys_merqs := merqsOf osys;
+       sys_merss := merssOf osys;
        sys_inits := initsOf osys;
        sys_rules := nil |}.
 
   Definition addRules (rules: list Rule) (sys: System) :=
-    {| sys_inds := sys_inds sys;
+    {| sys_oinds := sys_oinds sys;
+       sys_minds := sys_minds sys;
+       sys_merqs := sys_merqs sys;
+       sys_merss := sys_merss sys;
        sys_inits := sys_inits sys;
        sys_rules := sys_rules sys ++ rules |}.
 

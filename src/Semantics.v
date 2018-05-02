@@ -5,88 +5,43 @@ Require Export MessagePool.
 
 Set Implicit Arguments.
 
-Definition intOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
-           (sys: SysT) (outs: list MsgT) :=
-  filter (fun m => toInternal sys m) outs.
-Definition extOuts {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}
-           (sys: SysT) (outs: list MsgT) :=
-  filter (fun m => toExternal sys m) outs.
-
-Ltac unfold_idx :=
-  cbv [intOuts extOuts
-       isInternal isExternal
-       fromInternal fromExternal
-       toInternal toExternal
-       maFromInternal maFromExternal
-       maToInternal maToExternal
-       msgAddrOf mid_from mid_to mid_chn id] in *;
-  intros.
-
 Section Validness.
-  Context {MsgT} `{HasMsg MsgT}.
+  Context {MsgT SysT: Type} `{IsSystem SysT}.
 
-  (* A set of messages are "well-distributed" iff the addresses of
+  (* A set of messages are "well-distributed" iff the sources of
    * all messages are different from each others.
    *)
-  Definition WellDistrMsgs (msgs: list MsgT) :=
-    NoDup (map (fun m => msgAddrOf (getMsg m)) msgs).
+  Definition WellDistrMsgs (msgs: list (Id MsgT)) :=
+    NoDup (idsOf msgs).
 
-  (* A set of "incoming" messages are "well-distributed" iff
-   * all sources (pair of [mid_from] and [mid_chn]) are different from 
-   * each others. 
+  (* A set of messages are "valid internal inputs" iff
+   * 1) each source is internal and
+   * 2) they are well-distributed.
    *)
-  Definition WellDistrMsgsIn (msgs: list MsgT) :=
-    NoDup (map (fun m => (mid_from (msg_id (getMsg m)),
-                          mid_chn (msg_id (getMsg m)))) msgs).
+  Definition ValidMsgsIn (sys: SysT) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (mindsOf sys) /\
+    WellDistrMsgs msgs.
 
-  (* A set of "outgoing" messages are "well-distributed" iff
-   * all targets (pair of [mid_to] and [mid_chn]) are different from 
-   * each others. 
+  (* A set of messages are "valid outputs" iff they are
+   * just well-distributed.
    *)
-  Definition WellDistrMsgsOut (msgs: list MsgT) :=
-    NoDup (map (fun m => (mid_to (msg_id (getMsg m)),
-                          mid_chn (msg_id (getMsg m)))) msgs).
+  Definition ValidMsgsOut (msgs: list (Id MsgT)) :=
+    WellDistrMsgs msgs.
 
-  (* A set of messages are "valid inputs" iff
-   * 1) they have the same target [oidx],
-   * 2) each source is not the target, and
-   * 3) they are well-distributed.
-   *)
-  Definition ValidMsgsIn (oidx: IdxT) (msgs: list MsgT) :=
-    Forall (fun msg => mid_to (msg_id (getMsg msg)) = oidx /\
-                       mid_from (msg_id (getMsg msg)) <> oidx) msgs /\
-    WellDistrMsgsIn msgs.
-
-  (* A set of messages are "valid outputs" iff
-   * 1) they are from the same source [oidx],
-   * 2) each target is not the source, and
-   * 3) they are well-distributed.
-   *)
-  Definition ValidMsgsOut (oidx: IdxT) (msgs: list MsgT) :=
-    Forall (fun m => mid_from (msg_id (getMsg m)) = oidx /\
-                     mid_to (msg_id (getMsg m)) <> oidx) msgs /\
-    WellDistrMsgsOut msgs.
-
-  Context {SysT} `{IsSystem SysT}.
-  
   (* A set of messages are "valid external inputs" iff
-   * 1) each source is external,
-   * 2) each target is internal, and
-   * 3) they are well-distributed.
+   * 1) each message uses an external request queue and
+   * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtIn (sys: SysT) (msgs: list MsgT) :=
-    Forall (fun msg => fromExternal sys msg = true /\
-                       toInternal sys msg = true) msgs /\
+  Definition ValidMsgsExtIn (sys: SysT) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (merqsOf sys) /\
     WellDistrMsgs msgs.
 
   (* A set of messages are "valid external outputs" iff
-   * 1) each source is internal,
-   * 2) each target is external, and
-   * 3) they are well-distributed.
+   * 1) each message uses an external response queue and
+   * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtOut (sys: SysT) (msgs: list MsgT) :=
-    Forall (fun msg => fromInternal sys msg = true /\
-                       toExternal sys msg = true) msgs /\
+  Definition ValidMsgsExtOut (sys: SysT) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (merssOf sys) /\
     WellDistrMsgs msgs.
 
 End Validness.
@@ -94,8 +49,8 @@ End Validness.
 Section HasLabel.
 
   Inductive Label :=
-  | LblIns (mins: list Msg): Label
-  | LblOuts (mouts: list Msg): Label.
+  | LblIns (mins: list (Id Msg)): Label
+  | LblOuts (mouts: list (Id Msg)): Label.
 
   Class HasLabel (LabelT: Type) :=
     { getLabel: LabelT -> option Label }.
@@ -151,16 +106,14 @@ Section Transition.
              `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
              `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}
              (ssI: Steps SysI StateI LabelI) (ssS: Steps SysS StateS LabelS)
-             (p: Label -> Label) (impl: SysI) (spec: SysS) :=
+             (impl: SysI) (spec: SysS) :=
     forall ll, Behavior ssI impl ll ->
-               Behavior ssS spec (map p ll).
+               Behavior ssS spec ll.
 
 End Transition.
 
-Notation "StI # StS |-- I <=[ P ] S" := (Refines StI StS P I S) (at level 30).
-Notation "StI # StS |-- I ⊑[ P ] S" := (Refines StI StS P I S) (at level 30).
-Notation "StI # StS |-- I <= S" := (Refines StI StS id I S) (at level 30).
-Notation "StI # StS |-- I ⊑ S" := (Refines StI StS id I S) (at level 30).
+Notation "StI # StS |-- I <= S" := (Refines StI StS I S) (at level 30).
+Notation "StI # StS |-- I ⊑ S" := (Refines StI StS I S) (at level 30).
 
 (** Some concrete state and label definitions *)
 
@@ -179,7 +132,7 @@ Section BState.
   Definition getBStateInit (sys: SysT): BState MsgT :=
     {| bst_oss := initsOf sys;
        bst_orqs := initsOf sys;
-       bst_msgs := nil |}.
+       bst_msgs := emptyMP _ |}.
 
   Global Instance BState_HasInit: HasInit SysT (BState MsgT) :=
     {| initsOf := getBStateInit |}.
@@ -196,17 +149,17 @@ Section RLabel.
   Context `{HasMsg MsgT}.
 
   Inductive RLabel :=
-  | RlblIns (mins: list MsgT): RLabel
-  | RlblInt (hdl: option Rule) (mins: list MsgT) (mouts: list MsgT): RLabel
-  | RlblOuts (mouts: list MsgT): RLabel.
+  | RlblIns (mins: list (Id MsgT)): RLabel
+  | RlblInt (hdl: option Rule) (mins: list (Id MsgT)) (mouts: list (Id MsgT)): RLabel
+  | RlblOuts (mouts: list (Id MsgT)): RLabel.
 
   Definition emptyRLabel := RlblInt None nil nil.
   
   Definition rToLabel (l: RLabel): option Label :=
     match l with
-    | RlblIns mins => Some (LblIns (map getMsg mins))
+    | RlblIns mins => Some (LblIns (imap getMsg mins))
     | RlblInt _ _ _ => None
-    | RlblOuts mouts => Some (LblOuts (map getMsg mouts))
+    | RlblOuts mouts => Some (LblOuts (imap getMsg mouts))
     end.
 
   Global Instance RLabel_HasLabel: HasLabel RLabel :=
@@ -225,7 +178,7 @@ Section TMsg.
   Record TInfo :=
     { (* a unique transaction id, assigned when the transaction starts. *)
       tinfo_tid : TrsId; 
-      tinfo_rqin : list Msg
+      tinfo_rqin : list (Id Msg)
     }.
 
   Definition buildTInfo tid rqin :=
@@ -235,7 +188,9 @@ Section TMsg.
   Proof.
     decide equality.
     - decide equality.
-      apply msg_dec.
+      decide equality.
+      + apply msg_dec.
+      + decide equality.
     - decide equality.
   Defined.
 
@@ -280,6 +235,7 @@ Section TState.
     { tst_oss: OStates;
       tst_orqs: ORqs TMsg;
       tst_msgs: MessagePool TMsg;
+      tst_trss: MessagePool TMsg;
       tst_tid: TrsId
     }.
 
@@ -288,7 +244,8 @@ Section TState.
   Definition getTStateInit (sys: SysT): TState :=
     {| tst_oss := initsOf sys;
        tst_orqs := initsOf sys;
-       tst_msgs := nil;
+       tst_msgs := emptyMP _;
+       tst_trss := emptyMP _;
        tst_tid := trsIdInit |}.
 
   Global Instance TState_HasInit: HasInit SysT TState :=
