@@ -420,12 +420,16 @@ Section Compositionality.
         eapply StInt; try reflexivity; try eassumption.
         * rewrite <-Hii; assumption.
         * eapply ValidMsgsIn_mindsOf; eauto.
+        * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
         * rewrite Hss; reflexivity.
       + eapply Hinv2; eauto.
         eapply StInt; try reflexivity; try eassumption.
         * rewrite <-Hoinds, <-Hii; assumption.
         * eapply ValidMsgsIn_mindsOf; eauto.
           rewrite <-Hminds; auto.
+        * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
+          { rewrite <-Hminds; auto. }
+          { rewrite <-Hmerss; auto. }
         * rewrite Hss, Hmerss; reflexivity.
   Qed.
 
@@ -502,6 +506,7 @@ Section Compositionality.
         econstructor; eauto.
         * rewrite <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
+        * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
         * rewrite Hss; reflexivity.
       + inv H2; inv H4.
         specialize (IHAtomic H1 H8 _ H9).
@@ -519,6 +524,7 @@ Section Compositionality.
         econstructor; eauto.
         * rewrite <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
+        * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
         * rewrite Hss; reflexivity.
 
     - right.
@@ -533,6 +539,9 @@ Section Compositionality.
         * rewrite <-Hoinds, <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
           rewrite <-Hminds; auto.
+        * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
+          { rewrite <-Hminds; auto. }
+          { rewrite <-Hmerss; auto. }
         * rewrite <-Hmerss, <-Hss; reflexivity.
       + inv H2; inv H4.
         specialize (IHAtomic H1 H8 _ H9).
@@ -551,6 +560,9 @@ Section Compositionality.
         * rewrite <-Hoinds, <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
           rewrite <-Hminds; auto.
+        * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
+          { rewrite <-Hminds; auto. }
+          { rewrite <-Hmerss; auto. }
         * rewrite <-Hmerss, <-Hss; reflexivity.
   Qed.
 

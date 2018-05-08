@@ -139,6 +139,20 @@ Proof.
   rewrite <-H2; assumption.
 Qed.
 
+Lemma ValidMsgsOut_mindsOf_merssOf:
+  forall {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
+         (sys1: SysT) (eouts: list (Id MsgT)),
+    ValidMsgsOut sys1 eouts ->
+    forall sys2,
+      mindsOf sys1 = mindsOf sys2 ->
+      merssOf sys1 = merssOf sys2 ->
+      ValidMsgsOut sys2 eouts.
+Proof.
+  unfold ValidMsgsOut; intros.
+  dest; split; auto.
+  rewrite <-H2, <-H3; assumption.
+Qed.
+
 Lemma ValidMsgsExtIn_merqsOf:
   forall {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
          (sys1: SysT) (eins: list (Id MsgT)),

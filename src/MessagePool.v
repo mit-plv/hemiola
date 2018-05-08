@@ -180,6 +180,30 @@ Section Facts.
     apply hd_error_In; auto.
   Qed.
 
+  Lemma FirstMP_enqMP:
+    forall (mp: MessagePool MsgT) i m,
+      FirstMP mp i m ->
+      forall ni nm,
+        FirstMP (enqMP ni nm mp) i m.
+  Proof.
+    unfold FirstMP, firstMP, enqMP, findQ; intros.
+    mred; cbn.
+    destruct (mp@[ni]); cbn in *.
+    - apply hd_error_Some_app; auto.
+    - discriminate.
+  Qed.
+
+  Lemma FirstMP_enqMsgs:
+    forall msgs (mp: MessagePool MsgT) i m,
+      FirstMP mp i m ->
+      FirstMP (enqMsgs msgs mp) i m.
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [midx msg].
+    apply IHmsgs.
+    apply FirstMP_enqMP; auto.
+  Qed.
+
   Lemma InMP_enqMP_or:
     forall midx (msg: MsgT) nidx nmsg mp,
       InMP midx msg (enqMP nidx nmsg mp) ->

@@ -72,7 +72,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     rule_precond rule os (map tmsg_msg porq) (imap tmsg_msg ins) ->
     rule_postcond rule os (map tmsg_msg porq) (imap tmsg_msg ins)
                   pos (map tmsg_msg norq) outs ->
-    ValidMsgsOut outs ->
+    ValidMsgsOut sys outs ->
 
     tinfo = match getTMsgsTInfo (valsOf ins) with
             | Some ti => ti

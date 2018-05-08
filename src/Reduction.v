@@ -13,18 +13,27 @@ Ltac dest_step_m :=
 Definition NonSilentHistory (hst: History) :=
   Forall (fun lbl => lbl <> emptyRLabel _) hst.
 
-Definition NotMsgIn (lbl: MLabel) :=
+Definition NotMsgsIn (lbl: MLabel) :=
   match lbl with
   | RlblIns _ => False
   | _ => True
   end.
 
-Definition NonMsgInHistory (hst: History) :=
-  Forall (fun tlbl => NotMsgIn tlbl) hst.
+Definition NonMsgsInHistory (hst: History) :=
+  Forall (fun tlbl => NotMsgsIn tlbl) hst.
+
+Definition NotMsgsOut (lbl: MLabel) :=
+  match lbl with
+  | RlblOuts _ => False
+  | _ => True
+  end.
+
+Definition NonMsgsOutHistory (hst: History) :=
+  Forall (fun tlbl => NotMsgsOut tlbl) hst.
 
 Lemma msg_ins_commutes:
   forall sys st1 eins lbl st2,
-    NotMsgIn lbl ->
+    NotMsgsIn lbl ->
     steps step_m sys st1 [RlblIns eins; lbl] st2 ->
     steps step_m sys st1 [lbl; RlblIns eins] st2.
 Proof.
@@ -41,9 +50,12 @@ Proof.
         { econstructor. }
         { econstructor; eauto. }
       * econstructor; try reflexivity; try eassumption.
-        { admit. }
+        { clear -H9; induction mins; simpl; [constructor|].
+          inv H9; constructor; auto.
+          apply FirstMP_enqMsgs; auto.
+        }
         { f_equal.
-          admit.
+          admit. (* requires a lemma about [MessagePool] *)
         }
   - dest_step_m.
     econstructor.
@@ -51,15 +63,17 @@ Proof.
       * econstructor.
       * econstructor; eauto.
     + econstructor; try reflexivity; try eassumption.
-      * admit.
+      * clear -H2; induction mouts; simpl; [constructor|].
+        inv H2; constructor; auto.
+        apply FirstMP_enqMsgs; auto.
       * f_equal.
-        admit.
+        admit. (* requires a lemma about [MessagePool] *)
 Admitted.
 
 Lemma msg_in_reduced:
   forall sys st1 eins hst2 st2,
     steps step_m sys st1 (RlblIns eins :: hst2) st2 ->
-    NonMsgInHistory hst2 ->
+    NonMsgsInHistory hst2 ->
     steps step_m sys st1 (hst2 ++ [RlblIns eins]) st2.
 Proof.
   induction hst2 as [|lbl ?]; simpl; intros; auto.
@@ -76,13 +90,90 @@ Qed.
 Lemma msg_in_reduced_app:
   forall sys st1 hst1 eins hst2 st2,
     steps step_m sys st1 (hst1 ++ RlblIns eins :: hst2) st2 ->
-    NonMsgInHistory hst2 ->
+    NonMsgsInHistory hst2 ->
     steps step_m sys st1 (hst1 ++ hst2 ++ [RlblIns eins]) st2.
 Proof.
   intros.
   eapply steps_split in H; [|reflexivity].
   destruct H as [sti [? ?]].
   eapply msg_in_reduced in H; eauto.
+  eapply steps_append; eauto.
+Qed.
+
+Lemma msg_outs_commutes:
+  forall sys st1 eouts lbl st2,
+    NotMsgsOut lbl ->
+    steps step_m sys st1 [lbl; RlblOuts eouts] st2 ->
+    steps step_m sys st1 [RlblOuts eouts; lbl] st2.
+Proof.
+  intros.
+  destruct lbl as [|hdl mins mouts|]; [| |elim H].
+  - dest_step_m.
+    econstructor.
+      * econstructor.
+        { econstructor. }
+        { econstructor; eauto. }
+      * econstructor; try reflexivity; try eassumption.
+        { clear -H2; induction eouts; simpl; [constructor|].
+          inv H2; constructor; auto.
+          apply FirstMP_enqMsgs; auto.
+        }
+        { f_equal.
+          admit. (* requires a lemma about [MessagePool] *)
+        }
+  - dest_step_m.
+    + econstructor.
+      * econstructor.
+        { econstructor. }
+        { econstructor; eauto. }
+      * econstructor; eauto.
+    + econstructor.
+      * econstructor.
+        { econstructor. }
+        { econstructor; try reflexivity; try eassumption.
+          admit. (* requires a lemma about [MessagePool] *)
+        }
+      * econstructor; try reflexivity; try eassumption.
+        { admit. (* requires a lemma about [MessagePool] *)
+        }
+        { f_equal.
+          admit. (* requires a lemma about [MessagePool] *)
+        }
+Admitted.
+
+Lemma msg_outs_reduced:
+  forall sys st1 eouts hst2 st2,
+    steps step_m sys st1 (hst2 ++ [RlblOuts eouts]) st2 ->
+    NonMsgsOutHistory hst2 ->
+    steps step_m sys st1 (RlblOuts eouts :: hst2) st2.
+Proof.
+  induction hst2 as [|lbl ?]; simpl; intros; auto.
+  inv H0.
+
+  inv H.
+  specialize (IHhst2 _ H5 H4).
+  assert (steps step_m sys st1 (lbl :: RlblOuts eouts :: hst2) st2)
+    by (econstructor; eauto).
+  change (lbl :: RlblOuts eouts :: hst2) with
+      ([lbl; RlblOuts eouts] ++ hst2) in H.
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  change (RlblOuts eouts :: lbl :: hst2) with
+      ([RlblOuts eouts; lbl] ++ hst2).
+  eapply steps_append; eauto.
+  eapply msg_outs_commutes; eauto.
+Qed.
+
+Lemma msg_outs_reduced_app:
+  forall sys st1 hst1 eouts hst2 st2,
+    steps step_m sys st1 (hst1 ++ hst2 ++ [RlblOuts eouts]) st2 ->
+    NonMsgsOutHistory hst2 ->
+    steps step_m sys st1 (hst1 ++ RlblOuts eouts :: hst2) st2.
+Proof.
+  intros.
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  eapply msg_outs_reduced in H; eauto.
   eapply steps_append; eauto.
 Qed.
 

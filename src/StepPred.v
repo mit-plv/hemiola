@@ -71,7 +71,7 @@ Section GivenMsg.
         rqfwdr = PRuleRqFwd oidx (pmidOf rq) prec (map (@pmidOf _ _) fwds) ->
         FirstMPI oims rq ->
         ValidMsgsIn psys (rq :: nil) ->
-        ValidMsgsOut fwds ->
+        ValidMsgsOut psys fwds ->
 
         oss@[oidx] = Some pos ->
         prec pos (map (fun pmsg => getMsg (pmsg_omsg pmsg)) porq) (liftI getMsg rq :: nil) ->
@@ -93,7 +93,7 @@ Section GivenMsg.
         rsbackr = PRuleRsBack oidx (map (@pmidOf _ _) rss) opred (pmidOf rsb) rsbf  ->
         Forall (FirstMPI oims) rss ->
         ValidMsgsIn psys rss ->
-        ValidMsgsOut (rsb :: nil) ->
+        ValidMsgsOut psys (rsb :: nil) ->
 
         oss@[oidx] = Some pos ->
         orqs@[oidx] = Some orq ->

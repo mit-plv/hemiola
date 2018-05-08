@@ -30,10 +30,13 @@ Section Validness.
     SubList (idsOf msgs) (mindsOf sys) /\
     WellDistrMsgs msgs.
 
-  (* A set of messages are "valid outputs" iff they are
-   * just well-distributed.
+  (* A set of messages are "valid outputs" iff
+   * 1) each message is using either an internal or
+   *    an external-response queue.
+   * 2) they are well-distributed.
    *)
-  Definition ValidMsgsOut (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsOut (sys: SysT) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (mindsOf sys ++ merssOf sys) /\
     WellDistrMsgs msgs.
 
   (* A set of messages are "valid external inputs" iff

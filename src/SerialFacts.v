@@ -215,6 +215,20 @@ Proof.
   - subst; reflexivity.
 Qed.
 
+Lemma sequential_app:
+  forall sys ll1 ll2,
+    Sequential sys ll1 ->
+    Sequential sys ll2 ->
+    Sequential sys (ll1 ++ ll2).
+Proof.
+  unfold Sequential; intros.
+  destruct H as [trss1 [? ?]].
+  destruct H0 as [trss2 [? ?]]; subst.
+  exists (trss1 ++ trss2); split.
+  - apply Forall_app; auto.
+  - apply eq_sym, concat_app.
+Qed.
+
 Lemma serializable_nil:
   forall sys, Serializable sys nil.
 Proof.
