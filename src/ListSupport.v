@@ -106,6 +106,43 @@ Proof.
   rewrite IHl; reflexivity.
 Qed.
 
+Lemma NoDup_app_comm:
+  forall {A} (l1 l2: list A),
+    NoDup (l2 ++ l1) ->
+    NoDup (l1 ++ l2).
+Proof.
+  induction l1; simpl; intros.
+  - rewrite app_nil_r in H; auto.
+  - constructor.
+    + apply NoDup_remove_2 in H.
+      intro Hx; elim H; clear H.
+      apply in_or_app; apply in_app_or in Hx.
+      destruct Hx; auto.
+    + apply IHl1.
+      eapply NoDup_remove_1; eauto.
+Qed.
+
+Lemma NoDup_app_weakening_1:
+  forall {A} (l1 l2: list A),
+    NoDup (l1 ++ l2) ->
+    NoDup l1.
+Proof.
+  induction l1; simpl; intros; [constructor|].
+  inv H; constructor; eauto.
+  intro Hx; elim H2.
+  apply in_or_app; auto.
+Qed.
+
+Lemma NoDup_app_weakening_2:
+  forall {A} (l1 l2: list A),
+    NoDup (l1 ++ l2) ->
+    NoDup l2.
+Proof.
+  intros.
+  apply NoDup_app_comm in H.
+  eauto using NoDup_app_weakening_1.
+Qed.
+
 Lemma NoDup_filter:
   forall {A} (l: list A),
     NoDup l ->
@@ -177,6 +214,15 @@ Proof.
   destruct (in_dec eq_dec a l); auto.
   constructor; auto.
   intro Hx; elim n; eapply noDup_In; eauto.
+Qed.
+
+Lemma hd_error_In:
+  forall {A} (l: list A) v,
+    hd_error l = Some v ->
+    In v l.
+Proof.
+  induction l; simpl; intros; [discriminate|].
+  inv H; auto.
 Qed.
 
 Lemma hd_error_Some_app:

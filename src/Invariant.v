@@ -306,23 +306,26 @@ Proof.
 Qed.
 
 Lemma step_t_rules_split:
-  forall oinds minds merqs merss inits rules1 rules2 st1 lbl st2,
+  forall oinds minds merqs merss Hmvalid inits rules1 rules2 st1 lbl st2,
     step_t {| sys_oinds := oinds;
               sys_minds := minds;
               sys_merqs := merqs;
               sys_merss := merss;
+              sys_msg_inds_valid := Hmvalid;
               sys_inits := inits;
               sys_rules := rules1 ++ rules2 |} st1 lbl st2 ->
     step_t {| sys_oinds := oinds;
               sys_minds := minds;
               sys_merqs := merqs;
               sys_merss := merss;
+              sys_msg_inds_valid := Hmvalid;
               sys_inits := inits;
               sys_rules := rules1 |} st1 lbl st2 \/
     step_t {| sys_oinds := oinds;
               sys_minds := minds;
               sys_merqs := merqs;
               sys_merss := merss;
+              sys_msg_inds_valid := Hmvalid;
               sys_inits := inits;
               sys_rules := rules2 |} st1 lbl st2.
 Proof.
@@ -350,19 +353,16 @@ Proof.
   inv H1; simpl in *; auto.
   - apply ForallMP_enqMsgs; auto.
     destruct H3.
-    (** TODO: need a well-formedness of various indices in [IsSystem]. *)
-    (* clear -H1; induction eins; simpl; [constructor|]. *)
-    (* inv H1; dest. *)
-    (* constructor. *)
-    (* + unfold toInternal, toExternal in *; simpl in *. *)
-    (*   unfold id in H0. *)
-    (*   apply internal_not_external; auto. *)
-    (* + apply IHeins; auto. *)
-    admit.
+    pose proof (merqsOf_merssOf_DisjList sys).
+    eapply DisjList_SubList in H1; [|eassumption].
+
+    clear -H1; induction eins; simpl; [constructor|].
+    simpl in H1; apply DisjList_cons in H1; dest.
+    constructor; auto.
   - apply ForallMP_deqMsgs; auto.
   - exfalso.
     rewrite H in H10; elim H10.
-Admitted.
+Qed.
 
 Lemma steps_t_no_rules_NoExtOuts:
   forall sys,

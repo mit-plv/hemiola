@@ -58,6 +58,41 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma mindsOf_merqsOf_DisjList:
+  forall {SysT} `{IsSystem SysT} (sys: SysT),
+    DisjList (mindsOf sys) (merqsOf sys).
+Proof.
+  intros.
+  eapply DisjList_NoDup; [exact eq_nat_dec|].
+  eapply NoDup_app_weakening_1.
+  rewrite <-app_assoc.
+  apply msg_inds_valid.
+Qed.
+
+Lemma merqsOf_merssOf_DisjList:
+  forall {SysT} `{IsSystem SysT} (sys: SysT),
+    DisjList (merqsOf sys) (merssOf sys).
+Proof.
+  intros.
+  eapply DisjList_NoDup; [exact eq_nat_dec|].
+  eapply NoDup_app_weakening_2.
+  apply msg_inds_valid.
+Qed.
+
+Lemma mindsOf_merssOf_DisjList:
+  forall {SysT} `{IsSystem SysT} (sys: SysT),
+    DisjList (mindsOf sys) (merssOf sys).
+Proof.
+  intros.
+  eapply DisjList_NoDup; [exact eq_nat_dec|].
+  pose proof (msg_inds_valid sys).
+  rewrite app_assoc in H0.
+  apply NoDup_app_comm in H0.
+  rewrite app_assoc in H0.
+  apply NoDup_app_weakening_1 in H0.
+  apply NoDup_app_comm; assumption.
+Qed.
+
 Lemma getTMsgsTInfo_Some:
   forall tmsgs ti,
     getTMsgsTInfo tmsgs = Some ti ->
@@ -161,8 +196,9 @@ Lemma extRssOf_In_merssOf_FirstMP:
       FirstMP msgs1 (idOf mout) (valOf mout) ->
       FirstMP msgs2 (idOf mout) (valOf mout).
 Proof.
-  give_up.
-Admitted.
+  unfold extRssOf; intros.
+  eapply qsOf_In_FirstMP; eauto.
+Qed.
 
 Corollary extRssOf_SubList_merssOf_FirstMP:
   forall {SysT} `{IsSystem SysT} (sys: SysT) msgs1 msgs2,
@@ -202,7 +238,7 @@ Theorem step_t_sound:
         tToMLabel tlbl = lbl /\
         TStateRel ntst nst.
 Proof.
-  admit.
+  (* TODO: soundness of [step_t] *)
 Admitted.
 
 Lemma steps_split:

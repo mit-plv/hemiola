@@ -169,10 +169,26 @@ Section Lists. (* For dealing with domains *)
   Proof. unfold DisjList; auto. Qed.
 
   Lemma DisjList_cons:
-    forall a l1 l2, DisjList (a :: l1) l2 -> DisjList l1 l2.
+    forall a l1 l2, DisjList (a :: l1) l2 ->
+                    ~ In a l2 /\ DisjList l1 l2.
   Proof.
     unfold DisjList; intros.
-    specialize (H e); intuition.
+    split.
+    - specialize (H a); intuition.
+    - intros; specialize (H e); intuition.
+  Qed.
+
+  Lemma DisjList_cons_inv:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
+           a l1 l2,
+      DisjList l1 l2 -> ~ In a l2 -> DisjList (a :: l1) l2.
+  Proof.
+    unfold DisjList; intros.
+    specialize (H e); destruct H; auto.
+    destruct (deceqA a e); subst; auto.
+    left; intro Hx; elim H.
+    inv Hx; auto.
+    exfalso; auto.
   Qed.
 
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
@@ -198,6 +214,19 @@ Section Lists. (* For dealing with domains *)
       elim H1; simpl; tauto.
     - apply IHl1; auto.
       eapply DisjList_cons; eauto.
+  Qed.
+
+  Lemma DisjList_NoDup:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
+           l1 l2,
+      NoDup (l1 ++ l2) -> DisjList l1 l2.
+  Proof.
+    induction l1; simpl; intros.
+    - apply DisjList_nil_1.
+    - inv H.
+      apply DisjList_cons_inv; auto.
+      intro Hx; elim H2.
+      apply in_or_app; auto.
   Qed.
 
   Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.

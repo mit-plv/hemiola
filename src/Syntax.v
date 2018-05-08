@@ -149,7 +149,10 @@ Section System.
     { oindsOf: SysT -> list IdxT;
       mindsOf: SysT -> list IdxT;
       merqsOf: SysT -> list IdxT;
-      merssOf: SysT -> list IdxT
+      merssOf: SysT -> list IdxT;
+      msg_inds_valid:
+        forall sys,
+          NoDup (mindsOf sys ++ merqsOf sys ++ merssOf sys)
     }.
 
   Global Instance IsSystem_ORqs_HasInit
@@ -163,14 +166,17 @@ Section System.
       sys_minds: list IdxT;
       sys_merqs: list IdxT;
       sys_merss: list IdxT;
+      sys_msg_inds_valid: NoDup (sys_minds ++ sys_merqs ++ sys_merss);
       sys_inits: OStates;
-      sys_rules: list Rule }.
+      sys_rules: list Rule
+    }.
 
   Global Instance System_IsSystem : IsSystem System :=
     {| oindsOf := sys_oinds;
        mindsOf := sys_minds;
        merqsOf := sys_merqs;
-       merssOf := sys_merss
+       merssOf := sys_merss;
+       msg_inds_valid := sys_msg_inds_valid
     |}.
 
   Global Instance System_OStates_HasInit : HasInit System OStates :=
@@ -193,6 +199,7 @@ Section RuleAdder.
        sys_minds := mindsOf osys;
        sys_merqs := merqsOf osys;
        sys_merss := merssOf osys;
+       sys_msg_inds_valid := msg_inds_valid osys;
        sys_inits := initsOf osys;
        sys_rules := nil |}.
 
@@ -201,6 +208,7 @@ Section RuleAdder.
        sys_minds := sys_minds sys;
        sys_merqs := sys_merqs sys;
        sys_merss := sys_merss sys;
+       sys_msg_inds_valid := sys_msg_inds_valid sys;
        sys_inits := sys_inits sys;
        sys_rules := sys_rules sys ++ rules |}.
 

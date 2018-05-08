@@ -142,23 +142,26 @@ Proof.
 Admitted.
 
 Lemma step_pred_rules_split:
-  forall oinds minds merqs merss inits prules1 prules2 pst1 plbl pst2,
+  forall oinds minds merqs merss Hmvalid inits prules1 prules2 pst1 plbl pst2,
     step_pred_t {| psys_oinds := oinds;
                    psys_minds := minds;
                    psys_merqs := merqs;
                    psys_merss := merss;
+                   psys_msg_inds_valid := Hmvalid;
                    psys_inits := inits;
                    psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
     step_pred_t {| psys_oinds := oinds;
                    psys_minds := minds;
                    psys_merqs := merqs;
                    psys_merss := merss;
+                   psys_msg_inds_valid := Hmvalid;
                    psys_inits := inits;
                    psys_rules := prules1 |} pst1 plbl pst2 \/
     step_pred_t {| psys_oinds := oinds;
                    psys_minds := minds;
                    psys_merqs := merqs;
                    psys_merss := merss;
+                   psys_msg_inds_valid := Hmvalid;
                    psys_inits := inits;
                    psys_rules := prules2 |} pst1 plbl pst2.
 Proof.

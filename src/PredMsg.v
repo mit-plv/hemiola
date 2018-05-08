@@ -118,6 +118,7 @@ Section GivenMsg.
       psys_minds: list IdxT;
       psys_merqs: list IdxT;
       psys_merss: list IdxT;
+      psys_msg_inds_valid: NoDup (psys_minds ++ psys_merqs ++ psys_merss);
       psys_inits: OStates;
       psys_rules: list PRule }.
 
@@ -125,7 +126,8 @@ Section GivenMsg.
     {| oindsOf := psys_oinds;
        mindsOf := psys_minds;
        merqsOf := psys_merqs;
-       merssOf := psys_merss
+       merssOf := psys_merss;
+       msg_inds_valid := psys_msg_inds_valid
     |}.
 
   Global Instance PSystem_OStates_HasInit: HasInit PSystem OStates :=
@@ -160,6 +162,7 @@ Section GivenMsg.
        sys_minds := psys_minds psys;
        sys_merqs := psys_merqs psys;
        sys_merss := psys_merss psys;
+       sys_msg_inds_valid := psys_msg_inds_valid psys;
        sys_inits := psys_inits psys;
        sys_rules := map pToRule (psys_rules psys) |}.
 
@@ -194,6 +197,7 @@ Section RuleAdder.
        psys_minds := mindsOf osys;
        psys_merqs := merqsOf osys;
        psys_merss := merssOf osys;
+       psys_msg_inds_valid := msg_inds_valid osys;
        psys_inits := initsOf osys;
        psys_rules := nil |}.
 
@@ -202,6 +206,7 @@ Section RuleAdder.
        psys_minds := psys_minds sys;
        psys_merqs := psys_merqs sys;
        psys_merss := psys_merss sys;
+       psys_msg_inds_valid := psys_msg_inds_valid sys;
        psys_inits := psys_inits sys;
        psys_rules := psys_rules sys ++ rules |}.
 

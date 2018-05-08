@@ -140,7 +140,11 @@ Section Facts.
         (forall i m, P1 i m -> P2 i m) ->
         ForallMP P2 mp.
   Proof.
-  Admitted.
+    unfold ForallMP; intros.
+    specialize (H midx).
+    eapply Forall_impl; [|exact H].
+    auto.
+  Qed.
 
   Lemma ForallMP_InMP:
     forall (P: IdxT -> MsgT -> Prop) mp,
@@ -149,7 +153,10 @@ Section Facts.
         InMP i m mp ->
         P i m.
   Proof.
-  Admitted.
+    unfold ForallMP, InMP; intros.
+    specialize (H i).
+    eapply Forall_forall in H; eauto.
+  Qed.
 
   Corollary ForallMP_Forall_InMP:
     forall (P: IdxT -> MsgT -> Prop) mp,
@@ -169,7 +176,9 @@ Section Facts.
       FirstMP mp i m ->
       InMP i m mp.
   Proof.
-  Admitted.
+    unfold FirstMP, firstMP, InMP; intros.
+    apply hd_error_In; auto.
+  Qed.
 
   Lemma InMP_enqMP_or:
     forall midx (msg: MsgT) nidx nmsg mp,
@@ -221,6 +230,33 @@ Section Facts.
     induction rmsgs; simpl; intros; auto.
     specialize (IHrmsgs _ H).
     eapply InMP_deqMP; eauto.
+  Qed.
+
+  Lemma qsOf_In_findQ_eq:
+    forall (mp1 mp2: MessagePool MsgT) minds,
+      qsOf minds mp1 = qsOf minds mp2 ->
+      forall midx,
+        In midx minds ->
+        findQ midx mp1 = findQ midx mp2.
+  Proof.
+    unfold qsOf, findQ; intros.
+    rewrite <-M.restrict_in_find
+      with (m:= mp1) (d:= minds) by assumption.
+    rewrite <-M.restrict_in_find
+      with (m:= mp2) (d:= minds) by assumption.
+    rewrite H; reflexivity.
+  Qed.
+
+  Corollary qsOf_In_FirstMP:
+    forall (mp1 mp2: MessagePool MsgT) minds,
+      qsOf minds mp1 = qsOf minds mp2 ->
+      forall i m,
+        In i minds ->
+        FirstMP mp1 i m ->
+        FirstMP mp2 i m.
+  Proof.
+    unfold FirstMP, firstMP; intros.
+    erewrite qsOf_In_findQ_eq; eauto.
   Qed.
 
   (* Lemma firstMP_app_or: *)
@@ -813,207 +849,4 @@ Section Map.
   (* Qed. *)
   
 End Map.
-
-(* Section EquivMP. *)
-(*   Variable (MsgT: Type). *)
-(*   Context `{HasMsg MsgT}. *)
-  
-(*   (* Every [Queue] is equal. *) *)
-(*   Definition EquivMP (m1 m2: MessagePool MsgT) := *)
-(*     forall mind, *)
-(*       findMP mind m1 = findMP mind m2. *)
-
-(* End EquivMP. *)
-
-(* Section EquivMPFacts. *)
-(*   Variable (MsgT: Type). *)
-(*   Context `{HasMsg MsgT}. *)
-
-(*   Lemma EquivMP_refl: *)
-(*     forall mp, EquivMP mp mp. *)
-(*   Proof. *)
-(*     unfold EquivMP; intros; reflexivity. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_sym: *)
-(*     forall mp1 mp2, EquivMP mp1 mp2 -> EquivMP mp2 mp1. *)
-(*   Proof. *)
-(*     unfold EquivMP; intros; auto. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_trans: *)
-(*     forall mp1 mp2 mp3, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       EquivMP mp2 mp3 -> *)
-(*       EquivMP mp1 mp3. *)
-(*   Proof. *)
-(*     unfold EquivMP; intros. *)
-(*     rewrite H0; auto. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_enqMP: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall msg, *)
-(*         EquivMP (enqMP msg mp1) (enqMP msg mp2). *)
-(*   Proof. *)
-(*     unfold EquivMP; intros. *)
-(*     do 2 rewrite findMP_enqMP. *)
-(*     rewrite H0; reflexivity. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_FirstMP: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall msg, *)
-(*         FirstMP mp1 msg -> *)
-(*         FirstMP mp2 msg. *)
-(*   Proof. *)
-(*     unfold EquivMP, FirstMP, firstMP; intros. *)
-(*     rewrite <-H0; assumption. *)
-(*   Qed. *)
-
-(*   Corollary EquivMP_Forall_FirstMP: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall msgs, *)
-(*         Forall (FirstMP mp1) msgs -> *)
-(*         Forall (FirstMP mp2) msgs. *)
-(*   Proof. *)
-(*     intros. *)
-(*     eapply Forall_impl; [|eassumption]. *)
-(*     intros. *)
-(*     eapply EquivMP_FirstMP; eauto. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_enqMsgs: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall msgs, *)
-(*         EquivMP (enqMsgs msgs mp1) (enqMsgs msgs mp2). *)
-(*   Proof. *)
-(*     unfold EquivMP, enqMsgs; intros. *)
-(*     do 2 rewrite findMP_app. *)
-(*     rewrite H0; reflexivity. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_deqMP: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall mind, *)
-(*         EquivMP (deqMP mind mp1) (deqMP mind mp2). *)
-(*   Proof. *)
-(*     unfold EquivMP; intros. *)
-(*     destruct (msgAddr_dec (buildMsgAddr from0 to0 chn0) (buildMsgAddr mind)). *)
-(*     - inv e. *)
-(*       do 2 rewrite findMP_deqMP_eq. *)
-(*       rewrite H0; reflexivity. *)
-(*     - do 2 rewrite findMP_deqMP_neq by assumption. *)
-(*       auto. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_removeMP: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall msg, *)
-(*         EquivMP (removeMP msg mp1) (removeMP msg mp2). *)
-(*   Proof. *)
-(*     intros; apply EquivMP_deqMP; auto. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_deqMsgs: *)
-(*     forall msgs mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       EquivMP (deqMsgs msgs mp1) (deqMsgs msgs mp2). *)
-(*   Proof. *)
-(*     induction msgs; intros; auto. *)
-(*     simpl. *)
-(*     apply IHmsgs. *)
-(*     apply EquivMP_removeMP. *)
-(*     auto. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_app: *)
-(*     forall mp1 mp2, *)
-(*       EquivMP mp1 mp2 -> *)
-(*       forall mp3 mp4, *)
-(*         EquivMP mp3 mp4 -> *)
-(*         EquivMP (mp1 ++ mp3) (mp2 ++ mp4). *)
-(*   Proof. *)
-(*     unfold EquivMP; intros. *)
-(*     do 2 rewrite findMP_app. *)
-(*     rewrite H0, H1; reflexivity. *)
-(*   Qed. *)
-
-(*   Lemma MsgAddr_NoDup_not_In_findMP: *)
-(*     forall mp, *)
-(*       NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mp) -> *)
-(*       forall mind, *)
-(*         ~ In (buildMsgAddr mind) *)
-(*           (map (fun msg => mid_addr (msg_id (getMsg msg))) mp) -> *)
-(*         findMP mind mp = nil. *)
-(*   Proof. *)
-(*     induction mp; simpl; intros; [reflexivity|]. *)
-(*     inv H0; specialize (IHmp H5); clear H5. *)
-(*     unfold isAddrOf; destruct (msgAddr_dec _ _); auto. *)
-(*     exfalso; eauto. *)
-(*   Qed. *)
-  
-(*   Lemma MsgAddr_NoDup_In_findMP: *)
-(*     forall mp, *)
-(*       NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mp) -> *)
-(*       forall mind, *)
-(*         In (buildMsgAddr mind) (map (fun msg => mid_addr (msg_id (getMsg msg))) mp) -> *)
-(*         exists msg, *)
-(*           findMP mind mp = [msg] /\ *)
-(*           mid_addr (msg_id (getMsg msg)) = buildMsgAddr mind. *)
-(*   Proof. *)
-(*     induction mp; simpl; intros; [elim H1|]. *)
-(*     inv H0; specialize (IHmp H5). *)
-(*     unfold isAddrOf; destruct (msgAddr_dec _ _). *)
-(*     - exists a; split; auto. *)
-(*       rewrite MsgAddr_NoDup_not_In_findMP; auto. *)
-(*       rewrite <-e; assumption. *)
-(*     - destruct H1; eauto. *)
-(*       elim n; assumption. *)
-(*   Qed. *)
-
-(*   Lemma EquivMP_MsgAddr_NoDup_EquivList: *)
-(*     forall mp1 mp2, *)
-(*       NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mp1) -> *)
-(*       NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) mp2) -> *)
-(*       EquivList mp1 mp2 -> *)
-(*       EquivMP mp1 mp2. *)
-(*   Proof. *)
-(*     unfold EquivMP; intros. *)
-
-(*     assert (EquivList (map (fun msg => mid_addr (msg_id (getMsg msg))) mp1) *)
-(*                       (map (fun msg => mid_addr (msg_id (getMsg msg))) mp2)). *)
-(*     { destruct H2; split; apply SubList_map; auto. } *)
-    
-(*     destruct (in_dec msgAddr_dec (buildMsgAddr mind) *)
-(*                      (map (fun msg : MsgT => mid_addr (msg_id (getMsg msg))) mp1)); *)
-(*       destruct (in_dec msgAddr_dec (buildMsgAddr mind) *)
-(*                        (map (fun msg : MsgT => mid_addr (msg_id (getMsg msg))) mp2)). *)
-(*     - apply MsgAddr_NoDup_In_findMP in i; [|assumption]; destruct i as [msg1]. *)
-(*       apply MsgAddr_NoDup_In_findMP in i0; [|assumption]; destruct i0 as [msg2]. *)
-(*       dest; rewrite H4, H5. *)
-      
-(*       pose proof (findMP_SubList mind mp1); rewrite H4 in H8. *)
-(*       specialize (H8 _ (or_introl eq_refl)). *)
-(*       pose proof (findMP_SubList mind mp2); rewrite H5 in H9. *)
-(*       specialize (H9 _ (or_introl eq_refl)). *)
-(*       assert (msg1 = msg2). *)
-(*       { eapply NoDup_map_In; eauto. *)
-(*         { apply H2; auto. } *)
-(*         { simpl; rewrite H6, H7; reflexivity. } *)
-(*       } *)
-(*       subst; reflexivity. *)
-(*     - elim n; apply H3; assumption. *)
-(*     - elim n; apply H3; assumption. *)
-(*     - do 2 (rewrite MsgAddr_NoDup_not_In_findMP by assumption). *)
-(*       reflexivity. *)
-(*   Qed. *)
-
-(* End EquivMPFacts. *)
 

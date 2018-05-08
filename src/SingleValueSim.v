@@ -116,9 +116,11 @@ End Predicates.
 
 Section Sim.
   Variables erq1 erq2 ers1 ers2: nat.
+  Hypothesis (Hmvalid: NoDup ([c1pRq; c1pRs; pc1; c2pRq; c2pRs; pc2]
+                                ++ [erq1; erq2; ers1; ers2])).
 
-  Local Notation spec := (spec erq1 erq2 ers1 ers2).
-  Local Notation impl0 := (impl0 erq1 erq2 ers1 ers2).
+  Local Notation spec := (spec Hmvalid).
+  Local Notation impl0 := (impl0 Hmvalid).
 
   (** Global invariants *)
 

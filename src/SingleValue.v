@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepT.
+Require Import Common FMap ListSupport Syntax Semantics StepT.
 Require Import Synthesis.
 Require Import Topology.
 
@@ -26,6 +26,16 @@ Definition svmSetIdx: IdxT := 1.
 
 Section System.
   Variables erq1 erq2 ers1 ers2: nat.
+
+  Definition c1pRq := 0.
+  Definition c1pRs := 1.
+  Definition pc1 := 2.
+  Definition c2pRq := 3.
+  Definition c2pRs := 4.
+  Definition pc2 := 5.
+  
+  Hypothesis (Hmvalid: NoDup ([c1pRq; c1pRs; pc1; c2pRq; c2pRs; pc2]
+                                ++ [erq1; erq2; ers1; ers2])).
 
   Section Spec.
 
@@ -71,6 +81,7 @@ Section System.
          sys_minds := nil;
          sys_merqs := erq1 :: erq2 :: nil;
          sys_merss := ers1 :: ers2 :: nil;
+         sys_msg_inds_valid := NoDup_app_weakening_2 _ _ Hmvalid;
          sys_inits := specInit;
          sys_rules :=
            (specGetRq erq1 ers1)
@@ -99,18 +110,12 @@ Section System.
       +[child1Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
       +[child2Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]].
 
-    Definition c1pRq := 0.
-    Definition c1pRs := 1.
-    Definition pc1 := 2.
-    Definition c2pRq := 3.
-    Definition c2pRs := 4.
-    Definition pc2 := 5.
-
     Definition impl0: System :=
       {| sys_oinds := parentIdx :: child1Idx :: child2Idx :: nil;
          sys_minds := c1pRq :: c1pRs :: pc1 :: c2pRq :: c2pRs :: pc2 :: nil;
          sys_merqs := erq1 :: erq2 :: nil;
          sys_merss := ers1 :: ers2 :: nil;
+         sys_msg_inds_valid := Hmvalid;
          sys_inits := implInit;
          sys_rules := nil |}.
 
