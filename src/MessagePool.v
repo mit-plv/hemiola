@@ -14,11 +14,14 @@ Section MessagePool.
   Definition findQ (midx: IdxT) (mp: MessagePool): Queue :=
     mp@[midx] >>=[nil] (fun q => q).
 
-  Definition firstMP (midx: IdxT) (mp: MessagePool) :=
+  Definition firstMP (mp: MessagePool) (midx: IdxT) :=
     hd_error (findQ midx mp).
 
-  Definition FirstMP (midx: IdxT) (msg: MsgT) (mp: MessagePool) :=
-    firstMP midx mp = Some msg.
+  Definition FirstMP (mp: MessagePool) (midx: IdxT) (msg: MsgT) :=
+    firstMP mp midx = Some msg.
+
+  Definition FirstMPI (mp: MessagePool) (idm: Id MsgT)  :=
+    FirstMP mp (idOf idm) (valOf idm).
 
   (* NOTE: the head is the oldest one. *)
   Definition deqMP (midx: IdxT) (mp: MessagePool): MessagePool :=
@@ -29,17 +32,20 @@ Section MessagePool.
 
   (* NOTE: the head is the oldest one. *)
   Definition enqMP (midx: IdxT) (m: MsgT) (mp: MessagePool): MessagePool :=
-    mp+[midx <- (match findQ midx mp with
-                 | nil => [m]
-                 | q => q ++ [m]
-                 end)].
+    mp+[midx <- (findQ midx mp ++ [m])].
+
+  Definition enqMPI (idm: Id MsgT) (mp: MessagePool): MessagePool :=
+    enqMP (idOf idm) (valOf idm) mp.
 
   Definition EmptyMP (mp: MessagePool) := mp = M.empty _.
   Definition InMP (midx: IdxT) (msg: MsgT) (mp: MessagePool) :=
     In msg (findQ midx mp).
 
-  Definition ForallMP (P: MsgT -> Prop) (mp: MessagePool) :=
-    forall midx, Forall P (findQ midx mp).
+  Definition InMPI (idm: Id MsgT) (mp: MessagePool) :=
+    InMP (idOf idm) (valOf idm) mp.
+
+  Definition ForallMP (P: IdxT -> MsgT -> Prop) (mp: MessagePool) :=
+    forall midx, Forall (P midx) (findQ midx mp).
 
   Fixpoint enqMsgs (nmsgs: list (Id MsgT)) (mp: MessagePool): MessagePool :=
     match nmsgs with
@@ -55,16 +61,26 @@ Section MessagePool.
       deqMsgs minds' (deqMP mind mp)
     end.
 
+  Definition qsOf (minds: list IdxT) (mp: MessagePool): MessagePool :=
+    M.restrict mp minds.
+
 End MessagePool.
 
 Section Facts.
   Variable (MsgT: Type).
 
+  Lemma ForallMP_emptyMP:
+    forall (P: IdxT -> MsgT -> Prop),
+      ForallMP P (emptyMP _).
+  Proof.
+    intros; constructor.
+  Qed.
+
   Lemma ForallMP_enqMP:
     forall P (mp: MessagePool MsgT),
       ForallMP P mp ->
       forall i m,
-        P m ->
+        P i m ->
         ForallMP P (enqMP i m mp).
   Proof.
     unfold ForallMP, enqMP, findQ; intros.
@@ -82,7 +98,7 @@ Section Facts.
   Lemma ForallMP_enqMsgs:
     forall P nmsgs (mp: MessagePool MsgT),
       ForallMP P mp ->
-      Forall P (valsOf nmsgs) ->
+      Forall (fun im => P (idOf im) (valOf im)) nmsgs ->
       ForallMP P (enqMsgs nmsgs mp).
   Proof.
     induction nmsgs; simpl; intros; auto.
@@ -118,29 +134,29 @@ Section Facts.
   Qed.
 
   Lemma ForallMP_impl:
-    forall (P1: MsgT -> Prop) mp,
+    forall (P1: IdxT -> MsgT -> Prop) mp,
       ForallMP P1 mp ->
-      forall (P2: MsgT -> Prop),
-        (forall m, P1 m -> P2 m) ->
+      forall (P2: IdxT -> MsgT -> Prop),
+        (forall i m, P1 i m -> P2 i m) ->
         ForallMP P2 mp.
   Proof.
   Admitted.
 
   Lemma ForallMP_InMP:
-    forall (P: MsgT -> Prop) mp,
+    forall (P: IdxT -> MsgT -> Prop) mp,
       ForallMP P mp ->
       forall i m,
         InMP i m mp ->
-        P m.
+        P i m.
   Proof.
   Admitted.
 
   Corollary ForallMP_Forall_InMP:
-    forall (P: MsgT -> Prop) mp,
+    forall (P: IdxT -> MsgT -> Prop) mp,
       ForallMP P mp ->
       forall ims,
         Forall (fun im => InMP (idOf im) (valOf im) mp) ims ->
-        Forall P (valsOf ims).
+        Forall (fun im => P (idOf im) (valOf im)) ims.
   Proof.
     induction ims; simpl; intros; auto.
     inv H0.
@@ -150,10 +166,62 @@ Section Facts.
 
   Lemma FirstMP_InMP:
     forall (mp: MessagePool MsgT) i m,
-      FirstMP i m mp ->
+      FirstMP mp i m ->
       InMP i m mp.
   Proof.
   Admitted.
+
+  Lemma InMP_enqMP_or:
+    forall midx (msg: MsgT) nidx nmsg mp,
+      InMP midx msg (enqMP nidx nmsg mp) ->
+      (midx = nidx /\ msg = nmsg) \/
+      InMP midx msg mp.
+  Proof.
+    unfold InMP, enqMP, findQ; intros.
+    destruct (midx ==n nidx); subst.
+    - mred; unfold findQ in H; simpl in H.
+      destruct (mp@[nidx]); simpl in *.
+      + apply in_app_or in H; destruct H; auto.
+        Common.dest_in; auto.
+      + destruct H; auto.
+    - mred.
+  Qed.
+
+  Lemma InMP_enqMsgs_or:
+    forall midx (msg: MsgT) nmsgs mp,
+      InMP midx msg (enqMsgs nmsgs mp) ->
+      In (midx, msg) nmsgs \/
+      InMP midx msg mp.
+  Proof.
+    induction nmsgs; simpl; intros; auto.
+    destruct a as [nidx nmsg].
+    specialize (IHnmsgs _ H); destruct IHnmsgs; auto.
+    apply InMP_enqMP_or in H0; destruct H0; auto.
+    dest; subst; auto.
+  Qed.
+
+  Lemma InMP_deqMP:
+    forall midx (msg: MsgT) ridx mp,
+      InMP midx msg (deqMP ridx mp) ->
+      InMP midx msg mp.
+  Proof.
+    unfold InMP, deqMP, findQ; intros.
+    remember (mp@[ridx]) as rq; destruct rq; simpl in *; auto.
+    destruct l; auto.
+    destruct (midx ==n ridx); subst.
+    - mred; simpl in *; auto.
+    - mred.
+  Qed.
+
+  Lemma InMP_deqMsgs:
+    forall midx (msg: MsgT) rmsgs mp,
+      InMP midx msg (deqMsgs rmsgs mp) ->
+      InMP midx msg mp.
+  Proof.
+    induction rmsgs; simpl; intros; auto.
+    specialize (IHrmsgs _ H).
+    eapply InMP_deqMP; eauto.
+  Qed.
 
   (* Lemma firstMP_app_or: *)
   (*   forall (msg: MsgT) mind mp1 mp2, *)
@@ -188,34 +256,6 @@ Section Facts.
   (* Proof. *)
   (*   intros. *)
   (*   apply firstMP_app_or; auto. *)
-  (* Qed. *)
-
-  (* Lemma inMP_enqMP_or: *)
-  (*   forall (msg: MsgT) nmsg mp, *)
-  (*     InMP msg (enqMP nmsg mp) -> *)
-  (*     msg = nmsg \/ InMP msg mp. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply in_app_or in H0; destruct H0; auto. *)
-  (*   Common.dest_in; auto. *)
-  (* Qed. *)
-
-  (* Lemma inMP_deqMP: *)
-  (*   forall (msg: MsgT) mind mp, *)
-  (*     InMP msg (deqMP mind mp) -> *)
-  (*     InMP msg mp. *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   find_if_inside; auto. *)
-  (*   inv H0; auto. *)
-  (* Qed. *)
-
-  (* Lemma inMP_enqMsgs_or: *)
-  (*   forall (msg: MsgT) nmsgs mp, *)
-  (*     InMP msg (enqMsgs nmsgs mp) -> *)
-  (*     In msg nmsgs \/ InMP msg mp. *)
-  (* Proof. *)
-  (*   intros; apply in_app_or in H0; destruct H0; auto. *)
   (* Qed. *)
 
   (* Lemma firstMP_InMP: *)
@@ -268,14 +308,6 @@ Section Facts.
   (*   eapply InMP_deqMP; eauto. *)
   (* Qed. *)
 
-  (* Lemma InMP_deqMsgs: *)
-  (*   forall msg rmsgs mp, *)
-  (*     InMP msg (deqMsgs rmsgs mp) -> *)
-  (*     InMP msg mp. *)
-  (* Proof. *)
-  (*   induction rmsgs; simpl; intros; auto. *)
-  (*   eapply InMP_removeMP; eauto. *)
-  (* Qed. *)
 
   (* Lemma ForallMP_forall: *)
   (*   forall P mp, *)
@@ -700,6 +732,9 @@ Section Map.
 
   Variable (mmap: MsgT1 -> MsgT2).
   Hypothesis (Hmmap: forall msg, getMsg (mmap msg) = getMsg msg).
+
+  Definition mpmap (mp: MessagePool MsgT1): MessagePool MsgT2 :=
+    M.map (map mmap) mp.
 
   (* Lemma mmap_findMP: *)
   (*   forall mind mp, *)

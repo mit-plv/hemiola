@@ -31,27 +31,17 @@ Section GivenMsg.
       pmsg_pred: Pred MsgT }.
 
   Record PMsgId :=
-    { pmid_mid: MsgId;
+    { pmid_midx: IdxT;
+      pmid_msg_id: IdxT;
       pmid_pred: Pred MsgT }.
 
   Definition pmsg_mid (pmsg: PMsg) := msg_id (getMsg (pmsg_omsg pmsg)).
   Definition pmsg_val (pmsg: PMsg) := msg_value (getMsg (pmsg_omsg pmsg)).
 
-  Definition pmsg_pmid (pmsg: PMsg) :=
-    {| pmid_mid := pmsg_mid pmsg;
-       pmid_pred := pmsg_pred pmsg |}.
-
-  Definition DualPMsgId (rq rs: PMsgId) :=
-    DualMid (pmid_mid rq) (pmid_mid rs) /\
-    pmid_pred rq = pmid_pred rs.
-
-  Definition DualPMsg (rq rs: PMsg) :=
-    DualMid (pmsg_mid rq) (pmsg_mid rs) /\
-    pmsg_pred rq = pmsg_pred rs.
-
-  Definition dualOfP (pmid: PMsgId) (dchn: IdxT) :=
-    {| pmid_mid := dualOf (pmid_mid pmid) dchn;
-       pmid_pred := pmid_pred pmid |}.
+  Definition pmidOf (idp: Id PMsg) :=
+    {| pmid_midx := idOf idp;
+       pmid_msg_id := pmsg_mid (valOf idp);
+       pmid_pred := pmsg_pred (valOf idp) |}.
 
   Global Instance PMsg_HasMsg: HasMsg PMsg :=
     {| getMsg := fun pmsg => getMsg (pmsg_omsg pmsg) |}.
@@ -64,46 +54,54 @@ Section GivenMsg.
 
   Inductive PRule :=
   | PRuleImm:
-      forall (rq rs: PMsgId) (prec: RPrecond), PRule
+      forall (oidx: IdxT) (rq rs: PMsgId) (prec: RPrecond), PRule
   | PRuleRqFwd:
-      forall (rq: PMsgId) (prec: RPrecond) (rqf: list PMsgId), PRule
+      forall (oidx: IdxT) (rq: PMsgId) (prec: RPrecond) (rqf: list PMsgId), PRule
   | PRuleRsBack:
-      forall (rss: list PMsgId) (opred: OPred)
+      forall (oidx: IdxT) (rss: list PMsgId) (opred: OPred)
              (rsb: PMsgId) (rsbf: RsBackF), PRule.
 
   Definition oidxOfPRule (prule: PRule) :=
     match prule with
-    | PRuleImm rq _ _ => mid_to (pmid_mid rq)
-    | PRuleRqFwd rq _ _ => mid_to (pmid_mid rq)
-    | PRuleRsBack _ _ rsb _ => mid_from (pmid_mid rsb)
+    | PRuleImm oidx _ _ _ => oidx
+    | PRuleRqFwd oidx _ _ _ => oidx
+    | PRuleRsBack oidx _ _ _ _ => oidx
     end.
 
-  Definition midsOfPRule (prule: PRule) :=
+  Definition mindsOfPRule (prule: PRule) :=
     match prule with
-    | PRuleImm rq _ _ => pmid_mid rq :: nil
-    | PRuleRqFwd rq _ _ => pmid_mid rq :: nil
-    | PRuleRsBack rss _ _ _ => map pmid_mid rss
+    | PRuleImm _ rq _ _ => pmid_midx rq :: nil
+    | PRuleRqFwd _ rq _ _ => pmid_midx rq :: nil
+    | PRuleRsBack _ rss _ _ _ => map pmid_midx rss
+    end.
+
+  Definition msgIdsOfPRule (prule: PRule) :=
+    match prule with
+    | PRuleImm _ rq _ _ => pmid_msg_id rq :: nil
+    | PRuleRqFwd _ rq _ _ => pmid_msg_id rq :: nil
+    | PRuleRsBack _ rss _ _ _ => map pmid_msg_id rss
     end.
 
   Definition precOfPRule (prule: PRule) :=
     match prule with
-    | PRuleImm _ _ prec => prec
-    | PRuleRqFwd _ prec _ => prec
-    | PRuleRsBack _ _ _ _ => ⊤⊤
+    | PRuleImm _ _ _ prec => prec
+    | PRuleRqFwd _ _ prec _ => prec
+    | PRuleRsBack _ _ _ _ _ => ⊤⊤
     end.
 
   Section PLabel.
 
     Inductive PLabel :=
-    | PlblIns (mins: list PMsg): PLabel
-    | PlblInt (hdl: option PRule) (mins: list PMsg) (mouts: list PMsg): PLabel
-    | PlblOuts (mouts: list PMsg): PLabel.
+    | PlblIns (mins: list (Id PMsg)): PLabel
+    | PlblInt (hdl: option PRule)
+              (mins: list (Id PMsg)) (mouts: list (Id PMsg)): PLabel
+    | PlblOuts (mouts: list (Id PMsg)): PLabel.
  
     Definition pToLabel (l: PLabel): option Label :=
       match l with
-      | PlblIns mins => Some (LblIns (map getMsg mins))
+      | PlblIns mins => Some (LblIns (imap getMsg mins))
       | PlblInt _ _ _ => None
-      | PlblOuts mouts => Some (LblOuts (map getMsg mouts))
+      | PlblOuts mouts => Some (LblOuts (imap getMsg mouts))
       end.
 
     Global Instance PLabel_HasLabel: HasLabel PLabel :=
@@ -116,12 +114,19 @@ Section GivenMsg.
   Definition PHistory := list PLabel.
 
   Record PSystem :=
-    { psys_inds: list IdxT;
+    { psys_oinds: list IdxT;
+      psys_minds: list IdxT;
+      psys_merqs: list IdxT;
+      psys_merss: list IdxT;
       psys_inits: OStates;
       psys_rules: list PRule }.
 
   Global Instance PSystem_IsSystem: IsSystem PSystem :=
-    {| indicesOf := psys_inds |}.
+    {| oindsOf := psys_oinds;
+       mindsOf := psys_minds;
+       merqsOf := psys_merqs;
+       merssOf := psys_merss
+    |}.
 
   Global Instance PSystem_OStates_HasInit: HasInit PSystem OStates :=
     {| initsOf := psys_inits |}.
@@ -135,7 +140,7 @@ Section GivenMsg.
   Definition getPStateInit (psys: PSystem): PState :=
     {| pst_oss := initsOf psys;
        pst_orqs := [];
-       pst_msgs := nil |}.
+       pst_msgs := [] |}.
 
   Global Instance PState_PState_HasInit : HasInit PSystem PState :=
     {| initsOf := getPStateInit |}.
@@ -144,13 +149,17 @@ Section GivenMsg.
 
   Definition pToRule (prule: PRule): Rule :=
     {| rule_oidx := oidxOfPRule prule; 
-       rule_mids := midsOfPRule prule;
+       rule_minds := mindsOfPRule prule;
+       rule_msg_ids := msgIdsOfPRule prule;
        (** TODO: how to convert? *)
        rule_precond := fun _ _ _ => True;
        rule_postcond := fun _ _ _ _ _ _ => True |}.
 
   Definition pToSystem (psys: PSystem): System :=
-    {| sys_inds := psys_inds psys;
+    {| sys_oinds := psys_oinds psys;
+       sys_minds := psys_minds psys;
+       sys_merqs := psys_merqs psys;
+       sys_merss := psys_merss psys;
        sys_inits := psys_inits psys;
        sys_rules := map pToRule (psys_rules psys) |}.
 
@@ -160,12 +169,12 @@ End GivenMsg.
 
 Definition pToTLabel (plbl: PLabel TMsg): TLabel :=
   match plbl with
-  | PlblIns mins => RlblIns (map (@pmsg_omsg _) mins)
+  | PlblIns mins => RlblIns (imap (@pmsg_omsg _) mins)
   | PlblInt oprule mins mouts =>
     RlblInt (lift (@pToRule TMsg) oprule)
-            (map (@pmsg_omsg _) mins)
-            (map (@pmsg_omsg _) mouts)
-  | PlblOuts mouts => RlblOuts (map (@pmsg_omsg _) mouts)
+            (imap (@pmsg_omsg _) mins)
+            (imap (@pmsg_omsg _) mouts)
+  | PlblOuts mouts => RlblOuts (imap (@pmsg_omsg _) mouts)
   end.
 
 Definition pToTHistory (phst: PHistory TMsg): THistory :=
@@ -174,19 +183,25 @@ Definition pToTHistory (phst: PHistory TMsg): THistory :=
 Definition PTStateR (tst: TState) (pst: PState TMsg) :=
   tst_oss tst = pst_oss pst /\
   tst_orqs tst = M.map (map (@pmsg_omsg _)) (pst_orqs pst) /\
-  tst_msgs tst = map (@pmsg_omsg _) (pst_msgs pst).
+  tst_msgs tst = M.map (map (@pmsg_omsg _)) (pst_msgs pst).
 
 Section RuleAdder.
   Context {SysT: Type} `{IsSystem SysT} `{HasInit SysT OStates}.
   Variable (MsgT: Type).
 
   Definition buildRawPSys (osys: SysT): PSystem MsgT :=
-    {| psys_inds := indicesOf osys;
+    {| psys_oinds := oindsOf osys;
+       psys_minds := mindsOf osys;
+       psys_merqs := merqsOf osys;
+       psys_merss := merssOf osys;
        psys_inits := initsOf osys;
        psys_rules := nil |}.
 
   Definition addPRules (rules: list (PRule MsgT)) (sys: PSystem MsgT) :=
-    {| psys_inds := psys_inds sys;
+    {| psys_oinds := psys_oinds sys;
+       psys_minds := psys_minds sys;
+       psys_merqs := psys_merqs sys;
+       psys_merss := psys_merss sys;
        psys_inits := psys_inits sys;
        psys_rules := psys_rules sys ++ rules |}.
 
@@ -210,9 +225,10 @@ Global Opaque rsBackFDefault.
 Definition PredMPTrue: PredMP TMsg :=
   fun _ _ => True.
 
+(** TODO: check whether we really need this predicate. *)
 Definition NoMsgsTs (ts: TrsId): PredMP TMsg :=
   fun pmsgs nmsgs =>
-    ForallMP (fun tmsg =>
+    ForallMP (fun _ tmsg =>
                 (tmsg_info tmsg) >>=[True] (fun tinfo => tinfo_tid tinfo <> ts))
              nmsgs.
 

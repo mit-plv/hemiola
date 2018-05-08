@@ -8,8 +8,7 @@ Set Implicit Arguments.
 
 Section TrsSim.
   Variables (sim: TState -> TState -> Prop)
-            (ginv: TState -> Prop)
-            (p: Label -> Label).
+            (ginv: TState -> Prop).
 
   Local Infix "≈" := sim (at level 30).
 
@@ -25,7 +24,7 @@ Section TrsSim.
         trsSteps impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
-          map p (behaviorOf impl ihst) = behaviorOf spec shst /\
+          behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2.
 
   Hypotheses
@@ -44,7 +43,7 @@ Section TrsSim.
         steps step_t impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
-          map p (behaviorOf impl ihst) = behaviorOf spec shst /\
+          behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
     induction trss as [|trs trss]; simpl; intros; subst.
@@ -63,7 +62,6 @@ Section TrsSim.
       do 2 eexists; repeat split.
       + eapply steps_append; eauto.
       + do 2 rewrite behaviorOf_app.
-        rewrite map_app.
         rewrite H4, H10; reflexivity.
       + assumption.
       + assumption.
@@ -77,7 +75,7 @@ Section TrsSim.
         seqSteps impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
-          map p (behaviorOf impl ihst) = behaviorOf spec shst /\
+          behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
     unfold seqSteps, Sequential; intros; dest; subst.
@@ -85,7 +83,7 @@ Section TrsSim.
   Qed.
 
   Theorem sequential_simulation_implies_refinement:
-    seqSteps # steps step_t |-- impl ⊑[p] spec.
+    seqSteps # steps step_t |-- impl ⊑ spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.
@@ -98,8 +96,7 @@ End TrsSim.
 
 Section TrsSimSep.
   Variables (sim: TState -> TState -> Prop)
-            (ginv: TState -> Prop)
-            (p: Label -> Label).
+            (ginv: TState -> Prop).
 
   Local Infix "≈" := sim (at level 30).
 
@@ -121,9 +118,8 @@ Section TrsSimSep.
       ginv ist1 ->
       forall imins ist2,
         step_t impl ist1 (RlblIns imins) ist2 ->
-        exists smins sst2,
-          step_t spec sst1 (RlblIns smins) sst2 /\
-          getLabel (RlblIns smins) = lift p (getLabel (RlblIns imins)) /\
+        exists sst2,
+          step_t spec sst1 (RlblIns imins) sst2 /\
           ist2 ≈ sst2.
 
   Definition TrsSimOuts :=
@@ -132,9 +128,8 @@ Section TrsSimSep.
       ginv ist1 ->
       forall imouts ist2,
         step_t impl ist1 (RlblOuts imouts) ist2 ->
-        exists smouts sst2,
-          step_t spec sst1 (RlblOuts smouts) sst2 /\
-          getLabel (RlblOuts smouts) = lift p (getLabel (RlblOuts imouts)) /\
+        exists sst2,
+          step_t spec sst1 (RlblOuts imouts) sst2 /\
           ist2 ≈ sst2.
 
   Definition TrsSimAtomic ts rq :=
@@ -148,7 +143,7 @@ Section TrsSimSep.
             steps step_t impl ist1 hst ist2 ->
             exists sst2 shst,
               steps step_t spec sst1 shst sst2 /\
-              map p (behaviorOf impl hst) = behaviorOf spec shst /\
+              behaviorOf impl hst = behaviorOf spec shst /\
               ist2 ≈ sst2.
 
   Hypotheses
@@ -167,7 +162,7 @@ Section TrsSimSep.
         steps step_t impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
-          map p (behaviorOf impl ihst) = behaviorOf spec shst /\
+          behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2.
   Proof.
     destruct 3; simpl; intros; subst.
@@ -180,24 +175,24 @@ Section TrsSimSep.
       + assumption.
     - inv H2; inv H5.
       eapply HsimIns in H7; eauto.
-      destruct H7 as [smins [sst2 [? [? ?]]]].
+      destruct H7 as [sst2 [? ?]].
       eexists; eexists (_ :: _); repeat split.
       + econstructor; [econstructor|eassumption].
-      + simpl; simpl in H2; inv H2; reflexivity.
+      + reflexivity.
       + assumption.
     - inv H2; inv H5.
       eapply HsimOuts in H7; eauto.
-      destruct H7 as [smouts [sst2 [? [? ?]]]].
+      destruct H7 as [sst2 [? ?]].
       eexists; eexists (_ :: _); repeat split.
       + econstructor; [econstructor|eassumption].
-      + simpl; simpl in H2; inv H2; reflexivity.
+      + reflexivity.
       + assumption.
     - pose proof (HsimAtm H1 H0 H H2).
       dest; eauto.
   Qed.
 
   Lemma trs_sim_in_atm_simulates:
-    TrsSimulates sim ginv p impl spec.
+    TrsSimulates sim ginv impl spec.
   Proof.
     unfold TrsSimulates; intros.
     destruct H1.
@@ -206,14 +201,41 @@ Section TrsSimSep.
 
 End TrsSimSep.
 
+Lemma InvSim_implies_TrsSimulates:
+  forall sim ginv impl spec,
+    InvStep impl step_t ginv ->
+    InvSim step_t step_t ginv sim impl spec ->
+    TrsSimulates sim ginv impl spec.
+Proof.
+  unfold TrsSimulates; intros.
+  inv H3.
+  eapply inv_simulation_steps; eauto.
+Qed.
+
+Lemma TrsSimulates_no_rules:
+  forall sim ginv impl spec,
+    merqsOf impl = merqsOf spec ->
+    merssOf impl = merssOf spec ->
+    InvStep impl step_t ginv ->
+    (ginv ->i ValidTrss impl) ->
+    MsgsSim sim ->
+    ImpliesSimMP sim ->
+    sys_rules impl = nil ->
+    TrsSimulates sim ginv impl spec.
+Proof.
+  intros; hnf; intros.
+  eapply InvSim_implies_TrsSimulates; eauto.
+  eapply steps_simulation_ValidTrss_SimMP_no_rules; eauto.
+Qed.
+
 Section TrsPreserving.
 
   Definition trsPreservingRule (rule: Rule) :=
     exists tid,
-      Forall (fun mid => mid_tid mid = tid) (rule_mids rule) /\
+      Forall (fun mid => mid = tid) (rule_msg_ids rule) /\
       forall post porq ins nost norq outs,
         rule_postcond rule post porq ins nost norq outs ->
-        Forall (fun mout => mid_tid (msg_id mout) = tid) outs.
+        Forall (fun idm => msg_id (valOf idm) = tid) outs.
 
   Definition trsPreservingSys (sys: System) :=
     Forall trsPreservingRule (sys_rules sys).
@@ -227,12 +249,12 @@ Section TrsDisj.
       In rule1 rules1 ->
       In rule2 rules2 ->
       forall tid1 tid2,
-        In tid1 (map mid_tid (rule_mids rule1)) ->
-        In tid2 (map mid_tid (rule_mids rule2)) ->
+        In tid1 (rule_msg_ids rule1) ->
+        In tid2 (rule_msg_ids rule2) ->
         tid1 <> tid2.
 
   Definition TrsDisjSys (sys1 sys2: System) :=
-    TrsDisj (rulesOf sys1) (rulesOf sys2).
+    TrsDisj (sys_rules sys1) (sys_rules sys2).
 
   Lemma TrsDisj_sym:
     forall ms1 ms2,
@@ -278,17 +300,17 @@ Lemma trsPreservingSys_ins_outs_same_tid:
     forall st1 st2 orule hins houts,
       step_t sys st1 (RlblInt orule hins houts) st2 ->
       exists tid,
-        Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) = tid) hins /\
-        Forall (fun msg => mid_tid (msg_id (tmsg_msg msg)) = tid) houts.
+        Forall (fun idm => msg_id (getMsg (valOf idm)) = tid) hins /\
+        Forall (fun idm => msg_id (getMsg (valOf idm)) = tid) houts.
 Proof.
   intros; inv H0; [(* anything *) exists 0; split; constructor|].
   unfold trsPreservingSys in H.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
   destruct H as [tid [? ?]].
-  specialize (H0 _ _ _ _ _ _ H13).
+  specialize (H0 _ _ _ _ _ _ H14).
   exists tid; split; auto.
-  - rewrite <-H10 in H.
+  - rewrite <-H11 in H.
     clear -H; induction hins; [constructor|].
     inv H; constructor; auto.
   - clear -H0; induction outs; [constructor|].
@@ -301,14 +323,14 @@ Lemma trsPreservineSys_atomic_same_tid:
     forall ts rq hst mouts,
       Atomic sys ts rq hst mouts ->
       forall mtid,
-        mtid = mid_tid (msg_id rq) ->
+        mtid = msg_id (valOf rq) ->
         forall ist1 ist2,
           steps step_t sys ist1 hst ist2 ->
-          Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) mouts /\
+          ForallMP (fun _ msg => msg_id (getMsg msg) = mtid) mouts /\
           Forall (fun tl =>
                     match tl with
                     | RlblInt _ ins _ =>
-                      Forall (fun msg => mid_tid (msg_id (getMsg msg)) = mtid) ins
+                      Forall (fun msg => msg_id (getMsg (valOf msg)) = mtid) ins
                     | _ => False
                     end) hst.
 Proof.
@@ -317,27 +339,30 @@ Proof.
     inv H3.
     eapply trsPreservingSys_ins_outs_same_tid in H8; eauto.
     destruct H8 as [tid [? ?]].
-    inv H2; auto.
+    apply ForallMP_enqMsgs.
+    + apply ForallMP_emptyMP.
+    + inv H2; auto.
   - subst; inv H4.
     specialize (IHAtomic _ eq_refl _ _ H7); dest.
     split.
-    + apply Forall_app.
-      * apply ForallMP_removeMsgs; assumption.
-      * eapply ForallMP_SubList in H2; eauto.
+    + apply ForallMP_enqMsgs.
+      * apply ForallMP_deqMsgs; assumption.
+      * eapply ForallMP_Forall_InMP in H2; eauto.
         eapply trsPreservingSys_ins_outs_same_tid in H9; eauto.
         destruct H9 as [tid [? ?]].
         destruct msgs; [elim H1; reflexivity|].
         inv H5; inv H2.
         rewrite <-H9; auto.
     + constructor; auto.
-      eapply ForallMP_SubList; eauto.
+      eapply ForallMP_Forall_InMP in H2; eauto.
+      simpl in H2; auto.
 Qed.
 
 Lemma rule_mids_tid_In:
   forall tid (rules: list Rule) r,
-    In tid (map mid_tid (rule_mids r)) ->
+    In tid (rule_msg_ids r) ->
     In r rules ->
-    In tid (List.concat (map (fun rule => map mid_tid (rule_mids rule)) rules)).
+    In tid (List.concat (map (rule_msg_ids) rules)).
 Proof.
   induction rules; simpl; intros; auto.
   destruct H0; subst.
@@ -345,39 +370,32 @@ Proof.
   - apply in_or_app; right; eauto.
 Qed.
 
-Lemma TrsSimulates_no_rules:
-  forall sim mamap ginv impl spec,
-    ValidMaMap mamap impl spec ->
-    MsgsInSim (liftMmap mamap) sim ->
-    MsgsOutSim impl (liftTmap (liftMmap mamap)) sim ->
-    ImpliesSimMP impl (liftMmap mamap) sim ->
-    sys_rules impl = nil ->
-    TrsSimulates sim ginv (liftLmap (liftMmap mamap)) impl spec.
-Proof.
-  intros; hnf; intros.
-  inv H6.
-  eapply steps_simulation_BlockedInv_SimMP_no_rules; eauto.
-Qed.
-
 Section Compositionality.
 
   Variables (impl1 impl2 spec: System).
-  Hypotheses (Hidx: indicesOf impl1 = indicesOf impl2)
-             (Hmt1: trsPreservingSys impl1)
-             (Hmt2: trsPreservingSys impl2)
-             (Hmtdisj: TrsDisjSys impl1 impl2).
+  Hypotheses
+    (Hoinds: oindsOf impl1 = oindsOf impl2)
+    (Hminds: mindsOf impl1 = mindsOf impl2)
+    (Hmerqs: merqsOf impl1 = merqsOf impl2)
+    (Hmerss: merssOf impl1 = merssOf impl2)
+    (Hmt1: trsPreservingSys impl1)
+    (Hmt2: trsPreservingSys impl2)
+    (Hmtdisj: TrsDisjSys impl1 impl2).
 
   Variable (impl: System).
-  Hypotheses (Hmt: trsPreservingSys impl)
-             (Hii: indicesOf impl = indicesOf impl1)
-             (Himpl:
-                forall rule,
-                  In rule (sys_rules impl) ->
-                  In rule (sys_rules impl1 ++ sys_rules impl2)).
+  Hypotheses
+    (Hmt: trsPreservingSys impl)
+    (Hii: oindsOf impl = oindsOf impl1)
+    (Hmm: mindsOf impl = mindsOf impl1)
+    (Hqq: merqsOf impl = merqsOf impl1)
+    (Hss: merssOf impl = merssOf impl1)
+    (Himpl:
+       forall rule,
+         In rule (sys_rules impl) ->
+         In rule (sys_rules impl1 ++ sys_rules impl2)).
 
   Variables (ginv: TState -> Prop)
-            (simR: TState -> TState -> Prop)
-            (p: Label -> Label).
+            (simR: TState -> TState -> Prop).
   
   Local Infix "≈" := simR (at level 30).
   
@@ -392,41 +410,46 @@ Section Compositionality.
     - assumption.
     - eapply Hinv1; eauto.
       eapply StIns; try reflexivity; try assumption.
-      eapply ValidMsgsExtIn_same_indices; eauto.
+      eapply ValidMsgsExtIn_merqsOf; eauto.
     - eapply Hinv1; eauto.
       eapply StOuts; try reflexivity; try assumption.
-      eapply ValidMsgsExtOut_same_indices; eauto.
-    - specialize (Himpl _ H8).
+      eapply ValidMsgsExtOut_merssOf; eauto.
+    - specialize (Himpl _ H9).
       apply in_app_or in Himpl; destruct Himpl.
       + eapply Hinv1; eauto.
         eapply StInt; try reflexivity; try eassumption.
-        rewrite <-Hii; assumption.
+        * rewrite <-Hii; assumption.
+        * eapply ValidMsgsIn_mindsOf; eauto.
+        * rewrite Hss; reflexivity.
       + eapply Hinv2; eauto.
         eapply StInt; try reflexivity; try eassumption.
-        rewrite <-Hidx, <-Hii; assumption.
+        * rewrite <-Hoinds, <-Hii; assumption.
+        * eapply ValidMsgsIn_mindsOf; eauto.
+          rewrite <-Hminds; auto.
+        * rewrite Hss, Hmerss; reflexivity.
   Qed.
 
   Lemma TrsDisjSys_distr_same_tid:
     forall mtid,
       (forall rule,
-          rule_mids rule <> nil ->
-          Forall (fun mid => mid_tid mid = mtid) (rule_mids rule) ->
+          rule_msg_ids rule <> nil ->
+          Forall (fun mid => mid = mtid) (rule_msg_ids rule) ->
           In rule (sys_rules impl) ->
           In rule (sys_rules impl1)) \/
       (forall rule,
-          rule_mids rule <> nil ->
-          Forall (fun mid => mid_tid mid = mtid) (rule_mids rule) ->
+          rule_msg_ids rule <> nil ->
+          Forall (fun mid => mid = mtid) (rule_msg_ids rule) ->
           In rule (sys_rules impl) ->
           In rule (sys_rules impl2)).
   Proof.
     intros.
-    destruct (mtid ?<n List.concat (map (fun rule => (map mid_tid (rule_mids rule)))
+    destruct (mtid ?<n List.concat (map (fun rule => rule_msg_ids rule)
                                         (sys_rules impl1))).
     - left; intros.
       pose proof (Himpl _ H1).
       apply in_app_or in H2; destruct H2; [assumption|].
       exfalso.
-      assert (exists mrule, In mtid (map mid_tid (rule_mids mrule)) /\
+      assert (exists mrule, In mtid (rule_msg_ids mrule) /\
                             In mrule (sys_rules impl1)).
       { clear -i.
         induction (sys_rules impl1); [inv i|].
@@ -437,8 +460,8 @@ Section Compositionality.
           right; auto.
         }
       }
-      assert (In mtid (map mid_tid (rule_mids rule))).
-      { clear -H H0; destruct (rule_mids rule); [elim H; reflexivity|].
+      assert (In mtid (rule_msg_ids rule)).
+      { clear -H H0; destruct (rule_msg_ids rule); [elim H; reflexivity|].
         inv H0; left; reflexivity.
       }
       destruct H3 as [mrule [? ?]].
@@ -450,7 +473,7 @@ Section Compositionality.
       apply in_app_or in H2; destruct H2; [|assumption].
       elim n; clear n.
       eapply rule_mids_tid_In; eauto.
-      clear -H H0; destruct (rule_mids rule); [elim H; reflexivity|].
+      clear -H H0; destruct (rule_msg_ids rule); [elim H; reflexivity|].
       inv H0; left; reflexivity.
   Qed.
 
@@ -463,7 +486,7 @@ Section Compositionality.
         steps step_t impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (TrsDisjSys_distr_same_tid (mid_tid (msg_id rq))).
+    pose proof (TrsDisjSys_distr_same_tid (msg_id (valOf rq))).
     pose proof (trsPreservineSys_atomic_same_tid Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.
@@ -473,57 +496,66 @@ Section Compositionality.
       induction H0; intros.
       + inv H3; inv H7; inv H9.
         econstructor; [econstructor|].
-        assert (rule_mids rqr <> nil) by (rewrite <-H13; discriminate).
-        assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rqr))
-          by (rewrite <-H13; constructor; auto).
+        assert (rule_msg_ids rqr <> nil) by (rewrite <-H14; discriminate).
+        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rqr))
+          by (rewrite <-H14; constructor; auto).
         econstructor; eauto.
-        rewrite <-Hii; auto.
+        * rewrite <-Hii; auto.
+        * eapply ValidMsgsIn_mindsOf; eauto.
+        * rewrite Hss; reflexivity.
       + inv H2; inv H4.
         specialize (IHAtomic H1 H8 _ H9).
         econstructor; eauto.
         inv H11.
-        assert (rule_mids rule <> nil).
-        { rewrite <-H16; clear -H.
+        assert (rule_msg_ids rule <> nil).
+        { rewrite <-H17; clear -H.
           destruct msgs; [elim H; reflexivity|discriminate].
         }
-        assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rule)).
-        { rewrite <-H16.
+        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rule)).
+        { rewrite <-H17.
           clear -H7; induction msgs; [constructor|].
           inv H7; constructor; auto.
         }
         econstructor; eauto.
-        rewrite <-Hii; auto.
+        * rewrite <-Hii; auto.
+        * eapply ValidMsgsIn_mindsOf; eauto.
+        * rewrite Hss; reflexivity.
 
     - right.
-      assert (indicesOf impl = indicesOf impl2) as Hii2 by (rewrite Hii; auto).
       generalize dependent ist2.
       induction H0; intros.
       + inv H3; inv H7; inv H9.
         econstructor; [econstructor|].
-        assert (rule_mids rqr <> nil) by (rewrite <-H13; discriminate).
-        assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rqr))
-          by (rewrite <-H13; constructor; auto).
+        assert (rule_msg_ids rqr <> nil) by (rewrite <-H14; discriminate).
+        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rqr))
+          by (rewrite <-H14; constructor; auto).
         econstructor; eauto.
-        rewrite <-Hii2; auto.
+        * rewrite <-Hoinds, <-Hii; auto.
+        * eapply ValidMsgsIn_mindsOf; eauto.
+          rewrite <-Hminds; auto.
+        * rewrite <-Hmerss, <-Hss; reflexivity.
       + inv H2; inv H4.
         specialize (IHAtomic H1 H8 _ H9).
         econstructor; eauto.
         inv H11.
-        assert (rule_mids rule <> nil).
-        { rewrite <-H16; clear -H.
+        assert (rule_msg_ids rule <> nil).
+        { rewrite <-H17; clear -H.
           destruct msgs; [elim H; reflexivity|discriminate].
         }
-        assert (Forall (fun mid => mid_tid mid = mid_tid (msg_id rq)) (rule_mids rule)).
-        { rewrite <-H16.
+        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rule)).
+        { rewrite <-H17.
           clear -H7; induction msgs; [constructor|].
           inv H7; constructor; auto.
         }
         econstructor; eauto.
-        rewrite <-Hii2; auto.
+        * rewrite <-Hoinds, <-Hii; auto.
+        * eapply ValidMsgsIn_mindsOf; eauto.
+          rewrite <-Hminds; auto.
+        * rewrite <-Hmerss, <-Hss; reflexivity.
   Qed.
 
-  Hypotheses (Hsim1: TrsSimulates simR ginv p impl1 spec)
-             (Hsim2: TrsSimulates simR ginv p impl2 spec).
+  Hypotheses (Hsim1: TrsSimulates simR ginv impl1 spec)
+             (Hsim2: TrsSimulates simR ginv impl2 spec).
 
   Lemma trsSimulates_transactional_compositional:
     forall ihst,
@@ -535,7 +567,7 @@ Section Compositionality.
           steps step_t impl ist1 ihst ist2 ->
           exists (sst2 : TState) (shst : list TLabel),
             steps step_t spec sst1 shst sst2 /\
-            map p (behaviorOf impl ihst) = behaviorOf spec shst /\
+            behaviorOf impl ihst = behaviorOf spec shst /\
             ist2 ≈ sst2.
   Proof.
     destruct 1; simpl; intros; subst.
@@ -548,7 +580,7 @@ Section Compositionality.
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.
         eapply StIns; try reflexivity; try assumption.
-        eapply ValidMsgsExtIn_same_indices; eauto.
+        eapply ValidMsgsExtIn_merqsOf; eauto.
       }
       exact (Hsim1 H0 H1 H).
 
@@ -557,7 +589,7 @@ Section Compositionality.
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.
         eapply StOuts; try reflexivity; try assumption.
-        eapply ValidMsgsExtOut_same_indices; eauto.
+        eapply ValidMsgsExtOut_merssOf; eauto.
       }
       exact (Hsim1 H0 H1 H).
 
@@ -572,7 +604,7 @@ Section Compositionality.
       + assert (Transactional impl2 hst).
         { econstructor; eauto.
           eapply atomic_preserved; eauto.
-          rewrite Hii; assumption.
+          rewrite Hqq; assumption.
         }
         pose proof (Hsim2 H0 H1 (conj H3 H4)).
         rewrite behaviorOf_preserved with (impl4:= impl2)
@@ -580,7 +612,7 @@ Section Compositionality.
         assumption.
   Qed.
 
-  Theorem trsSimulates_compositional: TrsSimulates simR ginv p impl spec.
+  Theorem trsSimulates_compositional: TrsSimulates simR ginv impl spec.
   Proof.
     unfold TrsSimulates, trsSteps in *; intros.
     destruct H1.
@@ -588,7 +620,7 @@ Section Compositionality.
   Qed.
 
   Corollary trsSimulates_trsInvHolds_compositional:
-    TrsSimulates simR ginv p impl spec /\ InvStep impl step_t ginv.
+    TrsSimulates simR ginv impl spec /\ InvStep impl step_t ginv.
   Proof.
     split.
     - apply trsSimulates_compositional.

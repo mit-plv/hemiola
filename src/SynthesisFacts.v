@@ -5,18 +5,17 @@ Require Import Synthesis Serial SerialFacts Simulation Invariant TrsSim.
 Set Implicit Arguments.
 
 Corollary trsSimulates_trsInvHolds_rules_added:
-  forall impl rules spec simR ginv simP
+  forall impl rules spec simR ginv
          (Hsim1: InvStep impl step_t ginv ->
-                 TrsSimulates simR ginv simP impl spec)
+                 TrsSimulates simR ginv impl spec)
          (Hinv1: InvStep impl step_t ginv)
          (Hmt1: trsPreservingSys impl)
          (Hsim2: InvStep (addRules rules (buildRawSys impl)) step_t ginv ->
-                 TrsSimulates simR ginv simP
-                              (addRules rules (buildRawSys impl)) spec)
+                 TrsSimulates simR ginv (addRules rules (buildRawSys impl)) spec)
          (Hinv1: InvStep (addRules rules (buildRawSys impl)) step_t ginv)
          (Hmt2: trsPreservingSys (addRules rules (buildRawSys impl)))
-         (Hmtdisj: TrsDisj (rulesOf impl) rules),
-    TrsSimulates simR ginv simP (addRules rules impl) spec /\
+         (Hmtdisj: TrsDisj (sys_rules impl) rules),
+    TrsSimulates simR ginv (addRules rules impl) spec /\
     InvStep (addRules rules impl) step_t ginv.
 Proof.
   intros.

@@ -5,6 +5,14 @@ Require Export MessagePool.
 
 Set Implicit Arguments.
 
+Definition extRqsOf {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
+           (sys: SysT) (mp: MessagePool MsgT) :=
+  qsOf (merqsOf sys) mp.
+
+Definition extRssOf {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
+           (sys: SysT) (mp: MessagePool MsgT) :=
+  qsOf (merssOf sys) mp.
+
 Section Validness.
   Context {MsgT SysT: Type} `{IsSystem SysT}.
 

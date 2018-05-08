@@ -10,25 +10,9 @@ Section GivenMsg.
   Variable (MsgT SysT: Type).
   Context `{HasMsg MsgT} `{IsSystem SysT} `{HasInit SysT OStates}.
 
-  Lemma buildRawPSys_indicesOf:
-    forall (sys: SysT), indicesOf sys = indicesOf (buildRawPSys MsgT sys).
+  Lemma buildRawPSys_oindsOf:
+    forall (sys: SysT), oindsOf sys = oindsOf (buildRawPSys MsgT sys).
   Proof.
-    reflexivity.
-  Qed.
-
-  Corollary buildRawPSys_isExternal:
-    forall (sys: SysT), isExternal (buildRawPSys MsgT sys) = isExternal sys.
-  Proof.
-    unfold isExternal; intros.
-    rewrite <-buildRawPSys_indicesOf.
-    reflexivity.
-  Qed.
-
-  Corollary buildRawPSys_isInternal:
-    forall (sys: SysT), isInternal (buildRawPSys MsgT sys) = isInternal sys.
-  Proof.
-    unfold isInternal; intros.
-    rewrite <-buildRawPSys_indicesOf.
     reflexivity.
   Qed.
 
@@ -40,29 +24,9 @@ Section GivenMsg.
 
   Lemma addPRules_indices:
     forall rules sys,
-      indicesOf (addPRules (MsgT:= MsgT) rules sys) =
-      indicesOf sys.
+      oindsOf (addPRules (MsgT:= MsgT) rules sys) =
+      oindsOf sys.
   Proof.
-    reflexivity.
-  Qed.
-
-  Corollary addPRules_isExternal:
-    forall rules sys,
-      isExternal (addPRules (MsgT:= MsgT) rules sys) =
-      isExternal sys.
-  Proof.
-    unfold isExternal; intros.
-    rewrite addPRules_indices.
-    reflexivity.
-  Qed.
-
-  Corollary addPRules_isInternal:
-    forall rules sys,
-      isInternal (addPRules (MsgT:= MsgT) rules sys) =
-      isInternal sys.
-  Proof.
-    unfold isInternal; intros.
-    rewrite addPRules_indices.
     reflexivity.
   Qed.
 
@@ -76,36 +40,8 @@ Section GivenMsg.
   Qed.
 
   Lemma pToSystem_indices:
-    forall psys, indicesOf psys = indicesOf (pToSystem (MsgT:= MsgT) psys).
+    forall psys, oindsOf psys = oindsOf (pToSystem (MsgT:= MsgT) psys).
   Proof.
-    reflexivity.
-  Qed.
-
-  Corollary pToSystem_isExternal:
-    forall psys idx,
-      isExternal psys idx = isExternal (pToSystem (MsgT:= MsgT) psys) idx.
-  Proof.
-    unfold isExternal; intros.
-    rewrite pToSystem_indices; reflexivity.
-  Qed.
-
-  Corollary pToSystem_isInternal:
-    forall psys idx,
-      isInternal psys idx = isInternal (pToSystem (MsgT:= MsgT) psys) idx.
-  Proof.
-    unfold isInternal; intros.
-    rewrite pToSystem_indices; reflexivity.
-  Qed.
-
-  Lemma pmsg_omsg_extOuts:
-    forall psys msgs,
-      extOuts psys (map (fun pmsg => tmsg_msg (pmsg_omsg pmsg)) msgs) =
-      extOuts (pToSystem (MsgT:= MsgT) psys)
-              (map tmsg_msg (map (@pmsg_omsg _) msgs)).
-  Proof.
-    induction msgs; simpl; intros; [reflexivity|].
-    unfold toExternal, maToExternal.
-    rewrite pToSystem_isExternal, IHmsgs.
     reflexivity.
   Qed.
 
@@ -119,72 +55,64 @@ Section GivenMsg.
     clear; destruct a; simpl; auto.
     - repeat f_equal.
       induction mins; simpl; auto.
-      congruence.
+      rewrite IHmins; reflexivity.
     - repeat f_equal.
       induction mouts; simpl; auto.
-      congruence.
+      rewrite IHmouts; reflexivity.
   Qed.
 
 End GivenMsg.
 
-Lemma pmsg_omsg_FirstMP:
-  forall mp msg,
-    FirstMP mp msg ->
-    FirstMP (map (@pmsg_omsg _) mp) (pmsg_omsg msg).
-Proof.
-  intros; eapply mmap_FirstMP; eauto.
-Qed.
+(* Lemma atomic_history_pred_tinfo: *)
+(*   forall sys ts rq hst mouts, *)
+(*     Atomic sys ts rq hst mouts -> *)
+(*     forall st1 st2, *)
+(*       steps step_t sys st1 hst st2 -> *)
+(*       forall phst, *)
+(*         pToTHistory phst = hst -> *)
+(*         Forall *)
+(*           (fun lbl => *)
+(*              match lbl with *)
+(*              | PlblInt _ pins pouts => *)
+(*                Forall (fun pmsg => *)
+(*                          let tmsg := pmsg_omsg pmsg in *)
+(*                          let msg := tmsg_msg tmsg in *)
+(*                          if fromExternal sys msg then *)
+(*                            msg = rq /\ tmsg_info tmsg = None *)
+(*                          else *)
+(*                            tmsg_info tmsg = Some (buildTInfo ts [rq]) *)
+(*                       ) pins /\ *)
+(*                Forall (fun pmsg => *)
+(*                          tmsg_info (pmsg_omsg pmsg) = Some (buildTInfo ts [rq])) pouts *)
+(*              | _ => False *)
+(*              end) phst. *)
+(* Proof. *)
+(*   intros. *)
+(*   eapply atomic_hst_tinfo in H; eauto; subst. *)
 
-Lemma atomic_history_pred_tinfo:
-  forall sys ts rq hst mouts,
-    Atomic sys ts rq hst mouts ->
-    forall st1 st2,
-      steps step_t sys st1 hst st2 ->
-      forall phst,
-        pToTHistory phst = hst ->
-        Forall
-          (fun lbl =>
-             match lbl with
-             | PlblInt _ pins pouts =>
-               Forall (fun pmsg =>
-                         let tmsg := pmsg_omsg pmsg in
-                         let msg := tmsg_msg tmsg in
-                         if fromExternal sys msg then
-                           msg = rq /\ tmsg_info tmsg = None
-                         else
-                           tmsg_info tmsg = Some (buildTInfo ts [rq])
-                      ) pins /\
-               Forall (fun pmsg =>
-                         tmsg_info (pmsg_omsg pmsg) = Some (buildTInfo ts [rq])) pouts
-             | _ => False
-             end) phst.
-Proof.
-  intros.
-  eapply atomic_hst_tinfo in H; eauto; subst.
-
-  clear -H.
-  induction phst; [constructor|].
-  inv H; specialize (IHphst H3).
-  constructor; auto.
-  destruct a; auto.
+(*   clear -H. *)
+(*   induction phst; [constructor|]. *)
+(*   inv H; specialize (IHphst H3). *)
+(*   constructor; auto. *)
+(*   destruct a; auto. *)
   
-  simpl in H2; clear -H2; destruct H2.
-  split.
+(*   simpl in H2; clear -H2; destruct H2. *)
+(*   split. *)
 
-  - clear -H.
-    induction mins; [constructor|].
-    inv H; specialize (IHmins H3).
-    constructor; auto.
+(*   - clear -H. *)
+(*     induction mins; [constructor|]. *)
+(*     inv H; specialize (IHmins H3). *)
+(*     constructor; auto. *)
 
-    destruct a as [[msg oti] pred]; simpl in *.
-    destruct oti; dest; simpl in *; unfold_idx; subst.
-    + destruct (ma_from _ ?<n _); congruence.
-    + destruct (ma_from _ ?<n _); [congruence|auto].
+(*     destruct a as [[msg oti] pred]; simpl in *. *)
+(*     destruct oti; dest; simpl in *; unfold_idx; subst. *)
+(*     + destruct (ma_from _ ?<n _); congruence. *)
+(*     + destruct (ma_from _ ?<n _); [congruence|auto]. *)
 
-  - clear -H0.
-    induction mouts; [constructor|].
-    inv H0; constructor; auto.
-Qed.
+(*   - clear -H0. *)
+(*     induction mouts; [constructor|]. *)
+(*     inv H0; constructor; auto. *)
+(* Qed. *)
 
 Lemma rsBackFDefault_singleton:
   forall val ost,
@@ -214,14 +142,23 @@ Proof.
 Admitted.
 
 Lemma step_pred_rules_split:
-  forall inds inits prules1 prules2 pst1 plbl pst2,
-    step_pred_t {| psys_inds := inds;
+  forall oinds minds merqs merss inits prules1 prules2 pst1 plbl pst2,
+    step_pred_t {| psys_oinds := oinds;
+                   psys_minds := minds;
+                   psys_merqs := merqs;
+                   psys_merss := merss;
                    psys_inits := inits;
                    psys_rules := prules1 ++ prules2 |} pst1 plbl pst2 ->
-    step_pred_t {| psys_inds := inds;
+    step_pred_t {| psys_oinds := oinds;
+                   psys_minds := minds;
+                   psys_merqs := merqs;
+                   psys_merss := merss;
                    psys_inits := inits;
                    psys_rules := prules1 |} pst1 plbl pst2 \/
-    step_pred_t {| psys_inds := inds;
+    step_pred_t {| psys_oinds := oinds;
+                   psys_minds := minds;
+                   psys_merqs := merqs;
+                   psys_merss := merss;
                    psys_inits := inits;
                    psys_rules := prules2 |} pst1 plbl pst2.
 Proof.

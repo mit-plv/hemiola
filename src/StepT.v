@@ -1,6 +1,14 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepM.
 
+(* NOTE: [getTMsgsTInfo] and [isExternalResp] are both used just for
+ * annotating extra information about messages. We will be able to 
+ * prove some properties about messages using this information,
+ * assuming we only have a certain sort of [Rule]s (state transitions).
+ * Even if below definitions seem to be incomplete, it is totally fine
+ * because of the assumptions about [Rule]s.
+ *)
+
 Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
   match tmsgs with
   | nil => None
@@ -9,6 +17,15 @@ Fixpoint getTMsgsTInfo (tmsgs: list TMsg) :=
     | Some ti => Some ti
     | None => getTMsgsTInfo tmsgs'
     end
+  end.
+
+Fixpoint isExternalResp {MsgT} (merss: list IdxT) (outs: list (Id MsgT)) :=
+  match outs with
+  | nil => false
+  | out :: outs' =>
+    if (idOf out) ?<n merss
+    then true
+    else isExternalResp merss outs'
   end.
 
 Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
@@ -24,9 +41,10 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
              tst_tid := ts
           |} ->
     step_t sys pst (RlblIns (imap toTMsgU eins)) nst
+
 | StOuts: forall ts pst nst oss orqs msgs trss eouts,
     eouts <> nil ->
-    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) eouts ->
+    Forall (FirstMPI msgs) eouts ->
     ValidMsgsExtOut sys eouts ->
     pst = {| tst_oss := oss; tst_orqs := orqs;
              tst_msgs := msgs; tst_trss := trss; tst_tid := ts |} ->
@@ -37,6 +55,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
              tst_tid := ts
           |} ->
     step_t sys pst (RlblOuts eouts) nst
+
 | StInt: forall ts pst nst nts (Hts: nts > ts) tinfo
                 oss orqs msgs trss oidx os porq pos norq ins rule outs,
     oidx = rule_oidx rule ->
@@ -44,9 +63,10 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
     
-    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) ins ->
+    Forall (FirstMPI msgs) ins ->
     ValidMsgsIn sys ins ->
     idsOf ins = rule_minds rule ->
+    map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) = rule_msg_ids rule ->
     
     In rule (sys_rules sys) ->
     rule_precond rule os (map tmsg_msg porq) (imap tmsg_msg ins) ->
@@ -66,7 +86,11 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
              tst_orqs := orqs +[ oidx <- norq ];
              tst_msgs := enqMsgs (imap (toTMsg tinfo) outs)
                                  (deqMsgs (idsOf ins) msgs);
-             tst_trss := trss; (* FIXME *)
+             tst_trss :=
+               if isExternalResp (merssOf sys) outs
+               then enqMsgs (imap (toTMsg tinfo) outs)
+                            (deqMsgs (idsOf (tinfo_rqin tinfo)) msgs)
+               else msgs;
              tst_tid := match getTMsgsTInfo (valsOf ins) with
                         | Some _ => ts
                         | None => nts

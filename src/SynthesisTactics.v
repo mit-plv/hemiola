@@ -13,46 +13,16 @@ Open Scope fmap.
 Ltac constr_sim_mp :=
   repeat
     (try match goal with
-         | [ |- context[distributeMsgs nil _] ] => unfold distributeMsgs
+         | [ |- context[enqMsgs nil _] ] => unfold enqMsgs
          | [ |- context[_ ++ nil] ] => rewrite app_nil_r
-         | [ |- context[map _ (removeMP _ _)] ] =>
-           erewrite mmap_removeMP by reflexivity
-         | [ |- context[map _ (distributeMsgs _ _)] ] =>
-           rewrite mmap_distributeMsgs
          | [ |- context[map _ (_ ++ _)] ] =>
            rewrite map_app
 
-         | [H: context[map _ (removeMP _ _)] |- _] =>
-           erewrite mmap_removeMP in H by reflexivity
-         | [H: context[distributeMsgs nil _] |- _] => unfold distributeMsgs in H
+         | [H: context[enqMsgs nil _] |- _] => unfold enqMsgs in H
          | [H: context[_ ++ nil] |- _] => rewrite app_nil_r in H
-         | [H: context[map _ (distributeMsgs _ _)] |- _] =>
-           rewrite mmap_distributeMsgs in H
          | [H: context[map _ (_ ++ _)] |- _] =>
            rewrite map_app in H
-
-         | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] =>
-           apply SimMP_ext_msg_immediate_out; auto
-         (* | [ |- SimMP _ (removeMP _ _) (removeMP _ _) ] => *)
-         (*   eapply SimMP_response_back_ext_out; eauto; repeat constructor *)
-         | [ |- SimMP _ (distributeMsgs _ (removeMP ?emsg _)) _ ] =>
-           let Hchk := fresh "Hchk" in
-           assert (tmsg_info emsg = None) as Hchk by reflexivity; clear Hchk;
-           eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
-         | [ |- SimMP _ ((removeMP ?emsg _) ++ _) _ ] =>
-           let Hchk := fresh "Hchk" in
-           assert (tmsg_info emsg = None) as Hchk by reflexivity; clear Hchk;
-           eapply SimMP_ext_msg_rq_forwarding; try reflexivity; auto
                                                                   
-         | [ |- SimMP _ (distributeMsgs [?rs] (removeMP ?rq _)) _ ] =>
-           let Hchk := fresh "Hchk" in
-           assert (tmsg_info rq = tmsg_info rs) as Hchk by reflexivity; clear Hchk;
-           eapply SimMP_int_msg_immediate; try reflexivity; auto
-         | [ |- SimMP _ ((removeMP ?rq _) ++ [?rs]) _ ] =>
-           let Hchk := fresh "Hchk" in
-           assert (tmsg_info rq = tmsg_info rs) as Hchk by reflexivity; clear Hchk;
-           eapply SimMP_int_msg_immediate; try reflexivity; auto
-
          | [ |- TidLtMP _ _ ] => progress simpl
          | [H1: ValidTidState {| tst_msgs := ?msgs |}, H2: step_t _ _ _ _
             |- TidLtMP ?msgs _ ] =>
@@ -63,8 +33,6 @@ Ltac constr_sim_mp :=
              
          | [ |- Forall (fun tmsg => tmsg_info tmsg = Some _) _ ] =>
            constructor; simpl; try reflexivity
-         | [H: FirstMP ?imsgs _ |- FirstMP (map ?f ?imsgs) _ ] =>
-           eapply mmap_FirstMP with (mmap:= f) in H; eauto
          end;
      cbn).
 
@@ -121,22 +89,8 @@ Ltac trs_simulates_case_in msgF msgF_ValidMsgMap sim :=
   repeat split;
   [|assumption (* simulation relation should be maintained *)
    |assumption
-   |simpl; apply SimMP_ext_msg_ins; auto];
-  repeat econstructor;
-  unfold fromExternal, toInternal in *;
-  repeat
-    match goal with
-    | [H: isExternal _ (mid_from (msg_id _)) = true |-
-       isExternal _ (mid_from (msg_id _)) = true] =>
-      eapply validMaMap_maFromExternal; [|eassumption]
-    | [H: isInternal _ (mid_to (msg_id _)) = true |-
-       isInternal _ (mid_to (msg_id _)) = true] =>
-      eapply validMaMap_maToInternal; [|eassumption]
-    | [ |- ValidMaMap _ (addRules _ (buildRawSys ?imp)) _ ] =>
-      apply validMaMap_same_indices with (impl1:= imp);
-      [apply msgF_ValidMsgMap
-      |rewrite addRules_indices, <-buildRawSys_indicesOf; reflexivity]
-    end.
+   |];
+  repeat econstructor.
 
 (* This ltac handles trivial [Transactional] cases.
  * After then we only need to deal with [Atomic] histories.
@@ -168,20 +122,14 @@ Ltac reduce_invstep_pred :=
 
 Ltac trs_simulates_atomic_to_steps_pred rqmid :=
   unfold TrsSimAtomic; intros;
-  match goal with
-  | [H: Atomic ?sys _ _ _ _ |- _] =>
-    assert_later (ExtHandles sys [rqmid])
-  end;
   repeat
     match goal with
-    | [H: ExtHandles _ _ |- _] =>
-      eapply atomic_extHandles in H; eauto
     | [H: In _ _ |- _] => Common.dest_in
     end;
-  [match goal with
-   | [H1: Atomic _ _ _ ?hst _, H2: steps step_t _ _ ?hst _ |- _] =>
-     pose proof (atomic_history_pred_tinfo H1 H2)
-   end;
+  [(* match goal with *)
+   (* | [H1: Atomic _ _ _ ?hst _, H2: steps step_t _ _ ?hst _ |- _] => *)
+   (*   pose proof (atomic_history_pred_tinfo H1 H2) *)
+   (* end; *)
    match goal with
    | [H: steps step_t (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
      eapply atomic_steps_pred_ok
@@ -204,20 +152,12 @@ Ltac sim_liftL sim :=
 Ltac reduce_addPRules :=
   repeat
     match goal with
-    | [ |- context[indicesOf (addPRules _ _)] ] =>
+    | [ |- context[oindsOf (addPRules _ _)] ] =>
       rewrite addPRules_indices
-    | [ |- context[isExternal (addPRules _ _)] ] =>
-      rewrite addPRules_isExternal
-    | [ |- context[isInternal (addPRules _ _)] ] =>
-      rewrite addPRules_isInternal
     | [ |- context[behaviorOf (addPRules _ _)] ] =>
       rewrite addPRules_behaviorOf
-    | [H: context[indicesOf (addPRules _ _)] |- _] =>
+    | [H: context[oindsOf (addPRules _ _)] |- _] =>
       rewrite addPRules_indices in H
-    | [H: context[isExternal (addPRules _ _)] |- _] =>
-      rewrite addPRules_isExternal in H
-    | [H: context[isInternal (addPRules _ _)] |- _] =>
-      rewrite addPRules_isInternal in H
     | [H: context[behaviorOf (addPRules _ _)] |- _] =>
       rewrite addPRules_behaviorOf in H
     end.
@@ -225,20 +165,12 @@ Ltac reduce_addPRules :=
 Ltac reduce_addRules :=
   repeat
     match goal with
-    | [ |- context[indicesOf (addRules _ _)] ] =>
+    | [ |- context[oindsOf (addRules _ _)] ] =>
       rewrite addRules_indices
-    | [ |- context[isExternal (addRules _ _)] ] =>
-      rewrite addRules_isExternal
-    | [ |- context[isInternal (addRules _ _)] ] =>
-      rewrite addRules_isInternal
     | [ |- context[behaviorOf (addRules _ _)] ] =>
       rewrite addRules_behaviorOf
-    | [H: context[indicesOf (addRules _ _)] |- _] =>
+    | [H: context[oindsOf (addRules _ _)] |- _] =>
       rewrite addRules_indices in H
-    | [H: context[isExternal (addRules _ _)] |- _] =>
-      rewrite addRules_isExternal in H
-    | [H: context[isInternal (addRules _ _)] |- _] =>
-      rewrite addRules_isInternal in H
     | [H: context[behaviorOf (addRules _ _)] |- _] =>
       rewrite addRules_behaviorOf in H
     end.
@@ -321,9 +253,9 @@ Record PStackElt :=
   { pste_pmid: PMsgId TMsg;
     pste_prec: RPrecond }.
 
-Definition dualOfPStackElt (chn: IdxT) (pste: PStackElt) :=
-  {| pste_pmid := dualOfP (pste_pmid pste) chn;
-     pste_prec := pste_prec pste |}.
+(* Definition dualOfPStackElt (chn: IdxT) (pste: PStackElt) := *)
+(*   {| pste_pmid := dualOfP (pste_pmid pste) chn; *)
+(*      pste_prec := pste_prec pste |}. *)
 
 Ltac pstack_empty :=
   let stack := fresh "stack" in
@@ -363,17 +295,17 @@ Ltac pstack_push_pmids pmids prec :=
     pstack_push_pmids pmids' prec
   end.
 
-Ltac pstack_push_a tid from to chn prec pred :=
-  pstack_push {| pste_pmid :=
-                   {| pmid_mid :=
-                        {| mid_addr :=
-                             {| ma_from := from;
-                                ma_to := to;
-                                ma_chn := chn |};
-                           mid_tid := tid |};
-                      pmid_pred := pred
-                   |};
-                 pste_prec := prec |}.
+(* Ltac pstack_push_a tid from to chn prec pred := *)
+(*   pstack_push {| pste_pmid := *)
+(*                    {| pmid_mid := *)
+(*                         {| mid_addr := *)
+(*                              {| ma_from := from; *)
+(*                                 ma_to := to; *)
+(*                                 ma_chn := chn |}; *)
+(*                            mid_tid := tid |}; *)
+(*                       pmid_pred := pred *)
+(*                    |}; *)
+(*                  pste_prec := prec |}. *)
 
 Fixpoint evalStackInstanceFix
          (st: list (option PStackElt)) (n: nat) :=
@@ -490,21 +422,21 @@ Ltac pstack_push_from_prr precs :=
 
 (** End of [PRqRs] *)
 
-Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) :=
-  PRuleImm (pste_pmid pste)
-           (dualOfP (pste_pmid pste) dchn)
-           (pste_prec pste).
+(* Definition buildPRuleImmFromPStack (pste: PStackElt) (dchn: IdxT) := *)
+(*   PRuleImm (pste_pmid pste) *)
+(*            (dualOfP (pste_pmid pste) dchn) *)
+(*            (pste_prec pste). *)
 
-Definition buildPRuleRqFwdFromPStack (pste: PStackElt)
-           (rqff: PMsgId TMsg -> list (PMsgId TMsg)) :=
-  PRuleRqFwd (pste_pmid pste) (pste_prec pste) (rqff (pste_pmid pste)).
+(* Definition buildPRuleRqFwdFromPStack (pste: PStackElt) *)
+(*            (rqff: PMsgId TMsg -> list (PMsgId TMsg)) := *)
+(*   PRuleRqFwd (pste_pmid pste) (pste_prec pste) (rqff (pste_pmid pste)). *)
 
-Ltac set_prr_rqf :=
-  match goal with
-  | [H: context[buildPRuleRqFwdFromPStack
-                  {| pste_pmid := ?rq |} ?rqff] |- _] =>
-    set_prr rq (rqff rq)
-  end.
+(* Ltac set_prr_rqf := *)
+(*   match goal with *)
+(*   | [H: context[buildPRuleRqFwdFromPStack *)
+(*                   {| pste_pmid := ?rq |} ?rqff] |- _] => *)
+(*     set_prr rq (rqff rq) *)
+(*   end. *)
 
 Ltac synth_prule_one syner :=
   match goal with
@@ -524,33 +456,33 @@ Ltac synth_prule_two syner1 syner2 :=
     clear_prr
   end.
 
-Ltac pstack_first_instantiate_imm_prule :=
-  match goal with
-  | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
-    is_evar rule;
-    let pfst := pstack_first in
-    instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H
-  end.
+(* Ltac pstack_first_instantiate_imm_prule := *)
+(*   match goal with *)
+(*   | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] => *)
+(*     is_evar rule; *)
+(*     let pfst := pstack_first in *)
+(*     instantiate (1:= buildPRuleImmFromPStack pfst rsChn) in H *)
+(*   end. *)
 
-Ltac pstack_first_instantiate_rqfwd_prule rqff :=
-  match goal with
-  | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
-    is_evar rule;
-    let pfst := pstack_first in
-    instantiate (1:= buildPRuleRqFwdFromPStack pfst rqff) in H
-  end.
+(* Ltac pstack_first_instantiate_rqfwd_prule rqff := *)
+(*   match goal with *)
+(*   | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] => *)
+(*     is_evar rule; *)
+(*     let pfst := pstack_first in *)
+(*     instantiate (1:= buildPRuleRqFwdFromPStack pfst rqff) in H *)
+(*   end. *)
 
-Ltac prr_instantiate_rsback_prule opred rsbf :=
-  match goal with
-  | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] =>
-    is_evar rule;
-    let prr := get_prr in
-    let rq := (eval cbn in (prr_rq prr)) in
-    let rqf := (eval cbn in (prr_fwds prr)) in
-    let rsb := (eval cbn in (dualOfP rq rsChn)) in
-    let rss := (eval cbn in (map (fun pmid => dualOfP pmid rsChn) rqf)) in
-    instantiate (1:= PRuleRsBack rss opred rsb rsbf) in H
-  end.
+(* Ltac prr_instantiate_rsback_prule opred rsbf := *)
+(*   match goal with *)
+(*   | [H: step_pred_t (addPRules [?rule] _) _ _ _ |- _] => *)
+(*     is_evar rule; *)
+(*     let prr := get_prr in *)
+(*     let rq := (eval cbn in (prr_rq prr)) in *)
+(*     let rqf := (eval cbn in (prr_fwds prr)) in *)
+(*     let rsb := (eval cbn in (dualOfP rq rsChn)) in *)
+(*     let rss := (eval cbn in (map (fun pmid => dualOfP pmid rsChn) rqf)) in *)
+(*     instantiate (1:= PRuleRsBack rss opred rsb rsbf) in H *)
+(*   end. *)
 
 Ltac step_pred_invert_init :=
   repeat
@@ -614,41 +546,41 @@ Ltac step_pred_invert_dest_pmsg origRq :=
       unfold origRq in H
 
     (* For immediate [PMsg]s *)
-    | [H: DualPMsg ?rq ?rs |- _] =>
-      is_var rq; dest_pmsg_rq rq;
-      is_var rs; dest_pmsg_rs rs;
-      cbn in *
-    | [H: DualPMsg {| pmsg_omsg := _; pmsg_pred := _ |}
-                   {| pmsg_omsg := _; pmsg_pred := _ |} |- _] => inv H
-    | [H: DualMid {| mid_addr := _; mid_tid := _ |}
-                  {| mid_addr := _; mid_tid := _ |} |- _] => inv H
-    | [H: dualOf _ _ = {| mid_addr := _; mid_tid := _ |} |- _] => inv H
+    (* | [H: DualPMsg ?rq ?rs |- _] => *)
+    (*   is_var rq; dest_pmsg_rq rq; *)
+    (*   is_var rs; dest_pmsg_rs rs; *)
+    (*   cbn in * *)
+    (* | [H: DualPMsg {| pmsg_omsg := _; pmsg_pred := _ |} *)
+    (*                {| pmsg_omsg := _; pmsg_pred := _ |} |- _] => inv H *)
+    (* | [H: DualMid {| mid_addr := _; mid_tid := _ |} *)
+    (*               {| mid_addr := _; mid_tid := _ |} |- _] => inv H *)
+    (* | [H: dualOf _ _ = {| mid_addr := _; mid_tid := _ |} |- _] => inv H *)
 
     (* For request-forwarding [PMsg]s *)
-    | [H: {| mid_addr := _; mid_tid := _ |} = pmsg_mid ?rq |- _] =>
-      dest_pmsg_rq rq
-    | [H: ?lfwd :: ?lfwds = map (@pmsg_pmid _ _) ?rfwds |- _] =>
-      let rqfwd := fresh "rqfwd" in
-      let rqfwds := fresh "rqfwds" in
-      destruct rfwds as [|rqfwd rqfwds]; [discriminate|];
-      dest_pmsg_rq rqfwd;
-      inv H
-    | [H: nil = map (@pmsg_pmid _ _) ?rfwds |- _] =>
-      destruct rfwds; [clear H|discriminate]
+    (* | [H: {| mid_addr := _; mid_tid := _ |} = pmsg_mid ?rq |- _] => *)
+    (*   dest_pmsg_rq rq *)
+    (* | [H: ?lfwd :: ?lfwds = map (@pmsg_pmid _ _) ?rfwds |- _] => *)
+    (*   let rqfwd := fresh "rqfwd" in *)
+    (*   let rqfwds := fresh "rqfwds" in *)
+    (*   destruct rfwds as [|rqfwd rqfwds]; [discriminate|]; *)
+    (*   dest_pmsg_rq rqfwd; *)
+    (*   inv H *)
+    (* | [H: nil = map (@pmsg_pmid _ _) ?rfwds |- _] => *)
+    (*   destruct rfwds; [clear H|discriminate] *)
 
     (* For responses-back [PMsg]s *)
-    | [H: dualOf {| mid_addr := _; mid_tid := _ |} _ = pmsg_mid ?rs |- _] =>
-      dest_pmsg_rs rs
+    (* | [H: dualOf {| mid_addr := _; mid_tid := _ |} _ = pmsg_mid ?rs |- _] => *)
+    (*   dest_pmsg_rs rs *)
                    
     (* General *)
-    | [H: {| pmid_mid := _; pmid_pred := _ |} = ?rhs |- _] => is_var rhs; inv H
-    | [H: ?lhs = {| pmid_mid := _; pmid_pred := _ |} |- _] => is_var lhs; inv H
-    | [H: {| pmid_mid := _; pmid_pred := _ |} =
-          {| pmid_mid := _; pmid_pred := _ |} |- _] => inv H
-    | [H: {| mid_addr := _; mid_tid := _ |} = ?rhs |- _] => is_var rhs; inv H
-    | [H: ?lhs = {| mid_addr := _; mid_tid := _ |} |- _] => is_var lhs; inv H
-    | [H: {| mid_addr := _; mid_tid := _ |} =
-          {| mid_addr := _; mid_tid := _ |} |- _] => inv H
+    (* | [H: {| pmid_mid := _; pmid_pred := _ |} = ?rhs |- _] => is_var rhs; inv H *)
+    (* | [H: ?lhs = {| pmid_mid := _; pmid_pred := _ |} |- _] => is_var lhs; inv H *)
+    (* | [H: {| pmid_mid := _; pmid_pred := _ |} = *)
+    (*       {| pmid_mid := _; pmid_pred := _ |} |- _] => inv H *)
+    (* | [H: {| mid_addr := _; mid_tid := _ |} = ?rhs |- _] => is_var rhs; inv H *)
+    (* | [H: ?lhs = {| mid_addr := _; mid_tid := _ |} |- _] => is_var lhs; inv H *)
+    (* | [H: {| mid_addr := _; mid_tid := _ |} = *)
+    (*       {| mid_addr := _; mid_tid := _ |} |- _] => inv H *)
     end.
 
 Ltac red_forall :=
@@ -865,9 +797,9 @@ Ltac sim_spec_constr_step_t :=
            intro Hx; elim Hx
          | [ |- Forall _ (_ :: _)] => constructor
          | [ |- Forall _ nil] => constructor
-         | [ |- FirstMP _ _] =>
-           eapply blocked_int_SimMP_FirstMP; eauto;
-           [apply pmsg_omsg_FirstMP; eassumption|reflexivity]
+         (* | [ |- FirstMP _ _] => *)
+         (*   eapply blocked_int_SimMP_FirstMP; eauto; *)
+         (*   [apply mmap_FirstMP; eassumption|reflexivity] *)
          | [ |- ValidMsgsIn _ _] => repeat constructor
          | [ |- ValidMsgsOut _ _] => repeat constructor
          | [ |- rule_postcond _ _ _ _ _ _ _] => repeat constructor
@@ -916,46 +848,46 @@ Ltac sim_spec_constr_silent ssim msim ssim_ok msim_ok :=
  *)
 
 (** Try to synthesize an immediate [PRule]. *)
-Ltac synth_imm_prule_before_constr origRq red_sim :=
-  pstack_first_instantiate_imm_prule;
-  pstack_pop;
-  step_pred_invert_init;
-  step_pred_invert_red origRq red_sim.
+(* Ltac synth_imm_prule_before_constr origRq red_sim := *)
+(*   pstack_first_instantiate_imm_prule; *)
+(*   pstack_pop; *)
+(*   step_pred_invert_init; *)
+(*   step_pred_invert_red origRq red_sim. *)
 
-Ltac synth_imm_prule_ext origRq srule red_sim ssim msim ssim_ok msim_ok :=
-  synth_imm_prule_before_constr origRq red_sim;
-  sim_spec_constr_step srule ssim msim ssim_ok msim_ok.
+(* Ltac synth_imm_prule_ext origRq srule red_sim ssim msim ssim_ok msim_ok := *)
+(*   synth_imm_prule_before_constr origRq red_sim; *)
+(*   sim_spec_constr_step srule ssim msim ssim_ok msim_ok. *)
 
-Ltac synth_imm_prule_int origRq red_sim ssim msim ssim_ok msim_ok :=
-  synth_imm_prule_before_constr origRq red_sim;
-  sim_spec_constr_silent ssim msim ssim_ok msim_ok.
+(* Ltac synth_imm_prule_int origRq red_sim ssim msim ssim_ok msim_ok := *)
+(*   synth_imm_prule_before_constr origRq red_sim; *)
+(*   sim_spec_constr_silent ssim msim ssim_ok msim_ok. *)
 
 (** Try to synthesize a request-forwarding [PRule]. *)
-Ltac synth_rqfwd_prule origRq rqff red_sim ssim msim ssim_ok msim_ok :=
-  pstack_first_instantiate_rqfwd_prule rqff;
-  pstack_pop;
-  set_prr_rqf;
-  step_pred_invert_init;
-  step_pred_invert_red origRq red_sim;
-  sim_spec_constr_silent ssim msim ssim_ok msim_ok.
+(* Ltac synth_rqfwd_prule origRq rqff red_sim ssim msim ssim_ok msim_ok := *)
+(*   pstack_first_instantiate_rqfwd_prule rqff; *)
+(*   pstack_pop; *)
+(*   set_prr_rqf; *)
+(*   step_pred_invert_init; *)
+(*   step_pred_invert_red origRq red_sim; *)
+(*   sim_spec_constr_silent ssim msim ssim_ok msim_ok. *)
 
 (** Try to synthesize a responses-back [PRule]. *)
-Ltac synth_rsback_prule_before_constr origRq opred rsbf red_sim precs :=
-  prr_instantiate_rsback_prule opred rsbf;
-  pstack_push_from_prr precs;
-  clear_prr;
-  step_pred_invert_init;
-  step_pred_invert_red origRq red_sim.
+(* Ltac synth_rsback_prule_before_constr origRq opred rsbf red_sim precs := *)
+(*   prr_instantiate_rsback_prule opred rsbf; *)
+(*   pstack_push_from_prr precs; *)
+(*   clear_prr; *)
+(*   step_pred_invert_init; *)
+(*   step_pred_invert_red origRq red_sim. *)
 
-Ltac synth_rsback_prule_ext origRq srule opred rsbf
-     red_sim ssim msim ssim_ok msim_ok precs :=
-  synth_rsback_prule_before_constr origRq opred rsbf red_sim precs;
-  sim_spec_constr_step srule ssim msim ssim_ok msim_ok.
+(* Ltac synth_rsback_prule_ext origRq srule opred rsbf *)
+(*      red_sim ssim msim ssim_ok msim_ok precs := *)
+(*   synth_rsback_prule_before_constr origRq opred rsbf red_sim precs; *)
+(*   sim_spec_constr_step srule ssim msim ssim_ok msim_ok. *)
 
-Ltac synth_rsback_prule_int origRq opred rsbf
-     red_sim ssim msim ssim_ok msim_ok precs :=
-  synth_rsback_prule_before_constr origRq opred rsbf red_sim precs;
-  sim_spec_constr_silent ssim msim ssim_ok msim_ok.
+(* Ltac synth_rsback_prule_int origRq opred rsbf *)
+(*      red_sim ssim msim ssim_ok msim_ok precs := *)
+(*   synth_rsback_prule_before_constr origRq opred rsbf red_sim precs; *)
+(*   sim_spec_constr_silent ssim msim ssim_ok msim_ok. *)
 
 Ltac synth_done :=
   (tryif pstack_is_empty

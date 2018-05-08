@@ -33,39 +33,35 @@ Lemma atomic_preserved:
   forall impl1 ts rq hst mouts,
     Atomic impl1 ts rq hst mouts ->
     forall impl2,
-      indicesOf impl1 = indicesOf impl2 ->
+      merqsOf impl1 = merqsOf impl2 ->
       Atomic impl2 ts rq hst mouts.
 Proof.
   induction 1; simpl; intros.
   - econstructor; eauto.
-    unfold_idx; simpl in *.
+    simpl in *.
     rewrite H1 in H; assumption.
   - econstructor; eauto.
 Qed.
 
-Lemma atomic_tinfo:
+Theorem atomic_tinfo:
   forall sys ts rq hst mouts,
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
                          | RlblInt _ ins outs =>
-                           Forall (fun tmsg =>
-                                     match tmsg_info tmsg with
-                                     | Some hti =>
-                                       hti = buildTInfo ts [rq] /\
-                                       fromInternal sys tmsg = true
-                                     | None =>
-                                       tmsg_msg tmsg = rq /\
-                                       fromExternal sys tmsg = true
+                           Forall (fun idt =>
+                                     match tmsg_info (valOf idt) with
+                                     | Some hti => hti = buildTInfo ts [rq]
+                                     | None => liftI tmsg_msg idt = rq
                                      end) ins /\
-                           Forall (fun tmsg =>
-                                     tmsg_info tmsg = Some (buildTInfo ts [rq])) outs
+                           Forall (fun idt =>
+                                     tmsg_info (valOf idt) =
+                                     Some (buildTInfo ts [rq])) outs
                          | _ => False
                          end) hst /\
-      ForallMP (fun tmsg =>
-                  tmsg_info tmsg = Some (buildTInfo ts [rq]) /\
-                  fromInternal sys tmsg = true) mouts.
+      ForallMP (fun midx tmsg =>
+                  tmsg_info tmsg = Some (buildTInfo ts [rq])) mouts.
 Proof.
   induction 1; simpl; intros.
 
@@ -73,51 +69,51 @@ Proof.
     + constructor; auto.
       split; auto.
       constructor; cbn; auto.
+      destruct rq as [midx rq]; reflexivity.
     + inv H1; inv H5; inv H7.
-      apply idx_in_sys_internal in H5.
-      apply validMsgOuts_from_internal with (sys0:= sys) in H15; [|assumption].
-      clear -H0 H15.
-      induction outs; simpl; [constructor|].
-      inv H0; inv H15.
-      constructor; auto.
-      eapply IHouts; eauto.
+      cbn in *.
+      apply ForallMP_enqMsgs.
+      * apply ForallMP_emptyMP.
+      * clear -H0.
+        induction outs; simpl; [constructor|].
+        inv H0.
+        constructor; auto.
 
   - inv H2.
     specialize (IHAtomic _ _ H6); destruct IHAtomic.
     split.
     + constructor; auto.
-      assert (Forall (fun tmsg =>
-                        tmsg_info tmsg = Some (buildTInfo ts [rq]) /\
-                        fromInternal sys tmsg = true) msgs).
-      { eapply ForallMP_SubList; eauto. }
+      assert (Forall (fun idt =>
+                        tmsg_info (valOf idt) = Some (buildTInfo ts [rq])) msgs).
+      { eapply ForallMP_Forall_InMP in H3; eauto. }
       
       split.
       * clear -H4; eapply Forall_impl; eauto.
         simpl; intros.
-        destruct H; rewrite H, H0; auto.
+        rewrite H; reflexivity.
       * inv H8.
-        assert (Forall (fun tmsg : TMsg =>
-                          tmsg_info tmsg = Some (buildTInfo ts [rq])) msgs).
+        assert (Forall (fun idt =>
+                          tmsg_info (valOf idt) = Some (buildTInfo ts [rq])) msgs).
         { clear -H4; eapply Forall_impl; eauto.
           simpl; intros.
           destruct H; auto.
         }
-        erewrite getTMsgsTInfo_Forall_Some; eauto.
-        clear; induction outs; constructor; auto.
+
+        rewrite getTMsgsTInfo_Forall_Some with (ti:= buildTInfo ts [rq]).
+        { clear; induction outs; constructor; auto. }
+        { destruct msgs; [auto|discriminate]. }
+        { clear -H5; induction msgs; [constructor|].
+          inv H5; constructor; auto.
+        }
         
-    + apply ForallMP_distributeMsgs.
-      * apply ForallMP_removeMsgs; auto.
-      * eapply ForallMP_SubList in H1; eauto.
+    + apply ForallMP_enqMsgs.
+      * apply ForallMP_deqMsgs; auto.
+      * apply ForallMP_Forall_InMP with (ims:= msgs) in H3; auto.
         inv H8.
         destruct msgs as [|msg msgs]; [elim H0; reflexivity|].
-        inv H1; cbn; destruct H7; rewrite H1.
-        apply idx_in_sys_internal in H10.
-        apply validMsgOuts_from_internal with (sys0:= sys) in H19; [|assumption].
-        clear -H19.
-        induction outs; [constructor|].
-        inv H19.
+        inv H3; cbn; unfold valOf in H7; rewrite H7.
+        clear; induction outs; [constructor|].
         constructor; auto.
-        eapply IHouts; eauto.
 Qed.
 
 Corollary atomic_hst_tinfo:
@@ -127,17 +123,14 @@ Corollary atomic_hst_tinfo:
       steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
                          | RlblInt _ ins outs =>
-                           Forall (fun tmsg =>
-                                     match tmsg_info tmsg with
-                                     | Some hti =>
-                                       hti = buildTInfo ts (rq :: nil) /\
-                                       fromInternal sys tmsg = true
-                                     | None =>
-                                       tmsg_msg tmsg = rq /\
-                                       fromExternal sys tmsg = true
+                           Forall (fun idt =>
+                                     match tmsg_info (valOf idt) with
+                                     | Some hti => hti = buildTInfo ts [rq]
+                                     | None => liftI tmsg_msg idt = rq
                                      end) ins /\
-                           Forall (fun tmsg =>
-                                     tmsg_info tmsg = Some (buildTInfo ts [rq])) outs
+                           Forall (fun idt =>
+                                     tmsg_info (valOf idt) =
+                                     Some (buildTInfo ts [rq])) outs
                          | _ => False
                          end) hst.
 Proof.
@@ -151,117 +144,18 @@ Corollary atomic_mouts_tinfo:
     Atomic sys ts rq hst mouts ->
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
-      ForallMP (fun tmsg => tmsg_info tmsg = Some (buildTInfo ts (rq :: nil)) /\
-                            fromInternal sys tmsg = true) mouts.
+      ForallMP (fun midx tmsg =>
+                  tmsg_info tmsg = Some (buildTInfo ts [rq])) mouts.
 Proof.
   intros.
   eapply atomic_tinfo in H; eauto.
   destruct H; auto.
 Qed.
 
-Lemma atomic_extHandles:
-  forall sys erqs,
-    ExtHandles sys erqs ->
-    forall ts rq hst mouts,
-      Atomic sys ts rq hst mouts ->
-      forall st1 st2,
-        steps step_t sys st1 hst st2 ->
-        In (msg_id rq) erqs.
-Proof.
-Admitted.
-
-Lemma trsMessages_app:
-  forall ti mp1 mp2,
-    trsMessages ti (mp1 ++ mp2) =
-    trsMessages ti mp1 ++ trsMessages ti mp2.
-Proof.
-  intros; apply filter_app.
-Qed.
-
-Lemma trsMessages_In:
-  forall tmsg ti mp,
-    In tmsg mp ->
-    tmsg_info tmsg = Some ti ->
-    In tmsg (trsMessages ti mp).
-Proof.
-  induction mp; simpl; intros; auto.
-  destruct H; subst.
-  - rewrite H0.
-    destruct (tinfo_dec ti ti); [|elim n; reflexivity].
-    left; reflexivity.
-  - find_if_inside; auto.
-    right; auto.
-Qed.
-
-Lemma trsMessages_In_tinfo:
-  forall tmsg ti mp,
-    In tmsg (trsMessages ti mp) ->
-    tmsg_info tmsg = Some ti.
-Proof.
-  induction mp; simpl; intros; [elim H|].
-  remember (tmsg_info a) as oti; destruct oti as [ati|]; auto.
-  destruct (tinfo_dec ati ti); subst; auto.
-  inv H; auto.
-Qed.
-  
-Lemma trsMessages_SubList:
-  forall ti mp1 mp2,
-    SubList mp1 mp2 ->
-    SubList (trsMessages ti mp1) (trsMessages ti mp2).
-Proof.
-  induction mp1; simpl; intros; [apply SubList_nil|].
-  apply SubList_cons_inv in H; dest.
-  remember (tmsg_info a) as tinfo; destruct tinfo; auto.
-  destruct (tinfo_dec t ti); subst; auto.
-  apply SubList_cons; auto.
-  apply trsMessages_In; auto.
-Qed.
-
-Lemma trsMessages_deqMP_SubList:
-  forall ti from to chn mp,
-    SubList (trsMessages ti (deqMP from to chn mp))
-            (trsMessages ti mp).
-Proof.
-  intros.
-  apply trsMessages_SubList.
-  apply deqMP_SubList.
-Qed.
-
-Lemma trsMessages_toTMsg:
-  forall ti msgs,
-    trsMessages ti (toTMsgs ti msgs) = toTMsgs ti msgs.
-Proof.
-  induction msgs; simpl; intros; [reflexivity|].
-  destruct (tinfo_dec ti ti); [|elim n; reflexivity].
-  rewrite IHmsgs; reflexivity.
-Qed.
-
-Lemma trsMessages_deqMP_comm:
-  forall rqin from to chn mp tmsg,
-    firstMP from to chn mp = Some tmsg ->
-    tmsg_info tmsg = Some rqin ->
-    trsMessages rqin (deqMP from to chn mp) =
-    deqMP from to chn (trsMessages rqin mp).
-Proof.
-  induction mp; simpl; intros; [reflexivity|].
-  unfold firstMP in H; simpl in H.
-  unfold isAddrOf in *.
-  destruct (msgAddr_dec _ _).
-  - inv H; rewrite H0.
-    destruct (tinfo_dec _ _); [|elim n; reflexivity].
-    simpl; unfold isAddrOf; destruct (msgAddr_dec _ _); [|elim n; assumption].
-    reflexivity.
-  - specialize (IHmp _ H H0).
-    simpl; destruct (tmsg_info a); [|assumption].
-    destruct (tinfo_dec _ _); subst; [|assumption].
-    simpl; unfold isAddrOf; destruct (msgAddr_dec _ _); [elim n; assumption|].
-    rewrite IHmp; reflexivity.
-Qed.
-
 Theorem serializable_seqSteps_refines:
   forall sys,
     SerializableSys sys ->
-    steps step_t # seqSteps |-- sys ⊑[id] sys.
+    steps step_t # seqSteps |-- sys ⊑ sys.
 Proof.
   unfold SerializableSys, Refines; intros.
   inv H0; rename ll0 into ill.
@@ -270,7 +164,6 @@ Proof.
   destruct H as [sll [sst [? ?]]].
   rewrite H0.
   econstructor; eauto.
-  apply map_id.
 Qed.
 
 Lemma sequential_nil:
@@ -355,12 +248,12 @@ Lemma serializable_msg_ins:
     Serializable sys ll ->
     eins <> nil ->
     ValidMsgsExtIn sys eins ->
-    Serializable sys (RlblIns (toTMsgsU eins) :: ll).
+    Serializable sys (RlblIns (imap toTMsgU eins) :: ll).
 Proof.
   intros.
   hnf; hnf in H; intros; dest.
-  destruct x0 as [oss orqs msgs ts].
-  exists (RlblIns (toTMsgsU eins) :: x); eexists; split.
+  destruct x0 as [oss orqs msgs trss ts].
+  exists (RlblIns (imap toTMsgU eins) :: x); eexists; split.
   - destruct H; split.
     + econstructor.
       * eassumption.
@@ -368,24 +261,6 @@ Proof.
     + apply sequential_msg_ins; auto.
   - hnf; cbn; rewrite H2; reflexivity.
 Qed.
-
-(* Lemma serializable_msg_outs: *)
-(*   forall sys ll eouts, *)
-(*     Serializable sys ll -> *)
-(*     ValidMsgsExtOut sys eouts -> *)
-(*     Serializable sys (RlblOuts eouts :: ll). *)
-(* Proof. *)
-(*   intros. *)
-(*   hnf; hnf in H; intros; dest. *)
-(*   destruct x0 as [oss orqs msgs ts]. *)
-(*   exists (RlblOuts eouts :: x); eexists; split. *)
-(*   - destruct H; split. *)
-(*     + econstructor. *)
-(*       * eassumption. *)
-(*       * econstructor; eauto. *)
-(*     + apply sequential_msg_outs; auto. *)
-(*   - hnf; cbn; rewrite H1; reflexivity. *)
-(* Qed. *)
 
 Lemma serializable_steps_no_rules:
   forall sys,
@@ -407,13 +282,13 @@ Proof.
       red in H1; simpl in H1.
       destruct eouts as [|eout eouts]; auto.
       inv H3.
-      destruct H4; inv H2; dest.
+      destruct H4.
+      simpl in H2; apply SubList_cons_inv in H2; dest.
       apply FirstMP_InMP in H6.
-      eapply ForallMP_forall in H1; eauto.
-      congruence.
+      eapply ForallMP_InMP in H1; eauto.
     + exfalso.
-      rewrite H in H9.
-      elim H9.
+      rewrite H in H10.
+      elim H10.
 Qed.
                            
 Lemma serializable_no_rules:

@@ -10,8 +10,7 @@ Section SynthOk.
   Variables
     (impl0 spec: System)
     (R: TState -> TState -> Prop)
-    (ginv: TState -> Prop)
-    (p: Label -> Label).
+    (ginv: TState -> Prop).
 
   (* NOTE: the order here matters. [Rule]s are synthesized during the simulation
    * proof. Invariants are proven after all [Rule]s are synthesized.
@@ -19,7 +18,7 @@ Section SynthOk.
   Definition SynthOk (s: System) :=
     R (initsOf s) (initsOf spec) /\
     ginv (initsOf s) /\
-    (TrsSimulates R ginv p s spec /\ InvStep s step_t ginv) /\
+    (TrsSimulates R ginv s spec /\ InvStep s step_t ginv) /\
     SerializableSys s.
 
   Hypothesis (Hinit_ok: SynthOk impl0).
@@ -42,14 +41,14 @@ Section SynthOk.
          forall s, SerializableSys s ->
                    forall s', syn s s' -> SerializableSys s')
       (HsynSim:
-         forall s, TrsSimulates R ginv p s spec ->
-                   forall s', syn s s' -> TrsSimulates R ginv p s' spec)
+         forall s, TrsSimulates R ginv s spec ->
+                   forall s', syn s s' -> TrsSimulates R ginv s' spec)
       (HsynInv:
          forall s, InvStep s step_t ginv ->
                    forall s', syn s s' -> InvStep s' step_t ginv).
 
     Lemma synthOk_refinement:
-      forall s, SynthOk s -> steps step_t # steps step_t |-- s ⊑[p] spec.
+      forall s, SynthOk s -> steps step_t # steps step_t |-- s ⊑ spec.
     Proof.
       unfold SynthOk; intros; dest.
       eapply refines_trans.

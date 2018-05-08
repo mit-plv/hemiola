@@ -91,6 +91,19 @@ Proof.
   inv H; rewrite H2; auto.
 Qed.
 
+Lemma ValidMsgsIn_mindsOf:
+  forall {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
+         (sys1: SysT) (eins: list (Id MsgT)),
+    ValidMsgsIn sys1 eins ->
+    forall sys2,
+      mindsOf sys1 = mindsOf sys2 ->
+      ValidMsgsIn sys2 eins.
+Proof.
+  unfold ValidMsgsIn; intros.
+  dest; split; auto.
+  rewrite <-H2; assumption.
+Qed.
+
 Lemma ValidMsgsExtIn_merqsOf:
   forall {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
          (sys1: SysT) (eins: list (Id MsgT)),
@@ -140,6 +153,45 @@ Proof.
     + inv H2; simpl in H3; auto.
 Qed.
 
+Lemma extRssOf_In_merssOf_FirstMP:
+  forall {SysT} `{IsSystem SysT} (sys: SysT) msgs1 msgs2,
+    extRssOf sys msgs1 = extRssOf sys msgs2 ->
+    forall mout,
+      In (idOf mout) (merssOf sys) ->
+      FirstMP msgs1 (idOf mout) (valOf mout) ->
+      FirstMP msgs2 (idOf mout) (valOf mout).
+Proof.
+  give_up.
+Admitted.
+
+Corollary extRssOf_SubList_merssOf_FirstMP:
+  forall {SysT} `{IsSystem SysT} (sys: SysT) msgs1 msgs2,
+    extRssOf sys msgs1 = extRssOf sys msgs2 ->
+    forall mouts,
+      SubList (idsOf mouts) (merssOf sys) ->
+      Forall (FirstMPI msgs1) mouts ->
+      Forall (FirstMPI msgs2) mouts.
+Proof.
+  induction mouts; simpl; intros; [constructor|].
+  apply SubList_cons_inv in H1; dest.
+  inv H2; constructor; auto.
+  unfold FirstMPI in *.
+  eauto using extRssOf_In_merssOf_FirstMP.
+Qed.
+
+Corollary extRssOf_ValidMsgsExtOut_merssOf_FirstMP:
+  forall {SysT} `{IsSystem SysT} (sys: SysT) msgs1 msgs2,
+    extRssOf sys msgs1 = extRssOf sys msgs2 ->
+    forall mouts,
+      ValidMsgsExtOut sys mouts ->
+      Forall (FirstMPI msgs1) mouts ->
+      Forall (FirstMPI msgs2) mouts.
+Proof.
+  intros.
+  destruct H1.
+  eauto using extRssOf_SubList_merssOf_FirstMP.
+Qed.
+  
 Theorem step_t_sound:
   forall sys pst lbl nst,
     step_m sys pst lbl nst ->
@@ -150,6 +202,7 @@ Theorem step_t_sound:
         tToMLabel tlbl = lbl /\
         TStateRel ntst nst.
 Proof.
+  admit.
 Admitted.
 
 Lemma steps_split:

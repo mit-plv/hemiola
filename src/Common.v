@@ -5,14 +5,21 @@ Require Export ProofIrrelevance.
 Definition IdxT := nat.
 
 Definition Id (A: Type) := (IdxT * A)%type.
-Definition liftI {A B: Type} (f: A -> B) (ida: Id A): Id B :=
-  (fst ida, f (snd ida)).
-Definition imap {A B: Type} (f: A -> B) (ias: list (Id A)): list (Id B) :=
-  map (liftI f) ias.
+
 Definition idOf {A} (ida: Id A) := fst ida.
 Definition valOf {A} (ida: Id A) := snd ida.
 Definition idsOf {A} (ias: list (Id A)) := map fst ias.
 Definition valsOf {A} (ias: list (Id A)) := map snd ias.
+
+Definition liftI {A B: Type} (f: A -> B) (ida: Id A): Id B :=
+  (idOf ida, f (valOf ida)).
+
+Definition imap {A B: Type} (f: A -> B) (ias: list (Id A)): list (Id B) :=
+  map (liftI f) ias.
+Definition ifilterI {A} (ias: list (Id A)) (f: IdxT -> bool): list (Id A) :=
+  filter (fun ia => f (idOf ia)) ias.
+Definition ifilterV {A} (ias: list (Id A)) (f: A -> bool): list (Id A) :=
+  filter (fun ia => f (valOf ia)) ias.
 
 Notation "[ ]" := nil (format "[ ]").
 Notation "[ x ]" := (cons x nil).

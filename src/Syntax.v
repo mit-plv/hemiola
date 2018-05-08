@@ -110,6 +110,7 @@ Section Rule.
 
   Record Rule :=
     { rule_oidx: IdxT;
+      rule_msg_ids: list IdxT;
       rule_minds: list IdxT;
       rule_precond: RPrecond;
       rule_postcond: RPostcond;

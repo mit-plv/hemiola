@@ -21,55 +21,45 @@ Proof.
   repeat decide equality.
 Defined.
 
-Section System.
-  Variables extIdx1 extIdx2: nat.
+Definition svmGetIdx: IdxT := 0.
+Definition svmSetIdx: IdxT := 1.
 
-  Definition SvmGetE: IdxT := 0.
-  Definition SvmSetE: IdxT := 1.
+Section System.
+  Variables erq1 erq2 ers1 ers2: nat.
 
   Section Spec.
 
     Definition specIdx := 0.
-
-    Definition specRqChn (chnIdx: nat) := rqChn + numChns * chnIdx.
-    Definition specRsChn (chnIdx: nat) := rsChn + numChns * chnIdx.
-    Definition chnIdx0 := 0.
-    Definition chnIdx1 := 1.
-    
     Definition valueIdx := 0.
-
-    Definition getChnIdx (eidx: nat) :=
-      if eq_nat_dec eidx extIdx1 then chnIdx0 else chnIdx1.
     
     Section PerChn.
-      Variable eidx: nat.
+      Variables erq ers: nat.
 
-      Definition getReqM := buildMsgId SvmGetE eidx specIdx (specRqChn (getChnIdx eidx)).
-      Definition getRespM := buildMsgId SvmGetE specIdx eidx (specRsChn (getChnIdx eidx)).
-      Definition setReqM := buildMsgId SvmSetE eidx specIdx (specRqChn (getChnIdx eidx)).
-      Definition setRespM := buildMsgId SvmSetE specIdx eidx (specRsChn (getChnIdx eidx)).
-
-      Definition specGetReq: Rule :=
+      Definition specGetRq: Rule :=
         {| rule_oidx := specIdx;
-           rule_mids := getReqM :: nil;
+           rule_msg_ids := svmGetIdx :: nil;
+           rule_minds := erq :: nil;
            rule_precond := ⊤⊤;
            rule_postcond :=
              rpostOf ⊤⊤= ⊤⊤=
                      (fun pre _ =>
                         pre@[valueIdx] >>=[nil]
-                           (fun v => {| msg_id := getRespM; msg_value := v |} :: nil));
+                           (fun v => (ers, {| msg_id := svmGetIdx; msg_value := v |})
+                                       :: nil));
         |}.
 
-      Definition specSetReq: Rule :=
+      Definition specSetRq: Rule :=
         {| rule_oidx := specIdx;
-           rule_mids := setReqM :: nil;
+           rule_msg_ids := svmSetIdx :: nil;
+           rule_minds := erq :: nil;
            rule_precond := ⊤⊤;
            rule_postcond :=
              rpostOf (fun pre ins post =>
                         (hd_error ins) >>=[False]
-                        (fun msg => post@[valueIdx] = Some (msg_value msg)))
+                        (fun idm => post@[valueIdx] = Some (msg_value (valOf idm))))
                      ⊤⊤=
-                     (fun _ _ => {| msg_id := setRespM; msg_value := VUnit |} :: nil)
+                     (fun _ _ => (ers, {| msg_id := svmSetIdx; msg_value := VUnit |})
+                                   :: nil)
         |}.
 
     End PerChn.
@@ -77,13 +67,16 @@ Section System.
     Definition specInit: OStates := [specIdx <- [valueIdx <- VNat 0]].
 
     Definition spec: System :=
-      {| sys_inds := specIdx :: nil;
+      {| sys_oinds := specIdx :: nil;
+         sys_minds := nil;
+         sys_merqs := erq1 :: erq2 :: nil;
+         sys_merss := ers1 :: ers2 :: nil;
          sys_inits := specInit;
          sys_rules :=
-           (specGetReq extIdx1)
-             :: (specSetReq extIdx1)
-             :: (specGetReq extIdx2)
-             :: (specSetReq extIdx2) :: nil
+           (specGetRq erq1 ers1)
+             :: (specSetRq erq1 ers1)
+             :: (specGetRq erq2 ers2)
+             :: (specSetRq erq2 ers2) :: nil
       |}.
 
   End Spec.
@@ -94,15 +87,7 @@ Section System.
     Definition child1Idx := 1.
     Definition child2Idx := 2.
 
-    Definition valid_child1Idx: child1Idx = chnIdx0 + 1 := eq_refl.
-    Definition valid_child2Idx: child2Idx = chnIdx1 + 1 := eq_refl.
-    
-    Definition theOtherChild (idx: nat) :=
-      if eq_nat_dec idx child1Idx then child2Idx else child1Idx.
-    Definition getImplExtIdx (idx: nat) :=
-      if eq_nat_dec idx child1Idx then extIdx1 else extIdx2.
-
-    (* Definition valueIdx := 0. *)
+    (* Already defined above: Definition valueIdx := 0. *)
     Definition statusIdx := 1.
     
     Definition stM := 2.
@@ -114,8 +99,18 @@ Section System.
       +[child1Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]]
       +[child2Idx <- [valueIdx <- VNat 0] +[statusIdx <- VNat stS]].
 
+    Definition c1pRq := 0.
+    Definition c1pRs := 1.
+    Definition pc1 := 2.
+    Definition c2pRq := 3.
+    Definition c2pRs := 4.
+    Definition pc2 := 5.
+
     Definition impl0: System :=
-      {| sys_inds := parentIdx :: child1Idx :: child2Idx :: nil;
+      {| sys_oinds := parentIdx :: child1Idx :: child2Idx :: nil;
+         sys_minds := c1pRq :: c1pRs :: pc1 :: c2pRq :: c2pRs :: pc2 :: nil;
+         sys_merqs := erq1 :: erq2 :: nil;
+         sys_merss := ers1 :: ers2 :: nil;
          sys_inits := implInit;
          sys_rules := nil |}.
 
@@ -124,7 +119,7 @@ Section System.
            [Node child1Idx tt nil; Node child2Idx tt nil].
 
     Definition implIndices: list IdxT :=
-      ltac:(evalIndicesOf impl0).
+      ltac:(evalOIndsOf impl0).
     
   End Impl0.
 

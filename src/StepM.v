@@ -14,7 +14,7 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
     step_m sys pst (RlblIns eins) nst
 | SmOuts: forall pst nst oss orqs msgs eouts,
     eouts <> nil ->
-    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) eouts ->
+    Forall (FirstMPI msgs) eouts ->
     ValidMsgsExtOut sys eouts ->
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
     nst = {| bst_oss := oss;
@@ -28,9 +28,10 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
 
-    Forall (fun idm => FirstMP (fst idm) (snd idm) msgs) ins ->
+    Forall (FirstMPI msgs) ins ->
     ValidMsgsIn sys ins ->
     idsOf ins = rule_minds rule ->
+    map msg_id (valsOf ins) = rule_msg_ids rule ->
 
     In rule (sys_rules sys) ->
     rule_precond rule os porq ins ->
