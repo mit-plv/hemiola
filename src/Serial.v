@@ -8,15 +8,13 @@ Section PerSystem.
 
   (* A history is [Atomic] if it satisfies following conditions:
    * 1) The history can be either an incomplete or a complete transaction.
-   * 2) The history always begins by handling an external message.
-   * 3) Each label in the history has a form of [RlblOuts (Some hdl) _],
+   * 2) Each label in the history has a form of [RlblOuts (Some hdl) _],
    *    and all [hdl]s have the same [tinfo_tid]. It means that the history is
    *    for a single transaction.
    *)
   Inductive Atomic: TrsId -> Id Msg -> THistory -> MessagePool TMsg -> Prop :=
   | AtomicStart:
       forall ts rqr rq houts,
-        In (idOf rq) (merqsOf sys) ->
         Forall (fun idm => tmsg_info (valOf idm) =
                            Some (buildTInfo ts (rq :: nil))) houts ->
         Atomic ts rq (RlblInt (Some rqr) (liftI toTMsgU rq :: nil) houts :: nil)
@@ -28,6 +26,16 @@ Section PerSystem.
         Forall (fun idm => InMP (idOf idm) (valOf idm) mouts) msgs ->
         Atomic ts rq (RlblInt (Some rule) msgs houts :: hst)
                (enqMsgs houts (deqMsgs (idsOf msgs) mouts)).
+
+  (* A history is [ExtAtomic] iff it is [Atomic] and starts from
+   * an external request.
+   *)
+  Inductive ExtAtomic: TrsId -> Id Msg -> THistory -> MessagePool TMsg -> Prop :=
+  | ExtAtomicIntro:
+      forall ts rq hst mouts,
+        In (idOf rq) (merqsOf sys) ->
+        Atomic ts rq hst mouts ->
+        ExtAtomic ts rq hst mouts.
 
   Inductive Transactional: THistory -> Prop :=
   | TrsSlt:
@@ -42,7 +50,7 @@ Section PerSystem.
         Transactional (tout :: nil)
   | TrsAtomic:
       forall ts rq hst mouts,
-        Atomic ts rq hst mouts ->
+        ExtAtomic ts rq hst mouts ->
         Transactional hst.
 
   Definition Sequential (hst: THistory) :=

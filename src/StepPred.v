@@ -50,8 +50,10 @@ Section GivenMsg.
 
         poss@[oidx] = Some pos ->
         orqs@[oidx] = Some porq ->
-        prec pos (map (fun pmsg => getMsg (pmsg_omsg pmsg)) porq) (liftI getMsg rq :: nil) ->
-        pred_os (pmsg_pred (valOf rq)) (pmsg_val (valOf rq)) poss (pmsg_val (valOf rs)) noss ->
+        prec pos (imap (fun pmsg => getMsg (pmsg_omsg pmsg)) porq)
+             (liftI getMsg rq :: nil) ->
+        pred_os (pmsg_pred (valOf rq)) (pmsg_val (valOf rq)) poss
+                (pmsg_val (valOf rs)) noss ->
         pred_mp (pmsg_pred (valOf rq)) (toOrigMP poims) (toOrigMP noims) ->
 
         noss = poss +[ oidx <- nos ] ->
@@ -74,49 +76,51 @@ Section GivenMsg.
         ValidMsgsOut psys fwds ->
 
         oss@[oidx] = Some pos ->
-        prec pos (map (fun pmsg => getMsg (pmsg_omsg pmsg)) porq) (liftI getMsg rq :: nil) ->
+        prec pos (imap (fun pmsg => getMsg (pmsg_omsg pmsg)) porq)
+             (liftI getMsg rq :: nil) ->
 
         orqs@[oidx] = Some porq ->
 
         pst = {| pst_oss := oss; pst_orqs := orqs; pst_msgs := oims |} ->
         nst = {| pst_oss := oss;
-                 pst_orqs := orqs +[ oidx <- addRq porq (valOf rq) ];
+                 pst_orqs := orqs +[ oidx <- addRq porq rq ];
                  pst_msgs := enqMsgs fwds (deqMP (idOf rq) oims) |} ->
 
         step_pred0 psys pst (PlblInt (Some rqfwdr) (rq :: nil) fwds) nst
 
   | SpRsBack:
       forall pst nst oss orqs oidx pos nos orq origRq oims noss noims opred rsbf
-             (rsbackr: PRule MsgT) (rss: list (Id (PMsg MsgT))) (rsb: Id (PMsg MsgT)),
+             (rsbackr: PRule MsgT)
+             (rss: list (Id (PMsg MsgT))) (rsb: Id (PMsg MsgT)),
         In oidx (oindsOf psys) ->
         In rsbackr (psys_rules psys) ->
-        rsbackr = PRuleRsBack oidx (map (@pmidOf _ _) rss) opred (pmidOf rsb) rsbf  ->
+        rsbackr = PRuleRsBack oidx (map (@pmidOf _ _) rss)
+                              opred (pmidOf rsb) rsbf  ->
         Forall (FirstMPI oims) rss ->
         ValidMsgsIn psys rss ->
         ValidMsgsOut psys (rsb :: nil) ->
 
         oss@[oidx] = Some pos ->
         orqs@[oidx] = Some orq ->
-        getRq (fun pmsg => msg_id (getMsg (pmsg_omsg pmsg)))
-              orq (msg_id (getMsg (pmsg_omsg (valOf rsb)))) = Some origRq ->
+        getRq orq (idOf rsb) = Some origRq ->
 
         noss = oss +[ oidx <- nos ] ->
         noims = enqMsgs (rsb :: nil) (deqMsgs (idsOf rss) oims) ->
         
         (* Backing responses are all valid. *)
         Forall (fun pmsg =>
-                  pred_os (pmsg_pred pmsg) (msg_value (getMsg (pmsg_omsg origRq))) oss
-                          (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
+                  pred_os (pmsg_pred pmsg) (msg_value (getMsg (pmsg_omsg (valOf origRq))))
+                          oss (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
                   pred_mp (pmsg_pred pmsg) (toOrigMP oims)
                           (toOrigMP (enqMPI rsb (deqMsgs (idsOf rss) oims))))
                (valsOf rss) ->
-        opred (msg_value (getMsg (pmsg_omsg origRq))) pos (pmsg_val (valOf rsb)) nos ->
+        opred (msg_value (getMsg (pmsg_omsg (valOf origRq)))) pos (pmsg_val (valOf rsb)) nos ->
         pmsg_val (valOf rsb) = rsbf (map (fun idp => msg_value (getMsg (valOf idp))) rss) pos ->
 
         (* Using such responses, we should be able to prove 
          * the original request predicate.
          *)
-        pred_os (pmsg_pred (valOf rsb)) (msg_value (getMsg (pmsg_omsg origRq)))
+        pred_os (pmsg_pred (valOf rsb)) (msg_value (getMsg (pmsg_omsg (valOf origRq))))
                 oss (pmsg_val (valOf rsb)) noss ->
         pred_mp (pmsg_pred (valOf rsb)) (toOrigMP oims) (toOrigMP noims) ->
 

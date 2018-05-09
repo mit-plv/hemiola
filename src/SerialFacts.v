@@ -8,8 +8,8 @@ Require Import Program.Equality.
 Set Implicit Arguments.
 
 Lemma atomic_emptyILabel_not_in:
-  forall sys ts rq hst mouts,
-    Atomic sys ts rq hst mouts ->
+  forall ts rq hst mouts,
+    Atomic ts rq hst mouts ->
     ~ In (emptyRLabel _) hst.
 Proof.
   induction 1; simpl; intros.
@@ -19,8 +19,8 @@ Proof.
 Qed.
 
 Lemma atomic_iLblIn_not_in:
-  forall sys ts rq hst mouts,
-    Atomic sys ts rq hst mouts ->
+  forall ts rq hst mouts,
+    Atomic ts rq hst mouts ->
     forall msg,
       ~ In (RlblIns [msg]) hst.
 Proof.
@@ -29,23 +29,21 @@ Proof.
          [discriminate|firstorder]).
 Qed.
 
-Lemma atomic_preserved:
+Lemma extAtomic_preserved:
   forall impl1 ts rq hst mouts,
-    Atomic impl1 ts rq hst mouts ->
+    ExtAtomic impl1 ts rq hst mouts ->
     forall impl2,
       merqsOf impl1 = merqsOf impl2 ->
-      Atomic impl2 ts rq hst mouts.
+      ExtAtomic impl2 ts rq hst mouts.
 Proof.
-  induction 1; simpl; intros.
-  - econstructor; eauto.
-    simpl in *.
-    rewrite H1 in H; assumption.
-  - econstructor; eauto.
+  intros.
+  inv H; constructor; auto.
+  rewrite <-H0; assumption.
 Qed.
 
-Theorem atomic_tinfo:
+Theorem extAtomic_tinfo:
   forall sys ts rq hst mouts,
-    Atomic sys ts rq hst mouts ->
+    ExtAtomic sys ts rq hst mouts ->
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
@@ -63,7 +61,8 @@ Theorem atomic_tinfo:
       ForallMP (fun midx tmsg =>
                   tmsg_info tmsg = Some (buildTInfo ts [rq])) mouts.
 Proof.
-  induction 1; simpl; intros.
+  inversion_clear 1.
+  induction H1; simpl; intros.
 
   - split.
     + constructor; auto.
@@ -74,27 +73,27 @@ Proof.
       cbn in *.
       apply ForallMP_enqMsgs.
       * apply ForallMP_emptyMP.
-      * clear -H0.
+      * clear -H.
         induction outs; simpl; [constructor|].
-        inv H0.
+        inv H.
         constructor; auto.
 
-  - inv H2.
-    specialize (IHAtomic _ _ H6); destruct IHAtomic.
+  - inv H3.
+    specialize (IHAtomic H0 _ _ H7); destruct IHAtomic.
     split.
     + constructor; auto.
       assert (Forall (fun idt =>
                         tmsg_info (valOf idt) = Some (buildTInfo ts [rq])) msgs).
-      { eapply ForallMP_Forall_InMP in H3; eauto. }
+      { eapply ForallMP_Forall_InMP in H4; eauto. }
       
       split.
-      * clear -H4; eapply Forall_impl; eauto.
+      * clear -H5; eapply Forall_impl; eauto.
         simpl; intros.
         rewrite H; reflexivity.
-      * inv H8.
+      * inv H9.
         assert (Forall (fun idt =>
                           tmsg_info (valOf idt) = Some (buildTInfo ts [rq])) msgs).
-        { clear -H4; eapply Forall_impl; eauto.
+        { clear -H5; eapply Forall_impl; eauto.
           simpl; intros.
           destruct H; auto.
         }
@@ -102,23 +101,23 @@ Proof.
         rewrite getTMsgsTInfo_Forall_Some with (ti:= buildTInfo ts [rq]).
         { clear; induction outs; constructor; auto. }
         { destruct msgs; [auto|discriminate]. }
-        { clear -H5; induction msgs; [constructor|].
-          inv H5; constructor; auto.
+        { clear -H6; induction msgs; [constructor|].
+          inv H6; constructor; auto.
         }
         
     + apply ForallMP_enqMsgs.
       * apply ForallMP_deqMsgs; auto.
-      * apply ForallMP_Forall_InMP with (ims:= msgs) in H3; auto.
-        inv H8.
-        destruct msgs as [|msg msgs]; [elim H0; reflexivity|].
-        inv H3; cbn; unfold valOf in H7; rewrite H7.
+      * apply ForallMP_Forall_InMP with (ims:= msgs) in H4; auto.
+        inv H9.
+        destruct msgs as [|msg msgs]; [elim H; reflexivity|].
+        inv H4; cbn; unfold valOf in H8; rewrite H8.
         clear; induction outs; [constructor|].
         constructor; auto.
 Qed.
 
-Corollary atomic_hst_tinfo:
+Corollary extAtomic_hst_tinfo:
   forall sys ts rq hst mouts,
-    Atomic sys ts rq hst mouts ->
+    ExtAtomic sys ts rq hst mouts ->
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
       Forall (fun lbl => match lbl with
@@ -135,20 +134,20 @@ Corollary atomic_hst_tinfo:
                          end) hst.
 Proof.
   intros.
-  eapply atomic_tinfo in H; eauto.
+  eapply extAtomic_tinfo in H; eauto.
   destruct H; auto.
 Qed.
 
-Corollary atomic_mouts_tinfo:
+Corollary extAtomic_mouts_tinfo:
   forall sys ts rq hst mouts,
-    Atomic sys ts rq hst mouts ->
+    ExtAtomic sys ts rq hst mouts ->
     forall st1 st2,
       steps step_t sys st1 hst st2 ->
       ForallMP (fun midx tmsg =>
                   tmsg_info tmsg = Some (buildTInfo ts [rq])) mouts.
 Proof.
   intros.
-  eapply atomic_tinfo in H; eauto.
+  eapply extAtomic_tinfo in H; eauto.
   destruct H; auto.
 Qed.
 

@@ -132,7 +132,7 @@ Ltac trs_simulates_atomic_to_steps_pred rqmid :=
    (* end; *)
    match goal with
    | [H: steps step_t (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
-     eapply atomic_steps_pred_ok
+     eapply extAtomic_steps_pred_ok
        with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
      eauto; [clear_atomic_hyps; reduce_invstep_pred|]
    end|].

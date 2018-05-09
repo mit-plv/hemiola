@@ -125,11 +125,11 @@ Qed.
 Definition step_pred_t :=
   step_pred (stR:= PTStateR) step_t (@pToSystem TMsg) pToTLabel.
 
-Theorem atomic_steps_pred_ok:
+Theorem extAtomic_steps_pred_ok:
   forall sys ginv st1 thst st2 ts rqin mouts,
     InvStep sys step_t ginv ->
     steps step_t sys st1 thst st2 ->
-    Atomic sys ts rqin thst mouts ->
+    ExtAtomic sys ts rqin thst mouts ->
     forall psys: PSystem TMsg,
       pToSystem psys = sys ->
       InvStep psys step_pred_t (LiftInv (@pstx_st _ _ PTStateR) ginv) /\

@@ -64,26 +64,26 @@ Definition OState := M.t Value.
 Definition OStates := M.t OState.
 
 (* A request holder [ORq] holds all requests that 
- * the target object is handling now.
+ * an object is handling now.
  *)
-Definition ORq (MsgT: Type) := list MsgT.
+Definition ORq (MsgT: Type) := list (Id MsgT).
 Definition ORqs (MsgT: Type) := M.t (ORq MsgT).
 
-Definition addRq {MsgT} (orq: ORq MsgT) (rq: MsgT): ORq MsgT :=
+Definition addRq {MsgT} (orq: ORq MsgT) (rq: Id MsgT): ORq MsgT :=
   rq :: orq.
 
-Fixpoint getRq {MsgT} (idxf: MsgT -> IdxT) (orq: ORq MsgT) (idx: IdxT) :=
+Fixpoint getRq {MsgT} (orq: ORq MsgT) (idx: IdxT) :=
   match orq with
   | nil => None
   | rq :: orq' =>
-    if idxf rq ==n idx then Some rq else getRq idxf orq' idx
+    if idOf rq ==n idx then Some rq else getRq orq' idx
   end.
 
-Fixpoint removeRq {MsgT} (idxf: MsgT -> IdxT) (orq: ORq MsgT) (ridx: IdxT) :=
+Fixpoint removeRq {MsgT} (orq: ORq MsgT) (ridx: IdxT) :=
   match orq with
   | nil => nil
   | rq :: orq' =>
-    if idxf rq ==n ridx then orq' else rq :: removeRq idxf orq' ridx
+    if idOf rq ==n ridx then orq' else rq :: removeRq orq' ridx
   end.
 
 Section Rule.
