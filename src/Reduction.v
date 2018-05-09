@@ -1,5 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
+Require Import Serial.
 
 Set Implicit Arguments.
 
@@ -22,13 +23,50 @@ Definition Internal (lbl: MLabel) :=
 Definition InternalHistory (hst: History) :=
   Forall (fun tlbl => Internal tlbl) hst.
 
-Lemma msg_ins_commutes:
-  forall sys st1 eins lbl st2,
-    Internal lbl ->
-    steps step_m sys st1 [RlblIns eins; lbl] st2 ->
-    steps step_m sys st1 [lbl; RlblIns eins] st2.
+Definition Reduced (sys: System) (hfr hto: History) :=
+  forall st1 st2,
+    steps step_m sys st1 hfr st2 ->
+    steps step_m sys st1 hto st2.
+
+(*! General Facts *)
+
+Lemma reduced_app_1:
+  forall sys hfr hto,
+    Reduced sys hfr hto ->
+    forall hst,
+      Reduced sys (hst ++ hfr) (hst ++ hto).
 Proof.
-  intros.
+  unfold Reduced; intros.
+  eapply steps_split in H0; [|reflexivity]; dest.
+  eapply steps_append; eauto.
+Qed.
+
+Lemma reduced_app_2:
+  forall sys hfr hto,
+    Reduced sys hfr hto ->
+    forall hst,
+      Reduced sys (hfr ++ hst) (hto ++ hst).
+Proof.
+  unfold Reduced; intros.
+  eapply steps_split in H0; [|reflexivity]; dest.
+  eapply steps_append; eauto.
+Qed.
+
+(* Lemma reduced_serializable: *)
+(*   forall sys hfr, *)
+(*     Serializable sys hfr -> *)
+(*     forall hto, *)
+(*       Reduced sys hfr hto -> *)
+(*       Serializable sys hto. *)
+
+(*! Facts to prove serializability *)
+
+Lemma msg_ins_commutes:
+  forall sys eins lbl,
+    Internal lbl ->
+    Reduced sys [RlblIns eins; lbl] [lbl; RlblIns eins].
+Proof.
+  unfold Reduced; intros.
   destruct lbl as [|hdl mins mouts|]; [elim H| |elim H].
   dest_step_m.
   - econstructor.
@@ -49,33 +87,19 @@ Proof.
 Admitted.
 
 Lemma msg_in_reduced:
-  forall sys st1 eins hst2 st2,
-    steps step_m sys st1 (RlblIns eins :: hst2) st2 ->
+  forall sys eins hst2,
     InternalHistory hst2 ->
-    steps step_m sys st1 (hst2 ++ [RlblIns eins]) st2.
+    Reduced sys (RlblIns eins :: hst2) (hst2 ++ [RlblIns eins]).
 Proof.
-  induction hst2 as [|lbl ?]; simpl; intros; auto.
-  inv H0.
-  change (RlblIns eins :: lbl :: hst2) with ([RlblIns eins; lbl] ++ hst2) in H.
-  eapply steps_split in H; [|reflexivity].
-  destruct H as [sti [? ?]].
+  unfold Reduced; induction hst2 as [|lbl ?]; simpl; intros; auto.
+  inv H.
+  change (RlblIns eins :: lbl :: hst2) with ([RlblIns eins; lbl] ++ hst2) in H0.
+  eapply steps_split in H0; [|reflexivity].
+  destruct H0 as [sti [? ?]].
   eapply msg_ins_commutes in H0; [|assumption].
   pose proof (steps_append H H0); inv H1.
-  specialize (IHhst2 _ H7 H4).
+  specialize (IHhst2 H4 _ _ H7).
   econstructor; eauto.
-Qed.
-
-Lemma msg_in_reduced_app:
-  forall sys st1 hst1 eins hst2 st2,
-    steps step_m sys st1 (hst1 ++ RlblIns eins :: hst2) st2 ->
-    InternalHistory hst2 ->
-    steps step_m sys st1 (hst1 ++ hst2 ++ [RlblIns eins]) st2.
-Proof.
-  intros.
-  eapply steps_split in H; [|reflexivity].
-  destruct H as [sti [? ?]].
-  eapply msg_in_reduced in H; eauto.
-  eapply steps_append; eauto.
 Qed.
 
 Lemma msg_outs_commutes:
