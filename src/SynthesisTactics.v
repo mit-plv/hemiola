@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Semantics StepT SemFacts.
+Require Import Common FMap Syntax Semantics StepM StepT SemFacts.
 Require Import Simulation Serial SerialFacts Invariant TrsSim.
 Require Import PredMsg StepPred PredMsgFacts.
 Require Import Synthesis SynthesisFacts Blocking.
@@ -119,23 +119,6 @@ Ltac reduce_invstep_pred :=
       destruct H as [pstx1 [phst [pstx2 ?]]]; dest; subst
     | [H: forall _, _ = _ -> _ |- _] => specialize (H _ eq_refl)
     end.
-
-Ltac trs_simulates_atomic_to_steps_pred rqmid :=
-  unfold TrsSimAtomic; intros;
-  repeat
-    match goal with
-    | [H: In _ _ |- _] => Common.dest_in
-    end;
-  [(* match goal with *)
-   (* | [H1: Atomic _ _ _ ?hst _, H2: steps step_t _ _ ?hst _ |- _] => *)
-   (*   pose proof (atomic_history_pred_tinfo H1 H2) *)
-   (* end; *)
-   match goal with
-   | [H: steps step_t (addRules _ (buildRawSys ?implTopo)) _ _ _ |- _] =>
-     eapply extAtomic_steps_pred_ok
-       with (psys:= addPRules _ (buildRawPSys _ implTopo)) in H;
-     eauto; [clear_atomic_hyps; reduce_invstep_pred|]
-   end|].
 
 Ltac inv_lift inv :=
   match goal with

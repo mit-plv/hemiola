@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics SemFacts.
-Require Import StepT Serial SerialFacts Invariant TrsSim.
+Require Import StepM StepT Serial SerialFacts Invariant TrsSim.
 
 Set Implicit Arguments.
 
@@ -8,7 +8,7 @@ Section SynthOk.
 
   (** User inputs *)
   Variables
-    (impl0 spec: System)
+    (spec: System)
     (R: TState -> TState -> Prop)
     (ginv: TState -> Prop).
 
@@ -21,7 +21,17 @@ Section SynthOk.
     (TrsSimulates R ginv s spec /\ InvStep s step_t ginv) /\
     SerializableSys s.
 
-  Hypothesis (Hinit_ok: SynthOk impl0).
+  Lemma synthOk_refinement:
+    forall s, SynthOk s -> steps step_m # steps step_m |-- s ⊑ spec.
+  Proof.
+    unfold SynthOk; intros; dest.
+    eapply refines_trans.
+    - apply serializable_seqSteps_refines in H2.
+      eassumption.
+    - (** TODO: connect [step_m] and [step_t] *)
+      (* eapply sequential_simulation_implies_refinement; eauto. *)
+      admit.
+  Admitted.
 
   Section SynthesisStep.
 
@@ -47,16 +57,6 @@ Section SynthOk.
          forall s, InvStep s step_t ginv ->
                    forall s', syn s s' -> InvStep s' step_t ginv).
 
-    Lemma synthOk_refinement:
-      forall s, SynthOk s -> steps step_t # steps step_t |-- s ⊑ spec.
-    Proof.
-      unfold SynthOk; intros; dest.
-      eapply refines_trans.
-      - apply serializable_seqSteps_refines in H2.
-        eassumption.
-      - eapply sequential_simulation_implies_refinement; eauto.
-    Qed.
-
     Lemma synthOk_preserved:
       forall s s', SynthOk s -> syn s s' -> SynthOk s'.
     Proof.
@@ -69,8 +69,4 @@ Section SynthOk.
   End SynthesisStep.
 
 End SynthOk.
-
-Definition rqChn: IdxT := 0.
-Definition rsChn: IdxT := 1.
-Definition numChns := S rsChn.
 

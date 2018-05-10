@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Topology Semantics SemFacts StepT.
+Require Import Common FMap Syntax Topology Semantics SemFacts StepM StepT.
 Require Import Invariant Simulation TrsSim SerialFacts.
 Require Import Synthesis SynthesisTactics PredMsg Blocking.
 
@@ -202,7 +202,7 @@ Section Sim.
     Admitted.
 
     Theorem impl0_ok:
-      (steps step_t) # (steps step_t) |-- impl0 ⊑ spec.
+      (steps step_m) # (steps step_m) |-- impl0 ⊑ spec.
     Proof.
       eapply synthOk_refinement.
       eapply impl0_synth_ok.

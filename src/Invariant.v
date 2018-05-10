@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap ListSupport Syntax Semantics StepT SemFacts.
+Require Import Common FMap ListSupport Syntax Semantics StepM StepT SemFacts.
 Require Import Serial.
 
 Require Import Omega.
@@ -84,7 +84,67 @@ Ltac split_inv := apply inv_split.
 Infix "/\i" := invAnd (at level 80).
 Infix "->i" := invImp (at level 99).
 
-(*! Some generic invariants *)
+
+(*! Some generic invariants for [MState] *)
+
+Definition NoExtOutsMP {SysT} `{IsSystem SysT}
+           (sys: SysT) (msgs: MessagePool Msg) :=
+  ForallMP (fun midx tmsg => ~ In midx (merssOf sys)) msgs.
+
+Definition NoExtOuts {SysT} `{IsSystem SysT}
+           (sys: SysT) (st: MState) :=
+  NoExtOutsMP sys (bst_msgs st).
+
+Lemma step_m_no_rules_NoExtOuts:
+  forall sys,
+    sys_rules sys = nil ->
+    forall st1,
+      NoExtOuts sys st1 ->
+      forall lbl st2,
+        step_m sys st1 lbl st2 ->
+        NoExtOuts sys st2.
+Proof.
+  unfold NoExtOuts, NoExtOutsMP; intros.
+  inv H1; simpl in *; auto.
+  - apply ForallMP_enqMsgs; auto.
+    destruct H3.
+    pose proof (merqsOf_merssOf_DisjList sys).
+    eapply DisjList_SubList in H1; [|eassumption].
+
+    clear -H1; induction eins; simpl; [constructor|].
+    simpl in H1; apply DisjList_cons in H1; dest.
+    constructor; auto.
+  - apply ForallMP_deqMsgs; auto.
+  - exfalso.
+    rewrite H in H10; elim H10.
+Qed.
+
+Lemma steps_m_no_rules_NoExtOuts:
+  forall sys,
+    sys_rules sys = nil ->
+    forall st1,
+      NoExtOuts sys st1 ->
+      forall ll st2,
+        steps step_m sys st1 ll st2 ->
+        NoExtOuts sys st2.
+Proof.
+  induction 3; simpl; intros; auto.
+  eapply step_m_no_rules_NoExtOuts with (st1 := st2); eauto.
+Qed.
+
+Corollary behavior_no_rules_NoExtOuts:
+  forall sys,
+    sys_rules sys = nil ->
+    forall ll st,
+      steps step_m sys (initsOf sys) ll st ->
+      NoExtOuts sys st.
+Proof.
+  intros.
+  eapply steps_m_no_rules_NoExtOuts; eauto.
+  apply ForallMP_emptyMP.
+Qed.
+
+(*! Some generic invariants for [TState] *)
 
 Definition MsgsInInv (inv: TState -> Prop) :=
   forall oss orqs msgs trss trss' ts eins,
@@ -191,14 +251,6 @@ Definition ValidTidState (tst: TState) :=
 Definition ValidTrss {SysT} `{IsSystem SysT}
            (sys: SysT) (tst: TState) :=
   extRssOf sys (tst_msgs tst) = extRssOf sys (tst_trss tst).
-
-Definition NoExtOutsMP {SysT} `{IsSystem SysT}
-           (sys: SysT) (tmsgs: MessagePool TMsg) :=
-  ForallMP (fun midx tmsg => ~ In midx (merssOf sys)) tmsgs.
-
-Definition NoExtOuts {SysT} `{IsSystem SysT}
-           (sys: SysT) (tst: TState) :=
-  NoExtOutsMP sys (tst_msgs tst).
 
 Lemma ValidTidState_MsgsInv:
   MsgsInv ValidTidState.
@@ -338,54 +390,5 @@ Proof.
     apply in_app_or in H8; destruct H8.
     + left; econstructor; eauto.
     + right; econstructor; eauto.
-Qed.
-
-Lemma step_t_no_rules_NoExtOuts:
-  forall sys,
-    sys_rules sys = nil ->
-    forall st1,
-      NoExtOuts sys st1 ->
-      forall lbl st2,
-        step_t sys st1 lbl st2 ->
-        NoExtOuts sys st2.
-Proof.
-  unfold NoExtOuts, NoExtOutsMP; intros.
-  inv H1; simpl in *; auto.
-  - apply ForallMP_enqMsgs; auto.
-    destruct H3.
-    pose proof (merqsOf_merssOf_DisjList sys).
-    eapply DisjList_SubList in H1; [|eassumption].
-
-    clear -H1; induction eins; simpl; [constructor|].
-    simpl in H1; apply DisjList_cons in H1; dest.
-    constructor; auto.
-  - apply ForallMP_deqMsgs; auto.
-  - exfalso.
-    rewrite H in H10; elim H10.
-Qed.
-
-Lemma steps_t_no_rules_NoExtOuts:
-  forall sys,
-    sys_rules sys = nil ->
-    forall st1,
-      NoExtOuts sys st1 ->
-      forall ll st2,
-        steps step_t sys st1 ll st2 ->
-        NoExtOuts sys st2.
-Proof.
-  induction 3; simpl; intros; auto.
-  eapply step_t_no_rules_NoExtOuts with (st1 := st2); eauto.
-Qed.
-
-Corollary behavior_no_rules_NoExtOuts:
-  forall sys,
-    sys_rules sys = nil ->
-    forall ll st,
-      steps step_t sys (initsOf sys) ll st ->
-      NoExtOuts sys st.
-Proof.
-  intros.
-  eapply steps_t_no_rules_NoExtOuts; eauto.
-  apply ForallMP_emptyMP.
 Qed.
 

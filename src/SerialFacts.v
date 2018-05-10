@@ -1,231 +1,126 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap.
-Require Import Syntax Semantics SemFacts StepT Serial Invariant.
+Require Import Syntax Semantics SemFacts StepM Serial Invariant.
 
 Require Import Omega.
 Require Import Program.Equality.
 
 Set Implicit Arguments.
 
-Lemma atomic_emptyILabel_not_in:
-  forall ts rq hst mouts,
-    Atomic ts rq hst mouts ->
-    ~ In (emptyRLabel _) hst.
-Proof.
-  induction 1; simpl; intros.
-  - intro Hx; destruct Hx; [discriminate|auto].
-  - intro Hx; destruct Hx; auto.
-    inv H2; elim H0; reflexivity.
-Qed.
+Section MsgParam.
+  Variable MsgT: Type.
 
-Lemma atomic_iLblIn_not_in:
-  forall ts rq hst mouts,
-    Atomic ts rq hst mouts ->
-    forall msg,
-      ~ In (RlblIns [msg]) hst.
-Proof.
-  induction 1; simpl; intros; [auto|];
-    try (intro Hx; destruct Hx;
-         [discriminate|firstorder]).
-Qed.
+  Lemma atomic_emptyILabel_not_in:
+    forall rq hst mouts,
+      Atomic rq hst mouts ->
+      ~ In (emptyRLabel MsgT) hst.
+  Proof.
+    induction 1; simpl; intros.
+    - intro Hx; destruct Hx; [discriminate|auto].
+    - intro Hx; destruct Hx; auto.
+      inv H2; elim H0; reflexivity.
+  Qed.
 
-Lemma extAtomic_preserved:
-  forall impl1 ts rq hst mouts,
-    ExtAtomic impl1 ts rq hst mouts ->
-    forall impl2,
-      merqsOf impl1 = merqsOf impl2 ->
-      ExtAtomic impl2 ts rq hst mouts.
-Proof.
-  intros.
-  inv H; constructor; auto.
-  rewrite <-H0; assumption.
-Qed.
+  Lemma atomic_iLblIn_not_in:
+    forall rq hst mouts,
+      Atomic rq hst mouts ->
+      forall msg: Id MsgT,
+        ~ In (RlblIns [msg]) hst.
+  Proof.
+    induction 1; simpl; intros; [auto|];
+      try (intro Hx; destruct Hx;
+           [discriminate|firstorder]).
+  Qed.
 
-Theorem extAtomic_tinfo:
-  forall sys ts rq hst mouts,
-    ExtAtomic sys ts rq hst mouts ->
-    forall st1 st2,
-      steps step_t sys st1 hst st2 ->
-      Forall (fun lbl => match lbl with
-                         | RlblInt _ ins outs =>
-                           Forall (fun idt =>
-                                     match tmsg_info (valOf idt) with
-                                     | Some hti => hti = buildTInfo ts [rq]
-                                     | None => liftI tmsg_msg idt = rq
-                                     end) ins /\
-                           Forall (fun idt =>
-                                     tmsg_info (valOf idt) =
-                                     Some (buildTInfo ts [rq])) outs
-                         | _ => False
-                         end) hst /\
-      ForallMP (fun midx tmsg =>
-                  tmsg_info tmsg = Some (buildTInfo ts [rq])) mouts.
-Proof.
-  inversion_clear 1.
-  induction H1; simpl; intros.
+  Lemma extAtomic_preserved:
+    forall impl1 (rq: Id MsgT) hst mouts,
+      ExtAtomic impl1 rq hst mouts ->
+      forall impl2,
+        merqsOf impl1 = merqsOf impl2 ->
+        ExtAtomic impl2 rq hst mouts.
+  Proof.
+    intros.
+    inv H; constructor; auto.
+    rewrite <-H0; assumption.
+  Qed.
 
-  - split.
-    + constructor; auto.
-      split; auto.
-      constructor; cbn; auto.
-      destruct rq as [midx rq]; reflexivity.
-    + inv H1; inv H5; inv H7.
-      cbn in *.
-      apply ForallMP_enqMsgs.
-      * apply ForallMP_emptyMP.
-      * clear -H.
-        induction outs; simpl; [constructor|].
-        inv H.
-        constructor; auto.
-
-  - inv H3.
-    specialize (IHAtomic H0 _ _ H7); destruct IHAtomic.
+  Lemma sequential_nil:
+    forall sys, Sequential (MsgT:= MsgT) sys nil.
+  Proof.
+    intros; hnf; intros.
+    exists nil.
     split.
-    + constructor; auto.
-      assert (Forall (fun idt =>
-                        tmsg_info (valOf idt) = Some (buildTInfo ts [rq])) msgs).
-      { eapply ForallMP_Forall_InMP in H4; eauto. }
-      
-      split.
-      * clear -H5; eapply Forall_impl; eauto.
-        simpl; intros.
-        rewrite H; reflexivity.
-      * inv H9.
-        assert (Forall (fun idt =>
-                          tmsg_info (valOf idt) = Some (buildTInfo ts [rq])) msgs).
-        { clear -H5; eapply Forall_impl; eauto.
-          simpl; intros.
-          destruct H; auto.
-        }
+    - constructor.
+    - reflexivity.
+  Qed.
 
-        rewrite getTMsgsTInfo_Forall_Some with (ti:= buildTInfo ts [rq]).
-        { clear; induction outs; constructor; auto. }
-        { destruct msgs; [auto|discriminate]. }
-        { clear -H6; induction msgs; [constructor|].
-          inv H6; constructor; auto.
-        }
-        
-    + apply ForallMP_enqMsgs.
-      * apply ForallMP_deqMsgs; auto.
-      * apply ForallMP_Forall_InMP with (ims:= msgs) in H4; auto.
-        inv H9.
-        destruct msgs as [|msg msgs]; [elim H; reflexivity|].
-        inv H4; cbn; unfold valOf in H8; rewrite H8.
-        clear; induction outs; [constructor|].
-        constructor; auto.
-Qed.
+  Lemma sequential_silent:
+    forall sys ll,
+      Sequential (MsgT:= MsgT) sys ll ->
+      Sequential (MsgT:= MsgT) sys (emptyRLabel _ :: ll).
+  Proof.
+    intros.
+    hnf; hnf in H; dest.
+    eexists ([emptyRLabel _] :: _); split.
+    - constructor; [|eassumption].
+      constructor.
+    - subst; reflexivity.
+  Qed.
 
-Corollary extAtomic_hst_tinfo:
-  forall sys ts rq hst mouts,
-    ExtAtomic sys ts rq hst mouts ->
-    forall st1 st2,
-      steps step_t sys st1 hst st2 ->
-      Forall (fun lbl => match lbl with
-                         | RlblInt _ ins outs =>
-                           Forall (fun idt =>
-                                     match tmsg_info (valOf idt) with
-                                     | Some hti => hti = buildTInfo ts [rq]
-                                     | None => liftI tmsg_msg idt = rq
-                                     end) ins /\
-                           Forall (fun idt =>
-                                     tmsg_info (valOf idt) =
-                                     Some (buildTInfo ts [rq])) outs
-                         | _ => False
-                         end) hst.
-Proof.
-  intros.
-  eapply extAtomic_tinfo in H; eauto.
-  destruct H; auto.
-Qed.
+  Lemma sequential_msg_ins:
+    forall sys ll eins,
+      Sequential (MsgT:= MsgT) sys ll ->
+      Sequential (MsgT:= MsgT) sys (RlblIns eins :: ll).
+  Proof.
+    intros.
+    hnf; hnf in H; dest.
+    eexists ([RlblIns eins] :: _); split.
+    - constructor; [|eassumption].
+      eapply TrsIns; reflexivity.
+    - subst; reflexivity.
+  Qed.
 
-Corollary extAtomic_mouts_tinfo:
-  forall sys ts rq hst mouts,
-    ExtAtomic sys ts rq hst mouts ->
-    forall st1 st2,
-      steps step_t sys st1 hst st2 ->
-      ForallMP (fun midx tmsg =>
-                  tmsg_info tmsg = Some (buildTInfo ts [rq])) mouts.
-Proof.
-  intros.
-  eapply extAtomic_tinfo in H; eauto.
-  destruct H; auto.
-Qed.
+  Lemma sequential_msg_outs:
+    forall sys ll eouts,
+      Sequential (MsgT:= MsgT) sys ll ->
+      Sequential (MsgT:= MsgT) sys (RlblOuts eouts :: ll).
+  Proof.
+    intros.
+    hnf; hnf in H; dest.
+    eexists ([RlblOuts eouts] :: _); split.
+    - constructor; [|eassumption].
+      eapply TrsOuts; reflexivity.
+    - subst; reflexivity.
+  Qed.
+
+  Lemma sequential_app:
+    forall sys ll1 ll2,
+      Sequential (MsgT:= MsgT) sys ll1 ->
+      Sequential (MsgT:= MsgT) sys ll2 ->
+      Sequential (MsgT:= MsgT) sys (ll1 ++ ll2).
+  Proof.
+    unfold Sequential; intros.
+    destruct H as [trss1 [? ?]].
+    destruct H0 as [trss2 [? ?]]; subst.
+    exists (trss1 ++ trss2); split.
+    - apply Forall_app; auto.
+    - apply eq_sym, concat_app.
+  Qed.
+
+End MsgParam.
 
 Theorem serializable_seqSteps_refines:
   forall sys,
     SerializableSys sys ->
-    steps step_t # seqSteps |-- sys ⊑ sys.
+    steps step_m # seqStepsM |-- sys ⊑ sys.
 Proof.
   unfold SerializableSys, Refines; intros.
   inv H0; rename ll0 into ill.
   specialize (H _ _ H1).
   unfold Serializable in H.
   destruct H as [sll [sst [? ?]]].
-  rewrite H0.
+  unfold MLabel; rewrite H0.
   econstructor; eauto.
-Qed.
-
-Lemma sequential_nil:
-  forall sys, Sequential sys nil.
-Proof.
-  intros; hnf; intros.
-  exists nil.
-  split.
-  - constructor.
-  - reflexivity.
-Qed.
-
-Lemma sequential_silent:
-  forall sys ll,
-    Sequential sys ll ->
-    Sequential sys (emptyRLabel _ :: ll).
-Proof.
-  intros.
-  hnf; hnf in H; dest.
-  eexists ([emptyRLabel _] :: _); split.
-  - constructor; [|eassumption].
-    constructor.
-  - subst; reflexivity.
-Qed.
-
-Lemma sequential_msg_ins:
-  forall sys ll eins,
-    Sequential sys ll ->
-    Sequential sys (RlblIns eins :: ll).
-Proof.
-  intros.
-  hnf; hnf in H; dest.
-  eexists ([RlblIns eins] :: _); split.
-  - constructor; [|eassumption].
-    eapply TrsIns; reflexivity.
-  - subst; reflexivity.
-Qed.
-
-Lemma sequential_msg_outs:
-  forall sys ll eouts,
-    Sequential sys ll ->
-    Sequential sys (RlblOuts eouts :: ll).
-Proof.
-  intros.
-  hnf; hnf in H; dest.
-  eexists ([RlblOuts eouts] :: _); split.
-  - constructor; [|eassumption].
-    eapply TrsOuts; reflexivity.
-  - subst; reflexivity.
-Qed.
-
-Lemma sequential_app:
-  forall sys ll1 ll2,
-    Sequential sys ll1 ->
-    Sequential sys ll2 ->
-    Sequential sys (ll1 ++ ll2).
-Proof.
-  unfold Sequential; intros.
-  destruct H as [trss1 [? ?]].
-  destruct H0 as [trss2 [? ?]]; subst.
-  exists (trss1 ++ trss2); split.
-  - apply Forall_app; auto.
-  - apply eq_sym, concat_app.
 Qed.
 
 Lemma serializable_nil:
@@ -251,7 +146,7 @@ Proof.
   - destruct H; split.
     + eapply StepsCons.
       * eassumption.
-      * eapply StSlt.
+      * eapply SmSlt.
     + apply sequential_silent; auto.
   - assumption.
 Qed.
@@ -261,12 +156,12 @@ Lemma serializable_msg_ins:
     Serializable sys ll ->
     eins <> nil ->
     ValidMsgsExtIn sys eins ->
-    Serializable sys (RlblIns (imap toTMsgU eins) :: ll).
+    Serializable sys (RlblIns eins :: ll).
 Proof.
   intros.
   hnf; hnf in H; intros; dest.
-  destruct x0 as [oss orqs msgs trss ts].
-  exists (RlblIns (imap toTMsgU eins) :: x); eexists; split.
+  destruct x0 as [oss orqs msgs].
+  exists (RlblIns eins :: x); eexists; split.
   - destruct H; split.
     + econstructor.
       * eassumption.
@@ -281,7 +176,7 @@ Lemma serializable_steps_no_rules:
     forall st1,
       st1 = initsOf sys ->
       forall ll st2,
-        steps step_t sys st1 ll st2 ->
+        steps step_m sys st1 ll st2 ->
         Serializable sys ll.
 Proof.
   induction 3; simpl; intros.

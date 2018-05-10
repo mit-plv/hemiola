@@ -125,22 +125,6 @@ Qed.
 Definition step_pred_t :=
   step_pred (stR:= PTStateR) step_t (@pToSystem TMsg) pToTLabel.
 
-Theorem extAtomic_steps_pred_ok:
-  forall sys ginv st1 thst st2 ts rqin mouts,
-    InvStep sys step_t ginv ->
-    steps step_t sys st1 thst st2 ->
-    ExtAtomic sys ts rqin thst mouts ->
-    forall psys: PSystem TMsg,
-      pToSystem psys = sys ->
-      InvStep psys step_pred_t (LiftInv (@pstx_st _ _ PTStateR) ginv) /\
-      exists pst1 phst pst2,
-        pToTHistory phst = thst /\
-        pstx_st pst1 = st1 /\
-        pstx_st pst2 = st2 /\
-        steps step_pred_t psys pst1 phst pst2.
-Proof.
-Admitted.
-
 Lemma step_pred_rules_split:
   forall oinds minds merqs merss Hmvalid inits prules1 prules2 pst1 plbl pst2,
     step_pred_t {| psys_oinds := oinds;

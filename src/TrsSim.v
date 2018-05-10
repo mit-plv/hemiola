@@ -21,7 +21,7 @@ Section TrsSim.
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall ihst ist2,
-        trsSteps impl ist1 ihst ist2 ->
+        trsStepsT impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
           behaviorOf impl ihst = behaviorOf spec shst /\
@@ -72,18 +72,18 @@ Section TrsSim.
       ist1 ≈ sst1 ->
        ginv ist1 ->
       forall ihst ist2,
-        seqSteps impl ist1 ihst ist2 ->
+        seqStepsT impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps step_t spec sst1 shst sst2 /\
           behaviorOf impl ihst = behaviorOf spec shst /\
           ist2 ≈ sst2 /\ ginv ist2.
   Proof.
-    unfold seqSteps, Sequential; intros; dest; subst.
+    unfold seqStepsT, seqSteps, Sequential; intros; dest; subst.
     eapply trs_simulation_steps; eauto.
   Qed.
 
   Theorem sequential_simulation_implies_refinement:
-    seqSteps # steps step_t |-- impl ⊑ spec.
+    seqStepsT # steps step_t |-- impl ⊑ spec.
   Proof.
     unfold Simulates, Refines; intros.
     inv H.
@@ -132,9 +132,9 @@ Section TrsSimSep.
           step_t spec sst1 (RlblOuts imouts) sst2 /\
           ist2 ≈ sst2.
 
-  Definition TrsSimAtomic ts rq :=
+  Definition TrsSimAtomic rq :=
     forall hst mouts,
-      ExtAtomic impl ts rq hst mouts ->
+      ExtAtomic impl rq hst mouts ->
       forall ist1,
         ginv ist1 ->
         forall sst1,
@@ -151,7 +151,7 @@ Section TrsSimSep.
     (HsimSlt: TrsSimSilent)
     (HsimIns: TrsSimIns)
     (HsimOuts: TrsSimOuts)
-    (HsimAtm: forall ts rq, TrsSimAtomic ts rq).
+    (HsimAtm: forall rq, TrsSimAtomic rq).
 
   Lemma trs_sim_step_steps_trs:
     forall ist1 sst1,
@@ -320,10 +320,10 @@ Qed.
 Lemma trsPreservineSys_atomic_same_tid:
   forall sys,
     trsPreservingSys sys ->
-    forall ts rq hst mouts,
-      ExtAtomic sys ts rq hst mouts ->
+    forall rq (hst: THistory) mouts,
+      ExtAtomic sys rq hst mouts ->
       forall mtid,
-        mtid = msg_id (valOf rq) ->
+        mtid = msg_id (getMsg (valOf rq)) ->
         forall ist1 ist2,
           steps step_t sys ist1 hst ist2 ->
           ForallMP (fun _ msg => msg_id (getMsg msg) = mtid) mouts /\
@@ -337,12 +337,12 @@ Proof.
   inversion_clear 2.
   induction H2; simpl; intros.
   - subst; constructor; auto.
-    inv H3.
-    eapply trsPreservingSys_ins_outs_same_tid in H8; eauto.
-    destruct H8 as [tid [? ?]].
+    inv H2.
+    eapply trsPreservingSys_ins_outs_same_tid in H7; eauto.
+    destruct H7 as [tid [? ?]].
     apply ForallMP_enqMsgs.
     + apply ForallMP_emptyMP.
-    + inv H2; auto.
+    + inv H0; inv H2; auto.
   - subst; inv H5.
     specialize (IHAtomic H1 _ eq_refl _ _ H8); dest.
     split.
@@ -353,7 +353,7 @@ Proof.
         destruct H10 as [tid [? ?]].
         destruct msgs; [elim H0; reflexivity|].
         inv H6; inv H3.
-        rewrite <-H10; auto.
+        simpl in H10; rewrite <-H10; auto.
     + constructor; auto.
       eapply ForallMP_Forall_InMP in H3; eauto.
       simpl in H3; auto.
@@ -485,13 +485,13 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps step_t impl ist1 hst ist2 ->
-      forall ts rq mouts,
-        ExtAtomic impl ts rq hst mouts ->
+      forall rq mouts,
+        ExtAtomic impl rq hst mouts ->
         steps step_t impl1 ist1 hst ist2 \/
         steps step_t impl2 ist1 hst ist2.
   Proof.
     intros.
-    pose proof (TrsDisjSys_distr_same_tid (msg_id (valOf rq))).
+    pose proof (TrsDisjSys_distr_same_tid (msg_id (getMsg (valOf rq)))).
     pose proof (trsPreservineSys_atomic_same_tid Hmt H0 eq_refl H).
     destruct H2 as [_ ?].
     destruct H1.
@@ -499,11 +499,11 @@ Section Compositionality.
     - left.
       generalize dependent ist2.
       inv H0; induction H3; intros.
-      + inv H3; inv H7; inv H9.
+      + inv H0; inv H6; inv H8.
         econstructor; [econstructor|].
-        assert (rule_msg_ids rqr <> nil) by (rewrite <-H14; discriminate).
-        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rqr))
-          by (rewrite <-H14; constructor; auto).
+        assert (rule_msg_ids rqr <> nil) by (rewrite <-H13; discriminate).
+        assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rqr))
+          by (rewrite <-H13; constructor; auto).
         econstructor; eauto.
         * rewrite <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
@@ -517,7 +517,7 @@ Section Compositionality.
         { rewrite <-H18; clear -H0.
           destruct msgs; [elim H0; reflexivity|discriminate].
         }
-        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rule)).
+        assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rule)).
         { rewrite <-H18.
           clear -H8; induction msgs; [constructor|].
           inv H8; constructor; auto.
@@ -531,11 +531,11 @@ Section Compositionality.
     - right.
       generalize dependent ist2.
       inv H0; induction H3; intros.
-      + inv H3; inv H7; inv H9.
+      + inv H0; inv H6; inv H8.
         econstructor; [econstructor|].
-        assert (rule_msg_ids rqr <> nil) by (rewrite <-H14; discriminate).
-        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rqr))
-          by (rewrite <-H14; constructor; auto).
+        assert (rule_msg_ids rqr <> nil) by (rewrite <-H13; discriminate).
+        assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rqr))
+          by (rewrite <-H13; constructor; auto).
         econstructor; eauto.
         * rewrite <-Hoinds, <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
@@ -552,7 +552,7 @@ Section Compositionality.
         { rewrite <-H18; clear -H0.
           destruct msgs; [elim H0; reflexivity|discriminate].
         }
-        assert (Forall (fun mid => mid = msg_id (valOf rq)) (rule_msg_ids rule)).
+        assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rule)).
         { rewrite <-H18.
           clear -H8; induction msgs; [constructor|].
           inv H8; constructor; auto.
@@ -588,7 +588,7 @@ Section Compositionality.
     - inv H1; inv H5; inv H7.
       exists sst1, nil; repeat split; [constructor|assumption].
 
-    - assert (trsSteps impl1 ist1 (RlblIns eins :: nil) ist2).
+    - assert (trsStepsT impl1 ist1 (RlblIns eins :: nil) ist2).
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.
@@ -597,7 +597,7 @@ Section Compositionality.
       }
       exact (Hsim1 H0 H1 H).
 
-    - assert (trsSteps impl1 ist1 (RlblOuts eouts :: nil) ist2).
+    - assert (trsStepsT impl1 ist1 (RlblOuts eouts :: nil) ist2).
       { split; [|econstructor; reflexivity].
         econstructor; [econstructor|].
         inv H2; inv H5; inv H7.

@@ -179,7 +179,9 @@ Section RLabel.
 End RLabel.
 
 Definition MLabel := RLabel Msg.
-Definition History := list MLabel.
+Definition History (MsgT: Type) := list (RLabel MsgT).
+
+Definition MHistory := History Msg.
 
 Section TMsg.
 

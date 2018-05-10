@@ -310,7 +310,7 @@ Lemma behaviorOf_preserved:
   forall {SysT1 SysT2} `{IsSystem SysT1} `{IsSystem SysT2}
          (impl1: SysT1) (impl2: SysT2),
     oindsOf impl1 = oindsOf impl2 ->
-    forall hst,
+    forall {LabelT} `{HasLabel LabelT} (hst: list LabelT),
       behaviorOf impl1 hst = behaviorOf impl2 hst.
 Proof.
   induction hst; simpl; intros; [reflexivity|].

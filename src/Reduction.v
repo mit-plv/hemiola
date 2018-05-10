@@ -11,7 +11,7 @@ Ltac dest_step_m :=
          | [H: {| bst_oss := _ |} = {| bst_oss := _ |} |- _] => inv H
          end; simpl in *.
 
-Definition NonSilentHistory (hst: History) :=
+Definition NonSilentHistory (hst: MHistory) :=
   Forall (fun lbl => lbl <> emptyRLabel _) hst.
 
 Definition Internal (lbl: MLabel) :=
@@ -20,10 +20,10 @@ Definition Internal (lbl: MLabel) :=
   | _ => False
   end.
 
-Definition InternalHistory (hst: History) :=
+Definition InternalHistory (hst: MHistory) :=
   Forall (fun tlbl => Internal tlbl) hst.
 
-Definition Reduced (sys: System) (hfr hto: History) :=
+Definition Reduced (sys: System) (hfr hto: MHistory) :=
   forall st1 st2,
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2.
