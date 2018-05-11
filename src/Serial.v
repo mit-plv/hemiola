@@ -1,5 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM StepT.
+Require Import Topology.
 
 (** [Atomic] and [Transactional] histories *)
 
@@ -95,24 +96,62 @@ Definition SerializableSys (sys: System) :=
     steps step_m sys (initsOf sys) ll st ->
     Serializable sys ll.
 
-(** Let's start (experimentally) with an obvious condition 
- * that ensures [SerializableSys] 
- *)
+(** Some static conditions that ensure [SerializableSys]. *)
 
-(* Definition TotallyBlockingPrec: RPrecond := *)
-(*   fun ost orq ins => *)
-(*     SubList (map (fun msg => mid_tid (msg_id msg)) ins) *)
-(*             (map (fun msg => mid_tid (msg_id msg)) orq). *)
+Definition TotalBlockingPrec: RPrecond :=
+  fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
+    SubList (map (fun msg => msg_id msg) (valsOf ins))
+            (map (fun msg => msg_id msg) (map (@rqh_msg _) orq)).
 
-(* Definition TotallyBlockingRule (rule: Rule) := *)
-(*   (rule_precond rule) ->rprec TotallyBlockingPrec. *)
+Definition TotalBlockingRule (rule: Rule) :=
+  (rule_precond rule) ->rprec TotalBlockingPrec.
 
-(* Definition TotallyBlockingSys (sys: System) := *)
-(*   Forall TotallyBlockingRule (sys_rules sys). *)
+Definition TotalBlockingSys (sys: System) :=
+  Forall TotalBlockingRule (sys_rules sys).
 
-(* Theorem TotallyBlockingSys_SerializableSys: *)
-(*   forall sys, TotallyBlockingSys sys -> SerializableSys sys. *)
-(* Proof. *)
-(*   unfold SerializableSys, Serializable; intros. *)
-(*   eexists; exists st; split; [split|]. *)
-  
+(* Theorem TotalBlockingSys_SerializableSys: *)
+(*   forall sys, TotalBlockingSys sys -> SerializableSys sys. *)
+
+Fixpoint getDownRq (topo: CTree unit) (oidx: IdxT) (orq: ORq Msg) :=
+  match orq with
+  | nil => None
+  | ri :: orq' =>
+    if isFromParent topo oidx (rqh_from ri) then
+      Some ri
+    else getDownRq topo oidx orq'
+  end.
+
+Fixpoint getUpRq (topo: CTree unit) (oidx: IdxT) (orq: ORq Msg) :=
+  match orq with
+  | nil => None
+  | ri :: orq' =>
+    if isFromChild topo oidx (rqh_from ri) then
+      Some ri
+    else getUpRq topo oidx orq'
+  end.
+
+(* TODO: need a more intuitive (easier) definition. *)
+Definition PartialBlockingPrec (topo: CTree unit) (oidx: IdxT): RPrecond :=
+  fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
+    match getDownRq topo oidx orq with
+    | Some dri =>
+      Forall (fun msg => msg_id msg = msg_id (rqh_msg dri) /\
+                         msg_rr msg = Rs) (valsOf ins) /\
+      rqh_fwds dri = idsOf ins
+    | None =>
+      match getUpRq topo oidx orq with
+      | Some uri => 
+        SubList (idsOf ins) (fromParent topo oidx) /\
+        Forall (fun msg => msg_id msg = msg_id (rqh_msg uri) /\
+                           msg_rr msg = Rs) (valsOf ins)
+      | None => True
+      end
+    end.
+
+Definition PartialBlockingRule (topo: CTree unit) (rule: Rule) :=
+  (rule_precond rule)
+  ->rprec (PartialBlockingPrec topo (rule_oidx rule)).
+
+Definition PartialBlockingSys (topo: CTree unit) (sys: System) :=
+  Forall (PartialBlockingRule topo) (sys_rules sys).
+

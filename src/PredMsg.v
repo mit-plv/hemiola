@@ -4,8 +4,6 @@ Require Import Syntax Semantics.
 
 Set Implicit Arguments.
 
-Inductive RqRs := Rq | Rs.
-
 Definition OPred :=
   Value (* input *) -> OState (* prestate *) ->
   Value (* output *) -> OState (* poststate *) -> Prop.
@@ -185,7 +183,7 @@ Definition pToTHistory (phst: PHistory TMsg): THistory :=
 
 Definition PTStateR (tst: TState) (pst: PState TMsg) :=
   tst_oss tst = pst_oss pst /\
-  tst_orqs tst = M.map (imap (@pmsg_omsg _)) (pst_orqs pst) /\
+  tst_orqs tst = M.map (orqMap (@pmsg_omsg _)) (pst_orqs pst) /\
   tst_msgs tst = M.map (map (@pmsg_omsg _)) (pst_msgs pst).
 
 Section RuleAdder.

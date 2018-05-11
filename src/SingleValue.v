@@ -54,7 +54,9 @@ Section System.
              rpostOf ⊤⊤= ⊤⊤=
                      (fun pre _ =>
                         pre@[valueIdx] >>=[nil]
-                           (fun v => (ers, {| msg_id := svmGetIdx; msg_value := v |})
+                           (fun v => (ers, {| msg_id := svmGetIdx;
+                                              msg_rr := Rq;
+                                              msg_value := v |})
                                        :: nil));
         |}.
 
@@ -68,7 +70,9 @@ Section System.
                         (hd_error ins) >>=[False]
                         (fun idm => post@[valueIdx] = Some (msg_value (valOf idm))))
                      ⊤⊤=
-                     (fun _ _ => (ers, {| msg_id := svmSetIdx; msg_value := VUnit |})
+                     (fun _ _ => (ers, {| msg_id := svmSetIdx;
+                                          msg_rr := Rq;
+                                          msg_value := VUnit |})
                                    :: nil)
         |}.
 
@@ -119,9 +123,10 @@ Section System.
          sys_inits := implInit;
          sys_rules := nil |}.
 
-    Definition implTopo: Tree unit :=
-      Node parentIdx tt
-           [Node child1Idx tt nil; Node child2Idx tt nil].
+    Definition implTopo: CTree unit :=
+      CNode parentIdx tt
+            [({| chn_up := [c1pRq; c1pRs]; chn_down := [pc1] |}, CNode child1Idx tt nil);
+               ({| chn_up := [c2pRq; c2pRs]; chn_down := [pc2] |}, CNode child2Idx tt nil)].
 
     Definition implIndices: list IdxT :=
       ltac:(evalOIndsOf impl0).

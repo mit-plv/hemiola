@@ -107,7 +107,39 @@ Section MsgParam.
     - apply eq_sym, concat_app.
   Qed.
 
+  Lemma atomic_singleton:
+    forall rqr rq houts,
+      Atomic rq [RlblInt (Some rqr) [rq] houts]
+             (enqMsgs houts (emptyMP MsgT)).
+  Proof.
+    intros; constructor.
+  Qed.
+
 End MsgParam.
+
+Lemma bequivalent_refl:
+  forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT),
+    BEquivalent sys hst hst.
+Proof.
+  congruence.
+Qed.
+
+Lemma bequivalent_sym:
+  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT),
+    BEquivalent sys hst1 hst2 ->
+    BEquivalent sys hst2 hst1.
+Proof.
+  congruence.
+Qed.
+
+Lemma bequivalent_trans:
+  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT),
+    BEquivalent sys hst1 hst2 ->
+    BEquivalent sys hst2 hst3 ->
+    BEquivalent sys hst1 hst3.
+Proof.
+  congruence.
+Qed.
 
 Theorem serializable_seqSteps_refines:
   forall sys,

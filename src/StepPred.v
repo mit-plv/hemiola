@@ -50,7 +50,7 @@ Section GivenMsg.
 
         poss@[oidx] = Some pos ->
         orqs@[oidx] = Some porq ->
-        prec pos (imap (fun pmsg => getMsg (pmsg_omsg pmsg)) porq)
+        prec pos (orqMap (fun pmsg => getMsg (pmsg_omsg pmsg)) porq)
              (liftI getMsg rq :: nil) ->
         pred_os (pmsg_pred (valOf rq)) (pmsg_val (valOf rq)) poss
                 (pmsg_val (valOf rs)) noss ->
@@ -76,14 +76,14 @@ Section GivenMsg.
         ValidMsgsOut psys fwds ->
 
         oss@[oidx] = Some pos ->
-        prec pos (imap (fun pmsg => getMsg (pmsg_omsg pmsg)) porq)
+        prec pos (orqMap (fun pmsg => getMsg (pmsg_omsg pmsg)) porq)
              (liftI getMsg rq :: nil) ->
 
         orqs@[oidx] = Some porq ->
 
         pst = {| pst_oss := oss; pst_orqs := orqs; pst_msgs := oims |} ->
         nst = {| pst_oss := oss;
-                 pst_orqs := orqs +[ oidx <- addRq porq rq ];
+                 pst_orqs := orqs +[ oidx <- addRq porq rq (idsOf fwds) ];
                  pst_msgs := enqMsgs fwds (deqMP (idOf rq) oims) |} ->
 
         step_pred0 psys pst (PlblInt (Some rqfwdr) (rq :: nil) fwds) nst
@@ -109,18 +109,22 @@ Section GivenMsg.
         
         (* Backing responses are all valid. *)
         Forall (fun pmsg =>
-                  pred_os (pmsg_pred pmsg) (msg_value (getMsg (pmsg_omsg (valOf origRq))))
+                  pred_os (pmsg_pred pmsg)
+                          (msg_value (getMsg (pmsg_omsg (rqh_msg origRq))))
                           oss (pmsg_val pmsg) (oss +[ oidx <- nos ]) /\
                   pred_mp (pmsg_pred pmsg) (toOrigMP oims)
                           (toOrigMP (enqMPI rsb (deqMsgs (idsOf rss) oims))))
                (valsOf rss) ->
-        opred (msg_value (getMsg (pmsg_omsg (valOf origRq)))) pos (pmsg_val (valOf rsb)) nos ->
-        pmsg_val (valOf rsb) = rsbf (map (fun idp => msg_value (getMsg (valOf idp))) rss) pos ->
+        opred (msg_value (getMsg (pmsg_omsg (rqh_msg origRq))))
+              pos (pmsg_val (valOf rsb)) nos ->
+        pmsg_val (valOf rsb) =
+        rsbf (map (fun idp => msg_value (getMsg (valOf idp))) rss) pos ->
 
         (* Using such responses, we should be able to prove 
          * the original request predicate.
          *)
-        pred_os (pmsg_pred (valOf rsb)) (msg_value (getMsg (pmsg_omsg (valOf origRq))))
+        pred_os (pmsg_pred (valOf rsb))
+                (msg_value (getMsg (pmsg_omsg (rqh_msg origRq))))
                 oss (pmsg_val (valOf rsb)) noss ->
         pred_mp (pmsg_pred (valOf rsb)) (toOrigMP oims) (toOrigMP noims) ->
 

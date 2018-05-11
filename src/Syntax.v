@@ -24,13 +24,18 @@ Section Msg.
     - decide equality.
   Defined.
 
+  Inductive RqRs := Rq | Rs.
+
   Record Msg :=
     { msg_id: IdxT;
+      msg_rr: RqRs;
       msg_value: Value
     }.
 
-  Definition buildMsg mid v :=
-    {| msg_id := mid; msg_value := v |}.
+  Definition buildMsg mid rr v :=
+    {| msg_id := mid;
+       msg_rr := rr;
+       msg_value := v |}.
 
   Fixpoint buildMsgs mids vals :=
     match mids with
@@ -46,6 +51,7 @@ Section Msg.
   Proof.
     decide equality.
     - apply value_dec.
+    - decide equality.
     - apply eq_nat_dec.
   Defined.
 
@@ -66,30 +72,47 @@ Definition OStates := M.t OState.
 (* A request holder [ORq] holds all requests that 
  * an object is handling now.
  *)
-Definition ORq (MsgT: Type) := list (Id MsgT).
+
+Record RqInfo (MsgT: Type) :=
+  { rqh_msg: MsgT;
+    rqh_from: IdxT;
+    rqh_fwds: list IdxT
+  }.
+
+Definition buildRqInfo {MsgT} (rq: Id MsgT) (fwds: list IdxT) :=
+  {| rqh_msg := valOf rq;
+     rqh_from := idOf rq;
+     rqh_fwds := fwds |}.
+
+Definition ORq (MsgT: Type) := list (RqInfo MsgT).
 Definition ORqs (MsgT: Type) := M.t (ORq MsgT).
 
-Definition addRq {MsgT} (orq: ORq MsgT) (rq: Id MsgT): ORq MsgT :=
-  rq :: orq.
+Definition addRq {MsgT} (orq: ORq MsgT) (rq: Id MsgT) (fwds: list IdxT): ORq MsgT :=
+  (buildRqInfo rq fwds) :: orq.
 
 Fixpoint getRq {MsgT} (orq: ORq MsgT) (idx: IdxT) :=
   match orq with
   | nil => None
   | rq :: orq' =>
-    if idOf rq ==n idx then Some rq else getRq orq' idx
+    if rqh_from rq ==n idx then Some rq else getRq orq' idx
   end.
 
 Fixpoint removeRq {MsgT} (orq: ORq MsgT) (ridx: IdxT) :=
   match orq with
   | nil => nil
   | rq :: orq' =>
-    if idOf rq ==n ridx then orq' else rq :: removeRq orq' ridx
+    if rqh_from rq ==n ridx then orq' else rq :: removeRq orq' ridx
   end.
+
+Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1) :=
+  map (fun ri => {| rqh_msg := f (rqh_msg ri);
+                    rqh_from := rqh_from ri;
+                    rqh_fwds := rqh_fwds ri |}) orq.
 
 Section Rule.
 
-  Definition RPrecond := OState -> ORq Msg ->
-                         list (Id Msg) (* input messages *) -> Prop.
+  Definition RPrecond :=
+    OState -> ORq Msg -> list (Id Msg) (* input messages *) -> Prop.
   Definition RPostcond :=
     OState -> ORq Msg (* prestates *) -> list (Id Msg) (* input messages *) ->
     OState -> ORq Msg (* poststates *) -> list (Id Msg) (* output messages *) -> Prop.

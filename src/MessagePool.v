@@ -204,6 +204,72 @@ Section Facts.
     apply FirstMP_enqMP; auto.
   Qed.
 
+  Corollary FirstMPI_Forall_enqMsgs:
+    forall emsgs msgs (mp: MessagePool MsgT),
+      Forall (FirstMPI mp) msgs ->
+      Forall (FirstMPI (enqMsgs emsgs mp)) msgs.
+  Proof.
+    induction msgs; simpl; intros; auto.
+    inv H; constructor; auto.
+    apply FirstMP_enqMsgs; auto.
+  Qed.
+
+  Lemma FirstMP_deqMP:
+    forall midx1 midx2 msg2 (mp: MessagePool MsgT),
+      midx1 <> midx2 ->
+      FirstMP mp midx2 msg2 <->
+      FirstMP (deqMP midx1 mp) midx2 msg2.
+  Proof.
+    split.
+    - unfold FirstMP, firstMP, deqMP; intros.
+      remember (findQ midx2 mp) as q2; destruct q2; [discriminate|].
+      cbn in *.
+      remember (findQ midx1 mp) as q1; destruct q1.
+      + rewrite <-Heqq2; auto.
+      + unfold findQ in *; mred.
+        destruct (mp@[midx2]); simpl in *; subst; auto.
+        discriminate.
+    - unfold FirstMP, firstMP, deqMP; intros.
+      unfold findQ in *; mred.
+      remember (mp@[midx1]) as q1; destruct q1; auto.
+      simpl in *.
+      destruct l; auto.
+      remember (mp@[midx2]) as q2; destruct q2; auto; mred.
+  Qed.
+
+  Lemma FirstMP_deqMsgs:
+    forall minds1 midx2 msg2 (mp: MessagePool MsgT),
+      ~ In midx2 minds1 ->
+      FirstMP mp midx2 msg2 <->
+      FirstMP (deqMsgs minds1 mp) midx2 msg2.
+  Proof.
+    induction minds1; simpl; intros; [split; auto|].
+    split; intros.
+    - rewrite <-IHminds1.
+      + apply FirstMP_deqMP; auto.
+      + intro Hx; elim H; auto.
+    - eapply FirstMP_deqMP with (midx1:= a); auto.
+      rewrite IHminds1; auto.
+  Qed.
+
+  Corollary FirstMPI_Forall_deqMsgs:
+    forall minds1 msgs2 (mp: MessagePool MsgT),
+      DisjList (idsOf msgs2) minds1 ->
+      Forall (FirstMPI mp) msgs2 <->
+      Forall (FirstMPI (deqMsgs minds1 mp)) msgs2.
+  Proof.
+    induction msgs2; simpl; intros; [split; constructor|].
+    split; intros.
+    - apply DisjList_cons in H; dest.
+      inv H0; constructor.
+      + apply FirstMP_deqMsgs; auto.
+      + rewrite <-IHmsgs2; eauto.
+    - apply DisjList_cons in H; dest.
+      inv H0; constructor.
+      + eapply FirstMP_deqMsgs; eauto.
+      + rewrite IHmsgs2; eauto.
+  Qed.
+
   Lemma InMP_enqMP_or:
     forall midx (msg: MsgT) nidx nmsg mp,
       InMP midx msg (enqMP nidx nmsg mp) ->
@@ -283,503 +349,178 @@ Section Facts.
     erewrite qsOf_In_findQ_eq; eauto.
   Qed.
 
-  (* Lemma firstMP_app_or: *)
-  (*   forall (msg: MsgT) mind mp1 mp2, *)
-  (*     firstMP mind (mp1 ++ mp2) = Some msg -> *)
-  (*     firstMP mind mp1 = Some msg \/ *)
-  (*     firstMP mind mp2 = Some msg. *)
-  (* Proof. *)
-  (*   induction mp1; intros; auto. *)
-  (*   unfold firstMP in *; simpl in *. *)
-  (*   destruct (isAddrOf _ _ _ _). *)
-  (*   - left; inv H0; reflexivity. *)
-  (*   - auto. *)
-  (* Qed. *)
+  Lemma enqMP_enqMP_comm:
+    forall midx1 msg1 midx2 msg2 (mp: MessagePool MsgT),
+      midx1 <> midx2 ->
+      enqMP midx1 msg1 (enqMP midx2 msg2 mp) = enqMP midx2 msg2 (enqMP midx1 msg1 mp).
+  Proof.
+    unfold enqMP, findQ; intros.
+    mred.
+    destruct (mp@[midx1]); destruct (mp@[midx2]); meq.
+  Qed.
+      
+  Lemma enqMP_enqMsgs_comm:
+    forall midx msg msgs (mp: MessagePool MsgT),
+      ~ In midx (idsOf msgs) ->
+      enqMP midx msg (enqMsgs msgs mp) = enqMsgs msgs (enqMP midx msg mp).
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [midx2 msg2]; cbn in *.
+    rewrite IHmsgs by auto.
+    f_equal.
+    apply enqMP_enqMP_comm; auto.
+  Qed.
 
-  (* Lemma firstMP_enqMP_or: *)
-  (*   forall (msg nmsg: MsgT) mind mp, *)
-  (*     firstMP mind (enqMP nmsg mp) = Some msg -> *)
-  (*     msg = nmsg \/ firstMP mind mp = Some msg. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply firstMP_app_or in H0; destruct H0; auto. *)
-  (*   unfold firstMP in H0; cbn in H0. *)
-  (*   destruct (isAddrOf _ _ _ _); [|discriminate]. *)
-  (*   inv H0; auto. *)
-  (* Qed. *)
+  Lemma enqMsgs_enqMsgs_comm:
+    forall (msgs1 msgs2: list (Id MsgT)) (mp: MessagePool MsgT),
+      DisjList (idsOf msgs1) (idsOf msgs2) ->
+      enqMsgs msgs1 (enqMsgs msgs2 mp) = enqMsgs msgs2 (enqMsgs msgs1 mp).
+  Proof.
+    induction msgs1; simpl; intros; auto.
+    destruct a as [midx msg]; cbn in *.
+    apply DisjList_cons in H; dest.
+    rewrite <-IHmsgs1 by assumption.
+    f_equal.
+    apply enqMP_enqMsgs_comm; auto.
+  Qed.
 
-  (* Lemma firstMP_enqMsgs_or: *)
-  (*   forall (msg: MsgT) mind nmsgs mp, *)
-  (*     firstMP mind (enqMsgs nmsgs mp) = Some msg -> *)
-  (*     firstMP mind mp = Some msg \/ *)
-  (*     firstMP mind nmsgs = Some msg. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply firstMP_app_or; auto. *)
-  (* Qed. *)
+  Lemma enqMP_deqMP_comm:
+    forall midx1 msg1 (msg2: Id MsgT) (mp: MessagePool MsgT),
+      midx1 <> idOf msg2 ->
+      enqMP midx1 msg1 (deqMP (idOf msg2) mp) =
+      deqMP (idOf msg2) (enqMP midx1 msg1 mp).
+  Proof.
+    unfold enqMP, deqMP, findQ; intros.
+    destruct msg2 as [midx2 msg2]; simpl.
+    remember (mp@[midx2]) as q2; destruct q2; simpl in *.
+    - destruct l; simpl.
+      + mred.
+      + mred; simpl; meq.
+    - mred.
+  Qed.
 
-  (* Lemma firstMP_InMP: *)
-  (*   forall (msg: MsgT) mind mp, *)
-  (*     firstMP mind mp = Some msg -> *)
-  (*     InMP msg mp. *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; [discriminate|]. *)
-  (*   unfold firstMP in H0; simpl in H0. *)
-  (*   destruct (isAddrOf _ _ _ _). *)
-  (*   - inv H0; auto. *)
-  (*   - right; apply IHmp; auto. *)
-  (* Qed. *)
+  Lemma deqMP_deqMP_comm:
+    forall midx1 midx2 (mp: MessagePool MsgT),
+      midx1 <> midx2 ->
+      deqMP midx1 (deqMP midx2 mp) = deqMP midx2 (deqMP midx1 mp).
+  Proof.
+    unfold deqMP, findQ; intros.
+    remember (mp@[midx1]) as q1; destruct q1.
+    - destruct l; simpl.
+      + destruct (mp@[midx2]); simpl; mred.
+        destruct l; simpl; mred.
+      + remember (mp@[midx2]) as q2; destruct q2; simpl; mred.
+        destruct l0; simpl; mred.
+        simpl; meq.
+    - remember (mp@[midx2]) as q2; destruct q2; simpl; mred.
+      destruct l; simpl; mred.
+  Qed.
+      
+  Lemma deqMP_deqMsgs_comm:
+    forall midx minds (mp: MessagePool MsgT),
+      ~ In midx minds ->
+      deqMP midx (deqMsgs minds mp) = deqMsgs minds (deqMP midx mp).
+  Proof.
+    induction minds; simpl; intros; auto.
+    rewrite IHminds by auto.
+    f_equal.
+    apply deqMP_deqMP_comm; auto.
+  Qed.
 
-  (* Lemma FirstMP_InMP: *)
-  (*   forall (msg: MsgT) mp, *)
-  (*     FirstMP mp msg -> *)
-  (*     InMP msg mp. *)
-  (* Proof. *)
-  (*   unfold FirstMP; intros. *)
-  (*   eapply firstMP_InMP; eauto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_InMP_SubList: *)
-  (*   forall (msgs: list MsgT) mp, *)
-  (*     ForallMP (fun msg => InMP msg mp) msgs -> *)
-  (*     SubList msgs mp. *)
-  (* Proof. *)
-  (*   induction msgs; intros; [apply SubList_nil|]. *)
-  (*   inv H0. *)
-  (*   apply SubList_cons; auto. *)
-  (* Qed. *)
-
-  (* Lemma InMP_deqMP: *)
-  (*   forall msg mind mp, *)
-  (*     InMP msg (deqMP mind mp) -> *)
-  (*     InMP msg mp. *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   destruct (isAddrOf _ _ _ _); auto. *)
-  (*   inv H0; auto. *)
-  (* Qed. *)
-
-  (* Lemma InMP_removeMP: *)
-  (*   forall msg rmsg mp, *)
-  (*     InMP msg (removeMP rmsg mp) -> *)
-  (*     InMP msg mp. *)
-  (* Proof. *)
-  (*   unfold removeMP; intros. *)
-  (*   eapply InMP_deqMP; eauto. *)
-  (* Qed. *)
-
-
-  (* Lemma ForallMP_forall: *)
-  (*   forall P mp, *)
-  (*     ForallMP P mp <-> *)
-  (*     (forall msg: MsgT, InMP msg mp -> P msg). *)
-  (* Proof. *)
-  (*   intros; apply Forall_forall. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_SubList: *)
-  (*   forall P (mp1 mp2: MessagePool MsgT), *)
-  (*     ForallMP P mp2 -> *)
-  (*     SubList mp1 mp2 -> *)
-  (*     ForallMP P mp1. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply ForallMP_forall; intros. *)
-  (*   eapply ForallMP_forall in H0; eauto. *)
-  (*   apply H1; auto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_enqMP: *)
-  (*   forall (P: MsgT -> Prop) (msg: MsgT) mp, *)
-  (*     ForallMP P mp -> *)
-  (*     P msg -> *)
-  (*     ForallMP P (enqMP msg mp). *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply Forall_app; auto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_deqMP: *)
-  (*   forall (P: MsgT -> Prop) mind mp, *)
-  (*     ForallMP P mp -> *)
-  (*     ForallMP P (deqMP mind mp). *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   inv H0. *)
-  (*   find_if_inside; auto. *)
-  (*   constructor; auto. *)
-  (*   apply IHmp; auto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_removeMP: *)
-  (*   forall (P: MsgT -> Prop) msg mp, *)
-  (*     ForallMP P mp -> *)
-  (*     ForallMP P (removeMP msg mp). *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   inv H0. *)
-  (*   cbn; destruct (isAddrOf _ _ _ _); auto. *)
-  (*   constructor; auto. *)
-  (*   apply ForallMP_deqMP; auto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_enqMsgs: *)
-  (*   forall (P: MsgT -> Prop) (nmsgs: list MsgT) mp, *)
-  (*     ForallMP P mp -> *)
-  (*     ForallMP P nmsgs -> *)
-  (*     ForallMP P (enqMsgs nmsgs mp). *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   apply Forall_app; auto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_deqMsgs: *)
-  (*   forall (P: MsgT -> Prop) (dmsgs: list MsgT) mp, *)
-  (*     ForallMP P mp -> *)
-  (*     ForallMP P (deqMsgs dmsgs mp). *)
-  (* Proof. *)
-  (*   induction dmsgs; simpl; intros; auto. *)
-  (*   apply IHdmsgs. *)
-  (*   apply ForallMP_removeMP; auto. *)
-  (* Qed. *)
-
-  (* Lemma ForallMP_removeOnce: *)
-  (*   forall (msg_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}) *)
-  (*          (P: MsgT -> Prop) tmsg mp, *)
-  (*     ForallMP P mp -> *)
-  (*     ForallMP P (removeOnce msg_dec tmsg mp). *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   inv H0. *)
-  (*   find_if_inside; auto. *)
-  (*   constructor; auto. *)
-  (*   apply IHmp; auto. *)
-  (* Qed. *)
+  Lemma deqMsgs_deqMsgs_comm:
+    forall (minds1 minds2: list IdxT) (mp: MessagePool MsgT),
+      DisjList minds1 minds2 ->
+      deqMsgs minds1 (deqMsgs minds2 mp) = deqMsgs minds2 (deqMsgs minds1 mp).
+  Proof.
+    induction minds1; simpl; intros; auto.
+    apply DisjList_cons in H; dest.
+    rewrite <-IHminds1 by assumption.
+    f_equal.
+    apply deqMP_deqMsgs_comm; auto.
+  Qed.
   
-  (* Lemma deqMP_SubList: *)
-  (*   forall mind mp, *)
-  (*     SubList (deqMP mind mp) mp. *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; [apply SubList_nil|]. *)
-  (*   find_if_inside. *)
-  (*   - right; auto. *)
-  (*   - apply SubList_cons; [left; reflexivity|]. *)
-  (*     apply SubList_cons_right; auto. *)
-  (* Qed. *)
+  Lemma enqMP_deqMP_FirstMPI_comm:
+    forall midx1 msg1 msg2 (mp: MessagePool MsgT),
+      FirstMPI mp msg2 ->
+      enqMP midx1 msg1 (deqMP (idOf msg2) mp) =
+      deqMP (idOf msg2) (enqMP midx1 msg1 mp).
+  Proof.
+    unfold enqMP, deqMP, findQ; intros.
+    destruct msg2 as [midx2 msg2]; simpl.
+    apply FirstMP_InMP in H; simpl in H.
+    red in H; unfold findQ in H.
+    remember (mp@[midx1]) as q1; destruct q1;
+      remember (mp@[midx2]) as q2; destruct q2; simpl in *; try (elim H).
+    - destruct l0.
+      + mred; elim H.
+      + mred; simpl; meq.
+    - destruct l.
+      + mred.
+      + mred; simpl; meq.
+  Qed.
 
-  (* Lemma findMP_MsgAddr: *)
-  (*   forall mind msg mp, *)
-  (*     hd_error (findMP mind mp) = Some msg -> *)
-  (*     mid_addr (msg_id (getMsg msg)) = buildMsgAddr mind. *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; [discriminate|]. *)
-  (*   unfold isAddrOf in H0. *)
-  (*   destruct (msgAddr_dec _ _); auto. *)
-  (*   inv H0; auto. *)
-  (* Qed. *)
+  Lemma enqMsgs_deqMP_FirstMPI_comm:
+    forall msgs msg (mp: MessagePool MsgT),
+      FirstMPI mp msg ->
+      enqMsgs msgs (deqMP (idOf msg) mp) = deqMP (idOf msg) (enqMsgs msgs mp).
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [midx2 msg2]; cbn in *.
+    rewrite <-IHmsgs.
+    - rewrite enqMP_deqMP_FirstMPI_comm by assumption.
+      reflexivity.
+    - apply FirstMP_enqMP; auto.
+  Qed.
 
-  (* Lemma firstMP_MsgAddr: *)
-  (*   forall mind mp msg, *)
-  (*     firstMP mind mp = Some msg -> *)
-  (*     mid_addr (msg_id (getMsg msg)) = buildMsgAddr mind. *)
-  (* Proof. *)
-  (*   unfold firstMP; intros. *)
-  (*   eapply findMP_MsgAddr; eauto. *)
-  (* Qed. *)
+  Lemma enqMsgs_deqMP_comm:
+    forall msgs (msg: Id MsgT) (mp: MessagePool MsgT),
+      ~ In (idOf msg) (idsOf msgs) ->
+      enqMsgs msgs (deqMP (idOf msg) mp) = deqMP (idOf msg) (enqMsgs msgs mp).
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [midx2 msg2]; cbn in *.
+    rewrite <-IHmsgs.
+    - rewrite enqMP_deqMP_comm.
+      + reflexivity.
+      + intro Hx; elim H; auto.
+    - intro Hx; elim H; auto.
+  Qed.
 
-  (* Lemma removeMP_deqMP: *)
-  (*   forall msg mid mp, *)
-  (*     msg_id (getMsg msg) = mid -> *)
-  (*     removeMP msg mp = deqMP (mid_from mid) (mid_to mid) (mid_chn mid) mp. *)
-  (* Proof. *)
-  (*   intros; subst; reflexivity. *)
-  (* Qed. *)
+  Lemma enqMsgs_deqMsgs_FirstMPI_comm:
+    forall (msgs1 msgs2: list (Id MsgT)) (mp: MessagePool MsgT),
+      NoDup (idsOf msgs1) ->
+      Forall (FirstMPI mp) msgs1 ->
+      enqMsgs msgs2 (deqMsgs (idsOf msgs1) mp) =
+      deqMsgs (idsOf msgs1) (enqMsgs msgs2 mp).
+  Proof.
+    induction msgs1; simpl; intros; auto.
+    inv H; inv H0.
+    rewrite IHmsgs1.
+    - rewrite enqMsgs_deqMP_FirstMPI_comm by assumption.
+      reflexivity.
+    - assumption.
+    - clear -H2 H3 H5.
+      induction msgs1; simpl; intros; auto.
+      inv H5; constructor.
+      + apply FirstMP_deqMP; auto.
+        intro Hx; elim H3.
+        left; auto.
+      + apply IHmsgs1; auto.
+        intro Hx; elim H3; right; auto.
+  Qed.
 
-  (* Lemma firstMP_FirstMP: *)
-  (*   forall mind mp msg, *)
-  (*     firstMP mind mp = Some msg -> *)
-  (*     FirstMP mp msg. *)
-  (* Proof. *)
-  (*   unfold FirstMP; intros. *)
-  (*   pose proof (firstMP_MsgAddr _ _ _ _ H0). *)
-  (*   destruct (msg_id (getMsg msg)) as [[ ]]; cbn in *. *)
-  (*   inv H1; assumption. *)
-  (* Qed. *)
-
-  (* Lemma findMP_nil: *)
-  (*   forall mp, *)
-  (*     (forall mind, findMP mind mp = nil) -> *)
-  (*     mp = nil. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   destruct mp as [|msg ?]; auto. *)
-  (*   exfalso. *)
-  (*   specialize (H0 (mid_from (msg_id (getMsg msg))) *)
-  (*                  (mid_to (msg_id (getMsg msg))) *)
-  (*                  (mid_chn (msg_id (getMsg msg)))). *)
-  (*   simpl in H0. *)
-  (*   unfold isAddrOf in H0. *)
-  (*   destruct (msgAddr_dec _ _); [discriminate|]. *)
-  (*   elim n. *)
-  (*   destruct (getMsg msg) as [[[mind] tid] val]; cbn in *. *)
-  (*   reflexivity. *)
-  (* Qed. *)
-
-  (* Lemma findMP_app: *)
-  (*   forall mind mp1 mp2, *)
-  (*     findMP mind (mp1 ++ mp2) = *)
-  (*     findMP mind mp1 ++ findMP mind mp2. *)
-  (* Proof. *)
-  (*   unfold findMP; intros. *)
-  (*   apply filter_app. *)
-  (* Qed. *)
-
-  (* Lemma findMP_SubList: *)
-  (*   forall mind mp, *)
-  (*     SubList (findMP mind mp) mp. *)
-  (* Proof. *)
-  (*   unfold SubList, findMP; intros. *)
-  (*   apply filter_In in H0; dest; auto. *)
-  (* Qed. *)
-
-  (* Corollary findMP_enqMP: *)
-  (*   forall mind mp msg, *)
-  (*     findMP mind (enqMP msg mp) = *)
-  (*     findMP mind mp ++ findMP mind [msg]. *)
-  (* Proof. *)
-  (*   unfold enqMP; intros. *)
-  (*   apply findMP_app. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_enqMP: *)
-  (*   forall mp msg, *)
-  (*     FirstMP mp msg -> *)
-  (*     forall emsg, *)
-  (*       FirstMP (enqMP emsg mp) msg. *)
-  (* Proof. *)
-  (*   unfold FirstMP, firstMP, enqMP; intros. *)
-  (*   rewrite findMP_app. *)
-  (*   apply hd_error_Some_app; auto. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_enqMsgs: *)
-  (*   forall mp msg, *)
-  (*     FirstMP mp msg -> *)
-  (*     forall eins, *)
-  (*       FirstMP (enqMsgs eins mp) msg. *)
-  (* Proof. *)
-  (*   unfold FirstMP, firstMP, enqMsgs; intros. *)
-  (*   rewrite findMP_app. *)
-  (*   apply hd_error_Some_app; auto. *)
-  (* Qed. *)
-
-  (* Lemma findMP_deqMP_eq: *)
-  (*   forall mind mp, *)
-  (*     findMP mind (deqMP mind mp) = *)
-  (*     deqMP mind (findMP mind mp). *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; [reflexivity|]. *)
-  (*   unfold isAddrOf; destruct (msgAddr_dec _ _). *)
-  (*   - simpl; unfold isAddrOf. *)
-  (*     destruct (msgAddr_dec _ _); auto. *)
-  (*     elim n; assumption. *)
-  (*   - simpl; unfold isAddrOf. *)
-  (*     destruct (msgAddr_dec _ _); auto. *)
-  (*     elim n; assumption. *)
-  (* Qed. *)
-
-  (* Lemma findMP_deqMP_neq: *)
-  (*   forall mind dfrom dto dchn mp, *)
-  (*     buildMsgAddr mind <> buildMsgAddr dfrom dto dchn -> *)
-  (*     findMP mind (deqMP dfrom dto dchn mp) = *)
-  (*     findMP mind mp. *)
-  (* Proof. *)
-  (*   induction mp; intros; [reflexivity|]. *)
-  (*   simpl; unfold isAddrOf. *)
-  (*   destruct (msgAddr_dec _ _). *)
-  (*   - destruct (msgAddr_dec _ _); auto. *)
-  (*     rewrite e0 in e; elim H0; assumption. *)
-  (*   - simpl; unfold isAddrOf. *)
-  (*     destruct (msgAddr_dec _ _); auto. *)
-  (*     rewrite e in n. *)
-  (*     erewrite IHmp; eauto. *)
-  (* Qed. *)
-
-  (* Lemma firstMP_deqMP_app: *)
-  (*   forall mp1 mind, *)
-  (*     firstMP mind mp1 <> None -> *)
-  (*     forall mp2, *)
-  (*       deqMP mind (mp1 ++ mp2) = *)
-  (*       deqMP mind mp1 ++ mp2. *)
-  (* Proof. *)
-  (*   induction mp1; simpl; intros; [elim H0; reflexivity|]. *)
-  (*   unfold isAddrOf; destruct (msgAddr_dec _ _); auto. *)
-  (*   simpl; rewrite IHmp1; [reflexivity|]. *)
-  (*   assert (exists v, firstMP mind ([a] ++ mp1) = Some v). *)
-  (*   { simpl. *)
-  (*     destruct (firstMP mind (a :: mp1)); [|exfalso; auto]. *)
-  (*     eexists; reflexivity. *)
-  (*   } *)
-  (*   destruct H1 as [v ?]. *)
-  (*   apply firstMP_app_or in H1; destruct H1. *)
-  (*   - exfalso. *)
-  (*     unfold firstMP, findMP, isAddrOf in H1; simpl in H1. *)
-  (*     destruct (msgAddr_dec _ _); auto. *)
-  (*     discriminate. *)
-  (*   - rewrite H1; discriminate. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_deqMP_enqMP_comm: *)
-  (*   forall mp mind emsg, *)
-  (*     firstMP mind mp <> None -> *)
-  (*     deqMP mind (enqMP emsg mp) = *)
-  (*     enqMP emsg (deqMP mind mp). *)
-  (* Proof. *)
-  (*   unfold enqMP; intros. *)
-  (*   apply firstMP_deqMP_app; auto. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_deqMP_enqMsgs_comm: *)
-  (*   forall mp mind mins, *)
-  (*     firstMP mind mp <> None -> *)
-  (*     deqMP mind (enqMsgs mins mp) = *)
-  (*     enqMsgs mins (deqMP mind mp). *)
-  (* Proof. *)
-  (*   unfold enqMP; intros. *)
-  (*   apply firstMP_deqMP_app; auto. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_removeMP_enqMP_comm: *)
-  (*   forall mp rmsg, *)
-  (*     FirstMP mp rmsg -> *)
-  (*     forall emsg, *)
-  (*       removeMP rmsg (enqMP emsg mp) = *)
-  (*       enqMP emsg (removeMP rmsg mp). *)
-  (* Proof. *)
-  (*   unfold removeMP; intros. *)
-  (*   apply FirstMP_deqMP_enqMP_comm. *)
-  (*   rewrite H0; discriminate. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_removeMP_enqMsgs_comm: *)
-  (*   forall mp rmsg, *)
-  (*     FirstMP mp rmsg -> *)
-  (*     forall mins, *)
-  (*       removeMP rmsg (enqMsgs mins mp) = *)
-  (*       enqMsgs mins (removeMP rmsg mp). *)
-  (* Proof. *)
-  (*   unfold removeMP; intros. *)
-  (*   apply FirstMP_deqMP_enqMsgs_comm. *)
-  (*   rewrite H0; discriminate. *)
-  (* Qed. *)
-
-  (* Lemma firstMP'_firstMP'_removeMP: *)
-  (*   forall mp from1 to1 chn1 msg1 from2 to2 chn2 msg2, *)
-  (*     buildMsgAddr from1 to1 chn1 <> buildMsgAddr from2 to2 chn2 -> *)
-  (*     firstMP' from1 to1 chn1 mp = Some msg1 -> *)
-  (*     firstMP' from2 to2 chn2 mp = Some msg2 -> *)
-  (*     firstMP' from2 to2 chn2 (removeMP msg1 mp) = Some msg2. *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   pose proof H1; rewrite <-firstMP_firstMP' in H3. *)
-  (*   apply firstMP_MsgAddr in H3. *)
-  (*   pose proof H2; rewrite <-firstMP_firstMP' in H4. *)
-  (*   apply firstMP_MsgAddr in H4. *)
-  (*   induction mp; simpl; intros; [discriminate|]. *)
-  (*   cbn in *. *)
-  (*   remember (getMsg msg1) as m1. *)
-  (*   destruct m1 as [[[mfrom1 mto1 mchn1] mtid1] mval1]; cbn in *. *)
-  (*   remember (getMsg msg2) as m2. *)
-  (*   destruct m2 as [[[mfrom2 mto2 mchn2] mtid2] mval2]; cbn in *. *)
-  (*   inv H3; inv H4. *)
-  (*   unfold isAddrOf in *. *)
-  (*   destruct (msgAddr_dec _ _). *)
-  (*   - destruct (msgAddr_dec _ _); auto. *)
-  (*     exfalso; inv H1; inv H2. *)
-  (*     rewrite e in e0; auto. *)
-  (*   - simpl; unfold isAddrOf. *)
-  (*     destruct (msgAddr_dec _ _); auto. *)
-  (*     specialize (IHmp H1 H2). *)
-  (*     erewrite removeMP_deqMP in IHmp by reflexivity. *)
-  (*     rewrite <-Heqm1 in IHmp. *)
-  (*     assumption. *)
-  (* Qed. *)
-    
-  (* Lemma FirstMP_FirstMP_removeMP: *)
-  (*   forall mp msg1 msg2, *)
-  (*     mid_addr (msg_id (getMsg msg1)) <> mid_addr (msg_id (getMsg msg2)) -> *)
-  (*     FirstMP mp msg1 -> *)
-  (*     FirstMP mp msg2 -> *)
-  (*     FirstMP (removeMP msg1 mp) msg2. *)
-  (* Proof. *)
-  (*   unfold FirstMP; intros. *)
-  (*   rewrite firstMP_firstMP' in *. *)
-  (*   induction mp; simpl; intros; [inv H1|]. *)
-  (*   inv H1. *)
-  (*   unfold FirstMP in *; intros. *)
-  (*   eapply firstMP'_firstMP'_removeMP; eauto. *)
-  (*   destruct (getMsg msg1) as [[[mfrom1 mto1 mchn1] mtid1] mval1]; cbn in *. *)
-  (*   destruct (getMsg msg2) as [[[mfrom2 mto2 mchn2] mtid2] mval2]; cbn in *. *)
-  (*   auto. *)
-  (* Qed. *)
-
-  (* Corollary FirstMP_Forall_FirstMP_removeMP: *)
-  (*   forall mp msg1 msgs2, *)
-  (*     Forall (fun msg2 => mid_addr (msg_id (getMsg msg1)) <> *)
-  (*                         mid_addr (msg_id (getMsg msg2))) msgs2 -> *)
-  (*     FirstMP mp msg1 -> *)
-  (*     Forall (FirstMP mp) msgs2 -> *)
-  (*     Forall (FirstMP (removeMP msg1 mp)) msgs2. *)
-  (* Proof. *)
-  (*   induction msgs2; simpl; intros; [constructor|]. *)
-  (*   inv H0; inv H2. *)
-  (*   constructor; auto. *)
-  (*   apply FirstMP_FirstMP_removeMP; auto. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_deqMsgs_enqMP_comm: *)
-  (*   forall msgs mp, *)
-  (*     NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) msgs) -> *)
-  (*     Forall (FirstMP mp) msgs -> *)
-  (*     forall msg, *)
-  (*       deqMsgs msgs (enqMP msg mp) = *)
-  (*       enqMP msg (deqMsgs msgs mp). *)
-  (* Proof. *)
-  (*   induction msgs; simpl; intros; [reflexivity|]. *)
-  (*   inv H0; inv H1. *)
-  (*   rewrite FirstMP_removeMP_enqMP_comm by assumption. *)
-  (*   rewrite <-IHmsgs; [reflexivity|assumption|]. *)
-  (*   apply FirstMP_Forall_FirstMP_removeMP; auto. *)
-
-  (*   clear -H4. *)
-  (*   induction msgs; [constructor|]. *)
-  (*   constructor. *)
-  (*   - intro Hx; elim H4; left; auto. *)
-  (*   - eapply IHmsgs. *)
-  (*     intro Hx; elim H4; right; auto. *)
-  (* Qed. *)
-
-  (* Lemma FirstMP_deqMsgs_enqMsgs_comm: *)
-  (*   forall msgs mp, *)
-  (*     NoDup (map (fun msg => mid_addr (msg_id (getMsg msg))) msgs) -> *)
-  (*     Forall (FirstMP mp) msgs -> *)
-  (*     forall mins, *)
-  (*       deqMsgs msgs (enqMsgs mins mp) = *)
-  (*       enqMsgs mins (deqMsgs msgs mp). *)
-  (* Proof. *)
-  (*   induction msgs; simpl; intros; [reflexivity|]. *)
-  (*   inv H0; inv H1. *)
-  (*   rewrite FirstMP_removeMP_enqMsgs_comm by assumption. *)
-  (*   rewrite <-IHmsgs; [reflexivity|assumption|]. *)
-  (*   apply FirstMP_Forall_FirstMP_removeMP; auto. *)
-
-  (*   clear -H4. *)
-  (*   induction msgs; [constructor|]. *)
-  (*   constructor. *)
-  (*   - intro Hx; elim H4; left; auto. *)
-  (*   - eapply IHmsgs. *)
-  (*     intro Hx; elim H4; right; auto. *)
-  (* Qed. *)
+  Lemma enqMsgs_deqMsgs_comm:
+    forall (msgs1 msgs2: list (Id MsgT)) (mp: MessagePool MsgT),
+      DisjList (idsOf msgs1) (idsOf msgs2) ->
+      enqMsgs msgs2 (deqMsgs (idsOf msgs1) mp) =
+      deqMsgs (idsOf msgs1) (enqMsgs msgs2 mp).
+  Proof.
+    induction msgs1; simpl; intros; auto.
+    apply DisjList_cons in H; dest.
+    rewrite IHmsgs1 by assumption.
+    rewrite enqMsgs_deqMP_comm by assumption.
+    reflexivity.
+  Qed.
 
 End Facts.
 
@@ -796,81 +537,5 @@ Section Map.
   Definition mpmap (mp: MessagePool MsgT1): MessagePool MsgT2 :=
     M.map (map mmap) mp.
 
-  (* Lemma mmap_findMP: *)
-  (*   forall mind mp, *)
-  (*     findMP mind (map mmap mp) = *)
-  (*     map mmap (findMP mind mp). *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   unfold isAddrOf in *. *)
-  (*   rewrite IHmp. *)
-  (*   rewrite Hmmap. *)
-  (*   destruct (msgAddr_dec _ _); auto. *)
-  (* Qed. *)
-
-  (* Lemma mmap_firstMP: *)
-  (*   forall mind mp, *)
-  (*     firstMP mind (map mmap mp) = *)
-  (*     lift mmap (firstMP mind mp). *)
-  (* Proof. *)
-  (*   unfold firstMP; intros. *)
-  (*   rewrite mmap_findMP. *)
-  (*   apply eq_sym, lift_hd_error. *)
-  (* Qed. *)
-
-  (* Lemma mmap_FirstMP: *)
-  (*   forall mp msg, *)
-  (*     FirstMP mp msg -> *)
-  (*     FirstMP (map mmap mp) (mmap msg). *)
-  (* Proof. *)
-  (*   unfold FirstMP; intros. *)
-  (*   rewrite mmap_firstMP. *)
-  (*   rewrite Hmmap. *)
-  (*   rewrite H1. *)
-  (*   reflexivity. *)
-  (* Qed. *)
-
-  (* Lemma mmap_deqMP: *)
-  (*   forall mp mind, *)
-  (*     map mmap (deqMP mind mp) = *)
-  (*     deqMP mind (map mmap mp). *)
-  (* Proof. *)
-  (*   induction mp; simpl; intros; auto. *)
-  (*   unfold isAddrOf in *. *)
-  (*   rewrite Hmmap. *)
-  (*   destruct (msgAddr_dec _ _); auto. *)
-  (*   simpl; rewrite IHmp; auto. *)
-  (* Qed. *)
-  
-  (* Lemma mmap_removeMP: *)
-  (*   forall mp msg, *)
-  (*     map mmap (removeMP msg mp) = *)
-  (*     removeMP (mmap msg) (map mmap mp). *)
-  (* Proof. *)
-  (*   unfold removeMP; intros. *)
-  (*   rewrite Hmmap. *)
-  (*   apply mmap_deqMP. *)
-  (* Qed. *)
-
-  (* Lemma mmap_deqMsgs: *)
-  (*   forall msgs mp, *)
-  (*     map mmap (deqMsgs msgs mp) = *)
-  (*     deqMsgs (map mmap msgs) (map mmap mp). *)
-  (* Proof. *)
-  (*   induction msgs; simpl; intros; auto. *)
-  (*   rewrite IHmsgs. *)
-  (*   rewrite mmap_removeMP. *)
-  (*   reflexivity. *)
-  (* Qed. *)
-
-  (* Lemma mmap_enqMsgs: *)
-  (*   forall mp msgs, *)
-  (*     map mmap (enqMsgs msgs mp) = *)
-  (*     enqMsgs (map mmap msgs) (map mmap mp). *)
-  (* Proof. *)
-  (*   unfold enqMsgs; intros. *)
-  (*   apply map_app. *)
-  (* Qed. *)
-  
 End Map.
 

@@ -69,9 +69,9 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) = rule_msg_ids rule ->
     
     In rule (sys_rules sys) ->
-    rule_precond rule os (imap tmsg_msg porq) (imap tmsg_msg ins) ->
-    rule_postcond rule os (imap tmsg_msg porq) (imap tmsg_msg ins)
-                  pos (imap tmsg_msg norq) outs ->
+    rule_precond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
+    rule_postcond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)
+                  pos (orqMap tmsg_msg norq) outs ->
     ValidMsgsOut sys outs ->
 
     tinfo = match getTMsgsTInfo (valsOf ins) with
@@ -102,7 +102,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
   forall oidx,
     match torqs@[oidx], orqs@[oidx] with
-    | Some torq, Some orq => imap tmsg_msg torq = orq
+    | Some torq, Some orq => orqMap tmsg_msg torq = orq
     | None, None => True
     | _, _ => False
     end.

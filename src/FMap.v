@@ -2638,7 +2638,11 @@ Ltac mred_unit :=
     rewrite M.find_add_2 in H by discriminate
   | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
     rewrite M.find_add_2 in H by auto
+  | [Hk: ?k1 <> ?k2, H: context [M.find ?k2 (M.add ?k1 _ _)] |- _] =>
+    rewrite M.find_add_2 in H by auto
   | [Hk: ?k1 = ?k2 -> False, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
+    rewrite M.find_add_2 in H by auto
+  | [Hk: ?k1 = ?k2 -> False, H: context [M.find ?k2 (M.add ?k1 _ _)] |- _] =>
     rewrite M.find_add_2 in H by auto
   | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
     rewrite M.restrict_in_find in H2 by auto
