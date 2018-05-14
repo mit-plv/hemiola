@@ -224,33 +224,101 @@ Qed.
 
 Lemma msg_int_commutes_1:
   forall sys rule1 ins1 outs1 rule2 ins2 outs2,
-    Reduced sys [RlblInt rule2 ins2 outs2; RlblInt rule1 ins1 outs1]
-            [RlblInt rule1 ins1 outs1; RlblInt rule2 ins2 outs2].
+    rule_oidx rule1 <> rule_oidx rule2 ->
+    DisjList (idsOf ins1) (idsOf ins2) ->
+    DisjList (idsOf outs1) (idsOf ins2) ->
+    DisjList (idsOf outs1) (idsOf outs2) ->
+    Reduced sys [RlblInt (Some rule2) ins2 outs2; RlblInt (Some rule1) ins1 outs1]
+            [RlblInt (Some rule1) ins1 outs1; RlblInt (Some rule2) ins2 outs2].
 Proof.
-Admitted.
+  unfold Reduced; intros.
+  split; [|reflexivity].
+  dest_step_m.
+  econstructor.
+  - econstructor.
+    + econstructor.
+    + econstructor; try reflexivity; try eassumption.
+      * mred.
+      * mred.
+      * eapply FirstMPI_Forall_enqMsgs_inv in H22;
+          [|apply DisjList_comm; auto].
+        eapply FirstMPI_Forall_deqMsgs; eauto.
+        apply DisjList_comm; auto.
+  - econstructor; try reflexivity; try eassumption.
+    + mred.
+    + mred.
+    + apply FirstMPI_Forall_enqMsgs.
+      apply FirstMPI_Forall_deqMsgs; auto.
+    + f_equal.
+      * meq.
+      * meq.
+      * rewrite <-enqMsgs_deqMsgs_comm with (minds1:= idsOf ins2)
+          by (apply DisjList_comm; assumption).
+        rewrite deqMsgs_deqMsgs_comm by (apply DisjList_comm; assumption).
+        rewrite enqMsgs_enqMsgs_comm with (msgs1:= outs2)
+          by (apply DisjList_comm; assumption).
+        rewrite enqMsgs_deqMsgs_FirstMPI_comm with (msgs2:= outs2).
+        { reflexivity. }
+        { destruct H13; auto. }
+        { apply FirstMPI_Forall_deqMsgs; auto. }
+Qed.
 
 Lemma msg_int_commutes_2:
   forall sys rule1 ins1 outs1 rule2 ins2 outs2 rule3 ins3 outs3,
-    Reduced sys [RlblInt rule3 ins3 outs3;
-                   RlblInt rule2 ins2 outs2;
-                   RlblInt rule1 ins1 outs1]
-            [RlblInt rule3 ins3 outs3;
-               RlblInt rule1 ins1 outs1;
-               RlblInt rule2 ins2 outs2].
+    rule_oidx rule1 <> rule_oidx rule2 ->
+    DisjList (idsOf ins1) (idsOf ins2) ->
+    DisjList (idsOf outs1) (idsOf outs2) ->
+    DisjList (idsOf outs2) (idsOf ins3) ->
+    (forall midx,
+        In midx (idsOf outs1) ->
+        In midx (idsOf ins2) ->
+        In midx (idsOf ins3)) ->
+    Reduced sys [RlblInt (Some rule3) ins3 outs3;
+                   RlblInt (Some rule2) ins2 outs2;
+                   RlblInt (Some rule1) ins1 outs1]
+            [RlblInt (Some rule3) ins3 outs3;
+               RlblInt (Some rule1) ins1 outs1;
+               RlblInt (Some rule2) ins2 outs2].
 Proof.
-Admitted.
+  unfold Reduced; intros.
+  split; [|reflexivity].
+  dest_step_m.
+  econstructor; [econstructor; [econstructor; [econstructor|]|]|].
 
-(* Lemma msg_int_commutes_2: *)
-(*   forall sys eins lbl, *)
-(*     Internal lbl -> *)
-(*     Reduced sys [RlblIns eins; lbl] [lbl; RlblIns eins]. *)
-(* Proof. *)
+  - econstructor; try reflexivity; try eassumption; try (mred; fail).
+    apply FirstMPI_Forall_enqMsgs_inv in H35; [|apply DisjList_comm; assumption].
+    eapply FirstMPI_Forall_deqMsgs; [apply DisjList_comm; eassumption|].
+    remember (deqMsgs (idsOf ins1) msgs) as imsgs; clear H14 Heqimsgs msgs.
+    eapply FirstMPI_Forall_enqMsgs_order; eauto.
+    + destruct H22; auto.
+    + destruct H25; auto.
+  - econstructor; try reflexivity; try eassumption; try (mred; fail).
+    apply FirstMPI_Forall_enqMsgs.
+    apply FirstMPI_Forall_deqMsgs; auto.
+  - assert (enqMsgs outs2 (deqMsgs (idsOf ins2) (enqMsgs outs1 (deqMsgs (idsOf ins1) msgs))) =
+            enqMsgs outs1 (deqMsgs (idsOf ins1) (enqMsgs outs2 (deqMsgs (idsOf ins2) msgs)))).
+    {
+      rewrite <-enqMsgs_deqMsgs_FirstMPI_comm with (msgs1:= ins1);
+        [|destruct H15; auto
+         |apply FirstMPI_Forall_deqMsgs; auto].
+      rewrite deqMsgs_deqMsgs_comm by assumption.
+      rewrite enqMsgs_enqMsgs_comm by assumption.
 
+      rewrite enqMsgs_deqMsgs_comm_order with (msgs1:= outs1) (minds2:= idsOf ins2) (msgs3:= ins3).
+      { reflexivity. }
+      { destruct H22; auto. }
+      { destruct H25; auto. }
+      { assumption. }
+      { eapply FirstMPI_Forall_enqMsgs_inv; eauto.
+        apply DisjList_comm; assumption.
+      }
+    }
 
-(* Theorem request_forwardings_reduced: *)
-(*   forall rqr rqin rqfwds hsts, *)
-(*     Forall (fun rqhst => exists houts, Atomic (fst rqhst) (snd rqhst) houts) *)
-(*            (combine rqfwds hsts) -> *)
-(*     forall sys indeps, *)
-(*       Reduced sys (List.concat (indeps ++ hsts) ++ [RlblInt rqr [rqin] rqfwds]) *)
-(*               nil. (* TODO *) *)
+    econstructor; try reflexivity; try eassumption.
+    + rewrite M.add_comm; assumption.
+    + rewrite M.add_comm; assumption.
+    + rewrite <-H4; assumption.
+    + f_equal; try (meq; fail).
+      rewrite H4; reflexivity.
+Qed.
+

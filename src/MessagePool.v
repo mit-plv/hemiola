@@ -214,6 +214,213 @@ Section Facts.
     apply FirstMP_enqMsgs; auto.
   Qed.
 
+  Lemma FirstMP_enqMP_inv:
+    forall (mp: MessagePool MsgT) i m ni nm,
+      i <> ni ->
+      FirstMP (enqMP ni nm mp) i m ->
+      FirstMP mp i m.
+  Proof.
+    unfold FirstMP, firstMP, enqMP, findQ; intros.
+    mred.
+  Qed.
+
+  Lemma FirstMP_enqMsgs_inv:
+    forall msgs (mp: MessagePool MsgT) i m,
+      ~ In i (idsOf msgs) ->
+      FirstMP (enqMsgs msgs mp) i m ->
+      FirstMP mp i m.
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [midx msg]; simpl in *.
+    assert (~ In i (idsOf msgs)) by (intro Hx; elim H; auto).
+    specialize (IHmsgs _ _ _ H1 H0).
+    eapply FirstMP_enqMP_inv; [|eassumption].
+    auto.
+  Qed.
+
+  Corollary FirstMPI_Forall_enqMsgs_inv:
+    forall emsgs msgs (mp: MessagePool MsgT),
+      DisjList (idsOf msgs) (idsOf emsgs) ->
+      Forall (FirstMPI (enqMsgs emsgs mp)) msgs ->
+      Forall (FirstMPI mp) msgs.
+  Proof.
+    induction msgs; simpl; intros; auto.
+    apply DisjList_cons in H; dest.
+    inv H0; constructor; auto.
+    eapply FirstMP_enqMsgs_inv; eauto.
+  Qed.
+
+  Lemma findQ_not_In_enqMP:
+    forall (mp: MessagePool MsgT) msg midx1 midx2,
+      midx1 <> midx2 ->
+      findQ midx1 (enqMP midx2 msg mp) = findQ midx1 mp.
+  Proof.
+    unfold enqMP, findQ; intros; mred.
+  Qed.
+
+  Lemma findQ_not_In_enqMsgs:
+    forall msgs (mp: MessagePool MsgT) midx,
+      ~ In midx (idsOf msgs) ->
+      findQ midx (enqMsgs msgs mp) = findQ midx mp.
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [amidx amsg]; simpl in *.
+    rewrite IHmsgs.
+    - apply findQ_not_In_enqMP.
+      intro Hx; elim H; auto.
+    - intro Hx; elim H; auto.
+  Qed.
+
+  Lemma findQ_In_enqMP:
+    forall (mp: MessagePool MsgT) midx msg,
+        findQ midx (enqMP midx msg mp) =
+        findQ midx mp ++ [msg].
+  Proof.
+    unfold enqMP, findQ; intros; mred.
+  Qed.
+
+  Lemma findQ_In_NoDup_enqMsgs:
+    forall msgs (mp: MessagePool MsgT),
+      NoDup (idsOf msgs) ->
+      forall midx msg,
+        In (midx, msg) msgs ->
+        findQ midx (enqMsgs msgs mp) =
+        findQ midx mp ++ [msg].
+  Proof.
+    induction msgs; simpl; intros; [exfalso; auto|].
+    destruct H0; subst.
+    - simpl in H; inv H.
+      rewrite findQ_not_In_enqMsgs by assumption.
+      apply findQ_In_enqMP.
+    - destruct a as [amidx amsg]; simpl in *; inv H.
+      erewrite IHmsgs by eassumption.
+      rewrite findQ_not_In_enqMP; [reflexivity|].
+      intro Hx; subst; elim H3.
+      apply in_map with (f:= idOf) in H0; assumption.
+  Qed.
+
+  Lemma findQ_not_In_deqMP:
+    forall (mp: MessagePool MsgT) midx1 midx2,
+      midx1 <> midx2 ->
+      findQ midx1 (deqMP midx2 mp) = findQ midx1 mp.
+  Proof.
+    unfold deqMP, findQ; intros.
+    remember (mp@[midx2]) as q2; destruct q2; simpl; auto.
+    destruct l; simpl; auto.
+    mred.
+  Qed.
+
+  Lemma findQ_not_In_deqMsgs:
+    forall minds (mp: MessagePool MsgT) midx,
+      ~ In midx minds ->
+      findQ midx (deqMsgs minds mp) = findQ midx mp.
+  Proof.
+    induction minds; simpl; intros; auto.
+    rewrite IHminds.
+    - apply findQ_not_In_deqMP.
+      intro Hx; elim H; auto.
+    - intro Hx; elim H; auto.
+  Qed.
+
+  Lemma findQ_In_deqMP:
+    forall midx (mp: MessagePool MsgT),
+      findQ midx mp <> nil ->
+      exists msg,
+        msg :: (findQ midx (deqMP midx mp)) =
+        findQ midx mp.
+  Proof.
+    unfold deqMP, findQ; simpl; intros.
+    remember (mp@[midx]) as q; destruct q; simpl in *.
+    - destruct l; simpl; [exfalso; auto|].
+      mred; simpl.
+      eexists; reflexivity.
+    - mred.
+  Qed.
+
+  Lemma findQ_In_NoDup_deqMsgs:
+    forall minds midx (mp: MessagePool MsgT),
+      NoDup minds ->
+      In midx minds ->
+      findQ midx mp <> nil ->
+      exists msg,
+        msg :: (findQ midx (deqMsgs minds mp)) =
+        findQ midx mp.
+  Proof.
+    induction minds; simpl; intros; [exfalso; auto|].
+    destruct H0; subst.
+    - inv H.
+      rewrite findQ_not_In_deqMsgs by assumption.
+      apply findQ_In_deqMP; assumption.
+    - inv H.
+      rewrite <-findQ_not_In_deqMP with (midx2:= a) in H1
+        by (intro Hx; subst; elim H4; assumption).
+      specialize (IHminds _ _ H5 H0 H1).
+      destruct IHminds as [dmsg ?].
+      exists dmsg; rewrite H.
+      apply findQ_not_In_deqMP.
+      intro Hx; subst; elim H4; assumption.
+  Qed.
+      
+  Lemma FirstMP_enqMsgs_order:
+    forall midx msg1 outs1 minds2 msg2 (mp: MessagePool MsgT),
+      NoDup (idsOf outs1) ->
+      NoDup minds2 ->
+      outs1 <> nil ->
+      In midx (idsOf outs1) ->
+      In midx minds2 ->
+      FirstMP (enqMsgs outs1 mp) midx msg1 ->
+      FirstMP (deqMsgs minds2 (enqMsgs outs1 mp)) midx msg2 ->
+      FirstMP mp midx msg1.
+  Proof.
+    unfold FirstMP, firstMP; intros.
+    unfold idsOf in H2; rewrite in_map_iff in H2.
+    destruct H2 as [[amidx msg] [? ?]]; simpl in *; subst.
+    erewrite findQ_In_NoDup_enqMsgs in H4 by eassumption.
+    assert (findQ midx (enqMsgs outs1 mp) <> nil).
+    { erewrite findQ_In_NoDup_enqMsgs by eassumption.
+      destruct (findQ midx mp); discriminate.
+    }
+    pose proof (findQ_In_NoDup_deqMsgs _ (enqMsgs outs1 mp) H0 H3 H2).
+    destruct H7 as [dmsg ?].
+    erewrite findQ_In_NoDup_enqMsgs in H7 by eassumption.
+    rewrite <-H7 in H4; simpl in H4; inv H4.
+    destruct (findQ midx mp).
+    - inv H7; rewrite H9 in H5; discriminate.
+    - inv H7; reflexivity.
+  Qed.
+  
+  Lemma FirstMPI_Forall_enqMsgs_order:
+    forall outs1 ins2 ins3 (mp: MessagePool MsgT),
+      NoDup (idsOf outs1) ->
+      NoDup (idsOf ins2) ->
+      (forall midx : IdxT,
+          In midx (idsOf outs1) ->
+          In midx (idsOf ins2) -> In midx (idsOf ins3)) ->
+      Forall (FirstMPI (enqMsgs outs1 mp)) ins2 ->
+      Forall (FirstMPI (deqMsgs (idsOf ins2) (enqMsgs outs1 mp))) ins3 ->
+      Forall (FirstMPI mp) ins2.
+  Proof.
+    intros.
+    apply Forall_forall; intros [midx msg] ?.
+    specialize (H1 midx).
+    rewrite Forall_forall in H2.
+    specialize (H2 _ H4); red in H2; simpl in H2.
+    destruct (in_dec eq_nat_dec midx (idsOf outs1)).
+    - red; simpl.
+      assert (In midx (idsOf ins2))
+        by (eapply in_map with (f:= idOf) in H4; assumption).
+      specialize (H1 i H5); clear H4.
+      unfold idsOf in H1; rewrite in_map_iff in H1.
+      destruct H1 as [[midx3 msg3] [? ?]]; simpl in *; subst.
+      rewrite Forall_forall in H3; specialize (H3 _ H4).
+      red in H3; cbn in H3.
+      destruct outs1; [assumption|].
+      eapply FirstMP_enqMsgs_order;
+        [exact H| | | | | |]; eauto.
+      discriminate.
+    - eapply FirstMP_enqMsgs_inv; eauto.
+  Qed.
+
   Lemma FirstMP_deqMP:
     forall midx1 midx2 msg2 (mp: MessagePool MsgT),
       midx1 <> midx2 ->
@@ -385,13 +592,12 @@ Section Facts.
   Qed.
 
   Lemma enqMP_deqMP_comm:
-    forall midx1 msg1 (msg2: Id MsgT) (mp: MessagePool MsgT),
-      midx1 <> idOf msg2 ->
-      enqMP midx1 msg1 (deqMP (idOf msg2) mp) =
-      deqMP (idOf msg2) (enqMP midx1 msg1 mp).
+    forall midx1 msg1 midx2 (mp: MessagePool MsgT),
+      midx1 <> midx2 ->
+      enqMP midx1 msg1 (deqMP midx2 mp) =
+      deqMP midx2 (enqMP midx1 msg1 mp).
   Proof.
     unfold enqMP, deqMP, findQ; intros.
-    destruct msg2 as [midx2 msg2]; simpl.
     remember (mp@[midx2]) as q2; destruct q2; simpl in *.
     - destruct l; simpl.
       + mred.
@@ -473,9 +679,9 @@ Section Facts.
   Qed.
 
   Lemma enqMsgs_deqMP_comm:
-    forall msgs (msg: Id MsgT) (mp: MessagePool MsgT),
-      ~ In (idOf msg) (idsOf msgs) ->
-      enqMsgs msgs (deqMP (idOf msg) mp) = deqMP (idOf msg) (enqMsgs msgs mp).
+    forall msgs (midx: IdxT) (mp: MessagePool MsgT),
+      ~ In midx (idsOf msgs) ->
+      enqMsgs msgs (deqMP midx mp) = deqMP midx (enqMsgs msgs mp).
   Proof.
     induction msgs; simpl; intros; auto.
     destruct a as [midx2 msg2]; cbn in *.
@@ -510,17 +716,33 @@ Section Facts.
   Qed.
 
   Lemma enqMsgs_deqMsgs_comm:
-    forall (msgs1 msgs2: list (Id MsgT)) (mp: MessagePool MsgT),
-      DisjList (idsOf msgs1) (idsOf msgs2) ->
-      enqMsgs msgs2 (deqMsgs (idsOf msgs1) mp) =
-      deqMsgs (idsOf msgs1) (enqMsgs msgs2 mp).
+    forall minds1 (msgs2: list (Id MsgT)) (mp: MessagePool MsgT),
+      DisjList minds1 (idsOf msgs2) ->
+      enqMsgs msgs2 (deqMsgs minds1 mp) =
+      deqMsgs minds1 (enqMsgs msgs2 mp).
   Proof.
-    induction msgs1; simpl; intros; auto.
+    induction minds1; simpl; intros; auto.
     apply DisjList_cons in H; dest.
-    rewrite IHmsgs1 by assumption.
+    rewrite IHminds1 by assumption.
     rewrite enqMsgs_deqMP_comm by assumption.
     reflexivity.
   Qed.
+
+  Lemma enqMsgs_deqMsgs_comm_order:
+    forall msgs1 minds2,
+      NoDup (idsOf msgs1) ->
+      NoDup minds2 ->
+      forall msgs3,
+        (forall midx : IdxT,
+            In midx (idsOf msgs1) ->
+            In midx minds2 -> In midx (idsOf msgs3)) ->
+        forall (mp: MessagePool MsgT),
+          Forall (FirstMPI (deqMsgs minds2 (enqMsgs msgs1 mp))) msgs3 ->
+          deqMsgs minds2 (enqMsgs msgs1 mp) =
+          enqMsgs msgs1 (deqMsgs minds2 mp).
+  Proof.
+    intros; M.ext midx.
+  Admitted.
 
 End Facts.
 
