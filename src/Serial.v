@@ -98,20 +98,6 @@ Definition SerializableSys (sys: System) :=
 
 (** Some static conditions that ensure [SerializableSys]. *)
 
-Definition TotalBlockingPrec: RPrecond :=
-  fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
-    SubList (map (fun msg => msg_id msg) (valsOf ins))
-            (map (fun msg => msg_id msg) (map (@rqh_msg _) orq)).
-
-Definition TotalBlockingRule (rule: Rule) :=
-  (rule_precond rule) ->rprec TotalBlockingPrec.
-
-Definition TotalBlockingSys (sys: System) :=
-  Forall TotalBlockingRule (sys_rules sys).
-
-(* Theorem TotalBlockingSys_SerializableSys: *)
-(*   forall sys, TotalBlockingSys sys -> SerializableSys sys. *)
-
 Fixpoint getDownRq (topo: CTree) (oidx: IdxT) (orq: ORq Msg) :=
   match orq with
   | nil => None

@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
-Require Import Serial.
+Require Import Topology Serial.
 
 Require Import Permutation.
 
@@ -88,7 +88,7 @@ Proof.
   congruence.
 Qed.
 
-(*! Facts to prove serializability *)
+(*! Reducibility of incoming and outgoing labels *)
 
 Lemma msg_ins_commutes:
   forall sys eins lbl,
@@ -222,6 +222,8 @@ Proof.
     destruct lbl; auto; elim H2.
 Qed.
 
+(*! Reducibility of internal state transitions *)
+
 Lemma msg_int_commutes_1:
   forall sys rule1 ins1 outs1 rule2 ins2 outs2,
     rule_oidx rule1 <> rule_oidx rule2 ->
@@ -321,4 +323,99 @@ Proof.
     + f_equal; try (meq; fail).
       rewrite H4; reflexivity.
 Qed.
+
+(*! Reducibility of request-forwardings and responses-back *)
+
+Definition liftSingletonTrs (hst: MHistory) :=
+  map (fun lbl => [lbl]) hst.
+
+(* For a given list of "list of transactions," we want to preserve an order
+ * for each "list of transactions."
+ *)
+Inductive OPermutation {A}: list (list (list A)) -> list A -> Prop :=
+| OPermNil: OPermutation nil nil
+| OPermCons:
+    forall strss1 trs trss strss2 hst,
+      OPermutation (strss1 ++ trss :: strss2) hst ->
+      OPermutation (strss1 ++ (trs :: trss) :: strss2) (trs ++ hst).
+
+Lemma downward_request_forwardings_reduced:
+  forall sys rqfr rq rqfs rqfsp trss,
+
+    (* A subtransaction for each downward request can happen 
+     * in an arbitrary order. *)
+    Permutation rqfs rqfsp ->
+
+    (* [trss] are the subtransactions of downward requests,
+     * where each of them is already [Atomic]. *)
+    Forall (fun rqtrs => exists outs, Atomic (fst rqtrs) (snd rqtrs) outs)
+           (combine rqfsp trss) ->
+
+    (* Other irrelevant transaction segments and the subtransactions
+     * are interleaved in an arbitrary manner. *)
+    forall trsoths others,
+      OPermutation [trss; liftSingletonTrs others] trsoths ->
+
+      (* This reduction claims that all the irrelevant segments can be
+       * left-pushed before the original request-forwarding label. *)
+      Reduced sys (trsoths ++ [RlblInt (Some rqfr) [rq] rqfs])
+              (List.concat trss ++ [RlblInt (Some rqfr) [rq] rqfs] ++ others).
+Proof.
+  (* induction on [OPermutation]? *)
+Admitted.
+
+Lemma upward_request_forwarding_reduced:
+  forall sys rqfr rq rqf trs outs,
+
+    (* The transaction for the upward request is already [Atomic]. *)
+    Atomic rqf trs outs ->
+
+    (* This reduction claims that intermediate irrelevant subhistory [others]
+     * can be left-pushed before the original request-forwarding label. *)
+    forall others,
+      Reduced sys (trs ++ others ++ [RlblInt (Some rqfr) [rq] [rqf]])
+              (trs ++ [RlblInt (Some rqfr) [rq] [rqf]] ++ others).
+Proof.
+  (* induction on [others]? *)
+Admitted.
+
+Lemma upward_responses_back_reduced:
+  forall sys rsbr rss rssp trss rsb,
+
+    (* A subtransaction for each upward response can happen 
+     * in an arbitrary order. *)
+    Permutation rss rssp ->
+
+    (* [trss] are the subtransactions of upward responses,
+     * where each of them is already [Atomic]. *)
+    Forall (fun rstrs =>
+              exists rq, Atomic rq (snd rstrs) (enqMPI (fst rstrs) (emptyMP _)))
+           (combine rssp trss) ->
+
+    (* Other irrelevant transaction segments and the subtransactions
+     * are interleaved in an arbitrary manner. *)
+    forall trsoths others,
+      OPermutation [trss; liftSingletonTrs others] trsoths ->
+
+      (* This reduction claims that all the irrelevant segments can be
+       * right-pushed after the response-back label. *)
+      Reduced sys (RlblInt (Some rsbr) rss [rsb] :: trsoths)
+              (others ++ RlblInt (Some rsbr) rss [rsb] :: List.concat trss).
+Proof.
+Admitted.
+
+Lemma downward_response_back_reduced:
+  forall sys rq rsbr rs trs rsb,
+
+    (* The transaction for the downward response is already [Atomic]. *)
+    Atomic rq trs (enqMPI rs (emptyMP _)) ->
+
+    (* This reduction claims that intermediate irrelevant subhistory [others] *)
+    (* can be right-pushed after the response-back label. *)
+    forall others,
+      Reduced sys (RlblInt (Some rsbr) [rs] [rsb] :: others ++ trs)
+              (others ++ RlblInt (Some rsbr) [rs] [rsb] :: trs).
+Proof.
+  (* induction on [others]? *)
+Admitted.
 
