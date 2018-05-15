@@ -69,6 +69,20 @@ End MessagePool.
 Section Facts.
   Variable (MsgT: Type).
 
+  Lemma findQ_ext:
+    forall (mp1 mp2: MessagePool MsgT),
+      (forall midx, mp1@[midx] = None <-> mp2@[midx] = None) ->
+      (forall midx, findQ midx mp1 = findQ midx mp2) ->
+      mp1 = mp2.
+  Proof.
+    unfold findQ; intros.
+    M.ext midx.
+    specialize (H midx).
+    specialize (H0 midx).
+    destruct (mp1@[midx]) as [q1|], (mp2@[midx]) as [q2|];
+      simpl in *; subst; auto; intuition auto.
+  Qed.
+
   Lemma ForallMP_emptyMP:
     forall (P: IdxT -> MsgT -> Prop),
       ForallMP P (emptyMP _).
@@ -360,7 +374,7 @@ Section Facts.
       apply findQ_not_In_deqMP.
       intro Hx; subst; elim H4; assumption.
   Qed.
-      
+
   Lemma FirstMP_enqMsgs_order:
     forall midx msg1 outs1 minds2 msg2 (mp: MessagePool MsgT),
       NoDup (idsOf outs1) ->
@@ -728,6 +742,67 @@ Section Facts.
     reflexivity.
   Qed.
 
+  Lemma enqMP_None:
+    forall (mp: MessagePool MsgT) emidx msg midx, 
+      (enqMP emidx msg mp)@[midx] = None <->
+      (mp@[midx] = None /\ emidx <> midx).
+  Proof.
+    unfold enqMP, findQ; intros; split; intros.
+    - remember (mp@[emidx]) as eq; destruct eq; simpl in *;
+        destruct (emidx ==n midx); subst; mred.
+    - remember (mp@[emidx]) as eq; destruct eq; simpl in *; dest;
+        destruct (emidx ==n midx); subst; mred.
+  Qed.
+
+  Lemma enqMsgs_None:
+    forall (mp: MessagePool MsgT) msgs midx,
+      (enqMsgs msgs mp)@[midx] = None <->
+      (mp@[midx] = None /\ ~ In midx (idsOf msgs)).
+  Proof.
+    split; intros.
+    - generalize dependent mp.
+      induction msgs; simpl; intros; auto.
+      destruct a as [amidx amsg]; simpl in *.
+      specialize (IHmsgs _ H); dest.
+      apply enqMP_None in H0; dest.
+      split; intuition idtac.
+    - generalize dependent mp.
+      induction msgs; simpl; intros; dest; auto.
+      destruct a as [amidx amsg]; simpl in *.
+      apply IHmsgs; split; auto.
+      apply enqMP_None; auto.
+  Qed.
+
+  Lemma deqMP_None:
+    forall (mp: MessagePool MsgT) dmidx midx,
+      (deqMP dmidx mp)@[midx] = None <->
+      mp@[midx] = None.
+  Proof.
+    unfold deqMP, findQ; split; intros.
+    - remember (mp@[dmidx]) as dq; destruct dq; simpl in *; auto.
+      destruct l; simpl in *; auto.
+      destruct (dmidx ==n midx); subst; mred.
+    - remember (mp@[dmidx]) as dq; destruct dq; simpl in *; auto.
+      destruct l; simpl in *; auto.
+      destruct (dmidx ==n midx); subst; mred.
+  Qed.
+
+  Lemma deqMsgs_None:
+    forall (mp: MessagePool MsgT) minds midx,
+      (deqMsgs minds mp)@[midx] = None <->
+      mp@[midx] = None.
+  Proof.
+    split; intros.
+    - generalize dependent mp.
+      induction minds; simpl; intros; auto.
+      specialize (IHminds _ H).
+      eapply deqMP_None; eauto.
+    - generalize dependent mp.
+      induction minds; simpl; intros; auto.
+      eapply IHminds; eauto.
+      eapply deqMP_None; eauto.
+  Qed.
+
   Lemma enqMsgs_deqMsgs_comm_order:
     forall msgs1 minds2,
       NoDup (idsOf msgs1) ->
@@ -741,13 +816,43 @@ Section Facts.
           deqMsgs minds2 (enqMsgs msgs1 mp) =
           enqMsgs msgs1 (deqMsgs minds2 mp).
   Proof.
-    intros; M.ext midx.
+    intros.
+    apply findQ_ext; intros.
+    - split; intros.
+      + rewrite deqMsgs_None in H3.
+        rewrite enqMsgs_None in H3; dest.
+        apply enqMsgs_None; split; auto.
+        apply deqMsgs_None; auto.
+      + rewrite enqMsgs_None in H3; dest.
+        rewrite deqMsgs_None in H3.
+        apply deqMsgs_None.
+        apply enqMsgs_None; auto.
+    - destruct (in_dec eq_nat_dec midx (idsOf msgs1)).
+      + specialize (H1 _ i).
+        unfold idsOf in i; rewrite in_map_iff in i.
+        destruct i as [[imidx msg] [? ?]]; simpl in *; subst.
+        erewrite findQ_In_NoDup_enqMsgs; try eassumption.
+        destruct (in_dec eq_nat_dec midx minds2).
+        * specialize (H1 i).
+          unfold idsOf in H1; rewrite in_map_iff in H1.
+          destruct H1 as [[midx3 msg3] [? ?]]; simpl in *; subst.
+          rewrite Forall_forall in H2.
+          specialize (H2 _ H3); red in H2; simpl in H2.
+          admit.
+        * rewrite findQ_not_In_deqMsgs by assumption.
+          rewrite findQ_not_In_deqMsgs by assumption.
+          apply findQ_In_NoDup_enqMsgs; assumption.
+      + rewrite findQ_not_In_enqMsgs by assumption.
+        destruct (in_dec eq_nat_dec midx minds2).
+        * admit. 
+        * do 2 rewrite findQ_not_In_deqMsgs by assumption.
+          rewrite findQ_not_In_enqMsgs by assumption.
+          reflexivity.
   Admitted.
 
 End Facts.
 
 Global Opaque ForallMP.
-
 
 Section Map.
   Variables (MsgT1 MsgT2: Type).

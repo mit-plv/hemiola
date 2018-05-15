@@ -112,7 +112,7 @@ Definition TotalBlockingSys (sys: System) :=
 (* Theorem TotalBlockingSys_SerializableSys: *)
 (*   forall sys, TotalBlockingSys sys -> SerializableSys sys. *)
 
-Fixpoint getDownRq (topo: CTree unit) (oidx: IdxT) (orq: ORq Msg) :=
+Fixpoint getDownRq (topo: CTree) (oidx: IdxT) (orq: ORq Msg) :=
   match orq with
   | nil => None
   | ri :: orq' =>
@@ -121,7 +121,7 @@ Fixpoint getDownRq (topo: CTree unit) (oidx: IdxT) (orq: ORq Msg) :=
     else getDownRq topo oidx orq'
   end.
 
-Fixpoint getUpRq (topo: CTree unit) (oidx: IdxT) (orq: ORq Msg) :=
+Fixpoint getUpRq (topo: CTree) (oidx: IdxT) (orq: ORq Msg) :=
   match orq with
   | nil => None
   | ri :: orq' =>
@@ -131,7 +131,7 @@ Fixpoint getUpRq (topo: CTree unit) (oidx: IdxT) (orq: ORq Msg) :=
   end.
 
 (* TODO: need a more intuitive (easier) definition. *)
-Definition PartialBlockingPrec (topo: CTree unit) (oidx: IdxT): RPrecond :=
+Definition PartialBlockingPrec (topo: CTree) (oidx: IdxT): RPrecond :=
   fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
     match getDownRq topo oidx orq with
     | Some dri =>
@@ -141,17 +141,17 @@ Definition PartialBlockingPrec (topo: CTree unit) (oidx: IdxT): RPrecond :=
     | None =>
       match getUpRq topo oidx orq with
       | Some uri => 
-        SubList (idsOf ins) (fromParent topo oidx) /\
+        SubList (idsOf ins) (chnsFromParent topo oidx) /\
         Forall (fun msg => msg_id msg = msg_id (rqh_msg uri) /\
                            msg_rr msg = Rs) (valsOf ins)
       | None => True
       end
     end.
 
-Definition PartialBlockingRule (topo: CTree unit) (rule: Rule) :=
+Definition PartialBlockingRule (topo: CTree) (rule: Rule) :=
   (rule_precond rule)
   ->rprec (PartialBlockingPrec topo (rule_oidx rule)).
 
-Definition PartialBlockingSys (topo: CTree unit) (sys: System) :=
+Definition PartialBlockingSys (topo: CTree) (sys: System) :=
   Forall (PartialBlockingRule topo) (sys_rules sys).
 

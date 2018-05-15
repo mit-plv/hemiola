@@ -123,11 +123,17 @@ Section System.
          sys_inits := implInit;
          sys_rules := nil |}.
 
-    Definition implTopo: CTree unit :=
-      CNode parentIdx tt
-            [({| chn_up := [c1pRq; c1pRs]; chn_down := [pc1] |}, CNode child1Idx tt nil);
-               ({| chn_up := [c2pRq; c2pRs]; chn_down := [pc2] |}, CNode child2Idx tt nil)].
-
+    Definition implTopo: CTree :=
+      {| ctr_tr := Node parentIdx [Node child1Idx nil; Node child2Idx nil];
+         ctr_chns :=
+           [ {| chn_midx := c1pRq; chn_from := child1Idx; chn_to := parentIdx |};
+               {| chn_midx := c1pRs; chn_from := child1Idx; chn_to := parentIdx |};
+               {| chn_midx := c2pRq; chn_from := child2Idx; chn_to := parentIdx |};
+               {| chn_midx := c2pRs; chn_from := child2Idx; chn_to := parentIdx |};
+               {| chn_midx := pc1; chn_from := parentIdx; chn_to := child1Idx |};
+               {| chn_midx := pc2; chn_from := parentIdx; chn_to := child2Idx |} ]
+      |}.
+                                            
     Definition implIndices: list IdxT :=
       ltac:(evalOIndsOf impl0).
     

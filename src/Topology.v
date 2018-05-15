@@ -5,63 +5,101 @@ Set Implicit Arguments.
 
 (** Tree structure with (possibly-)multiple channels between nodes. *)
 Section CTree.
-  Variable (t: Type).
+
+  (* Structure definitions *)
+
+  Inductive Tree :=
+  | Node: IdxT -> list Tree -> Tree.
 
   Record Channel :=
-    { chn_up: list IdxT;
-      chn_down: list IdxT
+    { chn_midx: IdxT;
+      chn_from: IdxT;
+      chn_to: IdxT
     }.
 
-  Inductive CTree :=
-  | CNode: IdxT -> t -> list (Channel * CTree) -> CTree.
+  Definition Channels := list Channel.
 
-  Fixpoint trOIndsOf (tr: CTree) :=
+  Record CTree :=
+    { ctr_tr: Tree;
+      ctr_chns: Channels
+    }.
+
+  (* Utilities *)
+
+  Fixpoint trOIndsOf (tr: Tree) :=
     match tr with
-    | CNode i _ chd =>
-      i :: concat (map (fun cc => trOIndsOf (snd cc)) chd)
+    | Node i chd =>
+      i :: concat (map trOIndsOf chd)
     end.
 
-  Definition trCurOIdxOf (tr: CTree) :=
+  Definition trCurOIdxOf (tr: Tree) :=
     match tr with
-    | CNode i _ _ => i
+    | Node i _ => i
     end.
 
-  Definition trValueOf (tr: CTree) :=
+  Definition trChildrenOf (tr: Tree) :=
     match tr with
-    | CNode _ v _ => v
+    | Node _ chd => chd
     end.
 
-  Definition trChildrenOf (tr: CTree) :=
-    match tr with
-    | CNode _ _ chd => map snd chd
-    end.
+  Definition TreeWfOInds (tr: Tree) := NoDup (trOIndsOf tr).
 
-  Definition CTreeWfOInds (tr: CTree) := NoDup (trOIndsOf tr).
-
-  Fixpoint trIterate (f: CTree -> bool) (tr: CTree) :=
+  Fixpoint trIterate (f: Tree -> bool) (tr: Tree) :=
     if f tr
     then Some tr
     else match tr with
-         | CNode i v chd =>
-           (fix trIterateL (trs: list CTree) :=
+         | Node i chd =>
+           (fix trIterateL (trs: list Tree) :=
               match trs with
               | nil => None
               | tr :: trs' =>
                 if f tr then Some tr else trIterateL trs'
-              end) (map snd chd)
+              end) chd
          end.
 
-  Fixpoint getThis (tr: CTree) (idx: IdxT): option CTree :=
+  Fixpoint getThis (tr: Tree) (idx: IdxT): option Tree :=
     trIterate (fun tr =>
                  if trCurOIdxOf tr ==n idx
                  then true else false) tr.
 
-  Fixpoint getParent (tr: CTree) (idx: IdxT): option CTree :=
+  Fixpoint getParent (tr: Tree) (idx: IdxT): option Tree :=
     trIterate (fun tr =>
                  if idx ?<n (map trCurOIdxOf (trChildrenOf tr))
                  then true else false) tr.
 
-  Definition getParentFwds (tr: CTree) (this: IdxT): list (IdxT * list IdxT) :=
+  Definition chnsFromTo (chns: Channels) (from to: IdxT): Channels :=
+    filter (fun chn =>
+              if chn_from chn ==n from then
+                if chn_to chn ==n to then true
+                else false
+              else false) chns.
+
+  Definition chnsFromParent (ctr: CTree) (this: IdxT): list IdxT :=
+    match getParent (ctr_tr ctr) this with
+    | Some ptr => map chn_midx (chnsFromTo (ctr_chns ctr) (trCurOIdxOf ptr) this)
+    | None => nil
+    end.
+
+  Definition isFromParent (ctr: CTree) (this: IdxT) (midx: IdxT): bool :=
+    if in_dec eq_nat_dec midx (chnsFromParent ctr this)
+    then true
+    else false.
+  
+  Definition chnsFromChildren (ctr: CTree) (this: IdxT): list IdxT :=
+    match getThis (ctr_tr ctr) this with
+    | Some (Node _ chd) =>
+      concat (map (fun c => map chn_midx (chnsFromTo (ctr_chns ctr) (trCurOIdxOf c) this)) chd)
+    | None => nil
+    end.
+  
+  Definition isFromChild (ctr: CTree) (this: IdxT) (midx: IdxT): bool :=
+    if in_dec eq_nat_dec midx (chnsFromChildren ctr this)
+    then true
+    else false.
+
+  (** Forwardings *)
+
+  Definition getParentFwds (tr: Tree) (this: IdxT): list (IdxT * list IdxT) :=
     match getThis tr this with
     | Some ttr =>
       match getParent tr this with
@@ -71,24 +109,19 @@ Section CTree.
     | None => nil
     end.
 
-  Definition getChildrenFwds (tr: CTree) (fch this: IdxT): list (IdxT * list IdxT) :=
+  Definition getChildrenFwds (tr: Tree) (fch this: IdxT): list (IdxT * list IdxT) :=
     match getThis tr this with
     | Some ttr =>
       match ttr with
-      | CNode _ _ chd =>
+      | Node _ chd =>
         filter (fun ii => if fst ii ==n fch then false else true)
-               (map (fun cc => (trCurOIdxOf (snd cc), trOIndsOf (snd cc))) chd)
+               (map (fun c => (trCurOIdxOf c, trOIndsOf c)) chd)
       end
     | None => nil
     end.
 
-  Definition getFwds (tr: CTree) (fch this: IdxT): list (IdxT * list IdxT) :=
+  Definition getFwds (tr: Tree) (fch this: IdxT): list (IdxT * list IdxT) :=
     getParentFwds tr this ++ getChildrenFwds tr fch this.
-
-  Definition fromParent (tr: CTree) (this: IdxT): list IdxT := cheat _.
-  Definition isFromParent (tr: CTree) (this: IdxT) (midx: IdxT): bool := cheat _.
-  Definition fromChildren (tr: CTree) (this: IdxT): list IdxT := cheat _.
-  Definition isFromChild (tr: CTree) (this: IdxT) (midx: IdxT): bool := cheat _.
 
 End CTree.
 
