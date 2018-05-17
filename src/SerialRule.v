@@ -1,8 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM StepT.
-Require Import Topology Serial Reduction.
+Require Import Topology Serial SerialFacts Reduction.
 
-Require Import Permutation.
+Require Import Omega Permutation Wf.
 
 Section ImmRqRs.
   Variable (topo: CTree).
@@ -242,32 +242,69 @@ Proof.
 Admitted.
 
 
-(*! Serializability, using the above reduction lemmas *)
-(* TODO: we may have to provide more necessary conditions 
- * about the given topology and channels.
- *)
-Section PerSystem.
+(*! Proving [Serializability] using quasi-sequential histories *)
+
+Section QuasiSeq.
+  Variable (sys: System).
+
+  Variable (quasiSeq: forall (sys: System) (hst: MHistory) (n: nat), Prop).
+
+  Definition QuasiSeqOkInit :=
+    forall hst st,
+      steps step_m sys (initsOf sys) hst st ->
+      exists n, quasiSeq sys hst n.
+    
+  Definition QuasiSeqOkStep :=
+    forall hst n,
+      quasiSeq sys hst n ->
+      (Sequential sys hst \/
+       exists rhst m, Reduced sys hst rhst /\
+                      quasiSeq sys rhst m /\ m < n).
+
+  Lemma quasiSeq_implies_serializableSys:
+    QuasiSeqOkStep ->
+    forall n hst st,
+      steps step_m sys (initsOf sys) hst st ->
+      quasiSeq sys hst n ->
+      Serializable sys hst.
+  Proof.
+    induction n as [n IHn] using (well_founded_induction lt_wf).
+    intros.
+    specialize (H _ _ H1); destruct H.
+    - eapply sequential_serializable; eauto.
+    - destruct H as [rhst [m [? [? ?]]]].
+      eapply reduced_serializable; eauto.
+      eapply IHn; eauto.
+      eapply H; eauto.
+  Qed.
+
+  Lemma quasiSeqOk_implies_serializableSys:
+    QuasiSeqOkInit -> QuasiSeqOkStep -> SerializableSys sys.
+  Proof.
+    intros; red; intros.
+    specialize (H _ _ H1); destruct H as [n ?].
+    eapply quasiSeq_implies_serializableSys; eauto.
+  Qed.
+
+End QuasiSeq.
+
+Section Serializability.
   Variable (topo: CTree) (sys: System).
   Hypotheses (Hirr: ImmRqRsSys topo sys)
              (Hpb: PartialBlockingSys topo sys).
 
-  Lemma immrqrs_partial_blocking_reduced_to_sequential:
-    forall hst st,
-      steps step_m sys (initsOf sys) hst st ->
-      exists shst,
-        Reduced sys hst shst /\ Sequential sys shst.
-  Proof.
-    
-  Admitted.
+  Local Definition quasiSeq :=
+    fun (sys: System) (hst: MHistory) n => SSequential hst n.
 
   Theorem immrqrs_partial_blocking_serializable:
     SerializableSys sys.
   Proof.
-    unfold SerializableSys; intros.
-    pose proof (immrqrs_partial_blocking_reduced_to_sequential _ _ H).
-    dest.
-    eapply reduced_to_seq_serializable; eauto.
-  Qed.
+    intros.
+    apply quasiSeqOk_implies_serializableSys with (quasiSeq := quasiSeq).
+    - red; intros.
+      apply SSequential_default.
+    - unfold quasiSeq; red; intros.
+  Admitted.
 
-End PerSystem.
+End Serializability.
 

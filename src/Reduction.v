@@ -29,63 +29,6 @@ Definition Reduced (sys: System) (hfr hto: MHistory) :=
     steps step_m sys st1 hto st2 /\
     BEquivalent sys hfr hto.
 
-(*! Sound reduction *)
-
-Section Quasi.
-  Context {MsgT} `{HasMsg MsgT}.
-
-  Inductive QTransactional: History MsgT -> Prop :=
-  | QTrsSlt:
-      QTransactional (RlblEmpty _ :: nil)
-  | QTrsIns:
-      forall eins tin,
-        tin = RlblIns eins ->
-        QTransactional (tin :: nil)
-  | QTrsOuts:
-      forall eouts tout,
-        tout = RlblOuts eouts ->
-        QTransactional (tout :: nil)
-  | QTrsAtomic:
-      forall rq hst mouts,
-        Atomic rq hst mouts ->
-        QTransactional hst.
-
-  Inductive QSequential: History MsgT -> nat -> Prop :=
-  | QTrsIntro:
-      forall trss hst lth,
-        hst = List.concat trss ->
-        lth = List.length trss ->
-        Forall QTransactional trss ->
-        QSequential hst lth.
-
-  Lemma QTransactional_default:
-    forall lbl, QTransactional [lbl].
-  Proof.
-    destruct lbl; intros.
-    - eapply QTrsSlt.
-    - eapply QTrsIns; eauto.
-    - eapply QTrsAtomic.
-      eapply atomic_singleton.
-    - eapply QTrsOuts; eauto.
-  Qed.
-
-  Lemma QSequential_default:
-    forall hst, exists n, QSequential hst n.
-  Proof.
-    induction hst; simpl; intros; [repeat econstructor; eauto|].
-    destruct IHhst as [n ?].
-    destruct H0; subst.
-    exists (S (List.length trss)).
-    econstructor.
-    - instantiate (1:= [a] :: _); reflexivity.
-    - reflexivity.
-    - constructor; auto.
-      apply QTransactional_default.
-  Qed.
-
-End Quasi.
-
-
 (*! General Facts *)
 
 Lemma internal_history_behavior_nil:

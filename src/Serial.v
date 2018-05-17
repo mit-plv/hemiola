@@ -4,7 +4,7 @@ Require Import Topology.
 
 (** [Atomic] and [Transactional] histories *)
 
-Section PerSystem.
+Section Sequential.
   Variable sys: System.
 
   Context {MsgT} `{HasMsg MsgT}.
@@ -59,7 +59,36 @@ Section PerSystem.
       Forall Transactional trss /\
       hst = List.concat trss.
 
-End PerSystem.
+End Sequential.
+
+Section Semi.
+  Context {MsgT} `{HasMsg MsgT}.
+
+  Inductive STransactional: History MsgT -> Prop :=
+  | STrsSlt:
+      STransactional (RlblEmpty _ :: nil)
+  | STrsIns:
+      forall eins tin,
+        tin = RlblIns eins ->
+        STransactional (tin :: nil)
+  | STrsOuts:
+      forall eouts tout,
+        tout = RlblOuts eouts ->
+        STransactional (tout :: nil)
+  | STrsAtomic:
+      forall rq hst mouts,
+        Atomic rq hst mouts ->
+        STransactional hst.
+
+  Inductive SSequential: History MsgT -> nat -> Prop :=
+  | SSeqIntro:
+      forall trss hst lth,
+        hst = List.concat trss ->
+        lth = List.length trss ->
+        Forall STransactional trss ->
+        SSequential hst lth.
+
+End Semi.
 
 (*! Serializability *)
 

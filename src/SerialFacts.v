@@ -114,6 +114,43 @@ Section MsgParam.
     intros; constructor.
   Qed.
 
+  Lemma sequential_serializable:
+    forall sys hst st,
+      steps step_m sys (initsOf sys) hst st ->
+      Sequential sys hst ->
+      Serializable sys hst.
+  Proof.
+    intros; red; intros.
+    do 2 eexists; split.
+    - split; eauto.
+    - congruence.
+  Qed.
+
+  Lemma STransactional_default:
+    forall lbl, STransactional (MsgT:= MsgT) [lbl].
+  Proof.
+    destruct lbl; intros.
+    - eapply STrsSlt.
+    - eapply STrsIns; eauto.
+    - eapply STrsAtomic.
+      eapply atomic_singleton.
+    - eapply STrsOuts; eauto.
+  Qed.
+
+  Lemma SSequential_default:
+    forall hst, exists n, SSequential (MsgT:= MsgT) hst n.
+  Proof.
+    induction hst; simpl; intros; [repeat econstructor; eauto|].
+    destruct IHhst as [n ?].
+    destruct H; subst.
+    exists (S (List.length trss)).
+    econstructor.
+    - instantiate (1:= [a] :: _); reflexivity.
+    - reflexivity.
+    - constructor; auto.
+      apply STransactional_default.
+  Qed.
+
 End MsgParam.
 
 Lemma bequivalent_refl:
