@@ -2,7 +2,7 @@ Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics.
 
 Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
-| SmSlt: forall st, step_m sys st (emptyRLabel _) st
+| SmSlt: forall st, step_m sys st (RlblEmpty _) st
 | SmIns: forall pst nst oss orqs msgs eins,
     eins <> nil ->
     ValidMsgsExtIn sys eins ->
@@ -44,5 +44,5 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
              bst_msgs := enqMsgs iouts (deqMsgs (idsOf ins) msgs)
           |} ->
 
-    step_m sys pst (RlblInt (Some rule) ins iouts) nst.
+    step_m sys pst (RlblInt rule ins iouts) nst.
 

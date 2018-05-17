@@ -55,7 +55,7 @@ Ltac trs_simulates_case_slt :=
   unfold TrsSimSilent; intros;
   (** inversions *)
   match goal with
-  | [H: step_t _ _ emptyRLabel _ |- _] => inv H
+  | [H: step_t _ _ (RlblEmpty _) _ |- _] => inv H
   end;
   (** constructions *)
   eexists; split; [econstructor|assumption].

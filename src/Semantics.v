@@ -160,14 +160,14 @@ Section RLabel.
   Context `{HasMsg MsgT}.
 
   Inductive RLabel :=
+  | RlblEmpty
   | RlblIns (mins: list (Id MsgT)): RLabel
-  | RlblInt (hdl: option Rule) (mins: list (Id MsgT)) (mouts: list (Id MsgT)): RLabel
+  | RlblInt (hdl: Rule) (mins: list (Id MsgT)) (mouts: list (Id MsgT)): RLabel
   | RlblOuts (mouts: list (Id MsgT)): RLabel.
-
-  Definition emptyRLabel := RlblInt None nil nil.
   
   Definition rToLabel (l: RLabel): option Label :=
     match l with
+    | RlblEmpty => None
     | RlblIns mins => Some (LblIns (imap getMsg mins))
     | RlblInt _ _ _ => None
     | RlblOuts mouts => Some (LblOuts (imap getMsg mouts))

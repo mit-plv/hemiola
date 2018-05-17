@@ -334,7 +334,7 @@ Lemma step_t_TidLt:
     Forall (fun tmsg => tmsg_info tmsg = None) (valsOf mins) ->
     TidLt (tst_tid st2) st1.
 Proof.
-  intros; inv H1; [elim H0; reflexivity|].
+  intros; inv H1.
   simpl; rewrite getTMsgsTInfo_Forall_None by assumption.
   eapply TidLe_TidLt; eauto.
 Qed.

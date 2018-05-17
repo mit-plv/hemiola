@@ -12,7 +12,7 @@ Section GivenMsg.
 
   Inductive step_pred0 (psys: PSystem MsgT):
     PState MsgT -> PLabel MsgT -> PState MsgT -> Prop :=
-  | SpSlt: forall st, step_pred0 psys st (emptyPLabel MsgT) st
+  | SpSlt: forall st, step_pred0 psys st (PlblEmpty MsgT) st
 
   | SpIns:
       forall pst nst oss oims orqs (eins: list (Id (PMsg MsgT))),
@@ -62,7 +62,7 @@ Section GivenMsg.
         pst = {| pst_oss := poss; pst_orqs := orqs; pst_msgs := poims |} ->
         nst = {| pst_oss := noss; pst_orqs := orqs; pst_msgs := noims |} ->
 
-        step_pred0 psys pst (PlblInt (Some immr) (rq :: nil) (rs :: nil)) nst
+        step_pred0 psys pst (PlblInt immr (rq :: nil) (rs :: nil)) nst
 
   | SpRqFwd:
       forall pst nst oss porq orqs oidx pos oims
@@ -86,7 +86,7 @@ Section GivenMsg.
                  pst_orqs := orqs +[ oidx <- addRq porq rq (idsOf fwds) ];
                  pst_msgs := enqMsgs fwds (deqMP (idOf rq) oims) |} ->
 
-        step_pred0 psys pst (PlblInt (Some rqfwdr) (rq :: nil) fwds) nst
+        step_pred0 psys pst (PlblInt rqfwdr (rq :: nil) fwds) nst
 
   | SpRsBack:
       forall pst nst oss orqs oidx pos nos orq origRq oims noss noims opred rsbf
@@ -135,7 +135,7 @@ Section GivenMsg.
                  pst_orqs := M.remove oidx orqs;
                  pst_msgs := noims |} ->
 
-        step_pred0 psys pst (PlblInt (Some rsbackr) rss (rsb :: nil)) nst.
+        step_pred0 psys pst (PlblInt rsbackr rss (rsb :: nil)) nst.
 
   Variables (SysT: Type)
             (ostep: Step SysT StateT LabelT)

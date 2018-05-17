@@ -13,7 +13,7 @@ Section MsgParam.
   Lemma atomic_emptyILabel_not_in:
     forall rq hst mouts,
       Atomic rq hst mouts ->
-      ~ In (emptyRLabel MsgT) hst.
+      ~ In (RlblEmpty MsgT) hst.
   Proof.
     induction 1; simpl; intros.
     - intro Hx; destruct Hx; [discriminate|auto].
@@ -57,11 +57,11 @@ Section MsgParam.
   Lemma sequential_silent:
     forall sys ll,
       Sequential (MsgT:= MsgT) sys ll ->
-      Sequential (MsgT:= MsgT) sys (emptyRLabel _ :: ll).
+      Sequential (MsgT:= MsgT) sys (RlblEmpty _ :: ll).
   Proof.
     intros.
     hnf; hnf in H; dest.
-    eexists ([emptyRLabel _] :: _); split.
+    eexists ([RlblEmpty _] :: _); split.
     - constructor; [|eassumption].
       constructor.
     - subst; reflexivity.
@@ -108,9 +108,8 @@ Section MsgParam.
   Qed.
 
   Lemma atomic_singleton:
-    forall rqr rq houts,
-      Atomic rq [RlblInt (Some rqr) [rq] houts]
-             (enqMsgs houts (emptyMP MsgT)).
+    forall rqr rqs houts,
+      Atomic rqs [RlblInt rqr rqs houts] (enqMsgs houts (emptyMP MsgT)).
   Proof.
     intros; constructor.
   Qed.
@@ -170,7 +169,7 @@ Qed.
 Lemma serializable_silent:
   forall sys ll,
     Serializable sys ll ->
-    Serializable sys (emptyRLabel _ :: ll).
+    Serializable sys (RlblEmpty _ :: ll).
 Proof.
   intros.
   hnf; hnf in H; intros; dest.

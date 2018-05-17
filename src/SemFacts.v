@@ -192,14 +192,13 @@ Lemma step_t_tid_next:
 Proof.
   intros.
   inv H.
+  simpl.
+  apply getTMsgsTInfo_Forall_None in H1.
+  rewrite H1 in *.
+  clear -H0 H2.
+  destruct outs0 as [|out ?].
   - elim H0; reflexivity.
-  - simpl.
-    apply getTMsgsTInfo_Forall_None in H1.
-    rewrite H1 in *.
-    clear -H0 H2.
-    destruct outs0 as [|out ?].
-    + elim H0; reflexivity.
-    + inv H2; simpl in H3; auto.
+  - inv H2; simpl in H3; auto.
 Qed.
 
 Lemma extRssOf_In_merssOf_FirstMP:

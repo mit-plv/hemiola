@@ -15,17 +15,17 @@ Section PerSystem.
    *    and all [hdl]s have the same [tinfo_tid]. It means that the history is
    *    for a single transaction.
    *)
-  Inductive Atomic: Id MsgT -> History MsgT -> MessagePool MsgT -> Prop :=
+  Inductive Atomic: list (Id MsgT) -> History MsgT -> MessagePool MsgT -> Prop :=
   | AtomicStart:
-      forall rqr rq houts,
-        Atomic rq (RlblInt (Some rqr) (rq :: nil) houts :: nil)
+      forall rqr rqs houts,
+        Atomic rqs (RlblInt rqr rqs houts :: nil)
                (enqMsgs houts (emptyMP _))
   | AtomicCont:
       forall rq hst rule msgs mouts houts,
         Atomic rq hst mouts ->
         msgs <> nil ->
         Forall (fun idm => InMP (idOf idm) (valOf idm) mouts) msgs ->
-        Atomic rq (RlblInt (Some rule) msgs houts :: hst)
+        Atomic rq (RlblInt rule msgs houts :: hst)
                (enqMsgs houts (deqMsgs (idsOf msgs) mouts)).
 
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from
@@ -35,12 +35,12 @@ Section PerSystem.
   | ExtAtomicIntro:
       forall rq hst mouts,
         In (idOf rq) (merqsOf sys) ->
-        Atomic rq hst mouts ->
+        Atomic [rq] hst mouts ->
         ExtAtomic rq hst mouts.
 
   Inductive Transactional: History MsgT -> Prop :=
   | TrsSlt:
-      Transactional (emptyRLabel _ :: nil)
+      Transactional (RlblEmpty _ :: nil)
   | TrsIns:
       forall eins tin,
         tin = RlblIns eins ->

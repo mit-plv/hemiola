@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
-Require Import Topology Serial.
+Require Import Topology Serial SerialFacts.
 
 Set Implicit Arguments.
 
@@ -12,7 +12,7 @@ Ltac dest_step_m :=
          end; simpl in *.
 
 Definition NonSilentHistory (hst: MHistory) :=
-  Forall (fun lbl => lbl <> emptyRLabel _) hst.
+  Forall (fun lbl => lbl <> RlblEmpty _) hst.
 
 Definition Internal (lbl: MLabel) :=
   match lbl with
@@ -28,6 +28,63 @@ Definition Reduced (sys: System) (hfr hto: MHistory) :=
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2 /\
     BEquivalent sys hfr hto.
+
+(*! Sound reduction *)
+
+Section Quasi.
+  Context {MsgT} `{HasMsg MsgT}.
+
+  Inductive QTransactional: History MsgT -> Prop :=
+  | QTrsSlt:
+      QTransactional (RlblEmpty _ :: nil)
+  | QTrsIns:
+      forall eins tin,
+        tin = RlblIns eins ->
+        QTransactional (tin :: nil)
+  | QTrsOuts:
+      forall eouts tout,
+        tout = RlblOuts eouts ->
+        QTransactional (tout :: nil)
+  | QTrsAtomic:
+      forall rq hst mouts,
+        Atomic rq hst mouts ->
+        QTransactional hst.
+
+  Inductive QSequential: History MsgT -> nat -> Prop :=
+  | QTrsIntro:
+      forall trss hst lth,
+        hst = List.concat trss ->
+        lth = List.length trss ->
+        Forall QTransactional trss ->
+        QSequential hst lth.
+
+  Lemma QTransactional_default:
+    forall lbl, QTransactional [lbl].
+  Proof.
+    destruct lbl; intros.
+    - eapply QTrsSlt.
+    - eapply QTrsIns; eauto.
+    - eapply QTrsAtomic.
+      eapply atomic_singleton.
+    - eapply QTrsOuts; eauto.
+  Qed.
+
+  Lemma QSequential_default:
+    forall hst, exists n, QSequential hst n.
+  Proof.
+    induction hst; simpl; intros; [repeat econstructor; eauto|].
+    destruct IHhst as [n ?].
+    destruct H0; subst.
+    exists (S (List.length trss)).
+    econstructor.
+    - instantiate (1:= [a] :: _); reflexivity.
+    - reflexivity.
+    - constructor; auto.
+      apply QTransactional_default.
+  Qed.
+
+End Quasi.
+
 
 (*! General Facts *)
 
@@ -73,17 +130,33 @@ Qed.
 Lemma reduced_serializable:
   forall sys st1 hfr st2,
     steps step_m sys st1 hfr st2 ->
-    Serializable sys hfr ->
     forall hto,
       Reduced sys hfr hto ->
-      Serializable sys hto.
+      Serializable sys hto ->
+      Serializable sys hfr.
 Proof.
   unfold Serializable, Reduced; intros.
-  destruct H0 as [shfr [stfr [? ?]]].
+  destruct H1 as [shfr [stfr [? ?]]].
   exists shfr, stfr.
   split; auto.
-  specialize (H1 _ _ H); dest.
+  specialize (H0 _ _ H); dest.
   congruence.
+Qed.
+
+Lemma reduced_to_seq_serializable:
+  forall sys hst st2,
+    steps step_m sys (initsOf sys) hst st2 ->
+    forall shst,
+      Reduced sys hst shst ->
+      Sequential sys shst ->
+      Serializable sys hst.
+Proof.
+  intros.
+  eapply reduced_serializable with (hto:= shst); eauto.
+  exists shst, st2; split.
+  - split; auto.
+    apply H0; auto.
+  - congruence.
 Qed.
 
 (*! Reducibility of incoming and outgoing labels *)
@@ -95,34 +168,28 @@ Lemma msg_ins_commutes:
 Proof.
   unfold Reduced; intros.
   split.
-  - destruct lbl as [|hdl mins mouts|]; [elim H| |elim H].
+  - destruct lbl as [| |hdl mins mouts|]; [elim H|elim H| |elim H].
     dest_step_m.
+    econstructor.
     + econstructor.
-      * econstructor.
-        { econstructor. } 
-        { econstructor; eauto. }
-      * econstructor.
-    + econstructor.
-      * econstructor.
-        { econstructor. }
-        { econstructor; eauto. }
-      * econstructor; try reflexivity; try eassumption.
-        { eapply FirstMPI_Forall_enqMsgs; eauto. }
-        { f_equal.
-          rewrite enqMsgs_enqMsgs_comm.
-          { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
-            destruct H10; auto.
-          }
-          { destruct H2, H17.
-            eapply DisjList_SubList; eauto.
-            eapply DisjList_comm, DisjList_SubList; eauto.
-            apply DisjList_app_4.
-            { apply mindsOf_merqsOf_DisjList. }
-            { apply DisjList_comm, merqsOf_merssOf_DisjList. }
-          }
+      * econstructor. 
+      * econstructor; eauto. 
+    + econstructor; try reflexivity; try eassumption.
+      * eapply FirstMPI_Forall_enqMsgs; eauto. 
+      * f_equal.
+        rewrite enqMsgs_enqMsgs_comm.
+        { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
+          destruct H10; auto.
+        }
+        { destruct H2, H17.
+          eapply DisjList_SubList; eauto.
+          eapply DisjList_comm, DisjList_SubList; eauto.
+          apply DisjList_app_4.
+          { apply mindsOf_merqsOf_DisjList. }
+          { apply DisjList_comm, merqsOf_merssOf_DisjList. }
         }
   - hnf; cbn.
-    destruct lbl; [elim H|auto|elim H].
+    destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
 Lemma msg_in_reduced:
@@ -154,17 +221,12 @@ Lemma msg_outs_commutes:
 Proof.
   unfold Reduced; intros.
   split.
-  - destruct lbl as [|hdl mins mouts|]; [elim H| |elim H].
+  - destruct lbl as [| |hdl mins mouts|]; [elim H|elim H| |elim H].
     dest_step_m.
-    + econstructor.
-      * econstructor.
-        { econstructor. }
-        { econstructor; eauto. }
-      * econstructor; eauto.
-    + econstructor.
-      * econstructor.
-        { econstructor. }
-        { econstructor; try reflexivity; try eassumption.
+    econstructor.
+      + econstructor.
+        * econstructor.
+        * econstructor; try reflexivity; try eassumption.
           assert (DisjList (idsOf mins) (idsOf eouts)).
           { destruct H3, H12.
             eapply DisjList_SubList; eauto.
@@ -172,26 +234,23 @@ Proof.
             apply DisjList_comm, mindsOf_merssOf_DisjList.
           }
           eapply FirstMPI_Forall_deqMsgs; eauto.
-        }
-      * assert (DisjList (idsOf eouts) (idsOf mins)).
+      + assert (DisjList (idsOf eouts) (idsOf mins)).
         { destruct H3, H12.
           eapply DisjList_SubList; eauto.
           eapply DisjList_comm, DisjList_SubList; eauto.
           apply mindsOf_merssOf_DisjList.
         }
         econstructor; try reflexivity; try eassumption.
-        { eapply FirstMPI_Forall_enqMsgs.
+        * eapply FirstMPI_Forall_enqMsgs.
           rewrite <-FirstMPI_Forall_deqMsgs; eauto.
-        }
-        { f_equal; rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
+        * f_equal; rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
           { f_equal; eapply deqMsgs_deqMsgs_comm.
             apply DisjList_comm; auto.
           }
           { destruct H3; auto. }
           { rewrite <-FirstMPI_Forall_deqMsgs; eauto. }
-        }
   - hnf; cbn.
-    destruct lbl; [elim H|auto|elim H].
+    destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
 Lemma msg_outs_reduced:
@@ -228,8 +287,8 @@ Lemma msg_int_commutes_1:
     DisjList (idsOf ins1) (idsOf ins2) ->
     DisjList (idsOf outs1) (idsOf ins2) ->
     DisjList (idsOf outs1) (idsOf outs2) ->
-    Reduced sys [RlblInt (Some rule2) ins2 outs2; RlblInt (Some rule1) ins1 outs1]
-            [RlblInt (Some rule1) ins1 outs1; RlblInt (Some rule2) ins2 outs2].
+    Reduced sys [RlblInt rule2 ins2 outs2; RlblInt rule1 ins1 outs1]
+            [RlblInt rule1 ins1 outs1; RlblInt rule2 ins2 outs2].
 Proof.
   unfold Reduced; intros.
   split; [|reflexivity].
@@ -273,12 +332,8 @@ Lemma msg_int_commutes_2:
         In midx (idsOf outs1) ->
         In midx (idsOf ins2) ->
         In midx (idsOf ins3)) ->
-    Reduced sys [RlblInt (Some rule3) ins3 outs3;
-                   RlblInt (Some rule2) ins2 outs2;
-                   RlblInt (Some rule1) ins1 outs1]
-            [RlblInt (Some rule3) ins3 outs3;
-               RlblInt (Some rule1) ins1 outs1;
-               RlblInt (Some rule2) ins2 outs2].
+    Reduced sys [RlblInt rule3 ins3 outs3; RlblInt rule2 ins2 outs2; RlblInt rule1 ins1 outs1]
+            [RlblInt rule3 ins3 outs3; RlblInt rule1 ins1 outs1; RlblInt rule2 ins2 outs2].
 Proof.
   unfold Reduced; intros.
   split; [|reflexivity].

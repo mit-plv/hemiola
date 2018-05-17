@@ -29,7 +29,7 @@ Fixpoint isExternalResp {MsgT} (merss: list IdxT) (outs: list (Id MsgT)) :=
   end.
 
 Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
-| StSlt: forall st, step_t sys st (emptyRLabel _) st
+| StSlt: forall st, step_t sys st (RlblEmpty _) st
 | StIns: forall ts pst nst oss orqs msgs trss eins,
     eins <> nil ->
     ValidMsgsExtIn sys eins ->
@@ -97,7 +97,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
                         end
           |} ->
 
-    step_t sys pst (RlblInt (Some rule) ins (imap (toTMsg tinfo) outs)) nst.
+    step_t sys pst (RlblInt rule ins (imap (toTMsg tinfo) outs)) nst.
 
 Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
   forall oidx,
@@ -118,6 +118,7 @@ Definition TStateRel (tst: TState) (st: MState) :=
 
 Definition tToMLabel (tlbl: TLabel) :=
   match tlbl with
+  | RlblEmpty _ => RlblEmpty _
   | RlblIns eins => RlblIns (imap tmsg_msg eins)
   | RlblOuts eouts => RlblOuts (imap tmsg_msg eouts)
   | RlblInt orule mins mouts =>

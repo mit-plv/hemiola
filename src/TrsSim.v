@@ -107,9 +107,9 @@ Section TrsSimSep.
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall ist2,
-        step_t impl ist1 (emptyRLabel _) ist2 ->
+        step_t impl ist1 (RlblEmpty _) ist2 ->
         exists sst2,
-          step_t spec sst1 (emptyRLabel _) sst2 /\
+          step_t spec sst1 (RlblEmpty _) sst2 /\
           ist2 ≈ sst2.
 
   Definition TrsSimIns :=
@@ -303,7 +303,7 @@ Lemma trsPreservingSys_ins_outs_same_tid:
         Forall (fun idm => msg_id (getMsg (valOf idm)) = tid) hins /\
         Forall (fun idm => msg_id (getMsg (valOf idm)) = tid) houts.
 Proof.
-  intros; inv H0; [(* anything *) exists 0; split; constructor|].
+  intros; inv H0.
   unfold trsPreservingSys in H.
   eapply Forall_forall in H; eauto.
   unfold trsPreservingRule in H.
@@ -317,6 +317,48 @@ Proof.
     inv H0; constructor; auto.
 Qed.
 
+Lemma trsPreservineSys_atomic_same_tid':
+  forall sys,
+    trsPreservingSys sys ->
+    forall rq rqs (hst: THistory) mouts,
+      rqs = [rq] ->
+      Atomic rqs hst mouts ->
+      forall mtid,
+        mtid = msg_id (getMsg (valOf rq)) ->
+        forall ist1 ist2,
+          steps step_t sys ist1 hst ist2 ->
+          ForallMP (fun _ msg => msg_id (getMsg msg) = mtid) mouts /\
+          Forall (fun tl =>
+                    match tl with
+                    | RlblInt _ ins _ =>
+                      Forall (fun msg => msg_id (getMsg (valOf msg)) = mtid) ins
+                    | _ => False
+                    end) hst.
+Proof.
+  induction 3; simpl; intros; subst.
+  - subst; constructor; auto.
+    inv H2.
+    eapply trsPreservingSys_ins_outs_same_tid in H6; eauto.
+    destruct H6 as [tid [? ?]].
+    apply ForallMP_enqMsgs.
+    + apply ForallMP_emptyMP.
+    + inv H0; inv H1; auto.
+  - subst; inv H5.
+    specialize (IHAtomic eq_refl _ eq_refl _ _ H7); dest.
+    split.
+    + apply ForallMP_enqMsgs.
+      * apply ForallMP_deqMsgs; assumption.
+      * eapply ForallMP_Forall_InMP in H3; eauto.
+        eapply trsPreservingSys_ins_outs_same_tid in H9; eauto.
+        destruct H9 as [tid [? ?]].
+        destruct msgs; [elim H2; reflexivity|].
+        inv H5; inv H3.
+        simpl in H9; rewrite <-H9; auto.
+    + constructor; auto.
+      eapply ForallMP_Forall_InMP in H3; eauto.
+      simpl in H3; auto.
+Qed.
+                                   
 Lemma trsPreservineSys_atomic_same_tid:
   forall sys,
     trsPreservingSys sys ->
@@ -334,29 +376,8 @@ Lemma trsPreservineSys_atomic_same_tid:
                     | _ => False
                     end) hst.
 Proof.
-  inversion_clear 2.
-  induction H2; simpl; intros.
-  - subst; constructor; auto.
-    inv H2.
-    eapply trsPreservingSys_ins_outs_same_tid in H7; eauto.
-    destruct H7 as [tid [? ?]].
-    apply ForallMP_enqMsgs.
-    + apply ForallMP_emptyMP.
-    + inv H0; inv H2; auto.
-  - subst; inv H5.
-    specialize (IHAtomic H1 _ eq_refl _ _ H8); dest.
-    split.
-    + apply ForallMP_enqMsgs.
-      * apply ForallMP_deqMsgs; assumption.
-      * eapply ForallMP_Forall_InMP in H3; eauto.
-        eapply trsPreservingSys_ins_outs_same_tid in H10; eauto.
-        destruct H10 as [tid [? ?]].
-        destruct msgs; [elim H0; reflexivity|].
-        inv H6; inv H3.
-        simpl in H10; rewrite <-H10; auto.
-    + constructor; auto.
-      eapply ForallMP_Forall_InMP in H3; eauto.
-      simpl in H3; auto.
+  intros; inv H0.
+  eapply trsPreservineSys_atomic_same_tid'; eauto.
 Qed.
 
 Lemma rule_mids_tid_In:
@@ -485,42 +506,43 @@ Section Compositionality.
   Lemma atomic_steps_compositional:
     forall ist1 hst ist2,
       steps step_t impl ist1 hst ist2 ->
-      forall rq mouts,
-        ExtAtomic impl rq hst mouts ->
+      forall rq rqs mouts,
+        rqs = [rq] ->
+        Atomic rqs hst mouts ->
         steps step_t impl1 ist1 hst ist2 \/
         steps step_t impl2 ist1 hst ist2.
   Proof.
     intros.
     pose proof (TrsDisjSys_distr_same_tid (msg_id (getMsg (valOf rq)))).
-    pose proof (trsPreservineSys_atomic_same_tid Hmt H0 eq_refl H).
-    destruct H2 as [_ ?].
-    destruct H1.
+    pose proof (trsPreservineSys_atomic_same_tid' Hmt H0 H1 eq_refl H).
+    destruct H3 as [_ ?].
+    destruct H2.
 
     - left.
       generalize dependent ist2.
-      inv H0; induction H3; intros.
-      + inv H0; inv H6; inv H8.
+      induction H1; intros; subst.
+      + inv H; inv H5; inv H7.
         econstructor; [econstructor|].
-        assert (rule_msg_ids rqr <> nil) by (rewrite <-H13; discriminate).
+        assert (rule_msg_ids rqr <> nil) by (rewrite <-H12; discriminate).
         assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rqr))
-          by (rewrite <-H13; constructor; auto).
+          by (rewrite <-H12; constructor; auto).
         econstructor; eauto.
         * rewrite <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
         * eapply ValidMsgsOut_mindsOf_merssOf; eauto.
         * rewrite Hss; reflexivity.
-      + inv H2; inv H5.
-        specialize (IHAtomic H1 H9 H _ H10).
+      + inv H3; inv H5.
+        specialize (IHAtomic eq_refl H8 _ H9).
         econstructor; eauto.
-        inv H12.
+        inv H11.
         assert (rule_msg_ids rule <> nil).
-        { rewrite <-H18; clear -H0.
-          destruct msgs; [elim H0; reflexivity|discriminate].
+        { rewrite <-H17; clear -H.
+          destruct msgs; [elim H; reflexivity|discriminate].
         }
         assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rule)).
-        { rewrite <-H18.
-          clear -H8; induction msgs; [constructor|].
-          inv H8; constructor; auto.
+        { rewrite <-H17.
+          clear -H7; induction msgs; [constructor|].
+          inv H7; constructor; auto.
         }
         econstructor; eauto.
         * rewrite <-Hii; auto.
@@ -530,12 +552,12 @@ Section Compositionality.
 
     - right.
       generalize dependent ist2.
-      inv H0; induction H3; intros.
-      + inv H0; inv H6; inv H8.
+      induction H1; intros.
+      + inv H; inv H6; inv H8.
         econstructor; [econstructor|].
-        assert (rule_msg_ids rqr <> nil) by (rewrite <-H13; discriminate).
+        assert (rule_msg_ids rqr <> nil) by (rewrite <-H12; discriminate).
         assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rqr))
-          by (rewrite <-H13; constructor; auto).
+          by (rewrite <-H12; constructor; auto).
         econstructor; eauto.
         * rewrite <-Hoinds, <-Hii; auto.
         * eapply ValidMsgsIn_mindsOf; eauto.
@@ -544,16 +566,16 @@ Section Compositionality.
           { rewrite <-Hminds; auto. }
           { rewrite <-Hmerss; auto. }
         * rewrite <-Hmerss, <-Hss; reflexivity.
-      + inv H2; inv H5.
-        specialize (IHAtomic H1 H9 H _ H10).
+      + inv H3; inv H5.
+        specialize (IHAtomic eq_refl H9 _ H7).
         econstructor; eauto.
-        inv H12.
+        inv H11.
         assert (rule_msg_ids rule <> nil).
-        { rewrite <-H18; clear -H0.
-          destruct msgs; [elim H0; reflexivity|discriminate].
+        { rewrite <-H17; clear -H.
+          destruct msgs; [elim H; reflexivity|discriminate].
         }
         assert (Forall (fun mid => mid = msg_id (getMsg (valOf rq))) (rule_msg_ids rule)).
-        { rewrite <-H18.
+        { rewrite <-H17.
           clear -H8; induction msgs; [constructor|].
           inv H8; constructor; auto.
         }
@@ -565,6 +587,18 @@ Section Compositionality.
           { rewrite <-Hminds; auto. }
           { rewrite <-Hmerss; auto. }
         * rewrite <-Hmerss, <-Hss; reflexivity.
+  Qed.
+
+  Lemma ext_atomic_steps_compositional:
+    forall ist1 hst ist2,
+      steps step_t impl ist1 hst ist2 ->
+      forall rq mouts,
+        ExtAtomic impl rq hst mouts ->
+        steps step_t impl1 ist1 hst ist2 \/
+        steps step_t impl2 ist1 hst ist2.
+  Proof.
+    intros; inv H0.
+    eapply atomic_steps_compositional; eauto.
   Qed.
 
   Hypotheses (Hsim1: TrsSimulates simR ginv impl1 spec)
@@ -606,7 +640,7 @@ Section Compositionality.
       }
       exact (Hsim1 H0 H1 H).
 
-    - pose proof (atomic_steps_compositional H2 H); destruct H3.
+    - pose proof (ext_atomic_steps_compositional H2 H); destruct H3.
       + assert (Transactional impl1 hst).
         { econstructor; eauto.
           eapply extAtomic_preserved; eauto.

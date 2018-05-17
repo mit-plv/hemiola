@@ -170,7 +170,7 @@ Lemma downward_request_forwardings_reduced:
 
     (* [trss] are the subtransactions of downward requests,
      * where each of them is already [Atomic]. *)
-    Forall (fun rqtrs => exists outs, Atomic (fst rqtrs) (snd rqtrs) outs)
+    Forall (fun rqtrs => exists outs, Atomic [fst rqtrs] (snd rqtrs) outs)
            (combine rqfsp trss) ->
 
     (* Other irrelevant transaction segments and the subtransactions
@@ -180,8 +180,8 @@ Lemma downward_request_forwardings_reduced:
 
       (* This reduction claims that all the irrelevant segments can be
        * left-pushed before the original request-forwarding label. *)
-      Reduced sys (trsoths ++ [RlblInt (Some rqfr) [rq] rqfs])
-              (List.concat trss ++ [RlblInt (Some rqfr) [rq] rqfs] ++ others).
+      Reduced sys (trsoths ++ [RlblInt rqfr [rq] rqfs])
+              (List.concat trss ++ [RlblInt rqfr [rq] rqfs] ++ others).
 Proof.
   (* induction on [OPermutation]? *)
 Admitted.
@@ -190,13 +190,13 @@ Lemma upward_request_forwarding_reduced:
   forall sys rqfr rq rqf trs outs,
 
     (* The transaction for the upward request is already [Atomic]. *)
-    Atomic rqf trs outs ->
+    Atomic [rqf] trs outs ->
 
     (* This reduction claims that intermediate irrelevant subhistory [others]
      * can be left-pushed before the original request-forwarding label. *)
     forall others,
-      Reduced sys (trs ++ others ++ [RlblInt (Some rqfr) [rq] [rqf]])
-              (trs ++ [RlblInt (Some rqfr) [rq] [rqf]] ++ others).
+      Reduced sys (trs ++ others ++ [RlblInt rqfr [rq] [rqf]])
+              (trs ++ [RlblInt rqfr [rq] [rqf]] ++ others).
 Proof.
   (* induction on [others]? *)
 Admitted.
@@ -221,8 +221,8 @@ Lemma upward_responses_back_reduced:
 
       (* This reduction claims that all the irrelevant segments can be
        * right-pushed after the response-back label. *)
-      Reduced sys (RlblInt (Some rsbr) rss [rsb] :: trsoths)
-              (others ++ RlblInt (Some rsbr) rss [rsb] :: List.concat trss).
+      Reduced sys (RlblInt rsbr rss [rsb] :: trsoths)
+              (others ++ RlblInt rsbr rss [rsb] :: List.concat trss).
 Proof.
 Admitted.
 
@@ -235,23 +235,39 @@ Lemma downward_response_back_reduced:
     (* This reduction claims that intermediate irrelevant subhistory [others] *)
     (* can be right-pushed after the response-back label. *)
     forall others,
-      Reduced sys (RlblInt (Some rsbr) [rs] [rsb] :: others ++ trs)
-              (others ++ RlblInt (Some rsbr) [rs] [rsb] :: trs).
+      Reduced sys (RlblInt rsbr [rs] [rsb] :: others ++ trs)
+              (others ++ RlblInt rsbr [rs] [rsb] :: trs).
 Proof.
   (* induction on [others]? *)
 Admitted.
 
 
 (*! Serializability, using the above reduction lemmas *)
-
 (* TODO: we may have to provide more necessary conditions 
  * about the given topology and channels.
  *)
-Theorem immrqrs_partial_blocking_serializable:
-  forall topo sys,
-    ImmRqRsSys topo sys ->
-    PartialBlockingSys topo sys ->
+Section PerSystem.
+  Variable (topo: CTree) (sys: System).
+  Hypotheses (Hirr: ImmRqRsSys topo sys)
+             (Hpb: PartialBlockingSys topo sys).
+
+  Lemma immrqrs_partial_blocking_reduced_to_sequential:
+    forall hst st,
+      steps step_m sys (initsOf sys) hst st ->
+      exists shst,
+        Reduced sys hst shst /\ Sequential sys shst.
+  Proof.
+    
+  Admitted.
+
+  Theorem immrqrs_partial_blocking_serializable:
     SerializableSys sys.
-Proof.
-Admitted.
+  Proof.
+    unfold SerializableSys; intros.
+    pose proof (immrqrs_partial_blocking_reduced_to_sequential _ _ H).
+    dest.
+    eapply reduced_to_seq_serializable; eauto.
+  Qed.
+
+End PerSystem.
 
