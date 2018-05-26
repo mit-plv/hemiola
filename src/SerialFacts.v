@@ -32,6 +32,19 @@ Section MsgParam.
            [discriminate|firstorder]).
   Qed.
 
+  Lemma atomic_ins_outs_unique:
+    forall (hst: History MsgT) ins1 outs1,
+      Atomic ins1 hst outs1 ->
+      forall ins2 outs2,
+        Atomic ins2 hst outs2 ->
+        ins1 = ins2 /\ outs1 = outs2.
+  Proof.
+    induction 1; simpl; intros.
+    - inv H; [auto|inv H6].
+    - inv H2; [inv H|].
+      specialize (IHAtomic _ _ H9); dest; subst; auto.
+  Qed.
+
   Lemma extAtomic_preserved:
     forall impl1 (rq: Id MsgT) hst mouts,
       ExtAtomic impl1 rq hst mouts ->

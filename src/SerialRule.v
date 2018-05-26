@@ -334,24 +334,54 @@ Section QuasiSeq.
 
 End QuasiSeq.
 
-(* A list of (semi-)transactions is [Interleaved] iff
- * 1) there is a transaction which is [Atomic] but not [ExtAtomic] and
- * 2) this transaction and the previous transaction stem from different
- *    transactions, i.e., they cannot be merged into a single transaction.
- *)
-Definition Interleaved (sys: System) {MsgT} (trss: list (History MsgT)) :=
-  exists ins trs outs dtrs trss1 trss2,
-    Atomic ins trs outs /\ ~ SubList (idsOf ins) (merqsOf sys) /\
-    trss = trss1 ++ trs :: dtrs :: trss2 /\
-    ~ STransactional (trs ++ dtrs).
+Definition Discontinuous {MsgT} (hst1 hst2: History MsgT) :=
+  forall ins1 outs1 ins2 outs2,
+    Atomic ins1 hst1 outs1 ->
+    Atomic ins2 hst2 outs2 ->
+    ins2 = nil \/ (exists in2, In in2 ins2 /\ ~ InMPI outs1 in2).
 
-(* Any legal transaction sequences are either [Sequential] or [Interleaved]. *)
-Lemma stransactional_sequential_or_interleaved:
-  forall sys trss st1 st2,
-    steps step_m sys st1 (List.concat trss) st2 ->
-    Forall STransactional trss ->
-    Sequential sys (List.concat trss) \/
-    Interleaved sys trss.
+Definition NonconflictingLabels {MsgT} (lbl1 lbl2: RLabel MsgT) :=
+  match lbl1, lbl2 with
+  | RlblInt rule1 _ _, RlblInt rule2 _ _ =>
+    (rule_oidx rule1 <> rule_oidx rule2)
+    (* (rule_postcond rule1) .. (rule_postcond rule2) *)
+  | _, _ => True
+  end.
+
+Definition Nonconflicting {MsgT} (hst1 hst2: History MsgT) :=
+  forall lbl1 lbl2,
+    In lbl1 hst1 ->
+    In lbl2 hst2 ->
+    NonconflictingLabels lbl1 lbl2.
+
+Lemma not_discontinuous_atomic_concat:
+  forall {MsgT} (hst1: History MsgT) ins1 outs1,
+    Atomic ins1 hst1 outs1 ->
+    forall hst2 ins2 outs2,
+      Atomic ins2 hst2 outs2 ->
+      ~ Discontinuous hst1 hst2 ->
+      exists mouts,
+        Atomic ins1 (hst2 ++ hst1) mouts.
+Proof.
+  induction 2; simpl; intros.
+  - eexists.
+    eapply AtomicCont; eauto.
+    + destruct rqs; try discriminate.
+      elim H0; clear H0.
+      red; intros.
+      inv H1; auto.
+      elim H9; auto.
+    + admit.
+  - admit.
+Admitted.
+
+Lemma non_conflicting_discontinuous_commute:
+  forall sys ins1 hst1 outs1 ins2 hst2 outs2,
+    Atomic ins1 hst1 outs1 ->
+    Atomic ins2 hst2 outs2 ->
+    Discontinuous hst1 hst2 ->
+    Nonconflicting hst1 hst2 ->
+    Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
 Admitted.
 
@@ -363,45 +393,19 @@ Section ImmRqRsSerial.
   Local Definition quasiSeq :=
     fun (_: System) (hst: MHistory) n => SSequential hst n.
 
-  (* A possibly useful lemma:
-   * forall ins hst outs, Atomic ins hst outs ->
-   * it's either immediate or rq-fwd(+rs-back).
-   *)
-
-  Lemma immrqrs_partial_blocking_interleaved_reducible:
-    forall trss st1 st2,
-      steps step_m sys st1 (List.concat trss) st2 ->
-      Forall STransactional trss ->
-      Interleaved sys trss ->
-      exists (rhst : MHistory) (m : nat),
-        Reduced sys (List.concat trss) rhst /\
-        SSequential rhst m /\
-        m < Datatypes.length trss.
-  Proof.
-    intros.
-    destruct H1 as [ins [trs [outs [dtrs [trss1 [trss2 [? [? [? ?]]]]]]]]].
-    subst.
-  Admitted.
-  
-  Lemma immrqrs_partial_blocking_quasiSeq_ok:
+  Lemma immrqrs_pb_quasiSeq_ok:
     QuasiSeqOkStep sys quasiSeq.
   Proof.
-    red; intros.
-    inv H0.
-    pose proof (stransactional_sequential_or_interleaved H H3).
-    destruct H0; [auto|].
-    right.
-    eapply immrqrs_partial_blocking_interleaved_reducible; eauto.
-  Qed.
+  Admitted.
 
-  Theorem immrqrs_partial_blocking_serializable:
+  Theorem immrqrs_pb_serializable:
     SerializableSys sys.
   Proof.
     intros.
     apply quasiSeqOk_implies_serializableSys with (quasiSeq := quasiSeq).
     - red; intros.
       apply SSequential_default.
-    - apply immrqrs_partial_blocking_quasiSeq_ok.
+    - apply immrqrs_pb_quasiSeq_ok.
   Qed.
 
 End ImmRqRsSerial.

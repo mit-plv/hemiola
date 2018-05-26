@@ -41,7 +41,7 @@ Section MessagePool.
   Definition InMP (midx: IdxT) (msg: MsgT) (mp: MessagePool) :=
     In msg (findQ midx mp).
 
-  Definition InMPI (idm: Id MsgT) (mp: MessagePool) :=
+  Definition InMPI (mp: MessagePool) (idm: Id MsgT) :=
     InMP (idOf idm) (valOf idm) mp.
 
   Definition ForallMP (P: IdxT -> MsgT -> Prop) (mp: MessagePool) :=
