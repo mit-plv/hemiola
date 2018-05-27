@@ -194,6 +194,17 @@ Section Facts.
     apply hd_error_In; auto.
   Qed.
 
+  Lemma FirstMPI_Forall_InMP:
+    forall (mp: MessagePool MsgT) msgs,
+      Forall (FirstMPI mp) msgs ->
+      Forall (InMPI mp) msgs.
+  Proof.
+    induction msgs; simpl; intros; [constructor|].
+    inv H.
+    constructor; auto.
+    apply FirstMP_InMP; auto.
+  Qed.
+
   Lemma FirstMP_enqMP:
     forall (mp: MessagePool MsgT) i m,
       FirstMP mp i m ->

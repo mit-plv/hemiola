@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepM StepT.
+Require Import Common ListSupport FMap Syntax Semantics StepM StepT SemFacts.
 Require Import Topology Serial SerialFacts Reduction.
 
 Require Import Omega Permutation Wf.
@@ -191,102 +191,6 @@ Section RAtomic.
 
 End RAtomic.
 
-(*! Reducibility of request-forwardings and responses-back *)
-
-(* For a given list of "list of transactions," we want to preserve an order
- * for each "list of transactions."
- *)
-Inductive OPermutation {A}: list (list (list A)) -> list A -> Prop :=
-| OPermNil: OPermutation nil nil
-| OPermCons:
-    forall strss1 trs trss strss2 hst,
-      OPermutation (strss1 ++ trss :: strss2) hst ->
-      OPermutation (strss1 ++ (trs :: trss) :: strss2) (trs ++ hst).
-                
-Definition liftSingletonTrs (hst: MHistory) :=
-  map (fun lbl => [lbl]) hst.
-
-(** * TODO: change all [Atomic] in below lemmas to a stronger one [RAtomic]? *)
-
-Lemma downward_request_forwardings_reduced:
-  forall sys rqfr rq rqfs rqfsp trss,
-
-    (* A subtransaction for each downward request can happen 
-     * in an arbitrary order. *)
-    Permutation rqfs rqfsp ->
-
-    (* [trss] are the subtransactions of downward requests,
-     * where each of them is already [Atomic]. *)
-    Forall (fun rqtrs => exists outs, Atomic [fst rqtrs] (snd rqtrs) outs)
-           (combine rqfsp trss) ->
-
-    (* Other irrelevant transaction segments and the subtransactions
-     * are interleaved in an arbitrary manner. *)
-    forall trsoths others,
-      OPermutation [trss; liftSingletonTrs others] trsoths ->
-
-      (* This reduction claims that all the irrelevant segments can be
-       * left-pushed before the original request-forwarding label. *)
-      Reduced sys (trsoths ++ [RlblInt rqfr [rq] rqfs])
-              (List.concat trss ++ [RlblInt rqfr [rq] rqfs] ++ others).
-Proof.
-  (* induction on [OPermutation]? *)
-Admitted.
-
-Lemma upward_request_forwarding_reduced:
-  forall sys rqfr rq rqf trs outs,
-
-    (* The transaction for the upward request is already [Atomic]. *)
-    Atomic [rqf] trs outs ->
-
-    (* This reduction claims that intermediate irrelevant subhistory [others]
-     * can be left-pushed before the original request-forwarding label. *)
-    forall others,
-      Reduced sys (trs ++ others ++ [RlblInt rqfr [rq] [rqf]])
-              (trs ++ [RlblInt rqfr [rq] [rqf]] ++ others).
-Proof.
-  (* induction on [others]? *)
-Admitted.
-
-Lemma upward_responses_back_reduced:
-  forall sys rsbr rss rssp trss rsb,
-
-    (* A subtransaction for each upward response can happen 
-     * in an arbitrary order. *)
-    Permutation rss rssp ->
-
-    (* [trss] are the subtransactions of upward responses,
-     * where each of them is already [Atomic]. *)
-    Forall (fun rstrs =>
-              exists rq, Atomic rq (snd rstrs) (enqMPI (fst rstrs) (emptyMP _)))
-           (combine rssp trss) ->
-
-    (* Other irrelevant transaction segments and the subtransactions
-     * are interleaved in an arbitrary manner. *)
-    forall trsoths others,
-      OPermutation [trss; liftSingletonTrs others] trsoths ->
-
-      (* This reduction claims that all the irrelevant segments can be
-       * right-pushed after the response-back label. *)
-      Reduced sys (RlblInt rsbr rss [rsb] :: trsoths)
-              (others ++ RlblInt rsbr rss [rsb] :: List.concat trss).
-Proof.
-Admitted.
-
-Lemma downward_response_back_reduced:
-  forall sys rq rsbr rs trs rsb,
-
-    (* The transaction for the downward response is already [Atomic]. *)
-    Atomic rq trs (enqMPI rs (emptyMP _)) ->
-
-    (* This reduction claims that intermediate irrelevant subhistory [others] *)
-    (* can be right-pushed after the response-back label. *)
-    forall others,
-      Reduced sys (RlblInt rsbr [rs] [rsb] :: others ++ trs)
-              (others ++ RlblInt rsbr [rs] [rsb] :: trs).
-Proof.
-  (* induction on [others]? *)
-Admitted.
 
 (*! Proving [Serializability] using quasi-sequential histories *)
 
@@ -334,17 +238,27 @@ Section QuasiSeq.
 
 End QuasiSeq.
 
+Definition Continuous {MsgT} (hst1 hst2: History MsgT) :=
+  exists ins1 outs1 ins2 outs2,
+    Atomic ins1 hst1 outs1 /\
+    Atomic ins2 hst2 outs2 /\
+    ins2 <> nil /\
+    Forall (FirstMPI outs1) ins2.
+
 Definition Discontinuous {MsgT} (hst1 hst2: History MsgT) :=
   forall ins1 outs1 ins2 outs2,
-    Atomic ins1 hst1 outs1 ->
-    Atomic ins2 hst2 outs2 ->
-    ins2 = nil \/ (exists in2, In in2 ins2 /\ ~ InMPI outs1 in2).
+    STransactional ins1 hst1 outs1 ->
+    STransactional ins2 hst2 outs2 ->
+    DisjList ins1 ins2 /\ Forall (fun idm => ~ InMPI outs1 idm) ins2.
+
+Definition NonconflictingRules (rule1 rule2: Rule) :=
+  (rule_oidx rule1 <> rule_oidx rule2) \/
+  (* TODO: define when rules are for the same object. *)
+  True.
 
 Definition NonconflictingLabels {MsgT} (lbl1 lbl2: RLabel MsgT) :=
   match lbl1, lbl2 with
-  | RlblInt rule1 _ _, RlblInt rule2 _ _ =>
-    (rule_oidx rule1 <> rule_oidx rule2)
-    (* (rule_postcond rule1) .. (rule_postcond rule2) *)
+  | RlblInt rule1 _ _, RlblInt rule2 _ _ => NonconflictingRules rule1 rule2
   | _, _ => True
   end.
 
@@ -354,31 +268,47 @@ Definition Nonconflicting {MsgT} (hst1 hst2: History MsgT) :=
     In lbl2 hst2 ->
     NonconflictingLabels lbl1 lbl2.
 
-Lemma not_discontinuous_atomic_concat:
+Definition Interleaved (sys: System) {MsgT} (hsts: list (History MsgT)) :=
+  exists hst1 hst2 hsts1 hsts2,
+    hsts = hst2 :: hsts2 ++ hst1 :: hsts1 /\
+    Continuous hst1 hst2.
+
+Lemma continuous_atomic_concat':
   forall {MsgT} (hst1: History MsgT) ins1 outs1,
     Atomic ins1 hst1 outs1 ->
     forall hst2 ins2 outs2,
+      ins2 <> nil ->
       Atomic ins2 hst2 outs2 ->
-      ~ Discontinuous hst1 hst2 ->
-      exists mouts,
-        Atomic ins1 (hst2 ++ hst1) mouts.
+      Forall (FirstMPI outs1) ins2 ->
+      (* FIXME: need more information about [mouts]. *)
+      exists mouts, Atomic ins1 (hst2 ++ hst1) mouts.
 Proof.
-  induction 2; simpl; intros.
-  - eexists.
-    eapply AtomicCont; eauto.
-    + destruct rqs; try discriminate.
-      elim H0; clear H0.
-      red; intros.
-      inv H1; auto.
-      elim H9; auto.
-    + admit.
-  - admit.
+Admitted.
+
+Lemma continuous_atomic_concat:
+  forall {MsgT} (hst1 hst2: History MsgT),
+    Continuous hst1 hst2 ->
+    exists mins mouts,
+      Atomic mins (hst2 ++ hst1) mouts.
+Proof.
+  unfold Continuous; intros.
+  destruct H as [ins1 [outs1 [ins2 [outs2 [? [? [? ?]]]]]]].
+  eauto using continuous_atomic_concat'.
+Qed.
+
+Lemma stransactional_sequential_or_interleaved:
+  forall sys trss st1 st2,
+    steps step_m sys st1 (List.concat trss) st2 ->
+    Forall (fun trs => exists ins outs, STransactional ins trs outs) trss ->
+    Sequential sys (List.concat trss) \/
+    Interleaved sys trss.
+Proof.
 Admitted.
 
 Lemma non_conflicting_discontinuous_commute:
   forall sys ins1 hst1 outs1 ins2 hst2 outs2,
-    Atomic ins1 hst1 outs1 ->
-    Atomic ins2 hst2 outs2 ->
+    STransactional ins1 hst1 outs1 ->
+    STransactional ins2 hst2 outs2 ->
     Discontinuous hst1 hst2 ->
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
@@ -390,13 +320,151 @@ Section ImmRqRsSerial.
   Hypotheses (Hirr: ImmRqRsSys topo sys)
              (Hpb: PartialBlockingSys topo sys).
 
+  Lemma between_continuous_discontinuous_nonconflicting:
+    forall hst1 hst2,
+      Continuous hst1 hst2 ->
+      forall hsts,
+        Forall (fun hst => exists ins outs, STransactional ins hst outs) hsts ->
+        forall st1 st2,
+          steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+          Forall (fun hst => Discontinuous hst1 hst /\ Nonconflicting hst1 hst) hsts \/
+          Forall (fun hst => Discontinuous hst hst2 /\ Nonconflicting hst hst2) hsts.
+  Proof.
+  Admitted.
+
+  Lemma between_continuous_reduced:
+    forall hst1 hst2,
+      Continuous hst1 hst2 ->
+      forall hsts,
+        Forall (fun hst => exists ins outs, STransactional ins hst outs) hsts ->
+        forall st1 st2,
+          steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+          Reduced sys (List.concat (hst2 :: hsts ++ [hst1]))
+                  (List.concat (hst2 :: hst1 :: hsts)) \/
+          Reduced sys (List.concat (hst2 :: hsts ++ [hst1]))
+                  (List.concat (hsts ++ [hst2; hst1])).
+  Proof.
+    intros.
+    pose proof H.
+    destruct H as [ins1 [outs1 [ins2 [outs2 [? [? [? ?]]]]]]].
+    eapply between_continuous_discontinuous_nonconflicting in H2; eauto.
+    destruct H2; [left|right].
+    - simpl; apply reduced_app_1.
+      rewrite concat_app; simpl; rewrite app_nil_r.
+
+      clear -H H0 H2.
+      generalize dependent hst1.
+      induction hsts; simpl; intros;
+        [rewrite app_nil_r; apply reduced_refl|].
+      inv H0; inv H2; dest.
+      specialize (IHhsts H5 _ H H6).
+      rewrite <-app_assoc.
+      eapply reduced_trans; [eapply reduced_app_1; eassumption|].
+      do 2 rewrite app_assoc.
+      apply reduced_app_2.
+      eapply non_conflicting_discontinuous_commute; eauto.
+      eapply STrsAtomic; eauto.
+
+    - change (hst2 :: hsts ++ [hst1]) with ((hst2 :: hsts) ++ [hst1]).
+      do 2 rewrite concat_app.
+      simpl; rewrite app_nil_r.
+      rewrite app_assoc.
+      apply reduced_app_2.
+
+      clear -H0 H2 H3.
+      generalize dependent hst2.
+      induction hsts; simpl; intros;
+        [rewrite app_nil_r; apply reduced_refl|].
+      inv H0; inv H2; dest.
+      specialize (IHhsts H5 _ H3 H6).
+      rewrite <-app_assoc.
+      eapply reduced_trans; [|eapply reduced_app_1; eassumption].
+      do 2 rewrite app_assoc.
+      apply reduced_app_2.
+      eapply non_conflicting_discontinuous_commute; eauto.
+      eapply STrsAtomic; eauto.
+  Qed.
+
   Local Definition quasiSeq :=
     fun (_: System) (hst: MHistory) n => SSequential hst n.
 
+  Lemma immrqrs_pb_interleaved_reducible:
+    forall trss st1 st2,
+      steps step_m sys st1 (List.concat trss) st2 ->
+      Forall (fun trs => exists ins outs, STransactional ins trs outs) trss ->
+      Interleaved sys trss ->
+      exists (rhst : MHistory) (m : nat),
+        Reduced sys (List.concat trss) rhst /\
+        SSequential rhst m /\
+        m < Datatypes.length trss.
+  Proof.
+    intros.
+    destruct H1 as [hst1 [hst2 [hsts1 [hsts2 [? ?]]]]]; subst.
+    match goal with
+    | [H: steps step_m _ _ ?hst _ |- _] =>
+      replace hst with (List.concat (hst2 :: hsts2 ++ [hst1]) ++ List.concat hsts1) in *;
+        [|simpl; rewrite <-app_assoc; f_equal;
+          do 2 rewrite concat_app; simpl;
+          rewrite <-app_assoc, app_nil_r; reflexivity]
+    end.
+    eapply steps_split in H; [|reflexivity].
+    destruct H as [sti [? ?]].
+    inv H0; apply Forall_app_inv in H6; dest; inv H3.
+    eapply between_continuous_reduced in H1; eauto.
+    destruct H7 as [ins1 [outs1 ?]].
+    destruct H1.
+
+    - exists (List.concat (hsts2 ++ [hst2 ++ hst1]) ++ List.concat hsts1); eexists.
+      split; [|split].
+      + apply reduced_app_2.
+        replace (List.concat (hsts2 ++ [hst2 ++ hst1]))
+          with (List.concat (hsts2 ++ [hst2; hst1])); auto.
+        do 2 rewrite concat_app.
+        simpl; do 2 rewrite app_nil_r; reflexivity.
+      + econstructor.
+        * rewrite <-concat_app; reflexivity.
+        * reflexivity.
+        * do 2 (apply Forall_app; auto).
+          constructor; auto.
+          apply continuous_atomic_concat in H2.
+          destruct H2 as [mins [mouts ?]].
+          do 2 eexists.
+          eapply STrsAtomic; eauto.
+      + repeat (simpl; try rewrite app_length).
+        apply le_lt_n_Sm.
+        rewrite <-Nat.add_assoc; simpl.
+        apply Nat.le_refl.
+
+    - exists (List.concat ((hst2 ++ hst1) :: hsts2) ++ List.concat hsts1); eexists.
+      split; [|split].
+      + apply reduced_app_2.
+        replace (List.concat ((hst2 ++ hst1) :: hsts2))
+          with (List.concat (hst2 :: hst1 :: hsts2)); auto.
+        simpl; apply app_assoc.
+      + econstructor.
+        * rewrite <-concat_app; reflexivity.
+        * reflexivity.
+        * apply Forall_app; auto.
+          constructor; auto.
+          apply continuous_atomic_concat in H2.
+          destruct H2 as [mins [mouts ?]].
+          do 2 eexists.
+          eapply STrsAtomic; eauto.
+      + repeat (simpl; try rewrite app_length).
+        do 2 rewrite Nat.add_comm with (n:= List.length hsts2).
+        auto.
+  Qed.
+  
   Lemma immrqrs_pb_quasiSeq_ok:
     QuasiSeqOkStep sys quasiSeq.
   Proof.
-  Admitted.
+    red; intros.
+    inv H0.
+    pose proof (stransactional_sequential_or_interleaved H H3).
+    destruct H0; [auto|].
+    right.
+    eapply immrqrs_pb_interleaved_reducible; eauto.
+  Qed.
 
   Theorem immrqrs_pb_serializable:
     SerializableSys sys.

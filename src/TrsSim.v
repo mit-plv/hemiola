@@ -348,13 +348,15 @@ Proof.
     split.
     + apply ForallMP_enqMsgs.
       * apply ForallMP_deqMsgs; assumption.
-      * eapply ForallMP_Forall_InMP in H3; eauto.
+      * apply FirstMPI_Forall_InMP in H3.
+        eapply ForallMP_Forall_InMP in H3; eauto.
         eapply trsPreservingSys_ins_outs_same_tid in H9; eauto.
         destruct H9 as [tid [? ?]].
         destruct msgs; [elim H2; reflexivity|].
         inv H5; inv H3.
         simpl in H9; rewrite <-H9; auto.
     + constructor; auto.
+      apply FirstMPI_Forall_InMP in H3.
       eapply ForallMP_Forall_InMP in H3; eauto.
       simpl in H3; auto.
 Qed.

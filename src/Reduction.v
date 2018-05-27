@@ -40,6 +40,27 @@ Proof.
   destruct a; auto; elim H2.
 Qed.
 
+Lemma reduced_refl:
+  forall sys hst, Reduced sys hst hst.
+Proof.
+  unfold Reduced; intros.
+  split; auto.
+  congruence.
+Qed.
+
+Lemma reduced_trans:
+  forall sys hst1 hst2 hst3,
+    Reduced sys hst1 hst2 ->
+    Reduced sys hst2 hst3 ->
+    Reduced sys hst1 hst3.
+Proof.
+  unfold Reduced; intros.
+  specialize (H _ _ H1); dest.
+  specialize (H0 _ _ H); dest.
+  split; auto.
+  congruence.
+Qed.
+
 Lemma reduced_app_1:
   forall sys hfr hto,
     Reduced sys hfr hto ->

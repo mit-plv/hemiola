@@ -140,9 +140,9 @@ Section MsgParam.
   Qed.
 
   Lemma STransactional_default:
-    forall lbl, STransactional (MsgT:= MsgT) [lbl].
+    forall lbl, exists ins outs, STransactional (MsgT:= MsgT) ins [lbl] outs.
   Proof.
-    destruct lbl; intros.
+    destruct lbl; intros; do 2 eexists.
     - eapply STrsSlt.
     - eapply STrsIns; eauto.
     - eapply STrsAtomic.

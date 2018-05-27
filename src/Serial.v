@@ -24,7 +24,7 @@ Section Sequential.
       forall rq hst rule msgs mouts houts,
         Atomic rq hst mouts ->
         msgs <> nil ->
-        Forall (fun idm => InMP (idOf idm) (valOf idm) mouts) msgs ->
+        Forall (FirstMPI mouts) msgs ->
         Atomic rq (RlblInt rule msgs houts :: hst)
                (enqMsgs houts (deqMsgs (idsOf msgs) mouts)).
 
@@ -64,28 +64,28 @@ End Sequential.
 Section Semi.
   Context {MsgT} `{HasMsg MsgT}.
 
-  Inductive STransactional: History MsgT -> Prop :=
+  Inductive STransactional: list (Id MsgT) -> History MsgT -> MessagePool MsgT -> Prop :=
   | STrsSlt:
-      STransactional (RlblEmpty _ :: nil)
+      STransactional nil (RlblEmpty _ :: nil) (emptyMP _)
   | STrsIns:
       forall eins tin,
         tin = RlblIns eins ->
-        STransactional (tin :: nil)
+        STransactional nil (tin :: nil) (enqMsgs eins (emptyMP _))
   | STrsOuts:
       forall eouts tout,
         tout = RlblOuts eouts ->
-        STransactional (tout :: nil)
+        STransactional eouts (tout :: nil) (emptyMP _)
   | STrsAtomic:
-      forall rq hst mouts,
-        Atomic rq hst mouts ->
-        STransactional hst.
+      forall rqs hst mouts,
+        Atomic rqs hst mouts ->
+        STransactional rqs hst mouts.
 
   Inductive SSequential: History MsgT -> nat -> Prop :=
   | SSeqIntro:
       forall trss hst lth,
         hst = List.concat trss ->
         lth = List.length trss ->
-        Forall STransactional trss ->
+        Forall (fun trs => exists ins outs, STransactional ins trs outs) trss ->
         SSequential hst lth.
 
 End Semi.
