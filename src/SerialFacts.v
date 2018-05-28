@@ -45,6 +45,30 @@ Section MsgParam.
       specialize (IHAtomic _ _ H9); dest; subst; auto.
   Qed.
 
+  Lemma atomic_app:
+    forall (hst1: History MsgT) ins1 outs1,
+      Atomic ins1 hst1 outs1 ->
+      forall hst2 ins2 outs2,
+        ins2 <> nil ->
+        Atomic ins2 hst2 outs2 ->
+        Forall (InMPI outs1) ins2 ->
+        exists mouts,
+          Atomic ins1 (hst2 ++ hst1) mouts /\
+          (forall msgs, Forall (InMPI outs2) msgs -> Forall (InMPI mouts) msgs).
+  Proof.
+    induction 3; simpl; intros.
+    - eexists; split.
+      + econstructor; eauto.
+      + intros.
+        admit.
+    - specialize (IHAtomic H0 H4).
+      destruct IHAtomic as [mouts1 [? ?]].
+      eexists; split.
+      + econstructor; eauto.
+      + intros.
+        admit.
+  Admitted.
+
   Lemma extAtomic_preserved:
     forall impl1 (rq: Id MsgT) hst mouts,
       ExtAtomic impl1 rq hst mouts ->
@@ -58,64 +82,62 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_nil:
-    forall sys, Sequential (MsgT:= MsgT) sys nil.
+    forall sys, Sequential (MsgT:= MsgT) sys nil nil.
   Proof.
     intros; hnf; intros.
-    exists nil.
     split.
     - constructor.
     - reflexivity.
   Qed.
 
   Lemma sequential_silent:
-    forall sys ll,
-      Sequential (MsgT:= MsgT) sys ll ->
-      Sequential (MsgT:= MsgT) sys (RlblEmpty _ :: ll).
+    forall sys ll trss,
+      Sequential (MsgT:= MsgT) sys ll trss ->
+      Sequential (MsgT:= MsgT) sys (RlblEmpty _ :: ll) ([RlblEmpty _] :: trss).
   Proof.
     intros.
     hnf; hnf in H; dest.
-    eexists ([RlblEmpty _] :: _); split.
+    split.
     - constructor; [|eassumption].
       constructor.
     - subst; reflexivity.
   Qed.
 
   Lemma sequential_msg_ins:
-    forall sys ll eins,
-      Sequential (MsgT:= MsgT) sys ll ->
-      Sequential (MsgT:= MsgT) sys (RlblIns eins :: ll).
+    forall sys ll trss eins,
+      Sequential (MsgT:= MsgT) sys ll trss ->
+      Sequential (MsgT:= MsgT) sys (RlblIns eins :: ll) ([RlblIns eins] :: trss).
   Proof.
     intros.
     hnf; hnf in H; dest.
-    eexists ([RlblIns eins] :: _); split.
+    split.
     - constructor; [|eassumption].
       eapply TrsIns; reflexivity.
     - subst; reflexivity.
   Qed.
 
   Lemma sequential_msg_outs:
-    forall sys ll eouts,
-      Sequential (MsgT:= MsgT) sys ll ->
-      Sequential (MsgT:= MsgT) sys (RlblOuts eouts :: ll).
+    forall sys ll trss eouts,
+      Sequential (MsgT:= MsgT) sys ll trss ->
+      Sequential (MsgT:= MsgT) sys (RlblOuts eouts :: ll) ([RlblOuts eouts] :: trss).
   Proof.
     intros.
     hnf; hnf in H; dest.
-    eexists ([RlblOuts eouts] :: _); split.
+    split.
     - constructor; [|eassumption].
       eapply TrsOuts; reflexivity.
     - subst; reflexivity.
   Qed.
 
   Lemma sequential_app:
-    forall sys ll1 ll2,
-      Sequential (MsgT:= MsgT) sys ll1 ->
-      Sequential (MsgT:= MsgT) sys ll2 ->
-      Sequential (MsgT:= MsgT) sys (ll1 ++ ll2).
+    forall sys ll1 trss1 ll2 trss2,
+      Sequential (MsgT:= MsgT) sys ll1 trss1 ->
+      Sequential (MsgT:= MsgT) sys ll2 trss2 ->
+      Sequential (MsgT:= MsgT) sys (ll1 ++ ll2) (trss1 ++ trss2).
   Proof.
     unfold Sequential; intros.
-    destruct H as [trss1 [? ?]].
-    destruct H0 as [trss2 [? ?]]; subst.
-    exists (trss1 ++ trss2); split.
+    destruct H, H0; subst.
+    split.
     - apply Forall_app; auto.
     - apply eq_sym, concat_app.
   Qed.
@@ -128,9 +150,9 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_serializable:
-    forall sys hst st,
+    forall sys hst trss st,
       steps step_m sys (initsOf sys) hst st ->
-      Sequential sys hst ->
+      Sequential sys hst trss ->
       Serializable sys hst.
   Proof.
     intros; red; intros.
@@ -212,7 +234,7 @@ Proof.
   split.
   - split.
     + constructor.
-    + apply sequential_nil.
+    + eexists; eapply sequential_nil.
   - reflexivity.
 Qed.
 
@@ -224,11 +246,11 @@ Proof.
   intros.
   hnf; hnf in H; intros; dest.
   do 2 eexists; split.
-  - destruct H; split.
+  - destruct H; split; dest.
     + eapply StepsCons.
       * eassumption.
       * eapply SmSlt.
-    + apply sequential_silent; auto.
+    + eexists; eapply sequential_silent; eauto.
   - assumption.
 Qed.
 
@@ -243,11 +265,11 @@ Proof.
   hnf; hnf in H; intros; dest.
   destruct x0 as [oss orqs msgs].
   exists (RlblIns eins :: x); eexists; split.
-  - destruct H; split.
+  - destruct H; split; dest.
     + econstructor.
       * eassumption.
       * econstructor; eauto.
-    + apply sequential_msg_ins; auto.
+    + eexists; eapply sequential_msg_ins; eauto.
   - hnf; cbn; rewrite H2; reflexivity.
 Qed.
 

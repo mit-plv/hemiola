@@ -24,7 +24,7 @@ Section Sequential.
       forall rq hst rule msgs mouts houts,
         Atomic rq hst mouts ->
         msgs <> nil ->
-        Forall (FirstMPI mouts) msgs ->
+        Forall (InMPI mouts) msgs ->
         Atomic rq (RlblInt rule msgs houts :: hst)
                (enqMsgs houts (deqMsgs (idsOf msgs) mouts)).
 
@@ -54,10 +54,8 @@ Section Sequential.
         ExtAtomic rq hst mouts ->
         Transactional hst.
 
-  Definition Sequential (hst: History MsgT) :=
-    exists trss: list (History MsgT),
-      Forall Transactional trss /\
-      hst = List.concat trss.
+  Definition Sequential (hst: History MsgT) (trss: list (History MsgT)) :=
+    Forall Transactional trss /\ hst = List.concat trss.
 
 End Sequential.
 
@@ -105,7 +103,7 @@ Definition seqSteps {StateT MsgT} `{HasMsg MsgT}
            (step: Step System StateT (RLabel MsgT))
            (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
   steps step sys st1 hst st2 /\
-  Sequential sys hst.
+  exists trss, Sequential sys hst trss.
 
 Definition seqStepsM := seqSteps step_m.
 Definition seqStepsT := seqSteps step_t.

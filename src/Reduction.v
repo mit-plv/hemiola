@@ -110,15 +110,15 @@ Qed.
 Lemma reduced_to_seq_serializable:
   forall sys hst st2,
     steps step_m sys (initsOf sys) hst st2 ->
-    forall shst,
+    forall shst strss,
       Reduced sys hst shst ->
-      Sequential sys shst ->
+      Sequential sys shst strss ->
       Serializable sys hst.
 Proof.
   intros.
   eapply reduced_serializable with (hto:= shst); eauto.
   exists shst, st2; split.
-  - split; auto.
+  - split; eauto.
     apply H0; auto.
   - congruence.
 Qed.
