@@ -245,10 +245,12 @@ Definition Continuous {MsgT} (hst1 hst2: History MsgT) :=
     Forall (InMPI outs1) ins2.
 
 Definition Discontinuous {MsgT} (hst1 hst2: History MsgT) :=
-  forall ins1 outs1 ins2 outs2,
-    STransactional ins1 hst1 outs1 ->
-    STransactional ins2 hst2 outs2 ->
-    DisjList ins1 ins2 /\ Forall (fun idm => ~ InMPI outs1 idm) ins2.
+  forall tty1 ins1 outs1 tty2 ins2 outs2,
+    STransactional tty1 ins1 hst1 outs1 ->
+    STransactional tty2 ins2 hst2 outs2 ->
+    DisjList ins1 ins2 /\
+    Forall (fun idm => ~ InMPI outs1 idm) ins2.
+(* (forall idm, InMPI outs1 idm -> InMPI outs2 idm -> False). *)
 
 Definition NonconflictingRules (rule1 rule2: Rule) :=
   (rule_oidx rule1 <> rule_oidx rule2) \/
@@ -272,6 +274,32 @@ Definition Interleaved {MsgT} (hsts: list (History MsgT)) :=
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 /\
     Continuous hst1 hst2.
 
+Lemma discontinuous_cons_inv:
+  forall {MsgT} (hst1: History MsgT) lbl2 hst2 tty2 ins2 outs2,
+    STransactional tty2 ins2 (lbl2 :: hst2) outs2 ->
+    Discontinuous hst1 (lbl2 :: hst2) ->
+    Discontinuous hst1 hst2.
+Proof.
+  unfold Discontinuous; intros.
+  assert (ins0 = ins2); subst.
+  { apply stransactional_cons_inv in H.
+    destruct H; subst.
+    { inv H2; inv H. }
+    { dest; eapply stransactional_trsType_ins_outs_unique; eauto. }
+  }
+  eapply H0; eauto.
+Qed.
+
+Lemma nonconflicting_cons_inv:
+  forall {MsgT} (hst1: History MsgT) lbl2 hst2,
+    Nonconflicting hst1 (lbl2 :: hst2) ->
+    Nonconflicting hst1 hst2.
+Proof.
+  unfold Nonconflicting; intros.
+  eapply H; eauto.
+  right; auto.
+Qed.
+
 Lemma continuous_atomic_concat:
   forall {MsgT} (hst1 hst2: History MsgT),
     Continuous hst1 hst2 ->
@@ -287,7 +315,9 @@ Qed.
 Lemma stransactional_sequential_or_interleaved:
   forall sys trss st,
     steps step_m sys (initsOf sys) (List.concat trss) st ->
-    Forall (fun trs => exists ins outs, STransactional ins trs outs) trss ->
+    Forall (fun trs =>
+              exists tty ins outs, STransactional tty ins trs outs)
+           trss ->
     Sequential sys (List.concat trss) trss \/
     Interleaved trss.
 Proof.
@@ -318,20 +348,29 @@ Proof.
   
 Admitted.
 
-(** FIXME: [Discontinuous] definition is too broad to prove this lemma:
- * the predicate should not allow the case where both [hst1] and [hst2]
- * have some observable labels ([RlblIns] or [RlblOuts]) so commuting
- * two histories induces different behaviors.
- *
- * [Discontinuous] is used for 
- * [between_continuous_discontinuous_nonconflicting], where the one of arguments
- * is [Atomic], which means that it's totally fine to restrict the definition
- * of it by disallowing commutations of observable labels.
- *)
+Definition CommutableTrsType (tty1 tty2: TrsType) :=
+  match tty1, tty2 with
+  | TSlt, _ => True
+  | _, TSlt => True
+  | TInt, _ => True
+  | _, TInt => True
+  | _, _ => False
+  end.
+
+Lemma stransactional_tint_internal:
+  forall ins hst outs,
+    STransactional TInt ins hst outs ->
+    InternalHistory hst.
+Proof.
+  intros; inv H.
+  eapply atomic_internal_history; eauto.
+Qed.
+
 Lemma non_conflicting_discontinuous_commute:
-  forall sys hst1 ins1 outs1 hst2 ins2 outs2,
-    STransactional ins1 hst1 outs1 ->
-    STransactional ins2 hst2 outs2 ->
+  forall sys tty1 hst1 ins1 outs1 tty2 hst2 ins2 outs2,
+    STransactional tty1 ins1 hst1 outs1 ->
+    STransactional tty2 ins2 hst2 outs2 ->
+    CommutableTrsType tty1 tty2 ->
     Discontinuous hst1 hst2 ->
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
@@ -339,11 +378,52 @@ Proof.
   induction hst2; simpl; intros;
     [rewrite app_nil_r; apply reduced_refl|].
 
+  assert (Discontinuous hst1 hst2)
+    by (eapply discontinuous_cons_inv; eauto).
+  assert (Nonconflicting hst1 hst2)
+    by (eapply nonconflicting_cons_inv; eauto).
+  
   inv H0.
   - simpl; apply silent_reduced.
-  - simpl. admit.
-  - simpl. admit.
-  - admit.
+  - simpl.
+    destruct tty1; try (inv H1; fail).
+    + inv H; simpl.
+      apply silent_commutes_2.
+    + inv H; simpl.
+      apply msg_ins_reduced.
+      eapply atomic_internal_history; eauto.
+  - simpl.
+    destruct tty1; try (inv H1; fail).
+    + inv H; simpl.
+      apply silent_commutes_2.
+    + inv H; simpl.
+
+      (* need a lemma for the commutativity of [RlblOuts _], 
+       * stronger than [msg_outs_reduced] in Reduction.v
+       *)
+      admit.
+  - inv H6.
+    + simpl.
+      admit.
+    + assert (STransactional TInt ins2 hst2 mouts) by (constructor; auto).
+      specialize (IHhst2 _ _ H H0 H1 H4 H5).
+      eapply reduced_trans.
+      * change (RlblInt rule msgs houts :: hst2 ++ hst1)
+          with ([RlblInt rule msgs houts] ++ hst2 ++ hst1).
+        eapply reduced_app_1.
+        eassumption.
+      * replace (hst1 ++ RlblInt rule msgs houts :: hst2)
+          with ((hst1 ++ [RlblInt rule msgs houts]) ++ hst2)
+          by (rewrite <-app_assoc; reflexivity).
+        rewrite app_assoc.
+        apply reduced_app_2.
+        simpl.
+
+        (** FIXME: the current definition of [Discontinuous] 
+         * does not imply "Discontinuous hst1 (lbl2 :: hst2) ->
+         * Discontinuous hst [lbl2]", but we need this.
+         *)
+        admit.
 
 Admitted.
 
@@ -356,7 +436,9 @@ Section ImmRqRsSerial.
     forall hst1 hst2,
       Continuous hst1 hst2 ->
       forall hsts,
-        Forall (fun hst => exists ins outs, STransactional ins hst outs) hsts ->
+        Forall (fun hst =>
+                  exists tty ins outs, STransactional tty ins hst outs)
+               hsts ->
         forall st1 st2,
           steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
           Forall (fun hst => Discontinuous hst1 hst /\ Nonconflicting hst1 hst) hsts \/
@@ -368,7 +450,9 @@ Section ImmRqRsSerial.
     forall hst1 hst2,
       Continuous hst1 hst2 ->
       forall hsts,
-        Forall (fun hst => exists ins outs, STransactional ins hst outs) hsts ->
+        Forall (fun hst =>
+                  exists tty ins outs, STransactional tty ins hst outs)
+               hsts ->
         forall st1 st2,
           steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
           Reduced sys (List.concat (hst2 :: hsts ++ [hst1]))
@@ -395,7 +479,8 @@ Section ImmRqRsSerial.
       do 2 rewrite app_assoc.
       apply reduced_app_2.
       eapply non_conflicting_discontinuous_commute; eauto.
-      eapply STrsAtomic; eauto.
+      + eapply STrsAtomic; eauto.
+      + destruct x; simpl; auto.
 
     - change (hst2 :: hsts ++ [hst1]) with ((hst2 :: hsts) ++ [hst1]).
       do 2 rewrite concat_app.
@@ -414,7 +499,8 @@ Section ImmRqRsSerial.
       do 2 rewrite app_assoc.
       apply reduced_app_2.
       eapply non_conflicting_discontinuous_commute; eauto.
-      eapply STrsAtomic; eauto.
+      + eapply STrsAtomic; eauto.
+      + destruct x; simpl; auto.
   Qed.
 
   Local Definition quasiSeq :=
@@ -423,7 +509,9 @@ Section ImmRqRsSerial.
   Lemma immrqrs_pb_interleaved_reducible:
     forall trss st1 st2,
       steps step_m sys st1 (List.concat trss) st2 ->
-      Forall (fun trs => exists ins outs, STransactional ins trs outs) trss ->
+      Forall (fun trs =>
+                exists tty ins outs, STransactional tty ins trs outs)
+             trss ->
       Interleaved trss ->
       exists (rhst : MHistory) (m : nat),
         Reduced sys (List.concat trss) rhst /\
@@ -467,7 +555,7 @@ Section ImmRqRsSerial.
           constructor; auto.
           apply continuous_atomic_concat in H2.
           destruct H2 as [mins [mouts ?]].
-          do 2 eexists.
+          do 3 eexists.
           eapply STrsAtomic; eauto.
       + repeat (simpl; try rewrite app_length).
         apply plus_lt_compat_l.
@@ -491,7 +579,7 @@ Section ImmRqRsSerial.
           constructor; auto.
           apply continuous_atomic_concat in H2.
           destruct H2 as [mins [mouts ?]].
-          do 2 eexists.
+          do 3 eexists.
           eapply STrsAtomic; eauto.
       + repeat (simpl; try rewrite app_length).
         apply plus_lt_compat_l.
@@ -516,7 +604,7 @@ Section ImmRqRsSerial.
     intros.
     apply quasiSeqOk_implies_serializableSys with (quasiSeq := quasiSeq).
     - red; intros.
-      apply SSequential_default.
+      apply ssequential_default.
     - apply immrqrs_pb_quasiSeq_ok.
   Qed.
 

@@ -31,6 +31,16 @@ Definition Reduced (sys: System) (hfr hto: MHistory) :=
 
 (*! General Facts *)
 
+Lemma atomic_internal_history:
+  forall ins hst outs,
+    Atomic ins hst outs ->
+    InternalHistory hst.
+Proof.
+  induction 1; simpl; intros.
+  - repeat constructor.
+  - repeat constructor; auto.
+Qed.
+
 Lemma internal_history_behavior_nil:
   forall sys hst,
     InternalHistory hst -> behaviorOf sys hst = nil.
@@ -125,7 +135,7 @@ Qed.
 
 (*! Reducibility of silent, incoming, and outgoing labels *)
 
-Lemma silent_commutes:
+Lemma silent_commutes_1:
   forall sys lbl,
     Reduced sys [RlblEmpty _; lbl] [lbl; RlblEmpty _].
 Proof.
@@ -135,6 +145,19 @@ Proof.
     repeat econstructor.
     assumption.
   - inv H; inv H3; inv H2; inv H5.
+    repeat econstructor.
+Qed.
+
+Lemma silent_commutes_2:
+  forall sys lbl,
+    Reduced sys [lbl; RlblEmpty _] [RlblEmpty _; lbl].
+Proof.
+  unfold Reduced; intros.
+  split.
+  - inv H; inv H3; inv H2; inv H6.
+    repeat econstructor.
+    assumption.
+  - inv H; inv H3; inv H2; inv H6.
     repeat econstructor.
 Qed.
 
@@ -149,7 +172,7 @@ Proof.
   - change (RlblEmpty _ :: lbl :: hst) with ([RlblEmpty _; lbl] ++ hst) in H.
     eapply steps_split in H; [|reflexivity].
     destruct H as [sti [? ?]].
-    eapply silent_commutes in H0; dest.
+    eapply silent_commutes_1 in H0; dest.
     pose proof (steps_append H H0); inv H2.
     specialize (IHhst _ _ H6); dest.
     econstructor; eauto.
@@ -189,7 +212,7 @@ Proof.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
-Lemma msg_in_reduced:
+Lemma msg_ins_reduced:
   forall sys eins hst2,
     InternalHistory hst2 ->
     Reduced sys (RlblIns eins :: hst2) (hst2 ++ [RlblIns eins]).

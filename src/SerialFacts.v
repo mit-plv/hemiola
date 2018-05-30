@@ -161,10 +161,12 @@ Section MsgParam.
     - congruence.
   Qed.
 
-  Lemma STransactional_default:
-    forall lbl, exists ins outs, STransactional (MsgT:= MsgT) ins [lbl] outs.
+  Lemma stransactional_default:
+    forall lbl,
+    exists tty ins outs,
+      STransactional (MsgT:= MsgT) tty ins [lbl] outs.
   Proof.
-    destruct lbl; intros; do 2 eexists.
+    destruct lbl; intros; do 3 eexists.
     - eapply STrsSlt.
     - eapply STrsIns; eauto.
     - eapply STrsAtomic.
@@ -172,7 +174,39 @@ Section MsgParam.
     - eapply STrsOuts; eauto.
   Qed.
 
-  Lemma SSequential_default:
+  Lemma stransactional_trsType_ins_outs_unique:
+    forall (hst: History MsgT) tty1 ins1 outs1,
+      STransactional tty1 ins1 hst outs1 ->
+      forall tty2 ins2 outs2,
+        STransactional tty2 ins2 hst outs2 ->
+        tty1 = tty2 /\ ins1 = ins2 /\ outs1 = outs2.
+  Proof.
+    intros; inv H.
+    - inv H0; auto; try discriminate.
+      inv H.
+    - inv H0; auto; try discriminate.
+      + inv H3; auto.
+      + inv H.
+    - inv H0; auto; try discriminate.
+      + inv H3; auto.
+      + inv H.
+    - inv H0; try (inv H1; fail).
+      eapply atomic_ins_outs_unique in H; eauto.
+  Qed.
+
+  Lemma stransactional_cons_inv:
+    forall tty ins lbl (hst: History MsgT) outs,
+      STransactional tty ins (lbl :: hst) outs ->
+      hst = nil \/
+      exists pouts, STransactional tty ins hst pouts.
+  Proof.
+    intros.
+    inv H; auto.
+    inv H0; auto.
+    right; eexists; econstructor; eauto.
+  Qed.
+
+  Lemma ssequential_default:
     forall hst, exists n, SSequential (MsgT:= MsgT) hst n.
   Proof.
     induction hst; simpl; intros; [repeat econstructor; eauto|].
@@ -183,7 +217,7 @@ Section MsgParam.
     - instantiate (1:= [a] :: _); reflexivity.
     - reflexivity.
     - constructor; auto.
-      apply STransactional_default.
+      apply stransactional_default.
   Qed.
 
 End MsgParam.

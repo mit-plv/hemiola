@@ -4,6 +4,9 @@ Require Import Topology.
 
 (** [Atomic] and [Transactional] histories *)
 
+Inductive TrsType :=
+| TSlt | TIns | TOuts | TInt.
+
 Section Sequential.
   Variable sys: System.
 
@@ -62,28 +65,31 @@ End Sequential.
 Section Semi.
   Context {MsgT} `{HasMsg MsgT}.
 
-  Inductive STransactional: list (Id MsgT) -> History MsgT -> MessagePool MsgT -> Prop :=
+  Inductive STransactional:
+    TrsType -> list (Id MsgT) -> History MsgT -> MessagePool MsgT -> Prop :=
   | STrsSlt:
-      STransactional nil (RlblEmpty _ :: nil) (emptyMP _)
+      STransactional TSlt nil (RlblEmpty _ :: nil) (emptyMP _)
   | STrsIns:
       forall eins tin,
         tin = RlblIns eins ->
-        STransactional nil (tin :: nil) (enqMsgs eins (emptyMP _))
+        STransactional TIns nil (tin :: nil) (enqMsgs eins (emptyMP _))
   | STrsOuts:
       forall eouts tout,
         tout = RlblOuts eouts ->
-        STransactional eouts (tout :: nil) (emptyMP _)
+        STransactional TOuts eouts (tout :: nil) (emptyMP _)
   | STrsAtomic:
       forall rqs hst mouts,
         Atomic rqs hst mouts ->
-        STransactional rqs hst mouts.
+        STransactional TInt rqs hst mouts.
 
   Inductive SSequential: History MsgT -> nat -> Prop :=
   | SSeqIntro:
       forall trss hst lth,
         hst = List.concat trss ->
         lth = List.length trss ->
-        Forall (fun trs => exists ins outs, STransactional ins trs outs) trss ->
+        Forall (fun trs =>
+                  exists tty ins outs, STransactional tty ins trs outs)
+               trss ->
         SSequential hst lth.
 
 End Semi.
