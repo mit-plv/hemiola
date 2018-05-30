@@ -291,16 +291,60 @@ Lemma stransactional_sequential_or_interleaved:
     Sequential sys (List.concat trss) trss \/
     Interleaved trss.
 Proof.
+  induction trss as [|trs trss]; simpl; intros;
+    [left; constructor; auto|].
+
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  inv H0; destruct H4 as [ins [outs ?]].
+  specialize (IHtrss _ H H5); destruct IHtrss.
+
+  - (* TODO: need to prove that whenever a semi-transaction
+     * [STransactional ins trs outs] is added to a history ([List.concat trss]),
+     * [ins] is either a new semi-transaction or a continuation from one of 
+     * previous semi-transactions.
+     *
+     * This is not true when [ins] takes a part from [trs1] and the other part
+     * from [trs2], where [trs1 <> trs2] and [trs1 ∈ trss /\ trs2 ∈ trss].
+     * Thus we need a static condition to ensure each rule in the system takes
+     * incoming messages for a single transaction.
+     *)
+    admit.
+  - right.
+    clear -H2.
+    destruct H2 as [hst1 [hst2 [hsts1 [hsts2 [hsts3 [? ?]]]]]]; subst.
+    exists hst1, hst2, hsts1, hsts2, (trs :: hsts3).
+    split; auto.
+  
 Admitted.
 
+(** FIXME: [Discontinuous] definition is too broad to prove this lemma:
+ * the predicate should not allow the case where both [hst1] and [hst2]
+ * have some observable labels ([RlblIns] or [RlblOuts]) so commuting
+ * two histories induces different behaviors.
+ *
+ * [Discontinuous] is used for 
+ * [between_continuous_discontinuous_nonconflicting], where the one of arguments
+ * is [Atomic], which means that it's totally fine to restrict the definition
+ * of it by disallowing commutations of observable labels.
+ *)
 Lemma non_conflicting_discontinuous_commute:
-  forall sys ins1 hst1 outs1 ins2 hst2 outs2,
+  forall sys hst1 ins1 outs1 hst2 ins2 outs2,
     STransactional ins1 hst1 outs1 ->
     STransactional ins2 hst2 outs2 ->
     Discontinuous hst1 hst2 ->
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
+  induction hst2; simpl; intros;
+    [rewrite app_nil_r; apply reduced_refl|].
+
+  inv H0.
+  - simpl; apply silent_reduced.
+  - simpl. admit.
+  - simpl. admit.
+  - admit.
+
 Admitted.
 
 Section ImmRqRsSerial.

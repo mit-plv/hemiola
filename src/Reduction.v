@@ -123,7 +123,40 @@ Proof.
   - congruence.
 Qed.
 
-(*! Reducibility of incoming and outgoing labels *)
+(*! Reducibility of silent, incoming, and outgoing labels *)
+
+Lemma silent_commutes:
+  forall sys lbl,
+    Reduced sys [RlblEmpty _; lbl] [lbl; RlblEmpty _].
+Proof.
+  unfold Reduced; intros.
+  split.
+  - inv H; inv H3; inv H2; inv H5.
+    repeat econstructor.
+    assumption.
+  - inv H; inv H3; inv H2; inv H5.
+    repeat econstructor.
+Qed.
+
+Lemma silent_reduced:
+  forall sys hst,
+    Reduced sys (RlblEmpty _ :: hst) (hst ++ [RlblEmpty _]).
+Proof.
+  unfold Reduced; induction hst as [|lbl ?]; simpl; intros;
+    [split; [auto|congruence]|].
+
+  split.
+  - change (RlblEmpty _ :: lbl :: hst) with ([RlblEmpty _; lbl] ++ hst) in H.
+    eapply steps_split in H; [|reflexivity].
+    destruct H as [sti [? ?]].
+    eapply silent_commutes in H0; dest.
+    pose proof (steps_append H H0); inv H2.
+    specialize (IHhst _ _ H6); dest.
+    econstructor; eauto.
+  - red; cbn.
+    rewrite behaviorOf_app.
+    simpl; rewrite app_nil_r; reflexivity.
+Qed.
 
 Lemma msg_ins_commutes:
   forall sys eins lbl,
