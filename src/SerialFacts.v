@@ -45,6 +45,21 @@ Section MsgParam.
       specialize (IHAtomic _ _ H9); dest; subst; auto.
   Qed.
 
+  Lemma atomic_messages_spec:
+    forall ins hst outs,
+      Atomic ins hst outs ->
+      forall sys st1 st2,
+        steps step_m sys st1 hst st2 ->
+        bst_msgs st2 = unionMP (deqMsgs (idsOf ins) (bst_msgs st1)) outs.
+  Proof.
+    induction 1; simpl; intros.
+    - inv H; inv H3; inv H5; simpl.
+      admit.
+    - inv H2; specialize (IHAtomic _ _ _ H6).
+      inv H8; simpl in *; subst.
+      admit.
+  Admitted.
+
   Lemma atomic_app:
     forall (hst1: History MsgT) ins1 outs1,
       Atomic ins1 hst1 outs1 ->
@@ -52,21 +67,9 @@ Section MsgParam.
         ins2 <> nil ->
         Atomic ins2 hst2 outs2 ->
         Forall (InMPI outs1) ins2 ->
-        exists mouts,
-          Atomic ins1 (hst2 ++ hst1) mouts /\
-          (forall msgs, Forall (InMPI outs2) msgs -> Forall (InMPI mouts) msgs).
+        Atomic ins1 (hst2 ++ hst1) (unionMP (deqMsgs (idsOf ins2) outs1) outs2).
   Proof.
-    induction 3; simpl; intros.
-    - eexists; split.
-      + econstructor; eauto.
-      + intros.
-        admit.
-    - specialize (IHAtomic H0 H4).
-      destruct IHAtomic as [mouts1 [? ?]].
-      eexists; split.
-      + econstructor; eauto.
-      + intros.
-        admit.
+    induction 3.
   Admitted.
 
   Lemma extAtomic_preserved:

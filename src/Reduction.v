@@ -161,7 +161,7 @@ Proof.
     repeat econstructor.
 Qed.
 
-Lemma silent_reduced:
+Lemma silent_reduced_1:
   forall sys hst,
     Reduced sys (RlblEmpty _ :: hst) (hst ++ [RlblEmpty _]).
 Proof.
@@ -181,7 +181,28 @@ Proof.
     simpl; rewrite app_nil_r; reflexivity.
 Qed.
 
-Lemma msg_ins_commutes:
+Lemma silent_reduced_2:
+  forall sys hst,
+    Reduced sys (hst ++ [RlblEmpty _]) (RlblEmpty _ :: hst).
+Proof.
+  unfold Reduced; induction hst as [|lbl ?]; simpl; intros;
+    [split; [auto|congruence]|].
+
+  split.
+  - inv H.
+    specialize (IHhst _ _ H3); dest.
+    pose proof (StepsCons H _ _ H5).
+    change (lbl :: RlblEmpty _ :: hst) with ([lbl; RlblEmpty _] ++ hst) in H1.
+    eapply steps_split in H1; [|reflexivity].
+    destruct H1 as [sti [? ?]].
+    eapply silent_commutes_2 in H2; dest.
+    pose proof (steps_append H1 H2); auto.
+  - red; cbn.
+    rewrite behaviorOf_app.
+    simpl; rewrite app_nil_r; reflexivity.
+Qed.
+
+Lemma msg_ins_commutes_1:
   forall sys eins lbl,
     Internal lbl ->
     Reduced sys [RlblIns eins; lbl] [lbl; RlblIns eins].
@@ -212,21 +233,21 @@ Proof.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
-Lemma msg_ins_reduced:
-  forall sys eins hst2,
-    InternalHistory hst2 ->
-    Reduced sys (RlblIns eins :: hst2) (hst2 ++ [RlblIns eins]).
+Lemma msg_ins_reduced_1:
+  forall sys eins hst,
+    InternalHistory hst ->
+    Reduced sys (RlblIns eins :: hst) (hst ++ [RlblIns eins]).
 Proof.
-  unfold Reduced; induction hst2 as [|lbl ?]; simpl; intros;
+  unfold Reduced; induction hst as [|lbl ?]; simpl; intros;
     [split; [assumption|reflexivity]|].
   inv H.
   split.
-  - change (RlblIns eins :: lbl :: hst2) with ([RlblIns eins; lbl] ++ hst2) in H0.
+  - change (RlblIns eins :: lbl :: hst) with ([RlblIns eins; lbl] ++ hst) in H0.
     eapply steps_split in H0; [|reflexivity].
     destruct H0 as [sti [? ?]].
-    eapply msg_ins_commutes in H0; [|assumption]; dest.
+    eapply msg_ins_commutes_1 in H0; [|assumption]; dest.
     pose proof (steps_append H H0); inv H2.
-    specialize (IHhst2 H4 _ _ H8); dest.
+    specialize (IHhst H4 _ _ H8); dest.
     econstructor; eauto.
   - red; cbn.
     rewrite behaviorOf_app.
@@ -234,7 +255,16 @@ Proof.
     destruct lbl; auto; elim H3.
 Qed.
 
-Lemma msg_outs_commutes:
+Lemma msg_ins_reduced_2:
+  forall sys hst ins outs,
+    Atomic ins hst outs ->
+    forall eins,
+      DisjList ins eins ->
+      Reduced sys (hst ++ [RlblIns eins]) (RlblIns eins :: hst).
+Proof.
+Admitted.
+
+Lemma msg_outs_commutes_1:
   forall sys eouts lbl,
     Internal lbl ->
     Reduced sys [lbl; RlblOuts eouts] [RlblOuts eouts; lbl].
@@ -273,31 +303,41 @@ Proof.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
-Lemma msg_outs_reduced:
-  forall sys eouts hst2,
-    InternalHistory hst2 ->
-    Reduced sys (hst2 ++ [RlblOuts eouts]) (RlblOuts eouts :: hst2).
+Lemma msg_outs_reduced_1:
+  forall sys eouts hst,
+    InternalHistory hst ->
+    Reduced sys (hst ++ [RlblOuts eouts]) (RlblOuts eouts :: hst).
 Proof.
-  unfold Reduced; induction hst2 as [|lbl ?]; simpl; intros; 
+  unfold Reduced; induction hst as [|lbl ?]; simpl; intros; 
     [split; [assumption|reflexivity]|].
   inv H0; inv H.
   split.
-  - specialize (IHhst2 H3 _ _ H4); dest.
-    assert (steps step_m sys st1 (lbl :: RlblOuts eouts :: hst2) st2)
+  - specialize (IHhst H3 _ _ H4); dest.
+    assert (steps step_m sys st1 (lbl :: RlblOuts eouts :: hst) st2)
       by (econstructor; eauto).
-    change (lbl :: RlblOuts eouts :: hst2) with
-        ([lbl; RlblOuts eouts] ++ hst2) in H1.
+    change (lbl :: RlblOuts eouts :: hst) with
+        ([lbl; RlblOuts eouts] ++ hst) in H1.
     eapply steps_split in H1; [|reflexivity].
     destruct H1 as [sti [? ?]].
-    change (RlblOuts eouts :: lbl :: hst2) with
-        ([RlblOuts eouts; lbl] ++ hst2).
+    change (RlblOuts eouts :: lbl :: hst) with
+        ([RlblOuts eouts; lbl] ++ hst).
     eapply steps_append; eauto.
-    eapply msg_outs_commutes; eauto.
+    eapply msg_outs_commutes_1; eauto.
   - red; cbn.
     rewrite behaviorOf_app.
     rewrite internal_history_behavior_nil by assumption.
     destruct lbl; auto; elim H2.
 Qed.
+
+Lemma msg_outs_reduced_2:
+  forall sys hst ins outs,
+    Atomic ins hst outs ->
+    forall eouts,
+      DisjList ins eouts ->
+      Forall (fun idm => ~ InMPI outs idm) eouts ->
+    Reduced sys (RlblOuts eouts :: hst) (hst ++ [RlblOuts eouts]).
+Proof.
+Admitted.
 
 (*! Reducibility of internal state transitions *)
 

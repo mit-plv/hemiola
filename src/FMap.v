@@ -525,6 +525,17 @@ Module LeibnizFacts (M : MapLeibniz).
   Definition union {A} := @unionL A.
   Definition update {A : Type} (m1 m2: t A) := unionL m2 m1.
 
+  Definition mergeE {A} (mg: A -> A -> A) (k: E.t) (v: A) (m: t A) :=
+    match find k m with
+    | Some ov => add k (mg ov v) m
+    | None => add k v m
+    end.
+
+  Definition mergeL {A} (mg: A -> A -> A) (m m': t A): t A :=
+    fold (fun k v m => mergeE mg k v m) m' m.
+
+  Definition merge {A} := @mergeL A.
+
   Definition Sub {A : Type} (m m' : t A) :=
     forall k v, find k m = Some v -> find k m' = Some v.
 

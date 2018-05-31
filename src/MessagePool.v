@@ -64,6 +64,14 @@ Section MessagePool.
   Definition qsOf (minds: list IdxT) (mp: MessagePool): MessagePool :=
     M.restrict mp minds.
 
+  (* [q1] is older. *)
+  Definition unionQ (q1 q2: Queue): Queue :=
+    q1 ++ q2.
+
+  (* [mp1] is older. *)
+  Definition unionMP (mp1 mp2: MessagePool): MessagePool :=
+    M.merge (fun q1 q2 => unionQ q1 q2) mp1 mp2.
+
 End MessagePool.
 
 Section Facts.
@@ -518,6 +526,20 @@ Section Facts.
     - mred.
   Qed.
 
+  Lemma InMP_or_enqMP:
+    forall midx (msg: MsgT) nidx nmsg mp,
+      ((midx = nidx /\ msg = nmsg) \/ InMP midx msg mp) ->
+      InMP midx msg (enqMP nidx nmsg mp).
+  Proof.
+    unfold InMP, enqMP, findQ; intros.
+    destruct H; dest; subst.
+    - mred; simpl.
+      apply in_or_app; right.
+      simpl; tauto.
+    - mred; simpl.
+      apply in_or_app; left; auto.
+  Qed.
+
   Lemma InMP_enqMsgs_or:
     forall midx (msg: MsgT) nmsgs mp,
       InMP midx msg (enqMsgs nmsgs mp) ->
@@ -529,6 +551,23 @@ Section Facts.
     specialize (IHnmsgs _ H); destruct IHnmsgs; auto.
     apply InMP_enqMP_or in H0; destruct H0; auto.
     dest; subst; auto.
+  Qed.
+
+  Lemma InMP_or_enqMsgs:
+    forall midx (msg: MsgT) nmsgs mp,
+      (In (midx, msg) nmsgs \/ InMP midx msg mp) ->
+      InMP midx msg (enqMsgs nmsgs mp).
+  Proof.
+    induction nmsgs; simpl; intros.
+    - destruct H; [elim H|auto].
+    - destruct H.
+      + destruct H; subst; auto.
+        * eapply IHnmsgs.
+          right; apply InMP_or_enqMP; auto.
+        * destruct a; eapply IHnmsgs; auto.
+      + destruct a.
+        eapply IHnmsgs.
+        right; apply InMP_or_enqMP; auto.
   Qed.
 
   Lemma InMP_deqMP:
@@ -812,6 +851,19 @@ Section Facts.
       induction minds; simpl; intros; auto.
       eapply IHminds; eauto.
       eapply deqMP_None; eauto.
+  Qed.
+
+  Lemma enqMsgs_In_InMPI:
+    forall ins idm (mp: MessagePool MsgT),
+      In idm ins ->
+      InMPI (enqMsgs ins mp) idm.
+  Proof.
+    induction ins; simpl; intros; [elim H|].
+    destruct H; subst; auto.
+    - destruct idm.
+      apply InMP_or_enqMsgs; simpl.
+      right; apply InMP_or_enqMP; auto.
+    - destruct a; eauto.
   Qed.
 
   Lemma enqMsgs_deqMsgs_comm_order:

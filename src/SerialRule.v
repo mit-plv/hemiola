@@ -250,6 +250,7 @@ Definition Discontinuous {MsgT} (hst1 hst2: History MsgT) :=
     STransactional tty2 ins2 hst2 outs2 ->
     DisjList ins1 ins2 /\
     Forall (fun idm => ~ InMPI outs1 idm) ins2.
+(* Forall (fun idm => ~ InMPI outs2 idm) ins1 /\ *)
 (* (forall idm, InMPI outs1 idm -> InMPI outs2 idm -> False). *)
 
 Definition NonconflictingRules (rule1 rule2: Rule) :=
@@ -288,6 +289,12 @@ Proof.
     { dest; eapply stransactional_trsType_ins_outs_unique; eauto. }
   }
   eapply H0; eauto.
+  (* specialize (H0 _ _ _ _ _ _ H1 H); dest. *)
+  (* repeat split; try assumption. *)
+  (* - inv H; try (inv H2; inv H; fail). *)
+  (*   inv H6; [inv H2; inv H; fail|]. *)
+  (*   inv H2; try (inv H8; fail). *)
+  (*   pose proof (atomic_ins_outs_unique H H8); dest; subst. *)
 Qed.
 
 Lemma nonconflicting_cons_inv:
@@ -309,7 +316,6 @@ Proof.
   unfold Continuous; intros.
   destruct H as [ins1 [outs1 [ins2 [outs2 [? [? [? ?]]]]]]].
   eapply atomic_app in H2; eauto.
-  dest; eauto.
 Qed.
 
 Lemma stransactional_sequential_or_interleaved:
@@ -366,7 +372,18 @@ Proof.
   eapply atomic_internal_history; eauto.
 Qed.
 
-Lemma non_conflicting_discontinuous_commute:
+Lemma atomic_reduced:
+  forall sys hst1 ins1 outs1 hst2 ins2 outs2,
+    DisjList ins1 ins2 ->
+    Forall (fun idm : Id Msg => ~ InMPI outs1 idm) ins2 ->
+    Nonconflicting hst1 hst2 ->
+    Atomic ins2 hst2 outs2 ->
+    Atomic ins1 hst1 outs1 ->
+    Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
+Proof.
+Admitted.
+
+Lemma non_conflicting_discontinuous_reduced:
   forall sys tty1 hst1 ins1 outs1 tty2 hst2 ins2 outs2,
     STransactional tty1 ins1 hst1 outs1 ->
     STransactional tty2 ins2 hst2 outs2 ->
@@ -375,57 +392,38 @@ Lemma non_conflicting_discontinuous_commute:
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
-  induction hst2; simpl; intros;
-    [rewrite app_nil_r; apply reduced_refl|].
-
-  assert (Discontinuous hst1 hst2)
-    by (eapply discontinuous_cons_inv; eauto).
-  assert (Nonconflicting hst1 hst2)
-    by (eapply nonconflicting_cons_inv; eauto).
+  intros.
+  specialize (H2 _ _ _ _ _ _ H H0); dest.
   
   inv H0.
-  - simpl; apply silent_reduced.
+  - simpl; apply silent_reduced_1.
   - simpl.
     destruct tty1; try (inv H1; fail).
     + inv H; simpl.
       apply silent_commutes_2.
     + inv H; simpl.
-      apply msg_ins_reduced.
-      eapply atomic_internal_history; eauto.
+      apply msg_ins_reduced_1.
+      eauto using atomic_internal_history.
   - simpl.
     destruct tty1; try (inv H1; fail).
     + inv H; simpl.
       apply silent_commutes_2.
     + inv H; simpl.
-
-      (* need a lemma for the commutativity of [RlblOuts _], 
-       * stronger than [msg_outs_reduced] in Reduction.v
-       *)
-      admit.
-  - inv H6.
-    + simpl.
-      admit.
-    + assert (STransactional TInt ins2 hst2 mouts) by (constructor; auto).
-      specialize (IHhst2 _ _ H H0 H1 H4 H5).
-      eapply reduced_trans.
-      * change (RlblInt rule msgs houts :: hst2 ++ hst1)
-          with ([RlblInt rule msgs houts] ++ hst2 ++ hst1).
-        eapply reduced_app_1.
-        eassumption.
-      * replace (hst1 ++ RlblInt rule msgs houts :: hst2)
-          with ((hst1 ++ [RlblInt rule msgs houts]) ++ hst2)
-          by (rewrite <-app_assoc; reflexivity).
-        rewrite app_assoc.
-        apply reduced_app_2.
-        simpl.
-
-        (** FIXME: the current definition of [Discontinuous] 
-         * does not imply "Discontinuous hst1 (lbl2 :: hst2) ->
-         * Discontinuous hst [lbl2]", but we need this.
-         *)
-        admit.
-
-Admitted.
+      eapply msg_outs_reduced_2; eauto.
+  - inv H.
+    + simpl; apply silent_reduced_2.
+    + eapply msg_ins_reduced_2; eauto.
+      rewrite Forall_forall in H4.
+      red; intros.
+      destruct (in_dec (id_dec msg_dec) e ins2); auto.
+      specialize (H4 _ i).
+      right; intro Hx; elim H4.
+      apply InMP_or_enqMsgs.
+      destruct e; auto.
+    + apply msg_outs_reduced_1.
+      eauto using atomic_internal_history.
+    + eauto using atomic_reduced.
+Qed.
 
 Section ImmRqRsSerial.
   Variable (topo: CTree) (sys: System).
@@ -478,7 +476,7 @@ Section ImmRqRsSerial.
       eapply reduced_trans; [eapply reduced_app_1; eassumption|].
       do 2 rewrite app_assoc.
       apply reduced_app_2.
-      eapply non_conflicting_discontinuous_commute; eauto.
+      eapply non_conflicting_discontinuous_reduced; eauto.
       + eapply STrsAtomic; eauto.
       + destruct x; simpl; auto.
 
@@ -498,7 +496,7 @@ Section ImmRqRsSerial.
       eapply reduced_trans; [|eapply reduced_app_1; eassumption].
       do 2 rewrite app_assoc.
       apply reduced_app_2.
-      eapply non_conflicting_discontinuous_commute; eauto.
+      eapply non_conflicting_discontinuous_reduced; eauto.
       + eapply STrsAtomic; eauto.
       + destruct x; simpl; auto.
   Qed.
