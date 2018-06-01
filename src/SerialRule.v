@@ -244,14 +244,18 @@ Definition Continuous {MsgT} (hst1 hst2: History MsgT) :=
     ins2 <> nil /\
     Forall (InMPI outs1) ins2.
 
+(** TODO: more strict form of [Discontinuous]:
+ * disjointness of messages is declared just with [IdxT] (queue id),
+ * not with [list (Id Msg)].
+ * In this case, commutativity proof is much easier.
+ *)
+(** TODO: collect all queue ids used during this atomic history. *)
 Definition Discontinuous {MsgT} (hst1 hst2: History MsgT) :=
   forall tty1 ins1 outs1 tty2 ins2 outs2,
     STransactional tty1 ins1 hst1 outs1 ->
     STransactional tty2 ins2 hst2 outs2 ->
     DisjList ins1 ins2 /\
     Forall (fun idm => ~ InMPI outs1 idm) ins2.
-(* Forall (fun idm => ~ InMPI outs2 idm) ins1 /\ *)
-(* (forall idm, InMPI outs1 idm -> InMPI outs2 idm -> False). *)
 
 Definition NonconflictingRules (rule1 rule2: Rule) :=
   (rule_oidx rule1 <> rule_oidx rule2) \/
@@ -289,12 +293,6 @@ Proof.
     { dest; eapply stransactional_trsType_ins_outs_unique; eauto. }
   }
   eapply H0; eauto.
-  (* specialize (H0 _ _ _ _ _ _ H1 H); dest. *)
-  (* repeat split; try assumption. *)
-  (* - inv H; try (inv H2; inv H; fail). *)
-  (*   inv H6; [inv H2; inv H; fail|]. *)
-  (*   inv H2; try (inv H8; fail). *)
-  (*   pose proof (atomic_ins_outs_unique H H8); dest; subst. *)
 Qed.
 
 Lemma nonconflicting_cons_inv:
@@ -371,6 +369,38 @@ Proof.
   intros; inv H.
   eapply atomic_internal_history; eauto.
 Qed.
+
+(** FIXME: [Atomic] is not sufficient; here is a counterexample:
+ * MessagePool: ]=[2][1]]=] -> ]=[1][2][1]=] -> ]=[1][2]=]
+ * The message [1] was internally enqueued and dequeued but the resulting
+ * [MessagePool] differs from the original one.
+ *
+ * This is the only case (having the same message already in [MessagePool])
+ * I believe; in order to avoid this, we need a static condition that 
+ * guarantees that whenever a message is enqueued, the target queue doesn't
+ * have the same message.
+ *)
+
+(** OR: we maybe absolutely don't need this lemma!
+ * An alternative way: to have a more strict form of [Discontinuous],
+ * where disjointness of messages is declared just with [IdxT] (queue id),
+ * not with [list (Id Msg)].
+ * In this case, commutativity proof is much easier.
+ *)
+Lemma atomic_messages_spec:
+  forall ins hst outs,
+    Atomic ins hst outs ->
+    forall sys st1 st2,
+      steps step_m sys st1 hst st2 ->
+      bst_msgs st2 = unionMP (deqMsgs (idsOf ins) (bst_msgs st1)) outs.
+Proof.
+  induction 1; simpl; intros.
+  - inv H; inv H3; inv H5; simpl.
+    admit.
+  - inv H2; specialize (IHAtomic _ _ _ H6).
+    inv H8; simpl in *; subst.
+    admit.
+Admitted.
 
 Lemma atomic_reduced:
   forall sys hst1 ins1 outs1 hst2 ins2 outs2,
