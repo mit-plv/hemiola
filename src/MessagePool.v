@@ -866,53 +866,6 @@ Section Facts.
     - destruct a; eauto.
   Qed.
 
-  Lemma enqMsgs_deqMsgs_comm_order:
-    forall msgs1 minds2,
-      NoDup (idsOf msgs1) ->
-      NoDup minds2 ->
-      forall msgs3,
-        (forall midx : IdxT,
-            In midx (idsOf msgs1) ->
-            In midx minds2 -> In midx (idsOf msgs3)) ->
-        forall (mp: MessagePool MsgT),
-          Forall (FirstMPI (deqMsgs minds2 (enqMsgs msgs1 mp))) msgs3 ->
-          deqMsgs minds2 (enqMsgs msgs1 mp) =
-          enqMsgs msgs1 (deqMsgs minds2 mp).
-  Proof.
-    intros.
-    apply findQ_ext; intros.
-    - split; intros.
-      + rewrite deqMsgs_None in H3.
-        rewrite enqMsgs_None in H3; dest.
-        apply enqMsgs_None; split; auto.
-        apply deqMsgs_None; auto.
-      + rewrite enqMsgs_None in H3; dest.
-        rewrite deqMsgs_None in H3.
-        apply deqMsgs_None.
-        apply enqMsgs_None; auto.
-    - destruct (in_dec eq_nat_dec midx (idsOf msgs1)).
-      + specialize (H1 _ i).
-        unfold idsOf in i; rewrite in_map_iff in i.
-        destruct i as [[imidx msg] [? ?]]; simpl in *; subst.
-        erewrite findQ_In_NoDup_enqMsgs; try eassumption.
-        destruct (in_dec eq_nat_dec midx minds2).
-        * specialize (H1 i).
-          unfold idsOf in H1; rewrite in_map_iff in H1.
-          destruct H1 as [[midx3 msg3] [? ?]]; simpl in *; subst.
-          rewrite Forall_forall in H2.
-          specialize (H2 _ H3); red in H2; simpl in H2.
-          admit.
-        * rewrite findQ_not_In_deqMsgs by assumption.
-          rewrite findQ_not_In_deqMsgs by assumption.
-          apply findQ_In_NoDup_enqMsgs; assumption.
-      + rewrite findQ_not_In_enqMsgs by assumption.
-        destruct (in_dec eq_nat_dec midx minds2).
-        * admit. 
-        * do 2 rewrite findQ_not_In_deqMsgs by assumption.
-          rewrite findQ_not_In_enqMsgs by assumption.
-          reflexivity.
-  Admitted.
-
 End Facts.
 
 Global Opaque ForallMP.

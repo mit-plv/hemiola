@@ -16,6 +16,29 @@ Fixpoint removeL {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
   | h :: t => removeL eq_dec (removeOnce eq_dec h l1) t
   end.
 
+Lemma forall_removeOnce:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
+         a l P,
+    Forall P l ->
+    Forall P (removeOnce eq_dec a l).
+Proof.
+  induction l; simpl; intros; auto.
+  inv H.
+  destruct (eq_dec a a0); auto.
+Qed.
+  
+Lemma forall_removeL:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
+         l2 l1 P,
+    Forall P l1 ->
+    Forall P (removeL eq_dec l1 l2).
+Proof.
+  induction l2; simpl; intros; auto.
+  apply IHl2.
+  apply forall_removeOnce.
+  auto.
+Qed.
+
 Lemma tl_app:
   forall {A} (l1 l2: list A),
     l1 <> nil -> tl (l1 ++ l2) = (tl l1) ++ l2.

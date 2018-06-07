@@ -9,68 +9,100 @@ Set Implicit Arguments.
 
 Section MsgParam.
   Variable MsgT: Type.
+  Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
 
   Lemma atomic_emptyILabel_not_in:
-    forall rq hst mouts,
-      Atomic rq hst mouts ->
+    forall inits ins hst outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
       ~ In (RlblEmpty MsgT) hst.
   Proof.
     induction 1; simpl; intros.
     - intro Hx; destruct Hx; [discriminate|auto].
-    - intro Hx; destruct Hx; auto.
-      inv H2; elim H0; reflexivity.
+    - intro Hx; destruct Hx; subst; [discriminate|auto].
   Qed.
 
   Lemma atomic_iLblIn_not_in:
-    forall rq hst mouts,
-      Atomic rq hst mouts ->
-      forall msg: Id MsgT,
-        ~ In (RlblIns [msg]) hst.
+    forall inits ins hst outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      forall msg, ~ In (RlblIns [msg]) hst.
   Proof.
     induction 1; simpl; intros; [auto|];
       try (intro Hx; destruct Hx;
            [discriminate|firstorder]).
   Qed.
 
-  Lemma atomic_ins_outs_unique:
-    forall (hst: History MsgT) ins1 outs1,
-      Atomic ins1 hst outs1 ->
-      forall ins2 outs2,
-        Atomic ins2 hst outs2 ->
-        ins1 = ins2 /\ outs1 = outs2.
+  Lemma atomic_unique:
+    forall (hst: History MsgT) inits1 ins1 outs1 eouts1,
+      Atomic msgT_dec inits1 ins1 hst outs1 eouts1 ->
+      forall inits2 ins2 outs2 eouts2,
+        Atomic msgT_dec inits2 ins2 hst outs2 eouts2 ->
+        inits1 = inits2 /\ ins1 = ins2 /\
+        outs1 = outs2 /\ eouts1 = eouts2.
   Proof.
-    induction 1; simpl; intros.
-    - inv H; [auto|inv H6].
-    - inv H2; [inv H|].
-      specialize (IHAtomic _ _ H9); dest; subst; auto.
+    induction 1; simpl; intros; subst.
+    - inv H; [auto|inv H4].
+    - inv H5; [inv H|].
+      specialize (IHAtomic _ _ _ _ H7).
+      dest; subst; auto.
   Qed.
 
   Lemma atomic_app:
-    forall (hst1: History MsgT) ins1 outs1,
-      Atomic ins1 hst1 outs1 ->
-      forall hst2 ins2 outs2,
-        ins2 <> nil ->
-        Atomic ins2 hst2 outs2 ->
-        Forall (InMPI outs1) ins2 ->
-        Atomic ins1 (hst2 ++ hst1) (unionMP (deqMsgs (idsOf ins2) outs1) outs2).
+    forall (hst1: History MsgT) inits1 ins1 outs1 eouts1,
+      Atomic msgT_dec inits1 ins1 hst1 outs1 eouts1 ->
+      forall hst2 inits2 ins2 outs2 eouts2,
+        inits2 <> nil ->
+        Atomic msgT_dec inits2 ins2 hst2 outs2 eouts2 ->
+        SubList inits2 eouts1 ->
+        Atomic msgT_dec inits1 (ins1 ++ ins2)
+               (hst2 ++ hst1)
+               (outs2 ++ outs1)
+               (removeL (id_dec msgT_dec) outs1 ins2 ++ outs2).
   Proof.
-    induction 3.
   Admitted.
 
+  Lemma atomic_messages_spec:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall sys st1 st2,
+        steps step_m sys st1 hst st2 ->
+        bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)).
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv H; inv H3; inv H5; simpl.
+      apply enqMsgs_deqMsgs_comm.
+      (** FIXME: need to add this condition to [step_m]? *)
+  Admitted.
+
+  Lemma atomic_behavior_nil:
+    forall {SysT} `{IsSystem SysT} (sys: SysT)
+           `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      behaviorOf sys hst = nil.
+  Proof.
+    induction 1; simpl; intros; auto.
+  Qed.
+
+  Lemma atomic_singleton:
+    forall rule ins outs,
+      Atomic msgT_dec ins ins [RlblInt rule ins outs] outs outs.
+  Proof.
+    intros; constructor.
+  Qed.
+
   Lemma extAtomic_preserved:
-    forall impl1 (rq: Id MsgT) hst mouts,
-      ExtAtomic impl1 rq hst mouts ->
+    forall impl1 (rq: Id MsgT) hst,
+      ExtAtomic impl1 msgT_dec rq hst ->
       forall impl2,
         merqsOf impl1 = merqsOf impl2 ->
-        ExtAtomic impl2 rq hst mouts.
+        ExtAtomic impl2 msgT_dec rq hst.
   Proof.
     intros.
-    inv H; constructor; auto.
+    inv H; econstructor; eauto.
     rewrite <-H0; assumption.
   Qed.
 
   Lemma sequential_nil:
-    forall sys, Sequential (MsgT:= MsgT) sys nil nil.
+    forall sys, Sequential sys msgT_dec nil nil.
   Proof.
     intros; hnf; intros.
     split.
@@ -80,8 +112,8 @@ Section MsgParam.
 
   Lemma sequential_silent:
     forall sys ll trss,
-      Sequential (MsgT:= MsgT) sys ll trss ->
-      Sequential (MsgT:= MsgT) sys (RlblEmpty _ :: ll) ([RlblEmpty _] :: trss).
+      Sequential sys msgT_dec ll trss ->
+      Sequential sys msgT_dec (RlblEmpty _ :: ll) ([RlblEmpty _] :: trss).
   Proof.
     intros.
     hnf; hnf in H; dest.
@@ -93,8 +125,8 @@ Section MsgParam.
 
   Lemma sequential_msg_ins:
     forall sys ll trss eins,
-      Sequential (MsgT:= MsgT) sys ll trss ->
-      Sequential (MsgT:= MsgT) sys (RlblIns eins :: ll) ([RlblIns eins] :: trss).
+      Sequential sys msgT_dec ll trss ->
+      Sequential sys msgT_dec (RlblIns eins :: ll) ([RlblIns eins] :: trss).
   Proof.
     intros.
     hnf; hnf in H; dest.
@@ -106,8 +138,8 @@ Section MsgParam.
 
   Lemma sequential_msg_outs:
     forall sys ll trss eouts,
-      Sequential (MsgT:= MsgT) sys ll trss ->
-      Sequential (MsgT:= MsgT) sys (RlblOuts eouts :: ll) ([RlblOuts eouts] :: trss).
+      Sequential sys msgT_dec ll trss ->
+      Sequential sys msgT_dec (RlblOuts eouts :: ll) ([RlblOuts eouts] :: trss).
   Proof.
     intros.
     hnf; hnf in H; dest.
@@ -119,9 +151,9 @@ Section MsgParam.
 
   Lemma sequential_app:
     forall sys ll1 trss1 ll2 trss2,
-      Sequential (MsgT:= MsgT) sys ll1 trss1 ->
-      Sequential (MsgT:= MsgT) sys ll2 trss2 ->
-      Sequential (MsgT:= MsgT) sys (ll1 ++ ll2) (trss1 ++ trss2).
+      Sequential sys msgT_dec ll1 trss1 ->
+      Sequential sys msgT_dec ll2 trss2 ->
+      Sequential sys msgT_dec (ll1 ++ ll2) (trss1 ++ trss2).
   Proof.
     unfold Sequential; intros.
     destruct H, H0; subst.
@@ -130,17 +162,10 @@ Section MsgParam.
     - apply eq_sym, concat_app.
   Qed.
 
-  Lemma atomic_singleton:
-    forall rqr rqs houts,
-      Atomic rqs [RlblInt rqr rqs houts] (enqMsgs houts (emptyMP MsgT)).
-  Proof.
-    intros; constructor.
-  Qed.
-
   Lemma sequential_serializable:
     forall sys hst trss st,
       steps step_m sys (initsOf sys) hst st ->
-      Sequential sys hst trss ->
+      Sequential sys msg_dec hst trss ->
       Serializable sys hst.
   Proof.
     intros; red; intros.
@@ -150,11 +175,9 @@ Section MsgParam.
   Qed.
 
   Lemma stransactional_default:
-    forall lbl,
-    exists tty ins outs,
-      STransactional (MsgT:= MsgT) tty ins [lbl] outs.
+    forall lbl, STransactional msgT_dec [lbl].
   Proof.
-    destruct lbl; intros; do 3 eexists.
+    destruct lbl; intros.
     - eapply STrsSlt.
     - eapply STrsIns; eauto.
     - eapply STrsAtomic.
@@ -162,40 +185,20 @@ Section MsgParam.
     - eapply STrsOuts; eauto.
   Qed.
 
-  Lemma stransactional_trsType_ins_outs_unique:
-    forall (hst: History MsgT) tty1 ins1 outs1,
-      STransactional tty1 ins1 hst outs1 ->
-      forall tty2 ins2 outs2,
-        STransactional tty2 ins2 hst outs2 ->
-        tty1 = tty2 /\ ins1 = ins2 /\ outs1 = outs2.
-  Proof.
-    intros; inv H.
-    - inv H0; auto; try discriminate.
-      inv H.
-    - inv H0; auto; try discriminate.
-      + inv H3; auto.
-      + inv H.
-    - inv H0; auto; try discriminate.
-      + inv H3; auto.
-      + inv H.
-    - inv H0; try (inv H1; fail).
-      eapply atomic_ins_outs_unique in H; eauto.
-  Qed.
-
   Lemma stransactional_cons_inv:
-    forall tty ins lbl (hst: History MsgT) outs,
-      STransactional tty ins (lbl :: hst) outs ->
+    forall lbl (hst: History MsgT),
+      STransactional msgT_dec (lbl :: hst) ->
       hst = nil \/
-      exists pouts, STransactional tty ins hst pouts.
+      STransactional msgT_dec hst.
   Proof.
     intros.
     inv H; auto.
     inv H0; auto.
-    right; eexists; econstructor; eauto.
+    right; econstructor; eauto.
   Qed.
 
   Lemma ssequential_default:
-    forall hst, exists n, SSequential (MsgT:= MsgT) hst n.
+    forall hst, exists n, SSequential msgT_dec hst n.
   Proof.
     induction hst; simpl; intros; [repeat econstructor; eauto|].
     destruct IHhst as [n ?].

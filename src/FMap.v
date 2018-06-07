@@ -33,6 +33,16 @@ Section Lists. (* For dealing with domains *)
 
   Lemma SubList_cons_right: forall a l1 l2, SubList l1 l2 -> SubList l1 (a :: l2).
   Proof. unfold SubList; intros; right; auto. Qed.
+
+  Lemma SubList_forall:
+    forall P l1,
+      Forall P l1 ->
+      forall l2, SubList l2 l1 -> Forall P l2.
+  Proof.
+    unfold SubList; intros.
+    rewrite Forall_forall in H.
+    rewrite Forall_forall; intros; auto.
+  Qed.
   
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.

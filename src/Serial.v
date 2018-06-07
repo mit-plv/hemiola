@@ -11,35 +11,38 @@ Section Sequential.
   Variable sys: System.
 
   Context {MsgT} `{HasMsg MsgT}.
+  Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
 
-  (* A history is [Atomic] if it satisfies following conditions:
-   * 1) The history can be either an incomplete or a complete transaction.
-   * 2) Each label in the history has a form of [RlblOuts (Some hdl) _],
-   *    and all [hdl]s have the same [tinfo_tid]. It means that the history is
-   *    for a single transaction.
-   *)
-  Inductive Atomic: list (Id MsgT) -> History MsgT -> MessagePool MsgT -> Prop :=
+  (** NOTE: head is the oldest *)
+  Inductive Atomic:
+    list (Id MsgT) (* initially-dequeued messages *) ->
+    list (Id MsgT) (* all-dequeued  *) ->
+    History MsgT (* history *) ->
+    list (Id MsgT) (* all-enqueued *) ->
+    list (Id MsgT) (* eventual outputs *) ->
+    Prop :=
   | AtomicStart:
-      forall rqr rqs houts,
-        Atomic rqs (RlblInt rqr rqs houts :: nil)
-               (enqMsgs houts (emptyMP _))
+      forall rule ins outs,
+        Atomic ins ins (RlblInt rule ins outs :: nil) outs outs
   | AtomicCont:
-      forall rq hst rule msgs mouts houts,
-        Atomic rq hst mouts ->
-        msgs <> nil ->
-        Forall (InMPI mouts) msgs ->
-        Atomic rq (RlblInt rule msgs houts :: hst)
-               (enqMsgs houts (deqMsgs (idsOf msgs) mouts)).
+      forall inits ins hst outs eouts rule rins routs nins nouts neouts,
+        Atomic inits ins hst outs eouts ->
+        rins <> nil ->
+        SubList nins eouts ->
+        nins = ins ++ rins ->
+        nouts = outs ++ routs ->
+        neouts = removeL (id_dec msgT_dec) eouts rins ++ routs ->
+        Atomic inits nins (RlblInt rule rins routs :: hst) nouts neouts.
 
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from
-   * an external request.
+   * a single external request.
    *)
-  Inductive ExtAtomic: Id MsgT -> History MsgT -> MessagePool MsgT -> Prop :=
+  Inductive ExtAtomic: Id MsgT -> History MsgT -> Prop :=
   | ExtAtomicIntro:
-      forall rq hst mouts,
+      forall rq ins hst outs eouts,
         In (idOf rq) (merqsOf sys) ->
-        Atomic [rq] hst mouts ->
-        ExtAtomic rq hst mouts.
+        Atomic [rq] ins hst outs eouts ->
+        ExtAtomic rq hst.
 
   Inductive Transactional: History MsgT -> Prop :=
   | TrsSlt:
@@ -53,8 +56,8 @@ Section Sequential.
         tout = RlblOuts eouts ->
         Transactional (tout :: nil)
   | TrsAtomic:
-      forall rq hst mouts,
-        ExtAtomic rq hst mouts ->
+      forall rq hst,
+        ExtAtomic rq hst ->
         Transactional hst.
 
   Definition Sequential (hst: History MsgT) (trss: list (History MsgT)) :=
@@ -64,32 +67,30 @@ End Sequential.
 
 Section Semi.
   Context {MsgT} `{HasMsg MsgT}.
+  Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
 
-  Inductive STransactional:
-    TrsType -> list (Id MsgT) -> History MsgT -> MessagePool MsgT -> Prop :=
+  Inductive STransactional: History MsgT -> Prop :=
   | STrsSlt:
-      STransactional TSlt nil (RlblEmpty _ :: nil) (emptyMP _)
+      STransactional (RlblEmpty _ :: nil)
   | STrsIns:
       forall eins tin,
         tin = RlblIns eins ->
-        STransactional TIns nil (tin :: nil) (enqMsgs eins (emptyMP _))
+        STransactional (tin :: nil)
   | STrsOuts:
       forall eouts tout,
         tout = RlblOuts eouts ->
-        STransactional TOuts eouts (tout :: nil) (emptyMP _)
+        STransactional (tout :: nil)
   | STrsAtomic:
-      forall rqs hst mouts,
-        Atomic rqs hst mouts ->
-        STransactional TInt rqs hst mouts.
+      forall inits ins hst outs eouts,
+        Atomic msgT_dec inits ins hst outs eouts ->
+        STransactional hst.
 
   Inductive SSequential: History MsgT -> nat -> Prop :=
   | SSeqIntro:
       forall trss hst lth,
         hst = List.concat trss ->
         lth = List.length trss ->
-        Forall (fun trs =>
-                  exists tty ins outs, STransactional tty ins trs outs)
-               trss ->
+        Forall STransactional trss ->
         SSequential hst lth.
 
 End Semi.
@@ -97,22 +98,24 @@ End Semi.
 (*! Serializability *)
 
 Definition trsSteps {StateT MsgT} `{HasMsg MsgT}
+           (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
            (step: Step System StateT (RLabel MsgT))
            (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
   steps step sys st1 hst st2 /\
-  Transactional sys hst.
+  Transactional sys msgT_dec hst.
 
-Definition trsStepsM := trsSteps step_m.
-Definition trsStepsT := trsSteps step_t.
+Definition trsStepsM := trsSteps msg_dec step_m.
+Definition trsStepsT := trsSteps tmsg_dec step_t.
 
 Definition seqSteps {StateT MsgT} `{HasMsg MsgT}
+           (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
            (step: Step System StateT (RLabel MsgT))
            (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
   steps step sys st1 hst st2 /\
-  exists trss, Sequential sys hst trss.
+  exists trss, Sequential sys msgT_dec hst trss.
 
-Definition seqStepsM := seqSteps step_m.
-Definition seqStepsT := seqSteps step_t.
+Definition seqStepsM := seqSteps msg_dec step_m.
+Definition seqStepsT := seqSteps tmsg_dec step_t.
 
 Definition BEquivalent (sys: System)
            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=

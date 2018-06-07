@@ -32,8 +32,8 @@ Definition Reduced (sys: System) (hfr hto: MHistory) :=
 (*! General Facts *)
 
 Lemma atomic_internal_history:
-  forall ins hst outs,
-    Atomic ins hst outs ->
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
     InternalHistory hst.
 Proof.
   induction 1; simpl; intros.
@@ -122,7 +122,7 @@ Lemma reduced_to_seq_serializable:
     steps step_m sys (initsOf sys) hst st2 ->
     forall shst strss,
       Reduced sys hst shst ->
-      Sequential sys shst strss ->
+      Sequential sys msg_dec shst strss ->
       Serializable sys hst.
 Proof.
   intros.
@@ -256,8 +256,8 @@ Proof.
 Qed.
 
 Lemma msg_ins_reduced_2:
-  forall sys hst ins outs,
-    Atomic ins hst outs ->
+  forall sys hst inits ins outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
     forall eins,
       DisjList ins eins ->
       Reduced sys (hst ++ [RlblIns eins]) (RlblIns eins :: hst).
@@ -329,13 +329,11 @@ Proof.
     destruct lbl; auto; elim H2.
 Qed.
 
+(** FIXME: need more conditions *)
 Lemma msg_outs_reduced_2:
-  forall sys hst ins outs,
-    Atomic ins hst outs ->
-    forall eouts,
-      DisjList ins eouts ->
-      Forall (fun idm => ~ InMPI outs idm) eouts ->
-    Reduced sys (RlblOuts eouts :: hst) (hst ++ [RlblOuts eouts]).
+  forall sys hst inits ins outs eouts mouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    Reduced sys (RlblOuts mouts :: hst) (hst ++ [RlblOuts mouts]).
 Proof.
 Admitted.
 
@@ -380,60 +378,5 @@ Proof.
         { reflexivity. }
         { destruct H13; auto. }
         { apply FirstMPI_Forall_deqMsgs; auto. }
-Qed.
-
-Lemma msg_int_commutes_2:
-  forall sys rule1 ins1 outs1 rule2 ins2 outs2 rule3 ins3 outs3,
-    rule_oidx rule1 <> rule_oidx rule2 ->
-    DisjList (idsOf ins1) (idsOf ins2) ->
-    DisjList (idsOf outs1) (idsOf outs2) ->
-    DisjList (idsOf outs2) (idsOf ins3) ->
-    (forall midx,
-        In midx (idsOf outs1) ->
-        In midx (idsOf ins2) ->
-        In midx (idsOf ins3)) ->
-    Reduced sys [RlblInt rule3 ins3 outs3; RlblInt rule2 ins2 outs2; RlblInt rule1 ins1 outs1]
-            [RlblInt rule3 ins3 outs3; RlblInt rule1 ins1 outs1; RlblInt rule2 ins2 outs2].
-Proof.
-  unfold Reduced; intros.
-  split; [|reflexivity].
-  dest_step_m.
-  econstructor; [econstructor; [econstructor; [econstructor|]|]|].
-
-  - econstructor; try reflexivity; try eassumption; try (mred; fail).
-    apply FirstMPI_Forall_enqMsgs_inv in H35; [|apply DisjList_comm; assumption].
-    eapply FirstMPI_Forall_deqMsgs; [apply DisjList_comm; eassumption|].
-    remember (deqMsgs (idsOf ins1) msgs) as imsgs; clear H14 Heqimsgs msgs.
-    eapply FirstMPI_Forall_enqMsgs_order; eauto.
-    + destruct H22; auto.
-    + destruct H25; auto.
-  - econstructor; try reflexivity; try eassumption; try (mred; fail).
-    apply FirstMPI_Forall_enqMsgs.
-    apply FirstMPI_Forall_deqMsgs; auto.
-  - assert (enqMsgs outs2 (deqMsgs (idsOf ins2) (enqMsgs outs1 (deqMsgs (idsOf ins1) msgs))) =
-            enqMsgs outs1 (deqMsgs (idsOf ins1) (enqMsgs outs2 (deqMsgs (idsOf ins2) msgs)))).
-    {
-      rewrite <-enqMsgs_deqMsgs_FirstMPI_comm with (msgs1:= ins1);
-        [|destruct H15; auto
-         |apply FirstMPI_Forall_deqMsgs; auto].
-      rewrite deqMsgs_deqMsgs_comm by assumption.
-      rewrite enqMsgs_enqMsgs_comm by assumption.
-
-      rewrite enqMsgs_deqMsgs_comm_order with (msgs1:= outs1) (minds2:= idsOf ins2) (msgs3:= ins3).
-      { reflexivity. }
-      { destruct H22; auto. }
-      { destruct H25; auto. }
-      { assumption. }
-      { eapply FirstMPI_Forall_enqMsgs_inv; eauto.
-        apply DisjList_comm; assumption.
-      }
-    }
-
-    econstructor; try reflexivity; try eassumption.
-    + rewrite M.add_comm; assumption.
-    + rewrite M.add_comm; assumption.
-    + rewrite <-H4; assumption.
-    + f_equal; try (meq; fail).
-      rewrite H4; reflexivity.
 Qed.
 
