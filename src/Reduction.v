@@ -222,7 +222,7 @@ Proof.
         { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
           destruct H10; auto.
         }
-        { destruct H2, H17.
+        { destruct H2, H16.
           eapply DisjList_SubList; eauto.
           eapply DisjList_comm, DisjList_SubList; eauto.
           apply DisjList_app_4.
@@ -357,9 +357,9 @@ Proof.
     + econstructor; try reflexivity; try eassumption.
       * mred.
       * mred.
-      * eapply FirstMPI_Forall_enqMsgs_inv in H22;
+      * eapply FirstMPI_Forall_enqMsgs_inv in H23;
           [|apply DisjList_comm; auto].
-        eapply FirstMPI_Forall_deqMsgs; eauto.
+        eapply FirstMPI_Forall_deqMsgs; [|eassumption].
         apply DisjList_comm; auto.
   - econstructor; try reflexivity; try eassumption.
     + mred.

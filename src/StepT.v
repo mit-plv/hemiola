@@ -74,6 +74,8 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
                   pos (orqMap tmsg_msg norq) outs ->
     ValidMsgsOut sys outs ->
 
+    DisjList (idsOf ins) (idsOf outs) ->
+    
     tinfo = match getTMsgsTInfo (valsOf ins) with
             | Some ti => ti
             | None => {| tinfo_tid := nts;

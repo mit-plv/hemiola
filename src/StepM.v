@@ -38,6 +38,8 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
     rule_postcond rule os porq ins pos norq iouts ->
     ValidMsgsOut sys iouts ->
 
+    DisjList (idsOf ins) (idsOf iouts) ->
+
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
     nst = {| bst_oss := oss +[ oidx <- pos ];
              bst_orqs := orqs +[ oidx <- norq ];
