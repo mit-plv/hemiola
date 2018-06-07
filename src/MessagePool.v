@@ -20,7 +20,7 @@ Section MessagePool.
   Definition FirstMP (mp: MessagePool) (midx: IdxT) (msg: MsgT) :=
     firstMP mp midx = Some msg.
 
-  Definition FirstMPI (mp: MessagePool) (idm: Id MsgT)  :=
+  Definition FirstMPI (mp: MessagePool) (idm: Id MsgT) :=
     FirstMP mp (idOf idm) (valOf idm).
 
   (* NOTE: the head is the oldest one. *)
@@ -36,7 +36,7 @@ Section MessagePool.
 
   Definition enqMPI (idm: Id MsgT) (mp: MessagePool): MessagePool :=
     enqMP (idOf idm) (valOf idm) mp.
-
+  
   Definition EmptyMP (mp: MessagePool) := mp = M.empty _.
   Definition InMP (midx: IdxT) (msg: MsgT) (mp: MessagePool) :=
     In msg (findQ midx mp).
@@ -59,6 +59,16 @@ Section MessagePool.
     | nil => mp
     | mind :: minds' =>
       deqMsgs minds' (deqMP mind mp)
+    end.
+
+  Definition ValidDeq (mp: MessagePool) (midx: IdxT) :=
+    findQ midx mp <> nil.
+
+  Fixpoint ValidDeqs (mp: MessagePool) (minds: list IdxT) :=
+    match minds with
+    | nil => True
+    | midx :: minds' =>
+      ValidDeq mp midx /\ ValidDeqs (deqMP midx mp) minds'
     end.
 
   Definition qsOf (minds: list IdxT) (mp: MessagePool): MessagePool :=
@@ -477,6 +487,25 @@ Section Facts.
       remember (mp@[midx2]) as q2; destruct q2; auto; mred.
   Qed.
 
+  Lemma FirstMPI_Forall_deqMP:
+    forall midx1 msgs2 (mp: MessagePool MsgT),
+      ~ In midx1 (idsOf msgs2) ->
+      Forall (FirstMPI mp) msgs2 <->
+      Forall (FirstMPI (deqMP midx1 mp)) msgs2.
+  Proof.
+    induction msgs2; simpl; intros;
+      [split; intros; constructor|].
+    split; intros.
+    - inv H0.
+      constructor.
+      + apply FirstMP_deqMP; auto.
+      + rewrite <-IHmsgs2; auto.
+    - inv H0.
+      constructor.
+      + red; erewrite FirstMP_deqMP; [eassumption|auto].
+      + rewrite IHmsgs2; auto.
+  Qed.
+
   Lemma FirstMP_deqMsgs:
     forall minds1 midx2 msg2 (mp: MessagePool MsgT),
       ~ In midx2 minds1 ->
@@ -884,6 +913,117 @@ Section Facts.
     induction minds1; simpl; intros; auto.
   Qed.
 
+  Lemma ValidDeq_enqMP:
+    forall midx (mp: MessagePool MsgT),
+      ValidDeq mp midx ->
+      forall nmidx nmsg,
+        ValidDeq (enqMP nmidx nmsg mp) midx.
+  Proof.
+    unfold ValidDeq, enqMP, findQ; intros.
+    mred; simpl.
+    match goal with
+    | [H: ?l <> nil |- _] => destruct l; auto
+    end.
+    discriminate.
+  Qed.
+
+  Lemma enqMP_deqMP_ValidDeq_comm:
+    forall midx (mp: MessagePool MsgT),
+      ValidDeq mp midx ->
+      forall nmidx nmsg,
+        enqMP nmidx nmsg (deqMP midx mp) =
+        deqMP midx (enqMP nmidx nmsg mp).
+  Proof.
+    unfold ValidDeq, enqMP, deqMP, findQ; intros.
+    remember (mp@[midx]) as q; destruct q;
+      simpl in *; [|elim H; reflexivity].
+    destruct l; [elim H; reflexivity|].
+    mred; simpl; meq.
+  Qed.    
+
+  Lemma ValidDeqs_enqMP:
+    forall minds (mp: MessagePool MsgT),
+      ValidDeqs mp minds ->
+      forall midx msg,
+        ValidDeqs (enqMP midx msg mp) minds.
+  Proof.
+    induction minds; simpl; intros; auto.
+    dest; split.
+    - apply ValidDeq_enqMP; auto.
+    - rewrite <-enqMP_deqMP_ValidDeq_comm by assumption.
+      eapply IHminds; eauto.
+  Qed.
+
+  Lemma ValidDeqs_enqMsgs:
+    forall nmsgs minds (mp: MessagePool MsgT),
+      ValidDeqs mp minds ->
+      ValidDeqs (enqMsgs nmsgs mp) minds.
+  Proof.
+    induction nmsgs; simpl; intros; auto.
+    destruct a as [midx msg].
+    apply IHnmsgs.
+    apply ValidDeqs_enqMP; auto.
+  Qed.
+
+  Lemma enqMsgs_deqMP_ValidDeq_comm:
+    forall nmsgs midx (mp: MessagePool MsgT),
+      ValidDeq mp midx ->
+      enqMsgs nmsgs (deqMP midx mp) =
+      deqMP midx (enqMsgs nmsgs mp).
+  Proof.
+    induction nmsgs; simpl; intros; auto.
+    destruct a as [amidx amsg].
+    rewrite enqMP_deqMP_ValidDeq_comm by assumption.
+    eapply IHnmsgs.
+    apply ValidDeq_enqMP; auto.
+  Qed.
+
+  Lemma enqMsgs_deqMsgs_ValidDeqs_comm:
+    forall minds nmsgs (mp: MessagePool MsgT),
+      ValidDeqs mp minds ->
+      enqMsgs nmsgs (deqMsgs minds mp) =
+      deqMsgs minds (enqMsgs nmsgs mp).
+  Proof.
+    induction minds; simpl; intros; auto.
+    dest.
+    rewrite <-enqMsgs_deqMP_ValidDeq_comm by assumption.
+    apply IHminds; auto.
+  Qed.
+
+  Lemma ValidDeqs_app:
+    forall ins1 ins2 (mp: MessagePool MsgT),
+      ValidDeqs mp ins1 ->
+      ValidDeqs (deqMsgs ins1 mp) ins2 ->
+      ValidDeqs mp (ins1 ++ ins2).
+  Proof.
+    induction ins1; simpl; intros; auto.
+    dest; split; auto.
+  Qed.
+
+  Lemma FirstMP_ValidDeq:
+    forall midx msg (mp: MessagePool MsgT),
+      FirstMP mp midx msg ->
+      ValidDeq mp midx.
+  Proof.
+    unfold FirstMP, firstMP, ValidDeq; intros.
+    destruct (findQ midx mp); discriminate.
+  Qed.
+
+  Lemma FirstMPI_Forall_NoDup_ValidDeqs:
+    forall msgs (mp: MessagePool MsgT),
+      Forall (FirstMPI mp) msgs ->
+      NoDup (idsOf msgs) ->
+      ValidDeqs mp (idsOf msgs).
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [midx msg]; simpl in *.
+    inv H; inv H0.
+    split.
+    - eapply FirstMP_ValidDeq; eauto.
+    - eapply IHmsgs; eauto.
+      apply FirstMPI_Forall_deqMP; auto.
+  Qed.
+  
 End Facts.
 
 Global Opaque ForallMP.

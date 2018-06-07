@@ -46,26 +46,48 @@ Section MsgParam.
       dest; subst; auto.
   Qed.
 
-  Lemma atomic_messages_spec:
+  Lemma atomic_messages_spec_ValidDeqs:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall sys st1 st2,
+        steps step_m sys st1 hst st2 ->
+        bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)) /\
+        ValidDeqs (enqMsgs outs (bst_msgs st1)) (idsOf ins).
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv H; inv H3; inv H5; simpl; split.
+      + apply enqMsgs_deqMsgs_comm; auto.
+      + apply ValidDeqs_enqMsgs.
+        destruct H8.
+        apply FirstMPI_Forall_NoDup_ValidDeqs; auto.
+        
+    - inv H5.
+      specialize (IHAtomic _ _ _ H6); dest.
+      inv H8; simpl in *; subst.
+      repeat rewrite idsOf_app, deqMsgs_app, enqMsgs_app.
+      split.
+      + rewrite enqMsgs_deqMsgs_comm with (minds1:= idsOf rins) by assumption.
+        rewrite enqMsgs_deqMsgs_ValidDeqs_comm
+          with (minds:= idsOf ins) (nmsgs:= routs) by assumption.
+        reflexivity.
+      + apply ValidDeqs_app.
+        * apply ValidDeqs_enqMsgs; auto.
+        * rewrite <-enqMsgs_deqMsgs_ValidDeqs_comm
+            with (minds:= idsOf ins) (nmsgs:= routs) by assumption.
+          destruct H14.
+          apply FirstMPI_Forall_NoDup_ValidDeqs in H13; [|assumption].
+          apply ValidDeqs_enqMsgs; auto.
+  Qed.
+
+  Corollary atomic_messages_spec:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall sys st1 st2,
         steps step_m sys st1 hst st2 ->
         bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)).
   Proof.
-    induction 1; simpl; intros; subst.
-    - inv H; inv H3; inv H5; simpl.
-      apply enqMsgs_deqMsgs_comm; auto.
-    - inv H5.
-      specialize (IHAtomic _ _ _ H6).
-      inv H8; simpl in *; subst.
-      rewrite idsOf_app, deqMsgs_app, enqMsgs_app.
-      rewrite enqMsgs_deqMsgs_comm with (minds1:= idsOf rins) by assumption.
-      (* TODO: need a lemma for commutativity between [enqMsgs] and [deqMsgs]
-       * with conditions different from [enqMsgs_deqMsgs_comm];
-       * if [mp] contains messages for [deqMsgs], then commutative.
-       *)
-  Admitted.
+    intros; eapply atomic_messages_spec_ValidDeqs; eauto.
+  Qed.
 
   Lemma atomic_app:
     forall (hst1: History MsgT) inits1 ins1 outs1 eouts1,
