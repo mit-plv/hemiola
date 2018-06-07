@@ -279,13 +279,13 @@ Definition DiscontinuousIns (hst1 hst2: MHistory) :=
   forall eins1 inits2 ins2 outs2 eouts2,
     hst1 = [RlblIns eins1] ->
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DisjList eins1 inits2.
+    DisjList eins1 ins2.
 
 Definition DiscontinuousOuts (hst1 hst2: MHistory) :=
   forall inits1 ins1 outs1 eouts1 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
     hst2 = [RlblOuts eouts2] ->
-    DisjList (idsOf ins1 ++ idsOf outs1) (idsOf eouts2).
+    DisjList outs1 eouts2.
 
 Definition Discontinuous (hst1 hst2: MHistory) :=
   DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\
