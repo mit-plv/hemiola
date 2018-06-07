@@ -259,7 +259,7 @@ Lemma msg_ins_reduced_2:
   forall sys hst inits ins outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
     forall eins,
-      DisjList ins eins ->
+      DisjList eins inits ->
       Reduced sys (hst ++ [RlblIns eins]) (RlblIns eins :: hst).
 Proof.
 Admitted.
@@ -329,9 +329,9 @@ Proof.
     destruct lbl; auto; elim H2.
 Qed.
 
-(** FIXME: need more conditions *)
 Lemma msg_outs_reduced_2:
   forall sys hst inits ins outs eouts mouts,
+    DisjList (idsOf ins ++ idsOf outs) (idsOf mouts) ->
     Atomic msg_dec inits ins hst outs eouts ->
     Reduced sys (RlblOuts mouts :: hst) (hst ++ [RlblOuts mouts]).
 Proof.

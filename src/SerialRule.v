@@ -246,17 +246,52 @@ Definition Continuous (hst1 hst2: MHistory) :=
     inits2 <> nil /\
     SubList inits2 eouts1.
 
-(** Still not sure this is the right definition of [Discontinuous]:
- * 1) Is it a necessary condition to ensure commutativity?
- * 2) Does [~ Continuous] implies [Discontinuous] in certain systems?
- *)
-Definition Discontinuous (hst1 hst2: MHistory) :=
+Definition trsTypeOf (hst: MHistory) :=
+  match hst with
+  | nil => TSlt
+  | lbl :: _ =>
+    match lbl with
+    | RlblEmpty _ => TSlt
+    | RlblIns _ => TIns
+    | RlblOuts _ => TOuts
+    | RlblInt _ _ _ => TInt
+    end
+  end.
+
+Definition DiscontinuousTrsType (tty1 tty2: TrsType) :=
+  match tty1, tty2 with
+  | TSlt, _ => True
+  | _, TSlt => True
+  | TInt, _ => True
+  | _, TInt => True
+  | _, _ => False
+  end.
+
+Definition DiscontinuousA (hst1 hst2: MHistory) :=
   forall inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
     DisjList (idsOf ins1) (idsOf ins2) /\
     DisjList eouts1 inits2 /\
     DisjList (idsOf outs1) (idsOf outs2).
+
+Definition DiscontinuousIns (hst1 hst2: MHistory) :=
+  forall eins1 inits2 ins2 outs2 eouts2,
+    hst1 = [RlblIns eins1] ->
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+    DisjList eins1 inits2.
+
+Definition DiscontinuousOuts (hst1 hst2: MHistory) :=
+  forall inits1 ins1 outs1 eouts1 eouts2,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    hst2 = [RlblOuts eouts2] ->
+    DisjList (idsOf ins1 ++ idsOf outs1) (idsOf eouts2).
+
+Definition Discontinuous (hst1 hst2: MHistory) :=
+  DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\
+  DiscontinuousA hst1 hst2 /\
+  DiscontinuousIns hst1 hst2 /\
+  DiscontinuousOuts hst1 hst2.
 
 Definition Separated (hsts: list MHistory) :=
   forall hst1 hst2 hsts1 hsts2 hsts3,
@@ -292,35 +327,12 @@ Definition MinInterleaved (hsts: list MHistory) :=
     Separated (hsts2 ++ [hst1]) /\
     Separated (hst2 :: hsts2).
 
-Definition trsTypeOf (hst: MHistory) :=
-  match hst with
-  | nil => TSlt
-  | lbl :: _ =>
-    match lbl with
-    | RlblEmpty _ => TSlt
-    | RlblIns _ => TIns
-    | RlblOuts _ => TOuts
-    | RlblInt _ _ _ => TInt
-    end
-  end.
-  
-Definition CommutableTrsType (tty1 tty2: TrsType) :=
-  match tty1, tty2 with
-  | TSlt, _ => True
-  | _, TSlt => True
-  | TInt, _ => True
-  | _, TInt => True
-  | _, _ => False
-  end.
-
 Lemma atomic_reduced:
   forall sys hst1 inits1 ins1 outs1 eouts1
          hst2 inits2 ins2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DisjList (idsOf ins1) (idsOf ins2) ->
-    DisjList eouts1 inits2 ->
-    DisjList (idsOf outs1) (idsOf outs2) ->
+    DiscontinuousA hst1 hst2 ->
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
@@ -330,7 +342,6 @@ Lemma non_conflicting_discontinuous_reduced:
   forall sys hst1 hst2,
     STransactional msg_dec hst1 ->
     STransactional msg_dec hst2 ->
-    CommutableTrsType (trsTypeOf hst1) (trsTypeOf hst2) ->
     Discontinuous hst1 hst2 ->
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
@@ -339,21 +350,25 @@ Proof.
   inv H0.
   - simpl; apply silent_reduced_1.
   - simpl.
-    inv H; try (simpl in H1; exfalso; auto; fail).
+    inv H; try (red in H1; dest; simpl in H; exfalso; auto; fail).
     + apply silent_commutes_2.
     + apply msg_ins_reduced_1.
       eauto using atomic_internal_history.
-  - inv H; try (simpl in H1; exfalso; auto; fail).
+  - inv H; try (red in H1; dest; simpl in H; exfalso; auto; fail).
     + apply silent_commutes_2.
-    + admit.
+    + red in H1; dest; clear H H1 H3.
+      specialize (H4 _ _ _ _ _ H0 eq_refl).
+      eapply msg_outs_reduced_2; eauto.
   - inv H.
     + simpl; apply silent_reduced_2.
-    + admit.
+    + red in H1; dest; clear H H0 H4.
+      specialize (H1 _ _ _ _ _ eq_refl H3).
+      eauto using msg_ins_reduced_2.
     + apply msg_outs_reduced_1.
       eauto using atomic_internal_history.
-    + specialize (H2 _ _ _ _ _ _ _ _ H0 H4); dest.
+    + red in H1; dest; clear H H4 H5.
       eauto using atomic_reduced.
-Admitted.
+Qed.
 
 Lemma interleaved_min:
   forall hsts, Interleaved hsts -> MinInterleaved hsts.
@@ -572,7 +587,7 @@ Section ImmRqRsSerial.
   (*   forall hst1 hst2 st1 st2 hst, *)
   (*     steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 -> *)
   (*     Continuous hst1 hst2 -> *)
-  (*     Discontinuous hst1 hst2. *)
+  (*     DiscontinuousA hst1 hst2. *)
   (* Proof. *)
 
   Lemma immrqrs_well_interleaved_ind:
