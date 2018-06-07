@@ -259,3 +259,17 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma idsOf_app:
+  forall {A} (ias1 ias2: list (Id A)),
+    idsOf (ias1 ++ ias2) = idsOf ias1 ++ idsOf ias2.
+Proof.
+  intros; apply map_app.
+Qed.
+
+Lemma valsOf_app:
+  forall {A} (ias1 ias2: list (Id A)),
+    valsOf (ias1 ++ ias2) = valsOf ias1 ++ valsOf ias2.
+Proof.
+  intros; apply map_app.
+Qed.
+

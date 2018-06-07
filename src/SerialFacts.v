@@ -46,6 +46,27 @@ Section MsgParam.
       dest; subst; auto.
   Qed.
 
+  Lemma atomic_messages_spec:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall sys st1 st2,
+        steps step_m sys st1 hst st2 ->
+        bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)).
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv H; inv H3; inv H5; simpl.
+      apply enqMsgs_deqMsgs_comm; auto.
+    - inv H5.
+      specialize (IHAtomic _ _ _ H6).
+      inv H8; simpl in *; subst.
+      rewrite idsOf_app, deqMsgs_app, enqMsgs_app.
+      rewrite enqMsgs_deqMsgs_comm with (minds1:= idsOf rins) by assumption.
+      (* TODO: need a lemma for commutativity between [enqMsgs] and [deqMsgs]
+       * with conditions different from [enqMsgs_deqMsgs_comm];
+       * if [mp] contains messages for [deqMsgs], then commutative.
+       *)
+  Admitted.
+
   Lemma atomic_app:
     forall (hst1: History MsgT) inits1 ins1 outs1 eouts1,
       Atomic msgT_dec inits1 ins1 hst1 outs1 eouts1 ->
@@ -58,19 +79,6 @@ Section MsgParam.
                (outs2 ++ outs1)
                (removeL (id_dec msgT_dec) outs1 ins2 ++ outs2).
   Proof.
-  Admitted.
-
-  Lemma atomic_messages_spec:
-    forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
-      forall sys st1 st2,
-        steps step_m sys st1 hst st2 ->
-        bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)).
-  Proof.
-    induction 1; simpl; intros; subst.
-    - inv H; inv H3; inv H5; simpl.
-      apply enqMsgs_deqMsgs_comm.
-      (** FIXME: need to add this condition to [step_m]? *)
   Admitted.
 
   Lemma atomic_behavior_nil:

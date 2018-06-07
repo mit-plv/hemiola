@@ -866,6 +866,24 @@ Section Facts.
     - destruct a; eauto.
   Qed.
 
+  Lemma enqMsgs_app:
+    forall ins1 ins2 (mp: MessagePool MsgT),
+      enqMsgs (ins1 ++ ins2) mp =
+      enqMsgs ins2 (enqMsgs ins1 mp).
+  Proof.
+    induction ins1; simpl; intros; auto.
+    destruct a as [midx msg].
+    apply IHins1.
+  Qed.
+
+  Lemma deqMsgs_app:
+    forall minds1 minds2 (mp: MessagePool MsgT),
+      deqMsgs (minds1 ++ minds2) mp =
+      deqMsgs minds2 (deqMsgs minds1 mp).
+  Proof.
+    induction minds1; simpl; intros; auto.
+  Qed.
+
 End Facts.
 
 Global Opaque ForallMP.
