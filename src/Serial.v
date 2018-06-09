@@ -28,7 +28,7 @@ Section Sequential.
       forall inits ins hst outs eouts rule rins routs nins nouts neouts,
         Atomic inits ins hst outs eouts ->
         rins <> nil ->
-        SubList nins eouts ->
+        SubList rins eouts ->
         nins = ins ++ rins ->
         nouts = outs ++ routs ->
         neouts = removeL (id_dec msgT_dec) eouts rins ++ routs ->

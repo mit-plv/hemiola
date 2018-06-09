@@ -88,21 +88,7 @@ Section MsgParam.
   Proof.
     intros; eapply atomic_messages_spec_ValidDeqs; eauto.
   Qed.
-
-  Lemma atomic_app:
-    forall (hst1: History MsgT) inits1 ins1 outs1 eouts1,
-      Atomic msgT_dec inits1 ins1 hst1 outs1 eouts1 ->
-      forall hst2 inits2 ins2 outs2 eouts2,
-        inits2 <> nil ->
-        Atomic msgT_dec inits2 ins2 hst2 outs2 eouts2 ->
-        SubList inits2 eouts1 ->
-        Atomic msgT_dec inits1 (ins1 ++ ins2)
-               (hst2 ++ hst1)
-               (outs2 ++ outs1)
-               (removeL (id_dec msgT_dec) outs1 ins2 ++ outs2).
-  Proof.
-  Admitted.
-
+  
   Lemma atomic_behavior_nil:
     forall {SysT} `{IsSystem SysT} (sys: SysT)
            `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,
@@ -242,6 +228,87 @@ Section MsgParam.
   Qed.
 
 End MsgParam.
+
+Lemma atomic_legal_eouts:
+  forall (hst: MHistory) inits ins outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall sys st1 st2,
+      steps step_m sys st1 hst st2 ->
+      (forall nouts,
+          removeL (id_dec msg_dec) (inits ++ outs ++ nouts) ins =
+          removeL (id_dec msg_dec) (inits ++ outs) ins ++ nouts) /\
+      eouts = removeL (id_dec msg_dec) (inits ++ outs) ins.
+Proof.
+  induction 1; simpl; intros; subst.
+  - split.
+    + intros.
+      do 2 rewrite removeL_app_2.
+      reflexivity.
+    + rewrite removeL_app_2; reflexivity.
+  - inv H5.
+    specialize (IHAtomic _ _ _ H6).
+    assert (NoDup rins) by (inv H8; destruct H12; apply idsOf_NoDup; auto).
+    dest; subst; split.
+    + intros.
+      do 2 rewrite removeL_app_1.
+      rewrite <-app_assoc.
+      do 2 rewrite H3.
+      do 2 (rewrite removeL_app_3 with (l3:= rins) by assumption).
+      apply app_assoc.
+    + rewrite removeL_app_1.
+      rewrite H3.
+      rewrite removeL_app_3 with (l3:= rins) by assumption.
+      reflexivity.
+Qed.
+
+Lemma atomic_app_SSubList:
+  forall (hst1: MHistory) inits1 ins1 outs1 eouts1,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    forall hst2 inits2 ins2 outs2 eouts2,
+      inits2 <> nil ->
+      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      SubList inits2 eouts1 ->
+      exists eouts,
+        SSubList eouts2 eouts /\
+        Atomic msg_dec inits1 (ins1 ++ ins2)
+               (hst2 ++ hst1)
+               (outs1 ++ outs2)
+               eouts.
+Proof.
+  induction 3; simpl; intros.
+  - eexists; split; [|econstructor; eauto].
+    apply SSubList_app_1.
+  - subst.
+    specialize (IHAtomic H0 H7).
+    destruct IHAtomic as [peouts [? ?]].
+
+    eexists; split;
+      [|apply SSubList_SubList in H4;
+        do 2 rewrite app_assoc;
+        econstructor; eauto;
+        eapply SubList_trans; eauto].
+
+    apply SSubList_app_2.
+    apply SSubList_removeL_2; auto.
+Qed.
+
+Corollary atomic_app:
+  forall (hst1: MHistory) inits1 ins1 outs1 eouts1,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    forall hst2 inits2 ins2 outs2 eouts2,
+      inits2 <> nil ->
+      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      SubList inits2 eouts1 ->
+      exists eouts,
+        Atomic msg_dec inits1 (ins1 ++ ins2)
+               (hst2 ++ hst1)
+               (outs1 ++ outs2)
+               eouts.
+Proof.
+  intros.
+  pose proof (atomic_app_SSubList H H0 H1 H2).
+  dest; eauto.
+Qed.
 
 Lemma bequivalent_refl:
   forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT),

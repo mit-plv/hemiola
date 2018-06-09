@@ -336,6 +336,15 @@ Lemma atomic_reduced:
     Nonconflicting hst1 hst2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
+  intros; red; intros.
+  split.
+  - eapply steps_split in H3; [|reflexivity].
+    destruct H3 as [sti [? ?]].
+    admit.
+  - red; do 2 rewrite behaviorOf_app.
+    do 2 erewrite atomic_behavior_nil by eassumption.
+    reflexivity.
+  
 Admitted.
 
 Lemma non_conflicting_discontinuous_reduced:
@@ -390,10 +399,9 @@ Lemma continuous_atomic_concat:
     exists inits ins outs eouts,
       Atomic msg_dec inits ins (hst2 ++ hst1) outs eouts.
 Proof.
-  unfold Continuous; intros.
-  dest.
-  do 4 eexists.
-  eauto using atomic_app.
+  unfold Continuous; intros; dest.
+  pose proof (atomic_app H H1 H0 H2); dest.
+  eauto.
 Qed.
 
 Lemma stransactional_sequential_or_interleaved:
@@ -492,7 +500,7 @@ Section WellInterleaved.
       + apply Forall_app_inv in H8; dest.
         repeat (apply Forall_app; auto).
         constructor; auto.
-        apply continuous_atomic_concat in H2.
+        eapply continuous_atomic_concat in H2; eauto.
         destruct H2 as [inits [ins [outs [eouts ?]]]].
         eapply STrsAtomic; eauto.
     - repeat (simpl; try rewrite app_length).

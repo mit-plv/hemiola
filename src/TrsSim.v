@@ -352,12 +352,10 @@ Proof.
         destruct rins; [elim H2; reflexivity|].
         inv H5.
         eapply SubList_forall in H0; [|eassumption].
-        apply Forall_app_inv in H0; dest.
-        inv H5.
-        simpl in H10; rewrite <-H10; auto.
+        inv H0.
+        simpl in H9; rewrite <-H9; auto.
     + constructor; auto.
-      eapply SubList_forall in H3; [|eassumption].
-      eapply Forall_app_inv in H3; dest; auto.
+      eapply SubList_forall in H3; eauto.
 Qed.
 
 Lemma rule_mids_tid_In:
