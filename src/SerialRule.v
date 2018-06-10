@@ -286,7 +286,8 @@ Definition DiscontinuousOuts (hst1 hst2: MHistory) :=
   forall inits1 ins1 outs1 eouts1 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
     hst2 = [RlblOuts eouts2] ->
-    DisjList outs1 eouts2.
+    DisjList eouts2 outs1 /\
+    DisjList (idsOf eouts2) (idsOf ins1).
 
 Definition Discontinuous (hst1 hst2: MHistory) :=
   DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\
@@ -367,7 +368,7 @@ Proof.
   - inv H; try (red in H1; dest; simpl in H; exfalso; auto; fail).
     + apply silent_commutes_2.
     + red in H1; dest; clear H H1 H3.
-      specialize (H4 _ _ _ _ _ H0 eq_refl).
+      specialize (H4 _ _ _ _ _ H0 eq_refl); dest.
       eapply msg_outs_reduced_2; eauto.
   - inv H.
     + simpl; apply silent_reduced_2.

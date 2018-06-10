@@ -369,6 +369,32 @@ Proof.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
+Lemma msg_outs_commutes_2:
+  forall sys eouts rule ins outs,
+    DisjList eouts outs ->
+    DisjList (idsOf eouts) (idsOf ins) ->
+    Reduced sys [RlblOuts eouts; RlblInt rule ins outs] [RlblInt rule ins outs; RlblOuts eouts].
+Proof.
+  unfold Reduced; intros.
+  split.
+  - dest_step_m.
+    econstructor.
+    + econstructor.
+      * econstructor.
+      * econstructor; try reflexivity; try eassumption.
+        apply FirstMPI_Forall_enqMsgs_inv in H3; [|assumption].
+        apply FirstMPI_Forall_deqMsgs in H3; auto.
+    + econstructor; try reflexivity; try eassumption.
+      * apply FirstMPI_Forall_deqMsgs; auto.
+        apply DisjList_comm; auto.
+      * f_equal.
+        rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
+        { rewrite deqMsgs_deqMsgs_comm; auto. }
+        { destruct H4; auto. }
+        { apply FirstMPI_Forall_enqMsgs_inv in H3; assumption. }
+  - hnf; cbn; reflexivity.
+Qed.
+
 Lemma msg_outs_reduced_1:
   forall sys eouts hst,
     InternalHistory hst ->
@@ -397,11 +423,26 @@ Qed.
 
 Lemma msg_outs_reduced_2:
   forall sys hst inits ins outs eouts mouts,
-    DisjList outs mouts ->
+    DisjList (idsOf mouts) (idsOf ins) ->
+    DisjList mouts outs ->
     Atomic msg_dec inits ins hst outs eouts ->
     Reduced sys (RlblOuts mouts :: hst) (hst ++ [RlblOuts mouts]).
 Proof.
-Admitted.
+  induction 3; simpl; intros;
+    [apply msg_outs_commutes_2; auto|].
+
+  subst.
+  apply DisjList_comm, DisjList_app_3 in H0; dest.
+  apply DisjList_comm in H0; apply DisjList_comm in H4.
+  rewrite idsOf_app in H.
+  apply DisjList_comm, DisjList_app_3 in H; dest.
+  apply DisjList_comm in H; apply DisjList_comm in H5.
+  specialize (IHAtomic H H0).
+
+  eapply reduced_trans; [|apply reduced_cons; eassumption].
+  apply reduced_cons_2.
+  apply msg_outs_commutes_2; auto.
+Qed.
 
 (*! Reducibility of internal state transitions *)
 
