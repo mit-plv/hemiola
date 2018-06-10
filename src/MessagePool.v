@@ -259,23 +259,28 @@ Section Facts.
 
   Lemma FirstMP_enqMP_inv:
     forall (mp: MessagePool MsgT) i m ni nm,
-      i <> ni ->
+      (i, m) <> (ni, nm) ->
       FirstMP (enqMP ni nm mp) i m ->
       FirstMP mp i m.
   Proof.
     unfold FirstMP, firstMP, enqMP, findQ; intros.
-    mred.
+    destruct (i ==n ni); subst; [|mred].
+    mred; simpl in H0.
+    destruct (mp@[ni]).
+    - simpl in *; destruct l; simpl in *; auto.
+      inv H0; elim H; reflexivity.
+    - simpl in *; inv H0; elim H; reflexivity.
   Qed.
 
   Lemma FirstMP_enqMsgs_inv:
     forall msgs (mp: MessagePool MsgT) i m,
-      ~ In i (idsOf msgs) ->
+      ~ In (i, m) msgs ->
       FirstMP (enqMsgs msgs mp) i m ->
       FirstMP mp i m.
   Proof.
     induction msgs; simpl; intros; auto.
     destruct a as [midx msg]; simpl in *.
-    assert (~ In i (idsOf msgs)) by (intro Hx; elim H; auto).
+    assert (~ In (i, m) msgs) by (intro Hx; elim H; auto).
     specialize (IHmsgs _ _ _ H1 H0).
     eapply FirstMP_enqMP_inv; [|eassumption].
     auto.
@@ -283,13 +288,14 @@ Section Facts.
 
   Corollary FirstMPI_Forall_enqMsgs_inv:
     forall emsgs msgs (mp: MessagePool MsgT),
-      DisjList (idsOf msgs) (idsOf emsgs) ->
+      DisjList msgs emsgs ->
       Forall (FirstMPI (enqMsgs emsgs mp)) msgs ->
       Forall (FirstMPI mp) msgs.
   Proof.
     induction msgs; simpl; intros; auto.
     apply DisjList_cons in H; dest.
     inv H0; constructor; auto.
+    destruct a as [midx msg].
     eapply FirstMP_enqMsgs_inv; eauto.
   Qed.
 
@@ -462,6 +468,8 @@ Section Facts.
         [exact H| | | | | |]; eauto.
       discriminate.
     - eapply FirstMP_enqMsgs_inv; eauto.
+      intro Hx; elim n.
+      eapply in_map with (f:= idOf) in Hx; eauto.
   Qed.
 
   Lemma FirstMP_deqMP:

@@ -859,3 +859,31 @@ Proof.
   eapply NoDup_map_inv; eauto.
 Qed.
 
+Lemma idsOf_DisjList:
+  forall {A} (ias1 ias2: list (Id A)),
+    DisjList (idsOf ias1) (idsOf ias2) ->
+    DisjList ias1 ias2.
+Proof.
+  unfold DisjList; intros.
+  destruct e as [idx a].
+  specialize (H idx); destruct H.
+  - left; intro Hx; elim H.
+    eapply in_map with (f:= idOf) in Hx; auto.
+  - right; intro Hx; elim H.
+    eapply in_map with (f:= idOf) in Hx; auto.
+Qed.
+
+Lemma valsOf_DisjList:
+  forall {A} (ias1 ias2: list (Id A)),
+    DisjList (valsOf ias1) (valsOf ias2) ->
+    DisjList ias1 ias2.
+Proof.
+  unfold DisjList; intros.
+  destruct e as [idx a].
+  specialize (H a); destruct H.
+  - left; intro Hx; elim H.
+    eapply in_map with (f:= valOf) in Hx; auto.
+  - right; intro Hx; elim H.
+    eapply in_map with (f:= valOf) in Hx; auto.
+Qed.
+

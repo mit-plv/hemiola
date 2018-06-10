@@ -101,6 +101,30 @@ Proof.
     rewrite H2; reflexivity.
 Qed.
 
+Corollary reduced_cons:
+  forall sys hfr hto,
+    Reduced sys hfr hto ->
+    forall lbl,
+      Reduced sys (lbl :: hfr) (lbl :: hto).
+Proof.
+  intros.
+  change (lbl :: hfr) with ([lbl] ++ hfr).
+  change (lbl :: hto) with ([lbl] ++ hto).
+  apply reduced_app_1; auto.
+Qed.
+
+Corollary reduced_cons_2:
+  forall sys lbl1 lbl2 lbl3 lbl4,
+    Reduced sys [lbl1; lbl2] [lbl3; lbl4] ->
+    forall hst,
+      Reduced sys (lbl1 :: lbl2 :: hst) (lbl3 :: lbl4 :: hst).
+Proof.
+  intros.
+  change (lbl1 :: lbl2 :: hst) with ([lbl1; lbl2] ++ hst).
+  change (lbl3 :: lbl4 :: hst) with ([lbl3; lbl4] ++ hst).
+  apply reduced_app_2; auto.
+Qed.
+
 Lemma reduced_serializable:
   forall sys st1 hfr st2,
     steps step_m sys st1 hfr st2 ->
@@ -233,6 +257,32 @@ Proof.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
+Lemma msg_ins_commutes_2:
+  forall sys eins rule ins outs,
+    DisjList eins ins ->
+    DisjList (idsOf eins) (idsOf outs) ->
+    Reduced sys [RlblInt rule ins outs; RlblIns eins] [RlblIns eins; RlblInt rule ins outs].
+Proof.
+  unfold Reduced; intros.
+  split.
+  - dest_step_m.
+    econstructor.
+    + econstructor.
+      * econstructor.
+      * econstructor; try reflexivity; try eassumption.
+        eapply FirstMPI_Forall_enqMsgs_inv; [|eassumption].
+        apply DisjList_comm; auto.
+    + econstructor; try reflexivity; try eassumption.
+      f_equal.
+      rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
+      * rewrite enqMsgs_enqMsgs_comm; [reflexivity|].
+        apply DisjList_comm; auto.
+      * destruct H12; auto.
+      * eapply FirstMPI_Forall_enqMsgs_inv; [|eassumption].
+        apply DisjList_comm; auto.
+  - hnf; cbn; reflexivity.
+Qed.
+
 Lemma msg_ins_reduced_1:
   forall sys eins hst,
     InternalHistory hst ->
@@ -260,9 +310,25 @@ Lemma msg_ins_reduced_2:
     Atomic msg_dec inits ins hst outs eouts ->
     forall eins,
       DisjList eins ins ->
+      DisjList (idsOf eins) (idsOf outs) ->
       Reduced sys (hst ++ [RlblIns eins]) (RlblIns eins :: hst).
 Proof.
-Admitted.
+  induction 1; simpl; intros;
+    [apply msg_ins_commutes_2; auto|].
+
+  subst.
+  apply DisjList_comm, DisjList_app_3 in H5; dest.
+  apply DisjList_comm in H2; apply DisjList_comm in H3.
+  rewrite idsOf_app in H6.
+  apply DisjList_comm, DisjList_app_3 in H6; dest.
+  apply DisjList_comm in H4; apply DisjList_comm in H5.
+  specialize (IHAtomic _ H2 H4).
+
+  eapply reduced_trans.
+  - apply reduced_cons; eassumption.
+  - apply reduced_cons_2.
+    apply msg_ins_commutes_2; auto.
+Qed.
 
 Lemma msg_outs_commutes_1:
   forall sys eouts lbl,
@@ -357,10 +423,11 @@ Proof.
     + econstructor; try reflexivity; try eassumption.
       * mred.
       * mred.
-      * eapply FirstMPI_Forall_enqMsgs_inv in H23;
-          [|apply DisjList_comm; auto].
-        eapply FirstMPI_Forall_deqMsgs; [|eassumption].
-        apply DisjList_comm; auto.
+      * eapply FirstMPI_Forall_enqMsgs_inv in H23.
+        { eapply FirstMPI_Forall_deqMsgs; [|eassumption].
+          apply DisjList_comm; auto.
+        }
+        { apply DisjList_comm, idsOf_DisjList; auto. }
   - econstructor; try reflexivity; try eassumption.
     + mred.
     + mred.

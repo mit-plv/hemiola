@@ -279,7 +279,8 @@ Definition DiscontinuousIns (hst1 hst2: MHistory) :=
   forall eins1 inits2 ins2 outs2 eouts2,
     hst1 = [RlblIns eins1] ->
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DisjList eins1 ins2.
+    DisjList eins1 ins2 /\
+    DisjList (idsOf eins1) (idsOf outs2).
 
 Definition DiscontinuousOuts (hst1 hst2: MHistory) :=
   forall inits1 ins1 outs1 eouts1 eouts2,
@@ -371,7 +372,7 @@ Proof.
   - inv H.
     + simpl; apply silent_reduced_2.
     + red in H1; dest; clear H H0 H4.
-      specialize (H1 _ _ _ _ _ eq_refl H3).
+      specialize (H1 _ _ _ _ _ eq_refl H3); dest.
       eauto using msg_ins_reduced_2.
     + apply msg_outs_reduced_1.
       eauto using atomic_internal_history.
