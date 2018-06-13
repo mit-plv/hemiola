@@ -50,15 +50,14 @@ Section System.
            rule_msg_ids := svmGetIdx :: nil;
            rule_minds := erq :: nil;
            rule_precond := ⊤rprec;
-           rule_postcond :=
-             rpostOf (fun pre _ post => pre = post)
-                     (fun pre _ post => pre = post) 
-                     (fun pre _ =>
-                        pre@[valueIdx] >>=[nil]
-                           (fun v => (ers, {| msg_id := svmGetIdx;
-                                              msg_rr := Rq;
-                                              msg_value := v |})
-                                       :: nil));
+           rule_trs :=
+             fun ost orq mins =>
+               (ost, orq,
+                ost@[valueIdx] >>=[nil]
+                   (fun v => (ers, {| msg_id := svmGetIdx;
+                                      msg_rr := Rq;
+                                      msg_value := v |})
+                               :: nil))
         |}.
 
       Definition specSetRq: Rule :=
@@ -66,15 +65,15 @@ Section System.
            rule_msg_ids := svmSetIdx :: nil;
            rule_minds := erq :: nil;
            rule_precond := ⊤rprec;
-           rule_postcond :=
-             rpostOf (fun pre ins post =>
-                        (hd_error ins) >>=[False]
-                        (fun idm => post@[valueIdx] = Some (msg_value (valOf idm))))
-                     (fun pre _ post => pre = post)
-                     (fun _ _ => (ers, {| msg_id := svmSetIdx;
-                                          msg_rr := Rq;
-                                          msg_value := VUnit |})
-                                   :: nil)
+           rule_trs :=
+             fun ost orq mins =>
+               ((hd_error mins) >>=[ost]
+                (fun idm => ost+[valueIdx <- msg_value (valOf idm)]),
+                orq,
+                ((ers, {| msg_id := svmSetIdx;
+                          msg_rr := Rq;
+                          msg_value := VUnit |})
+                   :: nil))
         |}.
 
     End PerChn.

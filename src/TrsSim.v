@@ -234,7 +234,7 @@ Section TrsPreserving.
     exists tid,
       Forall (fun mid => mid = tid) (rule_msg_ids rule) /\
       forall post porq ins nost norq outs,
-        rule_postcond rule post porq ins nost norq outs ->
+        rule_trs rule post porq ins = (nost, norq, outs) ->
         Forall (fun idm => msg_id (valOf idm) = tid) outs.
 
   Definition trsPreservingSys (sys: System) :=

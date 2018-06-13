@@ -70,8 +70,8 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     
     In rule (sys_rules sys) ->
     rule_precond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
-    rule_postcond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)
-                  pos (orqMap tmsg_msg norq) outs ->
+    rule_trs rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)
+    = (pos, orqMap tmsg_msg norq, outs) ->
     ValidMsgsOut sys outs ->
 
     DisjList (idsOf ins) (idsOf outs) ->

@@ -785,7 +785,7 @@ Ltac sim_spec_constr_step_t :=
          (*   [apply mmap_FirstMP; eassumption|reflexivity] *)
          | [ |- ValidMsgsIn _ _] => repeat constructor
          | [ |- ValidMsgsOut _ _] => repeat constructor
-         | [ |- rule_postcond _ _ _ _ _ _ _] => repeat constructor
+         | [ |- rule_trs _ _ _ _ = _] => repeat constructor
          end;
      try reflexivity;
      try discriminate;

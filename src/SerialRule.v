@@ -13,7 +13,7 @@ Section ImmRqRs.
     exists rqoidx rqmidx rsmidx,
       rule_minds rule = [rqmidx] /\
       (forall post porq ins nost norq outs,
-          rule_postcond rule post porq ins nost norq outs ->
+          rule_trs rule post porq ins = (nost, norq, outs) ->
           idsOf outs = [rsmidx]) /\
       In (Build_Channel rqoidx rqmidx (rule_oidx rule)) (ctr_chns topo) /\
       In (Build_Channel (rule_oidx rule) rsmidx rqoidx) (ctr_chns topo).
@@ -22,7 +22,7 @@ Section ImmRqRs.
     exists coidx rqmidx rqfmidx poidx,
       rule_minds rule = [rqmidx] /\
       (forall post porq ins nost norq outs,
-          rule_postcond rule post porq ins nost norq outs ->
+          rule_trs rule post porq ins = (nost, norq, outs) ->
           idsOf outs = [rqfmidx]) /\
       (getParent (ctr_tr topo) (rule_oidx rule))
         >>=[False] (fun ptr => trCurOIdxOf ptr = poidx) /\
@@ -35,7 +35,7 @@ Section ImmRqRs.
     exists rqoidx rqmidx rqfminds coinds,
       rule_minds rule = [rqmidx] /\
       (forall post porq ins nost norq outs,
-          rule_postcond rule post porq ins nost norq outs ->
+          rule_trs rule post porq ins = (nost, norq, outs) ->
           idsOf outs = rqfminds) /\
       (getThis (ctr_tr topo) (rule_oidx rule))
         >>=[False] (fun tr => SubList coinds (map trCurOIdxOf (trChildrenOf tr))) /\
@@ -48,7 +48,7 @@ Section ImmRqRs.
     exists poidx rsmidx rsbmidx coidx,
       rule_minds rule = [rsmidx] /\
       (forall post pors ins nost nors outs,
-          rule_postcond rule post pors ins nost nors outs ->
+          rule_trs rule post pors ins = (nost, nors, outs) ->
           idsOf outs = [rsbmidx]) /\
       (getParent (ctr_tr topo) (rule_oidx rule))
         >>=[False] (fun ptr => trCurOIdxOf ptr = poidx) /\
@@ -59,7 +59,7 @@ Section ImmRqRs.
     exists coinds rsminds rsbmidx rsboidx,
       rule_minds rule = rsminds /\
       (forall post pors ins nost nors outs,
-          rule_postcond rule post pors ins nost nors outs ->
+          rule_trs rule post pors ins = (nost, nors, outs) ->
           idsOf outs = [rsbmidx]) /\
       (getThis (ctr_tr topo) (rule_oidx rule))
         >>=[False] (fun tr => SubList coinds (map trCurOIdxOf (trChildrenOf tr))) /\
@@ -306,24 +306,24 @@ Definition getFirstPrecond (rules: list Rule) :=
   | rule :: _ => rule_precond rule
   end.
 
-Fixpoint getLastPostcond (rules: list Rule) :=
+Fixpoint getLastTrs (rules: list Rule) :=
   match rules with
-  | nil => ⊤rpost
-  | rule :: nil => rule_postcond rule
-  | _ :: rules' => getLastPostcond rules'
+  | nil => =rpost
+  | rule :: nil => rule_trs rule
+  | _ :: rules' => getLastTrs rules'
   end.
 
-Definition toRPrecond (cond: RPostcond): RPrecond :=
+Definition toRPrecond (rtrs: RTrs): RPrecond :=
   fun ost orq msgs =>
     exists post porq pmsgs,
-      cond post porq pmsgs ost orq msgs.
+      rtrs post porq pmsgs = (ost, orq, msgs).
 
 Fixpoint CondChainedRules' (cc: RPrecond) (rules: list Rule) :=
   match rules with
   | nil => True
   | rule :: rules' =>
     (cc ->rprec rule_precond rule) /\
-    (CondChainedRules' (toRPrecond (rule_postcond rule)) rules')
+    (CondChainedRules' (toRPrecond (rule_trs rule)) rules')
   end.
 
 Definition CondChainedRules (rules: list Rule) :=
@@ -336,15 +336,15 @@ Definition NonconflictingLocalRules (rules1 rules2: list Rule) :=
   (getFirstPrecond rules1 ->rprec getFirstPrecond rules2) /\
   (* 2) A precondition of [rules1] should be satisfied after [rules2]. *)
   (forall post porq pmsgs nost norq nmsgs,
-      getLastPostcond rules2 post porq pmsgs nost norq nmsgs ->
+      getLastTrs rules2 post porq pmsgs = (nost, norq, nmsgs) ->
       getFirstPrecond rules1 nost norq nmsgs) /\
   (* 3) Postconditions should be commutable. *)
   (forall ost1 orq1 msgs1 ost2 orq2 msgs2 ost3 orq3 msgs3,
-      getLastPostcond rules1 ost1 orq1 msgs1 ost2 orq2 msgs2 ->
-      getLastPostcond rules2 ost2 orq2 msgs2 ost3 orq3 msgs3 ->
+      getLastTrs rules1 ost1 orq1 msgs1 = (ost2, orq2, msgs2) ->
+      getLastTrs rules2 ost2 orq2 msgs2 = (ost3, orq3, msgs3) ->
       exists osti orqi msgsi,
-        getLastPostcond rules2 ost1 orq1 msgs1 osti orqi msgsi /\
-        getLastPostcond rules1 osti orqi msgsi ost3 orq3 msgs3).
+        getLastTrs rules2 ost1 orq1 msgs1 = (osti, orqi, msgsi) /\
+        getLastTrs rules1 osti orqi msgsi = (ost3, orq3, msgs3)).
 
 Definition NonconflictingRules (rules1 rules2: list Rule) :=
   forall oidx,

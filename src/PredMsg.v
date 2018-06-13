@@ -152,7 +152,7 @@ Section GivenMsg.
        rule_msg_ids := msgIdsOfPRule prule;
        (** TODO: how to convert? *)
        rule_precond := fun _ _ _ => True;
-       rule_postcond := fun _ _ _ _ _ _ => True |}.
+       rule_trs := =rpost |}.
 
   Definition pToSystem (psys: PSystem): System :=
     {| sys_oinds := psys_oinds psys;

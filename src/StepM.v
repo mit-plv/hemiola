@@ -35,7 +35,7 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
 
     In rule (sys_rules sys) ->
     rule_precond rule os porq ins ->
-    rule_postcond rule os porq ins pos norq iouts ->
+    rule_trs rule os porq ins = (pos, norq, iouts) ->
     ValidMsgsOut sys iouts ->
 
     DisjList (idsOf ins) (idsOf iouts) ->
