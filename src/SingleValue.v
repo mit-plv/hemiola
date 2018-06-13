@@ -49,9 +49,10 @@ Section System.
         {| rule_oidx := specIdx;
            rule_msg_ids := svmGetIdx :: nil;
            rule_minds := erq :: nil;
-           rule_precond := ⊤⊤;
+           rule_precond := ⊤rprec;
            rule_postcond :=
-             rpostOf ⊤⊤= ⊤⊤=
+             rpostOf (fun pre _ post => pre = post)
+                     (fun pre _ post => pre = post) 
                      (fun pre _ =>
                         pre@[valueIdx] >>=[nil]
                            (fun v => (ers, {| msg_id := svmGetIdx;
@@ -64,12 +65,12 @@ Section System.
         {| rule_oidx := specIdx;
            rule_msg_ids := svmSetIdx :: nil;
            rule_minds := erq :: nil;
-           rule_precond := ⊤⊤;
+           rule_precond := ⊤rprec;
            rule_postcond :=
              rpostOf (fun pre ins post =>
                         (hd_error ins) >>=[False]
                         (fun idm => post@[valueIdx] = Some (msg_value (valOf idm))))
-                     ⊤⊤=
+                     (fun pre _ post => pre = post)
                      (fun _ _ => (ers, {| msg_id := svmSetIdx;
                                           msg_rr := Rq;
                                           msg_value := VUnit |})

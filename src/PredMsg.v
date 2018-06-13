@@ -84,7 +84,7 @@ Section GivenMsg.
     match prule with
     | PRuleImm _ _ _ prec => prec
     | PRuleRqFwd _ _ prec _ => prec
-    | PRuleRsBack _ _ _ _ _ => ⊤⊤
+    | PRuleRsBack _ _ _ _ _ => ⊤rprec
     end.
 
   Section PLabel.

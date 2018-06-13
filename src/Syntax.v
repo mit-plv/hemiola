@@ -146,6 +146,15 @@ Infix "->rprec" := RPrecImp (at level 99).
 Infix "/\rpost" := RPostAnd (at level 80).
 Infix "->rpost" := RPostImp (at level 99).
 
+Notation "'⊤rprec'" := (fun _ _ _ => True).
+Notation "'⊥rprec'" := (fun _ _ _ => False).
+Notation "'⊤rpost'" := (fun _ _ _ _ _ _ => True).
+Notation "'⊥rpost'" := (fun _ _ _ _ _ _ => False).
+
+Notation "'=rpost'" :=
+  (fun post porq pmsgs nost norq nmsgs =>
+     post = nost /\ porq = norq /\ pmsgs = nmsgs).
+
 Section Conditions.
 
   Definition MsgOuts :=

@@ -300,22 +300,72 @@ Definition Separated (hsts: list MHistory) :=
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 ->
     ~ Continuous hst1 hst2.
 
-Definition NonconflictingRules (rule1 rule2: Rule) :=
-  (rule_oidx rule1 <> rule_oidx rule2) \/
-  (* TODO: define when rules are for the same object. *)
-  False.
+Definition getFirstPrecond (rules: list Rule) :=
+  match rules with
+  | nil => ⊤rprec
+  | rule :: _ => rule_precond rule
+  end.
 
-Definition NonconflictingLabels {MsgT} (lbl1 lbl2: RLabel MsgT) :=
-  match lbl1, lbl2 with
-  | RlblInt rule1 _ _, RlblInt rule2 _ _ => NonconflictingRules rule1 rule2
-  | _, _ => True
+Fixpoint getLastPostcond (rules: list Rule) :=
+  match rules with
+  | nil => ⊤rpost
+  | rule :: nil => rule_postcond rule
+  | _ :: rules' => getLastPostcond rules'
+  end.
+
+Definition toRPrecond (cond: RPostcond): RPrecond :=
+  fun ost orq msgs =>
+    exists post porq pmsgs,
+      cond post porq pmsgs ost orq msgs.
+
+Fixpoint CondChainedRules' (cc: RPrecond) (rules: list Rule) :=
+  match rules with
+  | nil => True
+  | rule :: rules' =>
+    (cc ->rprec rule_precond rule) /\
+    (CondChainedRules' (toRPrecond (rule_postcond rule)) rules')
+  end.
+
+Definition CondChainedRules (rules: list Rule) :=
+  CondChainedRules' (fun _ _ _ => False) rules.
+
+Definition NonconflictingLocalRules (rules1 rules2: list Rule) :=
+  (* 0) Intermediate (internal) pre/postconditions should be stable. *)
+  CondChainedRules rules1 /\ CondChainedRules rules2 /\
+  (* 1) A precondition of [rules2] should be satisfied with the starting state. *)
+  (getFirstPrecond rules1 ->rprec getFirstPrecond rules2) /\
+  (* 2) A precondition of [rules1] should be satisfied after [rules2]. *)
+  (forall post porq pmsgs nost norq nmsgs,
+      getLastPostcond rules2 post porq pmsgs nost norq nmsgs ->
+      getFirstPrecond rules1 nost norq nmsgs) /\
+  (* 3) Postconditions should be commutable. *)
+  (forall ost1 orq1 msgs1 ost2 orq2 msgs2 ost3 orq3 msgs3,
+      getLastPostcond rules1 ost1 orq1 msgs1 ost2 orq2 msgs2 ->
+      getLastPostcond rules2 ost2 orq2 msgs2 ost3 orq3 msgs3 ->
+      exists osti orqi msgsi,
+        getLastPostcond rules2 ost1 orq1 msgs1 osti orqi msgsi /\
+        getLastPostcond rules1 osti orqi msgsi ost3 orq3 msgs3).
+
+Definition NonconflictingRules (rules1 rules2: list Rule) :=
+  forall oidx,
+    NonconflictingLocalRules
+      (filter (fun rule => if rule_oidx rule ==n oidx then true else false) rules1)
+      (filter (fun rule => if rule_oidx rule ==n oidx then true else false) rules2).
+
+Definition getExecutedRule {MsgT} (lbl: RLabel MsgT) :=
+  match lbl with
+  | RlblInt rule _ _ => Some rule
+  | _ => None
+  end.
+
+Fixpoint ruleExecutions {MsgT} (hst: History MsgT) :=
+  match hst with
+  | nil => nil
+  | lbl :: hst' => (getExecutedRule lbl) ::> (ruleExecutions hst')
   end.
 
 Definition Nonconflicting {MsgT} (hst1 hst2: History MsgT) :=
-  forall lbl1 lbl2,
-    In lbl1 hst1 ->
-    In lbl2 hst2 ->
-    NonconflictingLabels lbl1 lbl2.
+  NonconflictingRules (ruleExecutions hst1) (ruleExecutions hst2).
 
 Definition Interleaved (hsts: list MHistory) :=
   exists hst1 hst2 hsts1 hsts2 hsts3,
@@ -346,7 +396,6 @@ Proof.
   - red; do 2 rewrite behaviorOf_app.
     do 2 erewrite atomic_behavior_nil by eassumption.
     reflexivity.
-  
 Admitted.
 
 Lemma non_conflicting_discontinuous_reduced:

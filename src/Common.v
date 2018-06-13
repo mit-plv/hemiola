@@ -165,10 +165,5 @@ Fixpoint findAt (v: nat) (l: list nat) :=
     else (findAt v l') >>=[None] (fun o => Some (S o))
   end.
 
-Notation "'⊤'" := (fun _ _ => True).
-Notation "'⊤⊤'" := (fun _ _ _ => True).
-Notation "'⊤⊤⊤'" := (fun _ _ _ _ => True).
-Notation "'⊤⊤='" := (fun pre _ post => pre = post).
-
 Axiom cheat: forall t, t.
 
