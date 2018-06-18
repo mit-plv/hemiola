@@ -52,9 +52,9 @@ Section GivenMsg.
 
   Inductive PRule :=
   | PRuleImm:
-      forall (oidx: IdxT) (rq rs: PMsgId) (prec: RPrecond), PRule
+      forall (oidx: IdxT) (rq rs: PMsgId) (prec: OPrec), PRule
   | PRuleRqFwd:
-      forall (oidx: IdxT) (rq: PMsgId) (prec: RPrecond) (rqf: list PMsgId), PRule
+      forall (oidx: IdxT) (rq: PMsgId) (prec: OPrec) (rqf: list PMsgId), PRule
   | PRuleRsBack:
       forall (oidx: IdxT) (rss: list PMsgId) (opred: OPred)
              (rsb: PMsgId) (rsbf: RsBackF), PRule.
@@ -84,7 +84,7 @@ Section GivenMsg.
     match prule with
     | PRuleImm _ _ _ prec => prec
     | PRuleRqFwd _ _ prec _ => prec
-    | PRuleRsBack _ _ _ _ _ => ⊤rprec
+    | PRuleRsBack _ _ _ _ _ => ⊤oprec
     end.
 
   Section PLabel.
@@ -151,8 +151,8 @@ Section GivenMsg.
        rule_minds := mindsOfPRule prule;
        rule_msg_ids := msgIdsOfPRule prule;
        (** TODO: how to convert? *)
-       rule_precond := fun _ _ _ => True;
-       rule_trs := =rpost |}.
+       rule_precond := ⊤oprec;
+       rule_trs := =otrs |}.
 
   Definition pToSystem (psys: PSystem): System :=
     {| sys_oinds := psys_oinds psys;

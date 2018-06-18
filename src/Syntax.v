@@ -111,32 +111,32 @@ Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1) :=
 
 Section Rule.
 
-  Definition RPrecond :=
+  Definition OPrec :=
     OState -> ORq Msg -> list (Id Msg) -> Prop.
-  Definition RTrs :=
+  Definition OTrs :=
     OState -> ORq Msg -> list (Id Msg) -> (OState * ORq Msg * list (Id Msg)).
 
-  Definition RPrecAnd (p1 p2: RPrecond): RPrecond :=
+  Definition OPrecAnd (p1 p2: OPrec): OPrec :=
     fun ost orq ins => p1 ost orq ins /\ p2 ost orq ins.
 
-  Definition RPrecImp (p1 p2: RPrecond): Prop :=
+  Definition OPrecImp (p1 p2: OPrec): Prop :=
     forall ost orq ins, p1 ost orq ins -> p2 ost orq ins.
 
   Record Rule :=
     { rule_oidx: IdxT;
       rule_msg_ids: list IdxT;
       rule_minds: list IdxT;
-      rule_precond: RPrecond;
-      rule_trs: RTrs;
+      rule_precond: OPrec;
+      rule_trs: OTrs;
     }.
 
 End Rule.
 
-Infix "/\rprec" := RPrecAnd (at level 80).
-Infix "->rprec" := RPrecImp (at level 99).
-Notation "'⊤rprec'" := (fun _ _ _ => True).
-Notation "'⊥rprec'" := (fun _ _ _ => False).
-Notation "'=rpost'" := (fun post porq pmsgs => (post, porq, pmsgs)).
+Infix "/\oprec" := OPrecAnd (at level 80).
+Infix "->oprec" := OPrecImp (at level 99).
+Notation "'⊤oprec'" := (fun _ _ _ => True).
+Notation "'⊥oprec'" := (fun _ _ _ => False).
+Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
 
 Section System.
 

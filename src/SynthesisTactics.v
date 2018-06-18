@@ -234,7 +234,7 @@ Ltac sim_pred_silent :=
 
 Record PStackElt :=
   { pste_pmid: PMsgId TMsg;
-    pste_prec: RPrecond }.
+    pste_prec: OPrec }.
 
 (* Definition dualOfPStackElt (chn: IdxT) (pste: PStackElt) := *)
 (*   {| pste_pmid := dualOfP (pste_pmid pste) chn; *)
@@ -614,7 +614,7 @@ Ltac red_pred :=
       end
     | [H: ?rprec _ _ |- _] =>
       match type of rprec with
-      | RPrecond => red in H
+      | OPrec => red in H
       end
     | [H: context[rsBackFDefault (?v :: nil) ?o] |- _] =>
       rewrite rsBackFDefault_singleton with (val:= v) (ost:= o) in *

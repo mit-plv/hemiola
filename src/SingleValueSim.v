@@ -10,18 +10,18 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Section RPreconds.
+Section OPrecs.
 
-  Definition ImplOStatusM: RPrecond :=
+  Definition ImplOStatusM: OPrec :=
     fun ost _ _ => ost@[statusIdx] = Some (VNat stM).
 
-  Definition ImplOStatusS: RPrecond :=
+  Definition ImplOStatusS: OPrec :=
     fun ost _ _ => ost@[statusIdx] = Some (VNat stS).
   
-  Definition ImplOStatusI: RPrecond :=
+  Definition ImplOStatusI: OPrec :=
     fun ost _ _ => ost@[statusIdx] = Some (VNat stI).
 
-End RPreconds.
+End OPrecs.
 
 Section Predicates.
 

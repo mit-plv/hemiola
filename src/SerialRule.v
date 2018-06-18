@@ -100,7 +100,7 @@ Section PartialBlocking.
     end.
 
   (* TODO: need a more intuitive (easier) definition. *)
-  Definition PartialBlockingPrec (oidx: IdxT): RPrecond :=
+  Definition PartialBlockingPrec (oidx: IdxT): OPrec :=
     fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
       match getDownRq oidx orq with
       | Some dri =>
@@ -118,7 +118,7 @@ Section PartialBlocking.
       end.
 
   Definition PartialBlockingRule (rule: Rule) :=
-    (rule_precond rule) ->rprec (PartialBlockingPrec (rule_oidx rule)).
+    (rule_precond rule) ->oprec (PartialBlockingPrec (rule_oidx rule)).
 
   Definition PartialBlockingSys (sys: System) :=
     Forall PartialBlockingRule (sys_rules sys).
@@ -300,72 +300,46 @@ Definition Separated (hsts: list MHistory) :=
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 ->
     ~ Continuous hst1 hst2.
 
-Definition getFirstPrecond (rules: list Rule) :=
-  match rules with
-  | nil => ⊤rprec
-  | rule :: _ => rule_precond rule
-  end.
+TODO.
+(** FIXME: this is not enough since sometimes we need a case where two
+ * transactions are sharing a queue but commutative, e.g., between [eouts1]
+ * and [inits2]. *)
+Definition ASimilar (sys: System) (hst: MHistory) (s1 s2: MState) :=
+  exists inits ins outs eouts,
+    Atomic msg_dec inits ins hst outs eouts /\
+    exists ns1,
+      steps step_m sys s1 hst ns1 /\
+      qsOf (idsOf (ins ++ outs)) (bst_msgs s1) =
+      qsOf (idsOf (ins ++ outs)) (bst_msgs s2).
 
-Fixpoint getLastTrs (rules: list Rule) :=
-  match rules with
-  | nil => =rpost
-  | rule :: nil => rule_trs rule
-  | _ :: rules' => getLastTrs rules'
-  end.
+Definition AInstance (sys: System) (hst: MHistory) (st: MState) :=
+  exists si, ASimilar sys hst si st.
 
-Definition toRPrecond (rtrs: RTrs): RPrecond :=
-  fun ost orq msgs =>
-    exists post porq pmsgs,
-      rtrs post porq pmsgs = (ost, orq, msgs).
+Definition Prec := (OStates * ORqs Msg) -> Prop.
+Definition Trs := (OStates * ORqs Msg) -> (OStates * ORqs Msg).
 
-Fixpoint CondChainedRules' (cc: RPrecond) (rules: list Rule) :=
-  match rules with
-  | nil => True
-  | rule :: rules' =>
-    (cc ->rprec rule_precond rule) /\
-    (CondChainedRules' (toRPrecond (rule_trs rule)) rules')
-  end.
+Definition DenotationalL (sys: System) (prec: Prec) (trs: Trs) (hst: MHistory) :=
+  forall st1,
+    prec (bst_oss st1, bst_orqs st1) ->
+    AInstance sys hst st1 ->
+    exists st2,
+      steps step_m sys st1 hst st2 /\
+      trs (bst_oss st1, bst_orqs st1) = (bst_oss st2, bst_orqs st2).
 
-Definition CondChainedRules (rules: list Rule) :=
-  CondChainedRules' (fun _ _ _ => False) rules.
+Definition DenotationalR (sys: System) (prec: Prec) (trs: Trs) (hst: MHistory) :=
+  forall st1 st2,
+    steps step_m sys st1 hst st2 ->
+    prec (bst_oss st1, bst_orqs st1) /\
+    trs (bst_oss st1, bst_orqs st1) = (bst_oss st2, bst_orqs st2).
 
-Definition NonconflictingLocalRules (rules1 rules2: list Rule) :=
-  (* 0) Intermediate (internal) pre/postconditions should be stable. *)
-  CondChainedRules rules1 /\ CondChainedRules rules2 /\
-  (* 1) A precondition of [rules2] should be satisfied with the starting state. *)
-  (getFirstPrecond rules1 ->rprec getFirstPrecond rules2) /\
-  (* 2) A precondition of [rules1] should be satisfied after [rules2]. *)
-  (forall post porq pmsgs nost norq nmsgs,
-      getLastTrs rules2 post porq pmsgs = (nost, norq, nmsgs) ->
-      getFirstPrecond rules1 nost norq nmsgs) /\
-  (* 3) Postconditions should be commutable. *)
-  (forall ost1 orq1 msgs1 ost2 orq2 msgs2 ost3 orq3 msgs3,
-      getLastTrs rules1 ost1 orq1 msgs1 = (ost2, orq2, msgs2) ->
-      getLastTrs rules2 ost2 orq2 msgs2 = (ost3, orq3, msgs3) ->
-      exists osti orqi msgsi,
-        getLastTrs rules2 ost1 orq1 msgs1 = (osti, orqi, msgsi) /\
-        getLastTrs rules1 osti orqi msgsi = (ost3, orq3, msgs3)).
+Definition Denotational (sys: System) (prec: Prec) (trs: Trs) (hst: MHistory) :=
+  DenotationalL sys prec trs hst /\
+  DenotationalR sys prec trs hst.
 
-Definition NonconflictingRules (rules1 rules2: list Rule) :=
-  forall oidx,
-    NonconflictingLocalRules
-      (filter (fun rule => if rule_oidx rule ==n oidx then true else false) rules1)
-      (filter (fun rule => if rule_oidx rule ==n oidx then true else false) rules2).
-
-Definition getExecutedRule {MsgT} (lbl: RLabel MsgT) :=
-  match lbl with
-  | RlblInt rule _ _ => Some rule
-  | _ => None
-  end.
-
-Fixpoint ruleExecutions {MsgT} (hst: History MsgT) :=
-  match hst with
-  | nil => nil
-  | lbl :: hst' => (getExecutedRule lbl) ::> (ruleExecutions hst')
-  end.
-
-Definition Nonconflicting {MsgT} (hst1 hst2: History MsgT) :=
-  NonconflictingRules (ruleExecutions hst1) (ruleExecutions hst2).
+Definition Nonconflicting (p1 p2: Prec) (f1 f2: Trs) :=
+  (forall o, p2 (f1 o) -> p2 o) /\
+  (forall o, p1 o -> p1 (f2 o)) /\
+  (forall o, f2 (f1 o) = f1 (f2 o)).
 
 Definition Interleaved (hsts: list MHistory) :=
   exists hst1 hst2 hsts1 hsts2 hsts3,
@@ -381,18 +355,64 @@ Definition MinInterleaved (hsts: list MHistory) :=
 
 Lemma atomic_reduced:
   forall sys hst1 inits1 ins1 outs1 eouts1
-         hst2 inits2 ins2 outs2 eouts2,
+         hst2 inits2 ins2 outs2 eouts2 p1 p2 f1 f2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
     DiscontinuousA hst1 hst2 ->
-    Nonconflicting hst1 hst2 ->
+    Denotational sys p1 f1 hst1 ->
+    Denotational sys p2 f2 hst2 ->
+    Nonconflicting p1 p2 f1 f2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
   intros; red; intros.
   split.
-  - eapply steps_split in H3; [|reflexivity].
-    destruct H3 as [sti [? ?]].
-    admit.
+  - eapply steps_split in H5; [|reflexivity].
+    destruct H5 as [sti [? ?]].
+
+    red in H2, H3; dest.
+    specialize (H8 _ _ H5); specialize (H7 _ _ H6); dest.
+    red in H4; dest.
+
+    specialize (H11 _ H8).
+    rewrite <-H10 in H7.
+    specialize (H4 _ H7).
+
+    specialize (H3 _ H4).
+    assert (AInstance sys hst2 st1).
+    { eexists; red.
+      do 4 eexists; split.
+      { eassumption. }
+      { eexists; split.
+        { eassumption. }
+        { (** TODO: disjointness between
+           * (ins1 ++ outs1) and (ins2 ++ outs2) *)
+          admit.
+        }
+      }
+    }
+    specialize (H3 H13); clear H13.
+    destruct H3 as [nsti [? ?]].
+
+    red in H2.
+    rewrite H13 in H11.
+    specialize (H2 _ H11).
+    assert (AInstance sys hst1 nsti).
+    { eexists; red.
+      do 4 eexists; split.
+      { eassumption. }
+      { eexists; split.
+        { eassumption. }
+        { admit. }
+      }
+    }
+    specialize (H2 H14); clear H14.
+    destruct H2 as [nst2 [? ?]].
+
+    assert (st2 = nst2); subst.
+    { admit. }
+
+    eapply steps_append; eauto.
+
   - red; do 2 rewrite behaviorOf_app.
     do 2 erewrite atomic_behavior_nil by eassumption.
     reflexivity.

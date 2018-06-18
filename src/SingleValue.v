@@ -49,7 +49,7 @@ Section System.
         {| rule_oidx := specIdx;
            rule_msg_ids := svmGetIdx :: nil;
            rule_minds := erq :: nil;
-           rule_precond := ⊤rprec;
+           rule_precond := ⊤oprec;
            rule_trs :=
              fun ost orq mins =>
                (ost, orq,
@@ -64,7 +64,7 @@ Section System.
         {| rule_oidx := specIdx;
            rule_msg_ids := svmSetIdx :: nil;
            rule_minds := erq :: nil;
-           rule_precond := ⊤rprec;
+           rule_precond := ⊤oprec;
            rule_trs :=
              fun ost orq mins =>
                ((hd_error mins) >>=[ost]
