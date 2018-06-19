@@ -258,79 +258,31 @@ Definition trsTypeOf (hst: MHistory) :=
     end
   end.
 
-Definition DiscontinuousTrsType (tty1 tty2: TrsType) :=
-  match tty1, tty2 with
-  | TSlt, _ => True
-  | _, TSlt => True
-  | TInt, _ => True
-  | _, TInt => True
-  | _, _ => False
-  end.
-
-Definition DiscontinuousA (hst1 hst2: MHistory) :=
-  forall inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DisjList (idsOf ins1) (idsOf ins2) /\
-    DisjList eouts1 inits2 /\
-    DisjList (idsOf outs1) (idsOf outs2).
-
-Definition DiscontinuousIns (hst1 hst2: MHistory) :=
-  forall eins1 inits2 ins2 outs2 eouts2,
-    hst1 = [RlblIns eins1] ->
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DisjList eins1 ins2 /\
-    DisjList (idsOf eins1) (idsOf outs2).
-
-Definition DiscontinuousOuts (hst1 hst2: MHistory) :=
-  forall inits1 ins1 outs1 eouts1 eouts2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-    hst2 = [RlblOuts eouts2] ->
-    DisjList eouts2 outs1 /\
-    DisjList (idsOf eouts2) (idsOf ins1).
-
-Definition Discontinuous (hst1 hst2: MHistory) :=
-  DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\
-  DiscontinuousA hst1 hst2 /\
-  DiscontinuousIns hst1 hst2 /\
-  DiscontinuousOuts hst1 hst2.
+Lemma atomic_trsTypeOf:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    trsTypeOf hst = TInt.
+Proof.
+  intros; inv H; reflexivity.
+Qed.
 
 Definition Separated (hsts: list MHistory) :=
   forall hst1 hst2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 ->
     ~ Continuous hst1 hst2.
 
-TODO.
-(** FIXME: this is not enough since sometimes we need a case where two
- * transactions are sharing a queue but commutative, e.g., between [eouts1]
- * and [inits2]. *)
-Definition ASimilar (sys: System) (hst: MHistory) (s1 s2: MState) :=
-  exists inits ins outs eouts,
-    Atomic msg_dec inits ins hst outs eouts /\
-    exists ns1,
-      steps step_m sys s1 hst ns1 /\
-      qsOf (idsOf (ins ++ outs)) (bst_msgs s1) =
-      qsOf (idsOf (ins ++ outs)) (bst_msgs s2).
-
-Definition AInstance (sys: System) (hst: MHistory) (st: MState) :=
-  exists si, ASimilar sys hst si st.
-
-Definition Prec := (OStates * ORqs Msg) -> Prop.
-Definition Trs := (OStates * ORqs Msg) -> (OStates * ORqs Msg).
+Definition Prec := MState -> Prop.
+Definition Trs := MState -> MState.
 
 Definition DenotationalL (sys: System) (prec: Prec) (trs: Trs) (hst: MHistory) :=
   forall st1,
-    prec (bst_oss st1, bst_orqs st1) ->
-    AInstance sys hst st1 ->
-    exists st2,
-      steps step_m sys st1 hst st2 /\
-      trs (bst_oss st1, bst_orqs st1) = (bst_oss st2, bst_orqs st2).
+    prec st1 ->
+    steps step_m sys st1 hst (trs st1).
 
 Definition DenotationalR (sys: System) (prec: Prec) (trs: Trs) (hst: MHistory) :=
   forall st1 st2,
     steps step_m sys st1 hst st2 ->
-    prec (bst_oss st1, bst_orqs st1) /\
-    trs (bst_oss st1, bst_orqs st1) = (bst_oss st2, bst_orqs st2).
+    prec st1 /\ st2 = trs st1.
 
 Definition Denotational (sys: System) (prec: Prec) (trs: Trs) (hst: MHistory) :=
   DenotationalL sys prec trs hst /\
@@ -353,12 +305,13 @@ Definition MinInterleaved (hsts: list MHistory) :=
     Separated (hsts2 ++ [hst1]) /\
     Separated (hst2 :: hsts2).
 
-Lemma atomic_reduced:
-  forall sys hst1 inits1 ins1 outs1 eouts1
-         hst2 inits2 ins2 outs2 eouts2 p1 p2 f1 f2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DiscontinuousA hst1 hst2 ->
+Definition BCommutable (sys: System) (hst1 hst2: MHistory) :=
+  behaviorOf sys hst2 ++ behaviorOf sys hst1 =
+  behaviorOf sys hst1 ++ behaviorOf sys hst2.
+
+Lemma nonconflicting_reduced:
+  forall sys hst1 hst2 p1 p2 f1 f2,
+    BCommutable sys hst1 hst2 ->
     Denotational sys p1 f1 hst1 ->
     Denotational sys p2 f2 hst2 ->
     Nonconflicting p1 p2 f1 f2 ->
@@ -366,89 +319,154 @@ Lemma atomic_reduced:
 Proof.
   intros; red; intros.
   split.
-  - eapply steps_split in H5; [|reflexivity].
-    destruct H5 as [sti [? ?]].
-
-    red in H2, H3; dest.
-    specialize (H8 _ _ H5); specialize (H7 _ _ H6); dest.
-    red in H4; dest.
-
-    specialize (H11 _ H8).
-    rewrite <-H10 in H7.
-    specialize (H4 _ H7).
-
-    specialize (H3 _ H4).
-    assert (AInstance sys hst2 st1).
-    { eexists; red.
-      do 4 eexists; split.
-      { eassumption. }
-      { eexists; split.
-        { eassumption. }
-        { (** TODO: disjointness between
-           * (ins1 ++ outs1) and (ins2 ++ outs2) *)
-          admit.
-        }
-      }
-    }
-    specialize (H3 H13); clear H13.
-    destruct H3 as [nsti [? ?]].
-
-    red in H2.
-    rewrite H13 in H11.
-    specialize (H2 _ H11).
-    assert (AInstance sys hst1 nsti).
-    { eexists; red.
-      do 4 eexists; split.
-      { eassumption. }
-      { eexists; split.
-        { eassumption. }
-        { admit. }
-      }
-    }
-    specialize (H2 H14); clear H14.
-    destruct H2 as [nst2 [? ?]].
-
-    assert (st2 = nst2); subst.
-    { admit. }
-
+  - eapply steps_split in H3; [|reflexivity].
+    destruct H3 as [sti [? ?]].
+    red in H0, H1; dest.
+    specialize (H6 _ _ H3); specialize (H5 _ _ H4); dest; subst.
+    red in H2; dest.
+    specialize (H2 _ H5).
+    specialize (H1 _ H2).
+    specialize (H7 _ H6).
+    specialize (H0 _ H7).
+    rewrite H8.
     eapply steps_append; eauto.
+  - red; do 2 rewrite behaviorOf_app; assumption.
+Qed.
 
-  - red; do 2 rewrite behaviorOf_app.
-    do 2 erewrite atomic_behavior_nil by eassumption.
-    reflexivity.
-Admitted.
+Definition DiscontinuousTrsType (tty1 tty2: TrsType) :=
+  match tty1, tty2 with
+  | TSlt, _ => True
+  | _, TSlt => True
+  | TInt, _ => True
+  | _, TInt => True
+  | _, _ => False
+  end.
 
-Lemma non_conflicting_discontinuous_reduced:
+Lemma discontinuous_trs_type_bcommutable:
   forall sys hst1 hst2,
     STransactional msg_dec hst1 ->
     STransactional msg_dec hst2 ->
-    Discontinuous hst1 hst2 ->
-    Nonconflicting hst1 hst2 ->
+    DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) ->
+    BCommutable sys hst1 hst2.
+Proof.
+  intros.
+  inv H.
+  - inv H0; try reflexivity.
+    eapply atomic_behavior_nil with (sys:= sys) in H.
+    hnf; rewrite H; reflexivity.
+  - inv H0; try reflexivity; try (intuition; fail).
+    eapply atomic_behavior_nil with (sys:= sys) in H.
+    hnf; rewrite H; reflexivity.
+  - inv H0; try reflexivity; try (intuition; fail).
+    eapply atomic_behavior_nil with (sys:= sys) in H.
+    hnf; rewrite H; reflexivity.
+  - eapply atomic_behavior_nil with (sys:= sys) in H2.
+    hnf; rewrite H2.
+    rewrite app_nil_r; reflexivity.
+Qed.
+
+Corollary discontinuous_trs_type_reduced:
+  forall sys hst1 hst2 p1 p2 f1 f2,
+    STransactional msg_dec hst1 ->
+    STransactional msg_dec hst2 ->
+    DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) ->
+    Denotational sys p1 f1 hst1 ->
+    Denotational sys p2 f2 hst2 ->
+    Nonconflicting p1 p2 f1 f2 ->
     Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
   intros.
-  inv H0.
-  - simpl; apply silent_reduced_1.
-  - simpl.
-    inv H; try (red in H1; dest; simpl in H; exfalso; auto; fail).
-    + apply silent_commutes_2.
-    + apply msg_ins_reduced_1.
-      eauto using atomic_internal_history.
-  - inv H; try (red in H1; dest; simpl in H; exfalso; auto; fail).
-    + apply silent_commutes_2.
-    + red in H1; dest; clear H H1 H3.
-      specialize (H4 _ _ _ _ _ H0 eq_refl); dest.
-      eapply msg_outs_reduced_2; eauto.
-  - inv H.
-    + simpl; apply silent_reduced_2.
-    + red in H1; dest; clear H H0 H4.
-      specialize (H1 _ _ _ _ _ eq_refl H3); dest.
-      eauto using msg_ins_reduced_2.
-    + apply msg_outs_reduced_1.
-      eauto using atomic_internal_history.
-    + red in H1; dest; clear H H4 H5.
-      eauto using atomic_reduced.
+  eapply nonconflicting_reduced; eauto.
+  eapply discontinuous_trs_type_bcommutable; eauto.
 Qed.
+
+Lemma silent_denotational:
+  forall sys, Denotational sys (fun _ => True) id [RlblEmpty _].
+Proof.
+  intros.
+  hnf; split; hnf; intros.
+  - repeat econstructor.
+  - inv H; inv H3; inv H5; auto.
+Qed.
+
+Lemma ins_denotational:
+  forall sys eins,
+    eins <> nil ->
+    ValidMsgsExtIn sys eins ->
+    Denotational sys (fun _ => True)
+                 (fun st => {| bst_oss := bst_oss st;
+                               bst_orqs := bst_orqs st;
+                               bst_msgs := enqMsgs eins (bst_msgs st) |})
+                 [RlblIns eins].
+Proof.
+  intros.
+  hnf; split; hnf; intros.
+  - econstructor.
+    + econstructor.
+    + econstructor; eauto.
+      destruct st1; reflexivity.
+  - inv H1; inv H5; inv H7; auto.
+Qed.
+
+Lemma outs_denotational:
+  forall sys eouts,
+    eouts <> nil ->
+    ValidMsgsExtOut sys eouts ->
+    Denotational sys (fun st => Forall (FirstMPI (bst_msgs st)) eouts)
+                 (fun st => {| bst_oss := bst_oss st;
+                               bst_orqs := bst_orqs st;
+                               bst_msgs := deqMsgs (idsOf eouts) (bst_msgs st) |})
+                 [RlblOuts eouts].
+Proof.
+  intros.
+  hnf; split; hnf; intros.
+  - econstructor.
+    + econstructor.
+    + econstructor; eauto.
+      destruct st1; reflexivity.
+  - inv H1; inv H5; inv H7; auto.
+Qed.
+
+(* Definition DiscontinuousA (hst1 hst2: MHistory) := *)
+(*   forall inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2, *)
+(*     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 -> *)
+(*     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 -> *)
+(*     DisjList (idsOf ins1) (idsOf ins2) /\ *)
+(*     DisjList eouts1 inits2 /\ *)
+(*     DisjList (idsOf outs1) (idsOf outs2). *)
+
+(* Definition DiscontinuousIns (hst1 hst2: MHistory) := *)
+(*   forall eins1 inits2 ins2 outs2 eouts2, *)
+(*     hst1 = [RlblIns eins1] -> *)
+(*     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 -> *)
+(*     DisjList eins1 ins2 /\ *)
+(*     DisjList (idsOf eins1) (idsOf outs2). *)
+
+(* Definition DiscontinuousOuts (hst1 hst2: MHistory) := *)
+(*   forall inits1 ins1 outs1 eouts1 eouts2, *)
+(*     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 -> *)
+(*     hst2 = [RlblOuts eouts2] -> *)
+(*     DisjList eouts2 outs1 /\ *)
+(*     DisjList (idsOf eouts2) (idsOf ins1). *)
+
+(* Definition Discontinuous (hst1 hst2: MHistory) := *)
+(*   DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\ *)
+(*   DiscontinuousA hst1 hst2 /\ *)
+(*   DiscontinuousIns hst1 hst2 /\ *)
+(*   DiscontinuousOuts hst1 hst2. *)
+
+(** TODO: need one more condition about "discontinuity" *)
+Corollary discontinuous_trs_type_nonconflicting:
+  forall sys hst1 hst2,
+    STransactional msg_dec hst1 ->
+    STransactional msg_dec hst2 ->
+    DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) ->
+    exists p1 p2 f1 f2,
+      Denotational sys p1 f1 hst1 /\
+      Denotational sys p2 f2 hst2 /\
+      Nonconflicting p1 p2 f1 f2.
+Proof.
+Abort.
 
 Lemma interleaved_min:
   forall hsts, Interleaved hsts -> MinInterleaved hsts.
