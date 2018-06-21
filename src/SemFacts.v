@@ -240,7 +240,17 @@ Proof.
   destruct H1.
   eauto using extRssOf_SubList_merssOf_FirstMP.
 Qed.
-  
+
+Lemma steps_wfHistory:
+  forall sys st1 hst st2,
+    steps step_m sys st1 hst st2 ->
+    WfHistory sys hst.
+Proof.
+  induction 1; simpl; intros; [constructor|].
+  constructor; auto.
+  clear H; inv H0; red; auto 7.
+Qed.
+
 Theorem step_t_sound:
   forall sys pst lbl nst,
     step_m sys pst lbl nst ->

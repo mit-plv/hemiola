@@ -183,6 +183,33 @@ Definition History (MsgT: Type) := list (RLabel MsgT).
 
 Definition MHistory := History Msg.
 
+Definition InternalLbl (lbl: MLabel) :=
+  match lbl with
+  | RlblInt _ _ _ => True
+  | _ => False
+  end.
+
+Definition InternalHistory (hst: MHistory) :=
+  Forall (fun tlbl => InternalLbl tlbl) hst.
+
+Definition WfLbl (sys: System) (lbl: MLabel) :=
+  match lbl with
+  | RlblEmpty _ => True
+  | RlblIns eins => eins <> nil /\ ValidMsgsExtIn sys eins
+  | RlblOuts eouts => eouts <> nil /\ ValidMsgsExtOut sys eouts
+  | RlblInt rule ins outs =>
+    In (rule_oidx rule) (sys_oinds sys) /\
+    ValidMsgsIn sys ins /\
+    idsOf ins = rule_minds rule /\
+    map msg_id (valsOf ins) = rule_msg_ids rule /\
+    In rule (sys_rules sys) /\
+    ValidMsgsOut sys outs /\
+    DisjList (idsOf ins) (idsOf outs)
+  end.
+
+Definition WfHistory (sys: System) (hst: MHistory) :=
+  Forall (WfLbl sys) hst.
+
 Section TMsg.
 
   Definition TrsId := nat.
