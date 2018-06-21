@@ -189,3 +189,115 @@ Proof.
   eauto.
 Qed.
 
+Definition trsTypeOf (hst: MHistory) :=
+  match hst with
+  | nil => TSlt
+  | lbl :: _ =>
+    match lbl with
+    | RlblEmpty _ => TSlt
+    | RlblIns _ => TIns
+    | RlblOuts _ => TOuts
+    | RlblInt _ _ _ => TInt
+    end
+  end.
+
+Definition DiscontinuousTrsType (tty1 tty2: TrsType) :=
+  match tty1, tty2 with
+  | TSlt, _ => True
+  | _, TSlt => True
+  | TInt, _ => True
+  | _, TInt => True
+  | _, _ => False
+  end.
+
+Definition NonconflictingI (hst1 hst2: MHistory) :=
+  forall eins1 inits2 ins2 outs2 eouts2,
+    hst1 = [RlblIns eins1] ->
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+    DisjList eins1 ins2 /\ DisjList (idsOf eins1) (idsOf outs2).
+
+Definition NonconflictingO (hst1 hst2: MHistory) :=
+  forall inits1 ins1 outs1 eouts1 eouts2,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    hst2 = [RlblOuts eouts2] ->
+    DisjList (idsOf eouts2) (idsOf ins1) /\ DisjList eouts2 outs1.
+
+Definition NonconflictingA (sys: System) (hst1 hst2: MHistory) :=
+  forall inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+    exists p1 p2 f1 f2,
+      Denotational sys p1 f1 hst1 /\
+      Denotational sys p2 f2 hst2 /\
+      NonconflictingD p1 p2 f1 f2.
+
+Definition Nonconflicting (sys: System) (hst1 hst2: MHistory) :=
+  STransactional msg_dec hst1 /\
+  STransactional msg_dec hst2 /\
+  DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\
+  NonconflictingI hst1 hst2 /\
+  NonconflictingO hst1 hst2 /\
+  NonconflictingA sys hst1 hst2.
+
+Definition BCommutable (sys: System) (hst1 hst2: MHistory) :=
+  behaviorOf sys hst2 ++ behaviorOf sys hst1 =
+  behaviorOf sys hst1 ++ behaviorOf sys hst2.
+
+Lemma nonconflictingD_reduced:
+  forall sys hst1 hst2 p1 p2 f1 f2,
+    BCommutable sys hst1 hst2 ->
+    Denotational sys p1 f1 hst1 ->
+    Denotational sys p2 f2 hst2 ->
+    NonconflictingD p1 p2 f1 f2 ->
+    Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
+Proof.
+  intros; red; intros.
+  split.
+  - eapply steps_split in H3; [|reflexivity].
+    destruct H3 as [sti [? ?]].
+    red in H0, H1; dest.
+    specialize (H6 _ _ H3); specialize (H5 _ _ H4); dest; subst.
+    red in H2; dest.
+    specialize (H2 _ H5).
+    specialize (H1 _ H2).
+    specialize (H7 _ H6).
+    specialize (H0 _ H7).
+    rewrite H8.
+    eapply steps_append; eauto.
+  - red; do 2 rewrite behaviorOf_app; assumption.
+Qed.
+
+Lemma nonconflicting_reduced:
+  forall sys hst1 hst2,
+    Nonconflicting sys hst1 hst2 ->
+    Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
+Proof.
+  unfold Nonconflicting; intros; dest.
+  inv H.
+  - apply silent_reduced_2.
+  - inv H0; try (elim H1; fail).
+    + apply silent_reduced_1.
+    + specialize (H2 _ _ _ _ _ eq_refl H); dest.
+      eapply msg_ins_reduced_2; eauto.
+  - inv H0; try (elim H1; fail).
+    + apply silent_reduced_1.
+    + apply msg_outs_reduced_1.
+      eapply atomic_internal_history; eauto.
+  - inv H0.
+    + apply silent_reduced_1.
+    + apply msg_ins_reduced_1.
+      eapply atomic_internal_history; eauto.
+    + red in H3.
+      specialize (H3 _ _ _ _ _ H5 eq_refl); dest.
+      eapply msg_outs_reduced_2; eauto.
+    + red in H4.
+      specialize (H4 _ _ _ _ _ _ _ _ H5 H).
+      destruct H4 as [p1 [p2 [f1 [f2 [? [? ?]]]]]].
+      eapply nonconflictingD_reduced; eauto.
+      apply atomic_internal_history in H.
+      apply atomic_internal_history in H5.
+      red.
+      do 2 (rewrite internal_history_behavior_nil by assumption).
+      reflexivity.
+Qed.
+
