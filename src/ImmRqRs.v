@@ -133,65 +133,64 @@ Fixpoint mconcat {A} (ms: list (M.t A)): M.t A :=
     M.union m (mconcat ms')
   end.
 
-Inductive IRRType := Imm | RqFwd | RsBack.
-
 Section RAtomic.
   Variables (sys: System) (topo: CTree).
-
-  Context {MsgT} `{HasMsg MsgT}.
 
   (* Here we define [RAtomic], which defines a set of atomic sequences only by
    * immediate, request-forwarding, and responses-back rules.
    *)
   Inductive RAtomic:
-    list (Id MsgT) (* ins *) -> list IdxT (* affected objects *) ->
-    History MsgT (* outs *) -> MessagePool MsgT -> Prop :=
+    list (Id Msg) (* initially-dequeued messages *) ->
+    list (Id Msg) (* all-dequeued  *) ->
+    History Msg (* history *) ->
+    list (Id Msg) (* all-enqueued *) ->
+    list (Id Msg) (* eventual outputs *) ->
+    Prop :=
 
+  (** singletons *)
   | RAtomicImm:
       forall rq rqr rs,
-        msg_rr (getMsg (valOf rq)) = Rq ->
-        msg_rr (getMsg (valOf rs)) = Rs ->
-        RAtomic [rq] [rule_oidx rqr] [RlblInt rqr [rq] [rs]]
-                (enqMPI rs (emptyMP _))
+        msg_rr (valOf rq) = Rq ->
+        msg_rr (valOf rs) = Rs ->
+        RAtomic [rq] [rq] [RlblInt rqr [rq] [rs]] [rs] [rs]
   | RAtomicRqFwd:
       forall rq rqr rqfs,
-        msg_rr (getMsg (valOf rq)) = Rq ->
-        Forall (fun rqf => msg_rr (getMsg (valOf rqf)) = Rq) rqfs ->
-        RAtomic [rq] [rule_oidx rqr] [RlblInt rqr [rq] rqfs]
-                (enqMsgs rqfs (emptyMP _))
+        msg_rr (valOf rq) = Rq ->
+        Forall (fun rqf => msg_rr (valOf rqf) = Rq) rqfs ->
+        RAtomic [rq] [rq] [RlblInt rqr [rq] rqfs] rqfs rqfs
   | RAtomicRsBack:
       forall rss rsr rsb,
-        Forall (fun rs => msg_rr (getMsg (valOf rs)) = Rs) rss ->
-        msg_rr (getMsg (valOf rsb)) = Rs ->
-        RAtomic rss [rule_oidx rsr] [RlblInt rsr rss [rsb]]
-                (enqMPI rsb (emptyMP _))
+        Forall (fun rs => msg_rr (valOf rs) = Rs) rss ->
+        msg_rr (valOf rsb) = Rs ->
+        RAtomic rss rss [RlblInt rsr rss [rsb]] [rsb] [rsb].
 
-  | RAtomicRqFwdApp:
-      forall rq rqr rqfwds rqfwdsp rqfoinds rqfhsts rqfouts,
-        msg_rr (getMsg (valOf rq)) = Rq ->
-        RAtomic [rq] [rule_oidx rqr] [RlblInt rqr [rq] rqfwds] (enqMsgs rqfwds (emptyMP _)) ->
-        
-        SubList rqfwdsp rqfwds ->
-        NoDup rqfwdsp ->
-        Forall (fun moho =>
-                  msg_rr (getMsg (valOf (fst moho))) = Rq /\
-                  RAtomic [fst moho] (fst (snd moho))
-                          (fst (snd (snd moho)))
-                          (snd (snd (snd moho))))
-               (combine rqfwdsp (combine rqfoinds (combine rqfhsts rqfouts))) ->
-        NoDup (rule_oidx rqr :: List.concat rqfoinds) ->
-        RAtomic [rq] (rule_oidx rqr :: List.concat rqfoinds)
-                (List.concat rqfhsts ++ [RlblInt rqr [rq] rqfwds])
-                
-                
-                (mconcat rqfouts) (** FIXME: add uninitiated request forwardings *)
+  (** request-forwarding *)
+  (* | RAtomicRqFwdApp: *)
+  (*     forall rq rqr rqfs rqfsp rqfins rqfhsts rqfouts rqfeouts, *)
+  (*       msg_rr (valOf rq) = Rq -> *)
+  (*       RAtomic [rq] [rq] [RlblInt rqr [rq] rqfs] rqfs rqfs -> *)
 
-  | RAtomicRsBackApp:
-      forall rq oinds hst rsr rss rsb,
-        Forall (fun rs => msg_rr (getMsg (valOf rs)) = Rs) rss ->
-        msg_rr (getMsg (valOf rsb)) = Rs ->
-        RAtomic [rq] oinds hst (enqMsgs rss (emptyMP _)) ->
-        RAtomic [rq] oinds (RlblInt rsr rss [rsb] :: hst) (enqMPI rsb (emptyMP _)).
+  (*       (* forwarded requests can be partially handled. *) *)
+  (*       SubList rqfsp rqfs -> NoDup rqfsp -> *)
+  
+  (*       Forall (fun iihoo => *)
+  (*                 msg_rr (valOf (fst moho)) = Rq /\ *)
+  (*                 RAtomic [fst iihoo] (fst (snd iihoo)) *)
+  (*                         (fst (snd (snd iihoo))) *)
+  (*                         (fst (snd (snd (snd iihoo)))) *)
+  (*                         (snd (snd (snd (snd iihoo))))) *)
+  (*              (combine rqfsp (combine (rqfins (combine rqfhsts (combine rqfouts rqfeouts))))) -> *)
+  
+  (*       RAtomic [rq] ?? *)
+  (*               (List.concat rqfhsts ++ [RlblInt rqr [rq] rqfs]) *)
+  (*               ?? ??. *)
+  (** responses-back *)
+  (* | RAtomicRsBackApp: *)
+  (*     forall rq oinds hst rsr rss rsb, *)
+  (*       Forall (fun rs => msg_rr (getMsg (valOf rs)) = Rs) rss -> *)
+  (*       msg_rr (getMsg (valOf rsb)) = Rs -> *)
+  (*       RAtomic [rq] oinds hst (enqMsgs rss (emptyMP _)) -> *)
+  (*       RAtomic [rq] oinds (RlblInt rsr rss [rsb] :: hst) (enqMPI rsb (emptyMP _)). *)
 
 End RAtomic.
 
@@ -200,17 +199,31 @@ Section ImmRqRsSerial.
   Hypotheses (Hirr: ImmRqRsSys topo sys)
              (Hpb: PartialBlockingSys topo sys).
 
-  Lemma immrqrs_well_interleaved_ind:
-    WellInterleavedInd sys.
+  (* Lemma immrqrs_atomic_ratomic: *)
+  (*   forall st1 hst st2, *)
+  (*     steps step_m sys st1 hst st2 -> *)
+  (*     forall inits1 ins1 outs1 eouts1, *)
+  (*       Atomic inits1 ins1 hst outs1 eouts1 -> *)
+  (*       RAtomic inits1 ins1 hst outs1 eouts1. *)
+  
+  Lemma immrqrs_well_interleaved_push:
+    WellInterleavedPush sys.
   Proof.
+    red; intros.
+
+    red in H.
+    destruct H as [inits1 [ins1 [outs1 [eouts1 ?]]]].
+    destruct H as [inits2 [ins2 [outs2 [eouts2 [? [? [? ?]]]]]]].
+    (* apply immrqrs_atomic_ratomic in H. *)
+    (* apply immrqrs_atomic_ratomic in H4. *)
   Admitted.
   
   Theorem immrqrs_pb_serializable:
     SerializableSys sys.
   Proof.
     apply well_interleaved_serializable.
-    apply well_interleaved_ind_ok.
-    apply immrqrs_well_interleaved_ind.
+    apply well_interleaved_push_ok.
+    apply immrqrs_well_interleaved_push.
   Qed.
 
 End ImmRqRsSerial.

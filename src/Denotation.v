@@ -243,13 +243,13 @@ Definition BCommutable (sys: System) (hst1 hst2: MHistory) :=
   behaviorOf sys hst2 ++ behaviorOf sys hst1 =
   behaviorOf sys hst1 ++ behaviorOf sys hst2.
 
-Lemma nonconflictingD_reduced:
+Lemma nonconflictingD_reducible:
   forall sys hst1 hst2 p1 p2 f1 f2,
     BCommutable sys hst1 hst2 ->
     Denotational sys p1 f1 hst1 ->
     Denotational sys p2 f2 hst2 ->
     NonconflictingD p1 p2 f1 f2 ->
-    Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
+    Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
   intros; red; intros.
   split.
@@ -267,33 +267,33 @@ Proof.
   - red; do 2 rewrite behaviorOf_app; assumption.
 Qed.
 
-Lemma nonconflicting_reduced:
+Lemma nonconflicting_reducible:
   forall sys hst1 hst2,
     Nonconflicting sys hst1 hst2 ->
-    Reduced sys (hst2 ++ hst1) (hst1 ++ hst2).
+    Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
   unfold Nonconflicting; intros; dest.
   inv H.
-  - apply silent_reduced_2.
+  - apply silent_reducible_2.
   - inv H0; try (elim H1; fail).
-    + apply silent_reduced_1.
+    + apply silent_reducible_1.
     + specialize (H2 _ _ _ _ _ eq_refl H); dest.
-      eapply msg_ins_reduced_2; eauto.
+      eapply msg_ins_reducible_2; eauto.
   - inv H0; try (elim H1; fail).
-    + apply silent_reduced_1.
-    + apply msg_outs_reduced_1.
+    + apply silent_reducible_1.
+    + apply msg_outs_reducible_1.
       eapply atomic_internal_history; eauto.
   - inv H0.
-    + apply silent_reduced_1.
-    + apply msg_ins_reduced_1.
+    + apply silent_reducible_1.
+    + apply msg_ins_reducible_1.
       eapply atomic_internal_history; eauto.
     + red in H3.
       specialize (H3 _ _ _ _ _ H5 eq_refl); dest.
-      eapply msg_outs_reduced_2; eauto.
+      eapply msg_outs_reducible_2; eauto.
     + red in H4.
       specialize (H4 _ _ _ _ _ _ _ _ H5 H).
       destruct H4 as [p1 [p2 [f1 [f2 [? [? ?]]]]]].
-      eapply nonconflictingD_reduced; eauto.
+      eapply nonconflictingD_reducible; eauto.
       apply atomic_internal_history in H.
       apply atomic_internal_history in H5.
       red.
