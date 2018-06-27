@@ -74,8 +74,20 @@ Section ImmRqRs.
     UpRqFwdRule rule \/ DownRqFwdRule rule \/
     DownRsBackRule rule \/ UpRsBackRule rule.
 
+  Definition ImmRqRsSafe (sys: System) :=
+    forall rqr rsr,
+      In rqr (sys_rules sys) -> In rsr (sys_rules sys) ->
+      UpRqFwdRule rqr ->
+      (ImmRule rsr \/ UpRsBackRule rsr) ->
+      forall post porq ins,
+        rule_precond rqr post porq ins ->
+        forall nost norq outs,
+          rule_trs rsr post porq ins = (nost, norq, outs) ->
+          rule_precond rqr nost norq ins.
+
   Definition ImmRqRsSys (sys: System) :=
-    Forall ImmRqRsRule (sys_rules sys).
+    Forall ImmRqRsRule (sys_rules sys) /\
+    ImmRqRsSafe sys.
   
 End ImmRqRs.
 
