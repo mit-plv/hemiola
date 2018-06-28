@@ -301,3 +301,55 @@ Proof.
       reflexivity.
 Qed.
 
+(** A trivial but sufficient condition to ensure [Nonconflicting]: state and
+ * message pool transitions between two transactions are disjoint to each other.
+ *)
+
+Definition effectToObject {MsgT} (lbl: RLabel MsgT) :=
+  match lbl with
+  | RlblInt rule _ _ => Some (rule_oidx rule)
+  | _ => None
+  end.
+
+Fixpoint effectToObjects {MsgT} (hst: History MsgT) :=
+  match hst with
+  | nil => nil
+  | lbl :: hst' => (effectToObject lbl) ::> (effectToObjects hst')
+  end.
+
+Definition DisjHistoryO {MsgT} (hst1 hst2: History MsgT) :=
+  DisjList (effectToObjects hst1) (effectToObjects hst2).
+
+Definition DiscontinuousA (hst1 hst2: MHistory) :=
+  forall inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+    DisjList (idsOf ins1) (idsOf ins2) /\
+    DisjList eouts1 inits2 /\
+    DisjList (idsOf outs1) (idsOf outs2).
+
+Lemma disjoint_atomic_transitions_nonconflicting:
+  forall sys inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
+    WfHistory sys hst1 ->
+    WfHistory sys hst2 ->
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+    DisjHistoryO hst1 hst2 ->
+    DiscontinuousA hst1 hst2 ->
+    exists p1 p2 f1 f2,
+      Denotational sys p1 f1 hst1 /\
+      Denotational sys p2 f2 hst2 /\
+      NonconflictingD p1 p2 f1 f2.
+Proof.
+  intros.
+  red in H4.
+  specialize (H4 _ _ _ _ _ _ _ _ H1 H2); dest.
+  pose proof (atomic_denotational H H1); clear H.
+  destruct H7 as [p1 [f1 [? ?]]].
+  pose proof (atomic_denotational H0 H2); clear H0.
+  destruct H8 as [p2 [f2 [? ?]]].
+  exists p1, p2, f1, f2.
+  split; [|split]; try assumption.
+
+Admitted.
+
