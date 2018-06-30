@@ -3,6 +3,60 @@ Require Import Common FMap.
 
 Set Implicit Arguments.
 
+Section Digraph.
+
+  Definition vertex := IdxT.
+  Definition vertices := list vertex.
+
+  Definition channel := IdxT.
+  Definition channels := list channel.
+  
+  Definition edge := (channel * (vertex * vertex))%type.
+  Definition edgeChn (e: edge) := fst e.
+  Definition edgeFrom (e: edge) := fst (snd e).
+  Definition edgeTo (e: edge) := snd (snd e).
+
+  Definition edges := list edge.
+
+  Record digraph :=
+    { dg_vs: vertices; dg_es: edges }.
+
+  (** A highest level TODO: reflect transactional behaviors to
+   * digraph paths and reason about them. 
+   *
+   * An [Atomic] step --> exists a path
+   *
+   * A complete lock --> cut
+   * --> no paths passing that vertex
+   * --> each path belongs to either one of two categories.
+   *
+   * A "half" lock --> nothing to say? Correctness not by locks
+   * and topology; instead by pre/postcondition reasoning.
+   *)
+
+  Definition Bipartite (dg: digraph) (vs1 vs2: vertices) (cs: channels) :=
+    forall v1 v2,
+      In v1 vs1 -> In v2 vs2 ->
+      exists c, In c cs /\
+                In (c, (v1, v2)) (dg_es dg).
+  
+  Inductive Multipath (dg: digraph):
+    vertex (* initial vertex *) ->
+    vertices (* all involved vertices *) -> 
+    channels (* all involved channels *) ->
+    vertices (* end vertices *) -> Prop :=
+  | MultipathNil: forall v, Multipath dg v [v] nil [v]
+  | MultipathCons:
+      forall iv vs cs ends es ncs nes,
+        Multipath dg iv vs cs ends ->
+        es <> nil ->
+        SubList es ends ->
+        Bipartite dg es nes ncs ->
+        Multipath dg iv (vs ++ nes) (cs ++ ncs)
+                  (removeL eq_nat_dec ends es ++ nes).
+
+End Digraph.
+
 (** Tree structure with (possibly-)multiple channels between nodes. *)
 Section CTree.
 

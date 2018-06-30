@@ -31,6 +31,42 @@ Section MsgParam.
            [discriminate|firstorder]).
   Qed.
 
+  Fixpoint insOfA (hst: History MsgT) :=
+    match hst with
+    | nil => nil
+    | lbl :: hst' =>
+      match lbl with
+      | RlblInt _ ins _ => insOfA hst' ++ ins
+      | _ => nil
+      end
+    end.
+
+  Fixpoint outsOfA (hst: History MsgT) :=
+    match hst with
+    | nil => nil
+    | lbl :: hst' =>
+      match lbl with
+      | RlblInt _ _ outs => outsOfA hst' ++ outs
+      | _ => nil
+      end
+    end.
+
+  Lemma atomic_ins:
+    forall (hst: History MsgT) inits ins outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      ins = insOfA hst.
+  Proof.
+    induction 1; simpl; intros; subst; reflexivity.
+  Qed.
+
+  Lemma atomic_outs:
+    forall (hst: History MsgT) inits ins outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      outs = outsOfA hst.
+  Proof.
+    induction 1; simpl; intros; subst; reflexivity.
+  Qed.
+
   Lemma atomic_unique:
     forall (hst: History MsgT) inits1 ins1 outs1 eouts1,
       Atomic msgT_dec inits1 ins1 hst outs1 eouts1 ->
