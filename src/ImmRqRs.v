@@ -8,16 +8,18 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Section ImmRqRs.
-  Variable (topo: CTree).
+  Variable (gtr: GTree).
 
+  Local Notation topo := (topoOfT gtr).
+  
   Definition ImmRule (rule: Rule) :=
     exists rqoidx rqmidx rsmidx,
       rule_minds rule = [rqmidx] /\
       (forall post porq ins nost norq outs,
           rule_trs rule post porq ins = (nost, norq, outs) ->
           idsOf outs = [rsmidx]) /\
-      In (Build_Channel rqoidx rqmidx (rule_oidx rule)) (ctr_chns topo) /\
-      In (Build_Channel (rule_oidx rule) rsmidx rqoidx) (ctr_chns topo).
+      In (createEdge rqoidx rqmidx (rule_oidx rule)) (dg_es topo) /\
+      In (createEdge (rule_oidx rule) rsmidx rqoidx) (dg_es topo).
 
   Definition UpRqFwdRule (rule: Rule) :=
     exists coidx rqmidx rqfmidx poidx,
@@ -25,12 +27,10 @@ Section ImmRqRs.
       (forall post porq ins nost norq outs,
           rule_trs rule post porq ins = (nost, norq, outs) ->
           idsOf outs = [rqfmidx]) /\
-      (getParent (ctr_tr topo) (rule_oidx rule))
-        >>=[False] (fun ptr => trCurOIdxOf ptr = poidx) /\
-      (getThis (ctr_tr topo) (rule_oidx rule))
-        >>=[False] (fun tr => In coidx (map trCurOIdxOf (trChildrenOf tr))) /\
-      In (Build_Channel coidx rqmidx (rule_oidx rule)) (ctr_chns topo) /\
-      In (Build_Channel (rule_oidx rule) rqfmidx poidx) (ctr_chns topo).
+      getParent gtr (rule_oidx rule) = Some poidx /\
+      getParent gtr coidx = Some (rule_oidx rule) /\
+      In (createEdge coidx rqmidx (rule_oidx rule)) (dg_es topo) /\
+      In (createEdge (rule_oidx rule) rqfmidx poidx) (dg_es topo).
 
   Definition DownRqFwdRule (rule: Rule) :=
     exists rqoidx rqmidx rqfminds coinds,
@@ -38,11 +38,10 @@ Section ImmRqRs.
       (forall post porq ins nost norq outs,
           rule_trs rule post porq ins = (nost, norq, outs) ->
           idsOf outs = rqfminds) /\
-      (getThis (ctr_tr topo) (rule_oidx rule))
-        >>=[False] (fun tr => SubList coinds (map trCurOIdxOf (trChildrenOf tr))) /\
-      In (Build_Channel rqoidx rqmidx (rule_oidx rule)) (ctr_chns topo) /\
-      Forall (fun om => In (Build_Channel (rule_oidx rule) (fst om) (snd om))
-                           (ctr_chns topo))
+      Forall (fun cind => getParent gtr cind = Some (rule_oidx rule)) coinds /\
+      In (createEdge rqoidx rqmidx (rule_oidx rule)) (dg_es topo) /\
+      Forall (fun om => In (createEdge (rule_oidx rule) (fst om) (snd om))
+                           (dg_es topo))
              (combine coinds rqfminds).
 
   Definition DownRsBackRule (rule: Rule) :=
@@ -51,10 +50,9 @@ Section ImmRqRs.
       (forall post pors ins nost nors outs,
           rule_trs rule post pors ins = (nost, nors, outs) ->
           idsOf outs = [rsbmidx]) /\
-      (getParent (ctr_tr topo) (rule_oidx rule))
-        >>=[False] (fun ptr => trCurOIdxOf ptr = poidx) /\
-      In (Build_Channel poidx rsmidx (rule_oidx rule)) (ctr_chns topo) /\
-      In (Build_Channel (rule_oidx rule) rsbmidx coidx) (ctr_chns topo).
+      getParent gtr (rule_oidx rule) = Some poidx /\
+      In (createEdge poidx rsmidx (rule_oidx rule)) (dg_es topo) /\
+      In (createEdge (rule_oidx rule) rsbmidx coidx) (dg_es topo).
 
   Definition UpRsBackRule (rule: Rule) :=
     exists coinds rsminds rsbmidx rsboidx,
@@ -62,12 +60,11 @@ Section ImmRqRs.
       (forall post pors ins nost nors outs,
           rule_trs rule post pors ins = (nost, nors, outs) ->
           idsOf outs = [rsbmidx]) /\
-      (getThis (ctr_tr topo) (rule_oidx rule))
-        >>=[False] (fun tr => SubList coinds (map trCurOIdxOf (trChildrenOf tr))) /\
-      Forall (fun om => In (Build_Channel (snd om) (fst om) (rule_oidx rule))
-                           (ctr_chns topo))
+      Forall (fun cind => getParent gtr cind = Some (rule_oidx rule)) coinds /\
+      Forall (fun om => In (createEdge (snd om) (fst om) (rule_oidx rule))
+                           (dg_es topo))
              (combine coinds rsminds) /\
-      In (Build_Channel (rule_oidx rule) rsbmidx rsboidx) (ctr_chns topo).
+      In (createEdge (rule_oidx rule) rsbmidx rsboidx) (dg_es topo).
 
   Definition ImmRqRsRule (rule: Rule) :=
     ImmRule rule \/
@@ -92,14 +89,14 @@ Section ImmRqRs.
 End ImmRqRs.
 
 Section PartialBlocking.
-  Variable (topo: CTree).
+  Variable (gtr: GTree).
   
   Fixpoint getDownRq (oidx: IdxT) (orq: ORq Msg) :=
     match orq with
     | nil => None
     | ri :: orq' =>
-      if isFromParent topo oidx (rqh_from ri) then
-        Some ri
+      if isParent gtr oidx (rqh_from ri)
+      then Some ri
       else getDownRq oidx orq'
     end.
 
@@ -107,8 +104,8 @@ Section PartialBlocking.
     match orq with
     | nil => None
     | ri :: orq' =>
-      if isFromChild topo oidx (rqh_from ri) then
-        Some ri
+      if isParent gtr (rqh_from ri) oidx
+      then Some ri
       else getUpRq oidx orq'
     end.
 
@@ -123,7 +120,6 @@ Section PartialBlocking.
       | None =>
         match getUpRq oidx orq with
         | Some uri => 
-          SubList (idsOf ins) (chnsFromParent topo oidx) /\
           Forall (fun msg => msg_id msg = msg_id (rqh_msg uri) /\
                              msg_rr msg = Rs) (valsOf ins)
         | None => True
@@ -145,71 +141,10 @@ Fixpoint mconcat {A} (ms: list (M.t A)): M.t A :=
     M.union m (mconcat ms')
   end.
 
-Section RAtomic.
-  Variables (sys: System) (topo: CTree).
-
-  (* Here we define [RAtomic], which defines a set of atomic sequences only by
-   * immediate, request-forwarding, and responses-back rules.
-   *)
-  Inductive RAtomic:
-    list (Id Msg) (* initially-dequeued messages *) ->
-    list (Id Msg) (* all-dequeued  *) ->
-    History Msg (* history *) ->
-    list (Id Msg) (* all-enqueued *) ->
-    list (Id Msg) (* eventual outputs *) ->
-    Prop :=
-
-  (** singletons *)
-  | RAtomicImm:
-      forall rq rqr rs,
-        msg_rr (valOf rq) = Rq ->
-        msg_rr (valOf rs) = Rs ->
-        RAtomic [rq] [rq] [RlblInt rqr [rq] [rs]] [rs] [rs]
-  | RAtomicRqFwd:
-      forall rq rqr rqfs,
-        msg_rr (valOf rq) = Rq ->
-        Forall (fun rqf => msg_rr (valOf rqf) = Rq) rqfs ->
-        RAtomic [rq] [rq] [RlblInt rqr [rq] rqfs] rqfs rqfs
-  | RAtomicRsBack:
-      forall rss rsr rsb,
-        Forall (fun rs => msg_rr (valOf rs) = Rs) rss ->
-        msg_rr (valOf rsb) = Rs ->
-        RAtomic rss rss [RlblInt rsr rss [rsb]] [rsb] [rsb].
-
-  (** request-forwarding *)
-  (* | RAtomicRqFwdApp: *)
-  (*     forall rq rqr rqfs rqfsp rqfins rqfhsts rqfouts rqfeouts, *)
-  (*       msg_rr (valOf rq) = Rq -> *)
-  (*       RAtomic [rq] [rq] [RlblInt rqr [rq] rqfs] rqfs rqfs -> *)
-
-  (*       (* forwarded requests can be partially handled. *) *)
-  (*       SubList rqfsp rqfs -> NoDup rqfsp -> *)
-  
-  (*       Forall (fun iihoo => *)
-  (*                 msg_rr (valOf (fst moho)) = Rq /\ *)
-  (*                 RAtomic [fst iihoo] (fst (snd iihoo)) *)
-  (*                         (fst (snd (snd iihoo))) *)
-  (*                         (fst (snd (snd (snd iihoo)))) *)
-  (*                         (snd (snd (snd (snd iihoo))))) *)
-  (*              (combine rqfsp (combine (rqfins (combine rqfhsts (combine rqfouts rqfeouts))))) -> *)
-  
-  (*       RAtomic [rq] ?? *)
-  (*               (List.concat rqfhsts ++ [RlblInt rqr [rq] rqfs]) *)
-  (*               ?? ??. *)
-  (** responses-back *)
-  (* | RAtomicRsBackApp: *)
-  (*     forall rq oinds hst rsr rss rsb, *)
-  (*       Forall (fun rs => msg_rr (getMsg (valOf rs)) = Rs) rss -> *)
-  (*       msg_rr (getMsg (valOf rsb)) = Rs -> *)
-  (*       RAtomic [rq] oinds hst (enqMsgs rss (emptyMP _)) -> *)
-  (*       RAtomic [rq] oinds (RlblInt rsr rss [rsb] :: hst) (enqMPI rsb (emptyMP _)). *)
-
-End RAtomic.
-
 Section ImmRqRsSerial.
-  Variable (topo: CTree) (sys: System).
-  Hypotheses (Hirr: ImmRqRsSys topo sys)
-             (Hpb: PartialBlockingSys topo sys).
+  Variable (gtr: GTree) (sys: System).
+  Hypotheses (Hirr: ImmRqRsSys gtr sys)
+             (Hpb: PartialBlockingSys gtr sys).
 
   (* Lemma immrqrs_atomic_ratomic: *)
   (*   forall st1 hst st2, *)

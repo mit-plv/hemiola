@@ -2,6 +2,13 @@ Require Import Bool Ascii String List Eqdep Omega.
 
 Require Export ProofIrrelevance.
 
+Definition option_dec {A}
+           (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2}):
+  forall oa1 oa2: option A, {oa1 = oa2} + {oa1 <> oa2}.
+Proof.
+  decide equality.
+Defined.
+
 Definition IdxT := nat.
 
 Definition Id (A: Type) := (IdxT * A)%type.
@@ -97,20 +104,6 @@ Ltac collect_of_type_helper ty ls :=
   | _ => ls
   end.
 Ltac collect_of_type ty := collect_of_type_helper ty (@nil ty).
-
-Definition ocons {A} (oa: option A) (l: list A) :=
-  match oa with
-  | Some a => a :: l
-  | None => l
-  end.
-Infix "::>" := ocons (at level 0, right associativity).
-
-Definition o2l {A} (oa: option A): list A := ocons oa nil.
-Definition ol2l {A} (oa: option (list A)): list A :=
-  match oa with
-  | Some l => l
-  | None => nil
-  end.
 
 Infix "==n" := eq_nat_dec (at level 30).
 Infix "<=n" := le_dec (at level 30).

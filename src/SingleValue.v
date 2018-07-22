@@ -123,16 +123,16 @@ Section System.
          sys_inits := implInit;
          sys_rules := nil |}.
 
-    Definition implTopo: CTree :=
-      {| ctr_tr := Node parentIdx [Node child1Idx nil; Node child2Idx nil];
-         ctr_chns :=
-           [ {| chn_midx := c1pRq; chn_from := child1Idx; chn_to := parentIdx |};
-               {| chn_midx := c1pRs; chn_from := child1Idx; chn_to := parentIdx |};
-               {| chn_midx := c2pRq; chn_from := child2Idx; chn_to := parentIdx |};
-               {| chn_midx := c2pRs; chn_from := child2Idx; chn_to := parentIdx |};
-               {| chn_midx := pc1; chn_from := parentIdx; chn_to := child1Idx |};
-               {| chn_midx := pc2; chn_from := parentIdx; chn_to := child2Idx |} ]
-      |}.
+    Definition implTopo: GTree :=
+      Node parentIdx
+           [([createEdge child1Idx c1pRq parentIdx;
+                createEdge child1Idx c1pRs parentIdx;
+                createEdge parentIdx pc1 child1Idx],
+             Node child1Idx nil);
+              ([createEdge child2Idx parentIdx c2pRq;
+                  createEdge child2Idx parentIdx c2pRs;
+                  createEdge parentIdx child2Idx pc2],
+               Node child2Idx nil)].
                                             
     Definition implIndices: list IdxT :=
       ltac:(evalOIndsOf impl0).
