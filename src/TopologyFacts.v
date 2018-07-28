@@ -1,0 +1,114 @@
+Require Import Peano_dec List ListSupport.
+Require Import Common FMap.
+Require Import Syntax Semantics Serial Topology StepM.
+
+(** A highest level TODO: reflect transactional behaviors to
+ * digraph paths and reason about them. 
+ *
+ * 1. An [Atomic] step --> exists a multipath
+ * 2. A complete lock --> cut
+ *    --> no paths passing that IdxT
+ *    --> each path belongs to either one of two categories.
+ * 3. A "half" lock --> nothing to say? Correctness not by locks
+ *    and topology; instead by pre/postcondition reasoning.
+ *)
+
+Definition EdgeEquiv (e1 e2: edge) :=
+  match edge_from e1, edge_from e2 with
+  | Some fr1, Some fr2 => fr1 = fr2
+  | _, _ => True
+  end /\
+  edge_chn e1 = edge_chn e2 /\
+  match edge_to e1, edge_to e2 with
+  | Some fr1, Some fr2 => fr1 = fr2
+  | _, _ => True
+  end.
+
+Fixpoint EdgeIn (ie: edge) (es: edges) :=
+  match es with
+  | nil => False
+  | e :: es' => EdgeEquiv e ie \/ EdgeIn e es'
+  end.
+
+Inductive Multipath (dg: digraph):
+  edges (* initial edges *) ->
+  edges (* all involved edges *) ->
+  vertices (* all involved vertices *) ->
+  edges (* end edges *) -> Prop :=
+| MultipathNil: forall es, Multipath dg es es nil es
+| MultipathDiv:
+    forall ies es vs ees e des,
+      Multipath dg ies es vs ees ->
+      EdgeIn e ees -> edge_to e <> None ->
+      des <> nil -> NoDup (map edge_to des) ->
+      Forall (fun de => edge_from de = edge_to e) des ->
+      Multipath dg ies (es ++ des) (vs ++ o2l (edge_to e))
+                (removeOnce edge_dec e ees ++ des)
+| MultipathCons:
+    forall ies es vs ees e ces,
+      Multipath dg ies es vs ees ->
+      Forall (fun ce => EdgeIn ce ees) ces ->
+      ces <> nil -> NoDup (map edge_from ces) ->
+      Forall (fun ce => edge_to ce = edge_from e) ces ->
+      Multipath dg ies (es ++ [e])
+                (oapp vs (map edge_from ces))
+                (removeL edge_dec ees ces ++ [e]).
+
+Section Topological.
+  Variable (dg: digraph).
+
+  Context {MsgT: Type}.
+  
+  Definition TopoValidLabel (l: RLabel MsgT) :=
+    match l with
+    | RlblEmpty _ => True
+    | RlblIns eins =>
+      exists ito,
+      Forall (fun im =>
+                In (Build_edge None (idOf im) (Some ito)) (dg_es dg)) eins
+    | RlblInt rule ins outs =>
+      Forall (fun im =>
+                exists ifrom,
+                  In (Build_edge ifrom (idOf im) (Some (rule_oidx rule)))
+                     (dg_es dg)) ins /\
+      Forall (fun im =>
+                exists ito,
+                  In (Build_edge (Some (rule_oidx rule)) (idOf im) ito)
+                     (dg_es dg)) outs
+    | RlblOuts eouts =>
+      exists ifrom,
+      Forall (fun im =>
+                In (Build_edge ifrom (idOf im) None) (dg_es dg)) eouts
+    end.
+
+  Definition TopoValidHistory (hst: History MsgT) :=
+    Forall TopoValidLabel hst.
+
+End Topological.
+
+Definition getInitEdges {MsgT} (hst: History MsgT): edges :=
+  (hd_error hst) >>=[nil]
+  (fun lbl =>
+     match lbl with
+     | RlblInt rule ins outs =>
+       map (fun im => Build_edge None (idOf im) (Some (rule_oidx rule))) ins
+     | _ => nil
+     end).
+
+(* TODO: may also need to derive [es], [vs], and [ees] from [hst]. *)
+Lemma atomic_multipath:
+  forall sys st1 hst st2,
+    steps step_m sys st1 hst st2 ->
+    forall inits ins outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall dg,
+        TopoValidHistory dg hst ->
+        exists es vs ees,
+          Multipath dg (getInitEdges hst) es vs ees.
+Proof.
+Admitted.
+
+
+
+
+
