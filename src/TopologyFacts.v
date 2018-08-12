@@ -10,8 +10,20 @@ Require Import Syntax Semantics Serial Topology StepM.
  *    first we need to confirm whether [hst] is right- or left-pushable.
  * 3. Theorem: informally, [forall hst, hst ⊆ rssOf(h1) \/ hst ⊆ rssOf(h2)],
  *    where [rssOf] returns all responses of the history.
+ * 3-2. Theorem: [rssOf(h1)] and [rssOf(h2)] are totally disjoint.
  * 4. Theorem: if [hst ⊆ rssOf(hi)] (i = 1(left) or 2(right)), then [hst] is
  *    i-pushable.
+ * 4-2. How to prove (4):
+ *   + WLOG, let's say [hst ⊆ rssOf(h1)].
+ *   + Every response in [h2] is commutable with [hst] because of (3-2).
+ *   + Now for each request [rq ∈ h2]:
+ *     * If the request is downward, it made a complete lock before [hst],
+ *       thus [objectOf(rq) ∉ objectsOf(hst)]. Thus [hst] and [rq] are 
+ *       commutable.
+ *     * If the request is upward, we would've had a static condition claiming
+ *       that every possible state transition of [objectOf(rq)] does not affect
+ *       the precondition of [rq]. Since [rq] is not making any state 
+ *       transition, [hst] and [rq] are commutable.
  *)
 
 Definition EdgeEquiv (e1 e2: edge) :=
