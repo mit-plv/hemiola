@@ -2,15 +2,16 @@ Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics Serial Topology StepM.
 
-(** A highest level TODO: reflect transactional behaviors to
- * digraph paths and reason about them. 
- *
- * 1. An [Atomic] step --> exists a multipath
- * 2. A complete lock --> cut
- *    --> no paths passing that IdxT
- *    --> each path belongs to either one of two categories.
- * 3. A "half" lock --> nothing to say? Correctness not by locks
- *    and topology; instead by pre/postcondition reasoning.
+(** TODOs:
+ * 0. Maybe better to have a notion of [Multipath] including the "type"
+ *    of each edge (e.g., upward-request, downward-request, etc.)
+ * 1. An [Atomic] step --> exists a corresponding [Multipath]
+ * 2. Any history [hst] between continuous histories [h1] and [h2]:
+ *    first we need to confirm whether [hst] is right- or left-pushable.
+ * 3. Theorem: informally, [forall hst, hst ⊆ rssOf(h1) \/ hst ⊆ rssOf(h2)],
+ *    where [rssOf] returns all responses of the history.
+ * 4. Theorem: if [hst ⊆ rssOf(hi)] (i = 1(left) or 2(right)), then [hst] is
+ *    i-pushable.
  *)
 
 Definition EdgeEquiv (e1 e2: edge) :=
