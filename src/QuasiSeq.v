@@ -236,8 +236,7 @@ Section WellInterleaved.
         Separated (hsts ++ [hst1]) ->
         Separated (hst2 :: hsts) ->
         exists lhsts rhsts,
-          Forall lpush lhsts /\
-          Forall rpush rhsts /\
+          Forall lpush lhsts /\ Forall rpush rhsts /\
           Reducible sys (List.concat (hsts ++ [hst1]))
                     (List.concat (rhsts ++ hst1 :: lhsts)) /\
           Reducible sys (hst2 ++ List.concat rhsts)
@@ -267,9 +266,9 @@ Section WellInterleaved.
     forall hst1 hst2,
       Continuous hst1 hst2 ->
       exists (lpush rpush: MHistory -> Prop),
-        (forall lhst, lpush lhst -> Reducible sys (lhst ++ hst1) (hst1 ++ lhst)) /\
-        (forall rhst, rpush rhst -> Reducible sys (hst2 ++ rhst) (rhst ++ hst2)) /\
+        rpush hst1 /\ lpush hst2 /\
         (forall lhst rhst,
+            (* Do we need [~ Continuous] here? *)
             lpush lhst -> rpush rhst ->
             Reducible sys (lhst ++ rhst) (rhst ++ lhst)) /\
         forall hsts,
@@ -328,7 +327,7 @@ Section WellInterleaved.
           apply reducible_app_1.
           repeat rewrite app_assoc.
           apply reducible_app_2.
-          apply H0; auto.
+          apply H2; auto.
       + apply Forall_app_inv in H16; dest.
         apply Forall_app; auto.
       + rewrite app_length in H17.
@@ -340,7 +339,7 @@ Section WellInterleaved.
              | [ |- _ /\ _] => split
              end; auto.
       + simpl; apply reducible_app_1; assumption.
-      + specialize (H1 _ H9).
+      + specialize (H2 _ _ H1 H9).
         simpl; eapply reducible_trans.
         * rewrite app_assoc.
           apply reducible_app_2.

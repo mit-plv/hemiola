@@ -13,7 +13,6 @@ Section Sequential.
   Context {MsgT} `{HasMsg MsgT}.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
 
-  (** NOTE: head is the oldest *)
   Inductive Atomic:
     list (Id MsgT) (* initially-dequeued messages *) ->
     list (Id MsgT) (* all-dequeued  *) ->

@@ -57,7 +57,7 @@ Inductive Multipath (dg: digraph):
       Forall (fun de => edge_from de = edge_to e) des ->
       Multipath dg ies (es ++ des) (vs ++ o2l (edge_to e))
                 (removeOnce edge_dec e ees ++ des)
-| MultipathCons:
+| MultipathConv:
     forall ies es vs ees e ces,
       Multipath dg ies es vs ees ->
       Forall (fun ce => EdgeIn ce ees) ces ->
@@ -99,12 +99,17 @@ Section Topological.
 
 End Topological.
 
+Definition getInEdges {MsgT} (ins: list (Id MsgT)) (to: IdxT): edges :=
+  map (fun im => Build_edge None (idOf im) (Some to)) ins.
+
+Definition getOutEdges {MsgT} (from: IdxT) (outs: list (Id MsgT)): edges :=
+  map (fun im => Build_edge (Some from) (idOf im) None) outs.
+
 Definition getInitEdges {MsgT} (hst: History MsgT): edges :=
-  (hd_error hst) >>=[nil]
+  (hd_error (rev hst)) >>=[nil]
   (fun lbl =>
      match lbl with
-     | RlblInt rule ins outs =>
-       map (fun im => Build_edge None (idOf im) (Some (rule_oidx rule))) ins
+     | RlblInt rule ins outs => getInEdges ins (rule_oidx rule)
      | _ => nil
      end).
 
@@ -120,8 +125,4 @@ Lemma atomic_multipath:
           Multipath dg (getInitEdges hst) es vs ees.
 Proof.
 Admitted.
-
-
-
-
 
