@@ -74,6 +74,11 @@ Definition Continuous (hst1 hst2: MHistory) :=
     inits2 <> nil /\
     SubList inits2 eouts1.
 
+Definition ValidContinuous (sys: System) (hst1 hst2: MHistory) :=
+  Continuous hst1 hst2 /\
+  exists st1 st2 hst,
+    steps step_m sys st1 (hst2 ++ hst ++ hst1) st2.
+
 Definition Separated (hsts: list MHistory) :=
   forall hst1 hst2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 ->
@@ -154,7 +159,7 @@ Section WellInterleaved.
 
   Definition WellInterleaved :=
     forall hst1 hst2,
-      Continuous hst1 hst2 ->
+      ValidContinuous sys hst1 hst2 ->
       forall hsts,
         Forall (STransactional msg_dec) hsts ->
         Separated (hsts ++ [hst1]) ->
@@ -193,7 +198,14 @@ Section WellInterleaved.
     eapply steps_split in H; [|reflexivity]; destruct H as [sti1 [? ?]].
     apply Forall_app_inv in H0; dest.
     inv H6; apply Forall_app_inv in H10; dest; inv H7.
-    pose proof (Hwi _ _ H2 _ H6 H3 H4).
+    assert (ValidContinuous sys hst1 hst2) as Hvc.
+    { split; auto.
+      exists sti1, sti2, (List.concat hsts2).
+      simpl in H5; rewrite concat_app in H5.
+      simpl in H5; rewrite app_nil_r in H5.
+      assumption.
+    }
+    pose proof (Hwi _ _ Hvc _ H6 H3 H4).
     destruct H7 as [rhst1 [rhst2 [? [? ?]]]].
 
     exists ((List.concat hsts3)
@@ -216,7 +228,7 @@ Section WellInterleaved.
         destruct H2 as [inits [ins [outs [eouts ?]]]].
         eapply STrsAtomic; eauto.
     - repeat (simpl; try rewrite app_length).
-      unfold MHistory; rewrite H10.
+      unfold MHistory, History, MLabel in *; rewrite H10.
       apply plus_lt_compat_l.
       rewrite app_length.
       rewrite <-Nat.add_assoc; simpl.
@@ -229,13 +241,12 @@ Section WellInterleaved.
    * and [WellInterleavedPush]. *)
   Local Definition WellInterleavedPushHelper :=
     forall hst1 hst2,
-      Continuous hst1 hst2 ->
-      exists (lpush rpush: MHistory -> Prop),
+      ValidContinuous sys hst1 hst2 ->
       forall hsts,
         Forall (STransactional msg_dec) hsts ->
         Separated (hsts ++ [hst1]) ->
         Separated (hst2 :: hsts) ->
-        exists lhsts rhsts,
+        exists (lpush rpush: MHistory -> Prop) lhsts rhsts,
           Forall lpush lhsts /\ Forall rpush rhsts /\
           Reducible sys (List.concat (hsts ++ [hst1]))
                     (List.concat (rhsts ++ hst1 :: lhsts)) /\
@@ -248,10 +259,8 @@ Section WellInterleaved.
     forall (Hwip: WellInterleavedPushHelper), WellInterleaved.
   Proof.
     unfold WellInterleavedPushHelper, WellInterleaved; intros.
-    specialize (Hwip _ _ H).
-    destruct Hwip as [lpush [rpush ?]].
-    specialize (H3 _ H0 H1 H2).
-    destruct H3 as [lhsts [rhsts ?]]; dest.
+    specialize (Hwip _ _ H _ H0 H1 H2).
+    destruct Hwip as [lpush [rpush [lhsts [rhsts ?]]]]; dest.
     exists lhsts, rhsts.
     split; auto.
     eapply reducible_trans.
@@ -264,7 +273,7 @@ Section WellInterleaved.
 
   Definition WellInterleavedPush :=
     forall hst1 hst2,
-      Continuous hst1 hst2 ->
+      ValidContinuous sys hst1 hst2 ->
       exists (lpush rpush: MHistory -> Prop),
         rpush hst1 /\ lpush hst2 /\
         (forall lhst rhst,
@@ -285,22 +294,20 @@ Section WellInterleaved.
     destruct Hwip as [lpush [rpush ?]]; dest.
     exists lpush, rpush.
 
-    intros.
-    specialize (H3 _ H4 H5 H6).
+    specialize (H6 _ H0 H1 H2).
     generalize dependent hsts.
 
     induction hsts as [|hst hsts]; simpl; intros;
       [exists nil, nil; simpl; repeat rewrite app_nil_r; repeat split; auto|].
 
-    inv H3.
-    inv H4.
-    apply separated_cons with (hsts2:= nil) in H5; dest; simpl in *; clear H4.
-    apply separated_cons with (hsts2:= [hst2]) in H6; dest.
-    inv H6; clear H15.
+    inv H0; inv H6.
+    apply separated_cons with (hsts2:= nil) in H1; dest; simpl in *; clear H1.
+    apply separated_cons with (hsts2:= [hst2]) in H2; dest.
+    inv H2; clear H15.
 
-    specialize (IHhsts H10 H11 H5 H7).
+    specialize (IHhsts H11 H10 H6 H7).
     destruct IHhsts as [lhsts [rhsts ?]]; dest.
-    destruct H9.
+    destruct H8.
 
     - exists (hst :: lhsts), rhsts.
       repeat match goal with
@@ -313,12 +320,12 @@ Section WellInterleaved.
         * rewrite app_assoc.
           apply reducible_app_2.
           instantiate (1:= List.concat rhsts ++ hst).
-          clear -H2 H9 H12.
+          clear -H5 H8 H12.
           induction rhsts; simpl; [rewrite app_nil_r; apply reducible_refl|].
           inv H12.
           eapply reducible_trans.
           { rewrite app_assoc.
-            apply reducible_app_2, H2; auto.
+            apply reducible_app_2, H5; auto.
           }
           { do 2 rewrite <-app_assoc.
             apply reducible_app_1; auto.
@@ -327,7 +334,7 @@ Section WellInterleaved.
           apply reducible_app_1.
           repeat rewrite app_assoc.
           apply reducible_app_2.
-          apply H2; auto.
+          apply H5; auto.
       + apply Forall_app_inv in H16; dest.
         apply Forall_app; auto.
       + rewrite app_length in H17.
@@ -339,7 +346,7 @@ Section WellInterleaved.
              | [ |- _ /\ _] => split
              end; auto.
       + simpl; apply reducible_app_1; assumption.
-      + specialize (H2 _ _ H1 H9).
+      + specialize (H5 _ _ H4 H8).
         simpl; eapply reducible_trans.
         * rewrite app_assoc.
           apply reducible_app_2.

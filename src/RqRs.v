@@ -1,88 +1,31 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM StepT SemFacts.
 Require Import Topology Serial SerialFacts.
-Require Import QuasiSeq Reduction Denotation.
+Require Import QuasiSeq Reduction.
 Require Import Topology TopologyFacts.
 
 Require Import Omega.
 
 Set Implicit Arguments.
 
-Inductive RqRsTrs :=
-| ImmTrs | RqUpTrs | RqDownTrs | RsTrs.
-
-Section RqRsRule.
+Section TreeTopo.
   Variable (gtr: GTree).
-
   Local Notation topo := (topoOfT gtr).
 
-  (* TODO: may need to specify the type of handling messages, whether they are
-   * requests or responses. *)
-  
-  Definition ImmRule (rule: Rule) :=
-    exists rqoidx rqmidx rsmidx,
-      rule_minds rule = [rqmidx] /\
-      (forall post porq ins nost norq outs,
-          rule_trs rule post porq ins = (nost, norq, outs) ->
-          idsOf outs = [rsmidx]) /\
-      In (createEdge rqoidx rqmidx (rule_oidx rule)) (dg_es topo) /\
-      In (createEdge (rule_oidx rule) rsmidx rqoidx) (dg_es topo).
+  Definition TreeTopoRule (rule: Rule) :=
+    forall post porq ins nost norq outs,
+      rule_trs rule post porq ins = (nost, norq, outs) ->
+      (forall min,
+          In min ins ->
+          exists mfrom, In (createEdge mfrom (idOf min) (rule_oidx rule)) (dg_es topo)) /\
+      (forall mout,
+          In mout outs ->
+          exists mto, In (createEdge (rule_oidx rule) (idOf mout) mto) (dg_es topo)).
 
-  Definition RqUpRule (rule: Rule) :=
-    exists coidx rqmidx rqfmidx poidx,
-      rule_minds rule = [rqmidx] /\
-      (forall post porq ins nost norq outs,
-          rule_trs rule post porq ins = (nost, norq, outs) ->
-          idsOf outs = [rqfmidx]) /\
-      getParent gtr (rule_oidx rule) = Some poidx /\
-      getParent gtr coidx = Some (rule_oidx rule) /\
-      In (createEdge coidx rqmidx (rule_oidx rule)) (dg_es topo) /\
-      In (createEdge (rule_oidx rule) rqfmidx poidx) (dg_es topo).
+  Definition TreeTopoSys (sys: System) :=
+    Forall TreeTopoRule (sys_rules sys).
 
-  Definition RqDownRule (rule: Rule) :=
-    exists rqoidx rqmidx rqfminds coinds,
-      rule_minds rule = [rqmidx] /\
-      (forall post porq ins nost norq outs,
-          rule_trs rule post porq ins = (nost, norq, outs) ->
-          idsOf outs = rqfminds) /\
-      Forall (fun cind => getParent gtr cind = Some (rule_oidx rule)) coinds /\
-      In (createEdge rqoidx rqmidx (rule_oidx rule)) (dg_es topo) /\
-      Forall (fun om => In (createEdge (rule_oidx rule) (fst om) (snd om))
-                           (dg_es topo))
-             (combine coinds rqfminds).
-
-  Definition RsRule (rule: Rule) :=
-    exists coinds rsminds rsbmidx,
-      rule_minds rule = rsminds /\
-      (forall post pors ins nost nors outs,
-          rule_trs rule post pors ins = (nost, nors, outs) ->
-          idsOf outs = [rsbmidx]) /\
-      Forall (fun om => In (createEdge (snd om) (fst om) (rule_oidx rule))
-                           (dg_es topo))
-             (combine coinds rsminds).
-
-  Definition RqRsRule (rule: Rule) :=
-    ImmRule rule \/
-    RqUpRule rule \/ RqDownRule rule \/
-    RsRule rule.
-
-  (** TODO: do we need this? *)
-  (* Definition RqRsSafe (sys: System) := *)
-  (*   forall rqr rsr, *)
-  (*     In rqr (sys_rules sys) -> In rsr (sys_rules sys) -> *)
-  (*     RqUpRule rqr -> *)
-  (*     (ImmRule rsr \/ UpRsBackRule rsr) -> *)
-  (*     forall post porq ins, *)
-  (*       rule_precond rqr post porq ins -> *)
-  (*       forall nost norq outs, *)
-  (*         rule_trs rsr post porq ins = (nost, norq, outs) -> *)
-  (*         rule_precond rqr nost norq ins. *)
-
-  Definition RqRsSys (sys: System) :=
-    Forall RqRsRule (sys_rules sys).
-  (* RqRsSafe sys. *)
-  
-End RqRsRule.
+End TreeTopo.
 
 Section PartialBlocking.
   Variable (gtr: GTree).
@@ -129,25 +72,106 @@ Section PartialBlocking.
     Forall PartialBlockingRule (sys_rules sys).
 
 End PartialBlocking.
+  
+Section RqRs.
+  Variable (RqRsT: Type).
 
-(* Fixpoint mconcat {A} (ms: list (M.t A)): M.t A := *)
-(*   match ms with *)
-(*   | nil => M.empty _ *)
-(*   | m :: ms' => *)
-(*     M.union m (mconcat ms') *)
-(*   end. *)
+  Definition RqRsDec := Rule -> RqRsT.
+
+  Definition RNonExecutable (rule1 rule2: Rule) :=
+    forall post porq ins1 nost norq outs ins2,
+      rule_precond rule1 post porq ins1 ->
+      rule_trs rule1 post porq ins1 = (nost, norq, outs) ->
+      ~ rule_precond rule2 nost norq ins2.
+
+  (** TODO: need to check whether the disjointness between [ins1] and [ins2] 
+   * (or [outs1] and [outs2]) is required. *)
+  Definition RCommutable (rule1 rule2: Rule) :=
+    forall post1 porq1 ins1 nost1 norq1 outs1 ins2,
+      rule_precond rule1 post1 porq1 ins1 ->
+      rule_trs rule1 post1 porq1 ins1 = (nost1, norq1, outs1) ->
+      rule_precond rule2 nost1 norq1 ins2 ->
+      (* 1) Precondition of [rule2] holds if the one of [rule1] holds. *)
+      rule_precond rule2 post1 porq1 ins2 /\
+      forall nost2 norq2 outs2,
+        rule_trs rule2 post1 porq1 ins2 = (nost2, norq2, outs2) ->
+        (* 2) Precondition of [rule1] holds after a transition by [rule2]. *)
+        rule_precond rule1 nost2 norq2 ins1 /\
+        (* 3) Transitions by [rule1; rule2] and [rule2; rule1] are same. *)
+        fst (rule_trs rule2 nost1 norq1 ins2) =
+        fst (rule_trs rule1 nost2 norq2 ins1).
+
+  Variable (rrd: RqRsDec).
+  
+  Definition RqRsLocallyGoodRules (rules: list Rule) :=
+    forall rule1 rule2,
+      In rule1 rules -> In rule2 rules ->
+      rule_oidx rule1 = rule_oidx rule2 ->
+      rrd rule1 <> rrd rule2 ->
+      RCommutable rule1 rule2.
+
+  Definition getRqRsLabel {MsgT} (lbl: RLabel MsgT): option (IdxT * RqRsT) :=
+    match lbl with
+    | RlblInt rule _ _ => Some (rule_oidx rule, rrd rule)
+    | _ => None
+    end.
+  
+  Fixpoint getRqRsHistory (hst: MHistory): list (IdxT * RqRsT) :=
+    match hst with
+    | nil => nil
+    | lbl :: hst' => (getRqRsLabel lbl) ::> (getRqRsHistory hst')
+    end.
+
+  Definition RqRsDisjoint (hst1 hst2: MHistory) :=
+    forall rr1 rr2,
+      In rr1 (getRqRsHistory hst1) ->
+      In rr2 (getRqRsHistory hst2) ->
+      rr1 <> rr2.
+
+  Lemma RqRsDisjoint_comm:
+    forall hst1 hst2,
+      RqRsDisjoint hst1 hst2 -> RqRsDisjoint hst2 hst1.
+  Proof.
+    unfold RqRsDisjoint; intros; firstorder.
+  Qed.
+  
+  Definition RqRsSys (sys: System) :=
+    RqRsLocallyGoodRules (sys_rules sys).
+
+End RqRs.
 
 Section RqRsSerial.
-  Variable (gtr: GTree) (sys: System).
-  Hypotheses (Hrr: RqRsSys gtr sys)
-             (Hpb: PartialBlockingSys gtr sys).
+  Variables (gtr: GTree)
+            (RqRsT: Type) (rrd: RqRsDec RqRsT)
+            (sys: System).
 
+  Hypotheses (Htr: TreeTopoSys gtr sys)
+             (Hpb: PartialBlockingSys gtr sys)
+             (Hrr: RqRsSys rrd sys).
+
+  Lemma continuous_rqrs_disjoint:
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      RqRsDisjoint rrd hst1 hst2.
+  Proof.
+  Admitted.
+  
   Lemma rqrs_well_interleaved_push:
     WellInterleavedPush sys.
   Proof.
     red; intros.
+
+    exists (RqRsDisjoint rrd hst1).
+    exists (RqRsDisjoint rrd hst2).
+    split; [|split; [|split]].
+
+    - apply RqRsDisjoint_comm.
+      apply continuous_rqrs_disjoint; auto.
+    - apply continuous_rqrs_disjoint; auto.
+    - admit.
+    - admit.
   Admitted.
-  
+
   Theorem immrqrs_pb_serializable:
     SerializableSys sys.
   Proof.
