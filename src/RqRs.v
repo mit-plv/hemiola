@@ -72,11 +72,12 @@ Section PartialBlocking.
     Forall PartialBlockingRule (sys_rules sys).
 
 End PartialBlocking.
-  
+
 Section RqRs.
   Variable (RqRsT: Type).
 
   Definition RqRsDec := Rule -> RqRsT.
+  Definition RqRsCmt := RqRsT -> RqRsT -> Prop.
 
   Definition RNonExecutable (rule1 rule2: Rule) :=
     forall post porq ins1 nost norq outs ins2,
@@ -101,18 +102,18 @@ Section RqRs.
         fst (rule_trs rule2 nost1 norq1 ins2) =
         fst (rule_trs rule1 nost2 norq2 ins1).
 
-  Variable (rrd: RqRsDec).
+  Variables (rrdec: RqRsDec) (rrcmt: RqRsCmt).
   
   Definition RqRsLocallyGoodRules (rules: list Rule) :=
     forall rule1 rule2,
       In rule1 rules -> In rule2 rules ->
       rule_oidx rule1 = rule_oidx rule2 ->
-      rrd rule1 <> rrd rule2 ->
+      rrcmt (rrdec rule1) (rrdec rule2) ->
       RCommutable rule1 rule2.
 
   Definition getRqRsLabel {MsgT} (lbl: RLabel MsgT): option (IdxT * RqRsT) :=
     match lbl with
-    | RlblInt rule _ _ => Some (rule_oidx rule, rrd rule)
+    | RlblInt rule _ _ => Some (rule_oidx rule, rrdec rule)
     | _ => None
     end.
   
@@ -122,18 +123,12 @@ Section RqRs.
     | lbl :: hst' => (getRqRsLabel lbl) ::> (getRqRsHistory hst')
     end.
 
-  Definition RqRsDisjoint (hst1 hst2: MHistory) :=
-    forall rr1 rr2,
-      In rr1 (getRqRsHistory hst1) ->
-      In rr2 (getRqRsHistory hst2) ->
-      rr1 <> rr2.
-
-  Lemma RqRsDisjoint_comm:
-    forall hst1 hst2,
-      RqRsDisjoint hst1 hst2 -> RqRsDisjoint hst2 hst1.
-  Proof.
-    unfold RqRsDisjoint; intros; firstorder.
-  Qed.
+  Definition RqRsCommutable (hst1 hst2: MHistory) :=
+    forall irr1 irr2,
+      In irr1 (getRqRsHistory hst1) ->
+      In irr2 (getRqRsHistory hst2) ->
+      fst irr1 = fst irr2 ->
+      rrcmt (snd irr1) (snd irr2).
   
   Definition RqRsSys (sys: System) :=
     RqRsLocallyGoodRules (sys_rules sys).
@@ -142,17 +137,18 @@ End RqRs.
 
 Section RqRsSerial.
   Variables (gtr: GTree)
-            (RqRsT: Type) (rrd: RqRsDec RqRsT)
+            (RqRsT: Type) (rrdec: RqRsDec RqRsT)
+            (rrcmt: RqRsCmt RqRsT)
             (sys: System).
 
   Hypotheses (Htr: TreeTopoSys gtr sys)
              (Hpb: PartialBlockingSys gtr sys)
-             (Hrr: RqRsSys rrd sys).
+             (Hrr: RqRsSys rrdec rrcmt sys).
 
   Lemma continuous_rqrs_disjoint:
     forall hst1 hst2,
       ValidContinuous sys hst1 hst2 ->
-      RqRsDisjoint rrd hst1 hst2.
+      RqRsCommutable rrdec rrcmt hst1 hst2.
   Proof.
   Admitted.
   
@@ -161,15 +157,14 @@ Section RqRsSerial.
   Proof.
     red; intros.
 
-    exists (RqRsDisjoint rrd hst1).
-    exists (RqRsDisjoint rrd hst2).
+    exists (RqRsCommutable rrdec rrcmt hst1).
+    exists (fun hst => RqRsCommutable rrdec rrcmt hst hst2).
     split; [|split; [|split]].
 
-    - apply RqRsDisjoint_comm.
-      apply continuous_rqrs_disjoint; auto.
     - apply continuous_rqrs_disjoint; auto.
-    - admit.
-    - admit.
+    - apply continuous_rqrs_disjoint; auto.
+    - (* LR-commutability *) admit.
+    - (* Left- or right-pushable *) admit.
   Admitted.
 
   Theorem immrqrs_pb_serializable:
