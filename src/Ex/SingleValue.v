@@ -1,6 +1,5 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Semantics StepT.
-Require Import Synthesis.
 Require Import Topology.
 
 Set Implicit Arguments.
