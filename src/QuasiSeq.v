@@ -18,12 +18,14 @@ Section QuasiSeq.
       exists n, quasiSeq sys hst n.
 
   Definition QuasiSeqOkStep :=
-    forall hst st n,
+    forall hst n st,
       steps step_m sys (initsOf sys) hst st ->
       quasiSeq sys hst n ->
       ((exists trss, Sequential sys msg_dec hst trss) \/
-       (exists rhst m, Reducible sys hst rhst /\
-                       quasiSeq sys rhst m /\ m < n)).
+       (exists rhst m,
+           steps step_m sys (initsOf sys) rhst st /\
+           BEquivalent sys hst rhst /\
+           quasiSeq sys rhst m /\ m < n)).
 
   Lemma quasiSeq_implies_serializableSys:
     QuasiSeqOkStep ->
@@ -34,11 +36,11 @@ Section QuasiSeq.
   Proof.
     induction n as [n IHn] using (well_founded_induction lt_wf).
     intros.
-    specialize (H _ _ _ H0 H1); destruct H; dest.
-    - eapply sequential_serializable; eauto.
-    - eapply reducible_serializable; eauto.
-      eapply IHn; eauto.
-      eapply H; eauto.
+    specialize (H _ _ _ H0 H1); destruct H.
+    - dest; eapply sequential_serializable; eauto.
+    - destruct H as [rhst [m ?]]; dest.
+      specialize (IHn _ H4 _ _ H H3).
+      eapply reducible_serializable with (hto:= rhst); eauto.
   Qed.
 
   Lemma quasiSeqOk_implies_serializableSys:
@@ -154,21 +156,72 @@ Proof.
     split; auto.
 Admitted.
 
+Lemma list_picker:
+  forall (A: Type) (P: list A -> Prop) (f: P nil)
+         (Q0: A -> Prop) (Q1: A -> Prop)
+         (f0: forall l, Forall Q0 l -> P l)
+         (f1: forall a l0 l1,
+             Forall Q0 l0 -> Q1 a ->
+             P (l0 ++ l1) -> P (l0 ++ a :: l1)),
+  forall l, Forall (fun a => Q0 a \/ Q1 a) l ->
+            (Forall Q0 l \/
+             exists a l0 l1, l = l0 ++ a :: l1 /\ Forall Q0 l0 /\ Q1 a).
+Proof.
+  induction l; simpl; intros; auto.
+  inv H; destruct H2.
+  - specialize (IHl H3).
+    destruct IHl.
+    + left; constructor; auto.
+    + destruct H0 as [a0 [l0 [l1 ?]]]; dest; subst.
+      right; exists a0, (a :: l0), l1.
+      repeat split; auto.
+  - right; exists a, nil, l; repeat split; auto.
+Qed.
+
+Lemma list_ind_pick:
+  forall (A: Type) (P: list A -> Prop) (f: P nil)
+         (Q0: A -> Prop) (Q1: A -> Prop)
+         (f0: forall l, Forall Q0 l -> P l)
+         (f1: forall a l0 l1,
+             Forall Q0 l0 -> Q1 a ->
+             P (l0 ++ l1) -> P (l0 ++ a :: l1)),
+  forall l, Forall (fun a => Q0 a \/ Q1 a) l -> P l.
+Proof.
+  intros.
+  remember (List.length l) as n.
+  generalize dependent l.
+
+  induction n; intros;
+    [apply eq_sym, length_zero_iff_nil in Heqn; subst; auto|].
+
+  pose proof H.
+  eapply list_picker in H0; eauto.
+  destruct H0; auto.
+  destruct H0 as [a0 [l0 [l1 ?]]]; dest; subst.
+  eapply f1; eauto.
+  eapply IHn.
+  - apply Forall_app_inv in H; dest; inv H0.
+    apply Forall_app; auto.
+  - rewrite app_length in Heqn; simpl in Heqn.
+    rewrite app_length; omega.
+Qed.
+
 Section WellInterleaved.
   Variable (sys: System).
 
   Definition WellInterleaved :=
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      forall hsts,
-        Forall (STransactional msg_dec) hsts ->
-        Separated (hsts ++ [hst1]) ->
-        Separated (hst2 :: hsts) ->
-        exists rhst1 rhst2,
-          Reducible sys (List.concat (hst2 :: hsts ++ [hst1]))
+    forall st1 st2 hst1 hst2 hsts,
+      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+      Continuous hst1 hst2 ->
+      Forall (STransactional msg_dec) hsts ->
+      Separated (hsts ++ [hst1]) ->
+      Separated (hst2 :: hsts) ->
+      exists rhst1 rhst2,
+        steps step_m sys st1 (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)) st2 /\
+        BEquivalent sys (List.concat (hst2 :: hsts ++ [hst1]))
                     (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)) /\
-          Forall (STransactional msg_dec) (rhst2 ++ rhst1) /\
-          List.length hsts = List.length (rhst2 ++ rhst1).
+        Forall (STransactional msg_dec) (rhst2 ++ rhst1) /\
+        List.length hsts = List.length (rhst2 ++ rhst1).
 
   Lemma well_interleaved_reducible:
     forall (Hwi: WellInterleaved) trss st1 st2,
@@ -176,7 +229,8 @@ Section WellInterleaved.
       Forall (STransactional msg_dec) trss ->
       Interleaved trss ->
       exists (rhst : MHistory) (m : nat),
-        Reducible sys (List.concat trss) rhst /\
+        steps step_m sys st1 rhst st2 /\
+        BEquivalent sys (List.concat trss) rhst /\
         SSequential msg_dec rhst m /\
         m < Datatypes.length trss.
   Proof.
@@ -198,22 +252,22 @@ Section WellInterleaved.
     eapply steps_split in H; [|reflexivity]; destruct H as [sti1 [? ?]].
     apply Forall_app_inv in H0; dest.
     inv H6; apply Forall_app_inv in H10; dest; inv H7.
-    assert (ValidContinuous sys hst1 hst2) as Hvc.
-    { split; auto.
-      exists sti1, sti2, (List.concat hsts2).
-      simpl in H5; rewrite concat_app in H5.
-      simpl in H5; rewrite app_nil_r in H5.
-      assumption.
-    }
-    pose proof (Hwi _ _ Hvc _ H6 H3 H4).
-    destruct H7 as [rhst1 [rhst2 [? [? ?]]]].
+    pose proof (Hwi _ _ _ _ _ H5 H2 H6 H3 H4).
+    destruct H7 as [rhst1 [rhst2 [? [? [? ?]]]]].
 
     exists ((List.concat hsts3)
               ++ (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
               ++ (List.concat hsts1)); eexists.
-    split; [|split].
-    - apply reducible_app_1.
-      apply reducible_app_2.
+    split; [|split; [|split]].
+    - eapply steps_append; eauto.
+      eapply steps_append; eauto.
+      replace (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
+        with (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)); [assumption|].
+      repeat (rewrite concat_app; simpl).
+      rewrite <-app_assoc; reflexivity.
+    - red.
+      repeat rewrite behaviorOf_app.
+      do 2 f_equal.
       replace (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
         with (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)); [assumption|].
       repeat (rewrite concat_app; simpl).
@@ -221,14 +275,14 @@ Section WellInterleaved.
     - econstructor.
       + repeat rewrite <-concat_app; reflexivity.
       + reflexivity.
-      + apply Forall_app_inv in H8; dest.
+      + apply Forall_app_inv in H10; dest.
         repeat (apply Forall_app; auto).
         constructor; auto.
         eapply continuous_atomic_concat in H2; eauto.
         destruct H2 as [inits [ins [outs [eouts ?]]]].
         eapply STrsAtomic; eauto.
     - repeat (simpl; try rewrite app_length).
-      unfold MHistory, History, MLabel in *; rewrite H10.
+      unfold MHistory, History, MLabel in *; rewrite H13.
       apply plus_lt_compat_l.
       rewrite app_length.
       rewrite <-Nat.add_assoc; simpl.
@@ -237,133 +291,139 @@ Section WellInterleaved.
       auto.
   Qed.
 
-  (* In order to give a stronger induction hypothesis between [WellInterleaved]
-   * and [WellInterleavedPush]. *)
-  Local Definition WellInterleavedPushHelper :=
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      forall hsts,
-        Forall (STransactional msg_dec) hsts ->
-        Separated (hsts ++ [hst1]) ->
-        Separated (hst2 :: hsts) ->
-        exists (lpush rpush: MHistory -> Prop) lhsts rhsts,
-          Forall lpush lhsts /\ Forall rpush rhsts /\
-          Reducible sys (List.concat (hsts ++ [hst1]))
-                    (List.concat (rhsts ++ hst1 :: lhsts)) /\
-          Reducible sys (hst2 ++ List.concat rhsts)
-                    (List.concat rhsts ++ hst2) /\
-          Forall (STransactional msg_dec) (rhsts ++ lhsts) /\
-          List.length hsts = List.length (rhsts ++ lhsts).
-
-  Lemma well_interleaved_push_helper_ok:
-    forall (Hwip: WellInterleavedPushHelper), WellInterleaved.
-  Proof.
-    unfold WellInterleavedPushHelper, WellInterleaved; intros.
-    specialize (Hwip _ _ H _ H0 H1 H2).
-    destruct Hwip as [lpush [rpush [lhsts [rhsts ?]]]]; dest.
-    exists lhsts, rhsts.
-    split; auto.
-    eapply reducible_trans.
-    - simpl; apply reducible_app_1; eassumption.
-    - repeat (simpl; try rewrite concat_app).
-      repeat rewrite app_assoc.
-      do 2 apply reducible_app_2.
-      assumption.
-  Qed.
-
   Definition WellInterleavedPush :=
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
+    forall st1 st2 hst1 hst2 hsts,
+      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+      Continuous hst1 hst2 ->
+      Forall (STransactional msg_dec) hsts ->
+      Separated (hsts ++ [hst1]) ->
+      Separated (hst2 :: hsts) ->
       exists (lpush rpush: MHistory -> Prop),
         rpush hst1 /\ lpush hst2 /\
         (forall lhst rhst,
-            (* Do we need [~ Continuous] here? *)
             lpush lhst -> rpush rhst ->
             Reducible sys (lhst ++ rhst) (rhst ++ lhst)) /\
-        forall hsts,
-          Forall (STransactional msg_dec) hsts ->
-          Separated (hsts ++ [hst1]) ->
-          Separated (hst2 :: hsts) ->
-          Forall (fun hst => lpush hst \/ rpush hst) hsts.
-  
-  Lemma well_interleaved_push_ok':
-    forall (Hwip: WellInterleavedPush), WellInterleavedPushHelper.
+        Forall (fun hst => lpush hst \/ rpush hst) hsts.
+
+  Lemma left_pushes_commutable:
+    forall (lpush rpush: MHistory -> Prop),
+      (forall lhst rhst,
+          lpush lhst -> rpush rhst ->
+          Reducible sys (lhst ++ rhst) (rhst ++ lhst)) ->
+      forall rhst hsts,
+        rpush rhst ->
+        Forall lpush hsts ->
+        Reducible sys (List.concat hsts ++ rhst) (rhst ++ List.concat hsts).
   Proof.
-    red; intros.
-    specialize (Hwip _ _ H).
-    destruct Hwip as [lpush [rpush ?]]; dest.
-    exists lpush, rpush.
-
-    specialize (H6 _ H0 H1 H2).
-    generalize dependent hsts.
-
-    induction hsts as [|hst hsts]; simpl; intros;
-      [exists nil, nil; simpl; repeat rewrite app_nil_r; repeat split; auto|].
-
-    inv H0; inv H6.
-    apply separated_cons with (hsts2:= nil) in H1; dest; simpl in *; clear H1.
-    apply separated_cons with (hsts2:= [hst2]) in H2; dest.
-    inv H2; clear H15.
-
-    specialize (IHhsts H11 H10 H6 H7).
-    destruct IHhsts as [lhsts [rhsts ?]]; dest.
-    destruct H8.
-
-    - exists (hst :: lhsts), rhsts.
-      repeat match goal with
-             | [ |- _ /\ _] => split
-             end; auto.
-      + eapply reducible_trans;
-          [apply reducible_app_1; eassumption|].
-        repeat (simpl; try rewrite concat_app).
-        eapply reducible_trans.
-        * rewrite app_assoc.
-          apply reducible_app_2.
-          instantiate (1:= List.concat rhsts ++ hst).
-          clear -H5 H8 H12.
-          induction rhsts; simpl; [rewrite app_nil_r; apply reducible_refl|].
-          inv H12.
-          eapply reducible_trans.
-          { rewrite app_assoc.
-            apply reducible_app_2, H5; auto.
-          }
-          { do 2 rewrite <-app_assoc.
-            apply reducible_app_1; auto.
-          }
-        * rewrite <-app_assoc.
-          apply reducible_app_1.
-          repeat rewrite app_assoc.
-          apply reducible_app_2.
-          apply H5; auto.
-      + apply Forall_app_inv in H16; dest.
-        apply Forall_app; auto.
-      + rewrite app_length in H17.
-        rewrite app_length; simpl.
-        rewrite Nat.add_succ_r; congruence.
-
-    - exists lhsts, (hst :: rhsts).
-      repeat match goal with
-             | [ |- _ /\ _] => split
-             end; auto.
-      + simpl; apply reducible_app_1; assumption.
-      + specialize (H5 _ _ H4 H8).
-        simpl; eapply reducible_trans.
-        * rewrite app_assoc.
-          apply reducible_app_2.
-          eassumption.
-        * do 2 rewrite <-app_assoc.
-          apply reducible_app_1.
-          assumption.
-      + simpl; constructor; assumption.
-      + simpl; congruence.
+    induction hsts; simpl; intros;
+      [rewrite app_nil_r; apply reducible_refl|].
+    
+    inv H1; specialize (IHhsts H0 H5).
+    rewrite <-app_assoc.
+    eapply reducible_trans.
+    - apply reducible_app_1; eassumption.
+    - do 2 rewrite app_assoc.
+      apply reducible_app_2; auto.
   Qed.
-
+      
   Lemma well_interleaved_push_ok:
     forall (Hwip: WellInterleavedPush), WellInterleaved.
   Proof.
-    intros.
-    apply well_interleaved_push_helper_ok.
-    apply well_interleaved_push_ok'; auto.
+    unfold WellInterleavedPush, WellInterleaved; intros.
+    specialize (Hwip _ _ _ _ _ H H0 H1 H2 H3).
+    destruct Hwip as [lpush [rpush ?]]; dest.
+    
+    generalize dependent st1; generalize dependent st2.
+    generalize dependent hsts.
+    intros hsts ?.
+    eapply list_ind_pick
+      with (l:= hsts) (Q0:= lpush) (Q1:= rpush); eauto; simpl; intros.
+
+    - exists nil, nil.
+      simpl in *; rewrite app_nil_r in *.
+      repeat split; auto.
+    - clear H7 hsts; rename l into hsts.
+      exists hsts, nil.
+
+      rewrite concat_app in H8; simpl in H8.
+      rewrite app_nil_r in H8; simpl in H8.
+      eapply steps_split in H8; [|reflexivity].
+      destruct H8 as [sti [? ?]].
+      
+      assert (Reducible sys (List.concat hsts ++ hst1)
+                        (hst1 ++ List.concat hsts))
+        by (eapply left_pushes_commutable; eauto).
+
+      simpl; repeat split; auto.
+      + eapply steps_append; eauto.
+        apply H9; auto.
+      + red; do 2 rewrite behaviorOf_app.
+        f_equal.
+        rewrite concat_app; simpl.
+        rewrite app_nil_r.
+        eapply H9; eauto.
+      
+    - clear H7 hsts; rename l0 into hsts2; rename l1 into hsts1.
+
+      apply Forall_app_inv in H3; dest; inv H7.
+      specialize (H2 (Forall_app H3 H14)).
+      replace ((hsts2 ++ a :: hsts1) ++ [hst1])
+        with (hsts2 ++ a :: (hsts1 ++ [hst1])) in H8
+        by (rewrite <-app_assoc; reflexivity).
+      apply separated_cons with (hsts2:= hsts2) in H8; dest.
+      rewrite app_assoc in H11.
+      specialize (H2 H11).
+      apply separated_cons with (hsts2:= hst2 :: hsts2) in H9; dest.
+      specialize (H2 H15).
+
+      replace (hst2 ++ List.concat ((hsts2 ++ a :: hsts1) ++ [hst1]))
+        with (((hst2 ++ List.concat hsts2) ++ a) ++ List.concat hsts1 ++ hst1)
+        in H10
+        by (repeat rewrite concat_app;
+            simpl; rewrite app_nil_r;
+            repeat rewrite app_assoc; reflexivity).
+
+      eapply steps_split in H10; [|reflexivity].
+      destruct H10 as [sti [? ?]].
+
+      assert (Reducible sys ((hst2 ++ List.concat hsts2) ++ a)
+                        (a ++ hst2 ++ List.concat hsts2)).
+      { change (hst2 ++ List.concat hsts2) with (List.concat (hst2 :: hsts2)).
+        eapply left_pushes_commutable; eauto.
+      }
+
+      apply H17 in H16; dest.
+      pose proof (steps_append H10 H16); clear H10 H16 sti.
+      rewrite <-app_assoc in H19.
+      eapply steps_split in H19; [|reflexivity].
+      destruct H19 as [sti [? ?]].
+
+      replace ((hst2 ++ List.concat hsts2) ++ List.concat hsts1 ++ hst1)
+        with (hst2 ++ List.concat ((hsts2 ++ hsts1) ++ [hst1])) in H10
+        by (repeat rewrite concat_app;
+            simpl; rewrite app_nil_r;
+            repeat rewrite app_assoc; reflexivity).
+
+      specialize (H2 _ _ H10).
+      destruct H2 as [rhst1 [rhst2 ?]]; dest.
+      pose proof (steps_append H2 H16).
+
+      exists rhst1, (a :: rhst2).
+      repeat split; auto.
+      + simpl; repeat rewrite concat_app.
+        simpl; repeat rewrite app_nil_r.
+        eapply bequivalent_trans.
+        * repeat rewrite app_assoc.
+          do 2 apply bequivalent_app_2.
+          eassumption.
+        * repeat rewrite <-app_assoc.
+          apply bequivalent_app_1.
+          repeat rewrite concat_app in H19.
+          simpl in H19; repeat rewrite <-app_assoc in H19.
+          rewrite app_nil_r in H19; assumption.
+      + simpl; constructor; auto.
+      + simpl; repeat rewrite app_length in *; simpl.
+        rewrite Nat.add_succ_r; auto.
   Qed.
 
   Lemma well_interleaved_serializable:
@@ -378,7 +438,7 @@ Section WellInterleaved.
       inv H1.
       pose proof (stransactional_sequential_or_interleaved H0 H4).
       destruct H1; eauto.
-      right; eapply well_interleaved_reducible; eauto.
+      right; apply well_interleaved_reducible; auto.
   Qed.
 
 End WellInterleaved.

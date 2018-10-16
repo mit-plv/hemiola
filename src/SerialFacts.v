@@ -370,6 +370,26 @@ Proof.
   congruence.
 Qed.
 
+Lemma bequivalent_app_1:
+  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT),
+    BEquivalent sys hst1 hst2 ->
+    BEquivalent sys (hst3 ++ hst1) (hst3 ++ hst2).
+Proof.
+  intros.
+  red; do 2 rewrite behaviorOf_app.
+  f_equal; assumption.
+Qed.
+
+Lemma bequivalent_app_2:
+  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT),
+    BEquivalent sys hst1 hst2 ->
+    BEquivalent sys (hst1 ++ hst3) (hst2 ++ hst3).
+Proof.
+  intros.
+  red; do 2 rewrite behaviorOf_app.
+  f_equal; assumption.
+Qed.
+
 Theorem serializable_seqSteps_refines:
   forall sys,
     SerializableSys sys ->

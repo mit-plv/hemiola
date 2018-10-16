@@ -77,7 +77,7 @@ Section RqRs.
   Variable (RqRsT: Type).
 
   Definition RqRsDec := Rule -> RqRsT.
-  Definition RqRsCmt := RqRsT -> RqRsT -> Prop.
+  Definition RqRsSemiDisj := RqRsT -> RqRsT -> Prop.
 
   Definition RNonExecutable (rule1 rule2: Rule) :=
     forall post porq ins1 nost norq outs ins2,
@@ -102,13 +102,13 @@ Section RqRs.
         fst (rule_trs rule2 nost1 norq1 ins2) =
         fst (rule_trs rule1 nost2 norq2 ins1).
 
-  Variables (rrdec: RqRsDec) (rrcmt: RqRsCmt).
-  
-  Definition RqRsLocallyGoodRules (rules: list Rule) :=
+  Variables (rrdec: RqRsDec) (rrsd: RqRsSemiDisj).
+
+  Definition RqRsSemiDisjComm (sys: System) :=
     forall rule1 rule2,
-      In rule1 rules -> In rule2 rules ->
+      In rule1 (sys_rules sys) -> In rule2 (sys_rules sys) ->
       rule_oidx rule1 = rule_oidx rule2 ->
-      rrcmt (rrdec rule1) (rrdec rule2) ->
+      rrsd (rrdec rule1) (rrdec rule2) ->
       RCommutable rule1 rule2.
 
   Definition getRqRsLabel {MsgT} (lbl: RLabel MsgT): option (IdxT * RqRsT) :=
@@ -123,49 +123,70 @@ Section RqRs.
     | lbl :: hst' => (getRqRsLabel lbl) ::> (getRqRsHistory hst')
     end.
 
-  Definition RqRsCommutable (hst1 hst2: MHistory) :=
+  Definition RqRsSemiDisjHistories (hst1 hst2: MHistory) :=
     forall irr1 irr2,
       In irr1 (getRqRsHistory hst1) ->
       In irr2 (getRqRsHistory hst2) ->
       fst irr1 = fst irr2 ->
-      rrcmt (snd irr1) (snd irr2).
+      rrsd (snd irr1) (snd irr2).
+
+  Definition RqRsContSemiDisj (sys: System) :=
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      RqRsSemiDisjHistories hst1 hst2.
+
+  Definition RqRsLRComm (sys: System) :=
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      forall lhst rhst,
+        RqRsSemiDisjHistories hst1 lhst ->
+        RqRsSemiDisjHistories rhst hst2 ->
+        Reducible sys (lhst ++ rhst) (rhst ++ lhst).
+
+  Definition RqRsLOrR (sys: System) :=
+    forall st1 st2 hst1 hst2 hsts,
+      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+      Forall (STransactional msg_dec) hsts ->
+      Separated (hsts ++ [hst1]) ->
+      Separated (hst2 :: hsts) ->
+      Forall (fun hst => RqRsSemiDisjHistories hst1 hst \/
+                         RqRsSemiDisjHistories hst hst2) hsts.
   
   Definition RqRsSys (sys: System) :=
-    RqRsLocallyGoodRules (sys_rules sys).
+    RqRsSemiDisjComm sys /\
+    RqRsContSemiDisj sys /\
+    RqRsLRComm sys /\
+    RqRsLOrR sys.
 
 End RqRs.
 
 Section RqRsSerial.
   Variables (gtr: GTree)
             (RqRsT: Type) (rrdec: RqRsDec RqRsT)
-            (rrcmt: RqRsCmt RqRsT)
+            (rrsd: RqRsSemiDisj RqRsT)
             (sys: System).
 
   Hypotheses (Htr: TreeTopoSys gtr sys)
              (Hpb: PartialBlockingSys gtr sys)
-             (Hrr: RqRsSys rrdec rrcmt sys).
+             (Hrr: RqRsSys rrdec rrsd sys).
 
-  Lemma continuous_rqrs_disjoint:
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      RqRsCommutable rrdec rrcmt hst1 hst2.
-  Proof.
-  Admitted.
-  
   Lemma rqrs_well_interleaved_push:
     WellInterleavedPush sys.
   Proof.
     red; intros.
+    exists (RqRsSemiDisjHistories rrdec rrsd hst1).
+    exists (fun hst => RqRsSemiDisjHistories rrdec rrsd hst hst2).
 
-    exists (RqRsCommutable rrdec rrcmt hst1).
-    exists (fun hst => RqRsCommutable rrdec rrcmt hst hst2).
-    split; [|split; [|split]].
+    assert (ValidContinuous sys hst1 hst2).
+    { split; auto.
+      simpl in H; rewrite concat_app in H.
+      simpl in H; rewrite app_nil_r in H.
+      eauto.
+    }
 
-    - apply continuous_rqrs_disjoint; auto.
-    - apply continuous_rqrs_disjoint; auto.
-    - (* LR-commutability *) admit.
-    - (* Left- or right-pushable *) admit.
-  Admitted.
+    split; [|split; [|split]];
+      try (eapply Hrr; eauto; fail).
+  Qed.
 
   Theorem immrqrs_pb_serializable:
     SerializableSys sys.

@@ -70,8 +70,7 @@ Proof.
   specialize (H _ _ H0); dest.
   split.
   - eapply steps_append; eauto.
-  - red; do 2 rewrite behaviorOf_app.
-    rewrite H2; reflexivity.
+  - apply bequivalent_app_1; auto.
 Qed.
 
 Lemma reducible_app_2:
@@ -85,8 +84,7 @@ Proof.
   specialize (H _ _ H1); dest.
   split.
   - eapply steps_append; eauto.
-  - red; do 2 rewrite behaviorOf_app.
-    rewrite H2; reflexivity.
+  - apply bequivalent_app_2; auto.
 Qed.
 
 Corollary reducible_cons:
@@ -117,32 +115,17 @@ Lemma reducible_serializable:
   forall sys st1 hfr st2,
     steps step_m sys st1 hfr st2 ->
     forall hto,
-      Reducible sys hfr hto ->
+      steps step_m sys st1 hto st2 ->
+      BEquivalent sys hfr hto ->
+      (* Reducible sys hfr hto -> *)
       Serializable sys hto ->
       Serializable sys hfr.
 Proof.
   unfold Serializable, Reducible; intros.
-  destruct H1 as [shfr [stfr [? ?]]].
+  destruct H2 as [shfr [stfr [? ?]]].
   exists shfr, stfr.
   split; auto.
-  specialize (H0 _ _ H); dest.
-  congruence.
-Qed.
-
-Lemma reducible_to_seq_serializable:
-  forall sys hst st2,
-    steps step_m sys (initsOf sys) hst st2 ->
-    forall shst strss,
-      Reducible sys hst shst ->
-      Sequential sys msg_dec shst strss ->
-      Serializable sys hst.
-Proof.
-  intros.
-  eapply reducible_serializable with (hto:= shst); eauto.
-  exists shst, st2; split.
-  - split; eauto.
-    apply H0; auto.
-  - congruence.
+  eapply bequivalent_trans; eauto.
 Qed.
 
 (*! Reducibility of silent, incoming, and outgoing labels *)
