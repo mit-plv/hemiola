@@ -304,6 +304,28 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma reachable_init:
+  forall {SysT StateT LabelT}
+         `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
+         (step: Step SysT StateT LabelT) sys,
+    Reachable (steps step) sys (initsOf sys).
+Proof.
+  eexists; econstructor.
+Qed.
+
+Lemma reachable_steps:
+  forall {SysT StateT LabelT}
+         `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
+         (step: Step SysT StateT LabelT) sys st1,
+    Reachable (steps step) sys st1 ->
+    forall ll st2,
+      steps step sys st1 ll st2 ->
+      Reachable (steps step) sys st2.
+Proof.
+  unfold Reachable; intros; dest.
+  eexists; eapply steps_append; eauto.
+Qed.
+  
 Lemma behaviorOf_app:
   forall (sys: System)
          {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT),

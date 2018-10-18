@@ -79,11 +79,11 @@ Section RqRs.
   Definition RqRsDec := Rule -> RqRsT.
   Definition RqRsSemiDisj := RqRsT -> RqRsT -> Prop.
 
-  Definition RNonExecutable (rule1 rule2: Rule) :=
-    forall post porq ins1 nost norq outs ins2,
-      rule_precond rule1 post porq ins1 ->
-      rule_trs rule1 post porq ins1 = (nost, norq, outs) ->
-      ~ rule_precond rule2 nost norq ins2.
+  (* Definition RNonExecutable (rule1 rule2: Rule) := *)
+  (*   forall post porq ins1 nost norq outs ins2, *)
+  (*     rule_precond rule1 post porq ins1 -> *)
+  (*     rule_trs rule1 post porq ins1 = (nost, norq, outs) -> *)
+  (*     ~ rule_precond rule2 nost norq ins2. *)
 
   (** TODO: need to check whether the disjointness between [ins1] and [ins2] 
    * (or [outs1] and [outs2]) is required. *)
@@ -130,32 +130,36 @@ Section RqRs.
       fst irr1 = fst irr2 ->
       rrsd (snd irr1) (snd irr2).
 
+  Definition RqRsLPush (hst1 hst: MHistory) :=
+    RqRsSemiDisjHistories hst1 hst.
+
+  Definition RqRsRPush (hst2 hst: MHistory) :=
+    RqRsSemiDisjHistories hst hst2.
+
   Definition RqRsContSemiDisj (sys: System) :=
     forall hst1 hst2,
       ValidContinuous sys hst1 hst2 ->
       RqRsSemiDisjHistories hst1 hst2.
 
-  Definition RqRsLRComm (sys: System) :=
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      forall lhst rhst,
-        RqRsSemiDisjHistories hst1 lhst ->
-        RqRsSemiDisjHistories rhst hst2 ->
-        Reducible sys (lhst ++ rhst) (rhst ++ lhst).
+  Definition RqRsLRPushable (sys: System) :=
+    forall st1 st2 hst1 hst2 hsts,
+      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+      Continuous hst1 hst2 ->
+      Forall (STransactional msg_dec) hsts ->
+      LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\
+      LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts).
 
   Definition RqRsLOrR (sys: System) :=
     forall st1 st2 hst1 hst2 hsts,
       steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+      Continuous hst1 hst2 ->
       Forall (STransactional msg_dec) hsts ->
-      Separated (hsts ++ [hst1]) ->
-      Separated (hst2 :: hsts) ->
-      Forall (fun hst => RqRsSemiDisjHistories hst1 hst \/
-                         RqRsSemiDisjHistories hst hst2) hsts.
+      Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts.
   
   Definition RqRsSys (sys: System) :=
     RqRsSemiDisjComm sys /\
     RqRsContSemiDisj sys /\
-    RqRsLRComm sys /\
+    RqRsLRPushable sys /\
     RqRsLOrR sys.
 
 End RqRs.
@@ -174,17 +178,10 @@ Section RqRsSerial.
     WellInterleavedPush sys.
   Proof.
     red; intros.
-    exists (RqRsSemiDisjHistories rrdec rrsd hst1).
-    exists (fun hst => RqRsSemiDisjHistories rrdec rrsd hst hst2).
-
-    assert (ValidContinuous sys hst1 hst2).
-    { split; auto.
-      simpl in H; rewrite concat_app in H.
-      simpl in H; rewrite app_nil_r in H.
-      eauto.
-    }
-
-    split; [|split; [|split]];
+    exists (RqRsLPush rrdec rrsd hst1).
+    exists (RqRsRPush rrdec rrsd hst2).
+    pose proof H; destruct H0; clear H1.
+    split; [|split; [|split; [|split]]];
       try (eapply Hrr; eauto; fail).
   Qed.
 

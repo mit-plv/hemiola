@@ -97,6 +97,11 @@ Section Transition.
 
   Definition Trace := list Label.
 
+  Definition Reachable {SysT StateT LabelT}
+             `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
+             (ss: Steps SysT StateT LabelT) (sys: SysT) (st: StateT): Prop :=
+    exists ll, ss sys (initsOf sys) ll st.
+  
   Fixpoint behaviorOf {SysT} `{IsSystem SysT} (sys: SysT)
            {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
     match ll with
