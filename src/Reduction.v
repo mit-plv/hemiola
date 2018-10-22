@@ -302,6 +302,32 @@ Proof.
 Qed.
 
 Lemma msg_outs_commutes_1:
+  forall sys eouts rule ins outs,
+    DisjList eouts outs ->
+    DisjList (idsOf eouts) (idsOf ins) ->
+    Reducible sys [RlblOuts eouts; RlblInt rule ins outs] [RlblInt rule ins outs; RlblOuts eouts].
+Proof.
+  unfold Reducible; intros.
+  split.
+  - dest_step_m.
+    econstructor.
+    + econstructor.
+      * econstructor.
+      * econstructor; try reflexivity; try eassumption.
+        apply FirstMPI_Forall_enqMsgs_inv in H3; [|assumption].
+        apply FirstMPI_Forall_deqMsgs in H3; auto.
+    + econstructor; try reflexivity; try eassumption.
+      * apply FirstMPI_Forall_deqMsgs; auto.
+        apply DisjList_comm; auto.
+      * f_equal.
+        rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
+        { rewrite deqMsgs_deqMsgs_comm; auto. }
+        { destruct H4; auto. }
+        { apply FirstMPI_Forall_enqMsgs_inv in H3; assumption. }
+  - hnf; cbn; reflexivity.
+Qed.
+
+Lemma msg_outs_commutes_2:
   forall sys eouts lbl,
     InternalLbl lbl ->
     Reducible sys [lbl; RlblOuts eouts] [RlblOuts eouts; lbl].
@@ -340,33 +366,30 @@ Proof.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
-Lemma msg_outs_commutes_2:
-  forall sys eouts rule ins outs,
-    DisjList eouts outs ->
-    DisjList (idsOf eouts) (idsOf ins) ->
-    Reducible sys [RlblOuts eouts; RlblInt rule ins outs] [RlblInt rule ins outs; RlblOuts eouts].
+Lemma msg_outs_reducible_1:
+  forall sys hst inits ins outs eouts mouts,
+    DisjList (idsOf mouts) (idsOf ins) ->
+    DisjList mouts outs ->
+    Atomic msg_dec inits ins hst outs eouts ->
+    Reducible sys (RlblOuts mouts :: hst) (hst ++ [RlblOuts mouts]).
 Proof.
-  unfold Reducible; intros.
-  split.
-  - dest_step_m.
-    econstructor.
-    + econstructor.
-      * econstructor.
-      * econstructor; try reflexivity; try eassumption.
-        apply FirstMPI_Forall_enqMsgs_inv in H3; [|assumption].
-        apply FirstMPI_Forall_deqMsgs in H3; auto.
-    + econstructor; try reflexivity; try eassumption.
-      * apply FirstMPI_Forall_deqMsgs; auto.
-        apply DisjList_comm; auto.
-      * f_equal.
-        rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
-        { rewrite deqMsgs_deqMsgs_comm; auto. }
-        { destruct H4; auto. }
-        { apply FirstMPI_Forall_enqMsgs_inv in H3; assumption. }
-  - hnf; cbn; reflexivity.
+  induction 3; simpl; intros;
+    [apply msg_outs_commutes_1; auto|].
+
+  subst.
+  apply DisjList_comm, DisjList_app_3 in H0; dest.
+  apply DisjList_comm in H0; apply DisjList_comm in H4.
+  rewrite idsOf_app in H.
+  apply DisjList_comm, DisjList_app_3 in H; dest.
+  apply DisjList_comm in H; apply DisjList_comm in H5.
+  specialize (IHAtomic H H0).
+
+  eapply reducible_trans; [|apply reducible_cons; eassumption].
+  apply reducible_cons_2.
+  apply msg_outs_commutes_1; auto.
 Qed.
 
-Lemma msg_outs_reducible_1:
+Lemma msg_outs_reducible_2:
   forall sys eouts hst,
     InternalHistory hst ->
     Reducible sys (hst ++ [RlblOuts eouts]) (RlblOuts eouts :: hst).
@@ -385,39 +408,16 @@ Proof.
     change (RlblOuts eouts :: lbl :: hst) with
         ([RlblOuts eouts; lbl] ++ hst).
     eapply steps_append; eauto.
-    eapply msg_outs_commutes_1; eauto.
+    eapply msg_outs_commutes_2; eauto.
   - red; cbn.
     rewrite behaviorOf_app.
     rewrite internal_history_behavior_nil by assumption.
     destruct lbl; auto; elim H2.
 Qed.
 
-Lemma msg_outs_reducible_2:
-  forall sys hst inits ins outs eouts mouts,
-    DisjList (idsOf mouts) (idsOf ins) ->
-    DisjList mouts outs ->
-    Atomic msg_dec inits ins hst outs eouts ->
-    Reducible sys (RlblOuts mouts :: hst) (hst ++ [RlblOuts mouts]).
-Proof.
-  induction 3; simpl; intros;
-    [apply msg_outs_commutes_2; auto|].
-
-  subst.
-  apply DisjList_comm, DisjList_app_3 in H0; dest.
-  apply DisjList_comm in H0; apply DisjList_comm in H4.
-  rewrite idsOf_app in H.
-  apply DisjList_comm, DisjList_app_3 in H; dest.
-  apply DisjList_comm in H; apply DisjList_comm in H5.
-  specialize (IHAtomic H H0).
-
-  eapply reducible_trans; [|apply reducible_cons; eassumption].
-  apply reducible_cons_2.
-  apply msg_outs_commutes_2; auto.
-Qed.
-
 (*! Reducibility of internal state transitions *)
 
-Lemma msg_int_commutes_1:
+Lemma msg_int_commutes:
   forall sys rule1 ins1 outs1 rule2 ins2 outs2,
     rule_oidx rule1 <> rule_oidx rule2 ->
     DisjList (idsOf ins1) (idsOf ins2) ->

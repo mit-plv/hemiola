@@ -266,6 +266,27 @@ Section WellInterleaved.
       auto.
   Qed.
 
+  Lemma well_interleaved_serializable:
+    WellInterleaved -> SerializableSys sys.
+  Proof.
+    intros.
+    apply quasiSeqOk_implies_serializableSys
+      with (quasiSeq := fun _ hst n => SSequential msg_dec hst n).
+    - red; intros.
+      apply ssequential_default.
+    - red; intros.
+      inv H1.
+      pose proof (stransactional_sequential_or_interleaved H0 H4).
+      destruct H1; eauto.
+      right; apply well_interleaved_reducible; auto.
+      apply reachable_init.
+  Qed.
+
+End WellInterleaved.
+
+Section WellInterleavedPush.
+  Variable (sys: System).
+  
   Definition LRPushable (lpush rpush: MHistory -> Prop) (hsts: list MHistory) :=
     forall lhst rhst hsts1 hsts2 hsts3,
       hsts = hsts3 ++ lhst :: hsts2 ++ rhst :: hsts1 ->
@@ -303,7 +324,7 @@ Section WellInterleaved.
             LRPushable lpush rpush (hst2 :: hsts).
 
   Lemma well_interleaved_push_ok:
-    forall (Hwip: WellInterleavedPush), WellInterleaved.
+    forall (Hwip: WellInterleavedPush), WellInterleaved sys.
   Proof.
     unfold WellInterleavedPush, WellInterleaved; intros.
 
@@ -402,21 +423,60 @@ Section WellInterleaved.
         rewrite Nat.add_succ_r; auto.
   Qed.
 
-  Lemma well_interleaved_serializable:
-    WellInterleaved -> SerializableSys sys.
-  Proof.
-    intros.
-    apply quasiSeqOk_implies_serializableSys
-      with (quasiSeq := fun _ hst n => SSequential msg_dec hst n).
-    - red; intros.
-      apply ssequential_default.
-    - red; intros.
-      inv H1.
-      pose proof (stransactional_sequential_or_interleaved H0 H4).
-      destruct H1; eauto.
-      right; apply well_interleaved_reducible; auto.
-      apply reachable_init.
-  Qed.
+End WellInterleavedPush.
 
-End WellInterleaved.
+Section WellInterleavedLPush.
+  Variable (sys: System).
+  
+  Definition WellInterleavedLPush :=
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hst hsts,
+          STransactional msg_dec hst ->
+          Forall (STransactional msg_dec) hsts ->
+          forall st2,
+            steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst; hst1])) st2 ->
+            steps step_m sys st2 (List.concat (hst2 :: hsts ++ [hst1; hst])) st2.
+
+  Lemma well_interleaved_left_push_ok:
+    forall (Hwip: WellInterleavedLPush), WellInterleaved sys.
+  Proof.
+    unfold WellInterleavedLPush, WellInterleaved; intros.
+
+    assert (ValidContinuous sys hst1 hst2) as Hvc.
+    { simpl in H0; rewrite concat_app in H0.
+      simpl in H0; rewrite app_nil_r in H0.
+      red; split; eauto.
+    }
+    specialize (Hwip _ _ Hvc); clear Hvc.
+    
+    generalize dependent st1.
+    generalize dependent st2.
+
+    (** 1 *)
+    (* generalize dependent hsts. *)
+    (* induction hsts; simpl; intros; *)
+    (*   [exists nil, nil; simpl in *; rewrite app_nil_r in *; repeat split; auto|]. *)
+    (* rewrite concat_app in H0; simpl in H0. *)
+    (* rewrite app_nil_r in H0. *)
+    
+    (** or 2 *)
+    (* generalize H2. *)
+
+    (* eapply list_ind_pick *)
+    (*   with (l:= hsts) (Q0:= fun _ => True) (Q1:= fun _ => False); eauto; simpl; intros. *)
+    
+    (* - exists nil, nil. *)
+    (*   simpl in *; rewrite app_nil_r in *. *)
+    (*   repeat split; auto. *)
+    (* - clear H2 hsts; rename l into hsts. *)
+    (*   exists hsts, nil. *)
+    (* - admit. *)
+    (* - clear; induction hsts; auto. *)
+
+  Admitted.
+
+End WellInterleavedLPush.
 

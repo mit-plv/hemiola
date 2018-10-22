@@ -27,7 +27,7 @@ Section TreeTopo.
 
 End TreeTopo.
 
-Section PartialBlocking.
+Section HalfLock.
   Variable (gtr: GTree).
 
   Fixpoint getDownRq (oidx: IdxT) (orq: ORq Msg) :=
@@ -49,7 +49,7 @@ Section PartialBlocking.
     end.
 
   (* TODO: need a more intuitive (easier) definition. *)
-  Definition PartialBlockingPrec (oidx: IdxT): OPrec :=
+  Definition HalfLockPrec (oidx: IdxT): OPrec :=
     fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
       match getDownRq oidx orq with
       | Some dri =>
@@ -65,132 +65,85 @@ Section PartialBlocking.
         end
       end.
 
-  Definition PartialBlockingRule (rule: Rule) :=
-    (rule_precond rule) ->oprec (PartialBlockingPrec (rule_oidx rule)).
+  Definition HalfLockRule (rule: Rule) :=
+    (rule_precond rule) ->oprec (HalfLockPrec (rule_oidx rule)).
 
-  Definition PartialBlockingSys (sys: System) :=
-    Forall PartialBlockingRule (sys_rules sys).
+  Definition HalfLockSys (sys: System) :=
+    Forall HalfLockRule (sys_rules sys).
 
-End PartialBlocking.
+End HalfLock.
 
-Section RqRs.
-  Variable (RqRsT: Type).
+(* Section RqRs. *)
+(*   Variable (RqRsT: Type). *)
 
-  Definition RqRsDec := Rule -> RqRsT.
-  Definition RqRsSemiDisj := RqRsT -> RqRsT -> Prop.
+(*   Definition RqRsDec := MLabel -> RqRsT. *)
+(*   Definition RqRsSemiDisj := RqRsT -> RqRsT -> Prop. *)
 
-  (* Definition RNonExecutable (rule1 rule2: Rule) := *)
-  (*   forall post porq ins1 nost norq outs ins2, *)
-  (*     rule_precond rule1 post porq ins1 -> *)
-  (*     rule_trs rule1 post porq ins1 = (nost, norq, outs) -> *)
-  (*     ~ rule_precond rule2 nost norq ins2. *)
+(*   Variables (rrdec: RqRsDec) (rrsd: RqRsSemiDisj). *)
 
-  (** TODO: need to check whether the disjointness between [ins1] and [ins2] 
-   * (or [outs1] and [outs2]) is required. *)
-  Definition RCommutable (rule1 rule2: Rule) :=
-    forall post1 porq1 ins1 nost1 norq1 outs1 ins2,
-      rule_precond rule1 post1 porq1 ins1 ->
-      rule_trs rule1 post1 porq1 ins1 = (nost1, norq1, outs1) ->
-      rule_precond rule2 nost1 norq1 ins2 ->
-      (* 1) Precondition of [rule2] holds if the one of [rule1] holds. *)
-      rule_precond rule2 post1 porq1 ins2 /\
-      forall nost2 norq2 outs2,
-        rule_trs rule2 post1 porq1 ins2 = (nost2, norq2, outs2) ->
-        (* 2) Precondition of [rule1] holds after a transition by [rule2]. *)
-        rule_precond rule1 nost2 norq2 ins1 /\
-        (* 3) Transitions by [rule1; rule2] and [rule2; rule1] are same. *)
-        fst (rule_trs rule2 nost1 norq1 ins2) =
-        fst (rule_trs rule1 nost2 norq2 ins1).
+(*   Definition RqRsSemiDisjHistories (hst1 hst2: MHistory) := *)
+(*     forall lbl1 lbl2, *)
+(*       In lbl1 hst1 -> In lbl2 hst2 -> *)
+(*       rrsd (rrdec lbl1) (rrdec lbl2). *)
 
-  Variables (rrdec: RqRsDec) (rrsd: RqRsSemiDisj).
+(*   Definition RqRsLPush (hst1 hst: MHistory) := *)
+(*     RqRsSemiDisjHistories hst1 hst. *)
 
-  Definition RqRsSemiDisjComm (sys: System) :=
-    forall rule1 rule2,
-      In rule1 (sys_rules sys) -> In rule2 (sys_rules sys) ->
-      rule_oidx rule1 = rule_oidx rule2 ->
-      rrsd (rrdec rule1) (rrdec rule2) ->
-      RCommutable rule1 rule2.
+(*   Definition RqRsRPush (hst2 hst: MHistory) := *)
+(*     RqRsSemiDisjHistories hst hst2. *)
 
-  Definition getRqRsLabel {MsgT} (lbl: RLabel MsgT): option (IdxT * RqRsT) :=
-    match lbl with
-    | RlblInt rule _ _ => Some (rule_oidx rule, rrdec rule)
-    | _ => None
-    end.
+(*   Definition RqRsContSemiDisj (sys: System) := *)
+(*     forall hst1 hst2, *)
+(*       ValidContinuous sys hst1 hst2 -> *)
+(*       RqRsSemiDisjHistories hst1 hst2. *)
+
+(*   Definition RqRsLRPushable (sys: System) := *)
+(*     forall st1, *)
+(*       Reachable (steps step_m) sys st1 -> *)
+(*       forall st2 hst1 hst2 hsts, *)
+(*         steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 -> *)
+(*         Continuous hst1 hst2 -> *)
+(*         Forall (STransactional msg_dec) hsts -> *)
+(*         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\ *)
+(*         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts). *)
+
+(*   Definition RqRsLOrR (sys: System) := *)
+(*     forall st1 st2 hst1 hst2 hsts, *)
+(*       steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 -> *)
+(*       Continuous hst1 hst2 -> *)
+(*       Forall (STransactional msg_dec) hsts -> *)
+(*       Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts. *)
   
-  Fixpoint getRqRsHistory (hst: MHistory): list (IdxT * RqRsT) :=
-    match hst with
-    | nil => nil
-    | lbl :: hst' => (getRqRsLabel lbl) ::> (getRqRsHistory hst')
-    end.
+(*   Definition RqRsSys (sys: System) := *)
+(*     RqRsContSemiDisj sys /\ *)
+(*     RqRsLRPushable sys /\ *)
+(*     RqRsLOrR sys. *)
 
-  Definition RqRsSemiDisjHistories (hst1 hst2: MHistory) :=
-    forall irr1 irr2,
-      In irr1 (getRqRsHistory hst1) ->
-      In irr2 (getRqRsHistory hst2) ->
-      fst irr1 = fst irr2 ->
-      rrsd (snd irr1) (snd irr2).
-
-  Definition RqRsLPush (hst1 hst: MHistory) :=
-    RqRsSemiDisjHistories hst1 hst.
-
-  Definition RqRsRPush (hst2 hst: MHistory) :=
-    RqRsSemiDisjHistories hst hst2.
-
-  Definition RqRsContSemiDisj (sys: System) :=
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      RqRsSemiDisjHistories hst1 hst2.
-
-  Definition RqRsLRPushable (sys: System) :=
-    forall st1 st2 hst1 hst2 hsts,
-      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
-      Continuous hst1 hst2 ->
-      Forall (STransactional msg_dec) hsts ->
-      LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\
-      LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts).
-
-  Definition RqRsLOrR (sys: System) :=
-    forall st1 st2 hst1 hst2 hsts,
-      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
-      Continuous hst1 hst2 ->
-      Forall (STransactional msg_dec) hsts ->
-      Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts.
-  
-  Definition RqRsSys (sys: System) :=
-    RqRsSemiDisjComm sys /\
-    RqRsContSemiDisj sys /\
-    RqRsLRPushable sys /\
-    RqRsLOrR sys.
-
-End RqRs.
+(* End RqRs. *)
 
 Section RqRsSerial.
   Variables (gtr: GTree)
-            (RqRsT: Type) (rrdec: RqRsDec RqRsT)
-            (rrsd: RqRsSemiDisj RqRsT)
+            (* (RqRsT: Type) *)
+            (* (rrdec: RqRsDec RqRsT) *)
+            (* (rrsd: RqRsSemiDisj RqRsT) *)
             (sys: System).
 
   Hypotheses (Htr: TreeTopoSys gtr sys)
-             (Hpb: PartialBlockingSys gtr sys)
-             (Hrr: RqRsSys rrdec rrsd sys).
+             (Hpb: HalfLockSys gtr sys).
+  (* (Hrr: RqRsSys rrdec rrsd sys). *)
 
-  Lemma rqrs_well_interleaved_push:
-    WellInterleavedPush sys.
+  Lemma rqrs_well_interleaved_left_push:
+    WellInterleavedLPush sys.
   Proof.
     red; intros.
-    exists (RqRsLPush rrdec rrsd hst1).
-    exists (RqRsRPush rrdec rrsd hst2).
-    pose proof H; destruct H0; clear H1.
-    split; [|split; [|split; [|split]]];
-      try (eapply Hrr; eauto; fail).
-  Qed.
+  Admitted.
 
-  Theorem immrqrs_pb_serializable:
+  Theorem treeTopo_halfLock_rqrs_serializable:
     SerializableSys sys.
   Proof.
     apply well_interleaved_serializable.
-    apply well_interleaved_push_ok.
-    apply rqrs_well_interleaved_push.
+    apply well_interleaved_left_push_ok.
+    apply rqrs_well_interleaved_left_push.
   Qed.
 
 End RqRsSerial.
