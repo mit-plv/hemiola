@@ -1,5 +1,5 @@
-Require Import Bool List String Peano_dec.
-Require Import Common FMap.
+Require Import Bool Vector List String Peano_dec.
+Require Import Common FMap IList.
 
 Set Implicit Arguments.
 
@@ -66,8 +66,26 @@ End Msg.
 Class HasInit (SysT StateT: Type) :=
   { initsOf: SysT -> StateT }.
 
-Definition OState := M.t Value.
-Definition OStates := M.t OState.
+Fixpoint ostateInds (sz: nat): Vector.t nat sz :=
+  match sz with
+  | O => Vector.nil _
+  | S n => Vector.cons _ n _ (ostateInds n)
+  end.
+
+Record OStateIfc :=
+  { ost_sz: nat;
+    ost_ty: nat -> Type
+  }.
+
+Definition OState (ifc: OStateIfc) :=
+  @ilist _ (ost_ty ifc) (ost_sz ifc) (ostateInds (ost_sz ifc)).
+
+Record OStateR :=
+  { ost_ifc: OStateIfc;
+    ost_st: OState ost_ifc
+  }.
+
+Definition OStates := M.t OStateR.
 
 (* A request holder [ORq] holds all requests that 
  * an object is handling now.
@@ -110,11 +128,13 @@ Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1) :=
                     rqh_fwds := rqh_fwds ri |}) orq.
 
 Section Rule.
+  Variables (ifc: OStateIfc).
 
   Definition OPrec :=
-    OState -> ORq Msg -> list (Id Msg) -> Prop.
+    OState ifc -> ORq Msg -> list (Id Msg) -> Prop.
   Definition OTrs :=
-    OState -> ORq Msg -> list (Id Msg) -> (OState * ORq Msg * list (Id Msg)).
+    OState ifc -> ORq Msg -> list (Id Msg) ->
+    (OState ifc * ORq Msg * list (Id Msg)).
 
   Definition OPrecAnd (p1 p2: OPrec): OPrec :=
     fun ost orq ins => p1 ost orq ins /\ p2 ost orq ins.
@@ -123,7 +143,7 @@ Section Rule.
     forall ost orq ins, p1 ost orq ins -> p2 ost orq ins.
 
   Record Rule :=
-    { rule_oidx: IdxT;
+    { rule_idx: IdxT;
       rule_msg_ids: list IdxT;
       rule_minds: list IdxT;
       rule_precond: OPrec;
@@ -138,74 +158,27 @@ Notation "'⊤oprec'" := (fun _ _ _ => True).
 Notation "'⊥oprec'" := (fun _ _ _ => False).
 Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
 
-Section System.
+Record Object :=
+  { obj_idx: IdxT;
+    obj_ifc: OStateIfc;
+    obj_rules: list (Rule obj_ifc);
+    obj_rules_valid: NoDup (map (@rule_idx _) obj_rules)
+  }.
 
-  Class IsSystem (SysT: Type) :=
-    { oindsOf: SysT -> list IdxT;
-      mindsOf: SysT -> list IdxT;
-      merqsOf: SysT -> list IdxT;
-      merssOf: SysT -> list IdxT;
-      msg_inds_valid:
-        forall sys,
-          NoDup (mindsOf sys ++ merqsOf sys ++ merssOf sys)
-    }.
+Record System :=
+  { sys_objs: list Object;
+    sys_oinds_valid: NoDup (map obj_idx sys_objs);
+    sys_minds: list IdxT;
+    sys_merqs: list IdxT;
+    sys_merss: list IdxT;
+    sys_msg_inds_valid: NoDup (sys_minds ++ sys_merqs ++ sys_merss);
+    sys_oss_inits: OStates;
+    sys_orqs_inits: ORqs Msg
+  }.
 
-  Global Instance IsSystem_ORqs_HasInit
-         {SysT MsgT} `{IsSystem SysT} : HasInit SysT (ORqs MsgT) :=
-    {| initsOf := fun sys => M.replicate (oindsOf sys) (@nil _) |}.
+Global Instance System_OStates_HasInit : HasInit System OStates :=
+  {| initsOf := sys_oss_inits |}.
 
-  Context {SysT MsgT} `{IsSystem SysT} `{HasMsg MsgT}.
-
-  Record System :=
-    { sys_oinds: list IdxT;
-      sys_minds: list IdxT;
-      sys_merqs: list IdxT;
-      sys_merss: list IdxT;
-      sys_msg_inds_valid: NoDup (sys_minds ++ sys_merqs ++ sys_merss);
-      sys_inits: OStates;
-      sys_rules: list Rule
-    }.
-
-  Global Instance System_IsSystem : IsSystem System :=
-    {| oindsOf := sys_oinds;
-       mindsOf := sys_minds;
-       merqsOf := sys_merqs;
-       merssOf := sys_merss;
-       msg_inds_valid := sys_msg_inds_valid
-    |}.
-
-  Global Instance System_OStates_HasInit : HasInit System OStates :=
-    {| initsOf := sys_inits |}.
-
-End System.
-
-Ltac evalOIndsOf sys :=
-  let indices := eval cbn in (sys_oinds sys) in exact indices.
-
-Ltac evalMIndsOf sys :=
-  let indices := eval cbn in (sys_minds sys) in exact indices.
-
-Section RuleAdder.
-  Context {SysT: Type}
-          `{IsSystem SysT} `{HasInit SysT OStates}.
-
-  Definition buildRawSys (osys: SysT): System :=
-    {| sys_oinds := oindsOf osys;
-       sys_minds := mindsOf osys;
-       sys_merqs := merqsOf osys;
-       sys_merss := merssOf osys;
-       sys_msg_inds_valid := msg_inds_valid osys;
-       sys_inits := initsOf osys;
-       sys_rules := nil |}.
-
-  Definition addRules (rules: list Rule) (sys: System) :=
-    {| sys_oinds := sys_oinds sys;
-       sys_minds := sys_minds sys;
-       sys_merqs := sys_merqs sys;
-       sys_merss := sys_merss sys;
-       sys_msg_inds_valid := sys_msg_inds_valid sys;
-       sys_inits := sys_inits sys;
-       sys_rules := sys_rules sys ++ rules |}.
-
-End RuleAdder.
+Global Instance System_ORqs_Msg_HasInit : HasInit System (ORqs Msg) :=
+  {| initsOf := sys_orqs_inits |}.
 

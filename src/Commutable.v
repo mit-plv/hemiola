@@ -4,17 +4,17 @@ Require Import Topology Serial SerialFacts Reduction.
 
 Set Implicit Arguments.
 
-Definition ruleOfL {MsgT} (lbl: RLabel MsgT): option Rule :=
-  match lbl with
-  | RlblInt rule _ _ => Some rule
-  | _ => None
-  end.
+(* Definition ruleOfL {MsgT} (lbl: RLabel MsgT): option Rule := *)
+(*   match lbl with *)
+(*   | RlblInt rule _ _ => Some rule *)
+(*   | _ => None *)
+(*   end. *)
 
-Fixpoint rulesOfH (hst: MHistory) :=
-  match hst with
-  | nil => nil
-  | lbl :: hst' => (ruleOfL lbl) ::> (rulesOfH hst')
-  end.
+(* Fixpoint rulesOfH (hst: MHistory) := *)
+(*   match hst with *)
+(*   | nil => nil *)
+(*   | lbl :: hst' => (ruleOfL lbl) ::> (rulesOfH hst') *)
+(*   end. *)
 
 (* Definition insOfL {MsgT} (lbl: RLabel MsgT): list (Id MsgT) := *)
 (*   match lbl with *)
@@ -44,7 +44,7 @@ Fixpoint rulesOfH (hst: MHistory) :=
 
 (** TODO: need to check whether the disjointness between [ins1] and [ins2] 
  * (or [outs1] and [outs2]) is required. *)
-Definition NonConflictingR (rule1 rule2: Rule) :=
+Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
   forall post1 porq1 ins1 nost1 norq1 outs1 ins2,
     rule_precond rule1 post1 porq1 ins1 ->
     rule_trs rule1 post1 porq1 ins1 = (nost1, norq1, outs1) ->
@@ -59,11 +59,13 @@ Definition NonConflictingR (rule1 rule2: Rule) :=
       fst (rule_trs rule2 nost1 norq1 ins2) =
       fst (rule_trs rule1 nost2 norq2 ins1).
 
-Definition NonConflictingH (hst1 hst2: MHistory) :=
-  forall rule1 rule2,
-    In rule1 (rulesOfH hst1) ->
-    In rule2 (rulesOfH hst2) ->
-    rule_oidx rule1 = rule_oidx rule2 ->
+Definition NonConflictingH (sys: System) (hst1 hst2: MHistory) :=
+  forall obj rule1 rule2 ins1 outs1 ins2 outs2,
+    In obj (sys_objs sys) ->
+    In rule1 (obj_rules obj) ->
+    In rule2 (obj_rules obj) ->
+    In (RlblInt (obj_idx obj) (rule_idx rule1) ins1 outs1) hst1 ->
+    In (RlblInt (obj_idx obj) (rule_idx rule2) ins2 outs2) hst2 ->
     NonConflictingR rule1 rule2.
 
 Definition DiscontinuousI (hst1 hst2: MHistory) :=
@@ -94,7 +96,7 @@ Definition trsTypeOf (hst: MHistory) :=
     | RlblEmpty _ => TSlt
     | RlblIns _ => TIns
     | RlblOuts _ => TOuts
-    | RlblInt _ _ _ => TInt
+    | RlblInt _ _ _ _ => TInt
     end
   end.
 
@@ -113,28 +115,12 @@ Definition Discontinuous (sys: System) (hst1 hst2: MHistory) :=
   DiscontinuousO hst1 hst2 /\
   DiscontinuousA sys hst1 hst2.
 
-Lemma nonconflicting_discontinuous_commutable_atomic_sub:
-  forall sys rule1 ins1 outs1 inits2 ins2 hst2 outs2 eouts2,
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    (forall rule2,
-        In rule2 (rulesOfH hst2) ->
-        rule_oidx rule1 = rule_oidx rule2 ->
-        NonConflictingR rule1 rule2) ->
-    DisjList (idsOf ins1) (idsOf ins2) ->
-    DisjList ins1 eouts2 ->
-    DisjList (idsOf outs1) (idsOf outs2) ->
-    Reducible sys (hst2 ++ [RlblInt rule1 ins1 outs1])
-              (RlblInt rule1 ins1 outs1 :: hst2).
-Proof.
-  induction 1; simpl; intros.
-Admitted.
-
 Lemma nonconflicting_discontinuous_commutable_atomic:
   forall sys inits1 ins1 hst1 outs1 eouts1
          inits2 ins2 hst2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    NonConflictingH hst1 hst2 ->
+    NonConflictingH sys hst1 hst2 ->
     DisjList (idsOf ins1) (idsOf ins2) ->
     DisjList inits1 eouts2 ->
     DisjList (idsOf outs1) (idsOf outs2) ->
@@ -146,7 +132,7 @@ Theorem nonconflicting_discontinuous_commutable:
   forall sys hst1 hst2,
     STransactional msg_dec hst1 ->
     STransactional msg_dec hst2 ->
-    NonConflictingH hst1 hst2 ->
+    NonConflictingH sys hst1 hst2 ->
     Discontinuous sys hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.

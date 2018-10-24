@@ -21,17 +21,17 @@ Section Sequential.
     list (Id MsgT) (* eventual outputs *) ->
     Prop :=
   | AtomicStart:
-      forall rule ins outs,
-        Atomic ins ins (RlblInt rule ins outs :: nil) outs outs
+      forall oidx ridx ins outs,
+        Atomic ins ins (RlblInt oidx ridx ins outs :: nil) outs outs
   | AtomicCont:
-      forall inits ins hst outs eouts rule rins routs nins nouts neouts,
+      forall inits ins hst outs eouts oidx ridx rins routs nins nouts neouts,
         Atomic inits ins hst outs eouts ->
         rins <> nil ->
         SubList rins eouts ->
         nins = ins ++ rins ->
         nouts = outs ++ routs ->
         neouts = removeL (id_dec msgT_dec) eouts rins ++ routs ->
-        Atomic inits nins (RlblInt rule rins routs :: hst) nouts neouts.
+        Atomic inits nins (RlblInt oidx ridx rins routs :: hst) nouts neouts.
 
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from
    * a single external request.
@@ -39,7 +39,7 @@ Section Sequential.
   Inductive ExtAtomic: Id MsgT -> History MsgT -> Prop :=
   | ExtAtomicIntro:
       forall rq ins hst outs eouts,
-        In (idOf rq) (merqsOf sys) ->
+        In (idOf rq) (sys_merqs sys) ->
         Atomic [rq] ins hst outs eouts ->
         ExtAtomic rq hst.
 
@@ -98,7 +98,7 @@ End Semi.
 
 Definition trsSteps {StateT MsgT} `{HasMsg MsgT}
            (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
-           (step: Step System StateT (RLabel MsgT))
+           (step: Step StateT (RLabel MsgT))
            (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
   steps step sys st1 hst st2 /\
   Transactional sys msgT_dec hst.
@@ -108,7 +108,7 @@ Definition trsStepsT := trsSteps tmsg_dec step_t.
 
 Definition seqSteps {StateT MsgT} `{HasMsg MsgT}
            (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
-           (step: Step System StateT (RLabel MsgT))
+           (step: Step StateT (RLabel MsgT))
            (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
   steps step sys st1 hst st2 /\
   exists trss, Sequential sys msgT_dec hst trss.
@@ -118,7 +118,7 @@ Definition seqStepsT := seqSteps tmsg_dec step_t.
 
 Definition BEquivalent (sys: System)
            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
-  behaviorOf sys ll1 = behaviorOf sys ll2.
+  behaviorOf ll1 = behaviorOf ll2.
 
 Definition Serializable (sys: System) (ll: MHistory) :=
   exists sll sst,

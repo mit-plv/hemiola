@@ -22,9 +22,13 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
              bst_msgs := deqMsgs (idsOf eouts) msgs
           |} ->
     step_m sys pst (RlblOuts eouts) nst
-| SmInt: forall pst nst oss orqs msgs oidx os porq pos norq ins rule iouts,
-    oidx = rule_oidx rule ->
-    In oidx (oindsOf sys) ->
+| SmInt: forall oidx obj rule
+                pst nst oss orqs msgs os porq pos norq ins iouts
+                (Hifc: ost_ifc os = obj_ifc obj),
+    In obj (sys_objs sys) ->
+    In rule (obj_rules obj) ->
+    oidx = obj_idx obj ->
+    
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
 
@@ -33,18 +37,18 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
     idsOf ins = rule_minds rule ->
     map msg_id (valsOf ins) = rule_msg_ids rule ->
 
-    In rule (sys_rules sys) ->
-    rule_precond rule os porq ins ->
-    rule_trs rule os porq ins = (pos, norq, iouts) ->
+    rule_precond rule (match Hifc with eq_refl => ost_st os end) porq ins ->
+    rule_trs rule (match Hifc with eq_refl => ost_st os end) porq ins =
+    (pos, norq, iouts) ->
     ValidMsgsOut sys iouts ->
 
     DisjList (idsOf ins) (idsOf iouts) ->
 
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-    nst = {| bst_oss := oss +[ oidx <- pos ];
+    nst = {| bst_oss := oss +[ oidx <- {| ost_st := pos |} ];
              bst_orqs := orqs +[ oidx <- norq ];
              bst_msgs := enqMsgs iouts (deqMsgs (idsOf ins) msgs)
           |} ->
 
-    step_m sys pst (RlblInt rule ins iouts) nst.
+    step_m sys pst (RlblInt oidx (rule_idx rule) ins iouts) nst.
 

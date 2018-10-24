@@ -5,16 +5,16 @@ Require Export MessagePool.
 
 Set Implicit Arguments.
 
-Definition extRqsOf {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
-           (sys: SysT) (mp: MessagePool MsgT) :=
-  qsOf (merqsOf sys) mp.
+Definition extRqsOf {MsgT} `{HasMsg MsgT}
+           (sys: System) (mp: MessagePool MsgT) :=
+  qsOf (sys_merqs sys) mp.
 
-Definition extRssOf {MsgT SysT} `{HasMsg MsgT} `{IsSystem SysT}
-           (sys: SysT) (mp: MessagePool MsgT) :=
-  qsOf (merssOf sys) mp.
+Definition extRssOf {MsgT} `{HasMsg MsgT}
+           (sys: System) (mp: MessagePool MsgT) :=
+  qsOf (sys_merss sys) mp.
 
 Section Validness.
-  Context {MsgT SysT: Type} `{IsSystem SysT}.
+  Context {MsgT: Type}.
 
   (* A set of messages are "well-distributed" iff the sources of
    * all messages are different from each others.
@@ -26,8 +26,8 @@ Section Validness.
    * 1) each source is internal and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsIn (sys: SysT) (msgs: list (Id MsgT)) :=
-    SubList (idsOf msgs) (mindsOf sys) /\
+  Definition ValidMsgsIn (sys: System) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (sys_minds sys) /\
     WellDistrMsgs msgs.
 
   (* A set of messages are "valid outputs" iff
@@ -35,24 +35,24 @@ Section Validness.
    *    an external-response queue.
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsOut (sys: SysT) (msgs: list (Id MsgT)) :=
-    SubList (idsOf msgs) (mindsOf sys ++ merssOf sys) /\
+  Definition ValidMsgsOut (sys: System) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (sys_minds sys ++ sys_merss sys) /\
     WellDistrMsgs msgs.
 
   (* A set of messages are "valid external inputs" iff
    * 1) each message uses an external request queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtIn (sys: SysT) (msgs: list (Id MsgT)) :=
-    SubList (idsOf msgs) (merqsOf sys) /\
+  Definition ValidMsgsExtIn (sys: System) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (sys_merqs sys) /\
     WellDistrMsgs msgs.
 
   (* A set of messages are "valid external outputs" iff
    * 1) each message uses an external response queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtOut (sys: SysT) (msgs: list (Id MsgT)) :=
-    SubList (idsOf msgs) (merssOf sys) /\
+  Definition ValidMsgsExtOut (sys: System) (msgs: list (Id MsgT)) :=
+    SubList (idsOf msgs) (sys_merss sys) /\
     WellDistrMsgs msgs.
 
 End Validness.
@@ -70,16 +70,16 @@ End HasLabel.
 
 Section Transition.
 
-  Definition Step SysT StateT LabelT :=
-    SysT -> StateT -> LabelT -> StateT -> Prop.
+  Definition Step StateT LabelT :=
+    System -> StateT -> LabelT -> StateT -> Prop.
 
-  Definition Steps SysT StateT LabelT :=
-    SysT -> StateT -> list LabelT -> StateT -> Prop.
+  Definition Steps StateT LabelT :=
+    System -> StateT -> list LabelT -> StateT -> Prop.
 
   (* NOTE: the head is the youngest *)
-  Inductive steps {SysT StateT LabelT}
-            (step: Step SysT StateT LabelT)
-            (sys: SysT) : StateT -> list LabelT -> StateT -> Prop :=
+  Inductive steps {StateT LabelT}
+            (step: Step StateT LabelT)
+            (sys: System) : StateT -> list LabelT -> StateT -> Prop :=
   | StepsNil: forall st, steps step sys st nil st
   | StepsCons:
       forall st1 ll st2,
@@ -88,41 +88,40 @@ Section Transition.
           step sys st2 lbl st3 ->
           steps step sys st1 (lbl :: ll) st3.
 
-  Definition psteps {SysT StateT LabelT}
-             (step: Step SysT StateT LabelT)
+  Definition psteps {StateT LabelT}
+             (step: Step StateT LabelT)
              (P: StateT -> list LabelT -> StateT -> Prop)
-             (sys: SysT) (st1: StateT) (ll: list LabelT) (st2: StateT) :=
+             (sys: System) (st1: StateT) (ll: list LabelT) (st2: StateT) :=
     steps step sys st1 ll st2 /\
     P st1 ll st2.
 
   Definition Trace := list Label.
 
-  Definition Reachable {SysT StateT LabelT}
-             `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
-             (ss: Steps SysT StateT LabelT) (sys: SysT) (st: StateT): Prop :=
+  Definition Reachable {StateT LabelT}
+             `{HasInit System StateT} `{HasLabel LabelT}
+             (ss: Steps StateT LabelT) (sys: System) (st: StateT): Prop :=
     exists ll, ss sys (initsOf sys) ll st.
   
-  Fixpoint behaviorOf {SysT} `{IsSystem SysT} (sys: SysT)
-           {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
+  Fixpoint behaviorOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
     match ll with
     | nil => nil
-    | l :: ll' => (getLabel l) ::> (behaviorOf sys ll')
+    | l :: ll' => (getLabel l) ::> (behaviorOf ll')
     end.
 
-  Inductive Behavior {SysT StateT LabelT}
-            `{IsSystem SysT} `{HasInit SysT StateT} `{HasLabel LabelT}
-            (ss: Steps SysT StateT LabelT) : SysT -> Trace -> Prop :=
+  Inductive Behavior {StateT LabelT}
+            `{HasInit System StateT} `{HasLabel LabelT}
+            (ss: Steps StateT LabelT) : System -> Trace -> Prop :=
   | Behv: forall sys ll st,
       ss sys (initsOf sys) ll st ->
       forall tr,
-        tr = behaviorOf sys ll ->
+        tr = behaviorOf ll ->
         Behavior ss sys tr.
 
-  Definition Refines {SysI SysS StateI LabelI StateS LabelS}
-             `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
-             `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}
-             (ssI: Steps SysI StateI LabelI) (ssS: Steps SysS StateS LabelS)
-             (impl: SysI) (spec: SysS) :=
+  Definition Refines {StateI LabelI StateS LabelS}
+             `{HasInit System StateI} `{HasLabel LabelI}
+             `{HasInit System StateS} `{HasLabel LabelS}
+             (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS)
+             (impl spec: System) :=
     forall ll, Behavior ssI impl ll ->
                Behavior ssS spec ll.
 
@@ -142,15 +141,14 @@ Section BState.
       bst_msgs: MessagePool MsgT
     }.
 
-  Context {SysT: Type} `{IsSystem SysT} `{HasInit SysT OStates}
-          {MsgT: Type}.
+  Context {MsgT: Type} `{HasInit System (ORqs MsgT)}.
 
-  Definition getBStateInit (sys: SysT): BState MsgT :=
+  Definition getBStateInit (sys: System): BState MsgT :=
     {| bst_oss := initsOf sys;
        bst_orqs := initsOf sys;
        bst_msgs := emptyMP _ |}.
 
-  Global Instance BState_HasInit: HasInit SysT (BState MsgT) :=
+  Global Instance BState_HasInit: HasInit System (BState MsgT) :=
     {| initsOf := getBStateInit |}.
 
 End BState.
@@ -167,14 +165,14 @@ Section RLabel.
   Inductive RLabel :=
   | RlblEmpty
   | RlblIns (mins: list (Id MsgT)): RLabel
-  | RlblInt (hdl: Rule) (mins: list (Id MsgT)) (mouts: list (Id MsgT)): RLabel
+  | RlblInt (oidx ridx: IdxT) (mins: list (Id MsgT)) (mouts: list (Id MsgT)): RLabel
   | RlblOuts (mouts: list (Id MsgT)): RLabel.
   
   Definition rToLabel (l: RLabel): option Label :=
     match l with
     | RlblEmpty => None
     | RlblIns mins => Some (LblIns (imap getMsg mins))
-    | RlblInt _ _ _ => None
+    | RlblInt _ _ _ _ => None
     | RlblOuts mouts => Some (LblOuts (imap getMsg mouts))
     end.
 
@@ -190,7 +188,7 @@ Definition MHistory := History Msg.
 
 Definition InternalLbl (lbl: MLabel) :=
   match lbl with
-  | RlblInt _ _ _ => True
+  | RlblInt _ _ _ _ => True
   | _ => False
   end.
 
@@ -202,12 +200,13 @@ Definition WfLbl (sys: System) (lbl: MLabel) :=
   | RlblEmpty _ => True
   | RlblIns eins => eins <> nil /\ ValidMsgsExtIn sys eins
   | RlblOuts eouts => eouts <> nil /\ ValidMsgsExtOut sys eouts
-  | RlblInt rule ins outs =>
-    In (rule_oidx rule) (sys_oinds sys) /\
+  | RlblInt oidx ridx ins outs =>
+    exists obj rule,
+    In obj (sys_objs sys) /\ obj_idx obj = oidx /\
+    In rule (obj_rules obj) /\ rule_idx rule = ridx /\
     ValidMsgsIn sys ins /\
     idsOf ins = rule_minds rule /\
     map msg_id (valsOf ins) = rule_msg_ids rule /\
-    In rule (sys_rules sys) /\
     ValidMsgsOut sys outs /\
     DisjList (idsOf ins) (idsOf outs)
   end.
@@ -284,16 +283,16 @@ Section TState.
       tst_tid: TrsId
     }.
 
-  Context {SysT: Type} `{IsSystem SysT} `{HasInit SysT OStates}.
+  Context `{HasInit System (ORqs TMsg)}.
 
-  Definition getTStateInit (sys: SysT): TState :=
+  Definition getTStateInit (sys: System): TState :=
     {| tst_oss := initsOf sys;
        tst_orqs := initsOf sys;
        tst_msgs := emptyMP _;
        tst_trss := emptyMP _;
        tst_tid := trsIdInit |}.
 
-  Global Instance TState_HasInit: HasInit SysT TState :=
+  Global Instance TState_HasInit: HasInit System TState :=
     {| initsOf := getTStateInit |}.
 
 End TState.

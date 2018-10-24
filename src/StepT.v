@@ -56,10 +56,14 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
           |} ->
     step_t sys pst (RlblOuts eouts) nst
 
-| StInt: forall ts pst nst nts (Hts: nts > ts) tinfo
-                oss orqs msgs trss oidx os porq pos norq ins rule outs,
-    oidx = rule_oidx rule ->
-    In oidx (oindsOf sys) ->
+| StInt: forall oidx obj rule
+                ts pst nst nts (Hts: nts > ts) tinfo
+                oss orqs msgs trss os porq pos norq ins outs
+                (Hifc: ost_ifc os = obj_ifc obj),
+    In obj (sys_objs sys) ->
+    In rule (obj_rules obj) ->
+    oidx = obj_idx obj ->
+
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
     
@@ -68,9 +72,10 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     idsOf ins = rule_minds rule ->
     map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) = rule_msg_ids rule ->
     
-    In rule (sys_rules sys) ->
-    rule_precond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
-    rule_trs rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)
+    rule_precond rule (match Hifc with eq_refl => ost_st os end)
+                 (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
+    rule_trs rule (match Hifc with eq_refl => ost_st os end)
+             (orqMap tmsg_msg porq) (imap tmsg_msg ins)
     = (pos, orqMap tmsg_msg norq, outs) ->
     ValidMsgsOut sys outs ->
 
@@ -84,12 +89,12 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 
     pst = {| tst_oss := oss; tst_orqs := orqs;
              tst_msgs := msgs; tst_trss := trss; tst_tid := ts |} ->
-    nst = {| tst_oss := oss +[ oidx <- pos ];
+    nst = {| tst_oss := oss +[ oidx <- {| ost_st := pos |} ];
              tst_orqs := orqs +[ oidx <- norq ];
              tst_msgs := enqMsgs (imap (toTMsg tinfo) outs)
                                  (deqMsgs (idsOf ins) msgs);
              tst_trss :=
-               if isExternalResp (merssOf sys) outs
+               if isExternalResp (sys_merss sys) outs
                then enqMsgs (imap (toTMsg tinfo) outs)
                             (deqMsgs (idsOf (tinfo_rqin tinfo)) msgs)
                else msgs;
@@ -99,7 +104,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
                         end
           |} ->
 
-    step_t sys pst (RlblInt rule ins (imap (toTMsg tinfo) outs)) nst.
+    step_t sys pst (RlblInt oidx (rule_idx rule) ins (imap (toTMsg tinfo) outs)) nst.
 
 Definition TORqsRel (torqs: ORqs TMsg) (orqs: ORqs Msg) :=
   forall oidx,
@@ -123,7 +128,7 @@ Definition tToMLabel (tlbl: TLabel) :=
   | RlblEmpty _ => RlblEmpty _
   | RlblIns eins => RlblIns (imap tmsg_msg eins)
   | RlblOuts eouts => RlblOuts (imap tmsg_msg eouts)
-  | RlblInt orule mins mouts =>
-    RlblInt orule (imap tmsg_msg mins) (imap tmsg_msg mouts)
+  | RlblInt oidx ridx mins mouts =>
+    RlblInt oidx ridx (imap tmsg_msg mins) (imap tmsg_msg mouts)
   end.
 

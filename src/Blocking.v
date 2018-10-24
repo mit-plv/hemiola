@@ -38,29 +38,3 @@ Definition Blocked (msgs: MessagePool TMsg) :=
 Definition BlockedInv (tst: TState) :=
   Blocked (tst_msgs tst).
 
-Lemma BlockedInv_MsgsInv:
-  MsgsInv BlockedInv.
-Proof.
-  split.
-  - hnf; intros.
-    hnf; hnf in H; intros.
-    cbn in *.
-    apply InMP_enqMsgs_or in H0; destruct H0.
-    + exfalso; clear -H0 H2.
-      induction eins; simpl; auto.
-      inv H0; auto.
-      inv H; discriminate.
-    + apply InMP_enqMsgs_or in H1; destruct H1.
-      * exfalso; clear -H1 H3.
-        induction eins; simpl; auto.
-        inv H1; auto.
-        inv H; discriminate.
-      * eauto.
-  - hnf; intros.
-    hnf; hnf in H; intros.
-    cbn in *.
-    apply InMP_deqMsgs in H0.
-    apply InMP_deqMsgs in H1.
-    eauto.
-Qed.
-

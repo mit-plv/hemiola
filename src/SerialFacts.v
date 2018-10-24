@@ -36,7 +36,7 @@ Section MsgParam.
     | nil => nil
     | lbl :: hst' =>
       match lbl with
-      | RlblInt _ ins _ => insOfA hst' ++ ins
+      | RlblInt _ _ ins _ => insOfA hst' ++ ins
       | _ => nil
       end
     end.
@@ -46,7 +46,7 @@ Section MsgParam.
     | nil => nil
     | lbl :: hst' =>
       match lbl with
-      | RlblInt _ _ outs => outsOfA hst' ++ outs
+      | RlblInt _ _ _ outs => outsOfA hst' ++ outs
       | _ => nil
       end
     end.
@@ -76,9 +76,9 @@ Section MsgParam.
         outs1 = outs2 /\ eouts1 = eouts2.
   Proof.
     induction 1; simpl; intros; subst.
-    - inv H; [auto|inv H4].
+    - inv H; [auto|inv H5].
     - inv H5; [inv H|].
-      specialize (IHAtomic _ _ _ _ H7).
+      specialize (IHAtomic _ _ _ _ H8).
       dest; subst; auto.
   Qed.
 
@@ -94,7 +94,7 @@ Section MsgParam.
     - inv H; inv H3; inv H5; simpl; split.
       + apply enqMsgs_deqMsgs_comm; auto.
       + apply ValidDeqs_enqMsgs.
-        destruct H8.
+        destruct H10.
         apply FirstMPI_Forall_NoDup_ValidDeqs; auto.
         
     - inv H5.
@@ -110,9 +110,9 @@ Section MsgParam.
         * apply ValidDeqs_enqMsgs; auto.
         * rewrite <-enqMsgs_deqMsgs_ValidDeqs_comm
             with (minds:= idsOf ins) (nmsgs:= routs) by assumption.
-          destruct H14.
-          apply FirstMPI_Forall_NoDup_ValidDeqs in H13; [|assumption].
+          destruct H16.
           apply ValidDeqs_enqMsgs; auto.
+          apply FirstMPI_Forall_NoDup_ValidDeqs; auto.
   Qed.
 
   Corollary atomic_messages_spec:
@@ -126,17 +126,16 @@ Section MsgParam.
   Qed.
   
   Lemma atomic_behavior_nil:
-    forall {SysT} `{IsSystem SysT} (sys: SysT)
-           `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,
+    forall `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,
       Atomic msgT_dec inits ins hst outs eouts ->
-      behaviorOf sys hst = nil.
+      behaviorOf hst = nil.
   Proof.
     induction 1; simpl; intros; auto.
   Qed.
 
   Lemma atomic_singleton:
-    forall rule ins outs,
-      Atomic msgT_dec ins ins [RlblInt rule ins outs] outs outs.
+    forall oidx ridx ins outs,
+      Atomic msgT_dec ins ins [RlblInt oidx ridx ins outs] outs outs.
   Proof.
     intros; constructor.
   Qed.
@@ -145,7 +144,7 @@ Section MsgParam.
     forall impl1 (rq: Id MsgT) hst,
       ExtAtomic impl1 msgT_dec rq hst ->
       forall impl2,
-        merqsOf impl1 = merqsOf impl2 ->
+        sys_merqs impl1 = sys_merqs impl2 ->
         ExtAtomic impl2 msgT_dec rq hst.
   Proof.
     intros.
@@ -283,7 +282,7 @@ Proof.
     + rewrite removeL_app_2; reflexivity.
   - inv H5.
     specialize (IHAtomic _ _ _ H6).
-    assert (NoDup rins) by (inv H8; destruct H12; apply idsOf_NoDup; auto).
+    assert (NoDup rins) by (inv H8; destruct H14; apply idsOf_NoDup; auto).
     dest; subst; split.
     + intros.
       do 2 rewrite removeL_app_1.
@@ -449,43 +448,5 @@ Proof.
       * econstructor; eauto.
     + eexists; eapply sequential_msg_ins; eauto.
   - hnf; cbn; rewrite H2; reflexivity.
-Qed.
-
-Lemma serializable_steps_no_rules:
-  forall sys,
-    sys_rules sys = nil ->
-    forall st1,
-      st1 = initsOf sys ->
-      forall ll st2,
-        steps step_m sys st1 ll st2 ->
-        Serializable sys ll.
-Proof.
-  induction 3; simpl; intros.
-  - apply serializable_nil.
-  - specialize (IHsteps H0); subst.
-    inv H2.
-    + apply serializable_silent; auto.
-    + apply serializable_msg_ins; auto.
-    + exfalso.
-      eapply behavior_no_rules_NoExtOuts in H1; eauto.
-      red in H1; simpl in H1.
-      destruct eouts as [|eout eouts]; auto.
-      inv H3.
-      destruct H4.
-      simpl in H2; apply SubList_cons_inv in H2; dest.
-      apply FirstMP_InMP in H6.
-      eapply ForallMP_InMP in H1; eauto.
-    + exfalso.
-      rewrite H in H10.
-      elim H10.
-Qed.
-                           
-Lemma serializable_no_rules:
-  forall sys,
-    sys_rules sys = nil ->
-    SerializableSys sys.
-Proof.
-  intros; hnf; intros.
-  eapply serializable_steps_no_rules; eauto.
 Qed.
 

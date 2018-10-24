@@ -79,14 +79,14 @@ Section Topological.
       exists ito,
       Forall (fun im =>
                 In (Build_edge None (idOf im) (Some ito)) (dg_es dg)) eins
-    | RlblInt rule ins outs =>
+    | RlblInt oidx ridx ins outs =>
       Forall (fun im =>
                 exists ifrom,
-                  In (Build_edge ifrom (idOf im) (Some (rule_oidx rule)))
+                  In (Build_edge ifrom (idOf im) (Some oidx))
                      (dg_es dg)) ins /\
       Forall (fun im =>
                 exists ito,
-                  In (Build_edge (Some (rule_oidx rule)) (idOf im) ito)
+                  In (Build_edge (Some oidx) (idOf im) ito)
                      (dg_es dg)) outs
     | RlblOuts eouts =>
       exists ifrom,
@@ -109,7 +109,7 @@ Definition getInitEdges {MsgT} (hst: History MsgT): edges :=
   (hd_error (rev hst)) >>=[nil]
   (fun lbl =>
      match lbl with
-     | RlblInt rule ins outs => getInEdges ins (rule_oidx rule)
+     | RlblInt oidx ridx ins outs => getInEdges ins oidx
      | _ => nil
      end).
 

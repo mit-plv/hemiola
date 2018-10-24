@@ -12,18 +12,21 @@ Section TreeTopo.
   Variable (gtr: GTree).
   Local Notation topo := (topoOfT gtr).
 
-  Definition TreeTopoRule (rule: Rule) :=
+  Definition TreeTopoRule (oidx: IdxT) {ifc} (rule: Rule ifc) :=
     forall post porq ins nost norq outs,
       rule_trs rule post porq ins = (nost, norq, outs) ->
       (forall min,
           In min ins ->
-          exists mfrom, In (createEdge mfrom (idOf min) (rule_oidx rule)) (dg_es topo)) /\
+          exists mfrom, In (createEdge mfrom (idOf min) oidx) (dg_es topo)) /\
       (forall mout,
           In mout outs ->
-          exists mto, In (createEdge (rule_oidx rule) (idOf mout) mto) (dg_es topo)).
+          exists mto, In (createEdge oidx (idOf mout) mto) (dg_es topo)).
 
+  Definition TreeTopoObj (obj: Object) :=
+    Forall (TreeTopoRule (obj_idx obj)) (obj_rules obj).
+    
   Definition TreeTopoSys (sys: System) :=
-    Forall TreeTopoRule (sys_rules sys).
+    Forall TreeTopoObj (sys_objs sys).
 
 End TreeTopo.
 
@@ -49,8 +52,8 @@ Section HalfLock.
     end.
 
   (* TODO: need a more intuitive (easier) definition. *)
-  Definition HalfLockPrec (oidx: IdxT): OPrec :=
-    fun (ost: OState) (orq: ORq Msg) (ins: list (Id Msg)) =>
+  Definition HalfLockPrec (oidx: IdxT) {ifc}: OPrec ifc :=
+    fun (ost: OState ifc) (orq: ORq Msg) (ins: list (Id Msg)) =>
       match getDownRq oidx orq with
       | Some dri =>
         Forall (fun msg => msg_id msg = msg_id (rqh_msg dri) /\
@@ -65,85 +68,93 @@ Section HalfLock.
         end
       end.
 
-  Definition HalfLockRule (rule: Rule) :=
-    (rule_precond rule) ->oprec (HalfLockPrec (rule_oidx rule)).
+  Definition HalfLockRule (oidx: IdxT) {ifc} (rule: Rule ifc) :=
+    (rule_precond rule) ->oprec (HalfLockPrec oidx).
 
+  Definition HalfLockObj (obj: Object) :=
+    Forall (HalfLockRule (obj_idx obj)) (obj_rules obj).
+  
   Definition HalfLockSys (sys: System) :=
-    Forall HalfLockRule (sys_rules sys).
+    Forall HalfLockObj (sys_objs sys).
 
 End HalfLock.
 
-(* Section RqRs. *)
-(*   Variable (RqRsT: Type). *)
+Section RqRs.
+  Variable (RqRsT: Type).
 
-(*   Definition RqRsDec := MLabel -> RqRsT. *)
-(*   Definition RqRsSemiDisj := RqRsT -> RqRsT -> Prop. *)
+  Definition RqRsDec := MLabel -> RqRsT.
+  Definition RqRsComm := RqRsT -> RqRsT -> Prop.
 
-(*   Variables (rrdec: RqRsDec) (rrsd: RqRsSemiDisj). *)
+  Variables (rrdec: RqRsDec) (rrc: RqRsComm).
 
-(*   Definition RqRsSemiDisjHistories (hst1 hst2: MHistory) := *)
-(*     forall lbl1 lbl2, *)
-(*       In lbl1 hst1 -> In lbl2 hst2 -> *)
-(*       rrsd (rrdec lbl1) (rrdec lbl2). *)
+  Definition RqRsCommHistories (hst1 hst2: MHistory) :=
+    forall lbl1 lbl2,
+      In lbl1 hst1 -> In lbl2 hst2 ->
+      rrc (rrdec lbl1) (rrdec lbl2).
 
-(*   Definition RqRsLPush (hst1 hst: MHistory) := *)
-(*     RqRsSemiDisjHistories hst1 hst. *)
+  Definition RqRsLPush (hst1 hst: MHistory) :=
+    RqRsCommHistories hst1 hst.
 
-(*   Definition RqRsRPush (hst2 hst: MHistory) := *)
-(*     RqRsSemiDisjHistories hst hst2. *)
+  Definition RqRsRPush (hst2 hst: MHistory) :=
+    RqRsCommHistories hst hst2.
 
-(*   Definition RqRsContSemiDisj (sys: System) := *)
-(*     forall hst1 hst2, *)
-(*       ValidContinuous sys hst1 hst2 -> *)
-(*       RqRsSemiDisjHistories hst1 hst2. *)
+  Definition RqRsContComm (sys: System) :=
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      RqRsCommHistories hst1 hst2.
 
-(*   Definition RqRsLRPushable (sys: System) := *)
-(*     forall st1, *)
-(*       Reachable (steps step_m) sys st1 -> *)
-(*       forall st2 hst1 hst2 hsts, *)
-(*         steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 -> *)
-(*         Continuous hst1 hst2 -> *)
-(*         Forall (STransactional msg_dec) hsts -> *)
-(*         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\ *)
-(*         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts). *)
+  Definition RqRsLRPushable (sys: System) :=
+    forall st1,
+      Reachable (steps step_m) sys st1 ->
+      forall st2 hst1 hst2 hsts,
+        steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+        Continuous hst1 hst2 ->
+        Forall (STransactional msg_dec) hsts ->
+        LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\
+        LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts).
 
-(*   Definition RqRsLOrR (sys: System) := *)
-(*     forall st1 st2 hst1 hst2 hsts, *)
-(*       steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 -> *)
-(*       Continuous hst1 hst2 -> *)
-(*       Forall (STransactional msg_dec) hsts -> *)
-(*       Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts. *)
+  Definition RqRsLOrR (sys: System) :=
+    forall st1 st2 hst1 hst2 hsts,
+      steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+      Continuous hst1 hst2 ->
+      Forall (STransactional msg_dec) hsts ->
+      Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts.
   
-(*   Definition RqRsSys (sys: System) := *)
-(*     RqRsContSemiDisj sys /\ *)
-(*     RqRsLRPushable sys /\ *)
-(*     RqRsLOrR sys. *)
+  Definition RqRsSys (sys: System) :=
+    RqRsContComm sys /\
+    RqRsLRPushable sys /\
+    RqRsLOrR sys.
 
-(* End RqRs. *)
+End RqRs.
 
 Section RqRsSerial.
   Variables (gtr: GTree)
-            (* (RqRsT: Type) *)
-            (* (rrdec: RqRsDec RqRsT) *)
-            (* (rrsd: RqRsSemiDisj RqRsT) *)
+            (RqRsT: Type)
+            (rrdec: RqRsDec RqRsT)
+            (rrc: RqRsComm RqRsT)
             (sys: System).
 
   Hypotheses (Htr: TreeTopoSys gtr sys)
-             (Hpb: HalfLockSys gtr sys).
-  (* (Hrr: RqRsSys rrdec rrsd sys). *)
+             (Hpb: HalfLockSys gtr sys)
+             (Hrr: RqRsSys rrdec rrc sys).
 
-  Lemma rqrs_well_interleaved_left_push:
-    WellInterleavedLPush sys.
+  Lemma rqrs_well_interleaved_push:
+    WellInterleavedPush sys.
   Proof.
     red; intros.
-  Admitted.
+    exists (RqRsLPush rrdec rrc hst1).
+    exists (RqRsRPush rrdec rrc hst2).
+    pose proof H; destruct H0; clear H1.
+    split; [|split; [|split; [|split]]];
+      try (eapply Hrr; eauto; fail).
+  Qed.
 
-  Theorem treeTopo_halfLock_rqrs_serializable:
+  Theorem immrqrs_pb_serializable:
     SerializableSys sys.
   Proof.
     apply well_interleaved_serializable.
-    apply well_interleaved_left_push_ok.
-    apply rqrs_well_interleaved_left_push.
+    apply well_interleaved_push_ok.
+    apply rqrs_well_interleaved_push.
   Qed.
 
 End RqRsSerial.

@@ -4,15 +4,15 @@ Require Import Common FMap Syntax Semantics SemFacts Invariant StepT.
 Set Implicit Arguments.
 
 Section Simulation.
-  Context {SysI SysS StateI LabelI StateS LabelS: Type}
-          `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
-          `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}.
-  Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
+  Context {StateI LabelI StateS LabelS: Type}
+          `{HasInit System StateI} `{HasLabel LabelI}
+          `{HasInit System StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
             (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl: SysI) (spec: SysS).
+  Variables (impl spec: System).
 
   Definition Simulates :=
     forall ist1 sst1,
@@ -40,28 +40,28 @@ Section Simulation.
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps stepS spec sst1 shst sst2 /\
-          behaviorOf impl ihst = behaviorOf spec shst /\
+          behaviorOf ihst = behaviorOf shst /\
           ist2 ≈ sst2.
   Proof.
     induction 2; simpl; intros;
       [exists sst1, nil; repeat split; auto; constructor|].
 
-    specialize (IHsteps H5).
+    specialize (IHsteps H3).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H7; [|exact H10].
+    eapply Hsim in H5; [|exact H8].
     destruct (getLabel lbl) as [elbl|].
 
-    - destruct H7 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
       + econstructor; eauto.
-      + simpl; erewrite H9, H11; simpl.
+      + simpl; erewrite H7, H9; simpl.
         reflexivity.
-    - destruct H7.
-      * destruct H7 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5.
+      * destruct H5 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
         -- econstructor; eauto.
-        -- simpl; rewrite H9, H11; simpl; reflexivity.
+        -- simpl; rewrite H7, H9; simpl; reflexivity.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
@@ -71,25 +71,25 @@ Section Simulation.
     (steps stepI) # (steps stepS) |-- impl ⊑ spec.
   Proof.
     unfold Simulates, Refines; intros.
-    inv H5.
-    eapply simulation_steps in H6; [|exact Hsimi].
-    destruct H6 as [sst2 [shst [? [? ?]]]].
+    inv H3.
+    eapply simulation_steps in H4; [|exact Hsimi].
+    destruct H4 as [sst2 [shst [? [? ?]]]].
     econstructor; eauto.
   Qed.
 
 End Simulation.
 
 Section InvSim.
-  Context {SysI SysS StateI LabelI StateS LabelS: Type}
-          `{IsSystem SysI} `{HasInit SysI StateI} `{HasLabel LabelI}
-          `{IsSystem SysS} `{HasInit SysS StateS} `{HasLabel LabelS}.
-  Variables (stepI: Step SysI StateI LabelI) (stepS: Step SysS StateS LabelS)
+  Context {StateI LabelI StateS LabelS: Type}
+          `{HasInit System StateI} `{HasLabel LabelI}
+          `{HasInit System StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
             (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
   
-  Variables (impl: SysI) (spec: SysS).
+  Variables (impl spec: System).
 
   Definition InvSim :=
     forall ist1 sst1,
@@ -122,30 +122,30 @@ Section InvSim.
         steps stepI impl ist1 ihst ist2 ->
         exists sst2 shst,
           steps stepS spec sst1 shst sst2 /\
-          behaviorOf impl ihst = behaviorOf spec shst /\
+          behaviorOf ihst = behaviorOf shst /\
           ist2 ≈ sst2.
   Proof.
     induction 3; simpl; intros;
       [exists sst1, nil; repeat split; auto; constructor|].
 
-    specialize (IHsteps H5 H6).
+    specialize (IHsteps H3 H4).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H8;
-      [|exact H11|eapply inv_steps; eauto].
+    eapply Hsim in H6;
+      [|exact H9|eapply inv_steps; eauto].
     
     destruct (getLabel lbl) as [elbl|].
 
-    - destruct H8 as [sst3 [slbl [? [? ?]]]].
+    - destruct H6 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
       + econstructor; eauto.
-      + simpl; erewrite H10, H12; simpl.
+      + simpl; erewrite H8, H10; simpl.
         reflexivity.
-    - destruct H8.
-      * destruct H8 as [sst3 [slbl [? [? ?]]]].
+    - destruct H6.
+      * destruct H6 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
         -- econstructor; eauto.
-        -- simpl; rewrite H10, H12; simpl; reflexivity.
+        -- simpl; rewrite H8, H10; simpl; reflexivity.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
@@ -180,45 +180,4 @@ Definition SimMP (ist sst: TState): Prop :=
 
 Definition ImpliesSimMP (sim: TState -> TState -> Prop) :=
   forall ist sst, sim ist sst -> SimMP ist sst.
-
-Section NoRules.
-
-  Lemma steps_simulation_ValidTrss_SimMP_no_rules:
-    forall (ginv: TState -> Prop)
-           (sim: TState -> TState -> Prop) impl spec,
-      sys_rules impl = nil ->
-      merqsOf impl = merqsOf spec ->
-      merssOf impl = merssOf spec ->
-      MsgsSim sim ->
-      ImpliesSimMP sim ->
-      InvStep impl step_t ginv ->
-      (ginv ->i (ValidTrss impl)) ->
-      InvSim step_t step_t ginv sim impl spec.
-  Proof.
-    unfold InvSim; intros.
-    inv H8; simpl.
-    - left; do 2 eexists; repeat split.
-      + econstructor.
-      + reflexivity.
-      + assumption.
-    - destruct sst1 as [soss sorqs smsgs strss stid].
-      do 2 eexists; repeat split.
-      + eapply StIns; eauto.
-        eapply ValidMsgsExtIn_merqsOf; eauto.
-      + reflexivity.
-      + eapply H2; eauto.
-    - destruct sst1 as [soss sorqs smsgs strss stid].
-      do 2 eexists; repeat split.
-      + eapply StOuts; try reflexivity; try eassumption.
-        * specialize (H5 _ H7); hnf in H5; cbn in H5.
-          specialize (H3 _ _ H6); hnf in H3; cbn in H3; subst.
-          eapply extRssOf_ValidMsgsExtOut_merssOf_FirstMP; eauto.
-        * eapply ValidMsgsExtOut_merssOf; eauto.
-      + reflexivity.
-      + eapply H2; eauto.
-    - exfalso.
-      rewrite H in H17; elim H17.
-  Qed.
-
-End NoRules.
 

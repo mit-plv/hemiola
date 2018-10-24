@@ -30,8 +30,8 @@ Proof.
 Qed.
 
 Lemma internal_history_behavior_nil:
-  forall sys hst,
-    InternalHistory hst -> behaviorOf sys hst = nil.
+  forall hst,
+    InternalHistory hst -> behaviorOf hst = nil.
 Proof.
   induction hst; simpl; intros; auto.
   inv H; rewrite IHhst by assumption.
@@ -215,24 +215,25 @@ Proof.
       * f_equal.
         rewrite enqMsgs_enqMsgs_comm.
         { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
-          destruct H10; auto.
+          destruct H12; auto.
         }
-        { destruct H2, H16.
+        { destruct H2, H18.
           eapply DisjList_SubList; eauto.
           eapply DisjList_comm, DisjList_SubList; eauto.
           apply DisjList_app_4.
-          { apply mindsOf_merqsOf_DisjList. }
-          { apply DisjList_comm, merqsOf_merssOf_DisjList. }
+          { apply sys_minds_sys_merqs_DisjList. }
+          { apply DisjList_comm, sys_merqs_sys_merss_DisjList. }
         }
   - hnf; cbn.
     destruct lbl; [elim H|elim H|auto|elim H].
 Qed.
 
 Lemma msg_ins_commutes_2:
-  forall sys eins rule ins outs,
+  forall sys eins oidx ridx ins outs,
     DisjList eins ins ->
     DisjList (idsOf eins) (idsOf outs) ->
-    Reducible sys [RlblInt rule ins outs; RlblIns eins] [RlblIns eins; RlblInt rule ins outs].
+    Reducible sys [RlblInt oidx ridx ins outs; RlblIns eins]
+              [RlblIns eins; RlblInt oidx ridx ins outs].
 Proof.
   unfold Reducible; intros.
   split.
@@ -248,7 +249,7 @@ Proof.
       rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
       * rewrite enqMsgs_enqMsgs_comm; [reflexivity|].
         apply DisjList_comm; auto.
-      * destruct H12; auto.
+      * destruct H14; auto.
       * eapply FirstMPI_Forall_enqMsgs_inv; [|eassumption].
         apply DisjList_comm; auto.
   - hnf; cbn; reflexivity.
@@ -302,10 +303,11 @@ Proof.
 Qed.
 
 Lemma msg_outs_commutes_1:
-  forall sys eouts rule ins outs,
+  forall sys eouts oidx ridx ins outs,
     DisjList eouts outs ->
     DisjList (idsOf eouts) (idsOf ins) ->
-    Reducible sys [RlblOuts eouts; RlblInt rule ins outs] [RlblInt rule ins outs; RlblOuts eouts].
+    Reducible sys [RlblOuts eouts; RlblInt oidx ridx ins outs]
+              [RlblInt oidx ridx ins outs; RlblOuts eouts].
 Proof.
   unfold Reducible; intros.
   split.
@@ -334,24 +336,24 @@ Lemma msg_outs_commutes_2:
 Proof.
   unfold Reducible; intros.
   split.
-  - destruct lbl as [| |hdl mins mouts|]; [elim H|elim H| |elim H].
+  - destruct lbl as [| |oidx ridx mins mouts|]; [elim H|elim H| |elim H].
     dest_step_m.
     econstructor.
     + econstructor.
       * econstructor.
       * econstructor; try reflexivity; try eassumption.
         assert (DisjList (idsOf mins) (idsOf eouts)).
-        { destruct H3, H12.
+        { destruct H3, H14.
           eapply DisjList_SubList; eauto.
           eapply DisjList_comm, DisjList_SubList; eauto.
-          apply DisjList_comm, mindsOf_merssOf_DisjList.
+          apply DisjList_comm, sys_minds_sys_merss_DisjList.
         }
         eapply FirstMPI_Forall_deqMsgs; eauto.
     + assert (DisjList (idsOf eouts) (idsOf mins)).
-      { destruct H3, H12.
+      { destruct H3, H14.
         eapply DisjList_SubList; eauto.
         eapply DisjList_comm, DisjList_SubList; eauto.
-        apply mindsOf_merssOf_DisjList.
+        apply sys_minds_sys_merss_DisjList.
       }
       econstructor; try reflexivity; try eassumption.
       * eapply FirstMPI_Forall_enqMsgs.
@@ -418,13 +420,13 @@ Qed.
 (*! Reducibility of internal state transitions *)
 
 Lemma msg_int_commutes:
-  forall sys rule1 ins1 outs1 rule2 ins2 outs2,
-    rule_oidx rule1 <> rule_oidx rule2 ->
+  forall sys oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
+    oidx1 <> oidx2 ->
     DisjList (idsOf ins1) (idsOf ins2) ->
     DisjList (idsOf outs1) (idsOf ins2) ->
     DisjList (idsOf outs1) (idsOf outs2) ->
-    Reducible sys [RlblInt rule2 ins2 outs2; RlblInt rule1 ins1 outs1]
-              [RlblInt rule1 ins1 outs1; RlblInt rule2 ins2 outs2].
+    Reducible sys [RlblInt oidx2 ridx2 ins2 outs2; RlblInt oidx1 ridx1 ins1 outs1]
+              [RlblInt oidx1 ridx1 ins1 outs1; RlblInt oidx2 ridx2 ins2 outs2].
 Proof.
   unfold Reducible; intros.
   split; [|reflexivity].
@@ -435,7 +437,7 @@ Proof.
     + econstructor; try reflexivity; try eassumption.
       * mred.
       * mred.
-      * eapply FirstMPI_Forall_enqMsgs_inv in H23.
+      * eapply FirstMPI_Forall_enqMsgs_inv in H25.
         { eapply FirstMPI_Forall_deqMsgs; [|eassumption].
           apply DisjList_comm; auto.
         }
@@ -455,7 +457,7 @@ Proof.
           by (apply DisjList_comm; assumption).
         rewrite enqMsgs_deqMsgs_FirstMPI_comm with (msgs2:= outs2).
         { reflexivity. }
-        { destruct H13; auto. }
+        { destruct H15; auto. }
         { apply FirstMPI_Forall_deqMsgs; auto. }
 Qed.
 
