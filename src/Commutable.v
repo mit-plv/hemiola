@@ -4,6 +4,8 @@ Require Import Topology Serial SerialFacts Reduction.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 (* Definition ruleOfL {MsgT} (lbl: RLabel MsgT): option Rule := *)
 (*   match lbl with *)
 (*   | RlblInt rule _ _ => Some rule *)
@@ -158,4 +160,6 @@ Proof.
       specialize (H5 _ _ _ _ _ _ _ _ H6 H); dest.
       eauto using nonconflicting_discontinuous_commutable_atomic.
 Qed.
+
+Close Scope list.
 

@@ -1,6 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics.
 
+Open Scope fmap.
+
 Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
 | SmSlt: forall st, step_m sys st (RlblEmpty _) st
 | SmIns: forall pst nst oss orqs msgs eins,
@@ -51,4 +53,6 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
           |} ->
 
     step_m sys pst (RlblInt oidx (rule_idx rule) ins iouts) nst.
+
+Close Scope fmap.
 

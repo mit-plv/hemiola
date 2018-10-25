@@ -12,6 +12,8 @@ Require Export ListSupport.
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
+Open Scope list.
+
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
 
@@ -2484,4 +2486,6 @@ Ltac findeq_more := findeq_custom idtac.
 
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
 Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
+
+Close Scope list.
 

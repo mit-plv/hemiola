@@ -3,6 +3,8 @@ Require Import Common FMap Syntax Semantics SemFacts Invariant StepT.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Section Simulation.
   Context {StateI LabelI StateS LabelS: Type}
           `{HasInit System StateI} `{HasLabel LabelI}
@@ -180,4 +182,6 @@ Definition SimMP (ist sst: TState): Prop :=
 
 Definition ImpliesSimMP (sim: TState -> TState -> Prop) :=
   forall ist sst, sim ist sst -> SimMP ist sst.
+
+Close Scope list.
 

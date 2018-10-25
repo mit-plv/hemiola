@@ -1,6 +1,9 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap Syntax Semantics StepM.
 
+Open Scope list.
+Open Scope fmap.
+
 (* NOTE: [getTMsgsTInfo] and [isExternalResp] are both used just for
  * annotating extra information about messages. We will be able to 
  * prove some properties about messages using this information,
@@ -131,4 +134,7 @@ Definition tToMLabel (tlbl: TLabel) :=
   | RlblInt oidx ridx mins mouts =>
     RlblInt oidx ridx (imap tmsg_msg mins) (imap tmsg_msg mouts)
   end.
+
+Close Scope list.
+Close Scope fmap.
 

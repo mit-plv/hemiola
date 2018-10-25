@@ -8,6 +8,8 @@ Require Import Omega.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Section TreeTopo.
   Variable (gtr: GTree).
   Local Notation topo := (topoOfT gtr).
@@ -158,4 +160,6 @@ Section RqRsSerial.
   Qed.
 
 End RqRsSerial.
+
+Close Scope list.
 

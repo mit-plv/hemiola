@@ -4,6 +4,8 @@ Require Import Topology Serial SerialFacts.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Ltac dest_step_m :=
   repeat match goal with
          | [H: steps step_m _ _ _ _ |- _] => inv H
@@ -460,4 +462,6 @@ Proof.
         { destruct H15; auto. }
         { apply FirstMPI_Forall_deqMsgs; auto. }
 Qed.
+
+Close Scope list.
 

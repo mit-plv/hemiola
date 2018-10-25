@@ -6,6 +6,8 @@ Require Import Omega Wf.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 (*! Quasi-sequential histories *)
 
 Section QuasiSeq.
@@ -424,4 +426,6 @@ Section WellInterleavedPush.
   Qed.
 
 End WellInterleavedPush.
+
+Close Scope list.
 

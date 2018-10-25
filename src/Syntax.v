@@ -1,5 +1,5 @@
 Require Import Bool Vector List String Peano_dec.
-Require Import Common FMap IList.
+Require Import Common FMap HVector.
 
 Set Implicit Arguments.
 
@@ -66,19 +66,13 @@ End Msg.
 Class HasInit (SysT StateT: Type) :=
   { initsOf: SysT -> StateT }.
 
-Fixpoint ostateInds (sz: nat): Vector.t nat sz :=
-  match sz with
-  | O => Vector.nil _
-  | S n => Vector.cons _ n _ (ostateInds n)
-  end.
-
 Record OStateIfc :=
   { ost_sz: nat;
-    ost_ty: nat -> Type
+    ost_ty: Vector.t Type ost_sz
   }.
 
 Definition OState (ifc: OStateIfc) :=
-  @ilist _ (ost_ty ifc) (ost_sz ifc) (ostateInds (ost_sz ifc)).
+  hvec (ost_ty ifc).
 
 Record OStateR :=
   { ost_ifc: OStateIfc;
@@ -176,9 +170,16 @@ Record System :=
     sys_orqs_inits: ORqs Msg
   }.
 
+Ltac inds_valid_tac :=
+  compute; repeat (constructor; firstorder).
+
 Global Instance System_OStates_HasInit : HasInit System OStates :=
   {| initsOf := sys_oss_inits |}.
 
 Global Instance System_ORqs_Msg_HasInit : HasInit System (ORqs Msg) :=
   {| initsOf := sys_orqs_inits |}.
+
+Close Scope string.
+Close Scope list.
+Close Scope fmap.
 

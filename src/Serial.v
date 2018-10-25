@@ -2,6 +2,8 @@ Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM StepT.
 Require Import Topology.
 
+Open Scope list.
+
 (** [Atomic] and [Transactional] histories *)
 
 Inductive TrsType :=
@@ -130,4 +132,6 @@ Definition SerializableSys (sys: System) :=
   forall ll st,
     steps step_m sys (initsOf sys) ll st ->
     Serializable sys ll.
+
+Close Scope list.
 

@@ -3,6 +3,8 @@ Require Import Common FMap.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Section VertexParam.
 
   Section Digraph.
@@ -102,4 +104,6 @@ Section VertexParam.
   End GTree.
 
 End VertexParam.
+
+Close Scope list.
 

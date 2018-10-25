@@ -5,6 +5,8 @@ Require Import Omega.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Lemma sys_minds_sys_merqs_DisjList:
   forall sys, DisjList (sys_minds sys) (sys_merqs sys).
 Proof.
@@ -298,4 +300,6 @@ Proof.
   specialize (H2 _ (H1 _ H3)).
   assumption.
 Qed.
+
+Close Scope list.
 

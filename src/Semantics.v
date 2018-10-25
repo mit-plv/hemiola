@@ -5,6 +5,8 @@ Require Export MessagePool.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Definition extRqsOf {MsgT} `{HasMsg MsgT}
            (sys: System) (mp: MessagePool MsgT) :=
   qsOf (sys_merqs sys) mp.
@@ -296,4 +298,6 @@ Section TState.
     {| initsOf := getTStateInit |}.
 
 End TState.
+
+Close Scope list.
 

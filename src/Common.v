@@ -1,6 +1,8 @@
-Require Import Bool Ascii String List Eqdep Omega.
-
+Require Import Bool Ascii String List Vector Eqdep Omega.
 Require Export ProofIrrelevance.
+
+Include ListNotations.
+Include VectorNotations.
 
 Definition option_dec {A}
            (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2}):
@@ -15,14 +17,14 @@ Definition Id (A: Type) := (IdxT * A)%type.
 
 Definition idOf {A} (ida: Id A) := fst ida.
 Definition valOf {A} (ida: Id A) := snd ida.
-Definition idsOf {A} (ias: list (Id A)) := map fst ias.
-Definition valsOf {A} (ias: list (Id A)) := map snd ias.
+Definition idsOf {A} (ias: list (Id A)) := List.map fst ias.
+Definition valsOf {A} (ias: list (Id A)) := List.map snd ias.
 
 Definition liftI {A B: Type} (f: A -> B) (ida: Id A): Id B :=
   (idOf ida, f (valOf ida)).
 
 Definition imap {A B: Type} (f: A -> B) (ias: list (Id A)): list (Id B) :=
-  map (liftI f) ias.
+  List.map (liftI f) ias.
 Definition ifilterI {A} (ias: list (Id A)) (f: IdxT -> bool): list (Id A) :=
   filter (fun ia => f (idOf ia)) ias.
 Definition ifilterV {A} (ias: list (Id A)) (f: A -> bool): list (Id A) :=
@@ -35,11 +37,6 @@ Proof.
   decide equality.
   apply eq_nat_dec.
 Defined.
-
-Notation "[ ]" := nil (format "[ ]").
-Notation "[ x ]" := (cons x nil).
-Notation "[ x ; y ; .. ; z ]" := (cons x (cons y .. (cons z nil) ..)).
-Notation "[ x ; .. ; y ]" := (cons x .. (cons y nil) ..).
 
 Theorem tautology_0:
   forall (P Q: Prop), (P -> Q) -> P -> Q.
@@ -61,7 +58,7 @@ Ltac dest :=
 Ltac dest_in :=
   repeat
     match goal with
-    | [H: In _ _ |- _] => inv H
+    | [H: List.In _ _ |- _] => inv H
     end.
 Ltac find_if_inside :=
   match goal with
@@ -128,7 +125,7 @@ Definition lift {A B} (f: A -> B): option A -> option B :=
 
 Lemma lift_hd_error:
   forall {A B} (f: A -> B) (l: list A),
-    lift f (hd_error l) = hd_error (map f l).
+    lift f (hd_error l) = hd_error (List.map f l).
 Proof.
   induction l; simpl; intros; auto.
 Qed.
@@ -143,7 +140,7 @@ Notation "OA >>=[ NB ] F" :=
 
 Fixpoint replicate {A} (a: A) (sz: nat): list A :=
   match sz with
-  | O => nil
+  | O => []
   | S sz' => a :: replicate a sz'
   end.
 
@@ -152,8 +149,8 @@ Definition falses (sz: nat) := replicate false sz.
 
 Fixpoint findAt (v: nat) (l: list nat) :=
   match l with
-  | nil => None
-  | n :: l' =>
+  | List.nil => None
+  | List.cons n l' =>
     if v ==n n then Some O
     else (findAt v l') >>=[None] (fun o => Some (S o))
   end.

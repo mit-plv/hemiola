@@ -3,6 +3,9 @@ Require Import Common ListSupport FMap Syntax.
 
 Set Implicit Arguments.
 
+Open Scope list.
+Open Scope fmap.
+
 Section MessagePool.
   Variable (MsgT: Type).
 
@@ -558,6 +561,7 @@ Section Facts.
     - mred; unfold findQ in H; simpl in H.
       destruct (mp@[nidx]); simpl in *.
       + apply in_app_or in H; destruct H; auto.
+        
         Common.dest_in; auto.
       + destruct H; auto.
     - mred.
@@ -1047,4 +1051,7 @@ Section Map.
     M.map (map mmap) mp.
 
 End Map.
+
+Close Scope list.
+Close Scope fmap.
 

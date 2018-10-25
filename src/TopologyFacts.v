@@ -2,6 +2,8 @@ Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics Serial Topology StepM.
 
+Open Scope list.
+
 (** TODOs:
  * 0. Maybe better to have a notion of [Multipath] including the "type"
  *    of each edge (e.g., upward-request, downward-request, etc.)
@@ -125,4 +127,6 @@ Lemma atomic_multipath:
           Multipath dg (getInitEdges hst) es vs ees.
 Proof.
 Admitted.
+
+Close Scope list.
 

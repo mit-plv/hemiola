@@ -7,6 +7,8 @@ Require Import Program.Equality.
 
 Set Implicit Arguments.
 
+Open Scope list.
+
 Section MsgParam.
   Variable MsgT: Type.
   Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
@@ -449,4 +451,6 @@ Proof.
     + eexists; eapply sequential_msg_ins; eauto.
   - hnf; cbn; rewrite H2; reflexivity.
 Qed.
+
+Close Scope list.
 
