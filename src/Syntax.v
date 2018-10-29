@@ -7,8 +7,10 @@ Open Scope string.
 Open Scope list.
 Open Scope fmap.
 
-Section Msg.
+Definition AddrT := nat.
 
+Section Msg.
+  
   Inductive Value :=
   | VUnit
   | VBool (b: bool)
@@ -24,17 +26,13 @@ Section Msg.
     - decide equality.
   Defined.
 
-  Inductive RqRs := Rq | Rs.
-
   Record Msg :=
     { msg_id: IdxT;
-      msg_rr: RqRs;
       msg_value: Value
     }.
 
-  Definition buildMsg mid rr v :=
+  Definition buildMsg mid v :=
     {| msg_id := mid;
-       msg_rr := rr;
        msg_value := v |}.
 
   Fixpoint buildMsgs mids vals :=
@@ -51,7 +49,6 @@ Section Msg.
   Proof.
     decide equality.
     - apply value_dec.
-    - decide equality.
     - apply eq_nat_dec.
   Defined.
 
@@ -81,45 +78,43 @@ Record OStateR :=
 
 Definition OStates := M.t OStateR.
 
-(* A request holder [ORq] holds all requests that 
- * an object is handling now.
- *)
+Section ORqs.
 
-Record RqInfo (MsgT: Type) :=
-  { rqh_msg: MsgT;
-    rqh_from: IdxT;
-    rqh_fwds: list IdxT
-  }.
+  (* A request holder [ORq] holds all requests that an object is handling now.
+   * This is both for continuing a transaction when getting a corresponding
+   * response and providing a proper locking mechanism.
+   *)
+  Record RqInfo (MsgT: Type) :=
+    { rqh_msg: MsgT }.
 
-Definition buildRqInfo {MsgT} (rq: Id MsgT) (fwds: list IdxT) :=
-  {| rqh_msg := valOf rq;
-     rqh_from := idOf rq;
-     rqh_fwds := fwds |}.
+  (* AddrT |-> RqType |-> RqInfo *)
+  Definition ORq (MsgT: Type) := M.t (M.t (RqInfo MsgT)).
 
-Definition ORq (MsgT: Type) := list (RqInfo MsgT).
-Definition ORqs (MsgT: Type) := M.t (ORq MsgT).
+  (* Object IdxT |-> ORq *)
+  Definition ORqs (MsgT: Type) := M.t (ORq MsgT). 
 
-Definition addRq {MsgT} (orq: ORq MsgT) (rq: Id MsgT) (fwds: list IdxT): ORq MsgT :=
-  (buildRqInfo rq fwds) :: orq.
+  Definition addRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT) (msg: MsgT): ORq MsgT :=
+    let aorq := match orq@[addr] with
+                | Some aorq => aorq
+                | None => M.empty _
+                end in
+    orq+[addr <- aorq+[rqty <- {| rqh_msg := msg |}]].
 
-Fixpoint getRq {MsgT} (orq: ORq MsgT) (idx: IdxT) :=
-  match orq with
-  | nil => None
-  | rq :: orq' =>
-    if rqh_from rq ==n idx then Some rq else getRq orq' idx
-  end.
+  Fixpoint getRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT): option (RqInfo MsgT) :=
+    orq@[addr] >>=[None]
+       (fun aorq => aorq@[rqty] >>=[None] (fun rqinfo => Some rqinfo)).
 
-Fixpoint removeRq {MsgT} (orq: ORq MsgT) (ridx: IdxT) :=
-  match orq with
-  | nil => nil
-  | rq :: orq' =>
-    if rqh_from rq ==n ridx then orq' else rq :: removeRq orq' ridx
-  end.
+  Fixpoint removeRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT): ORq MsgT :=
+    orq@[addr] >>=[orq]
+       (fun aorq => orq +[addr <- (M.remove rqty aorq)]).
 
-Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1) :=
-  map (fun ri => {| rqh_msg := f (rqh_msg ri);
-                    rqh_from := rqh_from ri;
-                    rqh_fwds := rqh_fwds ri |}) orq.
+  Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1) :=
+    M.map (fun aorq =>
+             M.map (fun rqinfo =>
+                      {| rqh_msg := f (rqh_msg rqinfo) |}) aorq)
+          orq.
+
+End ORqs.
 
 Section Rule.
   Variables (ifc: OStateIfc).

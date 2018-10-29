@@ -1,27 +1,25 @@
 Require Import Bool Vector List String Peano_dec.
 Require Import Common FMap HVector ListSupport Syntax Semantics StepT.
-Require Import Topology.
+Require Import Topology RqRs.
 
 Set Implicit Arguments.
 
 Open Scope list.
 Open Scope fmap.
 
-Inductive SVM : Set :=
-| GetReq
-| GetResp (v: nat)
-| SetReq (v: nat)
-| SetResp
-| InvReq
-| InvResp (v: nat).
+Definition svmGetRq: IdxT := 0.
+Definition svmGetRs: IdxT := 1.
+Definition svmRqS: IdxT := 2.
+Definition svmRsS: IdxT := 3.
+Definition svmDownRqS: IdxT := 4.
+Definition svmDownRsS: IdxT := 5.
 
-Definition svm_dec: forall m1 m2: SVM, {m1 = m2} + {m1 <> m2}.
-Proof.
-  repeat decide equality.
-Defined.
-
-Definition svmGetIdx: IdxT := 0.
-Definition svmSetIdx: IdxT := 1.
+Definition svmSetRq: IdxT := 6.
+Definition svmSetRs: IdxT := 7.
+Definition svmRqM: IdxT := 8.
+Definition svmRsM: IdxT := 9.
+Definition svmDownRqM: IdxT := 10.
+Definition svmDownRsM: IdxT := 11.
 
 Section System.
 
@@ -44,20 +42,20 @@ Section System.
 
       Definition specGetRq: Rule SpecOStateIfc :=
         {| rule_idx := erq + 0;
-           rule_msg_ids := [svmGetIdx];
+           rule_msg_ids := [svmGetRq];
            rule_minds := [erq];
            rule_precond := ⊤oprec;
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                (ost, orq,
-                (ers, {| msg_id := svmGetIdx;
-                         msg_rr := Rq;
-                         msg_value := VNat (hvec_ith ost specValueIdx) |}) :: nil)
+                (ers, {| msg_id := svmGetRs;
+                         msg_value := VNat (hvec_ith ost specValueIdx)
+                      |}) :: nil)
         |}.
 
       Definition specSetRq: Rule SpecOStateIfc :=
         {| rule_idx := erq + 1;
-           rule_msg_ids := [svmSetIdx];
+           rule_msg_ids := [svmSetRq];
            rule_minds := [erq];
            rule_precond := ⊤oprec;
            rule_trs :=
@@ -69,8 +67,7 @@ Section System.
                      | _ => ost
                      end),
                 orq,
-                ((ers, {| msg_id := svmSetIdx;
-                          msg_rr := Rq;
+                ((ers, {| msg_id := svmSetRs;
                           msg_value := VUnit |})
                    :: nil))
         |}.
@@ -107,13 +104,17 @@ Section System.
 
   Section Impl.
 
-    Definition c1pRq := 4.
-    Definition c1pRs := 5.
-    Definition pc1 := 6.
-    Definition c2pRq := 7.
-    Definition c2pRs := 8.
-    Definition pc2 := 9.
-
+    Definition ec1 := 4.
+    Definition ce1 := 5.
+    Definition ec2 := 6.
+    Definition ce2 := 7.
+    Definition c1pRq := 8.
+    Definition c1pRs := 9.
+    Definition pc1 := 10.
+    Definition c2pRq := 11.
+    Definition c2pRs := 12.
+    Definition pc2 := 13.
+    
     Definition parentIdx := 0.
     Definition child1Idx := 1.
     Definition child2Idx := 2.
@@ -136,61 +137,310 @@ Section System.
       +[child2Idx <- {| ost_ifc := ImplOStateIfc;
                         ost_st := (0, (stS, tt)) |}].
 
-    Section PerChild.
-      Variables (erq ers: nat) (oidx: IdxT).
+    Section Child.
+      Variable (coidx: IdxT).
+      Variables (ec ce cpRq cpRs pc: IdxT).
 
-      (* Definition implGetImm: Rule := *)
-      (*   {| rule_oidx := oidx; *)
-      (*      rule_msg_ids := svmGetIdx :: nil; *)
-      (*      rule_minds := erq :: nil; *)
-      (*      rule_precond := *)
-      (*        fun ost orq mins => *)
-      (*          ost@[statusIdx] >=[False] (fun st => st >= stS); *)
-      (*      rule_trs := *)
-      (*        fun ost orq mins => *)
-      (*          (ost, orq, *)
+      Definition childGetRqImm: Rule ImplOStateIfc :=
+        {| rule_idx := 0;
+           rule_msg_ids := [svmGetRq];
+           rule_minds := [ec];
+           rule_precond :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               hvec_ith ost implStatusIdx >= stS;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               (ost, orq,
+                (ce, {| msg_id := svmGetRs;
+                        msg_value := VNat (hvec_ith ost implValueIdx)
+                     |}) :: nil)
+        |}.
+
+      Definition childGetRqS: Rule ImplOStateIfc :=
+        {| rule_idx := 1;
+           rule_msg_ids := [svmGetRq];
+           rule_minds := [ec];
+           rule_precond :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               hvec_ith ost implStatusIdx = stI;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               ((hd_error mins) >>=[(ost, orq, nil)]
+                  (fun idm =>
+                     (ost,
+                      addRq orq O upRq (valOf idm),
+                      [(cpRq, {| msg_id := svmRqS;
+                                 msg_value := VUnit |})])))
+        |}.
+
+      Definition childGetRsS: Rule ImplOStateIfc :=
+        {| rule_idx := 2;
+           rule_msg_ids := [svmRsS];
+           rule_minds := [pc];
+           rule_precond := ⊤oprec;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               ((hd_error mins) >>=[(ost, orq, nil)]
+                  (fun idm =>
+                     match msg_value (valOf idm) with
+                     | VNat n =>
+                       (hvec_upd (hvec_upd ost implValueIdx n)
+                                 implStatusIdx stS,
+                        removeRq orq O upRq,
+                        [(ce, {| msg_id := svmGetRs;
+                                 msg_value := VNat n |})])
+                     | _ => (ost, orq, nil) (** TODO: how to efficiently handle this case? *)
+                     end))
+        |}.
+
+      Definition childDownRqS: Rule ImplOStateIfc :=
+        {| rule_idx := 3;
+           rule_msg_ids := [svmDownRqS];
+           rule_minds := [pc];
+           rule_precond := ⊤oprec;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               (hvec_upd ost implStatusIdx stS,
+                orq,
+                [(cpRs, {| msg_id := svmDownRsS;
+                           msg_value := VUnit |})])
+        |}.
+
+      Definition childSetRqImm: Rule ImplOStateIfc :=
+        {| rule_idx := 4;
+           rule_msg_ids := [svmSetRq];
+           rule_minds := [ec];
+           rule_precond :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               hvec_ith ost implStatusIdx = stM;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               ((hd_error mins) >>=[(ost, orq, nil)]
+                  (fun idm =>
+                     match msg_value (valOf idm) with
+                     | VNat n =>
+                       (hvec_upd (hvec_upd ost implValueIdx n)
+                                 implStatusIdx stM,
+                        orq,
+                        [(ce, {| msg_id := svmSetRs;
+                                 msg_value := VUnit |})])
+                     | _ => (ost, orq, nil)
+                     end))
+        |}.
     
-      (* Definition implGetRqUp: Rule := *)
-      (*   {| rule_oidx := oidx; *)
-      (*      rule_msg_ids := svmGetIdx :: nil; *)
-      (*      rule_minds := erq :: nil; *)
-      (*      rule_precond := *)
-      (*        fun ost orq mins => True; *)
-      (*      rule_trs := *)
-      (*        fun ost orq mins => *)
-      (*          (ost, orq, *)
-      (*           ost@[valueIdx] >>=[nil] *)
-      (*              (fun v => (ers, {| msg_id := svmGetIdx; *)
-      (*                                 msg_rr := Rq; *)
-      (*                                 msg_value := v |}) *)
-      (*                          :: nil)) *)
-      (*   |}. *)
+      Definition childSetRqM: Rule ImplOStateIfc :=
+        {| rule_idx := 5;
+           rule_msg_ids := [svmSetRq];
+           rule_minds := [ec];
+           rule_precond :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               hvec_ith ost implStatusIdx <> stM;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               ((hd_error mins) >>=[(ost, orq, nil)]
+                  (fun idm =>
+                     (ost,
+                      addRq orq O upRq (valOf idm),
+                      [(cpRq, {| msg_id := svmRqM;
+                                 msg_value := VUnit |})])))
+        |}.
 
-    End PerChild.
+      Definition childSetRsM: Rule ImplOStateIfc :=
+        {| rule_idx := 6;
+           rule_msg_ids := [svmRsM];
+           rule_minds := [pc];
+           rule_precond := ⊤oprec;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               (getRq orq O upRq) >>=[(ost, orq, nil)]
+                 (fun rqinfo =>
+                    match msg_value (rqh_msg rqinfo) with
+                    | VNat n =>
+                      (hvec_upd (hvec_upd ost implValueIdx n)
+                                implStatusIdx stM,
+                       removeRq orq O upRq,
+                       (ce,
+                        {| msg_id := svmSetRs;
+                           msg_value := VNat n |}) :: nil)
+                    | _ => (ost, orq, nil)
+                    end)
+        |}.
+
+      Definition childDownRqM: Rule ImplOStateIfc :=
+        {| rule_idx := 7;
+           rule_msg_ids := [svmDownRqM];
+           rule_minds := [pc];
+           rule_precond := ⊤oprec;
+           rule_trs :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               (hvec_upd ost implStatusIdx stI,
+                orq,
+                [(cpRs, {| msg_id := svmDownRsS;
+                           msg_value := VNat (hvec_ith ost implValueIdx) |})])
+        |}.
+
+      Definition child: Object :=
+        {| obj_idx := coidx;
+           obj_ifc := ImplOStateIfc;
+           obj_rules :=
+             [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;
+                childSetRqImm; childSetRqM; childSetRsM; childDownRqM];
+           obj_rules_valid := ltac:(inds_valid_tac) |}.
+      
+    End Child.
+
+    Section Parent.
+
+      Section Rules.
+        Variable (ridxOfs: IdxT).
+        Variables (cpRq pc cpRs' pc': IdxT).
+
+        Definition parentNumOfRules := 6.
+
+        Definition parentGetRqImm: Rule ImplOStateIfc :=
+          {| rule_idx := parentNumOfRules * ridxOfs + 0;
+             rule_msg_ids := [svmRqS];
+             rule_minds := [cpRq];
+             rule_precond :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 hvec_ith ost implStatusIdx >= stS;
+             rule_trs :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 (ost, orq,
+                  [(pc, {| msg_id := svmRsS;
+                           msg_value := VNat (hvec_ith ost implValueIdx) |})])
+          |}.
+
+        Definition parentGetDownRqS: Rule ImplOStateIfc :=
+          {| rule_idx := parentNumOfRules * ridxOfs + 1;
+             rule_msg_ids := [svmRqS];
+             rule_minds := [cpRq];
+             rule_precond :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 hvec_ith ost implStatusIdx = stI;
+             rule_trs :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 ((hd_error mins) >>=[(ost, orq, nil)]
+                    (fun idm =>
+                       (ost,
+                        addRq orq O downRq (valOf idm),
+                        [(pc', {| msg_id := svmDownRqS;
+                                  msg_value := VUnit |})])))
+          |}.
+
+        Definition parentGetDownRsS: Rule ImplOStateIfc :=
+          {| rule_idx := parentNumOfRules * ridxOfs + 2;
+             rule_msg_ids := [svmDownRsS];
+             rule_minds := [cpRs'];
+             rule_precond := ⊤oprec;
+             rule_trs :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 ((hd_error mins) >>=[(ost, orq, nil)]
+                    (fun idm =>
+                       match msg_value (valOf idm) with
+                       | VNat n =>
+                         (hvec_upd (hvec_upd ost implValueIdx n)
+                                   implStatusIdx stS,
+                          removeRq orq O downRq,
+                          [(pc, {| msg_id := svmRsS;
+                                   msg_value := VNat n |})])
+                       | _ => (ost, orq, nil)
+                       end))
+          |}.
+
+        Definition parentSetRqImm: Rule ImplOStateIfc :=
+          {| rule_idx := parentNumOfRules * ridxOfs + 3;
+             rule_msg_ids := [svmRqM];
+             rule_minds := [cpRq];
+             rule_precond :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 hvec_ith ost implStatusIdx = stM;
+             rule_trs :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 (hvec_upd ost implStatusIdx stI,
+                  orq,
+                  [(pc, {| msg_id := svmRsM;
+                           msg_value := VNat (hvec_ith ost implValueIdx) |})])
+          |}.
+
+        Definition parentSetDownRqM: Rule ImplOStateIfc :=
+          {| rule_idx := parentNumOfRules * ridxOfs + 4;
+             rule_msg_ids := [svmRqM];
+             rule_minds := [cpRq];
+             rule_precond :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 hvec_ith ost implStatusIdx <> stM;
+             rule_trs :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 ((hd_error mins) >>=[(ost, orq, nil)]
+                    (fun idm =>
+                       (ost,
+                        addRq orq O downRq (valOf idm),
+                        [(pc', {| msg_id := svmDownRqM;
+                                  msg_value := VUnit |})])))
+          |}.
+
+        Definition parentSetDownRsM: Rule ImplOStateIfc :=
+          {| rule_idx := parentNumOfRules * ridxOfs + 5;
+             rule_msg_ids := [svmDownRsM];
+             rule_minds := [cpRs'];
+             rule_precond := ⊤oprec;
+             rule_trs :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 ((hd_error mins) >>=[(ost, orq, nil)]
+                    (fun idm =>
+                       match msg_value (valOf idm) with
+                       | VNat n =>
+                         (hvec_upd ost implStatusIdx stI,
+                          removeRq orq O downRq,
+                          [(pc, {| msg_id := svmRsM;
+                                   msg_value := VNat n |})])
+                       | _ => (ost, orq, nil)
+                       end))
+          |}.
+
+        Definition parentRules :=
+          [parentGetRqImm; parentGetDownRqS; parentGetDownRsS;
+             parentSetRqImm; parentSetDownRqM; parentSetDownRsM].
+        
+      End Rules.
+      
+      Definition parent: Object :=
+        {| obj_idx := parentIdx;
+           obj_ifc := ImplOStateIfc;
+           obj_rules :=
+             (parentRules 0 c1pRq pc1 c2pRs pc2)
+               ++ (parentRules 1 c2pRq pc2 c1pRs pc1);
+           obj_rules_valid := ltac:(inds_valid_tac)
+        |}.
+      
+    End Parent.
     
-    (* Definition impl0: System := *)
-    (*   {| sys_oinds := parentIdx :: child1Idx :: child2Idx :: nil; *)
-    (*      sys_minds := c1pRq :: c1pRs :: pc1 :: c2pRq :: c2pRs :: pc2 :: nil; *)
-    (*      sys_merqs := erq1 :: erq2 :: nil; *)
-    (*      sys_merss := ers1 :: ers2 :: nil; *)
-    (*      sys_msg_inds_valid := Hmvalid; *)
-    (*      sys_inits := implInit; *)
-    (*      sys_rules := nil |}. *)
+    Definition impl: System :=
+      {| sys_objs :=
+           [child child1Idx ec1 ce1 c1pRq c1pRs pc1;
+              child child2Idx ec2 ce2 c2pRq c2pRs pc2;
+              parent];
+         sys_oinds_valid := ltac:(inds_valid_tac);
+         sys_minds := c1pRq :: c1pRs :: pc1 :: c2pRq :: c2pRs :: pc2 :: nil;
+         sys_merqs := erq1 :: erq2 :: nil;
+         sys_merss := ers1 :: ers2 :: nil;
+         sys_msg_inds_valid := ltac:(inds_valid_tac);
+         sys_oss_inits := implInit;
+         sys_orqs_inits := []
+      |}.
 
-    (* Definition implTopo: GTree := *)
-    (*   Node parentIdx *)
-    (*        [([createEdge child1Idx c1pRq parentIdx; *)
-    (*             createEdge child1Idx c1pRs parentIdx; *)
-    (*             createEdge parentIdx pc1 child1Idx], *)
-    (*          Node child1Idx nil); *)
-    (*           ([createEdge child2Idx parentIdx c2pRq; *)
-    (*               createEdge child2Idx parentIdx c2pRs; *)
-    (*               createEdge parentIdx child2Idx pc2], *)
-    (*            Node child2Idx nil)]. *)
+    Definition implTopo: GTree :=
+      Node parentIdx
+           [([createEdge child1Idx c1pRq parentIdx;
+                createEdge child1Idx c1pRs parentIdx;
+                createEdge parentIdx pc1 child1Idx],
+             Node child1Idx nil);
+              ([createEdge child2Idx parentIdx c2pRq;
+                  createEdge child2Idx parentIdx c2pRs;
+                  createEdge parentIdx child2Idx pc2],
+               Node child2Idx nil)].
                                             
-    (* Definition implIndices: list IdxT := *)
-    (*   ltac:(evalOIndsOf impl0). *)
-    
   End Impl.
 
 End System.

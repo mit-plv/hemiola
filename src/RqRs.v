@@ -9,6 +9,7 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope fmap.
 
 Section TreeTopo.
   Variable (gtr: GTree).
@@ -35,40 +36,21 @@ End TreeTopo.
 Section HalfLock.
   Variable (gtr: GTree).
 
-  Fixpoint getDownRq (oidx: IdxT) (orq: ORq Msg) :=
-    match orq with
-    | nil => None
-    | ri :: orq' =>
-      if isParent gtr oidx (rqh_from ri)
-      then Some ri
-      else getDownRq oidx orq'
-    end.
+  Definition upRq := 0.
+  Definition downRq := 1.
 
-  Fixpoint getUpRq (oidx: IdxT) (orq: ORq Msg) :=
-    match orq with
-    | nil => None
-    | ri :: orq' =>
-      if isParent gtr (rqh_from ri) oidx
-      then Some ri
-      else getUpRq oidx orq'
-    end.
+  Definition getDownRq (addr: AddrT) (orq: ORq Msg) :=
+    orq@[addr] >>=[None]
+       (fun aorq => aorq@[downRq] >>=[None] (fun ri => Some ri)).
 
-  (* TODO: need a more intuitive (easier) definition. *)
+  Fixpoint getUpRq (addr: AddrT) (orq: ORq Msg) :=
+    orq@[addr] >>=[None]
+       (fun aorq => aorq@[upRq] >>=[None] (fun ri => Some ri)).
+
+  (* TODO: define it. *)
   Definition HalfLockPrec (oidx: IdxT) {ifc}: OPrec ifc :=
     fun (ost: OState ifc) (orq: ORq Msg) (ins: list (Id Msg)) =>
-      match getDownRq oidx orq with
-      | Some dri =>
-        Forall (fun msg => msg_id msg = msg_id (rqh_msg dri) /\
-                           msg_rr msg = Rs) (valsOf ins) /\
-        rqh_fwds dri = idsOf ins
-      | None =>
-        match getUpRq oidx orq with
-        | Some uri => 
-          Forall (fun msg => msg_id msg = msg_id (rqh_msg uri) /\
-                             msg_rr msg = Rs) (valsOf ins)
-        | None => True
-        end
-      end.
+      True.
 
   Definition HalfLockRule (oidx: IdxT) {ifc} (rule: Rule ifc) :=
     (rule_precond rule) ->oprec (HalfLockPrec oidx).
@@ -137,7 +119,7 @@ Section RqRsSerial.
             (sys: System).
 
   Hypotheses (Htr: TreeTopoSys gtr sys)
-             (Hpb: HalfLockSys gtr sys)
+             (Hpb: HalfLockSys (* gtr *) sys)
              (Hrr: RqRsSys rrdec rrc sys).
 
   Lemma rqrs_well_interleaved_push:
@@ -162,4 +144,5 @@ Section RqRsSerial.
 End RqRsSerial.
 
 Close Scope list.
+Close Scope fmap.
 
