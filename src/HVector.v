@@ -45,3 +45,8 @@ Section HVector.
 
 End HVector.
 
+Notation "HVEC #[ I ]" := (hvec_ith HVEC I) (at level 0): hvec_scope.
+Notation "HVEC +#[ I <- V ]" := (hvec_upd HVEC I V) (at level 0): hvec_scope.
+
+Delimit Scope hvec_scope with hvec.
+
