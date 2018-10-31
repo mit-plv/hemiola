@@ -207,7 +207,6 @@ Definition WfLbl (sys: System) (lbl: MLabel) :=
     In obj (sys_objs sys) /\ obj_idx obj = oidx /\
     In rule (obj_rules obj) /\ rule_idx rule = ridx /\
     ValidMsgsIn sys ins /\
-    idsOf ins = rule_minds rule /\
     map msg_id (valsOf ins) = rule_msg_ids rule /\
     ValidMsgsOut sys outs /\
     DisjList (idsOf ins) (idsOf outs)

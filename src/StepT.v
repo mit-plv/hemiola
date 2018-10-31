@@ -72,7 +72,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     
     Forall (FirstMPI msgs) ins ->
     ValidMsgsIn sys ins ->
-    idsOf ins = rule_minds rule ->
+    idsOf ins = rule_msgs_from rule (orqMap tmsg_msg porq) ->
     map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) = rule_msg_ids rule ->
     
     rule_precond rule (match Hifc with eq_refl => ost_st os end)

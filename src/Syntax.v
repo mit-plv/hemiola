@@ -85,7 +85,10 @@ Section ORqs.
    * response and providing a proper locking mechanism.
    *)
   Record RqInfo (MsgT: Type) :=
-    { rqh_msg: MsgT }.
+    { rqi_msg: MsgT;
+      rqi_minds_rss: list IdxT;
+      rqi_midx_rsb: IdxT
+    }.
 
   (* AddrT |-> RqType |-> RqInfo *)
   Definition ORq (MsgT: Type) := M.t (M.t (RqInfo MsgT)).
@@ -93,12 +96,16 @@ Section ORqs.
   (* Object IdxT |-> ORq *)
   Definition ORqs (MsgT: Type) := M.t (ORq MsgT). 
 
-  Definition addRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT) (msg: MsgT): ORq MsgT :=
+  Definition addRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT)
+             (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
     let aorq := match orq@[addr] with
                 | Some aorq => aorq
                 | None => M.empty _
                 end in
-    orq+[addr <- aorq+[rqty <- {| rqh_msg := msg |}]].
+    orq+[addr <- aorq+[rqty <- {| rqi_msg := msg;
+                                  rqi_minds_rss := mrss;
+                                  rqi_midx_rsb := mrsb
+                               |}]].
 
   Fixpoint getRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT): option (RqInfo MsgT) :=
     orq@[addr] >>=[None]
@@ -108,10 +115,13 @@ Section ORqs.
     orq@[addr] >>=[orq]
        (fun aorq => orq +[addr <- (M.remove rqty aorq)]).
 
-  Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1) :=
+  Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1): ORq MsgT2 :=
     M.map (fun aorq =>
-             M.map (fun rqinfo =>
-                      {| rqh_msg := f (rqh_msg rqinfo) |}) aorq)
+             M.map (fun rqi =>
+                      {| rqi_msg := f (rqi_msg rqi);
+                         rqi_minds_rss := rqi_minds_rss rqi;
+                         rqi_midx_rsb := rqi_midx_rsb rqi
+                      |}) aorq)
           orq.
 
 End ORqs.
@@ -119,6 +129,8 @@ End ORqs.
 Section Rule.
   Variables (ifc: OStateIfc).
 
+  Definition OMsgsFrom :=
+    ORq Msg -> list IdxT.
   Definition OPrec :=
     OState ifc -> ORq Msg -> list (Id Msg) -> Prop.
   Definition OTrs :=
@@ -134,7 +146,7 @@ Section Rule.
   Record Rule :=
     { rule_idx: IdxT;
       rule_msg_ids: list IdxT;
-      rule_minds: list IdxT;
+      rule_msgs_from: OMsgsFrom;
       rule_precond: OPrec;
       rule_trs: OTrs;
     }.
@@ -146,6 +158,9 @@ Infix "->oprec" := OPrecImp (at level 99).
 Notation "'⊤oprec'" := (fun _ _ _ => True).
 Notation "'⊥oprec'" := (fun _ _ _ => False).
 Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
+
+Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
+  List.map (fun midx => (midx, msg)) minds.
 
 Record Object :=
   { obj_idx: IdxT;
@@ -166,7 +181,7 @@ Record System :=
   }.
 
 Ltac inds_valid_tac :=
-  compute; repeat (constructor; firstorder).
+  abstract (compute; repeat (constructor; firstorder)).
 
 Global Instance System_OStates_HasInit : HasInit System OStates :=
   {| initsOf := sys_oss_inits |}.

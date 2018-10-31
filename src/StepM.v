@@ -36,7 +36,7 @@ Inductive step_m (sys: System): MState -> MLabel -> MState -> Prop :=
 
     Forall (FirstMPI msgs) ins ->
     ValidMsgsIn sys ins ->
-    idsOf ins = rule_minds rule ->
+    idsOf ins = rule_msgs_from rule porq ->
     map msg_id (valsOf ins) = rule_msg_ids rule ->
 
     rule_precond rule (match Hifc with eq_refl => ost_st os end) porq ins ->
