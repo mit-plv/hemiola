@@ -39,6 +39,15 @@ Section HalfLock.
   Definition upRq := 0.
   Definition downRq := 1.
 
+  (** Preconditions to check the lock state *)
+
+  Definition LockFree (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[True] (fun aorq => aorq = []).
+
+  Definition HalfLockFree (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[True] (fun aorq => aorq@[downRq] = None).
+
+
   Definition getDownRq (addr: AddrT) (orq: ORq Msg) :=
     orq@[addr] >>=[None]
        (fun aorq => aorq@[downRq] >>=[None] (fun ri => Some ri)).

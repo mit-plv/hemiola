@@ -159,8 +159,6 @@ Section System.
       +[child2Idx <- {| ost_ifc := ImplOStateIfc;
                         ost_st := (0, (stS, tt)) |}].
 
-    (*! TODO: Check each lock precondition is correct. *)
-    
     Section Child.
       Variable (coidx: IdxT).
       Variables (ec ce cpRq cpRs pc: IdxT).
@@ -171,7 +169,7 @@ Section System.
            rule_minds := [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implStatusIdx] >= stS;
+               LockFree orq O /\ ost#[implStatusIdx] >= stS;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost, orq,
@@ -186,7 +184,7 @@ Section System.
            rule_minds := [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implStatusIdx] = stI;
+               LockFree orq O /\ ost#[implStatusIdx] = stI;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -220,7 +218,9 @@ Section System.
         {| rule_idx := 3;
            rule_msg_ids := [svmDownRqS];
            rule_minds := [pc];
-           rule_precond := ⊤oprec;
+           rule_precond :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               HalfLockFree orq O;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost+#[implStatusIdx <- stS],
@@ -235,7 +235,7 @@ Section System.
            rule_minds := [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implStatusIdx] = stM;
+               LockFree orq O /\ ost#[implStatusIdx] = stM;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -256,7 +256,7 @@ Section System.
            rule_minds := [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implStatusIdx] <> stM;
+               LockFree orq O /\ ost#[implStatusIdx] <> stM;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -291,7 +291,9 @@ Section System.
         {| rule_idx := 7;
            rule_msg_ids := [svmDownRqM];
            rule_minds := [pc];
-           rule_precond := ⊤oprec;
+           rule_precond :=
+             fun (ost: OState ImplOStateIfc) orq mins =>
+               HalfLockFree orq O;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost +#[implStatusIdx <- stI],
@@ -306,7 +308,7 @@ Section System.
            rule_minds := [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implStatusIdx] <> stI;
+               LockFree orq O /\ ost#[implStatusIdx] <> stI;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -357,7 +359,7 @@ Section System.
              rule_minds := [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 ost#[implStatusIdx] >= stS;
+                 LockFree orq O /\ ost#[implStatusIdx] >= stS;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  (ost, orq,
@@ -371,7 +373,7 @@ Section System.
              rule_minds := [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 ost#[implStatusIdx] = stI;
+                 LockFree orq O /\ ost#[implStatusIdx] = stI;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
@@ -407,7 +409,7 @@ Section System.
              rule_minds := [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 ost#[implStatusIdx] = stM;
+                 LockFree orq O /\ ost#[implStatusIdx] = stM;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  (ost +#[implStatusIdx <- stI],
@@ -422,7 +424,7 @@ Section System.
              rule_minds := [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 ost#[implStatusIdx] <> stM;
+                 LockFree orq O /\ ost#[implStatusIdx] <> stM;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
@@ -456,7 +458,9 @@ Section System.
           {| rule_idx := parentNumOfRules * ridxOfs + 6;
              rule_msg_ids := [svmRqI];
              rule_minds := [cpRq];
-             rule_precond := ⊤oprec;
+             rule_precond :=
+               fun (ost: OState ImplOStateIfc) orq mins =>
+                 LockFree orq O;               
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
