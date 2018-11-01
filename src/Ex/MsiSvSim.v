@@ -3,7 +3,7 @@ Require Import Common FMap Syntax Topology Semantics SemFacts StepM StepT.
 Require Import Invariant Simulation SerialFacts.
 Require Import Blocking.
 
-Require Import SingleValue.
+Require Import MsiSv.
 
 Set Implicit Arguments.
 

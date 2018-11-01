@@ -2,30 +2,13 @@ Require Import Bool Vector List String Peano_dec.
 Require Import Common FMap HVector ListSupport Syntax Semantics StepT.
 Require Import Topology RqRs.
 
+Require Import Msi.
+
 Set Implicit Arguments.
 
 Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
-
-Definition svmGetRq: IdxT := 0.
-Definition svmGetRs: IdxT := 1.
-Definition svmRqS: IdxT := 2.
-Definition svmRsS: IdxT := 3.
-Definition svmDownRqS: IdxT := 4.
-Definition svmDownRsS: IdxT := 5.
-
-Definition svmSetRq: IdxT := 6.
-Definition svmSetRs: IdxT := 7.
-Definition svmRqM: IdxT := 8.
-Definition svmRsM: IdxT := 9.
-Definition svmDownRqM: IdxT := 10.
-Definition svmDownRsM: IdxT := 11.
-
-Definition svmEvictRq: IdxT := 12.
-Definition svmEvictRs: IdxT := 13.
-Definition svmRqI: IdxT := 14.
-Definition svmRsI: IdxT := 15.
 
 Section System.
 
@@ -51,20 +34,20 @@ Section System.
       
       Definition specGetRq: Rule SpecOStateIfc :=
         {| rule_idx := specNumOfRules * ridxOfs + 0;
-           rule_msg_ids := [svmGetRq];
+           rule_msg_ids := [msiGetRq];
            rule_msgs_from := fun _ => [erq];
            rule_precond := ⊤oprec;
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                (ost, orq,
-                [(ers, {| msg_id := svmGetRs;
+                [(ers, {| msg_id := msiGetRs;
                           msg_value := VNat (ost#[specValueIdx])
                        |})])
         |}.
 
       Definition specSetRq: Rule SpecOStateIfc :=
         {| rule_idx := specNumOfRules * ridxOfs + 1;
-           rule_msg_ids := [svmSetRq];
+           rule_msg_ids := [msiSetRq];
            rule_msgs_from := fun _ => [erq];
            rule_precond := ⊤oprec;
            rule_trs :=
@@ -76,19 +59,19 @@ Section System.
                      | _ => ost
                      end),
                 orq,
-                [(ers, {| msg_id := svmSetRs;
+                [(ers, {| msg_id := msiSetRs;
                           msg_value := VUnit |})])
         |}.
 
       Definition specEvictRq: Rule SpecOStateIfc :=
         {| rule_idx := specNumOfRules * ridxOfs + 2;
-           rule_msg_ids := [svmEvictRq];
+           rule_msg_ids := [msiEvictRq];
            rule_msgs_from := fun _ => [erq];
            rule_precond := ⊤oprec;
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                (ost, orq,
-                [(ers, {| msg_id := svmEvictRs;
+                [(ers, {| msg_id := msiEvictRs;
                           msg_value := VUnit |})])
         |}.
       
@@ -144,20 +127,16 @@ Section System.
     Definition implValueIdx: Fin.t 2 := Fin.F1.
     Definition implStatusIdx: Fin.t 2 := Fin.FS Fin.F1.
     
-    Definition stM := 2.
-    Definition stS := 1.
-    Definition stI := 0.
-
     Definition ImplOStateIfc: OStateIfc :=
       {| ost_sz := 2;
          ost_ty := [nat:Type; nat:Type]%vector |}.
     Definition implInit: OStates :=
       [parentIdx <- {| ost_ifc := ImplOStateIfc;
-                       ost_st := (0, (stS, tt)) |}]
+                       ost_st := (0, (msiS, tt)) |}]
       +[child1Idx <- {| ost_ifc := ImplOStateIfc;
-                        ost_st := (0, (stS, tt)) |}]
+                        ost_st := (0, (msiS, tt)) |}]
       +[child2Idx <- {| ost_ifc := ImplOStateIfc;
-                        ost_st := (0, (stS, tt)) |}].
+                        ost_st := (0, (msiS, tt)) |}].
 
     Section Child.
       Variable (coidx: IdxT).
@@ -165,39 +144,39 @@ Section System.
 
       Definition childGetRqImm: Rule ImplOStateIfc :=
         {| rule_idx := 0;
-           rule_msg_ids := [svmGetRq];
+           rule_msg_ids := [msiGetRq];
            rule_msgs_from := fun _ => [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] >= stS;
+               LockFree orq O /\ ost#[implStatusIdx] >= msiS;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost, orq,
-                [(ce, {| msg_id := svmGetRs;
+                [(ce, {| msg_id := msiGetRs;
                          msg_value := VNat (ost#[implValueIdx])
                       |})])
         |}.
 
       Definition childGetRqS: Rule ImplOStateIfc :=
         {| rule_idx := 1;
-           rule_msg_ids := [svmGetRq];
+           rule_msg_ids := [msiGetRq];
            rule_msgs_from := fun _ => [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] = stI;
+               LockFree orq O /\ ost#[implStatusIdx] = msiI;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
                       addRq orq O upRq (valOf idm) [pc] ce,
-                      [(cpRq, {| msg_id := svmRqS;
+                      [(cpRq, {| msg_id := msiRqS;
                                  msg_value := VUnit |})])))
         |}.
 
       Definition childGetRsS: Rule ImplOStateIfc :=
         {| rule_idx := 2;
-           rule_msg_ids := [svmRsS];
+           rule_msg_ids := [msiRsS];
            rule_msgs_from := fun _ => [pc];
            rule_precond := ⊤oprec;
            rule_trs :=
@@ -206,9 +185,9 @@ Section System.
                   (fun idm =>
                      match msg_value (valOf idm) with
                      | VNat n =>
-                       (ost +#[implValueIdx <- n] +#[implStatusIdx <- stS],
+                       (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiS],
                         removeRq orq O upRq,
-                        [(ce, {| msg_id := svmGetRs;
+                        [(ce, {| msg_id := msiGetRs;
                                  msg_value := VNat n |})])
                      | _ => (ost, orq, nil) (** TODO: how to efficiently handle this case? *)
                      end))
@@ -216,35 +195,35 @@ Section System.
 
       Definition childDownRqS: Rule ImplOStateIfc :=
         {| rule_idx := 3;
-           rule_msg_ids := [svmDownRqS];
+           rule_msg_ids := [msiDownRqS];
            rule_msgs_from := fun _ => [pc];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                HalfLockFree orq O;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               (ost+#[implStatusIdx <- stS],
+               (ost+#[implStatusIdx <- msiS],
                 orq,
-                [(cpRs, {| msg_id := svmDownRsS;
+                [(cpRs, {| msg_id := msiDownRsS;
                            msg_value := VUnit |})])
         |}.
 
       Definition childSetRqImm: Rule ImplOStateIfc :=
         {| rule_idx := 4;
-           rule_msg_ids := [svmSetRq];
+           rule_msg_ids := [msiSetRq];
            rule_msgs_from := fun _ => [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] = stM;
+               LockFree orq O /\ ost#[implStatusIdx] = msiM;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      match msg_value (valOf idm) with
                      | VNat n =>
-                       (ost +#[implValueIdx <- n] +#[implStatusIdx <- stM],
+                       (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiM],
                         orq,
-                        [(ce, {| msg_id := svmSetRs;
+                        [(ce, {| msg_id := msiSetRs;
                                  msg_value := VUnit |})])
                      | _ => (ost, orq, nil)
                      end))
@@ -252,24 +231,24 @@ Section System.
     
       Definition childSetRqM: Rule ImplOStateIfc :=
         {| rule_idx := 5;
-           rule_msg_ids := [svmSetRq];
+           rule_msg_ids := [msiSetRq];
            rule_msgs_from := fun _ => [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] <> stM;
+               LockFree orq O /\ ost#[implStatusIdx] <> msiM;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
                       addRq orq O upRq (valOf idm) [pc] ce,
-                      [(cpRq, {| msg_id := svmRqM;
+                      [(cpRq, {| msg_id := msiRqM;
                                  msg_value := VUnit |})])))
         |}.
 
       Definition childSetRsM: Rule ImplOStateIfc :=
         {| rule_idx := 6;
-           rule_msg_ids := [svmRsM];
+           rule_msg_ids := [msiRsM];
            rule_msgs_from := fun _ => [pc];
            rule_precond := ⊤oprec;
            rule_trs :=
@@ -278,10 +257,10 @@ Section System.
                  (fun rqinfo =>
                     match msg_value (rqi_msg rqinfo) with
                     | VNat n =>
-                      (ost +#[implValueIdx <- n] +#[implStatusIdx <- stM],
+                      (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiM],
                        removeRq orq O upRq,
                        (ce,
-                        {| msg_id := svmSetRs;
+                        {| msg_id := msiSetRs;
                            msg_value := VNat n |}) :: nil)
                     | _ => (ost, orq, nil)
                     end)
@@ -289,48 +268,48 @@ Section System.
 
       Definition childDownRqM: Rule ImplOStateIfc :=
         {| rule_idx := 7;
-           rule_msg_ids := [svmDownRqM];
+           rule_msg_ids := [msiDownRqM];
            rule_msgs_from := fun _ => [pc];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                HalfLockFree orq O;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               (ost +#[implStatusIdx <- stI],
+               (ost +#[implStatusIdx <- msiI],
                 orq,
-                [(cpRs, {| msg_id := svmDownRsS;
+                [(cpRs, {| msg_id := msiDownRsS;
                            msg_value := VNat (ost#[implValueIdx]) |})])
         |}.
 
       Definition childEvictRqI: Rule ImplOStateIfc :=
         {| rule_idx := 8;
-           rule_msg_ids := [svmEvictRq];
+           rule_msg_ids := [msiEvictRq];
            rule_msgs_from := fun _ => [ec];
            rule_precond :=
              fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] <> stI;
+               LockFree orq O /\ ost#[implStatusIdx] <> msiI;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
                       addRq orq O upRq (valOf idm) [pc] ce,
-                      [(cpRq, {| msg_id := svmRqI;
+                      [(cpRq, {| msg_id := msiRqI;
                                  msg_value := VNat (ost#[implValueIdx]) |})])))
         |}.
 
       Definition childEvictRsI: Rule ImplOStateIfc :=
         {| rule_idx := 9;
-           rule_msg_ids := [svmRsI];
+           rule_msg_ids := [msiRsI];
            rule_msgs_from := fun _ => [pc];
            rule_precond := ⊤oprec;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
-                     (ost +#[implStatusIdx <- stI],
+                     (ost +#[implStatusIdx <- msiI],
                       removeRq orq O upRq,
-                      [(ce, {| msg_id := svmEvictRs;
+                      [(ce, {| msg_id := msiEvictRs;
                                msg_value := VUnit |})])))
         |}.
       
@@ -355,38 +334,38 @@ Section System.
 
         Definition parentGetRqImm: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 0;
-             rule_msg_ids := [svmRqS];
+             rule_msg_ids := [msiRqS];
              rule_msgs_from := fun _ => [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] >= stS;
+                 LockFree orq O /\ ost#[implStatusIdx] >= msiS;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  (ost, orq,
-                  [(pc, {| msg_id := svmRsS;
+                  [(pc, {| msg_id := msiRsS;
                            msg_value := VNat (ost#[implValueIdx]) |})])
           |}.
 
         Definition parentGetDownRqS: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 1;
-             rule_msg_ids := [svmRqS];
+             rule_msg_ids := [msiRqS];
              rule_msgs_from := fun _ => [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] = stI;
+                 LockFree orq O /\ ost#[implStatusIdx] = msiI;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
                     (fun idm =>
                        (ost,
                         addRq orq O downRq (valOf idm) [cpRs'] pc,
-                        [(pc', {| msg_id := svmDownRqS;
+                        [(pc', {| msg_id := msiDownRqS;
                                   msg_value := VUnit |})])))
           |}.
 
         Definition parentGetDownRsS: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 2;
-             rule_msg_ids := [svmDownRsS];
+             rule_msg_ids := [msiDownRsS];
              rule_msgs_from := fun _ => [cpRs'];
              rule_precond := ⊤oprec;
              rule_trs :=
@@ -395,9 +374,9 @@ Section System.
                     (fun idm =>
                        match msg_value (valOf idm) with
                        | VNat n =>
-                         (ost +#[implValueIdx <- n] +#[implStatusIdx <-stS],
+                         (ost +#[implValueIdx <- n] +#[implStatusIdx <-msiS],
                           removeRq orq O downRq,
-                          [(pc, {| msg_id := svmRsS;
+                          [(pc, {| msg_id := msiRsS;
                                    msg_value := VNat n |})])
                        | _ => (ost, orq, nil)
                        end))
@@ -405,39 +384,39 @@ Section System.
 
         Definition parentSetRqImm: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 3;
-             rule_msg_ids := [svmRqM];
+             rule_msg_ids := [msiRqM];
              rule_msgs_from := fun _ => [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] = stM;
+                 LockFree orq O /\ ost#[implStatusIdx] = msiM;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 (ost +#[implStatusIdx <- stI],
+                 (ost +#[implStatusIdx <- msiI],
                   orq,
-                  [(pc, {| msg_id := svmRsM;
+                  [(pc, {| msg_id := msiRsM;
                            msg_value := VNat (ost#[implValueIdx]) |})])
           |}.
 
         Definition parentSetDownRqM: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 4;
-             rule_msg_ids := [svmRqM];
+             rule_msg_ids := [msiRqM];
              rule_msgs_from := fun _ => [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] <> stM;
+                 LockFree orq O /\ ost#[implStatusIdx] <> msiM;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
                     (fun idm =>
                        (ost,
                         addRq orq O downRq (valOf idm) [cpRs'] pc,
-                        [(pc', {| msg_id := svmDownRqM;
+                        [(pc', {| msg_id := msiDownRqM;
                                   msg_value := VUnit |})])))
           |}.
 
         Definition parentSetDownRsM: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 5;
-             rule_msg_ids := [svmDownRsM];
+             rule_msg_ids := [msiDownRsM];
              rule_msgs_from := fun _ => [cpRs'];
              rule_precond := ⊤oprec;
              rule_trs :=
@@ -446,9 +425,9 @@ Section System.
                     (fun idm =>
                        match msg_value (valOf idm) with
                        | VNat n =>
-                         (ost +#[implStatusIdx <- stI],
+                         (ost +#[implStatusIdx <- msiI],
                           removeRq orq O downRq,
-                          [(pc, {| msg_id := svmRsM;
+                          [(pc, {| msg_id := msiRsM;
                                    msg_value := VNat n |})])
                        | _ => (ost, orq, nil)
                        end))
@@ -456,7 +435,7 @@ Section System.
 
         Definition parentEvictRqImm: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * ridxOfs + 6;
-             rule_msg_ids := [svmRqI];
+             rule_msg_ids := [msiRqI];
              rule_msgs_from := fun _ => [cpRq];
              rule_precond :=
                fun (ost: OState ImplOStateIfc) orq mins =>
@@ -467,9 +446,9 @@ Section System.
                     (fun idm =>
                        match msg_value (valOf idm) with
                        | VNat n =>
-                         (ost +#[implValueIdx <- n] +#[implStatusIdx <- stS],
+                         (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiS],
                           orq,
-                          [(pc, {| msg_id := svmRsI;
+                          [(pc, {| msg_id := msiRsI;
                                    msg_value := VUnit |})])
                        | _ => (ost, orq, nil)
                        end))

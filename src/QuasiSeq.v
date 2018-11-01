@@ -288,7 +288,8 @@ End WellInterleaved.
 
 Section WellInterleavedPush.
   Variable (sys: System).
-  
+
+  (* TODO: check whether [hsts2] is required. Enough just with adjacent histories? *)
   Definition LRPushable (lpush rpush: MHistory -> Prop) (hsts: list MHistory) :=
     forall lhst rhst hsts1 hsts2 hsts3,
       hsts = hsts3 ++ lhst :: hsts2 ++ rhst :: hsts1 ->
