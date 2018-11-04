@@ -36,14 +36,18 @@ Section Sequential.
         Atomic inits nins (RlblInt oidx ridx rins routs :: hst) nouts neouts.
 
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from
-   * a single external request.
+   * a no or single external request.
    *)
-  Inductive ExtAtomic: Id MsgT -> History MsgT -> Prop :=
-  | ExtAtomicIntro:
+  Inductive ExtAtomic: History MsgT -> Prop :=
+  | ExtAtomicNil:
+      forall ins hst outs eouts,
+        Atomic nil ins hst outs eouts ->
+        ExtAtomic hst
+  | ExtAtomicSingle:
       forall rq ins hst outs eouts,
         In (idOf rq) (sys_merqs sys) ->
         Atomic [rq] ins hst outs eouts ->
-        ExtAtomic rq hst.
+        ExtAtomic hst.
 
   Inductive Transactional: History MsgT -> Prop :=
   | TrsSlt:
@@ -57,8 +61,8 @@ Section Sequential.
         tout = RlblOuts eouts ->
         Transactional (tout :: nil)
   | TrsAtomic:
-      forall rq hst,
-        ExtAtomic rq hst ->
+      forall hst,
+        ExtAtomic hst ->
         Transactional hst.
 
   Definition Sequential (hst: History MsgT) (trss: list (History MsgT)) :=

@@ -143,15 +143,17 @@ Section MsgParam.
   Qed.
 
   Lemma extAtomic_preserved:
-    forall impl1 (rq: Id MsgT) hst,
-      ExtAtomic impl1 msgT_dec rq hst ->
+    forall impl1 hst,
+      ExtAtomic impl1 msgT_dec hst ->
       forall impl2,
         sys_merqs impl1 = sys_merqs impl2 ->
-        ExtAtomic impl2 msgT_dec rq hst.
+        ExtAtomic impl2 msgT_dec hst.
   Proof.
     intros.
-    inv H; econstructor; eauto.
-    rewrite <-H0; assumption.
+    inv H.
+    - eapply ExtAtomicNil; eauto.
+    - eapply ExtAtomicSingle; eauto.
+      rewrite <-H0; assumption.
   Qed.
 
   Lemma sequential_nil:
