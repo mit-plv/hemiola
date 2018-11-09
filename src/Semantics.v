@@ -97,6 +97,10 @@ Section Transition.
     steps step sys st1 ll st2 /\
     P st1 ll st2.
 
+End Transition.
+
+Section Behavior.
+  
   Definition Trace := list Label.
 
   Definition Reachable {StateT LabelT}
@@ -124,13 +128,67 @@ Section Transition.
              `{HasInit System StateS} `{HasLabel LabelS}
              (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS)
              (impl spec: System) :=
-    forall ll, Behavior ssI impl ll ->
-               Behavior ssS spec ll.
+    forall tr, Behavior ssI impl tr ->
+               Behavior ssS spec tr.
 
-End Transition.
+End Behavior.
 
 Notation "StI # StS |-- I <= S" := (Refines StI StS I S) (at level 30).
 Notation "StI # StS |-- I ⊑ S" := (Refines StI StS I S) (at level 30).
+
+(* Section BehaviorIO. *)
+
+(*   Definition getInsLabel {LabelT} `{HasLabel LabelT} (l: LabelT): option Label := *)
+(*     (getLabel l) >>=[None] *)
+(*       (fun lbl => match lbl with *)
+(*                   | LblIns _ => Some lbl *)
+(*                   | _ => None *)
+(*                   end). *)
+
+(*   Definition getOutsLabel {LabelT} `{HasLabel LabelT} (l: LabelT): option Label := *)
+(*     (getLabel l) >>=[None] *)
+(*       (fun lbl => match lbl with *)
+(*                   | LblOuts _ => Some lbl *)
+(*                   | _ => None *)
+(*                   end). *)
+
+(*   Fixpoint behaviorInsOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace := *)
+(*     match ll with *)
+(*     | nil => nil *)
+(*     | l :: ll' => (getInsLabel l) ::> (behaviorInsOf ll') *)
+(*     end. *)
+
+(*   Fixpoint behaviorOutsOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace := *)
+(*     match ll with *)
+(*     | nil => nil *)
+(*     | l :: ll' => (getOutsLabel l) ::> (behaviorOutsOf ll') *)
+(*     end. *)
+
+(*   Definition behaviorIO {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace * Trace := *)
+(*     (behaviorInsOf ll, behaviorOutsOf ll). *)
+  
+(*   Inductive BehaviorIO {StateT LabelT} *)
+(*             `{HasInit System StateT} `{HasLabel LabelT} *)
+(*             (ss: Steps StateT LabelT) : System -> Trace -> Trace -> Prop := *)
+(*   | BehvIO: forall sys ll st, *)
+(*       ss sys (initsOf sys) ll st -> *)
+(*       forall trin trout, *)
+(*         trin = behaviorInsOf ll -> *)
+(*         trout = behaviorOutsOf ll -> *)
+(*         BehaviorIO ss sys trin trout. *)
+
+(*   Definition RefinesIO {StateI LabelI StateS LabelS} *)
+(*              `{HasInit System StateI} `{HasLabel LabelI} *)
+(*              `{HasInit System StateS} `{HasLabel LabelS} *)
+(*              (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS) *)
+(*              (impl spec: System) := *)
+(*     forall trin trout, BehaviorIO ssI impl trin trout -> *)
+(*                        BehaviorIO ssS spec trin trout. *)
+  
+(* End BehaviorIO. *)
+
+(* Notation "StI # StS |-- I <~ S" := (RefinesIO StI StS I S) (at level 30). *)
+(* Notation "StI # StS |-- I ≲ S" := (RefinesIO StI StS I S) (at level 30). *)
 
 (** Some concrete state and label definitions *)
 
@@ -187,15 +245,6 @@ Definition MLabel := RLabel Msg.
 Definition History (MsgT: Type) := list (RLabel MsgT).
 
 Definition MHistory := History Msg.
-
-Definition InternalLbl (lbl: MLabel) :=
-  match lbl with
-  | RlblInt _ _ _ _ => True
-  | _ => False
-  end.
-
-Definition InternalHistory (hst: MHistory) :=
-  Forall (fun tlbl => InternalLbl tlbl) hst.
 
 Definition WfLbl (sys: System) (lbl: MLabel) :=
   match lbl with

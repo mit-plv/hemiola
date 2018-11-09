@@ -221,12 +221,10 @@ Section MsgParam.
     forall sys hst trss st,
       steps step_m sys (initsOf sys) hst st ->
       Sequential sys msg_dec hst trss ->
-      Serializable sys hst.
+      Serializable sys hst st.
   Proof.
     intros; red; intros.
-    do 2 eexists; split.
-    - split; eauto.
-    - congruence.
+    eexists; split; eauto.
   Qed.
 
   Lemma stransactional_default:
@@ -349,109 +347,128 @@ Proof.
   dest; eauto.
 Qed.
 
-Lemma bequivalent_refl:
-  forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT),
-    BEquivalent sys hst hst.
-Proof.
-  congruence.
-Qed.
+(* Lemma bequivalent_refl: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT), *)
+(*     BEquivalent sys hst hst. *)
+(* Proof. *)
+(*   congruence. *)
+(* Qed. *)
 
-Lemma bequivalent_sym:
-  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT),
-    BEquivalent sys hst1 hst2 ->
-    BEquivalent sys hst2 hst1.
-Proof.
-  congruence.
-Qed.
+(* Lemma bequivalent_sym: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
+(*     BEquivalent sys hst1 hst2 -> *)
+(*     BEquivalent sys hst2 hst1. *)
+(* Proof. *)
+(*   congruence. *)
+(* Qed. *)
 
-Lemma bequivalent_trans:
-  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT),
-    BEquivalent sys hst1 hst2 ->
-    BEquivalent sys hst2 hst3 ->
-    BEquivalent sys hst1 hst3.
-Proof.
-  congruence.
-Qed.
+(* Lemma bequivalent_trans: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
+(*     BEquivalent sys hst1 hst2 -> *)
+(*     BEquivalent sys hst2 hst3 -> *)
+(*     BEquivalent sys hst1 hst3. *)
+(* Proof. *)
+(*   congruence. *)
+(* Qed. *)
 
-Lemma bequivalent_app_1:
-  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT),
-    BEquivalent sys hst1 hst2 ->
-    BEquivalent sys (hst3 ++ hst1) (hst3 ++ hst2).
-Proof.
-  intros.
-  red; do 2 rewrite behaviorOf_app.
-  f_equal; assumption.
-Qed.
+(* Lemma bequivalent_app_1: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
+(*     BEquivalent sys hst1 hst2 -> *)
+(*     BEquivalent sys (hst3 ++ hst1) (hst3 ++ hst2). *)
+(* Proof. *)
+(*   intros. *)
+(*   red; do 2 rewrite behaviorOf_app. *)
+(*   f_equal; assumption. *)
+(* Qed. *)
 
-Lemma bequivalent_app_2:
-  forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT),
-    BEquivalent sys hst1 hst2 ->
-    BEquivalent sys (hst1 ++ hst3) (hst2 ++ hst3).
-Proof.
-  intros.
-  red; do 2 rewrite behaviorOf_app.
-  f_equal; assumption.
-Qed.
+(* Lemma bequivalent_app_2: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
+(*     BEquivalent sys hst1 hst2 -> *)
+(*     BEquivalent sys (hst1 ++ hst3) (hst2 ++ hst3). *)
+(* Proof. *)
+(*   intros. *)
+(*   red; do 2 rewrite behaviorOf_app. *)
+(*   f_equal; assumption. *)
+(* Qed. *)
 
-Theorem serializable_seqSteps_refines:
-  forall sys,
-    SerializableSys sys ->
-    steps step_m # seqStepsM |-- sys ⊑ sys.
-Proof.
-  unfold SerializableSys, Refines; intros.
-  inv H0; rename ll0 into ill.
-  specialize (H _ _ H1).
-  unfold Serializable in H.
-  destruct H as [sll [sst [? ?]]].
-  unfold MLabel; rewrite H0.
-  econstructor; eauto.
-Qed.
+(* Lemma ioEquivalent_refl: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT), *)
+(*     IOEquivalent sys hst hst. *)
+(* Proof. *)
+(*   congruence. *)
+(* Qed. *)
+
+(* Lemma ioEquivalent_sym: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
+(*     IOEquivalent sys hst1 hst2 -> *)
+(*     IOEquivalent sys hst2 hst1. *)
+(* Proof. *)
+(*   congruence. *)
+(* Qed. *)
+
+(* Lemma ioEquivalent_trans: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
+(*     IOEquivalent sys hst1 hst2 -> *)
+(*     IOEquivalent sys hst2 hst3 -> *)
+(*     IOEquivalent sys hst1 hst3. *)
+(* Proof. *)
+(*   congruence. *)
+(* Qed. *)
+
+(* Lemma ioEquivalent_app_1: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
+(*     IOEquivalent sys hst1 hst2 -> *)
+(*     IOEquivalent sys (hst3 ++ hst1) (hst3 ++ hst2). *)
+(* Proof. *)
+(*   intros. *)
+(*   red; unfold behaviorIO. *)
+(*   do 2 (rewrite behaviorInsOf_app, behaviorOutsOf_app). *)
+(*   inv H0; reflexivity. *)
+(* Qed. *)
+
+(* Lemma ioEquivalent_app_2: *)
+(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
+(*     IOEquivalent sys hst1 hst2 -> *)
+(*     IOEquivalent sys (hst1 ++ hst3) (hst2 ++ hst3). *)
+(* Proof. *)
+(*   intros. *)
+(*   red; unfold behaviorIO. *)
+(*   do 2 (rewrite behaviorInsOf_app, behaviorOutsOf_app). *)
+(*   inv H0; reflexivity. *)
+(* Qed. *)
+
+(* Theorem serializable_seqSteps_refinesIO: *)
+(*   forall sys, *)
+(*     SerializableSys sys -> *)
+(*     steps step_m # seqStepsM |-- sys ≲ sys. *)
+(* Proof. *)
+(*   unfold SerializableSys, RefinesIO; intros. *)
+(*   inv H0. *)
+(*   specialize (H _ _ H1). *)
+(*   unfold Serializable in H. *)
+(*   destruct H as [sll [sst [? ?]]]. *)
+(*   inv H0; unfold MLabel; rewrite H3, H4. *)
+(*   econstructor; eauto. *)
+(* Qed. *)
 
 Lemma serializable_nil:
-  forall sys, Serializable sys nil.
+  forall sys, Serializable sys nil (initsOf sys).
 Proof.
   intros; hnf; intros.
-  exists nil; eexists.
-  split.
-  - split.
-    + constructor.
-    + eexists; eapply sequential_nil.
-  - reflexivity.
+  exists nil; split.
+  - constructor.
+  - exists nil; constructor; auto.
 Qed.
 
 Lemma serializable_silent:
-  forall sys ll,
-    Serializable sys ll ->
-    Serializable sys (RlblEmpty _ :: ll).
+  forall sys ll st,
+    Serializable sys ll st ->
+    Serializable sys (RlblEmpty _ :: ll) st.
 Proof.
   intros.
   hnf; hnf in H; intros; dest.
-  do 2 eexists; split.
-  - destruct H; split; dest.
-    + eapply StepsCons.
-      * eassumption.
-      * eapply SmSlt.
-    + eexists; eapply sequential_silent; eauto.
-  - assumption.
-Qed.
-
-Lemma serializable_msg_ins:
-  forall sys ll eins,
-    Serializable sys ll ->
-    eins <> nil ->
-    ValidMsgsExtIn sys eins ->
-    Serializable sys (RlblIns eins :: ll).
-Proof.
-  intros.
-  hnf; hnf in H; intros; dest.
-  destruct x0 as [oss orqs msgs].
-  exists (RlblIns eins :: x); eexists; split.
-  - destruct H; split; dest.
-    + econstructor.
-      * eassumption.
-      * econstructor; eauto.
-    + eexists; eapply sequential_msg_ins; eauto.
-  - hnf; cbn; rewrite H2; reflexivity.
+  destruct H; dest.
+  eexists; split; eauto.
 Qed.
 
 Close Scope list.

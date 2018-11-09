@@ -6,9 +6,13 @@ Set Implicit Arguments.
 
 Open Scope list.
 
-Ltac dest_step_m :=
+Ltac dest_steps :=
   repeat match goal with
          | [H: steps step_m _ _ _ _ |- _] => inv H
+         end; simpl in *.
+
+Ltac dest_step_m :=
+  repeat match goal with
          | [H: step_m _ _ _ _ |- _] => inv H
          | [H: {| bst_oss := _ |} = {| bst_oss := _ |} |- _] => inv H
          end; simpl in *.
@@ -16,10 +20,48 @@ Ltac dest_step_m :=
 Definition Reducible (sys: System) (hfr hto: MHistory) :=
   forall st1 st2,
     steps step_m sys st1 hfr st2 ->
-    steps step_m sys st1 hto st2 /\
-    BEquivalent sys hfr hto.
+    steps step_m sys st1 hto st2.
 
 (*! General Facts *)
+
+Definition InternalLbl (lbl: MLabel) :=
+  match lbl with
+  | RlblInt _ _ _ _ => True
+  | _ => False
+  end.
+
+Definition InsLbl (lbl: MLabel) :=
+  match lbl with
+  | RlblIns _ => True
+  | _ => False
+  end.
+
+Definition OutsLbl (lbl: MLabel) :=
+  match lbl with
+  | RlblOuts _ => True
+  | _ => False
+  end.
+
+Definition NonInsLbl (lbl: MLabel) :=
+  match lbl with
+  | RlblIns _ => False
+  | _ => True
+  end.
+
+Definition NonOutsLbl (lbl: MLabel) :=
+  match lbl with
+  | RlblOuts _ => False
+  | _ => True
+  end.
+
+Definition HistoryP (P: MLabel -> Prop) (hst: MHistory) :=
+  Forall (fun lbl => P lbl) hst.
+
+Definition InternalHistory := HistoryP InternalLbl.
+Definition InsHistory := HistoryP InsLbl.
+Definition OutsHistory := HistoryP OutsLbl.
+Definition NonInsHistory := HistoryP NonInsLbl.
+Definition NonOutsHistory := HistoryP NonOutsLbl.
 
 Lemma atomic_internal_history:
   forall inits ins hst outs eouts,
@@ -31,20 +73,20 @@ Proof.
   - repeat constructor; auto.
 Qed.
 
-Lemma internal_history_behavior_nil:
-  forall hst,
-    InternalHistory hst -> behaviorOf hst = nil.
-Proof.
-  induction hst; simpl; intros; auto.
-  inv H; rewrite IHhst by assumption.
-  destruct a; auto; elim H2.
-Qed.
+(* Lemma internal_history_behaviorIO_nil: *)
+(*   forall hst, *)
+(*     InternalHistory hst -> *)
+(*     behaviorIO hst = (nil, nil). *)
+(* Proof. *)
+(*   induction hst; simpl; intros; auto. *)
+(*   inv H; specialize (IHhst H3). *)
+(*   unfold behaviorIO in *. *)
+(*   destruct a; simpl; auto; elim H2. *)
+(* Qed. *)
 
 Lemma reducible_refl:
   forall sys hst, Reducible sys hst hst.
 Proof.
-  unfold Reducible; intros.
-  split; auto.
   congruence.
 Qed.
 
@@ -54,11 +96,7 @@ Lemma reducible_trans:
     Reducible sys hst2 hst3 ->
     Reducible sys hst1 hst3.
 Proof.
-  unfold Reducible; intros.
-  specialize (H _ _ H1); dest.
-  specialize (H0 _ _ H); dest.
-  split; auto.
-  congruence.
+  unfold Reducible; intros; auto.
 Qed.
 
 Lemma reducible_app_1:
@@ -70,9 +108,7 @@ Proof.
   unfold Reducible; intros.
   eapply steps_split in H0; [|reflexivity]; dest.
   specialize (H _ _ H0); dest.
-  split.
-  - eapply steps_append; eauto.
-  - apply bequivalent_app_1; auto.
+  eapply steps_append; eauto.
 Qed.
 
 Lemma reducible_app_2:
@@ -84,9 +120,7 @@ Proof.
   unfold Reducible; intros.
   eapply steps_split in H0; [|reflexivity]; dest.
   specialize (H _ _ H1); dest.
-  split.
-  - eapply steps_append; eauto.
-  - apply bequivalent_app_2; auto.
+  eapply steps_append; eauto.
 Qed.
 
 Corollary reducible_cons:
@@ -118,31 +152,40 @@ Lemma reducible_serializable:
     steps step_m sys st1 hfr st2 ->
     forall hto,
       steps step_m sys st1 hto st2 ->
-      BEquivalent sys hfr hto ->
-      (* Reducible sys hfr hto -> *)
-      Serializable sys hto ->
-      Serializable sys hfr.
+      Serializable sys hto st2 ->
+      Serializable sys hfr st2.
 Proof.
-  unfold Serializable, Reducible; intros.
-  destruct H2 as [shfr [stfr [? ?]]].
-  exists shfr, stfr.
-  split; auto.
-  eapply bequivalent_trans; eauto.
+  intros; auto.
 Qed.
 
 (*! Reducibility of silent, incoming, and outgoing labels *)
+
+Lemma silent_ignored_1:
+  forall sys hst,
+    Reducible sys (RlblEmpty _ :: hst) hst.
+Proof.
+  unfold Reducible; intros.
+  inv H; inv H5; assumption.
+Qed.
+
+Lemma silent_ignored_2:
+  forall sys hst,
+    Reducible sys (hst ++ [RlblEmpty _]) hst.
+Proof.
+  unfold Reducible; intros.
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  inv H; inv H4; inv H6.
+  assumption.
+Qed.
 
 Lemma silent_commutes_1:
   forall sys lbl,
     Reducible sys [RlblEmpty _; lbl] [lbl; RlblEmpty _].
 Proof.
   unfold Reducible; intros.
-  split.
-  - inv H; inv H3; inv H2; inv H5.
-    repeat econstructor.
-    assumption.
-  - inv H; inv H3; inv H2; inv H5.
-    repeat econstructor.
+  inv H; inv H3; inv H2; inv H5.
+  repeat econstructor; assumption.
 Qed.
 
 Lemma silent_commutes_2:
@@ -150,275 +193,213 @@ Lemma silent_commutes_2:
     Reducible sys [lbl; RlblEmpty _] [RlblEmpty _; lbl].
 Proof.
   unfold Reducible; intros.
-  split.
-  - inv H; inv H3; inv H2; inv H6.
-    repeat econstructor.
-    assumption.
-  - inv H; inv H3; inv H2; inv H6.
-    repeat econstructor.
+  inv H; inv H3; inv H2; inv H6.
+  repeat econstructor; assumption.
 Qed.
 
 Lemma silent_reducible_1:
   forall sys hst,
     Reducible sys (RlblEmpty _ :: hst) (hst ++ [RlblEmpty _]).
 Proof.
-  unfold Reducible; induction hst as [|lbl ?]; simpl; intros;
-    [split; [auto|congruence]|].
+  unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
 
-  split.
-  - change (RlblEmpty _ :: lbl :: hst) with ([RlblEmpty _; lbl] ++ hst) in H.
-    eapply steps_split in H; [|reflexivity].
-    destruct H as [sti [? ?]].
-    eapply silent_commutes_1 in H0; dest.
-    pose proof (steps_append H H0); inv H2.
-    specialize (IHhst _ _ H6); dest.
-    econstructor; eauto.
-  - red; cbn.
-    rewrite behaviorOf_app.
-    simpl; rewrite app_nil_r; reflexivity.
+  change (RlblEmpty _ :: lbl :: hst) with ([RlblEmpty _; lbl] ++ hst) in H.
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  eapply silent_commutes_1 in H0; dest.
+  pose proof (steps_append H H0); inv H1.
+  specialize (IHhst _ _ H5); dest.
+  econstructor; eauto.
 Qed.
 
 Lemma silent_reducible_2:
   forall sys hst,
     Reducible sys (hst ++ [RlblEmpty _]) (RlblEmpty _ :: hst).
 Proof.
-  unfold Reducible; induction hst as [|lbl ?]; simpl; intros;
-    [split; [auto|congruence]|].
+  unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
 
-  split.
-  - inv H.
-    specialize (IHhst _ _ H3); dest.
-    pose proof (StepsCons H _ _ H5).
-    change (lbl :: RlblEmpty _ :: hst) with ([lbl; RlblEmpty _] ++ hst) in H1.
-    eapply steps_split in H1; [|reflexivity].
-    destruct H1 as [sti [? ?]].
-    eapply silent_commutes_2 in H2; dest.
-    pose proof (steps_append H1 H2); auto.
-  - red; cbn.
-    rewrite behaviorOf_app.
-    simpl; rewrite app_nil_r; reflexivity.
-Qed.
-
-Lemma msg_ins_commutes_1:
-  forall sys eins lbl,
-    InternalLbl lbl ->
-    Reducible sys [RlblIns eins; lbl] [lbl; RlblIns eins].
-Proof.
-  unfold Reducible; intros.
-  split.
-  - destruct lbl as [| |hdl mins mouts|]; [elim H|elim H| |elim H].
-    dest_step_m.
-    econstructor.
-    + econstructor.
-      * econstructor. 
-      * econstructor; eauto. 
-    + econstructor; try reflexivity; try eassumption.
-      * eapply FirstMPI_Forall_enqMsgs; eauto. 
-      * f_equal.
-        rewrite enqMsgs_enqMsgs_comm.
-        { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
-          destruct H12; auto.
-        }
-        { destruct H2, H18.
-          eapply DisjList_SubList; eauto.
-          eapply DisjList_comm, DisjList_SubList; eauto.
-          apply DisjList_app_4.
-          { apply sys_minds_sys_merqs_DisjList. }
-          { apply DisjList_comm, sys_merqs_sys_merss_DisjList. }
-        }
-  - hnf; cbn.
-    destruct lbl; [elim H|elim H|auto|elim H].
-Qed.
-
-Lemma msg_ins_commutes_2:
-  forall sys eins oidx ridx ins outs,
-    DisjList eins ins ->
-    DisjList (idsOf eins) (idsOf outs) ->
-    Reducible sys [RlblInt oidx ridx ins outs; RlblIns eins]
-              [RlblIns eins; RlblInt oidx ridx ins outs].
-Proof.
-  unfold Reducible; intros.
-  split.
-  - dest_step_m.
-    econstructor.
-    + econstructor.
-      * econstructor.
-      * econstructor; try reflexivity; try eassumption.
-        eapply FirstMPI_Forall_enqMsgs_inv; [|eassumption].
-        apply DisjList_comm; auto.
-    + econstructor; try reflexivity; try eassumption.
-      f_equal.
-      rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
-      * rewrite enqMsgs_enqMsgs_comm; [reflexivity|].
-        apply DisjList_comm; auto.
-      * destruct H14; auto.
-      * eapply FirstMPI_Forall_enqMsgs_inv; [|eassumption].
-        apply DisjList_comm; auto.
-  - hnf; cbn; reflexivity.
-Qed.
-
-Lemma msg_ins_reducible_1:
-  forall sys eins hst,
-    InternalHistory hst ->
-    Reducible sys (RlblIns eins :: hst) (hst ++ [RlblIns eins]).
-Proof.
-  unfold Reducible; induction hst as [|lbl ?]; simpl; intros;
-    [split; [assumption|reflexivity]|].
   inv H.
-  split.
-  - change (RlblIns eins :: lbl :: hst) with ([RlblIns eins; lbl] ++ hst) in H0.
-    eapply steps_split in H0; [|reflexivity].
-    destruct H0 as [sti [? ?]].
-    eapply msg_ins_commutes_1 in H0; [|assumption]; dest.
-    pose proof (steps_append H H0); inv H2.
-    specialize (IHhst H4 _ _ H8); dest.
-    econstructor; eauto.
-  - red; cbn.
-    rewrite behaviorOf_app.
-    rewrite internal_history_behavior_nil by assumption.
-    destruct lbl; auto; elim H3.
+  specialize (IHhst _ _ H3).
+  pose proof (StepsCons IHhst _ _ H5).
+  change (lbl :: RlblEmpty _ :: hst) with ([lbl; RlblEmpty _] ++ hst) in H.
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  eapply silent_commutes_2 in H0; dest.
+  pose proof (steps_append H H0); auto.
 Qed.
 
-Lemma msg_ins_reducible_2:
-  forall sys hst inits ins outs eouts,
-    Atomic msg_dec inits ins hst outs eouts ->
-    forall eins,
-      DisjList eins ins ->
-      DisjList (idsOf eins) (idsOf outs) ->
-      Reducible sys (hst ++ [RlblIns eins]) (RlblIns eins :: hst).
-Proof.
-  induction 1; simpl; intros;
-    [apply msg_ins_commutes_2; auto|].
-
-  subst.
-  apply DisjList_comm, DisjList_app_3 in H5; dest.
-  apply DisjList_comm in H2; apply DisjList_comm in H3.
-  rewrite idsOf_app in H6.
-  apply DisjList_comm, DisjList_app_3 in H6; dest.
-  apply DisjList_comm in H4; apply DisjList_comm in H5.
-  specialize (IHAtomic _ H2 H4).
-
-  eapply reducible_trans.
-  - apply reducible_cons; eassumption.
-  - apply reducible_cons_2.
-    apply msg_ins_commutes_2; auto.
-Qed.
-
-Lemma msg_outs_commutes_1:
-  forall sys eouts oidx ridx ins outs,
-    DisjList eouts outs ->
-    DisjList (idsOf eouts) (idsOf ins) ->
-    Reducible sys [RlblOuts eouts; RlblInt oidx ridx ins outs]
-              [RlblInt oidx ridx ins outs; RlblOuts eouts].
+Lemma outs_ins_commutes:
+  forall sys eins eouts,
+    Reducible sys [RlblIns eins; RlblOuts eouts] [RlblOuts eouts; RlblIns eins].
 Proof.
   unfold Reducible; intros.
-  split.
-  - dest_step_m.
-    econstructor.
+  dest_steps; dest_step_m.
+  econstructor.
+  - econstructor.
     + econstructor.
-      * econstructor.
-      * econstructor; try reflexivity; try eassumption.
-        apply FirstMPI_Forall_enqMsgs_inv in H3; [|assumption].
-        apply FirstMPI_Forall_deqMsgs in H3; auto.
-    + econstructor; try reflexivity; try eassumption.
-      * apply FirstMPI_Forall_deqMsgs; auto.
-        apply DisjList_comm; auto.
-      * f_equal.
-        rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
-        { rewrite deqMsgs_deqMsgs_comm; auto. }
-        { destruct H4; auto. }
-        { apply FirstMPI_Forall_enqMsgs_inv in H3; assumption. }
-  - hnf; cbn; reflexivity.
+    + econstructor; eauto.
+  - econstructor; try reflexivity; try eassumption.
+    + eapply FirstMPI_Forall_enqMsgs; eauto. 
+    + f_equal.
+      rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
+      destruct H2; auto.
 Qed.
 
-Lemma msg_outs_commutes_2:
-  forall sys eouts lbl,
-    InternalLbl lbl ->
-    Reducible sys [lbl; RlblOuts eouts] [RlblOuts eouts; lbl].
+Lemma int_ins_commutes:
+  forall sys eins oidx ridx ins outs,
+    Reducible sys [RlblIns eins; RlblInt oidx ridx ins outs]
+              [RlblInt oidx ridx ins outs; RlblIns eins].
 Proof.
   unfold Reducible; intros.
-  split.
-  - destruct lbl as [| |oidx ridx mins mouts|]; [elim H|elim H| |elim H].
-    dest_step_m.
-    econstructor.
+  dest_steps; dest_step_m.
+  econstructor.
+  - econstructor.
     + econstructor.
-      * econstructor.
-      * econstructor; try reflexivity; try eassumption.
-        assert (DisjList (idsOf mins) (idsOf eouts)).
-        { destruct H3, H14.
-          eapply DisjList_SubList; eauto.
-          eapply DisjList_comm, DisjList_SubList; eauto.
-          apply DisjList_comm, sys_minds_sys_merss_DisjList.
-        }
-        eapply FirstMPI_Forall_deqMsgs; eauto.
-    + assert (DisjList (idsOf eouts) (idsOf mins)).
-      { destruct H3, H14.
+    + econstructor; eauto.
+  - econstructor; try reflexivity; try eassumption.
+    + eapply FirstMPI_Forall_enqMsgs; eauto. 
+    + f_equal.
+      rewrite enqMsgs_enqMsgs_comm.
+      { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
+        destruct H11; auto.
+      }
+      { destruct H1, H17.
         eapply DisjList_SubList; eauto.
         eapply DisjList_comm, DisjList_SubList; eauto.
-        apply sys_minds_sys_merss_DisjList.
-      }
-      econstructor; try reflexivity; try eassumption.
-      * eapply FirstMPI_Forall_enqMsgs.
-        rewrite <-FirstMPI_Forall_deqMsgs; eauto.
-      * f_equal; rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
-        { f_equal; eapply deqMsgs_deqMsgs_comm.
-          apply DisjList_comm; auto.
-        }
-        { destruct H3; auto. }
-        { rewrite <-FirstMPI_Forall_deqMsgs; eauto. }
-  - hnf; cbn.
-    destruct lbl; [elim H|elim H|auto|elim H].
+        apply DisjList_app_4.
+        { apply sys_minds_sys_merqs_DisjList. }
+        { apply DisjList_comm, sys_merqs_sys_merss_DisjList. }
+      }      
 Qed.
 
-Lemma msg_outs_reducible_1:
-  forall sys hst inits ins outs eouts mouts,
-    DisjList (idsOf mouts) (idsOf ins) ->
-    DisjList mouts outs ->
-    Atomic msg_dec inits ins hst outs eouts ->
-    Reducible sys (RlblOuts mouts :: hst) (hst ++ [RlblOuts mouts]).
+Lemma ins_commutes:
+  forall sys eins lbl,
+    NonInsLbl lbl ->
+    Reducible sys [RlblIns eins; lbl] [lbl; RlblIns eins].
 Proof.
-  induction 3; simpl; intros;
-    [apply msg_outs_commutes_1; auto|].
-
-  subst.
-  apply DisjList_comm, DisjList_app_3 in H0; dest.
-  apply DisjList_comm in H0; apply DisjList_comm in H4.
-  rewrite idsOf_app in H.
-  apply DisjList_comm, DisjList_app_3 in H; dest.
-  apply DisjList_comm in H; apply DisjList_comm in H5.
-  specialize (IHAtomic H H0).
-
-  eapply reducible_trans; [|apply reducible_cons; eassumption].
-  apply reducible_cons_2.
-  apply msg_outs_commutes_1; auto.
+  intros.
+  destruct lbl; [|elim H| |].
+  - apply silent_commutes_2.
+  - apply int_ins_commutes.
+  - apply outs_ins_commutes.
 Qed.
 
-Lemma msg_outs_reducible_2:
+Lemma ins_reducible:
+  forall sys eins hst,
+    NonInsHistory hst ->
+    Reducible sys (RlblIns eins :: hst) (hst ++ [RlblIns eins]).
+Proof.
+  unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
+  inv H.
+  change (RlblIns eins :: lbl :: hst) with ([RlblIns eins; lbl] ++ hst) in H0.
+  eapply steps_split in H0; [|reflexivity].
+  destruct H0 as [sti [? ?]].
+  eapply ins_commutes in H0; [|assumption]; dest.
+  pose proof (steps_append H H0); inv H1.
+  specialize (IHhst H4 _ _ H7); dest.
+  econstructor; eauto.
+Qed.
+
+Lemma outs_int_commutes:
+  forall sys oidx ridx ins outs eouts,
+    Reducible sys [RlblInt oidx ridx ins outs; RlblOuts eouts]
+              [RlblOuts eouts; RlblInt oidx ridx ins outs].
+Proof.
+  unfold Reducible; intros.
+  dest_steps; dest_step_m.
+  econstructor.
+  - econstructor.
+    + econstructor.
+    + econstructor; try reflexivity; try eassumption.
+      assert (DisjList (idsOf ins) (idsOf eouts)).
+      { destruct H2, H13.
+        eapply DisjList_SubList; eauto.
+        eapply DisjList_comm, DisjList_SubList; eauto.
+        apply DisjList_comm, sys_minds_sys_merss_DisjList.
+      }
+      eapply FirstMPI_Forall_deqMsgs; eauto.
+  - assert (DisjList (idsOf eouts) (idsOf ins)).
+    { destruct H2, H13.
+      eapply DisjList_SubList; eauto.
+      eapply DisjList_comm, DisjList_SubList; eauto.
+      apply sys_minds_sys_merss_DisjList.
+    }
+    econstructor; try reflexivity; try eassumption.
+    + eapply FirstMPI_Forall_enqMsgs.
+      rewrite <-FirstMPI_Forall_deqMsgs; eauto.
+    + f_equal; rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.
+      * f_equal; eapply deqMsgs_deqMsgs_comm.
+        apply DisjList_comm; auto.
+      * destruct H2; auto.
+      * rewrite <-FirstMPI_Forall_deqMsgs; eauto.
+Qed.
+
+Lemma outs_commutes:
+  forall sys eouts lbl,
+    NonOutsLbl lbl ->
+    Reducible sys [lbl; RlblOuts eouts] [RlblOuts eouts; lbl].
+Proof.
+  intros.
+  destruct lbl; [| | |elim H].
+  - apply silent_commutes_1.
+  - apply outs_ins_commutes.
+  - apply outs_int_commutes.
+Qed.
+
+Lemma outs_reducible:
   forall sys eouts hst,
-    InternalHistory hst ->
+    NonOutsHistory hst ->
     Reducible sys (hst ++ [RlblOuts eouts]) (RlblOuts eouts :: hst).
 Proof.
-  unfold Reducible; induction hst as [|lbl ?]; simpl; intros; 
-    [split; [assumption|reflexivity]|].
+  unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
   inv H0; inv H.
-  split.
-  - specialize (IHhst H3 _ _ H4); dest.
-    assert (steps step_m sys st1 (lbl :: RlblOuts eouts :: hst) st2)
-      by (econstructor; eauto).
-    change (lbl :: RlblOuts eouts :: hst) with
-        ([lbl; RlblOuts eouts] ++ hst) in H1.
-    eapply steps_split in H1; [|reflexivity].
-    destruct H1 as [sti [? ?]].
-    change (RlblOuts eouts :: lbl :: hst) with
-        ([RlblOuts eouts; lbl] ++ hst).
-    eapply steps_append; eauto.
-    eapply msg_outs_commutes_2; eauto.
-  - red; cbn.
-    rewrite behaviorOf_app.
-    rewrite internal_history_behavior_nil by assumption.
-    destruct lbl; auto; elim H2.
+  specialize (IHhst H3 _ _ H4); dest.
+  assert (steps step_m sys st1 (lbl :: RlblOuts eouts :: hst) st2)
+    by (econstructor; eauto).
+  change (lbl :: RlblOuts eouts :: hst) with
+      ([lbl; RlblOuts eouts] ++ hst) in H.
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  change (RlblOuts eouts :: lbl :: hst) with
+      ([RlblOuts eouts; lbl] ++ hst).
+  eapply steps_append; eauto.
+  eapply outs_commutes; eauto.
 Qed.
 
+(*! Reducing a history to (Ins -> Internals -> Outs) *)
+
+Theorem hst_reducible_to_ins_ints_outs:
+  forall sys hst,
+  exists ins ints outs,
+    InsHistory ins /\
+    InternalHistory ints /\
+    OutsHistory outs /\
+    Reducible sys hst (outs ++ ints ++ ins).
+Proof.
+  induction hst as [|lbl hst]; simpl; intros.
+  - exists nil, nil, nil.
+    repeat split; try constructor.
+    simpl; red; intros; assumption.
+  - destruct IHhst as [ins [ints [outs ?]]]; dest.
+    destruct lbl.
+    + exists ins, ints, outs.
+      repeat split; auto.
+      eapply reducible_trans; [|eassumption].
+      apply silent_ignored_1.
+    + exists (RlblIns mins :: ins), ints, outs.
+      repeat split; auto.
+      * constructor; simpl; auto.
+      * admit.
+    + exists ins, (RlblInt oidx ridx mins mouts :: ints), outs.
+      repeat split; auto.
+      * constructor; simpl; auto.
+      * admit.
+    + exists ins, ints, (RlblOuts mouts :: outs).
+      repeat split; auto.
+      * constructor; simpl; auto.
+      * admit.
+Admitted.  
+  
 (*! Reducibility of internal state transitions *)
 
 Lemma msg_int_commutes:
@@ -431,8 +412,7 @@ Lemma msg_int_commutes:
               [RlblInt oidx1 ridx1 ins1 outs1; RlblInt oidx2 ridx2 ins2 outs2].
 Proof.
   unfold Reducible; intros.
-  split; [|reflexivity].
-  dest_step_m.
+  dest_steps; dest_step_m.
   econstructor.
   - econstructor.
     + econstructor.

@@ -110,7 +110,6 @@ Definition trsSteps {StateT MsgT} `{HasMsg MsgT}
   Transactional sys msgT_dec hst.
 
 Definition trsStepsM := trsSteps msg_dec step_m.
-Definition trsStepsT := trsSteps tmsg_dec step_t.
 
 Definition seqSteps {StateT MsgT} `{HasMsg MsgT}
            (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
@@ -120,22 +119,25 @@ Definition seqSteps {StateT MsgT} `{HasMsg MsgT}
   exists trss, Sequential sys msgT_dec hst trss.
 
 Definition seqStepsM := seqSteps msg_dec step_m.
-Definition seqStepsT := seqSteps tmsg_dec step_t.
 
-Definition BEquivalent (sys: System)
-           {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) :=
-  behaviorOf ll1 = behaviorOf ll2.
+(* Definition BEquivalent (sys: System) *)
+(*            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) := *)
+(*   behaviorOf ll1 = behaviorOf ll2. *)
 
-Definition Serializable (sys: System) (ll: MHistory) :=
-  exists sll sst,
-    (* 1) legal, 2) sequential, and *) seqStepsM sys (initsOf sys) sll sst /\
-    (* 3) behavior-equivalent *) BEquivalent sys ll sll.
+(* Definition IOEquivalent (sys: System) *)
+(*            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) := *)
+(*   behaviorIO ll1 = behaviorIO ll2. *)
+
+Definition Serializable (sys: System) (ll: MHistory) (st: MState) :=
+  exists sll,
+    (* Legal and sequential *)
+    seqStepsM sys (initsOf sys) sll st.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys (sys: System) :=
   forall ll st,
     steps step_m sys (initsOf sys) ll st ->
-    Serializable sys ll.
+    Serializable sys ll st.
 
 Close Scope list.
 

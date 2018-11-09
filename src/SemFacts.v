@@ -281,6 +281,26 @@ Proof.
   destruct (getLabel a); reflexivity.
 Qed.
 
+(* Lemma behaviorInsOf_app: *)
+(*   forall {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
+(*     behaviorInsOf (hst1 ++ hst2) = *)
+(*     behaviorInsOf hst1 ++ behaviorInsOf hst2. *)
+(* Proof. *)
+(*   induction hst1; simpl; intros; auto. *)
+(*   rewrite IHhst1. *)
+(*   destruct (getInsLabel a); reflexivity. *)
+(* Qed. *)
+
+(* Lemma behaviorOutsOf_app: *)
+(*   forall {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
+(*     behaviorOutsOf (hst1 ++ hst2) = *)
+(*     behaviorOutsOf hst1 ++ behaviorOutsOf hst2. *)
+(* Proof. *)
+(*   induction hst1; simpl; intros; auto. *)
+(*   rewrite IHhst1. *)
+(*   destruct (getOutsLabel a); reflexivity. *)
+(* Qed. *)
+
 Theorem refines_refl:
   forall {StateT LabelT} `{HasInit System StateT} `{HasLabel LabelT}
          (ss: Steps StateT LabelT) sys, ss # ss |-- sys ⊑ sys.

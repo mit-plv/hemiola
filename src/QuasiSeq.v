@@ -26,7 +26,7 @@ Section QuasiSeq.
       ((exists trss, Sequential sys msg_dec hst trss) \/
        (exists rhst m,
            steps step_m sys (initsOf sys) rhst st /\
-           BEquivalent sys hst rhst /\
+           IOEquivalent sys hst rhst /\
            quasiSeq sys rhst m /\ m < n)).
 
   Lemma quasiSeq_implies_serializableSys:
