@@ -264,6 +264,22 @@ Section MsgParam.
       apply stransactional_default.
   Qed.
 
+  Lemma atomicEx_stransactional:
+    forall hst, AtomicEx msgT_dec hst -> STransactional msgT_dec hst.
+  Proof.
+    intros; inv H; dest.
+    eapply STrsAtomic; eauto.
+  Qed.
+
+  Lemma atomicEx_stransactional_forall:
+    forall trss, Forall (AtomicEx msgT_dec) trss ->
+                 Forall (STransactional msgT_dec) trss.
+  Proof.
+    intros.
+    eapply Forall_impl; [|eassumption].
+    apply atomicEx_stransactional.
+  Qed.
+  
 End MsgParam.
 
 Lemma atomic_legal_eouts:

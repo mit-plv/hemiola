@@ -102,7 +102,7 @@ Section RqRs.
       forall st2 hst1 hst2 hsts,
         steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
         Continuous hst1 hst2 ->
-        Forall (STransactional msg_dec) hsts ->
+        Forall (AtomicEx msg_dec) hsts ->
         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\
         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts).
 
@@ -110,7 +110,7 @@ Section RqRs.
     forall st1 st2 hst1 hst2 hsts,
       steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
       Continuous hst1 hst2 ->
-      Forall (STransactional msg_dec) hsts ->
+      Forall (AtomicEx msg_dec) hsts ->
       Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts.
   
   Definition RqRsSys (sys: System) :=
@@ -137,7 +137,7 @@ Section RqRsSerial.
     red; intros.
     exists (RqRsLPush rrdec rrc hst1).
     exists (RqRsRPush rrdec rrc hst2).
-    pose proof H; destruct H0; clear H1.
+    pose proof H; destruct H0.
     split; [|split; [|split; [|split]]];
       try (eapply Hrr; eauto; fail).
   Qed.

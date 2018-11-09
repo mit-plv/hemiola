@@ -35,6 +35,10 @@ Section Sequential.
         neouts = removeL (id_dec msgT_dec) eouts rins ++ routs ->
         Atomic inits nins (RlblInt oidx ridx rins routs :: hst) nouts neouts.
 
+  Definition AtomicEx (hst: History MsgT): Prop :=
+    exists inits ins outs eouts,
+      Atomic inits ins hst outs eouts.
+  
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from
    * a no or single external request.
    *)

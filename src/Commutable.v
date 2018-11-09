@@ -61,7 +61,7 @@ Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
       fst (rule_trs rule2 nost1 norq1 ins2) =
       fst (rule_trs rule1 nost2 norq2 ins1).
 
-Definition NonConflictingH (sys: System) (hst1 hst2: MHistory) :=
+Definition NonConflicting (sys: System) (hst1 hst2: MHistory) :=
   forall obj rule1 rule2 ins1 outs1 ins2 outs2,
     In obj (sys_objs sys) ->
     In rule1 (obj_rules obj) ->
@@ -70,96 +70,21 @@ Definition NonConflictingH (sys: System) (hst1 hst2: MHistory) :=
     In (RlblInt (obj_idx obj) (rule_idx rule2) ins2 outs2) hst2 ->
     NonConflictingR rule1 rule2.
 
-Definition DiscontinuousI (hst1 hst2: MHistory) :=
-  forall eins1 inits2 ins2 outs2 eouts2,
-    hst1 = [RlblIns eins1] ->
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    DisjList eins1 ins2 /\ DisjList (idsOf eins1) (idsOf outs2).
-
-Definition DiscontinuousO (hst1 hst2: MHistory) :=
-  forall inits1 ins1 outs1 eouts1 eouts2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-    hst2 = [RlblOuts eouts2] ->
-    DisjList (idsOf eouts2) (idsOf ins1) /\ DisjList eouts2 outs1.
-
-Definition DiscontinuousA (sys: System) (hst1 hst2: MHistory) :=
+Definition Discontinuous (sys: System) (hst1 hst2: MHistory) :=
   forall inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
     DisjList (idsOf ins1) (idsOf ins2) /\
     DisjList inits1 eouts2 /\
     DisjList (idsOf outs1) (idsOf outs2).
 
-Definition trsTypeOf (hst: MHistory) :=
-  match hst with
-  | nil => TSlt
-  | lbl :: _ =>
-    match lbl with
-    | RlblEmpty _ => TSlt
-    | RlblIns _ => TIns
-    | RlblOuts _ => TOuts
-    | RlblInt _ _ _ _ => TInt
-    end
-  end.
-
-Definition DiscontinuousTrsType (tty1 tty2: TrsType) :=
-  match tty1, tty2 with
-  | TSlt, _ => True
-  | _, TSlt => True
-  | TInt, _ => True
-  | _, TInt => True
-  | _, _ => False
-  end.
-
-Definition Discontinuous (sys: System) (hst1 hst2: MHistory) :=
-  DiscontinuousTrsType (trsTypeOf hst1) (trsTypeOf hst2) /\
-  DiscontinuousI hst1 hst2 /\
-  DiscontinuousO hst1 hst2 /\
-  DiscontinuousA sys hst1 hst2.
-
 Lemma nonconflicting_discontinuous_commutable_atomic:
-  forall sys inits1 ins1 hst1 outs1 eouts1
-         inits2 ins2 hst2 outs2 eouts2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
-    NonConflictingH sys hst1 hst2 ->
-    DisjList (idsOf ins1) (idsOf ins2) ->
-    DisjList inits1 eouts2 ->
-    DisjList (idsOf outs1) (idsOf outs2) ->
-    Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
-Proof.
-Admitted.
-
-Theorem nonconflicting_discontinuous_commutable:
   forall sys hst1 hst2,
-    STransactional msg_dec hst1 ->
-    STransactional msg_dec hst2 ->
-    NonConflictingH sys hst1 hst2 ->
+    NonConflicting sys hst1 hst2 ->
     Discontinuous sys hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
-  intros.
-  red in H2; dest.
-  inv H.
-  - apply silent_reducible_2.
-  - inv H0; try (exfalso; auto; fail).
-    + apply silent_reducible_1.
-    + specialize (H3 _ _ _ _ _ eq_refl H); dest.
-      eapply msg_ins_reducible_2; eauto.
-  - inv H0; try (exfalso; auto; fail).
-    + apply silent_reducible_1.
-    + apply msg_outs_reducible_2.
-      eauto using atomic_internal_history.
-  - inv H0.
-    + apply silent_reducible_1.
-    + apply msg_ins_reducible_1.
-      eauto using atomic_internal_history.
-    + specialize (H4 _ _ _ _ _ H6 eq_refl); dest.
-      eapply msg_outs_reducible_1; eauto.
-    + red in H5.
-      specialize (H5 _ _ _ _ _ _ _ _ H6 H); dest.
-      eauto using nonconflicting_discontinuous_commutable_atomic.
-Qed.
+Admitted.
 
 Close Scope list.
 

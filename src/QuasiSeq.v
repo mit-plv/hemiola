@@ -26,7 +26,6 @@ Section QuasiSeq.
       ((exists trss, Sequential sys msg_dec hst trss) \/
        (exists rhst m,
            steps step_m sys (initsOf sys) rhst st /\
-           IOEquivalent sys hst rhst /\
            quasiSeq sys rhst m /\ m < n)).
 
   Lemma quasiSeq_implies_serializableSys:
@@ -34,14 +33,14 @@ Section QuasiSeq.
     forall n hst st,
       steps step_m sys (initsOf sys) hst st ->
       quasiSeq sys hst n ->
-      Serializable sys hst.
+      Serializable sys hst st.
   Proof.
     induction n as [n IHn] using (well_founded_induction lt_wf).
     intros.
     specialize (H _ _ _ H0 H1); destruct H.
     - dest; eapply sequential_serializable; eauto.
     - destruct H as [rhst [m ?]]; dest.
-      specialize (IHn _ H4 _ _ H H3).
+      specialize (IHn _ H3 _ _ H H2).
       eapply reducible_serializable with (hto:= rhst); eauto.
   Qed.
 
@@ -100,10 +99,10 @@ Proof.
   eauto.
 Qed.
 
-Lemma stransactional_sequential_or_interleaved:
+Lemma atomic_trss_sequential_or_interleaved:
   forall sys trss st,
     steps step_m sys (initsOf sys) (List.concat trss) st ->
-    Forall (STransactional msg_dec) trss ->
+    Forall (AtomicEx msg_dec) trss ->
     Sequential sys msg_dec (List.concat trss) trss \/
     Interleaved trss.
 Proof.
@@ -115,12 +114,12 @@ Proof.
   inv H0.
   specialize (IHtrss _ H H5); destruct IHtrss.
 
-  - (* TODO: need to prove that whenever a semi-transaction
-     * [STransactional ins trs outs] is added to a history ([List.concat trss]),
-     * [ins] is either a new semi-transaction or a continuation from one of 
+  - (* TODO: need to prove that whenever an atomic
+     * [Atomic inits ins trs outs eouts] is added to a history ([List.concat trss]),
+     * [inits] is either a new semi-transaction or a continuation from one of 
      * previous semi-transactions.
      *
-     * This is not true when [ins] takes a part from [trs1] and the other part
+     * This is not true when [inits] takes a part from [trs1] and the other part
      * from [trs2], where [trs1 <> trs2] and [trs1 ∈ trss /\ trs2 ∈ trss].
      * Thus we need a static condition to ensure each rule in the system takes
      * incoming messages for a single transaction.
@@ -192,23 +191,20 @@ Section WellInterleaved.
       forall st2 hst1 hst2 hsts,
         steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
         Continuous hst1 hst2 ->
-        Forall (STransactional msg_dec) hsts ->
+        Forall (AtomicEx msg_dec) hsts ->
         exists rhst1 rhst2,
           steps step_m sys st1 (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)) st2 /\
-          BEquivalent sys (List.concat (hst2 :: hsts ++ [hst1]))
-                      (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)) /\
-          Forall (STransactional msg_dec) (rhst2 ++ rhst1) /\
+          Forall (AtomicEx msg_dec) (rhst2 ++ rhst1) /\
           List.length hsts = List.length (rhst2 ++ rhst1).
 
   Lemma well_interleaved_reducible:
     forall (Hwi: WellInterleaved) trss st1 st2
            (Hr: Reachable (steps step_m) sys st1),
       steps step_m sys st1 (List.concat trss) st2 ->
-      Forall (STransactional msg_dec) trss ->
+      Forall (AtomicEx msg_dec) trss ->
       Interleaved trss ->
       exists (rhst : MHistory) (m : nat),
         steps step_m sys st1 rhst st2 /\
-        BEquivalent sys (List.concat trss) rhst /\
         SSequential msg_dec rhst m /\
         m < Datatypes.length trss.
   Proof.
@@ -235,16 +231,9 @@ Section WellInterleaved.
     exists ((List.concat hsts3)
               ++ (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
               ++ (List.concat hsts1)); eexists.
-    split; [|split; [|split]].
+    split; [|split].
     - eapply steps_append; eauto.
       eapply steps_append; eauto.
-      replace (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
-        with (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)); [assumption|].
-      repeat (rewrite concat_app; simpl).
-      rewrite <-app_assoc; reflexivity.
-    - red.
-      repeat rewrite behaviorOf_app.
-      do 2 f_equal.
       replace (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
         with (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)); [assumption|].
       repeat (rewrite concat_app; simpl).
@@ -252,14 +241,19 @@ Section WellInterleaved.
     - econstructor.
       + repeat rewrite <-concat_app; reflexivity.
       + reflexivity.
-      + apply Forall_app_inv in H8; dest.
+      + apply Forall_app_inv in H6; dest.
         repeat (apply Forall_app; auto).
-        constructor; auto.
-        eapply continuous_atomic_concat in H2; eauto.
-        destruct H2 as [inits [ins [outs [eouts ?]]]].
-        eapply STrsAtomic; eauto.
+        * apply atomicEx_stransactional_forall; auto.
+        * apply atomicEx_stransactional_forall; auto.
+        * constructor; auto.
+          { eapply continuous_atomic_concat in H2; eauto.
+            destruct H2 as [inits [ins [outs [eouts ?]]]].
+            eapply STrsAtomic; eauto.
+          }
+          { apply atomicEx_stransactional_forall; auto. }
+        * apply atomicEx_stransactional_forall; auto.
     - repeat (simpl; try rewrite app_length).
-      unfold MHistory, History, MLabel in *; rewrite H11.
+      unfold MHistory, History, MLabel in *; rewrite H8.
       apply plus_lt_compat_l.
       rewrite app_length.
       rewrite <-Nat.add_assoc; simpl.
@@ -278,11 +272,12 @@ Section WellInterleaved.
       apply ssequential_default.
     - red; intros.
       inv H1.
-      pose proof (stransactional_sequential_or_interleaved H0 H4).
-      destruct H1; eauto.
-      right; apply well_interleaved_reducible; auto.
-      apply reachable_init.
-  Qed.
+      (* pose proof (stransactional_sequential_or_interleaved H0 H4). *)
+      (* destruct H1; eauto. *)
+      (* right; apply well_interleaved_reducible; auto. *)
+      (* apply reachable_init. *)
+      admit.
+  Admitted.
 
 End WellInterleaved.
 
@@ -320,7 +315,7 @@ Section WellInterleavedPush.
         forall st1,
           Reachable (steps step_m) sys st1 ->
           forall hsts st2,
-            Forall (STransactional msg_dec) hsts ->
+            Forall (AtomicEx msg_dec) hsts ->
             steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
             Forall (fun hst => lpush hst \/ rpush hst) hsts /\
             LRPushable lpush rpush (hsts ++ [hst1]) /\
@@ -364,13 +359,7 @@ Section WellInterleavedPush.
       destruct H10 as [sti [? ?]].
 
       simpl; repeat split; auto.
-      + eapply steps_append; eauto.
-        apply H2; auto.
-      + red; do 2 rewrite behaviorOf_app.
-        f_equal.
-        rewrite concat_app; simpl.
-        rewrite app_nil_r.
-        eapply H2; eauto.
+      eapply steps_append; eauto.
       
     - clear H2 H6 H7 H8 hsts; rename l0 into hsts2; rename l1 into hsts1.
 
@@ -396,9 +385,9 @@ Section WellInterleavedPush.
       destruct H12 as [sti [? ?]].
       apply H2 in H8; dest.
       pose proof (steps_append H7 H8); clear H7 H8 sti.
-      rewrite <-app_assoc in H12.
-      eapply steps_split in H12; [|reflexivity].
-      destruct H12 as [sti [? ?]].
+      rewrite <-app_assoc in H10.
+      eapply steps_split in H10; [|reflexivity].
+      destruct H10 as [sti [? ?]].
       replace ((hst2 ++ List.concat hsts2) ++ List.concat hsts1 ++ hst1)
         with (hst2 ++ List.concat ((hsts2 ++ hsts1) ++ [hst1])) in H7
         by (repeat rewrite concat_app;
@@ -410,17 +399,6 @@ Section WellInterleavedPush.
 
       exists rhst1, (a :: rhst2).
       repeat split; auto.
-      + simpl; repeat rewrite concat_app.
-        simpl; repeat rewrite app_nil_r.
-        eapply bequivalent_trans.
-        * repeat rewrite app_assoc.
-          do 2 apply bequivalent_app_2.
-          eassumption.
-        * repeat rewrite <-app_assoc.
-          apply bequivalent_app_1.
-          repeat rewrite concat_app in H12.
-          simpl in H12; repeat rewrite <-app_assoc in H12.
-          rewrite app_nil_r in H12; assumption.
       + simpl; constructor; auto.
       + simpl; repeat rewrite app_length in *; simpl.
         rewrite Nat.add_succ_r; auto.
