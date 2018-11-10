@@ -169,6 +169,18 @@ Record Object :=
     obj_rules_valid: NoDup (map (@rule_idx _) obj_rules)
   }.
 
+Lemma rules_same_id_in_object_same:
+  forall obj (rule1 rule2: Rule (obj_ifc obj)),
+    In rule1 (obj_rules obj) ->
+    In rule2 (obj_rules obj) ->
+    rule_idx rule1 = rule_idx rule2 ->
+    rule1 = rule2.
+Proof.
+  intros.
+  eapply NoDup_map_In; eauto.
+  exact (obj_rules_valid obj).
+Qed.
+
 Record System :=
   { sys_objs: list Object;
     sys_oinds_valid: NoDup (map obj_idx sys_objs);
@@ -179,6 +191,18 @@ Record System :=
     sys_oss_inits: OStates;
     sys_orqs_inits: ORqs Msg
   }.
+
+Lemma obj_same_id_in_system_same:
+  forall sys (obj1 obj2: Object),
+    In obj1 (sys_objs sys) ->
+    In obj2 (sys_objs sys) ->
+    obj_idx obj1 = obj_idx obj2 ->
+    obj1 = obj2.
+Proof.
+  intros.
+  eapply NoDup_map_In; eauto.
+  exact (sys_oinds_valid sys).
+Qed.
 
 Ltac inds_valid_tac :=
   abstract (compute; repeat (constructor; firstorder)).

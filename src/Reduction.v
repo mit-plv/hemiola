@@ -389,59 +389,56 @@ Proof.
     + exists (RlblIns mins :: ins), ints, outs.
       repeat split; auto.
       * constructor; simpl; auto.
-      * admit.
+      * change (RlblIns mins :: hst) with ([RlblIns mins] ++ hst).
+        eapply reducible_trans.
+        { eapply reducible_app_1; eassumption. }
+        { change (outs ++ ints ++ RlblIns mins :: ins)
+            with (outs ++ ints ++ [RlblIns mins] ++ ins).
+          repeat rewrite app_assoc.
+          apply reducible_app_2.
+          rewrite <-app_assoc with (n:= ints).
+          apply ins_reducible.
+          apply Forall_app.
+          { eapply Forall_impl with (P:= OutsLbl); auto.
+            intros; destruct a; intuition.
+          }
+          { eapply Forall_impl with (P:= InternalLbl); auto.
+            intros; destruct a; intuition.
+          }
+        }
     + exists ins, (RlblInt oidx ridx mins mouts :: ints), outs.
       repeat split; auto.
       * constructor; simpl; auto.
-      * admit.
+      * change (RlblInt oidx ridx mins mouts :: hst)
+          with ([RlblInt oidx ridx mins mouts] ++ hst).
+        eapply reducible_trans.
+        { eapply reducible_app_1; eassumption. }
+        { change (outs ++ (RlblInt oidx ridx mins mouts :: ints) ++ ins)
+            with (outs ++ [RlblInt oidx ridx mins mouts] ++ ints ++ ins).
+          repeat rewrite app_assoc.
+          do 2 apply reducible_app_2.
+          clear -H1.
+          induction outs; simpl; [apply reducible_refl|].
+          inv H1.
+          destruct a as [| | |eouts]; try (intuition; fail).
+          eapply reducible_trans.
+          { change (RlblInt oidx ridx mins mouts :: RlblOuts eouts :: outs)
+              with ([RlblInt oidx ridx mins mouts; RlblOuts eouts] ++ outs).
+            eapply reducible_app_2.
+            eapply outs_int_commutes.
+          }
+          { apply reducible_cons; auto. }
+        }
     + exists ins, ints, (RlblOuts mouts :: outs).
       repeat split; auto.
       * constructor; simpl; auto.
-      * admit.
-Admitted.  
-  
-(*! Reducibility of internal state transitions *)
-
-Lemma msg_int_commutes:
-  forall sys oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
-    oidx1 <> oidx2 ->
-    DisjList (idsOf ins1) (idsOf ins2) ->
-    DisjList (idsOf outs1) (idsOf ins2) ->
-    DisjList (idsOf outs1) (idsOf outs2) ->
-    Reducible sys [RlblInt oidx2 ridx2 ins2 outs2; RlblInt oidx1 ridx1 ins1 outs1]
-              [RlblInt oidx1 ridx1 ins1 outs1; RlblInt oidx2 ridx2 ins2 outs2].
-Proof.
-  unfold Reducible; intros.
-  dest_steps; dest_step_m.
-  econstructor.
-  - econstructor.
-    + econstructor.
-    + econstructor; try reflexivity; try eassumption.
-      * mred.
-      * mred.
-      * eapply FirstMPI_Forall_enqMsgs_inv in H25.
-        { eapply FirstMPI_Forall_deqMsgs; [|eassumption].
-          apply DisjList_comm; auto.
-        }
-        { apply DisjList_comm, idsOf_DisjList; auto. }
-  - econstructor; try reflexivity; try eassumption.
-    + mred.
-    + mred.
-    + apply FirstMPI_Forall_enqMsgs.
-      apply FirstMPI_Forall_deqMsgs; auto.
-    + f_equal.
-      * meq.
-      * meq.
-      * rewrite <-enqMsgs_deqMsgs_comm with (minds1:= idsOf ins2)
-          by (apply DisjList_comm; assumption).
-        rewrite deqMsgs_deqMsgs_comm by (apply DisjList_comm; assumption).
-        rewrite enqMsgs_enqMsgs_comm with (msgs1:= outs2)
-          by (apply DisjList_comm; assumption).
-        rewrite enqMsgs_deqMsgs_FirstMPI_comm with (msgs2:= outs2).
-        { reflexivity. }
-        { destruct H15; auto. }
-        { apply FirstMPI_Forall_deqMsgs; auto. }
+      * change (RlblOuts mouts :: hst) with ([RlblOuts mouts] ++ hst).
+        eapply reducible_trans.
+        { eapply reducible_app_1; eassumption. }
+        { apply reducible_refl. }
 Qed.
+  
+(* NOTE: For the reducibility of internal state transitions, see [Commutable.v]. *)
 
 Close Scope list.
 
