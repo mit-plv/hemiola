@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String Peano_dec Omega.
 Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
 Require Import Topology Serial SerialFacts.
 
@@ -23,66 +23,6 @@ Definition Reducible (sys: System) (hfr hto: MHistory) :=
     steps step_m sys st1 hto st2.
 
 (*! General Facts *)
-
-Definition InternalLbl (lbl: MLabel) :=
-  match lbl with
-  | RlblInt _ _ _ _ => True
-  | _ => False
-  end.
-
-Definition InsLbl (lbl: MLabel) :=
-  match lbl with
-  | RlblIns _ => True
-  | _ => False
-  end.
-
-Definition OutsLbl (lbl: MLabel) :=
-  match lbl with
-  | RlblOuts _ => True
-  | _ => False
-  end.
-
-Definition NonInsLbl (lbl: MLabel) :=
-  match lbl with
-  | RlblIns _ => False
-  | _ => True
-  end.
-
-Definition NonOutsLbl (lbl: MLabel) :=
-  match lbl with
-  | RlblOuts _ => False
-  | _ => True
-  end.
-
-Definition HistoryP (P: MLabel -> Prop) (hst: MHistory) :=
-  Forall (fun lbl => P lbl) hst.
-
-Definition InternalHistory := HistoryP InternalLbl.
-Definition InsHistory := HistoryP InsLbl.
-Definition OutsHistory := HistoryP OutsLbl.
-Definition NonInsHistory := HistoryP NonInsLbl.
-Definition NonOutsHistory := HistoryP NonOutsLbl.
-
-Lemma atomic_internal_history:
-  forall inits ins hst outs eouts,
-    Atomic msg_dec inits ins hst outs eouts ->
-    InternalHistory hst.
-Proof.
-  induction 1; simpl; intros.
-  - repeat constructor.
-  - repeat constructor; auto.
-Qed.
-
-(* Lemma internal_history_behaviorIO_nil: *)
-(*   forall hst, *)
-(*     InternalHistory hst -> *)
-(*     behaviorIO hst = (nil, nil). *)
-(* Proof. *)
-(*   induction hst; simpl; intros; auto. *)
-(*   inv H; specialize (IHhst H3). *)
-(*   unfold behaviorIO in *. *)
-(*   destruct a; simpl; auto; elim H2. *)
-(* Qed. *)
 
 Lemma reducible_refl:
   forall sys hst, Reducible sys hst hst.
@@ -368,74 +308,85 @@ Qed.
 
 (*! Reducing a history to (Ins -> Internals -> Outs) *)
 
-Theorem hst_reducible_to_ins_ints_outs:
-  forall sys hst,
-  exists ins ints outs,
-    InsHistory ins /\
-    InternalHistory ints /\
-    OutsHistory outs /\
-    Reducible sys hst (outs ++ ints ++ ins).
+Theorem trss_reducible_to_ins_atomics_outs:
+  forall sys trss,
+    Forall (STransactional msg_dec) trss ->
+    exists ins atms outs,
+      InsHistory ins /\
+      Forall (AtomicEx msg_dec) atms /\
+      OutsHistory outs /\
+      Reducible sys (List.concat trss) (outs ++ List.concat atms ++ ins) /\
+      List.length outs + List.length atms + List.length ins <= List.length trss.
 Proof.
-  induction hst as [|lbl hst]; simpl; intros.
+  induction trss as [|trs trss]; simpl; intros.
+
   - exists nil, nil, nil.
     repeat split; try constructor.
     simpl; red; intros; assumption.
-  - destruct IHhst as [ins [ints [outs ?]]]; dest.
-    destruct lbl.
-    + exists ins, ints, outs.
+
+  - inv H; specialize (IHtrss H3).
+    destruct IHtrss as [ins [atms [outs ?]]]; dest.
+    destruct H2; subst.
+    + exists ins, atms, outs.
       repeat split; auto.
       eapply reducible_trans; [|eassumption].
       apply silent_ignored_1.
-    + exists (RlblIns mins :: ins), ints, outs.
+    + exists (RlblIns eins :: ins), atms, outs.
       repeat split; auto.
       * constructor; simpl; auto.
-      * change (RlblIns mins :: hst) with ([RlblIns mins] ++ hst).
-        eapply reducible_trans.
+      * eapply reducible_trans.
         { eapply reducible_app_1; eassumption. }
-        { change (outs ++ ints ++ RlblIns mins :: ins)
-            with (outs ++ ints ++ [RlblIns mins] ++ ins).
+        { change (outs ++ List.concat atms ++ RlblIns eins :: ins)
+            with (outs ++ List.concat atms ++ [RlblIns eins] ++ ins).
           repeat rewrite app_assoc.
           apply reducible_app_2.
-          rewrite <-app_assoc with (n:= ints).
+          rewrite <-app_assoc with (n:= List.concat atms).
           apply ins_reducible.
           apply Forall_app.
-          { eapply Forall_impl with (P:= OutsLbl); auto.
+          { eapply Forall_impl with (P:= @OutsLbl _); auto.
             intros; destruct a; intuition.
           }
-          { eapply Forall_impl with (P:= InternalLbl); auto.
-            intros; destruct a; intuition.
+          { eapply Forall_impl with (Q:= @InternalHistory _) in H0;
+              [|apply atomicEx_internal_history].
+            clear -H0.
+            induction atms; simpl; auto.
+            inv H0; apply Forall_app; auto.
+            apply Forall_impl with (P:= @InternalLbl _); auto.
+            intros; destruct a0; intuition.
           }
         }
-    + exists ins, (RlblInt oidx ridx mins mouts :: ints), outs.
+      * simpl; omega.
+    + exists ins, atms, (RlblOuts eouts :: outs).
       repeat split; auto.
       * constructor; simpl; auto.
-      * change (RlblInt oidx ridx mins mouts :: hst)
-          with ([RlblInt oidx ridx mins mouts] ++ hst).
-        eapply reducible_trans.
+      * eapply reducible_trans.
         { eapply reducible_app_1; eassumption. }
-        { change (outs ++ (RlblInt oidx ridx mins mouts :: ints) ++ ins)
-            with (outs ++ [RlblInt oidx ridx mins mouts] ++ ints ++ ins).
-          repeat rewrite app_assoc.
+        { apply reducible_refl. }
+      * simpl; omega.
+    + exists ins, (hst :: atms), outs.
+      repeat split; auto.
+      * constructor; auto.
+        red; eauto.
+      * eapply reducible_trans.
+        { eapply reducible_app_1; eassumption. }
+        { simpl; repeat rewrite app_assoc.
           do 2 apply reducible_app_2.
-          clear -H1.
-          induction outs; simpl; [apply reducible_refl|].
+          apply atomic_internal_history in H2.
+          clear -H1 H2.
+          induction outs; simpl; [rewrite app_nil_r; apply reducible_refl|].
           inv H1.
           destruct a as [| | |eouts]; try (intuition; fail).
           eapply reducible_trans.
-          { change (RlblInt oidx ridx mins mouts :: RlblOuts eouts :: outs)
-              with ([RlblInt oidx ridx mins mouts; RlblOuts eouts] ++ outs).
+          { replace (hst ++ RlblOuts eouts :: outs) with ((hst ++ [RlblOuts eouts]) ++ outs)
+              by (rewrite <-app_assoc; reflexivity).
             eapply reducible_app_2.
-            eapply outs_int_commutes.
+            eapply outs_reducible.
+            apply Forall_impl with (P:= @InternalLbl _); auto.
+            intros; destruct a; intuition.
           }
           { apply reducible_cons; auto. }
         }
-    + exists ins, ints, (RlblOuts mouts :: outs).
-      repeat split; auto.
-      * constructor; simpl; auto.
-      * change (RlblOuts mouts :: hst) with ([RlblOuts mouts] ++ hst).
-        eapply reducible_trans.
-        { eapply reducible_app_1; eassumption. }
-        { apply reducible_refl. }
+      * simpl; omega.
 Qed.
   
 (* NOTE: For the reducibility of internal state transitions, see [Commutable.v]. *)

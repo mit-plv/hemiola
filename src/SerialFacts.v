@@ -156,6 +156,64 @@ Section MsgParam.
       rewrite <-H0; assumption.
   Qed.
 
+  Definition InternalLbl (lbl: RLabel MsgT) :=
+    match lbl with
+    | RlblInt _ _ _ _ => True
+    | _ => False
+    end.
+
+  Definition InsLbl (lbl: RLabel MsgT) :=
+    match lbl with
+    | RlblIns _ => True
+    | _ => False
+    end.
+
+  Definition OutsLbl (lbl: RLabel MsgT) :=
+    match lbl with
+    | RlblOuts _ => True
+    | _ => False
+    end.
+
+  Definition NonInsLbl (lbl: RLabel MsgT) :=
+    match lbl with
+    | RlblIns _ => False
+    | _ => True
+    end.
+
+  Definition NonOutsLbl (lbl: RLabel MsgT) :=
+    match lbl with
+    | RlblOuts _ => False
+    | _ => True
+    end.
+
+  Definition HistoryP (P: RLabel MsgT -> Prop) (hst: History MsgT) :=
+    Forall (fun lbl => P lbl) hst.
+
+  Definition InternalHistory := HistoryP InternalLbl.
+  Definition InsHistory := HistoryP InsLbl.
+  Definition OutsHistory := HistoryP OutsLbl.
+  Definition NonInsHistory := HistoryP NonInsLbl.
+  Definition NonOutsHistory := HistoryP NonOutsLbl.
+
+  Lemma atomic_internal_history:
+    forall inits ins hst outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      InternalHistory hst.
+  Proof.
+    induction 1; simpl; intros.
+    - repeat constructor.
+    - repeat constructor; auto.
+  Qed.
+
+  Lemma atomicEx_internal_history:
+    forall hst,
+      AtomicEx msgT_dec hst ->
+      InternalHistory hst.
+  Proof.
+    unfold AtomicEx; intros; dest.
+    eapply atomic_internal_history; eauto.
+  Qed.
+  
   Lemma sequential_nil:
     forall sys, Sequential sys msgT_dec nil nil.
   Proof.
@@ -204,6 +262,83 @@ Section MsgParam.
     - subst; reflexivity.
   Qed.
 
+  Lemma sequential_insHistory:
+    forall sys ins,
+      InsHistory ins ->
+      Sequential sys msgT_dec ins (lift_each ins).
+  Proof.
+    induction ins; simpl; intros; [constructor; auto|].
+    inv H; destruct a; try (intuition; fail).
+    specialize (IHins H3); destruct IHins.
+    split.
+    - constructor; auto.
+      eapply TrsIns; eauto.
+    - simpl; rewrite H0 at 1; reflexivity.
+  Qed.
+
+  Lemma sequential_outsHistory:
+    forall sys outs,
+      OutsHistory outs ->
+      Sequential sys msgT_dec outs (lift_each outs).
+  Proof.
+    induction outs; simpl; intros; [constructor; auto|].
+    inv H; destruct a; try (intuition; fail).
+    specialize (IHouts H3); destruct IHouts.
+    split.
+    - constructor; auto.
+      eapply TrsOuts; eauto.
+    - simpl; rewrite H0 at 1; reflexivity.
+  Qed.
+
+  Lemma ssequential_insHistory:
+    forall ins,
+      InsHistory ins ->
+      SSequential msgT_dec ins (List.length ins).
+  Proof.
+    induction ins; simpl; intros.
+    - apply SSeqIntro with (trss:= nil); auto.
+    - inv H; destruct a; try (intuition; fail).
+      specialize (IHins H3); inv IHins.
+      econstructor.
+      + instantiate (1:= [RlblIns mins] :: trss); reflexivity.
+      + simpl; rewrite H0; reflexivity.
+      + constructor; auto.
+        eapply STrsIns; reflexivity.
+  Qed.
+
+  Lemma ssequential_outsHistory:
+    forall outs,
+      OutsHistory outs ->
+      SSequential msgT_dec outs (List.length outs).
+  Proof.
+    induction outs; simpl; intros.
+    - apply SSeqIntro with (trss:= nil); auto.
+    - inv H; destruct a; try (intuition; fail).
+      specialize (IHouts H3); inv IHouts.
+      econstructor.
+      + instantiate (1:= [RlblOuts mouts] :: trss); reflexivity.
+      + simpl; rewrite H0; reflexivity.
+      + constructor; auto.
+        eapply STrsOuts; reflexivity.
+  Qed.
+
+  Lemma ssequential_atomicEx:
+    forall atms,
+      Forall (AtomicEx msgT_dec) atms ->
+      SSequential msgT_dec (List.concat atms) (List.length atms).
+  Proof.
+    induction atms; simpl; intros.
+    - apply SSeqIntro with (trss:= nil); auto.
+    - inv H.
+      specialize (IHatms H3); inv IHatms.
+      econstructor.
+      + instantiate (1:= a :: trss); rewrite H; reflexivity.
+      + simpl; rewrite H0; reflexivity.
+      + constructor; auto.
+        red in H2; dest.
+        eapply STrsAtomic; eauto.
+  Qed.
+  
   Lemma sequential_app:
     forall sys ll1 trss1 ll2 trss2,
       Sequential sys msgT_dec ll1 trss1 ->
@@ -262,6 +397,20 @@ Section MsgParam.
     - reflexivity.
     - constructor; auto.
       apply stransactional_default.
+  Qed.
+
+  Lemma ssequential_app:
+    forall ll1 n1 ll2 n2,
+      SSequential msgT_dec ll1 n1 ->
+      SSequential msgT_dec ll2 n2 ->
+      SSequential msgT_dec (ll1 ++ ll2) (n1 + n2).
+  Proof.
+    intros.
+    inv H; inv H0.
+    econstructor.
+    - rewrite <-concat_app; reflexivity.
+    - apply eq_sym, app_length.
+    - apply Forall_app; auto.
   Qed.
 
   Lemma atomicEx_stransactional:

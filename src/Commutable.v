@@ -53,7 +53,7 @@ Definition Discontinuous (sys: System) (hst1 hst2: MHistory) :=
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
     DisjList (idsOf ins1) (idsOf ins2) /\
-    DisjList outs1 inits2 /\
+    DisjList outs1 ins2 /\
     DisjList (idsOf outs1) (idsOf outs2).
 
 Lemma nonconflicting_head_1:
@@ -98,7 +98,7 @@ Proof.
   right; eauto.
 Qed.
 
-Lemma msg_int_commutes:
+Lemma internal_commutes:
   forall sys oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
     NonConflictingL sys oidx1 ridx1 oidx2 ridx2 ->
     DisjList (idsOf ins1) (idsOf ins2) ->
@@ -223,17 +223,48 @@ Lemma nonconflicting_discontinuous_commutable_atomic_0:
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
     NonConflicting sys [RlblInt oidx1 ridx1 mins1 mouts1] hst2 ->
     DisjList (idsOf mins1) (idsOf ins2) ->
-    DisjList mouts1 inits2 ->
+    DisjList mouts1 ins2 ->
     DisjList (idsOf mouts1) (idsOf outs2) ->
     Reducible sys (hst2 ++ [RlblInt oidx1 ridx1 mins1 mouts1])
               (RlblInt oidx1 ridx1 mins1 mouts1 :: hst2).
 Proof.
-  induction 1; simpl; intros.
+  induction 1; simpl; intros; subst.
 
-  - apply msg_int_commutes; auto.
-    
-Admitted.
-  
+  - apply internal_commutes; auto.
+    eapply H; try (left; reflexivity; fail).
+  - eapply reducible_trans.
+    + change (RlblInt oidx ridx rins routs :: hst ++ [RlblInt oidx1 ridx1 mins1 mouts1])
+        with ([RlblInt oidx ridx rins routs] ++ hst ++ [RlblInt oidx1 ridx1 mins1 mouts1]).
+      eapply reducible_app_1.
+      eapply IHAtomic.
+      * eapply nonconflicting_tail_2; eassumption.
+      * rewrite idsOf_app in H6.
+        apply DisjList_comm.
+        apply DisjList_comm, DisjList_app_3 in H6; dest; auto.
+      * apply DisjList_comm.
+        apply DisjList_comm, DisjList_app_3 in H7; dest; auto.
+      * rewrite idsOf_app in H8.
+        apply DisjList_comm.
+        apply DisjList_comm, DisjList_app_3 in H8; dest; auto.
+    + simpl.
+      change (RlblInt oidx ridx rins routs :: RlblInt oidx1 ridx1 mins1 mouts1 :: hst)
+        with ([RlblInt oidx ridx rins routs; RlblInt oidx1 ridx1 mins1 mouts1] ++ hst).
+      change (RlblInt oidx1 ridx1 mins1 mouts1 :: RlblInt oidx ridx rins routs :: hst)
+        with ([RlblInt oidx1 ridx1 mins1 mouts1; RlblInt oidx ridx rins routs] ++ hst).
+      apply reducible_app_2.
+      apply internal_commutes.
+      * apply nonconflicting_head_2 in H5.
+        eapply H5; try (left; reflexivity; fail).
+      * rewrite idsOf_app in H6.
+        apply DisjList_comm.
+        apply DisjList_comm, DisjList_app_3 in H6; dest; auto.
+      * apply DisjList_comm.
+        apply DisjList_comm, DisjList_app_3 in H7; dest; auto.
+      * rewrite idsOf_app in H8.
+        apply DisjList_comm.
+        apply DisjList_comm, DisjList_app_3 in H8; dest; auto.
+Qed.
+
 Lemma nonconflicting_discontinuous_commutable_atomic:
   forall sys hst1 hst2,
     NonConflicting sys hst1 hst2 ->

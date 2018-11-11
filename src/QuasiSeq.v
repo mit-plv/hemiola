@@ -23,7 +23,9 @@ Section QuasiSeq.
     forall hst n st,
       steps step_m sys (initsOf sys) hst st ->
       quasiSeq sys hst n ->
-      ((exists trss, Sequential sys msg_dec hst trss) \/
+      ((exists rhst rtrss,
+           steps step_m sys (initsOf sys) rhst st /\
+           Sequential sys msg_dec rhst rtrss) \/
        (exists rhst m,
            steps step_m sys (initsOf sys) rhst st /\
            quasiSeq sys rhst m /\ m < n)).
@@ -38,7 +40,8 @@ Section QuasiSeq.
     induction n as [n IHn] using (well_founded_induction lt_wf).
     intros.
     specialize (H _ _ _ H0 H1); destruct H.
-    - dest; eapply sequential_serializable; eauto.
+    - destruct H as [rhst [rtrss [? ?]]].
+      exists rhst; split; eauto.
     - destruct H as [rhst [m ?]]; dest.
       specialize (IHn _ H3 _ _ H H2).
       eapply reducible_serializable with (hto:= rhst); eauto.
@@ -100,8 +103,9 @@ Proof.
 Qed.
 
 Lemma atomic_trss_sequential_or_interleaved:
-  forall sys trss st,
-    steps step_m sys (initsOf sys) (List.concat trss) st ->
+  forall sys trss st1 st2,
+    Reachable (steps step_m) sys st1 ->
+    steps step_m sys st1 (List.concat trss) st2 ->
     Forall (AtomicEx msg_dec) trss ->
     Sequential sys msg_dec (List.concat trss) trss \/
     Interleaved trss.
@@ -109,10 +113,10 @@ Proof.
   induction trss as [|trs trss]; simpl; intros;
     [left; constructor; auto|].
 
-  eapply steps_split in H; [|reflexivity].
-  destruct H as [sti [? ?]].
-  inv H0.
-  specialize (IHtrss _ H H5); destruct IHtrss.
+  eapply steps_split in H0; [|reflexivity].
+  destruct H0 as [sti [? ?]].
+  inv H1.
+  specialize (IHtrss _ _ H H0 H6); destruct IHtrss.
 
   - (* TODO: need to prove that whenever an atomic
      * [Atomic inits ins trs outs eouts] is added to a history ([List.concat trss]),
@@ -126,8 +130,8 @@ Proof.
      *)
     admit.
   - right.
-    clear -H0.
-    destruct H0 as [hst1 [hst2 [hsts1 [hsts2 [hsts3 [? ?]]]]]]; subst.
+    clear -H1.
+    destruct H1 as [hst1 [hst2 [hsts1 [hsts2 [hsts3 [? ?]]]]]]; subst.
     exists hst1, hst2, hsts1, hsts2, (trs :: hsts3).
     split; auto.
 Admitted.
@@ -272,12 +276,38 @@ Section WellInterleaved.
       apply ssequential_default.
     - red; intros.
       inv H1.
-      (* pose proof (stransactional_sequential_or_interleaved H0 H4). *)
-      (* destruct H1; eauto. *)
-      (* right; apply well_interleaved_reducible; auto. *)
-      (* apply reachable_init. *)
-      admit.
-  Admitted.
+
+      apply trss_reducible_to_ins_atomics_outs with (sys:= sys) in H4.
+      destruct H4 as [ins [atms [outs ?]]]; dest.
+
+      pose proof (H4 _ _ H0).
+      eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti2 [? ?]].
+      eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti1 [? ?]].
+
+      assert (Reachable (steps step_m) sys sti1) by (red; eauto).
+      pose proof (atomic_trss_sequential_or_interleaved H9 H8 H2).
+      destruct H10.
+      + left.
+        exists (outs ++ List.concat atms ++ ins).
+        eexists (_ ++ atms ++ _).
+        split.
+        * apply H4; auto.
+        * apply sequential_app; [apply sequential_outsHistory; assumption|].
+          apply sequential_app; [|apply sequential_insHistory; assumption].
+          assumption.
+      + right.
+        eapply well_interleaved_reducible with (st1:= sti1) in H; eauto.
+        destruct H as [ratms [rm ?]]; dest.
+        exists (outs ++ ratms ++ ins), (List.length outs + rm + List.length ins).
+        split; [|split].
+        * do 2 (eapply steps_append; eauto).
+        * replace (List.length outs + rm + List.length ins)
+            with (List.length outs + (rm + List.length ins)) by omega.
+          apply ssequential_app; [apply ssequential_outsHistory; assumption|].
+          apply ssequential_app; [|apply ssequential_insHistory; assumption].
+          assumption.
+        * unfold History, MLabel in H5, H12; omega.
+  Qed.
 
 End WellInterleaved.
 

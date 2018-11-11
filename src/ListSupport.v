@@ -25,6 +25,13 @@ Definition ol2l {A} (oa: option (list A)): list A :=
   | None => nil
   end.
 
+Fixpoint lift_each {A} (l: list A): list (list A) :=
+  match l with
+  | nil => nil
+  | a :: l' => [a] :: lift_each l'
+  end.
+                   
+
 Section SubDisjEquiv.
   Context {A: Type}.
   
