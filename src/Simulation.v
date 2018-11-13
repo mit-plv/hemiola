@@ -113,75 +113,55 @@ Section InvSim.
               ist2 ≈ sst2)
         end.
 
-  Hypothesis (Hsim: InvSim)
-             (Hinv: InvStep impl stepI ginv).
+  Hypotheses (Hsim: InvSim)
+             (Hinv: InvStep impl stepI ginv)
+             (Hsimi: sim (initsOf impl) (initsOf spec))
+             (Hinvi: ginv (initsOf impl)).
 
   Lemma inv_simulation_steps:
-    forall ist1 sst1,
-      ist1 ≈ sst1 ->
-      ginv ist1 ->
-      forall ihst ist2,
-        steps stepI impl ist1 ihst ist2 ->
-        exists sst2 shst,
-          steps stepS spec sst1 shst sst2 /\
-          behaviorOf ihst = behaviorOf shst /\
-          ist2 ≈ sst2.
+    forall ihst ist1 ist2,
+      ist1 = initsOf impl ->
+      steps stepI impl ist1 ihst ist2 ->
+      exists sst2 shst,
+        steps stepS spec (initsOf spec) shst sst2 /\
+        behaviorOf ihst = behaviorOf shst /\
+        ist2 ≈ sst2.
   Proof.
-    induction 3; simpl; intros;
-      [exists sst1, nil; repeat split; auto; constructor|].
+    induction 2; simpl; intros; subst;
+      [exists (initsOf spec), nil; repeat split; auto; constructor|].
 
-    specialize (IHsteps H3 H4).
+    specialize (IHsteps eq_refl).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
-    eapply Hsim in H6;
-      [|exact H9|eapply inv_steps; eauto].
+    eapply Hsim in H5;
+      [|exact H7|eapply inv_steps; eauto].
     
     destruct (getLabel lbl) as [elbl|].
 
-    - destruct H6 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5 as [sst3 [slbl [? [? ?]]]].
       eexists; eexists (_ :: _); repeat split; eauto.
       + econstructor; eauto.
-      + simpl; erewrite H8, H10; simpl.
+      + simpl; erewrite H6, H8; simpl.
         reflexivity.
-    - destruct H6.
-      * destruct H6 as [sst3 [slbl [? [? ?]]]].
+    - destruct H5.
+      * destruct H5 as [sst3 [slbl [? [? ?]]]].
         eexists; eexists (slbl :: _); repeat split; eauto.
         -- econstructor; eauto.
-        -- simpl; rewrite H8, H10; simpl; reflexivity.
+        -- simpl; rewrite H6, H8; simpl; reflexivity.
       * exists sst2, shst; repeat split; auto.
   Qed.
 
-End InvSim.
-
-Definition LiftInv {StateT1 StateT2} (f: StateT2 -> StateT1)
-           (inv: StateT1 -> Prop): StateT2 -> Prop :=
-  fun st2 => inv (f st2).
+  Theorem invSim_implies_refinement:
+    (steps stepI) # (steps stepS) |-- impl ⊑ spec.
+  Proof.
+    unfold Simulates, Refines; intros.
+    inv H3.
+    eapply inv_simulation_steps in H4; [|reflexivity].
+    destruct H4 as [sst2 [shst [? [? ?]]]].
+    econstructor; eauto.
+  Qed.
   
-Definition LiftSimL {StateI1 StateI2} (f: StateI2 -> StateI1)
-           {StateS} (sim: StateI1 -> StateS -> Prop): StateI2 -> StateS -> Prop :=
-  fun sti2 sts => sim (f sti2) sts.
-
-Definition LiftSimR {StateS1 StateS2} (f: StateS2 -> StateS1)
-           {StateI} (sim: StateI -> StateS1 -> Prop): StateI -> StateS2 -> Prop :=
-  fun sti sts2 => sim sti (f sts2).
-
-Definition MsgsSim (sim: TState -> TState -> Prop) :=
-  forall ioss iorqs imsgs imsgs' itrss itrss' its
-         soss sorqs smsgs smsgs' strss strss' sts,
-    sim {| tst_oss := ioss; tst_orqs := iorqs;
-           tst_msgs := imsgs; tst_trss := itrss; tst_tid := its |}
-        {| tst_oss := soss; tst_orqs := sorqs;
-           tst_msgs := smsgs; tst_trss := strss; tst_tid := sts |} ->
-    sim {| tst_oss := ioss; tst_orqs := iorqs;
-           tst_msgs := imsgs'; tst_trss := itrss'; tst_tid := its |}
-        {| tst_oss := soss; tst_orqs := sorqs;
-           tst_msgs := smsgs'; tst_trss := strss'; tst_tid := sts |}.
-
-Definition SimMP (ist sst: TState): Prop :=
-  tst_msgs sst = tst_trss ist.
-
-Definition ImpliesSimMP (sim: TState -> TState -> Prop) :=
-  forall ist sst, sim ist sst -> SimMP ist sst.
+End InvSim.
 
 Close Scope list.
 

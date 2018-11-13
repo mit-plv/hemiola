@@ -1,6 +1,5 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Semantics StepM StepT SemFacts.
-Require Import Serial.
 
 Require Import Omega.
 
@@ -27,11 +26,9 @@ Section Invariant.
         ginv ist2.
 
   Definition InvSteps :=
-    forall ist1,
-      ginv ist1 ->
-      forall lbl ist2,
-        steps stepI impl ist1 lbl ist2 ->
-        ginv ist2.
+    forall lbl ist2,
+      steps stepI impl (initsOf impl) lbl ist2 ->
+      ginv ist2.
 
   Hypotheses (Hinvi: InvInit)
              (Hinvs: InvStep).
