@@ -87,6 +87,14 @@ Proof.
   apply reducible_app_2; auto.
 Qed.
 
+(* Lemma reducible_app_rev_1: *)
+(*   forall sys hfr hto hst, *)
+(*     Reducible sys (hst ++ hfr) (hst ++ hto) -> *)
+(*     Reducible sys hfr hto. *)
+(* Proof. *)
+(*   unfold Reducible; intros. *)
+  
+
 Lemma reducible_serializable:
   forall sys st1 hfr st2,
     steps step_m sys st1 hfr st2 ->

@@ -136,56 +136,6 @@ Proof.
     split; auto.
 Admitted.
 
-Lemma list_picker:
-  forall (A: Type) (P: list A -> Prop) (f: P nil)
-         (Q0: A -> Prop) (Q1: A -> Prop)
-         (f0: forall l, Forall Q0 l -> P l)
-         (f1: forall a l0 l1,
-             Forall Q0 l0 -> Q1 a ->
-             P (l0 ++ l1) -> P (l0 ++ a :: l1)),
-  forall l, Forall (fun a => Q0 a \/ Q1 a) l ->
-            (Forall Q0 l \/
-             exists a l0 l1, l = l0 ++ a :: l1 /\ Forall Q0 l0 /\ Q1 a).
-Proof.
-  induction l; simpl; intros; auto.
-  inv H; destruct H2.
-  - specialize (IHl H3).
-    destruct IHl.
-    + left; constructor; auto.
-    + destruct H0 as [a0 [l0 [l1 ?]]]; dest; subst.
-      right; exists a0, (a :: l0), l1.
-      repeat split; auto.
-  - right; exists a, nil, l; repeat split; auto.
-Qed.
-
-Lemma list_ind_pick:
-  forall (A: Type) (P: list A -> Prop) (f: P nil)
-         (Q0: A -> Prop) (Q1: A -> Prop)
-         (f0: forall l, Forall Q0 l -> P l)
-         (f1: forall a l0 l1,
-             Forall Q0 l0 -> Q1 a ->
-             P (l0 ++ l1) -> P (l0 ++ a :: l1)),
-  forall l, Forall (fun a => Q0 a \/ Q1 a) l -> P l.
-Proof.
-  intros.
-  remember (List.length l) as n.
-  generalize dependent l.
-
-  induction n; intros;
-    [apply eq_sym, length_zero_iff_nil in Heqn; subst; auto|].
-
-  pose proof H.
-  eapply list_picker in H0; eauto.
-  destruct H0; auto.
-  destruct H0 as [a0 [l0 [l1 ?]]]; dest; subst.
-  eapply f1; eauto.
-  eapply IHn.
-  - apply Forall_app_inv in H; dest; inv H0.
-    apply Forall_app; auto.
-  - rewrite app_length in Heqn; simpl in Heqn.
-    rewrite app_length; omega.
-Qed.
-
 Section WellInterleaved.
   Variable (sys: System).
 
@@ -314,7 +264,6 @@ End WellInterleaved.
 Section WellInterleavedPush.
   Variable (sys: System).
 
-  (* TODO: check whether [hsts2] is required. Enough just with adjacent histories? *)
   Definition LRPushable (lpush rpush: MHistory -> Prop) (hsts: list MHistory) :=
     forall lhst rhst hsts1 hsts2 hsts3,
       hsts = hsts3 ++ lhst :: hsts2 ++ rhst :: hsts1 ->
@@ -326,7 +275,28 @@ Section WellInterleavedPush.
       LRPushable lpush rpush (hsts1 ++ hsts2) ->
       LRPushable lpush rpush hsts1.
   Proof.
-  Admitted.
+    unfold LRPushable; intros; subst.
+    eapply H; eauto.
+    instantiate (1:= hsts0 ++ hsts2).
+    instantiate (1:= hsts3).
+    instantiate (1:= hsts4).
+    repeat (rewrite <-app_assoc; simpl).
+    reflexivity.
+  Qed.
+
+  Lemma LRPushable_split_right:
+    forall lpush rpush hsts1 hsts2,
+      LRPushable lpush rpush (hsts1 ++ hsts2) ->
+      LRPushable lpush rpush hsts2.
+  Proof.
+    unfold LRPushable; intros; subst.
+    eapply H; eauto.
+    instantiate (1:= hsts0).
+    instantiate (1:= hsts3).
+    instantiate (1:= hsts1 ++ hsts4).
+    repeat (rewrite <-app_assoc; simpl).
+    reflexivity.
+  Qed.
 
   Lemma LRPushable_commutable_left:
     forall lpush rpush hsts hst,
@@ -335,7 +305,23 @@ Section WellInterleavedPush.
       rpush hst ->
       Reducible sys (List.concat hsts ++ hst) (hst ++ List.concat hsts).
   Proof.
-  Admitted.
+    induction hsts; simpl; intros;
+      [rewrite app_nil_r; apply reducible_refl|].
+
+    inv H0.
+    eapply reducible_trans.
+    - rewrite <-app_assoc.
+      apply reducible_app_1.
+      apply IHhsts; auto.
+      apply LRPushable_split_right with (hsts1:= [a]); auto.
+    - do 2 rewrite app_assoc.
+      apply reducible_app_2.
+      eapply H; eauto.
+      instantiate (1:= nil).
+      instantiate (1:= hsts).
+      instantiate (1:= nil).
+      reflexivity.
+  Qed.
 
   Definition WellInterleavedPush :=
     forall hst1 hst2,

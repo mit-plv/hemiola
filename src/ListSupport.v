@@ -1,4 +1,4 @@
-Require Import Common List.
+Require Import Common List Omega.
 
 Set Implicit Arguments.
 
@@ -915,5 +915,94 @@ Proof.
     eapply in_map with (f:= valOf) in Hx; auto.
   - right; intro Hx; elim H.
     eapply in_map with (f:= valOf) in Hx; auto.
+Qed.
+
+(** Some other ways of induction for lists *)
+
+Lemma list_picker:
+  forall (A: Type) (P: list A -> Prop) (f: P nil)
+         (Q0: A -> Prop) (Q1: A -> Prop)
+         (f0: forall l, Forall Q0 l -> P l)
+         (f1: forall a l0 l1,
+             Forall Q0 l0 -> Q1 a ->
+             P (l0 ++ l1) -> P (l0 ++ a :: l1)),
+  forall l, Forall (fun a => Q0 a \/ Q1 a) l ->
+            (Forall Q0 l \/
+             exists a l0 l1, l = l0 ++ a :: l1 /\ Forall Q0 l0 /\ Q1 a).
+Proof.
+  induction l; simpl; intros; auto.
+  inv H; destruct H2.
+  - specialize (IHl H3).
+    destruct IHl.
+    + left; constructor; auto.
+    + destruct H0 as [a0 [l0 [l1 ?]]]; dest; subst.
+      right; exists a0, (a :: l0), l1.
+      repeat split; auto.
+  - right; exists a, nil, l; repeat split; auto.
+Qed.
+
+Lemma list_ind_pick:
+  forall (A: Type) (P: list A -> Prop) (f: P nil)
+         (Q0: A -> Prop) (Q1: A -> Prop)
+         (f0: forall l, Forall Q0 l -> P l)
+         (f1: forall a l0 l1,
+             Forall Q0 l0 -> Q1 a ->
+             P (l0 ++ l1) -> P (l0 ++ a :: l1)),
+  forall l, Forall (fun a => Q0 a \/ Q1 a) l -> P l.
+Proof.
+  intros.
+  remember (List.length l) as n.
+  generalize dependent l.
+
+  induction n; intros;
+    [apply eq_sym, length_zero_iff_nil in Heqn; subst; auto|].
+
+  pose proof H.
+  eapply list_picker in H0; eauto.
+  destruct H0; auto.
+  destruct H0 as [a0 [l0 [l1 ?]]]; dest; subst.
+  eapply f1; eauto.
+  eapply IHn.
+  - apply Forall_app_inv in H; dest; inv H0.
+    apply Forall_app; auto.
+  - rewrite app_length in Heqn; simpl in Heqn.
+    rewrite app_length; omega.
+Qed.
+
+Lemma list_not_nil_exists_tail:
+  forall (A: Type) (l: list A),
+    l <> nil ->
+    exists l' a, l = l' ++ [a].
+Proof.
+  induction l; intros; [elim H; reflexivity|].
+  destruct l as [|a' l'].
+  - exists nil, a; reflexivity.
+  - specialize (IHl (ltac:(discriminate))).
+    destruct IHl as [rl [ra ?]].
+    exists (a :: rl), ra.
+    rewrite H0.
+    reflexivity.
+Qed.
+
+Lemma list_ind_rev:
+  forall (A: Type) (P: list A -> Prop) (f: P nil)
+         (f0: forall a l, P l -> P (l ++ [a])),
+  forall l, P l.
+Proof.
+  intros.
+  remember (List.length l) as n.
+  generalize dependent l.
+
+  induction n; intros;
+    [apply eq_sym, length_zero_iff_nil in Heqn; subst; auto|].
+
+  destruct l; [inv Heqn|].
+  pose proof (@list_not_nil_exists_tail _ (a :: l) (ltac:(discriminate))).
+  destruct H as [rl [ra ?]]; rewrite H; rewrite H in Heqn.
+
+  apply f0.
+  apply IHn.
+  rewrite app_length in Heqn; simpl in Heqn.
+  omega.
 Qed.
 
