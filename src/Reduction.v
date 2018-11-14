@@ -17,7 +17,7 @@ Ltac dest_step_m :=
          | [H: {| bst_oss := _ |} = {| bst_oss := _ |} |- _] => inv H
          end; simpl in *.
 
-Definition Reducible (sys: System) (hfr hto: MHistory) :=
+Definition Reducible {oifc} (sys: System oifc) (hfr hto: MHistory) :=
   forall st1 st2,
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2.
@@ -25,13 +25,13 @@ Definition Reducible (sys: System) (hfr hto: MHistory) :=
 (*! General Facts *)
 
 Lemma reducible_refl:
-  forall sys hst, Reducible sys hst hst.
+  forall {oifc} (sys: System oifc) hst, Reducible sys hst hst.
 Proof.
   congruence.
 Qed.
 
 Lemma reducible_trans:
-  forall sys hst1 hst2 hst3,
+  forall {oifc} (sys: System oifc) hst1 hst2 hst3,
     Reducible sys hst1 hst2 ->
     Reducible sys hst2 hst3 ->
     Reducible sys hst1 hst3.
@@ -40,7 +40,7 @@ Proof.
 Qed.
 
 Lemma reducible_app_1:
-  forall sys hfr hto,
+  forall {oifc} (sys: System oifc) hfr hto,
     Reducible sys hfr hto ->
     forall hst,
       Reducible sys (hst ++ hfr) (hst ++ hto).
@@ -52,7 +52,7 @@ Proof.
 Qed.
 
 Lemma reducible_app_2:
-  forall sys hfr hto,
+  forall {oifc} (sys: System oifc) hfr hto,
     Reducible sys hfr hto ->
     forall hst,
       Reducible sys (hfr ++ hst) (hto ++ hst).
@@ -64,7 +64,7 @@ Proof.
 Qed.
 
 Corollary reducible_cons:
-  forall sys hfr hto,
+  forall {oifc} (sys: System oifc) hfr hto,
     Reducible sys hfr hto ->
     forall lbl,
       Reducible sys (lbl :: hfr) (lbl :: hto).
@@ -76,7 +76,7 @@ Proof.
 Qed.
 
 Corollary reducible_cons_2:
-  forall sys lbl1 lbl2 lbl3 lbl4,
+  forall {oifc} (sys: System oifc) lbl1 lbl2 lbl3 lbl4,
     Reducible sys [lbl1; lbl2] [lbl3; lbl4] ->
     forall hst,
       Reducible sys (lbl1 :: lbl2 :: hst) (lbl3 :: lbl4 :: hst).
@@ -94,9 +94,8 @@ Qed.
 (* Proof. *)
 (*   unfold Reducible; intros. *)
   
-
 Lemma reducible_serializable:
-  forall sys st1 hfr st2,
+  forall {oifc} (sys: System oifc) st1 hfr st2,
     steps step_m sys st1 hfr st2 ->
     forall hto,
       steps step_m sys st1 hto st2 ->
@@ -109,7 +108,7 @@ Qed.
 (*! Reducibility of silent, incoming, and outgoing labels *)
 
 Lemma silent_ignored_1:
-  forall sys hst,
+  forall {oifc} (sys: System oifc) hst,
     Reducible sys (RlblEmpty _ :: hst) hst.
 Proof.
   unfold Reducible; intros.
@@ -117,7 +116,7 @@ Proof.
 Qed.
 
 Lemma silent_ignored_2:
-  forall sys hst,
+  forall {oifc} (sys: System oifc) hst,
     Reducible sys (hst ++ [RlblEmpty _]) hst.
 Proof.
   unfold Reducible; intros.
@@ -128,7 +127,7 @@ Proof.
 Qed.
 
 Lemma silent_commutes_1:
-  forall sys lbl,
+  forall {oifc} (sys: System oifc) lbl,
     Reducible sys [RlblEmpty _; lbl] [lbl; RlblEmpty _].
 Proof.
   unfold Reducible; intros.
@@ -137,7 +136,7 @@ Proof.
 Qed.
 
 Lemma silent_commutes_2:
-  forall sys lbl,
+  forall {oifc} (sys: System oifc) lbl,
     Reducible sys [lbl; RlblEmpty _] [RlblEmpty _; lbl].
 Proof.
   unfold Reducible; intros.
@@ -146,7 +145,7 @@ Proof.
 Qed.
 
 Lemma silent_reducible_1:
-  forall sys hst,
+  forall {oifc} (sys: System oifc) hst,
     Reducible sys (RlblEmpty _ :: hst) (hst ++ [RlblEmpty _]).
 Proof.
   unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
@@ -161,7 +160,7 @@ Proof.
 Qed.
 
 Lemma silent_reducible_2:
-  forall sys hst,
+  forall {oifc} (sys: System oifc) hst,
     Reducible sys (hst ++ [RlblEmpty _]) (RlblEmpty _ :: hst).
 Proof.
   unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
@@ -177,7 +176,7 @@ Proof.
 Qed.
 
 Lemma outs_ins_commutes:
-  forall sys eins eouts,
+  forall {oifc} (sys: System oifc) eins eouts,
     Reducible sys [RlblIns eins; RlblOuts eouts] [RlblOuts eouts; RlblIns eins].
 Proof.
   unfold Reducible; intros.
@@ -194,7 +193,7 @@ Proof.
 Qed.
 
 Lemma int_ins_commutes:
-  forall sys eins oidx ridx ins outs,
+  forall {oifc} (sys: System oifc) eins oidx ridx ins outs,
     Reducible sys [RlblIns eins; RlblInt oidx ridx ins outs]
               [RlblInt oidx ridx ins outs; RlblIns eins].
 Proof.
@@ -221,7 +220,7 @@ Proof.
 Qed.
 
 Lemma ins_commutes:
-  forall sys eins lbl,
+  forall {oifc} (sys: System oifc) eins lbl,
     NonInsLbl lbl ->
     Reducible sys [RlblIns eins; lbl] [lbl; RlblIns eins].
 Proof.
@@ -233,7 +232,7 @@ Proof.
 Qed.
 
 Lemma ins_reducible:
-  forall sys eins hst,
+  forall {oifc} (sys: System oifc) eins hst,
     NonInsHistory hst ->
     Reducible sys (RlblIns eins :: hst) (hst ++ [RlblIns eins]).
 Proof.
@@ -249,7 +248,7 @@ Proof.
 Qed.
 
 Lemma outs_int_commutes:
-  forall sys oidx ridx ins outs eouts,
+  forall {oifc} (sys: System oifc) oidx ridx ins outs eouts,
     Reducible sys [RlblInt oidx ridx ins outs; RlblOuts eouts]
               [RlblOuts eouts; RlblInt oidx ridx ins outs].
 Proof.
@@ -283,7 +282,7 @@ Proof.
 Qed.
 
 Lemma outs_commutes:
-  forall sys eouts lbl,
+  forall {oifc} (sys: System oifc) eouts lbl,
     NonOutsLbl lbl ->
     Reducible sys [lbl; RlblOuts eouts] [RlblOuts eouts; lbl].
 Proof.
@@ -295,7 +294,7 @@ Proof.
 Qed.
 
 Lemma outs_reducible:
-  forall sys eouts hst,
+  forall {oifc} (sys: System oifc) eouts hst,
     NonOutsHistory hst ->
     Reducible sys (hst ++ [RlblOuts eouts]) (RlblOuts eouts :: hst).
 Proof.
@@ -317,7 +316,7 @@ Qed.
 (*! Reducing a history to (Ins -> Internals -> Outs) *)
 
 Theorem trss_reducible_to_ins_atomics_outs:
-  forall sys trss,
+  forall {oifc} (sys: System oifc) trss,
     Forall (STransactional msg_dec) trss ->
     exists ins atms outs,
       InsHistory ins /\

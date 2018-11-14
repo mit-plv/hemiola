@@ -71,12 +71,7 @@ Record OStateIfc :=
 Definition OState (ifc: OStateIfc) :=
   hvec (ost_ty ifc).
 
-Record OStateR :=
-  { ost_ifc: OStateIfc;
-    ost_st: OState ost_ifc
-  }.
-
-Definition OStates := M.t OStateR.
+Definition OStates (ifc: OStateIfc) := M.t (OState ifc).
 
 Section ORqs.
 
@@ -162,15 +157,14 @@ Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
 Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
   List.map (fun midx => (midx, msg)) minds.
 
-Record Object :=
+Record Object oifc :=
   { obj_idx: IdxT;
-    obj_ifc: OStateIfc;
-    obj_rules: list (Rule obj_ifc);
+    obj_rules: list (Rule oifc);
     obj_rules_valid: NoDup (map (@rule_idx _) obj_rules)
   }.
 
 Lemma rules_same_id_in_object_same:
-  forall obj (rule1 rule2: Rule (obj_ifc obj)),
+  forall {oifc} (obj: Object oifc) (rule1 rule2: Rule oifc),
     In rule1 (obj_rules obj) ->
     In rule2 (obj_rules obj) ->
     rule_idx rule1 = rule_idx rule2 ->
@@ -181,19 +175,19 @@ Proof.
   exact (obj_rules_valid obj).
 Qed.
 
-Record System :=
-  { sys_objs: list Object;
-    sys_oinds_valid: NoDup (map obj_idx sys_objs);
+Record System oifc :=
+  { sys_objs: list (Object oifc);
+    sys_oinds_valid: NoDup (map (@obj_idx _) sys_objs);
     sys_minds: list IdxT;
     sys_merqs: list IdxT;
     sys_merss: list IdxT;
     sys_msg_inds_valid: NoDup (sys_minds ++ sys_merqs ++ sys_merss);
-    sys_oss_inits: OStates;
+    sys_oss_inits: OStates oifc;
     sys_orqs_inits: ORqs Msg
   }.
 
 Lemma obj_same_id_in_system_same:
-  forall sys (obj1 obj2: Object),
+  forall {oifc} (sys: System oifc) (obj1 obj2: Object oifc),
     In obj1 (sys_objs sys) ->
     In obj2 (sys_objs sys) ->
     obj_idx obj1 = obj_idx obj2 ->
@@ -207,11 +201,11 @@ Qed.
 Ltac inds_valid_tac :=
   abstract (compute; repeat (constructor; firstorder)).
 
-Global Instance System_OStates_HasInit : HasInit System OStates :=
-  {| initsOf := sys_oss_inits |}.
+Global Instance System_OStates_HasInit {oifc}: HasInit (System oifc) (OStates oifc) :=
+  {| initsOf := @sys_oss_inits _ |}.
 
-Global Instance System_ORqs_Msg_HasInit : HasInit System (ORqs Msg) :=
-  {| initsOf := sys_orqs_inits |}.
+Global Instance System_ORqs_HasInit {oifc}: HasInit (System oifc) (ORqs Msg) :=
+  {| initsOf := @sys_orqs_inits _ |}.
 
 Close Scope string.
 Close Scope list.

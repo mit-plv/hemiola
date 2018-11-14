@@ -87,7 +87,7 @@ Section MsgParam.
   Lemma atomic_messages_spec_ValidDeqs:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
-      forall sys st1 st2,
+      forall {oifc} (sys: System oifc) st1 st2,
         steps step_m sys st1 hst st2 ->
         bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)) /\
         ValidDeqs (enqMsgs outs (bst_msgs st1)) (idsOf ins).
@@ -100,7 +100,7 @@ Section MsgParam.
         apply FirstMPI_Forall_NoDup_ValidDeqs; auto.
         
     - inv H5.
-      specialize (IHAtomic _ _ _ H6); dest.
+      specialize (IHAtomic _ _ _ _ H6); dest.
       inv H8; simpl in *; subst.
       repeat rewrite idsOf_app, deqMsgs_app, enqMsgs_app.
       split.
@@ -120,7 +120,7 @@ Section MsgParam.
   Corollary atomic_messages_spec:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
-      forall sys st1 st2,
+      forall {oifc} (sys: System oifc) st1 st2,
         steps step_m sys st1 hst st2 ->
         bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)).
   Proof.
@@ -143,9 +143,9 @@ Section MsgParam.
   Qed.
 
   Lemma extAtomic_preserved:
-    forall impl1 hst,
+    forall {oifc} (impl1: System oifc) hst,
       ExtAtomic impl1 msgT_dec hst ->
-      forall impl2,
+      forall (impl2: System oifc),
         sys_merqs impl1 = sys_merqs impl2 ->
         ExtAtomic impl2 msgT_dec hst.
   Proof.
@@ -215,7 +215,7 @@ Section MsgParam.
   Qed.
   
   Lemma sequential_nil:
-    forall sys, Sequential sys msgT_dec nil nil.
+    forall {oifc} (sys: System oifc), Sequential sys msgT_dec nil nil.
   Proof.
     intros; hnf; intros.
     split.
@@ -224,7 +224,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_silent:
-    forall sys ll trss,
+    forall {oifc} (sys: System oifc) ll trss,
       Sequential sys msgT_dec ll trss ->
       Sequential sys msgT_dec (RlblEmpty _ :: ll) ([RlblEmpty _] :: trss).
   Proof.
@@ -237,7 +237,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_msg_ins:
-    forall sys ll trss eins,
+    forall {oifc} (sys: System oifc) ll trss eins,
       Sequential sys msgT_dec ll trss ->
       Sequential sys msgT_dec (RlblIns eins :: ll) ([RlblIns eins] :: trss).
   Proof.
@@ -250,7 +250,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_msg_outs:
-    forall sys ll trss eouts,
+    forall {oifc} (sys: System oifc) ll trss eouts,
       Sequential sys msgT_dec ll trss ->
       Sequential sys msgT_dec (RlblOuts eouts :: ll) ([RlblOuts eouts] :: trss).
   Proof.
@@ -263,7 +263,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_insHistory:
-    forall sys ins,
+    forall {oifc} (sys: System oifc) ins,
       InsHistory ins ->
       Sequential sys msgT_dec ins (lift_each ins).
   Proof.
@@ -277,7 +277,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_outsHistory:
-    forall sys outs,
+    forall {oifc} (sys: System oifc) outs,
       OutsHistory outs ->
       Sequential sys msgT_dec outs (lift_each outs).
   Proof.
@@ -340,7 +340,7 @@ Section MsgParam.
   Qed.
   
   Lemma sequential_app:
-    forall sys ll1 trss1 ll2 trss2,
+    forall {oifc} (sys: System oifc) ll1 trss1 ll2 trss2,
       Sequential sys msgT_dec ll1 trss1 ->
       Sequential sys msgT_dec ll2 trss2 ->
       Sequential sys msgT_dec (ll1 ++ ll2) (trss1 ++ trss2).
@@ -353,7 +353,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_serializable:
-    forall sys hst trss st,
+    forall {oifc} (sys: System oifc) hst trss st,
       steps step_m sys (initsOf sys) hst st ->
       Sequential sys msg_dec hst trss ->
       Serializable sys hst st.
@@ -434,7 +434,7 @@ End MsgParam.
 Lemma atomic_legal_eouts:
   forall (hst: MHistory) inits ins outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall sys st1 st2,
+    forall {oifc} (sys: System oifc) st1 st2,
       steps step_m sys st1 hst st2 ->
       (forall nouts,
           removeL (id_dec msg_dec) (inits ++ outs ++ nouts) ins =
@@ -448,7 +448,7 @@ Proof.
       reflexivity.
     + rewrite removeL_app_2; reflexivity.
   - inv H5.
-    specialize (IHAtomic _ _ _ H6).
+    specialize (IHAtomic _ _ _ _ H6).
     assert (NoDup rins) by (inv H8; destruct H14; apply idsOf_NoDup; auto).
     dest; subst; split.
     + intros.
@@ -512,112 +512,8 @@ Proof.
   dest; eauto.
 Qed.
 
-(* Lemma bequivalent_refl: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT), *)
-(*     BEquivalent sys hst hst. *)
-(* Proof. *)
-(*   congruence. *)
-(* Qed. *)
-
-(* Lemma bequivalent_sym: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
-(*     BEquivalent sys hst1 hst2 -> *)
-(*     BEquivalent sys hst2 hst1. *)
-(* Proof. *)
-(*   congruence. *)
-(* Qed. *)
-
-(* Lemma bequivalent_trans: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
-(*     BEquivalent sys hst1 hst2 -> *)
-(*     BEquivalent sys hst2 hst3 -> *)
-(*     BEquivalent sys hst1 hst3. *)
-(* Proof. *)
-(*   congruence. *)
-(* Qed. *)
-
-(* Lemma bequivalent_app_1: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
-(*     BEquivalent sys hst1 hst2 -> *)
-(*     BEquivalent sys (hst3 ++ hst1) (hst3 ++ hst2). *)
-(* Proof. *)
-(*   intros. *)
-(*   red; do 2 rewrite behaviorOf_app. *)
-(*   f_equal; assumption. *)
-(* Qed. *)
-
-(* Lemma bequivalent_app_2: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
-(*     BEquivalent sys hst1 hst2 -> *)
-(*     BEquivalent sys (hst1 ++ hst3) (hst2 ++ hst3). *)
-(* Proof. *)
-(*   intros. *)
-(*   red; do 2 rewrite behaviorOf_app. *)
-(*   f_equal; assumption. *)
-(* Qed. *)
-
-(* Lemma ioEquivalent_refl: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst: list LabelT), *)
-(*     IOEquivalent sys hst hst. *)
-(* Proof. *)
-(*   congruence. *)
-(* Qed. *)
-
-(* Lemma ioEquivalent_sym: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
-(*     IOEquivalent sys hst1 hst2 -> *)
-(*     IOEquivalent sys hst2 hst1. *)
-(* Proof. *)
-(*   congruence. *)
-(* Qed. *)
-
-(* Lemma ioEquivalent_trans: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
-(*     IOEquivalent sys hst1 hst2 -> *)
-(*     IOEquivalent sys hst2 hst3 -> *)
-(*     IOEquivalent sys hst1 hst3. *)
-(* Proof. *)
-(*   congruence. *)
-(* Qed. *)
-
-(* Lemma ioEquivalent_app_1: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
-(*     IOEquivalent sys hst1 hst2 -> *)
-(*     IOEquivalent sys (hst3 ++ hst1) (hst3 ++ hst2). *)
-(* Proof. *)
-(*   intros. *)
-(*   red; unfold behaviorIO. *)
-(*   do 2 (rewrite behaviorInsOf_app, behaviorOutsOf_app). *)
-(*   inv H0; reflexivity. *)
-(* Qed. *)
-
-(* Lemma ioEquivalent_app_2: *)
-(*   forall sys {LabelT} `{HasLabel LabelT} (hst1 hst2 hst3: list LabelT), *)
-(*     IOEquivalent sys hst1 hst2 -> *)
-(*     IOEquivalent sys (hst1 ++ hst3) (hst2 ++ hst3). *)
-(* Proof. *)
-(*   intros. *)
-(*   red; unfold behaviorIO. *)
-(*   do 2 (rewrite behaviorInsOf_app, behaviorOutsOf_app). *)
-(*   inv H0; reflexivity. *)
-(* Qed. *)
-
-(* Theorem serializable_seqSteps_refinesIO: *)
-(*   forall sys, *)
-(*     SerializableSys sys -> *)
-(*     steps step_m # seqStepsM |-- sys ≲ sys. *)
-(* Proof. *)
-(*   unfold SerializableSys, RefinesIO; intros. *)
-(*   inv H0. *)
-(*   specialize (H _ _ H1). *)
-(*   unfold Serializable in H. *)
-(*   destruct H as [sll [sst [? ?]]]. *)
-(*   inv H0; unfold MLabel; rewrite H3, H4. *)
-(*   econstructor; eauto. *)
-(* Qed. *)
-
 Lemma serializable_nil:
-  forall sys, Serializable sys nil (initsOf sys).
+  forall {oifc} (sys: System oifc), Serializable sys nil (initsOf sys).
 Proof.
   intros; hnf; intros.
   exists nil; split.
@@ -626,7 +522,7 @@ Proof.
 Qed.
 
 Lemma serializable_silent:
-  forall sys ll st,
+  forall {oifc} (sys: System oifc) ll st,
     Serializable sys ll st ->
     Serializable sys (RlblEmpty _ :: ll) st.
 Proof.

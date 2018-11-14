@@ -6,12 +6,12 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Section Invariant.
-  Variables (StateI LabelI: Type).
-  Context `{HasInit System StateI} `{HasLabel LabelI}.
+  Variables (SystemI StateI LabelI: Type).
+  Context `{HasInit SystemI StateI} `{HasLabel LabelI}.
 
-  Variable (impl: System).
+  Variable (impl: SystemI).
 
-  Variables (stepI: Step StateI LabelI)
+  Variables (stepI: Step SystemI StateI LabelI)
             (ginv: StateI -> Prop).
 
   Definition Invariant := StateI -> Prop.

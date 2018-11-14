@@ -117,7 +117,7 @@ Definition getInitEdges {MsgT} (hst: History MsgT): edges :=
 
 (* TODO: may also need to derive [es], [vs], and [ees] from [hst]. *)
 Lemma atomic_multipath:
-  forall sys st1 hst st2,
+  forall {oifc} (sys: System oifc) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     forall inits ins outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->

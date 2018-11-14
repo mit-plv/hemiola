@@ -8,7 +8,7 @@ Set Implicit Arguments.
 Open Scope list.
 
 Lemma sys_minds_sys_merqs_DisjList:
-  forall sys, DisjList (sys_minds sys) (sys_merqs sys).
+  forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merqs sys).
 Proof.
   intros.
   eapply DisjList_NoDup; [exact eq_nat_dec|].
@@ -18,7 +18,7 @@ Proof.
 Qed.
 
 Lemma sys_merqs_sys_merss_DisjList:
-  forall sys, DisjList (sys_merqs sys) (sys_merss sys).
+  forall {oifc} (sys: System oifc), DisjList (sys_merqs sys) (sys_merss sys).
 Proof.
   intros.
   eapply DisjList_NoDup; [exact eq_nat_dec|].
@@ -27,7 +27,7 @@ Proof.
 Qed.
 
 Lemma sys_minds_sys_merss_DisjList:
-  forall sys, DisjList (sys_minds sys) (sys_merss sys).
+  forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merss sys).
 Proof.
   intros.
   eapply DisjList_NoDup; [exact eq_nat_dec|].
@@ -73,10 +73,10 @@ Proof.
 Qed.
 
 Lemma ValidMsgsIn_sys_minds:
-  forall {MsgT} `{HasMsg MsgT}
-         (sys1: System) (eins: list (Id MsgT)),
+  forall {MsgT oifc} `{HasMsg MsgT}
+         (sys1: System oifc) (eins: list (Id MsgT)),
     ValidMsgsIn sys1 eins ->
-    forall sys2,
+    forall (sys2: System oifc),
       sys_minds sys1 = sys_minds sys2 ->
       ValidMsgsIn sys2 eins.
 Proof.
@@ -86,10 +86,10 @@ Proof.
 Qed.
 
 Lemma ValidMsgsOut_sys_minds_sys_merss:
-  forall {MsgT} `{HasMsg MsgT} 
-         (sys1: System) (eouts: list (Id MsgT)),
+  forall {MsgT oifc} `{HasMsg MsgT} 
+         (sys1: System oifc) (eouts: list (Id MsgT)),
     ValidMsgsOut sys1 eouts ->
-    forall sys2,
+    forall (sys2: System oifc),
       sys_minds sys1 = sys_minds sys2 ->
       sys_merss sys1 = sys_merss sys2 ->
       ValidMsgsOut sys2 eouts.
@@ -100,10 +100,10 @@ Proof.
 Qed.
 
 Lemma ValidMsgsExtIn_sys_merqs:
-  forall {MsgT} `{HasMsg MsgT} 
-         (sys1: System) (eins: list (Id MsgT)),
+  forall {MsgT oifc} `{HasMsg MsgT} 
+         (sys1: System oifc) (eins: list (Id MsgT)),
     ValidMsgsExtIn sys1 eins ->
-    forall sys2,
+    forall (sys2: System oifc),
       sys_merqs sys1 = sys_merqs sys2 ->
       ValidMsgsExtIn sys2 eins.
 Proof.
@@ -113,10 +113,10 @@ Proof.
 Qed.
   
 Lemma ValidMsgsExtOut_sys_merss:
-  forall {MsgT} `{HasMsg MsgT} 
-         (sys1: System) (eouts: list (Id MsgT)),
+  forall {MsgT oifc} `{HasMsg MsgT} 
+         (sys1: System oifc) (eouts: list (Id MsgT)),
     ValidMsgsExtOut sys1 eouts ->
-    forall sys2,
+    forall (sys2: System oifc),
       sys_merss sys1 = sys_merss sys2 ->
       ValidMsgsExtOut sys2 eouts.
 Proof.
@@ -126,7 +126,7 @@ Proof.
 Qed.
 
 Lemma step_t_tid_next:
-  forall sys st1 oidx ridx ins outs ts st2,
+  forall {oifc} (sys: System oifc) st1 oidx ridx ins outs ts st2,
     step_t sys st1 (RlblInt oidx ridx ins outs) st2 ->
     outs <> nil ->
     Forall (fun tmsg => tmsg_info tmsg = None) (valsOf ins) ->
@@ -148,7 +148,7 @@ Proof.
 Qed.
 
 Lemma extRssOf_In_sys_merss_FirstMP:
-  forall (sys: System) msgs1 msgs2,
+  forall {oifc} (sys: System oifc) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mout,
       In (idOf mout) (sys_merss sys) ->
@@ -160,7 +160,7 @@ Proof.
 Qed.
 
 Corollary extRssOf_SubList_sys_merss_FirstMP:
-  forall (sys: System) msgs1 msgs2,
+  forall {oifc} (sys: System oifc) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mouts,
       SubList (idsOf mouts) (sys_merss sys) ->
@@ -175,7 +175,7 @@ Proof.
 Qed.
 
 Corollary extRssOf_ValidMsgsExtOut_sys_merss_FirstMP:
-  forall (sys: System) msgs1 msgs2,
+  forall {oifc} (sys: System oifc) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mouts,
       ValidMsgsExtOut sys mouts ->
@@ -188,7 +188,7 @@ Proof.
 Qed.
 
 Lemma steps_wfHistory:
-  forall sys st1 hst st2,
+  forall {oifc} (sys: System oifc) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     WfHistory sys hst.
 Proof.
@@ -199,7 +199,7 @@ Proof.
 Qed.
 
 Theorem step_t_sound:
-  forall sys pst lbl nst,
+  forall {oifc} (sys: System oifc) pst lbl nst,
     step_m sys pst lbl nst ->
     forall ptst,
       TStateRel ptst pst ->
@@ -212,8 +212,8 @@ Proof.
 Abort.
 
 Lemma steps_split:
-  forall {StateT LabelT} 
-         (step: Step StateT LabelT) sys st1 st2 ll,
+  forall {SystemT StateT LabelT} 
+         (step: Step SystemT StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
     forall ll1 ll2,
       ll = ll2 ++ ll1 ->
@@ -240,8 +240,8 @@ Proof.
 Qed.
 
 Lemma steps_append:
-  forall {StateT LabelT} 
-         (step: Step StateT LabelT) sys st1 ll1 st2,
+  forall {SystemT StateT LabelT} 
+         (step: Step SystemT StateT LabelT) sys st1 ll1 st2,
     steps step sys st1 ll1 st2 ->
     forall ll2 st3,
       steps step sys st2 ll2 st3 ->
@@ -252,16 +252,16 @@ Proof.
 Qed.
 
 Lemma reachable_init:
-  forall {StateT LabelT} `{HasInit System StateT} `{HasLabel LabelT}
-         (step: Step StateT LabelT) sys,
+  forall {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
+         (step: Step SystemT StateT LabelT) sys,
     Reachable (steps step) sys (initsOf sys).
 Proof.
   eexists; econstructor.
 Qed.
 
 Lemma reachable_steps:
-  forall {StateT LabelT} `{HasInit System StateT} `{HasLabel LabelT}
-         (step: Step StateT LabelT) sys st1,
+  forall {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
+         (step: Step SystemT StateT LabelT) sys st1,
     Reachable (steps step) sys st1 ->
     forall ll st2,
       steps step sys st1 ll st2 ->
@@ -302,16 +302,16 @@ Qed.
 (* Qed. *)
 
 Theorem refines_refl:
-  forall {StateT LabelT} `{HasInit System StateT} `{HasLabel LabelT}
-         (ss: Steps StateT LabelT) sys, ss # ss |-- sys ⊑ sys.
+  forall {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
+         (ss: Steps SystemT StateT LabelT) sys, ss # ss |-- sys ⊑ sys.
 Proof.
   unfold Refines; intros.
   assumption.
 Qed.
 
 Theorem refines_trans:
-  forall {StateT LabelT} `{HasInit System StateT} `{HasLabel LabelT}
-         (ss1 ss2 ss3: Steps StateT LabelT) s1 s2 s3,
+  forall {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
+         (ss1 ss2 ss3: Steps SystemT StateT LabelT) s1 s2 s3,
     ss1 # ss2 |-- s1 ⊑ s2 ->
     ss2 # ss3 |-- s2 ⊑ s3 ->
     ss1 # ss3 |-- s1 ⊑ s3.

@@ -38,13 +38,10 @@ Section System.
   Definition ImplOStateIfc: OStateIfc :=
     {| ost_sz := 2;
        ost_ty := [nat:Type; nat:Type]%vector |}.
-  Definition implInit: OStates :=
-    [parentIdx <- {| ost_ifc := ImplOStateIfc;
-                     ost_st := (0, (msiS, tt)) |}]
-    +[child1Idx <- {| ost_ifc := ImplOStateIfc;
-                      ost_st := (0, (msiS, tt)) |}]
-    +[child2Idx <- {| ost_ifc := ImplOStateIfc;
-                      ost_st := (0, (msiS, tt)) |}].
+  Definition implInit: OStates ImplOStateIfc :=
+    [parentIdx <- (0, (msiS, tt))]
+    +[child1Idx <- (0, (msiS, tt))]
+    +[child2Idx <- (0, (msiS, tt))].
 
   Section Child.
     Variable (coidx: IdxT).
@@ -220,9 +217,8 @@ Section System.
                    nil)))
       |}.
       
-    Definition child: Object :=
+    Definition child: Object ImplOStateIfc :=
       {| obj_idx := coidx;
-         obj_ifc := ImplOStateIfc;
          obj_rules :=
            [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;
               childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
@@ -368,9 +364,8 @@ Section System.
 
     End Rules.
     
-    Definition parent: Object :=
+    Definition parent: Object ImplOStateIfc :=
       {| obj_idx := parentIdx;
-         obj_ifc := ImplOStateIfc;
          obj_rules :=
            (parentRules 0 c1pRq pc1 c2pRs pc2)
              ++ (parentRules 1 c2pRq pc2 c1pRs pc1);
@@ -379,7 +374,7 @@ Section System.
     
   End Parent.
   
-  Definition impl: System :=
+  Definition impl: System ImplOStateIfc :=
     {| sys_objs :=
          [child child1Idx ec1 ce1 c1pRq c1pRs pc1;
             child child2Idx ec2 ce2 c2pRq c2pRs pc2;

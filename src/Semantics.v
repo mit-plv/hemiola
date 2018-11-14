@@ -7,16 +7,16 @@ Set Implicit Arguments.
 
 Open Scope list.
 
-Definition extRqsOf {MsgT} `{HasMsg MsgT}
-           (sys: System) (mp: MessagePool MsgT) :=
+Definition extRqsOf {StateT MsgT} `{HasMsg MsgT}
+           (sys: System StateT) (mp: MessagePool MsgT) :=
   qsOf (sys_merqs sys) mp.
 
-Definition extRssOf {MsgT} `{HasMsg MsgT}
-           (sys: System) (mp: MessagePool MsgT) :=
+Definition extRssOf {StateT MsgT} `{HasMsg MsgT}
+           (sys: System StateT) (mp: MessagePool MsgT) :=
   qsOf (sys_merss sys) mp.
 
 Section Validness.
-  Context {MsgT: Type}.
+  Context {MsgT: Type} {oifc: OStateIfc}.
 
   (* A set of messages are "well-distributed" iff the sources of
    * all messages are different from each others.
@@ -28,7 +28,7 @@ Section Validness.
    * 1) each source is internal and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsIn (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsIn (sys: System oifc) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_minds sys) /\
     WellDistrMsgs msgs.
 
@@ -37,7 +37,7 @@ Section Validness.
    *    an external-response queue.
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsOut (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsOut (sys: System oifc) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_minds sys ++ sys_merss sys) /\
     WellDistrMsgs msgs.
 
@@ -45,7 +45,7 @@ Section Validness.
    * 1) each message uses an external request queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtIn (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsExtIn (sys: System oifc) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_merqs sys) /\
     WellDistrMsgs msgs.
 
@@ -53,7 +53,7 @@ Section Validness.
    * 1) each message uses an external response queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtOut (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsExtOut (sys: System oifc) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_merss sys) /\
     WellDistrMsgs msgs.
 
@@ -71,17 +71,13 @@ Section HasLabel.
 End HasLabel.
 
 Section Transition.
+  Variables (SystemT StateT LabelT: Type).
 
-  Definition Step StateT LabelT :=
-    System -> StateT -> LabelT -> StateT -> Prop.
-
-  Definition Steps StateT LabelT :=
-    System -> StateT -> list LabelT -> StateT -> Prop.
+  Definition Step := SystemT -> StateT -> LabelT -> StateT -> Prop.
+  Definition Steps := SystemT -> StateT -> list LabelT -> StateT -> Prop.
 
   (* NOTE: the head is the youngest *)
-  Inductive steps {StateT LabelT}
-            (step: Step StateT LabelT)
-            (sys: System) : StateT -> list LabelT -> StateT -> Prop :=
+  Inductive steps (step: Step) (sys: SystemT): StateT -> list LabelT -> StateT -> Prop :=
   | StepsNil: forall st, steps step sys st nil st
   | StepsCons:
       forall st1 ll st2,
@@ -90,22 +86,20 @@ Section Transition.
           step sys st2 lbl st3 ->
           steps step sys st1 (lbl :: ll) st3.
 
-  Definition psteps {StateT LabelT}
-             (step: Step StateT LabelT)
+  Definition psteps (step: Step)
              (P: StateT -> list LabelT -> StateT -> Prop)
-             (sys: System) (st1: StateT) (ll: list LabelT) (st2: StateT) :=
+             (sys: SystemT) (st1: StateT) (ll: list LabelT) (st2: StateT) :=
     steps step sys st1 ll st2 /\
     P st1 ll st2.
 
 End Transition.
 
 Section Behavior.
-  
+
   Definition Trace := list Label.
 
-  Definition Reachable {StateT LabelT}
-             `{HasInit System StateT} `{HasLabel LabelT}
-             (ss: Steps StateT LabelT) (sys: System) (st: StateT): Prop :=
+  Definition Reachable {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
+             (ss: Steps SystemT StateT LabelT) (sys: SystemT) (st: StateT): Prop :=
     exists ll, ss sys (initsOf sys) ll st.
   
   Fixpoint behaviorOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
@@ -114,20 +108,19 @@ Section Behavior.
     | l :: ll' => (getLabel l) ::> (behaviorOf ll')
     end.
 
-  Inductive Behavior {StateT LabelT}
-            `{HasInit System StateT} `{HasLabel LabelT}
-            (ss: Steps StateT LabelT) : System -> Trace -> Prop :=
+  Inductive Behavior {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
+            (ss: Steps SystemT StateT LabelT) : SystemT -> Trace -> Prop :=
   | Behv: forall sys ll st,
       ss sys (initsOf sys) ll st ->
       forall tr,
         tr = behaviorOf ll ->
         Behavior ss sys tr.
 
-  Definition Refines {StateI LabelI StateS LabelS}
-             `{HasInit System StateI} `{HasLabel LabelI}
-             `{HasInit System StateS} `{HasLabel LabelS}
-             (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS)
-             (impl spec: System) :=
+  Definition Refines {SystemI StateI LabelI SystemS StateS LabelS}
+             `{HasInit SystemI StateI} `{HasInit SystemS StateS}
+             `{HasLabel LabelI} `{HasLabel LabelS}
+             (ssI: Steps SystemI StateI LabelI) (ssS: Steps SystemS StateS LabelS)
+             (impl: SystemI) (spec: SystemS) :=
     forall tr, Behavior ssI impl tr ->
                Behavior ssS spec tr.
 
@@ -136,85 +129,23 @@ End Behavior.
 Notation "StI # StS |-- I <= S" := (Refines StI StS I S) (at level 30).
 Notation "StI # StS |-- I ⊑ S" := (Refines StI StS I S) (at level 30).
 
-(* Section BehaviorIO. *)
-
-(*   Definition getInsLabel {LabelT} `{HasLabel LabelT} (l: LabelT): option Label := *)
-(*     (getLabel l) >>=[None] *)
-(*       (fun lbl => match lbl with *)
-(*                   | LblIns _ => Some lbl *)
-(*                   | _ => None *)
-(*                   end). *)
-
-(*   Definition getOutsLabel {LabelT} `{HasLabel LabelT} (l: LabelT): option Label := *)
-(*     (getLabel l) >>=[None] *)
-(*       (fun lbl => match lbl with *)
-(*                   | LblOuts _ => Some lbl *)
-(*                   | _ => None *)
-(*                   end). *)
-
-(*   Fixpoint behaviorInsOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace := *)
-(*     match ll with *)
-(*     | nil => nil *)
-(*     | l :: ll' => (getInsLabel l) ::> (behaviorInsOf ll') *)
-(*     end. *)
-
-(*   Fixpoint behaviorOutsOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace := *)
-(*     match ll with *)
-(*     | nil => nil *)
-(*     | l :: ll' => (getOutsLabel l) ::> (behaviorOutsOf ll') *)
-(*     end. *)
-
-(*   Definition behaviorIO {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace * Trace := *)
-(*     (behaviorInsOf ll, behaviorOutsOf ll). *)
-  
-(*   Inductive BehaviorIO {StateT LabelT} *)
-(*             `{HasInit System StateT} `{HasLabel LabelT} *)
-(*             (ss: Steps StateT LabelT) : System -> Trace -> Trace -> Prop := *)
-(*   | BehvIO: forall sys ll st, *)
-(*       ss sys (initsOf sys) ll st -> *)
-(*       forall trin trout, *)
-(*         trin = behaviorInsOf ll -> *)
-(*         trout = behaviorOutsOf ll -> *)
-(*         BehaviorIO ss sys trin trout. *)
-
-(*   Definition RefinesIO {StateI LabelI StateS LabelS} *)
-(*              `{HasInit System StateI} `{HasLabel LabelI} *)
-(*              `{HasInit System StateS} `{HasLabel LabelS} *)
-(*              (ssI: Steps StateI LabelI) (ssS: Steps StateS LabelS) *)
-(*              (impl spec: System) := *)
-(*     forall trin trout, BehaviorIO ssI impl trin trout -> *)
-(*                        BehaviorIO ssS spec trin trout. *)
-  
-(* End BehaviorIO. *)
-
-(* Notation "StI # StS |-- I <~ S" := (RefinesIO StI StS I S) (at level 30). *)
-(* Notation "StI # StS |-- I ≲ S" := (RefinesIO StI StS I S) (at level 30). *)
-
 (** Some concrete state and label definitions *)
 
 (* A basis state with [Msg]s. *)
-Section BState.
+Record MState oifc :=
+  { bst_oss: OStates oifc;
+    bst_orqs: ORqs Msg;
+    bst_msgs: MessagePool Msg
+  }.
 
-  Record BState MsgT :=
-    { bst_oss: OStates;
-      bst_orqs: ORqs MsgT;
-      bst_msgs: MessagePool MsgT
-    }.
+Definition getMStateInit {oifc} (sys: System oifc): MState oifc :=
+  {| bst_oss := initsOf sys;
+     bst_orqs := initsOf sys;
+     bst_msgs := emptyMP _ |}.
 
-  Context {MsgT: Type} `{HasInit System (ORqs MsgT)}.
-
-  Definition getBStateInit (sys: System): BState MsgT :=
-    {| bst_oss := initsOf sys;
-       bst_orqs := initsOf sys;
-       bst_msgs := emptyMP _ |}.
-
-  Global Instance BState_HasInit: HasInit System (BState MsgT) :=
-    {| initsOf := getBStateInit |}.
-
-End BState.
-
-Definition MState := BState Msg.
-
+Global Instance MState_HasInit {oifc}: HasInit (System oifc) (MState oifc) :=
+  {| initsOf := getMStateInit |}.
+  
 (* [RLabel] represents "internal rule-driven labels" that reveal which message 
  * is being handled now.
  *)
@@ -246,7 +177,7 @@ Definition History (MsgT: Type) := list (RLabel MsgT).
 
 Definition MHistory := History Msg.
 
-Definition WfLbl (sys: System) (lbl: MLabel) :=
+Definition WfLbl {oifc} (sys: System oifc) (lbl: MLabel) :=
   match lbl with
   | RlblEmpty _ => True
   | RlblIns eins => eins <> nil /\ ValidMsgsExtIn sys eins
@@ -261,7 +192,7 @@ Definition WfLbl (sys: System) (lbl: MLabel) :=
     DisjList (idsOf ins) (idsOf outs)
   end.
 
-Definition WfHistory (sys: System) (hst: MHistory) :=
+Definition WfHistory {oifc} (sys: System oifc) (hst: MHistory) :=
   Forall (WfLbl sys) hst.
 
 Section TMsg.
@@ -323,29 +254,13 @@ Section TMsg.
 
 End TMsg.
 
-Section TState.
-
-  Record TState :=
-    { tst_oss: OStates;
-      tst_orqs: ORqs TMsg;
-      tst_msgs: MessagePool TMsg;
-      tst_trss: MessagePool TMsg;
-      tst_tid: TrsId
-    }.
-
-  Context `{HasInit System (ORqs TMsg)}.
-
-  Definition getTStateInit (sys: System): TState :=
-    {| tst_oss := initsOf sys;
-       tst_orqs := initsOf sys;
-       tst_msgs := emptyMP _;
-       tst_trss := emptyMP _;
-       tst_tid := trsIdInit |}.
-
-  Global Instance TState_HasInit: HasInit System TState :=
-    {| initsOf := getTStateInit |}.
-
-End TState.
+Record TState ifc :=
+  { tst_oss: OStates ifc;
+    tst_orqs: ORqs TMsg;
+    tst_msgs: MessagePool TMsg;
+    tst_trss: MessagePool TMsg;
+    tst_tid: TrsId
+  }.
 
 Close Scope list.
 

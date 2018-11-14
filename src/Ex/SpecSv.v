@@ -24,9 +24,8 @@ Section System.
       {| ost_sz := 1;
          ost_ty := [nat:Type]%vector |}.
     Definition specValueIdx: Fin.t 1 := Fin.F1.
-    Definition specInit: OStates :=
-      [specIdx <- {| ost_ifc := SpecOStateIfc;
-                     ost_st := hvcons 0 hvnil |}].
+    Definition specInit: OStates SpecOStateIfc :=
+      [specIdx <- hvcons 0 hvnil].
     
     Section PerChn.
       Variable ridxOfs: nat.
@@ -81,9 +80,8 @@ Section System.
     Proof.
     Admitted.
 
-    Definition specObj: Object :=
+    Definition specObj: Object SpecOStateIfc :=
       {| obj_idx := specIdx;
-         obj_ifc := SpecOStateIfc;
          obj_rules := specRules numC;
          obj_rules_valid := specObj_obj_rules_valid numC
       |}.
@@ -105,7 +103,7 @@ Section System.
     Proof.
     Admitted.
 
-    Definition spec: System :=
+    Definition spec: System SpecOStateIfc :=
       {| sys_objs := [specObj];
          sys_oinds_valid := ltac:(inds_valid_tac);
          sys_minds := nil;

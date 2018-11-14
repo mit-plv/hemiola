@@ -15,7 +15,7 @@ Section TreeTopo.
   Variable (gtr: GTree).
   Local Notation topo := (topoOfT gtr).
 
-  Definition TreeTopoRule (oidx: IdxT) {ifc} (rule: Rule ifc) :=
+  Definition TreeTopoRule (oidx: IdxT) {oifc} (rule: Rule oifc) :=
     forall post porq ins nost norq outs,
       rule_trs rule post porq ins = (nost, norq, outs) ->
       (forall min,
@@ -25,10 +25,10 @@ Section TreeTopo.
           In mout outs ->
           exists mto, In (createEdge oidx (idOf mout) mto) (dg_es topo)).
 
-  Definition TreeTopoObj (obj: Object) :=
+  Definition TreeTopoObj {oifc} (obj: Object oifc) :=
     Forall (TreeTopoRule (obj_idx obj)) (obj_rules obj).
     
-  Definition TreeTopoSys (sys: System) :=
+  Definition TreeTopoSys {oifc} (sys: System oifc) :=
     Forall TreeTopoObj (sys_objs sys).
 
 End TreeTopo.
@@ -57,17 +57,17 @@ Section HalfLock.
        (fun aorq => aorq@[upRq] >>=[None] (fun ri => Some ri)).
 
   (* TODO: define it. *)
-  Definition HalfLockPrec (oidx: IdxT) {ifc}: OPrec ifc :=
-    fun (ost: OState ifc) (orq: ORq Msg) (ins: list (Id Msg)) =>
+  Definition HalfLockPrec (oidx: IdxT) {oifc}: OPrec oifc :=
+    fun (ost: OState oifc) (orq: ORq Msg) (ins: list (Id Msg)) =>
       True.
 
-  Definition HalfLockRule (oidx: IdxT) {ifc} (rule: Rule ifc) :=
+  Definition HalfLockRule (oidx: IdxT) {oifc} (rule: Rule oifc) :=
     (rule_precond rule) ->oprec (HalfLockPrec oidx).
 
-  Definition HalfLockObj (obj: Object) :=
+  Definition HalfLockObj {oifc} (obj: Object oifc) :=
     Forall (HalfLockRule (obj_idx obj)) (obj_rules obj).
   
-  Definition HalfLockSys (sys: System) :=
+  Definition HalfLockSys {oifc} (sys: System oifc) :=
     Forall HalfLockObj (sys_objs sys).
 
 End HalfLock.
@@ -91,12 +91,12 @@ Section RqRs.
   Definition RqRsRPush (hst2 hst: MHistory) :=
     RqRsCommHistories hst hst2.
 
-  Definition RqRsContComm (sys: System) :=
+  Definition RqRsContComm {oifc} (sys: System oifc) :=
     forall hst1 hst2,
       ValidContinuous sys hst1 hst2 ->
       RqRsCommHistories hst1 hst2.
 
-  Definition RqRsLRPushable (sys: System) :=
+  Definition RqRsLRPushable {oifc} (sys: System oifc) :=
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall st2 hst1 hst2 hsts,
@@ -106,14 +106,14 @@ Section RqRs.
         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hsts ++ [hst1]) /\
         LRPushable sys (RqRsLPush hst1) (RqRsRPush hst2) (hst2 :: hsts).
 
-  Definition RqRsLOrR (sys: System) :=
+  Definition RqRsLOrR {oifc} (sys: System oifc) :=
     forall st1 st2 hst1 hst2 hsts,
       steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
       Continuous hst1 hst2 ->
       Forall (AtomicEx msg_dec) hsts ->
       Forall (fun hst => RqRsLPush hst1 hst \/ RqRsRPush hst2 hst) hsts.
   
-  Definition RqRsSys (sys: System) :=
+  Definition RqRsSys {oifc} (sys: System oifc) :=
     RqRsContComm sys /\
     RqRsLRPushable sys /\
     RqRsLOrR sys.
@@ -121,11 +121,12 @@ Section RqRs.
 End RqRs.
 
 Section RqRsSerial.
+  Context {oifc: OStateIfc}.
   Variables (gtr: GTree)
             (RqRsT: Type)
             (rrdec: RqRsDec RqRsT)
             (rrc: RqRsComm RqRsT)
-            (sys: System).
+            (sys: System oifc).
 
   Hypotheses (Htr: TreeTopoSys gtr sys)
              (Hpb: HalfLockSys (* gtr *) sys)

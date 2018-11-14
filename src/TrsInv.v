@@ -7,30 +7,26 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Section TrsInv.
-  Variables (StateI MsgT: Type).
-  Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
-  Context `{HasInit System StateI} `{HasMsg MsgT}.
+  Context {oifc: OStateIfc}.
 
-  Variable (impl: System).
+  Variables (impl: System oifc)
+            (ginv: MState oifc -> Prop).
 
-  Variables (stepI: Step StateI (RLabel MsgT))
-            (ginv: StateI -> Prop).
-
-  Definition Invariant := @Invariant StateI.
-  Definition InvInit := @InvInit StateI _ impl ginv.
+  Definition Invariant := @Invariant (MState oifc).
+  Definition InvInit := @InvInit (System oifc) (MState oifc) _ impl ginv.
 
   Definition InvTrs :=
     forall ist1,
       ginv ist1 ->
       forall lbl ist2,
-        trsSteps msgT_dec stepI impl ist1 lbl ist2 ->
+        trsSteps impl ist1 lbl ist2 ->
         ginv ist2.
 
   Definition InvSeq :=
     forall ist1,
       ginv ist1 ->
       forall lbl ist2,
-        seqSteps msgT_dec stepI impl ist1 lbl ist2 ->
+        seqSteps impl ist1 lbl ist2 ->
         ginv ist2.
 
   Hypotheses (Hinvi: InvInit)
@@ -40,19 +36,19 @@ Section TrsInv.
     forall ist1,
       ginv ist1 ->
       forall ihst ist2,
-        seqSteps msgT_dec stepI impl ist1 ihst ist2 ->
+        seqSteps impl ist1 ihst ist2 ->
         ginv ist2.
   Proof.
     intros.
-    destruct H2; destruct H3 as [trss ?].
-    destruct H3; subst.
+    destruct H0; destruct H1 as [trss ?].
+    destruct H1; subst.
 
     generalize dependent ist2; generalize dependent ist1.
     induction trss; simpl; intros.
-    - inv H2; assumption.
-    - eapply steps_split in H2; [|reflexivity].
-      destruct H2 as [sti [? ?]].
-      inv H3.
+    - inv H0; assumption.
+    - eapply steps_split in H0; [|reflexivity].
+      destruct H0 as [sti [? ?]].
+      inv H1.
       eapply Hinvt with (ist1:= sti); eauto.
       split; eauto.
   Qed.
@@ -66,9 +62,9 @@ Section TrsInv.
 End TrsInv.
 
 Theorem invSeq_serializable_invSteps:
-  forall impl ginv,
+  forall {oifc} (impl: System oifc) ginv,
     InvInit impl ginv ->
-    InvSeq msg_dec impl step_m ginv ->
+    InvSeq impl ginv ->
     SerializableSys impl ->
     InvSteps impl step_m ginv.
 Proof.

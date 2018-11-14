@@ -31,7 +31,7 @@ Fixpoint isExternalResp {MsgT} (merss: list IdxT) (outs: list (Id MsgT)) :=
     else isExternalResp merss outs'
   end.
 
-Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
+Inductive step_t {oifc} (sys: System oifc): TState oifc -> TLabel -> TState oifc -> Prop :=
 | StSlt: forall st, step_t sys st (RlblEmpty _) st
 | StIns: forall ts pst nst oss orqs msgs trss eins,
     eins <> nil ->
@@ -61,8 +61,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 
 | StInt: forall oidx obj rule
                 ts pst nst nts (Hts: nts > ts) tinfo
-                oss orqs msgs trss os porq pos norq ins outs
-                (Hifc: ost_ifc os = obj_ifc obj),
+                oss orqs msgs trss os porq pos norq ins outs,
     In obj (sys_objs sys) ->
     In rule (obj_rules obj) ->
     oidx = obj_idx obj ->
@@ -75,10 +74,8 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
     idsOf ins = rule_msgs_from rule (orqMap tmsg_msg porq) ->
     map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) = rule_msg_ids rule ->
     
-    rule_precond rule (match Hifc with eq_refl => ost_st os end)
-                 (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
-    rule_trs rule (match Hifc with eq_refl => ost_st os end)
-             (orqMap tmsg_msg porq) (imap tmsg_msg ins)
+    rule_precond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
+    rule_trs rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)
     = (pos, orqMap tmsg_msg norq, outs) ->
     ValidMsgsOut sys outs ->
 
@@ -92,7 +89,7 @@ Inductive step_t (sys: System): TState -> TLabel -> TState -> Prop :=
 
     pst = {| tst_oss := oss; tst_orqs := orqs;
              tst_msgs := msgs; tst_trss := trss; tst_tid := ts |} ->
-    nst = {| tst_oss := oss +[ oidx <- {| ost_st := pos |} ];
+    nst = {| tst_oss := oss +[ oidx <- pos ];
              tst_orqs := orqs +[ oidx <- norq ];
              tst_msgs := enqMsgs (imap (toTMsg tinfo) outs)
                                  (deqMsgs (idsOf ins) msgs);
@@ -121,7 +118,7 @@ Definition TMsgsRel (tmsgs: MessagePool TMsg) (msgs: MessagePool Msg) :=
   forall midx,
     map tmsg_msg (findQ midx tmsgs) = findQ midx msgs.
 
-Definition TStateRel (tst: TState) (st: MState) :=
+Definition TStateRel {oifc} (tst: TState oifc) (st: MState oifc) :=
   tst_oss tst = bst_oss st /\
   TORqsRel (tst_orqs tst) (bst_orqs st) /\
   TMsgsRel (tst_msgs tst) (bst_msgs st).

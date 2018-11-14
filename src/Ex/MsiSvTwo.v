@@ -38,14 +38,10 @@ Section System.
               (list IdxT):Type (* parent:directory -- which children have the status? *)
            ]%vector |}.
 
-    Fixpoint childrenInit (i: nat): OStates :=
+    Fixpoint childrenInit (i: nat): OStates ImplOStateIfc :=
       match i with
-      | O => [O <- {| ost_ifc := ImplOStateIfc;
-                      ost_st := (0, (msiS, (nil, tt))) |}]
-      | S i' =>
-        (childrenInit i')
-        +[i <- {| ost_ifc := ImplOStateIfc;
-                  ost_st := (0, (msiS, (nil, tt))) |}]
+      | O => [O <- (0, (msiS, (nil, tt)))]
+      | S i' => (childrenInit i')+[i <- (0, (msiS, (nil, tt)))]
       end.
 
     Fixpoint childrenIndices (i: nat): list IdxT :=
@@ -55,10 +51,9 @@ Section System.
       end.
 
     (* NOTE: all the children have the status S in the beginning. *)
-    Definition implInit: OStates :=
+    Definition implInit: OStates ImplOStateIfc :=
       (childrenInit numC)
-      +[parentIdx <- {| ost_ifc := ImplOStateIfc;
-                        ost_st := (0, (msiS, (childrenIndices numC, tt))) |}].
+      +[parentIdx <- (0, (msiS, (childrenIndices numC, tt)))].
 
     Section Child.
       Variable (coidx: IdxT).
@@ -233,9 +228,8 @@ Section System.
                       nil)))
         |}.
       
-      Definition child: Object :=
+      Definition child: Object ImplOStateIfc :=
         {| obj_idx := coidx;
-           obj_ifc := ImplOStateIfc;
            obj_rules :=
              [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;
                 childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
@@ -442,9 +436,8 @@ Section System.
       Proof.
       Admitted.
       
-      Definition parent: Object :=
+      Definition parent: Object ImplOStateIfc :=
         {| obj_idx := parentIdx;
-           obj_ifc := ImplOStateIfc;
            obj_rules := parentRules numC;
            obj_rules_valid := parent_obj_rules_valid numC
         |}.
@@ -452,7 +445,7 @@ Section System.
     End Parent.
 
     Lemma impl_oinds_valid:
-      NoDup (map obj_idx (parent :: childObjs numC)).
+      NoDup (map (@obj_idx _) (parent :: childObjs numC)).
     Proof.
     Admitted.
 
@@ -479,7 +472,7 @@ Section System.
     Proof.
     Admitted.
     
-    Definition impl: System :=
+    Definition impl: System ImplOStateIfc :=
       {| sys_objs := parent :: childObjs numC;
          sys_oinds_valid := impl_oinds_valid;
          sys_minds := impl_minds numC;

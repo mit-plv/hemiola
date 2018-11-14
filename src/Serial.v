@@ -10,9 +10,11 @@ Inductive TrsType :=
 | TSlt | TIns | TOuts | TInt.
 
 Section Sequential.
-  Variable sys: System.
-
   Context {MsgT} `{HasMsg MsgT}.
+  Context {oifc: OStateIfc}.
+
+  Variables sys: System oifc.
+
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
 
   Inductive Atomic:
@@ -106,23 +108,15 @@ End Semi.
 
 (*! Serializability *)
 
-Definition trsSteps {StateT MsgT} `{HasMsg MsgT}
-           (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
-           (step: Step StateT (RLabel MsgT))
-           (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
-  steps step sys st1 hst st2 /\
-  Transactional sys msgT_dec hst.
+Definition trsSteps {oifc} (sys: System oifc)
+           (st1: MState oifc) (hst: MHistory) (st2: MState oifc) :=
+  steps step_m sys st1 hst st2 /\
+  Transactional sys msg_dec hst.
 
-Definition trsStepsM := trsSteps msg_dec step_m.
-
-Definition seqSteps {StateT MsgT} `{HasMsg MsgT}
-           (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2})
-           (step: Step StateT (RLabel MsgT))
-           (sys: System) (st1: StateT) (hst: History MsgT) (st2: StateT) :=
-  steps step sys st1 hst st2 /\
-  exists trss, Sequential sys msgT_dec hst trss.
-
-Definition seqStepsM := seqSteps msg_dec step_m.
+Definition seqSteps {oifc} (sys: System oifc)
+           (st1: MState oifc) (hst: MHistory) (st2: MState oifc) :=
+  steps step_m sys st1 hst st2 /\
+  exists trss, Sequential sys msg_dec hst trss.
 
 (* Definition BEquivalent (sys: System) *)
 (*            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) := *)
@@ -132,13 +126,12 @@ Definition seqStepsM := seqSteps msg_dec step_m.
 (*            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) := *)
 (*   behaviorIO ll1 = behaviorIO ll2. *)
 
-Definition Serializable (sys: System) (ll: MHistory) (st: MState) :=
-  exists sll,
-    (* Legal and sequential *)
-    seqStepsM sys (initsOf sys) sll st.
+Definition Serializable {oifc} (sys: System oifc) (ll: MHistory) (st: MState oifc) :=
+  (* Legal and sequential *)
+  exists sll, seqSteps sys (initsOf sys) sll st.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
-Definition SerializableSys (sys: System) :=
+Definition SerializableSys {oifc} (sys: System oifc) :=
   forall ll st,
     steps step_m sys (initsOf sys) ll st ->
     Serializable sys ll st.

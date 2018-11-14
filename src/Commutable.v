@@ -32,7 +32,7 @@ Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
     (* 3) Transitions by [rule1; rule2] and [rule2; rule1] are same. *)
     no2 = rno1 /\ outs1 = routs1.
 
-Definition NonConflictingL (sys: System)
+Definition NonConflictingL {oifc} (sys: System oifc)
            (oidx1 ridx1 oidx2 ridx2: IdxT) :=
   oidx1 <> oidx2 \/
   (oidx1 = oidx2 /\
@@ -42,13 +42,13 @@ Definition NonConflictingL (sys: System)
      In rule2 (obj_rules obj) -> rule_idx rule2 = ridx2 ->
      NonConflictingR rule1 rule2).
 
-Definition NonConflicting (sys: System) (hst1 hst2: MHistory) :=
+Definition NonConflicting {oifc} (sys: System oifc) (hst1 hst2: MHistory) :=
   forall oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
     In (RlblInt oidx1 ridx1 ins1 outs1) hst1 ->
     In (RlblInt oidx2 ridx2 ins2 outs2) hst2 ->
     NonConflictingL sys oidx1 ridx1 oidx2 ridx2.
 
-Definition Discontinuous (sys: System) (hst1 hst2: MHistory) :=
+Definition Discontinuous {oifc} (sys: System oifc) (hst1 hst2: MHistory) :=
   exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
@@ -57,7 +57,7 @@ Definition Discontinuous (sys: System) (hst1 hst2: MHistory) :=
     DisjList (idsOf outs1) (idsOf outs2).
 
 Lemma nonconflicting_head_1:
-  forall sys lbl1 hst1 hst2,
+  forall {oifc} (sys: System oifc) lbl1 hst1 hst2,
     NonConflicting sys (lbl1 :: hst1) hst2 ->
     NonConflicting sys [lbl1] hst2.
 Proof.
@@ -68,7 +68,7 @@ Proof.
 Qed.
 
 Lemma nonconflicting_head_2:
-  forall sys hst1 lbl2 hst2,
+  forall {oifc} (sys: System oifc) hst1 lbl2 hst2,
     NonConflicting sys hst1 (lbl2 :: hst2) ->
     NonConflicting sys hst1 [lbl2].
 Proof.
@@ -79,7 +79,7 @@ Proof.
 Qed.
 
 Lemma nonconflicting_tail_1:
-  forall sys lbl1 hst1 hst2,
+  forall {oifc} (sys: System oifc) lbl1 hst1 hst2,
     NonConflicting sys (lbl1 :: hst1) hst2 ->
     NonConflicting sys hst1 hst2.
 Proof.
@@ -89,7 +89,7 @@ Proof.
 Qed.
 
 Lemma nonconflicting_tail_2:
-  forall sys hst1 lbl2 hst2,
+  forall {oifc} (sys: System oifc) hst1 lbl2 hst2,
     NonConflicting sys hst1 (lbl2 :: hst2) ->
     NonConflicting sys hst1 hst2.
 Proof.
@@ -99,7 +99,7 @@ Proof.
 Qed.
 
 Lemma internal_commutes:
-  forall sys oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
+  forall {oifc} (sys: System oifc) oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
     NonConflictingL sys oidx1 ridx1 oidx2 ridx2 ->
     DisjList (idsOf ins1) (idsOf ins2) ->
     DisjList outs1 ins2 ->
@@ -153,15 +153,11 @@ Proof.
     specialize (H3 _ _ _ H7 eq_refl H8 eq_refl H11 eq_refl).
 
     red in H3.
-    pose proof (UIP_refl _ _ Hifc0); subst.
     specialize (H3 _ _ _ _ _ _ _ H18 H19 H29); dest.
 
-    remember (rule_trs rule0 pos porq0 ins2) as trs2.
+    remember (rule_trs rule0 os0 porq0 ins2) as trs2.
     destruct trs2 as [[tnost2 tnorq2] touts2]; inv H30.
-    remember (rule_trs rule0
-                       match Hifc in (_ = o) return (OState o) with
-                       | eq_refl => ost_st os
-                       end porq ins2) as rtrs2.
+    remember (rule_trs rule0 os porq ins2) as rtrs2.
     destruct rtrs2 as [[rnost2 rnorq2] routs2]; dest; subst.
     remember (rule_trs rule rnost2 rnorq2 ins1) as rtrs1.
     destruct rtrs1 as [[rnost1 rnorq1] routs1]; dest; subst.
@@ -179,10 +175,10 @@ Proof.
         }
         { apply eq_sym; eassumption. }
     + econstructor.
-      * assumption.
+      * eassumption.
       * assumption.
       * reflexivity.
-      * instantiate (2:= (oss+[obj_idx obj0 <- {| ost_st := rnost2 |}])%fmap).
+      * instantiate (2:= (oss+[obj_idx obj0 <- rnost2])%fmap).
         mred.
       * instantiate (2:= (orqs+[obj_idx obj0 <- rnorq2])%fmap).
         mred.
@@ -192,8 +188,7 @@ Proof.
       * assumption.
       * assumption.
       * assumption.
-      * instantiate (1:= eq_refl); simpl.
-        assumption.
+      * assumption.
       * simpl; apply eq_sym; eassumption.
       * assumption.
       * assumption.
@@ -219,7 +214,7 @@ Proof.
 Qed.
 
 Lemma nonconflicting_discontinuous_commutable_atomic_0:
-  forall sys oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
+  forall {oifc} (sys: System oifc) oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
     NonConflicting sys [RlblInt oidx1 ridx1 mins1 mouts1] hst2 ->
     DisjList (idsOf mins1) (idsOf ins2) ->
@@ -266,7 +261,7 @@ Proof.
 Qed.
 
 Lemma nonconflicting_discontinuous_commutable_atomic:
-  forall sys hst1 hst2,
+  forall {oifc} (sys: System oifc) hst1 hst2,
     NonConflicting sys hst1 hst2 ->
     Discontinuous sys hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).

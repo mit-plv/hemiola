@@ -11,8 +11,9 @@ Open Scope list.
 (*! Quasi-sequential histories *)
 
 Section QuasiSeq.
-  Variables (sys: System)
-            (quasiSeq: forall (sys: System) (hst: MHistory) (n: nat), Prop).
+  Context {oifc: OStateIfc}.
+  Variables (sys: System oifc)
+            (quasiSeq: forall (sys: System oifc) (hst: MHistory) (n: nat), Prop).
 
   Definition QuasiSeqOkInit :=
     forall hst st,
@@ -80,7 +81,7 @@ Definition Continuous (hst1 hst2: MHistory) :=
     inits2 <> nil /\
     SubList inits2 eouts1.
 
-Definition ValidContinuous (sys: System) (hst1 hst2: MHistory) :=
+Definition ValidContinuous {oifc} (sys: System oifc) (hst1 hst2: MHistory) :=
   Continuous hst1 hst2 /\
   exists st1 st2 hst,
     Reachable (steps step_m) sys st1 /\
@@ -103,7 +104,7 @@ Proof.
 Qed.
 
 Lemma atomic_trss_sequential_or_interleaved:
-  forall sys trss st1 st2,
+  forall {oifc} (sys: System oifc) trss st1 st2,
     Reachable (steps step_m) sys st1 ->
     steps step_m sys st1 (List.concat trss) st2 ->
     Forall (AtomicEx msg_dec) trss ->
@@ -137,7 +138,8 @@ Proof.
 Admitted.
 
 Section WellInterleaved.
-  Variable (sys: System).
+  Context {oifc: OStateIfc}.
+  Variable (sys: System oifc).
 
   Definition WellInterleaved :=
     forall st1,
@@ -227,7 +229,7 @@ Section WellInterleaved.
     - red; intros.
       inv H1.
 
-      apply trss_reducible_to_ins_atomics_outs with (sys:= sys) in H4.
+      apply trss_reducible_to_ins_atomics_outs with (sys0:= sys) in H4.
       destruct H4 as [ins [atms [outs ?]]]; dest.
 
       pose proof (H4 _ _ H0).
@@ -262,7 +264,8 @@ Section WellInterleaved.
 End WellInterleaved.
 
 Section WellInterleavedPush.
-  Variable (sys: System).
+  Context {oifc: OStateIfc}.
+  Variable (sys: System oifc).
 
   Definition LRPushable (lpush rpush: MHistory -> Prop) (hsts: list MHistory) :=
     forall lhst rhst hsts1 hsts2 hsts3,

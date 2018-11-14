@@ -6,15 +6,15 @@ Set Implicit Arguments.
 Open Scope list.
 
 Section Simulation.
-  Context {StateI LabelI StateS LabelS: Type}
-          `{HasInit System StateI} `{HasLabel LabelI}
-          `{HasInit System StateS} `{HasLabel LabelS}.
-  Variables (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
+  Context {SystemI StateI LabelI SystemS StateS LabelS: Type}
+          `{HasInit SystemI StateI} `{HasLabel LabelI}
+          `{HasInit SystemS StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step SystemI StateI LabelI) (stepS: Step SystemS StateS LabelS)
             (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
 
-  Variables (impl spec: System).
+  Variables (impl: SystemI) (spec: SystemS).
 
   Definition Simulates :=
     forall ist1 sst1,
@@ -82,16 +82,16 @@ Section Simulation.
 End Simulation.
 
 Section InvSim.
-  Context {StateI LabelI StateS LabelS: Type}
-          `{HasInit System StateI} `{HasLabel LabelI}
-          `{HasInit System StateS} `{HasLabel LabelS}.
-  Variables (stepI: Step StateI LabelI) (stepS: Step StateS LabelS)
+  Context {SystemI StateI LabelI SystemS StateS LabelS: Type}
+          `{HasInit SystemI StateI} `{HasLabel LabelI}
+          `{HasInit SystemS StateS} `{HasLabel LabelS}.
+  Variables (stepI: Step SystemI StateI LabelI) (stepS: Step SystemS StateS LabelS)
             (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
   
-  Variables (impl spec: System).
+  Variables (impl: SystemI) (spec: SystemS).
 
   Definition InvSim :=
     forall ist1 sst1,
