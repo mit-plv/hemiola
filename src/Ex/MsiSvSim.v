@@ -1,181 +1,95 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap Syntax Topology Semantics SemFacts StepM StepT.
+Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant Simulation SerialFacts.
-Require Import Blocking.
 
-Require Import MsiSv.
+Require Import Msi MsiSv SpecSv.
 
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope hvec.
 Open Scope fmap.
 
-(** * TODO: recover all below with new notations. *)
+Section Inv.
 
-(* Section OPrecs. *)
+  Definition ImplOStateI (ost: OState ImplOStateIfc): Prop :=
+    ost#[implStatusIdx] = msiI.
 
-(*   Definition ImplOStatusM: OPrec := *)
-(*     fun ost _ _ => ost@[statusIdx] = Some (VNat stM). *)
+  Definition ImplOStateS (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+    ost#[implStatusIdx] = msiI \/
+    (ost#[implStatusIdx] = msiS /\ ost#[implValueIdx] = cv).
 
-(*   Definition ImplOStatusS: OPrec := *)
-(*     fun ost _ _ => ost@[statusIdx] = Some (VNat stS). *)
+  Definition ImplOStateM (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+    ost#[implStatusIdx] = msiM /\ ost#[implValueIdx] = cv.
+
+  Definition ImplStateI (oss: OStates ImplOStateIfc): Prop.
+  Proof.
+    refine ((oss@[parentIdx]) >>=[False] (fun post => _)).
+    refine ((oss@[child1Idx]) >>=[False] (fun cost1 => _)).
+    refine ((oss@[child2Idx]) >>=[False] (fun cost2 => _)).
+    exact (ImplOStateI post /\ (* Directory status is I as well. *)
+           ImplOStateI cost1 /\ ImplOStateI cost2).
+  Defined.
+
+  Definition ImplStateS (cv: nat) (oss: OStates ImplOStateIfc): Prop.
+  Proof.
+    refine ((oss@[parentIdx]) >>=[False] (fun post => _)).
+    refine ((oss@[child1Idx]) >>=[False] (fun cost1 => _)).
+    refine ((oss@[child2Idx]) >>=[False] (fun cost2 => _)).
+    refine (post#[implStatusIdx] = msiS /\ _). (* Directory status is S. *)
+    exact (ImplOStateS cv cost1 /\ ImplOStateS cv cost2).
+  Defined.
+
+  Definition ImplStateM (cv: nat) (oss: OStates ImplOStateIfc): Prop.
+  Proof.
+    refine ((oss@[parentIdx]) >>=[False] (fun post => _)).
+    refine ((oss@[child1Idx]) >>=[False] (fun cost1 => _)).
+    refine ((oss@[child2Idx]) >>=[False] (fun cost2 => _)).
+    refine (post#[implStatusIdx] = msiM /\ _). (* Directory status is M. *)
+    exact ((ImplOStateM cv cost1 /\ ImplOStateI cost2) \/
+           (ImplOStateI cost1 /\ ImplOStateM cv cost2)).
+  Defined.
+
+  Definition ImplStateMSI (oss: OStates ImplOStateIfc): Prop :=
+    ImplStateI oss \/
+    (exists cv, ImplStateS cv oss) \/
+    (exists cv, ImplStateM cv oss).
   
-(*   Definition ImplOStatusI: OPrec := *)
-(*     fun ost _ _ => ost@[statusIdx] = Some (VNat stI). *)
+End Inv.
 
-(* End OPrecs. *)
+Section Sim.
 
-(* Section Predicates. *)
+  Local Definition spec := SpecSv.spec 1.
+  Local Definition impl := MsiSv.impl.
 
-(*   Definition ImplStateI: OStatesFP := *)
-(*     OStateForallP *)
-(*       (fun oidx ost => *)
-(*          forall stt,  *)
-(*            ost@[statusIdx] = Some (VNat stt) -> *)
-(*            stt = stI). *)
+  (** Simulation between [MState]s *)
 
-(*   Definition ImplStateMI (v: Value): OStatesFP := *)
-(*     fun inds ioss => *)
-(*       exists midx, *)
-(*         In midx inds /\ *)
-(*         OStateExistsP *)
-(*           (fun oidx ost => *)
-(*              ost@[statusIdx] = Some (VNat stM) /\ *)
-(*              ost@[valueIdx] = Some v) midx ioss /\ *)
-(*         OStateForallP *)
-(*           (fun oidx ost => *)
-(*              oidx <> midx -> *)
-(*              forall stt, *)
-(*                ost@[statusIdx] = Some (VNat stt) -> *)
-(*                stt = stI) inds ioss. *)
+  Definition SpecState (v: nat) (oss: OStates SpecOStateIfc): Prop.
+  Proof.
+    refine ((oss@[specIdx]) >>=[False] (fun sost => _)).
+    exact (sost#[specValueIdx] = v).
+  Defined.
 
-(*   Definition ImplStateSI (v: Value): OStatesFP := *)
-(*     fun inds ioss => *)
-(*       (exists midx, *)
-(*           In midx inds /\ *)
-(*           OStateExistsP *)
-(*             (fun oidx ost => ost@[statusIdx] = Some (VNat stS)) midx ioss) /\ *)
-(*       OStateForallP *)
-(*         (fun oidx ost => *)
-(*            forall stt, *)
-(*              ost@[statusIdx] = Some (VNat stt) -> *)
-(*              match stt with *)
-(*              | 0 (* stI *) => True *)
-(*              | 1 (* stS *) => ost@[valueIdx] = Some v *)
-(*              | 2 (* stM *) => False *)
-(*              | _ => False *)
-(*              end) inds ioss. *)
+  Definition SimOStates: OStates ImplOStateIfc -> OStates SpecOStateIfc -> Prop :=
+    fun ioss soss =>
+      ImplStateI ioss \/
+      (exists cv, ImplStateS cv ioss /\ SpecState cv soss) \/
+      (exists cv, ImplStateM cv ioss /\ SpecState cv soss).
 
-(*   Definition ImplStateMSI (v: Value): OStatesFP := *)
-(*     fun inds ioss => ImplStateMI v inds ioss \/ ImplStateSI v inds ioss. *)
+  Definition SimMsiSv: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
+    fun ist sst => SimOStates (bst_oss ist) (bst_oss sst).
 
-(*   (* NOTE: Here indeed binary predicates are required; if the predicate only *)
-(*    * takes a poststate, then we cannot specify that the coherence value should *)
-(*    * not be changed. *)
-(*    *) *)
-(*   (** --(.)--> [MSI(v) -> MSI(v)] --(v)--> *) *)
-(*   Definition PredGet (tinds: list IdxT): PredOS := *)
-(*     fun _ poss outv noss => *)
-(*       ImplStateMSI outv tinds poss /\ ImplStateMSI outv tinds noss. *)
+  Section Facts.
 
-(*   (** --(v)--> [. -> MSI(v)] --(.)--> *) *)
-(*   Definition PredSet (tinds: list IdxT): PredOS := *)
-(*     fun inv _ _ noss => ImplStateMI inv tinds noss. *)
+    Lemma SimMsiSv_init:
+      SimMsiSv (initsOf impl) (initsOf spec).
+    Proof.
+      repeat red.
+      right; left.
+      exists 0; split.
+    Admitted.
 
-(*   (** --(.)--> [MSI(v)|{tinds} -> SI(v)|{tinds}] --(v)--> *) *)
-(*   Definition PredGetSI (tinds: list IdxT): PredOS := *)
-(*     fun _ poss outv noss => *)
-(*       ImplStateMSI outv tinds poss /\ *)
-(*       ImplStateSI outv tinds noss. *)
-
-(*   (** --(.)--> [. -> I|{tinds}] --(v)--> *) *)
-(*   Definition PredSetI (tinds: list IdxT): PredOS := *)
-(*     fun _ _ _ noss => *)
-(*       ImplStateI tinds noss. *)
-
-(*   Definition OPredGetS: OPred := *)
-(*     fun inv post outv nost => *)
-(*       nost@[statusIdx] = Some (VNat stS) /\ *)
-(*       nost@[valueIdx] = Some outv. *)
-
-(*   (* Definition getRqFwdF (topo: Tree unit) (rqpmid: PMsgId TMsg): list (PMsgId TMsg) := *) *)
-(*   (*   let from := mid_from (pmid_mid rqpmid) in *) *)
-(*   (*   let this := mid_to (pmid_mid rqpmid) in *) *)
-(*   (*   map (fun tofwds => *) *)
-(*   (*          {| pmid_mid := *) *)
-(*   (*               {| mid_addr := *) *)
-(*   (*                    {| ma_from := this; *) *)
-(*   (*                       ma_to := fst tofwds; *) *)
-(*   (*                       ma_chn := rqChn |}; *) *)
-(*   (*                  mid_tid := mid_tid (pmid_mid rqpmid) |}; *) *)
-(*   (*             pmid_pred := *) *)
-(*   (*               {| pred_os := PredGetSI (snd tofwds); *) *)
-(*   (*                  pred_mp := ⊤ |} *) *)
-(*   (*          |}) *) *)
-(*   (*       (getFwds topo from this). *) *)
+  End Facts.
   
-(* End Predicates. *)
-
-(* Section Sim. *)
-(*   Variables erq1 erq2 ers1 ers2: nat. *)
-(*   Hypothesis (Hmvalid: NoDup ([c1pRq; c1pRs; pc1; c2pRq; c2pRs; pc2] *)
-(*                                 ++ [erq1; erq2; ers1; ers2])). *)
-
-(*   Local Notation spec := (spec Hmvalid). *)
-(*   Local Notation impl0 := (impl0 Hmvalid). *)
-
-(*   (** Global invariants *) *)
-
-(*   Definition SvmInvs := *)
-(*     ValidTrss impl0 /\i BlockedInv /\i ValidTidState. *)
-
-(*   (** Simulation between [TState]s *) *)
-
-(*   Definition SvmSpecState (v: Value) (soss: OStates) := *)
-(*     exists sost, *)
-(*       soss@[specIdx] = Some sost /\ *)
-(*       sost@[valueIdx] = Some v. *)
-
-(*   Definition SvmR (tinds: list IdxT): OStates -> OStates -> Prop := *)
-(*     fun ioss soss => *)
-(*       exists cv, *)
-(*         ImplStateMSI cv tinds ioss /\ SvmSpecState cv soss. *)
-
-(*   Definition SvmSpecORqs (sorqs: ORqs TMsg) := *)
-(*     exists sorq, *)
-(*       sorqs@[specIdx] = Some sorq. *)
-
-(*   Definition SvmSim {SysT} `{IsSystem SysT} (impl: SysT): TState -> TState -> Prop := *)
-(*     fun ist sst => *)
-(*       SvmR (oindsOf impl) (tst_oss ist) (tst_oss sst) /\ *)
-(*       SvmSpecORqs (tst_orqs sst) /\ *)
-(*       SimMP ist sst. *)
-
-(*   Section Facts. *)
-
-(*     Lemma SvmSim_init: *)
-(*       SvmSim impl0 (initsOf impl0) (initsOf spec). *)
-(*     Proof. *)
-(*       repeat esplit. *)
-(*       right; repeat econstructor; *)
-(*         cbn; intros; inv H; cbn; reflexivity. *)
-(*     Qed. *)
-
-(*     Lemma SvmSim_MsgsSim: *)
-(*       MsgsSim (SvmSim impl0). *)
-(*     Proof. *)
-(*     Admitted. *)
-
-(*     Lemma SvmInvs_init: *)
-(*       SvmInvs (initsOf impl0). *)
-(*     Proof. *)
-(*       repeat constructor. *)
-(*       - hnf; intros. *)
-(*         elim H. *)
-(*       - apply ForallMP_emptyMP. *)
-(*     Qed. *)
-    
-(*   End Facts. *)
-  
-(* End Sim. *)
+End Sim.
 

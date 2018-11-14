@@ -11,7 +11,7 @@ Open Scope hvec.
 Open Scope fmap.
 
 Section System.
-  Variable numC: nat. (* if [numC = 0], then the system has a single child. *)
+  Variable numC: nat. (* if [numC = 0], then the system has channels for a single child. *)
 
   Definition erq (i: nat) := 2 * i.
   Definition ers (i: nat) := 2 * i + 1.
