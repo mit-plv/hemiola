@@ -66,10 +66,10 @@ Section Inv.
         try (right; split; reflexivity; fail).
     Qed.
 
-    Lemma ImplStateMSI_invSteps:
-      InvSteps impl step_m (liftInv ImplStateMSI).
+    Lemma ImplStateMSI_invStep:
+      InvStep impl step_m (liftInv ImplStateMSI).
     Proof.
-      apply invSeq_serializable_invSteps.
+      apply invSeq_serializable_invStep.
       - apply ImplStateMSI_init.
       - admit. (* [InvSeq] *)
       - admit. (* [SerializableSys] *)
@@ -111,14 +111,22 @@ Section Sim.
       - reflexivity.
     Qed.
 
-    Lemma MsiSv_ok:
+    Lemma SimMsiSv_sim:
+      InvSim step_m step_m (liftInv ImplStateMSI) (liftSim SimMsiSv) impl spec.
+    Proof.
+    Admitted.
+    
+    Theorem MsiSv_ok:
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.
     Proof.
       apply invSim_implies_refinement
         with (ginv:= liftInv ImplStateMSI)
              (sim:= liftSim SimMsiSv).
-
-    Admitted.
+      - apply SimMsiSv_sim.
+      - apply ImplStateMSI_invStep.
+      - apply SimMsiSv_init.
+      - apply ImplStateMSI_init.
+    Qed.
 
   End Facts.
   

@@ -95,6 +95,7 @@ Section InvSim.
 
   Definition InvSim :=
     forall ist1 sst1,
+      Reachable (steps stepI) impl ist1 ->
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall ilbl ist2,
@@ -134,7 +135,9 @@ Section InvSim.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H5;
-      [|exact H7|eapply inv_steps; eauto].
+      [|red; eauto
+       |eassumption
+       |eapply inv_steps with (LabelI:= LabelI); eassumption].
     
     destruct (getLabel lbl) as [elbl|].
 

@@ -20,6 +20,7 @@ Section Invariant.
 
   Definition InvStep :=
     forall ist1,
+      Reachable (steps stepI) impl ist1 ->
       ginv ist1 ->
       forall lbl ist2,
         stepI impl ist1 lbl ist2 ->
@@ -35,18 +36,23 @@ Section Invariant.
 
   Lemma inv_steps':
     forall ist1,
+      Reachable (steps stepI) impl ist1 ->
       ginv ist1 ->
       forall ihst ist2,
         steps stepI impl ist1 ihst ist2 ->
         ginv ist2.
   Proof.
-    induction 2; simpl; intros; eauto.
+    induction 3; simpl; intros; eauto.
+
+    eapply Hinvs; [| |exact H4]; auto.
+    eapply reachable_steps; eauto.
   Qed.
 
   Lemma inv_steps: InvSteps.
   Proof.
     unfold InvSteps; intros.
     eapply inv_steps'; eauto.
+    apply reachable_init.
   Qed.
   
 End Invariant.

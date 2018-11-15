@@ -17,6 +17,7 @@ Section TrsInv.
 
   Definition InvTrs :=
     forall ist1,
+      Reachable (steps step_m) impl ist1 ->
       ginv ist1 ->
       forall lbl ist2,
         trsSteps impl ist1 lbl ist2 ->
@@ -24,6 +25,7 @@ Section TrsInv.
 
   Definition InvSeq :=
     forall ist1,
+      Reachable (steps step_m) impl ist1 ->
       ginv ist1 ->
       forall lbl ist2,
         seqSteps impl ist1 lbl ist2 ->
@@ -34,23 +36,25 @@ Section TrsInv.
 
   Lemma inv_trs_seqSteps':
     forall ist1,
+      Reachable (steps step_m) impl ist1 ->
       ginv ist1 ->
       forall ihst ist2,
         seqSteps impl ist1 ihst ist2 ->
         ginv ist2.
   Proof.
     intros.
-    destruct H0; destruct H1 as [trss ?].
-    destruct H1; subst.
+    destruct H1; destruct H2 as [trss ?].
+    destruct H2; subst.
 
     generalize dependent ist2; generalize dependent ist1.
     induction trss; simpl; intros.
-    - inv H0; assumption.
-    - eapply steps_split in H0; [|reflexivity].
-      destruct H0 as [sti [? ?]].
-      inv H1.
+    - inv H1; assumption.
+    - eapply steps_split in H1; [|reflexivity].
+      destruct H1 as [sti [? ?]].
+      inv H2.
       eapply Hinvt with (ist1:= sti); eauto.
-      split; eauto.
+      + eapply reachable_steps; eauto.
+      + split; eauto.
   Qed.
 
   Lemma inv_trs_seqSteps: InvSeq.
@@ -61,17 +65,19 @@ Section TrsInv.
 
 End TrsInv.
 
-Theorem invSeq_serializable_invSteps:
+Theorem invSeq_serializable_invStep:
   forall {oifc} (impl: System oifc) ginv,
     InvInit impl ginv ->
     InvSeq impl ginv ->
     SerializableSys impl ->
-    InvSteps impl step_m ginv.
+    InvStep impl step_m ginv.
 Proof.
-  unfold InvInit, InvSeq, SerializableSys, InvSteps, Invariant.InvSteps.
+  unfold InvInit, InvSeq, SerializableSys, InvStep, Invariant.InvStep.
   intros.
-  specialize (H1 _ _ H2).
+  red in H2; destruct H2 as [ll ?].
+  specialize (H1 _ _ (StepsCons H2 _ _ H4)).
   red in H1; destruct H1 as [sll ?].
-  eapply H0; eauto.
+  eapply H0; [| |eassumption]; auto.
+  apply reachable_init.
 Qed.
 
