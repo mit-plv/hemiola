@@ -1,6 +1,6 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
-Require Import Invariant Simulation SerialFacts.
+Require Import Invariant TrsInv Simulation SerialFacts.
 
 Require Import Msi MsiSv SpecSv.
 
@@ -54,6 +54,28 @@ Section Inv.
     ImplStateI oss \/
     (exists cv, ImplStateS cv oss) \/
     (exists cv, ImplStateM cv oss).
+
+  Section Facts.
+
+    Lemma ImplStateMSI_init:
+      ImplStateMSI (initsOf impl).
+    Proof.
+      repeat red.
+      right; left.
+      exists 0; repeat split;
+        try (right; split; reflexivity; fail).
+    Qed.
+
+    Lemma ImplStateMSI_invSteps:
+      InvSteps impl step_m (liftInv ImplStateMSI).
+    Proof.
+      apply invSeq_serializable_invSteps.
+      - apply ImplStateMSI_init.
+      - admit. (* [InvSeq] *)
+      - admit. (* [SerializableSys] *)
+    Admitted.
+
+  End Facts.
   
 End Inv.
 
@@ -70,14 +92,11 @@ Section Sim.
     exact (sost#[specValueIdx] = v).
   Defined.
 
-  Definition SimOStates: OStates ImplOStateIfc -> OStates SpecOStateIfc -> Prop :=
+  Definition SimMsiSv: OStates ImplOStateIfc -> OStates SpecOStateIfc -> Prop :=
     fun ioss soss =>
       ImplStateI ioss \/
       (exists cv, ImplStateS cv ioss /\ SpecState cv soss) \/
       (exists cv, ImplStateM cv ioss /\ SpecState cv soss).
-
-  Definition SimMsiSv: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
-    fun ist sst => SimOStates (bst_oss ist) (bst_oss sst).
 
   Section Facts.
 
@@ -87,6 +106,18 @@ Section Sim.
       repeat red.
       right; left.
       exists 0; split.
+      - cbn; repeat split;
+          try (right; split; reflexivity; fail).
+      - reflexivity.
+    Qed.
+
+    Lemma MsiSv_ok:
+      (steps step_m) # (steps step_m) |-- impl ⊑ spec.
+    Proof.
+      apply invSim_implies_refinement
+        with (ginv:= liftInv ImplStateMSI)
+             (sim:= liftSim SimMsiSv).
+
     Admitted.
 
   End Facts.

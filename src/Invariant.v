@@ -76,6 +76,9 @@ Section Operations.
 
 End Operations.
 
+Definition liftInv {oifc} (ossInv: OStates oifc -> Prop): MState oifc -> Prop :=
+  fun st => ossInv (bst_oss st).
+
 Ltac split_inv := apply inv_split.
 
 Infix "/\i" := invAnd (at level 80).
