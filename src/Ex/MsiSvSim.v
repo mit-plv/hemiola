@@ -114,6 +114,14 @@ Section Sim.
     Lemma SimMsiSv_sim:
       InvSim step_m step_m (liftInv ImplStateMSI) (liftSim SimMsiSv) impl spec.
     Proof.
+      red; intros.
+
+      (* TODO: simulation proof should be very easy when equipped with 
+       *       sufficient invariants, by iterating all possible state 
+       *       transitions by rules.
+       *       Automate this process.
+       *)
+      inv H2.
     Admitted.
     
     Theorem MsiSv_ok:
