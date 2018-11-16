@@ -17,7 +17,6 @@ Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
     rule_precond rule2 nost1 norq1 ins2 ->
     (* 1) Preconditions of [rule2] hold if the ones of [rule1] hold. *)
     rule_precond rule2 post1 porq1 ins2 /\
-    idsOf ins2 = rule_msgs_from rule2 porq1 /\
     let (no2, outs2) := rule_trs rule2 nost1 norq1 ins2 in
     let (nost2, norq2) := no2 in
     let (rno2, routs2) := rule_trs rule2 post1 porq1 ins2 in
@@ -28,7 +27,6 @@ Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
     routs2 = outs2 /\
     (* 2) Precondition of [rule1] holds after a transition by [rule2]. *)
     rule_precond rule1 rnost2 rnorq2 ins1 /\
-    idsOf ins1 = rule_msgs_from rule1 rnorq2 /\
     (* 3) Transitions by [rule1; rule2] and [rule2; rule1] are same. *)
     no2 = rno1 /\ outs1 = routs1.
 
@@ -193,7 +191,7 @@ Proof.
       * assumption.
       * assumption.
       * reflexivity.
-      * inv H20; f_equal.
+      * inv H6; f_equal.
         { meq. }
         { meq. }
         { rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.

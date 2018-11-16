@@ -124,8 +124,6 @@ End ORqs.
 Section Rule.
   Variables (ifc: OStateIfc).
 
-  Definition OMsgsFrom :=
-    ORq Msg -> list IdxT.
   Definition OPrec :=
     OState ifc -> ORq Msg -> list (Id Msg) -> Prop.
   Definition OTrs :=
@@ -140,8 +138,8 @@ Section Rule.
 
   Record Rule :=
     { rule_idx: IdxT;
-      rule_msg_ids: list IdxT;
-      rule_msgs_from: OMsgsFrom;
+      rule_msg_ids_from: list IdxT;
+      rule_msg_ids_to: list IdxT;
       rule_precond: OPrec;
       rule_trs: OTrs;
     }.
@@ -153,6 +151,14 @@ Infix "->oprec" := OPrecImp (at level 99).
 Notation "'⊤oprec'" := (fun _ _ _ => True).
 Notation "'⊥oprec'" := (fun _ _ _ => False).
 Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
+
+Definition MsgsFrom {oifc} (froms: list IdxT): OPrec oifc :=
+  fun _ _ mins => idsOf mins = froms.
+
+Definition MsgsFromORq {oifc} (addr: AddrT) (rqty: IdxT): OPrec oifc :=
+  fun _ orq mins =>
+    (getRq orq addr rqty)
+      >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi).
 
 Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
   List.map (fun midx => (midx, msg)) minds.

@@ -71,8 +71,10 @@ Inductive step_t {oifc} (sys: System oifc): TState oifc -> TLabel -> TState oifc
     
     Forall (FirstMPI msgs) ins ->
     ValidMsgsIn sys ins ->
-    idsOf ins = rule_msgs_from rule (orqMap tmsg_msg porq) ->
-    map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) = rule_msg_ids rule ->
+    map (fun tmsg => msg_id (getMsg tmsg)) (valsOf ins) =
+    rule_msg_ids_from rule ->
+    map (fun tmsg => msg_id (getMsg tmsg)) (valsOf outs) =
+    rule_msg_ids_to rule ->
     
     rule_precond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
     rule_trs rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)

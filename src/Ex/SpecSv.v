@@ -35,9 +35,9 @@ Section System.
 
       Definition specGetRq: Rule SpecOStateIfc :=
         {| rule_idx := specNumOfRules * ridxOfs + 0;
-           rule_msg_ids := [getRq];
-           rule_msgs_from := fun _ => [erq];
-           rule_precond := ⊤oprec;
+           rule_msg_ids_from := [getRq];
+           rule_msg_ids_to := [getRs];
+           rule_precond := MsgsFrom [erq];
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                (ost, orq,
@@ -48,9 +48,9 @@ Section System.
 
       Definition specSetRq: Rule SpecOStateIfc :=
         {| rule_idx := specNumOfRules * ridxOfs + 1;
-           rule_msg_ids := [setRq];
-           rule_msgs_from := fun _ => [erq];
-           rule_precond := ⊤oprec;
+           rule_msg_ids_from := [setRq];
+           rule_msg_ids_to := [setRs];
+           rule_precond := MsgsFrom [erq];
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                ((hd_error mins) >>=[ost]

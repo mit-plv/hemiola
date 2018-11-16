@@ -25,7 +25,7 @@ Inductive step_m {oifc} (sys: System oifc):
              bst_msgs := deqMsgs (idsOf eouts) msgs
           |} ->
     step_m sys pst (RlblOuts eouts) nst
-| SmInt: forall oidx obj rule pst nst oss orqs msgs os porq pos norq ins iouts,
+| SmInt: forall oidx obj rule pst nst oss orqs msgs os porq pos norq ins outs,
     In obj (sys_objs sys) ->
     In rule (obj_rules obj) ->
     oidx = obj_idx obj ->
@@ -35,23 +35,23 @@ Inductive step_m {oifc} (sys: System oifc):
 
     Forall (FirstMPI msgs) ins ->
     ValidMsgsIn sys ins ->
-    idsOf ins = rule_msgs_from rule porq ->
-    map msg_id (valsOf ins) = rule_msg_ids rule ->
+    map msg_id (valsOf ins) = rule_msg_ids_from rule ->
+    map msg_id (valsOf outs) = rule_msg_ids_to rule ->
 
     rule_precond rule os porq ins ->
     rule_trs rule os porq ins =
-    (pos, norq, iouts) ->
-    ValidMsgsOut sys iouts ->
+    (pos, norq, outs) ->
+    ValidMsgsOut sys outs ->
 
-    DisjList (idsOf ins) (idsOf iouts) ->
+    DisjList (idsOf ins) (idsOf outs) ->
 
     pst = {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
     nst = {| bst_oss := oss +[ oidx <- pos ];
              bst_orqs := orqs +[ oidx <- norq ];
-             bst_msgs := enqMsgs iouts (deqMsgs (idsOf ins) msgs)
+             bst_msgs := enqMsgs outs (deqMsgs (idsOf ins) msgs)
           |} ->
 
-    step_m sys pst (RlblInt oidx (rule_idx rule) ins iouts) nst.
+    step_m sys pst (RlblInt oidx (rule_idx rule) ins outs) nst.
 
 Close Scope fmap.
 
