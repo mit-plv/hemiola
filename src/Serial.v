@@ -6,9 +6,6 @@ Open Scope list.
 
 (** [Atomic] and [Transactional] histories *)
 
-Inductive TrsType :=
-| TSlt | TIns | TOuts | TInt.
-
 Section Sequential.
   Context {MsgT} `{HasMsg MsgT}.
   Context {oifc: OStateIfc}.

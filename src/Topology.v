@@ -64,30 +64,27 @@ Section VertexParam.
     (*       GTree (connectMany (singleton root) gcs). *)
 
     Inductive GTree :=
-    | Node: IdxT -> list (edges * GTree) -> GTree.
+    | Node: IdxT -> list ((list IdxT (* upward edges *) *
+                           list IdxT (* downward edges *)) *
+                          GTree (* child *)) -> GTree.
 
     Definition rootOf (gtr: GTree) :=
       match gtr with
       | Node root _ => root
       end.
-    
-    Fixpoint digraphOfT (gtr: GTree) :=
-      match gtr with
-      | Node root cs =>
-        connectMany
-          (singleton root)
-          (map (fun et => (fst et, digraphOfT (snd et))) cs)
-      end.
 
-    (* Each edge is pointing its parent. *) 
+    Definition edgesPC (pidx cidx: IdxT) (updowns: (list IdxT * list IdxT)) :=
+      (map (fun eidx => Build_edge (Some cidx) eidx (Some pidx)) (fst updowns))
+        ++ (map (fun eidx => Build_edge (Some pidx) eidx (Some cidx)) (snd updowns)).
+    
     Fixpoint topoOfT (gtr: GTree) :=
       match gtr with
       | Node root cs =>
         connectMany
           (singleton root)
-          (map (fun et =>
-                  ([Build_edge (Some (rootOf (snd et))) 0 (Some root)],
-                   topoOfT (snd et))) cs)
+          (map (fun eec =>
+                  (edgesPC root (rootOf (snd eec)) (fst eec),
+                   topoOfT (snd eec))) cs)
       end.
 
     Definition getParent (gtr: GTree) (cur: IdxT): option IdxT :=
@@ -100,6 +97,26 @@ Section VertexParam.
     Definition isParent (gtr: GTree) (cur parent: IdxT) :=
       if option_dec eq_nat_dec (getParent gtr cur) (Some parent)
       then true else false.
+
+    Definition EdgeIn (gtr: GTree) (e: edge) :=
+      let topo := topoOfT gtr in
+      In e (dg_es topo).
+    
+    Definition UpEdge (gtr: GTree) (e: edge) :=
+      let topo := topoOfT gtr in
+      In e (dg_es topo) /\
+      match edge_from e, edge_to e with
+      | Some cv, Some pv => isParent gtr cv pv = true
+      | _, _ => False
+      end.
+
+    Definition DownEdge (gtr: GTree) (e: edge) :=
+      let topo := topoOfT gtr in
+      In e (dg_es topo) /\
+      match edge_from e, edge_to e with
+      | Some pv, Some cv => isParent gtr cv pv = true
+      | _, _ => False
+      end.
 
   End GTree.
 
