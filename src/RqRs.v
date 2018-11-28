@@ -11,30 +11,31 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Section TreeTopo.
-  Variable (gtr: GTree).
-  Local Notation topo := (topoOfT gtr).
+(** * FIXME: below is being recovered in [Transaction.v] *)
+(* Section TreeTopo. *)
+(*   Variable (gtr: DTree). *)
+(*   Local Notation topo := (topoOfT gtr). *)
 
-  Definition TreeTopoRule (oidx: IdxT) {oifc} (rule: Rule oifc) :=
-    forall post porq ins nost norq outs,
-      rule_trs rule post porq ins = (nost, norq, outs) ->
-      (forall min,
-          In min ins ->
-          exists mfrom, In (createEdge mfrom (idOf min) oidx) (dg_es topo)) /\
-      (forall mout,
-          In mout outs ->
-          exists mto, In (createEdge oidx (idOf mout) mto) (dg_es topo)).
+(*   Definition TreeTopoRule (oidx: IdxT) {oifc} (rule: Rule oifc) := *)
+(*     forall post porq ins nost norq outs, *)
+(*       rule_trs rule post porq ins = (nost, norq, outs) -> *)
+(*       (forall min, *)
+(*           In min ins -> *)
+(*           exists mfrom, In (createEdge mfrom (idOf min) oidx) (dg_es topo)) /\ *)
+(*       (forall mout, *)
+(*           In mout outs -> *)
+(*           exists mto, In (createEdge oidx (idOf mout) mto) (dg_es topo)). *)
 
-  Definition TreeTopoObj {oifc} (obj: Object oifc) :=
-    Forall (TreeTopoRule (obj_idx obj)) (obj_rules obj).
+(*   Definition TreeTopoObj {oifc} (obj: Object oifc) := *)
+(*     Forall (TreeTopoRule (obj_idx obj)) (obj_rules obj). *)
     
-  Definition TreeTopoSys {oifc} (sys: System oifc) :=
-    Forall TreeTopoObj (sys_objs sys).
+(*   Definition TreeTopoSys {oifc} (sys: System oifc) := *)
+(*     Forall TreeTopoObj (sys_objs sys). *)
 
-End TreeTopo.
+(* End TreeTopo. *)
 
 Section HalfLock.
-  Variable (gtr: GTree).
+  Variable (gtr: DTree).
 
   Definition upRq := 0.
   Definition downRq := 1.
@@ -122,13 +123,13 @@ End RqRs.
 
 Section RqRsSerial.
   Context {oifc: OStateIfc}.
-  Variables (gtr: GTree)
+  Variables (gtr: DTree)
             (RqRsT: Type)
             (rrdec: RqRsDec RqRsT)
             (rrc: RqRsComm RqRsT)
             (sys: System oifc).
 
-  Hypotheses (Htr: TreeTopoSys gtr sys)
+  Hypotheses (* (Htr: TreeTopoSys gtr sys) *)
              (Hpb: HalfLockSys (* gtr *) sys)
              (Hrr: RqRsSys rrdec rrc sys).
 

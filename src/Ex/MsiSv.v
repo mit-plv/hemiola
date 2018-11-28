@@ -399,17 +399,6 @@ Section System.
        sys_orqs_inits := []
     |}.
 
-  Definition implTopo: GTree :=
-    Node parentIdx
-         [([createEdge child1Idx c1pRq parentIdx;
-              createEdge child1Idx c1pRs parentIdx;
-              createEdge parentIdx pc1 child1Idx],
-           Node child1Idx nil);
-            ([createEdge child2Idx parentIdx c2pRq;
-                createEdge child2Idx parentIdx c2pRs;
-                createEdge parentIdx child2Idx pc2],
-             Node child2Idx nil)].
-  
 End System.
 
 Close Scope list.
