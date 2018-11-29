@@ -163,6 +163,10 @@ Definition MsgsFromORq {oifc} (addr: AddrT) (rqty: IdxT): OPrec oifc :=
 Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
   List.map (fun midx => (midx, msg)) minds.
 
+Definition MsgsTo {oifc} (tos: list IdxT) (trs: OTrs oifc): Prop :=
+  forall ost orq mins,
+    idsOf (snd (trs ost orq mins)) = tos.
+
 Record Object oifc :=
   { obj_idx: IdxT;
     obj_rules: list (Rule oifc);

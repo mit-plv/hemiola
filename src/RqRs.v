@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM StepT SemFacts.
 Require Import Topology Serial SerialFacts.
-Require Import QuasiSeq Reduction.
+Require Import QuasiSeq Reduction Transaction.
 Require Import Topology.
 
 Require Import Omega.
@@ -33,45 +33,6 @@ Open Scope fmap.
 (*     Forall TreeTopoObj (sys_objs sys). *)
 
 (* End TreeTopo. *)
-
-Section HalfLock.
-  Variable (gtr: DTree).
-
-  Definition upRq := 0.
-  Definition downRq := 1.
-
-  (** Preconditions to check the lock state *)
-
-  Definition LockFree (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[True] (fun aorq => aorq = []).
-
-  Definition HalfLockFree (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[True] (fun aorq => aorq@[downRq] = None).
-
-
-  Definition getDownRq (addr: AddrT) (orq: ORq Msg) :=
-    orq@[addr] >>=[None]
-       (fun aorq => aorq@[downRq] >>=[None] (fun ri => Some ri)).
-
-  Fixpoint getUpRq (addr: AddrT) (orq: ORq Msg) :=
-    orq@[addr] >>=[None]
-       (fun aorq => aorq@[upRq] >>=[None] (fun ri => Some ri)).
-
-  (* TODO: define it. *)
-  Definition HalfLockPrec (oidx: IdxT) {oifc}: OPrec oifc :=
-    fun (ost: OState oifc) (orq: ORq Msg) (ins: list (Id Msg)) =>
-      True.
-
-  Definition HalfLockRule (oidx: IdxT) {oifc} (rule: Rule oifc) :=
-    (rule_precond rule) ->oprec (HalfLockPrec oidx).
-
-  Definition HalfLockObj {oifc} (obj: Object oifc) :=
-    Forall (HalfLockRule (obj_idx obj)) (obj_rules obj).
-  
-  Definition HalfLockSys {oifc} (sys: System oifc) :=
-    Forall HalfLockObj (sys_objs sys).
-
-End HalfLock.
 
 Section RqRs.
   Variable (RqRsT: Type).
@@ -130,7 +91,7 @@ Section RqRsSerial.
             (sys: System oifc).
 
   Hypotheses (* (Htr: TreeTopoSys gtr sys) *)
-             (Hpb: HalfLockSys (* gtr *) sys)
+             (* (Hpb: HalfLockSys (* gtr *) sys) *)
              (Hrr: RqRsSys rrdec rrc sys).
 
   Lemma rqrs_well_interleaved_push:

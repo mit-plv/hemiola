@@ -1,7 +1,7 @@
 Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics StepM Serial.
-Require Import Topology RqRs.
+Require Import Topology.
 
 Open Scope list.
 Open Scope fmap.
@@ -20,6 +20,29 @@ Open Scope fmap.
  *    2) Theorem (disjointness of [hst]): [∀hst. h1 -*- hst \/ hst -*- h2]
  * 4. Theorem: [∀h1 h2. h1 -*- h2 -> Discontinuous h1 h2 -> Commutable h1 h2]
  *)
+
+Section HalfLock.
+  Variable (gtr: DTree).
+
+  Definition upRq := 0.
+  Definition downRq := 1.
+
+  (** Preconditions to check the lock state *)
+
+  Definition LockFree (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[True] (fun aorq => aorq = []).
+
+  Definition HalfLockFree (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[True] (fun aorq => aorq@[downRq] = None).
+
+  Definition Locked (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[False] (fun aorq => aorq@[downRq] <> None).
+
+  Definition HalfLocked (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[False] (fun aorq => aorq@[downRq] = None /\
+                                       aorq@[upRq] <> None).
+
+End HalfLock.
 
 Inductive TrsType := RqUp | RqDown | Rs.
 
@@ -61,26 +84,104 @@ Section OnTreeTopo.
 
   (** TODO: discuss whether it's fine to have a locking mechanism 
    * only for a single address. *)
-  Definition LockFree: OPrec oifc :=
+  Definition LockFree0: OPrec oifc :=
     fun ost orq mins => LockFree orq O.
-  
+
+  Definition HalfLockFree0: OPrec oifc :=
+    fun ost orq mins => HalfLockFree orq O.
+
+  Definition Locking0 (otrs: OTrs oifc): Prop :=
+    forall ost orq mins,
+      Locked (snd (fst (otrs ost orq mins))) O.
+
+  Definition HalfLocking0 (otrs: OTrs oifc): Prop :=
+    forall ost orq mins,
+      HalfLocked (snd (fst (otrs ost orq mins))) O.
+
   Section PerTransaction.
 
     Variable (trsId: IdxT).
 
-    Definition RqUpRule ridx prec trs: Rule oifc :=
-      {| rule_idx := ridx;
-         rule_msg_ids_from := [trsId];
-         rule_msg_ids_to := [trsId];
-         rule_precond := prec;
-         rule_trs := trs 
-      |}.
+    (* Definition OneToOneRule ridx prec trs: Rule oifc := *)
+    (*   {| rule_idx := ridx; *)
+    (*      rule_msg_ids_from := [trsId]; *)
+    (*      rule_msg_ids_to := [trsId]; *)
+    (*      rule_precond := prec; *)
+    (*      rule_trs := trs *)
+    (*   |}. *)
 
-    (** TODO: should also ensure that it emits a valid RqUp message. *)
-    (* Definition RqUpRuleOk (rule: Rule oifc) := *)
-    (*   rule.(rule_precond) *)
-    (*   ->oprec (MsgsFrom [rqUpFrom gtr oidx] /\oprec LockFree). *)
+    (** * Rule predicates about which messages to handle *)
 
+    (* A rule handling a request from one of its children *)
+    Definition RqFromDownRule (rule: Rule oifc) :=
+      exists rqFrom,
+        In rqFrom (edgesUpTo gtr oidx) /\
+        (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec LockFree0)).
+
+    (* A rule handling a request from the parent *)
+    Definition RqFromUpRule (rule: Rule oifc) :=
+      exists rqFrom,
+        In rqFrom (edgesDownTo gtr oidx) /\
+        (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec HalfLockFree0)).
+
+    (* A rule handling responses from some of its children *)
+    (** NOTE: we don't need any lock conditions when dealing with responses.
+     * To prove liveness, we may need some conditions about proper lock release.
+     * But for correctness, we don't need any.
+     *)
+    Definition RsFromDownRule (rule: Rule oifc) :=
+      exists rssFrom,
+        SubList rssFrom (edgesUpTo gtr oidx) /\ NoDup rssFrom /\
+        (rule.(rule_precond) ->oprec MsgsFrom rssFrom).
+
+    (* A rule handling a response from the parent *)
+    Definition RsFromUpRule (rule: Rule oifc) :=
+      exists rsFrom,
+        In rsFrom (edgesDownTo gtr oidx) /\
+        (rule.(rule_precond) ->oprec MsgsFrom [rsFrom]).
+
+    (** * Rule predicates about which messages to emit *)
+
+    (* A rule making requests to some of its children *)
+    Definition RqToDownRule (rule: Rule oifc) :=
+      exists rqsTo,
+        SubList rqsTo (edgesDownFrom gtr oidx) /\ NoDup rqsTo /\
+        MsgsTo rqsTo rule.(rule_trs) /\
+        Locking0 rule.(rule_trs).
+
+    (* A rule making a request to the parent *)
+    Definition RqToUpRule (rule: Rule oifc) :=
+      exists rqTo,
+        In rqTo (edgesUpFrom gtr oidx) /\
+        MsgsTo [rqTo] rule.(rule_trs) /\
+        HalfLocking0 rule.(rule_trs).
+
+    (* A rule making a response to one of its children *)
+    Definition RsToDownRule (rule: Rule oifc) :=
+      exists rsTo,
+        In rsTo (edgesDownFrom gtr oidx) /\
+        MsgsTo [rsTo] rule.(rule_trs).
+    
+    (* A rule making a response to the parent *)
+    Definition RsToUpRule (rule: Rule oifc) :=
+      exists rsTo,
+        In rsTo (edgesUpFrom gtr oidx) /\
+        MsgsTo [rsTo] rule.(rule_trs).
+
+    (* TODO: define it. *)
+    (* Definition HalfLockPrec (oidx: IdxT) {oifc}: OPrec oifc := *)
+    (*   fun (ost: OState oifc) (orq: ORq Msg) (ins: list (Id Msg)) => *)
+    (*     True. *)
+
+    (* Definition HalfLockRule (oidx: IdxT) {oifc} (rule: Rule oifc) := *)
+    (*   (rule_precond rule) ->oprec (HalfLockPrec oidx). *)
+
+    (* Definition HalfLockObj {oifc} (obj: Object oifc) := *)
+    (*   Forall (HalfLockRule (obj_idx obj)) (obj_rules obj). *)
+    
+    (* Definition HalfLockSys {oifc} (sys: System oifc) := *)
+    (*   Forall HalfLockObj (sys_objs sys). *)
+    
     (** TODOs:
      * 1) Define [RqUpRule], [RqDownRule], and [RsRule]
      * 2) Define a system just using such rules.
