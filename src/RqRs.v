@@ -11,29 +11,6 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-(** * FIXME: below is being recovered in [Transaction.v] *)
-(* Section TreeTopo. *)
-(*   Variable (gtr: DTree). *)
-(*   Local Notation topo := (topoOfT gtr). *)
-
-(*   Definition TreeTopoRule (oidx: IdxT) {oifc} (rule: Rule oifc) := *)
-(*     forall post porq ins nost norq outs, *)
-(*       rule_trs rule post porq ins = (nost, norq, outs) -> *)
-(*       (forall min, *)
-(*           In min ins -> *)
-(*           exists mfrom, In (createEdge mfrom (idOf min) oidx) (dg_es topo)) /\ *)
-(*       (forall mout, *)
-(*           In mout outs -> *)
-(*           exists mto, In (createEdge oidx (idOf mout) mto) (dg_es topo)). *)
-
-(*   Definition TreeTopoObj {oifc} (obj: Object oifc) := *)
-(*     Forall (TreeTopoRule (obj_idx obj)) (obj_rules obj). *)
-    
-(*   Definition TreeTopoSys {oifc} (sys: System oifc) := *)
-(*     Forall TreeTopoObj (sys_objs sys). *)
-
-(* End TreeTopo. *)
-
 Section RqRs.
   Variable (RqRsT: Type).
 
