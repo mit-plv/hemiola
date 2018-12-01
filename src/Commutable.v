@@ -139,7 +139,7 @@ Proof.
             { destruct H15; auto. }
             { apply FirstMPI_Forall_deqMsgs; auto. }
           }
-          { destruct H26; auto. }
+          { destruct H28; auto. }
           { eapply FirstMPI_Forall_enqMsgs_inv.
             { apply DisjList_comm; eassumption. }
             { assumption. }
@@ -151,10 +151,10 @@ Proof.
     specialize (H3 _ _ _ H7 eq_refl H8 eq_refl H11 eq_refl).
 
     red in H3.
-    specialize (H3 _ _ _ _ _ _ _ H18 H19 H29); dest.
+    specialize (H3 _ _ _ _ _ _ _ H20 H21 H33); dest.
 
     remember (rule_trs rule0 os0 porq0 ins2) as trs2.
-    destruct trs2 as [[tnost2 tnorq2] touts2]; inv H30.
+    destruct trs2 as [[tnost2 tnorq2] touts2]; inv H34.
     remember (rule_trs rule0 os porq ins2) as rtrs2.
     destruct rtrs2 as [[rnost2 rnorq2] routs2]; dest; subst.
     remember (rule_trs rule rnost2 rnorq2 ins1) as rtrs1.
@@ -187,6 +187,8 @@ Proof.
       * assumption.
       * assumption.
       * assumption.
+      * assumption.
+      * assumption.
       * simpl; apply eq_sym; eassumption.
       * assumption.
       * assumption.
@@ -203,7 +205,7 @@ Proof.
             { destruct H15; auto. }
             { apply FirstMPI_Forall_deqMsgs; auto. }
           }
-          { destruct H26; auto. }
+          { destruct H28; auto. }
           { eapply FirstMPI_Forall_enqMsgs_inv.
             { apply DisjList_comm; eassumption. }
             { assumption. }

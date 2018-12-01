@@ -37,11 +37,14 @@ Section System.
         {| rule_idx := specNumOfRules * ridxOfs + 0;
            rule_msg_ids_from := [getRq];
            rule_msg_ids_to := [getRs];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRs;
            rule_precond := MsgsFrom [erq];
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                (ost, orq,
                 [(ers, {| msg_id := getRs;
+                          msg_type := MRs;
                           msg_value := VNat (ost#[specValueIdx])
                        |})])
         |}.
@@ -50,6 +53,8 @@ Section System.
         {| rule_idx := specNumOfRules * ridxOfs + 1;
            rule_msg_ids_from := [setRq];
            rule_msg_ids_to := [setRs];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRs;
            rule_precond := MsgsFrom [erq];
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
@@ -61,6 +66,7 @@ Section System.
                                    end),
                 orq,
                 [(ers, {| msg_id := setRs;
+                          msg_type := MRs;
                           msg_value := VUnit |})])
         |}.
 

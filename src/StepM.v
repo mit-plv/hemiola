@@ -37,6 +37,8 @@ Inductive step_m {oifc} (sys: System oifc):
     ValidMsgsIn sys ins ->
     map msg_id (valsOf ins) = rule_msg_ids_from rule ->
     map msg_id (valsOf outs) = rule_msg_ids_to rule ->
+    Forall (fun msg => msg_type msg = rule_msg_type_from rule) (valsOf ins) ->
+    Forall (fun msg => msg_type msg = rule_msg_type_to rule) (valsOf outs) ->
 
     rule_precond rule os porq ins ->
     rule_trs rule os porq ins =

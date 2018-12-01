@@ -51,6 +51,8 @@ Section System.
       {| rule_idx := 0;
          rule_msg_ids_from := [getRq];
          rule_msg_ids_to := [getRs];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRs;
          rule_precond :=
            MsgsFrom [ec] /\oprec
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -59,6 +61,7 @@ Section System.
            fun (ost: OState ImplOStateIfc) orq mins =>
              (ost, orq,
               [(ce, {| msg_id := getRs;
+                       msg_type := MRs;
                        msg_value := VNat (ost#[implValueIdx])
                     |})])
       |}.
@@ -67,6 +70,8 @@ Section System.
       {| rule_idx := 1;
          rule_msg_ids_from := [getRq];
          rule_msg_ids_to := [msiRqS];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRq;
          rule_precond :=
            MsgsFrom [ec] /\oprec
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -78,6 +83,7 @@ Section System.
                   (ost,
                    addRq orq O upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqS;
+                              msg_type := MRq;
                               msg_value := VUnit |})])))
       |}.
 
@@ -85,6 +91,8 @@ Section System.
       {| rule_idx := 2;
          rule_msg_ids_from := [msiRsS];
          rule_msg_ids_to := [getRs];
+         rule_msg_type_from := MRs;
+         rule_msg_type_to := MRs;
          rule_precond := MsgsFrom [pc];
          rule_trs :=
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -95,6 +103,7 @@ Section System.
                     (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiS],
                      removeRq orq O upRq,
                      [(ce, {| msg_id := getRs;
+                              msg_type := MRs;
                               msg_value := VNat n |})])
                   | _ => (ost, orq, nil) (** TODO: how to efficiently handle this case? *)
                   end))
@@ -104,6 +113,8 @@ Section System.
       {| rule_idx := 3;
          rule_msg_ids_from := [msiDownRqS];
          rule_msg_ids_to := [msiDownRsS];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRs;
          rule_precond :=
            MsgsFrom [pc] /\oprec
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -113,6 +124,7 @@ Section System.
              (ost+#[implStatusIdx <- msiS],
               orq,
               [(cpRs, {| msg_id := msiDownRsS;
+                         msg_type := MRs;
                          msg_value := VUnit |})])
       |}.
 
@@ -120,6 +132,8 @@ Section System.
       {| rule_idx := 4;
          rule_msg_ids_from := [setRq];
          rule_msg_ids_to := [setRs];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRs;
          rule_precond :=
            MsgsFrom [ec] /\oprec
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -133,6 +147,7 @@ Section System.
                     (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiM],
                      orq,
                      [(ce, {| msg_id := setRs;
+                              msg_type := MRs;
                               msg_value := VUnit |})])
                   | _ => (ost, orq, nil)
                   end))
@@ -142,6 +157,8 @@ Section System.
       {| rule_idx := 5;
          rule_msg_ids_from := [setRq];
          rule_msg_ids_to := [msiRqM];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRq;
          rule_precond :=
            MsgsFrom [ec] /\oprec
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -153,6 +170,7 @@ Section System.
                   (ost,
                    addRq orq O upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqM;
+                              msg_type := MRq;
                               msg_value := VUnit |})])))
       |}.
 
@@ -160,6 +178,8 @@ Section System.
       {| rule_idx := 6;
          rule_msg_ids_from := [msiRsM];
          rule_msg_ids_to := [setRs];
+         rule_msg_type_from := MRs;
+         rule_msg_type_to := MRs;
          rule_precond := MsgsFrom [pc];
          rule_trs :=
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -171,6 +191,7 @@ Section System.
                      removeRq orq O upRq,
                      (ce,
                       {| msg_id := setRs;
+                         msg_type := MRs;
                          msg_value := VNat n |}) :: nil)
                   | _ => (ost, orq, nil)
                   end)
@@ -180,6 +201,8 @@ Section System.
       {| rule_idx := 7;
          rule_msg_ids_from := [msiDownRqM];
          rule_msg_ids_to := [msiDownRsS];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRs;
          rule_precond :=
            MsgsFrom [pc] /\oprec
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -189,6 +212,7 @@ Section System.
              (ost +#[implStatusIdx <- msiI],
               orq,
               [(cpRs, {| msg_id := msiDownRsS;
+                         msg_type := MRs;
                          msg_value := VNat (ost#[implValueIdx]) |})])
       |}.
 
@@ -196,6 +220,8 @@ Section System.
       {| rule_idx := 8;
          rule_msg_ids_from := nil;
          rule_msg_ids_to := [msiRqI];
+         rule_msg_type_from := MRq;
+         rule_msg_type_to := MRq;
          rule_precond :=
            fun (ost: OState ImplOStateIfc) orq mins =>
              LockFree orq O /\ ost#[implStatusIdx] <> msiI;
@@ -206,6 +232,7 @@ Section System.
                   (ost,
                    addRq orq O upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqI;
+                              msg_type := MRq;
                               msg_value := VNat (ost#[implValueIdx]) |})])))
       |}.
 
@@ -213,6 +240,8 @@ Section System.
       {| rule_idx := 9;
          rule_msg_ids_from := [msiRsI];
          rule_msg_ids_to := nil;
+         rule_msg_type_from := MRs;
+         rule_msg_type_to := MRs;
          rule_precond := MsgsFrom [pc];
          rule_trs :=
            fun (ost: OState ImplOStateIfc) orq mins =>
@@ -245,6 +274,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 0;
            rule_msg_ids_from := [msiRqS];
            rule_msg_ids_to := [msiRsS];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRs;
            rule_precond :=
              MsgsFrom [cpRq] /\oprec
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -253,6 +284,7 @@ Section System.
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost, orq,
                 [(pc, {| msg_id := msiRsS;
+                         msg_type := MRs;
                          msg_value := VNat (ost#[implValueIdx]) |})])
         |}.
 
@@ -260,6 +292,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 1;
            rule_msg_ids_from := [msiRqS];
            rule_msg_ids_to := [msiDownRqS];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRq;
            rule_precond :=
              MsgsFrom [cpRq] /\oprec
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -271,6 +305,7 @@ Section System.
                     (ost,
                      addRq orq O downRq (valOf idm) [cpRs'] pc,
                      [(pc', {| msg_id := msiDownRqS;
+                               msg_type := MRq;
                                msg_value := VNat (ost#[implValueIdx]) |})])))
         |}.
 
@@ -278,6 +313,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 2;
            rule_msg_ids_from := [msiDownRsS];
            rule_msg_ids_to := [msiRsS];
+           rule_msg_type_from := MRs;
+           rule_msg_type_to := MRs;
            rule_precond := MsgsFrom [cpRs'];
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -288,6 +325,7 @@ Section System.
                       (ost +#[implValueIdx <- n] +#[implStatusIdx <-msiS],
                        removeRq orq O downRq,
                        [(pc, {| msg_id := msiRsS;
+                                msg_type := MRs;
                                 msg_value := VNat n |})])
                     | _ => (ost, orq, nil)
                     end))
@@ -297,6 +335,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 3;
            rule_msg_ids_from := [msiRqM];
            rule_msg_ids_to := [msiRsM];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRs;
            rule_precond :=
              MsgsFrom [cpRq] /\oprec
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -306,6 +346,7 @@ Section System.
                (ost +#[implStatusIdx <- msiI],
                 orq,
                 [(pc, {| msg_id := msiRsM;
+                         msg_type := MRs;
                          msg_value := VNat (ost#[implValueIdx]) |})])
         |}.
 
@@ -313,6 +354,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 4;
            rule_msg_ids_from := [msiRqM];
            rule_msg_ids_to := [msiDownRqM];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRq;
            rule_precond :=
              MsgsFrom [cpRq] /\oprec
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -324,6 +367,7 @@ Section System.
                     (ost,
                      addRq orq O downRq (valOf idm) [cpRs'] pc,
                      [(pc', {| msg_id := msiDownRqM;
+                               msg_type := MRq;
                                msg_value := VUnit |})])))
         |}.
 
@@ -331,6 +375,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 5;
            rule_msg_ids_from := [msiDownRsM];
            rule_msg_ids_to := [msiRsM];
+           rule_msg_type_from := MRs;
+           rule_msg_type_to := MRs;
            rule_precond := MsgsFrom [cpRs'];
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -341,6 +387,7 @@ Section System.
                       (ost +#[implStatusIdx <- msiI],
                        removeRq orq O downRq,
                        [(pc, {| msg_id := msiRsM;
+                                msg_type := MRs;
                                 msg_value := VNat n |})])
                     | _ => (ost, orq, nil)
                     end))
@@ -350,6 +397,8 @@ Section System.
         {| rule_idx := parentNumOfRules * ridxOfs + 6;
            rule_msg_ids_from := [msiRqI];
            rule_msg_ids_to := [msiRsI];
+           rule_msg_type_from := MRq;
+           rule_msg_type_to := MRs;
            rule_precond :=
              MsgsFrom [cpRq] /\oprec
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -363,6 +412,7 @@ Section System.
                       (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiS],
                        orq,
                        [(pc, {| msg_id := msiRsI;
+                                msg_type := MRs;
                                 msg_value := VUnit |})])
                     | _ => (ost, orq, nil)
                     end))

@@ -75,6 +75,10 @@ Inductive step_t {oifc} (sys: System oifc): TState oifc -> TLabel -> TState oifc
     rule_msg_ids_from rule ->
     map (fun tmsg => msg_id (getMsg tmsg)) (valsOf outs) =
     rule_msg_ids_to rule ->
+    Forall (fun tmsg => msg_type (getMsg tmsg) =
+                        rule_msg_type_from rule) (valsOf ins) ->
+    Forall (fun tmsg => msg_type (getMsg tmsg) =
+                        rule_msg_type_to rule) (valsOf outs) ->
     
     rule_precond rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins) ->
     rule_trs rule os (orqMap tmsg_msg porq) (imap tmsg_msg ins)

@@ -28,11 +28,13 @@ Section Msg.
 
   Record Msg :=
     { msg_id: IdxT;
+      msg_type: nat;
       msg_value: Value
     }.
 
-  Definition buildMsg mid v :=
+  Definition buildMsg mid ty v :=
     {| msg_id := mid;
+       msg_type := ty;
        msg_value := v |}.
 
   Fixpoint buildMsgs mids vals :=
@@ -49,6 +51,7 @@ Section Msg.
   Proof.
     decide equality.
     - apply value_dec.
+    - apply eq_nat_dec.
     - apply eq_nat_dec.
   Defined.
 
@@ -140,11 +143,16 @@ Section Rule.
     { rule_idx: IdxT;
       rule_msg_ids_from: list IdxT;
       rule_msg_ids_to: list IdxT;
+      rule_msg_type_from: nat;
+      rule_msg_type_to: nat;
       rule_precond: OPrec;
       rule_trs: OTrs;
     }.
 
 End Rule.
+
+Definition MRq: nat := 0.
+Definition MRs: nat := 1.
 
 Infix "/\oprec" := OPrecAnd (at level 80).
 Infix "->oprec" := OPrecImp (at level 99).
