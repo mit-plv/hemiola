@@ -90,7 +90,9 @@ Definition ValidContinuous {oifc} (sys: System oifc) (hst1 hst2: MHistory) :=
 Definition Interleaved (hsts: list MHistory) :=
   exists hst1 hst2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 /\
-    Continuous hst1 hst2.
+    Continuous hst1 hst2 /\
+    Forall (fun hst => ~ Continuous hst1 hst) hsts2 /\
+    Forall (fun hst => ~ Continuous hst hst2) hsts2.
 
 Lemma continuous_atomic_concat:
   forall (hst1 hst2: MHistory),
@@ -147,6 +149,8 @@ Section WellInterleaved.
       forall st2 hst1 hst2 hsts,
         steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
         Continuous hst1 hst2 ->
+        Forall (fun hst => ~ Continuous hst1 hst) hsts ->
+        Forall (fun hst => ~ Continuous hst hst2) hsts ->
         Forall (AtomicEx msg_dec) hsts ->
         exists rhst1 rhst2,
           steps step_m sys st1 (List.concat (rhst2 ++ hst2 :: hst1 :: rhst1)) st2 /\
@@ -180,9 +184,9 @@ Section WellInterleaved.
     eapply steps_split in H; [|reflexivity]; destruct H as [sti2 [? ?]].
     eapply steps_split in H; [|reflexivity]; destruct H as [sti1 [? ?]].
     apply Forall_app_inv in H0; dest.
-    inv H4; apply Forall_app_inv in H8; dest; inv H5.
-    pose proof (Hwi _ (reachable_steps Hr H) _ _ _ _ H3 H2 H4).
-    destruct H5 as [rhst1 [rhst2 ?]]; dest.
+    inv H6; apply Forall_app_inv in H10; dest; inv H7.
+    pose proof (Hwi _ (reachable_steps Hr H) _ _ _ _ H5 H2 H3 H4 H6).
+    destruct H7 as [rhst1 [rhst2 ?]]; dest.
 
     exists ((List.concat hsts3)
               ++ (List.concat (rhst2 ++ (hst2 ++ hst1) :: rhst1))
@@ -197,7 +201,7 @@ Section WellInterleaved.
     - econstructor.
       + repeat rewrite <-concat_app; reflexivity.
       + reflexivity.
-      + apply Forall_app_inv in H6; dest.
+      + apply Forall_app_inv in H8; dest.
         repeat (apply Forall_app; auto).
         * apply atomicEx_stransactional_forall; auto.
         * apply atomicEx_stransactional_forall; auto.
@@ -209,7 +213,7 @@ Section WellInterleaved.
           { apply atomicEx_stransactional_forall; auto. }
         * apply atomicEx_stransactional_forall; auto.
     - repeat (simpl; try rewrite app_length).
-      unfold MHistory, History, MLabel in *; rewrite H8.
+      unfold MHistory, History, MLabel in *; rewrite H10.
       apply plus_lt_compat_l.
       rewrite app_length.
       rewrite <-Nat.add_assoc; simpl.
@@ -336,6 +340,8 @@ Section WellInterleavedPush.
           forall hsts st2,
             Forall (AtomicEx msg_dec) hsts ->
             steps step_m sys st1 (List.concat (hst2 :: hsts ++ [hst1])) st2 ->
+            Forall (fun hst => ~ Continuous hst1 hst) hsts ->
+            Forall (fun hst => ~ Continuous hst hst2) hsts ->
             Forall (fun hst => lpush hst \/ rpush hst) hsts /\
             LRPushable lpush rpush (hsts ++ [hst1]) /\
             LRPushable lpush rpush (hst2 :: hsts).
@@ -353,68 +359,71 @@ Section WellInterleavedPush.
     specialize (Hwip _ _ Hvc); clear Hvc.
     destruct Hwip as [lpush [rpush ?]]; dest.
 
-    pose proof (H5 _ H _ _ H2 H0); dest.
+    pose proof (H7 _ H _ _ H4 H0 H2 H3); dest.
     generalize dependent st1.
     generalize dependent st2.
-    generalize H2.
+    generalize H2 H3 H4.
     eapply list_ind_pick
       with (l:= hsts) (Q0:= lpush) (Q1:= rpush); eauto; simpl; intros.
 
     - exists nil, nil.
       simpl in *; rewrite app_nil_r in *.
       repeat split; auto.
-    - clear H2 H6 H7 H8 hsts; rename l into hsts.
+    - clear H2 H3 H4 H8 H9 H10 hsts; rename l into hsts.
       exists hsts, nil.
 
       assert (Reducible sys (List.concat hsts ++ hst1)
                         (hst1 ++ List.concat hsts)).
-      { specialize (H5 _ H9 _ _ H0 H10); dest.
+      { specialize (H7 _ H13 _ _ H12 H14 H0 H11); dest.
         eapply LRPushable_commutable_left; eauto.
       }
 
-      rewrite concat_app in H10; simpl in H10.
-      rewrite app_nil_r in H10; simpl in H10.
-      eapply steps_split in H10; [|reflexivity].
-      destruct H10 as [sti [? ?]].
+      rewrite concat_app in H14; simpl in H14.
+      rewrite app_nil_r in H14; simpl in H14.
+      eapply steps_split in H14; [|reflexivity].
+      destruct H14 as [sti [? ?]].
 
       simpl; repeat split; auto.
       eapply steps_append; eauto.
       
-    - clear H2 H6 H7 H8 hsts; rename l0 into hsts2; rename l1 into hsts1.
+    - clear H2 H3 H4 H8 H9 H10 hsts; rename l0 into hsts2; rename l1 into hsts1.
 
       assert (Reducible sys ((hst2 ++ List.concat hsts2) ++ a)
                         (a ++ hst2 ++ List.concat hsts2)).
-      { specialize (H5 _ H11 _ _ H10 H12); dest.
+      { specialize (H7 _ H15 _ _ H14 H16 H12 H13); dest.
         change (hst2 ++ List.concat hsts2) with (List.concat (hst2 :: hsts2)).
         eapply LRPushable_commutable_left; eauto.
         eapply LRPushable_split_left with (hsts2:= hsts1).
         rewrite <-app_assoc; assumption.
       }
 
-      apply Forall_app_inv in H10; dest; inv H7.
-      specialize (H9 (Forall_app H6 H14)).
+      apply Forall_app_inv in H12; dest; inv H4.
+      apply Forall_app_inv in H13; dest; inv H8.
+      apply Forall_app_inv in H14; dest; inv H9.
+      specialize (H11 (Forall_app H3 H12) (Forall_app H4 H18) (Forall_app H8 H20)).
 
       replace (hst2 ++ List.concat ((hsts2 ++ a :: hsts1) ++ [hst1]))
         with (((hst2 ++ List.concat hsts2) ++ a) ++ List.concat hsts1 ++ hst1)
-        in H12
+        in H16
         by (repeat rewrite concat_app;
             simpl; rewrite app_nil_r;
             repeat rewrite app_assoc; reflexivity).
-      eapply steps_split in H12; [|reflexivity].
-      destruct H12 as [sti [? ?]].
-      apply H2 in H8; dest.
-      pose proof (steps_append H7 H8); clear H7 H8 sti.
-      rewrite <-app_assoc in H10.
-      eapply steps_split in H10; [|reflexivity].
-      destruct H10 as [sti [? ?]].
+      eapply steps_split in H16; [|reflexivity].
+      destruct H16 as [sti [? ?]].
+
+      apply H2 in H13.
+      pose proof (steps_append H9 H13); clear H9 H13 sti.
+      rewrite <-app_assoc in H14.
+      eapply steps_split in H14; [|reflexivity].
+      destruct H14 as [sti [? ?]].
       replace ((hst2 ++ List.concat hsts2) ++ List.concat hsts1 ++ hst1)
-        with (hst2 ++ List.concat ((hsts2 ++ hsts1) ++ [hst1])) in H7
+        with (hst2 ++ List.concat ((hsts2 ++ hsts1) ++ [hst1])) in H9
         by (repeat rewrite concat_app;
             simpl; rewrite app_nil_r;
             repeat rewrite app_assoc; reflexivity).
-      specialize (H9 _ _ H11 H7).
-      destruct H9 as [rhst1 [rhst2 ?]]; dest.
-      pose proof (steps_append H9 H8).
+      specialize (H11 _ _ H15 H9).
+      destruct H11 as [rhst1 [rhst2 ?]]; dest.
+      pose proof (steps_append H11 H13).
 
       exists rhst1, (a :: rhst2).
       repeat split; auto.

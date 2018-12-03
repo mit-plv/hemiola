@@ -46,7 +46,7 @@ Definition NonConflicting {oifc} (sys: System oifc) (hst1 hst2: MHistory) :=
     In (RlblInt oidx2 ridx2 ins2 outs2) hst2 ->
     NonConflictingL sys oidx1 ridx1 oidx2 ridx2.
 
-Definition Discontinuous {oifc} (sys: System oifc) (hst1 hst2: MHistory) :=
+Definition MDisjoint (hst1 hst2: MHistory) :=
   exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
@@ -263,10 +263,10 @@ Qed.
 Lemma nonconflicting_discontinuous_commutable_atomic:
   forall {oifc} (sys: System oifc) hst1 hst2,
     NonConflicting sys hst1 hst2 ->
-    Discontinuous sys hst1 hst2 ->
+    MDisjoint hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
-  unfold Discontinuous; intros.
+  unfold MDisjoint; intros.
   destruct H0 as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
   dest.
 

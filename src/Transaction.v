@@ -18,7 +18,7 @@ Open Scope fmap.
  *    [h1 -*- h2 ≜ rqsOf(h1) -*- rqsOf(h2) /\ rssOf(h1) -*- rssOf(h2)].
  *    Note that [-*-] is not commutative.
  *    2) Theorem (disjointness of [hst]): [∀hst. h1 -*- hst \/ hst -*- h2]
- * 4. Theorem: [∀h1 h2. h1 -*- h2 -> Discontinuous h1 h2 -> Commutable h1 h2]
+ * 4. Theorem: [∀h1 h2. h1 -*- h2 -> MDisjoint h1 h2 -> Commutable h1 h2]
  *)
 
 Section HalfLock.
@@ -100,12 +100,14 @@ Section RqRsTopo.
 
       (* A rule handling a request from one of its children *)
       Definition RqFromDownRule (rule: Rule oifc) :=
+        rule_msg_type_from rule = MRq /\
         exists rqFrom,
           In rqFrom (edgesUpTo gtr oidx) /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec LockFree0)).
 
       (* A rule handling a request from the parent *)
       Definition RqFromUpRule (rule: Rule oifc) :=
+        rule_msg_type_from rule = MRq /\
         exists rqFrom,
           In rqFrom (edgesDownTo gtr oidx) /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec HalfLockFree0)).
@@ -116,26 +118,24 @@ Section RqRsTopo.
        * But for correctness, we don't need any.
        *)
       Definition RsFromDownRule (rule: Rule oifc) :=
+        rule_msg_type_from rule = MRs /\
         exists rssFrom,
           SubList rssFrom (edgesUpTo gtr oidx) /\ NoDup rssFrom /\
           (rule.(rule_precond) ->oprec MsgsFrom rssFrom).
 
       (* A rule handling a response from the parent *)
       Definition RsFromUpRule (rule: Rule oifc) :=
+        rule_msg_type_from rule = MRs /\
         exists rsFrom,
           In rsFrom (edgesDownTo gtr oidx) /\
           (rule.(rule_precond) ->oprec MsgsFrom [rsFrom]).
 
-      Definition RqRsFromRule (rule: Rule oifc) :=
-        RqFromDownRule rule \/
-        RqFromUpRule rule \/
-        RsFromDownRule rule \/
-        RsFromUpRule rule.
       
-      (** * Rule predicates about which messages to emit *)
+      (** * Rule predicates about which messages to send *)
 
       (* A rule making requests to some of its children *)
       Definition RqToDownRule (rule: Rule oifc) :=
+        rule_msg_type_to rule = MRq /\
         exists rqsTo,
           SubList rqsTo (edgesDownFrom gtr oidx) /\ NoDup rqsTo /\
           MsgsTo rqsTo rule.(rule_trs) /\
@@ -144,6 +144,7 @@ Section RqRsTopo.
 
       (* A rule making a request to the parent *)
       Definition RqToUpRule (rule: Rule oifc) :=
+        rule_msg_type_to rule = MRq /\
         exists rqTo,
           In rqTo (edgesUpFrom gtr oidx) /\
           MsgsTo [rqTo] rule.(rule_trs) /\
@@ -152,24 +153,43 @@ Section RqRsTopo.
 
       (* A rule making a response to one of its children *)
       Definition RsToDownRule (rule: Rule oifc) :=
+        rule_msg_type_to rule = MRs /\
         exists rsTo,
           In rsTo (edgesDownFrom gtr oidx) /\
           MsgsTo [rsTo] rule.(rule_trs).
       
       (* A rule making a response to the parent *)
       Definition RsToUpRule (rule: Rule oifc) :=
+        rule_msg_type_to rule = MRs /\
         exists rsTo,
           In rsTo (edgesUpFrom gtr oidx) /\
           MsgsTo [rsTo] rule.(rule_trs).
 
-      Definition RqRsToRule (rule: Rule oifc) :=
-        RqToDownRule rule \/
-        RqToUpRule rule \/
-        RsToDownRule rule \/
-        RsToUpRule rule.
+      (** Now carefully build some rule predicates that guarantees
+       * a transaction linear, i.e., per an object actual state transition
+       * happens at most once.
+       * TODO: think how to prove the linearity!
+       *)
+
+      Definition ImmDownRule (rule: Rule oifc) :=
+        RqFromDownRule rule /\ RsToDownRule rule.
+
+      Definition ImmUpRule (rule: Rule oifc) :=
+        RqFromUpRule rule /\ RsToUpRule rule.
+
+      Definition RqFwdUpRule (rule: Rule oifc) :=
+        RqFromDownRule rule /\ RqToUpRule rule.
+
+      Definition RsBackDownRule (rule: Rule oifc) :=
+        RsFromUpRule rule /\ RsToDownRule rule.
+
+      (* ... *)
 
       Definition RqRsRule (rule: Rule oifc) :=
-        RqRsFromRule rule /\ RqRsToRule rule.
+        ImmDownRule rule \/
+        ImmUpRule rule \/
+        RqFwdUpRule rule \/
+        RsBackDownRule rule.
 
     End PerObject.
 
@@ -224,36 +244,31 @@ Section TrsPath.
   
 End TrsPath.
 
-Definition SDisjTrsType (t1 t2: TrsType) :=
-  match t1, t2 with
-  | RqUp, Rs => True
-  | _, _ => False
-  end.
+(* Definition SDisjTrsState (ts1 ts2: TrsState) := *)
+(*   forall i, *)
+(*     match ts1@[i], ts2@[i] with *)
+(*     | Some Rs, Some Rs => False *)
+(*     | _, _ => True *)
+(*     end. *)
 
-Definition SDisjTrsState (ts1 ts2: TrsState) :=
-  forall i,
-    match ts1@[i], ts2@[i] with
-    | Some t1, Some t2 => SDisjTrsType t1 t2
-    | _, _ => True
-    end.
+(* Section Facts. *)
 
-Section Facts.
+(*   Variables (gtr: DTree) *)
+(*             (oifc: OStateIfc) *)
+(*             (sys: System oifc). *)
 
-  Variables (gtr: DTree)
-            (oifc: OStateIfc)
-            (sys: System oifc).
+(*   Hypothesis (Hrrs: RqRsSys gtr oifc sys). *)
 
-  Hypothesis (Hrrs: RqRsSys gtr oifc sys).
-
-  (* Lemma atomic_trsPath: *)
-  (*   forall inits ins hst outs eouts, *)
-  (*     Atomic msgT_dec inits ins hst outs eouts -> *)
+(*   (* Lemma rqrsSys_atomic_trsState: *) *)
+(*   (*   forall inits ins hst outs eouts, *) *)
+(*   (*     Atomic msg_dec inits ins hst outs eouts -> *) *)
   
-  (* Theorem continuous_SDisjTrsState: *)
-  (*   forall hst1 hst2, *)
-  (*     ValidContinuous sys hst1 hst2 -> *)
+(*   Theorem continuous_SDisjTrsState: *)
+(*     forall hst1 hst2, *)
+(*       ValidContinuous sys hst1 hst2 -> *)
+(*       SDisjTrsState (trsStateOf hst1) (trsStateOf hst2). *)
 
-End Facts.
+(* End Facts. *)
 
 Close Scope list.
 Close Scope fmap.

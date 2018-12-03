@@ -2,7 +2,6 @@ Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM StepT SemFacts.
 Require Import Topology Serial SerialFacts.
 Require Import QuasiSeq Reduction Transaction.
-Require Import Topology.
 
 Require Import Omega.
 
