@@ -463,6 +463,65 @@ Proof.
       reflexivity.
 Qed.
 
+Lemma atomic_inits_in:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    SubList inits ins.
+Proof.
+  induction 1; simpl; intros; subst;
+    [apply SubList_refl|].
+  apply SubList_app_1; auto.
+Qed.
+  
+Lemma atomic_eouts_in:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    SubList eouts outs.
+Proof.
+  induction 1; simpl; intros; subst;
+    [apply SubList_refl|].
+  apply SubList_app_3.
+  - eapply SubList_trans.
+    + apply removeL_SubList_2.
+    + apply SubList_app_1; auto.
+  - apply SubList_app_2, SubList_refl.
+Qed.
+
+Lemma atomic_outs_cases:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall msg,
+      In msg outs -> In msg eouts \/ In msg ins.
+Proof.
+  induction 1; simpl; intros; subst; auto.
+
+  apply in_app_or in H5; destruct H5.
+  - specialize (IHAtomic _ H2); destruct IHAtomic.
+    + destruct (in_dec (id_dec msg_dec) msg rins).
+      * right; apply in_or_app; auto.
+      * left; apply in_or_app; left.
+        apply removeL_in; auto.
+    + right; apply in_or_app; auto.
+  - left; apply in_or_app; auto.
+Qed.
+
+Lemma atomic_ins_cases:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall msg,
+      In msg ins -> In msg inits \/ In msg outs.
+Proof.
+  induction 1; simpl; intros; subst; auto.
+
+  apply in_app_or in H5; destruct H5.
+  - specialize (IHAtomic _ H2); destruct IHAtomic; auto.
+    right; apply in_or_app; auto.
+  - apply H1 in H2.
+    pose proof (atomic_eouts_in H).
+    apply H3 in H2.
+    right; apply in_or_app; auto.
+Qed.
+
 Lemma atomic_app_SSubList:
   forall (hst1: MHistory) inits1 ins1 outs1 eouts1,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->

@@ -343,6 +343,27 @@ Section Removal.
     | h :: t => removeL (removeOnce h l1) t
     end.
 
+  Lemma removeOnce_in:
+    forall a1 a2 l,
+      In a1 l -> a1 <> a2 ->
+      In a1 (removeOnce a2 l).
+  Proof.
+    induction l; simpl; intros; auto.
+    destruct H; subst.
+    - destruct (eq_dec a2 a1); subst; firstorder.
+    - destruct (eq_dec a2 a); subst; firstorder.
+  Qed.
+
+  Lemma removeL_in:
+    forall a l2 l1,
+      In a l1 -> ~ In a l2 ->
+      In a (removeL l1 l2).
+  Proof.
+    induction l2; simpl; intros; auto.
+    apply IHl2; try (firstorder; fail).
+    apply removeOnce_in; auto.
+  Qed.
+  
   Lemma forall_removeOnce:
     forall a l P,
       Forall P l ->

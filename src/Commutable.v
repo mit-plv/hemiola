@@ -51,8 +51,47 @@ Definition MDisjoint (hst1 hst2: MHistory) :=
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
     DisjList (idsOf ins1) (idsOf ins2) /\
+    DisjList (idsOf ins1) (idsOf outs2) /\
+    DisjList eouts1 inits2 /\
+    DisjList (idsOf outs1) (idsOf outs2).
+
+Definition MDisjoint0 (hst1 hst2: MHistory) :=
+  exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
+    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
+    DisjList (idsOf ins1) (idsOf ins2) /\
     DisjList outs1 ins2 /\
     DisjList (idsOf outs1) (idsOf outs2).
+
+Lemma MDisjoint_MDisjoint0:
+  forall hst1 hst2,
+    MDisjoint hst1 hst2 -> MDisjoint0 hst1 hst2.
+Proof.
+  unfold MDisjoint, MDisjoint0; intros.
+  destruct H as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
+  dest.
+  exists inits1, ins1, outs1, eouts1, inits2, ins2, outs2, eouts2.
+  repeat split; try assumption.
+  red; intros.
+  destruct (in_dec (id_dec msg_dec) e outs1);
+    destruct (in_dec (id_dec msg_dec) e ins2); auto.
+  exfalso.
+  pose proof (atomic_outs_cases H _ i).
+  pose proof (atomic_ins_cases H0 _ i0).
+  destruct H5, H6.
+  - specialize (H3 e); destruct H3; intuition idtac.
+  - specialize (H4 (idOf e)); destruct H4; elim H4.
+    + apply in_map.
+      eapply atomic_eouts_in; eauto.
+    + apply in_map; auto.
+  - specialize (H1 (idOf e)); destruct H1; elim H1.
+    + apply in_map; auto.
+    + apply in_map.
+      eapply atomic_inits_in; eauto.
+  - specialize (H2 (idOf e)); destruct H2; elim H2.
+    + apply in_map; auto.
+    + apply in_map; auto.
+Qed.
 
 Lemma nonconflicting_head_1:
   forall {oifc} (sys: System oifc) lbl1 hst1 hst2,
@@ -213,7 +252,7 @@ Proof.
         }
 Qed.
 
-Lemma nonconflicting_discontinuous_commutable_atomic_0:
+Lemma nonconflicting_mdisj_commutable_atomic_0:
   forall {oifc} (sys: System oifc) oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
     NonConflicting sys [RlblInt oidx1 ridx1 mins1 mouts1] hst2 ->
@@ -260,18 +299,18 @@ Proof.
         apply DisjList_comm, DisjList_app_3 in H8; dest; auto.
 Qed.
 
-Lemma nonconflicting_discontinuous_commutable_atomic:
+Lemma nonconflicting_mdisjoint0_commutable_atomic:
   forall {oifc} (sys: System oifc) hst1 hst2,
     NonConflicting sys hst1 hst2 ->
-    MDisjoint hst1 hst2 ->
+    MDisjoint0 hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
-  unfold MDisjoint; intros.
+  unfold MDisjoint0; intros.
   destruct H0 as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
   dest.
 
   induction H0; simpl; intros; subst;
-    [eapply nonconflicting_discontinuous_commutable_atomic_0; eauto|].
+    [eapply nonconflicting_mdisj_commutable_atomic_0; eauto|].
 
   replace (hst2 ++ RlblInt oidx ridx rins routs :: hst)
     with ((hst2 ++ [RlblInt oidx ridx rins routs]) ++ hst)
@@ -279,7 +318,7 @@ Proof.
  
   eapply reducible_trans.
   - apply reducible_app_2.
-    eapply nonconflicting_discontinuous_commutable_atomic_0;
+    eapply nonconflicting_mdisj_commutable_atomic_0;
       try (eapply H1; eauto).
     + eapply nonconflicting_head_1; eauto.
     + rewrite idsOf_app in H2.
@@ -295,6 +334,17 @@ Proof.
     + apply DisjList_app_3 in H3; dest; auto.
     + rewrite idsOf_app in H4.
       apply DisjList_app_3 in H4; dest; auto.
+Qed.
+
+Lemma nonconflicting_mdisjoint_commutable_atomic:
+  forall {oifc} (sys: System oifc) hst1 hst2,
+    NonConflicting sys hst1 hst2 ->
+    MDisjoint hst1 hst2 ->
+    Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
+Proof.
+  intros.
+  apply MDisjoint_MDisjoint0 in H0.
+  apply nonconflicting_mdisjoint0_commutable_atomic; auto.
 Qed.
 
 Close Scope list.
