@@ -121,7 +121,7 @@ Proof.
   inv H1.
   specialize (IHtrss _ _ H H0 H6); destruct IHtrss.
 
-  - (* TODO: need to prove that whenever an atomic
+  - (** TODO: need to prove that whenever an atomic
      * [Atomic inits ins trs outs eouts] is added to a history ([List.concat trss]),
      * [inits] is either a new semi-transaction or a continuation from one of 
      * previous semi-transactions.

@@ -223,6 +223,18 @@ Section MsgParam.
     - reflexivity.
   Qed.
 
+  Lemma sequential_cons:
+    forall {oifc} (sys: System oifc) ll trss,
+      Sequential sys msgT_dec ll trss ->
+      forall trs,
+        Transactional sys msgT_dec trs ->
+        Sequential sys msgT_dec (trs ++ ll) (trs :: trss).
+  Proof.
+    intros.
+    inv H.
+    constructor; auto.
+  Qed.
+
   Lemma sequential_silent:
     forall {oifc} (sys: System oifc) ll trss,
       Sequential sys msgT_dec ll trss ->

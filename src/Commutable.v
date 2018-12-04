@@ -23,12 +23,10 @@ Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
     let (rnost2, rnorq2) := rno2 in
     let (rno1, routs1) := rule_trs rule1 rnost2 rnorq2 ins1 in
     let (rnost1, rnorq1) := rno1 in
-    (* ?? *)
-    routs2 = outs2 /\
     (* 2) Precondition of [rule1] holds after a transition by [rule2]. *)
     rule_precond rule1 rnost2 rnorq2 ins1 /\
     (* 3) Transitions by [rule1; rule2] and [rule2; rule1] are same. *)
-    no2 = rno1 /\ outs1 = routs1.
+    no2 = rno1 /\ outs1 = routs1 /\ routs2 = outs2.
 
 Definition NonConflictingL {oifc} (sys: System oifc)
            (oidx1 ridx1 oidx2 ridx2: IdxT) :=
@@ -232,7 +230,7 @@ Proof.
       * assumption.
       * assumption.
       * reflexivity.
-      * inv H6; f_equal.
+      * inv H5; f_equal.
         { meq. }
         { meq. }
         { rewrite <-enqMsgs_deqMsgs_FirstMPI_comm.

@@ -160,6 +160,10 @@ Section DTree.
   Definition EdgeIn (e: edge DChn) :=
     In e (dg_es topo).
 
+  Definition findEdge (cidx: IdxT): option (edge DChn) :=
+    find (fun e => if snd e.(edge_chn) ==n cidx
+                   then true else false) (dg_es topo).
+
   Definition isUpEdge (e: edge DChn) :=
     match fst e.(edge_chn) with
     | DUp => true
@@ -172,6 +176,12 @@ Section DTree.
     | DDown => true
     end.
 
+  Definition idxUpEdge (cidx: IdxT) :=
+    (findEdge cidx) >>=[false] (fun e => isUpEdge e).
+                
+  Definition idxDownEdge (cidx: IdxT) :=
+    (findEdge cidx) >>=[false] (fun e => isDownEdge e).
+  
   Definition upEdgesFrom (oidx: IdxT) :=
     filter (fun e =>
               if option_dec eq_nat_dec e.(edge_from) (Some oidx)

@@ -1,7 +1,7 @@
 Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics StepM Serial.
-Require Import QuasiSeq Topology.
+Require Import Reduction Commutable QuasiSeq Topology.
 
 Open Scope list.
 Open Scope fmap.
@@ -203,72 +203,252 @@ Section RqRsTopo.
   
 End RqRsTopo.
 
+Section SemiDisj.
+  Context {oifc: OStateIfc}.
+  Variables (gtr: DTree)
+            (sys: System oifc).
+
+  Definition RqRsNonConflictingR (rule1 rule2: Rule oifc) :=
+    if rule_msg_type_to rule1 ==n MRs then
+      if rule_msg_type_to rule2 ==n MRs then False
+      else True
+    else True.
+
+  Definition RqRsNonConflictingL (oidx1 ridx1 oidx2 ridx2: IdxT) :=
+    oidx1 <> oidx2 \/
+    (oidx1 = oidx2 /\
+     forall obj rule1 rule2,
+       In obj (sys_objs sys) -> obj_idx obj = oidx1 ->
+       In rule1 (obj_rules obj) -> rule_idx rule1 = ridx1 ->
+       In rule2 (obj_rules obj) -> rule_idx rule2 = ridx2 ->
+       RqRsNonConflictingR rule1 rule2).
+
+  Definition RqRsNonConflicting (hst1 hst2: MHistory) :=
+    forall oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
+      In (RlblInt oidx1 ridx1 ins1 outs1) hst1 ->
+      In (RlblInt oidx2 ridx2 ins2 outs2) hst2 ->
+      RqRsNonConflictingL oidx1 ridx1 oidx2 ridx2.
+
+  Definition SemiDisjHistories (hst1 hst2: MHistory) :=
+    exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
+      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
+      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
+      RqRsNonConflicting hst1 hst2 /\
+      DisjList (idsOf ins1) (idsOf ins2) /\
+      DisjList (idsOf ins1) (idsOf outs2) /\
+      DisjList (idsOf outs1) (idsOf outs2).
+
+  Lemma noncontinuous_SemiDisjHistories_NonConflicting:
+    forall st1 st2 hst1 hst2 hst,
+      Reachable (steps step_m) sys st1 ->
+      steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 ->
+      ~ Continuous hst1 hst2 ->
+      SemiDisjHistories hst1 hst2 ->
+      NonConflicting sys hst1 hst2.
+  Proof.
+  Admitted.
+
+  Lemma noncontinuous_SemiDisjHistories_MDisjoint:
+    forall st1 st2 hst1 hst2 hst,
+      Reachable (steps step_m) sys st1 ->
+      steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 ->
+      ~ Continuous hst1 hst2 ->
+      SemiDisjHistories hst1 hst2 ->
+      MDisjoint hst1 hst2.
+  Proof.
+    intros.
+    destruct H2 as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
+    dest.
+    do 8 eexists; repeat split; try eassumption.
+    unfold Continuous in H1.
+  Admitted.
+
+  Lemma noncontinuous_SemiDisjHistories_Commutable:
+    forall st1 st2 hst1 hst2 hst,
+      Reachable (steps step_m) sys st1 ->
+      steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 ->
+      ~ Continuous hst1 hst2 ->
+      SemiDisjHistories hst1 hst2 ->
+      Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
+  Proof.
+    intros.
+    apply nonconflicting_mdisjoint_commutable_atomic.
+    - eauto using noncontinuous_SemiDisjHistories_NonConflicting.
+    - eauto using noncontinuous_SemiDisjHistories_MDisjoint.
+  Qed.
+
+End SemiDisj.
+
 Inductive TrsType := RqUp | RqDown | Rs.
 Definition TrsState := M.t TrsType. (* Object index -> TrsType *)
 
-Section TrsPath.
-  Variables (gtr: DTree).
+Section Pushability.
+  Context {oifc: OStateIfc}.
+  Variables (gtr: DTree)
+            (sys: System oifc).
+  Hypothesis (Hrr: RqRsSys gtr oifc sys).
 
-  Inductive TrsPath:
-    edge DChn (* an initial edge *) ->
-    edges DChn (* all involved edges *) ->
-    TrsState (* all involved vertices *) ->
-    edges DChn (* end edges *) -> Prop :=
-  | TrsPathNil: forall ie, TrsPath ie [ie] [] [ie]
-  | TrsPathRqUp:
-      forall ie es tst ees e v ne,
-        TrsPath ie es tst ees ->
-        In e ees -> edge_to e = Some v ->
-        edge_from ne = Some v -> fst ne.(edge_chn) = DUp ->
-        tst@[v] = None ->
-        TrsPath ie (ne :: es) (tst +[v <- RqUp])
-                (ne :: removeOnce (edge_dec dchn_dec) e ees)
-  | TrsPathRqDown:
-      forall ie es tst ees e v nes,
-        TrsPath ie es tst ees ->
-        In e ees -> edge_to e = Some v ->
-        Forall (fun ne => edge_from ne = Some v /\ fst ne.(edge_chn) = DDown) nes ->
-        (tst@[v] = None \/ tst@[v] = Some RqUp) ->
-        TrsPath ie (nes ++ es) (tst +[v <- RqDown])
-                (nes ++ removeOnce (edge_dec dchn_dec) e ees)
-  | TrsPathRs:
-      forall ie es tst ees rss v rsb,
-        TrsPath ie es tst ees ->
-        SubList rss ees ->
-        Forall (fun rse => edge_from rse <> None /\ edge_to rse = Some v) rss ->
-        NoDup (map (@edge_from _) rss) ->
-        (tst@[v] = Some RqUp \/ tst@[v] = Some RqDown) ->
-        EdgeIn gtr rsb ->
-        TrsPath ie (rsb :: es) (tst +[v <- Rs])
-                (rsb :: removeL (edge_dec dchn_dec) ees rss).
+  Definition trsStateOfL (lbl: MLabel) :=
+    match lbl with
+    | RlblInt oidx _ _ mouts =>
+      (oidx,
+       match mouts with
+       | nil => Rs (* Requests are never ignored. *)
+       | (midx, mout) :: _ =>
+         if eq_nat_dec (msg_type mout) MRs
+         then Rs
+         else if idxUpEdge gtr midx
+              then RqUp
+              else RqDown
+       end)
+    | _ => (0, RqUp) (* never happens *)
+    end.
+
+  Fixpoint trsStateOf (hst: MHistory): TrsState :=
+    match hst with
+    | nil => []
+    | lbl :: hst' =>
+      let trsl := trsStateOfL lbl in
+      (trsStateOf hst') +[fst trsl <- snd trsl]
+    end.
+
+  Fixpoint rssOf (hst: MHistory): list IdxT :=
+    match hst with
+    | nil => nil
+    | lbl :: hst' =>
+      let trsl := trsStateOfL lbl in
+      match snd trsl with
+      | Rs => fst trsl :: rssOf hst'
+      | _ => rssOf hst'
+      end
+    end.
+
+  Definition RqRsLPush (hst1 hst: MHistory) :=
+    M.KeysDisj (trsStateOf hst) (rssOf hst1).
+
+  Definition RqRsRPush (hst1 hst: MHistory) :=
+    M.KeysSubset (trsStateOf hst) (rssOf hst1).
+    
+  Lemma RqRsRPush_right_push:
+    forall hst1, RqRsRPush hst1 hst1.
+  Proof.
+    intros; red.
+  Admitted.
+
+  Lemma RqRsLPush_left_push:
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      RqRsLPush hst1 hst2.
+  Proof.
+    intros; red.
+  Admitted.
+
+  Lemma RqRsPush_left_or_right:
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 ->
+          Forall (fun hst => ~ Continuous hst1 hst) hsts ->
+          Forall (fun hst => ~ Continuous hst hst2) hsts ->
+          Forall (fun hst => RqRsLPush hst1 hst \/
+                             RqRsRPush hst1 hst) hsts.
+  Proof.
+  Admitted.
+
+  Lemma RqRsPush_pushable_1:
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 ->
+          Forall (fun hst => ~ Continuous hst1 hst) hsts ->
+          LRPushable sys (RqRsLPush hst1) (RqRsRPush hst1)
+                     (hsts ++ [hst1]).
+  Proof.
+  Admitted.
+
+  Lemma RqRsPush_pushable_2:
+    forall hst1 hst2,
+      ValidContinuous sys hst1 hst2 ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 ->
+          Forall (fun hst => ~ Continuous hst1 hst) hsts ->
+          Forall (fun hst => ~ Continuous hst hst2) hsts ->
+          LRPushable sys (RqRsLPush hst1) (RqRsRPush hst1)
+                     (hst2 :: hsts).
+  Proof.
+  Admitted.
+
+  Lemma rqrs_well_interleaved_push:
+    WellInterleavedPush sys.
+  Proof.
+    red; intros.
+    exists (RqRsLPush hst1).
+    exists (RqRsRPush hst1).
+    pose proof H; destruct H0.
+    split; [|split; [|split; [|split]]].
+    - apply RqRsRPush_right_push.
+    - apply RqRsLPush_left_push; auto.
+    - eapply RqRsPush_left_or_right; eauto.
+    - eapply RqRsPush_pushable_1; eauto.
+    - eapply RqRsPush_pushable_2; eauto.
+  Qed.
+
+  Theorem rqrs_serializable:
+    SerializableSys sys.
+  Proof.
+    apply well_interleaved_serializable.
+    apply well_interleaved_push_ok.
+    apply rqrs_well_interleaved_push.
+  Qed.
   
-End TrsPath.
+End Pushability.
 
-(* Definition SDisjTrsState (ts1 ts2: TrsState) := *)
-(*   forall i, *)
-(*     match ts1@[i], ts2@[i] with *)
-(*     | Some Rs, Some Rs => False *)
-(*     | _, _ => True *)
-(*     end. *)
+(* Section TrsPath. *)
+(*   Variables (gtr: DTree). *)
 
-(* Section Facts. *)
-
-(*   Variables (gtr: DTree) *)
-(*             (oifc: OStateIfc) *)
-(*             (sys: System oifc). *)
-
-(*   Hypothesis (Hrrs: RqRsSys gtr oifc sys). *)
-
-(*   (* Lemma rqrsSys_atomic_trsState: *) *)
-(*   (*   forall inits ins hst outs eouts, *) *)
-(*   (*     Atomic msg_dec inits ins hst outs eouts -> *) *)
+(*   Inductive TrsPath: *)
+(*     edge DChn (* an initial edge *) -> *)
+(*     edges DChn (* all involved edges *) -> *)
+(*     TrsState (* all involved vertices *) -> *)
+(*     edges DChn (* end edges *) -> Prop := *)
+(*   | TrsPathNil: forall ie, TrsPath ie [ie] [] [ie] *)
+(*   | TrsPathRqUp: *)
+(*       forall ie es tst ees e v ne, *)
+(*         TrsPath ie es tst ees -> *)
+(*         In e ees -> edge_to e = Some v -> *)
+(*         edge_from ne = Some v -> fst ne.(edge_chn) = DUp -> *)
+(*         tst@[v] = None -> *)
+(*         TrsPath ie (ne :: es) (tst +[v <- RqUp]) *)
+(*                 (ne :: removeOnce (edge_dec dchn_dec) e ees) *)
+(*   | TrsPathRqDown: *)
+(*       forall ie es tst ees e v nes, *)
+(*         TrsPath ie es tst ees -> *)
+(*         In e ees -> edge_to e = Some v -> *)
+(*         Forall (fun ne => edge_from ne = Some v /\ fst ne.(edge_chn) = DDown) nes -> *)
+(*         (tst@[v] = None \/ tst@[v] = Some RqUp) -> *)
+(*         TrsPath ie (nes ++ es) (tst +[v <- RqDown]) *)
+(*                 (nes ++ removeOnce (edge_dec dchn_dec) e ees) *)
+(*   | TrsPathRs: *)
+(*       forall ie es tst ees rss v rsb, *)
+(*         TrsPath ie es tst ees -> *)
+(*         SubList rss ees -> *)
+(*         Forall (fun rse => edge_from rse <> None /\ edge_to rse = Some v) rss -> *)
+(*         NoDup (map (@edge_from _) rss) -> *)
+(*         (tst@[v] = Some RqUp \/ tst@[v] = Some RqDown) -> *)
+(*         EdgeIn gtr rsb -> *)
+(*         TrsPath ie (rsb :: es) (tst +[v <- Rs]) *)
+(*                 (rsb :: removeL (edge_dec dchn_dec) ees rss). *)
   
-(*   Theorem continuous_SDisjTrsState: *)
-(*     forall hst1 hst2, *)
-(*       ValidContinuous sys hst1 hst2 -> *)
-(*       SDisjTrsState (trsStateOf hst1) (trsStateOf hst2). *)
-
-(* End Facts. *)
+(* End TrsPath. *)
 
 Close Scope list.
 Close Scope fmap.
