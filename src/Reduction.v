@@ -210,7 +210,7 @@ Proof.
       { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
         destruct H11; auto.
       }
-      { destruct H1, H19.
+      { destruct H1, H15.
         eapply DisjList_SubList; eauto.
         eapply DisjList_comm, DisjList_SubList; eauto.
         apply DisjList_app_4.

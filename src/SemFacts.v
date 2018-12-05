@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepT StepM.
+Require Import Common ListSupport FMap Syntax Semantics StepM.
 
 Require Import Omega.
 
@@ -37,39 +37,6 @@ Proof.
   rewrite app_assoc in H.
   apply NoDup_app_weakening_1 in H.
   apply NoDup_app_comm; assumption.
-Qed.
-
-Lemma getTMsgsTInfo_Some:
-  forall tmsgs ti,
-    getTMsgsTInfo tmsgs = Some ti ->
-    exists tmsg,
-      In tmsg tmsgs /\ tmsg_info tmsg = Some ti.
-Proof.
-  induction tmsgs; simpl; intros; [discriminate|].
-  destruct a as [amsg ati]; simpl in *.
-  destruct ati.
-  - inv H; eexists; intuition idtac.
-  - specialize (IHtmsgs _ H); destruct IHtmsgs as [tmsg [? ?]].
-    exists tmsg; intuition idtac.
-Qed.
-
-Lemma getTMsgsTInfo_Forall_Some:
-  forall tmsgs ti,
-    tmsgs <> nil ->
-    Forall (fun tmsg => tmsg_info tmsg = Some ti) tmsgs ->
-    getTMsgsTInfo tmsgs = Some ti.
-Proof.
-  induction tmsgs; simpl; intros; [elim H; reflexivity|].
-  inv H0; rewrite H3; reflexivity.
-Qed.
-
-Lemma getTMsgsTInfo_Forall_None:
-  forall tmsgs,
-    Forall (fun tmsg => tmsg_info tmsg = None) tmsgs ->
-    getTMsgsTInfo tmsgs = None.
-Proof.
-  induction tmsgs; simpl; intros; [reflexivity|].
-  inv H; rewrite H2; auto.
 Qed.
 
 Lemma ValidMsgsIn_sys_minds:
@@ -125,28 +92,6 @@ Proof.
   rewrite <-H1; assumption.
 Qed.
 
-Lemma step_t_tid_next:
-  forall {oifc} (sys: System oifc) st1 oidx ridx ins outs ts st2,
-    step_t sys st1 (RlblInt oidx ridx ins outs) st2 ->
-    outs <> nil ->
-    Forall (fun tmsg => tmsg_info tmsg = None) (valsOf ins) ->
-    Forall (fun tmsg => match tmsg_info tmsg with
-                        | Some ti => tinfo_tid ti = ts
-                        | None => True
-                        end) (valsOf outs) ->
-    tst_tid st2 = ts.
-Proof.
-  intros.
-  inv H.
-  simpl.
-  apply getTMsgsTInfo_Forall_None in H1.
-  rewrite H1 in *.
-  clear -H0 H2.
-  destruct outs0 as [|out ?].
-  - elim H0; reflexivity.
-  - inv H2; simpl in H3; auto.
-Qed.
-
 Lemma extRssOf_In_sys_merss_FirstMP:
   forall {oifc} (sys: System oifc) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
@@ -197,19 +142,6 @@ Proof.
   clear H; inv H0; red; auto 7.
   do 2 eexists; eauto 9.
 Qed.
-
-Theorem step_t_sound:
-  forall {oifc} (sys: System oifc) pst lbl nst,
-    step_m sys pst lbl nst ->
-    forall ptst,
-      TStateRel ptst pst ->
-      exists ntst tlbl,
-        step_t sys ptst tlbl ntst /\
-        tToMLabel tlbl = lbl /\
-        TStateRel ntst nst.
-Proof.
-  (* TODO: soundness of [step_t] *)
-Abort.
 
 Lemma steps_split:
   forall {SystemT StateT LabelT} 
@@ -280,26 +212,6 @@ Proof.
   rewrite IHhst1.
   destruct (getLabel a); reflexivity.
 Qed.
-
-(* Lemma behaviorInsOf_app: *)
-(*   forall {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
-(*     behaviorInsOf (hst1 ++ hst2) = *)
-(*     behaviorInsOf hst1 ++ behaviorInsOf hst2. *)
-(* Proof. *)
-(*   induction hst1; simpl; intros; auto. *)
-(*   rewrite IHhst1. *)
-(*   destruct (getInsLabel a); reflexivity. *)
-(* Qed. *)
-
-(* Lemma behaviorOutsOf_app: *)
-(*   forall {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT), *)
-(*     behaviorOutsOf (hst1 ++ hst2) = *)
-(*     behaviorOutsOf hst1 ++ behaviorOutsOf hst2. *)
-(* Proof. *)
-(*   induction hst1; simpl; intros; auto. *)
-(*   rewrite IHhst1. *)
-(*   destruct (getOutsLabel a); reflexivity. *)
-(* Qed. *)
 
 Theorem refines_refl:
   forall {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}

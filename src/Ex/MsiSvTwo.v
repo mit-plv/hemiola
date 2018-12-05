@@ -1,5 +1,5 @@
 Require Import Bool Vector List String Peano_dec.
-Require Import Common FMap HVector ListSupport Syntax Semantics StepT.
+Require Import Common FMap HVector ListSupport Syntax Semantics.
 Require Import Topology Transaction.
 
 Require Import Spec SpecSv Msi.
@@ -60,14 +60,14 @@ Section System.
 
       Definition childGetRqImm: Rule ImplOStateIfc :=
         {| rule_idx := 0;
-           rule_msg_ids_from := [getRq];
-           rule_msg_ids_to := [getRs];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRs;
            rule_precond :=
-             MsgsFrom [ec coidx] /\oprec
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] >= msiS;
+             MsgsFrom [ec coidx]
+             /\oprec MsgIdsFrom [getRq]
+             /\oprec RqAccepting
+             /\oprec LockFree0
+             /\oprec
+                 fun (ost: OState ImplOStateIfc) orq mins =>
+                   ost#[implStatusIdx] >= msiS;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost, orq,
@@ -79,20 +79,20 @@ Section System.
 
       Definition childGetRqS: Rule ImplOStateIfc :=
         {| rule_idx := 1;
-           rule_msg_ids_from := [getRq];
-           rule_msg_ids_to := [msiRqS];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRq;
            rule_precond :=
-             MsgsFrom [ec coidx] /\oprec
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] = msiI;
+             MsgsFrom [ec coidx]
+             /\oprec MsgIdsFrom [getRq]
+             /\oprec RqAccepting
+             /\oprec LockFree0
+             /\oprec
+                 fun (ost: OState ImplOStateIfc) orq mins =>
+                   ost#[implStatusIdx] = msiI;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
-                      addRq orq O upRq (valOf idm) [pc coidx] (ce coidx),
+                      addRq orq O upRq (valOf idm) [pc coidx] [getRs] (ce coidx),
                       [(cpRq coidx, {| msg_id := msiRqS;
                                        msg_type := MRq;
                                        msg_value := VUnit |})])))
@@ -100,11 +100,10 @@ Section System.
 
       Definition childGetRsS: Rule ImplOStateIfc :=
         {| rule_idx := 2;
-           rule_msg_ids_from := [msiRsS];
-           rule_msg_ids_to := [getRs];
-           rule_msg_type_from := MRs;
-           rule_msg_type_to := MRs;
-           rule_precond := MsgsFrom [pc coidx];
+           rule_precond :=
+             MsgsFrom [pc coidx]
+             /\oprec MsgIdsFrom [msiRsS]
+             /\oprec RsAccepting;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -122,14 +121,11 @@ Section System.
 
       Definition childDownRqS: Rule ImplOStateIfc :=
         {| rule_idx := 3;
-           rule_msg_ids_from := [msiDownRqS];
-           rule_msg_ids_to := [msiDownRsS];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRs;
            rule_precond :=
-             MsgsFrom [pc coidx] /\oprec
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               HalfLockFree orq O;
+             MsgsFrom [pc coidx]
+             /\oprec MsgIdsFrom [msiDownRqS]
+             /\oprec RqAccepting
+             /\oprec HalfLockFree0;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost+#[implStatusIdx <- msiS],
@@ -141,14 +137,14 @@ Section System.
 
       Definition childSetRqImm: Rule ImplOStateIfc :=
         {| rule_idx := 4;
-           rule_msg_ids_from := [setRq];
-           rule_msg_ids_to := [setRs];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRs;
            rule_precond :=
-             MsgsFrom [ec coidx] /\oprec
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] = msiM;
+             MsgsFrom [ec coidx]
+             /\oprec MsgIdsFrom [setRq]
+             /\oprec RqAccepting
+             /\oprec LockFree0
+             /\oprec
+                 fun (ost: OState ImplOStateIfc) orq mins =>
+                   ost#[implStatusIdx] = msiM;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -166,20 +162,20 @@ Section System.
     
       Definition childSetRqM: Rule ImplOStateIfc :=
         {| rule_idx := 5;
-           rule_msg_ids_from := [setRq];
-           rule_msg_ids_to := [msiRqM];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRq;
            rule_precond :=
-             MsgsFrom [ec coidx] /\oprec
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] <> msiM;
+             MsgsFrom [ec coidx]
+             /\oprec MsgIdsFrom [setRq]
+             /\oprec RqAccepting
+             /\oprec LockFree0
+             /\oprec
+                 fun (ost: OState ImplOStateIfc) orq mins =>
+                   ost#[implStatusIdx] <> msiM;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
-                      addRq orq O upRq (valOf idm) [pc coidx] (ce coidx),
+                      addRq orq O upRq (valOf idm) [pc coidx] [setRs] (ce coidx),
                       [(cpRq coidx, {| msg_id := msiRqM;
                                        msg_type := MRq;
                                        msg_value := VUnit |})])))
@@ -187,11 +183,10 @@ Section System.
 
       Definition childSetRsM: Rule ImplOStateIfc :=
         {| rule_idx := 6;
-           rule_msg_ids_from := [msiRsM];
-           rule_msg_ids_to := [setRs];
-           rule_msg_type_from := MRs;
-           rule_msg_type_to := MRs;
-           rule_precond := MsgsFrom [pc coidx];
+           rule_precond :=
+             MsgsFrom [pc coidx]
+             /\oprec MsgIdsFrom [msiRsM]
+             /\oprec RsAccepting;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (Syntax.getRq orq O upRq) >>=[(ost, orq, nil)]
@@ -210,14 +205,11 @@ Section System.
 
       Definition childDownRqM: Rule ImplOStateIfc :=
         {| rule_idx := 7;
-           rule_msg_ids_from := [msiDownRqM];
-           rule_msg_ids_to := [msiDownRsM];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRs;
            rule_precond :=
-             MsgsFrom [pc coidx] /\oprec
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               HalfLockFree orq O;
+             MsgsFrom [pc coidx]
+             /\oprec MsgIdsFrom [msiDownRqM]
+             /\oprec RqAccepting
+             /\oprec HalfLockFree0;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                (ost +#[implStatusIdx <- msiI],
@@ -229,19 +221,18 @@ Section System.
 
       Definition childEvictRqI: Rule ImplOStateIfc :=
         {| rule_idx := 8;
-           rule_msg_ids_from := nil;
-           rule_msg_ids_to := [msiRqI];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRq;
            rule_precond :=
-             fun (ost: OState ImplOStateIfc) orq mins =>
-               LockFree orq O /\ ost#[implStatusIdx] <> msiI;
+             RqAccepting
+             /\oprec LockFree0
+             /\oprec
+                 fun (ost: OState ImplOStateIfc) orq mins =>
+                   ost#[implStatusIdx] <> msiI;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
-                      addRq orq O upRq (valOf idm) [pc coidx] (ce coidx),
+                      addRq orq O upRq (valOf idm) [pc coidx] nil (ce coidx),
                       [(cpRq coidx, {| msg_id := msiRqI;
                                        msg_type := MRq;
                                        msg_value := VNat (ost#[implValueIdx]) |})])))
@@ -249,11 +240,10 @@ Section System.
 
       Definition childEvictRsI: Rule ImplOStateIfc :=
         {| rule_idx := 9;
-           rule_msg_ids_from := [msiRsI];
-           rule_msg_ids_to := nil;
-           rule_msg_type_from := MRs;
-           rule_msg_type_to := MRs;
-           rule_precond := MsgsFrom [pc coidx];
+           rule_precond :=
+             MsgsFrom [pc coidx]
+             /\oprec MsgIdsFrom [msiRsI]
+             /\oprec RsAccepting;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -291,14 +281,14 @@ Section System.
          *)
         Definition parentGetRqImm: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 0;
-             rule_msg_ids_from := [msiRqS];
-             rule_msg_ids_to := [msiRsS];
-             rule_msg_type_from := MRq;
-             rule_msg_type_to := MRs;
              rule_precond :=
-               MsgsFrom [cpRq coidx] /\oprec
-               fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] <= msiS;
+               MsgsFrom [cpRq coidx]
+               /\oprec MsgIdsFrom [msiRqS]
+               /\oprec RqAccepting
+               /\oprec LockFree0
+               /\oprec
+                   fun (ost: OState ImplOStateIfc) orq mins =>
+                     ost#[implStatusIdx] <= msiS;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  (ost +#[implStatusIdx <- msiS],
@@ -314,14 +304,14 @@ Section System.
          *)
         Definition parentGetDownRqS: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 1;
-             rule_msg_ids_from := [msiRqS];
-             rule_msg_ids_to := [msiDownRqS];
-             rule_msg_type_from := MRq;
-             rule_msg_type_to := MRq;
              rule_precond :=
-               MsgsFrom [cpRq coidx] /\oprec
-               fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] = msiM;
+               MsgsFrom [cpRq coidx]
+               /\oprec MsgIdsFrom [msiRqS]
+               /\oprec RqAccepting
+               /\oprec LockFree0
+               /\oprec
+                   fun (ost: OState ImplOStateIfc) orq mins =>
+                     ost#[implStatusIdx] = msiM;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
@@ -329,7 +319,7 @@ Section System.
                        (hd_error (ost#[implDirIdx])) >>=[(ost, orq, nil)]
                          (fun idxM =>
                             (ost,
-                             addRq orq O downRq (valOf idm) [cpRs idxM] (pc coidx),
+                             addRq orq O downRq (valOf idm) [cpRs idxM] [msiRsS] (pc coidx),
                              [(idxM, {| msg_id := msiDownRqS;
                                         msg_type := MRq;
                                         msg_value := VUnit |})]))))
@@ -337,11 +327,10 @@ Section System.
 
         Definition parentGetDownRsS: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 2;
-             rule_msg_ids_from := [msiDownRsS];
-             rule_msg_ids_to := [msiRsS];
-             rule_msg_type_from := MRs;
-             rule_msg_type_to := MRs;
-             rule_precond := MsgsFromORq O downRq;
+             rule_precond :=
+               MsgsFromORq O downRq
+               /\oprec MsgIdsFrom [msiDownRsS]
+               /\oprec RsAccepting;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
@@ -364,14 +353,14 @@ Section System.
          *)
         Definition parentSetRqImm: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 3;
-             rule_msg_ids_from := [msiRqM];
-             rule_msg_ids_to := [msiRsM];
-             rule_msg_type_from := MRq;
-             rule_msg_type_to := MRs;
              rule_precond :=
-               MsgsFrom [cpRq coidx] /\oprec
-               fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] = msiI;
+               MsgsFrom [cpRq coidx]
+               /\oprec MsgIdsFrom [msiRqM]
+               /\oprec RqAccepting
+               /\oprec LockFree0
+               /\oprec
+                   fun (ost: OState ImplOStateIfc) orq mins =>
+                     ost#[implStatusIdx] = msiI;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  (ost +#[implStatusIdx <- msiM],
@@ -383,20 +372,22 @@ Section System.
 
         Definition parentSetDownRqM: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 4;
-             rule_msg_ids_from := [msiRqM];
-             rule_msg_ids_to := [msiDownRqM];
-             rule_msg_type_from := MRq;
-             rule_msg_type_to := MRq;
              rule_precond :=
-               MsgsFrom [cpRq coidx] /\oprec
-               fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] <> msiI;
+               MsgsFrom [cpRq coidx]
+               /\oprec MsgIdsFrom [msiRqM]
+               /\oprec RqAccepting
+               /\oprec LockFree0
+               /\oprec
+                   fun (ost: OState ImplOStateIfc) orq mins =>
+                     ost#[implStatusIdx] <> msiI;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
                     (fun idm =>
                        (ost,
-                        addRq orq O downRq (valOf idm) (cpRss (ost#[implDirIdx])) (pc coidx),
+                        addRq orq O downRq (valOf idm) (cpRss (ost#[implDirIdx]))
+                              (replicate msiRsM (List.length (ost#[implDirIdx])))
+                              (pc coidx),
                         broadcaster (pcs (ost#[implDirIdx]))
                                     {| msg_id := msiDownRqM;
                                        msg_type := MRq;
@@ -405,11 +396,7 @@ Section System.
 
         Definition parentSetDownRsM: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 5;
-             rule_msg_ids_from := [msiDownRsM];
-             rule_msg_ids_to := [msiRsM];
-             rule_msg_type_from := MRs;
-             rule_msg_type_to := MRs;
-             rule_precond := MsgsFromORq O downRq;
+             rule_precond := MsgsFromORq O downRq /\oprec RsAccepting;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
@@ -431,14 +418,14 @@ Section System.
          *)
         Definition parentEvictRqImmS: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 6;
-             rule_msg_ids_from := [msiRqI];
-             rule_msg_ids_to := [msiRsI];
-             rule_msg_type_from := MRq;
-             rule_msg_type_to := MRs;
              rule_precond :=
-               MsgsFrom [cpRq coidx] /\oprec
-               fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] = msiS;
+               MsgsFrom [cpRq coidx]
+               /\oprec MsgIdsFrom [msiRqI]
+               /\oprec RqAccepting
+               /\oprec LockFree0
+               /\oprec
+                   fun (ost: OState ImplOStateIfc) orq mins =>
+                     ost#[implStatusIdx] = msiS;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  let rdir := List.remove eq_nat_dec coidx (ost#[implDirIdx]) in
@@ -454,14 +441,14 @@ Section System.
 
         Definition parentEvictRqImmM: Rule ImplOStateIfc :=
           {| rule_idx := parentNumOfRules * coidx + 7;
-             rule_msg_ids_from := [msiRqI];
-             rule_msg_ids_to := [msiRsI];
-             rule_msg_type_from := MRq;
-             rule_msg_type_to := MRs;
              rule_precond :=
-               MsgsFrom [cpRq coidx] /\oprec
-               fun (ost: OState ImplOStateIfc) orq mins =>
-                 LockFree orq O /\ ost#[implStatusIdx] = msiM;
+               MsgsFrom [cpRq coidx]
+               /\oprec MsgIdsFrom [msiRqI]
+               /\oprec RqAccepting
+               /\oprec LockFree0
+               /\oprec
+                   fun (ost: OState ImplOStateIfc) orq mins =>
+                     ost#[implStatusIdx] = msiM;
              rule_trs :=
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ((hd_error mins) >>=[(ost, orq, nil)]
@@ -542,17 +529,6 @@ Section System.
          sys_orqs_inits := []
       |}.
 
-    (* Definition implTopo: GTree := *)
-    (*   Node parentIdx *)
-    (*        [([createEdge child1Idx c1pRq parentIdx; *)
-    (*             createEdge child1Idx c1pRs parentIdx; *)
-    (*             createEdge parentIdx pc1 child1Idx], *)
-    (*          Node child1Idx nil); *)
-    (*           ([createEdge child2Idx parentIdx c2pRq; *)
-    (*               createEdge child2Idx parentIdx c2pRs; *)
-    (*               createEdge parentIdx child2Idx pc2], *)
-    (*            Node child2Idx nil)]. *)
-                                            
   End Impl.
 
 End System.

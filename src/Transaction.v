@@ -6,7 +6,7 @@ Require Import Reduction Commutable QuasiSeq Topology.
 Open Scope list.
 Open Scope fmap.
 
-(** TODOs:
+(* TODOs:
  * 0. Have a notion of transaction paths ([TrsPath]) that includes a 
  *    "transaction type" of each object (e.g., upward-request, downward-request,
  *    etc.).
@@ -21,13 +21,48 @@ Open Scope fmap.
  * 4. Theorem: [∀h1 h2. h1 -*- h2 -> MDisjoint h1 h2 -> Commutable h1 h2]
  *)
 
-Section HalfLock.
-  Variable (gtr: DTree).
+Section Conditions.
+  Context {oifc: OStateIfc}.
 
-  Definition upRq := 0.
-  Definition downRq := 1.
+  (** Preconditions and postconditions dealing with messages. *)
+
+  Definition MsgsFrom (froms: list IdxT): OPrec oifc :=
+    fun _ _ mins => idsOf mins = froms.
+
+  Definition MsgIdsFrom (msgIds: list IdxT): OPrec oifc :=
+    fun _ _ mins => map msg_id (valsOf mins) = msgIds.
+
+  Definition MsgsFromORq (addr: AddrT) (rqty: IdxT): OPrec oifc :=
+    fun _ orq mins =>
+      (getRq orq addr rqty)
+        >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi /\
+                               map msg_id (valsOf mins) = rqi_msgIds_rss rqi).
+
+  Definition MsgsTo (tos: list IdxT) (rule: Rule oifc): Prop :=
+    forall ost orq mins,
+      idsOf (snd (rule.(rule_trs) ost orq mins)) = tos.
+
+  Definition RqAccepting: OPrec oifc :=
+    fun _ _ mins =>
+      Forall (fun idm => msg_type (valOf idm) = MRq) mins.
+
+  Definition RsAccepting: OPrec oifc :=
+    fun _ _ mins =>
+      Forall (fun idm => msg_type (valOf idm) = MRs) mins.
+
+  Definition RqForwarding (rule: Rule oifc) :=
+    forall ost orq mins,
+      Forall (fun idm => msg_type (valOf idm) = MRq)
+             (snd (rule.(rule_trs) ost orq mins)).
+
+  Definition RsForwarding (rule: Rule oifc) :=
+    forall ost orq mins,
+      Forall (fun idm => msg_type (valOf idm) = MRs)
+             (snd (rule.(rule_trs) ost orq mins)).
 
   (** Preconditions to check the lock state *)
+  Definition upRq := 0.
+  Definition downRq := 1.
 
   Definition LockFree (orq: ORq Msg) (addr: AddrT) :=
     orq@[addr] >>=[True] (fun aorq => aorq = []).
@@ -42,7 +77,27 @@ Section HalfLock.
     orq@[addr] >>=[False] (fun aorq => aorq@[downRq] = None /\
                                        aorq@[upRq] <> None).
 
-End HalfLock.
+  (** TODO: discuss whether it's fine to have a locking mechanism 
+   * only for a single address. *)
+  Definition LockFree0: OPrec oifc :=
+    fun ost orq mins => LockFree orq O.
+
+  Definition HalfLockFree0: OPrec oifc :=
+    fun ost orq mins => HalfLockFree orq O.
+
+  Definition Locking0 (rule: Rule oifc): Prop :=
+    forall ost orq mins,
+      Locked (snd (fst (rule.(rule_trs) ost orq mins))) O.
+
+  Definition HalfLocking0 (rule: Rule oifc): Prop :=
+    forall ost orq mins,
+      HalfLocked (snd (fst (rule.(rule_trs) ost orq mins))) O.
+
+  Definition StateUnchanged (rule: Rule oifc): Prop :=
+    forall ost orq mins,
+      ost = fst (fst (rule.(rule_trs) ost orq mins)).
+
+End Conditions.
 
 Section RqRsTopo.
 
@@ -72,45 +127,29 @@ Section RqRsTopo.
 
   Section PerSystem.
     Variables (gtr: DTree) (oifc: OStateIfc).
-
+    
     Section PerObject.
       Variable (oidx: IdxT).
-
-      (** TODO: discuss whether it's fine to have a locking mechanism 
-       * only for a single address. *)
-      Definition LockFree0: OPrec oifc :=
-        fun ost orq mins => LockFree orq O.
-
-      Definition HalfLockFree0: OPrec oifc :=
-        fun ost orq mins => HalfLockFree orq O.
-
-      Definition Locking0 (otrs: OTrs oifc): Prop :=
-        forall ost orq mins,
-          Locked (snd (fst (otrs ost orq mins))) O.
-
-      Definition HalfLocking0 (otrs: OTrs oifc): Prop :=
-        forall ost orq mins,
-          HalfLocked (snd (fst (otrs ost orq mins))) O.
-
-      Definition StateUnchanged (otrs: OTrs oifc): Prop :=
-        forall ost orq mins,
-          ost = fst (fst (otrs ost orq mins)).
       
       (** * Rule predicates about which messages to handle *)
 
       (* A rule handling a request from one of its children *)
       Definition RqFromDownRule (rule: Rule oifc) :=
-        rule_msg_type_from rule = MRq /\
         exists rqFrom,
           In rqFrom (edgesUpTo gtr oidx) /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec LockFree0)).
+          (rule.(rule_precond)
+           ->oprec (MsgsFrom [rqFrom]
+                    /\oprec RqAccepting
+                    /\oprec LockFree0)).
 
       (* A rule handling a request from the parent *)
       Definition RqFromUpRule (rule: Rule oifc) :=
-        rule_msg_type_from rule = MRq /\
         exists rqFrom,
           In rqFrom (edgesDownTo gtr oidx) /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec HalfLockFree0)).
+          (rule.(rule_precond)
+           ->oprec (MsgsFrom [rqFrom]
+                    /\oprec RqAccepting
+                    /\oprec HalfLockFree0)).
 
       (* A rule handling responses from some of its children *)
       (** NOTE: we don't need any lock conditions when dealing with responses.
@@ -118,52 +157,43 @@ Section RqRsTopo.
        * But for correctness, we don't need any.
        *)
       Definition RsFromDownRule (rule: Rule oifc) :=
-        rule_msg_type_from rule = MRs /\
         exists rssFrom,
           SubList rssFrom (edgesUpTo gtr oidx) /\ NoDup rssFrom /\
-          (rule.(rule_precond) ->oprec MsgsFrom rssFrom).
+          (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)).
 
       (* A rule handling a response from the parent *)
       Definition RsFromUpRule (rule: Rule oifc) :=
-        rule_msg_type_from rule = MRs /\
         exists rsFrom,
           In rsFrom (edgesDownTo gtr oidx) /\
-          (rule.(rule_precond) ->oprec MsgsFrom [rsFrom]).
+          (rule.(rule_precond) ->oprec (MsgsFrom [rsFrom] /\oprec RsAccepting)).
 
-      
       (** * Rule predicates about which messages to send *)
 
       (* A rule making requests to some of its children *)
       Definition RqToDownRule (rule: Rule oifc) :=
-        rule_msg_type_to rule = MRq /\
         exists rqsTo,
           SubList rqsTo (edgesDownFrom gtr oidx) /\ NoDup rqsTo /\
-          MsgsTo rqsTo rule.(rule_trs) /\
-          Locking0 rule.(rule_trs) /\
-          StateUnchanged rule.(rule_trs).
+          MsgsTo rqsTo rule /\ RqForwarding rule /\
+          Locking0 rule /\ StateUnchanged rule.
 
       (* A rule making a request to the parent *)
       Definition RqToUpRule (rule: Rule oifc) :=
-        rule_msg_type_to rule = MRq /\
         exists rqTo,
           In rqTo (edgesUpFrom gtr oidx) /\
-          MsgsTo [rqTo] rule.(rule_trs) /\
-          HalfLocking0 rule.(rule_trs) /\
-          StateUnchanged rule.(rule_trs).
+          MsgsTo [rqTo] rule /\ RqForwarding rule /\
+          HalfLocking0 rule /\ StateUnchanged rule.
 
       (* A rule making a response to one of its children *)
       Definition RsToDownRule (rule: Rule oifc) :=
-        rule_msg_type_to rule = MRs /\
         exists rsTo,
           In rsTo (edgesDownFrom gtr oidx) /\
-          MsgsTo [rsTo] rule.(rule_trs).
+          MsgsTo [rsTo] rule /\ RsForwarding rule.
       
       (* A rule making a response to the parent *)
       Definition RsToUpRule (rule: Rule oifc) :=
-        rule_msg_type_to rule = MRs /\
         exists rsTo,
           In rsTo (edgesUpFrom gtr oidx) /\
-          MsgsTo [rsTo] rule.(rule_trs).
+          MsgsTo [rsTo] rule /\ RsForwarding rule.
 
       (** Now carefully build some rule predicates that guarantees
        * a transaction linear, i.e., per an object actual state transition
@@ -203,214 +233,247 @@ Section RqRsTopo.
   
 End RqRsTopo.
 
-Section SemiDisj.
-  Context {oifc: OStateIfc}.
-  Variables (gtr: DTree)
-            (sys: System oifc).
 
-  Definition RqRsNonConflictingR (rule1 rule2: Rule oifc) :=
-    if rule_msg_type_to rule1 ==n MRs then
-      if rule_msg_type_to rule2 ==n MRs then False
-      else True
-    else True.
 
-  Definition RqRsNonConflictingL (oidx1 ridx1 oidx2 ridx2: IdxT) :=
-    oidx1 <> oidx2 \/
-    (oidx1 = oidx2 /\
-     forall obj rule1 rule2,
-       In obj (sys_objs sys) -> obj_idx obj = oidx1 ->
-       In rule1 (obj_rules obj) -> rule_idx rule1 = ridx1 ->
-       In rule2 (obj_rules obj) -> rule_idx rule2 = ridx2 ->
-       RqRsNonConflictingR rule1 rule2).
 
-  Definition RqRsNonConflicting (hst1 hst2: MHistory) :=
-    forall oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
-      In (RlblInt oidx1 ridx1 ins1 outs1) hst1 ->
-      In (RlblInt oidx2 ridx2 ins2 outs2) hst2 ->
-      RqRsNonConflictingL oidx1 ridx1 oidx2 ridx2.
 
-  Definition SemiDisjHistories (hst1 hst2: MHistory) :=
-    exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
-      RqRsNonConflicting hst1 hst2 /\
-      DisjList (idsOf ins1) (idsOf ins2) /\
-      DisjList (idsOf ins1) (idsOf outs2) /\
-      DisjList (idsOf outs1) (idsOf outs2).
 
-  Lemma noncontinuous_SemiDisjHistories_NonConflicting:
-    forall st1 st2 hst1 hst2 hst,
-      Reachable (steps step_m) sys st1 ->
-      steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 ->
-      ~ Continuous hst1 hst2 ->
-      SemiDisjHistories hst1 hst2 ->
-      NonConflicting sys hst1 hst2.
-  Proof.
-  Admitted.
 
-  Lemma noncontinuous_SemiDisjHistories_MDisjoint:
-    forall st1 st2 hst1 hst2 hst,
-      Reachable (steps step_m) sys st1 ->
-      steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 ->
-      ~ Continuous hst1 hst2 ->
-      SemiDisjHistories hst1 hst2 ->
-      MDisjoint hst1 hst2.
-  Proof.
-    intros.
-    destruct H2 as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
-    dest.
-    do 8 eexists; repeat split; try eassumption.
-    unfold Continuous in H1.
-  Admitted.
 
-  Lemma noncontinuous_SemiDisjHistories_Commutable:
-    forall st1 st2 hst1 hst2 hst,
-      Reachable (steps step_m) sys st1 ->
-      steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 ->
-      ~ Continuous hst1 hst2 ->
-      SemiDisjHistories hst1 hst2 ->
-      Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
-  Proof.
-    intros.
-    apply nonconflicting_mdisjoint_commutable_atomic.
-    - eauto using noncontinuous_SemiDisjHistories_NonConflicting.
-    - eauto using noncontinuous_SemiDisjHistories_MDisjoint.
-  Qed.
 
-End SemiDisj.
 
-Inductive TrsType := RqUp | RqDown | Rs.
-Definition TrsState := M.t TrsType. (* Object index -> TrsType *)
 
-Section Pushability.
-  Context {oifc: OStateIfc}.
-  Variables (gtr: DTree)
-            (sys: System oifc).
-  Hypothesis (Hrr: RqRsSys gtr oifc sys).
 
-  Definition trsStateOfL (lbl: MLabel) :=
-    match lbl with
-    | RlblInt oidx _ _ mouts =>
-      (oidx,
-       match mouts with
-       | nil => Rs (* Requests are never ignored. *)
-       | (midx, mout) :: _ =>
-         if eq_nat_dec (msg_type mout) MRs
-         then Rs
-         else if idxUpEdge gtr midx
-              then RqUp
-              else RqDown
-       end)
-    | _ => (0, RqUp) (* never happens *)
-    end.
 
-  Fixpoint trsStateOf (hst: MHistory): TrsState :=
-    match hst with
-    | nil => []
-    | lbl :: hst' =>
-      let trsl := trsStateOfL lbl in
-      (trsStateOf hst') +[fst trsl <- snd trsl]
-    end.
 
-  Fixpoint rssOf (hst: MHistory): list IdxT :=
-    match hst with
-    | nil => nil
-    | lbl :: hst' =>
-      let trsl := trsStateOfL lbl in
-      match snd trsl with
-      | Rs => fst trsl :: rssOf hst'
-      | _ => rssOf hst'
-      end
-    end.
 
-  Definition RqRsLPush (hst1 hst: MHistory) :=
-    M.KeysDisj (trsStateOf hst) (rssOf hst1).
 
-  Definition RqRsRPush (hst1 hst: MHistory) :=
-    M.KeysSubset (trsStateOf hst) (rssOf hst1).
-    
-  Lemma RqRsRPush_right_push:
-    forall hst1, RqRsRPush hst1 hst1.
-  Proof.
-    intros; red.
-  Admitted.
 
-  Lemma RqRsLPush_left_push:
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      RqRsLPush hst1 hst2.
-  Proof.
-    intros; red.
-  Admitted.
+(* Inductive TrsType := RqUp | RqDown | Rs. *)
+(* Definition TrsState := M.t TrsType. (* Object index -> TrsType *) *)
 
-  Lemma RqRsPush_left_or_right:
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 ->
-          Forall (fun hst => ~ Continuous hst1 hst) hsts ->
-          Forall (fun hst => ~ Continuous hst hst2) hsts ->
-          Forall (fun hst => RqRsLPush hst1 hst \/
-                             RqRsRPush hst1 hst) hsts.
-  Proof.
-  Admitted.
+(* Definition SemiDisjTrsType (t1 t2: TrsType) := *)
+(*   match t1, t2 with *)
+(*   | RqUp, Rs => True *)
+(*   | _, _ => False *)
+(*   end. *)
 
-  Lemma RqRsPush_pushable_1:
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 ->
-          Forall (fun hst => ~ Continuous hst1 hst) hsts ->
-          LRPushable sys (RqRsLPush hst1) (RqRsRPush hst1)
-                     (hsts ++ [hst1]).
-  Proof.
-  Admitted.
+(* Definition SemiDisjTrsState (ts1 ts2: TrsState) := *)
+(*   forall oidx, *)
+(*     match ts1@[oidx], ts2@[oidx] with *)
+(*     | Some t1, Some t2 => SemiDisjTrsType t1 t2 *)
+(*     | _, _ => True *)
+(*     end. *)
 
-  Lemma RqRsPush_pushable_2:
-    forall hst1 hst2,
-      ValidContinuous sys hst1 hst2 ->
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 ->
-          Forall (fun hst => ~ Continuous hst1 hst) hsts ->
-          Forall (fun hst => ~ Continuous hst hst2) hsts ->
-          LRPushable sys (RqRsLPush hst1) (RqRsRPush hst1)
-                     (hst2 :: hsts).
-  Proof.
-  Admitted.
+(* Section SemiDisj. *)
+(*   Context {oifc: OStateIfc}. *)
+(*   Variables (gtr: DTree) *)
+(*             (sys: System oifc). *)
 
-  Lemma rqrs_well_interleaved_push:
-    WellInterleavedPush sys.
-  Proof.
-    red; intros.
-    exists (RqRsLPush hst1).
-    exists (RqRsRPush hst1).
-    pose proof H; destruct H0.
-    split; [|split; [|split; [|split]]].
-    - apply RqRsRPush_right_push.
-    - apply RqRsLPush_left_push; auto.
-    - eapply RqRsPush_left_or_right; eauto.
-    - eapply RqRsPush_pushable_1; eauto.
-    - eapply RqRsPush_pushable_2; eauto.
-  Qed.
+(*   Definition trsStateOfL (lbl: MLabel) := *)
+(*     match lbl with *)
+(*     | RlblInt oidx _ _ mouts => *)
+(*       (oidx, *)
+(*        match mouts with *)
+(*        | nil => Rs (* Requests are never ignored. *) *)
+(*        | (midx, mout) :: _ => *)
+(*          if eq_nat_dec (msg_type mout) MRs *)
+(*          then Rs *)
+(*          else if idxUpEdge gtr midx *)
+(*               then RqUp *)
+(*               else RqDown *)
+(*        end) *)
+(*     | _ => (0, RqUp) (* never happens *) *)
+(*     end. *)
 
-  Theorem rqrs_serializable:
-    SerializableSys sys.
-  Proof.
-    apply well_interleaved_serializable.
-    apply well_interleaved_push_ok.
-    apply rqrs_well_interleaved_push.
-  Qed.
+(*   Fixpoint trsStateOf (hst: MHistory): TrsState := *)
+(*     match hst with *)
+(*     | nil => [] *)
+(*     | lbl :: hst' => *)
+(*       let trsl := trsStateOfL lbl in *)
+(*       (trsStateOf hst') +[fst trsl <- snd trsl] *)
+(*     end. *)
   
-End Pushability.
+(*   Definition RqRsNonConflictingR (rule1 rule2: Rule oifc) := *)
+(*     if rule_msg_type_to rule1 ==n MRs then *)
+(*       if rule_msg_type_to rule2 ==n MRs then False *)
+(*       else True *)
+(*     else True. *)
+
+(*   Definition RqRsNonConflictingL (oidx1 ridx1 oidx2 ridx2: IdxT) := *)
+(*     oidx1 <> oidx2 \/ *)
+(*     (oidx1 = oidx2 /\ *)
+(*      forall obj rule1 rule2, *)
+(*        In obj (sys_objs sys) -> obj_idx obj = oidx1 -> *)
+(*        In rule1 (obj_rules obj) -> rule_idx rule1 = ridx1 -> *)
+(*        In rule2 (obj_rules obj) -> rule_idx rule2 = ridx2 -> *)
+(*        RqRsNonConflictingR rule1 rule2). *)
+
+(*   Definition RqRsNonConflicting (hst1 hst2: MHistory) := *)
+(*     forall oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2, *)
+(*       In (RlblInt oidx1 ridx1 ins1 outs1) hst1 -> *)
+(*       In (RlblInt oidx2 ridx2 ins2 outs2) hst2 -> *)
+(*       RqRsNonConflictingL oidx1 ridx1 oidx2 ridx2. *)
+
+(*   Definition SemiDisjHistories (hst1 hst2: MHistory) := *)
+(*     exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2, *)
+(*       Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\ *)
+(*       Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\ *)
+(*       SemiDisjTrsState *)
+      
+(*       RqRsNonConflicting hst1 hst2 /\ *)
+(*       DisjList (idsOf ins1) (idsOf ins2) /\ *)
+(*       DisjList (idsOf ins1) (idsOf outs2) /\ *)
+(*       DisjList (idsOf outs1) (idsOf outs2). *)
+
+(*   Lemma noncontinuous_SemiDisjHistories_NonConflicting: *)
+(*     forall st1 st2 hst1 hst2 hst, *)
+(*       Reachable (steps step_m) sys st1 -> *)
+(*       steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 -> *)
+(*       ~ Continuous hst1 hst2 -> *)
+(*       SemiDisjHistories hst1 hst2 -> *)
+(*       NonConflicting sys hst1 hst2. *)
+(*   Proof. *)
+
+(*   Lemma noncontinuous_SemiDisjHistories_MDisjoint: *)
+(*     forall st1 st2 hst1 hst2 hst, *)
+(*       Reachable (steps step_m) sys st1 -> *)
+(*       steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 -> *)
+(*       ~ Continuous hst1 hst2 -> *)
+(*       SemiDisjHistories hst1 hst2 -> *)
+(*       MDisjoint hst1 hst2. *)
+(*   Proof. *)
+(*     intros. *)
+(*     destruct H2 as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]]. *)
+(*     dest. *)
+(*     do 8 eexists; repeat split; try eassumption. *)
+(*     unfold Continuous in H1. *)
+
+(*   Lemma noncontinuous_SemiDisjHistories_Commutable: *)
+(*     forall st1 st2 hst1 hst2 hst, *)
+(*       Reachable (steps step_m) sys st1 -> *)
+(*       steps step_m sys st1 (hst2 ++ hst ++ hst1) st2 -> *)
+(*       ~ Continuous hst1 hst2 -> *)
+(*       SemiDisjHistories hst1 hst2 -> *)
+(*       Reducible sys (hst2 ++ hst1) (hst1 ++ hst2). *)
+(*   Proof. *)
+(*     intros. *)
+(*     apply nonconflicting_mdisjoint_commutable_atomic. *)
+(*     - eauto using noncontinuous_SemiDisjHistories_NonConflicting. *)
+(*     - eauto using noncontinuous_SemiDisjHistories_MDisjoint. *)
+(*   Qed. *)
+
+(* End SemiDisj. *)
+
+(* Section Pushability. *)
+(*   Context {oifc: OStateIfc}. *)
+(*   Variables (gtr: DTree) *)
+(*             (sys: System oifc). *)
+(*   Hypothesis (Hrr: RqRsSys gtr oifc sys). *)
+
+(*   Fixpoint rssOf (hst: MHistory): list IdxT := *)
+(*     match hst with *)
+(*     | nil => nil *)
+(*     | lbl :: hst' => *)
+(*       let trsl := trsStateOfL lbl in *)
+(*       match snd trsl with *)
+(*       | Rs => fst trsl :: rssOf hst' *)
+(*       | _ => rssOf hst' *)
+(*       end *)
+(*     end. *)
+  
+(*   Definition RqRsLPush (hst1 hst: MHistory) := *)
+(*     M.KeysDisj (trsStateOf hst) (rssOf hst1). *)
+
+(*   Definition RqRsRPush (hst1 hst: MHistory) := *)
+(*     ~ M.KeysDisj (trsStateOf hst) (rssOf hst1). *)
+    
+(*   Lemma RqRsRPush_right_push: *)
+(*     forall hst1, RqRsRPush hst1 hst1. *)
+(*   Proof. *)
+(*     intros; red; intros. *)
+(*   Admitted. *)
+
+(*   Lemma RqRsLPush_left_push: *)
+(*     forall hst1 hst2, *)
+(*       ValidContinuous sys hst1 hst2 -> *)
+(*       RqRsLPush hst1 hst2. *)
+(*   Proof. *)
+(*     intros; red. *)
+(*   Admitted. *)
+
+(*   Lemma RqRsPush_left_or_right: *)
+(*     forall hst1 hst2, *)
+(*       ValidContinuous sys hst1 hst2 -> *)
+(*       forall st1, *)
+(*         Reachable (steps step_m) sys st1 -> *)
+(*         forall hsts st2, *)
+(*           Forall (AtomicEx msg_dec) hsts -> *)
+(*           steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 -> *)
+(*           Forall (fun hst => ~ Continuous hst1 hst) hsts -> *)
+(*           Forall (fun hst => ~ Continuous hst hst2) hsts -> *)
+(*           Forall (fun hst => RqRsLPush hst1 hst \/ *)
+(*                              RqRsRPush hst1 hst) hsts. *)
+(*   Proof. *)
+(*     intros. *)
+(*   Admitted. *)
+
+(*   Lemma RqRsPush_pushable_1: *)
+(*     forall hst1 hst2, *)
+(*       ValidContinuous sys hst1 hst2 -> *)
+(*       forall st1, *)
+(*         Reachable (steps step_m) sys st1 -> *)
+(*         forall hsts st2, *)
+(*           Forall (AtomicEx msg_dec) hsts -> *)
+(*           steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 -> *)
+(*           Forall (fun hst => ~ Continuous hst1 hst) hsts -> *)
+(*           Forall (fun hst => ~ Continuous hst hst2) hsts -> *)
+(*           LRPushable sys (RqRsLPush hst1) (RqRsRPush hst1) *)
+(*                      (hsts ++ [hst1]). *)
+(*   Proof. *)
+(*     intros. *)
+(*   Admitted. *)
+
+(*   Lemma RqRsPush_pushable_2: *)
+(*     forall hst1 hst2, *)
+(*       ValidContinuous sys hst1 hst2 -> *)
+(*       forall st1, *)
+(*         Reachable (steps step_m) sys st1 -> *)
+(*         forall hsts st2, *)
+(*           Forall (AtomicEx msg_dec) hsts -> *)
+(*           steps step_m sys st1 (concat (hst2 :: hsts ++ [hst1])) st2 -> *)
+(*           Forall (fun hst => ~ Continuous hst1 hst) hsts -> *)
+(*           Forall (fun hst => ~ Continuous hst hst2) hsts -> *)
+(*           LRPushable sys (RqRsLPush hst1) (RqRsRPush hst1) *)
+(*                      (hst2 :: hsts). *)
+(*   Proof. *)
+(*     intros. *)
+(*   Admitted. *)
+
+(*   Lemma rqrs_well_interleaved_push: *)
+(*     WellInterleavedPush sys. *)
+(*   Proof. *)
+(*     red; intros. *)
+(*     exists (RqRsLPush hst1). *)
+(*     exists (RqRsRPush hst1). *)
+(*     pose proof H; destruct H0. *)
+(*     split; [|split; [|split; [|split]]]. *)
+(*     - apply RqRsRPush_right_push. *)
+(*     - apply RqRsLPush_left_push; auto. *)
+(*     - eapply RqRsPush_left_or_right; eauto. *)
+(*     - eapply RqRsPush_pushable_1; eauto. *)
+(*     - eapply RqRsPush_pushable_2; eauto. *)
+(*   Qed. *)
+
+(*   Theorem rqrs_serializable: *)
+(*     SerializableSys sys. *)
+(*   Proof. *)
+(*     apply well_interleaved_serializable. *)
+(*     apply well_interleaved_push_ok. *)
+(*     apply rqrs_well_interleaved_push. *)
+(*   Qed. *)
+  
+(* End Pushability. *)
 
 (* Section TrsPath. *)
 (*   Variables (gtr: DTree). *)

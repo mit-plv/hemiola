@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common FMap ListSupport Syntax Semantics StepM StepT SemFacts.
+Require Import Common FMap ListSupport Syntax Semantics StepM SemFacts.
 Require Import Invariant Serial SerialFacts.
 
 Require Import Omega.

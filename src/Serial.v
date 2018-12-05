@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepM StepT.
+Require Import Common ListSupport FMap Syntax Semantics StepM.
 Require Import Topology.
 
 Open Scope list.

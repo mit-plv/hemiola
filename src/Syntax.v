@@ -85,6 +85,7 @@ Section ORqs.
   Record RqInfo (MsgT: Type) :=
     { rqi_msg: MsgT;
       rqi_minds_rss: list IdxT;
+      rqi_msgIds_rss: list IdxT;
       rqi_midx_rsb: IdxT
     }.
 
@@ -95,13 +96,14 @@ Section ORqs.
   Definition ORqs (MsgT: Type) := M.t (ORq MsgT). 
 
   Definition addRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT)
-             (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
+             (msg: MsgT) (mrss msgIds: list IdxT) (mrsb: IdxT): ORq MsgT :=
     let aorq := match orq@[addr] with
                 | Some aorq => aorq
                 | None => M.empty _
                 end in
     orq+[addr <- aorq+[rqty <- {| rqi_msg := msg;
                                   rqi_minds_rss := mrss;
+                                  rqi_msgIds_rss := msgIds;
                                   rqi_midx_rsb := mrsb
                                |}]].
 
@@ -112,15 +114,6 @@ Section ORqs.
   Fixpoint removeRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT): ORq MsgT :=
     orq@[addr] >>=[orq]
        (fun aorq => orq +[addr <- (M.remove rqty aorq)]).
-
-  Definition orqMap {MsgT1 MsgT2: Type} (f: MsgT1 -> MsgT2) (orq: ORq MsgT1): ORq MsgT2 :=
-    M.map (fun aorq =>
-             M.map (fun rqi =>
-                      {| rqi_msg := f (rqi_msg rqi);
-                         rqi_minds_rss := rqi_minds_rss rqi;
-                         rqi_midx_rsb := rqi_midx_rsb rqi
-                      |}) aorq)
-          orq.
 
 End ORqs.
 
@@ -141,10 +134,6 @@ Section Rule.
 
   Record Rule :=
     { rule_idx: IdxT;
-      rule_msg_ids_from: list IdxT;
-      rule_msg_ids_to: list IdxT;
-      rule_msg_type_from: nat;
-      rule_msg_type_to: nat;
       rule_precond: OPrec;
       rule_trs: OTrs;
     }.
@@ -160,20 +149,8 @@ Notation "'⊤oprec'" := (fun _ _ _ => True).
 Notation "'⊥oprec'" := (fun _ _ _ => False).
 Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
 
-Definition MsgsFrom {oifc} (froms: list IdxT): OPrec oifc :=
-  fun _ _ mins => idsOf mins = froms.
-
-Definition MsgsFromORq {oifc} (addr: AddrT) (rqty: IdxT): OPrec oifc :=
-  fun _ orq mins =>
-    (getRq orq addr rqty)
-      >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi).
-
 Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
   List.map (fun midx => (midx, msg)) minds.
-
-Definition MsgsTo {oifc} (tos: list IdxT) (trs: OTrs oifc): Prop :=
-  forall ost orq mins,
-    idsOf (snd (trs ost orq mins)) = tos.
 
 Record Object oifc :=
   { obj_idx: IdxT;

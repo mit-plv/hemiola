@@ -1,5 +1,5 @@
 Require Import Bool Vector List String Peano_dec.
-Require Import Common FMap HVector ListSupport Syntax Semantics StepT.
+Require Import Common FMap HVector ListSupport Syntax Semantics.
 Require Import Topology Transaction.
 
 Require Import Spec.
@@ -28,34 +28,31 @@ Section System.
       [specIdx <- hvcons 0 hvnil].
     
     Section PerChn.
-      Variable ridxOfs: nat.
-      Variables (erq ers: nat).
+      Variable i: nat.
 
       Definition specNumOfRules := 2.
 
       Definition specGetRq: Rule SpecOStateIfc :=
-        {| rule_idx := specNumOfRules * ridxOfs + 0;
-           rule_msg_ids_from := [getRq];
-           rule_msg_ids_to := [getRs];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRs;
-           rule_precond := MsgsFrom [erq];
+        {| rule_idx := specNumOfRules * i + 0;
+           rule_precond :=
+             MsgsFrom [erq i]
+             /\oprec MsgIdsFrom [getRq]
+             /\oprec RqAccepting;
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                (ost, orq,
-                [(ers, {| msg_id := getRs;
-                          msg_type := MRs;
-                          msg_value := VNat (ost#[specValueIdx])
-                       |})])
+                [(ers i, {| msg_id := getRs;
+                            msg_type := MRs;
+                            msg_value := VNat (ost#[specValueIdx])
+                         |})])
         |}.
 
       Definition specSetRq: Rule SpecOStateIfc :=
-        {| rule_idx := specNumOfRules * ridxOfs + 1;
-           rule_msg_ids_from := [setRq];
-           rule_msg_ids_to := [setRs];
-           rule_msg_type_from := MRq;
-           rule_msg_type_to := MRs;
-           rule_precond := MsgsFrom [erq];
+        {| rule_idx := specNumOfRules * i + 1;
+           rule_precond :=
+             MsgsFrom [erq i]
+             /\oprec MsgIdsFrom [setRq]
+             /\oprec RqAccepting;
            rule_trs :=
              fun (ost: OState SpecOStateIfc) orq mins =>
                ((hd_error mins) >>=[ost]
@@ -65,15 +62,15 @@ Section System.
                                    | _ => ost
                                    end),
                 orq,
-                [(ers, {| msg_id := setRs;
-                          msg_type := MRs;
-                          msg_value := VUnit |})])
+                [(ers i, {| msg_id := setRs;
+                            msg_type := MRs;
+                            msg_value := VUnit |})])
         |}.
 
     End PerChn.
     
     Definition specRulesI (i: nat): list (Rule SpecOStateIfc) :=
-      [specGetRq i (erq i) (ers i); specSetRq i (erq i) (ers i)].
+      [specGetRq i; specSetRq i].
 
     Fixpoint specRules (i: nat): list (Rule SpecOStateIfc) :=
       match i with

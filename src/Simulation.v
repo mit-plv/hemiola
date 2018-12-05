@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec FinFun.
-Require Import Common FMap Syntax Semantics SemFacts Invariant StepT.
+Require Import Common FMap Syntax Semantics SemFacts Invariant.
 
 Set Implicit Arguments.
 

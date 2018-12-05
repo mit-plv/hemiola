@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap Syntax Semantics StepM StepT SemFacts.
+Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
 Require Import Topology Serial SerialFacts Reduction.
 
 Set Implicit Arguments.
@@ -176,7 +176,7 @@ Proof.
             { destruct H15; auto. }
             { apply FirstMPI_Forall_deqMsgs; auto. }
           }
-          { destruct H28; auto. }
+          { destruct H24; auto. }
           { eapply FirstMPI_Forall_enqMsgs_inv.
             { apply DisjList_comm; eassumption. }
             { assumption. }
@@ -188,10 +188,10 @@ Proof.
     specialize (H3 _ _ _ H7 eq_refl H8 eq_refl H11 eq_refl).
 
     red in H3.
-    specialize (H3 _ _ _ _ _ _ _ H20 H21 H33); dest.
+    specialize (H3 _ _ _ _ _ _ _ H16 H17 H25); dest.
 
     remember (rule_trs rule0 os0 porq0 ins2) as trs2.
-    destruct trs2 as [[tnost2 tnorq2] touts2]; inv H34.
+    destruct trs2 as [[tnost2 tnorq2] touts2]; inv H26.
     remember (rule_trs rule0 os porq ins2) as rtrs2.
     destruct rtrs2 as [[rnost2 rnorq2] routs2]; dest; subst.
     remember (rule_trs rule rnost2 rnorq2 ins1) as rtrs1.
@@ -222,10 +222,6 @@ Proof.
         apply FirstMPI_Forall_deqMsgs; auto.
       * assumption.
       * assumption.
-      * assumption.
-      * assumption.
-      * assumption.
-      * assumption.
       * simpl; apply eq_sym; eassumption.
       * assumption.
       * assumption.
@@ -242,7 +238,7 @@ Proof.
             { destruct H15; auto. }
             { apply FirstMPI_Forall_deqMsgs; auto. }
           }
-          { destruct H28; auto. }
+          { destruct H24; auto. }
           { eapply FirstMPI_Forall_enqMsgs_inv.
             { apply DisjList_comm; eassumption. }
             { assumption. }

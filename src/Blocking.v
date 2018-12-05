@@ -1,7 +1,7 @@
 Require Import List.
 
 Require Import Common.
-Require Import Syntax Semantics StepT Invariant Simulation.
+Require Import Syntax Semantics Invariant Simulation.
 
 Set Implicit Arguments.
 
