@@ -81,7 +81,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost,
-                   addRq orq O upRq (valOf idm) [pc] [getRs] ce,
+                   addRq orq O upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqS;
                               msg_type := MRq;
                               msg_value := VUnit |})])))
@@ -164,7 +164,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost,
-                   addRq orq O upRq (valOf idm) [pc] [setRs] ce,
+                   addRq orq O upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqM;
                               msg_type := MRq;
                               msg_value := VUnit |})])))
@@ -221,7 +221,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost,
-                   addRq orq O upRq (valOf idm) [pc] nil ce,
+                   addRq orq O upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqI;
                               msg_type := MRq;
                               msg_value := VNat (ost#[implValueIdx]) |})])))
@@ -293,7 +293,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                  (fun idm =>
                     (ost,
-                     addRq orq O downRq (valOf idm) [cpRs'] [msiRsS] pc,
+                     addRq orq O downRq (valOf idm) [cpRs'] pc,
                      [(pc', {| msg_id := msiDownRqS;
                                msg_type := MRq;
                                msg_value := VNat (ost#[implValueIdx]) |})])))
@@ -354,7 +354,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                  (fun idm =>
                     (ost,
-                     addRq orq O downRq (valOf idm) [cpRs'] [msiRsM] pc,
+                     addRq orq O downRq (valOf idm) [cpRs'] pc,
                      [(pc', {| msg_id := msiDownRqM;
                                msg_type := MRq;
                                msg_value := VUnit |})])))

@@ -92,7 +92,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
-                      addRq orq O upRq (valOf idm) [pc coidx] [getRs] (ce coidx),
+                      addRq orq O upRq (valOf idm) [pc coidx] (ce coidx),
                       [(cpRq coidx, {| msg_id := msiRqS;
                                        msg_type := MRq;
                                        msg_value := VUnit |})])))
@@ -175,7 +175,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
-                      addRq orq O upRq (valOf idm) [pc coidx] [setRs] (ce coidx),
+                      addRq orq O upRq (valOf idm) [pc coidx] (ce coidx),
                       [(cpRq coidx, {| msg_id := msiRqM;
                                        msg_type := MRq;
                                        msg_value := VUnit |})])))
@@ -232,7 +232,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                   (fun idm =>
                      (ost,
-                      addRq orq O upRq (valOf idm) [pc coidx] nil (ce coidx),
+                      addRq orq O upRq (valOf idm) [pc coidx] (ce coidx),
                       [(cpRq coidx, {| msg_id := msiRqI;
                                        msg_type := MRq;
                                        msg_value := VNat (ost#[implValueIdx]) |})])))
@@ -319,7 +319,7 @@ Section System.
                        (hd_error (ost#[implDirIdx])) >>=[(ost, orq, nil)]
                          (fun idxM =>
                             (ost,
-                             addRq orq O downRq (valOf idm) [cpRs idxM] [msiRsS] (pc coidx),
+                             addRq orq O downRq (valOf idm) [cpRs idxM] (pc coidx),
                              [(idxM, {| msg_id := msiDownRqS;
                                         msg_type := MRq;
                                         msg_value := VUnit |})]))))
@@ -386,7 +386,6 @@ Section System.
                     (fun idm =>
                        (ost,
                         addRq orq O downRq (valOf idm) (cpRss (ost#[implDirIdx]))
-                              (replicate msiRsM (List.length (ost#[implDirIdx])))
                               (pc coidx),
                         broadcaster (pcs (ost#[implDirIdx]))
                                     {| msg_id := msiDownRqM;

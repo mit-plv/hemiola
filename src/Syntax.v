@@ -85,7 +85,6 @@ Section ORqs.
   Record RqInfo (MsgT: Type) :=
     { rqi_msg: MsgT;
       rqi_minds_rss: list IdxT;
-      rqi_msgIds_rss: list IdxT;
       rqi_midx_rsb: IdxT
     }.
 
@@ -96,14 +95,13 @@ Section ORqs.
   Definition ORqs (MsgT: Type) := M.t (ORq MsgT). 
 
   Definition addRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT)
-             (msg: MsgT) (mrss msgIds: list IdxT) (mrsb: IdxT): ORq MsgT :=
+             (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
     let aorq := match orq@[addr] with
                 | Some aorq => aorq
                 | None => M.empty _
                 end in
     orq+[addr <- aorq+[rqty <- {| rqi_msg := msg;
                                   rqi_minds_rss := mrss;
-                                  rqi_msgIds_rss := msgIds;
                                   rqi_midx_rsb := mrsb
                                |}]].
 

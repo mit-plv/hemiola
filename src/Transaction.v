@@ -35,8 +35,7 @@ Section Conditions.
   Definition MsgsFromORq (addr: AddrT) (rqty: IdxT): OPrec oifc :=
     fun _ orq mins =>
       (getRq orq addr rqty)
-        >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi /\
-                               map msg_id (valsOf mins) = rqi_msgIds_rss rqi).
+        >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi).
 
   Definition MsgsTo (tos: list IdxT) (rule: Rule oifc): Prop :=
     forall ost orq mins,
