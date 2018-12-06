@@ -47,6 +47,9 @@ Section MessagePool.
   Definition InMPI (mp: MessagePool) (idm: Id MsgT) :=
     InMP (idOf idm) (valOf idm) mp.
 
+  Definition ForallQ (P: IdxT -> Queue -> Prop) (mp: MessagePool) :=
+    forall midx, P midx (findQ midx mp).
+  
   Definition ForallMP (P: IdxT -> MsgT -> Prop) (mp: MessagePool) :=
     forall midx, Forall (P midx) (findQ midx mp).
 
@@ -267,7 +270,7 @@ Section Facts.
       FirstMP mp i m.
   Proof.
     unfold FirstMP, firstMP, enqMP, findQ; intros.
-    destruct (i ==n ni); subst; [|mred].
+    destruct (eq_nat_dec i ni); subst; [|mred].
     mred; simpl in H0.
     destruct (mp@[ni]).
     - simpl in *; destruct l; simpl in *; auto.
@@ -557,7 +560,7 @@ Section Facts.
       InMP midx msg mp.
   Proof.
     unfold InMP, enqMP, findQ; intros.
-    destruct (midx ==n nidx); subst.
+    destruct (eq_nat_dec midx nidx); subst.
     - mred; unfold findQ in H; simpl in H.
       destruct (mp@[nidx]); simpl in *.
       + apply in_app_or in H; destruct H; auto.
@@ -619,7 +622,7 @@ Section Facts.
     unfold InMP, deqMP, findQ; intros.
     remember (mp@[ridx]) as rq; destruct rq; simpl in *; auto.
     destruct l; auto.
-    destruct (midx ==n ridx); subst.
+    destruct (eq_nat_dec midx ridx); subst.
     - mred; simpl in *; auto.
     - mred.
   Qed.
@@ -840,9 +843,9 @@ Section Facts.
   Proof.
     unfold enqMP, findQ; intros; split; intros.
     - remember (mp@[emidx]) as eq; destruct eq; simpl in *;
-        destruct (emidx ==n midx); subst; mred.
+        destruct (eq_nat_dec emidx midx); subst; mred.
     - remember (mp@[emidx]) as eq; destruct eq; simpl in *; dest;
-        destruct (emidx ==n midx); subst; mred.
+        destruct (eq_nat_dec emidx midx); subst; mred.
   Qed.
 
   Lemma enqMsgs_None:
@@ -872,10 +875,10 @@ Section Facts.
     unfold deqMP, findQ; split; intros.
     - remember (mp@[dmidx]) as dq; destruct dq; simpl in *; auto.
       destruct l; simpl in *; auto.
-      destruct (dmidx ==n midx); subst; mred.
+      destruct (eq_nat_dec dmidx midx); subst; mred.
     - remember (mp@[dmidx]) as dq; destruct dq; simpl in *; auto.
       destruct l; simpl in *; auto.
-      destruct (dmidx ==n midx); subst; mred.
+      destruct (eq_nat_dec dmidx midx); subst; mred.
   Qed.
 
   Lemma deqMsgs_None:

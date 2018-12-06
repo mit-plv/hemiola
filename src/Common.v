@@ -44,6 +44,11 @@ Proof.
   tauto.
 Qed.
 
+Inductive xor3 (A B C: Prop): Prop :=
+| Xor1: A -> ~B -> ~C -> xor3 A B C
+| Xor2: ~A -> B -> ~C -> xor3 A B C
+| Xor3: ~A -> ~B -> C -> xor3 A B C.
+
 Ltac nothing := idtac.
 
 Ltac assert_later asrt :=
@@ -102,12 +107,14 @@ Ltac collect_of_type_helper ty ls :=
   end.
 Ltac collect_of_type ty := collect_of_type_helper ty (@nil ty).
 
-Infix "==n" := eq_nat_dec (at level 30).
-Infix "<=n" := le_dec (at level 30).
-Infix "<n" := lt_dec (at level 30).
-Infix ">=n" := ge_dec (at level 30).
-Infix ">n" := gt_dec (at level 30).
-Infix "?<n" := (in_dec eq_nat_dec) (at level 30).
+Definition nat_eq (n1 n2: nat) :=
+  if eq_nat_dec n1 n2 then true else false.
+
+Definition nat_in (n: nat) (ns: list nat) :=
+  if in_dec eq_nat_dec n ns then true else false.
+
+Infix "==n" := nat_eq (at level 30).
+Infix "?<n" := nat_in (at level 30).
 
 Definition bind {A B} (oa: option A) (f: A -> option B): option B :=
   match oa with

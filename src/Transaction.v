@@ -127,21 +127,40 @@ Section RqRsTopo.
                   RqRsTopo (snd udc)) cs ->
         RqRsTopo (Node ridx cs).
 
-  (* NOTE: should have length 2 if [RqRsTopo gtr] *)
-  Definition edgesUpFrom (gtr: DTree) (oidx: IdxT): list IdxT :=
-    map (fun e => snd e.(edge_chn)) (upEdgesFrom gtr oidx).
+  Definition edgeInds (es: list (edge DChn)): list IdxT :=
+    map (fun e => snd e.(edge_chn)) es.
 
-  Definition edgesUpTo (gtr: DTree) (oidx: IdxT): list IdxT :=
-    map (fun e => snd e.(edge_chn)) (upEdgesTo gtr oidx).
+  Definition rqUpEdges (gtr: DTree): list IdxT :=
+    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq) (upEdges gtr)).
 
-  (* NOTE: should have length 1 if [RqRsTopo gtr] *)
+  Definition rsUpEdges (gtr: DTree): list IdxT :=
+    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs) (upEdges gtr)).
+
+  Definition downEdges (gtr: DTree): list IdxT :=
+    edgeInds (downEdges gtr).
+
+  Definition rqEdgeUpFrom (gtr: DTree) (oidx: IdxT): option IdxT :=
+    hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
+                               (upEdgesFrom gtr oidx))).
+
+  Definition rsEdgeUpFrom (gtr: DTree) (oidx: IdxT): option IdxT :=
+    hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs)
+                               (upEdgesFrom gtr oidx))).
+
+  Definition rqEdgesUpTo (gtr: DTree) (oidx: IdxT): list IdxT :=
+    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
+                     (upEdgesTo gtr oidx)).
+
+  Definition rsEdgesUpTo (gtr: DTree) (oidx: IdxT): list IdxT :=
+    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs)
+                     (upEdgesTo gtr oidx)).
+
   Definition edgesDownFrom (gtr: DTree) (oidx: IdxT): list IdxT :=
-    map (fun e => snd e.(edge_chn)) (downEdgesFrom gtr oidx).
+    edgeInds (downEdgesFrom gtr oidx).
 
-  (* NOTE: should have length 1 if [RqRsTopo gtr] *)
-  Definition edgesDownTo (gtr: DTree) (oidx: IdxT): list IdxT :=
-    map (fun e => snd e.(edge_chn)) (downEdgesTo gtr oidx).
-
+  Definition edgeDownTo (gtr: DTree) (oidx: IdxT): option IdxT :=
+    hd_error (edgeInds (downEdgesTo gtr oidx)).
+  
   Section PerSystem.
     Variables (gtr: DTree) (oifc: OStateIfc).
     
@@ -153,7 +172,7 @@ Section RqRsTopo.
       (* A rule handling a request from one of its children *)
       Definition RqFromDownRule (rule: Rule oifc) :=
         exists rqFrom,
-          In rqFrom (edgesUpTo gtr oidx) /\
+          In rqFrom (rqEdgesUpTo gtr oidx) /\
           (rule.(rule_precond)
            ->oprec (MsgsFrom [rqFrom]
                     /\oprec RqAccepting
@@ -162,7 +181,7 @@ Section RqRsTopo.
       (* A rule handling a request from the parent *)
       Definition RqFromUpRule (rule: Rule oifc) :=
         exists rqFrom,
-          In rqFrom (edgesDownTo gtr oidx) /\
+          edgeDownTo gtr oidx = Some rqFrom /\
           (rule.(rule_precond)
            ->oprec (MsgsFrom [rqFrom]
                     /\oprec RqAccepting
@@ -171,14 +190,14 @@ Section RqRsTopo.
       (* A rule handling responses from some of its children *)
       Definition RsFromDownRule (rule: Rule oifc) :=
         exists rssFrom,
-          SubList rssFrom (edgesUpTo gtr oidx) /\ NoDup rssFrom /\
+          SubList rssFrom (rsEdgesUpTo gtr oidx) /\ NoDup rssFrom /\
           (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
           Releasing0 rule rssFrom.
 
       (* A rule handling a response from the parent *)
       Definition RsFromUpRule (rule: Rule oifc) :=
         exists rsFrom,
-          In rsFrom (edgesDownTo gtr oidx) /\
+          edgeDownTo gtr oidx = Some rsFrom /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rsFrom] /\oprec RsAccepting)) /\
           HalfReleasing0 rule rsFrom.
 
@@ -196,7 +215,7 @@ Section RqRsTopo.
       (* A rule making a request to the parent *)
       Definition RqToUpRule (rule: Rule oifc) :=
         exists rqTo rsFrom,
-          In rqTo (edgesUpFrom gtr oidx) /\
+          rqEdgeUpFrom gtr oidx = Some rqTo /\
           MsgsTo [rqTo] rule /\ RqForwarding rule /\
           HalfLocking0 rule rsFrom /\
           (* RqRsChannels [rqTo] [rsFrom] /\ *)
@@ -212,7 +231,7 @@ Section RqRsTopo.
       (* A rule making a response to the parent *)
       Definition RsToUpRule (rule: Rule oifc) :=
         exists rsTo,
-          In rsTo (edgesUpFrom gtr oidx) /\
+          rsEdgeUpFrom gtr oidx = Some rsTo /\
           MsgsTo [rsTo] rule /\
           RsForwarding rule.
 
@@ -255,17 +274,43 @@ Section LockInv.
 
   Section OnMessagePool.
     Variable (msgs: MessagePool Msg).
-    
-    Definition FullLockInv (oidx: IdxT) (rqi: RqInfo Msg) :=
-      let msgs := msgs in
-      True.
-
-    Definition HalfLockInv (oidx: IdxT) :=
-      True.
 
     Definition LockFreeInv (oidx: IdxT) :=
-      True.
+      let str := subtree gtr oidx in
+      ForallQ (fun midx q =>
+                 if midx ?<n (rsUpEdges str)
+                 then q = nil
+                 else if midx ?<n (downEdges str)
+                      then filter (fun msg => msg.(msg_type) ==n MRq) q = nil
+                      else True) msgs.
 
+    Definition FullLockInv (oidx: IdxT) (rqi: RqInfo Msg) :=
+      let str := subtree gtr oidx in
+      let ctrs := childrenOf str in
+      Forall (fun child =>
+                match child with
+                | Leaf => True
+                | Node croot _ =>
+                  (rsEdgeUpFrom gtr croot)
+                    >>=[True]
+                    (fun rsi =>
+                       if rsi ?<n rqi.(rqi_minds_rss)
+                       then True (** TODO: rqDown | rsUp | Locked *)
+                       else LockFreeInv croot)
+                end) ctrs.
+
+    Fixpoint HalfLockInv (oidx: IdxT) :=
+      (rqEdgeUpFrom gtr oidx) >>=[True]
+        (fun rqUp =>
+           (edgeDownTo gtr oidx) >>=[True]
+             (fun down =>
+                (xor3
+                   (** TODO: reasoning with [length], is this right? *)
+                   (length (findQ rqUp msgs) = 1)
+                   (length (filter (fun msg => msg.(msg_type) ==n MRs)
+                                   (findQ down msgs)) = 1)
+                   (True (** TODO: [HalfLockInv parentIdx] *))))).
+    
     Definition LockInvORq (oidx: IdxT) (orq: ORq Msg) :=
       match orq@[O] with
       | Some aorq =>

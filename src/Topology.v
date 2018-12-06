@@ -93,13 +93,27 @@ Section DTree.
     | Node _ cs => map snd cs
     end.
 
-  (* Fixpoint flatten (gtr: DTree): list DTree := *)
-  (*   match gtr with *)
-  (*   | Leaf => nil *)
-  (*   | Node root cs => *)
-  (*     Node root cs :: List.concat (map (fun udc => flatten (snd udc)) cs) *)
-  (*   end. *)
+  Fixpoint flatten (gtr: DTree): list DTree :=
+    match gtr with
+    | Leaf => nil
+    | Node root cs =>
+      Node root cs :: List.concat (map (fun udc => flatten (snd udc)) cs)
+    end.
 
+  Fixpoint subtree' (trs: list DTree) (idx: IdxT): DTree :=
+    match trs with
+    | nil => Leaf
+    | tr :: trs' =>
+      match tr with
+      | Leaf => subtree' trs' idx
+      | Node root _ =>
+        if root ==n idx then tr else subtree' trs' idx
+      end
+    end.
+
+  Definition subtree (gtr: DTree) (idx: IdxT): DTree :=
+    subtree' (flatten gtr) idx.
+  
   (* Fixpoint childrenOfIdx' (fls: list DTree) (pidx: IdxT): list DTree := *)
   (*   match fls with *)
   (*   | nil => nil *)
@@ -130,17 +144,36 @@ Section DTree.
   (* Definition parentIdxOfIdx (gtr: DTree) (cidx: IdxT): option IdxT := *)
   (*   (parentOfIdx gtr cidx) >>=[None] (fun ptr => rootOf ptr). *)
 
-  Inductive Dir := DUp | DDown.
-  Definition DChn := (Dir * IdxT)%type.
+  Inductive CDir := CUp | CDown.
+  Definition DChn := (CDir * nat * IdxT)%type.
 
   Definition dchn_dec: forall c1 c2: DChn, {c1 = c2} + {c1 <> c2}.
   Proof.
     repeat decide equality.
   Defined.
-  
-  Definition edgesPC (pidx: IdxT) (cidx: option IdxT) (updowns: (list IdxT * list IdxT)) :=
-    (map (fun eidx => Build_edge cidx (DUp, eidx) (Some pidx)) (fst updowns))
-      ++ (map (fun eidx => Build_edge (Some pidx) (DDown, eidx) cidx) (snd updowns)).
+
+  Fixpoint edgesUp (pidx: IdxT) (cidx: option IdxT) 
+           (ups: list IdxT) (i: nat): list (edge DChn) :=
+    match ups with
+    | nil => nil
+    | up :: ups' =>
+      (Build_edge cidx (CUp, i, up) (Some pidx))
+        :: edgesUp pidx cidx ups' (S i)
+    end.
+
+  Fixpoint edgesDown (pidx: IdxT) (cidx: option IdxT) 
+           (downs: list IdxT) (i: nat): list (edge DChn) :=
+    match downs with
+    | nil => nil
+    | down :: downs' =>
+      (Build_edge cidx (CDown, i, down) (Some pidx))
+        :: edgesDown pidx cidx downs' (S i)
+    end.
+
+  Definition edgesUpDowns (pidx: IdxT) (cidx: option IdxT)
+             (updowns: (list IdxT * list IdxT)): list (edge DChn) :=
+    (edgesUp pidx cidx (fst updowns) O)
+      ++ (edgesDown pidx cidx (snd updowns) O).
   
   Fixpoint topoOfT (gtr: DTree): digraph DChn :=
     match gtr with
@@ -149,7 +182,7 @@ Section DTree.
       connectMany
         (singleton DChn root)
         (map (fun eec =>
-                (edgesPC root (rootOf (snd eec)) (fst eec),
+                (edgesUpDowns root (rootOf (snd eec)) (fst eec),
                  topoOfT (snd eec))) cs)
     end.
 
@@ -161,19 +194,32 @@ Section DTree.
     In e (dg_es topo).
 
   Definition findEdge (cidx: IdxT): option (edge DChn) :=
-    find (fun e => if snd e.(edge_chn) ==n cidx
-                   then true else false) (dg_es topo).
+    find (fun e => snd e.(edge_chn) ==n cidx) (dg_es topo).
+
+  Definition upEdges: list (edge DChn) :=
+    filter (fun e =>
+              match fst (fst (e.(edge_chn))) with
+              | CUp => true
+              | CDown => false
+              end) (dg_es topo).
+
+  Definition downEdges: list (edge DChn) :=
+    filter (fun e =>
+              match fst (fst (e.(edge_chn))) with
+              | CUp => false
+              | CDown => true
+              end) (dg_es topo).
 
   Definition isUpEdge (e: edge DChn) :=
-    match fst e.(edge_chn) with
-    | DUp => true
-    | DDown => false
+    match fst (fst e.(edge_chn)) with
+    | CUp => true
+    | CDown => false
     end.
 
   Definition isDownEdge (e: edge DChn) :=
-    match fst e.(edge_chn) with
-    | DUp => false
-    | DDown => true
+    match fst (fst e.(edge_chn)) with
+    | CUp => false
+    | CDown => true
     end.
 
   Definition idxUpEdge (cidx: IdxT) :=
