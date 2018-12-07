@@ -37,8 +37,7 @@ Inductive step_m {oifc} (sys: System oifc):
     ValidMsgsIn sys ins ->
 
     rule_precond rule os porq ins ->
-    rule_trs rule os porq ins =
-    (pos, norq, outs) ->
+    rule_trs rule os porq ins = (pos, norq, outs) ->
     ValidMsgsOut sys outs ->
 
     DisjList (idsOf ins) (idsOf outs) ->

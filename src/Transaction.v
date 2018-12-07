@@ -272,9 +272,23 @@ Section LockInv.
 
   Hypothesis (Hrr: RqRsSys gtr oifc sys).
 
-  Section OnMessagePool.
-    Variable (msgs: MessagePool Msg).
+  Section OnMState.
+    Variables (orqs: ORqs Msg)
+              (msgs: MessagePool Msg).
 
+    Definition OLocked (oidx: IdxT) :=
+      orqs@[oidx] >>=[False]
+        (fun orq =>
+           orq@[O] >>=[False]
+             (fun aorq => aorq@[downRq] <> None)).
+
+    Definition OHalfLocked (oidx: IdxT) :=
+      orqs@[oidx] >>=[False]
+        (fun orq =>
+           orq@[O] >>=[False]
+             (fun aorq => aorq@[downRq] = None /\
+                          aorq@[upRq] <> None)).
+    
     Definition LockFreeInv (oidx: IdxT) :=
       let str := subtree gtr oidx in
       ForallQ (fun midx q =>
@@ -293,9 +307,15 @@ Section LockInv.
                 | Node croot _ =>
                   (rsEdgeUpFrom gtr croot)
                     >>=[True]
-                    (fun rsi =>
-                       if rsi ?<n rqi.(rqi_minds_rss)
-                       then True (** TODO: rqDown | rsUp | Locked *)
+                    (fun rsUp =>
+                       if rsUp ?<n rqi.(rqi_minds_rss)
+                       then (edgeDownTo gtr croot)
+                              >>=[True]
+                              (fun down =>
+                                 xor3 (length (findQ rsUp msgs) = 1)
+                                      (length (filter (fun msg => msg.(msg_type) ==n MRq)
+                                                      (findQ down msgs)) = 1)
+                                      (OLocked croot))
                        else LockFreeInv croot)
                 end) ctrs.
 
@@ -304,12 +324,11 @@ Section LockInv.
         (fun rqUp =>
            (edgeDownTo gtr oidx) >>=[True]
              (fun down =>
-                (xor3
-                   (** TODO: reasoning with [length], is this right? *)
-                   (length (findQ rqUp msgs) = 1)
-                   (length (filter (fun msg => msg.(msg_type) ==n MRs)
-                                   (findQ down msgs)) = 1)
-                   (True (** TODO: [HalfLockInv parentIdx] *))))).
+                (xor3 (length (findQ rqUp msgs) = 1)
+                      (length (filter (fun msg => msg.(msg_type) ==n MRs)
+                                      (findQ down msgs)) = 1)
+                      ((parentOf gtr oidx)
+                         >>=[False] (fun pidx => OHalfLocked pidx))))).
     
     Definition LockInvORq (oidx: IdxT) (orq: ORq Msg) :=
       match orq@[O] with
@@ -325,15 +344,15 @@ Section LockInv.
       | None => LockFreeInv oidx
       end.
 
-    Definition LockInvMO (orqs: ORqs Msg) :=
+    Definition LockInvMO :=
       forall oidx,
         In oidx (map (@obj_idx _) sys.(sys_objs)) ->
         LockInvORq oidx (orqs@[oidx] >>=[[]] (fun orq => orq)).
 
-  End OnMessagePool.
+  End OnMState.
   
   Definition LockInv (st: MState oifc) :=
-    LockInvMO st.(bst_msgs) st.(bst_orqs).
+    LockInvMO st.(bst_orqs) st.(bst_msgs).
 
 End LockInv.
 

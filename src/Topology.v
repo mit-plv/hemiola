@@ -210,6 +210,14 @@ Section DTree.
               | CDown => true
               end) (dg_es topo).
 
+  Definition parentOf (idx: IdxT): option IdxT :=
+    (find (fun e =>
+             match e.(edge_from) with
+             | Some from => from ==n idx
+             | None => false
+             end) upEdges)
+      >>= (fun ue => ue.(edge_to)).
+  
   Definition isUpEdge (e: edge DChn) :=
     match fst (fst e.(edge_chn)) with
     | CUp => true
