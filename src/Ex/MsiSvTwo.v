@@ -1,6 +1,6 @@
 Require Import Bool Vector List String Peano_dec.
 Require Import Common FMap HVector ListSupport Syntax Semantics.
-Require Import Topology Transaction.
+Require Import Topology RqRsTopo.
 
 Require Import Spec SpecSv Msi.
 
