@@ -53,7 +53,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [getRq]
            /\oprec RqAccepting
-           /\oprec LockFree0
+           /\oprec UpLockFree0
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] >= msiS;
@@ -72,7 +72,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [getRq]
            /\oprec RqAccepting
-           /\oprec LockFree0
+           /\oprec UpLockFree0
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiI;
@@ -113,8 +113,7 @@ Section System.
          rule_precond :=
            MsgsFrom [pc]
            /\oprec MsgIdsFrom [msiDownRqS]
-           /\oprec RqAccepting
-           /\oprec HalfLockFree0;
+           /\oprec RqAccepting;
          rule_trs :=
            fun (ost: OState ImplOStateIfc) orq mins =>
              (ost+#[implStatusIdx <- msiS],
@@ -130,7 +129,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [setRq]
            /\oprec RqAccepting
-           /\oprec LockFree0
+           /\oprec UpLockFree0
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiM;
@@ -155,7 +154,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [setRq]
            /\oprec RqAccepting
-           /\oprec LockFree0
+           /\oprec UpLockFree0
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] <> msiM;
@@ -197,8 +196,7 @@ Section System.
          rule_precond :=
            MsgsFrom [pc]
            /\oprec MsgIdsFrom [msiDownRqM]
-           /\oprec RqAccepting
-           /\oprec HalfLockFree0;
+           /\oprec RqAccepting;
          rule_trs :=
            fun (ost: OState ImplOStateIfc) orq mins =>
              (ost +#[implStatusIdx <- msiI],
@@ -212,7 +210,7 @@ Section System.
       {| rule_idx := 8;
          rule_precond :=
            RqAccepting
-           /\oprec LockFree0
+           /\oprec UpLockFree0
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] <> msiI;
@@ -266,7 +264,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqS]
              /\oprec RqAccepting
-             /\oprec LockFree0
+             /\oprec DownLockFree0
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] >= msiS;
@@ -284,7 +282,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqS]
              /\oprec RqAccepting
-             /\oprec LockFree0
+             /\oprec DownLockFree0
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] = msiI;
@@ -326,7 +324,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqM]
              /\oprec RqAccepting
-             /\oprec LockFree0
+             /\oprec DownLockFree0
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] = msiM;
@@ -345,7 +343,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqM]
              /\oprec RqAccepting
-             /\oprec LockFree0
+             /\oprec DownLockFree0
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] <> msiM;
@@ -387,7 +385,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqI]
              /\oprec RqAccepting
-             /\oprec LockFree0;
+             /\oprec DownLockFree0;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]

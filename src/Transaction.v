@@ -64,51 +64,54 @@ Section Conditions.
   Definition downRq := 1.
 
   Definition LockFree (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[True] (fun aorq => aorq = []).
+    orq@[addr] >>=[True]
+       (fun aorq => aorq@[upRq] = None /\ aorq@[downRq] = None).
 
-  Definition HalfLockFree (orq: ORq Msg) (addr: AddrT) :=
+  Definition UpLockFree (orq: ORq Msg) (addr: AddrT) :=
+    orq@[addr] >>=[True] (fun aorq => aorq@[upRq] = None).
+
+  Definition DownLockFree (orq: ORq Msg) (addr: AddrT) :=
     orq@[addr] >>=[True] (fun aorq => aorq@[downRq] = None).
 
-  Definition Locked (orq: ORq Msg) (addr: AddrT) (rss: list IdxT) :=
+  Definition UpLocked (orq: ORq Msg) (addr: AddrT) (rsFrom: IdxT) :=
     orq@[addr] >>=[False]
-      (fun aorq =>
-         exists rqi,
-           aorq@[downRq] = Some rqi /\
-           rqi.(rqi_minds_rss) = rss).
+       (fun aorq =>
+          exists rqi,
+            aorq@[upRq] = Some rqi /\
+            rqi.(rqi_minds_rss) = [rsFrom]).
 
-  Definition HalfLocked (orq: ORq Msg) (addr: AddrT) (rsFrom: IdxT) :=
+  Definition DownLocked (orq: ORq Msg) (addr: AddrT) (rss: list IdxT) :=
     orq@[addr] >>=[False]
-      (fun aorq =>
-         aorq@[downRq] = None /\
-         exists rqi,
-           aorq@[upRq] = Some rqi /\
-           rqi.(rqi_minds_rss) = [rsFrom]).
+       (fun aorq =>
+          exists rqi,
+            aorq@[downRq] = Some rqi /\
+            rqi.(rqi_minds_rss) = rss).
 
   (** TODO: discuss whether it's fine to have a locking mechanism 
    * only for a single address. *)
-  Definition LockFree0: OPrec oifc :=
-    fun ost orq mins => LockFree orq O.
+  Definition UpLockFree0: OPrec oifc :=
+    fun ost orq mins => UpLockFree orq O.
 
-  Definition HalfLockFree0: OPrec oifc :=
-    fun ost orq mins => HalfLockFree orq O.
+  Definition DownLockFree0: OPrec oifc :=
+    fun ost orq mins => DownLockFree orq O.
 
-  Definition Locking0 (rule: Rule oifc) (rss: list IdxT): Prop :=
+  Definition UpLocking0 (rule: Rule oifc) (rsFrom: IdxT): Prop :=
     forall ost orq mins,
-      Locked (snd (fst (rule.(rule_trs) ost orq mins))) O rss.
+      UpLocked (snd (fst (rule.(rule_trs) ost orq mins))) O rsFrom.
 
-  Definition HalfLocking0 (rule: Rule oifc) (rsFrom: IdxT): Prop :=
+  Definition DownLocking0 (rule: Rule oifc) (rss: list IdxT): Prop :=
     forall ost orq mins,
-      HalfLocked (snd (fst (rule.(rule_trs) ost orq mins))) O rsFrom.
+      DownLocked (snd (fst (rule.(rule_trs) ost orq mins))) O rss.
 
-  Definition Releasing0 (rule: Rule oifc) (rss: list IdxT): Prop :=
+  Definition UpReleasing0 (rule: Rule oifc) (rsFrom: IdxT): Prop :=
     forall ost orq mins,
-      Locked orq O rss /\
-      LockFree (snd (fst (rule.(rule_trs) ost orq mins))) O.
+      UpLocked orq O rsFrom /\
+      UpLockFree (snd (fst (rule.(rule_trs) ost orq mins))) O.
 
-  Definition HalfReleasing0 (rule: Rule oifc) (rsFrom: IdxT): Prop :=
+  Definition DownReleasing0 (rule: Rule oifc) (rss: list IdxT): Prop :=
     forall ost orq mins,
-      HalfLocked orq O rsFrom /\
-      HalfLockFree (snd (fst (rule.(rule_trs) ost orq mins))) O.
+      DownLocked orq O rss /\
+      DownLockFree (snd (fst (rule.(rule_trs) ost orq mins))) O.
 
   Definition StateUnchanged (rule: Rule oifc): Prop :=
     forall ost orq mins,
@@ -136,6 +139,9 @@ Section RqRsTopo.
   Definition rsUpEdges (gtr: DTree): list IdxT :=
     edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs) (upEdges gtr)).
 
+  Definition upEdges (gtr: DTree): list IdxT :=
+    edgeInds (upEdges gtr).
+  
   Definition downEdges (gtr: DTree): list IdxT :=
     edgeInds (downEdges gtr).
 
@@ -174,32 +180,28 @@ Section RqRsTopo.
         exists rqFrom,
           In rqFrom (rqEdgesUpTo gtr oidx) /\
           (rule.(rule_precond)
-           ->oprec (MsgsFrom [rqFrom]
-                    /\oprec RqAccepting
-                    /\oprec LockFree0)).
+           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)).
 
       (* A rule handling a request from the parent *)
       Definition RqFromUpRule (rule: Rule oifc) :=
         exists rqFrom,
           edgeDownTo gtr oidx = Some rqFrom /\
           (rule.(rule_precond)
-           ->oprec (MsgsFrom [rqFrom]
-                    /\oprec RqAccepting
-                    /\oprec HalfLockFree0)).
+           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)).
 
       (* A rule handling responses from some of its children *)
       Definition RsFromDownRule (rule: Rule oifc) :=
         exists rssFrom,
           SubList rssFrom (rsEdgesUpTo gtr oidx) /\ NoDup rssFrom /\
           (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
-          Releasing0 rule rssFrom.
+          DownReleasing0 rule rssFrom.
 
       (* A rule handling a response from the parent *)
       Definition RsFromUpRule (rule: Rule oifc) :=
         exists rsFrom,
           edgeDownTo gtr oidx = Some rsFrom /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rsFrom] /\oprec RsAccepting)) /\
-          HalfReleasing0 rule rsFrom.
+          UpReleasing0 rule rsFrom.
 
       (** * Rule predicates about which messages to release *)
 
@@ -208,7 +210,8 @@ Section RqRsTopo.
         exists rqsTo rssFrom,
           SubList rqsTo (edgesDownFrom gtr oidx) /\ NoDup rqsTo /\
           MsgsTo rqsTo rule /\ RqForwarding rule /\
-          Locking0 rule rssFrom /\
+          (rule.(rule_precond) ->oprec DownLockFree0) /\
+          DownLocking0 rule rssFrom /\
           (* RqRsChannels rqsTo rssFrom /\ *)
           StateUnchanged rule.
 
@@ -217,7 +220,8 @@ Section RqRsTopo.
         exists rqTo rsFrom,
           rqEdgeUpFrom gtr oidx = Some rqTo /\
           MsgsTo [rqTo] rule /\ RqForwarding rule /\
-          HalfLocking0 rule rsFrom /\
+          (rule.(rule_precond) ->oprec UpLockFree0) /\
+          UpLocking0 rule rsFrom /\
           (* RqRsChannels [rqTo] [rsFrom] /\ *)
           StateUnchanged rule.
 
@@ -225,8 +229,9 @@ Section RqRsTopo.
       Definition RsToDownRule (rule: Rule oifc) :=
         exists rsTo,
           In rsTo (edgesDownFrom gtr oidx) /\
-          MsgsTo [rsTo] rule /\
-          RsForwarding rule.
+          MsgsTo [rsTo] rule /\ RsForwarding rule /\
+          (* This is the trick to avoid incorrect behaviors! *)
+          (rule.(rule_precond) ->oprec DownLockFree0).
       
       (* A rule making a response to the parent *)
       Definition RsToUpRule (rule: Rule oifc) :=
@@ -264,6 +269,168 @@ Section RqRsTopo.
 End RqRsTopo.
 
 (*! Invariants *)
+
+Inductive TrsType := RqUp | RqDown | RsUp | RsDown.
+(* (* Object index -> TrsTypes (ordered, head is the oldest one) *) *)
+(* Definition TrsState := M.t (list TrsType). *)
+
+Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
+  option IdxT * option IdxT * TrsType :=
+  (findEdge gtr (fst idm))
+    >>=[(None, None, RqUp)]
+    (fun e =>
+       (e.(edge_from),
+        e.(edge_to),
+        match fst (fst e.(edge_chn)) with
+        | CUp => if eq_nat_dec (msg_type (snd idm)) MRq then RqUp else RsUp
+        | CDown => if eq_nat_dec (msg_type (snd idm)) MRq then RqDown else RsDown
+        end)).
+
+(* Definition addTrsState (oidx: IdxT) (tr: TrsType) (ts: TrsState): TrsState := *)
+(*   match ts@[oidx] with *)
+(*   | Some tts => ts +[oidx <- tr :: tts] *)
+(*   | None => ts +[oidx <- [tr]] *)
+(*   end. *)
+
+(* Definition SemiDisjTrsType (t1 t2: TrsType) := *)
+(*   match t1, t2 with *)
+(*   | RqUp, RqDown => True *)
+(*   | RqUp, RsUp => True *)
+(*   | RqDown, RqUp => True *)
+(*   (** Since there is always a single downward channel, we need to keep the order *)
+(*    * in the channel. *)
+(*    *) *)
+(*   (* | RqDown, RsDown => True *) *)
+(*   | _, _ => False *)
+(*   end. *)
+
+(* Definition SemiDisjTrsState (ts1 ts2: TrsState) := *)
+(*   forall oidx, *)
+(*     match ts1@[oidx], ts2@[oidx] with *)
+(*     | Some tts1, Some tts2 => *)
+(*       forall t1 t2, *)
+(*         In t1 tts1 -> In t2 tts2 -> *)
+(*         SemiDisjTrsType t1 t2 *)
+(*     | _, _ => True *)
+(*     end. *)
+
+(* Definition rqsOfL (lbl: MLabel) := *)
+(*   match lbl with *)
+(*   | RlblInt oidx _ _ mouts => *)
+(*     match mouts with *)
+(*     | nil => None (* Requests are never ignored. *) *)
+(*     | (midx, mout) :: _ => *)
+(*       if eq_nat_dec (msg_type mout) MRq *)
+(*       then Some oidx else None *)
+(*     end *)
+(*   | _ => None *)
+(*   end. *)
+
+Definition rssOfL (lbl: MLabel) :=
+  match lbl with
+  | RlblInt oidx _ _ mouts =>
+    match mouts with
+    | nil => Some oidx (* Requests are never ignored. *)
+    | (midx, mout) :: _ =>
+      if eq_nat_dec (msg_type mout) MRs
+      then Some oidx else None
+    end
+  | _ => None
+  end.
+
+Fixpoint rssOf (hst: MHistory): list IdxT :=
+  match hst with
+  | nil => nil
+  | lbl :: hst' => (rssOfL lbl) ::> (rssOf hst')
+  end.
+
+Section AtomicInv.
+  Context {oifc: OStateIfc}.
+  Variables (gtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hrr: RqRsSys gtr oifc sys).
+
+  Definition subtreeInds (sroot: option IdxT): list IdxT :=
+    sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree gtr sroot))).
+
+  Definition subtreeCInds (sroot: option IdxT): list IdxT :=
+    removeL eq_nat_dec (dg_vs (topoOfT gtr))
+            (sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree gtr sroot)))).
+
+  Definition rqCover (idm: Id Msg): list IdxT :=
+    let from := fst (fst (trsTypeOf gtr idm)) in
+    let to := snd (fst (trsTypeOf gtr idm)) in
+    match snd (trsTypeOf gtr idm) with
+    | RqUp => dg_vs (topoOfT gtr) (* the entire indices *)
+    | RqDown => subtreeInds to
+    | _ => nil
+    end.
+  
+  Fixpoint rqCovers (eouts: list (Id Msg)): list IdxT :=
+    match eouts with
+    | nil => nil
+    | idm :: eouts' => rqCover idm ++ rqCovers eouts'
+    end.
+  
+  Definition rsCover (idm: Id Msg): list IdxT :=
+    let from := fst (fst (trsTypeOf gtr idm)) in
+    let to := snd (fst (trsTypeOf gtr idm)) in
+    match snd (trsTypeOf gtr idm) with
+    | RsUp => subtreeInds from
+    | RsDown => subtreeCInds to
+    | _ => nil
+    end.
+  
+  Fixpoint rsCovers (eouts: list (Id Msg)): list IdxT :=
+    match eouts with
+    | nil => nil
+    | idm :: eouts' => rsCover idm ++ rsCovers eouts'
+    end.
+  
+  (* Definition RssInSubtree (oidx: option IdxT) (hst: MHistory) := *)
+  (*   SubList (rssOf hst) (subtreeInds oidx). *)
+
+  (* Definition RssInSubtreeC (oidx: option IdxT) (hst: MHistory) := *)
+  (*   DisjList (rssOf hst) (subtreeInds oidx). *)
+
+  (* Definition AtomicInvInits (inits: list (Id Msg)) (hst: MHistory) := *)
+  (*   forall idm, *)
+  (*     In idm inits -> *)
+  (*     let from := fst (fst (trsTypeOf gtr idm)) in *)
+  (*     let to := snd (fst (trsTypeOf gtr idm)) in *)
+  (*     match snd (trsTypeOf gtr idm) with *)
+  (*     | RqUp => True *)
+  (*     | RqDown => RssInSubtree from hst *)
+  (*     | RsUp => RssDisjToSubtree from hst *)
+  (*     | RsDown => RssInSubtree to hst *)
+  (*     end. *)
+
+  (* Definition AtomicInvEOuts (eouts: list (Id Msg)) (hst: MHistory) := *)
+  (*   forall idm, *)
+  (*     In idm eouts -> *)
+  (*     let from := fst (fst (trsTypeOf gtr idm)) in *)
+  (*     let to := snd (fst (trsTypeOf gtr idm)) in *)
+  (*     match snd (trsTypeOf gtr idm) with *)
+  (*     | RsUp =>  *)
+  (*     | RsDown =>  *)
+  (*     end. *)
+
+  Definition AtomicInv (eouts: list (Id Msg)) (hst: MHistory) :=
+    NoDup (rssOf hst) /\
+    SubList (rssOf hst) (rsCovers eouts) /\
+    DisjList (rssOf hst) (rqCovers eouts).
+
+  Lemma atomic_inv:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall s1 s2,
+        steps step_m sys s1 hst s2 ->
+        AtomicInv inits hst.
+  Proof.
+  Admitted.
+  
+End AtomicInv.
 
 Section LockInv.
   Context {oifc: OStateIfc}.
@@ -354,24 +521,61 @@ Section LockInv.
   Definition LockInv (st: MState oifc) :=
     LockInvMO st.(bst_orqs) st.(bst_msgs).
 
+  Lemma lockInv_init:
+    sys.(sys_orqs_inits) = [] ->
+    InvInit sys LockInv.
+  Proof.
+    intros; do 3 red; cbn.
+    intros; cbn; rewrite H; cbn.
+    do 2 red; cbn; intros.
+    find_if_inside; auto.
+    find_if_inside; auto.
+  Qed.
+
+  Lemma lockInv_step_ext_in:
+    forall oss orqs msgs eins,
+      LockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      eins <> nil ->
+      ValidMsgsExtIn sys eins ->
+      LockInv {| bst_oss := oss;
+                 bst_orqs := orqs;
+                 bst_msgs := enqMsgs eins msgs |}.
+  Proof.
+    unfold LockInv, LockInvMO; cbn; intros.
+    specialize (H oidx H2).
+    unfold LockInvORq in *.
+    remember (orqs@[oidx]) as orq; destruct orq as [orq|]; cbn in *.
+    - remember (orq@[0]) as aorq; destruct aorq as [aorq|]; cbn in *.
+      + admit.
+      + admit.
+    - admit.
+    
+  Admitted.
+
+  Lemma lockInv_step_ext_out:
+    forall oss orqs msgs eouts,
+      LockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      eouts <> nil ->
+      Forall (FirstMPI msgs) eouts ->
+      ValidMsgsExtOut sys eouts ->
+      LockInv {| bst_oss := oss;
+                 bst_orqs := orqs;
+                 bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+  Proof.
+  Admitted.
+  
+  Lemma lockInv_step:
+    InvStep sys step_m LockInv.
+  Proof.
+    red; intros.
+    
+    inv H1; auto.
+    - apply lockInv_step_ext_in; auto.
+    - apply lockInv_step_ext_out; auto.
+    - 
+  Admitted.
+
 End LockInv.
-
-
-(* Inductive TrsType := RqUp | RqDown | Rs. *)
-(* Definition TrsState := M.t TrsType. (* Object index -> TrsType *) *)
-
-(* Definition SemiDisjTrsType (t1 t2: TrsType) := *)
-(*   match t1, t2 with *)
-(*   | RqUp, Rs => True *)
-(*   | _, _ => False *)
-(*   end. *)
-
-(* Definition SemiDisjTrsState (ts1 ts2: TrsState) := *)
-(*   forall oidx, *)
-(*     match ts1@[oidx], ts2@[oidx] with *)
-(*     | Some t1, Some t2 => SemiDisjTrsType t1 t2 *)
-(*     | _, _ => True *)
-(*     end. *)
 
 (* Section SemiDisj. *)
 (*   Context {oifc: OStateIfc}. *)
@@ -383,13 +587,13 @@ End LockInv.
 (*     | RlblInt oidx _ _ mouts => *)
 (*       (oidx, *)
 (*        match mouts with *)
-(*        | nil => Rs (* Requests are never ignored. *) *)
+(*        | nil => RsDown (* Requests are never ignored. *) *)
 (*        | (midx, mout) :: _ => *)
-(*          if eq_nat_dec (msg_type mout) MRs *)
-(*          then Rs *)
-(*          else if idxUpEdge gtr midx *)
-(*               then RqUp *)
-(*               else RqDown *)
+(*          if idxUpEdge gtr midx *)
+(*          then if eq_nat_dec (msg_type mout) MRs *)
+(*               then RsUp else RqUp *)
+(*          else if eq_nat_dec (msg_type mout) MRq *)
+(*               then RqDown else RsDown *)
 (*        end) *)
 (*     | _ => (0, RqUp) (* never happens *) *)
 (*     end. *)
@@ -399,9 +603,9 @@ End LockInv.
 (*     | nil => [] *)
 (*     | lbl :: hst' => *)
 (*       let trsl := trsStateOfL lbl in *)
-(*       (trsStateOf hst') +[fst trsl <- snd trsl] *)
+(*       addTrsState (fst trsl) (snd trsl) (trsStateOf hst') *)
 (*     end. *)
-  
+
 (*   Definition RqRsNonConflictingR (rule1 rule2: Rule oifc) := *)
 (*     if rule_msg_type_to rule1 ==n MRs then *)
 (*       if rule_msg_type_to rule2 ==n MRs then False *)

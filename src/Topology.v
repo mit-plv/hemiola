@@ -93,11 +93,11 @@ Section DTree.
     | Node _ cs => map snd cs
     end.
 
-  Fixpoint flatten (gtr: DTree): list DTree :=
+  Fixpoint collectSubtrees (gtr: DTree): list DTree :=
     match gtr with
     | Leaf => nil
     | Node root cs =>
-      Node root cs :: List.concat (map (fun udc => flatten (snd udc)) cs)
+      Node root cs :: List.concat (map (fun udc => collectSubtrees (snd udc)) cs)
     end.
 
   Fixpoint subtree' (trs: list DTree) (idx: IdxT): DTree :=
@@ -112,37 +112,7 @@ Section DTree.
     end.
 
   Definition subtree (gtr: DTree) (idx: IdxT): DTree :=
-    subtree' (flatten gtr) idx.
-  
-  (* Fixpoint childrenOfIdx' (fls: list DTree) (pidx: IdxT): list DTree := *)
-  (*   match fls with *)
-  (*   | nil => nil *)
-  (*   | fl :: fls' => *)
-  (*     if option_dec eq_nat_dec (rootOf fl) (Some pidx) *)
-  (*     then childrenOf fl *)
-  (*     else childrenOfIdx' fls' pidx *)
-  (*   end. *)
-
-  (* Definition childrenOfIdx (gtr: DTree) (pidx: IdxT): list DTree := *)
-  (*   childrenOfIdx' (flatten gtr) pidx. *)
-
-  (* Definition childrenIndsOfIdx (gtr: DTree) (pidx: IdxT): list IdxT := *)
-  (*   oll (map rootOf (childrenOfIdx gtr pidx)). *)
-
-  (* Fixpoint parentOfIdx' (fls: list DTree) (cidx: IdxT): option DTree := *)
-  (*   match fls with *)
-  (*   | nil => None *)
-  (*   | fl :: fls' => *)
-  (*     if in_dec (option_dec eq_nat_dec) (Some cidx) (map rootOf (childrenOf fl)) *)
-  (*     then Some fl *)
-  (*     else parentOfIdx' fls' cidx *)
-  (*   end. *)
-
-  (* Definition parentOfIdx (gtr: DTree) (cidx: IdxT): option DTree := *)
-  (*   parentOfIdx' (flatten gtr) cidx. *)
-
-  (* Definition parentIdxOfIdx (gtr: DTree) (cidx: IdxT): option IdxT := *)
-  (*   (parentOfIdx gtr cidx) >>=[None] (fun ptr => rootOf ptr). *)
+    subtree' (collectSubtrees gtr) idx.
 
   Inductive CDir := CUp | CDown.
   Definition DChn := (CDir * nat * IdxT)%type.

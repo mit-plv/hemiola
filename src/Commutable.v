@@ -8,8 +8,6 @@ Open Scope list.
 
 (*! Reducibility (commutativity) of internal state transitions *)
 
-(** TODO: need to check whether the disjointness between [ins1] and [ins2] 
- * (or [outs1] and [outs2]) is required. *)
 Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
   forall post1 porq1 ins1 nost1 norq1 outs1 ins2,
     rule_precond rule1 post1 porq1 ins1 ->
