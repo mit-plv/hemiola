@@ -83,7 +83,7 @@ Section MsgParam.
       specialize (IHAtomic _ _ _ _ H8).
       dest; subst; auto.
   Qed.
-  
+
   Lemma atomic_messages_spec_ValidDeqs:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -150,7 +150,16 @@ Section MsgParam.
       apply SubList_app_3; [assumption|].
       apply removeL_SubList_2.
   Qed.
-  
+
+  Lemma internal_transition_messages_in:
+    forall {oifc} (sys: System oifc) idm st1 st2 oidx ridx ins outs,
+      InMPI (bst_msgs st1) idm ->
+      ~ In idm ins ->
+      step_m sys st1 (RlblInt oidx ridx ins outs) st2 ->
+      InMPI (bst_msgs st2) idm.
+  Proof.
+  Admitted.
+
   Lemma atomic_messages_spec_in:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -161,6 +170,30 @@ Section MsgParam.
           ~ In idm inits ->
           InMPI (bst_msgs st2) idm.
   Proof.
+    (* intros. *)
+    (* pose proof (atomic_messages_spec H H0). *)
+    (* pose proof (atomic_messages_ins_outs H). *)
+    (* destruct (in_dec (id_dec msg_dec) idm outs). *)
+
+    (* induction 1; simpl; intros; subst. *)
+
+    (* - inv H; inv H5. *)
+    (*   eapply internal_transition_messages_in; eauto. *)
+
+    (* - inv H5. *)
+    (*   specialize (IHAtomic _ _ _ _ H8 _ H6 H7). *)
+    (*   destruct (in_dec (id_dec msg_dec) idm rins); *)
+    (*     [|eauto using internal_transition_messages_in]. *)
+
+    (*   apply H1 in i. *)
+    (*   assert (In idm outs). *)
+    (*   { pose proof (atomic_messages_ins_outs H). *)
+    (*     destruct H2. *)
+    (*     assert (In idm (ins ++ eouts)) by (apply in_or_app; auto). *)
+    (*     apply H3 in H4. *)
+    (*     apply in_app_or in H4. *)
+    (*     destruct H4; intuition. *)
+    (*   } *)
   Admitted.
   
   Lemma atomic_behavior_nil:

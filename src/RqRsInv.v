@@ -37,40 +37,6 @@ Fixpoint rssOf (hst: MHistory): list IdxT :=
   | lbl :: hst' => (rssOfL lbl) ::> (rssOf hst')
   end.
 
-Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
-  option IdxT * option IdxT * TrsType :=
-  (findEdge gtr (fst idm))
-    >>=[(None, None, RqUp)]
-    (fun e =>
-       (e.(edge_from),
-        e.(edge_to),
-        match fst (fst e.(edge_chn)) with
-        | CUp => if eq_nat_dec (msg_type (snd idm)) MRq then RqUp else RsUp
-        | CDown => if eq_nat_dec (msg_type (snd idm)) MRq then RqDown else RsDown
-        end)).
-
-(* Definition SemiDisjTrsType (t1 t2: TrsType) := *)
-(*   match t1, t2 with *)
-(*   | RqUp, RqDown => True *)
-(*   | RqUp, RsUp => True *)
-(*   | RqDown, RqUp => True *)
-(*   (** Since there is always a single downward channel, we need to keep the order *)
-(*    * in the channel. *)
-(*    *) *)
-(*   (* | RqDown, RsDown => True *) *)
-(*   | _, _ => False *)
-(*   end. *)
-
-(* Definition SemiDisjTrsState (ts1 ts2: TrsState) := *)
-(*   forall oidx, *)
-(*     match ts1@[oidx], ts2@[oidx] with *)
-(*     | Some tts1, Some tts2 => *)
-(*       forall t1 t2, *)
-(*         In t1 tts1 -> In t2 tts2 -> *)
-(*         SemiDisjTrsType t1 t2 *)
-(*     | _, _ => True *)
-(*     end. *)
-
 (* Definition rqsOfL (lbl: MLabel) := *)
 (*   match lbl with *)
 (*   | RlblInt oidx _ _ mouts => *)
@@ -82,6 +48,18 @@ Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
 (*     end *)
 (*   | _ => None *)
 (*   end. *)
+
+Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
+  option IdxT * option IdxT * TrsType :=
+  (findEdge gtr (fst idm))
+    >>=[(None, None, RqUp)]
+    (fun e =>
+       (e.(edge_from),
+        e.(edge_to),
+        match fst (fst e.(edge_chn)) with
+        | CUp => if eq_nat_dec (msg_type (snd idm)) MRq then RqUp else RsUp
+        | CDown => if eq_nat_dec (msg_type (snd idm)) MRq then RqDown else RsDown
+        end)).
 
 Section AtomicInv.
   Context {oifc: OStateIfc}.
@@ -154,7 +132,8 @@ Section AtomicInv.
 End AtomicInv.
 
 (* Want: between two continuous histories H1 and H2, after H1, related locks are
- * never released until H2.
+ * never released until H2; it can be proven by [LockInv] below and
+ * [atomic_messages_spec_in] in SerialFacts.v.
  *)
 Section LockInv.
   Context {oifc: OStateIfc}.
