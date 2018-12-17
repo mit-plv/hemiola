@@ -45,11 +45,12 @@ Lemma ValidMsgsIn_sys_minds:
     ValidMsgsIn sys1 eins ->
     forall (sys2: System oifc),
       sys_minds sys1 = sys_minds sys2 ->
+      sys_merqs sys1 = sys_merqs sys2 ->
       ValidMsgsIn sys2 eins.
 Proof.
   unfold ValidMsgsIn; intros.
   dest; split; auto.
-  rewrite <-H1; assumption.
+  rewrite <-H1, <-H2; assumption.
 Qed.
 
 Lemma ValidMsgsOut_sys_minds_sys_merss:

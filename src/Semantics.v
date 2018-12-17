@@ -29,7 +29,7 @@ Section Validness.
    * 2) they are well-distributed.
    *)
   Definition ValidMsgsIn (sys: System oifc) (msgs: list (Id MsgT)) :=
-    SubList (idsOf msgs) (sys_minds sys) /\
+    SubList (idsOf msgs) (sys_minds sys ++ sys_merqs sys) /\
     WellDistrMsgs msgs.
 
   (* A set of messages are "valid outputs" iff
