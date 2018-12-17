@@ -83,7 +83,7 @@ Section MsgParam.
       specialize (IHAtomic _ _ _ _ H8).
       dest; subst; auto.
   Qed.
-
+  
   Lemma atomic_messages_spec_ValidDeqs:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -126,6 +126,42 @@ Section MsgParam.
   Proof.
     intros; eapply atomic_messages_spec_ValidDeqs; eauto.
   Qed.
+
+  Lemma atomic_messages_ins_outs:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      EquivList (inits ++ outs) (ins ++ eouts).
+  Proof.
+    induction 1; simpl; intros; subst;
+      [apply EquivList_refl|].
+
+    destruct IHAtomic; split.
+    - repeat rewrite app_assoc.
+      apply SubList_app_6; [|apply SubList_refl].
+      eapply SubList_trans; [eassumption|].
+      rewrite <-app_assoc.
+      apply SubList_app_6; [apply SubList_refl|].
+      apply removeL_SubList_3.
+    - repeat rewrite app_assoc.
+      apply SubList_app_6; [|apply SubList_refl].
+      eapply SubList_trans; [|eassumption].
+      rewrite <-app_assoc.
+      apply SubList_app_6; [apply SubList_refl|].
+      apply SubList_app_3; [assumption|].
+      apply removeL_SubList_2.
+  Qed.
+  
+  Lemma atomic_messages_spec_in:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall {oifc} (sys: System oifc) st1 st2,
+        steps step_m sys st1 hst st2 ->
+        forall idm,
+          InMPI (bst_msgs st1) idm ->
+          ~ In idm inits ->
+          InMPI (bst_msgs st2) idm.
+  Proof.
+  Admitted.
   
   Lemma atomic_behavior_nil:
     forall `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,

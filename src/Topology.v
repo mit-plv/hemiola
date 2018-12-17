@@ -81,38 +81,60 @@ Section DTree.
                          list IdxT (* downward edges *)) *
                         DTree (* child *)) -> DTree.
 
-  Definition rootOf (gtr: DTree): option IdxT :=
-    match gtr with
+  Section DTree_ind'.
+    Variable P: DTree -> Prop.
+    Hypotheses (H0: P Leaf)
+               (H1: forall i cs,
+                   Forall (fun ic => P (snd ic)) cs ->
+                   P (Node i cs)).
+
+    Fixpoint DTree_ind' (dtr: DTree): P dtr :=
+      match dtr with
+      | Leaf => H0
+      | Node i cs =>
+        H1 i (list_ind
+                (fun cs => Forall (fun ic => P (snd ic)) cs)
+                (Forall_nil _)
+                (fun ic _ IH =>
+                   Forall_cons ic (DTree_ind' (snd ic)) IH) cs)
+      end.
+  End DTree_ind'.
+
+  Section FindNonLeaf.
+    Context {A: Type}.
+    Variable f: A -> DTree.
+
+    Fixpoint findNonLeaf (trs: list A): DTree :=
+      match trs with
+      | nil => Leaf
+      | tr :: trs' =>
+        match f tr with
+        | Leaf => findNonLeaf trs'
+        | _ => f tr
+        end
+      end.
+
+  End FindNonLeaf.
+  
+  Definition rootOf (dtr: DTree): option IdxT :=
+    match dtr with
     | Leaf => None
     | Node root _ => Some root
     end.
 
-  Definition childrenOf (gtr: DTree): list DTree :=
-    match gtr with
+  Definition childrenOf (dtr: DTree): list DTree :=
+    match dtr with
     | Leaf => nil
     | Node _ cs => map snd cs
     end.
-
-  Fixpoint collectSubtrees (gtr: DTree): list DTree :=
-    match gtr with
-    | Leaf => nil
+  
+  Fixpoint subtree (dtr: DTree) (idx: IdxT): DTree :=
+    match dtr with
+    | Leaf => Leaf
     | Node root cs =>
-      Node root cs :: List.concat (map (fun udc => collectSubtrees (snd udc)) cs)
+      if eq_nat_dec root idx then dtr
+      else findNonLeaf (fun ic => subtree (snd ic) idx) cs
     end.
-
-  Fixpoint subtree' (trs: list DTree) (idx: IdxT): DTree :=
-    match trs with
-    | nil => Leaf
-    | tr :: trs' =>
-      match tr with
-      | Leaf => subtree' trs' idx
-      | Node root _ =>
-        if root ==n idx then tr else subtree' trs' idx
-      end
-    end.
-
-  Definition subtree (gtr: DTree) (idx: IdxT): DTree :=
-    subtree' (collectSubtrees gtr) idx.
 
   Inductive CDir := CUp | CDown.
   Definition DChn := (CDir * nat * IdxT)%type.
@@ -145,8 +167,8 @@ Section DTree.
     (edgesUp pidx cidx (fst updowns) O)
       ++ (edgesDown pidx cidx (snd updowns) O).
   
-  Fixpoint topoOfT (gtr: DTree): digraph DChn :=
-    match gtr with
+  Fixpoint topoOfT (dtr: DTree): digraph DChn :=
+    match dtr with
     | Leaf => emptyDigraph DChn
     | Node root cs =>
       connectMany
@@ -156,9 +178,9 @@ Section DTree.
                  topoOfT (snd eec))) cs)
     end.
 
-  Variable (gtr: DTree).
+  Variable (dtr: DTree).
 
-  Local Notation topo := (topoOfT gtr).
+  Local Notation topo := (topoOfT dtr).
 
   Definition EdgeIn (e: edge DChn) :=
     In e (dg_es topo).

@@ -460,6 +460,16 @@ Section Removal.
     eapply removeOnce_In_2; eauto.
   Qed.
 
+  Lemma removeOnce_SubList_3:
+    forall a l2,
+      SubList l2 (a :: removeOnce a l2).
+  Proof.
+    unfold SubList; intros.
+    destruct (eq_dec a e); subst.
+    - intuition.
+    - right; apply removeOnce_In_1; auto.
+  Qed.
+  
   Lemma removeL_SubList_1:
     forall l1 l2,
       SubList l1 l2 ->
@@ -490,6 +500,22 @@ Section Removal.
       + apply removeOnce_SubList_2.
   Qed.
 
+  Lemma removeL_SubList_3:
+    forall l1 l2,
+      SubList l1 (l2 ++ removeL l1 l2).
+  Proof.
+    intros.
+    generalize dependent l1.
+    induction l2; simpl; intros.
+    - apply SubList_refl.
+    - specialize (IHl2 (removeOnce a l1)).
+      eapply SubList_trans.
+      + apply removeOnce_SubList_3 with (a:= a).
+      + apply SubList_cons.
+        * intuition.
+        * apply SubList_cons_right; auto.
+  Qed.
+      
   Lemma removeL_app_1:
     forall (l1 l2 l3: list A),
       removeL l1 (l2 ++ l3) =

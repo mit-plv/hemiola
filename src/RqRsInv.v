@@ -10,8 +10,32 @@ Open Scope fmap.
 (** Useful invariants on top of [RqRsSys] *)
 
 Inductive TrsType := RqUp | RqDown | RsUp | RsDown.
-(* (* Object index -> TrsTypes (ordered, head is the oldest one) *) *)
-(* Definition TrsState := M.t (list TrsType). *)
+(* Object index -> TrsTypes (ordered, head is the oldest one) *)
+Definition TrsState := M.t (list TrsType).
+
+Definition addTrsState (oidx: IdxT) (tr: TrsType) (ts: TrsState): TrsState :=
+  match ts@[oidx] with
+  | Some tts => ts +[oidx <- tr :: tts]
+  | None => ts +[oidx <- [tr]]
+  end.
+
+Definition rssOfL (lbl: MLabel) :=
+  match lbl with
+  | RlblInt oidx _ _ mouts =>
+    match mouts with
+    | nil => Some oidx (* Requests are never ignored. *)
+    | (midx, mout) :: _ =>
+      if eq_nat_dec (msg_type mout) MRs
+      then Some oidx else None
+    end
+  | _ => None
+  end.
+
+Fixpoint rssOf (hst: MHistory): list IdxT :=
+  match hst with
+  | nil => nil
+  | lbl :: hst' => (rssOfL lbl) ::> (rssOf hst')
+  end.
 
 Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
   option IdxT * option IdxT * TrsType :=
@@ -24,12 +48,6 @@ Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
         | CUp => if eq_nat_dec (msg_type (snd idm)) MRq then RqUp else RsUp
         | CDown => if eq_nat_dec (msg_type (snd idm)) MRq then RqDown else RsDown
         end)).
-
-(* Definition addTrsState (oidx: IdxT) (tr: TrsType) (ts: TrsState): TrsState := *)
-(*   match ts@[oidx] with *)
-(*   | Some tts => ts +[oidx <- tr :: tts] *)
-(*   | None => ts +[oidx <- [tr]] *)
-(*   end. *)
 
 (* Definition SemiDisjTrsType (t1 t2: TrsType) := *)
 (*   match t1, t2 with *)
@@ -64,24 +82,6 @@ Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
 (*     end *)
 (*   | _ => None *)
 (*   end. *)
-
-Definition rssOfL (lbl: MLabel) :=
-  match lbl with
-  | RlblInt oidx _ _ mouts =>
-    match mouts with
-    | nil => Some oidx (* Requests are never ignored. *)
-    | (midx, mout) :: _ =>
-      if eq_nat_dec (msg_type mout) MRs
-      then Some oidx else None
-    end
-  | _ => None
-  end.
-
-Fixpoint rssOf (hst: MHistory): list IdxT :=
-  match hst with
-  | nil => nil
-  | lbl :: hst' => (rssOfL lbl) ::> (rssOf hst')
-  end.
 
 Section AtomicInv.
   Context {oifc: OStateIfc}.
@@ -153,6 +153,9 @@ Section AtomicInv.
   
 End AtomicInv.
 
+(* Want: between two continuous histories H1 and H2, after H1, related locks are
+ * never released until H2.
+ *)
 Section LockInv.
   Context {oifc: OStateIfc}.
   Variables (gtr: DTree)
@@ -170,14 +173,7 @@ Section LockInv.
            orq@[O] >>=[False]
              (fun aorq => aorq@[downRq] <> None)).
 
-    Definition OHalfLocked (oidx: IdxT) :=
-      orqs@[oidx] >>=[False]
-        (fun orq =>
-           orq@[O] >>=[False]
-             (fun aorq => aorq@[downRq] = None /\
-                          aorq@[upRq] <> None)).
-    
-    Definition LockFreeInv (oidx: IdxT) :=
+    Definition DownLockFreeInv (oidx: IdxT) :=
       let str := subtree gtr oidx in
       ForallQ (fun midx q =>
                  if midx ?<n (rsUpEdges str)
@@ -186,7 +182,7 @@ Section LockInv.
                       then filter (fun msg => msg.(msg_type) ==n MRq) q = nil
                       else True) msgs.
 
-    Definition FullLockInv (oidx: IdxT) (rqi: RqInfo Msg) :=
+    Definition DownLockedInv (oidx: IdxT) (rqi: RqInfo Msg) :=
       let str := subtree gtr oidx in
       let ctrs := childrenOf str in
       Forall (fun child =>
@@ -204,32 +200,17 @@ Section LockInv.
                                       (length (filter (fun msg => msg.(msg_type) ==n MRq)
                                                       (findQ down msgs)) = 1)
                                       (OLocked croot))
-                       else LockFreeInv croot)
+                       else DownLockFreeInv croot)
                 end) ctrs.
 
-    Fixpoint HalfLockInv (oidx: IdxT) :=
-      (rqEdgeUpFrom gtr oidx) >>=[True]
-        (fun rqUp =>
-           (edgeDownTo gtr oidx) >>=[True]
-             (fun down =>
-                (xor3 (length (findQ rqUp msgs) = 1)
-                      (length (filter (fun msg => msg.(msg_type) ==n MRs)
-                                      (findQ down msgs)) = 1)
-                      ((parentOf gtr oidx)
-                         >>=[False] (fun pidx => OHalfLocked pidx))))).
-    
     Definition LockInvORq (oidx: IdxT) (orq: ORq Msg) :=
       match orq@[O] with
       | Some aorq =>
         match aorq@[downRq] with
-        | Some downRqi => FullLockInv oidx downRqi
-        | None =>
-          match aorq@[upRq] with
-          | Some upRqi => HalfLockInv oidx
-          | None => LockFreeInv oidx
-          end
+        | Some downRqi => DownLockedInv oidx downRqi
+        | None => DownLockFreeInv oidx
         end
-      | None => LockFreeInv oidx
+      | None => DownLockFreeInv oidx
       end.
 
     Definition LockInvMO :=

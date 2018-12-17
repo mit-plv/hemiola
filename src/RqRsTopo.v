@@ -123,6 +123,9 @@ Section RqRsTopo.
   Definition downEdges: list IdxT :=
     edgeInds (downEdges gtr).
 
+  Definition treeEdges: list IdxT :=
+    edgeInds (dg_es (topoOfT gtr)).
+  
   Definition rqEdgeUpFrom (oidx: IdxT): option IdxT :=
     hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
                                (upEdgesFrom gtr oidx))).
