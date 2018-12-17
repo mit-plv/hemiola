@@ -262,14 +262,18 @@ Proof.
       { destruct H2, H13.
         eapply DisjList_SubList; eauto.
         eapply DisjList_comm, DisjList_SubList; eauto.
-        apply DisjList_comm, sys_minds_sys_merss_DisjList.
+        apply DisjList_comm, DisjList_app_4.
+        { apply sys_minds_sys_merss_DisjList. }
+        { apply sys_merqs_sys_merss_DisjList. }
       }
       eapply FirstMPI_Forall_deqMsgs; eauto.
   - assert (DisjList (idsOf eouts) (idsOf ins)).
     { destruct H2, H13.
       eapply DisjList_SubList; eauto.
       eapply DisjList_comm, DisjList_SubList; eauto.
-      apply sys_minds_sys_merss_DisjList.
+      apply DisjList_app_4.
+      { apply sys_minds_sys_merss_DisjList. }
+      { apply sys_merqs_sys_merss_DisjList. }
     }
     econstructor; try reflexivity; try eassumption.
     + eapply FirstMPI_Forall_enqMsgs.
