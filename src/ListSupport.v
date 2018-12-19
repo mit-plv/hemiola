@@ -31,6 +31,14 @@ Fixpoint lift_each {A} (l: list A): list (list A) :=
   | a :: l' => [a] :: lift_each l'
   end.
 
+Lemma lift_each_app:
+  forall {A} (l1 l2: list A),
+    lift_each (l1 ++ l2) = lift_each l1 ++ lift_each l2.
+Proof.
+  induction l1; simpl; intros; auto.
+  rewrite IHl1; reflexivity.
+Qed.
+
 Lemma lift_each_concat:
   forall {A} (l: list A),
     l = List.concat (lift_each l).

@@ -151,14 +151,6 @@ Section MsgParam.
       apply removeL_SubList_2.
   Qed.
 
-  (* Lemma internal_transition_messages_in: *)
-  (*   forall {oifc} (sys: System oifc) idm st1 st2 oidx ridx ins outs, *)
-  (*     InMPI (bst_msgs st1) idm -> *)
-  (*     ~ In idm ins -> *)
-  (*     step_m sys st1 (RlblInt oidx ridx ins outs) st2 -> *)
-  (*     InMPI (bst_msgs st2) idm. *)
-  (* Proof. *)
-
   Lemma atomic_messages_spec_in:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -221,6 +213,25 @@ Section MsgParam.
     inv H.
     econstructor; eauto.
     rewrite <-H0; assumption.
+  Qed.
+
+  Lemma atomic_split_each:
+    forall inits ins hst outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      Forall (AtomicEx msgT_dec) (lift_each hst).
+  Proof.
+    induction 1; simpl; intros; [repeat econstructor|].
+    repeat econstructor.
+    assumption.
+  Qed.
+
+  Lemma atomicEx_split_each:
+    forall hst,
+      AtomicEx msgT_dec hst ->
+      Forall (AtomicEx msgT_dec) (lift_each hst).
+  Proof.
+    unfold AtomicEx; intros; dest.
+    eapply atomic_split_each; eauto.
   Qed.
 
   Definition InternalLbl (lbl: RLabel MsgT) :=
@@ -541,6 +552,60 @@ Section MsgParam.
       + apply ssequential_app; auto.
         econstructor; try reflexivity; auto.
       + omega.
+  Qed.
+
+  Lemma intAtomic_stransactional_split_each:
+    forall {oifc} (sys: System oifc) inits ins trs outs eouts,
+      ~ SubList (idsOf inits) (sys_merqs sys) ->
+      Atomic msgT_dec inits ins trs outs eouts ->
+      exists sn,
+        SSequential sys msgT_dec (lift_each trs) sn /\
+        sn <= List.length trs.
+  Proof.
+    induction 2; simpl; intros; subst.
+    - eexists; split.
+      + econstructor; try reflexivity.
+        * eapply SSeqNil.
+        * eapply STrsIntAtomic.
+          econstructor; eauto.
+          econstructor.
+      + simpl; omega.
+    - specialize (IHAtomic H).
+      destruct IHAtomic as [sn [? ?]].
+      destruct (subList_dec eq_nat_dec (idsOf rins) (sys_merqs sys)).
+      + eexists; split.
+        * econstructor; try reflexivity.
+          { eassumption. }
+          { eapply STrsExtAtomic.
+            econstructor; eauto.
+            econstructor.
+          }
+        * omega.
+      + eexists; split.
+        * econstructor; try reflexivity.
+          { eassumption. }
+          { eapply STrsIntAtomic.
+            econstructor; eauto.
+            econstructor.
+          }
+        * simpl; omega.
+  Qed.
+
+  Corollary internal_stransactional_split_each:
+    forall {oifc} (sys: System oifc) inits ins trs outs eouts tn,
+      ~ SubList (idsOf inits) (sys_merqs sys) ->
+      Atomic msgT_dec inits ins trs outs eouts ->
+      STransactional sys msgT_dec trs tn ->
+      exists sn,
+        SSequential sys msgT_dec (lift_each trs) sn /\
+        sn <= tn.
+  Proof.
+    intros.
+    inv H1; try (inv H0; fail).
+    - eapply intAtomic_stransactional_split_each; eauto.
+    - exfalso; inv H2.
+      pose proof (atomic_unique H0 H3); dest; subst.
+      auto.
   Qed.
 
 End MsgParam.

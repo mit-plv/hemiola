@@ -59,6 +59,14 @@ Section QuasiSeq.
 End QuasiSeq.
 
 Definition ExtContinuous {oifc} (sys: System oifc)
+           (hst1 hst2: MHistory) :=
+  exists eouts1 inits2 ins2 outs2 eouts2,
+    ExtAtomic sys msg_dec hst1 eouts1 /\
+    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
+    ~ SubList (idsOf inits2) (sys_merqs sys) /\
+    SubList inits2 eouts1.
+
+Definition ExtContinuousL {oifc} (sys: System oifc)
            (hst: MHistory) (l: MLabel) :=
   exists eouts oidx ridx rins routs,
     ExtAtomic sys msg_dec hst eouts /\
@@ -66,9 +74,9 @@ Definition ExtContinuous {oifc} (sys: System oifc)
     ~ SubList (idsOf rins) (sys_merqs sys) /\
     SubList rins eouts.
 
-Definition ValidExtContinuous {oifc} (sys: System oifc)
+Definition ValidExtContinuousL {oifc} (sys: System oifc)
            (hst1: MHistory) (l2: MLabel) :=
-  ExtContinuous sys hst1 l2 /\
+  ExtContinuousL sys hst1 l2 /\
   exists st1 st2 hst,
     Reachable (steps step_m) sys st1 /\
     steps step_m sys st1 (l2 :: hst ++ hst1) st2.
@@ -81,18 +89,25 @@ Definition Discontinuous (hst1 hst2: MHistory) :=
 
 Definition ExtInterleaved {oifc} (sys: System oifc)
            (hsts: list MHistory) :=
+  exists hst1 hst2 hsts1 hsts2 hsts3,
+    hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 /\
+    ExtContinuous sys hst1 hst2 /\
+    Forall (fun hst => Discontinuous hst1 hst) hsts2.
+
+Definition ExtInterleavedL {oifc} (sys: System oifc)
+           (hsts: list MHistory) :=
   exists hst1 l2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ [l2] :: hsts2 ++ hst1 :: hsts1 /\
-    ExtContinuous sys hst1 l2 /\
+    ExtContinuousL sys hst1 l2 /\
     Forall (fun hst => Discontinuous hst1 hst) hsts2.
 
 Lemma extContinuous_concat:
   forall {oifc} (sys: System oifc) hst l,
-    ExtContinuous sys hst l ->
+    ExtContinuousL sys hst l ->
     exists neouts,
       ExtAtomic sys msg_dec (l :: hst) neouts.
 Proof.
-  unfold ExtContinuous; intros; dest; subst.
+  unfold ExtContinuousL; intros; dest; subst.
   inv H.
   eexists.
   econstructor; [eassumption|].
@@ -103,11 +118,11 @@ Qed.
 
 Lemma extContinuous_hst_stransactional_length:
   forall {oifc} (sys: System oifc) hst l tn,
-    ExtContinuous sys hst l ->
+    ExtContinuousL sys hst l ->
     STransactional sys msg_dec hst tn ->
     tn = 0.
 Proof.
-  unfold ExtContinuous; intros.
+  unfold ExtContinuousL; intros.
   destruct H as [eouts [oidx [ridx [rins [routs ?]]]]]; dest; subst.
   inv H.
   inv H0; auto; try (inv H4; fail).
@@ -117,16 +132,104 @@ Qed.
 
 Lemma extContinuous_label_stransactional_one:
   forall {oifc} (sys: System oifc) hst l tn,
-    ExtContinuous sys hst l ->
+    ExtContinuousL sys hst l ->
     STransactional sys msg_dec [l] tn ->
     tn = 1.
 Proof.
-  unfold ExtContinuous; intros.
+  unfold ExtContinuousL; intros.
   destruct H as [eouts [oidx [ridx [rins [routs ?]]]]]; dest; subst.
   inv H0; auto; try discriminate.
   exfalso; inv H1.
   inv H4; auto.
   inv H9.
+Qed.
+
+Lemma atomic_beginning_label:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    exists hhst oidx ridx routs,
+      hst = hhst ++ [RlblInt oidx ridx inits routs].
+Proof.
+  induction 1; simpl; intros; subst.
+  - exists nil; do 3 eexists; simpl; reflexivity.
+  - destruct IHAtomic as [hhst [ioidx [iridx [irouts ?]]]]; subst.
+    exists (RlblInt oidx ridx rins routs :: hhst).
+    exists ioidx, iridx, irouts.
+    reflexivity.
+Qed.
+
+Lemma extInterleaved_atomic_extInterleavedL:
+  forall {oifc} (sys: System oifc) atms n,
+    Forall (AtomicEx msg_dec) atms ->
+    SSequential sys msg_dec atms n ->
+    ExtInterleaved sys atms ->
+    exists datms,
+      List.concat atms = List.concat datms /\
+      Forall (AtomicEx msg_dec) datms /\
+      ExtInterleavedL sys datms /\
+      exists m,
+        SSequential sys msg_dec datms m /\
+        m <= n.
+Proof.
+  unfold ExtInterleaved, ExtInterleavedL; intros.
+  destruct H1 as [hst1 [hst2 [hsts1 [hsts2 [hsts3 ?]]]]]; dest; subst.
+  red in H2.
+  destruct H2 as [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]; dest.
+
+  pose proof (atomic_beginning_label H2).
+  destruct H6 as [hhst [oidx [ridx [routs ?]]]]; subst.
+
+  
+  
+  exists (hsts3 ++ (lift_each hhst)
+                ++ [RlblInt oidx ridx inits2 routs]
+                :: hsts2 ++ hst1 :: hsts1).
+  repeat split.
+  - repeat (rewrite concat_app; simpl).
+    repeat rewrite <-app_assoc.
+    rewrite <-lift_each_concat.
+    reflexivity.
+  - apply Forall_app_inv in H; dest.
+    inv H6; apply Forall_app_inv in H10; dest.
+    inv H7.
+    apply atomicEx_split_each in H9.
+    rewrite lift_each_app in H9.
+    apply Forall_app_inv in H9; dest.
+    inv H8; clear H14.
+    apply Forall_app; [assumption|].
+    apply Forall_app; [assumption|].
+    constructor; [assumption|].
+    apply Forall_app; [assumption|].
+    constructor; assumption.
+  - exists hst1, (RlblInt oidx ridx inits2 routs).
+    eexists hsts1, hsts2, (hsts3 ++ lift_each hhst).
+    repeat split; auto.
+    + repeat (rewrite <-app_assoc; simpl).
+      reflexivity.
+    + red; exists eouts1, oidx, ridx, inits2, routs.
+      repeat split; auto.
+  - apply ssequential_app_inv in H0.
+    destruct H0 as [n1 [n2 ?]]; dest; subst.
+    inv H6; inv H9.
+    apply ssequential_app_inv in H7.
+    destruct H7 as [n2 [n3 ?]]; dest; subst.
+    inv H7; inv H11.
+
+    eapply internal_stransactional_split_each in H2; eauto.
+    destruct H2 as [sn [? ?]].
+    rewrite lift_each_app in H2; simpl in H2.
+    apply ssequential_app_inv in H2.
+    destruct H2 as [sn1 [sn2 ?]]; dest; subst.
+    inv H11; inv H14.
+    inv H12; [|discriminate].
+
+    eexists; split.
+    + apply ssequential_app; [eassumption|].
+      apply ssequential_app; [eassumption|].
+      econstructor; try reflexivity; [|eassumption].
+      apply ssequential_app; [eassumption|].
+      econstructor; try reflexivity; eassumption.
+    + omega.
 Qed.
 
 Lemma atomic_transactions_sequential_or_extInterleaved:
@@ -162,7 +265,7 @@ Section WellInterleaved.
       Reachable (steps step_m) sys st1 ->
       forall st2 hst1 l2 hsts,
         steps step_m sys st1 (l2 :: List.concat hsts ++ hst1) st2 ->
-        ExtContinuous sys hst1 l2 ->
+        ExtContinuousL sys hst1 l2 ->
         Forall (fun hst => Discontinuous hst1 hst) hsts ->
         Forall (AtomicEx msg_dec) hsts ->
         exists rhst1 rhst2,
@@ -176,7 +279,7 @@ Section WellInterleaved.
       steps step_m sys st1 (List.concat trss) st2 ->
       Forall (AtomicEx msg_dec) trss ->
       SSequential sys msg_dec trss n ->
-      ExtInterleaved sys trss ->
+      ExtInterleavedL sys trss ->
       exists (rtrss: list MHistory) (m: nat),
         steps step_m sys st1 (List.concat rtrss) st2 /\
         SSequential sys msg_dec rtrss m /\ m < n.
@@ -269,7 +372,11 @@ Section WellInterleaved.
         destruct H5 as [no [nai ?]]; dest; subst.
         apply ssequential_app_inv in H11.
         destruct H11 as [na [ni ?]]; dest; subst.
-          
+
+        eapply extInterleaved_atomic_extInterleavedL in H10; eauto.
+        destruct H10 as [datms [? [? [? [m ?]]]]]; dest.
+        rewrite H10 in *; clear H10.
+        
         eapply well_interleaved_reducible with (st1:= sti1) in H; eauto.
         destruct H as [ratms [rm ?]]; dest.
         exists (outs ++ List.concat ratms ++ ins).
@@ -285,7 +392,7 @@ Section WellInterleaved.
             repeat rewrite <-lift_each_concat.
             reflexivity.
           }
-        * unfold History, MLabel in H5, H12; omega.
+        * omega.
   Qed.
 
 End WellInterleaved.
@@ -355,7 +462,7 @@ Section Pushable.
 
   Definition Pushable :=
     forall hst1 l2,
-      ValidExtContinuous sys hst1 l2 ->
+      ValidExtContinuousL sys hst1 l2 ->
       exists (lpush rpush: MHistory -> Prop),
         rpush hst1 /\ lpush [l2] /\
         forall st1,
@@ -373,7 +480,7 @@ Section Pushable.
   Proof.
     unfold Pushable, WellInterleaved; intros.
 
-    assert (ValidExtContinuous sys hst1 l2) as Hvc
+    assert (ValidExtContinuousL sys hst1 l2) as Hvc
         by (red; split; eauto).
     specialize (Hp _ _ Hvc); clear Hvc.
     destruct Hp as [lpush [rpush ?]]; dest.
