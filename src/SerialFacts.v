@@ -151,14 +151,13 @@ Section MsgParam.
       apply removeL_SubList_2.
   Qed.
 
-  Lemma internal_transition_messages_in:
-    forall {oifc} (sys: System oifc) idm st1 st2 oidx ridx ins outs,
-      InMPI (bst_msgs st1) idm ->
-      ~ In idm ins ->
-      step_m sys st1 (RlblInt oidx ridx ins outs) st2 ->
-      InMPI (bst_msgs st2) idm.
-  Proof.
-  Admitted.
+  (* Lemma internal_transition_messages_in: *)
+  (*   forall {oifc} (sys: System oifc) idm st1 st2 oidx ridx ins outs, *)
+  (*     InMPI (bst_msgs st1) idm -> *)
+  (*     ~ In idm ins -> *)
+  (*     step_m sys st1 (RlblInt oidx ridx ins outs) st2 -> *)
+  (*     InMPI (bst_msgs st2) idm. *)
+  (* Proof. *)
 
   Lemma atomic_messages_spec_in:
     forall inits ins hst outs eouts,
@@ -212,17 +211,16 @@ Section MsgParam.
   Qed.
 
   Lemma extAtomic_preserved:
-    forall {oifc} (impl1: System oifc) hst,
-      ExtAtomic impl1 msgT_dec hst ->
+    forall {oifc} (impl1: System oifc) hst eouts,
+      ExtAtomic impl1 msgT_dec hst eouts ->
       forall (impl2: System oifc),
         sys_merqs impl1 = sys_merqs impl2 ->
-        ExtAtomic impl2 msgT_dec hst.
+        ExtAtomic impl2 msgT_dec hst eouts.
   Proof.
     intros.
     inv H.
-    - eapply ExtAtomicNil; eauto.
-    - eapply ExtAtomicSingle; eauto.
-      rewrite <-H0; assumption.
+    econstructor; eauto.
+    rewrite <-H0; assumption.
   Qed.
 
   Definition InternalLbl (lbl: RLabel MsgT) :=
@@ -372,54 +370,31 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_insHistory:
-    forall ins,
+    forall {oifc} (sys: System oifc) ins,
       InsHistory ins ->
-      SSequential msgT_dec ins (List.length ins).
+      SSequential sys msgT_dec (lift_each ins) 0.
   Proof.
     induction ins; simpl; intros.
-    - apply SSeqIntro with (trss:= nil); auto.
+    - apply SSeqNil.
     - inv H; destruct a; try (intuition; fail).
-      specialize (IHins H3); inv IHins.
-      econstructor.
-      + instantiate (1:= [RlblIns mins] :: trss); reflexivity.
-      + simpl; rewrite H0; reflexivity.
-      + constructor; auto.
-        eapply STrsIns; reflexivity.
+      specialize (IHins H3).
+      econstructor; eauto.
+      eapply STrsIns; reflexivity.
   Qed.
 
   Lemma ssequential_outsHistory:
-    forall outs,
+    forall {oifc} (sys: System oifc) outs,
       OutsHistory outs ->
-      SSequential msgT_dec outs (List.length outs).
+      SSequential sys msgT_dec (lift_each outs) 0.
   Proof.
     induction outs; simpl; intros.
-    - apply SSeqIntro with (trss:= nil); auto.
+    - apply SSeqNil.
     - inv H; destruct a; try (intuition; fail).
-      specialize (IHouts H3); inv IHouts.
-      econstructor.
-      + instantiate (1:= [RlblOuts mouts] :: trss); reflexivity.
-      + simpl; rewrite H0; reflexivity.
-      + constructor; auto.
-        eapply STrsOuts; reflexivity.
+      specialize (IHouts H3).
+      econstructor; eauto.
+      eapply STrsOuts; reflexivity.
   Qed.
 
-  Lemma ssequential_atomicEx:
-    forall atms,
-      Forall (AtomicEx msgT_dec) atms ->
-      SSequential msgT_dec (List.concat atms) (List.length atms).
-  Proof.
-    induction atms; simpl; intros.
-    - apply SSeqIntro with (trss:= nil); auto.
-    - inv H.
-      specialize (IHatms H3); inv IHatms.
-      econstructor.
-      + instantiate (1:= a :: trss); rewrite H; reflexivity.
-      + simpl; rewrite H0; reflexivity.
-      + constructor; auto.
-        red in H2; dest.
-        eapply STrsAtomic; eauto.
-  Qed.
-  
   Lemma sequential_app:
     forall {oifc} (sys: System oifc) ll1 trss1 ll2 trss2,
       Sequential sys msgT_dec ll1 trss1 ->
@@ -444,72 +419,130 @@ Section MsgParam.
   Qed.
 
   Lemma stransactional_default:
-    forall lbl, STransactional msgT_dec [lbl].
+    forall {oifc} (sys: System oifc) lbl,
+      exists n,
+        STransactional sys msgT_dec [lbl] n.
   Proof.
-    destruct lbl; intros.
+    destruct lbl; intros; eexists.
     - eapply STrsSlt.
     - eapply STrsIns; eauto.
-    - eapply STrsAtomic.
-      eapply atomic_singleton.
+    - instantiate
+        (1:= if subList_dec eq_nat_dec (idsOf mins) sys.(sys_merqs)
+             then _ else _).
+      destruct (subList_dec eq_nat_dec (idsOf mins) sys.(sys_merqs)).
+      + eapply STrsExtAtomic.
+        econstructor; eauto.
+        econstructor.
+      + eapply STrsIntAtomic.
+        econstructor; eauto.
+        econstructor.
     - eapply STrsOuts; eauto.
   Qed.
 
-  Lemma stransactional_cons_inv:
-    forall lbl (hst: History MsgT),
-      STransactional msgT_dec (lbl :: hst) ->
-      hst = nil \/
-      STransactional msgT_dec hst.
-  Proof.
-    intros.
-    inv H; auto.
-    inv H0; auto.
-    right; econstructor; eauto.
-  Qed.
-
   Lemma ssequential_default:
-    forall hst, exists n, SSequential msgT_dec hst n.
+    forall {oifc} (sys: System oifc) hst,
+    exists n trss,
+      SSequential sys msgT_dec trss n /\ hst = List.concat trss.
   Proof.
-    induction hst; simpl; intros; [repeat econstructor; eauto|].
-    destruct IHhst as [n ?].
-    destruct H; subst.
-    exists (S (List.length trss)).
-    econstructor.
-    - instantiate (1:= [a] :: _); reflexivity.
+    induction hst as [|l hst]; simpl; intros; [repeat econstructor; eauto|].
+    destruct IHhst as [n [trss ?]]; dest; subst.
+    pose proof (stransactional_default sys l).
+    destruct H0 as [ln ?].
+    exists (ln + n), ([l] :: trss).
+    split.
+    - econstructor; eauto.
     - reflexivity.
-    - constructor; auto.
-      apply stransactional_default.
   Qed.
 
-  Lemma ssequential_app:
-    forall ll1 n1 ll2 n2,
-      SSequential msgT_dec ll1 n1 ->
-      SSequential msgT_dec ll2 n2 ->
-      SSequential msgT_dec (ll1 ++ ll2) (n1 + n2).
+  Lemma ssequential_add:
+    forall {oifc} (sys: System oifc) ll1 ll2 n,
+      SSequential sys msgT_dec (ll1 ++ ll2) n ->
+      forall trs tn,
+        STransactional sys msgT_dec trs tn ->
+        SSequential sys msgT_dec (ll1 ++ trs :: ll2) (tn + n).
   Proof.
-    intros.
-    inv H; inv H0.
+    induction ll1; simpl; intros; [econstructor; eauto|].
+    inv H; inv H3.
+    specialize (IHll1 _ _ H1 _ _ H0).
     econstructor.
-    - rewrite <-concat_app; reflexivity.
-    - apply eq_sym, app_length.
-    - apply Forall_app; auto.
-  Qed.
-
-  Lemma atomicEx_stransactional:
-    forall hst, AtomicEx msgT_dec hst -> STransactional msgT_dec hst.
-  Proof.
-    intros; inv H; dest.
-    eapply STrsAtomic; eauto.
-  Qed.
-
-  Lemma atomicEx_stransactional_forall:
-    forall trss, Forall (AtomicEx msgT_dec) trss ->
-                 Forall (STransactional msgT_dec) trss.
-  Proof.
-    intros.
-    eapply Forall_impl; [|eassumption].
-    apply atomicEx_stransactional.
+    - exact IHll1.
+    - exact H2.
+    - reflexivity.
+    - omega.
   Qed.
   
+  Lemma ssequential_app:
+    forall {oifc} (sys: System oifc) ll1 n1 ll2 n2,
+      SSequential sys msgT_dec ll1 n1 ->
+      SSequential sys msgT_dec ll2 n2 ->
+      SSequential sys msgT_dec (ll1 ++ ll2) (n1 + n2).
+  Proof.
+    induction 1; simpl; intros; subst; simpl; auto.
+    econstructor.
+    - exact (IHSSequential H3).
+    - eassumption.
+    - reflexivity.
+    - omega.
+  Qed.
+
+  Lemma ssequential_app_inv:
+    forall {oifc} (sys: System oifc) ll1 ll2 n,
+      SSequential sys msgT_dec (ll1 ++ ll2) n ->
+      exists n1 n2,
+        SSequential sys msgT_dec ll1 n1 /\
+        SSequential sys msgT_dec ll2 n2 /\
+        n = n1 + n2.
+  Proof.
+    induction ll1; simpl; intros.
+    - exists 0, n; repeat split; [constructor|assumption].
+    - inv H; inv H2.
+      specialize (IHll1 _ _ H0).
+      destruct IHll1 as [n1 [n2 ?]]; dest; subst.
+      exists (tn + n1), n2; repeat split.
+      + econstructor.
+        * exact H.
+        * exact H1.
+        * reflexivity.
+        * reflexivity.
+      + assumption.
+      + omega.
+  Qed.
+
+  Lemma ssequential_distr_inv:
+    forall {oifc} (sys: System oifc) ll ll1 ll2,
+      Distribution ll ll1 ll2 ->
+      forall n,
+        SSequential sys msgT_dec ll n ->
+        exists n1 n2,
+          SSequential sys msgT_dec ll1 n1 /\
+          SSequential sys msgT_dec ll2 n2 /\
+          n = n1 + n2.
+  Proof.
+    induction 1; simpl; intros.
+    - inv H; try discriminate.
+      exists 0, 0; repeat split; constructor.
+    - inv H0; inv H3.
+      specialize (IHDistribution _ H1).
+      destruct IHDistribution as [n1 [n2 ?]]; dest; subst.
+      apply ssequential_app_inv in H0.
+      destruct H0 as [n11 [n12 ?]]; dest; subst.
+      exists (n11 + (tn + n12)), n2; repeat split.
+      + apply ssequential_app; auto.
+        econstructor; try reflexivity; auto.
+      + assumption.
+      + omega.
+    - inv H0; inv H3.
+      specialize (IHDistribution _ H1).
+      destruct IHDistribution as [n1 [n2 ?]]; dest; subst.
+      apply ssequential_app_inv in H3.
+      destruct H3 as [n21 [n22 ?]]; dest; subst.
+      exists n1, (n21 + (tn + n22)); repeat split.
+      + assumption.
+      + apply ssequential_app; auto.
+        econstructor; try reflexivity; auto.
+      + omega.
+  Qed.
+
 End MsgParam.
 
 Lemma atomic_legal_eouts:

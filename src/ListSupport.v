@@ -30,13 +30,20 @@ Fixpoint lift_each {A} (l: list A): list (list A) :=
   | nil => nil
   | a :: l' => [a] :: lift_each l'
   end.
-                   
+
+Lemma lift_each_concat:
+  forall {A} (l: list A),
+    l = List.concat (lift_each l).
+Proof.
+  induction l; simpl; intros; auto.
+  rewrite IHl at 1; reflexivity.
+Qed.
 
 Section SubDisjEquiv.
   Context {A: Type}.
   
-  Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
   Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
+  Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
   Definition EquivList (l1 l2: list A) := SubList l1 l2 /\ SubList l2 l1.
 
   Lemma SubList_nil: forall l, SubList nil l.
@@ -302,21 +309,27 @@ Section SubDisjEquiv.
     apply in_app_or in Hx; destruct Hx; auto.
   Qed.
 
+  Definition subList_dec:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
+           l1 l2,
+      {SubList l1 l2} + {~ SubList l1 l2}.
+  Proof.
+    induction l1; intros.
+    - left; apply SubList_nil.
+    - destruct (IHl1 l2).
+      + destruct (in_dec deceqA a l2).
+        * left; apply SubList_cons; assumption.
+        * right; intro Hx; elim n.
+          apply SubList_cons_inv in Hx.
+          destruct Hx.
+          assumption.
+      + right; intro Hx; elim n.
+        apply SubList_cons_inv in Hx.
+        destruct Hx.
+        assumption.
+  Defined.
+  
 End SubDisjEquiv.
-
-Ltac subList_app_tac :=
-  auto;
-  repeat
-    match goal with
-    | [H: SubList _ _ |- _] => apply SubList_app_7 in H; destruct H
-    end;
-  repeat apply SubList_app_3;
-  match goal with
-  | _ => apply SubList_refl
-  | _ => apply SubList_app_1; subList_app_tac
-  | _ => apply SubList_app_2; subList_app_tac
-  end.
-Ltac equivList_app_tac := split; subList_app_tac.
 
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
                      SubList l1 l2 -> SubList (map f l1) (map f l2).
@@ -686,6 +699,72 @@ Section SSubList.
 
 End SSubList.
 
+Section Distribution.
+  Context {A: Type}.
+
+  Inductive Distribution: list A -> list A -> list A -> Prop :=
+  | DistrNil: Distribution nil nil nil
+  | DistrL:
+      forall l ll1 ll2 rl a,
+        Distribution l (ll1 ++ ll2) rl ->
+        Distribution (a :: l) (ll1 ++ a :: ll2) rl
+  | DistrR:
+      forall l ll rl1 rl2 a,
+        Distribution l ll (rl1 ++ rl2) ->
+        Distribution (a :: l) ll (rl1 ++ a :: rl2).
+
+  Lemma distribution_left:
+    forall l, Distribution l l nil.
+  Proof.
+    induction l; simpl; intros.
+    - constructor; auto.
+    - change (a :: l) with ([] ++ a :: l) at 2.
+      constructor; auto.
+  Qed.
+
+  Lemma distribution_right:
+    forall l, Distribution l nil l.
+  Proof.
+    induction l; simpl; intros.
+    - constructor; auto.
+    - change (a :: l) with ([] ++ a :: l) at 2.
+      constructor; auto.
+  Qed.
+
+  Lemma distribution_add_left_head:
+    forall l1 l2 dl1 dl2,
+      Distribution (l1 ++ l2) dl1 dl2 ->
+      forall a,
+        Distribution (l1 ++ a :: l2) (a :: dl1) dl2.
+  Proof.
+    induction l1; simpl; intros.
+    - change (a :: dl1) with ([] ++ a :: dl1).
+      constructor; auto.
+    - inv H.
+      + change (a0 :: ll1 ++ a :: ll2) with ((a0 :: ll1) ++ a :: ll2).
+        apply DistrL.
+        simpl; auto.
+      + apply DistrR; auto.
+  Qed.
+
+  Lemma distribution_add_right_head:
+    forall l1 l2 dl1 dl2,
+      Distribution (l1 ++ l2) dl1 dl2 ->
+      forall a,
+        Distribution (l1 ++ a :: l2) dl1 (a :: dl2).
+  Proof.
+    induction l1; simpl; intros.
+    - change (a :: dl2) with ([] ++ a :: dl2).
+      constructor; auto.
+    - inv H.
+      + apply DistrL; auto.
+      + change (a0 :: rl1 ++ a :: rl2) with ((a0 :: rl1) ++ a :: rl2).
+        apply DistrR.
+        simpl; auto.
+  Qed.
+  
+End Distribution.
+  
 Lemma tl_app:
   forall {A} (l1 l2: list A),
     l1 <> nil -> tl (l1 ++ l2) = (tl l1) ++ l2.

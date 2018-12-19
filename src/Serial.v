@@ -7,11 +7,10 @@ Open Scope list.
 (** [Atomic] and [Transactional] histories *)
 
 Section Sequential.
-  Context {MsgT} `{HasMsg MsgT}.
   Context {oifc: OStateIfc}.
-
   Variables sys: System oifc.
 
+  Context {MsgT} `{HasMsg MsgT}.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
 
   Inductive Atomic:
@@ -37,20 +36,23 @@ Section Sequential.
   Definition AtomicEx (hst: History MsgT): Prop :=
     exists inits ins outs eouts,
       Atomic inits ins hst outs eouts.
-  
-  (* A history is [ExtAtomic] iff it is [Atomic] and starts from
-   * a no or single external request.
+
+  (* A history is [ExtAtomic] iff it is [Atomic] and starts from some
+   * external requests (possibly [nil]) 
    *)
-  Inductive ExtAtomic: History MsgT -> Prop :=
-  | ExtAtomicNil:
-      forall ins hst outs eouts,
-        Atomic nil ins hst outs eouts ->
-        ExtAtomic hst
-  | ExtAtomicSingle:
-      forall rq ins hst outs eouts,
-        In (idOf rq) (sys_merqs sys) ->
-        Atomic [rq] ins hst outs eouts ->
-        ExtAtomic hst.
+  Inductive ExtAtomic: History MsgT -> list (Id MsgT) -> Prop :=
+  | ExtAtomicIntro:
+      forall rqs ins hst outs eouts,
+        SubList (idsOf rqs) (sys_merqs sys) ->
+        Atomic rqs ins hst outs eouts ->
+        ExtAtomic hst eouts.
+
+  Inductive IntAtomic: History MsgT -> list (Id MsgT) -> Prop :=
+  | IntAtomicIntro:
+      forall inits ins hst outs eouts,
+        ~ SubList (idsOf inits) (sys_merqs sys) ->
+        Atomic inits ins hst outs eouts ->
+        IntAtomic hst eouts.
 
   Inductive Transactional: History MsgT -> Prop :=
   | TrsSlt:
@@ -64,8 +66,8 @@ Section Sequential.
         tout = RlblOuts eouts ->
         Transactional (tout :: nil)
   | TrsAtomic:
-      forall hst,
-        ExtAtomic hst ->
+      forall hst eouts,
+        ExtAtomic hst eouts ->
         Transactional hst.
 
   Definition Sequential (hst: History MsgT) (trss: list (History MsgT)) :=
@@ -74,32 +76,41 @@ Section Sequential.
 End Sequential.
 
 Section Semi.
+  Context {oifc: OStateIfc}.
+  Variables sys: System oifc.
+
   Context {MsgT} `{HasMsg MsgT}.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
 
-  Inductive STransactional: History MsgT -> Prop :=
+  Inductive STransactional: History MsgT -> nat -> Prop :=
   | STrsSlt:
-      STransactional (RlblEmpty _ :: nil)
+      STransactional (RlblEmpty _ :: nil) 0
   | STrsIns:
       forall eins tin,
         tin = RlblIns eins ->
-        STransactional (tin :: nil)
+        STransactional (tin :: nil) 0
   | STrsOuts:
       forall eouts tout,
         tout = RlblOuts eouts ->
-        STransactional (tout :: nil)
-  | STrsAtomic:
-      forall inits ins hst outs eouts,
-        Atomic msgT_dec inits ins hst outs eouts ->
-        STransactional hst.
+        STransactional (tout :: nil) 0
+  | STrsIntAtomic:
+      forall hst eouts,
+        IntAtomic sys msgT_dec hst eouts ->
+        STransactional hst (List.length hst)
+  | STrsExtAtomic:
+      forall hst eouts,
+        ExtAtomic sys msgT_dec hst eouts ->
+        STransactional hst 0.
 
-  Inductive SSequential: History MsgT -> nat -> Prop :=
-  | SSeqIntro:
-      forall trss hst lth,
-        hst = List.concat trss ->
-        lth = List.length trss ->
-        Forall STransactional trss ->
-        SSequential hst lth.
+  Inductive SSequential: list (History MsgT) -> nat -> Prop :=
+  | SSeqNil: SSequential nil 0
+  | SSeqConcat:
+      forall trss n trs tn ntrss nn,
+        SSequential trss n ->
+        STransactional trs tn ->
+        ntrss = trs :: trss ->
+        nn = tn + n ->
+        SSequential ntrss nn.
 
 End Semi.
 
