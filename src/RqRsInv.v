@@ -4,6 +4,8 @@ Require Import Syntax Semantics StepM Invariant Serial.
 Require Import Reduction Commutable QuasiSeq Topology.
 Require Import RqRsTopo.
 
+Set Implicit Arguments.
+
 Open Scope list.
 Open Scope fmap.
 
@@ -61,12 +63,81 @@ Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
         | CDown => if eq_nat_dec (msg_type (snd idm)) MRq then RqDown else RsDown
         end)).
 
+Section MessageInv.
+  Context {oifc: OStateIfc}.
+  Variables (gtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hitr: GoodIterationSys gtr sys).
+
+  Definition RqUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    exists rqUp, msgs = [rqUp] /\
+                 msg_type (valOf rqUp) = MRq /\
+                 In (idOf rqUp) (rqEdgesUpTo gtr oidx).
+
+  Definition RqDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    exists rqDown, msgs = [rqDown] /\
+                   msg_type (valOf rqDown) = MRq /\
+                   edgeDownTo gtr oidx = Some (idOf rqDown).
+
+  Definition RsUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    Forall (fun msg => msg_type (valOf msg) = MRs) msgs /\
+    SubList (idsOf msgs) (rsEdgesUpTo gtr oidx).
+
+  Definition RsDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    exists rsDown, msgs = [rsDown] /\
+                   msg_type (valOf rsDown) = MRs /\
+                   edgeDownTo gtr oidx = Some (idOf rsDown).
+
+  Lemma messages_in_cases:
+    forall s1 oidx ridx rins routs s2,
+      step_m sys s1 (RlblInt oidx ridx rins routs) s2 ->
+      RqUpMsgs oidx rins \/
+      RqDownMsgs oidx rins \/
+      RsUpMsgs oidx rins \/
+      RsDownMsgs oidx rins.
+  Proof.
+    intros.
+    inv H.
+
+    pose proof Hitr.
+    red in H; rewrite Forall_forall in H.
+    specialize (H _ H4).
+    red in H; rewrite Forall_forall in H.
+    specialize (H _ H5).
+    red in H.
+    destruct H as [|[|[|[|]]]].
+
+    - left.
+      admit.
+    - right; left.
+
+      red in H.
+      destruct H as [rqFrom [rsTo ?]]; dest.
+      specialize (H1 _ _ _ H11).
+      destruct H1.
+      red in H1.
+      red in H6.
+
+      destruct rins; try discriminate.
+      destruct rins; try discriminate.
+      destruct i as [i v]; simpl in *.
+      inv H1; inv H6; clear H17; simpl in *.
+
+      exists (rqFrom, v); repeat split; auto.
+    - admit.
+    - admit.
+    - admit.
+  Admitted.
+    
+End MessageInv.
+
 Section AtomicInv.
   Context {oifc: OStateIfc}.
   Variables (gtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hitr: GoodIterationSys gtr oifc sys).
+  Hypothesis (Hitr: GoodIterationSys gtr sys).
 
   Definition subtreeInds (sroot: option IdxT): list IdxT :=
     sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree gtr sroot))).
@@ -140,7 +211,7 @@ Section LockInv.
   Variables (gtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrr: GoodLockingSys gtr oifc sys).
+  Hypothesis (Hrr: GoodLockingSys gtr sys).
 
   Section OnMState.
     Variables (orqs: ORqs Msg)

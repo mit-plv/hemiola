@@ -3,6 +3,8 @@ Require Import Common FMap.
 Require Import Syntax Semantics StepM Invariant Serial.
 Require Import Reduction Commutable QuasiSeq Topology.
 
+Set Implicit Arguments.
+
 Open Scope list.
 Open Scope fmap.
 
