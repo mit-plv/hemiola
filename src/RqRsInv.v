@@ -142,61 +142,62 @@ Section AtomicInv.
   Definition subtreeInds (sroot: option IdxT): list IdxT :=
     sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree gtr sroot))).
 
-  Definition subtreeCInds (sroot: option IdxT): list IdxT :=
-    removeL eq_nat_dec (dg_vs (topoOfT gtr))
-            (sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree gtr sroot)))).
-
-  Definition rqCover (idm: Id Msg): list IdxT :=
-    let from := fst (fst (trsTypeOf gtr idm)) in
-    let to := snd (fst (trsTypeOf gtr idm)) in
-    match snd (trsTypeOf gtr idm) with
-    | RqUp => dg_vs (topoOfT gtr) (* the entire indices *)
-    | RqDown => subtreeInds to
-    | _ => nil
-    end.
-  
-  Fixpoint rqCovers (eouts: list (Id Msg)): list IdxT :=
-    match eouts with
-    | nil => nil
-    | idm :: eouts' => rqCover idm ++ rqCovers eouts'
-    end.
-  
-  Definition rsCover (idm: Id Msg): list IdxT :=
+  Definition rsUpCover (idm: Id Msg): list IdxT :=
     let from := fst (fst (trsTypeOf gtr idm)) in
     let to := snd (fst (trsTypeOf gtr idm)) in
     match snd (trsTypeOf gtr idm) with
     | RsUp => subtreeInds from
-    | RsDown => subtreeCInds to
     | _ => nil
     end.
-  
-  Fixpoint rsCovers (eouts: list (Id Msg)): list IdxT :=
+
+  Fixpoint rsUpCovers (eouts: list (Id Msg)): list IdxT :=
     match eouts with
     | nil => nil
-    | idm :: eouts' => rsCover idm ++ rsCovers eouts'
+    | idm :: eouts' => rsUpCover idm ++ rsUpCovers eouts'
     end.
 
-  Definition AtomicInv (eouts: list (Id Msg)) (hst: MHistory) :=
+  Definition rsDownCover (idm: Id Msg): list IdxT :=
+    let from := fst (fst (trsTypeOf gtr idm)) in
+    let to := snd (fst (trsTypeOf gtr idm)) in
+    match snd (trsTypeOf gtr idm) with
+    | RsDown => subtreeInds to
+    | _ => nil
+    end.
+
+  Fixpoint rsDownCovers (eouts: list (Id Msg)): list IdxT :=
+    match eouts with
+    | nil => nil
+    | idm :: eouts' => rsDownCover idm ++ rsDownCovers eouts'
+    end.
+
+  Definition AtomicInv (inits eouts: list (Id Msg)) (hst: MHistory) :=
     NoDup (rssOf hst) /\
-    SubList (rssOf hst) (rsCovers eouts) /\
-    DisjList (rssOf hst) (rqCovers eouts).
+    SubList (rssOf hst) (rsDownCovers inits) /\
+    DisjList (rssOf hst) (rsUpCovers inits) /\
+    SubList (rssOf hst) (rsUpCovers eouts) /\
+    DisjList (rssOf hst) (rsDownCovers eouts).
 
   Lemma atomic_inv:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall s1 s2,
         steps step_m sys s1 hst s2 ->
-        AtomicInv eouts hst.
+        AtomicInv inits eouts hst.
   Proof.
     induction 1; simpl; intros; subst.
     
     - inv H; inv H3; inv H5.
 
-      red in Hitr; rewrite Forall_forall in Hitr.
-      specialize (Hitr _ H3).
-      red in Hitr; rewrite Forall_forall in Hitr.
-      specialize (Hitr _ H4).
-      red in Hitr.
+      pose proof Hitr.
+      red in H; rewrite Forall_forall in H.
+      specialize (H _ H3).
+      red in H; rewrite Forall_forall in H.
+      specialize (H _ H4).
+      red in H.
+
+      (* destruct H as [ *)
+
+      
 
   Admitted.
   
