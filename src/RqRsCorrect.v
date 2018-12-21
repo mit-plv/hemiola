@@ -24,6 +24,23 @@ Open Scope fmap.
  * 4. Theorem: [∀h1 h2. h1 -*- h2 -> MDisjoint h1 h2 -> Commutable h1 h2]
  *)
 
+Section RssComm.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hrrs: RqRsSys dtr sys).
+
+  (* Theorem rssOf_disj_commutable: *)
+  (*   forall hst1 hst2 oidx, *)
+  (*     (* DisjList (rssOf hst1) (rssOf hst2) -> *) *)
+  (*     SubList (rssOf hst1) (subtreeInds oidx) -> *)
+  (*     DisjList (rssOf hst2) (subtreeInds oidx) -> *)
+  (*     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2). *)
+  (* Proof. *)
+
+End RssComm.
+
 Section Pushable.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -38,62 +55,135 @@ Section Pushable.
                        sys phst (RlblInt oidx ridx rins routs)).
 
   Local Definition nlbl := (RlblInt oidx ridx rins routs).
-  
-  (*   RqUpMsgs dtr oidx rins \/ *)
-  (*   (RqDownMsgs dtr oidx rins /\ *)
-  (*    SubList (rssOf hst) (subtreeInds dtr (parentOf dtr oidx))). *)
-  Definition RqRsLPush (hst: MHistory): Prop :=
-    DisjList (rssOf phst) (rssOf hst).
 
-  (*   RsUpMsgs dtr oidx rins \/ *)
-  (*   RsDownMsgs dtr oidx rins \/ *)
-  (*   (RqDownMsgs dtr oidx rins /\ *)
-  (*    DisjList (rssOf hst) (subtreeInds dtr (parentOf dtr oidx))). *)
-  Definition RqRsRPush (hst: MHistory): Prop :=
-    ~ In oidx (rssOf hst).
+  Section RqUp.
+    Hypothesis (Hru: RqUpMsgs dtr oidx rins).
 
-  Lemma rqrs_previous_rpush: RqRsRPush phst.
-  Proof.
-    (** requires the [GoodIteration] invariant *)
-  Admitted.
+    Definition RqUpLPush (hst: MHistory): Prop :=
+      True. (* always left-pushable *)
 
-  Lemma rqrs_next_lpush: RqRsLPush [RlblInt oidx ridx rins routs].
-  Proof.
-    (** requires the [GoodIteration] invariant *)
-  Admitted.
+    Definition RqUpRPush (hst: MHistory): Prop :=
+      False. (* no right-pushable histories *)
 
-  Lemma rqrs_lpush_or_rpush:
-    forall st1,
-      Reachable (steps step_m) sys st1 ->
-      forall hsts st2,
-        Forall (AtomicEx msg_dec) hsts ->
-        steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-        Forall (fun hst => Discontinuous phst hst) hsts ->
-        Forall (fun hst => RqRsLPush hst \/ RqRsRPush hst) hsts.
-  Proof.
-  Admitted.
+    Lemma rqUp_lpush_or_rpush:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          Forall (fun hst => RqUpLPush hst \/ RqUpRPush hst) hsts.
+    Proof.
+      intros; clear.
+      apply Forall_forall; intros.
+      left; red; auto.
+    Qed.
 
-  Lemma rqrs_left_right_pushable_phst:
-    forall st1,
-      Reachable (steps step_m) sys st1 ->
-      forall hsts st2,
-        Forall (AtomicEx msg_dec) hsts ->
-        steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-        Forall (fun hst => Discontinuous phst hst) hsts ->
-        LRPushable sys RqRsLPush RqRsRPush (hsts ++ [phst]).
-  Proof.
-  Admitted.
+    Lemma rqUp_lpush_ok:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst =>
+                    RqUpLPush hst ->
+                    Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
+    Proof.
+      (* Hint: [phst] only consists of RqUp. *)
+    Admitted.
 
-  Lemma rqrs_left_right_pushable_nlbl:
-    forall st1,
-      Reachable (steps step_m) sys st1 ->
-      forall hsts st2,
-        Forall (AtomicEx msg_dec) hsts ->
-        steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-        Forall (fun hst => Discontinuous phst hst) hsts ->
-        LRPushable sys RqRsLPush RqRsRPush ([nlbl] :: hsts).
-  Proof.
-  Admitted.
+    Lemma rqUp_rpush_ok:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst =>
+                    RqUpRPush hst ->
+                    Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
+    Proof.
+      intros; clear.
+      apply Forall_forall; intros.
+      red in H0; elim H0.
+    Qed.
+
+    Lemma rqUp_LRPushable:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          LRPushable sys RqUpLPush RqUpRPush hsts.
+    Proof.
+      intros; red; intros; subst.
+      red in H4; elim H4.
+    Qed.
+
+  End RqUp.
+
+  Section RsUp.
+    Hypothesis (Hru: RsUpMsgs dtr oidx rins).
+
+    Definition RsUpLPush (hst: MHistory): Prop :=
+      False. (* no left-pushable histories *)
+
+    Definition RsUpRPush (hst: MHistory): Prop :=
+      True. (* always right-pushable *)
+
+    Lemma rsUp_lpush_or_rpush:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          Forall (fun hst => RsUpLPush hst \/ RsUpRPush hst) hsts.
+    Proof.
+      intros; clear.
+      apply Forall_forall; intros.
+      right; red; auto.
+    Qed.
+
+    Lemma rsUp_lpush_ok:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst =>
+                    RsUpLPush hst ->
+                    Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
+    Proof.
+      intros; clear.
+      apply Forall_forall; intros.
+      red in H0; elim H0.
+    Qed.
+
+    Lemma rsUp_rpush_ok:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst =>
+                    RsUpRPush hst ->
+                    Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
+    Proof.
+    Admitted.
+
+    Lemma rsUp_LRPushable:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          LRPushable sys RsUpLPush RsUpRPush hsts.
+    Proof.
+      intros; red; intros; subst.
+      red in H3; elim H3.
+    Qed.
+    
+  End RsUp.
 
 End Pushable.
 
@@ -105,21 +195,41 @@ Proof.
   intros; red; intros.
 
   assert (exists oidx ridx rins routs,
-             l2 = RlblInt oidx ridx rins routs) as Hnlbl.
+             l2 = RlblInt oidx ridx rins routs /\
+             (RqUpMsgs dtr oidx rins \/
+              RqDownMsgs dtr oidx rins \/
+              RsUpMsgs dtr oidx rins \/
+              RsDownMsgs dtr oidx rins)) as Hnlbl.
   { inv H0; inv H1.
     destruct H0 as [oidx [ridx [rins [routs ?]]]]; dest; subst.
-    do 4 eexists; reflexivity.
+    do 4 eexists; split; auto.
+    destruct H as [? [? ?]].
+    inv H5.
+    eapply messages_in_cases; eauto.
   }
-  destruct Hnlbl as [oidx [ridx [rins [routs ?]]]]; subst.
-  
-  exists (RqRsLPush hst1), (RqRsRPush oidx).
-  repeat split.
-  - eauto using rqrs_previous_rpush.
-  - eauto using rqrs_next_lpush.
-  - eauto using rqrs_lpush_or_rpush.
-  - eauto using rqrs_left_right_pushable_phst.
-  - eauto using rqrs_left_right_pushable_nlbl.
-Qed.
+  destruct Hnlbl as [oidx [ridx [rins [routs ?]]]]; dest; subst.
+
+  destruct H2 as [|[|[|]]].
+
+  - exists RqUpLPush, RqUpRPush.
+    repeat split.
+    + eauto using rqUp_lpush_or_rpush.
+    + eauto using rqUp_lpush_ok.
+    + eauto using rqUp_rpush_ok.
+    + eauto using rqUp_LRPushable.
+
+  - admit.
+
+  - exists RsUpLPush, RsUpRPush.
+    repeat split.
+    + eauto using rsUp_lpush_or_rpush.
+    + eauto using rsUp_lpush_ok.
+    + eauto using rsUp_rpush_ok.
+    + eauto using rsUp_LRPushable.
+
+  - admit.
+      
+Admitted.
 
 Corollary rqrs_serializable:
   forall {oifc} (sys: System oifc) (dtr: DTree),

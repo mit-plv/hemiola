@@ -460,11 +460,31 @@ Section Pushable.
       reflexivity.
   Qed.
 
+  Lemma left_pushable_left:
+    forall lpush hst1 hsts,
+      Forall lpush hsts ->
+      Forall (fun hst =>
+                lpush hst ->
+                Reducible sys (hst ++ hst1) (hst1 ++ hst)) hsts ->
+      Reducible sys (List.concat hsts ++ hst1)
+                (hst1 ++ List.concat hsts).
+  Proof.
+    induction hsts; simpl; intros;
+      [rewrite app_nil_r; apply reducible_refl|].
+    inv H; inv H0.
+    specialize (H2 H3).
+    eapply reducible_trans.
+    - rewrite <-app_assoc.
+      apply reducible_app_1.
+      apply IHhsts; assumption.
+    - do 2 rewrite app_assoc.
+      apply reducible_app_2; assumption.
+  Qed.
+
   Definition Pushable :=
     forall hst1 l2,
       ValidExtContinuousL sys hst1 l2 ->
       exists (lpush rpush: MHistory -> Prop),
-        rpush hst1 /\ lpush [l2] /\
         forall st1,
           Reachable (steps step_m) sys st1 ->
           forall hsts st2,
@@ -472,8 +492,13 @@ Section Pushable.
             steps step_m sys st1 (l2 :: List.concat hsts ++ hst1) st2 ->
             Forall (fun hst => Discontinuous hst1 hst) hsts ->
             Forall (fun hst => lpush hst \/ rpush hst) hsts /\
-            LRPushable lpush rpush (hsts ++ [hst1]) /\
-            LRPushable lpush rpush ([l2] :: hsts).
+            Forall (fun hst =>
+                      lpush hst ->
+                      Reducible sys (hst ++ hst1) (hst1 ++ hst)) hsts /\
+            Forall (fun hst =>
+                      rpush hst ->
+                      Reducible sys (l2 :: hst) (hst ++ [l2])) hsts /\
+            LRPushable lpush rpush hsts.
 
   Lemma well_interleaved_push_ok:
     forall (Hp: Pushable), WellInterleaved sys.
@@ -485,10 +510,10 @@ Section Pushable.
     specialize (Hp _ _ Hvc); clear Hvc.
     destruct Hp as [lpush [rpush ?]]; dest.
 
-    pose proof (H6 _ H _ _ H3 H0 H2); dest.
+    pose proof (H4 _ H _ _ H3 H0 H2); dest.
     generalize dependent st1.
     generalize dependent st2.
-    generalize H1 H2 H3.
+    generalize H2 H3. (* H5 H6 H7 H8. *)
     eapply list_ind_pick
       with (l:= hsts) (Q0:= lpush) (Q1:= rpush); eauto; simpl; intros.
 
@@ -496,63 +521,71 @@ Section Pushable.
       simpl in *; rewrite app_nil_r in *.
       split; auto.
       constructor.
-    - clear H1 H2 H3 H7 H8 H9 hsts; rename l into hsts.
+
+    - clear H2 H3 H5 H6 H7 H8 hsts; rename l into hsts.
       exists hsts, nil.
 
-      assert (Reducible sys (List.concat hsts ++ hst1)
-                        (hst1 ++ List.concat hsts)).
-      { specialize (H6 _ H12 _ _ H11 H13 H10); dest.
-        eapply LRPushable_commutable_left; eauto.
-      }
-
-      inv H13; apply H1 in H8.
+      specialize (H4 _ H10 _ _ H9 H11 H0); dest.
+      pose proof (left_pushable_left _ H H3).
+      inv H11; apply H6 in H13.
       
       simpl; split; auto.
       + econstructor; eauto.
       + apply distribution_left.
       
-    - clear H1 H2 H3 H7 H8 H9 hsts.
+    - clear H2 H3 H5 H6 H7 H8 hsts.
       rename l0 into hsts2; rename l1 into hsts1.
+
+      specialize (H4 _ H12 _ _ H11 H13 H10); dest.
 
       assert (Reducible sys ((l2 :: List.concat hsts2) ++ a)
                         (a ++ l2 :: List.concat hsts2)).
-      { specialize (H6 _ H14 _ _ H13 H15 H12); dest.
-        change (l2 :: List.concat hsts2) with (List.concat ([l2] :: hsts2)).
-        eapply LRPushable_commutable_left; eauto.
-        eapply LRPushable_split_left with (hsts2:= hsts1).
-        rewrite <-app_assoc; assumption.
+      { change (l2 :: List.concat hsts2) with ([l2] ++ List.concat hsts2).
+        rewrite <-app_assoc.
+        eapply reducible_trans.
+        { apply reducible_app_1.
+          eapply LRPushable_commutable_left; eauto.
+          eapply LRPushable_split_left with (hsts2:= hsts1).
+          rewrite <-app_assoc; assumption.
+        }
+        { do 2 rewrite app_assoc.
+          apply reducible_app_2.
+          rewrite Forall_forall in H4.
+          apply H4; [|assumption].
+          apply in_or_app; right.
+          left; reflexivity.
+        }
       }
 
-      apply Forall_app_inv in H12; dest; inv H3.
-      apply Forall_app_inv in H13; dest; inv H7.
-      specialize (H10 H11 (Forall_app H2 H12) (Forall_app H3 H17)).
+      apply Forall_app_inv in H10; dest; inv H8.
+      apply Forall_app_inv in H11; dest; inv H10.
+      specialize (H9 (Forall_app H7 H16) (Forall_app H8 H18)).
 
       replace (l2 :: List.concat (hsts2 ++ a :: hsts1) ++ hst1)
         with (((l2 :: List.concat hsts2) ++ a) ++ List.concat hsts1 ++ hst1)
-        in H15
+        in H13
         by (repeat rewrite concat_app;
             simpl; repeat rewrite app_assoc; reflexivity).
-      eapply steps_split in H15; [|reflexivity].
-      destruct H15 as [sti [? ?]].
+      eapply steps_split in H13; [|reflexivity].
+      destruct H13 as [sti [? ?]].
 
-      apply H1 in H8.
-      pose proof (steps_append H7 H8); clear H7 H8 sti.
+      apply H6 in H11.
+      pose proof (steps_append H10 H11); clear H10 H11 sti.
       rewrite <-app_assoc in H13.
       eapply steps_split in H13; [|reflexivity].
       destruct H13 as [sti [? ?]].
       replace ((l2 :: List.concat hsts2) ++ List.concat hsts1 ++ hst1)
-        with (l2 :: List.concat (hsts2 ++ hsts1) ++ hst1) in H7
+        with (l2 :: List.concat (hsts2 ++ hsts1) ++ hst1) in H10
         by (repeat rewrite concat_app;
             simpl; repeat rewrite app_assoc; reflexivity).
-      specialize (H10 _ _ H14 H7).
-      destruct H10 as [rhst1 [rhst2 ?]]; dest.
-      pose proof (steps_append H10 H8).
+      specialize (H9 _ _ H12 H10).
+      destruct H9 as [rhst1 [rhst2 ?]]; dest.
+      pose proof (steps_append H9 H11).
 
       exists rhst1, (a :: rhst2).
       split.
       + simpl; rewrite <-app_assoc; assumption.
-      + clear -H13.
-        apply distribution_add_right_head; auto.
+      + apply distribution_add_right_head; auto.
   Qed.
 
 End Pushable.
