@@ -24,23 +24,6 @@ Open Scope fmap.
  * 4. Theorem: [∀h1 h2. h1 -*- h2 -> MDisjoint h1 h2 -> Commutable h1 h2]
  *)
 
-Section RssComm.
-  Context {oifc: OStateIfc}.
-  Variables (dtr: DTree)
-            (sys: System oifc).
-
-  Hypothesis (Hrrs: RqRsSys dtr sys).
-
-  (* Theorem rssOf_disj_commutable: *)
-  (*   forall hst1 hst2 oidx, *)
-  (*     (* DisjList (rssOf hst1) (rssOf hst2) -> *) *)
-  (*     SubList (rssOf hst1) (subtreeInds oidx) -> *)
-  (*     DisjList (rssOf hst2) (subtreeInds oidx) -> *)
-  (*     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2). *)
-  (* Proof. *)
-
-End RssComm.
-
 Section Pushable.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)

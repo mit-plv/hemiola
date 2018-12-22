@@ -11,6 +11,138 @@ Open Scope fmap.
 
 (** Useful invariants on top of [RqRsSys] *)
 
+Ltac inv_steps :=
+  repeat
+    match goal with
+    | [H: steps _ _ _ _ _ |- _] => inv H
+    end.
+
+Ltac inv_step :=
+  repeat
+    match goal with
+    | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
+    | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
+          {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
+    end.
+
+Ltac red_obj_rule :=
+  repeat
+    match goal with
+    | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
+    | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
+          {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
+    | [H0: In ?obj1 (sys_objs ?sys),
+       H1: In ?obj2 (sys_objs ?sys),
+       H2: obj_idx ?obj1 = obj_idx ?obj2 |- _] =>
+      pose proof (obj_same_id_in_system_same _ _ _ H0 H1 H2);
+      subst; clear H0 H2
+    | [H0: In ?rule1 (obj_rules ?obj),
+       H1: In ?rule2 (obj_rules ?obj),
+       H2: rule_idx ?obj1 = rule_idx ?obj2 |- _] =>
+      pose proof (rules_same_id_in_object_same _ _ _ H0 H1 H2);
+      subst; clear H0 H2
+    end.
+
+Ltac good_locking_rule_get rule :=
+  match goal with
+  | [H: GoodLockingSys _ ?sys,
+     Hobj: In ?obj (sys_objs ?sys),
+     Hrule: In rule (obj_rules ?obj) |- _] =>
+    let Hg := fresh "H" in
+    pose proof H as Hg;
+    red in Hg; rewrite Forall_forall in Hg;
+    specialize (Hg _ Hobj);
+    red in Hg; rewrite Forall_forall in Hg;
+    specialize (Hg _ Hrule)
+  end.
+
+Section RqUpInv.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hrrs: RqRsSys dtr sys).
+
+  Lemma rqUp_reducible:
+    forall oidx1 ridx1 rins1 routs1 rule1 obj1
+           (Hobj1: In obj1 sys.(sys_objs)) (Hoidx1: obj1.(obj_idx) = oidx1)
+           (Hrule1: In rule1 obj1.(obj_rules))
+           (Hridx1: rule1.(rule_idx) = ridx1)
+           oidx2 ridx2 rins2 routs2 rule2 obj2
+           (Hobj2: In obj2 sys.(sys_objs)) (Hoidx2: obj2.(obj_idx) = oidx2)
+           (Hrule2: In rule2 obj2.(obj_rules))
+           (Hridx2: rule2.(rule_idx) = ridx2),
+      RqToUpRule dtr oidx1 rule1 ->
+      DisjList routs1 rins2 ->
+      Reducible sys [RlblInt oidx2 ridx2 rins2 routs2;
+                       RlblInt oidx1 ridx1 rins1 routs1]
+                [RlblInt oidx1 ridx1 rins1 routs1;
+                   RlblInt oidx2 ridx2 rins2 routs2].
+  Proof.
+    intros.
+    destruct Hrrs as [? [? ?]].
+    unfold Reducible; intros.
+
+    apply internal_commutes; auto.
+        
+    - inv_steps; inv_step.
+      red_obj_rule.
+      good_locking_rule_get rule2.
+
+      red.
+      destruct (eq_nat_dec (obj_idx obj) (obj_idx obj0));
+        [right|left; assumption].
+      red_obj_rule.
+      split; [reflexivity|]; intros.
+      red_obj_rule.
+
+      clear -H H4.
+      red in H4; dest.
+      red; intros.
+      split.
+
+      Ltac disc_rule_conds :=
+        repeat
+          (match goal with
+           | [H: RqToUpRule _ _ _ |- _] =>
+             let rqTo := fresh "rqTo" in destruct H as [rqTo ?]; dest
+           | [H: RqToDownRule _ _ _ |- _] =>
+             let rqsTo := fresh "rqsTo" in destruct H as [rqsTo ?]; dest
+
+           | [H: MsgsFrom _ _ _ _ |- _] => red in H
+           | [H: MsgsTo _ _ |- _] => red in H
+           | [H: RqAccepting _ _ _ |- _] => red in H
+           | [H: RqReleasing _ |- _] => red in H
+           | [H: UpLocking0 _ |- _] => red in H
+           | [H: UpLocked _ _ |- _] => red in H
+           | [H: DownLockFree0 _ _ _ |- _] => red in H
+           | [H: DownLocking0 _ |- _] => red in H
+           | [H: DownLockFree _ _ |- _] => red in H
+           | [H: DownLocked _ _ |- _] => red in H
+           | [H: StateUnchanged _ |- _] => red in H
+                                                    
+           | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
+             specialize (H1 _ _ _ H2)
+           | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
+           | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
+             specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
+           end; simpl in *; subst).
+      
+      + (* Conjecture: it's just about preconditions, thus provable by 
+         * the case analysis on [GoodLockingAccept] *)
+        admit.
+
+      + (* Conjecture: it's just about postconditions, thus provable by
+         * the case analysis on [GoodLockingRelease] *)
+        admit.
+
+    - admit.
+    - admit.
+
+  Admitted.
+
+End RqUpInv.
+
 Inductive TrsType := RqUp | RqDown | RsUp | RsDown.
 (* Object index -> TrsTypes (ordered, head is the oldest one) *)
 Definition TrsState := M.t (list TrsType).

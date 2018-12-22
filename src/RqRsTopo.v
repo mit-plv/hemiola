@@ -218,7 +218,7 @@ Section RqRsTopo.
         exists rqFrom,
           In rqFrom (rqEdgesUpTo oidx) /\
           (rule.(rule_precond)
-           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)).
+           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting /\oprec UpLockFree0)).
 
       (* A rule handling a request from the parent *)
       Definition RqFromUpRule (rule: Rule oifc) :=
@@ -257,7 +257,6 @@ Section RqRsTopo.
         exists rqTo,
           rqEdgeUpFrom oidx = Some rqTo /\
           MsgsTo [rqTo] rule /\ RqReleasing rule /\
-          (rule.(rule_precond) ->oprec UpLockFree0) /\
           UpLocking0 rule /\
           StateUnchanged rule.
 
@@ -266,7 +265,7 @@ Section RqRsTopo.
         exists rsTo,
           In rsTo (edgesDownFrom oidx) /\
           MsgsTo [rsTo] rule /\ RsReleasing rule /\
-          (** Below is a crucial locking condition to avoid 
+          (** Below [DownLockFree0] is a crucial locking condition to avoid
            * incorrect behaviors by interleaving! *)
           (rule.(rule_precond) ->oprec DownLockFree0).
       
