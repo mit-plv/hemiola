@@ -62,7 +62,7 @@ Section RqUpInv.
             (sys: System oifc).
 
   Hypothesis (Hrrs: RqRsSys dtr sys).
-
+  
   Lemma rqUp_reducible:
     forall oidx1 ridx1 rins1 routs1 rule1 obj1
            (Hobj1: In obj1 sys.(sys_objs)) (Hoidx1: obj1.(obj_idx) = oidx1)
@@ -72,6 +72,7 @@ Section RqUpInv.
            (Hobj2: In obj2 sys.(sys_objs)) (Hoidx2: obj2.(obj_idx) = oidx2)
            (Hrule2: In rule2 obj2.(obj_rules))
            (Hridx2: rule2.(rule_idx) = ridx2),
+      RqFromDownRule dtr oidx1 rule1 ->
       RqToUpRule dtr oidx1 rule1 ->
       DisjList routs1 rins2 ->
       Reducible sys [RlblInt oidx2 ridx2 rins2 routs2;
@@ -96,29 +97,29 @@ Section RqUpInv.
       split; [reflexivity|]; intros.
       red_obj_rule.
 
-      clear -H H4.
-      red in H4; dest.
+      clear -H0 H H5.
+      red in H5; dest.
       red; intros.
       split.
 
       Ltac disc_rule_conds :=
         repeat
           (match goal with
+           | [H: RqFromDownRule _ _ _ |- _] =>
+             let rqFrom := fresh "rqFrom" in destruct H as [rqFrom ?]; dest
            | [H: RqToUpRule _ _ _ |- _] =>
              let rqTo := fresh "rqTo" in destruct H as [rqTo ?]; dest
-           | [H: RqToDownRule _ _ _ |- _] =>
-             let rqsTo := fresh "rqsTo" in destruct H as [rqsTo ?]; dest
 
            | [H: MsgsFrom _ _ _ _ |- _] => red in H
            | [H: MsgsTo _ _ |- _] => red in H
            | [H: RqAccepting _ _ _ |- _] => red in H
            | [H: RqReleasing _ |- _] => red in H
-           | [H: UpLocking _ |- _] => red in H
-           | [H: UpLockedORq _ _ |- _] => red in H
-           | [H: DownLockFree _ _ _ |- _] => red in H
-           | [H: DownLocking _ |- _] => red in H
-           | [H: DownLockFree _ _ |- _] => red in H
-           | [H: DownLockedORq _ _ |- _] => red in H
+           (* | [H: UpLockFree _ _ _ |- _] => red in H *)
+           (* | [H: UpLocking _ |- _] => red in H *)
+           (* | [H: UpLockedORq _ _ |- _] => red in H *)
+           (* | [H: DownLockFree _ _ _ |- _] => red in H *)
+           (* | [H: DownLocking _ |- _] => red in H *)
+           (* | [H: DownLockedORq _ _ |- _] => red in H *)
            | [H: StateUnchanged _ |- _] => red in H
                                                     
            | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
@@ -127,10 +128,10 @@ Section RqUpInv.
            | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
              specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
            end; simpl in *; subst).
-      
-      + (* Conjecture: it's just about preconditions, thus provable by 
-         * the case analysis on [GoodLockingAccept] *)
-        admit.
+
+      + disc_rule_conds.
+        eapply H3; [eassumption|].
+        eapply UpLockFree_UpLocking_SubLock; eauto.
 
       + (* Conjecture: it's just about postconditions, thus provable by
          * the case analysis on [GoodLockingRelease] *)

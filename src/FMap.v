@@ -2347,12 +2347,21 @@ Ltac mred_unit :=
   match goal with
   (* basic destruction *)
   | [H: Some _ = Some _ |- _] => inv H
-  | [H: _ = M.find ?k ?m |- context [M.find ?k ?m] ] =>
-    rewrite <-H
-  | [H1: None = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
-    rewrite <-H1 in H2
-  | [H1: Some _ = M.find ?k ?m, H2: context [M.find ?k ?m] |- _] =>
-    rewrite <-H1 in H2
+  | [H: Some _ = None |- _] => discriminate
+  | [H: None = Some _ |- _] => discriminate
+  | [H: None = None |- _] => clear H
+  | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
+  | [H: None = M.find _ _ |- _] => apply eq_sym in H
+  | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
+    rewrite H1 in H2
+  | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
+    rewrite H1 in H2
+  | [H1: M.find ?m ?k = Some _, H2: context[M.find ?m ?k] |- _] =>
+    rewrite H1 in H2; simpl in H2
+  | [H1: M.find ?m ?k = None, H2: context[M.find ?m ?k] |- _] =>
+    rewrite H1 in H2; simpl in H2
+  | [H: M.find ?m ?k = Some _ |- context[M.find ?m ?k] ] => rewrite H
+  | [H: M.find ?m ?k = None |- context[M.find ?m ?k] ] => rewrite H
 
   (* hypothesis reduction *)
   | [H: context [M.find _ (M.empty _)] |- _] =>
@@ -2424,23 +2433,6 @@ Ltac mred_unit :=
   try discriminate; try reflexivity; try (intuition idtac; fail).
 
 Ltac mred := repeat mred_unit.
-
-Ltac mred_find :=
-  repeat
-    match goal with
-    | [H: Some _ = M.find _ _ |- _] => apply eq_sym in H
-    | [H: None = M.find _ _ |- _] => apply eq_sym in H
-    | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = Some _ |- _] =>
-      rewrite H1 in H2; inv H2
-    | [H1: M.find ?m ?k1 = Some _, H2: M.find ?m ?k2 = None |- _] =>
-      rewrite H1 in H2; discriminate
-    | [H1: M.find ?m ?k = Some _, H2: context[M.find ?m ?k] |- _] =>
-      rewrite H1 in H2; simpl in H2
-    | [H1: M.find ?m ?k = None, H2: context[M.find ?m ?k] |- _] =>
-      rewrite H1 in H2; simpl in H2
-    | [H: M.find ?m ?k = Some _ |- context[M.find ?m ?k] ] => rewrite H
-    | [H: M.find ?m ?k = None |- context[M.find ?m ?k] ] => rewrite H
-    end.
 
 Ltac mcontra :=
   repeat

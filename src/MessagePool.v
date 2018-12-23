@@ -125,7 +125,7 @@ Section Facts.
     remember (mp@[i]) as iq; destruct iq; simpl.
     - findeq; auto.
       specialize (H i).
-      mred_find.
+      mred.
       destruct l; simpl; auto.
       inv H.
       constructor; auto.
@@ -156,7 +156,7 @@ Section Facts.
     remember (mp@[i]) as iq; destruct iq; simpl.
     - destruct l; auto.
       findeq; auto; simpl.
-      specialize (H i); mred_find.
+      specialize (H i); mred.
       inv H; auto.
     - findeq; simpl; auto.
   Qed.

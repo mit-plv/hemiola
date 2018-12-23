@@ -65,8 +65,6 @@ Section Conditions.
   Definition DownLockedORq (orq: ORq Msg) :=
     orq@[downRq] <> None.
 
-  (** TODO: discuss whether it's fine to have a locking mechanism 
-   * only for a single address. *)
   Definition UpLockFree: OPrec oifc :=
     fun ost orq mins => UpLockFreeORq orq.
 
@@ -75,11 +73,13 @@ Section Conditions.
 
   Definition UpLocking (rule: Rule oifc): Prop :=
     forall ost orq mins,
-      UpLockedORq (snd (fst (rule.(rule_trs) ost orq mins))).
+      exists rqi,
+        snd (fst (rule.(rule_trs) ost orq mins)) = orq+[upRq <- rqi].
 
   Definition DownLocking (rule: Rule oifc): Prop :=
     forall ost orq mins,
-      DownLockedORq (snd (fst (rule.(rule_trs) ost orq mins))).
+      exists rqi,
+        snd (fst (rule.(rule_trs) ost orq mins)) = orq+[downRq <- rqi].
 
   Definition UpReleasing (rule: Rule oifc): Prop :=
     forall ost orq mins,
@@ -91,10 +91,52 @@ Section Conditions.
       DownLockedORq orq /\
       DownLockFreeORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
+  Definition SubLock (orq1 orq2: ORq Msg) :=
+    M.Sub orq1 orq2.
+  
+  Definition PrecLockMonotone (rule: Rule oifc) :=
+    forall ost orq mins,
+      rule.(rule_precond) ost orq mins ->
+      forall rorq,
+        SubLock rorq orq ->
+        rule.(rule_precond) ost rorq mins.
+
   Definition StateUnchanged (rule: Rule oifc): Prop :=
     forall ost orq mins,
       ost = fst (fst (rule.(rule_trs) ost orq mins)).
 
+  (** Some facts *)
+
+  Lemma UpLockFree_UpLocking_SubLock:
+    forall rule post porq mins nost norq mouts,
+      UpLockFree post porq mins ->
+      UpLocking rule ->
+      rule.(rule_precond) post porq mins ->
+      rule.(rule_trs) post porq mins = (nost, norq, mouts) ->
+      SubLock porq norq.
+  Proof.
+    unfold UpLockFree, UpLockFreeORq, UpLocking, SubLock; intros.
+    specialize (H0 post porq mins).
+    rewrite H2 in H0.
+    simpl in H0; destruct H0 as [rqi ?]; subst.
+    red; intros; mred.
+  Qed.
+
+  Lemma DownLockFree_DownLocking_SubLock:
+    forall rule post porq mins nost norq mouts,
+      DownLockFree post porq mins ->
+      DownLocking rule ->
+      rule.(rule_precond) post porq mins ->
+      rule.(rule_trs) post porq mins = (nost, norq, mouts) ->
+      SubLock porq norq.
+  Proof.
+    unfold DownLockFree, DownLockFreeORq, DownLocking, SubLock; intros.
+    specialize (H0 post porq mins).
+    rewrite H2 in H0.
+    simpl in H0; destruct H0 as [rqi ?]; subst.
+    red; intros; mred.
+  Qed.
+  
 End Conditions.
 
 Section RqRsTopo.
@@ -202,7 +244,7 @@ Section RqRsTopo.
              (combine downCInds rssFrom).
   
   Section GoodLocking.
-    
+
     Section PerObject.
       Variable (oidx: IdxT).
       
@@ -288,7 +330,8 @@ Section RqRsTopo.
 
       Definition GoodLockingRule (rule: Rule oifc) :=
         GoodLockingAccept rule /\
-        GoodLockingRelease rule.
+        GoodLockingRelease rule /\
+        PrecLockMonotone rule.
 
     End PerObject.
 
