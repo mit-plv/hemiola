@@ -98,7 +98,7 @@ Section Conditions.
 End Conditions.
 
 Section RqRsTopo.
-  Variables (gtr: DTree) (oifc: OStateIfc).
+  Variables (dtr: DTree) (oifc: OStateIfc).
 
   Inductive RqRsTopo: DTree -> Prop :=
   | RqRsNode:
@@ -113,41 +113,41 @@ Section RqRsTopo.
     map (fun e => snd e.(edge_chn)) es.
 
   Definition rqUpEdges: list IdxT :=
-    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq) (upEdges gtr)).
+    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq) (upEdges dtr)).
 
   Definition rsUpEdges: list IdxT :=
-    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs) (upEdges gtr)).
+    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs) (upEdges dtr)).
 
   Definition upEdges: list IdxT :=
-    edgeInds (upEdges gtr).
+    edgeInds (upEdges dtr).
   
   Definition downEdges: list IdxT :=
-    edgeInds (downEdges gtr).
+    edgeInds (downEdges dtr).
 
   Definition treeEdges: list IdxT :=
-    edgeInds (dg_es (topoOfT gtr)).
+    edgeInds (dg_es (topoOfT dtr)).
   
   Definition rqEdgeUpFrom (oidx: IdxT): option IdxT :=
     hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
-                               (upEdgesFrom gtr oidx))).
+                               (upEdgesFrom dtr oidx))).
 
   Definition rsEdgeUpFrom (oidx: IdxT): option IdxT :=
     hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs)
-                               (upEdgesFrom gtr oidx))).
+                               (upEdgesFrom dtr oidx))).
 
   Definition rqEdgesUpTo (oidx: IdxT): list IdxT :=
     edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
-                     (upEdgesTo gtr oidx)).
+                     (upEdgesTo dtr oidx)).
 
   Definition rsEdgesUpTo (oidx: IdxT): list IdxT :=
     edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs)
-                     (upEdgesTo gtr oidx)).
+                     (upEdgesTo dtr oidx)).
 
   Definition edgesDownFrom (oidx: IdxT): list IdxT :=
-    edgeInds (downEdgesFrom gtr oidx).
+    edgeInds (downEdgesFrom dtr oidx).
 
   Definition edgeDownTo (oidx: IdxT): option IdxT :=
-    hd_error (edgeInds (downEdgesTo gtr oidx)).
+    hd_error (edgeInds (downEdgesTo dtr oidx)).
 
   (* Upward-requested *)
   Definition FootprintedUp (orq: ORq Msg) (rssFrom: list IdxT) (rsbTo: IdxT) :=
@@ -211,6 +211,7 @@ Section RqRsTopo.
         exists cidx rqFrom rsTo,
           rqEdgeUpFrom cidx = Some rqFrom /\
           edgeDownTo cidx = Some rsTo /\
+          parentOf dtr cidx = Some oidx /\
           (rule.(rule_precond)
            ->oprec (MsgsFrom [rqFrom]
                     /\oprec RqAccepting
@@ -237,8 +238,9 @@ Section RqRsTopo.
       Definition RqUpUp (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec UpLockFree) /\
         UpLocking rule /\
-        In rqFrom (rqEdgesUpTo oidx) /\
-        exists rqTo rsFrom rsbTo,
+        exists cidx rqTo rsFrom rsbTo,
+          rqEdgeUpFrom cidx = Some rqFrom /\
+          parentOf dtr cidx = Some oidx /\
           rqTos = [rqTo] /\
           FootprintUpOk oidx rqTo rsFrom rsbTo /\
           FootprintingUp rule [rsFrom] rsbTo.
@@ -246,20 +248,19 @@ Section RqRsTopo.
       Definition RqUpDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
         DownLocking rule /\
-        In rqFrom (rqEdgesUpTo oidx) /\
         SubList rqTos (edgesDownFrom oidx) /\
-        exists rssFrom rsbTo,
+        exists cidx rssFrom rsbTo,
+          rqEdgeUpFrom cidx = Some rqFrom /\
+          parentOf dtr cidx = Some oidx /\
           FootprintDownOk rqFrom rqTos rssFrom rsbTo /\
           FootprintingDown rule rssFrom rsbTo.
 
       Definition RqDownDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
         DownLocking rule /\
-        In rqFrom (edgesDownFrom oidx) /\
-        SubList rqTos (edgesDownFrom oidx) /\
-        exists downCIdx downCInds rssFrom rsbTo,
-          edgeDownTo downCIdx = Some rqFrom /\
-          rsEdgeUpFrom downCIdx = Some rsbTo /\
+        edgeDownTo oidx = Some rqFrom /\
+        exists downCInds rssFrom rsbTo,
+          rsEdgeUpFrom oidx = Some rsbTo /\
           Forall (fun crq => edgeDownTo (fst crq) = Some (snd crq))
                  (combine downCInds rqTos) /\
           Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))

@@ -62,31 +62,104 @@ Ltac good_rqrs_rule_cases rule :=
     destruct H as [|[|[|[|]]]]
   end.
 
+Ltac disc_rule_conds :=
+  repeat
+    (match goal with
+     | [H: ImmDownRule _ _ _ |- _] =>
+       let cidx := fresh "cidx" in
+       let rqFrom := fresh "rqFrom" in
+       let rsTo := fresh "rsTo" in
+       destruct H as [cidx [rqFrom [rsTo ?]]]; dest
+     | [H: ImmUpRule _ _ _ |- _] =>
+       let rqFrom := fresh "rqFrom" in
+       let rsTo := fresh "rsTo" in
+       destruct H as [rqFrom [rsTo ?]]; dest
+     | [H: RqFwdRule _ _ _ |- _] =>
+       let rqFrom := fresh "rqFrom" in
+       let rqTos := fresh "rqTos" in
+       red in H;
+       destruct H as [rqFrom [rqTos ?]]; dest
+     | [H: RqUpUp _ _ _ _ ?rule \/
+           RqUpDown _ _ _ _ ?rule \/
+           RqDownDown _ _ _ _ ?rule |- _] =>
+       destruct H as [|[|]]
+     | [H: RqUpUp _ _ _ _ _ |- _] => red in H; dest
+     | [H: RqUpDown _ _ _ _ _ |- _] => red in H; dest
+     | [H: RqDownDown _ _ _ _ _ |- _] => red in H; dest
+     | [H: RsBackRule _ |- _] =>
+       let rssFrom := fresh "rssFrom" in
+       let rsbTo := fresh "rsbTo" in
+       destruct H as [rssFrom [rsbTo ?]]; dest
+     | [H: FootprintedUpPrec _ _ _ \/ FootprintedDownPrec _ _ _ |- _] =>
+       destruct H
+     | [H: FootprintedUpPrec _ _ _ |- _] => red in H
+     | [H: FootprintedDownPrec _ _ _ |- _] => red in H
+     | [H: FootprintedUp _ _ _ |- _] =>
+       let rqi := fresh "rqi" in
+       destruct H as [rqi ?]; dest
+                                
+     | [H: MsgsFrom _ _ _ _ |- _] => red in H
+     | [H: MsgsTo _ _ |- _] => red in H
+     | [H: RqAccepting _ _ _ |- _] => red in H
+     | [H: RsReleasing _ |- _] => red in H
+
+     | [H: DownLockFree _ _ _ |- _] => red in H
+     | [H: DownLockFreeORq _ |- _] => red in H
+     | [H: UpLockFree _ _ _ |- _] => red in H
+     | [H: UpLockFreeORq _ |- _] => red in H
+                                             
+     | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
+       specialize (H1 _ _ _ H2)
+     | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
+     | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
+       specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
+
+     | [H: Forall _ (_ :: _) |- _] => inv H
+     | [H: Forall _ nil |- _] => clear H
+
+     | [H: idsOf ?ivs = _ :: nil |- _] =>
+       destruct ivs; [discriminate|simpl in H; inv H]
+     | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
+     | [H: nil = nil |- _] => clear H
+     end; simpl in *; subst).
+
+Ltac solve_rule_conds :=
+  repeat red;
+  repeat
+    (repeat
+       match goal with
+       | [ |- exists _, _] => eexists
+       | [ |- _ /\ _] => split
+       end;
+     try reflexivity; try eassumption).
+
 Section MessageInv.
   Context {oifc: OStateIfc}.
-  Variables (gtr: DTree)
+  Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hitr: GoodRqRsSys gtr sys).
+  Hypothesis (Hitr: GoodRqRsSys dtr sys).
 
   Definition RqUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
-    exists rqUp, msgs = [rqUp] /\
-                 msg_type (valOf rqUp) = MRq /\
-                 In (idOf rqUp) (rqEdgesUpTo gtr oidx).
+    exists cidx rqUp,
+      msgs = [rqUp] /\
+      msg_type (valOf rqUp) = MRq /\
+      parentOf dtr cidx = Some oidx /\
+      rqEdgeUpFrom dtr cidx = Some (idOf rqUp).
 
   Definition RqDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists rqDown, msgs = [rqDown] /\
                    msg_type (valOf rqDown) = MRq /\
-                   edgeDownTo gtr oidx = Some (idOf rqDown).
+                   edgeDownTo dtr oidx = Some (idOf rqDown).
 
   Definition RsUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     Forall (fun msg => msg_type (valOf msg) = MRs) msgs /\
-    SubList (idsOf msgs) (rsEdgesUpTo gtr oidx).
+    SubList (idsOf msgs) (rsEdgesUpTo dtr oidx).
 
   Definition RsDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists rsDown, msgs = [rsDown] /\
                    msg_type (valOf rsDown) = MRs /\
-                   edgeDownTo gtr oidx = Some (idOf rsDown).
+                   edgeDownTo dtr oidx = Some (idOf rsDown).
 
   Lemma messages_in_cases:
     forall s1 oidx ridx rins routs s2,
@@ -102,16 +175,20 @@ Section MessageInv.
     good_rqrs_rule_cases rule.
 
     - left.
+      disc_rule_conds.
+      solve_rule_conds.
 
-      Ltac disc_rule_conds :=
-        repeat
-          (match goal with
-           | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
-             specialize (H1 _ _ _ H2)
-           | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
-           | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
-             specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
-           end; simpl in *; subst).
+    - right; left.
+      disc_rule_conds.
+      solve_rule_conds.
+
+    - disc_rule_conds.
+      + left; solve_rule_conds.
+      + left; solve_rule_conds.
+      + right; left; solve_rule_conds.
+
+    - admit.
+    - admit.
 
   Admitted.
     
@@ -327,9 +404,9 @@ Fixpoint rssOf (hst: MHistory): list IdxT :=
 (*   | _ => None *)
 (*   end. *)
 
-Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
+Definition trsTypeOf (dtr: DTree) (idm: Id Msg):
   option IdxT * option IdxT * TrsType :=
-  (findEdge gtr (fst idm))
+  (findEdge dtr (fst idm))
     >>=[(None, None, RqUp)]
     (fun e =>
        (e.(edge_from),
@@ -341,18 +418,18 @@ Definition trsTypeOf (gtr: DTree) (idm: Id Msg):
 
 Section AtomicInv.
   Context {oifc: OStateIfc}.
-  Variables (gtr: DTree)
+  Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hitr: GoodRqRsSys gtr sys).
+  Hypothesis (Hitr: GoodRqRsSys dtr sys).
 
   Definition subtreeInds (sroot: option IdxT): list IdxT :=
-    sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree gtr sroot))).
+    sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree dtr sroot))).
 
   Definition rsUpCover (idm: Id Msg): list IdxT :=
-    let from := fst (fst (trsTypeOf gtr idm)) in
-    let to := snd (fst (trsTypeOf gtr idm)) in
-    match snd (trsTypeOf gtr idm) with
+    let from := fst (fst (trsTypeOf dtr idm)) in
+    let to := snd (fst (trsTypeOf dtr idm)) in
+    match snd (trsTypeOf dtr idm) with
     | RsUp => subtreeInds from
     | _ => nil
     end.
@@ -364,9 +441,9 @@ Section AtomicInv.
     end.
 
   Definition rsDownCover (idm: Id Msg): list IdxT :=
-    let from := fst (fst (trsTypeOf gtr idm)) in
-    let to := snd (fst (trsTypeOf gtr idm)) in
-    match snd (trsTypeOf gtr idm) with
+    let from := fst (fst (trsTypeOf dtr idm)) in
+    let to := snd (fst (trsTypeOf dtr idm)) in
+    match snd (trsTypeOf dtr idm) with
     | RsDown => subtreeInds to
     | _ => nil
     end.
