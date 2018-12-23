@@ -144,6 +144,19 @@ Proof.
   inv H9.
 Qed.
 
+Lemma discontinuous_tail_right:
+  forall hst1 hst2 lbl2,
+    hst2 <> nil ->
+    Discontinuous hst1 (lbl2 :: hst2) ->
+    Discontinuous hst1 hst2.
+Proof.
+  unfold Discontinuous; intros.
+  destruct H0 as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
+  dest.
+  inv H1; [elim H; reflexivity|].
+  do 8 eexists; repeat split; eauto.
+Qed.
+
 Lemma atomic_beginning_label:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
@@ -435,7 +448,7 @@ Section Pushable.
     reflexivity.
   Qed.
 
-  Lemma LRPushable_commutable_left:
+  Lemma LRPushable_commutative_left:
     forall lpush rpush hsts hst,
       LRPushable lpush rpush (hsts ++ [hst]) ->
       Forall lpush hsts ->
@@ -544,7 +557,7 @@ Section Pushable.
         rewrite <-app_assoc.
         eapply reducible_trans.
         { apply reducible_app_1.
-          eapply LRPushable_commutable_left; eauto.
+          eapply LRPushable_commutative_left; eauto.
           eapply LRPushable_split_left with (hsts2:= hsts1).
           rewrite <-app_assoc; assumption.
         }

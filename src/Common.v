@@ -44,10 +44,14 @@ Proof.
   tauto.
 Qed.
 
+Inductive xor (A B: Prop): Prop :=
+| Xor1: A -> ~B -> xor A B
+| Xor2: ~A -> B -> xor A B.
+
 Inductive xor3 (A B C: Prop): Prop :=
-| Xor1: A -> ~B -> ~C -> xor3 A B C
-| Xor2: ~A -> B -> ~C -> xor3 A B C
-| Xor3: ~A -> ~B -> C -> xor3 A B C.
+| Xor31: A -> ~B -> ~C -> xor3 A B C
+| Xor32: ~A -> B -> ~C -> xor3 A B C
+| Xor33: ~A -> ~B -> C -> xor3 A B C.
 
 Ltac nothing := idtac.
 

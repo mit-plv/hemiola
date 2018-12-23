@@ -1,7 +1,7 @@
 Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics StepM Invariant Serial.
-Require Import Reduction Commutable QuasiSeq Topology.
+Require Import Reduction Commutativity QuasiSeq Topology.
 
 Set Implicit Arguments.
 
@@ -91,51 +91,9 @@ Section Conditions.
       DownLockedORq orq /\
       DownLockFreeORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
-  Definition SubLock (orq1 orq2: ORq Msg) :=
-    M.Sub orq1 orq2.
-  
-  Definition PrecLockMonotone (rule: Rule oifc) :=
-    forall ost orq mins,
-      rule.(rule_precond) ost orq mins ->
-      forall rorq,
-        SubLock rorq orq ->
-        rule.(rule_precond) ost rorq mins.
-
   Definition StateUnchanged (rule: Rule oifc): Prop :=
     forall ost orq mins,
       ost = fst (fst (rule.(rule_trs) ost orq mins)).
-
-  (** Some facts *)
-
-  Lemma UpLockFree_UpLocking_SubLock:
-    forall rule post porq mins nost norq mouts,
-      UpLockFree post porq mins ->
-      UpLocking rule ->
-      rule.(rule_precond) post porq mins ->
-      rule.(rule_trs) post porq mins = (nost, norq, mouts) ->
-      SubLock porq norq.
-  Proof.
-    unfold UpLockFree, UpLockFreeORq, UpLocking, SubLock; intros.
-    specialize (H0 post porq mins).
-    rewrite H2 in H0.
-    simpl in H0; destruct H0 as [rqi ?]; subst.
-    red; intros; mred.
-  Qed.
-
-  Lemma DownLockFree_DownLocking_SubLock:
-    forall rule post porq mins nost norq mouts,
-      DownLockFree post porq mins ->
-      DownLocking rule ->
-      rule.(rule_precond) post porq mins ->
-      rule.(rule_trs) post porq mins = (nost, norq, mouts) ->
-      SubLock porq norq.
-  Proof.
-    unfold DownLockFree, DownLockFreeORq, DownLocking, SubLock; intros.
-    specialize (H0 post porq mins).
-    rewrite H2 in H0.
-    simpl in H0; destruct H0 as [rqi ?]; subst.
-    red; intros; mred.
-  Qed.
   
 End Conditions.
 
@@ -243,107 +201,7 @@ Section RqRsTopo.
       Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
              (combine downCInds rssFrom).
   
-  Section GoodLocking.
-
-    Section PerObject.
-      Variable (oidx: IdxT).
-      
-      (** * Rule predicates about which messages to accept *)
-
-      (* A rule handling a request from one of its children *)
-      Definition RqFromDownRule (rule: Rule oifc) :=
-        exists rqFrom,
-          In rqFrom (rqEdgesUpTo oidx) /\
-          (rule.(rule_precond)
-           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting /\oprec UpLockFree)).
-
-      (* A rule handling a request from the parent *)
-      Definition RqFromUpRule (rule: Rule oifc) :=
-        exists rqFrom,
-          edgeDownTo oidx = Some rqFrom /\
-          (rule.(rule_precond)
-           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)).
-
-      (* A rule handling responses from some of its children *)
-      Definition RsFromDownRule (rule: Rule oifc) :=
-        exists rssFrom,
-          SubList rssFrom (rsEdgesUpTo oidx) /\ NoDup rssFrom /\
-          (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
-          DownReleasing rule.
-
-      (* A rule handling a response from the parent *)
-      Definition RsFromUpRule (rule: Rule oifc) :=
-        exists rsFrom,
-          edgeDownTo oidx = Some rsFrom /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rsFrom] /\oprec RsAccepting)) /\
-          UpReleasing rule.
-
-      (** * Rule predicates about which messages to release *)
-
-      (* A rule making requests to some of its children *)
-      Definition RqToDownRule (rule: Rule oifc) :=
-        exists rqsTo,
-          SubList rqsTo (edgesDownFrom oidx) /\ NoDup rqsTo /\
-          MsgsTo rqsTo rule /\ RqReleasing rule /\
-          (rule.(rule_precond) ->oprec DownLockFree) /\
-          DownLocking rule /\
-          StateUnchanged rule.
-
-      (* A rule making a request to the parent *)
-      Definition RqToUpRule (rule: Rule oifc) :=
-        exists rqTo,
-          rqEdgeUpFrom oidx = Some rqTo /\
-          MsgsTo [rqTo] rule /\ RqReleasing rule /\
-          UpLocking rule /\
-          StateUnchanged rule.
-
-      (* A rule making a response to one of its children *)
-      Definition RsToDownRule (rule: Rule oifc) :=
-        exists rsTo,
-          In rsTo (edgesDownFrom oidx) /\
-          MsgsTo [rsTo] rule /\ RsReleasing rule /\
-          (** Below [DownLockFree] is a crucial locking condition to avoid
-           * incorrect behaviors by interleaving! *)
-          (rule.(rule_precond) ->oprec DownLockFree).
-      
-      (* A rule making a response to the parent:
-       * Note that unlike [RsToDownRule] we don't have any locking condition for
-       * any upward responses. If we put [UpLockFree] here then it's correct
-       * but makes deadlock. *)
-      Definition RsToUpRule (rule: Rule oifc) :=
-        exists rsTo,
-          rsEdgeUpFrom oidx = Some rsTo /\
-          MsgsTo [rsTo] rule /\
-          RsReleasing rule.
-
-      Definition GoodLockingAccept (rule: Rule oifc) :=
-        RqFromDownRule rule \/
-        RqFromUpRule rule \/
-        RsFromDownRule rule \/
-        RsFromUpRule rule.
-
-      Definition GoodLockingRelease (rule: Rule oifc) :=
-        RqToDownRule rule \/
-        RqToUpRule rule \/
-        RqToDownRule rule \/
-        RsToUpRule rule.
-
-      Definition GoodLockingRule (rule: Rule oifc) :=
-        GoodLockingAccept rule /\
-        GoodLockingRelease rule /\
-        PrecLockMonotone rule.
-
-    End PerObject.
-
-    Definition GoodLockingObj (obj: Object oifc) :=
-      Forall (GoodLockingRule obj.(obj_idx)) obj.(obj_rules).
-    
-    Definition GoodLockingSys (sys: System oifc) :=
-      Forall GoodLockingObj sys.(sys_objs).
-    
-  End GoodLocking.
-
-  Section GoodIteration.
+  Section GoodRqRs.
     
     Section PerObject.
       Variable (oidx: IdxT).
@@ -353,7 +211,11 @@ Section RqRsTopo.
         exists cidx rqFrom rsTo,
           rqEdgeUpFrom cidx = Some rqFrom /\
           edgeDownTo cidx = Some rsTo /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)) /\
+          (rule.(rule_precond)
+           ->oprec (MsgsFrom [rqFrom]
+                    /\oprec RqAccepting
+                    /\oprec DownLockFree
+                    /\oprec UpLockFree)) /\
           MsgsTo [rsTo] rule /\ RsReleasing rule.
 
       (* A rule making an immediate response to the parent *)
@@ -361,7 +223,10 @@ Section RqRsTopo.
         exists rqFrom rsTo,
           edgeDownTo oidx = Some rqFrom /\
           rsEdgeUpFrom oidx = Some rsTo /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)) /\
+          (rule.(rule_precond)
+           ->oprec (MsgsFrom [rqFrom]
+                    /\oprec RqAccepting
+                    /\oprec DownLockFree)) /\
           MsgsTo [rsTo] rule /\ RsReleasing rule.
 
       (* A rule forwarding a request. Request-forwarding rules should satisfy
@@ -370,6 +235,8 @@ Section RqRsTopo.
        * 2) Correct footprinting (to [ORq])
        *)
       Definition RqUpUp (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
+        (rule.(rule_precond) ->oprec UpLockFree) /\
+        UpLocking rule /\
         In rqFrom (rqEdgesUpTo oidx) /\
         exists rqTo rsFrom rsbTo,
           rqTos = [rqTo] /\
@@ -377,6 +244,8 @@ Section RqRsTopo.
           FootprintingUp rule [rsFrom] rsbTo.
 
       Definition RqUpDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
+        (rule.(rule_precond) ->oprec DownLockFree) /\
+        DownLocking rule /\
         In rqFrom (rqEdgesUpTo oidx) /\
         SubList rqTos (edgesDownFrom oidx) /\
         exists rssFrom rsbTo,
@@ -384,6 +253,8 @@ Section RqRsTopo.
           FootprintingDown rule rssFrom rsbTo.
 
       Definition RqDownDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
+        (rule.(rule_precond) ->oprec DownLockFree) /\
+        DownLocking rule /\
         In rqFrom (edgesDownFrom oidx) /\
         SubList rqTos (edgesDownFrom oidx) /\
         exists downCIdx downCInds rssFrom rsbTo,
@@ -401,7 +272,7 @@ Section RqRsTopo.
            RqUpDown rqFrom rqTos rule \/
            RqDownDown rqFrom rqTos rule) /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)) /\
-          MsgsTo rqTos rule /\ RqReleasing rule.
+          MsgsTo rqTos rule /\ RqReleasing rule /\ StateUnchanged rule.
       
       Definition RsBackRule (rule: Rule oifc) :=
         exists rssFrom rsbTo,
@@ -421,26 +292,41 @@ Section RqRsTopo.
           FootprintUpToDown rule rsFrom rqTos /\
           edgeDownTo oidx = Some rsFrom /\
           SubList rqTos (edgesDownFrom oidx) /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rsFrom] /\oprec RsAccepting)) /\
-          MsgsTo rqTos rule /\ RqReleasing rule.
+          (rule.(rule_precond)
+           ->oprec (MsgsFrom [rsFrom]
+                    /\oprec RsAccepting
+                    /\oprec DownLockFree)) /\
+          MsgsTo rqTos rule /\ RqReleasing rule /\
+          DownLocking rule /\ StateUnchanged rule.
       
-      Definition GoodIterationRule (rule: Rule oifc) :=
+      Definition GoodRqRsRule (rule: Rule oifc) :=
         ImmDownRule rule \/ ImmUpRule rule \/
         RqFwdRule rule \/ RsBackRule rule \/
         RsDownRqDownRule rule.
 
     End PerObject.
 
-    Definition GoodIterationObj (obj: Object oifc) :=
-      Forall (GoodIterationRule obj.(obj_idx)) obj.(obj_rules).
+    Definition GoodRqRsObj (obj: Object oifc) :=
+      Forall (GoodRqRsRule obj.(obj_idx)) obj.(obj_rules).
     
-    Definition GoodIterationSys (sys: System oifc) :=
-      Forall GoodIterationObj sys.(sys_objs).
+    Definition GoodRqRsSys (sys: System oifc) :=
+      Forall GoodRqRsObj sys.(sys_objs).
     
-  End GoodIteration.
+  End GoodRqRs.
 
   Section RqUpRsUpComm.
 
+    Definition RqToUpRule (oidx: IdxT) (rule: Rule oifc) :=
+      RqFwdRule oidx rule /\
+      exists rqFrom rqTos,
+        RqUpUp oidx rqFrom rqTos rule.
+
+    Definition RsToUpRule (oidx: IdxT) (rule: Rule oifc) :=
+      ImmUpRule oidx rule \/
+      (RsBackRule rule /\
+       exists rssFrom rsbTo,
+         FootprintedDownPrec rule rssFrom rsbTo).
+    
     Definition RqUpRsUpOkObj (obj: Object oifc) :=
       forall rqUpRule rsUpRule,
         In rqUpRule obj.(obj_rules) -> RqToUpRule obj.(obj_idx) rqUpRule ->
@@ -453,8 +339,7 @@ Section RqRsTopo.
   End RqUpRsUpComm.
 
   Definition RqRsSys (sys: System oifc) :=
-    GoodLockingSys sys /\
-    GoodIterationSys sys /\
+    GoodRqRsSys sys /\
     RqUpRsUpOkSys sys.
   
 End RqRsTopo.

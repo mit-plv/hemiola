@@ -244,7 +244,7 @@ Proof.
         }
 Qed.
 
-Lemma nonconflicting_mdisj_commutable_atomic_0:
+Lemma nonconflicting_mdisj_commutative_atomic_0:
   forall {oifc} (sys: System oifc) oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
     NonConflicting sys [RlblInt oidx1 ridx1 mins1 mouts1] hst2 ->
@@ -291,7 +291,7 @@ Proof.
         apply DisjList_comm, DisjList_app_3 in H8; dest; auto.
 Qed.
 
-Lemma nonconflicting_mdisjoint0_commutable_atomic:
+Lemma nonconflicting_mdisjoint0_commutative_atomic:
   forall {oifc} (sys: System oifc) hst1 hst2,
     NonConflicting sys hst1 hst2 ->
     MDisjoint0 hst1 hst2 ->
@@ -302,7 +302,7 @@ Proof.
   dest.
 
   induction H0; simpl; intros; subst;
-    [eapply nonconflicting_mdisj_commutable_atomic_0; eauto|].
+    [eapply nonconflicting_mdisj_commutative_atomic_0; eauto|].
 
   replace (hst2 ++ RlblInt oidx ridx rins routs :: hst)
     with ((hst2 ++ [RlblInt oidx ridx rins routs]) ++ hst)
@@ -310,7 +310,7 @@ Proof.
  
   eapply reducible_trans.
   - apply reducible_app_2.
-    eapply nonconflicting_mdisj_commutable_atomic_0;
+    eapply nonconflicting_mdisj_commutative_atomic_0;
       try (eapply H1; eauto).
     + eapply nonconflicting_head_1; eauto.
     + rewrite idsOf_app in H2.
@@ -328,7 +328,7 @@ Proof.
       apply DisjList_app_3 in H4; dest; auto.
 Qed.
 
-Lemma nonconflicting_mdisjoint_commutable_atomic:
+Lemma nonconflicting_mdisjoint_commutative_atomic:
   forall {oifc} (sys: System oifc) hst1 hst2,
     NonConflicting sys hst1 hst2 ->
     MDisjoint hst1 hst2 ->
@@ -336,7 +336,7 @@ Lemma nonconflicting_mdisjoint_commutable_atomic:
 Proof.
   intros.
   apply MDisjoint_MDisjoint0 in H0.
-  apply nonconflicting_mdisjoint0_commutable_atomic; auto.
+  apply nonconflicting_mdisjoint0_commutative_atomic; auto.
 Qed.
 
 Close Scope list.

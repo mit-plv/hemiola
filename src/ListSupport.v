@@ -25,6 +25,14 @@ Definition ol2l {A} (oa: option (list A)): list A :=
   | None => nil
   end.
 
+Definition list_dec_eq_nil {A}: forall (l: list A), {l = nil} + {l <> nil}.
+Proof.
+  intros.
+  destruct l.
+  - left; reflexivity.
+  - right; discriminate.
+Defined.
+
 Fixpoint lift_each {A} (l: list A): list (list A) :=
   match l with
   | nil => nil

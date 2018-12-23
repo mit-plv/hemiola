@@ -1,7 +1,7 @@
 Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
-Require Import Syntax Semantics StepM Invariant Serial.
-Require Import Reduction Commutable QuasiSeq Topology.
+Require Import Syntax Semantics SemFacts StepM Invariant Serial.
+Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsInv.
 
 Set Implicit Arguments.
@@ -62,18 +62,39 @@ Section Pushable.
       left; red; auto.
     Qed.
 
+    Lemma rqUp_lpush_unit_ok:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        Discontinuous phst hst ->
+        Reducible sys (hst ++ phst) (phst ++ hst).
+    Proof.
+    Admitted.
+    
     Lemma rqUp_lpush_ok:
       forall st1,
         Reachable (steps step_m) sys st1 ->
         forall hsts st2,
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst =>
                     RqUpLPush hst ->
                     Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
     Proof.
-      (* Hint: [phst] only consists of RqUp. *)
-    Admitted.
+      intros.
+      inv H1; clear H8.
+      generalize dependent st3.
+      induction hsts; simpl; intros; [constructor|].
+
+      inv H0; inv H2.
+      rewrite <-app_assoc in H6.
+      eapply steps_split in H6; [|reflexivity].
+      destruct H6 as [sti [? ?]].
+
+      constructor; eauto.
+      intros; inv H4; dest.
+      eapply rqUp_lpush_unit_ok; eauto.
+    Qed.
 
     Lemma rqUp_rpush_ok:
       forall st1,
@@ -81,6 +102,7 @@ Section Pushable.
         forall hsts st2,
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst =>
                     RqUpRPush hst ->
                     Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
@@ -96,10 +118,11 @@ Section Pushable.
         forall hsts st2,
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
           LRPushable sys RqUpLPush RqUpRPush hsts.
     Proof.
       intros; red; intros; subst.
-      red in H4; elim H4.
+      red in H5; elim H5.
     Qed.
 
   End RqUp.
@@ -133,6 +156,7 @@ Section Pushable.
         forall hsts st2,
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst =>
                     RsUpLPush hst ->
                     Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
@@ -148,6 +172,7 @@ Section Pushable.
         forall hsts st2,
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst =>
                     RsUpRPush hst ->
                     Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
@@ -160,10 +185,11 @@ Section Pushable.
         forall hsts st2,
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
           LRPushable sys RsUpLPush RsUpRPush hsts.
     Proof.
       intros; red; intros; subst.
-      red in H3; elim H3.
+      red in H4; elim H4.
     Qed.
     
   End RsUp.
@@ -186,7 +212,7 @@ Proof.
   { inv H0; inv H1.
     destruct H0 as [oidx [ridx [rins [routs ?]]]]; dest; subst.
     do 4 eexists; split; auto.
-    destruct H as [? [? ?]].
+    destruct H.
     inv H5.
     eapply messages_in_cases; eauto.
   }

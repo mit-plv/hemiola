@@ -435,7 +435,7 @@ Proof.
         eapply STrsExtAtomic; eauto.
 Qed.
   
-(* NOTE: For the reducibility of internal state transitions, see [Commutable.v]. *)
+(* NOTE: For the reducibility of internal state transitions, see [Commutativity.v]. *)
 
 Close Scope list.
 
