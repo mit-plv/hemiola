@@ -88,30 +88,24 @@ Section ORqs.
       rqi_midx_rsb: IdxT
     }.
 
-  (* AddrT |-> RqType |-> RqInfo *)
-  Definition ORq (MsgT: Type) := M.t (M.t (RqInfo MsgT)).
+  (* RqType |-> RqInfo *)
+  Definition ORq (MsgT: Type) := M.t (RqInfo MsgT).
 
   (* Object IdxT |-> ORq *)
   Definition ORqs (MsgT: Type) := M.t (ORq MsgT). 
 
-  Definition addRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT)
+  Definition addRq {MsgT} (orq: ORq MsgT) (rqty: IdxT)
              (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
-    let aorq := match orq@[addr] with
-                | Some aorq => aorq
-                | None => M.empty _
-                end in
-    orq+[addr <- aorq+[rqty <- {| rqi_msg := msg;
-                                  rqi_minds_rss := mrss;
-                                  rqi_midx_rsb := mrsb
-                               |}]].
+    orq+[rqty <- {| rqi_msg := msg;
+                    rqi_minds_rss := mrss;
+                    rqi_midx_rsb := mrsb
+                 |}].
 
-  Fixpoint getRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT): option (RqInfo MsgT) :=
-    orq@[addr] >>=[None]
-       (fun aorq => aorq@[rqty] >>=[None] (fun rqinfo => Some rqinfo)).
+  Fixpoint getRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): option (RqInfo MsgT) :=
+    orq@[rqty] >>=[None] (fun rqinfo => Some rqinfo).
 
-  Fixpoint removeRq {MsgT} (orq: ORq MsgT) (addr: AddrT) (rqty: IdxT): ORq MsgT :=
-    orq@[addr] >>=[orq]
-       (fun aorq => orq +[addr <- (M.remove rqty aorq)]).
+  Fixpoint removeRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): ORq MsgT :=
+    M.remove rqty orq.
 
 End ORqs.
 

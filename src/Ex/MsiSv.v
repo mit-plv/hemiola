@@ -53,7 +53,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [getRq]
            /\oprec RqAccepting
-           /\oprec UpLockFree0
+           /\oprec UpLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] >= msiS;
@@ -72,7 +72,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [getRq]
            /\oprec RqAccepting
-           /\oprec UpLockFree0
+           /\oprec UpLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiI;
@@ -81,7 +81,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost,
-                   addRq orq O upRq (valOf idm) [pc] ce,
+                   addRq orq upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqS;
                               msg_type := MRq;
                               msg_value := VUnit |})])))
@@ -100,7 +100,7 @@ Section System.
                   match msg_value (valOf idm) with
                   | VNat n =>
                     (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiS],
-                     removeRq orq O upRq,
+                     removeRq orq upRq,
                      [(ce, {| msg_id := getRs;
                               msg_type := MRs;
                               msg_value := VNat n |})])
@@ -129,7 +129,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [setRq]
            /\oprec RqAccepting
-           /\oprec UpLockFree0
+           /\oprec UpLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiM;
@@ -154,7 +154,7 @@ Section System.
            MsgsFrom [ec]
            /\oprec MsgIdsFrom [setRq]
            /\oprec RqAccepting
-           /\oprec UpLockFree0
+           /\oprec UpLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] <> msiM;
@@ -163,7 +163,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost,
-                   addRq orq O upRq (valOf idm) [pc] ce,
+                   addRq orq upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqM;
                               msg_type := MRq;
                               msg_value := VUnit |})])))
@@ -177,12 +177,12 @@ Section System.
            /\oprec RsAccepting;
          rule_trs :=
            fun (ost: OState ImplOStateIfc) orq mins =>
-             (Syntax.getRq orq O upRq) >>=[(ost, orq, nil)]
+             (Syntax.getRq orq upRq) >>=[(ost, orq, nil)]
                (fun rqinfo =>
                   match msg_value (rqi_msg rqinfo) with
                   | VNat n =>
                     (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiM],
-                     removeRq orq O upRq,
+                     removeRq orq upRq,
                      (ce,
                       {| msg_id := setRs;
                          msg_type := MRs;
@@ -210,7 +210,7 @@ Section System.
       {| rule_idx := 8;
          rule_precond :=
            RqAccepting
-           /\oprec UpLockFree0
+           /\oprec UpLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] <> msiI;
@@ -219,7 +219,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost,
-                   addRq orq O upRq (valOf idm) [pc] ce,
+                   addRq orq upRq (valOf idm) [pc] ce,
                    [(cpRq, {| msg_id := msiRqI;
                               msg_type := MRq;
                               msg_value := VNat (ost#[implValueIdx]) |})])))
@@ -236,7 +236,7 @@ Section System.
              ((hd_error mins) >>=[(ost, orq, nil)]
                (fun idm =>
                   (ost +#[implStatusIdx <- msiI],
-                   removeRq orq O upRq,
+                   removeRq orq upRq,
                    nil)))
       |}.
       
@@ -264,7 +264,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqS]
              /\oprec RqAccepting
-             /\oprec DownLockFree0
+             /\oprec DownLockFree
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] >= msiS;
@@ -282,7 +282,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqS]
              /\oprec RqAccepting
-             /\oprec DownLockFree0
+             /\oprec DownLockFree
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] = msiI;
@@ -291,7 +291,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                  (fun idm =>
                     (ost,
-                     addRq orq O downRq (valOf idm) [cpRs'] pc,
+                     addRq orq downRq (valOf idm) [cpRs'] pc,
                      [(pc', {| msg_id := msiDownRqS;
                                msg_type := MRq;
                                msg_value := VNat (ost#[implValueIdx]) |})])))
@@ -310,7 +310,7 @@ Section System.
                     match msg_value (valOf idm) with
                     | VNat n =>
                       (ost +#[implValueIdx <- n] +#[implStatusIdx <-msiS],
-                       removeRq orq O downRq,
+                       removeRq orq downRq,
                        [(pc, {| msg_id := msiRsS;
                                 msg_type := MRs;
                                 msg_value := VNat n |})])
@@ -324,7 +324,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqM]
              /\oprec RqAccepting
-             /\oprec DownLockFree0
+             /\oprec DownLockFree
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] = msiM;
@@ -343,7 +343,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqM]
              /\oprec RqAccepting
-             /\oprec DownLockFree0
+             /\oprec DownLockFree
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
                    ost#[implStatusIdx] <> msiM;
@@ -352,7 +352,7 @@ Section System.
                ((hd_error mins) >>=[(ost, orq, nil)]
                  (fun idm =>
                     (ost,
-                     addRq orq O downRq (valOf idm) [cpRs'] pc,
+                     addRq orq downRq (valOf idm) [cpRs'] pc,
                      [(pc', {| msg_id := msiDownRqM;
                                msg_type := MRq;
                                msg_value := VUnit |})])))
@@ -371,7 +371,7 @@ Section System.
                     match msg_value (valOf idm) with
                     | VNat n =>
                       (ost +#[implStatusIdx <- msiI],
-                       removeRq orq O downRq,
+                       removeRq orq downRq,
                        [(pc, {| msg_id := msiRsM;
                                 msg_type := MRs;
                                 msg_value := VNat n |})])
@@ -385,7 +385,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqI]
              /\oprec RqAccepting
-             /\oprec DownLockFree0;
+             /\oprec DownLockFree;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]

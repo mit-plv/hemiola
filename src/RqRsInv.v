@@ -113,12 +113,12 @@ Section RqUpInv.
            | [H: MsgsTo _ _ |- _] => red in H
            | [H: RqAccepting _ _ _ |- _] => red in H
            | [H: RqReleasing _ |- _] => red in H
-           | [H: UpLocking0 _ |- _] => red in H
-           | [H: UpLocked _ _ |- _] => red in H
-           | [H: DownLockFree0 _ _ _ |- _] => red in H
-           | [H: DownLocking0 _ |- _] => red in H
+           | [H: UpLocking _ |- _] => red in H
+           | [H: UpLockedORq _ _ |- _] => red in H
+           | [H: DownLockFree _ _ _ |- _] => red in H
+           | [H: DownLocking _ |- _] => red in H
            | [H: DownLockFree _ _ |- _] => red in H
-           | [H: DownLocked _ _ |- _] => red in H
+           | [H: DownLockedORq _ _ |- _] => red in H
            | [H: StateUnchanged _ |- _] => red in H
                                                     
            | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
@@ -352,9 +352,7 @@ Section LockInv.
 
     Definition OLocked (oidx: IdxT) :=
       orqs@[oidx] >>=[False]
-        (fun orq =>
-           orq@[O] >>=[False]
-             (fun aorq => aorq@[downRq] <> None)).
+        (fun orq => orq@[downRq] <> None).
 
     Definition DownLockFreeInv (oidx: IdxT) :=
       let str := subtree gtr oidx in
@@ -387,12 +385,8 @@ Section LockInv.
                 end) ctrs.
 
     Definition LockInvORq (oidx: IdxT) (orq: ORq Msg) :=
-      match orq@[O] with
-      | Some aorq =>
-        match aorq@[downRq] with
-        | Some downRqi => DownLockedInv oidx downRqi
-        | None => DownLockFreeInv oidx
-        end
+      match orq@[downRq] with
+      | Some downRqi => DownLockedInv oidx downRqi
       | None => DownLockFreeInv oidx
       end.
 

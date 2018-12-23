@@ -19,9 +19,9 @@ Section Conditions.
   Definition MsgIdsFrom (msgIds: list IdxT): OPrec oifc :=
     fun _ _ mins => map msg_id (valsOf mins) = msgIds.
 
-  Definition MsgsFromORq (addr: AddrT) (rqty: IdxT): OPrec oifc :=
+  Definition MsgsFromORq (rqty: IdxT): OPrec oifc :=
     fun _ orq mins =>
-      (getRq orq addr rqty)
+      (getRq orq rqty)
         >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi).
 
   Definition MsgsTo (tos: list IdxT) (rule: Rule oifc): Prop :=
@@ -50,47 +50,46 @@ Section Conditions.
   Definition upRq := 0.
   Definition downRq := 1.
 
-  Definition LockFree (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[True]
-       (fun aorq => aorq@[upRq] = None /\ aorq@[downRq] = None).
+  Definition LockFreeORq (orq: ORq Msg) :=
+    orq@[upRq] = None /\ orq@[downRq] = None.
 
-  Definition UpLockFree (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[True] (fun aorq => aorq@[upRq] = None).
+  Definition UpLockFreeORq (orq: ORq Msg) :=
+    orq@[upRq] = None.
 
-  Definition DownLockFree (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[True] (fun aorq => aorq@[downRq] = None).
+  Definition DownLockFreeORq (orq: ORq Msg) :=
+    orq@[downRq] = None.
 
-  Definition UpLocked (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[False] (fun aorq => aorq@[upRq] <> None).
+  Definition UpLockedORq (orq: ORq Msg) :=
+    orq@[upRq] <> None.
 
-  Definition DownLocked (orq: ORq Msg) (addr: AddrT) :=
-    orq@[addr] >>=[False] (fun aorq => aorq@[downRq] <> None).
+  Definition DownLockedORq (orq: ORq Msg) :=
+    orq@[downRq] <> None.
 
   (** TODO: discuss whether it's fine to have a locking mechanism 
    * only for a single address. *)
-  Definition UpLockFree0: OPrec oifc :=
-    fun ost orq mins => UpLockFree orq O.
+  Definition UpLockFree: OPrec oifc :=
+    fun ost orq mins => UpLockFreeORq orq.
 
-  Definition DownLockFree0: OPrec oifc :=
-    fun ost orq mins => DownLockFree orq O.
+  Definition DownLockFree: OPrec oifc :=
+    fun ost orq mins => DownLockFreeORq orq.
 
-  Definition UpLocking0 (rule: Rule oifc): Prop :=
+  Definition UpLocking (rule: Rule oifc): Prop :=
     forall ost orq mins,
-      UpLocked (snd (fst (rule.(rule_trs) ost orq mins))) O.
+      UpLockedORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
-  Definition DownLocking0 (rule: Rule oifc): Prop :=
+  Definition DownLocking (rule: Rule oifc): Prop :=
     forall ost orq mins,
-      DownLocked (snd (fst (rule.(rule_trs) ost orq mins))) O.
+      DownLockedORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
-  Definition UpReleasing0 (rule: Rule oifc): Prop :=
+  Definition UpReleasing (rule: Rule oifc): Prop :=
     forall ost orq mins,
-      UpLocked orq O /\
-      UpLockFree (snd (fst (rule.(rule_trs) ost orq mins))) O.
+      UpLockedORq orq /\
+      UpLockFreeORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
-  Definition DownReleasing0 (rule: Rule oifc): Prop :=
+  Definition DownReleasing (rule: Rule oifc): Prop :=
     forall ost orq mins,
-      DownLocked orq O /\
-      DownLockFree (snd (fst (rule.(rule_trs) ost orq mins))) O.
+      DownLockedORq orq /\
+      DownLockFreeORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
   Definition StateUnchanged (rule: Rule oifc): Prop :=
     forall ost orq mins,
@@ -152,21 +151,17 @@ Section RqRsTopo.
 
   (* Upward-requested *)
   Definition FootprintedUp (orq: ORq Msg) (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    orq@[O] >>=[False]
-       (fun aorq =>
-          exists rqi,
-            aorq@[upRq] = Some rqi /\
-            rqi.(rqi_minds_rss) = rssFrom /\
-            rqi.(rqi_midx_rsb) = rsbTo).
+    exists rqi,
+      orq@[upRq] = Some rqi /\
+      rqi.(rqi_minds_rss) = rssFrom /\
+      rqi.(rqi_midx_rsb) = rsbTo.
 
   (* Downward-requested *)
   Definition FootprintedDown (orq: ORq Msg) (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    orq@[O] >>=[False]
-       (fun aorq =>
-          exists rqi,
-            aorq@[downRq] = Some rqi /\
-            rqi.(rqi_minds_rss) = rssFrom /\
-            rqi.(rqi_midx_rsb) = rsbTo).
+    exists rqi,
+      orq@[downRq] = Some rqi /\
+      rqi.(rqi_minds_rss) = rssFrom /\
+      rqi.(rqi_midx_rsb) = rsbTo.
 
   (** This precondition is required when handling a _downward response_. *)
   Definition FootprintedUpPrec (rule: Rule oifc) (rssFrom: list IdxT) (rsbTo: IdxT) :=
@@ -218,7 +213,7 @@ Section RqRsTopo.
         exists rqFrom,
           In rqFrom (rqEdgesUpTo oidx) /\
           (rule.(rule_precond)
-           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting /\oprec UpLockFree0)).
+           ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting /\oprec UpLockFree)).
 
       (* A rule handling a request from the parent *)
       Definition RqFromUpRule (rule: Rule oifc) :=
@@ -232,14 +227,14 @@ Section RqRsTopo.
         exists rssFrom,
           SubList rssFrom (rsEdgesUpTo oidx) /\ NoDup rssFrom /\
           (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
-          DownReleasing0 rule.
+          DownReleasing rule.
 
       (* A rule handling a response from the parent *)
       Definition RsFromUpRule (rule: Rule oifc) :=
         exists rsFrom,
           edgeDownTo oidx = Some rsFrom /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rsFrom] /\oprec RsAccepting)) /\
-          UpReleasing0 rule.
+          UpReleasing rule.
 
       (** * Rule predicates about which messages to release *)
 
@@ -248,8 +243,8 @@ Section RqRsTopo.
         exists rqsTo,
           SubList rqsTo (edgesDownFrom oidx) /\ NoDup rqsTo /\
           MsgsTo rqsTo rule /\ RqReleasing rule /\
-          (rule.(rule_precond) ->oprec DownLockFree0) /\
-          DownLocking0 rule /\
+          (rule.(rule_precond) ->oprec DownLockFree) /\
+          DownLocking rule /\
           StateUnchanged rule.
 
       (* A rule making a request to the parent *)
@@ -257,7 +252,7 @@ Section RqRsTopo.
         exists rqTo,
           rqEdgeUpFrom oidx = Some rqTo /\
           MsgsTo [rqTo] rule /\ RqReleasing rule /\
-          UpLocking0 rule /\
+          UpLocking rule /\
           StateUnchanged rule.
 
       (* A rule making a response to one of its children *)
@@ -265,13 +260,13 @@ Section RqRsTopo.
         exists rsTo,
           In rsTo (edgesDownFrom oidx) /\
           MsgsTo [rsTo] rule /\ RsReleasing rule /\
-          (** Below [DownLockFree0] is a crucial locking condition to avoid
+          (** Below [DownLockFree] is a crucial locking condition to avoid
            * incorrect behaviors by interleaving! *)
-          (rule.(rule_precond) ->oprec DownLockFree0).
+          (rule.(rule_precond) ->oprec DownLockFree).
       
       (* A rule making a response to the parent:
        * Note that unlike [RsToDownRule] we don't have any locking condition for
-       * any upward responses. If we put [UpLockFree0] here then it's correct
+       * any upward responses. If we put [UpLockFree] here then it's correct
        * but makes deadlock. *)
       Definition RsToUpRule (rule: Rule oifc) :=
         exists rsTo,
