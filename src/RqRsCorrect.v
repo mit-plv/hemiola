@@ -214,7 +214,10 @@ Proof.
     do 4 eexists; split; auto.
     destruct H.
     inv H5.
-    eapply messages_in_cases; eauto.
+    eapply messages_in_cases.
+    { eassumption. }
+    { eapply reachable_steps; eassumption. }
+    { eassumption. }
   }
   destruct Hnlbl as [oidx [ridx [rins [routs ?]]]]; dest; subst.
 

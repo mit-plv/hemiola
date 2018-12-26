@@ -62,6 +62,7 @@ Ltac good_rqrs_rule_cases rule :=
     destruct H as [|[|[|[|]]]]
   end.
 
+Ltac disc_rule_custom := idtac.
 Ltac disc_rule_conds :=
   repeat
     (match goal with
@@ -90,13 +91,28 @@ Ltac disc_rule_conds :=
        let rssFrom := fresh "rssFrom" in
        let rsbTo := fresh "rsbTo" in
        destruct H as [rssFrom [rsbTo ?]]; dest
-     | [H: FootprintedUpPrec _ _ _ \/ FootprintedDownPrec _ _ _ |- _] =>
-       destruct H
-     | [H: FootprintedUpPrec _ _ _ |- _] => red in H
-     | [H: FootprintedDownPrec _ _ _ |- _] => red in H
+     | [H: RsDownRqDownRule _ _ _ |- _] =>
+       let rsFrom := fresh "rsFrom" in
+       let rqTos := fresh "rqTos" in
+       destruct H as [rsFrom [rqTos ?]]; dest
+
+     | [H: (FootprintReleasingUp _ _ _ /\ _) \/
+           (FootprintReleasingDown _ _ _ /\ _) |- _] => destruct H; dest
+     | [H: FootprintReleasingUp _ _ _ |- _] => red in H; dest
+     | [H: FootprintReleasingDown _ _ _ |- _] => red in H; dest
+     | [H: FootprintingUp _ _ _ |- _] => red in H
+     | [H: FootprintingDown _ _ _ |- _] => red in H
      | [H: FootprintedUp _ _ _ |- _] =>
        let rqi := fresh "rqi" in
        destruct H as [rqi ?]; dest
+     | [H: FootprintedDown _ _ _ |- _] =>
+       let rqi := fresh "rqi" in
+       destruct H as [rqi ?]; dest
+     | [H: FootprintUpToDown _ _ _ _ |- _] =>
+       let rqFrom := fresh "rqFrom" in
+       let rsbTo := fresh "rsbTo" in
+       let nrssFrom := fresh "nrssFrom" in
+       destruct H as [rqFrom [rsbTo [nrssFrom ?]]]; dest
                                 
      | [H: MsgsFrom _ _ _ _ |- _] => red in H
      | [H: MsgsTo _ _ |- _] => red in H
@@ -107,6 +123,11 @@ Ltac disc_rule_conds :=
      | [H: DownLockFreeORq _ |- _] => red in H
      | [H: UpLockFree _ _ _ |- _] => red in H
      | [H: UpLockFreeORq _ |- _] => red in H
+
+     | [H: StateSilent _ |- _] => red in H
+     | [H: FootprintSilent _ |- _] => red in H; dest
+     | [H: FootprintUpSilent _ |- _] => red in H
+     | [H: FootprintDownSilent _ |- _] => red in H
                                              
      | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
        specialize (H1 _ _ _ H2)
@@ -121,7 +142,9 @@ Ltac disc_rule_conds :=
        destruct ivs; [discriminate|simpl in H; inv H]
      | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
      | [H: nil = nil |- _] => clear H
-     end; simpl in *; subst).
+     end;
+     try disc_rule_custom;
+     simpl in *; subst).
 
 Ltac solve_rule_conds :=
   repeat red;
@@ -132,6 +155,108 @@ Ltac solve_rule_conds :=
        | [ |- _ /\ _] => split
        end;
      try reflexivity; try eassumption).
+
+Section FootprintInv.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hitr: GoodRqRsSys dtr sys).
+
+  Definition FootprintUpOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
+    exists rqTo rsFrom rsbTo,
+      rqi.(rqi_minds_rss) = [rsFrom] /\
+      rqi.(rqi_midx_rsb) = rsbTo /\
+      FootprintUpOk dtr oidx rqTo rsFrom rsbTo.
+
+  Definition FootprintDownOkEx (rqi: RqInfo Msg) :=
+    exists rqTos rssFrom rsbTo,
+      rqi.(rqi_minds_rss) = rssFrom /\
+      rqi.(rqi_midx_rsb) = rsbTo /\
+      ((exists rqFrom, FootprintUpDownOk dtr rqFrom rqTos rssFrom rsbTo) \/
+       FootprintDownDownOk dtr rqTos rssFrom).
+
+  Definition FootprintsOkORqs (orqs: ORqs Msg) :=
+    forall oidx,
+      orqs@[oidx] >>=[True]
+          (fun orq =>
+             (orq@[upRq] >>=[True] (fun rqiu => FootprintUpOkEx oidx rqiu)) /\
+             (orq@[downRq] >>=[True] (fun rqid => FootprintDownOkEx rqid))).
+
+  Lemma footprints_ok_orqs_add:
+    forall orqs,
+      FootprintsOkORqs orqs ->
+      forall oidx norq,
+        norq@[upRq] >>=[True] (fun rqiu => FootprintUpOkEx oidx rqiu) ->
+        norq@[downRq] >>=[True] (fun rqid => FootprintDownOkEx rqid) ->
+        FootprintsOkORqs (orqs +[oidx <- norq]).
+  Proof.
+    unfold FootprintsOkORqs; intros.
+    mred; simpl; intros; auto.
+  Qed.
+  
+  Definition FootprintsOk (st: MState oifc) :=
+    FootprintsOkORqs st.(bst_orqs).
+
+  Ltac disc_rule_custom ::=
+    repeat
+      match goal with
+      | [H1: FootprintsOkORqs ?orqs, H2: ?orqs @[?oidx] = _ |- _] =>
+        let Hf := fresh "H" in
+        pose proof (H1 oidx) as Hf;
+        rewrite H2 in Hf; simpl in Hf; dest;
+        clear H2
+      end.
+  
+  Lemma footprints_ok:
+    InvStep sys step_m FootprintsOk.
+  Proof.
+    red; intros.
+    red in H0; red.
+    inv H1; try assumption.
+
+    simpl in *.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - disc_rule_conds.
+      mred.
+      apply footprints_ok_orqs_add; auto; try (mred; fail).
+    - disc_rule_conds.
+      mred.
+      apply footprints_ok_orqs_add; auto; try (mred; fail).
+      rewrite <-H6; assumption.
+    - disc_rule_conds.
+      + apply footprints_ok_orqs_add; auto.
+        * rewrite H15; simpl.
+          do 3 eexists; repeat split; eassumption.
+        * rewrite <-H23; assumption.
+      + apply footprints_ok_orqs_add; auto.
+        * rewrite <-H23; assumption.
+        * rewrite H13; simpl.
+          do 3 eexists; repeat split.
+          left; eexists; eassumption.
+      + apply footprints_ok_orqs_add; auto.
+        * rewrite <-H22; assumption.
+        * rewrite H13; simpl.
+          do 3 eexists; repeat split.
+          right; eassumption.
+    - disc_rule_conds.
+      + apply footprints_ok_orqs_add; auto.
+        * rewrite H17; simpl; auto.
+        * rewrite <-H6; assumption.
+      + apply footprints_ok_orqs_add; auto.
+        * rewrite <-H6; assumption.
+        * rewrite H17; simpl; auto.
+    - disc_rule_conds.
+      apply footprints_ok_orqs_add; auto.
+      + rewrite H22; simpl; auto.
+      + rewrite H15; simpl.
+        do 3 eexists; repeat split.
+        left; eexists; rewrite <-H21 in H6; eassumption.
+  Qed.
+  
+End FootprintInv.
 
 Section MessageInv.
   Context {oifc: OStateIfc}.
@@ -162,15 +287,16 @@ Section MessageInv.
                    edgeDownTo dtr oidx = Some (idOf rsDown).
 
   Lemma messages_in_cases:
-    forall s1 oidx ridx rins routs s2,
-      step_m sys s1 (RlblInt oidx ridx rins routs) s2 ->
+    forall st1 oidx ridx rins routs st2,
+      Reachable (steps step_m) sys st1 ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
       RqUpMsgs oidx rins \/
       RqDownMsgs oidx rins \/
       RsUpMsgs oidx rins \/
       RsDownMsgs oidx rins.
   Proof.
     intros.
-    inv H.
+    inv H0.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
 

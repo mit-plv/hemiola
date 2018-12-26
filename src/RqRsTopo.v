@@ -91,9 +91,22 @@ Section Conditions.
       DownLockedORq orq /\
       DownLockFreeORq (snd (fst (rule.(rule_trs) ost orq mins))).
 
-  Definition StateUnchanged (rule: Rule oifc): Prop :=
+  Definition StateSilent (rule: Rule oifc): Prop :=
     forall ost orq mins,
       ost = fst (fst (rule.(rule_trs) ost orq mins)).
+
+  Definition FootprintUpSilent (rule: Rule oifc): Prop :=
+    forall ost orq mins,
+      let norq := snd (fst (rule.(rule_trs) ost orq mins)) in
+      orq@[upRq] = norq@[upRq].
+
+  Definition FootprintDownSilent (rule: Rule oifc): Prop :=
+    forall ost orq mins,
+      let norq := snd (fst (rule.(rule_trs) ost orq mins)) in
+      orq@[downRq] = norq@[downRq].
+
+  Definition FootprintSilent (rule: Rule oifc): Prop :=
+    FootprintUpSilent rule /\ FootprintDownSilent rule.
   
 End Conditions.
 
@@ -163,15 +176,19 @@ Section RqRsTopo.
       rqi.(rqi_minds_rss) = rssFrom /\
       rqi.(rqi_midx_rsb) = rsbTo.
 
-  (** This precondition is required when handling a _downward response_. *)
-  Definition FootprintedUpPrec (rule: Rule oifc) (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    rule.(rule_precond)
-    ->oprec (fun _ orq _ => FootprintedUp orq rssFrom rsbTo).
+  (** A rule handling a _downward response_. *)
+  Definition FootprintReleasingUp (rule: Rule oifc) (rssFrom: list IdxT) (rsbTo: IdxT) :=
+    (rule.(rule_precond) ->oprec (fun _ orq _ => FootprintedUp orq rssFrom rsbTo)) /\
+    (forall ost orq mins,
+        let norq := snd (fst (rule.(rule_trs) ost orq mins)) in
+        norq@[upRq] = None).
 
-  (** This precondition is required when handling _upward responses_. *)
-  Definition FootprintedDownPrec (rule: Rule oifc) (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    rule.(rule_precond)
-    ->oprec (fun _ orq _ => FootprintedDown orq rssFrom rsbTo).
+  (** A rule handling _upward responses_. *)
+  Definition FootprintReleasingDown (rule: Rule oifc) (rssFrom: list IdxT) (rsbTo: IdxT) :=
+    (rule.(rule_precond) ->oprec (fun _ orq _ => FootprintedDown orq rssFrom rsbTo)) /\
+    (forall ost orq mins,
+        let norq := snd (fst (rule.(rule_trs) ost orq mins)) in
+        norq@[downRq] = None).
 
   (* A rule is making an upward request. *)
   Definition FootprintingUp (rule: Rule oifc) (rssFrom: list IdxT) (rsbTo: IdxT) :=
@@ -188,14 +205,21 @@ Section RqRsTopo.
       rqEdgeUpFrom oidx = Some rqTo /\
       edgeDownTo oidx = Some rsFrom /\
       edgeDownTo cidx = Some rsbTo.
-  
-  Definition FootprintDownOk
+
+  Definition FootprintUpDownOk
              (rqFrom: IdxT) (rqTos: list IdxT)
              (rssFrom: list IdxT) (rsbTo: IdxT) :=
     exists upCIdx downCInds,
       ~ In upCIdx downCInds /\
       rqEdgeUpFrom upCIdx = Some rqFrom /\
       edgeDownTo upCIdx = Some rsbTo /\
+      Forall (fun crq => edgeDownTo (fst crq) = Some (snd crq))
+             (combine downCInds rqTos) /\
+      Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
+             (combine downCInds rssFrom).
+
+  Definition FootprintDownDownOk (rqTos: list IdxT) (rssFrom: list IdxT) :=
+    exists downCInds,
       Forall (fun crq => edgeDownTo (fst crq) = Some (snd crq))
              (combine downCInds rqTos) /\
       Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
@@ -217,7 +241,8 @@ Section RqRsTopo.
                     /\oprec RqAccepting
                     /\oprec DownLockFree
                     /\oprec UpLockFree)) /\
-          MsgsTo [rsTo] rule /\ RsReleasing rule.
+          MsgsTo [rsTo] rule /\ RsReleasing rule /\
+          FootprintSilent rule.
 
       (* A rule making an immediate response to the parent *)
       Definition ImmUpRule (rule: Rule oifc) :=
@@ -228,7 +253,8 @@ Section RqRsTopo.
            ->oprec (MsgsFrom [rqFrom]
                     /\oprec RqAccepting
                     /\oprec DownLockFree)) /\
-          MsgsTo [rsTo] rule /\ RsReleasing rule.
+          MsgsTo [rsTo] rule /\ RsReleasing rule /\
+          FootprintSilent rule.
 
       (* A rule forwarding a request. Request-forwarding rules should satisfy
        * following two properties:
@@ -243,7 +269,8 @@ Section RqRsTopo.
           parentOf dtr cidx = Some oidx /\
           rqTos = [rqTo] /\
           FootprintUpOk oidx rqTo rsFrom rsbTo /\
-          FootprintingUp rule [rsFrom] rsbTo.
+          FootprintingUp rule [rsFrom] rsbTo /\
+          FootprintDownSilent rule.
 
       Definition RqUpDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
@@ -252,20 +279,19 @@ Section RqRsTopo.
         exists cidx rssFrom rsbTo,
           rqEdgeUpFrom cidx = Some rqFrom /\
           parentOf dtr cidx = Some oidx /\
-          FootprintDownOk rqFrom rqTos rssFrom rsbTo /\
-          FootprintingDown rule rssFrom rsbTo.
+          FootprintUpDownOk rqFrom rqTos rssFrom rsbTo /\
+          FootprintingDown rule rssFrom rsbTo /\
+          FootprintUpSilent rule.
 
       Definition RqDownDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
         DownLocking rule /\
         edgeDownTo oidx = Some rqFrom /\
-        exists downCInds rssFrom rsbTo,
+        exists rssFrom rsbTo,
           rsEdgeUpFrom oidx = Some rsbTo /\
-          Forall (fun crq => edgeDownTo (fst crq) = Some (snd crq))
-                 (combine downCInds rqTos) /\
-          Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
-                 (combine downCInds rssFrom) /\
-          FootprintingDown rule rssFrom rsbTo.
+          FootprintDownDownOk rqTos rssFrom /\
+          FootprintingDown rule rssFrom rsbTo /\
+          FootprintUpSilent rule.
 
       Definition RqFwdRule (rule: Rule oifc) :=
         exists rqFrom rqTos,
@@ -273,19 +299,19 @@ Section RqRsTopo.
            RqUpDown rqFrom rqTos rule \/
            RqDownDown rqFrom rqTos rule) /\
           (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)) /\
-          MsgsTo rqTos rule /\ RqReleasing rule /\ StateUnchanged rule.
+          MsgsTo rqTos rule /\ RqReleasing rule /\ StateSilent rule.
       
       Definition RsBackRule (rule: Rule oifc) :=
         exists rssFrom rsbTo,
-          (FootprintedUpPrec rule rssFrom rsbTo \/
-           FootprintedDownPrec rule rssFrom rsbTo) /\
+          ((FootprintReleasingUp rule rssFrom rsbTo /\ FootprintDownSilent rule) \/
+           (FootprintReleasingDown rule rssFrom rsbTo /\ FootprintUpSilent rule)) /\
           (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
           MsgsTo [rsbTo] rule /\ RsReleasing rule.
 
       Definition FootprintUpToDown (rule: Rule oifc) (rsFrom: IdxT) (rqTos: list IdxT) :=
         exists rqFrom rsbTo nrssFrom,
-          FootprintedUpPrec rule [rsFrom] rsbTo /\
-          FootprintDownOk rqFrom rqTos nrssFrom rsbTo /\
+          FootprintReleasingUp rule [rsFrom] rsbTo /\
+          FootprintUpDownOk rqFrom rqTos nrssFrom rsbTo /\
           FootprintingDown rule nrssFrom rsbTo.
       
       Definition RsDownRqDownRule (rule: Rule oifc) :=
@@ -298,7 +324,7 @@ Section RqRsTopo.
                     /\oprec RsAccepting
                     /\oprec DownLockFree)) /\
           MsgsTo rqTos rule /\ RqReleasing rule /\
-          DownLocking rule /\ StateUnchanged rule.
+          DownLocking rule /\ StateSilent rule.
       
       Definition GoodRqRsRule (rule: Rule oifc) :=
         ImmDownRule rule \/ ImmUpRule rule \/
@@ -326,7 +352,7 @@ Section RqRsTopo.
       ImmUpRule oidx rule \/
       (RsBackRule rule /\
        exists rssFrom rsbTo,
-         FootprintedDownPrec rule rssFrom rsbTo).
+         FootprintReleasingDown rule rssFrom rsbTo).
     
     Definition RqUpRsUpOkObj (obj: Object oifc) :=
       forall rqUpRule rsUpRule,
