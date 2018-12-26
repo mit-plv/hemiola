@@ -117,6 +117,8 @@ Ltac disc_rule_conds :=
      | [H: MsgsFrom _ _ _ _ |- _] => red in H
      | [H: MsgsTo _ _ |- _] => red in H
      | [H: RqAccepting _ _ _ |- _] => red in H
+     | [H: RsAccepting _ _ _ |- _] => red in H
+     | [H: RqReleasing _ |- _] => red in H
      | [H: RsReleasing _ |- _] => red in H
 
      | [H: DownLockFree _ _ _ |- _] => red in H
@@ -134,6 +136,15 @@ Ltac disc_rule_conds :=
      | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
      | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
        specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
+
+     | [H1: ?ov = None, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+       rewrite H1 in H2; simpl in H2
+     | [H1: ?ov = Some _, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+       rewrite H1 in H2; simpl in H2
+     | [H1: None = ?ov, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+       rewrite <-H1 in H2; simpl in H2
+     | [H1: Some _ = ?ov, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+       rewrite <-H1 in H2; simpl in H2
 
      | [H: Forall _ (_ :: _) |- _] => inv H
      | [H: Forall _ nil |- _] => clear H
@@ -273,6 +284,43 @@ Section FootprintInv.
   
 End FootprintInv.
 
+Ltac disc_footprints_ok :=
+  repeat
+    match goal with
+    | [H: FootprintsOk _ _ |- _] => red in H
+    | [H1: FootprintsOkORqs _ ?orqs, H2: ?orqs @[?oidx] = _ |- _] =>
+      let Hf := fresh "H" in
+      pose proof (H1 oidx) as Hf;
+      rewrite H2 in Hf; simpl in Hf; dest;
+      clear H2
+    | [H: FootprintUpOkEx _ _ _ |- _] =>
+      let rqTo := fresh "rqTo" in
+      let rsFrom := fresh "rsFrom" in
+      let rsbTo := fresh "rsbTo" in
+      destruct H as [rqTo [rsFrom [rsbTo ?]]]; dest
+    | [H: FootprintDownOkEx _ _ |- _] =>
+      let rqTos := fresh "rqTos" in
+      let rssFrom := fresh "rssFrom" in
+      let rsbTo := fresh "rsbTo" in
+      destruct H as [rqTos [rssFrom [rsbTo ?]]]; dest
+                                                   
+    | [H: FootprintUpOk _ _ _ _ _ |- _] =>
+      let cidx := fresh "cidx" in
+      destruct H as [cidx ?]; dest
+    | [H: (exists _, FootprintUpDownOk _ _ _ _ _) \/
+          FootprintDownDownOk _ _ _ |- _] => destruct H
+    | [H: exists _, FootprintUpDownOk _ _ _ _ _ |- _] =>
+      let rsFrom := fresh "rqFrom" in
+      destruct H as [rqFrom ?]; dest
+    | [H: FootprintUpDownOk _ _ _ _ _ |- _] =>
+      let upCIdx := fresh "upCIdx" in
+      let downCInds := fresh "downCInds" in
+      destruct H as [upCIdx [downCInds ?]]; dest
+    | [H: FootprintDownDownOk _ _ _ |- _] =>
+      let downCInds := fresh "downCInds" in
+      destruct H as [downCInds ?]; dest
+    end.
+
 Section MessageInv.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -294,14 +342,17 @@ Section MessageInv.
 
   Definition RsUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     Forall (fun msg => msg_type (valOf msg) = MRs) msgs /\
-    SubList (idsOf msgs) (rsEdgesUpTo dtr oidx).
+    exists cinds,
+      Forall (fun crs => rsEdgeUpFrom dtr (fst crs) = Some (snd crs))
+             (combine cinds (idsOf msgs)).
 
   Definition RsDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists rsDown, msgs = [rsDown] /\
                    msg_type (valOf rsDown) = MRs /\
                    edgeDownTo dtr oidx = Some (idOf rsDown).
-
-  Ltac disc_rule_custom ::= idtac.
+  
+  Ltac disc_rule_custom ::=
+    disc_footprints_ok.
   
   Lemma messages_in_cases:
     forall st1 oidx ridx rins routs st2,
@@ -316,7 +367,7 @@ Section MessageInv.
 
     (* Register some necessary invariants to prove this invariant. *)
     pose proof (footprints_ok Hitr H).
-    
+
     inv H0.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -334,10 +385,25 @@ Section MessageInv.
       + left; solve_rule_conds.
       + right; left; solve_rule_conds.
 
-    - admit.
-    - admit.
+    - disc_rule_conds.
+      + right; right; right.
+        (* [disc_rule_conds] currently can't discharge below automatically. *)
+        rewrite H8 in H2.
+        disc_rule_conds.
+        solve_rule_conds.
+      + right; right; left.
+        (* [disc_rule_conds] currently can't discharge below automatically. *)
+        rewrite <-H2 in H24.
+        solve_rule_conds.
+      + right; right; left.
+        (* [disc_rule_conds] currently can't discharge below automatically. *)
+        rewrite <-H2 in H21.
+        solve_rule_conds.
 
-  Admitted.
+    - right; right; right.
+      disc_rule_conds.
+      solve_rule_conds.
+  Qed.
     
 End MessageInv.
 
