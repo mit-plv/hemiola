@@ -27,10 +27,15 @@ Section Invariant.
         ginv ist2.
 
   Definition InvSteps :=
-    forall lbl ist2,
-      steps stepI impl (initsOf impl) lbl ist2 ->
+    forall hst ist2,
+      steps stepI impl (initsOf impl) hst ist2 ->
       ginv ist2.
 
+  Definition InvReachable :=
+    forall ist,
+      Reachable (steps stepI) impl ist ->
+      ginv ist.
+  
   Hypotheses (Hinvi: InvInit)
              (Hinvs: InvStep).
 
@@ -53,6 +58,13 @@ Section Invariant.
     unfold InvSteps; intros.
     eapply inv_steps'; eauto.
     apply reachable_init.
+  Qed.
+
+  Corollary inv_reachable: InvReachable.
+  Proof.
+    unfold InvReachable; intros.
+    destruct H1 as [ll ?].
+    eapply inv_steps; eauto.
   Qed.
   
 End Invariant.

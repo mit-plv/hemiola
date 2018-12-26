@@ -207,8 +207,15 @@ Section FootprintInv.
         rewrite H2 in Hf; simpl in Hf; dest;
         clear H2
       end.
+
+  Lemma footprints_ok_init:
+    InvInit sys FootprintsOk.
+  Proof.
+    intros; do 3 red.
+    intros; simpl; auto.
+  Qed.
   
-  Lemma footprints_ok:
+  Lemma footprints_ok_step:
     InvStep sys step_m FootprintsOk.
   Proof.
     red; intros.
@@ -255,6 +262,14 @@ Section FootprintInv.
         do 3 eexists; repeat split.
         left; eexists; rewrite <-H21 in H6; eassumption.
   Qed.
+
+  Lemma footprints_ok:
+    InvReachable sys step_m FootprintsOk.
+  Proof.
+    eapply inv_reachable.
+    - apply footprints_ok_init.
+    - apply footprints_ok_step.
+  Qed.
   
 End FootprintInv.
 
@@ -286,6 +301,8 @@ Section MessageInv.
                    msg_type (valOf rsDown) = MRs /\
                    edgeDownTo dtr oidx = Some (idOf rsDown).
 
+  Ltac disc_rule_custom ::= idtac.
+  
   Lemma messages_in_cases:
     forall st1 oidx ridx rins routs st2,
       Reachable (steps step_m) sys st1 ->
@@ -296,6 +313,10 @@ Section MessageInv.
       RsDownMsgs oidx rins.
   Proof.
     intros.
+
+    (* Register some necessary invariants to prove this invariant. *)
+    pose proof (footprints_ok Hitr H).
+    
     inv H0.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.

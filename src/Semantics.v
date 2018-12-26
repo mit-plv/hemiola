@@ -140,7 +140,7 @@ Record MState oifc :=
 
 Definition getMStateInit {oifc} (sys: System oifc): MState oifc :=
   {| bst_oss := initsOf sys;
-     bst_orqs := initsOf sys;
+     bst_orqs := M.empty _;
      bst_msgs := emptyMP _ |}.
 
 Global Instance MState_HasInit {oifc}: HasInit (System oifc) (MState oifc) :=
