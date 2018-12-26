@@ -432,11 +432,10 @@ Section LockInv.
     LockInvMO st.(bst_orqs) st.(bst_msgs).
 
   Lemma lockInv_init:
-    sys.(sys_orqs_inits) = [] ->
     InvInit sys LockInv.
   Proof.
     intros; do 3 red; cbn.
-    intros; cbn; rewrite H; cbn.
+    intros; cbn.
     split.
     - red; cbn; repeat split.
       + destruct (rqEdgeUpFrom dtr oidx); simpl; auto.

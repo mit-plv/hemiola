@@ -113,8 +113,7 @@ Section System.
          sys_merqs := specMerqs numC;
          sys_merss := specMerss numC;
          sys_msg_inds_valid := spec_msg_inds_valid numC;
-         sys_oss_inits := specInit;
-         sys_orqs_inits := []
+         sys_oss_inits := specInit
       |}.
 
   End Spec.

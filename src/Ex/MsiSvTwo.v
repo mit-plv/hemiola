@@ -522,8 +522,7 @@ Section System.
          sys_merqs := impl_merqs numC;
          sys_merss := impl_merss numC;
          sys_msg_inds_valid := impl_msg_inds_valid;
-         sys_oss_inits := implInit;
-         sys_orqs_inits := []
+         sys_oss_inits := implInit
       |}.
 
   End Impl.

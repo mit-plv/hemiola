@@ -428,8 +428,7 @@ Section System.
        sys_merqs := [erq1; erq2];
        sys_merss := [ers1; ers2];
        sys_msg_inds_valid := ltac:(inds_valid_tac);
-       sys_oss_inits := implInit;
-       sys_orqs_inits := []
+       sys_oss_inits := implInit
     |}.
 
 End System.
