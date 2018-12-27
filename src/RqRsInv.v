@@ -1,6 +1,6 @@
 Require Import Peano_dec List ListSupport.
 Require Import Common FMap.
-Require Import Syntax Semantics StepM Invariant Serial.
+Require Import Syntax Semantics SemFacts StepM Invariant Serial.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo.
 
@@ -512,6 +512,67 @@ Section LockInv.
       + destruct (rsEdgeUpFrom dtr cidx); simpl; auto.
   Qed.
 
+  Lemma upLockedInv_enqMsgs_preserved:
+    forall orqs msgs emsgs oidx,
+      UpLockedInv orqs msgs oidx ->
+      DisjList (idsOf emsgs) (sys_minds sys) ->
+      UpLockedInv orqs (enqMsgs emsgs msgs) oidx.
+  Proof.
+    unfold UpLockedInv; simpl; intros.
+    destruct H as [rqUp [down [pidx ?]]]; dest.
+    exists rqUp, down, pidx.
+    repeat split; try assumption.
+
+    (** TODO: need to know three facts:
+     * 1) [rqEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
+     * 1) [rsEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
+     * 2) [edgeDownTo dtr _ = Some midx -> In midx (sys_minds sys)]
+     *)
+    unfold rssQ.
+    rewrite findQ_not_In_enqMsgs with (midx:= rqUp) by admit.
+    rewrite findQ_not_In_enqMsgs with (midx:= down) by admit.
+    assumption.
+  Admitted.
+
+  Lemma upLockFreeInv_enqMsgs_preserved:
+    forall orqs msgs emsgs oidx,
+      UpLockFreeInv orqs msgs oidx ->
+      DisjList (idsOf emsgs) (sys_minds sys) ->
+      UpLockFreeInv orqs (enqMsgs emsgs msgs) oidx.
+  Proof.
+    unfold UpLockFreeInv; simpl; intros; dest.
+    repeat split; try assumption.
+
+    (** TODO: ditto *)
+    - remember (rqEdgeUpFrom dtr oidx) as omidx.
+      destruct omidx as [midx|]; simpl in *; auto.
+      rewrite findQ_not_In_enqMsgs with (midx:= midx) by admit.
+      assumption.
+    - remember (edgeDownTo dtr oidx) as omidx.
+      destruct omidx as [midx|]; simpl in *; auto.
+      unfold rssQ in *.
+      rewrite findQ_not_In_enqMsgs with (midx:= midx) by admit.
+      assumption.
+  Admitted.
+
+  Lemma downLockedInv_enqMsgs_preserved:
+    forall msgs emsgs oidx rqi,
+      DownLockedInv msgs oidx rqi ->
+      DisjList (idsOf emsgs) (sys_minds sys) ->
+      DownLockedInv (enqMsgs emsgs msgs) oidx rqi.
+  Proof.
+    (** TODO: ditto *)
+  Admitted.
+
+  Lemma downLockFreeInv_enqMsgs_preserved:
+    forall msgs emsgs oidx,
+      DownLockFreeInv msgs oidx ->
+      DisjList (idsOf emsgs) (sys_minds sys) ->
+      DownLockFreeInv (enqMsgs emsgs msgs) oidx.
+  Proof.
+    (** TODO: ditto *)
+  Admitted.
+  
   Lemma lockInv_step_ext_in:
     forall oss orqs msgs eins,
       LockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
@@ -521,6 +582,99 @@ Section LockInv.
                  bst_orqs := orqs;
                  bst_msgs := enqMsgs eins msgs |}.
   Proof.
+    unfold LockInv; simpl; intros.
+    red; intros.
+    specialize (H oidx H2).
+
+    destruct H1.
+    assert (DisjList (idsOf eins) (sys_minds sys)).
+    { eapply DisjList_SubList; eauto.
+      apply DisjList_comm.
+      apply sys_minds_sys_merqs_DisjList.
+    }
+    
+    destruct (orqs@[oidx]) as [orq|]; simpl in *; dest.
+
+    - split.
+      + clear H5; red in H; red.
+        remember (orq@[upRq]) as orqi.
+        destruct orqi as [rqi|].
+        * apply upLockedInv_enqMsgs_preserved; assumption.
+        * apply upLockFreeInv_enqMsgs_preserved; assumption.
+      + clear H; red in H5; red.
+        remember (orq@[downRq]) as orqi.
+        destruct orqi as [rqi|].
+        * apply downLockedInv_enqMsgs_preserved; assumption.
+        * apply downLockFreeInv_enqMsgs_preserved; assumption.
+
+    - red in H; simpl in H.
+      red in H5; simpl in H5.
+      split.
+      + red; simpl.
+        apply upLockFreeInv_enqMsgs_preserved; assumption.
+      + red; simpl.
+        apply downLockFreeInv_enqMsgs_preserved; assumption.
+  Qed.
+
+  Lemma upLockedInv_deqMsgs_preserved:
+    forall orqs msgs eminds oidx,
+      UpLockedInv orqs msgs oidx ->
+      DisjList eminds (sys_minds sys) ->
+      UpLockedInv orqs (deqMsgs eminds msgs) oidx.
+  Proof.
+    unfold UpLockedInv; simpl; intros.
+    destruct H as [rqUp [down [pidx ?]]]; dest.
+    exists rqUp, down, pidx.
+    repeat split; try assumption.
+
+    (** TODO: need to know three facts:
+     * 1) [rqEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
+     * 1) [rsEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
+     * 2) [edgeDownTo dtr _ = Some midx -> In midx (sys_minds sys)]
+     *)
+    unfold rssQ.
+    rewrite findQ_not_In_deqMsgs with (midx:= rqUp) by admit.
+    rewrite findQ_not_In_deqMsgs with (midx:= down) by admit.
+    assumption.
+  Admitted.
+
+  Lemma upLockFreeInv_deqMsgs_preserved:
+    forall orqs msgs eminds oidx,
+      UpLockFreeInv orqs msgs oidx ->
+      DisjList eminds (sys_minds sys) ->
+      UpLockFreeInv orqs (deqMsgs eminds msgs) oidx.
+  Proof.
+    unfold UpLockFreeInv; simpl; intros; dest.
+    repeat split; try assumption.
+
+    (** TODO: ditto *)
+    - remember (rqEdgeUpFrom dtr oidx) as omidx.
+      destruct omidx as [midx|]; simpl in *; auto.
+      rewrite findQ_not_In_deqMsgs with (midx:= midx) by admit.
+      assumption.
+    - remember (edgeDownTo dtr oidx) as omidx.
+      destruct omidx as [midx|]; simpl in *; auto.
+      unfold rssQ in *.
+      rewrite findQ_not_In_deqMsgs with (midx:= midx) by admit.
+      assumption.
+  Admitted.
+
+  Lemma downLockedInv_deqMsgs_preserved:
+    forall msgs eminds oidx rqi,
+      DownLockedInv msgs oidx rqi ->
+      DisjList eminds (sys_minds sys) ->
+      DownLockedInv (deqMsgs eminds msgs) oidx rqi.
+  Proof.
+    (** TODO: ditto *)
+  Admitted.
+
+  Lemma downLockFreeInv_deqMsgs_preserved:
+    forall msgs eminds oidx,
+      DownLockFreeInv msgs oidx ->
+      DisjList eminds (sys_minds sys) ->
+      DownLockFreeInv (deqMsgs eminds msgs) oidx.
+  Proof.
+    (** TODO: ditto *)
   Admitted.
 
   Lemma lockInv_step_ext_out:
@@ -533,19 +687,63 @@ Section LockInv.
                  bst_orqs := orqs;
                  bst_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
-  Admitted.
+    unfold LockInv; simpl; intros.
+    red; intros.
+    specialize (H oidx H3).
+
+    destruct H2.
+    assert (DisjList (idsOf eouts) (sys_minds sys)).
+    { eapply DisjList_SubList; eauto.
+      apply DisjList_comm.
+      apply sys_minds_sys_merss_DisjList.
+    }
+    
+    destruct (orqs@[oidx]) as [orq|]; simpl in *; dest.
+
+    - split.
+      + clear H6; red in H; red.
+        remember (orq@[upRq]) as orqi.
+        destruct orqi as [rqi|].
+        * apply upLockedInv_deqMsgs_preserved; assumption.
+        * apply upLockFreeInv_deqMsgs_preserved; assumption.
+      + clear H; red in H6; red.
+        remember (orq@[downRq]) as orqi.
+        destruct orqi as [rqi|].
+        * apply downLockedInv_deqMsgs_preserved; assumption.
+        * apply downLockFreeInv_deqMsgs_preserved; assumption.
+
+    - red in H; simpl in H.
+      red in H6; simpl in H6.
+      split.
+      + red; simpl.
+        apply upLockFreeInv_deqMsgs_preserved; assumption.
+      + red; simpl.
+        apply downLockFreeInv_deqMsgs_preserved; assumption.
+  Qed.
   
   Lemma lockInv_step:
     InvStep sys step_m LockInv.
   Proof.
     red; intros.
     
-    inv H1; auto.
-    - apply lockInv_step_ext_in; auto.
-    - apply lockInv_step_ext_out; auto.
-    - 
+    inv H1; [auto
+            |apply lockInv_step_ext_in; auto
+            |apply lockInv_step_ext_out; auto
+            |].
+
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
   Admitted.
 
+  Lemma lockInv_ok:
+    InvReachable sys step_m LockInv.
+  Proof.
+    apply inv_reachable.
+    - apply lockInv_init.
+    - apply lockInv_step.
+  Qed.
+  
 End LockInv.
 
 Section RqUpInv.
