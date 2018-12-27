@@ -137,13 +137,13 @@ Ltac disc_rule_conds :=
      | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
        specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
 
-     | [H1: ?ov = None, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+     | [H1: ?m@[?k] = None, H2: context[?m@[?k]] |- _] =>
        rewrite H1 in H2; simpl in H2
-     | [H1: ?ov = Some _, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+     | [H1: ?m@[?k] = Some _, H2: context[?m@[?k]] |- _] =>
        rewrite H1 in H2; simpl in H2
-     | [H1: None = ?ov, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+     | [H1: None = ?m@[?k], H2: context[?m@[?k]] |- _] =>
        rewrite <-H1 in H2; simpl in H2
-     | [H1: Some _ = ?ov, H2: context[(?ov) >>=[_] (fun _ => _)] |- _] =>
+     | [H1: Some _ = ?m@[?k], H2: context[?m@[?k]] |- _] =>
        rewrite <-H1 in H2; simpl in H2
 
      | [H: Forall _ (_ :: _) |- _] => inv H
@@ -243,7 +243,6 @@ Section FootprintInv.
     - disc_rule_conds.
       mred.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
-      rewrite <-H6; assumption.
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; auto.
         * rewrite H15; simpl.
@@ -433,6 +432,13 @@ Section LockInv.
     Definition ODownLocked (oidx: IdxT) :=
       orqs@[oidx] >>=[False] (fun orq => DownLockedORq orq).
 
+    Definition ODownLockedTo (oidx: IdxT) (rsbTo: IdxT) :=
+      orqs@[oidx] >>=[False]
+          (fun orq =>
+             exists rqi,
+               orq@[downRq] = Some rqi /\
+               rqi.(rqi_midx_rsb) = rsbTo).
+    
     Definition OUpLockFree (oidx: IdxT) :=
       orqs@[oidx] >>=[True] (fun orq => UpLockFreeORq orq).
 
@@ -471,7 +477,9 @@ Section LockInv.
                   edgeDownTo dtr cidx = Some down /\
                   rsEdgeUpFrom dtr cidx = Some rsUp /\
                   parentOf dtr cidx = Some oidx /\
-                  xor (rqsQ down <> nil) (findQ rsUp msgs <> nil))
+                  xor3 (rqsQ down <> nil)
+                       (findQ rsUp msgs <> nil)
+                       (ODownLockedTo cidx rsUp))
              rqi.(rqi_minds_rss).
 
     Definition UpLockInvORq (oidx: IdxT) (orq: ORq Msg) :=
@@ -512,54 +520,158 @@ Section LockInv.
       + destruct (rsEdgeUpFrom dtr cidx); simpl; auto.
   Qed.
 
-  Lemma upLockedInv_enqMsgs_preserved:
+  (** TODO: need to prove following facts:
+   * 1) [rqEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
+   * 2) [rsEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
+   * 3) [edgeDownTo dtr _ = Some midx -> In midx (sys_minds sys)]
+   *
+   * 4) [NoDup [rqEdgeUpFrom dtr oidx; 
+   *            rsEdgeUpFrom dtr oidx;
+   *            edgeDownTo dtr oidx]]
+   * 5) [parentOf dtr cidx = Some oidx ->
+   *     {rqEdgeUpFrom dtr cidx, rsEdgeUpFrom dtr cidx, edgeDownTo dtr cidx}
+   *     <>
+   *     {rqEdgeUpFrom dtr oidx, rsEdgeUpFrom dtr oidx, edgeDownTo dtr oidx}]
+   * 5') Better to prove more generally:
+   *     a) [parentOf dtr cidx = Some oidx -> cidx <> oidx] and
+   *     b) [∀oidx1 oidx2, oidx1 <> oidx2 -> ...]
+   *)
+  
+  Lemma upLockedInv_msgs_preserved:
+    forall orqs msgs1 msgs2 oidx,
+      UpLockedInv orqs msgs1 oidx ->
+      (match rqEdgeUpFrom dtr oidx with
+       | Some rqUp => findQ rqUp msgs1 = findQ rqUp msgs2
+       | None => False
+       end) ->
+      (match edgeDownTo dtr oidx with
+       | Some down => rssQ msgs1 down = rssQ msgs2 down
+       | None => False
+       end) ->
+      UpLockedInv orqs msgs2 oidx.
+  Proof.
+    unfold UpLockedInv; simpl; intros.
+    destruct H as [rqUp [down [pidx ?]]]; dest.
+    rewrite H in H0.
+    rewrite H2 in H1.
+    exists rqUp, down, pidx.
+    repeat split; try assumption.
+    rewrite <-H0, <-H1.
+    assumption.
+  Qed.
+  
+  Corollary upLockedInv_enqMsgs_preserved:
     forall orqs msgs emsgs oidx,
       UpLockedInv orqs msgs oidx ->
       DisjList (idsOf emsgs) (sys_minds sys) ->
       UpLockedInv orqs (enqMsgs emsgs msgs) oidx.
   Proof.
-    unfold UpLockedInv; simpl; intros.
-    destruct H as [rqUp [down [pidx ?]]]; dest.
-    exists rqUp, down, pidx.
-    repeat split; try assumption.
-
-    (** TODO: need to know three facts:
-     * 1) [rqEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
-     * 1) [rsEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
-     * 2) [edgeDownTo dtr _ = Some midx -> In midx (sys_minds sys)]
-     *)
-    unfold rssQ.
-    rewrite findQ_not_In_enqMsgs with (midx:= rqUp) by admit.
-    rewrite findQ_not_In_enqMsgs with (midx:= down) by admit.
-    assumption.
+    intros.
+    eapply upLockedInv_msgs_preserved; eauto.
+    - destruct H as [rqUp [down [pidx ?]]]; dest.
+      rewrite H.
+      rewrite findQ_not_In_enqMsgs by admit.
+      reflexivity.
+    - destruct H as [rqUp [down [pidx ?]]]; dest.
+      rewrite H1.
+      unfold rssQ.
+      rewrite findQ_not_In_enqMsgs by admit.
+      reflexivity.
   Admitted.
 
-  Lemma upLockFreeInv_enqMsgs_preserved:
+  Corollary upLockedInv_deqMsgs_preserved:
+    forall orqs msgs eminds oidx,
+      UpLockedInv orqs msgs oidx ->
+      DisjList eminds (sys_minds sys) ->
+      UpLockedInv orqs (deqMsgs eminds msgs) oidx.
+  Proof.
+    intros.
+    eapply upLockedInv_msgs_preserved; eauto.
+    - destruct H as [rqUp [down [pidx ?]]]; dest.
+      rewrite H.
+      rewrite findQ_not_In_deqMsgs by admit.
+      reflexivity.
+    - destruct H as [rqUp [down [pidx ?]]]; dest.
+      rewrite H1.
+      unfold rssQ.
+      rewrite findQ_not_In_deqMsgs by admit.
+      reflexivity.
+  Admitted.
+
+  Lemma upLockFreeInv_msgs_preserved:
+    forall orqs msgs1 msgs2 oidx,
+      UpLockFreeInv orqs msgs1 oidx ->
+      (match rqEdgeUpFrom dtr oidx with
+       | Some rqUp => findQ rqUp msgs1 = findQ rqUp msgs2
+       | None => True
+       end) ->
+      (match edgeDownTo dtr oidx with
+       | Some down => rssQ msgs1 down = rssQ msgs2 down
+       | None => True
+       end) ->
+      UpLockFreeInv orqs msgs2 oidx.
+  Proof.
+    unfold UpLockFreeInv; simpl; intros.
+    repeat split.
+    - destruct (rqEdgeUpFrom dtr oidx); simpl in *; dest; auto.
+      rewrite <-H0; assumption.
+    - destruct (edgeDownTo dtr oidx); simpl in *; dest; auto.
+      rewrite <-H1; assumption.
+    - destruct (parentOf dtr oidx); simpl in *; dest; auto.
+  Qed.
+  
+  Corollary upLockFreeInv_enqMsgs_preserved:
     forall orqs msgs emsgs oidx,
       UpLockFreeInv orqs msgs oidx ->
       DisjList (idsOf emsgs) (sys_minds sys) ->
       UpLockFreeInv orqs (enqMsgs emsgs msgs) oidx.
   Proof.
-    unfold UpLockFreeInv; simpl; intros; dest.
-    repeat split; try assumption.
+    intros.
+    eapply upLockFreeInv_msgs_preserved; eauto.
+    - red in H; dest.
+      destruct (rqEdgeUpFrom dtr oidx); simpl in *; dest; auto.
+      rewrite findQ_not_In_enqMsgs by admit.
+      reflexivity.
+    - red in H; dest.
+      destruct (edgeDownTo dtr oidx); simpl in *; dest; auto.
+      unfold rssQ.
+      rewrite findQ_not_In_enqMsgs by admit.
+      reflexivity.
+  Admitted.
 
-    (** TODO: ditto *)
-    - remember (rqEdgeUpFrom dtr oidx) as omidx.
-      destruct omidx as [midx|]; simpl in *; auto.
-      rewrite findQ_not_In_enqMsgs with (midx:= midx) by admit.
-      assumption.
-    - remember (edgeDownTo dtr oidx) as omidx.
-      destruct omidx as [midx|]; simpl in *; auto.
-      unfold rssQ in *.
-      rewrite findQ_not_In_enqMsgs with (midx:= midx) by admit.
-      assumption.
+  Corollary upLockFreeInv_deqMsgs_preserved:
+    forall orqs msgs eminds oidx,
+      UpLockFreeInv orqs msgs oidx ->
+      DisjList eminds (sys_minds sys) ->
+      UpLockFreeInv orqs (deqMsgs eminds msgs) oidx.
+  Proof.
+    intros.
+    eapply upLockFreeInv_msgs_preserved; eauto.
+    - red in H; dest.
+      destruct (rqEdgeUpFrom dtr oidx); simpl in *; dest; auto.
+      rewrite findQ_not_In_deqMsgs by admit.
+      reflexivity.
+    - red in H; dest.
+      destruct (edgeDownTo dtr oidx); simpl in *; dest; auto.
+      unfold rssQ.
+      rewrite findQ_not_In_deqMsgs by admit.
+      reflexivity.
   Admitted.
 
   Lemma downLockedInv_enqMsgs_preserved:
-    forall msgs emsgs oidx rqi,
-      DownLockedInv msgs oidx rqi ->
+    forall orqs msgs emsgs oidx rqi,
+      DownLockedInv orqs msgs oidx rqi ->
       DisjList (idsOf emsgs) (sys_minds sys) ->
-      DownLockedInv (enqMsgs emsgs msgs) oidx rqi.
+      DownLockedInv orqs (enqMsgs emsgs msgs) oidx rqi.
+  Proof.
+    (** TODO: ditto *)
+  Admitted.
+
+  Lemma downLockedInv_deqMsgs_preserved:
+    forall orqs msgs eminds oidx rqi,
+      DownLockedInv orqs msgs oidx rqi ->
+      DisjList eminds (sys_minds sys) ->
+      DownLockedInv orqs (deqMsgs eminds msgs) oidx rqi.
   Proof.
     (** TODO: ditto *)
   Admitted.
@@ -569,6 +681,15 @@ Section LockInv.
       DownLockFreeInv msgs oidx ->
       DisjList (idsOf emsgs) (sys_minds sys) ->
       DownLockFreeInv (enqMsgs emsgs msgs) oidx.
+  Proof.
+    (** TODO: ditto *)
+  Admitted.
+
+  Lemma downLockFreeInv_deqMsgs_preserved:
+    forall msgs eminds oidx,
+      DownLockFreeInv msgs oidx ->
+      DisjList eminds (sys_minds sys) ->
+      DownLockFreeInv (deqMsgs eminds msgs) oidx.
   Proof.
     (** TODO: ditto *)
   Admitted.
@@ -616,67 +737,6 @@ Section LockInv.
         apply downLockFreeInv_enqMsgs_preserved; assumption.
   Qed.
 
-  Lemma upLockedInv_deqMsgs_preserved:
-    forall orqs msgs eminds oidx,
-      UpLockedInv orqs msgs oidx ->
-      DisjList eminds (sys_minds sys) ->
-      UpLockedInv orqs (deqMsgs eminds msgs) oidx.
-  Proof.
-    unfold UpLockedInv; simpl; intros.
-    destruct H as [rqUp [down [pidx ?]]]; dest.
-    exists rqUp, down, pidx.
-    repeat split; try assumption.
-
-    (** TODO: need to know three facts:
-     * 1) [rqEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
-     * 1) [rsEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
-     * 2) [edgeDownTo dtr _ = Some midx -> In midx (sys_minds sys)]
-     *)
-    unfold rssQ.
-    rewrite findQ_not_In_deqMsgs with (midx:= rqUp) by admit.
-    rewrite findQ_not_In_deqMsgs with (midx:= down) by admit.
-    assumption.
-  Admitted.
-
-  Lemma upLockFreeInv_deqMsgs_preserved:
-    forall orqs msgs eminds oidx,
-      UpLockFreeInv orqs msgs oidx ->
-      DisjList eminds (sys_minds sys) ->
-      UpLockFreeInv orqs (deqMsgs eminds msgs) oidx.
-  Proof.
-    unfold UpLockFreeInv; simpl; intros; dest.
-    repeat split; try assumption.
-
-    (** TODO: ditto *)
-    - remember (rqEdgeUpFrom dtr oidx) as omidx.
-      destruct omidx as [midx|]; simpl in *; auto.
-      rewrite findQ_not_In_deqMsgs with (midx:= midx) by admit.
-      assumption.
-    - remember (edgeDownTo dtr oidx) as omidx.
-      destruct omidx as [midx|]; simpl in *; auto.
-      unfold rssQ in *.
-      rewrite findQ_not_In_deqMsgs with (midx:= midx) by admit.
-      assumption.
-  Admitted.
-
-  Lemma downLockedInv_deqMsgs_preserved:
-    forall msgs eminds oidx rqi,
-      DownLockedInv msgs oidx rqi ->
-      DisjList eminds (sys_minds sys) ->
-      DownLockedInv (deqMsgs eminds msgs) oidx rqi.
-  Proof.
-    (** TODO: ditto *)
-  Admitted.
-
-  Lemma downLockFreeInv_deqMsgs_preserved:
-    forall msgs eminds oidx,
-      DownLockFreeInv msgs oidx ->
-      DisjList eminds (sys_minds sys) ->
-      DownLockFreeInv (deqMsgs eminds msgs) oidx.
-  Proof.
-    (** TODO: ditto *)
-  Admitted.
-
   Lemma lockInv_step_ext_out:
     forall oss orqs msgs eouts,
       LockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
@@ -721,20 +781,92 @@ Section LockInv.
         apply downLockFreeInv_deqMsgs_preserved; assumption.
   Qed.
   
+  Lemma lockInv_step_int:
+    forall oss orqs msgs obj rule
+           post porq mins nost norq mouts,
+      LockInv {| bst_oss := oss;
+                 bst_orqs := orqs;
+                 bst_msgs := msgs |} ->
+      In obj (sys_objs sys) ->
+      In rule (obj_rules obj) ->
+      orqs@[obj_idx obj] = Some porq ->
+      oss@[obj_idx obj] = Some post ->
+      Forall (FirstMPI msgs) mins ->
+      ValidMsgsIn sys mins ->
+      rule_precond rule post porq mins ->
+      rule_trs rule post porq mins = (nost, norq, mouts) ->
+      ValidMsgsOut sys mouts ->
+      DisjList (idsOf mins) (idsOf mouts) ->
+      LockInv
+        {| bst_oss := (oss) +[ obj_idx obj <- nost];
+           bst_orqs := (orqs) +[ obj_idx obj <- norq];
+           bst_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
+  Proof.
+    intros.
+    do 2 red; simpl; intros.
+    do 2 red in H; simpl in H.
+    good_rqrs_rule_get rule.
+    specialize (H _ H10); dest; split.
+
+    - (** Proving invariants about uplocks *)
+      clear H12.
+      red; red in H.
+      M.cmp (obj_idx obj) oidx; mred; simpl in *.
+
+      + (* case [oidx = obj_idx obj] *)
+        good_rqrs_rule_cases rule.
+
+        * (* case [ImmDownRule] *)
+          disc_rule_conds.
+          rewrite H18.
+          replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
+          destruct i as [rsMIdx rsd]; simpl in *.
+
+          eapply upLockFreeInv_msgs_preserved; eauto.
+          { admit. }
+          { admit. }
+
+        * (* case [ImmUpRule] *)
+          disc_rule_conds.
+          replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
+          destruct i as [rsMIdx rsd]; simpl in *.
+          destruct (porq@[upRq]).
+          { eapply upLockedInv_msgs_preserved; eauto.
+            { admit. }
+            { rewrite H11.
+              (* provable since [msg_type (valOf i0) = MRq]. *)
+              admit.
+            }
+          }
+          { eapply upLockFreeInv_msgs_preserved; eauto.
+            { admit. }
+            { rewrite H11.
+              (* provable since [msg_type (valOf i0) = MRq]. *)
+              admit.
+            }
+          }
+
+        * (* case [RqFwdRule] *)
+          admit.
+
+        * (* case [RsBackRule] *)
+          admit.
+
+        * (* case [RsDownRqDownRule] *)
+          admit.
+
+  Admitted.
+  
   Lemma lockInv_step:
     InvStep sys step_m LockInv.
   Proof.
     red; intros.
-    
-    inv H1; [auto
-            |apply lockInv_step_ext_in; auto
-            |apply lockInv_step_ext_out; auto
-            |].
-
-    good_rqrs_rule_get rule.
-    good_rqrs_rule_cases rule.
-
-  Admitted.
+    inv H1;
+      [auto
+      |apply lockInv_step_ext_in; auto
+      |apply lockInv_step_ext_out; auto
+      |eapply lockInv_step_int; eauto].
+  Qed.
 
   Lemma lockInv_ok:
     InvReachable sys step_m LockInv.

@@ -106,7 +106,9 @@ Section Conditions.
       orq@[downRq] = norq@[downRq].
 
   Definition FootprintSilent (rule: Rule oifc): Prop :=
-    FootprintUpSilent rule /\ FootprintDownSilent rule.
+    forall ost orq mins,
+      let norq := snd (fst (rule.(rule_trs) ost orq mins)) in
+      norq = orq.
   
 End Conditions.
 
