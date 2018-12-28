@@ -86,6 +86,30 @@ Section DTree.
       else findSome (fun ic => parentOf (snd ic) idx) cs
     end.
 
+  Fixpoint indsOf (dtr: DTree): list IdxT :=
+    match dtr with
+    | Leaf => nil
+    | Node root cs =>
+      root :: collect (fun ic => indsOf (snd ic)) cs
+    end.
+
+  Fixpoint chnsOf (dtr: DTree): list IdxT :=
+    match dtr with
+    | Leaf => nil
+    | Node _ cs =>
+      (concat (map (fun ic => fst (fst ic)) cs))
+        ++ (concat (map (fun ic => snd (fst ic)) cs))
+        ++ collect (fun ic => chnsOf (snd ic)) cs
+    end.
+
+  Fixpoint subtree (dtr: DTree) (idx: IdxT): option DTree :=
+    match dtr with
+    | Leaf => None
+    | Node root cs =>
+      if eq_nat_dec root idx then (Some dtr)
+      else findSome (fun ic => subtree (snd ic) idx) cs
+    end.
+
   Definition childChnsOf
              (cs: list (list IdxT * list IdxT * DTree))
              (idx: IdxT):
@@ -106,21 +130,6 @@ Section DTree.
       end
     end.
   
-  Fixpoint indsOf (dtr: DTree): list IdxT :=
-    match dtr with
-    | Leaf => nil
-    | Node root cs =>
-      root :: collect (fun ic => indsOf (snd ic)) cs
-    end.
-
-  Fixpoint subtree (dtr: DTree) (idx: IdxT): option DTree :=
-    match dtr with
-    | Leaf => None
-    | Node root cs =>
-      if eq_nat_dec root idx then (Some dtr)
-      else findSome (fun ic => subtree (snd ic) idx) cs
-    end.
-
   Definition upEdgesFrom (dtr: DTree) (idx: IdxT): list IdxT :=
     (parentChnsOf dtr idx)
       >>=[nil]
@@ -134,8 +143,41 @@ Section DTree.
   Definition parentIdxOf (dtr: DTree) (idx: IdxT): option IdxT :=
     (parentChnsOf dtr idx)
       >>= (fun udp => Some (snd udp)).
+
+  (** Well-formedness *)
+
+  Definition UniqueInds (dtr: DTree): Prop :=
+    NoDup (indsOf dtr).
+
+  Definition UniqueChns (dtr: DTree): Prop :=
+    NoDup (chnsOf dtr).
+
+  Definition WfDTree (dtr: DTree): Prop :=
+    UniqueInds dtr /\
+    UniqueChns dtr.
   
 End DTree.
+
+Section Facts.
+
+  Lemma parentChnsOf_NoDup:
+    forall dtr (Hwf: WfDTree dtr)
+           idx ups downs pidx,
+      parentChnsOf dtr idx = Some (ups, downs, pidx) ->
+      NoDup (ups ++ downs).
+  Proof.
+  Admitted.
+  
+  Lemma parentChnsOf_NoDup_2:
+    forall dtr (Hwf: WfDTree dtr)
+           idx1 ups1 downs1 pidx1 idx2 ups2 downs2 pidx2,
+      parentChnsOf dtr idx1 = Some (ups1, downs1, pidx1) ->
+      parentChnsOf dtr idx2 = Some (ups2, downs2, pidx2) ->
+      NoDup (ups1 ++ downs1 ++ ups2 ++ downs2).
+  Proof.
+  Admitted.
+  
+End Facts.
 
 Close Scope list.
 

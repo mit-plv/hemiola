@@ -167,6 +167,129 @@ Ltac solve_rule_conds :=
        end;
      try reflexivity; try eassumption).
 
+Section SysOnDTree.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hsd: SysOnDTree dtr sys).
+
+  Lemma rqEdgeUpFrom_parentChnsOf_Some:
+    forall oidx midx,
+      rqEdgeUpFrom dtr oidx = Some midx ->
+      exists ups downs pidx,
+        parentChnsOf dtr oidx = Some (ups, downs, pidx) /\
+        hd_error ups = Some midx.
+  Proof.
+    unfold rqEdgeUpFrom, upEdgesFrom; intros.
+    destruct (parentChnsOf dtr oidx) as [[[ups downs] pidx]|];
+      simpl in *; [|discriminate].
+    repeat eexists; eauto.
+  Qed.
+
+  Lemma rsEdgeUpFrom_parentChnsOf_Some:
+    forall oidx midx,
+      rsEdgeUpFrom dtr oidx = Some midx ->
+      exists ups downs pidx,
+        parentChnsOf dtr oidx = Some (ups, downs, pidx) /\
+        hd_error (tail ups) = Some midx.
+  Proof.
+    unfold rsEdgeUpFrom, upEdgesFrom; intros.
+    destruct (parentChnsOf dtr oidx) as [[[ups downs] pidx]|];
+      simpl in *; [|discriminate].
+    repeat eexists; eauto.
+  Qed.
+
+  Lemma edgeDownTo_parentChnsOf_Some:
+    forall oidx midx,
+      edgeDownTo dtr oidx = Some midx ->
+      exists ups downs pidx,
+        parentChnsOf dtr oidx = Some (ups, downs, pidx) /\
+        hd_error downs = Some midx.
+  Proof.
+    unfold edgeDownTo, downEdgesTo; intros.
+    destruct (parentChnsOf dtr oidx) as [[[ups downs] pidx]|];
+      simpl in *; [|discriminate].
+    repeat eexists; eauto.
+  Qed.
+  
+  Lemma sysOnDTree_rqEdgeUpFrom_sys_minds:
+    forall oidx midx,
+      rqEdgeUpFrom dtr oidx = Some midx ->
+      In midx sys.(sys_minds).
+  Proof.
+    intros.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]]; dest.
+    destruct Hsd.
+    specialize (H2 _ _ _ _ H); dest.
+    apply hd_error_In in H0.
+    auto.
+  Qed.
+
+  Lemma sysOnDTree_rsEdgeUpFrom_sys_minds:
+    forall oidx midx,
+      rsEdgeUpFrom dtr oidx = Some midx ->
+      In midx sys.(sys_minds).
+  Proof.
+    intros.
+    apply rsEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]]; dest.
+    destruct Hsd.
+    specialize (H2 _ _ _ _ H); dest.
+    apply hd_error_In in H0.
+    apply tl_In in H0.
+    auto.
+  Qed.
+
+  Lemma sysOnDTree_edgeDownTo_sys_minds:
+    forall oidx midx,
+      edgeDownTo dtr oidx = Some midx ->
+      In midx sys.(sys_minds).
+  Proof.
+    intros.
+    apply edgeDownTo_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]]; dest.
+    destruct Hsd.
+    specialize (H2 _ _ _ _ H); dest.
+    apply hd_error_In in H0.
+    auto.
+  Qed.
+
+  Lemma sysOnDTree_rqrs_updown_NoDup:
+    forall oidx rqUp rsUp down,
+      rqEdgeUpFrom dtr oidx = Some rqUp ->
+      rsEdgeUpFrom dtr oidx = Some rsUp ->
+      edgeDownTo dtr oidx = Some down ->
+      NoDup [rqUp; rsUp; down].
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]].
+    apply rsEdgeUpFrom_parentChnsOf_Some in H0.
+    apply edgeDownTo_parentChnsOf_Some in H1.
+    dest.
+    rewrite H0 in H; inv H.
+    rewrite H1 in H0; inv H0.
+    apply parentChnsOf_NoDup in H1; [|assumption].
+    
+    destruct ups as [|? ups]; [discriminate|].
+    simpl in *; inv H4.
+    destruct ups as [|? ups]; [discriminate|].
+    simpl in *; inv H6.
+    destruct downs as [|? downs]; [discriminate|].
+    simpl in *; inv H5.
+
+    inv H1; inv H5.
+    constructor; [intro Hx; Common.dest_in; intuition|].
+    constructor; [intro Hx; Common.dest_in; intuition|].
+    repeat constructor.
+    auto.
+  Qed.
+
+End SysOnDTree.
+
 Section FootprintInv.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)

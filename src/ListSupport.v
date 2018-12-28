@@ -780,7 +780,17 @@ Section Distribution.
   Qed.
   
 End Distribution.
-  
+
+Lemma tl_In:
+  forall {A} (a: A) (l: list A),
+    In a (tl l) ->
+    In a l.
+Proof.
+  intros.
+  destruct l; [elim H|simpl in H].
+  right; assumption.
+Qed.
+
 Lemma tl_app:
   forall {A} (l1 l2: list A),
     l1 <> nil -> tl (l1 ++ l2) = (tl l1) ++ l2.

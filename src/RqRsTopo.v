@@ -186,6 +186,20 @@ Section RqRsTopo.
              (combine downCInds rqTos) /\
       Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
              (combine downCInds rssFrom).
+
+  Section SysOnDTree.
+
+    Definition IntChnsOnDTree (sys: System oifc) :=
+      forall oidx ups downs pidx,
+        parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
+        SubList ups sys.(sys_minds) /\
+        SubList downs sys.(sys_minds).
+
+    Definition SysOnDTree (sys: System oifc) :=
+      WfDTree dtr /\
+      IntChnsOnDTree sys.
+    
+  End SysOnDTree.
   
   Section GoodRqRs.
     
@@ -323,6 +337,7 @@ Section RqRsTopo.
   End RqUpRsUpComm.
 
   Definition RqRsSys (sys: System oifc) :=
+    SysOnDTree sys /\
     GoodRqRsSys sys /\
     RqUpRsUpOkSys sys.
   

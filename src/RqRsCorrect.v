@@ -212,7 +212,7 @@ Proof.
   { inv H0; inv H1.
     destruct H0 as [oidx [ridx [rins [routs ?]]]]; dest; subst.
     do 4 eexists; split; auto.
-    destruct H.
+    destruct H as [? [? ?]].
     inv H5.
     eapply messages_in_cases.
     { eassumption. }
