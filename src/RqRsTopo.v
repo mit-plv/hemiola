@@ -115,54 +115,14 @@ End Conditions.
 Section RqRsTopo.
   Variables (dtr: DTree) (oifc: OStateIfc).
 
-  Inductive RqRsTopo: DTree -> Prop :=
-  | RqRsNode:
-      forall ridx cs,
-        Forall (fun udc =>
-                  List.length (fst (fst udc)) = 2 /\ (* Two upward channels *)
-                  List.length (snd (fst udc)) = 1 /\ (* A single downward channel *)
-                  RqRsTopo (snd udc)) cs ->
-        RqRsTopo (Node ridx cs).
-
-  Definition edgeInds (es: list (edge DChn)): list IdxT :=
-    map (fun e => snd e.(edge_chn)) es.
-
-  Definition rqUpEdges: list IdxT :=
-    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq) (upEdges dtr)).
-
-  Definition rsUpEdges: list IdxT :=
-    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs) (upEdges dtr)).
-
-  Definition upEdges: list IdxT :=
-    edgeInds (upEdges dtr).
-  
-  Definition downEdges: list IdxT :=
-    edgeInds (downEdges dtr).
-
-  Definition treeEdges: list IdxT :=
-    edgeInds (dg_es (topoOfT dtr)).
-  
   Definition rqEdgeUpFrom (oidx: IdxT): option IdxT :=
-    hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
-                               (upEdgesFrom dtr oidx))).
+    hd_error (upEdgesFrom dtr oidx).
 
   Definition rsEdgeUpFrom (oidx: IdxT): option IdxT :=
-    hd_error (edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs)
-                               (upEdgesFrom dtr oidx))).
-
-  Definition rqEdgesUpTo (oidx: IdxT): list IdxT :=
-    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRq)
-                     (upEdgesTo dtr oidx)).
-
-  Definition rsEdgesUpTo (oidx: IdxT): list IdxT :=
-    edgeInds (filter (fun e => snd (fst e.(edge_chn)) ==n MRs)
-                     (upEdgesTo dtr oidx)).
-
-  Definition edgesDownFrom (oidx: IdxT): list IdxT :=
-    edgeInds (downEdgesFrom dtr oidx).
+    hd_error (tail (upEdgesFrom dtr oidx)).
 
   Definition edgeDownTo (oidx: IdxT): option IdxT :=
-    hd_error (edgeInds (downEdgesTo dtr oidx)).
+    hd_error (downEdgesTo dtr oidx).
 
   (* Upward-requested *)
   Definition FootprintedUp (orq: ORq Msg) (rssFrom: list IdxT) (rsbTo: IdxT) :=
@@ -237,7 +197,7 @@ Section RqRsTopo.
         exists cidx rqFrom rsTo,
           rqEdgeUpFrom cidx = Some rqFrom /\
           edgeDownTo cidx = Some rsTo /\
-          parentOf dtr cidx = Some oidx /\
+          parentIdxOf dtr cidx = Some oidx /\
           (rule.(rule_precond)
            ->oprec (MsgsFrom [rqFrom]
                     /\oprec RqAccepting
@@ -265,10 +225,9 @@ Section RqRsTopo.
        *)
       Definition RqUpUp (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec UpLockFree) /\
-        UpLocking rule /\
         exists cidx rqTo rsFrom rsbTo,
           rqEdgeUpFrom cidx = Some rqFrom /\
-          parentOf dtr cidx = Some oidx /\
+          parentIdxOf dtr cidx = Some oidx /\
           rqTos = [rqTo] /\
           FootprintUpOk oidx rqTo rsFrom rsbTo /\
           FootprintingUp rule [rsFrom] rsbTo /\
@@ -276,18 +235,15 @@ Section RqRsTopo.
 
       Definition RqUpDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
-        DownLocking rule /\
-        SubList rqTos (edgesDownFrom oidx) /\
         exists cidx rssFrom rsbTo,
           rqEdgeUpFrom cidx = Some rqFrom /\
-          parentOf dtr cidx = Some oidx /\
+          parentIdxOf dtr cidx = Some oidx /\
           FootprintUpDownOk rqFrom rqTos rssFrom rsbTo /\
           FootprintingDown rule rssFrom rsbTo /\
           FootprintUpSilent rule.
 
       Definition RqDownDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
-        DownLocking rule /\
         edgeDownTo oidx = Some rqFrom /\
         exists rssFrom rsbTo,
           rsEdgeUpFrom oidx = Some rsbTo /\
@@ -320,13 +276,12 @@ Section RqRsTopo.
         exists rsFrom rqTos,
           FootprintUpToDown rule rsFrom rqTos /\
           edgeDownTo oidx = Some rsFrom /\
-          SubList rqTos (edgesDownFrom oidx) /\
           (rule.(rule_precond)
            ->oprec (MsgsFrom [rsFrom]
                     /\oprec RsAccepting
                     /\oprec DownLockFree)) /\
           MsgsTo rqTos rule /\ RqReleasing rule /\
-          DownLocking rule /\ StateSilent rule.
+          StateSilent rule.
       
       Definition GoodRqRsRule (rule: Rule oifc) :=
         ImmDownRule rule \/ ImmUpRule rule \/

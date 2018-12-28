@@ -247,14 +247,14 @@ Section FootprintInv.
       + apply footprints_ok_orqs_add; auto.
         * rewrite H15; simpl.
           do 3 eexists; repeat split; eassumption.
-        * rewrite <-H23; assumption.
+        * rewrite <-H22; assumption.
       + apply footprints_ok_orqs_add; auto.
-        * rewrite <-H23; assumption.
+        * rewrite <-H21; assumption.
         * rewrite H13; simpl.
           do 3 eexists; repeat split.
           left; eexists; eassumption.
       + apply footprints_ok_orqs_add; auto.
-        * rewrite <-H22; assumption.
+        * rewrite <-H21; assumption.
         * rewrite H13; simpl.
           do 3 eexists; repeat split.
           right; eassumption.
@@ -267,10 +267,10 @@ Section FootprintInv.
         * rewrite H17; simpl; auto.
     - disc_rule_conds.
       apply footprints_ok_orqs_add; auto.
-      + rewrite H22; simpl; auto.
-      + rewrite H15; simpl.
+      + rewrite H20; simpl; auto.
+      + rewrite H14; simpl.
         do 3 eexists; repeat split.
-        left; eexists; rewrite <-H21 in H6; eassumption.
+        left; eexists; rewrite <-H19 in H6; eassumption.
   Qed.
 
   Lemma footprints_ok:
@@ -331,7 +331,7 @@ Section MessageInv.
     exists cidx rqUp,
       msgs = [rqUp] /\
       msg_type (valOf rqUp) = MRq /\
-      parentOf dtr cidx = Some oidx /\
+      parentIdxOf dtr cidx = Some oidx /\
       rqEdgeUpFrom dtr cidx = Some (idOf rqUp).
 
   Definition RqDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
@@ -454,20 +454,20 @@ Section LockInv.
     Definition UpLockFreeInv (oidx: IdxT) :=
       (rqEdgeUpFrom dtr oidx) >>=[True] (fun rqUp => findQ rqUp msgs = nil) /\
       (edgeDownTo dtr oidx) >>=[True] (fun down => rssQ down = nil) /\
-      (parentOf dtr oidx) >>=[True] (fun pidx => OUpLockFree pidx).
+      (parentIdxOf dtr oidx) >>=[True] (fun pidx => OUpLockFree pidx).
     
     Definition UpLockedInv (oidx: IdxT) :=
       exists rqUp down pidx,
         rqEdgeUpFrom dtr oidx = Some rqUp /\
         edgeDownTo dtr oidx = Some down /\
-        parentOf dtr oidx = Some pidx /\
+        parentIdxOf dtr oidx = Some pidx /\
         xor3 (findQ rqUp msgs <> nil)
              (rssQ down <> nil)
              (OUpLocked pidx).
 
     Definition DownLockFreeInv (oidx: IdxT) :=
       forall cidx,
-        parentOf dtr cidx = Some oidx ->
+        parentIdxOf dtr cidx = Some oidx ->
         ((edgeDownTo dtr cidx) >>=[True] (fun down => rqsQ down = nil) /\
          (rsEdgeUpFrom dtr cidx) >>=[True] (fun rsUp => findQ rsUp msgs = nil)).
     
@@ -476,7 +476,7 @@ Section LockInv.
                 exists down cidx,
                   edgeDownTo dtr cidx = Some down /\
                   rsEdgeUpFrom dtr cidx = Some rsUp /\
-                  parentOf dtr cidx = Some oidx /\
+                  parentIdxOf dtr cidx = Some oidx /\
                   xor3 (rqsQ down <> nil)
                        (findQ rsUp msgs <> nil)
                        (ODownLockedTo cidx rsUp))
@@ -514,7 +514,7 @@ Section LockInv.
     - red; cbn; repeat split.
       + destruct (rqEdgeUpFrom dtr oidx); simpl; auto.
       + destruct (edgeDownTo dtr oidx); simpl; auto.
-      + destruct (parentOf dtr oidx); simpl; auto.
+      + destruct (parentIdxOf dtr oidx); simpl; auto.
     - red; cbn; repeat split.
       + destruct (edgeDownTo dtr cidx); simpl; auto.
       + destruct (rsEdgeUpFrom dtr cidx); simpl; auto.
@@ -528,12 +528,12 @@ Section LockInv.
    * 4) [NoDup [rqEdgeUpFrom dtr oidx; 
    *            rsEdgeUpFrom dtr oidx;
    *            edgeDownTo dtr oidx]]
-   * 5) [parentOf dtr cidx = Some oidx ->
+   * 5) [parentIdxOf dtr cidx = Some oidx ->
    *     {rqEdgeUpFrom dtr cidx, rsEdgeUpFrom dtr cidx, edgeDownTo dtr cidx}
    *     <>
    *     {rqEdgeUpFrom dtr oidx, rsEdgeUpFrom dtr oidx, edgeDownTo dtr oidx}]
    * 5') Better to prove more generally:
-   *     a) [parentOf dtr cidx = Some oidx -> cidx <> oidx] and
+   *     a) [parentIdxOf dtr cidx = Some oidx -> cidx <> oidx] and
    *     b) [∀oidx1 oidx2, oidx1 <> oidx2 -> ...]
    *)
   
@@ -617,7 +617,7 @@ Section LockInv.
       rewrite <-H0; assumption.
     - destruct (edgeDownTo dtr oidx); simpl in *; dest; auto.
       rewrite <-H1; assumption.
-    - destruct (parentOf dtr oidx); simpl in *; dest; auto.
+    - destruct (parentIdxOf dtr oidx); simpl in *; dest; auto.
   Qed.
   
   Corollary upLockFreeInv_enqMsgs_preserved:
@@ -847,13 +847,48 @@ Section LockInv.
           }
 
         * (* case [RqFwdRule] *)
-          admit.
+          disc_rule_conds.
+          { (* case [RqUpUp]; setting an uplock. *)
+            admit.
+          }
+          { (* case [RqUpDown]; setting a downlock; [UpLockInvORq] preserved. *)
+            rewrite <-H20.
+            admit.
+          }
+          { (* case [RqDownDown]; setting a downlock; [UpLockInvORq] preserved. *)
+            rewrite <-H20.
+            admit.
+          }
 
         * (* case [RsBackRule] *)
+          disc_rule_conds.
+          { (* case [FootprintReleasingUp]; releasing the uplock. *)
+            rewrite H16.
+            red in H.
+            (** * we need [footprints_ok] here to say the footprint is valid!! *)
+            admit.
+          }
+          { (* case [FootprintReleasingDown]; releasing the downlock;
+             * [UpLockInvORq] preserved *)
+            rewrite <-H15.
+            (** * we need [footprints_ok] here to say the footprint is valid!! *)
+            admit.
+          }
+
+        * (* case [RsDownRqDownRule]; releasing the uplock; setting a downlock.
+           * The proof must be similar to that of [FootprintReleasingUp].
+           *)
+          disc_rule_conds.
           admit.
 
-        * (* case [RsDownRqDownRule] *)
-          admit.
+      + (* case [oidx <> obj_idx obj]:
+         * The only nontrivial case will be when [oidx = parentIdxOf dtr (obj_idx obj)].
+         * Otherwise state transitions are orthogonal.
+         *)
+        admit.
+
+    - (** Proving invariants about downlocks *)
+      admit.
 
   Admitted.
   
@@ -946,18 +981,6 @@ Fixpoint rssOf (hst: MHistory): list IdxT :=
 (*   | _ => None *)
 (*   end. *)
 
-Definition trsTypeOf (dtr: DTree) (idm: Id Msg):
-  option IdxT * option IdxT * TrsType :=
-  (findEdge dtr (fst idm))
-    >>=[(None, None, RqUp)]
-    (fun e =>
-       (e.(edge_from),
-        e.(edge_to),
-        match fst (fst e.(edge_chn)) with
-        | CUp => if eq_nat_dec (msg_type (snd idm)) MRq then RqUp else RsUp
-        | CDown => if eq_nat_dec (msg_type (snd idm)) MRq then RqDown else RsDown
-        end)).
-
 Section AtomicInv.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -965,16 +988,8 @@ Section AtomicInv.
 
   Hypothesis (Hitr: GoodRqRsSys dtr sys).
 
-  Definition subtreeInds (sroot: option IdxT): list IdxT :=
-    sroot >>=[nil] (fun sroot => dg_vs (topoOfT (subtree dtr sroot))).
-
   Definition rsUpCover (idm: Id Msg): list IdxT :=
-    let from := fst (fst (trsTypeOf dtr idm)) in
-    let to := snd (fst (trsTypeOf dtr idm)) in
-    match snd (trsTypeOf dtr idm) with
-    | RsUp => subtreeInds from
-    | _ => nil
-    end.
+    nil. (** TODO: define it. *)
 
   Fixpoint rsUpCovers (eouts: list (Id Msg)): list IdxT :=
     match eouts with
@@ -983,12 +998,7 @@ Section AtomicInv.
     end.
 
   Definition rsDownCover (idm: Id Msg): list IdxT :=
-    let from := fst (fst (trsTypeOf dtr idm)) in
-    let to := snd (fst (trsTypeOf dtr idm)) in
-    match snd (trsTypeOf dtr idm) with
-    | RsDown => subtreeInds to
-    | _ => nil
-    end.
+    nil. (** TODO: define it. *)
 
   Fixpoint rsDownCovers (eouts: list (Id Msg)): list IdxT :=
     match eouts with
