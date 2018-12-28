@@ -247,6 +247,22 @@ Section SubDisjEquiv.
     exfalso; auto.
   Qed.
 
+  Lemma DisjList_In_1:
+    forall a l1 l2,
+      DisjList l1 l2 -> In a l2 -> ~ In a l1.
+  Proof.
+    unfold DisjList; intros.
+    specialize (H a); destruct H; auto.
+  Qed.
+    
+  Lemma DisjList_In_2:
+    forall a l1 l2,
+      DisjList l1 l2 -> In a l1 -> ~ In a l2.
+  Proof.
+    unfold DisjList; intros.
+    specialize (H a); destruct H; auto.
+  Qed.
+  
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. 
     intros. unfold DisjList in *. intros e. specialize (H e). intuition.

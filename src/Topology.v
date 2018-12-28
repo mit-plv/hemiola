@@ -160,6 +160,13 @@ End DTree.
 
 Section Facts.
 
+  Lemma parentIdxOf_not_eq:
+    forall dtr (Hwf: WfDTree dtr) idx pidx,
+      parentIdxOf dtr idx = Some pidx ->
+      idx <> pidx.
+  Proof.
+  Admitted.
+  
   Lemma parentChnsOf_NoDup:
     forall dtr (Hwf: WfDTree dtr)
            idx ups downs pidx,
@@ -167,13 +174,14 @@ Section Facts.
       NoDup (ups ++ downs).
   Proof.
   Admitted.
-  
-  Lemma parentChnsOf_NoDup_2:
+
+  Lemma parentChnsOf_DisjList:
     forall dtr (Hwf: WfDTree dtr)
            idx1 ups1 downs1 pidx1 idx2 ups2 downs2 pidx2,
+      idx1 <> idx2 ->
       parentChnsOf dtr idx1 = Some (ups1, downs1, pidx1) ->
       parentChnsOf dtr idx2 = Some (ups2, downs2, pidx2) ->
-      NoDup (ups1 ++ downs1 ++ ups2 ++ downs2).
+      DisjList (ups1 ++ downs1) (ups2 ++ downs2).
   Proof.
   Admitted.
   

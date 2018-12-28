@@ -288,6 +288,58 @@ Section SysOnDTree.
     auto.
   Qed.
 
+  Lemma sysOnDTree_rqrs_updown_disj:
+    forall oidx1 rqUp1 rsUp1 down1 oidx2 rqUp2 rsUp2 down2
+           (Hoidx: oidx1 <> oidx2),
+      rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
+      rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
+      edgeDownTo dtr oidx1 = Some down1 ->
+      rqEdgeUpFrom dtr oidx2 = Some rqUp2 ->
+      rsEdgeUpFrom dtr oidx2 = Some rsUp2 ->
+      edgeDownTo dtr oidx2 = Some down2 ->
+      DisjList [rqUp1; rsUp1; down1] [rqUp2; rsUp2; down2].
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups1 [downs1 [pidx1 ?]]].
+    apply rsEdgeUpFrom_parentChnsOf_Some in H0.
+    apply edgeDownTo_parentChnsOf_Some in H1.
+    dest.
+    rewrite H0 in H; inv H.
+    rewrite H1 in H0; inv H0.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H2.
+    destruct H2 as [ups2 [downs2 [pidx2 ?]]].
+    apply rsEdgeUpFrom_parentChnsOf_Some in H3.
+    apply edgeDownTo_parentChnsOf_Some in H4.
+    dest.
+    rewrite H2 in H; inv H.
+    rewrite H3 in H2; inv H2.
+
+    destruct ups1 as [|? ups1]; [discriminate|].
+    simpl in *; inv H7.
+    destruct ups1 as [|? ups1]; [discriminate|].
+    simpl in *; inv H9.
+    destruct downs1 as [|? downs1]; [discriminate|].
+    simpl in *; inv H8.
+    destruct ups2 as [|? ups2]; [discriminate|].
+    simpl in *; inv H0.
+    destruct ups2 as [|? ups2]; [discriminate|].
+    simpl in *; inv H10.
+    destruct downs2 as [|? downs2]; [discriminate|].
+    simpl in *; inv H4.
+
+    pose proof (parentChnsOf_DisjList H5 Hoidx H1 H3).
+    eapply DisjList_SubList;
+      [|apply DisjList_comm;
+        eapply DisjList_SubList;
+        [|apply DisjList_comm; exact H]].
+    - red; intros.
+      Common.dest_in; clear; firstorder.
+    - red; intros.
+      Common.dest_in; clear; firstorder.
+  Qed.
+  
 End SysOnDTree.
 
 Section FootprintInv.
@@ -543,7 +595,8 @@ Section LockInv.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrr: GoodRqRsSys dtr sys).
+  Hypotheses (Hrr: GoodRqRsSys dtr sys)
+             (Hsd: SysOnDTree dtr sys).
 
   Section OnMState.
     Variables (orqs: ORqs Msg)
@@ -693,14 +746,18 @@ Section LockInv.
     eapply upLockedInv_msgs_preserved; eauto.
     - destruct H as [rqUp [down [pidx ?]]]; dest.
       rewrite H.
-      rewrite findQ_not_In_enqMsgs by admit.
-      reflexivity.
+      rewrite findQ_not_In_enqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_rqEdgeUpFrom_sys_minds; eauto.
     - destruct H as [rqUp [down [pidx ?]]]; dest.
       rewrite H1.
       unfold rssQ.
-      rewrite findQ_not_In_enqMsgs by admit.
-      reflexivity.
-  Admitted.
+      rewrite findQ_not_In_enqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+  Qed.
 
   Corollary upLockedInv_deqMsgs_preserved:
     forall orqs msgs eminds oidx,
@@ -712,14 +769,18 @@ Section LockInv.
     eapply upLockedInv_msgs_preserved; eauto.
     - destruct H as [rqUp [down [pidx ?]]]; dest.
       rewrite H.
-      rewrite findQ_not_In_deqMsgs by admit.
-      reflexivity.
+      rewrite findQ_not_In_deqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_rqEdgeUpFrom_sys_minds; eauto.
     - destruct H as [rqUp [down [pidx ?]]]; dest.
       rewrite H1.
       unfold rssQ.
-      rewrite findQ_not_In_deqMsgs by admit.
-      reflexivity.
-  Admitted.
+      rewrite findQ_not_In_deqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+  Qed.
 
   Lemma upLockFreeInv_msgs_preserved:
     forall orqs msgs1 msgs2 oidx,
@@ -752,15 +813,21 @@ Section LockInv.
     intros.
     eapply upLockFreeInv_msgs_preserved; eauto.
     - red in H; dest.
-      destruct (rqEdgeUpFrom dtr oidx); simpl in *; dest; auto.
-      rewrite findQ_not_In_enqMsgs by admit.
-      reflexivity.
+      remember (rqEdgeUpFrom dtr oidx) as rqUp.
+      destruct rqUp as [rqUp|]; simpl in *; dest; auto.
+      rewrite findQ_not_In_enqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_rqEdgeUpFrom_sys_minds; eauto.
     - red in H; dest.
-      destruct (edgeDownTo dtr oidx); simpl in *; dest; auto.
+      remember (edgeDownTo dtr oidx) as down.
+      destruct down as [down|]; simpl in *; dest; auto.
       unfold rssQ.
-      rewrite findQ_not_In_enqMsgs by admit.
-      reflexivity.
-  Admitted.
+      rewrite findQ_not_In_enqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+  Qed.
 
   Corollary upLockFreeInv_deqMsgs_preserved:
     forall orqs msgs eminds oidx,
@@ -771,15 +838,21 @@ Section LockInv.
     intros.
     eapply upLockFreeInv_msgs_preserved; eauto.
     - red in H; dest.
-      destruct (rqEdgeUpFrom dtr oidx); simpl in *; dest; auto.
-      rewrite findQ_not_In_deqMsgs by admit.
-      reflexivity.
+      remember (rqEdgeUpFrom dtr oidx) as rqUp.
+      destruct rqUp as [rqUp|]; simpl in *; dest; auto.
+      rewrite findQ_not_In_deqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_rqEdgeUpFrom_sys_minds; eauto.
     - red in H; dest.
-      destruct (edgeDownTo dtr oidx); simpl in *; dest; auto.
+      remember (edgeDownTo dtr oidx) as down.
+      destruct down as [down|]; simpl in *; dest; auto.
       unfold rssQ.
-      rewrite findQ_not_In_deqMsgs by admit.
-      reflexivity.
-  Admitted.
+      rewrite findQ_not_In_deqMsgs.
+      + reflexivity.
+      + eapply DisjList_In_1; [eassumption|].
+        eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+  Qed.
 
   Lemma downLockedInv_enqMsgs_preserved:
     forall orqs msgs emsgs oidx rqi,
