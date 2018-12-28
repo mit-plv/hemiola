@@ -696,23 +696,6 @@ Section LockInv.
       + destruct (rsEdgeUpFrom dtr cidx); simpl; auto.
   Qed.
 
-  (** TODO: need to prove following facts:
-   * 1) [rqEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
-   * 2) [rsEdgeUpFrom dtr _ = Some midx -> In midx (sys_minds sys)]
-   * 3) [edgeDownTo dtr _ = Some midx -> In midx (sys_minds sys)]
-   *
-   * 4) [NoDup [rqEdgeUpFrom dtr oidx; 
-   *            rsEdgeUpFrom dtr oidx;
-   *            edgeDownTo dtr oidx]]
-   * 5) [parentIdxOf dtr cidx = Some oidx ->
-   *     {rqEdgeUpFrom dtr cidx, rsEdgeUpFrom dtr cidx, edgeDownTo dtr cidx}
-   *     <>
-   *     {rqEdgeUpFrom dtr oidx, rsEdgeUpFrom dtr oidx, edgeDownTo dtr oidx}]
-   * 5') Better to prove more generally:
-   *     a) [parentIdxOf dtr cidx = Some oidx -> cidx <> oidx] and
-   *     b) [∀oidx1 oidx2, oidx1 <> oidx2 -> ...]
-   *)
-  
   Lemma upLockedInv_msgs_preserved:
     forall orqs msgs1 msgs2 oidx,
       UpLockedInv orqs msgs1 oidx ->
@@ -854,32 +837,108 @@ Section LockInv.
         eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
   Qed.
 
-  Lemma downLockedInv_enqMsgs_preserved:
+  Lemma downLockedInv_msgs_preserved:
+    forall orqs msgs1 msgs2 oidx rqi,
+      DownLockedInv orqs msgs1 oidx rqi ->
+      (forall rsUp down cidx,
+          In rsUp (rqi_minds_rss rqi) ->
+          edgeDownTo dtr cidx = Some down ->
+          rsEdgeUpFrom dtr cidx = Some rsUp ->
+          parentIdxOf dtr cidx = Some oidx ->
+          rqsQ msgs1 down = rqsQ msgs2 down /\
+          findQ rsUp msgs1 = findQ rsUp msgs2) ->
+      DownLockedInv orqs msgs2 oidx rqi.
+  Proof.
+    unfold DownLockedInv; simpl; intros.
+    rewrite Forall_forall in H.
+    apply Forall_forall; intros rsUp ?.
+    specialize (H _ H1).
+    destruct H as [down [cidx ?]]; dest.
+    specialize (H0 _ _ _ H1 H H2 H3); dest.
+    exists down, cidx.
+    repeat split; try assumption.
+    rewrite <-H0, <-H5.
+    assumption.
+  Qed.
+  
+  Corollary downLockedInv_enqMsgs_preserved:
     forall orqs msgs emsgs oidx rqi,
       DownLockedInv orqs msgs oidx rqi ->
       DisjList (idsOf emsgs) (sys_minds sys) ->
       DownLockedInv orqs (enqMsgs emsgs msgs) oidx rqi.
   Proof.
-    (** TODO: ditto *)
-  Admitted.
+    intros.
+    eapply downLockedInv_msgs_preserved; eauto.
+    intros; split.
+    - unfold rqsQ.
+      rewrite findQ_not_In_enqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+    - rewrite findQ_not_In_enqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_rsEdgeUpFrom_sys_minds; eauto.
+  Qed.
 
-  Lemma downLockedInv_deqMsgs_preserved:
+  Corollary downLockedInv_deqMsgs_preserved:
     forall orqs msgs eminds oidx rqi,
       DownLockedInv orqs msgs oidx rqi ->
       DisjList eminds (sys_minds sys) ->
       DownLockedInv orqs (deqMsgs eminds msgs) oidx rqi.
   Proof.
-    (** TODO: ditto *)
-  Admitted.
+    intros.
+    eapply downLockedInv_msgs_preserved; eauto.
+    intros; split.
+    - unfold rqsQ.
+      rewrite findQ_not_In_deqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+    - rewrite findQ_not_In_deqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_rsEdgeUpFrom_sys_minds; eauto.
+  Qed.
 
-  Lemma downLockFreeInv_enqMsgs_preserved:
+  Lemma downLockFreeInv_msgs_preserved:
+    forall msgs1 msgs2 oidx,
+      DownLockFreeInv msgs1 oidx ->
+      (forall cidx,
+          parentIdxOf dtr cidx = Some oidx ->
+          (forall down,
+              edgeDownTo dtr cidx = Some down ->
+              rqsQ msgs1 down = rqsQ msgs2 down) /\
+          (forall rsUp,
+              rsEdgeUpFrom dtr cidx = Some rsUp ->
+              findQ rsUp msgs1 = findQ rsUp msgs2)) ->
+      DownLockFreeInv msgs2 oidx.
+  Proof.
+    unfold DownLockFreeInv; simpl; intros.
+    specialize (H _ H1); dest.
+    specialize (H0 _ H1); dest.
+    split.
+    - remember (edgeDownTo dtr cidx) as down.
+      destruct down as [down|]; simpl in *; dest; auto.
+      rewrite <-H0; auto.
+    - remember (rsEdgeUpFrom dtr cidx) as rsUp.
+      destruct rsUp as [rsUp|]; simpl in *; dest; auto.
+      rewrite <-H3; auto.
+  Qed.
+  
+  Corollary downLockFreeInv_enqMsgs_preserved:
     forall msgs emsgs oidx,
       DownLockFreeInv msgs oidx ->
       DisjList (idsOf emsgs) (sys_minds sys) ->
       DownLockFreeInv (enqMsgs emsgs msgs) oidx.
   Proof.
-    (** TODO: ditto *)
-  Admitted.
+    intros.
+    eapply downLockFreeInv_msgs_preserved; eauto.
+    intros; split; intros.
+    - unfold rqsQ.
+      rewrite findQ_not_In_enqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+    - rewrite findQ_not_In_enqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_rsEdgeUpFrom_sys_minds; eauto.
+  Qed.
 
   Lemma downLockFreeInv_deqMsgs_preserved:
     forall msgs eminds oidx,
@@ -887,8 +946,17 @@ Section LockInv.
       DisjList eminds (sys_minds sys) ->
       DownLockFreeInv (deqMsgs eminds msgs) oidx.
   Proof.
-    (** TODO: ditto *)
-  Admitted.
+    intros.
+    eapply downLockFreeInv_msgs_preserved; eauto.
+    intros; split; intros.
+    - unfold rqsQ.
+      rewrite findQ_not_In_deqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_edgeDownTo_sys_minds; eauto.
+    - rewrite findQ_not_In_deqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply sysOnDTree_rsEdgeUpFrom_sys_minds; eauto.
+  Qed.
   
   Lemma lockInv_step_ext_in:
     forall oss orqs msgs eins,
