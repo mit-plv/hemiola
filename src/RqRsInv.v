@@ -1044,127 +1044,178 @@ Section LockInv.
       + red; simpl.
         apply downLockFreeInv_deqMsgs_preserved; assumption.
   Qed.
-  
-  Lemma lockInv_step_int:
-    forall oss orqs msgs obj rule
-           post porq mins nost norq mouts,
-      LockInv {| bst_oss := oss;
-                 bst_orqs := orqs;
-                 bst_msgs := msgs |} ->
-      In obj (sys_objs sys) ->
-      In rule (obj_rules obj) ->
-      orqs@[obj_idx obj] = Some porq ->
-      oss@[obj_idx obj] = Some post ->
-      Forall (FirstMPI msgs) mins ->
-      ValidMsgsIn sys mins ->
-      rule_precond rule post porq mins ->
-      rule_trs rule post porq mins = (nost, norq, mouts) ->
-      ValidMsgsOut sys mouts ->
-      DisjList (idsOf mins) (idsOf mouts) ->
-      LockInv
-        {| bst_oss := (oss) +[ obj_idx obj <- nost];
-           bst_orqs := (orqs) +[ obj_idx obj <- norq];
-           bst_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
-  Proof.
-    intros.
-    do 2 red; simpl; intros.
-    do 2 red in H; simpl in H.
-    good_rqrs_rule_get rule.
-    specialize (H _ H10); dest; split.
 
-    - (** Proving invariants about uplocks *)
-      clear H12.
-      red; red in H.
-      M.cmp (obj_idx obj) oidx; mred; simpl in *.
+  Section InternalStep.
+    Variables (oss: OStates oifc) (orqs: ORqs Msg) (msgs: MessagePool Msg)
+              (obj: Object oifc) (rule: Rule oifc)
+              (post: OState oifc) (porq: ORq Msg) (mins: list (Id Msg))
+              (nost: OState oifc) (norq: ORq Msg) (mouts: list (Id Msg)).
 
-      + (* case [oidx = obj_idx obj] *)
-        good_rqrs_rule_cases rule.
+    Hypotheses
+      (Hfpok: FootprintsOk
+                dtr {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+      (HobjIn: In obj (sys_objs sys))
+      (HruleIn: In rule (obj_rules obj))
+      (Hporq: orqs@[obj_idx obj] = Some porq)
+      (Hpost: oss@[obj_idx obj] = Some post)
+      (HminsF: Forall (FirstMPI msgs) mins)
+      (HminsV: ValidMsgsIn sys mins)
+      (Hprec: rule_precond rule post porq mins)
+      (Htrs: rule_trs rule post porq mins = (nost, norq, mouts))
+      (HmoutsV: ValidMsgsOut sys mouts)
+      (Hmdisj: DisjList (idsOf mins) (idsOf mouts)).
 
-        * (* case [ImmDownRule] *)
-          disc_rule_conds.
-          rewrite H18.
-          replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
-          destruct i as [rsMIdx rsd]; simpl in *.
+    Lemma upLockInvORq_step_int_me:
+      UpLockInvORq orqs msgs (obj_idx obj) porq ->
+      In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
+      GoodRqRsRule dtr (obj_idx obj) rule ->
+      UpLockInvORq (orqs+[obj_idx obj <- norq])
+                   (enqMsgs mouts (deqMsgs (idsOf mins) msgs))
+                   (obj_idx obj) norq.
+    Proof.
+      intros.
+      red in H; red.
+      good_rqrs_rule_cases rule.
 
-          eapply upLockFreeInv_msgs_preserved; eauto.
+      - (** case [ImmDownRule] *)
+        disc_rule_conds.
+        rewrite H8.
+        replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
+        destruct i as [rsMIdx rsd]; simpl in *.
+
+        eapply upLockFreeInv_msgs_preserved; eauto.
+        + admit.
+        + admit.
+
+      - (** case [ImmUpRule] *)
+        disc_rule_conds.
+        replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
+        destruct i as [rsMIdx rsd]; simpl in *.
+        destruct (porq@[upRq]).
+        { eapply upLockedInv_msgs_preserved; eauto.
           { admit. }
+          { rewrite H1.
+            (* provable since [msg_type (valOf i0) = MRq]. *)
+            admit.
+          }
+        }
+        { eapply upLockFreeInv_msgs_preserved; eauto.
           { admit. }
+          { rewrite H1.
+            (* provable since [msg_type (valOf i0) = MRq]. *)
+            admit.
+          }
+        }
 
-        * (* case [ImmUpRule] *)
-          disc_rule_conds.
-          replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
-          destruct i as [rsMIdx rsd]; simpl in *.
-          destruct (porq@[upRq]).
-          { eapply upLockedInv_msgs_preserved; eauto.
-            { admit. }
-            { rewrite H11.
-              (* provable since [msg_type (valOf i0) = MRq]. *)
-              admit.
-            }
-          }
-          { eapply upLockFreeInv_msgs_preserved; eauto.
-            { admit. }
-            { rewrite H11.
-              (* provable since [msg_type (valOf i0) = MRq]. *)
-              admit.
-            }
-          }
-
-        * (* case [RqFwdRule] *)
-          disc_rule_conds.
-          { (* case [RqUpUp]; setting an uplock. *)
-            admit.
-          }
-          { (* case [RqUpDown]; setting a downlock; [UpLockInvORq] preserved. *)
-            rewrite <-H20.
-            admit.
-          }
-          { (* case [RqDownDown]; setting a downlock; [UpLockInvORq] preserved. *)
-            rewrite <-H20.
-            admit.
-          }
-
-        * (* case [RsBackRule] *)
-          disc_rule_conds.
-          { (* case [FootprintReleasingUp]; releasing the uplock. *)
-            rewrite H16.
-            red in H.
-            (** * we need [footprints_ok] here to say the footprint is valid!! *)
-            admit.
-          }
-          { (* case [FootprintReleasingDown]; releasing the downlock;
-             * [UpLockInvORq] preserved *)
-            rewrite <-H15.
-            (** * we need [footprints_ok] here to say the footprint is valid!! *)
-            admit.
-          }
-
-        * (* case [RsDownRqDownRule]; releasing the uplock; setting a downlock.
-           * The proof must be similar to that of [FootprintReleasingUp].
-           *)
-          disc_rule_conds.
+      - (** case [RqFwdRule] *)
+        disc_rule_conds.
+        { (* case [RqUpUp]; setting an uplock. *)
           admit.
+        }
+        { (* case [RqUpDown]; setting a downlock; [UpLockInvORq] preserved. *)
+          rewrite <-H10.
+          admit.
+        }
+        { (* case [RqDownDown]; setting a downlock; [UpLockInvORq] preserved. *)
+          rewrite <-H10.
+          admit.
+        }
 
-      + (* case [oidx <> obj_idx obj]:
-         * The only nontrivial case will be when [oidx = parentIdxOf dtr (obj_idx obj)].
-         * Otherwise state transitions are orthogonal.
+      - (** case [RsBackRule] *)
+        disc_rule_conds.
+        { (* case [FootprintReleasingUp]; releasing the uplock. *)
+          rewrite H6.
+          (** * we need [footprints_ok] here to say the footprint is valid!! *)
+          admit.
+        }
+        { (* case [FootprintReleasingDown]; releasing the downlock;
+           * [UpLockInvORq] preserved 
+           *)
+          rewrite <-H5.
+          (** * we need [footprints_ok] here to say the footprint is valid!! *)
+          admit.
+        }
+
+      - (** case [RsDownRqDownRule]; releasing the uplock; setting a downlock.
+         * The proof must be similar to that of [FootprintReleasingUp]. 
          *)
-        admit.
+    Admitted.
 
-    - (** Proving invariants about downlocks *)
-      admit.
+    Lemma upLockInvORq_step_int_other:
+      forall oidx,
+        UpLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
+        In oidx (map (@obj_idx _) (sys_objs sys)) ->
+        GoodRqRsRule dtr (obj_idx obj) rule ->
+        obj_idx obj <> oidx ->
+        UpLockInvORq (orqs+[obj_idx obj <- norq])
+                     (enqMsgs mouts (deqMsgs (idsOf mins) msgs)) oidx
+                     ((orqs@[ oidx]) >>=[[]] (fun orq => orq)).
+    Proof.
+      (* The only nontrivial case will be when [oidx = parentIdxOf dtr (obj_idx obj)].
+       * Otherwise state transitions are orthogonal.
+       *)
+    Admitted.
 
-  Admitted.
-  
+    Lemma downLockInvORq_step_int_me:
+      DownLockInvORq orqs msgs (obj_idx obj) porq ->
+      In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
+      GoodRqRsRule dtr (obj_idx obj) rule ->
+      DownLockInvORq (orqs+[obj_idx obj <- norq])
+                     (enqMsgs mouts (deqMsgs (idsOf mins) msgs))
+                     (obj_idx obj) norq.
+    Proof.
+    Admitted.
+
+    Lemma downLockInvORq_step_int_other:
+      forall oidx,
+        DownLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
+        In oidx (map (@obj_idx _) (sys_objs sys)) ->
+        GoodRqRsRule dtr (obj_idx obj) rule ->
+        obj_idx obj <> oidx ->
+        DownLockInvORq (orqs+[obj_idx obj <- norq])
+                     (enqMsgs mouts (deqMsgs (idsOf mins) msgs)) oidx
+                     ((orqs@[ oidx]) >>=[[]] (fun orq => orq)).
+    Proof.
+    Admitted.
+
+    Lemma lockInv_step_int:
+      LockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      LockInv {| bst_oss := (oss) +[ obj_idx obj <- nost];
+                 bst_orqs := (orqs) +[ obj_idx obj <- norq];
+                 bst_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
+    Proof.
+      intros.
+      do 2 red; simpl; intros.
+      good_rqrs_rule_get rule.
+      specialize (H _ H0); simpl in H; dest; split.
+
+      - (** Proving invariants about uplocks *)
+        M.cmp (obj_idx obj) oidx; mred; simpl in *.
+        + (** case [oidx = obj_idx obj] *)
+          apply upLockInvORq_step_int_me; assumption.
+        + (** case [oidx <> obj_idx obj] *)
+          apply upLockInvORq_step_int_other; assumption.
+
+      - (** Proving invariants about downlocks *)
+        M.cmp (obj_idx obj) oidx; mred; simpl in *.
+        + (** case [oidx = obj_idx obj] *)
+          apply downLockInvORq_step_int_me; assumption.
+        + (** case [oidx <> obj_idx obj] *)
+          apply downLockInvORq_step_int_other; assumption.
+    Qed.
+
+  End InternalStep.
+
   Lemma lockInv_step:
     InvStep sys step_m LockInv.
   Proof.
     red; intros.
-    inv H1;
-      [auto
-      |apply lockInv_step_ext_in; auto
-      |apply lockInv_step_ext_out; auto
-      |eapply lockInv_step_int; eauto].
+    inv H1.
+    - auto.
+    - apply lockInv_step_ext_in; auto.
+    - apply lockInv_step_ext_out; auto.
+    - eapply lockInv_step_int; eauto.
+      eapply footprints_ok; eassumption.
   Qed.
 
   Lemma lockInv_ok:
