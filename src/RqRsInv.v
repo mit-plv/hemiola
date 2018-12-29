@@ -256,39 +256,77 @@ Section SysOnDTree.
     auto.
   Qed.
 
-  Lemma sysOnDTree_rqrs_updown_NoDup:
-    forall oidx rqUp rsUp down,
+  Lemma sysOnDTree_rqUp_rsUp_not_eq:
+    forall oidx rqUp rsUp,
       rqEdgeUpFrom dtr oidx = Some rqUp ->
       rsEdgeUpFrom dtr oidx = Some rsUp ->
-      edgeDownTo dtr oidx = Some down ->
-      NoDup [rqUp; rsUp; down].
+      rqUp <> rsUp.
   Proof.
     intros.
     destruct Hsd.
     apply rqEdgeUpFrom_parentChnsOf_Some in H.
     destruct H as [ups [downs [pidx ?]]].
     apply rsEdgeUpFrom_parentChnsOf_Some in H0.
-    apply edgeDownTo_parentChnsOf_Some in H1.
     dest.
     rewrite H0 in H; inv H.
-    rewrite H1 in H0; inv H0.
-    apply parentChnsOf_NoDup in H1; [|assumption].
+    apply parentChnsOf_NoDup in H0; [|assumption].
     
     destruct ups as [|? ups]; [discriminate|].
-    simpl in *; inv H4.
+    simpl in *; inv H3.
     destruct ups as [|? ups]; [discriminate|].
-    simpl in *; inv H6.
-    destruct downs as [|? downs]; [discriminate|].
-    simpl in *; inv H5.
-
-    inv H1; inv H5.
-    constructor; [intro Hx; Common.dest_in; intuition|].
-    constructor; [intro Hx; Common.dest_in; intuition|].
-    repeat constructor.
-    auto.
+    simpl in *; inv H4.
+    intro Hx; subst.
+    inv H0; firstorder.
   Qed.
 
-  Lemma sysOnDTree_rqUp_rqUp_not_eq:
+  Lemma sysOnDTree_rqUp_down_not_eq:
+    forall oidx rqUp down,
+      rqEdgeUpFrom dtr oidx = Some rqUp ->
+      edgeDownTo dtr oidx = Some down ->
+      rqUp <> down.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]].
+    apply edgeDownTo_parentChnsOf_Some in H0.
+    dest.
+    rewrite H0 in H; inv H.
+    apply parentChnsOf_NoDup in H0; [|assumption].
+    
+    destruct ups as [|? ups]; [discriminate|].
+    simpl in *; inv H3.
+    destruct downs as [|? downs]; [discriminate|].
+    simpl in *; inv H4.
+    intro Hx; subst.
+    inv H0; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_rsUp_down_not_eq:
+    forall oidx rsUp down,
+      rsEdgeUpFrom dtr oidx = Some rsUp ->
+      edgeDownTo dtr oidx = Some down ->
+      rsUp <> down.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rsEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]].
+    apply edgeDownTo_parentChnsOf_Some in H0.
+    dest.
+    rewrite H0 in H; inv H.
+    apply parentChnsOf_NoDup in H0; [|assumption].
+    
+    destruct ups as [|? ups]; [discriminate|].
+    destruct ups as [|? ups]; [discriminate|].
+    simpl in *; inv H3.
+    destruct downs as [|? downs]; [discriminate|].
+    simpl in *; inv H4.
+    intro Hx; subst.
+    inv H0; inv H5; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_diff_rqUp_rqUp_not_eq:
     forall oidx1 rqUp1 oidx2 rqUp2 (Hoidx: oidx1 <> oidx2),
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
       rqEdgeUpFrom dtr oidx2 = Some rqUp2 ->
@@ -311,7 +349,7 @@ Section SysOnDTree.
     specialize (H3 rqUp2); destruct H3; clear -H3; firstorder.
   Qed.
 
-  Lemma sysOnDTree_rqUp_rsUp_not_eq:
+  Lemma sysOnDTree_diff_rqUp_rsUp_not_eq:
     forall oidx1 rqUp1 oidx2 rsUp2 (Hoidx: oidx1 <> oidx2),
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
       rsEdgeUpFrom dtr oidx2 = Some rsUp2 ->
@@ -335,7 +373,7 @@ Section SysOnDTree.
     specialize (H3 rsUp2); destruct H3; clear -H3; firstorder.
   Qed.
 
-  Lemma sysOnDTree_rqUp_down_not_eq:
+  Lemma sysOnDTree_diff_rqUp_down_not_eq:
     forall oidx1 rqUp1 oidx2 down2 (Hoidx: oidx1 <> oidx2),
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
       edgeDownTo dtr oidx2 = Some down2 ->
@@ -358,7 +396,7 @@ Section SysOnDTree.
     specialize (H3 down2); destruct H3; clear -H3; firstorder.
   Qed.
 
-  Lemma sysOnDTree_rsUp_rsUp_not_eq:
+  Lemma sysOnDTree_diff_rsUp_rsUp_not_eq:
     forall oidx1 rsUp1 oidx2 rsUp2 (Hoidx: oidx1 <> oidx2),
       rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
       rsEdgeUpFrom dtr oidx2 = Some rsUp2 ->
@@ -383,7 +421,7 @@ Section SysOnDTree.
     specialize (H3 rsUp2); destruct H3; clear -H3; firstorder.
   Qed.
 
-  Lemma sysOnDTree_rsUp_down_not_eq:
+  Lemma sysOnDTree_diff_rsUp_down_not_eq:
     forall oidx1 rsUp1 oidx2 down2 (Hoidx: oidx1 <> oidx2),
       rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
       edgeDownTo dtr oidx2 = Some down2 ->
@@ -407,7 +445,7 @@ Section SysOnDTree.
     specialize (H3 down2); destruct H3; clear -H3; firstorder.
   Qed.
 
-  Lemma sysOnDTree_down_down_not_eq:
+  Lemma sysOnDTree_diff_down_down_not_eq:
     forall oidx1 down1 oidx2 down2 (Hoidx: oidx1 <> oidx2),
       edgeDownTo dtr oidx1 = Some down1 ->
       edgeDownTo dtr oidx2 = Some down2 ->
@@ -443,46 +481,68 @@ Ltac solve_midx_neq_unit :=
   | [H: None = rsEdgeUpFrom _ _ |- _] => apply eq_sym in H
   | [H: None = edgeDownTo _ _ |- _] => apply eq_sym in H
 
+  | [Hrq: rqEdgeUpFrom _ ?idx = Some ?rqUp,
+     Hrs: rsEdgeUpFrom _ ?idx = Some ?rsUp |- ?rqUp <> ?rsUp] =>
+    eapply sysOnDTree_rqUp_rsUp_not_eq with (oidx:= idx); eauto
+  | [Hrq: rqEdgeUpFrom _ ?idx = Some ?rqUp,
+     Hrs: rsEdgeUpFrom _ ?idx = Some ?rsUp |- ?rsUp <> ?rqUp] =>
+    apply neq_sym;
+    eapply sysOnDTree_rqUp_rsUp_not_eq with (oidx:= idx); eauto
+  | [Hrq: rqEdgeUpFrom _ ?idx = Some ?rqUp,
+     Hd: edgeDownTo _ ?idx = Some ?down |- ?rqUp <> ?down] =>
+    eapply sysOnDTree_rqUp_down_not_eq with (oidx:= idx); eauto
+  | [Hrq: rqEdgeUpFrom _ ?idx = Some ?rqUp,
+     Hd: edgeDownTo _ ?idx = Some ?down |- ?down <> ?rqUp] =>
+    apply neq_sym;
+    eapply sysOnDTree_rqUp_down_not_eq with (oidx:= idx); eauto
+  | [Hrs: rsEdgeUpFrom _ ?idx = Some ?rsUp,
+     Hd: edgeDownTo _ ?idx = Some ?down |- ?rsUp <> ?down] =>
+    eapply sysOnDTree_rsUp_down_not_eq with (oidx:= idx); eauto
+  | [Hrs: rsEdgeUpFrom _ ?idx = Some ?rsUp,
+     Hd: edgeDownTo _ ?idx = Some ?down |- ?down <> ?rsUp] =>
+    apply neq_sym;
+    eapply sysOnDTree_rsUp_down_not_eq with (oidx:= idx); eauto
+    
   | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
      Hru2: rqEdgeUpFrom _ ?idx2 = Some ?rqUp2 |- ?rqUp1 <> ?rqUp2] =>
-    eapply sysOnDTree_rqUp_rqUp_not_eq
+    eapply sysOnDTree_diff_rqUp_rqUp_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
      Hru2: rsEdgeUpFrom _ ?idx2 = Some ?rsUp2 |- ?rqUp1 <> ?rsUp2] =>
-    eapply sysOnDTree_rqUp_rsUp_not_eq
+    eapply sysOnDTree_diff_rqUp_rsUp_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
      Hru2: rsEdgeUpFrom _ ?idx2 = Some ?rsUp2 |- ?rsUp2 <> ?rqUp1] =>
     apply neq_sym;
-    eapply sysOnDTree_rqUp_rsUp_not_eq
+    eapply sysOnDTree_diff_rqUp_rsUp_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
      Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?rqUp1 <> ?down2] =>
-    eapply sysOnDTree_rqUp_down_not_eq
+    eapply sysOnDTree_diff_rqUp_down_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
      Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?down2 <> ?rqUp1] =>
     apply neq_sym;
-    eapply sysOnDTree_rqUp_down_not_eq
+    eapply sysOnDTree_diff_rqUp_down_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
 
   | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
      Hru2: rsEdgeUpFrom _ ?idx2 = Some ?rsUp2 |- ?rsUp1 <> ?rsUp2] =>
-    eapply sysOnDTree_rsUp_rsUp_not_eq
+    eapply sysOnDTree_diff_rsUp_rsUp_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
      Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?rsUp1 <> ?down2] =>
-    eapply sysOnDTree_rsUp_down_not_eq
+    eapply sysOnDTree_diff_rsUp_down_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
      Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?down2 <> ?rsUp1] =>
     apply neq_sym;
-    eapply sysOnDTree_rsUp_down_not_eq
+    eapply sysOnDTree_diff_rsUp_down_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
                                             
   | [Hd1: edgeDownTo _ ?idx1 = Some ?down1,
      Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?down1 <> ?down2] =>
-    eapply sysOnDTree_down_down_not_eq
+    eapply sysOnDTree_diff_down_down_not_eq
       with (oidx1:= idx1) (oidx2:= idx2); eauto
   end.
 
@@ -1212,6 +1272,44 @@ Section LockInv.
       (HmoutsV: ValidMsgsOut sys mouts)
       (Hmdisj: DisjList (idsOf mins) (idsOf mouts)).
 
+    Lemma deqMP_rq_filter_rs_eq:
+      forall midx msg,
+        msg_type msg = MRq ->
+        FirstMPI msgs (midx, msg) ->
+        filter (fun msg => msg_type msg ==n MRs)
+               (findQ midx msgs) =
+        filter (fun msg => msg_type msg ==n MRs)
+               (findQ midx (deqMP midx msgs)).
+    Proof.
+      intros.
+      unfold FirstMPI, FirstMP, firstMP in H0.
+      unfold deqMP, idOf in *; simpl in *.
+      destruct (findQ midx msgs); [discriminate|].
+      simpl in H0; inv H0.
+      unfold findQ; mred; simpl.
+      rewrite H; simpl.
+      reflexivity.
+    Qed.
+
+    Lemma deqMP_rs_filter_rq_eq:
+      forall midx msg,
+        msg_type msg = MRs ->
+        FirstMPI msgs (midx, msg) ->
+        filter (fun msg => msg_type msg ==n MRq)
+               (findQ midx msgs) =
+        filter (fun msg => msg_type msg ==n MRq)
+               (findQ midx (deqMP midx msgs)).
+    Proof.
+      intros.
+      unfold FirstMPI, FirstMP, firstMP in H0.
+      unfold deqMP, idOf in *; simpl in *.
+      destruct (findQ midx msgs); [discriminate|].
+      simpl in H0; inv H0.
+      unfold findQ; mred; simpl.
+      rewrite H; simpl.
+      reflexivity.
+    Qed.
+    
     Lemma upLockInvORq_step_int_me:
       UpLockInvORq orqs msgs (obj_idx obj) porq ->
       In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
@@ -1230,7 +1328,6 @@ Section LockInv.
         rewrite H10.
         replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
         destruct i as [rsMIdx rsd]; simpl in *.
-
         eapply upLockFreeInv_msgs_preserved; eauto.
         + remember (rqEdgeUpFrom dtr (obj_idx obj)) as orqUp.
           destruct orqUp as [rqUp|]; auto.
@@ -1249,20 +1346,28 @@ Section LockInv.
         replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
         destruct i as [rsMIdx rsd]; simpl in *.
         destruct (porq@[upRq]).
-        { eapply upLockedInv_msgs_preserved; eauto.
-          { admit. }
-          { rewrite H1.
-            (* provable since [msg_type (valOf i0) = MRq]. *)
-            admit.
-          }
-        }
-        { eapply upLockFreeInv_msgs_preserved; eauto.
-          { admit. }
-          { rewrite H1.
-            (* provable since [msg_type (valOf i0) = MRq]. *)
-            admit.
-          }
-        }
+        + eapply upLockedInv_msgs_preserved; eauto.
+          * red in H.
+            destruct H as [rqUp [down [pidx ?]]]; dest.
+            rewrite H.
+            rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+            rewrite findQ_not_In_deqMP; [|solve_midx_neq].
+            reflexivity.
+          * rewrite H1.
+            unfold rssQ.
+            rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+            destruct i0 as [down rqDown]; simpl in *.
+            eapply deqMP_rq_filter_rs_eq; eauto.
+        + eapply upLockFreeInv_msgs_preserved; eauto.
+          * remember (rqEdgeUpFrom dtr (obj_idx obj)) as orqUp.
+            destruct orqUp as [rqUp|]; auto.
+            rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+            rewrite findQ_not_In_deqMP; [|solve_midx_neq].
+            reflexivity.
+          * rewrite H1.
+            unfold rssQ.
+            rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+            eapply deqMP_rq_filter_rs_eq; eauto.
 
       - (** case [RqFwdRule] *)
         disc_rule_conds.
@@ -1296,6 +1401,7 @@ Section LockInv.
       - (** case [RsDownRqDownRule]; releasing the uplock; setting a downlock.
          * The proof must be similar to that of [FootprintReleasingUp]. 
          *)
+        admit.
     Admitted.
 
     Lemma upLockInvORq_step_int_other:
