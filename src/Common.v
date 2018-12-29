@@ -4,6 +4,18 @@ Require Export ProofIrrelevance.
 Include ListNotations.
 Include VectorNotations.
 
+Ltac isNew P :=
+  match goal with
+    | [ _: ?P' |- _] => assert (P = P') by reflexivity; fail 1
+    | _ => idtac
+  end.
+
+Lemma neq_sym:
+  forall {A} (a1 a2: A), a1 <> a2 -> a2 <> a1.
+Proof.
+  auto.
+Qed.
+
 Definition option_dec {A}
            (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2}):
   forall oa1 oa2: option A, {oa1 = oa2} + {oa1 <> oa2}.

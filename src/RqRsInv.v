@@ -288,59 +288,206 @@ Section SysOnDTree.
     auto.
   Qed.
 
-  Lemma sysOnDTree_rqrs_updown_disj:
-    forall oidx1 rqUp1 rsUp1 down1 oidx2 rqUp2 rsUp2 down2
-           (Hoidx: oidx1 <> oidx2),
+  Lemma sysOnDTree_rqUp_rqUp_not_eq:
+    forall oidx1 rqUp1 oidx2 rqUp2 (Hoidx: oidx1 <> oidx2),
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
-      rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
-      edgeDownTo dtr oidx1 = Some down1 ->
       rqEdgeUpFrom dtr oidx2 = Some rqUp2 ->
+      rqUp1 <> rqUp2.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups1 [downs1 [pidx1 ?]]].
+    apply rqEdgeUpFrom_parentChnsOf_Some in H0.
+    destruct H0 as [ups2 [downs2 [pidx2 ?]]].
+    dest.
+    destruct ups1 as [|? ups1]; [discriminate|].
+    simpl in *; inv H4.
+    destruct ups2 as [|? ups2]; [discriminate|].
+    simpl in *; inv H3.
+
+    pose proof (parentChnsOf_DisjList H1 Hoidx H H0).
+    intro Hx; subst.
+    specialize (H3 rqUp2); destruct H3; clear -H3; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_rqUp_rsUp_not_eq:
+    forall oidx1 rqUp1 oidx2 rsUp2 (Hoidx: oidx1 <> oidx2),
+      rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
       rsEdgeUpFrom dtr oidx2 = Some rsUp2 ->
-      edgeDownTo dtr oidx2 = Some down2 ->
-      DisjList [rqUp1; rsUp1; down1] [rqUp2; rsUp2; down2].
+      rqUp1 <> rsUp2.
   Proof.
     intros.
     destruct Hsd.
     apply rqEdgeUpFrom_parentChnsOf_Some in H.
     destruct H as [ups1 [downs1 [pidx1 ?]]].
     apply rsEdgeUpFrom_parentChnsOf_Some in H0.
-    apply edgeDownTo_parentChnsOf_Some in H1.
+    destruct H0 as [ups2 [downs2 [pidx2 ?]]].
     dest.
-    rewrite H0 in H; inv H.
-    rewrite H1 in H0; inv H0.
-    apply rqEdgeUpFrom_parentChnsOf_Some in H2.
-    destruct H2 as [ups2 [downs2 [pidx2 ?]]].
-    apply rsEdgeUpFrom_parentChnsOf_Some in H3.
-    apply edgeDownTo_parentChnsOf_Some in H4.
-    dest.
-    rewrite H2 in H; inv H.
-    rewrite H3 in H2; inv H2.
-
     destruct ups1 as [|? ups1]; [discriminate|].
-    simpl in *; inv H7.
-    destruct ups1 as [|? ups1]; [discriminate|].
-    simpl in *; inv H9.
-    destruct downs1 as [|? downs1]; [discriminate|].
-    simpl in *; inv H8.
-    destruct ups2 as [|? ups2]; [discriminate|].
-    simpl in *; inv H0.
-    destruct ups2 as [|? ups2]; [discriminate|].
-    simpl in *; inv H10.
-    destruct downs2 as [|? downs2]; [discriminate|].
     simpl in *; inv H4.
+    destruct ups2 as [|? ups2]; [discriminate|].
+    destruct ups2 as [|? ups2]; [discriminate|].
+    simpl in *; inv H3.
 
-    pose proof (parentChnsOf_DisjList H5 Hoidx H1 H3).
-    eapply DisjList_SubList;
-      [|apply DisjList_comm;
-        eapply DisjList_SubList;
-        [|apply DisjList_comm; exact H]].
-    - red; intros.
-      Common.dest_in; clear; firstorder.
-    - red; intros.
-      Common.dest_in; clear; firstorder.
+    pose proof (parentChnsOf_DisjList H1 Hoidx H H0).
+    intro Hx; subst.
+    specialize (H3 rsUp2); destruct H3; clear -H3; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_rqUp_down_not_eq:
+    forall oidx1 rqUp1 oidx2 down2 (Hoidx: oidx1 <> oidx2),
+      rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
+      edgeDownTo dtr oidx2 = Some down2 ->
+      rqUp1 <> down2.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups1 [downs1 [pidx1 ?]]].
+    apply edgeDownTo_parentChnsOf_Some in H0.
+    destruct H0 as [ups2 [downs2 [pidx2 ?]]].
+    dest.
+    destruct ups1 as [|? ups1]; [discriminate|].
+    simpl in *; inv H4.
+    destruct downs2 as [|? downs2]; [discriminate|].
+    simpl in *; inv H3.
+
+    pose proof (parentChnsOf_DisjList H1 Hoidx H H0).
+    intro Hx; subst.
+    specialize (H3 down2); destruct H3; clear -H3; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_rsUp_rsUp_not_eq:
+    forall oidx1 rsUp1 oidx2 rsUp2 (Hoidx: oidx1 <> oidx2),
+      rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
+      rsEdgeUpFrom dtr oidx2 = Some rsUp2 ->
+      rsUp1 <> rsUp2.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rsEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups1 [downs1 [pidx1 ?]]].
+    apply rsEdgeUpFrom_parentChnsOf_Some in H0.
+    destruct H0 as [ups2 [downs2 [pidx2 ?]]].
+    dest.
+    destruct ups1 as [|? ups1]; [discriminate|].
+    destruct ups1 as [|? ups1]; [discriminate|].
+    simpl in *; inv H4.
+    destruct ups2 as [|? ups2]; [discriminate|].
+    destruct ups2 as [|? ups2]; [discriminate|].
+    simpl in *; inv H3.
+
+    pose proof (parentChnsOf_DisjList H1 Hoidx H H0).
+    intro Hx; subst.
+    specialize (H3 rsUp2); destruct H3; clear -H3; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_rsUp_down_not_eq:
+    forall oidx1 rsUp1 oidx2 down2 (Hoidx: oidx1 <> oidx2),
+      rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
+      edgeDownTo dtr oidx2 = Some down2 ->
+      rsUp1 <> down2.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply rsEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups1 [downs1 [pidx1 ?]]].
+    apply edgeDownTo_parentChnsOf_Some in H0.
+    destruct H0 as [ups2 [downs2 [pidx2 ?]]].
+    dest.
+    destruct ups1 as [|? ups1]; [discriminate|].
+    destruct ups1 as [|? ups1]; [discriminate|].
+    simpl in *; inv H4.
+    destruct downs2 as [|? downs2]; [discriminate|].
+    simpl in *; inv H3.
+
+    pose proof (parentChnsOf_DisjList H1 Hoidx H H0).
+    intro Hx; subst.
+    specialize (H3 down2); destruct H3; clear -H3; firstorder.
+  Qed.
+
+  Lemma sysOnDTree_down_down_not_eq:
+    forall oidx1 down1 oidx2 down2 (Hoidx: oidx1 <> oidx2),
+      edgeDownTo dtr oidx1 = Some down1 ->
+      edgeDownTo dtr oidx2 = Some down2 ->
+      down1 <> down2.
+  Proof.
+    intros.
+    destruct Hsd.
+    apply edgeDownTo_parentChnsOf_Some in H.
+    destruct H as [ups1 [downs1 [pidx1 ?]]].
+    apply edgeDownTo_parentChnsOf_Some in H0.
+    destruct H0 as [ups2 [downs2 [pidx2 ?]]].
+    dest.
+    destruct downs1 as [|? downs1]; [discriminate|].
+    simpl in *; inv H4.
+    destruct downs2 as [|? downs2]; [discriminate|].
+    simpl in *; inv H3.
+
+    pose proof (parentChnsOf_DisjList H1 Hoidx H H0).
+    intro Hx; subst.
+    specialize (H3 down2); destruct H3; clear -H3; firstorder.
   Qed.
   
 End SysOnDTree.
+
+Ltac solve_midx_neq_unit :=
+  match goal with
+  | [Hw: WfDTree ?dtr, H: parentIdxOf ?dtr ?cidx = Some ?pidx |- _] =>
+    isNew (cidx <> pidx); pose proof (parentIdxOf_not_eq Hw H)
+  | [H: Some _ = rqEdgeUpFrom _ _ |- _] => apply eq_sym in H
+  | [H: Some _ = rsEdgeUpFrom _ _ |- _] => apply eq_sym in H
+  | [H: Some _ = edgeDownTo _ _ |- _] => apply eq_sym in H
+  | [H: None = rqEdgeUpFrom _ _ |- _] => apply eq_sym in H
+  | [H: None = rsEdgeUpFrom _ _ |- _] => apply eq_sym in H
+  | [H: None = edgeDownTo _ _ |- _] => apply eq_sym in H
+
+  | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
+     Hru2: rqEdgeUpFrom _ ?idx2 = Some ?rqUp2 |- ?rqUp1 <> ?rqUp2] =>
+    eapply sysOnDTree_rqUp_rqUp_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
+     Hru2: rsEdgeUpFrom _ ?idx2 = Some ?rsUp2 |- ?rqUp1 <> ?rsUp2] =>
+    eapply sysOnDTree_rqUp_rsUp_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
+     Hru2: rsEdgeUpFrom _ ?idx2 = Some ?rsUp2 |- ?rsUp2 <> ?rqUp1] =>
+    apply neq_sym;
+    eapply sysOnDTree_rqUp_rsUp_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
+     Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?rqUp1 <> ?down2] =>
+    eapply sysOnDTree_rqUp_down_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
+     Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?down2 <> ?rqUp1] =>
+    apply neq_sym;
+    eapply sysOnDTree_rqUp_down_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+
+  | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
+     Hru2: rsEdgeUpFrom _ ?idx2 = Some ?rsUp2 |- ?rsUp1 <> ?rsUp2] =>
+    eapply sysOnDTree_rsUp_rsUp_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
+     Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?rsUp1 <> ?down2] =>
+    eapply sysOnDTree_rsUp_down_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
+     Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?down2 <> ?rsUp1] =>
+    apply neq_sym;
+    eapply sysOnDTree_rsUp_down_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+                                            
+  | [Hd1: edgeDownTo _ ?idx1 = Some ?down1,
+     Hd2: edgeDownTo _ ?idx2 = Some ?down2 |- ?down1 <> ?down2] =>
+    eapply sysOnDTree_down_down_not_eq
+      with (oidx1:= idx1) (oidx2:= idx2); eauto
+  end.
+
+Ltac solve_midx_neq :=
+  repeat solve_midx_neq_unit; fail.
 
 Section FootprintInv.
   Context {oifc: OStateIfc}.
@@ -1074,18 +1221,28 @@ Section LockInv.
                    (obj_idx obj) norq.
     Proof.
       intros.
+      destruct Hsd.
       red in H; red.
       good_rqrs_rule_cases rule.
 
       - (** case [ImmDownRule] *)
         disc_rule_conds.
-        rewrite H8.
+        rewrite H10.
         replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
         destruct i as [rsMIdx rsd]; simpl in *.
 
         eapply upLockFreeInv_msgs_preserved; eauto.
-        + admit.
-        + admit.
+        + remember (rqEdgeUpFrom dtr (obj_idx obj)) as orqUp.
+          destruct orqUp as [rqUp|]; auto.
+          rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+          rewrite findQ_not_In_deqMP; [|solve_midx_neq].
+          reflexivity.
+        + remember (edgeDownTo dtr (obj_idx obj)) as odown.
+          destruct odown as [down|]; auto.
+          unfold rssQ.
+          rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+          rewrite findQ_not_In_deqMP; [|solve_midx_neq].
+          reflexivity.
 
       - (** case [ImmUpRule] *)
         disc_rule_conds.
@@ -1113,25 +1270,25 @@ Section LockInv.
           admit.
         }
         { (* case [RqUpDown]; setting a downlock; [UpLockInvORq] preserved. *)
-          rewrite <-H10.
+          rewrite <-H12.
           admit.
         }
         { (* case [RqDownDown]; setting a downlock; [UpLockInvORq] preserved. *)
-          rewrite <-H10.
+          rewrite <-H12.
           admit.
         }
 
       - (** case [RsBackRule] *)
         disc_rule_conds.
         { (* case [FootprintReleasingUp]; releasing the uplock. *)
-          rewrite H6.
+          rewrite H8.
           (** * we need [footprints_ok] here to say the footprint is valid!! *)
           admit.
         }
         { (* case [FootprintReleasingDown]; releasing the downlock;
            * [UpLockInvORq] preserved 
            *)
-          rewrite <-H5.
+          rewrite <-H7.
           (** * we need [footprints_ok] here to say the footprint is valid!! *)
           admit.
         }
