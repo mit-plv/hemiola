@@ -262,6 +262,15 @@ Section SubDisjEquiv.
     unfold DisjList; intros.
     specialize (H a); destruct H; auto.
   Qed.
+
+  Lemma DisjList_In_neq:
+    forall a1 a2 l1 l2,
+      DisjList l1 l2 -> In a1 l1 -> In a2 l2 -> a1 <> a2.
+  Proof.
+    unfold DisjList; intros.
+    intro Hx; subst.
+    specialize (H a2); destruct H; auto.
+  Qed.
   
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
   Proof. 

@@ -239,20 +239,21 @@ Section RqRsTopo.
       eapply IHrssFrom; eauto.
       split; eauto.
   Qed.
-  
-  Section SysOnDTree.
 
-    Definition IntChnsOnDTree (sys: System oifc) :=
+  Section RqRsDTree.
+
+    Definition RqRsChnsOnDTree (sys: System oifc) :=
       forall oidx ups downs pidx,
         parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
-        SubList ups sys.(sys_minds) /\
-        SubList downs sys.(sys_minds).
+        exists rqUp rsUp down,
+          ups = [rqUp; rsUp] /\ downs = [down] /\
+          SubList [rqUp; rsUp] sys.(sys_minds) /\
+          SubList [down] sys.(sys_minds).
 
-    Definition SysOnDTree (sys: System oifc) :=
-      WfDTree dtr /\
-      IntChnsOnDTree sys.
+    Definition RqRsDTree (sys: System oifc) :=
+      WfDTree dtr /\ RqRsChnsOnDTree sys.
     
-  End SysOnDTree.
+  End RqRsDTree.
   
   Section GoodRqRs.
     
@@ -388,7 +389,7 @@ Section RqRsTopo.
   End RqUpRsUpComm.
 
   Definition RqRsSys (sys: System oifc) :=
-    SysOnDTree sys /\
+    RqRsDTree sys /\
     GoodRqRsSys sys /\
     RqUpRsUpOkSys sys.
   
