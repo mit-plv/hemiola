@@ -171,21 +171,24 @@ Section RqRsTopo.
   Definition FootprintUpDownOk
              (rqFrom: IdxT) (rqTos: list IdxT)
              (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    exists upCIdx downCInds,
-      ~ In upCIdx downCInds /\
+    exists upCIdx,
       rqEdgeUpFrom upCIdx = Some rqFrom /\
       edgeDownTo upCIdx = Some rsbTo /\
-      Forall (fun crq => edgeDownTo (fst crq) = Some (snd crq))
-             (combine downCInds rqTos) /\
-      Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
-             (combine downCInds rssFrom).
+      List.length rqTos = List.length rssFrom /\
+      Forall (fun rqrs =>
+                exists cidx,
+                  cidx <> upCIdx /\
+                  edgeDownTo cidx = Some (fst rqrs) /\
+                  rsEdgeUpFrom cidx = Some (snd rqrs))
+             (combine rqTos rssFrom).
 
   Definition FootprintDownDownOk (rqTos: list IdxT) (rssFrom: list IdxT) :=
-    exists downCInds,
-      Forall (fun crq => edgeDownTo (fst crq) = Some (snd crq))
-             (combine downCInds rqTos) /\
-      Forall (fun crs => rsEdgeUpFrom (fst crs) = Some (snd crs))
-             (combine downCInds rssFrom).
+    List.length rqTos = List.length rssFrom /\
+    Forall (fun rqrs =>
+              exists cidx,
+                edgeDownTo cidx = Some (fst rqrs) /\
+                rsEdgeUpFrom cidx = Some (snd rqrs))
+           (combine rqTos rssFrom).
 
   Section SysOnDTree.
 

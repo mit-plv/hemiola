@@ -60,10 +60,17 @@ Inductive xor (A B: Prop): Prop :=
 | Xor1: A -> ~B -> xor A B
 | Xor2: ~A -> B -> xor A B.
 
+Ltac xleft := apply Xor1.
+Ltac xright := apply Xor2.
+
 Inductive xor3 (A B C: Prop): Prop :=
 | Xor31: A -> ~B -> ~C -> xor3 A B C
 | Xor32: ~A -> B -> ~C -> xor3 A B C
 | Xor33: ~A -> ~B -> C -> xor3 A B C.
+
+Ltac xfst := apply Xor31.
+Ltac xsnd := apply Xor32.
+Ltac xthd := apply Xor33.
 
 Ltac nothing := idtac.
 

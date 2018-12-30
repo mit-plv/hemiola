@@ -63,97 +63,119 @@ Ltac good_rqrs_rule_cases rule :=
   end.
 
 Ltac disc_rule_custom := idtac.
+
+Ltac disc_rule_conds_unit_rule_preds :=
+  match goal with
+  | [H: ImmDownRule _ _ _ |- _] =>
+    let cidx := fresh "cidx" in
+    let rqFrom := fresh "rqFrom" in
+    let rsTo := fresh "rsTo" in
+    destruct H as [cidx [rqFrom [rsTo ?]]]; dest
+  | [H: ImmUpRule _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rsTo := fresh "rsTo" in
+    destruct H as [rqFrom [rsTo ?]]; dest
+  | [H: RqFwdRule _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rqTos := fresh "rqTos" in
+    red in H;
+    destruct H as [rqFrom [rqTos ?]]; dest
+  | [H: RqUpUp _ _ _ _ ?rule \/
+        RqUpDown _ _ _ _ ?rule \/
+        RqDownDown _ _ _ _ ?rule |- _] =>
+    destruct H as [|[|]]
+  | [H: RqUpUp _ _ _ _ _ |- _] => red in H; dest
+  | [H: RqUpDown _ _ _ _ _ |- _] => red in H; dest
+  | [H: RqDownDown _ _ _ _ _ |- _] => red in H; dest
+  | [H: RsBackRule _ |- _] =>
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [rssFrom [rsbTo ?]]; dest
+  | [H: RsDownRqDownRule _ _ _ |- _] =>
+    let rsFrom := fresh "rsFrom" in
+    let rqTos := fresh "rqTos" in
+    destruct H as [rsFrom [rqTos ?]]; dest
+  | [H: MsgsFrom _ _ _ _ |- _] => red in H
+  | [H: MsgsTo _ _ |- _] => red in H
+  | [H: RqAccepting _ _ _ |- _] => red in H
+  | [H: RsAccepting _ _ _ |- _] => red in H
+  | [H: RqReleasing _ |- _] => red in H
+  | [H: DownLockFree _ _ _ |- _] => red in H
+  | [H: DownLockFreeORq _ |- _] => red in H
+  | [H: UpLockFree _ _ _ |- _] => red in H
+  | [H: UpLockFreeORq _ |- _] => red in H
+  | [H: StateSilent _ |- _] => red in H
+  end.
+
+Ltac disc_rule_conds_unit_footprint :=
+  match goal with
+  | [H: (FootprintReleasingUp _ _ _ /\ _) \/
+        (FootprintReleasingDown _ _ _ /\ _) |- _] => destruct H; dest
+  | [H: FootprintReleasingUp _ _ _ |- _] => red in H; dest
+  | [H: FootprintReleasingDown _ _ _ |- _] => red in H; dest
+  | [H: FootprintingUp _ _ _ |- _] => red in H
+  | [H: FootprintingDown _ _ _ |- _] => red in H
+  | [H: FootprintedUp _ _ _ |- _] =>
+    let rqi := fresh "rqi" in
+    destruct H as [rqi ?]; dest
+  | [H: FootprintedDown _ _ _ |- _] =>
+    let rqi := fresh "rqi" in
+    destruct H as [rqi ?]; dest
+  | [H: FootprintUpToDown _ _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rsbTo := fresh "rsbTo" in
+    let nrssFrom := fresh "nrssFrom" in
+    destruct H as [rqFrom [rsbTo [nrssFrom ?]]]; dest
+  | [H: FootprintSilent _ |- _] => red in H; dest
+  | [H: FootprintUpSilent _ |- _] => red in H
+  | [H: FootprintDownSilent _ |- _] => red in H
+  | [H: DownLockFree _ _ _ |- _] => red in H
+  | [H: DownLockFreeORq _ |- _] => red in H
+  | [H: UpLockFree _ _ _ |- _] => red in H
+  | [H: UpLockFreeORq _ |- _] => red in H
+  end.
+
+Ltac disc_rule_conds_unit_simpl :=
+  match goal with
+  | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
+    specialize (H1 _ _ _ H2)
+  | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
+  | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
+    specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
+
+  | [H: Some _ = Some _ |- _] => inv H
+  | [H: Some _ = None |- _] => discriminate
+  | [H: None = Some _ |- _] => discriminate
+                                                              
+  | [H1: ?t = None, H2: context[?t] |- _] => rewrite H1 in H2; simpl in H2
+  | [H1: ?t = Some _, H2: context[?t] |- _] => rewrite H1 in H2; simpl in H2
+  | [H1: None = ?t, H2: context[?t] |- _] => rewrite <-H1 in H2; simpl in H2
+  | [H1: Some _ = ?t, H2: context[?t] |- _] => rewrite <-H1 in H2; simpl in H2
+
+  | [H1: ?t = None |- context[?t]] => rewrite H1; simpl
+  | [H1: ?t = Some _ |- context[?t]] => rewrite H1; simpl
+  | [H1: None = ?t |- context[?t]] => rewrite <-H1; simpl
+  | [H1: Some _ = ?t |- context[?t]] => rewrite <-H1; simpl
+                                   
+  | [H: Forall _ (_ :: _) |- _] => inv H
+  | [H: Forall _ nil |- _] => clear H
+
+  | [H: idsOf ?ivs = _ :: nil |- _] =>
+    destruct ivs; [discriminate|simpl in H; inv H]
+  | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
+  | [H: _ :: nil = idsOf ?ivs |- _] => apply eq_sym in H
+  | [H: nil = idsOf ?ivs |- _] => apply eq_sym in H
+  | [H: nil = nil |- _] => clear H
+  end.
+
+Ltac disc_rule_conds_unit :=
+  try disc_rule_conds_unit_rule_preds;
+  try disc_rule_conds_unit_footprint;
+  try disc_rule_conds_unit_simpl.
+
 Ltac disc_rule_conds :=
   repeat
-    (match goal with
-     | [H: ImmDownRule _ _ _ |- _] =>
-       let cidx := fresh "cidx" in
-       let rqFrom := fresh "rqFrom" in
-       let rsTo := fresh "rsTo" in
-       destruct H as [cidx [rqFrom [rsTo ?]]]; dest
-     | [H: ImmUpRule _ _ _ |- _] =>
-       let rqFrom := fresh "rqFrom" in
-       let rsTo := fresh "rsTo" in
-       destruct H as [rqFrom [rsTo ?]]; dest
-     | [H: RqFwdRule _ _ _ |- _] =>
-       let rqFrom := fresh "rqFrom" in
-       let rqTos := fresh "rqTos" in
-       red in H;
-       destruct H as [rqFrom [rqTos ?]]; dest
-     | [H: RqUpUp _ _ _ _ ?rule \/
-           RqUpDown _ _ _ _ ?rule \/
-           RqDownDown _ _ _ _ ?rule |- _] =>
-       destruct H as [|[|]]
-     | [H: RqUpUp _ _ _ _ _ |- _] => red in H; dest
-     | [H: RqUpDown _ _ _ _ _ |- _] => red in H; dest
-     | [H: RqDownDown _ _ _ _ _ |- _] => red in H; dest
-     | [H: RsBackRule _ |- _] =>
-       let rssFrom := fresh "rssFrom" in
-       let rsbTo := fresh "rsbTo" in
-       destruct H as [rssFrom [rsbTo ?]]; dest
-     | [H: RsDownRqDownRule _ _ _ |- _] =>
-       let rsFrom := fresh "rsFrom" in
-       let rqTos := fresh "rqTos" in
-       destruct H as [rsFrom [rqTos ?]]; dest
-
-     | [H: (FootprintReleasingUp _ _ _ /\ _) \/
-           (FootprintReleasingDown _ _ _ /\ _) |- _] => destruct H; dest
-     | [H: FootprintReleasingUp _ _ _ |- _] => red in H; dest
-     | [H: FootprintReleasingDown _ _ _ |- _] => red in H; dest
-     | [H: FootprintingUp _ _ _ |- _] => red in H
-     | [H: FootprintingDown _ _ _ |- _] => red in H
-     | [H: FootprintedUp _ _ _ |- _] =>
-       let rqi := fresh "rqi" in
-       destruct H as [rqi ?]; dest
-     | [H: FootprintedDown _ _ _ |- _] =>
-       let rqi := fresh "rqi" in
-       destruct H as [rqi ?]; dest
-     | [H: FootprintUpToDown _ _ _ _ |- _] =>
-       let rqFrom := fresh "rqFrom" in
-       let rsbTo := fresh "rsbTo" in
-       let nrssFrom := fresh "nrssFrom" in
-       destruct H as [rqFrom [rsbTo [nrssFrom ?]]]; dest
-                                
-     | [H: MsgsFrom _ _ _ _ |- _] => red in H
-     | [H: MsgsTo _ _ |- _] => red in H
-     | [H: RqAccepting _ _ _ |- _] => red in H
-     | [H: RsAccepting _ _ _ |- _] => red in H
-     | [H: RqReleasing _ |- _] => red in H
-     | [H: RsReleasing _ |- _] => red in H
-
-     | [H: DownLockFree _ _ _ |- _] => red in H
-     | [H: DownLockFreeORq _ |- _] => red in H
-     | [H: UpLockFree _ _ _ |- _] => red in H
-     | [H: UpLockFreeORq _ |- _] => red in H
-
-     | [H: StateSilent _ |- _] => red in H
-     | [H: FootprintSilent _ |- _] => red in H; dest
-     | [H: FootprintUpSilent _ |- _] => red in H
-     | [H: FootprintDownSilent _ |- _] => red in H
-                                             
-     | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
-       specialize (H1 _ _ _ H2)
-     | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
-     | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
-       specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
-
-     | [H1: ?m@[?k] = None, H2: context[?m@[?k]] |- _] =>
-       rewrite H1 in H2; simpl in H2
-     | [H1: ?m@[?k] = Some _, H2: context[?m@[?k]] |- _] =>
-       rewrite H1 in H2; simpl in H2
-     | [H1: None = ?m@[?k], H2: context[?m@[?k]] |- _] =>
-       rewrite <-H1 in H2; simpl in H2
-     | [H1: Some _ = ?m@[?k], H2: context[?m@[?k]] |- _] =>
-       rewrite <-H1 in H2; simpl in H2
-
-     | [H: Forall _ (_ :: _) |- _] => inv H
-     | [H: Forall _ nil |- _] => clear H
-
-     | [H: idsOf ?ivs = _ :: nil |- _] =>
-       destruct ivs; [discriminate|simpl in H; inv H]
-     | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
-     | [H: nil = nil |- _] => clear H
-     end;
+    (repeat disc_rule_conds_unit;
      try disc_rule_custom;
      simpl in *; subst).
 
@@ -212,7 +234,33 @@ Section SysOnDTree.
       simpl in *; [|discriminate].
     repeat eexists; eauto.
   Qed.
-  
+
+  Lemma rqEdgeUpFrom_Some_parent:
+    forall oidx midx,
+      rqEdgeUpFrom dtr oidx = Some midx ->
+      exists pidx,
+        parentIdxOf dtr oidx = Some pidx.
+  Proof.
+    intros.
+    apply rqEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]]; dest.
+    unfold parentIdxOf; rewrite H; simpl.
+    eexists; reflexivity.
+  Qed.
+
+  Lemma rsEdgeUpFrom_Some_parent:
+    forall oidx midx,
+      rsEdgeUpFrom dtr oidx = Some midx ->
+      exists pidx,
+        parentIdxOf dtr oidx = Some pidx.
+  Proof.
+    intros.
+    apply rsEdgeUpFrom_parentChnsOf_Some in H.
+    destruct H as [ups [downs [pidx ?]]]; dest.
+    unfold parentIdxOf; rewrite H; simpl.
+    eexists; reflexivity.
+  Qed.
+
   Lemma sysOnDTree_rqEdgeUpFrom_sys_minds:
     forall oidx midx,
       rqEdgeUpFrom dtr oidx = Some midx ->
@@ -626,33 +674,26 @@ Section FootprintInv.
       mred.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
-      + apply footprints_ok_orqs_add; auto.
-        * rewrite H15; simpl.
-          do 3 eexists; repeat split; eassumption.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
+        * do 3 eexists; repeat split; eassumption.
         * rewrite <-H22; assumption.
-      + apply footprints_ok_orqs_add; auto.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
         * rewrite <-H21; assumption.
-        * rewrite H13; simpl.
-          do 3 eexists; repeat split.
+        * do 3 eexists; repeat split.
           left; eexists; eassumption.
-      + apply footprints_ok_orqs_add; auto.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
         * rewrite <-H21; assumption.
-        * rewrite H13; simpl.
-          do 3 eexists; repeat split.
+        * do 3 eexists; repeat split.
           right; eassumption.
     - disc_rule_conds.
-      + apply footprints_ok_orqs_add; auto.
-        * rewrite H17; simpl; auto.
-        * rewrite <-H6; assumption.
-      + apply footprints_ok_orqs_add; auto.
-        * rewrite <-H6; assumption.
-        * rewrite H17; simpl; auto.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
+        rewrite <-H15; assumption.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
+        rewrite <-H15; assumption.
     - disc_rule_conds.
-      apply footprints_ok_orqs_add; auto.
-      + rewrite H20; simpl; auto.
-      + rewrite H14; simpl.
-        do 3 eexists; repeat split.
-        left; eexists; rewrite <-H19 in H6; eassumption.
+      apply footprints_ok_orqs_add; disc_rule_conds; auto.
+      do 3 eexists; repeat split.
+      left; eexists; eassumption.
   Qed.
 
   Lemma footprints_ok:
@@ -695,11 +736,8 @@ Ltac disc_footprints_ok :=
       destruct H as [rqFrom ?]; dest
     | [H: FootprintUpDownOk _ _ _ _ _ |- _] =>
       let upCIdx := fresh "upCIdx" in
-      let downCInds := fresh "downCInds" in
-      destruct H as [upCIdx [downCInds ?]]; dest
-    | [H: FootprintDownDownOk _ _ _ |- _] =>
-      let downCInds := fresh "downCInds" in
-      destruct H as [downCInds ?]; dest
+      destruct H as [upCIdx ?]; dest
+    | [H: FootprintDownDownOk _ _ _ |- _] => red in H; dest
     end.
 
 Section MessageInv.
@@ -723,9 +761,8 @@ Section MessageInv.
 
   Definition RsUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     Forall (fun msg => msg_type (valOf msg) = MRs) msgs /\
-    exists cinds,
-      Forall (fun crs => rsEdgeUpFrom dtr (fst crs) = Some (snd crs))
-             (combine cinds (idsOf msgs)).
+    Forall (fun rs => exists cidx, rsEdgeUpFrom dtr cidx = Some rs)
+           (idsOf msgs).
 
   Definition RsDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists rsDown, msgs = [rsDown] /\
@@ -768,18 +805,35 @@ Section MessageInv.
 
     - disc_rule_conds.
       + right; right; right.
-        (* [disc_rule_conds] currently can't discharge below automatically. *)
-        rewrite H8 in H2.
+        rewrite H10 in H2.
         disc_rule_conds.
         solve_rule_conds.
+
       + right; right; left.
-        (* [disc_rule_conds] currently can't discharge below automatically. *)
-        rewrite <-H2 in H24.
-        solve_rule_conds.
+        rewrite H2 in H22, H23.
+        split; auto.
+
+        (* extract a lemma? *)
+        clear -H22 H23.
+        generalize dependent rqTos.
+        induction (idsOf rins); intros; [constructor|].
+        destruct rqTos as [|rqTo rqTos]; [discriminate|].
+        simpl in H23; inv H23.
+        destruct H1 as [cidx ?]; dest.
+        constructor; eauto.
+        
       + right; right; left.
-        (* [disc_rule_conds] currently can't discharge below automatically. *)
-        rewrite <-H2 in H21.
-        solve_rule_conds.
+        rewrite H2 in H20, H21.
+        split; auto.
+
+        (* extract a lemma? *)
+        clear -H20 H21.
+        generalize dependent rqTos.
+        induction (idsOf rins); intros; [constructor|].
+        destruct rqTos as [|rqTo rqTos]; [discriminate|].
+        simpl in H21; inv H21.
+        destruct H1 as [cidx ?]; dest.
+        constructor; eauto.
 
     - right; right; right.
       disc_rule_conds.
@@ -901,6 +955,15 @@ Section LockInv.
     - red; cbn; repeat split.
       + destruct (edgeDownTo dtr cidx); simpl; auto.
       + destruct (rsEdgeUpFrom dtr cidx); simpl; auto.
+  Qed.
+
+  Lemma OUpLockFree_not_OUpLocked:
+    forall orqs oidx,
+      OUpLockFree orqs oidx -> ~ OUpLocked orqs oidx.
+  Proof.
+    unfold OUpLockFree, OUpLocked; intros.
+    intro Hx.
+    destruct (orqs@[oidx]); simpl in *; auto.
   Qed.
 
   Lemma upLockedInv_msgs_preserved:
@@ -1164,6 +1227,70 @@ Section LockInv.
       eapply DisjList_In_1; [eassumption|].
       eapply sysOnDTree_rsEdgeUpFrom_sys_minds; eauto.
   Qed.
+
+  Lemma upLockedInv_orqs_preserved:
+    forall orqs1 orqs2 msgs oidx pidx,
+      UpLockedInv orqs1 msgs oidx ->
+      parentIdxOf dtr oidx = Some pidx ->
+      orqs1@[pidx] = orqs2@[pidx] ->
+      UpLockedInv orqs2 msgs oidx.
+  Proof.
+    unfold UpLockedInv; intros.
+    destruct H as [rqUp [down [pidx' ?]]]; dest.
+    rewrite H3 in H0; inv H0.
+    exists rqUp, down, pidx; repeat split; try assumption.
+    destruct H4.
+    - xfst; try assumption.
+      intro Hx; elim H5.
+      red; rewrite H1; assumption.
+    - xsnd; try assumption.
+      intro Hx; elim H5.
+      red; rewrite H1; assumption.
+    - xthd; try assumption.
+      red; rewrite <-H1; assumption.
+  Qed.
+
+  Corollary upLockedInv_orqs_preserved_add:
+    forall orqs msgs oidx orq,
+      UpLockedInv orqs msgs oidx ->
+      UpLockedInv (orqs+[oidx <- orq]) msgs oidx.
+  Proof.
+    intros.
+    destruct Hsd.
+    pose proof H.
+    destruct H2 as [rqUp [down [pidx ?]]]; dest.
+    eapply upLockedInv_orqs_preserved; eauto.
+    apply parentIdxOf_not_eq in H4; [|assumption].
+    mred.
+  Qed.
+
+  Lemma upLockFreeInv_orqs_preserved:
+    forall orqs1 orqs2 msgs oidx pidx,
+      UpLockFreeInv orqs1 msgs oidx ->
+      parentIdxOf dtr oidx = Some pidx ->
+      orqs1@[pidx] = orqs2@[pidx] ->
+      UpLockFreeInv orqs2 msgs oidx.
+  Proof.
+    unfold UpLockFreeInv; intros; dest.
+    repeat split; try assumption.
+    rewrite H0 in H3; simpl in H3.
+    rewrite H0; simpl.
+    red; rewrite <-H1; assumption.
+  Qed.
+
+  Lemma upLockFreeInv_orqs_preserved_add:
+    forall orqs msgs oidx orq,
+      UpLockFreeInv orqs msgs oidx ->
+      UpLockFreeInv (orqs+[oidx <- orq]) msgs oidx.
+  Proof.
+    unfold UpLockFreeInv; intros; dest.
+    destruct Hsd.
+    repeat split; try assumption.
+    remember (parentIdxOf dtr oidx) as opidx; destruct opidx as [pidx|];
+      simpl in *; auto.
+    apply eq_sym, parentIdxOf_not_eq in Heqopidx; [|assumption].
+    red in H1; red; mred.
+  Qed.
   
   Lemma lockInv_step_ext_in:
     forall oss orqs msgs eins,
@@ -1309,7 +1436,14 @@ Section LockInv.
       rewrite H; simpl.
       reflexivity.
     Qed.
-    
+
+    Ltac disc_rule_custom ::=
+      match goal with
+      | [H: FootprintUpOk _ _ _ _ _ |- _] =>
+        let cidx := fresh "cidx" in
+        destruct H as [cidx ?]; dest
+      end.
+
     Lemma upLockInvORq_step_int_me:
       UpLockInvORq orqs msgs (obj_idx obj) porq ->
       In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
@@ -1325,7 +1459,6 @@ Section LockInv.
 
       - (** case [ImmDownRule] *)
         disc_rule_conds.
-        rewrite H10.
         replace (orqs +[obj_idx obj <- porq]) with orqs by meq.
         destruct i as [rsMIdx rsd]; simpl in *.
         eapply upLockFreeInv_msgs_preserved; eauto.
@@ -1371,35 +1504,50 @@ Section LockInv.
 
       - (** case [RqFwdRule] *)
         disc_rule_conds.
-        { (* case [RqUpUp]; setting an uplock. *)
+        + (** case [RqUpUp]; setting an uplock. *)
+          red in H; dest.
+          pose proof (rqEdgeUpFrom_Some_parent _ _ H4).
+          destruct H17 as [pidx ?].
+          disc_rule_conds.
+          do 3 eexists; repeat split; try eassumption.
+          destruct i0 as [rqUp rqm]; simpl in *.
+          xfst.
+          * rewrite findQ_In_enqMP.
+            destruct (findQ rqUp (deqMP (fst i) msgs)); discriminate.
+          * unfold rssQ.
+            rewrite findQ_not_In_enqMP; [|solve_midx_neq].
+            rewrite findQ_not_In_deqMP; [|solve_midx_neq].
+            unfold rssQ in H12; rewrite H12; auto.
+          * apply OUpLockFree_not_OUpLocked in H16.
+            pose proof (parentIdxOf_not_eq H2 H17).
+            intro Hx; red in Hx; mred.
+
+        + (** case [RqUpDown]; setting a downlock. *)
+          rewrite <-H13.
+          remember (porq@[upRq]) as orqiu; destruct orqiu as [rqiu|].
+          * apply upLockedInv_msgs_preserved with (msgs1:= msgs).
+            { apply upLockedInv_orqs_preserved_add; auto. }
+            { admit. }
+            { admit. }
+          * apply upLockFreeInv_msgs_preserved with (msgs1:= msgs).
+            { apply upLockFreeInv_orqs_preserved_add; auto. }
+            { admit. }
+            { admit. }
+
+        + (** case [RqDownDown]; setting a downlock *)
           admit.
-        }
-        { (* case [RqUpDown]; setting a downlock; [UpLockInvORq] preserved. *)
-          rewrite <-H12.
-          admit.
-        }
-        { (* case [RqDownDown]; setting a downlock; [UpLockInvORq] preserved. *)
-          rewrite <-H12.
-          admit.
-        }
 
       - (** case [RsBackRule] *)
         disc_rule_conds.
-        { (* case [FootprintReleasingUp]; releasing the uplock. *)
-          rewrite H8.
+        + (** case [FootprintReleasingUp]; releasing the uplock. *)
           (** * we need [footprints_ok] here to say the footprint is valid!! *)
           admit.
-        }
-        { (* case [FootprintReleasingDown]; releasing the downlock;
-           * [UpLockInvORq] preserved 
-           *)
-          rewrite <-H7.
+        + (** case [FootprintReleasingDown]; releasing the downlock *)
           (** * we need [footprints_ok] here to say the footprint is valid!! *)
           admit.
-        }
 
       - (** case [RsDownRqDownRule]; releasing the uplock; setting a downlock.
-         * The proof must be similar to that of [FootprintReleasingUp]. 
+         * The proof must be similar to that of [Rq**Down].
          *)
         admit.
     Admitted.
