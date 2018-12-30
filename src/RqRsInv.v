@@ -121,7 +121,7 @@ Ltac disc_rule_conds_unit_footprint :=
   | [H: FootprintedDown _ _ _ |- _] =>
     let rqi := fresh "rqi" in
     destruct H as [rqi ?]; dest
-  | [H: FootprintUpToDown _ _ _ _ |- _] =>
+  | [H: FootprintUpToDown _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rsbTo := fresh "rsbTo" in
     let nrssFrom := fresh "nrssFrom" in
@@ -610,26 +610,27 @@ Section FootprintInv.
       rqi.(rqi_midx_rsb) = rsbTo /\
       FootprintUpOk dtr oidx rqTo rsFrom rsbTo.
 
-  Definition FootprintDownOkEx (rqi: RqInfo Msg) :=
+  Definition FootprintDownOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
     exists rqTos rssFrom rsbTo,
       rqi.(rqi_minds_rss) = rssFrom /\
       rqi.(rqi_midx_rsb) = rsbTo /\
-      ((exists rqFrom, FootprintUpDownOk dtr rqFrom rqTos rssFrom rsbTo) \/
-       FootprintDownDownOk dtr rqTos rssFrom).
+      ((exists rqFrom,
+           FootprintUpDownOk dtr oidx rqFrom rqTos rssFrom rsbTo) \/
+       FootprintDownDownOk dtr oidx rqTos rssFrom).
 
   Definition FootprintsOkORqs (orqs: ORqs Msg) :=
     forall oidx,
       orqs@[oidx] >>=[True]
           (fun orq =>
              (orq@[upRq] >>=[True] (fun rqiu => FootprintUpOkEx oidx rqiu)) /\
-             (orq@[downRq] >>=[True] (fun rqid => FootprintDownOkEx rqid))).
+             (orq@[downRq] >>=[True] (fun rqid => FootprintDownOkEx oidx rqid))).
 
   Lemma footprints_ok_orqs_add:
     forall orqs,
       FootprintsOkORqs orqs ->
       forall oidx norq,
         norq@[upRq] >>=[True] (fun rqiu => FootprintUpOkEx oidx rqiu) ->
-        norq@[downRq] >>=[True] (fun rqid => FootprintDownOkEx rqid) ->
+        norq@[downRq] >>=[True] (fun rqid => FootprintDownOkEx oidx rqid) ->
         FootprintsOkORqs (orqs +[oidx <- norq]).
   Proof.
     unfold FootprintsOkORqs; intros.
@@ -678,7 +679,7 @@ Section FootprintInv.
         * do 3 eexists; repeat split; eassumption.
         * rewrite <-H22; assumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        * rewrite <-H21; assumption.
+        * rewrite <-H19; assumption.
         * do 3 eexists; repeat split.
           left; eexists; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
@@ -720,7 +721,7 @@ Ltac disc_footprints_ok :=
       let rsFrom := fresh "rsFrom" in
       let rsbTo := fresh "rsbTo" in
       destruct H as [rqTo [rsFrom [rsbTo ?]]]; dest
-    | [H: FootprintDownOkEx _ _ |- _] =>
+    | [H: FootprintDownOkEx _ _ _ |- _] =>
       let rqTos := fresh "rqTos" in
       let rssFrom := fresh "rssFrom" in
       let rsbTo := fresh "rsbTo" in
@@ -729,15 +730,15 @@ Ltac disc_footprints_ok :=
     | [H: FootprintUpOk _ _ _ _ _ |- _] =>
       let cidx := fresh "cidx" in
       destruct H as [cidx ?]; dest
-    | [H: (exists _, FootprintUpDownOk _ _ _ _ _) \/
-          FootprintDownDownOk _ _ _ |- _] => destruct H
-    | [H: exists _, FootprintUpDownOk _ _ _ _ _ |- _] =>
+    | [H: (exists _, FootprintUpDownOk _ _ _ _ _ _) \/
+          FootprintDownDownOk _ _ _ _ |- _] => destruct H
+    | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ |- _] =>
       let rsFrom := fresh "rqFrom" in
       destruct H as [rqFrom ?]; dest
-    | [H: FootprintUpDownOk _ _ _ _ _ |- _] =>
+    | [H: FootprintUpDownOk _ _ _ _ _ _ |- _] =>
       let upCIdx := fresh "upCIdx" in
       destruct H as [upCIdx ?]; dest
-    | [H: FootprintDownDownOk _ _ _ |- _] => red in H; dest
+    | [H: FootprintDownDownOk _ _ _ _ |- _] => red in H; dest
     end.
 
 Section MessageInv.
@@ -808,32 +809,18 @@ Section MessageInv.
         rewrite H10 in H2.
         disc_rule_conds.
         solve_rule_conds.
-
       + right; right; left.
-        rewrite H2 in H22, H23.
+        rewrite H2 in H23.
         split; auto.
-
-        (* extract a lemma? *)
-        clear -H22 H23.
-        generalize dependent rqTos.
-        induction (idsOf rins); intros; [constructor|].
-        destruct rqTos as [|rqTo rqTos]; [discriminate|].
-        simpl in H23; inv H23.
-        destruct H1 as [cidx ?]; dest.
-        constructor; eauto.
-        
+        clear -H23; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H23; [|eassumption].
+        dest; eauto.
       + right; right; left.
-        rewrite H2 in H20, H21.
+        rewrite H2 in H20.
         split; auto.
-
-        (* extract a lemma? *)
-        clear -H20 H21.
-        generalize dependent rqTos.
-        induction (idsOf rins); intros; [constructor|].
-        destruct rqTos as [|rqTo rqTos]; [discriminate|].
-        simpl in H21; inv H21.
-        destruct H1 as [cidx ?]; dest.
-        constructor; eauto.
+        clear -H20; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H20; [|eassumption].
+        dest; eauto.
 
     - right; right; right.
       disc_rule_conds.
@@ -1523,11 +1510,28 @@ Section LockInv.
             intro Hx; red in Hx; mred.
 
         + (** case [RqUpDown]; setting a downlock. *)
-          rewrite <-H13.
+          rewrite <-H11.
           remember (porq@[upRq]) as orqiu; destruct orqiu as [rqiu|].
           * apply upLockedInv_msgs_preserved with (msgs1:= msgs).
             { apply upLockedInv_orqs_preserved_add; auto. }
-            { admit. }
+            { red in H; destruct H as [rqUp [down [pidx ?]]]; dest.
+              rewrite H.
+
+              (* extract a lemma.. *)
+              red in H9; destruct H9 as [upCIdx ?]; dest.
+              rewrite findQ_not_In_enqMsgs.
+              { rewrite findQ_not_In_deqMP; [|solve_midx_neq].
+                reflexivity.
+              }
+              { intro Hx.
+                eapply RqRsDownMatch_rq_In in H15; [|eassumption].
+                destruct H15 as [cidx ?]; dest.
+                apply parentIdxOf_not_eq in H16; [|assumption].
+                apply neq_sym in H16.
+                pose proof (sysOnDTree_diff_rqUp_down_not_eq Hsd H16 H H17).
+                elim H18; reflexivity.
+              }
+            }
             { admit. }
           * apply upLockFreeInv_msgs_preserved with (msgs1:= msgs).
             { apply upLockFreeInv_orqs_preserved_add; auto. }

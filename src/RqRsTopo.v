@@ -168,28 +168,78 @@ Section RqRsTopo.
       edgeDownTo oidx = Some rsFrom /\
       edgeDownTo cidx = Some rsbTo.
 
-  Definition FootprintUpDownOk
-             (rqFrom: IdxT) (rqTos: list IdxT)
-             (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    exists upCIdx,
-      rqEdgeUpFrom upCIdx = Some rqFrom /\
-      edgeDownTo upCIdx = Some rsbTo /\
-      List.length rqTos = List.length rssFrom /\
-      Forall (fun rqrs =>
-                exists cidx,
-                  cidx <> upCIdx /\
-                  edgeDownTo cidx = Some (fst rqrs) /\
-                  rsEdgeUpFrom cidx = Some (snd rqrs))
-             (combine rqTos rssFrom).
-
-  Definition FootprintDownDownOk (rqTos: list IdxT) (rssFrom: list IdxT) :=
+  Definition RqRsDownMatch (oidx: IdxT) (rqTos: list IdxT) (rssFrom: list IdxT)
+             (P: IdxT (* each child index *) -> Prop) :=
     List.length rqTos = List.length rssFrom /\
     Forall (fun rqrs =>
               exists cidx,
+                P cidx /\
+                parentIdxOf dtr cidx = Some oidx /\
                 edgeDownTo cidx = Some (fst rqrs) /\
                 rsEdgeUpFrom cidx = Some (snd rqrs))
            (combine rqTos rssFrom).
+  
+  Definition FootprintUpDownOk (oidx: IdxT)
+             (rqFrom: IdxT) (rqTos: list IdxT)
+             (rssFrom: list IdxT) (rsbTo: IdxT) :=
+    exists upCIdx,
+      parentIdxOf dtr upCIdx = Some oidx /\
+      rqEdgeUpFrom upCIdx = Some rqFrom /\
+      edgeDownTo upCIdx = Some rsbTo /\
+      RqRsDownMatch oidx rqTos rssFrom (fun cidx => cidx <> upCIdx).
 
+  Definition FootprintDownDownOk (oidx: IdxT)
+             (rqTos: list IdxT) (rssFrom: list IdxT) :=
+    RqRsDownMatch oidx rqTos rssFrom (fun _ => True). 
+
+  Lemma RqRsDownMatch_rq_In:
+    forall oidx rqTos rssFrom P,
+      RqRsDownMatch oidx rqTos rssFrom P ->
+      forall rq,
+        In rq rqTos ->
+        exists cidx, P cidx /\
+                     parentIdxOf dtr cidx = Some oidx /\
+                     edgeDownTo cidx = Some rq.
+  Proof.
+    induction rqTos; simpl; intros; [elim H0|].
+    destruct H0; subst.
+    - red in H; dest.
+      destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+      simpl in H0; inv H0.
+      destruct H3 as [cidx ?]; dest; simpl in *.
+      exists cidx; repeat split; assumption.
+    - red in H; dest.
+      destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+      simpl in H; inv H.
+      simpl in H1; inv H1.
+      eapply IHrqTos; eauto.
+      split; eauto.
+  Qed.
+
+  Lemma RqRsDownMatch_rs_In:
+    forall oidx rssFrom rqTos P,
+      RqRsDownMatch oidx rqTos rssFrom P ->
+      forall rs,
+        In rs rssFrom ->
+        exists cidx, P cidx /\
+                     parentIdxOf dtr cidx = Some oidx /\
+                     rsEdgeUpFrom cidx = Some rs.
+  Proof.
+    induction rssFrom; simpl; intros; [elim H0|].
+    destruct H0; subst.
+    - red in H; dest.
+      destruct rqTos as [|rqTo rqTos]; [discriminate|].
+      simpl in H0; inv H0.
+      destruct H3 as [cidx ?]; dest; simpl in *.
+      exists cidx; repeat split; assumption.
+    - red in H; dest.
+      destruct rqTos as [|rqTo rqTos]; [discriminate|].
+      simpl in H; inv H.
+      simpl in H1; inv H1.
+      eapply IHrssFrom; eauto.
+      split; eauto.
+  Qed.
+  
   Section SysOnDTree.
 
     Definition IntChnsOnDTree (sys: System oifc) :=
@@ -252,10 +302,8 @@ Section RqRsTopo.
 
       Definition RqUpDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
-        exists cidx rssFrom rsbTo,
-          rqEdgeUpFrom cidx = Some rqFrom /\
-          parentIdxOf dtr cidx = Some oidx /\
-          FootprintUpDownOk rqFrom rqTos rssFrom rsbTo /\
+        exists rssFrom rsbTo,
+          FootprintUpDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           FootprintingDown rule rssFrom rsbTo /\
           FootprintUpSilent rule.
 
@@ -264,7 +312,7 @@ Section RqRsTopo.
         edgeDownTo oidx = Some rqFrom /\
         exists rssFrom rsbTo,
           rsEdgeUpFrom oidx = Some rsbTo /\
-          FootprintDownDownOk rqTos rssFrom /\
+          FootprintDownDownOk oidx rqTos rssFrom /\
           FootprintingDown rule rssFrom rsbTo /\
           FootprintUpSilent rule.
 
@@ -286,7 +334,7 @@ Section RqRsTopo.
       Definition FootprintUpToDown (rule: Rule oifc) (rsFrom: IdxT) (rqTos: list IdxT) :=
         exists rqFrom rsbTo nrssFrom,
           FootprintReleasingUp rule [rsFrom] rsbTo /\
-          FootprintUpDownOk rqFrom rqTos nrssFrom rsbTo /\
+          FootprintUpDownOk oidx rqFrom rqTos nrssFrom rsbTo /\
           FootprintingDown rule nrssFrom rsbTo.
       
       Definition RsDownRqDownRule (rule: Rule oifc) :=
