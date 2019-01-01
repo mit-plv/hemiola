@@ -162,8 +162,10 @@ Section RqRsTopo.
     forall ost orq mins,
       FootprintedDown (snd (fst (rule.(rule_trs) ost orq mins))) rssFrom rsbTo.
 
-  Definition FootprintUpOk (oidx: IdxT) (rqTo rsFrom rsbTo: IdxT) :=
+  Definition FootprintUpOk (oidx: IdxT) (rqFrom rqTo rsFrom rsbTo: IdxT) :=
     exists cidx,
+      parentIdxOf dtr cidx = Some oidx /\
+      rqEdgeUpFrom cidx = Some rqFrom /\
       rqEdgeUpFrom oidx = Some rqTo /\
       edgeDownTo oidx = Some rsFrom /\
       edgeDownTo cidx = Some rsbTo.
@@ -293,11 +295,9 @@ Section RqRsTopo.
        *)
       Definition RqUpUp (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec UpLockFree) /\
-        exists cidx rqTo rsFrom rsbTo,
-          rqEdgeUpFrom cidx = Some rqFrom /\
-          parentIdxOf dtr cidx = Some oidx /\
+        exists rqTo rsFrom rsbTo,
           rqTos = [rqTo] /\
-          FootprintUpOk oidx rqTo rsFrom rsbTo /\
+          FootprintUpOk oidx rqFrom rqTo rsFrom rsbTo /\
           FootprintingUp rule [rsFrom] rsbTo /\
           FootprintDownSilent rule.
 

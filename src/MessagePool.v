@@ -392,6 +392,19 @@ Section Facts.
     - mred.
   Qed.
 
+  Lemma findQ_In_deqMP_FirstMP:
+    forall midx msg (mp: MessagePool MsgT),
+      FirstMP mp midx msg ->
+      msg :: (findQ midx (deqMP midx mp)) =
+      findQ midx mp.
+  Proof.
+    unfold FirstMP, firstMP, deqMP, findQ; simpl; intros.
+    remember (mp@[midx]) as q; destruct q; simpl in *.
+    - destruct l; [discriminate|].
+      inv H; mred.
+    - mred.
+  Qed.
+
   Lemma findQ_In_NoDup_deqMsgs:
     forall minds midx (mp: MessagePool MsgT),
       NoDup minds ->

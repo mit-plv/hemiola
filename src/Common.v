@@ -63,6 +63,18 @@ Inductive xor (A B: Prop): Prop :=
 Ltac xleft := apply Xor1.
 Ltac xright := apply Xor2.
 
+Lemma xor_inv_left:
+  forall A B, xor A B -> A -> ~ B.
+Proof.
+  intros; firstorder.
+Qed.
+
+Lemma xor_inv_right:
+  forall A B, xor A B -> B -> ~ A.
+Proof.
+  intros; firstorder.
+Qed.
+
 Inductive xor3 (A B C: Prop): Prop :=
 | Xor31: A -> ~B -> ~C -> xor3 A B C
 | Xor32: ~A -> B -> ~C -> xor3 A B C
@@ -71,6 +83,24 @@ Inductive xor3 (A B C: Prop): Prop :=
 Ltac xfst := apply Xor31.
 Ltac xsnd := apply Xor32.
 Ltac xthd := apply Xor33.
+
+Lemma xor3_inv_1:
+  forall A B C, xor3 A B C -> A -> ~B /\ ~C.
+Proof.
+  intros; firstorder.
+Qed.
+
+Lemma xor3_inv_2:
+  forall A B C, xor3 A B C -> B -> ~A /\ ~C.
+Proof.
+  intros; firstorder.
+Qed.
+
+Lemma xor3_inv_3:
+  forall A B C, xor3 A B C -> C -> ~A /\ ~B.
+Proof.
+  intros; firstorder.
+Qed.
 
 Ltac nothing := idtac.
 
