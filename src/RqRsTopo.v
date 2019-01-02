@@ -191,8 +191,11 @@ Section RqRsTopo.
       RqRsDownMatch oidx rqTos rssFrom (fun cidx => cidx <> upCIdx).
 
   Definition FootprintDownDownOk (oidx: IdxT)
-             (rqTos: list IdxT) (rssFrom: list IdxT) :=
-    RqRsDownMatch oidx rqTos rssFrom (fun _ => True). 
+             (rqFrom: IdxT) (rqTos: list IdxT)
+             (rssFrom: list IdxT) (rsbTo: IdxT) :=
+    edgeDownTo oidx = Some rqFrom /\
+    rsEdgeUpFrom oidx = Some rsbTo /\
+    RqRsDownMatch oidx rqTos rssFrom (fun _ => True).
 
   Lemma RqRsDownMatch_rq_In:
     forall oidx rqTos rssFrom P,
@@ -310,10 +313,8 @@ Section RqRsTopo.
 
       Definition RqDownDown (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
         (rule.(rule_precond) ->oprec DownLockFree) /\
-        edgeDownTo oidx = Some rqFrom /\
         exists rssFrom rsbTo,
-          rsEdgeUpFrom oidx = Some rsbTo /\
-          FootprintDownDownOk oidx rqTos rssFrom /\
+          FootprintDownDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           FootprintingDown rule rssFrom rsbTo /\
           FootprintUpSilent rule.
 
