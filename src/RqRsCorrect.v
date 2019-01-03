@@ -93,29 +93,74 @@ Section RqUpInd.
       pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H29); auto.
   Qed.
 
-  (* Lemma rqUp_lpush_unit_ind: *)
-  (*   forall phst oidx ridx rins routs inits ins hst outs eouts, *)
-  (*     ValidExtContinuousL sys phst (RlblInt oidx ridx rins routs) -> *)
-  (*     RqUpMsgs dtr oidx rins -> *)
-  (*     Atomic msg_dec inits ins hst outs eouts -> *)
-  (*     Discontinuous phst hst -> *)
-  (*     Reducible sys (hst ++ phst) (phst ++ hst). *)
-  (* Proof. *)
-  (*   induction 3; simpl; intros; subst. *)
-  (*   - destruct H. *)
-  (*     destruct H2 as [st1 [st2 [hst ?]]]; dest. *)
-  (*     destruct H as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest. *)
-  (*     apply eq_sym in H4; inv H4. *)
-  (*     red in H1; dest. *)
-  (*     inv H. *)
-  (*     pose proof (atomic_unique H1 H9); dest; subst. *)
-  (*     inv H4; [|inv H14]. *)
-  (*     eapply rqUp_lpush_lbl; eauto. *)
-  (*     apply DisjList_comm. *)
-  (*     eapply DisjList_SubList; eauto. *)
-  (*     apply DisjList_comm; assumption. *)
-  (* Abort. *)
+  Lemma rqUp_lbl_reducible:
+    forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
+      RqUpMsgs dtr oidxTo rqUps ->
+      SubList rqUps routs1 ->
+      forall oidx2 ridx2 rins2 routs2,
+        DisjList rins2 routs1 ->
+        Reducible
+          sys [RlblInt oidx2 ridx2 rins2 routs2;
+                 RlblInt oidx1 ridx1 rins1 routs1]
+          [RlblInt oidx1 ridx1 rins1 routs1;
+             RlblInt oidx2 ridx2 rins2 routs2].
+  Proof.
+    intros.
+    apply internal_commutes.
+  Admitted.
+  
+  Lemma rqUp_lpush_lbl:
+    forall pinits pins phst pouts peouts,
+      Atomic msg_dec pinits pins phst pouts peouts ->
+      forall oidxTo rqUps,
+        RqUpMsgs dtr oidxTo rqUps ->
+        SubList rqUps peouts ->
+        forall oidx ridx rins routs,
+          DisjList rins peouts ->
+          Reducible sys (RlblInt oidx ridx rins routs :: phst)
+                    (phst ++ [RlblInt oidx ridx rins routs]).
+  Proof.
+    induction 1; simpl; intros; subst.
+    - eapply rqUp_lbl_reducible; eauto.
+    - eapply reducible_trans.
+      + apply reducible_cons_2.
+        eapply rqUp_lbl_reducible; admit.
+      + apply reducible_cons.
+        eapply IHAtomic.
 
+        (** TODO: need to prove [peouts = rqUps = [rqUp]]. *)
+      
+  Admitted.
+  
+  Lemma rqUp_lpush_unit_ok_ind:
+    forall oidxTo rqUps inits ins hst outs eouts
+           pinits pins phst pouts peouts,
+      Atomic msg_dec pinits pins phst pouts peouts ->
+      RqUpMsgs dtr oidxTo rqUps ->
+      SubList rqUps peouts ->
+      Atomic msg_dec inits ins hst outs eouts ->
+      DisjList inits peouts ->
+      Reducible sys (hst ++ phst) (phst ++ hst).
+  Proof.
+    induction 4; simpl; intros; subst.
+    - eapply rqUp_lpush_lbl; eauto.
+    - eapply reducible_trans.
+      + change (RlblInt oidx ridx rins routs :: hst ++ phst)
+          with ([RlblInt oidx ridx rins routs] ++ hst ++ phst).
+        apply reducible_app_1.
+        apply IHAtomic; auto.
+      + replace (phst ++ RlblInt oidx ridx rins routs :: hst)
+          with ((phst ++ [RlblInt oidx ridx rins routs]) ++ hst)
+          by (rewrite <-app_assoc; reflexivity).
+        rewrite app_assoc.
+        apply reducible_app_2.
+        eapply rqUp_lpush_lbl; eauto.
+        eapply DisjList_SubList; [eassumption|].
+
+        (** TODO: need to prove this admit *)
+        admit.
+  Admitted.
+  
 End RqUpInd.
 
 Section Pushable.
@@ -163,8 +208,15 @@ Section Pushable.
         Reducible sys (hst ++ phst) (phst ++ hst).
     Proof.
       intros.
-      
-    Admitted.
+      destruct Hcont; clear H2.
+      destruct H1 as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H2; inv H2.
+      destruct H1 as [pinits pins phst pouts peouts].
+      red in H0; dest.
+      pose proof (atomic_unique H0 H2); dest; subst.
+      pose proof (atomic_unique H5 H); dest; subst.
+      eapply rqUp_lpush_unit_ok_ind; eauto.
+    Qed.
     
     Lemma rqUp_lpush_ok:
       forall st1,
