@@ -1,6 +1,7 @@
-Require Import Peano_dec List ListSupport.
+Require Import Peano_dec Omega List ListSupport.
 Require Import Common FMap.
-Require Import Syntax Semantics SemFacts StepM Invariant Serial.
+Require Import Syntax Semantics SemFacts StepM Invariant.
+Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsInv.
 
@@ -9,20 +10,113 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-(* TODOs:
- * 0. Have a notion of transaction paths ([TrsPath]) that includes a 
- *    "transaction type" of each object (e.g., upward-request, downward-request,
- *    etc.).
- * 1. An [Atomic] step --> exists a corresponding [TrsPath]
- * 2. For each history [hst] between continuous histories [h1] and [h2]:
- *    we need to have a way to check whether [hst] is right- or left-pushable.
- * 3. 1) Theorem (disjointness between [h1] and [h2]):
- *    [h1 -*- h2], where 
- *    [h1 -*- h2 ≜ rqsOf(h1) -*- rqsOf(h2) /\ rssOf(h1) -*- rssOf(h2)].
- *    Note that [-*-] is not commutative.
- *    2) Theorem (disjointness of [hst]): [∀hst. h1 -*- hst \/ hst -*- h2]
- * 4. Theorem: [∀h1 h2. h1 -*- h2 -> MDisjoint h1 h2 -> Commutable h1 h2]
- *)
+Section RqUpInd.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hrrs: RqRsSys dtr sys).
+
+  Lemma rqUp_set:
+    forall oidxTo oidx ridx rins routs,
+      RqUpMsgs dtr oidxTo routs ->
+      forall st1 st2,
+        Reachable (steps step_m) sys st1 ->
+        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+        exists rqUp rsbTo,
+          OUpLockedTo st2.(bst_orqs) oidx rsbTo /\
+          rqEdgeUpFrom dtr oidx = Some rqUp /\
+          length (findQ rqUp st2.(bst_msgs)) = 1.
+  Proof.
+    intros.
+    destruct Hrrs as [? [? ?]].
+
+    assert (LockInv dtr sys st2) as Hlock.
+    { apply lockInv_ok; auto.
+      eapply reachable_steps; [eassumption|].
+      econstructor; eauto.
+      econstructor.
+    }
+
+    inv H1; simpl in *.
+    destruct H as [oidx [[rqUp rqm] ?]];
+      dest; simpl in *; subst; simpl in *.
+    
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - exfalso; disc_rule_conds.
+      rewrite H1 in H28; discriminate.
+    - exfalso; disc_rule_conds.
+      rewrite H1 in H26; discriminate.
+
+    - disc_rule_conds.
+      + (** The only non-"exfalso" case *)
+        good_locking_get obj.
+
+        (* TODO: better to have a discharger for [LockInv]? *)
+        red in H7; mred; simpl in H7.
+        rewrite H24 in H7.
+        destruct H7 as [rqUp [down [pidx ?]]]; dest.
+        (* TODO ends here *)
+
+        disc_footprints_ok.
+        disc_rule_conds.
+
+        exists rqUp, (rqi_midx_rsb rqi).
+        repeat split.
+        * red; mred; simpl.
+          exists rqi; split; auto.
+        * clear -H22.
+          rewrite findQ_In_enqMP in *.
+          rewrite app_length in H22; simpl in H22.
+          rewrite app_length; simpl.
+          omega.
+      + exfalso; disc_rule_conds.
+        red in H22; destruct H22 as [upCIdx ?]; dest.
+        eapply RqRsDownMatch_rq_In in H18; [|left; reflexivity].
+        destruct H18 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H25); auto.
+      + exfalso; disc_rule_conds.
+        red in H22; destruct H22 as [upCIdx ?]; dest.
+        eapply RqRsDownMatch_rq_In in H8; [|left; reflexivity].
+        destruct H8 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H18); auto.
+
+    - exfalso; disc_rule_conds.
+      + rewrite H1 in H25; discriminate.
+      + rewrite H1 in H25; discriminate.
+    - exfalso; disc_rule_conds.
+      red in H22; destruct H22 as [upCIdx ?]; dest.
+      eapply RqRsDownMatch_rq_In in H22; [|left; reflexivity].
+      destruct H22 as [cidx ?]; dest.
+      pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H29); auto.
+  Qed.
+
+  (* Lemma rqUp_lpush_unit_ind: *)
+  (*   forall phst oidx ridx rins routs inits ins hst outs eouts, *)
+  (*     ValidExtContinuousL sys phst (RlblInt oidx ridx rins routs) -> *)
+  (*     RqUpMsgs dtr oidx rins -> *)
+  (*     Atomic msg_dec inits ins hst outs eouts -> *)
+  (*     Discontinuous phst hst -> *)
+  (*     Reducible sys (hst ++ phst) (phst ++ hst). *)
+  (* Proof. *)
+  (*   induction 3; simpl; intros; subst. *)
+  (*   - destruct H. *)
+  (*     destruct H2 as [st1 [st2 [hst ?]]]; dest. *)
+  (*     destruct H as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest. *)
+  (*     apply eq_sym in H4; inv H4. *)
+  (*     red in H1; dest. *)
+  (*     inv H. *)
+  (*     pose proof (atomic_unique H1 H9); dest; subst. *)
+  (*     inv H4; [|inv H14]. *)
+  (*     eapply rqUp_lpush_lbl; eauto. *)
+  (*     apply DisjList_comm. *)
+  (*     eapply DisjList_SubList; eauto. *)
+  (*     apply DisjList_comm; assumption. *)
+  (* Abort. *)
+
+End RqUpInd.
 
 Section Pushable.
   Context {oifc: OStateIfc}.
@@ -61,13 +155,15 @@ Section Pushable.
       apply Forall_forall; intros.
       left; red; auto.
     Qed.
-
+    
     Lemma rqUp_lpush_unit_ok:
       forall inits ins hst outs eouts,
         Atomic msg_dec inits ins hst outs eouts ->
         Discontinuous phst hst ->
         Reducible sys (hst ++ phst) (phst ++ hst).
     Proof.
+      intros.
+      
     Admitted.
     
     Lemma rqUp_lpush_ok:

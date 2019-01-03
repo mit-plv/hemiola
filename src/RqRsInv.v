@@ -84,9 +84,19 @@ Ltac disc_rule_conds_unit_rule_preds :=
         RqUpDown _ _ _ _ ?rule \/
         RqDownDown _ _ _ _ ?rule |- _] =>
     destruct H as [|[|]]
-  | [H: RqUpUp _ _ _ _ _ |- _] => red in H; dest
-  | [H: RqUpDown _ _ _ _ _ |- _] => red in H; dest
-  | [H: RqDownDown _ _ _ _ _ |- _] => red in H; dest
+  | [H: RqUpUp _ _ _ _ _ |- _] =>
+    let rqTo := fresh "rqTo" in
+    let rsFrom := fresh "rsFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [? [rqTo [rsFrom [rsbTo ?]]]]; dest
+  | [H: RqUpDown _ _ _ _ _ |- _] =>
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [? [rssFrom [rsbTo ?]]]; dest
+  | [H: RqDownDown _ _ _ _ _ |- _] =>
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [? [rssFrom [rsbTo ?]]]; dest
   | [H: RsBackRule _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
@@ -164,6 +174,7 @@ Ltac disc_rule_conds_unit_simpl :=
   | [H: idsOf ?ivs = _ :: nil |- _] =>
     destruct ivs; [discriminate|simpl in H; inv H]
   | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
+  | [H: _ :: nil = _ :: nil |- _] => inv H
   | [H: _ :: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = nil |- _] => clear H
@@ -904,15 +915,6 @@ Section MessageInv.
     
 End MessageInv.
 
-(** NOTE: With [LockInv] below we may need some invariants 
- * for [Atomic] histories, such as: if [Atomic hst] and [st1 -(hst)-> st2]
- * then [hst.eouts ⊆ st2.msgs].
- *)
-
-(* Want: between two continuous histories H1 and H2, after H1, related locks are
- * never released until H2; it can be proven by [LockInv] below and
- * [atomic_messages_spec_in] in SerialFacts.v.
- *)
 Section LockInv.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -1929,9 +1931,15 @@ Section LockInv.
                      (enqMsgs mouts (deqMsgs (idsOf mins) msgs)) oidx
                      ((orqs@[ oidx]) >>=[[]] (fun orq => orq)).
     Proof.
-      (* The only nontrivial case will be when [oidx = parentIdxOf dtr (obj_idx obj)].
-       * Otherwise state transitions are orthogonal.
+      (* The only nontrivial case will be when
+       * [oidx = parentIdxOf dtr (obj_idx obj)],
+       * otherwise state transitions are orthogonal.
        *)
+      intros.
+      destruct Hsd.
+      red in H; red.
+      good_rqrs_rule_cases rule.
+
     Admitted.
 
     Lemma downLockInvORq_step_int_me:
@@ -2005,6 +2013,15 @@ Section LockInv.
   Qed.
   
 End LockInv.
+
+Ltac good_locking_get obj :=
+  match goal with
+  | [Hlock: LockInv _ ?sys _, Ho: In obj (sys_objs ?sys) |- _] =>
+    let H := fresh "H" in
+    pose proof Hlock as H;
+    specialize (H (obj_idx obj)); simpl in H;
+    specialize (H (in_map _ _ _ Ho)); dest
+  end.
 
 Section RqUpInv.
   Context {oifc: OStateIfc}.

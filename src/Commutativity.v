@@ -339,5 +339,23 @@ Proof.
   apply nonconflicting_mdisjoint0_commutative_atomic; auto.
 Qed.
 
+Corollary nonconflicting_steps_mdisjoint_commutative_atomic:
+  forall {oifc} (sys: System oifc) hst1 hst2,
+    (forall st1 st2,
+        steps step_m sys st1 (hst2 ++ hst1) st2 ->
+        NonConflicting sys hst1 hst2) ->
+    (forall st1 st2,
+        steps step_m sys st1 (hst2 ++ hst1) st2 ->
+        MDisjoint hst1 hst2) ->
+    Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
+Proof.
+  intros.
+  red; intros.
+  specialize (H _ _ H1).
+  specialize (H0 _ _ H1).
+  pose proof (nonconflicting_mdisjoint_commutative_atomic H H0).
+  apply H2; auto.
+Qed.
+
 Close Scope list.
 
