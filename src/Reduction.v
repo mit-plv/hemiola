@@ -18,11 +18,20 @@ Ltac dest_step_m :=
          end; simpl in *.
 
 Definition Reducible {oifc} (sys: System oifc) (hfr hto: MHistory) :=
-  forall st1 st2,
+  forall st1 (Hr: Reachable (steps step_m) sys st1) st2,
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2.
 
 (*! General Facts *)
+
+Ltac reachable_by_steps :=
+  match goal with
+  | [H1: Reachable _ _ ?st1, H2: steps _ _ ?st1 _ ?st2
+     |- Reachable _ _ ?st2] =>
+    eapply reachable_steps; eauto
+  end.
+
+Hint Extern 1 (Reachable _ _ _) => reachable_by_steps.
 
 Lemma reducible_refl:
   forall {oifc} (sys: System oifc) hst, Reducible sys hst hst.
@@ -47,7 +56,7 @@ Lemma reducible_app_1:
 Proof.
   unfold Reducible; intros.
   eapply steps_split in H0; [|reflexivity]; dest.
-  specialize (H _ _ H0); dest.
+  specialize (H _ Hr _ H0); dest.
   eapply steps_append; eauto.
 Qed.
 
@@ -59,7 +68,6 @@ Lemma reducible_app_2:
 Proof.
   unfold Reducible; intros.
   eapply steps_split in H0; [|reflexivity]; dest.
-  specialize (H _ _ H1); dest.
   eapply steps_append; eauto.
 Qed.
 
@@ -87,13 +95,6 @@ Proof.
   apply reducible_app_2; auto.
 Qed.
 
-(* Lemma reducible_app_rev_1: *)
-(*   forall sys hfr hto hst, *)
-(*     Reducible sys (hst ++ hfr) (hst ++ hto) -> *)
-(*     Reducible sys hfr hto. *)
-(* Proof. *)
-(*   unfold Reducible; intros. *)
-  
 Lemma reducible_serializable:
   forall {oifc} (sys: System oifc) st1 hfr st2,
     steps step_m sys st1 hfr st2 ->
@@ -153,9 +154,9 @@ Proof.
   change (RlblEmpty _ :: lbl :: hst) with ([RlblEmpty _; lbl] ++ hst) in H.
   eapply steps_split in H; [|reflexivity].
   destruct H as [sti [? ?]].
-  eapply silent_commutes_1 in H0; dest.
+  eapply silent_commutes_1 in H0; eauto.
   pose proof (steps_append H H0); inv H1.
-  specialize (IHhst _ _ H5); dest.
+  specialize (IHhst _ Hr _ H5); dest.
   econstructor; eauto.
 Qed.
 
@@ -166,12 +167,12 @@ Proof.
   unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
 
   inv H.
-  specialize (IHhst _ _ H3).
+  specialize (IHhst _ Hr _ H3).
   pose proof (StepsCons IHhst _ _ H5).
   change (lbl :: RlblEmpty _ :: hst) with ([lbl; RlblEmpty _] ++ hst) in H.
   eapply steps_split in H; [|reflexivity].
   destruct H as [sti [? ?]].
-  eapply silent_commutes_2 in H0; dest.
+  eapply silent_commutes_2 in H0; eauto.
   pose proof (steps_append H H0); auto.
 Qed.
 
@@ -241,9 +242,8 @@ Proof.
   change (RlblIns eins :: lbl :: hst) with ([RlblIns eins; lbl] ++ hst) in H0.
   eapply steps_split in H0; [|reflexivity].
   destruct H0 as [sti [? ?]].
-  eapply ins_commutes in H0; [|assumption]; dest.
+  eapply ins_commutes in H0; eauto.
   pose proof (steps_append H H0); inv H1.
-  specialize (IHhst H4 _ _ H7); dest.
   econstructor; eauto.
 Qed.
 
@@ -304,7 +304,7 @@ Lemma outs_reducible:
 Proof.
   unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
   inv H0; inv H.
-  specialize (IHhst H3 _ _ H4); dest.
+  specialize (IHhst H3 _ Hr _ H4); dest.
   assert (steps step_m sys st1 (lbl :: RlblOuts eouts :: hst) st2)
     by (econstructor; eauto).
   change (lbl :: RlblOuts eouts :: hst) with
@@ -435,7 +435,5 @@ Proof.
         eapply STrsExtAtomic; eauto.
 Qed.
   
-(* NOTE: For the reducibility of internal state transitions, see [Commutativity.v]. *)
-
 Close Scope list.
 

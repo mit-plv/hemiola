@@ -364,7 +364,7 @@ Section WellInterleaved.
       apply trss_reducible_to_ins_atomics_outs with (sys0:= sys) in H1.
       destruct H1 as [ins [atms [outs ?]]]; dest.
 
-      pose proof (H4 _ _ H0).
+      pose proof (H4 _ (reachable_init step_m sys) _ H0).
       eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti2 [? ?]].
       eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti1 [? ?]].
 
@@ -376,6 +376,7 @@ Section WellInterleaved.
         eexists (lift_each outs ++ atms ++ lift_each ins).
         split.
         * apply H4; auto.
+          apply reachable_init.
         * apply sequential_app; [apply sequential_outsHistory; assumption|].
           apply sequential_app; [|apply sequential_insHistory; assumption].
           assumption.
@@ -540,7 +541,8 @@ Section Pushable.
 
       specialize (H4 _ H10 _ _ H9 H11 H0); dest.
       pose proof (left_pushable_left _ H H3).
-      inv H11; apply H6 in H13.
+      inv H11.
+      apply H6 in H13; [|assumption].
       
       simpl; split; auto.
       + econstructor; eauto.
@@ -582,7 +584,7 @@ Section Pushable.
       eapply steps_split in H13; [|reflexivity].
       destruct H13 as [sti [? ?]].
 
-      apply H6 in H11.
+      apply H6 in H11; [|eauto].
       pose proof (steps_append H10 H11); clear H10 H11 sti.
       rewrite <-app_assoc in H13.
       eapply steps_split in H13; [|reflexivity].
