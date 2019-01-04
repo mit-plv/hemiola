@@ -100,6 +100,20 @@ Section SubDisjEquiv.
     forall l1 l2 l3, SubList l1 l2 -> SubList l2 l3 -> SubList l1 l3.
   Proof. unfold SubList; intros; auto. Qed.
 
+  Lemma SubList_singleton:
+    forall a1 a2, SubList [a1] [a2] -> a1 = a2.
+  Proof.
+    intros.
+    specialize (H a1 (or_introl eq_refl)).
+    firstorder.
+  Qed.
+
+  Lemma SubList_singleton_In:
+    forall a l, SubList [a] l -> In a l.
+  Proof.
+    intros; firstorder.
+  Qed.
+  
   Lemma SubList_app_1: forall l1 l2 l3, SubList l1 l2 -> SubList l1 (l2 ++ l3).
   Proof.
     unfold SubList; intros; apply in_or_app; left; auto.
@@ -397,25 +411,58 @@ Section Removal.
     | h :: t => removeL (removeOnce h l1) t
     end.
 
-  Lemma removeOnce_in:
-    forall a1 a2 l,
-      In a1 l -> a1 <> a2 ->
-      In a1 (removeOnce a2 l).
+  Lemma removeL_nil:
+    forall l, removeL l l = nil.
   Proof.
-    induction l; simpl; intros; auto.
-    destruct H; subst.
-    - destruct (eq_dec a2 a1); subst; firstorder.
-    - destruct (eq_dec a2 a); subst; firstorder.
+    induction l; simpl; intros; [reflexivity|].
+    destruct (eq_dec a a); auto.
+    elim n; reflexivity.
   Qed.
 
-  Lemma removeL_in:
+  Lemma removeOnce_In_1:
+    forall a1 a2,
+      a1 <> a2 ->
+      forall l,
+        In a1 l ->
+        In a1 (removeOnce a2 l).
+  Proof.
+    induction l; simpl; intros; auto.
+    destruct H0; subst.
+    - destruct (eq_dec a2 a1); subst.
+      + elim H; reflexivity.
+      + left; reflexivity.
+    - destruct (eq_dec a2 a); subst; auto.
+      right; auto.
+  Qed.
+
+  Lemma removeOnce_In_2:
+    forall a1 a2 l,
+      In a1 (removeOnce a2 l) ->
+      In a1 l.
+  Proof.
+    induction l; simpl; intros; auto.
+    destruct (eq_dec a2 a); subst; auto.
+    inv H; auto.
+  Qed.
+
+  Lemma removeL_In_1:
     forall a l2 l1,
       In a l1 -> ~ In a l2 ->
       In a (removeL l1 l2).
   Proof.
     induction l2; simpl; intros; auto.
     apply IHl2; try (firstorder; fail).
-    apply removeOnce_in; auto.
+    apply removeOnce_In_1; auto.
+  Qed.
+
+  Lemma removeL_In_2:
+    forall a l2 l1,
+      In a (removeL l1 l2) ->
+      In a l1.
+  Proof.
+    induction l2; simpl; intros; auto.
+    specialize (IHl2 _ H).
+    eapply removeOnce_In_2; eauto.
   Qed.
   
   Lemma forall_removeOnce:
@@ -465,32 +512,6 @@ Section Removal.
     - elim H; left; reflexivity.
     - rewrite IHl1; [reflexivity|].
       intro Hx; elim H; auto.
-  Qed.
-
-  Lemma removeOnce_In_1:
-    forall a1 a2,
-      a1 <> a2 ->
-      forall l,
-        In a1 l ->
-        In a1 (removeOnce a2 l).
-  Proof.
-    induction l; simpl; intros; auto.
-    destruct H0; subst.
-    - destruct (eq_dec a2 a1); subst.
-      + elim H; reflexivity.
-      + left; reflexivity.
-    - destruct (eq_dec a2 a); subst; auto.
-      right; auto.
-  Qed.
-
-  Lemma removeOnce_In_2:
-    forall a1 a2 l,
-      In a1 (removeOnce a2 l) ->
-      In a1 l.
-  Proof.
-    induction l; simpl; intros; auto.
-    destruct (eq_dec a2 a); subst; auto.
-    inv H; auto.
   Qed.
 
   Lemma removeOnce_SubList_1:

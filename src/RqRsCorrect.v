@@ -18,11 +18,14 @@ Section RqUpInd.
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
   Lemma rqUp_set:
-    forall oidxTo oidx ridx rins routs,
-      RqUpMsgs dtr oidxTo routs ->
-      forall st1 st2,
+    forall oidxTo rqUps,
+      RqUpMsgs dtr oidxTo rqUps ->
+      forall oidx ridx rins routs st1 st2,
+        SubList rqUps routs ->
         Reachable (steps step_m) sys st1 ->
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+        RqUpMsgs dtr oidx rins /\
+        routs = rqUps /\
         exists rqUp rsbTo,
           OUpLockedTo st2.(bst_orqs) oidx rsbTo /\
           rqEdgeUpFrom dtr oidx = Some rqUp /\
@@ -38,7 +41,7 @@ Section RqUpInd.
       econstructor.
     }
 
-    inv H1; simpl in *.
+    inv H2; simpl in *.
     destruct H as [oidx [[rqUp rqm] ?]];
       dest; simpl in *; subst; simpl in *.
     
@@ -46,53 +49,121 @@ Section RqUpInd.
     good_rqrs_rule_cases rule.
 
     - exfalso; disc_rule_conds.
-      rewrite H1 in H28; discriminate.
+      apply SubList_singleton in H0; subst; simpl in *.
+      rewrite H2 in H27; discriminate.
     - exfalso; disc_rule_conds.
-      rewrite H1 in H26; discriminate.
+      apply SubList_singleton in H0; subst; simpl in *.
+      rewrite H2 in H25; discriminate.
 
     - disc_rule_conds.
       + (** The only non-"exfalso" case *)
+        apply SubList_singleton in H0; subst; simpl in *.
         good_locking_get obj.
 
         (* TODO: better to have a discharger for [LockInv]? *)
-        red in H7; mred; simpl in H7.
-        rewrite H24 in H7.
-        destruct H7 as [rqUp [down [pidx ?]]]; dest.
+        red in H0; mred; simpl in H0.
+        rewrite H25 in H0.
+        destruct H0 as [rqUp' [down [pidx ?]]]; dest.
         (* TODO ends here *)
 
         disc_footprints_ok.
         disc_rule_conds.
 
-        exists rqUp, (rqi_midx_rsb rqi).
-        repeat split.
-        * red; mred; simpl.
-          exists rqi; split; auto.
-        * clear -H22.
-          rewrite findQ_In_enqMP in *.
-          rewrite app_length in H22; simpl in H22.
-          rewrite app_length; simpl.
-          omega.
+        split; [|split].
+        * exists cidx, i.
+          repeat split; try assumption.
+        * reflexivity.
+        * exists rqUp', (rqi_midx_rsb rqi).
+          repeat split.
+          { red; mred; simpl.
+            exists rqi; split; auto.
+          }
+          { clear -H19.
+            rewrite findQ_In_enqMP in *.
+            rewrite app_length in H19; simpl in H19.
+            rewrite app_length; simpl.
+            omega.
+          }
       + exfalso; disc_rule_conds.
-        red in H22; destruct H22 as [upCIdx ?]; dest.
-        eapply RqRsDownMatch_rq_In in H18; [|left; reflexivity].
-        destruct H18 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H25); auto.
+        apply SubList_singleton_In in H0.
+        red in H23; destruct H23 as [upCIdx ?]; dest.
+        eapply RqRsDownMatch_rq_In in H23; [|apply in_map; eassumption].
+        destruct H23 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H27); auto.
       + exfalso; disc_rule_conds.
-        red in H22; destruct H22 as [upCIdx ?]; dest.
-        eapply RqRsDownMatch_rq_In in H8; [|left; reflexivity].
-        destruct H8 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H18); auto.
+        apply SubList_singleton_In in H0.
+        red in H23; destruct H23 as [upCIdx ?]; dest.
+        eapply RqRsDownMatch_rq_In in H9; [|apply in_map; eassumption].
+        destruct H9 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H23); auto.
 
     - exfalso; disc_rule_conds.
-      + rewrite H1 in H25; discriminate.
-      + rewrite H1 in H25; discriminate.
+      + apply SubList_singleton in H0; subst; simpl in *.
+        rewrite H2 in H27; discriminate.
+      + apply SubList_singleton in H0; subst; simpl in *.
+        rewrite H2 in H27; discriminate.
     - exfalso; disc_rule_conds.
-      red in H22; destruct H22 as [upCIdx ?]; dest.
-      eapply RqRsDownMatch_rq_In in H22; [|left; reflexivity].
-      destruct H22 as [cidx ?]; dest.
-      pose proof (rqrsDTree_rqUp_down_not_eq H2 _ _ H6 H29); auto.
+      apply SubList_singleton_In in H0.
+      red in H23; destruct H23 as [upCIdx ?]; dest.
+      eapply RqRsDownMatch_rq_In in H27; [|apply in_map; eassumption].
+      destruct H27 as [cidx ?]; dest.
+      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H31); auto.
   Qed.
 
+  Lemma rqUp_atomic_eouts:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall oidxTo rqUps,
+        RqUpMsgs dtr oidxTo rqUps ->
+        SubList rqUps eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          steps step_m sys st1 hst st2 ->
+          eouts = rqUps.
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv H2; inv H6.
+      eapply rqUp_set in H8; try eassumption; dest.
+      assumption.
+    - destruct H5 as [cidx [rqUp ?]]; dest; subst.
+      inv H8.
+      apply SubList_singleton_In in H6.
+      apply in_app_or in H6; destruct H6.
+      + exfalso.
+        pose proof (removeL_In_2 _ _ _ _ H2).
+        assert (RqUpMsgs dtr oidxTo [rqUp] /\ SubList [rqUp] eouts).
+        { split.
+          { exists cidx, rqUp; repeat split; assumption. }
+          { red; intros; Common.dest_in; assumption. }
+        }
+        destruct H8.
+        specialize (IHAtomic _ _ H8 H9 _ _ H7 H11); subst.
+        assert (rins = [rqUp]); subst.
+        { inv H13; destruct H22; red in H12.
+          clear -H0 H1 H12.
+          destruct rins as [|rin1 rins]; [elim H0; reflexivity|].
+          destruct rins as [|rin2 rins].
+          { apply SubList_singleton in H1; subst; reflexivity. }
+          { inv H12.
+            pose proof (H1 rin1 (or_introl eq_refl)).
+            pose proof (H1 rin2 (or_intror (or_introl eq_refl))).
+            Common.dest_in.
+            elim H3; simpl; tauto.
+          }
+        }
+        rewrite removeL_nil in H2; inv H2.
+      + assert (RqUpMsgs dtr oidxTo [rqUp] /\ SubList [rqUp] routs).
+        { split.
+          { exists cidx, rqUp; repeat split; assumption. }
+          { red; intros; Common.dest_in; assumption. }
+        }
+        destruct H6.
+        eapply rqUp_set in H13; try eassumption; eauto.
+        dest; subst.
+        specialize (IHAtomic _ _ H9 H1 _ _ H7 H11); subst.
+        rewrite removeL_nil; reflexivity.
+  Qed.
+  
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       RqUpMsgs dtr oidxTo rqUps ->

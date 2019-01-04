@@ -679,7 +679,7 @@ Proof.
     + destruct (in_dec (id_dec msg_dec) msg rins).
       * right; apply in_or_app; auto.
       * left; apply in_or_app; left.
-        apply removeL_in; auto.
+        apply removeL_In_1; auto.
     + right; apply in_or_app; auto.
   - left; apply in_or_app; auto.
 Qed.
