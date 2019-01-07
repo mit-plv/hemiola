@@ -244,6 +244,25 @@ Proof.
         }
 Qed.
 
+Lemma internal_steps_commutes:
+  forall {oifc} (sys: System oifc) oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
+    (forall st1 st2,
+        Reachable (steps step_m) sys st1 ->
+        steps step_m sys st1 [RlblInt oidx2 ridx2 ins2 outs2;
+                                RlblInt oidx1 ridx1 ins1 outs1] st2 ->
+        NonConflictingL sys oidx1 ridx1 oidx2 ridx2 /\
+        DisjList (idsOf ins1) (idsOf ins2) /\
+        DisjList outs1 ins2 /\
+        DisjList (idsOf outs1) (idsOf outs2)) ->
+    Reducible sys [RlblInt oidx2 ridx2 ins2 outs2; RlblInt oidx1 ridx1 ins1 outs1]
+              [RlblInt oidx1 ridx1 ins1 outs1; RlblInt oidx2 ridx2 ins2 outs2].
+Proof.
+  intros.
+  red; intros.
+  specialize (H _ _ Hr H0); dest.
+  apply internal_commutes; auto.
+Qed.
+
 Lemma nonconflicting_mdisj_commutative_atomic_0:
   forall {oifc} (sys: System oifc) oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->

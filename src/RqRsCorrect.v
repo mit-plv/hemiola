@@ -17,6 +17,11 @@ Section RqUpInd.
 
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
+  Ltac disc_rule_custom ::=
+    match goal with
+    | [H: OUpLockedTo _ _ _ |- _] => red in H
+    end.
+  
   Lemma rqUp_set:
     forall oidxTo rqUps,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -163,13 +168,13 @@ Section RqUpInd.
         specialize (IHAtomic _ _ H9 H1 _ _ H7 H11); subst.
         rewrite removeL_nil; reflexivity.
   Qed.
-  
+
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps routs1 ->
       forall oidx2 ridx2 rins2 routs2,
-        DisjList rins2 routs1 ->
+        DisjList routs1 rins2 ->
         Reducible
           sys [RlblInt oidx2 ridx2 rins2 routs2;
                  RlblInt oidx1 ridx1 rins1 routs1]
@@ -177,7 +182,33 @@ Section RqUpInd.
              RlblInt oidx2 ridx2 rins2 routs2].
   Proof.
     intros.
-    apply internal_commutes.
+    destruct Hrrs as [? [? ?]].
+    apply internal_steps_commutes; intros.
+
+    inv_steps.
+
+    eapply rqUp_set in H13; try eassumption.
+    destruct H13 as [? [? [rqUp [rsbTo ?]]]]; dest; subst.
+
+    inv H12; simpl in *.
+    good_rqrs_rule_get rule.
+
+    destruct (eq_nat_dec oidx1 (obj_idx obj)); subst.
+    - good_rqrs_rule_cases rule.
+      + exfalso.
+        disc_rule_conds.
+        dest; discriminate.
+      + (* case [ImmDownRule] *)
+        admit.
+      + disc_rule_conds.
+        * exfalso; dest; discriminate.
+        * admit. (* RqUpDown *)
+        * admit. (* RqDownDown *)
+      + admit.
+      + admit.
+
+    - admit.
+      
   Admitted.
   
   Lemma rqUp_lpush_lbl:
@@ -187,7 +218,7 @@ Section RqUpInd.
         RqUpMsgs dtr oidxTo rqUps ->
         SubList rqUps peouts ->
         forall oidx ridx rins routs,
-          DisjList rins peouts ->
+          DisjList peouts rins ->
           Reducible sys (RlblInt oidx ridx rins routs :: phst)
                     (phst ++ [RlblInt oidx ridx rins routs]).
   Proof.
@@ -210,7 +241,7 @@ Section RqUpInd.
       RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps peouts ->
       Atomic msg_dec inits ins hst outs eouts ->
-      DisjList inits peouts ->
+      DisjList peouts inits ->
       Reducible sys (hst ++ phst) (phst ++ hst).
   Proof.
     induction 4; simpl; intros; subst.
@@ -226,6 +257,7 @@ Section RqUpInd.
         rewrite app_assoc.
         apply reducible_app_2.
         eapply rqUp_lpush_lbl; eauto.
+        apply DisjList_comm.
         eapply DisjList_SubList; [eassumption|].
 
         (** TODO: need to prove this admit *)
@@ -287,6 +319,7 @@ Section Pushable.
       pose proof (atomic_unique H0 H2); dest; subst.
       pose proof (atomic_unique H5 H); dest; subst.
       eapply rqUp_lpush_unit_ok_ind; eauto.
+      apply DisjList_comm; assumption.
     Qed.
     
     Lemma rqUp_lpush_ok:
