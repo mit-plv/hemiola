@@ -2088,6 +2088,54 @@ Section LockInv.
         + admit.
         + exfalso; admit.
 
+      - (** case [ImmUpRule] *)
+        find_if_inside.
+        + disc_rule_conds.
+          eapply upLockedInv_orqs_preserved with (orqs1:= orqs);
+            [|eassumption|mred].
+          apply upLockedInv_msgs_preserved with (msgs1:= msgs);
+            [assumption| |].
+          * destruct H as [rqUp [down [pidx ?]]]; dest.
+            disc_rule_conds.
+            solve_q.
+          * destruct H as [rqUp [down [pidx ?]]]; dest.
+            disc_rule_conds.
+            solve_q.
+        + disc_rule_conds.
+          eapply upLockFreeInv_orqs_preserved with (orqs1:= orqs);
+            [|eassumption|mred].
+          apply upLockFreeInv_msgs_preserved with (msgs1:= msgs);
+            [assumption| |].
+          * destruct H.
+            { remember (rqEdgeUpFrom dtr oidx) as orqUp.
+              destruct orqUp; auto.
+              eapply eq_sym, rqEdgeUpFrom_Some in HeqorqUp; [|eassumption].
+              dest; disc_rule_conds.
+            }
+            { destruct H as [rqUp [down [pidx ?]]]; dest.
+              disc_rule_conds.
+              solve_q.
+            }
+          * destruct H.
+            { remember (edgeDownTo dtr oidx) as odown.
+              destruct odown; auto.
+              eapply eq_sym, edgeDownTo_Some in Heqodown; [|eassumption].
+              dest; disc_rule_conds.
+            }
+            { destruct H as [rqUp [down [pidx ?]]]; dest.
+              disc_rule_conds.
+              solve_q.
+            }
+
+      - (** case [RqFwdRule] *)
+        admit.
+
+      - (** case [RsBackRule] *)
+        admit.
+
+      - (** case [RsDownRqDownRule] *)
+        admit.
+
     Admitted.
 
     Lemma upLockInvORq_step_int_other:
