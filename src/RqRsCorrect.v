@@ -3,7 +3,7 @@ Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
-Require Import RqRsTopo RqRsInv.
+Require Import RqRsTopo RqRsFacts RqRsInv.
 
 Set Implicit Arguments.
 
