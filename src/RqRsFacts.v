@@ -617,7 +617,7 @@ Section RqRsDTree.
     - pose proof (rqrsDTree_down_down_not_eq n H H3).
       elim H6; reflexivity.
   Qed.
-  
+
 End RqRsDTree.
 
 Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
@@ -625,6 +625,18 @@ Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
 
 Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
   filter (fun msg => msg.(msg_type) ==n MRs) (findQ midx msgs).
+
+Lemma findQ_length_one:
+  forall (msgs: MessagePool Msg) midx msg,
+    length (findQ midx msgs) <= 1 ->
+    FirstMPI msgs (midx, msg) ->
+    length (findQ midx msgs) = 1.
+Proof.
+  unfold FirstMPI, FirstMP, firstMP; simpl; intros.
+  destruct (findQ midx msgs); [discriminate|].
+  inv H0; simpl in *.
+  omega.
+Qed.
 
 Lemma rqsQ_length_one:
   forall msgs midx msg,
