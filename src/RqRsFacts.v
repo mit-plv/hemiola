@@ -670,6 +670,58 @@ Proof.
   omega.
 Qed.
 
+Lemma rssQ_enqMP_rq:
+  forall msgs rqMIdx rqm midx,
+    msg_type rqm = MRq ->
+    rssQ (enqMP rqMIdx rqm msgs) midx =
+    rssQ msgs midx.
+Proof.
+  unfold rssQ, findQ, enqMP; intros.
+  mred; simpl.
+  rewrite filter_app; simpl.
+  rewrite H; simpl.
+  rewrite app_nil_r; reflexivity.
+Qed.
+
+Lemma rssQ_enqMsgs_rqs:
+  forall rqs msgs midx,
+    Forall (fun idm => msg_type (valOf idm) = MRq) rqs ->
+    rssQ (enqMsgs rqs msgs) midx =
+    rssQ msgs midx.
+Proof.
+  induction rqs; simpl; intros; [reflexivity|].
+  inv H.
+  destruct a as [rqMIdx rqm]; simpl in *.
+  rewrite IHrqs by assumption.
+  apply rssQ_enqMP_rq; auto.
+Qed.
+
+Lemma rqsQ_enqMP_rs:
+  forall msgs rsMIdx rsm midx,
+    msg_type rsm = MRs ->
+    rqsQ (enqMP rsMIdx rsm msgs) midx =
+    rqsQ msgs midx.
+Proof.
+  unfold rqsQ, findQ, enqMP; intros.
+  mred; simpl.
+  rewrite filter_app; simpl.
+  rewrite H; simpl.
+  rewrite app_nil_r; reflexivity.
+Qed.
+
+Lemma rqsQ_enqMsgs_rss:
+  forall rss msgs midx,
+    Forall (fun idm => msg_type (valOf idm) = MRs) rss ->
+    rqsQ (enqMsgs rss msgs) midx =
+    rqsQ msgs midx.
+Proof.
+  induction rss; simpl; intros; [reflexivity|].
+  inv H.
+  destruct a as [rsMIdx rsm]; simpl in *.
+  rewrite IHrss by assumption.
+  apply rqsQ_enqMP_rs; auto.
+Qed.
+
 Ltac solve_midx_neq_unit :=
   match goal with
   | [Hw: WfDTree ?dtr, H: parentIdxOf ?dtr ?cidx = Some ?pidx |- _] =>
