@@ -618,6 +618,19 @@ Section RqRsDTree.
       elim H6; reflexivity.
   Qed.
 
+  Lemma rqrsDTree_down_downs_not_in_child:
+    forall oidx1 oidx2 down1 downs2 ups2,
+      edgeDownTo dtr oidx1 = Some down1 ->
+      RqRsDownMatch dtr oidx2 downs2 ups2 (fun cidx => cidx <> oidx1) ->
+      ~ In down1 downs2.
+  Proof.
+    intros; intro Hx.
+    eapply RqRsDownMatch_rq_In in H0; [|eassumption].
+    destruct H0 as [cidx ?]; dest.
+    pose proof (rqrsDTree_down_down_not_eq H0 H2 H).
+    elim H3; reflexivity.
+  Qed.
+
 End RqRsDTree.
 
 Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
@@ -828,7 +841,11 @@ Ltac solve_midx_neq_unit :=
      Hnp: Some ?pidx <> Some ?idx2 |- ~ In ?down1 ?downs2] =>
     rewrite <-Hp in Hnp;
     eapply rqrsDTree_down_downs_not_in_parent; eauto
-                                               
+
+  | [Hdown1: edgeDownTo _ ?idx1 = Some ?down1,
+     Hdowns2: RqRsDownMatch _ ?idx2 ?downs2 _ (fun _ => _ <> ?idx1) |- _] =>
+    eapply rqrsDTree_down_downs_not_in_child; eauto
+     
   end.
 
 Ltac solve_midx_neq :=
