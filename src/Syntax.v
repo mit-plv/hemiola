@@ -150,7 +150,7 @@ Record Object oifc :=
     obj_rules_valid: NoDup (map (@rule_idx _) obj_rules)
   }.
 
-Lemma rules_same_id_in_object_same:
+Lemma rule_same_id_in_object_same:
   forall {oifc} (obj: Object oifc) (rule1 rule2: Rule oifc),
     In rule1 (obj_rules obj) ->
     In rule2 (obj_rules obj) ->

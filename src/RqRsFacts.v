@@ -39,7 +39,7 @@ Ltac red_obj_rule :=
     | [H0: In ?rule1 (obj_rules ?obj),
        H1: In ?rule2 (obj_rules ?obj),
        H2: rule_idx ?obj1 = rule_idx ?obj2 |- _] =>
-      pose proof (rules_same_id_in_object_same _ _ _ H0 H1 H2);
+      pose proof (rule_same_id_in_object_same _ _ _ H0 H1 H2);
       subst; clear H0 H2
     end.
 
@@ -875,4 +875,8 @@ Ltac solve_q :=
   unfold rssQ, rqsQ;
   repeat solve_q_unit;
   try reflexivity.
+
+
+
+
 

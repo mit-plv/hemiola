@@ -11,6 +11,45 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
+(** TODO: add more conditions; move to RqRsInvLock.v *)
+Ltac disc_lock_conds :=
+  match goal with
+  | [H: OLockedTo _ _ _ |- _] => red in H
+  end.
+
+(** TODO: add more conditions; move to RqRsInvMsg.v *)
+Ltac disc_msgs_in :=
+  match goal with
+  | [H: RqUpMsgs _ _ _ |- _] =>
+    let cidx := fresh "cidx" in
+    let rqUp := fresh "rqUp" in
+    destruct H as [cidx [rqUp ?]]; dest
+  end.
+
+(** TODO: move to RqRsTopo.v *)
+Ltac good_rqUp_rsUp_get rqRule rsRule :=
+  match goal with
+  | [H: RqUpRsUpOkSys _ ?sys,
+     HobjIn: In ?obj (sys_objs ?sys),
+     HrqIn: In rqRule (obj_rules ?obj),
+     Hrq: RqToUpRule _ _ rqRule,
+     HrsIn: In rsRule (obj_rules ?obj),
+     Hrs: RsToUpRule _ _ rsRule |- _] =>
+    let Hr := fresh "H" in
+    pose proof H as Hr;
+    red in Hr; rewrite Forall_forall in Hr;
+    specialize (Hr _ HobjIn);
+    specialize (Hr _ _ HrqIn Hrq HrsIn Hrs)
+  end.
+
+Ltac disc_rqToUpRule :=
+  match goal with
+  | [H: RqToUpRule _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rqTos := fresh "rqTos" in
+    destruct H as [? [rqFrom [rqTos ?]]]
+  end.
+
 Section RqUpInd.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -19,9 +58,7 @@ Section RqUpInd.
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
   Ltac disc_rule_custom ::=
-    match goal with
-    | [H: OLockedTo _ _ _ |- _] => red in H
-    end.
+    disc_lock_conds.
   
   Lemma rqUp_set:
     forall oidxTo rqUps,
@@ -170,6 +207,46 @@ Section RqUpInd.
         rewrite removeL_nil; reflexivity.
   Qed.
 
+  Ltac disc_rule_custom ::=
+    try disc_lock_conds;
+    try disc_footprints_ok;
+    try disc_msgs_in.
+  
+  Lemma rqUpMsgs_RqToUpRule:
+    forall oidx {oifc} (rule: Rule oifc) post porq rins nost norq routs oidxTo,
+      GoodRqRsRule dtr oidx rule ->
+      rule_precond rule post porq rins ->
+      rule_trs rule post porq rins = (nost, norq, routs) ->
+      RqUpMsgs dtr oidxTo routs ->
+      RqToUpRule dtr oidx rule.
+  Proof.
+    intros; destruct Hrrs as [? [? ?]].
+    good_rqrs_rule_cases rule.
+    - exfalso; disc_rule_conds.
+      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H14 H6); reflexivity.
+    - exfalso; disc_rule_conds.
+      elim (rqrsDTree_rqUp_rsUp_not_eq H3 _ _ H12 H6); reflexivity.
+    - split; [assumption|].
+      destruct H as [rqFrom [rqTos ?]]; dest.
+      destruct H as [|[|]].
+      + eauto.
+      + exfalso; disc_rule_conds.
+        eapply RqRsDownMatch_rq_In in H13; [|left; reflexivity].
+        destruct H13 as [cidx' ?]; dest.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H16 H13); reflexivity.
+      + exfalso; disc_rule_conds.
+        eapply RqRsDownMatch_rq_In in H10; [|left; reflexivity].
+        destruct H10 as [cidx' ?]; dest.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H10); reflexivity.
+    - exfalso; disc_rule_conds.
+      + rewrite H8 in H15; discriminate.
+      + rewrite H8 in H15; discriminate.
+    - exfalso; disc_rule_conds.
+      eapply RqRsDownMatch_rq_In in H16; [|left; reflexivity].
+      destruct H16 as [cidx' ?]; dest.
+      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H21 H16); reflexivity.
+  Qed.
+  
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -186,30 +263,83 @@ Section RqUpInd.
     destruct Hrrs as [? [? ?]].
     apply internal_steps_commutes; intros.
 
+    (* Register necessary invariants. *)
+    pose proof (upLockInv_ok H3 H2 H5) as HlockInv.
+    
     inv_steps.
-
-    eapply rqUp_set in H13; try eassumption.
-    destruct H13 as [? [? [rqUp [rsbTo ?]]]]; dest; subst.
-
-    inv H12; simpl in *.
+    pose proof (rqUp_set H H0 H5 H13).
+    destruct H6 as [? [? [rqUp [rsbTo ?]]]]; dest; subst.
+    inv_step; simpl in *.
     good_rqrs_rule_get rule.
+    eapply rqUpMsgs_RqToUpRule in H7; try eassumption.
+    good_rqrs_rule_get rule0.
 
-    destruct (eq_nat_dec oidx1 (obj_idx obj)); subst.
-    - good_rqrs_rule_cases rule.
-      + exfalso.
-        disc_rule_conds.
-        dest.
+    destruct (eq_nat_dec (obj_idx obj) (obj_idx obj0)); subst.
+    - red_obj_rule; rename obj0 into obj.
+      good_rqrs_rule_cases rule0.
+
+      + (** case [ImmDownRule] *)
+        exfalso; disc_rule_conds.
         destruct H8; discriminate.
-      + (* case [ImmDownRule] *)
-        admit.
-      + disc_rule_conds.
-        * admit. (* RqUpUp *)
-        * admit. (* RqUpDown *)
-        * admit. (* RqDownDown *)
-      + admit.
-      + admit.
 
-    - admit.
+      + (** case [ImmUpRule] *)
+        repeat split; try assumption.
+        * assert (RsToUpRule dtr (obj_idx obj) rule0) by (left; assumption).
+          good_rqUp_rsUp_get rule rule0.
+          right; split; [reflexivity|].
+          intros; red_obj_rule.
+          assumption.
+        * admit.
+        * admit.
+
+      + (** case [RqFwdRule] *)
+        mred.
+        pose proof H11.
+        destruct H12 as [rqFrom [rqTos ?]].
+        dest; clear H13 H14 H16 H25.
+        destruct H12 as [|[|]].
+        * (** case [RqUpUp] *)
+          exfalso.
+          disc_rqToUpRule.
+          disc_rule_conds.
+
+        * (** case [RqUpDown] *)
+          repeat split; try assumption.
+          { right; split; [reflexivity|].
+            intros; red_obj_rule.
+            admit.
+          }
+          { admit. }
+          { admit. }
+          
+        * (** case [RqDownDown] *)
+          admit.
+
+      + (** case [RsBackRule] *)
+        mred; disc_rule_conds.
+        * (** case [FootprintReleasingUp] *)
+          exfalso.
+          (* This case breaks [UpLockInv]. *)
+          admit.
+
+        * (** case [FootprintReleasingDown] *)
+          assert (RsToUpRule dtr (obj_idx obj) rule0).
+          { admit. }
+
+          good_rqUp_rsUp_get rule rule0.
+          admit.
+
+      + (** case [RsDownRqDownRule] *)
+        exfalso.
+        (* This case breaks [UpLockInv]. *)
+        admit.
+
+    - repeat split; try assumption.
+      + red; auto.
+      (** TODO: need to know if [oidx1 <> oidx2] then [rins1 -*- rins2] 
+       * and [routs1 -*- routs2]. *)
+      + admit.
+      + admit.
       
   Admitted.
   
