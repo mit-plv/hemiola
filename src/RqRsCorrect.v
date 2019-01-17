@@ -3,7 +3,8 @@ Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
-Require Import RqRsTopo RqRsFacts RqRsInv.
+Require Import RqRsTopo RqRsFacts.
+Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
 
 Set Implicit Arguments.
 
@@ -19,7 +20,7 @@ Section RqUpInd.
 
   Ltac disc_rule_custom ::=
     match goal with
-    | [H: OUpLockedTo _ _ _ |- _] => red in H
+    | [H: OLockedTo _ _ _ |- _] => red in H
     end.
   
   Lemma rqUp_set:
@@ -32,15 +33,15 @@ Section RqUpInd.
         RqUpMsgs dtr oidx rins /\
         routs = rqUps /\
         exists rqUp rsbTo,
-          OUpLockedTo st2.(bst_orqs) oidx rsbTo /\
+          OLockedTo st2.(bst_orqs) oidx rsbTo /\
           rqEdgeUpFrom dtr oidx = Some rqUp /\
           length (findQ rqUp st2.(bst_msgs)) = 1.
   Proof.
     intros.
     destruct Hrrs as [? [? ?]].
 
-    assert (LockInv dtr sys st2) as Hlock.
-    { apply lockInv_ok; auto.
+    assert (UpLockInv dtr sys st2) as Hlock.
+    { apply upLockInv_ok; auto.
       eapply reachable_steps; [eassumption|].
       econstructor; eauto.
       econstructor.
@@ -83,9 +84,9 @@ Section RqUpInd.
           { red; mred; simpl.
             exists rqi; split; auto.
           }
-          { clear -H19.
+          { clear -H12.
             rewrite findQ_In_enqMP in *.
-            rewrite app_length in H19; simpl in H19.
+            rewrite app_length in H12; simpl in H12.
             rewrite app_length; simpl.
             omega.
           }
@@ -197,11 +198,12 @@ Section RqUpInd.
     - good_rqrs_rule_cases rule.
       + exfalso.
         disc_rule_conds.
-        dest; discriminate.
+        dest.
+        destruct H8; discriminate.
       + (* case [ImmDownRule] *)
         admit.
       + disc_rule_conds.
-        * exfalso; dest; discriminate.
+        * admit. (* RqUpUp *)
         * admit. (* RqUpDown *)
         * admit. (* RqDownDown *)
       + admit.
