@@ -78,8 +78,11 @@ Ltac disc_rule_conds_unit_rule_preds :=
   | [H: RqFwdRule _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqTos := fresh "rqTos" in
+    let Hft := fresh "H" in
     red in H;
-    destruct H as [rqFrom [rqTos ?]]; dest
+    destruct H as [rqFrom [rqTos [? Hft]]];
+    red in Hft; dest
+  | [H: RqFwdFromTo _ _ _ |- _] => red in H; dest
   | [H: RqUpUp _ _ _ _ ?rule \/
         RqUpDown _ _ _ _ ?rule \/
         RqDownDown _ _ _ _ ?rule |- _] =>
@@ -100,7 +103,10 @@ Ltac disc_rule_conds_unit_rule_preds :=
   | [H: RsBackRule _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
-    destruct H as [rssFrom [rsbTo ?]]; dest
+    let Hft := fresh "H" in
+    destruct H as [rssFrom [rsbTo [? Hft]]];
+    red in Hft; dest
+  | [H: RsBackFromTo _ _ _ |- _] => red in H; dest
   | [H: RsDownRqDownRule _ _ _ |- _] =>
     let rsFrom := fresh "rsFrom" in
     let rqTos := fresh "rqTos" in

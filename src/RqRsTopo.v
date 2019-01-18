@@ -318,20 +318,26 @@ Section RqRsTopo.
           FootprintingDown rule rssFrom rsbTo /\
           FootprintUpSilent rule.
 
+      Definition RqFwdFromTo (rqFrom: IdxT) (rqTos: list IdxT) (rule: Rule oifc) :=
+        (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)) /\
+        MsgsTo rqTos rule /\ RqReleasing rule /\ StateSilent rule.
+
       Definition RqFwdRule (rule: Rule oifc) :=
         exists rqFrom rqTos,
           (RqUpUp rqFrom rqTos rule \/
            RqUpDown rqFrom rqTos rule \/
            RqDownDown rqFrom rqTos rule) /\
-          (rule.(rule_precond) ->oprec (MsgsFrom [rqFrom] /\oprec RqAccepting)) /\
-          MsgsTo rqTos rule /\ RqReleasing rule /\ StateSilent rule.
+          RqFwdFromTo rqFrom rqTos rule.
+
+      Definition RsBackFromTo (rssFrom: list IdxT) (rsbTo: IdxT) (rule: Rule oifc) :=
+        (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
+        MsgsTo [rsbTo] rule /\ RsReleasing rule.
       
       Definition RsBackRule (rule: Rule oifc) :=
         exists rssFrom rsbTo,
           ((FootprintReleasingUp rule rssFrom rsbTo /\ FootprintDownSilent rule) \/
            (FootprintReleasingDown rule rssFrom rsbTo /\ FootprintUpSilent rule)) /\
-          (rule.(rule_precond) ->oprec (MsgsFrom rssFrom /\oprec RsAccepting)) /\
-          MsgsTo [rsbTo] rule /\ RsReleasing rule.
+          RsBackFromTo rssFrom rsbTo rule.
 
       Definition FootprintUpToDown (rule: Rule oifc) (rsFrom: IdxT) (rqTos: list IdxT) :=
         exists rqFrom rsbTo nrssFrom,
@@ -368,15 +374,15 @@ Section RqRsTopo.
   Section RqUpRsUpComm.
 
     Definition RqToUpRule (oidx: IdxT) (rule: Rule oifc) :=
-      RqFwdRule oidx rule /\
       exists rqFrom rqTos,
-        RqUpUp oidx rqFrom rqTos rule.
+        RqUpUp oidx rqFrom rqTos rule /\
+        RqFwdFromTo rqFrom rqTos rule.
 
     Definition RsToUpRule (oidx: IdxT) (rule: Rule oifc) :=
       ImmUpRule oidx rule \/
-      (RsBackRule rule /\
-       exists rssFrom rsbTo,
-         FootprintReleasingDown rule rssFrom rsbTo).
+      (exists rssFrom rsbTo,
+          FootprintReleasingDown rule rssFrom rsbTo /\
+          RsBackFromTo rssFrom rsbTo rule).
     
     Definition RqUpRsUpOkObj (obj: Object oifc) :=
       forall rqUpRule rsUpRule,

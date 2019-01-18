@@ -50,6 +50,8 @@ Ltac disc_rqToUpRule :=
     destruct H as [? [rqFrom [rqTos ?]]]
   end.
 
+
+
 Section RqUpInd.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -226,8 +228,10 @@ Section RqUpInd.
       elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H14 H6); reflexivity.
     - exfalso; disc_rule_conds.
       elim (rqrsDTree_rqUp_rsUp_not_eq H3 _ _ H12 H6); reflexivity.
-    - split; [assumption|].
+    - red in H.
       destruct H as [rqFrom [rqTos ?]]; dest.
+      exists rqFrom, rqTos.
+      split; [|assumption].
       destruct H as [|[|]].
       + eauto.
       + exfalso; disc_rule_conds.
@@ -246,7 +250,47 @@ Section RqUpInd.
       destruct H16 as [cidx' ?]; dest.
       elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H21 H16); reflexivity.
   Qed.
-  
+
+  Lemma rqUpUp_rqUpDown_reducible:
+    forall oidx rqFrom1 rqTos1 (rule1: Rule oifc)
+           rqFrom2 rqTos2 (rule2: Rule oifc),
+      RqUpUp dtr oidx rqFrom1 rqTos1 rule1 ->
+      RqFwdFromTo rqFrom1 rqTos1 rule1 ->
+      RqUpDown dtr oidx rqFrom2 rqTos2 rule2 ->
+      RqFwdFromTo rqFrom2 rqTos2 rule2 ->
+      NonConflictingR rule1 rule2.
+  Proof.
+    intros.
+    red; intros.
+    disc_rule_conds.
+
+    split.
+    - (* TODOs:
+       * 1) Should know [norq1 = porq1 +[upRq <- rqi]].
+       * 2) [rule_precond rule2] should satisfy following:
+       *    [rule_precond rule2 ost orq1 rins ->
+       *     orq2@[downRq] = None ->
+       *     rule_precond rule2 ost orq2 rins].
+       *)
+      admit.
+    - (* 3) [rule_trs rule ost1 orq1 rins = (nost1, norq1, routs1) ->
+       *     rule_trs rule ost2 orq2 rins = (nost2, norq2, routs2) ->
+       *     routs1 = routs2].
+       *)
+      admit.
+  Admitted.
+
+  Lemma rqUpUp_rqDownDown_reducible:
+    forall oidx rqFrom1 rqTos1 (rule1: Rule oifc)
+           rqFrom2 rqTos2 (rule2: Rule oifc),
+      RqUpUp dtr oidx rqFrom1 rqTos1 rule1 ->
+      RqFwdFromTo rqFrom1 rqTos1 rule1 ->
+      RqDownDown dtr oidx rqFrom2 rqTos2 rule2 ->
+      RqFwdFromTo rqFrom2 rqTos2 rule2 ->
+      NonConflictingR rule1 rule2.
+  Proof.
+  Admitted.
+
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -294,10 +338,8 @@ Section RqUpInd.
 
       + (** case [RqFwdRule] *)
         mred.
-        pose proof H11.
-        destruct H12 as [rqFrom [rqTos ?]].
-        dest; clear H13 H14 H16 H25.
-        destruct H12 as [|[|]].
+        destruct H11 as [rqFrom [rqTos [? ?]]].
+        destruct H11 as [|[|]].
         * (** case [RqUpUp] *)
           exfalso.
           disc_rqToUpRule.
@@ -307,27 +349,42 @@ Section RqUpInd.
           repeat split; try assumption.
           { right; split; [reflexivity|].
             intros; red_obj_rule.
-            admit.
+            destruct H7 as [rqFrom' [rqTos' ?]]; dest.
+            eapply rqUpUp_rqUpDown_reducible; eauto.
           }
           { admit. }
           { admit. }
           
         * (** case [RqDownDown] *)
-          admit.
+          repeat split; try assumption.
+          { right; split; [reflexivity|].
+            intros; red_obj_rule.
+            destruct H7 as [rqFrom' [rqTos' ?]]; dest.
+            eapply rqUpUp_rqDownDown_reducible; eauto.
+          }
+          { admit. }
+          { admit. }
 
       + (** case [RsBackRule] *)
-        mred; disc_rule_conds.
+        mred.
+        destruct H11 as [rssFrom [rsbTo' ?]]; dest.
+        destruct H11; dest.
         * (** case [FootprintReleasingUp] *)
-          exfalso.
+          exfalso; disc_rule_conds.
           (* This case breaks [UpLockInv]. *)
           admit.
 
         * (** case [FootprintReleasingDown] *)
-          assert (RsToUpRule dtr (obj_idx obj) rule0).
+          assert (RsToUpRule dtr (obj_idx obj) rule0) by (right; eauto).
+          
+          repeat split; try assumption.
+          { good_rqUp_rsUp_get rule rule0.
+            right; split; [reflexivity|].
+            intros; red_obj_rule.
+            assumption.
+          }
           { admit. }
-
-          good_rqUp_rsUp_get rule rule0.
-          admit.
+          { admit. }
 
       + (** case [RsDownRqDownRule] *)
         exfalso.
