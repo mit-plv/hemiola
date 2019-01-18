@@ -220,11 +220,10 @@ Section System.
       Definition childEvictRqI: Rule ImplOStateIfc :=
         {| rule_idx := 8;
            rule_precond :=
-             RqAccepting
-             /\oprec UpLockFree
-             /\oprec
-                 fun (ost: OState ImplOStateIfc) orq mins =>
-                   ost#[implStatusIdx] <> msiI;
+             MsgsFrom [ec coidx]
+             /\oprec MsgIdsFrom [evictRq]
+             /\oprec RqAccepting
+             /\oprec UpLockFree;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
                ((hd_error mins) >>=[(ost, orq, nil)]
@@ -248,7 +247,9 @@ Section System.
                   (fun idm =>
                      (ost +#[implStatusIdx <- msiI],
                       removeRq orq upRq,
-                      nil)))
+                      [(ce coidx, {| msg_id := evictRs;
+                                     msg_type := MRs;
+                                     msg_value := VUnit |})])))
         |}.
       
       Definition child: Object ImplOStateIfc :=

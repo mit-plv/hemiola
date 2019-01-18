@@ -30,7 +30,7 @@ Section System.
     Section PerChn.
       Variable i: nat.
 
-      Definition specNumOfRules := 2.
+      Definition specNumOfRules := 3.
 
       Definition specGetRq: Rule SpecOStateIfc :=
         {| rule_idx := specNumOfRules * i + 0;
@@ -67,10 +67,25 @@ Section System.
                             msg_value := VUnit |})])
         |}.
 
+      Definition specEvictRq: Rule SpecOStateIfc :=
+        {| rule_idx := specNumOfRules * i + 2;
+           rule_precond :=
+             MsgsFrom [erq i]
+             /\oprec MsgIdsFrom [evictRq]
+             /\oprec RqAccepting;
+           rule_trs :=
+             fun (ost: OState SpecOStateIfc) orq mins =>
+               (ost, orq,
+                [(ers i, {| msg_id := evictRs;
+                            msg_type := MRs;
+                            msg_value := VUnit
+                         |})])
+        |}.
+
     End PerChn.
     
     Definition specRulesI (i: nat): list (Rule SpecOStateIfc) :=
-      [specGetRq i; specSetRq i].
+      [specGetRq i; specSetRq i; specEvictRq i].
 
     Fixpoint specRules (i: nat): list (Rule SpecOStateIfc) :=
       match i with
