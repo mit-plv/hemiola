@@ -106,8 +106,7 @@ Section RqUpInd.
         good_locking_get obj.
 
         (* TODO: better to have a discharger for [LockInv]? *)
-        red in H0; mred; simpl in H0.
-        rewrite H25 in H0.
+        red in H0; mred; simpl in H0; mred.
         destruct H0 as [rqUp' [down [pidx ?]]]; dest.
         (* TODO ends here *)
 
@@ -120,7 +119,7 @@ Section RqUpInd.
         * reflexivity.
         * exists rqUp', (rqi_midx_rsb rqi).
           repeat split.
-          { red; mred; simpl.
+          { red; mred; simpl; mred.
             exists rqi; split; auto.
           }
           { clear -H12.
@@ -134,7 +133,7 @@ Section RqUpInd.
         red in H23; destruct H23 as [upCIdx ?]; dest.
         eapply RqRsDownMatch_rq_In in H23; [|apply in_map; eassumption].
         destruct H23 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H27); auto.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H26); auto.
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
         red in H23; destruct H23 as [upCIdx ?]; dest.
@@ -144,15 +143,15 @@ Section RqUpInd.
 
     - exfalso; disc_rule_conds.
       + apply SubList_singleton in H0; subst; simpl in *.
-        rewrite H2 in H27; discriminate.
+        rewrite H2 in H25; discriminate.
       + apply SubList_singleton in H0; subst; simpl in *.
-        rewrite H2 in H27; discriminate.
+        rewrite H2 in H25; discriminate.
     - exfalso; disc_rule_conds.
       apply SubList_singleton_In in H0.
       red in H23; destruct H23 as [upCIdx ?]; dest.
-      eapply RqRsDownMatch_rq_In in H27; [|apply in_map; eassumption].
-      destruct H27 as [cidx ?]; dest.
-      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H31); auto.
+      eapply RqRsDownMatch_rq_In in H24; [|apply in_map; eassumption].
+      destruct H24 as [cidx ?]; dest.
+      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H29); auto.
   Qed.
 
   Lemma rqUp_atomic_eouts:
@@ -235,20 +234,20 @@ Section RqUpInd.
       destruct H as [|[|]].
       + eauto.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_In in H13; [|left; reflexivity].
-        destruct H13 as [cidx' ?]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H16 H13); reflexivity.
+        eapply RqRsDownMatch_rq_In in H11; [|left; reflexivity].
+        destruct H11 as [cidx' ?]; dest.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H11); reflexivity.
       + exfalso; disc_rule_conds.
         eapply RqRsDownMatch_rq_In in H10; [|left; reflexivity].
         destruct H10 as [cidx' ?]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H10); reflexivity.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H14 H10); reflexivity.
     - exfalso; disc_rule_conds.
-      + rewrite H8 in H15; discriminate.
-      + rewrite H8 in H15; discriminate.
+      + rewrite H8 in H13; discriminate.
+      + rewrite H8 in H13; discriminate.
     - exfalso; disc_rule_conds.
-      eapply RqRsDownMatch_rq_In in H16; [|left; reflexivity].
-      destruct H16 as [cidx' ?]; dest.
-      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H21 H16); reflexivity.
+      eapply RqRsDownMatch_rq_In in H14; [|left; reflexivity].
+      destruct H14 as [cidx' ?]; dest.
+      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H18 H14); reflexivity.
   Qed.
 
   Lemma rqUpUp_rqUpDown_reducible:
@@ -324,7 +323,7 @@ Section RqUpInd.
 
       + (** case [ImmDownRule] *)
         exfalso; disc_rule_conds.
-        destruct H8; discriminate.
+        destruct H6; discriminate.
 
       + (** case [ImmUpRule] *)
         repeat split; try assumption.

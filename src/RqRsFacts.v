@@ -138,11 +138,15 @@ Ltac disc_rule_conds_unit_footprint :=
   | [H: FootprintedDown _ _ _ |- _] =>
     let rqi := fresh "rqi" in
     destruct H as [rqi ?]; dest
+  | [H: exists _:RqInfo Msg, _ |- _] =>
+    let rqi := fresh "rqi" in
+    destruct H as [rqi ?]; dest
   | [H: FootprintUpToDown _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rsbTo := fresh "rsbTo" in
     let nrssFrom := fresh "nrssFrom" in
     destruct H as [rqFrom [rsbTo [nrssFrom ?]]]; dest
+  | [H: FootprintingUpToDown _ _ _ _ |- _] => destruct H
   | [H: FootprintSilent _ |- _] => red in H; dest
   | [H: FootprintUpSilent _ |- _] => red in H
   | [H: FootprintDownSilent _ |- _] => red in H
@@ -195,7 +199,7 @@ Ltac disc_rule_conds :=
   repeat
     (repeat disc_rule_conds_unit;
      try disc_rule_custom;
-     simpl in *; subst).
+     simpl in *; subst; mred).
 
 Ltac solve_rule_conds :=
   repeat red;

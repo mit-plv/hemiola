@@ -2285,6 +2285,7 @@ End M.
 Notation "'[]'" := (M.empty _) : fmap_scope.
 Notation " [ k <- v ] " := (M.add k v (M.empty _)) : fmap_scope.
 Notation " m +[ k <- v ] " := (M.add k v m) (at level 0) : fmap_scope.
+Notation " m -[ k ] " := (M.remove k m) (at level 0) : fmap_scope.
 Notation " m @[ k ] " := (M.find k m) (at level 0) : fmap_scope.
 
 Delimit Scope fmap_scope with fmap.
@@ -2372,18 +2373,15 @@ Ltac mred_unit :=
     rewrite M.union_empty_R in H
   | [H: context [M.find _ (M.union _ _)] |- _] =>
     rewrite M.find_union in H
+
+  | [H: context [M.find ?k (M.remove ?k ?m)] |- _] =>
+    rewrite M.F.P.F.remove_eq_o with (x:= k) (y:= k) in H
+  | [H: context [M.find ?y (M.remove ?k ?m)] |- _] =>
+    rewrite M.F.P.F.remove_neq_o in H by (auto || eassumption || discriminate)
   | [H: context [M.find ?k (M.add ?k _ _)] |- _] =>
     rewrite M.find_add_1 in H
   | [H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
-    rewrite M.find_add_2 in H by discriminate
-  | [Hk: ?k1 <> ?k2, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
-    rewrite M.find_add_2 in H by auto
-  | [Hk: ?k1 <> ?k2, H: context [M.find ?k2 (M.add ?k1 _ _)] |- _] =>
-    rewrite M.find_add_2 in H by auto
-  | [Hk: ?k1 = ?k2 -> False, H: context [M.find ?k1 (M.add ?k2 _ _)] |- _] =>
-    rewrite M.find_add_2 in H by auto
-  | [Hk: ?k1 = ?k2 -> False, H: context [M.find ?k2 (M.add ?k1 _ _)] |- _] =>
-    rewrite M.find_add_2 in H by auto
+    rewrite M.find_add_2 in H by (auto || eassumption || discriminate)
   | [H1: In ?y ?d, H2: context [M.find ?y (M.restrict _ ?d)] |- _] =>
     rewrite M.restrict_in_find in H2 by auto
   | [H: context [M.find ?y (M.subtractKV _ ?m1 ?m2)] |- _] =>
@@ -2400,26 +2398,14 @@ Ltac mred_unit :=
     rewrite M.union_empty_R
   | [ |- context [M.find ?y (M.union _ _)] ] =>
     rewrite M.find_union
-  | [ |- context [M.find ?y (M.remove ?y ?m)] ] =>
-    rewrite M.F.P.F.remove_eq_o
-  | [H: ?y <> ?k |- context [M.find ?y (M.remove ?k ?m)] ] =>
-    rewrite M.F.P.F.remove_neq_o by intuition auto
-  | [H: ?k <> ?y |- context [M.find ?y (M.remove ?k ?m)] ] =>
-    rewrite M.F.P.F.remove_neq_o by intuition auto
-  | [H: ?y = ?k -> False |- context [M.find ?y (M.remove ?k ?m)] ] =>
-    rewrite M.F.P.F.remove_neq_o by intuition auto
-  | [H: ?k = ?y -> False |- context [M.find ?y (M.remove ?k ?m)] ] =>
-    rewrite M.F.P.F.remove_neq_o by intuition auto
-  | [ |- context [M.find ?y (M.add ?y _ _)] ] => rewrite M.find_add_1
-  | [ |- context [M.find ?y (M.add ?k _ _)] ] => rewrite M.find_add_2 by discriminate
-  | [H: ?y <> ?k |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition auto
-  | [H: ?k <> ?y |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition auto
-  | [H: ?y = ?k -> False |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition auto
-  | [H: ?k = ?y -> False |- context [M.find ?y (M.add ?k _ _)] ] =>
-    rewrite M.find_add_2 by intuition auto
+  | [ |- context [M.find ?k (M.remove ?k ?m)] ] =>
+    rewrite M.F.P.F.remove_eq_o with (x:= k) (y:= k)
+  | [ |- context [M.find ?y (M.remove ?k ?m)] ] =>
+    rewrite M.F.P.F.remove_neq_o by (auto || eassumption || discriminate)
+  | [ |- context [M.find ?y (M.add ?y _ _)] ] =>
+    rewrite M.find_add_1
+  | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
+    rewrite M.find_add_2 by (auto || eassumption || discriminate)
   | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
     M.cmp y k; [rewrite M.find_add_1|
                 rewrite M.find_add_2 by intuition auto]

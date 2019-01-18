@@ -80,32 +80,22 @@ Section FootprintInv.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      mred.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
-      mred.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        * do 4 eexists; repeat split; eassumption.
-        * rewrite <-H20; assumption.
+        do 4 eexists; repeat split; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        * rewrite <-H19; assumption.
-        * do 4 eexists; repeat split.
-          left; eassumption.
+        do 4 eexists; repeat split; left; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        * rewrite <-H19; assumption.
-        * do 4 eexists; repeat split.
-          right; eassumption.
+        do 4 eexists; repeat split; right; eassumption.
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        rewrite <-H15; assumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        rewrite <-H15; assumption.
     - disc_rule_conds.
       apply footprints_ok_orqs_add; disc_rule_conds; auto.
-      do 4 eexists; repeat split.
-      left; eassumption.
+      do 4 eexists; repeat split; eauto.
   Qed.
 
   Lemma footprints_ok:
@@ -236,10 +226,10 @@ Section MessageInv.
         eapply RqRsDownMatch_rs_In in H20; [|eassumption].
         dest; eauto.
       + right; right; left.
-        rewrite H2 in H19.
+        rewrite H2 in H17.
         split; auto.
-        clear -H19; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H19; [|eassumption].
+        clear -H17; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H17; [|eassumption].
         dest; eauto.
 
     - right; right; right.
