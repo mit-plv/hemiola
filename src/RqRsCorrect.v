@@ -50,8 +50,6 @@ Ltac disc_rqToUpRule :=
     destruct H as [? [rqFrom [rqTos ?]]]
   end.
 
-
-
 Section RqUpInd.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -114,7 +112,7 @@ Section RqUpInd.
         disc_rule_conds.
 
         split; [|split].
-        * exists cidx, i.
+        * exists cidx, idm.
           repeat split; try assumption.
         * reflexivity.
         * exists rqUp', (rqi_midx_rsb rqi).
@@ -122,24 +120,24 @@ Section RqUpInd.
           { red; mred; simpl; mred.
             exists rqi; split; auto.
           }
-          { clear -H12.
+          { clear -H19.
             rewrite findQ_In_enqMP in *.
-            rewrite app_length in H12; simpl in H12.
+            rewrite app_length in H19; simpl in H19.
             rewrite app_length; simpl.
             omega.
           }
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
-        red in H23; destruct H23 as [upCIdx ?]; dest.
-        eapply RqRsDownMatch_rq_In in H23; [|apply in_map; eassumption].
-        destruct H23 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H26); auto.
+        red in H25; destruct H25 as [upCIdx ?]; dest.
+        eapply RqRsDownMatch_rq_In in H25; [|apply in_map; eassumption].
+        destruct H25 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H28); auto.
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
-        red in H23; destruct H23 as [upCIdx ?]; dest.
-        eapply RqRsDownMatch_rq_In in H9; [|apply in_map; eassumption].
-        destruct H9 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H23); auto.
+        red in H25; destruct H25 as [upCIdx ?]; dest.
+        eapply RqRsDownMatch_rq_In in H12; [|apply in_map; eassumption].
+        destruct H12 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H25); auto.
 
     - exfalso; disc_rule_conds.
       + apply SubList_singleton in H0; subst; simpl in *.
@@ -151,7 +149,7 @@ Section RqUpInd.
       red in H23; destruct H23 as [upCIdx ?]; dest.
       eapply RqRsDownMatch_rq_In in H24; [|apply in_map; eassumption].
       destruct H24 as [cidx ?]; dest.
-      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H29); auto.
+      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H30); auto.
   Qed.
 
   Lemma rqUp_atomic_eouts:
@@ -228,68 +226,175 @@ Section RqUpInd.
     - exfalso; disc_rule_conds.
       elim (rqrsDTree_rqUp_rsUp_not_eq H3 _ _ H12 H6); reflexivity.
     - red in H.
-      destruct H as [rqFrom [rqTos ?]]; dest.
+      destruct H as [? [rqFrom [rqTos ?]]]; dest.
       exists rqFrom, rqTos.
-      split; [|assumption].
-      destruct H as [|[|]].
+      split; [|split]; try assumption.
+      destruct H6 as [|[|]].
       + eauto.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_In in H11; [|left; reflexivity].
-        destruct H11 as [cidx' ?]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H11); reflexivity.
+        eapply RqRsDownMatch_rq_In in H13; [|left; reflexivity].
+        destruct H13 as [cidx' ?]; dest.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H19 H13); reflexivity.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_In in H10; [|left; reflexivity].
-        destruct H10 as [cidx' ?]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H14 H10); reflexivity.
+        eapply RqRsDownMatch_rq_In in H12; [|left; reflexivity].
+        destruct H12 as [cidx' ?]; dest.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H18 H12); reflexivity.
     - exfalso; disc_rule_conds.
       + rewrite H8 in H13; discriminate.
       + rewrite H8 in H13; discriminate.
     - exfalso; disc_rule_conds.
       eapply RqRsDownMatch_rq_In in H14; [|left; reflexivity].
       destruct H14 as [cidx' ?]; dest.
-      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H18 H14); reflexivity.
+      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H20 H14); reflexivity.
   Qed.
+
+  Ltac disc_rule_custom ::=
+    match goal with
+    | [H: UpLockFreeSuff _ |- _] => red in H
+    | [H: DownLockFreeSuff _ |- _] => red in H
+    | [H: MsgOutsOrthORq _ |- _] => red in H
+    end.
+
+  Inductive PMarker2: Prop -> Prop -> Prop :=
+  | PMarkerIntro2: forall P1 P2: Prop, P1 -> P2 -> PMarker2 P1 P2.
+
+  Ltac pmark2 H1 H2 := pose proof (PMarkerIntro2 H1 H2).
+  Ltac pmarked2 H1 H2 :=
+    match type of H1 with
+    | ?P1 =>
+      match type of H2 with
+      | ?P2 => isNew (PMarker2 P1 P2)
+      end
+    end.
+  Ltac pmark_erase :=
+    repeat
+      match goal with
+      | [H: PMarker2 _ _ |- _] => clear H
+      end.
+
+  Ltac disc_rule_conds_unit_simpl ::=
+    match goal with
+    | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
+      pmarked2 H1 H2;
+      pose proof (H1 _ _ _ H2);
+      pmark2 H1 H2
+    | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
+    | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
+      pmarked2 H1 H2;
+      let Ht := fresh "H" in
+      pose proof (H2 ost orq ins) as Ht;
+      rewrite H1 in Ht; simpl in Ht;
+      pmark2 H1 H2
+    end.
 
   Lemma rqUpUp_rqUpDown_reducible:
     forall oidx rqFrom1 rqTos1 (rule1: Rule oifc)
            rqFrom2 rqTos2 (rule2: Rule oifc),
       RqUpUp dtr oidx rqFrom1 rqTos1 rule1 ->
-      RqFwdFromTo rqFrom1 rqTos1 rule1 ->
+      StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqUpDown dtr oidx rqFrom2 rqTos2 rule2 ->
-      RqFwdFromTo rqFrom2 rqTos2 rule2 ->
+      StateSilent rule2 -> MsgOutsOrthORq rule2 ->
       NonConflictingR rule1 rule2.
   Proof.
     intros.
     red; intros.
-    disc_rule_conds.
-
     split.
-    - (* TODOs:
-       * 1) Should know [norq1 = porq1 +[upRq <- rqi]].
-       * 2) [rule_precond rule2] should satisfy following:
-       *    [rule_precond rule2 ost orq1 rins ->
-       *     orq2@[downRq] = None ->
-       *     rule_precond rule2 ost orq2 rins].
-       *)
-      admit.
-    - (* 3) [rule_trs rule ost1 orq1 rins = (nost1, norq1, routs1) ->
-       *     rule_trs rule ost2 orq2 rins = (nost2, norq2, routs2) ->
-       *     routs1 = routs2].
-       *)
-      admit.
-  Admitted.
+    - disc_rule_conds.
+      eapply H15; [eassumption|mred].
+    - remember (rule_trs rule2 nost1 norq1 ins2) as trs2.
+      destruct trs2 as [[nost2 norq2] outs2]; apply eq_sym in Heqtrs2.
+      remember (rule_trs rule2 post1 porq1 ins2) as rtrs2.
+      destruct rtrs2 as [[rnost2 rnorq2] routs2]; apply eq_sym in Heqrtrs2.
+      remember (rule_trs rule1 rnost2 rnorq2 ins1) as rtrs1.
+      destruct rtrs1 as [[rnost1 rnorq1] routs1]; apply eq_sym in Heqrtrs1.
+
+      disc_rule_conds.
+      pmark_erase.
+
+      assert (rqi = rqi0); subst.
+      { destruct rqi as [rqim rss rsb].
+        destruct rqi0 as [rqim0 rss0 rsb0].
+        simpl in *; subst.
+        inv H37; reflexivity.
+      }
+
+      assert (rqi1 = rqi2); subst.
+      { destruct rqi1 as [rqim1 rss1 rsb1].
+        destruct rqi2 as [rqim2 rss2 rsb2].
+        simpl in *; subst.
+        inv H57; reflexivity.
+      }
+
+      repeat split.
+      + eapply H8; [eassumption|mred].
+      + f_equal.
+        meq.
+      + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi0]) [idm1]).
+        rewrite H6, Heqrtrs1 in H1; simpl in H1; subst.
+        reflexivity.
+      + specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi2]) [idm]).
+        rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; subst.
+        reflexivity.
+  Qed.
 
   Lemma rqUpUp_rqDownDown_reducible:
     forall oidx rqFrom1 rqTos1 (rule1: Rule oifc)
            rqFrom2 rqTos2 (rule2: Rule oifc),
       RqUpUp dtr oidx rqFrom1 rqTos1 rule1 ->
-      RqFwdFromTo rqFrom1 rqTos1 rule1 ->
+      StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqDownDown dtr oidx rqFrom2 rqTos2 rule2 ->
-      RqFwdFromTo rqFrom2 rqTos2 rule2 ->
+      StateSilent rule2 -> MsgOutsOrthORq rule2 ->
       NonConflictingR rule1 rule2.
   Proof.
-  Admitted.
+    intros.
+    red; intros.
+    split.
+    - disc_rule_conds.
+      eapply H15; [eassumption|mred].
+    - remember (rule_trs rule2 nost1 norq1 ins2) as trs2.
+      destruct trs2 as [[nost2 norq2] outs2]; apply eq_sym in Heqtrs2.
+      remember (rule_trs rule2 post1 porq1 ins2) as rtrs2.
+      destruct rtrs2 as [[rnost2 rnorq2] routs2]; apply eq_sym in Heqrtrs2.
+      remember (rule_trs rule1 rnost2 rnorq2 ins1) as rtrs1.
+      destruct rtrs1 as [[rnost1 rnorq1] routs1]; apply eq_sym in Heqrtrs1.
 
+      disc_rule_conds.
+      pmark_erase.
+
+      assert (rqi = rqi0); subst.
+      { destruct rqi as [rqim rss rsb].
+        destruct rqi0 as [rqim0 rss0 rsb0].
+        simpl in *; subst.
+        inv H37; reflexivity.
+      }
+
+      assert (rqi1 = rqi2); subst.
+      { destruct rqi1 as [rqim1 rss1 rsb1].
+        destruct rqi2 as [rqim2 rss2 rsb2].
+        simpl in *; subst.
+        inv H57; reflexivity.
+      }
+
+      repeat split.
+      + eapply H8; [eassumption|mred].
+      + f_equal.
+        meq.
+      + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi0]) [idm1]).
+        rewrite H6, Heqrtrs1 in H1; simpl in H1; subst.
+        reflexivity.
+      + specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi2]) [idm]).
+        rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; subst.
+        reflexivity.
+  Qed.
+
+  Ltac disc_rule_custom ::=
+    try disc_lock_conds;
+    try disc_footprints_ok;
+    try disc_msgs_in.
+
+  Ltac disc_rule_conds_unit_simpl ::=
+    disc_rule_conds_unit_simpl_basic.
+  
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -337,8 +442,8 @@ Section RqUpInd.
 
       + (** case [RqFwdRule] *)
         mred.
-        destruct H11 as [rqFrom [rqTos [? ?]]].
-        destruct H11 as [|[|]].
+        destruct H11 as [? [rqFrom [rqTos [? ?]]]].
+        destruct H12 as [|[|]].
         * (** case [RqUpUp] *)
           exfalso.
           disc_rqToUpRule.
@@ -349,6 +454,7 @@ Section RqUpInd.
           { right; split; [reflexivity|].
             intros; red_obj_rule.
             destruct H7 as [rqFrom' [rqTos' ?]]; dest.
+            red in H13, H16; dest.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
           { admit. }
@@ -359,6 +465,7 @@ Section RqUpInd.
           { right; split; [reflexivity|].
             intros; red_obj_rule.
             destruct H7 as [rqFrom' [rqTos' ?]]; dest.
+            red in H13, H16; dest.
             eapply rqUpUp_rqDownDown_reducible; eauto.
           }
           { admit. }
@@ -696,3 +803,4 @@ Qed.
 
 Close Scope list.
 Close Scope fmap.
+

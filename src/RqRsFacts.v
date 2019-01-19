@@ -79,8 +79,7 @@ Ltac disc_rule_conds_unit_rule_preds :=
     let rqFrom := fresh "rqFrom" in
     let rqTos := fresh "rqTos" in
     let Hft := fresh "H" in
-    red in H;
-    destruct H as [rqFrom [rqTos [? Hft]]];
+    destruct H as [? [rqFrom [rqTos [? Hft]]]];
     red in Hft; dest
   | [H: RqFwdFromTo _ _ _ |- _] => red in H; dest
   | [H: RqUpUp _ _ _ _ ?rule \/
@@ -91,15 +90,15 @@ Ltac disc_rule_conds_unit_rule_preds :=
     let rqTo := fresh "rqTo" in
     let rsFrom := fresh "rsFrom" in
     let rsbTo := fresh "rsbTo" in
-    destruct H as [? [rqTo [rsFrom [rsbTo ?]]]]; dest
+    destruct H as [? [? [rqTo [rsFrom [rsbTo ?]]]]]; dest
   | [H: RqUpDown _ _ _ _ _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
-    destruct H as [? [rssFrom [rsbTo ?]]]; dest
+    destruct H as [? [? [rssFrom [rsbTo ?]]]]; dest
   | [H: RqDownDown _ _ _ _ _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
-    destruct H as [? [rssFrom [rsbTo ?]]]; dest
+    destruct H as [? [? [rssFrom [rsbTo ?]]]]; dest
   | [H: RsBackRule _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
@@ -138,9 +137,18 @@ Ltac disc_rule_conds_unit_footprint :=
   | [H: FootprintedDown _ _ _ |- _] =>
     let rqi := fresh "rqi" in
     destruct H as [rqi ?]; dest
-  | [H: exists _:RqInfo Msg, _ |- _] =>
+
+  | [H: exists (_: Id Msg) (_: RqInfo Msg), _ |- _] =>
+    let idm := fresh "idm" in
+    let rqi := fresh "rqi" in
+    destruct H as [idm [rqi ?]]; dest
+  | [H: exists (_: Id Msg), _ |- _] =>
+    let idm := fresh "idm" in
+    destruct H as [idm ?]; dest
+  | [H: exists (_: RqInfo Msg), _ |- _] =>
     let rqi := fresh "rqi" in
     destruct H as [rqi ?]; dest
+
   | [H: FootprintUpToDown _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rsbTo := fresh "rsbTo" in
@@ -156,7 +164,7 @@ Ltac disc_rule_conds_unit_footprint :=
   | [H: UpLockFreeORq _ |- _] => red in H
   end.
 
-Ltac disc_rule_conds_unit_simpl :=
+Ltac disc_rule_conds_unit_simpl_basic :=
   match goal with
   | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
     specialize (H1 _ _ _ H2)
@@ -189,6 +197,9 @@ Ltac disc_rule_conds_unit_simpl :=
   | [H: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = nil |- _] => clear H
   end.
+
+Ltac disc_rule_conds_unit_simpl :=
+  disc_rule_conds_unit_simpl_basic.
 
 Ltac disc_rule_conds_unit :=
   try disc_rule_conds_unit_rule_preds;
@@ -885,8 +896,4 @@ Ltac solve_q :=
   unfold rssQ, rqsQ;
   repeat solve_q_unit;
   try reflexivity.
-
-
-
-
 

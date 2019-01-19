@@ -16,7 +16,6 @@ Definition NonConflictingR {ifc: OStateIfc} (rule1 rule2: Rule ifc) :=
     (* 1) Preconditions of [rule2] hold if the ones of [rule1] hold. *)
     rule_precond rule2 post1 porq1 ins2 /\
     let (no2, outs2) := rule_trs rule2 nost1 norq1 ins2 in
-    let (nost2, norq2) := no2 in
     let (rno2, routs2) := rule_trs rule2 post1 porq1 ins2 in
     let (rnost2, rnorq2) := rno2 in
     let (rno1, routs1) := rule_trs rule1 rnost2 rnorq2 ins1 in
