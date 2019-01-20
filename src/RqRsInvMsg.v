@@ -95,7 +95,7 @@ Section FootprintInv.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
     - disc_rule_conds.
       apply footprints_ok_orqs_add; disc_rule_conds; auto.
-      do 4 eexists; repeat split; eauto.
+      do 4 eexists; repeat split; disc_rule_conds; eauto.
   Qed.
 
   Lemma footprints_ok:
@@ -216,20 +216,18 @@ Section MessageInv.
 
     - disc_rule_conds.
       + right; right; right.
-        rewrite H4 in H2.
-        disc_rule_conds.
         solve_rule_conds.
       + right; right; left.
-        rewrite H2 in H20.
+        rewrite <-H24 in H10.
         split; auto.
-        clear -H20; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H20; [|eassumption].
+        clear -H10; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H10; [|eassumption].
         dest; eauto.
       + right; right; left.
-        rewrite H2 in H17.
+        rewrite <-H24 in H8.
         split; auto.
-        clear -H17; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H17; [|eassumption].
+        clear -H8; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H8; [|eassumption].
         dest; eauto.
 
     - right; right; right.

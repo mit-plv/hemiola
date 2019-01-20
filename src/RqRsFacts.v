@@ -64,73 +64,42 @@ Ltac good_rqrs_rule_cases rule :=
 
 Ltac disc_rule_custom := idtac.
 
-Ltac disc_rule_conds_unit_rule_preds :=
+Ltac disc_rule_conds_unit_rule_preds_red :=
   match goal with
-  | [H: ImmDownRule _ _ _ |- _] =>
-    let cidx := fresh "cidx" in
-    let rqFrom := fresh "rqFrom" in
-    let rsTo := fresh "rsTo" in
-    destruct H as [cidx [rqFrom [rsTo ?]]]; dest
-  | [H: ImmUpRule _ _ _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
-    let rsTo := fresh "rsTo" in
-    destruct H as [rqFrom [rsTo ?]]; dest
-  | [H: RqFwdRule _ _ _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
-    let rqTos := fresh "rqTos" in
-    let Hft := fresh "H" in
-    destruct H as [? [rqFrom [rqTos [? Hft]]]];
-    red in Hft; dest
-  | [H: RqFwdFromTo _ _ _ |- _] => red in H; dest
-  | [H: RqUpUp _ _ _ _ ?rule \/
-        RqUpDown _ _ _ _ ?rule \/
-        RqDownDown _ _ _ _ ?rule |- _] =>
-    destruct H as [|[|]]
-  | [H: RqUpUp _ _ _ _ _ |- _] =>
-    let rqTo := fresh "rqTo" in
-    let rsFrom := fresh "rsFrom" in
-    let rsbTo := fresh "rsbTo" in
-    destruct H as [? [? [rqTo [rsFrom [rsbTo ?]]]]]; dest
-  | [H: RqUpDown _ _ _ _ _ |- _] =>
-    let rssFrom := fresh "rssFrom" in
-    let rsbTo := fresh "rsbTo" in
-    destruct H as [? [? [rssFrom [rsbTo ?]]]]; dest
-  | [H: RqDownDown _ _ _ _ _ |- _] =>
-    let rssFrom := fresh "rssFrom" in
-    let rsbTo := fresh "rsbTo" in
-    destruct H as [? [? [rssFrom [rsbTo ?]]]]; dest
-  | [H: RsBackRule _ |- _] =>
-    let rssFrom := fresh "rssFrom" in
-    let rsbTo := fresh "rsbTo" in
-    let Hft := fresh "H" in
-    destruct H as [rssFrom [rsbTo [? Hft]]];
-    red in Hft; dest
-  | [H: RsBackFromTo _ _ _ |- _] => red in H; dest
-  | [H: RsDownRqDownRule _ _ _ |- _] =>
-    let rsFrom := fresh "rsFrom" in
-    let rqTos := fresh "rqTos" in
-    destruct H as [rsFrom [rqTos ?]]; dest
-  | [H: MsgsFrom _ _ _ _ |- _] => red in H
-  | [H: MsgsTo _ _ |- _] => red in H
+  | [H: ImmDownRule _ _ _ |- _] => red in H; dest
+  | [H: ImmUpRule _ _ _ |- _] => red in H; dest
+  | [H: RqFwdRule _ _ _ |- _] => red in H; dest
+  | [H: RqFwdRuleCommon _ |- _] => red in H; dest
+  | [H: RqUpUp _ _ ?rule \/
+        RqUpDown _ _ ?rule \/
+        RqDownDown _ _ ?rule |- _] => destruct H as [|[|]]
+  | [H: RqUpUp _ _ _ |- _] => red in H; dest
+  | [H: RqUpDown _ _ _ |- _] => red in H; dest
+  | [H: RqDownDown _ _ _ |- _] => red in H; dest
+  | [H: RsBackRule _ |- _] => red in H; dest
+  | [H: RsBackRuleCommon _ |- _] => red in H; dest
+  | [H: (FootprintReleasingUp ?rule /\ FootprintDownSilent ?rule) \/
+        (FootprintReleasingDown ?rule /\ FootprintUpSilent ?rule) |- _] => destruct H; dest
+  | [H: RsDownRqDownRule _ _ _ |- _] => red in H; dest
+
   | [H: RqAccepting _ _ _ |- _] => red in H
   | [H: RsAccepting _ _ _ |- _] => red in H
   | [H: RqReleasing _ |- _] => red in H
   | [H: RsReleasing _ |- _] => red in H
-  | [H: DownLockFree _ _ _ |- _] => red in H
-  | [H: DownLockFreeORq _ |- _] => red in H
-  | [H: UpLockFree _ _ _ |- _] => red in H
-  | [H: UpLockFreeORq _ |- _] => red in H
   | [H: StateSilent _ |- _] => red in H
-  end.
 
-Ltac disc_rule_conds_unit_footprint :=
-  match goal with
-  | [H: (FootprintReleasingUp _ _ _ /\ _) \/
-        (FootprintReleasingDown _ _ _ /\ _) |- _] => destruct H; dest
-  | [H: FootprintReleasingUp _ _ _ |- _] => red in H; dest
-  | [H: FootprintReleasingDown _ _ _ |- _] => red in H; dest
-  | [H: FootprintingUp _ _ _ |- _] => red in H
-  | [H: FootprintingDown _ _ _ |- _] => red in H
+  | [H: FootprintReleasingUp _ |- _] => red in H; dest
+  | [H: FootprintReleasingDown _ |- _] => red in H; dest
+  | [H: FootprintingUp _ _ _ _ _ |- _] =>
+    let rqi := fresh "rqi" in
+    destruct H as [rqi ?]; dest
+  | [H: FootprintingDown _ _ _ _ _ |- _] =>
+    let rqi := fresh "rqi" in
+    destruct H as [rqi ?]; dest
+  | [H: FootprintingUpToDown _ _ _ |- _] =>
+    let prqi := fresh "rqi" in
+    let nrqi := fresh "rqi" in
+    destruct H as [prqi [nrqi ?]]; dest
   | [H: FootprintedUp _ _ _ |- _] =>
     let rqi := fresh "rqi" in
     destruct H as [rqi ?]; dest
@@ -138,23 +107,6 @@ Ltac disc_rule_conds_unit_footprint :=
     let rqi := fresh "rqi" in
     destruct H as [rqi ?]; dest
 
-  | [H: exists (_: Id Msg) (_: RqInfo Msg), _ |- _] =>
-    let idm := fresh "idm" in
-    let rqi := fresh "rqi" in
-    destruct H as [idm [rqi ?]]; dest
-  | [H: exists (_: Id Msg), _ |- _] =>
-    let idm := fresh "idm" in
-    destruct H as [idm ?]; dest
-  | [H: exists (_: RqInfo Msg), _ |- _] =>
-    let rqi := fresh "rqi" in
-    destruct H as [rqi ?]; dest
-
-  | [H: FootprintUpToDown _ _ _ _ _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
-    let rsbTo := fresh "rsbTo" in
-    let nrssFrom := fresh "nrssFrom" in
-    destruct H as [rqFrom [rsbTo [nrssFrom ?]]]; dest
-  | [H: FootprintingUpToDown _ _ _ _ |- _] => destruct H
   | [H: FootprintSilent _ |- _] => red in H; dest
   | [H: FootprintUpSilent _ |- _] => red in H
   | [H: FootprintDownSilent _ |- _] => red in H
@@ -162,33 +114,103 @@ Ltac disc_rule_conds_unit_footprint :=
   | [H: DownLockFreeORq _ |- _] => red in H
   | [H: UpLockFree _ _ _ |- _] => red in H
   | [H: UpLockFreeORq _ |- _] => red in H
+
+  | [H: FootprintReleasingUpPost _ _ _ _ _ _ |- _] =>
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    let rsm := fresh "rsm" in
+    destruct H as [rssFrom [rsbTo [rsm ?]]]; dest
+  | [H: FootprintReleasingDownPost _ _ _ _ _ _ |- _] =>
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    let rsm := fresh "rsm" in
+    destruct H as [rssFrom [rsbTo [rsm ?]]]; dest
+  | [H: ImmDownOk _ _ _ _ _ _ _ _ |- _] =>
+    let cidx := fresh "cidx" in
+    let rqFrom := fresh "rqFrom" in
+    let rqm := fresh "rqm" in
+    let rsTo := fresh "rsTo" in
+    let rsm := fresh "rsm" in
+    destruct H as [cidx [rqFrom [rqm [rsTo [rsm ?]]]]]; dest
+  | [H: ImmUpOk _ _ _ _ _ _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rqm := fresh "rqm" in
+    let rsTo := fresh "rsTo" in
+    let rsm := fresh "rsm" in
+    destruct H as [rqFrom [rqm [rsTo [rsm ?]]]]; dest
+  | [H: RqUpUpOk _ _ _ _ _ _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rqfm := fresh "rqfm" in
+    let rqTo := fresh "rqTo" in
+    let rqtm := fresh "rqtm" in
+    let rsFrom := fresh "rsFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [rqFrom [rqfm [rqTo [rqtm [rsFrom [rsbTo ?]]]]]]; dest
+  | [H: RqUpDownOk _ _ _ _ _ _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rqfm := fresh "rqfm" in
+    let rqTos := fresh "rqTos" in
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [rqFrom [rqfm [rqTos [rssFrom [rsbTo ?]]]]]; dest
+  | [H: RqDownDownOk _ _ _ _ _ _ _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rqfm := fresh "rqfm" in
+    let rqTos := fresh "rqTos" in
+    let rssFrom := fresh "rssFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [rqFrom [rqfm [rqTos [rssFrom [rsbTo ?]]]]]; dest
+  | [H: RsDownRqDownOk _ _ _ _ _ _ _ _ |- _] =>
+    let rsFrom := fresh "rsFrom" in
+    let rsm := fresh "rsm" in
+    let rqTos := fresh "rqTos" in
+    let rqOrig := fresh "rqOrig" in
+    let rsbTo := fresh "rsbTo" in
+    destruct H as [rsFrom [rsm [rqTos [rqOrig [rsbTo ?]]]]]; dest
   end.
 
-Ltac disc_rule_conds_unit_simpl_basic :=
+Ltac disc_rule_conds_unit_rule_preds_inst :=
   match goal with
-  | [H1: rule_precond ?rule ->oprec _, H2: rule_precond ?rule _ _ _ |- _] =>
-    specialize (H1 _ _ _ H2)
   | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
-  | [H1: rule_trs ?rule ?ost ?orq ?ins = _, H2: context[rule_trs ?rule _ _ _] |- _] =>
-    specialize (H2 ost orq ins); rewrite H1 in H2; simpl in H2
+  | [H1: RulePrecSat ?rule _, H2: rule_precond ?rule _ _ _ |- _] =>
+    pmarked2 H1 H2;
+    let Hp := fresh "H" in
+    pose proof (H1 _ _ _ H2) as Hp;
+    pmark2 H1 H2
+  | [H: (?nost, ?norq, ?routs) = rule_trs ?rule ?ost ?orq ?ins |- _] =>
+    apply eq_sym in H
+  | [H1: RulePostSat ?rule _, H2: rule_precond ?rule ?ost ?orq ?ins,
+     H3: rule_trs ?rule ?ost ?orq ?ins = (?nost, ?norq, ?routs) |- _] =>
+    pmarked2 H1 H3;
+    let Hp := fresh "H" in
+    pose proof (H1 _ _ _ H2 _ _ _ H3) as Hp;
+    pmark2 H1 H3
+  end.
+           
+Ltac disc_rule_conds_rule_preds_clear :=
+  match goal with
+  | [H: RulePrecSat _ _ |- _] => clear H
+  | [H: RulePostSat _ _ |- _] => clear H
+  end.
 
+Ltac disc_rule_conds_unit_simpl :=
+  match goal with
   | [H: Some _ = Some _ |- _] => inv H
   | [H: Some _ = None |- _] => discriminate
   | [H: None = Some _ |- _] => discriminate
-                                                              
   | [H1: ?t = None, H2: context[?t] |- _] => rewrite H1 in H2; simpl in H2
   | [H1: ?t = Some _, H2: context[?t] |- _] => rewrite H1 in H2; simpl in H2
   | [H1: None = ?t, H2: context[?t] |- _] => rewrite <-H1 in H2; simpl in H2
   | [H1: Some _ = ?t, H2: context[?t] |- _] => rewrite <-H1 in H2; simpl in H2
-
   | [H1: ?t = None |- context[?t]] => rewrite H1; simpl
   | [H1: ?t = Some _ |- context[?t]] => rewrite H1; simpl
   | [H1: None = ?t |- context[?t]] => rewrite <-H1; simpl
   | [H1: Some _ = ?t |- context[?t]] => rewrite <-H1; simpl
-                                   
+
   | [H: Forall _ (_ :: _) |- _] => inv H
   | [H: Forall _ nil |- _] => clear H
 
+  | [H: (_, _) = (_, _) |- _] => inv H
   | [H: idsOf ?ivs = _ :: nil |- _] =>
     destruct ivs; [discriminate|simpl in H; inv H]
   | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
@@ -196,21 +218,29 @@ Ltac disc_rule_conds_unit_simpl_basic :=
   | [H: _ :: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = nil |- _] => clear H
+
+  | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
+    rewrite H1 in H2; discriminate
+                                 
+  | [H: rqi_msg _ = _ |- _] => rewrite H in *
+  | [H: rqi_minds_rss _ = _ |- _] => rewrite H in *
+  | [H: rqi_midx_rsb _ = _ |- _] => rewrite H in *
   end.
 
-Ltac disc_rule_conds_unit_simpl :=
-  disc_rule_conds_unit_simpl_basic.
-
-Ltac disc_rule_conds_unit :=
-  try disc_rule_conds_unit_rule_preds;
-  try disc_rule_conds_unit_footprint;
-  try disc_rule_conds_unit_simpl.
+Ltac disc_rule_conds_rule_preds :=
+  repeat
+    (repeat disc_rule_conds_unit_rule_preds_red;
+     repeat disc_rule_conds_unit_rule_preds_inst);
+  repeat disc_rule_conds_rule_preds_clear;
+  pmark_erase.
 
 Ltac disc_rule_conds :=
   repeat
-    (repeat disc_rule_conds_unit;
+    (repeat disc_rule_conds_rule_preds;
+     repeat disc_rule_conds_unit_simpl;
      try disc_rule_custom;
-     simpl in *; subst; mred).
+     simpl in *; subst; mred;
+     try reflexivity; try eassumption).
 
 Ltac solve_rule_conds :=
   repeat red;
@@ -652,6 +682,76 @@ Section RqRsDTree.
     elim H3; reflexivity.
   Qed.
 
+  Lemma footprintUpOk_rs_eq:
+    forall oidx rqFrom rqTo rsFrom1 rsbTo1 rsFrom2 rsbTo2,
+      FootprintUpOk dtr oidx rqFrom rqTo rsFrom1 rsbTo1 ->
+      FootprintUpOk dtr oidx rqFrom rqTo rsFrom2 rsbTo2 ->
+      rsFrom1 = rsFrom2 /\ rsbTo1 = rsbTo2.
+  Proof.
+    unfold FootprintUpOk; intros.
+    destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; dest.
+    destruct (eq_nat_dec cidx1 cidx2); subst.
+    - rewrite H7 in H3; inv H3.
+      rewrite H8 in H4; inv H4.
+      auto.
+    - exfalso.
+      elim (rqrsDTree_rqUp_rqUp_not_eq n H5 H1); auto.
+  Qed.
+
+  Lemma RqRsDownMatch_rs_eq:
+    forall oidx rqTos rssFrom1 rssFrom2 P1 P2,
+      RqRsDownMatch dtr oidx rqTos rssFrom1 P1 ->
+      RqRsDownMatch dtr oidx rqTos rssFrom2 P2 ->
+      rssFrom1 = rssFrom2.
+  Proof.
+    induction rqTos; simpl; intros.
+    - destruct H, H0; simpl in *.
+      apply eq_sym, length_zero_iff_nil in H.
+      apply eq_sym, length_zero_iff_nil in H0.
+      subst; reflexivity.
+    - destruct H, H0.
+      destruct rssFrom1 as [|rsFrom1 rssFrom1]; [discriminate|].
+      destruct rssFrom2 as [|rsFrom2 rssFrom2]; [discriminate|].
+      simpl in *.
+      inv H; inv H0; inv H1; inv H2.
+      destruct H5 as [cidx1 ?]; destruct H1 as [cidx2 ?]; dest.
+      simpl in *.
+      f_equal.
+      + destruct (eq_nat_dec cidx1 cidx2); subst.
+        * rewrite H10 in H5; inv H5; reflexivity.
+        * exfalso.
+          elim (rqrsDTree_down_down_not_eq n H9 H2); auto.
+      + eapply IHrqTos; split; eauto.
+  Qed.
+  
+  Lemma footprintUpDownOk_rs_eq:
+    forall oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
+      FootprintUpDownOk dtr oidx rqFrom rqTos rssFrom1 rsbTo1 ->
+      FootprintUpDownOk dtr oidx rqFrom rqTos rssFrom2 rsbTo2 ->
+      rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.
+  Proof.
+    unfold FootprintUpDownOk; intros.
+    destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; dest.
+    split.
+    - eapply RqRsDownMatch_rs_eq; eauto.
+    - destruct (eq_nat_dec cidx1 cidx2); subst.
+      + rewrite H5 in H2; inv H2; reflexivity.
+      + exfalso.
+        elim (rqrsDTree_rqUp_rqUp_not_eq n H4 H1); auto.
+  Qed.
+
+  Lemma footprintDownDownOk_rs_eq:
+    forall oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
+      FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom1 rsbTo1 ->
+      FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom2 rsbTo2 ->
+      rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.
+  Proof.
+    unfold FootprintDownDownOk; intros.
+    dest; split.
+    - eapply RqRsDownMatch_rs_eq; eauto.
+    - rewrite H3 in H1; inv H1; reflexivity.
+  Qed.
+  
 End RqRsDTree.
 
 Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=

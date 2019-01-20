@@ -1,6 +1,8 @@
 Require Import Bool Ascii String List Vector Eqdep Omega.
 Require Export ProofIrrelevance.
 
+Set Implicit Arguments.
+
 Include ListNotations.
 Include VectorNotations.
 
@@ -214,6 +216,33 @@ Fixpoint findAt (v: nat) (l: list nat) :=
     if v ==n n then Some O
     else (findAt v l') >>=[None] (fun o => Some (S o))
   end.
+
+Inductive PMarker2: Prop -> Prop -> Prop :=
+| PMarkerIntro2: forall P1 P2: Prop, P1 -> P2 -> PMarker2 P1 P2.
+
+Ltac pmark2 H1 H2 := pose proof (PMarkerIntro2 H1 H2).
+Ltac pmarked2 H1 H2 :=
+  match type of H1 with
+  | ?P1 =>
+    match type of H2 with
+    | ?P2 => isNew (PMarker2 P1 P2)
+    end
+  end.
+Ltac is_pmark2 H :=
+  match type of H with
+  | PMarker2 _ _ => idtac
+  end.
+Ltac is_not_pmark2 H :=
+  lazymatch type of H with
+  | PMarker2 _ _ => fail
+  | _ => idtac
+  end.
+
+Ltac pmark_erase :=
+  repeat
+    match goal with
+    | [H: PMarker2 _ _ |- _] => clear H
+    end.
 
 Axiom cheat: forall t, t.
 
