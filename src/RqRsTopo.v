@@ -10,7 +10,7 @@ Open Scope fmap.
 
 Section RqRsTopo.
   Context {oifc: OStateIfc}.
-  Variable (dtr: DTree).
+  Variable (dtr: DTree) (sys: System oifc).
 
   Definition rqEdgeUpFrom (oidx: IdxT): option IdxT :=
     hd_error (upEdgesFrom dtr oidx).
@@ -220,7 +220,9 @@ Section RqRsTopo.
   Definition FootprintUpDownOk (oidx: IdxT)
              (rqFrom: IdxT) (rqTos: list IdxT)
              (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    exists upCIdx,
+    exists upCIdx upCObj,
+      In upCObj sys.(sys_objs) /\
+      upCObj.(obj_idx) = upCIdx /\
       parentIdxOf dtr upCIdx = Some oidx /\
       rqEdgeUpFrom upCIdx = Some rqFrom /\
       edgeDownTo upCIdx = Some rsbTo /\
@@ -283,7 +285,7 @@ Section RqRsTopo.
 
   Section RqRsDTree.
 
-    Definition RqRsChnsOnDTree (sys: System oifc) :=
+    Definition RqRsChnsOnDTree :=
       forall oidx ups downs pidx,
         parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
         exists rqUp rsUp down,
@@ -291,8 +293,8 @@ Section RqRsTopo.
           SubList [rqUp; rsUp] sys.(sys_minds) /\
           SubList [down] sys.(sys_minds).
 
-    Definition RqRsDTree (sys: System oifc) :=
-      WfDTree dtr /\ RqRsChnsOnDTree sys.
+    Definition RqRsDTree :=
+      WfDTree dtr /\ RqRsChnsOnDTree.
     
   End RqRsDTree.
   
@@ -427,7 +429,7 @@ Section RqRsTopo.
     Definition GoodRqRsObj (obj: Object oifc) :=
       Forall (GoodRqRsRule obj.(obj_idx)) obj.(obj_rules).
     
-    Definition GoodRqRsSys (sys: System oifc) :=
+    Definition GoodRqRsSys :=
       Forall GoodRqRsObj sys.(sys_objs).
     
   End GoodRqRs.
@@ -449,15 +451,13 @@ Section RqRsTopo.
         In rsUpRule obj.(obj_rules) -> RsToUpRule obj.(obj_idx) rsUpRule ->
         NonConflictingR rqUpRule rsUpRule.
 
-    Definition RqUpRsUpOkSys (sys: System oifc) :=
+    Definition RqUpRsUpOkSys :=
       Forall RqUpRsUpOkObj sys.(sys_objs).
     
   End RqUpRsUpComm.
 
-  Definition RqRsSys (sys: System oifc) :=
-    RqRsDTree sys /\
-    GoodRqRsSys sys /\
-    RqUpRsUpOkSys sys.
+  Definition RqRsSys :=
+    RqRsDTree /\ GoodRqRsSys /\ RqUpRsUpOkSys.
   
 End RqRsTopo.
 

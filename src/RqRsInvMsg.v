@@ -26,7 +26,7 @@ Section FootprintInv.
     exists rqFrom rqTos rssFrom rsbTo,
       rqi.(rqi_minds_rss) = rssFrom /\
       rqi.(rqi_midx_rsb) = rsbTo /\
-      (FootprintUpDownOk dtr oidx rqFrom rqTos rssFrom rsbTo \/
+      (FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom rsbTo \/
        FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom rsbTo).
 
   Definition FootprintsOkORqs (orqs: ORqs Msg) :=
@@ -110,7 +110,7 @@ End FootprintInv.
 
 Ltac good_footprint_get oidx :=
   match goal with
-  | [Hfpok: FootprintsOk _ _, Ho: _@[oidx] = Some _ |- _] =>
+  | [Hfpok: FootprintsOk _ _ _, Ho: _@[oidx] = Some _ |- _] =>
     let H := fresh "H" in
     pose proof Hfpok as H;
     specialize (H oidx); simpl in H
@@ -118,8 +118,8 @@ Ltac good_footprint_get oidx :=
 
 Ltac disc_footprints_ok :=
   match goal with
-  | [H: FootprintsOk _ _ |- _] => red in H
-  | [H1: FootprintsOkORqs _ ?orqs, H2: ?orqs @[?oidx] = _ |- _] =>
+  | [H: FootprintsOk _ _ _ |- _] => red in H
+  | [H1: FootprintsOkORqs _ _ ?orqs, H2: ?orqs @[?oidx] = _ |- _] =>
     let Hf := fresh "H" in
     pose proof (H1 oidx) as Hf;
     rewrite H2 in Hf; simpl in Hf; dest;
@@ -130,24 +130,25 @@ Ltac disc_footprints_ok :=
     let rsFrom := fresh "rsFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest
-  | [H: FootprintDownOkEx _ _ _ |- _] =>
+  | [H: FootprintDownOkEx _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqTos := fresh "rqTos" in
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rqFrom [rqTos [rssFrom [rsbTo ?]]]]; dest
-                                                          
+
   | [H: FootprintUpOk _ _ _ _ _ _ |- _] =>
     let cidx := fresh "cidx" in
     destruct H as [cidx ?]; dest
-  | [H: FootprintUpDownOk _ _ _ _ _ _ \/
+  | [H: FootprintUpDownOk _ _ _ _ _ _ _ \/
         FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
-  | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ |- _] =>
+  | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
     let rsFrom := fresh "rqFrom" in
     destruct H as [rqFrom ?]; dest
-  | [H: FootprintUpDownOk _ _ _ _ _ _ |- _] =>
+  | [H: FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
     let upCIdx := fresh "upCIdx" in
-    destruct H as [upCIdx ?]; dest
+    let upCObj := fresh "upCObj" in
+    destruct H as [upCIdx [upCObj ?]]; dest
   | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
   end.
 
@@ -218,10 +219,10 @@ Section MessageInv.
       + right; right; right.
         solve_rule_conds.
       + right; right; left.
-        rewrite <-H24 in H10.
+        rewrite <-H24 in H17.
         split; auto.
-        clear -H10; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H10; [|eassumption].
+        clear -H17; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H17; [|eassumption].
         dest; eauto.
       + right; right; left.
         rewrite <-H24 in H8.

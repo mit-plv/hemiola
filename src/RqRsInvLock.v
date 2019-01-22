@@ -900,7 +900,7 @@ Section UpLockInv.
 
     Hypotheses
       (Hfpok: FootprintsOk
-                dtr {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+                dtr sys {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
       (HobjIn: In obj (sys_objs sys))
       (HruleIn: In rule (obj_rules obj))
       (Hporq: orqs@[obj_idx obj] = Some porq)
@@ -953,7 +953,7 @@ Section UpLockInv.
     Ltac disc_rule_custom ::=
       match goal with
       | [H: FootprintUpOkEx _ _ _ /\ _ |- _] => destruct H
-      | [H: _ /\ FootprintDownOkEx _ _ _ |- _] => destruct H
+      | [H: _ /\ FootprintDownOkEx _ _ _ _ |- _] => destruct H
       | [H: FootprintUpOkEx _ _ _ |- _] =>
         let rqFrom := fresh "rqFrom" in
         let rqTo := fresh "rqTo" in
@@ -964,27 +964,28 @@ Section UpLockInv.
         let cidx := fresh "cidx" in
         destruct H as [cidx ?]; dest
 
-      | [H: FootprintDownOkEx _ _ _ |- _] =>
+      | [H: FootprintDownOkEx _ _ _ _ |- _] =>
         let rqFrom := fresh "rqFrom" in
         let rqTos := fresh "rqTos" in
         let rssFrom := fresh "rssFrom" in
         let rsbTo := fresh "rsbTo" in
         destruct H as [rqFrom [rqTos [rssFrom [rsbTo ?]]]]; dest
-      | [H: FootprintUpDownOk _ _ _ _ _ _ \/
+      | [H: FootprintUpDownOk _ _ _ _ _ _ _ \/
             FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
-      | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ |- _] =>
+      | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
         let rqFrom := fresh "rqFrom" in
         destruct H as [rqFrom ?]
-      | [H: FootprintUpDownOk _ _ _ _ _ _ |- _] =>
+      | [H: FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
         let upCIdx := fresh "upCIdx" in
-        destruct H as [upCIdx ?]; dest
+        let upCObj := fresh "upCObj" in
+        destruct H as [upCIdx [upCObj ?]]; dest
       | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
       end.
 
     Lemma upLockInvORq_step_int_me:
       UpLockInvORq orqs msgs (obj_idx obj) porq ->
       In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
-      GoodRqRsRule dtr (obj_idx obj) rule ->
+      GoodRqRsRule dtr sys (obj_idx obj) rule ->
       UpLockInvORq (orqs+[obj_idx obj <- norq])
                    (enqMsgs mouts (deqMsgs (idsOf mins) msgs))
                    (obj_idx obj) norq.
@@ -1248,7 +1249,7 @@ Section UpLockInv.
         apply upLockFreeInv_orqs_preserved_self_update.
         destruct H as [rqUp [down [pidx ?]]]; dest.
         disc_rule_conds.
-        eapply xor3_inv_2 with (B:= length (rssQ msgs rsFrom) = 1) in H15;
+        eapply xor3_inv_2 with (B:= length (rssQ msgs rsFrom) = 1) in H17;
           [dest|eapply rssQ_length_one; eauto].
         red; right.
         exists rqUp, rsFrom, pidx; repeat split; try assumption.
@@ -1256,8 +1257,8 @@ Section UpLockInv.
           apply length_zero_iff_nil; omega.
         + solve_q.
           apply findQ_In_deqMP_FirstMP in H7; simpl in H7.
-          unfold rssQ in H13; rewrite <-H7 in H13.
-          simpl in H13; rewrite H5 in H13; simpl in H13.
+          unfold rssQ in H14; rewrite <-H7 in H14.
+          simpl in H14; rewrite H5 in H14; simpl in H14.
           apply length_zero_iff_nil; omega.
         + apply not_ONoLockTo_OLockedTo; auto.
     Qed.
@@ -1266,7 +1267,7 @@ Section UpLockInv.
       forall oidx,
         UpLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
         In oidx (map (@obj_idx _) (sys_objs sys)) ->
-        GoodRqRsRule dtr (obj_idx obj) rule ->
+        GoodRqRsRule dtr sys (obj_idx obj) rule ->
         parentIdxOf dtr oidx = Some (obj_idx obj) ->
         UpLockInvORq (orqs+[obj_idx obj <- norq])
                      (enqMsgs mouts (deqMsgs (idsOf mins) msgs)) oidx
@@ -1486,37 +1487,37 @@ Section UpLockInv.
             }
 
         + (** case [RqUpDown] *)
-          destruct (eq_nat_dec upCIdx oidx); subst.
+          destruct (eq_nat_dec (obj_idx upCObj) oidx); subst.
           * find_if_inside.
             { destruct H as [rqUp [down [pidx ?]]]; dest.
               exists rqUp, down, pidx.
               disc_rule_conds.
 
               apply xor3_inv_1
-                with (A:= length (findQ rqFrom msgs) = 1) in H19;
+                with (A:= length (findQ rqFrom msgs) = 1) in H20;
                 [dest|eapply findQ_length_one; eauto].
 
               assert (length (findQ rqFrom (enqMsgs mouts (deqMP rqFrom msgs))) = 0).
               { solve_q.
                 apply findQ_In_deqMP_FirstMP in H14; simpl in H14.
-                rewrite <-H14 in H15; simpl in H15.
+                rewrite <-H14 in H16; simpl in H16.
                 omega.
               }
-              rewrite H5; clear H5.
+              rewrite H7; clear H7.
 
               assert (length (rssQ (enqMsgs mouts (deqMP rqFrom msgs))
                                    (rqi_midx_rsb rqi)) = 0).
               { solve_q.
-                unfold rssQ in H1, H16; omega.
+                unfold rssQ in H2, H17; omega.
               }
-              rewrite H5; clear H5.
+              rewrite H7; clear H7.
 
               repeat split; try assumption; try omega.
               { unfold ONoSameLockTo, OLockedTo in *.
                 mred; simpl; mred.
                 destruct (porq@[upRq]) as [rqiu|]; auto.
                 left.
-                intro Hx; elim H2; eauto.
+                intro Hx; elim H6; eauto.
               }
               { xthd; try discriminate.
                 red; mred; simpl; mred.
@@ -1528,7 +1529,7 @@ Section UpLockInv.
               exfalso.
               disc_rule_conds.
               apply FirstMP_InMP in H14.
-              red in H14; simpl in H14; rewrite H15 in H14.
+              red in H14; simpl in H14; rewrite H16 in H14.
               elim H14.
             }
           * find_if_inside.
@@ -1547,7 +1548,7 @@ Section UpLockInv.
                 }
               }
               { intro Hx.
-                elim (rqrsDTree_down_down_not_eq Hsd n H6 Hx).
+                elim (rqrsDTree_down_down_not_eq Hsd n H9 Hx).
                 reflexivity.
               }
             }
@@ -1580,7 +1581,7 @@ Section UpLockInv.
                 }
               }
               { intro Hx.
-                elim (rqrsDTree_down_down_not_eq Hsd n H6 Hx).
+                elim (rqrsDTree_down_down_not_eq Hsd n H9 Hx).
                 reflexivity.
               }
             }
@@ -1733,7 +1734,7 @@ Section UpLockInv.
             }
 
         + (** case [FootprintReleasingDown]-1 *)
-          destruct (eq_nat_dec upCIdx oidx); subst.
+          destruct (eq_nat_dec (obj_idx upCObj) oidx); subst.
           * find_if_inside.
             { destruct H as [rqUp [down [pidx ?]]]; dest.
               exists rqUp, down, pidx.
@@ -1741,13 +1742,13 @@ Section UpLockInv.
 
               apply xor3_inv_3
                 with (C:= OLockedTo orqs (obj_idx obj) (rqi_midx_rsb rqi))
-                in H19; [dest|red; disc_rule_conds; eexists; intuition].
+                in H20; [dest|red; disc_rule_conds; eexists; intuition].
 
               assert (length (findQ rqFrom (enqMP (rqi_midx_rsb rqi) rsm (deqMsgs (idsOf mins) msgs))) = 0).
               { rewrite H18; solve_q.
                 omega.
               }
-              rewrite H6; clear H6.
+              rewrite H11; clear H11.
 
               assert (length
                         (rssQ (enqMP (rqi_midx_rsb rqi) rsm (deqMsgs (idsOf mins) msgs))
@@ -1756,9 +1757,9 @@ Section UpLockInv.
                 rewrite filter_app; simpl.
                 rewrite H8; simpl.
                 rewrite app_length; simpl.
-                unfold rssQ in H5, H16; omega.
+                unfold rssQ in H10, H17; omega.
               }
-              rewrite H6; clear H6.
+              rewrite H11; clear H11.
 
               repeat split; try assumption; try omega.
               { red; mred; simpl; mred.
@@ -1766,11 +1767,11 @@ Section UpLockInv.
               }
               { xsnd; [discriminate|reflexivity|].
                 apply ONoLockTo_not_OLockedTo.
-                red in H17; red; mred.
+                red in H19; red; mred.
                 simpl; split.
                 { mred.
                   destruct (porq@[upRq]) as [rqiu|]; auto.
-                  destruct H17; auto.
+                  destruct H19; auto.
                 }
                 { mred. }
               }
@@ -1779,7 +1780,7 @@ Section UpLockInv.
               destruct H as [rqUp [down [pidx ?]]]; dest.
               exfalso.
               disc_rule_conds.
-              red in H17; mred.
+              red in H19; mred.
             }
           * find_if_inside.
             { apply upLockedInv_orqs_preserved_parent_none_down
@@ -1796,7 +1797,7 @@ Section UpLockInv.
                 }
               }
               { intro Hx.
-                elim (rqrsDTree_down_down_not_eq Hsd n H7 Hx).
+                elim (rqrsDTree_down_down_not_eq Hsd n H11 Hx).
                 reflexivity.
               }
             }
@@ -1920,7 +1921,7 @@ Section UpLockInv.
       forall oidx orq,
         UpLockInvORq orqs msgs oidx orq ->
         In oidx (map (@obj_idx _) (sys_objs sys)) ->
-        GoodRqRsRule dtr (obj_idx obj) rule ->
+        GoodRqRsRule dtr sys (obj_idx obj) rule ->
         obj_idx obj <> oidx ->
         parentIdxOf dtr oidx <> Some (obj_idx obj) ->
         UpLockInvORq (orqs+[obj_idx obj <- norq])
@@ -2161,7 +2162,7 @@ Section UpLockInv.
               }
             }
 
-        + rewrite <-H19 in H11.
+        + rewrite <-H19 in H13.
           find_if_inside.
           * apply upLockedInv_orqs_preserved_non_parent_update; auto.
             apply upLockedInv_msgs_preserved with (msgs1:= msgs);
@@ -2591,7 +2592,7 @@ Section DownLockInv.
 
     Hypotheses
       (Hfpok: FootprintsOk
-                dtr {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+                dtr sys {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
       (HobjIn: In obj (sys_objs sys))
       (HruleIn: In rule (obj_rules obj))
       (Hporq: orqs@[obj_idx obj] = Some porq)
@@ -2604,38 +2605,12 @@ Section DownLockInv.
       (Hmdisj: DisjList (idsOf mins) (idsOf mouts)).
 
     Ltac disc_rule_custom ::=
-      match goal with
-      | [H: FootprintUpOkEx _ _ _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        let rqTo := fresh "rqTo" in
-        let rsFrom := fresh "rsFrom" in
-        let rsbTo := fresh "rsbTo" in
-        destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest
-      | [H: FootprintUpOk _ _ _ _ _ _ |- _] =>
-        let cidx := fresh "cidx" in
-        destruct H as [cidx ?]; dest
-
-      | [H: FootprintDownOkEx _ _ _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        let rqTos := fresh "rqTos" in
-        let rssFrom := fresh "rssFrom" in
-        let rsbTo := fresh "rsbTo" in
-        destruct H as [rqFrom [rqTos [rssFrom [rsbTo ?]]]]; dest
-      | [H: FootprintUpDownOk _ _ _ _ _ _ \/
-            FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
-      | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        destruct H as [rqFrom ?]
-      | [H: FootprintUpDownOk _ _ _ _ _ _ |- _] =>
-        let upCIdx := fresh "upCIdx" in
-        destruct H as [upCIdx ?]; dest
-      | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
-      end.
+      idtac.
 
     Lemma downLockInvORq_step_int_me:
       DownLockInvORq orqs msgs (obj_idx obj) porq ->
       In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
-      GoodRqRsRule dtr (obj_idx obj) rule ->
+      GoodRqRsRule dtr sys (obj_idx obj) rule ->
       DownLockInvORq (orqs+[obj_idx obj <- norq])
                      (enqMsgs mouts (deqMsgs (idsOf mins) msgs))
                      (obj_idx obj) norq.
@@ -2646,7 +2621,7 @@ Section DownLockInv.
       forall oidx,
         DownLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
         In oidx (map (@obj_idx _) (sys_objs sys)) ->
-        GoodRqRsRule dtr (obj_idx obj) rule ->
+        GoodRqRsRule dtr sys (obj_idx obj) rule ->
         obj_idx obj <> oidx ->
         DownLockInvORq (orqs+[obj_idx obj <- norq])
                      (enqMsgs mouts (deqMsgs (idsOf mins) msgs)) oidx

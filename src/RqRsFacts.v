@@ -58,7 +58,7 @@ Ltac good_rqrs_rule_get rule :=
 
 Ltac good_rqrs_rule_cases rule :=
   match goal with
-  | [H: GoodRqRsRule _ _ rule |- _] =>
+  | [H: GoodRqRsRule _ _ _ rule |- _] =>
     destruct H as [|[|[|[|]]]]
   end.
 
@@ -83,19 +83,19 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
   match goal with
   | [H: ImmDownRule _ _ _ |- _] => red in H; dest
   | [H: ImmUpRule _ _ _ |- _] => red in H; dest
-  | [H: RqFwdRule _ _ _ |- _] => red in H; dest
+  | [H: RqFwdRule _ _ _ _ |- _] => red in H; dest
   | [H: RqFwdRuleCommon _ |- _] => red in H; dest
   | [H: RqUpUp _ _ ?rule \/
-        RqUpDown _ _ ?rule \/
+        RqUpDown _ _ _ ?rule \/
         RqDownDown _ _ ?rule |- _] => destruct H as [|[|]]
   | [H: RqUpUp _ _ _ |- _] => red in H; dest
-  | [H: RqUpDown _ _ _ |- _] => red in H; dest
+  | [H: RqUpDown _ _ _ _ |- _] => red in H; dest
   | [H: RqDownDown _ _ _ |- _] => red in H; dest
   | [H: RsBackRule _ |- _] => red in H; dest
   | [H: RsBackRuleCommon _ |- _] => red in H; dest
   | [H: (FootprintReleasingUp ?rule /\ FootprintDownSilent ?rule) \/
         (FootprintReleasingDown ?rule /\ FootprintUpSilent ?rule) |- _] => destruct H; dest
-  | [H: RsDownRqDownRule _ _ _ |- _] => red in H; dest
+  | [H: RsDownRqDownRule _ _ _ _ |- _] => red in H; dest
 
   | [H: RqAccepting _ _ _ |- _] => red in H
   | [H: RsAccepting _ _ _ |- _] => red in H
@@ -161,7 +161,7 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
     let rsFrom := fresh "rsFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rqFrom [rqfm [rqTo [rqtm [rsFrom [rsbTo ?]]]]]]; dest
-  | [H: RqUpDownOk _ _ _ _ _ _ _ _ |- _] =>
+  | [H: RqUpDownOk _ _ _ _ _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqfm := fresh "rqfm" in
     let rqTos := fresh "rqTos" in
@@ -175,7 +175,7 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rqFrom [rqfm [rqTos [rssFrom [rsbTo ?]]]]]; dest
-  | [H: RsDownRqDownOk _ _ _ _ _ _ _ _ |- _] =>
+  | [H: RsDownRqDownOk _ _ _ _ _ _ _ _ _ |- _] =>
     let rsFrom := fresh "rsFrom" in
     let rsm := fresh "rsm" in
     let rqTos := fresh "rqTos" in
@@ -740,19 +740,19 @@ Section RqRsDTree.
   Qed.
   
   Lemma footprintUpDownOk_rs_eq:
-    forall oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
-      FootprintUpDownOk dtr oidx rqFrom rqTos rssFrom1 rsbTo1 ->
-      FootprintUpDownOk dtr oidx rqFrom rqTos rssFrom2 rsbTo2 ->
+    forall {oifc} (sys: System oifc) oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
+      FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom1 rsbTo1 ->
+      FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom2 rsbTo2 ->
       rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.
   Proof.
     unfold FootprintUpDownOk; intros.
-    destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; dest.
+    destruct H as [cidx1 [cobj1 ?]]; destruct H0 as [cidx2 [cobj2 ?]]; dest; subst.
     split.
     - eapply RqRsDownMatch_rs_eq; eauto.
-    - destruct (eq_nat_dec cidx1 cidx2); subst.
-      + rewrite H5 in H2; inv H2; reflexivity.
+    - destruct (eq_nat_dec (obj_idx cobj1) (obj_idx cobj2)).
+      + rewrite e in H9; rewrite H9 in H4; inv H4; reflexivity.
       + exfalso.
-        elim (rqrsDTree_rqUp_rqUp_not_eq n H4 H1); auto.
+        elim (rqrsDTree_rqUp_rqUp_not_eq n H8 H3); auto.
   Qed.
 
   Lemma footprintDownDownOk_rs_eq:

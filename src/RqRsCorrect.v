@@ -138,16 +138,16 @@ Section RqUpInd.
           }
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
-        red in H37; destruct H37 as [upCIdx ?]; dest.
-        eapply RqRsDownMatch_rq_In in H15; [|apply in_map; eassumption].
-        destruct H15 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H26); auto.
+        red in H37; destruct H37 as [upCIdx [upCObj ?]]; dest.
+        eapply RqRsDownMatch_rq_In in H26; [|apply in_map; eassumption].
+        destruct H26 as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H28); auto.
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
-        red in H37; destruct H37 as [upCIdx ?]; dest.
-        eapply RqRsDownMatch_rq_In in H8; [|apply in_map; eassumption].
-        destruct H8 as [cidx ?]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H15); auto.
+        red in H37; destruct H37 as [upCIdx [upCObj ?]]; dest.
+        eapply RqRsDownMatch_rq_In in H; [|apply in_map; eassumption].
+        destruct H as [cidx ?]; dest.
+        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H12); auto.
 
     - exfalso; disc_rule_conds.
       + apply SubList_singleton in H0; inv H0.
@@ -156,10 +156,10 @@ Section RqUpInd.
         disc_rule_conds.
     - exfalso; disc_rule_conds.
       apply SubList_singleton_In in H0.
-      red in H26; destruct H26 as [upCIdx ?]; dest.
-      eapply RqRsDownMatch_rq_In in H15; [|apply in_map; eassumption].
-      destruct H15 as [cidx ?]; dest.
-      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H24); auto.
+      red in H26; destruct H26 as [upCIdx [upCObj ?]]; dest.
+      eapply RqRsDownMatch_rq_In in H24; [|apply in_map; eassumption].
+      destruct H24 as [cidx ?]; dest.
+      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H26); auto.
   Qed.
 
   Lemma rqUp_atomic_eouts:
@@ -221,8 +221,9 @@ Section RqUpInd.
     try disc_msgs_in.
   
   Lemma rqUpMsgs_RqToUpRule:
-    forall oidx {oifc} (rule: Rule oifc) post porq rins nost norq routs oidxTo,
-      GoodRqRsRule dtr oidx rule ->
+    forall {oifc} (sys: System oifc) oidx (rule: Rule oifc)
+           post porq rins nost norq routs oidxTo,
+      GoodRqRsRule dtr sys oidx rule ->
       rule_precond rule post porq rins ->
       rule_trs rule post porq rins = (nost, norq, routs) ->
       RqUpMsgs dtr oidxTo routs ->
@@ -237,18 +238,18 @@ Section RqUpInd.
       destruct H6 as [|[|]].
       + eauto.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_In in H8; [|left; reflexivity].
-        destruct H8 as [cidx' ?]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H14 H15); reflexivity.
+        eapply RqRsDownMatch_rq_In in H12; [|left; reflexivity].
+        destruct H12 as [cidx' ?]; dest.
+        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H18 H12); reflexivity.
       + exfalso; disc_rule_conds.
         eapply RqRsDownMatch_rq_In in H7; [|left; reflexivity].
         destruct H7 as [cidx' ?]; dest.
         elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H12 H14); reflexivity.
     - exfalso; disc_rule_conds.
     - exfalso; disc_rule_conds.
-      eapply RqRsDownMatch_rq_In in H9; [|left; reflexivity].
-      destruct H9 as [cidx' ?]; dest.
-      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H13 H14); reflexivity.
+      eapply RqRsDownMatch_rq_In in H12; [|left; reflexivity].
+      destruct H12 as [cidx' ?]; dest.
+      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H12); reflexivity.
   Qed.
 
   Ltac disc_rule_custom ::=
@@ -262,7 +263,7 @@ Section RqUpInd.
     forall oidx (rule1 rule2: Rule oifc),
       RqUpUp dtr oidx rule1 ->
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
-      RqUpDown dtr oidx rule2 ->
+      RqUpDown dtr sys oidx rule2 ->
       StateSilent rule2 -> MsgOutsOrthORq rule2 ->
       NonConflictingR rule1 rule2.
   Proof.
@@ -436,26 +437,48 @@ Section RqUpInd.
             red in H7, H8; dest.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
-          { 
+          { disc_rule_conds.
+            destruct (eq_nat_dec upCObj.(obj_idx) cidx0); subst.
+            { exfalso.
+              good_locking_get upCObj.
+              red in H21.
+              apply parentIdxOf_not_eq in H42;
+                [|destruct Hrrs as [[? ?] _]; assumption]; mred.
+              remember (orqs@[obj_idx upCObj]) as corq.
+              destruct corq as [corq|]; simpl in H21.
+              { destruct (corq@[upRq]).
+                { destruct H21 as [rqUp [down [pidx ?]]]; dest.
+                  rewrite H47 in H21; inv H21.
+                  rewrite H47 in H14; inv H14.
+                  eapply xor3_False_2; [eassumption| |].
+                  { eapply findQ_length_one; eauto. }
+                  { rewrite H7 in H52; inv H52.
+                    rewrite H41 in H51; inv H51.
+                    red; mred; simpl; mred.
+                    eauto.
+                  }
+                }
+                { destruct H21; [congruence|].
+                  destruct H21 as [upRq [down [pidx ?]]]; dest.
 
-            (* disc_rule_conds. *)
-            (* destruct (eq_nat_dec upCIdx cidx0); subst. *)
-            (* { exfalso. *)
+                  (* TODO: better to extract as a lemma. *)
+                  unfold FirstMPI, FirstMP, firstMP in H38.
+                  simpl in H38.
+                  rewrite H47 in H21; inv H21.
+                  rewrite H53 in H38; discriminate.
+                }
+              }
+              { destruct H21; [congruence|].
+                destruct H21 as [upRq [down [pidx ?]]]; dest.
 
-            (*   assert (exists cobj, In cobj (sys_objs sys) /\ *)
-            (*                        obj_idx cobj = cidx0) by admit. *)
-            (*   destruct H48 as [cobj ?]; dest. *)
-
-            (*   good_locking_get cobj. *)
-            (*   red in H51. *)
-            (*   rewrite H50 in H51. *)
-            (*   apply parentIdxOf_not_eq in H7; mred. *)
-              
-              
-              
-            (*   admit. *)
-            (* } *)
-            (* { solve_midx_disj. } *)
+                (* TODO: better to extract as a lemma. *)
+                unfold FirstMPI, FirstMP, firstMP in H38.
+                simpl in H38.
+                rewrite H47 in H21; inv H21.
+                rewrite H53 in H38; discriminate.
+              }
+            }
+            { solve_midx_disj. }
           }
           { disc_rule_conds.
             solve_midx_disj.
@@ -515,15 +538,14 @@ Section RqUpInd.
         destruct (eq_nat_dec cidx1 (obj_idx obj));
           [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H46 H10); reflexivity].
         good_locking_get obj.
-        red in H45; mred; simpl in H45; mred.
+        red in H27; mred; simpl in H27; mred.
         eapply upLockedInv_False_1; eauto.
         { apply InMP_or_enqMP; auto. }
         { apply FirstMP_InMP; auto. }
 
     - repeat split; try assumption.
       + red; auto.
-      +
-        (** * TODO: better to extract as a lemma, for arbitrary [Rule]s? *)
+      + (* TODO: better to extract as a lemma, for arbitrary [Rule]s? *)
         good_footprint_get (obj_idx obj0).
         good_rqrs_rule_cases rule0.
         * disc_rule_conds.
@@ -537,8 +559,8 @@ Section RqUpInd.
               [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
             solve_midx_disj.
           }
-          { destruct (eq_nat_dec cidx0 upCIdx);
-              [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
+          { destruct (eq_nat_dec cidx0 (obj_idx upCObj));
+              [subst; rewrite H52 in H7; elim n; inv H7; reflexivity|].
             solve_midx_disj.
           }
           { solve_midx_disj. }
@@ -562,8 +584,8 @@ Section RqUpInd.
               [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
             solve_midx_disj.
           }
-          { destruct (eq_nat_dec cidx0 upCIdx);
-              [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
+          { destruct (eq_nat_dec cidx0 (obj_idx upCObj));
+              [subst; rewrite H52 in H7; elim n; inv H7; reflexivity|].
             solve_midx_disj.
           }
           { solve_midx_disj. }
@@ -573,8 +595,7 @@ Section RqUpInd.
           { solve_midx_disj. }
         * disc_rule_conds.
           solve_midx_disj.
-      
-  Admitted.
+  Qed.
   
   Lemma rqUp_lpush_lbl:
     forall pinits pins phst pouts peouts,
