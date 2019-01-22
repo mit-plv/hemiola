@@ -359,8 +359,22 @@ Section RqUpInd.
   Ltac disc_rule_custom ::=
     try disc_lock_conds;
     try disc_footprints_ok;
-    try disc_msgs_in.
+    try disc_msgs_in;
+    try disc_rqToUpRule.
 
+  Ltac solve_midx_disj :=
+    repeat
+      match goal with
+      | [ |- _ <> _] => solve_midx_neq
+      | [ |- ~ In _ _] => solve_midx_neq
+      | [ |- DisjList (_ :: nil) (_ :: nil)] =>
+        apply (DisjList_singletons eq_nat_dec)
+      | [ |- DisjList (_ :: nil) _] =>
+        apply (DisjList_singleton_1 eq_nat_dec)
+      | [ |- DisjList _ (_ :: nil)] =>
+        apply (DisjList_singleton_2 eq_nat_dec)
+      end.
+  
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -396,25 +410,23 @@ Section RqUpInd.
 
       + (** case [ImmDownRule] *)
         exfalso; disc_rule_conds.
-        destruct H9; discriminate.
 
       + (** case [ImmUpRule] *)
+        assert (RsToUpRule dtr (obj_idx obj) rule0) by (left; assumption).
+        good_rqUp_rsUp_get rule rule0.
+        disc_rule_conds.
         repeat split; try assumption.
-        * assert (RsToUpRule dtr (obj_idx obj) rule0) by (left; assumption).
-          good_rqUp_rsUp_get rule rule0.
-          right; split; [reflexivity|].
+        * right; split; [reflexivity|].
           intros; red_obj_rule.
           assumption.
-        * admit.
-        * admit.
+        * solve_midx_disj.
+        * solve_midx_disj.
 
       + (** case [RqFwdRule] *)
         mred.
         destruct H8; destruct H12 as [|[|]].
         * (** case [RqUpUp] *)
-          exfalso.
-          disc_rqToUpRule.
-          disc_rule_conds.
+          exfalso; disc_rule_conds.
 
         * (** case [RqUpDown] *)
           repeat split; try assumption.
@@ -424,8 +436,30 @@ Section RqUpInd.
             red in H7, H8; dest.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
-          { admit. }
-          { admit. }
+          { 
+
+            (* disc_rule_conds. *)
+            (* destruct (eq_nat_dec upCIdx cidx0); subst. *)
+            (* { exfalso. *)
+
+            (*   assert (exists cobj, In cobj (sys_objs sys) /\ *)
+            (*                        obj_idx cobj = cidx0) by admit. *)
+            (*   destruct H48 as [cobj ?]; dest. *)
+
+            (*   good_locking_get cobj. *)
+            (*   red in H51. *)
+            (*   rewrite H50 in H51. *)
+            (*   apply parentIdxOf_not_eq in H7; mred. *)
+              
+              
+              
+            (*   admit. *)
+            (* } *)
+            (* { solve_midx_disj. } *)
+          }
+          { disc_rule_conds.
+            solve_midx_disj.
+          }
           
         * (** case [RqDownDown] *)
           repeat split; try assumption.
@@ -435,53 +469,110 @@ Section RqUpInd.
             red in H7, H8; dest.
             eapply rqUpUp_rqDownDown_reducible; eauto.
           }
-          { admit. }
-          { admit. }
+          { disc_rule_conds.
+            solve_midx_disj.
+          }
+          { disc_rule_conds.
+            solve_midx_disj.
+          }
 
       + (** case [RsBackRule] *)
         good_footprint_get (obj_idx obj).
-        mred.
-        destruct H8; destruct H8; dest.
+        mred; destruct H8; destruct H8; dest.
         * (** case [FootprintReleasingUp] *)
           exfalso; disc_rule_conds.
           destruct (eq_nat_dec cidx0 (obj_idx obj));
-            [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H39 H10); reflexivity].
+            [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H44 H10); reflexivity].
           good_locking_get obj.
-          red in H21; mred; simpl in H21.
-          rewrite H40 in H21.
+          red in H30; mred; simpl in H30; mred.
           eapply upLockedInv_False_1; eauto.
           { apply InMP_or_enqMP; auto. }
           { apply FirstMP_InMP; auto. }
 
         * (** case [FootprintReleasingDown] *)
           assert (RsToUpRule dtr (obj_idx obj) rule0) by (right; eauto).
-          
-          repeat split; try assumption.
-          { good_rqUp_rsUp_get rule rule0.
-            right; split; [reflexivity|].
-            intros; red_obj_rule.
-            assumption.
+          good_rqUp_rsUp_get rule rule0.
+          disc_rule_conds.
+          { repeat split; try assumption.
+            { right; split; [reflexivity|].
+              intros; red_obj_rule.
+              assumption.
+            }
+            { rewrite H45; solve_midx_disj. }
+            { solve_midx_disj. }
           }
-          { admit. }
-          { admit. }
-
+          { repeat split; try assumption.
+            { right; split; [reflexivity|].
+              intros; red_obj_rule.
+              assumption.
+            }
+            { rewrite H45; solve_midx_disj. }
+            { solve_midx_disj. }
+          }
+            
       + (** case [RsDownRqDownRule] *)
         exfalso; disc_rule_conds.
-        destruct (eq_nat_dec cidx0 (obj_idx obj));
-          [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H39 H10); reflexivity].
+        destruct (eq_nat_dec cidx1 (obj_idx obj));
+          [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H46 H10); reflexivity].
         good_locking_get obj.
-        red in H; mred; simpl in H.
-        rewrite H45 in H.
+        red in H45; mred; simpl in H45; mred.
         eapply upLockedInv_False_1; eauto.
         { apply InMP_or_enqMP; auto. }
         { apply FirstMP_InMP; auto. }
 
     - repeat split; try assumption.
       + red; auto.
-      (** TODO: need to know if [oidx1 <> oidx2] then [rins1 -*- rins2] 
-       * and [routs1 -*- routs2]. *)
-      + admit.
-      + admit.
+      +
+        (** * TODO: better to extract as a lemma, for arbitrary [Rule]s? *)
+        good_footprint_get (obj_idx obj0).
+        good_rqrs_rule_cases rule0.
+        * disc_rule_conds.
+          destruct (eq_nat_dec cidx cidx1);
+            [subst; rewrite H51 in H7; elim n; inv H7; reflexivity|].
+          solve_midx_disj.
+        * disc_rule_conds.
+          solve_midx_disj.
+        * disc_rule_conds.
+          { destruct (eq_nat_dec cidx0 cidx2);
+              [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
+            solve_midx_disj.
+          }
+          { destruct (eq_nat_dec cidx0 upCIdx);
+              [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
+            solve_midx_disj.
+          }
+          { solve_midx_disj. }
+        * disc_rule_conds.
+          { solve_midx_disj. }
+          { rewrite H45; solve_midx_disj. }
+          { rewrite H45; solve_midx_disj. }
+        * disc_rule_conds.
+          solve_midx_disj.
+
+      + good_footprint_get (obj_idx obj0).
+        good_rqrs_rule_cases rule0.
+        * disc_rule_conds.
+          destruct (eq_nat_dec cidx cidx1);
+            [subst; rewrite H51 in H7; elim n; inv H7; reflexivity|].
+          solve_midx_disj.
+        * disc_rule_conds.
+          solve_midx_disj.
+        * disc_rule_conds.
+          { destruct (eq_nat_dec cidx0 cidx2);
+              [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
+            solve_midx_disj.
+          }
+          { destruct (eq_nat_dec cidx0 upCIdx);
+              [subst; rewrite H in H7; elim n; inv H7; reflexivity|].
+            solve_midx_disj.
+          }
+          { solve_midx_disj. }
+        * disc_rule_conds.
+          { solve_midx_disj. }
+          { solve_midx_disj. }
+          { solve_midx_disj. }
+        * disc_rule_conds.
+          solve_midx_disj.
       
   Admitted.
   

@@ -364,6 +364,32 @@ Section SubDisjEquiv.
     apply in_app_or in Hx; destruct Hx; auto.
   Qed.
 
+  Lemma DisjList_singleton_1:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y)) a1 l2,
+      ~ In a1 l2 ->
+      DisjList [a1] l2.
+  Proof.
+    unfold DisjList; intros.
+    destruct (deceqA e a1); subst; firstorder.
+  Qed.
+    
+  Lemma DisjList_singleton_2:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y)) l1 a2,
+      ~ In a2 l1 ->
+      DisjList l1 [a2].
+  Proof.
+    unfold DisjList; intros.
+    destruct (deceqA e a2); subst; firstorder.
+  Qed.
+  
+  Lemma DisjList_singletons:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y)) a1 a2,
+      a1 <> a2 -> DisjList [a1] [a2].
+  Proof.
+    unfold DisjList; intros.
+    destruct (deceqA e a1); subst; firstorder.
+  Qed.
+
   Definition subList_dec:
     forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
            l1 l2,
