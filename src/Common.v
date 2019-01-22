@@ -104,6 +104,24 @@ Proof.
   intros; firstorder.
 Qed.
 
+Lemma xor3_False_1:
+  forall A B C, xor3 A B C -> A -> B -> False.
+Proof.
+  intros; firstorder.
+Qed.
+
+Lemma xor3_False_2:
+  forall A B C, xor3 A B C -> A -> C -> False.
+Proof.
+  intros; firstorder.
+Qed.
+
+Lemma xor3_False_3:
+  forall A B C, xor3 A B C -> B -> C -> False.
+Proof.
+  intros; firstorder.
+Qed.
+
 Ltac nothing := idtac.
 
 Ltac assert_later asrt :=

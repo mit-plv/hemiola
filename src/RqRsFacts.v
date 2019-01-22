@@ -62,6 +62,21 @@ Ltac good_rqrs_rule_cases rule :=
     destruct H as [|[|[|[|]]]]
   end.
 
+Ltac good_rqUp_rsUp_get rqRule rsRule :=
+  match goal with
+  | [H: RqUpRsUpOkSys _ ?sys,
+     HobjIn: In ?obj (sys_objs ?sys),
+     HrqIn: In rqRule (obj_rules ?obj),
+     Hrq: RqToUpRule _ _ rqRule,
+     HrsIn: In rsRule (obj_rules ?obj),
+     Hrs: RsToUpRule _ _ rsRule |- _] =>
+    let Hr := fresh "H" in
+    pose proof H as Hr;
+    red in Hr; rewrite Forall_forall in Hr;
+    specialize (Hr _ HobjIn);
+    specialize (Hr _ _ HrqIn Hrq HrsIn Hrs)
+  end.
+
 Ltac disc_rule_custom := idtac.
 
 Ltac disc_rule_conds_unit_rule_preds_red :=

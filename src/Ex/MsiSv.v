@@ -418,6 +418,18 @@ Section System.
       |}.
     
   End Parent.
+
+  Definition leaf (cidx: IdxT) (ec ce: IdxT): DTree :=
+    Node cidx [([ec], [ce], Leaf)].
+  
+  Definition topo: DTree :=
+    Node parentIdx
+         [([c1pRq; c1pRs],
+           [pc1],
+           leaf child1Idx ec1 ce1);
+            ([c2pRq; c2pRs],
+             [pc2],
+             leaf child2Idx ec2 ce2)].
   
   Definition impl: System ImplOStateIfc :=
     {| sys_objs :=

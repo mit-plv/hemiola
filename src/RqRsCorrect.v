@@ -26,22 +26,6 @@ Ltac disc_msgs_in :=
     destruct H as [cidx [rqUp ?]]; dest
   end.
 
-(** TODO: move to RqRsTopo.v *)
-Ltac good_rqUp_rsUp_get rqRule rsRule :=
-  match goal with
-  | [H: RqUpRsUpOkSys _ ?sys,
-     HobjIn: In ?obj (sys_objs ?sys),
-     HrqIn: In rqRule (obj_rules ?obj),
-     Hrq: RqToUpRule _ _ rqRule,
-     HrsIn: In rsRule (obj_rules ?obj),
-     Hrs: RsToUpRule _ _ rsRule |- _] =>
-    let Hr := fresh "H" in
-    pose proof H as Hr;
-    red in Hr; rewrite Forall_forall in Hr;
-    specialize (Hr _ HobjIn);
-    specialize (Hr _ _ HrqIn Hrq HrsIn Hrs)
-  end.
-
 Ltac disc_rqToUpRule :=
   match goal with
   | [H: RqToUpRule _ _ _ |- _] =>
@@ -50,6 +34,35 @@ Ltac disc_rqToUpRule :=
     destruct H as [? [rqFrom [rqTos ?]]]
   end.
 
+Lemma upLockedInv_False_1:
+  forall dtr orqs msgs oidx rqUp rqm down rsm,
+    UpLockedInv dtr orqs msgs oidx ->
+    rqEdgeUpFrom dtr oidx = Some rqUp ->
+    edgeDownTo dtr oidx = Some down ->
+    InMP rqUp rqm msgs ->
+    InMP down rsm msgs -> msg_type rsm = MRs ->
+    False.
+Proof.
+  intros.
+  destruct H as [rqUp' [down' [pidx ?]]]; dest.
+  rewrite H in H0; inv H0.
+  rewrite H5 in H1; inv H1.
+  eapply xor3_False_1; [eassumption| |].
+  - red in H2.
+    destruct (findQ rqUp msgs).
+    + intuition.
+    + simpl in *; omega.
+  - unfold rssQ in *; red in H3.
+    clear -H3 H4 H8.
+    induction (findQ down msgs).
+    + intuition.
+    + simpl in *.
+      destruct H3; subst.
+      * rewrite H4 in *; simpl in *; omega.
+      * destruct (msg_type a ==n MRs); auto.
+        simpl in *; omega.
+Qed.
+
 Section RqUpInd.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -57,9 +70,6 @@ Section RqUpInd.
 
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
-  Ltac disc_rule_custom ::=
-    disc_lock_conds.
-  
   Lemma rqUp_set:
     forall oidxTo rqUps,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -69,7 +79,8 @@ Section RqUpInd.
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         RqUpMsgs dtr oidx rins /\
         routs = rqUps /\
-        exists rqUp rsbTo,
+        exists rqUp rqm rsbTo,
+          rqUps = [(rqUp, rqm)] /\
           OLockedTo st2.(bst_orqs) oidx rsbTo /\
           rqEdgeUpFrom dtr oidx = Some rqUp /\
           length (findQ rqUp st2.(bst_msgs)) = 1.
@@ -111,11 +122,10 @@ Section RqUpInd.
         disc_footprints_ok.
         disc_rule_conds.
 
-        split; [|split].
+        repeat split.
         * exists cidx; eexists.
           repeat split; try assumption.
-        * reflexivity.
-        * exists rqUp', (rqi_midx_rsb rqi).
+        * exists rqUp', rqtm, (rqi_midx_rsb rqi).
           repeat split.
           { red; mred; simpl; mred.
             exists rqi; split; auto.
@@ -207,7 +217,6 @@ Section RqUpInd.
   Qed.
 
   Ltac disc_rule_custom ::=
-    try disc_lock_conds;
     try disc_footprints_ok;
     try disc_msgs_in.
   
@@ -249,19 +258,6 @@ Section RqUpInd.
     | [H: MsgOutsOrthORq _ |- _] => red in H
     end.
 
-  Ltac disc_rule_conds_rule_preds_c :=
-    repeat
-      (repeat disc_rule_conds_unit_rule_preds_red;
-       repeat disc_rule_conds_unit_rule_preds_inst);
-    pmark_erase.
-
-  Ltac disc_rule_conds_c :=
-    disc_rule_conds_rule_preds_c;
-    repeat disc_rule_conds_unit_simpl;
-    try disc_rule_custom;
-    simpl in *; subst; mred;
-    try reflexivity; try eassumption.
-  
   Lemma rqUpUp_rqUpDown_reducible:
     forall oidx (rule1 rule2: Rule oifc),
       RqUpUp dtr oidx rule1 ->
@@ -382,11 +378,13 @@ Section RqUpInd.
     apply internal_steps_commutes; intros.
 
     (* Register necessary invariants. *)
-    pose proof (upLockInv_ok H3 H2 H5) as HlockInv.
+    inv H6.
+    pose proof (upLockInv_ok H3 H2 (reachable_steps H5 H10)) as HlockInv.
+    pose proof (footprints_ok H3 (reachable_steps H5 H10)) as HftInv.
     
     inv_steps.
     pose proof (rqUp_set H H0 H5 H13).
-    destruct H6 as [? [? [rqUp [rsbTo ?]]]]; dest; subst.
+    destruct H6 as [? [? [rqUp [rqm [rsbTo ?]]]]]; dest; subst.
     inv_step; simpl in *.
     good_rqrs_rule_get rule.
     eapply rqUpMsgs_RqToUpRule in H7; try eassumption.
@@ -398,7 +396,7 @@ Section RqUpInd.
 
       + (** case [ImmDownRule] *)
         exfalso; disc_rule_conds.
-        destruct H8; discriminate.
+        destruct H9; discriminate.
 
       + (** case [ImmUpRule] *)
         repeat split; try assumption.
@@ -412,8 +410,7 @@ Section RqUpInd.
 
       + (** case [RqFwdRule] *)
         mred.
-        destruct H11.
-        destruct H12 as [|[|]].
+        destruct H8; destruct H12 as [|[|]].
         * (** case [RqUpUp] *)
           exfalso.
           disc_rqToUpRule.
@@ -424,7 +421,7 @@ Section RqUpInd.
           { right; split; [reflexivity|].
             intros; red_obj_rule.
             destruct H7.
-            red in H7, H11; dest.
+            red in H7, H8; dest.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
           { admit. }
@@ -435,20 +432,26 @@ Section RqUpInd.
           { right; split; [reflexivity|].
             intros; red_obj_rule.
             destruct H7.
-            red in H7, H11; dest.
+            red in H7, H8; dest.
             eapply rqUpUp_rqDownDown_reducible; eauto.
           }
           { admit. }
           { admit. }
 
       + (** case [RsBackRule] *)
+        good_footprint_get (obj_idx obj).
         mred.
-        destruct H11.
-        destruct H11; dest.
+        destruct H8; destruct H8; dest.
         * (** case [FootprintReleasingUp] *)
           exfalso; disc_rule_conds.
-          (* This case breaks [UpLockInv]. *)
-          admit.
+          destruct (eq_nat_dec cidx0 (obj_idx obj));
+            [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H39 H10); reflexivity].
+          good_locking_get obj.
+          red in H21; mred; simpl in H21.
+          rewrite H40 in H21.
+          eapply upLockedInv_False_1; eauto.
+          { apply InMP_or_enqMP; auto. }
+          { apply FirstMP_InMP; auto. }
 
         * (** case [FootprintReleasingDown] *)
           assert (RsToUpRule dtr (obj_idx obj) rule0) by (right; eauto).
@@ -463,9 +466,15 @@ Section RqUpInd.
           { admit. }
 
       + (** case [RsDownRqDownRule] *)
-        exfalso.
-        (* This case breaks [UpLockInv]. *)
-        admit.
+        exfalso; disc_rule_conds.
+        destruct (eq_nat_dec cidx0 (obj_idx obj));
+          [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H2 n H39 H10); reflexivity].
+        good_locking_get obj.
+        red in H; mred; simpl in H.
+        rewrite H45 in H.
+        eapply upLockedInv_False_1; eauto.
+        { apply InMP_or_enqMP; auto. }
+        { apply FirstMP_InMP; auto. }
 
     - repeat split; try assumption.
       + red; auto.
