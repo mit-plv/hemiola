@@ -781,10 +781,10 @@ Lemma findQ_length_one:
     FirstMPI msgs (midx, msg) ->
     length (findQ midx msgs) = 1.
 Proof.
-  unfold FirstMPI, FirstMP, firstMP; simpl; intros.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H0; simpl in *.
-  omega.
+  intros.
+  remember (findQ midx msgs) as q; destruct q.
+  - exfalso; eapply FirstMP_findQ_False; eauto.
+  - simpl in *; omega.
 Qed.
 
 Lemma rqsQ_length_one:
@@ -795,12 +795,12 @@ Lemma rqsQ_length_one:
     length (rqsQ msgs midx) = 1.
 Proof.
   unfold rqsQ; intros.
-  unfold FirstMPI, FirstMP, firstMP in H1.
-  simpl in H1.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H1.
-  simpl in *; rewrite H0 in *; simpl in *.
-  omega.
+  remember (findQ midx msgs) as q; destruct q.
+  - exfalso; eapply FirstMP_findQ_False; eauto.
+  - unfold FirstMPI, FirstMP, firstMP in H1.
+    simpl in H1; rewrite <-Heqq in H1; inv H1.
+    simpl in *; rewrite H0 in *; simpl in *.
+    omega.
 Qed.
 
 Lemma rssQ_length_one:
@@ -811,12 +811,12 @@ Lemma rssQ_length_one:
     length (rssQ msgs midx) = 1.
 Proof.
   unfold rssQ; intros.
-  unfold FirstMPI, FirstMP, firstMP in H1.
-  simpl in H1.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H1.
-  simpl in *; rewrite H0 in *; simpl in *.
-  omega.
+  remember (findQ midx msgs) as q; destruct q.
+  - exfalso; eapply FirstMP_findQ_False; eauto.
+  - unfold FirstMPI, FirstMP, firstMP in H1.
+    simpl in H1; rewrite <-Heqq in H1; inv H1.
+    simpl in *; rewrite H0 in *; simpl in *.
+    omega.
 Qed.
 
 Lemma rssQ_enqMP_rq:

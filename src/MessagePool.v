@@ -429,6 +429,16 @@ Section Facts.
       intro Hx; subst; elim H4; assumption.
   Qed.
 
+  Lemma FirstMP_findQ_False:
+    forall midx msg (mp: MessagePool MsgT),
+      findQ midx mp = nil ->
+      FirstMP mp midx msg ->
+      False.
+  Proof.
+    unfold FirstMP, firstMP; intros.
+    rewrite H in H0; discriminate.
+  Qed.
+
   Lemma FirstMP_enqMsgs_order:
     forall midx msg1 outs1 minds2 msg2 (mp: MessagePool MsgT),
       NoDup (idsOf outs1) ->
