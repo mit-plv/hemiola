@@ -69,29 +69,7 @@ Proof.
         simpl in *; omega.
 Qed.
 
-Ltac disc_midx :=
-  match goal with
-  | [H1: parentIdxOf _ ?idx = Some _, H2: parentIdxOf _ ?idx = Some _ |- _] =>
-    rewrite H1 in H2; inv H2
-  | [H1: rqEdgeUpFrom _ ?idx = Some _, H2: rqEdgeUpFrom _ ?idx = Some _ |- _] =>
-    rewrite H1 in H2; inv H2
-  | [H1: rsEdgeUpFrom _ ?idx = Some _, H2: rsEdgeUpFrom _ ?idx = Some _ |- _] =>
-    rewrite H1 in H2; inv H2
-  | [H: RqRsDTree _ _,
-     H1: rqEdgeUpFrom _ ?idx1 = Some ?midx,
-     H2: rqEdgeUpFrom _ ?idx2 = Some ?midx |- _] =>
-    let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [|Hneq];
-    [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H Hneq H1 H2); reflexivity]
-  | [H: RqRsDTree _ _,
-     H1: rsEdgeUpFrom _ ?idx1 = Some ?midx,
-     H2: rsEdgeUpFrom _ ?idx2 = Some ?midx |- _] =>
-    let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [|Hneq];
-    [subst|elim (rqrsDTree_rsUp_rsUp_not_eq H Hneq H1 H2); reflexivity]
-  end.
-
-Section RqUpInd.
+Section RqUpReduction.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
@@ -155,15 +133,12 @@ Section RqUpInd.
         repeat split.
         * exists cidx; eexists.
           repeat split; try assumption.
-        * destruct (eq_nat_dec oidx (obj_idx obj)); subst.
-          { rewrite H6 in H24; inv H24; reflexivity. }
-          { elim (rqrsDTree_rqUp_rqUp_not_eq H3 n H7 H9); reflexivity. }
         * do 8 eexists.
           repeat split; try eassumption.
           { mred. }
-          { clear -H26.
+          { clear -H24.
             rewrite findQ_In_enqMP in *.
-            rewrite app_length in H26; simpl in H26.
+            rewrite app_length in H24; simpl in H24.
             rewrite app_length; simpl.
             omega.
           }
@@ -329,7 +304,6 @@ Section RqUpInd.
   Qed.
 
   Ltac disc_rule_custom ::=
-    try disc_midx;
     try disc_lock_conds;
     try disc_footprints_ok;
     try disc_msgs_in;
@@ -412,11 +386,11 @@ Section RqUpInd.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
           { disc_rule_conds.
-            destruct (eq_nat_dec upCObj.(obj_idx) cidx0); subst.
+            destruct (eq_nat_dec upCObj.(obj_idx) cidx1); subst.
             { exfalso.
               good_locking_get upCObj.
               red in H6.
-              apply parentIdxOf_not_eq in H11;
+              apply parentIdxOf_not_eq in H8;
                 [|destruct Hrrs as [[? ?] _]; assumption]; mred.
               find_if_inside.
               { destruct H6 as [rqUp [down [pidx ?]]]; dest.
@@ -429,7 +403,7 @@ Section RqUpInd.
               }
               { destruct H6; [congruence|].
                 destruct H6 as [upRq [down [pidx ?]]]; dest.
-                repeat disc_midx.
+                disc_rule_conds.
                 eapply FirstMP_findQ_False; eauto.
               }
             }
@@ -454,7 +428,7 @@ Section RqUpInd.
         * (** case [FootprintReleasingUp] *)
           exfalso; disc_rule_conds.
           good_locking_get obj.
-          red in H; mred; simpl in H; mred.
+          red in H7; mred; simpl in H7; mred.
           eapply upLockedInv_False_1; eauto.
           { apply InMP_or_enqMP; auto. }
           { apply FirstMP_InMP; auto. }
@@ -493,17 +467,17 @@ Section RqUpInd.
       good_footprint_get (obj_idx obj0).
       good_rqrs_rule_cases rule0.
       + disc_rule_conds.
-        destruct (eq_nat_dec cidx0 cidx1);
+        destruct (eq_nat_dec cidx0 cidx2);
           [subst; rewrite H56 in H30; elim n; inv H30; reflexivity|].
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
-        * destruct (eq_nat_dec cidx0 cidx);
+        * destruct (eq_nat_dec cidx1 cidx);
             [subst; rewrite H in H30; elim n; inv H30; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
-        * destruct (eq_nat_dec cidx0 (obj_idx upCObj));
-            [subst; rewrite H30 in H11; elim n; inv H11; reflexivity|].
+        * destruct (eq_nat_dec cidx1 (obj_idx upCObj));
+            [subst; rewrite H30 in H8; elim n; inv H8; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
@@ -794,7 +768,7 @@ Section RqUpInd.
         admit.
   Admitted.
   
-End RqUpInd.
+End RqUpReduction.
 
 Section Pushable.
   Context {oifc: OStateIfc}.
