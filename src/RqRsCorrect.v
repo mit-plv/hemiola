@@ -511,7 +511,7 @@ Section RqUpReduction.
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
-          RqUpHistory hst eouts.
+          eouts = rqUps /\ RqUpHistory hst eouts.
   Proof.
     induction 1; simpl; intros; subst.
     - inv_steps.
@@ -519,7 +519,7 @@ Section RqUpReduction.
       destruct H8 as [? [? [? ?]]].
       destruct H5 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
       dest; subst.
-      econstructor; eauto.
+      split; [reflexivity|econstructor; eauto].
     - destruct H5 as [cidx [rqUp ?]]; dest; subst.
       inv H8.
       apply SubList_singleton_In in H6.
@@ -532,19 +532,19 @@ Section RqUpReduction.
           { red; intros; Common.dest_in; assumption. }
         }
         destruct H8.
-        specialize (IHAtomic _ _ H8 H9 _ _ H7 H11).
+        specialize (IHAtomic _ _ H8 H9 _ _ H7 H11); dest.
         assert (exists oidxTo, RqUpMsgs dtr oidxTo eouts)
-          by (inv IHAtomic; eauto).
-        destruct H10 as [poidxTo ?].
-        destruct H10 as [pcidx [prqUp ?]]; dest; subst.
-        apply SubList_singleton in H9; subst.
-        inv H13; destruct H24; red in H10.
-        clear -H0 H1 H2 H10.
+          by (inv H12; eauto).
+        destruct H14 as [poidxTo ?].
+        destruct H14 as [pcidx [prqUp ?]]; dest; subst.
+        inv H14.
+        inv H13; destruct H26; red in H13.
+        clear -H0 H1 H2 H13.
         destruct rins as [|rin1 rins]; [elim H0; reflexivity|].
         destruct rins as [|rin2 rins].
         * apply SubList_singleton in H1; subst.
           rewrite removeL_nil in H2; elim H2.
-        * inv H10.
+        * inv H13.
           pose proof (H1 rin1 (or_introl eq_refl)).
           pose proof (H1 rin2 (or_intror (or_introl eq_refl))).
           Common.dest_in.
@@ -559,18 +559,12 @@ Section RqUpReduction.
         destruct H13 as [? [? [? ?]]].
         destruct H13 as [cidx' [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
         dest; subst.
-        specialize (IHAtomic _ _ H9 H1 _ _ H7 H11).
-        assert ([(rqFrom, rqfm)] = eouts); subst.
-        { assert (exists oidxTo, RqUpMsgs dtr oidxTo eouts)
-            by (inv IHAtomic; eauto).
-          destruct H12 as [noidxTo [ncidx [nrqUp ?]]]; dest; subst.
-          apply SubList_singleton in H1; subst; reflexivity.
-        }
+        specialize (IHAtomic _ _ H9 H1 _ _ H7 H11); dest; subst.
         rewrite removeL_nil; simpl.
-        econstructor; eauto.
+        split; [reflexivity|econstructor; eauto].
   Qed.
 
-  Lemma rqUp_lbl_disj:
+  Lemma rqUp_ins_disj:
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall cidx corq pidx porq rqUp down prqi,
@@ -698,7 +692,7 @@ Section RqUpReduction.
         inv H29.
         disc_rule_conds.
         apply DisjList_comm, idsOf_DisjList; simpl.
-        eapply rqUp_lbl_disj.
+        eapply rqUp_ins_disj.
         * instantiate (1:= st5).
           eapply reachable_steps; [|apply steps_singleton; eassumption].
           eapply reachable_steps; [|apply steps_singleton; eassumption].
@@ -734,10 +728,70 @@ Section RqUpReduction.
     red; intros.
     inv H3.
     eapply rqUp_atomic in H; eauto.
+    dest; subst.
     eapply rqUpHistory_lpush_lbl; eauto.
     econstructor; eauto.
   Qed.
 
+  Lemma rqUp_outs_disj:
+    forall oidxTo rqUp st1 st2 oidx ridx rins routs,
+      RqUpMsgs dtr oidxTo [rqUp] ->
+      Reachable (steps step_m) sys st1 ->
+      InMPI st1.(bst_msgs) rqUp ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      DisjList routs [rqUp].
+  Proof.
+    intros; destruct Hrrs as [? [? ?]].
+    pose proof (footprints_ok H4 H0).
+    pose proof (upLockInv_ok H4 H3 H0).
+
+    destruct H as [ruIdx [[rqUp' rqm] ?]]; dest.
+    inv H; rename rqUp' into rqUp; simpl in *.
+    apply idsOf_DisjList; simpl.
+    inv_step.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - disc_rule_conds; solve_midx_disj.
+    - disc_rule_conds; solve_midx_disj.
+
+    - good_locking_get obj.
+      disc_rule_conds.
+      + (* [RqUpUp] is the only case that requires [UpLockInv] 
+         * to draw a contradiction. *)
+        destruct (eq_nat_dec ruIdx (obj_idx obj));
+          subst; [|solve_midx_disj].
+        exfalso.
+        destruct H2; [congruence|].
+        destruct H2 as [orqUp [down [pidx ?]]]; dest.
+        disc_rule_conds.
+        eapply InMP_findQ_False; eauto.
+      + solve_midx_disj.
+      + solve_midx_disj.
+
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds; solve_midx_disj.
+
+    - disc_rule_conds; solve_midx_disj.
+  Qed.
+
+  Lemma rqUpHistory_outs:
+    forall hst outs,
+      RqUpHistory hst outs ->
+      forall rqUp st1 st2,
+        outs = [rqUp] ->
+        steps step_m sys st1 hst st2 ->
+        InMPI st2.(bst_msgs) rqUp.
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv_steps; inv_step.
+      destruct rqUp as [ruIdx rqm]; simpl in *.
+      apply InMP_or_enqMP; auto.
+    - inv_steps; inv_step.
+      destruct rqUp as [ruIdx rqm]; simpl in *.
+      apply InMP_or_enqMP; auto.
+  Qed.
+  
   Lemma rqUp_lpush_unit_ok_ind:
     forall oidxTo rqUps inits ins hst outs eouts
            pinits pins phst pouts peouts,
@@ -750,7 +804,12 @@ Section RqUpReduction.
   Proof.
     induction 4; simpl; intros; subst.
     - eapply rqUp_lpush_lbl; eauto.
-    - eapply reducible_trans.
+    - red; intros.
+
+      assert (Reducible sys (RlblInt oidx ridx rins routs :: hst ++ phst)
+                        (phst ++ RlblInt oidx ridx rins routs :: hst)); auto.
+
+      eapply reducible_trans.
       + change (RlblInt oidx ridx rins routs :: hst ++ phst)
           with ([RlblInt oidx ridx rins routs] ++ hst ++ phst).
         apply reducible_app_1.
@@ -764,9 +823,40 @@ Section RqUpReduction.
         apply DisjList_comm.
         eapply DisjList_SubList; [eassumption|].
 
-        (** TODO: need to prove this admit *)
-        admit.
-  Admitted.
+        inv_steps.
+        clear H3 H4 H12 rins st2.
+        eapply steps_split in H10; [|reflexivity].
+        destruct H10 as [st2 [? ?]].
+        eapply rqUp_atomic in H; eauto.
+        dest; subst.
+        destruct H0 as [ruIdx [[rqUp rqm] ?]]; dest; subst.
+        simpl in *.
+
+        assert (Reachable (steps step_m) sys st2)
+          by (eapply reachable_steps; eauto).
+        eapply rqUpHistory_outs in H5; [|reflexivity|eassumption].
+
+        clear H1 H3 IHAtomic phst.
+        generalize dependent st3.
+        generalize dependent st2.
+        induction H2; intros; subst.
+        * inv_steps.
+          eapply rqUp_outs_disj.
+          { exists ruIdx, (rqUp, rqm); repeat split; eauto. }
+          { apply H. }
+          { assumption. }
+          { eassumption. }
+        * inv_steps.
+          specialize (IHAtomic H8 _ H9 H10 _ H12).
+          eapply (atomic_messages_spec_in msg_dec) in H2; eauto;
+            [|eapply DisjList_In_2; [eassumption|left; reflexivity]].
+          apply DisjList_app_4; [apply removeL_DisjList; assumption|].
+          eapply rqUp_outs_disj.
+          { exists ruIdx, (rqUp, rqm); repeat split; eauto. }
+          { eapply reachable_steps; eauto. }
+          { assumption. }
+          { eassumption. }
+  Qed.
   
 End RqUpReduction.
 

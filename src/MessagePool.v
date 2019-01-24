@@ -576,6 +576,16 @@ Section Facts.
       + rewrite IHmsgs2; eauto.
   Qed.
 
+  Lemma InMP_findQ_False:
+    forall midx msg (mp: MessagePool MsgT),
+      findQ midx mp = nil ->
+      InMP midx msg mp ->
+      False.
+  Proof.
+    unfold InMP, firstMP; intros.
+    rewrite H in H0; elim H0.
+  Qed.
+  
   Lemma InMP_enqMP_or:
     forall midx (msg: MsgT) nidx nmsg mp,
       InMP midx msg (enqMP nidx nmsg mp) ->

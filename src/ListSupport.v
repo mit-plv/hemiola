@@ -616,7 +616,18 @@ Section Removal.
         * intuition.
         * apply SubList_cons_right; auto.
   Qed.
-      
+
+  Lemma removeL_DisjList:
+    forall l1 l2 l3,
+      DisjList l1 l3 ->
+      DisjList (removeL l1 l2) l3.
+  Proof.
+    intros.
+    eapply DisjList_SubList.
+    - apply removeL_SubList_2.
+    - assumption.
+  Qed.
+  
   Lemma removeL_app_1:
     forall (l1 l2 l3: list A),
       removeL l1 (l2 ++ l3) =
