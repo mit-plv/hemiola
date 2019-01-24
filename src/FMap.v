@@ -2406,9 +2406,6 @@ Ltac mred_unit :=
     rewrite M.find_add_1
   | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
     rewrite M.find_add_2 by (auto || eassumption || discriminate)
-  | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
-    M.cmp y k; [rewrite M.find_add_1|
-                rewrite M.find_add_2 by intuition auto]
   | [H: In ?y ?d |- context [M.find ?y (M.restrict _ ?d)] ] =>
     rewrite M.restrict_in_find by auto
   | [ |- context [M.find ?y (M.subtractKV _ ?m1 ?m2)] ] =>
@@ -2418,7 +2415,16 @@ Ltac mred_unit :=
   end;
   try discriminate; try reflexivity; try (intuition idtac; fail).
 
-Ltac mred := repeat mred_unit.
+Ltac mred_step :=
+  match goal with
+  | [ |- context [M.find ?y (M.add ?k _ _)] ] =>
+    M.cmp y k; [rewrite M.find_add_1|
+                rewrite M.find_add_2 by intuition auto]
+  end;
+  try discriminate; try reflexivity; try (intuition idtac; fail).
+
+Ltac mred :=
+  repeat ((repeat mred_unit) || mred_step).
 
 Ltac mcontra :=
   repeat

@@ -7,6 +7,21 @@ Set Implicit Arguments.
 
 Open Scope list.
 
+Ltac inv_steps :=
+  repeat
+    match goal with
+    | [H: steps _ _ _ nil _ |- _] => inv H
+    | [H: steps _ _ _ (_ :: _) _ |- _] => inv H
+    end.
+
+Ltac inv_step :=
+  repeat
+    match goal with
+    | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
+    | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
+          {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
+    end.
+
 Lemma sys_minds_sys_merqs_DisjList:
   forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merqs sys).
 Proof.
@@ -131,6 +146,16 @@ Proof.
   intros.
   destruct H0.
   eauto using extRssOf_SubList_sys_merss_FirstMP.
+Qed.
+
+Lemma steps_singleton:
+  forall {oifc} (sys: System oifc) st1 lbl st2,
+    step_m sys st1 lbl st2 ->
+    steps step_m sys st1 [lbl] st2.
+Proof.
+  intros.
+  repeat econstructor.
+  assumption.
 Qed.
 
 Lemma steps_wfHistory:

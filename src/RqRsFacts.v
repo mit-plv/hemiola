@@ -11,20 +11,6 @@ Open Scope fmap.
 
 (** Useful invariants on top of [RqRsSys] *)
 
-Ltac inv_steps :=
-  repeat
-    match goal with
-    | [H: steps _ _ _ _ _ |- _] => inv H
-    end.
-
-Ltac inv_step :=
-  repeat
-    match goal with
-    | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
-    | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
-          {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
-    end.
-
 Ltac red_obj_rule :=
   repeat
     match goal with
