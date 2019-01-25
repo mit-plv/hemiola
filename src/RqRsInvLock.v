@@ -2685,6 +2685,17 @@ Ltac good_locking_get obj :=
     specialize (H (in_map _ _ _ Ho)); dest
   end.
 
+Ltac disc_lock_conds :=
+  match goal with
+  | [H: OLockedTo _ _ _ |- _] => red in H
+  | [H: UpLockInvORq _ _ _ _ _ |- _] => red in H; mred; simpl in H; mred
+  | [H: UpLockedInv _ _ _ _ |- _] =>
+    let rqUp := fresh "rqUp" in
+    let down := fresh "down" in
+    let pidx := fresh "pidx" in
+    destruct H as [rqUp [down [pidx ?]]]; dest
+  end.
+
 Close Scope list.
 Close Scope fmap.
 

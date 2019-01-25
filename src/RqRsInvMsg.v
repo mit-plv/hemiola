@@ -238,6 +238,14 @@ Section MessageInv.
     
 End MessageInv.
 
+Ltac disc_msgs_in :=
+  match goal with
+  | [H: RqUpMsgs _ _ _ |- _] =>
+    let cidx := fresh "cidx" in
+    let rqUp := fresh "rqUp" in
+    destruct H as [cidx [rqUp ?]]; dest
+  end.
+
 Close Scope list.
 Close Scope fmap.
 
