@@ -38,6 +38,18 @@ Section DownLockInv.
              | Some rqi => rqi.(rqi_midx_rsb) <> rsbTo
              | None => True
              end).
+
+    Definition DownLockFreeChildInv (cidx: IdxT) (down rsUp: IdxT) :=
+      rqsQ msgs down = nil /\
+      findQ rsUp msgs = nil /\
+      ONoDownLockTo cidx rsUp.
+    
+    Definition DownLockedChildInv (cidx: IdxT) (down rsUp: IdxT) :=
+      length (rqsQ msgs down) <= 1 /\
+      length (findQ rsUp msgs) <= 1 /\
+      xor3 (length (rqsQ msgs down) = 1)
+           (length (findQ rsUp msgs) = 1)
+           (ODownLockedTo cidx rsUp).
     
     Definition DownLockFreeInv (oidx: IdxT) :=
       forall cidx,
@@ -45,22 +57,17 @@ Section DownLockInv.
         exists down rsUp,
           edgeDownTo dtr cidx = Some down /\ 
           rsEdgeUpFrom dtr cidx = Some rsUp /\
-          rqsQ msgs down = nil /\
-          findQ rsUp msgs = nil /\
-          ONoDownLockTo cidx rsUp.
-
+          DownLockFreeChildInv cidx down rsUp.
+    
     Definition DownLockedInv (oidx: IdxT) (rqi: RqInfo Msg) :=
-      Forall (fun rsUp =>
-                exists down cidx,
-                  edgeDownTo dtr cidx = Some down /\
-                  rsEdgeUpFrom dtr cidx = Some rsUp /\
-                  parentIdxOf dtr cidx = Some oidx /\
-                  length (rqsQ msgs down) <= 1 /\
-                  length (findQ rsUp msgs) <= 1 /\
-                  xor3 (length (rqsQ msgs down) = 1)
-                       (length (findQ rsUp msgs) = 1)
-                       (ODownLockedTo cidx rsUp))
-             rqi.(rqi_minds_rss).
+      forall cidx,
+        parentIdxOf dtr cidx = Some oidx ->
+        exists down rsUp,
+          edgeDownTo dtr cidx = Some down /\ 
+          rsEdgeUpFrom dtr cidx = Some rsUp /\
+          if in_dec eq_nat_dec rsUp rqi.(rqi_minds_rss)
+          then DownLockedChildInv cidx down rsUp
+          else DownLockFreeChildInv cidx down rsUp.
 
     Definition DownLockInvORq (oidx: IdxT) (orq: ORq Msg) :=
       match orq@[downRq] with
@@ -90,65 +97,6 @@ Section DownLockInv.
     exists down, rsUp; repeat split; assumption.
   Qed.
 
-  Lemma downLockedInv_msgs_preserved:
-    forall orqs msgs1 msgs2 oidx rqi,
-      DownLockedInv orqs msgs1 oidx rqi ->
-      (forall rsUp down cidx,
-          In rsUp (rqi_minds_rss rqi) ->
-          edgeDownTo dtr cidx = Some down ->
-          rsEdgeUpFrom dtr cidx = Some rsUp ->
-          parentIdxOf dtr cidx = Some oidx ->
-          rqsQ msgs1 down = rqsQ msgs2 down /\
-          findQ rsUp msgs1 = findQ rsUp msgs2) ->
-      DownLockedInv orqs msgs2 oidx rqi.
-  Proof.
-    unfold DownLockedInv; simpl; intros.
-    rewrite Forall_forall in H.
-    apply Forall_forall; intros rsUp ?.
-    specialize (H _ H1).
-    destruct H as [down [cidx ?]]; dest.
-    specialize (H0 _ _ _ H1 H H2 H3); dest.
-    exists down, cidx.
-    rewrite <-H0, <-H7.
-    repeat split; try assumption.
-  Qed.
-  
-  Corollary downLockedInv_disj_enqMsgs_preserved:
-    forall orqs msgs emsgs oidx rqi,
-      DownLockedInv orqs msgs oidx rqi ->
-      DisjList (idsOf emsgs) (sys_minds sys) ->
-      DownLockedInv orqs (enqMsgs emsgs msgs) oidx rqi.
-  Proof.
-    intros.
-    eapply downLockedInv_msgs_preserved; eauto.
-    intros; split.
-    - unfold rqsQ.
-      rewrite findQ_not_In_enqMsgs; [reflexivity|].
-      eapply DisjList_In_1; [eassumption|].
-      eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
-    - rewrite findQ_not_In_enqMsgs; [reflexivity|].
-      eapply DisjList_In_1; [eassumption|].
-      eapply rqrsDTree_rsEdgeUpFrom_sys_minds; eauto.
-  Qed.
-
-  Corollary downLockedInv_disj_deqMsgs_preserved:
-    forall orqs msgs eminds oidx rqi,
-      DownLockedInv orqs msgs oidx rqi ->
-      DisjList eminds (sys_minds sys) ->
-      DownLockedInv orqs (deqMsgs eminds msgs) oidx rqi.
-  Proof.
-    intros.
-    eapply downLockedInv_msgs_preserved; eauto.
-    intros; split.
-    - unfold rqsQ.
-      rewrite findQ_not_In_deqMsgs; [reflexivity|].
-      eapply DisjList_In_1; [eassumption|].
-      eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
-    - rewrite findQ_not_In_deqMsgs; [reflexivity|].
-      eapply DisjList_In_1; [eassumption|].
-      eapply rqrsDTree_rsEdgeUpFrom_sys_minds; eauto.
-  Qed.
-
   Lemma downLockFreeInv_msgs_preserved:
     forall orqs msgs1 msgs2 oidx,
       DownLockFreeInv orqs msgs1 oidx ->
@@ -165,7 +113,10 @@ Section DownLockInv.
     unfold DownLockFreeInv; simpl; intros.
     specialize (H _ H1).
     destruct H as [down [rsUp ?]]; dest.
+    red in H3; dest.
     specialize (H0 _ H1); destruct H0.
+    specialize (H0 _ H).
+    specialize (H6 _ H2).
     exists down, rsUp.
     repeat split; auto.
     - rewrite <-H0; auto.
@@ -207,6 +158,63 @@ Section DownLockInv.
       eapply DisjList_In_1; [eassumption|].
       eapply rqrsDTree_rsEdgeUpFrom_sys_minds; eauto.
   Qed.
+  
+  Lemma downLockedInv_msgs_preserved:
+    forall orqs msgs1 msgs2 oidx rqi,
+      DownLockedInv orqs msgs1 oidx rqi ->
+      (forall rsUp down cidx,
+          edgeDownTo dtr cidx = Some down ->
+          rsEdgeUpFrom dtr cidx = Some rsUp ->
+          parentIdxOf dtr cidx = Some oidx ->
+          rqsQ msgs1 down = rqsQ msgs2 down /\
+          findQ rsUp msgs1 = findQ rsUp msgs2) ->
+      DownLockedInv orqs msgs2 oidx rqi.
+  Proof.
+    unfold DownLockedInv; simpl; intros.
+    specialize (H _ H1).
+    destruct H as [down [rsUp ?]]; dest.
+    specialize (H0 _ _ _ H H2 H1); dest.
+    exists down, rsUp.
+    unfold DownLockedChildInv, DownLockFreeChildInv in *.
+    rewrite <-H0, <-H4.
+    split; [|split]; assumption.
+  Qed.
+  
+  Corollary downLockedInv_disj_enqMsgs_preserved:
+    forall orqs msgs emsgs oidx rqi,
+      DownLockedInv orqs msgs oidx rqi ->
+      DisjList (idsOf emsgs) (sys_minds sys) ->
+      DownLockedInv orqs (enqMsgs emsgs msgs) oidx rqi.
+  Proof.
+    intros.
+    eapply downLockedInv_msgs_preserved; eauto.
+    intros; split.
+    - unfold rqsQ.
+      rewrite findQ_not_In_enqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
+    - rewrite findQ_not_In_enqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply rqrsDTree_rsEdgeUpFrom_sys_minds; eauto.
+  Qed.
+
+  Corollary downLockedInv_disj_deqMsgs_preserved:
+    forall orqs msgs eminds oidx rqi,
+      DownLockedInv orqs msgs oidx rqi ->
+      DisjList eminds (sys_minds sys) ->
+      DownLockedInv orqs (deqMsgs eminds msgs) oidx rqi.
+  Proof.
+    intros.
+    eapply downLockedInv_msgs_preserved; eauto.
+    intros; split.
+    - unfold rqsQ.
+      rewrite findQ_not_In_deqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
+    - rewrite findQ_not_In_deqMsgs; [reflexivity|].
+      eapply DisjList_In_1; [eassumption|].
+      eapply rqrsDTree_rsEdgeUpFrom_sys_minds; eauto.
+  Qed.
 
   Corollary downLockedInv_orqs_preserved_self_update:
     forall orqs msgs oidx orq rqid,
@@ -215,15 +223,22 @@ Section DownLockInv.
   Proof.
     intros.
     destruct Hsd.
-    red in H; red.
-    eapply Forall_impl; [|eassumption].
-    clear H; simpl; intro midx; intros.
-    destruct H as [down [cidx ?]]; dest.
-    exists down, cidx.
+    red in H; red; intros.
+    specialize (H _ H2).
+    destruct H as [down [rsUp ?]]; dest.
+    exists down, rsUp.
     repeat split; try assumption.
-    unfold ODownLockedTo in *.
-    apply parentIdxOf_not_eq in H3; [|assumption].
-    mred.
+    find_if_inside.
+    - red in H4; red; dest.
+      repeat split; try assumption.
+      unfold ODownLockedTo in *.
+      apply parentIdxOf_not_eq in H2; [|assumption].
+      mred.
+    - red in H4; red; dest.
+      repeat split; try assumption.
+      unfold ONoDownLockTo in *.
+      apply parentIdxOf_not_eq in H2; [|assumption].
+      mred.
   Qed.
 
   Lemma downLockFreeInv_orqs_preserved_self_update:
@@ -231,13 +246,17 @@ Section DownLockInv.
       DownLockFreeInv orqs msgs oidx ->
       DownLockFreeInv (orqs+[oidx <- orq]) msgs oidx.
   Proof.
-    unfold DownLockFreeInv; intros; dest.
-    specialize (H _ H0).
+    intros.
+    destruct Hsd.
+    red in H; red; intros.
+    specialize (H _ H2).
     destruct H as [down [rsUp ?]]; dest.
     exists down, rsUp.
+    split; [|split]; try assumption.
+    red in H4; red; dest.
     repeat split; try assumption.
-    red in H4; red.
-    apply parentIdxOf_not_eq in H0; [|destruct Hsd; assumption].
+    unfold ONoDownLockTo in *.
+    apply parentIdxOf_not_eq in H2; [|assumption].
     mred.
   Qed.
 
