@@ -396,10 +396,19 @@ Section RqRsTopo.
       
       Definition RsBackRuleCommon (rule: Rule oifc) :=
         rule#prec <= RsAccepting /\ RsReleasing rule.
-      
+
+      Definition RsDownDown (rule: Rule oifc) :=
+        (* Below [DownLockFree] precondition is very important to ensure correctness. *)
+        rule#prec <= DownLockFree /\
+        FootprintReleasingUp rule /\
+        FootprintDownSilent rule.
+
+      Definition RsUp (rule: Rule oifc) :=
+        FootprintReleasingDown rule /\
+        FootprintUpSilent rule.
+
       Definition RsBackRule (rule: Rule oifc) :=
-        ((FootprintReleasingUp rule /\ FootprintDownSilent rule) \/
-         (FootprintReleasingDown rule /\ FootprintUpSilent rule)) /\
+        (RsDownDown rule \/ RsUp rule) /\
         RsBackRuleCommon rule.
 
       Definition RsDownRqDownOk (post: OState oifc) (porq: ORq Msg) (rins: list (Id Msg))
@@ -441,9 +450,7 @@ Section RqRsTopo.
 
     Definition RsToUpRule (oidx: IdxT) (rule: Rule oifc) :=
       ImmUpRule oidx rule \/
-      (FootprintReleasingDown rule /\
-       FootprintUpSilent rule /\
-       RsBackRuleCommon rule).
+      (RsUp rule /\ RsBackRuleCommon rule).
     
     Definition RqUpRsUpOkObj (obj: Object oifc) :=
       forall rqUpRule rsUpRule,

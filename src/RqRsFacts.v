@@ -583,8 +583,9 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
   | [H: RqDownDown _ _ _ |- _] => red in H; dest
   | [H: RsBackRule _ |- _] => red in H; dest
   | [H: RsBackRuleCommon _ |- _] => red in H; dest
-  | [H: (FootprintReleasingUp ?rule /\ FootprintDownSilent ?rule) \/
-        (FootprintReleasingDown ?rule /\ FootprintUpSilent ?rule) |- _] => destruct H; dest
+  | [H: RsDownDown ?rule \/ RsUp ?rule |- _] => destruct H
+  | [H: RsDownDown ?rule |- _] => red in H; dest
+  | [H: RsUp ?rule |- _] => red in H; dest
   | [H: RsDownRqDownRule _ _ _ _ |- _] => red in H; dest
 
   | [H: RqAccepting _ _ _ |- _] => red in H
@@ -706,18 +707,33 @@ Ltac disc_rule_minds :=
     rewrite H1 in H2; inv H2
   | [H1: rsEdgeUpFrom _ ?idx = Some _, H2: rsEdgeUpFrom _ ?idx = Some _ |- _] =>
     rewrite H1 in H2; inv H2
+  | [H1: edgeDownTo _ ?idx = Some _, H2: edgeDownTo _ ?idx = Some _ |- _] =>
+    rewrite H1 in H2; inv H2
+
   | [H: RqRsDTree _ _,
      H1: rqEdgeUpFrom _ ?idx1 = Some ?midx,
      H2: rqEdgeUpFrom _ ?idx2 = Some ?midx |- _] =>
+    let Heq := fresh "Heq" in
     let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [|Hneq];
-    [subst|elim (rqrsDTree_rqUp_rqUp_not_eq H Hneq H1 H2); reflexivity]
+    destruct (eq_nat_dec idx1 idx2) as [Heq|Hneq];
+    [rewrite Heq in *; clear H2
+    |elim (rqrsDTree_rqUp_rqUp_not_eq H Hneq H1 H2); reflexivity]
   | [H: RqRsDTree _ _,
      H1: rsEdgeUpFrom _ ?idx1 = Some ?midx,
      H2: rsEdgeUpFrom _ ?idx2 = Some ?midx |- _] =>
+    let Heq := fresh "Heq" in
     let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [|Hneq];
-    [subst|elim (rqrsDTree_rsUp_rsUp_not_eq H Hneq H1 H2); reflexivity]
+    destruct (eq_nat_dec idx1 idx2) as [Heq|Hneq];
+    [rewrite Heq in *; clear H2
+    |elim (rqrsDTree_rsUp_rsUp_not_eq H Hneq H1 H2); reflexivity]
+  | [H: RqRsDTree _ _,
+     H1: edgeDownTo _ ?idx1 = Some ?midx,
+     H2: edgeDownTo _ ?idx2 = Some ?midx |- _] =>
+    let Heq := fresh "Heq" in
+    let Hneq := fresh "Hneq" in
+    destruct (eq_nat_dec idx1 idx2) as [Heq|Hneq];
+    [rewrite Heq in *; clear H2
+    |elim (rqrsDTree_down_down_not_eq H Hneq H1 H2); reflexivity]
   end.
 
 Ltac disc_rule_conds_unit_simpl :=

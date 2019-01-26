@@ -51,12 +51,13 @@ Section Pushable.
     Qed.
     
     Lemma rqUp_lpush_unit_ok:
-      forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+      forall hst,
+        AtomicEx msg_dec hst ->
         Discontinuous phst hst ->
         Reducible sys (hst ++ phst) (phst ++ hst).
     Proof.
       intros.
+      destruct H as [inits [ins [outs [eouts ?]]]].
       destruct Hcont; clear H2.
       destruct H1 as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
       apply eq_sym in H2; inv H2.
@@ -90,8 +91,7 @@ Section Pushable.
       destruct H6 as [sti [? ?]].
 
       constructor; eauto.
-      intros; inv H4; dest.
-      eapply rqUp_lpush_unit_ok; eauto.
+      intros; eapply rqUp_lpush_unit_ok; eauto.
     Qed.
 
     Lemma rqUp_rpush_ok:
