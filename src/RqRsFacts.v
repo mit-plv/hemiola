@@ -493,6 +493,39 @@ Section RqRsDTree.
     elim H3; reflexivity.
   Qed.
 
+  Lemma RqRsDownMatch_rq_rs:
+    forall oidx rssFrom rqTos P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      forall cidx down rsUp,
+        parentIdxOf dtr cidx = Some oidx ->
+        edgeDownTo dtr cidx = Some down ->
+        rsEdgeUpFrom dtr cidx = Some rsUp ->
+        (In down rqTos <-> In rsUp rssFrom).
+  Proof.
+    intros.
+    destruct H.
+    generalize dependent rssFrom.
+    induction rqTos as [|rqTo rqTos]; simpl; intros.
+    - destruct rssFrom; [|discriminate].
+      simpl; split; auto.
+    - destruct rssFrom as [|rssFrom rssFroms]; [discriminate|].
+      simpl; inv H; inv H3.
+      destruct H6 as [rcidx ?]; dest; simpl in *.
+      split; intros.
+      + destruct H8; subst.
+        * destruct (eq_nat_dec rcidx cidx); subst.
+          { rewrite H2 in H6; inv H6; auto. }
+          { elim (rqrsDTree_down_down_not_eq n H4 H1); reflexivity. }
+        * right; apply IHrqTos; auto.
+      + destruct H8; subst.
+        * destruct (eq_nat_dec rcidx cidx); subst.
+          { rewrite H1 in H4; inv H4; auto. }
+          { elim (rqrsDTree_rsUp_rsUp_not_eq n H6 H2); reflexivity. }
+        * right.
+          specialize (IHrqTos _ H5 H7).
+          destruct IHrqTos; auto.
+  Qed.
+  
   Lemma rqrsDTree_down_downs_not_in_child:
     forall cidx oidx down rsUp downs ups P,
       parentIdxOf dtr cidx = Some oidx ->
@@ -504,17 +537,8 @@ Section RqRsDTree.
   Proof.
     intros; intro Hx.
     elim H2; clear H2.
-    unfold RqRsDownMatch in H3; dest.
-    generalize dependent ups.
-    induction downs as [|rdown downs]; simpl; intros; [elim Hx|].
-    destruct ups as [|rup ups]; [discriminate|].
-    inv H2; inv H3.
-    inv Hx.
-    - destruct H6 as [rcidx ?]; dest; simpl in *.
-      destruct (eq_nat_dec cidx rcidx); subst.
-      + rewrite H1 in H6; inv H6; auto.
-      + elim (rqrsDTree_down_down_not_eq n H0 H4); reflexivity.
-    - right; eauto.
+    eapply RqRsDownMatch_rq_rs in H3; eauto.
+    apply H3; auto.
   Qed.
 
   Lemma footprintUpOk_rs_eq:

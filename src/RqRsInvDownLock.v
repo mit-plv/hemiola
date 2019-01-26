@@ -303,12 +303,46 @@ Section DownLockInv.
       edgeDownTo dtr cidx = Some down ->
       rsEdgeUpFrom dtr cidx = Some rsUp ->
       DownLockFreeChildInv orqs msgs cidx down rsUp ->
-      In rsUp (rqi_minds_rss rqi) ->
+      In rsUp (rqi_minds_rss rqi) ->      
+      NoDup (idsOf mouts) ->
+      Forall (fun idm => msg_type (valOf idm) = MRq) mouts ->
       RqRsDownMatch dtr oidx (idsOf mouts) (rqi_minds_rss rqi) P ->
       DownLockedChildInv (orqs +[oidx <- porq +[ downRq <- rqi]])
                          (enqMsgs mouts msgs) cidx down rsUp.
   Proof.
-  Admitted.
+    intros; destruct Hsd.
+    red in H2; dest; red.
+
+    assert (length (rqsQ (enqMsgs mouts msgs) down) = 1).
+    { eapply RqRsDownMatch_rq_rs in H6; eauto.
+      apply H6 in H3.
+      apply in_map_iff in H3.
+      destruct H3 as [[midx msg] ?]; dest; simpl in *; subst.
+      rewrite Forall_forall in H5.
+      specialize (H5 _ H11); simpl in H5.
+      unfold rqsQ.
+      erewrite findQ_In_NoDup_enqMsgs; eauto.
+      rewrite filter_app; simpl.
+      rewrite H5; simpl.
+      unfold rqsQ in H2; rewrite H2.
+      reflexivity.
+    }
+
+    assert (length (findQ rsUp (enqMsgs mouts msgs)) = 0).
+    { solve_q; rewrite H9; reflexivity. }
+
+    rewrite H11, H12.
+    repeat split; try omega.
+    xfst; [reflexivity|discriminate|].
+
+    apply parentIdxOf_not_eq in H; [|assumption].
+    intro Hx; red in H10, Hx.
+    mred.
+    destruct (orqs@[cidx]) as [corq|]; auto.
+    simpl in H10, Hx.
+    destruct Hx as [crqi [? ?]].
+    rewrite H13 in H10; auto.
+  Qed.
   
   Lemma downLockInv_step_ext_in:
     forall oss orqs msgs eins,
@@ -465,6 +499,7 @@ Section DownLockInv.
           red in H; red; intros.
           specialize (H _ H4).
           destruct H as [down [rsUp ?]]; dest.
+          destruct HmoutsV.
           exists down, rsUp.
           repeat split; try assumption.
           find_if_inside.
@@ -478,6 +513,7 @@ Section DownLockInv.
           red in H; red; intros.
           specialize (H _ H6).
           destruct H as [down [rsUp ?]]; dest.
+          destruct HmoutsV.
           exists down, rsUp.
           repeat split; try assumption.
           find_if_inside.
@@ -510,6 +546,7 @@ Section DownLockInv.
         red in H; red; intros.
         specialize (H _ H4).
         destruct H as [down [rsUp ?]]; dest.
+        destruct HmoutsV.
         exists down, rsUp.
         repeat split; try assumption.
         find_if_inside.
