@@ -480,7 +480,7 @@ Section RqRsDTree.
       elim H6; reflexivity.
   Qed.
 
-  Lemma rqrsDTree_down_downs_not_in_child:
+  Lemma rqrsDTree_down_downs_not_in_child_P:
     forall oidx1 oidx2 down1 downs2 ups2,
       edgeDownTo dtr oidx1 = Some down1 ->
       RqRsDownMatch dtr oidx2 downs2 ups2 (fun cidx => cidx <> oidx1) ->
@@ -491,6 +491,30 @@ Section RqRsDTree.
     destruct H0 as [cidx ?]; dest.
     pose proof (rqrsDTree_down_down_not_eq H0 H2 H).
     elim H3; reflexivity.
+  Qed.
+
+  Lemma rqrsDTree_down_downs_not_in_child:
+    forall cidx oidx down rsUp downs ups P,
+      parentIdxOf dtr cidx = Some oidx ->
+      edgeDownTo dtr cidx = Some down ->
+      rsEdgeUpFrom dtr cidx = Some rsUp ->
+      ~ In rsUp ups ->
+      RqRsDownMatch dtr oidx downs ups P ->
+      ~ In down downs.
+  Proof.
+    intros; intro Hx.
+    elim H2; clear H2.
+    unfold RqRsDownMatch in H3; dest.
+    generalize dependent ups.
+    induction downs as [|rdown downs]; simpl; intros; [elim Hx|].
+    destruct ups as [|rup ups]; [discriminate|].
+    inv H2; inv H3.
+    inv Hx.
+    - destruct H6 as [rcidx ?]; dest; simpl in *.
+      destruct (eq_nat_dec cidx rcidx); subst.
+      + rewrite H1 in H6; inv H6; auto.
+      + elim (rqrsDTree_down_down_not_eq n H0 H4); reflexivity.
+    - right; eauto.
   Qed.
 
   Lemma footprintUpOk_rs_eq:
@@ -1006,9 +1030,15 @@ Ltac solve_midx_neq_unit :=
     eapply rqrsDTree_down_downs_not_in_parent; eauto
 
   | [Hdown1: edgeDownTo _ ?idx1 = Some ?down1,
-     Hdowns2: RqRsDownMatch _ ?idx2 ?downs2 _ (fun _ => _ <> ?idx1) |- _] =>
+     Hdowns2: RqRsDownMatch _ ?idx2 ?downs2 _ (fun _ => _ <> ?idx1) |- ~ In ?down1 ?downs2] =>
+    eapply rqrsDTree_down_downs_not_in_child_P; eauto
+
+  | [Hp: parentIdxOf _ ?cidx = Some ?oidx,
+     Hdown: edgeDownTo _ ?cidx = Some ?down,
+     Hup: rsEdgeUpFrom _ ?cidx = Some ?rsUp,
+     Hnin: ~ In ?rsUp ?ups,
+     Hud: RqRsDownMatch _ ?oidx ?downs ?ups _ |- ~ In ?down ?downs] =>
     eapply rqrsDTree_down_downs_not_in_child; eauto
-     
   end.
 
 Ltac solve_midx_neq :=

@@ -173,7 +173,10 @@ Section MessageInv.
 
   Definition RsUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     Forall (fun msg => msg_type (valOf msg) = MRs) msgs /\
-    Forall (fun rs => exists cidx, rsEdgeUpFrom dtr cidx = Some rs)
+    Forall (fun rs =>
+              exists cidx,
+                parentIdxOf dtr cidx = Some oidx /\
+                rsEdgeUpFrom dtr cidx = Some rs)
            (idsOf msgs).
 
   Definition RsDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=

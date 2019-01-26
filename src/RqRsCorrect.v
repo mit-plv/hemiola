@@ -5,7 +5,7 @@ Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
 Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
-Require Import RqUpRed.
+Require Import RqUpRed RsUpRed.
 
 Set Implicit Arguments.
 
@@ -164,6 +164,27 @@ Section Pushable.
       red in H0; elim H0.
     Qed.
 
+    Lemma rsUp_lpush_unit_ok:
+      forall hst,
+        AtomicEx msg_dec hst ->
+        Discontinuous phst hst ->
+        Reducible sys (nlbl :: hst) (hst ++ [nlbl]).
+    Proof.
+      intros.
+      destruct H as [inits [ins [outs [eouts ?]]]].
+      destruct Hcont; clear H2.
+      destruct H1 as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H2; inv H2.
+      destruct H1 as [pinits pins phst pouts peouts].
+      red in H0; dest.
+      pose proof (atomic_unique H0 H2); dest; subst.
+      pose proof (atomic_unique H5 H); dest; subst.
+      eapply rsUp_rpush_unit_ok_ind; eauto.
+      eapply DisjList_SubList.
+      - eassumption.
+      - apply DisjList_comm; assumption.
+    Qed.
+
     Lemma rsUp_rpush_ok:
       forall st1,
         Reachable (steps step_m) sys st1 ->
@@ -175,7 +196,28 @@ Section Pushable.
                     RsUpRPush hst ->
                     Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
     Proof.
-    Admitted.
+      intros.
+      inv H1.
+      eapply steps_split in H6; [|reflexivity].
+      destruct H6 as [st4 [? ?]]; clear H1.
+      generalize dependent st4.
+      induction hsts as [|hst hsts] using list_ind_rev;
+        simpl; intros; [constructor|].
+
+      apply Forall_app_inv in H0; dest.
+      inv H1; clear H7.
+      apply Forall_app_inv in H2; dest.
+      inv H2; clear H9.
+
+      rewrite concat_app in H3; simpl in H3.
+      rewrite app_nil_r in H3.
+      eapply steps_split in H3; [|reflexivity].
+      destruct H3 as [sti [? ?]].
+
+      apply Forall_app; eauto.
+      constructor; auto.
+      intros; eapply rsUp_lpush_unit_ok; eauto.
+    Qed.
 
     Lemma rsUp_LRPushable:
       forall st1,
