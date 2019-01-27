@@ -946,6 +946,43 @@ Proof.
   apply rqsQ_enqMP_rs; auto.
 Qed.
 
+Lemma rqsQ_deqMP_rs:
+  forall rsMIdx rsm msgs midx,
+    FirstMP msgs rsMIdx rsm ->
+    msg_type rsm = MRs ->
+    rqsQ (deqMP rsMIdx msgs) midx =
+    rqsQ msgs midx.
+Proof.
+  unfold rqsQ, FirstMP, firstMP, deqMP; intros.
+  remember (findQ rsMIdx msgs) as q.
+  destruct q as [|msg q]; [discriminate|].
+  inv H.
+  unfold findQ in *; mred; simpl.
+  rewrite <-Heqq.
+  simpl; rewrite H0; reflexivity.
+Qed.
+
+Lemma rqsQ_deqMsgs_rss:
+  forall rss msgs midx,
+    NoDup (idsOf rss) ->
+    Forall (FirstMPI msgs) rss ->
+    Forall (fun idm => msg_type (valOf idm) = MRs) rss ->
+    rqsQ (deqMsgs (idsOf rss) msgs) midx =
+    rqsQ msgs midx.
+Proof.
+  induction rss; simpl; intros; [reflexivity|].
+  inv H; inv H0; inv H1.
+  destruct a as [rsMIdx rsm]; simpl in *.
+  rewrite IHrss; auto.
+  - eapply rqsQ_deqMP_rs; eauto.
+  - apply Forall_forall; intros [nrsMIdx nrsm] ?.
+    apply FirstMP_deqMP; simpl.
+    + intro Hx; subst; elim H4.
+      apply in_map with (f:= idOf) in H; auto.
+    + rewrite Forall_forall in H6.
+      specialize (H6 _ H); assumption.
+Qed.
+
 Ltac solve_midx_neq_unit :=
   match goal with
   | [Hw: WfDTree ?dtr, H: parentIdxOf ?dtr ?cidx = Some ?pidx |- _] =>

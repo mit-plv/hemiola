@@ -343,6 +343,64 @@ Section DownLockInv.
     destruct Hx as [crqi [? ?]].
     rewrite H13 in H10; auto.
   Qed.
+
+  Lemma downLockFreeChildInv_responded:
+    forall orqs msgs oidx rqi mins rqTos P (* rsm cidx *) porq,
+      DownLockedInv orqs msgs oidx rqi ->
+      NoDup (idsOf mins) ->
+      Forall (FirstMPI msgs) mins ->
+      Forall (fun idm => msg_type (valOf idm) = MRs) mins ->
+      RqRsDownMatch dtr oidx rqTos (idsOf mins) P ->
+      idsOf mins = rqi.(rqi_minds_rss) ->
+      (* msg_type rsm = MRs -> *)
+      (* parentIdxOf dtr cidx = Some oidx -> *)
+      (* edgeDownTo dtr cidx = Some rsbTo -> *)
+      DownLockFreeInv (orqs +[oidx <- porq -[downRq]])
+                      (* (enqMP rsbTo rsm (deqMsgs (idsOf mins) msgs)) *)
+                      (deqMsgs (idsOf mins) msgs) oidx.
+  Proof.
+    intros.
+    apply downLockFreeInv_orqs_preserved_self_update.
+
+    red in H; red; intros.
+    specialize (H _ H5).
+    destruct H as [down [rsUp ?]]; dest.
+    exists down, rsUp.
+    split; [|split]; try assumption.
+
+    find_if_inside.
+    - red in H7; dest.
+      rewrite <-H4 in i; apply in_map_iff in i.
+      destruct i as [[rsUp' rsum] [? ?]]; simpl in *; subst.
+      pose proof H1.
+      rewrite Forall_forall in H10.
+      specialize (H10 _ H11).
+      assert (length (findQ rsUp msgs) = 1) by (eapply findQ_length_one; eauto).
+      eapply xor3_inv_2 with (B:= length (findQ rsUp msgs) = 1) in H9;
+        [dest|assumption].
+      red; split; [|split].
+      { (* rewrite rqsQ_enqMP_rs by assumption. *)
+        rewrite rqsQ_deqMsgs_rss; try assumption.
+        destruct (rqsQ msgs down); [reflexivity|simpl in *; omega].
+      }
+      { (* solve_q. *)
+        apply in_map with (f:= idOf) in H11; simpl in H11.
+        assert (findQ rsUp msgs <> nil) by (destruct (findQ rsUp msgs); discriminate).
+        eapply findQ_In_NoDup_deqMsgs in H14; try eassumption.
+        destruct H14 as [dmsg ?].
+        rewrite <-H14 in H12.
+        destruct (findQ rsUp (deqMsgs _ _)); [reflexivity|discriminate].
+      }
+      { unfold ODownLockedTo in H13.
+        red; destruct (orqs@[cidx]) as [corq|]; simpl in *; auto.
+        destruct (corq@[downRq]) as [crqi|]; auto.
+        intro Hx; elim H13; eauto.
+      }
+    - eapply downLockFreeChildInv_msgs_preserved; try eassumption.
+      + solve_q.
+      + rewrite findQ_not_In_deqMsgs; auto.
+        rewrite H4; assumption.
+  Qed.
   
   Lemma downLockInv_step_ext_in:
     forall oss orqs msgs eins,
@@ -535,11 +593,21 @@ Section DownLockInv.
             solve_q.
           * solve_q.
         + (** case [RsUp(Down)] *)
-          apply downLockFreeInv_orqs_preserved_self_update.
-          admit.
+          eapply downLockFreeInv_msgs_preserved.
+          * destruct HminsV.
+            rewrite <-H17 in H11.
+            eapply downLockFreeChildInv_responded; eauto.
+          * intros; split.
+            { rewrite rqsQ_enqMP_rs; [reflexivity|assumption]. }
+            { solve_q. }
         + (** case [RsUp(Up)] *)
-          apply downLockFreeInv_orqs_preserved_self_update.
-          admit.
+          eapply downLockFreeInv_msgs_preserved.
+          * destruct HminsV.
+            rewrite <-H17 in H6.
+            eapply downLockFreeChildInv_responded; eauto.
+          * intros; split.
+            { rewrite rqsQ_enqMP_rs; [reflexivity|assumption]. }
+            { solve_q. }
 
       - (** case [RsDownRqDownRule] *)
         disc_rule_conds.
@@ -556,8 +624,7 @@ Section DownLockInv.
         * eapply downLockFreeChildInv_orqs_preserved_self_update; [assumption|].
           eapply downLockFreeChildInv_msgs_preserved;
             try eassumption; solve_q.
-      
-    Admitted.
+    Qed.
 
     Lemma downLockInvORq_step_int_child:
       forall oidx,
