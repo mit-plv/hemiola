@@ -104,6 +104,21 @@ Proof.
   intros; firstorder.
 Qed.
 
+Ltac xor3_inv1 H :=
+  match type of H with
+  | xor3 ?P _ _ => eapply xor3_inv_1 with (A:= P) in H
+  end.
+  
+Ltac xor3_inv2 H :=
+  match type of H with
+  | xor3 _ ?P _ => eapply xor3_inv_2 with (B:= P) in H
+  end.
+
+Ltac xor3_inv3 H :=
+  match type of H with
+  | xor3 _ _ ?P => eapply xor3_inv_3 with (C:= P) in H
+  end.
+
 Lemma xor3_False_1:
   forall A B C, xor3 A B C -> A -> B -> False.
 Proof.

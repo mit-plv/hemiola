@@ -1143,8 +1143,7 @@ Section UpLockInv.
           destruct i as [rsDown rsbm]; simpl in *.
           destruct H as [rqUp [down [pidx ?]]]; dest.
           disc_rule_conds.
-          eapply xor3_inv_2 with (B:= length (rssQ msgs rsDown) = 1) in H20;
-            [dest|eapply rssQ_length_one; eauto].
+          xor3_inv2 H20; [dest|eapply rssQ_length_one; eauto].
           remember (rqi_midx_rsb rqi) as rsbTo; clear HeqrsbTo.
           right.
           exists rqTo, rsDown, pidx.
@@ -1249,8 +1248,7 @@ Section UpLockInv.
         apply upLockFreeInv_orqs_preserved_self_update.
         destruct H as [rqUp [down [pidx ?]]]; dest.
         disc_rule_conds.
-        eapply xor3_inv_2 with (B:= length (rssQ msgs rsFrom) = 1) in H17;
-          [dest|eapply rssQ_length_one; eauto].
+        xor3_inv2 H17; [dest|eapply rssQ_length_one; eauto].
         red; right.
         exists rqUp, rsFrom, pidx; repeat split; try assumption.
         + solve_q.
@@ -1292,8 +1290,7 @@ Section UpLockInv.
                 rewrite filter_app; simpl.
                 rewrite H6; simpl.
                 rewrite app_length; simpl.
-                eapply xor3_inv_1
-                  with (A:= length (findQ rqFrom msgs) = 1) in H14; dest.
+                xor3_inv1 H14; dest.
                 { unfold rssQ in H2, H9; omega. }
                 { eapply findQ_length_one; eauto. }
               }
@@ -1395,9 +1392,7 @@ Section UpLockInv.
               exists rqUp, down, pidx.
               disc_rule_conds.
 
-              apply xor3_inv_1
-                with (A:= length (findQ rqFrom msgs) = 1) in H21;
-                [dest|eapply findQ_length_one; eauto].
+              xor3_inv1 H21; [dest|eapply findQ_length_one; eauto].
 
               assert (length (findQ rqFrom (enqMP rqTo rqtm (deqMP rqFrom msgs))) = 0).
               { solve_q.
@@ -1493,9 +1488,7 @@ Section UpLockInv.
               exists rqUp, down, pidx.
               disc_rule_conds.
 
-              apply xor3_inv_1
-                with (A:= length (findQ rqFrom msgs) = 1) in H20;
-                [dest|eapply findQ_length_one; eauto].
+              xor3_inv1 H20; [dest|eapply findQ_length_one; eauto].
 
               assert (length (findQ rqFrom (enqMsgs mouts (deqMP rqFrom msgs))) = 0).
               { solve_q.
@@ -1651,9 +1644,7 @@ Section UpLockInv.
               exists rqUp, down, pidx.
               disc_rule_conds.
 
-              apply xor3_inv_3
-                with (C:= OLockedTo orqs (obj_idx obj) (rqi_midx_rsb rqi))
-                in H21; [dest|red; disc_rule_conds; eexists; intuition].
+              xor3_inv3 H21; [dest|red; disc_rule_conds; eexists; intuition].
 
               assert (length (findQ rqFrom (enqMP (rqi_midx_rsb rqi) rsm (deqMP (fst i) msgs))) = 0).
               { solve_q; omega. }
@@ -1738,9 +1729,7 @@ Section UpLockInv.
               exists rqUp, down, pidx.
               disc_rule_conds.
 
-              apply xor3_inv_3
-                with (C:= OLockedTo orqs (obj_idx obj) (rqi_midx_rsb rqi))
-                in H20; [dest|red; disc_rule_conds; eexists; intuition].
+              xor3_inv3 H20; [dest|red; disc_rule_conds; eexists; intuition].
 
               assert (length (findQ rqFrom (enqMP (rqi_midx_rsb rqi) rsm (deqMsgs (idsOf mins) msgs))) = 0).
               { rewrite H18; solve_q.

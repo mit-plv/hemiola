@@ -850,10 +850,35 @@ Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
 Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
   filter (fun msg => msg.(msg_type) ==n MRs) (findQ midx msgs).
 
+Lemma findQ_length_zero:
+  forall (msgs: MessagePool Msg) midx msg,
+    length (findQ midx msgs) <= 1 ->
+    FirstMP msgs midx msg ->
+    findQ midx (deqMP midx msgs) = nil.
+Proof.
+  intros.
+  apply findQ_In_deqMP_FirstMP in H0.
+  unfold FirstMP, firstMP in *; simpl in *.
+  destruct (findQ midx msgs); [discriminate|].
+  inv H0.
+  simpl in H.
+  destruct (findQ _ _); [reflexivity|simpl in H; omega].
+Qed.
+
+Lemma findQ_length_zero_False:
+  forall (msgs: MessagePool Msg) midx msg,
+    findQ midx msgs = nil ->
+    FirstMP msgs midx msg ->
+    False.
+Proof.
+  unfold FirstMP, firstMP; simpl; intros.
+  destruct (findQ midx msgs); discriminate.
+Qed.
+
 Lemma findQ_length_one:
   forall (msgs: MessagePool Msg) midx msg,
     length (findQ midx msgs) <= 1 ->
-    FirstMPI msgs (midx, msg) ->
+    FirstMP msgs midx msg ->
     length (findQ midx msgs) = 1.
 Proof.
   intros.
@@ -862,33 +887,93 @@ Proof.
   - simpl in *; omega.
 Qed.
 
+Lemma rqsQ_length_zero:
+  forall (msgs: MessagePool Msg) midx msg,
+    length (rqsQ msgs midx) <= 1 ->
+    FirstMP msgs midx msg ->
+    msg_type msg = MRq ->
+    rqsQ (deqMP midx msgs) midx = nil.
+Proof.
+  intros.
+  apply findQ_In_deqMP_FirstMP in H0.
+  unfold rqsQ, FirstMP, firstMP in *; simpl in *.
+  destruct (findQ midx msgs); [discriminate|].
+  inv H0.
+  simpl in H; rewrite H1 in H; simpl in H.
+  destruct (filter _ _); [reflexivity|simpl in H; omega].
+Qed.
+
+Lemma rqsQ_length_zero_False:
+  forall msgs midx msg,
+    rqsQ msgs midx = nil ->
+    msg_type msg = MRq ->
+    FirstMP msgs midx msg ->
+    False.
+Proof.
+  unfold rqsQ, FirstMP, firstMP; simpl; intros.
+  destruct (findQ midx msgs); [discriminate|].
+  inv H1.
+  simpl in H; rewrite H0 in H; simpl in H.
+  discriminate.
+Qed.
+
 Lemma rqsQ_length_one:
   forall msgs midx msg,
     length (rqsQ msgs midx) <= 1 ->
     msg_type msg = MRq ->
-    FirstMPI msgs (midx, msg) ->
+    FirstMP msgs midx msg ->
     length (rqsQ msgs midx) = 1.
 Proof.
   unfold rqsQ; intros.
   remember (findQ midx msgs) as q; destruct q.
   - exfalso; eapply FirstMP_findQ_False; eauto.
-  - unfold FirstMPI, FirstMP, firstMP in H1.
+  - unfold FirstMP, firstMP in H1.
     simpl in H1; rewrite <-Heqq in H1; inv H1.
     simpl in *; rewrite H0 in *; simpl in *.
     omega.
+Qed.
+
+Lemma rssQ_length_zero:
+  forall (msgs: MessagePool Msg) midx msg,
+    length (rssQ msgs midx) <= 1 ->
+    FirstMP msgs midx msg ->
+    msg_type msg = MRs ->
+    rssQ (deqMP midx msgs) midx = nil.
+Proof.
+  intros.
+  apply findQ_In_deqMP_FirstMP in H0.
+  unfold rssQ, FirstMP, firstMP in *; simpl in *.
+  destruct (findQ midx msgs); [discriminate|].
+  inv H0.
+  simpl in H; rewrite H1 in H; simpl in H.
+  destruct (filter _ _); [reflexivity|simpl in H; omega].
+Qed.
+
+Lemma rssQ_length_zero_False:
+  forall msgs midx msg,
+    rssQ msgs midx = nil ->
+    msg_type msg = MRs ->
+    FirstMP msgs midx msg ->
+    False.
+Proof.
+  unfold rssQ, FirstMP, firstMP; simpl; intros.
+  destruct (findQ midx msgs); [discriminate|].
+  inv H1.
+  simpl in H; rewrite H0 in H; simpl in H.
+  discriminate.
 Qed.
 
 Lemma rssQ_length_one:
   forall msgs midx msg,
     length (rssQ msgs midx) <= 1 ->
     msg_type msg = MRs ->
-    FirstMPI msgs (midx, msg) ->
+    FirstMP msgs midx msg ->
     length (rssQ msgs midx) = 1.
 Proof.
   unfold rssQ; intros.
   remember (findQ midx msgs) as q; destruct q.
   - exfalso; eapply FirstMP_findQ_False; eauto.
-  - unfold FirstMPI, FirstMP, firstMP in H1.
+  - unfold FirstMP, firstMP in H1.
     simpl in H1; rewrite <-Heqq in H1; inv H1.
     simpl in *; rewrite H0 in *; simpl in *.
     omega.
