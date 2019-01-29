@@ -1103,7 +1103,54 @@ Section DownLockInv.
             }
             { mred. }
         + (** [RsUpUp] *)
-          admit.
+          destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
+          * pose proof (H _ H2).
+            destruct H10 as [odown [orsUp ?]]; dest.
+            repeat disc_rule_minds.
+            red in H; red; intros.
+            specialize (H _ H10).
+            destruct H as [down [rsUp ?]]; dest.
+            exists down, rsUp; repeat split; try assumption.
+            destruct (eq_nat_dec cidx (obj_idx obj)); subst.
+            { repeat disc_rule_minds.
+              clear H12; find_if_inside.
+              { red in H14; red; dest.
+                xor3_inv3 H10;
+                  [dest|red; mred; simpl; eexists; repeat split; assumption].
+                replace (length
+                           (rqsQ (enqMP (rqi_midx_rsb rqi)
+                                        rsm (deqMsgs (idsOf mins) msgs)) odown)) with 0;
+                  [|rewrite H18; solve_q; unfold rqsQ in H5, H10; omega].
+                replace (length
+                           (findQ (rqi_midx_rsb rqi)
+                                  (enqMP (rqi_midx_rsb rqi)
+                                         rsm (deqMsgs (idsOf mins) msgs)))) with 1;
+                  [|rewrite H18; solve_q; rewrite app_length; simpl; omega].
+                repeat split; try omega.
+                xsnd; [omega|omega|].
+                intro Hx; red in Hx; mred; simpl in Hx.
+                destruct Hx as [xrqi [? ?]]; mred.
+              }
+              { exfalso; red in H14; dest.
+                red in H10; mred.
+              }
+            }
+            { rewrite H18.
+              assert (Some oidx <> Some (obj_idx obj)).
+              { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
+              clear H12; find_if_inside.
+              { eapply downLockedChildInv_orqs_preserved_not_child_update; eauto.
+                eapply downLockedChildInv_msgs_preserved; eauto; solve_q.
+              }
+              { eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
+                eapply downLockFreeChildInv_msgs_preserved; eauto; solve_q.
+              }
+            }
+          * exfalso; specialize (H _ H2).
+            destruct H as [odown [orsUp ?]]; dest.
+            repeat disc_rule_minds.
+            red in H11; dest.
+            red in H11; mred.
 
       - (** case [RsDownRqDownRule] *)
         disc_rule_conds.
@@ -1132,8 +1179,7 @@ Section DownLockInv.
             { solve_q. }
           * mred.
           * rewrite H27; solve_midx_neq.
-
-    Admitted.
+    Qed.
 
     Lemma downLockInvORq_step_int_other:
       forall oidx,
