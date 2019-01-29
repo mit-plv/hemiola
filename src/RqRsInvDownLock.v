@@ -274,7 +274,7 @@ Section DownLockInv.
       mred; simpl; rewrite <-H2; assumption.
   Qed.
 
-  Lemma downLockedChildInv_orqs_preserved_downRq_rsbTo:
+  Lemma downLockedChildInv_orqs_preserved_downRq_rsbTo_1:
     forall orqs msgs cidx down rsUp oidx porq norq rqid,
       parentIdxOf dtr cidx = Some oidx ->
       DownLockedChildInv orqs msgs cidx down rsUp ->
@@ -300,6 +300,35 @@ Section DownLockInv.
     - xthd; try assumption.
       mred; simpl.
       destruct H11 as [rqi ?]; dest; discriminate.
+  Qed.
+
+  Lemma downLockedChildInv_orqs_preserved_downRq_rsbTo_2:
+    forall orqs msgs cidx down rsUp oidx porq norq rqid,
+      parentIdxOf dtr cidx = Some oidx ->
+      DownLockedChildInv orqs msgs cidx down rsUp ->
+      orqs@[cidx] = Some porq ->
+      porq@[downRq] = Some rqid ->
+      rqid.(rqi_midx_rsb) <> rsUp ->
+      norq@[downRq] = None ->
+      DownLockedChildInv (orqs+[cidx <- norq]) msgs cidx down rsUp.
+  Proof.
+    intros; destruct Hsd.
+    red in H0; dest.
+    repeat split; try assumption.
+    unfold ODownLockedTo in *.
+    inv H8.
+    - xfst; try assumption.
+      mred; simpl.
+      intro Hx; destruct Hx as [rqi ?]; dest.
+      congruence.
+    - xsnd; try assumption.
+      mred; simpl.
+      intro Hx; destruct Hx as [rqi ?]; dest.
+      congruence.
+    - xthd; try assumption.
+      mred; simpl.
+      destruct H11 as [rqi ?]; dest.
+      inv H8; elim H3; reflexivity.
   Qed.
 
   Lemma downLockFreeChildInv_orqs_preserved_not_child_update:
@@ -331,12 +360,10 @@ Section DownLockInv.
     mred; simpl; rewrite <-H2; assumption.
   Qed.
 
-  Lemma downLockFreeChildInv_orqs_preserved_downRq_rsbTo:
-    forall orqs msgs cidx down rsUp oidx porq norq rqid,
+  Lemma downLockFreeChildInv_orqs_preserved_downRq_rsbTo_1:
+    forall orqs msgs cidx down rsUp oidx norq rqid,
       parentIdxOf dtr cidx = Some oidx ->
       DownLockFreeChildInv orqs msgs cidx down rsUp ->
-      orqs@[cidx] = Some porq ->
-      porq@[downRq] = None ->
       norq@[downRq] = Some rqid ->
       rqid.(rqi_midx_rsb) <> rsUp ->
       DownLockFreeChildInv (orqs+[cidx <- norq]) msgs cidx down rsUp.
@@ -344,9 +371,22 @@ Section DownLockInv.
     intros; destruct Hsd.
     red in H0; dest.
     repeat split; try assumption.
-    unfold ONoDownLockTo in *.
-    mred; simpl.
-    rewrite H3; simpl; auto.
+    red; mred; simpl.
+    rewrite H1; assumption.
+  Qed.
+
+  Lemma downLockFreeChildInv_orqs_preserved_downRq_rsbTo_2:
+    forall orqs msgs cidx down rsUp oidx norq,
+      parentIdxOf dtr cidx = Some oidx ->
+      DownLockFreeChildInv orqs msgs cidx down rsUp ->
+      norq@[downRq] = None ->
+      DownLockFreeChildInv (orqs+[cidx <- norq]) msgs cidx down rsUp.
+  Proof.
+    intros; destruct Hsd.
+    red in H0; dest.
+    repeat split; try assumption.
+    red; mred; simpl.
+    rewrite H1; auto.
   Qed.
 
   Lemma downLockedInv_orqs_preserved_self_update:
@@ -386,7 +426,32 @@ Section DownLockInv.
       intro Hx; subst; auto.
   Qed.
 
-  Lemma downLockedInv_orqs_preserved_downRq_rsbTo:
+  Lemma downLockedInv_orqs_preserved_downRq_intact:
+    forall orqs msgs oidx rqid cidx porq norq,
+      parentIdxOf dtr cidx = Some oidx ->
+      DownLockedInv orqs msgs oidx rqid ->
+      orqs@[cidx] = Some porq ->
+      porq@[downRq] = norq@[downRq] ->
+      DownLockedInv (orqs+[cidx <- norq]) msgs oidx rqid.
+  Proof.
+    intros; destruct Hsd.
+    red in H0; red; intros.
+    specialize (H0 _ H5).
+    destruct H0 as [cdown [crsUp ?]]; dest.
+    exists cdown, crsUp.
+    repeat split; try assumption.
+    destruct (eq_nat_dec cidx cidx0); subst.
+    - find_if_inside.
+      + repeat disc_rule_minds.
+        eapply downLockedChildInv_orqs_preserved_downRq_intact; eauto.
+      + repeat disc_rule_minds.
+        eapply downLockFreeChildInv_orqs_preserved_downRq_intact; eauto.
+    - find_if_inside.
+      + eapply downLockedChildInv_orqs_preserved_not_child_update; eauto.
+      + eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
+  Qed.
+  
+  Lemma downLockedInv_orqs_preserved_downRq_rsbTo_1:
     forall orqs msgs oidx rqid rqi cidx porq norq rsUp,
       parentIdxOf dtr cidx = Some oidx ->
       rsEdgeUpFrom dtr cidx = Some rsUp ->
@@ -406,9 +471,37 @@ Section DownLockInv.
     destruct (eq_nat_dec cidx cidx0); subst.
     - find_if_inside.
       + repeat disc_rule_minds.
-        eapply downLockedChildInv_orqs_preserved_downRq_rsbTo; eauto.
+        eapply downLockedChildInv_orqs_preserved_downRq_rsbTo_1; eauto.
       + repeat disc_rule_minds.
-        eapply downLockFreeChildInv_orqs_preserved_downRq_rsbTo; eauto.
+        eapply downLockFreeChildInv_orqs_preserved_downRq_rsbTo_1; eauto.
+    - find_if_inside.
+      + eapply downLockedChildInv_orqs_preserved_not_child_update; eauto.
+      + eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
+  Qed.
+
+  Lemma downLockedInv_orqs_preserved_downRq_rsbTo_2:
+    forall orqs msgs oidx rqid rqi cidx porq norq rsUp,
+      parentIdxOf dtr cidx = Some oidx ->
+      rsEdgeUpFrom dtr cidx = Some rsUp ->
+      DownLockedInv orqs msgs oidx rqid ->
+      orqs@[cidx] = Some porq ->
+      porq@[downRq] = Some rqi ->
+      rqi.(rqi_midx_rsb) <> rsUp ->
+      norq@[downRq] = None ->
+      DownLockedInv (orqs+[cidx <- norq]) msgs oidx rqid.
+  Proof.
+    intros; destruct Hsd.
+    red in H1; red; intros.
+    specialize (H1 _ H8).
+    destruct H1 as [cdown [crsUp ?]]; dest.
+    exists cdown, crsUp.
+    repeat split; try assumption.
+    destruct (eq_nat_dec cidx cidx0); subst.
+    - find_if_inside.
+      + repeat disc_rule_minds.
+        eapply downLockedChildInv_orqs_preserved_downRq_rsbTo_2; eauto.
+      + repeat disc_rule_minds.
+        eapply downLockFreeChildInv_orqs_preserved_downRq_rsbTo_2; eauto.
     - find_if_inside.
       + eapply downLockedChildInv_orqs_preserved_not_child_update; eauto.
       + eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
@@ -445,26 +538,64 @@ Section DownLockInv.
     intro Hx; subst; auto.
   Qed.
 
-  Lemma downLockFreeInv_orqs_preserved_downRq_rsbTo:
-    forall orqs msgs oidx rqid cidx porq norq rsUp,
+  Lemma downLockFreeInv_orqs_preserved_downRq_intact:
+    forall orqs msgs oidx cidx porq norq,
+      parentIdxOf dtr cidx = Some oidx ->
+      DownLockFreeInv orqs msgs oidx ->
+      orqs@[cidx] = Some porq ->
+      porq@[downRq] = norq@[downRq] ->
+      DownLockFreeInv (orqs+[cidx <- norq]) msgs oidx.
+  Proof.
+    intros; destruct Hsd.
+    red in H0; red; intros.
+    specialize (H0 _ H5).
+    destruct H0 as [cdown [crsUp ?]]; dest.
+    exists cdown, crsUp.
+    split; [|split]; try assumption.
+    destruct (eq_nat_dec cidx cidx0); subst.
+    - repeat disc_rule_minds.
+      eapply downLockFreeChildInv_orqs_preserved_downRq_intact; eauto.
+    - eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
+  Qed.
+  
+  Lemma downLockFreeInv_orqs_preserved_downRq_rsbTo_1:
+    forall orqs msgs oidx rqid cidx norq rsUp,
       parentIdxOf dtr cidx = Some oidx ->
       rsEdgeUpFrom dtr cidx = Some rsUp ->
       DownLockFreeInv orqs msgs oidx ->
-      orqs@[cidx] = Some porq ->
-      porq@[downRq] = None ->
       norq@[downRq] = Some rqid ->
       rqid.(rqi_midx_rsb) <> rsUp ->
       DownLockFreeInv (orqs+[cidx <- norq]) msgs oidx.
   Proof.
     intros; destruct Hsd.
     red in H1; red; intros.
-    specialize (H1 _ H8).
+    specialize (H1 _ H6).
     destruct H1 as [cdown [crsUp ?]]; dest.
     exists cdown, crsUp.
     split; [|split]; try assumption.
     destruct (eq_nat_dec cidx cidx0); subst.
     - repeat disc_rule_minds.
-      eapply downLockFreeChildInv_orqs_preserved_downRq_rsbTo; eauto.
+      eapply downLockFreeChildInv_orqs_preserved_downRq_rsbTo_1; eauto.
+    - eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
+  Qed.
+
+  Lemma downLockFreeInv_orqs_preserved_downRq_rsbTo_2:
+    forall orqs msgs oidx cidx norq rsUp,
+      parentIdxOf dtr cidx = Some oidx ->
+      rsEdgeUpFrom dtr cidx = Some rsUp ->
+      DownLockFreeInv orqs msgs oidx ->
+      norq@[downRq] = None ->
+      DownLockFreeInv (orqs+[cidx <- norq]) msgs oidx.
+  Proof.
+    intros; destruct Hsd.
+    red in H1; red; intros.
+    specialize (H1 _ H5).
+    destruct H1 as [cdown [crsUp ?]]; dest.
+    exists cdown, crsUp.
+    split; [|split]; try assumption.
+    destruct (eq_nat_dec cidx cidx0); subst.
+    - repeat disc_rule_minds.
+      eapply downLockFreeChildInv_orqs_preserved_downRq_rsbTo_2; eauto.
     - eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
   Qed.
   
@@ -852,10 +983,127 @@ Section DownLockInv.
           eapply rqsQ_length_zero_False; eauto.
 
       - (** case [RqFwdRule] *)
-        admit.
+        disc_rule_conds.
+        + (** [RqUpUp] *)
+          destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
+          * eapply downLockedInv_orqs_preserved_downRq_intact; eauto; [|mred].
+            eapply downLockedInv_msgs_preserved; [eassumption|].
+            intros; split; solve_q.
+          * eapply downLockFreeInv_orqs_preserved_downRq_intact; eauto; [|mred].
+            eapply downLockFreeInv_msgs_preserved; [eassumption|].
+            intros; split; solve_q.
+        + (** [RqUpDown] *)
+          pose proof H2.
+          eapply parentIdxOf_Some in H5; [|eassumption].
+          destruct H5 as [rqUp [rsUp [down ?]]]; dest.
+          assert (Some oidx <> Some (obj_idx obj)).
+          { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
+          destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
+          * eapply downLockedInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
+            { eapply downLockedInv_msgs_preserved; [eassumption|].
+              intros; split; solve_q.
+            }
+            { mred. }
+            { solve_midx_neq. }
+          * eapply downLockFreeInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
+            { eapply downLockFreeInv_msgs_preserved; [eassumption|].
+              intros; split; solve_q.
+            }
+            { mred. }
+            { solve_midx_neq. }
+        + (** [RqDownDown] *)
+          destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
+          * pose proof (H _ H2).
+            destruct H7 as [odown [orsUp ?]]; dest.
+            repeat disc_rule_minds.
+            red in H; red; intros.
+            specialize (H _ H7).
+            destruct H as [down [rsUp ?]]; dest.
+            exists down, rsUp; repeat split; try assumption.
+            destruct (eq_nat_dec cidx (obj_idx obj)); subst.
+            { repeat disc_rule_minds.
+              clear H15; find_if_inside.
+              { red in H13; red; dest.
+                xor3_inv1 H7; [dest|eapply rqsQ_length_one; eauto].
+                replace (length (rqsQ (enqMsgs mouts (deqMP odown msgs)) odown)) with 0;
+                  [|solve_q;
+                    apply rqsQ_length_zero in H14; try assumption;
+                    simpl in H14; unfold rqsQ in H14; rewrite H14; reflexivity].
+                replace (length (findQ (rqi_midx_rsb rqi) (enqMsgs mouts (deqMP odown msgs))))
+                  with 0; [|solve_q;
+                            destruct (findQ (rqi_midx_rsb rqi) msgs);
+                            simpl in *; omega].
+                repeat split; try omega.
+                xthd; [omega|omega|].
+                red; mred; simpl.
+                exists rqi; split; [mred|reflexivity].
+              }
+              { exfalso; red in H13; dest.
+                eapply rqsQ_length_zero_False; eauto.
+              }
+            }
+            { assert (Some oidx <> Some (obj_idx obj)).
+              { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
+              clear H13; find_if_inside.
+              { eapply downLockedChildInv_orqs_preserved_not_child_update; eauto.
+                eapply downLockedChildInv_msgs_preserved; eauto; solve_q.
+              }
+              { eapply downLockFreeChildInv_orqs_preserved_not_child_update; eauto.
+                eapply downLockFreeChildInv_msgs_preserved; eauto; solve_q.
+              }
+            }
+          * exfalso; specialize (H _ H2).
+            destruct H as [odown [orsUp ?]]; dest.
+            repeat disc_rule_minds.
+            red in H9; dest.
+            eapply rqsQ_length_zero_False; eauto.
 
       - (** case [RsBackRule] *)
-        admit.
+        good_footprint_get (obj_idx obj).
+        disc_rule_conds.
+        + (** [RsDownDown] *)
+          destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
+          * eapply downLockedInv_orqs_preserved_downRq_intact; eauto; [|mred].
+            eapply downLockedInv_msgs_preserved; [eassumption|].
+            intros; split.
+            { rewrite rqsQ_enqMP_rs by assumption.
+              erewrite rqsQ_deqMP_rs by eassumption.
+              reflexivity.
+            }
+            { solve_q. }
+          * eapply downLockFreeInv_orqs_preserved_downRq_intact; eauto; [|mred].
+            eapply downLockFreeInv_msgs_preserved; [eassumption|].
+            intros; split.
+            { rewrite rqsQ_enqMP_rs by assumption.
+              erewrite rqsQ_deqMP_rs by eassumption.
+              reflexivity.
+            }
+            { solve_q. }
+        + (** [RsUpDown] *)
+          pose proof H2.
+          eapply parentIdxOf_Some in H6; [|eassumption].
+          destruct H6 as [rqUp [rsUp [down ?]]]; dest.
+          assert (Some oidx <> Some (obj_idx obj)).
+          { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
+          rewrite H18.
+          destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
+          * eapply downLockedInv_orqs_preserved_downRq_rsbTo_2; try eassumption.
+            { eapply downLockedInv_msgs_preserved; [eassumption|].
+              intros; split.
+              { rewrite rqsQ_enqMP_rs by assumption; solve_q. }
+              { solve_q. }
+            }
+            { solve_midx_neq. }
+            { mred. }
+          * eapply downLockFreeInv_orqs_preserved_downRq_rsbTo_2; try eassumption.
+            { eapply downLockFreeInv_msgs_preserved; [eassumption|].
+              intros; split.
+              { rewrite rqsQ_enqMP_rs by assumption; solve_q. }
+              { solve_q. }
+            }
+            { mred. }
+        + (** [RsUpUp] *)
+          admit.
 
       - (** case [RsDownRqDownRule] *)
         disc_rule_conds.
@@ -866,7 +1114,7 @@ Section DownLockInv.
         assert (Some oidx <> Some (obj_idx obj)).
         { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
         destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
-        + eapply downLockedInv_orqs_preserved_downRq_rsbTo; try eassumption.
+        + eapply downLockedInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
           * eapply downLockedInv_msgs_preserved; [eassumption|].
             intros; split.
             { solve_q.
@@ -875,7 +1123,7 @@ Section DownLockInv.
             { solve_q. }
           * mred.
           * rewrite H27; solve_midx_neq.
-        + eapply downLockFreeInv_orqs_preserved_downRq_rsbTo; try eassumption.
+        + eapply downLockFreeInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
           * eapply downLockFreeInv_msgs_preserved; [eassumption|].
             intros; split.
             { solve_q.

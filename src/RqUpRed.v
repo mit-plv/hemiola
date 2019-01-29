@@ -301,30 +301,30 @@ Section RqUpReduction.
         apply (DisjList_singleton_2 eq_nat_dec)
       end.
 
-  Lemma rqUp_lbl_reducible:
-    forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
+  Lemma rqUp_lbl_commutes:
+    forall oidxTo rqUps st1 st2 oidx1 ridx1 rins1 routs1 oidx2 ridx2 rins2 routs2,
       RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps routs1 ->
-      forall oidx2 ridx2 rins2 routs2,
-        DisjList routs1 rins2 ->
-        Reducible
-          sys [RlblInt oidx2 ridx2 rins2 routs2;
-                 RlblInt oidx1 ridx1 rins1 routs1]
-          [RlblInt oidx1 ridx1 rins1 routs1;
-             RlblInt oidx2 ridx2 rins2 routs2].
+      DisjList routs1 rins2 ->
+      Reachable (steps step_m) sys st1 ->
+      steps step_m sys st1
+            [RlblInt oidx2 ridx2 rins2 routs2;
+               RlblInt oidx1 ridx1 rins1 routs1] st2 ->
+      NonConflictingL sys oidx1 ridx1 oidx2 ridx2 /\
+      DisjList (idsOf rins1) (idsOf rins2) /\
+      DisjList routs1 rins2 /\
+      DisjList (idsOf routs1) (idsOf routs2).
   Proof.
-    intros.
-    destruct Hrrs as [? [? ?]].
-    apply internal_steps_commutes; intros.
-
+    intros; destruct Hrrs as [? [? ?]].
+    
     (* Register necessary invariants. *)
-    inv H6.
-    pose proof (upLockInv_ok H3 H2 (reachable_steps H5 H10)) as HlockInv.
-    pose proof (footprints_ok H3 (reachable_steps H5 H10)) as HftInv.
+    inv H3.
+    pose proof (upLockInv_ok H5 H4 (reachable_steps H2 H10)) as HlockInv.
+    pose proof (footprints_ok H5 (reachable_steps H2 H10)) as HftInv.
     
     inv_steps.
-    pose proof (rqUp_spec H H0 H5 H13).
-    destruct H6 as [? [? [? ?]]].
+    pose proof (rqUp_spec H H0 H2 H13).
+    destruct H3 as [? [? [? ?]]].
     destruct H9 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
     dest; subst.
     inv_step; simpl in *.
@@ -368,11 +368,11 @@ Section RqUpReduction.
             destruct (eq_nat_dec upCObj.(obj_idx) cidx1); subst.
             { exfalso.
               good_locking_get upCObj.
-              red in H6.
+              red in H3.
               apply parentIdxOf_not_eq in H8;
                 [|destruct Hrrs as [[? ?] _]; assumption]; mred.
               find_if_inside.
-              { destruct H6 as [rqUp [down [pidx ?]]]; dest.
+              { destruct H3 as [rqUp [down [pidx ?]]]; dest.
                 disc_rule_conds.
                 eapply xor3_False_2; [eassumption| |].
                 { eapply findQ_length_one; eauto. }
@@ -380,8 +380,8 @@ Section RqUpReduction.
                   eauto.
                 }
               }
-              { destruct H6; [congruence|].
-                destruct H6 as [upRq [down [pidx ?]]]; dest.
+              { destruct H3; [congruence|].
+                destruct H3 as [upRq [down [pidx ?]]]; dest.
                 disc_rule_conds.
                 eapply FirstMP_findQ_False; eauto.
               }
@@ -467,6 +467,24 @@ Section RqUpReduction.
           split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
         split; [|split]; [|assumption|]; solve_midx_disj.
+  Qed.
+
+  Lemma rqUp_lbl_reducible:
+    forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
+      RqUpMsgs dtr oidxTo rqUps ->
+      SubList rqUps routs1 ->
+      forall oidx2 ridx2 rins2 routs2,
+        DisjList routs1 rins2 ->
+        Reducible
+          sys [RlblInt oidx2 ridx2 rins2 routs2;
+                 RlblInt oidx1 ridx1 rins1 routs1]
+          [RlblInt oidx1 ridx1 rins1 routs1;
+             RlblInt oidx2 ridx2 rins2 routs2].
+  Proof.
+    intros.
+    destruct Hrrs as [? [? ?]].
+    apply internal_steps_commutes; intros.
+    eapply rqUp_lbl_commutes; eauto.
   Qed.
 
   Inductive RqUpHistory: MHistory -> list (Id Msg) -> Prop :=

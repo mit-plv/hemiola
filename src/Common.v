@@ -6,6 +6,11 @@ Set Implicit Arguments.
 Include ListNotations.
 Include VectorNotations.
 
+Ltac ssplit :=
+  match goal with
+  | [ |- _ /\ _] => split
+  end.
+
 Ltac isNew P :=
   match goal with
     | [ _: ?P' |- _] => assert (P = P') by reflexivity; fail 1
