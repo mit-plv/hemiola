@@ -388,20 +388,18 @@ Section RqUpReduction.
             destruct (eq_nat_dec upCObj.(obj_idx) cidx1); subst.
             { exfalso.
               good_locking_get upCObj.
-              red in H3.
-              apply parentIdxOf_not_eq in H8;
+              red in H.
+              apply parentIdxOf_not_eq in H15;
                 [|destruct Hrrs as [[? ?] _]; assumption]; mred.
               find_if_inside.
-              { destruct H3 as [rqUp [down [pidx ?]]]; dest.
+              { destruct H as [rqUp [down [pidx ?]]]; dest.
                 disc_rule_conds.
                 eapply xor3_False_2; [eassumption| |].
                 { eapply findQ_length_one; eauto. }
-                { red; mred; simpl; mred.
-                  eauto.
-                }
+                { red; mred; simpl; mred; eauto. }
               }
-              { destruct H3; [congruence|].
-                destruct H3 as [upRq [down [pidx ?]]]; dest.
+              { destruct H; [congruence|].
+                destruct H as [upRq [down [pidx ?]]]; dest.
                 disc_rule_conds.
                 eapply FirstMP_findQ_False; eauto.
               }
@@ -467,16 +465,16 @@ Section RqUpReduction.
       good_rqrs_rule_cases rule0.
       + disc_rule_conds.
         destruct (eq_nat_dec cidx0 cidx2);
-          [subst; rewrite H56 in H30; elim n; inv H30; reflexivity|].
+          [subst; rewrite H56 in H15; elim n; inv H15; reflexivity|].
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
-        * destruct (eq_nat_dec cidx1 cidx);
-            [subst; rewrite H in H30; elim n; inv H30; reflexivity|].
+        * destruct (eq_nat_dec cidx2 cidx0);
+            [subst; rewrite H9 in H48; elim n; inv H48; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * destruct (eq_nat_dec cidx1 (obj_idx upCObj));
-            [subst; rewrite H30 in H8; elim n; inv H8; reflexivity|].
+            [subst; rewrite H48 in H30; elim n; inv H30; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
@@ -645,11 +643,8 @@ Section RqUpReduction.
 
     - pose proof (footprints_ok H10 H) as HftInv.
       good_footprint_get (obj_idx obj).
-      rewrite H20 in H8; simpl in H8; dest.
       disc_rule_conds.
       + solve_midx_disj.
-      + rewrite H35; solve_midx_disj.
-      + rewrite H35; solve_midx_disj.
       + rewrite H35; solve_midx_disj.
       + rewrite H35; solve_midx_disj.
 

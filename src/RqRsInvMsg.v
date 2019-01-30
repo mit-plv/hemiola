@@ -113,17 +113,11 @@ Ltac good_footprint_get oidx :=
   | [Hfpok: FootprintsOk _ _ _, Ho: _@[oidx] = Some _ |- _] =>
     let H := fresh "H" in
     pose proof Hfpok as H;
-    specialize (H oidx); simpl in H
+    specialize (H oidx); simpl in H; mred; dest
   end.
 
 Ltac disc_footprints_ok :=
   match goal with
-  | [H: FootprintsOk _ _ _ |- _] => red in H
-  | [H1: FootprintsOkORqs _ _ ?orqs, H2: ?orqs @[?oidx] = _ |- _] =>
-    let Hf := fresh "H" in
-    pose proof (H1 oidx) as Hf;
-    rewrite H2 in Hf; simpl in Hf; dest;
-    clear H2
   | [H: FootprintUpOkEx _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqTo := fresh "rqTo" in
@@ -218,20 +212,21 @@ Section MessageInv.
       + left; solve_rule_conds.
       + right; left; solve_rule_conds.
 
-    - disc_rule_conds.
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
       + right; right; right.
         solve_rule_conds.
       + right; right; left.
-        rewrite <-H24 in H17.
+        rewrite <-H26 in H19.
         split; auto.
-        clear -H17; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H17; [|eassumption].
+        clear -H19; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H19; [|eassumption].
         dest; eauto.
       + right; right; left.
-        rewrite <-H24 in H8.
+        rewrite <-H26 in H4.
         split; auto.
-        clear -H8; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H8; [|eassumption].
+        clear -H4; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_In in H4; [|eassumption].
         dest; eauto.
 
     - right; right; right.

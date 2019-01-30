@@ -52,26 +52,28 @@ Section RsUpReduction.
     - exfalso; disc_rule_conds.
     - exfalso; disc_rule_conds.
 
-    - good_locking_get obj.
+    - good_footprint_get (obj_idx obj).
+      good_locking_get obj.
       red in H1; dest; destruct H1.
       + disc_rule_conds.
-        exfalso; destruct H30 as [ncidx [? ?]].
-        elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H23 H16); reflexivity.
+        exfalso; destruct H31 as [ncidx [? ?]].
+        elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H23 H14); reflexivity.
       + split.
         * exists obj, rule.
           repeat ssplit; try assumption; try reflexivity.
         * disc_rule_conds.
           { exists porq, rqi.
             repeat ssplit; try assumption; try reflexivity.
-            red in H8; rewrite H28 in H8; assumption.
+            red in H10; rewrite H30 in H10; assumption.
           }
           { exists porq, rqi.
             repeat ssplit; try assumption; try reflexivity.
-            red in H8; rewrite H28 in H8; assumption.
+            red in H10; rewrite H30 in H10; assumption.
           }
 
     - exfalso; disc_rule_conds.
-      elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H8 H34); reflexivity.
+      destruct H26 as [cidx ?]; dest.
+      elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H7 H34); reflexivity.
   Qed.
 
   Lemma rsUp_not_down_requested:
@@ -119,6 +121,24 @@ Section RsUpReduction.
     }
   Qed.
 
+  Ltac disc_rule_custom ::=
+    try disc_footprints_ok;
+    try disc_msgs_in;
+    try disc_rqToUpRule.
+
+  Ltac solve_midx_disj :=
+    repeat
+      match goal with
+      | [ |- _ <> _] => solve_midx_neq
+      | [ |- ~ In _ _] => solve_midx_neq
+      | [ |- DisjList (_ :: nil) (_ :: nil)] =>
+        apply (DisjList_singletons eq_nat_dec)
+      | [ |- DisjList (_ :: nil) _] =>
+        apply (DisjList_singleton_1 eq_nat_dec)
+      | [ |- DisjList _ (_ :: nil)] =>
+        apply (DisjList_singleton_2 eq_nat_dec)
+      end.
+
   Lemma rsUp_lbl_reducible:
     forall oidxTo rsUps,
       RsUpMsgs dtr oidxTo rsUps ->
@@ -141,7 +161,7 @@ Section RsUpReduction.
     { eapply reachable_steps; [eassumption|].
       econstructor; [econstructor|eassumption].
     }
-    pose proof (footprints_ok H2 H5) as HftInv.
+    pose proof (footprints_ok H2 H4) as HftInv.
     
     pose proof (rsUp_spec H H5 H11).
     destruct H6 as [[obj [rule ?]] [orq [rqid ?]]]; dest.
@@ -181,13 +201,13 @@ Section RsUpReduction.
           exfalso; phide_clear.
           disc_rule_conds.
           destruct H33.
-          rewrite <-H59 in H19.
+          rewrite <-H59 in H21.
           eapply rsUp_not_down_requested; eauto.
         * (** [RqDownDown] *)
           exfalso; phide_clear.
           disc_rule_conds.
           destruct H33.
-          rewrite <-H59 in H10.
+          rewrite <-H59 in H12.
           eapply rsUp_not_down_requested; eauto.
 
       + (** case [RsBackRule] *)
@@ -197,12 +217,51 @@ Section RsUpReduction.
         exfalso; phide_clear.
         disc_rule_conds.
         destruct H33.
-        rewrite <-H54 in H17.
+        rewrite <-H54 in H18.
         eapply rsUp_not_down_requested; eauto.
 
-    - split; [red; auto|].
-      (* good_footprint_get (obj_idx obj1). *)
-      (* disc_rule_conds. *)
+    - phide_clear.
+      split; [red; auto|].
+      good_footprint_get (obj_idx obj1).
+      disc_rule_conds.
+      
+      + rewrite <-H45 in H21.
+        good_rqrs_rule_cases rule0.
+        * disc_rule_conds.
+          destruct (eq_nat_dec cidx (obj_idx upCObj));
+            [subst; rewrite H58 in H15; elim n; inv H15; reflexivity|].
+          split; [|split]; [|assumption|]; solve_midx_disj.
+        * disc_rule_conds.
+          split; [|split]; [|assumption|]; solve_midx_disj.
+        * assert (Some (obj_idx obj1) <> Some (obj_idx obj0))
+            by (intro Hx; inv Hx; auto).
+          disc_rule_conds.
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+        * good_footprint_get (obj_idx obj0).
+          disc_rule_conds.
+          { destruct (eq_nat_dec cidx (obj_idx upCObj));
+              [subst; rewrite H14 in H15; elim n; inv H15; reflexivity|].
+            split; [|split]; [|assumption|]; solve_midx_disj.
+          }
+          { split; [|split]; [|assumption|].
+            { admit. (* TODO *) }
+            { destruct (eq_nat_dec (obj_idx upCObj0) (obj_idx upCObj));
+              [rewrite e in *; rewrite H39 in H15; elim n; inv H15; reflexivity|].
+              solve_midx_disj.
+            }
+          }
+          { split; [|split]; [|assumption|].
+            { admit. (* TODO *) }
+            { solve_midx_disj. }
+          }
+        * assert (Some (obj_idx obj1) <> Some (obj_idx obj0))
+            by (intro Hx; inv Hx; auto).
+          disc_rule_conds.
+          split; [|split]; [|assumption|]; solve_midx_disj.
+
+      + admit.
     
   Admitted.
 
