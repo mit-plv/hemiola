@@ -860,7 +860,7 @@ Section RqUpReduction.
           { eassumption. }
         * inv_steps.
           specialize (IHAtomic H8 _ H9 H10 _ H12).
-          eapply (atomic_messages_spec_in msg_dec) in H2; eauto;
+          eapply (atomic_messages_in_in msg_dec) in H2; eauto;
             [|eapply DisjList_In_2; [eassumption|left; reflexivity]].
           apply DisjList_app_4; [apply removeL_DisjList; assumption|].
           eapply rqUp_outs_disj.

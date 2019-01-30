@@ -151,7 +151,30 @@ Section MsgParam.
       apply removeL_SubList_2.
   Qed.
 
-  Lemma atomic_messages_spec_in:
+  Lemma atomic_messages_eouts_in:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall {oifc} (sys: System oifc) st1 st2,
+        steps step_m sys st1 hst st2 ->
+        Forall (InMPI st2.(bst_msgs)) eouts.
+  Proof.
+    (* induction 1; simpl; intros. *)
+    (* - inv_steps; inv_step; simpl in *. *)
+    (*   destruct H14. *)
+    (*   apply Forall_forall; intros [midx msg] ?. *)
+    (*   admit. *)
+    (* - inv_steps; inv_step; simpl in *. *)
+    (*   apply Forall_app. *)
+    (*   + specialize (IHAtomic _ _ _ _ H9); simpl in IHAtomic. *)
+    (*     destruct H14; red in H3. *)
+    (*     clear -IHAtomic H3. *)
+    (*     admit. *)
+    (*   + destruct H18. *)
+    (*     apply Forall_forall; intros [midx msg] ?. *)
+    (*     admit. *)
+  Admitted.
+
+  Lemma atomic_messages_in_in:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall {oifc} (sys: System oifc) st1 st2,

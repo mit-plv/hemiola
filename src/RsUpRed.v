@@ -143,7 +143,6 @@ Section RsUpReduction.
     forall oidxTo rsUps,
       RsUpMsgs dtr oidxTo rsUps ->
       forall oidx1 ridx1 rins1 routs1 oidx2 ridx2 routs2,
-        (* DisjList rsUps rins1 -> *)
         DisjList routs1 rsUps ->
         Reducible
           sys [RlblInt oidx2 ridx2 rsUps routs2;
@@ -286,6 +285,39 @@ Section RsUpReduction.
           split; [|split]; [|assumption|]; solve_midx_disj.
   Qed.
 
+  Lemma rsUp_atomic_outs_disj:
+    forall oidxTo rsUps inits ins hst outs eouts,
+      RsUpMsgs dtr oidxTo rsUps ->
+      Atomic msg_dec inits ins hst outs eouts ->
+      DisjList rsUps inits ->
+      forall st1 st2,
+        Reachable (steps step_m) sys st1 ->
+        Forall (InMPI st1.(bst_msgs)) rsUps ->
+        steps step_m sys st1 hst st2 ->
+        forall st3 oidx ridx routs,
+          step_m sys st2 (RlblInt oidx ridx rsUps routs) st3 ->
+          DisjList outs rsUps.
+  Proof.
+  Admitted.
+
+  Lemma rsUp_rpush_unit_ok_ind':
+    forall oidxTo rsUps inits ins hst outs eouts
+           oidx ridx routs,
+      RsUpMsgs dtr oidxTo rsUps ->
+      Atomic msg_dec inits ins hst outs eouts ->
+      DisjList outs rsUps ->
+      Reducible sys (RlblInt oidx ridx rsUps routs :: hst)
+                (hst ++ [RlblInt oidx ridx rsUps routs]).
+  Proof.
+    induction 2; simpl; intros; subst.
+    - eapply rsUp_lbl_reducible; eauto.
+    - apply DisjList_app_3 in H6; dest.
+      eapply reducible_trans.
+      + apply reducible_cons_2.
+        eapply rsUp_lbl_reducible; eauto.
+      + apply reducible_cons; eauto.
+  Qed.
+
   Lemma rsUp_rpush_unit_ok_ind:
     forall oidxTo rsUps inits ins hst outs eouts
            oidx ridx routs,
@@ -295,15 +327,12 @@ Section RsUpReduction.
       Reducible sys (RlblInt oidx ridx rsUps routs :: hst)
                 (hst ++ [RlblInt oidx ridx rsUps routs]).
   Proof.
-    induction 2; simpl; intros; subst.
-    - eapply rsUp_lbl_reducible; eauto.
-      admit.
-    - eapply reducible_trans.
-      + apply reducible_cons_2.
-        eapply rsUp_lbl_reducible.
-        * eassumption.
-        * admit.
-      + apply reducible_cons; auto.
+    intros.
+    pose proof H0.
+    red; intros.
+    eapply rsUp_rpush_unit_ok_ind'; eauto.
+    inv H3.
+    eapply rsUp_atomic_outs_disj; eauto.
   Admitted.
   
 End RsUpReduction.
