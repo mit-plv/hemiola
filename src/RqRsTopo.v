@@ -357,7 +357,7 @@ Section RqRsTopo.
           FootprintingDown porq norq rqfm rssFrom rsbTo /\
           FootprintUpDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           rins = [(rqFrom, rqfm)] /\
-          idsOf routs = rqTos.
+          idsOf routs = rqTos /\ routs <> nil.
 
       Definition RqUpDown (rule: Rule oifc) :=
         rule#prec <= DownLockFree /\
@@ -371,7 +371,7 @@ Section RqRsTopo.
           FootprintingDown porq norq rqfm rssFrom rsbTo /\
           FootprintDownDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           rins = [(rqFrom, rqfm)] /\
-          idsOf routs = rqTos.
+          idsOf routs = rqTos /\ routs <> nil.
       
       Definition RqDownDown (rule: Rule oifc) :=
         rule#prec <= DownLockFree /\
@@ -419,7 +419,7 @@ Section RqRsTopo.
           FootprintedUp porq [rsFrom] rsbTo /\
           edgeDownTo oidx = Some rsFrom /\
           rins = [(rsFrom, rsm)] /\
-          idsOf routs = rqTos.
+          idsOf routs = rqTos /\ routs <> nil.
       
       Definition RsDownRqDownRule (rule: Rule oifc) :=
         rule#prec <= RsAccepting /\

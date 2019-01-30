@@ -496,34 +496,53 @@ Section RqRsDTree.
   Lemma RqRsDownMatch_rq_rs:
     forall oidx rssFrom rqTos P,
       RqRsDownMatch dtr oidx rqTos rssFrom P ->
-      forall cidx down rsUp,
-        parentIdxOf dtr cidx = Some oidx ->
-        edgeDownTo dtr cidx = Some down ->
-        rsEdgeUpFrom dtr cidx = Some rsUp ->
-        (In down rqTos <-> In rsUp rssFrom).
+      forall down,
+        In down rqTos ->
+        exists cidx rsUp,
+          parentIdxOf dtr cidx = Some oidx /\
+          edgeDownTo dtr cidx = Some down /\
+          rsEdgeUpFrom dtr cidx = Some rsUp /\
+          In rsUp rssFrom.
   Proof.
     intros.
     destruct H.
     generalize dependent rssFrom.
     induction rqTos as [|rqTo rqTos]; simpl; intros.
-    - destruct rssFrom; [|discriminate].
-      simpl; split; auto.
-    - destruct rssFrom as [|rssFrom rssFroms]; [discriminate|].
-      simpl; inv H; inv H3.
-      destruct H6 as [rcidx ?]; dest; simpl in *.
-      split; intros.
-      + destruct H8; subst.
-        * destruct (eq_nat_dec rcidx cidx); subst.
-          { rewrite H2 in H6; inv H6; auto. }
-          { elim (rqrsDTree_down_down_not_eq n H4 H1); reflexivity. }
-        * right; apply IHrqTos; auto.
-      + destruct H8; subst.
-        * destruct (eq_nat_dec rcidx cidx); subst.
-          { rewrite H1 in H4; inv H4; auto. }
-          { elim (rqrsDTree_rsUp_rsUp_not_eq n H6 H2); reflexivity. }
-        * right.
-          specialize (IHrqTos _ H5 H7).
-          destruct IHrqTos; auto.
+    - destruct rssFrom; [|discriminate]; inv H0.
+    - destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+      simpl; inv H; inv H1.
+      destruct H4 as [rcidx ?]; dest; simpl in *.
+      destruct H0; subst.
+      + eauto 7.
+      + specialize (IHrqTos H0 _ H3 H5).
+        destruct IHrqTos as [cidx [rsUp ?]]; dest.
+        eauto 7.
+  Qed.
+
+  Lemma RqRsDownMatch_rs_rq:
+    forall oidx rssFrom rqTos P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      forall rsUp,
+        In rsUp rssFrom ->
+        exists cidx down,
+          parentIdxOf dtr cidx = Some oidx /\
+          edgeDownTo dtr cidx = Some down /\
+          rsEdgeUpFrom dtr cidx = Some rsUp /\
+          In down rqTos.
+  Proof.
+    intros.
+    destruct H.
+    generalize dependent rssFrom.
+    induction rqTos as [|rqTo rqTos]; simpl; intros.
+    - destruct rssFrom; [|discriminate]; inv H0.
+    - destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+      simpl; inv H; inv H1.
+      destruct H4 as [rcidx ?]; dest; simpl in *.
+      destruct H0; subst.
+      + eauto 7.
+      + specialize (IHrqTos _ H3 H5 H0).
+        destruct IHrqTos as [cidx [down ?]]; dest.
+        eauto 7.
   Qed.
   
   Lemma rqrsDTree_down_downs_not_in_child:
@@ -538,7 +557,10 @@ Section RqRsDTree.
     intros; intro Hx.
     elim H2; clear H2.
     eapply RqRsDownMatch_rq_rs in H3; eauto.
-    apply H3; auto.
+    destruct H3 as [rcidx [rrsUp ?]]; dest.
+    destruct (eq_nat_dec cidx rcidx); subst.
+    - rewrite H1 in H4; inv H4; assumption.
+    - elim (rqrsDTree_down_down_not_eq n H0 H3); reflexivity.
   Qed.
 
   Lemma footprintUpOk_rs_eq:
@@ -823,7 +845,7 @@ Ltac disc_rule_conds_rule_preds :=
     (repeat disc_rule_conds_unit_rule_preds_red;
      repeat disc_rule_conds_unit_rule_preds_inst);
   repeat disc_rule_conds_rule_preds_clear;
-  pmark_erase.
+  pmark_clear.
 
 Ltac disc_rule_conds :=
   repeat

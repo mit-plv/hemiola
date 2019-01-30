@@ -142,6 +142,24 @@ Proof.
   intros; firstorder.
 Qed.
 
+Ltac xor3_contra1 H :=
+  match type of H with
+  | xor3 ?PA ?PB ?PC =>
+    exfalso; apply xor3_False_1 with (A:= PA) (B:= PB) (C:= PC) in H; auto
+  end.
+
+Ltac xor3_contra2 H :=
+  match type of H with
+  | xor3 ?PA ?PB ?PC =>
+    exfalso; apply xor3_False_2 with (A:= PA) (B:= PB) (C:= PC) in H; auto
+  end.
+
+Ltac xor3_contra3 H :=
+  match type of H with
+  | xor3 ?PA ?PB ?PC =>
+    exfalso; apply xor3_False_3 with (A:= PA) (B:= PB) (C:= PC) in H; auto
+  end.
+
 Ltac nothing := idtac.
 
 Ltac assert_later asrt :=
@@ -255,6 +273,20 @@ Fixpoint findAt (v: nat) (l: list nat) :=
     else (findAt v l') >>=[None] (fun o => Some (S o))
   end.
 
+Inductive PHide: Prop -> Prop :=
+| PHideIntro: forall P:Prop, P -> PHide P.
+
+Ltac phide H := pose proof (PHideIntro H); clear H.
+Ltac preveal H :=
+  match type of H with
+  | PHide _ => inv H
+  end.
+Ltac phide_clear :=
+  repeat
+    match goal with
+    | [H: PHide _ |- _] => clear H
+    end.
+
 Inductive PMarker2: Prop -> Prop -> Prop :=
 | PMarkerIntro2: forall P1 P2: Prop, P1 -> P2 -> PMarker2 P1 P2.
 
@@ -276,7 +308,7 @@ Ltac is_not_pmark2 H :=
   | _ => idtac
   end.
 
-Ltac pmark_erase :=
+Ltac pmark_clear :=
   repeat
     match goal with
     | [H: PMarker2 _ _ |- _] => clear H

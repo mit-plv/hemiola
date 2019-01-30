@@ -59,6 +59,26 @@ Section RqUpReduction.
     try disc_lock_conds;
     try disc_footprints_ok.
 
+  Lemma rqUpUp_rqUpMsgs:
+    forall oidx ridx rins routs st1 st2 obj rule,
+      Reachable (steps step_m) sys st1 ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      In obj sys.(sys_objs) -> obj.(obj_idx) = oidx ->
+      In rule obj.(obj_rules) -> rule.(rule_idx) = ridx ->
+      RqUpUp dtr oidx rule -> RqFwdRuleCommon rule ->
+      exists oidxTo, RqUpMsgs dtr oidxTo routs.
+  Proof.
+    intros; destruct Hrrs as [? [? ?]].
+    inv_step.
+    red_obj_rule.
+    disc_rule_conds.
+    pose proof (rqEdgeUpFrom_Some H7 _ H2).
+    destruct H11 as [rsUp [down [pidx ?]]]; dest.
+    repeat disc_rule_minds.
+    exists pidx.
+    red; do 2 eexists; repeat split; try eassumption.
+  Qed.
+  
   Lemma rqUp_spec:
     forall oidxTo rqUps,
       RqUpMsgs dtr oidxTo rqUps ->
@@ -225,7 +245,7 @@ Section RqUpReduction.
           destruct rqi2 as [rqim2 rss2 rsb2].
           simpl in *; subst.
           destruct Hrrs as [? _].
-          pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
+          pose proof (footprintUpDownOk_rs_eq H0 H60 H67); dest; subst.
           reflexivity.
         * destruct rqi as [rqim rss rsb].
           destruct rqi0 as [rqim0 rss0 rsb0].
@@ -272,7 +292,7 @@ Section RqUpReduction.
           destruct rqi2 as [rqim2 rss2 rsb2].
           simpl in *; subst.
           destruct Hrrs as [? _].
-          pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
+          pose proof (footprintDownDownOk_rs_eq H0 H60 H67); dest; subst.
           reflexivity.
         * destruct rqi as [rqim rss rsb].
           destruct rqi0 as [rqim0 rss0 rsb0].
