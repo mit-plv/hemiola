@@ -544,6 +544,50 @@ Section RqRsDTree.
         destruct IHrqTos as [cidx [down ?]]; dest.
         eauto 7.
   Qed.
+
+  Lemma RqRsDownMatch_rqs_disj:
+    forall oidx1 rqTos1 rssFrom1 P1
+           oidx2 rqTos2 rssFrom2 P2,
+      oidx1 <> oidx2 ->
+      RqRsDownMatch dtr oidx1 rqTos1 rssFrom1 P1 ->
+      RqRsDownMatch dtr oidx2 rqTos2 rssFrom2 P2 ->
+      DisjList rqTos1 rqTos2.
+  Proof.
+    intros.
+    red; intro midx.
+    destruct (in_dec eq_nat_dec midx rqTos1) as [Heq1|]; auto.
+    destruct (in_dec eq_nat_dec midx rqTos2) as [Heq2|]; auto.
+    exfalso.
+    eapply RqRsDownMatch_rq_rs in Heq1; [|eassumption].
+    destruct Heq1 as [cidx1 [rsUp1 ?]]; dest.
+    eapply RqRsDownMatch_rq_rs in Heq2; [|eassumption].
+    destruct Heq2 as [cidx2 [rsUp2 ?]]; dest.
+    destruct (eq_nat_dec cidx1 cidx2); subst.
+    - rewrite H2 in H6; inv H6; auto.
+    - elim (rqrsDTree_down_down_not_eq n H3 H7); reflexivity.
+  Qed.
+
+  Lemma RqRsDownMatch_rss_disj:
+    forall oidx1 rqTos1 rssFrom1 P1
+           oidx2 rqTos2 rssFrom2 P2,
+      oidx1 <> oidx2 ->
+      RqRsDownMatch dtr oidx1 rqTos1 rssFrom1 P1 ->
+      RqRsDownMatch dtr oidx2 rqTos2 rssFrom2 P2 ->
+      DisjList rssFrom1 rssFrom2.
+  Proof.
+    intros.
+    red; intro midx.
+    destruct (in_dec eq_nat_dec midx rssFrom1) as [Heq1|]; auto.
+    destruct (in_dec eq_nat_dec midx rssFrom2) as [Heq2|]; auto.
+    exfalso.
+    eapply RqRsDownMatch_rs_rq in Heq1; [|eassumption].
+    destruct Heq1 as [cidx1 [down1 ?]]; dest.
+    eapply RqRsDownMatch_rs_rq in Heq2; [|eassumption].
+    destruct Heq2 as [cidx2 [down2 ?]]; dest.
+    destruct (eq_nat_dec cidx1 cidx2); subst.
+    - rewrite H2 in H6; inv H6; auto.
+    - elim (rqrsDTree_rsUp_rsUp_not_eq n H4 H8); reflexivity.
+  Qed.
   
   Lemma rqrsDTree_down_downs_not_in_child:
     forall cidx oidx down rsUp downs ups P,

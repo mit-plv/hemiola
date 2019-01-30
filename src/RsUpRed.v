@@ -246,14 +246,14 @@ Section RsUpReduction.
             split; [|split]; [|assumption|]; solve_midx_disj.
           }
           { split; [|split]; [|assumption|].
-            { admit. (* TODO *) }
+            { rewrite H54; eapply RqRsDownMatch_rss_disj; eauto. }
             { destruct (eq_nat_dec (obj_idx upCObj0) (obj_idx upCObj));
               [rewrite e in *; rewrite H39 in H15; elim n; inv H15; reflexivity|].
               solve_midx_disj.
             }
           }
           { split; [|split]; [|assumption|].
-            { admit. (* TODO *) }
+            { rewrite H54; eapply RqRsDownMatch_rss_disj; eauto. }
             { solve_midx_disj. }
           }
         * assert (Some (obj_idx obj1) <> Some (obj_idx obj0))
@@ -261,9 +261,30 @@ Section RsUpReduction.
           disc_rule_conds.
           split; [|split]; [|assumption|]; solve_midx_disj.
 
-      + admit.
-    
-  Admitted.
+      + rewrite <-H45 in H15.
+        good_rqrs_rule_cases rule0.
+        * disc_rule_conds.
+          split; [|split]; [|assumption|]; solve_midx_disj.
+        * disc_rule_conds.
+          split; [|split]; [|assumption|]; solve_midx_disj.
+        * disc_rule_conds.
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+        * good_footprint_get (obj_idx obj0).
+          disc_rule_conds.
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|].
+            { rewrite H52; eapply RqRsDownMatch_rss_disj; eauto. }
+            { solve_midx_disj. }
+          }
+          { split; [|split]; [|assumption|].
+            { rewrite H52; eapply RqRsDownMatch_rss_disj; eauto. }
+            { solve_midx_disj. }
+          }
+        * disc_rule_conds.
+          split; [|split]; [|assumption|]; solve_midx_disj.
+  Qed.
 
   Lemma rsUp_rpush_unit_ok_ind:
     forall oidxTo rsUps inits ins hst outs eouts
