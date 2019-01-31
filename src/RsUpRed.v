@@ -28,7 +28,11 @@ Section RsUpReduction.
       forall st1 oidx ridx routs st2,
         Reachable (steps step_m) sys st1 ->
         step_m sys st1 (RlblInt oidx ridx rsUps routs) st2 ->
-        oidxTo = oidx /\
+        (oidxTo = oidx /\
+         Forall (fun rsUp =>
+                   exists cidx,
+                     parentIdxOf dtr cidx = Some oidx /\
+                     rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps) /\
         (exists obj rule,
             In obj sys.(sys_objs) /\ obj.(obj_idx) = oidx /\
             In rule obj.(obj_rules) /\ rule.(rule_idx) = ridx /\
@@ -60,36 +64,53 @@ Section RsUpReduction.
         exfalso; destruct H31 as [ncidx [? ?]].
         elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H23 H14); reflexivity.
       + split.
-        * disc_rule_conds.
-          { rewrite <-H33 in H26.
-            assert (exists rsUp, In rsUp (idsOf rsUps)).
-            { apply RqRsDownMatch_rs_not_nil in H26.
-              destruct (idsOf rsUps); [exfalso; auto|].
-              eexists; left; reflexivity.
+        { disc_rule_conds.
+          { split.
+            { rewrite <-H33 in H26.
+              assert (exists rsUp, In rsUp (idsOf rsUps)).
+              { apply RqRsDownMatch_rs_not_nil in H26.
+                destruct (idsOf rsUps); [exfalso; auto|].
+                eexists; left; reflexivity.
+              }
+              destruct H9 as [rsUp ?].
+              rewrite Forall_forall in H7; specialize (H7 _ H9).
+              destruct H7 as [cidx ?]; dest.
+              eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
+              destruct H26 as [rcidx [down ?]]; dest.
+              repeat disc_rule_minds.
+              reflexivity.
             }
-            destruct H9 as [rsUp ?].
-            rewrite Forall_forall in H7; specialize (H7 _ H9).
-            destruct H7 as [cidx ?]; dest.
-            eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
-            destruct H26 as [rcidx [down ?]]; dest.
-            repeat disc_rule_minds.
-            reflexivity.
-          }
-          { rewrite <-H33 in H11.
-            assert (exists rsUp, In rsUp (idsOf rsUps)).
-            { apply RqRsDownMatch_rs_not_nil in H11.
-              destruct (idsOf rsUps); [exfalso; auto|].
-              eexists; left; reflexivity.
+            { rewrite <-H33 in H26.
+              apply Forall_forall; intros rsUp ?.
+              apply in_map with (f:= idOf) in H9.
+              eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
+              destruct H26 as [cidx [down ?]]; dest; eauto.
             }
-            destruct H21 as [rsUp ?].
-            rewrite Forall_forall in H7; specialize (H7 _ H21).
-            destruct H7 as [cidx ?]; dest.
-            eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
-            destruct H11 as [rcidx [down ?]]; dest.
-            repeat disc_rule_minds.
-            reflexivity.
           }
-        * split.
+          { split.
+            { rewrite <-H33 in H11.
+              assert (exists rsUp, In rsUp (idsOf rsUps)).
+              { apply RqRsDownMatch_rs_not_nil in H11.
+                destruct (idsOf rsUps); [exfalso; auto|].
+                eexists; left; reflexivity.
+              }
+              destruct H21 as [rsUp ?].
+              rewrite Forall_forall in H7; specialize (H7 _ H21).
+              destruct H7 as [cidx ?]; dest.
+              eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+              destruct H11 as [rcidx [down ?]]; dest.
+              repeat disc_rule_minds.
+              reflexivity.
+            }
+            { rewrite <-H33 in H11.
+              apply Forall_forall; intros rsUp ?.
+              apply in_map with (f:= idOf) in H21.
+              eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+              destruct H11 as [cidx [down ?]]; dest; eauto.
+            }
+          }
+        }
+        { split.
           { exists obj, rule.
             repeat ssplit; try assumption; try reflexivity.
           }
@@ -103,7 +124,8 @@ Section RsUpReduction.
               red in H10; rewrite H30 in H10; assumption.
             }
           }
-
+        }
+          
     - exfalso; disc_rule_conds.
       destruct H26 as [cidx ?]; dest.
       elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H7 H34); reflexivity.
@@ -323,6 +345,10 @@ Section RsUpReduction.
     forall objTo rsUps,
       In objTo (sys_objs sys) ->
       RsUpMsgs dtr objTo.(obj_idx) rsUps ->
+      Forall (fun rsUp =>
+                exists cidx,
+                  parentIdxOf dtr cidx = Some objTo.(obj_idx) /\
+                  rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps ->
       forall oidx ridx rins routs,
         NoDup (idsOf routs) ->
         DisjList rsUps rins ->
@@ -332,12 +358,61 @@ Section RsUpReduction.
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           DisjList (idsOf rsUps) (idsOf rins).
   Proof.
-  Admitted.
+    destruct Hrrs as [? [? ?]]; intros.
+    pose proof (downLockInv_ok H0 H H7).
+    good_locking_get objTo; clear H10.
+
+    red; intros rsUp.
+    destruct (in_dec eq_nat_dec rsUp (idsOf rsUps)) as [Hin1|]; auto.
+    destruct (in_dec eq_nat_dec rsUp (idsOf rins)) as [Hin2|]; auto.
+    exfalso.
+    apply in_map_iff in Hin1; destruct Hin1 as [[rsUp' rsm1] ?]; dest; subst.
+    apply in_map_iff in Hin2; destruct Hin2 as [[rsUp rsm2] ?]; dest; subst.
+    simpl in H10; subst rsUp'.
+    destruct (msg_dec rsm1 rsm2); subst;
+      [specialize (H6 (rsUp, rsm2)); destruct H6; auto|].
+
+    assert (length (findQ rsUp st1.(bst_msgs)) >= 2).
+    { rewrite Forall_forall in H8; specialize (H8 _ H12).
+      assert (InMPI (bst_msgs st1) (rsUp, rsm2)).
+      { inv_step; simpl.
+        apply FirstMPI_Forall_InMP in H22.
+        rewrite Forall_forall in H22; auto.
+      }
+      clear -H8 H10 n.
+      unfold InMPI, InMP in *; simpl in *.
+      destruct (findQ rsUp (bst_msgs st1)); [elim H8|].
+      destruct q; [Common.dest_in; exfalso; auto|].
+      simpl; omega.
+    }
+
+    rewrite Forall_forall in H4; specialize (H4 _ H12).
+    destruct H4 as [cidx [? ?]].
+    red in H11.
+    destruct ((((bst_orqs st1)@[obj_idx objTo])
+                 >>=[[]] (fun orq => orq))@[downRq]).
+    - specialize (H11 _ H4).
+      destruct H11 as [down [rrsUp ?]]; dest.
+      repeat disc_rule_minds.
+      find_if_inside.
+      + red in H16; dest; omega.
+      + red in H16; dest.
+        rewrite H16 in H10; simpl in H10; omega.
+    - specialize (H11 _ H4).
+      destruct H11 as [down [rrsUp ?]]; dest.
+      repeat disc_rule_minds.
+      red in H16; dest.
+      rewrite H16 in H10; simpl in H10; omega.
+  Qed.
 
   Lemma rsUp_lbl_outs_disj:
     forall objTo rsUps,
       In objTo (sys_objs sys) ->
       RsUpMsgs dtr objTo.(obj_idx) rsUps ->
+      Forall (fun rsUp =>
+                exists cidx,
+                  parentIdxOf dtr cidx = Some objTo.(obj_idx) /\
+                  rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps ->
       forall oidx ridx rins routs,
         NoDup (idsOf routs) ->
         DisjList rsUps rins ->
@@ -349,7 +424,7 @@ Section RsUpReduction.
   Proof.
     destruct Hrrs as [? [? ?]].
     intros.
-    eapply rsUp_lbl_rins_ids_disj in H5; eauto.
+    eapply rsUp_lbl_rins_ids_disj in H5; eauto; clear H4.
 
     assert (Reachable (steps step_m) sys st2).
     { eapply reachable_steps; [eassumption|].
@@ -357,8 +432,8 @@ Section RsUpReduction.
     }
 
     inv_step; simpl in *.
-    pose proof (downLockInv_ok H0 H H9).
-    good_locking_get objTo; clear H8.
+    pose proof (downLockInv_ok H0 H H4).
+    good_locking_get objTo; clear H9.
     red in H10.
 
     red; intro rsUp.
@@ -368,15 +443,16 @@ Section RsUpReduction.
     destruct rsUp as [rsUp rsm].
     pose proof (in_map idOf _ _ Hin2); simpl in *.
     red in H3; dest.
-    rewrite Forall_forall in H11; specialize (H11 _ H8).
+    rewrite Forall_forall in H11; specialize (H11 _ H9).
     destruct H11 as [cidx [? ?]].
     
     assert (length (findQ rsUp (enqMsgs routs (deqMsgs (idsOf rins) msgs))) >= 2).
-    { erewrite findQ_In_NoDup_enqMsgs by eassumption.
+    { destruct H24.
+      erewrite findQ_In_NoDup_enqMsgs by eassumption.
       rewrite app_length; simpl.
       rewrite findQ_not_In_deqMsgs.
-      { rewrite Forall_forall in H7.
-        specialize (H7 _ Hin2).
+      { rewrite Forall_forall in H8.
+        specialize (H8 _ Hin2).
         remember (findQ rsUp msgs) as q; destruct q.
         { exfalso; eapply InMP_findQ_False; eauto. }
         { simpl; omega. }
@@ -404,6 +480,10 @@ Section RsUpReduction.
     forall objTo rsUps,
       In objTo (sys_objs sys) ->
       RsUpMsgs dtr objTo.(obj_idx) rsUps ->
+      Forall (fun rsUp =>
+                exists cidx,
+                  parentIdxOf dtr cidx = Some objTo.(obj_idx) /\
+                  rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps ->
       forall inits ins hst outs eouts,
         Atomic msg_dec inits ins hst outs eouts ->
         DisjList rsUps inits ->
@@ -414,28 +494,29 @@ Section RsUpReduction.
           DisjList outs rsUps.
   Proof.
     destruct Hrrs as [? [? ?]].
-    induction 3; simpl; intros; subst.
+    induction 4; simpl; intros; subst.
     - inv_steps.
       eapply rsUp_lbl_outs_disj; eauto.
-      inv_step; destruct H22; assumption.
-    - inv H13.
+      inv_step; destruct H23; assumption.
+    - inv H14.
       apply DisjList_app_4; eauto.
       eapply rsUp_lbl_outs_disj.
       { eassumption. }
       { assumption. }
-      { inv_step; destruct H26; assumption. }
+      { assumption. }
+      { inv_step; destruct H27; assumption. }
       { instantiate (1:= rins).
-        specialize (IHAtomic H10 _ _ H11 H12 H14).
+        specialize (IHAtomic H11 _ _ H12 H13 H15).
         eapply DisjList_comm, DisjList_SubList; [eassumption|].
         eapply DisjList_SubList; [|eassumption].
         eapply atomic_eouts_in; eauto.
       }
       { eapply reachable_steps; eassumption. }
-      { rewrite Forall_forall in H12.
+      { rewrite Forall_forall in H13.
         apply Forall_forall; intros rsUp ?.
-        specialize (H12 _ H7).
+        specialize (H13 _ H8).
         eapply (atomic_messages_in_in msg_dec); eauto.
-        specialize (H10 rsUp); destruct H10; auto.
+        specialize (H11 rsUp); destruct H11; auto.
       }
       { eassumption. }
   Qed.
@@ -444,14 +525,18 @@ Section RsUpReduction.
     forall oidxTo rsUps inits ins hst outs eouts
            oidx ridx routs,
       RsUpMsgs dtr oidxTo rsUps ->
+      Forall (fun rsUp =>
+                exists cidx,
+                  parentIdxOf dtr cidx = Some oidxTo /\
+                  rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps ->
       Atomic msg_dec inits ins hst outs eouts ->
       DisjList outs rsUps ->
       Reducible sys (RlblInt oidx ridx rsUps routs :: hst)
                 (hst ++ [RlblInt oidx ridx rsUps routs]).
   Proof.
-    induction 2; simpl; intros; subst.
+    induction 3; simpl; intros; subst.
     - eapply rsUp_lbl_reducible; eauto.
-    - apply DisjList_app_3 in H6; dest.
+    - apply DisjList_app_3 in H7; dest.
       eapply reducible_trans.
       + apply reducible_cons_2.
         eapply rsUp_lbl_reducible; eauto.
@@ -470,14 +555,14 @@ Section RsUpReduction.
     intros.
     pose proof H0.
     red; intros.
-    eapply rsUp_rpush_unit_ok_ind'; eauto.
-    inv H3.
-
+    inv_steps.
     pose proof (rsUp_spec H (reachable_steps Hr H7) H9).
-    destruct H3 as [? _]; subst.
-    inv_step.
-    eapply rsUp_atomic_outs_disj; eauto.
-    admit.
+    destruct H3 as [[? ?] _]; subst.
+    eapply rsUp_rpush_unit_ok_ind'; eauto.
+    - inv_step.
+      eapply rsUp_atomic_outs_disj; eauto.
+      admit.
+    - econstructor; eauto.
   Admitted.
 
 End RsUpReduction.
