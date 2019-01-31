@@ -28,7 +28,7 @@ Section RsUpReduction.
       forall st1 oidx ridx routs st2,
         Reachable (steps step_m) sys st1 ->
         step_m sys st1 (RlblInt oidx ridx rsUps routs) st2 ->
-        (* oidxTo = oidx /\ <- requires [rsUps <> nil] <- requires an invariant *)
+        oidxTo = oidx /\
         (exists obj rule,
             In obj sys.(sys_objs) /\ obj.(obj_idx) = oidx /\
             In rule obj.(obj_rules) /\ rule.(rule_idx) = ridx /\
@@ -60,16 +60,48 @@ Section RsUpReduction.
         exfalso; destruct H31 as [ncidx [? ?]].
         elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H23 H14); reflexivity.
       + split.
-        * exists obj, rule.
-          repeat ssplit; try assumption; try reflexivity.
         * disc_rule_conds.
-          { exists porq, rqi.
-            repeat ssplit; try assumption; try reflexivity.
-            red in H10; rewrite H30 in H10; assumption.
+          { rewrite <-H33 in H26.
+            assert (exists rsUp, In rsUp (idsOf rsUps)).
+            { apply RqRsDownMatch_rs_not_nil in H26.
+              destruct (idsOf rsUps); [exfalso; auto|].
+              eexists; left; reflexivity.
+            }
+            destruct H9 as [rsUp ?].
+            rewrite Forall_forall in H7; specialize (H7 _ H9).
+            destruct H7 as [cidx ?]; dest.
+            eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
+            destruct H26 as [rcidx [down ?]]; dest.
+            repeat disc_rule_minds.
+            reflexivity.
           }
-          { exists porq, rqi.
+          { rewrite <-H33 in H11.
+            assert (exists rsUp, In rsUp (idsOf rsUps)).
+            { apply RqRsDownMatch_rs_not_nil in H11.
+              destruct (idsOf rsUps); [exfalso; auto|].
+              eexists; left; reflexivity.
+            }
+            destruct H21 as [rsUp ?].
+            rewrite Forall_forall in H7; specialize (H7 _ H21).
+            destruct H7 as [cidx ?]; dest.
+            eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+            destruct H11 as [rcidx [down ?]]; dest.
+            repeat disc_rule_minds.
+            reflexivity.
+          }
+        * split.
+          { exists obj, rule.
             repeat ssplit; try assumption; try reflexivity.
-            red in H10; rewrite H30 in H10; assumption.
+          }
+          { disc_rule_conds.
+            { exists porq, rqi.
+              repeat ssplit; try assumption; try reflexivity.
+              red in H10; rewrite H30 in H10; assumption.
+            }
+            { exists porq, rqi.
+              repeat ssplit; try assumption; try reflexivity.
+              red in H10; rewrite H30 in H10; assumption.
+            }
           }
 
     - exfalso; disc_rule_conds.
@@ -81,7 +113,7 @@ Section RsUpReduction.
     forall orqs msgs oidx porq rqi rqDowns rsUps P,
       DownLockedInv dtr (orqs +[oidx <- porq +[downRq <- rqi]])
                     (enqMsgs rqDowns msgs) oidx rqi ->
-      rqDowns <> nil -> NoDup (idsOf rqDowns) ->
+      NoDup (idsOf rqDowns) ->
       Forall (fun idm => msg_type (valOf idm) = MRq) rqDowns ->
       Forall (FirstMPI (enqMsgs rqDowns msgs)) rsUps ->
       idsOf rsUps = rqi_minds_rss rqi ->
@@ -90,34 +122,35 @@ Section RsUpReduction.
   Proof.
     intros.
     assert (exists rqTo, In rqTo (idsOf rqDowns)).
-    { destruct rqDowns as [|[rqDown rqm] ?]; [exfalso; auto|].
-      eexists; left; reflexivity.
+    { destruct rqDowns as [|[rqDown rqm] ?].
+      { red in H4; dest; elim H4; reflexivity. }
+      { eexists; left; reflexivity. }
     }
-    destruct H6 as [rqTo ?]; dest.
-    pose proof (RqRsDownMatch_rq_rs H5 _ H6).
-    destruct H7 as [cidx [rsUp ?]]; dest; simpl in *.
+    destruct H5 as [rqTo ?]; dest.
+    pose proof (RqRsDownMatch_rq_rs H4 _ H5).
+    destruct H6 as [cidx [rsUp ?]]; dest; simpl in *.
     
     specialize (H _ H7).
     destruct H as [down [rrsUp ?]]; dest.
     repeat disc_rule_minds.
     destruct (in_dec eq_nat_dec rsUp (rqi_minds_rss rqi));
-      [|elim n; rewrite <-H4; assumption].
+      [|elim n; rewrite <-H3; assumption].
 
     red in H12; dest.
     xor3_contra1 H12.
     { assert_later (length (rqsQ (enqMsgs rqDowns msgs) rqTo) >= 1); [omega|].
-      apply in_map_iff in H6.
-      destruct H6 as [[rqDown rqm] ?]; dest; simpl in *; subst.
-      rewrite Forall_forall in H2; specialize (H2 _ H13); simpl in *.
+      apply in_map_iff in H5.
+      destruct H5 as [[rqDown rqm] ?]; dest; simpl in *; subst.
+      rewrite Forall_forall in H1; specialize (H1 _ H13); simpl in *.
       unfold rqsQ.
       erewrite findQ_In_NoDup_enqMsgs; eauto.
       rewrite filter_app; simpl.
-      rewrite H2; simpl.
+      rewrite H1; simpl.
       rewrite app_length; simpl; omega.
     }
     { apply in_map_iff in H10.
       destruct H10 as [[rrsUp rsm] ?]; dest; simpl in *; subst.
-      rewrite Forall_forall in H3; specialize (H3 _ H13); simpl in *.
+      rewrite Forall_forall in H2; specialize (H2 _ H13); simpl in *.
       eapply findQ_length_one; eauto.
     }
   Qed.
@@ -162,9 +195,9 @@ Section RsUpReduction.
       econstructor; [econstructor|eassumption].
     }
     pose proof (footprints_ok H2 H4) as HftInv.
-    
+
     pose proof (rsUp_spec H H5 H11).
-    destruct H6 as [[obj [rule ?]] [orq [rqid ?]]]; dest.
+    destruct H6 as [_ [[obj [rule ?]] [orq [rqid ?]]]]; dest.
 
     pose proof H11; phide H17.
     pose proof H12; phide H17.
@@ -440,10 +473,13 @@ Section RsUpReduction.
     eapply rsUp_rpush_unit_ok_ind'; eauto.
     inv H3.
 
-    (* pose proof (rsUp_spec H (reachable_steps Hr H7) H9). *)
+    pose proof (rsUp_spec H (reachable_steps Hr H7) H9).
+    destruct H3 as [? _]; subst.
+    inv_step.
     eapply rsUp_atomic_outs_disj; eauto.
+    admit.
   Admitted.
-  
+
 End RsUpReduction.
 
 Close Scope list.

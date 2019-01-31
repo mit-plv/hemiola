@@ -151,6 +151,60 @@ Section RqRsDTree.
     repeat eexists.
   Qed.
 
+  Lemma RqRsDownMatch_rq_rs:
+    forall oidx rssFrom rqTos P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      forall down,
+        In down rqTos ->
+        exists cidx rsUp,
+          P cidx /\
+          parentIdxOf dtr cidx = Some oidx /\
+          edgeDownTo dtr cidx = Some down /\
+          rsEdgeUpFrom dtr cidx = Some rsUp /\
+          In rsUp rssFrom.
+  Proof.
+    intros.
+    red in H; dest; clear H.
+    generalize dependent rssFrom.
+    induction rqTos as [|rqTo rqTos]; simpl; intros.
+    - destruct rssFrom; [|discriminate]; inv H0.
+    - destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+      simpl; inv H1; inv H2.
+      destruct H4 as [rcidx ?]; dest; simpl in *.
+      destruct H0; subst.
+      + eauto 8.
+      + specialize (IHrqTos H0 _ H3 H5).
+        destruct IHrqTos as [cidx [rsUp ?]]; dest.
+        eauto 8.
+  Qed.
+
+  Lemma RqRsDownMatch_rs_rq:
+    forall oidx rssFrom rqTos P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      forall rsUp,
+        In rsUp rssFrom ->
+        exists cidx down,
+          P cidx /\
+          parentIdxOf dtr cidx = Some oidx /\
+          edgeDownTo dtr cidx = Some down /\
+          rsEdgeUpFrom dtr cidx = Some rsUp /\
+          In down rqTos.
+  Proof.
+    intros.
+    red in H; dest; clear H.
+    generalize dependent rssFrom.
+    induction rqTos as [|rqTo rqTos]; simpl; intros.
+    - destruct rssFrom; [|discriminate]; inv H0.
+    - destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+      simpl; inv H1; inv H2.
+      destruct H4 as [rcidx ?]; dest; simpl in *.
+      destruct H0; subst.
+      + eauto 8.
+      + specialize (IHrqTos _ H3 H5 H0).
+        destruct IHrqTos as [cidx [down ?]]; dest.
+        eauto 8.
+  Qed.
+  
   Lemma rqrsDTree_rqEdgeUpFrom_sys_minds:
     forall oidx midx,
       rqEdgeUpFrom dtr oidx = Some midx ->
@@ -371,10 +425,9 @@ Section RqRsDTree.
       ~ In rqUp1 ups2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rs_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
-    pose proof (rqrsDTree_rqUp_rsUp_not_eq _ _ H H2).
-    elim H3; reflexivity.
+    eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
+    elim (rqrsDTree_rqUp_rsUp_not_eq _ _ H H3); reflexivity.
   Qed.
 
   Lemma rqrsDTree_rsUp_ups_not_in:
@@ -384,12 +437,11 @@ Section RqRsDTree.
       ~ In rsUp1 ups2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rs_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
+    eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
     destruct Hsd.
     apply parentIdxOf_not_eq in H1; [|assumption].
-    pose proof (rqrsDTree_rsUp_rsUp_not_eq H1 H2 H).
-    elim H5; reflexivity.
+    elim (rqrsDTree_rsUp_rsUp_not_eq H1 H3 H); reflexivity.
   Qed.
 
   Lemma rqrsDTree_rsUp_ups_not_in_parent:
@@ -400,13 +452,12 @@ Section RqRsDTree.
       ~ In rsUp1 ups2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rs_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
+    eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
     destruct Hsd.
     destruct (eq_nat_dec oidx1 cidx); subst.
-    - rewrite H2 in H1; elim H1; reflexivity.
-    - pose proof (rqrsDTree_rsUp_rsUp_not_eq n H H3).
-      elim H6; reflexivity.
+    - elim H1; assumption.
+    - elim (rqrsDTree_rsUp_rsUp_not_eq n H H4); reflexivity.
   Qed.
 
   Lemma rqrsDTree_down_ups_not_in:
@@ -416,10 +467,9 @@ Section RqRsDTree.
       ~ In down1 ups2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rs_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
-    pose proof (rqrsDTree_rsUp_down_not_eq _ _ H2 H).
-    elim H3; reflexivity.
+    eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
+    elim (rqrsDTree_rsUp_down_not_eq _ _ H3 H); reflexivity.
   Qed.
   
   Lemma rqrsDTree_rqUp_downs_not_in:
@@ -429,10 +479,9 @@ Section RqRsDTree.
       ~ In rqUp1 downs2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rq_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
-    pose proof (rqrsDTree_rqUp_down_not_eq _ _ H H2).
-    elim H3; reflexivity.
+    eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
+    elim (rqrsDTree_rqUp_down_not_eq _ _ H H2); reflexivity.
   Qed.
 
   Lemma rqrsDTree_rsUp_downs_not_in:
@@ -442,10 +491,9 @@ Section RqRsDTree.
       ~ In rsUp1 downs2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rq_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
-    pose proof (rqrsDTree_rsUp_down_not_eq _ _ H H2).
-    elim H3; reflexivity.
+    eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
+    elim (rqrsDTree_rsUp_down_not_eq _ _ H H2); reflexivity.
   Qed.
 
   Lemma rqrsDTree_down_downs_not_in:
@@ -455,12 +503,11 @@ Section RqRsDTree.
       ~ In down1 downs2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rq_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
+    eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
     destruct Hsd.
     apply parentIdxOf_not_eq in H1; [|eassumption].
-    pose proof (rqrsDTree_down_down_not_eq H1 H2 H).
-    elim H5; reflexivity.
+    elim (rqrsDTree_down_down_not_eq H1 H2 H); reflexivity.
   Qed.
 
   Lemma rqrsDTree_down_downs_not_in_parent:
@@ -471,13 +518,12 @@ Section RqRsDTree.
       ~ In down1 downs2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rq_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
+    eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
     destruct Hsd.
     destruct (eq_nat_dec oidx1 cidx); subst.
-    - rewrite H2 in H1; elim H1; reflexivity.
-    - pose proof (rqrsDTree_down_down_not_eq n H H3).
-      elim H6; reflexivity.
+    - elim H1; assumption.
+    - elim (rqrsDTree_down_down_not_eq n H H3); reflexivity.
   Qed.
 
   Lemma rqrsDTree_down_downs_not_in_child_P:
@@ -487,62 +533,10 @@ Section RqRsDTree.
       ~ In down1 downs2.
   Proof.
     intros; intro Hx.
-    eapply RqRsDownMatch_rq_In in H0; [|eassumption].
-    destruct H0 as [cidx ?]; dest.
-    pose proof (rqrsDTree_down_down_not_eq H0 H2 H).
+    eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
+    destruct H0 as [cidx [down ?]]; dest.
+    elim (rqrsDTree_down_down_not_eq H0 H2 H).
     elim H3; reflexivity.
-  Qed.
-
-  Lemma RqRsDownMatch_rq_rs:
-    forall oidx rssFrom rqTos P,
-      RqRsDownMatch dtr oidx rqTos rssFrom P ->
-      forall down,
-        In down rqTos ->
-        exists cidx rsUp,
-          parentIdxOf dtr cidx = Some oidx /\
-          edgeDownTo dtr cidx = Some down /\
-          rsEdgeUpFrom dtr cidx = Some rsUp /\
-          In rsUp rssFrom.
-  Proof.
-    intros.
-    destruct H.
-    generalize dependent rssFrom.
-    induction rqTos as [|rqTo rqTos]; simpl; intros.
-    - destruct rssFrom; [|discriminate]; inv H0.
-    - destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
-      simpl; inv H; inv H1.
-      destruct H4 as [rcidx ?]; dest; simpl in *.
-      destruct H0; subst.
-      + eauto 7.
-      + specialize (IHrqTos H0 _ H3 H5).
-        destruct IHrqTos as [cidx [rsUp ?]]; dest.
-        eauto 7.
-  Qed.
-
-  Lemma RqRsDownMatch_rs_rq:
-    forall oidx rssFrom rqTos P,
-      RqRsDownMatch dtr oidx rqTos rssFrom P ->
-      forall rsUp,
-        In rsUp rssFrom ->
-        exists cidx down,
-          parentIdxOf dtr cidx = Some oidx /\
-          edgeDownTo dtr cidx = Some down /\
-          rsEdgeUpFrom dtr cidx = Some rsUp /\
-          In down rqTos.
-  Proof.
-    intros.
-    destruct H.
-    generalize dependent rssFrom.
-    induction rqTos as [|rqTo rqTos]; simpl; intros.
-    - destruct rssFrom; [|discriminate]; inv H0.
-    - destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
-      simpl; inv H; inv H1.
-      destruct H4 as [rcidx ?]; dest; simpl in *.
-      destruct H0; subst.
-      + eauto 7.
-      + specialize (IHrqTos _ H3 H5 H0).
-        destruct IHrqTos as [cidx [down ?]]; dest.
-        eauto 7.
   Qed.
 
   Lemma RqRsDownMatch_rqs_disj:
@@ -563,8 +557,8 @@ Section RqRsDTree.
     eapply RqRsDownMatch_rq_rs in Heq2; [|eassumption].
     destruct Heq2 as [cidx2 [rsUp2 ?]]; dest.
     destruct (eq_nat_dec cidx1 cidx2); subst.
-    - rewrite H2 in H6; inv H6; auto.
-    - elim (rqrsDTree_down_down_not_eq n H3 H7); reflexivity.
+    - rewrite H3 in H8; inv H8; auto.
+    - elim (rqrsDTree_down_down_not_eq n H4 H9); reflexivity.
   Qed.
 
   Lemma RqRsDownMatch_rss_disj:
@@ -585,8 +579,8 @@ Section RqRsDTree.
     eapply RqRsDownMatch_rs_rq in Heq2; [|eassumption].
     destruct Heq2 as [cidx2 [down2 ?]]; dest.
     destruct (eq_nat_dec cidx1 cidx2); subst.
-    - rewrite H2 in H6; inv H6; auto.
-    - elim (rqrsDTree_rsUp_rsUp_not_eq n H4 H8); reflexivity.
+    - rewrite H3 in H8; inv H8; auto.
+    - elim (rqrsDTree_rsUp_rsUp_not_eq n H5 H10); reflexivity.
   Qed.
   
   Lemma rqrsDTree_down_downs_not_in_child:
@@ -603,8 +597,8 @@ Section RqRsDTree.
     eapply RqRsDownMatch_rq_rs in H3; eauto.
     destruct H3 as [rcidx [rrsUp ?]]; dest.
     destruct (eq_nat_dec cidx rcidx); subst.
-    - rewrite H1 in H4; inv H4; assumption.
-    - elim (rqrsDTree_down_down_not_eq n H0 H3); reflexivity.
+    - rewrite H1 in H5; inv H5; assumption.
+    - elim (rqrsDTree_down_down_not_eq n H0 H4); reflexivity.
   Qed.
 
   Lemma footprintUpOk_rs_eq:
@@ -629,24 +623,44 @@ Section RqRsDTree.
       RqRsDownMatch dtr oidx rqTos rssFrom2 P2 ->
       rssFrom1 = rssFrom2.
   Proof.
+    unfold RqRsDownMatch; intros; dest.
+    clear H H0.
+    generalize dependent rssFrom1.
+    generalize dependent rssFrom2.
     induction rqTos; simpl; intros.
-    - destruct H, H0; simpl in *.
-      apply eq_sym, length_zero_iff_nil in H.
-      apply eq_sym, length_zero_iff_nil in H0.
-      subst; reflexivity.
-    - destruct H, H0.
-      destruct rssFrom1 as [|rsFrom1 rssFrom1]; [discriminate|].
+    - destruct rssFrom1, rssFrom2; simpl in *; try discriminate.
+      reflexivity.
+    - destruct rssFrom1 as [|rsFrom1 rssFrom1]; [discriminate|].
       destruct rssFrom2 as [|rsFrom2 rssFrom2]; [discriminate|].
       simpl in *.
-      inv H; inv H0; inv H1; inv H2.
-      destruct H5 as [cidx1 ?]; destruct H1 as [cidx2 ?]; dest.
+      inv H1; inv H2; inv H3; inv H4.
+      destruct H5 as [cidx1 ?]; destruct H3 as [cidx2 ?]; dest.
       simpl in *.
       f_equal.
       + destruct (eq_nat_dec cidx1 cidx2); subst.
         * rewrite H10 in H5; inv H5; reflexivity.
         * exfalso.
-          elim (rqrsDTree_down_down_not_eq n H9 H2); auto.
-      + eapply IHrqTos; split; eauto.
+          elim (rqrsDTree_down_down_not_eq n H9 H4); auto.
+      + eapply IHrqTos; eauto.
+  Qed.
+
+  Lemma RqRsDownMatch_rq_not_nil:
+    forall oidx rqTos rssFrom P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      rqTos <> nil.
+  Proof.
+    unfold RqRsDownMatch; intros; dest; assumption.
+  Qed.
+    
+  Lemma RqRsDownMatch_rs_not_nil:
+    forall oidx rqTos rssFrom P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      rssFrom <> nil.
+  Proof.
+    unfold RqRsDownMatch; intros; dest.
+    destruct rssFrom; [|discriminate].
+    destruct rqTos; auto.
+    simpl in H0; discriminate.
   Qed.
   
   Lemma footprintUpDownOk_rs_eq:

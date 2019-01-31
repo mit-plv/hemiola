@@ -208,6 +208,7 @@ Section RqRsTopo.
 
   Definition RqRsDownMatch (oidx: IdxT) (rqTos: list IdxT) (rssFrom: list IdxT)
              (P: IdxT (* each child index *) -> Prop) :=
+    rqTos <> nil /\
     List.length rqTos = List.length rssFrom /\
     Forall (fun rqrs =>
               exists cidx,
@@ -234,54 +235,6 @@ Section RqRsTopo.
     edgeDownTo oidx = Some rqFrom /\
     rsEdgeUpFrom oidx = Some rsbTo /\
     RqRsDownMatch oidx rqTos rssFrom (fun _ => True).
-
-  Lemma RqRsDownMatch_rq_In:
-    forall oidx rqTos rssFrom P,
-      RqRsDownMatch oidx rqTos rssFrom P ->
-      forall rq,
-        In rq rqTos ->
-        exists cidx, P cidx /\
-                     parentIdxOf dtr cidx = Some oidx /\
-                     edgeDownTo cidx = Some rq.
-  Proof.
-    induction rqTos; simpl; intros; [elim H0|].
-    destruct H0; subst.
-    - red in H; dest.
-      destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
-      simpl in H0; inv H0.
-      destruct H3 as [cidx ?]; dest; simpl in *.
-      exists cidx; repeat split; assumption.
-    - red in H; dest.
-      destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
-      simpl in H; inv H.
-      simpl in H1; inv H1.
-      eapply IHrqTos; eauto.
-      split; eauto.
-  Qed.
-
-  Lemma RqRsDownMatch_rs_In:
-    forall oidx rssFrom rqTos P,
-      RqRsDownMatch oidx rqTos rssFrom P ->
-      forall rs,
-        In rs rssFrom ->
-        exists cidx, P cidx /\
-                     parentIdxOf dtr cidx = Some oidx /\
-                     rsEdgeUpFrom cidx = Some rs.
-  Proof.
-    induction rssFrom; simpl; intros; [elim H0|].
-    destruct H0; subst.
-    - red in H; dest.
-      destruct rqTos as [|rqTo rqTos]; [discriminate|].
-      simpl in H0; inv H0.
-      destruct H3 as [cidx ?]; dest; simpl in *.
-      exists cidx; repeat split; assumption.
-    - red in H; dest.
-      destruct rqTos as [|rqTo rqTos]; [discriminate|].
-      simpl in H; inv H.
-      simpl in H1; inv H1.
-      eapply IHrssFrom; eauto.
-      split; eauto.
-  Qed.
 
   Section RqRsDTree.
 
@@ -357,7 +310,7 @@ Section RqRsTopo.
           FootprintingDown porq norq rqfm rssFrom rsbTo /\
           FootprintUpDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           rins = [(rqFrom, rqfm)] /\
-          idsOf routs = rqTos /\ routs <> nil.
+          idsOf routs = rqTos.
 
       Definition RqUpDown (rule: Rule oifc) :=
         rule#prec <= DownLockFree /\
@@ -371,7 +324,7 @@ Section RqRsTopo.
           FootprintingDown porq norq rqfm rssFrom rsbTo /\
           FootprintDownDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           rins = [(rqFrom, rqfm)] /\
-          idsOf routs = rqTos /\ routs <> nil.
+          idsOf routs = rqTos.
       
       Definition RqDownDown (rule: Rule oifc) :=
         rule#prec <= DownLockFree /\
@@ -419,7 +372,7 @@ Section RqRsTopo.
           FootprintedUp porq [rsFrom] rsbTo /\
           edgeDownTo oidx = Some rsFrom /\
           rins = [(rsFrom, rsm)] /\
-          idsOf routs = rqTos /\ routs <> nil.
+          idsOf routs = rqTos.
       
       Definition RsDownRqDownRule (rule: Rule oifc) :=
         rule#prec <= RsAccepting /\

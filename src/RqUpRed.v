@@ -144,13 +144,13 @@ Section RqUpReduction.
 
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
-        eapply RqRsDownMatch_rq_In in H24; [|apply in_map; eassumption].
-        destruct H24 as [cidx ?]; dest.
+        eapply RqRsDownMatch_rq_rs in H24; [|apply in_map; eassumption].
+        destruct H24 as [cidx [rsUp ?]]; dest.
         pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H24); auto.
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H0.
-        eapply RqRsDownMatch_rq_In in H9; [|apply in_map; eassumption].
-        destruct H9 as [cidx ?]; dest.
+        eapply RqRsDownMatch_rq_rs in H9; [|apply in_map; eassumption].
+        destruct H9 as [cidx [rsUp ?]]; dest.
         pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H15); auto.
 
     - exfalso; disc_rule_conds.
@@ -160,8 +160,8 @@ Section RqUpReduction.
         disc_rule_conds.
     - exfalso; disc_rule_conds.
       apply SubList_singleton_In in H0.
-      eapply RqRsDownMatch_rq_In in H24; [|apply in_map; eassumption].
-      destruct H24 as [cidx ?]; dest.
+      eapply RqRsDownMatch_rq_rs in H24; [|apply in_map; eassumption].
+      destruct H24 as [cidx [down ?]]; dest.
       pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H25); auto.
   Qed.
 
@@ -187,17 +187,17 @@ Section RqUpReduction.
       destruct H6 as [|[|]].
       + eauto.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_In in H12; [|left; reflexivity].
-        destruct H12 as [cidx' ?]; dest.
+        eapply RqRsDownMatch_rq_rs in H12; [|left; reflexivity].
+        destruct H12 as [cidx' [rsUp ?]]; dest.
         elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H18 H12); reflexivity.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_In in H7; [|left; reflexivity].
-        destruct H7 as [cidx' ?]; dest.
+        eapply RqRsDownMatch_rq_rs in H7; [|left; reflexivity].
+        destruct H7 as [cidx' [rsUp ?]]; dest.
         elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H12 H14); reflexivity.
     - exfalso; disc_rule_conds.
     - exfalso; disc_rule_conds.
-      eapply RqRsDownMatch_rq_In in H12; [|left; reflexivity].
-      destruct H12 as [cidx' ?]; dest.
+      eapply RqRsDownMatch_rq_rs in H12; [|left; reflexivity].
+      destruct H12 as [cidx' [rsUp ?]]; dest.
       elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H12); reflexivity.
   Qed.
 
@@ -245,7 +245,7 @@ Section RqUpReduction.
           destruct rqi2 as [rqim2 rss2 rsb2].
           simpl in *; subst.
           destruct Hrrs as [? _].
-          pose proof (footprintUpDownOk_rs_eq H0 H60 H67); dest; subst.
+          pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
           reflexivity.
         * destruct rqi as [rqim rss rsb].
           destruct rqi0 as [rqim0 rss0 rsb0].
@@ -292,7 +292,7 @@ Section RqUpReduction.
           destruct rqi2 as [rqim2 rss2 rsb2].
           simpl in *; subst.
           destruct Hrrs as [? _].
-          pose proof (footprintDownDownOk_rs_eq H0 H60 H67); dest; subst.
+          pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
           reflexivity.
         * destruct rqi as [rqim rss rsb].
           destruct rqi0 as [rqim0 rss0 rsb0].

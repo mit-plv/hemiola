@@ -220,13 +220,13 @@ Section MessageInv.
         rewrite <-H26 in H19.
         split; auto.
         clear -H19; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H19; [|eassumption].
+        eapply RqRsDownMatch_rs_rq in H19; [|eassumption].
         dest; eauto.
       + right; right; left.
         rewrite <-H26 in H4.
         split; auto.
         clear -H4; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_In in H4; [|eassumption].
+        eapply RqRsDownMatch_rs_rq in H4; [|eassumption].
         dest; eauto.
 
     - right; right; right.

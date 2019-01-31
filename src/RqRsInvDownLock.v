@@ -619,10 +619,10 @@ Section DownLockInv.
     { eapply RqRsDownMatch_rs_rq in H6; eauto.
       destruct H6 as [rcidx [rdown ?]]; dest.
       repeat disc_rule_minds.
-      apply in_map_iff in H13.
-      destruct H13 as [[midx msg] ?]; dest; simpl in *; subst.
+      apply in_map_iff in H14.
+      destruct H14 as [[midx msg] ?]; dest; simpl in *; subst.
       rewrite Forall_forall in H5.
-      specialize (H5 _ H11); simpl in H5.
+      specialize (H5 _ H12); simpl in H5.
       unfold rqsQ.
       erewrite findQ_In_NoDup_enqMsgs; eauto.
       rewrite filter_app; simpl.
@@ -1170,7 +1170,7 @@ Section DownLockInv.
             }
             { solve_q. }
           * mred.
-          * rewrite H28; solve_midx_neq.
+          * rewrite H27; solve_midx_neq.
         + eapply downLockFreeInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
           * eapply downLockFreeInv_msgs_preserved; [eassumption|].
             intros; split.
@@ -1179,7 +1179,7 @@ Section DownLockInv.
             }
             { solve_q. }
           * mred.
-          * rewrite H28; solve_midx_neq.
+          * rewrite H27; solve_midx_neq.
     Qed.
 
     Lemma downLockInvORq_step_int_other:
