@@ -28,6 +28,7 @@ Section RsUpReduction.
       forall st1 oidx ridx routs st2,
         Reachable (steps step_m) sys st1 ->
         step_m sys st1 (RlblInt oidx ridx rsUps routs) st2 ->
+        (* oidxTo = oidx /\ <- requires [rsUps <> nil] <- requires an invariant *)
         (exists obj rule,
             In obj sys.(sys_objs) /\ obj.(obj_idx) = oidx /\
             In rule obj.(obj_rules) /\ rule.(rule_idx) = ridx /\
@@ -285,20 +286,126 @@ Section RsUpReduction.
           split; [|split]; [|assumption|]; solve_midx_disj.
   Qed.
 
-  Lemma rsUp_atomic_outs_disj:
-    forall oidxTo rsUps inits ins hst outs eouts,
-      RsUpMsgs dtr oidxTo rsUps ->
-      Atomic msg_dec inits ins hst outs eouts ->
-      DisjList rsUps inits ->
-      forall st1 st2,
-        Reachable (steps step_m) sys st1 ->
-        Forall (InMPI st1.(bst_msgs)) rsUps ->
-        steps step_m sys st1 hst st2 ->
-        forall st3 oidx ridx routs,
-          step_m sys st2 (RlblInt oidx ridx rsUps routs) st3 ->
-          DisjList outs rsUps.
+  Lemma rsUp_lbl_rins_ids_disj:
+    forall objTo rsUps,
+      In objTo (sys_objs sys) ->
+      RsUpMsgs dtr objTo.(obj_idx) rsUps ->
+      forall oidx ridx rins routs,
+        NoDup (idsOf routs) ->
+        DisjList rsUps rins ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          Forall (InMPI st1.(bst_msgs)) rsUps ->
+          step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+          DisjList (idsOf rsUps) (idsOf rins).
   Proof.
   Admitted.
+
+  Lemma rsUp_lbl_outs_disj:
+    forall objTo rsUps,
+      In objTo (sys_objs sys) ->
+      RsUpMsgs dtr objTo.(obj_idx) rsUps ->
+      forall oidx ridx rins routs,
+        NoDup (idsOf routs) ->
+        DisjList rsUps rins ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          Forall (InMPI st1.(bst_msgs)) rsUps ->
+          step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+          DisjList routs rsUps.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    intros.
+    eapply rsUp_lbl_rins_ids_disj in H5; eauto.
+
+    assert (Reachable (steps step_m) sys st2).
+    { eapply reachable_steps; [eassumption|].
+      apply steps_singleton; eassumption.
+    }
+
+    inv_step; simpl in *.
+    pose proof (downLockInv_ok H0 H H9).
+    good_locking_get objTo; clear H8.
+    red in H10.
+
+    red; intro rsUp.
+    destruct (in_dec (id_dec msg_dec) rsUp routs) as [Hin1|]; auto.
+    destruct (in_dec (id_dec msg_dec) rsUp rsUps) as [Hin2|]; auto.
+    exfalso.
+    destruct rsUp as [rsUp rsm].
+    pose proof (in_map idOf _ _ Hin2); simpl in *.
+    red in H3; dest.
+    rewrite Forall_forall in H11; specialize (H11 _ H8).
+    destruct H11 as [cidx [? ?]].
+    
+    assert (length (findQ rsUp (enqMsgs routs (deqMsgs (idsOf rins) msgs))) >= 2).
+    { erewrite findQ_In_NoDup_enqMsgs by eassumption.
+      rewrite app_length; simpl.
+      rewrite findQ_not_In_deqMsgs.
+      { rewrite Forall_forall in H7.
+        specialize (H7 _ Hin2).
+        remember (findQ rsUp msgs) as q; destruct q.
+        { exfalso; eapply InMP_findQ_False; eauto. }
+        { simpl; omega. }
+      }
+      { destruct (H5 rsUp); auto. }
+    }
+
+    destruct (((orqs +[obj_idx obj <- norq])@[obj_idx objTo])
+                >>=[[]] (fun orq => orq)@[downRq]).
+    + specialize (H10 _ H11).
+      destruct H10 as [down [rrsUp ?]]; dest.
+      repeat disc_rule_minds.
+      find_if_inside.
+      * red in H23; dest; omega.
+      * red in H23; dest.
+        rewrite H23 in H13; simpl in H13; omega.
+    + specialize (H10 _ H11).
+      destruct H10 as [down [rrsUp ?]]; dest.
+      repeat disc_rule_minds.
+      red in H23; dest.
+      rewrite H23 in H13; simpl in H13; omega.
+  Qed.
+  
+  Lemma rsUp_atomic_outs_disj:
+    forall objTo rsUps,
+      In objTo (sys_objs sys) ->
+      RsUpMsgs dtr objTo.(obj_idx) rsUps ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        DisjList rsUps inits ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          Forall (InMPI st1.(bst_msgs)) rsUps ->
+          steps step_m sys st1 hst st2 ->
+          DisjList outs rsUps.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 3; simpl; intros; subst.
+    - inv_steps.
+      eapply rsUp_lbl_outs_disj; eauto.
+      inv_step; destruct H22; assumption.
+    - inv H13.
+      apply DisjList_app_4; eauto.
+      eapply rsUp_lbl_outs_disj.
+      { eassumption. }
+      { assumption. }
+      { inv_step; destruct H26; assumption. }
+      { instantiate (1:= rins).
+        specialize (IHAtomic H10 _ _ H11 H12 H14).
+        eapply DisjList_comm, DisjList_SubList; [eassumption|].
+        eapply DisjList_SubList; [|eassumption].
+        eapply atomic_eouts_in; eauto.
+      }
+      { eapply reachable_steps; eassumption. }
+      { rewrite Forall_forall in H12.
+        apply Forall_forall; intros rsUp ?.
+        specialize (H12 _ H7).
+        eapply (atomic_messages_in_in msg_dec); eauto.
+        specialize (H10 rsUp); destruct H10; auto.
+      }
+      { eassumption. }
+  Qed.
 
   Lemma rsUp_rpush_unit_ok_ind':
     forall oidxTo rsUps inits ins hst outs eouts
@@ -332,6 +439,8 @@ Section RsUpReduction.
     red; intros.
     eapply rsUp_rpush_unit_ok_ind'; eauto.
     inv H3.
+
+    (* pose proof (rsUp_spec H (reachable_steps Hr H7) H9). *)
     eapply rsUp_atomic_outs_disj; eauto.
   Admitted.
   
