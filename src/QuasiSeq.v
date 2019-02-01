@@ -74,13 +74,6 @@ Definition ExtContinuousL {oifc} (sys: System oifc)
     ~ SubList (idsOf rins) (sys_merqs sys) /\
     SubList rins eouts.
 
-Definition ValidExtContinuousL {oifc} (sys: System oifc)
-           (hst1: MHistory) (l2: MLabel) :=
-  ExtContinuousL sys hst1 l2 /\
-  exists st1 st2 hst,
-    Reachable (steps step_m) sys st1 /\
-    steps step_m sys st1 (l2 :: hst ++ hst1) st2.
-
 Definition Discontinuous (hst1 hst2: MHistory) :=
   exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
@@ -517,7 +510,7 @@ Section Pushable.
   
   Definition Pushable :=
     forall hst1 l2,
-      ValidExtContinuousL sys hst1 l2 ->
+      ExtContinuousL sys hst1 l2 ->
       PushableHst hst1 l2.
 
   Lemma PushableHst_WellInterleavedHst:
@@ -612,8 +605,6 @@ Section Pushable.
   Proof.
     unfold Pushable, WellInterleaved; intros.
     red; intros.
-    assert (ValidExtContinuousL sys hst1 l2) as Hvc
-        by (red; split; eauto).
     apply PushableHst_WellInterleavedHst; auto.
   Qed.
 

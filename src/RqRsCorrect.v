@@ -22,8 +22,7 @@ Section Pushable.
   Variables (phst: MHistory)
             (oidx ridx: IdxT)
             (rins routs: list (Id Msg)).
-  Hypothesis (Hcont: ValidExtContinuousL
-                       sys phst (RlblInt oidx ridx rins routs)).
+  Hypothesis (Hcont: ExtContinuousL sys phst (RlblInt oidx ridx rins routs)).
 
   Local Definition nlbl := (RlblInt oidx ridx rins routs).
 
@@ -38,8 +37,7 @@ Section Pushable.
     Proof.
       intros.
       destruct H as [inits [ins [outs [eouts ?]]]].
-      destruct Hcont; clear H2.
-      destruct H1 as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
       apply eq_sym in H2; inv H2.
       destruct H1 as [pinits pins phst pouts peouts].
       red in H0; dest.
@@ -75,8 +73,7 @@ Section Pushable.
       PInitializing sys RsUpP phst.
     Proof.
       intros; red; intros.
-      destruct Hcont as [? _].
-      destruct H0 as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
       apply eq_sym in H1; inv H1.
       inv H0.
       red; eapply SubList_forall; [|eassumption].
@@ -91,8 +88,7 @@ Section Pushable.
     Proof.
       intros.
       destruct H as [inits [ins [outs [eouts ?]]]].
-      destruct Hcont; clear H2.
-      destruct H1 as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
       apply eq_sym in H2; inv H2.
       destruct H1 as [pinits pins phst pouts peouts].
       red in H0; dest.
@@ -110,10 +106,8 @@ Section Pushable.
         PPreserving sys RsUpP hst.
     Proof.
       intros.
-      destruct Hcont.
-      destruct H1 as [st1 [st2 [ihst ?]]]; dest.
-      destruct H0 as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
-      apply eq_sym in H3; inv H3.
+      destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H1; inv H1.
       inv H0.
       destruct H as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
       dest.
@@ -183,22 +177,14 @@ Proof.
   }
   destruct Hnlbl as [oidx [ridx [rins [routs ?]]]]; dest; subst.
 
-  assert (ValidExtContinuousL sys hst1 (RlblInt oidx ridx rins routs)).
-  { split; eauto. }
-
   destruct H6 as [|[|[|]]].
-
   - apply LPushableHst_WellInterleavedHst; auto.
     eauto using rqUp_LPushableHst.
-
   - admit.
-
   - apply RPushableP_WellInterleavedHst with (P:= RsUpP rins); auto.
     + eauto using rsUp_PInitializing.
     + eauto using rsUp_RPushableP.
-
   - admit.
-      
 Admitted.
 
 Corollary rqrs_Serializable:
