@@ -22,6 +22,12 @@ Definition Reducible {oifc} (sys: System oifc) (hfr hto: MHistory) :=
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2.
 
+Definition ReducibleP {oifc} (sys: System oifc)
+           (P: MState oifc -> Prop) (hfr hto: MHistory) :=
+  forall st1 (Hr: Reachable (steps step_m) sys st1) (Hp: P st1) st2,
+    steps step_m sys st1 hfr st2 ->
+    steps step_m sys st1 hto st2.
+
 (*! General Facts *)
 
 Ltac reachable_by_steps :=

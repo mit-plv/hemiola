@@ -549,8 +549,10 @@ Section RsUpReduction.
       RsUpMsgs dtr oidxTo rsUps ->
       Atomic msg_dec inits ins hst outs eouts ->
       DisjList rsUps inits ->
-      Reducible sys (RlblInt oidx ridx rsUps routs :: hst)
-                (hst ++ [RlblInt oidx ridx rsUps routs]).
+      ReducibleP
+        sys (fun st => Forall (InMPI st.(bst_msgs)) rsUps)
+        (RlblInt oidx ridx rsUps routs :: hst)
+        (hst ++ [RlblInt oidx ridx rsUps routs]).
   Proof.
     intros.
     pose proof H0.
@@ -561,9 +563,8 @@ Section RsUpReduction.
     eapply rsUp_rpush_unit_ok_ind'; eauto.
     - inv_step.
       eapply rsUp_atomic_outs_disj; eauto.
-      admit.
     - econstructor; eauto.
-  Admitted.
+  Qed.
 
 End RsUpReduction.
 

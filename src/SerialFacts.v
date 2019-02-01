@@ -209,6 +209,23 @@ Section MsgParam.
     (*     destruct H4; intuition. *)
     (*   } *)
   Admitted.
+
+  Corollary atomic_messages_ins_ins:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall {oifc} (sys: System oifc) st1 st2,
+        steps step_m sys st1 hst st2 ->
+        forall msgs,
+          Forall (InMPI (bst_msgs st1)) msgs ->
+          DisjList inits msgs ->
+          Forall (InMPI (bst_msgs st2)) msgs.
+  Proof.
+    intros.
+    rewrite Forall_forall in H1.
+    apply Forall_forall; intros idm ?.
+    eapply atomic_messages_in_in; eauto.
+    destruct (H2 idm); auto.
+  Qed.
   
   Lemma atomic_behavior_nil:
     forall `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,

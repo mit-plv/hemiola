@@ -30,27 +30,7 @@ Section Pushable.
   Section RqUp.
     Hypothesis (Hru: RqUpMsgs dtr oidx rins).
 
-    Definition RqUpLPush (hst: MHistory): Prop :=
-      True. (* always left-pushable *)
-
-    Definition RqUpRPush (hst: MHistory): Prop :=
-      False. (* no right-pushable histories *)
-
-    Lemma rqUp_lpush_or_rpush:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (fun hst => RqUpLPush hst \/ RqUpRPush hst) hsts.
-    Proof.
-      intros; clear.
-      apply Forall_forall; intros.
-      left; red; auto.
-    Qed.
-    
-    Lemma rqUp_lpush_unit_ok:
+    Lemma rqUp_LPushable_unit:
       forall hst,
         AtomicEx msg_dec hst ->
         Discontinuous phst hst ->
@@ -69,58 +49,18 @@ Section Pushable.
       apply DisjList_comm; assumption.
     Qed.
     
-    Lemma rqUp_lpush_ok:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (fun hst =>
-                    RqUpLPush hst ->
-                    Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
+    Lemma rqUp_LPushableHst: LPushableHst sys phst nlbl.
     Proof.
-      intros.
+      intros; red; intros.
       inv H1; clear H8.
       generalize dependent st3.
       induction hsts; simpl; intros; [constructor|].
-
       inv H0; inv H2.
       rewrite <-app_assoc in H6.
       eapply steps_split in H6; [|reflexivity].
       destruct H6 as [sti [? ?]].
-
       constructor; eauto.
-      intros; eapply rqUp_lpush_unit_ok; eauto.
-    Qed.
-
-    Lemma rqUp_rpush_ok:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (fun hst =>
-                    RqUpRPush hst ->
-                    Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
-    Proof.
-      intros; clear.
-      apply Forall_forall; intros.
-      red in H0; elim H0.
-    Qed.
-
-    Lemma rqUp_LRPushable:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          LRPushable sys RqUpLPush RqUpRPush hsts.
-    Proof.
-      intros; red; intros; subst.
-      red in H5; elim H5.
+      intros; eapply rqUp_LPushable_unit; eauto.
     Qed.
 
   End RqUp.
@@ -128,47 +68,26 @@ Section Pushable.
   Section RsUp.
     Hypothesis (Hru: RsUpMsgs dtr oidx rins).
 
-    Definition RsUpLPush (hst: MHistory): Prop :=
-      False. (* no left-pushable histories *)
+    Definition RsUpP: MState oifc -> Prop :=
+      fun st => Forall (InMPI st.(bst_msgs)) rins.
 
-    Definition RsUpRPush (hst: MHistory): Prop :=
-      True. (* always right-pushable *)
-
-    Lemma rsUp_lpush_or_rpush:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (fun hst => RsUpLPush hst \/ RsUpRPush hst) hsts.
+    Lemma rsUp_PInitializing:
+      PInitializing sys RsUpP phst.
     Proof.
-      intros; clear.
-      apply Forall_forall; intros.
-      right; red; auto.
+      intros; red; intros.
+      destruct Hcont as [? _].
+      destruct H0 as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H1; inv H1.
+      inv H0.
+      red; eapply SubList_forall; [|eassumption].
+      eapply (atomic_messages_eouts_in msg_dec); eauto.
     Qed.
 
-    Lemma rsUp_lpush_ok:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (fun hst =>
-                    RsUpLPush hst ->
-                    Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
-    Proof.
-      intros; clear.
-      apply Forall_forall; intros.
-      red in H0; elim H0.
-    Qed.
-
-    Lemma rsUp_lpush_unit_ok:
+    Lemma rsUp_rpush_unit_ok:
       forall hst,
         AtomicEx msg_dec hst ->
         Discontinuous phst hst ->
-        Reducible sys (nlbl :: hst) (hst ++ [nlbl]).
+        ReducibleP sys RsUpP (nlbl :: hst) (hst ++ [nlbl]).
     Proof.
       intros.
       destruct H as [inits [ins [outs [eouts ?]]]].
@@ -185,18 +104,34 @@ Section Pushable.
       - apply DisjList_comm; assumption.
     Qed.
 
-    Lemma rsUp_rpush_ok:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (fun hst =>
-                    RsUpRPush hst ->
-                    Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
+    Lemma rsUp_PPreserving:
+      forall hst,
+        Discontinuous phst hst ->
+        PPreserving sys RsUpP hst.
     Proof.
       intros.
+      destruct Hcont.
+      destruct H1 as [st1 [st2 [ihst ?]]]; dest.
+      destruct H0 as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H3; inv H3.
+      inv H0.
+      destruct H as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
+      dest.
+      eapply atomic_unique in H; [|eassumption]; dest; subst.
+
+      red; intros.
+      eapply (atomic_messages_ins_ins msg_dec).
+      - eapply H0.
+      - eassumption.
+      - assumption.
+      - eapply DisjList_comm, DisjList_SubList; [eassumption|].
+        apply DisjList_comm; assumption.
+    Qed.
+    
+    Lemma rsUp_RPushableP:
+      RPushableP sys RsUpP phst nlbl.
+    Proof.
+      intros; red; intros.
       inv H1.
       eapply steps_split in H6; [|reflexivity].
       destruct H6 as [st4 [? ?]]; clear H1.
@@ -216,32 +151,22 @@ Section Pushable.
 
       apply Forall_app; eauto.
       constructor; auto.
-      intros; eapply rsUp_lpush_unit_ok; eauto.
+      split.
+      - apply rsUp_PPreserving; auto.
+      - intros; eapply rsUp_rpush_unit_ok; eauto.
     Qed.
 
-    Lemma rsUp_LRPushable:
-      forall st1,
-        Reachable (steps step_m) sys st1 ->
-        forall hsts st2,
-          Forall (AtomicEx msg_dec) hsts ->
-          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
-          Forall (fun hst => Discontinuous phst hst) hsts ->
-          LRPushable sys RsUpLPush RsUpRPush hsts.
-    Proof.
-      intros; red; intros; subst.
-      red in H4; elim H4.
-    Qed.
-    
   End RsUp.
 
 End Pushable.
 
-Theorem rqrs_pushable:
+Theorem rqrs_WellInterleaved:
   forall {oifc} (sys: System oifc) (dtr: DTree),
     RqRsSys dtr sys ->
-    Pushable sys.
+    WellInterleaved sys.
 Proof.
   intros; red; intros.
+  red; intros.
 
   assert (exists oidx ridx rins routs,
              l2 = RlblInt oidx ridx rins routs /\
@@ -249,49 +174,41 @@ Proof.
               RqDownMsgs dtr oidx rins \/
               RsUpMsgs dtr oidx rins \/
               RsDownMsgs dtr oidx rins)) as Hnlbl.
-  { inv H0; inv H1.
-    destruct H0 as [oidx [ridx [rins [routs ?]]]]; dest; subst.
-    do 4 eexists; split; auto.
-    destruct H as [? [? ?]].
-    inv H5.
-    eapply messages_in_cases.
-    { eassumption. }
-    { eapply reachable_steps; eassumption. }
-    { eassumption. }
+  { destruct H as [? [? ?]].
+    red in H0.
+    destruct H0 as [eouts [oidx [ridx [rins [routs ?]]]]]; dest; subst.
+    inv H2.
+    eapply messages_in_cases in H14; eauto.
+    eauto 6.
   }
   destruct Hnlbl as [oidx [ridx [rins [routs ?]]]]; dest; subst.
 
-  destruct H2 as [|[|[|]]].
+  assert (ValidExtContinuousL sys hst1 (RlblInt oidx ridx rins routs)).
+  { split; eauto. }
 
-  - exists RqUpLPush, RqUpRPush.
-    repeat split.
-    + eauto using rqUp_lpush_or_rpush.
-    + eauto using rqUp_lpush_ok.
-    + eauto using rqUp_rpush_ok.
-    + eauto using rqUp_LRPushable.
+  destruct H6 as [|[|[|]]].
+
+  - apply LPushableHst_WellInterleavedHst; auto.
+    eauto using rqUp_LPushableHst.
 
   - admit.
 
-  - exists RsUpLPush, RsUpRPush.
-    repeat split.
-    + eauto using rsUp_lpush_or_rpush.
-    + eauto using rsUp_lpush_ok.
-    + eauto using rsUp_rpush_ok.
-    + eauto using rsUp_LRPushable.
+  - apply RPushableP_WellInterleavedHst with (P:= RsUpP rins); auto.
+    + eauto using rsUp_PInitializing.
+    + eauto using rsUp_RPushableP.
 
   - admit.
       
 Admitted.
 
-Corollary rqrs_serializable:
+Corollary rqrs_Serializable:
   forall {oifc} (sys: System oifc) (dtr: DTree),
     RqRsSys dtr sys ->
     SerializableSys sys.
 Proof.
   intros.
   apply well_interleaved_serializable.
-  apply well_interleaved_push_ok.
-  eapply rqrs_pushable; eauto.
+  eapply rqrs_WellInterleaved; eauto.
 Qed.
 
 Close Scope list.
