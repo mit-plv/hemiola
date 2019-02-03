@@ -12,6 +12,34 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
+Definition RespondingL (toidx: IdxT) (lbl: MLabel) :=
+  match lbl with
+  | RlblInt oidx ridx rins routs =>
+    toidx = oidx /\ Forall (fun idm => msg_type (valOf idm) = MRs) routs
+  | _ => False
+  end.
+
+Definition respondingL_dec:
+  forall toidx lbl, {RespondingL toidx lbl} + {~ RespondingL toidx lbl}.
+Proof.
+  unfold RespondingL; intros.
+  destruct lbl; auto.
+  assert (forall idm, {msg_type (valOf idm) = MRs} + {msg_type (valOf idm) <> MRs})
+    as Hdec by (intros; exact (eq_nat_dec (msg_type (valOf idm)) MRs)).
+  apply Forall_dec with (l:= mouts) in Hdec.
+  destruct (eq_nat_dec toidx oidx); subst.
+  - destruct Hdec; auto.
+    right; intro Hx; dest; auto.
+  - right; intro Hx; dest; auto.
+Defined.
+
+Definition respondingL_not_dec:
+  forall toidx lbl, {~ RespondingL toidx lbl} + {~ (~ RespondingL toidx lbl)}.
+Proof.
+  intros.
+  destruct (respondingL_dec toidx lbl); auto.
+Defined.
+
 Section Pushable.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -152,6 +180,130 @@ Section Pushable.
 
   End RsUp.
 
+  (** Generally we need to prove:
+   * a) [oinds(hst1) -*- oinds(hst2) -> Reducible (hst2 ++ hst1) (hst1 ++ hst2)]
+   *
+   ** Proof sketch for the reducibility of downward-request labels:
+   * 1) [phst] ⊆ tr(nlbl)^{-1}
+   * 2) Let [olast(hst)] be the last object index of an [Atomic] history [hst].
+   * 2-1) [olast(hst) ∈ tr(nlbl) -> oinds(hst) ⊆ tr(nlbl)]
+   * 2-2) [olast(hst) ∈ tr(nlbl)^{-1} -> 
+   *       exists preh posth, 
+   *         hst = posth ++ preh /\
+   *         ("preh" just consists of RqUp labels) /\
+   *         oinds(posth) ⊆ tr(nlbl)^{-1}]
+   * 3) Now define [LPush] and [RPush] as follows:
+   *    [LPush hst ≜ olast(hst) ∈ tr(nlbl)]
+   *    [RPush hst ≜ olast(hst) ∈ tr(nlbl)^{-1}]
+   * 4) To check each condition in [PushableHst]:
+   * 4-1) Left-or-right: [olast(hst)] is a single object index, 
+   *      thus [in_dec eq_nat_dec olast(hst) tr(nlbl)] provides enough
+   *      information.
+   * 4-2) Left-push-reducibility: if [hst] is left-pushable, then by 2-1) and 3)
+   *      we get [oinds(hst) ⊆ tr(nlbl)]. Now by 1) and a) we exactly get the
+   *      reducibility.
+   * 4-3) Right-push-reducibility: if [hst] is right-pushable, then by 2-2) 
+   *      and 3) we have [preh] and [posth] that satisfy the conditions in 2-2).
+   * 4-3-1) [preh] and [nlbl] are commutative since [preh] only consists of 
+   *        RqUp labels.
+   * 4-3-2) [posth] and [nlbl] are commutative by applying a).
+   * 4-4) [LRPushable]: if [RPush hst1 /\ LPush hst2], then by 2-1), 2-2), 
+   *      and 3) for [hst1] we have [preh1] and [posth1] that satisfy the
+   *      conditions in 2-2). Now reasoning very similarly to 4-2) and 4-3):
+   * 4-4-1) [preh1] and [hst2] are commutative since [preh1] only consists of
+   *        RqUp labels.
+   * 4-4-2) [posth1] and [hst2] are commutative by applying a).
+   *
+   ** Proof sketch for the reducibility of downward-response labels:
+   * 1) [phst] ⊆ tr(nlbl)^{-1}
+   * 2) Let [olast(hst)] be the last object index of an [Atomic] history [hst].
+   * 2-1) [olast(hst) ∈ tr(nlbl) -> oinds(hst) ⊆ tr(nlbl)]
+   * 2-2) [olast(hst) ∈ tr(nlbl)^{-1} -> oinds(hst) ⊆ tr(nlbl)^{-1}]
+   *      This part differs from the one for downward-requests since both upward
+   *      requests and upward responses cannot happen when a downward-response label is
+   *      in the message pool.
+   * 3) Define [LPush] and [RPush] as follows:
+   *    [LPush hst ≜ olast(hst) ∈ tr(nlbl)]
+   *    [RPush hst ≜ olast(hst) ∈ tr(nlbl)^{-1}]
+   * 4) Conditions of [PushableHst] are easier to prove, mostly by a).
+   *)
+
+  Section RqDown.
+    Hypothesis (Hrd: RqDownMsgs dtr oidx rins).
+
+    Definition RqDownLPush (hst: MHistory) :=
+      exists lbl, In lbl hst /\ RespondingL oidx lbl.
+
+    Definition RqDownRPush (hst: MHistory) :=
+      Forall (fun lbl => ~ RespondingL oidx lbl) hst.
+
+    Lemma rqDown_lpush_or_rpush:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          Forall (fun hst => RqDownLPush hst \/ RqDownRPush hst) hsts.
+    Proof.
+      intros; clear.
+      apply Forall_forall.
+      intros hst ?.
+      destruct (Forall_dec _ (respondingL_not_dec oidx) hst) as [|Hnf];
+        [right; assumption|left].
+      apply Exists_Forall_neg in Hnf.
+      - clear -Hnf; induction Hnf; intros.
+        + exists x; split; [left; reflexivity|].
+          destruct (respondingL_dec oidx x); [auto|].
+          elim H; assumption.
+        + destruct IHHnf as [lbl [? ?]].
+          exists lbl; split; auto.
+          right; auto.
+      - clear; intros.
+        destruct (respondingL_not_dec oidx x); auto.
+    Qed.
+
+    Lemma rqDown_lpush_reducible:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          Forall (fun hst => RqDownLPush hst ->
+                             Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
+    Proof.
+    Admitted.
+
+    Lemma rqDown_rpush_reducible:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          Forall (fun hst => RqDownRPush hst ->
+                             Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
+    Proof.
+      intros.
+      inv H1.
+      eapply steps_split in H6; [|reflexivity].
+      
+    Admitted.
+
+    Lemma rqDown_LRPushable:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          LRPushable sys RqDownLPush RqDownRPush hsts.
+    Proof.
+    Admitted.
+    
+  End RqDown.
+  
 End Pushable.
 
 Theorem rqrs_WellInterleaved:
@@ -180,7 +332,13 @@ Proof.
   destruct H6 as [|[|[|]]].
   - apply LPushableHst_WellInterleavedHst; auto.
     eauto using rqUp_LPushableHst.
-  - admit.
+  - apply PushableHst_WellInterleavedHst; auto.
+    exists (RqDownLPush oidx), (RqDownRPush oidx).
+    intros; repeat split.
+    + eapply rqDown_lpush_or_rpush; eauto.
+    + eapply rqDown_lpush_reducible; eauto.
+    + eapply rqDown_rpush_reducible; eauto.
+    + eapply rqDown_LRPushable; eauto.
   - apply RPushableP_WellInterleavedHst with (P:= RsUpP rins); auto.
     + eauto using rsUp_PInitializing.
     + eauto using rsUp_RPushableP.
