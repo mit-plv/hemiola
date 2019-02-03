@@ -5,7 +5,7 @@ Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
 Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
-Require Import RqUpRed RsUpRed.
+Require Import RqUpRed RsUpRed RqDownRed.
 
 Set Implicit Arguments.
 
