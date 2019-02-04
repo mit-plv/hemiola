@@ -1295,3 +1295,16 @@ Ltac solve_q :=
   repeat solve_q_unit;
   try reflexivity.
 
+Ltac solve_midx_disj :=
+  repeat
+    match goal with
+    | [ |- _ <> _] => solve_midx_neq
+    | [ |- ~ In _ _] => solve_midx_neq
+    | [ |- DisjList (_ :: nil) (_ :: nil)] =>
+      apply (DisjList_singletons eq_nat_dec)
+    | [ |- DisjList (_ :: nil) _] =>
+      apply (DisjList_singleton_1 eq_nat_dec)
+    | [ |- DisjList _ (_ :: nil)] =>
+      apply (DisjList_singleton_2 eq_nat_dec)
+    end.
+

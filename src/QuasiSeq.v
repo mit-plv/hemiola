@@ -240,7 +240,7 @@ Qed.
 
 Lemma atomic_transactions_sequential_or_extInterleaved:
   forall {oifc} (sys: System oifc) trss st1 st2,
-    Reachable (steps step_m) sys st1 ->
+    IntMsgsEmpty sys st1.(bst_msgs) ->
     steps step_m sys st1 (List.concat trss) st2 ->
     Forall (AtomicEx msg_dec) trss ->
     Sequential sys msg_dec (List.concat trss) trss \/
@@ -254,7 +254,17 @@ Proof.
   inv H1.
   specialize (IHtrss _ _ H H0 H6); destruct IHtrss.
 
-  - admit.
+  - inv H1; clear H4.
+    destruct H5 as [inits [ins [outs [eouts ?]]]].
+    destruct (subList_dec eq_nat_dec (idsOf inits) (sys_merqs sys)) as [Hex|Hnex].
+    + left; constructor; [|reflexivity].
+      constructor; auto.
+      eapply TrsAtomic; econstructor; eauto.
+    + right.
+
+      (** This is true since each transaction in [trss] is [AtomicEx]. *)
+      admit.
+
   - right.
     clear -H1.
     destruct H1 as [hst1 [l2 [hsts1 [hsts2 [hsts3 [? [? ?]]]]]]]; subst.
@@ -364,7 +374,10 @@ Section WellInterleaved.
       eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti2 [? ?]].
       eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti1 [? ?]].
 
-      assert (Reachable (steps step_m) sys sti1) by (red; eauto).
+      assert (IntMsgsEmpty sys sti1.(bst_msgs)).
+      { eapply insHistory_IntMsgsEmpty; eauto.
+        apply init_IntMsgsEmpty.
+      }
       pose proof (atomic_transactions_sequential_or_extInterleaved H9 H8 H2).
       destruct H10.
       + left.
@@ -403,6 +416,7 @@ Section WellInterleaved.
             reflexivity.
           }
         * omega.
+        * econstructor; eauto.
   Qed.
 
 End WellInterleaved.

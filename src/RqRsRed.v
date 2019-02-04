@@ -11,6 +11,12 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
+Definition lastOIdxOf (hst: MHistory): option IdxT :=
+  match hst with
+  | RlblInt oidx _ _ _ :: _ => Some oidx
+  | _ => None
+  end.
+
 Definition oidxOf (lbl: MLabel) :=
   match lbl with
   | RlblInt oidx _ _ _ => Some oidx
@@ -23,6 +29,15 @@ Fixpoint oindsOf (hst: MHistory) :=
   | lbl :: hst' => (oidxOf lbl) ::> (oindsOf hst')
   end.
 
+Lemma atomic_lastOIdxOf:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    exists loidx,
+      lastOIdxOf hst = Some loidx.
+Proof.
+  induction 1; simpl; intros; eauto.
+Qed.
+
 Section RqRsRed.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -34,6 +49,7 @@ Section RqRsRed.
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall oidx1 ridx1 rins1 routs1 oidx2 ridx2 rins2 routs2 st2,
+        oidx1 <> oidx2 ->
         steps step_m sys st1
               [RlblInt oidx2 ridx2 rins2 routs2;
                  RlblInt oidx1 ridx1 rins1 routs1] st2 ->
@@ -45,6 +61,7 @@ Section RqRsRed.
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall oidx1 ridx1 rins1 routs1 oidx2 ridx2 rins2 routs2 st2,
+        oidx1 <> oidx2 ->
         steps step_m sys st1
               [RlblInt oidx2 ridx2 rins2 routs2;
                  RlblInt oidx1 ridx1 rins1 routs1] st2 ->
@@ -83,8 +100,8 @@ Section RqRsRed.
     unfold Reducible; induction 1; simpl; intros; subst.
     - apply internal_commutes; auto.
       + red; intuition.
-      + eapply rqrs_lbl_ins_disj; eauto.
-      + eapply rqrs_lbl_outs_disj; eauto.
+      + eapply rqrs_lbl_ins_disj; try eassumption; intuition.
+      + eapply rqrs_lbl_outs_disj; try eassumption; intuition.
     - eapply reducible_trans; try eassumption.
       + apply reducible_cons_2.
         * change (RlblInt oidx2 ridx2 rins2 routs2 :: RlblInt oidx ridx rins routs :: hst)
@@ -94,14 +111,14 @@ Section RqRsRed.
           destruct H8 as [sti [? ?]].
           apply internal_commutes; auto.
           { red; intuition. }
-          { eapply rqrs_lbl_ins_disj.
-            { eapply reachable_steps; eassumption. }
-            { eassumption. }
+          { eapply rqrs_lbl_ins_disj;
+              [eapply reachable_steps; eassumption| |eassumption].
+            intuition.
           }
           { eapply DisjList_app_3 in H7; dest; assumption. }
-          { eapply rqrs_lbl_outs_disj.
-            { eapply reachable_steps; eassumption. }
-            { eassumption. }
+          { eapply rqrs_lbl_outs_disj;
+              [eapply reachable_steps; eassumption| |eassumption].
+            intuition.
           }
       + apply reducible_cons.
         red; intros.
@@ -171,3 +188,4 @@ End RqRsRed.
 
 Close Scope list.
 Close Scope fmap.
+

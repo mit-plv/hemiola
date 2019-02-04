@@ -145,7 +145,12 @@ Definition getMStateInit {oifc} (sys: System oifc): MState oifc :=
 
 Global Instance MState_HasInit {oifc}: HasInit (System oifc) (MState oifc) :=
   {| initsOf := getMStateInit |}.
-  
+
+Definition IntMsgsEmpty {oifc} (sys: System oifc) (msgs: MessagePool Msg) :=
+  forall midx,
+    In midx sys.(sys_minds) ->
+    findQ midx msgs = nil.
+
 (* [RLabel] represents "internal rule-driven labels" that reveal which message 
  * is being handled now.
  *)

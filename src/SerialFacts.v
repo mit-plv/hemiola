@@ -127,6 +127,18 @@ Section MsgParam.
     intros; eapply atomic_messages_spec_ValidDeqs; eauto.
   Qed.
 
+  Lemma atomic_messages_inits_valid:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall {oifc} (sys: System oifc) st1 st2,
+        steps step_m sys st1 hst st2 ->
+        ValidMsgsIn sys inits.
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv_steps; inv_step; assumption.
+    - inv_steps; eauto.
+  Qed.
+  
   Lemma atomic_messages_ins_outs:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -649,6 +661,37 @@ Section MsgParam.
   Qed.
 
 End MsgParam.
+
+Lemma insLbl_IntMsgsEmpty:
+  forall {oifc} (sys: System oifc) st1 lbl st2,
+    step_m sys st1 lbl st2 ->
+    IntMsgsEmpty sys st1.(bst_msgs) ->
+    InsLbl lbl ->
+    IntMsgsEmpty sys st2.(bst_msgs).
+Proof.
+  intros; red in H1.
+  inv H; try (exfalso; auto; fail).
+  simpl in *.
+  red in H3; dest.
+  red in H0; red; intros.
+  specialize (H0 _ H4).
+  rewrite findQ_not_In_enqMsgs.
+  - assumption.
+  - intro Hx; apply H in Hx.
+    destruct (sys_minds_sys_merqs_DisjList sys midx); auto.
+Qed.
+
+Lemma insHistory_IntMsgsEmpty:
+  forall {oifc} (sys: System oifc) st1 hst st2,
+    steps step_m sys st1 hst st2 ->
+    IntMsgsEmpty sys st1.(bst_msgs) ->
+    InsHistory hst ->
+    IntMsgsEmpty sys st2.(bst_msgs).
+Proof.
+  induction 1; simpl; intros; auto.
+  inv H2.
+  eapply insLbl_IntMsgsEmpty; eauto.
+Qed.
 
 Lemma atomic_legal_eouts:
   forall (hst: MHistory) inits ins outs eouts,

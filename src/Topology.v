@@ -110,6 +110,9 @@ Section DTree.
       else findSome (fun ic => subtree (snd ic) idx) cs
     end.
 
+  Definition subtreeIndsOf (dtr: DTree) (idx: IdxT): list IdxT :=
+    (subtree dtr idx) >>=[nil] (fun tr => indsOf tr).
+
   Definition childChnsOf
              (cs: list (list IdxT * list IdxT * DTree))
              (idx: IdxT):

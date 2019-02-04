@@ -5,40 +5,12 @@ Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
 Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
-Require Import RqUpRed RsUpRed RqDownRed.
+Require Import RqRsRed RqUpRed RsUpRed RqDownRed.
 
 Set Implicit Arguments.
 
 Open Scope list.
 Open Scope fmap.
-
-Definition RespondingL (toidx: IdxT) (lbl: MLabel) :=
-  match lbl with
-  | RlblInt oidx ridx rins routs =>
-    toidx = oidx /\ Forall (fun idm => msg_type (valOf idm) = MRs) routs
-  | _ => False
-  end.
-
-Definition respondingL_dec:
-  forall toidx lbl, {RespondingL toidx lbl} + {~ RespondingL toidx lbl}.
-Proof.
-  unfold RespondingL; intros.
-  destruct lbl; auto.
-  assert (forall idm, {msg_type (valOf idm) = MRs} + {msg_type (valOf idm) <> MRs})
-    as Hdec by (intros; exact (eq_nat_dec (msg_type (valOf idm)) MRs)).
-  apply Forall_dec with (l:= mouts) in Hdec.
-  destruct (eq_nat_dec toidx oidx); subst.
-  - destruct Hdec; auto.
-    right; intro Hx; dest; auto.
-  - right; intro Hx; dest; auto.
-Defined.
-
-Definition respondingL_not_dec:
-  forall toidx lbl, {~ RespondingL toidx lbl} + {~ (~ RespondingL toidx lbl)}.
-Proof.
-  intros.
-  destruct (respondingL_dec toidx lbl); auto.
-Defined.
 
 Section Pushable.
   Context {oifc: OStateIfc}.
@@ -215,7 +187,10 @@ Section Pushable.
    * 4-4-2) [posth1] and [hst2] are commutative by applying a).
    *
    ** Proof sketch for the reducibility of downward-response labels:
-   * 1) [phst] ⊆ tr(nlbl)^{-1}
+   * 1) [exists preh posth, 
+   *       phst = posth ++ preh /\
+   *       ("preh" just consists of RqUp labels) /\
+   *       oinds(posth) ⊆ tr(nlbl)^{-1}]
    * 2) Let [olast(hst)] be the last object index of an [Atomic] history [hst].
    * 2-1) [olast(hst) ∈ tr(nlbl) -> oinds(hst) ⊆ tr(nlbl)]
    * 2-2) [olast(hst) ∈ tr(nlbl)^{-1} -> oinds(hst) ⊆ tr(nlbl)^{-1}]
@@ -232,10 +207,14 @@ Section Pushable.
     Hypothesis (Hrd: RqDownMsgs dtr oidx rins).
 
     Definition RqDownLPush (hst: MHistory) :=
-      exists lbl, In lbl hst /\ RespondingL oidx lbl.
+      exists loidx,
+        lastOIdxOf hst = Some loidx /\
+        In loidx (subtreeIndsOf dtr oidx).
 
     Definition RqDownRPush (hst: MHistory) :=
-      Forall (fun lbl => ~ RespondingL oidx lbl) hst.
+      exists loidx,
+        lastOIdxOf hst = Some loidx /\
+        ~ In loidx (subtreeIndsOf dtr oidx).
 
     Lemma rqDown_lpush_or_rpush:
       forall st1,
@@ -246,21 +225,17 @@ Section Pushable.
           Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst => RqDownLPush hst \/ RqDownRPush hst) hsts.
     Proof.
-      intros; clear.
+      intros; clear -H0.
+      rewrite Forall_forall in H0.
       apply Forall_forall.
       intros hst ?.
-      destruct (Forall_dec _ (respondingL_not_dec oidx) hst) as [|Hnf];
-        [right; assumption|left].
-      apply Exists_Forall_neg in Hnf.
-      - clear -Hnf; induction Hnf; intros.
-        + exists x; split; [left; reflexivity|].
-          destruct (respondingL_dec oidx x); [auto|].
-          elim H; assumption.
-        + destruct IHHnf as [lbl [? ?]].
-          exists lbl; split; auto.
-          right; auto.
-      - clear; intros.
-        destruct (respondingL_not_dec oidx x); auto.
+      specialize (H0 _ H).
+      destruct H0 as [inits [ints [outs [eouts ?]]]].
+      apply atomic_lastOIdxOf in H0.
+      destruct H0 as [loidx ?].
+      destruct (in_dec eq_nat_dec loidx (subtreeIndsOf dtr oidx)).
+      - left; red; eauto.
+      - right; red; eauto.
     Qed.
 
     Lemma rqDown_lpush_reducible:
@@ -285,10 +260,6 @@ Section Pushable.
           Forall (fun hst => RqDownRPush hst ->
                              Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
     Proof.
-      intros.
-      inv H1.
-      eapply steps_split in H6; [|reflexivity].
-      
     Admitted.
 
     Lemma rqDown_LRPushable:
@@ -333,7 +304,7 @@ Proof.
   - apply LPushableHst_WellInterleavedHst; auto.
     eauto using rqUp_LPushableHst.
   - apply PushableHst_WellInterleavedHst; auto.
-    exists (RqDownLPush oidx), (RqDownRPush oidx).
+    exists (RqDownLPush dtr oidx), (RqDownRPush dtr oidx).
     intros; repeat split.
     + eapply rqDown_lpush_or_rpush; eauto.
     + eapply rqDown_lpush_reducible; eauto.

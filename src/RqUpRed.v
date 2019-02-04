@@ -308,19 +308,6 @@ Section RqUpReduction.
     try disc_msgs_in;
     try disc_rqToUpRule.
 
-  Ltac solve_midx_disj :=
-    repeat
-      match goal with
-      | [ |- _ <> _] => solve_midx_neq
-      | [ |- ~ In _ _] => solve_midx_neq
-      | [ |- DisjList (_ :: nil) (_ :: nil)] =>
-        apply (DisjList_singletons eq_nat_dec)
-      | [ |- DisjList (_ :: nil) _] =>
-        apply (DisjList_singleton_1 eq_nat_dec)
-      | [ |- DisjList _ (_ :: nil)] =>
-        apply (DisjList_singleton_2 eq_nat_dec)
-      end.
-
   Lemma rqUp_lbl_commutes:
     forall oidxTo rqUps st1 st2 oidx1 ridx1 rins1 routs1 oidx2 ridx2 rins2 routs2,
       RqUpMsgs dtr oidxTo rqUps ->

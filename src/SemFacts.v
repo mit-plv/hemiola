@@ -148,6 +148,13 @@ Proof.
   eauto using extRssOf_SubList_sys_merss_FirstMP.
 Qed.
 
+Lemma init_IntMsgsEmpty:
+  forall {oifc} (sys: System oifc), IntMsgsEmpty sys (emptyMP Msg).
+Proof.
+  intros; red; intros.
+  reflexivity.
+Qed.
+
 Lemma steps_singleton:
   forall {oifc} (sys: System oifc) st1 lbl st2,
     step_m sys st1 lbl st2 ->
