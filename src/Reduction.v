@@ -112,6 +112,82 @@ Proof.
   intros; auto.
 Qed.
 
+Lemma reducibleP_refl:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hst,
+    ReducibleP sys P hst hst.
+Proof.
+  congruence.
+Qed.
+
+Definition PInitializing {oifc} (sys: System oifc)
+           (P: MState oifc -> Prop) (hst1: MHistory) :=
+  forall st1 st2, steps step_m sys st1 hst1 st2 -> P st2.
+
+Definition PPreserving {oifc} (sys: System oifc)
+           (P: MState oifc -> Prop) (hst: MHistory) :=
+  forall st1,
+    P st1 ->
+    forall st2,
+      steps step_m sys st1 hst st2 -> P st2.
+
+Lemma reducibleP_trans:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hst1 hst2 hst3,
+    ReducibleP sys P hst1 hst2 ->
+    ReducibleP sys P hst2 hst3 ->
+    ReducibleP sys P hst1 hst3.
+Proof.
+  unfold ReducibleP; intros; auto.
+Qed.
+
+Lemma reducibleP_app_1:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hfr hto,
+    ReducibleP sys P hfr hto ->
+    forall hst,
+      ReducibleP sys P (hst ++ hfr) (hst ++ hto).
+Proof.
+  unfold ReducibleP; intros.
+  eapply steps_split in H0; [|reflexivity]; dest.
+  specialize (H _ Hr Hp _ H0); dest.
+  eapply steps_append; eauto.
+Qed.
+
+Lemma reducibleP_app_2:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hfr hto,
+    ReducibleP sys P hfr hto ->
+    forall hst,
+      PPreserving sys P hst ->
+      ReducibleP sys P (hfr ++ hst) (hto ++ hst).
+Proof.
+  unfold ReducibleP; intros.
+  eapply steps_split in H1; [|reflexivity]; dest.
+  eapply steps_append; eauto.
+Qed.
+
+Corollary reducibleP_cons:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hfr hto,
+    ReducibleP sys P hfr hto ->
+    forall lbl,
+      ReducibleP sys P (lbl :: hfr) (lbl :: hto).
+Proof.
+  intros.
+  change (lbl :: hfr) with ([lbl] ++ hfr).
+  change (lbl :: hto) with ([lbl] ++ hto).
+  apply reducibleP_app_1; auto.
+Qed.
+
+Corollary reducibleP_cons_2:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) lbl1 lbl2 lbl3 lbl4,
+    ReducibleP sys P [lbl1; lbl2] [lbl3; lbl4] ->
+    forall hst,
+      PPreserving sys P hst ->
+      ReducibleP sys P (lbl1 :: lbl2 :: hst) (lbl3 :: lbl4 :: hst).
+Proof.
+  intros.
+  change (lbl1 :: lbl2 :: hst) with ([lbl1; lbl2] ++ hst).
+  change (lbl3 :: lbl4 :: hst) with ([lbl3; lbl4] ++ hst).
+  apply reducibleP_app_2; auto.
+Qed.
+
 (*! Reducibility of silent, incoming, and outgoing labels *)
 
 Lemma silent_ignored_1:
