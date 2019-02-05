@@ -122,8 +122,8 @@ Section Pushable.
         apply DisjList_comm; assumption.
     Qed.
     
-    Lemma rsUp_RPushableP:
-      RPushableP sys RsUpP phst nlbl.
+    Lemma rsUp_RPushableHst:
+      RPushableHst sys RsUpP phst nlbl.
     Proof.
       intros; red; intros.
       inv H1.
@@ -206,6 +206,9 @@ Section Pushable.
   Section RqDown.
     Hypothesis (Hrd: RqDownMsgs dtr oidx rins).
 
+    Definition RqDownP (st: MState oifc) :=
+      Forall (InMPI st.(bst_msgs)) rins.
+    
     Definition RqDownLPush (hst: MHistory) :=
       exists loidx,
         lastOIdxOf hst = Some loidx /\
@@ -215,6 +218,55 @@ Section Pushable.
       exists loidx,
         lastOIdxOf hst = Some loidx /\
         ~ In loidx (subtreeIndsOf dtr oidx).
+
+    Lemma rqDown_PInitializing:
+      PInitializing sys RqDownP phst.
+    Proof.
+      intros; red; intros.
+      destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H1; inv H1.
+      inv H0.
+      red; eapply SubList_forall; [|eassumption].
+      eapply (atomic_messages_eouts_in msg_dec); eauto.
+    Qed.
+
+    Lemma rqDown_discontinuous_PPreserving:
+      forall hst,
+        Discontinuous phst hst ->
+        PPreserving sys RsUpP hst.
+    Proof.
+      intros.
+      destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H1; inv H1.
+
+      inv H0.
+      destruct H as [inits1 [ins1 [outs1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]]].
+      dest.
+      eapply atomic_unique in H; [|eassumption]; dest; subst.
+
+      red; intros.
+      eapply (atomic_messages_ins_ins msg_dec).
+      - eapply H0.
+      - eassumption.
+      - assumption.
+      - eapply DisjList_comm, DisjList_SubList; [eassumption|].
+        apply DisjList_comm; assumption.
+    Qed.
+
+    Lemma rqDown_PPreserving:
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall hsts st2,
+          Forall (AtomicEx msg_dec) hsts ->
+          steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
+          Forall (fun hst => Discontinuous phst hst) hsts ->
+          Forall (PPreserving sys RqDownP) hsts.
+    Proof.
+      intros.
+      eapply Forall_impl; [|eapply H2].
+      simpl; intros hst ?.
+      eapply rqDown_discontinuous_PPreserving; assumption.
+    Qed.
 
     Lemma rqDown_lpush_or_rpush:
       forall st1,
@@ -258,7 +310,7 @@ Section Pushable.
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
           Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst => RqDownRPush hst ->
-                             Reducible sys (nlbl :: hst) (hst ++ [nlbl])) hsts.
+                             ReducibleP sys RqDownP (nlbl :: hst) (hst ++ [nlbl])) hsts.
     Proof.
     Admitted.
 
@@ -269,7 +321,7 @@ Section Pushable.
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
           Forall (fun hst => Discontinuous phst hst) hsts ->
-          LRPushable sys RqDownLPush RqDownRPush hsts.
+          LRPushable sys RqDownP RqDownLPush RqDownRPush hsts.
     Proof.
     Admitted.
     
@@ -303,16 +355,18 @@ Proof.
   destruct H6 as [|[|[|]]].
   - apply LPushableHst_WellInterleavedHst; auto.
     eauto using rqUp_LPushableHst.
-  - apply PushableHst_WellInterleavedHst; auto.
-    exists (RqDownLPush dtr oidx), (RqDownRPush dtr oidx).
-    intros; repeat split.
-    + eapply rqDown_lpush_or_rpush; eauto.
-    + eapply rqDown_lpush_reducible; eauto.
-    + eapply rqDown_rpush_reducible; eauto.
-    + eapply rqDown_LRPushable; eauto.
-  - apply RPushableP_WellInterleavedHst with (P:= RsUpP rins); auto.
+  - apply PushableHst_WellInterleavedHst with (P:= RqDownP rins); auto.
+    + eauto using rqDown_PInitializing.
+    + exists (RqDownLPush dtr oidx), (RqDownRPush dtr oidx).
+      intros; repeat split.
+      * eauto using rqDown_PPreserving.
+      * eauto using rqDown_lpush_or_rpush.
+      * eauto using rqDown_lpush_reducible.
+      * eauto using rqDown_rpush_reducible.
+      * eauto using rqDown_LRPushable.
+  - apply RPushableHst_WellInterleavedHst with (P:= RsUpP rins); auto.
     + eauto using rsUp_PInitializing.
-    + eauto using rsUp_RPushableP.
+    + eauto using rsUp_RPushableHst.
   - admit.
 Admitted.
 
