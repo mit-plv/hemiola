@@ -130,6 +130,21 @@ Definition PPreserving {oifc} (sys: System oifc)
     forall st2,
       steps step_m sys st1 hst st2 -> P st2.
 
+Lemma PPreserving_Forall_concat:
+  forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hsts,
+    Forall (PPreserving sys P) hsts ->
+    PPreserving sys P (List.concat hsts).
+Proof.
+  induction hsts as [|hst hsts]; simpl; intros.
+  - red; intros; inv_steps; assumption.
+  - inv H.
+    red; intros.
+    eapply steps_split in H0; [|reflexivity].
+    destruct H0 as [sti [? ?]].
+    eapply H2; [|eassumption].
+    eapply IHhsts; eauto.
+Qed.
+
 Lemma reducibleP_trans:
   forall {oifc} (sys: System oifc) (P: MState oifc -> Prop) hst1 hst2 hst3,
     ReducibleP sys P hst1 hst2 ->
