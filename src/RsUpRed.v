@@ -508,7 +508,7 @@ Section RsUpReduction.
       { eassumption. }
   Qed.
 
-  Lemma rsUp_rpush_unit_ok_ind':
+  Lemma rsUp_rpush_unit_reducible':
     forall oidxTo rsUps inits ins hst outs eouts
            oidx ridx routs,
       RsUpMsgs dtr oidxTo rsUps ->
@@ -530,7 +530,7 @@ Section RsUpReduction.
       + apply reducible_cons; eauto.
   Qed.
 
-  Lemma rsUp_rpush_unit_ok_ind:
+  Lemma rsUp_rpush_unit_reducible:
     forall oidxTo rsUps inits ins hst outs eouts
            oidx ridx routs,
       RsUpMsgs dtr oidxTo rsUps ->
@@ -547,7 +547,7 @@ Section RsUpReduction.
     inv_steps.
     pose proof (rsUp_spec H (reachable_steps Hr H7) H9).
     destruct H3 as [[? ?] _]; subst.
-    eapply rsUp_rpush_unit_ok_ind'; eauto.
+    eapply rsUp_rpush_unit_reducible'; eauto.
     - inv_step.
       eapply rsUp_atomic_outs_disj; eauto.
     - econstructor; eauto.

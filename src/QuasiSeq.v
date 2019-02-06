@@ -78,7 +78,7 @@ Definition Discontinuous (hst1 hst2: MHistory) :=
   exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
     Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
-    DisjList inits2 eouts1.
+    DisjList eouts1 inits2.
 
 Definition ExtInterleaved {oifc} (sys: System oifc)
            (hsts: list MHistory) :=

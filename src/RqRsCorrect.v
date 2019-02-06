@@ -29,7 +29,7 @@ Section Pushable.
   Section RqUp.
     Hypothesis (Hru: RqUpMsgs dtr oidx rins).
 
-    Lemma rqUp_LPushable_unit:
+    Lemma rqUp_lpush_unit:
       forall hst,
         AtomicEx msg_dec hst ->
         Discontinuous phst hst ->
@@ -43,8 +43,7 @@ Section Pushable.
       red in H0; dest.
       pose proof (atomic_unique H0 H2); dest; subst.
       pose proof (atomic_unique H5 H); dest; subst.
-      eapply rqUp_lpush_unit_ok_ind; eauto.
-      apply DisjList_comm; assumption.
+      eapply rqUp_lpush_unit_reducible; eauto.
     Qed.
     
     Lemma rqUp_LPushableHst: LPushableHst sys phst nlbl.
@@ -58,9 +57,15 @@ Section Pushable.
       eapply steps_split in H6; [|reflexivity].
       destruct H6 as [sti [? ?]].
       constructor; eauto.
-      intros; eapply rqUp_LPushable_unit; eauto.
+      intros; eapply rqUp_lpush_unit; eauto.
     Qed.
 
+    Lemma rqUp_WellInterleavedHst: WellInterleavedHst sys phst nlbl.
+    Proof.
+      apply LPushableHst_WellInterleavedHst; auto.
+      eauto using rqUp_LPushableHst.
+    Qed.
+    
   End RqUp.
 
   Section RsUp.
@@ -78,26 +83,6 @@ Section Pushable.
       inv H0.
       red; eapply SubList_forall; [|eassumption].
       eapply (atomic_messages_eouts_in msg_dec); eauto.
-    Qed.
-
-    Lemma rsUp_rpush_unit_ok:
-      forall hst,
-        AtomicEx msg_dec hst ->
-        Discontinuous phst hst ->
-        ReducibleP sys RsUpP (nlbl :: hst) (hst ++ [nlbl]).
-    Proof.
-      intros.
-      destruct H as [inits [ins [outs [eouts ?]]]].
-      destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
-      apply eq_sym in H2; inv H2.
-      destruct H1 as [pinits pins phst pouts peouts].
-      red in H0; dest.
-      pose proof (atomic_unique H0 H2); dest; subst.
-      pose proof (atomic_unique H5 H); dest; subst.
-      eapply rsUp_rpush_unit_ok_ind; eauto.
-      eapply DisjList_SubList.
-      - eassumption.
-      - apply DisjList_comm; assumption.
     Qed.
 
     Lemma rsUp_PPreserving:
@@ -118,8 +103,25 @@ Section Pushable.
       - eapply H0.
       - eassumption.
       - assumption.
-      - eapply DisjList_comm, DisjList_SubList; [eassumption|].
-        apply DisjList_comm; assumption.
+      - eapply DisjList_comm, DisjList_SubList; eauto.
+    Qed.
+
+    Lemma rsUp_rpush_unit:
+      forall hst,
+        AtomicEx msg_dec hst ->
+        Discontinuous phst hst ->
+        ReducibleP sys RsUpP (nlbl :: hst) (hst ++ [nlbl]).
+    Proof.
+      intros.
+      destruct H as [inits [ins [outs [eouts ?]]]].
+      destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H2; inv H2.
+      destruct H1 as [pinits pins phst pouts peouts].
+      red in H0; dest.
+      pose proof (atomic_unique H0 H2); dest; subst.
+      pose proof (atomic_unique H5 H); dest; subst.
+      eapply rsUp_rpush_unit_reducible; eauto.
+      eapply DisjList_SubList; eauto.
     Qed.
     
     Lemma rsUp_RPushableHst:
@@ -147,7 +149,15 @@ Section Pushable.
       constructor; auto.
       split.
       - apply rsUp_PPreserving; auto.
-      - intros; eapply rsUp_rpush_unit_ok; eauto.
+      - intros; eapply rsUp_rpush_unit; eauto.
+    Qed.
+
+    Lemma rsUp_WellInterleavedHst:
+      WellInterleavedHst sys phst nlbl.
+    Proof.
+      apply RPushableHst_WellInterleavedHst with (P:= RsUpP); auto.
+      - eauto using rsUp_PInitializing.
+      - eauto using rsUp_RPushableHst.
     Qed.
 
   End RsUp.
@@ -206,9 +216,6 @@ Section Pushable.
   Section RqDown.
     Hypothesis (Hrd: RqDownMsgs dtr oidx rins).
 
-    Definition RqDownP (st: MState oifc) :=
-      Forall (InMPI st.(bst_msgs)) rins.
-    
     Definition RqDownLPush (hst: MHistory) :=
       exists loidx,
         lastOIdxOf hst = Some loidx /\
@@ -220,7 +227,7 @@ Section Pushable.
         ~ In loidx (subtreeIndsOf dtr oidx).
 
     Lemma rqDown_PInitializing:
-      PInitializing sys RqDownP phst.
+      PInitializing sys (RqDownP rins) phst.
     Proof.
       intros; red; intros.
       destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
@@ -249,8 +256,7 @@ Section Pushable.
       - eapply H0.
       - eassumption.
       - assumption.
-      - eapply DisjList_comm, DisjList_SubList; [eassumption|].
-        apply DisjList_comm; assumption.
+      - eapply DisjList_comm, DisjList_SubList; eauto.
     Qed.
 
     Lemma rqDown_PPreserving:
@@ -260,7 +266,7 @@ Section Pushable.
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
           Forall (fun hst => Discontinuous phst hst) hsts ->
-          Forall (PPreserving sys RqDownP) hsts.
+          Forall (PPreserving sys (RqDownP rins)) hsts.
     Proof.
       intros.
       eapply Forall_impl; [|eapply H2].
@@ -290,6 +296,25 @@ Section Pushable.
       - right; red; eauto.
     Qed.
 
+    Lemma rqDown_lpush_unit:
+      forall hst,
+        AtomicEx msg_dec hst ->
+        Discontinuous phst hst ->
+        RqDownLPush hst ->
+        Reducible sys (hst ++ phst) (phst ++ hst).
+    Proof.
+      intros.
+      destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H3; inv H3.
+      inv H2.
+      destruct H0 as [inits1 [ins1 [outs1 [eouts1 ?]]]].
+      destruct H0 as [inits2 [ins2 [outs2 [eouts2 ?]]]]; dest.
+      pose proof (atomic_unique H6 H0); dest; subst; clear H0.
+      destruct H1 as [loidx [? ?]].
+      eapply rqDown_lpush_unit_reducible; eauto.
+      apply rqDown_PInitializing.
+    Qed.
+    
     Lemma rqDown_lpush_reducible:
       forall st1,
         Reachable (steps step_m) sys st1 ->
@@ -300,7 +325,40 @@ Section Pushable.
           Forall (fun hst => RqDownLPush hst ->
                              Reducible sys (hst ++ phst) (phst ++ hst)) hsts.
     Proof.
-    Admitted.
+      intros.
+      inv_steps.
+      eapply steps_split in H6; [|reflexivity].
+      destruct H6 as [sti [? ?]].
+      clear H8.
+      generalize dependent st3.
+      induction hsts as [|hst hsts]; simpl; intros; [constructor|].
+      inv H0; inv H2.
+      eapply steps_split in H3; [|reflexivity].
+      destruct H3 as [hsti [? ?]].
+      specialize (IHhsts H7 H8 _ H0).
+      constructor; [|assumption].
+      intros; apply rqDown_lpush_unit; auto.
+    Qed.
+
+    Lemma rqDown_rpush_unit:
+      forall hst,
+        RqDownRPush hst ->
+        AtomicEx msg_dec hst ->
+        Discontinuous phst hst ->
+        ReducibleP sys (RqDownP rins) (nlbl :: hst) (hst ++ [nlbl]).
+    Proof.
+      intros.
+      destruct H0 as [inits [ins [outs [eouts ?]]]].
+      destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+      apply eq_sym in H3; inv H3.
+      destruct H2 as [pinits pins phst pouts peouts].
+      red in H1; dest.
+      pose proof (atomic_unique H1 H3); dest; subst; clear H3.
+      pose proof (atomic_unique H6 H0); dest; subst; clear H6.
+      destruct H as [loidx [? ?]].
+      eapply rqDown_rpush_unit_reducible; eauto.
+      eapply DisjList_SubList; eauto.
+    Qed.
 
     Lemma rqDown_rpush_reducible:
       forall st1,
@@ -310,9 +368,15 @@ Section Pushable.
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
           Forall (fun hst => Discontinuous phst hst) hsts ->
           Forall (fun hst => RqDownRPush hst ->
-                             ReducibleP sys RqDownP (nlbl :: hst) (hst ++ [nlbl])) hsts.
+                             ReducibleP sys (RqDownP rins) (nlbl :: hst) (hst ++ [nlbl])) hsts.
     Proof.
-    Admitted.
+      intros.
+      clear H1.
+      induction hsts as [|hst hsts]; simpl; intros; [constructor|].
+      inv H0; inv H2.
+      constructor; eauto.
+      intros; eapply rqDown_rpush_unit; eauto.
+    Qed.
 
     Lemma rqDown_LRPushable:
       forall st1,
@@ -321,9 +385,33 @@ Section Pushable.
           Forall (AtomicEx msg_dec) hsts ->
           steps step_m sys st1 (nlbl :: List.concat hsts ++ phst) st2 ->
           Forall (fun hst => Discontinuous phst hst) hsts ->
-          LRPushable sys RqDownP RqDownLPush RqDownRPush hsts.
+          LRPushable sys (RqDownP rins) RqDownLPush RqDownRPush hsts.
     Proof.
-    Admitted.
+      intros; red; intros; subst.
+      apply Forall_app_inv in H0; dest.
+      inv H3; destruct H8 as [inits1 [ins1 [outs1 [eouts1 ?]]]].
+      apply Forall_app_inv in H9; dest.
+      inv H7; destruct H10 as [inits2 [ins2 [outs2 [eouts2 ?]]]].
+      destruct H4 as [lloidx [? ?]].
+      destruct H5 as [rloidx [? ?]].
+
+      assert (DisjList rins inits1 /\ DisjList rins inits2).
+      { destruct Hcont as [peouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+        apply eq_sym in H12; inv H12.
+        apply Forall_app_inv in H2; dest.
+        inv H12; apply Forall_app_inv in H18; dest.
+        inv H15.
+        red in H17, H19; dest.
+        pose proof (atomic_unique H19 H3); dest; subst; clear H19.
+        pose proof (atomic_unique H16 H7); dest; subst; clear H16.
+        inv H10.
+        pose proof (atomic_unique H17 H19); dest; subst; clear H17.
+        pose proof (atomic_unique H15 H19); dest; subst; clear H15.
+        split; eapply DisjList_SubList; eassumption.
+      }
+      destruct H10.
+      eapply rqDown_LRPushable_unit_reducible; try eassumption.
+    Qed.
     
   End RqDown.
   

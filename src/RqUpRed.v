@@ -791,7 +791,7 @@ Section RqUpReduction.
       apply InMP_or_enqMP; auto.
   Qed.
   
-  Lemma rqUp_lpush_unit_ok_ind:
+  Lemma rqUp_lpush_unit_reducible:
     forall oidxTo rqUps inits ins hst outs eouts
            pinits pins phst pouts peouts,
       Atomic msg_dec pinits pins phst pouts peouts ->
