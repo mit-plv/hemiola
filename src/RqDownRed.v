@@ -177,8 +177,12 @@ Section RqDownReduction.
         + inv_steps.
           apply steps_singleton; assumption.
         + eapply rqUpHistory_lpush_lbl; try eassumption.
-          (* [RqUp]s and [RqDown]s are certainly disjoint. *)
-          admit.
+          destruct Hrrs as [? [? ?]].
+          clear -Hrqd H4 H13.
+          destruct Hrqd as [[rqDown rqdm] ?]; dest; subst.
+          destruct H4 as [cidx [[rqUp rqum] ?]]; dest; subst.
+          apply idsOf_DisjList; simpl in *.
+          solve_midx_disj.
       - change (nhst ++ RlblInt oidxTo ridx rqDowns routs :: rhst)
           with (nhst ++ [RlblInt oidxTo ridx rqDowns routs] ++ rhst).
         rewrite app_assoc.
@@ -188,9 +192,13 @@ Section RqDownReduction.
             with ([RlblInt oidxTo ridx rqDowns routs] ++ nhst).
           eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
           * constructor.
-          * simpl.
-            (* [In oidxTo (subtreeIndsOf dtr oidxTo)] when [oidxTo] is valid. *)
-            admit.
+          * simpl; red; intros; Common.dest_in.
+            apply parentChnsOf_subtreeIndsOf_self_in.
+            { apply Hrrs. }
+            { destruct Hrqd as [rqDown ?]; dest.
+              unfold edgeDownTo, downEdgesTo in H13.
+              destruct (parentChnsOf dtr e); simpl in H13; discriminate.
+            }
           * (* For an [Atomic] history, 
              * if [DisjList rqDowns inits] then [DisjList eouts rqDowns] *)
             admit.

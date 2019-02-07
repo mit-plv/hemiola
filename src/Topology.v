@@ -187,7 +187,14 @@ Section Facts.
       DisjList (ups1 ++ downs1) (ups2 ++ downs2).
   Proof.
   Admitted.
-  
+
+  Lemma parentChnsOf_subtreeIndsOf_self_in:
+    forall dtr (Hwf: WfDTree dtr) oidx,
+      parentChnsOf dtr oidx <> None ->
+      In oidx (subtreeIndsOf dtr oidx).
+  Proof.
+  Admitted.
+    
 End Facts.
 
 Close Scope list.

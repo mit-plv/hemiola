@@ -168,10 +168,13 @@ Section RsDownReduction.
       eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
       - eapply rsDown_olast_outside_tree; eassumption.
       - constructor.
-      - simpl.
-        (* [In oidxTo (subtreeIndsOf dtr oidxTo)] when [oidxTo] is valid. *)
-        admit.
-      - (* For an [Atomic] history, 
+      - simpl; red; intros; Common.dest_in.
+        apply parentChnsOf_subtreeIndsOf_self_in.
+        + apply Hrrs.
+        + destruct Hrsd as [rsDown ?]; dest.
+          unfold edgeDownTo, downEdgesTo in H5.
+          destruct (parentChnsOf dtr e); simpl in H5; discriminate.
+      - (* For an [Atomic] history,
          * if [DisjList rqDowns inits] then [DisjList eouts rqDowns] *)
         admit.
       - simpl; econstructor; eassumption.
