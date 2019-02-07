@@ -790,21 +790,20 @@ Section RqUpReduction.
       destruct rqUp as [ruIdx rqm]; simpl in *.
       apply InMP_or_enqMP; auto.
   Qed.
-  
-  Lemma rqUp_lpush_unit_reducible:
-    forall oidxTo rqUps inits ins hst outs eouts
-           pinits pins phst pouts peouts,
-      Atomic msg_dec pinits pins phst pouts peouts ->
-      RqUpMsgs dtr oidxTo rqUps ->
-      SubList rqUps peouts ->
-      Atomic msg_dec inits ins hst outs eouts ->
-      DisjList peouts inits ->
-      Reducible sys (hst ++ phst) (phst ++ hst).
-  Proof.
-    induction 4; simpl; intros; subst.
-    - eapply rqUp_lpush_lbl; eauto.
-    - red; intros.
 
+  Lemma rqUpHistory_lpush_unit_reducible:
+    forall phst oidxTo rqUps,
+      RqUpMsgs dtr oidxTo rqUps ->
+      RqUpHistory phst rqUps ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        DisjList rqUps inits ->
+        Reducible sys (hst ++ phst) (phst ++ hst).
+  Proof.
+    induction 3; simpl; intros; subst.
+    - red; intros.
+      eapply rqUpHistory_lpush_lbl; eauto.
+    - red; intros.
       assert (Reducible sys (RlblInt oidx ridx rins routs :: hst ++ phst)
                         (phst ++ RlblInt oidx ridx rins routs :: hst)); auto.
 
@@ -818,43 +817,62 @@ Section RqUpReduction.
           by (rewrite <-app_assoc; reflexivity).
         rewrite app_assoc.
         apply reducible_app_2.
-        eapply rqUp_lpush_lbl; eauto.
+        red; intros.
+        eapply rqUpHistory_lpush_lbl; eauto.
+        clear st0 Hr0 st3 H5.
+        
         apply DisjList_comm.
         eapply DisjList_SubList; [eassumption|].
-
         inv_steps.
-        clear H3 H4 H12 rins st2.
-        eapply steps_split in H10; [|reflexivity].
-        destruct H10 as [st2 [? ?]].
-        eapply rqUp_atomic in H; eauto.
-        dest; subst.
-        destruct H0 as [ruIdx [[rqUp rqm] ?]]; dest; subst.
-        simpl in *.
+        clear H2 H3 H11 rins st2.
+        eapply steps_split in H9; [|reflexivity].
+        destruct H9 as [st2 [? ?]].
 
         assert (Reachable (steps step_m) sys st2)
           by (eapply reachable_steps; eauto).
-        eapply rqUpHistory_outs in H5; [|reflexivity|eassumption].
+        destruct H as [ruIdx [rqUp ?]]; dest; subst.
+        eapply rqUpHistory_outs in H0; [|reflexivity|eassumption].
 
-        clear H1 H3 IHAtomic phst.
+        clear H2 IHAtomic phst.
         generalize dependent st3.
         generalize dependent st2.
-        induction H2; intros; subst.
+        induction H1; intros; subst.
         * inv_steps.
           eapply rqUp_outs_disj.
-          { exists ruIdx, (rqUp, rqm); repeat split; eauto. }
-          { apply H. }
+          { exists ruIdx, rqUp; repeat split; eauto. }
+          { apply H4. }
           { assumption. }
           { eassumption. }
         * inv_steps.
-          specialize (IHAtomic H8 _ H9 H10 _ H12).
-          eapply (atomic_messages_in_in msg_dec) in H2; eauto;
+          specialize (IHAtomic H7 _ H9 H10 _ H12).
+          eapply (atomic_messages_in_in msg_dec) in H10; eauto;
             [|eapply DisjList_In_2; [eassumption|left; reflexivity]].
           apply DisjList_app_4; [apply removeL_DisjList; assumption|].
           eapply rqUp_outs_disj.
-          { exists ruIdx, (rqUp, rqm); repeat split; eauto. }
+          { exists ruIdx, rqUp; repeat split; eauto. }
           { eapply reachable_steps; eauto. }
           { assumption. }
           { eassumption. }
+  Qed.    
+  
+  Lemma rqUp_lpush_unit_reducible:
+    forall oidxTo rqUps inits ins hst outs eouts
+           pinits pins phst pouts peouts,
+      Atomic msg_dec pinits pins phst pouts peouts ->
+      RqUpMsgs dtr oidxTo rqUps ->
+      SubList rqUps peouts ->
+      Atomic msg_dec inits ins hst outs eouts ->
+      DisjList peouts inits ->
+      Reducible sys (hst ++ phst) (phst ++ hst).
+  Proof.
+    intros; red; intros.
+    eapply steps_split in H4; [|reflexivity].
+    destruct H4 as [sti [? ?]].
+    eapply rqUpHistory_lpush_unit_reducible; eauto.
+    - eapply rqUp_atomic in H; eauto.
+      dest; subst; assumption.
+    - eapply DisjList_SubList; eassumption.
+    - eapply steps_append; eauto.
   Qed.
   
 End RqUpReduction.

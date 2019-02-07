@@ -12,6 +12,39 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
+(** Proof sketch for the reducibility of downward-request labels:
+ * 1) [phst] ⊆ tr(nlbl)^{-1}
+ * 2) Let [olast(hst)] be the last object index of an [Atomic] history [hst].
+ * 2-1) [olast(hst) ∈ tr(nlbl) -> oinds(hst) ⊆ tr(nlbl)]
+ * 2-2) [olast(hst) ∈ tr(nlbl)^{-1} -> 
+ *       exists preh posth, 
+ *         hst = posth ++ preh /\
+ *         ("preh" just consists of RqUp labels) /\
+ *         oinds(posth) ⊆ tr(nlbl)^{-1}]
+ * 3) Now define [LPush] and [RPush] as follows:
+ *    [LPush hst ≜ olast(hst) ∈ tr(nlbl)]
+ *    [RPush hst ≜ olast(hst) ∈ tr(nlbl)^{-1}]
+ * 4) To check each condition in [PushableHst]:
+ * 4-1) Left-or-right: [olast(hst)] is a single object index, 
+ *      thus [in_dec eq_nat_dec olast(hst) tr(nlbl)] provides enough
+ *      information.
+ * 4-2) Left-push-reducibility: if [hst] is left-pushable, then by 2-1) and 3)
+ *      we get [oinds(hst) ⊆ tr(nlbl)]. Now by 1) and a) we exactly get the
+ *      reducibility.
+ * 4-3) Right-push-reducibility: if [hst] is right-pushable, then by 2-2) 
+ *      and 3) we have [preh] and [posth] that satisfy the conditions in 2-2).
+ * 4-3-1) [preh] and [nlbl] are commutative since [preh] only consists of 
+ *        RqUp labels.
+ * 4-3-2) [posth] and [nlbl] are commutative by applying a).
+ * 4-4) [LRPushable]: if [RPush hst1 /\ LPush hst2], then by 2-1), 2-2), 
+ *      and 3) for [hst1] we have [preh1] and [posth1] that satisfy the
+ *      conditions in 2-2). Now reasoning very similarly to 4-2) and 4-3):
+ * 4-4-1) [preh1] and [hst2] are commutative since [preh1] only consists of
+ *        RqUp labels.
+ * 4-4-2) [posth1] and [hst2] are commutative by applying a).
+ *
+ *)
+
 Section RqDownReduction.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -59,9 +92,10 @@ Section RqDownReduction.
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
           ~ In loidx (subtreeIndsOf dtr oidxTo) ->
-          exists phst rqUps ninits nins nhst nouts,
+          exists phst ruIdx rqUps ninits nins nhst nouts,
             hst = nhst ++ phst /\
-            (phst = nil \/ RqUpHistory dtr phst rqUps) /\
+            (phst = nil \/
+             (RqUpMsgs dtr ruIdx rqUps /\ RqUpHistory dtr phst rqUps)) /\
             SubList (oindsOf phst) (subtreeIndsOf dtr oidxTo) /\
             SubList ninits ins /\
             Atomic msg_dec ninits nins nhst nouts eouts /\
@@ -130,7 +164,7 @@ Section RqDownReduction.
       intros; red; intros.
       inv_steps.
       pose proof (rqDown_olast_outside_tree H2 H Hr Hp H7 H0 H1).
-      destruct H3 as [rhst [rqUps ?]].
+      destruct H3 as [rhst [ruIdx [rqUps ?]]].
       destruct H3 as [ninits [nins [nhst [nouts ?]]]]; dest; subst.
       eapply steps_split in H7; [|reflexivity].
       destruct H7 as [sti [? ?]].
@@ -180,7 +214,39 @@ Section RqDownReduction.
       intros; red; intros.
       eapply steps_split in H7; [|reflexivity].
       destruct H7 as [sti [? ?]].
-      (* pose proof (rqDown_olast_outside_tree H2 H Hr Hp H7 H0 H1). *)
+
+      eapply rqDown_olast_inside_tree in H6;
+        [|exact H4
+         |eassumption
+         |eapply reachable_steps; eassumption
+         |eapply (atomic_messages_ins_ins msg_dec);
+          try eapply H; try eassumption;
+          apply DisjList_comm; assumption
+         |eassumption
+         |eassumption].
+      clear H5.
+
+      eapply rqDown_olast_outside_tree in H2;
+        try exact H0; try eassumption.
+      clear H1.
+      destruct H2 as [prhst [ruIdx [rqUps [ninits [nins [nrhst [nouts ?]]]]]]].
+      dest; subst.
+
+      rewrite <-app_assoc.
+      eapply reducible_app_1; try assumption.
+      - instantiate (1:= lhst ++ prhst).
+        destruct H2; dest; subst; simpl.
+        + rewrite app_nil_r; apply reducible_refl.
+        + eapply rqUpHistory_lpush_unit_reducible; eauto.
+          (* Need something more about [rqUps], e.g., [SubList rqUps routs]. *)
+          admit.
+      - rewrite app_assoc.
+        eapply reducible_app_2; try assumption.
+        + instantiate (1:= lhst ++ nrhst).
+          eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
+          admit.
+        + rewrite <-app_assoc.
+          eapply steps_append; eassumption.
     Admitted.
     
   End OnRqDown.
