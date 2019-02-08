@@ -92,12 +92,15 @@ Section RqDownReduction.
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
           ~ In loidx (subtreeIndsOf dtr oidxTo) ->
-          exists phst ruIdx rqUps ninits nins nhst nouts,
+          exists phst ninits nins nhst nouts,
             hst = nhst ++ phst /\
             (phst = nil \/
-             (RqUpMsgs dtr ruIdx rqUps /\
-              RqUpHistory dtr phst rqUps /\
-              parentIdxOf dtr oidxTo = Some ruIdx)) /\
+             (exists pins pouts ruIdx rqUps,
+                 Atomic msg_dec inits pins phst pouts rqUps /\
+                 RqUpMsgs dtr ruIdx rqUps /\
+                 RqUpHistory dtr phst rqUps /\
+                 Forall (fun rqUp => rqEdgeUpFrom dtr oidxTo =
+                                     Some (idOf rqUp)) rqUps)) /\
             SubList (oindsOf phst) (subtreeIndsOf dtr oidxTo) /\
             SubList ninits ins /\
             Atomic msg_dec ninits nins nhst nouts eouts /\
@@ -118,6 +121,22 @@ Section RqDownReduction.
           forall st2,
             steps step_m sys st1 hst st2 ->
             DisjList rqDowns outs /\ RqDownP st2.
+    Proof.
+    Admitted.
+
+    Lemma rqDown_lpush_rpush_messages_disj:
+      forall rinits rins rhst routs reouts
+             linits lins lhst louts leouts,
+        Atomic msg_dec rinits rins rhst routs reouts ->
+        DisjList (oindsOf rhst) (subtreeIndsOf dtr oidxTo) ->
+        Atomic msg_dec linits lins lhst louts leouts ->
+        SubList (oindsOf lhst) (subtreeIndsOf dtr oidxTo) ->
+        forall st1,
+          Reachable (steps step_m) sys st1 ->
+          RqDownP st1 ->
+          forall st2,
+            steps step_m sys st1 (lhst ++ rhst) st2 ->
+            DisjList reouts linits.
     Proof.
     Admitted.
 
@@ -179,27 +198,27 @@ Section RqDownReduction.
       intros; red; intros.
       inv_steps.
       pose proof (rqDown_olast_outside_tree H2 H Hr Hp H7 H0 H1).
-      destruct H3 as [rhst [ruIdx [rqUps ?]]].
-      destruct H3 as [ninits [nins [nhst [nouts ?]]]]; dest; subst.
+      destruct H3 as [prhst [ninits [nins [nhst [nouts ?]]]]]; dest; subst.
       eapply steps_split in H7; [|reflexivity].
       destruct H7 as [sti [? ?]].
 
       rewrite <-app_assoc.
       eapply reducible_app_1; try assumption.
-      - instantiate (1:= RlblInt oidxTo ridx rqDowns routs :: rhst).
+      - instantiate (1:= RlblInt oidxTo ridx rqDowns routs :: prhst).
         red; intros.
-        destruct H4; dest; subst; simpl in *.
+        destruct H4; subst; simpl in *.
         + inv_steps.
           apply steps_singleton; assumption.
-        + eapply rqUpHistory_lpush_lbl; try eassumption.
+        + destruct H4 as [prins [prouts [ruIdx [rqUps ?]]]]; dest.
+          eapply rqUpHistory_lpush_lbl; try eassumption.
           destruct Hrrs as [? [? ?]].
-          clear -Hrqd H4 H14.
+          clear -Hrqd H12 H15.
           destruct Hrqd as [[rqDown rqdm] ?]; dest; subst.
-          destruct H4 as [cidx [[rqUp rqum] ?]]; dest; subst.
+          destruct H12 as [cidx [[rqUp rqum] ?]]; dest; subst.
           apply idsOf_DisjList; simpl in *.
           solve_midx_disj.
-      - change (nhst ++ RlblInt oidxTo ridx rqDowns routs :: rhst)
-          with (nhst ++ [RlblInt oidxTo ridx rqDowns routs] ++ rhst).
+      - change (nhst ++ RlblInt oidxTo ridx rqDowns routs :: prhst)
+          with (nhst ++ [RlblInt oidxTo ridx rqDowns routs] ++ prhst).
         rewrite app_assoc.
         eapply reducible_app_2; try assumption.
         + instantiate (1:= RlblInt oidxTo ridx rqDowns routs :: nhst).
@@ -255,7 +274,7 @@ Section RqDownReduction.
       eapply rqDown_olast_outside_tree in H2;
         try exact H0; try eassumption.
       clear H1.
-      destruct H2 as [prhst [ruIdx [rqUps [ninits [nins [nrhst [nouts ?]]]]]]].
+      destruct H2 as [prhst [ninits [nins [nrhst [nouts ?]]]]].
       dest; subst.
 
       rewrite <-app_assoc.
@@ -264,20 +283,32 @@ Section RqDownReduction.
         destruct H2; dest; subst; simpl.
         + rewrite app_nil_r; apply reducible_refl.
         + eapply rqUpHistory_lpush_unit_reducible; eauto.
-          (* [DisjList rqUps linits]:
-           * Since [oindsOf(lhst) ⊆ tr(oidxTo)], [linits] never has
-           * any messages in [rqUps].
-           *)
-          admit.
+          destruct Hrrs as [? [? ?]].
+          eapply atomic_inside_tree_inits_disj_rqUps; try eassumption.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
         + instantiate (1:= lhst ++ nrhst).
           eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
-          (* [DisjList reouts linits]: the proof should be similar to the above. *)
-          admit.
+          eapply steps_split in H7; [|reflexivity].
+          destruct H7 as [rsti [? ?]].
+          eapply rqDown_lpush_rpush_messages_disj.
+          * eassumption.
+          * eassumption.
+          * eassumption.
+          * eassumption.
+          * eapply reachable_steps; eassumption.
+          * destruct H2; subst; simpl in *;
+              [inv_steps; assumption|].
+            destruct H2 as [pins [pouts [ruIdx [rqUps ?]]]]; dest.
+            eapply (atomic_messages_ins_ins msg_dec).
+            { eapply H2. }
+            { eassumption. }
+            { eassumption. }
+            { eapply DisjList_comm, H0. }
+          * eapply steps_append; eassumption.
         + rewrite <-app_assoc.
           eapply steps_append; eassumption.
-    Admitted.
+    Qed.
     
   End OnRqDown.
 

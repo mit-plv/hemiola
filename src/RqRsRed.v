@@ -38,6 +38,51 @@ Proof.
   induction 1; simpl; intros; eauto.
 Qed.
 
+Section InsideTree.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hrrd: RqRsDTree dtr sys).
+
+  Lemma atomic_inside_tree_ins_disj_outs:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall st1 st2,
+        steps step_m sys st1 hst st2 ->
+        forall toidx,
+          SubList (oindsOf hst) (subtreeIndsOf dtr toidx) ->
+          forall ups,
+            Forall (fun up =>
+                      rqEdgeUpFrom dtr toidx = Some (idOf up) \/
+                      rsEdgeUpFrom dtr toidx = Some (idOf up)) ups ->
+            DisjList ups ins.
+  Proof.
+    pose proof Hrrd.
+  Admitted.
+
+  Corollary atomic_inside_tree_inits_disj_rqUps:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall st1 st2,
+        steps step_m sys st1 hst st2 ->
+        forall toidx,
+          SubList (oindsOf hst) (subtreeIndsOf dtr toidx) ->
+          forall rqUps,
+            Forall (fun up => rqEdgeUpFrom dtr toidx = Some (idOf up)) rqUps ->
+            DisjList rqUps inits.
+  Proof.
+    intros.
+    eapply DisjList_comm, DisjList_SubList;
+      [eapply atomic_inits_in; eassumption|].
+    apply DisjList_comm.
+    eapply atomic_inside_tree_ins_disj_outs; try eassumption.
+    eapply Forall_impl; [|eassumption].
+    simpl; intros; auto.
+  Qed.
+
+End InsideTree.
+
 Section RqRsRed.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)

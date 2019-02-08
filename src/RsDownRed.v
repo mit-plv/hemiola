@@ -48,12 +48,15 @@ Section RsDownReduction.
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
-          exists phst ruIdx rqUps ninits nins nhst nouts,
+          exists phst ninits nins nhst nouts,
             hst = nhst ++ phst /\
             (phst = nil \/
-             (RqUpMsgs dtr ruIdx rqUps /\
-              RqUpHistory dtr phst rqUps /\
-              parentIdxOf dtr oidxTo = Some ruIdx)) /\
+             (exists pins pouts ruIdx rqUps,
+                 Atomic msg_dec inits pins phst pouts rqUps /\
+                 RqUpMsgs dtr ruIdx rqUps /\
+                 RqUpHistory dtr phst rqUps /\
+                 Forall (fun rqUp => rqEdgeUpFrom dtr oidxTo =
+                                     Some (idOf rqUp)) rqUps)) /\
             SubList (oindsOf phst) (subtreeIndsOf dtr oidxTo) /\
             SubList ninits ins /\
             Atomic msg_dec ninits nins nhst nouts eouts /\
@@ -104,6 +107,22 @@ Section RsDownReduction.
             DisjList rsDowns outs /\ RsDownP st2.
     Proof.
     Admitted.
+
+    Lemma rsDown_lpush_rpush_messages_disj:
+      forall rinits rins rhst routs reouts
+             linits lins lhst louts leouts,
+        Atomic msg_dec rinits rins rhst routs reouts ->
+        DisjList (oindsOf rhst) (subtreeIndsOf dtr oidxTo) ->
+        Atomic msg_dec linits lins lhst louts leouts ->
+        SubList (oindsOf lhst) (subtreeIndsOf dtr oidxTo) ->
+        forall st1,
+          Reachable (steps step_m) sys st1 ->
+          RsDownP st1 ->
+          forall st2,
+            steps step_m sys st1 (lhst ++ rhst) st2 ->
+            DisjList reouts linits.
+    Proof.
+    Admitted.
     
     Lemma rsDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
@@ -138,37 +157,36 @@ Section RsDownReduction.
       destruct H6 as [sti [? ?]].
 
       pose proof (rsDown_oinds H1 H0 Hr H6).
-      destruct H8 as [pphst [ruIdx [rqUps [ninits [nins [nphst [nouts ?]]]]]]].
+      destruct H8 as [prhst [ninits [nins [nphst [nouts ?]]]]].
       dest; subst.
       eapply steps_split in H6; [|reflexivity].
       destruct H6 as [psti [? ?]].
+      eapply rsDown_olast_inside_tree in H4;
+        [|eapply DisjList_SubList; eassumption
+         |eassumption
+         |eapply reachable_steps; [eassumption|];
+          eapply steps_append; eassumption
+         |eapply H; eapply steps_append; eassumption
+         |eassumption
+         |eassumption].
 
       rewrite <-app_assoc.
       eapply reducible_app_1; try assumption.
-      - instantiate (1:= hst ++ pphst).
-        destruct H9; dest; subst; simpl in *.
+      - instantiate (1:= hst ++ prhst).
+        destruct H9; subst; simpl in *.
         + rewrite app_nil_r; apply reducible_refl.
-        + eapply rqUpHistory_lpush_unit_reducible; eauto.
-          (* [DisjList rqUps inits]: because [oinds(hst) ⊆ tr(oidxTo)] *)
-          admit.
+        + destruct H9 as [prins [prouts [ruIdx [rqUps ?]]]]; dest.
+          eapply rqUpHistory_lpush_unit_reducible; eauto.
+          destruct Hrrs as [? [? ?]].
+          eapply atomic_inside_tree_inits_disj_rqUps; try eassumption.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
         + instantiate (1:= hst ++ nphst).
           eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
-          eapply rsDown_olast_inside_tree.
-          * eapply DisjList_SubList; eassumption.
-          * eassumption.
-          * eapply reachable_steps; [eassumption|].
-            eapply steps_append; eassumption.
-          * eapply H.
-            eapply steps_append; eassumption.
-          * eassumption.
-          * eassumption.
-          * eassumption.
         + rewrite <-app_assoc.
           eapply steps_append; [|eassumption].
           eapply steps_append; eassumption.
-    Admitted.
+    Qed.
 
     Lemma rsDown_rpush_unit_reducible:
       forall inits ins hst outs eouts loidx ridx routs,
@@ -227,10 +245,10 @@ Section RsDownReduction.
         try exact H0; try eassumption.
       clear H1.
       eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
-      - (* [DisjList reouts linits] *)
-        admit.
+      - eapply rsDown_lpush_rpush_messages_disj; try eassumption.
+        eapply steps_append; eassumption.
       - eapply steps_append; eassumption.
-    Admitted.
+    Qed.
     
   End OnRsDown.
 
