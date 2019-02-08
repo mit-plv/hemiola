@@ -95,7 +95,9 @@ Section RqDownReduction.
           exists phst ruIdx rqUps ninits nins nhst nouts,
             hst = nhst ++ phst /\
             (phst = nil \/
-             (RqUpMsgs dtr ruIdx rqUps /\ RqUpHistory dtr phst rqUps)) /\
+             (RqUpMsgs dtr ruIdx rqUps /\
+              RqUpHistory dtr phst rqUps /\
+              parentIdxOf dtr oidxTo = Some ruIdx)) /\
             SubList (oindsOf phst) (subtreeIndsOf dtr oidxTo) /\
             SubList ninits ins /\
             Atomic msg_dec ninits nins nhst nouts eouts /\
@@ -105,6 +107,19 @@ Section RqDownReduction.
 
     Definition RqDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rqDowns.
+
+    Lemma rqDown_atomic_messages_indep:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        DisjList rqDowns inits ->
+        forall st1,
+          Reachable (steps step_m) sys st1 ->
+          RqDownP st1 ->
+          forall st2,
+            steps step_m sys st1 hst st2 ->
+            DisjList rqDowns outs /\ RqDownP st2.
+    Proof.
+    Admitted.
 
     Lemma rqDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
@@ -178,7 +193,7 @@ Section RqDownReduction.
           apply steps_singleton; assumption.
         + eapply rqUpHistory_lpush_lbl; try eassumption.
           destruct Hrrs as [? [? ?]].
-          clear -Hrqd H4 H13.
+          clear -Hrqd H4 H14.
           destruct Hrqd as [[rqDown rqdm] ?]; dest; subst.
           destruct H4 as [cidx [[rqUp rqum] ?]]; dest; subst.
           apply idsOf_DisjList; simpl in *.
@@ -199,12 +214,15 @@ Section RqDownReduction.
               unfold edgeDownTo, downEdgesTo in H13.
               destruct (parentChnsOf dtr e); simpl in H13; discriminate.
             }
-          * (* For an [Atomic] history, 
-             * if [DisjList rqDowns inits] then [DisjList eouts rqDowns] *)
-            admit.
+          * eapply DisjList_SubList.
+            { eapply atomic_eouts_in, H. }
+            { apply DisjList_comm.
+              eapply rqDown_atomic_messages_indep; try eassumption.
+              eapply steps_append; eassumption.
+            }
         + simpl; econstructor; [|eassumption].
           eapply steps_append; eassumption.
-    Admitted.      
+    Qed.
 
     Lemma rqDown_LRPushable_unit_reducible:
       forall rinits rins rhst routs reouts rloidx
@@ -246,12 +264,16 @@ Section RqDownReduction.
         destruct H2; dest; subst; simpl.
         + rewrite app_nil_r; apply reducible_refl.
         + eapply rqUpHistory_lpush_unit_reducible; eauto.
-          (* Need something more about [rqUps], e.g., [SubList rqUps routs]. *)
+          (* [DisjList rqUps linits]:
+           * Since [oindsOf(lhst) ⊆ tr(oidxTo)], [linits] never has
+           * any messages in [rqUps].
+           *)
           admit.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
         + instantiate (1:= lhst ++ nrhst).
           eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
+          (* [DisjList reouts linits]: the proof should be similar to the above. *)
           admit.
         + rewrite <-app_assoc.
           eapply steps_append; eassumption.

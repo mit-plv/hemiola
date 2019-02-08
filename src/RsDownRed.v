@@ -51,7 +51,9 @@ Section RsDownReduction.
           exists phst ruIdx rqUps ninits nins nhst nouts,
             hst = nhst ++ phst /\
             (phst = nil \/
-             (RqUpMsgs dtr ruIdx rqUps /\ RqUpHistory dtr phst rqUps)) /\
+             (RqUpMsgs dtr ruIdx rqUps /\
+              RqUpHistory dtr phst rqUps /\
+              parentIdxOf dtr oidxTo = Some ruIdx)) /\
             SubList (oindsOf phst) (subtreeIndsOf dtr oidxTo) /\
             SubList ninits ins /\
             Atomic msg_dec ninits nins nhst nouts eouts /\
@@ -90,6 +92,19 @@ Section RsDownReduction.
     Definition RsDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rsDowns.
 
+    Lemma rsDown_atomic_messages_indep:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        DisjList rsDowns inits ->
+        forall st1,
+          Reachable (steps step_m) sys st1 ->
+          RsDownP st1 ->
+          forall st2,
+            steps step_m sys st1 hst st2 ->
+            DisjList rsDowns outs /\ RsDownP st2.
+    Proof.
+    Admitted.
+    
     Lemma rsDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
@@ -134,6 +149,7 @@ Section RsDownReduction.
         destruct H9; dest; subst; simpl in *.
         + rewrite app_nil_r; apply reducible_refl.
         + eapply rqUpHistory_lpush_unit_reducible; eauto.
+          (* [DisjList rqUps inits]: because [oinds(hst) ⊆ tr(oidxTo)] *)
           admit.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
@@ -174,11 +190,12 @@ Section RsDownReduction.
         + destruct Hrsd as [rsDown ?]; dest.
           unfold edgeDownTo, downEdgesTo in H5.
           destruct (parentChnsOf dtr e); simpl in H5; discriminate.
-      - (* For an [Atomic] history,
-         * if [DisjList rqDowns inits] then [DisjList eouts rqDowns] *)
-        admit.
+      - eapply DisjList_SubList.
+        + eapply atomic_eouts_in; eassumption.
+        + apply DisjList_comm.
+          eapply rsDown_atomic_messages_indep; eassumption.
       - simpl; econstructor; eassumption.
-    Admitted.
+    Qed.
 
     Lemma rsDown_LRPushable_unit_reducible:
       forall rinits rins rhst routs reouts rloidx
@@ -196,7 +213,6 @@ Section RsDownReduction.
       intros; red; intros.
       eapply steps_split in H7; [|reflexivity].
       destruct H7 as [sti [? ?]].
-
       eapply rsDown_olast_inside_tree in H6;
         [|exact H4
          |eassumption
@@ -207,13 +223,12 @@ Section RsDownReduction.
          |eassumption
          |eassumption].
       clear H5.
-
       eapply rsDown_olast_outside_tree in H2;
         try exact H0; try eassumption.
       clear H1.
-
       eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
-      - admit.
+      - (* [DisjList reouts linits] *)
+        admit.
       - eapply steps_append; eassumption.
     Admitted.
     
