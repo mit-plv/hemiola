@@ -58,7 +58,7 @@ Section RqDownReduction.
     Hypothesis (Hrqd: RqDownMsgs dtr oidxTo rqDowns).
 
     Lemma rqDown_oinds:
-      forall inits ins hst outs eouts,
+      forall hst inits ins outs eouts,
         SubList rqDowns eouts ->
         Atomic msg_dec inits ins hst outs eouts ->
         forall st1 st2,
@@ -111,6 +111,105 @@ Section RqDownReduction.
     Definition RqDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rqDowns.
 
+    Ltac disc_rule_custom ::=
+      try disc_footprints_ok.
+
+    Lemma rqDown_step_disj:
+      forall st1 oidx ridx rins routs st2,
+        Reachable (steps step_m) sys st1 ->
+        RqDownP st1 ->
+        DisjList rqDowns rins ->
+        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+        DisjList rqDowns routs.
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      assert (Reachable (steps step_m) sys st2).
+      { eapply reachable_steps; [eassumption|].
+        eapply steps_singleton; eassumption.
+      }
+      pose proof (downLockInv_ok H0 H H6); clear H6.
+      inv_step.
+      good_locking_get obj.
+      disc_rule_conds.
+      red in H3; destruct Hrqd as [rqDown ?]; dest; subst.
+      inv H3; clear H20; simpl in H13.
+      
+      red; intros [rrqDown rqm].
+      destruct (in_dec (id_dec msg_dec) (rrqDown, rqm) [rqDown]); auto.
+      destruct (in_dec (id_dec msg_dec) (rrqDown, rqm) routs); auto.
+      exfalso.
+      Common.dest_in; simpl in *.
+
+      good_rqrs_rule_get rule.
+      good_rqrs_rule_cases rule.
+
+      - disc_rule_conds.
+        destruct i0; auto; inv H3.
+        rewrite H8 in H10; discriminate.
+      - disc_rule_conds.
+        destruct i0; auto; inv H3.
+        rewrite H8 in H10; discriminate.
+
+      - disc_rule_conds.
+        + destruct i0; auto; inv H16.
+          assert (rrqDown <> rrqDown) by solve_midx_neq; auto.
+        + eapply RqRsDownMatch_rq_rs in H26;
+            [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
+          destruct H26 as [cidx [rsUp ?]]; dest.
+          repeat disc_rule_minds; subst.
+          eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
+
+          destruct H21; solve_q.
+          erewrite findQ_In_NoDup_enqMsgs by eassumption.
+          solve_q.
+          rewrite filter_app; simpl.
+          rewrite H8; simpl.
+          rewrite app_length; simpl.
+          eapply rqsQ_length_ge_one in H13; [|assumption].
+          unfold rqsQ in H13; simpl in H13.
+          omega.
+        + eapply RqRsDownMatch_rq_rs in H10;
+            [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
+          destruct H10 as [cidx [rsUp ?]]; dest.
+          repeat disc_rule_minds; subst.
+          eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
+
+          destruct H21; solve_q.
+          erewrite findQ_In_NoDup_enqMsgs by eassumption.
+          apply parentIdxOf_not_eq in H16; [|destruct H; assumption].
+          solve_q.
+          rewrite filter_app; simpl.
+          rewrite H8; simpl.
+          rewrite app_length; simpl.
+          eapply rqsQ_length_ge_one in H13; [|assumption].
+          unfold rqsQ in H13; simpl in H13.
+          omega.
+
+      - disc_rule_conds.
+        + destruct i0; auto; inv H3.
+          rewrite H8 in H10; discriminate.
+        + destruct i0; auto; inv H3.
+          rewrite H8 in H10; discriminate.
+
+      - disc_rule_conds.
+        eapply RqRsDownMatch_rq_rs in H26;
+          [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
+        destruct H26 as [cidx [rsUp ?]]; dest.
+        repeat disc_rule_minds; subst.
+        eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
+
+        destruct H21; solve_q.
+        erewrite findQ_In_NoDup_enqMsgs by eassumption.
+        apply parentIdxOf_not_eq in H26; [|destruct H; assumption].
+        solve_q.
+        rewrite filter_app; simpl.
+        rewrite H8; simpl.
+        rewrite app_length; simpl.
+        eapply rqsQ_length_ge_one in H13; [|assumption].
+        unfold rqsQ in H13; simpl in H13.
+        omega.
+    Qed.
+    
     Lemma rqDown_atomic_messages_indep:
       forall inits ins hst outs eouts,
         Atomic msg_dec inits ins hst outs eouts ->
@@ -120,9 +219,30 @@ Section RqDownReduction.
           RqDownP st1 ->
           forall st2,
             steps step_m sys st1 hst st2 ->
-            DisjList rqDowns outs /\ RqDownP st2.
+            DisjList rqDowns outs.
     Proof.
-    Admitted.
+      induction 1; simpl; intros; subst.
+      - inv_steps.
+        eapply rqDown_step_disj; eauto.
+      - inv_steps.
+        specialize (IHAtomic H5 _ H6 H7 _ H9).
+        apply DisjList_comm, DisjList_app_4;
+          [apply DisjList_comm in IHAtomic; assumption|].
+        apply DisjList_comm in H5.
+        assert (DisjList rqDowns rins).
+        { eapply DisjList_comm, DisjList_SubList;
+            [|eapply DisjList_comm; eassumption].
+          eapply SubList_trans; [eassumption|].
+          eapply atomic_eouts_in; eassumption.
+        }
+        eapply (atomic_messages_ins_ins msg_dec) in H; try eassumption.
+        apply DisjList_comm.
+        eapply rqDown_step_disj.
+        + eapply reachable_steps; eassumption.
+        + assumption.
+        + eassumption.
+        + eassumption.
+    Qed.
 
     Lemma rqDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts

@@ -95,6 +95,25 @@ Section RsDownReduction.
     Definition RsDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rsDowns.
 
+    Lemma rsDown_step_disj:
+      forall st1 oidx ridx rins routs st2,
+        Reachable (steps step_m) sys st1 ->
+        RsDownP st1 ->
+        DisjList rsDowns rins ->
+        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+        DisjList rsDowns routs.
+    Proof.
+      (* destruct Hrrs as [? [? ?]]; intros. *)
+      (* assert (Reachable (steps step_m) sys st2). *)
+      (* { eapply reachable_steps; [eassumption|]. *)
+      (*   eapply steps_singleton; eassumption. *)
+      (* } *)
+      (* pose proof (upLockInv_ok H0 H H6); clear H6. *)
+      (* inv_step. *)
+
+      (* red in H3; destruct Hrsd as [rsDown ?]; dest; subst. *)
+    Admitted.
+
     Lemma rsDown_atomic_messages_indep:
       forall inits ins hst outs eouts,
         Atomic msg_dec inits ins hst outs eouts ->
@@ -104,9 +123,30 @@ Section RsDownReduction.
           RsDownP st1 ->
           forall st2,
             steps step_m sys st1 hst st2 ->
-            DisjList rsDowns outs /\ RsDownP st2.
+            DisjList rsDowns outs.
     Proof.
-    Admitted.
+      induction 1; simpl; intros; subst.
+      - inv_steps.
+        eapply rsDown_step_disj; eauto.
+      - inv_steps.
+        specialize (IHAtomic H5 _ H6 H7 _ H9).
+        apply DisjList_comm, DisjList_app_4;
+          [apply DisjList_comm in IHAtomic; assumption|].
+        apply DisjList_comm in H5.
+        assert (DisjList rsDowns rins).
+        { eapply DisjList_comm, DisjList_SubList;
+            [|eapply DisjList_comm; eassumption].
+          eapply SubList_trans; [eassumption|].
+          eapply atomic_eouts_in; eassumption.
+        }
+        eapply (atomic_messages_ins_ins msg_dec) in H; try eassumption.
+        apply DisjList_comm.
+        eapply rsDown_step_disj.
+        + eapply reachable_steps; eassumption.
+        + assumption.
+        + eassumption.
+        + eassumption.
+    Qed.
 
     Lemma rsDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts

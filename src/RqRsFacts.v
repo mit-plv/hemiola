@@ -997,6 +997,20 @@ Proof.
   discriminate.
 Qed.
 
+Lemma rqsQ_length_ge_one:
+  forall msgs midx msg,
+    msg_type msg = MRq ->
+    InMP midx msg msgs ->
+    length (rqsQ msgs midx) >= 1.
+Proof.
+  unfold rqsQ, InMP; intros.
+  induction (findQ midx msgs); simpl; intros.
+  - elim H0.
+  - inv H0.
+    + rewrite H; simpl; omega.
+    + find_if_inside; simpl; [omega|auto].
+Qed.
+
 Lemma rqsQ_length_one:
   forall msgs midx msg,
     length (rqsQ msgs midx) <= 1 ->
@@ -1004,13 +1018,10 @@ Lemma rqsQ_length_one:
     FirstMP msgs midx msg ->
     length (rqsQ msgs midx) = 1.
 Proof.
-  unfold rqsQ; intros.
-  remember (findQ midx msgs) as q; destruct q.
-  - exfalso; eapply FirstMP_findQ_False; eauto.
-  - unfold FirstMP, firstMP in H1.
-    simpl in H1; rewrite <-Heqq in H1; inv H1.
-    simpl in *; rewrite H0 in *; simpl in *.
-    omega.
+  intros.
+  apply FirstMP_InMP in H1.
+  eapply rqsQ_length_ge_one in H1; [|assumption].
+  omega.
 Qed.
 
 Lemma rssQ_length_zero:
@@ -1043,6 +1054,20 @@ Proof.
   discriminate.
 Qed.
 
+Lemma rssQ_length_ge_one:
+  forall msgs midx msg,
+    msg_type msg = MRs ->
+    InMP midx msg msgs ->
+    length (rssQ msgs midx) >= 1.
+Proof.
+  unfold rssQ, InMP; intros.
+  induction (findQ midx msgs); simpl; intros.
+  - elim H0.
+  - inv H0.
+    + rewrite H; simpl; omega.
+    + find_if_inside; simpl; [omega|auto].
+Qed.
+
 Lemma rssQ_length_one:
   forall msgs midx msg,
     length (rssQ msgs midx) <= 1 ->
@@ -1050,13 +1075,10 @@ Lemma rssQ_length_one:
     FirstMP msgs midx msg ->
     length (rssQ msgs midx) = 1.
 Proof.
-  unfold rssQ; intros.
-  remember (findQ midx msgs) as q; destruct q.
-  - exfalso; eapply FirstMP_findQ_False; eauto.
-  - unfold FirstMP, firstMP in H1.
-    simpl in H1; rewrite <-Heqq in H1; inv H1.
-    simpl in *; rewrite H0 in *; simpl in *.
-    omega.
+  intros.
+  apply FirstMP_InMP in H1.
+  eapply rssQ_length_ge_one in H1; [|assumption].
+  omega.
 Qed.
 
 Lemma rssQ_enqMP_rq:

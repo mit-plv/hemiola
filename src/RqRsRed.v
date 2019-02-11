@@ -4,39 +4,12 @@ Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
-Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
+Require Import RqRsInvMsg RqRsInvAtomic RqRsInvLock RqRsInvAtomic.
 
 Set Implicit Arguments.
 
 Open Scope list.
 Open Scope fmap.
-
-Definition lastOIdxOf (hst: MHistory): option IdxT :=
-  match hst with
-  | RlblInt oidx _ _ _ :: _ => Some oidx
-  | _ => None
-  end.
-
-Definition oidxOf (lbl: MLabel) :=
-  match lbl with
-  | RlblInt oidx _ _ _ => Some oidx
-  | _ => None
-  end.
-
-Fixpoint oindsOf (hst: MHistory) :=
-  match hst with
-  | nil => nil
-  | lbl :: hst' => (oidxOf lbl) ::> (oindsOf hst')
-  end.
-
-Lemma atomic_lastOIdxOf:
-  forall inits ins hst outs eouts,
-    Atomic msg_dec inits ins hst outs eouts ->
-    exists loidx,
-      lastOIdxOf hst = Some loidx.
-Proof.
-  induction 1; simpl; intros; eauto.
-Qed.
 
 Section InsideTree.
   Context {oifc: OStateIfc}.

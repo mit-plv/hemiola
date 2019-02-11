@@ -1380,6 +1380,52 @@ Section DownLockInv.
   
 End DownLockInv.
 
+Lemma downLockInvORq_down_rqsQ_length_two_False:
+  forall dtr orqs msgs oidx orq cidx down,
+    DownLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr cidx = Some oidx ->
+    edgeDownTo dtr cidx = Some down ->
+    length (rqsQ msgs down) >= 2 ->
+    False.
+Proof.
+  intros.
+  red in H; destruct (orq@[downRq]).
+  - specialize (H _ H0).
+    destruct H as [rdown [rsUp ?]]; dest.
+    repeat disc_rule_minds.
+    destruct (in_dec _ _ _).
+    + red in H4; dest; omega.
+    + red in H4; dest.
+      destruct (rqsQ msgs down); simpl in *; [omega|discriminate].
+  - specialize (H _ H0); dest.
+    repeat disc_rule_minds.
+    red in H4; dest.
+    destruct (rqsQ msgs down); simpl in *; [omega|discriminate].
+Qed.
+    
+Lemma downLockInvORq_rsUp_length_two_False:
+  forall dtr orqs msgs oidx orq cidx rsUp,
+    DownLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr cidx = Some oidx ->
+    rsEdgeUpFrom dtr cidx = Some rsUp ->
+    length (findQ rsUp msgs) >= 2 ->
+    False.
+Proof.
+  intros.
+  red in H; destruct (orq@[downRq]).
+  - specialize (H _ H0).
+    destruct H as [down [rrsUp ?]]; dest.
+    repeat disc_rule_minds.
+    destruct (in_dec _ _ _).
+    + red in H4; dest; omega.
+    + red in H4; dest.
+      destruct (findQ rsUp msgs); simpl in *; [omega|discriminate].
+  - specialize (H _ H0); dest.
+    repeat disc_rule_minds.
+    red in H4; dest.
+    destruct (findQ rsUp msgs); simpl in *; [omega|discriminate].
+Qed.
+
 Close Scope list.
 Close Scope fmap.
 

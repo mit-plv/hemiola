@@ -374,22 +374,8 @@ Section RsUpReduction.
     }
 
     rewrite Forall_forall in H4; specialize (H4 _ H12).
-    destruct H4 as [cidx [? ?]].
-    red in H11.
-    destruct ((((bst_orqs st1)@[obj_idx objTo])
-                 >>=[[]] (fun orq => orq))@[downRq]).
-    - specialize (H11 _ H4).
-      destruct H11 as [down [rrsUp ?]]; dest.
-      repeat disc_rule_minds.
-      find_if_inside.
-      + red in H16; dest; omega.
-      + red in H16; dest.
-        rewrite H16 in H10; simpl in H10; omega.
-    - specialize (H11 _ H4).
-      destruct H11 as [down [rrsUp ?]]; dest.
-      repeat disc_rule_minds.
-      red in H16; dest.
-      rewrite H16 in H10; simpl in H10; omega.
+    destruct H4 as [cidx [? ?]]; simpl in *.
+    eapply downLockInvORq_rsUp_length_two_False; eassumption.
   Qed.
 
   Lemma rsUp_lbl_outs_disj:
@@ -421,7 +407,6 @@ Section RsUpReduction.
     inv_step; simpl in *.
     pose proof (downLockInv_ok H0 H H4).
     good_locking_get objTo; clear H9.
-    red in H10.
 
     red; intro rsUp.
     destruct (in_dec (id_dec msg_dec) rsUp routs) as [Hin1|]; auto.
@@ -432,7 +417,7 @@ Section RsUpReduction.
     red in H3; dest.
     rewrite Forall_forall in H11; specialize (H11 _ H9).
     destruct H11 as [cidx [? ?]].
-    
+
     assert (length (findQ rsUp (enqMsgs routs (deqMsgs (idsOf rins) msgs))) >= 2).
     { destruct H24.
       erewrite findQ_In_NoDup_enqMsgs by eassumption.
@@ -447,20 +432,7 @@ Section RsUpReduction.
       { destruct (H5 rsUp); auto. }
     }
 
-    destruct (((orqs +[obj_idx obj <- norq])@[obj_idx objTo])
-                >>=[[]] (fun orq => orq)@[downRq]).
-    + specialize (H10 _ H11).
-      destruct H10 as [down [rrsUp ?]]; dest.
-      repeat disc_rule_minds.
-      find_if_inside.
-      * red in H23; dest; omega.
-      * red in H23; dest.
-        rewrite H23 in H13; simpl in H13; omega.
-    + specialize (H10 _ H11).
-      destruct H10 as [down [rrsUp ?]]; dest.
-      repeat disc_rule_minds.
-      red in H23; dest.
-      rewrite H23 in H13; simpl in H13; omega.
+    eapply downLockInvORq_rsUp_length_two_False; eassumption.
   Qed.
   
   Lemma rsUp_atomic_outs_disj:

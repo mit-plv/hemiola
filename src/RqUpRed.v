@@ -4,7 +4,7 @@ Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
-Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
+Require Import RqRsInvMsg RqRsInvLock.
 
 Set Implicit Arguments.
 
