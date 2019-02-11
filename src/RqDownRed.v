@@ -55,7 +55,7 @@ Section RqDownReduction.
   Section OnRqDown.
     Variables (oidxTo: IdxT)
               (rqDowns: list (Id Msg)).
-    Hypothesis (Hrqd: RqDownMsgs dtr oidxTo rqDowns).
+    Hypothesis (Hrqd: RqDownMsgs dtr sys oidxTo rqDowns).
 
     Lemma rqDown_oinds:
       forall hst inits ins outs eouts,
@@ -131,8 +131,8 @@ Section RqDownReduction.
       inv_step.
       good_locking_get obj.
       disc_rule_conds.
-      red in H3; destruct Hrqd as [rqDown ?]; dest; subst.
-      inv H3; clear H20; simpl in H13.
+      red in H3; destruct Hrqd as [robj [rqDown ?]]; dest; subst.
+      inv H3; clear H22; simpl in H20.
       
       red; intros [rrqDown rqm].
       destruct (in_dec (id_dec msg_dec) (rrqDown, rqm) [rqDown]); auto.
@@ -145,17 +145,17 @@ Section RqDownReduction.
 
       - disc_rule_conds.
         destruct i0; auto; inv H3.
-        rewrite H8 in H10; discriminate.
+        rewrite H8 in H13; discriminate.
       - disc_rule_conds.
         destruct i0; auto; inv H3.
-        rewrite H8 in H10; discriminate.
+        rewrite H8 in H13; discriminate.
 
       - disc_rule_conds.
         + destruct i0; auto; inv H16.
-          assert (rrqDown <> rrqDown) by solve_midx_neq; auto.
-        + eapply RqRsDownMatch_rq_rs in H26;
+          elim (rqrsDTree_rqUp_down_not_eq H _ _ H13 H9); reflexivity.
+        + eapply RqRsDownMatch_rq_rs in H27;
             [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
-          destruct H26 as [cidx [rsUp ?]]; dest.
+          destruct H27 as [cidx [rsUp ?]]; dest.
           repeat disc_rule_minds; subst.
           eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
 
@@ -165,12 +165,12 @@ Section RqDownReduction.
           rewrite filter_app; simpl.
           rewrite H8; simpl.
           rewrite app_length; simpl.
-          eapply rqsQ_length_ge_one in H13; [|assumption].
-          unfold rqsQ in H13; simpl in H13.
+          eapply rqsQ_length_ge_one in H20; [|assumption].
+          unfold rqsQ in H20; simpl in H20.
           omega.
-        + eapply RqRsDownMatch_rq_rs in H10;
+        + eapply RqRsDownMatch_rq_rs in H13;
             [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
-          destruct H10 as [cidx [rsUp ?]]; dest.
+          destruct H13 as [cidx [rsUp ?]]; dest.
           repeat disc_rule_minds; subst.
           eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
 
@@ -181,32 +181,32 @@ Section RqDownReduction.
           rewrite filter_app; simpl.
           rewrite H8; simpl.
           rewrite app_length; simpl.
-          eapply rqsQ_length_ge_one in H13; [|assumption].
-          unfold rqsQ in H13; simpl in H13.
+          eapply rqsQ_length_ge_one in H20; [|assumption].
+          unfold rqsQ in H20; simpl in H20.
           omega.
 
       - disc_rule_conds.
         + destruct i0; auto; inv H3.
-          rewrite H8 in H10; discriminate.
+          rewrite H8 in H13; discriminate.
         + destruct i0; auto; inv H3.
-          rewrite H8 in H10; discriminate.
+          rewrite H8 in H13; discriminate.
 
       - disc_rule_conds.
-        eapply RqRsDownMatch_rq_rs in H26;
+        eapply RqRsDownMatch_rq_rs in H27;
           [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
-        destruct H26 as [cidx [rsUp ?]]; dest.
+        destruct H27 as [cidx [rsUp ?]]; dest.
         repeat disc_rule_minds; subst.
         eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
 
         destruct H21; solve_q.
         erewrite findQ_In_NoDup_enqMsgs by eassumption.
-        apply parentIdxOf_not_eq in H26; [|destruct H; assumption].
+        apply parentIdxOf_not_eq in H27; [|destruct H; assumption].
         solve_q.
         rewrite filter_app; simpl.
         rewrite H8; simpl.
         rewrite app_length; simpl.
-        eapply rqsQ_length_ge_one in H13; [|assumption].
-        unfold rqsQ in H13; simpl in H13.
+        eapply rqsQ_length_ge_one in H20; [|assumption].
+        unfold rqsQ in H20; simpl in H20.
         omega.
     Qed.
     

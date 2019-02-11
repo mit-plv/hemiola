@@ -161,9 +161,11 @@ Section MessageInv.
       rqEdgeUpFrom dtr cidx = Some (idOf rqUp).
 
   Definition RqDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
-    exists rqDown, msgs = [rqDown] /\
-                   msg_type (valOf rqDown) = MRq /\
-                   edgeDownTo dtr oidx = Some (idOf rqDown).
+    exists obj rqDown,
+      msgs = [rqDown] /\
+      msg_type (valOf rqDown) = MRq /\
+      edgeDownTo dtr oidx = Some (idOf rqDown) /\
+      In obj sys.(sys_objs) /\ obj.(obj_idx) = oidx.
 
   Definition RsUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     Forall (fun msg => msg_type (valOf msg) = MRs) msgs /\
@@ -174,9 +176,11 @@ Section MessageInv.
            (idsOf msgs).
 
   Definition RsDownMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
-    exists rsDown, msgs = [rsDown] /\
-                   msg_type (valOf rsDown) = MRs /\
-                   edgeDownTo dtr oidx = Some (idOf rsDown).
+    exists obj rsDown,
+      msgs = [rsDown] /\
+      msg_type (valOf rsDown) = MRs /\
+      edgeDownTo dtr oidx = Some (idOf rsDown) /\
+      In obj sys.(sys_objs) /\ obj.(obj_idx) = oidx.
   
   Ltac disc_rule_custom ::=
     disc_footprints_ok.
@@ -235,14 +239,6 @@ Section MessageInv.
   Qed.
     
 End MessageInv.
-
-Ltac disc_msgs_in :=
-  match goal with
-  | [H: RqUpMsgs _ _ _ |- _] =>
-    let cidx := fresh "cidx" in
-    let rqUp := fresh "rqUp" in
-    destruct H as [cidx [rqUp ?]]; dest
-  end.
 
 Close Scope list.
 Close Scope fmap.

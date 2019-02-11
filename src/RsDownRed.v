@@ -39,7 +39,7 @@ Section RsDownReduction.
   Section OnRsDown.
     Variables (oidxTo: IdxT)
               (rsDowns: list (Id Msg)).
-    Hypothesis (Hrsd: RsDownMsgs dtr oidxTo rsDowns).
+    Hypothesis (Hrsd: RsDownMsgs dtr sys oidxTo rsDowns).
 
     Lemma rsDown_oinds:
       forall inits ins hst outs eouts,
@@ -95,6 +95,9 @@ Section RsDownReduction.
     Definition RsDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rsDowns.
 
+    Ltac disc_rule_custom ::=
+      try disc_footprints_ok.
+
     Lemma rsDown_step_disj:
       forall st1 oidx ridx rins routs st2,
         Reachable (steps step_m) sys st1 ->
@@ -103,16 +106,83 @@ Section RsDownReduction.
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         DisjList rsDowns routs.
     Proof.
-      (* destruct Hrrs as [? [? ?]]; intros. *)
-      (* assert (Reachable (steps step_m) sys st2). *)
-      (* { eapply reachable_steps; [eassumption|]. *)
-      (*   eapply steps_singleton; eassumption. *)
-      (* } *)
-      (* pose proof (upLockInv_ok H0 H H6); clear H6. *)
-      (* inv_step. *)
+      destruct Hrrs as [? [? ?]]; intros.
+      assert (Reachable (steps step_m) sys st2).
+      { eapply reachable_steps; [eassumption|].
+        eapply steps_singleton; eassumption.
+      }
+      pose proof (upLockInv_ok H0 H H6) as Hlinv; clear H6.
+      pose proof (footprints_ok H0 H2) as Hfinv.
+      inv_step.
+      red in H3; destruct Hrsd as [robj [rsDown ?]]; dest; subst.
+      inv H3; clear H19; simpl in H12.
+      pose proof (edgeDownTo_Some H _ H7).
+      destruct H3 as [rqUp [rsUp [pidx ?]]]; dest.
+      good_locking_get robj.
+      
+      red; intros [rrsDown rsm].
+      destruct (in_dec (id_dec msg_dec) (rrsDown, rsm) [rsDown]); auto.
+      destruct (in_dec (id_dec msg_dec) (rrsDown, rsm) routs); auto.
+      exfalso.
+      Common.dest_in; simpl in *.
 
-      (* red in H3; destruct Hrsd as [rsDown ?]; dest; subst. *)
-    Admitted.
+      good_rqrs_rule_get rule.
+      good_rqrs_rule_cases rule.
+
+      - disc_rule_conds.
+        destruct i0; auto; inv H15.
+        repeat disc_rule_minds.
+        eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
+        solve_q.
+        rewrite filter_app; simpl.
+        rewrite H24; simpl.
+        rewrite app_length; simpl.
+        eapply rssQ_length_ge_one in H12; [|assumption].
+        unfold rssQ in H12; simpl in H12.
+        omega.
+
+      - disc_rule_conds.
+        destruct i0; auto; inv H15.
+        elim (rqrsDTree_rsUp_down_not_eq H _ _ H37 H7); reflexivity.
+
+      - disc_rule_conds.
+        + destruct i0; auto; inv H15.
+          disc_rule_conds.
+        + rewrite Forall_forall in H40; specialize (H40 _ i0).
+          simpl in H40; rewrite H40 in H6; discriminate.
+        + rewrite Forall_forall in H40; specialize (H40 _ i0).
+          simpl in H40; rewrite H40 in H6; discriminate.
+
+      - good_footprint_get (obj_idx obj).
+        disc_rule_conds.
+        + destruct i0; auto; inv H28.
+          eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
+          solve_q.
+          apply parentIdxOf_not_eq in H15; [|destruct H; assumption].
+          solve_q.
+          rewrite filter_app; simpl.
+          rewrite H27; simpl.
+          rewrite app_length; simpl.
+          eapply rssQ_length_ge_one in H12; [|assumption].
+          unfold rssQ in H12; simpl in H12.
+          omega.
+        + destruct i0; auto; inv H24.
+          eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
+          rewrite <-H37 in H30.
+          solve_q.
+          rewrite filter_app; simpl.
+          rewrite H26; simpl.
+          rewrite app_length; simpl.
+          eapply rssQ_length_ge_one in H12; [|assumption].
+          unfold rssQ in H12; simpl in H12.
+          omega.
+        + destruct i0; auto; inv H27.
+          elim (rqrsDTree_rsUp_down_not_eq H _ _ H24 H7); reflexivity.
+
+      - disc_rule_conds.
+        rewrite Forall_forall in H35; specialize (H35 _ i0).
+        simpl in H35; rewrite H35 in H6; discriminate.
+    Qed.
 
     Lemma rsDown_atomic_messages_indep:
       forall inits ins hst outs eouts,

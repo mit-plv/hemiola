@@ -179,7 +179,7 @@ Section RsUpReduction.
 
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
-    try disc_msgs_in;
+    try disc_rqUpMsgs;
     try disc_rqToUpRule.
 
   Lemma rsUp_lbl_reducible:

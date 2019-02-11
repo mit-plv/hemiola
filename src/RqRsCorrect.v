@@ -163,7 +163,7 @@ Section Pushable.
   End RsUp.
 
   Section RqDown.
-    Hypothesis (Hrd: RqDownMsgs dtr oidx rins).
+    Hypothesis (Hrd: RqDownMsgs dtr sys oidx rins).
 
     Definition RqDownLPush (hst: MHistory) :=
       exists loidx,
@@ -379,7 +379,7 @@ Section Pushable.
   End RqDown.
 
   Section RsDown.
-    Hypothesis (Hrd: RsDownMsgs dtr oidx rins).
+    Hypothesis (Hrd: RsDownMsgs dtr sys oidx rins).
 
     Definition RsDownLPush (hst: MHistory) :=
       exists loidx,
@@ -607,9 +607,9 @@ Proof.
   assert (exists oidx ridx rins routs,
              l2 = RlblInt oidx ridx rins routs /\
              (RqUpMsgs dtr oidx rins \/
-              RqDownMsgs dtr oidx rins \/
+              RqDownMsgs dtr sys oidx rins \/
               RsUpMsgs dtr oidx rins \/
-              RsDownMsgs dtr oidx rins)) as Hnlbl.
+              RsDownMsgs dtr sys oidx rins)) as Hnlbl.
   { destruct H as [? [? ?]].
     red in H0.
     destruct H0 as [eouts [oidx [ridx [rins [routs ?]]]]]; dest; subst.
