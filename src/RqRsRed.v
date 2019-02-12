@@ -16,12 +16,95 @@ Section InsideTree.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrd: RqRsDTree dtr sys).
+  Hypothesis (Hrrs: RqRsSys dtr sys).
+
+  Ltac exfalso_midx :=
+    match goal with
+    | [H1: rqEdgeUpFrom _ _ = Some ?midx, H2: rsEdgeUpFrom _ _ = Some ?midx |- _] =>
+      assert (midx <> midx) by solve_midx_neq; auto
+    | [H1: rqEdgeUpFrom _ _ = Some ?midx, H2: edgeDownTo _ _ = Some ?midx |- _] =>
+      assert (midx <> midx) by solve_midx_neq; auto
+    | [H1: rsEdgeUpFrom _ _ = Some ?midx, H2: edgeDownTo _ _ = Some ?midx |- _] =>
+      assert (midx <> midx) by solve_midx_neq; auto
+    end.
+  
+  Ltac disc_rule_custom ::=
+    try disc_footprints_ok;
+    try exfalso_midx.
+  
+  Lemma step_inside_tree_ins_disj_outs:
+    forall st1,
+      Reachable (steps step_m) sys st1 ->
+      forall oidx ridx rins routs st2,
+        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+        forall toidx,
+          In oidx (subtreeIndsOf dtr toidx) ->
+          forall ups,
+            Forall (fun up =>
+                      rqEdgeUpFrom dtr toidx = Some (idOf up) \/
+                      rsEdgeUpFrom dtr toidx = Some (idOf up)) ups ->
+            DisjList ups rins.
+  Proof.
+    intros.
+    destruct Hrrs as [? [? ?]].
+    pose proof (footprints_ok H4 H).
+    red; intros [up umsg].
+    destruct (in_dec (id_dec msg_dec) (up, umsg) ups) as [Hin1|]; auto.
+    destruct (in_dec (id_dec msg_dec) (up, umsg) rins) as [Hin2|]; auto.
+    exfalso.
+    rewrite Forall_forall in H2.
+    specialize (H2 _ Hin1); simpl in H2.
+    
+    inv_step.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - disc_rule_conds.
+      destruct Hin2; auto; inv H0.
+      destruct H2; disc_rule_conds.
+      eapply parent_not_in_subtree; eauto.
+
+    - disc_rule_conds.
+      destruct Hin2; auto; inv H0.
+      destruct H2; disc_rule_conds.
+
+    - disc_rule_conds.
+      + destruct Hin2; auto; inv H16.
+        destruct H2; disc_rule_conds.
+        eapply parent_not_in_subtree; eauto.
+      + destruct Hin2; auto; inv H7.
+        destruct H2; disc_rule_conds.
+        eapply parent_not_in_subtree; eauto.
+      + destruct Hin2; auto; inv H9.
+        destruct H2; disc_rule_conds.
+
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      + destruct Hin2; auto; subst; simpl in *.
+        destruct H2; disc_rule_conds.
+      + rewrite <-H31 in H24.
+        apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
+        eapply RqRsDownMatch_rs_rq in H24; [|eassumption].
+        destruct H24 as [cidx [down ?]]; dest.
+        destruct H2; disc_rule_conds.
+        eapply parent_not_in_subtree; eauto.
+      + rewrite <-H31 in H9.
+        apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
+        eapply RqRsDownMatch_rs_rq in H9; [|eassumption].
+        destruct H9 as [cidx [down ?]]; dest.
+        destruct H2; disc_rule_conds.
+        eapply parent_not_in_subtree; eauto.
+
+    - disc_rule_conds.
+      destruct Hin2; auto; inv H7.
+      destruct H2; disc_rule_conds.
+  Qed.
 
   Lemma atomic_inside_tree_ins_disj_outs:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall st1 st2,
+        Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
         forall toidx,
           SubList (oindsOf hst) (subtreeIndsOf dtr toidx) ->
@@ -31,13 +114,23 @@ Section InsideTree.
                       rsEdgeUpFrom dtr toidx = Some (idOf up)) ups ->
             DisjList ups ins.
   Proof.
-    pose proof Hrrd.
-  Admitted.
+    induction 1; simpl; intros; subst.
+    - inv_steps.
+      apply SubList_singleton_In in H1.
+      eapply step_inside_tree_ins_disj_outs; eauto.
+    - inv_steps.
+      apply SubList_cons_inv in H7; dest.
+      apply DisjList_comm, DisjList_app_4; apply DisjList_comm.
+      + eauto.
+      + eapply step_inside_tree_ins_disj_outs;
+          try (eapply reachable_steps; eassumption); eauto.
+  Qed.
 
   Corollary atomic_inside_tree_inits_disj_rqUps:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall st1 st2,
+        Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
         forall toidx,
           SubList (oindsOf hst) (subtreeIndsOf dtr toidx) ->

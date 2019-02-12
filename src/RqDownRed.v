@@ -400,11 +400,14 @@ Section RqDownReduction.
       rewrite <-app_assoc.
       eapply reducible_app_1; try assumption.
       - instantiate (1:= lhst ++ prhst).
-        destruct H2; dest; subst; simpl.
+        destruct H2; subst; simpl.
         + rewrite app_nil_r; apply reducible_refl.
-        + eapply rqUpHistory_lpush_unit_reducible; eauto.
-          destruct Hrrs as [? [? ?]].
-          eapply atomic_inside_tree_inits_disj_rqUps; try eassumption.
+        + destruct H1 as [pins [pouts [ruIdx [rqUps ?]]]]; dest.
+          eapply rqUpHistory_lpush_unit_reducible; eauto.
+          assert (Reachable (steps step_m) sys sti)
+            by (eapply reachable_steps; eassumption).
+          clear Hr.
+          eapply atomic_inside_tree_inits_disj_rqUps; eauto.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
         + instantiate (1:= lhst ++ nrhst).

@@ -287,8 +287,11 @@ Section RsDownReduction.
         + rewrite app_nil_r; apply reducible_refl.
         + destruct H9 as [prins [prouts [ruIdx [rqUps ?]]]]; dest.
           eapply rqUpHistory_lpush_unit_reducible; eauto.
-          destruct Hrrs as [? [? ?]].
-          eapply atomic_inside_tree_inits_disj_rqUps; try eassumption.
+          assert (Reachable (steps step_m) sys sti)
+            by (do 2 (eapply reachable_steps; [|eassumption]);
+                assumption).
+          clear Hr.
+          eapply atomic_inside_tree_inits_disj_rqUps; eauto.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
         + instantiate (1:= hst ++ nphst).

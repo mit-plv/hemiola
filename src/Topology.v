@@ -194,7 +194,14 @@ Section Facts.
       In oidx (subtreeIndsOf dtr oidx).
   Proof.
   Admitted.
-    
+
+  Lemma parent_not_in_subtree:
+    forall dtr oidx pidx,
+      parentIdxOf dtr oidx = Some pidx ->
+      ~ In pidx (subtreeIndsOf dtr oidx).
+  Proof.
+  Admitted.
+  
 End Facts.
 
 Close Scope list.
