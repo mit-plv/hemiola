@@ -232,6 +232,18 @@ Section SubDisjEquiv.
     - eapply SubList_app_4; eauto.
   Qed.
 
+  Lemma DisjList_false_spec:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
+           l1 l2,
+      (forall a, In a l1 -> In a l2 -> False) ->
+      DisjList l1 l2.
+  Proof.
+    intros; red; intros.
+    destruct (in_dec deceqA e l1); auto.
+    destruct (in_dec deceqA e l2); auto.
+    exfalso; eauto.
+  Qed.
+  
   Lemma DisjList_nil_1: forall l, DisjList nil l.
   Proof. unfold DisjList; auto. Qed.
 

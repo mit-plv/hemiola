@@ -146,7 +146,7 @@ Ltac disc_footprints_ok :=
   | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
   end.
 
-Section MessageInv.
+Section IncomingMessageInv.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
@@ -237,8 +237,135 @@ Section MessageInv.
       disc_rule_conds.
       solve_rule_conds.
   Qed.
-    
-End MessageInv.
+
+End IncomingMessageInv.
+
+Section OutgoingMessageInv.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+
+  Hypothesis (Hitr: GoodRqRsSys dtr sys).
+
+  Definition RqUpOutMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    exists rqUp,
+      msgs = [rqUp] /\
+      msg_type (valOf rqUp) = MRq /\
+      rqEdgeUpFrom dtr oidx = Some (idOf rqUp).
+
+  Definition RqDownOutMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    Forall (fun msg => msg_type (valOf msg) = MRq) msgs /\
+    Forall (fun rq =>
+              exists cidx,
+                parentIdxOf dtr cidx = Some oidx /\
+                edgeDownTo dtr cidx = Some rq)
+           (idsOf msgs).
+
+  Definition RsUpOutMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    exists rsUp,
+      msgs = [rsUp] /\
+      msg_type (valOf rsUp) = MRs /\
+      rsEdgeUpFrom dtr oidx = Some (idOf rsUp).
+
+  Definition RsDownOutMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    exists cidx rsDown,
+      msgs = [rsDown] /\
+      msg_type (valOf rsDown) = MRs /\
+      parentIdxOf dtr cidx = Some oidx /\
+      edgeDownTo dtr cidx = Some (idOf rsDown).
+  
+  Ltac disc_rule_custom ::=
+    disc_footprints_ok.
+  
+  Lemma messages_out_cases:
+    forall st1 oidx ridx rins routs st2,
+      Reachable (steps step_m) sys st1 ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      RqUpOutMsgs oidx routs \/
+      RqDownOutMsgs oidx routs \/
+      RsUpOutMsgs oidx routs \/
+      RsDownOutMsgs oidx routs.
+  Proof.
+    intros.
+
+    (* Register some necessary invariants to prove this invariant. *)
+    pose proof (footprints_ok Hitr H).
+
+    inv H0.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - right; right; right.
+      disc_rule_conds.
+      solve_rule_conds.
+
+    - right; right; left.
+      disc_rule_conds.
+      solve_rule_conds.
+
+    - disc_rule_conds.
+      + left; solve_rule_conds.
+      + right; left.
+        solve_rule_conds.
+        clear -H17; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rq_rs in H17; [|eassumption].
+        dest; eauto.
+      + right; left.
+        solve_rule_conds.
+        clear -H3; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rq_rs in H3; [|eassumption].
+        dest; eauto.
+
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      + right; right; right.
+        solve_rule_conds.
+      + right; right; right.
+        solve_rule_conds.
+      + right; right; left.
+        solve_rule_conds.
+
+    - right; left.
+      disc_rule_conds.
+      solve_rule_conds.
+      clear -H17; apply Forall_forall; intros.
+      eapply RqRsDownMatch_rq_rs in H17; [|eassumption].
+      dest; eauto.
+  Qed.
+
+End OutgoingMessageInv.
+
+Ltac disc_messages_in :=
+  match goal with
+  | [H: RqUpMsgs _ _ _ |- _] =>
+    let cidx := fresh "cidx" in
+    let rqUp := fresh "rqUp" in
+    destruct H as [cidx [rqUp ?]]; dest; subst
+  | [H: RqDownMsgs _ _ _ _ |- _] =>
+    let obj := fresh "obj" in
+    let rqDown := fresh "rqDown" in
+    destruct H as [obj [rqDown ?]]; dest; subst
+  | [H: RsUpMsgs _ _ _ |- _] => red in H; dest
+  | [H: RsDownMsgs _ _ _ _ |- _] =>
+    let obj := fresh "obj" in
+    let rsDown := fresh "rsDown" in
+    destruct H as [obj [rsDown ?]]; dest; subst
+  end.
+
+Ltac disc_messages_out :=
+  match goal with
+  | [H: RqUpOutMsgs _ _ _ |- _] =>
+    let rqUp := fresh "rqUp" in
+    destruct H as [rqUp ?]; dest; subst
+  | [H: RqDownOutMsgs _ _ _ |- _] => red in H; dest
+  | [H: RsUpOutMsgs _ _ _ |- _] =>
+    let rsUp := fresh "rsUp" in
+    destruct H as [rsUp ?]; dest; subst
+  | [H: RsDownOutMsgs _ _ _ |- _] =>
+    let cidx := fresh "cidx" in
+    let rsDown := fresh "rsDown" in
+    destruct H as [cidx [rsDown ?]]; dest; subst
+  end.
 
 Close Scope list.
 Close Scope fmap.

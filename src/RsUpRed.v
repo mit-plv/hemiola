@@ -177,6 +177,14 @@ Section RsUpReduction.
     }
   Qed.
 
+  Ltac disc_rqUpMsgs :=
+    match goal with
+    | [H: RqUpMsgs _ _ _ |- _] =>
+      let cidx := fresh "cidx" in
+      let rqUp := fresh "rqUp" in
+      destruct H as [cidx [rqUp ?]]; dest
+    end.
+  
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try disc_rqUpMsgs;
@@ -349,10 +357,7 @@ Section RsUpReduction.
     pose proof (downLockInv_ok H0 H H7).
     good_locking_get objTo; clear H10.
 
-    red; intros rsUp.
-    destruct (in_dec eq_nat_dec rsUp (idsOf rsUps)) as [Hin1|]; auto.
-    destruct (in_dec eq_nat_dec rsUp (idsOf rins)) as [Hin2|]; auto.
-    exfalso.
+    apply (DisjList_false_spec eq_nat_dec); intros rsUp Hin1 Hin2.
     apply in_map_iff in Hin1; destruct Hin1 as [[rsUp' rsm1] ?]; dest; subst.
     apply in_map_iff in Hin2; destruct Hin2 as [[rsUp rsm2] ?]; dest; subst.
     simpl in H10; subst rsUp'.
@@ -407,11 +412,8 @@ Section RsUpReduction.
     inv_step; simpl in *.
     pose proof (downLockInv_ok H0 H H4).
     good_locking_get objTo; clear H9.
-
-    red; intro rsUp.
-    destruct (in_dec (id_dec msg_dec) rsUp routs) as [Hin1|]; auto.
-    destruct (in_dec (id_dec msg_dec) rsUp rsUps) as [Hin2|]; auto.
-    exfalso.
+    
+    apply (DisjList_false_spec (id_dec msg_dec)); intros rsUp Hin1 Hin2.
     destruct rsUp as [rsUp rsm].
     pose proof (in_map idOf _ _ Hin2); simpl in *.
     red in H3; dest.

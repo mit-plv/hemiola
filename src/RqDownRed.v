@@ -134,10 +134,7 @@ Section RqDownReduction.
       red in H3; destruct Hrqd as [robj [rqDown ?]]; dest; subst.
       inv H3; clear H22; simpl in H20.
       
-      red; intros [rrqDown rqm].
-      destruct (in_dec (id_dec msg_dec) (rrqDown, rqm) [rqDown]); auto.
-      destruct (in_dec (id_dec msg_dec) (rrqDown, rqm) routs); auto.
-      exfalso.
+      apply (DisjList_false_spec (id_dec msg_dec)); intros [rrqDown rqm] i i0.
       Common.dest_in; simpl in *.
 
       good_rqrs_rule_get rule.

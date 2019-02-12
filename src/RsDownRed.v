@@ -119,11 +119,8 @@ Section RsDownReduction.
       pose proof (edgeDownTo_Some H _ H7).
       destruct H3 as [rqUp [rsUp [pidx ?]]]; dest.
       good_locking_get robj.
-      
-      red; intros [rrsDown rsm].
-      destruct (in_dec (id_dec msg_dec) (rrsDown, rsm) [rsDown]); auto.
-      destruct (in_dec (id_dec msg_dec) (rrsDown, rsm) routs); auto.
-      exfalso.
+
+      apply (DisjList_false_spec (id_dec msg_dec)); intros [rrsDown rsm] i i0.
       Common.dest_in; simpl in *.
 
       good_rqrs_rule_get rule.

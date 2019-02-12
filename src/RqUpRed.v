@@ -11,14 +11,6 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Ltac disc_rqUpMsgs :=
-  match goal with
-  | [H: RqUpMsgs _ _ _ |- _] =>
-    let cidx := fresh "cidx" in
-    let rqUp := fresh "rqUp" in
-    destruct H as [cidx [rqUp ?]]; dest
-  end.
-
 Ltac disc_rqToUpRule :=
   match goal with
   | [H: RqToUpRule _ _ _ |- _] =>
@@ -175,7 +167,7 @@ Section RqUpReduction.
 
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
-    try disc_rqUpMsgs.
+    try disc_messages_in.
   
   Lemma rqUpMsgs_RqToUpRule:
     forall {oifc} (sys: System oifc) oidx (rule: Rule oifc)
@@ -313,7 +305,7 @@ Section RqUpReduction.
   Ltac disc_rule_custom ::=
     try disc_lock_conds;
     try disc_footprints_ok;
-    try disc_rqUpMsgs;
+    try disc_messages_in;
     try disc_rqToUpRule.
 
   Lemma rqUp_lbl_commutes:

@@ -548,17 +548,14 @@ Section RqRsDTree.
       DisjList rqTos1 rqTos2.
   Proof.
     intros.
-    red; intro midx.
-    destruct (in_dec eq_nat_dec midx rqTos1) as [Heq1|]; auto.
-    destruct (in_dec eq_nat_dec midx rqTos2) as [Heq2|]; auto.
-    exfalso.
-    eapply RqRsDownMatch_rq_rs in Heq1; [|eassumption].
-    destruct Heq1 as [cidx1 [rsUp1 ?]]; dest.
-    eapply RqRsDownMatch_rq_rs in Heq2; [|eassumption].
-    destruct Heq2 as [cidx2 [rsUp2 ?]]; dest.
+    apply (DisjList_false_spec eq_nat_dec); intros midx ? ?.
+    eapply RqRsDownMatch_rq_rs in H2; [|eassumption].
+    destruct H2 as [cidx1 [rsUp1 ?]]; dest.
+    eapply RqRsDownMatch_rq_rs in H3; [|eassumption].
+    destruct H3 as [cidx2 [rsUp2 ?]]; dest.
     destruct (eq_nat_dec cidx1 cidx2); subst.
-    - rewrite H3 in H8; inv H8; auto.
-    - elim (rqrsDTree_down_down_not_eq n H4 H9); reflexivity.
+    - rewrite H4 in H8; inv H8; auto.
+    - elim (rqrsDTree_down_down_not_eq n H5 H9); reflexivity.
   Qed.
 
   Lemma RqRsDownMatch_rss_disj:
@@ -570,17 +567,14 @@ Section RqRsDTree.
       DisjList rssFrom1 rssFrom2.
   Proof.
     intros.
-    red; intro midx.
-    destruct (in_dec eq_nat_dec midx rssFrom1) as [Heq1|]; auto.
-    destruct (in_dec eq_nat_dec midx rssFrom2) as [Heq2|]; auto.
-    exfalso.
-    eapply RqRsDownMatch_rs_rq in Heq1; [|eassumption].
-    destruct Heq1 as [cidx1 [down1 ?]]; dest.
-    eapply RqRsDownMatch_rs_rq in Heq2; [|eassumption].
-    destruct Heq2 as [cidx2 [down2 ?]]; dest.
+    apply (DisjList_false_spec eq_nat_dec); intros midx ? ?.
+    eapply RqRsDownMatch_rs_rq in H2; [|eassumption].
+    destruct H2 as [cidx1 [down1 ?]]; dest.
+    eapply RqRsDownMatch_rs_rq in H3; [|eassumption].
+    destruct H3 as [cidx2 [down2 ?]]; dest.
     destruct (eq_nat_dec cidx1 cidx2); subst.
-    - rewrite H3 in H8; inv H8; auto.
-    - elim (rqrsDTree_rsUp_rsUp_not_eq n H5 H10); reflexivity.
+    - rewrite H4 in H8; inv H8; auto.
+    - elim (rqrsDTree_rsUp_rsUp_not_eq n H6 H10); reflexivity.
   Qed.
   
   Lemma rqrsDTree_down_downs_not_in_child:
@@ -1328,5 +1322,16 @@ Ltac solve_midx_disj :=
       apply (DisjList_singleton_1 eq_nat_dec)
     | [ |- DisjList _ (_ :: nil)] =>
       apply (DisjList_singleton_2 eq_nat_dec)
+    end.
+
+Ltac solve_midx_false :=
+  repeat
+    match goal with
+    | [H1: rqEdgeUpFrom _ _ = Some ?midx, H2: rsEdgeUpFrom _ _ = Some ?midx |- _] =>
+      exfalso; assert (midx <> midx) by solve_midx_neq; auto
+    | [H1: rqEdgeUpFrom _ _ = Some ?midx, H2: edgeDownTo _ _ = Some ?midx |- _] =>
+      exfalso; assert (midx <> midx) by solve_midx_neq; auto
+    | [H1: rsEdgeUpFrom _ _ = Some ?midx, H2: edgeDownTo _ _ = Some ?midx |- _] =>
+      exfalso; assert (midx <> midx) by solve_midx_neq; auto
     end.
 
