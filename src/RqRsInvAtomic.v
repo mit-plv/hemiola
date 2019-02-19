@@ -49,19 +49,23 @@ Section RqUpStart.
     | RlblEmpty _ => True
     | RlblIns _ => True
     | RlblOuts _ => True
-    | RlblInt oidx _ _ routs => ~ RqUpMsgs dtr oidx routs
+    | RlblInt _ _ _ routs => forall oidxTo, ~ RqUpMsgs dtr oidxTo routs
     end.
 
   Ltac disc_NonRqUpL :=
     repeat
       match goal with
       | [ |- NonRqUpL _] => red
-      | [ |- ~ RqUpMsgs _ _ _] => let Hx := fresh "H" in intro Hx
+      | [ |- forall _, ~ RqUpMsgs _ _ _] =>
+        let oidxTo := fresh "oidxTo" in
+        let Hx := fresh "H" in
+        intros oidxTo Hx
       | [H: RqUpMsgs _ _ _ |- _] =>
         let cidx := fresh "cidx" in
         let rqUp := fresh "rqUp" in
         destruct H as [cidx [rqUp ?]]; dest
       | [H: _ :: _ = _ :: _ |- _] => inv H; simpl in *
+      | [H1: ?t = MRq, H2: ?t = MRs |- _] => rewrite H1 in H2; discriminate
       end.
 
   Ltac disc_rule_custom ::=
@@ -82,10 +86,8 @@ Section RqUpStart.
 
     - disc_rule_conds.
       right; disc_NonRqUpL.
-      solve_midx_false.
     - disc_rule_conds.
       right; disc_NonRqUpL.
-      solve_midx_false.
 
     - disc_rule_conds.
       + left.
@@ -105,11 +107,8 @@ Section RqUpStart.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; disc_NonRqUpL.
-        rewrite H11 in H25; discriminate.
       + right; disc_NonRqUpL.
-        rewrite H8 in H23; discriminate.
       + right; disc_NonRqUpL.
-        rewrite H8 in H20; discriminate.
 
     - disc_rule_conds.
       right; disc_NonRqUpL; subst.
@@ -155,7 +154,6 @@ Section RqUpStart.
           econstructor.
       + constructor; [|constructor].
         disc_NonRqUpL; subst.
-        rewrite H9 in H12; discriminate.
 
     - exfalso; disc_rule_conds.
       solve_midx_false.
@@ -199,6 +197,111 @@ Section RqUpStart.
 
     - exfalso; disc_rule_conds.
     - exfalso; disc_rule_conds.
+  Qed.
+
+  Lemma nonRqUpL_label_outs_no_rqUp:
+    forall oidx ridx rins routs st1 st2,
+      Reachable (steps step_m) sys st1 ->
+      NonRqUpL (RlblInt oidx ridx rins routs) ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      Forall (fun out => forall oidxTo, ~ RqUpMsgs dtr oidxTo [out]) routs.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    pose proof (footprints_ok H0 H2) as Hfinv.
+    inv_step.
+    
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - disc_rule_conds.
+      repeat constructor.
+      disc_NonRqUpL.
+    - disc_rule_conds.
+      repeat constructor.
+      disc_NonRqUpL.
+    - disc_rule_conds.
+      + pose proof (rqEdgeUpFrom_Some H _ H6).
+        destruct H14 as [rsUp [down [pidx ?]]]; dest.
+        elim (H3 pidx).
+        do 2 eexists; eauto.
+      + apply Forall_forall; intros [midx msg] ?.
+        apply in_map with (f:= idOf) in H5; simpl in H5.
+        disc_NonRqUpL.
+        eapply RqRsDownMatch_rq_rs in H20; [|eassumption].
+        destruct H20 as [rcidx [rsUp ?]]; dest.
+        solve_midx_false.
+      + apply Forall_forall; intros [midx msg] ?.
+        apply in_map with (f:= idOf) in H7; simpl in H7.
+        disc_NonRqUpL.
+        eapply RqRsDownMatch_rq_rs in H6; [|eassumption].
+        destruct H6 as [rcidx [rsUp ?]]; dest.
+        solve_midx_false.
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds;
+        try (repeat constructor; disc_NonRqUpL; fail).
+    - disc_rule_conds.
+      apply Forall_forall; intros [midx msg] ?.
+      apply in_map with (f:= idOf) in H5; simpl in H5.
+      disc_NonRqUpL.
+      eapply RqRsDownMatch_rq_rs in H20; [|eassumption].
+      destruct H20 as [rcidx [rsUp ?]]; dest.
+      solve_midx_false.
+  Qed.
+
+  Lemma nonRqUpL_history_eouts_no_rqUp:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      Forall NonRqUpL hst ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        forall st2,
+          steps step_m sys st1 hst st2 ->
+          Forall (fun eout => forall oidxTo, ~ RqUpMsgs dtr oidxTo [eout]) eouts.
+  Proof.
+    induction 1; simpl; intros; subst.
+    - inv_steps.
+      inv H.
+      eapply nonRqUpL_label_outs_no_rqUp; eauto.
+    - inv_steps.
+      inv H5.
+      apply Forall_app.
+      + apply forall_removeL; eauto.
+      + eapply nonRqUpL_label_outs_no_rqUp;
+          try eapply H10; eauto.
+  Qed.
+
+  Lemma nonRqUp_ins_nonRqUpL:
+    forall st1 st2 oidx ridx rins routs,
+      Reachable (steps step_m) sys st1 ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      Forall (fun rin => forall oidxTo, ~ RqUpMsgs dtr oidxTo [rin]) rins ->
+      NonRqUpL (RlblInt oidx ridx rins routs).
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    pose proof (footprints_ok H0 H2).
+    inv_step.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - disc_rule_conds; disc_NonRqUpL.
+    - disc_rule_conds; disc_NonRqUpL.
+    - disc_rule_conds.
+      + elim (H24 (obj_idx obj)).
+        do 2 eexists; eauto.
+      + disc_NonRqUpL; subst.
+        eapply RqRsDownMatch_rq_rs in H21; [|left; reflexivity].
+        destruct H21 as [rcidx [rsUp ?]]; dest.
+        solve_midx_false.
+      + disc_NonRqUpL; subst.
+        eapply RqRsDownMatch_rq_rs in H7; [|left; reflexivity].
+        destruct H7 as [rcidx [rsUp ?]]; dest.
+        solve_midx_false.
+    - disc_rule_conds; disc_NonRqUpL.
+    - disc_rule_conds.
+      disc_NonRqUpL; subst.
+      eapply RqRsDownMatch_rq_rs in H21; [|left; reflexivity].
+      destruct H21 as [rcidx [rsUp ?]]; dest.
+      solve_midx_false.
   Qed.
 
   Lemma rqUp_start_ok:
@@ -249,14 +352,10 @@ Section RqUpStart.
         * reflexivity.
         * left; reflexivity.
         * constructor; [|assumption].
-          (*
-           * 1) [Atomic msg_dec inits ins pnhst outs eouts] ->
-           *    [Forall NonRqUpL pnhst] ->
-           *    [eouts] does not have any RqUps.
-           * 2) [SubList rins eouts] -> [rins] does not have any RqUps.
-           * 3) NonRqUpL (RlblInt oidx ridx rins routs)
-           *)
-          admit.
+          eapply nonRqUpL_history_eouts_no_rqUp in H2; try eassumption.
+          eapply SubList_forall in H4; [|eassumption].
+          assert (Reachable (steps step_m) sys st3) by eauto; clear H8.
+          eapply nonRqUp_ins_nonRqUpL; eauto.
 
       + destruct H5 as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
         destruct H9; subst.
@@ -287,16 +386,17 @@ Section RqUpStart.
             econstructor; eauto.
           }
           { constructor; [|assumption].
-            (*
-             * 1) [Atomic msg_dec inits ins pnhst outs eouts] ->
-             *    [Forall NonRqUpL pnhst] ->
-             *    [eouts] does not have any RqUps.
-             * 2) [SubList rins eouts] -> [rins] does not have any RqUps.
-             * 3) NonRqUpL (RlblInt oidx ridx rins routs)
-             *)
-            admit.
+            assert (Reachable (steps step_m) sys st3) by eauto.
+            eapply steps_split in H10; [|reflexivity].
+            destruct H10 as [sti [? ?]].
+            eapply nonRqUpL_history_eouts_no_rqUp in H9;
+              [|assumption
+               |eapply reachable_steps; [|eapply H10]; assumption
+               |eassumption].
+            eapply SubList_forall in H4; [|eassumption].
+            eapply nonRqUp_ins_nonRqUpL; try eapply H12; eauto.
           }
-  Admitted.
+  Qed.
 
 End RqUpStart.
 
