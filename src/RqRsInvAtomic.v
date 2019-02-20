@@ -406,13 +406,33 @@ Section Covers.
             (sys: System oifc).
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
-  Definition WellUpLocked (rqUps: MHistory) (orqs: ORqs Msg) :=
-    True.
+  Inductive WellUpLocked:
+    MHistory (* rqUps *) ->
+    MHistory (* others *) ->
+    ORqs Msg -> Prop :=
+  | WellULNil: forall orqs, WellUpLocked nil nil orqs.
+  TODO.
+  | WellULCons:
+      forall rqUps orqs oidx ridx rqFrom rqTo orq rqiu cidx pidx rsFrom rsTo,
+        WellUpLocked rqUps orqs ->
+        orqs@[oidx] = Some orq ->
+        orq@[upRq] = Some rqiu ->
+
+        parentIdxOf dtr cidx = Some oidx ->
+        rqEdgeUpFrom dtr cidx = Some (idOf rqFrom) ->
+        edgeDownTo dtr cidx = Some rsTo ->
+        parentIdxOf dtr oidx = Some pidx ->
+        rqEdgeUpFrom dtr oidx = Some (idOf rqTo) ->
+        edgeDownTo dtr oidx = Some rsFrom ->
+        
+        rqiu.(rqi_minds_rss) = [rsFrom] ->
+        rqiu.(rqi_midx_rsb) = rsTo ->
+
+        WellUpLocked (RlblInt oidx ridx [rqFrom] [rqTo] :: rqUps) orqs.
 
   Section OnWellUpLocked.
     Variables (rqUps: MHistory) (orqs: ORqs Msg).
-    Hypothesis (Hwul: WellUpLocked rqUps orqs).
-  
+
     Definition RqDownCoverInv (rqDown: Id Msg) (hst: MHistory) :=
       forall rdFrom rdTo,
         msg_type (valOf rqDown) = MRq ->
@@ -422,6 +442,7 @@ Section Covers.
 
     (* Definition RsUpCoverInv (hoinds: list IdxT) (rsUp: Id Msg) := *)
 
+    (** * FIXME: should know the message is concistent with [WellUpLocked]. *)
     Definition RsDownCoverInv (rsDown: Id Msg) (hst: MHistory) :=
       forall rdFrom rdTo,
         msg_type (valOf rsDown) = MRs ->
@@ -437,21 +458,27 @@ Section Covers.
     Definition MsgOutsCoverInv (eouts: list (Id Msg)) (hst: MHistory) :=
       Forall (fun eout => MsgOutCoverInv eout hst) eouts.
 
-  End OnWellUpLocked.
+    Ltac disc_rule_custom ::=
+      try disc_footprints_ok.
 
-  Ltac disc_rule_custom ::=
-    try disc_footprints_ok.
-  
-  (* Lemma covers_ok: *)
-  (*   forall inits ins hst outs eouts, *)
-  (*     Atomic msg_dec inits ins hst outs eouts -> *)
-  (*     forall s1 s2, *)
-  (*       Reachable (steps step_m) sys s1 -> *)
-  (*       steps step_m sys s1 hst s2 -> *)
-  (*       LockCoverInv (oindsOf hst) s2.(bst_orqs) /\ *)
-  (*       MsgOutsCoverInv (oindsOf hst) eouts. *)
-  (* Proof. *)
-  (* Qed. *)
+    (* Lemma covers_ok_rqUp_start: *)
+    (*   forall roidx rqUps ruins ruouts, *)
+    (*      RqUpMsgs dtr roidx rqUps -> *)
+    (*      Atomic msg_dec inits ruins ruhst ruouts rqUps -> *)
+         
+         
+    Lemma covers_ok:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall s1 s2,
+          Reachable (steps step_m) sys s1 ->
+          steps step_m sys s1 hst s2 ->
+          LockCoverInv (oindsOf hst) s2.(bst_orqs) /\
+          MsgOutsCoverInv (oindsOf hst) eouts.
+    Proof.
+    Qed.
+
+  End OnWellUpLocked.
 
 End Covers.
 
