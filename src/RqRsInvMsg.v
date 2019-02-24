@@ -367,6 +367,34 @@ Ltac disc_messages_out :=
     destruct H as [cidx [rsDown ?]]; dest; subst
   end.
 
+Section MsgInitCases.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+  Hypothesis (Hrrs: RqRsSys dtr sys).
+
+  Lemma msg_init_cases_ok:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        exists oidx,
+          RqUpMsgs dtr oidx inits \/
+          RqDownMsgs dtr sys oidx inits \/
+          RsUpMsgs dtr oidx inits \/
+          RsDownMsgs dtr sys oidx inits.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 1; simpl; intros; subst.
+    - inv_steps.
+      exists oidx.
+      eapply messages_in_cases; eauto.
+    - inv_steps; eauto.
+  Qed.
+
+End MsgInitCases.
+
 Close Scope list.
 Close Scope fmap.
 

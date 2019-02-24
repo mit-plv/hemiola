@@ -49,7 +49,7 @@ Section InsideTree.
     - disc_rule_conds.
       destruct Hin2; auto; inv H0.
       destruct H2; disc_rule_conds.
-      eapply parent_not_in_subtree; eauto.
+      destruct H3; eapply parent_not_in_subtree; eauto.
 
     - disc_rule_conds.
       destruct Hin2; auto; inv H0.
@@ -58,10 +58,10 @@ Section InsideTree.
     - disc_rule_conds.
       + destruct Hin2; auto; inv H16.
         destruct H2; disc_rule_conds.
-        eapply parent_not_in_subtree; eauto.
+        destruct H3; eapply parent_not_in_subtree; eauto.
       + destruct Hin2; auto; inv H7.
         destruct H2; disc_rule_conds.
-        eapply parent_not_in_subtree; eauto.
+        destruct H3; eapply parent_not_in_subtree; eauto.
       + destruct Hin2; auto; inv H9.
         destruct H2; disc_rule_conds.
 
@@ -74,13 +74,13 @@ Section InsideTree.
         eapply RqRsDownMatch_rs_rq in H24; [|eassumption].
         destruct H24 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
-        eapply parent_not_in_subtree; eauto.
+        destruct H3; eapply parent_not_in_subtree; eauto.
       + rewrite <-H31 in H9.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
         eapply RqRsDownMatch_rs_rq in H9; [|eassumption].
         destruct H9 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
-        eapply parent_not_in_subtree; eauto.
+        destruct H3; eapply parent_not_in_subtree; eauto.
 
     - disc_rule_conds.
       destruct Hin2; auto; inv H7.

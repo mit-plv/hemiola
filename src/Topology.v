@@ -162,25 +162,25 @@ Section DTree.
 End DTree.
 
 Section Facts.
-
+  Variable dtr: DTree.
+  Hypothesis Hwf: WfDTree dtr.
+  
   Lemma parentIdxOf_not_eq:
-    forall dtr (Hwf: WfDTree dtr) idx pidx,
+    forall idx pidx,
       parentIdxOf dtr idx = Some pidx ->
       idx <> pidx.
   Proof.
   Admitted.
   
   Lemma parentChnsOf_NoDup:
-    forall dtr (Hwf: WfDTree dtr)
-           idx ups downs pidx,
+    forall idx ups downs pidx,
       parentChnsOf dtr idx = Some (ups, downs, pidx) ->
       NoDup (ups ++ downs).
   Proof.
   Admitted.
 
   Lemma parentChnsOf_DisjList:
-    forall dtr (Hwf: WfDTree dtr)
-           idx1 ups1 downs1 pidx1 idx2 ups2 downs2 pidx2,
+    forall idx1 ups1 downs1 pidx1 idx2 ups2 downs2 pidx2,
       idx1 <> idx2 ->
       parentChnsOf dtr idx1 = Some (ups1, downs1, pidx1) ->
       parentChnsOf dtr idx2 = Some (ups2, downs2, pidx2) ->
@@ -188,20 +188,64 @@ Section Facts.
   Proof.
   Admitted.
 
+  Lemma subtreeIndsOf_composed:
+    forall oidx roidx,
+      In oidx (subtreeIndsOf dtr roidx) ->
+      oidx = roidx \/
+      (exists cidx,
+          parentIdxOf dtr cidx = Some roidx /\
+          In oidx (subtreeIndsOf dtr cidx)).
+  Proof.
+  Admitted.
+
   Lemma parentChnsOf_subtreeIndsOf_self_in:
-    forall dtr (Hwf: WfDTree dtr) oidx,
+    forall oidx,
       parentChnsOf dtr oidx <> None ->
       In oidx (subtreeIndsOf dtr oidx).
   Proof.
   Admitted.
 
   Lemma parent_not_in_subtree:
-    forall dtr oidx pidx,
+    forall oidx pidx,
       parentIdxOf dtr oidx = Some pidx ->
       ~ In pidx (subtreeIndsOf dtr oidx).
   Proof.
   Admitted.
+
+  Lemma inside_parent_out:
+    forall cidx pidx oidx poidx,
+      parentIdxOf dtr cidx = Some pidx ->
+      In oidx (subtreeIndsOf dtr cidx) ->
+      parentIdxOf dtr oidx = Some poidx ->
+      In poidx (pidx :: subtreeIndsOf dtr cidx).
+  Proof.
+  Admitted.
   
+  Lemma inside_child_in:
+    forall cidx pidx oidx coidx,
+      parentIdxOf dtr cidx = Some pidx ->
+      In oidx (subtreeIndsOf dtr cidx) ->
+      parentIdxOf dtr coidx = Some oidx ->
+      In coidx (subtreeIndsOf dtr cidx).
+  Proof.
+  Admitted.
+
+  Lemma outside_parent_out:
+    forall oidx cidx pidx,
+      ~ In cidx (subtreeIndsOf dtr oidx) ->
+      parentIdxOf dtr cidx = Some pidx ->
+      ~ In pidx (subtreeIndsOf dtr oidx).
+  Proof.
+  Admitted.
+
+  Lemma outside_child_in:
+    forall oidx cidx pidx,
+      ~ In pidx (subtreeIndsOf dtr oidx) ->
+      parentIdxOf dtr cidx = Some pidx ->
+      cidx = oidx \/ ~ In cidx (subtreeIndsOf dtr oidx).
+  Proof.
+  Admitted.
+
 End Facts.
 
 Close Scope list.

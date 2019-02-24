@@ -71,7 +71,8 @@ Section Inv.
     Proof.
       apply invSeq_serializable_invStep.
       - apply ImplStateMSI_init.
-      - admit. (* [InvSeq] *)
+      - apply inv_trs_seqSteps.
+        admit. (* [InvTrs] *)
       - admit. (* [SerializableSys] *)
     Admitted.
 

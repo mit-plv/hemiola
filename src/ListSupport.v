@@ -113,6 +113,21 @@ Section SubDisjEquiv.
   Proof.
     intros; firstorder.
   Qed.
+
+  Lemma SubList_singleton_NoDup:
+    forall l a,
+      SubList l [a] -> NoDup l -> l = nil \/ l = [a].
+  Proof.
+    intros.
+    destruct l; [auto|].
+    right.
+    apply SubList_cons_inv in H; dest.
+    inv H0; Common.dest_in.
+    destruct l; [auto|].
+    apply SubList_cons_inv in H1; dest.
+    inv H5; Common.dest_in.
+    elim H4; left; reflexivity.
+  Qed.
   
   Lemma SubList_app_1: forall l1 l2 l3, SubList l1 l2 -> SubList l1 (l2 ++ l3).
   Proof.
@@ -483,6 +498,20 @@ Section Removal.
     inv H; auto.
   Qed.
 
+  Lemma removeOnce_In_NoDup:
+    forall a1 a2 l,
+      NoDup l -> In a1 (removeOnce a2 l) ->
+      a1 <> a2 /\ In a1 l.
+  Proof.
+    induction l; simpl; intros; auto.
+    inv H.
+    destruct (eq_dec a2 a); [subst|].
+    - split; [|auto].
+      intro Hx; subst; auto.
+    - inv H0; auto.
+      specialize (IHl H4 H); dest; auto.
+  Qed.
+
   Lemma removeL_In_1:
     forall a l2 l1,
       In a l1 -> ~ In a l2 ->
@@ -581,6 +610,22 @@ Section Removal.
     destruct (eq_dec a e); subst.
     - intuition.
     - right; apply removeOnce_In_1; auto.
+  Qed.
+
+  Lemma removeOnce_length:
+    forall a l,
+      In a l ->
+      length l > 0 /\ length (removeOnce a l) = length l - 1.
+  Proof.
+    induction l; simpl; intros; [exfalso; auto|].
+    destruct H; subst.
+    - destruct (eq_dec a a); [clear e|exfalso; auto].
+      split; omega.
+    - destruct (eq_dec a a0); [subst|].
+      + split; omega.
+      + simpl.
+        specialize (IHl H); destruct IHl.
+        split; omega.
   Qed.
   
   Lemma removeL_SubList_1:

@@ -54,6 +54,7 @@ Section System.
            /\oprec MsgIdsFrom [getRq]
            /\oprec RqAccepting
            /\oprec UpLockFree
+           /\oprec DownLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] >= msiS;
@@ -130,6 +131,7 @@ Section System.
            /\oprec MsgIdsFrom [setRq]
            /\oprec RqAccepting
            /\oprec UpLockFree
+           /\oprec DownLockFree
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiM;
@@ -265,6 +267,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqS]
              /\oprec RqAccepting
+             /\oprec UpLockFree
              /\oprec DownLockFree
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
@@ -325,6 +328,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqM]
              /\oprec RqAccepting
+             /\oprec UpLockFree
              /\oprec DownLockFree
              /\oprec
                  fun (ost: OState ImplOStateIfc) orq mins =>
@@ -386,6 +390,7 @@ Section System.
              MsgsFrom [cpRq]
              /\oprec MsgIdsFrom [msiRqI]
              /\oprec RqAccepting
+             /\oprec UpLockFree
              /\oprec DownLockFree;
            rule_trs :=
              fun (ost: OState ImplOStateIfc) orq mins =>
@@ -419,17 +424,20 @@ Section System.
     
   End Parent.
 
-  Definition leaf (cidx: IdxT) (ec ce: IdxT): DTree :=
-    Node cidx [([ec], [ce], Leaf)].
+  Definition ext1Idx := 3.
+  Definition ext2Idx := 4.
+
+  Definition leaf (cidx: IdxT) (ec ce: IdxT) (eidx: IdxT): DTree :=
+    Node cidx [([ec], [ce], Node eidx nil)].
   
   Definition topo: DTree :=
     Node parentIdx
          [([c1pRq; c1pRs],
            [pc1],
-           leaf child1Idx ec1 ce1);
+           leaf child1Idx ec1 ce1 ext1Idx);
             ([c2pRq; c2pRs],
              [pc2],
-             leaf child2Idx ec2 ce2)].
+             leaf child2Idx ec2 ce2 ext2Idx)].
   
   Definition impl: System ImplOStateIfc :=
     {| sys_objs :=
