@@ -205,6 +205,39 @@ Section Facts.
   Proof.
   Admitted.
 
+  Lemma subtreeIndsOf_child_in:
+    forall cidx pidx,
+      parentIdxOf dtr cidx = Some pidx ->
+      In cidx (subtreeIndsOf dtr pidx).
+  Proof.
+  Admitted.
+
+  Lemma subtreeIndsOf_child_disj:
+    forall cidx1 cidx2 pidx,
+      cidx1 <> cidx2 ->
+      parentIdxOf dtr cidx1 = Some pidx ->
+      parentIdxOf dtr cidx2 = Some pidx ->
+      DisjList (subtreeIndsOf dtr cidx1) (subtreeIndsOf dtr cidx2).
+  Proof.
+  Admitted.
+
+  Lemma subtreeIndsOf_other_child_not_in:
+    forall cidx1 cidx2 pidx,
+      cidx1 <> cidx2 ->
+      parentIdxOf dtr cidx1 = Some pidx ->
+      parentIdxOf dtr cidx2 = Some pidx ->
+      ~ In cidx1 (subtreeIndsOf dtr cidx2).
+  Proof.
+    intros.
+    pose proof (subtreeIndsOf_child_disj H H0 H1).
+    specialize (H2 cidx1).
+    destruct H2; [elim H2|auto].
+    apply parentChnsOf_subtreeIndsOf_self_in.
+    unfold parentIdxOf in H0.
+    destruct (parentChnsOf dtr cidx1);
+      simpl in *; discriminate.
+  Qed.
+
   Lemma parent_not_in_subtree:
     forall oidx pidx,
       parentIdxOf dtr oidx = Some pidx ->

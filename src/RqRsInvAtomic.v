@@ -248,7 +248,7 @@ Section RqUpStart.
       solve_midx_false.
   Qed.
 
-  Lemma nonRqUpL_history_eouts_no_rqUp:
+  Lemma nonRqUpL_atomic_msg_outs_no_rqUp:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       Forall NonRqUpL hst ->
@@ -352,7 +352,7 @@ Section RqUpStart.
         * reflexivity.
         * left; reflexivity.
         * constructor; [|assumption].
-          eapply nonRqUpL_history_eouts_no_rqUp in H2; try eassumption.
+          eapply nonRqUpL_atomic_msg_outs_no_rqUp in H2; try eassumption.
           eapply SubList_forall in H4; [|eassumption].
           assert (Reachable (steps step_m) sys st3) by eauto; clear H8.
           eapply nonRqUp_ins_nonRqUpL; eauto.
@@ -389,7 +389,7 @@ Section RqUpStart.
             assert (Reachable (steps step_m) sys st3) by eauto.
             eapply steps_split in H10; [|reflexivity].
             destruct H10 as [sti [? ?]].
-            eapply nonRqUpL_history_eouts_no_rqUp in H9;
+            eapply nonRqUpL_atomic_msg_outs_no_rqUp in H9;
               [|assumption
                |eapply reachable_steps; [|eapply H10]; assumption
                |eassumption].
@@ -524,7 +524,7 @@ Section Separation.
       right; right; eauto.
   Qed.
 
-  Lemma history_msg_outs_bounded:
+  Lemma atomic_msg_outs_bounded:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall s1 s2,
@@ -555,7 +555,7 @@ Section Separation.
         exists oidx; split; auto.
   Qed.
 
-  Lemma history_msg_outs_disj:
+  Lemma atomic_msg_outs_disj:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall s1 s2,
@@ -782,7 +782,7 @@ Section Separation.
       clear -H2 H24; firstorder.
   Qed.
   
-  Lemma history_separation_ok:
+  Lemma atomic_separation_ok:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall s1 s2,
@@ -812,14 +812,14 @@ Section Separation.
       specialize (IHAtomic _ _ H8 H11 _ H6).
       destruct IHAtomic.
       + destruct H7 as [cidx ?]; dest.
-        pose proof (history_msg_outs_bounded H2 H8 H11 H9).
+        pose proof (atomic_msg_outs_bounded H2 H8 H11 H9).
         left; exists cidx.
         split; [assumption|].
         apply SubList_cons; [|assumption].
         eapply SubList_forall in H12; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
-      + pose proof (history_msg_outs_disj H2 H8 H11 H7).
+      + pose proof (atomic_msg_outs_disj H2 H8 H11 H7).
         right.
         apply (DisjList_cons_inv eq_nat_dec); [assumption|].
         specialize (H7 oidx); destruct H7; [|assumption].
@@ -828,6 +828,75 @@ Section Separation.
         eapply step_separation_outside_ok; eauto.
   Qed.
   
+  (** This lemma is a bit freaky but crucially used in the proof of 
+   * the coverage invariant.
+   *)
+  Lemma atomic_non_visiting_rsUps_one:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        forall ruTo rsUps,
+          ~ In ruTo (oindsOf hst) ->
+          rsUps <> nil ->
+          NoDup (idsOf rsUps) ->
+          Forall (fun msg =>
+                    exists cidx,
+                      parentIdxOf dtr cidx = Some ruTo /\
+                      rsEdgeUpFrom dtr cidx = Some (idOf msg)) rsUps ->
+          SubList rsUps eouts ->
+          exists rsUp, rsUps = [rsUp].
+  Proof.
+    intros.
+    destruct rsUps as [|[rsUp0 rsm0] rsUps]; [exfalso; auto|].
+    destruct rsUps as [|[rsUp1 rsm1] rsUps]; [eauto|].
+    exfalso; clear H3.
+    assert (rsUp0 <> rsUp1).
+    { inv H4; inv H9.
+      intro Hx; elim H8.
+      unfold idOf in Hx; rewrite Hx.
+      left; reflexivity.
+    }
+    clear H4.
+    apply SubList_cons_inv in H6; dest.
+    apply SubList_cons_inv in H6; dest.
+    clear H7.
+    inv H5; inv H10; clear H11.
+    destruct H9 as [cidx0 [? ?]].
+    destruct H8 as [cidx1 [? ?]].
+    simpl in *.
+    assert (cidx0 <> cidx1)
+      by (intro Hx; subst; repeat disc_rule_minds; auto).
+
+    pose proof (atomic_msg_outs_bounded H H0 H1 (SubList_refl _)).
+    rewrite Forall_forall in H11.
+    apply H11 in H4; destruct H4 as [oidx0 [? ?]].
+    apply H11 in H6; destruct H6 as [oidx1 [? ?]].
+    clear H11.
+    repeat disc_RqRsMsgFrom.
+
+    eapply atomic_separation_ok in H; try eassumption.
+    destruct H.
+    - destruct H as [cidx [? ?]].
+      destruct (eq_nat_dec cidx cidx0); subst.
+      + apply H4 in H13.
+        destruct Hrrs as [[? _] _].
+        generalize H13.
+        eapply subtreeIndsOf_other_child_not_in; try eassumption.
+        congruence.
+      + apply H4 in H12.
+        destruct Hrrs as [[? _] _].
+        generalize H12.
+        eapply subtreeIndsOf_other_child_not_in; try eassumption.
+        congruence.
+    - specialize (H cidx0).
+      destruct H; [auto|].
+      elim H.
+      destruct Hrrs as [[? _] _].
+      apply subtreeIndsOf_child_in; assumption.
+  Qed.
+
 End Separation.
 
 Section MsgOutCases.
@@ -1005,7 +1074,7 @@ Section MsgOutCases.
 
     assert (Reachable (steps step_m) sys st2) by eauto.
     pose proof (footprints_ok H0 H10).
-    pose proof (nonRqUpL_history_eouts_no_rqUp Hrrs H2 H11 H9 H12).
+    pose proof (nonRqUpL_atomic_msg_outs_no_rqUp Hrrs H2 H11 H9 H12).
     eapply SubList_forall in H15; [|eassumption].
     clear H2 H9 H11 H12.
 
@@ -1017,14 +1086,34 @@ Section MsgOutCases.
       disc_rule_conds.
       elim (H21 (obj_idx obj)).
       do 2 eexists; eauto.
+
     - (** [ImmUpRule] *)
       disc_rule_conds.
       replace (orqs+[obj_idx obj <- norq]) with orqs by meq.
-      repeat ssplit.
-      + admit.
-      + apply MsgOutsInv_app; admit.
-      + admit.
 
+      inv H5;
+        [exfalso;
+         apply SubList_singleton in H4; subst;
+         red in H2; dest;
+         simpl in *; rewrite H2 in H14; discriminate|].
+
+      repeat ssplit.
+      + eapply MsgOutsRqDownRsUp.
+        * apply Forall_app; [apply forall_removeOnce; assumption|].
+          constructor; [|constructor].
+          eexists; right.
+          red; eauto.
+        * rewrite idsOf_app.
+          eapply NoDup_DisjList.
+          { admit. (* easy but tedious *) }
+          { repeat constructor; auto. }
+          { simpl.
+            admit. (* by using up/downlock invariants *)
+          }
+      + admit. (* [MsgOutsInv] *)
+      + red; repeat (simpl; mred).
+        admit.
+        
     - (** [RqFwdRule]; 
        * [RqUpUp] and [RqUpDown] cases are contradictory -- previous [eouts] 
        * cannot have any [RqUp] messages.
