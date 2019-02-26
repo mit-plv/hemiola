@@ -118,15 +118,10 @@ Section RqUpReduction.
     good_rqrs_rule_cases rule.
 
     - exfalso; disc_rule_conds.
-      apply SubList_singleton in H0; inv H0.
-      disc_rule_conds.
     - exfalso; disc_rule_conds.
-      apply SubList_singleton in H0; inv H0.
-      disc_rule_conds.
 
     - disc_rule_conds.
       + (** The only non-"exfalso" case *)
-        apply SubList_singleton in H0; inv H0.
         good_locking_get obj.
         disc_rule_conds.
         repeat split.
@@ -154,10 +149,6 @@ Section RqUpReduction.
         pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H15); auto.
 
     - exfalso; disc_rule_conds.
-      + apply SubList_singleton in H0; inv H0.
-        disc_rule_conds.
-      + apply SubList_singleton in H0; inv H0.
-        disc_rule_conds.
     - exfalso; disc_rule_conds.
       apply SubList_singleton_In in H0.
       eapply RqRsDownMatch_rq_rs in H24; [|apply in_map; eassumption].
@@ -376,7 +367,7 @@ Section RqUpReduction.
             { exfalso.
               good_locking_get upCObj.
               red in H.
-              apply parentIdxOf_not_eq in H15;
+              apply parentIdxOf_not_eq in H12;
                 [|destruct Hrrs as [[? ?] _]; assumption]; mred.
               find_if_inside.
               { destruct H as [rqUp [down [pidx ?]]]; dest.
@@ -452,16 +443,16 @@ Section RqUpReduction.
       good_rqrs_rule_cases rule0.
       + disc_rule_conds.
         destruct (eq_nat_dec cidx0 cidx2);
-          [subst; rewrite H56 in H15; elim n; inv H15; reflexivity|].
+          [subst; rewrite H56 in H9; elim n; inv H9; reflexivity|].
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
         * destruct (eq_nat_dec cidx2 cidx0);
-            [subst; rewrite H9 in H48; elim n; inv H48; reflexivity|].
+            [subst; rewrite H0 in H46; elim n; inv H46; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * destruct (eq_nat_dec cidx1 (obj_idx upCObj));
-            [subst; rewrite H48 in H30; elim n; inv H30; reflexivity|].
+            [subst; rewrite H47 in H15; elim n; inv H15; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.

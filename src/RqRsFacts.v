@@ -884,9 +884,10 @@ Ltac disc_rule_conds_unit_simpl :=
   | [H: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = nil |- _] => clear H
 
+  (* Below cases seem a bit ad-hoc, but appear quite frequently. *)
+  | [H: SubList [_] [_] |- _] => apply SubList_singleton in H; subst
   | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
     rewrite H1 in H2; discriminate
-                                 
   | [H: rqi_msg _ = _ |- _] => rewrite H in *
   | [H: rqi_minds_rss _ = _ |- _] => rewrite H in *
   | [H: rqi_midx_rsb _ = _ |- _] => rewrite H in *
