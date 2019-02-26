@@ -198,9 +198,20 @@ Section Facts.
   Proof.
   Admitted.
 
+  (* Just need to make sure an object is in the tree --
+   * [parentChnsOf] provides enough information. *)
   Lemma parentChnsOf_subtreeIndsOf_self_in:
-    forall oidx,
-      parentChnsOf dtr oidx <> None ->
+    forall cidx,
+      parentChnsOf dtr cidx <> None ->
+      In cidx (subtreeIndsOf dtr cidx).
+  Proof.
+  Admitted.
+
+  (* Just need to make sure an object is in the tree --
+   * [parentIdxOf] provides enough information. *)
+  Lemma parent_subtreeIndsOf_self_in:
+    forall cidx oidx,
+      parentIdxOf dtr cidx = Some oidx ->
       In oidx (subtreeIndsOf dtr oidx).
   Proof.
   Admitted.

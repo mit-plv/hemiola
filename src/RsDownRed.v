@@ -313,11 +313,9 @@ Section RsDownReduction.
       - eapply rsDown_olast_outside_tree; eassumption.
       - constructor.
       - simpl; red; intros; Common.dest_in.
-        apply parentChnsOf_subtreeIndsOf_self_in.
+        apply edgeDownTo_subtreeIndsOf_self_in.
         + apply Hrrs.
-        + destruct Hrsd as [rsDown ?]; dest.
-          unfold edgeDownTo, downEdgesTo in H5.
-          destruct (parentChnsOf dtr e); simpl in H5; discriminate.
+        + destruct Hrsd as [rsDown ?]; dest; congruence.
       - eapply DisjList_SubList.
         + eapply atomic_eouts_in; eassumption.
         + apply DisjList_comm.

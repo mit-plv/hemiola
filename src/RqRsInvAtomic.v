@@ -1011,7 +1011,7 @@ Section MsgOutCases.
     end.
 
   Definition MsgOutsNormInv (orqs: ORqs Msg) (hst: MHistory) (eouts: list (Id Msg)) :=
-    List.length eouts = DownLocksNorm (oindsOf hst) orqs + 1.
+    List.length (idsOf eouts) = DownLocksNorm (oindsOf hst) orqs + 1.
   
   Inductive MsgOutsCases (orqs: ORqs Msg) (hst: MHistory): list (Id Msg) -> Prop :=
   | MsgOutsRsDown: (* Only one live RsDown message *)
@@ -1042,6 +1042,52 @@ Section MsgOutCases.
     try disc_messages_in;
     try disc_msg_case.
 
+  Ltac solve_msg_out_cases_step :=
+    match goal with
+    | [H: edgeDownTo _ _ = Some ?midx
+       |- RqDownMsgOutInv _ (?midx, _) _ \/
+          RsUpMsgOutInv _ (?midx, _) _ _] => left
+    | [H: rsEdgeUpFrom _ _ = Some ?midx
+       |- RqDownMsgOutInv _ (?midx, _) _ \/
+          RsUpMsgOutInv _ (?midx, _) _ _] => right
+    | [ |- RsDownMsgOutInv _ _ _] => split
+    | [ |- RqDownMsgOutInv _ _ _] => split
+    | [ |- RsUpMsgOutInv _ _ _ _] => split
+                                       
+    | [ |- DownLocksCoverInv _ _] => red; intros
+    | [ |- DownLockCoverInv _ _ _] => red; intros
+    | [ |- DownLockRootInv _ _] => red; intros; split
+    | [ |- DownLockInRoot _ _ _] => red; intros
+
+    | [ |- MsgOutsNormInv _ _ _] => red; simpl
+
+    | [ |- RqDownMsgTo _ _] => red; eauto; fail
+    | [ |- RsDownMsgTo _ _] => red; eauto; fail
+    | [ |- RsUpMsgFrom _ _] => red; eauto; fail
+
+    | [ |- HistoryDisjTree _ _] => red; simpl
+    | [ |- NoDownLocks _ _] => simpl; red; intros
+    | [ |- NoDownLock _ _] => red; repeat (mred; simpl); fail
+    | [ |- NoDownLocks2 _ _ _] => simpl; red; intros
+
+    | [H: In _ [_] |- _] => Common.dest_in
+    | [H: In _ (oindsOf [_]) |- _] => Common.dest_in
+    | [ |- DisjList [_] _] => apply (DisjList_singleton_1 eq_nat_dec)
+    | [H: parentIdxOf _ ?cidx = Some ?pidx
+       |- ~ In ?pidx (subtreeIndsOf _ ?cidx)] =>
+      apply parent_not_in_subtree; assumption
+    | [ |- Forall _ _] => repeat constructor
+    | [ |- NoDup _] => clear; simpl; repeat constructor; firstorder; fail
+    | [ |- exists _, _] => eexists
+    | [ |- context [(Some _) >>=[_] (fun _ => _)]] => simpl
+    end.
+
+  Ltac solve_msg_out_cases :=
+    repeat (try solve_msg_out_cases_step; mred).
+
+  Ltac solve_msg_out_cases_bt :=
+    try (solve_msg_out_cases; fail).
+
   Lemma step_msg_outs_ok:
     forall st1 st2 oidx ridx rins routs,
       Reachable (steps step_m) sys st1 ->
@@ -1051,12 +1097,88 @@ Section MsgOutCases.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
     pose proof (footprints_ok H0 H2).
-
     inv_step.
     good_rqrs_rule_get rule.
+    pose proof H; destruct H6 as [? _].
     good_rqrs_rule_cases rule; simpl in *.
 
-  Admitted.
+    - disc_rule_conds.
+      eapply MsgOutsRsDown; solve_msg_out_cases.
+
+    - disc_rule_conds.
+      eapply MsgOutsRqDownRsUp; solve_msg_out_cases.
+      unfold DownLockNorm; mred.
+
+    - disc_rule_conds.
+      + exfalso.
+        pose proof (rqEdgeUpFrom_Some H _ H8).
+        destruct H15 as [rsUp [down [pidx ?]]]; dest.
+        repeat disc_rule_minds.
+        elim (H3 pidx).
+        do 2 eexists; eauto.
+      + eapply MsgOutsRqDownRsUp; solve_msg_out_cases.
+        * destruct H20; assumption.
+        * apply Forall_forall; intros [midx msg] ?.
+          rewrite Forall_forall in H34; specialize (H34 _ H7).
+          apply in_map with (f:= idOf) in H7.
+          eapply RqRsDownMatch_rq_rs in H23; [|eassumption].
+          destruct H23 as [cidx [rsUp ?]]; dest.
+          eexists; left.
+          solve_msg_out_cases.
+        * disc_rule_conds.
+          solve_msg_out_cases.
+        * eapply parent_subtreeIndsOf_self_in;
+            [destruct H; assumption|eassumption].
+        * unfold DownLockNorm; mred; simpl.
+          red in H23; dest.
+          assert (length (idsOf routs) > 0)
+            by (destruct (idsOf routs); simpl; [exfalso; auto|omega]).
+          omega.
+      + eapply MsgOutsRqDownRsUp; solve_msg_out_cases.
+        * destruct H20; assumption.
+        * apply Forall_forall; intros [midx msg] ?.
+          rewrite Forall_forall in H34; specialize (H34 _ H9).
+          apply in_map with (f:= idOf) in H9.
+          eapply RqRsDownMatch_rq_rs in H8; [|eassumption].
+          destruct H8 as [cidx [rsUp ?]]; dest.
+          eexists; left.
+          solve_msg_out_cases.
+        * solve_midx_false.
+        * apply edgeDownTo_subtreeIndsOf_self_in;
+            [destruct H; assumption|congruence].
+        * unfold DownLockNorm; mred; simpl.
+          red in H8; dest.
+          assert (length (idsOf routs) > 0)
+            by (destruct (idsOf routs); simpl; [exfalso; auto|omega]).
+          omega.
+
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      + eapply MsgOutsRsDown; solve_msg_out_cases.
+      + eapply MsgOutsRsDown; solve_msg_out_cases.
+      + eapply MsgOutsRqDownRsUp; solve_msg_out_cases.
+        unfold DownLockNorm; mred.
+
+    - disc_rule_conds.
+      eapply MsgOutsRqDownRsUp; solve_msg_out_cases.
+      + destruct H20; assumption.
+      + apply Forall_forall; intros [midx msg] ?.
+        rewrite Forall_forall in H29; specialize (H29 _ H7).
+        apply in_map with (f:= idOf) in H7.
+        eapply RqRsDownMatch_rq_rs in H23; [|eassumption].
+        destruct H23 as [cidx [rsUp ?]]; dest.
+        eexists; left.
+        solve_msg_out_cases.
+      + disc_rule_conds.
+        solve_msg_out_cases.
+      + apply edgeDownTo_subtreeIndsOf_self_in;
+          [destruct H; assumption|congruence].
+      + unfold DownLockNorm; mred; simpl.
+        red in H23; dest.
+        assert (length (idsOf routs) > 0)
+          by (destruct (idsOf routs); simpl; [exfalso; auto|omega]).
+        omega.
+  Qed.
   
   Lemma atomic_msg_outs_ok:
     forall inits ins hst outs eouts,

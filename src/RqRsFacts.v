@@ -63,6 +63,42 @@ Ltac good_rqUp_rsUp_get rqRule rsRule :=
     specialize (Hr _ _ HrqIn Hrq HrsIn Hrs)
   end.
 
+Lemma rqEdgeUpFrom_subtreeIndsOf_self_in:
+  forall dtr (Hwf: WfDTree dtr) cidx,
+    rqEdgeUpFrom dtr cidx <> None ->
+    In cidx (subtreeIndsOf dtr cidx).
+Proof.
+  intros.
+  apply parentChnsOf_subtreeIndsOf_self_in.
+  - assumption.
+  - unfold rqEdgeUpFrom, upEdgesFrom in H.
+    destruct (parentChnsOf _ _); simpl in *; [discriminate|auto].
+Qed.
+
+Lemma rsEdgeUpFrom_subtreeIndsOf_self_in:
+  forall dtr (Hwf: WfDTree dtr) cidx,
+    rsEdgeUpFrom dtr cidx <> None ->
+    In cidx (subtreeIndsOf dtr cidx).
+Proof.
+  intros.
+  apply parentChnsOf_subtreeIndsOf_self_in.
+  - assumption.
+  - unfold rsEdgeUpFrom, upEdgesFrom in H.
+    destruct (parentChnsOf _ _); simpl in *; [discriminate|auto].
+Qed.
+
+Lemma edgeDownTo_subtreeIndsOf_self_in:
+  forall dtr (Hwf: WfDTree dtr) cidx,
+    edgeDownTo dtr cidx <> None ->
+    In cidx (subtreeIndsOf dtr cidx).
+Proof.
+  intros.
+  apply parentChnsOf_subtreeIndsOf_self_in.
+  - assumption.
+  - unfold edgeDownTo, downEdgesTo in H.
+    destruct (parentChnsOf _ _); simpl in *; [discriminate|auto].
+Qed.
+
 Section RqRsDTree.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
