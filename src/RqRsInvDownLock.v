@@ -1380,6 +1380,86 @@ Section DownLockInv.
   
 End DownLockInv.
 
+Lemma downLockInvORq_down_rqsQ_length_one_locked:
+  forall dtr orqs msgs oidx orq cidx down,
+    DownLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr cidx = Some oidx ->
+    edgeDownTo dtr cidx = Some down ->
+    length (rqsQ msgs down) >= 1 ->
+    exists rqid,
+      orq@[downRq] = Some rqid /\
+      DownLockedInv dtr orqs msgs oidx rqid /\
+      exists rsUp,
+        rsEdgeUpFrom dtr cidx = Some rsUp /\
+        In rsUp rqid.(rqi_minds_rss).
+Proof.
+  intros.
+  red in H; destruct (orq@[downRq]).
+  - exists r; repeat ssplit; auto.
+    specialize (H _ H0).
+    destruct H as [rdown [rsUp ?]]; dest.
+    repeat disc_rule_minds.
+    destruct (in_dec _ _ _); eauto.
+    red in H4; dest.
+    rewrite H1 in H2; simpl in H2; omega.
+  - specialize (H _ H0); dest.
+    repeat disc_rule_minds.
+    red in H4; dest.
+    rewrite H1 in H2; simpl in H2; omega.
+Qed.
+
+Lemma downLockInvORq_rsUp_length_one_locked:
+  forall dtr orqs msgs oidx orq cidx rsUp,
+    DownLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr cidx = Some oidx ->
+    rsEdgeUpFrom dtr cidx = Some rsUp ->
+    length (findQ rsUp msgs) >= 1 ->
+    exists rqid,
+      orq@[downRq] = Some rqid /\
+      DownLockedInv dtr orqs msgs oidx rqid /\
+      In rsUp rqid.(rqi_minds_rss).
+Proof.
+  intros.
+  red in H; destruct (orq@[downRq]).
+  - exists r; repeat ssplit; auto.
+    specialize (H _ H0).
+    destruct H as [down [rrsUp ?]]; dest.
+    repeat disc_rule_minds.
+    destruct (in_dec _ _ _); eauto.
+    red in H4; dest.
+    rewrite H4 in H2; simpl in H2; omega.
+  - specialize (H _ H0); dest.
+    repeat disc_rule_minds.
+    red in H4; dest.
+    rewrite H4 in H2; simpl in H2; omega.
+Qed.
+
+Lemma downLockInvORq_down_rqsQ_rsUp_False:
+  forall dtr orqs msgs oidx orq cidx down rsUp,
+    DownLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr cidx = Some oidx ->
+    edgeDownTo dtr cidx = Some down ->
+    rsEdgeUpFrom dtr cidx = Some rsUp ->
+    length (rqsQ msgs down) >= 1 ->
+    length (findQ rsUp msgs) >= 1 ->
+    False.
+Proof.
+  intros.
+  red in H; destruct (orq@[downRq]).
+  - specialize (H _ H0).
+    destruct H as [rdown [rrsUp ?]]; dest.
+    repeat disc_rule_minds.
+    destruct (in_dec _ _ _).
+    + red in H6; dest.
+      xor3_contra1 H6; omega.
+    + red in H6; dest.
+      rewrite H1 in H3; simpl in H3; omega.
+  - specialize (H _ H0); dest.
+    repeat disc_rule_minds.
+    red in H6; dest.
+    rewrite H1 in H3; simpl in H3; omega.
+Qed.
+
 Lemma downLockInvORq_down_rqsQ_length_two_False:
   forall dtr orqs msgs oidx orq cidx down,
     DownLockInvORq dtr orqs msgs oidx orq ->

@@ -256,21 +256,28 @@ Section Facts.
   Proof.
   Admitted.
 
-  Lemma inside_parent_out:
-    forall cidx pidx oidx poidx,
+  Lemma inside_child_in:
+    forall cidx pidx oidx,
       parentIdxOf dtr cidx = Some pidx ->
-      In oidx (subtreeIndsOf dtr cidx) ->
-      parentIdxOf dtr oidx = Some poidx ->
-      In poidx (pidx :: subtreeIndsOf dtr cidx).
+      In pidx (subtreeIndsOf dtr oidx) ->
+      In cidx (subtreeIndsOf dtr oidx).
   Proof.
   Admitted.
-  
-  Lemma inside_child_in:
-    forall cidx pidx oidx coidx,
+
+  Lemma inside_parent_in:
+    forall cidx pidx oidx,
       parentIdxOf dtr cidx = Some pidx ->
-      In oidx (subtreeIndsOf dtr cidx) ->
-      parentIdxOf dtr coidx = Some oidx ->
-      In coidx (subtreeIndsOf dtr cidx).
+      In cidx (subtreeIndsOf dtr oidx) ->
+      cidx <> oidx ->
+      In pidx (subtreeIndsOf dtr oidx).
+  Proof.
+  Admitted.
+
+  Lemma outside_child_in:
+    forall oidx cidx pidx,
+      ~ In pidx (subtreeIndsOf dtr oidx) ->
+      parentIdxOf dtr cidx = Some pidx ->
+      cidx = oidx \/ ~ In cidx (subtreeIndsOf dtr oidx).
   Proof.
   Admitted.
 
@@ -282,11 +289,24 @@ Section Facts.
   Proof.
   Admitted.
 
-  Lemma outside_child_in:
-    forall oidx cidx pidx,
-      ~ In pidx (subtreeIndsOf dtr oidx) ->
+  Lemma inside_child_outside_parent_case:
+    forall cidx pidx oidx,
       parentIdxOf dtr cidx = Some pidx ->
-      cidx = oidx \/ ~ In cidx (subtreeIndsOf dtr oidx).
+      In cidx (subtreeIndsOf dtr oidx) ->
+      ~ In pidx (subtreeIndsOf dtr oidx) ->
+      cidx = oidx.
+  Proof.
+    intros.
+    destruct (eq_nat_dec cidx oidx); auto.
+    eapply inside_parent_in in H; try eassumption.
+    exfalso; auto.
+  Qed.
+
+  Lemma subtreeIndsOf_In_each_other_eq:
+    forall oidx1 oidx2,
+      In oidx1 (subtreeIndsOf dtr oidx2) ->
+      In oidx2 (subtreeIndsOf dtr oidx1) ->
+      oidx1 = oidx2.
   Proof.
   Admitted.
 

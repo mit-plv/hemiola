@@ -741,6 +741,47 @@ Section Removal.
 
 End Removal.
 
+Lemma removeOnce_idsOf_In:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il iv i,
+    In i (idsOf (removeOnce (id_dec eq_dec) iv il)) ->
+    In i (idsOf il).
+Proof.
+  induction il; simpl; intros; auto.
+  destruct (id_dec eq_dec iv a); subst; auto.
+  simpl in H; destruct H; subst; eauto.
+Qed.
+
+Lemma removeL_idsOf_In:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il2 il1 i,
+    In i (idsOf (removeL (id_dec eq_dec) il1 il2)) ->
+    In i (idsOf il1).
+Proof.
+  induction il2; simpl; intros; auto.
+  eapply removeOnce_idsOf_In; eauto.
+Qed.
+
+Lemma removeOnce_idsOf_NoDup:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il iv,
+    NoDup (idsOf il) ->
+    NoDup (idsOf (removeOnce (id_dec eq_dec) iv il)).
+Proof.
+  induction il; simpl; intros; auto.
+  inv H.
+  destruct (id_dec eq_dec iv a); subst; auto.
+  simpl; constructor; eauto.
+  intro Hx; elim H2.
+  eapply removeOnce_idsOf_In; eauto.
+Qed.
+
+Lemma removeL_idsOf_NoDup:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il2 il1,
+    NoDup (idsOf il1) ->
+    NoDup (idsOf (removeL (id_dec eq_dec) il1 il2)).
+Proof.
+  induction il2; simpl; intros; auto.
+  eapply IHil2, removeOnce_idsOf_NoDup; eauto.
+Qed.
+
 Section SSubList.
   Context {A: Type}.
 
@@ -1179,6 +1220,24 @@ Lemma valsOf_NoDup:
 Proof.
   unfold valsOf; intros.
   eapply NoDup_map_inv; eauto.
+Qed.
+
+Lemma idsOf_NoDup_In_value_eq:
+  forall {A} (ias: list (Id A)) i a1 a2,
+    NoDup (idsOf ias) ->
+    In (i, a1) ias -> In (i, a2) ias ->
+    a1 = a2.
+Proof.
+  induction ias as [|[i a] ias]; simpl; intros; [exfalso; auto|].
+  inv H.
+  destruct H0.
+  - inv H.
+    destruct H1.
+    + inv H; reflexivity.
+    + elim H4; apply in_map_iff; exists (i0, a2); auto.
+  - destruct H1.
+    + inv H0; elim H4; apply in_map_iff; exists (i0, a1); auto.
+    + eapply IHias; eauto.
 Qed.
 
 Lemma idsOf_DisjList:
