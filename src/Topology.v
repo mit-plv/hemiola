@@ -310,6 +310,23 @@ Section Facts.
   Proof.
   Admitted.
 
+  Lemma subtreeIndsOf_SubList:
+    forall oidx1 oidx2,
+      In oidx1 (subtreeIndsOf dtr oidx2) ->
+      SubList (subtreeIndsOf dtr oidx1) (subtreeIndsOf dtr oidx2).
+  Proof.
+  Admitted.
+
+  Lemma subtreeIndsOf_child_SubList:
+    forall cidx pidx,
+      parentIdxOf dtr cidx = Some pidx ->
+      SubList (subtreeIndsOf dtr cidx) (subtreeIndsOf dtr pidx).
+  Proof.
+    intros.
+    apply subtreeIndsOf_SubList.
+    apply subtreeIndsOf_child_in; assumption.
+  Qed.
+
 End Facts.
 
 Close Scope list.

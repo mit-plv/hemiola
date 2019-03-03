@@ -1227,6 +1227,45 @@ Section MsgOutCases.
   Ltac solve_msg_out_cases_bt :=
     try (solve_msg_out_cases; fail).
 
+  Lemma downLocksNorm_orqs_add:
+    forall oinds orqs ooidx orq,
+      ~ In ooidx oinds ->
+      DownLocksNorm oinds (orqs +[ooidx <- orq]) =
+      DownLocksNorm oinds orqs.
+  Proof.
+    induction oinds as [|oidx oinds]; simpl; intros; [reflexivity|].
+    mred.
+    destruct (in_dec eq_nat_dec ooidx oinds); [exfalso; auto|].
+    rewrite IHoinds by assumption.
+    reflexivity.
+  Qed.
+
+  Lemma downLocksNorm_NoDownLocks_zero:
+    forall oinds orqs,
+      NoDownLocks oinds orqs ->
+      DownLocksNorm oinds orqs = 0.
+  Proof.
+    induction oinds as [|oidx oinds]; simpl; intros; [reflexivity|].
+    pose proof (H _ (or_introl eq_refl)).
+    assert (NoDownLocks oinds orqs).
+    { red; intros.
+      eapply H; right; assumption.
+    }
+    red in H0.
+    destruct (orqs@[oidx]); simpl in *; auto.
+    unfold DownLockNorm; rewrite H0; simpl; auto.
+  Qed.
+  
+  Lemma msgOutsCases_NoDup:
+    forall orqs hst eouts,
+      MsgOutsCases orqs hst eouts ->
+      NoDup (idsOf eouts).
+  Proof.
+    intros; inv H.
+    - repeat constructor; auto.
+    - assumption.
+  Qed.
+  
   Lemma step_msg_outs_ok:
     forall st1 st2 oidx ridx rins routs,
       Reachable (steps step_m) sys st1 ->
@@ -1323,11 +1362,13 @@ Section MsgOutCases.
   Qed.
 
   Ltac inv_MsgOutsCases :=
+    match goal with
+    | [H: MsgOutsCases _ _ _ |- _] => inv H
+    end;
     repeat
       match goal with
       | [H: SubList [_] _ |- _] => apply SubList_singleton_In in H
       | [H: In _ [_] |- _] => Common.dest_in
-      | [H: MsgOutsCases _ _ _ |- _] => inv H
       | [H1: In _ ?eouts, H2: Forall _ ?eouts |- _] =>
         rewrite Forall_forall in H2;
         let oidx := fresh "oidx" in pose proof (H2 _ H1) as [oidx ?]
@@ -1339,6 +1380,27 @@ Section MsgOutCases.
       | [H: RqDownMsgTo _ _ |- _] => disc_rule_conds; solve_midx_false; fail
       | [H: RsUpMsgFrom _ _ |- _] => disc_rule_conds; solve_midx_false; fail
       end.
+
+  Lemma rqDown_rsUp_inv_msg:
+    forall orqs hst eouts,
+      Forall (fun eout =>
+                exists oidx,
+                  RqDownMsgOutInv oidx eout hst \/
+                  RsUpMsgOutInv oidx eout orqs hst) eouts ->
+      Forall (fun eout =>
+                exists oidx,
+                  RqDownMsgTo oidx eout \/
+                  RsUpMsgFrom oidx eout) eouts.
+  Proof.
+    induction eouts; simpl; intros; [constructor|].
+    inv H.
+    constructor; auto.
+    destruct H2 as [oidx ?].
+    exists oidx.
+    destruct H.
+    - left; apply H.
+    - right; apply H.
+  Qed.
 
   Lemma rqDownMsgOutInv_no_rqDown:
     forall inits ins hst outs eouts,
@@ -1542,7 +1604,659 @@ Section MsgOutCases.
         eapply subtreeIndsOf_In_each_other_eq;
           try eapply Hrrs; assumption.
   Qed.
+
+  Lemma step_rqDown_rsUp_NoDup:
+    forall st1 oidx ridx rins routs st2,
+      Reachable (steps step_m) sys st1 ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      forall eouts,
+        Forall (fun eout =>
+                  exists oidx,
+                    RqDownMsgTo oidx eout \/
+                    RsUpMsgFrom oidx eout) eouts ->
+        Forall (InMPI (bst_msgs st1)) eouts ->
+        NoDup (idsOf eouts) ->
+        Forall (fun rout =>
+                  exists oidx,
+                    RqDownMsgTo oidx rout \/
+                    RsUpMsgFrom oidx rout) routs ->
+        NoDup (idsOf (removeL (id_dec msg_dec) eouts rins ++ routs)).
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    rewrite idsOf_app.
+    apply NoDup_DisjList;
+      [apply removeL_idsOf_NoDup; assumption
+      |inv_step; apply H22|].
+
+    apply (DisjList_false_spec eq_nat_dec).
+    intros midx ? ?.
+    apply removeL_idsOf_In in H8.
+    apply in_map_iff in H8; destruct H8 as [[midx1 msg1] [? ?]].
+    apply in_map_iff in H9; destruct H9 as [[midx2 msg2] [? ?]].
+    simpl in *; subst.
+    rewrite Forall_forall in H4; specialize (H4 _ H10).
+    destruct H4 as [oidx1 ?].
+    rewrite Forall_forall in H7; specialize (H7 _ H11).
+    destruct H7 as [oidx2 ?].
     
+    pose proof (reachable_steps H2 (steps_singleton H3)).
+    pose proof (downLockInv_ok H0 H H8).
+
+    destruct H4, H7; try (disc_rule_conds; solve_midx_false; fail).
+    - (* Two RqDown messages in the same channel *)
+      admit.
+    - (* Two RsUp messages in the same channel *)
+      admit.
+
+  Admitted.
+
+  Section InternalStep.
+
+    Variables (st0: MState oifc)
+              (inits ins: list (Id Msg)) (hst: MHistory) (outs eouts: list (Id Msg))
+              (oss: OStates oifc) (orqs: ORqs Msg) (msgs: MessagePool Msg)
+              (obj: Object oifc) (rule: Rule oifc)
+              (post: OState oifc) (porq: ORq Msg) (rins: list (Id Msg))
+              (nost: OState oifc) (norq: ORq Msg) (routs: list (Id Msg)).
+
+    Hypotheses
+      (Hatm: Atomic msg_dec inits ins hst outs eouts)
+      (Hrch: Reachable (steps step_m) sys st0)
+      (Hsteps: steps step_m sys st0 hst {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+      (Hrins: rins <> nil)
+      (Hosub: SubList rins eouts)
+      (Hmoc: MsgOutsCases orqs hst eouts)
+      (* (Hnruh: Forall (NonRqUpL dtr) hst) *)
+      (* (Hnrul: NonRqUpL dtr (RlblInt (obj_idx obj) (rule_idx rule) rins routs)) *)
+      (Hnrul: Forall (fun eout : Id Msg =>
+                        forall oidxTo, ~ RqUpMsgs dtr oidxTo [eout]) rins)
+      (Hftinv: FootprintsOk dtr sys {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+      (Hdlinv: DownLockInv dtr sys {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+      (Hnodup:
+         Forall (fun eout =>
+                   exists oidx,
+                     RqDownMsgTo oidx eout \/
+                     RsUpMsgFrom oidx eout) eouts ->
+         Forall (fun rout =>
+                   exists oidx,
+                     RqDownMsgTo oidx rout \/
+                     RsUpMsgFrom oidx rout) routs ->
+         NoDup (idsOf (removeL (id_dec msg_dec) eouts rins ++ routs))).
+
+    Hypotheses
+      (HobjIn: In obj (sys_objs sys))
+      (HruleIn: In rule (obj_rules obj))
+      (Hporq: orqs@[obj_idx obj] = Some porq)
+      (Hpost: oss@[obj_idx obj] = Some post)
+      (HminsF: Forall (FirstMPI msgs) rins)
+      (HminsV: ValidMsgsIn sys rins)
+      (Hprec: rule_precond rule post porq rins)
+      (Htrs: rule_trs rule post porq rins = (nost, norq, routs))
+      (HmoutsV: ValidMsgsOut sys routs)
+      (Hmdisj: DisjList (idsOf rins) (idsOf routs)).
+
+    Lemma step_msg_outs_ok_ImmDownRule:
+      ImmDownRule dtr (obj_idx obj) rule ->
+      MsgOutsCases (orqs +[obj_idx obj <- norq])
+                   (RlblInt (obj_idx obj) (rule_idx rule) rins routs :: hst)
+                   (removeL (id_dec msg_dec) eouts rins ++ routs).
+    Proof.
+      intros.
+      disc_rule_conds.
+      elim (H9 (obj_idx obj)).
+      do 2 eexists; eauto.
+    Qed.
+
+    Lemma step_msg_outs_ok_ImmUpRule:
+      ImmUpRule dtr (obj_idx obj) rule ->
+      MsgOutsCases (orqs +[obj_idx obj <- norq])
+                   (RlblInt (obj_idx obj) (rule_idx rule) rins routs :: hst)
+                   (removeL (id_dec msg_dec) eouts rins ++ routs).
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      disc_rule_conds.
+      replace (orqs+[obj_idx obj <- norq]) with orqs by meq.
+
+      inv_MsgOutsCases.
+
+      pose proof (edgeDownTo_Some H _ H11).
+      destruct H15 as [rqUp [rsUp [pidx ?]]]; dest.
+      disc_rule_conds.
+      assert (In rqFrom (idsOf eouts))
+        by (apply in_map_iff; exists (rqFrom, rqm); auto).
+      pose proof (atomic_down_out_in_history
+                    Hrrs Hatm Hrch Hsteps _ H11 H18 H16); clear H16.
+
+      eapply MsgOutsRqDownRsUp.
+      - eapply Hnodup.
+        + eapply rqDown_rsUp_inv_msg.
+          rewrite Forall_forall; eassumption.
+        + repeat constructor.
+          exists (obj_idx obj); right.
+          red; auto.
+
+      - (* Invariant for each message *)
+        apply Forall_app.
+        + (* For the others except (rqFrom, rqm) *)
+          apply Forall_forall.
+          intros [midx msg] ?.
+          apply removeOnce_In_NoDup in H16;
+            [|apply idsOf_NoDup; assumption]; dest.
+
+          pose proof (H3 _ H20).
+          destruct H21 as [oidx ?].
+          destruct H21.
+          * (* RqDown *)
+            exists oidx; left.
+            destruct H21.
+            split; [assumption|].
+            red in H22.
+            red; simpl.
+            apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+
+            eapply rqDownMsgOutInv_no_rqDown
+              with (oidx := oidx) (rqdm := (midx, msg))
+                   (ooidx := obj_idx obj) (orqdm := (rqFrom, rqm));
+              try eassumption.
+            { split; assumption. }
+            { split; assumption. }
+            { congruence. }
+          * (* RsUp *)
+            exists oidx; right.
+            destruct H21.
+            split; [assumption|].
+            red; simpl; intros.
+            destruct H23; [subst|auto].
+            red; mred.
+          
+        + (* For the new output *)
+          repeat constructor.
+          exists (obj_idx obj); right.
+          split; [red; auto|].
+          red; simpl; intros.
+          destruct H16.
+          * subst; red; mred.
+          * specialize (H14 oidx); destruct H14; exfalso; auto.
+          
+      - red; simpl; intros.
+        destruct H16; [subst; mred|].
+        red; intros.
+        red; simpl.
+        apply (DisjList_cons_inv eq_nat_dec);
+          [eapply H5; eauto|].
+
+        intro Hx.
+        specialize (H5 _ _ _ H16 H20 H21 _ _ H22 H23 H24).
+        red in H5.
+        eapply DisjList_In_2 in H19; [|eapply H5].
+        eapply inside_child_outside_parent_case in Hx;
+          try eassumption; try apply Hrrs; subst.
+
+        pose proof (steps_object_in_system Hsteps _ H16).
+        destruct H25 as [dobj [? ?]]; subst.
+        good_locking_get dobj; mred.
+        red in H26; mred.
+
+        disc_rule_conds.
+        specialize (H26 _ H18).
+        destruct H26 as [down [rsUp ?]]; dest.
+        disc_rule_conds.
+        destruct (in_dec eq_nat_dec rsUp _); [auto|].
+        red in H26; dest.
+        eapply rqsQ_length_zero_False; eauto.
+        
+      - red; simpl; intros.
+        destruct H16; [subst; mred|].
+        pose proof (H8 _ _ _ _ _ H16 H20 H21 H22 H23 H24); dest.
+        repeat ssplit; [assumption| |].
+        + red in H27.
+          red; simpl.
+          apply (DisjList_cons_inv eq_nat_dec); [auto|].
+          intro Hx.
+          eapply DisjList_In_2 in H19; [|eassumption].
+          eapply inside_child_outside_parent_case in Hx;
+            try eassumption; try apply Hrrs; subst.
+          disc_rule_conds.
+
+          pose proof (steps_object_in_system Hsteps _ H16).
+          destruct H22 as [robj [? ?]]; subst.
+          good_locking_get robj; mred.
+          red in H23; mred.
+          specialize (H23 _ H18).
+          destruct H23 as [down [rsUp' ?]]; dest.
+          disc_rule_conds.
+          destruct (in_dec eq_nat_dec rsUp' _); [auto|].
+          red in H28; dest.
+          eapply rqsQ_length_zero_False; eauto.
+        + red; simpl; intros.
+          destruct H28; [subst|eauto].
+          mred.
+
+      - red; repeat (simpl; mred).
+        rewrite idsOf_app; simpl.
+        rewrite app_length; simpl.
+        unfold idsOf; rewrite map_length.
+        pose proof (removeOnce_length (id_dec msg_dec) _ _ Hosub); dest.
+        unfold Id in *; rewrite H20.
+        unfold DownLockNorm; repeat (simpl; mred).
+        red in H10.
+        unfold idsOf in H10; rewrite map_length in H10.
+        omega.
+    Qed.
+
+    Lemma step_msg_outs_ok_RqFwdRule:
+      RqFwdRule dtr sys (obj_idx obj) rule ->
+      MsgOutsCases (orqs +[obj_idx obj <- norq])
+                   (RlblInt (obj_idx obj) (rule_idx rule) rins routs :: hst)
+                   (removeL (id_dec msg_dec) eouts rins ++ routs).
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      disc_rule_conds.
+      { elim (H19 (obj_idx obj)); do 2 eexists; eauto. }
+      { elim (H17 (obj_idx obj)); do 2 eexists; eauto. }
+
+      inv_MsgOutsCases.
+      pose proof (edgeDownTo_Some H _ H2).
+      destruct H19 as [rqUp [rsUp [pidx ?]]]; dest.
+      disc_rule_conds.
+      assert (In rqFrom (idsOf eouts))
+        by (apply in_map_iff; exists (rqFrom, rqi_msg rqi); auto).
+      pose proof (atomic_down_out_in_history
+                    Hrrs Hatm Hrch Hsteps _ H2 H22 H21); clear H21.
+
+      eapply MsgOutsRqDownRsUp.
+      - eapply Hnodup.
+        + eapply rqDown_rsUp_inv_msg.
+          rewrite Forall_forall; eassumption.
+        + apply Forall_forall.
+          intros [rqDown rqm] ?.
+          rewrite Forall_forall in H20; specialize (H20 _ H21).
+          apply in_map with (f:= idOf) in H21; simpl in H21.
+          eapply RqRsDownMatch_rq_rs in H4; [|eassumption].
+          destruct H4 as [cidx [rsUp ?]]; dest.
+          exists cidx; left.
+          red; auto.
+
+      - apply Forall_app.
+        + apply Forall_forall.
+          intros [midx msg] ?.
+          apply removeOnce_In_NoDup in H21;
+            [|apply idsOf_NoDup; assumption]; dest.
+
+          pose proof (H7 _ H24).
+          destruct H25 as [oidx ?].
+          destruct H25.
+          * (* RqDown *)
+            exists oidx; left.
+            destruct H25.
+            split; [assumption|].
+            red in H26.
+            red; simpl.
+            apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+
+            eapply rqDownMsgOutInv_no_rqDown
+              with (oidx := oidx) (rqdm := (midx, msg))
+                   (ooidx := obj_idx obj) (orqdm := (rqFrom, rqi_msg rqi));
+              try eassumption.
+            { split; assumption. }
+            { split; assumption. }
+            { congruence. }
+          * (* RsUp *)
+            exists oidx; right.
+            destruct H25.
+            split; [assumption|].
+
+            red; simpl; intros.
+            destruct (eq_nat_dec (obj_idx obj) oidx0).
+            { subst; exfalso.
+              eapply rsUpMsgOutInv_no_rqDown
+                with (oidx := oidx) (rsum := (midx, msg))
+                     (ooidx := obj_idx obj) (orqdm := (rqFrom, rqi_msg rqi));
+                try eassumption.
+              { split; assumption. }
+              { split; assumption. }
+            }
+            { destruct H27; [exfalso; auto|].
+              specialize (H26 _ H27 H28).
+              red; mred.
+            }
+
+        + apply Forall_forall.
+          intros [rqTo rqm] ?.
+          assert (In rqTo (idsOf routs))
+            by (apply in_map_iff; exists (rqTo, rqm); auto).
+          eapply RqRsDownMatch_rq_rs in H4; [|eassumption].
+          destruct H4 as [cidx [rsUp ?]]; dest.
+          rewrite Forall_forall in H20.
+          pose proof (H20 _ H21); simpl in H29.
+          exists cidx; left.
+          split; [red; auto|].
+          red in H18; red; simpl.
+          apply (DisjList_cons_inv eq_nat_dec).
+          { apply DisjList_comm in H18.
+            eapply DisjList_comm, DisjList_SubList;
+              [|eassumption].
+            eapply subtreeIndsOf_child_SubList;
+              [apply Hrrs|assumption].
+          }
+          { apply parent_not_in_subtree; [apply Hrrs|auto]. }
+
+      - red; simpl; intros.
+        destruct (eq_nat_dec (obj_idx obj) oidx).
+        + subst; mred.
+          red; intros.
+          red in H18; red; simpl.
+          apply (DisjList_cons_inv eq_nat_dec).
+          * eapply DisjList_comm in H18.
+            eapply DisjList_comm, DisjList_SubList; [|eassumption].
+            apply subtreeIndsOf_child_SubList;
+              [apply Hrrs|assumption].
+          * eapply parent_not_in_subtree; [apply Hrrs|auto].
+        + destruct H21; [exfalso; auto|].
+          mred; specialize (H11 _ _ _ H21 H24 H25).
+          red; intros.
+          specialize (H11 _ _ H26 H27 H28).
+          red in H11.
+          red; simpl; intros.
+          apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+          eapply DisjList_In_2 in H23; [|eapply H11].
+          eapply outside_child_in in H23; try apply Hrrs; [|eassumption].
+          destruct H23; [subst; exfalso|assumption].
+          pose proof (steps_object_in_system Hsteps _ H21).
+          destruct H23 as [oobj [? ?]]; subst.
+          good_locking_get oobj.
+          red in H29; mred.
+
+          disc_rule_conds.
+          specialize (H29 _ H22).
+          destruct H29 as [down [rsUp ?]]; dest.
+          disc_rule_conds.
+          destruct (in_dec eq_nat_dec (rqi_midx_rsb rqi) _); [auto|].
+          red in H29; dest.
+          eapply rqsQ_length_zero_False; eauto.
+          
+      - red; simpl; intros.
+        destruct (eq_nat_dec (obj_idx obj) roidx);
+          [subst; exfalso; mred; solve_midx_false|].
+        destruct H21; [exfalso; auto|].
+        mred.
+        specialize (H13 _ _ _ _ _ H21 H24 H25 H26 H27 H28); dest.
+        repeat ssplit; [assumption| |].
+        + red in H29.
+          red; simpl.
+          apply (DisjList_cons_inv eq_nat_dec); [auto|].
+          intro Hx.
+          eapply DisjList_In_2 in H23; [|apply H29].
+          eapply inside_child_outside_parent_case in Hx;
+            try eassumption; try apply Hrrs; subst.
+          disc_rule_conds.
+
+          pose proof (steps_object_in_system Hsteps _ H21).
+          destruct H26 as [robj [? ?]]; subst.
+          good_locking_get robj; mred.
+          red in H27; mred.
+          specialize (H27 _ H22).
+          destruct H27 as [down [rsUp ?]]; dest.
+          disc_rule_conds.
+          destruct (in_dec eq_nat_dec (rqi_midx_rsb rqi) _); [auto|].
+          red in H31; dest.
+          eapply rqsQ_length_zero_False; eauto.
+        + red; simpl; intros.
+          destruct (eq_nat_dec (obj_idx obj) sidx).
+          * subst; clear H31; mred.
+            admit.
+          * destruct H31; [exfalso; auto|].
+            mred; eauto.
+        
+      - red; repeat (simpl; mred).
+        rewrite idsOf_app; simpl.
+        rewrite app_length; simpl.
+        unfold idsOf; rewrite map_length.
+        pose proof (removeOnce_length (id_dec msg_dec) _ _ Hosub); dest.
+        unfold Id in *; rewrite H24.
+        unfold DownLockNorm; repeat (simpl; mred).
+
+        red in H4; dest; rewrite <-H25.
+        rewrite downLocksNorm_orqs_add.
+        + assert (length (idsOf routs) > 0)
+            by (destruct (idsOf routs); [exfalso; auto|simpl; omega]).
+          red in H15.
+          unfold idsOf in H15; rewrite map_length in H15.
+          rewrite H15.
+          unfold idsOf in *.
+          omega.
+        + specialize (H7 _ Hosub).
+          destruct H7 as [oidx ?].
+          destruct H7; [|destruct H7; disc_rule_conds].
+          destruct H7; disc_rule_conds.
+          red in H18.
+          eapply DisjList_In_1.
+          * eassumption.
+          * apply rsEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
+
+    Admitted.
+
+    Lemma step_msg_outs_ok_RsBackRule:
+      RsBackRule rule ->
+      MsgOutsCases (orqs +[obj_idx obj <- norq])
+                   (RlblInt (obj_idx obj) (rule_idx rule) rins routs :: hst)
+                   (removeL (id_dec msg_dec) eouts rins ++ routs).
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      - (** [RsDownDown] *)
+        inv_MsgOutsCases.
+        disc_rule_conds.
+        destruct (id_dec msg_dec i i) as [_|]; [simpl|exfalso; auto].
+
+        eapply MsgOutsRsDown.
+        + split; [red; simpl; eauto|].
+          red; simpl.
+          apply (DisjList_cons_inv eq_nat_dec).
+          * red in H16; apply DisjList_comm in H16.
+            eapply DisjList_comm, DisjList_SubList; [|eassumption].
+            apply subtreeIndsOf_child_SubList; [apply Hrrs|assumption].
+          * apply parent_not_in_subtree; [apply Hrrs|assumption].
+        + red; simpl; intros.
+          destruct H18; subst.
+          * red; repeat (simpl; mred).
+          * specialize (H15 _ H18).
+            red in H15; red.
+            repeat (simpl; mred).
+
+      - (** [RsUpDown] *)
+        inv_MsgOutsCases.
+        + exfalso.
+          eapply SubList_singleton_NoDup in Hosub;
+            [|apply idsOf_NoDup, HminsV].
+          destruct Hosub; [exfalso; auto|subst].
+          rewrite <-H17 in H10.
+          eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+          destruct H10 as [cidx [down ?]]; dest.
+          disc_rule_conds.
+          solve_midx_false.
+
+        + assert (eouts = rins); subst.
+          { admit. }
+          rewrite removeL_nil; simpl.
+
+          pose proof (edgeDownTo_Some H _ H9).
+          destruct H18 as [rqUp [rsUp [pidx ?]]]; dest.
+          disc_rule_conds.
+          rewrite Forall_forall in H11.
+
+          (* Different proofs whether the object is part of the history or not *)
+          destruct (in_dec eq_nat_dec (obj_idx obj) (oindsOf hst)).
+          * (* If the object is in the history, we can use 1) [DownLockRootInv]
+             * to say all downlocks are in the tree of the object and 2) the RsUp
+             * invariants to say there are no downlocks in the tree.
+             *)
+            specialize (H15 _ _ _ _ _ i Hporq H14 H5 H9 H19); dest.
+            eapply MsgOutsRsDown.
+            { split; [red; eauto|].
+              red; simpl.
+              apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+              apply parent_not_in_subtree; [apply Hrrs|assumption].
+            }
+            { simpl; red; simpl; intros.
+              destruct (eq_nat_dec (obj_idx obj) oidx);
+                [subst; red; repeat (simpl; mred)|].
+              destruct H21; [exfalso; auto|].
+              red; mred.
+              remember (orqs@[oidx]) as orq;
+                destruct orq as [orq|]; simpl; [|auto].
+              remember (orq@[downRq]) as rqid;
+                destruct rqid as [rqid|]; [|reflexivity].
+              exfalso.
+              red in H20.
+              apply eq_sym in Heqorq; apply eq_sym in Heqrqid.
+              specialize (H20 _ _ _ H21 Heqorq Heqrqid).
+              apply subtreeIndsOf_composed in H20; [|apply Hrrs].
+              destruct H20; [auto|].
+              destruct H20 as [cidx [? ?]].
+              pose proof (parentIdxOf_Some H _ H20).
+              destruct H23 as [crqUp [crsUp [down ?]]]; dest.
+              destruct (in_dec eq_nat_dec crsUp (rqi_minds_rss rqi)).
+              { (* If a child is in RsUp messages we can use the RsUp invariant. *)
+                eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
+                destruct H10 as [rcidx [rdown ?]]; dest.
+                disc_rule_conds.
+                rewrite <-H17 in i0.
+                apply in_map_iff in i0.
+                destruct i0 as [[crsUp' crsm] [? ?]]; simpl in *; subst.
+                specialize (H11 _ H27).
+                destruct H11 as [cidx ?].
+                destruct H11; [destruct H11; disc_rule_conds; solve_midx_false|].
+                destruct H11; disc_rule_conds.
+                specialize (H26 _ H21 H22).
+                red in H26; mred.
+              }
+              { (* If not we can use [DownLocksCoverInv] to say that actually 
+                 * the object (not the child) is in the history. *)
+                specialize (H13 _ _ _ i Hporq H14).
+                specialize (H13 _ _ H20 H24 n0).
+                specialize (H13 oidx); destruct H13; auto.
+              }
+            }
+
+          * (* If the object is NOT in the history, it's more tricky to prove.
+             * We first have to show [rins] is just a single RsUp message and
+             * the history belongs to the RsUp tree.
+             * (cf. [atomic_non_visiting_rsUps_one])
+             * Still the RsUp invariant holds and it directly implies there are
+             * no downlocks through the history.
+             *)
+            admit.
+
+      - (** [RsUpUp] *)
+        admit.
+
+    Admitted.
+    
+    Lemma step_msg_outs_ok_RsDownRqDownRule:
+      RsDownRqDownRule dtr sys (obj_idx obj) rule ->
+      MsgOutsCases (orqs +[obj_idx obj <- norq])
+                   (RlblInt (obj_idx obj) (rule_idx rule) rins routs :: hst)
+                   (removeL (id_dec msg_dec) eouts rins ++ routs).
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      disc_rule_conds.
+      inv_MsgOutsCases.
+
+      pose proof (removeL_nil (id_dec msg_dec) [(rsFrom, rsm)]).
+      unfold removeL in H14; unfold Id in *; rewrite H14; clear H14.
+      simpl; disc_rule_conds.
+
+      eapply MsgOutsRqDownRsUp.
+      - apply HmoutsV.
+      - apply Forall_forall.
+        intros [rqTo rqm] ?.
+        assert (In rqTo (idsOf routs))
+          by (apply in_map_iff; exists (rqTo, rqm); auto).
+        eapply RqRsDownMatch_rq_rs in H11; [|eassumption].
+        destruct H11 as [cidx [rsUp ?]]; dest.
+        rewrite Forall_forall in H15.
+        pose proof (H15 _ H14); simpl in H24.
+        disc_rule_conds.
+        exists cidx; left.
+        split; [red; auto|].
+        red in H13; red; simpl.
+        apply (DisjList_cons_inv eq_nat_dec).
+        + apply DisjList_comm in H13.
+          eapply DisjList_comm, DisjList_SubList;
+            [|eassumption].
+          eapply subtreeIndsOf_child_SubList;
+            [apply Hrrs|assumption].
+        + apply parent_not_in_subtree; [apply Hrrs|auto].
+
+      - red; simpl; intros.
+        destruct (eq_nat_dec (obj_idx obj) oidx).
+        + subst; clear H14.
+          disc_rule_conds.
+          red; intros.
+          red in H13; red; simpl.
+          apply (DisjList_cons_inv eq_nat_dec).
+          * apply DisjList_comm in H13.
+            eapply DisjList_comm, DisjList_SubList; [|eassumption].
+            apply subtreeIndsOf_child_SubList; [apply Hrrs|assumption].
+          * apply parent_not_in_subtree; [apply Hrrs|assumption].
+        + destruct H14; [exfalso; auto|].
+          disc_rule_conds.
+          exfalso.
+          specialize (H12 _ H14).
+          red in H12; mred.
+
+      - red; simpl; intros.
+        destruct (eq_nat_dec (obj_idx obj) roidx).
+        + subst; clear H14.
+          disc_rule_conds.
+          repeat split.
+          * intro Hx.
+            eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+            destruct H11 as [cidx [down ?]]; dest.
+            disc_rule_conds; auto.
+          * red; simpl.
+            apply (DisjList_cons_inv eq_nat_dec).
+            { apply DisjList_comm in H13.
+              eapply DisjList_comm, DisjList_SubList; [|eassumption].
+              apply subtreeIndsOf_child_SubList; [apply Hrrs|assumption].
+            }
+            { apply parent_not_in_subtree; [apply Hrrs|assumption]. }
+          * red; simpl; intros.
+            destruct (eq_nat_dec (obj_idx obj) sidx).
+            { subst; clear H14.
+              disc_rule_conds.
+              apply edgeDownTo_subtreeIndsOf_self_in; [apply Hrrs|congruence].
+            }
+            { destruct H14; [exfalso; auto|].
+              disc_rule_conds.
+              exfalso.
+              specialize (H12 _ H14).
+              red in H12; mred.
+            }
+        + destruct H14; [exfalso; auto|].
+          disc_rule_conds.
+          exfalso.
+          specialize (H12 _ H14).
+          red in H12; mred.
+        
+      - red; repeat (simpl; mred).
+        unfold DownLockNorm; repeat (simpl; mred).
+        rewrite downLocksNorm_orqs_add.
+        + rewrite downLocksNorm_NoDownLocks_zero by assumption.
+          red in H11; dest.
+          rewrite <-H14.
+          assert (length (idsOf routs) > 0).
+          { destruct (idsOf routs); [exfalso; auto|simpl; omega]. }
+          omega.
+        + specialize (H13 (obj_idx obj)).
+          destruct H13; [assumption|].
+          elim H13; apply edgeDownTo_subtreeIndsOf_self_in; [apply Hrrs|congruence].
+    Qed.
+
+  End InternalStep.
+  
   Lemma atomic_msg_outs_ok:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -1564,344 +2278,33 @@ Section MsgOutCases.
     pose proof (downLockInv_ok H0 H H5) as Hdlinv.
     pose proof (nonRqUpL_atomic_msg_outs_no_rqUp Hrrs H2 H11 H9 H12).
     eapply SubList_forall in H6; [|eassumption].
+    assert (Forall (fun eout =>
+                      exists oidx,
+                        RqDownMsgTo oidx eout \/
+                        RsUpMsgFrom oidx eout) eouts ->
+            Forall (fun rout =>
+                      exists oidx,
+                        RqDownMsgTo oidx rout \/
+                        RsUpMsgFrom oidx rout) routs ->
+            NoDup (idsOf (removeL (id_dec msg_dec) eouts rins ++ routs))) as Hndinv.
+    { intros; eapply step_rqDown_rsUp_NoDup; eauto.
+      { eapply (atomic_messages_eouts_in msg_dec) in H2; [|eassumption].
+        simpl in H2; assumption.
+      }
+      { eapply msgOutsCases_NoDup; eassumption. }
+    }
+    clear H5.
 
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule; simpl in *.
 
-    - (** [ImmDownRule]; exfalso *)
-      disc_rule_conds.
-      elim (H21 (obj_idx obj)).
-      do 2 eexists; eauto.
-
-    - (** [ImmUpRule] *)
-      disc_rule_conds.
-      replace (orqs+[obj_idx obj <- norq]) with orqs by meq.
-
-      (* Several inversions *)
-      (* - Invert [MsgOutsCases] to check whether the case is for the RsDown
-       * message or RqDown/RsUp messages. *)
-      inv_MsgOutsCases.
-
-      (* - Collect some information about the current target output message. *)
-      pose proof (edgeDownTo_Some H _ H30).
-      destruct H32 as [rqUp [rsUp [pidx ?]]]; dest.
-      disc_rule_conds.
-      assert (In rqFrom (idsOf eouts))
-        by (apply in_map_iff; exists (rqFrom, rqm); auto).
-      pose proof (atomic_down_out_in_history
-                    Hrrs H2 H9 H12 _ H30 H34 H33); clear H33.
-
-      eapply MsgOutsRqDownRsUp.
-      + rewrite idsOf_app.
-        apply NoDup_DisjList.
-        * apply removeOnce_idsOf_NoDup; assumption.
-        * repeat constructor; auto.
-        * simpl; apply (DisjList_singleton_2 eq_nat_dec).
-          intro Hx; apply removeOnce_idsOf_In in Hx.
-          pose proof (atomic_rsUp_out_in_history
-                        Hrrs H2 H9 H12 _ H36 Hx).
-          specialize (H31 (obj_idx obj)).
-          destruct H31; auto.
-          elim H31.
-          apply rsEdgeUpFrom_subtreeIndsOf_self_in;
-            [apply Hrrs|congruence].
-          
-      + (* The invariant for each message *)
-        apply Forall_app.
-        * (* For the others except (rqFrom, rqm) *)
-          apply Forall_forall.
-          intros [midx msg] ?.
-          apply removeOnce_In_NoDup in H33;
-            [|apply idsOf_NoDup; assumption]; dest.
-
-          pose proof (H8 _ H37).
-          destruct H38 as [oidx ?].
-          destruct H38.
-          { (* RqDown *)
-            exists oidx; left.
-            destruct H38.
-            split; [assumption|].
-            red in H39.
-            red; simpl.
-            apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-
-            intro Hx.
-            eapply DisjList_In_2 in H35; [|eassumption].
-            eapply inside_child_outside_parent_case in Hx;
-              try eassumption; try apply Hrrs; subst.
-            disc_rule_conds.
-            elim H33; f_equal.
-            eapply idsOf_NoDup_In_value_eq; eauto.
-          }
-          { (* RsUp *)
-            exists oidx; right.
-            destruct H38.
-            split; [assumption|].
-            red; simpl; intros.
-            destruct H40; [subst|auto].
-            red; mred.
-          }
-          
-        * (* For the new output *)
-          repeat constructor.
-          exists (obj_idx obj); right.
-          split; [red; auto|].
-          red; simpl; intros.
-          destruct H33;
-            [|specialize (H31 oidx); destruct H31; exfalso; auto].
-          subst.
-          red; mred.
-          
-      + red; simpl; intros.
-        destruct H33; [subst; mred|].
-        red; intros.
-        red; simpl.
-        apply (DisjList_cons_inv eq_nat_dec);
-          [eapply H10; eauto|].
-        intro Hx.
-
-        specialize (H10 _ _ _ H33 H37 H38 _ _ H39 H40 H41).
-        red in H10.
-        eapply DisjList_In_2 in H35; [|eapply H10].
-        eapply inside_child_outside_parent_case in Hx;
-          try eassumption; try apply Hrrs; subst.
-
-        pose proof (steps_object_in_system H12 _ H33).
-        destruct H42 as [dobj [? ?]]; subst.
-        good_locking_get dobj; mred.
-        red in H43; mred.
-
-        disc_rule_conds.
-        specialize (H43 _ H34).
-        destruct H43 as [down [rsUp ?]]; dest.
-        disc_rule_conds.
-        destruct (in_dec eq_nat_dec rsUp _); [auto|].
-        red in H43; dest.
-        eapply rqsQ_length_zero_False; eauto.
-        
-      + red; simpl; intros.
-        destruct H33; [subst; mred|].
-        pose proof (H14 _ _ _ _ _ H33 H37 H38 H39 H40 H41); dest.
-        repeat ssplit; [assumption| |].
-        * red in H43.
-          red; simpl.
-          apply (DisjList_cons_inv eq_nat_dec); [auto|].
-          intro Hx.
-          eapply DisjList_In_2 in H35; [|eassumption].
-          eapply inside_child_outside_parent_case in Hx;
-            try eassumption; try apply Hrrs; subst.
-          disc_rule_conds.
-
-          pose proof (steps_object_in_system H12 _ H33).
-          destruct H39 as [robj [? ?]]; subst.
-          good_locking_get robj; mred.
-          red in H40; mred.
-          specialize (H40 _ H34).
-          destruct H40 as [down [rsUp' ?]]; dest.
-          disc_rule_conds.
-          destruct (in_dec eq_nat_dec rsUp' _); [auto|].
-          red in H45; dest.
-          eapply rqsQ_length_zero_False; eauto.
-        * red; simpl; intros.
-          destruct H45; [subst|eauto].
-          mred.
-
-      + red; repeat (simpl; mred).
-        rewrite idsOf_app; simpl.
-        rewrite app_length; simpl.
-        unfold idsOf; rewrite map_length.
-        apply (removeOnce_length (id_dec msg_dec)) in H4; dest.
-        unfold Id in *; rewrite H33.
-        unfold DownLockNorm; repeat (simpl; mred).
-        red in H25.
-        unfold idsOf in H25; rewrite map_length in H25.
-        omega.
-        
-    - (** [RqFwdRule]; 
-       * [RqUpUp] and [RqUpDown] cases are contradictory -- previous [eouts] 
-       * cannot have any [RqUp] messages.
-       * [RqDownDown] case is valid.
-       *)
-      disc_rule_conds;
-        try (elim (H30 (obj_idx obj)); do 2 eexists; eauto; fail).
-
-      inv_MsgOutsCases.
-      pose proof (edgeDownTo_Some H _ H8).
-      destruct H36 as [rqUp [rsUp [pidx ?]]]; dest.
-      disc_rule_conds.
-      assert (In rqFrom (idsOf eouts))
-        by (apply in_map_iff; exists (rqFrom, rqi_msg rqi); auto).
-      pose proof (atomic_down_out_in_history
-                    Hrrs H2 H9 H12 _ H8 H38 H37); clear H37.
-
-      eapply MsgOutsRqDownRsUp.
-      + rewrite idsOf_app.
-        apply NoDup_DisjList.
-        * apply removeOnce_idsOf_NoDup; assumption.
-        * apply H26.
-        * admit. (* [NoDup] for new output messages *)
-
-      + apply Forall_app.
-        * apply Forall_forall.
-          intros [midx msg] ?.
-          apply removeOnce_In_NoDup in H37;
-            [|apply idsOf_NoDup; assumption]; dest.
-
-          pose proof (H14 _ H41).
-          destruct H42 as [oidx ?].
-          destruct H42.
-          { (* RqDown *)
-            exists oidx; left.
-            destruct H42.
-            split; [assumption|].
-            red in H43.
-            red; simpl.
-            apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-
-            intro Hx.
-            eapply DisjList_In_2 in H43; [|eassumption].
-            eapply inside_child_outside_parent_case in Hx;
-              try eassumption; try apply Hrrs; subst.
-            disc_rule_conds.
-            elim H37; f_equal.
-            eapply idsOf_NoDup_In_value_eq; eauto.
-          }
-          { (* RsUp *)
-            exists oidx; right.
-            destruct H42.
-            split; [assumption|].
-
-            pose proof (steps_object_in_system H12 _ H40).
-            destruct H44 as [pobj [? ?]]; subst.
-            good_locking_get pobj.
-            
-            assert (~ In (obj_idx pobj) (subtreeIndsOf dtr oidx)).
-            { eapply downLockInvORq_down_rqsQ_length_one_locked in H45;
-                try eassumption;
-                [|eapply rqsQ_length_ge_one;
-                  [eassumption|apply FirstMP_InMP; assumption]].
-              destruct H45 as [rqid [? [? [rsUp [? ?]]]]].
-              intro Hx.
-              specialize (H43 _ H40 Hx).
-              red in H43.
-              destruct (orqs@[obj_idx pobj]); simpl in *;
-                [congruence|discriminate].
-            }
-            
-            assert (~ In (obj_idx obj) (subtreeIndsOf dtr oidx)).
-            { intro Hx.
-              eapply inside_child_outside_parent_case in H46;
-                try eassumption; try apply Hrrs; subst.
-
-              pose proof (atomic_messages_eouts_in msg_dec H2 H12).
-              simpl in H46; rewrite Forall_forall in H46.
-              pose proof (H46 _ H41).
-              apply FirstMP_InMP in H31; simpl in H31.
-              disc_rule_conds.
-
-              eapply downLockInvORq_down_rqsQ_rsUp_False in H45;
-                try eassumption.
-              { eapply rqsQ_length_ge_one; eauto. }
-              { eapply findQ_length_ge_one; eauto. }
-            }
-
-            red; simpl; intros.
-            destruct H48.
-            { subst; exfalso; auto. }
-            { specialize (H43 _ H48 H49); red; mred. }
-          }
-
-        * apply Forall_forall.
-          intros [rqTo rqm] ?.
-          assert (In rqTo (idsOf routs))
-            by (apply in_map_iff; exists (rqTo, rqm); auto).
-          eapply RqRsDownMatch_rq_rs in H13; [|eassumption].
-          destruct H13 as [cidx [rsUp ?]]; dest.
-          rewrite Forall_forall in H39.
-          pose proof (H39 _ H37); simpl in H46.
-          exists cidx; left.
-          split; [red; auto|].
-          red in H34; red; simpl.
-          apply (DisjList_cons_inv eq_nat_dec).
-          { apply DisjList_comm in H34.
-            eapply DisjList_comm, DisjList_SubList;
-              [|eassumption].
-            admit.
-          }
-          { apply parent_not_in_subtree; [apply Hrrs|auto]. }
-
-      + red; simpl; intros.
-        destruct (eq_nat_dec (obj_idx obj) oidx).
-        * subst; mred.
-          red; intros.
-          red in H34; red; simpl.
-          apply (DisjList_cons_inv eq_nat_dec).
-          { admit. }
-          { eapply parent_not_in_subtree; [apply Hrrs|auto]. }
-        * destruct H37; [exfalso; auto|].
-          mred; specialize (H18 _ _ _ H37 H41 H42).
-          red; intros.
-          specialize (H18 _ _ H43 H44 H45).
-          red in H18.
-          red; simpl; intros.
-          apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-
-          (* obj_idx obj = cidx ... ditto *)
-          admit.
-          
-      + admit.
-      + admit.
-
-    - (** [RsBackRule] *)
-      good_footprint_get (obj_idx obj).
-      disc_rule_conds.
-      + (** [RsDownDown] *)
-        inv_MsgOutsCases.
-        disc_rule_conds.
-        destruct (id_dec msg_dec i i) as [_|]; [simpl|exfalso; auto].
-
-        eapply MsgOutsRsDown.
-        * split.
-          { red; simpl; eauto. }
-          { red; simpl.
-            apply (DisjList_cons_inv eq_nat_dec).
-            { red in H25; apply DisjList_comm in H25.
-              eapply DisjList_comm, DisjList_SubList; [|eassumption].
-              admit.
-            }
-            { apply parent_not_in_subtree; [apply Hrrs|assumption]. }
-          }
-        * red; simpl; intros.
-          destruct H33; subst.
-          { red; repeat (simpl; mred). }
-          { specialize (H32 _ H33).
-            red in H32; red.
-            repeat (simpl; mred).
-          }
-
-      + (** [RsUpDown] *)
-        inv_MsgOutsCases;
-          [exfalso;
-           eapply SubList_singleton_NoDup in H4;
-            [|apply idsOf_NoDup, H22];
-            destruct H4; [exfalso; auto|subst];
-            rewrite <-H36 in H29;
-            eapply RqRsDownMatch_rs_rq in H29; [|left; reflexivity];
-            destruct H29 as [cidx [down ?]]; dest;
-            disc_rule_conds;
-            solve_midx_false|].
-        admit.
-
-      + (** [RsUpUp] *)
-        admit.
-
-    - (** [RsDownRqDownRule] *)
-      disc_rule_conds.
-      inv_MsgOutsCases.
-      admit.
-    
-  Admitted.
+    - eapply step_msg_outs_ok_ImmDownRule; eauto.
+    - eapply step_msg_outs_ok_ImmUpRule; eauto.
+    - eapply step_msg_outs_ok_RqFwdRule; eauto.
+    - eapply step_msg_outs_ok_RsBackRule; eauto.
+    - eapply step_msg_outs_ok_RsDownRqDownRule; eauto.
+  Qed.
   
 End MsgOutCases.
 
