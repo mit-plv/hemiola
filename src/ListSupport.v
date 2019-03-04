@@ -498,6 +498,17 @@ Section Removal.
     inv H; auto.
   Qed.
 
+  Lemma removeOnce_NoDup:
+    forall a l,
+      NoDup l -> NoDup (removeOnce a l).
+  Proof.
+    induction l; simpl; intros; auto.
+    inv H; destruct (eq_dec a a0); auto.
+    constructor; auto.
+    intro Hx; elim H2.
+    eapply removeOnce_In_2; eauto.
+  Qed.
+
   Lemma removeOnce_In_NoDup:
     forall a1 a2 l,
       NoDup l -> In a1 (removeOnce a2 l) ->
@@ -737,6 +748,21 @@ Section Removal.
     apply DisjList_comm, DisjList_cons in H; dest.
     apply DisjList_comm in H0.
     rewrite removeOnce_app_2; auto.
+  Qed.
+
+  Lemma removeL_In_NoDup:
+    forall a l2 l1,
+      NoDup l1 -> In a (removeL l1 l2) ->
+      ~ In a l2 /\ In a l1.
+  Proof.
+    induction l2; simpl; intros; auto.
+    specialize (IHl2 _ (removeOnce_NoDup a0 H) H0); dest.
+    split.
+    - intro Hx; destruct Hx; subst; auto.
+      apply removeOnce_In_NoDup in H2; [|assumption].
+      dest; auto.
+    - apply removeOnce_In_NoDup in H2; [|assumption].
+      dest; auto.
   Qed.
 
 End Removal.
