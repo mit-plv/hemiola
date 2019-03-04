@@ -141,15 +141,9 @@ Section RqDownReduction.
       good_rqrs_rule_cases rule.
 
       - disc_rule_conds.
-        destruct i0; auto; inv H3.
-        rewrite H8 in H13; discriminate.
       - disc_rule_conds.
-        destruct i0; auto; inv H3.
-        rewrite H8 in H13; discriminate.
-
       - disc_rule_conds.
-        + destruct i0; auto; inv H16.
-          elim (rqrsDTree_rqUp_down_not_eq H _ _ H13 H9); reflexivity.
+        + elim (rqrsDTree_rqUp_down_not_eq H _ _ H13 H9); reflexivity.
         + eapply RqRsDownMatch_rq_rs in H27;
             [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
           destruct H27 as [cidx [rsUp ?]]; dest.
@@ -183,11 +177,6 @@ Section RqDownReduction.
           omega.
 
       - disc_rule_conds.
-        + destruct i0; auto; inv H3.
-          rewrite H8 in H13; discriminate.
-        + destruct i0; auto; inv H3.
-          rewrite H8 in H13; discriminate.
-
       - disc_rule_conds.
         eapply RqRsDownMatch_rq_rs in H27;
           [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].

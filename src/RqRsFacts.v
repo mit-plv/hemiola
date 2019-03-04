@@ -921,6 +921,9 @@ Ltac disc_rule_conds_unit_simpl :=
   | [H: nil = nil |- _] => clear H
 
   (* Below cases seem a bit ad-hoc, but appear quite frequently. *)
+  | [H: In _ [_] |- _] => inv H
+  | [H: _ = _ \/ False |- _] => inv H; [|exfalso; auto]
+  | [H: In _ nil |- _] => inv H
   | [H: SubList [_] [_] |- _] => apply SubList_singleton in H; subst
   | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
     rewrite H1 in H2; discriminate

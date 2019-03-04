@@ -127,7 +127,6 @@ Section RsDownReduction.
       good_rqrs_rule_cases rule.
 
       - disc_rule_conds.
-        destruct i0; auto; inv H15.
         repeat disc_rule_minds.
         eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
         solve_q.
@@ -139,12 +138,9 @@ Section RsDownReduction.
         omega.
 
       - disc_rule_conds.
-        destruct i0; auto; inv H15.
         elim (rqrsDTree_rsUp_down_not_eq H _ _ H37 H7); reflexivity.
 
       - disc_rule_conds.
-        + destruct i0; auto; inv H15.
-          disc_rule_conds.
         + rewrite Forall_forall in H40; specialize (H40 _ i0).
           simpl in H40; rewrite H40 in H6; discriminate.
         + rewrite Forall_forall in H40; specialize (H40 _ i0).
@@ -152,10 +148,9 @@ Section RsDownReduction.
 
       - good_footprint_get (obj_idx obj).
         disc_rule_conds.
-        + destruct i0; auto; inv H28.
-          eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
+        + eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
           solve_q.
-          apply parentIdxOf_not_eq in H15; [|destruct H; assumption].
+          apply parentIdxOf_not_eq in H9; [|destruct H; assumption].
           solve_q.
           rewrite filter_app; simpl.
           rewrite H27; simpl.
@@ -163,8 +158,7 @@ Section RsDownReduction.
           eapply rssQ_length_ge_one in H12; [|assumption].
           unfold rssQ in H12; simpl in H12.
           omega.
-        + destruct i0; auto; inv H24.
-          eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
+        + eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
           rewrite <-H37 in H30.
           solve_q.
           rewrite filter_app; simpl.
@@ -173,8 +167,7 @@ Section RsDownReduction.
           eapply rssQ_length_ge_one in H12; [|assumption].
           unfold rssQ in H12; simpl in H12.
           omega.
-        + destruct i0; auto; inv H27.
-          elim (rqrsDTree_rsUp_down_not_eq H _ _ H24 H7); reflexivity.
+        + elim (rqrsDTree_rsUp_down_not_eq H _ _ H24 H7); reflexivity.
 
       - disc_rule_conds.
         rewrite Forall_forall in H35; specialize (H35 _ i0).

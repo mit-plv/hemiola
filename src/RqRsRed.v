@@ -47,28 +47,22 @@ Section InsideTree.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      destruct Hin2; auto; inv H0.
       destruct H2; disc_rule_conds.
       destruct H3; eapply parent_not_in_subtree; eauto.
 
     - disc_rule_conds.
-      destruct Hin2; auto; inv H0.
       destruct H2; disc_rule_conds.
 
     - disc_rule_conds.
-      + destruct Hin2; auto; inv H16.
-        destruct H2; disc_rule_conds.
+      + destruct H2; disc_rule_conds.
         destruct H3; eapply parent_not_in_subtree; eauto.
-      + destruct Hin2; auto; inv H7.
-        destruct H2; disc_rule_conds.
+      + destruct H2; disc_rule_conds.
         destruct H3; eapply parent_not_in_subtree; eauto.
-      + destruct Hin2; auto; inv H9.
-        destruct H2; disc_rule_conds.
+      + destruct H2; disc_rule_conds.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + destruct Hin2; auto; subst; simpl in *.
-        destruct H2; disc_rule_conds.
+      + destruct H2; disc_rule_conds.
       + rewrite <-H31 in H24.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
         eapply RqRsDownMatch_rs_rq in H24; [|eassumption].
@@ -83,7 +77,6 @@ Section InsideTree.
         destruct H3; eapply parent_not_in_subtree; eauto.
 
     - disc_rule_conds.
-      destruct Hin2; auto; inv H7.
       destruct H2; disc_rule_conds.
   Qed.
 
