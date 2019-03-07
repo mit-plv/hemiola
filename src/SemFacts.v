@@ -22,6 +22,53 @@ Ltac inv_step :=
           {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
     end.
 
+Definition lastOIdxOf {MsgT} (hst: History MsgT): option IdxT :=
+  match hst with
+  | RlblInt oidx _ _ _ :: _ => Some oidx
+  | _ => None
+  end.
+
+Definition oidxOf {MsgT} (lbl: RLabel MsgT) :=
+  match lbl with
+  | RlblInt oidx _ _ _ => Some oidx
+  | _ => None
+  end.
+
+Fixpoint oindsOf {MsgT} (hst: History MsgT) :=
+  match hst with
+  | nil => nil
+  | lbl :: hst' => (oidxOf lbl) ::> (oindsOf hst')
+  end.
+
+Lemma lastOIdxOf_Some_oindsOf_In:
+  forall {MsgT} (hst: History MsgT) loidx,
+    lastOIdxOf hst = Some loidx ->
+    In loidx (oindsOf hst).
+Proof.
+  intros.
+  destruct hst as [|lbl hst]; [discriminate|].
+  simpl in H.
+  destruct lbl; try discriminate.
+  inv H.
+  left; reflexivity.
+Qed.
+
+Lemma steps_object_in_system:
+  forall {oifc} (sys: System oifc) st1 hst st2,
+    steps step_m sys st1 hst st2 ->
+    forall oidx,
+      In oidx (oindsOf hst) ->
+      exists obj,
+        In obj sys.(sys_objs) /\
+        obj.(obj_idx) = oidx.
+Proof.
+  induction 1; simpl; intros; [exfalso; auto|].
+  destruct lbl; simpl in *; auto.
+  destruct H1; subst; auto.
+  inv_step.
+  exists obj; auto.
+Qed.
+
 Lemma sys_minds_sys_merqs_DisjList:
   forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merqs sys).
 Proof.

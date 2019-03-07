@@ -171,6 +171,14 @@ Section Facts.
       idx <> pidx.
   Proof.
   Admitted.
+
+  Lemma parentIdxOf_asym:
+    forall oidx1 oidx2,
+      parentIdxOf dtr oidx1 = Some oidx2 ->
+      parentIdxOf dtr oidx2 = Some oidx1 ->
+      False.
+  Proof.
+  Admitted.
   
   Lemma parentChnsOf_NoDup:
     forall idx ups downs pidx,

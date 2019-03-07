@@ -53,6 +53,15 @@ Section MsgParam.
       end
     end.
 
+  Lemma atomic_lastOIdxOf:
+    forall inits ins hst outs eouts,
+      Atomic msgT_dec inits ins hst outs eouts ->
+      exists loidx,
+        lastOIdxOf hst = Some loidx.
+  Proof.
+    induction 1; simpl; intros; eauto.
+  Qed.
+
   Lemma atomic_ins:
     forall (hst: History MsgT) inits ins outs eouts,
       Atomic msgT_dec inits ins hst outs eouts ->

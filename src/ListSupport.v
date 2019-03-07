@@ -808,6 +808,36 @@ Proof.
   eapply IHil2, removeOnce_idsOf_NoDup; eauto.
 Qed.
 
+Lemma SubList_NoDup_length_eq_removeL_nil:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
+         (l1 l2: list A),
+    SubList l1 l2 -> NoDup l1 ->
+    length l1 = length l2 ->
+    removeL eq_dec l2 l1 = nil.
+Proof.
+  induction l1; simpl; intros;
+    [destruct l2; [reflexivity|discriminate]|].
+  apply SubList_cons_inv in H; dest; inv H0.
+  destruct l2; [exfalso; auto|].
+  inv H1.
+  destruct (eq_dec a0 a).
+  - subst; simpl; destruct (eq_dec a a) as [Heq|Hneq]; [clear Heq|exfalso; auto].
+    eapply IHl1; eauto.
+    red; intros; specialize (H2 _ H0).
+    inv H2; intuition.
+  - inv H; [exfalso; auto|].
+    simpl; destruct (eq_dec a a0) as [Heq|Hneq]; [exfalso; auto|clear Hneq].
+    eapply IHl1.
+    + red; intros; specialize (H2 _ H).
+      inv H2; [left; reflexivity|].
+      right; eapply removeOnce_In_1.
+      * intro Hx; subst; auto.
+      * assumption.
+    + assumption.
+    + simpl; pose proof (removeOnce_length eq_dec _ _ H0); dest.
+      omega.
+Qed.
+
 Section SSubList.
   Context {A: Type}.
 

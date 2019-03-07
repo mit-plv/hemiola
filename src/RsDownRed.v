@@ -4,30 +4,13 @@ Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
-Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
+Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic RqRsInvSep.
 Require Import RqUpRed RsUpRed RqRsRed.
 
 Set Implicit Arguments.
 
 Open Scope list.
 Open Scope fmap.
-
-(** Proof sketch for the reducibility of downward-response labels:
- * 1) [exists preh posth, 
- *       phst = posth ++ preh /\
- *       ("preh" just consists of RqUp labels) /\
- *       oinds(posth) ⊆ tr(nlbl)^{-1}]
- * 2) Let [olast(hst)] be the last object index of an [Atomic] history [hst].
- * 2-1) [olast(hst) ∈ tr(nlbl) -> oinds(hst) ⊆ tr(nlbl)]
- * 2-2) [olast(hst) ∈ tr(nlbl)^{-1} -> oinds(hst) ⊆ tr(nlbl)^{-1}]
- *      This part differs from the one for downward-requests since both upward
- *      requests and upward responses cannot happen when a downward-response label is
- *      in the message pool.
- * 3) Define [LPush] and [RPush] as follows:
- *    [LPush hst ≜ olast(hst) ∈ tr(nlbl)]
- *    [RPush hst ≜ olast(hst) ∈ tr(nlbl)^{-1}]
- * 4) Conditions of [PushableHst] are easier to prove, mostly by a).
- *)
 
 Section RsDownReduction.
   Context {oifc: OStateIfc}.
@@ -76,7 +59,15 @@ Section RsDownReduction.
           In loidx (subtreeIndsOf dtr oidxTo) ->
           SubList (oindsOf hst) (subtreeIndsOf dtr oidxTo).
     Proof.
-    Admitted.
+      destruct Hrrs as [? [? ?]]; intros.
+      destruct Hrsd as [cobj [rsDown ?]]; dest; subst.
+      pose proof (edgeDownTo_Some H _ H11).
+      destruct H9 as [rqUp [rsUp [pidx ?]]]; dest.
+      disc_rule_conds.
+      eapply atomic_rsDown_separation_inside; try eassumption; try reflexivity.
+      - apply DisjList_cons in H2; dest; assumption.
+      - eapply lastOIdxOf_Some_oindsOf_In; eauto.
+    Qed.
 
     Lemma rsDown_olast_outside_tree:
       forall inits ins hst outs eouts,
@@ -90,7 +81,15 @@ Section RsDownReduction.
           ~ In loidx (subtreeIndsOf dtr oidxTo) ->
           DisjList (oindsOf hst) (subtreeIndsOf dtr oidxTo).
     Proof.
-    Admitted.
+      destruct Hrrs as [? [? ?]]; intros.
+      destruct Hrsd as [cobj [rsDown ?]]; dest; subst.
+      pose proof (edgeDownTo_Some H _ H11).
+      destruct H9 as [rqUp [rsUp [pidx ?]]]; dest.
+      disc_rule_conds.
+      eapply atomic_rsDown_separation_outside; try eassumption; try reflexivity.
+      - apply DisjList_cons in H2; dest; assumption.
+      - eapply lastOIdxOf_Some_oindsOf_In; eauto.
+    Qed.
 
     Definition RsDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rsDowns.
@@ -211,8 +210,10 @@ Section RsDownReduction.
     Lemma rsDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
+        DisjList rsDowns rinits ->
         Atomic msg_dec rinits rins rhst routs reouts ->
         DisjList (oindsOf rhst) (subtreeIndsOf dtr oidxTo) ->
+        DisjList rsDowns linits ->
         Atomic msg_dec linits lins lhst louts leouts ->
         SubList (oindsOf lhst) (subtreeIndsOf dtr oidxTo) ->
         forall st1,
@@ -346,7 +347,8 @@ Section RsDownReduction.
         try exact H0; try eassumption.
       clear H1.
       eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
-      - eapply rsDown_lpush_rpush_messages_disj; try eassumption.
+      - eapply rsDown_lpush_rpush_messages_disj
+          with (linits := linits) (rinits := rinits); try eassumption.
         eapply steps_append; eassumption.
       - eapply steps_append; eassumption.
     Qed.

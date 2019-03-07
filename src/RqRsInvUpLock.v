@@ -2306,6 +2306,28 @@ Section UpLockInv.
   
 End UpLockInv.
 
+Lemma upLockInvORq_rqUp_down_rssQ_False:
+  forall dtr orqs msgs oidx orq pidx rqUp down,
+    UpLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr oidx = Some pidx ->
+    rqEdgeUpFrom dtr oidx = Some rqUp ->
+    edgeDownTo dtr oidx = Some down ->
+    length (findQ rqUp msgs) >= 1 ->
+    length (rssQ msgs down) >= 1 ->
+    False.
+Proof.
+  intros.
+  red in H; destruct (orq@[upRq]).
+  - destruct H as [rrqUp [rdown [rpidx ?]]]; dest.
+    repeat disc_rule_minds.
+    xor3_contra1 H10; omega.
+  - destruct H.
+    + congruence.
+    + destruct H as [rrqUp [rdown [rpidx ?]]]; dest.
+      repeat disc_rule_minds.
+      rewrite H7 in H3; simpl in H3; omega.
+Qed.
+
 Lemma upLockInvORq_rqUp_length_two_False:
   forall dtr orqs msgs oidx orq pidx rqUp,
     UpLockInvORq dtr orqs msgs oidx orq ->
