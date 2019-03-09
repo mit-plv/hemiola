@@ -97,116 +97,6 @@ Section RsDownReduction.
     Ltac disc_rule_custom ::=
       try disc_footprints_ok.
 
-    Lemma rsDown_step_disj:
-      forall st1 oidx ridx rins routs st2,
-        Reachable (steps step_m) sys st1 ->
-        RsDownP st1 ->
-        DisjList rsDowns rins ->
-        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
-        DisjList rsDowns routs.
-    Proof.
-      destruct Hrrs as [? [? ?]]; intros.
-      assert (Reachable (steps step_m) sys st2).
-      { eapply reachable_steps; [eassumption|].
-        eapply steps_singleton; eassumption.
-      }
-      pose proof (upLockInv_ok H0 H H6) as Hlinv; clear H6.
-      pose proof (footprints_ok H0 H2) as Hfinv.
-      inv_step.
-      red in H3; destruct Hrsd as [robj [rsDown ?]]; dest; subst.
-      inv H3; clear H19; simpl in H12.
-      pose proof (edgeDownTo_Some H _ H7).
-      destruct H3 as [rqUp [rsUp [pidx ?]]]; dest.
-      good_locking_get robj.
-
-      apply (DisjList_false_spec (id_dec msg_dec)); intros [rrsDown rsm] i i0.
-      Common.dest_in; simpl in *.
-
-      good_rqrs_rule_get rule.
-      good_rqrs_rule_cases rule.
-
-      - disc_rule_conds.
-        repeat disc_rule_minds.
-        eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
-        solve_q.
-        rewrite filter_app; simpl.
-        rewrite H24; simpl.
-        rewrite app_length; simpl.
-        eapply rssQ_length_ge_one in H12; [|assumption].
-        unfold rssQ in H12; simpl in H12.
-        omega.
-
-      - disc_rule_conds.
-        elim (rqrsDTree_rsUp_down_not_eq H _ _ H37 H7); reflexivity.
-
-      - disc_rule_conds.
-        + rewrite Forall_forall in H40; specialize (H40 _ i0).
-          simpl in H40; rewrite H40 in H6; discriminate.
-        + rewrite Forall_forall in H40; specialize (H40 _ i0).
-          simpl in H40; rewrite H40 in H6; discriminate.
-
-      - good_footprint_get (obj_idx obj).
-        disc_rule_conds.
-        + eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
-          solve_q.
-          apply parentIdxOf_not_eq in H9; [|destruct H; assumption].
-          solve_q.
-          rewrite filter_app; simpl.
-          rewrite H27; simpl.
-          rewrite app_length; simpl.
-          eapply rssQ_length_ge_one in H12; [|assumption].
-          unfold rssQ in H12; simpl in H12.
-          omega.
-        + eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
-          rewrite <-H37 in H30.
-          solve_q.
-          rewrite filter_app; simpl.
-          rewrite H26; simpl.
-          rewrite app_length; simpl.
-          eapply rssQ_length_ge_one in H12; [|assumption].
-          unfold rssQ in H12; simpl in H12.
-          omega.
-        + elim (rqrsDTree_rsUp_down_not_eq H _ _ H24 H7); reflexivity.
-
-      - disc_rule_conds.
-        rewrite Forall_forall in H35; specialize (H35 _ i0).
-        simpl in H35; rewrite H35 in H6; discriminate.
-    Qed.
-
-    Lemma rsDown_atomic_messages_indep:
-      forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
-        DisjList rsDowns inits ->
-        forall st1,
-          Reachable (steps step_m) sys st1 ->
-          RsDownP st1 ->
-          forall st2,
-            steps step_m sys st1 hst st2 ->
-            DisjList rsDowns outs.
-    Proof.
-      induction 1; simpl; intros; subst.
-      - inv_steps.
-        eapply rsDown_step_disj; eauto.
-      - inv_steps.
-        specialize (IHAtomic H5 _ H6 H7 _ H9).
-        apply DisjList_comm, DisjList_app_4;
-          [apply DisjList_comm in IHAtomic; assumption|].
-        apply DisjList_comm in H5.
-        assert (DisjList rsDowns rins).
-        { eapply DisjList_comm, DisjList_SubList;
-            [|eapply DisjList_comm; eassumption].
-          eapply SubList_trans; [eassumption|].
-          eapply atomic_eouts_in; eassumption.
-        }
-        eapply (atomic_messages_ins_ins msg_dec) in H; try eassumption.
-        apply DisjList_comm.
-        eapply rsDown_step_disj.
-        + eapply reachable_steps; eassumption.
-        + assumption.
-        + eassumption.
-        + eassumption.
-    Qed.
-
     Lemma rsDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
@@ -301,7 +191,7 @@ Section RsDownReduction.
         ReducibleP sys RsDownP (RlblInt oidxTo ridx rsDowns routs :: hst)
                    (hst ++ [RlblInt oidxTo ridx rsDowns routs]).
     Proof.
-      intros; red; intros.
+      destruct Hrrs as [? [? ?]]; intros; red; intros.
       inv_steps.
       eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
       - eapply rsDown_olast_outside_tree; eassumption.
@@ -313,7 +203,16 @@ Section RsDownReduction.
       - eapply DisjList_SubList.
         + eapply atomic_eouts_in; eassumption.
         + apply DisjList_comm.
-          eapply rsDown_atomic_messages_indep; eassumption.
+          red in Hp.
+          destruct Hrsd as [dobj [[rsDown rsdm] ?]]; dest; subst.
+          inv Hp; clear H14.
+          apply (DisjList_singleton_1 (id_dec msg_dec)).
+          simpl in H8.
+          pose proof (edgeDownTo_Some H _ H8).
+          destruct H6 as [rqUp [rsUp [pidx ?]]]; dest.
+          eapply atomic_rsDown_inits_outs_disj; eauto.
+          destruct (H5 (rsDown, rsdm)); [|auto].
+          elim H15; left; reflexivity.
       - simpl; econstructor; eassumption.
     Qed.
 

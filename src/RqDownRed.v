@@ -4,46 +4,13 @@ Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
-Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
+Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic RqRsInvSep.
 Require Import RqUpRed RsUpRed RqRsRed.
 
 Set Implicit Arguments.
 
 Open Scope list.
 Open Scope fmap.
-
-(** Proof sketch for the reducibility of downward-request labels:
- * 1) [phst] ⊆ tr(nlbl)^{-1}
- * 2) Let [olast(hst)] be the last object index of an [Atomic] history [hst].
- * 2-1) [olast(hst) ∈ tr(nlbl) -> oinds(hst) ⊆ tr(nlbl)]
- * 2-2) [olast(hst) ∈ tr(nlbl)^{-1} -> 
- *       exists preh posth, 
- *         hst = posth ++ preh /\
- *         ("preh" just consists of RqUp labels) /\
- *         oinds(posth) ⊆ tr(nlbl)^{-1}]
- * 3) Now define [LPush] and [RPush] as follows:
- *    [LPush hst ≜ olast(hst) ∈ tr(nlbl)]
- *    [RPush hst ≜ olast(hst) ∈ tr(nlbl)^{-1}]
- * 4) To check each condition in [PushableHst]:
- * 4-1) Left-or-right: [olast(hst)] is a single object index, 
- *      thus [in_dec eq_nat_dec olast(hst) tr(nlbl)] provides enough
- *      information.
- * 4-2) Left-push-reducibility: if [hst] is left-pushable, then by 2-1) and 3)
- *      we get [oinds(hst) ⊆ tr(nlbl)]. Now by 1) and a) we exactly get the
- *      reducibility.
- * 4-3) Right-push-reducibility: if [hst] is right-pushable, then by 2-2) 
- *      and 3) we have [preh] and [posth] that satisfy the conditions in 2-2).
- * 4-3-1) [preh] and [nlbl] are commutative since [preh] only consists of 
- *        RqUp labels.
- * 4-3-2) [posth] and [nlbl] are commutative by applying a).
- * 4-4) [LRPushable]: if [RPush hst1 /\ LPush hst2], then by 2-1), 2-2), 
- *      and 3) for [hst1] we have [preh1] and [posth1] that satisfy the
- *      conditions in 2-2). Now reasoning very similarly to 4-2) and 4-3):
- * 4-4-1) [preh1] and [hst2] are commutative since [preh1] only consists of
- *        RqUp labels.
- * 4-4-2) [posth1] and [hst2] are commutative by applying a).
- *
- *)
 
 Section RqDownReduction.
   Context {oifc: OStateIfc}.
@@ -110,125 +77,6 @@ Section RqDownReduction.
 
     Definition RqDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rqDowns.
-
-    Ltac disc_rule_custom ::=
-      try disc_footprints_ok.
-
-    Lemma rqDown_step_disj:
-      forall st1 oidx ridx rins routs st2,
-        Reachable (steps step_m) sys st1 ->
-        RqDownP st1 ->
-        DisjList rqDowns rins ->
-        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
-        DisjList rqDowns routs.
-    Proof.
-      destruct Hrrs as [? [? ?]]; intros.
-      assert (Reachable (steps step_m) sys st2).
-      { eapply reachable_steps; [eassumption|].
-        eapply steps_singleton; eassumption.
-      }
-      pose proof (downLockInv_ok H0 H H6); clear H6.
-      inv_step.
-      good_locking_get obj.
-      disc_rule_conds.
-      red in H3; destruct Hrqd as [robj [rqDown ?]]; dest; subst.
-      inv H3; clear H22; simpl in H20.
-      
-      apply (DisjList_false_spec (id_dec msg_dec)); intros [rrqDown rqm] i i0.
-      Common.dest_in; simpl in *.
-
-      good_rqrs_rule_get rule.
-      good_rqrs_rule_cases rule.
-
-      - disc_rule_conds.
-      - disc_rule_conds.
-      - disc_rule_conds.
-        + elim (rqrsDTree_rqUp_down_not_eq H _ _ H13 H9); reflexivity.
-        + eapply RqRsDownMatch_rq_rs in H27;
-            [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
-          destruct H27 as [cidx [rsUp ?]]; dest.
-          repeat disc_rule_minds; subst.
-          eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
-
-          destruct H21; solve_q.
-          erewrite findQ_In_NoDup_enqMsgs by eassumption.
-          solve_q.
-          rewrite filter_app; simpl.
-          rewrite H8; simpl.
-          rewrite app_length; simpl.
-          eapply rqsQ_length_ge_one in H20; [|assumption].
-          unfold rqsQ in H20; simpl in H20.
-          omega.
-        + eapply RqRsDownMatch_rq_rs in H13;
-            [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
-          destruct H13 as [cidx [rsUp ?]]; dest.
-          repeat disc_rule_minds; subst.
-          eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
-
-          destruct H21; solve_q.
-          erewrite findQ_In_NoDup_enqMsgs by eassumption.
-          apply parentIdxOf_not_eq in H16; [|destruct H; assumption].
-          solve_q.
-          rewrite filter_app; simpl.
-          rewrite H8; simpl.
-          rewrite app_length; simpl.
-          eapply rqsQ_length_ge_one in H20; [|assumption].
-          unfold rqsQ in H20; simpl in H20.
-          omega.
-
-      - disc_rule_conds.
-      - disc_rule_conds.
-        eapply RqRsDownMatch_rq_rs in H27;
-          [|apply in_map with (f:= idOf) in i0; simpl in i0; eassumption].
-        destruct H27 as [cidx [rsUp ?]]; dest.
-        repeat disc_rule_minds; subst.
-        eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
-
-        destruct H21; solve_q.
-        erewrite findQ_In_NoDup_enqMsgs by eassumption.
-        apply parentIdxOf_not_eq in H27; [|destruct H; assumption].
-        solve_q.
-        rewrite filter_app; simpl.
-        rewrite H8; simpl.
-        rewrite app_length; simpl.
-        eapply rqsQ_length_ge_one in H20; [|assumption].
-        unfold rqsQ in H20; simpl in H20.
-        omega.
-    Qed.
-    
-    Lemma rqDown_atomic_messages_indep:
-      forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
-        DisjList rqDowns inits ->
-        forall st1,
-          Reachable (steps step_m) sys st1 ->
-          RqDownP st1 ->
-          forall st2,
-            steps step_m sys st1 hst st2 ->
-            DisjList rqDowns outs.
-    Proof.
-      induction 1; simpl; intros; subst.
-      - inv_steps.
-        eapply rqDown_step_disj; eauto.
-      - inv_steps.
-        specialize (IHAtomic H5 _ H6 H7 _ H9).
-        apply DisjList_comm, DisjList_app_4;
-          [apply DisjList_comm in IHAtomic; assumption|].
-        apply DisjList_comm in H5.
-        assert (DisjList rqDowns rins).
-        { eapply DisjList_comm, DisjList_SubList;
-            [|eapply DisjList_comm; eassumption].
-          eapply SubList_trans; [eassumption|].
-          eapply atomic_eouts_in; eassumption.
-        }
-        eapply (atomic_messages_ins_ins msg_dec) in H; try eassumption.
-        apply DisjList_comm.
-        eapply rqDown_step_disj.
-        + eapply reachable_steps; eassumption.
-        + assumption.
-        + eassumption.
-        + eassumption.
-    Qed.
 
     Lemma rqDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts
@@ -319,7 +167,7 @@ Section RqDownReduction.
           eapply rqUpHistory_lpush_lbl; try eassumption.
           destruct Hrrs as [? [? ?]].
           clear -Hrqd H12 H15.
-          destruct Hrqd as [[rqDown rqdm] ?]; dest; subst.
+          destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
           destruct H12 as [cidx [[rqUp rqum] ?]]; dest; subst.
           apply idsOf_DisjList; simpl in *.
           solve_midx_disj.
@@ -335,12 +183,19 @@ Section RqDownReduction.
           * simpl; red; intros; Common.dest_in.
             apply edgeDownTo_subtreeIndsOf_self_in.
             { apply Hrrs. }
-            { destruct Hrqd as [rqDown ?]; dest; congruence. }
+            { destruct Hrqd; dest; congruence. }
           * eapply DisjList_SubList.
             { eapply atomic_eouts_in, H. }
             { apply DisjList_comm.
-              eapply rqDown_atomic_messages_indep; try eassumption.
-              eapply steps_append; eassumption.
+              red in Hp.
+              destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
+              inv Hp; clear H17.
+              apply (DisjList_singleton_1 (id_dec msg_dec)).
+              eapply atomic_rqDown_inits_outs_disj; eauto.
+              { destruct (H2 (rqDown, rqdm)); [|assumption].
+                elim H11; left; reflexivity.
+              }
+              { eapply steps_append; eassumption. }
             }
         + simpl; econstructor; [|eassumption].
           eapply steps_append; eassumption.
