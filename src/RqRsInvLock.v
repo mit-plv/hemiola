@@ -80,29 +80,6 @@ Section RqRsDown.
     inv H4.
   Qed.
 
-  Lemma noRqRsDown_step_ext_in:
-    forall oss orqs msgs eins,
-      NoRqRsDown {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      eins <> nil ->
-      ValidMsgsExtIn sys eins ->
-      NoRqRsDown {| bst_oss := oss;
-                    bst_orqs := orqs;
-                    bst_msgs := enqMsgs eins msgs |}.
-  Proof.
-  Admitted.
-
-  Lemma noRqRsDown_step_ext_out:
-    forall oss orqs msgs eouts,
-      NoRqRsDown {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      eouts <> nil ->
-      Forall (FirstMPI msgs) eouts ->
-      ValidMsgsExtOut sys eouts ->
-      NoRqRsDown {| bst_oss := oss;
-                    bst_orqs := orqs;
-                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
-  Proof.
-  Admitted.
-
   Ltac disc_NoRqRsDown :=
     match goal with
     | [H: NoRqRsDown _ |- NoRqRsDown _] =>
@@ -116,12 +93,110 @@ Section RqRsDown.
       let rsdm := fresh "rsdm" in
       let H4 := fresh in
       red; intros cobj pobj H0 H1 H2 down H3 rsdm H4 ?;
-      specialize (H _ _ H0 H1 H2 _ H3 _ H4); simpl in *
+                  specialize (H _ _ H0 H1 H2 _ H3 _ H4); simpl in *
     end.
+
+  Lemma noRqRsDown_step_ext_in:
+    forall oss orqs msgs eins,
+      NoRqRsDown {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      eins <> nil ->
+      ValidMsgsExtIn sys eins ->
+      NoRqRsDown {| bst_oss := oss;
+                    bst_orqs := orqs;
+                    bst_msgs := enqMsgs eins msgs |}.
+  Proof.
+    intros; disc_NoRqRsDown.
+    assert (~ In down (idsOf eins)).
+    { destruct H1.
+      apply DisjList_In_1 with (l2:= sys_minds sys).
+      { eapply DisjList_SubList; eauto.
+        apply DisjList_comm.
+        apply sys_minds_sys_merqs_DisjList.
+      }
+      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|].
+        eassumption.
+      }
+    }
+    
+    apply InMP_enqMsgs_or in H7; destruct H7.
+    - exfalso.
+      apply in_map with (f:= idOf) in H7; simpl in H7; auto.
+    - specialize (H H7).
+      destruct H; [left; assumption|].
+      dest; right; split.
+      + red in H; red.
+        destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+        destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+        intros; specialize (H _ _ H10 H11 H12).
+        solve_q.
+        rewrite findQ_not_In_enqMsgs by assumption.
+        assumption.
+      + apply FirstMP_enqMsgs; assumption.
+  Qed.
+
+  Lemma noRqRsDown_step_ext_out:
+    forall oss orqs msgs eouts,
+      NoRqRsDown {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      eouts <> nil ->
+      Forall (FirstMPI msgs) eouts ->
+      ValidMsgsExtOut sys eouts ->
+      NoRqRsDown {| bst_oss := oss;
+                    bst_orqs := orqs;
+                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+  Proof.
+    intros; disc_NoRqRsDown.
+    apply InMP_deqMsgs in H8.
+    specialize (H H8).
+    destruct H; [left; assumption|].
+    assert (~ In down (idsOf eouts)).
+    { destruct H2.
+      apply DisjList_In_1 with (l2:= sys_minds sys).
+      { eapply DisjList_SubList; eauto.
+        apply DisjList_comm.
+        apply sys_minds_sys_merss_DisjList.
+      }
+      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|].
+        eassumption.
+      }
+    }
+    
+    dest; right; split.
+    - red in H; red.
+      destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+      destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+      intros; specialize (H _ _ H11 H12 H13).
+      solve_q.
+      rewrite findQ_not_In_deqMsgs by assumption.
+      assumption.
+    - apply FirstMP_deqMsgs; assumption.
+  Qed.
   
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try disc_NoRqRsDown.
+
+  Lemma rsDown_rqsQ_nil_in_first:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall cobj,
+        In cobj sys.(sys_objs) ->
+        forall down rsdm,
+          edgeDownTo dtr (obj_idx cobj) = Some down ->
+          rsdm.(msg_type) = MRs ->
+          InMP down rsdm st.(bst_msgs) ->
+          rqsQ st.(bst_msgs) down = nil ->
+          FirstMP st.(bst_msgs) down rsdm.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    pose proof (upLockInv_ok H0 H H2).
+    good_locking_get cobj.
+    pose proof (edgeDownTo_Some H _ H4).
+    destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
+    eapply upLockInvORq_down_rssQ_length_one_locked in H9; eauto;
+      [|eapply rssQ_length_ge_one; eauto].
+    destruct H9 as [rrqUp [rdown [rpidx ?]]]; dest.
+    repeat disc_rule_minds.
+  Admitted.
 
   Lemma noRqRsDown_step_int:
     forall st1,

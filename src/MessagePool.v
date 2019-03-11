@@ -238,6 +238,18 @@ Section Facts.
     apply FirstMP_InMP; auto.
   Qed.
 
+  Lemma InMP_FirstMP:
+    forall (mp: MessagePool MsgT) i m,
+      InMP i m mp -> List.length (findQ i mp) <= 1 ->
+      FirstMP mp i m.
+  Proof.
+    unfold InMP, FirstMP, firstMP; intros.
+    destruct (findQ i mp); [elim H|].
+    destruct q.
+    - Common.dest_in; reflexivity.
+    - simpl in H0; inv H0; inv H2.
+  Qed.
+
   Lemma FirstMP_enqMP:
     forall (mp: MessagePool MsgT) i m,
       FirstMP mp i m ->

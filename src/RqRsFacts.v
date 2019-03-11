@@ -964,6 +964,14 @@ Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
 Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
   filter (fun msg => msg.(msg_type) ==n MRs) (findQ midx msgs).
 
+(* Lemma rqsQ_rssQ_length: *)
+(*   forall (msgs: MessagePool Msg) midx, *)
+(*     length (findQ midx msgs) = length (rqsQ msgs midx) + length (rssQ msgs midx). *)
+(* Proof. *)
+(*   unfold rqsQ, rssQ; intros. *)
+(*   induction (findQ midx msgs); simpl; [reflexivity|]. *)
+(* Qed. *)
+
 Lemma findQ_length_zero:
   forall (msgs: MessagePool Msg) midx msg,
     length (findQ midx msgs) <= 1 ->

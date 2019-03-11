@@ -2306,6 +2306,40 @@ Section UpLockInv.
   
 End UpLockInv.
 
+Lemma upLockInvORq_rqUp_length_one_locked:
+  forall dtr orqs msgs oidx orq pidx rqUp,
+    UpLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr oidx = Some pidx ->
+    rqEdgeUpFrom dtr oidx = Some rqUp ->
+    length (findQ rqUp msgs) >= 1 ->
+    UpLockedInv dtr orqs msgs oidx.
+Proof.
+  intros.
+  red in H; destruct (orq@[upRq]); [assumption|].
+  destruct H.
+  - rewrite H in H0; discriminate.
+  - destruct H as [rrqUp [down [rpidx ?]]]; dest.
+    repeat disc_rule_minds.
+    rewrite H5 in H2; simpl in H2; omega.
+Qed.
+
+Lemma upLockInvORq_down_rssQ_length_one_locked:
+  forall dtr orqs msgs oidx orq down pidx,
+    UpLockInvORq dtr orqs msgs oidx orq ->
+    parentIdxOf dtr oidx = Some pidx ->
+    edgeDownTo dtr oidx = Some down ->
+    length (rssQ msgs down) >= 1 ->
+    UpLockedInv dtr orqs msgs oidx.
+Proof.
+  intros.
+  red in H; destruct (orq@[upRq]); [assumption|].
+  destruct H.
+  - rewrite H in H0; discriminate.
+  - destruct H as [rqUp [rdown [rpidx ?]]]; dest.
+    repeat disc_rule_minds.
+    rewrite H6 in H2; simpl in H2; omega.
+Qed.
+
 Lemma upLockInvORq_rqUp_down_rssQ_False:
   forall dtr orqs msgs oidx orq pidx rqUp down,
     UpLockInvORq dtr orqs msgs oidx orq ->
