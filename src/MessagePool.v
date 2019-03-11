@@ -209,6 +209,15 @@ Section Facts.
     eapply ForallMP_InMP; eauto.
   Qed.
 
+  Lemma FirstMP_eq:
+    forall (mp: MessagePool MsgT) i m1 m2,
+      FirstMP mp i m1 -> FirstMP mp i m2 ->
+      m1 = m2.
+  Proof.
+    unfold FirstMP, firstMP; intros.
+    congruence.
+  Qed.
+
   Lemma FirstMP_InMP:
     forall (mp: MessagePool MsgT) i m,
       FirstMP mp i m ->

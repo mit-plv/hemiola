@@ -10,50 +10,6 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-(* Section RqRsDown. *)
-(*   Context {oifc: OStateIfc}. *)
-(*   Variables (dtr: DTree) *)
-(*             (sys: System oifc). *)
-(*   Hypothesis (Hrrs: RqRsSys dtr sys). *)
-
-(*   Definition NoRqRsDown (st: MState oifc) := *)
-(*     forall cidx pobj, *)
-(*       In pobj sys.(sys_objs) -> *)
-(*       parentIdxOf dtr cidx = Some (obj_idx pobj) -> *)
-(*       forall down, *)
-(*         edgeDownTo dtr cidx = Some down -> *)
-(*         forall rqdm rsdm, *)
-(*           rqdm.(msg_type) = MRq -> *)
-(*           FirstMP st.(bst_msgs) down rqdm -> *)
-(*           rsdm.(msg_type) = MRs -> *)
-(*           InMP down rsdm st.(bst_msgs) -> *)
-(*           False. *)
-  
-(*   Ltac disc_rule_custom ::= *)
-(*     try disc_footprints_ok. *)
-  
-(*   Lemma noRqRsDown_InvInit: *)
-(*     InvInit sys NoRqRsDown. *)
-(*   Proof. *)
-(*     do 2 red; intros. *)
-(*     simpl in *. *)
-(*     inv H5. *)
-(*   Qed. *)
-
-(*   Lemma noRqRsDown_InvStep: *)
-(*     InvStep sys step_m NoRqRsDown. *)
-(*   Proof. *)
-(*     destruct Hrrs as [? [? ?]]; red; intros. *)
-(*     pose proof (footprints_ok H0 H2) as Hftinv. *)
-(*     pose proof (downLockInv_ok H0 H H2) as Hdlinv. *)
-
-(*     (* inv_step; simpl in *. *) *)
-(*     (* good_rqrs_rule_get rule. *) *)
-(*     (* good_rqrs_rule_cases rule. *) *)
-(*    Admitted. *)
-
-(* End RsDownBlock. *)
-
 Section RqUpStart.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
