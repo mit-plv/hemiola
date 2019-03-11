@@ -180,23 +180,71 @@ Section RqRsDown.
       Reachable (steps step_m) sys st ->
       forall cobj,
         In cobj sys.(sys_objs) ->
-        forall down rsdm,
+        forall msgs down rsdm,
+          st.(bst_msgs) = msgs ->
           edgeDownTo dtr (obj_idx cobj) = Some down ->
           rsdm.(msg_type) = MRs ->
-          InMP down rsdm st.(bst_msgs) ->
-          rqsQ st.(bst_msgs) down = nil ->
-          FirstMP st.(bst_msgs) down rsdm.
+          InMP down rsdm msgs ->
+          rqsQ msgs down = nil ->
+          FirstMP msgs down rsdm.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? ?]]; intros; subst.
     pose proof (upLockInv_ok H0 H H2).
     good_locking_get cobj.
-    pose proof (edgeDownTo_Some H _ H4).
+    pose proof (edgeDownTo_Some H _ H5).
     destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
     eapply upLockInvORq_down_rssQ_length_one_locked in H9; eauto;
       [|eapply rssQ_length_ge_one; eauto].
     destruct H9 as [rrqUp [rdown [rpidx ?]]]; dest.
     repeat disc_rule_minds.
-  Admitted.
+    apply InMP_FirstMP; [assumption|].
+    rewrite rqsQ_rssQ_length.
+    rewrite H8; simpl.
+    assumption.
+  Qed.
+
+  Lemma rsDown_in_deqMP_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall cobj,
+        In cobj sys.(sys_objs) ->
+        forall msgs down rsdm1 rsdm2,
+          st.(bst_msgs) = msgs ->
+          edgeDownTo dtr (obj_idx cobj) = Some down ->
+          rsdm1.(msg_type) = MRs ->
+          FirstMP msgs down rsdm1 ->
+          rsdm2.(msg_type) = MRs ->
+          InMP down rsdm2 (deqMP down msgs) ->
+          False.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros; subst.
+    pose proof (upLockInv_ok H0 H H2).
+    good_locking_get cobj.
+    pose proof (edgeDownTo_Some H _ H5).
+    destruct H11 as [rqUp [rsUp [pidx ?]]]; dest.
+    eapply upLockInvORq_down_rssQ_length_one_locked in H10; eauto.
+    - red in H10.
+      destruct H10 as [rrqUp [rdown [rpidx ?]]]; dest.
+      repeat disc_rule_minds.
+
+      (* Looks it is too specific to extract as a lemma. *)
+      clear -H6 H7 H8 H9 H17.
+      unfold InMP, FirstMP, firstMP, rssQ, deqMP in *.
+      destruct (findQ rdown (bst_msgs st)); [discriminate|].
+      simpl in H7; inv H7.
+      simpl in H17; rewrite H6 in H17; simpl in H17.
+      unfold findQ in H9; mred; simpl in H9.
+      destruct (filter (fun msg => negb (msg_type msg ==n MRq)) q) eqn:Hq.
+      + assert (In rsdm2 (filter (fun msg => negb (msg_type msg ==n MRq)) q)).
+        { apply filter_In.
+          split; auto.
+          rewrite H8; reflexivity.
+        }
+        rewrite Hq in H; elim H.
+      + simpl in H17; omega.
+    - eapply rssQ_length_ge_one; eauto.
+      eapply InMP_deqMP; eassumption.
+  Qed.
 
   Lemma noRqRsDown_step_int:
     forall st1,
@@ -347,11 +395,13 @@ Section RqRsDown.
           { apply FirstMP_enqMsgs.
             apply FirstMP_deqMP.
             { solve_midx_neq. }
-            { (* [rqsQ down msgs = nil] since [porq@[downRq] = None].
-               * Need to prove:
-               * [InMP down rsdm msgs -> rqsQ down msgs = nil -> FirstMP down rsdm msgs]
-               *)
-              admit.
+            { eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
+              good_locking_get pobj.
+              red in H24; mred.
+              specialize (H24 _ H27).
+              destruct H24 as [rdown [rsUp ?]]; dest.
+              disc_rule_conds.
+              apply H34.
             }
           }
         * destruct H3; [left; red; mred|].
@@ -404,10 +454,13 @@ Section RqRsDown.
             { apply parentIdxOf_not_eq in H20; [|apply Hrrs].
               solve_midx_neq.
             }
-            { (* Need to prove:
-               * [InMP down rsdm msgs -> rqsQ down msgs = nil -> FirstMP down rsdm msgs]
-               *)
-              admit.
+            { eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
+              good_locking_get pobj.
+              red in H26; mred.
+              specialize (H26 _ H20).
+              destruct H26 as [rdown [rsUp ?]]; dest.
+              disc_rule_conds.
+              apply H31.
             }
           }
           
@@ -470,8 +523,8 @@ Section RqRsDown.
             { exfalso.
               eapply obj_same_id_in_system_same in e; eauto; subst.
               disc_rule_conds.
-              (* H26 is false. *)
-              admit.
+              eapply rsDown_in_deqMP_false
+                with (cobj:= cobj) (rsdm1:= valOf i) (rsdm2:= rsdm); eauto.
             }
             { apply InMP_deqMP in H26; specialize (H3 H26).
               destruct H3; [left; red in H3; red; mred|].
@@ -582,19 +635,21 @@ Section RqRsDown.
           { apply parentIdxOf_not_eq in H24; [|apply Hrrs].
             solve_midx_neq.
           }
-          { (* [rqsQ down msgs = nil] since [porq@[downRq] = None].
-             * Then we need to prove:
-             * [InMP down rsdm msgs -> rqsQ down msgs = nil -> FirstMP down rsdm msgs]
-             *)
-            admit.
+          { eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
+            good_locking_get pobj.
+            red in H30; mred.
+            specialize (H30 _ H24).
+            destruct H30 as [rdown [rsUp ?]]; dest.
+            disc_rule_conds.
+            apply H33.
           }
 
       + destruct (eq_nat_dec (obj_idx obj) (obj_idx cobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           disc_rule_conds.
           exfalso.
-          (* H5 is false. *)
-          admit.
+          eapply rsDown_in_deqMP_false
+            with (cobj:= cobj) (rsdm1:= rsm) (rsdm2:= rsdm); eauto.
         * apply InMP_deqMP in H5.
           specialize (H3 H5).
           destruct H3; [left; red; mred|].
@@ -611,8 +666,7 @@ Section RqRsDown.
             apply FirstMP_deqMP; [|assumption].
             solve_midx_neq.
           }
-    
-  Admitted.
+  Qed.
   
   Lemma noRqRsDown_InvStep:
     InvStep sys step_m NoRqRsDown.

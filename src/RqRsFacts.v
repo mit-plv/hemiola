@@ -962,15 +962,16 @@ Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
   filter (fun msg => msg.(msg_type) ==n MRq) (findQ midx msgs).
 
 Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
-  filter (fun msg => msg.(msg_type) ==n MRs) (findQ midx msgs).
+  filter (fun msg => negb (msg.(msg_type) ==n MRq)) (findQ midx msgs).
 
-(* Lemma rqsQ_rssQ_length: *)
-(*   forall (msgs: MessagePool Msg) midx, *)
-(*     length (findQ midx msgs) = length (rqsQ msgs midx) + length (rssQ msgs midx). *)
-(* Proof. *)
-(*   unfold rqsQ, rssQ; intros. *)
-(*   induction (findQ midx msgs); simpl; [reflexivity|]. *)
-(* Qed. *)
+Lemma rqsQ_rssQ_length:
+  forall (msgs: MessagePool Msg) midx,
+    length (findQ midx msgs) = length (rqsQ msgs midx) + length (rssQ msgs midx).
+Proof.
+  unfold rqsQ, rssQ; intros.
+  induction (findQ midx msgs); simpl; [reflexivity|].
+  destruct (msg_type a ==n MRq) eqn:Heq; simpl; rewrite IHq; omega.
+Qed.
 
 Lemma findQ_length_zero:
   forall (msgs: MessagePool Msg) midx msg,
@@ -1206,7 +1207,7 @@ Proof.
     induction q; [intuition|].
     inv H2.
     + simpl; rewrite H0; simpl; omega.
-    + simpl; destruct (msg_type a ==n MRs); eauto.
+    + simpl; destruct (msg_type a ==n MRq); eauto.
       simpl; omega.
   - inv H3.
     + rewrite H0; simpl.
@@ -1214,10 +1215,10 @@ Proof.
       induction q; [intuition|].
       inv H4.
       * simpl; rewrite H; simpl; omega.
-      * simpl; destruct (msg_type a ==n MRs); eauto.
+      * simpl; destruct (msg_type a ==n MRq); eauto.
         simpl; omega.
     + specialize (IHq H4 H2).
-      destruct (msg_type a ==n MRs); eauto.
+      destruct (msg_type a ==n MRq); eauto.
       simpl; omega.
 Qed.
 
