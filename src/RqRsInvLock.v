@@ -234,11 +234,10 @@ Section RqRsDown.
       simpl in H7; inv H7.
       simpl in H17; rewrite H6 in H17; simpl in H17.
       unfold findQ in H9; mred; simpl in H9.
-      destruct (filter (fun msg => negb (msg_type msg ==n MRq)) q) eqn:Hq.
-      + assert (In rsdm2 (filter (fun msg => negb (msg_type msg ==n MRq)) q)).
+      destruct (filter (fun msg => msg_type msg) q) eqn:Hq.
+      + assert (In rsdm2 (filter (fun msg => msg_type msg) q)).
         { apply filter_In.
           split; auto.
-          rewrite H8; reflexivity.
         }
         rewrite Hq in H; elim H.
       + simpl in H17; omega.

@@ -28,9 +28,12 @@ Section Msg.
 
   Record Msg :=
     { msg_id: IdxT;
-      msg_type: nat;
+      msg_type: bool;
       msg_value: Value
     }.
+
+  Definition MRq: bool := false.
+  Definition MRs: bool := true.
 
   Definition buildMsg mid ty v :=
     {| msg_id := mid;
@@ -51,7 +54,7 @@ Section Msg.
   Proof.
     decide equality.
     - apply value_dec.
-    - apply eq_nat_dec.
+    - decide equality.
     - apply eq_nat_dec.
   Defined.
 
@@ -131,9 +134,6 @@ Section Rule.
     }.
 
 End Rule.
-
-Definition MRq: nat := 0.
-Definition MRs: nat := 1.
 
 Infix "/\oprec" := OPrecAnd (at level 80).
 Infix "->oprec" := OPrecImp (at level 99).

@@ -959,10 +959,10 @@ Ltac solve_rule_conds :=
      try reflexivity; try eassumption).
 
 Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
-  filter (fun msg => msg.(msg_type) ==n MRq) (findQ midx msgs).
+  filter (fun msg => negb (msg.(msg_type))) (findQ midx msgs).
 
 Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
-  filter (fun msg => negb (msg.(msg_type) ==n MRq)) (findQ midx msgs).
+  filter (fun msg => msg.(msg_type)) (findQ midx msgs).
 
 Lemma rqsQ_rssQ_length:
   forall (msgs: MessagePool Msg) midx,
@@ -970,7 +970,7 @@ Lemma rqsQ_rssQ_length:
 Proof.
   unfold rqsQ, rssQ; intros.
   induction (findQ midx msgs); simpl; [reflexivity|].
-  destruct (msg_type a ==n MRq) eqn:Heq; simpl; rewrite IHq; omega.
+  destruct (msg_type a) eqn:Heq; simpl; rewrite IHq; omega.
 Qed.
 
 Lemma findQ_length_zero:
@@ -1117,7 +1117,7 @@ Proof.
     induction q; [intuition|].
     inv H2.
     + simpl; rewrite H0; simpl; omega.
-    + simpl; destruct (msg_type a ==n MRq); eauto.
+    + simpl; destruct (msg_type a); eauto.
       simpl; omega.
   - inv H3.
     + rewrite H0; simpl.
@@ -1125,10 +1125,10 @@ Proof.
       induction q; [intuition|].
       inv H4.
       * simpl; rewrite H; simpl; omega.
-      * simpl; destruct (msg_type a ==n MRq); eauto.
+      * simpl; destruct (msg_type a); eauto.
         simpl; omega.
     + specialize (IHq H4 H2).
-      destruct (msg_type a ==n MRq); eauto.
+      destruct (msg_type a); eauto.
       simpl; omega.
 Qed.
 
@@ -1207,7 +1207,7 @@ Proof.
     induction q; [intuition|].
     inv H2.
     + simpl; rewrite H0; simpl; omega.
-    + simpl; destruct (msg_type a ==n MRq); eauto.
+    + simpl; destruct (msg_type a); eauto.
       simpl; omega.
   - inv H3.
     + rewrite H0; simpl.
@@ -1215,10 +1215,10 @@ Proof.
       induction q; [intuition|].
       inv H4.
       * simpl; rewrite H; simpl; omega.
-      * simpl; destruct (msg_type a ==n MRq); eauto.
+      * simpl; destruct (msg_type a); eauto.
         simpl; omega.
     + specialize (IHq H4 H2).
-      destruct (msg_type a ==n MRq); eauto.
+      destruct (msg_type a); eauto.
       simpl; omega.
 Qed.
 

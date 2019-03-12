@@ -44,7 +44,7 @@ Proof.
     + simpl in *.
       destruct H3; subst.
       * rewrite H4 in *; simpl in *; omega.
-      * destruct (msg_type a ==n MRq); auto.
+      * destruct (msg_type a); auto.
         simpl in *; omega.
 Qed.
 

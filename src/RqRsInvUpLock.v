@@ -916,9 +916,9 @@ Section UpLockInv.
       forall midx msg,
         msg_type msg = MRq ->
         FirstMPI msgs (midx, msg) ->
-        filter (fun msg => negb (msg_type msg ==n MRq))
+        filter (fun msg => msg_type msg)
                (findQ midx msgs) =
-        filter (fun msg => negb (msg_type msg ==n MRq))
+        filter (fun msg => msg_type msg)
                (findQ midx (deqMP midx msgs)).
     Proof.
       intros.
@@ -935,9 +935,9 @@ Section UpLockInv.
       forall midx msg,
         msg_type msg = MRs ->
         FirstMPI msgs (midx, msg) ->
-        filter (fun msg => msg_type msg ==n MRq)
+        filter (fun msg => negb (msg_type msg))
                (findQ midx msgs) =
-        filter (fun msg => msg_type msg ==n MRq)
+        filter (fun msg => negb (msg_type msg))
                (findQ midx (deqMP midx msgs)).
     Proof.
       intros.
