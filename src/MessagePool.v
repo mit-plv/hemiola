@@ -691,6 +691,38 @@ Section Facts.
     eapply InMP_deqMP; eauto.
   Qed.
 
+  Lemma deqMP_InMP:
+    forall midx (msg: MsgT) rmidx rmsg mp,
+      InMP midx msg mp ->
+      (midx, msg) <> (rmidx, rmsg) ->
+      FirstMP mp rmidx rmsg ->
+      InMP midx msg (deqMP rmidx mp).
+  Proof.
+    unfold FirstMP, firstMP, InMP, deqMP, findQ; intros.
+    destruct (mp@[rmidx]) eqn:Hrq; simpl in *; auto.
+    destruct l; [discriminate|].
+    simpl in H1; inv H1.
+    mred; simpl.
+    destruct H; subst.
+    - exfalso; auto.
+    - assumption.
+  Qed.
+  
+  Lemma deqMsgs_InMP:
+    forall midx (msg: MsgT) rmsgs mp,
+      InMP midx msg mp ->
+      ~ In (midx, msg) rmsgs ->
+      Forall (FirstMPI mp) rmsgs ->
+      NoDup (idsOf rmsgs) ->
+      InMP midx msg (deqMsgs (idsOf rmsgs) mp).
+  Proof.
+    induction rmsgs as [|[rmidx rmsg] rmsgs]; simpl; intros; auto.
+    inv H1; inv H2.
+    eapply IHrmsgs; eauto.
+    - eapply deqMP_InMP; eauto.
+    - apply FirstMPI_Forall_deqMP; auto.
+  Qed.
+  
   Lemma qsOf_In_findQ_eq:
     forall (mp1 mp2: MessagePool MsgT) minds,
       qsOf minds mp1 = qsOf minds mp2 ->

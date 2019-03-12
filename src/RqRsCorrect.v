@@ -4,7 +4,7 @@ Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts.
-Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic.
+Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic RqRsInvSep.
 Require Import RqRsRed RqUpRed RsUpRed RqDownRed RsDownRed.
 
 Set Implicit Arguments.
@@ -163,7 +163,10 @@ Section Pushable.
   End RsUp.
 
   Section RqDown.
-    Hypothesis (Hrd: RqDownMsgs dtr sys oidx rins).
+    Variable pobj: Object oifc.
+    Hypothesis (Hrd: RqDownMsgs dtr sys oidx rins)
+               (Hpobj: In pobj sys.(sys_objs))
+               (Hcp: parentIdxOf dtr oidx = Some (obj_idx pobj)).
 
     Definition RqDownLPush (hst: MHistory) :=
       exists loidx,
@@ -244,7 +247,7 @@ Section Pushable.
       - left; red; eauto.
       - right; red; eauto.
     Qed.
-
+    
     Lemma rqDown_lpush_unit:
       forall hst,
         AtomicEx msg_dec hst ->
@@ -379,8 +382,11 @@ Section Pushable.
   End RqDown.
 
   Section RsDown.
-    Hypothesis (Hrd: RsDownMsgs dtr sys oidx rins).
-
+    Variable pobj: Object oifc.
+    Hypothesis (Hrd: RsDownMsgs dtr sys oidx rins)
+               (Hpobj: In pobj sys.(sys_objs))
+               (Hcp: parentIdxOf dtr oidx = Some (obj_idx pobj)).
+    
     Definition RsDownLPush (hst: MHistory) :=
       exists loidx,
         lastOIdxOf hst = Some loidx /\
@@ -593,6 +599,56 @@ Section Pushable.
     Qed.
     
   End RsDown.
+
+  Lemma rqDown_ExtContinuousL_parent_in_system:
+    RqDownMsgs dtr sys oidx rins ->
+    forall st1,
+      Reachable (steps step_m) sys st1 ->
+      forall st2,
+        steps step_m sys st1 phst st2 ->
+        exists pobj,
+          In pobj (sys_objs sys) /\
+          parentIdxOf dtr oidx = Some (obj_idx pobj).
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+    apply eq_sym in H6; inv H6.
+    destruct H5 as [pinits pins phst pouts peouts].
+    destruct H2 as [cobj [rqDown ?]]; dest; subst.
+    pose proof (edgeDownTo_Some H _ H10).
+    destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
+    eapply atomic_down_out_in_history in H6; eauto.
+    - eapply steps_object_in_system in H6; eauto.
+      destruct H6 as [pobj [? ?]]; subst.
+      exists pobj; auto.
+    - apply SubList_singleton_In in H8.
+      apply in_map; assumption.
+  Qed.
+
+  Lemma rsDown_ExtContinuousL_parent_in_system:
+    RsDownMsgs dtr sys oidx rins ->
+    forall st1,
+      Reachable (steps step_m) sys st1 ->
+      forall st2,
+        steps step_m sys st1 phst st2 ->
+        exists pobj,
+          In pobj (sys_objs sys) /\
+          parentIdxOf dtr oidx = Some (obj_idx pobj).
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hcont as [eouts [oidx' [ridx' [rins' [routs' ?]]]]]; dest.
+    apply eq_sym in H6; inv H6.
+    destruct H5 as [pinits pins phst pouts peouts].
+    destruct H2 as [cobj [rsDown ?]]; dest; subst.
+    pose proof (edgeDownTo_Some H _ H10).
+    destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
+    eapply atomic_down_out_in_history in H6; eauto.
+    - eapply steps_object_in_system in H6; eauto.
+      destruct H6 as [pobj [? ?]]; subst.
+      exists pobj; auto.
+    - apply SubList_singleton_In in H8.
+      apply in_map; assumption.
+  Qed.
   
 End Pushable.
 
@@ -621,9 +677,25 @@ Proof.
 
   destruct H6 as [|[|[|]]].
   - eapply rqUp_WellInterleavedHst; eauto.
-  - eapply rqDown_WellInterleavedHst; eauto.
+  - assert (exists sti, steps step_m sys st1 hst1 sti).
+    { inv_steps.
+      eapply steps_split in H9; [|reflexivity].
+      destruct H9 as [sti [? ?]]; eauto.
+    }
+    destruct H6 as [sti ?].
+    destruct (rqDown_ExtContinuousL_parent_in_system H H0 H5 H1 H6)
+      as [pobj [? ?]].
+    eapply rqDown_WellInterleavedHst; eauto.
   - eapply rsUp_WellInterleavedHst; eauto.
-  - eapply rsDown_WellInterleavedHst; eauto.
+  - assert (exists sti, steps step_m sys st1 hst1 sti).
+    { inv_steps.
+      eapply steps_split in H9; [|reflexivity].
+      destruct H9 as [sti [? ?]]; eauto.
+    }
+    destruct H6 as [sti ?].
+    destruct (rsDown_ExtContinuousL_parent_in_system H H0 H5 H1 H6)
+      as [pobj [? ?]].
+    eapply rsDown_WellInterleavedHst; eauto.
 Qed.
 
 Corollary rqrs_Serializable:

@@ -20,9 +20,11 @@ Section RqDownReduction.
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
   Section OnRqDown.
-    Variables (oidxTo: IdxT)
+    Variables (cidx: IdxT) (pobj: Object oifc)
               (rqDowns: list (Id Msg)).
-    Hypothesis (Hrqd: RqDownMsgs dtr sys oidxTo rqDowns).
+    Hypotheses (Hrqd: RqDownMsgs dtr sys cidx rqDowns)
+               (Hpobj: In pobj sys.(sys_objs))
+               (Hcp: parentIdxOf dtr cidx = Some (obj_idx pobj)).
 
     Lemma rqDown_oinds:
       forall hst inits ins outs eouts,
@@ -31,7 +33,7 @@ Section RqDownReduction.
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
-          DisjList (oindsOf hst) (subtreeIndsOf dtr oidxTo).
+          DisjList (oindsOf hst) (subtreeIndsOf dtr cidx).
     Proof.
     Admitted.
 
@@ -44,8 +46,8 @@ Section RqDownReduction.
           Forall (InMPI st1.(bst_msgs)) rqDowns ->
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
-          In loidx (subtreeIndsOf dtr oidxTo) ->
-          SubList (oindsOf hst) (subtreeIndsOf dtr oidxTo).
+          In loidx (subtreeIndsOf dtr cidx) ->
+          SubList (oindsOf hst) (subtreeIndsOf dtr cidx).
     Proof.
     Admitted.
 
@@ -58,7 +60,7 @@ Section RqDownReduction.
           Forall (InMPI st1.(bst_msgs)) rqDowns ->
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
-          ~ In loidx (subtreeIndsOf dtr oidxTo) ->
+          ~ In loidx (subtreeIndsOf dtr cidx) ->
           exists phst ninits nins nhst nouts,
             hst = nhst ++ phst /\
             (phst = nil \/
@@ -66,12 +68,12 @@ Section RqDownReduction.
                  Atomic msg_dec inits pins phst pouts rqUps /\
                  RqUpMsgs dtr ruIdx rqUps /\
                  RqUpHistory dtr phst rqUps /\
-                 Forall (fun rqUp => rqEdgeUpFrom dtr oidxTo =
+                 Forall (fun rqUp => rqEdgeUpFrom dtr cidx =
                                      Some (idOf rqUp)) rqUps)) /\
-            SubList (oindsOf phst) (subtreeIndsOf dtr oidxTo) /\
+            SubList (oindsOf phst) (subtreeIndsOf dtr cidx) /\
             SubList ninits ins /\
             Atomic msg_dec ninits nins nhst nouts eouts /\
-            DisjList (oindsOf nhst) (subtreeIndsOf dtr oidxTo).
+            DisjList (oindsOf nhst) (subtreeIndsOf dtr cidx).
     Proof.
     Admitted.
 
@@ -82,9 +84,9 @@ Section RqDownReduction.
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
         Atomic msg_dec rinits rins rhst routs reouts ->
-        DisjList (oindsOf rhst) (subtreeIndsOf dtr oidxTo) ->
+        DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
         Atomic msg_dec linits lins lhst louts leouts ->
-        SubList (oindsOf lhst) (subtreeIndsOf dtr oidxTo) ->
+        SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         forall st1,
           Reachable (steps step_m) sys st1 ->
           RqDownP st1 ->
@@ -98,9 +100,9 @@ Section RqDownReduction.
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
         Atomic msg_dec rinits rins rhst routs reouts ->
-        DisjList (oindsOf rhst) (subtreeIndsOf dtr oidxTo) ->
+        DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
         Atomic msg_dec linits lins lhst louts leouts ->
-        SubList (oindsOf lhst) (subtreeIndsOf dtr oidxTo) ->
+        SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         DisjList reouts linits ->
         Reducible sys (lhst ++ rhst) (rhst ++ lhst).
     Proof.
@@ -118,7 +120,7 @@ Section RqDownReduction.
         SubList rqDowns peouts ->
         Atomic msg_dec inits ins hst outs eouts ->
         lastOIdxOf hst = Some loidx ->
-        In loidx (subtreeIndsOf dtr oidxTo) ->
+        In loidx (subtreeIndsOf dtr cidx) ->
         DisjList peouts inits ->
         Reducible sys (hst ++ phst) (phst ++ hst).
     Proof.
@@ -144,10 +146,10 @@ Section RqDownReduction.
       forall inits ins hst outs eouts loidx ridx routs,
         Atomic msg_dec inits ins hst outs eouts ->
         lastOIdxOf hst = Some loidx ->
-        ~ In loidx (subtreeIndsOf dtr oidxTo) ->
+        ~ In loidx (subtreeIndsOf dtr cidx) ->
         DisjList rqDowns inits ->
-        ReducibleP sys RqDownP (RlblInt oidxTo ridx rqDowns routs :: hst)
-                   (hst ++ [RlblInt oidxTo ridx rqDowns routs]).
+        ReducibleP sys RqDownP (RlblInt cidx ridx rqDowns routs :: hst)
+                   (hst ++ [RlblInt cidx ridx rqDowns routs]).
     Proof.
       intros; red; intros.
       inv_steps.
@@ -158,7 +160,7 @@ Section RqDownReduction.
 
       rewrite <-app_assoc.
       eapply reducible_app_1; try assumption.
-      - instantiate (1:= RlblInt oidxTo ridx rqDowns routs :: prhst).
+      - instantiate (1:= RlblInt cidx ridx rqDowns routs :: prhst).
         red; intros.
         destruct H4; subst; simpl in *.
         + inv_steps.
@@ -171,13 +173,13 @@ Section RqDownReduction.
           destruct H12 as [cidx [[rqUp rqum] ?]]; dest; subst.
           apply idsOf_DisjList; simpl in *.
           solve_midx_disj.
-      - change (nhst ++ RlblInt oidxTo ridx rqDowns routs :: prhst)
-          with (nhst ++ [RlblInt oidxTo ridx rqDowns routs] ++ prhst).
+      - change (nhst ++ RlblInt cidx ridx rqDowns routs :: prhst)
+          with (nhst ++ [RlblInt cidx ridx rqDowns routs] ++ prhst).
         rewrite app_assoc.
         eapply reducible_app_2; try assumption.
-        + instantiate (1:= RlblInt oidxTo ridx rqDowns routs :: nhst).
-          change (RlblInt oidxTo ridx rqDowns routs :: nhst)
-            with ([RlblInt oidxTo ridx rqDowns routs] ++ nhst).
+        + instantiate (1:= RlblInt cidx ridx rqDowns routs :: nhst).
+          change (RlblInt cidx ridx rqDowns routs :: nhst)
+            with ([RlblInt cidx ridx rqDowns routs] ++ nhst).
           eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
           * constructor.
           * simpl; red; intros; Common.dest_in.
@@ -207,11 +209,11 @@ Section RqDownReduction.
         Atomic msg_dec rinits rins rhst routs reouts ->
         DisjList rqDowns rinits ->
         lastOIdxOf rhst = Some rloidx ->
-        ~ In rloidx (subtreeIndsOf dtr oidxTo) ->
+        ~ In rloidx (subtreeIndsOf dtr cidx) ->
         Atomic msg_dec linits lins lhst louts leouts ->
         DisjList rqDowns linits ->
         lastOIdxOf lhst = Some lloidx ->
-        In lloidx (subtreeIndsOf dtr oidxTo) ->
+        In lloidx (subtreeIndsOf dtr cidx) ->
         ReducibleP sys RqDownP (lhst ++ rhst) (rhst ++ lhst).
     Proof.
       intros; red; intros.

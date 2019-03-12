@@ -1363,7 +1363,8 @@ Section Separation.
           { eexists; left; reflexivity. }
         }
         destruct H12 as [[rsUp rsum] ?].
-        assert (In rsUp (idsOf rins)) by (apply in_map with (f:= idOf) in H12; assumption).
+        assert (In rsUp (idsOf rins))
+          by (apply in_map with (f:= idOf) in H12; assumption).
         eapply RqRsDownMatch_rs_rq in H15; [|eassumption].
         destruct H15 as [cidx [down ?]]; dest.
         rewrite Forall_forall in H10; specialize (H10 _ H12).
@@ -1376,8 +1377,85 @@ Section Separation.
       left; reflexivity.
   Qed.
 
-  Lemma atomic_rqDown_no_rsDown:
-    forall cidx rqDown pidx,
+  Lemma step_rqDown_no_rsDown_out:
+    forall cidx cobj pidx pobj rqDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rqDown) ->
+      msg_type (valOf rqDown) = MRq ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        InMPI (bst_msgs st1) rqDown ->
+        forall oidx ridx rins routs st2,
+          step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+          ~ In rqDown rins ->
+          forall rsDown,
+            idOf rsDown = idOf rqDown ->
+            msg_type (valOf rsDown) = MRs ->
+            ~ In rsDown routs.
+  Proof.
+    intros; subst.
+    assert (Reachable (steps step_m) sys st2)
+      by (eapply reachable_steps;
+          [eassumption|apply steps_singleton; eassumption]).
+    inv_step; simpl in *.
+    intro Hx.
+    eapply rqDown_in_rsDown_push_false
+      with (cobj0:= cobj) (pobj0:= pobj)
+           (dq:= findQ (idOf rqDown) (deqMsgs (idsOf rins) msgs))
+      in H0; eauto.
+    - destruct H21; red in H8.
+      destruct rqDown as [rqDown rqdm]; simpl in *.
+      eapply deqMsgs_InMP; eauto.
+    - destruct rsDown as [rsDown rsdm]; simpl in *; subst.
+      destruct H25.
+      rewrite findQ_In_NoDup_enqMsgs with (msg:= rsdm); try assumption.
+      reflexivity.
+  Qed.
+  
+  Lemma atomic_rqDown_no_rsDown_out:
+    forall cidx cobj pidx pobj rqDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rqDown) ->
+      msg_type (valOf rqDown) = MRq ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rqDown ->
+          steps step_m sys st1 hst st2 ->
+          ~ In rqDown inits ->
+          forall rsDown,
+            idOf rsDown = idOf rqDown ->
+            msg_type (valOf rsDown) = MRs ->
+            ~ In rsDown outs.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 8; simpl; intros; subst.
+    - inv_steps.
+      eapply step_rqDown_no_rsDown_out
+        with (cobj:= cobj) (pobj:= pobj); eauto.
+    - inv_steps.
+      intro Hx; apply in_app_or in Hx; destruct Hx.
+      + eapply IHAtomic; eauto.
+      + assert (Reachable (steps step_m) sys st3) by eauto.
+        eapply step_rqDown_no_rsDown_out
+          with (cobj:= cobj) (pobj:= pobj) (st1:= st3); eauto.
+        * eapply (atomic_messages_in_in msg_dec); eauto.
+        * pose proof H9.
+          eapply atomic_rqDown_inits_outs_disj with (st1:= st1) in H12; eauto.
+          intro Hx; elim H12.
+          apply H11 in Hx.
+          eapply atomic_eouts_in; eauto.
+  Qed.
+
+  Lemma atomic_rqDown_no_rsDown_in:
+    forall cidx cobj pidx pobj rqDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
       parentIdxOf dtr cidx = Some pidx ->
       edgeDownTo dtr cidx = Some (idOf rqDown) ->
       msg_type (valOf rqDown) = MRq ->
@@ -1394,20 +1472,18 @@ Section Separation.
             ~ In rsDown inits ->
             ~ In rsDown ins.
   Proof.
-    destruct Hrrs as [? [? ?]].
-    induction 4; simpl; intros; subst; [assumption|].
-
-    pose proof (footprints_ok H0 H11) as Hftinv.
-    
-    inv_steps.
-    intro Hx; apply in_app_or in Hx.
-    destruct Hx; [eapply IHAtomic; eauto|].
-
-  (* Since [In rsDown ins] and [~ In rsDown inits], we have [In rsDown outs].
-   * [st2.(bst_msgs) = enqMsgs outs (deqMsgs ins st1.(bst_msgs))] and we know
-   * [~ In rqDown inits] (which implies [~ In rqDown ins])...
-   *)
-  Admitted.
+    intros.
+    pose proof H6.
+    eapply atomic_rqDown_no_rsDown_out
+      with (cobj:= cobj) (pobj:= pobj) in H14; eauto.
+    apply atomic_messages_ins_outs in H6.
+    destruct H6.
+    intro Hx; elim H14.
+    apply SubList_app_4 in H15.
+    apply H15 in Hx.
+    apply in_app_or in Hx; destruct Hx; auto.
+    exfalso; auto.
+  Qed.
 
   Ltac disc_rule_custom ::=
     try disc_messages_in.
@@ -1476,23 +1552,26 @@ Section Separation.
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
-        forall cidx pobj rqDown,
+        forall cobj pobj rqDown,
+          In cobj sys.(sys_objs) ->
           In pobj sys.(sys_objs) ->
-          parentIdxOf dtr cidx = Some (obj_idx pobj) ->
-          edgeDownTo dtr cidx = Some (idOf rqDown) ->
+          parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
+          edgeDownTo dtr (obj_idx cobj) = Some (idOf rqDown) ->
           msg_type (valOf rqDown) = MRq ->
           InMPI s1.(bst_msgs) rqDown ->
           ~ In rqDown inits ->
-          SubList (oindsOf hst) (subtreeIndsOf dtr cidx) \/
-          DisjList (oindsOf hst) (subtreeIndsOf dtr cidx).
+          SubList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)) \/
+          DisjList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (atomic_rqDown_no_rsDown _ _ H7 H8 H9 H2 H4 H10 H5 H11) as Hrqrs.
+    pose proof (atomic_rqDown_no_rsDown_in
+                  _ _ _ H6 eq_refl H7 eq_refl H8 H9 H10
+                  H2 H4 H11 H5 H12) as Hrqrs.
 
     generalize dependent s2.
     generalize dependent s1.
     induction H2; simpl; intros; subst.
-    - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr cidx)).
+    - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
       + left; red; intros; Common.dest_in; assumption.
       + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
     - inv_steps.
@@ -1505,35 +1584,35 @@ Section Separation.
         eapply Hrqrs; eauto.
         apply in_or_app; auto.
       }
-      specialize (IHAtomic H16 H11 H3); clear H3.
-      specialize (IHAtomic _ H14 H15 _ H17).
+      specialize (IHAtomic H17 H12 H3); clear H3.
+      specialize (IHAtomic _ H15 H16 _ H18).
       destruct IHAtomic.
       + left; apply SubList_cons; [|assumption].
-        pose proof (atomic_msg_outs_bounded H2 H14 H17 H3).
-        eapply SubList_forall in H10; [|eassumption].
+        pose proof (atomic_msg_outs_bounded H2 H15 H18 H3).
+        eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
-        eapply (atomic_messages_in_in msg_dec) in H11; try eassumption.
+        eapply (atomic_messages_in_in msg_dec) in H12; try eassumption.
         intro Hx; subst.
         eapply step_rqDown_separation_inside_false; eauto.
       + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-        pose proof (atomic_msg_outs_disj H2 H14 H17 H3).
-        eapply SubList_forall in H10; [|eassumption].
+        pose proof (atomic_msg_outs_disj H2 H15 H18 H3).
+        eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_outside_ok; eauto.
-        pose proof (atomic_messages_in_in msg_dec H2 H17 _ H15 H11).
+        pose proof (atomic_messages_in_in msg_dec H2 H18 _ H16 H12).
         intro Hx; subst.
         eapply step_rqDown_separation_outside_false with (rins:= rins); eauto.
-        * clear H12.
+        * clear H13.
           pose proof H2.
-          eapply atomic_rqDown_inits_outs_disj in H12; eauto.
+          eapply atomic_rqDown_inits_outs_disj in H13; eauto.
           intro Hx; apply H5 in Hx.
-          elim H12.
+          elim H13.
           eapply atomic_eouts_in; eauto.
         * intros; intro Hx.
           eapply Hrqrs; eauto.
           { destruct rsDown as [rsDown rsdm]; simpl in *; subst.
-            clear H12.
+            clear H13.
             eapply atomic_outside_tree_init_not_inside; eauto.
           }
           { apply in_or_app; auto. }
@@ -1743,21 +1822,74 @@ Section Separation.
           try apply Hrrs; eassumption.
 
       + (* Not possible for RsDown and RsUp to be together *)
-        admit.
+        assert (exists rsUp rsum,
+                   In (rsUp, rsum) rins /\
+                   rsEdgeUpFrom dtr (obj_idx cobj) = Some rsUp /\
+                   InMP rsUp rsum msgs).
+        { rewrite <-H34 in H26.
+          destruct rins as [|[rsUp rsum] ?].
+          { red in H26; dest.
+            destruct rqTos; [exfalso; auto|discriminate].
+          }
+          { inv H9; destruct H30 as [oidx [? ?]].
+            eapply RqRsDownMatch_rs_rq in H26; [|left; reflexivity].
+            destruct H26 as [cidx [down ?]]; dest; simpl in *.
+            disc_rule_conds.
+            eapply inside_child_outside_parent_case in H28;
+              try apply Hrrs; eauto;
+                [|apply parent_not_in_subtree; [apply Hrrs|]; assumption].
+            subst; exists rsUp, rsum.
+            repeat split; auto.
+            apply FirstMP_InMP; assumption.
+          }
+        }
+        destruct H11 as [rsUp [rsum ?]]; dest.
+        eapply rsDown_in_rsUp_in_false
+          with (cobj0:= cobj) (pobj:= obj)
+               (down:= idOf rsDown) (rsdm:= valOf rsDown)
+               (rsUp0:= rsUp) (rsum0:= rsum); eauto.
+
       + (* Not possible for RsDown and RsUp to be together *)
-        admit.
+        assert (exists rsUp rsum,
+                   In (rsUp, rsum) rins /\
+                   rsEdgeUpFrom dtr (obj_idx cobj) = Some rsUp /\
+                   InMP rsUp rsum msgs).
+        { rewrite <-H34 in H12.
+          destruct rins as [|[rsUp rsum] ?].
+          { red in H12; dest.
+            destruct rqTos; [exfalso; auto|discriminate].
+          }
+          { inv H9; destruct H26 as [oidx [? ?]].
+            eapply RqRsDownMatch_rs_rq in H12; [|left; reflexivity].
+            destruct H12 as [cidx [down ?]]; dest; simpl in *.
+            disc_rule_conds.
+            eapply inside_child_outside_parent_case in H24;
+              try apply Hrrs; eauto;
+                [|apply parent_not_in_subtree; [apply Hrrs|]; assumption].
+            subst; exists rsUp, rsum.
+            repeat split; auto.
+            apply FirstMP_InMP; assumption.
+          }
+        }
+        destruct H14 as [rsUp [rsum ?]]; dest.
+        eapply rsDown_in_rsUp_in_false
+          with (cobj0:= cobj) (pobj:= obj)
+               (down:= idOf rsDown) (rsdm:= valOf rsDown)
+               (rsUp0:= rsUp) (rsum0:= rsum); eauto.
 
     - disc_rule_conds.
       pose proof (edgeDownTo_Some H _ H36).
       destruct H9 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
-      eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
+      eapply parent_parent_in_False
+        with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
         try apply Hrrs; eassumption.
-      
-  Admitted.
+  Qed.
 
   Lemma step_rsDown_separation_outside_false:
-    forall cidx rsDown,
+    forall cidx pobj rsDown,
+      In pobj sys.(sys_objs) ->
+      parentIdxOf dtr cidx = Some (obj_idx pobj) ->
       edgeDownTo dtr cidx = Some (idOf rsDown) ->
       msg_type (valOf rsDown) = MRs ->
       forall st1,
@@ -1774,35 +1906,29 @@ Section Separation.
             False.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H4) as Hftinv.
-    pose proof (upLockInv_ok H0 H H4) as Hulinv.
+    pose proof (footprints_ok H0 H6) as Hftinv.
+    pose proof (upLockInv_ok H0 H H6) as Hulinv.
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      elim H8; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+      elim H10; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
 
     - disc_rule_conds.
-      (* Not possible for RqDown and RsDown in the same queue,
-       * where RqDown is the first of the queue.
-       *)
-      admit.
+      eapply rsDown_in_rqDown_first_false
+        with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown); eauto.
 
     - disc_rule_conds.
+      + elim H13; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + elim H11; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
-      + elim H9; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
-      + (* Not possible for RqDown and RsDown in the same queue,
-         * where RqDown is the first of the queue.
-         *)
-        admit.
+      + eapply rsDown_in_rqDown_first_false
+          with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown); eauto.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + destruct rsDown as [rsDown rsdm]; simpl in *.
         destruct i as [rsFrom rsfm]; simpl in *; subst.
-        pose proof (rqEdgeUpFrom_Some H _ H11).
-        destruct H12 as [rsUp [down [pidx ?]]]; dest.
         disc_rule_conds.
         assert (rsfm <> rsdm) by (intro Hx; subst; elim H6; auto); clear H6.
         good_locking_get obj.
@@ -1810,56 +1936,57 @@ Section Separation.
         eapply rssQ_length_two with (msg1:= rsfm) (msg2:= rsdm); try eassumption.
         apply FirstMP_InMP; assumption.
 
-      + rewrite <-H33 in H26.
+      + rewrite <-H35 in H28.
         assert (exists rin, In rin rins).
         { destruct rins.
           { exfalso.
-            red in H26; dest.
+            red in H28; dest.
+            destruct rqTos; [auto|].
+            discriminate.
+          }
+          { eexists; left; reflexivity. }
+        }
+        destruct H12 as [[rsUp rsum] ?].
+        assert (In rsUp (idsOf rins))
+          by (apply in_map with (f:= idOf) in H12; assumption).
+        eapply RqRsDownMatch_rs_rq in H28; [|eassumption].
+        destruct H28 as [cidx [down ?]]; dest.
+        rewrite Forall_forall in H9; specialize (H9 _ H12).
+        destruct H9 as [oidx [? ?]].
+        disc_rule_conds.
+        elim H37; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+
+      + rewrite <-H35 in H13.
+        assert (exists rin, In rin rins).
+        { destruct rins.
+          { exfalso.
+            red in H13; dest.
             destruct rqTos; [auto|].
             discriminate.
           }
           { eexists; left; reflexivity. }
         }
         destruct H10 as [[rsUp rsum] ?].
-        assert (In rsUp (idsOf rins)) by (apply in_map with (f:= idOf) in H10; assumption).
-        eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
-        destruct H26 as [cidx [down ?]]; dest.
-        rewrite Forall_forall in H7; specialize (H7 _ H10).
-        destruct H7 as [oidx [? ?]].
+        assert (In rsUp (idsOf rins))
+          by (apply in_map with (f:= idOf) in H10; assumption).
+        eapply RqRsDownMatch_rs_rq in H13; [|eassumption].
+        destruct H13 as [cidx [down ?]]; dest.
+        rewrite Forall_forall in H9; specialize (H9 _ H10).
+        destruct H9 as [oidx [? ?]].
         disc_rule_conds.
-        elim H35; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
-
-      + rewrite <-H33 in H11.
-        assert (exists rin, In rin rins).
-        { destruct rins.
-          { exfalso.
-            red in H11; dest.
-            destruct rqTos; [auto|].
-            discriminate.
-          }
-          { eexists; left; reflexivity. }
-        }
-        destruct H8 as [[rsUp rsum] ?].
-        assert (In rsUp (idsOf rins)) by (apply in_map with (f:= idOf) in H8; assumption).
-        eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
-        destruct H11 as [cidx [down ?]]; dest.
-        rewrite Forall_forall in H7; specialize (H7 _ H8).
-        destruct H7 as [oidx [? ?]].
-        disc_rule_conds.
-        elim H31; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+        elim H33; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
 
     - disc_rule_conds.
       destruct rsDown as [rsDown rsdm]; simpl in *.
-      pose proof (edgeDownTo_Some H _ H2).
-      destruct H8 as [rqUp [rsUp [pidx ?]]]; dest.
+      pose proof (edgeDownTo_Some H _ H4).
+      destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
-      assert (rsm <> rsdm) by (intro Hx; subst; elim H6; auto); clear H6.
+      assert (rsm <> rsdm) by (intro Hx; subst; elim H8; auto); clear H8.
       good_locking_get obj.
-      eapply upLockInvORq_down_rssQ_length_two_False in H6; try eassumption.
+      eapply upLockInvORq_down_rssQ_length_two_False in H8; try eassumption.
       eapply rssQ_length_two with (msg1:= rsm) (msg2:= rsdm); try eassumption.
       apply FirstMP_InMP; assumption.
-
-  Admitted.
+  Qed.
 
   Lemma atomic_rsDown_separation_ok:
     forall inits ins hst outs eouts,
@@ -1867,17 +1994,16 @@ Section Separation.
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
-        forall cidx cobj,
+        forall cobj pobj rsDown,
           In cobj sys.(sys_objs) ->
-          cobj.(obj_idx) = cidx ->
-          forall rsDown pidx,
-            parentIdxOf dtr cidx = Some pidx ->
-            edgeDownTo dtr cidx = Some (idOf rsDown) ->
-            msg_type (valOf rsDown) = MRs ->
-            InMPI s1.(bst_msgs) rsDown ->
-            ~ In rsDown inits ->
-            SubList (oindsOf hst) (subtreeIndsOf dtr cidx) \/
-            DisjList (oindsOf hst) (subtreeIndsOf dtr cidx).
+          In pobj sys.(sys_objs) ->
+          parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
+          edgeDownTo dtr (obj_idx cobj) = Some (idOf rsDown) ->
+          msg_type (valOf rsDown) = MRs ->
+          InMPI s1.(bst_msgs) rsDown ->
+          ~ In rsDown inits ->
+          SubList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)) \/
+          DisjList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
   Proof.
     destruct Hrrs as [? [? ?]].
     induction 1; simpl; intros; subst.
@@ -1885,26 +2011,26 @@ Section Separation.
       + left; red; intros; Common.dest_in; assumption.
       + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
     - inv_steps.
-      specialize (IHAtomic _ _ H8 H11 _ _ H10 eq_refl _ _ H12 H13 H14 H15 H16).
+      specialize (IHAtomic _ _ H8 H17 _ _ _ H10 H11 H12 H13 H14 H15 H16).
       destruct IHAtomic.
       + left; apply SubList_cons; [|assumption].
-        pose proof (atomic_msg_outs_bounded H2 H8 H11 H5).
+        pose proof (atomic_msg_outs_bounded H2 H8 H17 H5).
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
-        eapply (atomic_messages_in_in msg_dec) in H15; try eassumption.
+        eapply (atomic_messages_in_in msg_dec) in H17; try eassumption.
         intro Hx; subst.
-        eapply step_rsDown_separation_inside_false; eauto.
+        eapply step_rsDown_separation_inside_false with (cobj:= cobj); eauto.
       + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-        pose proof (atomic_msg_outs_disj H2 H8 H11 H5).
+        pose proof (atomic_msg_outs_disj H2 H8 H17 H5).
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_outside_ok; eauto.
-        pose proof (atomic_messages_in_in msg_dec H2 H11 _ H15 H16).
+        pose proof (atomic_messages_in_in msg_dec H2 H17 _ H15 H16).
         intro Hx; subst.
         eapply step_rsDown_separation_outside_false with (rins:= rins); eauto.
         clear H7; pose proof H2.
-        eapply atomic_rsDown_inits_outs_disj in H7; eauto.
+        eapply atomic_rsDown_inits_outs_disj with (cobj:= cobj) in H7; eauto.
         intro Hx; eapply H4 in Hx.
         elim H7; eapply atomic_eouts_in; eauto.
   Qed.
@@ -1915,22 +2041,21 @@ Section Separation.
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
-        forall cidx cobj,
+        forall cobj pobj rsDown,
           In cobj sys.(sys_objs) ->
-          cobj.(obj_idx) = cidx ->
-          forall rsDown pidx,
-            parentIdxOf dtr cidx = Some pidx ->
-            edgeDownTo dtr cidx = Some (idOf rsDown) ->
-            msg_type (valOf rsDown) = MRs ->
-            InMPI s1.(bst_msgs) rsDown ->
-            ~ In rsDown inits ->
-            forall ioidx,
-              In ioidx (oindsOf hst) ->
-              In ioidx (subtreeIndsOf dtr cidx) ->
-              SubList (oindsOf hst) (subtreeIndsOf dtr cidx).
+          In pobj sys.(sys_objs) ->
+          parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
+          edgeDownTo dtr (obj_idx cobj) = Some (idOf rsDown) ->
+          msg_type (valOf rsDown) = MRs ->
+          InMPI s1.(bst_msgs) rsDown ->
+          ~ In rsDown inits ->
+          forall ioidx,
+            In ioidx (oindsOf hst) ->
+            In ioidx (subtreeIndsOf dtr (obj_idx cobj)) ->
+            SubList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
   Proof.
     intros.
-    eapply atomic_rsDown_separation_ok in H; eauto.
+    eapply atomic_rsDown_separation_ok with (cobj:= cobj) in H; eauto.
     destruct H; auto.
     exfalso.
     specialize (H ioidx); destruct H; auto.
@@ -1942,22 +2067,21 @@ Section Separation.
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
-        forall cidx cobj,
+        forall cobj pobj rsDown,
           In cobj sys.(sys_objs) ->
-          cobj.(obj_idx) = cidx ->
-          forall rsDown pidx,
-            parentIdxOf dtr cidx = Some pidx ->
-            edgeDownTo dtr cidx = Some (idOf rsDown) ->
-            msg_type (valOf rsDown) = MRs ->
-            InMPI s1.(bst_msgs) rsDown ->
-            ~ In rsDown inits ->
-            forall ioidx,
-              In ioidx (oindsOf hst) ->
-              ~ In ioidx (subtreeIndsOf dtr cidx) ->
-              DisjList (oindsOf hst) (subtreeIndsOf dtr cidx).
+          In pobj sys.(sys_objs) ->
+          parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
+          edgeDownTo dtr (obj_idx cobj) = Some (idOf rsDown) ->
+          msg_type (valOf rsDown) = MRs ->
+          InMPI s1.(bst_msgs) rsDown ->
+          ~ In rsDown inits ->
+          forall ioidx,
+            In ioidx (oindsOf hst) ->
+            ~ In ioidx (subtreeIndsOf dtr (obj_idx cobj)) ->
+            DisjList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
   Proof.
     intros.
-    eapply atomic_rsDown_separation_ok in H; eauto.
+    eapply atomic_rsDown_separation_ok with (cobj:= cobj) in H; eauto.
     destruct H; auto.
     exfalso.
     elim H10; auto.
