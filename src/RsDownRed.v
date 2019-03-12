@@ -117,6 +117,27 @@ Section RsDownReduction.
             steps step_m sys st1 (lhst ++ rhst) st2 ->
             DisjList reouts linits.
     Proof.
+      intros.
+      apply (DisjList_false_spec (id_dec msg_dec)).
+      intros [midx msg] ? ?.
+      unfold RsDownP in H6.
+      destruct Hrsd as [cobj [[rsDown rsdm] ?]]; dest; subst.
+      inv H6; clear H16.
+      simpl in *.
+
+      replace midx with rsDown in *.
+      - eapply steps_split in H7; [|reflexivity].
+        destruct H7 as [sti [? ?]].
+        eapply atomic_rsDown_no_in
+          with (cobj0:= cobj) (pobj0:= pobj) (rsDown0:= (rsDown, rsdm))
+               (dmsg:= (rsDown, msg)) (st3:= sti); eauto.
+        + eapply (atomic_messages_in_in msg_dec); try apply H0; eauto.
+          eapply DisjList_In_2; [eassumption|].
+          left; reflexivity.
+        + eapply DisjList_In_2; [eassumption|].
+          left; reflexivity.
+        + eapply atomic_inits_in; eauto.
+      
     Admitted.
     
     Lemma rsDown_lpush_rpush_unit_reducible:

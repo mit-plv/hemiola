@@ -1476,27 +1476,103 @@ Section Separation.
           eapply atomic_eouts_in; eauto.
   Qed.
 
-  (* Lemma atomic_rqDown_no_out: *)
-  (*   forall cidx cobj pidx pobj rqDown, *)
-  (*     In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx -> *)
-  (*     In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx -> *)
-  (*     parentIdxOf dtr cidx = Some pidx -> *)
-  (*     edgeDownTo dtr cidx = Some (idOf rqDown) -> *)
-  (*     msg_type (valOf rqDown) = MRq -> *)
-  (*     forall inits ins hst outs eouts, *)
-  (*       Atomic msg_dec inits ins hst outs eouts -> *)
-  (*       forall st1 st2, *)
-  (*         Reachable (steps step_m) sys st1 -> *)
-  (*         InMPI (bst_msgs st1) rqDown -> *)
-  (*         steps step_m sys st1 hst st2 -> *)
-  (*         ~ In rqDown inits -> *)
-  (*         forall dmsg, *)
-  (*           idOf dmsg = idOf rqDown -> *)
-  (*           ~ In dmsg outs. *)
-  (* Proof. *)
-  (*   destruct Hrrs as [? [? ?]]; intros. *)
-  (*   destruct  *)
-  (* Qed. *)
+  Lemma step_rqDown_no_rqDown_out:
+    forall cidx pidx pobj rqDown1,
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rqDown1) ->
+      msg_type (valOf rqDown1) = MRq ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        InMPI (bst_msgs st1) rqDown1 ->
+        forall oidx ridx rins routs st2,
+          step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+          ~ In rqDown1 rins ->
+          forall rqDown2,
+            idOf rqDown2 = idOf rqDown1 ->
+            msg_type (valOf rqDown2) = MRq ->
+            ~ In rqDown2 routs.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros; subst.
+    assert (Reachable (steps step_m) sys st2)
+      by (eapply reachable_steps;
+          [eassumption|apply steps_singleton; eassumption]).
+    pose proof (downLockInv_ok H0 H H3); clear H3.
+    inv_step; simpl in *.
+    intro Hx.
+    good_locking_get pobj.
+    eapply downLockInvORq_down_rqsQ_length_two_False in H3; eauto.
+    destruct rqDown1 as [down rqdm1]; simpl in *; subst.
+    destruct rqDown2 as [down rqdm2]; simpl in *.
+    destruct H23, H27; unfold rqsQ.
+    rewrite findQ_In_NoDup_enqMsgs with (msg:= rqdm2); auto.
+    rewrite filter_app; simpl.
+    rewrite H12; simpl.
+    rewrite app_length; simpl.
+    assert (InMP down rqdm1 (deqMsgs (idsOf rins) msgs)).
+    { apply deqMsgs_InMP; eauto. }
+    apply rqsQ_length_ge_one in H16; auto.
+    unfold rqsQ in H16; omega.
+  Qed.
+
+  Lemma atomic_rqDown_no_rqDown_out:
+    forall cidx pidx pobj rqDown1,
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rqDown1) ->
+      msg_type (valOf rqDown1) = MRq ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rqDown1 ->
+          steps step_m sys st1 hst st2 ->
+          ~ In rqDown1 inits ->
+          forall rqDown2,
+            idOf rqDown2 = idOf rqDown1 ->
+            msg_type (valOf rqDown2) = MRq ->
+            ~ In rqDown2 outs.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 6; simpl; intros; subst.
+    - inv_steps.
+      eapply step_rqDown_no_rqDown_out with (pobj:= pobj); eauto.
+    - inv_steps.
+      intro Hx; apply in_app_or in Hx; destruct Hx.
+      + eapply IHAtomic; eauto.
+      + assert (Reachable (steps step_m) sys st3) by eauto.
+        eapply step_rqDown_no_rqDown_out with (pobj:= pobj) (st1:= st3); eauto.
+        * eapply (atomic_messages_in_in msg_dec); eauto.
+        * pose proof H7.
+          eapply atomic_rqDown_inits_outs_disj with (st1:= st1) in H11; eauto.
+          intro Hx; elim H11.
+          apply H9 in Hx.
+          eapply atomic_eouts_in; eauto.
+  Qed.
+  
+  Corollary atomic_rqDown_no_out:
+    forall cidx cobj pidx pobj rqDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rqDown) ->
+      msg_type (valOf rqDown) = MRq ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rqDown ->
+          steps step_m sys st1 hst st2 ->
+          ~ In rqDown inits ->
+          forall dmsg,
+            idOf dmsg = idOf rqDown ->
+            ~ In dmsg outs.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    destruct (msg_type (valOf dmsg)) eqn:Hmt.
+    - eapply atomic_rqDown_no_rsDown_out with (cobj:= cobj) (pobj:= pobj); eauto.
+    - eapply atomic_rqDown_no_rqDown_out with (pobj:= pobj); eauto.
+  Qed.
 
   Lemma atomic_rqDown_no_rsDown_in:
     forall cidx cobj pidx pobj rqDown,
@@ -1800,6 +1876,161 @@ Section Separation.
     apply SubList_app_4 in H10.
     intro Hx; apply H10 in Hx.
     apply in_app_or in Hx; destruct Hx; auto.
+  Qed.
+
+  Lemma step_rsDown_no_rqDown_in:
+    forall cidx cobj pidx pobj rsDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rsDown) ->
+      msg_type (valOf rsDown) = MRs ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        InMPI (bst_msgs st1) rsDown ->
+        forall oidx ridx rins routs st2,
+          step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+          forall rqDown,
+            idOf rqDown = idOf rsDown ->
+            msg_type (valOf rqDown) = MRq ->
+            ~ In rqDown rins.
+  Proof.
+    intros; subst.
+    inv_step; simpl in *.
+    intro Hx.
+    rewrite Forall_forall in H18.
+    specialize (H18 _ Hx).
+    eapply rsDown_in_rqDown_first_false
+      with (cobj0:= cobj) (pobj0:= pobj); eauto.
+    simpl; rewrite <-H9; assumption.
+  Qed.
+
+  Lemma atomic_rsDown_no_rqDown_in:
+    forall cidx cobj pidx pobj rsDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rsDown) ->
+      msg_type (valOf rsDown) = MRs ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rsDown ->
+          steps step_m sys st1 hst st2 ->
+          ~ In rsDown inits ->
+          forall rqDown,
+            idOf rqDown = idOf rsDown ->
+            msg_type (valOf rqDown) = MRq ->
+            ~ In rqDown ins.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 8; simpl; intros; subst.
+    - inv_steps.
+      eapply step_rsDown_no_rqDown_in
+        with (cobj:= cobj) (pobj:= pobj); eauto.
+    - inv_steps.
+      intro Hx; apply in_app_or in Hx; destruct Hx.
+      + eapply IHAtomic; eauto.
+      + assert (Reachable (steps step_m) sys st3) by eauto.
+        eapply step_rsDown_no_rqDown_in
+          with (cobj:= cobj) (pobj:= pobj) (st1:= st3); eauto.
+        eapply (atomic_messages_in_in msg_dec); eauto.
+  Qed.
+
+  Lemma step_rsDown_no_rsDown_in:
+    forall cidx cobj pidx rsDown1,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rsDown1) ->
+      msg_type (valOf rsDown1) = MRs ->
+      forall st1,
+        Reachable (steps step_m) sys st1 ->
+        InMPI (bst_msgs st1) rsDown1 ->
+        forall oidx ridx rins routs st2,
+          step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+          ~ In rsDown1 rins ->
+          forall rsDown2,
+            idOf rsDown2 = idOf rsDown1 ->
+            msg_type (valOf rsDown2) = MRs ->
+            ~ In rsDown2 rins.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros; subst.
+    (* assert (Reachable (steps step_m) sys st2) *)
+    (*   by (eapply reachable_steps; *)
+    (*       [eassumption|apply steps_singleton; eassumption]). *)
+    pose proof (upLockInv_ok H0 H H7).
+    inv_step; simpl in *.
+    intro Hx.
+    good_locking_get cobj.
+    eapply upLockInvORq_down_rssQ_length_two_False in H9; eauto.
+    destruct rsDown1 as [down rsdm1]; simpl in *; subst.
+    destruct rsDown2 as [down rsdm2]; simpl in *.
+    destruct H23, H27.
+
+    eapply rssQ_length_two with (msg1:= rsdm1) (msg2:= rsdm2); eauto.
+    - intro; subst; auto.
+    - rewrite Forall_forall in H22; specialize (H22 _ Hx).
+      apply FirstMP_InMP; assumption.
+  Qed.
+
+  Lemma atomic_rsDown_no_rsDown_in:
+    forall cidx cobj pidx rsDown1,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rsDown1) ->
+      msg_type (valOf rsDown1) = MRs ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rsDown1 ->
+          steps step_m sys st1 hst st2 ->
+          ~ In rsDown1 inits ->
+          forall rsDown2,
+            idOf rsDown2 = idOf rsDown1 ->
+            msg_type (valOf rsDown2) = MRs ->
+            ~ In rsDown2 ins.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 6; simpl; intros; subst.
+    - inv_steps.
+      eapply step_rsDown_no_rsDown_in with (cobj:= cobj); eauto.
+    - inv_steps.
+      intro Hx; apply in_app_or in Hx; destruct Hx.
+      + eapply IHAtomic; eauto.
+      + assert (Reachable (steps step_m) sys st3) by eauto.
+        eapply step_rsDown_no_rsDown_in with (cobj:= cobj) (st1:= st3); eauto.
+        * eapply (atomic_messages_in_in msg_dec); eauto.
+        * pose proof H7.
+          eapply atomic_rsDown_inits_outs_disj with (st1:= st1) in H11; eauto.
+          intro Hx; elim H11.
+          apply H9 in Hx.
+          eapply atomic_eouts_in; eauto.
+  Qed.
+
+  Corollary atomic_rsDown_no_in:
+    forall cidx cobj pidx pobj rsDown,
+      In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
+      In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx ->
+      parentIdxOf dtr cidx = Some pidx ->
+      edgeDownTo dtr cidx = Some (idOf rsDown) ->
+      msg_type (valOf rsDown) = MRs ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rsDown ->
+          steps step_m sys st1 hst st2 ->
+          ~ In rsDown inits ->
+          forall dmsg,
+            idOf dmsg = idOf rsDown ->
+            ~ In dmsg ins.
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    destruct (msg_type (valOf dmsg)) eqn:Hmt.
+    - eapply atomic_rsDown_no_rsDown_in with (cobj:= cobj); eauto.
+    - eapply atomic_rsDown_no_rqDown_in with (cobj:= cobj); eauto.
   Qed.
   
   Lemma step_rsDown_separation_inside_false:

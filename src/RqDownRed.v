@@ -100,17 +100,20 @@ Section RqDownReduction.
       apply (DisjList_false_spec (id_dec msg_dec)).
       intros [midx msg] ? ?.
       unfold RqDownP in H6.
-      destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
+      destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst.
       inv H6; clear H16.
       simpl in *.
 
       replace midx with rqDown in *.
-      - 
-      
-      (* apply atomic_down_out_in_history in H8. *)
-      
-
-      
+      - eapply steps_split in H7; [|reflexivity].
+        destruct H7 as [sti [? ?]].
+        eapply atomic_rqDown_no_out
+          with (cobj0:= cobj) (pobj0:= pobj) (rqDown0:= (rqDown, rqdm))
+               (dmsg:= (rqDown, msg)) (st3:= st1) (outs:= routs); eauto.
+        + eapply DisjList_In_2; [eassumption|].
+          left; reflexivity.
+        + eapply atomic_eouts_in; eauto.
+      - admit.
     Admitted.
 
     Lemma rqDown_lpush_rpush_unit_reducible:
