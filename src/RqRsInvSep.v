@@ -401,6 +401,15 @@ Section Separation.
         parentIdxOf dtr cidx = Some oidx /\
         edgeDownTo dtr cidx = Some (idOf idm)).
 
+  Definition RqRsMsgTo (oidx: IdxT) (idm: Id Msg) :=
+    (exists cidx,
+        parentIdxOf dtr cidx = Some oidx /\
+        rqEdgeUpFrom dtr cidx = Some (idOf idm)) \/
+    (exists cidx,
+        parentIdxOf dtr cidx = Some oidx /\
+        rsEdgeUpFrom dtr cidx = Some (idOf idm)) \/
+    edgeDownTo dtr oidx = Some (idOf idm).
+
   Lemma RqRsMsgFrom_rqEdgeUpFrom_eq:
     forall oidx1 oidx2 midx msg,
       RqRsMsgFrom oidx1 (midx, msg) ->
@@ -444,6 +453,53 @@ Section Separation.
       repeat disc_rule_minds; auto.
   Qed.
 
+  Lemma RqRsMsgTo_rqEdgeUpFrom_eq:
+    forall oidx1 cidx oidx2 midx msg,
+      RqRsMsgTo oidx1 (midx, msg) ->
+      parentIdxOf dtr cidx = Some oidx2 ->
+      rqEdgeUpFrom dtr cidx = Some midx ->
+      oidx1 = oidx2.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    intros; destruct H2 as [|[|]]; simpl in *.
+    - destruct H2 as [rcidx [? ?]].
+      repeat disc_rule_minds; auto.
+    - destruct H2 as [rcidx [? ?]].
+      solve_midx_false.
+    - solve_midx_false.
+  Qed.
+
+  Lemma RqRsMsgTo_rsEdgeUpFrom_eq:
+    forall oidx1 cidx oidx2 midx msg,
+      RqRsMsgTo oidx1 (midx, msg) ->
+      parentIdxOf dtr cidx = Some oidx2 ->
+      rsEdgeUpFrom dtr cidx = Some midx ->
+      oidx1 = oidx2.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    intros; destruct H2 as [|[|]]; simpl in *.
+    - destruct H2 as [rcidx [? ?]].
+      solve_midx_false.
+    - destruct H2 as [rcidx [? ?]].
+      repeat disc_rule_minds; auto.
+    - solve_midx_false.
+  Qed.
+
+  Lemma RqRsMsgTo_edgeDownTo_eq:
+    forall oidx1 oidx2 midx msg,
+      RqRsMsgTo oidx1 (midx, msg) ->
+      edgeDownTo dtr oidx2 = Some midx ->
+      oidx1 = oidx2.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    intros; destruct H2 as [|[|]]; simpl in *.
+    - destruct H2 as [rcidx [? ?]].
+      solve_midx_false.
+    - destruct H2 as [rcidx [? ?]].
+      solve_midx_false.
+    - repeat disc_rule_minds; auto.
+  Qed.
+  
   Ltac disc_RqRsMsgFrom :=
     match goal with
     | [H: exists _, RqRsMsgFrom _ _ /\ _ |- _] =>
@@ -461,10 +517,118 @@ Section Separation.
       eapply RqRsMsgFrom_edgeDownTo_eq in H3; [|eapply H1|eapply H2]; subst
     end.
 
+  Ltac disc_RqRsMsgTo :=
+    match goal with
+    | [H: exists _, RqRsMsgTo _ _ /\ _ |- _] =>
+      let oidx := fresh "oidx" in
+      destruct H as [oidx [? ?]]
+    | [H1: parentIdxOf _ ?cidx = Some ?oidx1,
+       H2: rqEdgeUpFrom _ ?cidx = Some ?rqUp,
+       H3: RqRsMsgTo ?oidx2 (?rqUp, _) |- _] =>
+      eapply RqRsMsgTo_rqEdgeUpFrom_eq in H3; [|eapply H1|eapply H2]; subst
+    | [H1: parentIdxOf _ ?cidx = Some ?oidx1,
+       H2: rsEdgeUpFrom _ ?oidx1 = Some ?rsUp,
+       H3: RqRsMsgTo ?oidx2 (?rsUp, _) |- _] =>
+      eapply RqRsMsgTo_rsEdgeUpFrom_eq in H3; [|eapply H1|eapply H2]; subst
+    | [H1: edgeDownTo _ ?cidx = Some ?down,
+       H2: RqRsMsgTo ?oidx2 (?down, _) |- _] =>
+      eapply RqRsMsgTo_edgeDownTo_eq in H2; [|eapply H1]; subst
+    end.
+  
+  Ltac disc_rule_custom ::=
+    try disc_footprints_ok;
+    try disc_RqRsMsgTo.
+
+  Lemma step_msg_ins:
+    forall st1 st2 oidx ridx rins routs,
+      Reachable (steps step_m) sys st1 ->
+      step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+      Forall (RqRsMsgTo oidx) rins.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    intros.
+    pose proof (footprints_ok H0 H2).
+    inv_step.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+    - disc_rule_conds.
+      constructor; [|constructor].
+      left; eauto.
+    - disc_rule_conds.
+      constructor; [|constructor].
+      right; right; eauto.
+    - disc_rule_conds.
+      + constructor; [|constructor].
+        left; eauto.
+      + constructor; [|constructor].
+        left; eauto.
+      + constructor; [|constructor].
+        right; right; eauto.
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      + constructor; [|constructor].
+        right; right; eauto.
+      + rewrite <-H29 in H22.
+        apply Forall_forall; intros [midx msg] ?.
+        apply in_map with (f:= idOf) in H6.
+        eapply RqRsDownMatch_rs_rq in H22; [|eassumption].
+        destruct H22 as [cidx [down ?]]; dest.
+        right; left; eauto.
+      + rewrite <-H29 in H7.
+        apply Forall_forall; intros [midx msg] ?.
+        apply in_map with (f:= idOf) in H11.
+        eapply RqRsDownMatch_rs_rq in H7; [|eassumption].
+        destruct H7 as [cidx [down ?]]; dest.
+        right; left; eauto.
+    - disc_rule_conds.
+      constructor; [|constructor].
+      right; right; eauto.
+  Qed.
+
+  Lemma atomic_inits_bounded:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        forall cover,
+          SubList (oindsOf hst) cover ->
+          Forall (fun init =>
+                    exists oidx,
+                      RqRsMsgTo oidx init /\ In oidx cover) inits.
+  Proof.
+    destruct Hrrs as [? [? ?]].
+    induction 1; simpl; intros; subst.
+    - inv_steps.
+      apply step_msg_ins in H10; [|assumption].
+      eapply Forall_impl; [|eassumption].
+      intros idm ?.
+      exists oidx; split; auto.
+      apply SubList_singleton_In; assumption.
+    - inv_steps.
+      apply SubList_cons_inv in H10; dest.
+      eauto.
+  Qed.
+
+  Corollary atomic_inits_in_history:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        Forall (fun init =>
+                  exists oidx,
+                    RqRsMsgTo oidx init /\ In oidx (oindsOf hst)) inits.
+  Proof.
+    intros.
+    eapply atomic_inits_bounded in H; try eassumption.
+    apply SubList_refl.
+  Qed.
+  
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try disc_RqRsMsgFrom.
-  
+    
   Lemma step_msg_outs:
     forall st1 st2 oidx ridx rins routs,
       Reachable (steps step_m) sys st1 ->
@@ -512,7 +676,7 @@ Section Separation.
       right; right; eauto.
   Qed.
 
-  Lemma atomic_msg_outs_bounded:
+  Lemma atomic_ext_outs_bounded:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall s1 s2,
@@ -543,7 +707,7 @@ Section Separation.
         exists oidx; split; auto.
   Qed.
 
-  Corollary atomic_msg_outs_in_history:
+  Corollary atomic_ext_outs_in_history:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall s1 s2,
@@ -554,7 +718,7 @@ Section Separation.
                     RqRsMsgFrom oidx eout /\ In oidx (oindsOf hst)) eouts.
   Proof.
     intros.
-    eapply atomic_msg_outs_bounded in H; try eassumption.
+    eapply atomic_ext_outs_bounded in H; try eassumption.
     apply SubList_refl.
   Qed.
 
@@ -570,7 +734,7 @@ Section Separation.
           In oidx (oindsOf hst).
   Proof.
     intros.
-    eapply atomic_msg_outs_in_history in H; try eassumption.
+    eapply atomic_ext_outs_in_history in H; try eassumption.
     apply in_map_iff in H3; destruct H3 as [[rrqUp rqm] [? ?]].
     simpl in *; subst.
     rewrite Forall_forall in H.
@@ -590,7 +754,7 @@ Section Separation.
           In oidx (oindsOf hst).
   Proof.
     intros.
-    eapply atomic_msg_outs_in_history in H; try eassumption.
+    eapply atomic_ext_outs_in_history in H; try eassumption.
     apply in_map_iff in H3; destruct H3 as [[rrsUp rsm] [? ?]].
     simpl in *; subst.
     rewrite Forall_forall in H.
@@ -611,7 +775,7 @@ Section Separation.
           In pidx (oindsOf hst).
   Proof.
     intros.
-    eapply atomic_msg_outs_in_history in H; try eassumption.
+    eapply atomic_ext_outs_in_history in H; try eassumption.
     apply in_map_iff in H4; destruct H4 as [[rdown dm] [? ?]].
     simpl in *; subst.
     rewrite Forall_forall in H.
@@ -883,7 +1047,7 @@ Section Separation.
       specialize (IHAtomic _ _ H8 H11 _ H6).
       destruct IHAtomic.
       + destruct H7 as [cidx ?]; dest.
-        pose proof (atomic_msg_outs_bounded H2 H8 H11 H9).
+        pose proof (atomic_ext_outs_bounded H2 H8 H11 H9).
         left; exists cidx.
         split; [assumption|].
         apply SubList_cons; [|assumption].
@@ -930,7 +1094,7 @@ Section Separation.
     - inv H5; clear H10.
       destruct H9 as [cidx [? ?]].
       apply SubList_cons_inv in H6; dest; clear H8.
-      pose proof (atomic_msg_outs_in_history H H0 H1).
+      pose proof (atomic_ext_outs_in_history H H0 H1).
       rewrite Forall_forall in H8.
       apply H8 in H6; destruct H6 as [oidx0 [? ?]].
       repeat disc_RqRsMsgFrom.
@@ -968,7 +1132,7 @@ Section Separation.
       assert (cidx0 <> cidx1)
         by (intro Hx; subst; repeat disc_rule_minds; auto).
 
-      pose proof (atomic_msg_outs_in_history H H0 H1).
+      pose proof (atomic_ext_outs_in_history H H0 H1).
       rewrite Forall_forall in H11.
       apply H11 in H4; destruct H4 as [oidx0 [? ?]].
       apply H11 in H6; destruct H6 as [oidx1 [? ?]].
@@ -1710,7 +1874,7 @@ Section Separation.
       specialize (IHAtomic _ H15 H16 _ H18).
       destruct IHAtomic.
       + left; apply SubList_cons; [|assumption].
-        pose proof (atomic_msg_outs_bounded H2 H15 H18 H3).
+        pose proof (atomic_ext_outs_bounded H2 H15 H18 H3).
         eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
@@ -2319,7 +2483,7 @@ Section Separation.
       specialize (IHAtomic _ _ H8 H17 _ _ _ H10 H11 H12 H13 H14 H15 H16).
       destruct IHAtomic.
       + left; apply SubList_cons; [|assumption].
-        pose proof (atomic_msg_outs_bounded H2 H8 H17 H5).
+        pose proof (atomic_ext_outs_bounded H2 H8 H17 H5).
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
@@ -2393,4 +2557,7 @@ Section Separation.
   Qed.
 
 End Separation.
+
+Close Scope list.
+Close Scope fmap.
 

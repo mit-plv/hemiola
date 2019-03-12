@@ -117,28 +117,59 @@ Section RsDownReduction.
             steps step_m sys st1 (lhst ++ rhst) st2 ->
             DisjList reouts linits.
     Proof.
-      intros.
+      destruct Hrrs as [? [? ?]]; intros.
       apply (DisjList_false_spec (id_dec msg_dec)).
       intros [midx msg] ? ?.
-      unfold RsDownP in H6.
+      unfold RsDownP in H9.
       destruct Hrsd as [cobj [[rsDown rsdm] ?]]; dest; subst.
-      inv H6; clear H16.
+      inv H9; clear H19.
       simpl in *.
 
       replace midx with rsDown in *.
-      - eapply steps_split in H7; [|reflexivity].
-        destruct H7 as [sti [? ?]].
+      - eapply steps_split in H10; [|reflexivity].
+        destruct H10 as [sti [? ?]].
         eapply atomic_rsDown_no_in
           with (cobj0:= cobj) (pobj0:= pobj) (rsDown0:= (rsDown, rsdm))
                (dmsg:= (rsDown, msg)) (st3:= sti); eauto.
-        + eapply (atomic_messages_in_in msg_dec); try apply H0; eauto.
+        + eapply (atomic_messages_in_in msg_dec); try apply H3; eauto.
           eapply DisjList_In_2; [eassumption|].
           left; reflexivity.
         + eapply DisjList_In_2; [eassumption|].
           left; reflexivity.
         + eapply atomic_inits_in; eauto.
-      
-    Admitted.
+
+      - eapply steps_split in H10; [|reflexivity].
+        destruct H10 as [sti [? ?]].
+        eapply atomic_ext_outs_in_history in H3; eauto.
+        rewrite Forall_forall in H3; specialize (H3 _ H11).
+        destruct H3 as [ofrom [? ?]].
+        eapply atomic_inits_in_history with (s1:= sti) in H6; eauto.
+        rewrite Forall_forall in H6; specialize (H6 _ H12).
+        destruct H6 as [oto [? ?]].
+        destruct H3 as [|[|]], H6 as [|[|]];
+          try (dest; exfalso; solve_midx_false; fail).
+        + exfalso; simpl in *.
+          destruct H6 as [cidx [? ?]].
+          disc_rule_conds.
+          eapply DisjList_In_2 in H13; [|eassumption].
+          apply H7 in H17.
+          elim H13.
+          eapply inside_child_in; try apply Hrrs; eauto.
+        + exfalso; simpl in *.
+          destruct H6 as [cidx [? ?]].
+          disc_rule_conds.
+          eapply DisjList_In_2 in H13; [|eassumption].
+          apply H7 in H17.
+          elim H13.
+          eapply inside_child_in; try apply Hrrs; eauto.
+        + simpl in *; destruct H3 as [cidx [? ?]].
+          disc_rule_conds.
+          eapply DisjList_In_2 in H13; [|eassumption].
+          apply H7 in H17.
+          eapply inside_child_outside_parent_case in H17;
+            try apply Hrrs; eauto; subst.
+          disc_rule_conds.
+    Qed.
     
     Lemma rsDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
@@ -280,4 +311,7 @@ Section RsDownReduction.
   End OnRsDown.
 
 End RsDownReduction.
+
+Close Scope list.
+Close Scope fmap.
 

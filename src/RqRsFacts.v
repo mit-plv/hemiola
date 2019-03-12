@@ -1482,3 +1482,6 @@ Ltac solve_midx_false :=
       exfalso; assert (midx <> midx) by solve_midx_neq; auto
     end.
 
+Close Scope list.
+Close Scope fmap.
+
