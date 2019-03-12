@@ -1134,6 +1134,30 @@ Section Separation.
       eapply atomic_eouts_in; eauto.
   Qed.
 
+  Corollary atomic_rqDown_inits_ins_disj:
+    forall cidx rqDown,
+      edgeDownTo dtr cidx = Some (idOf rqDown) ->
+      msg_type (valOf rqDown) = MRq ->
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        ~ In rqDown inits ->
+        forall st1,
+          Reachable (steps step_m) sys st1 ->
+          InMPI (bst_msgs st1) rqDown ->
+          forall st2,
+            steps step_m sys st1 hst st2 ->
+            ~ In rqDown ins.
+  Proof.
+    intros.
+    pose proof H1.
+    eapply atomic_rqDown_inits_outs_disj in H6; eauto.
+    apply atomic_messages_ins_outs in H1.
+    destruct H1.
+    apply SubList_app_4 in H7.
+    intro Hx; apply H7 in Hx.
+    apply in_app_or in Hx; destruct Hx; auto.
+  Qed.
+
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try disc_RqRsMsgFrom.
@@ -1413,7 +1437,7 @@ Section Separation.
       rewrite findQ_In_NoDup_enqMsgs with (msg:= rsdm); try assumption.
       reflexivity.
   Qed.
-  
+
   Lemma atomic_rqDown_no_rsDown_out:
     forall cidx cobj pidx pobj rqDown,
       In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx ->
@@ -1451,6 +1475,28 @@ Section Separation.
           apply H11 in Hx.
           eapply atomic_eouts_in; eauto.
   Qed.
+
+  (* Lemma atomic_rqDown_no_out: *)
+  (*   forall cidx cobj pidx pobj rqDown, *)
+  (*     In cobj sys.(sys_objs) -> cobj.(obj_idx) = cidx -> *)
+  (*     In pobj sys.(sys_objs) -> pobj.(obj_idx) = pidx -> *)
+  (*     parentIdxOf dtr cidx = Some pidx -> *)
+  (*     edgeDownTo dtr cidx = Some (idOf rqDown) -> *)
+  (*     msg_type (valOf rqDown) = MRq -> *)
+  (*     forall inits ins hst outs eouts, *)
+  (*       Atomic msg_dec inits ins hst outs eouts -> *)
+  (*       forall st1 st2, *)
+  (*         Reachable (steps step_m) sys st1 -> *)
+  (*         InMPI (bst_msgs st1) rqDown -> *)
+  (*         steps step_m sys st1 hst st2 -> *)
+  (*         ~ In rqDown inits -> *)
+  (*         forall dmsg, *)
+  (*           idOf dmsg = idOf rqDown -> *)
+  (*           ~ In dmsg outs. *)
+  (* Proof. *)
+  (*   destruct Hrrs as [? [? ?]]; intros. *)
+  (*   destruct  *)
+  (* Qed. *)
 
   Lemma atomic_rqDown_no_rsDown_in:
     forall cidx cobj pidx pobj rqDown,
@@ -1726,6 +1772,34 @@ Section Separation.
       + intro Hx; apply H6 in Hx.
         elim IHAtomic.
         eapply atomic_eouts_in; eauto.
+  Qed.
+
+  Corollary atomic_rsDown_inits_ins_disj:
+    forall cidx cobj,
+      In cobj sys.(sys_objs) ->
+      cobj.(obj_idx) = cidx ->
+      forall rsDown pidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        edgeDownTo dtr cidx = Some (idOf rsDown) ->
+        msg_type (valOf rsDown) = MRs ->
+        forall inits ins hst outs eouts,
+          Atomic msg_dec inits ins hst outs eouts ->
+          ~ In rsDown inits ->
+          forall st1,
+            Reachable (steps step_m) sys st1 ->
+            InMPI (bst_msgs st1) rsDown ->
+            forall st2,
+              steps step_m sys st1 hst st2 ->
+              ~ In rsDown ins.
+  Proof.
+    intros.
+    pose proof H4.
+    eapply atomic_rsDown_inits_outs_disj in H9; eauto.
+    apply atomic_messages_ins_outs in H4.
+    destruct H4.
+    apply SubList_app_4 in H10.
+    intro Hx; apply H10 in Hx.
+    apply in_app_or in Hx; destruct Hx; auto.
   Qed.
   
   Lemma step_rsDown_separation_inside_false:

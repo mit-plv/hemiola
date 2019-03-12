@@ -83,8 +83,10 @@ Section RqDownReduction.
     Lemma rqDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
+        DisjList rqDowns rinits ->
         Atomic msg_dec rinits rins rhst routs reouts ->
         DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
+        DisjList rqDowns linits ->
         Atomic msg_dec linits lins lhst louts leouts ->
         SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         forall st1,
@@ -94,6 +96,21 @@ Section RqDownReduction.
             steps step_m sys st1 (lhst ++ rhst) st2 ->
             DisjList reouts linits.
     Proof.
+      intros.
+      apply (DisjList_false_spec (id_dec msg_dec)).
+      intros [midx msg] ? ?.
+      unfold RqDownP in H6.
+      destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
+      inv H6; clear H16.
+      simpl in *.
+
+      replace midx with rqDown in *.
+      - 
+      
+      (* apply atomic_down_out_in_history in H8. *)
+      
+
+      
     Admitted.
 
     Lemma rqDown_lpush_rpush_unit_reducible:
@@ -254,12 +271,20 @@ Section RqDownReduction.
           eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
           eapply steps_split in H7; [|reflexivity].
           destruct H7 as [rsti [? ?]].
-          eapply rqDown_lpush_rpush_messages_disj.
-          * eassumption.
-          * eassumption.
-          * eassumption.
-          * eassumption.
-          * eapply reachable_steps; eassumption.
+          assert (DisjList rqDowns ninits).
+          { eapply DisjList_comm, DisjList_SubList; [eassumption|].
+            apply DisjList_comm.
+            unfold RqDownP in Hp.
+            destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
+            inv Hp.
+            apply (DisjList_singleton_1 (id_dec msg_dec)).
+            eapply atomic_rqDown_inits_ins_disj; eauto;
+              [|eapply steps_append; eauto].
+            specialize (H0 (rqDown, rqdm)); destruct H0; auto.
+            elim H0; left; reflexivity.
+          }
+          eapply rqDown_lpush_rpush_messages_disj
+            with (rinits:= ninits) (linits:= linits) (st1:= rsti); eauto.
           * destruct H2; subst; simpl in *;
               [inv_steps; assumption|].
             destruct H2 as [pins [pouts [ruIdx [rqUps ?]]]]; dest.
