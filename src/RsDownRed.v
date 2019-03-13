@@ -33,18 +33,16 @@ Section RsDownReduction.
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
-          exists phst ninits nins nhst nouts,
-            hst = nhst ++ phst /\
-            (phst = nil \/
-             (exists pins pouts ruIdx rqUps,
-                 Atomic msg_dec inits pins phst pouts rqUps /\
-                 RqUpMsgs dtr ruIdx rqUps /\
-                 RqUpHistory dtr phst rqUps /\
-                 Forall (fun rqUp => rqEdgeUpFrom dtr cidx =
-                                     Some (idOf rqUp)) rqUps)) /\
-            SubList (oindsOf phst) (subtreeIndsOf dtr cidx) /\
-            SubList ninits ins /\
-            Atomic msg_dec ninits nins nhst nouts eouts /\
+          exists ruhst nhst,
+            hst = nhst ++ ruhst /\
+            (ruhst = nil \/
+             exists roidx rqUps ruins ruouts,
+               RqUpMsgs dtr roidx rqUps /\
+               ~ In roidx (subtreeIndsOf dtr cidx) /\
+               Atomic msg_dec inits ruins ruhst ruouts rqUps /\
+               SubList rqUps ins /\
+               exists nins nouts,
+                 Atomic msg_dec rqUps nins nhst nouts eouts) /\
             DisjList (oindsOf nhst) (subtreeIndsOf dtr cidx).
     Proof.
     Admitted.
@@ -204,8 +202,7 @@ Section RsDownReduction.
       destruct H6 as [sti [? ?]].
 
       pose proof (rsDown_oinds H1 H0 Hr H6).
-      destruct H8 as [prhst [ninits [nins [nphst [nouts ?]]]]].
-      dest; subst.
+      destruct H8 as [ruhst [nhst ?]]; dest; subst.
       eapply steps_split in H6; [|reflexivity].
       destruct H6 as [psti [? ?]].
       eapply rsDown_olast_inside_tree in H4;
@@ -219,20 +216,30 @@ Section RsDownReduction.
 
       rewrite <-app_assoc.
       eapply reducible_app_1; try assumption.
-      - instantiate (1:= hst ++ prhst).
+      - instantiate (1:= hst ++ ruhst).
         destruct H9; subst; simpl in *.
         + rewrite app_nil_r; apply reducible_refl.
-        + destruct H9 as [prins [prouts [ruIdx [rqUps ?]]]]; dest.
+        + destruct H9 as [roidx [rqUps [ruins [ruouts ?]]]].
+          destruct H9 as [? [? [? [? ?]]]].
+          destruct H14 as [nins [nouts ?]].
           eapply rqUpHistory_lpush_unit_reducible; eauto.
-          assert (Reachable (steps step_m) sys sti)
-            by (do 2 (eapply reachable_steps; [|eassumption]);
-                assumption).
-          clear Hr.
-          eapply atomic_inside_tree_inits_disj_rqUps; eauto.
+          * eapply rqUp_atomic; eauto.
+            apply SubList_refl.
+          * assert (Reachable (steps step_m) sys sti)
+              by (do 2 (eapply reachable_steps; [|eassumption]);
+                  assumption).
+            clear Hr.
+            destruct H9 as [rcidx [rqUp ?]]; dest; subst.
+            eapply atomic_inside_tree_inits_disj_rqUps
+              with (rqFrom:= rcidx); eauto.
+            eapply outside_child_in; try apply Hrrs; eassumption.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.
-        + instantiate (1:= hst ++ nphst).
-          eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
+        + instantiate (1:= hst ++ nhst).
+          destruct H9; subst.
+          * rewrite app_nil_r in *.
+            eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
+          * dest; eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
         + rewrite <-app_assoc.
           eapply steps_append; [|eassumption].
           eapply steps_append; eassumption.

@@ -29,15 +29,16 @@ Section InsideTree.
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         forall toidx,
           In oidx (subtreeIndsOf dtr toidx) ->
-          forall ups,
+          forall uoidx ups,
             Forall (fun up =>
-                      rqEdgeUpFrom dtr toidx = Some (idOf up) \/
-                      rsEdgeUpFrom dtr toidx = Some (idOf up)) ups ->
+                      rqEdgeUpFrom dtr uoidx = Some (idOf up) \/
+                      rsEdgeUpFrom dtr uoidx = Some (idOf up)) ups ->
+            (uoidx = toidx \/ ~ In uoidx (subtreeIndsOf dtr toidx)) ->
             DisjList ups rins.
   Proof.
     intros.
     destruct Hrrs as [? [? ?]].
-    pose proof (footprints_ok H4 H).
+    pose proof (footprints_ok H5 H).
     apply (DisjList_false_spec (id_dec msg_dec)); intros [up umsg] Hin1 Hin2.
     rewrite Forall_forall in H2.
     specialize (H2 _ Hin1); simpl in H2.
@@ -48,33 +49,43 @@ Section InsideTree.
 
     - disc_rule_conds.
       destruct H2; disc_rule_conds.
-      destruct H3; eapply parent_not_in_subtree; eauto.
+      destruct H3; subst.
+      + eapply parent_not_in_subtree; try apply Hrrs; eauto.
+      + elim H2; eapply inside_child_in; try apply Hrrs; eauto.
 
     - disc_rule_conds.
       destruct H2; disc_rule_conds.
 
     - disc_rule_conds.
       + destruct H2; disc_rule_conds.
-        destruct H3; eapply parent_not_in_subtree; eauto.
+        destruct H3; subst.
+        * eapply parent_not_in_subtree; try apply Hrrs; eauto.
+        * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
       + destruct H2; disc_rule_conds.
-        destruct H3; eapply parent_not_in_subtree; eauto.
+        destruct H3; subst.
+        * eapply parent_not_in_subtree; try apply Hrrs; eauto.
+        * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
       + destruct H2; disc_rule_conds.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + destruct H2; disc_rule_conds.
-      + rewrite <-H31 in H24.
+      + rewrite <-H32 in H25.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
-        eapply RqRsDownMatch_rs_rq in H24; [|eassumption].
-        destruct H24 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H25; [|eassumption].
+        destruct H25 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
-        destruct H3; eapply parent_not_in_subtree; eauto.
-      + rewrite <-H31 in H9.
+        destruct H3; subst.
+        * eapply parent_not_in_subtree; try apply Hrrs; eauto.
+        * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
+      + rewrite <-H32 in H10.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
-        eapply RqRsDownMatch_rs_rq in H9; [|eassumption].
-        destruct H9 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
+        destruct H10 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
-        destruct H3; eapply parent_not_in_subtree; eauto.
+        destruct H3; subst.
+        * eapply parent_not_in_subtree; try apply Hrrs; eauto.
+        * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
 
     - disc_rule_conds.
       destruct H2; disc_rule_conds.
@@ -88,10 +99,11 @@ Section InsideTree.
         steps step_m sys st1 hst st2 ->
         forall toidx,
           SubList (oindsOf hst) (subtreeIndsOf dtr toidx) ->
-          forall ups,
+          forall uoidx ups,
             Forall (fun up =>
-                      rqEdgeUpFrom dtr toidx = Some (idOf up) \/
-                      rsEdgeUpFrom dtr toidx = Some (idOf up)) ups ->
+                      rqEdgeUpFrom dtr uoidx = Some (idOf up) \/
+                      rsEdgeUpFrom dtr uoidx = Some (idOf up)) ups ->
+            (uoidx = toidx \/ ~ In uoidx (subtreeIndsOf dtr toidx)) ->
             DisjList ups ins.
   Proof.
     induction 1; simpl; intros; subst.
@@ -114,8 +126,9 @@ Section InsideTree.
         steps step_m sys st1 hst st2 ->
         forall toidx,
           SubList (oindsOf hst) (subtreeIndsOf dtr toidx) ->
-          forall rqUps,
-            Forall (fun up => rqEdgeUpFrom dtr toidx = Some (idOf up)) rqUps ->
+          forall rqFrom rqUps,
+            Forall (fun up => rqEdgeUpFrom dtr rqFrom = Some (idOf up)) rqUps ->
+            (rqFrom = toidx \/ ~ In rqFrom (subtreeIndsOf dtr toidx)) ->
             DisjList rqUps inits.
   Proof.
     intros.
