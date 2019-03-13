@@ -105,8 +105,11 @@ Section RqUpStart.
            (exists roidx0 rqUps ruins0 ruouts0,
                RqUpMsgs dtr roidx0 rqUps /\
                Atomic msg_dec inits ruins0 ruhst ruouts0 rqUps /\
+               SubList rqUps (ruouts ++ routs) /\
                (nhst = nil \/
-                (exists nins nouts, Atomic msg_dec rqUps nins nhst nouts routs)))) /\
+                (exists nins nouts,
+                    Atomic msg_dec rqUps nins nhst nouts routs /\
+                    In roidx0 (oindsOf nhst))))) /\
           Forall NonRqUpL nhst.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
@@ -123,8 +126,11 @@ Section RqUpStart.
         repeat ssplit; try eassumption.
         * red; do 2 eexists.
           repeat ssplit; eauto.
-        * right; do 2 eexists.
-          econstructor.
+        * apply SubList_app_1.
+          eapply atomic_eouts_in; eauto.
+        * right; do 2 eexists; split.
+          { econstructor. }
+          { left; reflexivity. }
       + constructor; [|constructor].
         disc_NonRqUpL; subst.
 
@@ -148,6 +154,7 @@ Section RqUpStart.
             { apply SubList_refl. }
             { rewrite removeL_nil; reflexivity. }
           }
+          { apply SubList_app_2, SubList_refl. }
           { left; reflexivity. }
         * constructor.
       + eexists pruhst, [_].
@@ -158,8 +165,12 @@ Section RqUpStart.
           { red; do 2 eexists.
             repeat ssplit; eauto.
           }
-          { right; do 2 eexists.
-            econstructor.
+          { apply SubList_app_1.
+            eapply atomic_eouts_in; eauto.
+          }
+          { right; do 2 eexists; split.
+            { econstructor. }
+            { left; reflexivity. }
           }
         * constructor; [|constructor].
           disc_NonRqUpL; subst.
@@ -289,8 +300,11 @@ Section RqUpStart.
            exists roidx rqUps ruins ruouts,
              RqUpMsgs dtr roidx rqUps /\
              Atomic msg_dec inits ruins ruhst ruouts rqUps /\
+             SubList rqUps outs /\
              (nhst = nil \/
-              exists nins nouts, Atomic msg_dec rqUps nins nhst nouts eouts)) /\
+              exists nins nouts,
+                Atomic msg_dec rqUps nins nhst nouts eouts /\
+                In roidx (oindsOf nhst))) /\
           Forall NonRqUpL nhst.
   Proof.
     destruct Hrrs as [? [? ?]].
@@ -305,7 +319,8 @@ Section RqUpStart.
         * reflexivity.
         * right; do 4 eexists.
           repeat ssplit; eauto.
-          econstructor.
+          { econstructor. }
+          { apply SubList_refl. }
         * constructor.
       + exists nil; eexists.
         repeat ssplit.
@@ -331,38 +346,41 @@ Section RqUpStart.
           eapply nonRqUp_ins_nonRqUpL; eauto.
 
       + destruct H5 as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
-        destruct H9; subst.
+        destruct H11; subst.
 
         * simpl in *.
-          pose proof (atomic_unique H2 H6); dest; subst; clear H2.
+          pose proof (atomic_unique H2 H6); dest; subst; clear H11.
           red in H5; destruct H5 as [cidx [rqUp ?]]; dest; subst.
           assert (rins = [rqUp]); subst.
-          { inv_step; inv H23.
+          { inv_step; inv H24.
             destruct rins; [elim H3; reflexivity|].
             pose proof (H4 i (or_introl eq_refl)); Common.dest_in.
             destruct rins; [reflexivity|].
             specialize (H4 i0 (or_intror (or_introl eq_refl))); Common.dest_in.
             red in H12; simpl in H12.
-            inv H12; elim H15; left; reflexivity.
+            inv H12; elim H16; left; reflexivity.
           }
           pose proof (reachable_steps H8 H10).
           rewrite removeL_nil; simpl.
           eapply rqUp_start_ok_end; eauto.
 
-        * destruct H9 as [pnins [pnouts ?]].
+        * destruct H11 as [pnins [pnouts [? ?]]].
           exists pruhst, (RlblInt oidx ridx rins routs :: pnhst).
           repeat ssplit.
           { reflexivity. }
           { right; exists roidx, rqUps, ruins, ruouts.
             repeat ssplit; try assumption.
-            right; do 2 eexists.
-            econstructor; eauto.
+            { apply SubList_app_1; assumption. }
+            { right; do 2 eexists; split.
+              { econstructor; eauto. }
+              { right; assumption. }
+            }
           }
           { constructor; [|assumption].
             assert (Reachable (steps step_m) sys st3) by eauto.
             eapply steps_split in H10; [|reflexivity].
             destruct H10 as [sti [? ?]].
-            eapply nonRqUpL_atomic_msg_outs_no_rqUp in H9;
+            eapply nonRqUpL_atomic_msg_outs_no_rqUp in H11;
               [|assumption
                |eapply reachable_steps; [|eapply H10]; assumption
                |eassumption].

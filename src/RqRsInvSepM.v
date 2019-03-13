@@ -733,6 +733,60 @@ Section Separation.
           }
           { apply in_or_app; auto. }
   Qed.
+
+  Lemma atomic_NonRqUp_rqDown_separation_inside:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      Forall (NonRqUpL dtr) hst ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        forall cobj pobj rqDown,
+          In cobj sys.(sys_objs) ->
+          In pobj sys.(sys_objs) ->
+          parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
+          edgeDownTo dtr (obj_idx cobj) = Some (idOf rqDown) ->
+          msg_type (valOf rqDown) = MRq ->
+          InMPI s1.(bst_msgs) rqDown ->
+          ~ In rqDown inits ->
+          forall ioidx,
+            In ioidx (oindsOf hst) ->
+            In ioidx (subtreeIndsOf dtr (obj_idx cobj)) ->
+            SubList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
+  Proof.
+    intros.
+    eapply atomic_NonRqUp_rqDown_separation_ok with (cobj:= cobj) in H; eauto.
+    destruct H; auto.
+    exfalso.
+    specialize (H ioidx); destruct H; auto.
+  Qed.
+
+  Lemma atomic_NonRqUp_rqDown_separation_outside:
+    forall inits ins hst outs eouts,
+      Atomic msg_dec inits ins hst outs eouts ->
+      Forall (NonRqUpL dtr) hst ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        forall cobj pobj rqDown,
+          In cobj sys.(sys_objs) ->
+          In pobj sys.(sys_objs) ->
+          parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
+          edgeDownTo dtr (obj_idx cobj) = Some (idOf rqDown) ->
+          msg_type (valOf rqDown) = MRq ->
+          InMPI s1.(bst_msgs) rqDown ->
+          ~ In rqDown inits ->
+          forall ioidx,
+            In ioidx (oindsOf hst) ->
+            ~ In ioidx (subtreeIndsOf dtr (obj_idx cobj)) ->
+            DisjList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
+  Proof.
+    intros.
+    eapply atomic_NonRqUp_rqDown_separation_ok with (cobj:= cobj) in H; eauto.
+    destruct H; auto.
+    exfalso.
+    elim H11; auto.
+  Qed.
   
   (*! Separation by an RsDown message *)
 

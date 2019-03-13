@@ -40,6 +40,25 @@ Fixpoint oindsOf {MsgT} (hst: History MsgT) :=
   | lbl :: hst' => (oidxOf lbl) ::> (oindsOf hst')
   end.
 
+Lemma oindsOf_app:
+  forall {MsgT} (hst1 hst2: History MsgT),
+    oindsOf (hst1 ++ hst2) = oindsOf hst1 ++ oindsOf hst2.
+Proof.
+  induction hst1 as [|lbl hst1]; simpl; intros; [reflexivity|].
+  destruct (oidxOf lbl); simpl; auto.
+  rewrite IHhst1; reflexivity.
+Qed.
+
+Lemma lastOIdxOf_app:
+  forall {MsgT} (hst1 hst2: History MsgT),
+    hst2 <> nil ->
+    lastOIdxOf (hst2 ++ hst1) = lastOIdxOf hst2.
+Proof.
+  intros.
+  destruct hst2; [exfalso; auto|].
+  reflexivity.
+Qed.
+
 Lemma lastOIdxOf_Some_oindsOf_In:
   forall {MsgT} (hst: History MsgT) loidx,
     lastOIdxOf hst = Some loidx ->

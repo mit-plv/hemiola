@@ -179,20 +179,6 @@ Section MsgParam.
         steps step_m sys st1 hst st2 ->
         Forall (InMPI st2.(bst_msgs)) eouts.
   Proof.
-    (* induction 1; simpl; intros. *)
-    (* - inv_steps; inv_step; simpl in *. *)
-    (*   destruct H14. *)
-    (*   apply Forall_forall; intros [midx msg] ?. *)
-    (*   admit. *)
-    (* - inv_steps; inv_step; simpl in *. *)
-    (*   apply Forall_app. *)
-    (*   + specialize (IHAtomic _ _ _ _ H9); simpl in IHAtomic. *)
-    (*     destruct H14; red in H3. *)
-    (*     clear -IHAtomic H3. *)
-    (*     admit. *)
-    (*   + destruct H18. *)
-    (*     apply Forall_forall; intros [midx msg] ?. *)
-    (*     admit. *)
   Admitted.
 
   Lemma atomic_messages_in_in:
@@ -205,30 +191,6 @@ Section MsgParam.
           ~ In idm inits ->
           InMPI (bst_msgs st2) idm.
   Proof.
-    (* intros. *)
-    (* pose proof (atomic_messages_spec H H0). *)
-    (* pose proof (atomic_messages_ins_outs H). *)
-    (* destruct (in_dec (id_dec msg_dec) idm outs). *)
-
-    (* induction 1; simpl; intros; subst. *)
-
-    (* - inv H; inv H5. *)
-    (*   eapply internal_transition_messages_in; eauto. *)
-
-    (* - inv H5. *)
-    (*   specialize (IHAtomic _ _ _ _ H8 _ H6 H7). *)
-    (*   destruct (in_dec (id_dec msg_dec) idm rins); *)
-    (*     [|eauto using internal_transition_messages_in]. *)
-
-    (*   apply H1 in i. *)
-    (*   assert (In idm outs). *)
-    (*   { pose proof (atomic_messages_ins_outs H). *)
-    (*     destruct H2. *)
-    (*     assert (In idm (ins ++ eouts)) by (apply in_or_app; auto). *)
-    (*     apply H3 in H4. *)
-    (*     apply in_app_or in H4. *)
-    (*     destruct H4; intuition. *)
-    (*   } *)
   Admitted.
 
   Corollary atomic_messages_ins_ins:

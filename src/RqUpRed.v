@@ -483,18 +483,56 @@ Section RqUpReduction.
     eapply rqUp_lbl_commutes; eauto.
   Qed.
 
-  Inductive RqUpHistory: MHistory -> list (Id Msg) -> Prop :=
+  Definition RqUpMsgsFrom (ruFrom ruTo: IdxT) (msgs: list (Id Msg)) :=
+    exists rqUp,
+      msgs = [rqUp] /\
+      msg_type (valOf rqUp) = MRq /\
+      parentIdxOf dtr ruFrom = Some ruTo /\
+      rqEdgeUpFrom dtr ruFrom = Some (idOf rqUp).
+
+  Lemma rqUpMsgsFrom_RqUpMsgs:
+    forall cidx pidx rqTo rqtm,
+      RqUpMsgs dtr pidx [(rqTo, rqtm)] ->
+      parentIdxOf dtr cidx = Some pidx ->
+      rqEdgeUpFrom dtr cidx = Some rqTo ->
+      RqUpMsgsFrom cidx pidx [(rqTo, rqtm)].
+  Proof.
+    intros.
+    destruct H as [rcidx [rqUp ?]]; dest; subst.
+    inv H; simpl in *.
+    econstructor; eauto.
+  Qed.
+
+  Lemma rqUpMsgs_RqUpMsgsFrom:
+    forall cidx pidx msgs,
+      RqUpMsgsFrom cidx pidx msgs ->
+      RqUpMsgs dtr pidx msgs.
+  Proof.
+    intros.
+    destruct H as [rqUp ?]; dest; subst.
+    econstructor; eauto.
+  Qed.
+
+  Inductive RqUpHistory: MHistory -> IdxT -> list (Id Msg) -> Prop :=
   | RqUpIntro:
       forall oidx ridx rins routs oidxTo,
-        RqUpMsgs dtr oidxTo routs ->
-        RqUpHistory [RlblInt oidx ridx rins routs] routs
+        RqUpMsgsFrom oidx oidxTo routs ->
+        RqUpHistory [RlblInt oidx ridx rins routs] oidxTo routs
   | RqUpCont:
       forall phst pouts oidx ridx rins routs oidxTo,
-        RqUpHistory phst pouts ->
+        RqUpHistory phst oidx pouts ->
         rins = pouts ->
-        RqUpMsgs dtr oidxTo routs ->
-        RqUpHistory (RlblInt oidx ridx rins routs :: phst) routs.
+        RqUpMsgsFrom oidx oidxTo routs ->
+        RqUpHistory (RlblInt oidx ridx rins routs :: phst) oidxTo routs.
 
+  Lemma rqUpHistory_RqUpMsgsFrom:
+    forall hst oidx rqUps,
+      RqUpHistory hst oidx rqUps ->
+      exists cidx, RqUpMsgsFrom cidx oidx rqUps.
+  Proof.
+    destruct 1; simpl; intros; eauto.
+  Qed.
+  
   Lemma rqUp_atomic:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
@@ -504,7 +542,7 @@ Section RqUpReduction.
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
-          eouts = rqUps /\ RqUpHistory hst eouts.
+          eouts = rqUps /\ RqUpHistory hst oidxTo eouts.
   Proof.
     induction 1; simpl; intros; subst.
     - inv_steps.
@@ -512,7 +550,9 @@ Section RqUpReduction.
       destruct H8 as [? [? [? ?]]].
       destruct H5 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
       dest; subst.
-      split; [reflexivity|econstructor; eauto].
+      split; [reflexivity|].
+      econstructor.
+      eapply rqUpMsgsFrom_RqUpMsgs; eauto.
     - destruct H5 as [cidx [rqUp ?]]; dest; subst.
       inv H8.
       apply SubList_singleton_In in H6.
@@ -554,7 +594,114 @@ Section RqUpReduction.
         dest; subst.
         specialize (IHAtomic _ _ H9 H1 _ _ H7 H11); dest; subst.
         rewrite removeL_nil; simpl.
-        split; [reflexivity|econstructor; eauto].
+        split; [reflexivity|].        
+        econstructor; eauto.
+        inv H17.
+        eapply rqUpMsgsFrom_RqUpMsgs; eauto.
+  Qed.
+
+  Lemma rqUpHistory_lastOIdxOf:
+    forall hst roidx rqUps rqUp,
+      rqUps = [rqUp] ->
+      RqUpHistory hst roidx rqUps ->
+      forall loidx,
+        lastOIdxOf hst = Some loidx ->
+        parentIdxOf dtr loidx = Some roidx /\
+        rqEdgeUpFrom dtr loidx = Some (idOf rqUp).
+  Proof.
+    destruct Hrrs as [? [? ?]]; intros.
+    inv H3; simpl in *.
+    - inv H4.
+      destruct H5 as [rqUp0 ?].
+      dest; subst; inv H2.
+      repeat disc_rule_minds.
+      split; assumption.
+    - inv H4.
+      destruct H7 as [rqUp0 ?].
+      dest; subst; inv H2.
+      repeat disc_rule_minds.
+      split; assumption.
+  Qed.
+  
+  Lemma rqUp_atomic_lastOIdxOf:
+    forall inits ins hst outs rqUp,
+      Atomic msg_dec inits ins hst outs [rqUp] ->
+      forall st1 st2,
+        Reachable (steps step_m) sys st1 ->
+        steps step_m sys st1 hst st2 ->
+        forall roidx loidx,
+          RqUpMsgs dtr roidx [rqUp] ->
+          lastOIdxOf hst = Some loidx ->
+          parentIdxOf dtr loidx = Some roidx /\
+          rqEdgeUpFrom dtr loidx = Some (idOf rqUp).
+  Proof.
+    intros.
+    eapply rqUp_atomic in H; eauto; [dest|apply SubList_refl].
+    eapply rqUpHistory_lastOIdxOf; eauto.
+  Qed.
+
+  Lemma rqUpHistory_bounded:
+    forall hst roidx rqUps,
+      RqUpHistory hst roidx rqUps ->
+      forall rqUp,
+        rqUps = [rqUp] ->
+        forall rcidx,
+          parentIdxOf dtr rcidx = Some roidx ->
+          rqEdgeUpFrom dtr rcidx = Some (idOf rqUp) ->
+          forall tidx,
+            In rcidx (subtreeIndsOf dtr tidx) ->
+            SubList (oindsOf hst) (subtreeIndsOf dtr tidx).
+  Proof.
+    destruct Hrrs as [? [? ?]]; induction 1; simpl; intros; subst.
+    - destruct H2 as [rqUp0 ?]; dest; subst.
+      inv H2; repeat disc_rule_minds.
+      apply SubList_cons; [|apply SubList_nil].
+      assumption.
+    - destruct H4 as [rqUp0 ?]; dest.
+      inv H3; repeat disc_rule_minds.
+      apply SubList_cons; [assumption|].
+
+      clear -Hrrs H2 H8 IHRqUpHistory.
+      pose proof (rqUpHistory_RqUpMsgsFrom H2).
+      destruct H as [cidx [rqUp ?]]; dest; subst.
+      eapply IHRqUpHistory; eauto.
+      eapply inside_child_in; try apply Hrrs; eassumption.
+  Qed.
+  
+  Lemma rqUp_atomic_bounded:
+    forall rcidx roidx rqUp,
+      parentIdxOf dtr rcidx = Some roidx ->
+      rqEdgeUpFrom dtr rcidx = Some (idOf rqUp) ->
+      RqUpMsgs dtr roidx [rqUp] ->
+      forall inits ins hst outs,
+        Atomic msg_dec inits ins hst outs [rqUp] ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          steps step_m sys st1 hst st2 ->
+        forall tidx,
+          In rcidx (subtreeIndsOf dtr tidx) ->
+          SubList (oindsOf hst) (subtreeIndsOf dtr tidx).
+  Proof.
+    intros.
+    eapply rqUp_atomic in H2; eauto; [dest|apply SubList_refl].
+    eapply rqUpHistory_bounded; eauto.
+  Qed.
+
+  Corollary rqUp_atomic_inside_tree:
+    forall roidx rqUps,
+      RqUpMsgs dtr roidx rqUps ->
+      forall inits ins hst outs,
+        Atomic msg_dec inits ins hst outs rqUps ->
+        forall st1 st2,
+          Reachable (steps step_m) sys st1 ->
+          steps step_m sys st1 hst st2 ->
+          SubList (oindsOf hst) (subtreeIndsOf dtr roidx).
+  Proof.
+    intros.
+    pose proof H.
+    destruct H3 as [cidx [rqUp ?]]; dest; subst.
+    eapply rqUp_atomic_bounded; eauto.
+    apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
   Qed.
 
   Lemma rqUp_ins_disj:
@@ -631,8 +778,8 @@ Section RqUpReduction.
   Qed.
   
   Lemma rqUpHistory_lpush_lbl:
-    forall phst rqUps,
-      RqUpHistory phst rqUps ->
+    forall phst oidxTo rqUps,
+      RqUpHistory phst oidxTo rqUps ->
       forall oidx ridx rins routs,
         DisjList rqUps rins ->
         forall st1,
@@ -643,11 +790,13 @@ Section RqUpReduction.
   Proof.
     induction 1; simpl; intros; subst.
     - eapply rqUp_lbl_reducible; eauto.
-      apply SubList_refl.
+      + eapply rqUpMsgs_RqUpMsgsFrom; eauto.
+      + apply SubList_refl.
     - eapply reducible_trans; eauto.
       + apply reducible_cons_2.
         eapply rqUp_lbl_reducible; eauto.
-        apply SubList_refl.
+        * eapply rqUpMsgs_RqUpMsgsFrom; eauto.
+        * apply SubList_refl.
       + destruct Hrrs as [? [? ?]].
         apply reducible_cons.
         red; intros.
@@ -655,8 +804,11 @@ Section RqUpReduction.
 
         assert (exists coidx cridx crins pphst coidxTo,
                    phst = RlblInt coidx cridx crins pouts :: pphst /\
-                   RqUpMsgs dtr coidxTo pouts)
-          by (inv H; do 5 eexists; eauto).
+                   RqUpMsgs dtr coidxTo pouts).
+        { inv H.
+          { do 5 eexists; split; eauto; eapply rqUpMsgs_RqUpMsgsFrom; eauto. }
+          { do 5 eexists; split; eauto; eapply rqUpMsgs_RqUpMsgsFrom; eauto. }
+        }
         destruct H8 as [coidx [cridx [crins [pphst [coidxTo ?]]]]]; dest; subst.
         clear H7; inv_steps.
 
@@ -665,9 +817,10 @@ Section RqUpReduction.
 
         pose proof H14 as Hru.
         eapply rqUp_spec with (rqUps:= routs) in Hru; eauto;
-          [|apply SubList_refl
-           |eapply reachable_steps; eauto;
-            apply steps_singleton; eassumption].
+          [|eapply rqUpMsgs_RqUpMsgsFrom; eauto
+           |apply SubList_refl
+           |eapply reachable_steps;
+            [eapply H4|apply steps_singleton; eassumption]].
         destruct Hru as [? [? [? ?]]].
         destruct H12 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
         dest; subst.
@@ -766,8 +919,8 @@ Section RqUpReduction.
   Qed.
 
   Lemma rqUpHistory_outs:
-    forall hst outs,
-      RqUpHistory hst outs ->
+    forall hst oidxTo outs,
+      RqUpHistory hst oidxTo outs ->
       forall rqUp st1 st2,
         outs = [rqUp] ->
         steps step_m sys st1 hst st2 ->
@@ -785,7 +938,7 @@ Section RqUpReduction.
   Lemma rqUpHistory_lpush_unit_reducible:
     forall phst oidxTo rqUps,
       RqUpMsgs dtr oidxTo rqUps ->
-      RqUpHistory phst rqUps ->
+      RqUpHistory phst oidxTo rqUps ->
       forall inits ins hst outs eouts,
         Atomic msg_dec inits ins hst outs eouts ->
         DisjList rqUps inits ->

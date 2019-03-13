@@ -18,7 +18,7 @@ Section RqDownReduction.
             (sys: System oifc).
 
   Hypothesis (Hrrs: RqRsSys dtr sys).
-
+  
   Section OnRqDown.
     Variables (cidx: IdxT) (pobj: Object oifc)
               (rqDowns: list (Id Msg)).
@@ -49,7 +49,58 @@ Section RqDownReduction.
           In loidx (subtreeIndsOf dtr cidx) ->
           SubList (oindsOf hst) (subtreeIndsOf dtr cidx).
     Proof.
-    Admitted.
+      intros.
+      destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
+      inv H2; clear H12.
+      pose proof H0.
+      eapply rqUp_start_ok in H2; eauto.
+      destruct H2 as [ruhst [nhst ?]]; dest; subst.
+      assert (~ In (rqDown, rqdm) inits).
+      { eapply DisjList_In_2; [eassumption|].
+        left; reflexivity.
+      }
+      clear H.
+
+      destruct H6; subst.
+      - rewrite app_nil_r in *.
+        eapply atomic_NonRqUp_rqDown_separation_inside
+          with (cobj0:= cobj) (pobj0:= pobj) (rqDown0:= (rqDown, rqdm)); eauto.
+        eapply lastOIdxOf_Some_oindsOf_In; eauto.
+
+      - destruct H as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
+        pose proof H.
+        destruct H14 as [cidx [rqUp [? _]]]; subst.
+        destruct H13; subst.
+        + simpl in *; clear H10.
+          eapply rqUp_atomic_lastOIdxOf in H4; eauto; dest.
+          eapply rqUp_atomic_bounded; eauto.
+        + destruct H13 as [nins [nouts ?]]; dest.
+          rewrite oindsOf_app.
+          eapply steps_split in H3; [|reflexivity].
+          destruct H3 as [sti [? ?]].
+            
+          assert (SubList (oindsOf nhst) (subtreeIndsOf dtr (obj_idx cobj))).
+          { eapply atomic_NonRqUp_rqDown_separation_inside
+              with (cobj0:= cobj) (pobj0:= pobj)
+                   (rqDown0:= (rqDown, rqdm)) (s1:= sti) (ioidx:= loidx); eauto.
+            { eapply (atomic_messages_in_in msg_dec); try eapply H6; eauto. }
+            { intro Hx; apply H12 in Hx.
+              eapply atomic_rqDown_inits_outs_disj
+                with (cidx0:= obj_idx cobj) (rqDown0:= (rqDown, rqdm))
+                     (hst:= nhst ++ ruhst); eauto.
+              eapply steps_append; eauto.
+            }
+            { eapply lastOIdxOf_Some_oindsOf_In; eauto.
+              rewrite lastOIdxOf_app in H4; [|intro Hx; subst; inv H13].
+              assumption.
+            }
+          }
+          apply SubList_app_3; [assumption|].
+          apply H16 in H14.
+          apply subtreeIndsOf_SubList in H14; [|apply Hrrs].
+          eapply SubList_trans; [|eapply H14].
+          eapply rqUp_atomic_inside_tree; eauto.
+    Qed.
 
     Lemma rqDown_olast_outside_tree:
       forall inits ins hst outs eouts,
@@ -68,13 +119,70 @@ Section RqDownReduction.
                RqUpMsgs dtr roidx rqUps /\
                ~ In roidx (subtreeIndsOf dtr cidx) /\
                Atomic msg_dec inits ruins ruhst ruouts rqUps /\
-               SubList rqUps ins /\
+               SubList rqUps outs /\
                (nhst = nil \/
                 exists nins nouts,
                   Atomic msg_dec rqUps nins nhst nouts eouts)) /\
             DisjList (oindsOf nhst) (subtreeIndsOf dtr cidx).
     Proof.
-    Admitted.
+      intros.
+      destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
+      inv H2; clear H12.
+      pose proof H0.
+      eapply rqUp_start_ok in H2; eauto.
+      destruct H2 as [ruhst [nhst ?]]; dest; subst.
+      exists ruhst, nhst.
+      assert (~ In (rqDown, rqdm) inits).
+      { eapply DisjList_In_2; [eassumption|].
+        left; reflexivity.
+      }
+      clear H.
+
+      destruct H6; subst.
+      - rewrite app_nil_r in *.
+        repeat ssplit; [reflexivity|left; reflexivity|].
+        eapply atomic_NonRqUp_rqDown_separation_outside
+          with (cobj0:= cobj) (pobj0:= pobj) (rqDown0:= (rqDown, rqdm))
+               (ioidx:= loidx); eauto.
+        eapply lastOIdxOf_Some_oindsOf_In; eauto.
+
+      - destruct H as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
+        pose proof H.
+        destruct H14 as [cidx [rqUp [? _]]]; subst rqUps.
+        destruct H13; subst.
+        + simpl in *; clear H10.
+          repeat ssplit; [reflexivity| |apply DisjList_nil_1].
+          right; exists roidx, [rqUp], ruins, ruouts.
+          repeat ssplit; try assumption.
+          * eapply rqUp_atomic_lastOIdxOf in H6; eauto; dest.
+            eapply outside_parent_out; try apply Hrrs; eauto.
+          * left; reflexivity.
+
+        + destruct H13 as [nins [nouts ?]]; dest.
+          assert (DisjList (oindsOf nhst) (subtreeIndsOf dtr (obj_idx cobj))).
+          { eapply steps_split in H3; [|reflexivity].
+            destruct H3 as [sti [? ?]].
+            eapply atomic_NonRqUp_rqDown_separation_outside
+              with (cobj0:= cobj) (pobj0:= pobj) (rqDown0:= (rqDown, rqdm))
+                   (ioidx:= loidx) (s1:= sti); eauto.
+            { eapply (atomic_messages_in_in msg_dec); try eapply H6; eauto. }
+            { intro Hx; apply H12 in Hx.
+              eapply atomic_rqDown_inits_outs_disj
+                with (cidx0:= obj_idx cobj) (rqDown0:= (rqDown, rqdm))
+                     (hst:= nhst ++ ruhst); eauto.
+              eapply steps_append; eauto.
+            }
+            { eapply lastOIdxOf_Some_oindsOf_In; eauto.
+              rewrite lastOIdxOf_app in H4; [|intro Hx; subst; inv H13].
+              assumption.
+            }
+          }
+          repeat ssplit; [reflexivity| |assumption].
+          right; exists roidx, [rqUp], ruins, ruouts.
+          repeat ssplit; try assumption.
+          { eapply DisjList_In_2; eauto. }
+          { right; eauto. }
+    Qed.
 
     Definition RqDownP (st: MState oifc) :=
       Forall (InMPI st.(bst_msgs)) rqDowns.
@@ -362,7 +470,7 @@ Section RqDownReduction.
                 destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
                 inv Hp.
                 apply (DisjList_singleton_1 (id_dec msg_dec)).
-                eapply atomic_rqDown_inits_ins_disj; eauto;
+                eapply atomic_rqDown_inits_outs_disj; eauto;
                   [|eapply steps_append; eauto].
                 specialize (H0 (rqDown, rqdm)); destruct H0; auto.
                 elim H0; left; reflexivity.
