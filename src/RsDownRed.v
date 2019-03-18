@@ -40,12 +40,40 @@ Section RsDownReduction.
                RqUpMsgs dtr roidx rqUps /\
                ~ In roidx (subtreeIndsOf dtr cidx) /\
                Atomic msg_dec inits ruins ruhst ruouts rqUps /\
-               SubList rqUps ins /\
                exists nins nouts,
                  Atomic msg_dec rqUps nins nhst nouts eouts) /\
             DisjList (oindsOf nhst) (subtreeIndsOf dtr cidx).
     Proof.
-    Admitted.
+      destruct Hrrs as [? [? ?]]; intros.
+      destruct Hrsd as [cobj [[rsDown rsdm] ?]]; dest; subst; simpl in *.
+      eapply SubList_singleton_In in H2.
+      pose proof H3.
+      eapply rqUp_start_ok in H6; eauto.
+      destruct H6 as [ruhst [nhst ?]]; dest; subst.
+      exists ruhst, nhst.
+      destruct H10; subst.
+      - rewrite app_nil_r in *.
+        repeat split; [left; reflexivity|].
+        eapply atomic_rsDown_covers; eauto.
+        red; auto.
+      - destruct H6 as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
+        destruct H13; subst.
+        + exfalso.
+          simpl in *; clear H11.
+          pose proof (atomic_unique H3 H10); dest; subst.
+          destruct H6 as [cidx [rqUp ?]]; dest; subst.
+          Common.dest_in.
+          solve_midx_false.
+        + destruct H13 as [nins [nouts ?]]; dest.
+          eapply steps_split in H5; [|reflexivity].
+          destruct H5 as [sti [? ?]].
+          pose proof H13.
+          eapply atomic_rsDown_covers with (st3:= sti) in H16; eauto; [|red; eauto].
+          repeat split; auto.
+          right; exists roidx, rqUps, ruins, ruouts.
+          repeat split; eauto.
+          eapply DisjList_In_2; eassumption.
+    Qed.
 
     Lemma rsDown_olast_inside_tree:
       forall inits ins hst outs eouts,
@@ -220,8 +248,8 @@ Section RsDownReduction.
         destruct H9; subst; simpl in *.
         + rewrite app_nil_r; apply reducible_refl.
         + destruct H9 as [roidx [rqUps [ruins [ruouts ?]]]].
-          destruct H9 as [? [? [? [? ?]]]].
-          destruct H14 as [nins [nouts ?]].
+          destruct H9 as [? [? [? ?]]].
+          destruct H13 as [nins [nouts ?]].
           eapply rqUpHistory_lpush_unit_reducible; eauto.
           * eapply rqUp_atomic; eauto.
             apply SubList_refl.

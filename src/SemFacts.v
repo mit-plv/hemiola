@@ -6,6 +6,7 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope fmap.
 
 Ltac inv_steps :=
   repeat
@@ -221,6 +222,20 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma steps_locks_unaffected:
+  forall {oifc} (sys: System oifc) s1 hst s2,
+    steps step_m sys s1 hst s2 ->
+    forall oidx,
+      ~ In oidx (oindsOf hst) ->
+      s1.(bst_orqs)@[oidx] = s2.(bst_orqs)@[oidx].
+Proof.
+  induction 1; simpl; intros; auto.
+  inv H0; auto; simpl in *.
+  destruct (eq_nat_dec (obj_idx obj) oidx); subst; [exfalso; auto|].
+  mred.
+  apply IHsteps; auto.
+Qed.
+
 Lemma steps_singleton:
   forall {oifc} (sys: System oifc) st1 lbl st2,
     step_m sys st1 lbl st2 ->
@@ -333,4 +348,5 @@ Proof.
 Qed.
 
 Close Scope list.
+Close Scope fmap.
 

@@ -35,7 +35,12 @@ Section RqDownReduction.
           steps step_m sys st1 hst st2 ->
           DisjList (oindsOf hst) (subtreeIndsOf dtr cidx).
     Proof.
-    Admitted.
+      intros.
+      destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
+      eapply atomic_rqDown_covers with (rqDown0:= (rqDown, rqdm)); eauto.
+      - red; auto.
+      - apply SubList_singleton_In; auto.
+    Qed.
 
     Lemma rqDown_olast_inside_tree:
       forall inits ins hst outs eouts,
