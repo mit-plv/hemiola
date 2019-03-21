@@ -48,31 +48,6 @@ Proof.
         simpl in *; omega.
 Qed.
 
-Section RqUpLock.
-  Context {oifc: OStateIfc}.
-  Variables (dtr: DTree)
-            (sys: System oifc).
-
-  Hypothesis (Hrrs: RqRsSys dtr sys).
-
-  Definition OUpLocked (oidx: IdxT) (orqs: ORqs Msg) :=
-    orqs@[oidx] >>=[False] (fun orq => orq@[upRq] <> None).
-  
-  (* Lemma upLocked_rqUp: *)
-  (*   forall inits ins hst outs eouts, *)
-  (*     Atomic msg_dec inits ins hst outs eouts -> *)
-  (*     forall st1 st2, *)
-  (*       Reachable (steps step_m) sys st1 -> *)
-  (*       steps step_m sys st1 hst st2 -> *)
-  (*       forall oidx, *)
-  (*         In oidx (oindsOf hst) -> *)
-  (*         OUpLocked oidx st2.(bst_orqs) -> *)
-  (*         exists ridx rins routs pidx, *)
-  (*           In (RlblInt oidx ridx rins routs) hst /\ *)
-  (*           RqUpMsgs dtr pidx routs. *)
-  
-End RqUpLock.
-
 Section RqUpReduction.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
