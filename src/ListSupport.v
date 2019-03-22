@@ -808,6 +808,32 @@ Proof.
   eapply IHil2, removeOnce_idsOf_NoDup; eauto.
 Qed.
 
+Lemma SubList_NoDup_removeL_nil:
+  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
+         (l1 l2: list A),
+    SubList l2 l1 -> NoDup l2 ->
+    removeL eq_dec l2 l1 = nil.
+Proof.
+  induction l1; simpl; intros;
+    [apply SubList_nil_inv in H; auto|].
+  eapply IHl1; [|apply removeOnce_NoDup; assumption].
+  clear IHl1.
+  generalize dependent l1.
+  induction l2; simpl; intros; [apply SubList_nil|].
+  destruct (eq_dec a a0); subst.
+  - apply SubList_cons_inv in H; dest.
+    red; intros.
+    pose proof (H1 _ H2).
+    inv H3; auto.
+    exfalso; inv H0; auto.
+  - apply SubList_cons.
+    + apply SubList_cons_inv in H; dest.
+      inv H; [exfalso; auto|auto].
+    + eapply IHl2.
+      * inv H0; auto.
+      * apply SubList_cons_inv in H; dest; auto.
+Qed.
+
 Lemma SubList_NoDup_length_eq_removeL_nil:
   forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
          (l1 l2: list A),
