@@ -62,14 +62,11 @@ Section Coverage.
     Definition NoDownLock (oidx: IdxT) :=
       orqs2@[oidx] >>=[True] (fun orq => orq@[downRq] = None).
 
-    Definition NoDownLocks := 
-      forall oidx, In oidx oinds -> NoDownLock oidx.
-
-    Definition NoDownLocks2 (oinds2: list IdxT) :=
+    Definition NoLocks2 (oinds2: list IdxT) :=
       forall oidx,
         In oidx oinds ->
         In oidx oinds2 ->
-        NoDownLock oidx.
+        ~ UpLockedNew oidx /\ NoDownLock oidx.
 
     Definition NoDownLockOutside (roidx: IdxT) :=
       forall oidx,
@@ -135,7 +132,7 @@ Section Coverage.
 
     Definition RsUpMsgOutInv (oidx: IdxT) (rsUp: Id Msg) :=
       RsUpMsgFrom oidx rsUp /\
-      NoDownLocks2 (subtreeIndsOf dtr oidx) /\
+      NoLocks2 (subtreeIndsOf dtr oidx) /\
       OutsideUpLocked oidx.
 
     Definition DownLockCoverInv (oidx: IdxT) (rqid: RqInfo Msg) :=
@@ -822,7 +819,9 @@ Section Coverage.
         eexists; right.
         red; repeat ssplit; [red; eauto|..].
         * red; intros; Common.dest_in.
-          red; mred.
+          split.
+          { intro Hx; repeat (red in Hx; mred); dest; auto. }
+          { red; mred. }
         * red; intros; Common.dest_in.
           red in H5; repeat (simpl in H5; mred).
           dest; exfalso; auto.
@@ -959,7 +958,9 @@ Section Coverage.
           eexists; right.
           red; repeat ssplit; [red; eauto|..].
           { red; intros; Common.dest_in.
-            red; repeat (simpl; mred).
+            split.
+            { intro Hx; repeat (red in Hx; mred). }
+            { red; repeat (simpl; mred). }
           }
           { red; intros; Common.dest_in.
             red in H20; repeat (simpl in H20; mred).
@@ -1255,9 +1256,9 @@ Section Coverage.
   Qed.
 
   Lemma noDownLockOutside_child_in:
-    forall oinds orqs oidx,
+    forall oinds orqs1 orqs2 oidx,
       In oidx oinds ->
-      NoDownLockOutside oinds orqs oidx ->
+      NoDownLockOutside oinds orqs2 oidx ->
       forall cidx down,
         parentIdxOf dtr cidx = Some oidx ->
         edgeDownTo dtr cidx = Some down ->
@@ -1267,11 +1268,11 @@ Section Coverage.
             parentIdxOf dtr ocidx = Some oidx ->
             edgeDownTo dtr ocidx = Some odown ->
             odown <> down ->
-            NoDownLocks2 oinds orqs (subtreeIndsOf dtr ocidx) \/
+            NoLocks2 oinds orqs1 orqs2 (subtreeIndsOf dtr ocidx) \/
             DisjList oinds (subtreeIndsOf dtr ocidx)) ->
         forall norq,
           norq@[downRq] = None ->
-          NoDownLockOutside (oidx :: oinds) (orqs +[oidx <- norq]) cidx.
+          NoDownLockOutside (oidx :: oinds) (orqs2 +[oidx <- norq]) cidx.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
     red; intros.
@@ -1310,7 +1311,7 @@ Section Coverage.
         NoDownLockOutside (oidx :: oinds) (orqs +[oidx <- norq]) cidx.
   Proof.
     intros; subst.
-    eapply noDownLockOutside_child_in; eauto.
+    eapply noDownLockOutside_child_in with (orqs1:= M.empty _); eauto.
     intros.
     assert (In oidx (subtreeIndsOf dtr oidx)).
     { eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption]. }
@@ -1834,7 +1835,15 @@ Section Coverage.
             red; repeat ssplit; [assumption|..].
             { red; simpl; intros.
               destruct H24; [subst|auto].
-              red; mred.
+              split.
+              { eapply steps_not_in_history_no_new_uplocks
+                  with (st2:= {| bst_oss := oss;
+                                 bst_orqs := orqs;
+                                 bst_msgs := msgs |}); eauto.
+                eapply DisjList_In_1; [eassumption|].
+                apply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
+              }
+              { red; mred. }
             }
             { red; intros; Common.dest_in; [|eauto].
               exfalso.
@@ -1849,7 +1858,16 @@ Section Coverage.
           red; repeat ssplit; [red; auto|..].
           * red; simpl; intros.
             destruct H19.
-            { subst; red; mred. }
+            { subst; split.
+              { eapply steps_not_in_history_no_new_uplocks
+                  with (st2:= {| bst_oss := oss;
+                                 bst_orqs := orqs;
+                                 bst_msgs := msgs |}); eauto.
+                eapply DisjList_In_1; [eassumption|].
+                apply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
+              }
+              { red; mred. }
+            }
             { specialize (H12 oidx); destruct H12; exfalso; auto. }
           * red; intros; Common.dest_in; [|eauto].
             exfalso.
@@ -2397,8 +2415,10 @@ Section Coverage.
                   { red; auto. }
                 }
                 { destruct H27; [exfalso; auto|].
-                  specialize (H25 _ H27 H28).
-                  red; mred.
+                  specialize (H25 _ H27 H28); dest.
+                  split.
+                  { unfold UpLockedNew in *; mred. }
+                  { red; mred. }
                 }
               }
               { apply Houl; assumption. }
@@ -2837,7 +2857,21 @@ Section Coverage.
               }
             }
           * red; intros; exfalso.
-            admit.
+            destruct (eq_nat_dec oidx (obj_idx obj)); subst.
+            { eapply steps_not_in_history_no_new_uplocks with (oidx:= obj_idx obj); eauto.
+              { intro Hx; apply H24 in Hx.
+                eapply parent_not_in_subtree; [apply Hrrs|..]; eassumption.
+              }
+              { simpl.
+                red in H31; repeat (simpl in H31; mred).
+                red; repeat (simpl; mred).
+                assumption.
+              }
+            }
+            { destruct H30; [exfalso; auto|].
+              specialize (H28 _ H30 (H24 _ H30)); dest.
+              elim H28; red in H31; mred.
+            }
           * red; intros.
             destruct (eq_nat_dec oidx (obj_idx obj)); subst.
             { red; repeat (simpl; mred). }
@@ -2870,7 +2904,7 @@ Section Coverage.
           solve_midx_false.
         }
 
-        (* Need to have just one child of the incoming RsUp messages. *)
+        (** Need to have just one child of the incoming RsUp messages. *)
         assert (exists rsFrom rsfm, In (rsFrom, rsfm) rins).
         { destruct rins as [|[rsFrom rsfm] ?]; [exfalso; auto|].
           do 2 eexists; left; reflexivity.
@@ -2892,25 +2926,16 @@ Section Coverage.
                       Hrrs Hatm Hrch Hsteps _ H20 H22); clear H22.
 
         destruct (in_dec eq_nat_dec (obj_idx obj) (oindsOf hst)).
-        + assert (~ UpLockedNew (bst_orqs st0) orqs (obj_idx obj)) as Hnul.
-          { assert (exists rsUp rsum, In (rsUp, rsum) rins).
-            { destruct rins as [|[rsUp rsum] ?]; [exfalso; auto|].
-              do 2 eexists; left; reflexivity.
-            }
-            destruct H22 as [rsUp [rsum ?]].
-            pose proof H22.
-            apply in_map with (f:= idOf) in H24; simpl in H24.
-            eapply RqRsDownMatch_rs_rq in H5; [|eassumption].
-            destruct H5 as [cidx [rdown ?]]; dest.
-            apply Hosub in H22.
-            rewrite Forall_forall in H9; specialize (H9 _ H22).
+        + (** If the history has visited the join *)
+          assert (~ UpLockedNew (bst_orqs st0) orqs (obj_idx obj)) as Hnul.
+          { rewrite Forall_forall in H9; specialize (H9 _ H13).
             destruct H9 as [oidx ?].
             destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
             red in H9; dest; disc_rule_conds.
             intro Hx.
-            specialize (H30 _ i Hx).
-            elim H30; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
-          }
+            specialize (H24 _ i Hx).
+            elim H24; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+          } 
  
           eapply MsgOutsRqDownRsUp.
           * (** [RqDownRsUpDisj] *)
@@ -2944,22 +2969,48 @@ Section Coverage.
                   { eapply rqDown_rsUp_inv_msg, Forall_forall; eauto. }
                   { red; auto. }
                 }
-                { (* easy: [obj_idx obj] is already [~ UpLockedNew] *)
-                  admit.
+                { red; intros.
+                  destruct (eq_nat_dec uidx (obj_idx obj)); subst.
+                  { elim Hnul.
+                    red in H29; repeat (simpl in H29; mred).
+                    red; repeat (simpl; mred).
+                    assumption.
+                  }
+                  { destruct H28; [exfalso; auto|].
+                    red in H29; mred.
+                    apply H27; assumption.
+                  }
                 }
               }
               { exists oidx; right.
                 red in H25; dest.
                 red; repeat ssplit; [assumption|..].
                 { red; simpl; intros.
-                  destruct (eq_nat_dec (obj_idx obj) oidx0);
-                    [subst; red; repeat (simpl; mred)|].
-                  destruct H28; [exfalso; auto|].
-                  red; mred.
-                  eapply H26; eauto.
+                  destruct (eq_nat_dec oidx0 (obj_idx obj)); subst.
+                  { split.
+                    { unfold UpLockedNew in Hnul; repeat (simpl in Hnul; mred).
+                      unfold UpLockedNew; repeat (simpl; mred).
+                    }
+                    { red; repeat (simpl; mred). }
+                  }
+                  { destruct H28; [exfalso; auto|].
+                    specialize (H26 _ H28 H29); dest.
+                    split.
+                    { unfold UpLockedNew in *; mred. }
+                    { red; mred. }
+                  }
                 }
-                { (* easy: [obj_idx obj] is already [~ UpLockedNew] *)
-                  admit.
+                { red; intros.
+                  destruct (eq_nat_dec uidx (obj_idx obj)); subst.
+                  { elim Hnul.
+                    red in H29; repeat (simpl in H29; mred).
+                    red; repeat (simpl; mred).
+                    assumption.
+                  }
+                  { destruct H28; [exfalso; auto|].
+                    red in H29; mred.
+                    apply H27; assumption.
+                  }
                 }
               }
             }
@@ -2967,37 +3018,56 @@ Section Coverage.
               exists (obj_idx obj); right.
               red; repeat ssplit; [red; auto|..].
               { red; simpl; intros.
-                destruct (eq_nat_dec (obj_idx obj) oidx);
-                  [subst; red; repeat (simpl; mred)|].
-                destruct H22; [exfalso; auto|].
-                red; mred.
-                apply subtreeIndsOf_composed in H24; [|apply Hrrs].
-                destruct H24; [exfalso; auto|].
-                destruct H24 as [cidx [? ?]].
-                pose proof (parentIdxOf_Some H _ H24).
-                destruct H26 as [crqUp [crsUp [cdown ?]]]; dest.
-                destruct (in_dec eq_nat_dec crsUp rqi.(rqi_minds_rss)).
-                { rewrite <-H17 in i0.
-                  apply in_map_iff in i0.
-                  destruct i0 as [[crsUp' crsm] [? ?]]; simpl in *; subst.
-                  apply Hosub in H30.
-                  rewrite Forall_forall in H9; specialize (H9 _ H30).
-                  destruct H9 as [rcidx ?].
-                  destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
-                  red in H9; dest; disc_rule_conds.
-                  specialize (H29 _ H22 H25).
-                  red in H29; destruct (orqs@[oidx]); auto.
+                destruct (eq_nat_dec oidx (obj_idx obj)); subst.
+                { split.
+                  { unfold UpLockedNew in *; repeat (simpl; mred). }
+                  { red; repeat (simpl; mred). }
                 }
-                { assert (DownLocked orqs (obj_idx obj) rqi) by (red; mred).
-                  assert (cdown <> rqi_midx_rsb rqi)
-                    by (intro Hx; subst; solve_midx_false).
-                  specialize (H10 _ _ i Hnul H29).
-                  specialize (H10 _ _ _ H24 H27 H28 n0 H30).
-                  exfalso; destruct (H10 oidx); eauto.
+                { destruct H22; [exfalso; auto|].
+                  apply subtreeIndsOf_composed in H24; [|apply Hrrs].
+                  destruct H24; [exfalso; auto|].
+                  destruct H24 as [cidx [? ?]].
+                  pose proof (parentIdxOf_Some H _ H24).
+                  destruct H26 as [crqUp [crsUp [cdown ?]]]; dest.
+                  destruct (in_dec eq_nat_dec crsUp rqi.(rqi_minds_rss)).
+                  { rewrite <-H17 in i0.
+                    apply in_map_iff in i0.
+                    destruct i0 as [[crsUp' crsm] [? ?]]; simpl in *; subst.
+                    apply Hosub in H30.
+                    rewrite Forall_forall in H9; specialize (H9 _ H30).
+                    destruct H9 as [rcidx ?].
+                    destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
+                    red in H9; dest; disc_rule_conds.
+                    specialize (H29 _ H22 H25); dest.
+                    split.
+                    { unfold UpLockedNew; mred. }
+                    { red; mred. }
+                  }
+                  { assert (DownLocked orqs (obj_idx obj) rqi) by (red; mred).
+                    assert (cdown <> rqi_midx_rsb rqi)
+                      by (intro Hx; subst; solve_midx_false).
+                    specialize (H10 _ _ i Hnul H29).
+                    specialize (H10 _ _ _ H24 H27 H28 n0 H30).
+                    exfalso; destruct (H10 oidx); eauto.
+                  }
                 }
               }
-              { (* easy: [obj_idx obj] is already [~ UpLockedNew] *)
-                admit.
+              { rewrite Forall_forall in H9; specialize (H9 _ H13).
+                destruct H9 as [oidx ?].
+                destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
+                red in H9; dest; disc_rule_conds.
+                red; intros.
+                destruct (eq_nat_dec uidx (obj_idx obj)); subst.
+                { elim Hnul.
+                  red in H26; repeat (simpl in H26; mred).
+                  red; repeat (simpl; mred).
+                  assumption.
+                }
+                { destruct H20; [exfalso; auto|].
+                  red in H26; mred.
+                  specialize (H24 _ H20 H26).
+                  eapply outside_parent_out; [apply Hrrs|..]; eassumption.
+                }
               }
             }
 
@@ -3080,8 +3150,17 @@ Section Coverage.
               }
             }
             { (* [UpLockedBound] *)
-              (* easy: [obj_idx obj] is [~ UpLockedNew] *)
-              admit.
+              red; intros.
+              destruct (eq_nat_dec oidx (obj_idx obj)); subst.
+              { elim Hnul.
+                red in H32; repeat (simpl in H32; mred).
+                red; repeat (simpl; mred).
+                assumption.
+              }
+              { destruct H31; [exfalso; auto|].
+                red in H32; mred.
+                apply H26; assumption.
+              }
             }
             { (* [NoDownLockOutside] *)
               red; intros.
@@ -3092,7 +3171,8 @@ Section Coverage.
               }
             }
 
-        + eapply atomic_separation_ok in n; eauto.
+        + (** If the history never visited the join *)
+          eapply atomic_separation_ok in n; eauto.
           destruct n.
           2: {
             exfalso.
@@ -3126,7 +3206,7 @@ Section Coverage.
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
           rewrite removeL_nil in *; simpl in *.
-          destruct H25.
+          red in H25; dest.
 
           eapply MsgOutsRqDownRsUp.
           * apply rqDownRsUpDisj_singleton.
@@ -3134,45 +3214,76 @@ Section Coverage.
             exists (obj_idx obj); right.
             red; repeat ssplit; [red; auto|..].
             { red; intros.
-              destruct (eq_nat_dec oidx (obj_idx obj)); subst;
-                [red; repeat (simpl; mred)|].
-              destruct H29; [exfalso; auto|].
-              red; mred.
-              eapply H28; eauto.
+              destruct (eq_nat_dec oidx (obj_idx obj)); subst.
+              { split.
+                { intro Hx.
+                  eapply steps_not_in_history_no_new_uplocks with (oidx:= obj_idx obj); eauto.
+                  { intro Hx0; apply H24 in Hx0.
+                    eapply parent_not_in_subtree; [apply Hrrs|..]; eassumption.
+                  }
+                  { red in Hx; repeat (simpl in Hx; mred).
+                    simpl; red; repeat (simpl; mred).
+                    assumption.
+                  }
+                }
+                { red; repeat (simpl; mred). }
+              }
+              { destruct H30; [exfalso; auto|].
+                specialize (H28 _ H30 (H24 _ H30)); dest.
+                split.
+                { unfold UpLockedNew; mred. }
+                { red; mred. }
+              }
             }
-            { (* easy: [obj_idx obj] is [~ UpLockedNew] *)
-              admit.
+            { red; intros.
+              destruct (eq_nat_dec uidx (obj_idx obj)); subst.
+              { exfalso.
+                eapply steps_not_in_history_no_new_uplocks with (oidx:= obj_idx obj); eauto.
+                { intro Hx; apply H24 in Hx.
+                  eapply parent_not_in_subtree; [apply Hrrs|..]; eassumption.
+                }
+                { red in H31; repeat (simpl in H31; mred).
+                  red; repeat (simpl; mred).
+                  assumption.
+                }
+              }
+              { destruct H30; [exfalso; auto|].
+                red in H31; mred.
+                specialize (H29 _ H30 H31).
+                eapply outside_parent_out; [apply Hrrs|..]; eassumption.
+              }
             }
           * red; intros.
             destruct (eq_nat_dec oidx (obj_idx obj)); subst;
-              [exfalso; red in H31; repeat (simpl in H31; mred)|].
-            destruct H29; [exfalso; auto|].
-            unfold UpLockedNew in H30; red in H31; mred.
+              [exfalso; red in H32; repeat (simpl in H32; mred)|].
+            destruct H30; [exfalso; auto|].
+            unfold UpLockedNew in H31; red in H31; mred.
+            red in H32; mred.
             red; intros.
             apply (DisjList_cons_inv eq_nat_dec); [eapply H10; eauto|].
-            apply H24 in H29.
-            apply subtreeIndsOf_SubList in H29; [|apply Hrrs].
-            apply subtreeIndsOf_child_SubList in H32; [|apply Hrrs].
+            apply H24 in H30.
+            apply subtreeIndsOf_SubList in H30; [|apply Hrrs].
+            apply subtreeIndsOf_child_SubList in H33; [|apply Hrrs].
             intro Hx.
-            apply H32, H29 in Hx.
+            apply H33, H30 in Hx.
             eapply parent_not_in_subtree; [apply Hrrs|..]; eauto.
 
           * intros.
             destruct (eq_nat_dec (obj_idx obj) roidx); subst.
             1: {
               exfalso.
-              red in H29; dest.
-              red in H31; repeat (simpl in H31; mred).
+              red in H30; dest.
+              red in H32; repeat (simpl in H32; mred).
             }
             assert (DownLockRoot (oindsOf hst) (bst_orqs st0) orqs
                                  roidx rrqid rcidx).
-            { red in H29; dest.
+            { red in H30; dest.
               red; repeat ssplit; try eassumption.
-              { destruct H29; [exfalso; auto|assumption]. }
-              { unfold UpLockedNew in H30; mred. }
-              { red in H31; mred. }
+              { destruct H30; [exfalso; auto|assumption]. }
+              { unfold UpLockedNew in H31; mred. }
+              { red in H32; mred. }
             }
-            specialize (H11 _ _ _ H30); clear H29 H30.
+            specialize (H11 _ _ _ H31); clear H30 H31.
 
             red in H11; dest.
             pose proof H11.
@@ -3211,8 +3322,23 @@ Section Coverage.
                 eapply outside_parent_out; [apply Hrrs|..]; eauto.
               }
             }
-            { (** This is problematic.. *)
-              admit. }
+            { red; intros; exfalso.
+              destruct (eq_nat_dec oidx (obj_idx obj)); subst.
+              { eapply steps_not_in_history_no_new_uplocks with (oidx:= obj_idx obj); eauto.
+                { intro Hx; apply H24 in Hx.
+                  eapply parent_not_in_subtree; [apply Hrrs|..]; eassumption.
+                }
+                { simpl.
+                  red in H38; repeat (simpl in H38; mred).
+                  red; repeat (simpl; mred).
+                  assumption.
+                }
+              }
+              { destruct H37; [exfalso; auto|].
+                specialize (H28 _ H37 (H24 _ H37)); dest.
+                elim H28; red in H38; mred.
+              }
+            }
             { red; intros.
               destruct (eq_nat_dec oidx (obj_idx obj)); subst.
               { red; repeat (simpl; mred). }
@@ -3220,8 +3346,7 @@ Section Coverage.
                 red; mred; eapply H33; eauto.
               }
             }
-
-    Admitted.
+    Qed.
     
   End InternalStep.
   
