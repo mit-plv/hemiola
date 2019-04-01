@@ -10,6 +10,110 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
+Definition StateM oifc :=
+  (OState oifc * ORq Msg * list (Id Msg))%type.
+
+Definition StateMTrs oifc :=
+  StateM oifc -> StateM oifc.
+
+Definition StateMBind {oifc A}
+           (f: StateM oifc -> option A)
+           (cont: A -> StateM oifc -> StateM oifc): StateMTrs oifc :=
+  fun st => (f st) >>=[st] (fun a => cont a st).
+
+Definition TrsMTrs {oifc} (mtrs: StateMTrs oifc): OTrs oifc :=
+  fun ost orq mins => mtrs (ost, orq, mins).
+
+Definition getFirstMsg {oifc} (st: StateM oifc): option Msg :=
+  (hd_error (snd st)) >>= (fun idm => Some (valOf idm)).
+
+Definition FirstNatMsg {oifc}: OPrec oifc :=
+  fun ost orq mins =>
+    (hd_error mins)
+      >>=[False]
+      (fun idm =>
+         match msg_value (valOf idm) with
+         | VNat _ => True
+         | _ => False
+         end).
+
+Definition getFirstNatMsg {oifc} (st: StateM oifc): option nat :=
+  (hd_error (snd st))
+    >>= (fun idm =>
+           match msg_value (valOf idm) with
+           | VNat n => Some n
+           | _ => None
+           end).
+
+Definition UpLockNatMsg {oifc}: OPrec oifc :=
+  fun ost orq mins =>
+    (orq@[upRq])
+      >>=[False]
+      (fun rqiu =>
+         match msg_value (rqi_msg rqiu) with
+         | VNat _ => True
+         | _ => False
+         end).
+
+Definition getUpLockNatMsg {oifc} (st: StateM oifc): option nat :=
+  ((snd (fst st))@[upRq])
+    >>= (fun rqiu =>
+           match msg_value (rqi_msg rqiu) with
+           | VNat n => Some n
+           | _ => None
+           end).
+
+Definition UpLocked {oifc}: OPrec oifc :=
+  fun ost orq mins => orq@[upRq] <> None.
+
+Definition getUpLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
+  ((snd (fst st))@[upRq])
+    >>= (fun rqiu => Some rqiu.(rqi_midx_rsb)).
+
+Definition DownLockNatMsg {oifc}: OPrec oifc :=
+  fun ost orq mins =>
+    (orq@[downRq])
+      >>=[False]
+      (fun rqid =>
+         match msg_value (rqi_msg rqid) with
+         | VNat _ => True
+         | _ => False
+         end).
+
+Definition getDownLockNatMsg {oifc} (st: StateM oifc): option nat :=
+  ((snd (fst st))@[downRq])
+    >>= (fun rqid =>
+           match msg_value (rqi_msg rqid) with
+           | VNat n => Some n
+           | _ => None
+           end).
+
+Definition DownLocked {oifc}: OPrec oifc :=
+  fun ost orq mins => orq@[downRq] <> None.
+
+Definition getDownLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
+  ((snd (fst st))@[downRq])
+    >>= (fun rqid => Some rqid.(rqi_midx_rsb)).
+
+Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
+Notation "N <-- F ; CONT" :=
+  (StateMBind F (fun N => CONT)) (at level 15, right associativity): trs_scope.
+Notation "PST --> NST" :=
+  (fun PST => NST) (at level 12): trs_scope.
+Notation "PST {{ OIFC }} --> NST" :=
+  (fun PST: StateM OIFC => NST) (at level 12): trs_scope.
+
+Notation "ST '.ost'" := (fst (fst ST)) (at level 11): trs_scope.
+Notation "ST '.orq'" := (snd (fst ST)) (at level 11): trs_scope.
+Notation "ST '.msgs'" := (snd ST) (at level 11): trs_scope.
+
+Delimit Scope trs_scope with trs.
+
+(** TODOs:
+ * 1) Notations for [Rule]: not to use [%trs] in [rule_trs]
+ * 2) For some rules in [parent], they should satisfy conditions of [RsBackRule].
+ *)
+
 Section System.
 
   Definition erq1 := erq 0.
@@ -36,8 +140,7 @@ Section System.
   Definition implStatusIdx: Fin.t 2 := Fin.FS Fin.F1.
   
   Definition ImplOStateIfc: OStateIfc :=
-    {| ost_sz := 2;
-       ost_ty := [nat:Type; nat:Type]%vector |}.
+    {| ost_ty := [nat:Type; nat:Type]%vector |}.
   Definition implInit: OStates ImplOStateIfc :=
     [parentIdx <- (0, (msiS, tt))]
     +[child1Idx <- (0, (msiS, tt))]
@@ -66,7 +169,7 @@ Section System.
                        msg_value := VNat (ost#[implValueIdx])
                     |})])
       |}.
-
+    
     Definition childGetRqS: Rule ImplOStateIfc :=
       {| rule_idx := 1;
          rule_precond :=
@@ -78,35 +181,32 @@ Section System.
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiI;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             ((hd_error mins) >>=[(ost, orq, nil)]
-               (fun idm =>
-                  (ost,
-                   addRq orq upRq (valOf idm) [pc] ce,
-                   [(cpRq, {| msg_id := msiRqS;
-                              msg_type := MRq;
-                              msg_value := VUnit |})])))
+           (do (msg <-- getFirstMsg;
+                st --> (st.ost,
+                        addRq (st.orq) upRq msg [pc] ce,
+                        [(cpRq, {| msg_id := msiRqS;
+                                   msg_type := MRq;
+                                   msg_value := VUnit |})])))%trs
       |}.
-
+    
     Definition childGetRsS: Rule ImplOStateIfc :=
       {| rule_idx := 2;
          rule_precond :=
            MsgsFrom [pc]
            /\oprec MsgIdsFrom [msiRsS]
-           /\oprec RsAccepting;
+           /\oprec RsAccepting
+           /\oprec FirstNatMsg
+           /\oprec UpLocked;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             ((hd_error mins) >>=[(ost, orq, nil)]
-               (fun idm =>
-                  match msg_value (valOf idm) with
-                  | VNat n =>
-                    (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiS],
-                     removeRq orq upRq,
-                     [(ce, {| msg_id := getRs;
-                              msg_type := MRs;
-                              msg_value := VNat n |})])
-                  | _ => (ost, orq, nil) (** TODO: how to efficiently handle this case? *)
-                  end))
+           (do (n <-- getFirstNatMsg;
+                ursb <-- getUpLockIdxBack;
+                st {{ ImplOStateIfc }}
+                   --> (st.ost +#[implValueIdx <- n]
+                               +#[implStatusIdx <- msiS],
+                        removeRq (st.orq) upRq,
+                        [(ursb, {| msg_id := getRs;
+                                   msg_type := MRs;
+                                   msg_value := VNat n |})])))%trs
       |}.
 
     Definition childDownRqS: Rule ImplOStateIfc :=
@@ -132,24 +232,21 @@ Section System.
            /\oprec RqAccepting
            /\oprec UpLockFree
            /\oprec DownLockFree
+           /\oprec FirstNatMsg
            /\oprec
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] = msiM;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             ((hd_error mins) >>=[(ost, orq, nil)]
-               (fun idm =>
-                  match msg_value (valOf idm) with
-                  | VNat n =>
-                    (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiM],
-                     orq,
-                     [(ce, {| msg_id := setRs;
-                              msg_type := MRs;
-                              msg_value := VUnit |})])
-                  | _ => (ost, orq, nil)
-                  end))
+           (do (n <-- getFirstNatMsg;
+                st {{ ImplOStateIfc }}
+                   --> (st.ost +#[implValueIdx <- n]
+                               +#[implStatusIdx <- msiM],
+                        st.orq,
+                        [(ce, {| msg_id := setRs;
+                                 msg_type := MRs;
+                                 msg_value := VUnit |})])))%trs
       |}.
-    
+
     Definition childSetRqM: Rule ImplOStateIfc :=
       {| rule_idx := 5;
          rule_precond :=
@@ -161,14 +258,12 @@ Section System.
                fun (ost: OState ImplOStateIfc) orq mins =>
                  ost#[implStatusIdx] <> msiM;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             ((hd_error mins) >>=[(ost, orq, nil)]
-               (fun idm =>
-                  (ost,
-                   addRq orq upRq (valOf idm) [pc] ce,
-                   [(cpRq, {| msg_id := msiRqM;
-                              msg_type := MRq;
-                              msg_value := VUnit |})])))
+           (do (msg <-- getFirstMsg;
+                st --> (st.ost,
+                        addRq (st.orq) upRq msg [pc] ce,
+                        [(cpRq, {| msg_id := msiRqM;
+                                   msg_type := MRq;
+                                   msg_value := VUnit |})])))%trs
       |}.
 
     Definition childSetRsM: Rule ImplOStateIfc :=
@@ -176,21 +271,19 @@ Section System.
          rule_precond :=
            MsgsFrom [pc]
            /\oprec MsgIdsFrom [msiRsM]
-           /\oprec RsAccepting;
+           /\oprec RsAccepting
+           /\oprec UpLockNatMsg;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             (Syntax.getRq orq upRq) >>=[(ost, orq, nil)]
-               (fun rqinfo =>
-                  match msg_value (rqi_msg rqinfo) with
-                  | VNat n =>
-                    (ost +#[implValueIdx <- n] +#[implStatusIdx <- msiM],
-                     removeRq orq upRq,
-                     (ce,
-                      {| msg_id := setRs;
-                         msg_type := MRs;
-                         msg_value := VNat n |}) :: nil)
-                  | _ => (ost, orq, nil)
-                  end)
+           (do (n <-- getUpLockNatMsg;
+                ursb <-- getUpLockIdxBack;
+                st {{ ImplOStateIfc }}
+                   --> (st.ost +#[implValueIdx <- n]
+                               +#[implStatusIdx <- msiM],
+                        removeRq (st.orq) upRq,
+                        (ursb,
+                         {| msg_id := setRs;
+                            msg_type := MRs;
+                            msg_value := VNat n |}) :: nil)))%trs
       |}.
 
     Definition childDownRqM: Rule ImplOStateIfc :=
@@ -216,14 +309,14 @@ Section System.
            /\oprec RqAccepting
            /\oprec UpLockFree;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             ((hd_error mins) >>=[(ost, orq, nil)]
-               (fun idm =>
-                  (ost,
-                   addRq orq upRq (valOf idm) [pc] ce,
-                   [(cpRq, {| msg_id := msiRqI;
-                              msg_type := MRq;
-                              msg_value := VNat (ost#[implValueIdx]) |})])))
+           (do (msg <-- getFirstMsg;
+                st {{ ImplOStateIfc }}
+                   --> (st.ost,
+                        addRq (st.orq) upRq msg [pc] ce,
+                        [(cpRq, {| msg_id := msiRqI;
+                                   msg_type := MRq;
+                                   msg_value := VNat (st.ost#[implValueIdx])
+                                |})])))%trs
       |}.
 
     Definition childEvictRsI: Rule ImplOStateIfc :=
@@ -231,16 +324,16 @@ Section System.
          rule_precond :=
            MsgsFrom [pc]
            /\oprec MsgIdsFrom [msiRsI]
-           /\oprec RsAccepting;
+           /\oprec RsAccepting
+           /\oprec UpLocked;
          rule_trs :=
-           fun (ost: OState ImplOStateIfc) orq mins =>
-             ((hd_error mins) >>=[(ost, orq, nil)]
-               (fun idm =>
-                  (ost +#[implStatusIdx <- msiI],
-                   removeRq orq upRq,
-                   [(ce, {| msg_id := evictRs;
-                            msg_type := MRs;
-                            msg_value := VUnit |})])))
+           (do (ursb <-- getUpLockIdxBack;
+                st {{ ImplOStateIfc }}
+                   --> (st.ost +#[implStatusIdx <- msiI],
+                        removeRq (st.orq) upRq,
+                        [(ursb, {| msg_id := evictRs;
+                                   msg_type := MRs;
+                                   msg_value := VUnit |})])))%trs
       |}.
       
     Definition child: Object ImplOStateIfc :=

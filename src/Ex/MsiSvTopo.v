@@ -23,46 +23,76 @@ Proof.
   - auto using msiSv_impl_RqRsChnsOnDTree.
 Qed.
 
+Ltac solve_rule_conds :=
+  repeat
+    (autounfold with RuleConds in *; intros;
+     match goal with
+     | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
+     | [H: rule_precond _ _ _ _ |- _] => simpl in H
+     | [H: rule_trs _ _ _ _ = _ |- _] => simpl in H
+     | [H: (_, _) = (_, _) |- _] => inv H
+     | [H: idsOf ?rins = [_]%list |- _] =>
+       let rin := fresh "rin" in
+       let rmsg := fresh "rmsg" in
+       destruct rins as [|[rin rmsg] [|]]; try discriminate;
+       simpl in H; inv H
+     | [H: map _ _ = [_]%list |- _] => simpl in H; inv H
+     | [H: context [hd_error [_]%list] |- _] => simpl in H
+
+     | [ |- rule_precond _ _ _ _] => simpl
+     | [ |- (_ /\oprec _) _ _ _] => split
+     | [ |- _ /\ _] => split
+     | [ |- _ ->oprec _] => red; intros
+     | [ |- Forall _ _] => constructor
+     | [ |- exists _, _] => eexists
+     end;
+     simpl in *;
+     try assumption; try reflexivity; try congruence).
+
+Ltac rule_immd := left.
+Ltac rule_immu := right; left.
+Ltac rule_rquu := do 2 right; left; split; [|left].
+Ltac rule_rqud := do 2 right; left; split; [|right; left].
+Ltac rule_rqdd := do 2 right; left; split; [|right; right].
+Ltac rule_rsdd := do 3 right; left; split; [left|].
+Ltac rule_rsu := do 3 right; left; split; [right|].
+Ltac rule_rsrq := do 4 right.
+
 Lemma msiSv_impl_GoodRqRsSys: GoodRqRsSys topo impl.
 Proof.
   repeat
     match goal with
     | [ |- GoodRqRsSys _ _] => red
-    | [ |- Forall _ _] => constructor; simpl
     | [ |- GoodRqRsObj _ _ _] => red
+    | [ |- Forall _ _] => constructor; simpl
     end.
 
-  - left.
-    repeat
-      (match goal with
-       | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
-       | [H: rule_precond _ _ _ _ |- _] => simpl in H
-       | [H: rule_trs _ _ _ _ = _ |- _] => simpl in H
-       | [H: (_, _) = (_, _) |- _] => inv H
+  - rule_immd; solve_rule_conds.
+    instantiate (1:= ext1Idx).
+    all:reflexivity.
 
-       | [ |- RulePrecSat _ _] => red
-       | [ |- RulePostSat _ _] => red; intros
-       | [ |- RsReleasing _] => red
-       | [ |- FootprintSilent _] => red
-       | [ |- ImmDownRule _ _ _] => red
-       | [ |- ImmDownOk _ _ _ _ _ _ _ _] => red
+  - rule_rquu.
+    + solve_rule_conds.
+      intros; cbn; destruct (hd_error mins); simpl; reflexivity.
+    + solve_rule_conds.
+      * unfold addRq; mred.
+      * instantiate (1:= ext1Idx); reflexivity.
+      * reflexivity.
+      * reflexivity.
 
-       | [ |- _ /\ _] => split
-       | [ |- _ ->oprec _] => red; intros
-       | [ |- Forall _ _] => constructor
-       end; try assumption; try reflexivity).
-
-    red in H.
-    destruct rins as [|[midx msg] [|]]; try discriminate.
-    inv H.
-    
-    exists ext1Idx; do 4 eexists; repeat ssplit; try reflexivity.
-  - 
+  - rule_rsdd.
     
 Admitted.
 
 Lemma msiSv_impl_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
 Proof.
+  repeat
+    match goal with
+    | [ |- RqUpRsUpOkSys _ _] => red
+    | [ |- RqUpRsUpOkObj _ _] => red
+    | [ |- Forall _ _] => constructor; simpl
+    end.
+
 Admitted.
 
 Theorem msiSv_impl_RqRsSys: RqRsSys topo impl.

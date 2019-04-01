@@ -77,20 +77,11 @@ Section RqRsTopo.
   Definition upRq := 0.
   Definition downRq := 1.
 
-  Definition LockFreeORq (orq: ORq Msg) :=
-    orq@[upRq] = None /\ orq@[downRq] = None.
-
   Definition UpLockFreeORq (orq: ORq Msg) :=
     orq@[upRq] = None.
 
   Definition DownLockFreeORq (orq: ORq Msg) :=
     orq@[downRq] = None.
-
-  Definition UpLockedORq (orq: ORq Msg) :=
-    orq@[upRq] <> None.
-
-  Definition DownLockedORq (orq: ORq Msg) :=
-    orq@[downRq] <> None.
 
   Definition UpLockFree: OPrec oifc :=
     fun ost orq mins => UpLockFreeORq orq.
@@ -420,6 +411,23 @@ Section RqRsTopo.
     RqRsDTree /\ GoodRqRsSys /\ RqUpRsUpOkSys.
   
 End RqRsTopo.
+
+Hint Unfold RulePrecSat RulePostSat
+     MsgsFrom MsgIdsFrom MsgsFromORq MsgsTo
+     RqAccepting RsAccepting RqReleasing RsReleasing
+     UpLockFreeORq DownLockFreeORq
+     UpLockFree DownLockFree UpLockFreeSuff DownLockFreeSuff
+     StateSilent FootprintUpSilent FootprintDownSilent FootprintSilent
+     MsgOutsOrthORq FootprintingUp FootprintingDown FootprintingUpToDown
+     FootprintedUp FootprintedDown FootprintReleasingUpPost
+     FootprintReleasingUp FootprintReleasingDownPost
+     FootprintReleasingDown FootprintUpOk RqRsDownMatch
+     FootprintUpDownOk FootprintDownDownOk
+     ImmDownOk ImmDownRule ImmUpOk ImmUpRule
+     RqUpUpOk RqUpUp RqUpDownOk RqUpDown RqDownDownOk
+     RqDownDown RqFwdRuleCommon RqFwdRule
+     RsBackRuleCommon RsDownDown RsUp RsBackRule
+     RsDownRqDownOk RsDownRqDownRule : RuleConds.
 
 Close Scope list.
 Close Scope fmap.
