@@ -71,17 +71,6 @@ Proof.
     instantiate (1:= ext1Idx).
     all:reflexivity.
 
-  - rule_rquu.
-    + solve_rule_conds.
-      intros; cbn; destruct (hd_error mins); simpl; reflexivity.
-    + solve_rule_conds.
-      * unfold addRq; mred.
-      * instantiate (1:= ext1Idx); reflexivity.
-      * reflexivity.
-      * reflexivity.
-
-  - rule_rsdd.
-    
 Admitted.
 
 Lemma msiSv_impl_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
