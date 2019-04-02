@@ -55,7 +55,7 @@ Section System.
           /\ UpLockFree
           /\ DownLockFree
           /\ (fun (ost: OState ImplOStateIfc) orq mins =>
-                ost#[implStatusIdx] >= msiS))%prec
+                ost#[implStatusIdx] >= msiS))
       :transition
          (fun (ost: OState ImplOStateIfc) orq mins =>
             (ost, orq,
@@ -84,11 +84,12 @@ Section System.
     Definition childGetRsS: Rule ImplOStateIfc :=
       rule[2]
       :requires
-         (MsgsFrom [pc]
+         (MsgsFromORq upRq
           /\ MsgIdsFrom [msiRsS]
           /\ RsAccepting
           /\ FirstNatMsg
-          /\ UpLocked)
+          /\ UpLocked
+          /\ DownLockFree)
       :transition
          (do (n <-- getFirstNatMsg;
                 ursb <-- getUpLockIdxBack;
@@ -105,7 +106,10 @@ Section System.
       :requires
          (MsgsFrom [pc]
           /\ MsgIdsFrom [msiDownRqS]
-          /\ RqAccepting)
+          /\ RqAccepting
+          /\ DownLockFree
+          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+                ost#[implStatusIdx] >= msiS))
       :transition
          (fun (ost: OState ImplOStateIfc) orq mins =>
             (ost+#[implStatusIdx <- msiS],
@@ -155,10 +159,11 @@ Section System.
     Definition childSetRsM: Rule ImplOStateIfc :=
       rule[6]
       :requires
-         (MsgsFrom [pc]
+         (MsgsFromORq upRq
           /\ MsgIdsFrom [msiRsM]
           /\ RsAccepting
-          /\ UpLockNatMsg)
+          /\ UpLockNatMsg
+          /\ DownLockFree)
       :transition
          (do (n <-- getUpLockNatMsg;
                 ursb <-- getUpLockIdxBack;
@@ -176,7 +181,10 @@ Section System.
       :requires
          (MsgsFrom [pc]
           /\ MsgIdsFrom [msiDownRqM]
-          /\ RqAccepting)
+          /\ RqAccepting
+          /\ DownLockFree
+          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+                ost#[implStatusIdx] <> msiI))
       :transition
          (fun (ost: OState ImplOStateIfc) orq mins =>
             (ost +#[implStatusIdx <- msiI],
@@ -205,10 +213,11 @@ Section System.
     Definition childEvictRsI: Rule ImplOStateIfc :=
       rule[9]
       :requires
-         (MsgsFrom [pc]
+         (MsgsFromORq upRq
           /\ MsgIdsFrom [msiRsI]
           /\ RsAccepting
-          /\ UpLocked)
+          /\ UpLocked
+          /\ DownLockFree)
       :transition
          (do (ursb <-- getUpLockIdxBack;
                 st {{ ImplOStateIfc }}
@@ -316,7 +325,8 @@ Section System.
               /\ MsgIdsFrom [msiRqI]
               /\ RqAccepting
               /\ UpLockFree
-              /\ DownLockFree)
+              /\ DownLockFree
+              /\ FirstNatMsg)
           :transition
              (do (n <-- getFirstNatMsg;
                     st {{ ImplOStateIfc }}
@@ -339,7 +349,9 @@ Section System.
         :requires
            (MsgsFromORq downRq
             /\ MsgIdsFrom [msiDownRsS]
-            /\ RsAccepting)
+            /\ RsAccepting
+            /\ FirstNatMsg
+            /\ DownLocked)
         :transition
            (do (nv <-- getFirstNatMsg;
                   ursb <-- getDownLockIdxBack;
@@ -356,7 +368,9 @@ Section System.
         :requires
            (MsgsFromORq downRq
             /\ MsgIdsFrom [msiDownRsM]
-            /\ RsAccepting)
+            /\ RsAccepting
+            /\ FirstNatMsg
+            /\ DownLocked)
         :transition
            (do (n <-- getFirstNatMsg;
                   ursb <-- getDownLockIdxBack;

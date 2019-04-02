@@ -92,6 +92,12 @@ Definition getDownLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
   ((snd (fst st))@[downRq])
     >>= (fun rqid => Some rqid.(rqi_midx_rsb)).
 
+Hint Unfold StateMBind TrsMTrs getFirstMsg
+     FirstNatMsg getFirstNatMsg
+     UpLockNatMsg getUpLockNatMsg UpLocked getUpLockIdxBack
+     DownLockNatMsg getDownLockNatMsg DownLocked getDownLockIdxBack
+  : RuleConds.
+
 Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
 Notation "N <-- F ; CONT" :=
   (StateMBind F (fun N => CONT)) (at level 15, right associativity): trs_scope.
