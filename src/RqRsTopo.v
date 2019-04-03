@@ -412,8 +412,7 @@ Section RqRsTopo.
   
 End RqRsTopo.
 
-Hint Unfold RulePrecSat RulePostSat
-     MsgsFrom MsgIdsFrom MsgsFromORq MsgsTo
+Hint Unfold MsgsFrom MsgIdsFrom MsgsFromORq MsgsTo
      RqAccepting RsAccepting RqReleasing RsReleasing
      UpLockFreeORq DownLockFreeORq
      UpLockFree DownLockFree UpLockFreeSuff DownLockFreeSuff
@@ -428,6 +427,10 @@ Hint Unfold RulePrecSat RulePostSat
      RqDownDown RqFwdRuleCommon RqFwdRule
      RsBackRuleCommon RsDownDown RsUp RsBackRule
      RsDownRqDownOk RsDownRqDownRule : RuleConds.
+
+Hint Unfold RqToUpRule RsToUpRule : RuleConds.
+
+Hint Unfold addRq removeRq : RuleConds.
 
 Close Scope list.
 Close Scope fmap.

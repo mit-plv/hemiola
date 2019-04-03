@@ -1,6 +1,6 @@
-Require Import Bool Vector List String Peano_dec.
+Require Import Bool Vector List String Peano_dec Omega.
 Require Import Common FMap HVector ListSupport Syntax Semantics.
-Require Import Topology RqRsTopo RqRsLang.
+Require Import Topology RqRsTopo RqRsLang RqRsFacts.
 
 Require Import Spec SpecSv Msi MsiSv.
 
@@ -58,25 +58,27 @@ Ltac solve_rule_conds :=
        [simpl in *|exfalso; auto]
          
      | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
-     | [H: rule_precond _ _ _ _ |- _] => simpl in H
-     | [H: rule_trs _ _ _ _ = _ |- _] => simpl in H
+     | [H: rule_precond _ _ _ _ |- _] => progress simpl in H
+     | [H: rule_trs _ _ _ _ = _ |- _] => progress simpl in H
      | [H: (_, _) = (_, _) |- _] => inv H
      | [H: idsOf ?rins = [_]%list |- _] =>
        let rin := fresh "rin" in
        let rmsg := fresh "rmsg" in
        destruct rins as [|[rin rmsg] [|]]; try discriminate;
        simpl in H; inv H
+     | [H: idsOf [_] = [_]%list |- _] => simpl in H; inv H
      | [H: map msg_id (valsOf ?rins) = [_]%list |- _] =>
        let rin := fresh "rin" in
        let rmsg := fresh "rmsg" in
        destruct rins as [|[rin rmsg] [|]]; try discriminate;
        simpl in H; inv H
-     | [H: map _ _ = [_]%list |- _] => simpl in H
-     | [H: context [hd_error [_]%list] |- _] => simpl in H
+     | [H: map msg_id (valsOf [_]%list) = [_]%list |- _] => simpl in H; inv H
+     | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
+     | [H: context [hd_error [_]%list] |- _] => progress simpl in H
      | [H: [_]%list = [_]%list |- _] => inv H
      | [H: Forall _ [_]%list |- _] => inv H
      | [H: Forall _ nil |- _] => clear H
-     | [ |- rule_precond _ _ _ _] => simpl
+     | [ |- rule_precond _ _ _ _] => progress simpl
      | [ |- (_ /\oprec _) _ _ _] => split
      | [ |- _ /\ _] => split
      | [ |- _ ->oprec _] => red; intros
@@ -84,7 +86,11 @@ Ltac solve_rule_conds :=
      | [ |- exists _, _] => eexists
      end;
      simpl in *;
-     try first [assumption|reflexivity|discriminate|congruence]).
+     try first [assumption
+               |reflexivity
+               |discriminate
+               |congruence
+               |(mred; fail)]).
 
 Ltac rule_immd := left.
 Ltac rule_immu := right; left.
@@ -106,37 +112,164 @@ Proof.
 
   - intros; red; intros.
     phide H1.
-    Common.dest_in.
-    1: {
-      exfalso.
-      red in H0; dest.
-      red in H0; dest.
-      red in H8.
-      specialize (H8 _ _ _ H3 _ _ _ H4).
-      red in H8.
-      destruct H8 as [rqFrom [rqfm [rqTo [rqtm [rsFrom [rsbTo ?]]]]]]; dest; subst.
-      simpl in H4; inv H4.
-      red in H9; dest.
-      simpl in *.
-      discriminate.
-    }
-    5: {
-      preveal H6.
-      Common.dest_in.
-      4: {
-        clear H0 H2.
-        simpl in *.
-        solve_rule_conds.
-        unfold addRq in H2; mred.
-      }
-      7: {
-        clear H0 H2.
-        simpl in *.
-        solve_rule_conds.
-        unfold addRq in H2; mred.
-      }
+    Common.dest_in;
+      try (exfalso; phide_clear;
+             clear H2 H5 rsUpRule;
+             repeat (autounfold with RuleConds in *; dest);
+             disc_rule_conds; dest;
+             solve_rule_conds;
+             fail).
+    + preveal H6.
+      Common.dest_in;
+        try (exfalso; clear H0 H3 H4;
+               match goal with
+               | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
+                 let trs := fresh "trs" in
+                 let Htrs := fresh "Htrs" in
+                 let nost := fresh "nost" in
+                 let norq := fresh "norq" in
+                 let outs := fresh "outs" in
+                 remember (rule_trs r ost orq ins) as trs eqn:Htrs;
+                   destruct trs as [[nost norq] outs];
+                   apply eq_sym in Htrs
+               end;
+               destruct H2;
+               try (repeat (autounfold with RuleConds in *; dest);
+                      repeat (disc_rule_conds; dest; solve_rule_conds));
+               fail).
+      * solve_rule_conds.
+        rewrite H11 in H7.
+        unfold msiI, msiS in H7; omega.
+      * solve_rule_conds.
 
-Admitted.
+    + preveal H6.
+      Common.dest_in;
+        try (exfalso; clear H0 H3 H4;
+               match goal with
+               | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
+                 let trs := fresh "trs" in
+                 let Htrs := fresh "Htrs" in
+                 let nost := fresh "nost" in
+                 let norq := fresh "norq" in
+                 let outs := fresh "outs" in
+                 remember (rule_trs r ost orq ins) as trs eqn:Htrs;
+                   destruct trs as [[nost norq] outs];
+                   apply eq_sym in Htrs
+               end;
+               destruct H2;
+               try (repeat (autounfold with RuleConds in *; dest);
+                      repeat (disc_rule_conds; dest; solve_rule_conds));
+               fail).
+      * solve_rule_conds.
+      * solve_rule_conds.
+
+    + preveal H6.
+      Common.dest_in;
+        try (exfalso; clear H0 H3 H4;
+               match goal with
+               | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
+                 let trs := fresh "trs" in
+                 let Htrs := fresh "Htrs" in
+                 let nost := fresh "nost" in
+                 let norq := fresh "norq" in
+                 let outs := fresh "outs" in
+                 remember (rule_trs r ost orq ins) as trs eqn:Htrs;
+                   destruct trs as [[nost norq] outs];
+                   apply eq_sym in Htrs
+               end;
+               destruct H2;
+               try (repeat (autounfold with RuleConds in *; dest);
+                      repeat (disc_rule_conds; dest; solve_rule_conds));
+               fail).
+      * solve_rule_conds.
+      * solve_rule_conds.
+
+  - intros; red; intros.
+    phide H1.
+    Common.dest_in;
+      try (exfalso; phide_clear;
+             clear H2 H5 rsUpRule;
+             repeat (autounfold with RuleConds in *; dest);
+             disc_rule_conds; dest;
+             solve_rule_conds;
+             fail).
+    + preveal H6.
+      Common.dest_in;
+        try (exfalso; clear H0 H3 H4;
+               match goal with
+               | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
+                 let trs := fresh "trs" in
+                 let Htrs := fresh "Htrs" in
+                 let nost := fresh "nost" in
+                 let norq := fresh "norq" in
+                 let outs := fresh "outs" in
+                 remember (rule_trs r ost orq ins) as trs eqn:Htrs;
+                   destruct trs as [[nost norq] outs];
+                   apply eq_sym in Htrs
+               end;
+               destruct H2;
+               try (repeat (autounfold with RuleConds in *; dest);
+                      repeat (disc_rule_conds; dest; solve_rule_conds));
+               fail).
+      * solve_rule_conds.
+        rewrite H11 in H7.
+        unfold msiI, msiS in H7; omega.
+      * solve_rule_conds.
+
+    + preveal H6.
+      Common.dest_in;
+        try (exfalso; clear H0 H3 H4;
+               match goal with
+               | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
+                 let trs := fresh "trs" in
+                 let Htrs := fresh "Htrs" in
+                 let nost := fresh "nost" in
+                 let norq := fresh "norq" in
+                 let outs := fresh "outs" in
+                 remember (rule_trs r ost orq ins) as trs eqn:Htrs;
+                   destruct trs as [[nost norq] outs];
+                   apply eq_sym in Htrs
+               end;
+               destruct H2;
+               try (repeat (autounfold with RuleConds in *; dest);
+                      repeat (disc_rule_conds; dest; solve_rule_conds));
+               fail).
+      * solve_rule_conds.
+      * solve_rule_conds.
+
+    + preveal H6.
+      Common.dest_in;
+        try (exfalso; clear H0 H3 H4;
+               match goal with
+               | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
+                 let trs := fresh "trs" in
+                 let Htrs := fresh "Htrs" in
+                 let nost := fresh "nost" in
+                 let norq := fresh "norq" in
+                 let outs := fresh "outs" in
+                 remember (rule_trs r ost orq ins) as trs eqn:Htrs;
+                   destruct trs as [[nost norq] outs];
+                   apply eq_sym in Htrs
+               end;
+               destruct H2;
+               try (repeat (autounfold with RuleConds in *; dest);
+                      repeat (disc_rule_conds; dest; solve_rule_conds));
+               fail).
+      * solve_rule_conds.
+      * solve_rule_conds.
+
+  - intros; red; intros.
+    phide H1.
+    Common.dest_in;
+      try (exfalso; phide_clear;
+             clear H2 H5 rsUpRule;
+             repeat (autounfold with RuleConds in *; dest);
+             disc_rule_conds; dest;
+             solve_rule_conds;
+             fail).
+Qed.
+
+Local Hint Unfold RulePrecSat RulePostSat : RuleConds.
 
 Lemma msiSv_impl_GoodRqRsSys: GoodRqRsSys topo impl.
 Proof.
@@ -153,16 +286,14 @@ Proof.
 
   - rule_rquu; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + instantiate (1:= ext1Idx).
       reflexivity.
     + reflexivity.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    + unfold upRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold upRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   - rule_immu; solve_rule_conds.
 
@@ -172,31 +303,27 @@ Proof.
 
   - rule_rquu; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + instantiate (1:= ext1Idx).
       reflexivity.
     + reflexivity.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    + unfold upRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold upRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   - rule_immu; solve_rule_conds.
 
   - rule_rquu; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + instantiate (1:= ext1Idx).
       reflexivity.
     + reflexivity.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    + unfold upRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold upRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   - rule_immd; solve_rule_conds.
     instantiate (1:= ext2Idx).
@@ -204,16 +331,14 @@ Proof.
 
   - rule_rquu; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + instantiate (1:= ext2Idx).
       reflexivity.
     + reflexivity.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    + unfold upRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold upRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   - rule_immu; solve_rule_conds.
 
@@ -223,31 +348,27 @@ Proof.
 
   - rule_rquu; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + instantiate (1:= ext2Idx).
       reflexivity.
     + reflexivity.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    + unfold upRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold upRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   - rule_immu; solve_rule_conds.
 
   - rule_rquu; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + instantiate (1:= ext2Idx).
       reflexivity.
     + reflexivity.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    + unfold upRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold upRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   (* the parent *)
       
@@ -257,7 +378,6 @@ Proof.
 
   - rule_rqud; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + left; reflexivity.
     + reflexivity.
     + reflexivity.
@@ -275,7 +395,6 @@ Proof.
 
   - rule_rqud; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + left; reflexivity.
     + reflexivity.
     + reflexivity.
@@ -297,7 +416,6 @@ Proof.
 
   - rule_rqud; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + right; left; reflexivity.
     + reflexivity.
     + reflexivity.
@@ -315,7 +433,6 @@ Proof.
 
   - rule_rqud; solve_rule_conds.
     + intros; destruct (hd_error mins); simpl; auto.
-    + unfold addRq; mred.
     + right; left; reflexivity.
     + reflexivity.
     + reflexivity.
@@ -332,14 +449,12 @@ Proof.
     all:reflexivity.
 
   - rule_rsu; solve_rule_conds.
-    + unfold downRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold downRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
   - rule_rsu; solve_rule_conds.
-    + unfold downRq in Horq; rewrite Horq in H; simpl in H.
-      assumption.
-    + mred.
+    unfold downRq in Horq; rewrite Horq in H; simpl in H.
+    assumption.
 
 Qed.
 
