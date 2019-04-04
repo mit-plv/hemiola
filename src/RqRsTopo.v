@@ -434,6 +434,7 @@ Section RqRsTopo.
 
     Definition GoodExtRssRule (rule: Rule oifc) :=
       forall post porq mins nost norq mouts,
+        rule_precond rule post porq mins ->
         rule_trs rule post porq mins = (nost, norq, mouts) ->
         forall mout,
           In mout mouts ->

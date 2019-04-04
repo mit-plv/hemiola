@@ -53,70 +53,70 @@ Proof.
   - auto using msiSv_impl_ExtsOnDTree.
 Qed.
 
-Ltac solve_rule_conds :=
-  repeat
-    (repeat autounfold with RuleConds in *; intros;
-     match goal with
-     | [H: context [match msg_value ?msg with
-                    | VNat _ => True
-                    | _ => _
-                    end] |- _] =>
-       destruct (msg_value msg); try (exfalso; auto; fail); simpl in *
-     | [H: ?orq@[upRq] <> None |- _] =>
-       let rqiu := fresh "rqiu" in
-       let Horq := fresh "Horq" in
-       destruct (orq@[upRq]) as [rqiu|] eqn:Horq;
-       [clear H; simpl in *|exfalso; auto]
-     | [H: context [(?orq@[upRq]) >>=[False] (fun _ => _)] |- _] =>
-       let rqiu := fresh "rqiu" in
-       let Horq := fresh "Horq" in
-       destruct (orq@[upRq]) as [rqiu|] eqn:Horq;
-       [simpl in *|exfalso; auto]
-     | [H: ?orq@[downRq] <> None |- _] =>
-       let rqid := fresh "rqid" in
-       let Horq := fresh "Horq" in
-       destruct (orq@[downRq]) as [rqid|] eqn:Horq;
-       [clear H; simpl in *|exfalso; auto]
-     | [H: context [(?orq@[downRq]) >>=[False] (fun _ => _)] |- _] =>
-       let rqid := fresh "rqid" in
-       let Horq := fresh "Horq" in
-       destruct (orq@[downRq]) as [rqid|] eqn:Horq;
-       [simpl in *|exfalso; auto]
-         
-     | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
-     | [H: rule_precond _ _ _ _ |- _] => progress simpl in H
-     | [H: rule_trs _ _ _ _ = _ |- _] => progress simpl in H
-     | [H: (_, _) = (_, _) |- _] => inv H
-     | [H: idsOf ?rins = [_]%list |- _] =>
-       let rin := fresh "rin" in
-       let rmsg := fresh "rmsg" in
-       destruct rins as [|[rin rmsg] [|]]; try discriminate;
-       simpl in H; inv H
-     | [H: idsOf [_] = [_]%list |- _] => simpl in H; inv H
-     | [H: map msg_id (valsOf ?rins) = [_]%list |- _] =>
-       let rin := fresh "rin" in
-       let rmsg := fresh "rmsg" in
-       destruct rins as [|[rin rmsg] [|]]; try discriminate;
-       simpl in H; inv H
-     | [H: map msg_id (valsOf [_]%list) = [_]%list |- _] => simpl in H; inv H
-     | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
-     | [H: context [hd_error [_]%list] |- _] => progress simpl in H
-     | [H: [_]%list = [_]%list |- _] => inv H
-     | [H: Forall _ [_]%list |- _] => inv H
-     | [H: Forall _ nil |- _] => clear H
-     | [ |- rule_precond _ _ _ _] => progress simpl
-     | [ |- (_ /\oprec _) _ _ _] => split
-     | [ |- _ /\ _] => split
-     | [ |- _ ->oprec _] => red; intros
-     | [ |- Forall _ _] => constructor
-     | [ |- exists _, _] => eexists
-     end;
-     simpl in *;
-     try first [assumption
-               |reflexivity
-               |discriminate
-               |congruence
-               |(mred; fail)]).
+Hint Unfold upRq downRq : RuleConds.
+
+Ltac solve_rule_conds_step :=
+  repeat autounfold with RuleConds in *; intros;
+  try
+    match goal with
+    | [H: context [match msg_value ?msg with
+                   | VNat _ => True
+                   | _ => _
+                   end] |- _] =>
+      let Hmsg := fresh "Hmsg" in
+      destruct (msg_value msg) eqn:Hmsg; try (exfalso; auto; fail); simpl in *
+    | [H: ?orq@[?i] <> None |- _] =>
+      let rqi := fresh "rqi" in
+      let Horq := fresh "Horq" in
+      destruct (orq@[i]) as [rqi|] eqn:Horq;
+      [clear H; simpl in *|exfalso; auto]
+    | [H: context [(?orq@[?i]) >>=[False] (fun _ => _)] |- _] =>
+      let rqiu := fresh "rqiu" in
+      let Horq := fresh "Horq" in
+      destruct (orq@[i]) as [rqiu|] eqn:Horq;
+      [simpl in *|exfalso; auto]
+    | [H1: ?t = _, H2: context[?t] |- _] =>
+      match type of t with
+      | option _ => rewrite H1 in H2; simpl in H2
+      | Value => rewrite H1 in H2; simpl in H2
+      end
+                                                                            
+    | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
+    | [H: rule_precond _ _ _ _ |- _] => progress simpl in H
+    | [H: rule_trs _ _ _ _ = _ |- _] => progress simpl in H
+    | [H: (_, _) = (_, _) |- _] => inv H
+    | [H: idsOf ?rins = [_]%list |- _] =>
+      let rin := fresh "rin" in
+      let rmsg := fresh "rmsg" in
+      destruct rins as [|[rin rmsg] [|]]; try discriminate;
+      simpl in H; inv H
+    | [H: idsOf [_] = [_]%list |- _] => simpl in H; inv H
+    | [H: map msg_id (valsOf ?rins) = [_]%list |- _] =>
+      let rin := fresh "rin" in
+      let rmsg := fresh "rmsg" in
+      destruct rins as [|[rin rmsg] [|]]; try discriminate;
+      simpl in H; inv H
+    | [H: map msg_id (valsOf [_]%list) = [_]%list |- _] => simpl in H; inv H
+    | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
+    | [H: context [hd_error [_]%list] |- _] => progress simpl in H
+    | [H: [_]%list = [_]%list |- _] => inv H
+    | [H: Forall _ [_]%list |- _] => inv H
+    | [H: Forall _ nil |- _] => clear H
+    | [ |- rule_precond _ _ _ _] => progress simpl
+    | [ |- (_ /\oprec _) _ _ _] => split
+    | [ |- _ /\ _] => split
+    | [ |- _ ->oprec _] => red; intros
+    | [ |- Forall _ _] => constructor
+    | [ |- exists _, _] => eexists
+    end;
+  simpl in *;
+  try first [assumption
+            |reflexivity
+            |discriminate
+            |congruence
+            |(mred; fail)].
+
+Ltac solve_rule_conds := repeat solve_rule_conds_step.
 
 Ltac rule_immd := left.
 Ltac rule_immu := right; left.
@@ -126,6 +126,17 @@ Ltac rule_rqdd := do 2 right; left; split; [|right; right].
 Ltac rule_rsdd := do 3 right; left; split; [left|].
 Ltac rule_rsu := do 3 right; left; split; [right|].
 Ltac rule_rsrq := do 4 right.
+
+Lemma msiSv_impl_GoodExtRssSys: GoodExtRssSys impl.
+Proof.
+  repeat constructor;
+    try (red; intros; disc_rule_conds; solve_rule_conds;
+         repeat
+           (try match goal with
+                | [H: _ \/ _ |- _] => destruct H
+                end;
+            simpl in *; subst; try discriminate; auto); fail).
+Qed.
 
 Lemma msiSv_impl_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
 Proof.
@@ -295,10 +306,6 @@ Proof.
              fail).
 Qed.
 
-Lemma msiSv_impl_GoodExtRssSys: GoodExtRssSys impl.
-Proof.
-Admitted.
-
 Local Hint Unfold RulePrecSat RulePostSat : RuleConds.
 
 Lemma msiSv_impl_GoodRqRsSys: GoodRqRsSys topo impl.
@@ -322,8 +329,6 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    unfold upRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   - rule_immu; solve_rule_conds.
 
@@ -339,8 +344,6 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    unfold upRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   - rule_immu; solve_rule_conds.
 
@@ -352,8 +355,6 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    unfold upRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   - rule_immd; solve_rule_conds.
     instantiate (1:= ext2Idx).
@@ -367,8 +368,6 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    unfold upRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   - rule_immu; solve_rule_conds.
 
@@ -384,8 +383,6 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    unfold upRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   - rule_immu; solve_rule_conds.
 
@@ -397,8 +394,6 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds.
-    unfold upRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   (* the parent *)
       
@@ -479,12 +474,8 @@ Proof.
     all:reflexivity.
 
   - rule_rsu; solve_rule_conds.
-    unfold downRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
   - rule_rsu; solve_rule_conds.
-    unfold downRq in Horq; rewrite Horq in H; simpl in H.
-    assumption.
 
 Qed.
 

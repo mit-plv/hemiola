@@ -470,7 +470,7 @@ Section ExtRss.
         pose proof Hers.
         red in H12; rewrite Forall_forall in H12; specialize (H12 _ H1).
         red in H12; rewrite Forall_forall in H12; specialize (H12 _ H2).
-        red in H12; specialize (H12 _ _ _ _ _ _ H9).
+        red in H12; specialize (H12 _ _ _ _ _ _ H8 H9).
         specialize (H12 _ H13 H3); assumption.
       + rewrite findQ_not_In_enqMsgs by assumption.
         assumption.
