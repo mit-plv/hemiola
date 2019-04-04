@@ -118,7 +118,7 @@ Section RqRsDTree.
     remember (parentChnsOf dtr oidx) as pchns.
     destruct pchns as [[[ups downs] pidx]|]; simpl in *; [|discriminate].
     unfold rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo, parentIdxOf.
-    destruct Hsd.
+    destruct Hsd as [? [? ?]].
     apply eq_sym in Heqpchns.
     rewrite Heqpchns; simpl.
     apply H1 in Heqpchns.
@@ -138,7 +138,7 @@ Section RqRsDTree.
     remember (parentChnsOf dtr oidx) as pchns.
     destruct pchns as [[[ups downs] pidx]|]; simpl in *; [|discriminate].
     unfold rqEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo, parentIdxOf.
-    destruct Hsd.
+    destruct Hsd as [? [? ?]].
     apply eq_sym in Heqpchns.
     rewrite Heqpchns; simpl.
     apply H1 in Heqpchns.
@@ -158,7 +158,7 @@ Section RqRsDTree.
     remember (parentChnsOf dtr oidx) as pchns.
     destruct pchns as [[[ups downs] pidx]|]; simpl in *; [|discriminate].
     unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom, parentIdxOf.
-    destruct Hsd.
+    destruct Hsd as [? [? ?]].
     apply eq_sym in Heqpchns.
     rewrite Heqpchns; simpl.
     apply H1 in Heqpchns.
@@ -179,7 +179,7 @@ Section RqRsDTree.
     destruct pchns as [[[ups downs] pidx']|]; simpl in *; [|discriminate].
     inv H.
     unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo.
-    destruct Hsd.
+    destruct Hsd as [? [? ?]].
     apply eq_sym in Heqpchns.
     rewrite Heqpchns; simpl.
     apply H0 in Heqpchns.
@@ -243,50 +243,50 @@ Section RqRsDTree.
   
   Lemma rqrsDTree_rqEdgeUpFrom_sys_minds:
     forall oidx midx,
+      In oidx (map (@obj_idx _) sys.(sys_objs)) ->
       rqEdgeUpFrom dtr oidx = Some midx ->
       In midx sys.(sys_minds).
   Proof.
     intros.
-    unfold rqEdgeUpFrom, upEdgesFrom in H.
+    unfold rqEdgeUpFrom, upEdgesFrom in H0.
     remember (parentChnsOf dtr oidx) as pchns.
     destruct pchns as [[[ups downs] pidx']|]; simpl in *; [|discriminate].
-    destruct Hsd.
-    apply eq_sym in Heqpchns; apply H1 in Heqpchns.
-    destruct Heqpchns as [rqUp [rsUp [down ?]]]; dest; subst; simpl.
-    simpl in H; inv H.
-    apply H4; simpl; tauto.
+    apply hd_error_In in H0.
+    destruct Hsd as [? [? [? ?]]].
+    apply eq_sym in Heqpchns.
+    specialize (H3 _ _ _ _ H Heqpchns); dest; auto.
   Qed.
 
   Lemma rqrsDTree_rsEdgeUpFrom_sys_minds:
     forall oidx midx,
+      In oidx (map (@obj_idx _) sys.(sys_objs)) ->
       rsEdgeUpFrom dtr oidx = Some midx ->
       In midx sys.(sys_minds).
   Proof.
     intros.
-    unfold rsEdgeUpFrom, upEdgesFrom in H.
+    unfold rsEdgeUpFrom, upEdgesFrom in H0.
     remember (parentChnsOf dtr oidx) as pchns.
     destruct pchns as [[[ups downs] pidx']|]; simpl in *; [|discriminate].
-    destruct Hsd.
-    apply eq_sym in Heqpchns; apply H1 in Heqpchns.
-    destruct Heqpchns as [rqUp [rsUp [down ?]]]; dest; subst; simpl.
-    simpl in H; inv H.
-    apply H4; simpl; tauto.
+    apply hd_error_In, tl_In in H0.
+    destruct Hsd as [? [? [? ?]]].
+    apply eq_sym in Heqpchns.
+    specialize (H3 _ _ _ _ H Heqpchns); dest; auto.
   Qed.
 
   Lemma rqrsDTree_edgeDownTo_sys_minds:
     forall oidx midx,
+      In oidx (map (@obj_idx _) sys.(sys_objs)) ->
       edgeDownTo dtr oidx = Some midx ->
       In midx sys.(sys_minds).
   Proof.
     intros.
-    unfold edgeDownTo, downEdgesTo in H.
+    unfold edgeDownTo, downEdgesTo in H0.
     remember (parentChnsOf dtr oidx) as pchns.
     destruct pchns as [[[ups downs] pidx']|]; simpl in *; [|discriminate].
-    destruct Hsd.
-    apply eq_sym in Heqpchns; apply H1 in Heqpchns.
-    destruct Heqpchns as [rqUp [rsUp [down ?]]]; dest; subst; simpl.
-    simpl in H; inv H.
-    apply H5; simpl; tauto.
+    apply hd_error_In in H0.
+    destruct Hsd as [? [? [? ?]]].
+    apply eq_sym in Heqpchns.
+    specialize (H3 _ _ _ _ H Heqpchns); dest; auto.
   Qed.
 
   Lemma rqrsDTree_rqUp_rqUp_not_eq:
@@ -297,7 +297,7 @@ Section RqRsDTree.
       rqUp1 <> rqUp2.
   Proof.
     unfold rqEdgeUpFrom, upEdgesFrom; intros.
-    destruct Hsd.
+    destruct Hsd as [? _].
     remember (parentChnsOf dtr oidx1) as pchns1.
     destruct pchns1 as [[[ups1 downs1] pidx1]|]; [apply eq_sym in Heqpchns1|discriminate].
     remember (parentChnsOf dtr oidx2) as pchns2.
@@ -319,7 +319,8 @@ Section RqRsDTree.
       rsEdgeUpFrom dtr oidx2 = Some rsUp2 ->
       rqUp1 <> rsUp2.
   Proof.
-    unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom; intros; destruct Hsd.
+    unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom; intros.
+    destruct Hsd as [? _].
     destruct (eq_nat_dec oidx1 oidx2); subst.
     - remember (parentChnsOf dtr oidx2) as pchn.
       destruct pchn as [[[ups downs] pidx]|]; [|discriminate].
@@ -328,7 +329,7 @@ Section RqRsDTree.
       destruct ups as [|? ups]; [discriminate|simpl in H; inv H].
       destruct ups as [|? ups]; [discriminate|simpl in H0; inv H0].
       intro Hx; subst.
-      inv Heqpchn; elim H3; simpl; tauto.
+      inv Heqpchn; elim H2; simpl; tauto.
     - remember (parentChnsOf dtr oidx1) as pchns1.
       destruct pchns1 as [[[ups1 downs1] pidx1]|]; [apply eq_sym in Heqpchns1|discriminate].
       remember (parentChnsOf dtr oidx2) as pchns2.
@@ -349,7 +350,8 @@ Section RqRsDTree.
       edgeDownTo dtr oidx2 = Some down2 ->
       rqUp1 <> down2.
   Proof.
-    unfold rqEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo; intros; destruct Hsd.
+    unfold rqEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo; intros.
+    destruct Hsd as [? _].
     destruct (eq_nat_dec oidx1 oidx2); subst.
     - remember (parentChnsOf dtr oidx2) as pchn.
       destruct pchn as [[[ups downs] pidx]|]; [|discriminate].
@@ -358,7 +360,7 @@ Section RqRsDTree.
       destruct ups as [|? ups]; [discriminate|simpl in H; inv H].
       destruct downs as [|? downs]; [discriminate|simpl in H0; inv H0].
       intro Hx; subst.
-      inv Heqpchn; elim H3.
+      inv Heqpchn; elim H2.
       apply in_or_app; right; simpl; tauto.
     - remember (parentChnsOf dtr oidx1) as pchns1.
       destruct pchns1 as [[[ups1 downs1] pidx1]|]; [apply eq_sym in Heqpchns1|discriminate].
@@ -382,7 +384,7 @@ Section RqRsDTree.
       rsUp1 <> rsUp2.
   Proof.
     unfold rsEdgeUpFrom, upEdgesFrom; intros.
-    destruct Hsd.
+    destruct Hsd as [? _].
     remember (parentChnsOf dtr oidx1) as pchns1.
     destruct pchns1 as [[[ups1 downs1] pidx1]|]; [apply eq_sym in Heqpchns1|discriminate].
     remember (parentChnsOf dtr oidx2) as pchns2.
@@ -404,17 +406,18 @@ Section RqRsDTree.
       edgeDownTo dtr oidx2 = Some down2 ->
       rsUp1 <> down2.
   Proof.
-    unfold rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo; intros; destruct Hsd.
+    unfold rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo; intros.
+    destruct Hsd as [? _].
     destruct (eq_nat_dec oidx1 oidx2); subst.
     - remember (parentChnsOf dtr oidx2) as pchn.
       destruct pchn as [[[ups downs] pidx]|]; [|discriminate].
       apply eq_sym in Heqpchn; simpl in *.
       apply parentChnsOf_NoDup in Heqpchn; [|assumption].
       destruct ups as [|? ups]; [discriminate|simpl in H; inv H].
-      destruct ups as [|? ups]; [discriminate|simpl in H4; inv H4].
+      destruct ups as [|? ups]; [discriminate|simpl in H3; inv H3].
       destruct downs as [|? downs]; [discriminate|simpl in H0; inv H0].
       intro Hx; subst.
-      inv Heqpchn; inv H4; elim H5.
+      inv Heqpchn; inv H3; elim H4.
       apply in_or_app; right; simpl; tauto.
     - remember (parentChnsOf dtr oidx1) as pchns1.
       destruct pchns1 as [[[ups1 downs1] pidx1]|]; [apply eq_sym in Heqpchns1|discriminate].
@@ -438,7 +441,7 @@ Section RqRsDTree.
       down1 <> down2.
   Proof.
     unfold edgeDownTo, downEdgesTo; intros.
-    destruct Hsd.
+    destruct Hsd as [? _].
     remember (parentChnsOf dtr oidx1) as pchns1.
     destruct pchns1 as [[[ups1 downs1] pidx1]|]; [apply eq_sym in Heqpchns1|discriminate].
     remember (parentChnsOf dtr oidx2) as pchns2.
@@ -475,8 +478,7 @@ Section RqRsDTree.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
     destruct H0 as [cidx [down ?]]; dest.
-    destruct Hsd.
-    apply parentIdxOf_not_eq in H1; [|assumption].
+    apply parentIdxOf_not_eq in H1; [|apply Hsd].
     elim (rqrsDTree_rsUp_rsUp_not_eq H1 H3 H); reflexivity.
   Qed.
 
@@ -490,7 +492,6 @@ Section RqRsDTree.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
     destruct H0 as [cidx [down ?]]; dest.
-    destruct Hsd.
     destruct (eq_nat_dec oidx1 cidx); subst.
     - elim H1; assumption.
     - elim (rqrsDTree_rsUp_rsUp_not_eq n H H4); reflexivity.
@@ -541,8 +542,7 @@ Section RqRsDTree.
     intros; intro Hx.
     eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
     destruct H0 as [cidx [down ?]]; dest.
-    destruct Hsd.
-    apply parentIdxOf_not_eq in H1; [|eassumption].
+    apply parentIdxOf_not_eq in H1; [|apply Hsd].
     elim (rqrsDTree_down_down_not_eq H1 H2 H); reflexivity.
   Qed.
 
@@ -556,7 +556,6 @@ Section RqRsDTree.
     intros; intro Hx.
     eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
     destruct H0 as [cidx [down ?]]; dest.
-    destruct Hsd.
     destruct (eq_nat_dec oidx1 cidx); subst.
     - elim H1; assumption.
     - elim (rqrsDTree_down_down_not_eq n H H3); reflexivity.

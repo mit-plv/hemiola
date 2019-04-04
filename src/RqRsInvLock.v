@@ -113,8 +113,8 @@ Section RqRsDown.
         apply DisjList_comm.
         apply sys_minds_sys_merqs_DisjList.
       }
-      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|].
-        eassumption.
+      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|..]; eauto.
+        apply in_map; assumption.
       }
     }
     
@@ -155,8 +155,8 @@ Section RqRsDown.
         apply DisjList_comm.
         apply sys_minds_sys_merss_DisjList.
       }
-      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|].
-        eassumption.
+      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|..]; eauto.
+        apply in_map; assumption.
       }
     }
     
@@ -253,12 +253,12 @@ Section RqRsDown.
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         NoRqRsDown st2.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? [_ ?]]]; intros.
     pose proof (footprints_ok H0 H2) as Hftinv.
     assert (Reachable (steps step_m) sys st2) as Hnrch
       by (eapply reachable_steps; [eassumption|apply steps_singleton; eassumption]).
     pose proof (upLockInv_ok H0 H Hnrch) as Hulinv.
-    pose proof (downLockInv_ok H0 H H2) as Hdlinv.
+    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
     clear Hnrch.
 
     inv_step.
@@ -711,8 +711,8 @@ Section Corollaries.
             msg_type rqdm = MRq ->
             ~ FirstMP msgs down rqdm.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros; subst.
-    pose proof (downLockInv_ok H0 H H2) as Hdlinv.
+    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
+    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
     pose proof (noRqRsDown_ok Hrrs H2) as Hrrinv.
     red in Hrrinv.
     specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H8 H9).
@@ -754,9 +754,9 @@ Section Corollaries.
             findQ down msgs = dq ++ [rsdm] ->
             False.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros; subst.
+    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
     pose proof (upLockInv_ok H0 H H2) as Hulinv.
-    pose proof (downLockInv_ok H0 H H2) as Hdlinv.
+    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
     pose proof (noRqRsDown_ok Hrrs H2) as Hrrinv.
     assert (InMP down rsdm st.(bst_msgs)).
     { red; rewrite H11.
@@ -805,8 +805,8 @@ Section Corollaries.
             InMP down rsdm msgs ->
             ~ InMP rsUp rsum msgs.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros; subst.
-    pose proof (downLockInv_ok H0 H H2) as Hdlinv.
+    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
+    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
     pose proof (noRqRsDown_ok Hrrs H2) as Hrrinv.
     red in Hrrinv.
     specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H9 H10).

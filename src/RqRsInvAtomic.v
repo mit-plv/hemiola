@@ -1203,7 +1203,7 @@ Section Coverage.
                       ~ In ridx (subtreeIndsOf dtr oidx))
                  (removeL (id_dec msg_dec) eouts rins).
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? [_ ?]]]; intros.
     rewrite Forall_forall.
     intros [rmidx rmsg]; intros.
     intro Hx; apply subtreeIndsOf_composed in Hx; [|apply Hrrs].
@@ -1263,7 +1263,7 @@ Section Coverage.
           eapply inside_parent_in; [apply Hrrs|..]; try eassumption.
 
           intro Hx; subst; disc_rule_conds.
-          pose proof (downLockInv_ok H0 H (reachable_steps H3 H4)).
+          pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
           pose proof (steps_object_in_system H4 _ H8).
           destruct H25 as [obj [? ?]]; subst.
           good_locking_get obj.
@@ -1314,7 +1314,7 @@ Section Coverage.
           OutsInRoot roidx rcidx eouts ->
           SubList eouts rins.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? [_ ?]]]; intros.
     red; intros [rmidx rmsg]; intros.
     red in H18; rewrite Forall_forall in H18.
     specialize (H18 _ H19).
@@ -1355,7 +1355,7 @@ Section Coverage.
         disc_rule_conds.
         pose proof (steps_object_in_system H4 _ H10).
         destruct H29 as [robj [? ?]]; subst.
-        pose proof (downLockInv_ok H0 H (reachable_steps H3 H4)).
+        pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
         good_locking_get robj.
 
         destruct (in_dec eq_nat_dec rsUp (rqi_minds_rss rqid)).
@@ -1397,7 +1397,7 @@ Section Coverage.
         disc_rule_conds.
         pose proof (steps_object_in_system H4 _ H10).
         destruct H28 as [robj [? ?]]; subst.
-        pose proof (downLockInv_ok H0 H (reachable_steps H3 H4)).
+        pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
         good_locking_get robj.
         pose proof (atomic_messages_eouts_in msg_dec H2 H4).
         rewrite Forall_forall in H32.
@@ -3159,14 +3159,14 @@ Section Coverage.
         steps step_m sys s1 hst s2 ->
         MsgOutsInv (oindsOf hst) s1.(bst_orqs) s2.(bst_orqs) eouts.
   Proof.
-    destruct Hrrs as [? [? ?]].
+    destruct Hrrs as [? [? [_ ?]]].
     induction 1; simpl; intros; subst;
       [inv_steps; eapply step_msg_outs_ok; eauto|].
     inv_steps.
     specialize (IHAtomic _ _ H8 H10).
     assert (Reachable (steps step_m) sys st2) by eauto.
     pose proof (footprints_ok H0 H5) as Hftinv.
-    pose proof (downLockInv_ok H0 H H5) as Hdlinv.
+    pose proof (downLockInv_ok H0 H H1 H5) as Hdlinv.
     clear H5.
     inv_step.
     good_rqrs_rule_get rule.

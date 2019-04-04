@@ -175,52 +175,6 @@ Section UpLockInv.
     repeat split; try assumption.
   Qed.
 
-  Corollary upLockedInv_disj_enqMsgs_preserved:
-    forall orqs msgs emsgs oidx,
-      UpLockedInv orqs msgs oidx ->
-      DisjList (idsOf emsgs) (sys_minds sys) ->
-      UpLockedInv orqs (enqMsgs emsgs msgs) oidx.
-  Proof.
-    intros.
-    eapply upLockedInv_msgs_preserved; eauto.
-    - destruct H as [rqUp [down [pidx ?]]]; dest.
-      rewrite H.
-      rewrite findQ_not_In_enqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
-    - destruct H as [rqUp [down [pidx ?]]]; dest.
-      rewrite H1.
-      unfold rssQ.
-      rewrite findQ_not_In_enqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
-  Qed.
-
-  Corollary upLockedInv_disj_deqMsgs_preserved:
-    forall orqs msgs eminds oidx,
-      UpLockedInv orqs msgs oidx ->
-      DisjList eminds (sys_minds sys) ->
-      UpLockedInv orqs (deqMsgs eminds msgs) oidx.
-  Proof.
-    intros.
-    eapply upLockedInv_msgs_preserved; eauto.
-    - destruct H as [rqUp [down [pidx ?]]]; dest.
-      rewrite H.
-      rewrite findQ_not_In_deqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
-    - destruct H as [rqUp [down [pidx ?]]]; dest.
-      rewrite H1.
-      unfold rssQ.
-      rewrite findQ_not_In_deqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
-  Qed.
-
   Lemma upLockFreeInv_msgs_preserved:
     forall orqs msgs1 msgs2 oidx,
       UpLockFreeInv orqs msgs1 oidx ->
@@ -241,56 +195,6 @@ Section UpLockInv.
     rewrite H2 in H1.
     exists rqUp, down, pidx; repeat split;
       try assumption; try congruence.
-  Qed.
-
-  Corollary upLockFreeInv_disj_enqMsgs_preserved:
-    forall orqs msgs emsgs oidx,
-      UpLockFreeInv orqs msgs oidx ->
-      DisjList (idsOf emsgs) (sys_minds sys) ->
-      UpLockFreeInv orqs (enqMsgs emsgs msgs) oidx.
-  Proof.
-    intros.
-    eapply upLockFreeInv_msgs_preserved; eauto.
-    - red in H; dest.
-      remember (rqEdgeUpFrom dtr oidx) as rqUp.
-      destruct rqUp as [rqUp|]; simpl in *; dest; auto.
-      rewrite findQ_not_In_enqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
-    - red in H; dest.
-      remember (edgeDownTo dtr oidx) as down.
-      destruct down as [down|]; simpl in *; dest; auto.
-      unfold rssQ.
-      rewrite findQ_not_In_enqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
-  Qed.
-
-  Corollary upLockFreeInv_disj_deqMsgs_preserved:
-    forall orqs msgs eminds oidx,
-      UpLockFreeInv orqs msgs oidx ->
-      DisjList eminds (sys_minds sys) ->
-      UpLockFreeInv orqs (deqMsgs eminds msgs) oidx.
-  Proof.
-    intros.
-    eapply upLockFreeInv_msgs_preserved; eauto.
-    - red in H; dest.
-      remember (rqEdgeUpFrom dtr oidx) as rqUp.
-      destruct rqUp as [rqUp|]; simpl in *; dest; auto.
-      rewrite findQ_not_In_deqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
-    - red in H; dest.
-      remember (edgeDownTo dtr oidx) as down.
-      destruct down as [down|]; simpl in *; dest; auto.
-      unfold rssQ.
-      rewrite findQ_not_In_deqMsgs.
-      + reflexivity.
-      + eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
   Qed.
 
   Lemma upLockedInv_orqs_preserved_parent_eq:
@@ -851,12 +755,39 @@ Section UpLockInv.
     - red in H; red.
       remember (orq@[upRq]) as orqi.
       destruct orqi as [rqi|].
-      + apply upLockedInv_disj_enqMsgs_preserved; assumption.
-      + apply upLockFreeInv_disj_enqMsgs_preserved; assumption.
+      + eapply upLockedInv_msgs_preserved; eauto.
+        * destruct H as [rqUp [down [pidx ?]]]; dest.
+          rewrite H.
+          rewrite findQ_not_In_enqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
+        * destruct H as [rqUp [down [pidx ?]]]; dest.
+          rewrite H5.
+          unfold rssQ; rewrite findQ_not_In_enqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
+      + eapply upLockFreeInv_msgs_preserved; eauto.
+        * destruct (rqEdgeUpFrom dtr oidx) as [rqUp|] eqn:HrqUp; auto.
+          rewrite findQ_not_In_enqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
+        * destruct (edgeDownTo dtr oidx) as [down|] eqn:Hdown; auto.
+          unfold rssQ; rewrite findQ_not_In_enqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
     - red in H; simpl in H.
       red in H3; simpl in H3.
       red; simpl.
-      apply upLockFreeInv_disj_enqMsgs_preserved; assumption.
+
+      eapply upLockFreeInv_msgs_preserved; eauto.
+      + destruct (rqEdgeUpFrom dtr oidx) as [rqUp|] eqn:HrqUp; auto.
+        rewrite findQ_not_In_enqMsgs; [reflexivity|].
+        eapply DisjList_In_1; [eassumption|].
+        eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
+      + destruct (edgeDownTo dtr oidx) as [down|] eqn:Hdown; auto.
+        unfold rssQ; rewrite findQ_not_In_enqMsgs; [reflexivity|].
+        eapply DisjList_In_1; [eassumption|].
+        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.      
   Qed.
 
   Lemma upLockInv_step_ext_out:
@@ -884,12 +815,39 @@ Section UpLockInv.
     - red in H; red.
       remember (orq@[upRq]) as orqi.
       destruct orqi as [rqi|].
-      + apply upLockedInv_disj_deqMsgs_preserved; assumption.
-      + apply upLockFreeInv_disj_deqMsgs_preserved; assumption.
+      + eapply upLockedInv_msgs_preserved; eauto.
+        * destruct H as [rqUp [down [pidx ?]]]; dest.
+          rewrite H.
+          rewrite findQ_not_In_deqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
+        * destruct H as [rqUp [down [pidx ?]]]; dest.
+          rewrite H6.
+          unfold rssQ; rewrite findQ_not_In_deqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
+      + eapply upLockFreeInv_msgs_preserved; eauto.
+        * destruct (rqEdgeUpFrom dtr oidx) as [rqUp|] eqn:HrqUp; auto.
+          rewrite findQ_not_In_deqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
+        * destruct (edgeDownTo dtr oidx) as [down|] eqn:Hdown; auto.
+          unfold rssQ; rewrite findQ_not_In_deqMsgs; [reflexivity|].
+          eapply DisjList_In_1; [eassumption|].
+          eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
     - red in H; simpl in H.
       red in H4; simpl in H4.
       red; simpl.
-      apply upLockFreeInv_disj_deqMsgs_preserved; assumption.
+
+      eapply upLockFreeInv_msgs_preserved; eauto.
+      + destruct (rqEdgeUpFrom dtr oidx) as [rqUp|] eqn:HrqUp; auto.
+        rewrite findQ_not_In_deqMsgs; [reflexivity|].
+        eapply DisjList_In_1; [eassumption|].
+        eapply rqrsDTree_rqEdgeUpFrom_sys_minds; eauto.
+      + destruct (edgeDownTo dtr oidx) as [down|] eqn:Hdown; auto.
+        unfold rssQ; rewrite findQ_not_In_deqMsgs; [reflexivity|].
+        eapply DisjList_In_1; [eassumption|].
+        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.      
   Qed.
 
   Section InternalStep.
@@ -991,7 +949,8 @@ Section UpLockInv.
                    (obj_idx obj) norq.
     Proof.
       intros.
-      destruct Hsd.
+      (* [RqRsChnsOnSystem] is not required here. *)
+      destruct Hsd as [? [? _]]. 
       red in H; red.
       good_rqrs_rule_cases rule.
 
@@ -1264,7 +1223,7 @@ Section UpLockInv.
                      ((orqs@[ oidx]) >>=[[]] (fun orq => orq)).
     Proof.
       intros.
-      destruct Hsd.
+      destruct Hsd as [? [? _]].
       red in H; red.
       good_rqrs_rule_cases rule.
 
@@ -1908,7 +1867,7 @@ Section UpLockInv.
                      orq.
     Proof.
       intros.
-      destruct Hsd.
+      destruct Hsd as [? [? _]].
       red in H; red.
       good_rqrs_rule_cases rule.
 

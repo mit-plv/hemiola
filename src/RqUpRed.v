@@ -313,7 +313,7 @@ Section RqUpReduction.
       DisjList routs1 rins2 /\
       DisjList (idsOf routs1) (idsOf routs2).
   Proof.
-    intros; destruct Hrrs as [? [? ?]].
+    intros; destruct Hrrs as [? [? [? _]]].
     
     (* Register necessary invariants. *)
     inv H3.

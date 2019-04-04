@@ -233,12 +233,35 @@ Section RqRsTopo.
       forall oidx ups downs pidx,
         parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
         exists rqUp rsUp down,
-          ups = [rqUp; rsUp] /\ downs = [down] /\
-          SubList [rqUp; rsUp] sys.(sys_minds) /\
-          SubList [down] sys.(sys_minds).
+          ups = [rqUp; rsUp] /\ downs = [down].
 
+    Definition RqRsChnsOnSystem :=
+      forall oidx ups downs pidx,
+        In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+        parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
+        SubList ups sys.(sys_minds) /\
+        SubList downs sys.(sys_minds).
+
+    Definition ExtRqsOnDTree :=
+      forall erq,
+        In erq sys.(sys_merqs) ->
+        exists eoidx,
+          rqEdgeUpFrom eoidx = Some erq.
+          
+    Definition ExtRssOnDTree :=
+      forall ers,
+        In ers sys.(sys_merss) ->
+        exists eoidx,
+          edgeDownTo eoidx = Some ers.
+
+    Definition ExtsOnDTree :=
+      ExtRqsOnDTree /\ ExtRssOnDTree.
+    
     Definition RqRsDTree :=
-      WfDTree dtr /\ RqRsChnsOnDTree.
+      WfDTree dtr /\
+      RqRsChnsOnDTree /\
+      RqRsChnsOnSystem /\
+      ExtsOnDTree.
     
   End RqRsDTree.
   
@@ -381,7 +404,7 @@ Section RqRsTopo.
 
     Definition GoodRqRsObj (obj: Object oifc) :=
       Forall (GoodRqRsRule obj.(obj_idx)) obj.(obj_rules).
-    
+
     Definition GoodRqRsSys :=
       Forall GoodRqRsObj sys.(sys_objs).
     
@@ -407,8 +430,29 @@ Section RqRsTopo.
     
   End RqUpRsUpComm.
 
+  Section GoodExtRss.
+
+    Definition GoodExtRssRule (rule: Rule oifc) :=
+      forall post porq mins nost norq mouts,
+        rule_trs rule post porq mins = (nost, norq, mouts) ->
+        forall mout,
+          In mout mouts ->
+          In (idOf mout) sys.(sys_merss) ->
+          msg_type (valOf mout) = MRs.
+
+    Definition GoodExtRssObj (obj: Object oifc) :=
+      Forall GoodExtRssRule obj.(obj_rules).
+
+    Definition GoodExtRssSys :=
+      Forall GoodExtRssObj sys.(sys_objs).
+
+  End GoodExtRss.
+
+  Definition GoodRqRsInterfSys :=
+    RqUpRsUpOkSys /\ GoodExtRssSys.
+
   Definition RqRsSys :=
-    RqRsDTree /\ GoodRqRsSys /\ RqUpRsUpOkSys.
+    RqRsDTree /\ GoodRqRsSys /\ GoodRqRsInterfSys.
   
 End RqRsTopo.
 

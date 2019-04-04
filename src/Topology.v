@@ -179,7 +179,14 @@ Section Facts.
       False.
   Proof.
   Admitted.
-  
+
+  Lemma parentChnsOf_Some_in_tree:
+    forall dtr oidx chns,
+      parentChnsOf dtr oidx = Some chns ->
+      In oidx (indsOf dtr).
+  Proof.
+  Admitted.
+
   Lemma parentChnsOf_NoDup:
     forall idx ups downs pidx,
       parentChnsOf dtr idx = Some (ups, downs, pidx) ->

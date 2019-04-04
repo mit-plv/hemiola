@@ -32,12 +32,12 @@ Section Separation.
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         ~ In rqDown routs.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? [_ ?]]]; intros.
     assert (Reachable (steps step_m) sys st2).
     { eapply reachable_steps; [eassumption|].
       eapply steps_singleton; eassumption.
     }
-    pose proof (downLockInv_ok H0 H H8); clear H8.
+    pose proof (downLockInv_ok H0 H H1 H8); clear H8.
     inv_step.
     good_locking_get obj.
     disc_rule_conds.
@@ -174,9 +174,9 @@ Section Separation.
             step_m sys st1 (RlblInt pidx ridx rins routs) st2 ->
             False.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? [_ ?]]]; intros.
     pose proof (footprints_ok H0 H5) as Hftinv.
-    pose proof (downLockInv_ok H0 H H5) as Hdlinv.
+    pose proof (downLockInv_ok H0 H H1 H5) as Hdlinv.
     inv_step.
     good_locking_get obj.
     good_rqrs_rule_get rule.
@@ -314,9 +314,9 @@ Section Separation.
             step_m sys st1 (RlblInt cidx ridx rins routs) st2 ->
             False.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros.
+    destruct Hrrs as [? [? [_ ?]]]; intros.
     pose proof (footprints_ok H0 H6) as Hftinv.
-    pose proof (downLockInv_ok H0 H H6) as Hulinv.
+    pose proof (downLockInv_ok H0 H H1 H6) as Hulinv.
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -487,11 +487,11 @@ Section Separation.
             msg_type (valOf rqDown2) = MRq ->
             ~ In rqDown2 routs.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros; subst.
+    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
     assert (Reachable (steps step_m) sys st2)
       by (eapply reachable_steps;
           [eassumption|apply steps_singleton; eassumption]).
-    pose proof (downLockInv_ok H0 H H3); clear H3.
+    pose proof (downLockInv_ok H0 H H1 H3); clear H3.
     inv_step; simpl in *.
     intro Hx.
     good_locking_get pobj.

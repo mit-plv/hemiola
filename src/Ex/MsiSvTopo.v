@@ -4,6 +4,8 @@ Require Import Topology RqRsTopo RqRsLang RqRsFacts.
 
 Require Import Spec SpecSv Msi MsiSv.
 
+Set Implicit Arguments.
+
 Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
@@ -15,16 +17,40 @@ Proof.
   - compute; repeat constructor; firstorder.
 Qed.
 
-Lemma msiSv_impl_RqRsChnsOnDTree: RqRsChnsOnDTree topo impl.
+Lemma msiSv_impl_RqRsChnsOnDTree: RqRsChnsOnDTree topo.
 Proof.
-  (** TODO: extensionality for [DTree] w.r.t. [oidx] *)
-Admitted.
+  red; intros.
+  pose proof (parentChnsOf_Some_in_tree msiSv_topo_wf _ _ H).
+  Common.dest_in; try (inv H; eauto).
+Qed.
+  
+Lemma msiSv_impl_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
+Proof.
+  red; intros.
+  Common.dest_in.
+  - inv H0; split; try (red; intros; Common.dest_in; simpl; tauto).
+  - inv H0; split; try (red; intros; Common.dest_in; simpl; tauto).
+  - inv H0; split; try (red; intros; Common.dest_in; simpl; tauto).
+Qed.
 
-Lemma msiSv_impl_RqRsDTree: RqRsDTree topo impl.
+Lemma msiSv_impl_ExtsOnDTree: ExtsOnDTree topo impl.
 Proof.
   split.
+  - red; intros; Common.dest_in.
+    + exists ext1Idx; reflexivity.
+    + exists ext2Idx; reflexivity.
+  - red; intros; Common.dest_in.
+    + exists ext1Idx; reflexivity.
+    + exists ext2Idx; reflexivity.
+Qed.
+  
+Lemma msiSv_impl_RqRsDTree: RqRsDTree topo impl.
+Proof.
+  red; repeat ssplit.
   - auto using msiSv_topo_wf.
   - auto using msiSv_impl_RqRsChnsOnDTree.
+  - auto using msiSv_impl_RqRsChnsOnSystem.
+  - auto using msiSv_impl_ExtsOnDTree.
 Qed.
 
 Ltac solve_rule_conds :=
@@ -269,6 +295,10 @@ Proof.
              fail).
 Qed.
 
+Lemma msiSv_impl_GoodExtRssSys: GoodExtRssSys impl.
+Proof.
+Admitted.
+
 Local Hint Unfold RulePrecSat RulePostSat : RuleConds.
 
 Lemma msiSv_impl_GoodRqRsSys: GoodRqRsSys topo impl.
@@ -463,7 +493,9 @@ Proof.
   red; repeat ssplit.
   - auto using msiSv_impl_RqRsDTree.
   - auto using msiSv_impl_GoodRqRsSys.
-  - auto using msiSv_impl_RqUpRsUpOkSys.
+  - split.
+    + auto using msiSv_impl_RqUpRsUpOkSys.
+    + auto using msiSv_impl_GoodExtRssSys.
 Qed.
 
 Close Scope list.

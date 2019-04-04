@@ -395,6 +395,115 @@ Section MsgInitCases.
 
 End MsgInitCases.
 
+Section ExtRss.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+  Hypothesis (Hers: GoodExtRssSys sys).
+
+  Definition ExtRssInvMP (msgs: MessagePool Msg) :=
+    ForallQ (fun ers ersq =>
+               In ers sys.(sys_merss) ->
+               Forall (fun msg => msg_type msg = MRs) ersq) msgs.
+
+  Definition ExtRssInv (st: MState oifc) :=
+    ExtRssInvMP st.(bst_msgs).
+    
+  Lemma extRssInv_init: InvInit sys ExtRssInv.
+  Proof.
+    repeat red; intros.
+    constructor.
+  Qed.
+
+  Lemma extRssInv_case_outs:
+    forall oss orqs msgs (eouts: list (Id Msg)),
+      ExtRssInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      Forall (FirstMPI msgs) eouts ->
+      NoDup (idsOf eouts) ->
+      ExtRssInv {| bst_oss := oss;
+                   bst_orqs := orqs;
+                   bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+  Proof.
+    intros.
+    do 2 red in H; do 2 red; simpl in *.
+    red; intros.
+    specialize (H _ H2).
+    destruct (in_dec eq_nat_dec midx (idsOf eouts)).
+    + eapply findQ_In_NoDup_deqMsgs with (mp:= msgs) in H1; eauto.
+      * destruct H1 as [hmsg ?].
+        rewrite <-H1 in H.
+        inv H; assumption.
+      * intro Hx.
+        apply in_map_iff in i.
+        destruct i as [[midx' msg] [? ?]]; subst; simpl in *.
+        rewrite Forall_forall in H0; specialize (H0 _ H4).
+        eapply FirstMP_findQ_False in Hx; eauto.
+    + rewrite findQ_not_In_deqMsgs by assumption.
+      assumption.
+  Qed.
+
+  Lemma extRssInv_step: InvStep sys step_m ExtRssInv.
+  Proof.
+    red; induction 3; simpl; intros; subst; auto.
+    - do 2 red in H0; do 2 red; simpl in *.
+      red; intros.
+      specialize (H0 _ H3).
+      destruct H2.
+      rewrite findQ_not_In_enqMsgs; [assumption|].
+      eapply DisjList_In_1; [|eassumption].
+      eapply DisjList_SubList; [eassumption|].
+      apply sys_merqs_sys_merss_DisjList.
+
+    - apply extRssInv_case_outs; auto.
+      apply H3.
+
+    - eapply extRssInv_case_outs in H0; [|eassumption|apply H7].
+      do 2 red in H0; do 2 red; simpl in *.
+      red; intros.
+      specialize (H0 _ H3).
+      destruct (in_dec eq_nat_dec midx (idsOf outs)).
+      + apply in_map_iff in i.
+        destruct i as [[midx' msg] [? ?]]; simpl in *; subst.
+        rewrite findQ_In_NoDup_enqMsgs with (msg:= msg); [|apply H10|assumption].
+        apply Forall_app; [assumption|].
+        repeat constructor.
+        pose proof Hers.
+        red in H12; rewrite Forall_forall in H12; specialize (H12 _ H1).
+        red in H12; rewrite Forall_forall in H12; specialize (H12 _ H2).
+        red in H12; specialize (H12 _ _ _ _ _ _ H9).
+        specialize (H12 _ H13 H3); assumption.
+      + rewrite findQ_not_In_enqMsgs by assumption.
+        assumption.
+  Qed.
+
+  Lemma extRssInv_ok: InvReachable sys step_m ExtRssInv.
+  Proof.
+    apply inv_reachable.
+    - apply extRssInv_init.
+    - apply extRssInv_step.
+  Qed.
+
+End ExtRss.
+
+Lemma msgs_ext_out_rss:
+  forall {oifc} (sys: System oifc) msgs eouts,
+    SubList (idsOf eouts) sys.(sys_merss) ->
+    Forall (FirstMPI msgs) eouts ->
+    ExtRssInvMP sys msgs ->
+    Forall (fun emsg => msg_type (valOf emsg) = MRs) eouts.
+Proof.
+  intros.
+  rewrite Forall_forall in H0.
+  apply Forall_forall; intros [emidx emsg] ?.
+  specialize (H0 _ H2).
+  apply FirstMP_InMP in H0; simpl in H0.
+  apply in_map with (f:= idOf) in H2; simpl in H2.
+  apply H in H2.
+  specialize (H1 _ H2).
+  rewrite Forall_forall in H1; specialize (H1 _ H0).
+  assumption.
+Qed.
+
 Close Scope list.
 Close Scope fmap.
 

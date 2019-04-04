@@ -12,11 +12,8 @@ Open Scope fmap.
 
 Section System.
 
-  Definition erq1 := erq 0.
-  Definition ers1 := ers 0.
-  Definition erq2 := erq 1.
-  Definition ers2 := ers 1.
-
+  Definition ecd1 := 2.
+  Definition ecd2 := 3.
   Definition ec1 := 4.
   Definition ce1 := 5.
   Definition ec2 := 6.
@@ -399,17 +396,17 @@ Section System.
   Definition ext1Idx := 3.
   Definition ext2Idx := 4.
 
-  Definition leaf (cidx: IdxT) (ec ce: IdxT) (eidx: IdxT): DTree :=
-    Node cidx [([ec], [ce], Node eidx nil)].
+  Definition leaf (cidx: IdxT) (ecs ces: list IdxT) (eidx: IdxT): DTree :=
+    Node cidx [(ecs, ces, Node eidx nil)].
   
   Definition topo: DTree :=
     Node parentIdx
          [([c1pRq; c1pRs],
            [pc1],
-           leaf child1Idx ec1 ce1 ext1Idx);
+           leaf child1Idx [ec1; ecd1] [ce1] ext1Idx);
             ([c2pRq; c2pRs],
              [pc2],
-             leaf child2Idx ec2 ce2 ext2Idx)].
+             leaf child2Idx [ec2; ecd2] [ce2] ext2Idx)].
   
   Definition impl: System ImplOStateIfc :=
     {| sys_objs :=
@@ -418,8 +415,8 @@ Section System.
             parent];
        sys_oinds_valid := ltac:(inds_valid_tac);
        sys_minds := [c1pRq; c1pRs; pc1; c2pRq; c2pRs; pc2];
-       sys_merqs := [erq1; erq2];
-       sys_merss := [ers1; ers2];
+       sys_merqs := [ec1; ec2];
+       sys_merss := [ce1; ce2];
        sys_msg_inds_valid := ltac:(inds_valid_tac);
        sys_oss_inits := implInit
     |}.

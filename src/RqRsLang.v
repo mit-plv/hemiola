@@ -106,9 +106,9 @@ Notation "PST --> NST" :=
 Notation "PST {{ OIFC }} --> NST" :=
   (fun PST: StateM OIFC => NST) (at level 12, only parsing): trs_scope.
 
-Notation "ST '.ost'" := (fst (fst ST)) (at level 11): trs_scope.
-Notation "ST '.orq'" := (snd (fst ST)) (at level 11): trs_scope.
-Notation "ST '.msgs'" := (snd ST) (at level 11): trs_scope.
+Notation "ST '.ost'" := (fst (fst ST)) (at level 11, only parsing): trs_scope.
+Notation "ST '.orq'" := (snd (fst ST)) (at level 11, only parsing): trs_scope.
+Notation "ST '.msgs'" := (snd ST) (at level 11, only parsing): trs_scope.
 
 Delimit Scope trs_scope with trs.
 
