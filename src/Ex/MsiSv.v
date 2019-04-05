@@ -113,7 +113,7 @@ Section System.
              orq,
              [(cpRs, {| msg_id := msiDownRsS;
                         msg_type := MRs;
-                        msg_value := VUnit |})])).
+                        msg_value := VNat (ost#[implValueIdx]) |})])).
 
     Definition childSetRqImm: Rule ImplOStateIfc :=
       rule[4]
@@ -186,7 +186,7 @@ Section System.
          (fun (ost: OState ImplOStateIfc) orq mins =>
             (ost +#[implStatusIdx <- msiI],
              orq,
-             [(cpRs, {| msg_id := msiDownRsS;
+             [(cpRs, {| msg_id := msiDownRsM;
                         msg_type := MRs;
                         msg_value := VNat (ost#[implValueIdx]) |})])).
 

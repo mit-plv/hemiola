@@ -1,8 +1,9 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
-Require Import Invariant TrsInv Simulation SerialFacts.
+Require Import Invariant TrsInv Simulation Serial SerialFacts.
+Require Import RqRsTopo RqRsCorrect.
 
-Require Import Msi MsiSv SpecSv.
+Require Import Msi MsiSv SpecSv MsiSvTopo.
 
 Set Implicit Arguments.
 
@@ -50,31 +51,65 @@ Section Inv.
            (ImplOStateI cost1 /\ ImplOStateM cv cost2)).
   Defined.
 
-  Definition ImplStateMSI (oss: OStates ImplOStateIfc): Prop :=
-    ImplStateI oss \/
-    (exists cv, ImplStateS cv oss) \/
-    (exists cv, ImplStateM cv oss).
+  Definition ImplMsg (cv: nat) (msg: Msg) :=
+    In (msg_id msg) [msiRsS; msiRsM; msiDownRsS; msiDownRsM] ->
+    msg_value msg = VNat cv.
+
+  Definition ImplQ (cv: nat) (q: Queue Msg) :=
+    Forall (ImplMsg cv) q.
+
+  Definition ImplMsgs (cv: nat) (msgs: MessagePool Msg) :=
+    ForallQ (fun _ q => ImplQ cv q) msgs.
+
+  Definition ImplStateCoherent
+             (cv: nat) (st: MState ImplOStateIfc): Prop :=
+    (ImplStateI st.(bst_oss) \/
+     ImplStateS cv st.(bst_oss) \/
+     ImplStateM cv st.(bst_oss)) /\
+    ImplMsgs cv st.(bst_msgs).
+  
+  Definition ImplStateMSI (st: MState ImplOStateIfc): Prop :=
+    exists cv, (* The coherent value always exists. *)
+      ImplStateCoherent cv st.
 
   Section Facts.
+
+    Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.
+    Proof.
+      red; intros.
+      destruct H1.
+      inv H2.
+      4: { (* [ExtAtomic] *)
+        inv H3.
+
+        (** TODOs:
+         * 1) Should be able to do case analysis in terms of [idsOf rqs].
+         * 2) For each case, strengthen the invariant 
+         *    by adding proper predicate messages.
+         *)
+        
+    Admitted.
 
     Lemma ImplStateMSI_init:
       ImplStateMSI (initsOf impl).
     Proof.
       repeat red.
-      right; left.
-      exists 0; repeat split;
-        try (right; split; reflexivity; fail).
+      exists 0; split.
+      - right; left.
+        repeat split; right; split; reflexivity.
+      - constructor.
     Qed.
 
     Lemma ImplStateMSI_invStep:
-      InvStep impl step_m (liftInv ImplStateMSI).
+      InvStep impl step_m ImplStateMSI.
     Proof.
       apply invSeq_serializable_invStep.
       - apply ImplStateMSI_init.
       - apply inv_trs_seqSteps.
-        admit. (* [InvTrs] *)
-      - admit. (* [SerializableSys] *)
-    Admitted.
+        apply msiSv_impl_InvTrs.
+      - eapply rqrs_Serializable.
+        apply msiSv_impl_RqRsSys.
+    Qed.
 
   End Facts.
   
@@ -85,7 +120,7 @@ Section Sim.
   Local Definition spec := SpecSv.spec 1.
   Local Definition impl := MsiSv.impl.
 
-  (** Simulation between [MState]s *)
+  (** Simulation between states *)
 
   Definition SpecState (v: nat) (oss: OStates SpecOStateIfc): Prop.
   Proof.
@@ -93,34 +128,35 @@ Section Sim.
     exact (sost#[specValueIdx] = v).
   Defined.
 
-  Definition SimMsiSv: OStates ImplOStateIfc -> OStates SpecOStateIfc -> Prop :=
-    fun ioss soss =>
-      ImplStateI ioss \/
-      (exists cv, ImplStateS cv ioss /\ SpecState cv soss) \/
-      (exists cv, ImplStateM cv ioss /\ SpecState cv soss).
+  Definition SimMSI: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
+    fun ist sst =>
+      exists cv,
+        ImplStateCoherent cv ist /\
+        SpecState cv sst.(bst_oss).
 
   Section Facts.
 
     Lemma SimMsiSv_init:
-      SimMsiSv (initsOf impl) (initsOf spec).
+      SimMSI (initsOf impl) (initsOf spec).
     Proof.
       repeat red.
-      right; left.
       exists 0; split.
-      - cbn; repeat split;
-          try (right; split; reflexivity; fail).
+      - split.
+        + right; left.
+          repeat split; right; split; reflexivity.
+        + constructor.
       - reflexivity.
     Qed.
 
     Lemma SimMsiSv_sim:
-      InvSim step_m step_m (liftInv ImplStateMSI) (liftSim SimMsiSv) impl spec.
+      InvSim step_m step_m ImplStateMSI SimMSI impl spec.
     Proof.
       red; intros.
 
-      (* TODO: simulation proof should be very easy when equipped with 
-       *       sufficient invariants, by iterating all possible state 
-       *       transitions by rules.
-       *       Automate this process.
+      (** TODO: simulation proof should be very easy when equipped with 
+       *        sufficient invariants, by iterating all possible state 
+       *        transitions by rules.
+       *        Automate this process.
        *)
       inv H2.
     Admitted.
@@ -129,8 +165,8 @@ Section Sim.
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.
     Proof.
       apply invSim_implies_refinement
-        with (ginv:= liftInv ImplStateMSI)
-             (sim:= liftSim SimMsiSv).
+        with (ginv:= ImplStateMSI)
+             (sim:= SimMSI).
       - apply SimMsiSv_sim.
       - apply ImplStateMSI_invStep.
       - apply SimMsiSv_init.

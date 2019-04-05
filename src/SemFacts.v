@@ -18,6 +18,9 @@ Ltac inv_steps :=
 Ltac inv_step :=
   repeat
     match goal with
+    | [H: step_m _ _ (RlblEmpty _) _ |- _] => inv H
+    | [H: step_m _ _ (RlblIns _) _ |- _] => inv H
+    | [H: step_m _ _ (RlblOuts _) _ |- _] => inv H
     | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
     | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
           {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
