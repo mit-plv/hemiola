@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsTopo RqRsCorrect.
+Require Import RqRsTopo RqRsMsgPred RqRsCorrect.
 
 Require Import Msi MsiSv SpecSv MsiSvTopo.
 
@@ -55,11 +55,12 @@ Section Inv.
     In (msg_id msg) [msiRsS; msiRsM; msiDownRsS; msiDownRsM] ->
     msg_value msg = VNat cv.
 
-  Definition ImplQ (cv: nat) (q: Queue Msg) :=
+  Definition ImplQ (cv: nat) (midx: IdxT) (q: Queue Msg) :=
+    In midx impl.(sys_minds) ->
     Forall (ImplMsg cv) q.
 
   Definition ImplMsgs (cv: nat) (msgs: MessagePool Msg) :=
-    ForallQ (fun _ q => ImplQ cv q) msgs.
+    ForallQ (fun midx q => ImplQ cv midx q) msgs.
 
   Definition ImplStateCoherent
              (cv: nat) (st: MState ImplOStateIfc): Prop :=
@@ -74,19 +75,65 @@ Section Inv.
 
   Section Facts.
 
+    Lemma msiSv_impl_InvTrs_ext_in:
+      forall st1 eins st2,
+        ImplStateMSI st1 ->
+        step_m impl st1 (RlblIns eins) st2 ->
+        ImplStateMSI st2.
+    Proof.
+      intros; inv_step.
+      destruct H as [cv ?]; exists cv.
+      destruct H; simpl in *.
+      split; simpl; auto.
+      clear H.
+
+      do 3 (red in H0; red).
+      intros; specialize (H0 _ H).
+      rewrite findQ_not_In_enqMsgs; [assumption|].
+      eapply DisjList_In_1; [|eassumption].
+      eapply DisjList_SubList; [apply H3|].
+      apply DisjList_comm, sys_minds_sys_merqs_DisjList.
+    Qed.
+
+    Lemma msiSv_impl_InvTrs_ext_out:
+      forall st1 eouts st2,
+        ImplStateMSI st1 ->
+        step_m impl st1 (RlblOuts eouts) st2 ->
+        ImplStateMSI st2.
+    Proof.
+      intros; inv_step.
+      destruct H as [cv ?]; exists cv.
+      destruct H; simpl in *.
+      split; simpl; auto.
+      clear H.
+
+      do 3 (red in H0; red).
+      intros; specialize (H0 _ H).
+      rewrite findQ_not_In_deqMsgs; [assumption|].
+      eapply DisjList_In_1; [|eassumption].
+      eapply DisjList_SubList; [apply H4|].
+      apply DisjList_comm, sys_minds_sys_merss_DisjList.
+    Qed.
+
     Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.
     Proof.
       red; intros.
       destruct H1.
-      inv H2.
-      4: { (* [ExtAtomic] *)
-        inv H3.
+      inv H2; inv_steps;
+        [inv_step; assumption
+        |eapply msiSv_impl_InvTrs_ext_in; eauto
+        |eapply msiSv_impl_InvTrs_ext_out; eauto
+        |].
 
-        (** TODOs:
-         * 1) Should be able to do case analysis in terms of [idsOf rqs].
-         * 2) For each case, strengthen the invariant 
-         *    by adding proper predicate messages.
-         *)
+      inv H3.
+
+      assert (idsOf rqs = [ec1]) by admit.
+      assert (map (fun idm => msg_id (valOf idm)) rqs = [Spec.getRq]) by admit.
+
+      generalize dependent ist2.
+      induction H4; simpl; intros; subst.
+      - admit.
+      - 
         
     Admitted.
 

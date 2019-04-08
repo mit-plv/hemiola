@@ -19,16 +19,16 @@ Section TrsInv.
     forall ist1,
       Reachable (steps step_m) impl ist1 ->
       ginv ist1 ->
-      forall lbl ist2,
-        trsSteps impl ist1 lbl ist2 ->
+      forall hst ist2,
+        trsSteps impl ist1 hst ist2 ->
         ginv ist2.
 
   Definition InvSeq :=
     forall ist1,
       Reachable (steps step_m) impl ist1 ->
       ginv ist1 ->
-      forall lbl ist2,
-        seqSteps impl ist1 lbl ist2 ->
+      forall hst ist2,
+        seqSteps impl ist1 hst ist2 ->
         ginv ist2.
 
   Hypotheses (Hinvi: InvInit)
