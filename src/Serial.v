@@ -40,12 +40,12 @@ Section Sequential.
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from some
    * external requests (possibly [nil]) 
    *)
-  Inductive ExtAtomic: History MsgT -> list (Id MsgT) -> Prop :=
+  Inductive ExtAtomic: list (Id MsgT) -> History MsgT -> list (Id MsgT) -> Prop :=
   | ExtAtomicIntro:
       forall rqs ins hst outs eouts,
         SubList (idsOf rqs) (sys_merqs sys) ->
         Atomic rqs ins hst outs eouts ->
-        ExtAtomic hst eouts.
+        ExtAtomic rqs hst eouts.
 
   Inductive IntAtomic: History MsgT -> list (Id MsgT) -> Prop :=
   | IntAtomicIntro:
@@ -66,8 +66,8 @@ Section Sequential.
         tout = RlblOuts eouts ->
         Transactional (tout :: nil)
   | TrsAtomic:
-      forall hst eouts,
-        ExtAtomic hst eouts ->
+      forall inits hst eouts,
+        ExtAtomic inits hst eouts ->
         Transactional hst.
 
   Definition Sequential (hst: History MsgT) (trss: list (History MsgT)) :=
@@ -98,8 +98,8 @@ Section Semi.
         IntAtomic sys msgT_dec hst eouts ->
         STransactional hst (List.length hst)
   | STrsExtAtomic:
-      forall hst eouts,
-        ExtAtomic sys msgT_dec hst eouts ->
+      forall inits hst eouts,
+        ExtAtomic sys msgT_dec inits hst eouts ->
         STransactional hst 0.
 
   Inductive SSequential: list (History MsgT) -> nat -> Prop :=
@@ -125,14 +125,6 @@ Definition seqSteps {oifc} (sys: System oifc)
            (st1: MState oifc) (hst: MHistory) (st2: MState oifc) :=
   steps step_m sys st1 hst st2 /\
   exists trss, Sequential sys msg_dec hst trss.
-
-(* Definition BEquivalent (sys: System) *)
-(*            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) := *)
-(*   behaviorOf ll1 = behaviorOf ll2. *)
-
-(* Definition IOEquivalent (sys: System) *)
-(*            {LabelT} `{HasLabel LabelT} (ll1 ll2: list LabelT) := *)
-(*   behaviorIO ll1 = behaviorIO ll2. *)
 
 Definition Serializable {oifc} (sys: System oifc) (ll: MHistory) (st: MState oifc) :=
   (* Legal and sequential *)

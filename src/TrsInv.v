@@ -65,6 +65,57 @@ Section TrsInv.
 
 End TrsInv.
 
+Section AtomicInv.
+  Context {oifc: OStateIfc}.
+
+  Variables (impl: System oifc)
+            (ginv: MState oifc -> Prop)
+            (ainv: list (Id Msg) -> list (Id Msg) -> MState oifc -> Prop).
+
+  Definition InvTrsIns :=
+    forall ist1,
+      Reachable (steps step_m) impl ist1 ->
+      ginv ist1 ->
+      forall eins ist2,
+        step_m impl ist1 (RlblIns eins) ist2 ->
+        ginv ist2.
+
+  Definition InvTrsOuts :=
+    forall ist1,
+      Reachable (steps step_m) impl ist1 ->
+      ginv ist1 ->
+      forall eouts ist2,
+        step_m impl ist1 (RlblOuts eouts) ist2 ->
+        ginv ist2.
+
+  Definition InvTrsAtomic :=
+    forall ist1,
+      Reachable (steps step_m) impl ist1 ->
+      ginv ist1 ->
+      forall inits hst eouts ist2,
+        ExtAtomic impl msg_dec inits hst eouts ->
+        steps step_m impl ist1 hst ist2 ->
+        ainv inits eouts ist2 /\ ginv ist2.
+
+  Hypotheses (Hinvi: InvInit impl ginv)
+             (Hinvti: InvTrsIns)
+             (Hinvto: InvTrsOuts)
+             (Hinvta: InvTrsAtomic).
+
+  Lemma inv_atomic_InvTrs:
+    InvTrs impl ginv.
+  Proof.
+    red; intros.
+    destruct H1.
+    inv H2.
+    - inv_steps; inv_step; assumption.
+    - inv_steps; eapply Hinvti; eauto.
+    - inv_steps; eapply Hinvto; eauto.
+    - eapply Hinvta; eauto.
+  Qed.
+
+End AtomicInv.
+
 Theorem invSeq_serializable_invStep:
   forall {oifc} (impl: System oifc) ginv,
     InvInit impl ginv ->

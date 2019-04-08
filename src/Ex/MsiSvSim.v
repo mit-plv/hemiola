@@ -115,25 +115,33 @@ Section Inv.
       apply DisjList_comm, sys_minds_sys_merss_DisjList.
     Qed.
 
+    (** TODO: define it. *)
+    Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
+      fun eout oss =>
+        True.
+
+    Lemma msiSvMsgOutPred_good:
+      GoodMsgOutPred topo MsiSvMsgOutPred.
+    Proof.
+    Admitted.
+
+    (** TODO: define it. *)
+    Definition msiSvMsgOutBoundF (inits: list (Id Msg)): list (Id Msg) :=
+      nil.
+    
     Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.
     Proof.
+      eapply inv_atomic_InvTrs;
+        [red; intros; eapply msiSv_impl_InvTrs_ext_in; eauto
+        |red; intros; eapply msiSv_impl_InvTrs_ext_out; eauto
+        |].
+      instantiate (1:= AtomicMsgOutsInv MsiSvMsgOutPred msiSvMsgOutBoundF).
+
       red; intros.
       destruct H1.
-      inv H2; inv_steps;
-        [inv_step; assumption
-        |eapply msiSv_impl_InvTrs_ext_in; eauto
-        |eapply msiSv_impl_InvTrs_ext_out; eauto
-        |].
-
-      inv H3.
-
-      assert (idsOf rqs = [ec1]) by admit.
-      assert (map (fun idm => msg_id (valOf idm)) rqs = [Spec.getRq]) by admit.
 
       generalize dependent ist2.
-      induction H4; simpl; intros; subst.
-      - admit.
-      - 
+      induction H3; simpl; intros; subst.
         
     Admitted.
 

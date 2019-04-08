@@ -60,16 +60,16 @@ End QuasiSeq.
 
 Definition ExtContinuous {oifc} (sys: System oifc)
            (hst1 hst2: MHistory) :=
-  exists eouts1 inits2 ins2 outs2 eouts2,
-    ExtAtomic sys msg_dec hst1 eouts1 /\
+  exists inits1 eouts1 inits2 ins2 outs2 eouts2,
+    ExtAtomic sys msg_dec inits1 hst1 eouts1 /\
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
     ~ SubList (idsOf inits2) (sys_merqs sys) /\
     SubList inits2 eouts1.
 
 Definition ExtContinuousL {oifc} (sys: System oifc)
            (hst: MHistory) (l: MLabel) :=
-  exists eouts oidx ridx rins routs,
-    ExtAtomic sys msg_dec hst eouts /\
+  exists inits eouts oidx ridx rins routs,
+    ExtAtomic sys msg_dec inits hst eouts /\
     l = RlblInt oidx ridx rins routs /\
     ~ SubList (idsOf rins) (sys_merqs sys) /\
     SubList rins eouts.
@@ -97,15 +97,15 @@ Definition ExtInterleavedL {oifc} (sys: System oifc)
 Lemma extContinuous_concat:
   forall {oifc} (sys: System oifc) hst l,
     ExtContinuousL sys hst l ->
-    exists neouts,
-      ExtAtomic sys msg_dec (l :: hst) neouts.
+    exists inits neouts,
+      ExtAtomic sys msg_dec inits (l :: hst) neouts.
 Proof.
   unfold ExtContinuousL; intros; dest; subst.
   inv H.
-  eexists.
+  do 2 eexists.
   econstructor; [eassumption|].
   econstructor; eauto.
-  destruct x2; try discriminate.
+  destruct x3; try discriminate.
   elim H1; apply SubList_nil.
 Qed.
 
@@ -180,12 +180,9 @@ Proof.
   unfold ExtInterleaved, ExtInterleavedL; intros.
   destruct H1 as [hst1 [hst2 [hsts1 [hsts2 [hsts3 ?]]]]]; dest; subst.
   red in H2.
-  destruct H2 as [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]; dest.
-
+  destruct H2 as [inits1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]; dest.
   pose proof (atomic_beginning_label H2).
   destruct H6 as [hhst [oidx [ridx [routs ?]]]]; subst.
-
-  
   
   exists (hsts3 ++ (lift_each hhst)
                 ++ [RlblInt oidx ridx inits2 routs]
@@ -212,7 +209,7 @@ Proof.
     repeat split; auto.
     + repeat (rewrite <-app_assoc; simpl).
       reflexivity.
-    + red; exists eouts1, oidx, ridx, inits2, routs.
+    + red; exists inits1, eouts1, oidx, ridx, inits2, routs.
       repeat split; auto.
   - apply ssequential_app_inv in H0.
     destruct H0 as [n1 [n2 ?]]; dest; subst.
@@ -338,7 +335,7 @@ Section WellInterleaved.
     pose proof (extContinuous_hst_stransactional_length H3 H16); subst.
     
     eapply extContinuous_concat in H3.
-    destruct H3 as [neouts ?].
+    destruct H3 as [inits [neouts ?]].
     
     exists (hsts3 ++ (rhst2 ++ (l2 :: trs) :: rhst1) ++ trss); eexists.
     split; [|split].

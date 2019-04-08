@@ -226,11 +226,11 @@ Section MsgParam.
   Qed.
 
   Lemma extAtomic_preserved:
-    forall {oifc} (impl1: System oifc) hst eouts,
-      ExtAtomic impl1 msgT_dec hst eouts ->
+    forall {oifc} (impl1: System oifc) inits hst eouts,
+      ExtAtomic impl1 msgT_dec inits hst eouts ->
       forall (impl2: System oifc),
         sys_merqs impl1 = sys_merqs impl2 ->
-        ExtAtomic impl2 msgT_dec hst eouts.
+        ExtAtomic impl2 msgT_dec inits hst eouts.
   Proof.
     intros.
     inv H.
