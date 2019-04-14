@@ -173,13 +173,6 @@ Section PredMsg.
   
 End PredMsg.
 
-Definition AtomicMsgOutsInv {oifc} (mp: MsgOutPred oifc)
-           (boundf: list (Id Msg) (* inits *) ->
-                    list (Id Msg) (* eouts *)) :=
-  fun inits eouts st =>
-    SubList eouts (boundf inits) /\
-    Forall (fun eout => mp eout st.(bst_oss)) eouts.
-
 Section PredLock.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)

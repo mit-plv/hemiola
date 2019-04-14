@@ -70,7 +70,10 @@ Section AtomicInv.
 
   Variables (impl: System oifc)
             (ginv: MState oifc -> Prop)
-            (ainv: list (Id Msg) -> list (Id Msg) -> MState oifc -> Prop).
+            (ainv: list (Id Msg) (* inits *) ->
+                   list (Id Msg) (* eouts *) ->
+                   MState oifc (* starting state *) ->
+                   MState oifc (* ending state *) -> Prop).
 
   Definition InvTrsIns :=
     forall ist1,
@@ -95,7 +98,7 @@ Section AtomicInv.
       forall inits hst eouts ist2,
         ExtAtomic impl msg_dec inits hst eouts ->
         steps step_m impl ist1 hst ist2 ->
-        ainv inits eouts ist2 /\ ginv ist2.
+        ainv inits eouts ist1 ist2 /\ ginv ist2.
 
   Hypotheses (Hinvi: InvInit impl ginv)
              (Hinvti: InvTrsIns)
