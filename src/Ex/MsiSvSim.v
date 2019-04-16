@@ -224,7 +224,7 @@ Section Inv.
 
     Ltac atomic_non_init_bound_exfalso :=
       exfalso;
-      disc_rule_conds; solve_rule_conds;
+      disc_rule_conds; solve_rule_conds_const;
       repeat atomic_non_init_bound_exfalso_step.
     
     Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.

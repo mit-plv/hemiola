@@ -205,21 +205,21 @@ Section IncomingMessageInv.
 
     - left.
       disc_rule_conds.
-      solve_rule_conds.
+      constr_rule_conds.
 
     - right; left.
       disc_rule_conds.
-      solve_rule_conds.
+      constr_rule_conds.
 
     - disc_rule_conds.
-      + left; solve_rule_conds.
-      + left; solve_rule_conds.
-      + right; left; solve_rule_conds.
+      + left; constr_rule_conds.
+      + left; constr_rule_conds.
+      + right; left; constr_rule_conds.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; right; right.
-        solve_rule_conds.
+        constr_rule_conds.
       + right; right; left.
         rewrite <-H26 in H19.
         split; auto.
@@ -235,7 +235,7 @@ Section IncomingMessageInv.
 
     - right; right; right.
       disc_rule_conds.
-      solve_rule_conds.
+      constr_rule_conds.
   Qed.
 
 End IncomingMessageInv.
@@ -297,21 +297,21 @@ Section OutgoingMessageInv.
 
     - right; right; right.
       disc_rule_conds.
-      solve_rule_conds.
+      constr_rule_conds.
 
     - right; right; left.
       disc_rule_conds.
-      solve_rule_conds.
+      constr_rule_conds.
 
     - disc_rule_conds.
-      + left; solve_rule_conds.
+      + left; constr_rule_conds.
       + right; left.
-        solve_rule_conds.
+        constr_rule_conds.
         clear -H17; apply Forall_forall; intros.
         eapply RqRsDownMatch_rq_rs in H17; [|eassumption].
         dest; eauto.
       + right; left.
-        solve_rule_conds.
+        constr_rule_conds.
         clear -H3; apply Forall_forall; intros.
         eapply RqRsDownMatch_rq_rs in H3; [|eassumption].
         dest; eauto.
@@ -319,15 +319,15 @@ Section OutgoingMessageInv.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; right; right.
-        solve_rule_conds.
+        constr_rule_conds.
       + right; right; right.
-        solve_rule_conds.
+        constr_rule_conds.
       + right; right; left.
-        solve_rule_conds.
+        constr_rule_conds.
 
     - right; left.
       disc_rule_conds.
-      solve_rule_conds.
+      constr_rule_conds.
       clear -H17; apply Forall_forall; intros.
       eapply RqRsDownMatch_rq_rs in H17; [|eassumption].
       dest; eauto.

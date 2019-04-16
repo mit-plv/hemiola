@@ -947,15 +947,37 @@ Ltac disc_rule_conds :=
      simpl in *; subst; mred;
      try reflexivity; try eassumption).
 
-Ltac solve_rule_conds :=
+Ltac constr_rule_conds_step :=
   repeat red;
   repeat
-    (repeat
-       match goal with
-       | [ |- exists _, _] => eexists
-       | [ |- _ /\ _] => split
-       end;
-     try reflexivity; try eassumption).
+    match goal with
+    | [ |- rule_precond _ _ _ _] => progress simpl
+    | [ |- (_ /\oprec _) _ _ _] => split
+    | [ |- _ /\ _] => split
+    | [ |- _ ->oprec _] => red; intros
+    | [ |- Forall _ _] => constructor
+    | [ |- exists _, _] => eexists
+    end;
+  subst; simpl in *;
+  try match goal with
+      | [ |- ?lhs = ?rhs] => is_evar lhs; reflexivity
+      | [ |- ?lhs = ?rhs] => is_evar rhs; reflexivity
+      | [ |- ?lhs = _] =>
+        match type of lhs with
+        | M.t _ => reflexivity
+        | IdxT => reflexivity
+        | option IdxT => reflexivity
+        end
+      | [ |- nil = nil] => reflexivity
+      | [ |- [_] = [_]] => reflexivity
+      end;
+  try first [eassumption
+            |discriminate
+            |congruence
+            |(mred; fail)].
+
+Ltac constr_rule_conds :=
+  repeat constr_rule_conds_step.
 
 Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
   filter (fun msg => negb (msg.(msg_type))) (findQ midx msgs).
