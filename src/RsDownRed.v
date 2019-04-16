@@ -62,7 +62,7 @@ Section RsDownReduction.
           simpl in *; clear H11.
           pose proof (atomic_unique H3 H10); dest; subst.
           destruct H6 as [cidx [rqUp ?]]; dest; subst.
-          Common.dest_in.
+          dest_in.
           solve_midx_false.
         + destruct H13 as [nins [nouts ?]]; dest.
           eapply steps_split in H5; [|reflexivity].
@@ -287,7 +287,7 @@ Section RsDownReduction.
       eapply rsDown_lpush_rpush_unit_reducible; try eassumption.
       - eapply rsDown_olast_outside_tree; eassumption.
       - constructor.
-      - simpl; red; intros; Common.dest_in.
+      - simpl; red; intros; dest_in.
         apply edgeDownTo_subtreeIndsOf_self_in.
         + apply Hrrs.
         + destruct Hrsd as [rsDown ?]; dest; congruence.

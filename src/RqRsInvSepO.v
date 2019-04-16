@@ -354,9 +354,9 @@ Section RqUpStart.
           assert (rins = [rqUp]); subst.
           { inv_step; inv H24.
             destruct rins; [elim H3; reflexivity|].
-            pose proof (H4 i (or_introl eq_refl)); Common.dest_in.
+            pose proof (H4 i (or_introl eq_refl)); dest_in.
             destruct rins; [reflexivity|].
-            specialize (H4 i0 (or_intror (or_introl eq_refl))); Common.dest_in.
+            specialize (H4 i0 (or_intror (or_introl eq_refl))); dest_in.
             red in H12; simpl in H12.
             inv H12; elim H16; left; reflexivity.
           }
@@ -1200,7 +1200,7 @@ Section Separation.
     - discriminate.
     - repeat constructor; auto.
     - repeat constructor; eauto.
-    - red; intros; Common.dest_in; assumption.
+    - red; intros; dest_in; assumption.
   Qed.
 
 End Separation.

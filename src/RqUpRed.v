@@ -562,7 +562,7 @@ Section RqUpReduction.
         assert (RqUpMsgs dtr oidxTo [rqUp] /\ SubList [rqUp] eouts).
         { split.
           { exists cidx, rqUp; repeat split; assumption. }
-          { red; intros; Common.dest_in; assumption. }
+          { red; intros; dest_in; assumption. }
         }
         destruct H8.
         specialize (IHAtomic _ _ H8 H9 _ _ H7 H11); dest.
@@ -580,12 +580,12 @@ Section RqUpReduction.
         * inv H13.
           pose proof (H1 rin1 (or_introl eq_refl)).
           pose proof (H1 rin2 (or_intror (or_introl eq_refl))).
-          Common.dest_in.
+          dest_in.
           elim H4; simpl; tauto.
       + assert (RqUpMsgs dtr oidxTo [rqUp] /\ SubList [rqUp] routs).
         { split.
           { exists cidx, rqUp; repeat split; assumption. }
-          { red; intros; Common.dest_in; assumption. }
+          { red; intros; dest_in; assumption. }
         }
         destruct H6.
         eapply rqUp_spec in H13; eauto.

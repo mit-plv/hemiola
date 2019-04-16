@@ -122,10 +122,10 @@ Section SubDisjEquiv.
     destruct l; [auto|].
     right.
     apply SubList_cons_inv in H; dest.
-    inv H0; Common.dest_in.
+    inv H0; dest_in.
     destruct l; [auto|].
     apply SubList_cons_inv in H1; dest.
-    inv H5; Common.dest_in.
+    inv H5; dest_in.
     elim H4; left; reflexivity.
   Qed.
   

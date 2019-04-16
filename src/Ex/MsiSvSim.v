@@ -219,7 +219,7 @@ Section Inv.
         clear -Hs; apply SubList_singleton_In in Hs; cbn in Hs
       | [H: context[miis_dec ?miis1 ?miis2] |- _] =>
         destruct (miis_dec miis1 miis2) in H;
-        try (Common.dest_in; discriminate)
+        try (dest_in; discriminate)
       end.
 
     Ltac atomic_non_init_bound_exfalso :=
@@ -245,7 +245,7 @@ Section Inv.
       - inv_steps.
         specialize (IHAtomic H1 _ H9); dest.
         (** For each rule, *)
-        inv_step; Common.dest_in.
+        inv_step; dest_in.
 
         + atomic_non_init_bound_exfalso.
         + atomic_non_init_bound_exfalso.

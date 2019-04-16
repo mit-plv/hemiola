@@ -469,7 +469,7 @@ Section Coverage.
       [apply rqDownRsUpDisj_removeOnce; auto
       |apply rqDownRsUpDisj_singleton|].
 
-    intros; Common.dest_in.
+    intros; dest_in.
     eapply removeOnce_In_NoDup in H5; [dest|apply idsOf_NoDup; assumption].
     split.
     - eapply rqDownRsUpIdx_oidx_eq in H3; [|eassumption]; subst.
@@ -597,7 +597,7 @@ Section Coverage.
       [apply rqDownRsUpDisj_removeL; auto
       |apply rqDownRsUpDisj_singleton|].
 
-    intros; Common.dest_in.
+    intros; dest_in.
     rewrite Forall_forall in H9; specialize (H9 _ H10 _ H11).
     eapply rqDownRsUpIdx_oidx_eq in H4; [|eassumption]; subst.
 
@@ -944,7 +944,7 @@ Section Coverage.
         DisjExceptUpLocked (oidx :: oinds) orqs1 orqs2 rcidx.
   Proof.
     unfold DisjExceptUpLocked; intros.
-    Common.dest_in; auto.
+    dest_in; auto.
   Qed.
 
   Lemma disjExceptUpLocked_child:
@@ -1124,7 +1124,7 @@ Section Coverage.
               nth_error eouts mn = Some idm /\
               mn <> rn).
     { destruct eouts as [|eout0 teouts]; [elim H7|].
-      destruct teouts as [|eout1 teouts]; [Common.dest_in; left; reflexivity|].
+      destruct teouts as [|eout1 teouts]; [dest_in; left; reflexivity|].
       right; inv H7.
       { destruct eout1 as [midx msg].
         exists 1, (midx, msg); split; [intuition|].
@@ -1481,11 +1481,11 @@ Section Coverage.
     - disc_rule_conds.
       eapply MsgOutsRsDown.
       + red; eauto.
-      + red; intros; Common.dest_in.
+      + red; intros; dest_in.
         apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-      + red; intros; Common.dest_in; mred.
-      + red; intros; Common.dest_in; simpl_locks.
-      + red; intros; Common.dest_in; simpl_locks.
+      + red; intros; dest_in; mred.
+      + red; intros; dest_in; simpl_locks.
+      + red; intros; dest_in; simpl_locks.
 
     - disc_rule_conds.
       eapply MsgOutsRqDownRsUp.
@@ -1493,24 +1493,24 @@ Section Coverage.
       + repeat constructor.
         eexists; right.
         red; repeat ssplit; [red; eauto|..].
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           split; simpl_locks.
           intro Hx; dest; auto.
-        * red; intros; Common.dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
           dest; exfalso; auto.
-      + red; intros; Common.dest_in; simpl_locks.
-      + intros; red in H3; dest; Common.dest_in; simpl_locks.
+      + red; intros; dest_in; simpl_locks.
+      + intros; red in H3; dest; dest_in; simpl_locks.
 
     - disc_rule_conds.
       + eapply MsgOutsRqUp; [red; eauto|..].
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           red; apply (DisjList_singleton_1 eq_nat_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
         * apply SubList_cons; [|apply SubList_nil].
           eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
-        * red; intros; Common.dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
           split; [discriminate|reflexivity].
 
       + eapply MsgOutsRqDownRsUp.
@@ -1525,13 +1525,13 @@ Section Coverage.
           { red; apply (DisjList_singleton_1 eq_nat_dec).
             apply parent_not_in_subtree; [apply Hrrs|]; assumption.
           }
-          { red; intros; Common.dest_in; simpl_locks. }
-        * red; intros; Common.dest_in.
+          { red; intros; dest_in; simpl_locks. }
+        * red; intros; dest_in.
           red; intros.
           red; apply (DisjList_singleton_1 eq_nat_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
         * intros.
-          red in H5; dest; Common.dest_in.
+          red in H5; dest; dest_in.
           simpl_locks.
           red; repeat ssplit.
           { apply Forall_forall; intros [midx msg] ?.
@@ -1548,18 +1548,18 @@ Section Coverage.
             }
             { red; intros; disc_rule_conds; solve_midx_false. }
           }
-          { red; intros; Common.dest_in.
+          { red; intros; dest_in.
             apply parent_not_in_subtree; [apply Hrrs|]; assumption.
           }
-          { red; intros; Common.dest_in.
+          { red; intros; dest_in.
             red; apply (DisjList_singleton_1 eq_nat_dec).
             intro Hx.
             apply subtreeIndsOf_child_SubList in H31; [|apply Hrrs].
             apply H31 in Hx.
             eapply parent_not_in_subtree; [apply Hrrs|..]; eauto.
           }
-          { red; intros; Common.dest_in; simpl_locks. }
-          { red; intros; Common.dest_in.
+          { red; intros; dest_in; simpl_locks. }
+          { red; intros; dest_in.
             elim H23.
             eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
           }
@@ -1576,46 +1576,46 @@ Section Coverage.
           { red; apply (DisjList_singleton_1 eq_nat_dec).
             apply parent_not_in_subtree; [apply Hrrs|]; assumption.
           }
-          { red; intros; Common.dest_in; simpl_locks. }
-        * red; intros; Common.dest_in.
+          { red; intros; dest_in; simpl_locks. }
+        * red; intros; dest_in.
           simpl_locks.
           red; intros.
           red; apply (DisjList_singleton_1 eq_nat_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
         * intros; exfalso.
-          red in H7; dest; Common.dest_in; simpl_locks; solve_midx_false.
+          red in H7; dest; dest_in; simpl_locks; solve_midx_false.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + eapply MsgOutsRsDown; [red; eauto|..].
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           red; apply (DisjList_singleton_1 eq_nat_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in; simpl_locks.
-        * red; intros; Common.dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
       + eapply MsgOutsRsDown; [red; eauto|..].
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           red; apply (DisjList_singleton_1 eq_nat_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in; simpl_locks.
-        * red; intros; Common.dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
 
       + eapply MsgOutsRqDownRsUp.
         * apply rqDownRsUpDisj_singleton.
         * repeat constructor.
           eexists; right.
           red; repeat ssplit; [red; eauto|..].
-          { red; intros; Common.dest_in.
+          { red; intros; dest_in.
             split; simpl_locks.
           }
-          { red; intros; Common.dest_in; simpl_locks. }
-        * red; intros; Common.dest_in; simpl_locks.
+          { red; intros; dest_in; simpl_locks. }
+        * red; intros; dest_in; simpl_locks.
         * intros; exfalso.
-          red in H11; dest; Common.dest_in; simpl_locks.
+          red in H11; dest; dest_in; simpl_locks.
 
     - disc_rule_conds.
       eapply MsgOutsRqDownRsUp.
@@ -1629,13 +1629,13 @@ Section Coverage.
         red; repeat ssplit; [red; eauto|..].
         * apply (DisjList_singleton_1 eq_nat_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in; simpl_locks.
-      + red; intros; Common.dest_in; simpl_locks.
+        * red; intros; dest_in; simpl_locks.
+      + red; intros; dest_in; simpl_locks.
         red; intros.
         apply (DisjList_singleton_1 eq_nat_dec).
         apply parent_not_in_subtree; [apply Hrrs|]; assumption.
       + intros.
-        red in H5; dest; Common.dest_in; simpl_locks.
+        red in H5; dest; dest_in; simpl_locks.
         red; repeat ssplit.
         * apply Forall_forall; intros [midx msg] ?.
           apply in_map with (f:= idOf) in H5.
@@ -1650,16 +1650,16 @@ Section Coverage.
             }
           }
           { red; intros; disc_rule_conds; solve_midx_false. }
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in.
           red; apply (DisjList_singleton_1 eq_nat_dec).
           intro Hx.
           apply subtreeIndsOf_child_SubList in H30; [|apply Hrrs].
           apply H30 in Hx.
           eapply parent_not_in_subtree; [apply Hrrs|..]; eauto.
-        * red; intros; Common.dest_in; simpl_locks.
-        * red; intros; Common.dest_in.
+        * red; intros; dest_in; simpl_locks.
+        * red; intros; dest_in.
           elim H23.
           eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
   Qed.
@@ -1713,7 +1713,7 @@ Section Coverage.
       repeat
         match goal with
         | [H: SubList [_] _ |- _] => apply SubList_singleton_In in H
-        | [H: In _ [_] |- _] => Common.dest_in
+        | [H: In _ [_] |- _] => dest_in
         | [H1: In _ ?eouts, H2: Forall _ ?eouts |- _] =>
           rewrite Forall_forall in H2;
           let oidx := fresh "oidx" in pose proof (H2 _ H1) as [oidx ?]
@@ -1741,10 +1741,10 @@ Section Coverage.
       destruct (id_dec msg_dec _ _); [clear e; simpl|exfalso; auto].
       eapply MsgOutsRsDown.
       - red; eauto.
-      - red; intros; Common.dest_in; eauto.
+      - red; intros; dest_in; eauto.
         apply parent_not_in_subtree; [apply Hrrs|]; assumption.
       - disc_rule_conds.
-        red; intros; Common.dest_in; [exfalso; disc_rule_conds|].
+        red; intros; dest_in; [exfalso; disc_rule_conds|].
         apply (DisjList_cons_inv eq_nat_dec).
         + eapply H3; eauto.
         + intro Hx.
@@ -1753,9 +1753,9 @@ Section Coverage.
           apply H17, H12 in Hx.
           eapply parent_not_in_subtree; [apply Hrrs|..]; eauto.
       - disc_rule_conds.
-        red; intros; Common.dest_in; [simpl_locks|].
+        red; intros; dest_in; [simpl_locks|].
         apply H7; assumption.
-      - red; intros; Common.dest_in; [simpl_locks|].
+      - red; intros; dest_in; [simpl_locks|].
         disc_rule_conds.
         elim H13; auto.
     Qed.
@@ -1807,7 +1807,7 @@ Section Coverage.
                 with (rqdm:= (midx, msg)) (orqdm:= (rqFrom, rqm)); eauto.
               red; auto.
             }
-            { red; intros; Common.dest_in; [|eauto].
+            { red; intros; dest_in; [|eauto].
               exfalso.
               eapply steps_not_in_history_no_new_uplocks; eauto.
               intro Hx; eapply DisjList_In_2 in Hx; [|eapply H12].
@@ -1830,7 +1830,7 @@ Section Coverage.
               }
               { red; mred. }
             }
-            { red; intros; Common.dest_in; [|eauto].
+            { red; intros; dest_in; [|eauto].
               exfalso.
               eapply steps_not_in_history_no_new_uplocks; eauto.
               intro Hx; eapply DisjList_In_2 in Hx; [|eapply H12].
@@ -1854,7 +1854,7 @@ Section Coverage.
               { simpl_locks. }
             }
             { specialize (H12 oidx); destruct H12; exfalso; auto. }
-          * red; intros; Common.dest_in; [|eauto].
+          * red; intros; dest_in; [|eauto].
             exfalso.
             eapply steps_not_in_history_no_new_uplocks; eauto.
             intro Hx; eapply DisjList_In_2 in Hx; [|eapply H12].
@@ -1920,7 +1920,7 @@ Section Coverage.
           disc_rule_conds.
           apply disjExceptUpLocked_history_add; auto.
         + (* [UpLockCoverInv] *)
-          red; intros; Common.dest_in; [exfalso; auto|].
+          red; intros; dest_in; [exfalso; auto|].
           apply (DisjList_cons_inv eq_nat_dec); [eapply H21; eauto|].
           intro Hx; elim H27.
           apply subtreeIndsOf_child_SubList in H32; [|apply Hrrs].
@@ -1928,11 +1928,11 @@ Section Coverage.
           apply subtreeIndsOf_SubList in H28; [|apply Hrrs].
           apply H28; assumption.
         + (* [UpLockedBound] *)
-          red; intros; Common.dest_in.
+          red; intros; dest_in.
           * exfalso; eapply steps_not_in_history_no_new_uplocks; eauto.
           * apply H22; auto.
         + (* [NoDownLockOutside] *)
-          red; intros; Common.dest_in; [|eauto].
+          red; intros; dest_in; [|eauto].
           elim H29; eapply inside_child_in; [apply Hrrs|..]; eassumption.
     Qed.
             
@@ -2278,7 +2278,7 @@ Section Coverage.
             apply H15; auto.
 
           * (* [NoDownLockOutside] *)
-            red; intros; Common.dest_in.
+            red; intros; dest_in.
             { elim H21.
               eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
             }
@@ -3193,12 +3193,12 @@ Section Coverage.
     eapply atomic_msg_outs_ok in H4; eauto.
     inv H4.
     - exfalso.
-      Common.dest_in.
+      dest_in.
       destruct H7.
       repeat disc_msg_case.
       solve_midx_false.
     - exfalso.
-      Common.dest_in.
+      dest_in.
       destruct H7.
       repeat disc_msg_case.
       rewrite H2 in H3; discriminate.
@@ -3232,11 +3232,11 @@ Section Coverage.
     eapply atomic_msg_outs_ok in H8; eauto.
     inv H8.
     - exfalso.
-      Common.dest_in.
+      dest_in.
       destruct H9.
       repeat disc_msg_case.
       solve_midx_false.
-    - Common.dest_in.
+    - dest_in.
       red in H9; dest.
       repeat disc_msg_case.
       repeat disc_rule_minds.

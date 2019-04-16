@@ -246,7 +246,7 @@ Section Facts.
     unfold InMP, FirstMP, firstMP; intros.
     destruct (findQ i mp); [elim H|].
     destruct q.
-    - Common.dest_in; reflexivity.
+    - dest_in; reflexivity.
     - simpl in H0; inv H0; inv H2.
   Qed.
 
@@ -619,7 +619,7 @@ Section Facts.
       destruct (mp@[nidx]); simpl in *.
       + apply in_app_or in H; destruct H; auto.
         
-        Common.dest_in; auto.
+        dest_in; auto.
       + destruct H; auto.
     - mred.
   Qed.

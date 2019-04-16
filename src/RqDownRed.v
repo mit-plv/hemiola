@@ -365,7 +365,7 @@ Section RqDownReduction.
               with ([RlblInt cidx ridx rqDowns routs] ++ nhst).
             eapply rqDown_lpush_rpush_unit_reducible; try eassumption.
             { constructor. }
-            { simpl; red; intros; Common.dest_in.
+            { simpl; red; intros; dest_in.
               apply edgeDownTo_subtreeIndsOf_self_in.
               { apply Hrrs. }
               { destruct Hrqd; dest; congruence. }

@@ -371,7 +371,7 @@ Section RsUpReduction.
       clear -H8 H10 n.
       unfold InMPI, InMP in *; simpl in *.
       destruct (findQ rsUp (bst_msgs st1)); [elim H8|].
-      destruct q; [Common.dest_in; exfalso; auto|].
+      destruct q; [dest_in; exfalso; auto|].
       simpl; omega.
     }
 

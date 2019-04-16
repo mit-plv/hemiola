@@ -93,7 +93,7 @@ Lemma nonconflicting_head_1:
     NonConflicting sys [lbl1] hst2.
 Proof.
   unfold NonConflicting; intros.
-  Common.dest_in.
+  dest_in.
   eapply H; eauto.
   left; eauto.
 Qed.
@@ -104,7 +104,7 @@ Lemma nonconflicting_head_2:
     NonConflicting sys hst1 [lbl2].
 Proof.
   unfold NonConflicting; intros.
-  Common.dest_in.
+  dest_in.
   eapply H; eauto.
   left; eauto.
 Qed.

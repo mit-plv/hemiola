@@ -2290,7 +2290,7 @@ Notation " m @[ k ] " := (M.find k m) (at level 0) : fmap_scope.
 
 Delimit Scope fmap_scope with fmap.
 
-Ltac dest_disj :=
+Ltac dest_mdisj :=
   repeat
     match goal with
     | [H: M.Disj (M.add _ _ _) _ |- _] =>
@@ -2305,7 +2305,7 @@ Ltac dest_disj :=
     | [H: M.Disj (M.empty _) _ |- _] => clear H
     end.
 
-Ltac solve_disj :=
+Ltac solve_mdisj :=
   repeat
     (try assumption;
      match goal with
@@ -2324,12 +2324,12 @@ Ltac solve_disj :=
      | [ |- M.Disj (M.union _ _) _ ] =>
        apply M.Disj_comm, M.Disj_union
      | [ |- M.Disj (M.remove _ _) _ ] =>
-       try (apply M.Disj_remove_1; solve_disj; fail)
+       try (apply M.Disj_remove_1; solve_mdisj; fail)
      | [ |- M.Disj _ (M.remove _ _) ] =>
-       try (apply M.Disj_remove_2; solve_disj; fail)
+       try (apply M.Disj_remove_2; solve_mdisj; fail)
      end).
 
-Ltac dest_in :=
+Ltac dest_min :=
   repeat
     match goal with
     | [H: ~ M.In _ _ |- _] =>
@@ -2445,7 +2445,7 @@ Ltac mcontra :=
       elim H1; apply M.F.P.F.in_find_iff; rewrite <-H2; discriminate
     end.
 
-Ltac findeq := dest_disj; dest_in; mred; mcontra; intuition idtac.
+Ltac findeq := dest_mdisj; dest_min; mred; mcontra; intuition idtac.
 
 Ltac is_new_find y m :=
   match goal with
@@ -2469,7 +2469,7 @@ Ltac findeq_custom tac := tac; dest_find_more; mred; mcontra; intuition idtac.
 Ltac findeq_more := findeq_custom idtac.
 
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
-Ltac mdisj := mred; dest_disj; solve_disj; try findeq.
+Ltac mdisj := mred; dest_mdisj; solve_mdisj; try findeq.
 
 Close Scope list.
 

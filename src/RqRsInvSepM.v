@@ -688,7 +688,7 @@ Section Separation.
     generalize dependent s1.
     induction H2; simpl; intros; subst.
     - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
-      + left; red; intros; Common.dest_in; assumption.
+      + left; red; intros; dest_in; assumption.
       + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
     - inv_steps.
       inv H3.
@@ -1361,7 +1361,7 @@ Section Separation.
     destruct Hrrs as [? [? ?]].
     induction 1; simpl; intros; subst.
     - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
-      + left; red; intros; Common.dest_in; assumption.
+      + left; red; intros; dest_in; assumption.
       + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
     - inv_steps.
       specialize (IHAtomic _ _ H8 H17 _ _ _ H10 H11 H12 H13 H14 H15 H16).

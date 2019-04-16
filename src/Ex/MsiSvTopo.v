@@ -21,25 +21,25 @@ Lemma msiSv_impl_RqRsChnsOnDTree: RqRsChnsOnDTree topo.
 Proof.
   red; intros.
   pose proof (parentChnsOf_Some_in_tree msiSv_topo_wf _ _ H).
-  Common.dest_in; try (inv H; eauto).
+  dest_in; try (inv H; eauto).
 Qed.
   
 Lemma msiSv_impl_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
 Proof.
   red; intros.
-  Common.dest_in.
-  - inv H0; split; try (red; intros; Common.dest_in; simpl; tauto).
-  - inv H0; split; try (red; intros; Common.dest_in; simpl; tauto).
-  - inv H0; split; try (red; intros; Common.dest_in; simpl; tauto).
+  dest_in.
+  - inv H0; split; try (red; intros; dest_in; simpl; tauto).
+  - inv H0; split; try (red; intros; dest_in; simpl; tauto).
+  - inv H0; split; try (red; intros; dest_in; simpl; tauto).
 Qed.
 
 Lemma msiSv_impl_ExtsOnDTree: ExtsOnDTree topo impl.
 Proof.
   split.
-  - red; intros; Common.dest_in.
+  - red; intros; dest_in.
     + exists ext1Idx; reflexivity.
     + exists ext2Idx; reflexivity.
-  - red; intros; Common.dest_in.
+  - red; intros; dest_in.
     + exists ext1Idx; reflexivity.
     + exists ext2Idx; reflexivity.
 Qed.
@@ -86,10 +86,10 @@ Proof.
 
   - intros; red; intros.
     phide H1.
-    Common.dest_in;
+    dest_in;
       try (exfalso; phide_clear; clear H2 H5 rsUpRule; solve_rule_conds_ex; fail).
     + preveal H6.
-      Common.dest_in;
+      dest_in;
         try (exfalso; clear H0 H3 H4;
                match goal with
                | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
@@ -109,7 +109,7 @@ Proof.
       * solve_rule_conds_const.
 
     + preveal H6.
-      Common.dest_in;
+      dest_in;
         try (exfalso; clear H0 H3 H4;
                match goal with
                | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
@@ -127,7 +127,7 @@ Proof.
       * solve_rule_conds_const.
 
     + preveal H6.
-      Common.dest_in;
+      dest_in;
         try (exfalso; clear H0 H3 H4;
                match goal with
                | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
@@ -146,10 +146,10 @@ Proof.
 
   - intros; red; intros.
     phide H1.
-    Common.dest_in;
+    dest_in;
       try (exfalso; phide_clear; clear H2 H5 rsUpRule; solve_rule_conds_ex; fail).
     + preveal H6.
-      Common.dest_in;
+      dest_in;
         try (exfalso; clear H0 H3 H4;
                match goal with
                | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
@@ -169,7 +169,7 @@ Proof.
       * solve_rule_conds_const.
 
     + preveal H6.
-      Common.dest_in;
+      dest_in;
         try (exfalso; clear H0 H3 H4;
                match goal with
                | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
@@ -187,7 +187,7 @@ Proof.
       * solve_rule_conds_const.
 
     + preveal H6.
-      Common.dest_in;
+      dest_in;
         try (exfalso; clear H0 H3 H4;
                match goal with
                | [H: rule_precond ?r ?ost ?orq ?ins |- _] =>
@@ -206,7 +206,7 @@ Proof.
 
   - intros; red; intros.
     phide H1.
-    Common.dest_in;
+    dest_in;
       try (exfalso; phide_clear; clear H2 H5 rsUpRule; solve_rule_conds_ex; fail).
 Qed.
 
