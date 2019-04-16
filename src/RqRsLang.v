@@ -168,10 +168,14 @@ Ltac disc_rule_conds_const_step :=
   end.
 
 Ltac disc_rule_conds_const :=
-  repeat
-    (disc_rule_conds_const_step;
-     subst; simpl in *).
+  repeat (disc_rule_conds_const_step; subst; simpl in * ).
 
+Ltac disc_rule_conds_ex :=
+  repeat (
+      repeat (autounfold with RuleConds in *; dest);
+      disc_rule_conds_const;
+      disc_rule_conds; dest).
+      
 Ltac solve_rule_conds_const :=
   repeat
     (repeat autounfold with RuleConds in *; intros;

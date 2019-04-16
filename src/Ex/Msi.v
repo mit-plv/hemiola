@@ -5,10 +5,6 @@ Require Import Spec.
 
 Set Implicit Arguments.
 
-Open Scope list.
-Open Scope hvec.
-Open Scope fmap.
-
 (** Message Ids *)
 
 Definition msiRqS: IdxT := specNumMsgIds + 0.
@@ -29,8 +25,4 @@ Definition msiRsI: IdxT := specNumMsgIds + 9.
 Definition msiM := 2.
 Definition msiS := 1.
 Definition msiI := 0.
-
-Close Scope list.
-Close Scope hvec.
-Close Scope fmap.
 
