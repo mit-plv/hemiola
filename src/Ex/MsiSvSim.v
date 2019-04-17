@@ -336,7 +336,7 @@ Section Inv.
           * (* [AtomicMsgOutsInv] *)
             split.
             { simpl; unfold miiOf; simpl.
-              rewrite H8; cbn.
+              rewrite H4; cbn.
               apply SubList_cons; [|apply SubList_nil].
               simpl; tauto.
             }
@@ -345,8 +345,8 @@ Section Inv.
             red; intros; dest_in.
             repeat (simpl; mred).
             unfold miiOf; simpl.
-            rewrite H8; cbn.
-            unfold upRq; rewrite H5.
+            rewrite H4; cbn.
+            rewrite H5.
             simpl; auto.
           * (* [ImplStateMSI] *)
             replace (oss +[child1Idx <- pos]) with oss by meq.
@@ -370,7 +370,7 @@ Section Inv.
           * (* [AtomicMsgOutsInv] *)
             split.
             { simpl; unfold miiOf; simpl.
-              rewrite H7; cbn.
+              rewrite H4; cbn.
               apply SubList_cons; [|apply SubList_nil].
               simpl; tauto.
             }
@@ -379,9 +379,8 @@ Section Inv.
             red; intros; dest_in.
             repeat (simpl; mred).
             unfold miiOf; simpl.
-            rewrite H7.
-            red; simpl.
-            mred.
+            rewrite H4.
+            red; simpl; mred.
           * (* [ImplStateMSI] *)
             replace (oss +[child1Idx <- pos]) with oss by meq.
             destruct H0 as [cv ?].

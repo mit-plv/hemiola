@@ -1099,20 +1099,19 @@ Section UpLockInv.
         disc_rule_conds.
         + (** case [FootprintReleasingUp]; releasing the uplock. *)
           apply upLockFreeInv_orqs_preserved_self_update.
-          destruct i as [rsDown rsbm]; simpl in *.
           destruct H as [rqUp [down [pidx ?]]]; dest.
           disc_rule_conds.
           xor3_inv2 H20; [dest|eapply rssQ_length_one; eauto].
           remember (rqi_midx_rsb rqi) as rsbTo; clear HeqrsbTo.
           right.
-          exists rqTo, rsDown, pidx.
+          exists rqTo, rsFrom, pidx.
           repeat split; try assumption.
           * solve_q.
             apply length_zero_iff_nil; omega.
           * solve_q.
             apply findQ_In_deqMP_FirstMP in H10; simpl in H10.
             unfold rssQ in H17; rewrite <-H10 in H17.
-            simpl in H17; rewrite H11 in H17; simpl in H17.
+            simpl in H17; rewrite H9 in H17; simpl in H17.
             apply length_zero_iff_nil; omega.
           * apply not_ONoLockTo_OLockedTo; auto.
           
@@ -1597,12 +1596,12 @@ Section UpLockInv.
 
               xor3_inv3 H21; [dest|red; disc_rule_conds; eexists; intuition].
 
-              assert (length (findQ rqFrom (enqMP (rqi_midx_rsb rqi) rsm (deqMP (fst i) msgs))) = 0).
+              assert (length (findQ rqFrom (enqMP (rqi_midx_rsb rqi) rsm (deqMP rsFrom msgs))) = 0).
               { solve_q; omega. }
               rewrite H7; clear H7.
 
               assert (length
-                        (rssQ (enqMP (rqi_midx_rsb rqi) rsm (deqMP (fst i) msgs))
+                        (rssQ (enqMP (rqi_midx_rsb rqi) rsm (deqMP rsFrom msgs))
                               (rqi_midx_rsb rqi)) = 1).
               { solve_q.
                 rewrite filter_app; simpl.
@@ -1641,7 +1640,7 @@ Section UpLockInv.
                 }
               }
               { intro Hx.
-                elim (rqrsDTree_down_down_not_eq Hsd n H15 Hx).
+                elim (rqrsDTree_down_down_not_eq Hsd n H14 Hx).
                 reflexivity.
               }
             }

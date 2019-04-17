@@ -225,9 +225,8 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + destruct i as [rrsDown rrsm]; simpl in *.
-        pose proof (edgeDownTo_Some H _ H16).
-        destruct H25 as [rqUp [rsUp [pidx ?]]]; dest.
+      + pose proof (edgeDownTo_Some H _ H16).
+        destruct H31 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -346,9 +345,8 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + destruct i as [rrsDown rrsm]; simpl in *.
-        disc_rule_conds.
-        elim (H9 (idOf rqDown, rrsm) eq_refl H30).
+      + disc_rule_conds.
+        elim (H9 (idOf rqDown, rmsg) eq_refl H26).
         left; reflexivity.
 
       + rewrite <-H37 in H30.
@@ -1167,9 +1165,8 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + destruct i as [rrsDown rrsm]; simpl in *.
-        pose proof (edgeDownTo_Some H _ H13).
-        destruct H17 as [rqUp [rsUp [pidx ?]]]; dest.
+      + pose proof (edgeDownTo_Some H _ H13).
+        destruct H30 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -1281,12 +1278,11 @@ Section Separation.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + destruct rsDown as [rsDown rsdm]; simpl in *.
-        destruct i as [rsFrom rsfm]; simpl in *; subst.
         disc_rule_conds.
-        assert (rsfm <> rsdm) by (intro Hx; subst; elim H6; auto); clear H6.
+        assert (rmsg <> rsdm) by (intro Hx; subst; elim H6; auto); clear H6.
         good_locking_get obj.
         eapply upLockInvORq_down_rssQ_length_two_False in H6; try eassumption.
-        eapply rssQ_length_two with (msg1:= rsfm) (msg2:= rsdm); try eassumption.
+        eapply rssQ_length_two with (msg1:= rmsg) (msg2:= rsdm); try eassumption.
         apply FirstMP_InMP; assumption.
 
       + rewrite <-H35 in H28.

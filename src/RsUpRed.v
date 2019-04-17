@@ -58,8 +58,8 @@ Section RsUpReduction.
       good_locking_get obj.
       red in H1; dest; destruct H1.
       + disc_rule_conds.
-        exfalso; destruct H31 as [ncidx [? ?]].
-        elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H23 H14); reflexivity.
+        exfalso; destruct H30 as [ncidx [? ?]].
+        elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H28 H14); reflexivity.
       + split.
         { disc_rule_conds.
           { split.

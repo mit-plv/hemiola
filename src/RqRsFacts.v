@@ -911,12 +911,15 @@ Ltac disc_rule_conds_unit_simpl :=
   | [H: Forall _ nil |- _] => clear H
 
   | [H: (_, _) = (_, _) |- _] => inv H
-  | [H: idsOf ?ivs = _ :: nil |- _] =>
-    destruct ivs; [discriminate|simpl in H; inv H]
-  | [H: idsOf ?ivs = nil |- _] => destruct ivs; [|discriminate]
+
+  | [H: idsOf ?rins = [_]%list |- _] =>
+    let rin := fresh "rin" in
+    let rmsg := fresh "rmsg" in
+    destruct rins as [|[rin rmsg] [|]]; try discriminate;
+    simpl in H; inv H
+  | [H: idsOf [_] = [_]%list |- _] => simpl in H; inv H
+
   | [H: _ :: nil = _ :: nil |- _] => inv H
-  | [H: _ :: nil = idsOf ?ivs |- _] => apply eq_sym in H
-  | [H: nil = idsOf ?ivs |- _] => apply eq_sym in H
   | [H: nil = nil |- _] => clear H
 
   (* Below cases seem a bit ad-hoc, but appear quite frequently. *)

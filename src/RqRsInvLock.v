@@ -523,7 +523,7 @@ Section RqRsDown.
               eapply obj_same_id_in_system_same in e; eauto; subst.
               disc_rule_conds.
               eapply rsDown_in_deqMP_false
-                with (cobj:= cobj) (rsdm1:= valOf i) (rsdm2:= rsdm); eauto.
+                with (cobj:= cobj) (rsdm1:= rmsg) (rsdm2:= rsdm); eauto.
             }
             { apply InMP_deqMP in H26; specialize (H3 H26).
               destruct H3; [left; red in H3; red; mred|].

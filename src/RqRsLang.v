@@ -120,7 +120,7 @@ Notation "'rule' '[' IDX ']' ':requires' PREC ':transition' TRS" :=
      rule_precond := PREC%prec;
      rule_trs := TRS%trs |} (at level 5).
 
-Ltac disc_rule_conds_const_step :=
+Ltac disc_rule_conds_const_unit :=
   match goal with
   | [H: context [match msg_value ?msg with
                  | VNat _ => True
@@ -147,13 +147,6 @@ Ltac disc_rule_conds_const_step :=
   | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
   | [H: rule_precond _ _ _ _ |- _] => progress simpl in H
   | [H: rule_trs _ _ _ _ = _ |- _] => progress simpl in H
-  | [H: (_, _) = (_, _) |- _] => inv H
-  | [H: idsOf ?rins = [_]%list |- _] =>
-    let rin := fresh "rin" in
-    let rmsg := fresh "rmsg" in
-    destruct rins as [|[rin rmsg] [|]]; try discriminate;
-    simpl in H; inv H
-  | [H: idsOf [_] = [_]%list |- _] => simpl in H; inv H
   | [H: map msg_id (valsOf ?rins) = [_]%list |- _] =>
     let rin := fresh "rin" in
     let rmsg := fresh "rmsg" in
@@ -162,30 +155,37 @@ Ltac disc_rule_conds_const_step :=
   | [H: map msg_id (valsOf [_]%list) = [_]%list |- _] => simpl in H; inv H
   | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
   | [H: context [hd_error [_]%list] |- _] => progress simpl in H
-  | [H: [_]%list = [_]%list |- _] => inv H
-  | [H: Forall _ [_]%list |- _] => inv H
-  | [H: Forall _ nil |- _] => clear H
   end.
 
 Ltac disc_rule_conds_const :=
-  repeat (disc_rule_conds_const_step; subst; simpl in * ).
+  repeat (try disc_rule_conds_unit_simpl;
+          try disc_rule_conds_const_unit;
+          subst; simpl in * ).
 
-Ltac disc_rule_conds_ex :=
-  repeat (
-      repeat (autounfold with RuleConds in *; dest);
-      disc_rule_conds_const;
-      disc_rule_conds; dest).
-      
 Ltac solve_rule_conds_const :=
   repeat
-    (repeat autounfold with RuleConds in *; intros;
+    (repeat (autounfold with RuleConds in *; dest); intros;
      disc_rule_conds_const;
      constr_rule_conds).
 
+Ltac disc_rule_conds_ex :=
+  repeat (repeat (autounfold with RuleConds in *; dest); intros;
+          disc_rule_conds; dest;
+          disc_rule_conds_const).
+
 Ltac solve_rule_conds_ex :=
-  repeat 
-    (repeat (autounfold with RuleConds in *; dest);
-     disc_rule_conds; dest; solve_rule_conds_const).
+  repeat (repeat (autounfold with RuleConds in *; dest); intros;
+          disc_rule_conds; dest;
+          solve_rule_conds_const).
+
+Ltac rule_immd := left.
+Ltac rule_immu := right; left.
+Ltac rule_rquu := do 2 right; left; split; [|left].
+Ltac rule_rqud := do 2 right; left; split; [|right; left].
+Ltac rule_rqdd := do 2 right; left; split; [|right; right].
+Ltac rule_rsdd := do 3 right; left; split; [left|].
+Ltac rule_rsu := do 3 right; left; split; [right|].
+Ltac rule_rsrq := do 4 right.
 
 Close Scope list.
 Close Scope hvec.

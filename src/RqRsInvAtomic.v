@@ -2538,18 +2538,20 @@ Section Coverage.
 
       - (** [RsDownDown] *)
         inv_MsgOutsInv.
-        simpl; destruct (id_dec msg_dec i i) as [_|]; [simpl|exfalso; auto].
+        unfold removeOnce.
+        destruct (id_dec msg_dec (rsFrom, rmsg) (rsFrom, rmsg)) as [_|];
+          [simpl|exfalso; auto].
         disc_rule_conds.
         assert (forall ccidx,
                    parentIdxOf dtr ccidx = Some (obj_idx obj) ->
                    SubList (oindsOf hst) (subtreeIndsOf dtr ccidx) ->
                    False) as Hcf.
         { intros.
-          pose proof (edgeDownTo_Some H _ H12).
+          pose proof (edgeDownTo_Some H _ H10).
           destruct H21 as [rqUp [rrsUp [pidx ?]]]; dest.
           disc_rule_conds.
           pose proof Hatm.
-          eapply atomic_down_out_in_history with (down:= fst i) in H21;
+          eapply atomic_down_out_in_history with (down:= rsFrom) in H21;
             eauto; [|left; reflexivity].
           apply H20 in H21.
           eapply parent_parent_in_False with (oidx2:= obj_idx obj);

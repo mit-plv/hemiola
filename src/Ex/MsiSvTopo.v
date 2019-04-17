@@ -53,16 +53,7 @@ Proof.
   - auto using msiSv_impl_ExtsOnDTree.
 Qed.
 
-Hint Unfold upRq downRq : RuleConds.
-
-Ltac rule_immd := left.
-Ltac rule_immu := right; left.
-Ltac rule_rquu := do 2 right; left; split; [|left].
-Ltac rule_rqud := do 2 right; left; split; [|right; left].
-Ltac rule_rqdd := do 2 right; left; split; [|right; right].
-Ltac rule_rsdd := do 3 right; left; split; [left|].
-Ltac rule_rsu := do 3 right; left; split; [right|].
-Ltac rule_rsrq := do 4 right.
+Local Hint Unfold upRq downRq : RuleConds.
 
 Lemma msiSv_impl_GoodExtRssSys: GoodExtRssSys impl.
 Proof.
@@ -104,8 +95,8 @@ Proof.
                end;
                destruct H2; solve_rule_conds_ex; fail).
       * exfalso; solve_rule_conds_const.
-        rewrite H11 in H7.
-        unfold msiI, msiS in H7; omega.
+        rewrite H18 in H14.
+        unfold msiI, msiS in H14; omega.
       * solve_rule_conds_const.
 
     + preveal H6.
@@ -164,8 +155,8 @@ Proof.
                end;
                destruct H2; solve_rule_conds_ex; fail).
       * solve_rule_conds_const.
-        rewrite H11 in H7.
-        unfold msiI, msiS in H7; omega.
+        rewrite H18 in H14.
+        unfold msiI, msiS in H14; omega.
       * solve_rule_conds_const.
 
     + preveal H6.
@@ -299,8 +290,6 @@ Proof.
 
   - rule_rsdd; solve_rule_conds_const.
 
-  (* the parent *)
-      
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
@@ -372,7 +361,6 @@ Proof.
   - rule_rsu; solve_rule_conds_const.
 
   - rule_rsu; solve_rule_conds_const.
-
 Qed.
 
 Theorem msiSv_impl_RqRsSys: RqRsSys topo impl.

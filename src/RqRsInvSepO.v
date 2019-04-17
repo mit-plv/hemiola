@@ -884,12 +884,11 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + destruct i as [midx msg]; simpl in *.
-        pose proof (edgeDownTo_Some H _ H11).
-        destruct H21 as [rqUp [rsUp [rpidx ?]]]; dest.
+      + pose proof (edgeDownTo_Some H _ H11).
+        destruct H28 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
-        eapply inside_child_in in H28; try eassumption.
+        eapply inside_child_in in H27; try eassumption.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
@@ -982,13 +981,12 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + destruct i as [midx msg]; simpl in *.
-        pose proof (edgeDownTo_Some H _ H10).
-        destruct H20 as [rqUp [rsUp [rpidx ?]]]; dest.
+      + pose proof (edgeDownTo_Some H _ H10).
+        destruct H27 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
-        eapply outside_child_in in H27; try eassumption.
-        clear -H2 H27; firstorder.
+        eapply outside_child_in in H26; try eassumption.
+        clear -H2 H26; firstorder.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
