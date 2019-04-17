@@ -1879,12 +1879,12 @@ Section Coverage.
         good_locking_get dobj; mred.
         red in H21, H23.
         destruct (orqs@[obj_idx dobj]) as [dorq|]; simpl in *; auto.
-        rewrite H21 in H23.
-        specialize (H23 _ H16).
-        destruct H23 as [rdown [rsUp ?]]; dest.
+        rewrite H21 in H23; dest.
+        specialize (H24 _ H16).
+        destruct H24 as [rdown [rsUp ?]]; dest.
         disc_rule_conds.
         destruct (in_dec eq_nat_dec rsUp _); [auto|].
-        red in H27; dest.
+        red in H28; dest.
         eapply rqsQ_length_zero_False; eauto.
 
       - (** [DownLockRootInv] *)

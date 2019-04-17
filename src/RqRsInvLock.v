@@ -31,11 +31,14 @@ Ltac disc_lock_conds :=
   match goal with
   | [H: OLockedTo _ _ _ |- _] => red in H
   | [H: UpLockInvORq _ _ _ _ _ |- _] => red in H; mred; simpl in H; mred
+  | [H: UpLockRsFromParent _ _ _ /\ UpLockedInv _ _ _ _ |- _] => destruct H
   | [H: UpLockedInv _ _ _ _ |- _] =>
     let rqUp := fresh "rqUp" in
     let down := fresh "down" in
     let pidx := fresh "pidx" in
     destruct H as [rqUp [down [pidx ?]]]; dest
+  | [H: DownLockInvORq _ _ _ _ _ |- _] => red in H; mred; simpl in H; mred
+  | [H: DownLockRssToParent _ _ _ /\ DownLockedInv _ _ _ _ _ |- _] => destruct H
   end.
 
 Section RqRsDown.

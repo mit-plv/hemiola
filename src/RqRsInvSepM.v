@@ -232,9 +232,9 @@ Section Separation.
           try apply Hrrs; eassumption.
 
       + pose proof H9. (* Duplicate [DownLockInvORq] to apply proper lemmas later. *)
-        red in H9; mred.
-        specialize (H9 _ H2).
-        destruct H9 as [down [rsUp ?]]; dest.
+        red in H9; mred; dest.
+        specialize (H29 _ H2).
+        destruct H29 as [down [rsUp ?]]; dest.
         disc_rule_conds.
         destruct (in_dec eq_nat_dec rsUp rqi.(rqi_minds_rss)).
         * eapply RqRsDownMatch_rs_rq in H28; [|eassumption].
@@ -246,20 +246,20 @@ Section Separation.
           { rewrite <-H35 in i.
             apply in_map_iff in i; destruct i as [[rsUp' rsum] [? ?]].
             simpl in *; subst.
-            rewrite Forall_forall in H19; specialize (H19 _ H33).
+            rewrite Forall_forall in H19; specialize (H19 _ H34).
             eapply findQ_length_ge_one.
             apply FirstMP_InMP; eassumption.
           }
-        * red in H31; dest.
+        * red in H33; dest.
           destruct rqDown as [rqDown rqdm]; simpl in *.
           pose proof (rqsQ_length_ge_one _ _ _ H4 H6).
-          simpl in H34; rewrite H9 in H34.
-          simpl in H34; omega.
+          simpl in H36; rewrite H29 in H36.
+          simpl in H36; omega.
 
       + pose proof H9. (* Duplicate [DownLockInvORq] to apply proper lemmas later. *)
-        red in H9; mred.
-        specialize (H9 _ H2).
-        destruct H9 as [down [rsUp ?]]; dest.
+        red in H9; mred; dest.
+        specialize (H27 _ H2).
+        destruct H27 as [down [rsUp ?]]; dest.
         disc_rule_conds.
         destruct (in_dec eq_nat_dec rsUp rqi.(rqi_minds_rss)).
         * eapply RqRsDownMatch_rs_rq in H13; [|eassumption].
@@ -271,15 +271,15 @@ Section Separation.
           { rewrite <-H35 in i.
             apply in_map_iff in i; destruct i as [[rsUp' rsum] [? ?]].
             simpl in *; subst.
-            rewrite Forall_forall in H19; specialize (H19 _ H29).
+            rewrite Forall_forall in H19; specialize (H19 _ H31).
             eapply findQ_length_ge_one.
             apply FirstMP_InMP; eassumption.
           }
-        * red in H28; dest.
+        * red in H29; dest.
           destruct rqDown as [rqDown rqdm]; simpl in *.
           pose proof (rqsQ_length_ge_one _ _ _ H4 H6).
-          simpl in H31; rewrite H9 in H31.
-          simpl in H31; omega.
+          simpl in H33; rewrite H27 in H33.
+          simpl in H33; omega.
 
     - disc_rule_conds.
       pose proof (edgeDownTo_Some H _ H37).

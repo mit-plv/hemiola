@@ -63,47 +63,47 @@ Section RsUpReduction.
       + split.
         { disc_rule_conds.
           { split.
-            { rewrite <-H33 in H26.
+            { rewrite <-H33 in H27.
               assert (exists rsUp, In rsUp (idsOf rsUps)).
-              { apply RqRsDownMatch_rs_not_nil in H26.
+              { apply RqRsDownMatch_rs_not_nil in H27.
                 destruct (idsOf rsUps); [exfalso; auto|].
                 eexists; left; reflexivity.
               }
-              destruct H9 as [rsUp ?].
-              rewrite Forall_forall in H7; specialize (H7 _ H9).
+              destruct H11 as [rsUp ?].
+              rewrite Forall_forall in H7; specialize (H7 _ H11).
               destruct H7 as [cidx ?]; dest.
-              eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
-              destruct H26 as [rcidx [down ?]]; dest.
+              eapply RqRsDownMatch_rs_rq in H27; [|eassumption].
+              destruct H27 as [rcidx [down ?]]; dest.
               repeat disc_rule_minds.
               reflexivity.
             }
-            { rewrite <-H33 in H26.
+            { rewrite <-H33 in H27.
               apply Forall_forall; intros rsUp ?.
-              apply in_map with (f:= idOf) in H9.
-              eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
-              destruct H26 as [cidx [down ?]]; dest; eauto.
+              apply in_map with (f:= idOf) in H11.
+              eapply RqRsDownMatch_rs_rq in H27; [|eassumption].
+              destruct H27 as [cidx [down ?]]; dest; eauto.
             }
           }
           { split.
-            { rewrite <-H33 in H11.
+            { rewrite <-H33 in H14.
               assert (exists rsUp, In rsUp (idsOf rsUps)).
-              { apply RqRsDownMatch_rs_not_nil in H11.
+              { apply RqRsDownMatch_rs_not_nil in H14.
                 destruct (idsOf rsUps); [exfalso; auto|].
                 eexists; left; reflexivity.
               }
-              destruct H21 as [rsUp ?].
-              rewrite Forall_forall in H7; specialize (H7 _ H21).
+              destruct H25 as [rsUp ?].
+              rewrite Forall_forall in H7; specialize (H7 _ H25).
               destruct H7 as [cidx ?]; dest.
-              eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
-              destruct H11 as [rcidx [down ?]]; dest.
+              eapply RqRsDownMatch_rs_rq in H14; [|eassumption].
+              destruct H14 as [rcidx [down ?]]; dest.
               repeat disc_rule_minds.
               reflexivity.
             }
-            { rewrite <-H33 in H11.
+            { rewrite <-H33 in H14.
               apply Forall_forall; intros rsUp ?.
-              apply in_map with (f:= idOf) in H21.
-              eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
-              destruct H11 as [cidx [down ?]]; dest; eauto.
+              apply in_map with (f:= idOf) in H25.
+              eapply RqRsDownMatch_rs_rq in H14; [|eassumption].
+              destruct H14 as [cidx [down ?]]; dest; eauto.
             }
           }
         }
@@ -114,11 +114,9 @@ Section RsUpReduction.
           { disc_rule_conds.
             { exists porq, rqi.
               repeat ssplit; try assumption; try reflexivity.
-              red in H10; rewrite H30 in H10; assumption.
             }
             { exists porq, rqi.
               repeat ssplit; try assumption; try reflexivity.
-              red in H10; rewrite H30 in H10; assumption.
             }
           }
         }

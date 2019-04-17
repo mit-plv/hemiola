@@ -124,15 +124,15 @@ Section RqUpReduction.
       + (** The only non-"exfalso" case *)
         good_locking_get obj.
         disc_rule_conds.
-        repeat split.
+        dest; repeat split.
         * exists cidx; eexists.
           repeat split; try assumption.
         * do 8 eexists.
           repeat split; try eassumption.
           { mred. }
-          { clear -H24.
+          { clear -H26.
             rewrite findQ_In_enqMP in *.
-            rewrite app_length in H24; simpl in H24.
+            rewrite app_length in H26; simpl in H26.
             rewrite app_length; simpl.
             omega.
           }
@@ -369,7 +369,10 @@ Section RqUpReduction.
               red in H.
               apply parentIdxOf_not_eq in H12;
                 [|destruct Hrrs as [[? ?] _]; assumption]; mred.
-              find_if_inside.
+              match goal with
+              | [H: match ?ul with | Some _ => _ | None => _ end |- _] =>
+                destruct ul
+              end.
               { destruct H as [rqUp [down [pidx ?]]]; dest.
                 disc_rule_conds.
                 eapply xor3_False_2; [eassumption| |].
@@ -403,7 +406,7 @@ Section RqUpReduction.
         * (** case [FootprintReleasingUp] *)
           exfalso; disc_rule_conds.
           good_locking_get obj.
-          disc_lock_conds.
+          disc_lock_conds; dest.
           eapply upLockedInv_False_1; eauto.
           { apply InMP_or_enqMP; auto. }
           { apply FirstMP_InMP; auto. }
@@ -432,7 +435,7 @@ Section RqUpReduction.
       + (** case [RsDownRqDownRule] *)
         exfalso; disc_rule_conds.
         good_locking_get obj.
-        disc_lock_conds.
+        disc_lock_conds; dest.
         eapply upLockedInv_False_1; eauto.
         { apply InMP_or_enqMP; auto. }
         { apply FirstMP_InMP; auto. }

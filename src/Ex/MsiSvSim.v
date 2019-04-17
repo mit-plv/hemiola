@@ -1,7 +1,8 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsTopo RqRsFacts RqRsMsgPred RqRsCorrect RqRsLang.
+Require Import RqRsTopo RqRsFacts RqRsLang.
+Require Import RqRsInvLock RqRsMsgPred RqRsCorrect.
 
 Require Import Msi MsiSv SpecSv MsiSvTopo.
 
@@ -298,7 +299,7 @@ Section Inv.
         | [H: AtomicInv _ _ _ _ _ _ _ _ |- _] => red in H; dest
         | [H: AtomicMsgOutsInv _ _ _ _ _ |- _] => red in H; dest
         end.
-    
+
     Ltac atomic_non_init_bound_exfalso_step :=
       match goal with
       | [H1: SubList [_] ?eouts, H2: SubList (miisOf ?eouts) _ |- _] =>
@@ -328,6 +329,14 @@ Section Inv.
       induction H3; simpl; intros; subst.
       
       - inv_steps; inv_step.
+        pose proof (upLockInv_ok
+                      msiSv_impl_GoodRqRsSys
+                      msiSv_impl_RqRsDTree H) as Hulinv.
+        pose proof (downLockInv_ok
+                      msiSv_impl_GoodRqRsSys
+                      msiSv_impl_RqRsDTree
+                      msiSv_impl_GoodExtRssSys H) as Hdlinv.
+        good_locking_get obj.
         dest_in.
 
         1: {
@@ -336,7 +345,7 @@ Section Inv.
           * (* [AtomicMsgOutsInv] *)
             split.
             { simpl; unfold miiOf; simpl.
-              rewrite H4; cbn.
+              rewrite H6; cbn.
               apply SubList_cons; [|apply SubList_nil].
               simpl; tauto.
             }
@@ -345,8 +354,8 @@ Section Inv.
             red; intros; dest_in.
             repeat (simpl; mred).
             unfold miiOf; simpl.
-            rewrite H4; cbn.
-            rewrite H5.
+            rewrite H6; cbn.
+            rewrite H7.
             simpl; auto.
           * (* [ImplStateMSI] *)
             replace (oss +[child1Idx <- pos]) with oss by meq.
@@ -361,7 +370,7 @@ Section Inv.
               by (intro Hx; subst; dest_in; discriminate).
             rewrite findQ_not_In_deqMP
               by (intro Hx; subst; dest_in; discriminate).
-            apply H2; auto.
+            apply H4; auto.
         }
 
         1: {
@@ -370,7 +379,7 @@ Section Inv.
           * (* [AtomicMsgOutsInv] *)
             split.
             { simpl; unfold miiOf; simpl.
-              rewrite H4; cbn.
+              rewrite H6; cbn.
               apply SubList_cons; [|apply SubList_nil].
               simpl; tauto.
             }
@@ -379,7 +388,7 @@ Section Inv.
             red; intros; dest_in.
             repeat (simpl; mred).
             unfold miiOf; simpl.
-            rewrite H4.
+            rewrite H6.
             red; simpl; mred.
           * (* [ImplStateMSI] *)
             replace (oss +[child1Idx <- pos]) with oss by meq.
@@ -397,24 +406,47 @@ Section Inv.
               apply Forall_app.
               { rewrite findQ_not_In_deqMP
                   by (intro Hx; subst; dest_in; discriminate).
-                apply H2; auto.
+                apply H4; auto.
               }
               { repeat constructor.
                 red; intros.
-                clear H3; dest_in; discriminate.
+                clear H4; dest_in; discriminate.
               }
             }
             { rewrite findQ_not_In_enqMP by assumption.
               rewrite findQ_not_In_deqMP
                 by (intro Hx; subst; dest_in; discriminate).
-              apply H2; auto.
+              apply H4; auto.
             }
         }
 
-        2: {
+        1: {
+          exfalso.
+          red in H2.
+          disc_rule_conds_ex.
+          unfold upRq in Horq.
+          rewrite Horq in H4; simpl in H4.
+          destruct H2 as [rsFrom [? ?]].
+          rewrite <-H4 in H6; inv H6.
+          apply SubList_singleton_In in H1; dest_in; discriminate.
+        }
+          
+        1: {
           exfalso.
           disc_rule_conds_ex.
           apply SubList_singleton_In in H1; dest_in; discriminate.
+        }
+
+        27: {
+          exfalso.
+          red in H3.
+          disc_rule_conds_ex.
+          unfold downRq in Horq.
+          rewrite Horq in H4; simpl in H4.
+          red in H3; rewrite <-H4 in H3.
+          inv H3; clear H16.
+          destruct H15 as [cidx [? ?]].
+          apply SubList_singleton_In in H1; dest_in; admit.
         }
 
         all: admit.
