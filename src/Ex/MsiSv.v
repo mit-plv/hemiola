@@ -396,9 +396,6 @@ Section System.
   Definition ext1Idx := 3.
   Definition ext2Idx := 4.
 
-  Definition leaf (cidx: IdxT) (ecs ces: list IdxT) (eidx: IdxT): DTree :=
-    Node cidx [(ecs, ces, Node eidx nil)].
-  
   Definition topo: DTree :=
     Node parentIdx
          [([c1pRq; c1pRs],

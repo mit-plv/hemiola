@@ -1,5 +1,5 @@
 Require Import Common List ListSupport HVector FMap.
-Require Import Syntax RqRsTopo RqRsFacts.
+Require Import Syntax Topology RqRsTopo RqRsFacts.
 
 Set Implicit Arguments.
 
@@ -7,6 +7,9 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
+Definition leaf (cidx: IdxT) (ecs ces: list IdxT) (eidx: IdxT): DTree :=
+  Node cidx [(ecs, ces, Node eidx nil)].
+  
 Definition StateM oifc :=
   (OState oifc * ORq Msg * list (Id Msg))%type.
 
