@@ -112,29 +112,65 @@ Section Inv.
            (ImplOStateI cost1 /\ ImplOStateM cv cost2)).
   Defined.
 
-  Definition ImplMsg (cv: nat) (msg: Msg) :=
-    In (msg_id msg) [msiRsS; msiRsM; msiDownRsS; msiDownRsM] ->
-    msg_value msg = VNat cv.
-
-  Definition ImplQ (cv: nat) (midx: IdxT) (q: Queue Msg) :=
-    In midx impl.(sys_minds) ->
-    Forall (ImplMsg cv) q.
-
-  Definition ImplMsgs (cv: nat) (msgs: MessagePool Msg) :=
-    ForallQ (fun midx q => ImplQ cv midx q) msgs.
-
   Definition ImplStateCoherent
-             (cv: nat) (st: MState ImplOStateIfc): Prop :=
-    (ImplStateI st.(bst_oss) \/
-     ImplStateS cv st.(bst_oss) \/
-     ImplStateM cv st.(bst_oss)) /\
-    ImplMsgs cv st.(bst_msgs).
+             (cv: nat) (oss: OStates ImplOStateIfc): Prop :=
+    ImplStateI oss \/ ImplStateS cv oss \/ ImplStateM cv oss.
   
   Definition ImplStateMSI (st: MState ImplOStateIfc): Prop :=
     exists cv, (* The coherent value always exists. *)
-      ImplStateCoherent cv st.
+      ImplStateCoherent cv st.(bst_oss).
 
   Section Facts.
+
+    Lemma implStateCoherent_M_value_changed:
+      forall cv oss,
+        ImplStateCoherent cv oss ->
+        forall oidx ost,
+          (oidx = child1Idx \/ oidx = child2Idx) ->
+          oss@[oidx] = Some ost ->
+          ost#[implStatusIdx] = msiM ->
+          forall n uv,
+            ImplStateCoherent n (oss +[oidx <- (n, (msiM, uv))]).
+    Proof.
+      intros.
+      destruct H as [|[|]].
+      - exfalso; red in H.
+        disc_rule_conds_ex.
+        destruct H0; subst.
+        + disc_rule_conds_ex.
+          red in H3; simpl in H3.
+          rewrite H3 in H2; discriminate.
+        + disc_rule_conds_ex.
+          red in H4; simpl in H4.
+          rewrite H4 in H2; discriminate.
+      - exfalso; red in H.
+        disc_rule_conds_ex.
+        destruct H0; subst.
+        + disc_rule_conds_ex.
+          destruct H3;
+            try (dest; simpl in H0; rewrite H0 in H2; discriminate).
+        + disc_rule_conds_ex.
+          destruct H4;
+            try (dest; simpl in H0; rewrite H0 in H2; discriminate).
+      - right; right.
+        red in H.
+        disc_rule_conds_ex.
+        destruct H0; subst.
+        + destruct H3; dest.
+          * red; red in H0, H3; dest.
+            solve_rule_conds_ex.
+            left; solve_rule_conds_ex.
+          * red; red in H0, H3; dest.
+            solve_rule_conds_ex.
+            left; solve_rule_conds_ex.
+        + destruct H3; dest.
+          * red; red in H0, H3; dest.
+            solve_rule_conds_ex.
+            right; solve_rule_conds_ex.
+          * red; red in H0, H3; dest.
+            solve_rule_conds_ex.
+            right; solve_rule_conds_ex.
+    Qed.
 
     Lemma msiSv_impl_InvTrs_ext_in:
       forall st1 eins st2,
@@ -144,16 +180,7 @@ Section Inv.
     Proof.
       intros; inv_step.
       destruct H as [cv ?]; exists cv.
-      destruct H; simpl in *.
-      split; simpl; auto.
-      clear H.
-
-      do 3 (red in H0; red).
-      intros; specialize (H0 _ H).
-      rewrite findQ_not_In_enqMsgs; [assumption|].
-      eapply DisjList_In_1; [|eassumption].
-      eapply DisjList_SubList; [apply H3|].
-      apply DisjList_comm, sys_minds_sys_merqs_DisjList.
+      assumption.
     Qed.
 
     Lemma msiSv_impl_InvTrs_ext_out:
@@ -164,16 +191,7 @@ Section Inv.
     Proof.
       intros; inv_step.
       destruct H as [cv ?]; exists cv.
-      destruct H; simpl in *.
-      split; simpl; auto.
-      clear H.
-
-      do 3 (red in H0; red).
-      intros; specialize (H0 _ H).
-      rewrite findQ_not_In_deqMsgs; [assumption|].
-      eapply DisjList_In_1; [|eassumption].
-      eapply DisjList_SubList; [apply H4|].
-      apply DisjList_comm, sys_minds_sys_merss_DisjList.
+      assumption.
     Qed.
 
     Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
@@ -182,11 +200,15 @@ Section Inv.
         | (pc1, msiRsS): 
             post <-- oss@[parentIdx];
             cost2 <-- oss@[child2Idx];
-            (post#[implStatusIdx] = msiS /\ cost2#[implStatusIdx] = msiS)
+            (post#[implStatusIdx] = msiS /\
+             cost2#[implStatusIdx] = msiS /\
+             msg_value (valOf eout) = VNat post#[implValueIdx])
         | (pc2, msiRsS):
             post <-- oss@[parentIdx];
             cost1 <-- oss@[child1Idx];
-            (post#[implStatusIdx] = msiS /\ cost1#[implStatusIdx] = msiS)
+            (post#[implStatusIdx] = msiS /\
+             cost1#[implStatusIdx] = msiS /\
+             msg_value (valOf eout) = VNat post#[implValueIdx])
         | (pc1, msiRsM): 
             post <-- oss@[parentIdx];
             cost2 <-- oss@[child2Idx];
@@ -197,10 +219,12 @@ Section Inv.
             (post#[implStatusIdx] = msiM /\ cost1#[implStatusIdx] = msiI)
         | (c1pRs, msiDownRsS):
             cost1 <-- oss@[child1Idx];
-            (cost1#[implStatusIdx] = msiS)
+            (cost1#[implStatusIdx] = msiS /\
+             msg_value (valOf eout) = VNat cost1#[implValueIdx])
         | (c2pRs, msiDownRsS):
             cost2 <-- oss@[child2Idx];
-            (cost2#[implStatusIdx] = msiS)
+            (cost2#[implStatusIdx] = msiS /\
+             msg_value (valOf eout) = VNat cost2#[implValueIdx])
         | (c1pRs, msiDownRsM):
             cost1 <-- oss@[child1Idx];
             (cost1#[implStatusIdx] = msiI)
@@ -300,18 +324,21 @@ Section Inv.
         | [H: AtomicMsgOutsInv _ _ _ _ _ |- _] => red in H; dest
         end.
 
-    Ltac atomic_non_init_bound_exfalso_step :=
-      match goal with
-      | [H1: SubList [_] ?eouts, H2: SubList (miisOf ?eouts) _ |- _] =>
-        let Hs := fresh "H" in
-        pose proof (SubList_trans (SubList_map miiOf H1) H2) as Hs;
-        clear -Hs; apply SubList_singleton_In in Hs; cbn in Hs
-      | [H: context[miis_dec ?miis1 ?miis2] |- _] =>
-        destruct (miis_dec miis1 miis2) in H;
-        try (Common.dest_in; discriminate)
-      end.
+    Ltac atomic_cont_exfalso_bound :=
+      exfalso;
+      disc_rule_conds_ex;
+      repeat 
+        match goal with
+        | [H1: SubList [_] ?eouts, H2: SubList (miisOf ?eouts) _ |- _] =>
+          let Hs := fresh "H" in
+          pose proof (SubList_trans (SubList_map miiOf H1) H2) as Hs;
+          clear -Hs; apply SubList_singleton_In in Hs; cbn in Hs
+        | [H: context[miis_dec ?miis1 ?miis2] |- _] =>
+          destruct (miis_dec miis1 miis2) in H;
+          try (Common.dest_in; discriminate)
+        end.
 
-    Ltac atomic_init_exfalso_rq_from_parent :=
+    Ltac atomic_init_exfalso_rq :=
       exfalso;
       disc_rule_conds_ex;
       match goal with
@@ -335,6 +362,24 @@ Section Inv.
       match goal with
       | [H1: SubList [?rsFrom] _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
         apply SubList_singleton_In in H1; dest_in; discriminate
+      end.
+
+    Ltac atomic_init_exfalso_rs_to_parent :=
+      exfalso;
+      pose proof msiSv_impl_RqRsDTree;
+      repeat
+        (repeat match goal with
+                | [H: DownLockInvORq _ _ _ _ _ |- _] => red in H
+                | [H1: ?orq@[1] = Some _, H2: context[?orq@[1]] |- _] =>
+                  rewrite H1 in H2; simpl in H2
+                | [H: DownLockRssToParent _ _ _ |- _] => red in H
+                | [H: _ = rqi_minds_rss _ |- _] => apply eq_sym in H
+                end;
+         unfold downRq in *;
+         disc_rule_conds_ex);
+      match goal with
+      | [H1: SubList [?rsFrom] _, H2: rsEdgeUpFrom _ _ = Some ?rsFrom |- _] =>
+        apply SubList_singleton_In in H1; dest_in
       end.
 
     Ltac atomic_init_solve_AtomicMsgOutsInv_subList :=
@@ -377,6 +422,97 @@ Section Inv.
       split; [atomic_init_solve_AtomicMsgOutsInv|
               atomic_init_solve_AtomicLocksInv].
 
+    Lemma msiSv_impl_InvTrs_init:
+      forall st1,
+        Reachable (steps step_m) impl st1 ->
+        ImplStateMSI st1 ->
+        forall oidx ridx ins outs st2,
+          SubList (idsOf ins) (sys_merqs impl) ->
+          step_m impl st1 (RlblInt oidx ridx ins outs) st2 ->
+          AtomicInv MsiSvMsgOutPred msiSvAtomicBoundF MsiSvLockPred
+                    ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
+          ImplStateMSI st2.
+    Proof.
+      intros.
+      inv_step.
+      pose proof (upLockInv_ok
+                    msiSv_impl_GoodRqRsSys
+                    msiSv_impl_RqRsDTree H) as Hulinv.
+      pose proof (downLockInv_ok
+                    msiSv_impl_GoodRqRsSys
+                    msiSv_impl_RqRsDTree
+                    msiSv_impl_GoodExtRssSys H) as Hdlinv.
+      good_locking_get obj.
+      dest_in.
+
+      3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent.
+      3, 6, 10, 13, 15-24: atomic_init_exfalso_rq.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        destruct H0 as [cv ?]; simpl in H.
+        exists n; simpl.
+        eapply implStateCoherent_M_value_changed; eauto.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child2Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child2Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        destruct H0 as [cv ?]; simpl in H.
+        exists n; simpl.
+        eapply implStateCoherent_M_value_changed; eauto.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child2Idx <- pos]) with oss by meq.
+        assumption.
+
+      - disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child2Idx <- pos]) with oss by meq.
+        assumption.
+
+      - atomic_init_exfalso_rs_to_parent.
+        + assert (rqEdgeUpFrom topo ext1Idx = Some ec1) by reflexivity.
+          solve_midx_false.
+        + assert (rqEdgeUpFrom topo ext2Idx = Some ec2) by reflexivity.
+          solve_midx_false.
+
+      - atomic_init_exfalso_rs_to_parent.
+        + assert (rqEdgeUpFrom topo ext1Idx = Some ec1) by reflexivity.
+          solve_midx_false.
+        + assert (rqEdgeUpFrom topo ext2Idx = Some ec2) by reflexivity.
+          solve_midx_false.
+    Qed.
+
     Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.
     Proof.
       eapply inv_atomic_InvTrs;
@@ -393,266 +529,53 @@ Section Inv.
       generalize dependent ist2.
       induction H3; simpl; intros; subst.
       
-      - inv_steps; inv_step.
-        pose proof (upLockInv_ok
-                      msiSv_impl_GoodRqRsSys
-                      msiSv_impl_RqRsDTree H) as Hulinv.
-        pose proof (downLockInv_ok
-                      msiSv_impl_GoodRqRsSys
-                      msiSv_impl_RqRsDTree
-                      msiSv_impl_GoodExtRssSys H) as Hdlinv.
-        good_locking_get obj.
-        dest_in.
-
-        3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent.
-        3, 6, 10, 13: atomic_init_exfalso_rq_from_parent.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child1Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          rewrite findQ_not_In_enqMP
-            by (intro Hx; subst; dest_in; discriminate).
-          rewrite findQ_not_In_deqMP
-            by (intro Hx; subst; dest_in; discriminate).
-          apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child1Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          destruct (eq_nat_dec midx c1pRq).
-          * subst.
-            rewrite findQ_In_enqMP.
-            apply Forall_app.
-            { rewrite findQ_not_In_deqMP
-                by (intro Hx; subst; dest_in; discriminate).
-              apply H4; auto.
-            }
-            { repeat constructor.
-              red; intros.
-              clear H4; dest_in; discriminate.
-            }
-          * rewrite findQ_not_In_enqMP by assumption.
-            rewrite findQ_not_In_deqMP
-              by (intro Hx; subst; dest_in; discriminate).
-            apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          (* Need a lemma? discharger? solver? *)
-          clear -H0 H10 H14.
-          destruct H0 as [cv ?].
-          red in H; simpl in H; dest.
-
-          destruct H as [|[|]].
-          * exfalso.
-            red in H.
-            disc_rule_conds_ex.
-            red in H1; simpl in H1; rewrite H1 in H14; discriminate.
-          * exfalso.
-            red in H.
-            disc_rule_conds_ex.
-            destruct H1.
-            { simpl in H1; rewrite H1 in H14; discriminate. }
-            { dest; simpl in H1; rewrite H1 in H14; discriminate. }
-          * exists n.
-            red; simpl; split.
-            { admit. }
-            { admit. }
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child1Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          destruct (eq_nat_dec midx c1pRq).
-          * subst.
-            rewrite findQ_In_enqMP.
-            apply Forall_app.
-            { rewrite findQ_not_In_deqMP
-                by (intro Hx; subst; dest_in; discriminate).
-              apply H4; auto.
-            }
-            { repeat constructor.
-              red; intros.
-              clear H4; dest_in; discriminate.
-            }
-          * rewrite findQ_not_In_enqMP by assumption.
-            rewrite findQ_not_In_deqMP
-              by (intro Hx; subst; dest_in; discriminate).
-            apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child1Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          destruct (eq_nat_dec midx c1pRq).
-          * subst.
-            rewrite findQ_In_enqMP.
-            apply Forall_app.
-            { rewrite findQ_not_In_deqMP
-                by (intro Hx; subst; dest_in; discriminate).
-              apply H4; auto.
-            }
-            { repeat constructor.
-              red; intros.
-              clear H4; dest_in; discriminate.
-            }
-          * rewrite findQ_not_In_enqMP by assumption.
-            rewrite findQ_not_In_deqMP
-              by (intro Hx; subst; dest_in; discriminate).
-            apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child2Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          rewrite findQ_not_In_enqMP
-            by (intro Hx; subst; dest_in; discriminate).
-          rewrite findQ_not_In_deqMP
-            by (intro Hx; subst; dest_in; discriminate).
-          apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child2Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          destruct (eq_nat_dec midx c2pRq).
-          * subst.
-            rewrite findQ_In_enqMP.
-            apply Forall_app.
-            { rewrite findQ_not_In_deqMP
-                by (intro Hx; subst; dest_in; discriminate).
-              apply H4; auto.
-            }
-            { repeat constructor.
-              red; intros.
-              clear H4; dest_in; discriminate.
-            }
-          * rewrite findQ_not_In_enqMP by assumption.
-            rewrite findQ_not_In_deqMP
-              by (intro Hx; subst; dest_in; discriminate).
-            apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          admit.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child2Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          destruct (eq_nat_dec midx c2pRq).
-          * subst.
-            rewrite findQ_In_enqMP.
-            apply Forall_app.
-            { rewrite findQ_not_In_deqMP
-                by (intro Hx; subst; dest_in; discriminate).
-              apply H4; auto.
-            }
-            { repeat constructor.
-              red; intros.
-              clear H4; dest_in; discriminate.
-            }
-          * rewrite findQ_not_In_enqMP by assumption.
-            rewrite findQ_not_In_deqMP
-              by (intro Hx; subst; dest_in; discriminate).
-            apply H4; auto.
-
-        + disc_rule_conds_ex.
-          simpl; split; [atomic_init_solve_AtomicInv|].
-
-          replace (oss +[child2Idx <- pos]) with oss by meq.
-          destruct H0 as [cv ?].
-          red in H0; simpl in H0; dest.
-          exists cv.
-          red; simpl; split; [assumption|].
-          do 2 red; intros.
-          red; intros.
-          destruct (eq_nat_dec midx c2pRq).
-          * subst.
-            rewrite findQ_In_enqMP.
-            apply Forall_app.
-            { rewrite findQ_not_In_deqMP
-                by (intro Hx; subst; dest_in; discriminate).
-              apply H4; auto.
-            }
-            { repeat constructor.
-              red; intros.
-              clear H4; dest_in; discriminate.
-            }
-          * rewrite findQ_not_In_enqMP by assumption.
-            rewrite findQ_not_In_deqMP
-              by (intro Hx; subst; dest_in; discriminate).
-            apply H4; auto.
-
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-        + admit.
-
+      - inv_steps.
+        apply msiSv_impl_InvTrs_init; auto.
+        
       - inv_steps.
         specialize (IHAtomic H1 _ H9); dest.
-        (** For each rule, *)
         inv_step; dest_in.
 
-        1: {
-          exfalso.
-          disc_rule_conds_ex.
-          repeat atomic_non_init_bound_exfalso_step.
-        }
+        (** child1 *)
+
+        + atomic_cont_exfalso_bound.
+        + atomic_cont_exfalso_bound.
+        + admit.
+        + admit.
+        + atomic_cont_exfalso_bound.
+        + atomic_cont_exfalso_bound.
+        + admit.
+        + admit.
+        + atomic_cont_exfalso_bound.
+        + admit.
+
+        (* child2 *)
+
+        + atomic_cont_exfalso_bound.
+        + atomic_cont_exfalso_bound.
+        + admit.
+        + admit.
+        + atomic_cont_exfalso_bound.
+        + atomic_cont_exfalso_bound.
+        + admit.
+        + admit.
+        + atomic_cont_exfalso_bound.
+        + admit.
+
+        (* parent *)
+
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
         
     Admitted.
 
@@ -660,10 +583,9 @@ Section Inv.
       ImplStateMSI (initsOf impl).
     Proof.
       repeat red.
-      exists 0; split.
-      - right; left.
-        repeat split; right; split; reflexivity.
-      - constructor.
+      exists 0.
+      right; left.
+      repeat split; right; split; reflexivity.
     Qed.
 
     Lemma ImplStateMSI_invStep:
@@ -694,10 +616,14 @@ Section Sim.
     exact (sost#[specValueIdx] = v).
   Defined.
 
+  (** * FIXME: simulation should connect external request/response queues:
+   * while connecting them we need to include [RqInfo] as well.
+   *)
+
   Definition SimMSI: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
     fun ist sst =>
       exists cv,
-        ImplStateCoherent cv ist /\
+        ImplStateCoherent cv ist.(bst_oss) /\
         SpecState cv sst.(bst_oss).
 
   Section Facts.
@@ -707,10 +633,8 @@ Section Sim.
     Proof.
       repeat red.
       exists 0; split.
-      - split.
-        + right; left.
-          repeat split; right; split; reflexivity.
-        + constructor.
+      - right; left.
+        repeat split; right; split; reflexivity.
       - reflexivity.
     Qed.
 
