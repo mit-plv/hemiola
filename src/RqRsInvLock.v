@@ -17,14 +17,14 @@ Ltac good_locking_get obj :=
         let H := fresh "H" in
         pose proof Hlock as H;
         specialize (H (obj_idx obj)); simpl in H;
-        specialize (H (in_map _ _ _ Ho)); dest
+        specialize (H (in_map (@obj_idx _) _ _ Ho)); dest
       end;
   try match goal with
       | [Hlock: DownLockInv _ ?sys _, Ho: In obj (sys_objs ?sys) |- _] =>
         let H := fresh "H" in
         pose proof Hlock as H;
         specialize (H (obj_idx obj)); simpl in H;
-        specialize (H (in_map _ _ _ Ho)); dest
+        specialize (H (in_map (@obj_idx _) _ _ Ho)); dest
       end.
 
 Ltac disc_lock_conds :=

@@ -136,17 +136,35 @@ Ltac disc_rule_conds_const_unit :=
     let Horq := fresh "Horq" in
     destruct (orq@[i]) as [rqi|] eqn:Horq;
     [clear H; simpl in *|exfalso; auto]
-  | [H: context [(?orq@[?i]) >>=[False] (fun _ => _)] |- _] =>
-    let rqiu := fresh "rqiu" in
-    let Horq := fresh "Horq" in
-    destruct (orq@[i]) as [rqiu|] eqn:Horq;
-    [simpl in *|exfalso; auto]
+  | [H: context [(?m@[?i]) >>=[False] (fun _ => _)] |- _] =>
+    match type of m with
+    | M.t (RqInfo _) =>
+      let rqiu := fresh "rqiu" in
+      let Horq := fresh "Horq" in
+      destruct (m@[i]) as [rqiu|] eqn:Horq;
+      [simpl in *|exfalso; auto]
+    | ORq _ =>
+      let rqiu := fresh "rqiu" in
+      let Horq := fresh "Horq" in
+      destruct (m@[i]) as [rqiu|] eqn:Horq;
+      [simpl in *|exfalso; auto]
+    | M.t (OState _) =>
+      let ost := fresh "ost" in
+      let Host := fresh "Host" in
+      destruct (m@[i]) as [ost|] eqn:Host;
+      [simpl in *|exfalso; auto]
+    | OStates _ =>
+      let ost := fresh "ost" in
+      let Host := fresh "Host" in
+      destruct (m@[i]) as [ost|] eqn:Host;
+      [simpl in *|exfalso; auto]
+    end
   | [H1: ?t = _, H2: context[?t] |- _] =>
     match type of t with
     | option _ => rewrite H1 in H2; simpl in H2
     | Value => rewrite H1 in H2; simpl in H2
     end
-      
+
   | [H: (_ /\oprec _) _ _ _ |- _] => destruct H
   | [H: rule_precond _ _ _ _ |- _] => progress simpl in H
   | [H: rule_trs _ _ _ _ = _ |- _] => progress simpl in H

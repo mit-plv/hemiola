@@ -104,10 +104,10 @@ Section ORqs.
                     rqi_midx_rsb := mrsb
                  |}].
 
-  Fixpoint getRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): option (RqInfo MsgT) :=
+  Definition getRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): option (RqInfo MsgT) :=
     orq@[rqty] >>=[None] (fun rqinfo => Some rqinfo).
 
-  Fixpoint removeRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): ORq MsgT :=
+  Definition removeRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): ORq MsgT :=
     M.remove rqty orq.
 
 End ORqs.

@@ -44,6 +44,41 @@ Proof.
   intros; red; intros; mred.
 Qed.
 
+Section PredLock.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+  Hypothesis (Hrrs: RqRsSys dtr sys).
+
+  Lemma extAtomic_rsUp_acceptor_visited:
+    forall inits hst eouts,
+      ExtAtomic sys msg_dec inits hst eouts ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        forall cidx rsUp pidx,
+          In rsUp eouts ->
+          RsUpMsgFrom dtr cidx rsUp ->
+          parentIdxOf dtr cidx = Some pidx ->
+          In pidx (oindsOf hst).
+  Proof.
+  Admitted.
+
+  Lemma extAtomic_rsDown_acceptor_visited:
+    forall inits hst eouts,
+      ExtAtomic sys msg_dec inits hst eouts ->
+      forall s1 s2,
+        Reachable (steps step_m) sys s1 ->
+        steps step_m sys s1 hst s2 ->
+        forall oidx rsDown,
+          In rsDown eouts ->
+          RsDownMsgTo dtr oidx rsDown ->
+          In oidx (oindsOf hst).
+  Proof.
+  Admitted.
+
+End PredLock.
+
 Section PredMsg.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -73,15 +108,77 @@ Section PredMsg.
 
   Section Facts.
 
+    Lemma rqDown_preserves_msg_out_preds:
+      forall eouts,
+        RqDownRsUpDisj dtr eouts ->
+        Forall (fun eout =>
+                  exists oidx, RqDownRsUpIdx dtr oidx eout) eouts ->
+        forall oidx rqDown,
+          In rqDown eouts ->
+          RqDownMsgTo dtr oidx rqDown ->
+          forall P oss nost,
+            GoodMsgOutPred P ->
+            Forall (fun eout => P eout oss) eouts ->
+            Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      apply Forall_forall; intros [midx msg] ?.
+      specialize (H6 (midx, msg)); dest.
+      rewrite Forall_forall in H7; specialize (H7 _ H8).
+      rewrite Forall_forall in H3.
+      pose proof (H3 _ H8).
+      destruct H11 as [cidx ?].
+      destruct H11; [eapply H10; eauto|].
+
+      specialize (H6 _ H11).
+      eapply H6; [eassumption|].
+      apply OStatesEquivR_add.
+
+      eapply rqDownRsUpDisj_in_spec
+        with (eout1:= rqDown) (eout2:= (midx, msg)); eauto.
+      - intro Hx; subst.
+        destruct H5, H11.
+        disc_rule_conds.
+      - left; assumption.
+      - right; assumption.
+    Qed.
+
+    Corollary atomic_rqDown_preserves_msg_out_preds:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall s1 s2,
+          Reachable (steps step_m) sys s1 ->
+          steps step_m sys s1 hst s2 ->
+          forall oidx rqDown,
+            In rqDown eouts ->
+            RqDownMsgTo dtr oidx rqDown ->
+            forall P oss nost,
+              GoodMsgOutPred P ->
+              Forall (fun eout => P eout oss) eouts ->
+              Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      eapply atomic_msg_outs_ok in H2; eauto.
+      inv H2.
+      - exfalso; dest_in.
+        destruct H6, H9.
+        solve_midx_false.
+      - exfalso; dest_in.
+        destruct H6, H9.
+        disc_rule_conds.
+      - eapply rqDown_preserves_msg_out_preds; eauto.
+        eapply rqDown_rsUp_inv_msg; eauto.
+    Qed.
+
     Lemma rsUps_preserves_msg_out_preds:
       forall eouts,
         RqDownRsUpDisj dtr eouts ->
         Forall (fun eout =>
                   exists oidx, RqDownRsUpIdx dtr oidx eout) eouts ->
-        forall oidx rqTos rsUps Rp nost,
+        forall oidx rqTos rsUps Rp,
           SubList rsUps eouts ->
           RqRsDownMatch dtr oidx rqTos (idsOf rsUps) Rp ->
-          forall P oss,
+          forall P oss nost,
             GoodMsgOutPred P ->
             Forall (fun eout => P eout oss) eouts ->
             Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
@@ -137,11 +234,11 @@ Section PredMsg.
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
-          forall oidx rqTos rsUps Rp nost,
+          forall oidx rqTos rsUps Rp,
             NoDup (idsOf rsUps) ->
             SubList rsUps eouts ->
             RqRsDownMatch dtr oidx rqTos (idsOf rsUps) Rp ->
-            forall P oss,
+            forall P oss nost,
               GoodMsgOutPred P ->
               Forall (fun eout => P eout oss) eouts ->
               Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
@@ -172,16 +269,6 @@ Section PredMsg.
   End Facts.
   
 End PredMsg.
-
-Section PredLock.
-  Context {oifc: OStateIfc}.
-  Variables (dtr: DTree)
-            (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
-
-  (** TODO: design it. *)
-
-End PredLock.
 
 Close Scope list.
 Close Scope fmap.

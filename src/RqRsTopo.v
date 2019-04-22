@@ -475,7 +475,7 @@ Hint Unfold MsgsFrom MsgIdsFrom MsgsFromORq MsgsTo
 
 Hint Unfold RqToUpRule RsToUpRule : RuleConds.
 
-Hint Unfold addRq removeRq : RuleConds.
+Hint Unfold getRq addRq removeRq : RuleConds.
 
 Close Scope list.
 Close Scope fmap.
