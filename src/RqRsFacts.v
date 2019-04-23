@@ -11,6 +11,16 @@ Open Scope fmap.
 
 (** Ltacs to get conditions about [Rule]s. *)
 
+Ltac icase oidx :=
+  match goal with
+  | [H: In oidx (?h :: _) |- _] =>
+    destruct (eq_nat_dec oidx h);
+    [subst|destruct H; [exfalso; auto|]]
+  | [H: ?h = oidx \/ In oidx _ |- _] =>
+    destruct (eq_nat_dec oidx h);
+    [subst|destruct H; [exfalso; auto|]]
+  end.
+
 Ltac red_obj_rule :=
   repeat
     match goal with

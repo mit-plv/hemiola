@@ -1,8 +1,7 @@
 Require Import Bool List String Peano_dec Omega.
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsTopo RqRsFacts RqRsLang.
-Require Import RqRsInvMsg RqRsInvLock RqRsMsgPred RqRsCorrect.
+Require Import RqRsLang RqRsCorrect.
 
 Require Import Msi MsiSv SpecSv MsiSvTopo.
 
@@ -293,7 +292,6 @@ Section Inv.
       disc_rule_conds_ex;
       repeat 
         match goal with
-        | [H: SubList [_] ?eouts |- _] => apply SubList_singleton_In in H
         | [H1: AtomicMsgOutsInv _ ?eouts _, H2: In _ ?eouts |- _] =>
           red in H1; rewrite Forall_forall in H1;
           specialize (H1 _ H2); simpl in H1
@@ -314,10 +312,11 @@ Section Inv.
     Ltac atomic_init_exfalso_rq :=
       exfalso;
       disc_rule_conds_ex;
-      match goal with
-      | [H1: SubList [_] _ |- _] =>
-        apply SubList_singleton_In in H1; dest_in; discriminate
-      end.
+      repeat
+        match goal with
+        | [H: _ = _ \/ _ |- _] =>
+          destruct H; [subst; try discriminate|auto]
+        end.
 
     Ltac atomic_init_exfalso_rs_from_parent :=
       exfalso;
@@ -332,10 +331,11 @@ Section Inv.
                 end;
          unfold upRq in *;
          disc_rule_conds_ex);
-      match goal with
-      | [H1: SubList [?rsFrom] _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
-        apply SubList_singleton_In in H1; dest_in; discriminate
-      end.
+      repeat
+        match goal with
+        | [H1: _ = ?rsFrom \/ _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
+          destruct H1; [subst; try discriminate|auto]
+        end.
 
     Ltac atomic_init_exfalso_rs_to_parent :=
       exfalso;
@@ -350,10 +350,11 @@ Section Inv.
                 end;
          unfold downRq in *;
          disc_rule_conds_ex);
-      match goal with
-      | [H1: SubList [?rsFrom] _, H2: rsEdgeUpFrom _ _ = Some ?rsFrom |- _] =>
-        apply SubList_singleton_In in H1; dest_in
-      end.
+      repeat
+        match goal with
+        | [H1: _ = ?rsFrom \/ _, H2: rsEdgeUpFrom _ _ = Some ?rsFrom |- _] =>
+          destruct H1; [subst; try discriminate|auto]
+        end.
 
     Ltac atomic_init_solve_AtomicMsgOutsInv :=
       simpl; repeat constructor.
@@ -480,6 +481,66 @@ Section Inv.
       apply map_app.
     Qed.
 
+    Ltac obj_visited_rsDown oidx :=
+      try match goal with
+          | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
+            assert (In oidx (oindsOf hst))
+              by (eapply extAtomic_rsDown_acceptor_visited; eauto;
+                  [exact msiSv_impl_RqRsSys
+                  |econstructor; eassumption
+                  |red; auto])
+          end.
+
+    Ltac disc_lock_preds_with Hl oidx :=
+      match type of Hl with
+      | AtomicLocksInv _ ?hst _ =>
+        match goal with
+        | [Hin: In oidx (oindsOf ?hst) |- _] =>
+          specialize (Hl _ Hin); simpl in Hl;
+          disc_rule_conds_ex; red in Hl; simpl in Hl
+        end
+      end.
+
+    Ltac disc_lock_preds oidx :=
+      match goal with
+      | [H: AtomicLocksInv _ _ _ |- _] =>
+        let Hl := fresh "H" in
+        pose proof H as Hl;
+        disc_lock_preds_with Hl oidx
+      end.
+
+    Ltac disc_mii_caseDec :=
+      match goal with
+      | [H1: caseDec _ ?mii _ _ |- _] =>
+        match mii with
+        | miiOf (?midx, ?msg) =>
+          match goal with
+          | [H2: msg_id ?msg = ?mid |- _] =>
+            progress replace mii with (midx, mid) in H1
+              by (unfold miiOf; simpl; rewrite H2; reflexivity);
+            simpl in H1
+          end
+        end
+      end.
+
+    Ltac disc_msg_preds_with Hl Hin :=
+      match type of Hl with
+      | AtomicMsgOutsInv _ ?eouts _ =>
+        red in Hl; rewrite Forall_forall in Hl;
+        specialize (Hl _ Hin); simpl in Hl;
+        red in Hl; disc_mii_caseDec
+      end.
+
+    Ltac disc_msg_preds Hin :=
+      match goal with
+      | [H: AtomicMsgOutsInv _ _ _ |- _] =>
+        let Hl := fresh "H" in
+        pose proof H as Hl;
+        disc_msg_preds_with Hl Hin
+      end.
+    
+    Opaque upRq downRq.
+
     Ltac disc_minds_const :=
       repeat
         match goal with
@@ -493,10 +554,9 @@ Section Inv.
 
     Ltac disc_rule_custom ::=
       try disc_footprints_ok;
+      try disc_msg_case;
       try disc_AtomicInv;
       try disc_minds_const.
-
-    Opaque upRq downRq.
 
     Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.
     Proof.
@@ -522,59 +582,35 @@ Section Inv.
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
 
-      - (* [childGetRsS] *)
+      - (** [childGetRsS] *)
         disc_rule_conds_ex.
         good_footprint_get child1Idx.
         disc_rule_conds_ex.
 
-        apply SubList_singleton_In in H4.
-        pose proof H7.
-        red in H21; simpl in H21.
-        assert (In child1Idx (oindsOf hst)).
-        { eapply extAtomic_rsDown_acceptor_visited; eauto.
-          { exact msiSv_impl_RqRsSys. }
-          { econstructor; eassumption. }
-          { red; auto. }
-        }
-        specialize (H21 _ H22); clear H22.
+        (* discharge lock predicates *)
+        obj_visited_rsDown child1Idx.
+        disc_lock_preds child1Idx.
         disc_rule_conds_ex.
 
-        red in H21; simpl in H21.
-        disc_rule_conds_ex.
-
-        red in H5; rewrite Forall_forall in H5.
-        specialize (H5 _ H4); simpl in H5.
-        red in H5.
-        match goal with
-        | [H1: caseDec _ ?mii _ _ |- _] =>
-          match mii with
-          | miiOf (?midx, ?msg) =>
-            match goal with
-            | [H2: msg_id ?msg = ?mid |- _] =>
-              progress replace mii with (midx, mid) in H1
-                by (unfold miiOf; simpl; rewrite H2; reflexivity);
-                simpl in H1
-            end
-          end
-        end.
+        (* discharge message predicates *)
+        disc_msg_preds H4.
         disc_rule_conds_ex.
 
         (* construction *)
-        
         split.
         + split.
-          * match goal with
-            | [ |- AtomicMsgOutsInv _ (?rl ++ _) _ ] =>
-              replace rl with (@nil (Id Msg)) by admit
-            end.
-            repeat (constructor; simpl).
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl). }
           * red; simpl; intros.
-            destruct (eq_nat_dec oidx child1Idx);
-              [subst; clear H28
-              |destruct H28; [exfalso; auto|]].
+            icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-
         + red; simpl.
           eexists.
           right; left.
@@ -583,7 +619,33 @@ Section Inv.
           * right; split; eauto.
             congruence.
         
-      - admit.
+      - (** [childDownRqS] *)
+        disc_rule_conds_ex.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              mred; simpl; auto.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { (* previously uplocked but just visited..? *)
+              admit.
+            }
+            { mred; apply H7; auto. }
+        + destruct H6 as [cv ?]; simpl in H6.
+          exists cv; simpl.
+          apply implStateCoherent_M_downgraded_to_S; auto.
+        
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
       - admit.

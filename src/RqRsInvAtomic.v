@@ -236,13 +236,6 @@ Section Coverage.
     try disc_messages_in;
     try disc_msg_case.
 
-  Ltac icase oidx :=
-    match goal with
-    | [H: In oidx (?h :: _) |- _] =>
-      destruct (eq_nat_dec oidx h);
-      [subst|destruct H; [exfalso; auto|]]
-    end.
-
   Ltac simpl_lock :=
     match goal with
     | [H: UpLockedNew _ _ _ |- _] =>
@@ -3258,6 +3251,14 @@ Section Coverage.
   Qed.
   
 End Coverage.
+
+Ltac disc_msg_case :=
+  match goal with
+  | [H: RqUpMsgFrom _ _ _ |- _] => destruct H
+  | [H: RsDownMsgTo _ _ _ |- _] => destruct H
+  | [H: RqDownMsgTo _ _ _ |- _] => destruct H
+  | [H: RsUpMsgFrom _ _ _ |- _] => destruct H
+  end.
 
 Close Scope list.
 Close Scope fmap.

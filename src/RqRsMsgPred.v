@@ -108,6 +108,9 @@ Section PredMsg.
 
   Section Facts.
 
+    Ltac disc_rule_custom ::=
+      try disc_msg_case.
+
     Lemma rqDown_preserves_msg_out_preds:
       forall eouts,
         RqDownRsUpDisj dtr eouts ->
@@ -137,7 +140,6 @@ Section PredMsg.
       eapply rqDownRsUpDisj_in_spec
         with (eout1:= rqDown) (eout2:= (midx, msg)); eauto.
       - intro Hx; subst.
-        destruct H5, H11.
         disc_rule_conds.
       - left; assumption.
       - right; assumption.
@@ -161,10 +163,9 @@ Section PredMsg.
       eapply atomic_msg_outs_ok in H2; eauto.
       inv H2.
       - exfalso; dest_in.
-        destruct H6, H9.
+        disc_rule_conds.
         solve_midx_false.
       - exfalso; dest_in.
-        destruct H6, H9.
         disc_rule_conds.
       - eapply rqDown_preserves_msg_out_preds; eauto.
         eapply rqDown_rsUp_inv_msg; eauto.
@@ -219,8 +220,7 @@ Section PredMsg.
       destruct H12 as [rcidx [rsUp ?]]; dest.
 
       destruct (id_dec msg_dec rsUp (midx, msg)); subst.
-      - destruct H11, H14; simpl in *.
-        disc_rule_conds.
+      - disc_rule_conds.
         eapply parent_not_in_subtree; [apply Hrrs|assumption].
       - eapply outside_parent_out; [apply Hrrs| |eassumption].
         eapply rqDownRsUpDisj_in_spec
@@ -264,6 +264,44 @@ Section PredMsg.
         simpl in *; solve_midx_false.
       - eapply rsUps_preserves_msg_out_preds; eauto.
         eapply rqDown_rsUp_inv_msg; eauto.
+    Qed.
+
+    Lemma atomic_rsDown_preserves_msg_out_preds:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall s1 s2,
+          Reachable (steps step_m) sys s1 ->
+          steps step_m sys s1 hst s2 ->
+          forall oidx rsDown,
+            In rsDown eouts ->
+            RsDownMsgTo dtr oidx rsDown ->
+            forall P oss nost,
+              GoodMsgOutPred P ->
+              Forall (fun eout => P eout oss) eouts ->
+              Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      eapply atomic_msg_outs_ok in H2; eauto.
+      inv H2.
+      - exfalso; dest_in.
+        disc_rule_conds.
+      - dest_in.
+        specialize (H7 rsDown); dest.
+        specialize (H5 _ H6).
+        disc_rule_conds.
+        repeat constr_rule_conds.
+        eapply H5; [eassumption|].
+        red; intros; mred.
+        elim H9.
+        apply edgeDownTo_subtreeIndsOf_self_in; [apply Hrrs|].
+        congruence.
+      - exfalso.
+        apply rqDown_rsUp_inv_msg in H10.
+        rewrite Forall_forall in H10; specialize (H10 _ H5).
+        destruct H10 as [cidx ?].
+        destruct H2.
+        + disc_rule_conds.
+        + disc_rule_conds; solve_midx_false.
     Qed.
 
   End Facts.

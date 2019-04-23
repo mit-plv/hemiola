@@ -1,5 +1,9 @@
-Require Import Common List ListSupport HVector FMap.
-Require Import Syntax Topology RqRsTopo RqRsFacts.
+Require Import Common Omega List ListSupport HVector FMap.
+Require Import Syntax Topology Semantics SemFacts StepM Invariant Serial.
+
+Require Export RqRsTopo RqRsFacts.
+Require Export RqRsInvMsg RqRsInvLock RqRsInvSep RqRsInvAtomic.
+Require Export RqRsMsgPred.
 
 Set Implicit Arguments.
 
@@ -136,6 +140,7 @@ Ltac disc_rule_conds_const_unit :=
     let Horq := fresh "Horq" in
     destruct (orq@[i]) as [rqi|] eqn:Horq;
     [clear H; simpl in *|exfalso; auto]
+
   | [H: context [(?m@[?i]) >>=[False] (fun _ => _)] |- _] =>
     match type of m with
     | M.t (RqInfo _) =>
@@ -176,6 +181,7 @@ Ltac disc_rule_conds_const_unit :=
   | [H: map msg_id (valsOf [_]%list) = [_]%list |- _] => simpl in H; inv H
   | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
   | [H: context [hd_error [_]%list] |- _] => progress simpl in H
+  | [H: SubList [_] _ |- _] => apply SubList_singleton_In in H
   end.
 
 Ltac disc_rule_conds_const :=
