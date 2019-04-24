@@ -396,14 +396,26 @@ Section System.
   Definition ext1Idx := 3.
   Definition ext2Idx := 4.
 
+  Definition rootDmc (ridx: IdxT) :=
+    {| dmc_me := ridx;
+       dmc_ups := nil;
+       dmc_downs := nil |}.
+
   Definition topo: DTree :=
-    Node parentIdx
-         [([c1pRq; c1pRs],
-           [pc1],
-           leaf child1Idx [ec1; ecd1] [ce1] ext1Idx);
-            ([c2pRq; c2pRs],
-             [pc2],
-             leaf child2Idx [ec2; ecd2] [ce2] ext2Idx)].
+    DNode
+      (rootDmc parentIdx)
+      [(DNode {| dmc_me := child1Idx;
+                 dmc_ups := [c1pRq; c1pRs];
+                 dmc_downs := [pc1] |}
+              [DNode {| dmc_me := ext1Idx;
+                        dmc_ups := [ec1; ecd1];
+                        dmc_downs := [ce1] |} nil]);
+         (DNode {| dmc_me := child2Idx;
+                   dmc_ups := [c2pRq; c2pRs];
+                   dmc_downs := [pc2] |}
+                [DNode {| dmc_me := ext2Idx;
+                          dmc_ups := [ec2; ecd2];
+                          dmc_downs := [ce2] |} nil])].
   
   Definition impl: System ImplOStateIfc :=
     {| sys_objs :=

@@ -9,15 +9,29 @@ Section FindSome.
   Context {A B: Type}.
   Variable f: A -> option B.
 
-  Fixpoint findSome (trs: list A): option B :=
-    match trs with
+  Fixpoint find_some (al: list A): option B :=
+    match al with
     | nil => None
-    | tr :: trs' =>
-      match f tr with
-      | None => findSome trs'
+    | a :: al' =>
+      match f a with
+      | None => find_some al'
       | Some b => Some b
       end
     end.
+
+  Lemma find_some_exist:
+    forall al b,
+      find_some al = Some b ->
+      exists a,
+        In a al /\ f a = Some b.
+  Proof.
+    induction al; simpl; intros; [discriminate|].
+    destruct (f a) as [b'|] eqn:Ha.
+    - inv H; eauto.
+    - specialize (IHal _ H).
+      destruct IHal as [a' [? ?]].
+      exists a'; auto.
+  Qed.
 
 End FindSome.
 
@@ -25,127 +39,187 @@ Section Collect.
   Context {A B: Type}.
   Variable f: A -> list B.
 
-  Fixpoint collect (trs: list A): list B :=
-    match trs with
+  Fixpoint collect (al: list A): list B :=
+    match al with
     | nil => nil
-    | tr :: trs' =>
-      f tr ++ collect trs'
+    | a :: al' =>
+      f a ++ collect al'
     end.
+
+  Lemma collect_in:
+    forall al a,
+      In a al ->
+      SubList (f a) (collect al).
+  Proof.
+    induction al; simpl; intros; [exfalso; auto|].
+    destruct H; subst.
+    - apply SubList_app_1, SubList_refl.
+    - apply SubList_app_2; auto.
+  Qed.
+
+  Lemma collect_in_exist:
+    forall al b,
+      In b (collect al) ->
+      exists a, In a al /\ In b (f a).
+  Proof.
+    induction al; simpl; intros; [exfalso; auto|].
+    apply in_app_or in H; destruct H; eauto.
+    specialize (IHal _ H).
+    destruct IHal as [a' [? ?]].
+    eauto.
+  Qed.
 
 End Collect.
 
+(** The Coq standard library already has an equivalent definition [Exists]
+ * but it does not guarantee termination when involved with mutually inductive
+ * structures.
+ *)
+Section Exists.
+  Context {A: Type}.
+  Variable f: A -> Prop.
+
+  Fixpoint Exists (al: list A): Prop :=
+    match al with
+    | nil => False
+    | a :: al' =>
+      f a \/ Exists al'
+    end.
+
+  Lemma exists_exists:
+    forall al,
+      Exists al ->
+      exists a, In a al /\ f a.
+  Proof.
+    induction al; simpl; intros; [exfalso; auto|].
+    destruct H; firstorder.
+  Qed.
+
+  Lemma exists_in:
+    forall a al, In a al -> f a -> Exists al.
+  Proof.
+    induction al; simpl; intros; auto.
+    destruct H; subst; auto.
+  Qed.
+  
+End Exists.
+
 Section DTree.
 
+  Record dmc :=
+    { dmc_me: IdxT;
+      dmc_ups: list IdxT;
+      dmc_downs: list IdxT
+    }.
+
   Inductive DTree :=
-  | Leaf: DTree
-  | Node: IdxT -> list (list IdxT (* upward edges *) *
-                        list IdxT (* downward edges *) *
-                        DTree (* child *)) -> DTree.
+  | DNode: dmc -> list DTree -> DTree.
 
-  Section DTree_ind'.
+  Fixpoint dtree_dec (dtr1 dtr2: DTree): {dtr1 = dtr2} + {dtr1 <> dtr2}.
+  Proof.
+    intros.
+    decide equality.
+    - apply (list_eq_dec dtree_dec).
+    - decide equality.
+      + apply (list_eq_dec eq_nat_dec).
+      + apply (list_eq_dec eq_nat_dec).
+      + apply eq_nat_dec.
+  Defined.
+
+  Section DTree_ind2.
     Variable P: DTree -> Prop.
-    Hypotheses (H0: P Leaf)
-               (H1: forall i cs,
-                   Forall (fun ic => P (snd ic)) cs ->
-                   P (Node i cs)).
+    Hypotheses (H: forall i cs, Forall P cs -> P (DNode i cs)).
 
-    Fixpoint DTree_ind' (dtr: DTree): P dtr :=
+    Fixpoint DTree_ind2 (dtr: DTree): P dtr :=
       match dtr with
-      | Leaf => H0
-      | Node i cs =>
-        H1 i (list_ind
-                (fun cs => Forall (fun ic => P (snd ic)) cs)
-                (Forall_nil _)
-                (fun ic _ IH =>
-                   Forall_cons ic (DTree_ind' (snd ic)) IH) cs)
+      | DNode i cs =>
+        H i (list_ind
+               (fun cs => Forall P cs)
+               (Forall_nil _)
+               (fun ic _ IH =>
+                  Forall_cons ic (DTree_ind2 ic) IH) cs)
       end.
-  End DTree_ind'.
+  End DTree_ind2.
 
-  Definition rootOf (dtr: DTree): option IdxT :=
+  Definition rootOf (dtr: DTree): IdxT :=
     match dtr with
-    | Leaf => None
-    | Node root _ => Some root
+    | DNode root _ => root.(dmc_me)
+    end.
+
+  Definition dmcOf (dtr: DTree): dmc :=
+    match dtr with
+    | DNode root _ => root
     end.
 
   Definition childrenOf (dtr: DTree): list DTree :=
     match dtr with
-    | Leaf => nil
-    | Node _ cs => map snd cs
+    | DNode _ cs => cs
     end.
 
-  Definition childrenIndsOf (dtr: DTree): list (option IdxT) :=
+  Definition childrenIndsOf (dtr: DTree): list IdxT :=
     map rootOf (childrenOf dtr).
 
-  Fixpoint parentOf (dtr: DTree) (idx: IdxT): option DTree :=
+  Fixpoint parentOf (idx: IdxT) (dtr: DTree): option DTree :=
     match dtr with
-    | Leaf => None
-    | Node root cs =>
-      if in_dec (option_dec eq_nat_dec) (Some idx)
-                (map rootOf (map snd cs))
+    | DNode root cs =>
+      if in_dec eq_nat_dec idx (map rootOf cs)
       then Some dtr
-      else findSome (fun ic => parentOf (snd ic) idx) cs
+      else find_some (parentOf idx) cs
     end.
 
   Fixpoint indsOf (dtr: DTree): list IdxT :=
     match dtr with
-    | Leaf => nil
-    | Node root cs =>
-      root :: collect (fun ic => indsOf (snd ic)) cs
+    | DNode root cs =>
+      root.(dmc_me) :: collect indsOf cs
     end.
 
   Fixpoint chnsOf (dtr: DTree): list IdxT :=
     match dtr with
-    | Leaf => nil
-    | Node _ cs =>
-      (concat (map (fun ic => fst (fst ic)) cs))
-        ++ (concat (map (fun ic => snd (fst ic)) cs))
-        ++ collect (fun ic => chnsOf (snd ic)) cs
+    | DNode root cs =>
+      root.(dmc_ups) ++ root.(dmc_downs) ++ collect chnsOf cs
     end.
 
-  Fixpoint subtree (dtr: DTree) (idx: IdxT): option DTree :=
+  Fixpoint subtree (idx: IdxT) (dtr: DTree): option DTree :=
     match dtr with
-    | Leaf => None
-    | Node root cs =>
-      if eq_nat_dec root idx then (Some dtr)
-      else findSome (fun ic => subtree (snd ic) idx) cs
+    | DNode root cs =>
+      if eq_nat_dec root.(dmc_me) idx
+      then Some dtr
+      else find_some (subtree idx) cs
+    end.
+
+  Fixpoint Subtree (str dtr: DTree): Prop :=
+    str = dtr \/
+    match dtr with
+    | DNode root cs =>
+      Exists (Subtree str) cs
     end.
 
   Definition subtreeIndsOf (dtr: DTree) (idx: IdxT): list IdxT :=
-    (subtree dtr idx) >>=[nil] (fun tr => indsOf tr).
+    (subtree idx dtr) >>=[nil] (fun tr => indsOf tr).
 
-  Definition childChnsOf
-             (cs: list (list IdxT * list IdxT * DTree))
-             (idx: IdxT):
-    option (list IdxT * list IdxT * DTree) :=
-    find (fun ic =>
-            if option_dec eq_nat_dec (Some idx) (rootOf (snd ic))
-            then true
-            else false) cs.
+  Definition hasIdx (idx: IdxT) (dtr: DTree): option DTree :=
+    if eq_nat_dec (rootOf dtr) idx
+    then Some dtr
+    else None.
   
-  Fixpoint parentChnsOf (dtr: DTree) (idx: IdxT):
-    option (list IdxT * list IdxT * IdxT (* parent index *)) :=
+  Fixpoint parentChnsOf (idx: IdxT) (dtr: DTree):
+    option (dmc * IdxT (* parent index *)) :=
     match dtr with
-    | Leaf => None
-    | Node root cs =>
-      match childChnsOf cs idx with
-      | Some ic => Some (fst ic, root)
-      | None => findSome (fun ic => parentChnsOf (snd ic) idx) cs
+    | DNode root cs =>
+      match find_some (hasIdx idx) cs with
+      | Some (DNode croot _) => Some (croot, root.(dmc_me))
+      | None => find_some (parentChnsOf idx) cs
       end
     end.
   
   Definition upEdgesFrom (dtr: DTree) (idx: IdxT): list IdxT :=
-    (parentChnsOf dtr idx)
-      >>=[nil]
-      (fun udp => fst (fst udp)).
-         
+    (parentChnsOf idx dtr) >>=[nil] (fun udp => dmc_ups (fst udp)).
+  
   Definition downEdgesTo (dtr: DTree) (idx: IdxT): list IdxT :=
-    (parentChnsOf dtr idx)
-      >>=[nil]
-      (fun udp => snd (fst udp)).
+    (parentChnsOf idx dtr) >>=[nil] (fun udp => dmc_downs (fst udp)).
 
   Definition parentIdxOf (dtr: DTree) (idx: IdxT): option IdxT :=
-    (parentChnsOf dtr idx)
-      >>= (fun udp => Some (snd udp)).
+    (parentChnsOf idx dtr) >>= (fun udp => Some (snd udp)).
 
   (** Well-formedness *)
 
@@ -156,191 +230,674 @@ Section DTree.
     NoDup (chnsOf dtr).
 
   Definition WfDTree (dtr: DTree): Prop :=
-    UniqueInds dtr /\
-    UniqueChns dtr.
+    UniqueInds dtr /\ UniqueChns dtr.
   
 End DTree.
 
 Section Facts.
-  Variable dtr: DTree.
-  Hypothesis Hwf: WfDTree dtr.
+
+  Ltac dtree_ind dtr :=
+    let root := fresh "root" in
+    let cs := fresh "cs" in
+    induction dtr as [root cs] using DTree_ind2; simpl; intros.
+
+  Ltac disc_find_some :=
+    match goal with
+    | [H: find_some _ _ = Some _ |- _] =>
+      let ctr := fresh "ctr" in
+      apply find_some_exist in H;
+      destruct H as [ctr [? ?]]
+    end.
+
+  Ltac disc_exists :=
+    match goal with
+    | [H: Exists _ _ |- _] =>
+      let ctr := fresh "ctr" in
+      apply exists_exists in H;
+      destruct H as [ctr ?]; dest
+    end.
+
+  Ltac disc_forall_in :=
+    match goal with
+    | [H1: Forall _ ?cs, H2: In _ ?cs |- _] =>
+      let Hf := fresh "H" in
+      pose proof H1 as Hf;
+      rewrite Forall_forall in Hf;
+      specialize (Hf _ H2)
+    end.
+
+  Lemma rootOf_dmcOf:
+    forall dtr,
+      rootOf dtr = dmc_me (dmcOf dtr).
+  Proof.
+    intros; destruct dtr; reflexivity.
+  Qed.
+
+  Lemma uniqueInds_child:
+    forall root cs,
+      UniqueInds (DNode root cs) ->
+      forall ctr,
+        In ctr cs ->
+        UniqueInds ctr.
+  Proof.
+    unfold UniqueInds; intros.
+    simpl in H.
+    inv H.
+    clear -H0 H4.
+    induction cs; [inv H0|].
+    destruct H0; subst.
+    - eapply NoDup_app_weakening_1; eauto.
+    - apply IHcs; auto.
+      eapply NoDup_app_weakening_2; eauto.
+  Qed.
+
+  Lemma uniqueChns_child:
+    forall root cs,
+      UniqueChns (DNode root cs) ->
+      forall ctr,
+        In ctr cs ->
+        UniqueChns ctr.
+  Proof.
+    unfold UniqueChns; intros.
+    simpl in H.
+    do 2 apply NoDup_app_weakening_2 in H.
+    clear -H H0.
+    induction cs; [inv H0|].
+    destruct H0; subst.
+    - eapply NoDup_app_weakening_1; eauto.
+    - apply IHcs; auto.
+      eapply NoDup_app_weakening_2; eauto.
+  Qed.
+
+  Lemma wfDTree_child:
+    forall root cs,
+      WfDTree (DNode root cs) ->
+      forall ctr,
+        In ctr cs ->
+        WfDTree ctr.
+  Proof.
+    intros; destruct H; split.
+    - eapply uniqueInds_child; eauto.
+    - eapply uniqueChns_child; eauto.
+  Qed.
+
+  Lemma indsOf_self_in:
+    forall dtr,
+      In (rootOf dtr) (indsOf dtr).
+  Proof.
+    destruct dtr as [root cs]; simpl; auto.
+  Qed.
+
+  Lemma childrenOf_indsOf:
+    forall ctr dtr,
+      In ctr (childrenOf dtr) ->
+      SubList (indsOf ctr) (indsOf dtr).
+  Proof.
+    destruct dtr as [root cs]; simpl; intros.
+    apply SubList_cons_right.
+    apply collect_in; auto.
+  Qed.
+
+  Lemma parent_idx_not_in_children:
+    forall dtr ctr,
+      WfDTree dtr ->
+      In ctr (childrenOf dtr) ->
+      ~ In (rootOf dtr) (indsOf ctr).
+  Proof.
+    destruct dtr as [root cs]; intros.
+    destruct H.
+    red in H; simpl in H.
+    inv H.
+    intro Hx; elim H4.
+    eapply collect_in; eauto.
+  Qed.
+
+  Lemma hasIdx_Some:
+    forall idx dtr tr,
+      hasIdx idx dtr = Some tr ->
+      tr = dtr /\ rootOf dtr = idx.
+  Proof.
+    intros; unfold hasIdx in H.
+    find_if_inside; [|discriminate].
+    inv H; auto.
+  Qed.
+
+  Lemma subtree_rootOf:
+    forall idx dtr str,
+      subtree idx dtr = Some str ->
+      rootOf str = idx.
+  Proof.
+    dtree_ind dtr; simpl; intros.
+    find_if_inside.
+    - inv H0; reflexivity.
+    - disc_find_some.
+      disc_forall_in.
+      eauto.
+  Qed.
+
+  Lemma subtree_Subtree:
+    forall dtr idx str,
+      subtree idx dtr = Some str ->
+      Subtree str dtr.
+  Proof.
+    dtree_ind dtr.
+    find_if_inside; subst; [inv H0; auto|].
+    disc_find_some.
+    disc_forall_in.
+    right; eapply exists_in; eauto.
+  Qed.
+
+  Lemma Subtree_wfDTree:
+    forall dtr str,
+      WfDTree dtr ->
+      Subtree str dtr ->
+      WfDTree str.
+  Proof.
+    dtree_ind dtr.
+    destruct H1; subst; auto.
+    disc_exists.
+    disc_forall_in.
+    eapply H3; eauto.
+    eapply wfDTree_child; eauto.
+  Qed.
+
+  Lemma Subtree_refl:
+    forall dtr, Subtree dtr dtr.
+  Proof.
+    dtree_ind dtr; auto.
+  Qed.
+
+  Lemma child_Subtree:
+    forall dtr ctr,
+      In ctr (childrenOf dtr) ->
+      Subtree ctr dtr.
+  Proof.
+    dtree_ind dtr.
+    right; eapply exists_in; eauto.
+    apply Subtree_refl.
+  Qed.
+
+  Lemma Subtree_child:
+    forall dtr ctr str,
+      Subtree str dtr ->
+      In ctr (childrenOf str) ->
+      Subtree ctr dtr.
+  Proof.
+    dtree_ind dtr.
+    destruct H0; subst.
+    - simpl in *.
+      right; eapply exists_in; eauto.
+      apply Subtree_refl.
+    - disc_exists.
+      right; eapply exists_in; eauto.
+      disc_forall_in; eauto.
+  Qed.
+
+  Lemma Subtree_trans:
+    forall {dtr1 dtr2},
+      Subtree dtr1 dtr2 ->
+      forall {dtr3},
+        Subtree dtr2 dtr3 ->
+        Subtree dtr1 dtr3.
+  Proof.
+    dtree_ind dtr2; simpl; intros.
+    destruct H0; subst; auto.
+    disc_exists.
+    rewrite Forall_forall in H.
+    eapply H; eauto.
+    eapply Subtree_child; eauto.
+  Qed.
+
+  Lemma Subtree_indsOf:
+    forall str dtr,
+      Subtree str dtr ->
+      SubList (indsOf str) (indsOf dtr).
+  Proof.
+    dtree_ind dtr.
+    destruct H0; subst; [apply SubList_refl|].
+    disc_exists.
+    disc_forall_in.
+    apply SubList_cons_right.
+    eapply SubList_trans; [eauto|].
+    apply collect_in; auto.
+  Qed.
+
+  Lemma children_disj:
+    forall dtr,
+      WfDTree dtr ->
+      forall ctr1 ctr2,
+        In ctr1 (childrenOf dtr) ->
+        In ctr2 (childrenOf dtr) ->
+        ctr1 <> ctr2 ->
+        DisjList (indsOf ctr1) (indsOf ctr2).
+  Proof.
+    destruct dtr as [root cs]; simpl; intros.
+    destruct H.
+    inv H.
+    clear -H0 H1 H2 H7.
+    induction cs; [inv H0|].
+    destruct H0; subst.
+    - destruct H1; subst; [exfalso; auto|].
+      simpl in H7; apply (DisjList_NoDup eq_nat_dec) in H7.
+      apply DisjList_comm in H7.
+      eapply DisjList_comm, DisjList_SubList; [|eassumption].
+      apply collect_in; auto.
+    - destruct H1; subst.
+      + simpl in H7; apply (DisjList_NoDup eq_nat_dec) in H7.
+        apply DisjList_comm in H7.
+        eapply DisjList_SubList; [|eassumption].
+        apply collect_in; auto.
+      + apply IHcs; auto.
+        eapply NoDup_app_weakening_2; eauto.
+  Qed.
+
+  Lemma rootOf_Subtree_eq:
+    forall dtr,
+      WfDTree dtr ->
+      forall str1 str2,
+        Subtree str1 dtr ->
+        Subtree str2 dtr ->
+        rootOf str1 = rootOf str2 ->
+        str1 = str2.
+  Proof.
+    dtree_ind dtr.
+    destruct H1, H2; subst; auto.
+    - exfalso; simpl in *.
+      disc_exists.
+      elim (parent_idx_not_in_children _ H0 H1).
+      simpl; rewrite H3.
+      eapply Subtree_indsOf; [eassumption|].
+      apply indsOf_self_in.
+    - exfalso; simpl in *.
+      disc_exists.
+      elim (parent_idx_not_in_children _ H0 H1).
+      simpl; rewrite <-H3.
+      eapply Subtree_indsOf; [eassumption|].
+      apply indsOf_self_in.
+    - do 2 disc_exists.
+      destruct (dtree_dec ctr ctr0); subst.
+      + disc_forall_in.
+        eapply H6; eauto.
+        eapply wfDTree_child; eauto.
+      + exfalso.
+        eapply children_disj in n; eauto.
+        apply Subtree_indsOf in H4.
+        apply Subtree_indsOf in H5.
+        eapply DisjList_SubList in n; [|eassumption].
+        eapply DisjList_comm, DisjList_SubList in n; [|eassumption].
+        apply DisjList_comm in n.
+        destruct (n (rootOf str1)).
+        * elim H6; rewrite H3; apply indsOf_self_in.
+        * elim H6; apply indsOf_self_in.
+  Qed.
+
+  Lemma Subtree_subtree:
+    forall dtr,
+      WfDTree dtr ->
+      forall ctr,
+        Subtree ctr dtr ->
+        subtree (rootOf ctr) dtr = Some ctr.
+  Proof.
+    dtree_ind dtr.
+    find_if_inside.
+    - f_equal.
+      eapply rootOf_Subtree_eq; eauto.
+      apply Subtree_refl.
+    - destruct H1; [subst; elim n; auto|].
+      disc_exists.
+      disc_forall_in.
+      specialize (H3 (wfDTree_child H0 _ H1) _ H2).
+      pose proof (children_disj H0); simpl in H4.
+    
+  Admitted.
+
+  Lemma subtreeIndsOf_indsOf:
+    forall dtr,
+      WfDTree dtr ->
+      forall ctr,
+        Subtree ctr dtr ->
+        subtreeIndsOf dtr (rootOf ctr) = indsOf ctr.
+  Proof.
+    intros.
+    apply Subtree_subtree in H0; [|assumption].
+    unfold subtreeIndsOf; rewrite H0; reflexivity.
+  Qed.
+
+  Lemma Subtree_subtreeIndsOf_self_in:
+    forall dtr,
+      WfDTree dtr ->
+      forall str,
+        Subtree str dtr ->
+        In (rootOf str) (subtreeIndsOf dtr (rootOf str)).
+  Proof.
+    intros.
+    unfold subtreeIndsOf.
+    rewrite Subtree_subtree by assumption.
+    simpl; apply indsOf_self_in.
+  Qed.
   
-  Lemma parentIdxOf_not_eq:
-    forall idx pidx,
-      parentIdxOf dtr idx = Some pidx ->
-      idx <> pidx.
-  Proof.
-  Admitted.
+  Section Wf.
+    Variable dtr: DTree.
+    Hypothesis Hwf: WfDTree dtr.
 
-  Lemma parentIdxOf_asym:
-    forall oidx1 oidx2,
-      parentIdxOf dtr oidx1 = Some oidx2 ->
-      parentIdxOf dtr oidx2 = Some oidx1 ->
-      False.
-  Proof.
-  Admitted.
+    Lemma parentChnsOf_Subtree:
+      forall cidx croot pidx,
+        parentChnsOf cidx dtr = Some (croot, pidx) ->
+        exists ctr ptr,
+          Subtree ptr dtr /\ rootOf ptr = pidx /\
+          dmcOf ctr = croot /\ croot.(dmc_me) = cidx /\
+          In ctr (childrenOf ptr).
+    Proof.
+      dtree_ind dtr.
+      destruct (find_some (hasIdx cidx) cs) as [[croot' ccs]|] eqn:Hctr.
+      - inv H0.
+        disc_find_some.
+        apply hasIdx_Some in H1; dest; subst.
+        exists (DNode croot ccs), (DNode root cs).
+        repeat split; auto.
+      - disc_find_some.
+        disc_forall_in.
+        specialize (H2 (wfDTree_child Hwf _ H0) _ _ _ H1).
+        destruct H2 as [cdtr [ptr ?]]; dest.
+        exists cdtr, ptr.
+        repeat split; auto.
+        assert (Subtree ctr (DNode root cs))
+          by (apply child_Subtree; assumption).
+        apply (Subtree_trans H2 H7).
+    Qed.
 
-  Lemma parentChnsOf_Some_in_tree:
-    forall dtr oidx chns,
-      parentChnsOf dtr oidx = Some chns ->
-      In oidx (indsOf dtr).
-  Proof.
-  Admitted.
+    Corollary parentIdxOf_Subtree:
+      forall cidx pidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        exists ctr ptr,
+          Subtree ptr dtr /\ rootOf ptr = pidx /\
+          rootOf ctr = cidx /\ In ctr (childrenOf ptr).
+    Proof.
+      unfold parentIdxOf; intros.
+      destruct (parentChnsOf cidx dtr) as [[croot pidx']|] eqn:Hcp;
+        [|discriminate].
+      inv H.
+      apply parentChnsOf_Subtree in Hcp.
+      destruct Hcp as [ctr [ptr ?]]; dest; subst.
+      exists ctr, ptr.
+      repeat split; auto.
+      destruct ctr; reflexivity.
+    Qed.
 
-  Lemma parentChnsOf_NoDup:
-    forall idx ups downs pidx,
-      parentChnsOf dtr idx = Some (ups, downs, pidx) ->
-      NoDup (ups ++ downs).
-  Proof.
-  Admitted.
+    Lemma parentIdxOf_not_eq:
+      forall idx pidx,
+        parentIdxOf dtr idx = Some pidx ->
+        idx <> pidx.
+    Proof.
+      intros.
+      apply parentIdxOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      pose proof (Subtree_wfDTree _ Hwf H).
+      apply parent_idx_not_in_children in H2; [|assumption].
+      intro Hx; subst; elim H2.
+      rewrite <-Hx.
+      apply indsOf_self_in.
+    Qed.
 
-  Lemma parentChnsOf_DisjList:
-    forall idx1 ups1 downs1 pidx1 idx2 ups2 downs2 pidx2,
-      idx1 <> idx2 ->
-      parentChnsOf dtr idx1 = Some (ups1, downs1, pidx1) ->
-      parentChnsOf dtr idx2 = Some (ups2, downs2, pidx2) ->
-      DisjList (ups1 ++ downs1) (ups2 ++ downs2).
-  Proof.
-  Admitted.
+    Lemma parentIdxOf_asym:
+      forall oidx1 oidx2,
+        parentIdxOf dtr oidx1 = Some oidx2 ->
+        parentIdxOf dtr oidx2 = Some oidx1 ->
+        False.
+    Proof.
+      intros.
+      apply parentIdxOf_Subtree in H.
+      destruct H as [ctr1 [ptr1 ?]].
+      apply parentIdxOf_Subtree in H0.
+      destruct H0 as [ctr2 [ptr2 ?]].
+      dest; subst.
+      pose proof (Subtree_trans (child_Subtree _ _ H6) H).
+      pose proof (Subtree_trans (child_Subtree _ _ H3) H0).
+      eapply rootOf_Subtree_eq in H1; eauto; subst.
+      eapply rootOf_Subtree_eq in H2; eauto; subst.
+      apply parent_idx_not_in_children in H3.
+      - elim H3.
+        eapply childrenOf_indsOf; [eassumption|].
+        apply indsOf_self_in.
+      - eapply Subtree_wfDTree; eauto.
+    Qed.
 
-  Lemma subtreeIndsOf_composed:
-    forall oidx roidx,
-      In oidx (subtreeIndsOf dtr roidx) ->
-      oidx = roidx \/
-      (exists cidx,
-          parentIdxOf dtr cidx = Some roidx /\
-          In oidx (subtreeIndsOf dtr cidx)).
-  Proof.
-  Admitted.
+    Lemma parentChnsOf_Some_in_tree:
+      forall oidx cp,
+        parentChnsOf oidx dtr = Some cp ->
+        In oidx (indsOf dtr).
+    Proof.
+      destruct cp as [croot pidx]; intros.
+      apply parentChnsOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      eapply Subtree_indsOf; [eassumption|].
+      eapply childrenOf_indsOf; [eassumption|].
+      rewrite <-rootOf_dmcOf.
+      eapply indsOf_self_in.
+    Qed.
 
-  (* Just need to make sure an object is in the tree --
-   * [parentChnsOf] provides enough information. *)
-  Lemma parentChnsOf_subtreeIndsOf_self_in:
-    forall cidx,
-      parentChnsOf dtr cidx <> None ->
-      In cidx (subtreeIndsOf dtr cidx).
-  Proof.
-  Admitted.
+    Lemma indsOf_composed:
+      forall oidx root cs,
+        In oidx (indsOf (DNode root cs)) ->
+        oidx = root.(dmc_me) \/
+        (exists ctr, In ctr cs /\ In oidx (indsOf ctr)).
+    Proof.
+      simpl; intros.
+      destruct H; auto.
+      apply collect_in_exist in H.
+      destruct H as [ctr [? ?]].
+      eauto.
+    Qed.
 
-  (* Just need to make sure an object is in the tree --
-   * [parentIdxOf] provides enough information. *)
-  Lemma parent_subtreeIndsOf_self_in:
-    forall cidx oidx,
-      parentIdxOf dtr cidx = Some oidx ->
-      In oidx (subtreeIndsOf dtr oidx).
-  Proof.
-  Admitted.
+    Lemma subtreeIndsOf_composed:
+      forall oidx roidx,
+        In oidx (subtreeIndsOf dtr roidx) ->
+        oidx = roidx \/
+        (exists cidx,
+            parentIdxOf dtr cidx = Some roidx /\
+            In oidx (subtreeIndsOf dtr cidx)).
+    Proof.
+      intros.
+      unfold subtreeIndsOf in H.
+      destruct (subtree roidx dtr) as [[root cs]|] eqn:Htr; [|inv H].
+      apply indsOf_composed in H.
+      destruct H; subst.
+      - left; apply subtree_rootOf in Htr; assumption.
+      - right.
+        destruct H as [ctr [? ?]].
+        exists (rootOf ctr).
+        split.
+        + admit.
+        + rewrite subtreeIndsOf_indsOf; auto.
+          apply subtree_Subtree in Htr.
+          eapply Subtree_trans; [|eassumption].
+          apply child_Subtree; auto.
+    Admitted.
 
-  Lemma subtreeIndsOf_child_in:
-    forall cidx pidx,
-      parentIdxOf dtr cidx = Some pidx ->
-      In cidx (subtreeIndsOf dtr pidx).
-  Proof.
-  Admitted.
+    Lemma parentChnsOf_subtreeIndsOf_self_in:
+      forall cidx,
+        parentChnsOf cidx dtr <> None ->
+        In cidx (subtreeIndsOf dtr cidx).
+    Proof.
+      intros.
+      destruct (parentChnsOf cidx dtr) as [[croot pidx]|] eqn:Hcp;
+        [|exfalso; auto].
+      apply parentChnsOf_Subtree in Hcp.
+      destruct Hcp as [ctr [ptr ?]]; dest; subst.
+      rewrite <-rootOf_dmcOf.
+      apply Subtree_subtreeIndsOf_self_in; auto.
+      eapply Subtree_trans; [|eassumption].
+      apply child_Subtree; auto.
+    Qed.
 
-  Lemma subtreeIndsOf_child_disj:
-    forall cidx1 cidx2 pidx,
-      cidx1 <> cidx2 ->
-      parentIdxOf dtr cidx1 = Some pidx ->
-      parentIdxOf dtr cidx2 = Some pidx ->
-      DisjList (subtreeIndsOf dtr cidx1) (subtreeIndsOf dtr cidx2).
-  Proof.
-  Admitted.
+    Lemma parent_subtreeIndsOf_self_in:
+      forall cidx oidx,
+        parentIdxOf dtr cidx = Some oidx ->
+        In oidx (subtreeIndsOf dtr oidx).
+    Proof.
+      intros.
+      apply parentIdxOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      apply Subtree_subtreeIndsOf_self_in; auto.
+    Qed.
 
-  Lemma subtreeIndsOf_other_child_not_in:
-    forall cidx1 cidx2 pidx,
-      cidx1 <> cidx2 ->
-      parentIdxOf dtr cidx1 = Some pidx ->
-      parentIdxOf dtr cidx2 = Some pidx ->
-      ~ In cidx1 (subtreeIndsOf dtr cidx2).
-  Proof.
-    intros.
-    pose proof (subtreeIndsOf_child_disj H H0 H1).
-    specialize (H2 cidx1).
-    destruct H2; [elim H2|auto].
-    apply parentChnsOf_subtreeIndsOf_self_in.
-    unfold parentIdxOf in H0.
-    destruct (parentChnsOf dtr cidx1);
-      simpl in *; discriminate.
-  Qed.
+    Lemma subtreeIndsOf_child_in:
+      forall cidx pidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        In cidx (subtreeIndsOf dtr pidx).
+    Proof.
+      intros.
+      apply parentIdxOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      rewrite subtreeIndsOf_indsOf by assumption.
+      eapply childrenOf_indsOf; [eassumption|].
+      apply indsOf_self_in.
+    Qed.
 
-  Lemma parent_not_in_subtree:
-    forall oidx pidx,
-      parentIdxOf dtr oidx = Some pidx ->
-      ~ In pidx (subtreeIndsOf dtr oidx).
-  Proof.
-  Admitted.
+    Lemma subtreeIndsOf_child_disj:
+      forall cidx1 cidx2 pidx,
+        cidx1 <> cidx2 ->
+        parentIdxOf dtr cidx1 = Some pidx ->
+        parentIdxOf dtr cidx2 = Some pidx ->
+        DisjList (subtreeIndsOf dtr cidx1) (subtreeIndsOf dtr cidx2).
+    Proof.
+    Admitted.
 
-  Lemma inside_child_in:
-    forall cidx pidx oidx,
-      parentIdxOf dtr cidx = Some pidx ->
-      In pidx (subtreeIndsOf dtr oidx) ->
-      In cidx (subtreeIndsOf dtr oidx).
-  Proof.
-  Admitted.
+    Lemma subtreeIndsOf_other_child_not_in:
+      forall cidx1 cidx2 pidx,
+        cidx1 <> cidx2 ->
+        parentIdxOf dtr cidx1 = Some pidx ->
+        parentIdxOf dtr cidx2 = Some pidx ->
+        ~ In cidx1 (subtreeIndsOf dtr cidx2).
+    Proof.
+      intros.
+      pose proof (subtreeIndsOf_child_disj H H0 H1).
+      specialize (H2 cidx1).
+      destruct H2; [elim H2|auto].
+      apply parentChnsOf_subtreeIndsOf_self_in.
+      unfold parentIdxOf in H0.
+      destruct (parentChnsOf cidx1 dtr);
+        simpl in *; discriminate.
+    Qed.
 
-  Lemma inside_parent_in:
-    forall cidx pidx oidx,
-      parentIdxOf dtr cidx = Some pidx ->
-      In cidx (subtreeIndsOf dtr oidx) ->
-      cidx <> oidx ->
-      In pidx (subtreeIndsOf dtr oidx).
-  Proof.
-  Admitted.
+    Lemma parent_not_in_subtree:
+      forall oidx pidx,
+        parentIdxOf dtr oidx = Some pidx ->
+        ~ In pidx (subtreeIndsOf dtr oidx).
+    Proof.
+      intros.
+      apply parentIdxOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      rewrite subtreeIndsOf_indsOf.
+      - eapply parent_idx_not_in_children in H2; [eassumption|].
+        eapply Subtree_wfDTree; eauto.
+      - assumption.
+      - eapply Subtree_trans; [|eassumption].
+        eapply Subtree_child; eauto.
+        apply Subtree_refl.
+    Qed.
 
-  Lemma outside_child_in:
-    forall oidx cidx pidx,
-      ~ In pidx (subtreeIndsOf dtr oidx) ->
-      parentIdxOf dtr cidx = Some pidx ->
-      cidx = oidx \/ ~ In cidx (subtreeIndsOf dtr oidx).
-  Proof.
-  Admitted.
+    Lemma subtreeIndsOf_SubList:
+      forall oidx1 oidx2,
+        In oidx1 (subtreeIndsOf dtr oidx2) ->
+        SubList (subtreeIndsOf dtr oidx1) (subtreeIndsOf dtr oidx2).
+    Proof.
+    Admitted.
 
-  Lemma outside_parent_out:
-    forall oidx cidx pidx,
-      ~ In cidx (subtreeIndsOf dtr oidx) ->
-      parentIdxOf dtr cidx = Some pidx ->
-      ~ In pidx (subtreeIndsOf dtr oidx).
-  Proof.
-  Admitted.
+    Lemma inside_child_in:
+      forall cidx pidx oidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        In pidx (subtreeIndsOf dtr oidx) ->
+        In cidx (subtreeIndsOf dtr oidx).
+    Proof.
+      intros.
+      apply subtreeIndsOf_SubList in H0.
+      apply H0.
+      apply subtreeIndsOf_child_in; auto.
+    Qed.
 
-  Lemma inside_child_outside_parent_case:
-    forall cidx pidx oidx,
-      parentIdxOf dtr cidx = Some pidx ->
-      In cidx (subtreeIndsOf dtr oidx) ->
-      ~ In pidx (subtreeIndsOf dtr oidx) ->
-      cidx = oidx.
-  Proof.
-    intros.
-    destruct (eq_nat_dec cidx oidx); auto.
-    eapply inside_parent_in in H; try eassumption.
-    exfalso; auto.
-  Qed.
+    Lemma outside_parent_out:
+      forall oidx cidx pidx,
+        ~ In cidx (subtreeIndsOf dtr oidx) ->
+        parentIdxOf dtr cidx = Some pidx ->
+        ~ In pidx (subtreeIndsOf dtr oidx).
+    Proof.
+      intros.
+      intro Hx; elim H.
+      eapply inside_child_in; eauto.
+    Qed.
 
-  Lemma subtreeIndsOf_In_each_other_eq:
-    forall oidx1 oidx2,
-      In oidx1 (subtreeIndsOf dtr oidx2) ->
-      In oidx2 (subtreeIndsOf dtr oidx1) ->
-      oidx1 = oidx2.
-  Proof.
-  Admitted.
+    Lemma inside_parent_in:
+      forall cidx pidx oidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        In cidx (subtreeIndsOf dtr oidx) ->
+        cidx <> oidx ->
+        In pidx (subtreeIndsOf dtr oidx).
+    Proof.
+    Admitted.
 
-  Lemma subtreeIndsOf_SubList:
-    forall oidx1 oidx2,
-      In oidx1 (subtreeIndsOf dtr oidx2) ->
-      SubList (subtreeIndsOf dtr oidx1) (subtreeIndsOf dtr oidx2).
-  Proof.
-  Admitted.
+    Lemma outside_child_in:
+      forall oidx cidx pidx,
+        ~ In pidx (subtreeIndsOf dtr oidx) ->
+        parentIdxOf dtr cidx = Some pidx ->
+        cidx = oidx \/ ~ In cidx (subtreeIndsOf dtr oidx).
+    Proof.
+      intros.
+      destruct (eq_nat_dec cidx oidx); auto.
+      right.
+      intro Hx; elim H.
+      eapply inside_parent_in; eauto.
+    Qed.
 
-  Lemma subtreeIndsOf_child_SubList:
-    forall cidx pidx,
-      parentIdxOf dtr cidx = Some pidx ->
-      SubList (subtreeIndsOf dtr cidx) (subtreeIndsOf dtr pidx).
-  Proof.
-    intros.
-    apply subtreeIndsOf_SubList.
-    apply subtreeIndsOf_child_in; assumption.
-  Qed.
+    Lemma inside_child_outside_parent_case:
+      forall cidx pidx oidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        In cidx (subtreeIndsOf dtr oidx) ->
+        ~ In pidx (subtreeIndsOf dtr oidx) ->
+        cidx = oidx.
+    Proof.
+      intros.
+      destruct (eq_nat_dec cidx oidx); auto.
+      eapply inside_parent_in in H; try eassumption.
+      exfalso; auto.
+    Qed.
+
+    Lemma subtreeIndsOf_In_each_other_eq:
+      forall oidx1 oidx2,
+        In oidx1 (subtreeIndsOf dtr oidx2) ->
+        In oidx2 (subtreeIndsOf dtr oidx1) ->
+        oidx1 = oidx2.
+    Proof.
+    Admitted.
+
+    Lemma subtreeIndsOf_child_SubList:
+      forall cidx pidx,
+        parentIdxOf dtr cidx = Some pidx ->
+        SubList (subtreeIndsOf dtr cidx) (subtreeIndsOf dtr pidx).
+    Proof.
+      intros.
+      apply subtreeIndsOf_SubList.
+      apply subtreeIndsOf_child_in; assumption.
+    Qed.
+
+    Lemma parentChnsOf_NoDup:
+      forall idx croot pidx,
+        parentChnsOf idx dtr = Some (croot, pidx) ->
+        NoDup (croot.(dmc_ups) ++ croot.(dmc_downs)).
+    Proof.
+    Admitted.
+
+    Lemma parentChnsOf_DisjList:
+      forall idx1 croot1 pidx1 idx2 croot2 pidx2,
+        idx1 <> idx2 ->
+        parentChnsOf idx1 dtr = Some (croot1, pidx1) ->
+        parentChnsOf idx2 dtr = Some (croot2, pidx2) ->
+        DisjList (croot1.(dmc_ups) ++ croot1.(dmc_downs))
+                 (croot2.(dmc_ups) ++ croot2.(dmc_downs)).
+    Proof.
+    Admitted.
+    
+  End Wf.
 
 End Facts.
 

@@ -230,17 +230,17 @@ Section RqRsTopo.
   Section RqRsDTree.
 
     Definition RqRsChnsOnDTree :=
-      forall oidx ups downs pidx,
-        parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
+      forall oidx root pidx,
+        parentChnsOf oidx dtr = Some (root, pidx) ->
         exists rqUp rsUp down,
-          ups = [rqUp; rsUp] /\ downs = [down].
+          root.(dmc_ups) = [rqUp; rsUp] /\ root.(dmc_downs) = [down].
 
     Definition RqRsChnsOnSystem :=
-      forall oidx ups downs pidx,
+      forall oidx root pidx,
         In oidx (map (@obj_idx _) sys.(sys_objs)) ->
-        parentChnsOf dtr oidx = Some (ups, downs, pidx) ->
-        SubList ups sys.(sys_minds) /\
-        SubList downs sys.(sys_minds).
+        parentChnsOf oidx dtr = Some (root, pidx) ->
+        SubList root.(dmc_ups) sys.(sys_minds) /\
+        SubList root.(dmc_downs) sys.(sys_minds).
 
     Definition ExtRqsOnDTree :=
       forall erq,

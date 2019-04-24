@@ -20,8 +20,8 @@ Qed.
 Lemma msiSv_impl_RqRsChnsOnDTree: RqRsChnsOnDTree topo.
 Proof.
   red; intros.
-  pose proof (parentChnsOf_Some_in_tree msiSv_topo_wf _ _ H).
-  dest_in; try (inv H; eauto).
+  pose proof (parentChnsOf_Some_in_tree msiSv_topo_wf _ H).
+  dest_in; try (inv H; simpl; eauto).
 Qed.
   
 Lemma msiSv_impl_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
