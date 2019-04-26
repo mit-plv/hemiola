@@ -181,7 +181,7 @@ Section System.
           /\ RqAccepting
           /\ DownLockFree
           /\ (fun (ost: OState ImplOStateIfc) orq mins =>
-                ost#[implStatusIdx] <> msiI))
+                ost#[implStatusIdx] >= msiS))
       :transition
          (fun (ost: OState ImplOStateIfc) orq mins =>
             (ost +#[implStatusIdx <- msiI],

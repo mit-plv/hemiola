@@ -948,6 +948,18 @@ Section Facts.
     - discriminate.
   Qed.
 
+  Lemma parentIdxOf_child_indsOf:
+    forall dtr cidx pidx,
+      parentIdxOf dtr cidx = Some pidx ->
+      In cidx (indsOf dtr).
+  Proof.
+    unfold parentIdxOf; intros.
+    destruct (parentChnsOf cidx dtr) as [[croot pidx']|] eqn:Hcp.
+    - simpl in *; inv H.
+      eapply parentChnsOf_child_indsOf; eauto.
+    - discriminate.
+  Qed.
+
   Lemma parentChnsOf_child_eq:
     forall dtr,
       WfDTree dtr ->

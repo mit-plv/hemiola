@@ -165,7 +165,7 @@ Section Inv.
         right; left; solve_rule_conds_ex.
     Qed.
 
-    Lemma implStateCoherent_M_downgraded_to_S:
+    Lemma implStateCoherent_downgraded_to_S:
       forall cv oss,
         ImplStateCoherent cv oss ->
         forall oidx ost,
@@ -180,6 +180,29 @@ Section Inv.
                 red; solve_rule_conds_ex;
                 right; right;
                 solve_rule_conds_ex).
+    Qed.
+
+    Lemma implStateCoherent_downgraded_to_I:
+      forall cv oss,
+        ImplStateCoherent cv oss ->
+        forall oidx ost,
+          (oidx = child1Idx \/ oidx = child2Idx) ->
+          oss@[oidx] = Some ost ->
+          ImplStateCoherent cv (oss +[oidx <- (fst ost, (msiI, snd (snd ost)))]).
+    Proof.
+      intros; solve_rule_conds_ex.
+      all: try (left; red; solve_rule_conds_ex; fail).
+      all: try (right; left; red; solve_rule_conds_ex; auto; fail).
+      all: try (right; right;
+                red; solve_rule_conds_ex;
+                right; right;
+                solve_rule_conds_ex; fail).
+      - right; right.
+        red; solve_rule_conds_ex.
+        right; left; solve_rule_conds_ex.
+      - right; right.
+        red; solve_rule_conds_ex.
+        left; solve_rule_conds_ex.
     Qed.
 
     Lemma msiSv_impl_InvTrs_ext_in:
@@ -271,10 +294,12 @@ Section Inv.
 
     Definition MsiSvLockPred (oidx: IdxT) (orq: ORq Msg): Prop :=
       match case oidx on eq_nat_dec default True with
-      | child1Idx:
-          rqiu <+- orq@[upRq]; (rqiu.(rqi_midx_rsb) = ce1)
-      | child2Idx:
-          rqiu <+- orq@[upRq]; (rqiu.(rqi_midx_rsb) = ce2)
+      | child1Idx: True
+      | child2Idx: True
+      | parentIdx:
+          rqid <+- orq@[downRq];
+          ((rqid.(rqi_minds_rss) = [c1pRs] /\ rqid.(rqi_midx_rsb) = pc2) \/
+           (rqid.(rqi_minds_rss) = [c2pRs] /\ rqid.(rqi_midx_rsb) = pc1))
       end.
 
     Ltac disc_AtomicInv :=
@@ -596,6 +621,11 @@ Section Inv.
         disc_msg_preds H4.
         disc_rule_conds_ex.
 
+        (* generate hints for leaves (L1 caches) *)
+        pose proof (parentIdxOf_child_indsOf _ _ H8).
+        dest_in; try discriminate; simpl in *.
+        cbn in H24; inv H24.
+
         (* construction *)
         split.
         + split.
@@ -638,33 +668,294 @@ Section Inv.
             }
           * red; simpl; intros.
             icase oidx.
-            { (* previously uplocked but just visited..? *)
-              admit.
-            }
+            { mred. }
             { mred; apply H7; auto. }
         + destruct H6 as [cv ?]; simpl in H6.
           exists cv; simpl.
-          apply implStateCoherent_M_downgraded_to_S; auto.
+          apply implStateCoherent_downgraded_to_S; auto.
         
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
-      - admit.
-      - admit.
+      - (** [childSetRsM] *)
+        disc_rule_conds_ex.
+        good_footprint_get child1Idx.
+        disc_rule_conds_ex.
+
+        (* discharge lock predicates *)
+        obj_visited_rsDown child1Idx.
+        disc_lock_preds child1Idx.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        (* generate hints for leaves (L1 caches) *)
+        pose proof (parentIdxOf_child_indsOf _ _ H8).
+        dest_in; try discriminate; simpl in *.
+        cbn in H24; inv H24.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red; simpl.
+          eexists.
+          right; right.
+          red; solve_rule_conds_ex.
+          left; solve_rule_conds_ex.
+          
+      - (** [childDownRqM] *)
+        disc_rule_conds_ex.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              mred; simpl; auto.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { mred. }
+            { mred; apply H7; auto. }
+        + destruct H6 as [cv ?]; simpl in H6.
+          exists cv; simpl.
+          apply implStateCoherent_downgraded_to_I; auto.
+
       - atomic_cont_exfalso_bound.
-      - admit.
+      - (** [childEvictRsI] *)
+        disc_rule_conds_ex.
+        good_footprint_get child1Idx.
+        disc_rule_conds_ex.
+
+        (* discharge lock predicates *)
+        obj_visited_rsDown child1Idx.
+        disc_lock_preds child1Idx.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        (* generate hints for leaves (L1 caches) *)
+        pose proof (parentIdxOf_child_indsOf _ _ H8).
+        dest_in; try discriminate; simpl in *.
+        cbn in H22; inv H22.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + destruct H6 as [cv ?]; simpl in H6.
+          exists cv; simpl.
+          apply implStateCoherent_downgraded_to_I; auto.
 
       (** child2 *)
 
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
-      - admit.
-      - admit.
+      - (** [childGetRsS] *)
+        disc_rule_conds_ex.
+        good_footprint_get child2Idx.
+        disc_rule_conds_ex.
+
+        (* discharge lock predicates *)
+        obj_visited_rsDown child2Idx.
+        disc_lock_preds child2Idx.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        (* generate hints for leaves (L1 caches) *)
+        pose proof (parentIdxOf_child_indsOf _ _ H8).
+        dest_in; try discriminate; simpl in *.
+        cbn in H24; inv H24.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red; simpl.
+          eexists.
+          right; left.
+          red; solve_rule_conds_ex.
+          * eauto.
+          * right; split; eauto.
+            congruence.
+            
+      - (** [childDownRqS] *)
+        disc_rule_conds_ex.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              mred; simpl; auto.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { mred. }
+            { mred; apply H7; auto. }
+        + destruct H6 as [cv ?]; simpl in H6.
+          exists cv; simpl.
+          apply implStateCoherent_downgraded_to_S; auto.
+        
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
-      - admit.
-      - admit.
+      - (** [childSetRsM] *)
+        disc_rule_conds_ex.
+        good_footprint_get child2Idx.
+        disc_rule_conds_ex.
+
+        (* discharge lock predicates *)
+        obj_visited_rsDown child2Idx.
+        disc_lock_preds child2Idx.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        (* generate hints for leaves (L1 caches) *)
+        pose proof (parentIdxOf_child_indsOf _ _ H8).
+        dest_in; try discriminate; simpl in *.
+        cbn in H24; inv H24.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red; simpl.
+          eexists.
+          right; right.
+          red; solve_rule_conds_ex.
+          right; left; solve_rule_conds_ex.
+
+      - (** [childDownRqM] *)
+        disc_rule_conds_ex.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              mred; simpl; auto.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { mred. }
+            { mred; apply H7; auto. }
+        + destruct H6 as [cv ?]; simpl in H6.
+          exists cv; simpl.
+          apply implStateCoherent_downgraded_to_I; auto.
+
       - atomic_cont_exfalso_bound.
-      - admit.
+      - (** [childEvictRsI] *)
+        disc_rule_conds_ex.
+        good_footprint_get child2Idx.
+        disc_rule_conds_ex.
+
+        (* discharge lock predicates *)
+        obj_visited_rsDown child2Idx.
+        disc_lock_preds child2Idx.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        (* generate hints for leaves (L1 caches) *)
+        pose proof (parentIdxOf_child_indsOf _ _ H8).
+        dest_in; try discriminate; simpl in *.
+        cbn in H22; inv H22.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsDown_preserves_msg_out_preds; eauto;
+                [exact msiSv_impl_RqRsSys
+                |red; auto
+                |exact msiSvMsgOutPred_good].
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + destruct H6 as [cv ?]; simpl in H6.
+          exists cv; simpl.
+          apply implStateCoherent_downgraded_to_I; auto.
 
       (** parent *)
 
