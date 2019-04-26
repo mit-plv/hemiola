@@ -333,14 +333,14 @@ Section Facts.
     - eapply uniqueChns_child; eauto.
   Qed.
 
-  Lemma indsOf_self_in:
+  Lemma indsOf_root_in:
     forall dtr,
       In (rootOf dtr) (indsOf dtr).
   Proof.
     destruct dtr as [root cs]; simpl; auto.
   Qed.
 
-  Lemma chnsOf_self_in:
+  Lemma chnsOf_root_in:
     forall root cs,
       SubList (dmc_ups root ++ dmc_downs root)
               (chnsOf (DNode root cs)).
@@ -349,7 +349,7 @@ Section Facts.
     apply SubList_app_1, SubList_refl.
   Qed.
 
-  Lemma childrenOf_indsOf:
+  Lemma indsOf_childrenOf:
     forall ctr dtr,
       In ctr (childrenOf dtr) ->
       SubList (indsOf ctr) (indsOf dtr).
@@ -359,7 +359,7 @@ Section Facts.
     apply collect_in; auto.
   Qed.
 
-  Lemma parent_idx_not_in_children:
+  Lemma parent_not_in_children:
     forall dtr ctr,
       WfDTree dtr ->
       In ctr (childrenOf dtr) ->
@@ -373,17 +373,17 @@ Section Facts.
     eapply collect_in; eauto.
   Qed.
 
-  Lemma parent_idx_child_not_eq:
+  Lemma parent_child_not_eq:
     forall dtr ctr,
       WfDTree dtr ->
       In ctr (childrenOf dtr) ->
       rootOf dtr <> rootOf ctr.
   Proof.
     intros; intro Hx.
-    apply parent_idx_not_in_children in H0; [|eassumption].
+    apply parent_not_in_children in H0; [|eassumption].
     elim H0.
     rewrite Hx.
-    apply indsOf_self_in.
+    apply indsOf_root_in.
   Qed.
 
   Lemma hasIdx_Some:
@@ -441,7 +441,7 @@ Section Facts.
     dtree_ind dtr; auto.
   Qed.
 
-  Lemma child_Subtree:
+  Lemma childrenOf_Subtree:
     forall dtr ctr,
       In ctr (childrenOf dtr) ->
       Subtree ctr dtr.
@@ -451,7 +451,7 @@ Section Facts.
     apply Subtree_refl.
   Qed.
 
-  Lemma Subtree_child:
+  Lemma Subtree_child_Subtree:
     forall dtr ctr str,
       Subtree str dtr ->
       In ctr (childrenOf str) ->
@@ -479,10 +479,10 @@ Section Facts.
     disc_exists.
     rewrite Forall_forall in H.
     eapply H; eauto.
-    eapply Subtree_child; eauto.
+    eapply Subtree_child_Subtree; eauto.
   Qed.
 
-  Lemma Subtree_children_not_itself:
+  Lemma Subtree_itself_not_childrenOf:
     forall str dtr,
       Subtree str dtr ->
       ~ Exists (Subtree dtr) (childrenOf str).
@@ -501,10 +501,10 @@ Section Facts.
       disc_exists.
       eapply exists_in; eauto.
       eapply Subtree_trans; [|eassumption].
-      eapply child_Subtree; auto.
+      eapply childrenOf_Subtree; auto.
   Qed.
 
-  Lemma Subtree_child_not_itself:
+  Lemma Subtree_itself_not_child:
     forall str dtr,
       Subtree str dtr ->
       forall ctr,
@@ -512,7 +512,7 @@ Section Facts.
         ~ Subtree dtr ctr.
   Proof.
     intros.
-    apply Subtree_children_not_itself in H.
+    apply Subtree_itself_not_childrenOf in H.
     intro Hx; elim H; clear H.
     eapply exists_in; eauto.
   Qed.
@@ -530,11 +530,11 @@ Section Facts.
     disc_forall_in.
     assert (Subtree ctr dtr2).
     { eapply Subtree_trans; [|eassumption].
-      apply Subtree_child with (str:= DNode root cs); auto.
+      apply Subtree_child_Subtree with (str:= DNode root cs); auto.
       apply Subtree_refl.
     }
     specialize (H3 _ H4 H2); subst.
-    eapply Subtree_child_not_itself with (str:= DNode root cs); eauto.
+    eapply Subtree_itself_not_child with (str:= DNode root cs); eauto.
   Qed.
 
   Lemma Subtree_indsOf:
@@ -551,7 +551,7 @@ Section Facts.
     apply collect_in; auto.
   Qed.
 
-  Lemma children_indsOf_disj:
+  Lemma indsOf_childrenOf_disj:
     forall dtr,
       WfDTree dtr ->
       forall ctr1 ctr2,
@@ -580,7 +580,7 @@ Section Facts.
         eapply NoDup_app_weakening_2; eauto.
   Qed.
 
-  Lemma children_chnsOf_disj:
+  Lemma chnsOf_childrenOf_disj:
     forall dtr,
       WfDTree dtr ->
       forall ctr1 ctr2,
@@ -610,7 +610,7 @@ Section Facts.
         eapply NoDup_app_weakening_2; eauto.
   Qed.
 
-  Lemma rootOf_Subtree_eq:
+  Lemma Subtree_rootOf_eq:
     forall dtr,
       WfDTree dtr ->
       forall str1 str2,
@@ -623,31 +623,31 @@ Section Facts.
     destruct H1, H2; subst; auto.
     - exfalso; simpl in *.
       disc_exists.
-      elim (parent_idx_not_in_children _ H0 H1).
+      elim (parent_not_in_children _ H0 H1).
       simpl; rewrite H3.
       eapply Subtree_indsOf; [eassumption|].
-      apply indsOf_self_in.
+      apply indsOf_root_in.
     - exfalso; simpl in *.
       disc_exists.
-      elim (parent_idx_not_in_children _ H0 H1).
+      elim (parent_not_in_children _ H0 H1).
       simpl; rewrite <-H3.
       eapply Subtree_indsOf; [eassumption|].
-      apply indsOf_self_in.
+      apply indsOf_root_in.
     - do 2 disc_exists.
       destruct (dtree_dec ctr ctr0); subst.
       + disc_forall_in.
         eapply H6; eauto.
         eapply wfDTree_child; eauto.
       + exfalso.
-        eapply children_indsOf_disj in n; eauto.
+        eapply indsOf_childrenOf_disj in n; eauto.
         apply Subtree_indsOf in H4.
         apply Subtree_indsOf in H5.
         eapply DisjList_SubList in n; [|eassumption].
         eapply DisjList_comm, DisjList_SubList in n; [|eassumption].
         apply DisjList_comm in n.
         destruct (n (rootOf str1)).
-        * elim H6; rewrite H3; apply indsOf_self_in.
-        * elim H6; apply indsOf_self_in.
+        * elim H6; rewrite H3; apply indsOf_root_in.
+        * elim H6; apply indsOf_root_in.
   Qed.
 
   Lemma Subtree_subtree:
@@ -660,7 +660,7 @@ Section Facts.
     dtree_ind dtr.
     find_if_inside.
     - f_equal.
-      eapply rootOf_Subtree_eq; eauto.
+      eapply Subtree_rootOf_eq; eauto.
       apply Subtree_refl.
     - destruct H1; [subst; elim n; auto|].
       disc_exists.
@@ -671,14 +671,14 @@ Section Facts.
 
       disc_find_some.
       f_equal.
-      eapply rootOf_Subtree_eq; [eassumption|..].
+      eapply Subtree_rootOf_eq; [eassumption|..].
       + apply subtree_Subtree in H5.
         eapply Subtree_trans; [eassumption|].
-        apply Subtree_child with (str:= DNode root cs); auto.
+        apply Subtree_child_Subtree with (str:= DNode root cs); auto.
         apply Subtree_refl.
       + apply subtree_Subtree in H3.
         eapply Subtree_trans; [eassumption|].
-        apply Subtree_child with (str:= DNode root cs); auto.
+        apply Subtree_child_Subtree with (str:= DNode root cs); auto.
         apply Subtree_refl.
       + apply subtree_rootOf in H3.
         apply subtree_rootOf in H5.
@@ -697,7 +697,7 @@ Section Facts.
     unfold subtreeIndsOf; rewrite H0; reflexivity.
   Qed.
 
-  Lemma Subtree_subtreeIndsOf_self_in:
+  Lemma subtreeIndsOf_root_in:
     forall dtr,
       WfDTree dtr ->
       forall str,
@@ -707,7 +707,7 @@ Section Facts.
     intros.
     unfold subtreeIndsOf.
     rewrite Subtree_subtree by assumption.
-    simpl; apply indsOf_self_in.
+    simpl; apply indsOf_root_in.
   Qed.
 
   Lemma indsOf_in_Subtree:
@@ -727,7 +727,7 @@ Section Facts.
       right; eapply exists_in; eauto.
   Qed.
 
-  Lemma child_parentIdxOf:
+  Lemma parentIdxOf_childrenOf:
     forall ctr ptr,
       In ctr (childrenOf ptr) ->
       parentIdxOf ptr (rootOf ctr) = Some (rootOf ptr).
@@ -805,7 +805,7 @@ Section Facts.
       exists cdtr, ptr.
       repeat split; auto.
       assert (Subtree ctr (DNode root cs))
-        by (apply child_Subtree; assumption).
+        by (apply childrenOf_Subtree; assumption).
       apply (Subtree_trans H2 H7).
   Qed.
 
@@ -819,9 +819,9 @@ Section Facts.
     destruct H as [ctr [ptr ?]]; dest; subst.
     eapply SubList_trans; [|eapply chnsOf_Subtree; eassumption].
     eapply SubList_trans; [|apply chnsOf_Subtree;
-                            apply child_Subtree; eassumption].
+                            apply childrenOf_Subtree; eassumption].
     destruct ctr as [croot ccs]; simpl in *.
-    apply chnsOf_self_in.
+    apply chnsOf_root_in.
   Qed.
 
   Lemma parentChnsOf_child_chnsOf:
@@ -838,7 +838,7 @@ Section Facts.
     destruct H0; dest; subst.
     - split; auto.
       destruct ctr as [root cs].
-      apply chnsOf_self_in.
+      apply chnsOf_root_in.
     - split; auto.
       eapply parentChnsOf_chnsOf; eauto.
   Qed.
@@ -905,7 +905,7 @@ Section Facts.
     - inv H0; disc_find_some.
       apply hasIdx_Some in H1; dest; subst; simpl in *.
       right; eapply collect_in; eauto.
-      pose proof (indsOf_self_in (DNode croot ccs)); assumption.
+      pose proof (indsOf_root_in (DNode croot ccs)); assumption.
     - disc_find_some.
       disc_forall_in.
       specialize (H2 _ _ _ H1).
@@ -964,10 +964,10 @@ Section Facts.
       disc_find_some.
       apply hasIdx_Some in H4; dest; subst; simpl in *.
       assert (DNode croot ccs <> ctr) by (intro Hx; subst; auto).
-      pose proof (children_indsOf_disj H H3 H0 H4).
+      pose proof (indsOf_childrenOf_disj H H3 H0 H4).
       destruct (H5 (dmc_me croot)); auto.
       elim H6.
-      pose proof (indsOf_self_in (DNode croot ccs)); assumption.
+      pose proof (indsOf_root_in (DNode croot ccs)); assumption.
     - destruct (parentChnsOf oidx ctr) as [cp|] eqn:Hcp;
         [|exfalso; eapply indsOf_parentChnsOf_not_None; eauto].
       destruct (find_some (parentChnsOf oidx) cs) as [rctr|] eqn:Hrctr;
@@ -975,7 +975,7 @@ Section Facts.
       disc_find_some.
       destruct (dtree_dec ctr ctr0); subst; [congruence|].
       exfalso.
-      eapply children_indsOf_disj in n; eauto.
+      eapply indsOf_childrenOf_disj in n; eauto.
       destruct (n oidx); [auto|].
       elim H5.
       destruct rctr as [rcroot rccs].
@@ -1005,7 +1005,7 @@ Section Facts.
         destruct ctr as [croot ccs].
         simpl in H3; destruct H3; [subst; auto|].
         disc_exists.
-        eapply parent_idx_not_in_children
+        eapply parent_not_in_children
           with (dtr:= DNode croot ccs) in H3.
         + elim H3.
           eapply Subtree_indsOf; eauto.
@@ -1035,10 +1035,10 @@ Section Facts.
       apply parentIdxOf_Subtree in H.
       destruct H as [ctr [ptr ?]]; dest; subst.
       pose proof (Subtree_wfDTree _ Hwf H).
-      apply parent_idx_not_in_children in H2; [|assumption].
+      apply parent_not_in_children in H2; [|assumption].
       intro Hx; subst; elim H2.
       rewrite <-Hx.
-      apply indsOf_self_in.
+      apply indsOf_root_in.
     Qed.
 
     Lemma parentIdxOf_asym:
@@ -1053,14 +1053,14 @@ Section Facts.
       apply parentIdxOf_Subtree in H0.
       destruct H0 as [ctr2 [ptr2 ?]].
       dest; subst.
-      pose proof (Subtree_trans (child_Subtree _ _ H6) H).
-      pose proof (Subtree_trans (child_Subtree _ _ H3) H0).
-      eapply rootOf_Subtree_eq in H1; eauto; subst.
-      eapply rootOf_Subtree_eq in H2; eauto; subst.
-      apply parent_idx_not_in_children in H3.
+      pose proof (Subtree_trans (childrenOf_Subtree _ _ H6) H).
+      pose proof (Subtree_trans (childrenOf_Subtree _ _ H3) H0).
+      eapply Subtree_rootOf_eq in H1; eauto; subst.
+      eapply Subtree_rootOf_eq in H2; eauto; subst.
+      apply parent_not_in_children in H3.
       - elim H3.
-        eapply childrenOf_indsOf; [eassumption|].
-        apply indsOf_self_in.
+        eapply indsOf_childrenOf; [eassumption|].
+        apply indsOf_root_in.
       - eapply Subtree_wfDTree; eauto.
     Qed.
 
@@ -1099,19 +1099,19 @@ Section Facts.
           apply subtree_rootOf in H1; simpl in H1; subst.
           apply subtree_Subtree in Htr.
           rewrite parentIdxOf_Subtree_eq with (str:= DNode root cs).
-          * apply child_parentIdxOf; auto.
+          * apply parentIdxOf_childrenOf; auto.
           * assumption.
           * apply neq_sym.
-            eapply parent_idx_child_not_eq.
+            eapply parent_child_not_eq.
             { eapply Subtree_wfDTree; eauto. }
             { assumption. }
           * eapply Subtree_indsOf with (str:= ctr).
-            { apply child_Subtree; auto. }
-            { apply indsOf_self_in. }
+            { apply childrenOf_Subtree; auto. }
+            { apply indsOf_root_in. }
         + rewrite subtreeIndsOf_indsOf; auto.
           apply subtree_Subtree in Htr.
           eapply Subtree_trans; [|eassumption].
-          apply child_Subtree; auto.
+          apply childrenOf_Subtree; auto.
     Qed.
 
     Lemma parentChnsOf_subtreeIndsOf_self_in:
@@ -1125,9 +1125,9 @@ Section Facts.
       apply parentChnsOf_Subtree in Hcp.
       destruct Hcp as [ctr [ptr ?]]; dest; subst.
       rewrite <-rootOf_dmcOf.
-      apply Subtree_subtreeIndsOf_self_in; auto.
+      apply subtreeIndsOf_root_in; auto.
       eapply Subtree_trans; [|eassumption].
-      apply child_Subtree; auto.
+      apply childrenOf_Subtree; auto.
     Qed.
 
     Lemma parent_subtreeIndsOf_self_in:
@@ -1138,7 +1138,7 @@ Section Facts.
       intros.
       apply parentIdxOf_Subtree in H.
       destruct H as [ctr [ptr ?]]; dest; subst.
-      apply Subtree_subtreeIndsOf_self_in; auto.
+      apply subtreeIndsOf_root_in; auto.
     Qed.
 
     Lemma subtreeIndsOf_child_in:
@@ -1150,8 +1150,8 @@ Section Facts.
       apply parentIdxOf_Subtree in H.
       destruct H as [ctr [ptr ?]]; dest; subst.
       rewrite subtreeIndsOf_indsOf by assumption.
-      eapply childrenOf_indsOf; [eassumption|].
-      apply indsOf_self_in.
+      eapply indsOf_childrenOf; [eassumption|].
+      apply indsOf_root_in.
     Qed.
 
     Lemma subtreeIndsOf_child_disj:
@@ -1168,12 +1168,12 @@ Section Facts.
       destruct H1 as [ctr2 [ptr2 ?]]; dest; subst.
       rewrite subtreeIndsOf_indsOf;
         [|assumption
-         |eapply Subtree_child; [|eassumption]; assumption].
+         |eapply Subtree_child_Subtree; [|eassumption]; assumption].
       rewrite subtreeIndsOf_indsOf;
         [|assumption
-         |eapply Subtree_child; [|eassumption]; assumption].
-      eapply rootOf_Subtree_eq in H5; eauto; subst.
-      eapply children_indsOf_disj with (dtr:= ptr1); eauto.
+         |eapply Subtree_child_Subtree; [|eassumption]; assumption].
+      eapply Subtree_rootOf_eq in H5; eauto; subst.
+      eapply indsOf_childrenOf_disj with (dtr:= ptr1); eauto.
       - eapply Subtree_wfDTree; eauto.
       - intro Hx; subst; auto.
     Qed.
@@ -1204,11 +1204,11 @@ Section Facts.
       apply parentIdxOf_Subtree in H.
       destruct H as [ctr [ptr ?]]; dest; subst.
       rewrite subtreeIndsOf_indsOf.
-      - eapply parent_idx_not_in_children in H2; [eassumption|].
+      - eapply parent_not_in_children in H2; [eassumption|].
         eapply Subtree_wfDTree; eauto.
       - assumption.
       - eapply Subtree_trans; [|eassumption].
-        eapply Subtree_child; eauto.
+        eapply Subtree_child_Subtree; eauto.
         apply Subtree_refl.
     Qed.
 
@@ -1253,9 +1253,9 @@ Section Facts.
       pose proof (subtree_Subtree _ _ Hstr2).
       apply subtree_rootOf in Hstr1.
       apply subtree_rootOf in Hstr2.
-      eapply rootOf_Subtree_eq in Hstr1; eauto; subst;
+      eapply Subtree_rootOf_eq in Hstr1; eauto; subst;
         [|eapply Subtree_trans; eauto].
-      eapply rootOf_Subtree_eq in Hstr2; eauto; subst;
+      eapply Subtree_rootOf_eq in Hstr2; eauto; subst;
         [|eapply Subtree_trans; eauto].
       pose proof (Subtree_antisym _ _ H0 H1); subst.
       reflexivity.
@@ -1373,12 +1373,12 @@ Section Facts.
       destruct H3, H4; dest; subst.
       - eapply DisjList_SubList with (l1:= chnsOf ctr1);
           [destruct ctr1 as [croot1 ccs1]; unfold dmcOf;
-           apply chnsOf_self_in|].
+           apply chnsOf_root_in|].
         eapply DisjList_comm, DisjList_SubList with (l1:= chnsOf ctr2);
           [destruct ctr2 as [croot2 ccs2]; unfold dmcOf;
-           apply chnsOf_self_in|].
+           apply chnsOf_root_in|].
         apply DisjList_comm.
-        eapply children_chnsOf_disj; eauto.
+        eapply chnsOf_childrenOf_disj; eauto.
         intro Hx; subst; auto.
       - destruct (dtree_dec ctr1 ctr2); subst.
         + eapply parentChnsOf_root_disj; eauto.
@@ -1386,9 +1386,9 @@ Section Facts.
         + eapply DisjList_SubList; [eapply parentChnsOf_chnsOf; eauto|].
           destruct ctr2 as [root2 cs2]; simpl in *.
           eapply DisjList_comm, DisjList_SubList;
-            [eapply chnsOf_self_in with (cs:= cs2)|].
+            [eapply chnsOf_root_in with (cs:= cs2)|].
           apply DisjList_comm.
-          eapply children_chnsOf_disj; eauto.
+          eapply chnsOf_childrenOf_disj; eauto.
       - destruct (dtree_dec ctr1 ctr2); subst.
         + eapply DisjList_comm, parentChnsOf_root_disj; eauto.
           eapply wfDTree_child; eauto.
@@ -1396,9 +1396,9 @@ Section Facts.
             [eapply parentChnsOf_chnsOf; eauto|].
           destruct ctr1 as [root1 cs1]; simpl in *.
           eapply DisjList_comm, DisjList_SubList;
-            [eapply chnsOf_self_in with (cs:= cs1)|].
+            [eapply chnsOf_root_in with (cs:= cs1)|].
           apply DisjList_comm.
-          eapply children_chnsOf_disj; eauto.
+          eapply chnsOf_childrenOf_disj; eauto.
       - destruct (dtree_dec ctr1 ctr2); subst.
         + disc_forall_in.
           eapply H5; eauto.
@@ -1407,7 +1407,7 @@ Section Facts.
           eapply DisjList_comm, DisjList_SubList;
             [eapply parentChnsOf_chnsOf; eauto|].
           apply DisjList_comm.
-          eapply children_chnsOf_disj; eauto.
+          eapply chnsOf_childrenOf_disj; eauto.
     Qed.
     
   End Wf.
