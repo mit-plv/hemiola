@@ -772,7 +772,7 @@ Section Facts.
       parentChnsOf cidx dtr = Some (croot, pidx) ->
       exists ctr,
         In ctr (childrenOf dtr) /\
-        ((cidx = rootOf ctr /\ croot = dmcOf ctr) \/
+        ((cidx = rootOf ctr /\ croot = dmcOf ctr /\ pidx = rootOf dtr) \/
          parentChnsOf cidx ctr = Some (croot, pidx)).
   Proof.
     destruct dtr as [root cs]; simpl; intros.
@@ -880,6 +880,33 @@ Section Facts.
     destruct ctr; reflexivity.
   Qed.
 
+  Lemma parentChnsOf_indsOf:
+    forall dtr cidx croot pidx,
+      parentChnsOf cidx dtr = Some (croot, pidx) ->
+      In pidx (indsOf dtr).
+  Proof.
+    dtree_ind dtr.
+    destruct (find_some (hasIdx cidx) cs)
+      as [[croot' ccs]|] eqn:Hctr; [inv H0; auto|].
+    disc_find_some.
+    disc_forall_in.
+    specialize (H2 _ _ _ H1).
+    right.
+    eapply collect_in; eauto.
+  Qed.
+
+  Lemma parentIdxOf_indsOf:
+    forall dtr cidx pidx,
+      parentIdxOf dtr cidx = Some pidx ->
+      In pidx (indsOf dtr).
+  Proof.
+    unfold parentIdxOf; intros.
+    destruct (parentChnsOf cidx dtr) as [[croot pidx']|] eqn:Hcp.
+    - simpl in *; inv H.
+      eapply parentChnsOf_indsOf; eauto.
+    - discriminate.
+  Qed.
+
   Section Wf.
     Variable dtr: DTree.
     Hypothesis Hwf: WfDTree dtr.
@@ -943,20 +970,6 @@ Section Facts.
         eapply childrenOf_indsOf; [eassumption|].
         apply indsOf_self_in.
       - eapply Subtree_wfDTree; eauto.
-    Qed.
-
-    Lemma parentChnsOf_Some_in_tree:
-      forall oidx cp,
-        parentChnsOf oidx dtr = Some cp ->
-        In oidx (indsOf dtr).
-    Proof.
-      destruct cp as [croot pidx]; intros.
-      apply parentChnsOf_Subtree in H.
-      destruct H as [ctr [ptr ?]]; dest; subst.
-      eapply Subtree_indsOf; [eassumption|].
-      eapply childrenOf_indsOf; [eassumption|].
-      rewrite <-rootOf_dmcOf.
-      eapply indsOf_self_in.
     Qed.
 
     Lemma indsOf_composed:
@@ -1186,7 +1199,16 @@ Section Facts.
         cidx <> oidx ->
         In pidx (subtreeIndsOf dtr oidx).
     Proof.
-    Admitted.
+      intros.
+      unfold subtreeIndsOf in *.
+      destruct (subtree oidx dtr) as [str|] eqn:Hstr; [|inv H0].
+      simpl in *.
+      pose proof (subtree_rootOf _ _ Hstr); subst.
+      apply subtree_Subtree in Hstr.
+      erewrite parentIdxOf_Subtree_eq
+        with (str:= str) in H; eauto.
+      eapply parentIdxOf_indsOf; eauto.
+    Qed.
 
     Lemma outside_child_in:
       forall oidx cidx pidx,
