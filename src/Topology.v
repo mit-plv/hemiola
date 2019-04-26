@@ -880,7 +880,7 @@ Section Facts.
     destruct ctr; reflexivity.
   Qed.
 
-  Lemma parentChnsOf_indsOf:
+  Lemma parentChnsOf_parent_indsOf:
     forall dtr cidx croot pidx,
       parentChnsOf cidx dtr = Some (croot, pidx) ->
       In pidx (indsOf dtr).
@@ -895,7 +895,48 @@ Section Facts.
     eapply collect_in; eauto.
   Qed.
 
-  Lemma parentIdxOf_indsOf:
+  Lemma parentChnsOf_child_indsOf:
+    forall dtr cidx croot pidx,
+      parentChnsOf cidx dtr = Some (croot, pidx) ->
+      In cidx (indsOf dtr).
+  Proof.
+    dtree_ind dtr.
+    destruct (find_some (hasIdx cidx) cs) as [[croot' ccs]|] eqn:Hctr.
+    - inv H0; disc_find_some.
+      apply hasIdx_Some in H1; dest; subst; simpl in *.
+      right; eapply collect_in; eauto.
+      pose proof (indsOf_self_in (DNode croot ccs)); assumption.
+    - disc_find_some.
+      disc_forall_in.
+      specialize (H2 _ _ _ H1).
+      right; eapply collect_in; eauto.
+  Qed.
+
+  Lemma indsOf_parentChnsOf_not_None:
+    forall dtr oidx,
+      In oidx (indsOf dtr) ->
+      oidx <> rootOf dtr ->
+      parentChnsOf oidx dtr <> None.
+  Proof.
+    dtree_ind dtr.
+    destruct H0; [exfalso; auto|].
+    destruct (find_some (hasIdx oidx) cs)
+      as [[croot ccs]|] eqn:Hctr; [discriminate|].
+    apply collect_in_exist in H0.
+    destruct H0 as [ctr ?]; dest.
+    disc_forall_in.
+    specialize (H3 _ H2).
+    destruct (eq_nat_dec oidx (rootOf ctr)).
+    - exfalso; subst.
+      eapply find_some_not_None; [..|eassumption]; eauto.
+      unfold hasIdx.
+      find_if_inside; [reflexivity|exfalso; auto].
+    - specialize (H3 n).
+      destruct (parentChnsOf oidx ctr) as [cp|] eqn:Hcp; [|exfalso; auto].
+      eapply find_some_not_None; eauto.
+  Qed.
+
+  Lemma parentIdxOf_parent_indsOf:
     forall dtr cidx pidx,
       parentIdxOf dtr cidx = Some pidx ->
       In pidx (indsOf dtr).
@@ -903,8 +944,42 @@ Section Facts.
     unfold parentIdxOf; intros.
     destruct (parentChnsOf cidx dtr) as [[croot pidx']|] eqn:Hcp.
     - simpl in *; inv H.
-      eapply parentChnsOf_indsOf; eauto.
+      eapply parentChnsOf_parent_indsOf; eauto.
     - discriminate.
+  Qed.
+
+  Lemma parentChnsOf_child_eq:
+    forall dtr,
+      WfDTree dtr ->
+      forall ctr,
+        In ctr (childrenOf dtr) ->
+        forall oidx,
+          oidx <> rootOf ctr ->
+          In oidx (indsOf ctr) ->
+          parentChnsOf oidx dtr = parentChnsOf oidx ctr.
+  Proof.
+    destruct dtr as [root cs]; simpl; intros.
+    destruct (find_some (hasIdx oidx) cs) as [[croot ccs]|] eqn:Hctr.
+    - exfalso.
+      disc_find_some.
+      apply hasIdx_Some in H4; dest; subst; simpl in *.
+      assert (DNode croot ccs <> ctr) by (intro Hx; subst; auto).
+      pose proof (children_indsOf_disj H H3 H0 H4).
+      destruct (H5 (dmc_me croot)); auto.
+      elim H6.
+      pose proof (indsOf_self_in (DNode croot ccs)); assumption.
+    - destruct (parentChnsOf oidx ctr) as [cp|] eqn:Hcp;
+        [|exfalso; eapply indsOf_parentChnsOf_not_None; eauto].
+      destruct (find_some (parentChnsOf oidx) cs) as [rctr|] eqn:Hrctr;
+        [|exfalso; eapply find_some_not_None with (f:= parentChnsOf oidx); eauto].
+      disc_find_some.
+      destruct (dtree_dec ctr ctr0); subst; [congruence|].
+      exfalso.
+      eapply children_indsOf_disj in n; eauto.
+      destruct (n oidx); [auto|].
+      elim H5.
+      destruct rctr as [rcroot rccs].
+      eapply parentChnsOf_child_indsOf; eauto.
   Qed.
 
   Section Wf.
@@ -919,7 +994,24 @@ Section Facts.
           In oidx (indsOf str) ->
           parentChnsOf oidx dtr = parentChnsOf oidx str.
     Proof.
-    Admitted.
+      induction dtr as [root cs] using DTree_ind2; intros.
+      simpl in H0; destruct H0; [subst; reflexivity|].
+      disc_exists.
+      disc_forall_in.
+      specialize (H4 (wfDTree_child Hwf _ H0) _ H3 _ H1 H2).
+      rewrite <-H4.
+      eapply parentChnsOf_child_eq; eauto.
+      - intro Hx; subst.
+        destruct ctr as [croot ccs].
+        simpl in H3; destruct H3; [subst; auto|].
+        disc_exists.
+        eapply parent_idx_not_in_children
+          with (dtr:= DNode croot ccs) in H3.
+        + elim H3.
+          eapply Subtree_indsOf; eauto.
+        + eapply wfDTree_child; eauto.
+      - eapply Subtree_indsOf; eauto.
+    Qed.
 
     Lemma parentIdxOf_Subtree_eq:
       forall str,
@@ -1207,7 +1299,7 @@ Section Facts.
       apply subtree_Subtree in Hstr.
       erewrite parentIdxOf_Subtree_eq
         with (str:= str) in H; eauto.
-      eapply parentIdxOf_indsOf; eauto.
+      eapply parentIdxOf_parent_indsOf; eauto.
     Qed.
 
     Lemma outside_child_in:
