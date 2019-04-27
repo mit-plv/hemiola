@@ -733,6 +733,39 @@ Section RqRsDTree.
     - eapply RqRsDownMatch_rs_eq; eauto.
     - rewrite H3 in H1; inv H1; reflexivity.
   Qed.
+
+  Lemma rqEdgeUpFrom_indsOf:
+    forall oidx rqUp,
+      rqEdgeUpFrom dtr oidx = Some rqUp ->
+      In oidx (indsOf dtr).
+  Proof.
+    unfold rqEdgeUpFrom, upEdgesFrom; intros.
+    destruct (parentChnsOf oidx dtr) as [[croot pidx]|] eqn:Hcp;
+      simpl in *; [|discriminate].
+    eapply parentChnsOf_child_indsOf; eauto.
+  Qed.
+    
+  Lemma rsEdgeUpFrom_indsOf:
+    forall oidx rsUp,
+      rsEdgeUpFrom dtr oidx = Some rsUp ->
+      In oidx (indsOf dtr).
+  Proof.
+    unfold rsEdgeUpFrom, upEdgesFrom; intros.
+    destruct (parentChnsOf oidx dtr) as [[croot pidx]|] eqn:Hcp;
+      simpl in *; [|discriminate].
+    eapply parentChnsOf_child_indsOf; eauto.
+  Qed.
+  
+  Lemma edgeDownTo_indsOf:
+    forall oidx down,
+      edgeDownTo dtr oidx = Some down ->
+      In oidx (indsOf dtr).
+  Proof.
+    unfold edgeDownTo, downEdgesTo; intros.
+    destruct (parentChnsOf oidx dtr) as [[croot pidx]|] eqn:Hcp;
+      simpl in *; [|discriminate].
+    eapply parentChnsOf_child_indsOf; eauto.
+  Qed.
   
 End RqRsDTree.
 

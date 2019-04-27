@@ -696,6 +696,38 @@ Proof.
       reflexivity.
 Qed.
 
+Lemma atomic_eouts_not_erqs:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      Forall (fun eout => ~ In (idOf eout) sys.(sys_merqs)) eouts.
+Proof.
+  induction 1; simpl; intros; subst.
+  - inv_steps; inv_step.
+    destruct H14.
+    apply Forall_forall; intros [midx msg] ?.
+    apply in_map with (f:= idOf) in H1.
+    simpl in *.
+    apply H in H1.
+    eapply DisjList_In_2; [|eassumption].
+    apply DisjList_app_4.
+    + apply sys_minds_sys_merqs_DisjList.
+    + apply DisjList_comm, sys_merqs_sys_merss_DisjList.
+  - inv_steps.
+    apply Forall_app; [apply forall_removeL; eauto|].
+    inv_step.
+    destruct H18.
+    apply Forall_forall; intros [midx msg] ?.
+    apply in_map with (f:= idOf) in H4.
+    simpl in *.
+    apply H2 in H4.
+    eapply DisjList_In_2; [|eassumption].
+    apply DisjList_app_4.
+    + apply sys_minds_sys_merqs_DisjList.
+    + apply DisjList_comm, sys_merqs_sys_merss_DisjList.
+Qed.
+
 Lemma atomic_inits_in:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->

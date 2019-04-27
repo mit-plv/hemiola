@@ -237,38 +237,30 @@ Section Inv.
         | (ec2, Spec.setRq): False
         | (ec2, Spec.evictRq): False
                            
-        (* | (pc1, msiDownRqS): *)
-        (*     cost1 <-- oss@[child1Idx]; *)
-        (*     (cost1#[implStatusIdx] = msiM) *)
-        (* | (pc2, msiDownRqS): *)
-        (*     cost2 <-- oss@[child2Idx]; *)
-        (*     (cost2#[implStatusIdx] = msiM) *)
-              
         | (pc1, msiRsS): 
             post <-- oss@[parentIdx];
             cost2 <-- oss@[child2Idx];
             (post#[implStatusIdx] = msiS /\
-             cost2#[implStatusIdx] = msiS /\
-             msg_value (valOf eout) = VNat post#[implValueIdx] /\
-             post#[implValueIdx] = cost2#[implValueIdx])
+             ImplOStateS post#[implValueIdx] cost2 /\
+             msg_value (valOf eout) = VNat post#[implValueIdx])
         | (pc2, msiRsS):
             post <-- oss@[parentIdx];
             cost1 <-- oss@[child1Idx];
             (post#[implStatusIdx] = msiS /\
-             cost1#[implStatusIdx] = msiS /\
-             msg_value (valOf eout) = VNat post#[implValueIdx] /\
-             post#[implValueIdx] = cost1#[implValueIdx])
+             ImplOStateS post#[implValueIdx] cost1 /\
+             msg_value (valOf eout) = VNat post#[implValueIdx])
         | (pc1, msiRsM):
             post <-- oss@[parentIdx];
             cost2 <-- oss@[child2Idx];
-            (post#[implStatusIdx] = msiM /\ cost2#[implStatusIdx] = msiI)
+            (post#[implStatusIdx] = msiM /\ ImplOStateI cost2)
         | (pc2, msiRsM):
             post <-- oss@[parentIdx];
             cost1 <-- oss@[child1Idx];
-            (post#[implStatusIdx] = msiM /\ cost1#[implStatusIdx] = msiI)
+            (post#[implStatusIdx] = msiM /\ ImplOStateI cost1)
+
         | (c1pRs, msiDownRsS):
             cost1 <-- oss@[child1Idx];
-            (cost1#[implStatusIdx] = msiS /\
+            (cost1#[implStatusIdx] = msiS /\             
              msg_value (valOf eout) = VNat cost1#[implValueIdx])
         | (c2pRs, msiDownRsS):
             cost2 <-- oss@[child2Idx];
@@ -283,13 +275,8 @@ Section Inv.
         end.
 
     Lemma msiSvMsgOutPred_good:
-      GoodMsgOutPred topo MsiSvMsgOutPred.
+      GoodMsgOutPred topo impl MsiSvMsgOutPred.
     Proof.
-      red; intros.
-      repeat split.
-      - red; intros.
-        red in H; dest.
-        (** TODO: need a lemma [rsEdgeUpFrom dtr oidx = Some _ -> In oidx (indsOf dtr)] *)
     Admitted.
 
     Definition MsiSvLockPred (oidx: IdxT) (orq: ORq Msg): Prop :=
@@ -645,9 +632,7 @@ Section Inv.
           eexists.
           right; left.
           red; solve_rule_conds_ex.
-          * eauto.
-          * right; split; eauto.
-            congruence.
+          right; solve_rule_conds_ex.
         
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
@@ -822,9 +807,7 @@ Section Inv.
           eexists.
           right; left.
           red; solve_rule_conds_ex.
-          * eauto.
-          * right; split; eauto.
-            congruence.
+          right; solve_rule_conds_ex.
             
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
@@ -959,19 +942,32 @@ Section Inv.
 
       (** parent *)
 
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-        
+      - (** [parentGetRqImm] *)
+        disc_rule_conds_ex.
+
+        destruct H6 as [cv ?]; simpl in H6.
+
+        (* construction *)
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); eauto.
+              { exact msiSv_impl_RqRsSys. }
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { reflexivity. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { admit. }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + replace (oss +[parentIdx <- pos]) with oss by meq.
+          exists cv; assumption.
+
     Admitted.
 
     Lemma ImplStateMSI_init:

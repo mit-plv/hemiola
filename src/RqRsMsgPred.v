@@ -95,21 +95,65 @@ Section PredMsg.
       RsDownMsgTo dtr oidx rsDown ->
       OssPredC (subtreeIndsOf dtr oidx) P.
 
-  Definition GoodRqPred (rq: Id Msg) (P: OssPred oifc) :=
+  Definition GoodRqUpPred (rqUp: Id Msg) (P: OssPred oifc) :=
     forall oidx,
-      (RqUpMsgFrom dtr oidx rq \/ RqDownMsgTo dtr oidx rq) ->
+      RqUpMsgFrom dtr oidx rqUp ->
+      (In (idOf rqUp) sys.(sys_merqs) \/
+       forall oss, P oss).
+
+  Definition GoodRqDownPred (rqDown: Id Msg) (P: OssPred oifc) :=
+    forall oidx,
+      RqDownMsgTo dtr oidx rqDown ->
       forall oss, P oss.
 
   Definition GoodMsgOutPred (P: MsgOutPred oifc) :=
     forall eout: Id Msg,
       GoodRsUpPred eout (P eout) /\
       GoodRsDownPred eout (P eout) /\
-      GoodRqPred eout (P eout).
+      GoodRqUpPred eout (P eout) /\
+      GoodRqDownPred eout (P eout).
 
   Section Facts.
 
     Ltac disc_rule_custom ::=
       try disc_msg_case.
+
+    Lemma atomic_rqUp_preserves_msg_out_preds:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall s1 s2,
+          Reachable (steps step_m) sys s1 ->
+          steps step_m sys s1 hst s2 ->
+          forall oidx rqUp pidx,
+            In rqUp eouts ->
+            ~ In (idOf rqUp) sys.(sys_merqs) ->
+            RqUpMsgFrom dtr oidx rqUp ->
+            parentIdxOf dtr oidx = Some pidx ->
+            forall P oss nost,
+              GoodMsgOutPred P ->
+              Forall (fun eout => P eout oss) eouts ->
+              Forall (fun eout => P eout (oss +[pidx <- nost])) eouts.
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      eapply atomic_msg_outs_ok in H2; eauto.
+      inv H2.
+      - dest_in.
+        repeat constructor.
+        specialize (H9 rqUp); dest.
+        specialize (H9 _ H7).
+        destruct H9.
+        + exfalso; auto.
+        + apply H9.
+      - exfalso; dest_in.
+        disc_rule_conds.
+      - exfalso.
+        eapply rqDown_rsUp_inv_msg in H12.
+        rewrite Forall_forall in H12; specialize (H12 _ H5).
+        destruct H12 as [roidx ?].
+        destruct H2.
+        + disc_rule_conds; solve_midx_false.
+        + disc_rule_conds.
+    Qed.
 
     Lemma rqDown_preserves_msg_out_preds:
       forall eouts,
@@ -130,10 +174,10 @@ Section PredMsg.
       rewrite Forall_forall in H7; specialize (H7 _ H8).
       rewrite Forall_forall in H3.
       pose proof (H3 _ H8).
-      destruct H11 as [cidx ?].
-      destruct H11; [eapply H10; eauto|].
+      destruct H12 as [cidx ?].
+      destruct H12; [eapply H11; eauto|].
 
-      specialize (H6 _ H11).
+      specialize (H6 _ H12).
       eapply H6; [eassumption|].
       apply OStatesEquivR_add.
 
@@ -190,10 +234,10 @@ Section PredMsg.
       rewrite Forall_forall in H7; specialize (H7 _ H8).
       rewrite Forall_forall in H3.
       pose proof (H3 _ H8).
-      destruct H11 as [cidx ?].
-      destruct H11; [eapply H10; eauto|].
+      destruct H12 as [cidx ?].
+      destruct H12; [eapply H11; eauto|].
 
-      specialize (H6 _ H11).
+      specialize (H6 _ H12).
       eapply H6; [eassumption|].
       apply OStatesEquivR_add.
 
@@ -208,7 +252,7 @@ Section PredMsg.
         { pose proof (H4 _ (or_introl eq_refl)).
           eapply RqRsDownMatch_rs_rq in H5; [|left; reflexivity].
           destruct H5 as [rcidx [down ?]]; dest.
-          specialize (H3 _ H12).
+          specialize (H3 _ H13).
           destruct H3 as [rcidx0 ?].
           destruct H3; [destruct H3; exfalso; solve_midx_false|].
           destruct H3; disc_rule_conds.
@@ -217,7 +261,7 @@ Section PredMsg.
           red; auto.
         }
       }
-      destruct H12 as [rcidx [rsUp ?]]; dest.
+      destruct H13 as [rcidx [rsUp ?]]; dest.
 
       destruct (id_dec msg_dec rsUp (midx, msg)); subst.
       - disc_rule_conds.
