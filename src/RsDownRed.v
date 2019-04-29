@@ -157,7 +157,7 @@ Section RsDownReduction.
         eapply atomic_rsDown_no_in
           with (cobj0:= cobj) (pobj0:= pobj) (rsDown0:= (rsDown, rsdm))
                (dmsg:= (rsDown, msg)) (st3:= sti); eauto.
-        + eapply (atomic_messages_in_in msg_dec); try apply H3; eauto.
+        + eapply atomic_messages_in_in; try apply H3; eauto.
           eapply DisjList_In_2; [eassumption|].
           left; reflexivity.
         + eapply DisjList_In_2; [eassumption|].
@@ -327,7 +327,7 @@ Section RsDownReduction.
         [|exact H4
          |eassumption
          |eapply reachable_steps; eassumption
-         |eapply (atomic_messages_ins_ins msg_dec);
+         |eapply atomic_messages_ins_ins;
           try eapply H; try eassumption;
           apply DisjList_comm; assumption
          |eassumption

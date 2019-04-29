@@ -1267,7 +1267,7 @@ Section Coverage.
             mred; disc_rule_conds; auto.
           }
           { apply rqsQ_length_ge_one with (msg:= rmsg); auto.
-            pose proof (atomic_messages_eouts_in msg_dec H2 H4).
+            pose proof (atomic_messages_eouts_in H2 H4).
             rewrite Forall_forall in H27; specialize (H27 _ H17).
             assumption.
           }
@@ -1356,7 +1356,7 @@ Section Coverage.
           eapply downLockInvORq_down_rqsQ_rsUp_False
             with (cidx:= oidx) in H31; try eassumption.
           { eapply rqsQ_length_ge_one with (msg:= rmsg); auto.
-            pose proof (atomic_messages_eouts_in msg_dec H2 H4).
+            pose proof (atomic_messages_eouts_in H2 H4).
             rewrite Forall_forall in H32; specialize (H32 _ H19).
             assumption.
           }
@@ -1366,7 +1366,7 @@ Section Coverage.
             apply in_map_iff in i; destruct i as [[rsUp' rsum] [? ?]]; simpl in *; subst.
             apply H7 in H37.
             eapply findQ_length_ge_one with (msg:= rsum); auto.
-            pose proof (atomic_messages_eouts_in msg_dec H2 H4).
+            pose proof (atomic_messages_eouts_in H2 H4).
             rewrite Forall_forall in H36; specialize (H36 _ H37).
             assumption.
           }
@@ -1377,7 +1377,7 @@ Section Coverage.
             mred; disc_rule_conds; auto.
           }
           { apply rqsQ_length_ge_one with (msg:= rmsg); auto.
-            pose proof (atomic_messages_eouts_in msg_dec H2 H4).
+            pose proof (atomic_messages_eouts_in H2 H4).
             rewrite Forall_forall in H32; specialize (H32 _ H19).
             assumption.
           }
@@ -1392,7 +1392,7 @@ Section Coverage.
         destruct H28 as [robj [? ?]]; subst.
         pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
         good_locking_get robj.
-        pose proof (atomic_messages_eouts_in msg_dec H2 H4).
+        pose proof (atomic_messages_eouts_in H2 H4).
         rewrite Forall_forall in H32.
 
         destruct (in_dec eq_nat_dec rsUp (rqi_minds_rss rqid)).

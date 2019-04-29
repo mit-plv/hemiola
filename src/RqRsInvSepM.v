@@ -122,7 +122,7 @@ Section Separation.
       specialize (IHAtomic H7 _ H8 H9 _ H11).
       intro Hx; apply in_app_or in Hx.
       destruct Hx; [auto|].
-      eapply (atomic_messages_in_in msg_dec) in H9; try eassumption.
+      eapply atomic_messages_in_in in H9; try eassumption.
       eapply step_rqDown_ins_outs_disj in H13; eauto.
       intro Hx; elim IHAtomic.
       eapply atomic_eouts_in; eauto.
@@ -460,7 +460,7 @@ Section Separation.
       + assert (Reachable (steps step_m) sys st3) by eauto.
         eapply step_rqDown_no_rsDown_out
           with (cobj:= cobj) (pobj:= pobj) (st1:= st3); eauto.
-        * eapply (atomic_messages_in_in msg_dec); eauto.
+        * eapply atomic_messages_in_in; eauto.
         * pose proof H9.
           eapply atomic_rqDown_inits_outs_disj with (st1:= st1) in H12; eauto.
           intro Hx; elim H12.
@@ -534,7 +534,7 @@ Section Separation.
       + eapply IHAtomic; eauto.
       + assert (Reachable (steps step_m) sys st3) by eauto.
         eapply step_rqDown_no_rqDown_out with (pobj:= pobj) (st1:= st3); eauto.
-        * eapply (atomic_messages_in_in msg_dec); eauto.
+        * eapply atomic_messages_in_in; eauto.
         * pose proof H7.
           eapply atomic_rqDown_inits_outs_disj with (st1:= st1) in H11; eauto.
           intro Hx; elim H11.
@@ -706,7 +706,7 @@ Section Separation.
         eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
-        eapply (atomic_messages_in_in msg_dec) in H12; try eassumption.
+        eapply atomic_messages_in_in in H12; try eassumption.
         intro Hx; subst.
         eapply step_rqDown_separation_inside_false; eauto.
       + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
@@ -714,7 +714,7 @@ Section Separation.
         eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_outside_ok; eauto.
-        pose proof (atomic_messages_in_in msg_dec H2 H18 _ H16 H12).
+        pose proof (atomic_messages_in_in H2 H18 _ H16 H12).
         intro Hx; subst.
         eapply step_rqDown_separation_outside_false with (rins:= rins); eauto.
         * clear H13.
@@ -890,7 +890,7 @@ Section Separation.
       destruct Hx; [auto|].
       assert (Reachable (steps step_m) sys st3) by eauto.
       eapply step_rsDown_ins_outs_disj with (rins:= rins); eauto.
-      + eapply (atomic_messages_in_in msg_dec); eauto.
+      + eapply atomic_messages_in_in; eauto.
       + intro Hx; apply H6 in Hx.
         elim IHAtomic.
         eapply atomic_eouts_in; eauto.
@@ -981,7 +981,7 @@ Section Separation.
       + assert (Reachable (steps step_m) sys st3) by eauto.
         eapply step_rsDown_no_rqDown_in
           with (cobj:= cobj) (pobj:= pobj) (st1:= st3); eauto.
-        eapply (atomic_messages_in_in msg_dec); eauto.
+        eapply atomic_messages_in_in; eauto.
   Qed.
 
   Lemma step_rsDown_no_rsDown_in:
@@ -1047,7 +1047,7 @@ Section Separation.
       + eapply IHAtomic; eauto.
       + assert (Reachable (steps step_m) sys st3) by eauto.
         eapply step_rsDown_no_rsDown_in with (cobj:= cobj) (st1:= st3); eauto.
-        * eapply (atomic_messages_in_in msg_dec); eauto.
+        * eapply atomic_messages_in_in; eauto.
         * pose proof H7.
           eapply atomic_rsDown_inits_outs_disj with (st1:= st1) in H11; eauto.
           intro Hx; elim H11.
@@ -1367,7 +1367,7 @@ Section Separation.
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
-        eapply (atomic_messages_in_in msg_dec) in H17; try eassumption.
+        eapply atomic_messages_in_in in H17; try eassumption.
         intro Hx; subst.
         eapply step_rsDown_separation_inside_false with (cobj:= cobj); eauto.
       + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
@@ -1375,7 +1375,7 @@ Section Separation.
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_outside_ok; eauto.
-        pose proof (atomic_messages_in_in msg_dec H2 H17 _ H15 H16).
+        pose proof (atomic_messages_in_in H2 H17 _ H15 H16).
         intro Hx; subst.
         eapply step_rsDown_separation_outside_false with (rins:= rins); eauto.
         clear H7; pose proof H2.

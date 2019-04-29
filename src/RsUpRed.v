@@ -471,7 +471,7 @@ Section RsUpReduction.
       { rewrite Forall_forall in H13.
         apply Forall_forall; intros rsUp ?.
         specialize (H13 _ H8).
-        eapply (atomic_messages_in_in msg_dec); eauto.
+        eapply atomic_messages_in_in; eauto.
         specialize (H11 rsUp); destruct H11; auto.
       }
       { eassumption. }

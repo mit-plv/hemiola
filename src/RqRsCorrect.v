@@ -82,7 +82,7 @@ Section Pushable.
       apply eq_sym in H1; inv H1.
       inv H0.
       red; eapply SubList_forall; [|eassumption].
-      eapply (atomic_messages_eouts_in msg_dec); eauto.
+      eapply atomic_messages_eouts_in; eauto.
     Qed.
 
     Lemma rsUp_PPreserving:
@@ -99,7 +99,7 @@ Section Pushable.
       eapply atomic_unique in H; [|eassumption]; dest; subst.
 
       red; intros.
-      eapply (atomic_messages_ins_ins msg_dec).
+      eapply atomic_messages_ins_ins.
       - eapply H0.
       - eassumption.
       - assumption.
@@ -186,7 +186,7 @@ Section Pushable.
       apply eq_sym in H1; inv H1.
       inv H0.
       red; eapply SubList_forall; [|eassumption].
-      eapply (atomic_messages_eouts_in msg_dec); eauto.
+      eapply atomic_messages_eouts_in; eauto.
     Qed.
 
     Lemma rqDown_discontinuous_PPreserving:
@@ -204,7 +204,7 @@ Section Pushable.
       eapply atomic_unique in H; [|eassumption]; dest; subst.
 
       red; intros.
-      eapply (atomic_messages_ins_ins msg_dec).
+      eapply atomic_messages_ins_ins.
       - eapply H0.
       - eassumption.
       - assumption.
@@ -405,7 +405,7 @@ Section Pushable.
       apply eq_sym in H1; inv H1.
       inv H0.
       red; eapply SubList_forall; [|eassumption].
-      eapply (atomic_messages_eouts_in msg_dec); eauto.
+      eapply atomic_messages_eouts_in; eauto.
     Qed.
 
     Lemma rsDown_discontinuous_PPreserving:
@@ -423,7 +423,7 @@ Section Pushable.
       eapply atomic_unique in H; [|eassumption]; dest; subst.
 
       red; intros.
-      eapply (atomic_messages_ins_ins msg_dec).
+      eapply atomic_messages_ins_ins.
       - eapply H0.
       - eassumption.
       - assumption.

@@ -88,7 +88,7 @@ Section RqDownReduction.
           { eapply atomic_NonRqUp_rqDown_separation_inside
               with (cobj0:= cobj) (pobj0:= pobj)
                    (rqDown0:= (rqDown, rqdm)) (s1:= sti) (ioidx:= loidx); eauto.
-            { eapply (atomic_messages_in_in msg_dec); try eapply H6; eauto. }
+            { eapply atomic_messages_in_in; try eapply H6; eauto. }
             { intro Hx; apply H12 in Hx.
               eapply atomic_rqDown_inits_outs_disj
                 with (cidx0:= obj_idx cobj) (rqDown0:= (rqDown, rqdm))
@@ -170,7 +170,7 @@ Section RqDownReduction.
             eapply atomic_NonRqUp_rqDown_separation_outside
               with (cobj0:= cobj) (pobj0:= pobj) (rqDown0:= (rqDown, rqdm))
                    (ioidx:= loidx) (s1:= sti); eauto.
-            { eapply (atomic_messages_in_in msg_dec); try eapply H6; eauto. }
+            { eapply atomic_messages_in_in; try eapply H6; eauto. }
             { intro Hx; apply H12 in Hx.
               eapply atomic_rqDown_inits_outs_disj
                 with (cidx0:= obj_idx cobj) (rqDown0:= (rqDown, rqdm))
@@ -408,7 +408,7 @@ Section RqDownReduction.
         [|exact H4
          |eassumption
          |eapply reachable_steps; eassumption
-         |eapply (atomic_messages_ins_ins msg_dec);
+         |eapply atomic_messages_ins_ins;
           try eapply H; try eassumption;
           apply DisjList_comm; assumption
          |eassumption
@@ -482,7 +482,7 @@ Section RqDownReduction.
               }
               eapply rqDown_lpush_rpush_messages_disj
                 with (rinits:= rqUps) (linits:= linits) (st1:= rsti); eauto.
-              { eapply (atomic_messages_ins_ins msg_dec).
+              { eapply atomic_messages_ins_ins.
                 { eapply H9. }
                 { eassumption. }
                 { eassumption. }
