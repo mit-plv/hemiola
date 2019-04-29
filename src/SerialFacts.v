@@ -8,6 +8,7 @@ Require Import Program.Equality.
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope fmap.
 
 Section MsgParam.
   Variable MsgT: Type.
@@ -172,44 +173,6 @@ Section MsgParam.
       apply removeL_SubList_2.
   Qed.
 
-  Lemma atomic_messages_eouts_in:
-    forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
-      forall {oifc} (sys: System oifc) st1 st2,
-        steps step_m sys st1 hst st2 ->
-        Forall (InMPI st2.(bst_msgs)) eouts.
-  Proof.
-  Admitted.
-
-  Lemma atomic_messages_in_in:
-    forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
-      forall {oifc} (sys: System oifc) st1 st2,
-        steps step_m sys st1 hst st2 ->
-        forall idm,
-          InMPI (bst_msgs st1) idm ->
-          ~ In idm inits ->
-          InMPI (bst_msgs st2) idm.
-  Proof.
-  Admitted.
-
-  Corollary atomic_messages_ins_ins:
-    forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
-      forall {oifc} (sys: System oifc) st1 st2,
-        steps step_m sys st1 hst st2 ->
-        forall msgs,
-          Forall (InMPI (bst_msgs st1)) msgs ->
-          DisjList inits msgs ->
-          Forall (InMPI (bst_msgs st2)) msgs.
-  Proof.
-    intros.
-    rewrite Forall_forall in H1.
-    apply Forall_forall; intros idm ?.
-    eapply atomic_messages_in_in; eauto.
-    destruct (H2 idm); auto.
-  Qed.
-  
   Lemma atomic_behavior_nil:
     forall `{HasMsg MsgT} (hst: History MsgT) inits ins outs eouts,
       Atomic msgT_dec inits ins hst outs eouts ->
@@ -633,6 +596,255 @@ Section MsgParam.
 
 End MsgParam.
 
+Lemma count_occ_app:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (l1 l2: list A),
+    count_occ eq_dec (l1 ++ l2) a =
+    count_occ eq_dec l1 a + count_occ eq_dec l2 a.
+Proof.
+  induction l1; simpl; intros; auto.
+  destruct (eq_dec a0 a); subst; auto.
+  rewrite IHl1; reflexivity.
+Qed.
+
+Lemma count_occ_removeOnce_eq:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (l: list A),
+    In a l ->
+    S (count_occ eq_dec (removeOnce eq_dec a l) a) =
+    count_occ eq_dec l a.
+Proof.
+  induction l; simpl; intros; [exfalso; auto|].
+  destruct (eq_dec a a0); subst.
+  - destruct (eq_dec a0 a0); [reflexivity|exfalso; auto].
+  - simpl.
+    destruct (eq_dec a0 a); [exfalso; auto|].
+    destruct H; [exfalso; auto|].
+    auto.
+Qed.
+
+Lemma count_occ_removeOnce_neq:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (ra a: A) (l: list A),
+    a <> ra ->
+    count_occ eq_dec (removeOnce eq_dec ra l) a =
+    count_occ eq_dec l a.
+Proof.
+  induction l; simpl; intros; [reflexivity|].
+  destruct (eq_dec ra a0); subst.
+  - destruct (eq_dec a0 a); auto.
+    exfalso; auto.
+  - simpl.
+    destruct (eq_dec a0 a); subst; auto.
+Qed.
+
+Lemma count_occ_removeL:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (rl l: list A),
+    SubList rl l -> NoDup rl ->
+    count_occ eq_dec (removeL eq_dec l rl) a +
+    count_occ eq_dec rl a =
+    count_occ eq_dec l a.
+Proof.
+  induction rl; simpl; intros; [omega|].
+  apply SubList_cons_inv in H; dest.
+  inv H0.
+  destruct (eq_dec a0 a); subst.
+  - rewrite Nat.add_succ_r.
+    rewrite IHrl.
+    + apply count_occ_removeOnce_eq; auto.
+    + apply removeOnce_SubList_1; auto.
+    + assumption.
+  - rewrite IHrl.
+    + apply count_occ_removeOnce_neq; auto.
+    + apply removeOnce_SubList_1; auto.
+    + assumption.
+Qed.
+
+Section MP.
+  Variable (MsgT: Type).
+  Hypothesis (msgT_dec : forall m1 m2 : MsgT, {m1 = m2} + {m1 <> m2}).
+
+  Definition countMsg (idm: Id MsgT) (mp: MessagePool MsgT) :=
+    List.count_occ msgT_dec (findQ (idOf idm) mp) (valOf idm).
+
+  Lemma countMsg_In_enqMP:
+    forall (mp: MessagePool MsgT) idm midx msg,
+      idm = (midx, msg) ->
+      countMsg idm (enqMP midx msg mp) = S (countMsg idm mp).
+  Proof.
+    unfold enqMP, countMsg, findQ; intros; subst.
+    mred; simpl.
+    rewrite count_occ_app; simpl.
+    destruct (msgT_dec msg msg); [|exfalso; auto].
+    apply Nat.add_1_r.
+  Qed.
+
+  Lemma countMsg_not_In_enqMP:
+    forall (mp: MessagePool MsgT) idm midx msg,
+      idm <> (midx, msg) ->
+      countMsg idm (enqMP midx msg mp) = countMsg idm mp.
+  Proof.
+    unfold enqMP, countMsg, findQ; intros.
+    mred; simpl.
+    rewrite count_occ_app; simpl.
+    destruct (msgT_dec msg (valOf idm)).
+    - exfalso; subst; destruct idm; auto.
+    - rewrite Nat.add_0_r; reflexivity.
+  Qed.
+
+  Lemma countMsg_enqMsgs:
+    forall msgs (mp: MessagePool MsgT) idm,
+      countMsg idm (enqMsgs msgs mp) =
+      countMsg idm mp + count_occ (id_dec msgT_dec) msgs idm.
+  Proof.
+    induction msgs; simpl; intros; auto.
+    destruct a as [amidx amsg].
+    rewrite IHmsgs by auto.
+    destruct (id_dec msgT_dec (amidx, amsg) idm).
+    - subst; rewrite countMsg_In_enqMP by reflexivity.
+      omega.
+    - rewrite countMsg_not_In_enqMP by auto.
+      reflexivity.
+  Qed.
+
+  Lemma countMsg_In_deqMP:
+    forall (mp: MessagePool MsgT) idm midx,
+      idOf idm = midx ->
+      FirstMPI mp idm ->
+      S (countMsg idm (deqMP midx mp)) = countMsg idm mp.
+  Proof.
+    unfold FirstMPI, FirstMP, firstMP, deqMP, countMsg, findQ; simpl; intros.
+    destruct idm as [midx' msg]; simpl in *; subst.
+    destruct (mp@[midx]) as [q|] eqn:Hq; [|discriminate].
+    simpl in *.
+    destruct q; [discriminate|].
+    simpl in *; inv H0.
+    destruct (msgT_dec msg msg); [|exfalso; auto].
+    mred.
+  Qed.
+
+  Lemma countMsg_not_In_deqMP:
+    forall (mp: MessagePool MsgT) idm midx,
+      (idOf idm <> midx \/ ~ FirstMPI mp idm) ->
+      countMsg idm (deqMP midx mp) = countMsg idm mp.
+  Proof.
+    unfold FirstMPI, FirstMP, firstMP, deqMP, countMsg, findQ; simpl; intros.
+    destruct idm as [midx' msg]; simpl in *; subst.
+    destruct (mp@[midx]) as [q|] eqn:Hq; simpl; [|reflexivity].
+    destruct q; [reflexivity|].
+    destruct H.
+    - mred.
+    - mred; simpl.
+      destruct (msgT_dec m msg); [exfalso; subst; auto|].
+      reflexivity.
+  Qed.
+
+  Lemma countMsg_deqMsgs:
+    forall idm msgs (mp: MessagePool MsgT),
+      NoDup (idsOf msgs) ->
+      Forall (FirstMPI mp) msgs ->
+      countMsg idm (deqMsgs (idsOf msgs) mp) + count_occ (id_dec msgT_dec) msgs idm =
+      countMsg idm mp.
+  Proof.
+    induction msgs; simpl; intros; [omega|].
+    inv H; inv H0.
+    destruct (id_dec msgT_dec a idm); subst.
+    - rewrite Nat.add_succ_r.
+      rewrite IHmsgs.
+      + apply countMsg_In_deqMP; auto.
+      + assumption.
+      + apply FirstMPI_Forall_deqMP; auto.
+    - rewrite IHmsgs.
+      + apply countMsg_not_In_deqMP.
+        destruct a as [amidx amsg], idm as [midx msg].
+        simpl in *.
+        destruct (eq_nat_dec midx amidx); [|auto].
+        subst; right.
+        intro Hx.
+        pose proof (FirstMP_eq H2 Hx); simpl in *; subst.
+        auto.
+      + assumption.
+      + apply FirstMPI_Forall_deqMP; auto.
+  Qed.
+
+  Lemma countMsg_InMPI:
+    forall idm (mp: MessagePool MsgT),
+      InMPI mp idm <-> countMsg idm mp > 0.
+  Proof.
+    unfold countMsg, InMPI, InMP; intros.
+    apply (count_occ_In msgT_dec).
+  Qed.
+
+End MP.
+
+Lemma atomic_messages_eouts_count_eq:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall idm,
+        List.count_occ (id_dec msg_dec) eouts idm <=
+        countMsg msg_dec idm st2.(bst_msgs).
+Proof.
+  induction 1; simpl; intros; subst.
+  - inv_steps; inv_step; simpl.
+    rewrite countMsg_enqMsgs; omega.
+  - inv_steps; inv_step; simpl.
+    rewrite count_occ_app, countMsg_enqMsgs.
+    apply plus_le_compat_r.
+    specialize (IHAtomic _ _ _ _ H6 idm); simpl in IHAtomic.
+    destruct H14.
+    assert (NoDup rins) by (apply idsOf_NoDup in H3; auto).
+    pose proof (countMsg_deqMsgs msg_dec idm H3 H13).
+    pose proof (count_occ_removeL (id_dec msg_dec) idm H1 H4).
+    omega.
+Qed.
+
+Lemma atomic_messages_eouts_in:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      Forall (InMPI st2.(bst_msgs)) eouts.
+Proof.
+  intros.
+  apply Forall_forall; intros idm ?.
+  apply (countMsg_InMPI msg_dec).
+  eapply atomic_messages_eouts_count_eq with (idm:= idm) in H; eauto.
+  apply (count_occ_In (id_dec msg_dec)) in H1.
+  omega.
+Qed.
+
+Lemma atomic_messages_in_in:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall idm,
+        InMPI (bst_msgs st1) idm ->
+        ~ In idm inits ->
+        InMPI (bst_msgs st2) idm.
+Proof.
+Admitted.
+
+Corollary atomic_messages_ins_ins:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall msgs,
+        Forall (InMPI (bst_msgs st1)) msgs ->
+        DisjList inits msgs ->
+        Forall (InMPI (bst_msgs st2)) msgs.
+Proof.
+  intros.
+  rewrite Forall_forall in H1.
+  apply Forall_forall; intros idm ?.
+  eapply atomic_messages_in_in; eauto.
+  destruct (H2 idm); auto.
+Qed.
+
 Lemma insLbl_IntMsgsEmpty:
   forall {oifc} (sys: System oifc) st1 lbl st2,
     step_m sys st1 lbl st2 ->
@@ -857,4 +1069,5 @@ Proof.
 Qed.
 
 Close Scope list.
+Close Scope fmap.
 
