@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String Peano_dec Omega.
 Require Import Common ListSupport FMap Syntax.
 
 Set Implicit Arguments.
@@ -88,6 +88,14 @@ Section MessagePool.
   Definition unionMP (mp1 mp2: MessagePool): MessagePool :=
     M.merge (fun q1 q2 => unionQ q1 q2) mp1 mp2.
 
+  Section OnDec.
+    Variable (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
+
+    Definition countMsg (idm: Id MsgT) (mp: MessagePool) :=
+      List.count_occ msgT_dec (findQ (idOf idm) mp) (valOf idm).
+
+  End OnDec.
+  
 End MessagePool.
 
 Section Facts.
@@ -1124,6 +1132,124 @@ Section Facts.
     - eapply IHmsgs; eauto.
       apply FirstMPI_Forall_deqMP; auto.
   Qed.
+
+  Section OnDec.
+    Variable (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
+
+    Lemma countMsg_In_enqMP:
+      forall (mp: MessagePool MsgT) idm midx msg,
+        idm = (midx, msg) ->
+        countMsg msgT_dec idm (enqMP midx msg mp) =
+        S (countMsg msgT_dec idm mp).
+    Proof.
+      unfold enqMP, countMsg, findQ; intros; subst.
+      mred; simpl.
+      rewrite count_occ_app; simpl.
+      destruct (msgT_dec msg msg); [|exfalso; auto].
+      apply Nat.add_1_r.
+    Qed.
+
+    Lemma countMsg_not_In_enqMP:
+      forall (mp: MessagePool MsgT) idm midx msg,
+        idm <> (midx, msg) ->
+        countMsg msgT_dec idm (enqMP midx msg mp) =
+        countMsg msgT_dec idm mp.
+    Proof.
+      unfold enqMP, countMsg, findQ; intros.
+      mred; simpl.
+      rewrite count_occ_app; simpl.
+      destruct (msgT_dec msg (valOf idm)).
+      - exfalso; subst; destruct idm; auto.
+      - rewrite Nat.add_0_r; reflexivity.
+    Qed.
+
+    Lemma countMsg_enqMsgs:
+      forall msgs (mp: MessagePool MsgT) idm,
+        countMsg msgT_dec idm (enqMsgs msgs mp) =
+        countMsg msgT_dec idm mp + count_occ (id_dec msgT_dec) msgs idm.
+    Proof.
+      induction msgs; simpl; intros; auto.
+      destruct a as [amidx amsg].
+      rewrite IHmsgs by auto.
+      destruct (id_dec msgT_dec (amidx, amsg) idm).
+      - subst; rewrite countMsg_In_enqMP by reflexivity.
+        omega.
+      - rewrite countMsg_not_In_enqMP by auto.
+        reflexivity.
+    Qed.
+
+    Lemma countMsg_In_deqMP:
+      forall (mp: MessagePool MsgT) idm midx,
+        idOf idm = midx ->
+        FirstMPI mp idm ->
+        S (countMsg msgT_dec idm (deqMP midx mp)) =
+        countMsg msgT_dec idm mp.
+    Proof.
+      unfold FirstMPI, FirstMP, firstMP, deqMP, countMsg, findQ; simpl; intros.
+      destruct idm as [midx' msg]; simpl in *; subst.
+      destruct (mp@[midx]) as [q|] eqn:Hq; [|discriminate].
+      simpl in *.
+      destruct q; [discriminate|].
+      simpl in *; inv H0.
+      destruct (msgT_dec msg msg); [|exfalso; auto].
+      mred.
+    Qed.
+
+    Lemma countMsg_not_In_deqMP:
+      forall (mp: MessagePool MsgT) idm midx,
+        (idOf idm <> midx \/ ~ FirstMPI mp idm) ->
+        countMsg msgT_dec idm (deqMP midx mp) =
+        countMsg msgT_dec idm mp.
+    Proof.
+      unfold FirstMPI, FirstMP, firstMP, deqMP, countMsg, findQ; simpl; intros.
+      destruct idm as [midx' msg]; simpl in *; subst.
+      destruct (mp@[midx]) as [q|] eqn:Hq; simpl; [|reflexivity].
+      destruct q; [reflexivity|].
+      destruct H.
+      - mred.
+      - mred; simpl.
+        destruct (msgT_dec m msg); [exfalso; subst; auto|].
+        reflexivity.
+    Qed.
+
+    Lemma countMsg_deqMsgs:
+      forall idm msgs (mp: MessagePool MsgT),
+        NoDup (idsOf msgs) ->
+        Forall (FirstMPI mp) msgs ->
+        countMsg msgT_dec idm (deqMsgs (idsOf msgs) mp) +
+        count_occ (id_dec msgT_dec) msgs idm =
+        countMsg msgT_dec idm mp.
+    Proof.
+      induction msgs; simpl; intros; [omega|].
+      inv H; inv H0.
+      destruct (id_dec msgT_dec a idm); subst.
+      - rewrite Nat.add_succ_r.
+        rewrite IHmsgs.
+        + apply countMsg_In_deqMP; auto.
+        + assumption.
+        + apply FirstMPI_Forall_deqMP; auto.
+      - rewrite IHmsgs.
+        + apply countMsg_not_In_deqMP.
+          destruct a as [amidx amsg], idm as [midx msg].
+          simpl in *.
+          destruct (eq_nat_dec midx amidx); [|auto].
+          subst; right.
+          intro Hx.
+          pose proof (FirstMP_eq H2 Hx); simpl in *; subst.
+          auto.
+        + assumption.
+        + apply FirstMPI_Forall_deqMP; auto.
+    Qed.
+
+    Lemma countMsg_InMPI:
+      forall idm (mp: MessagePool MsgT),
+        InMPI mp idm <-> countMsg msgT_dec idm mp > 0.
+    Proof.
+      unfold countMsg, InMPI, InMP; intros.
+      apply (count_occ_In msgT_dec).
+    Qed.
+
+  End OnDec.
   
 End Facts.
 

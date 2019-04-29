@@ -1350,6 +1350,71 @@ Proof.
     eapply in_map with (f:= valOf) in Hx; auto.
 Qed.
 
+Lemma count_occ_app:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (l1 l2: list A),
+    count_occ eq_dec (l1 ++ l2) a =
+    count_occ eq_dec l1 a + count_occ eq_dec l2 a.
+Proof.
+  induction l1; simpl; intros; auto.
+  destruct (eq_dec a0 a); subst; auto.
+  rewrite IHl1; reflexivity.
+Qed.
+
+Lemma count_occ_removeOnce_eq:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (l: list A),
+    In a l ->
+    S (count_occ eq_dec (removeOnce eq_dec a l) a) =
+    count_occ eq_dec l a.
+Proof.
+  induction l; simpl; intros; [exfalso; auto|].
+  destruct (eq_dec a a0); subst.
+  - destruct (eq_dec a0 a0); [reflexivity|exfalso; auto].
+  - simpl.
+    destruct (eq_dec a0 a); [exfalso; auto|].
+    destruct H; [exfalso; auto|].
+    auto.
+Qed.
+
+Lemma count_occ_removeOnce_neq:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (ra a: A) (l: list A),
+    a <> ra ->
+    count_occ eq_dec (removeOnce eq_dec ra l) a =
+    count_occ eq_dec l a.
+Proof.
+  induction l; simpl; intros; [reflexivity|].
+  destruct (eq_dec ra a0); subst.
+  - destruct (eq_dec a0 a); auto.
+    exfalso; auto.
+  - simpl.
+    destruct (eq_dec a0 a); subst; auto.
+Qed.
+
+Lemma count_occ_removeL:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (rl l: list A),
+    SubList rl l -> NoDup rl ->
+    count_occ eq_dec (removeL eq_dec l rl) a +
+    count_occ eq_dec rl a =
+    count_occ eq_dec l a.
+Proof.
+  induction rl; simpl; intros; [omega|].
+  apply SubList_cons_inv in H; dest.
+  inv H0.
+  destruct (eq_dec a0 a); subst.
+  - rewrite Nat.add_succ_r.
+    rewrite IHrl.
+    + apply count_occ_removeOnce_eq; auto.
+    + apply removeOnce_SubList_1; auto.
+    + assumption.
+  - rewrite IHrl.
+    + apply count_occ_removeOnce_neq; auto.
+    + apply removeOnce_SubList_1; auto.
+    + assumption.
+Qed.
+
 (** Some other ways of induction for lists *)
 
 Lemma list_picker:
