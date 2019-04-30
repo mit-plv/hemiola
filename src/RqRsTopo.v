@@ -39,22 +39,6 @@ Section RqRsTopo.
   Local Notation "RULE '#post' '<=' PP" := (RulePostSat RULE PP) (at level 0).
   
   (** Preconditions and postconditions dealing with messages. *)
-
-  Definition MsgsFrom (froms: list IdxT): OPrec oifc :=
-    fun _ _ mins => idsOf mins = froms.
-
-  Definition MsgIdsFrom (msgIds: list IdxT): OPrec oifc :=
-    fun _ _ mins => map msg_id (valsOf mins) = msgIds.
-
-  Definition MsgsFromORq (rqty: IdxT): OPrec oifc :=
-    fun _ orq mins =>
-      (getRq orq rqty)
-        >>=[False] (fun rqi => idsOf mins = rqi_minds_rss rqi).
-
-  Definition MsgsTo (tos: list IdxT) (rule: Rule oifc): Prop :=
-    forall ost orq mins,
-      idsOf (snd (rule.(rule_trs) ost orq mins)) = tos.
-
   Definition RqAccepting: OPrec oifc :=
     fun _ _ mins =>
       Forall (fun idm => msg_type (valOf idm) = MRq) mins.
@@ -457,8 +441,7 @@ Section RqRsTopo.
   
 End RqRsTopo.
 
-Hint Unfold MsgsFrom MsgIdsFrom MsgsFromORq MsgsTo
-     RqAccepting RsAccepting RqReleasing RsReleasing
+Hint Unfold RqAccepting RsAccepting RqReleasing RsReleasing
      UpLockFreeORq DownLockFreeORq
      UpLockFree DownLockFree UpLockFreeSuff DownLockFreeSuff
      StateSilent FootprintUpSilent FootprintDownSilent FootprintSilent

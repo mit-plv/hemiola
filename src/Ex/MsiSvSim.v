@@ -417,72 +417,83 @@ Section Inv.
       good_locking_get obj.
       dest_in.
 
+      (** List of [Rule]s:
+       * [childGetRqImm; childGetRqS; childGetRsS; childDownRqS; 
+       *  childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
+       *  childEvictRqI; childEvictRsI] for [child1Idx] ++
+       * [childGetRqImm; childGetRqS; childGetRsS; childDownRqS; 
+       *  childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
+       *  childEvictRqI; childEvictRsI] for [child2Idx] ++
+       * [parentGetRqImm; parentGetDownRqS; parentSetRqImm; parentSetDownRqM;
+       *  parentGetDownRsS; parentSetDownRsM;
+       *  parentEvictRqImmS; parentEvictRqImmLastS; parentEvictRqImmM] * 2
+       *)
+
       3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent.
-      3, 6, 10, 13, 15-24: atomic_init_exfalso_rq.
+      all: try (atomic_init_exfalso_rq; fail).
 
-      - disc_rule_conds_ex.
+      - (** [childGetRqImm] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childGetRqS] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childSetRqImm] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         destruct H0 as [cv ?]; simpl in H.
         exists n; simpl.
         eapply implStateCoherent_M_value_changed; eauto.
 
-      - disc_rule_conds_ex.
+      - (** [childSetRqM] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childEvictRqI] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childGetRqImm] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childGetRqS] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childSetRqImm] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         destruct H0 as [cv ?]; simpl in H.
         exists n; simpl.
         eapply implStateCoherent_M_value_changed; eauto.
 
-      - disc_rule_conds_ex.
+      - (** [childSetRqM] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
         assumption.
 
-      - disc_rule_conds_ex.
+      - (** [childEvictRqI] *)
+        disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
         assumption.
 
-      - atomic_init_exfalso_rs_to_parent.
-        + assert (rqEdgeUpFrom topo ext1Idx = Some ec1) by reflexivity.
-          solve_midx_false.
-        + assert (rqEdgeUpFrom topo ext2Idx = Some ec2) by reflexivity.
-          solve_midx_false.
-
-      - atomic_init_exfalso_rs_to_parent.
-        + assert (rqEdgeUpFrom topo ext1Idx = Some ec1) by reflexivity.
-          solve_midx_false.
-        + assert (rqEdgeUpFrom topo ext2Idx = Some ec2) by reflexivity.
-          solve_midx_false.
     Qed.
 
     Lemma miisOf_app:
@@ -941,32 +952,6 @@ Section Inv.
           apply implStateCoherent_downgraded_to_I; auto.
 
       (** parent *)
-
-      - (** [parentGetRqImm] *)
-        disc_rule_conds_ex.
-
-        destruct H6 as [cv ?]; simpl in H6.
-
-        (* construction *)
-        split.
-        + split.
-          * apply Forall_app.
-            { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); eauto.
-              { exact msiSv_impl_RqRsSys. }
-              { intro; dest_in; discriminate. }
-              { red; auto. }
-              { reflexivity. }
-              { exact msiSvMsgOutPred_good. }
-            }
-            { admit. }
-          * red; simpl; intros.
-            icase oidx.
-            { repeat (simpl; red; mred). }
-            { mred; apply H7; auto. }
-        + replace (oss +[parentIdx <- pos]) with oss by meq.
-          exists cv; assumption.
 
     Admitted.
 

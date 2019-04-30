@@ -212,6 +212,8 @@ Proof.
     | [ |- Forall _ _] => constructor; simpl
     end.
 
+  (** For "child1" *)
+  
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= ext1Idx).
     all:reflexivity.
@@ -250,6 +252,8 @@ Proof.
     + reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
+
+  (** For "child2" *)
 
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= ext2Idx).
@@ -290,6 +294,8 @@ Proof.
 
   - rule_rsdd; solve_rule_conds_const.
 
+  (** For the parent *)
+    
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
@@ -320,25 +326,22 @@ Proof.
     + reflexivity.
     + reflexivity.
 
+  - rule_rsu; solve_rule_conds_const.
+
+  - rule_rsu; solve_rule_conds_const.
+    
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
-    instantiate (1:= child2Idx).
+    instantiate (1:= child1Idx).
     all:reflexivity.
 
-  - rule_rqud; solve_rule_conds_const.
-    + intros; destruct (hd_error mins); simpl; auto.
-    + right; left; reflexivity.
-    + reflexivity.
-    + reflexivity.
-    + reflexivity.
-    + instantiate (1:= child1Idx) in H; discriminate.
-    + reflexivity.
-    + reflexivity.
-    + reflexivity.
-
+  - rule_immd; solve_rule_conds_const.
+    instantiate (1:= child1Idx).
+    all:reflexivity.
+    
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
@@ -358,9 +361,33 @@ Proof.
     instantiate (1:= child2Idx).
     all:reflexivity.
 
+  - rule_rqud; solve_rule_conds_const.
+    + intros; destruct (hd_error mins); simpl; auto.
+    + right; left; reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + instantiate (1:= child1Idx) in H; discriminate.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+
   - rule_rsu; solve_rule_conds_const.
 
   - rule_rsu; solve_rule_conds_const.
+
+  - rule_immd; solve_rule_conds_const.
+    instantiate (1:= child2Idx).
+    all:reflexivity.
+
+  - rule_immd; solve_rule_conds_const.
+    instantiate (1:= child2Idx).
+    all:reflexivity.
+
+  - rule_immd; solve_rule_conds_const.
+    instantiate (1:= child2Idx).
+    all:reflexivity.
+
 Qed.
 
 Theorem msiSv_impl_RqRsSys: RqRsSys topo impl.

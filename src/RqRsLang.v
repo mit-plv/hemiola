@@ -11,6 +11,11 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
+Definition rootDmc (ridx: IdxT) :=
+  {| dmc_me := ridx;
+     dmc_ups := nil;
+     dmc_downs := nil |}.
+
 Definition StateM oifc :=
   (OState oifc * ORq Msg * list (Id Msg))%type.
 
@@ -96,11 +101,35 @@ Definition getDownLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
   ((snd (fst st))@[downRq])
     >>= (fun rqid => Some rqid.(rqi_midx_rsb)).
 
+Definition MsgsFrom {oifc} (froms: list IdxT): OPrec oifc :=
+  fun _ _ mins => idsOf mins = froms.
+
+Definition MsgIdsFrom {oifc} (msgIds: list IdxT): OPrec oifc :=
+  fun _ _ mins => map msg_id (valsOf mins) = msgIds.
+
+Definition MsgsFromORq {oifc} (rqty: IdxT): OPrec oifc :=
+  fun _ orq mins =>
+    orq@[rqty] >>=[False]
+       (fun rqi => idsOf mins = rqi_minds_rss rqi).
+
+Definition MsgsFromRsUp {oifc} (dtr: DTree) (orss: list IdxT): OPrec oifc :=
+  fun _ orq mins =>
+    orq@[downRq] >>=[False]
+       (fun rqid =>
+          idsOf mins = rqi_minds_rss rqid /\
+          Forall2 (fun rsUp robj =>
+                     rqEdgeUpFrom dtr robj = Some rsUp)
+                  (rqi_minds_rss rqid) orss).
+
+Definition MsgsTo {oifc} (tos: list IdxT) (rule: Rule oifc): Prop :=
+  forall ost orq mins,
+    idsOf (snd (rule.(rule_trs) ost orq mins)) = tos.
+
 Hint Unfold StateMBind TrsMTrs getFirstMsg
      FirstNatMsg getFirstNatMsg
      UpLockNatMsg getUpLockNatMsg UpLocked getUpLockIdxBack
      DownLockNatMsg getDownLockNatMsg DownLocked getDownLockIdxBack
-  : RuleConds.
+     MsgsFrom MsgIdsFrom MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
 Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
 Notation "N <-- F ; CONT" :=
@@ -179,6 +208,10 @@ Ltac disc_rule_conds_const_unit :=
   | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
   | [H: context [hd_error [_]%list] |- _] => progress simpl in H
   | [H: SubList [_] _ |- _] => apply SubList_singleton_In in H
+  | [H: [_]%list = rqi_minds_rss _ |- _] => rewrite <-H in *
+  | [H: [_]%list = rqi_midx_rsb _ |- _] => rewrite <-H in *
+  | [H: Forall2 _ [_]%list [_]%list |- _] => inv H
+  | [H: Forall2 _ nil nil |- _] => clear H
   end.
 
 Ltac disc_rule_conds_const :=

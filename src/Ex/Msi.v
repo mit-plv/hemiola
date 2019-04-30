@@ -22,7 +22,8 @@ Definition msiRsI: IdxT := specNumMsgIds + 9.
 
 (** Cache Status *)
 
-Definition msiM := 2.
-Definition msiS := 1.
-Definition msiI := 0.
+Notation MSI := nat (only parsing).
+Definition msiM: MSI := 2.
+Definition msiS: MSI := 1.
+Definition msiI: MSI := 0.
 
