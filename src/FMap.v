@@ -2280,6 +2280,8 @@ Module M.
   Include (LeibnizFacts Map).
 End M.
 
+Global Opaque M.find.
+
 (** FMap Notations *)
 
 Notation "'[]'" := (M.empty _) : fmap_scope.

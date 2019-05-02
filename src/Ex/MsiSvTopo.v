@@ -53,8 +53,6 @@ Proof.
   - auto using msiSv_impl_ExtsOnDTree.
 Qed.
 
-Local Hint Unfold upRq downRq : RuleConds.
-
 Lemma msiSv_impl_GoodExtRssSys: GoodExtRssSys impl.
 Proof.
   repeat constructor;

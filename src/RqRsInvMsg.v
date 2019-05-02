@@ -65,7 +65,7 @@ Section FootprintInv.
     InvInit sys FootprintsOk.
   Proof.
     intros; do 3 red.
-    intros; simpl; auto.
+    intros; simpl; mred.
   Qed.
   
   Lemma footprints_ok_step:

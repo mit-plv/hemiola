@@ -131,13 +131,16 @@ Hint Unfold StateMBind TrsMTrs getFirstMsg
      DownLockNatMsg getDownLockNatMsg DownLocked getDownLockIdxBack
      MsgsFrom MsgIdsFrom MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
+(* TODO: We need refactoring of monadic notations, which includes 
+ * merging with the ones in [Ex/MsiSvSim.v].
+ *)
 Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
 Notation "N <-- F ; CONT" :=
-  (StateMBind F (fun N => CONT)) (at level 15, right associativity): trs_scope.
+  (StateMBind F (fun N => CONT)) (at level 84, right associativity): trs_scope.
 Notation "PST --> NST" :=
-  (fun PST => NST) (at level 12, only parsing): trs_scope.
+  (fun PST => NST) (at level 82, only parsing): trs_scope.
 Notation "PST {{ OIFC }} --> NST" :=
-  (fun PST: StateM OIFC => NST) (at level 12, only parsing): trs_scope.
+  (fun PST: StateM OIFC => NST) (at level 82, only parsing): trs_scope.
 
 Notation "ST '.ost'" := (fst (fst ST)) (at level 11, only parsing): trs_scope.
 Notation "ST '.orq'" := (snd (fst ST)) (at level 11, only parsing): trs_scope.
@@ -167,17 +170,27 @@ Ltac disc_rule_conds_const_unit :=
     destruct (orq@[i]) as [rqi|] eqn:Horq;
     [clear H; simpl in *|exfalso; auto]
 
-  | [H: context [(?m@[?i]) >>=[False] (fun _ => _)] |- _] =>
+  | [H: (?m@[?i]) >>=[False] (fun _ => _) |- _] =>
     match type of m with
-    | M.t (RqInfo _) =>
-      let rqiu := fresh "rqiu" in
+    | M.t (ORq _) =>
+      let orq := fresh "orq" in
       let Horq := fresh "Horq" in
-      destruct (m@[i]) as [rqiu|] eqn:Horq;
+      destruct (m@[i]) as [orq|] eqn:Horq;
+      [simpl in *|exfalso; auto]
+    | ORqs _ =>
+      let orq := fresh "orq" in
+      let Horq := fresh "Horq" in
+      destruct (m@[i]) as [orq|] eqn:Horq;
+      [simpl in *|exfalso; auto]
+    | M.t (RqInfo _) =>
+      let rqi := fresh "rqi" in
+      let Hrqi := fresh "Hrqi" in
+      destruct (m@[i]) as [rqi|] eqn:Hrqi;
       [simpl in *|exfalso; auto]
     | ORq _ =>
-      let rqiu := fresh "rqiu" in
-      let Horq := fresh "Horq" in
-      destruct (m@[i]) as [rqiu|] eqn:Horq;
+      let rqi := fresh "rqi" in
+      let Hrqi := fresh "Hrqi" in
+      destruct (m@[i]) as [rqi|] eqn:Hrqi;
       [simpl in *|exfalso; auto]
     | M.t (OState _) =>
       let ost := fresh "ost" in

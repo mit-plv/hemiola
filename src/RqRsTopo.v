@@ -460,6 +460,8 @@ Hint Unfold RqToUpRule RsToUpRule : RuleConds.
 
 Hint Unfold getRq addRq removeRq : RuleConds.
 
+Global Opaque upRq downRq.
+
 Close Scope list.
 Close Scope fmap.
 

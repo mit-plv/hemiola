@@ -101,6 +101,8 @@ Section DownLockInv.
     intros; do 3 red; cbn.
     intros; cbn.
     red; intros.
+    repeat (mred; simpl).
+    red; intros.
     eapply parentIdxOf_Some in H0; [|eassumption].
     destruct H0 as [rqUp [rsUp [down ?]]]; dest.
     exists down, rsUp; repeat split; assumption.

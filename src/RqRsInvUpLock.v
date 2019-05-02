@@ -102,10 +102,9 @@ Section UpLockInv.
   Proof.
     intros; do 3 red; cbn.
     intros; cbn.
-    red.
-    remember (parentIdxOf dtr oidx) as opidx.
-    destruct opidx as [pidx|]; [right|left; reflexivity].
-    pose proof (eq_sym Heqopidx).
+    red; repeat (mred; simpl).
+    destruct (parentIdxOf dtr oidx) as [pidx|] eqn:Hpidx; [right|left; auto].
+    pose proof Hpidx.
     eapply parentIdxOf_Some in H0; [|eassumption].
     destruct H0 as [rqUp [rsUp [down ?]]]; dest.
     do 3 eexists; repeat split; try eassumption.
@@ -786,7 +785,7 @@ Section UpLockInv.
       red in H3; simpl in H3.
       red; simpl.
 
-      eapply upLockFreeInv_msgs_preserved; eauto.
+      mred; eapply upLockFreeInv_msgs_preserved; eauto.
       + destruct (rqEdgeUpFrom dtr oidx) as [rqUp|] eqn:HrqUp; auto.
         rewrite findQ_not_In_enqMsgs; [reflexivity|].
         eapply DisjList_In_1; [eassumption|].
@@ -794,7 +793,7 @@ Section UpLockInv.
       + destruct (edgeDownTo dtr oidx) as [down|] eqn:Hdown; auto.
         unfold rssQ; rewrite findQ_not_In_enqMsgs; [reflexivity|].
         eapply DisjList_In_1; [eassumption|].
-        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.      
+        eapply rqrsDTree_edgeDownTo_sys_minds; eauto.
   Qed.
 
   Lemma upLockInv_step_ext_out:
@@ -847,7 +846,7 @@ Section UpLockInv.
       red in H4; simpl in H4.
       red; simpl.
 
-      eapply upLockFreeInv_msgs_preserved; eauto.
+      mred; eapply upLockFreeInv_msgs_preserved; eauto.
       + destruct (rqEdgeUpFrom dtr oidx) as [rqUp|] eqn:HrqUp; auto.
         rewrite findQ_not_In_deqMsgs; [reflexivity|].
         eapply DisjList_In_1; [eassumption|].
