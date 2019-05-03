@@ -1,4 +1,5 @@
-Require Import Bool List String Peano_dec Omega.
+Require Import Bool List String Peano_dec.
+Require Import Lia. (* experimental *)
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
@@ -12,9 +13,11 @@ Open Scope hvec.
 Open Scope fmap.
 
 Notation "A <-- OA ; CONT" :=
-  (OA >>=[False] (fun A => CONT)) (at level 15, right associativity).
+  (OA >>=[False] (fun A => CONT)) (at level 84, right associativity).
 Notation "A <+- OA ; CONT" :=
-  (OA >>=[True] (fun A => CONT)) (at level 15, right associativity).
+  (OA >>=[True] (fun A => CONT)) (at level 84, right associativity).
+Notation "! OA ; CONT" :=
+  (OA = None -> CONT) (at level 84, right associativity).
 
 Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
          (a: A) (def: B) (cs: list (A * B)) :=
@@ -71,162 +74,186 @@ Definition AtomicInv {oifc}
 
 Section Inv.
 
-  Definition ImplOStateI (ost: OState ImplOStateIfc): Prop :=
-    ost#[implStatusIdx] = msiI.
-
-  Definition ImplOStateS (cv: nat) (ost: OState ImplOStateIfc): Prop :=
-    ost#[implStatusIdx] = msiI \/
-    (ost#[implStatusIdx] = msiS /\ ost#[implValueIdx] = cv).
-
+  (** Basic predicates per an object *)
+  
   Definition ImplOStateM (cv: nat) (ost: OState ImplOStateIfc): Prop :=
     ost#[implStatusIdx] = msiM /\ ost#[implValueIdx] = cv.
 
-  Definition ImplStateI (oss: OStates ImplOStateIfc): Prop.
-  Proof.
-    refine ((oss@[parentIdx]) >>=[False] (fun post => _)).
-    refine ((oss@[child1Idx]) >>=[False] (fun cost1 => _)).
-    refine ((oss@[child2Idx]) >>=[False] (fun cost2 => _)).
-    exact (ImplOStateI post /\ (* Directory status is I as well. *)
-           ImplOStateI cost1 /\ ImplOStateI cost2).
-  Defined.
+  Definition ImplOStateS (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+    ost#[implStatusIdx] = msiS /\ ost#[implValueIdx] = cv.
 
-  Definition ImplStateS (cv: nat) (oss: OStates ImplOStateIfc): Prop.
-  Proof.
-    refine ((oss@[parentIdx]) >>=[False] (fun post => _)).
-    refine ((oss@[child1Idx]) >>=[False] (fun cost1 => _)).
-    refine ((oss@[child2Idx]) >>=[False] (fun cost2 => _)).
-    refine (post#[implStatusIdx] = msiS /\ _). (* Directory status is S. *)
-    exact (ImplOStateS cv cost1 /\ ImplOStateS cv cost2).
-  Defined.
+  Definition ImplOStateI (ost: OState ImplOStateIfc): Prop :=
+    ost#[implStatusIdx] = msiI.
 
-  Definition ImplStateM (cv: nat) (oss: OStates ImplOStateIfc): Prop.
-  Proof.
-    refine ((oss@[parentIdx]) >>=[False] (fun post => _)).
-    refine ((oss@[child1Idx]) >>=[False] (fun cost1 => _)).
-    refine ((oss@[child2Idx]) >>=[False] (fun cost2 => _)).
-    refine (post#[implStatusIdx] = msiM /\ _). (* Directory status is M. *)
-    exact ((ImplOStateM cv cost1 /\ ImplOStateI cost2) \/
-           (ImplOStateI cost1 /\ ImplOStateM cv cost2) \/
-           (ImplOStateS cv cost1 /\ ImplOStateS cv cost2)).
-  Defined.
+  Definition ImplOStateSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+    ImplOStateS cv ost \/ ImplOStateI ost.
 
-  Definition ImplStateCoherent
+  Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+    (ost#[implStatusIdx] = msiM -> ost#[implValueIdx] = cv) /\
+    (ost#[implStatusIdx] = msiS -> ost#[implValueIdx] = cv).
+
+  Definition ImplDirM (ost: OState ImplOStateIfc): Prop :=
+    (ost#[implDirIdx].(fst) = msiM /\ ost#[implDirIdx].(snd) = msiI) \/
+    (ost#[implDirIdx].(fst) = msiI /\ ost#[implDirIdx].(snd) = msiM).
+
+  Definition ImplDirS (ost: OState ImplOStateIfc): Prop :=
+    ost#[implDirIdx].(fst) <= msiS /\
+    ost#[implDirIdx].(snd) <= msiS.
+
+  Definition ImplDirI (ost: OState ImplOStateIfc): Prop :=
+    ost#[implDirIdx].(fst) = msiI /\
+    ost#[implDirIdx].(snd) = msiI.
+
+  (** The first invariant: the directory status is coherent to statuses of
+   * children. Note that an object is *not* required to keep the coherency
+   * when it is (properly) locked (the meaning of "properly" depends on the
+   * protocol).
+   *)
+  Definition ImplDirCoh (oss: OStates ImplOStateIfc): Prop :=
+    post <-- oss@[parentIdx];
+      (cost1 <-- oss@[child1Idx];
+         cost1#[implStatusIdx] = post#[implDirIdx].(fst)) /\
+      (cost2 <-- oss@[child2Idx];
+         cost2#[implStatusIdx] = post#[implDirIdx].(snd)).
+
+  (** The second invariant is only for parent, saying that the parent status
+   * and its directory status are coherent.
+   *)
+  Definition ImplParentCoh (cv: nat) (oss: OStates ImplOStateIfc): Prop :=
+    post <-- oss@[parentIdx];
+      ((ImplOStateM cv post /\ ImplDirI post) \/
+       (ImplOStateS cv post /\ ImplDirS post) \/
+       (ImplOStateI post /\ ImplDirM post)).
+
+  (** The last invariant is for children, in order for ensuring
+   * the local coherency. 
+   *)
+  Definition ImplChildCoh (cidx: IdxT)
              (cv: nat) (oss: OStates ImplOStateIfc): Prop :=
-    ImplStateI oss \/ ImplStateS cv oss \/ ImplStateM cv oss.
+    cost <-- oss@[cidx]; ImplOStateMSI cv cost.
   
-  Definition ImplStateMSI (st: MState ImplOStateIfc): Prop :=
+  Definition ImplStateCoh (cv: nat) (oss: OStates ImplOStateIfc): Prop :=
+    ImplDirCoh oss /\
+    ImplParentCoh cv oss /\
+    ImplChildCoh child1Idx cv oss /\
+    ImplChildCoh child2Idx cv oss.
+
+  Definition ImplStable (orqs: ORqs Msg): Prop :=
+    (porq <-- orqs@[parentIdx]; porq@[downRq] = None) /\
+    (corq1 <-- orqs@[child1Idx]; corq1@[upRq] = None) /\
+    (corq2 <-- orqs@[child2Idx]; corq2@[upRq] = None).
+
+  Definition ImplStateInv (st: MState ImplOStateIfc): Prop :=
+    ImplStable st.(bst_orqs) ->
     exists cv, (* The coherent value always exists. *)
-      ImplStateCoherent cv st.(bst_oss).
+      ImplStateCoh cv st.(bst_oss).
+  
+  Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
+       ImplDirM ImplDirS ImplDirI
+       ImplDirCoh ImplParentCoh ImplChildCoh
+       ImplStateCoh ImplStable: RuleConds.
 
   Ltac disc_msi :=
-    match goal with
-    | [H: ImplStateCoherent _ _ |- _] => red in H
-    | [H: _ \/ _ |- _] => destruct H
+    try
+      match goal with
+      | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
+      | [H: ?oss@[parentIdx] = Some ?ost |- _] =>
+        match type of ost with
+        | OState _ =>
+          let val := fresh "val" in
+          let stt := fresh "stt" in
+          let dir := fresh "dir" in
+          destruct ost as [val [stt [dir ?]]]
+        end
+      | [H: ?oss@[child1Idx] = Some ?ost |- _] =>
+        match type of ost with
+        | OState _ =>
+          let val := fresh "val" in
+          let stt := fresh "stt" in
+          destruct ost as [val [stt ?]]
+        end
+      | [H: ?oss@[child2Idx] = Some ?ost |- _] =>
+        match type of ost with
+        | OState _ =>
+          let val := fresh "val" in
+          let stt := fresh "stt" in
+          destruct ost as [val [stt ?]]
+        end
+      | [H: msiM = _ |- _] => apply eq_sym in H
+      | [H: msiS = _ |- _] => apply eq_sym in H
+      | [H: msiI = _ |- _] => apply eq_sym in H
+      | [H1: ?t = msiM, H2: ?t = msiS |- _] => rewrite H1 in H2; discriminate
+      | [H1: ?t = msiM, H2: ?t = msiI |- _] => rewrite H1 in H2; discriminate
+      | [H1: ?t = msiS, H2: ?t = msiI |- _] => rewrite H1 in H2; discriminate
+      | [H1: ?t = msiM, H2: ?t <= msiS |- _] =>
+        rewrite H1 in H2; unfold msiM, msiS in H2; lia
+      end.
 
-    | [H: ImplStateM _ _ |- _] => red in H
-    | [H: ImplStateS _ _ |- _] => red in H
-    | [H: ImplStateI _ |- _] => red in H
-
-    | [H: ImplOStateM _ _ |- _] => destruct H
-    | [H: ImplOStateS _ _ |- _] => destruct H
-    | [H: ImplOStateI _ |- _] => red in H
-
-    | [H: ?oss@[_] = Some ?ost |- _] =>
-      match type of ost with
-      | OState _ =>
-        let val := fresh "val" in
-        let stt := fresh "stt" in
-        destruct ost as [val [stt ?]]
-      end
-    end.
-  
   Ltac disc_rule_custom ::=
-    try disc_msi;
-    try (unfold msiI, msiS, msiM in *; omega).
+    try disc_msi.
   
   Section Facts.
 
-    Lemma implStateCoherent_M_value_changed:
+    Lemma implStateInv_child_orq_invalid:
+      forall st oidx orq,
+        (oidx = child1Idx \/ oidx = child2Idx) ->
+        st.(bst_orqs)@[oidx] = Some orq ->
+        orq@[upRq] <> None ->
+        ImplStateInv st.
+    Proof.
+      intros.
+      red; intros; exfalso.
+      destruct H; solve_rule_conds_ex.
+    Qed.
+
+    Lemma implStateCoh_M_value_changed:
       forall cv oss,
-        ImplStateCoherent cv oss ->
+        ImplStateCoh cv oss ->
         forall oidx ost,
           (oidx = child1Idx \/ oidx = child2Idx) ->
           oss@[oidx] = Some ost ->
           ost#[implStatusIdx] = msiM ->
-          forall n uv,
-            ImplStateCoherent n (oss +[oidx <- (n, (msiM, uv))]).
+          forall n (uv: DirT * unit),
+            ImplStateCoh
+              n (oss +[oidx <- (n, (msiM, uv))]).
     Proof.
-      intros; solve_rule_conds_ex.
-      - right; right.
-        red; solve_rule_conds_ex.
-        left; solve_rule_conds_ex.
-      - right; right.
-        red; solve_rule_conds_ex.
-        right; left; solve_rule_conds_ex.
-    Qed.
-
-    Lemma implStateCoherent_downgraded_to_S:
-      forall cv oss,
-        ImplStateCoherent cv oss ->
-        forall oidx ost,
-          (oidx = child1Idx \/ oidx = child2Idx) ->
-          oss@[oidx] = Some ost ->
-          ost#[implStatusIdx] >= msiS ->
-          ImplStateCoherent cv (oss +[oidx <- (fst ost, (msiS, snd (snd ost)))]).
-    Proof.
-      intros; solve_rule_conds_ex.
-      all: try (right; left; red; solve_rule_conds_ex; auto; fail).
-      all: try (right; right;
-                red; solve_rule_conds_ex;
-                right; right;
-                solve_rule_conds_ex).
-    Qed.
-
-    Lemma implStateCoherent_downgraded_to_I:
-      forall cv oss,
-        ImplStateCoherent cv oss ->
-        forall oidx ost,
-          (oidx = child1Idx \/ oidx = child2Idx) ->
-          oss@[oidx] = Some ost ->
-          ImplStateCoherent cv (oss +[oidx <- (fst ost, (msiI, snd (snd ost)))]).
-    Proof.
-      intros; solve_rule_conds_ex.
-      all: try (left; red; solve_rule_conds_ex; fail).
-      all: try (right; left; red; solve_rule_conds_ex; auto; fail).
-      all: try (right; right;
-                red; solve_rule_conds_ex;
-                right; right;
-                solve_rule_conds_ex; fail).
-      - right; right.
-        red; solve_rule_conds_ex.
-        right; left; solve_rule_conds_ex.
-      - right; right.
-        red; solve_rule_conds_ex.
-        left; solve_rule_conds_ex.
+      intros.
+      destruct H0.
+      - solve_rule_conds_ex.
+        + right; right.
+          destruct H3 as [|[|]]; try solve_rule_conds_ex.
+        + destruct H3 as [|[|]]; try solve_rule_conds_ex.
+          destruct H3; solve_rule_conds_ex.
+        + destruct H3 as [|[|]]; try solve_rule_conds_ex.
+          destruct H3; solve_rule_conds_ex.
+      - solve_rule_conds_ex.
+        + right; right.
+          destruct H3 as [|[|]]; try solve_rule_conds_ex.
+        + destruct H3 as [|[|]]; try solve_rule_conds_ex.
+          destruct H0; solve_rule_conds_ex.
+        + destruct H3 as [|[|]]; try solve_rule_conds_ex.
+          destruct H0; solve_rule_conds_ex.
     Qed.
 
     Lemma msiSv_impl_InvTrs_ext_in:
       forall st1 eins st2,
-        ImplStateMSI st1 ->
+        ImplStateInv st1 ->
         step_m impl st1 (RlblIns eins) st2 ->
-        ImplStateMSI st2.
+        ImplStateInv st2.
     Proof.
-      intros; inv_step.
-      destruct H as [cv ?]; exists cv.
-      assumption.
+      intros; inv_step; assumption.
     Qed.
 
     Lemma msiSv_impl_InvTrs_ext_out:
       forall st1 eouts st2,
-        ImplStateMSI st1 ->
+        ImplStateInv st1 ->
         step_m impl st1 (RlblOuts eouts) st2 ->
-        ImplStateMSI st2.
+        ImplStateInv st2.
     Proof.
-      intros; inv_step.
-      destruct H as [cv ?]; exists cv.
-      assumption.
+      intros; inv_step; assumption.
     Qed.
 
+    (** * TODO: add proper conditions about directory! *)
     Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
       fun eout oss =>
         match case (miiOf eout) on mii_dec default True with
@@ -236,42 +263,77 @@ Section Inv.
         | (ec2, Spec.getRq): False
         | (ec2, Spec.setRq): False
         | (ec2, Spec.evictRq): False
-                           
+
         | (pc1, msiRsS): 
             post <-- oss@[parentIdx];
             cost2 <-- oss@[child2Idx];
-            (post#[implStatusIdx] = msiS /\
-             ImplOStateS post#[implValueIdx] cost2 /\
-             msg_value (valOf eout) = VNat post#[implValueIdx])
+            post#[implStatusIdx] = msiS /\
+            post#[implDirIdx].(fst) = msiS /\
+            post#[implDirIdx].(snd) = cost2#[implStatusIdx] /\
+            ImplOStateSI post#[implValueIdx] cost2 /\
+            msg_value (valOf eout) = VNat post#[implValueIdx]
         | (pc2, msiRsS):
             post <-- oss@[parentIdx];
             cost1 <-- oss@[child1Idx];
-            (post#[implStatusIdx] = msiS /\
-             ImplOStateS post#[implValueIdx] cost1 /\
-             msg_value (valOf eout) = VNat post#[implValueIdx])
+            post#[implStatusIdx] = msiS /\
+            post#[implDirIdx].(fst) = cost1#[implStatusIdx] /\
+            post#[implDirIdx].(snd) = msiS /\
+            ImplOStateSI post#[implValueIdx] cost1 /\
+            msg_value (valOf eout) = VNat post#[implValueIdx]
+
         | (pc1, msiRsM):
             post <-- oss@[parentIdx];
             cost2 <-- oss@[child2Idx];
-            (post#[implStatusIdx] = msiM /\ ImplOStateI cost2)
+            post#[implStatusIdx] = msiI /\
+            post#[implDirIdx].(fst) = msiM /\
+            post#[implDirIdx].(snd) = msiI /\
+            ImplOStateI cost2
         | (pc2, msiRsM):
             post <-- oss@[parentIdx];
             cost1 <-- oss@[child1Idx];
-            (post#[implStatusIdx] = msiM /\ ImplOStateI cost1)
+            post#[implStatusIdx] = msiI /\
+            post#[implDirIdx].(fst) = msiI /\
+            post#[implDirIdx].(snd) = msiM /\
+            ImplOStateI cost1
+
+        | (pc1, msiRsI):
+            post <-- oss@[parentIdx];
+            cost2 <-- oss@[child2Idx];
+            ((post#[implStatusIdx] = msiM /\
+              post#[implDirIdx].(fst) = msiI /\
+              post#[implDirIdx].(snd) = msiI /\
+              ImplOStateI cost2) \/
+             (post#[implStatusIdx] = msiS /\
+              post#[implDirIdx].(fst) = msiI /\
+              post#[implDirIdx].(snd) = cost2#[implStatusIdx] /\
+              ImplOStateSI post#[implValueIdx] cost2))
+        | (pc2, msiRsI):
+            post <-- oss@[parentIdx];
+            cost1 <-- oss@[child1Idx];
+            ((post#[implStatusIdx] = msiM /\
+              post#[implDirIdx].(fst) = msiI /\
+              post#[implDirIdx].(snd) = msiI /\
+              ImplOStateI cost1) \/
+             (post#[implStatusIdx] = msiS /\
+              post#[implDirIdx].(fst) = cost1#[implStatusIdx] /\
+              post#[implDirIdx].(snd) = msiI /\
+              ImplOStateSI post#[implValueIdx] cost1))
 
         | (c1pRs, msiDownRsS):
             cost1 <-- oss@[child1Idx];
-            (cost1#[implStatusIdx] = msiS /\             
-             msg_value (valOf eout) = VNat cost1#[implValueIdx])
+            cost1#[implStatusIdx] = msiS /\             
+            msg_value (valOf eout) = VNat cost1#[implValueIdx]
         | (c2pRs, msiDownRsS):
             cost2 <-- oss@[child2Idx];
-            (cost2#[implStatusIdx] = msiS /\
-             msg_value (valOf eout) = VNat cost2#[implValueIdx])
+            cost2#[implStatusIdx] = msiS /\
+            msg_value (valOf eout) = VNat cost2#[implValueIdx]
+
         | (c1pRs, msiDownRsM):
             cost1 <-- oss@[child1Idx];
-            (cost1#[implStatusIdx] = msiI)
+            cost1#[implStatusIdx] = msiI
         | (c2pRs, msiDownRsM):
             cost2 <-- oss@[child2Idx];
-            (cost2#[implStatusIdx] = msiI)
+            cost2#[implStatusIdx] = msiI
         end.
 
     Lemma msiSvMsgOutPred_good:
@@ -341,7 +403,6 @@ Section Inv.
                   let rsFrom := fresh "rsFrom" in
                   destruct H as [rsFrom [? ?]]
                 end;
-         unfold upRq in *;
          disc_rule_conds_ex);
       repeat
         match goal with
@@ -360,7 +421,6 @@ Section Inv.
                 | [H: DownLockRssToParent _ _ _ |- _] => red in H
                 | [H: _ = rqi_minds_rss _ |- _] => apply eq_sym in H
                 end;
-         unfold downRq in *;
          disc_rule_conds_ex);
       repeat
         match goal with
@@ -396,14 +456,14 @@ Section Inv.
     Lemma msiSv_impl_InvTrs_init:
       forall st1,
         Reachable (steps step_m) impl st1 ->
-        ImplStateMSI st1 ->
+        ImplStateInv st1 ->
         forall oidx ridx ins outs st2,
           SubList (idsOf ins) (sys_merqs impl) ->
           step_m impl st1 (RlblInt oidx ridx ins outs) st2 ->
           AtomicInv
             MsiSvMsgOutPred MsiSvLockPred
             ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
-          ImplStateMSI st2.
+          ImplStateInv st2.
     Proof.
       intros.
       inv_step.
@@ -436,64 +496,79 @@ Section Inv.
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
+        replace (orqs +[child1Idx <- norq]) with orqs by meq.
         assumption.
 
       - (** [childGetRqS] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
-        assumption.
+        eapply implStateInv_child_orq_invalid with (oidx:= child1Idx);
+          simpl; eauto; mred.
 
       - (** [childSetRqImm] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
-        destruct H0 as [cv ?]; simpl in H.
+        red; red in H0; simpl in *.
+        replace (orqs +[child1Idx <- norq]) with orqs by meq.
+        intros.
+        specialize (H0 H4).
+        destruct H0 as [cv ?].
         exists n; simpl.
-        eapply implStateCoherent_M_value_changed; eauto.
+        eapply implStateCoh_M_value_changed; eauto.
 
       - (** [childSetRqM] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
-        assumption.
+        eapply implStateInv_child_orq_invalid with (oidx:= child1Idx);
+          simpl; eauto; mred.
 
       - (** [childEvictRqI] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
-        assumption.
+        eapply implStateInv_child_orq_invalid with (oidx:= child1Idx);
+          simpl; eauto; mred.
 
       - (** [childGetRqImm] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
+        replace (orqs +[child2Idx <- norq]) with orqs by meq.
         assumption.
 
       - (** [childGetRqS] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
-        assumption.
+        eapply implStateInv_child_orq_invalid with (oidx:= child2Idx);
+          simpl; eauto; mred.
 
       - (** [childSetRqImm] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
-        destruct H0 as [cv ?]; simpl in H.
+        red; red in H0; simpl in *.
+        replace (orqs +[child2Idx <- norq]) with orqs by meq.
+        intros.
+        specialize (H0 H4).
+        destruct H0 as [cv ?].
         exists n; simpl.
-        eapply implStateCoherent_M_value_changed; eauto.
+        eapply implStateCoh_M_value_changed; eauto.
 
       - (** [childSetRqM] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
-        assumption.
+        eapply implStateInv_child_orq_invalid with (oidx:= child2Idx);
+          simpl; eauto; mred.
 
       - (** [childEvictRqI] *)
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (oss +[child2Idx <- pos]) with oss by meq.
-        assumption.
-
+        eapply implStateInv_child_orq_invalid with (oidx:= child2Idx);
+          simpl; eauto; mred.
     Qed.
 
     Lemma miisOf_app:
@@ -562,8 +637,6 @@ Section Inv.
         disc_msg_preds_with Hl Hin
       end.
     
-    Opaque upRq downRq.
-
     Ltac disc_minds_const :=
       repeat
         match goal with
@@ -581,7 +654,7 @@ Section Inv.
       try disc_AtomicInv;
       try disc_minds_const.
 
-    Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateMSI.
+    Lemma msiSv_impl_InvTrs: InvTrs impl ImplStateInv.
     Proof.
       eapply inv_atomic_InvTrs;
         [red; intros; eapply msiSv_impl_InvTrs_ext_in; eauto
@@ -639,11 +712,23 @@ Section Inv.
             icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-        + red; simpl.
-          eexists.
-          right; left.
-          red; solve_rule_conds_ex.
-          right; solve_rule_conds_ex.
+        + clear H0.
+          red; simpl; intros.
+          clear H0.
+          exists n.
+          repeat split.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            right; left.
+            solve_rule_conds_ex.
+            { unfold msiM, msiS, msiI in *; lia. }
+            { unfold msiM, msiS, msiI in *; lia. }
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            { unfold msiM, msiS, msiI in *; lia. }
+            { inv H30.
+              unfold msiM, msiS, msiI in *; lia.
+            }
         
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
@@ -666,9 +751,10 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + destruct H6 as [cv ?]; simpl in H6.
-          exists cv; simpl.
-          apply implStateCoherent_downgraded_to_S; auto.
+        + red; simpl; intros.
+          exfalso.
+          (** TODO: the parent is downlocked; automate reasoning it. *)
+          admit.
         
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
@@ -706,11 +792,20 @@ Section Inv.
             icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-        + red; simpl.
-          eexists.
-          right; right.
-          red; solve_rule_conds_ex.
-          left; solve_rule_conds_ex.
+        + clear H0.
+          red; simpl; intros.
+          clear H0.
+          exists n.
+          repeat split.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            right; right.
+            solve_rule_conds_ex.
+            left; auto.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            { unfold msiM, msiS, msiI in *; lia. }
+            { unfold msiM, msiS, msiI in *; lia. }
           
       - (** [childDownRqM] *)
         disc_rule_conds_ex.
@@ -733,9 +828,10 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + destruct H6 as [cv ?]; simpl in H6.
-          exists cv; simpl.
-          apply implStateCoherent_downgraded_to_I; auto.
+        + red; simpl; intros.
+          exfalso.
+          (** TODO: the parent is downlocked; automate reasoning it. *)
+          admit.
 
       - atomic_cont_exfalso_bound.
       - (** [childEvictRsI] *)
@@ -772,14 +868,39 @@ Section Inv.
             icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-        + destruct H6 as [cv ?]; simpl in H6.
-          exists cv; simpl.
-          apply implStateCoherent_downgraded_to_I; auto.
+        + clear H0.
+          red; simpl; intros.
+          clear H0.
+          exists (ost#[implValueIdx]).
+          destruct H24.
+          * repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              left; solve_rule_conds_ex.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
+          * repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              right; left.
+              solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
 
       (** child2 *)
+      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound.
 
-      - atomic_cont_exfalso_bound.
-      - atomic_cont_exfalso_bound.
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
         good_footprint_get child2Idx.
@@ -814,12 +935,24 @@ Section Inv.
             icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-        + red; simpl.
-          eexists.
-          right; left.
-          red; solve_rule_conds_ex.
-          right; solve_rule_conds_ex.
-            
+        + clear H0.
+          red; simpl; intros.
+          clear H0.
+          exists n.
+          repeat split.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            right; left.
+            solve_rule_conds_ex.
+            { unfold msiM, msiS, msiI in *; lia. }
+            { unfold msiM, msiS, msiI in *; lia. }
+          * solve_rule_conds_ex.
+            { unfold msiM, msiS, msiI in *; lia. }
+            { inv H30.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+          * solve_rule_conds_ex.
+        
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
 
@@ -841,9 +974,10 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + destruct H6 as [cv ?]; simpl in H6.
-          exists cv; simpl.
-          apply implStateCoherent_downgraded_to_S; auto.
+        + red; simpl; intros.
+          exfalso.
+          (** TODO: the parent is downlocked; automate reasoning it. *)
+          admit.
         
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
@@ -881,12 +1015,21 @@ Section Inv.
             icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-        + red; simpl.
-          eexists.
-          right; right.
-          red; solve_rule_conds_ex.
-          right; left; solve_rule_conds_ex.
-
+        + clear H0.
+          red; simpl; intros.
+          clear H0.
+          exists n.
+          repeat split.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            right; right.
+            solve_rule_conds_ex.
+            right; auto.
+          * solve_rule_conds_ex.
+            { unfold msiM, msiS, msiI in *; lia. }
+            { unfold msiM, msiS, msiI in *; lia. }
+          * solve_rule_conds_ex.
+          
       - (** [childDownRqM] *)
         disc_rule_conds_ex.
 
@@ -908,9 +1051,10 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + destruct H6 as [cv ?]; simpl in H6.
-          exists cv; simpl.
-          apply implStateCoherent_downgraded_to_I; auto.
+        + red; simpl; intros.
+          exfalso.
+          (** TODO: the parent is downlocked; automate reasoning it. *)
+          admit.
 
       - atomic_cont_exfalso_bound.
       - (** [childEvictRsI] *)
@@ -947,28 +1091,51 @@ Section Inv.
             icase oidx.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
-        + destruct H6 as [cv ?]; simpl in H6.
-          exists cv; simpl.
-          apply implStateCoherent_downgraded_to_I; auto.
+        + clear H0.
+          red; simpl; intros.
+          clear H0.
+          exists (ost#[implValueIdx]).
+          destruct H24.
+          * repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              left; solve_rule_conds_ex.
+            }
+            { solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
+            { solve_rule_conds_ex. }
+          * repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              right; left.
+              solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
+            { solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
+            { solve_rule_conds_ex. }
 
       (** parent *)
 
     Admitted.
 
-    Lemma ImplStateMSI_init:
-      ImplStateMSI (initsOf impl).
+    Lemma ImplStateInv_init:
+      ImplStateInv (initsOf impl).
     Proof.
-      repeat red.
-      exists 0.
-      right; left.
-      repeat split; right; split; reflexivity.
+      vm_compute.
+      intros; dest; exfalso; auto.
     Qed.
 
-    Lemma ImplStateMSI_invStep:
-      InvStep impl step_m ImplStateMSI.
+    Lemma ImplStateInv_invStep:
+      InvStep impl step_m ImplStateInv.
     Proof.
       apply invSeq_serializable_invStep.
-      - apply ImplStateMSI_init.
+      - apply ImplStateInv_init.
       - apply inv_trs_seqSteps.
         apply msiSv_impl_InvTrs.
       - eapply rqrs_Serializable.
@@ -999,7 +1166,7 @@ Section Sim.
   Definition SimMSI: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
     fun ist sst =>
       exists cv,
-        ImplStateCoherent cv ist.(bst_oss) /\
+        ImplStateCoh cv ist.(bst_oss) /\
         SpecState cv sst.(bst_oss).
 
   Section Facts.
@@ -1009,13 +1176,12 @@ Section Sim.
     Proof.
       repeat red.
       exists 0; split.
-      - right; left.
-        repeat split; right; split; reflexivity.
+      - vm_compute; lia.
       - reflexivity.
     Qed.
 
     Lemma SimMsiSv_sim:
-      InvSim step_m step_m ImplStateMSI SimMSI impl spec.
+      InvSim step_m step_m ImplStateInv SimMSI impl spec.
     Proof.
       red; intros.
 
@@ -1031,12 +1197,12 @@ Section Sim.
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.
     Proof.
       apply invSim_implies_refinement
-        with (ginv:= ImplStateMSI)
+        with (ginv:= ImplStateInv)
              (sim:= SimMSI).
       - apply SimMsiSv_sim.
-      - apply ImplStateMSI_invStep.
+      - apply ImplStateInv_invStep.
       - apply SimMsiSv_init.
-      - apply ImplStateMSI_init.
+      - apply ImplStateInv_init.
     Qed.
 
   End Facts.
