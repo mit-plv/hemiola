@@ -9,37 +9,46 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Definition OstPred oifc := IdxT -> OState oifc -> Prop.
-Definition OssPred oifc := OStates oifc -> Prop.
+Definition StatesPred oifc := OStates oifc -> ORqs Msg -> Prop.
+Definition MsgOutPred oifc := Id Msg -> StatesPred oifc.
 
-Definition OStatesEquivR (oinds: list IdxT) {oifc} (oss1 oss2: OStates oifc) :=
-  forall oidx,
-    In oidx oinds ->
-    oss1@[oidx] = oss2@[oidx].
+Section PerOStateIfc.
+  Context {oifc: OStateIfc}.
+  
+  Definition StatesEquivR (oinds: list IdxT)
+             (oss1: OStates oifc) (orqs1: ORqs Msg)
+             (oss2: OStates oifc) (orqs2: ORqs Msg): Prop :=
+    forall oidx,
+      In oidx oinds ->
+      oss1@[oidx] = oss2@[oidx] /\
+      orqs1@[oidx] = orqs2@[oidx].
 
-Definition OStatesEquivC (oinds: list IdxT) {oifc} (oss1 oss2: OStates oifc) :=
-  forall oidx,
-    ~ In oidx oinds ->
-    oss1@[oidx] = oss2@[oidx].
+  Definition StatesEquivC (oinds: list IdxT)
+             (oss1: OStates oifc) (orqs1: ORqs Msg)
+             (oss2: OStates oifc) (orqs2: ORqs Msg) :=
+    forall oidx,
+      ~ In oidx oinds ->
+      oss1@[oidx] = oss2@[oidx] /\
+      orqs1@[oidx] = orqs2@[oidx].
 
-Definition OssPredR {oifc} (oinds: list IdxT) (P: OssPred oifc) :=
-  forall oss1 oss2,
-    P oss1 ->
-    OStatesEquivR oinds oss1 oss2 ->
-    P oss2.
+  Definition StatesPredR (oinds: list IdxT) (P: StatesPred oifc) :=
+    forall oss1 orqs1 oss2 orqs2,
+      P oss1 orqs1 ->
+      StatesEquivR oinds oss1 orqs1 oss2 orqs2 ->
+      P oss2 orqs2.
 
-Definition OssPredC {oifc} (oinds: list IdxT) (P: OssPred oifc) :=
-  forall oss1 oss2,
-    P oss1 ->
-    OStatesEquivC oinds oss1 oss2 ->
-    P oss2.
+  Definition StatesPredC (oinds: list IdxT) (P: StatesPred oifc) :=
+    forall oss1 orqs1 oss2 orqs2,
+      P oss1 orqs1 ->
+      StatesEquivC oinds oss1 orqs2 oss2 orqs2 ->
+      P oss2 orqs2.
 
-Definition MsgOutPred oifc := Id Msg -> OssPred oifc.
+End PerOStateIfc.
 
 Lemma OStatesEquivR_add:
-  forall {oifc} oinds (oss: OStates oifc) oidx nost,
+  forall {oifc} oinds (oss: OStates oifc) orqs oidx nost norq,
     ~ In oidx oinds ->
-    OStatesEquivR oinds oss (oss +[oidx <- nost]).
+    StatesEquivR oinds oss orqs (oss +[oidx <- nost]) (orqs +[oidx <- norq]).
 Proof.
   intros; red; intros; mred.
 Qed.
@@ -85,26 +94,26 @@ Section PredMsg.
             (sys: System oifc).
   Hypothesis (Hrrs: RqRsSys dtr sys).
 
-  Definition GoodRsUpPred (rsUp: Id Msg) (P: OssPred oifc) :=
+  Definition GoodRsUpPred (rsUp: Id Msg) (P: StatesPred oifc) :=
     forall oidx,
       RsUpMsgFrom dtr oidx rsUp ->
-      OssPredR (subtreeIndsOf dtr oidx) P.
+      StatesPredR (subtreeIndsOf dtr oidx) P.
 
-  Definition GoodRsDownPred (rsDown: Id Msg) (P: OssPred oifc) :=
+  Definition GoodRsDownPred (rsDown: Id Msg) (P: StatesPred oifc) :=
     forall oidx,
       RsDownMsgTo dtr oidx rsDown ->
-      OssPredC (subtreeIndsOf dtr oidx) P.
+      StatesPredC (subtreeIndsOf dtr oidx) P.
 
-  Definition GoodRqUpPred (rqUp: Id Msg) (P: OssPred oifc) :=
+  Definition GoodRqUpPred (rqUp: Id Msg) (P: StatesPred oifc) :=
     forall oidx,
       RqUpMsgFrom dtr oidx rqUp ->
       (In (idOf rqUp) sys.(sys_merqs) \/
-       forall oss, P oss).
+       forall oss orqs, P oss orqs).
 
-  Definition GoodRqDownPred (rqDown: Id Msg) (P: OssPred oifc) :=
+  Definition GoodRqDownPred (rqDown: Id Msg) (P: StatesPred oifc) :=
     forall oidx,
       RqDownMsgTo dtr oidx rqDown ->
-      forall oss, P oss.
+      forall oss orqs, P oss orqs.
 
   Definition GoodMsgOutPred (P: MsgOutPred oifc) :=
     forall eout: Id Msg,
@@ -129,10 +138,10 @@ Section PredMsg.
             ~ In (idOf rqUp) sys.(sys_merqs) ->
             RqUpMsgFrom dtr oidx rqUp ->
             parentIdxOf dtr oidx = Some pidx ->
-            forall P oss nost,
+            forall P oss orqs nost norq,
               GoodMsgOutPred P ->
-              Forall (fun eout => P eout oss) eouts ->
-              Forall (fun eout => P eout (oss +[pidx <- nost])) eouts.
+              Forall (fun eout => P eout oss orqs) eouts ->
+              Forall (fun eout => P eout (oss +[pidx <- nost]) (orqs +[pidx <- norq])) eouts.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       eapply atomic_msg_outs_ok in H2; eauto.
@@ -163,10 +172,10 @@ Section PredMsg.
         forall oidx rqDown,
           In rqDown eouts ->
           RqDownMsgTo dtr oidx rqDown ->
-          forall P oss nost,
+          forall P oss orqs nost norq,
             GoodMsgOutPred P ->
-            Forall (fun eout => P eout oss) eouts ->
-            Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+            Forall (fun eout => P eout oss orqs) eouts ->
+            Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])) eouts.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       apply Forall_forall; intros [midx msg] ?.
@@ -198,10 +207,10 @@ Section PredMsg.
           forall oidx rqDown,
             In rqDown eouts ->
             RqDownMsgTo dtr oidx rqDown ->
-            forall P oss nost,
+            forall P oss orqs nost norq,
               GoodMsgOutPred P ->
-              Forall (fun eout => P eout oss) eouts ->
-              Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+              Forall (fun eout => P eout oss orqs) eouts ->
+              Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])) eouts.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       eapply atomic_msg_outs_ok in H2; eauto.
@@ -223,10 +232,10 @@ Section PredMsg.
         forall oidx rqTos rsUps Rp,
           SubList rsUps eouts ->
           RqRsDownMatch dtr oidx rqTos (idsOf rsUps) Rp ->
-          forall P oss nost,
+          forall P oss orqs nost norq,
             GoodMsgOutPred P ->
-            Forall (fun eout => P eout oss) eouts ->
-            Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+            Forall (fun eout => P eout oss orqs) eouts ->
+            Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])) eouts.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       apply Forall_forall; intros [midx msg] ?.
@@ -282,10 +291,10 @@ Section PredMsg.
             NoDup (idsOf rsUps) ->
             SubList rsUps eouts ->
             RqRsDownMatch dtr oidx rqTos (idsOf rsUps) Rp ->
-            forall P oss nost,
+            forall P oss orqs nost norq,
               GoodMsgOutPred P ->
-              Forall (fun eout => P eout oss) eouts ->
-              Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+              Forall (fun eout => P eout oss orqs) eouts ->
+              Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])) eouts.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       eapply atomic_msg_outs_ok in H2; eauto.
@@ -319,10 +328,10 @@ Section PredMsg.
           forall oidx rsDown,
             In rsDown eouts ->
             RsDownMsgTo dtr oidx rsDown ->
-            forall P oss nost,
+            forall P oss orqs nost norq,
               GoodMsgOutPred P ->
-              Forall (fun eout => P eout oss) eouts ->
-              Forall (fun eout => P eout (oss +[oidx <- nost])) eouts.
+              Forall (fun eout => P eout oss orqs) eouts ->
+              Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])) eouts.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       eapply atomic_msg_outs_ok in H2; eauto.
