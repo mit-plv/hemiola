@@ -89,8 +89,7 @@ Section Inv.
     ImplOStateS cv ost \/ ImplOStateI ost.
 
   Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
-    (ost#[implStatusIdx] = msiM -> ost#[implValueIdx] = cv) /\
-    (ost#[implStatusIdx] = msiS -> ost#[implValueIdx] = cv).
+    ost#[implStatusIdx] >= msiS -> ost#[implValueIdx] = cv.
 
   Definition ImplDirM (ost: OState ImplOStateIfc): Prop :=
     (ost#[implDirIdx].(fst) = msiM /\ ost#[implDirIdx].(snd) = msiI) \/
@@ -158,6 +157,7 @@ Section Inv.
     try
       match goal with
       | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
+      | [H: ?p -> _, Hp: ?p |- _] => specialize (H Hp)
       | [H: VNat ?v = VNat _ |- _] => is_var v; inv H
       | [H: VNat _ = VNat ?v |- _] => is_var v; inv H
       | [H: ?oss@[parentIdx] = Some ?ost |- _] =>
@@ -190,6 +190,8 @@ Section Inv.
       | [H1: ?t = msiS, H2: ?t = msiI |- _] => rewrite H1 in H2; discriminate
       | [H1: ?t = msiM, H2: ?t <= msiS |- _] =>
         rewrite H1 in H2; unfold msiM, msiS in H2; lia
+      | [H1: ?t = msiI, H2: ?t >= msiS |- _] =>
+        rewrite H1 in H2; unfold msiS, msiI in H2; lia
       end.
 
   Ltac disc_rule_custom ::=
@@ -207,18 +209,20 @@ Section Inv.
                         bst_msgs := nmsgs |}.
     Proof.
       unfold ImplStateInv; simpl; intros.
-      destruct (bst_oss st)@[parentIdx] as [post|]; simpl in *; auto.
-      destruct (bst_oss st)@[child1Idx] as [cost1|]; simpl in *; auto.
-      destruct (bst_oss st)@[child2Idx] as [cost2|]; simpl in *; auto.
-    Admitted.
+      disc_rule_conds_const.
+      destruct H as [[cv ?] ?].
+      solve_rule_conds_ex.
+    Qed.
 
     Lemma implStateCoh_M_value_changed:
       forall st,
         ImplStateInv st ->
-        forall oidx ost,
+        forall oidx ost orq,
           (oidx = child1Idx \/ oidx = child2Idx) ->
           (bst_oss st)@[oidx] = Some ost ->
           ost#[implStatusIdx] = msiM ->
+          (bst_orqs st)@[oidx] = Some orq ->
+          orq@[upRq] = None ->
           forall n (uv: DirT * unit) nmsgs,
             ImplStateInv
               (Build_MState
@@ -551,6 +555,18 @@ Section Inv.
                   |red; auto])
           end.
 
+    Ltac obj_visited_rsUp oidx ocidx :=
+      try match goal with
+          | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
+            assert (In parentIdx (oindsOf hst))
+              by (eapply extAtomic_rsUp_acceptor_visited
+                    with (cidx:= ocidx); eauto;
+                  [exact msiSv_impl_RqRsSys
+                  |econstructor; eassumption
+                  |red; auto
+                  |reflexivity])
+          end.
+
     Ltac disc_lock_preds_with Hl oidx :=
       match type of Hl with
       | AtomicLocksInv _ ?hst _ =>
@@ -691,8 +707,7 @@ Section Inv.
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex.
-              { unfold msiM, msiS, msiI in *; lia. }
-              { unfold msiM, msiS, msiI in *; lia. }
+              unfold msiM, msiS, msiI in *; lia.
             }
           * solve_rule_conds_ex.
 
@@ -717,11 +732,22 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + red; simpl; intros.
-          exfalso.
-          (** TODO: the parent is downlocked; automate reasoning it. *)
-          admit.
-        
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[parentIdx]) as [post|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[parentIdx]) as [porq|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * (** need to know parent is downlocked. *)
+            admit.
+          
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
       - (** [childSetRsM] *)
@@ -772,19 +798,10 @@ Section Inv.
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex.
-              { destruct H6 as [|[|]]; try (exfalso; dest; discriminate).
-                dest; destruct H34.
-                { unfold msiM, msiS, msiI in *; lia. }
-                { unfold msiM, msiS, msiI in *; lia. }
-              }
-              { destruct H6 as [|[|]]; try (exfalso; dest; discriminate).
-                dest; destruct H34.
-                { unfold msiM, msiS, msiI in *; lia. }
-                { unfold msiM, msiS, msiI in *; lia. }
-              }
+              unfold msiM, msiS, msiI in *; lia.
             }
           * solve_rule_conds_ex.
-          
+
       - (** [childDownRqM] *)
         disc_rule_conds_ex.
 
@@ -806,10 +823,21 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + red; simpl; intros.
-          exfalso.
-          (** TODO: the parent is downlocked; automate reasoning it. *)
-          admit.
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[parentIdx]) as [post|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[parentIdx]) as [porq|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * (** need to know parent is downlocked. *)
+            admit.
 
       - atomic_cont_exfalso_bound.
       - (** [childEvictRsI] *)
@@ -858,7 +886,9 @@ Section Inv.
             clear H22.
             red; repeat ssplit.
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
             { solve_rule_conds_ex. }
           * destruct H24.
             { solve_rule_conds_ex. }
@@ -917,8 +947,7 @@ Section Inv.
               { unfold msiM, msiS, msiI in *; lia. }
             }
             { solve_rule_conds_ex.
-              { unfold msiM, msiS, msiI in *; lia. }
-              { unfold msiM, msiS, msiI in *; lia. }
+              unfold msiM, msiS, msiI in *; lia.
             }
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
@@ -944,10 +973,21 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + red; simpl; intros.
-          exfalso.
-          (** TODO: the parent is downlocked; automate reasoning it. *)
-          admit.
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[parentIdx]) as [post|]; simpl in *; [|auto].
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (orqs@[parentIdx]) as [porq|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * (** need to know parent is downlocked. *)
+            admit.
         
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
@@ -998,16 +1038,7 @@ Section Inv.
               right; right; solve_rule_conds_ex.
             }
             { solve_rule_conds_ex.
-              { destruct H6 as [|[|]]; try (exfalso; dest; discriminate).
-                dest; destruct H34.
-                { unfold msiM, msiS, msiI in *; lia. }
-                { unfold msiM, msiS, msiI in *; lia. }
-              }
-              { destruct H6 as [|[|]]; try (exfalso; dest; discriminate).
-                dest; destruct H34.
-                { unfold msiM, msiS, msiI in *; lia. }
-                { unfold msiM, msiS, msiI in *; lia. }
-              }
+              unfold msiM, msiS, msiI in *; lia.
             }
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
@@ -1033,10 +1064,21 @@ Section Inv.
             icase oidx.
             { mred. }
             { mred; apply H7; auto. }
-        + red; simpl; intros.
-          exfalso.
-          (** TODO: the parent is downlocked; automate reasoning it. *)
-          admit.
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[parentIdx]) as [post|]; simpl in *; [|auto].
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (orqs@[parentIdx]) as [porq|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * (** need to know parent is downlocked. *)
+            admit.
 
       - atomic_cont_exfalso_bound.
       - (** [childEvictRsI] *)
@@ -1082,11 +1124,12 @@ Section Inv.
           red in H6; dest.
           split.
           * exists cv.
-            clear H22.
             red; repeat ssplit.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
           * destruct H24.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1137,12 +1180,406 @@ Section Inv.
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
             exfalso.
-            (** TODO: [child1] should not be uplocked. *)
+            (** TODO: [child1] should be uplocked. *)
             admit.
 
       - (** [parentGetDownRqS] *)
+        disc_rule_conds_ex.
 
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred).
+              simpl; right; auto.
+            }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            clear H8.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+      - (** [parentSetRqImm] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in H14; simpl in H14.
+          split.
+          * exists cv.
+            red; repeat ssplit.
+            { solve_rule_conds_ex.
+              right; right.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+            exfalso.
+            (** TODO: [child1] should be uplocked. *)
+            admit.
+
+      - (** [parentSetDownRqM] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred).
+              simpl; right; auto.
+            }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            clear H8.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+      - (** [parentGetDownRsS] *)
+        disc_rule_conds_ex.
+
+        obj_visited_rsUp parentIdx child2Idx.
+        disc_lock_preds parentIdx.
+        disc_rule_conds_ex.
+        destruct H11; dest; [discriminate|].
+        clear H11.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+        
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsUps_preserves_msg_out_preds
+                with (rsUps:= [(c2pRs, rmsg)]); eauto.
+              { exact msiSv_impl_RqRsSys. }
+              { repeat constructor; intro; dest_in. }
+              { apply SubList_cons; [|apply SubList_nil].
+                assumption.
+              }
+              { instantiate (1:= fun _ => True).
+                instantiate (1:= [pc2]).
+                repeat split.
+                { discriminate. }
+                { repeat constructor.
+                  simpl; exists child2Idx.
+                  repeat split.
+                }
+              }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              solve_rule_conds_ex.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists val0.
+            clear H11.
+            red; repeat ssplit.
+            { solve_rule_conds_ex.
+              right; left; auto.
+            }
+            { solve_rule_conds_ex.
+              exfalso.
+              (** [child1] should be uplocked. *)
+              admit.
+            }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+            (** [child1] should be uplocked. *)
+            admit.
+
+      - (** [parentSetDownRsM] *)
+        disc_rule_conds_ex.
+
+        obj_visited_rsUp parentIdx child2Idx.
+        disc_lock_preds parentIdx.
+        disc_rule_conds_ex.
+        destruct H11; dest; [discriminate|].
+        clear H11.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+        
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsUps_preserves_msg_out_preds
+                with (rsUps:= [(c2pRs, rmsg)]); eauto.
+              { exact msiSv_impl_RqRsSys. }
+              { repeat constructor; intro; dest_in. }
+              { apply SubList_cons; [|apply SubList_nil].
+                assumption.
+              }
+              { instantiate (1:= fun _ => True).
+                instantiate (1:= [pc2]).
+                repeat split.
+                { discriminate. }
+                { repeat constructor.
+                  simpl; exists child2Idx.
+                  repeat split.
+                }
+              }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              solve_rule_conds_ex.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists val0.
+            clear H11.
+            red; repeat ssplit.
+            { solve_rule_conds_ex.
+              right; right; auto.
+            }
+            { solve_rule_conds_ex.
+              exfalso.
+              (** [child1] should be uplocked. *)
+              admit.
+            }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+            (** [child1] should be uplocked. *)
+            admit.
+
+      - (** [parentEvictRqImmS] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+              (** need to detach the invariant for [parent] from [ORqs] conditions? *)
+              admit.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in *; simpl in *.
+          disc_rule_conds_ex.
+          destruct H6 as [|[|]];
+            [exfalso; solve_rule_conds_ex
+            | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
           
+          split.
+          * exists cv.
+            repeat ssplit.
+            { solve_rule_conds_ex.
+              right; left.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+            exfalso.
+            (** TODO: [child1] should be uplocked. *)
+            admit.
+
+      - (** [parentEvictRqImmLastS] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+              lia.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in *; simpl in *.
+          disc_rule_conds_ex.
+          destruct H6 as [|[|]];
+            [exfalso; solve_rule_conds_ex
+            | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
+          
+          split.
+          * exists cv.
+            repeat ssplit.
+            { solve_rule_conds_ex.
+              left.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+            exfalso.
+            (** TODO: [child1] should be uplocked. *)
+            admit.
+
+      - (** [parentEvictRqImmM] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+              lia.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in *; simpl in *.
+          disc_rule_conds_ex.
+          destruct H6 as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
+          split.
+          * exists n.
+            repeat ssplit.
+            { solve_rule_conds_ex.
+              left.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex.
+              exfalso.
+              (** TODO: [child1] should be uplocked. *)
+              admit.
+            }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            
+          * solve_rule_conds_ex.
+            exfalso.
+            (** TODO: [child1] should be uplocked. *)
+            admit.
+
     Admitted.
 
     Lemma ImplStateInv_init:

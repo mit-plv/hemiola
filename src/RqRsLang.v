@@ -118,7 +118,7 @@ Definition MsgsFromRsUp {oifc} (dtr: DTree) (orss: list IdxT): OPrec oifc :=
        (fun rqid =>
           idsOf mins = rqi_minds_rss rqid /\
           Forall2 (fun rsUp robj =>
-                     rqEdgeUpFrom dtr robj = Some rsUp)
+                     rsEdgeUpFrom dtr robj = Some rsUp)
                   (rqi_minds_rss rqid) orss).
 
 Definition MsgsTo {oifc} (tos: list IdxT) (rule: Rule oifc): Prop :=
