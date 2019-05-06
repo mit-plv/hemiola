@@ -226,16 +226,16 @@ Section RqRsDown.
     pose proof (edgeDownTo_Some H _ H5).
     destruct H11 as [rqUp [rsUp [pidx ?]]]; dest.
     eapply upLockInvORq_down_rssQ_length_one_locked in H10; eauto.
-    - red in H10.
-      destruct H10 as [rrqUp [rdown [rpidx ?]]]; dest.
+    - dest; red in H14.
+      destruct H14 as [rrqUp [rdown [rpidx ?]]]; dest.
       repeat disc_rule_minds.
 
       (* Looks it is too specific to extract as a lemma. *)
-      clear -H6 H7 H8 H9 H17.
+      clear -H6 H7 H8 H9 H18.
       unfold InMP, FirstMP, firstMP, rssQ, deqMP in *.
       destruct (findQ rdown (bst_msgs st)); [discriminate|].
       simpl in H7; inv H7.
-      simpl in H17; rewrite H6 in H17; simpl in H17.
+      simpl in H18; rewrite H6 in H18; simpl in H18.
       unfold findQ in H9; mred; simpl in H9.
       destruct (filter (fun msg => msg_type msg) q) eqn:Hq.
       + assert (In rsdm2 (filter (fun msg => msg_type msg) q)).
@@ -243,7 +243,7 @@ Section RqRsDown.
           split; auto.
         }
         rewrite Hq in H; elim H.
-      + simpl in H17; omega.
+      + simpl in H18; omega.
     - eapply rssQ_length_ge_one; eauto.
       eapply InMP_deqMP; eassumption.
   Qed.
