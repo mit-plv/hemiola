@@ -16,6 +16,8 @@ Notation "A <-- OA ; CONT" :=
   (OA >>=[False] (fun A => CONT)) (at level 84, right associativity).
 Notation "A <+- OA ; CONT" :=
   (OA >>=[True] (fun A => CONT)) (at level 84, right associativity).
+Notation "A <-[ DEFA ] OA ; CONT" :=
+  ((fun A => CONT) (OA >>=[DEFA] (fun DA => DA))) (at level 84, right associativity). 
 Notation "! OA ; CONT" :=
   (OA = None -> CONT) (at level 84, right associativity).
 
@@ -155,7 +157,7 @@ Section Inv.
       corq2 <-- (bst_orqs st)@[child2Idx];
       (exists cv, ImplStateCoh post cost1 cost2 porq corq1 corq2 cv) /\
       (ImplDirCoh post cost1 cost2 porq corq1 corq2).
-  
+
   Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
        ImplDirM ImplDirS ImplDirI
        ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
@@ -206,6 +208,13 @@ Section Inv.
     try disc_msi.
   
   Section Facts.
+
+    Lemma msiSv_impl_ORqsInit: GoodORqsInit (initsOf impl).
+    Proof.
+      red; intros.
+      cbn; unfold implORqsInit.
+      mred.
+    Qed.
 
     Lemma implStateInv_orqs_weakened:
       forall st oidx orq norq rqt rqi nmsgs,
@@ -486,9 +495,11 @@ Section Inv.
       intros.
       inv_step.
       pose proof (upLockInv_ok
+                    msiSv_impl_ORqsInit
                     msiSv_impl_GoodRqRsSys
                     msiSv_impl_RqRsDTree H) as Hulinv.
       pose proof (downLockInv_ok
+                    msiSv_impl_ORqsInit
                     msiSv_impl_GoodRqRsSys
                     msiSv_impl_RqRsDTree
                     msiSv_impl_GoodExtRssSys H) as Hdlinv.
@@ -586,7 +597,8 @@ Section Inv.
           | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
             assert (In oidx (oindsOf hst))
               by (eapply extAtomic_rsDown_acceptor_visited; eauto;
-                  [exact msiSv_impl_RqRsSys
+                  [exact msiSv_impl_ORqsInit
+                  |exact msiSv_impl_RqRsSys
                   |econstructor; eassumption
                   |red; auto])
           end.
@@ -597,7 +609,8 @@ Section Inv.
             assert (In parentIdx (oindsOf hst))
               by (eapply extAtomic_rsUp_acceptor_visited
                     with (cidx:= ocidx); eauto;
-                  [exact msiSv_impl_RqRsSys
+                  [exact msiSv_impl_ORqsInit
+                  |exact msiSv_impl_RqRsSys
                   |econstructor; eassumption
                   |red; auto
                   |reflexivity])
@@ -683,13 +696,18 @@ Section Inv.
         [inv_steps; apply msiSv_impl_InvTrs_init; auto|].
 
       inv_steps.
-      pose proof (footprints_ok msiSv_impl_GoodRqRsSys (reachable_steps H H9))
+      pose proof (footprints_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys
+                    (reachable_steps H H9))
         as Hftinv.
       specialize (IHAtomic H1 _ H9); dest.
       pose proof (upLockInv_ok
+                    msiSv_impl_ORqsInit
                     msiSv_impl_GoodRqRsSys
                     msiSv_impl_RqRsDTree (reachable_steps H H9)) as Hulinv.
       pose proof (downLockInv_ok
+                    msiSv_impl_ORqsInit
                     msiSv_impl_GoodRqRsSys
                     msiSv_impl_RqRsDTree
                     msiSv_impl_GoodExtRssSys (reachable_steps H H9)) as Hdlinv.
@@ -725,7 +743,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rsDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -761,7 +780,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rqDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -828,7 +848,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rsDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -868,7 +889,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rqDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -932,7 +954,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rsDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -991,7 +1014,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rsDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -1027,7 +1051,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rqDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -1094,7 +1119,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rsDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -1134,7 +1160,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rqDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -1198,7 +1225,8 @@ Section Inv.
           * apply Forall_app.
             { apply forall_removeOnce.
               eapply atomic_rsDown_preserves_msg_out_preds; eauto;
-                [exact msiSv_impl_RqRsSys
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys
                 |red; auto
                 |exact msiSvMsgOutPred_good].
             }
@@ -1236,8 +1264,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1288,8 +1317,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1325,8 +1355,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1369,8 +1400,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1419,6 +1451,7 @@ Section Inv.
             { apply forall_removeOnce.
               eapply atomic_rsUps_preserves_msg_out_preds
                 with (rsUps:= [(c2pRs, rmsg)]); eauto.
+              { exact msiSv_impl_ORqsInit. }
               { exact msiSv_impl_RqRsSys. }
               { repeat constructor; intro; dest_in. }
               { apply SubList_cons; [|apply SubList_nil].
@@ -1489,6 +1522,7 @@ Section Inv.
             { apply forall_removeOnce.
               eapply atomic_rsUps_preserves_msg_out_preds
                 with (rsUps:= [(c2pRs, rmsg)]); eauto.
+              { exact msiSv_impl_ORqsInit. }
               { exact msiSv_impl_RqRsSys. }
               { repeat constructor; intro; dest_in. }
               { apply SubList_cons; [|apply SubList_nil].
@@ -1544,8 +1578,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1603,8 +1638,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1653,8 +1689,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child1Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1709,8 +1746,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1761,8 +1799,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1798,8 +1837,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1842,8 +1882,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -1892,6 +1933,7 @@ Section Inv.
             { apply forall_removeOnce.
               eapply atomic_rsUps_preserves_msg_out_preds
                 with (rsUps:= [(c1pRs, rmsg)]); eauto.
+              { exact msiSv_impl_ORqsInit. }
               { exact msiSv_impl_RqRsSys. }
               { repeat constructor; intro; dest_in. }
               { apply SubList_cons; [|apply SubList_nil].
@@ -1962,6 +2004,7 @@ Section Inv.
             { apply forall_removeOnce.
               eapply atomic_rsUps_preserves_msg_out_preds
                 with (rsUps:= [(c1pRs, rmsg)]); eauto.
+              { exact msiSv_impl_ORqsInit. }
               { exact msiSv_impl_RqRsSys. }
               { repeat constructor; intro; dest_in. }
               { apply SubList_cons; [|apply SubList_nil].
@@ -2017,8 +2060,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -2076,8 +2120,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -2126,8 +2171,9 @@ Section Inv.
         + split.
           * apply Forall_app.
             { apply forall_removeOnce.
-              eapply atomic_rqUp_preserves_msg_out_preds
-                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
               { intro; dest_in; discriminate. }
               { red; auto. }
               { exact msiSvMsgOutPred_good. }
@@ -2178,9 +2224,17 @@ Section Inv.
     Lemma ImplStateInv_init:
       ImplStateInv (initsOf impl).
     Proof.
-      vm_compute.
-      (* TODO: need [sys_orqs_inits].. *)
-    Admitted.
+      red; simpl.
+      unfold implOStatesInit, implORqsInit; mred.
+      simpl.
+      repeat split.
+      exists 0.
+      repeat split; intros.
+      - vm_compute; intros.
+        right; left; auto.
+      - discriminate.
+      - discriminate.
+    Qed.
 
     Lemma ImplStateInv_invStep:
       InvStep impl step_m ImplStateInv.
@@ -2190,7 +2244,8 @@ Section Inv.
       - apply inv_trs_seqSteps.
         apply msiSv_impl_InvTrs.
       - eapply rqrs_Serializable.
-        apply msiSv_impl_RqRsSys.
+        + apply msiSv_impl_ORqsInit.
+        + apply msiSv_impl_RqRsSys.
     Qed.
 
   End Facts.
@@ -2213,7 +2268,6 @@ Section Sim.
   (** * FIXME: simulation should connect external request/response queues:
    * while connecting them we need to include [RqInfo] as well.
    *)
-
   Definition SimMSI: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
     fun ist sst =>
       exists cv,

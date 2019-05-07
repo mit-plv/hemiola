@@ -14,7 +14,8 @@ Section DownLockInv.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypotheses (Hrr: GoodRqRsSys dtr sys)
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrr: GoodRqRsSys dtr sys)
              (Hsd: RqRsDTree dtr sys)
              (Hers: GoodExtRssSys sys).
 
@@ -101,11 +102,19 @@ Section DownLockInv.
     intros; do 3 red; cbn.
     intros; cbn.
     red; intros.
-    repeat (mred; simpl).
+    assert ((sys_orqs_inits sys)@[oidx] >>=[[]] (fun orq => orq) = []).
+    { specialize (Hiorqs oidx); simpl in Hiorqs.
+      destruct ((sys_orqs_inits sys)@[oidx]) as [orq|]; simpl in *; auto.
+    }
+    rewrite H0; mred.
     red; intros.
-    eapply parentIdxOf_Some in H0; [|eassumption].
-    destruct H0 as [rqUp [rsUp [down ?]]]; dest.
-    exists down, rsUp; repeat split; assumption.
+    eapply parentIdxOf_Some in H1; [|eassumption].
+    destruct H1 as [rqUp [rsUp [down ?]]]; dest.
+    exists down, rsUp; repeat split; try assumption.
+    red.
+    specialize (Hiorqs cidx); simpl in Hiorqs.
+    destruct ((sys_orqs_inits sys)@[cidx]) as [corq|]; simpl in *; auto.
+    subst; mred.
   Qed.
 
   Lemma downLockFreeChildInv_msgs_preserved:

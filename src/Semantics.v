@@ -6,6 +6,7 @@ Require Export MessagePool.
 Set Implicit Arguments.
 
 Open Scope list.
+Open Scope fmap.
 
 Definition extRqsOf {StateT MsgT} `{HasMsg MsgT}
            (sys: System StateT) (mp: MessagePool MsgT) :=
@@ -140,11 +141,15 @@ Record MState oifc :=
 
 Definition getMStateInit {oifc} (sys: System oifc): MState oifc :=
   {| bst_oss := initsOf sys;
-     bst_orqs := M.empty _;
+     bst_orqs := initsOf sys;
      bst_msgs := emptyMP _ |}.
 
 Global Instance MState_HasInit {oifc}: HasInit (System oifc) (MState oifc) :=
   {| initsOf := getMStateInit |}.
+
+Definition GoodORqsInit (iorqs: ORqs Msg): Prop :=
+  forall oidx,
+    iorqs@[oidx] >>=[True] (fun orq => orq = []).
 
 Definition IntMsgsEmpty {oifc} (sys: System oifc) (msgs: MessagePool Msg) :=
   forall midx,
@@ -267,4 +272,5 @@ Record TState ifc :=
   }.
 
 Close Scope list.
+Close Scope fmap.
 

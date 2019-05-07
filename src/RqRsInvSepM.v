@@ -14,7 +14,8 @@ Section Separation.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   (*! Separation by an RqDown message *)
 
@@ -37,7 +38,7 @@ Section Separation.
     { eapply reachable_steps; [eassumption|].
       eapply steps_singleton; eassumption.
     }
-    pose proof (downLockInv_ok H0 H H1 H8); clear H8.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H8); clear H8.
     inv_step.
     good_locking_get obj.
     disc_rule_conds.
@@ -175,8 +176,8 @@ Section Separation.
             False.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros.
-    pose proof (footprints_ok H0 H5) as Hftinv.
-    pose proof (downLockInv_ok H0 H H1 H5) as Hdlinv.
+    pose proof (footprints_ok Hiorqs H0 H5) as Hftinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H5) as Hdlinv.
     inv_step.
     good_locking_get obj.
     good_rqrs_rule_get rule.
@@ -314,8 +315,8 @@ Section Separation.
             False.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros.
-    pose proof (footprints_ok H0 H6) as Hftinv.
-    pose proof (downLockInv_ok H0 H H1 H6) as Hulinv.
+    pose proof (footprints_ok Hiorqs H0 H6) as Hftinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H6) as Hulinv.
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -489,7 +490,7 @@ Section Separation.
     assert (Reachable (steps step_m) sys st2)
       by (eapply reachable_steps;
           [eassumption|apply steps_singleton; eassumption]).
-    pose proof (downLockInv_ok H0 H H1 H3); clear H3.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H3); clear H3.
     inv_step; simpl in *.
     intro Hx.
     good_locking_get pobj.
@@ -702,7 +703,7 @@ Section Separation.
       specialize (IHAtomic _ H15 H16 _ H18).
       destruct IHAtomic.
       + left; apply SubList_cons; [|assumption].
-        pose proof (atomic_ext_outs_bounded Hrrs H2 H15 H18 H3).
+        pose proof (atomic_ext_outs_bounded Hiorqs Hrrs H2 H15 H18 H3).
         eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
@@ -710,7 +711,7 @@ Section Separation.
         intro Hx; subst.
         eapply step_rqDown_separation_inside_false; eauto.
       + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-        pose proof (atomic_msg_outs_disj Hrrs H2 H15 H18 H3).
+        pose proof (atomic_msg_outs_disj Hiorqs Hrrs H2 H15 H18 H3).
         eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_outside_ok; eauto.
@@ -808,8 +809,8 @@ Section Separation.
     { eapply reachable_steps; [eassumption|].
       eapply steps_singleton; eassumption.
     }
-    pose proof (upLockInv_ok H0 H H11) as Hlinv; clear H11.
-    pose proof (footprints_ok H0 H7) as Hfinv.
+    pose proof (upLockInv_ok Hiorqs H0 H H11) as Hlinv; clear H11.
+    pose proof (footprints_ok Hiorqs H0 H7) as Hfinv.
     inv_step.
     good_locking_get cobj.
     intro Hx.
@@ -1005,7 +1006,7 @@ Section Separation.
     (* assert (Reachable (steps step_m) sys st2) *)
     (*   by (eapply reachable_steps; *)
     (*       [eassumption|apply steps_singleton; eassumption]). *)
-    pose proof (upLockInv_ok H0 H H7).
+    pose proof (upLockInv_ok Hiorqs H0 H H7).
     inv_step; simpl in *.
     intro Hx.
     good_locking_get cobj.
@@ -1100,8 +1101,8 @@ Section Separation.
               False.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H7) as Hftinv.
-    pose proof (upLockInv_ok H0 H H7) as Hulinv.
+    pose proof (footprints_ok Hiorqs H0 H7) as Hftinv.
+    pose proof (upLockInv_ok Hiorqs H0 H H7) as Hulinv.
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -1256,8 +1257,8 @@ Section Separation.
             False.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H6) as Hftinv.
-    pose proof (upLockInv_ok H0 H H6) as Hulinv.
+    pose proof (footprints_ok Hiorqs H0 H6) as Hftinv.
+    pose proof (upLockInv_ok Hiorqs H0 H H6) as Hulinv.
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -1363,7 +1364,7 @@ Section Separation.
       specialize (IHAtomic _ _ H8 H17 _ _ _ H10 H11 H12 H13 H14 H15 H16).
       destruct IHAtomic.
       + left; apply SubList_cons; [|assumption].
-        pose proof (atomic_ext_outs_bounded Hrrs H2 H8 H17 H5).
+        pose proof (atomic_ext_outs_bounded Hiorqs Hrrs H2 H8 H17 H5).
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_inside_child_ok; eauto.
@@ -1371,7 +1372,7 @@ Section Separation.
         intro Hx; subst.
         eapply step_rsDown_separation_inside_false with (cobj:= cobj); eauto.
       + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
-        pose proof (atomic_msg_outs_disj Hrrs H2 H8 H17 H5).
+        pose proof (atomic_msg_outs_disj Hiorqs Hrrs H2 H8 H17 H5).
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
         eapply step_separation_outside_ok; eauto.

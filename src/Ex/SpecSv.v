@@ -24,8 +24,10 @@ Section System.
       {| ost_sz := 1;
          ost_ty := [nat:Type]%vector |}.
     Definition specValueIdx: Fin.t 1 := Fin.F1.
-    Definition specInit: OStates SpecOStateIfc :=
+    Definition specOStatesInit: OStates SpecOStateIfc :=
       [specIdx <- hvcons 0 hvnil].
+    Definition specORqsInit: ORqs Msg :=
+      [specIdx <- []].
     
     Section PerChn.
       Variable i: nat.
@@ -128,7 +130,8 @@ Section System.
          sys_merqs := specMerqs numC;
          sys_merss := specMerss numC;
          sys_msg_inds_valid := spec_msg_inds_valid numC;
-         sys_oss_inits := specInit
+         sys_oss_inits := specOStatesInit;
+         sys_orqs_inits := specORqsInit
       |}.
 
   End Spec.

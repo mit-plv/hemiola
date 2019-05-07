@@ -64,10 +64,14 @@ Section System.
   
   Definition ImplOStateIfc: OStateIfc :=
     {| ost_ty := [nat:Type; MSI:Type; DirT]%vector |}.
-  Definition implInit: OStates ImplOStateIfc :=
+  Definition implOStatesInit: OStates ImplOStateIfc :=
     [parentIdx <- (0, (msiS, (dirInit, tt)))]
     +[child1Idx <- (0, (msiS, (dirInit, tt)))]
     +[child2Idx <- (0, (msiS, (dirInit, tt)))].
+  Definition implORqsInit: ORqs Msg :=
+    [parentIdx <- []]
+    +[child1Idx <- []]
+    +[child2Idx <- []].
 
   Section Child.
     Variable (coidx: IdxT).
@@ -491,7 +495,8 @@ Section System.
        sys_merqs := [ec1; ec2];
        sys_merss := [ce1; ce2];
        sys_msg_inds_valid := ltac:(inds_valid_tac);
-       sys_oss_inits := implInit
+       sys_oss_inits := implOStatesInit;
+       sys_orqs_inits := implORqsInit
     |}.
 
 End System.

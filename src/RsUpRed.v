@@ -16,7 +16,8 @@ Section RsUpReduction.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Ltac disc_rule_custom ::=
     try disc_lock_conds;
@@ -43,8 +44,8 @@ Section RsUpReduction.
             DownLockedInv dtr st1.(bst_orqs) st1.(bst_msgs) oidx orqid).
   Proof.
     intros; destruct Hrrs as [? [? [_ ?]]].
-    pose proof (footprints_ok H3 H0).
-    pose proof (downLockInv_ok H3 H2 H4 H0).
+    pose proof (footprints_ok Hiorqs H3 H0).
+    pose proof (downLockInv_ok Hiorqs H3 H2 H4 H0).
     red in H; dest.
     inv_step.
     good_rqrs_rule_get rule.
@@ -206,7 +207,7 @@ Section RsUpReduction.
     { eapply reachable_steps; [eassumption|].
       econstructor; [econstructor|eassumption].
     }
-    pose proof (footprints_ok H2 H4) as HftInv.
+    pose proof (footprints_ok Hiorqs H2 H4) as HftInv.
 
     pose proof (rsUp_spec H H5 H11).
     destruct H6 as [_ [[obj [rule ?]] [orq [rqid ?]]]]; dest.
@@ -349,7 +350,7 @@ Section RsUpReduction.
           DisjList (idsOf rsUps) (idsOf rins).
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros.
-    pose proof (downLockInv_ok H0 H H1 H7).
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H7).
     good_locking_get objTo; clear H10.
 
     apply (DisjList_false_spec eq_nat_dec); intros rsUp Hin1 Hin2.
@@ -405,7 +406,7 @@ Section RsUpReduction.
     }
 
     inv_step; simpl in *.
-    pose proof (downLockInv_ok H0 H H1 H4).
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H4).
     good_locking_get objTo; clear H9.
     
     apply (DisjList_false_spec (id_dec msg_dec)); intros rsUp Hin1 Hin2.

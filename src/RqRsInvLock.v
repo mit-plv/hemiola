@@ -45,7 +45,8 @@ Section RqRsDown.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Definition ONoDownLock (orqs: ORqs Msg) (oidx: IdxT) :=
     orqs@[oidx] >>=[True] (fun orq => orq@[downRq] = None).
@@ -192,7 +193,7 @@ Section RqRsDown.
           FirstMP msgs down rsdm.
   Proof.
     destruct Hrrs as [? [? ?]]; intros; subst.
-    pose proof (upLockInv_ok H0 H H2).
+    pose proof (upLockInv_ok Hiorqs H0 H H2).
     good_locking_get cobj.
     pose proof (edgeDownTo_Some H _ H5).
     destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
@@ -221,7 +222,7 @@ Section RqRsDown.
           False.
   Proof.
     destruct Hrrs as [? [? ?]]; intros; subst.
-    pose proof (upLockInv_ok H0 H H2).
+    pose proof (upLockInv_ok Hiorqs H0 H H2).
     good_locking_get cobj.
     pose proof (edgeDownTo_Some H _ H5).
     destruct H11 as [rqUp [rsUp [pidx ?]]]; dest.
@@ -257,11 +258,11 @@ Section RqRsDown.
         NoRqRsDown st2.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros.
-    pose proof (footprints_ok H0 H2) as Hftinv.
+    pose proof (footprints_ok Hiorqs H0 H2) as Hftinv.
     assert (Reachable (steps step_m) sys st2) as Hnrch
       by (eapply reachable_steps; [eassumption|apply steps_singleton; eassumption]).
-    pose proof (upLockInv_ok H0 H Hnrch) as Hulinv.
-    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
+    pose proof (upLockInv_ok Hiorqs H0 H Hnrch) as Hulinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
     clear Hnrch.
 
     inv_step.
@@ -696,7 +697,8 @@ Section Corollaries.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Corollary rsDown_in_rqDown_first_false:
     forall st,
@@ -715,8 +717,8 @@ Section Corollaries.
             ~ FirstMP msgs down rqdm.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros; subst.
-    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
-    pose proof (noRqRsDown_ok Hrrs H2) as Hrrinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
+    pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
     red in Hrrinv.
     specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H8 H9).
     destruct Hrrinv.
@@ -758,9 +760,9 @@ Section Corollaries.
             False.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros; subst.
-    pose proof (upLockInv_ok H0 H H2) as Hulinv.
-    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
-    pose proof (noRqRsDown_ok Hrrs H2) as Hrrinv.
+    pose proof (upLockInv_ok Hiorqs H0 H H2) as Hulinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
+    pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
     assert (InMP down rsdm st.(bst_msgs)).
     { red; rewrite H11.
       apply in_or_app; right; left; reflexivity.
@@ -809,8 +811,8 @@ Section Corollaries.
             ~ InMP rsUp rsum msgs.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros; subst.
-    pose proof (downLockInv_ok H0 H H1 H2) as Hdlinv.
-    pose proof (noRqRsDown_ok Hrrs H2) as Hrrinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
+    pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
     red in Hrrinv.
     specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H9 H10).
     destruct Hrrinv.

@@ -16,7 +16,8 @@ Section InsideTree.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
@@ -38,7 +39,7 @@ Section InsideTree.
   Proof.
     intros.
     destruct Hrrs as [? [? ?]].
-    pose proof (footprints_ok H5 H).
+    pose proof (footprints_ok Hiorqs H5 H).
     apply (DisjList_false_spec (id_dec msg_dec)); intros [up umsg] Hin1 Hin2.
     rewrite Forall_forall in H2.
     specialize (H2 _ Hin1); simpl in H2.
@@ -147,7 +148,8 @@ Section RqRsRed.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Lemma rqrs_lbl_ins_disj:
     forall st11 st21,

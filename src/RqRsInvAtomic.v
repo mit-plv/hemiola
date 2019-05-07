@@ -14,7 +14,8 @@ Section Coverage.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Definition RqUpMsgFrom (oidx: IdxT) (idm: Id Msg) :=
     msg_type (valOf idm) = MRq /\
@@ -641,7 +642,7 @@ Section Coverage.
       ~ UpLockedNew st1.(bst_orqs) st2.(bst_orqs) oidx.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H2).
+    pose proof (footprints_ok Hiorqs H0 H2).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule; simpl in *.
@@ -1161,12 +1162,12 @@ Section Coverage.
       pose proof (edgeDownTo_Some H _ H19).
       destruct H20 as [rqUp [rsUp [pidx ?]]]; dest.
       apply in_map with (f:= idOf) in H17.
-      pose proof (atomic_down_out_in_history Hrrs H2 H3 H4 _ H19 H22 H17).
+      pose proof (atomic_down_out_in_history Hiorqs Hrrs H2 H3 H4 _ H19 H22 H17).
       eapply inside_child_in; [apply Hrrs|..]; eauto.
     - destruct H18.
       pose proof (rsEdgeUpFrom_Some H _ H19).
       apply in_map with (f:= idOf) in H17.
-      pose proof (atomic_rsUp_out_in_history Hrrs H2 H3 H4 _ H19 H17).
+      pose proof (atomic_rsUp_out_in_history Hiorqs Hrrs H2 H3 H4 _ H19 H17).
       auto.
   Qed.
 
@@ -1250,13 +1251,13 @@ Section Coverage.
           apply removeL_In_2 in H17.
           pose proof H17.
           apply in_map with (f:= idOf) in H28.
-          pose proof (atomic_down_out_in_history Hrrs H2 H3 H4 _ H24 H27 H28); clear H28.
+          pose proof (atomic_down_out_in_history Hiorqs Hrrs H2 H3 H4 _ H24 H27 H28); clear H28.
           eapply DisjList_In_2 in H29; [|eassumption].
           elim H29.
           eapply inside_parent_in; [apply Hrrs|..]; try eassumption.
 
           intro Hx; subst; disc_rule_conds.
-          pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
+          pose proof (downLockInv_ok Hiorqs H0 H H1 (reachable_steps H3 H4)).
           pose proof (steps_object_in_system H4 _ H8).
           destruct H25 as [obj [? ?]]; subst.
           good_locking_get obj.
@@ -1276,7 +1277,7 @@ Section Coverage.
           apply removeL_In_2 in H17.
           pose proof H17.
           apply in_map with (f:= idOf) in H25.
-          pose proof (atomic_rsUp_out_in_history Hrrs H2 H3 H4 _ H24 H25); clear H25.
+          pose proof (atomic_rsUp_out_in_history Hiorqs Hrrs H2 H3 H4 _ H24 H25); clear H25.
           eapply DisjList_In_2 in H26; [|eassumption].
           auto.
   Qed.
@@ -1348,7 +1349,7 @@ Section Coverage.
         disc_rule_conds.
         pose proof (steps_object_in_system H4 _ H10).
         destruct H29 as [robj [? ?]]; subst.
-        pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
+        pose proof (downLockInv_ok Hiorqs H0 H H1 (reachable_steps H3 H4)).
         good_locking_get robj.
 
         destruct (in_dec eq_nat_dec rsUp (rqi_minds_rss rqid)).
@@ -1390,7 +1391,7 @@ Section Coverage.
         disc_rule_conds.
         pose proof (steps_object_in_system H4 _ H10).
         destruct H28 as [robj [? ?]]; subst.
-        pose proof (downLockInv_ok H0 H H1 (reachable_steps H3 H4)).
+        pose proof (downLockInv_ok Hiorqs H0 H H1 (reachable_steps H3 H4)).
         good_locking_get robj.
         pose proof (atomic_messages_eouts_in H2 H4).
         rewrite Forall_forall in H32.
@@ -1449,12 +1450,12 @@ Section Coverage.
         destruct H8.
         * disc_rule_conds.
           apply in_map with (f:= idOf) in H19.
-          pose proof (atomic_down_out_in_history Hrrs H2 H3 H4 _ H32 H25 H19).
+          pose proof (atomic_down_out_in_history Hiorqs Hrrs H2 H3 H4 _ H32 H25 H19).
           eapply DisjList_In_2 in H33; [|eassumption].
           auto.
         * disc_rule_conds.
           apply in_map with (f:= idOf) in H19.
-          pose proof (atomic_rsUp_out_in_history Hrrs H2 H3 H4 _ H32 H19).
+          pose proof (atomic_rsUp_out_in_history Hiorqs Hrrs H2 H3 H4 _ H32 H19).
           eapply DisjList_In_2 in H33; [|eassumption].
           elim H33; eapply inside_child_in; [apply Hrrs|..]; eassumption.
   Qed.
@@ -1466,7 +1467,7 @@ Section Coverage.
       MsgOutsInv [oidx] st1.(bst_orqs) st2.(bst_orqs) routs.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H2).
+    pose proof (footprints_ok Hiorqs H0 H2).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule; simpl in *.
@@ -1770,7 +1771,7 @@ Section Coverage.
       assert (In rqFrom (idsOf eouts))
         by (apply in_map_iff; exists (rqFrom, rqm); auto).
       pose proof (atomic_down_out_in_history
-                    Hrrs Hatm Hrch Hsteps _ H11 H16 H15); clear H15.
+                    Hiorqs Hrrs Hatm Hrch Hsteps _ H11 H16 H15); clear H15.
       assert (Forall (fun eout => exists oidx, RqDownRsUpIdx oidx eout) eouts)
         by (eapply rqDown_rsUp_inv_msg, Forall_forall; eauto).
 
@@ -1948,7 +1949,7 @@ Section Coverage.
                             (obj_idx upCObj)) as Hulb.
       { eapply upLockedBound_child; eauto; [|mred].
         intros.
-        eapply atomic_separation_ok in H16; eauto.
+        eapply atomic_separation_ok in H16; eauto; try apply Hiorqs.
         destruct H16; [|assumption].
         exfalso; destruct H16 as [ccidx [? ?]].
         pose proof (edgeDownTo_Some H _ H19).
@@ -1956,7 +1957,7 @@ Section Coverage.
         disc_rule_conds.
         pose proof Hatm.
         eapply atomic_down_out_in_history with (down:= rsFrom) in H24;
-          eauto; [|left; reflexivity].
+          eauto; try apply Hiorqs; [|left; reflexivity].
         apply H18 in H24.
         eapply parent_parent_in_False with (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -1988,7 +1989,7 @@ Section Coverage.
             { intro Hx; subst.
               disc_rule_conds; auto.
             }
-          * eapply atomic_separation_ok in n; eauto.
+          * eapply atomic_separation_ok in n; eauto; try apply Hiorqs.
             destruct n.
             1: {
               exfalso; destruct H28 as [rcidx [? ?]].
@@ -1997,7 +1998,7 @@ Section Coverage.
               disc_rule_conds.
               pose proof Hatm.
               eapply atomic_down_out_in_history with (down:= rsFrom) in H19;
-                eauto; [|left; reflexivity].
+                eauto; try apply Hiorqs; [|left; reflexivity].
               apply H29 in H19.
               eapply parent_parent_in_False with (oidx2:= obj_idx obj);
                 try apply Hrrs; eassumption.
@@ -2033,7 +2034,7 @@ Section Coverage.
             specialize (H12 _ _ H16 H20 H22).
             assumption.
           * eapply parent_not_in_subtree; [apply Hrrs|assumption].
-        + eapply atomic_separation_ok in n; eauto.
+        + eapply atomic_separation_ok in n; eauto; try apply Hiorqs.
           destruct n.
           1: {
             exfalso; destruct H16 as [ccidx [? ?]].
@@ -2042,7 +2043,7 @@ Section Coverage.
             disc_rule_conds.
             pose proof Hatm.
             eapply atomic_down_out_in_history with (down:= rsFrom) in H24;
-              eauto; [|left; reflexivity].
+              eauto; try apply Hiorqs; [|left; reflexivity].
             apply H18 in H24.
             eapply parent_parent_in_False with (oidx2:= obj_idx obj);
               try apply Hrrs; eassumption.
@@ -2287,7 +2288,7 @@ Section Coverage.
         assert (In rqFrom (idsOf eouts))
           by (apply in_map_iff; exists (rqFrom, rqi_msg rqi); auto).
         pose proof (atomic_down_out_in_history
-                      Hrrs Hatm Hrch Hsteps _ H2 H21 H19); clear H19.
+                      Hiorqs Hrrs Hatm Hrch Hsteps _ H2 H21 H19); clear H19.
         
         eapply MsgOutsRqDownRsUp.
         + (** [RqDownRsUpDisj] *)
@@ -2545,7 +2546,7 @@ Section Coverage.
           disc_rule_conds.
           pose proof Hatm.
           eapply atomic_down_out_in_history with (down:= rsFrom) in H21;
-            eauto; [|left; reflexivity].
+            eauto; try apply Hiorqs; [|left; reflexivity].
           apply H20 in H21.
           eapply parent_parent_in_False with (oidx2:= obj_idx obj);
             try apply Hrrs; eassumption.
@@ -2556,13 +2557,13 @@ Section Coverage.
         + eapply upLockCoverInv_child; eauto.
         + eapply upLockedBound_child; eauto; [|mred].
           intros.
-          eapply atomic_separation_ok in H19; eauto.
+          eapply atomic_separation_ok in H19; eauto; try apply Hiorqs.
           destruct H19; [|assumption].
           exfalso; destruct H19 as [ccidx [? ?]].
           eapply Hcf; eauto.
         + destruct (in_dec eq_nat_dec (obj_idx obj) (oindsOf hst)).
           * eapply noDownLockOutside_child_in_1; eauto; mred.
-          * eapply atomic_separation_ok in n; eauto.
+          * eapply atomic_separation_ok in n; eauto; try apply Hiorqs.
             destruct n.
             { exfalso; destruct H19 as [rcidx [? ?]].
               eapply Hcf; eauto.
@@ -2693,9 +2694,9 @@ Section Coverage.
           assert (In rsFrom (idsOf eouts))
             by (apply in_map with (f:= idOf) in H16; assumption).
           pose proof (atomic_rsUp_out_in_history
-                        Hrrs Hatm Hrch Hsteps _ H20 H22); clear H22.
+                        Hiorqs Hrrs Hatm Hrch Hsteps _ H20 H22); clear H22.
 
-          eapply atomic_separation_ok in n; eauto.
+          eapply atomic_separation_ok in n; eauto; try apply Hiorqs.
           destruct n.
           2: {
             exfalso.
@@ -2815,7 +2816,7 @@ Section Coverage.
         assert (In rsFrom (idsOf eouts))
           by (apply in_map with (f:= idOf) in H13; assumption).
         pose proof (atomic_rsUp_out_in_history
-                      Hrrs Hatm Hrch Hsteps _ H20 H22); clear H22.
+                      Hiorqs Hrrs Hatm Hrch Hsteps _ H20 H22); clear H22.
 
         destruct (in_dec eq_nat_dec (obj_idx obj) (oindsOf hst)).
         + (** If the history has visited the join *)
@@ -3003,7 +3004,7 @@ Section Coverage.
             }
 
         + (** If the history never visited the join *)
-          eapply atomic_separation_ok in n; eauto.
+          eapply atomic_separation_ok in n; eauto; try apply Hiorqs.
           destruct n.
           2: {
             exfalso.
@@ -3160,8 +3161,8 @@ Section Coverage.
     inv_steps.
     specialize (IHAtomic _ _ H8 H10).
     assert (Reachable (steps step_m) sys st2) by eauto.
-    pose proof (footprints_ok H0 H5) as Hftinv.
-    pose proof (downLockInv_ok H0 H H1 H5) as Hdlinv.
+    pose proof (footprints_ok Hiorqs H0 H5) as Hftinv.
+    pose proof (downLockInv_ok Hiorqs H0 H H1 H5) as Hdlinv.
     clear H5.
     inv_step.
     good_rqrs_rule_get rule.

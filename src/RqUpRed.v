@@ -53,7 +53,8 @@ Section RqUpReduction.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Ltac disc_rule_custom ::=
     try disc_lock_conds;
@@ -317,8 +318,8 @@ Section RqUpReduction.
     
     (* Register necessary invariants. *)
     inv H3.
-    pose proof (upLockInv_ok H5 H4 (reachable_steps H2 H10)) as HlockInv.
-    pose proof (footprints_ok H5 (reachable_steps H2 H10)) as HftInv.
+    pose proof (upLockInv_ok Hiorqs H5 H4 (reachable_steps H2 H10)) as HlockInv.
+    pose proof (footprints_ok Hiorqs H5 (reachable_steps H2 H10)) as HftInv.
     
     inv_steps.
     pose proof (rqUp_spec H H0 H2 H13).
@@ -747,7 +748,7 @@ Section RqUpReduction.
         rewrite H0 in H7; inv H7.
         congruence.
       + (** case [RqUpDown] *)
-        pose proof (upLockInv_ok H10 H9 H) as HlockInv.
+        pose proof (upLockInv_ok Hiorqs H10 H9 H) as HlockInv.
         good_locking_get upCObj.
         destruct (eq_nat_dec (obj_idx upCObj) cidx);
           subst; [|solve_midx_disj].
@@ -769,7 +770,7 @@ Section RqUpReduction.
       + (** case [RqDownDown] *)
         solve_midx_disj.
 
-    - pose proof (footprints_ok H10 H) as HftInv.
+    - pose proof (footprints_ok Hiorqs H10 H) as HftInv.
       good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + solve_midx_disj.
@@ -888,8 +889,8 @@ Section RqUpReduction.
       DisjList routs [rqUp].
   Proof.
     intros; destruct Hrrs as [? [? ?]].
-    pose proof (footprints_ok H4 H0).
-    pose proof (upLockInv_ok H4 H3 H0).
+    pose proof (footprints_ok Hiorqs H4 H0).
+    pose proof (upLockInv_ok Hiorqs H4 H3 H0).
 
     destruct H as [ruIdx [[rqUp' rqm] ?]]; dest.
     inv H; rename rqUp' into rqUp; simpl in *.

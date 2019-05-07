@@ -15,7 +15,8 @@ Section RqUpStart.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
   
   Definition NonRqUpL (lbl: MLabel) :=
     match lbl with
@@ -52,7 +53,7 @@ Section RqUpStart.
       NonRqUpL (RlblInt oidx ridx rins routs).
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H2).
+    pose proof (footprints_ok Hiorqs H0 H2).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -113,7 +114,7 @@ Section RqUpStart.
           Forall NonRqUpL nhst.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H6).
+    pose proof (footprints_ok Hiorqs H0 H6).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -191,7 +192,7 @@ Section RqUpStart.
       Forall (fun out => forall oidxTo, ~ RqUpMsgs dtr oidxTo [out]) routs.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H2) as Hfinv.
+    pose proof (footprints_ok Hiorqs H0 H2) as Hfinv.
     inv_step.
     
     good_rqrs_rule_get rule.
@@ -262,7 +263,7 @@ Section RqUpStart.
       NonRqUpL (RlblInt oidx ridx rins routs).
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
-    pose proof (footprints_ok H0 H2).
+    pose proof (footprints_ok Hiorqs H0 H2).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -410,7 +411,8 @@ Section Separation.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Definition RqRsMsgFrom (oidx: IdxT) (idm: Id Msg) :=
     rqEdgeUpFrom dtr oidx = Some (idOf idm) \/
@@ -565,7 +567,7 @@ Section Separation.
   Proof.
     destruct Hrrs as [? [? ?]].
     intros.
-    pose proof (footprints_ok H0 H2).
+    pose proof (footprints_ok Hiorqs H0 H2).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -655,7 +657,7 @@ Section Separation.
   Proof.
     destruct Hrrs as [? [? ?]].
     intros.
-    pose proof (footprints_ok H0 H2).
+    pose proof (footprints_ok Hiorqs H0 H2).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -851,7 +853,7 @@ Section Separation.
   Proof.
     destruct Hrrs as [? [? ?]].
     intros.
-    pose proof (footprints_ok H0 H4).
+    pose proof (footprints_ok Hiorqs H0 H4).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -953,7 +955,7 @@ Section Separation.
   Proof.
     destruct Hrrs as [? [? ?]].
     intros.
-    pose proof (footprints_ok H0 H3).
+    pose proof (footprints_ok Hiorqs H0 H3).
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.

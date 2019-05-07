@@ -17,7 +17,8 @@ Section Pushable.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Variables (phst: MHistory)
             (oidx ridx: IdxT)
@@ -653,7 +654,8 @@ Section Pushable.
 End Pushable.
 
 Theorem rqrs_WellInterleaved:
-  forall {oifc} (sys: System oifc) (dtr: DTree),
+  forall {oifc} (sys: System oifc) (Hiorqs: GoodORqsInit (initsOf sys))
+         (dtr: DTree),
     RqRsSys dtr sys ->
     WellInterleaved sys.
 Proof.
@@ -683,7 +685,7 @@ Proof.
       destruct H9 as [sti [? ?]]; eauto.
     }
     destruct H6 as [sti ?].
-    destruct (rqDown_ExtContinuousL_parent_in_system H H0 H5 H1 H6)
+    destruct (rqDown_ExtContinuousL_parent_in_system Hiorqs H H0 H5 H1 H6)
       as [pobj [? ?]].
     eapply rqDown_WellInterleavedHst; eauto.
   - eapply rsUp_WellInterleavedHst; eauto.
@@ -693,13 +695,14 @@ Proof.
       destruct H9 as [sti [? ?]]; eauto.
     }
     destruct H6 as [sti ?].
-    destruct (rsDown_ExtContinuousL_parent_in_system H H0 H5 H1 H6)
+    destruct (rsDown_ExtContinuousL_parent_in_system Hiorqs H H0 H5 H1 H6)
       as [pobj [? ?]].
     eapply rsDown_WellInterleavedHst; eauto.
 Qed.
 
 Corollary rqrs_Serializable:
-  forall {oifc} (sys: System oifc) (dtr: DTree),
+  forall {oifc} (sys: System oifc) (Hiorqs: GoodORqsInit (initsOf sys))
+         (dtr: DTree),
     RqRsSys dtr sys ->
     SerializableSys sys.
 Proof.

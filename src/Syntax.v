@@ -169,7 +169,8 @@ Record System oifc :=
     sys_merqs: list IdxT;
     sys_merss: list IdxT;
     sys_msg_inds_valid: NoDup (sys_minds ++ sys_merqs ++ sys_merss);
-    sys_oss_inits: OStates oifc
+    sys_oss_inits: OStates oifc;
+    sys_orqs_inits: ORqs Msg
   }.
 
 Lemma obj_same_id_in_system_same:
@@ -189,6 +190,9 @@ Ltac inds_valid_tac :=
 
 Global Instance System_OStates_HasInit {oifc}: HasInit (System oifc) (OStates oifc) :=
   {| initsOf := @sys_oss_inits _ |}.
+
+Global Instance System_ORqs_HasInit {oifc}: HasInit (System oifc) (ORqs Msg) :=
+  {| initsOf := @sys_orqs_inits _ |}.
 
 Close Scope string.
 Close Scope list.

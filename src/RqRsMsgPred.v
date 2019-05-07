@@ -57,7 +57,8 @@ Section PredLock.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Lemma extAtomic_rsUp_acceptor_visited:
     forall inits hst eouts,
@@ -92,7 +93,8 @@ Section PredMsg.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Definition GoodRsUpPred (rsUp: Id Msg) (P: StatesPred oifc) :=
     forall oidx,

@@ -14,7 +14,8 @@ Section UpLockInv.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypotheses (Hrr: GoodRqRsSys dtr sys)
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrr: GoodRqRsSys dtr sys)
              (Hsd: RqRsDTree dtr sys).
 
   Section OnMState.
@@ -103,11 +104,20 @@ Section UpLockInv.
     intros; do 3 red; cbn.
     intros; cbn.
     red; repeat (mred; simpl).
+    assert ((sys_orqs_inits sys)@[oidx] >>=[[]](fun orq => orq) = []).
+    { specialize (Hiorqs oidx); simpl in Hiorqs.
+      destruct ((sys_orqs_inits sys)@[oidx]) as [orq|]; simpl in *; auto.
+    }
+    rewrite H0; mred.
     destruct (parentIdxOf dtr oidx) as [pidx|] eqn:Hpidx; [right|left; auto].
     pose proof Hpidx.
-    eapply parentIdxOf_Some in H0; [|eassumption].
-    destruct H0 as [rqUp [rsUp [down ?]]]; dest.
+    eapply parentIdxOf_Some in H1; [|eassumption].
+    destruct H1 as [rqUp [rsUp [down ?]]]; dest.
     do 3 eexists; repeat split; try eassumption.
+    red.
+    specialize (Hiorqs pidx); simpl in Hiorqs.
+    destruct ((sys_orqs_inits sys)@[pidx]) as [porq|]; simpl in *; auto.
+    subst; mred.
   Qed.
 
   Lemma ONoLockTo_not_OLockedTo:

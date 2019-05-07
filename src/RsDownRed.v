@@ -17,7 +17,8 @@ Section RsDownReduction.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Section OnRsDown.
     Variables (cidx: IdxT) (pobj: Object oifc)
@@ -48,13 +49,13 @@ Section RsDownReduction.
       destruct Hrsd as [cobj [[rsDown rsdm] ?]]; dest; subst; simpl in *.
       eapply SubList_singleton_In in H2.
       pose proof H3.
-      eapply rqUp_start_ok in H6; eauto.
+      eapply rqUp_start_ok in H6; eauto; try apply Hiorqs.
       destruct H6 as [ruhst [nhst ?]]; dest; subst.
       exists ruhst, nhst.
       destruct H10; subst.
       - rewrite app_nil_r in *.
         repeat split; [left; reflexivity|].
-        eapply atomic_rsDown_covers; eauto.
+        eapply atomic_rsDown_covers; eauto; try apply Hiorqs.
         red; auto.
       - destruct H6 as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
         destruct H13; subst.
@@ -166,7 +167,7 @@ Section RsDownReduction.
 
       - eapply steps_split in H10; [|reflexivity].
         destruct H10 as [sti [? ?]].
-        eapply atomic_ext_outs_in_history in H3; eauto.
+        eapply atomic_ext_outs_in_history in H3; eauto; try apply Hiorqs.
         rewrite Forall_forall in H3; specialize (H3 _ H11).
         destruct H3 as [ofrom [? ?]].
         eapply atomic_inits_in_history with (s1:= sti) in H6; eauto.
@@ -251,7 +252,7 @@ Section RsDownReduction.
           destruct H9 as [? [? [? ?]]].
           destruct H13 as [nins [nouts ?]].
           eapply rqUpHistory_lpush_unit_reducible; eauto.
-          * eapply rqUp_atomic; eauto.
+          * eapply rqUp_atomic; eauto; try apply Hiorqs.
             apply SubList_refl.
           * assert (Reachable (steps step_m) sys sti)
               by (do 2 (eapply reachable_steps; [|eassumption]);
@@ -259,7 +260,7 @@ Section RsDownReduction.
             clear Hr.
             destruct H9 as [rcidx [rqUp ?]]; dest; subst.
             eapply atomic_inside_tree_inits_disj_rqUps
-              with (rqFrom:= rcidx); eauto.
+              with (rqFrom:= rcidx); eauto; try apply Hiorqs.
             eapply outside_child_in; try apply Hrrs; eassumption.
       - rewrite app_assoc.
         eapply reducible_app_2; try assumption.

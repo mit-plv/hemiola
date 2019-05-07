@@ -14,7 +14,8 @@ Section FootprintInv.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hitr: GoodRqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hitr: GoodRqRsSys dtr sys).
 
   Definition FootprintUpOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
     exists rqFrom rqTo rsFrom rsbTo,
@@ -66,6 +67,9 @@ Section FootprintInv.
   Proof.
     intros; do 3 red.
     intros; simpl; mred.
+    specialize (Hiorqs oidx); simpl in Hiorqs.
+    destruct ((sys_orqs_inits sys)@[oidx]) as [orq|]; simpl in *; auto.
+    subst; mred; simpl; auto.
   Qed.
   
   Lemma footprints_ok_step:
@@ -151,7 +155,8 @@ Section IncomingMessageInv.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hitr: GoodRqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hitr: GoodRqRsSys dtr sys).
 
   Definition RqUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists cidx rqUp,
@@ -197,7 +202,7 @@ Section IncomingMessageInv.
     intros.
 
     (* Register some necessary invariants to prove this invariant. *)
-    pose proof (footprints_ok Hitr H).
+    pose proof (footprints_ok Hiorqs Hitr H).
 
     inv H0.
     good_rqrs_rule_get rule.
@@ -245,7 +250,8 @@ Section OutgoingMessageInv.
   Variables (dtr: DTree)
             (sys: System oifc).
 
-  Hypothesis (Hitr: GoodRqRsSys dtr sys).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hitr: GoodRqRsSys dtr sys).
 
   Definition RqUpOutMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists rqUp,
@@ -289,7 +295,7 @@ Section OutgoingMessageInv.
     intros.
 
     (* Register some necessary invariants to prove this invariant. *)
-    pose proof (footprints_ok Hitr H).
+    pose proof (footprints_ok Hiorqs Hitr H).
 
     inv H0.
     good_rqrs_rule_get rule.
@@ -371,7 +377,8 @@ Section MsgInitCases.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
-  Hypothesis (Hrrs: RqRsSys dtr sys).
+  Hypothesis (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hrrs: RqRsSys dtr sys).
 
   Lemma msg_init_cases_ok:
     forall inits ins hst outs eouts,
