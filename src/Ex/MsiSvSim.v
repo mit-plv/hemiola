@@ -133,9 +133,16 @@ Section Inv.
       !corq1@[upRq]; ImplOStateMSI cv cost1.
     Definition ImplChildCoh2 (cv: nat): Prop :=
       !corq2@[upRq]; ImplOStateMSI cv cost2.
+
+    Definition ImplChildrenCoh: Prop :=
+      !corq1@[upRq]; !corq2@[upRq];
+        (cost1#[implStatusIdx] = msiM -> cost2#[implStatusIdx] = msiI) /\
+        (cost2#[implStatusIdx] = msiM -> cost1#[implStatusIdx] = msiI).
   
     Definition ImplStateCoh (cv: nat): Prop :=
-      ImplParentCoh cv /\ ImplChildCoh1 cv /\ ImplChildCoh2 cv.
+      ImplParentCoh cv /\ 
+      ImplChildCoh1 cv /\ ImplChildCoh2 cv /\
+      ImplChildrenCoh.
 
   End GInv.
 
@@ -151,7 +158,7 @@ Section Inv.
   
   Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
        ImplDirM ImplDirS ImplDirI
-       ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2
+       ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
        ImplStateCoh: RuleConds.
 
   Ltac disc_msi :=
@@ -242,11 +249,10 @@ Section Inv.
             destruct H as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
             right; right.
             solve_rule_conds_ex.
-          * assert (orq0@[downRq] = None) by admit.
-            disc_rule_conds_ex.
-            destruct H as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
-            disc_rule_conds_ex.
-            destruct H7; solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            unfold msiM, msiS, msiI in *; lia.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
         + solve_rule_conds_ex.
       - split.
         + exists n; repeat split.
@@ -254,15 +260,13 @@ Section Inv.
             destruct H as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
             right; right.
             solve_rule_conds_ex.
-          * assert (orq0@[downRq] = None) by admit.
-            disc_rule_conds_ex.
-            destruct H as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
-            disc_rule_conds_ex.
-            destruct H5; solve_rule_conds_ex.
+          * solve_rule_conds_ex.
+            unfold msiM, msiS, msiI in *; lia.
+          * solve_rule_conds_ex.
+          * solve_rule_conds_ex.
         + solve_rule_conds_ex.
-      - eauto.
-      
-    Admitted.
+      - eauto 6.
+    Qed.
 
     Lemma msiSv_impl_InvTrs_ext_in:
       forall st1 eins st2,
@@ -743,6 +747,9 @@ Section Inv.
             { solve_rule_conds_ex.
               unfold msiM, msiS, msiI in *; lia.
             }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
           * solve_rule_conds_ex.
 
       - (** [childDownRqS] *)
@@ -779,18 +786,21 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
           * disc_rule_conds_ex.
             exfalso.
             assert (In parent (sys_objs impl)) by (simpl; tauto).
             good_locking_get parent.
-            clear H22.
+            clear H24.
             eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child1Idx) in H26; eauto;
+              with (cidx:= child1Idx) in H27; eauto;
               [|reflexivity
                |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H26 as [rqid [? [? [rsUp ?]]]]; dest.
+            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
             disc_rule_conds_ex.
-          
+
       - atomic_cont_exfalso_bound.
       - atomic_cont_exfalso_bound.
       - (** [childSetRsM] *)
@@ -843,6 +853,10 @@ Section Inv.
             { solve_rule_conds_ex.
               unfold msiM, msiS, msiI in *; lia.
             }
+            { solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
           * solve_rule_conds_ex.
 
       - (** [childDownRqM] *)
@@ -879,16 +893,17 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
           * disc_rule_conds_ex.
             exfalso.
             assert (In parent (sys_objs impl)) by (simpl; tauto).
             good_locking_get parent.
-            clear H22.
+            clear H24.
             eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child1Idx) in H26; eauto;
+              with (cidx:= child1Idx) in H27; eauto;
               [|reflexivity
                |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H26 as [rqid [? [? [rsUp ?]]]]; dest.
+            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
             disc_rule_conds_ex.
 
       - atomic_cont_exfalso_bound.
@@ -941,6 +956,7 @@ Section Inv.
             { solve_rule_conds_ex.
               unfold msiM, msiS, msiI in *; lia.
             }
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
           * destruct H24.
             { solve_rule_conds_ex. }
@@ -997,6 +1013,9 @@ Section Inv.
               unfold msiM, msiS, msiI in *; lia.
             }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
           * solve_rule_conds_ex.
 
       - (** [childDownRqS] *)
@@ -1033,16 +1052,19 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
           * disc_rule_conds_ex.
             exfalso.
             assert (In parent (sys_objs impl)) by (simpl; tauto).
             good_locking_get parent.
-            clear H22.
+            clear H24.
             eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child2Idx) in H26; eauto;
+              with (cidx:= child2Idx) in H27; eauto;
               [|reflexivity
                |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H26 as [rqid [? [? [rsUp ?]]]]; dest.
+            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
             disc_rule_conds_ex.
         
       - atomic_cont_exfalso_bound.
@@ -1097,6 +1119,10 @@ Section Inv.
               unfold msiM, msiS, msiI in *; lia.
             }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              { unfold msiM, msiS, msiI in *; lia. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
           * solve_rule_conds_ex.
           
       - (** [childDownRqM] *)
@@ -1133,16 +1159,17 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
           * disc_rule_conds_ex.
             exfalso.
             assert (In parent (sys_objs impl)) by (simpl; tauto).
             good_locking_get parent.
-            clear H22.
+            clear H24.
             eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child2Idx) in H26; eauto;
+              with (cidx:= child2Idx) in H27; eauto;
               [|reflexivity
                |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H26 as [rqid [? [? [rsUp ?]]]]; dest.
+            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
             disc_rule_conds_ex.
 
       - atomic_cont_exfalso_bound.
@@ -1195,11 +1222,12 @@ Section Inv.
             { solve_rule_conds_ex.
               unfold msiM, msiS, msiI in *; lia.
             }
+            { solve_rule_conds_ex. }
           * destruct H24.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
 
-      (** parent *)
+      (** parent(child1) *)
 
       - (** [parentGetRqImm] *)
         disc_rule_conds_ex.
@@ -1243,12 +1271,13 @@ Section Inv.
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
           * disc_rule_conds_ex.
             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
               by (simpl; tauto).
             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
-            clear H22.
-            eapply upLockInvORq_rqUp_length_one_locked in H24; try reflexivity;
+            clear H24.
+            eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity;
               [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
             solve_rule_conds_ex.
 
@@ -1283,6 +1312,7 @@ Section Inv.
           * exists cv.
             clear H8.
             red; repeat ssplit.
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1322,12 +1352,13 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
           * disc_rule_conds_ex.
             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
               by (simpl; tauto).
             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
-            clear H22.
-            eapply upLockInvORq_rqUp_length_one_locked in H24; try reflexivity;
+            clear H24.
+            eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity;
               [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
             solve_rule_conds_ex.
 
@@ -1362,6 +1393,7 @@ Section Inv.
           * exists cv.
             clear H8.
             red; repeat ssplit.
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1421,8 +1453,8 @@ Section Inv.
           assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
             by (simpl; tauto).
           good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
-          clear H22.
-          eapply upLockInvORq_parent_locked_locked in H24; try reflexivity;
+          clear H24.
+          eapply upLockInvORq_parent_locked_locked in H26; try reflexivity;
             [|red; repeat (simpl; mred); eauto]; dest.
           
           split.
@@ -1432,6 +1464,7 @@ Section Inv.
             { solve_rule_conds_ex.
               right; left; auto.
             }
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
@@ -1490,14 +1523,15 @@ Section Inv.
           assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
             by (simpl; tauto).
           good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
-          clear H22.
-          eapply upLockInvORq_parent_locked_locked in H24; try reflexivity;
+          clear H24.
+          eapply upLockInvORq_parent_locked_locked in H26; try reflexivity;
             [|red; repeat (simpl; mred); eauto]; dest.
 
           split.
           * exists val0.
             clear H11.
             red; repeat ssplit.
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1524,7 +1558,7 @@ Section Inv.
               destruct H6 as [|[|]]; dest.
               { exfalso; solve_rule_conds_ex. }
               { subst; auto. }
-              { exfalso; destruct H24; solve_rule_conds_ex. }
+              { exfalso; destruct H26; solve_rule_conds_ex. }
             }
           * red; simpl; intros.
             icase oidx.
@@ -1552,12 +1586,13 @@ Section Inv.
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
           * disc_rule_conds_ex.
             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
               by (simpl; tauto).
             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
             clear H6.
-            eapply upLockInvORq_rqUp_length_one_locked in H27; try reflexivity;
+            eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity;
               [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
             solve_rule_conds_ex.
 
@@ -1601,12 +1636,13 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
           * disc_rule_conds_ex.
             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
               by (simpl; tauto).
             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
             clear H6.
-            eapply upLockInvORq_rqUp_length_one_locked in H27; try reflexivity;
+            eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity;
               [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
             solve_rule_conds_ex.
 
@@ -1645,8 +1681,8 @@ Section Inv.
           assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl))
             by (simpl; tauto).
           good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1).
-          clear H24.
-          eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity;
+          clear H26.
+          eapply upLockInvORq_rqUp_length_one_locked in H27; try reflexivity;
             [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
           disc_rule_conds_ex.
           
@@ -1661,10 +1697,483 @@ Section Inv.
             { solve_rule_conds_ex.
               unfold msiM, msiS, msiI in *; lia.
             }
-            
+            { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
 
-    Admitted.
+      (** parent(child2) *)
+
+      - (** [parentGetRqImm] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            clear H8.
+            red; repeat ssplit.
+            { solve_rule_conds_ex.
+              right; left.
+              destruct H6 as [|[|]].
+              { solve_rule_conds_ex.
+                unfold msiM, msiS, msiI in *; lia.
+              }
+              { solve_rule_conds_ex. }
+              { unfold msiM, msiS, msiI in *; lia. }
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * disc_rule_conds_ex.
+            assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+              by (simpl; tauto).
+            good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+            clear H24.
+            eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity;
+              [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
+            solve_rule_conds_ex.
+
+      - (** [parentGetDownRqS] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred).
+              simpl; right; auto.
+            }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            clear H8.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+      - (** [parentSetRqImm] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in H14; simpl in H14.
+          split.
+          * exists cv.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * disc_rule_conds_ex.
+            assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+              by (simpl; tauto).
+            good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+            clear H24.
+            eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity;
+              [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
+            solve_rule_conds_ex.
+
+      - (** [parentSetDownRqM] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl). }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred).
+              simpl; right; auto.
+            }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          split.
+          * exists cv.
+            clear H8.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+      - (** [parentGetDownRsS] *)
+        disc_rule_conds_ex.
+
+        obj_visited_rsUp parentIdx child1Idx.
+        disc_lock_preds parentIdx.
+        disc_rule_conds_ex.
+        destruct H11; dest; [discriminate|].
+        clear H11.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+        
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsUps_preserves_msg_out_preds
+                with (rsUps:= [(c1pRs, rmsg)]); eauto.
+              { exact msiSv_impl_RqRsSys. }
+              { repeat constructor; intro; dest_in. }
+              { apply SubList_cons; [|apply SubList_nil].
+                assumption.
+              }
+              { instantiate (1:= fun _ => True).
+                instantiate (1:= [pc1]).
+                repeat split.
+                { discriminate. }
+                { repeat constructor.
+                  simpl; exists child1Idx.
+                  repeat split.
+                }
+              }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              solve_rule_conds_ex.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+
+          assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+            by (simpl; tauto).
+          good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+          clear H24.
+          eapply upLockInvORq_parent_locked_locked in H26; try reflexivity;
+            [|red; repeat (simpl; mred); eauto]; dest.
+          
+          split.
+          * exists val0.
+            clear H11.
+            red; repeat ssplit.
+            { solve_rule_conds_ex.
+              right; left; auto.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+      - (** [parentSetDownRsM] *)
+        disc_rule_conds_ex.
+
+        obj_visited_rsUp parentIdx child1Idx.
+        disc_lock_preds parentIdx.
+        disc_rule_conds_ex.
+        destruct H11; dest; [discriminate|].
+        clear H11.
+        disc_rule_conds_ex.
+
+        (* discharge message predicates *)
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+        
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rsUps_preserves_msg_out_preds
+                with (rsUps:= [(c1pRs, rmsg)]); eauto.
+              { exact msiSv_impl_RqRsSys. }
+              { repeat constructor; intro; dest_in. }
+              { apply SubList_cons; [|apply SubList_nil].
+                assumption.
+              }
+              { instantiate (1:= fun _ => True).
+                instantiate (1:= [pc1]).
+                repeat split.
+                { discriminate. }
+                { repeat constructor.
+                  simpl; exists child1Idx.
+                  repeat split.
+                }
+              }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; simpl.
+              solve_rule_conds_ex.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost1; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+
+          assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+            by (simpl; tauto).
+          good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+          clear H24.
+          eapply upLockInvORq_parent_locked_locked in H26; try reflexivity;
+            [|red; repeat (simpl; mred); eauto]; dest.
+
+          split.
+          * exists val0.
+            clear H11.
+            red; repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+      - (** [parentEvictRqImmS] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+              red in H6; simpl in H6.
+              unfold getDir in *; simpl in *.
+              disc_rule_conds_ex.
+              destruct H6 as [|[|]]; dest.
+              { exfalso; solve_rule_conds_ex. }
+              { subst; auto. }
+              { exfalso; destruct H26; solve_rule_conds_ex. }
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in *; simpl in *.
+          disc_rule_conds_ex.
+          destruct H6 as [|[|]];
+            [exfalso; solve_rule_conds_ex
+            | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
+          
+          split.
+          * exists cv.
+            repeat ssplit.
+            { solve_rule_conds_ex.
+              right; left.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * disc_rule_conds_ex.
+            assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+              by (simpl; tauto).
+            good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+            clear H6.
+            eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity;
+              [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
+            solve_rule_conds_ex.
+
+      - (** [parentEvictRqImmLastS] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+              lia.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in *; simpl in *.
+          disc_rule_conds_ex.
+          destruct H6 as [|[|]];
+            [exfalso; solve_rule_conds_ex
+            | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
+          
+          split.
+          * exists cv.
+            repeat ssplit.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * disc_rule_conds_ex.
+            assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+              by (simpl; tauto).
+            good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+            clear H6.
+            eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity;
+              [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
+            solve_rule_conds_ex.
+
+      - (** [parentEvictRqImmM] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds
+                with (oidx:= child2Idx); [exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+              lia.
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred; simpl.
+          destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
+          destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
+          destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
+          destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
+          destruct H6 as [[cv ?] ?].
+          red in H6; dest.
+          unfold getDir in *; simpl in *.
+          disc_rule_conds_ex.
+          destruct H6 as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
+
+          assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl))
+            by (simpl; tauto).
+          good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2).
+          clear H26.
+          eapply upLockInvORq_rqUp_length_one_locked in H27; try reflexivity;
+            [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption].
+          disc_rule_conds_ex.
+          
+          split.
+          * exists n.
+            repeat ssplit.
+            { solve_rule_conds_ex.
+              left.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex.
+              unfold msiM, msiS, msiI in *; lia.
+            }
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+          * solve_rule_conds_ex.
+
+    Qed.
 
     Lemma ImplStateInv_init:
       ImplStateInv (initsOf impl).
