@@ -256,22 +256,33 @@ Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
 Notation "OA >>=[ NB ] F" :=
   (tbind NB OA F) (at level 0, format "OA  '>>=[' NB ] '/' F").
 
-Fixpoint replicate {A} (a: A) (sz: nat): list A :=
-  match sz with
-  | O => []
-  | S sz' => a :: replicate a sz'
+Module MonadNotations.
+  Notation "A <-- OA ; CONT" :=
+    (OA >>=[False] (fun A => CONT)) (at level 84, right associativity): monad_scope.
+  Notation "A <+- OA ; CONT" :=
+    (OA >>=[True] (fun A => CONT)) (at level 84, right associativity): monad_scope.
+  Notation "! OA ; CONT" :=
+    (OA = None -> CONT) (at level 84, right associativity): monad_scope.
+  Open Scope monad_scope.
+End MonadNotations.
+
+Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+         (a: A) (def: B) (cs: list (A * B)) :=
+  match cs with
+  | List.nil => def
+  | List.cons (ca, cp) cs' =>
+    if dec a ca then cp else caseDec dec a def cs'
   end.
 
-Definition trues (sz: nat) := replicate true sz.
-Definition falses (sz: nat) := replicate false sz.
-
-Fixpoint findAt (v: nat) (l: list nat) :=
-  match l with
-  | List.nil => None
-  | List.cons n l' =>
-    if v ==n n then Some O
-    else (findAt v l') >>=[None] (fun o => Some (S o))
-  end.
+Module CaseNotations.
+  Notation "x : t" := (x, t) (at level 90, only parsing): cases_scope.
+  Notation "| xt1 | xt2 | .. | xtn" :=
+    (List.cons xt1 (List.cons xt2 .. (List.cons xtn List.nil) ..))
+      (at level 95, only parsing): cases_scope.
+  Delimit Scope cases_scope with cases.
+  Notation "'match' 'case' X 'on' DEC 'default' DEF 'with' CS 'end'" :=
+    (caseDec DEC X DEF CS%cases) (only parsing).
+End CaseNotations.
 
 Inductive PHide: Prop -> Prop :=
 | PHideIntro: forall P:Prop, P -> PHide P.

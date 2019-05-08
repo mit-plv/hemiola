@@ -1,5 +1,4 @@
-Require Import Bool List String Peano_dec.
-Require Import Lia. (* experimental *)
+Require Import Bool List String Peano_dec Lia.
 Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
@@ -8,33 +7,12 @@ Require Import Msi MsiSv SpecSv MsiSvTopo.
 
 Set Implicit Arguments.
 
+Import MonadNotations.
+Import CaseNotations.
+
 Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
-
-Notation "A <-- OA ; CONT" :=
-  (OA >>=[False] (fun A => CONT)) (at level 84, right associativity).
-Notation "A <+- OA ; CONT" :=
-  (OA >>=[True] (fun A => CONT)) (at level 84, right associativity).
-Notation "A <-[ DEFA ] OA ; CONT" :=
-  ((fun A => CONT) (OA >>=[DEFA] (fun DA => DA))) (at level 84, right associativity). 
-Notation "! OA ; CONT" :=
-  (OA = None -> CONT) (at level 84, right associativity).
-
-Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
-         (a: A) (def: B) (cs: list (A * B)) :=
-  match cs with
-  | nil => def
-  | (ca, cp) :: cs' =>
-    if dec a ca then cp else caseDec dec a def cs'
-  end.
-
-Notation "x : t" := (x, t) (at level 90, only parsing): cases_scope.
-Notation "| xt1 | xt2 | .. | xtn" :=
-  (cons xt1 (cons xt2 .. (cons xtn nil) ..)) (at level 95, only parsing): cases_scope.
-Delimit Scope cases_scope with cases.
-Notation "'match' 'case' X 'on' DEC 'default' DEF 'with' CS 'end'" :=
-  (caseDec DEC X DEF CS%cases) (only parsing).
 
 Definition Mii := (IdxT * IdxT)%type.
 

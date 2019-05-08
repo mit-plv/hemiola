@@ -131,30 +131,29 @@ Hint Unfold StateMBind TrsMTrs getFirstMsg
      DownLockNatMsg getDownLockNatMsg DownLocked getDownLockIdxBack
      MsgsFrom MsgIdsFrom MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
-(* TODO: We need refactoring of monadic notations, which includes 
- * merging with the ones in [Ex/MsiSvSim.v].
- *)
-Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
-Notation "N <-- F ; CONT" :=
-  (StateMBind F (fun N => CONT)) (at level 84, right associativity): trs_scope.
-Notation "PST --> NST" :=
-  (fun PST => NST) (at level 82, only parsing): trs_scope.
-Notation "PST {{ OIFC }} --> NST" :=
-  (fun PST: StateM OIFC => NST) (at level 82, only parsing): trs_scope.
+Module RqRsNotations.
+  Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
+  Notation "N <-- F ; CONT" :=
+    (StateMBind F (fun N => CONT)) (at level 84, right associativity): trs_scope.
+  Notation "PST --> NST" :=
+    (fun PST => NST) (at level 82, only parsing): trs_scope.
+  Notation "PST {{ OIFC }} --> NST" :=
+    (fun PST: StateM OIFC => NST) (at level 82, only parsing): trs_scope.
 
-Notation "ST '.ost'" := (fst (fst ST)) (at level 11, only parsing): trs_scope.
-Notation "ST '.orq'" := (snd (fst ST)) (at level 11, only parsing): trs_scope.
-Notation "ST '.msgs'" := (snd ST) (at level 11, only parsing): trs_scope.
+  Notation "ST '.ost'" := (fst (fst ST)) (at level 11, only parsing): trs_scope.
+  Notation "ST '.orq'" := (snd (fst ST)) (at level 11, only parsing): trs_scope.
+  Notation "ST '.msgs'" := (snd ST) (at level 11, only parsing): trs_scope.
 
-Delimit Scope trs_scope with trs.
+  Delimit Scope trs_scope with trs.
 
-Notation "PREC1 /\ PREC2" := (OPrecAnd PREC1 PREC2): prec_scope.
-Delimit Scope prec_scope with prec.
+  Notation "PREC1 /\ PREC2" := (OPrecAnd PREC1 PREC2): prec_scope.
+  Delimit Scope prec_scope with prec.
 
-Notation "'rule' '[' IDX ']' ':requires' PREC ':transition' TRS" :=
-  {| rule_idx := IDX;
-     rule_precond := PREC%prec;
-     rule_trs := TRS%trs |} (at level 5).
+  Notation "'rule' '[' IDX ']' ':requires' PREC ':transition' TRS" :=
+    {| rule_idx := IDX;
+       rule_precond := PREC%prec;
+       rule_trs := TRS%trs |} (at level 5).
+End RqRsNotations.
 
 Ltac disc_rule_conds_const_unit :=
   match goal with

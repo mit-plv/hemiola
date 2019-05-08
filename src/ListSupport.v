@@ -25,6 +25,12 @@ Definition ol2l {A} (oa: option (list A)): list A :=
   | None => nil
   end.
 
+Fixpoint replicate {A} (a: A) (sz: nat): list A :=
+  match sz with
+  | O => []
+  | S sz' => a :: replicate a sz'
+  end.
+
 Definition list_dec_eq_nil {A}: forall (l: list A), {l = nil} + {l <> nil}.
 Proof.
   intros.
