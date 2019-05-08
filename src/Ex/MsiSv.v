@@ -13,18 +13,18 @@ Open Scope fmap.
 
 Section System.
 
-  Definition ecd1 := 2.
-  Definition ecd2 := 3.
-  Definition ec1 := 4.
-  Definition ce1 := 5.
-  Definition ec2 := 6.
-  Definition ce2 := 7.
-  Definition c1pRq := 8.
-  Definition c1pRs := 9.
-  Definition pc1 := 10.
-  Definition c2pRq := 11.
-  Definition c2pRs := 12.
-  Definition pc2 := 13.
+  Definition ec1 := erq 0.
+  Definition ce1 := ers 0.
+  Definition ec2 := erq 1.
+  Definition ce2 := ers 1.
+  Definition ecd1 := 4.
+  Definition ecd2 := 5.
+  Definition c1pRq := 6.
+  Definition c1pRs := 7.
+  Definition pc1 := 8.
+  Definition c2pRq := 9.
+  Definition c2pRs := 10.
+  Definition pc2 := 11.
     
   Definition parentIdx := 0.
   Definition child1Idx := 1.
@@ -493,8 +493,8 @@ Section System.
             parent];
        sys_oinds_valid := ltac:(inds_valid_tac);
        sys_minds := [c1pRq; c1pRs; pc1; c2pRq; c2pRs; pc2];
-       sys_merqs := [ec1; ec2];
-       sys_merss := [ce1; ce2];
+       sys_merqs := [ec2; ec1];
+       sys_merss := [ce2; ce1];
        sys_msg_inds_valid := ltac:(inds_valid_tac);
        sys_oss_inits := implOStatesInit;
        sys_orqs_inits := implORqsInit

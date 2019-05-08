@@ -37,11 +37,11 @@ Lemma msiSv_impl_ExtsOnDTree: ExtsOnDTree topo impl.
 Proof.
   split.
   - red; intros; dest_in.
-    + exists ext1Idx; reflexivity.
     + exists ext2Idx; reflexivity.
+    + exists ext1Idx; reflexivity.
   - red; intros; dest_in.
-    + exists ext1Idx; reflexivity.
     + exists ext2Idx; reflexivity.
+    + exists ext1Idx; reflexivity.
 Qed.
   
 Lemma msiSv_impl_RqRsDTree: RqRsDTree topo impl.
