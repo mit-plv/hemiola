@@ -22,6 +22,11 @@ Proof.
   destruct oa as [a|]; simpl; intros; reflexivity.
 Qed.
 
+Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
+     ImplDirM ImplDirS ImplDirI
+     ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
+     ImplStateCoh: RuleConds.
+
 Section Sim.
 
   Local Definition spec := SpecSv.spec 1.
@@ -29,31 +34,27 @@ Section Sim.
 
   (** Simulation between states *)
 
-  Definition SpecState (v: nat) (oss: OStates SpecOStateIfc): Prop :=
-    sost <-- oss@[specIdx]; sost#[specValueIdx] = v.
+  Definition SpecState (v: nat) (oss: OStates SpecOStateIfc)
+             (orqs: ORqs Msg): Prop :=
+    sost <-- oss@[specIdx];
+      sorq <-- orqs@[specIdx];
+      sost#[specValueIdx] = v.
 
   Definition SimState (ioss: OStates ImplOStateIfc) (iorqs: ORqs Msg)
-             (soss: OStates SpecOStateIfc): Prop :=
-    post <-- ioss@[parentIdx];
-      cost1 <-- ioss@[child1Idx];
+             (soss: OStates SpecOStateIfc) (sorqs: ORqs Msg): Prop :=
+    cost1 <-- ioss@[child1Idx];
       cost2 <-- ioss@[child2Idx];
-      porq <-- iorqs@[parentIdx];
       corq1 <-- iorqs@[child1Idx];
       corq2 <-- iorqs@[child2Idx];
       (exists cv,
-          ImplStateCoh post cost1 cost2 porq corq1 corq2 cv /\
-          SpecState cv soss).
+          ImplChildCoh1 cost1 corq1 cv /\
+          ImplChildCoh2 cost2 corq2 cv /\
+          SpecState cv soss sorqs).
 
   Definition SimMP (imsgs: MessagePool Msg) (iorqs: ORqs Msg)
              (smsgs: MessagePool Msg) :=
     corq1 <-- iorqs@[child1Idx];
       corq2 <-- iorqs@[child2Idx];
-      (* (findQ ec1 imsgs) *)
-      (*   ++ (oll [(corq1@[upRq] >>= (fun rqiu1 => Some rqiu1.(rqi_msg)))]) = *)
-      (* findQ (erq 0) smsgs /\ *)
-      (* (findQ ec2 imsgs) *)
-      (*   ++ (oll [(corq2@[upRq] >>= (fun rqiu2 => Some rqiu2.(rqi_msg)))]) = *)
-      (* findQ (erq 1) smsgs /\ *)
       (corq1@[upRq] >>= (fun rqiu1 => Some rqiu1.(rqi_msg)))
         ::> (findQ ec1 imsgs) = findQ (erq 0) smsgs /\
       (corq2@[upRq] >>= (fun rqiu2 => Some rqiu2.(rqi_msg)))
@@ -62,7 +63,7 @@ Section Sim.
       findQ ce2 imsgs = findQ (ers 1) smsgs.
   
   Definition SimMSI (ist: MState ImplOStateIfc) (sst: MState SpecOStateIfc): Prop :=
-    SimState ist.(bst_oss) ist.(bst_orqs) sst.(bst_oss) /\
+    SimState ist.(bst_oss) ist.(bst_orqs) sst.(bst_oss) sst.(bst_orqs) /\
     SimMP ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
 
   Section Facts.
@@ -72,9 +73,7 @@ Section Sim.
     Proof.
       vm_compute.
       split.
-      - exists 0; split.
-        + firstorder.
-        + reflexivity.
+      - exists 0; repeat split.
       - repeat split.
     Qed.
 
@@ -200,31 +199,126 @@ Section Sim.
       InvSim step_m step_m ImplStateInv SimMSI impl spec.
     Proof.
       red; intros.
-      inv H2; [simpl; eauto|..].
+      inv H2.
+
+      - simpl; exists (RlblEmpty _); eexists.
+        repeat ssplit; eauto.
+        constructor.
 
       - destruct sst1 as [soss1 sorqs1 smsgs1]; simpl in *.
         destruct H0; simpl in *.
-        do 2 eexists.
+        exists (RlblIns eins); eexists.
         repeat ssplit.
-        + eapply SmIns; eauto.
         + reflexivity.
+        + eapply SmIns; eauto.
         + split; [assumption|].
           apply SimMP_enqMsgs; auto.
           apply H4.
 
       - destruct sst1 as [soss1 sorqs1 smsgs1]; simpl in *.
         destruct H0; simpl in *.
-        do 2 eexists.
-        repeat ssplit; simpl.
+        exists (RlblOuts eouts); eexists.
+        repeat ssplit.
+        + reflexivity.
         + eapply SmOuts with (msgs0:= smsgs1); eauto.
           eapply SimMP_ext_outs_FirstMPI; eauto.
-        + reflexivity.
         + split; [assumption|].
-          simpl.
           apply SimMP_ext_outs_deqMsgs; auto.
 
-      - 
-        
+      - destruct sst1 as [soss1 sorqs1 smsgs1].
+        destruct H0; simpl in H0, H2; simpl.
+        red in H0; disc_rule_conds_const.
+        destruct H0 as [cv ?]; dest.
+        red in H14; disc_rule_conds_const.
+        destruct H3 as [|[|[|]]];
+          try (exfalso; auto; fail); subst; dest_in.
+
+        + disc_rule_conds_ex.
+          eexists (RlblInt 0 (rule_idx (specGetRq 0)) _ _); eexists.
+          repeat ssplit.
+          * reflexivity.
+          * eapply SmInt with (obj:= specObj 1);
+              try reflexivity; try eassumption.
+            { left; reflexivity. }
+            { simpl; tauto. }
+            { instantiate (1:= [(ec1, rmsg)]).
+              repeat constructor.
+              admit.
+            }
+            { split.
+              { simpl; apply SubList_cons; [|apply SubList_nil].
+                simpl; tauto.
+              }
+              { repeat constructor; intro Hx; dest_in. }
+            }
+            { solve_rule_conds_ex. }
+            { clear; solve_rule_conds_ex.
+              { simpl; tauto. }
+              { repeat constructor; intro Hx; dest_in. }
+            }
+            { disc_rule_conds_ex. }
+          * red; simpl; split.
+            { solve_rule_conds_ex. }
+            { replace (orqs +[child1Idx <- norq]) with orqs by meq.
+              specialize (H0 eq_refl H14).
+              rewrite H0.
+              admit.
+            }
+
+        + admit.
+        + disc_rule_conds_ex.
+          eexists (RlblInt 0 (rule_idx (specGetRq 0)) _ _); eexists.
+          repeat ssplit.
+          * reflexivity.
+          * eapply SmInt with (obj:= specObj 1);
+              try reflexivity; try eassumption.
+            { left; reflexivity. }
+            { simpl; tauto. }
+            { instantiate (1:= [(ec1, rqi_msg rqi)]).
+              repeat constructor.
+              red in H2.
+              disc_rule_conds_ex.
+              clear -H2.
+              unfold FirstMPI, FirstMP, firstMP; simpl.
+              unfold ec1.
+              rewrite <-H2.
+              reflexivity.
+            }
+            { split.
+              { simpl; apply SubList_cons; [|apply SubList_nil].
+                simpl; tauto.
+              }
+              { repeat constructor; intro Hx; dest_in. }
+            }
+            { solve_rule_conds_ex.
+              (** TODO: need to know
+               * 1) msg_id (rqi_msg rqi) = Spec.getRq
+               * 2) msg_type (rqi_msg rqi) = MRq
+               * Do we need to strengthen the invariant? 
+               *)
+              all: admit.
+            }
+            { clear; solve_rule_conds_ex.
+              { simpl; tauto. }
+              { repeat constructor; intro Hx; dest_in. }
+            }
+            { disc_rule_conds_ex.
+              (** TODO: develop [solve_sublist] and [solve_disjlist]. *)
+              admit.
+            }
+          * red; simpl; split.
+            { (** TODO: need to know the response message value is
+               *  coherent as well. This is part of predicate messages but
+               *  [ImplStateInv] does not contain it.
+               *)
+              solve_rule_conds_ex.
+              admit.
+            }
+            { replace (fst ost1) with n by admit.
+              (** TODO: need to know [rqi_midx_rsb rqi = ce1] as well *)
+              admit.
+            }
+
     Admitted.
     
     Theorem MsiSv_ok:

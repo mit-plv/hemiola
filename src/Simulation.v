@@ -21,17 +21,10 @@ Section Simulation.
       ist1 ≈ sst1 ->
       forall ilbl ist2,
         stepI impl ist1 ilbl ist2 ->
-        match getLabel ilbl with
-        | None => (exists sst2 slbl,
-                      stepS spec sst1 slbl sst2 /\
-                      getLabel slbl = None /\
-                      ist2 ≈ sst2) \/
-                  ist2 ≈ sst1
-        | Some elbl => (exists sst2 slbl,
-                           stepS spec sst1 slbl sst2 /\
-                           getLabel slbl = Some elbl /\
-                           ist2 ≈ sst2)
-        end.
+        exists slbl sst2,
+          getLabel ilbl = getLabel slbl /\
+          stepS spec sst1 slbl sst2 /\
+          ist2 ≈ sst2.
 
   Hypothesis (Hsim: Simulates).
 
@@ -52,19 +45,11 @@ Section Simulation.
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
     eapply Hsim in H5; [|exact H8].
-    destruct (getLabel lbl) as [elbl|].
 
-    - destruct H5 as [sst3 [slbl [? [? ?]]]].
-      eexists; eexists (_ :: _); repeat split; eauto.
-      + econstructor; eauto.
-      + simpl; erewrite H7, H9; simpl.
-        reflexivity.
-    - destruct H5.
-      * destruct H5 as [sst3 [slbl [? [? ?]]]].
-        eexists; eexists (slbl :: _); repeat split; eauto.
-        -- econstructor; eauto.
-        -- simpl; rewrite H7, H9; simpl; reflexivity.
-      * exists sst2, shst; repeat split; auto.
+    destruct H5 as [slbl [sst3 ?]]; dest.
+    eexists; eexists (_ :: _); repeat split; eauto.
+    - econstructor; eauto.
+    - simpl; congruence.
   Qed.
 
   Hypothesis (Hsimi: sim (initsOf impl) (initsOf spec)).
@@ -100,19 +85,10 @@ Section InvSim.
       ginv ist1 ->
       forall ilbl ist2,
         stepI impl ist1 ilbl ist2 ->
-        match getLabel ilbl with
-        | None =>
-          (exists sst2 slbl,
-              stepS spec sst1 slbl sst2 /\
-              getLabel slbl = None /\
-              ist2 ≈ sst2) \/
-          ist2 ≈ sst1
-        | Some elbl =>
-          (exists sst2 slbl,
-              stepS spec sst1 slbl sst2 /\
-              getLabel slbl = Some elbl /\
-              ist2 ≈ sst2)
-        end.
+        exists slbl sst2,
+          getLabel ilbl = getLabel slbl /\
+          stepS spec sst1 slbl sst2 /\
+          ist2 ≈ sst2.
 
   Hypotheses (Hsim: InvSim)
              (Hinv: InvStep impl stepI ginv)
@@ -138,20 +114,11 @@ Section InvSim.
       [|red; eauto
        |eassumption
        |eapply inv_steps with (LabelI:= LabelI); eassumption].
-    
-    destruct (getLabel lbl) as [elbl|].
 
-    - destruct H5 as [sst3 [slbl [? [? ?]]]].
-      eexists; eexists (_ :: _); repeat split; eauto.
-      + econstructor; eauto.
-      + simpl; erewrite H6, H8; simpl.
-        reflexivity.
-    - destruct H5.
-      * destruct H5 as [sst3 [slbl [? [? ?]]]].
-        eexists; eexists (slbl :: _); repeat split; eauto.
-        -- econstructor; eauto.
-        -- simpl; rewrite H6, H8; simpl; reflexivity.
-      * exists sst2, shst; repeat split; auto.
+    destruct H5 as [slbl [sst3 ?]]; dest.
+    eexists; eexists (_ :: _); repeat split; eauto.
+    - econstructor; eauto.
+    - simpl; congruence.
   Qed.
 
   Theorem invSim_implies_refinement:

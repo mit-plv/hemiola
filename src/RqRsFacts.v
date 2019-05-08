@@ -1059,16 +1059,6 @@ Proof.
   destruct (findQ _ _); [reflexivity|simpl in H; omega].
 Qed.
 
-Lemma findQ_length_zero_False:
-  forall (msgs: MessagePool Msg) midx msg,
-    findQ midx msgs = nil ->
-    FirstMP msgs midx msg ->
-    False.
-Proof.
-  unfold FirstMP, firstMP; simpl; intros.
-  destruct (findQ midx msgs); discriminate.
-Qed.
-
 Lemma findQ_length_ge_one:
   forall (msgs: MessagePool Msg) midx msg,
     InMP midx msg msgs ->
