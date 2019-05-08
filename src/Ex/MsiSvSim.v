@@ -14,6 +14,14 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
+
+Lemma ocons_app:
+  forall {A} (oa: option A) l1 l2,
+    ocons oa (l1 ++ l2) = ocons oa l1 ++ l2.
+Proof.
+  destruct oa as [a|]; simpl; intros; reflexivity.
+Qed.
+
 Section Sim.
 
   Local Definition spec := SpecSv.spec 1.
@@ -40,6 +48,12 @@ Section Sim.
              (smsgs: MessagePool Msg) :=
     corq1 <-- iorqs@[child1Idx];
       corq2 <-- iorqs@[child2Idx];
+      (* (findQ ec1 imsgs) *)
+      (*   ++ (oll [(corq1@[upRq] >>= (fun rqiu1 => Some rqiu1.(rqi_msg)))]) = *)
+      (* findQ (erq 0) smsgs /\ *)
+      (* (findQ ec2 imsgs) *)
+      (*   ++ (oll [(corq2@[upRq] >>= (fun rqiu2 => Some rqiu2.(rqi_msg)))]) = *)
+      (* findQ (erq 1) smsgs /\ *)
       (corq1@[upRq] >>= (fun rqiu1 => Some rqiu1.(rqi_msg)))
         ::> (findQ ec1 imsgs) = findQ (erq 0) smsgs /\
       (corq2@[upRq] >>= (fun rqiu2 => Some rqiu2.(rqi_msg)))
@@ -64,6 +78,124 @@ Section Sim.
       - repeat split.
     Qed.
 
+    Lemma SimMP_enqMsgs:
+      forall eins,
+        NoDup (idsOf eins) ->
+        forall imsgs orqs smsgs,
+          SimMP imsgs orqs smsgs ->
+          SimMP (enqMsgs eins imsgs) orqs (enqMsgs eins smsgs).
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split.
+      - destruct (in_dec eq_nat_dec ec1 (idsOf eins)).
+        + apply in_map_iff in i.
+          destruct i as [[midx msg] ?]; dest; simpl in *; subst.
+          do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
+          rewrite ocons_app; congruence.
+        + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
+          assumption.
+      - destruct (in_dec eq_nat_dec ec2 (idsOf eins)).
+        + apply in_map_iff in i.
+          destruct i as [[midx msg] ?]; dest; simpl in *; subst.
+          do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
+          rewrite ocons_app; congruence.
+        + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
+          assumption.
+      - destruct (in_dec eq_nat_dec ce1 (idsOf eins)).
+        + apply in_map_iff in i.
+          destruct i as [[midx msg] ?]; dest; simpl in *; subst.
+          do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
+          congruence.
+        + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
+          assumption.
+      - destruct (in_dec eq_nat_dec ce2 (idsOf eins)).
+        + apply in_map_iff in i.
+          destruct i as [[midx msg] ?]; dest; simpl in *; subst.
+          do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
+          congruence.
+        + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
+          assumption.
+    Qed.
+
+    Lemma SimMP_ext_outs_deqMsgs:
+      forall eouts,
+        ValidMsgsExtOut impl eouts ->
+        forall imsgs orqs smsgs,
+          Forall (FirstMPI imsgs) eouts ->
+          SimMP imsgs orqs smsgs ->
+          SimMP (deqMsgs (idsOf eouts) imsgs) orqs (deqMsgs (idsOf eouts) smsgs).
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split.
+      - destruct (in_dec eq_nat_dec ec1 (idsOf eouts)).
+        + exfalso.
+          destruct H; apply H in i.
+          dest_in; discriminate.
+        + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
+          assumption.
+      - destruct (in_dec eq_nat_dec ec2 (idsOf eouts)).
+        + exfalso.
+          destruct H; apply H in i.
+          dest_in; discriminate.
+        + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
+          assumption.
+      - destruct (in_dec eq_nat_dec ce1 (idsOf eouts)).
+        + assert (findQ ce1 imsgs <> nil).
+          { apply in_map_iff in i.
+            destruct i as [[midx msg] ?]; dest; simpl in *; subst.
+            intro Hx.
+            rewrite Forall_forall in H0; specialize (H0 _ H6).
+            eapply FirstMP_findQ_False; eauto.
+          }
+          assert (findQ (ers 0) smsgs <> nil) by congruence.
+          eapply findQ_In_NoDup_deqMsgs in H5; eauto; [|apply H].
+          destruct H5 as [ieout ?].
+          eapply findQ_In_NoDup_deqMsgs in H6; eauto; [|apply H].
+          destruct H6 as [seout ?].
+          congruence.
+        + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
+          assumption.
+      - destruct (in_dec eq_nat_dec ce2 (idsOf eouts)).
+        + assert (findQ ce2 imsgs <> nil).
+          { apply in_map_iff in i.
+            destruct i as [[midx msg] ?]; dest; simpl in *; subst.
+            intro Hx.
+            rewrite Forall_forall in H0; specialize (H0 _ H6).
+            eapply FirstMP_findQ_False; eauto.
+          }
+          assert (findQ (ers 1) smsgs <> nil) by congruence.
+          eapply findQ_In_NoDup_deqMsgs in H5; eauto; [|apply H].
+          destruct H5 as [ieout ?].
+          eapply findQ_In_NoDup_deqMsgs in H6; eauto; [|apply H].
+          destruct H6 as [seout ?].
+          congruence.
+        + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
+          assumption.
+    Qed.
+
+    Lemma SimMP_ext_outs_FirstMPI:
+      forall eouts,
+        ValidMsgsExtOut impl eouts ->
+        forall imsgs orqs smsgs,
+          SimMP imsgs orqs smsgs ->
+          Forall (FirstMPI imsgs) eouts ->
+          Forall (FirstMPI smsgs) eouts.
+    Proof.
+      unfold SimMP; intros.
+      destruct H.
+      disc_rule_conds_ex.
+      apply Forall_forall; intros [midx msg] ?.
+      rewrite Forall_forall in H1; specialize (H1 _ H6).
+      apply in_map with (f:= idOf) in H6.
+      apply H in H6; unfold idOf, fst in H6; dest_in.
+      - unfold FirstMPI, FirstMP, firstMP in *; simpl in *.
+        rewrite H5 in H1; assumption.
+      - unfold FirstMPI, FirstMP, firstMP in *; simpl in *.
+        rewrite H4 in H1; assumption.
+    Qed.
+
     Lemma SimMsiSv_sim:
       InvSim step_m step_m ImplStateInv SimMSI impl spec.
     Proof.
@@ -73,11 +205,25 @@ Section Sim.
       - destruct sst1 as [soss1 sorqs1 smsgs1]; simpl in *.
         destruct H0; simpl in *.
         do 2 eexists.
-        repeat split; simpl.
+        repeat ssplit.
         + eapply SmIns; eauto.
         + reflexivity.
-        + assumption.
-        + simpl.
+        + split; [assumption|].
+          apply SimMP_enqMsgs; auto.
+          apply H4.
+
+      - destruct sst1 as [soss1 sorqs1 smsgs1]; simpl in *.
+        destruct H0; simpl in *.
+        do 2 eexists.
+        repeat ssplit; simpl.
+        + eapply SmOuts with (msgs0:= smsgs1); eauto.
+          eapply SimMP_ext_outs_FirstMPI; eauto.
+        + reflexivity.
+        + split; [assumption|].
+          simpl.
+          apply SimMP_ext_outs_deqMsgs; auto.
+
+      - 
         
     Admitted.
     
