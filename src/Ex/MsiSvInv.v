@@ -352,6 +352,47 @@ Section Inv.
             cost2#[implStatusIdx] = msiI
         end.
 
+    Ltac disc_GoodMsgOutPred :=
+      repeat
+        match goal with
+        | [H: sigOf ?eout = (_, (_, _)) |- _] =>
+          let midx := fresh "midx" in
+          let msg := fresh "msg" in
+          destruct eout as [midx msg]; inv H
+
+        | [H: RsUpMsgFrom _ _ (_, _) |- _] =>
+          let H1 := fresh "H" in
+          let H2 := fresh "H" in
+          destruct H as [H1 H2]; simpl in H1, H2
+        | [H: RsDownMsgTo _ _ (_, _) |- _] =>
+          let H1 := fresh "H" in
+          let H2 := fresh "H" in
+          destruct H as [H1 H2]; simpl in H1, H2
+        | [H: RqUpMsgFrom _ _ (_, _) |- _] =>
+          let H1 := fresh "H" in
+          let H2 := fresh "H" in
+          destruct H as [H1 H2]; simpl in H1, H2
+        | [H: RqDownMsgTo _ _ (_, _) |- _] =>
+          let H1 := fresh "H" in
+          let H2 := fresh "H" in
+          destruct H as [H1 H2]; simpl in H1, H2
+
+        | [H: ~ In ?midx (sys_merqs _) |- _] =>
+          elim H; simpl; tauto
+        | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
+          rewrite H1 in H2; discriminate
+        | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
+          is_var oidx;
+          is_const rsUp;
+          pose proof (rsEdgeUpFrom_indsOf _ _ H);
+          dest_in; try discriminate
+        | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
+          is_var oidx;
+          is_const down;
+          pose proof (edgeDownTo_indsOf _ _ H);
+          dest_in; try discriminate
+        end.
+
     Lemma msiSvMsgOutPred_good:
       GoodMsgOutPred topo impl MsiSvMsgOutPred.
     Proof.
@@ -361,99 +402,35 @@ Section Inv.
         red in H0; unfold caseDec in H0.
         repeat find_if_inside;
           try (exfalso; auto; fail);
-          try (repeat
-                 match goal with
-                 | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-                   let midx := fresh "midx" in
-                   let msg := fresh "msg" in
-                   destruct eout as [midx msg]; inv H
-                 | [H: RsUpMsgFrom _ _ (_, _) |- _] =>
-                   let Hx := fresh "Hx" in
-                   destruct H as [_ Hx]; simpl in Hx
-                 | [H: rsEdgeUpFrom _ _ = Some ?rsUp |- _] =>
-                   is_const rsUp;
-                   pose proof (rsEdgeUpFrom_indsOf _ _ H);
-                   dest_in; discriminate
-                 end; fail).
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsUpMsgFrom _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
-              is_var oidx;
-                is_const rsUp;
-                pose proof (rsEdgeUpFrom_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+          disc_GoodMsgOutPred.
+
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (In child1Idx (subtreeIndsOf topo child1Idx)).
           { simpl; tauto. }
-          specialize (H1 _ H3).
-          solve_rule_conds_ex.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsUpMsgFrom _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
-              is_var oidx;
-                is_const rsUp;
-                pose proof (rsEdgeUpFrom_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (In child2Idx (subtreeIndsOf topo child2Idx)).
           { simpl; tauto. }
-          specialize (H1 _ H3).
-          solve_rule_conds_ex.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsUpMsgFrom _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
-              is_var oidx;
-                is_const rsUp;
-                pose proof (rsEdgeUpFrom_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (In child1Idx (subtreeIndsOf topo child1Idx)).
           { simpl; tauto. }
-          specialize (H1 _ H3).
-          solve_rule_conds_ex.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsUpMsgFrom _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
-              is_var oidx;
-                is_const rsUp;
-                pose proof (rsEdgeUpFrom_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (In child2Idx (subtreeIndsOf topo child2Idx)).
           { simpl; tauto. }
-          specialize (H1 _ H3).
-          solve_rule_conds_ex.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
 
         + red; unfold caseDec.
           repeat find_if_inside; congruence.
@@ -462,155 +439,48 @@ Section Inv.
         red in H0; unfold caseDec in H0.
         repeat find_if_inside;
           try (exfalso; auto; fail);
-          try (repeat
-                 match goal with
-                 | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-                   let midx := fresh "midx" in
-                   let msg := fresh "msg" in
-                   destruct eout as [midx msg]; inv H
-                 | [H: RsDownMsgTo _ _ (_, _) |- _] =>
-                   let Hx := fresh "Hx" in
-                   destruct H as [_ Hx]; simpl in Hx
-                 | [H: edgeDownTo _ _ = Some ?down |- _] =>
-                   is_const down;
-                   pose proof (edgeDownTo_indsOf _ _ H);
-                   dest_in; discriminate
-                 end; fail).
+          disc_GoodMsgOutPred.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-              is_var oidx;
-                is_const down;
-                pose proof (edgeDownTo_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (~ In parentIdx (subtreeIndsOf topo child1Idx)).
           { intro Hx; dest_in; discriminate. }
-          specialize (H1 _ H3).
-          destruct H1.
-          rewrite <-H1.
-          rewrite <-H6.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1, <-H6.
           assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-              is_var oidx;
-                is_const down;
-                pose proof (edgeDownTo_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (~ In parentIdx (subtreeIndsOf topo child2Idx)).
           { intro Hx; dest_in; discriminate. }
-          specialize (H1 _ H3).
-          destruct H1.
-          rewrite <-H1.
-          rewrite <-H6.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1, <-H6.
           assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-              is_var oidx;
-                is_const down;
-                pose proof (edgeDownTo_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (~ In parentIdx (subtreeIndsOf topo child1Idx)).
           { intro Hx; dest_in; discriminate. }
-          specialize (H1 _ H3).
-          destruct H1.
-          rewrite <-H1.
-          rewrite <-H6.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1, <-H6.
           assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-              is_var oidx;
-                is_const down;
-                pose proof (edgeDownTo_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (~ In parentIdx (subtreeIndsOf topo child2Idx)).
           { intro Hx; dest_in; discriminate. }
-          specialize (H1 _ H3).
-          destruct H1.
-          rewrite <-H1.
-          rewrite <-H6.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1, <-H6.
           assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-              is_var oidx;
-                is_const down;
-                pose proof (edgeDownTo_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (~ In parentIdx (subtreeIndsOf topo child1Idx)).
           { intro Hx; dest_in; discriminate. }
-          specialize (H1 _ H3).
-          destruct H1.
-          rewrite <-H1.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
           assumption.
 
-        + red; rewrite e; simpl.
-          repeat
-            match goal with
-            | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-              let midx := fresh "midx" in
-              let msg := fresh "msg" in
-              destruct eout as [midx msg]; inv H
-            | [H: RsDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-            | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-              is_var oidx;
-                is_const down;
-                pose proof (edgeDownTo_indsOf _ _ H);
-                dest_in; try discriminate
-            end.
-          simpl in *.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (~ In parentIdx (subtreeIndsOf topo child2Idx)).
           { intro Hx; dest_in; discriminate. }
-          specialize (H1 _ H3).
-          destruct H1.
-          rewrite <-H1.
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
           assumption.
 
         + red; unfold caseDec.
@@ -620,40 +490,13 @@ Section Inv.
         destruct (in_dec eq_nat_dec (idOf eout) (sys_merqs impl)); auto.
         right; intros.
         red; unfold caseDec.
-        repeat find_if_inside;
-          try (repeat
-                 match goal with
-                 | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-                   let midx := fresh "midx" in
-                   let msg := fresh "msg" in
-                   destruct eout as [midx msg]; inv H
-                 | [H: ~ In ?midx (sys_merqs _) |- _] =>
-                   elim H; simpl; tauto
-                 | [H: RqUpMsgFrom _ _ (_, _) |- _] => destruct H; simpl in *
-                 | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
-                   rewrite H1 in H2; discriminate
-                 end; fail).
+        repeat find_if_inside; disc_GoodMsgOutPred.
         auto.
 
       - red; intros.
         red; unfold caseDec.
-        repeat find_if_inside;
-          try (repeat
-                 match goal with
-                 | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-                   let midx := fresh "midx" in
-                   let msg := fresh "msg" in
-                   destruct eout as [midx msg]; inv H
-                 | [H: RqDownMsgTo _ _ (_, _) |- _] => destruct H; simpl in *
-                 | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
-                   rewrite H1 in H2; discriminate
-                 | [H: edgeDownTo _ _ = Some ?down |- _] =>
-                   is_const down;
-                   pose proof (edgeDownTo_indsOf _ _ H);
-                   dest_in; discriminate
-                 end; fail).
+        repeat find_if_inside; disc_GoodMsgOutPred.
         auto.
-      
     Qed.
 
     Definition MsiSvLockPred (oidx: IdxT) (orq: ORq Msg): Prop :=
