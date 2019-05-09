@@ -40,7 +40,7 @@ Section PerOStateIfc.
   Definition StatesPredC (oinds: list IdxT) (P: StatesPred oifc) :=
     forall oss1 orqs1 oss2 orqs2,
       P oss1 orqs1 ->
-      StatesEquivC oinds oss1 orqs2 oss2 orqs2 ->
+      StatesEquivC oinds oss1 orqs1 oss2 orqs2 ->
       P oss2 orqs2.
 
 End PerOStateIfc.
