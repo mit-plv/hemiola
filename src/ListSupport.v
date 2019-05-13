@@ -470,6 +470,14 @@ Section Removal.
     | h :: t => removeL (removeOnce h l1) t
     end.
 
+  Lemma removeOnce_nil:
+    forall a, removeOnce a [a] = nil.
+  Proof.
+    intros; simpl.
+    destruct (eq_dec a a); auto.
+    elim n; reflexivity.
+  Qed.
+  
   Lemma removeL_nil:
     forall l, removeL l l = nil.
   Proof.

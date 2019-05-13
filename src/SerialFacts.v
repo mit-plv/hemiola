@@ -596,6 +596,19 @@ Section MsgParam.
 
 End MsgParam.
 
+Lemma sequential_transactional_Forall:
+  forall {oifc} (sys: System oifc) st1 trss st2,
+    steps step_m sys st1 (List.concat trss) st2 ->
+    Forall (Transactional sys msg_dec) trss ->
+    Sequential sys msg_dec (List.concat trss) trss.
+Proof.
+  induction trss; simpl; intros; [repeat constructor|].
+  eapply steps_split in H; [|reflexivity].
+  destruct H as [sti [? ?]].
+  inv H0.
+  eapply sequential_cons; eauto.
+Qed.
+
 Lemma atomic_messages_eouts_count_le:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
