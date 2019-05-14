@@ -120,7 +120,7 @@ Section System.
           /\ MsgIdsFrom [msiRsS]
           /\ RsAccepting
           /\ FirstNatMsg
-          /\ UpLocked
+          /\ UpLockMsgId MRq Spec.getRq
           /\ DownLockFree)
       :transition
          (do (n <-- getFirstNatMsg;
@@ -195,6 +195,7 @@ Section System.
           /\ MsgIdsFrom [msiRsM]
           /\ RsAccepting
           /\ UpLockNatMsg
+          /\ UpLockMsgId MRq Spec.getRq
           /\ DownLockFree)
       :transition
          (do (n <-- getUpLockNatMsg;

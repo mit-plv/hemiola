@@ -458,6 +458,17 @@ Section Facts.
       intro Hx; subst; elim H4; assumption.
   Qed.
 
+  Lemma findQ_eq_FirstMPI:
+    forall midx (msg: MsgT) msgs1,
+      FirstMPI msgs1 (midx, msg) ->
+      forall msgs2,
+        findQ midx msgs1 = findQ midx msgs2 ->
+        FirstMPI msgs2 (midx, msg).
+  Proof.
+    unfold FirstMPI, FirstMP, firstMP; simpl; intros.
+    congruence.
+  Qed.
+
   Lemma FirstMP_findQ_False:
     forall midx msg (mp: MessagePool MsgT),
       findQ midx mp = nil ->

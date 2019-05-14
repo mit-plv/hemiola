@@ -45,6 +45,13 @@ Fixpoint lift_each {A} (l: list A): list (list A) :=
   | a :: l' => [a] :: lift_each l'
   end.
 
+Lemma ocons_app:
+  forall {A} (oa: option A) l1 l2,
+    ocons oa (l1 ++ l2) = ocons oa l1 ++ l2.
+Proof.
+  destruct oa as [a|]; simpl; intros; reflexivity.
+Qed.
+
 Lemma lift_each_app:
   forall {A} (l1 l2: list A),
     lift_each (l1 ++ l2) = lift_each l1 ++ lift_each l2.

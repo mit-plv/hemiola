@@ -64,6 +64,32 @@ Section Msg.
   Global Instance Msg_HasMsg : HasMsg Msg :=
     { getMsg := id }.
 
+  Definition MSig := (IdxT * (bool * IdxT))%type.
+
+  Definition sig_dec: forall sig1 sig2: MSig, {sig1 = sig2} + {sig1 <> sig2}.
+  Proof.
+    decide equality.
+    - decide equality.
+      + apply eq_nat_dec.
+      + apply bool_dec.
+    - apply eq_nat_dec.
+  Defined.
+
+  Definition sigs_dec := list_eq_dec sig_dec.
+
+  Definition sigOf (idm: Id Msg): MSig :=
+    (idOf idm, (msg_type (valOf idm), msg_id (valOf idm))).
+  Definition sigsOf (msgs: list (Id Msg)): list MSig :=
+    map sigOf msgs.
+
+  Lemma sigsOf_app:
+    forall sigs1 sigs2,
+      sigsOf (sigs1 ++ sigs2) = sigsOf sigs1 ++ sigsOf sigs2.
+  Proof.
+    unfold sigsOf; intros.
+    apply map_app.
+  Qed.
+  
 End Msg.
 
 Class HasInit (SysT StateT: Type) :=

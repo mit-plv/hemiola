@@ -14,55 +14,6 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
-Definition MSig := (IdxT * (bool * IdxT))%type.
-
-Definition sig_dec: forall sig1 sig2: MSig, {sig1 = sig2} + {sig1 <> sig2}.
-Proof.
-  decide equality.
-  - decide equality.
-    + apply eq_nat_dec.
-    + apply bool_dec.
-  - apply eq_nat_dec.
-Defined.
-
-Definition sigs_dec := list_eq_dec sig_dec.
-
-Definition sigOf (idm: Id Msg): MSig :=
-  (idOf idm, (msg_type (valOf idm), msg_id (valOf idm))).
-Definition sigsOf (msgs: list (Id Msg)): list MSig :=
-  map sigOf msgs.
-
-Lemma sigsOf_app:
-  forall sigs1 sigs2,
-    sigsOf (sigs1 ++ sigs2) = sigsOf sigs1 ++ sigsOf sigs2.
-Proof.
-  unfold sigsOf; intros.
-  apply map_app.
-Qed.
-
-Definition AtomicMsgOutsInv {oifc} (mp: MsgOutPred oifc)
-           (eouts: list (Id Msg)) (nst: MState oifc): Prop :=
-  Forall (fun eout => mp eout nst.(bst_oss) nst.(bst_orqs)) eouts.
-
-Definition AtomicLocksInv {oifc}
-           (lp: IdxT -> ORq Msg -> Prop)
-           (hst: MHistory) (nst: MState oifc): Prop :=
-  forall oidx,
-    In oidx (oindsOf hst) ->
-    orq <-- (bst_orqs nst)@[oidx]; lp oidx orq.
-
-Definition AtomicInv {oifc}
-           (mp: MsgOutPred oifc)
-           (lp: IdxT -> ORq Msg -> Prop):
-  list (Id Msg) (* inits *) ->
-  MState oifc (* starting state *) ->
-  MHistory (* atomic history *) ->
-  list (Id Msg) (* eouts *) ->
-  MState oifc (* ending state *) -> Prop :=
-  fun inits st1 hst eouts st2 =>
-    AtomicMsgOutsInv mp eouts st2 /\
-    AtomicLocksInv lp hst st2.
-
 Section Inv.
 
   (** Basic predicates per an object *)
@@ -96,7 +47,7 @@ Section Inv.
 
   Section GInv.
     Variables (post cost1 cost2: OState ImplOStateIfc)
-              (porq corq1 corq2: ORq Msg).
+              (corq1 corq2: ORq Msg).
 
     (** The first invariant: the directory status is coherent to statuses of
      * children. Note that an object is *not* required to keep the coherency
@@ -104,18 +55,16 @@ Section Inv.
      * protocol).
      *)
     Definition ImplDirCoh: Prop :=
-      !porq@[downRq];
-        (!corq1@[upRq]; cost1#[implStatusIdx] = post#[implDirIdx].(fst)) /\
-        (!corq2@[upRq]; cost2#[implStatusIdx] = post#[implDirIdx].(snd)).
+      (!corq1@[upRq]; cost1#[implStatusIdx] <= post#[implDirIdx].(fst)) /\
+      (!corq2@[upRq]; cost2#[implStatusIdx] <= post#[implDirIdx].(snd)).
     
     (** The second invariant is only for parent, saying that the parent status
      * and its directory status are coherent.
      *)
     Definition ImplParentCoh (cv: nat): Prop :=
-      !porq@[downRq];
-      ((ImplOStateM cv post /\ ImplDirI post) \/
-       (ImplOStateS cv post /\ ImplDirS post) \/
-       (ImplOStateI post /\ ImplDirM post)).
+      (ImplOStateM cv post /\ ImplDirI post) \/
+      (ImplOStateS cv post /\ ImplDirS post) \/
+      (ImplOStateI post /\ ImplDirM post).
 
     (** The last invariant is for children, in order for ensuring
      * the local coherency. 
@@ -137,15 +86,26 @@ Section Inv.
 
   End GInv.
 
+  (* Definition ImplMsgsCoh (msgs: MessagePool Msg) (cv: nat): Prop := *)
+  (*   forall idm, *)
+  (*     InMPI msgs idm -> *)
+  (*     match case (sigOf idm) on sig_dec default True with *)
+  (*     | (ce1, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (ce2, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c1pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c1pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c2pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c2pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
+  (*     end. *)
+  
   Definition ImplStateInv (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       cost1 <-- (bst_oss st)@[child1Idx];
       cost2 <-- (bst_oss st)@[child2Idx];
-      porq <-- (bst_orqs st)@[parentIdx];
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
-      (exists cv, ImplStateCoh post cost1 cost2 porq corq1 corq2 cv) /\
-      (ImplDirCoh post cost1 cost2 porq corq1 corq2).
+      (exists cv, ImplStateCoh post cost1 cost2 corq1 corq2 cv) /\
+      (ImplDirCoh post cost1 cost2 corq1 corq2).
 
   Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
        ImplDirM ImplDirS ImplDirI
@@ -193,6 +153,9 @@ Section Inv.
         rewrite H1 in H2; unfold msiS, msiI in H2; lia
       end.
 
+  Ltac solve_msi :=
+    unfold msiM, msiS, msiI in *; lia.
+  
   Ltac disc_rule_custom ::=
     try disc_msi.
   
@@ -216,7 +179,7 @@ Section Inv.
     Proof.
       unfold ImplStateInv; simpl; intros.
       disc_rule_conds_const.
-      destruct H as [[cv ?] ?].
+      destruct H as [[cv [? ?]] ?].
       solve_rule_conds_ex.
     Qed.
 
@@ -244,26 +207,26 @@ Section Inv.
       - split.
         + exists n; repeat split.
           * disc_rule_conds_ex.
-            destruct H as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
+            destruct H as [|[|]];
+              try (exfalso; solve_rule_conds_ex; solve_msi; fail).
             right; right.
             solve_rule_conds_ex.
-          * solve_rule_conds_ex.
-            unfold msiM, msiS, msiI in *; lia.
+          * solve_rule_conds_ex; solve_msi.
           * solve_rule_conds_ex.
           * solve_rule_conds_ex.
         + solve_rule_conds_ex.
       - split.
         + exists n; repeat split.
           * disc_rule_conds_ex.
-            destruct H as [|[|]]; try (exfalso; solve_rule_conds_ex; fail).
+            destruct H as [|[|]];
+              try (exfalso; solve_rule_conds_ex; solve_msi; fail).
             right; right.
             solve_rule_conds_ex.
-          * solve_rule_conds_ex.
-            unfold msiM, msiS, msiI in *; lia.
+          * solve_rule_conds_ex; solve_msi.
           * solve_rule_conds_ex.
           * solve_rule_conds_ex.
         + solve_rule_conds_ex.
-      - eauto 6.
+      - eauto 7.
     Qed.
 
     Lemma msiSv_impl_InvTrs_ext_in:
@@ -350,47 +313,6 @@ Section Inv.
         | (c2pRs, (MRs, msiDownRsM)):
             cost2 <-- oss@[child2Idx];
             cost2#[implStatusIdx] = msiI
-        end.
-
-    Ltac disc_GoodMsgOutPred :=
-      repeat
-        match goal with
-        | [H: sigOf ?eout = (_, (_, _)) |- _] =>
-          let midx := fresh "midx" in
-          let msg := fresh "msg" in
-          destruct eout as [midx msg]; inv H
-
-        | [H: RsUpMsgFrom _ _ (_, _) |- _] =>
-          let H1 := fresh "H" in
-          let H2 := fresh "H" in
-          destruct H as [H1 H2]; simpl in H1, H2
-        | [H: RsDownMsgTo _ _ (_, _) |- _] =>
-          let H1 := fresh "H" in
-          let H2 := fresh "H" in
-          destruct H as [H1 H2]; simpl in H1, H2
-        | [H: RqUpMsgFrom _ _ (_, _) |- _] =>
-          let H1 := fresh "H" in
-          let H2 := fresh "H" in
-          destruct H as [H1 H2]; simpl in H1, H2
-        | [H: RqDownMsgTo _ _ (_, _) |- _] =>
-          let H1 := fresh "H" in
-          let H2 := fresh "H" in
-          destruct H as [H1 H2]; simpl in H1, H2
-
-        | [H: ~ In ?midx (sys_merqs _) |- _] =>
-          elim H; simpl; tauto
-        | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
-          rewrite H1 in H2; discriminate
-        | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
-          is_var oidx;
-          is_const rsUp;
-          pose proof (rsEdgeUpFrom_indsOf _ _ H);
-          dest_in; try discriminate
-        | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
-          is_var oidx;
-          is_const down;
-          pose proof (edgeDownTo_indsOf _ _ H);
-          dest_in; try discriminate
         end.
 
     Lemma msiSvMsgOutPred_good:
@@ -509,107 +431,33 @@ Section Inv.
            (rqid.(rqi_minds_rss) = [c1pRs] /\ rqid.(rqi_midx_rsb) = pc2))
       end.
 
-    Ltac disc_AtomicInv :=
-      repeat
-        match goal with
-        | [H: AtomicInv _ _ _ _ _ _ _ |- _] => red in H; dest
-        end.
+    Ltac obj_visited_rsDown oidx :=
+      try match goal with
+          | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
+            assert (In oidx (oindsOf hst))
+              by (eapply extAtomic_rsDown_acceptor_visited; eauto;
+                  [exact msiSv_impl_ORqsInit
+                  |exact msiSv_impl_RqRsSys
+                  |econstructor; eassumption
+                  |red; auto])
+          end.
 
+    Ltac obj_visited_rsUp oidx ocidx :=
+      try match goal with
+          | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
+            assert (In parentIdx (oindsOf hst))
+              by (eapply extAtomic_rsUp_acceptor_visited
+                    with (cidx:= ocidx); eauto;
+                  [exact msiSv_impl_ORqsInit
+                  |exact msiSv_impl_RqRsSys
+                  |econstructor; eassumption
+                  |red; auto
+                  |reflexivity])
+          end.
+    
     Ltac disc_rule_custom ::=
       try disc_footprints_ok;
       try disc_AtomicInv.
-
-    Ltac atomic_cont_exfalso_bound :=
-      exfalso;
-      disc_rule_conds_ex;
-      repeat 
-        match goal with
-        | [H1: AtomicMsgOutsInv _ ?eouts _, H2: In _ ?eouts |- _] =>
-          red in H1; rewrite Forall_forall in H1;
-          specialize (H1 _ H2); simpl in H1
-        | [H: MsiSvMsgOutPred _ _ _ |- _] => red in H
-        | [H1: caseDec _ ?sig _ _ |- _] =>
-          match sig with
-          | sigOf (?midx, ?msg) =>
-            match goal with
-            | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
-              progress replace sig with (midx, (mty, mid)) in H1
-                by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
-              simpl in H1
-            end
-          end
-        end;
-      assumption.
-
-    Ltac atomic_init_exfalso_rq :=
-      exfalso;
-      disc_rule_conds_ex;
-      repeat
-        match goal with
-        | [H: _ = _ \/ _ |- _] =>
-          destruct H; [subst; try discriminate|auto]
-        end.
-
-    Ltac atomic_init_exfalso_rs_from_parent :=
-      exfalso;
-      repeat
-        (repeat match goal with
-                | [H: UpLockInvORq _ _ _ _ _ |- _] => red in H
-                | [H1: ?orq@[0] = Some _, H2: context[?orq@[0]] |- _] =>
-                  rewrite H1 in H2; simpl in H2
-                | [H: UpLockRsFromParent _ _ _ |- _] =>
-                  let rsFrom := fresh "rsFrom" in
-                  destruct H as [rsFrom [? ?]]
-                end;
-         disc_rule_conds_ex);
-      repeat
-        match goal with
-        | [H1: _ = ?rsFrom \/ _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
-          destruct H1; [subst; try discriminate|auto]
-        end.
-
-    Ltac atomic_init_exfalso_rs_to_parent :=
-      exfalso;
-      pose proof msiSv_impl_RqRsDTree;
-      repeat
-        (repeat match goal with
-                | [H: DownLockInvORq _ _ _ _ _ |- _] => red in H
-                | [H1: ?orq@[1] = Some _, H2: context[?orq@[1]] |- _] =>
-                  rewrite H1 in H2; simpl in H2
-                | [H: DownLockRssToParent _ _ _ |- _] => red in H
-                | [H: _ = rqi_minds_rss _ |- _] => apply eq_sym in H
-                end;
-         disc_rule_conds_ex);
-      repeat
-        match goal with
-        | [H1: _ = ?rsFrom \/ _, H2: rsEdgeUpFrom _ _ = Some ?rsFrom |- _] =>
-          destruct H1; [subst; try discriminate|auto]
-        end.
-
-    Ltac atomic_init_solve_AtomicMsgOutsInv :=
-      simpl; repeat constructor.
-
-    Ltac atomic_init_solve_AtomicLocksInv :=
-      red; intros; dest_in;
-      repeat (simpl; mred);
-      unfold sigOf; simpl;
-      repeat
-        match goal with
-        | [H: msg_id ?msg = _ |- context [msg_id ?msg] ] => rewrite H
-        | [H1: msg_id ?msg = _, H2: context [msg_id ?msg] |- _] =>
-          rewrite H1 in H2
-        | [H: ?orq@[?i] = Some _ |- context [?orq@[?i]] ] => rewrite H
-        | [H1: ?orq@[?i] = Some _, H2: context [?orq@[?i]] |- _] =>
-          rewrite H1 in H2
-        | [H: ?orq@[?i] = None |- context [?orq@[?i]] ] => rewrite H
-        | [H1: ?orq@[?i] = None, H2: context [?orq@[?i]] |- _] =>
-          rewrite H1 in H2
-        end;
-      repeat (red; simpl; mred; auto).
-
-    Local Ltac atomic_init_solve_AtomicInv :=
-      split; [atomic_init_solve_AtomicMsgOutsInv
-             |atomic_init_solve_AtomicLocksInv].
 
     Lemma msiSv_impl_InvTrs_init:
       forall st1,
@@ -640,13 +488,14 @@ Section Inv.
       (** List of [Rule]s:
        * [childGetRqImm; childGetRqS; childGetRsS; childDownRqS; 
        *  childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
-       *  childEvictRqI; childEvictRsI] for [child1Idx] ++
+       *  childEvictRqI; childEvictRsI] for [child1Idx] +
        * [childGetRqImm; childGetRqS; childGetRsS; childDownRqS; 
        *  childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
-       *  childEvictRqI; childEvictRsI] for [child2Idx] ++
+       *  childEvictRqI; childEvictRsI] for [child2Idx] +
        * [parentGetRqImm; parentGetDownRqS; parentSetRqImm; parentSetDownRqM;
        *  parentGetDownRsS; parentSetDownRsM;
-       *  parentEvictRqImmS; parentEvictRqImmLastS; parentEvictRqImmM] * 2
+       *  parentEvictRqImmS; parentEvictRqImmLastS; parentEvictRqImmM]
+       *  * {child1Idx, child2Idx}
        *)
 
       3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent.
@@ -715,89 +564,6 @@ Section Inv.
         eapply implStateInv_orqs_weakened in H0; eauto.
     Qed.
 
-    Ltac obj_visited_rsDown oidx :=
-      try match goal with
-          | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
-            assert (In oidx (oindsOf hst))
-              by (eapply extAtomic_rsDown_acceptor_visited; eauto;
-                  [exact msiSv_impl_ORqsInit
-                  |exact msiSv_impl_RqRsSys
-                  |econstructor; eassumption
-                  |red; auto])
-          end.
-
-    Ltac obj_visited_rsUp oidx ocidx :=
-      try match goal with
-          | [Ha: Atomic _ _ _ ?hst _ _ |- _] =>
-            assert (In parentIdx (oindsOf hst))
-              by (eapply extAtomic_rsUp_acceptor_visited
-                    with (cidx:= ocidx); eauto;
-                  [exact msiSv_impl_ORqsInit
-                  |exact msiSv_impl_RqRsSys
-                  |econstructor; eassumption
-                  |red; auto
-                  |reflexivity])
-          end.
-
-    Ltac disc_lock_preds_with Hl oidx :=
-      match type of Hl with
-      | AtomicLocksInv _ ?hst _ =>
-        match goal with
-        | [Hin: In oidx (oindsOf ?hst) |- _] =>
-          specialize (Hl _ Hin); simpl in Hl;
-          disc_rule_conds_ex; red in Hl; simpl in Hl
-        end
-      end.
-
-    Ltac disc_lock_preds oidx :=
-      match goal with
-      | [H: AtomicLocksInv _ _ _ |- _] =>
-        let Hl := fresh "H" in
-        pose proof H as Hl;
-        disc_lock_preds_with Hl oidx
-      end.
-
-    Ltac disc_sig_caseDec :=
-      match goal with
-      | [H1: caseDec _ ?sig _ _ |- _] =>
-        match sig with
-        | sigOf (?midx, ?msg) =>
-          match goal with
-          | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
-            progress replace sig with (midx, (mty, mid)) in H1
-              by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
-            simpl in H1
-          end
-        end
-      end.
-
-    Ltac disc_msg_preds_with Hl Hin :=
-      match type of Hl with
-      | AtomicMsgOutsInv _ ?eouts _ =>
-        red in Hl; rewrite Forall_forall in Hl;
-        specialize (Hl _ Hin); simpl in Hl;
-        red in Hl; disc_sig_caseDec
-      end.
-
-    Ltac disc_msg_preds Hin :=
-      match goal with
-      | [H: AtomicMsgOutsInv _ _ _ |- _] =>
-        let Hl := fresh "H" in
-        pose proof H as Hl;
-        disc_msg_preds_with Hl Hin
-      end.
-    
-    Ltac disc_minds_const :=
-      repeat
-        match goal with
-        | [H: rqEdgeUpFrom ?dtr ?oidx = Some ?midx |- _] =>
-          is_const dtr; is_const oidx; is_var midx; inv H
-        | [H: rsEdgeUpFrom ?dtr ?oidx = Some ?midx |- _] =>
-          is_const dtr; is_const oidx; is_var midx; inv H
-        | [H: edgeDownTo ?dtr ?oidx = Some ?midx |- _] =>
-          is_const dtr; is_const oidx; is_var midx; inv H
-        end.
-
     Ltac disc_rule_custom ::=
       try disc_footprints_ok;
       try disc_msg_case;
@@ -838,8 +604,8 @@ Section Inv.
 
       (** child1 *)
 
-      - atomic_cont_exfalso_bound.
-      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
 
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
@@ -858,7 +624,7 @@ Section Inv.
         (* generate hints for leaves (L1 caches) *)
         pose proof (parentIdxOf_child_indsOf _ _ H8).
         dest_in; try discriminate; simpl in *.
-        cbn in H24; inv H24.
+        cbn in H27; inv H27.
 
         (* construction *)
         split.
@@ -884,15 +650,11 @@ Section Inv.
           split.
           * exists val0.
             red; repeat ssplit.
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-          * solve_rule_conds_ex.
+            { solve_rule_conds_ex; solve_msi. }
+            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
 
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
@@ -919,7 +681,6 @@ Section Inv.
         + red in H6; red; simpl in *; mred; simpl.
           destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto].
           destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
-          destruct (orqs@[parentIdx]) as [porq|] eqn:Hporq; simpl in *; [|auto].
           destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
@@ -929,23 +690,11 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-          * disc_rule_conds_ex.
-            exfalso.
-            assert (In parent (sys_objs impl)) by (simpl; tauto).
-            good_locking_get parent.
-            clear H24.
-            eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child1Idx) in H27; eauto;
-              [|reflexivity
-               |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
-            disc_rule_conds_ex.
+            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
 
-      - atomic_cont_exfalso_bound.
-      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
       - (** [childSetRsM] *)
         disc_rule_conds_ex.
         good_footprint_get child1Idx.
@@ -963,7 +712,7 @@ Section Inv.
         (* generate hints for leaves (L1 caches) *)
         pose proof (parentIdxOf_child_indsOf _ _ H8).
         dest_in; try discriminate; simpl in *.
-        cbn in H24; inv H24.
+        cbn in H27; inv H27.
 
         (* construction *)
         split.
@@ -994,14 +743,9 @@ Section Inv.
               right; right; solve_rule_conds_ex.
             }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-            { solve_rule_conds_ex.
-              { unfold msiM, msiS, msiI in *; lia. }
-              { unfold msiM, msiS, msiI in *; lia. }
-            }
-          * solve_rule_conds_ex.
+            { solve_rule_conds_ex; solve_msi. }
+            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
 
       - (** [childDownRqM] *)
         disc_rule_conds_ex.
@@ -1028,7 +772,6 @@ Section Inv.
         + red in H6; red; simpl in *; mred; simpl.
           destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto].
           destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto].
-          destruct (orqs@[parentIdx]) as [porq|] eqn:Hporq; simpl in *; [|auto].
           destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto].
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
@@ -1039,19 +782,9 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-          * disc_rule_conds_ex.
-            exfalso.
-            assert (In parent (sys_objs impl)) by (simpl; tauto).
-            good_locking_get parent.
-            clear H24.
-            eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child1Idx) in H27; eauto;
-              [|reflexivity
-               |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
-            disc_rule_conds_ex.
+          * solve_rule_conds_ex; solve_msi.
 
-      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
       - (** [childEvictRsI] *)
         disc_rule_conds_ex.
         good_footprint_get child1Idx.
@@ -1090,7 +823,6 @@ Section Inv.
         + red in H6; red; simpl in *; mred; simpl.
           rename porq into orq.
           destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
-          destruct (orqs@[parentIdx]) as [porq|]; simpl in *; [|auto].
           destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
@@ -1099,18 +831,16 @@ Section Inv.
             clear H22.
             red; repeat ssplit.
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
           * destruct H24.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex; solve_msi. }
+            { solve_rule_conds_ex; solve_msi. }
 
       (** child2 *)
-      - atomic_cont_exfalso_bound.
-      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
 
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
@@ -1129,7 +859,7 @@ Section Inv.
         (* generate hints for leaves (L1 caches) *)
         pose proof (parentIdxOf_child_indsOf _ _ H8).
         dest_in; try discriminate; simpl in *.
-        cbn in H24; inv H24.
+        cbn in H27; inv H27.
 
         (* construction *)
         split.
@@ -1155,15 +885,11 @@ Section Inv.
           split.
           * exists val0.
             red; repeat ssplit.
+            { solve_rule_conds_ex; solve_msi. }
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-          * solve_rule_conds_ex.
+            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
 
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
@@ -1190,7 +916,6 @@ Section Inv.
         + red in H6; red; simpl in *; mred; simpl.
           destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto].
           destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
-          destruct (orqs@[parentIdx]) as [porq|] eqn:Hporq; simpl in *; [|auto].
           destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
@@ -1200,23 +925,11 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
-          * disc_rule_conds_ex.
-            exfalso.
-            assert (In parent (sys_objs impl)) by (simpl; tauto).
-            good_locking_get parent.
-            clear H24.
-            eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child2Idx) in H27; eauto;
-              [|reflexivity
-               |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
-            disc_rule_conds_ex.
+            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
         
-      - atomic_cont_exfalso_bound.
-      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
       - (** [childSetRsM] *)
         disc_rule_conds_ex.
         good_footprint_get child2Idx.
@@ -1234,7 +947,7 @@ Section Inv.
         (* generate hints for leaves (L1 caches) *)
         pose proof (parentIdxOf_child_indsOf _ _ H8).
         dest_in; try discriminate; simpl in *.
-        cbn in H24; inv H24.
+        cbn in H27; inv H27.
 
         (* construction *)
         split.
@@ -1264,15 +977,10 @@ Section Inv.
               destruct H6 as [|[|]]; try (exfalso; dest; discriminate).
               right; right; solve_rule_conds_ex.
             }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              { unfold msiM, msiS, msiI in *; lia. }
-              { unfold msiM, msiS, msiI in *; lia. }
-            }
-          * solve_rule_conds_ex.
+            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
           
       - (** [childDownRqM] *)
         disc_rule_conds_ex.
@@ -1299,7 +1007,6 @@ Section Inv.
         + red in H6; red; simpl in *; mred; simpl.
           destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto].
           destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto].
-          destruct (orqs@[parentIdx]) as [porq|] eqn:Hporq; simpl in *; [|auto].
           destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto].
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
@@ -1310,19 +1017,9 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-          * disc_rule_conds_ex.
-            exfalso.
-            assert (In parent (sys_objs impl)) by (simpl; tauto).
-            good_locking_get parent.
-            clear H24.
-            eapply downLockInvORq_down_rqsQ_length_one_locked
-              with (cidx:= child2Idx) in H27; eauto;
-              [|reflexivity
-               |eapply rqsQ_length_ge_one; [eauto|apply FirstMP_InMP; assumption]].
-            destruct H27 as [rqid [? [? [rsUp ?]]]]; dest.
-            disc_rule_conds_ex.
+          * solve_rule_conds_ex; solve_msi.
 
-      - atomic_cont_exfalso_bound.
+      - atomic_cont_exfalso_bound MsiSvMsgOutPred.
       - (** [childEvictRsI] *)
         disc_rule_conds_ex.
         good_footprint_get child2Idx.
@@ -1359,9 +1056,7 @@ Section Inv.
             { repeat (simpl; red; mred). }
             { mred; apply H7; auto. }
         + red in H6; red; simpl in *; mred; simpl.
-          rename porq into orq.
           destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
-          destruct (orqs@[parentIdx]) as [porq|]; simpl in *; [|auto].
           destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
@@ -1370,13 +1065,11 @@ Section Inv.
             red; repeat ssplit.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
           * destruct H24.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex; solve_msi. }
+            { solve_rule_conds_ex; solve_msi. }
 
       (** parent(child1) *)
 
@@ -1415,11 +1108,9 @@ Section Inv.
             { solve_rule_conds_ex.
               right; left.
               destruct H6 as [|[|]].
-              { solve_rule_conds_ex.
-                unfold msiM, msiS, msiI in *; lia.
-              }
+              { solve_rule_conds_ex; solve_msi. }
               { solve_rule_conds_ex. }
-              { unfold msiM, msiS, msiI in *; lia. }
+              { solve_msi. }
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1454,22 +1145,7 @@ Section Inv.
               simpl; left; auto.
             }
             { mred; apply H7; auto. }
-        + red in H6; red; simpl in *; mred; simpl.
-          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
-          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
-          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
-          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
-          destruct H6 as [[cv ?] ?].
-          red in H6; dest.
-          split.
-          * exists cv.
-            clear H8.
-            red; repeat ssplit.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-          * solve_rule_conds_ex.
+        + red in H6; red; simpl in *; mred.
 
       - (** [parentSetRqImm] *)
         disc_rule_conds_ex.
@@ -1500,10 +1176,13 @@ Section Inv.
           destruct H6 as [[cv ?] ?].
           red in H6; dest.
           unfold getDir in H14; simpl in H14.
+
           split.
           * exists cv.
             red; repeat ssplit.
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              right; right; auto.
+            }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1537,22 +1216,7 @@ Section Inv.
               simpl; left; auto.
             }
             { mred; apply H7; auto. }
-        + red in H6; red; simpl in *; mred; simpl.
-          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
-          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
-          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
-          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
-          destruct H6 as [[cv ?] ?].
-          red in H6; dest.
-          split.
-          * exists cv.
-            clear H8.
-            red; repeat ssplit.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-          * solve_rule_conds_ex.
+        + red in H6; red; simpl in *; mred.
 
       - (** [parentGetDownRsS] *)
         disc_rule_conds_ex.
@@ -1688,7 +1352,9 @@ Section Inv.
           * exists val0.
             clear H11.
             red; repeat ssplit.
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              right; right; auto.
+            }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1739,8 +1405,7 @@ Section Inv.
           * exists cv.
             repeat ssplit.
             { solve_rule_conds_ex.
-              right; left.
-              unfold msiM, msiS, msiI in *; lia.
+              right; left; solve_msi.
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1792,7 +1457,9 @@ Section Inv.
           split.
           * exists cv.
             repeat ssplit.
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              left; auto.
+            }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1850,13 +1517,10 @@ Section Inv.
           * exists n.
             repeat ssplit.
             { solve_rule_conds_ex.
-              left.
-              unfold msiM, msiS, msiI in *; lia.
+              left; solve_msi.
             }
             { solve_rule_conds_ex. }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
 
@@ -1897,11 +1561,9 @@ Section Inv.
             { solve_rule_conds_ex.
               right; left.
               destruct H6 as [|[|]].
-              { solve_rule_conds_ex.
-                unfold msiM, msiS, msiI in *; lia.
-              }
+              { solve_rule_conds_ex; solve_msi. }
               { solve_rule_conds_ex. }
-              { unfold msiM, msiS, msiI in *; lia. }
+              { solve_msi. }
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -1936,22 +1598,7 @@ Section Inv.
               simpl; right; auto.
             }
             { mred; apply H7; auto. }
-        + red in H6; red; simpl in *; mred; simpl.
-          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
-          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
-          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
-          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
-          destruct H6 as [[cv ?] ?].
-          red in H6; dest.
-          split.
-          * exists cv.
-            clear H8.
-            red; repeat ssplit.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-          * solve_rule_conds_ex.
+        + red in H6; red; simpl in *; mred.
 
       - (** [parentSetRqImm] *)
         disc_rule_conds_ex.
@@ -1985,7 +1632,9 @@ Section Inv.
           split.
           * exists cv.
             red; repeat ssplit.
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              right; right; auto.
+            }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -2019,22 +1668,7 @@ Section Inv.
               simpl; right; auto.
             }
             { mred; apply H7; auto. }
-        + red in H6; red; simpl in *; mred; simpl.
-          destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto].
-          destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto].
-          destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto].
-          destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto].
-          destruct H6 as [[cv ?] ?].
-          red in H6; dest.
-          split.
-          * exists cv.
-            clear H8.
-            red; repeat ssplit.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-          * solve_rule_conds_ex.
+        + red in H6; red; simpl in *; mred.
 
       - (** [parentGetDownRsS] *)
         disc_rule_conds_ex.
@@ -2170,7 +1804,9 @@ Section Inv.
           * exists val0.
             clear H11.
             red; repeat ssplit.
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              right; right; auto.
+            }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -2221,8 +1857,7 @@ Section Inv.
           * exists cv.
             repeat ssplit.
             { solve_rule_conds_ex.
-              right; left.
-              unfold msiM, msiS, msiI in *; lia.
+              right; left; solve_msi.
             }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -2274,7 +1909,9 @@ Section Inv.
           split.
           * exists cv.
             repeat ssplit.
-            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex.
+              left; auto.
+            }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
@@ -2332,12 +1969,9 @@ Section Inv.
           * exists n.
             repeat ssplit.
             { solve_rule_conds_ex.
-              left.
-              unfold msiM, msiS, msiI in *; lia.
+              left; solve_msi.
             }
-            { solve_rule_conds_ex.
-              unfold msiM, msiS, msiI in *; lia.
-            }
+            { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
@@ -2357,6 +1991,8 @@ Section Inv.
         right; left; auto.
       - discriminate.
       - discriminate.
+      - vm_compute; intros; auto.
+      - vm_compute; intros; auto.
     Qed.
 
     Lemma ImplStateInv_invStep:
@@ -2374,4 +2010,13 @@ Section Inv.
   End Facts.
   
 End Inv.
+
+Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
+     ImplDirM ImplDirS ImplDirI
+     ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
+     ImplStateCoh: RuleConds.
+
+Close Scope list.
+Close Scope hvec.
+Close Scope fmap.
 

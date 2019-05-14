@@ -14,19 +14,6 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
-
-Lemma ocons_app:
-  forall {A} (oa: option A) l1 l2,
-    ocons oa (l1 ++ l2) = ocons oa l1 ++ l2.
-Proof.
-  destruct oa as [a|]; simpl; intros; reflexivity.
-Qed.
-
-Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
-     ImplDirM ImplDirS ImplDirI
-     ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
-     ImplStateCoh: RuleConds.
-
 Section Sim.
 
   Local Definition spec := SpecSv.spec 1.
@@ -117,6 +104,16 @@ Section Sim.
           assumption.
     Qed.
 
+    Lemma SimMP_enqMP:
+      forall midx msg imsgs orqs smsgs,
+        SimMP imsgs orqs smsgs ->
+        SimMP (enqMP midx msg imsgs) orqs (enqMP midx msg smsgs).
+    Proof.
+      intros.
+      eapply SimMP_enqMsgs with (eins:= [(midx, msg)]) in H; auto.
+      repeat constructor; intro; dest_in.
+    Qed.
+
     Lemma SimMP_ext_outs_deqMsgs:
       forall eouts,
         ValidMsgsExtOut impl eouts ->
@@ -195,6 +192,104 @@ Section Sim.
         rewrite H4 in H1; assumption.
     Qed.
 
+    Lemma SimMP_outs_deqMP_child_1:
+      forall msg imsgs (orqs: ORqs Msg) smsgs corq1,
+        orqs@[child1Idx] = Some corq1 ->
+        corq1@[upRq] = None ->
+        FirstMPI imsgs (ec1, msg) ->
+        SimMP imsgs orqs smsgs ->
+        SimMP (deqMP ec1 imsgs) orqs (deqMP ec1 smsgs).
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (do 2 (rewrite findQ_not_In_deqMP by discriminate);
+             assumption).
+
+      (* TODO: extract to a lemma? *)
+      clear -H2.
+      unfold deqMP.
+      rewrite H2.
+      change ec1 with (erq 0) in *.
+      destruct (findQ (erq 0) smsgs) eqn:Hq.
+      - congruence.
+      - unfold findQ; mred.
+    Qed.
+      
+    Lemma SimMP_outs_deqMP_child_2:
+      forall msg imsgs (orqs: ORqs Msg) smsgs corq2,
+        orqs@[child2Idx] = Some corq2 ->
+        corq2@[upRq] = None ->
+        FirstMPI imsgs (ec2, msg) ->
+        SimMP imsgs orqs smsgs ->
+        SimMP (deqMP ec2 imsgs) orqs (deqMP ec2 smsgs).
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (do 2 (rewrite findQ_not_In_deqMP by discriminate);
+             assumption).
+
+      (* TODO: extract to a lemma? *)
+      clear -H3.
+      unfold deqMP.
+      rewrite H3.
+      change ec2 with (erq 1) in *.
+      destruct (findQ (erq 1) smsgs) eqn:Hq.
+      - congruence.
+      - unfold findQ; mred.
+    Qed.
+
+    Lemma SimMP_impl_deqMP_indep:
+      forall midx imsgs (orqs: ORqs Msg) smsgs,
+        ~ In midx [ce1; ce2; ec1; ec2] ->
+        SimMP imsgs orqs smsgs ->
+        SimMP (deqMP midx imsgs) orqs smsgs.
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (rewrite findQ_not_In_deqMP
+              by (intro; subst; clear -H; firstorder);
+             assumption).
+    Qed.
+
+    Lemma SimMP_spec_deqMP_unlocked_1:
+      forall imsgs (orqs: ORqs Msg) smsgs porq1 norq1,
+        orqs@[child1Idx] = Some porq1 ->
+        porq1@[upRq] <> None -> norq1@[upRq] = None ->
+        SimMP imsgs orqs smsgs ->
+        SimMP imsgs (orqs +[child1Idx <- norq1]) (deqMP ec1 smsgs).
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (rewrite findQ_not_In_deqMP by discriminate;
+             assumption).
+      unfold deqMP.
+      change ec1 with (erq 0).
+      rewrite <-H0.
+      unfold findQ; mred.
+    Qed.
+
+    Lemma SimMP_spec_deqMP_unlocked_2:
+      forall imsgs (orqs: ORqs Msg) smsgs porq2 norq2,
+        orqs@[child2Idx] = Some porq2 ->
+        porq2@[upRq] <> None -> norq2@[upRq] = None ->
+        SimMP imsgs orqs smsgs ->
+        SimMP imsgs (orqs +[child2Idx <- norq2]) (deqMP ec2 smsgs).
+    Proof.
+      unfold SimMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (rewrite findQ_not_In_deqMP by discriminate;
+             assumption).
+      unfold deqMP.
+      change ec2 with (erq 1).
+      rewrite <-H2.
+      unfold findQ; mred.
+    Qed.
+    
     Lemma SimMsiSv_sim:
       InvSim step_m step_m ImplStateInv SimMSI impl spec.
     Proof.
@@ -213,7 +308,7 @@ Section Sim.
         + eapply SmIns; eauto.
         + split; [assumption|].
           apply SimMP_enqMsgs; auto.
-          apply H4.
+          apply H5.
 
       - destruct sst1 as [soss1 sorqs1 smsgs1]; simpl in *.
         destruct H0; simpl in *.
@@ -225,15 +320,20 @@ Section Sim.
         + split; [assumption|].
           apply SimMP_ext_outs_deqMsgs; auto.
 
-      - destruct sst1 as [soss1 sorqs1 smsgs1].
+      - pose proof (footprints_ok
+                      msiSv_impl_ORqsInit
+                      msiSv_impl_GoodRqRsSys H) as Hftinv.
+
+        destruct sst1 as [soss1 sorqs1 smsgs1].
         destruct H0; simpl in H0, H2; simpl.
         red in H0; disc_rule_conds_const.
         destruct H0 as [cv ?]; dest.
-        red in H14; disc_rule_conds_const.
-        destruct H3 as [|[|[|]]];
+        red in H15; disc_rule_conds_const.
+        destruct H4 as [|[|[|]]];
           try (exfalso; auto; fail); subst; dest_in.
 
-        + disc_rule_conds_ex.
+        + (** [childGetRqImm] *)
+          disc_rule_conds_ex.
           eexists (RlblInt 0 (rule_idx (specGetRq 0)) _ _); eexists.
           repeat ssplit.
           * reflexivity.
@@ -243,7 +343,8 @@ Section Sim.
             { simpl; tauto. }
             { instantiate (1:= [(ec1, rmsg)]).
               repeat constructor.
-              admit.
+              red in H2; disc_rule_conds_ex.
+              eapply findQ_eq_FirstMPI; eauto.
             }
             { split.
               { simpl; apply SubList_cons; [|apply SubList_nil].
@@ -260,13 +361,16 @@ Section Sim.
           * red; simpl; split.
             { solve_rule_conds_ex. }
             { replace (orqs +[child1Idx <- norq]) with orqs by meq.
-              specialize (H0 eq_refl H14).
-              rewrite H0.
-              admit.
+              specialize (H0 eq_refl H15); rewrite H0.
+              apply SimMP_enqMP.
+              eapply SimMP_outs_deqMP_child_1; eauto.
             }
 
-        + admit.
-        + disc_rule_conds_ex.
+        + (** [childGetRqS] *)
+          admit.
+
+        + (** [childGetRsS] *)
+          disc_rule_conds_ex.
           eexists (RlblInt 0 (rule_idx (specGetRq 0)) _ _); eexists.
           repeat ssplit.
           * reflexivity.
@@ -290,34 +394,40 @@ Section Sim.
               }
               { repeat constructor; intro Hx; dest_in. }
             }
-            { solve_rule_conds_ex.
-              (** TODO: need to know
-               * 1) msg_id (rqi_msg rqi) = Spec.getRq
-               * 2) msg_type (rqi_msg rqi) = MRq
-               * Do we need to strengthen the invariant? 
-               *)
-              all: admit.
-            }
+            { solve_rule_conds_ex. }
             { clear; solve_rule_conds_ex.
               { simpl; tauto. }
               { repeat constructor; intro Hx; dest_in. }
             }
             { disc_rule_conds_ex.
               (** TODO: develop [solve_sublist] and [solve_disjlist]. *)
-              admit.
+              red; intro e.
+              destruct (in_dec eq_nat_dec e [ec1]); [right|auto].
+              dest_in; intro; dest_in; discriminate.
             }
           * red; simpl; split.
             { (** TODO: need to know the response message value is
                *  coherent as well. This is part of predicate messages but
                *  [ImplStateInv] does not contain it.
                *)
-              solve_rule_conds_ex.
               admit.
             }
             { replace (fst ost1) with n by admit.
-              (** TODO: need to know [rqi_midx_rsb rqi = ce1] as well *)
-              admit.
+              good_footprint_get child1Idx.
+              red in H9.
+              destruct H9 as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest.
+              disc_rule_conds_ex.
+              pose proof (parentIdxOf_child_indsOf _ _ H19).
+              dest_in; try discriminate; simpl in *.
+              inv H22; inv H23.
+              apply SimMP_enqMP.
+              apply SimMP_impl_deqMP_indep; [intro Hx; dest_in; discriminate|].
+              eapply SimMP_spec_deqMP_unlocked_1; eauto.
+              { congruence. }
+              { mred. }
             }
+
+        + (** [childDownRqS] *)
 
     Admitted.
     
@@ -336,4 +446,8 @@ Section Sim.
   End Facts.
   
 End Sim.
+
+Close Scope list.
+Close Scope hvec.
+Close Scope fmap.
 

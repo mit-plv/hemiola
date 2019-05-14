@@ -363,6 +363,47 @@ Section PredMsg.
   
 End PredMsg.
 
+Ltac disc_GoodMsgOutPred :=
+  repeat
+    match goal with
+    | [H: sigOf ?eout = (_, (_, _)) |- _] =>
+      let midx := fresh "midx" in
+      let msg := fresh "msg" in
+      destruct eout as [midx msg]; inv H
+
+    | [H: RsUpMsgFrom _ _ (_, _) |- _] =>
+      let H1 := fresh "H" in
+      let H2 := fresh "H" in
+      destruct H as [H1 H2]; simpl in H1, H2
+    | [H: RsDownMsgTo _ _ (_, _) |- _] =>
+      let H1 := fresh "H" in
+      let H2 := fresh "H" in
+      destruct H as [H1 H2]; simpl in H1, H2
+    | [H: RqUpMsgFrom _ _ (_, _) |- _] =>
+      let H1 := fresh "H" in
+      let H2 := fresh "H" in
+      destruct H as [H1 H2]; simpl in H1, H2
+    | [H: RqDownMsgTo _ _ (_, _) |- _] =>
+      let H1 := fresh "H" in
+      let H2 := fresh "H" in
+      destruct H as [H1 H2]; simpl in H1, H2
+
+    | [H: ~ In ?midx (sys_merqs _) |- _] =>
+      elim H; simpl; tauto
+    | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
+      rewrite H1 in H2; discriminate
+    | [H: rsEdgeUpFrom _ ?oidx = Some ?rsUp |- _] =>
+      is_var oidx;
+      is_const rsUp;
+      pose proof (rsEdgeUpFrom_indsOf _ _ H);
+      dest_in; try discriminate
+    | [H: edgeDownTo _ ?oidx = Some ?down |- _] =>
+      is_var oidx;
+      is_const down;
+      pose proof (edgeDownTo_indsOf _ _ H);
+      dest_in; try discriminate
+    end.
+
 Close Scope list.
 Close Scope fmap.
 

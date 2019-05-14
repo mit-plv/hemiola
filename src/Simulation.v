@@ -84,7 +84,7 @@ Section InvSim.
       ist1 ≈ sst1 ->
       ginv ist1 ->
       forall ilbl ist2,
-        stepI impl ist1 ilbl ist2 ->
+        stepI impl ist1 ilbl ist2 -> ginv ist2 ->
         exists slbl sst2,
           getLabel ilbl = getLabel slbl /\
           stepS spec sst1 slbl sst2 /\
@@ -110,12 +110,18 @@ Section InvSim.
     specialize (IHsteps eq_refl).
     destruct IHsteps as [sst2 [shst [? [? ?]]]].
 
+    assert (ginv st3).
+    { eapply inv_steps with (stepI:= stepI) (impl:= impl); eauto.
+      econstructor; eauto.
+    }
+
     eapply Hsim in H5;
       [|red; eauto
        |eassumption
        |eapply inv_steps with (LabelI:= LabelI); eassumption].
-
+    specialize (H5 H8).
     destruct H5 as [slbl [sst3 ?]]; dest.
+    
     eexists; eexists (_ :: _); repeat split; eauto.
     - econstructor; eauto.
     - simpl; congruence.
