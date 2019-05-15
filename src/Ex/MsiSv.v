@@ -279,7 +279,7 @@ Section System.
         Variables (childIdx childIdx': IdxT)
                   (cpRq pc cpRs' pc': IdxT).
 
-        Definition parentNumOfRules := 9.
+        Definition parentNumOfRules := 10.
 
         Definition parentGetRqImm: Rule ImplOStateIfc :=
           rule[parentNumOfRules * ridxOfs + 0]
@@ -393,9 +393,27 @@ Section System.
                             [(ursb, {| msg_id := msiRsM;
                                        msg_type := MRs;
                                        msg_value := VNat n |})]))).
+
+        Definition parentEvictRqImmI: Rule ImplOStateIfc :=
+          rule[parentNumOfRules * ridxOfs + 6]
+          :requires
+             (MsgsFrom [cpRq]
+              /\ MsgIdsFrom [msiRqI]
+              /\ RqAccepting
+              /\ UpLockFree
+              /\ DownLockFree
+              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+                    getDir childIdx ost#[implDirIdx] = msiI))
+          :transition
+             (do (st {{ ImplOStateIfc }}
+                     --> (st.ost,
+                          st.orq,
+                          [(pc, {| msg_id := msiRsI;
+                                   msg_type := MRs;
+                                   msg_value := VUnit |})]))).
         
         Definition parentEvictRqImmS: Rule ImplOStateIfc :=
-          rule[parentNumOfRules * ridxOfs + 6]
+          rule[parentNumOfRules * ridxOfs + 7]
           :requires
              (MsgsFrom [cpRq]
               /\ MsgIdsFrom [msiRqI]
@@ -416,7 +434,7 @@ Section System.
                                    msg_value := VUnit |})]))).
 
         Definition parentEvictRqImmLastS: Rule ImplOStateIfc :=
-          rule[parentNumOfRules * ridxOfs + 7]
+          rule[parentNumOfRules * ridxOfs + 8]
           :requires
              (MsgsFrom [cpRq]
               /\ MsgIdsFrom [msiRqI]
@@ -438,7 +456,7 @@ Section System.
                                    msg_value := VUnit |})]))).
 
         Definition parentEvictRqImmM: Rule ImplOStateIfc :=
-          rule[parentNumOfRules * ridxOfs + 8]
+          rule[parentNumOfRules * ridxOfs + 9]
           :requires
              (MsgsFrom [cpRq]
               /\ MsgIdsFrom [msiRqI]
@@ -464,7 +482,7 @@ Section System.
           [parentGetRqImm; parentGetDownRqS;
              parentSetRqImm; parentSetDownRqM;
                parentGetDownRsS; parentSetDownRsM;
-                 parentEvictRqImmS; parentEvictRqImmLastS;
+                 parentEvictRqImmI; parentEvictRqImmS; parentEvictRqImmLastS;
                    parentEvictRqImmM].
 
         (* just checking *)

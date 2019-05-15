@@ -327,7 +327,11 @@ Proof.
   - rule_rsu; solve_rule_conds_const.
 
   - rule_rsu; solve_rule_conds_const.
-    
+
+  - rule_immd; solve_rule_conds_const.
+    instantiate (1:= child1Idx).
+    all:reflexivity.
+
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
@@ -373,6 +377,10 @@ Proof.
   - rule_rsu; solve_rule_conds_const.
 
   - rule_rsu; solve_rule_conds_const.
+
+  - rule_immd; solve_rule_conds_const.
+    instantiate (1:= child2Idx).
+    all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
     instantiate (1:= child2Idx).

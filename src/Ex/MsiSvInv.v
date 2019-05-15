@@ -90,6 +90,20 @@ Section Inv.
   (*   forall idm, *)
   (*     InMPI msgs idm -> *)
   (*     match case (sigOf idm) on sig_dec default True with *)
+  (*     (** Message values are coherent as well. *) *)
+  (*     | (ce1, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (ce2, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c1pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c1pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c2pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
+  (*     | (c2pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
+  (*     end. *)
+
+  (* Definition ImplMsgsStatus (msgs: MessagePool Msg) (dir: DirT): Prop := *)
+  (*   forall idm, *)
+  (*     InMPI msgs idm -> *)
+  (*     match case (sigOf idm) on sig_dec default True with *)
+  (*     (** Existence of a certain message implies a certain directory state *) *)
   (*     | (ce1, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
   (*     | (ce2, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
   (*     | (c1pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
@@ -287,16 +301,10 @@ Section Inv.
 
         | (pc1, (MRs, msiRsI)):
             post <-- oss@[parentIdx];
-            ((post#[implStatusIdx] = msiM /\
-              post#[implDirIdx].(fst) = msiI) \/
-             (post#[implStatusIdx] = msiS /\
-              post#[implDirIdx].(fst) = msiI))
+            post#[implDirIdx].(fst) = msiI
         | (pc2, (MRs, msiRsI)):
             post <-- oss@[parentIdx];
-            ((post#[implStatusIdx] = msiM /\
-              post#[implDirIdx].(snd) = msiI) \/
-             (post#[implStatusIdx] = msiS /\
-              post#[implDirIdx].(snd) = msiI))
+            post#[implDirIdx].(snd) = msiI
 
         | (c1pRs, (MRs, msiDownRsS)):
             cost1 <-- oss@[child1Idx];
@@ -494,7 +502,7 @@ Section Inv.
        *  childEvictRqI; childEvictRsI] for [child2Idx] +
        * [parentGetRqImm; parentGetDownRqS; parentSetRqImm; parentSetDownRqM;
        *  parentGetDownRsS; parentSetDownRsM;
-       *  parentEvictRqImmS; parentEvictRqImmLastS; parentEvictRqImmM]
+       *  parentEvictRqImmI; parentEvictRqImmS; parentEvictRqImmLastS; parentEvictRqImmM]
        *  * {child1Idx, child2Idx}
        *)
 
@@ -834,9 +842,7 @@ Section Inv.
             { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
-          * destruct H24.
-            { solve_rule_conds_ex; solve_msi. }
-            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
 
       (** child2 *)
       - atomic_cont_exfalso_bound MsiSvMsgOutPred.
@@ -1067,9 +1073,7 @@ Section Inv.
             { solve_rule_conds_ex. }
             { solve_rule_conds_ex; solve_msi. }
             { solve_rule_conds_ex. }
-          * destruct H24.
-            { solve_rule_conds_ex; solve_msi. }
-            { solve_rule_conds_ex; solve_msi. }
+          * solve_rule_conds_ex; solve_msi.
 
       (** parent(child1) *)
 
@@ -1360,6 +1364,29 @@ Section Inv.
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
 
+      - (** [parentEvictRqImmI] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred.
+        
       - (** [parentEvictRqImmS] *)
         disc_rule_conds_ex.
 
@@ -1376,13 +1403,6 @@ Section Inv.
             }
             { repeat (constructor; simpl).
               red; repeat (simpl; mred).
-              red in H6; simpl in H6.
-              unfold getDir in *; simpl in *.
-              disc_rule_conds_ex.
-              destruct H6 as [|[|]]; dest.
-              { exfalso; solve_rule_conds_ex. }
-              { subst; auto. }
-              { exfalso; destruct H26; solve_rule_conds_ex. }
             }
           * red; simpl; intros.
             icase oidx.
@@ -1400,7 +1420,6 @@ Section Inv.
           destruct H6 as [|[|]];
             [exfalso; solve_rule_conds_ex
             | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
-          
           split.
           * exists cv.
             repeat ssplit.
@@ -1435,7 +1454,6 @@ Section Inv.
             }
             { repeat (constructor; simpl).
               red; repeat (simpl; mred).
-              lia.
             }
           * red; simpl; intros.
             icase oidx.
@@ -1453,7 +1471,6 @@ Section Inv.
           destruct H6 as [|[|]];
             [exfalso; solve_rule_conds_ex
             | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
-          
           split.
           * exists cv.
             repeat ssplit.
@@ -1488,7 +1505,6 @@ Section Inv.
             }
             { repeat (constructor; simpl).
               red; repeat (simpl; mred).
-              lia.
             }
           * red; simpl; intros.
             icase oidx.
@@ -1812,6 +1828,29 @@ Section Inv.
             { solve_rule_conds_ex. }
           * solve_rule_conds_ex.
 
+      - (** [parentEvictRqImmI] *)
+        disc_rule_conds_ex.
+
+        split.
+        + split.
+          * apply Forall_app.
+            { apply forall_removeOnce.
+              eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx);
+                [exact msiSv_impl_ORqsInit
+                |exact msiSv_impl_RqRsSys|..]; eauto.
+              { intro; dest_in; discriminate. }
+              { red; auto. }
+              { exact msiSvMsgOutPred_good. }
+            }
+            { repeat (constructor; simpl).
+              red; repeat (simpl; mred).
+            }
+          * red; simpl; intros.
+            icase oidx.
+            { repeat (simpl; red; mred). }
+            { mred; apply H7; auto. }
+        + red in H6; red; simpl in *; mred.
+            
       - (** [parentEvictRqImmS] *)
         disc_rule_conds_ex.
 
@@ -1828,13 +1867,6 @@ Section Inv.
             }
             { repeat (constructor; simpl).
               red; repeat (simpl; mred).
-              red in H6; simpl in H6.
-              unfold getDir in *; simpl in *.
-              disc_rule_conds_ex.
-              destruct H6 as [|[|]]; dest.
-              { exfalso; solve_rule_conds_ex. }
-              { subst; auto. }
-              { exfalso; destruct H26; solve_rule_conds_ex. }
             }
           * red; simpl; intros.
             icase oidx.
@@ -1852,7 +1884,6 @@ Section Inv.
           destruct H6 as [|[|]];
             [exfalso; solve_rule_conds_ex
             | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
-          
           split.
           * exists cv.
             repeat ssplit.
@@ -1887,7 +1918,6 @@ Section Inv.
             }
             { repeat (constructor; simpl).
               red; repeat (simpl; mred).
-              lia.
             }
           * red; simpl; intros.
             icase oidx.
@@ -1905,7 +1935,6 @@ Section Inv.
           destruct H6 as [|[|]];
             [exfalso; solve_rule_conds_ex
             | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex].
-          
           split.
           * exists cv.
             repeat ssplit.
@@ -1940,7 +1969,6 @@ Section Inv.
             }
             { repeat (constructor; simpl).
               red; repeat (simpl; mred).
-              lia.
             }
           * red; simpl; intros.
             icase oidx.
