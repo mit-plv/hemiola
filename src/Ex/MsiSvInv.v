@@ -27,9 +27,6 @@ Section Inv.
   Definition ImplOStateI (ost: OState ImplOStateIfc): Prop :=
     ost#[implStatusIdx] = msiI.
 
-  Definition ImplOStateSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
-    ImplOStateS cv ost \/ ImplOStateI ost.
-
   Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
     ost#[implStatusIdx] >= msiS -> ost#[implValueIdx] = cv.
 
@@ -86,32 +83,6 @@ Section Inv.
 
   End GInv.
 
-  (* Definition ImplMsgsCoh (msgs: MessagePool Msg) (cv: nat): Prop := *)
-  (*   forall idm, *)
-  (*     InMPI msgs idm -> *)
-  (*     match case (sigOf idm) on sig_dec default True with *)
-  (*     (** Message values are coherent as well. *) *)
-  (*     | (ce1, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (ce2, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c1pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c1pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c2pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c2pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
-  (*     end. *)
-
-  (* Definition ImplMsgsStatus (msgs: MessagePool Msg) (dir: DirT): Prop := *)
-  (*   forall idm, *)
-  (*     InMPI msgs idm -> *)
-  (*     match case (sigOf idm) on sig_dec default True with *)
-  (*     (** Existence of a certain message implies a certain directory state *) *)
-  (*     | (ce1, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (ce2, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c1pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c1pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c2pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv *)
-  (*     | (c2pRs, (MRs, msiDownRsM)): (valOf idm).(msg_value) = VNat cv *)
-  (*     end. *)
-  
   Definition ImplStateInv (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       cost1 <-- (bst_oss st)@[child1Idx];
@@ -121,7 +92,7 @@ Section Inv.
       (exists cv, ImplStateCoh post cost1 cost2 corq1 corq2 cv) /\
       (ImplDirCoh post cost1 cost2 corq1 corq2).
 
-  Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
+  Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateMSI
        ImplDirM ImplDirS ImplDirI
        ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
        ImplStateCoh: RuleConds.
@@ -2039,7 +2010,7 @@ Section Inv.
   
 End Inv.
 
-Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateSI ImplOStateMSI
+Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateMSI
      ImplDirM ImplDirS ImplDirI
      ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh
      ImplStateCoh: RuleConds.

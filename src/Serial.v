@@ -15,7 +15,7 @@ Section Sequential.
 
   Inductive Atomic:
     list (Id MsgT) (* initially-dequeued messages *) ->
-    list (Id MsgT) (* all-dequeued  *) ->
+    list (Id MsgT) (* all-dequeued *) ->
     History MsgT (* history *) ->
     list (Id MsgT) (* all-enqueued *) ->
     list (Id MsgT) (* eventual outputs *) ->
