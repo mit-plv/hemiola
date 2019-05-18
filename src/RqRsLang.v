@@ -174,24 +174,14 @@ Definition AtomicMsgOutsInv {oifc} (mp: MsgOutPred oifc)
            (eouts: list (Id Msg)) (nst: MState oifc): Prop :=
   Forall (fun eout => mp eout nst.(bst_oss) nst.(bst_orqs)) eouts.
 
-Definition AtomicLocksInv {oifc}
-           (lp: IdxT -> ORq Msg -> Prop)
-           (hst: MHistory) (nst: MState oifc): Prop :=
-  forall oidx,
-    In oidx (oindsOf hst) ->
-    (bst_orqs nst)@[oidx] >>=[False] (fun orq => lp oidx orq).
-
-Definition AtomicInv {oifc}
-           (mp: MsgOutPred oifc)
-           (lp: IdxT -> ORq Msg -> Prop):
+Definition AtomicInv {oifc} (mp: MsgOutPred oifc):
   list (Id Msg) (* inits *) ->
   MState oifc (* starting state *) ->
   MHistory (* atomic history *) ->
   list (Id Msg) (* eouts *) ->
   MState oifc (* ending state *) -> Prop :=
   fun inits st1 hst eouts st2 =>
-    AtomicMsgOutsInv mp eouts st2 /\
-    AtomicLocksInv lp hst st2.
+    AtomicMsgOutsInv mp eouts st2.
 
 Ltac disc_rule_conds_const_unit :=
   match goal with
@@ -304,134 +294,6 @@ Ltac rule_rqdd := do 2 right; left; split; [|right; right].
 Ltac rule_rsdd := do 3 right; left; split; [left|].
 Ltac rule_rsu := do 3 right; left; split; [right|].
 Ltac rule_rsrq := do 4 right.
-
-Ltac disc_AtomicInv :=
-  repeat
-    match goal with
-    | [H: AtomicInv _ _ _ _ _ _ _ |- _] => red in H; dest
-    end.
-
-Ltac atomic_cont_exfalso_bound msgOutPred :=
-  exfalso;
-  disc_rule_conds_ex;
-  repeat 
-    match goal with
-    | [H1: AtomicMsgOutsInv _ ?eouts _, H2: In _ ?eouts |- _] =>
-      red in H1; rewrite Forall_forall in H1;
-      specialize (H1 _ H2); simpl in H1
-    | [H: msgOutPred _ _ _ |- _] => red in H
-    | [H1: caseDec _ ?sig _ _ |- _] =>
-      match sig with
-      | sigOf (?midx, ?msg) =>
-        match goal with
-        | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
-          progress replace sig with (midx, (mty, mid)) in H1
-            by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
-          simpl in H1
-        end
-      end
-    end;
-  assumption.
-
-Ltac atomic_init_exfalso_rq :=
-  exfalso;
-  disc_rule_conds_ex;
-  repeat
-    match goal with
-    | [H: _ = _ \/ _ |- _] =>
-      destruct H; [subst; try discriminate|auto]
-    end.
-
-Ltac atomic_init_exfalso_rs_from_parent :=
-  exfalso;
-  repeat
-    (repeat match goal with
-            | [H: UpLockInvORq _ _ _ _ _ |- _] => red in H
-            | [H1: ?orq@[0] = Some _, H2: context[?orq@[0]] |- _] =>
-              rewrite H1 in H2; simpl in H2
-            | [H: UpLockRsFromParent _ _ _ |- _] =>
-              let rsFrom := fresh "rsFrom" in
-              destruct H as [rsFrom [? ?]]
-            end;
-     disc_rule_conds_ex);
-  repeat
-    match goal with
-    | [H1: _ = ?rsFrom \/ _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
-      destruct H1; [subst; try discriminate|auto]
-    end.
-
-Ltac atomic_init_solve_AtomicMsgOutsInv :=
-  simpl; repeat constructor.
-
-Ltac atomic_init_solve_AtomicLocksInv :=
-  red; intros; dest_in;
-  repeat (simpl; mred);
-  unfold sigOf; simpl;
-  repeat
-    match goal with
-    | [H: msg_id ?msg = _ |- context [msg_id ?msg] ] => rewrite H
-    | [H1: msg_id ?msg = _, H2: context [msg_id ?msg] |- _] =>
-      rewrite H1 in H2
-    | [H: ?orq@[?i] = Some _ |- context [?orq@[?i]] ] => rewrite H
-    | [H1: ?orq@[?i] = Some _, H2: context [?orq@[?i]] |- _] =>
-      rewrite H1 in H2
-    | [H: ?orq@[?i] = None |- context [?orq@[?i]] ] => rewrite H
-    | [H1: ?orq@[?i] = None, H2: context [?orq@[?i]] |- _] =>
-      rewrite H1 in H2
-    end;
-  repeat (red; simpl; mred; auto).
-
-Ltac atomic_init_solve_AtomicInv :=
-  split; [atomic_init_solve_AtomicMsgOutsInv
-         |atomic_init_solve_AtomicLocksInv].
-
-Ltac disc_lock_preds_with Hl oidx :=
-  match type of Hl with
-  | AtomicLocksInv _ ?hst _ =>
-    match goal with
-    | [Hin: In oidx (oindsOf ?hst) |- _] =>
-      specialize (Hl _ Hin); simpl in Hl;
-      disc_rule_conds_ex; red in Hl; simpl in Hl
-    end
-  end.
-
-Ltac disc_lock_preds oidx :=
-  match goal with
-  | [H: AtomicLocksInv _ _ _ |- _] =>
-    let Hl := fresh "H" in
-    pose proof H as Hl;
-    disc_lock_preds_with Hl oidx
-  end.
-
-Ltac disc_sig_caseDec :=
-  match goal with
-  | [H1: caseDec _ ?sig _ _ |- _] =>
-    match sig with
-    | sigOf (?midx, ?msg) =>
-      match goal with
-      | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
-        progress replace sig with (midx, (mty, mid)) in H1
-          by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
-        simpl in H1
-      end
-    end
-  end.
-
-Ltac disc_msg_preds_with Hl Hin :=
-  match type of Hl with
-  | AtomicMsgOutsInv _ ?eouts _ =>
-    red in Hl; rewrite Forall_forall in Hl;
-    specialize (Hl _ Hin); simpl in Hl;
-    red in Hl; disc_sig_caseDec
-  end.
-
-Ltac disc_msg_preds Hin :=
-  match goal with
-  | [H: AtomicMsgOutsInv _ _ _ |- _] =>
-    let Hl := fresh "H" in
-    pose proof H as Hl;
-    disc_msg_preds_with Hl Hin
-  end.
 
 Close Scope list.
 Close Scope hvec.

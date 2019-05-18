@@ -53,42 +53,6 @@ Proof.
   intros; red; intros; mred.
 Qed.
 
-Section PredLock.
-  Context {oifc: OStateIfc}.
-  Variables (dtr: DTree)
-            (sys: System oifc).
-  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
-
-  Lemma extAtomic_rsUp_acceptor_visited:
-    forall inits hst eouts,
-      ExtAtomic sys msg_dec inits hst eouts ->
-      forall s1 s2,
-        Reachable (steps step_m) sys s1 ->
-        steps step_m sys s1 hst s2 ->
-        forall cidx rsUp pidx,
-          In rsUp eouts ->
-          RsUpMsgFrom dtr cidx rsUp ->
-          parentIdxOf dtr cidx = Some pidx ->
-          In pidx (oindsOf hst).
-  Proof.
-  Admitted.
-
-  Lemma extAtomic_rsDown_acceptor_visited:
-    forall inits hst eouts,
-      ExtAtomic sys msg_dec inits hst eouts ->
-      forall s1 s2,
-        Reachable (steps step_m) sys s1 ->
-        steps step_m sys s1 hst s2 ->
-        forall oidx rsDown,
-          In rsDown eouts ->
-          RsDownMsgTo dtr oidx rsDown ->
-          In oidx (oindsOf hst).
-  Proof.
-  Admitted.
-
-End PredLock.
-
 Section PredMsg.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)

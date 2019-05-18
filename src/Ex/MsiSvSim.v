@@ -55,7 +55,7 @@ Section Sim.
 
   Section Facts.
 
-    Lemma SimMsiSv_init:
+    Lemma simMsiSv_init:
       SimMSI (initsOf impl) (initsOf spec).
     Proof.
       vm_compute.
@@ -290,8 +290,8 @@ Section Sim.
       unfold findQ; mred.
     Qed.
     
-    Lemma SimMsiSv_sim:
-      InvSim step_m step_m ImplStateInv SimMSI impl spec.
+    Lemma simMsiSv_sim:
+      InvSim step_m step_m ImplInv SimMSI impl spec.
     Proof.
       red; intros.
       inv H2.
@@ -434,13 +434,11 @@ Section Sim.
     Theorem MsiSv_ok:
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.
     Proof.
-      apply invSim_implies_refinement
-        with (ginv:= ImplStateInv)
-             (sim:= SimMSI).
-      - apply SimMsiSv_sim.
-      - apply ImplStateInv_invStep.
-      - apply SimMsiSv_init.
-      - apply ImplStateInv_init.
+      apply invSim_implies_refinement with (ginv:= ImplInv) (sim:= SimMSI).
+      - apply simMsiSv_sim.
+      - apply implInv_invStep.
+      - apply simMsiSv_init.
+      - apply implInv_init.
     Qed.
 
   End Facts.
