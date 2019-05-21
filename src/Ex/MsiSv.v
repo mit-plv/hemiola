@@ -336,7 +336,7 @@ Section System.
                  orq,
                  [(pc, {| msg_id := msiRsM;
                           msg_type := MRs;
-                          msg_value := VNat (ost#[implValueIdx]) |})])).
+                          msg_value := VUnit |})])).
 
         Definition parentSetDownRqM: Rule ImplOStateIfc :=
           rule[parentNumOfRules * ridxOfs + 3]
