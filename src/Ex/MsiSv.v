@@ -195,7 +195,7 @@ Section System.
           /\ MsgIdsFrom [msiRsM]
           /\ RsAccepting
           /\ UpLockNatMsg
-          /\ UpLockMsgId MRq Spec.getRq
+          /\ UpLockMsgId MRq Spec.setRq
           /\ DownLockFree)
       :transition
          (do (n <-- getUpLockNatMsg;
@@ -207,9 +207,9 @@ Section System.
                         (ursb,
                          {| msg_id := setRs;
                             msg_type := MRs;
-                            msg_value := VNat n |}) :: nil))).
+                            msg_value := VUnit |}) :: nil))).
 
-    Definition childDownRqM: Rule ImplOStateIfc :=
+    Definition childDownRqI: Rule ImplOStateIfc :=
       rule[7]
       :requires
          (MsgsFrom [pc]
@@ -224,7 +224,7 @@ Section System.
              orq,
              [(cpRs, {| msg_id := msiDownRsM;
                         msg_type := MRs;
-                        msg_value := VNat (ost#[implValueIdx]) |})])).
+                        msg_value := VUnit |})])).
 
     Definition childEvictRqI: Rule ImplOStateIfc :=
       rule[8]
@@ -264,7 +264,7 @@ Section System.
       {| obj_idx := coidx;
          obj_rules :=
            [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;
-              childSetRqImm; childSetRqM; childSetRsM; childDownRqM;
+              childSetRqImm; childSetRqM; childSetRsM; childDownRqI;
                 childEvictRqI; childEvictRsI];
          obj_rules_valid := ltac:(inds_valid_tac) |}.
 
@@ -338,7 +338,7 @@ Section System.
                           msg_type := MRs;
                           msg_value := VUnit |})])).
 
-        Definition parentSetDownRqM: Rule ImplOStateIfc :=
+        Definition parentSetDownRqI: Rule ImplOStateIfc :=
           rule[parentNumOfRules * ridxOfs + 3]
           :requires
              (MsgsFrom [cpRq]
@@ -375,7 +375,7 @@ Section System.
                                        msg_type := MRs;
                                        msg_value := VNat nv |})]))).
 
-        Definition parentSetDownRsM: Rule ImplOStateIfc :=
+        Definition parentSetDownRsI: Rule ImplOStateIfc :=
           rule[parentNumOfRules * ridxOfs + 5]
           :requires
              (MsgsFromRsUp topo [childIdx']
@@ -384,15 +384,16 @@ Section System.
               /\ FirstNatMsg
               /\ DownLocked)
           :transition
-             (do (n <-- getFirstNatMsg;
-                    ursb <-- getDownLockIdxBack;
+             (do (ursb <-- getDownLockIdxBack;
                     st {{ ImplOStateIfc }}
                        --> (st.ost +#[implStatusIdx <- msiI]
-                                   +#[implDirIdx <- setDir childIdx' msiI (setDir childIdx msiM (st.ost)#[implDirIdx])],
+                                   +#[implDirIdx <- (setDir childIdx' msiI
+                                                            (setDir childIdx msiM
+                                                                    (st.ost)#[implDirIdx]))],
                             removeRq (st.orq) downRq,
                             [(ursb, {| msg_id := msiRsM;
                                        msg_type := MRs;
-                                       msg_value := VNat n |})]))).
+                                       msg_value := VUnit |})]))).
 
         Definition parentEvictRqImmI: Rule ImplOStateIfc :=
           rule[parentNumOfRules * ridxOfs + 6]
@@ -480,8 +481,8 @@ Section System.
 
         Definition parentRulesPerChild :=
           [parentGetRqImm; parentGetDownRqS;
-             parentSetRqImm; parentSetDownRqM;
-               parentGetDownRsS; parentSetDownRsM;
+             parentSetRqImm; parentSetDownRqI;
+               parentGetDownRsS; parentSetDownRsI;
                  parentEvictRqImmI; parentEvictRqImmS; parentEvictRqImmLastS;
                    parentEvictRqImmM].
 
