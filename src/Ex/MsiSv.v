@@ -213,7 +213,7 @@ Section System.
       rule[7]
       :requires
          (MsgsFrom [pc]
-          /\ MsgIdsFrom [msiDownRqM]
+          /\ MsgIdsFrom [msiDownRqI]
           /\ RqAccepting
           /\ DownLockFree
           /\ (fun (ost: OState ImplOStateIfc) orq mins =>
@@ -222,7 +222,7 @@ Section System.
          (fun (ost: OState ImplOStateIfc) orq mins =>
             (ost +#[implStatusIdx <- msiI],
              orq,
-             [(cpRs, {| msg_id := msiDownRsM;
+             [(cpRs, {| msg_id := msiDownRsI;
                         msg_type := MRs;
                         msg_value := VUnit |})])).
 
@@ -351,7 +351,7 @@ Section System.
              (do (msg <-- getFirstMsg;
                     st --> (st.ost,
                             addRq (st.orq) downRq msg [cpRs'] pc,
-                            [(pc', {| msg_id := msiDownRqM;
+                            [(pc', {| msg_id := msiDownRqI;
                                       msg_type := MRq;
                                       msg_value := VUnit |})]))).
 
@@ -379,7 +379,7 @@ Section System.
           rule[parentNumOfRules * ridxOfs + 5]
           :requires
              (MsgsFromRsUp topo [childIdx']
-              /\ MsgIdsFrom [msiDownRsM]
+              /\ MsgIdsFrom [msiDownRsI]
               /\ RsAccepting
               /\ FirstNatMsg
               /\ DownLocked)

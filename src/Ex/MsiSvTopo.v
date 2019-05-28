@@ -10,6 +10,13 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
+Lemma msiSv_impl_ORqsInit: GoodORqsInit (initsOf impl).
+Proof.
+  red; intros.
+  cbn; unfold implORqsInit.
+  mred.
+Qed.
+
 Lemma msiSv_topo_wf: WfDTree topo.
 Proof.
   split.

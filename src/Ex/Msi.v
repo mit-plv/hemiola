@@ -14,8 +14,8 @@ Definition msiDownRsS: IdxT := specNumMsgIds + 3.
 
 Definition msiRqM: IdxT := specNumMsgIds + 4.
 Definition msiRsM: IdxT := specNumMsgIds + 5.
-Definition msiDownRqM: IdxT := specNumMsgIds + 6.
-Definition msiDownRsM: IdxT := specNumMsgIds + 7.
+Definition msiDownRqI: IdxT := specNumMsgIds + 6.
+Definition msiDownRsI: IdxT := specNumMsgIds + 7.
 
 Definition msiRqI: IdxT := specNumMsgIds + 8.
 Definition msiRsI: IdxT := specNumMsgIds + 9.
