@@ -249,7 +249,7 @@ Section System.
          (MsgsFromORq upRq
           /\ MsgIdsFrom [msiRsI]
           /\ RsAccepting
-          /\ UpLocked
+          /\ UpLockMsgId MRq Spec.evictRq
           /\ DownLockFree)
       :transition
          (do (ursb <-- getUpLockIdxBack;
