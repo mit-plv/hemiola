@@ -78,7 +78,7 @@ Section Sim.
   Definition ChildExcl (cost: OState ImplOStateIfc) (corq: ORq Msg) :=
     cost#[implStatusIdx] = msiM /\ corq@[upRq] = None.
 
-  Section ImplExcl.
+  Section ImplInv.
     Variables (post cost1 cost2: OState ImplOStateIfc)
               (porq corq1 corq2: ORq Msg)
               (msgs: MessagePool Msg).
@@ -101,7 +101,20 @@ Section Sim.
       (ChildExcl cost2 corq2 ->
        post#[implStatusIdx] = msiI /\ ChildInvalid cost1 corq1 /\ ImplNoCohMsgs).
 
-  End ImplExcl.
+    Definition ImplDirCoh: Prop :=
+      forall idm,
+        InMPI msgs idm ->
+        match case (sigOf idm) on sig_dec default True with
+        | (c1pRq, (MRq, msiRqI)):
+            !porq@[downRq]; post#[implDirIdx].(fst) = cost1#[implStatusIdx]
+        | (c2pRq, (MRq, msiRqI)):
+            !porq@[downRq]; post#[implDirIdx].(snd) = cost2#[implStatusIdx]
+        end.
+
+    Definition ImplInv: Prop :=
+      ImplExcl /\ ImplDirCoh.
+
+  End ImplInv.
 
   Definition ImplStateCoh (cv: nat) (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
@@ -111,13 +124,14 @@ Section Sim.
       corq2 <-- (bst_orqs st)@[child2Idx];
       ImplCoh cv post cost1 cost2 corq1 corq2 (bst_msgs st).
 
-  Definition ImplStateExcl (st: MState ImplOStateIfc): Prop :=
+  Definition ImplStateInv (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       cost1 <-- (bst_oss st)@[child1Idx];
       cost2 <-- (bst_oss st)@[child2Idx];
+      porq <-- (bst_orqs st)@[parentIdx];
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
-      ImplExcl post cost1 cost2 corq1 corq2 (bst_msgs st).
+      ImplInv post cost1 cost2 porq corq1 corq2 (bst_msgs st).
 
   Definition SpecStateCoh (cv: nat) (st: MState SpecOStateIfc): Prop :=
     sost <-- (bst_oss st)@[specIdx];
@@ -148,7 +162,7 @@ Section Sim.
 
   Hint Unfold ImplOStateMSI ParentCoh
        ImplChildCoh1 ImplChildCoh2 ImplOStateCoh ImplCoh
-       ChildInvalid ChildExcl ImplExcl: RuleConds.
+       ChildInvalid ChildExcl ImplExcl ImplInv: RuleConds.
 
   Section Facts.
 
@@ -717,7 +731,7 @@ Section Sim.
     Qed.
 
     Lemma simMsiSv_sim:
-      InvSim step_m step_m ImplStateExcl SimMSI impl spec.
+      InvSim step_m step_m ImplStateInv SimMSI impl spec.
     Proof.
       red; intros.
       inv H2;
@@ -841,7 +855,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_set 0 ec1.
 
-        (* discharging [ImplStateExcl] *)
+        (* discharging [ImplStateInv] *)
         red in H3; simpl in H3.
         disc_rule_conds_ex.
         specialize (H3 (conj eq_refl eq_refl)); dest.
@@ -855,7 +869,7 @@ Section Sim.
             split.
             { solve_rule_conds_ex.
               { solve_msi. }
-              { destruct H12; [solve_msi|exfalso; auto]. }
+              { destruct H15; [solve_msi|exfalso; auto]. }
             }
             { apply implNoCohMsgs_ImplMsgsCoh; assumption. }
         + replace (orqs +[child1Idx <- norq]) with orqs by meq.
@@ -883,7 +897,7 @@ Section Sim.
            simpl; change ec1 with (erq 0);
            rewrite <-H2; reflexivity|].
 
-        (* discharging [ImplStateExcl] *)
+        (* discharging [ImplStateInv] *)
         red in H3; simpl in H3.
         disc_rule_conds_ex.
         specialize (H3 (conj eq_refl eq_refl)); dest.
@@ -897,7 +911,7 @@ Section Sim.
             split.
             { solve_rule_conds_ex.
               { solve_msi. }
-              { destruct H18; [solve_msi|exfalso; auto]. }
+              { destruct H22; [solve_msi|exfalso; auto]. }
             }
             { apply implNoCohMsgs_ImplMsgsCoh; assumption. }
         + admit.
@@ -1087,19 +1101,27 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_silent.
 
-        red; simpl; split.
-        + eapply SimStateIntro with (cv:= fst sost).
-          * solve_rule_conds_ex.
-          * red; simpl.
-            disc_rule_conds_ex.
-            split.
-            { admit. }
-            { admit. }
-        + admit.
-          
-      - (** [parentEvictRqImmM] *)
-        disc_rule_conds_ex.
-        spec_case_silent.
+        (* simplify [getDir] *)
+        unfold getDir in *; simpl in *.
+
+        (* discharging [ImplStateInv] *)
+        assert (n = fst sost).
+        { red in H1; simpl in H1.
+          disc_rule_conds_ex.
+          red in H9.
+          specialize (H9 _ (FirstMP_InMP H23)).
+          unfold sigOf, valOf, snd in H9.
+          rewrite H11, H22 in H9; simpl in H9.
+          specialize (H9 H18).
+          red in H4.
+          specialize (H4 _ (FirstMP_InMP H23)).
+          unfold sigOf, valOf, snd in H4.
+          rewrite H11, H22 in H4; simpl in H4.
+          assert (fst (snd cost1) >= msiS) by solve_msi.
+          specialize (H4 H15).
+          congruence.
+        }
+        subst.
 
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
@@ -1107,7 +1129,43 @@ Section Sim.
           * red; simpl.
             disc_rule_conds_ex.
             split.
+            { solve_rule_conds_ex. }
             { admit. }
+        + admit.
+          
+      - (** [parentEvictRqImmM] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        (* simplify [getDir] *)
+        unfold getDir in *; simpl in *.
+
+        (* discharging [ImplStateInv] *)
+        assert (n = fst sost).
+        { red in H1; simpl in H1.
+          disc_rule_conds_ex.
+          red in H9.
+          specialize (H9 _ (FirstMP_InMP H22)).
+          unfold sigOf, valOf, snd in H9.
+          rewrite H11, H21 in H9; simpl in H9.
+          specialize (H9 H18).
+          red in H4.
+          specialize (H4 _ (FirstMP_InMP H22)).
+          unfold sigOf, valOf, snd in H4.
+          rewrite H11, H21 in H4; simpl in H4.
+          assert (fst (snd cost1) >= msiS) by solve_msi.
+          specialize (H4 H15).
+          congruence.
+        }
+        subst.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            split.
+            { solve_rule_conds_ex. }
             { admit. }
         + admit.
           
@@ -1116,7 +1174,7 @@ Section Sim.
     Theorem MsiSv_ok:
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.
     Proof.
-      apply invSim_implies_refinement with (ginv:= ImplStateExcl) (sim:= SimMSI).
+      apply invSim_implies_refinement with (ginv:= ImplStateInv) (sim:= SimMSI).
       - apply simMsiSv_sim.
       - admit.
       - apply simMsiSv_init.

@@ -442,19 +442,22 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
+              /\ FirstNatMsg
               /\ (fun (ost: OState ImplOStateIfc) orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiS)
               /\ (fun (ost: OState ImplOStateIfc) orq mins =>
                     getDir childIdx' ost#[implDirIdx] = msiI))
           :transition
-             (do (st {{ ImplOStateIfc }}
-                     --> (st.ost +#[implStatusIdx <- msiM]
-                                 +#[implDirIdx <- (setDir childIdx msiI
-                                                          (st.ost)#[implDirIdx])],
-                          st.orq,
-                          [(pc, {| msg_id := msiRsI;
-                                   msg_type := MRs;
-                                   msg_value := VUnit |})]))).
+             (do (n <-- getFirstNatMsg;
+                    st {{ ImplOStateIfc }}
+                       --> (st.ost +#[implValueIdx <- n]
+                                   +#[implStatusIdx <- msiM]
+                                   +#[implDirIdx <- (setDir childIdx msiI
+                                                            (st.ost)#[implDirIdx])],
+                            st.orq,
+                            [(pc, {| msg_id := msiRsI;
+                                     msg_type := MRs;
+                                     msg_value := VUnit |})]))).
 
         Definition parentEvictRqImmM: Rule ImplOStateIfc :=
           rule[parentNumOfRules * ridxOfs + 9]
