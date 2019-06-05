@@ -18,13 +18,16 @@ Open Scope fmap.
 Ltac solve_msi :=
   unfold msiM, msiS, msiI in *; lia.
 
+Ltac solve_not_in :=
+  intro; dest_in; discriminate.
+
 Ltac solve_DisjList :=
   match goal with
   | [ |- DisjList ?ll ?rl] =>
     let e := fresh "e" in
     red; intro e;
     destruct (in_dec eq_nat_dec e ll); [right|auto];
-    dest_in; intro; dest_in; discriminate
+    dest_in; solve_not_in
   end.
 
 Section Sim.
@@ -35,42 +38,28 @@ Section Sim.
   (** Simulation between states *)
 
   Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
-    ost#[implStatusIdx] >= msiS -> ost#[implValueIdx] = cv.
+    msiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
 
-  Section ImplCoh.
+  Section DirCoh.
     Variables (cv: nat)
-              (post cost1 cost2: OState ImplOStateIfc)
-              (porq corq1 corq2: ORq Msg)
+              (dir: MSI)
+              (cost: OState ImplOStateIfc)
+              (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
-    Definition ParentCoh: Prop :=
-      ImplOStateMSI cv post.
-    Definition ImplChildCoh1: Prop :=
-      !corq1@[upRq]; ImplOStateMSI cv cost1.
-    Definition ImplChildCoh2: Prop :=
-      !corq2@[upRq]; ImplOStateMSI cv cost2.
-
-    Definition ImplOStateCoh: Prop :=
-      ParentCoh /\ ImplChildCoh1 /\ ImplChildCoh2.
-
-    Definition ImplMsgsCoh :=
+    Definition DirMsgsCoh :=
       forall idm,
         InMPI msgs idm ->
         match case (sigOf idm) on sig_dec default True with
-        | (pc1, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv
-        | (pc2, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv
-        | (c1pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv
-        | (c2pRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv
-        | (c1pRq, (MRq, msiRqI)):
-            (cost1#[implStatusIdx] >= msiS -> (valOf idm).(msg_value) = VNat cv)
-        | (c2pRq, (MRq, msiRqI)):
-            (cost2#[implStatusIdx] >= msiS -> (valOf idm).(msg_value) = VNat cv)
+        | (pc, (MRs, msiRsS)): (valOf idm).(msg_value) = VNat cv
+        | (cpRs, (MRs, msiDownRsS)): (valOf idm).(msg_value) = VNat cv
+        | (cpRq, (MRq, msiRqI)): (valOf idm).(msg_value) = VNat cv
         end.
-             
-    Definition ImplCoh :=
-      ImplOStateCoh /\ ImplMsgsCoh.
 
-  End ImplCoh.
+    Definition DirCoh :=
+      msiS <= dir -> (ImplOStateMSI cv cost /\ DirMsgsCoh).
+
+  End DirCoh.
 
   Definition ChildInvalid (cost: OState ImplOStateIfc) (corq: ORq Msg) :=
     cost#[implStatusIdx] = msiI \/ corq@[upRq] <> None.
@@ -83,36 +72,53 @@ Section Sim.
               (porq corq1 corq2: ORq Msg)
               (msgs: MessagePool Msg).
 
-    Definition ImplNoCohMsgs: Prop :=
-      forall idm,
-        InMPI msgs idm ->
-        match case (sigOf idm) on sig_dec default True with
-        | (pc1, (MRs, msiRsS)): False
-        | (pc2, (MRs, msiRsS)): False
-        | (c1pRs, (MRs, msiDownRsS)): False
-        | (c2pRs, (MRs, msiDownRsS)): False
-        | (c1pRq, (MRq, msiRqI)): cost1#[implStatusIdx] = msiI
-        | (c2pRq, (MRq, msiRqI)): cost2#[implStatusIdx] = msiI
-        end.
+    Definition DirSound1: Prop :=
+      !corq1@[upRq]; cost1#[implStatusIdx] <= post#[implDirIdx].(fst).
 
-    Definition ImplExcl: Prop :=
-      (ChildExcl cost1 corq1 ->
-       post#[implStatusIdx] = msiI /\ ChildInvalid cost2 corq2 /\ ImplNoCohMsgs) /\
-      (ChildExcl cost2 corq2 ->
-       post#[implStatusIdx] = msiI /\ ChildInvalid cost1 corq1 /\ ImplNoCohMsgs).
+    Definition DirSound2: Prop :=
+      !corq2@[upRq]; cost2#[implStatusIdx] <= post#[implDirIdx].(snd).
 
-    Definition ImplDirCoh: Prop :=
-      forall idm,
-        InMPI msgs idm ->
-        match case (sigOf idm) on sig_dec default True with
-        | (c1pRq, (MRq, msiRqI)):
-            !porq@[downRq]; post#[implDirIdx].(fst) = cost1#[implStatusIdx]
-        | (c2pRq, (MRq, msiRqI)):
-            !porq@[downRq]; post#[implDirIdx].(snd) = cost2#[implStatusIdx]
-        end.
+    Definition DirComplete1: Prop :=
+      msiM <= post#[implDirIdx].(fst) ->
+      post#[implStatusIdx] = msiI /\ post#[implDirIdx].(snd) = msiI.
+
+    Definition DirComplete2: Prop :=
+      msiM <= post#[implDirIdx].(snd) ->
+      post#[implStatusIdx] = msiI /\ post#[implDirIdx].(fst) = msiI.
+
+    (* Definition ImplNoCohMsgs: Prop := *)
+    (*   forall idm, *)
+    (*     InMPI msgs idm -> *)
+    (*     match case (sigOf idm) on sig_dec default True with *)
+    (*     | (pc1, (MRs, msiRsS)): False *)
+    (*     | (pc2, (MRs, msiRsS)): False *)
+    (*     | (c1pRs, (MRs, msiDownRsS)): False *)
+    (*     | (c2pRs, (MRs, msiDownRsS)): False *)
+    (*     | (c1pRq, (MRq, msiRqI)): cost1#[implStatusIdx] = msiI *)
+    (*     | (c2pRq, (MRq, msiRqI)): cost2#[implStatusIdx] = msiI *)
+    (*     end. *)
+
+    (* Definition ImplExcl: Prop := *)
+    (*   (ChildExcl cost1 corq1 -> *)
+    (*    post#[implStatusIdx] = msiI /\ *)
+    (*    ChildInvalid cost2 corq2 (* /\ ImplNoCohMsgs *)) /\ *)
+    (*   (ChildExcl cost2 corq2 -> *)
+    (*    post#[implStatusIdx] = msiI /\ *)
+    (*    ChildInvalid cost1 corq1 (* /\ ImplNoCohMsgs *)). *)
+
+    (* Definition ImplDirCoh: Prop := *)
+    (*   forall idm, *)
+    (*     InMPI msgs idm -> *)
+    (*     match case (sigOf idm) on sig_dec default True with *)
+    (*     | (c1pRq, (MRq, msiRqI)): *)
+    (*         !porq@[downRq]; post#[implDirIdx].(fst) = cost1#[implStatusIdx] *)
+    (*     | (c2pRq, (MRq, msiRqI)): *)
+    (*         !porq@[downRq]; post#[implDirIdx].(snd) = cost2#[implStatusIdx] *)
+    (*     end. *)
 
     Definition ImplInv: Prop :=
-      ImplExcl /\ ImplDirCoh.
+      DirSound1 /\ DirSound2 /\
+      DirComplete1 /\ DirComplete2.
 
   End ImplInv.
 
@@ -122,7 +128,9 @@ Section Sim.
       cost2 <-- (bst_oss st)@[child2Idx];
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
-      ImplCoh cv post cost1 cost2 corq1 corq2 (bst_msgs st).
+      ImplOStateMSI cv post /\
+      DirCoh cv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
+      DirCoh cv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
 
   Definition ImplStateInv (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
@@ -131,7 +139,7 @@ Section Sim.
       porq <-- (bst_orqs st)@[parentIdx];
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
-      ImplInv post cost1 cost2 porq corq1 corq2 (bst_msgs st).
+      ImplInv post cost1 cost2 corq1 corq2.
 
   Definition SpecStateCoh (cv: nat) (st: MState SpecOStateIfc): Prop :=
     sost <-- (bst_oss st)@[specIdx];
@@ -160,25 +168,29 @@ Section Sim.
     SimState ist sst /\
     SimExtMP ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
 
-  Hint Unfold ImplOStateMSI ParentCoh
-       ImplChildCoh1 ImplChildCoh2 ImplOStateCoh ImplCoh
-       ChildInvalid ChildExcl ImplExcl ImplInv: RuleConds.
+  Hint Unfold ImplOStateMSI DirCoh
+       ChildInvalid ChildExcl
+       DirSound1 DirSound2 DirComplete1 DirComplete2 ImplInv
+       ImplStateCoh ImplStateInv: RuleConds.
 
   Section Facts.
 
-    Lemma implNoCohMsgs_ImplMsgsCoh:
-      forall cost1 cost2 msgs,
-        ImplNoCohMsgs cost1 cost2 msgs ->
-        forall cv, ImplMsgsCoh cv cost1 cost2 msgs.
-    Proof.
-      unfold ImplNoCohMsgs, ImplMsgsCoh; intros.
-      specialize (H _ H0).
-      unfold caseDec in *.
-      repeat (find_if_inside; [exfalso; auto; fail|]).
-      find_if_inside; [intros; exfalso; rewrite H in H1; solve_msi|].
-      find_if_inside; [intros; exfalso; rewrite H in H1; solve_msi|].
-      auto.
-    Qed.
+    (* Lemma implNoCohMsgs_DirMsgsCoh_1: *)
+    (*   forall cost1 cost2 msgs, *)
+    (*     ImplNoCohMsgs cost1 cost2 msgs -> *)
+    (*     forall cv, DirMsgsCoh cv pc1 c1pRq c1pRs msgs. *)
+    (* Proof. *)
+    (*   unfold ImplNoCohMsgs, DirMsgsCoh; intros. *)
+    (*   specialize (H _ H0). *)
+    (*   unfold caseDec in *. *)
+    (*   repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]). *)
+    (*   destruct (sig_dec _ _). *)
+    (*   find_if_inside. *)
+    (*   repeat (find_if_inside; [exfalso; auto; fail|]). *)
+    (*   find_if_inside; [intros; exfalso; rewrite H in H1; solve_msi|]. *)
+    (*   find_if_inside; [intros; exfalso; rewrite H in H1; solve_msi|]. *)
+    (*   auto. *)
+    (* Qed. *)
 
     Lemma simMsiSv_init:
       SimMSI (initsOf impl) (initsOf spec).
@@ -186,8 +198,7 @@ Section Sim.
       split.
       - apply SimStateIntro with (cv:= 0).
         + reflexivity.
-        + repeat split.
-          vm_compute; intros; exfalso; auto.
+        + repeat split; vm_compute; intros; exfalso; auto.
       - repeat split.
     Qed.
 
@@ -229,6 +240,17 @@ Section Sim.
           congruence.
         + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
           assumption.
+    Qed.
+
+    Lemma SimExtMP_orqs:
+      forall imsgs orqs1 orqs2 smsgs,
+        SimExtMP imsgs orqs1 smsgs ->
+        orqs1@[child1Idx] = orqs2@[child1Idx] ->
+        orqs1@[child2Idx] = orqs2@[child2Idx] ->
+        SimExtMP imsgs orqs2 smsgs.
+    Proof.
+      unfold SimExtMP; intros.
+      disc_rule_conds_ex.
     Qed.
 
     Lemma SimExtMP_enqMP:
@@ -367,6 +389,20 @@ Section Sim.
       - unfold findQ; mred.
     Qed.
 
+    Lemma SimExtMP_impl_enqMP_indep:
+      forall midx msg imsgs (orqs: ORqs Msg) smsgs,
+        ~ In midx [ce1; ce2; ec1; ec2] ->
+        SimExtMP imsgs orqs smsgs ->
+        SimExtMP (enqMP midx msg imsgs) orqs smsgs.
+    Proof.
+      unfold SimExtMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (rewrite findQ_not_In_enqMP
+              by (intro; subst; clear -H; firstorder);
+             assumption).
+    Qed.
+
     Lemma SimExtMP_impl_deqMP_indep:
       forall midx imsgs (orqs: ORqs Msg) smsgs,
         ~ In midx [ce1; ce2; ec1; ec2] ->
@@ -379,6 +415,40 @@ Section Sim.
         try (rewrite findQ_not_In_deqMP
               by (intro; subst; clear -H; firstorder);
              assumption).
+    Qed.
+
+    Lemma SimExtMP_spec_deqMP_locked_1:
+      forall imsgs (orqs: ORqs Msg) smsgs porq1 norq1 rqiu1 msg,
+        orqs@[child1Idx] = Some porq1 ->
+        porq1@[upRq] = None -> norq1@[upRq] = Some rqiu1 ->
+        FirstMPI imsgs (ec1, msg) ->
+        rqiu1.(rqi_msg) = msg ->
+        SimExtMP imsgs orqs smsgs ->
+        SimExtMP (deqMP ec1 imsgs) (orqs +[child1Idx <- norq1]) smsgs.
+    Proof.
+      unfold SimExtMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (rewrite findQ_not_In_deqMP by discriminate;
+             assumption).
+      rewrite findQ_In_deqMP_FirstMP; assumption.
+    Qed.
+
+    Lemma SimExtMP_spec_deqMP_locked_2:
+      forall imsgs (orqs: ORqs Msg) smsgs porq2 norq2 rqiu2 msg,
+        orqs@[child2Idx] = Some porq2 ->
+        porq2@[upRq] = None -> norq2@[upRq] = Some rqiu2 ->
+        FirstMPI imsgs (ec2, msg) ->
+        rqiu2.(rqi_msg) = msg ->
+        SimExtMP imsgs orqs smsgs ->
+        SimExtMP (deqMP ec2 imsgs) (orqs +[child2Idx <- norq2]) smsgs.
+    Proof.
+      unfold SimExtMP; intros.
+      disc_rule_conds_ex.
+      repeat split;
+        try (rewrite findQ_not_In_deqMP by discriminate;
+             assumption).
+      rewrite findQ_In_deqMP_FirstMP; assumption.
     Qed.
 
     Lemma SimExtMP_spec_deqMP_unlocked_1:
@@ -420,114 +490,114 @@ Section Sim.
     Definition cohMsgIds: list IdxT :=
       [msiRsS; msiDownRsS; msiRqI].
     
-    Lemma ImplMsgsCoh_other_msg_id_enqMP:
-      forall cv cost1 cost2 msgs,
-        ImplMsgsCoh cv cost1 cost2 msgs ->
-        forall midx msg,
-          ~ In (msg_id msg) cohMsgIds ->
-          ImplMsgsCoh cv cost1 cost2 (enqMP midx msg msgs).
-    Proof.
-    Admitted.
+    (* Lemma ImplMsgsCoh_other_msg_id_enqMP: *)
+    (*   forall cv cost1 cost2 msgs, *)
+    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
+    (*     forall midx msg, *)
+    (*       ~ In (msg_id msg) cohMsgIds -> *)
+    (*       ImplMsgsCoh cv cost1 cost2 (enqMP midx msg msgs). *)
+    (* Proof. *)
+    (* Admitted. *)
 
-    Lemma ImplMsgsCoh_other_msg_id_enqMsgs:
-      forall cv cost1 cost2 msgs,
-        ImplMsgsCoh cv cost1 cost2 msgs ->
-        forall eins,
-          DisjList (map (fun idm => msg_id (valOf idm)) eins) cohMsgIds ->
-          ImplMsgsCoh cv cost1 cost2 (enqMsgs eins msgs).
-    Proof.
-      intros.
-      generalize dependent msgs.
-      induction eins as [|ein eins]; simpl; intros; [assumption|].
-      destruct ein as [midx msg]; simpl in *.
-      apply DisjList_cons in H0; dest.
-      eapply IHeins; eauto.
-      apply ImplMsgsCoh_other_msg_id_enqMP; auto.
-    Qed.
+    (* Lemma ImplMsgsCoh_other_msg_id_enqMsgs: *)
+    (*   forall cv cost1 cost2 msgs, *)
+    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
+    (*     forall eins, *)
+    (*       DisjList (map (fun idm => msg_id (valOf idm)) eins) cohMsgIds -> *)
+    (*       ImplMsgsCoh cv cost1 cost2 (enqMsgs eins msgs). *)
+    (* Proof. *)
+    (*   intros. *)
+    (*   generalize dependent msgs. *)
+    (*   induction eins as [|ein eins]; simpl; intros; [assumption|]. *)
+    (*   destruct ein as [midx msg]; simpl in *. *)
+    (*   apply DisjList_cons in H0; dest. *)
+    (*   eapply IHeins; eauto. *)
+    (*   apply ImplMsgsCoh_other_msg_id_enqMP; auto. *)
+    (* Qed. *)
 
-    Definition cohMinds: list IdxT :=
-      [pc1; pc2; c1pRs; c2pRs; c1pRq; c2pRq].
+    (* Definition cohMinds: list IdxT := *)
+    (*   [pc1; pc2; c1pRs; c2pRs; c1pRq; c2pRq]. *)
 
-    Lemma ImplMsgsCoh_other_midx_enqMP:
-      forall cv cost1 cost2 msgs,
-        ImplMsgsCoh cv cost1 cost2 msgs ->
-        forall midx msg,
-          ~ In midx cohMinds ->
-          ImplMsgsCoh cv cost1 cost2 (enqMP midx msg msgs).
-    Proof.
-    Admitted.
+    (* Lemma ImplMsgsCoh_other_midx_enqMP: *)
+    (*   forall cv cost1 cost2 msgs, *)
+    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
+    (*     forall midx msg, *)
+    (*       ~ In midx cohMinds -> *)
+    (*       ImplMsgsCoh cv cost1 cost2 (enqMP midx msg msgs). *)
+    (* Proof. *)
+    (* Admitted. *)
 
-    Lemma ImplMsgsCoh_other_midx_enqMsgs:
-      forall cv cost1 cost2 msgs,
-        ImplMsgsCoh cv cost1 cost2 msgs ->
-        forall eins,
-          DisjList (idsOf eins) cohMinds ->
-          ImplMsgsCoh cv cost1 cost2 (enqMsgs eins msgs).
-    Proof.
-      intros.
-      generalize dependent msgs.
-      induction eins as [|ein eins]; simpl; intros; [assumption|].
-      destruct ein as [midx msg]; simpl in *.
-      apply DisjList_cons in H0; dest.
-      eapply IHeins; eauto.
-      apply ImplMsgsCoh_other_midx_enqMP; auto.
-    Qed.
+    (* Lemma ImplMsgsCoh_other_midx_enqMsgs: *)
+    (*   forall cv cost1 cost2 msgs, *)
+    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
+    (*     forall eins, *)
+    (*       DisjList (idsOf eins) cohMinds -> *)
+    (*       ImplMsgsCoh cv cost1 cost2 (enqMsgs eins msgs). *)
+    (* Proof. *)
+    (*   intros. *)
+    (*   generalize dependent msgs. *)
+    (*   induction eins as [|ein eins]; simpl; intros; [assumption|]. *)
+    (*   destruct ein as [midx msg]; simpl in *. *)
+    (*   apply DisjList_cons in H0; dest. *)
+    (*   eapply IHeins; eauto. *)
+    (*   apply ImplMsgsCoh_other_midx_enqMP; auto. *)
+    (* Qed. *)
 
-    Lemma ImplMsgsCoh_deqMP:
-      forall cv cost1 cost2 msgs,
-        ImplMsgsCoh cv cost1 cost2 msgs ->
-        forall midx,
-          ImplMsgsCoh cv cost1 cost2 (deqMP midx msgs).
-    Proof.
-      unfold ImplMsgsCoh; intros.
-      apply InMP_deqMP in H0; auto.
-    Qed.
+    (* Lemma ImplMsgsCoh_deqMP: *)
+    (*   forall cv cost1 cost2 msgs, *)
+    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
+    (*     forall midx, *)
+    (*       ImplMsgsCoh cv cost1 cost2 (deqMP midx msgs). *)
+    (* Proof. *)
+    (*   unfold ImplMsgsCoh; intros. *)
+    (*   apply InMP_deqMP in H0; auto. *)
+    (* Qed. *)
 
-    Lemma ImplMsgsCoh_deqMsgs:
-      forall cv cost1 cost2 msgs,
-        ImplMsgsCoh cv cost1 cost2 msgs ->
-        forall minds,
-          ImplMsgsCoh cv cost1 cost2 (deqMsgs minds msgs).
-    Proof.
-      unfold ImplMsgsCoh; intros.
-      apply InMP_deqMsgs in H0; auto.
-    Qed.
+    (* Lemma ImplMsgsCoh_deqMsgs: *)
+    (*   forall cv cost1 cost2 msgs, *)
+    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
+    (*     forall minds, *)
+    (*       ImplMsgsCoh cv cost1 cost2 (deqMsgs minds msgs). *)
+    (* Proof. *)
+    (*   unfold ImplMsgsCoh; intros. *)
+    (*   apply InMP_deqMsgs in H0; auto. *)
+    (* Qed. *)
 
-    Lemma SimState_impl_other_msg_id_enqMsgs:
-      forall ioss iorqs imsgs sst,
-        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
-        forall nmsgs,
-          DisjList (map (fun idm => msg_id (valOf idm)) nmsgs) cohMsgIds ->
-          SimState {| bst_oss := ioss; bst_orqs := iorqs;
-                      bst_msgs := enqMsgs nmsgs imsgs |} sst.
-    Proof.
-      intros.
-      inv H.
-      apply SimStateIntro with (cv:= cv); [assumption|].
-      clear H1.
-      red in H2; red; simpl in *.
-      disc_rule_conds_ex.
-      repeat split; try assumption.
-      eapply ImplMsgsCoh_other_msg_id_enqMsgs; eauto.
-    Qed.
+    (* Lemma SimState_impl_other_msg_id_enqMsgs: *)
+    (*   forall ioss iorqs imsgs sst, *)
+    (*     SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst -> *)
+    (*     forall nmsgs, *)
+    (*       DisjList (map (fun idm => msg_id (valOf idm)) nmsgs) cohMsgIds -> *)
+    (*       SimState {| bst_oss := ioss; bst_orqs := iorqs; *)
+    (*                   bst_msgs := enqMsgs nmsgs imsgs |} sst. *)
+    (* Proof. *)
+    (*   intros. *)
+    (*   inv H. *)
+    (*   apply SimStateIntro with (cv:= cv); [assumption|]. *)
+    (*   clear H1. *)
+    (*   red in H2; red; simpl in *. *)
+    (*   disc_rule_conds_ex. *)
+    (*   repeat split; try assumption. *)
+    (*   eapply ImplMsgsCoh_other_msg_id_enqMsgs; eauto. *)
+    (* Qed. *)
 
-    Lemma SimState_impl_other_midx_enqMsgs:
-      forall ioss iorqs imsgs sst,
-        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
-        forall nmsgs,
-          DisjList (idsOf nmsgs) cohMinds ->
-          SimState {| bst_oss := ioss; bst_orqs := iorqs;
-                      bst_msgs := enqMsgs nmsgs imsgs |} sst.
-    Proof.
-      intros.
-      inv H.
-      apply SimStateIntro with (cv:= cv); [assumption|].
-      clear H1.
-      red in H2; red; simpl in *.
-      disc_rule_conds_ex.
-      repeat split; try assumption.
-      eapply ImplMsgsCoh_other_midx_enqMsgs; eauto.
-    Qed.
+    (* Lemma SimState_impl_other_midx_enqMsgs: *)
+    (*   forall ioss iorqs imsgs sst, *)
+    (*     SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst -> *)
+    (*     forall nmsgs, *)
+    (*       DisjList (idsOf nmsgs) cohMinds -> *)
+    (*       SimState {| bst_oss := ioss; bst_orqs := iorqs; *)
+    (*                   bst_msgs := enqMsgs nmsgs imsgs |} sst. *)
+    (* Proof. *)
+    (*   intros. *)
+    (*   inv H. *)
+    (*   apply SimStateIntro with (cv:= cv); [assumption|]. *)
+    (*   clear H1. *)
+    (*   red in H2; red; simpl in *. *)
+    (*   disc_rule_conds_ex. *)
+    (*   repeat split; try assumption. *)
+    (*   eapply ImplMsgsCoh_other_midx_enqMsgs; eauto. *)
+    (* Qed. *)
 
     Lemma SimState_spec_enqMsgs:
       forall ist soss sorqs smsgs,
@@ -541,24 +611,24 @@ Section Sim.
       econstructor; eauto.
     Qed.
 
-    Lemma SimState_impl_deqMsgs:
-      forall ioss iorqs imsgs sst,
-        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
-        forall minds,
-          SimState {| bst_oss := ioss; bst_orqs := iorqs;
-                      bst_msgs := deqMsgs minds imsgs |} sst.
-    Proof.
-      intros.
-      inv H.
-      apply SimStateIntro with (cv:= cv); [assumption|].
-      clear H0.
-      red in H1; red; simpl in *.
-      disc_rule_conds_ex.
-      repeat split; try assumption.
-      clear -H0.
-      red in H0; red; intros.
-      apply InMP_deqMsgs in H; auto.
-    Qed.
+    (* Lemma SimState_impl_deqMsgs: *)
+    (*   forall ioss iorqs imsgs sst, *)
+    (*     SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst -> *)
+    (*     forall minds, *)
+    (*       SimState {| bst_oss := ioss; bst_orqs := iorqs; *)
+    (*                   bst_msgs := deqMsgs minds imsgs |} sst. *)
+    (* Proof. *)
+    (*   intros. *)
+    (*   inv H. *)
+    (*   apply SimStateIntro with (cv:= cv); [assumption|]. *)
+    (*   clear H0. *)
+    (*   red in H1; red; simpl in *. *)
+    (*   disc_rule_conds_ex. *)
+    (*   repeat split; try assumption. *)
+    (*   clear -H0. *)
+    (*   red in H0; red; intros. *)
+    (*   apply InMP_deqMsgs in H; auto. *)
+    (* Qed. *)
 
     Lemma SimState_spec_deqMsgs:
       forall ist soss sorqs smsgs,
@@ -661,6 +731,36 @@ Section Sim.
       |spec_constr_step_evict ecmidx
       |].
 
+    Ltac solve_sim_ext_mp :=
+      repeat
+        (match goal with
+         | [ |- SimExtMP _ (?m +[?k <- ?v]) _ ] =>
+           apply SimExtMP_orqs with (orqs1:= m); [|findeq; fail|findeq; fail]
+         | [ |- SimExtMP (enqMP _ _ _) _ (enqMP _ _ _) ] =>
+           apply SimExtMP_enqMP
+         | [ |- SimExtMP (deqMP _ _) _ (deqMP _ _) ] =>
+           eapply SimExtMP_outs_deqMP_child_1; eauto; fail
+         | [ |- SimExtMP (enqMP _ _ _) _ _ ] =>
+           apply SimExtMP_impl_enqMP_indep; [solve_not_in; fail|]
+         | [ |- SimExtMP (deqMP _ _) _ _ ] =>
+           eapply SimExtMP_spec_deqMP_locked_1; eauto; [mred|reflexivity]; fail
+         | [ |- SimExtMP (deqMP _ _) _ _ ] =>
+           apply SimExtMP_impl_deqMP_indep; [solve_not_in; fail|]
+         | [ |- SimExtMP _ _ (deqMP _ _) ] =>
+           eapply SimExtMP_spec_deqMP_unlocked_1; eauto; [congruence|mred]; fail
+         end; try assumption).
+
+    Ltac solve_sim_obj :=
+      repeat
+        match goal with
+        | [ |- SimMSI _ _] => red; simpl; split
+        | [ |- SimExtMP _ _ _ ] => solve_sim_ext_mp
+        | [sost: OState SpecOStateIfc |- SimState _ _] =>
+          eapply SimStateIntro with (cv:= fst sost)
+        | [ |- SpecStateCoh _ _] => solve_rule_conds_ex; solve_msi
+        | [ |- ImplStateCoh _ _] => red; simpl; solve_rule_conds_ex
+        end.
+
     Lemma simMsiSv_sim_silent:
       forall ist sst1,
         SimMSI ist sst1 ->
@@ -694,13 +794,14 @@ Section Sim.
       + eapply SmIns; eauto.
       + split.
         * apply SimState_spec_enqMsgs.
-          apply SimState_impl_other_midx_enqMsgs; [assumption|].
-          destruct H1.
-          eapply DisjList_SubList; [eassumption|].
-          solve_DisjList.
+          (* apply SimState_impl_other_midx_enqMsgs; [assumption|]. *)
+          (* destruct H1. *)
+          (* eapply DisjList_SubList; [eassumption|]. *)
+          (* solve_DisjList. *)
+          admit.
         * apply SimExtMP_enqMsgs; auto.
           apply H1.
-    Qed.
+    Admitted.
 
     Lemma simMsiSv_sim_ext_out:
       forall oss orqs msgs sst1,
@@ -725,10 +826,11 @@ Section Sim.
         eapply SimExtMP_ext_outs_FirstMPI; eauto.
       + split.
         * apply SimState_spec_deqMsgs.
-          apply SimState_impl_deqMsgs.
-          assumption.
+          (* apply SimState_impl_deqMsgs. *)
+          (* assumption. *)
+          admit.
         * apply SimExtMP_ext_outs_deqMsgs; auto.
-    Qed.
+    Admitted.
 
     Lemma simMsiSv_sim:
       InvSim step_m step_m ImplStateInv SimMSI impl spec.
@@ -765,39 +867,41 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_get 0 ec1.
 
-        red; simpl; split.
-        + eapply SimStateIntro with (cv:= fst sost).
-          * solve_rule_conds_ex.
-          * red; simpl.
-            disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex. }
-            { apply ImplMsgsCoh_other_msg_id_enqMP;
-                [|intro; dest_in; discriminate].
-              apply ImplMsgsCoh_deqMP.
-              assumption.
-            }
-        + replace (orqs +[child1Idx <- norq]) with orqs by meq.
-          specialize (H5 eq_refl H19); rewrite H5.
-          apply SimExtMP_enqMP.
-          eapply SimExtMP_outs_deqMP_child_1; eauto.
-
-      - (** [childGetRqS] *)
-        disc_rule_conds_ex.
-        spec_case_silent.
+        assert (pos#[implValueIdx] = fst sost).
+        { solve_rule_conds_ex.
+          apply H15; solve_msi.
+        }
+        simpl in H4; rewrite H4 in *.
         
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
+            repeat split.
             { solve_rule_conds_ex. }
-            { apply ImplMsgsCoh_other_msg_id_enqMP;
-                [|intro; dest_in; discriminate].
-              apply ImplMsgsCoh_deqMP; assumption.
-            }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
+
+      - (** [childGetRqS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { admit. }
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
@@ -809,14 +913,14 @@ Section Sim.
         good_footprint_get child1Idx.
         destruct H15 as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest.
         disc_rule_conds_ex.
-        pose proof (parentIdxOf_child_indsOf _ _ H23).
+        pose proof (parentIdxOf_child_indsOf _ _ H29).
         dest_in; try discriminate; simpl in *.
-        inv H26; inv H27.
+        inv H32; inv H33.
 
         assert (n = fst sost).
-        { specialize (H4 _ (FirstMP_InMP H20)).
-          unfold sigOf, valOf, snd in H4.
-          rewrite H21, H22 in H4; simpl in H4.
+        { specialize (H12 _ (FirstMP_InMP H25)).
+          unfold sigOf, valOf, snd in H12.
+          rewrite H26, H27 in H12; simpl in H12.
           congruence.
         }
         subst.
@@ -826,14 +930,12 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
+            repeat split.
             { solve_rule_conds_ex. }
             { admit. }
-        + apply SimExtMP_enqMP.
-          apply SimExtMP_impl_deqMP_indep; [intro Hx; dest_in; discriminate|].
-          eapply SimExtMP_spec_deqMP_unlocked_1; eauto.
-          * congruence.
-          * mred.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [childDownRqS] *)
         disc_rule_conds_ex.
@@ -844,10 +946,11 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex.
-              apply H5; auto.
-            }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
+            { admit. }
+            { solve_rule_conds_ex. }
             { admit. }
         + admit.
 
@@ -855,27 +958,19 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_set 0 ec1.
 
-        (* discharging [ImplStateInv] *)
-        red in H3; simpl in H3.
-        disc_rule_conds_ex.
-        specialize (H3 (conj eq_refl eq_refl)); dest.
-
         red; simpl; split.
         + eapply SimStateIntro with (cv:= n).
           * rewrite Hmsg.
             solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex.
-              { solve_msi. }
-              { destruct H15; [solve_msi|exfalso; auto]. }
-            }
-            { apply implNoCohMsgs_ImplMsgsCoh; assumption. }
-        + replace (orqs +[child1Idx <- norq]) with orqs by meq.
-          apply SimExtMP_enqMP.
-          eapply SimExtMP_outs_deqMP_child_1; eauto.
-          
+            repeat split.
+            { intros; solve_msi. }
+            { admit. }
+            { intros; solve_msi. }
+            { admit. }
+        + solve_sim_ext_mp.
+
       - (** [childSetRqM] *)
         disc_rule_conds_ex.
         spec_case_silent.
@@ -885,10 +980,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
+            repeat split.
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
           
       - (** [childSetRsM] *)
         disc_rule_conds_ex.
@@ -897,10 +995,13 @@ Section Sim.
            simpl; change ec1 with (erq 0);
            rewrite <-H2; reflexivity|].
 
-        (* discharging [ImplStateInv] *)
-        red in H3; simpl in H3.
+        good_footprint_get child1Idx.
+        destruct H27 as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest.
         disc_rule_conds_ex.
-        specialize (H3 (conj eq_refl eq_refl)); dest.
+        pose proof (parentIdxOf_child_indsOf _ _ H30).
+        dest_in; try discriminate; simpl in *.
+        inv H33; inv H34.
+        (* rewrite <-H27 in H24. *)
 
         red; simpl; split.
         + eapply SimStateIntro with (cv:= n).
@@ -908,13 +1009,12 @@ Section Sim.
             solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex.
-              { solve_msi. }
-              { destruct H22; [solve_msi|exfalso; auto]. }
-            }
-            { apply implNoCohMsgs_ImplMsgsCoh; assumption. }
-        + admit.
+            repeat split.
+            { intros; solve_msi. }
+            { admit. }
+            { intros; solve_msi. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [childDownRqI] *)
         disc_rule_conds_ex.
@@ -925,12 +1025,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex.
-              apply H5; auto.
-            }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [childEvictRqI] *)
         disc_rule_conds_ex.
@@ -941,10 +1042,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
+            repeat split.
+            { solve_rule_conds_ex. }
             { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [childEvictRsI] *)
         disc_rule_conds_ex.
@@ -952,18 +1056,26 @@ Section Sim.
           [unfold FirstMPI, FirstMP, firstMP;
            simpl; change ec1 with (erq 0);
            rewrite <-H2; reflexivity|].
-        
+
+        good_footprint_get child1Idx.
+        destruct H9 as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest.
+        disc_rule_conds_ex.
+        pose proof (parentIdxOf_child_indsOf _ _ H27).
+        dest_in; try discriminate; simpl in *.
+        inv H30; inv H31.
+
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex.
-              solve_msi.
-            }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { intros; solve_msi. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - admit.
       - admit.
@@ -985,10 +1097,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { admit. (*! FIXME *) }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [parentGetDownRqS] *)
         disc_rule_conds_ex.
@@ -999,10 +1114,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [parentSetRqImm] *)
         disc_rule_conds_ex.
@@ -1013,10 +1131,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { intros; solve_msi. }
+            { admit. (*! FIXME *) }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [parentSetDownRqI] *)
         disc_rule_conds_ex.
@@ -1027,21 +1148,22 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [parentGetDownRsS] *)
         disc_rule_conds_ex.
         spec_case_silent.
 
-        inv H21.
+        inv H26.
         assert (n = fst sost).
-        { specialize (H4 _ (FirstMP_InMP H18)).
-          unfold sigOf, valOf, snd in H4.
-          rewrite H19, H20 in H4; simpl in H4.
-          congruence.
+        { (** TODO: need to know [dir.C2 = M] *)
+          admit.
         }
         subst.
 
@@ -1050,8 +1172,10 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex. }
+            repeat split.
+            { admit. (** FIXME *) }
+            { admit. }
+            { admit. }
             { admit. }
         + admit.
 
@@ -1064,8 +1188,11 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { intros; solve_msi. }
+            { admit. }
+            { admit. }
+            { intros; solve_msi. }
             { admit. }
         + admit.
 
@@ -1078,10 +1205,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [parentEvictRqImmS] *)
         disc_rule_conds_ex.
@@ -1092,10 +1222,13 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
-            { solve_rule_conds_ex; solve_msi. }
+            repeat split.
+            { solve_rule_conds_ex. }
+            { solve_msi. }
             { admit. }
-        + admit.
+            { solve_rule_conds_ex. }
+            { admit. }
+        + solve_sim_ext_mp.
 
       - (** [parentEvictRqImmLastS] *)
         disc_rule_conds_ex.
@@ -1104,34 +1237,18 @@ Section Sim.
         (* simplify [getDir] *)
         unfold getDir in *; simpl in *.
 
-        (* discharging [ImplStateInv] *)
-        assert (n = fst sost).
-        { red in H1; simpl in H1.
-          disc_rule_conds_ex.
-          red in H9.
-          specialize (H9 _ (FirstMP_InMP H23)).
-          unfold sigOf, valOf, snd in H9.
-          rewrite H11, H22 in H9; simpl in H9.
-          specialize (H9 H18).
-          red in H4.
-          specialize (H4 _ (FirstMP_InMP H23)).
-          unfold sigOf, valOf, snd in H4.
-          rewrite H11, H22 in H4; simpl in H4.
-          assert (fst (snd cost1) >= msiS) by solve_msi.
-          specialize (H4 H15).
-          congruence.
-        }
-        subst.
-
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
+            repeat split.
+            { admit. (** TODO: need to know [P.st = S] before. *) }
+            { solve_msi. }
+            { solve_msi. }
             { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+        + solve_sim_ext_mp.
           
       - (** [parentEvictRqImmM] *)
         disc_rule_conds_ex.
@@ -1142,19 +1259,10 @@ Section Sim.
 
         (* discharging [ImplStateInv] *)
         assert (n = fst sost).
-        { red in H1; simpl in H1.
-          disc_rule_conds_ex.
-          red in H9.
-          specialize (H9 _ (FirstMP_InMP H22)).
-          unfold sigOf, valOf, snd in H9.
-          rewrite H11, H21 in H9; simpl in H9.
-          specialize (H9 H18).
-          red in H4.
-          specialize (H4 _ (FirstMP_InMP H22)).
-          unfold sigOf, valOf, snd in H4.
-          rewrite H11, H21 in H4; simpl in H4.
-          assert (fst (snd cost1) >= msiS) by solve_msi.
-          specialize (H4 H15).
+        { specialize (H15 ltac:(solve_msi)); dest.
+          specialize (H5 _ (FirstMP_InMP H27)).
+          unfold sigOf, valOf, snd in H5.
+          rewrite H26, H6 in H5; simpl in H5.
           congruence.
         }
         subst.
@@ -1164,10 +1272,12 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            split.
+            repeat split.
+            { solve_msi. }
+            { solve_msi. }
             { solve_rule_conds_ex. }
             { admit. }
-        + admit.
+        + solve_sim_ext_mp.
           
     Admitted.
     

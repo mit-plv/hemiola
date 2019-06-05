@@ -252,6 +252,11 @@ Ltac disc_rule_conds_const_unit :=
   | [H: [_]%list = rqi_midx_rsb _ |- _] => rewrite <-H in *
   | [H: Forall2 _ [_]%list [_]%list |- _] => inv H
   | [H: Forall2 _ nil nil |- _] => clear H
+  | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl)
+  | [H: ?P -> _, Hp: ?P |- _] =>
+    match type of P with
+    | Prop => specialize (H Hp)
+    end
   end.
 
 Ltac disc_rule_conds_const :=
