@@ -72,18 +72,21 @@ Section Sim.
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
-    Definition DirMsgExcl :=
+    Definition DirMsgRsM :=
       exists idm,
         InMPI msgs idm /\ sigOf idm = (pc, (MRs, msiRsM)).
 
+    Definition DirMsgDownRsS :=
+      exists idm,
+        InMPI msgs idm /\ sigOf idm = (cpRs, (MRs, msiDownRsS)).
+
     Definition DirExcl :=
-      dir = msiM ->
-      DirMsgExcl ->
-      cost#[implStatusIdx] = msiI.
+      (dir = msiM -> DirMsgRsM -> cost#[implStatusIdx] = msiI) /\
+      (DirMsgDownRsS -> dir = msiM).
 
   End DirExcl.
 
-  Section ImplInv.
+  Section DirInv.
     Variables (post cost1 cost2: OState ImplOStateIfc)
               (porq corq1 corq2: ORq Msg)
               (msgs: MessagePool Msg).
@@ -112,7 +115,21 @@ Section Sim.
       DirSound1 /\ DirSound2 /\
       DirSoundS /\ DirExcl1 /\ DirExcl2.
 
-  End ImplInv.
+  End DirInv.
+
+  Section DownLockInv.
+    Variables (post: OState ImplOStateIfc)
+              (porq: ORq Msg).
+
+    Definition ParentDownLockBack: Prop :=
+      rqid <+- porq@[downRq];
+        (rqid.(rqi_minds_rss) = [c1pRs] -> rqid.(rqi_midx_rsb) = pc2) /\
+        (rqid.(rqi_minds_rss) = [c2pRs] -> rqid.(rqi_midx_rsb) = pc1).
+
+    Definition DownLockInv: Prop :=
+      ParentDownLockBack.
+
+  End DownLockInv.
 
   Definition ImplStateCoh (cv: nat) (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
@@ -132,10 +149,11 @@ Section Sim.
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
       DirInv post cost1 cost2 corq1 corq2 /\
-      DirExcl post#[implDirIdx].(fst) cost1 pc1 (bst_msgs st) /\
-      DirExcl post#[implDirIdx].(snd) cost2 pc2 (bst_msgs st) /\
+      DirExcl post#[implDirIdx].(fst) cost1 pc1 c1pRs (bst_msgs st) /\
+      DirExcl post#[implDirIdx].(snd) cost2 pc2 c2pRs (bst_msgs st) /\
       DirCohEx post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
-      DirCohEx post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
+      DirCohEx post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st) /\
+      DownLockInv porq.
 
   Definition SpecStateCoh (cv: nat) (st: MState SpecOStateIfc): Prop :=
     sost <-- (bst_oss st)@[specIdx];
@@ -164,8 +182,9 @@ Section Sim.
     SimState ist sst /\
     SimExtMP ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
 
-  Hint Unfold ImplOStateMSI DirCoh DirExcl DirMsgExcl
+  Hint Unfold ImplOStateMSI DirCoh DirExcl
        DirSound1 DirSound2 DirSoundS DirExcl1 DirExcl2 DirInv
+       ParentDownLockBack DownLockInv
        ImplStateCoh ImplStateInv: RuleConds.
 
   Section Facts.
@@ -944,7 +963,7 @@ Section Sim.
         pull_uplock_facts child1Idx.
 
         assert (n = fst sost)
-          by (disc_DirMsgsCoh_by_FirstMP H12 H35; congruence).
+          by (disc_DirMsgsCoh_by_FirstMP H12 H41; congruence).
         subst.
 
         red; simpl; split.
@@ -989,7 +1008,7 @@ Section Sim.
             repeat split.
             { clear -H9; intros; solve_msi. }
             { admit. }
-            { clear -H12 H26; intros; solve_msi. }
+            { clear -H12 H29; intros; solve_msi. }
             { admit. }
         + solve_sim_ext_mp.
 
@@ -1026,9 +1045,9 @@ Section Sim.
           * red; simpl.
             disc_rule_conds_ex.
             repeat split.
-            { clear -H25; intros; solve_msi. }
+            { clear -H28; intros; solve_msi. }
             { admit. }
-            { clear -H4 H33; intros; solve_msi. }
+            { clear -H4 H39; intros; solve_msi. }
             { admit. }
         + solve_sim_ext_mp.
 
@@ -1184,13 +1203,25 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_silent.
 
-        assert (rqi_midx_rsb rqi = pc1) by admit.
-        rewrite H5 in *.
+        inv H43.
+        specialize (H9 eq_refl).
+        rewrite H34 in H16
+          by (eexists; split;
+              [apply FirstMP_InMP; eassumption
+              |unfold sigOf; simpl; congruence]).
+        specialize (H16 ltac:(solve_msi)); dest.
+        disc_DirMsgsCoh_by_FirstMP H12 H17.
+        rewrite H12 in Hmsg; inv Hmsg.
+        rewrite H9 in *.
 
-        inv H36.
-        assert (n = fst sost).
-        { admit. }
-        subst.
+        move H20 at bottom.
+        destruct H20 as [cv ?].
+        specialize (H16 ltac:(solve_msi)); dest.
+        specialize (H20 (pc1, _) (InMP_or_enqMP
+                                    (deqMP c2pRs msgs)
+                                    (or_introl (conj eq_refl eq_refl)))).
+        red in H20; simpl in H20.
+        inv H20.
 
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
@@ -1198,18 +1229,19 @@ Section Sim.
           * red; simpl.
             disc_rule_conds_ex.
             repeat split.
+            { assumption. }
             { admit. }
+            { assumption. }
             { admit. }
-            { admit. }
-            { admit. }
-        + admit.
+        + solve_sim_ext_mp.
 
       - (** [parentSetDownRsI] *)
         disc_rule_conds_ex.
         spec_case_silent.
 
-        assert (rqi_midx_rsb rqi = pc1) by admit.
-        rewrite H5 in *.
+        inv H43.
+        specialize (H9 eq_refl).
+        rewrite H9 in *.
 
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
@@ -1219,13 +1251,13 @@ Section Sim.
             repeat split.
             { clear; intros; solve_msi. }
             { intros; exfalso.
-              rewrite H18 in H9; [clear -H9; solve_msi|].
+              rewrite H18 in H33; [clear -H33; solve_msi|].
               eexists (_, _); split.
               { apply InMP_or_enqMP; simpl; auto. }
               { reflexivity. }
             }
             { admit. }
-            { clear -H6; intros; solve_msi. }
+            { clear -H5; intros; solve_msi. }
             { admit. }
         + admit.
 
@@ -1278,7 +1310,7 @@ Section Sim.
             repeat split.
             { solve_rule_conds_ex.
               apply H0.
-              rewrite H33; auto.
+              rewrite H39; auto.
             }
             { clear -H4; solve_msi. }
             { clear -H4; solve_msi. }
@@ -1296,7 +1328,7 @@ Section Sim.
         (* discharging [ImplStateInv] *)
         assert (n = fst sost).
         { specialize (H15 ltac:(solve_msi)); dest.
-          disc_DirMsgsCoh_by_FirstMP H5 H37.
+          disc_DirMsgsCoh_by_FirstMP H5 H43.
           congruence.
         }
         subst.
