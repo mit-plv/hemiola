@@ -18,8 +18,25 @@ Open Scope fmap.
 Ltac solve_msi :=
   unfold msiM, msiS, msiI in *; lia.
 
+Ltac solve_msi_false :=
+  exfalso; try congruence;
+  match goal with
+  | [H: msiS <= msiI |- _] => clear -H; solve_msi
+  | [H: msiM <= msiI |- _] => clear -H; solve_msi
+  | [H: msiM <= msiS |- _] => clear -H; solve_msi
+  | [H1: ?t = msiI, H2: msiS <= ?t |- _] =>
+    rewrite H1 in H2; clear -H2; solve_msi
+  | [H1: ?t = msiI, H2: msiM <= ?t |- _] =>
+    rewrite H1 in H2; clear -H2; solve_msi
+  | [H1: ?t = msiS, H2: msiM <= ?t |- _] =>
+    rewrite H1 in H2; clear -H2; solve_msi
+  end.
+
 Ltac solve_not_in :=
   intro; dest_in; discriminate.
+
+Ltac solve_SubList :=
+  red; intros; dest_in; simpl; tauto.
 
 Ltac solve_DisjList :=
   match goal with
@@ -40,10 +57,58 @@ Section Sim.
   Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
     msiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
 
+  Definition ImplOStateValid (cv: nat)
+             (ost: OState ImplOStateIfc) (orq: ORq Msg): Prop :=
+    (msiS <= ost#[implStatusIdx] \/ orq@[upRq] = None) ->
+    ost#[implValueIdx] = cv.
+
+  Definition ImplOStateInvalid
+             (ost: OState ImplOStateIfc) (orq: ORq Msg): Prop :=
+    ost#[implStatusIdx] = msiI /\ orq@[upRq] <> None.
+
+  Section ExclInv.
+    Variables (dir: MSI)
+              (cost: OState ImplOStateIfc)
+              (corq: ORq Msg)
+              (pc cpRq cpRs: IdxT)
+              (msgs: MessagePool Msg).
+
+    Definition NoCohMsgs :=
+      forall idm,
+        InMPI msgs idm ->
+        match case (sigOf idm) on sig_dec default True with
+        | (pc, (MRs, msiRsS)): False
+        | (cpRs, (MRs, msiDownRsS)): False
+        | (cpRq, (MRq, msiRqI)): False
+        end.
+
+    Definition ChildExcl :=
+      msiM <= cost#[implStatusIdx] ->
+      corq@[upRq] = None ->
+      NoCohMsgs.
+
+    Definition DirMsgRsM :=
+      exists idm,
+        InMPI msgs idm /\ sigOf idm = (pc, (MRs, msiRsM)).
+
+    Definition DirMsgDownRsS :=
+      exists idm,
+        InMPI msgs idm /\ sigOf idm = (cpRs, (MRs, msiDownRsS)).
+
+    Definition DirExcl :=
+      (msiM <= dir -> DirMsgRsM -> True) /\
+      (DirMsgDownRsS -> dir = msiM).
+
+    Definition ExclInv :=
+      ChildExcl /\ DirExcl.
+
+  End ExclInv.
+  
   Section DirCoh.
     Variables (cv: nat)
               (dir: MSI)
               (cost: OState ImplOStateIfc)
+              (corq: ORq Msg)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
@@ -58,34 +123,39 @@ Section Sim.
       forall idm, InMPI msgs idm -> DirMsgCoh idm.
 
     Definition DirCoh :=
-      msiS <= dir -> ImplOStateMSI cv cost /\ DirMsgsCoh.
+      msiS <= dir -> ImplOStateValid cv cost corq /\ DirMsgsCoh.
 
   End DirCoh.
 
-  Definition DirCohEx (dir: nat) (cost: OState ImplOStateIfc)
-             (pc cpRq cpRs: IdxT) (msgs: MessagePool Msg) :=
-    exists cv, DirCoh cv dir cost pc cpRq cpRs msgs.
+  Definition DirCohEx
+             (post cost1 cost2: OState ImplOStateIfc)
+             (corq1 corq2: ORq Msg)
+             (msgs: MessagePool Msg) :=
+    exists cv,
+      ImplOStateMSI cv post /\
+      DirCoh cv post#[implDirIdx].(fst) cost1 corq1 pc1 c1pRq c1pRs msgs /\
+      DirCoh cv post#[implDirIdx].(snd) cost2 corq2 pc2 c2pRq c2pRs msgs.
 
-  Section DirExcl.
-    Variables (dir: MSI)
+  Section DirInvalid.
+    Variables (cv: nat)
+              (dir: MSI)
               (cost: OState ImplOStateIfc)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
-    Definition DirMsgRsM :=
+    Definition DirMsgRsI :=
       exists idm,
-        InMPI msgs idm /\ sigOf idm = (pc, (MRs, msiRsM)).
+        InMPI msgs idm /\ sigOf idm = (pc, (MRs, msiRsI)).
 
-    Definition DirMsgDownRsS :=
-      exists idm,
-        InMPI msgs idm /\ sigOf idm = (cpRs, (MRs, msiDownRsS)).
+    Definition DirInvalid :=
+      (dir = msiI -> 
 
-    Definition DirExcl :=
-      (dir = msiM -> DirMsgRsM -> cost#[implStatusIdx] = msiI) /\
-      (DirMsgDownRsS -> dir = msiM).
 
-  End DirExcl.
+       NoCohMsgs pc cpRq cpRs msgs) /\
+      (DirMsgRsI -> dir = msiI).
 
+  End DirInvalid.
+  
   Section DirInv.
     Variables (post cost1 cost2: OState ImplOStateIfc)
               (porq corq1 corq2: ORq Msg)
@@ -138,8 +208,8 @@ Section Sim.
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
       ImplOStateMSI cv post /\
-      DirCoh cv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
-      DirCoh cv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
+      DirCoh cv post#[implDirIdx].(fst) cost1 corq1 pc1 c1pRq c1pRs (bst_msgs st) /\
+      DirCoh cv post#[implDirIdx].(snd) cost2 corq2 pc2 c2pRq c2pRs (bst_msgs st).
 
   Definition ImplStateInv (st: MState ImplOStateIfc): Prop :=
     post <-- (bst_oss st)@[parentIdx];
@@ -149,10 +219,11 @@ Section Sim.
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
       DirInv post cost1 cost2 corq1 corq2 /\
-      DirExcl post#[implDirIdx].(fst) cost1 pc1 c1pRs (bst_msgs st) /\
-      DirExcl post#[implDirIdx].(snd) cost2 pc2 c2pRs (bst_msgs st) /\
-      DirCohEx post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
-      DirCohEx post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st) /\
+      ExclInv post#[implDirIdx].(fst) cost1 corq1 pc1 c1pRq c1pRs (bst_msgs st) /\
+      ExclInv post#[implDirIdx].(snd) cost2 corq2 pc2 c2pRq c2pRs (bst_msgs st) /\
+      DirCohEx post cost1 cost2 corq1 corq2 (bst_msgs st) /\
+      DirInvalid post#[implDirIdx].(fst) pc1 c1pRq c1pRs (bst_msgs st) /\
+      DirInvalid post#[implDirIdx].(snd) pc2 c2pRq c2pRs (bst_msgs st) /\
       DownLockInv porq.
 
   Definition SpecStateCoh (cv: nat) (st: MState SpecOStateIfc): Prop :=
@@ -182,29 +253,26 @@ Section Sim.
     SimState ist sst /\
     SimExtMP ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
 
-  Hint Unfold ImplOStateMSI DirCoh DirExcl
-       DirSound1 DirSound2 DirSoundS DirExcl1 DirExcl2 DirInv
+  Hint Unfold ImplOStateMSI ImplOStateValid ImplOStateInvalid
+       ChildExcl DirExcl ExclInv
+       DirCoh DirInvalid
+       DirExcl1 DirExcl2 DirSound1 DirSound2 DirSoundS DirInv
        ParentDownLockBack DownLockInv
        ImplStateCoh ImplStateInv: RuleConds.
 
   Section Facts.
 
-    (* Lemma implNoCohMsgs_DirMsgsCoh_1: *)
-    (*   forall cost1 cost2 msgs, *)
-    (*     ImplNoCohMsgs cost1 cost2 msgs -> *)
-    (*     forall cv, DirMsgsCoh cv pc1 c1pRq c1pRs msgs. *)
-    (* Proof. *)
-    (*   unfold ImplNoCohMsgs, DirMsgsCoh; intros. *)
-    (*   specialize (H _ H0). *)
-    (*   unfold caseDec in *. *)
-    (*   repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]). *)
-    (*   destruct (sig_dec _ _). *)
-    (*   find_if_inside. *)
-    (*   repeat (find_if_inside; [exfalso; auto; fail|]). *)
-    (*   find_if_inside; [intros; exfalso; rewrite H in H1; solve_msi|]. *)
-    (*   find_if_inside; [intros; exfalso; rewrite H in H1; solve_msi|]. *)
-    (*   auto. *)
-    (* Qed. *)
+    Lemma noCohMsgs_DirMsgsCoh:
+      forall pc cpRq cpRs msgs,
+        NoCohMsgs pc cpRq cpRs msgs ->
+        forall cv, DirMsgsCoh cv pc cpRq cpRs msgs.
+    Proof.
+      unfold NoCohMsgs, DirMsgsCoh, DirMsgCoh; intros.
+      specialize (H _ H0).
+      unfold caseDec in *.
+      repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+      auto.
+    Qed.
 
     Lemma simMsiSv_init:
       SimMSI (initsOf impl) (initsOf spec).
@@ -501,117 +569,135 @@ Section Sim.
       unfold findQ; mred.
     Qed.
 
-    (* Definition cohMsgIds: list IdxT := *)
-    (*   [msiRsS; msiDownRsS; msiRqI]. *)
+    Lemma DirMsgsCoh_enqMP:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall midx msg,
+          DirMsgCoh cv pc cpRq cpRs (midx, msg) ->
+          DirMsgsCoh cv pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_enqMP_or in H1; destruct H1; auto.
+      destruct idm as [midx' msg']; simpl in *; dest; subst.
+      assumption.
+    Qed.
+
+    Definition cohMsgIds: list IdxT :=
+      [msiRsS; msiDownRsS; msiRqI].
     
-    (* Lemma ImplMsgsCoh_other_msg_id_enqMP: *)
-    (*   forall cv cost1 cost2 msgs, *)
-    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
-    (*     forall midx msg, *)
-    (*       ~ In (msg_id msg) cohMsgIds -> *)
-    (*       ImplMsgsCoh cv cost1 cost2 (enqMP midx msg msgs). *)
-    (* Proof. *)
-    (* Admitted. *)
+    Lemma DirMsgsCoh_other_msg_id_enqMP:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In (msg_id msg) cohMsgIds ->
+          DirMsgsCoh cv pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_enqMP_or in H1; destruct H1; auto.
+      destruct idm as [midx' msg']; simpl in *; dest; subst.
+      destruct msg as [mid mty mval]; simpl in H0.
+      red; cbv [sigOf idOf valOf fst snd msg_id msg_type].
+      unfold caseDec.
+      repeat (find_if_inside; [inv e; exfalso; intuition idtac|]).
+      auto.
+    Qed.
 
-    (* Lemma ImplMsgsCoh_other_msg_id_enqMsgs: *)
-    (*   forall cv cost1 cost2 msgs, *)
-    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
-    (*     forall eins, *)
-    (*       DisjList (map (fun idm => msg_id (valOf idm)) eins) cohMsgIds -> *)
-    (*       ImplMsgsCoh cv cost1 cost2 (enqMsgs eins msgs). *)
-    (* Proof. *)
-    (*   intros. *)
-    (*   generalize dependent msgs. *)
-    (*   induction eins as [|ein eins]; simpl; intros; [assumption|]. *)
-    (*   destruct ein as [midx msg]; simpl in *. *)
-    (*   apply DisjList_cons in H0; dest. *)
-    (*   eapply IHeins; eauto. *)
-    (*   apply ImplMsgsCoh_other_msg_id_enqMP; auto. *)
-    (* Qed. *)
+    Lemma DirMsgsCoh_other_msg_id_enqMsgs:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall eins,
+          DisjList (map (fun idm => msg_id (valOf idm)) eins) cohMsgIds ->
+          DirMsgsCoh cv pc cpRq cpRs (enqMsgs eins msgs).
+    Proof.
+      intros.
+      generalize dependent msgs.
+      induction eins as [|ein eins]; simpl; intros; [assumption|].
+      destruct ein as [midx msg]; simpl in *.
+      apply DisjList_cons in H0; dest.
+      eapply IHeins; eauto.
+      apply DirMsgsCoh_other_msg_id_enqMP; auto.
+    Qed.
 
-    (* Definition cohMinds: list IdxT := *)
-    (*   [pc1; pc2; c1pRs; c2pRs; c1pRq; c2pRq]. *)
+    Lemma DirMsgsCoh_other_midx_enqMP:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In midx [pc; cpRq; cpRs] ->
+          DirMsgsCoh cv pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_enqMP_or in H1; destruct H1; auto.
+      destruct idm as [midx' msg']; simpl in *; dest; subst.
+      destruct msg as [mid mty mval].
+      red; cbv [sigOf idOf valOf fst snd msg_id msg_type].
+      unfold caseDec.
+      repeat (find_if_inside; [inv e; exfalso; intuition idtac|]).
+      auto.
+    Qed.
 
-    (* Lemma ImplMsgsCoh_other_midx_enqMP: *)
-    (*   forall cv cost1 cost2 msgs, *)
-    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
-    (*     forall midx msg, *)
-    (*       ~ In midx cohMinds -> *)
-    (*       ImplMsgsCoh cv cost1 cost2 (enqMP midx msg msgs). *)
-    (* Proof. *)
-    (* Admitted. *)
+    Lemma DirMsgsCoh_other_midx_enqMsgs:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall eins,
+          DisjList (idsOf eins) [pc; cpRq; cpRs] ->
+          DirMsgsCoh cv pc cpRq cpRs (enqMsgs eins msgs).
+    Proof.
+      intros.
+      generalize dependent msgs.
+      induction eins as [|ein eins]; simpl; intros; [assumption|].
+      destruct ein as [midx msg]; simpl in *.
+      apply DisjList_cons in H0; dest.
+      eapply IHeins; eauto.
+      apply DirMsgsCoh_other_midx_enqMP; auto.
+    Qed.
 
-    (* Lemma ImplMsgsCoh_other_midx_enqMsgs: *)
-    (*   forall cv cost1 cost2 msgs, *)
-    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
-    (*     forall eins, *)
-    (*       DisjList (idsOf eins) cohMinds -> *)
-    (*       ImplMsgsCoh cv cost1 cost2 (enqMsgs eins msgs). *)
-    (* Proof. *)
-    (*   intros. *)
-    (*   generalize dependent msgs. *)
-    (*   induction eins as [|ein eins]; simpl; intros; [assumption|]. *)
-    (*   destruct ein as [midx msg]; simpl in *. *)
-    (*   apply DisjList_cons in H0; dest. *)
-    (*   eapply IHeins; eauto. *)
-    (*   apply ImplMsgsCoh_other_midx_enqMP; auto. *)
-    (* Qed. *)
+    Lemma DirMsgsCoh_deqMP:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall midx,
+          DirMsgsCoh cv pc cpRq cpRs (deqMP midx msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_deqMP in H0; auto.
+    Qed.
 
-    (* Lemma ImplMsgsCoh_deqMP: *)
-    (*   forall cv cost1 cost2 msgs, *)
-    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
-    (*     forall midx, *)
-    (*       ImplMsgsCoh cv cost1 cost2 (deqMP midx msgs). *)
-    (* Proof. *)
-    (*   unfold ImplMsgsCoh; intros. *)
-    (*   apply InMP_deqMP in H0; auto. *)
-    (* Qed. *)
+    Lemma DirMsgsCoh_deqMsgs:
+      forall cv pc cpRq cpRs msgs,
+        DirMsgsCoh cv pc cpRq cpRs msgs ->
+        forall minds,
+          DirMsgsCoh cv pc cpRq cpRs (deqMsgs minds msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_deqMsgs in H0; auto.
+    Qed.
 
-    (* Lemma ImplMsgsCoh_deqMsgs: *)
-    (*   forall cv cost1 cost2 msgs, *)
-    (*     ImplMsgsCoh cv cost1 cost2 msgs -> *)
-    (*     forall minds, *)
-    (*       ImplMsgsCoh cv cost1 cost2 (deqMsgs minds msgs). *)
-    (* Proof. *)
-    (*   unfold ImplMsgsCoh; intros. *)
-    (*   apply InMP_deqMsgs in H0; auto. *)
-    (* Qed. *)
+    Definition cohMinds: list IdxT :=
+      [pc1; pc2; c1pRs; c2pRs; c1pRq; c2pRq].
 
-    (* Lemma SimState_impl_other_msg_id_enqMsgs: *)
-    (*   forall ioss iorqs imsgs sst, *)
-    (*     SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst -> *)
-    (*     forall nmsgs, *)
-    (*       DisjList (map (fun idm => msg_id (valOf idm)) nmsgs) cohMsgIds -> *)
-    (*       SimState {| bst_oss := ioss; bst_orqs := iorqs; *)
-    (*                   bst_msgs := enqMsgs nmsgs imsgs |} sst. *)
-    (* Proof. *)
-    (*   intros. *)
-    (*   inv H. *)
-    (*   apply SimStateIntro with (cv:= cv); [assumption|]. *)
-    (*   clear H1. *)
-    (*   red in H2; red; simpl in *. *)
-    (*   disc_rule_conds_ex. *)
-    (*   repeat split; try assumption. *)
-    (*   eapply ImplMsgsCoh_other_msg_id_enqMsgs; eauto. *)
-    (* Qed. *)
-
-    (* Lemma SimState_impl_other_midx_enqMsgs: *)
-    (*   forall ioss iorqs imsgs sst, *)
-    (*     SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst -> *)
-    (*     forall nmsgs, *)
-    (*       DisjList (idsOf nmsgs) cohMinds -> *)
-    (*       SimState {| bst_oss := ioss; bst_orqs := iorqs; *)
-    (*                   bst_msgs := enqMsgs nmsgs imsgs |} sst. *)
-    (* Proof. *)
-    (*   intros. *)
-    (*   inv H. *)
-    (*   apply SimStateIntro with (cv:= cv); [assumption|]. *)
-    (*   clear H1. *)
-    (*   red in H2; red; simpl in *. *)
-    (*   disc_rule_conds_ex. *)
-    (*   repeat split; try assumption. *)
-    (*   eapply ImplMsgsCoh_other_midx_enqMsgs; eauto. *)
-    (* Qed. *)
+    Lemma SimState_impl_other_midx_enqMsgs:
+      forall ioss iorqs imsgs sst,
+        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
+        forall nmsgs,
+          DisjList (idsOf nmsgs) cohMinds ->
+          SimState {| bst_oss := ioss; bst_orqs := iorqs;
+                      bst_msgs := enqMsgs nmsgs imsgs |} sst.
+    Proof.
+      intros.
+      inv H.
+      apply SimStateIntro with (cv:= cv); [assumption|].
+      clear H1.
+      red in H2; red; simpl in *.
+      disc_rule_conds_ex.
+      repeat split; intuition.
+      - apply DirMsgsCoh_other_midx_enqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply DirMsgsCoh_other_midx_enqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+    Qed.
 
     Lemma SimState_spec_enqMsgs:
       forall ist soss sorqs smsgs,
@@ -625,24 +711,23 @@ Section Sim.
       econstructor; eauto.
     Qed.
 
-    (* Lemma SimState_impl_deqMsgs: *)
-    (*   forall ioss iorqs imsgs sst, *)
-    (*     SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst -> *)
-    (*     forall minds, *)
-    (*       SimState {| bst_oss := ioss; bst_orqs := iorqs; *)
-    (*                   bst_msgs := deqMsgs minds imsgs |} sst. *)
-    (* Proof. *)
-    (*   intros. *)
-    (*   inv H. *)
-    (*   apply SimStateIntro with (cv:= cv); [assumption|]. *)
-    (*   clear H0. *)
-    (*   red in H1; red; simpl in *. *)
-    (*   disc_rule_conds_ex. *)
-    (*   repeat split; try assumption. *)
-    (*   clear -H0. *)
-    (*   red in H0; red; intros. *)
-    (*   apply InMP_deqMsgs in H; auto. *)
-    (* Qed. *)
+    Lemma SimState_impl_deqMsgs:
+      forall ioss iorqs imsgs sst,
+        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
+        forall minds,
+          SimState {| bst_oss := ioss; bst_orqs := iorqs;
+                      bst_msgs := deqMsgs minds imsgs |} sst.
+    Proof.
+      intros.
+      inv H.
+      apply SimStateIntro with (cv:= cv); [assumption|].
+      clear H0.
+      red in H1; red; simpl in *.
+      disc_rule_conds_ex.
+      repeat split; intuition.
+      - apply DirMsgsCoh_deqMsgs; assumption.
+      - apply DirMsgsCoh_deqMsgs; assumption.
+    Qed.
 
     Lemma SimState_spec_deqMsgs:
       forall ist soss sorqs smsgs,
@@ -842,14 +927,13 @@ Section Sim.
       + eapply SmIns; eauto.
       + split.
         * apply SimState_spec_enqMsgs.
-          (* apply SimState_impl_other_midx_enqMsgs; [assumption|]. *)
-          (* destruct H1. *)
-          (* eapply DisjList_SubList; [eassumption|]. *)
-          (* solve_DisjList. *)
-          admit.
+          apply SimState_impl_other_midx_enqMsgs; [assumption|].
+          destruct H1.
+          eapply DisjList_SubList; [eassumption|].
+          solve_DisjList.
         * apply SimExtMP_enqMsgs; auto.
           apply H1.
-    Admitted.
+    Qed.
 
     Lemma simMsiSv_sim_ext_out:
       forall oss orqs msgs sst1,
@@ -874,11 +958,10 @@ Section Sim.
         eapply SimExtMP_ext_outs_FirstMPI; eauto.
       + split.
         * apply SimState_spec_deqMsgs.
-          (* apply SimState_impl_deqMsgs. *)
-          (* assumption. *)
-          admit.
+          apply SimState_impl_deqMsgs.
+          assumption.
         * apply SimExtMP_ext_outs_deqMsgs; auto.
-    Admitted.
+    Qed.
 
     Lemma simMsiSv_sim:
       InvSim step_m step_m ImplStateInv SimMSI impl spec.
@@ -917,9 +1000,8 @@ Section Sim.
 
         assert (pos#[implValueIdx] = fst sost).
         { solve_rule_conds_ex.
-          apply H15; [|assumption].
-          clear -H1 H18.
-          solve_msi.
+          apply H15; [|auto].
+          clear -H1 H18; solve_msi.
         }
         simpl in H4; rewrite H4 in *.
         
@@ -928,12 +1010,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childGetRqS] *)
@@ -945,12 +1030,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childGetRsS] *)
@@ -963,7 +1051,7 @@ Section Sim.
         pull_uplock_facts child1Idx.
 
         assert (n = fst sost)
-          by (disc_DirMsgsCoh_by_FirstMP H12 H41; congruence).
+          by (disc_DirMsgsCoh_by_FirstMP H12 H51; congruence).
         subst.
 
         red; simpl; split.
@@ -971,11 +1059,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childDownRqS] *)
@@ -987,12 +1079,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_enqMP.
+              { apply DirMsgsCoh_deqMP; assumption. }
+              { cbn; congruence. }
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childSetRqImm] *)
@@ -1005,11 +1100,19 @@ Section Sim.
             solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { clear -H9; intros; solve_msi. }
-            { admit. }
-            { clear -H12 H29; intros; solve_msi. }
-            { admit. }
+            intuition idtac.
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              apply noCohMsgs_DirMsgsCoh.
+              apply H36; [clear -H19; solve_msi|reflexivity].
+            }
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              apply noCohMsgs_DirMsgsCoh; assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childSetRqM] *)
@@ -1021,12 +1124,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
           
       - (** [childSetRsM] *)
@@ -1044,11 +1150,18 @@ Section Sim.
             solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { clear -H28; intros; solve_msi. }
-            { admit. }
-            { clear -H4 H39; intros; solve_msi. }
-            { admit. }
+            intuition idtac.
+            { solve_msi_false. }
+            { apply noCohMsgs_DirMsgsCoh.
+              rewrite <-H55 in H19.
+              apply H19; auto.
+            }
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              apply noCohMsgs_DirMsgsCoh; assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childDownRqI] *)
@@ -1060,12 +1173,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childEvictRqI] *)
@@ -1077,12 +1193,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_enqMP.
+              { apply DirMsgsCoh_deqMP; assumption. }
+              { cbn; congruence. }
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [childEvictRsI] *)
@@ -1099,12 +1218,23 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { clear; intros; solve_msi. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { solve_msi_false. }
+            { rewrite H41 in H31; [solve_msi_false|].
+              eexists (_, _); split.
+              { apply FirstMP_InMP; eassumption. }
+              { unfold sigOf; simpl.
+                rewrite H50, H51; reflexivity.
+              }
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - admit.
@@ -1122,25 +1252,19 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_silent.
 
+        (** * FIXME: check later whether we really need [DirCohEx] as inv. *)
+        rewrite H0 in *.
+        destruct H20 as [cv ?].
+        disc_rule_conds_ex.
+        specialize (H4 ltac:(auto)).
+        subst.
+
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { destruct H20 as [cv ?].
-              disc_rule_conds_ex.
-              red in H20.
-              specialize (H20 (pc1, _) (InMP_or_enqMP
-                                          (deqMP c1pRq msgs)
-                                          (or_introl (conj eq_refl eq_refl)))).
-              red in H20; simpl in H20.
-              congruence.
-            }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
         + solve_sim_ext_mp.
 
       - (** [parentGetDownRqS] *)
@@ -1152,34 +1276,46 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [parentSetRqImm] *)
         disc_rule_conds_ex.
         spec_case_silent.
 
+        (* simplify [getDir] *)
+        unfold getDir in *; simpl in *.
+
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
-            disc_rule_conds_ex.
-            repeat split.
-            { clear; intros; solve_msi. }
-            { intros; exfalso.
-              rewrite H12 in H5; [clear -H5; solve_msi|].
-              eexists (_, _); split.
-              { apply InMP_or_enqMP; simpl; auto. }
-              { reflexivity. }
+            destruct (Compare_dec.le_gt_dec msiS (fst (fst (snd (snd post))))).
+            { disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
             }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            { assert (fst (fst (snd (snd post))) = msiI) by (clear -g; solve_msi).
+              disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              { admit. }
+              { admit. }
+              { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+                apply DirMsgsCoh_deqMP.
+                apply noCohMsgs_DirMsgsCoh.
+                assumption.
+              }
+            }
         + solve_sim_ext_mp.
 
       - (** [parentSetDownRqI] *)
@@ -1191,55 +1327,63 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [parentGetDownRsS] *)
         disc_rule_conds_ex.
         spec_case_silent.
 
-        inv H43.
+        inv H53.
         specialize (H9 eq_refl).
-        rewrite H34 in H16
-          by (eexists; split;
-              [apply FirstMP_InMP; eassumption
-              |unfold sigOf; simpl; congruence]).
-        specialize (H16 ltac:(solve_msi)); dest.
-        disc_DirMsgsCoh_by_FirstMP H12 H17.
-        rewrite H12 in Hmsg; inv Hmsg.
         rewrite H9 in *.
+        unfold setDir in *; simpl in *.
 
+        assert (post#[implDirIdx].(snd) = msiM).
+        { apply H43.
+          eexists (_, _); split.
+          { apply FirstMP_InMP; eassumption. }
+          { unfold sigOf; simpl.
+            rewrite H50, H51; reflexivity.
+          }
+        }
+        disc_rule_conds_ex.
+
+        (* Discharge previous simulation *)
+        specialize (H16 ltac:(clear -H5; solve_msi)); dest.
+        disc_DirMsgsCoh_by_FirstMP H16 H17.
+        rewrite Hmsg in H16; inv H16.
+
+        (* Discharge [DirCohEx] *)
         move H20 at bottom.
-        destruct H20 as [cv ?].
-        specialize (H16 ltac:(solve_msi)); dest.
-        specialize (H20 (pc1, _) (InMP_or_enqMP
-                                    (deqMP c2pRs msgs)
-                                    (or_introl (conj eq_refl eq_refl)))).
-        red in H20; simpl in H20.
-        inv H20.
+        destruct H20 as [cv ?]; dest.
+        specialize (H20 ltac:(auto)); dest.
 
         red; simpl; split.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { assumption. }
-            { admit. }
-            { assumption. }
-            { admit. }
+            intuition idtac.
+            { congruence. }
+            { congruence. }
+            { subst; assumption. }
+            { subst; assumption. }
         + solve_sim_ext_mp.
 
       - (** [parentSetDownRsI] *)
         disc_rule_conds_ex.
         spec_case_silent.
 
-        inv H43.
+        inv H53.
         specialize (H9 eq_refl).
         rewrite H9 in *.
 
@@ -1247,19 +1391,25 @@ Section Sim.
         + eapply SimStateIntro with (cv:= fst sost).
           * solve_rule_conds_ex.
           * red; simpl.
-            disc_rule_conds_ex.
-            repeat split.
-            { clear; intros; solve_msi. }
-            { intros; exfalso.
-              rewrite H18 in H33; [clear -H33; solve_msi|].
-              eexists (_, _); split.
-              { apply InMP_or_enqMP; simpl; auto. }
-              { reflexivity. }
+            destruct (Compare_dec.le_gt_dec msiS (fst (fst (snd (snd post))))).
+            { disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
             }
-            { admit. }
-            { clear -H5; intros; solve_msi. }
-            { admit. }
-        + admit.
+            { assert (fst (fst (snd (snd post))) = msiI) by (clear -g; solve_msi).
+              disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              { admit. }
+              { admit. }
+              { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+                apply DirMsgsCoh_deqMP.
+                apply noCohMsgs_DirMsgsCoh.
+                assumption.
+              }
+            }
+        + solve_sim_ext_mp.
 
       - (** [parentEvictRqImmI] *)
         disc_rule_conds_ex.
@@ -1270,12 +1420,15 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { solve_rule_conds_ex. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [parentEvictRqImmS] *)
@@ -1287,12 +1440,14 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { solve_rule_conds_ex. }
-            { clear -H4; solve_msi. }
-            { admit. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
 
       - (** [parentEvictRqImmLastS] *)
@@ -1307,15 +1462,17 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
+            intuition idtac.
             { solve_rule_conds_ex.
-              apply H0.
-              rewrite H39; auto.
+              apply H0; rewrite H9; auto.
             }
-            { clear -H4; solve_msi. }
-            { clear -H4; solve_msi. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
           
       - (** [parentEvictRqImmM] *)
@@ -1327,8 +1484,8 @@ Section Sim.
 
         (* discharging [ImplStateInv] *)
         assert (n = fst sost).
-        { specialize (H15 ltac:(solve_msi)); dest.
-          disc_DirMsgsCoh_by_FirstMP H5 H43.
+        { specialize (H15 ltac:(clear -H19; solve_msi)); dest.
+          disc_DirMsgsCoh_by_FirstMP H5 H53.
           congruence.
         }
         subst.
@@ -1338,11 +1495,14 @@ Section Sim.
           * solve_rule_conds_ex.
           * red; simpl.
             disc_rule_conds_ex.
-            repeat split.
-            { clear -H4; solve_msi. }
-            { clear -H4; solve_msi. }
-            { solve_rule_conds_ex. }
-            { admit. }
+            intuition idtac.
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
         + solve_sim_ext_mp.
           
     Admitted.
