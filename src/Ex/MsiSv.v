@@ -164,8 +164,7 @@ Section System.
       :transition
          (do (n <-- getFirstNatMsg;
                 st {{ ImplOStateIfc }}
-                   --> (st.ost +#[implValueIdx <- n]
-                               +#[implStatusIdx <- msiM],
+                   --> (st.ost +#[implValueIdx <- n],
                         st.orq,
                         [(ce, {| msg_id := setRs;
                                  msg_type := MRs;
@@ -290,7 +289,7 @@ Section System.
               /\ UpLockFree
               /\ DownLockFree
               /\ (fun (ost: OState ImplOStateIfc) orq mins =>
-                    ost#[implStatusIdx] >= msiS))
+                    msiS <= ost#[implStatusIdx]))
           :transition
              (fun (ost: OState ImplOStateIfc) orq mins =>
                 (ost +#[implStatusIdx <- msiS]
@@ -362,7 +361,7 @@ Section System.
               /\ MsgIdsFrom [msiDownRsS]
               /\ RsAccepting
               /\ FirstNatMsg
-              /\ DownLocked)
+              /\ DownLockMsgId MRq msiDownRqS)
           :transition
              (do (nv <-- getFirstNatMsg;
                     ursb <-- getDownLockIdxBack;
@@ -382,7 +381,7 @@ Section System.
               /\ MsgIdsFrom [msiDownRsI]
               /\ RsAccepting
               /\ FirstNatMsg
-              /\ DownLocked)
+              /\ DownLockMsgId MRq msiDownRqI)
           :transition
              (do (ursb <-- getDownLockIdxBack;
                     st {{ ImplOStateIfc }}

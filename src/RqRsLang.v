@@ -64,6 +64,17 @@ Definition getUpLockMsgId {oifc} (st: StateM oifc): option (bool * IdxT) :=
     >>= (fun rqiu => Some (rqiu.(rqi_msg).(msg_type),
                            rqiu.(rqi_msg).(msg_id))).
 
+Definition UpLockMsg {oifc}: OPrec oifc :=
+  fun ost orq mins =>
+    match orq@[upRq] with
+    | Some _ => True
+    | _ => False
+    end.
+
+Definition getUpLockMsg {oifc} (st: StateM oifc): option Msg :=
+  ((snd (fst st))@[upRq])
+    >>= (fun rqiu => Some (rqi_msg rqiu)).
+
 Definition UpLockNatMsg {oifc}: OPrec oifc :=
   fun ost orq mins =>
     (orq@[upRq])
@@ -88,6 +99,19 @@ Definition UpLocked {oifc}: OPrec oifc :=
 Definition getUpLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
   ((snd (fst st))@[upRq])
     >>= (fun rqiu => Some rqiu.(rqi_midx_rsb)).
+
+Definition DownLockMsgId {oifc} (mty: bool) (mid: IdxT): OPrec oifc :=
+  fun ost orq mins =>
+    (orq@[downRq])
+      >>=[False]
+      (fun rqiu =>
+         rqiu.(rqi_msg).(msg_type) = mty /\
+         rqiu.(rqi_msg).(msg_id) = mid).
+
+Definition getDownLockMsgId {oifc} (st: StateM oifc): option (bool * IdxT) :=
+  ((snd (fst st))@[downRq])
+    >>= (fun rqiu => Some (rqiu.(rqi_msg).(msg_type),
+                           rqiu.(rqi_msg).(msg_id))).
 
 Definition DownLockNatMsg {oifc}: OPrec oifc :=
   fun ost orq mins =>
@@ -140,10 +164,13 @@ Definition MsgsTo {oifc} (tos: list IdxT) (rule: Rule oifc): Prop :=
 
 Hint Unfold StateMBind TrsMTrs getFirstMsg
      FirstNatMsg getFirstNatMsg
+     UpLockMsg getUpLockMsg
      UpLockNatMsg getUpLockNatMsg
      UpLockMsgId getUpLockMsgId
      UpLocked getUpLockIdxBack
-     DownLockNatMsg getDownLockNatMsg DownLocked getDownLockIdxBack
+     DownLockNatMsg getDownLockNatMsg
+     DownLockMsgId getDownLockMsgId
+     DownLocked getDownLockIdxBack
      MsgsFrom MsgIdsFrom MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
 Module RqRsNotations.
