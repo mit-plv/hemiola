@@ -4,6 +4,7 @@ Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
 Require Import Msi MsiSv SpecSv MsiSvTopo.
+Require Export MsiSvInvB.
 
 Set Implicit Arguments.
 
@@ -13,6 +14,8 @@ Import CaseNotations.
 Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
+
+(*! TODO: move to another file for general use *)
 
 Ltac disc_AtomicInv :=
   repeat
@@ -105,1843 +108,1249 @@ Ltac disc_msg_preds Hin :=
     disc_msg_preds_with Hl Hin
   end.
 
-(* Section Inv. *)
+Ltac pull_uplock_minds oidx :=
+  progress (good_footprint_get oidx);
+  repeat
+    match goal with
+    | [H: FootprintUpOkEx _ _ _ |- _] =>
+      let rqFrom := fresh "rqFrom" in
+      let rqTo := fresh "rqTo" in
+      let rsFrom := fresh "rsFrom" in
+      let rsbTo := fresh "rsbTo" in
+      destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest;
+      disc_rule_conds_ex
+    | [H: parentIdxOf _ _ = Some ?oidx |- _] =>
+      is_const oidx;
+      pose proof (parentIdxOf_child_indsOf _ _ H);
+      dest_in; try discriminate; simpl in *; clear H
+    | [H: rqEdgeUpFrom _ ?oidx = Some _ |- _] =>
+      is_const oidx; inv H
+    | [H: rsEdgeUpFrom _ ?oidx = Some _ |- _] =>
+      is_const oidx; inv H
+    | [H: edgeDownTo _ ?oidx = Some _ |- _] =>
+      is_const oidx; inv H
+    end.
 
-(*   (** Basic predicates per an object *) *)
+Ltac pull_uplock_inv obj sys :=
+  let H := fresh "H" in
+  assert (In obj (sys_objs sys)) as H by (simpl; tauto);
+  progress (good_locking_get obj);
+  clear H.
 
-(*   Definition ImplOStateM (cv: nat) (ost: OState ImplOStateIfc): Prop := *)
-(*     ost#[implStatusIdx] = msiM /\ ost#[implValueIdx] = cv. *)
+Ltac exfalso_uplock_rq_rs pidx' rqUp' down' :=
+  progress
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_rqUp_down_rssQ_False
+        with (pidx:= pidx') (rqUp:= rqUp') (down:= down') in H;
+      try reflexivity; auto
+    end;
+  repeat
+    match goal with
+    | [ |- Datatypes.length (findQ _ _) >= 1] =>
+      eapply findQ_length_ge_one; try eassumption
+    | [ |- Datatypes.length (rssQ _ _) >= 1] =>
+      eapply rssQ_length_ge_one; try eassumption
+    | [H: FirstMPI _ (?midx, _) |- InMP ?midx _ _] =>
+      apply FirstMP_InMP; eassumption
+    end.
 
-(*   Definition ImplOStateS (cv: nat) (ost: OState ImplOStateIfc): Prop := *)
-(*     ost#[implStatusIdx] = msiS /\ ost#[implValueIdx] = cv. *)
+Ltac exfalso_uplock_rs_two pidx' down' msg :=
+  progress
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_down_rssQ_length_two_False
+        with (pidx:= pidx') (down:= down') in H;
+      try reflexivity; auto
+    end;
+  repeat
+    match goal with
+    | [ |- Datatypes.length (rssQ (enqMP _ ?omsg _) _) >= 2] =>
+      eapply rssQ_length_two with (msg1:= omsg) (msg2:= msg);
+      try eassumption; auto
+    | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
+    | [ |- InMP ?midx ?msg (enqMP ?midx ?msg _)] =>
+      apply InMP_or_enqMP; left; auto
+    | [ |- InMP _ _ (enqMP _ _ _)] =>
+      apply InMP_or_enqMP; right
+    | [ |- InMP _ _ (deqMP _ _)] =>
+      eapply deqMP_InMP; try eassumption
+    end.
 
-(*   Definition ImplOStateI (ost: OState ImplOStateIfc): Prop := *)
-(*     ost#[implStatusIdx] = msiI. *)
+Section Inv.
 
-(*   Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop := *)
-(*     ost#[implStatusIdx] >= msiS -> ost#[implValueIdx] = cv. *)
+  Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+    msiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
 
-(*   Definition ImplDirM (ost: OState ImplOStateIfc): Prop := *)
-(*     (ost#[implDirIdx].(fst) = msiM /\ ost#[implDirIdx].(snd) = msiI) \/ *)
-(*     (ost#[implDirIdx].(fst) = msiI /\ ost#[implDirIdx].(snd) = msiM). *)
+  Definition MsgExistsSig (sig: MSig) (msgs: MessagePool Msg) :=
+    exists idm, InMPI msgs idm /\ sigOf idm = sig.
 
-(*   Definition ImplDirS (ost: OState ImplOStateIfc): Prop := *)
-(*     ost#[implDirIdx].(fst) <= msiS /\ *)
-(*     ost#[implDirIdx].(snd) <= msiS. *)
+  Section InvExcl.
+    Variables (dir: MSI)
+              (cost: OState ImplOStateIfc)
+              (corq: ORq Msg)
+              (pc cpRq cpRs: IdxT)
+              (msgs: MessagePool Msg).
 
-(*   Definition ImplDirI (ost: OState ImplOStateIfc): Prop := *)
-(*     ost#[implDirIdx].(fst) = msiI /\ *)
-(*     ost#[implDirIdx].(snd) = msiI. *)
+    Definition InvalidMsgs :=
+      forall idm,
+        InMPI msgs idm ->
+        match case (sigOf idm) on sig_dec default True with
+        | (pc, (MRs, msiRsS)): False
+        | (cpRs, (MRs, msiDownRsS)): False
+        | (cpRq, (MRq, msiRqI)): cost#[implStatusIdx] = msiI
+        end.
 
-(*   Section GInv. *)
-(*     Variables (post cost1 cost2: OState ImplOStateIfc) *)
-(*               (porq corq1 corq2: ORq Msg). *)
+    (** Required when handling [setRq], need to know [DirMsgsCoh] but instead
+     * [InvalidMsgs] holds and it implies [DirMsgsCoh].
+     *)
+    Definition ChildExcl :=
+      msiM <= cost#[implStatusIdx] -> corq@[upRq] = None ->
+      InvalidMsgs.
 
-(*     (** The first invariant: the directory status is coherent to statuses of *) *)
-(* (*      * children. Note that an object is *not* required to keep the coherency *) *)
-(* (*      * when it is (properly) locked (the meaning of "properly" depends on the *) *)
-(* (*      * protocol). *) *)
-(* (*      *) *)
-(*     Definition ImplDirCoh: Prop := *)
-(*       (!corq1@[upRq]; cost1#[implStatusIdx] <= post#[implDirIdx].(fst)) /\ *)
-(*       (!corq2@[upRq]; cost2#[implStatusIdx] <= post#[implDirIdx].(snd)). *)
+    Definition DirExcl :=
+      msiM <= dir ->
+      MsgExistsSig (cpRq, (MRq, msiRqI)) msgs ->
+      msiM <= cost#[implStatusIdx].
+
+    Definition ExclInv :=
+      ChildExcl /\ DirExcl.
+
+  End InvExcl.
+
+  Section InvInvalid.
+    Variables (dir: MSI)
+              (cost: OState ImplOStateIfc)
+              (pc cpRq cpRs: IdxT)
+              (msgs: MessagePool Msg).
+
+    Definition ChildInvalid :=
+      cost#[implStatusIdx] = msiI \/
+      MsgExistsSig (pc, (MRs, msiRsI)) msgs.
     
-(*     (** The second invariant is only for parent, saying that the parent status *) *)
-(* (*      * and its directory status are coherent. *) *)
-(* (*      *) *)
-(*     Definition ImplParentCoh (cv: nat): Prop := *)
-(*       (ImplOStateM cv post /\ ImplDirI post) \/ *)
-(*       (ImplOStateS cv post /\ ImplDirS post) \/ *)
-(*       (ImplOStateI post /\ ImplDirM post). *)
+    Definition InvalidInv :=
+      dir = msiI ->
+      ChildInvalid /\ InvalidMsgs cost pc cpRq cpRs msgs.
 
-(*     (** The last invariant is for children, in order for ensuring *) *)
-(* (*      * the local coherency.  *) *)
-(* (*      *) *)
-(*     Definition ImplChildCoh1 (cv: nat): Prop := *)
-(*       !corq1@[upRq]; ImplOStateMSI cv cost1. *)
-(*     Definition ImplChildCoh2 (cv: nat): Prop := *)
-(*       !corq2@[upRq]; ImplOStateMSI cv cost2. *)
+  End InvInvalid.
 
-(*     Definition ImplChildrenCoh: Prop := *)
-(*       !corq1@[upRq]; !corq2@[upRq]; *)
-(*         (cost1#[implStatusIdx] = msiM -> cost2#[implStatusIdx] = msiI) /\ *)
-(*         (cost2#[implStatusIdx] = msiM -> cost1#[implStatusIdx] = msiI). *)
-  
-(*     Definition ImplStateCoh (cv: nat): Prop := *)
-(*       ImplParentCoh cv /\ *)
-(*       ImplChildCoh1 cv /\ ImplChildCoh2 cv /\ *)
-(*       ImplChildrenCoh. *)
+  Section InvDir.
+    Variables (post cost1 cost2: OState ImplOStateIfc)
+              (corq1 corq2: ORq Msg).
 
-(*     Definition ImplParentLockInv: Prop := *)
-(*       rqid <+- porq@[downRq]; *)
-(*         ((rqid.(rqi_minds_rss) = [c2pRs] /\ rqid.(rqi_midx_rsb) = pc1) \/ *)
-(*          (rqid.(rqi_minds_rss) = [c1pRs] /\ rqid.(rqi_midx_rsb) = pc2)). *)
+    (* Why soundness of the directory:
+     * 1) We need to relax when an object value is coherent, by allowing
+     *    the case where [Ci.st >= S /\ P.dir.Ci >= S] and [Ci] not necessarily
+     *    being lock-free.
+     * 2) In order to know an object value is coherent when [Ci.st >= S] and
+     *    [Ci] is lock-free, we need this soundness.
+     *)
+    Definition DirSound1: Prop :=
+      !corq1@[upRq]; cost1#[implStatusIdx] <= post#[implDirIdx].(fst).
+
+    Definition DirSound2: Prop :=
+      !corq2@[upRq]; cost2#[implStatusIdx] <= post#[implDirIdx].(snd).
+
+    Definition DirInv: Prop :=
+      DirSound1 /\ DirSound2.
+
+  End InvDir.
+
+  Definition ImplInv (st: MState ImplOStateIfc): Prop :=
+    post <-- (bst_oss st)@[parentIdx];
+      cost1 <-- (bst_oss st)@[child1Idx];
+      cost2 <-- (bst_oss st)@[child2Idx];
+      porq <-- (bst_orqs st)@[parentIdx];
+      corq1 <-- (bst_orqs st)@[child1Idx];
+      corq2 <-- (bst_orqs st)@[child2Idx];
+      DirInv post cost1 cost2 corq1 corq2 /\
+      ExclInv post#[implDirIdx].(fst) cost1 corq1 pc1 c1pRq c1pRs (bst_msgs st) /\
+      ExclInv post#[implDirIdx].(snd) cost2 corq2 pc2 c2pRq c2pRs (bst_msgs st) /\
+      InvalidInv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
+      InvalidInv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
+
+  Hint Unfold ImplOStateMSI ChildExcl DirExcl ExclInv InvalidInv
+       DirSound1 DirSound2 DirInv: RuleConds.
+
+  Section Facts.
+
+    Lemma dirInv_orqs_weakened_1:
+      forall post cost1 cost2 corq1 corq2,
+        DirInv post cost1 cost2 corq1 corq2 ->
+        forall rty rqi,
+          DirInv post cost1 cost2 (corq1 +[rty <- rqi]) corq2.
+    Proof.
+      unfold DirInv; intros; dest.
+      split; [|assumption].
+      red in H; red; mred.
+    Qed.
+
+    Lemma dirInv_orqs_weakened_2:
+      forall post cost1 cost2 corq1 corq2,
+        DirInv post cost1 cost2 corq1 corq2 ->
+        forall rty rqi,
+          DirInv post cost1 cost2 corq1 (corq2 +[rty <- rqi]).
+    Proof.
+      unfold DirInv; intros; dest.
+      split; [assumption|].
+      red in H0; red; mred.
+    Qed.
+
+    Lemma exclInv_orqs_weakened:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall rty rqi,
+          ExclInv dir cost (corq +[rty <- rqi]) pc cpRq cpRs msgs.
+    Proof.
+      unfold ExclInv; intros; dest.
+      split; [|assumption].
+      red in H; red; mred.
+    Qed.
+
+    Lemma implInv_orqs_weakened:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall oidx porq norq rty rqi,
+          orqs@[oidx] = Some porq ->
+          norq = porq +[rty <- rqi] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs +[oidx <- norq];
+                     bst_msgs := msgs |}.
+    Proof.
+      unfold ImplInv; simpl; intros.
+      disc_rule_conds_const; dest.
+      mred; simpl; auto.
+      - repeat ssplit; try assumption.
+        + apply dirInv_orqs_weakened_1; assumption.
+        + apply exclInv_orqs_weakened; assumption.
+      - repeat ssplit; try assumption.
+        + apply dirInv_orqs_weakened_2; assumption.
+        + apply exclInv_orqs_weakened; assumption.
+    Qed.
+
+    Lemma msgExistsSig_enqMP:
+      forall sig msgs,
+        MsgExistsSig sig msgs ->
+        forall nmidx nmsg,
+          MsgExistsSig sig (enqMP nmidx nmsg msgs).
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      exists (midx, msg); split; auto.
+      apply InMP_or_enqMP; auto.
+    Qed.
+
+    Lemma msgExistsSig_enqMsgs:
+      forall sig msgs,
+        MsgExistsSig sig msgs ->
+        forall nmsgs,
+          MsgExistsSig sig (enqMsgs nmsgs msgs).
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      exists (midx, msg); split; auto.
+      apply InMP_or_enqMsgs; auto.
+    Qed.
+
+    Lemma msgExistsSig_deqMP:
+      forall sig msgs,
+        MsgExistsSig sig msgs ->
+        forall rmidx,
+          rmidx <> fst sig ->
+          MsgExistsSig sig (deqMP rmidx msgs).
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      exists (midx, msg); split; auto.
+      apply deqMP_InMP_midx; auto.
+    Qed.
+
+    Lemma msgExistsSig_deqMsgs:
+      forall sig msgs,
+        MsgExistsSig sig msgs ->
+        forall rminds,
+          ~ In (fst sig) rminds ->
+          MsgExistsSig sig (deqMsgs rminds msgs).
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      exists (midx, msg); split; auto.
+      apply deqMsgs_InMP_midx; auto.
+    Qed.
+
+    Lemma msgExistsSig_enqMP_or:
+      forall sig msgs nmidx nmsg,
+        MsgExistsSig sig (enqMP nmidx nmsg msgs) ->
+        sigOf (nmidx, nmsg) = sig \/ MsgExistsSig sig msgs.
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      apply InMP_enqMP_or in H; destruct H; eauto.
+      simpl in *; dest; subst; auto.
+    Qed.
+
+    Lemma msgExistsSig_enqMsgs_or:
+      forall sig msgs nmsgs,
+        MsgExistsSig sig (enqMsgs nmsgs msgs) ->
+        (exists idm, In idm nmsgs /\ sigOf idm = sig) \/
+        MsgExistsSig sig msgs.
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      apply InMP_enqMsgs_or in H; destruct H; eauto.
+    Qed.
+
+    Lemma msgExistsSig_deqMP_inv:
+      forall sig msgs rmidx,
+        MsgExistsSig sig (deqMP rmidx msgs) ->
+        MsgExistsSig sig msgs.
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      apply InMP_deqMP in H.
+      eauto.
+    Qed.
+
+    Lemma msgExistsSig_deqMsgs_inv:
+      forall sig msgs rminds,
+        MsgExistsSig sig (deqMsgs rminds msgs) ->
+        MsgExistsSig sig msgs.
+    Proof.
+      unfold MsgExistsSig; intros.
+      destruct H as [[midx msg] [? ?]]; subst.
+      apply InMP_deqMsgs in H.
+      eauto.
+    Qed.
+
+    Lemma childInvalid_enqMP:
+      forall cost pc msgs,
+        ChildInvalid cost pc msgs ->
+        forall midx msg,
+          ChildInvalid cost pc (enqMP midx msg msgs).
+    Proof.
+      unfold ChildInvalid; intros.
+      destruct H; [left; auto|right].
+      apply msgExistsSig_enqMP; assumption.
+    Qed.
+
+    Lemma childInvalid_enqMsgs:
+      forall cost pc msgs,
+        ChildInvalid cost pc msgs ->
+        forall nmsgs,
+          ChildInvalid cost pc (enqMsgs nmsgs msgs).
+    Proof.
+      unfold ChildInvalid; intros.
+      destruct H; [left; auto|right].
+      apply msgExistsSig_enqMsgs; assumption.
+    Qed.
+
+    Lemma childInvalid_other_midx_deqMP:
+      forall cost pc msgs,
+        ChildInvalid cost pc msgs ->
+        forall midx,
+          midx <> pc ->
+          ChildInvalid cost pc (deqMP midx msgs).
+    Proof.
+      unfold ChildInvalid; intros.
+      destruct H; [left; auto|right].
+      apply msgExistsSig_deqMP; auto.
+    Qed.
+
+    Lemma childInvalid_other_midx_deqMsgs:
+      forall cost pc msgs,
+        ChildInvalid cost pc msgs ->
+        forall rminds,
+          ~ In pc rminds ->
+          ChildInvalid cost pc (deqMsgs rminds msgs).
+    Proof.
+      unfold ChildInvalid; intros.
+      destruct H; [left; auto|right].
+      apply msgExistsSig_deqMsgs; auto.
+    Qed.
+
+    Lemma invalidMsgs_other_midx_enqMP:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In midx [pc; cpRq; cpRs] ->
+          InvalidMsgs cost pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      unfold InvalidMsgs; intros.
+      apply InMP_enqMP_or in H1; destruct H1; dest; subst.
+      - destruct idm as [midx msg]; simpl in H0.
+        unfold caseDec.
+        repeat (destruct (sig_dec _ _); try (exfalso; inv e; auto)).
+        auto.
+      - specialize (H _ H1).
+        unfold caseDec in *.
+        repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+        destruct (sig_dec _ _); auto.
+    Qed.
+
+    Lemma invalidMsgs_other_midx_enqMsgs:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall nmsgs,
+          DisjList (idsOf nmsgs) [pc; cpRq; cpRs] ->
+          InvalidMsgs cost pc cpRq cpRs (enqMsgs nmsgs msgs).
+    Proof.
+      unfold InvalidMsgs; intros.
+      apply InMP_enqMsgs_or in H1; destruct H1; dest; subst.
+      - destruct idm as [midx msg]; simpl in H1.
+        unfold caseDec.
+        repeat (destruct (sig_dec _ _);
+                [exfalso; inv e;
+                 apply in_map with (f:= idOf) in H1;
+                 eapply DisjList_In_1; eauto; simpl; tauto|]).
+        auto.
+      - specialize (H _ H1).
+        unfold caseDec in *.
+        repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+        destruct (sig_dec _ _); auto.
+    Qed.
+
+    Lemma invalidMsgs_other_msg_id_enqMP:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In msg.(msg_id) [msiRsS; msiDownRsS; msiRqI] ->
+          InvalidMsgs cost pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      unfold InvalidMsgs; intros.
+      apply InMP_enqMP_or in H1; destruct H1; dest; subst.
+      - destruct idm as [midx msg]; simpl in H0.
+        unfold caseDec.
+        repeat (destruct (sig_dec _ _); try (exfalso; inv e; auto)).
+        auto.
+      - specialize (H _ H1).
+        unfold caseDec in *.
+        repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+        destruct (sig_dec _ _); auto.
+    Qed.
+
+    Lemma invalidMsgs_other_msg_id_enqMsgs:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall nmsgs,
+          DisjList (map (fun idm => (valOf idm).(msg_id)) nmsgs)
+                   [msiRsS; msiDownRsS; msiRqI] ->
+          InvalidMsgs cost pc cpRq cpRs (enqMsgs nmsgs msgs).
+    Proof.
+      unfold InvalidMsgs; intros.
+      apply InMP_enqMsgs_or in H1; destruct H1; dest; subst.
+      - destruct idm as [midx msg]; simpl in H1.
+        unfold caseDec.
+        repeat (destruct (sig_dec _ _);
+                [exfalso; inv e;
+                 apply in_map with (f:= fun idm => (valOf idm).(msg_id)) in H1;
+                 eapply DisjList_In_1; eauto;
+                 simpl; rewrite H5; tauto|]).
+        auto.
+      - specialize (H _ H1).
+        unfold caseDec in *.
+        repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+        destruct (sig_dec _ _); auto.
+    Qed.
+
+    Lemma invalidMsgs_deqMP:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall rmidx,
+          InvalidMsgs cost pc cpRq cpRs (deqMP rmidx msgs).
+    Proof.
+      unfold InvalidMsgs; intros.
+      apply InMP_deqMP in H0.
+      destruct idm as [midx msg]; simpl in H0.
+      specialize (H (midx, msg) H0).
+      unfold caseDec in *.
+      repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+      destruct (sig_dec _ _); auto.
+    Qed.
+
+    Lemma invalidMsgs_deqMsgs:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall rminds,
+          InvalidMsgs cost pc cpRq cpRs (deqMsgs rminds msgs).
+    Proof.
+      unfold InvalidMsgs; intros.
+      apply InMP_deqMsgs in H0.
+      specialize (H _ H0).
+      unfold caseDec in *.
+      repeat (destruct (sig_dec _ _); [exfalso; auto; fail|]).
+      destruct (sig_dec _ _); auto.
+    Qed.
+
+    Lemma exclInv_other_midx_enqMP:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In midx [pc; cpRq; cpRs] ->
+          ExclInv dir cost corq pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - apply invalidMsgs_other_midx_enqMP; auto.
+      - apply H1; auto.
+        apply msgExistsSig_enqMP_or in H3.
+        destruct H3; auto.
+        inv H3; exfalso; auto.
+    Qed.
+
+    Lemma exclInv_other_midx_enqMsgs:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall nmsgs,
+          DisjList (idsOf nmsgs) [pc; cpRq; cpRs] ->
+          ExclInv dir cost corq pc cpRq cpRs (enqMsgs nmsgs msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - apply invalidMsgs_other_midx_enqMsgs; auto.
+      - apply H1; auto.
+        apply msgExistsSig_enqMsgs_or in H3.
+        destruct H3; auto.
+        destruct H3 as [[midx msg] [? ?]].
+        inv H4.
+        apply in_map with (f:= idOf) in H3.
+        exfalso; eapply DisjList_In_1; eauto.
+        simpl; tauto.
+    Qed.
+
+    Lemma exclInv_other_msg_id_enqMP:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In msg.(msg_id) [msiRsS; msiDownRsS; msiRqI] ->
+          ExclInv dir cost corq pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - apply invalidMsgs_other_msg_id_enqMP; auto.
+      - apply H1; auto.
+        apply msgExistsSig_enqMP_or in H3.
+        destruct H3; auto.
+        inv H3; exfalso; auto.
+    Qed.
+
+    Lemma exclInv_other_msg_id_enqMsgs:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall nmsgs,
+          DisjList (map (fun idm => (valOf idm).(msg_id)) nmsgs)
+                   [msiRsS; msiDownRsS; msiRqI] ->
+          ExclInv dir cost corq pc cpRq cpRs (enqMsgs nmsgs msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - apply invalidMsgs_other_msg_id_enqMsgs; auto.
+      - apply H1; auto.
+        apply msgExistsSig_enqMsgs_or in H3.
+        destruct H3; auto.
+        destruct H3 as [[midx msg] [? ?]].
+        inv H4.
+        apply in_map with (f:= fun idm => (valOf idm).(msg_id)) in H3.
+        simpl in H3; rewrite H8 in H3.
+        exfalso; eapply DisjList_In_1; eauto.
+        simpl; tauto.
+    Qed.
+
+    Lemma exclInv_other_midx_deqMP:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall rmidx,
+          ~ In rmidx [pc; cpRq; cpRs] ->
+          ExclInv dir cost corq pc cpRq cpRs (deqMP rmidx msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - apply invalidMsgs_deqMP; auto.
+      - apply H1; auto.
+        apply msgExistsSig_deqMP_inv in H3; auto.
+    Qed.
+
+    Lemma exclInv_other_midx_deqMsgs:
+      forall dir cost corq pc cpRq cpRs msgs,
+        ExclInv dir cost corq pc cpRq cpRs msgs ->
+        forall rminds,
+          DisjList rminds [pc; cpRq; cpRs] ->
+          ExclInv dir cost corq pc cpRq cpRs (deqMsgs rminds msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - apply invalidMsgs_deqMsgs; auto.
+      - apply H1; auto.
+        apply msgExistsSig_deqMsgs_inv in H3; auto.
+    Qed.
+
+    Lemma invalidInv_other_midx_enqMP:
+      forall dir cost pc cpRq cpRs msgs,
+        InvalidInv dir cost pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In midx [pc; cpRq; cpRs] ->
+          InvalidInv dir cost pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split.
+      - red in H; red.
+        destruct H; [left; assumption|right].
+        apply msgExistsSig_enqMP; auto.
+      - apply invalidMsgs_other_midx_enqMP; auto.
+    Qed.
+
+    Lemma invalidInv_other_midx_enqMsgs:
+      forall dir cost  pc cpRq cpRs msgs,
+        InvalidInv dir cost pc cpRq cpRs msgs ->
+        forall nmsgs,
+          DisjList (idsOf nmsgs) [pc; cpRq; cpRs] ->
+          InvalidInv dir cost pc cpRq cpRs (enqMsgs nmsgs msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - red in H; red.
+        destruct H; [left; assumption|right].
+        apply msgExistsSig_enqMsgs; auto.
+      - apply invalidMsgs_other_midx_enqMsgs; auto.
+    Qed.
+
+    Lemma invalidInv_other_msg_id_enqMP:
+      forall dir cost pc cpRq cpRs msgs,
+        InvalidInv dir cost pc cpRq cpRs msgs ->
+        forall midx msg,
+          ~ In msg.(msg_id) [msiRsS; msiDownRsS; msiRqI] ->
+          InvalidInv dir cost pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split.
+      - red in H; red.
+        destruct H; [left; assumption|right].
+        apply msgExistsSig_enqMP; auto.
+      - apply invalidMsgs_other_msg_id_enqMP; auto.
+    Qed.
+
+    Lemma invalidInv_other_msg_id_enqMsgs:
+      forall dir cost  pc cpRq cpRs msgs,
+        InvalidInv dir cost pc cpRq cpRs msgs ->
+        forall nmsgs,
+          DisjList (map (fun idm => (valOf idm).(msg_id)) nmsgs)
+                   [msiRsS; msiDownRsS; msiRqI] ->
+          InvalidInv dir cost pc cpRq cpRs (enqMsgs nmsgs msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - red in H; red.
+        destruct H; [left; assumption|right].
+        apply msgExistsSig_enqMsgs; auto.
+      - apply invalidMsgs_other_msg_id_enqMsgs; auto.
+    Qed.
+
+    Lemma invalidInv_other_midx_deqMP:
+      forall dir cost pc cpRq cpRs msgs,
+        InvalidInv dir cost pc cpRq cpRs msgs ->
+        forall rmidx,
+          ~ In rmidx [pc; cpRq; cpRs] ->
+          InvalidInv dir cost pc cpRq cpRs (deqMP rmidx msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split.
+      - red in H; red.
+        destruct H; [left; assumption|right].
+        apply msgExistsSig_deqMP; auto.
+      - apply invalidMsgs_deqMP; auto.
+    Qed.
+
+    Lemma invalidInv_other_midx_deqMsgs:
+      forall dir cost  pc cpRq cpRs msgs,
+        InvalidInv dir cost pc cpRq cpRs msgs ->
+        forall rminds,
+          DisjList rminds [pc; cpRq; cpRs] ->
+          InvalidInv dir cost pc cpRq cpRs (deqMsgs rminds msgs).
+    Proof.
+      intros.
+      disc_rule_conds_ex.
+      repeat split; intros.
+      - red in H; red.
+        destruct H; [left; assumption|right].
+        apply msgExistsSig_deqMsgs; auto.
+        eapply DisjList_In_1; eauto.
+        simpl; tauto.
+      - apply invalidMsgs_deqMsgs; auto.
+    Qed.
+
+    Lemma implInv_other_midx_enqMP:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall midx msg,
+          ~ In midx [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs;
+                     bst_msgs := enqMP midx msg msgs |}.
+    Proof.
+      intros.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      repeat ssplit; [assumption|..].
+      - apply exclInv_other_midx_enqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+      - apply exclInv_other_midx_enqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+      - apply invalidInv_other_midx_enqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+      - apply invalidInv_other_midx_enqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+    Qed.
+
+    Lemma implInv_other_midx_enqMsgs:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall nmsgs,
+          DisjList (idsOf nmsgs) [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs;
+                     bst_msgs := enqMsgs nmsgs msgs |}.
+    Proof.
+      intros.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      repeat ssplit; [assumption|..].
+      - apply exclInv_other_midx_enqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply exclInv_other_midx_enqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply invalidInv_other_midx_enqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply invalidInv_other_midx_enqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+    Qed.
+
+    Lemma implInv_other_msg_id_enqMP:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall midx msg,
+          ~ In msg.(msg_id) [msiRsS; msiDownRsS; msiRqI] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs;
+                     bst_msgs := enqMP midx msg msgs |}.
+    Proof.
+      intros.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      repeat ssplit; [assumption|..].
+      - apply exclInv_other_msg_id_enqMP; auto.
+      - apply exclInv_other_msg_id_enqMP; auto.
+      - apply invalidInv_other_msg_id_enqMP; auto.
+      - apply invalidInv_other_msg_id_enqMP; auto.
+    Qed.
+
+    Lemma implInv_other_msg_id_enqMsgs:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall nmsgs,
+          DisjList (map (fun idm => (valOf idm).(msg_id)) nmsgs)
+                   [msiRsS; msiDownRsS; msiRqI] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs;
+                     bst_msgs := enqMsgs nmsgs msgs |}.
+    Proof.
+      intros.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      repeat ssplit; [assumption|..].
+      - apply exclInv_other_msg_id_enqMsgs; auto.
+      - apply exclInv_other_msg_id_enqMsgs; auto.
+      - apply invalidInv_other_msg_id_enqMsgs; auto.
+      - apply invalidInv_other_msg_id_enqMsgs; auto.
+    Qed.
     
-(*   End GInv. *)
+    Lemma implInv_other_midx_deqMP:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall rmidx,
+          ~ In rmidx [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs;
+                     bst_msgs := deqMP rmidx msgs |}.
+    Proof.
+      intros.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      repeat ssplit; [assumption|..].
+      - apply exclInv_other_midx_deqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+      - apply exclInv_other_midx_deqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+      - apply invalidInv_other_midx_deqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+      - apply invalidInv_other_midx_deqMP; auto.
+        intro Hx; elim H0; dest_in; tauto.
+    Qed.
 
-(*   Definition ImplStateInv (st: MState ImplOStateIfc): Prop := *)
-(*     post <-- (bst_oss st)@[parentIdx]; *)
-(*       cost1 <-- (bst_oss st)@[child1Idx]; *)
-(*       cost2 <-- (bst_oss st)@[child2Idx]; *)
-(*       corq1 <-- (bst_orqs st)@[child1Idx]; *)
-(*       corq2 <-- (bst_orqs st)@[child2Idx]; *)
-(*       (exists cv, ImplStateCoh post cost1 cost2 corq1 corq2 cv) /\ *)
-(*       ImplDirCoh post cost1 cost2 corq1 corq2. *)
+    Lemma implInv_other_midx_deqMsgs:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall rminds,
+          DisjList rminds [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
+          ImplInv {| bst_oss := oss;
+                     bst_orqs := orqs;
+                     bst_msgs := deqMsgs rminds msgs |}.
+    Proof.
+      intros.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      repeat ssplit; [assumption|..].
+      - apply exclInv_other_midx_deqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply exclInv_other_midx_deqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply invalidInv_other_midx_deqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+      - apply invalidInv_other_midx_deqMsgs; auto.
+        eapply DisjList_comm, DisjList_SubList;
+          [|apply DisjList_comm; eassumption].
+        solve_SubList.
+    Qed.
 
-(*   Definition ImplLockInv (st: MState ImplOStateIfc): Prop := *)
-(*     porq <-- (bst_orqs st)@[parentIdx]; *)
-(*       ImplParentLockInv porq. *)
+    Lemma msiSv_impl_InvTrs_ext_in:
+      forall st1 eins st2,
+        ImplInv st1 ->
+        step_m impl st1 (RlblIns eins) st2 ->
+        ImplInv st2.
+    Proof.
+      intros; inv_step.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      destruct H3.
+      repeat ssplit; try assumption.
 
-(*   Definition ImplInv (st: MState ImplOStateIfc): Prop := *)
-(*     ImplStateInv st /\ ImplLockInv st. *)
+      - apply exclInv_other_midx_enqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+      - apply exclInv_other_midx_enqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+      - apply invalidInv_other_midx_enqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+      - apply invalidInv_other_midx_enqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+    Qed.
 
-(*   Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateMSI *)
-(*        ImplDirM ImplDirS ImplDirI *)
-(*        ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh *)
-(*        ImplStateCoh: RuleConds. *)
+    Lemma msiSv_impl_InvTrs_ext_out:
+      forall st1 eouts st2,
+        ImplInv st1 ->
+        step_m impl st1 (RlblOuts eouts) st2 ->
+        ImplInv st2.
+    Proof.
+      intros; inv_step.
+      red in H; red; simpl in *.
+      disc_rule_conds_const; dest.
+      destruct H4.
+      repeat ssplit; try assumption.
 
-(*   Ltac disc_msi := *)
-(*     try *)
-(*       match goal with *)
-(*       | [H: ?t = ?t -> _ |- _] => specialize (H eq_refl) *)
-(*       | [H: ?p -> _, Hp: ?p |- _] => specialize (H Hp) *)
-(*       | [H: VNat ?v = VNat _ |- _] => is_var v; inv H *)
-(*       | [H: VNat _ = VNat ?v |- _] => is_var v; inv H *)
-(*       | [H: ?oss@[parentIdx] = Some ?ost |- _] => *)
-(*         match type of ost with *)
-(*         | OState _ => *)
-(*           let val := fresh "val" in *)
-(*           let stt := fresh "stt" in *)
-(*           let dir := fresh "dir" in *)
-(*           destruct ost as [val [stt [dir ?]]] *)
-(*         end *)
-(*       | [H: ?oss@[child1Idx] = Some ?ost |- _] => *)
-(*         match type of ost with *)
-(*         | OState _ => *)
-(*           let val := fresh "val" in *)
-(*           let stt := fresh "stt" in *)
-(*           destruct ost as [val [stt ?]] *)
-(*         end *)
-(*       | [H: ?oss@[child2Idx] = Some ?ost |- _] => *)
-(*         match type of ost with *)
-(*         | OState _ => *)
-(*           let val := fresh "val" in *)
-(*           let stt := fresh "stt" in *)
-(*           destruct ost as [val [stt ?]] *)
-(*         end *)
-(*       | [H: msiM = _ |- _] => apply eq_sym in H *)
-(*       | [H: msiS = _ |- _] => apply eq_sym in H *)
-(*       | [H: msiI = _ |- _] => apply eq_sym in H *)
-(*       | [H1: ?t = msiM, H2: ?t = msiS |- _] => rewrite H1 in H2; discriminate *)
-(*       | [H1: ?t = msiM, H2: ?t = msiI |- _] => rewrite H1 in H2; discriminate *)
-(*       | [H1: ?t = msiS, H2: ?t = msiI |- _] => rewrite H1 in H2; discriminate *)
-(*       | [H1: ?t = msiM, H2: ?t <= msiS |- _] => *)
-(*         rewrite H1 in H2; unfold msiM, msiS in H2; lia *)
-(*       | [H1: ?t = msiI, H2: ?t >= msiS |- _] => *)
-(*         rewrite H1 in H2; unfold msiS, msiI in H2; lia *)
-(*       end. *)
+      - apply exclInv_other_midx_deqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+      - apply exclInv_other_midx_deqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+      - apply invalidInv_other_midx_deqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+      - apply invalidInv_other_midx_deqMsgs; auto.
+        eapply DisjList_SubList; [eassumption|].
+        solve_DisjList.
+    Qed.
 
-(*   Ltac solve_msi := *)
-(*     unfold msiM, msiS, msiI in *; lia. *)
+    Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
+      fun eout oss orqs =>
+        match case (sigOf eout) on sig_dec default True with
+        | (ec1, (MRq, Spec.getRq)): False
+        | (ec1, (MRq, Spec.setRq)): False
+        | (ec1, (MRq, Spec.evictRq)): False
+        | (ec2, (MRq, Spec.getRq)): False
+        | (ec2, (MRq, Spec.setRq)): False
+        | (ec2, (MRq, Spec.evictRq)): False
+
+        | (pc1, (MRs, msiRsM)):
+            post <-- oss@[parentIdx];
+            post#[implStatusIdx] = msiI /\ post#[implDirIdx].(fst) = msiM
+        | (pc2, (MRs, msiRsM)):
+            post <-- oss@[parentIdx];
+            post#[implStatusIdx] = msiI /\ post#[implDirIdx].(snd) = msiM
+
+        | (pc1, (MRs, msiRsS)):
+            post <-- oss@[parentIdx];
+            post#[implStatusIdx] = msiS /\ post#[implDirIdx].(fst) = msiS
+        | (pc2, (MRs, msiRsS)):
+            post <-- oss@[parentIdx];
+            post#[implStatusIdx] = msiS /\ post#[implDirIdx].(snd) = msiS
+                              
+        | (pc1, (MRs, msiRsI)):
+            post <-- oss@[parentIdx];
+            post#[implDirIdx].(fst) = msiI
+        | (pc2, (MRs, msiRsI)):
+            post <-- oss@[parentIdx];
+            post#[implDirIdx].(snd) = msiI
+
+        | (c1pRs, (MRs, msiDownRsI)):
+            cost1 <-- oss@[child1Idx];
+            cost1#[implStatusIdx] = msiI
+        | (c2pRs, (MRs, msiDownRsI)):
+            cost2 <-- oss@[child2Idx];
+            cost2#[implStatusIdx] = msiI
+        end.
+
+    Lemma msiSvMsgOutPred_good:
+      GoodMsgOutPred topo impl MsiSvMsgOutPred.
+    Proof.
+      red; intros; repeat split.
+
+      - do 2 (red; intros).
+        red in H0; unfold caseDec in H0.
+        repeat find_if_inside;
+          try (exfalso; auto; fail);
+          disc_GoodMsgOutPred.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (In child1Idx (subtreeIndsOf topo child1Idx))
+            by (simpl; tauto).
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (In child2Idx (subtreeIndsOf topo child2Idx))
+            by (simpl; tauto).
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+        + red; unfold caseDec.
+          repeat find_if_inside; congruence.
+
+      - do 2 (red; intros).
+        red in H0; unfold caseDec in H0.
+        repeat find_if_inside;
+          try (exfalso; auto; fail);
+          disc_GoodMsgOutPred.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (~ In parentIdx (subtreeIndsOf topo child1Idx)).
+          { intro Hx; dest_in; discriminate. }
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (~ In parentIdx (subtreeIndsOf topo child2Idx)).
+          { intro Hx; dest_in; discriminate. }
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (~ In parentIdx (subtreeIndsOf topo child1Idx)).
+          { intro Hx; dest_in; discriminate. }
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (~ In parentIdx (subtreeIndsOf topo child2Idx)).
+          { intro Hx; dest_in; discriminate. }
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (~ In parentIdx (subtreeIndsOf topo child1Idx)).
+          { intro Hx; dest_in; discriminate. }
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (~ In parentIdx (subtreeIndsOf topo child2Idx)).
+          { intro Hx; dest_in; discriminate. }
+          specialize (H1 _ H).
+          destruct H1; rewrite <-H1.
+          assumption.
+        + red; unfold caseDec.
+          repeat find_if_inside; congruence.
+          
+      - red; intros.
+        destruct (in_dec eq_nat_dec (idOf eout) (sys_merqs impl)); auto.
+        right; intros.
+        red; unfold caseDec.
+        repeat find_if_inside; disc_GoodMsgOutPred.
+        auto.
+
+      - red; intros.
+        red; unfold caseDec.
+        repeat find_if_inside; disc_GoodMsgOutPred.
+        auto.
+    Qed.
+
+    Ltac disc_rule_custom ::=
+      try disc_footprints_ok;
+      try disc_AtomicInv.
+
+    Lemma msiSv_impl_InvTrs_init:
+      forall st1,
+        Reachable (steps step_m) impl st1 ->
+        ImplInv st1 ->
+        forall oidx ridx ins outs st2,
+          SubList (idsOf ins) (sys_merqs impl) ->
+          step_m impl st1 (RlblInt oidx ridx ins outs) st2 ->
+          AtomicInv
+            MsiSvMsgOutPred
+            ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
+          ImplInv st2.
+    Proof.
+      intros.
+      inv_step.
+      pose proof (footprints_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys H) as Hftinv.
+      pose proof (upLockInv_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys
+                    msiSv_impl_RqRsDTree H) as Hulinv.
+      pose proof (downLockInv_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys
+                    msiSv_impl_RqRsDTree
+                    msiSv_impl_GoodExtRssSys H) as Hdlinv.
+      good_locking_get obj.
+      dest_in.
+
+      3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent.
+      all: try (atomic_init_exfalso_rq; fail).
+
+      - (** [childGetRqImm] *)
+        disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        replace (orqs +[child1Idx <- norq]) with orqs by meq.
+        apply implInv_other_midx_enqMP; [|solve_not_in].
+        apply implInv_other_midx_deqMP; [|solve_not_in].
+        assumption.
+
+      - (** [childGetRqS] *)
+        disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        apply implInv_other_msg_id_enqMP; [|solve_not_in].
+        apply implInv_other_midx_deqMP; [|solve_not_in].
+        eapply implInv_orqs_weakened in H0; try eassumption.
+        findeq.
+
+      - (** [childSetRqImm] *)
+        disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (orqs +[child1Idx <- norq]) with orqs by meq.
+        admit.
+
+      - (** [childSetRqM] *)
+        disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        apply implInv_other_msg_id_enqMP; [|solve_not_in].
+        apply implInv_other_midx_deqMP; [|solve_not_in].
+        eapply implInv_orqs_weakened in H0; try eassumption.
+        findeq.
+
+      - (** [childEvictRqI] *)
+        disc_rule_conds_ex.
+        simpl; split; [atomic_init_solve_AtomicInv|].
+        replace (oss +[child1Idx <- pos]) with oss by meq.
+        admit.
+
+    Admitted.
+
+    Ltac disc_rule_custom ::=
+      try disc_footprints_ok;
+      try disc_msg_case;
+      try disc_AtomicInv;
+      (* try disc_msi; *)
+      try disc_minds_const.
+
+    Local Hint Resolve msiSv_impl_ORqsInit.
+    Local Hint Resolve msiSv_impl_RqRsSys.
+    Local Hint Resolve msiSvMsgOutPred_good.
+
+    Lemma msiSv_impl_InvTrs: InvTrs impl ImplInv.
+    Proof.
+      eapply inv_atomic_InvTrs;
+        [red; intros; eapply msiSv_impl_InvTrs_ext_in; eauto
+        |red; intros; eapply msiSv_impl_InvTrs_ext_out; eauto
+        |].
+      instantiate (1:= AtomicInv MsiSvMsgOutPred).
+      red; intros.
+      destruct H1.
+      generalize dependent ist2.
+      induction H3; simpl; intros; subst;
+        [inv_steps; apply msiSv_impl_InvTrs_init; auto|].
+
+      inv_steps.
+      pose proof (footprints_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys
+                    (reachable_steps H H9))
+        as Hftinv.
+      pose proof (upLockInv_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys
+                    msiSv_impl_RqRsDTree (reachable_steps H H9)) as Hulinv.
+      pose proof (downLockInv_ok
+                    msiSv_impl_ORqsInit
+                    msiSv_impl_GoodRqRsSys
+                    msiSv_impl_RqRsDTree
+                    msiSv_impl_GoodExtRssSys (reachable_steps H H9)) as Hdlinv.
+
+      specialize (IHAtomic H1 _ H9); dest.
+      inv_step; dest_in.
+
+      - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+
+      - (** [childGetRsS] *)
+        disc_rule_conds_ex.
+        pull_uplock_minds child1Idx.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + apply Forall_app.
+          * apply forall_removeOnce.
+            eapply atomic_rsDown_preserves_msg_out_preds; eauto.
+            red; auto.
+          * repeat constructor.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H33; destruct H33; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H29; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [childDownRqS] *)
+        disc_rule_conds_ex.
+
+        split.
+        + apply Forall_app.
+          * apply forall_removeOnce.
+            eapply atomic_rqDown_preserves_msg_out_preds; eauto.
+            red; auto.
+          * repeat constructor.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * exfalso.
+            destruct H26 as [[midx msg] [? ?]].
+            inv H26.
+            admit.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H26; destruct H26; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H20; auto.
+          * (* TODO. predicate message for rqs. *)
+            admit.
+          * admit.
+          * admit.
+          * admit.
+
+      - (** [childSetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childSetRqM] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+
+      - (** [childSetRsM] *)
+        disc_rule_conds_ex.
+        pull_uplock_minds child1Idx.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + admit.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * admit.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H33; destruct H33; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H29; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [childDownRqI] *)
+        admit.
+
+      - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childEvictRsI] *)
+        admit.
+
+    Admitted.
+
+    Lemma implInv_init:
+      ImplInv (initsOf impl).
+    Proof.
+      red; simpl.
+      unfold implOStatesInit, implORqsInit; mred.
+      simpl; repeat split;
+        try (red; simpl; mred; solve_msi; fail).
+    Qed.
+
+    Lemma implInv_invStep:
+      InvStep impl step_m ImplInv.
+    Proof.
+      apply invSeq_serializable_invStep.
+      - apply implInv_init.
+      - apply inv_trs_seqSteps.
+        apply msiSv_impl_InvTrs.
+      - eapply rqrs_Serializable.
+        + apply msiSv_impl_ORqsInit.
+        + apply msiSv_impl_RqRsSys.
+    Qed.
+
+  End Facts.
   
-(*   Ltac disc_rule_custom ::= *)
-(*     try disc_msi. *)
-  
-(*   Section Facts. *)
-
-(*     Lemma implInv_orqs_weakened: *)
-(*       forall st oidx orq norq rqt rqi nmsgs, *)
-(*         ImplInv st -> *)
-(*         (oidx = child1Idx \/ oidx = child2Idx) -> *)
-(*         (bst_orqs st)@[oidx] = Some orq -> *)
-(*         norq = orq +[rqt <- rqi] -> *)
-(*         ImplInv {| bst_oss := bst_oss st; *)
-(*                    bst_orqs := (bst_orqs st) +[oidx <- norq]; *)
-(*                    bst_msgs := nmsgs |}. *)
-(*     Proof. *)
-(*       unfold ImplInv, ImplStateInv, ImplLockInv; simpl; intros; dest. *)
-(*       split. *)
-(*       - disc_rule_conds_const. *)
-(*         destruct H as [[cv ?] ?]. *)
-(*         destruct H0; subst. *)
-(*         + solve_rule_conds_ex. *)
-(*         + solve_rule_conds_ex. *)
-(*       - disc_rule_conds_const. *)
-(*         destruct H0; subst; mred. *)
-(*     Qed. *)
-
-(*     Lemma implInv_M_value_changed: *)
-(*       forall st, *)
-(*         ImplInv st -> *)
-(*         forall oidx ost orq, *)
-(*           (oidx = child1Idx \/ oidx = child2Idx) -> *)
-(*           (bst_oss st)@[oidx] = Some ost -> *)
-(*           ost#[implStatusIdx] = msiM -> *)
-(*           (bst_orqs st)@[oidx] = Some orq -> *)
-(*           orq@[upRq] = None -> *)
-(*           forall n (uv: DirT * unit) nmsgs, *)
-(*             ImplInv *)
-(*               (Build_MState *)
-(*                  (oifc:= ImplOStateIfc) *)
-(*                  ((bst_oss st) +[oidx <- (n, (msiM, uv))]) *)
-(*                  (bst_orqs st) nmsgs). *)
-(*     Proof. *)
-(*       unfold ImplInv, ImplStateInv, ImplLockInv; simpl; intros; dest. *)
-(*       split. *)
-(*       - disc_rule_conds_const. *)
-(*         destruct H as [[cv ?] ?]. *)
-(*         disc_rule_conds_ex. *)
-(*         + destruct H0; discriminate. *)
-(*         + split. *)
-(*           * exists n; repeat split. *)
-(*             { disc_rule_conds_ex. *)
-(*               destruct H as [|[|]]; *)
-(*                 try (exfalso; solve_rule_conds_ex; solve_msi; fail). *)
-(*               right; right. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*             { solve_rule_conds_ex. } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * solve_rule_conds_ex. *)
-(*         + split. *)
-(*           * exists n; repeat split. *)
-(*             { disc_rule_conds_ex. *)
-(*               destruct H as [|[|]]; *)
-(*                 try (exfalso; solve_rule_conds_ex; solve_msi; fail). *)
-(*               right; right. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*             { solve_rule_conds_ex. } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * solve_rule_conds_ex. *)
-(*         + eauto 7. *)
-(*       - assumption. *)
-(*     Qed. *)
-
-(*     Lemma msiSv_impl_InvTrs_ext_in: *)
-(*       forall st1 eins st2, *)
-(*         ImplInv st1 -> *)
-(*         step_m impl st1 (RlblIns eins) st2 -> *)
-(*         ImplInv st2. *)
-(*     Proof. *)
-(*       intros; inv_step; assumption. *)
-(*     Qed. *)
-
-(*     Lemma msiSv_impl_InvTrs_ext_out: *)
-(*       forall st1 eouts st2, *)
-(*         ImplInv st1 -> *)
-(*         step_m impl st1 (RlblOuts eouts) st2 -> *)
-(*         ImplInv st2. *)
-(*     Proof. *)
-(*       intros; inv_step; assumption. *)
-(*     Qed. *)
-
-(*     Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc := *)
-(*       fun eout oss orqs => *)
-(*         match case (sigOf eout) on sig_dec default True with *)
-(*         | (ec1, (MRq, Spec.getRq)): False *)
-(*         | (ec1, (MRq, Spec.setRq)): False *)
-(*         | (ec1, (MRq, Spec.evictRq)): False *)
-(*         | (ec2, (MRq, Spec.getRq)): False *)
-(*         | (ec2, (MRq, Spec.setRq)): False *)
-(*         | (ec2, (MRq, Spec.evictRq)): False *)
-
-(*         | (pc1, (MRs, msiRsS)): *)
-(*             post <-- oss@[parentIdx]; *)
-(*             porq <-- orqs@[parentIdx]; *)
-(*             post#[implStatusIdx] = msiS /\ *)
-(*             post#[implDirIdx].(fst) = msiS /\ *)
-(*             porq@[downRq] = None /\ *)
-(*             msg_value (valOf eout) = VNat post#[implValueIdx] *)
-(*         | (pc2, (MRs, msiRsS)): *)
-(*             post <-- oss@[parentIdx]; *)
-(*             porq <-- orqs@[parentIdx]; *)
-(*             post#[implStatusIdx] = msiS /\ *)
-(*             post#[implDirIdx].(snd) = msiS /\ *)
-(*             porq@[downRq] = None /\ *)
-(*             msg_value (valOf eout) = VNat post#[implValueIdx] *)
-
-(*         | (pc1, (MRs, msiRsM)): *)
-(*             post <-- oss@[parentIdx]; *)
-(*             porq <-- orqs@[parentIdx]; *)
-(*             post#[implStatusIdx] = msiI /\ *)
-(*             post#[implDirIdx].(fst) = msiM /\ *)
-(*             porq@[downRq] = None *)
-(*         | (pc2, (MRs, msiRsM)): *)
-(*             post <-- oss@[parentIdx]; *)
-(*             porq <-- orqs@[parentIdx]; *)
-(*             post#[implStatusIdx] = msiI /\ *)
-(*             post#[implDirIdx].(snd) = msiM /\ *)
-(*             porq@[downRq] = None *)
-
-(*         | (pc1, (MRs, msiRsI)): *)
-(*             post <-- oss@[parentIdx]; *)
-(*             post#[implDirIdx].(fst) = msiI *)
-(*         | (pc2, (MRs, msiRsI)): *)
-(*             post <-- oss@[parentIdx]; *)
-(*             post#[implDirIdx].(snd) = msiI *)
-
-(*         | (c1pRs, (MRs, msiDownRsS)): *)
-(*             cost1 <-- oss@[child1Idx]; *)
-(*             cost1#[implStatusIdx] = msiS /\ *)
-(*             msg_value (valOf eout) = VNat cost1#[implValueIdx] *)
-(*         | (c2pRs, (MRs, msiDownRsS)): *)
-(*             cost2 <-- oss@[child2Idx]; *)
-(*             cost2#[implStatusIdx] = msiS /\ *)
-(*             msg_value (valOf eout) = VNat cost2#[implValueIdx] *)
-
-(*         | (c1pRs, (MRs, msiDownRsM)): *)
-(*             cost1 <-- oss@[child1Idx]; *)
-(*             cost1#[implStatusIdx] = msiI *)
-(*         | (c2pRs, (MRs, msiDownRsM)): *)
-(*             cost2 <-- oss@[child2Idx]; *)
-(*             cost2#[implStatusIdx] = msiI *)
-(*         end. *)
-
-(*     Lemma msiSvMsgOutPred_good: *)
-(*       GoodMsgOutPred topo impl MsiSvMsgOutPred. *)
-(*     Proof. *)
-(*       red; intros; repeat split. *)
-
-(*       - do 2 (red; intros). *)
-(*         red in H0; unfold caseDec in H0. *)
-(*         repeat find_if_inside; *)
-(*           try (exfalso; auto; fail); *)
-(*           disc_GoodMsgOutPred. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (In child1Idx (subtreeIndsOf topo child1Idx)). *)
-(*           { simpl; tauto. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (In child2Idx (subtreeIndsOf topo child2Idx)). *)
-(*           { simpl; tauto. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (In child1Idx (subtreeIndsOf topo child1Idx)). *)
-(*           { simpl; tauto. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (In child2Idx (subtreeIndsOf topo child2Idx)). *)
-(*           { simpl; tauto. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1. *)
-(*           assumption. *)
-
-(*         + red; unfold caseDec. *)
-(*           repeat find_if_inside; congruence. *)
-
-(*       - do 2 (red; intros). *)
-(*         red in H0; unfold caseDec in H0. *)
-(*         repeat find_if_inside; *)
-(*           try (exfalso; auto; fail); *)
-(*           disc_GoodMsgOutPred. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (~ In parentIdx (subtreeIndsOf topo child1Idx)). *)
-(*           { intro Hx; dest_in; discriminate. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1, <-H6. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (~ In parentIdx (subtreeIndsOf topo child2Idx)). *)
-(*           { intro Hx; dest_in; discriminate. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1, <-H6. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (~ In parentIdx (subtreeIndsOf topo child1Idx)). *)
-(*           { intro Hx; dest_in; discriminate. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1, <-H6. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (~ In parentIdx (subtreeIndsOf topo child2Idx)). *)
-(*           { intro Hx; dest_in; discriminate. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1, <-H6. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (~ In parentIdx (subtreeIndsOf topo child1Idx)). *)
-(*           { intro Hx; dest_in; discriminate. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1. *)
-(*           assumption. *)
-
-(*         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl. *)
-(*           assert (~ In parentIdx (subtreeIndsOf topo child2Idx)). *)
-(*           { intro Hx; dest_in; discriminate. } *)
-(*           specialize (H1 _ H). *)
-(*           destruct H1; rewrite <-H1. *)
-(*           assumption. *)
-
-(*         + red; unfold caseDec. *)
-(*           repeat find_if_inside; congruence. *)
-          
-(*       - red; intros. *)
-(*         destruct (in_dec eq_nat_dec (idOf eout) (sys_merqs impl)); auto. *)
-(*         right; intros. *)
-(*         red; unfold caseDec. *)
-(*         repeat find_if_inside; disc_GoodMsgOutPred. *)
-(*         auto. *)
-
-(*       - red; intros. *)
-(*         red; unfold caseDec. *)
-(*         repeat find_if_inside; disc_GoodMsgOutPred. *)
-(*         auto. *)
-(*     Qed. *)
-
-(*     Ltac disc_rule_custom ::= *)
-(*       try disc_footprints_ok; *)
-(*       try disc_AtomicInv. *)
-
-(*     Lemma msiSv_impl_InvTrs_init: *)
-(*       forall st1, *)
-(*         Reachable (steps step_m) impl st1 -> *)
-(*         ImplInv st1 -> *)
-(*         forall oidx ridx ins outs st2, *)
-(*           SubList (idsOf ins) (sys_merqs impl) -> *)
-(*           step_m impl st1 (RlblInt oidx ridx ins outs) st2 -> *)
-(*           AtomicInv *)
-(*             MsiSvMsgOutPred *)
-(*             ins st1 [RlblInt oidx ridx ins outs] outs st2 /\ *)
-(*           ImplInv st2. *)
-(*     Proof. *)
-(*       intros. *)
-(*       inv_step. *)
-(*       pose proof (upLockInv_ok *)
-(*                     msiSv_impl_ORqsInit *)
-(*                     msiSv_impl_GoodRqRsSys *)
-(*                     msiSv_impl_RqRsDTree H) as Hulinv. *)
-(*       pose proof (downLockInv_ok *)
-(*                     msiSv_impl_ORqsInit *)
-(*                     msiSv_impl_GoodRqRsSys *)
-(*                     msiSv_impl_RqRsDTree *)
-(*                     msiSv_impl_GoodExtRssSys H) as Hdlinv. *)
-(*       good_locking_get obj. *)
-(*       dest_in. *)
-
-(*       (** List of [Rule]s: *) *)
-(* (*        * [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;  *) *)
-(* (*        *  childSetRqImm; childSetRqM; childSetRsM; childDownRqM; *) *)
-(* (*        *  childEvictRqI; childEvictRsI] for [child1Idx] + *) *)
-(* (*        * [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;  *) *)
-(* (*        *  childSetRqImm; childSetRqM; childSetRsM; childDownRqM; *) *)
-(* (*        *  childEvictRqI; childEvictRsI] for [child2Idx] + *) *)
-(* (*        * [parentGetRqImm; parentGetDownRqS; parentSetRqImm; parentSetDownRqM; *) *)
-(* (*        *  parentGetDownRsS; parentSetDownRsM; *) *)
-(* (*        *  parentEvictRqImmI; parentEvictRqImmS; parentEvictRqImmLastS; parentEvictRqImmM] *) *)
-(* (*        *  * {child1Idx, child2Idx} *) *)
-(* (*        *) *)
-
-(*       3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent. *)
-(*       all: try (atomic_init_exfalso_rq; fail). *)
-
-(*       - (** [childGetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child1Idx <- pos]) with oss by meq. *)
-(*         replace (orqs +[child1Idx <- norq]) with orqs by meq. *)
-(*         assumption. *)
-
-(*       - (** [childGetRqS] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child1Idx <- pos]) with oss by meq. *)
-(*         eapply implInv_orqs_weakened in H0; eauto. *)
-
-(*       - (** [childSetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (orqs +[child1Idx <- norq]) with orqs by meq. *)
-(*         eapply implInv_M_value_changed in H0; eauto. *)
-
-(*       - (** [childSetRqM] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child1Idx <- pos]) with oss by meq. *)
-(*         eapply implInv_orqs_weakened in H0; eauto. *)
-
-(*       - (** [childEvictRqI] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child1Idx <- pos]) with oss by meq. *)
-(*         eapply implInv_orqs_weakened in H0; eauto. *)
-
-(*       - (** [childGetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child2Idx <- pos]) with oss by meq. *)
-(*         replace (orqs +[child2Idx <- norq]) with orqs by meq. *)
-(*         assumption. *)
-
-(*       - (** [childGetRqS] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child2Idx <- pos]) with oss by meq. *)
-(*         eapply implInv_orqs_weakened in H0; eauto. *)
-
-(*       - (** [childSetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (orqs +[child2Idx <- norq]) with orqs by meq. *)
-(*         eapply implInv_M_value_changed in H0; eauto. *)
-
-(*       - (** [childSetRqM] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child2Idx <- pos]) with oss by meq. *)
-(*         eapply implInv_orqs_weakened in H0; eauto. *)
-
-(*       - (** [childEvictRqI] *) *)
-(*         disc_rule_conds_ex. *)
-(*         simpl; split; [atomic_init_solve_AtomicInv|]. *)
-(*         replace (oss +[child2Idx <- pos]) with oss by meq. *)
-(*         eapply implInv_orqs_weakened in H0; eauto. *)
-(*     Qed. *)
-
-(*     Ltac disc_rule_custom ::= *)
-(*       try disc_footprints_ok; *)
-(*       try disc_msg_case; *)
-(*       try disc_AtomicInv; *)
-(*       try disc_msi; *)
-(*       try disc_minds_const. *)
-
-(*     Lemma msiSv_impl_InvTrs: InvTrs impl ImplInv. *)
-(*     Proof. *)
-(*       eapply inv_atomic_InvTrs; *)
-(*         [red; intros; eapply msiSv_impl_InvTrs_ext_in; eauto *)
-(*         |red; intros; eapply msiSv_impl_InvTrs_ext_out; eauto *)
-(*         |]. *)
-(*       instantiate (1:= AtomicInv MsiSvMsgOutPred). *)
-(*       red; intros. *)
-(*       destruct H1. *)
-(*       generalize dependent ist2. *)
-(*       induction H3; simpl; intros; subst; *)
-(*         [inv_steps; apply msiSv_impl_InvTrs_init; auto|]. *)
-
-(*       inv_steps. *)
-(*       pose proof (footprints_ok *)
-(*                     msiSv_impl_ORqsInit *)
-(*                     msiSv_impl_GoodRqRsSys *)
-(*                     (reachable_steps H H9)) *)
-(*         as Hftinv. *)
-(*       specialize (IHAtomic H1 _ H9); dest. *)
-(*       pose proof (upLockInv_ok *)
-(*                     msiSv_impl_ORqsInit *)
-(*                     msiSv_impl_GoodRqRsSys *)
-(*                     msiSv_impl_RqRsDTree (reachable_steps H H9)) as Hulinv. *)
-(*       pose proof (downLockInv_ok *)
-(*                     msiSv_impl_ORqsInit *)
-(*                     msiSv_impl_GoodRqRsSys *)
-(*                     msiSv_impl_RqRsDTree *)
-(*                     msiSv_impl_GoodExtRssSys (reachable_steps H H9)) as Hdlinv. *)
-(*       inv_step; dest_in. *)
-
-(*       (** child1 *) *)
-
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-
-(*       - (** [childGetRsS] *) *)
-(*         disc_rule_conds_ex. *)
-(*         good_footprint_get child1Idx. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* generate hints for leaves (L1 caches) *) *)
-(*         pose proof (parentIdxOf_child_indsOf _ _ H7). *)
-(*         dest_in; try discriminate; simpl in *. *)
-(*         cbn in H26; inv H26. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists val0. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H22; red; simpl in *; mred. *)
-            
-(*       - (** [childDownRqS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             mred; simpl; auto. *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - (** [childSetRsM] *) *)
-(*         disc_rule_conds_ex. *)
-(*         good_footprint_get child1Idx. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* generate hints for leaves (L1 caches) *) *)
-(*         pose proof (parentIdxOf_child_indsOf _ _ H7). *)
-(*         dest_in; try discriminate; simpl in *. *)
-(*         cbn in H26; inv H26. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists n. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 destruct H6 as [|[|]]; try (exfalso; dest; discriminate). *)
-(*                 right; right; solve_rule_conds_ex. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H22; red; simpl in *; mred. *)
-
-(*       - (** [childDownRqM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             mred; simpl; auto. *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - (** [childEvictRsI] *) *)
-(*         disc_rule_conds_ex. *)
-(*         good_footprint_get child1Idx. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* generate hints for leaves (L1 caches) *) *)
-(*         pose proof (parentIdxOf_child_indsOf _ _ H7). *)
-(*         dest_in; try discriminate; simpl in *. *)
-(*         cbn in H21; inv H21. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             rename porq into orq. *)
-(*             destruct (oss@[child2Idx]) as [cost2|]; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|]; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H20; red; simpl in *; mred. *)
-
-(*       (** child2 *) *)
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-
-(*       - (** [childGetRsS] *) *)
-(*         disc_rule_conds_ex. *)
-(*         good_footprint_get child2Idx. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* generate hints for leaves (L1 caches) *) *)
-(*         pose proof (parentIdxOf_child_indsOf _ _ H7). *)
-(*         dest_in; try discriminate; simpl in *. *)
-(*         cbn in H26; inv H26. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists val0. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H22; red; simpl in *; mred. *)
-
-(*       - (** [childDownRqS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             mred; simpl; auto. *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto]. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] [? ?]]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H7; red; simpl in *; mred. *)
-        
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - (** [childSetRsM] *) *)
-(*         disc_rule_conds_ex. *)
-(*         good_footprint_get child2Idx. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* generate hints for leaves (L1 caches) *) *)
-(*         pose proof (parentIdxOf_child_indsOf _ _ H7). *)
-(*         dest_in; try discriminate; simpl in *. *)
-(*         cbn in H26; inv H26. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists n. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 destruct H6 as [|[|]]; try (exfalso; dest; discriminate). *)
-(*                 right; right; solve_rule_conds_ex. *)
-(*               } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H22; red; simpl in *; mred. *)
-          
-(*       - (** [childDownRqM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             mred; simpl; auto. *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[parentIdx]) as [post|] eqn:Hpost; simpl in *; [|auto]. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] [? ?]]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - atomic_cont_exfalso_bound MsiSvMsgOutPred. *)
-(*       - (** [childEvictRsI] *) *)
-(*         disc_rule_conds_ex. *)
-(*         good_footprint_get child2Idx. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* generate hints for leaves (L1 caches) *) *)
-(*         pose proof (parentIdxOf_child_indsOf _ _ H7). *)
-(*         dest_in; try discriminate; simpl in *. *)
-(*         cbn in H21; inv H21. *)
-
-(*         (* construction *) *)
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsDown_preserves_msg_out_preds; eauto; *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys *)
-(*               |red; auto *)
-(*               |exact msiSvMsgOutPred_good]. *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             rename porq into orq. *)
-(*             destruct (oss@[child1Idx]) as [cost1|]; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|]; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex; solve_msi. } *)
-(*           * red in H20; red; simpl in *; mred. *)
-
-(*       (** parent(child1) *) *)
-
-(*       - (** [parentGetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; left. *)
-(*                 destruct H6 as [|[|]]. *)
-(*                 { solve_rule_conds_ex; solve_msi. } *)
-(*                 { solve_rule_conds_ex. } *)
-(*                 { solve_msi. } *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*               clear H24. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentGetDownRqS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred. *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentSetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in H13; simpl in H13. *)
-
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; right; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*               clear H24. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentSetDownRqM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred. *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentGetDownRsS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge the lock invariant *) *)
-(*         destruct H6. *)
-(*         red in H8; simpl in H8. *)
-(*         disc_rule_conds_const. *)
-(*         red in H8. *)
-(*         disc_rule_conds_const. *)
-(*         destruct H8; dest; [|discriminate]. *)
-(*         rewrite H10 in *. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-        
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsUps_preserves_msg_out_preds *)
-(*               with (rsUps:= [(c2pRs, rmsg)]); eauto. *)
-(*             { exact msiSv_impl_ORqsInit. } *)
-(*             { exact msiSv_impl_RqRsSys. } *)
-(*             { repeat constructor; intro; dest_in. } *)
-(*             { apply SubList_cons; [|apply SubList_nil]. *)
-(*               assumption. *)
-(*             } *)
-(*             { instantiate (1:= fun _ => True). *)
-(*               instantiate (1:= [pc2]). *)
-(*               repeat split. *)
-(*               { discriminate. } *)
-(*               { repeat constructor. *)
-(*                 simpl; exists child2Idx. *)
-(*                 repeat split. *)
-(*               } *)
-(*             } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             solve_rule_conds_ex. *)
-(*         + split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-
-(*             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*               by (simpl; tauto). *)
-(*             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*             clear H21. *)
-(*             eapply upLockInvORq_parent_locked_locked in H22; try reflexivity; *)
-(*               [|red; repeat (simpl; mred); eauto]; dest. *)
-          
-(*             split. *)
-(*             { exists val0. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; left; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentSetDownRsM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge the lock invariant *) *)
-(*         destruct H6. *)
-(*         red in H8; simpl in H8. *)
-(*         disc_rule_conds_const. *)
-(*         red in H8. *)
-(*         disc_rule_conds_const. *)
-(*         destruct H8; dest; [|discriminate]. *)
-(*         rewrite H10 in *. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-        
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsUps_preserves_msg_out_preds *)
-(*               with (rsUps:= [(c2pRs, rmsg)]); eauto. *)
-(*             { exact msiSv_impl_ORqsInit. } *)
-(*             { exact msiSv_impl_RqRsSys. } *)
-(*             { repeat constructor; intro; dest_in. } *)
-(*             { apply SubList_cons; [|apply SubList_nil]. *)
-(*               assumption. *)
-(*             } *)
-(*             { instantiate (1:= fun _ => True). *)
-(*               instantiate (1:= [pc2]). *)
-(*               repeat split. *)
-(*               { discriminate. } *)
-(*               { repeat constructor. *)
-(*                 simpl; exists child2Idx. *)
-(*                 repeat split. *)
-(*               } *)
-(*             } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             solve_rule_conds_ex. *)
-(*         + split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-
-(*             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*               by (simpl; tauto). *)
-(*             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*             clear H21. *)
-(*             eapply upLockInvORq_parent_locked_locked in H22; try reflexivity; *)
-(*               [|red; repeat (simpl; mred); eauto]; dest. *)
-
-(*             split. *)
-(*             { exists val0. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; right; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentEvictRqImmI] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred. *)
-(*           * red in H7; red; simpl in *; mred. *)
-        
-(*       - (** [parentEvictRqImmS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in *; simpl in *. *)
-(*             disc_rule_conds_ex. *)
-(*             destruct H6 as [|[|]]; *)
-(*               [exfalso; solve_rule_conds_ex *)
-(*               | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex]. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; left; solve_msi. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*               clear H6. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentEvictRqImmLastS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in *; simpl in *. *)
-(*             disc_rule_conds_ex. *)
-(*             destruct H6 as [|[|]]; *)
-(*               [exfalso; solve_rule_conds_ex *)
-(*               | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex]. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 left; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*               clear H6. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentEvictRqImmM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child1Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in *; simpl in *. *)
-(*             disc_rule_conds_ex. *)
-(*             destruct H6 as [|[|]]; try (exfalso; solve_rule_conds_ex; fail). *)
-
-(*             assert (In (child child1Idx ec1 ce1 c1pRq c1pRs pc1) (sys_objs impl)) *)
-(*               by (simpl; tauto). *)
-(*             good_locking_get (child child1Idx ec1 ce1 c1pRq c1pRs pc1). *)
-(*             clear H26. *)
-(*             eapply upLockInvORq_rqUp_length_one_locked in H27; try reflexivity; *)
-(*               [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*             disc_rule_conds_ex. *)
-          
-(*             split. *)
-(*             { exists n. *)
-(*               repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 left; solve_msi. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       (** parent(child2) *) *)
-
-(*       - (** [parentGetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; left. *)
-(*                 destruct H6 as [|[|]]. *)
-(*                 { solve_rule_conds_ex; solve_msi. } *)
-(*                 { solve_rule_conds_ex. } *)
-(*                 { solve_msi. } *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*               clear H24. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentGetDownRqS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred. *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentSetRqImm] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in H14; simpl in H14. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; right; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*               clear H24. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H26; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentSetDownRqM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred. *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentGetDownRsS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge the lock invariant *) *)
-(*         destruct H6. *)
-(*         red in H8; simpl in H8. *)
-(*         disc_rule_conds_const. *)
-(*         red in H8. *)
-(*         disc_rule_conds_const. *)
-(*         destruct H8; dest; [discriminate|]. *)
-(*         rewrite H10 in *. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-        
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsUps_preserves_msg_out_preds *)
-(*               with (rsUps:= [(c1pRs, rmsg)]); eauto. *)
-(*             { exact msiSv_impl_ORqsInit. } *)
-(*             { exact msiSv_impl_RqRsSys. } *)
-(*             { repeat constructor; intro; dest_in. } *)
-(*             { apply SubList_cons; [|apply SubList_nil]. *)
-(*               assumption. *)
-(*             } *)
-(*             { instantiate (1:= fun _ => True). *)
-(*               instantiate (1:= [pc1]). *)
-(*               repeat split. *)
-(*               { discriminate. } *)
-(*               { repeat constructor. *)
-(*                 simpl; exists child1Idx. *)
-(*                 repeat split. *)
-(*               } *)
-(*             } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             solve_rule_conds_ex. *)
-(*         + split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-
-(*             assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*               by (simpl; tauto). *)
-(*             good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*             clear H21. *)
-(*             eapply upLockInvORq_parent_locked_locked in H22; try reflexivity; *)
-(*               [|red; repeat (simpl; mred); eauto]; dest. *)
-          
-(*             split. *)
-(*             { exists val0. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; left; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentSetDownRsM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         (* discharge the lock invariant *) *)
-(*         destruct H6. *)
-(*         red in H8; simpl in H8. *)
-(*         disc_rule_conds_const. *)
-(*         red in H8. *)
-(*         disc_rule_conds_const. *)
-(*         destruct H8; dest; [discriminate|]. *)
-(*         rewrite H10 in *. *)
-
-(*         (* discharge message predicates *) *)
-(*         disc_msg_preds H4. *)
-(*         disc_rule_conds_ex. *)
-        
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rsUps_preserves_msg_out_preds *)
-(*               with (rsUps:= [(c1pRs, rmsg)]); eauto. *)
-(*             { exact msiSv_impl_ORqsInit. } *)
-(*             { exact msiSv_impl_RqRsSys. } *)
-(*             { repeat constructor; intro; dest_in. } *)
-(*             { apply SubList_cons; [|apply SubList_nil]. *)
-(*               assumption. *)
-(*             } *)
-(*             { instantiate (1:= fun _ => True). *)
-(*               instantiate (1:= [pc1]). *)
-(*               repeat split. *)
-(*               { discriminate. } *)
-(*               { repeat constructor. *)
-(*                 simpl; exists child1Idx. *)
-(*                 repeat split. *)
-(*               } *)
-(*             } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; simpl. *)
-(*             solve_rule_conds_ex. *)
-(*         + split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-
-(*             assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*               by (simpl; tauto). *)
-(*             good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*             clear H21. *)
-(*             eapply upLockInvORq_parent_locked_locked in H22; try reflexivity; *)
-(*               [|red; repeat (simpl; mred); eauto]; dest. *)
-
-(*             split. *)
-(*             { exists val0. *)
-(*               red; repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; right; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * solve_rule_conds_ex. *)
-
-(*       - (** [parentEvictRqImmI] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred. *)
-(*           * red in H7; red; simpl in *; mred. *)
-        
-(*       - (** [parentEvictRqImmS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in *; simpl in *. *)
-(*             disc_rule_conds_ex. *)
-(*             destruct H6 as [|[|]]; *)
-(*               [exfalso; solve_rule_conds_ex *)
-(*               | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex]. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 right; left; solve_msi. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*               clear H6. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentEvictRqImmLastS] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in *; simpl in *. *)
-(*             disc_rule_conds_ex. *)
-(*             destruct H6 as [|[|]]; *)
-(*               [exfalso; solve_rule_conds_ex *)
-(*               | |exfalso; destruct H6 as [? [|]]; solve_rule_conds_ex]. *)
-(*             split. *)
-(*             { exists cv. *)
-(*               repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 left; auto. *)
-(*               } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { disc_rule_conds_ex. *)
-(*               assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*                 by (simpl; tauto). *)
-(*               good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*               clear H6. *)
-(*               eapply upLockInvORq_rqUp_length_one_locked in H28; try reflexivity; *)
-(*                 [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*               solve_rule_conds_ex. *)
-(*             } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*       - (** [parentEvictRqImmM] *) *)
-(*         disc_rule_conds_ex. *)
-
-(*         split. *)
-(*         + apply Forall_app. *)
-(*           * apply forall_removeOnce. *)
-(*             eapply atomic_rqUp_preserves_msg_out_preds with (oidx:= child2Idx); *)
-(*               [exact msiSv_impl_ORqsInit *)
-(*               |exact msiSv_impl_RqRsSys|..]; eauto. *)
-(*             { intro; dest_in; discriminate. } *)
-(*             { red; auto. } *)
-(*             { exact msiSvMsgOutPred_good. } *)
-(*           * repeat (constructor; simpl). *)
-(*             red; repeat (simpl; mred). *)
-(*         + destruct H6; split. *)
-(*           * red in H6; red; simpl in *; mred; simpl. *)
-(*             destruct (oss@[child1Idx]) as [cost1|] eqn:Hcost1; simpl in *; [|auto]. *)
-(*             destruct (oss@[child2Idx]) as [cost2|] eqn:Hcost2; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1; simpl in *; [|auto]. *)
-(*             destruct (orqs@[child2Idx]) as [corq2|] eqn:Hcorq2; simpl in *; [|auto]. *)
-(*             destruct H6 as [[cv ?] ?]. *)
-(*             red in H6; dest. *)
-(*             unfold getDir in *; simpl in *. *)
-(*             disc_rule_conds_ex. *)
-(*             destruct H6 as [|[|]]; try (exfalso; solve_rule_conds_ex; fail). *)
-
-(*             assert (In (child child2Idx ec2 ce2 c2pRq c2pRs pc2) (sys_objs impl)) *)
-(*               by (simpl; tauto). *)
-(*             good_locking_get (child child2Idx ec2 ce2 c2pRq c2pRs pc2). *)
-(*             clear H26. *)
-(*             eapply upLockInvORq_rqUp_length_one_locked in H27; try reflexivity; *)
-(*               [|eapply findQ_length_ge_one; apply FirstMP_InMP; eassumption]. *)
-(*             disc_rule_conds_ex. *)
-          
-(*             split. *)
-(*             { exists n. *)
-(*               repeat ssplit. *)
-(*               { solve_rule_conds_ex. *)
-(*                 left; solve_msi. *)
-(*               } *)
-(*               { solve_rule_conds_ex; solve_msi. } *)
-(*               { solve_rule_conds_ex. } *)
-(*               { solve_rule_conds_ex. } *)
-(*             } *)
-(*             { solve_rule_conds_ex. } *)
-(*           * red in H7; red; simpl in *; mred. *)
-
-(*     Qed. *)
-
-(*     Lemma implInv_init: *)
-(*       ImplInv (initsOf impl). *)
-(*     Proof. *)
-(*       red; simpl. *)
-(*       unfold implOStatesInit, implORqsInit; mred. *)
-(*       simpl. *)
-(*       repeat split. *)
-(*       exists 0. *)
-(*       repeat split; intros. *)
-(*       - vm_compute; intros. *)
-(*         right; left; auto. *)
-(*       - discriminate. *)
-(*       - discriminate. *)
-(*       - vm_compute; intros; auto. *)
-(*       - vm_compute; intros; auto. *)
-(*     Qed. *)
-
-(*     Lemma implInv_invStep: *)
-(*       InvStep impl step_m ImplInv. *)
-(*     Proof. *)
-(*       apply invSeq_serializable_invStep. *)
-(*       - apply implInv_init. *)
-(*       - apply inv_trs_seqSteps. *)
-(*         apply msiSv_impl_InvTrs. *)
-(*       - eapply rqrs_Serializable. *)
-(*         + apply msiSv_impl_ORqsInit. *)
-(*         + apply msiSv_impl_RqRsSys. *)
-(*     Qed. *)
-
-(*   End Facts. *)
-  
-(* End Inv. *)
-
-(* Hint Unfold ImplOStateM ImplOStateS ImplOStateI ImplOStateMSI *)
-(*      ImplDirM ImplDirS ImplDirI *)
-(*      ImplDirCoh ImplParentCoh ImplChildCoh1 ImplChildCoh2 ImplChildrenCoh *)
-(*      ImplStateCoh: RuleConds. *)
+End Inv.
+
+Hint Unfold ImplOStateMSI ChildExcl DirExcl ExclInv InvalidInv
+     DirSound1 DirSound2 DirSoundS DirExcl1 DirExcl2
+     DirCorrectM DirCorrectS DirInv
+     ParentDownRsS1 ParentDownRsS2 ParentDownRsI1 ParentDownRsI2
+     ParentDownLockBack DownLockInv
+     ImplInv: RuleConds.
 
 Close Scope list.
 Close Scope hvec.

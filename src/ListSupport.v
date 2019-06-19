@@ -1525,3 +1525,20 @@ Proof.
   omega.
 Qed.
 
+(** Tactics for solving predicates of constant lists *)
+
+Ltac solve_not_in :=
+  intro; dest_in; discriminate.
+
+Ltac solve_SubList :=
+  red; intros; dest_in; simpl; tauto.
+
+Ltac solve_DisjList :=
+  match goal with
+  | [ |- DisjList ?ll ?rl] =>
+    let e := fresh "e" in
+    red; intro e;
+    destruct (in_dec eq_nat_dec e ll); [right|auto];
+    dest_in; solve_not_in
+  end.
+
