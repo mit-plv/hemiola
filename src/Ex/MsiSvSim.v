@@ -1392,7 +1392,7 @@ Section Sim.
         { specialize (H15 ltac:(clear -H21; solve_msi)); dest.
           disc_DirMsgsCoh_by_FirstMP H15 H47.
           assert (msiM <= fst (snd cost1)).
-          { apply H44.
+          { apply H44; auto.
             { rewrite H21; auto. }
             { exists (c1pRq, rmsg); split.
               { apply FirstMP_InMP; assumption. }
