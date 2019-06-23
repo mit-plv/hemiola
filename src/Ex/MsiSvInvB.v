@@ -37,6 +37,33 @@ Section Inv.
     Variables (post: OState ImplOStateIfc)
               (porq: ORq Msg).
 
+    (* Why exclusiveness of the directory:
+     * It's simple. We need to know [P.st = C2.st = I] when [C1.st = M] and
+     * [C1] is lock-free. By the soundness of the directory, we can get
+     * [P.dir.C1 = M]. Then by this exclusiveness, we can get
+     * [P.st = P.dir.C2 = I].
+     *)
+    Definition DirExcl1: Prop :=
+      (msiM <= post#[implDirIdx].(fst) ->
+       post#[implStatusIdx] = msiI /\ post#[implDirIdx].(snd) = msiI) /\
+      (post#[implStatusIdx] = msiI ->
+       post#[implDirIdx].(snd) = msiI ->
+       msiM <= post#[implDirIdx].(fst)).
+
+    Definition DirExcl2: Prop :=
+      (msiM <= post#[implDirIdx].(snd) ->
+       post#[implStatusIdx] = msiI /\ post#[implDirIdx].(fst) = msiI) /\
+      (post#[implStatusIdx] = msiI ->
+       post#[implDirIdx].(fst) = msiI ->
+       msiM <= post#[implDirIdx].(snd)).
+
+    Definition DirCorrectM: Prop :=
+      (msiM <= post#[implStatusIdx] ->
+       post#[implDirIdx].(fst) = msiI /\ post#[implDirIdx].(snd) = msiI) /\
+      (post#[implDirIdx].(fst) = msiI ->
+       post#[implDirIdx].(snd) = msiI ->
+       msiM <= post#[implStatusIdx]).
+
     (* Why soundness of the shared status:
      * the parent is upgraded to M when all children values are evicted.
      * In this case the parent does not update the value, but maintain the
@@ -48,28 +75,10 @@ Section Inv.
       (post#[implDirIdx].(fst) = msiS \/ post#[implDirIdx].(snd) = msiS) ->
       post#[implStatusIdx] = msiS.
 
-    (* Why exclusiveness of the directory:
-     * It's simple. We need to know [P.st = C2.st = I] when [C1.st = M] and
-     * [C1] is lock-free. By the soundness of the directory, we can get
-     * [P.dir.C1 = M]. Then by this exclusiveness, we can get
-     * [P.st = P.dir.C2 = I].
-     *)
-    Definition DirExcl1: Prop :=
-      msiM <= post#[implDirIdx].(fst) ->
-      post#[implStatusIdx] = msiI /\ post#[implDirIdx].(snd) = msiI.
-
-    Definition DirExcl2: Prop :=
-      msiM <= post#[implDirIdx].(snd) ->
-      post#[implStatusIdx] = msiI /\ post#[implDirIdx].(fst) = msiI.
-
-    Definition DirCorrectM: Prop :=
-      msiM <= post#[implStatusIdx] ->
-      post#[implDirIdx].(fst) = msiI /\ post#[implDirIdx].(snd) = msiI.
-    
     Definition DirCorrectS: Prop :=
       post#[implStatusIdx] = msiS ->
       (post#[implDirIdx].(fst) <= msiS /\ post#[implDirIdx].(snd) <= msiS).
-    
+        
     Definition DirInvP: Prop :=
       DirSoundS /\ DirExcl1 /\ DirExcl2 /\
       DirCorrectM /\ DirCorrectS.
@@ -135,7 +144,8 @@ Section Inv.
     red; simpl.
     unfold implOStatesInit, implORqsInit; mred.
     simpl; repeat split;
-      try (simpl in *; solve_msi_false; fail); auto.
+      try (simpl in *; solve_msi_false; fail); auto;
+        try (simpl; intros; discriminate).
   Qed.
 
   Lemma implInvB_invStep:
@@ -145,8 +155,16 @@ Section Inv.
     inv H1; try assumption.
     dest_in.
 
-    (* It roughly takes 2 minutes to solve all 40 cases. *)
+    (* It roughly takes 3 minutes to solve all 40 cases. *)
     all: solve_rule_conds_ex; solve_msi; fail.
+  Qed.
+
+  Lemma implInvB_ok:
+    InvReachable impl step_m ImplInvB.
+  Proof.
+    apply inv_reachable.
+    - apply implInvB_init.
+    - apply implInvB_invStep.
   Qed.
 
 End Inv.
@@ -154,8 +172,7 @@ End Inv.
 Hint Unfold DirSoundS DirExcl1 DirExcl2
      DirCorrectM DirCorrectS DirInvP
      ParentDownRsS1 ParentDownRsS2 ParentDownRsI1 ParentDownRsI2
-     ParentDownLockBack DownLockInv
-     ImplInvB: RuleConds.
+     ParentDownLockBack DownLockInv: RuleConds.
 
 Close Scope list.
 Close Scope hvec.

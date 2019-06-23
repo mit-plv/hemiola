@@ -121,6 +121,7 @@ Proof.
                destruct H2; solve_rule_conds_ex; fail).
       * solve_rule_conds_const.
       * solve_rule_conds_const.
+        unfold msiI, msiS; omega.
 
     + preveal H6.
       dest_in;
@@ -181,6 +182,7 @@ Proof.
                destruct H2; solve_rule_conds_ex; fail).
       * solve_rule_conds_const.
       * solve_rule_conds_const.
+        unfold msiI, msiS; omega.
 
     + preveal H6.
       dest_in;

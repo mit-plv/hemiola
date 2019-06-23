@@ -178,7 +178,7 @@ Section System.
           /\ RqAccepting
           /\ UpLockFree
           /\ (fun (ost: OState ImplOStateIfc) orq mins =>
-                ost#[implStatusIdx] <> msiM))
+                ost#[implStatusIdx] <= msiS))
       :transition
          (do (msg <-- getFirstMsg;
                 st --> (st.ost,
@@ -307,6 +307,8 @@ Section System.
               /\ RqAccepting
               /\ DownLockFree
               /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+                    getDir childIdx ost#[implDirIdx] = msiI)
+              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
                     ost#[implStatusIdx] = msiI))
           :transition
              (do (msg <-- getFirstMsg;
@@ -345,7 +347,7 @@ Section System.
               /\ RqAccepting
               /\ DownLockFree
               /\ (fun (ost: OState ImplOStateIfc) orq mins =>
-                    getDir childIdx' ost#[implDirIdx] <> msiI))
+                    msiS <= getDir childIdx' ost#[implDirIdx]))
           :transition
              (do (msg <-- getFirstMsg;
                     st --> (st.ost,
