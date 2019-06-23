@@ -209,6 +209,13 @@ Section Inv.
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
+    Definition InvalidMsg (idm: Id Msg) :=
+      match case (sigOf idm) on sig_dec default True with
+      | (pc, (MRs, msiRsS)): False
+      | (cpRs, (MRs, msiDownRsS)): False
+      | (cpRq, (MRq, msiRqI)): cost#[implStatusIdx] = msiI
+      end.
+    
     Definition InvalidMsgs :=
       forall idm,
         InMPI msgs idm ->
@@ -254,7 +261,7 @@ Section Inv.
 
   Section InvDir.
     Variables (post cost1 cost2: OState ImplOStateIfc)
-              (corq1 corq2: ORq Msg).
+              (porq corq1 corq2: ORq Msg).
 
     (* Why soundness of the directory:
      * 1) We need to relax when an object value is coherent, by allowing
@@ -269,8 +276,17 @@ Section Inv.
     Definition DirSound2: Prop :=
       !corq2@[upRq]; cost2#[implStatusIdx] <= post#[implDirIdx].(snd).
 
+    Definition DirComplete1: Prop :=
+      !corq1@[upRq]; !porq@[downRq];
+        post#[implDirIdx].(fst) <= cost1#[implStatusIdx].
+
+    Definition DirComplete2: Prop :=
+      !corq2@[upRq]; !porq@[downRq];
+        post#[implDirIdx].(snd) <= cost2#[implStatusIdx].
+
     Definition DirInv: Prop :=
-      DirSound1 /\ DirSound2.
+      DirSound1 /\ DirSound2 /\
+      DirComplete1 /\ DirComplete2.
 
   End InvDir.
 
@@ -281,7 +297,7 @@ Section Inv.
       porq <-- (bst_orqs st)@[parentIdx];
       corq1 <-- (bst_orqs st)@[child1Idx];
       corq2 <-- (bst_orqs st)@[child2Idx];
-      DirInv post cost1 cost2 corq1 corq2 /\
+      DirInv post cost1 cost2 porq corq1 corq2 /\
       ExclInv (fst post#[implDirIdx]) porq cost1 corq1
               pc1 c1pRq c1pRs (bst_msgs st) /\
       ExclInv (snd post#[implDirIdx]) porq cost2 corq2
@@ -290,30 +306,44 @@ Section Inv.
       InvalidInv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
 
   Hint Unfold ImplOStateMSI ChildExcl DirExcl ExclInv InvalidInv
-       DirSound1 DirSound2 DirInv: RuleConds.
+       DirSound1 DirSound2 DirComplete1 DirComplete2 DirInv: RuleConds.
 
   Section Facts.
 
-    Lemma dirInv_orqs_weakened_1:
-      forall post cost1 cost2 corq1 corq2,
-        DirInv post cost1 cost2 corq1 corq2 ->
+    Lemma dirInv_orqs_weakened_p:
+      forall post cost1 cost2 porq corq1 corq2,
+        DirInv post cost1 cost2 porq corq1 corq2 ->
         forall rty rqi,
-          DirInv post cost1 cost2 (corq1 +[rty <- rqi]) corq2.
+          DirInv post cost1 cost2 (porq +[rty <- rqi]) corq1 corq2.
     Proof.
       unfold DirInv; intros; dest.
-      split; [|assumption].
-      red in H; red; mred.
+      repeat split; try assumption.
+      - red in H1; red; mred.
+      - red in H2; red; mred.
+    Qed.
+
+    Lemma dirInv_orqs_weakened_1:
+      forall post cost1 cost2 porq corq1 corq2,
+        DirInv post cost1 cost2 porq corq1 corq2 ->
+        forall rty rqi,
+          DirInv post cost1 cost2 porq (corq1 +[rty <- rqi]) corq2.
+    Proof.
+      unfold DirInv; intros; dest.
+      repeat split; try assumption.
+      - red in H; red; mred.
+      - red in H1; red; mred.
     Qed.
 
     Lemma dirInv_orqs_weakened_2:
-      forall post cost1 cost2 corq1 corq2,
-        DirInv post cost1 cost2 corq1 corq2 ->
+      forall post cost1 cost2 porq corq1 corq2,
+        DirInv post cost1 cost2 porq corq1 corq2 ->
         forall rty rqi,
-          DirInv post cost1 cost2 corq1 (corq2 +[rty <- rqi]).
+          DirInv post cost1 cost2 porq corq1 (corq2 +[rty <- rqi]).
     Proof.
       unfold DirInv; intros; dest.
-      split; [assumption|].
-      red in H0; red; mred.
+      repeat split; try assumption.
+      - red in H0; red; mred.
+      - red in H2; red; mred.
     Qed.
 
     Lemma exclInv_parent_orqs_weakened:
@@ -352,6 +382,7 @@ Section Inv.
       disc_rule_conds_const; dest.
       mred; simpl; auto.
       - repeat ssplit; try assumption.
+        + apply dirInv_orqs_weakened_p; assumption.
         + apply exclInv_parent_orqs_weakened; assumption.
         + apply exclInv_parent_orqs_weakened; assumption.
       - repeat ssplit; try assumption.
@@ -615,6 +646,19 @@ Section Inv.
       destruct (sig_dec _ _); auto.
     Qed.
 
+    Lemma invalidMsgs_enqMP:
+      forall cost pc cpRq cpRs msgs,
+        InvalidMsgs cost pc cpRq cpRs msgs ->
+        forall midx msg,
+          InvalidMsg cost pc cpRq cpRs (midx, msg) ->
+          InvalidMsgs cost pc cpRq cpRs (enqMP midx msg msgs).
+    Proof.
+      unfold InvalidMsgs, InvalidMsg; intros.
+      apply InMP_enqMP_or in H1; destruct H1; [dest|auto].
+      destruct idm as [midx' msg']; simpl in H1, H2; subst.
+      assumption.
+    Qed.
+    
     Lemma exclInv_other_midx_enqMP:
       forall dir porq cost corq pc cpRq cpRs msgs,
         ExclInv dir porq cost corq pc cpRq cpRs msgs ->
@@ -1036,13 +1080,21 @@ Section Inv.
         | (c2pRq, (MRq, msiRqI)):
             corq2 <-- orqs@[child2Idx]; corq2@[upRq] <> None
         | (c1pRq, (MRq, msiRqS)):
-            cost1 <-- oss@[child1Idx]; cost1#[implStatusIdx] = msiI
+            cost1 <-- oss@[child1Idx];
+            corq1 <-- orqs@[child1Idx];
+            cost1#[implStatusIdx] = msiI /\ corq1@[upRq] <> None
         | (c2pRq, (MRq, msiRqS)):
-            cost2 <-- oss@[child2Idx]; cost2#[implStatusIdx] = msiI
+            cost2 <-- oss@[child2Idx];
+            corq2 <-- orqs@[child2Idx];
+            cost2#[implStatusIdx] = msiI /\ corq2@[upRq] <> None
         | (c1pRq, (MRq, msiRqM)):
-            cost1 <-- oss@[child1Idx]; cost1#[implStatusIdx] <= msiS
+            cost1 <-- oss@[child1Idx];
+            corq1 <-- orqs@[child1Idx];
+            cost1#[implStatusIdx] <= msiS /\ corq1@[upRq] <> None
         | (c2pRq, (MRq, msiRqM)):
-            cost2 <-- oss@[child2Idx]; cost2#[implStatusIdx] <= msiS
+            cost2 <-- oss@[child2Idx];
+            corq2 <-- orqs@[child2Idx];
+            cost2#[implStatusIdx] <= msiS /\ corq2@[upRq] <> None
 
         | (pc1, (MRq, msiDownRqS)):
             post <-- oss@[parentIdx];
@@ -1063,10 +1115,10 @@ Section Inv.
 
         | (pc1, (MRs, msiRsM)):
             post <-- oss@[parentIdx];
-            post#[implStatusIdx] = msiI /\ msiM <= post#[implDirIdx].(fst)
+            post#[implStatusIdx] = msiI /\ post#[implDirIdx].(fst) = msiM
         | (pc2, (MRs, msiRsM)):
             post <-- oss@[parentIdx];
-            post#[implStatusIdx] = msiI /\ msiM <= post#[implDirIdx].(snd)
+            post#[implStatusIdx] = msiI /\ post#[implDirIdx].(snd) = msiM
 
         | (pc1, (MRs, msiRsS)):
             post <-- oss@[parentIdx];
@@ -1178,6 +1230,22 @@ Section Inv.
           repeat find_if_inside; congruence.
     Qed.
 
+    Lemma implInv_value_changed:
+      forall oss orqs msgs,
+        ImplInv {| bst_oss := oss;
+                   bst_orqs := orqs;
+                   bst_msgs := msgs |} ->
+        forall cidx ost nv (noss: OStates ImplOStateIfc),
+          oss@[cidx] = Some ost ->
+          noss = oss +[cidx <- (nv, snd ost)] ->
+          ImplInv {| bst_oss := noss;
+                     bst_orqs := orqs;
+                     bst_msgs := msgs |}.
+    Proof.
+      unfold ImplInv; simpl; intros.
+      disc_rule_conds_ex.
+    Qed.
+
     Ltac disc_rule_custom ::=
       try disc_footprints_ok;
       try disc_AtomicInv.
@@ -1227,7 +1295,7 @@ Section Inv.
         disc_rule_conds_ex.
         simpl; split.
         + atomic_init_solve_AtomicInv.
-          red; simpl; mred.
+          solve_rule_conds_ex.
         + replace (oss +[child1Idx <- pos]) with oss by meq.
           apply implInv_other_msg_id_enqMP; [|solve_not_in].
           apply implInv_other_midx_deqMP; [|solve_not_in].
@@ -1238,13 +1306,15 @@ Section Inv.
         disc_rule_conds_ex.
         simpl; split; [atomic_init_solve_AtomicInv|].
         replace (orqs +[child1Idx <- norq]) with orqs by meq.
-        admit.
+        apply implInv_other_midx_enqMP; [|solve_not_in].
+        apply implInv_other_midx_deqMP; [|solve_not_in].
+        eapply implInv_value_changed; eauto.
 
       - (** [childSetRqM] *)
         disc_rule_conds_ex.
         simpl; split.
         + atomic_init_solve_AtomicInv.
-          red; simpl; mred.
+          solve_rule_conds_ex.
         + replace (oss +[child1Idx <- pos]) with oss by meq.
           apply implInv_other_msg_id_enqMP; [|solve_not_in].
           apply implInv_other_midx_deqMP; [|solve_not_in].
@@ -1253,9 +1323,29 @@ Section Inv.
 
       - (** [childEvictRqI] *)
         disc_rule_conds_ex.
-        simpl; split; [atomic_init_solve_AtomicInv|].
-        replace (oss +[child1Idx <- pos]) with oss by meq.
-        admit.
+        simpl; split.
+        + atomic_init_solve_AtomicInv.
+          solve_rule_conds_ex.
+        + replace (oss +[child1Idx <- pos]) with oss by meq.
+          red in H0; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * solve_msi.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H24; destruct H24; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H24; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_enqMP.
+            { apply invalidMsgs_deqMP; assumption. }
+            { red; simpl; solve_msi. }
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
 
     Admitted.
 
@@ -1373,14 +1463,11 @@ Section Inv.
           repeat constructor.
         + red in H6; red.
           disc_rule_conds_ex.
-          intuition idtac; try solve_msi_false.
-          * solve_msi.
+          intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H34; destruct H34; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H34; auto.
-          * solve_msi.
-          * solve_msi.
+          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H36; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1444,8 +1531,8 @@ Section Inv.
             { rewrite H15; discriminate. }
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H35; destruct H35; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H35; auto.
+          * apply msgExistsSig_enqMP_or in H37; destruct H37; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H37; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1497,12 +1584,11 @@ Section Inv.
           repeat constructor.
         + red in H6; red.
           disc_rule_conds_ex.
-          intuition idtac; try solve_msi_false.
-          * solve_msi.
+          intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H34; destruct H34; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H34; auto.
+          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H36; auto.
           * left; reflexivity.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP.
@@ -1536,14 +1622,11 @@ Section Inv.
           solve_rule_conds_ex.
         + red in H6; red.
           disc_rule_conds_ex.
-          intuition idtac; try solve_msi_false.
-          * solve_msi.
+          intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H29; destruct H29; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H29; auto.
-          * solve_msi.
-          * solve_msi.
+          * apply msgExistsSig_enqMP_or in H31; destruct H31; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H31; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1602,21 +1685,21 @@ Section Inv.
         + red in H6; red.
           disc_rule_conds_ex.
           intuition idtac; try solve_msi_false; try solve_msi.
-          * apply msgExistsSig_enqMP_or in H31; destruct H31; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H31.
-            destruct H31 as [[midx msg] [? ?]]; simpl in *.
-            inv H32.
+          * apply msgExistsSig_enqMP_or in H33; destruct H33; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H33.
+            destruct H33 as [[midx msg] [? ?]]; simpl in *.
+            inv H34.
             exfalso.
             exfalso_uplock_rq_two parentIdx c1pRq msg rmsg.
             { intro Hx; subst.
-              rewrite H10 in H36; discriminate.
+              rewrite H10 in H38; discriminate.
             }
             { apply FirstMP_InMP; assumption. }
 
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H31; destruct H31; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H31; auto.
+          * apply msgExistsSig_enqMP_or in H33; destruct H33; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H33; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1639,8 +1722,7 @@ Section Inv.
           solve_rule_conds_ex.
         + red in H6; red.
           disc_rule_conds_ex.
-          intuition idtac; try solve_msi_false.
-          * solve_msi.
+          intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
           * apply childInvalid_enqMP.
@@ -1676,8 +1758,8 @@ Section Inv.
           intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H29; destruct H29; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H29; auto.
+          * apply msgExistsSig_enqMP_or in H31; destruct H31; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H31; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1803,7 +1885,7 @@ Section Inv.
             assumption.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-            
+
     Admitted.
 
     Lemma implInv_init:
