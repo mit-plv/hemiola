@@ -726,7 +726,7 @@ Section Facts.
     - exfalso; auto.
     - assumption.
   Qed.
-  
+
   Lemma deqMsgs_InMP:
     forall midx (msg: MsgT) rmsgs mp,
       InMP midx msg mp ->

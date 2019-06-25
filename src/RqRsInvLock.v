@@ -231,7 +231,6 @@ Section RqRsDown.
       destruct H14 as [rrqUp [rdown [rpidx ?]]]; dest.
       repeat disc_rule_minds.
 
-      (* Looks it is too specific to extract as a lemma. *)
       clear -H6 H7 H8 H9 H18.
       unfold InMP, FirstMP, firstMP, rssQ, deqMP in *.
       destruct (findQ rdown (bst_msgs st)); [discriminate|].
@@ -247,6 +246,33 @@ Section RqRsDown.
       + simpl in H18; omega.
     - eapply rssQ_length_ge_one; eauto.
       eapply InMP_deqMP; eassumption.
+  Qed.
+
+  Lemma rsUp_in_deqMP_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj sys.(sys_objs) ->
+        forall cidx msgs rsUp rsum1 rsum2,
+          st.(bst_msgs) = msgs ->
+          parentIdxOf dtr cidx = Some (obj_idx pobj) ->
+          rsEdgeUpFrom dtr cidx = Some rsUp ->
+          FirstMP msgs rsUp rsum1 ->
+          InMP rsUp rsum2 (deqMP rsUp msgs) ->
+          False.
+  Proof.
+    destruct Hrrs as [? [? [? ?]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs H0 H H2 H3).
+    good_locking_get pobj.
+    eapply downLockInvORq_rsUp_length_two_False in H10; eauto.
+
+    clear -H8 H9.
+    unfold InMP, FirstMP, firstMP, deqMP in *.
+    destruct (findQ rsUp (bst_msgs st)); [discriminate|].
+    simpl in H8; inv H8.
+    unfold findQ in H9; mred; simpl in H9.
+    destruct q; [elim H9|].
+    simpl; omega.
   Qed.
 
   Lemma noRqRsDown_step_int:

@@ -1140,6 +1140,12 @@ Section Inv.
         | (c2pRs, (MRs, msiDownRsI)):
             cost2 <-- oss@[child2Idx];
             cost2#[implStatusIdx] = msiI
+        | (c1pRs, (MRs, msiDownRsS)):
+            cost1 <-- oss@[child1Idx];
+            cost1#[implStatusIdx] = msiS
+        | (c2pRs, (MRs, msiDownRsS)):
+            cost2 <-- oss@[child2Idx];
+            cost2#[implStatusIdx] = msiS
         end.
 
     Ltac disc_GoodMsgOutPred :=
@@ -1216,6 +1222,16 @@ Section Inv.
         repeat find_if_inside;
           try (exfalso; auto; fail);
           disc_GoodMsgOutPred.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (In child1Idx (subtreeIndsOf topo child1Idx)) by (simpl; tauto).
+          specialize (H1 _ H); dest.
+          rewrite <-H1.
+          assumption.
+        + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
+          assert (In child2Idx (subtreeIndsOf topo child2Idx)) by (simpl; tauto).
+          specialize (H1 _ H); dest.
+          rewrite <-H1.
+          assumption.
         + red; unfold sigOf, valOf, snd; rewrite H4, H5; simpl.
           assert (In child1Idx (subtreeIndsOf topo child1Idx)) by (simpl; tauto).
           specialize (H1 _ H); dest.
@@ -1399,6 +1415,44 @@ Section Inv.
       - auto.
     Qed.
 
+    Lemma invalidMsgs_rsUp_deq:
+      forall st,
+        Reachable (steps step_m) impl st ->
+        forall cobj pobj,
+          In cobj impl.(sys_objs) ->
+          In pobj impl.(sys_objs) ->
+          forall orqs msgs pidx orq,
+            pobj.(obj_idx) = pidx ->
+            bst_msgs st = msgs ->
+            DownLockInvORq topo orqs msgs pidx orq ->
+            forall cidx pc cpRq cpRs,
+              cobj.(obj_idx) = cidx ->
+              parentIdxOf topo cidx = Some pidx ->
+              edgeDownTo topo cidx = Some pc ->
+              rqEdgeUpFrom topo cidx = Some cpRq ->
+              rsEdgeUpFrom topo cidx = Some cpRs ->
+              forall rsm,
+                FirstMP msgs cpRs rsm ->
+                msg_type rsm = MRs ->
+                forall cost: OState ImplOStateIfc,
+                  cost#[implStatusIdx] = msiI ->
+                  InvalidMsgs cost pc cpRq cpRs (deqMP cpRs msgs).
+    Proof.
+      intros.
+      red; intros.
+      destruct idm as [midx msg].
+      unfold caseDec.
+      repeat find_if_inside; auto.
+      - inv e.
+        eapply rsDown_in_rsUp_in_false
+          with (st0:= st) (rsdm:= msg) (rsum:= rsm)
+               (cobj0:= cobj) (pobj0:= pobj); eauto.
+        + apply InMP_deqMP in H13; assumption.
+        + apply FirstMP_InMP; assumption.
+      - inv e.
+        eapply rsUp_in_deqMP_false; eauto.
+    Qed.
+
     Lemma msiSv_impl_InvTrs: InvTrs impl ImplInv.
     Proof.
       eapply inv_atomic_InvTrs;
@@ -1486,6 +1540,8 @@ Section Inv.
               try exact H; eauto.
             red; auto.
           * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
         + red in H6; red.
           disc_rule_conds_ex.
           intuition idtac; try solve_msi_false; try solve_msi.
@@ -1736,8 +1792,144 @@ Section Inv.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
 
-      - admit.
-      - admit.
+      - (** [parentGetDownRsS] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        red in Hibinv.
+        disc_rule_conds_ex.
+        specialize (H21 eq_refl); dest.
+
+        (** TODO: automate it! *)
+        assert (exists corq1,
+                   orqs@[child1Idx] = Some corq1 /\
+                   corq1@[upRq] <> None).
+        { clear Hnulinv Hpdlinv Hndlinv.
+          pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+          eapply upLockInvORq_parent_locked_locked in H34;
+            try reflexivity; dest.
+          { destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1;
+              simpl in H33; [|mred].
+            eauto.
+          }
+          { red; simpl.
+            rewrite H17; simpl; eauto.
+          }
+        }
+        destruct H33 as [corq1 [? ?]].
+
+        split.
+        + good_footprint_get parentIdx.
+          disc_rule_conds.
+          apply Forall_app.
+          * simpl.
+            red in H5; simpl in H5.
+            rewrite <-H7 in H41.
+            eapply atomic_rsUps_preserves_msg_out_preds
+              with (rsUps:= [(c2pRs, rmsg)]) in H5;
+              try exact H9; try eassumption; eauto.
+            { right; right; left; reflexivity. }
+            { reflexivity. }
+            { repeat constructor; intro Hx; elim Hx. }
+            { apply SubList_cons; [assumption|].
+              apply SubList_nil.
+            }
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+            
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * clear -H12; solve_msi.
+          * clear -H12; solve_msi.
+            
+      - (** [parentGetDownRsI] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        red in Hibinv.
+        disc_rule_conds_ex.
+        specialize (H21 eq_refl); dest.
+        rewrite H21 in *.
+
+        assert (exists corq1,
+                   orqs@[child1Idx] = Some corq1 /\
+                   corq1@[upRq] <> None).
+        { clear Hnulinv Hpdlinv Hndlinv.
+          pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+          eapply upLockInvORq_parent_locked_locked in H34;
+            try reflexivity; dest.
+          { destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1;
+              simpl in H33; [|mred].
+            eauto.
+          }
+          { red; simpl.
+            rewrite H17; simpl; eauto.
+          }
+        }
+        destruct H33 as [corq1 [? ?]].
+
+        split.
+        + good_footprint_get parentIdx.
+          disc_rule_conds.
+          apply Forall_app.
+          * simpl.
+            red in H5; simpl in H5.
+            rewrite <-H7 in H41.
+            eapply atomic_rsUps_preserves_msg_out_preds
+              with (rsUps:= [(c2pRs, rmsg)]) in H5;
+              try exact H9; try eassumption; eauto.
+            { right; right; left; reflexivity. }
+            { reflexivity. }
+            { repeat constructor; intro Hx; elim Hx. }
+            { apply SubList_cons; [assumption|].
+              apply SubList_nil.
+            }
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * clear -H12; solve_msi.
+          * clear -H12; solve_msi.
+          * exfalso.
+
+            clear Hpulinv Hpdlinv Hndlinv.
+            pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+            destruct H46 as [[midx msg] ?]; dest; inv H47.
+
+            (** TODO: [exfalso_uplock_rq_rs] doesn't work here.. *)
+            (* exfalso_uplock_rq_rs *)
+            eapply upLockInvORq_rqUp_down_rssQ_False with
+                (pidx := parentIdx) (rqUp := c1pRq) (down := pc1) in H48;
+              try reflexivity; auto.
+            { eapply findQ_length_ge_one; try eassumption. }
+            { eapply rssQ_length_ge_one; [|apply InMP_or_enqMP; eauto].
+              reflexivity.
+            }
+          * left; assumption.
+          * clear Hnulinv Hndlinv.
+            pull_uplock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+            clear H47.
+
+            (** TODO: make an Ltac for this. *)
+            let H := fresh "H" in
+            assert (H : In parent (sys_objs impl)) by (simpl; tauto);
+              progress good_locking_get parent; clear H.
+            clear H47.
+
+            apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            eapply invalidMsgs_rsUp_deq
+              with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2)
+                   (pobj:= parent);
+              try exact Hr1; try eassumption; try reflexivity;
+                try (simpl; tauto).
 
       - (** [parentEvictRqImmI] *)
         disc_rule_conds_ex.

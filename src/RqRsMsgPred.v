@@ -2,7 +2,7 @@ Require Import Peano_dec Omega List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
-Require Import RqRsTopo RqRsFacts RqRsInvAtomic.
+Require Import RqRsTopo RqRsFacts RqRsInvLock RqRsInvAtomic.
 
 Set Implicit Arguments.
 
@@ -294,42 +294,79 @@ Section PredMsg.
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
-          forall oidx rqTos rsUps Rp,
+          forall obj oidx rqTos rsUps Rp,
+            In obj (sys_objs sys) ->
+            obj.(obj_idx) = oidx ->
             NoDup (idsOf rsUps) ->
             SubList rsUps eouts ->
             RqRsDownMatch dtr oidx rqTos (idsOf rsUps) Rp ->
-            (* No RqUp messages in the subtree for the RsUp messages *)
-            Forall (fun eout =>
-                      forall cidx,
-                        RqDownMsgTo dtr cidx eout ->
-                        parentIdxOf dtr cidx <> Some oidx) eouts ->
-            forall P oss orqs nost norq,
-              GoodMsgOutPred P ->
-              Forall (fun eout => P eout oss orqs) eouts ->
-              Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq]))
-                     (removeL (id_dec msg_dec) eouts rsUps).
+            forall orq rqid,
+              s2.(bst_orqs)@[oidx] = Some orq ->
+              orq@[downRq] = Some rqid ->
+              rqid.(rqi_minds_rss) = idsOf rsUps ->
+              forall P oss orqs nost norq,
+                GoodMsgOutPred P ->
+                Forall (fun eout => P eout oss orqs) eouts ->
+                Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq]))
+                       (removeL (id_dec msg_dec) eouts rsUps).
     Proof.
-      destruct Hrrs as [? [? ?]]; intros.
-      eapply atomic_msg_outs_ok in H2; eauto.
-      inv H2.
+      destruct Hrrs as [? [? [? ?]]]; intros.
+      pose proof H3.
+      eapply atomic_msg_outs_ok in H16; eauto.
+      inv H16.
       - exfalso; destruct rqUp as [rqUp rqm].
-        apply SubList_singleton_NoDup in H6; [|apply idsOf_NoDup; assumption].
-        destruct H6; subst;
-          [red in H7; dest; destruct rqTos; [auto|discriminate]|].
-        eapply RqRsDownMatch_rs_rq in H7; [|left; reflexivity].
-        destruct H7 as [cidx [down ?]]; dest.
-        destruct H11.
+        apply SubList_singleton_NoDup in H9; [|apply idsOf_NoDup; assumption].
+        destruct H9; subst;
+          [red in H10; dest; destruct rqTos; [auto|discriminate]|].
+        eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+        destruct H10 as [cidx [down ?]]; dest.
+        destruct H17.
         simpl in *; solve_midx_false.
       - exfalso; destruct rsDown as [rsDown rsm].
-        apply SubList_singleton_NoDup in H6; [|apply idsOf_NoDup; assumption].
-        destruct H6; subst;
-          [red in H7; dest; destruct rqTos; [auto|discriminate]|].
-        eapply RqRsDownMatch_rs_rq in H7; [|left; reflexivity].
-        destruct H7 as [cidx [down ?]]; dest.
-        destruct H11.
+        apply SubList_singleton_NoDup in H9; [|apply idsOf_NoDup; assumption].
+        destruct H9; subst;
+          [red in H10; dest; destruct rqTos; [auto|discriminate]|].
+        eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+        destruct H10 as [cidx [down ?]]; dest.
+        destruct H17.
         simpl in *; solve_midx_false.
       - eapply rsUps_preserves_msg_out_preds; eauto.
-        eapply rqDown_rsUp_inv_msg; eauto.
+        + eapply rqDown_rsUp_inv_msg; eauto.
+        + apply Forall_forall.
+          intros [rqDown rqdm]; intros.
+          intro Hx.
+          destruct H16; simpl in *.
+          pose proof (edgeDownTo_Some H _ H21).
+          destruct H22 as [rqUp [rsUp [pidx ?]]]; dest.
+          disc_rule_conds.
+          pose proof (downLockInv_ok Hiorqs H0 H H2 (reachable_steps H4 H5)).
+          good_locking_get obj.
+
+          (** TODO: clean up the proof... *)
+
+          pose proof H25.
+          eapply downLockInvORq_down_rqsQ_length_one_locked in H25; eauto.
+          * destruct H25 as [rrqid ?]; dest.
+            disc_rule_conds.
+            eapply downLockInvORq_down_rqsQ_rsUp_False in H26; eauto.
+            { eapply rqsQ_length_ge_one; eauto.
+              eapply atomic_messages_eouts_in in H3; [|eassumption].
+              rewrite Forall_forall in H3.
+              specialize (H3 _ H7); assumption.
+            }
+            { apply in_map_iff with (f:= idOf) in H29.
+              destruct H29 as [[rsUp rsum] [? ?]].
+              simpl in *; subst.
+              apply H9 in H28.
+              eapply atomic_messages_eouts_in in H3; [|eassumption].
+              rewrite Forall_forall in H3.
+              specialize (H3 _ H28).
+              eapply findQ_length_ge_one; eauto.
+            }
+          * eapply rqsQ_length_ge_one; eauto.
+            eapply atomic_messages_eouts_in in H3; [|eassumption].
+            rewrite Forall_forall in H3.
+            specialize (H3 _ H7); assumption.
     Qed.
 
   End Facts.
