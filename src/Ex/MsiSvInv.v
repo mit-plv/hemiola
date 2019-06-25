@@ -15,152 +15,44 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
-(*! TODO: move to another file for general use *)
-
-Ltac disc_AtomicInv :=
-  repeat
-    match goal with
-    | [H: AtomicInv _ _ _ _ _ _ |- _] => red in H; dest
-    end.
-
-Ltac atomic_cont_exfalso_bound msgOutPred :=
-  exfalso;
-  disc_rule_conds_ex;
-  repeat 
-    match goal with
-    | [H1: AtomicMsgOutsInv _ ?eouts _, H2: In _ ?eouts |- _] =>
-      red in H1; rewrite Forall_forall in H1;
-      specialize (H1 _ H2); simpl in H1
-    | [H: msgOutPred _ _ _ |- _] => red in H
-    | [H1: caseDec _ ?sig _ _ |- _] =>
-      match sig with
-      | sigOf (?midx, ?msg) =>
-        match goal with
-        | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
-          progress replace sig with (midx, (mty, mid)) in H1
-            by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
-          simpl in H1
-        end
-      end
-    end;
-  assumption.
-
-Ltac atomic_init_exfalso_rq :=
-  exfalso;
-  disc_rule_conds_ex;
-  repeat
-    match goal with
-    | [H: _ = _ \/ _ |- _] =>
-      destruct H; [subst; try discriminate|auto]
-    end.
-
-Ltac atomic_init_exfalso_rs_from_parent :=
-  exfalso;
-  repeat
-    (repeat match goal with
-            | [H: UpLockInvORq _ _ _ _ _ |- _] => red in H
-            | [H1: ?orq@[0] = Some _, H2: context[?orq@[0]] |- _] =>
-              rewrite H1 in H2; simpl in H2
-            | [H: UpLockRsFromParent _ _ _ |- _] =>
-              let rsFrom := fresh "rsFrom" in
-              destruct H as [rsFrom [? ?]]
-            end;
-     disc_rule_conds_ex);
-  repeat
-    match goal with
-    | [H1: _ = ?rsFrom \/ _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
-      destruct H1; [subst; try discriminate|auto]
-    end.
-
-Ltac atomic_init_solve_AtomicMsgOutsInv :=
-  simpl; repeat constructor.
-
-Ltac atomic_init_solve_AtomicInv :=
-  atomic_init_solve_AtomicMsgOutsInv.
-
-Ltac disc_sig_caseDec :=
-  match goal with
-  | [H1: caseDec _ ?sig _ _ |- _] =>
-    match sig with
-    | sigOf (?midx, ?msg) =>
-      match goal with
-      | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
-        progress replace sig with (midx, (mty, mid)) in H1
-          by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
-        simpl in H1
-      end
-    end
-  end.
-
-Ltac disc_msg_preds_with Hl Hin :=
-  match type of Hl with
-  | AtomicMsgOutsInv _ ?eouts _ =>
-    red in Hl; rewrite Forall_forall in Hl;
-    specialize (Hl _ Hin); simpl in Hl;
-    red in Hl; disc_sig_caseDec
-  end.
-
-Ltac disc_msg_preds Hin :=
-  match goal with
-  | [H: AtomicMsgOutsInv _ _ _ |- _] =>
-    let Hl := fresh "H" in
-    pose proof H as Hl;
-    disc_msg_preds_with Hl Hin
-  end.
-
-Ltac pull_uplock_minds oidx :=
+(* NOTE: these ltacs only work for constants (channels, objects, etc.),
+ * thus will be used only in this file.
+ *)
+Ltac get_lock_minds oidx :=
   progress (good_footprint_get oidx);
-  repeat
-    match goal with
-    | [H: FootprintUpOkEx _ _ _ |- _] =>
-      let rqFrom := fresh "rqFrom" in
-      let rqTo := fresh "rqTo" in
-      let rsFrom := fresh "rsFrom" in
-      let rsbTo := fresh "rsbTo" in
-      destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest;
-      disc_rule_conds_ex
-    | [H: parentIdxOf _ _ = Some ?oidx |- _] =>
-      is_const oidx;
-      pose proof (parentIdxOf_child_indsOf _ _ H);
-      dest_in; try discriminate; simpl in *; clear H
-    | [H: rqEdgeUpFrom _ ?oidx = Some _ |- _] =>
-      is_const oidx; inv H
-    | [H: rsEdgeUpFrom _ ?oidx = Some _ |- _] =>
-      is_const oidx; inv H
-    | [H: edgeDownTo _ ?oidx = Some _ |- _] =>
-      is_const oidx; inv H
-    end.
+  repeat disc_footprints_ok;
+  disc_minds_const.
 
-Ltac pull_uplock_inv obj sys :=
+Ltac get_lock_inv obj sys :=
   let H := fresh "H" in
   assert (In obj (sys_objs sys)) as H by (simpl; tauto);
   progress (good_locking_get obj);
   clear H.
 
-Ltac exfalso_uplock_rq_rs pidx' rqUp' down' :=
+Ltac exfalso_uplock_rq_rs upidx urqUp udown :=
   progress
     match goal with
     | [H: UpLockInvORq _ _ _ _ _ |- _] =>
       eapply upLockInvORq_rqUp_down_rssQ_False
-        with (pidx:= pidx') (rqUp:= rqUp') (down:= down') in H;
+        with (pidx:= upidx) (rqUp:= urqUp) (down:= udown) in H;
       try reflexivity; auto
     end;
   repeat
     match goal with
     | [ |- Datatypes.length (findQ _ _) >= 1] =>
-      eapply findQ_length_ge_one; try eassumption
+      eapply findQ_length_ge_one; eassumption
     | [ |- Datatypes.length (rssQ _ _) >= 1] =>
-      eapply rssQ_length_ge_one; try eassumption
+      eapply rssQ_length_ge_one; [|eassumption]; eassumption
     | [H: FirstMPI _ (?midx, _) |- InMP ?midx _ _] =>
       apply FirstMP_InMP; eassumption
     end.
 
-Ltac exfalso_uplock_rq_two pidx' rqUp' m1 m2 :=
+Ltac exfalso_uplock_rq_two upidx urqUp m1 m2 :=
   progress
     match goal with
     | [H: UpLockInvORq _ _ _ _ _ |- _] =>
       eapply upLockInvORq_rqUp_length_two_False
-        with (pidx:= pidx') (rqUp:= rqUp') in H;
+        with (pidx:= upidx) (rqUp:= urqUp) in H;
       try reflexivity; auto
     end;
   repeat
@@ -171,12 +63,12 @@ Ltac exfalso_uplock_rq_two pidx' rqUp' m1 m2 :=
     | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
     end.
 
-Ltac exfalso_uplock_rs_two pidx' down' m1 m2 :=
+Ltac exfalso_uplock_rs_two upidx udown m1 m2 :=
   progress
     match goal with
     | [H: UpLockInvORq _ _ _ _ _ |- _] =>
       eapply upLockInvORq_down_rssQ_length_two_False
-        with (pidx:= pidx') (down:= down') in H;
+        with (pidx:= upidx) (down:= udown) in H;
       try reflexivity; auto
     end;
   repeat
@@ -186,7 +78,7 @@ Ltac exfalso_uplock_rs_two pidx' down' m1 m2 :=
       try eassumption; auto
     | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
     | [ |- InMP ?midx ?msg (enqMP ?midx ?msg _)] =>
-      apply InMP_or_enqMP; left; auto
+      apply InMP_or_enqMP; left; auto; fail
     | [ |- InMP _ _ (enqMP _ _ _)] =>
       apply InMP_or_enqMP; right
     | [ |- InMP _ _ (deqMP _ _)] =>
@@ -1300,7 +1192,7 @@ Section Inv.
 
       - (** [childGetRqImm] *)
         disc_rule_conds_ex.
-        simpl; split; [atomic_init_solve_AtomicInv|].
+        simpl; split; [simpl; repeat constructor|].
         replace (oss +[child1Idx <- pos]) with oss by meq.
         replace (orqs +[child1Idx <- norq]) with orqs by meq.
         apply implInv_other_midx_enqMP; [|solve_not_in].
@@ -1310,7 +1202,7 @@ Section Inv.
       - (** [childGetRqS] *)
         disc_rule_conds_ex.
         simpl; split.
-        + atomic_init_solve_AtomicInv.
+        + simpl; repeat constructor.
           solve_rule_conds_ex.
         + replace (oss +[child1Idx <- pos]) with oss by meq.
           apply implInv_other_msg_id_enqMP; [|solve_not_in].
@@ -1320,7 +1212,7 @@ Section Inv.
 
       - (** [childSetRqImm] *)
         disc_rule_conds_ex.
-        simpl; split; [atomic_init_solve_AtomicInv|].
+        simpl; split; [simpl; repeat constructor|].
         replace (orqs +[child1Idx <- norq]) with orqs by meq.
         apply implInv_other_midx_enqMP; [|solve_not_in].
         apply implInv_other_midx_deqMP; [|solve_not_in].
@@ -1329,7 +1221,7 @@ Section Inv.
       - (** [childSetRqM] *)
         disc_rule_conds_ex.
         simpl; split.
-        + atomic_init_solve_AtomicInv.
+        + simpl; repeat constructor.
           solve_rule_conds_ex.
         + replace (oss +[child1Idx <- pos]) with oss by meq.
           apply implInv_other_msg_id_enqMP; [|solve_not_in].
@@ -1340,7 +1232,7 @@ Section Inv.
       - (** [childEvictRqI] *)
         disc_rule_conds_ex.
         simpl; split.
-        + atomic_init_solve_AtomicInv.
+        + simpl; repeat constructor.
           solve_rule_conds_ex.
         + replace (oss +[child1Idx <- pos]) with oss by meq.
           red in H0; red.
@@ -1369,7 +1261,6 @@ Section Inv.
       try disc_footprints_ok;
       try disc_msg_case;
       try disc_AtomicInv;
-      (* try disc_msi; *)
       try disc_minds_const.
 
     Local Hint Resolve msiSv_impl_ORqsInit.
@@ -1504,7 +1395,7 @@ Section Inv.
 
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
-        pull_uplock_minds child1Idx.
+        get_lock_minds child1Idx.
 
         disc_msg_preds H4.
         disc_rule_conds_ex.
@@ -1559,13 +1450,14 @@ Section Inv.
 
       - (** [childSetRsM] *)
         disc_rule_conds_ex.
-        pull_uplock_minds child1Idx.
+        get_lock_minds child1Idx.
+        disc_rule_conds_ex.
 
         disc_msg_preds H4.
         disc_rule_conds_ex.
 
         clear Hnulinv Hpdlinv Hndlinv.
-        pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+        get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
         disc_rule_conds_ex.
 
         split.
@@ -1623,18 +1515,19 @@ Section Inv.
       - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
       - (** [childEvictRsI] *)
         disc_rule_conds_ex.
-        pull_uplock_minds child1Idx.
+        get_lock_minds child1Idx.
+        disc_rule_conds_ex.
 
         disc_msg_preds H4.
         disc_rule_conds_ex.
 
         clear Hnulinv Hpdlinv Hndlinv.
-        pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+        get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
         disc_rule_conds_ex.
         
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H21;
+          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H20;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1727,7 +1620,7 @@ Section Inv.
         disc_rule_conds_ex.
 
         clear Hnulinv Hpdlinv Hndlinv.
-        pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+        get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
         disc_rule_conds_ex.
 
         split.
@@ -1807,7 +1700,7 @@ Section Inv.
                    orqs@[child1Idx] = Some corq1 /\
                    corq1@[upRq] <> None).
         { clear Hnulinv Hpdlinv Hndlinv.
-          pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+          get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
           eapply upLockInvORq_parent_locked_locked in H34;
             try reflexivity; dest.
           { destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1;
@@ -1861,7 +1754,7 @@ Section Inv.
                    orqs@[child1Idx] = Some corq1 /\
                    corq1@[upRq] <> None).
         { clear Hnulinv Hpdlinv Hndlinv.
-          pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+          get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
           eapply upLockInvORq_parent_locked_locked in H34;
             try reflexivity; dest.
           { destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1;
@@ -1901,11 +1794,11 @@ Section Inv.
           * exfalso.
 
             clear Hpulinv Hpdlinv Hndlinv.
-            pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+            get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
             destruct H46 as [[midx msg] ?]; dest; inv H47.
 
             (** TODO: [exfalso_uplock_rq_rs] doesn't work here.. *)
-            (* exfalso_uplock_rq_rs *)
+            (* exfalso_uplock_rq_rs parentIdx c1pRq pc1. *)
             eapply upLockInvORq_rqUp_down_rssQ_False with
                 (pidx := parentIdx) (rqUp := c1pRq) (down := pc1) in H48;
               try reflexivity; auto.
@@ -1915,7 +1808,7 @@ Section Inv.
             }
           * left; assumption.
           * clear Hnulinv Hndlinv.
-            pull_uplock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+            get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
             clear H47.
 
             (** TODO: make an Ltac for this. *)
@@ -1967,7 +1860,7 @@ Section Inv.
         disc_rule_conds_ex.
 
         clear Hpulinv Hpdlinv Hndlinv.
-        pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+        get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
         disc_rule_conds_ex.
 
         disc_msg_preds H4.
@@ -2000,7 +1893,7 @@ Section Inv.
         disc_rule_conds_ex.
 
         clear Hpulinv Hpdlinv Hndlinv.
-        pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+        get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
         disc_rule_conds_ex.
 
         disc_msg_preds H4.
@@ -2038,7 +1931,7 @@ Section Inv.
         disc_rule_conds_ex.
 
         clear Hpulinv Hpdlinv Hndlinv.
-        pull_uplock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+        get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
         disc_rule_conds_ex.
 
         disc_msg_preds H4.

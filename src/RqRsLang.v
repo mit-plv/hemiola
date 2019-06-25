@@ -210,6 +210,12 @@ Definition AtomicInv {oifc} (mp: MsgOutPred oifc):
   fun inits st1 hst eouts st2 =>
     AtomicMsgOutsInv mp eouts st2.
 
+Ltac disc_AtomicInv :=
+  repeat
+    match goal with
+    | [H: AtomicInv _ _ _ _ _ _ |- _] => red in H; dest
+    end.
+
 Ltac disc_rule_conds_const_unit :=
   match goal with
   | [H: context [match msg_value ?msg with
@@ -294,12 +300,16 @@ Ltac disc_rule_conds_const :=
 Ltac disc_minds_const :=
   repeat
     match goal with
+    | [H: parentIdxOf ?dtr _ = Some ?oidx |- _] =>
+      is_const oidx;
+      pose proof (parentIdxOf_child_indsOf _ _ H);
+      dest_in; try discriminate; simpl in *; clear H
     | [H: rqEdgeUpFrom ?dtr ?oidx = Some ?midx |- _] =>
-      is_const dtr; is_const oidx; is_var midx; inv H
+      is_const oidx; inv H
     | [H: rsEdgeUpFrom ?dtr ?oidx = Some ?midx |- _] =>
-      is_const dtr; is_const oidx; is_var midx; inv H
+      is_const oidx; inv H
     | [H: edgeDownTo ?dtr ?oidx = Some ?midx |- _] =>
-      is_const dtr; is_const oidx; is_var midx; inv H
+      is_const oidx; inv H
     end.
 
 Ltac solve_rule_conds_const :=
@@ -317,6 +327,85 @@ Ltac solve_rule_conds_ex :=
   repeat (repeat (autounfold with RuleConds in *; dest); intros;
           disc_rule_conds; dest;
           solve_rule_conds_const).
+
+Ltac atomic_cont_exfalso_bound msgOutPred :=
+  exfalso;
+  disc_rule_conds_ex;
+  repeat 
+    match goal with
+    | [H1: AtomicMsgOutsInv _ ?eouts _, H2: In _ ?eouts |- _] =>
+      red in H1; rewrite Forall_forall in H1;
+      specialize (H1 _ H2); simpl in H1
+    | [H: msgOutPred _ _ _ |- _] => red in H
+    | [H1: caseDec _ ?sig _ _ |- _] =>
+      match sig with
+      | sigOf (?midx, ?msg) =>
+        match goal with
+        | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
+          progress replace sig with (midx, (mty, mid)) in H1
+            by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
+          simpl in H1
+        end
+      end
+    end;
+  assumption.
+
+Ltac atomic_init_exfalso_rq :=
+  exfalso;
+  disc_rule_conds_ex;
+  repeat
+    match goal with
+    | [H: _ = _ \/ _ |- _] =>
+      destruct H; [subst; try discriminate|auto]
+    end.
+
+Ltac atomic_init_exfalso_rs_from_parent :=
+  exfalso;
+  repeat
+    (repeat match goal with
+            | [H: UpLockInvORq _ _ _ _ _ |- _] => red in H
+            | [H1: ?orq@[0] = Some _, H2: context[?orq@[0]] |- _] =>
+              rewrite H1 in H2; simpl in H2
+            | [H: UpLockRsFromParent _ _ _ |- _] =>
+              let rsFrom := fresh "rsFrom" in
+              destruct H as [rsFrom [? ?]]
+            end;
+     disc_rule_conds_ex);
+  repeat
+    match goal with
+    | [H1: _ = ?rsFrom \/ _, H2: edgeDownTo _ _ = Some ?rsFrom |- _] =>
+      destruct H1; [subst; try discriminate|auto]
+    end.
+
+Ltac disc_sig_caseDec :=
+  match goal with
+  | [H1: caseDec _ ?sig _ _ |- _] =>
+    match sig with
+    | sigOf (?midx, ?msg) =>
+      match goal with
+      | [H2: msg_id ?msg = ?mid, H3: msg_type ?msg = ?mty |- _] =>
+        progress replace sig with (midx, (mty, mid)) in H1
+          by (unfold sigOf; simpl; rewrite H2, H3; reflexivity);
+        simpl in H1
+      end
+    end
+  end.
+
+Ltac disc_msg_preds_with Hl Hin :=
+  match type of Hl with
+  | AtomicMsgOutsInv _ ?eouts _ =>
+    red in Hl; rewrite Forall_forall in Hl;
+    specialize (Hl _ Hin); simpl in Hl;
+    red in Hl; disc_sig_caseDec
+  end.
+
+Ltac disc_msg_preds Hin :=
+  match goal with
+  | [H: AtomicMsgOutsInv _ _ _ |- _] =>
+    let Hl := fresh "H" in
+    pose proof H as Hl;
+    disc_msg_preds_with Hl Hin
+  end.
 
 Ltac rule_immd := left.
 Ltac rule_immu := right; left.

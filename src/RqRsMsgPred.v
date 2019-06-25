@@ -307,7 +307,8 @@ Section PredMsg.
               forall P oss orqs nost norq,
                 GoodMsgOutPred P ->
                 Forall (fun eout => P eout oss orqs) eouts ->
-                Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq]))
+                Forall (fun eout => P eout (oss +[oidx <- nost])
+                                      (orqs +[oidx <- norq]))
                        (removeL (id_dec msg_dec) eouts rsUps).
     Proof.
       destruct Hrrs as [? [? [? ?]]]; intros.
@@ -335,6 +336,14 @@ Section PredMsg.
         + apply Forall_forall.
           intros [rqDown rqdm]; intros.
           intro Hx.
+
+          (* The proof idea: if such a RqDown message exists, then the 
+           * corresponding RsUp channel should exist and belong to
+           * [rqid.(rqi_minds_rss)]. We also know every RsUp channel is ready,
+           * i.e., there exists an RsUp message. The existence of RqDown and 
+           * RsUp messages contradicts the fact that they cannot exist at the
+           * same time.
+           *)
           destruct H16; simpl in *.
           pose proof (edgeDownTo_Some H _ H21).
           destruct H22 as [rqUp [rsUp [pidx ?]]]; dest.
@@ -342,31 +351,26 @@ Section PredMsg.
           pose proof (downLockInv_ok Hiorqs H0 H H2 (reachable_steps H4 H5)).
           good_locking_get obj.
 
-          (** TODO: clean up the proof... *)
-
-          pose proof H25.
-          eapply downLockInvORq_down_rqsQ_length_one_locked in H25; eauto.
-          * destruct H25 as [rrqid ?]; dest.
-            disc_rule_conds.
-            eapply downLockInvORq_down_rqsQ_rsUp_False in H26; eauto.
-            { eapply rqsQ_length_ge_one; eauto.
-              eapply atomic_messages_eouts_in in H3; [|eassumption].
-              rewrite Forall_forall in H3.
-              specialize (H3 _ H7); assumption.
-            }
-            { apply in_map_iff with (f:= idOf) in H29.
-              destruct H29 as [[rsUp rsum] [? ?]].
-              simpl in *; subst.
-              apply H9 in H28.
-              eapply atomic_messages_eouts_in in H3; [|eassumption].
-              rewrite Forall_forall in H3.
-              specialize (H3 _ H28).
-              eapply findQ_length_ge_one; eauto.
-            }
-          * eapply rqsQ_length_ge_one; eauto.
+          assert (length (rqsQ (bst_msgs s2) rqDown) >= 1).
+          { eapply rqsQ_length_ge_one; eauto.
             eapply atomic_messages_eouts_in in H3; [|eassumption].
             rewrite Forall_forall in H3.
             specialize (H3 _ H7); assumption.
+          }
+
+          pose proof H25.
+          eapply downLockInvORq_down_rqsQ_length_one_locked in H25; eauto.
+          destruct H25 as [rrqid ?]; dest.
+          disc_rule_conds.
+          eapply downLockInvORq_down_rqsQ_rsUp_False in H26; eauto.
+          apply in_map_iff with (f:= idOf) in H30.
+          destruct H30 as [[rsUp rsum] [? ?]].
+          simpl in *; subst.
+          apply H9 in H29.
+          eapply atomic_messages_eouts_in in H3; [|eassumption].
+          rewrite Forall_forall in H3.
+          specialize (H3 _ H29).
+          eapply findQ_length_ge_one; eauto.
     Qed.
 
   End Facts.
