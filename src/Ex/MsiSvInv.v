@@ -22,12 +22,29 @@ Ltac get_lock_minds oidx :=
   progress (good_footprint_get oidx);
   repeat disc_footprints_ok;
   disc_minds_const.
-
+ 
 Ltac get_lock_inv obj sys :=
   let H := fresh "H" in
   assert (In obj (sys_objs sys)) as H by (simpl; tauto);
   progress (good_locking_get obj);
   clear H.
+
+(** TODO: move below tactics to the other file for general purpose. *)
+
+Ltac solve_in_mp :=
+  repeat
+    match goal with
+    | [ |- InMP _ _ _] => eassumption
+    | [H: FirstMPI _ (?midx, _) |- InMP ?midx _ _] =>
+      apply FirstMP_InMP; eassumption
+
+    | [ |- InMP ?midx _ (enqMP ?midx _ _) ] =>
+      apply InMP_or_enqMP; left; eauto; fail
+    | [ |- InMP ?midx _ (enqMP _ _ _) ] =>
+      apply InMP_or_enqMP; right
+    | [ |- InMP _ _ (deqMP _ _) ] =>
+      eapply deqMP_InMP; try eassumption; try discriminate
+    end.
 
 Ltac exfalso_uplock_rq_rs upidx urqUp udown :=
   progress
@@ -40,11 +57,10 @@ Ltac exfalso_uplock_rq_rs upidx urqUp udown :=
   repeat
     match goal with
     | [ |- Datatypes.length (findQ _ _) >= 1] =>
-      eapply findQ_length_ge_one; eassumption
+      eapply findQ_length_ge_one; solve_in_mp; fail
     | [ |- Datatypes.length (rssQ _ _) >= 1] =>
-      eapply rssQ_length_ge_one; [|eassumption]; eassumption
-    | [H: FirstMPI _ (?midx, _) |- InMP ?midx _ _] =>
-      apply FirstMP_InMP; eassumption
+      eapply rssQ_length_ge_one; [|solve_in_mp; fail]
+    | [ |- msg_type _ = _] => try reflexivity; try eassumption
     end.
 
 Ltac exfalso_uplock_rq_two upidx urqUp m1 m2 :=
@@ -58,8 +74,8 @@ Ltac exfalso_uplock_rq_two upidx urqUp m1 m2 :=
   repeat
     match goal with
     | [ |- Datatypes.length (findQ _ _) >= 2] =>
-      eapply findQ_length_two with (msg1:= m1) (msg2:= m2);
-      try eassumption; auto
+      eapply findQ_length_two with (msg1:= m1) (msg2:= m2); auto
+    | [ |- InMP _ _ _] => solve_in_mp; fail
     | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
     end.
 
@@ -75,14 +91,19 @@ Ltac exfalso_uplock_rs_two upidx udown m1 m2 :=
     match goal with
     | [ |- Datatypes.length (rssQ _ _) >= 2] =>
       eapply rssQ_length_two with (msg1:= m1) (msg2:= m2);
-      try eassumption; auto
+      try solve_in_mp; try reflexivity; try eassumption
     | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
-    | [ |- InMP ?midx ?msg (enqMP ?midx ?msg _)] =>
-      apply InMP_or_enqMP; left; auto; fail
-    | [ |- InMP _ _ (enqMP _ _ _)] =>
-      apply InMP_or_enqMP; right
-    | [ |- InMP _ _ (deqMP _ _)] =>
-      eapply deqMP_InMP; try eassumption
+    end.
+
+Ltac get_child_uplock_from_parent :=
+  repeat
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_parent_locked_locked in H;
+      try reflexivity; dest;
+      [|red; simpl; disc_rule_conds_const; eauto; fail]
+    | [H: (?oorq >>=[[]] _)@[upRq] <> None |- _] =>
+      destruct oorq; simpl in H; [|exfalso; auto]
     end.
 
 Section Inv.
@@ -1640,10 +1661,8 @@ Section Inv.
             inv H34.
             exfalso.
             exfalso_uplock_rq_two parentIdx c1pRq msg rmsg.
-            { intro Hx; subst.
-              rewrite H10 in H38; discriminate.
-            }
-            { apply FirstMP_InMP; assumption. }
+            intro Hx; subst.
+            rewrite H10 in H38; discriminate.
 
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
@@ -1687,29 +1706,19 @@ Section Inv.
 
       - (** [parentGetDownRsS] *)
         disc_rule_conds_ex.
-
         disc_msg_preds H4.
         disc_rule_conds_ex.
-
         red in Hibinv.
         disc_rule_conds_ex.
         specialize (H21 eq_refl); dest.
 
-        (** TODO: automate it! *)
         assert (exists corq1,
                    orqs@[child1Idx] = Some corq1 /\
                    corq1@[upRq] <> None).
         { clear Hnulinv Hpdlinv Hndlinv.
           get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
-          eapply upLockInvORq_parent_locked_locked in H34;
-            try reflexivity; dest.
-          { destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1;
-              simpl in H33; [|mred].
-            eauto.
-          }
-          { red; simpl.
-            rewrite H17; simpl; eauto.
-          }
+          get_child_uplock_from_parent.
+          eauto.
         }
         destruct H33 as [corq1 [? ?]].
 
@@ -1755,15 +1764,8 @@ Section Inv.
                    corq1@[upRq] <> None).
         { clear Hnulinv Hpdlinv Hndlinv.
           get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
-          eapply upLockInvORq_parent_locked_locked in H34;
-            try reflexivity; dest.
-          { destruct (orqs@[child1Idx]) as [corq1|] eqn:Hcorq1;
-              simpl in H33; [|mred].
-            eauto.
-          }
-          { red; simpl.
-            rewrite H17; simpl; eauto.
-          }
+          get_child_uplock_from_parent.
+          eauto.
         }
         destruct H33 as [corq1 [? ?]].
 
@@ -1792,31 +1794,14 @@ Section Inv.
           * clear -H12; solve_msi.
           * clear -H12; solve_msi.
           * exfalso.
-
             clear Hpulinv Hpdlinv Hndlinv.
             get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
             destruct H46 as [[midx msg] ?]; dest; inv H47.
-
-            (** TODO: [exfalso_uplock_rq_rs] doesn't work here.. *)
-            (* exfalso_uplock_rq_rs parentIdx c1pRq pc1. *)
-            eapply upLockInvORq_rqUp_down_rssQ_False with
-                (pidx := parentIdx) (rqUp := c1pRq) (down := pc1) in H48;
-              try reflexivity; auto.
-            { eapply findQ_length_ge_one; try eassumption. }
-            { eapply rssQ_length_ge_one; [|apply InMP_or_enqMP; eauto].
-              reflexivity.
-            }
+            exfalso_uplock_rq_rs parentIdx c1pRq pc1.
           * left; assumption.
           * clear Hnulinv Hndlinv.
             get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
-            clear H47.
-
-            (** TODO: make an Ltac for this. *)
-            let H := fresh "H" in
-            assert (H : In parent (sys_objs impl)) by (simpl; tauto);
-              progress good_locking_get parent; clear H.
-            clear H47.
-
+            get_lock_inv parent impl.
             apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             eapply invalidMsgs_rsUp_deq
               with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2)
