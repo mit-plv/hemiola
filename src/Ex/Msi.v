@@ -1,7 +1,7 @@
 Require Import Bool Vector List String Peano_dec.
 Require Import Common FMap HVector ListSupport.
 
-Require Import Spec.
+Require Import Ex.Spec.
 
 Set Implicit Arguments.
 

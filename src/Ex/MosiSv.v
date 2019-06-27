@@ -2,7 +2,7 @@ Require Import Bool Vector List String Peano_dec.
 Require Import Common FMap HVector ListSupport Syntax Semantics Topology.
 Require Import RqRsLang.
 
-Require Import Spec SpecSv Mosi.
+Require Import Ex.Spec Ex.SpecSv Ex.Mosi.
 
 Set Implicit Arguments.
 

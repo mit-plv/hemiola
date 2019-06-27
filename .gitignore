@@ -1,5 +1,11 @@
 Makefile.coq
 Makefile.coq.conf
+Makefile.coq.lib
+Makefile.coq.lib.conf
+Makefile.coq.ex
+Makefile.coq.ex.conf
+Makefile.coq.msisv
+Makefile.coq.msisv.conf
 *.aux
 *.glob
 *.v.d

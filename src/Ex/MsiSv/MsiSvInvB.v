@@ -3,7 +3,8 @@ Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
-Require Import Msi MsiSv SpecSv MsiSvTopo.
+Require Import Ex.Msi Ex.SpecSv.
+Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo.
 
 Set Implicit Arguments.
 

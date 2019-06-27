@@ -1,16 +1,30 @@
-LIBS:=$(wildcard *.v)
-EXS:=$(wildcard Ex/*.v)
+LIB:=$(wildcard *.v)
+EX:=$(wildcard Ex/*.v)
+MSISV:=$(wildcard Ex/MsiSv/*.v)
 
-.PHONY: all clean
+.PHONY: lib ex msisv clean
 
-all: Makefile.coq
-	$(MAKE) -f Makefile.coq
+lib: Makefile.coq.lib
+	$(MAKE) -f Makefile.coq.lib
 
-Makefile.coq: Makefile $(LIBS) $(EXS)
-	$(COQBIN)coq_makefile $(LIBS) $(EXS) -o Makefile.coq
+Makefile.coq.lib: Makefile $(LIB)
+	$(COQBIN)coq_makefile $(LIB) -o Makefile.coq.lib
 
-clean: Makefile.coq
-	$(MAKE) -f Makefile.coq clean
+ex: Makefile.coq.ex
+	$(MAKE) -f Makefile.coq.ex
+
+Makefile.coq.ex: Makefile $(LIB) $(EX)
+	$(COQBIN)coq_makefile $(LIB) $(EX) -o Makefile.coq.ex
+
+msisv: Makefile.coq.msisv
+	$(MAKE) -f Makefile.coq.msisv
+
+Makefile.coq.msisv: Makefile $(LIB) $(EX) $(MSISV)
+	$(COQBIN)coq_makefile $(LIB) $(EX) $(MSISV) -o Makefile.coq.msisv
+
+clean:
+	$(MAKE) -f Makefile.coq.msisv clean || $(MAKE) -f Makefile.coq.ex clean || $(MAKE) -f Makefile.coq.lib clean
 	rm -f .*.aux *.v.d *.glob *.vo *~
 	rm -f */.*.aux */*.v.d */*.glob */*.vo */*~
-	rm -f Makefile.coq .coqdeps.d
+	rm -f Makefile.coq.*
+	rm -f .coqdeps.d
