@@ -407,6 +407,81 @@ Ltac disc_msg_preds Hin :=
     disc_msg_preds_with Hl Hin
   end.
 
+Ltac solve_in_mp :=
+  repeat
+    match goal with
+    | [ |- InMP _ _ _] => eassumption
+    | [H: FirstMPI _ (?midx, _) |- InMP ?midx _ _] =>
+      apply FirstMP_InMP; eassumption
+
+    | [ |- InMP ?midx _ (enqMP ?midx _ _) ] =>
+      apply InMP_or_enqMP; left; eauto; fail
+    | [ |- InMP ?midx _ (enqMP _ _ _) ] =>
+      apply InMP_or_enqMP; right
+    | [ |- InMP _ _ (deqMP _ _) ] =>
+      eapply deqMP_InMP; try eassumption; try discriminate
+    end.
+
+Ltac exfalso_uplock_rq_rs upidx urqUp udown :=
+  progress
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_rqUp_down_rssQ_False
+        with (pidx:= upidx) (rqUp:= urqUp) (down:= udown) in H;
+      try reflexivity; auto
+    end;
+  repeat
+    match goal with
+    | [ |- Datatypes.length (findQ _ _) >= 1] =>
+      eapply findQ_length_ge_one; solve_in_mp; fail
+    | [ |- Datatypes.length (rssQ _ _) >= 1] =>
+      eapply rssQ_length_ge_one; [|solve_in_mp; fail]
+    | [ |- msg_type _ = _] => try reflexivity; try eassumption
+    end.
+
+Ltac exfalso_uplock_rq_two upidx urqUp m1 m2 :=
+  progress
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_rqUp_length_two_False
+        with (pidx:= upidx) (rqUp:= urqUp) in H;
+      try reflexivity; auto
+    end;
+  repeat
+    match goal with
+    | [ |- Datatypes.length (findQ _ _) >= 2] =>
+      eapply findQ_length_two with (msg1:= m1) (msg2:= m2); auto
+    | [ |- InMP _ _ _] => solve_in_mp; fail
+    | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
+    end.
+
+Ltac exfalso_uplock_rs_two upidx udown m1 m2 :=
+  progress
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_down_rssQ_length_two_False
+        with (pidx:= upidx) (down:= udown) in H;
+      try reflexivity; auto
+    end;
+  repeat
+    match goal with
+    | [ |- Datatypes.length (rssQ _ _) >= 2] =>
+      eapply rssQ_length_two with (msg1:= m1) (msg2:= m2);
+      try solve_in_mp; try reflexivity; try eassumption
+    | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
+    end.
+
+Ltac get_child_uplock_from_parent :=
+  repeat
+    match goal with
+    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
+      eapply upLockInvORq_parent_locked_locked in H;
+      try reflexivity; dest;
+      [|red; simpl; disc_rule_conds_const; eauto; fail]
+    | [H: (?oorq >>=[[]] _)@[upRq] <> None |- _] =>
+      destruct oorq; simpl in H; [|exfalso; auto]
+    end.
+
 Ltac rule_immd := left.
 Ltac rule_immu := right; left.
 Ltac rule_rquu := do 2 right; left; split; [|left].

@@ -690,16 +690,22 @@ Section Sim.
            apply SimExtMP_orqs with (orqs1:= m); [|findeq; fail|findeq; fail]
          | [ |- SimExtMP (enqMP _ _ _) _ (enqMP _ _ _) ] =>
            apply SimExtMP_enqMP
-         | [ |- SimExtMP (deqMP _ _) _ (deqMP _ _) ] =>
+         | [ |- SimExtMP (deqMP ec1 _) _ (deqMP ec1 _) ] =>
            eapply SimExtMP_outs_deqMP_child_1; eauto; fail
+         | [ |- SimExtMP (deqMP ec2 _) _ (deqMP ec2 _) ] =>
+           eapply SimExtMP_outs_deqMP_child_2; eauto; fail
          | [ |- SimExtMP (enqMP _ _ _) _ _ ] =>
            apply SimExtMP_impl_enqMP_indep; [solve_not_in; fail|]
-         | [ |- SimExtMP (deqMP _ _) _ _ ] =>
+         | [ |- SimExtMP (deqMP ec1 _) _ _ ] =>
            eapply SimExtMP_spec_deqMP_locked_1; eauto; [mred|reflexivity]; fail
+         | [ |- SimExtMP (deqMP ec2 _) _ _ ] =>
+           eapply SimExtMP_spec_deqMP_locked_2; eauto; [mred|reflexivity]; fail
          | [ |- SimExtMP (deqMP _ _) _ _ ] =>
            apply SimExtMP_impl_deqMP_indep; [solve_not_in; fail|]
-         | [ |- SimExtMP _ _ (deqMP _ _) ] =>
+         | [ |- SimExtMP _ _ (deqMP ec1 _) ] =>
            eapply SimExtMP_spec_deqMP_unlocked_1; eauto; [congruence|mred]; fail
+         | [ |- SimExtMP _ _ (deqMP ec2 _) ] =>
+           eapply SimExtMP_spec_deqMP_unlocked_2; eauto; [congruence|mred]; fail
          end; try assumption).
 
     Ltac solve_sim_obj :=
@@ -838,6 +844,8 @@ Section Sim.
       
       destruct H4 as [|[|[|]]];
         try (exfalso; auto; fail); subst; dest_in.
+
+      (*! Cases for [child1] *)
 
       - (** [childGetRqImm] *)
         disc_rule_conds_ex.
@@ -1081,16 +1089,251 @@ Section Sim.
             }
         + solve_sim_ext_mp.
 
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
+      (*! Cases for [child2] *)
+
+      - (** [childGetRqImm] *)
+        disc_rule_conds_ex.
+        spec_case_get 1 ec2.
+
+        assert (pos#[implValueIdx] = fst sost).
+        { solve_rule_conds_ex.
+          apply H16; [|auto].
+          clear -H34 H20; solve_msi.
+        }
+        simpl in H6; rewrite H6 in *.
+        
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childGetRqS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childGetRsS] *)
+        disc_rule_conds_ex.
+        spec_case_get 1 ec2;
+          [unfold FirstMPI, FirstMP, firstMP;
+           simpl; change ec2 with (erq 1);
+           rewrite <-H8; reflexivity|].
+
+        get_lock_minds child2Idx.
+        clear Hnulinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_const.
+
+        assert (n = fst sost)
+          by (disc_DirMsgsCoh_by_FirstMP H16 H55; congruence).
+        subst.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in]. 
+              apply DirMsgsCoh_deqMP.
+              eapply DirMsgsCoh_no_RqI; eauto.
+              intros; intro Hx.
+              destruct idm as [midx msg]; inv H62.
+              exfalso_uplock_rq_rs parentIdx c2pRq pc2.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childDownRqS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_enqMP.
+              { apply DirMsgsCoh_deqMP.
+                eapply DirMsgsCoh_child_status; eauto.
+              }
+              { cbn; congruence. }
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childSetRqImm] *)
+        disc_rule_conds_ex.
+        spec_case_set 1 ec2.
+
+        rewrite H21 in H53.
+        disc_rule_conds_ex.
+              
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= n).
+          * rewrite Hmsg.
+            solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac; try solve_msi_false.
+            apply invalidMsgs_DirMsgsCoh.
+            apply H31; auto.
+            clear -H21; solve_msi.
+        + solve_sim_ext_mp.
+
+      - (** [childSetRqM] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+        + solve_sim_ext_mp.
+          
+      - (** [childSetRsM] *)
+        disc_rule_conds_ex.
+        spec_case_set 1 ec2;
+          [unfold FirstMPI, FirstMP, firstMP;
+           simpl; change ec2 with (erq 1);
+           rewrite <-H8; reflexivity|].
+
+        clear Hnulinv.
+        get_lock_minds child2Idx.
+        disc_rule_conds_ex.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= n).
+          * rewrite Hmsg.
+            solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { solve_msi_false. }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              apply invalidMsgs_DirMsgsCoh; assumption.
+            }
+            { apply invalidMsgs_DirMsgsCoh.
+              rewrite <-H62 in H30.
+              apply H30; auto.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childDownRqI] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              eapply DirMsgsCoh_child_status; eauto.
+              simpl; clear; solve_msi.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childEvictRqI] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_enqMP.
+              { apply DirMsgsCoh_deqMP; assumption. }
+              { cbn; intros; intuition. }
+            }
+        + solve_sim_ext_mp.
+
+      - (** [childEvictRsI] *)
+        disc_rule_conds_ex.
+        spec_case_evict 1 ec2;
+          [unfold FirstMPI, FirstMP, firstMP;
+           simpl; change ec2 with (erq 1);
+           rewrite <-H8; reflexivity|].
+
+        get_lock_minds child2Idx.
+        disc_rule_conds_ex.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { solve_msi_false. }
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              eapply DirMsgsCoh_child_status; eauto.
+              simpl; clear; solve_msi.
+            }
+        + solve_sim_ext_mp.
+
+      (*! Cases for [parent] with [child1] *)
 
       - (** [parentGetRqImm] *)
         disc_rule_conds_ex.
@@ -1440,8 +1683,358 @@ Section Sim.
             apply DirMsgsCoh_deqMP.
             assumption.
         + solve_sim_ext_mp.
+
+      (*! Cases for [parent] with [child2] *)
+
+      - (** [parentGetRqImm] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            destruct (Compare_dec.le_gt_dec msiM (fst (snd post))).
+            { disc_rule_conds_ex.
+              intuition idtac.
+              { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+                apply DirMsgsCoh_deqMP; assumption.
+              }
+              { destruct H40.
+                { exfalso; simpl in *; solve_msi_false. }
+                { destruct H40 as [[midx msg] [? ?]]; inv H62.
+                  clear Hpulinv.
+                  get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+                  disc_rule_conds_const.
+                  exfalso.
+                  exfalso_uplock_rs_two
+                    parentIdx pc2 msg
+                    {| msg_id:= msiRsS;
+                       msg_type:= MRs;
+                       msg_value:= VNat (fst post) |}.
+                }
+              }
+              { apply DirMsgsCoh_enqMP.
+                { apply DirMsgsCoh_deqMP.
+                  apply invalidMsgs_DirMsgsCoh; assumption.
+                }
+                { red; simpl; congruence. }
+              }
+            }
+            
+            { assert (fst (snd post) = msiS) by (clear -g H20; solve_msi).
+              disc_rule_conds_ex.
+              destruct (eq_nat_dec (snd (fst (snd (snd post)))) msiS).
+              { specialize (H16 ltac:(clear -e; solve_msi)); dest.
+                intuition idtac.
+                { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+                  apply DirMsgsCoh_deqMP; assumption.
+                }
+                { apply DirMsgsCoh_enqMP.
+                  { apply DirMsgsCoh_deqMP; assumption. }
+                  { red; simpl; congruence. }
+                }
+              }
+              { assert (snd (fst (snd (snd post))) = msiI)
+                  by (clear -H17 n; solve_msi).
+                disc_rule_conds_ex.
+                intuition idtac.
+                { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+                  apply DirMsgsCoh_deqMP; assumption.
+                }
+                { destruct H48.
+                  { exfalso; simpl in *; solve_msi_false. }
+                  { destruct H48 as [[midx msg] [? ?]]; inv H62.
+                    clear Hpulinv.
+                    get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+                    disc_rule_conds_const.
+                    exfalso.
+                    exfalso_uplock_rs_two
+                      parentIdx pc2 msg
+                      {| msg_id:= msiRsS;
+                         msg_type:= MRs;
+                         msg_value:= VNat (fst post) |}.
+                  }
+                }
+                { apply DirMsgsCoh_enqMP.
+                  { apply DirMsgsCoh_deqMP.
+                    apply invalidMsgs_DirMsgsCoh; assumption.
+                  }
+                  { red; simpl; congruence. }
+                }
+              }
+            }
+        + solve_sim_ext_mp.
+
+      - (** [parentGetDownRqS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [parentSetRqImm] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        (* simplify [getDir] *)
+        unfold getDir in *; simpl in *.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            destruct (Compare_dec.le_gt_dec msiS (snd (fst (snd (snd post))))).
+            { disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { assert (snd (fst (snd (snd post))) = msiI) by (clear -g; solve_msi).
+              disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              { destruct H40.
+                { exfalso; simpl in *; solve_msi_false. }
+                { destruct H40 as [[midx msg] [? ?]]; inv H63.
+                  clear Hpulinv.
+                  get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+                  disc_rule_conds_const.
+                  exfalso.
+                  exfalso_uplock_rs_two
+                    parentIdx pc2 msg
+                    {| msg_id:= msiRsM;
+                       msg_type:= MRs;
+                       msg_value:= VUnit |}.
+                }
+              }
+              { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+                apply DirMsgsCoh_deqMP.
+                apply invalidMsgs_DirMsgsCoh.
+                assumption.
+              }
+            }            
+        + solve_sim_ext_mp.
+
+      - (** [parentSetDownRqI] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [parentGetDownRsS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        inv H60.
+        unfold setDir in *; simpl in *.
+
+        (* Discharge the downlock invariant *)
+        specialize (H24 eq_refl); dest.
+        disc_rule_conds_ex.
+
+        (* To get [DirMsgsCoh (fst sost) cost1 ..]  *)
+        specialize (H15 ltac:(clear -H44; solve_msi)); dest.
+        pose proof H60.
+        disc_DirMsgsCoh_by_FirstMP H61 H54.
+        rewrite Hmsg in H61; inv H61.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP; assumption.
+            }
+            { destruct H48.
+              { exfalso; simpl in *; solve_msi_false. }
+              { destruct H48 as [[midx msg] [? ?]]; inv H65.
+                clear Hpulinv.
+                get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+                disc_rule_conds_const.
+                exfalso.
+                exfalso_uplock_rs_two
+                  parentIdx pc2 msg
+                  {| msg_id:= msiRsS;
+                     msg_type:= MRs;
+                     msg_value:= VNat (fst sost) |}.
+              }
+            }
+            { apply DirMsgsCoh_enqMP.
+              { apply DirMsgsCoh_deqMP.
+                apply invalidMsgs_DirMsgsCoh; assumption.
+              }
+              { reflexivity. }
+            }
+        + solve_sim_ext_mp.
+
+      - (** [parentSetDownRsI] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        inv H61.
+        unfold setDir in *; simpl in *.
+
+        specialize (H37 eq_refl).
+        disc_rule_conds_ex.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            destruct (Compare_dec.le_gt_dec msiS (snd (fst (snd (snd post))))).
+            { disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { assert (snd (fst (snd (snd post))) = msiI) by (clear -g; solve_msi).
+              disc_rule_conds_ex.
+              intuition idtac; try solve_msi_false.
+              { destruct H48.
+                { exfalso; simpl in *; solve_msi_false. }
+                { destruct H48 as [[midx msg] [? ?]]; inv H65.
+                  clear Hpulinv.
+                  get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+                  disc_rule_conds_const.
+                  exfalso.
+                  exfalso_uplock_rs_two
+                    parentIdx pc2 msg
+                    {| msg_id:= msiRsM;
+                       msg_type:= MRs;
+                       msg_value:= VUnit |}.
+                }
+              }
+              { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+                apply DirMsgsCoh_deqMP.
+                apply invalidMsgs_DirMsgsCoh.
+                assumption.
+              }
+            }
+        + solve_sim_ext_mp.
+
+      - (** [parentEvictRqImmI] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+        + solve_sim_ext_mp.
+
+      - (** [parentEvictRqImmS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac.
+            { apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+              apply DirMsgsCoh_deqMP.
+              assumption.
+            }
+            { solve_msi_false. }
+            { solve_msi_false. }
+        + solve_sim_ext_mp.
+
+      - (** [parentEvictRqImmLastS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        (* simplify [getDir] *)
+        unfold getDir in *; simpl in *.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac; try solve_msi_false.
+            solve_rule_conds_ex.
+            apply H0; rewrite H5; auto.
+        + solve_sim_ext_mp.
           
-    Admitted.
+      - (** [parentEvictRqImmM] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        (* simplify [getDir] *)
+        unfold getDir in *; simpl in *.
+
+        (* discharging [ImplStateInv] *)
+        assert (n = fst sost).
+        { specialize (H16 ltac:(clear -H21; solve_msi)); dest.
+          disc_DirMsgsCoh_by_FirstMP H16 H57.
+          assert (msiM <= fst (snd cost2)).
+          { apply H51; auto.
+            { rewrite H21; auto. }
+            { exists (c2pRq, rmsg); split.
+              { apply FirstMP_InMP; assumption. }
+              { unfold sigOf; simpl.
+                rewrite H56, H9; reflexivity.
+              }
+            }
+          }
+          specialize (H16 ltac:(clear -H17; solve_msi)).
+          congruence.
+        }
+        subst.
+
+        red; simpl; split.
+        + eapply SimStateIntro with (cv:= fst sost).
+          * solve_rule_conds_ex.
+          * red; simpl.
+            disc_rule_conds_ex.
+            intuition idtac; try solve_msi_false.
+            apply DirMsgsCoh_other_msg_id_enqMP; [|solve_not_in].
+            apply DirMsgsCoh_deqMP.
+            assumption.
+        + solve_sim_ext_mp.
+    Qed.          
     
     Theorem MsiSv_ok:
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.

@@ -29,83 +29,6 @@ Ltac get_lock_inv obj sys :=
   progress (good_locking_get obj);
   clear H.
 
-(** TODO: move below tactics to the other file for general purpose. *)
-
-Ltac solve_in_mp :=
-  repeat
-    match goal with
-    | [ |- InMP _ _ _] => eassumption
-    | [H: FirstMPI _ (?midx, _) |- InMP ?midx _ _] =>
-      apply FirstMP_InMP; eassumption
-
-    | [ |- InMP ?midx _ (enqMP ?midx _ _) ] =>
-      apply InMP_or_enqMP; left; eauto; fail
-    | [ |- InMP ?midx _ (enqMP _ _ _) ] =>
-      apply InMP_or_enqMP; right
-    | [ |- InMP _ _ (deqMP _ _) ] =>
-      eapply deqMP_InMP; try eassumption; try discriminate
-    end.
-
-Ltac exfalso_uplock_rq_rs upidx urqUp udown :=
-  progress
-    match goal with
-    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
-      eapply upLockInvORq_rqUp_down_rssQ_False
-        with (pidx:= upidx) (rqUp:= urqUp) (down:= udown) in H;
-      try reflexivity; auto
-    end;
-  repeat
-    match goal with
-    | [ |- Datatypes.length (findQ _ _) >= 1] =>
-      eapply findQ_length_ge_one; solve_in_mp; fail
-    | [ |- Datatypes.length (rssQ _ _) >= 1] =>
-      eapply rssQ_length_ge_one; [|solve_in_mp; fail]
-    | [ |- msg_type _ = _] => try reflexivity; try eassumption
-    end.
-
-Ltac exfalso_uplock_rq_two upidx urqUp m1 m2 :=
-  progress
-    match goal with
-    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
-      eapply upLockInvORq_rqUp_length_two_False
-        with (pidx:= upidx) (rqUp:= urqUp) in H;
-      try reflexivity; auto
-    end;
-  repeat
-    match goal with
-    | [ |- Datatypes.length (findQ _ _) >= 2] =>
-      eapply findQ_length_two with (msg1:= m1) (msg2:= m2); auto
-    | [ |- InMP _ _ _] => solve_in_mp; fail
-    | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
-    end.
-
-Ltac exfalso_uplock_rs_two upidx udown m1 m2 :=
-  progress
-    match goal with
-    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
-      eapply upLockInvORq_down_rssQ_length_two_False
-        with (pidx:= upidx) (down:= udown) in H;
-      try reflexivity; auto
-    end;
-  repeat
-    match goal with
-    | [ |- Datatypes.length (rssQ _ _) >= 2] =>
-      eapply rssQ_length_two with (msg1:= m1) (msg2:= m2);
-      try solve_in_mp; try reflexivity; try eassumption
-    | [ |- _ <> _] => intro Hx; subst; simpl in *; discriminate
-    end.
-
-Ltac get_child_uplock_from_parent :=
-  repeat
-    match goal with
-    | [H: UpLockInvORq _ _ _ _ _ |- _] =>
-      eapply upLockInvORq_parent_locked_locked in H;
-      try reflexivity; dest;
-      [|red; simpl; disc_rule_conds_const; eauto; fail]
-    | [H: (?oorq >>=[[]] _)@[upRq] <> None |- _] =>
-      destruct oorq; simpl in H; [|exfalso; auto]
-    end.
-
 Section Inv.
 
   Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
@@ -1211,6 +1134,8 @@ Section Inv.
       3, 7, 10, 13, 17, 20: atomic_init_exfalso_rs_from_parent.
       all: try (atomic_init_exfalso_rq; fail).
 
+      (*! Cases for [child1] *)
+      
       - (** [childGetRqImm] *)
         disc_rule_conds_ex.
         simpl; split; [simpl; repeat constructor|].
@@ -1276,7 +1201,73 @@ Section Inv.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
 
-    Admitted.
+      (*! Cases for [child2] *)
+      
+      - (** [childGetRqImm] *)
+        disc_rule_conds_ex.
+        simpl; split; [simpl; repeat constructor|].
+        replace (oss +[child2Idx <- pos]) with oss by meq.
+        replace (orqs +[child2Idx <- norq]) with orqs by meq.
+        apply implInv_other_midx_enqMP; [|solve_not_in].
+        apply implInv_other_midx_deqMP; [|solve_not_in].
+        assumption.
+
+      - (** [childGetRqS] *)
+        disc_rule_conds_ex.
+        simpl; split.
+        + simpl; repeat constructor.
+          solve_rule_conds_ex.
+        + replace (oss +[child2Idx <- pos]) with oss by meq.
+          apply implInv_other_msg_id_enqMP; [|solve_not_in].
+          apply implInv_other_midx_deqMP; [|solve_not_in].
+          eapply implInv_orqs_weakened in H0; try eassumption.
+          findeq.
+
+      - (** [childSetRqImm] *)
+        disc_rule_conds_ex.
+        simpl; split; [simpl; repeat constructor|].
+        replace (orqs +[child2Idx <- norq]) with orqs by meq.
+        apply implInv_other_midx_enqMP; [|solve_not_in].
+        apply implInv_other_midx_deqMP; [|solve_not_in].
+        eapply implInv_value_changed; eauto.
+
+      - (** [childSetRqM] *)
+        disc_rule_conds_ex.
+        simpl; split.
+        + simpl; repeat constructor.
+          solve_rule_conds_ex.
+        + replace (oss +[child2Idx <- pos]) with oss by meq.
+          apply implInv_other_msg_id_enqMP; [|solve_not_in].
+          apply implInv_other_midx_deqMP; [|solve_not_in].
+          eapply implInv_orqs_weakened in H0; try eassumption.
+          findeq.
+
+      - (** [childEvictRqI] *)
+        disc_rule_conds_ex.
+        simpl; split.
+        + simpl; repeat constructor.
+          solve_rule_conds_ex.
+        + replace (oss +[child2Idx <- pos]) with oss by meq.
+          red in H0; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H24; destruct H24; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H24; auto.
+          * solve_msi.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_enqMP.
+            { apply invalidMsgs_deqMP; assumption. }
+            { red; simpl; solve_msi. }
+    Qed.
 
     Ltac disc_rule_custom ::=
       try disc_footprints_ok;
@@ -1407,9 +1398,7 @@ Section Inv.
       specialize (IHAtomic H1 _ H9); dest.
       inv_step; dest_in.
 
-      11-20, 31-40: admit.
-            
-      (*! For 1-10: *)
+      (*! Cases for [child1] *)
 
       - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
       - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
@@ -1574,7 +1563,172 @@ Section Inv.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
 
-      (*! For 21-30: *)
+      (*! Cases for [child2] *)
+
+      - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+
+      - (** [childGetRsS] *)
+        disc_rule_conds_ex.
+        get_lock_minds child2Idx.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H24;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H36; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [childDownRqS] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + apply Forall_app.
+          * eapply atomic_rqDown_preserves_msg_out_preds;
+              try exact H; eauto.
+            red; auto.
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP.
+            assumption.
+
+      - (** [childSetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childSetRqM] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+
+      - (** [childSetRsM] *)
+        disc_rule_conds_ex.
+        get_lock_minds child2Idx.
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        clear Hnulinv Hpdlinv Hndlinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H24;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H37; destruct H37; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H37; auto.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP.
+            eapply invalidMsgs_if_rsDown_exists
+              with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2);
+              try exact Hr1; try reflexivity; try eassumption.
+            { simpl; tauto. }
+            { apply FirstMP_InMP; assumption. }
+            { rewrite H15; discriminate. }
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [childDownRqI] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + apply Forall_app.
+          * eapply atomic_rqDown_preserves_msg_out_preds;
+              try exact H; eauto.
+            red; auto.
+          * repeat constructor.
+            red; simpl; mred.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP.
+            assumption.
+
+      - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childEvictRsI] *)
+        disc_rule_conds_ex.
+        get_lock_minds child2Idx.
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        clear Hnulinv Hpdlinv Hndlinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_ex.
+        
+        split.
+        + pose proof H3.
+          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H20;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H36; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * left; reflexivity.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP.
+            eapply invalidMsgs_if_rsDown_exists
+              with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2);
+              try exact Hr1; try reflexivity; try eassumption.
+            { simpl; tauto. }
+            { apply FirstMP_InMP; assumption. }
+            { rewrite H14; discriminate. }
+            
+      (*! Cases for [parent] with [child1] *)
       
       - (** [parentGetRqImm] *)
         disc_rule_conds_ex.
@@ -1939,7 +2093,7 @@ Section Inv.
           intuition idtac; try solve_msi_false.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * exfalso; solve_msi.
+          * exfalso; clear -H14 H44; solve_msi.
           * right; eexists (_, _); split.
             { apply InMP_or_enqMP; left; simpl; eauto. }
             { reflexivity. }
@@ -1956,7 +2110,387 @@ Section Inv.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
 
-    Admitted.
+      (*! Cases for [parent] with [child2] *)
+      
+      - (** [parentGetRqImm] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H8;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H31; destruct H31; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H31; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [parentGetDownRqS] *)
+        disc_rule_conds_ex.
+
+        unfold getDir in *; simpl in *.
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + red in Hibinv.
+          disc_rule_conds_ex.
+          pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H30;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * left; assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [parentSetRqImm] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        clear Hnulinv Hpdlinv Hndlinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H8;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H33; destruct H33; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H33; auto.
+          * apply msgExistsSig_enqMP_or in H33; destruct H33; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H33.
+            destruct H33 as [[midx msg] [? ?]]; simpl in *.
+            inv H34.
+            exfalso.
+            exfalso_uplock_rq_two parentIdx c2pRq msg rmsg.
+            intro Hx; subst.
+            rewrite H10 in H38; discriminate.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [parentSetDownRqI] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H8;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [parentGetDownRsS] *)
+        disc_rule_conds_ex.
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+        red in Hibinv.
+        disc_rule_conds_ex.
+        specialize (H20 eq_refl); dest.
+
+        assert (exists corq2,
+                   orqs@[child2Idx] = Some corq2 /\
+                   corq2@[upRq] <> None).
+        { clear Hnulinv Hpdlinv Hndlinv.
+          get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+          get_child_uplock_from_parent.
+          eauto.
+        }
+        destruct H33 as [corq2 [? ?]].
+
+        split.
+        + good_footprint_get parentIdx.
+          disc_rule_conds.
+          apply Forall_app.
+          * simpl.
+            red in H5; simpl in H5.
+            rewrite <-H7 in H41.
+            eapply atomic_rsUps_preserves_msg_out_preds
+              with (rsUps:= [(c1pRs, rmsg)]) in H5;
+              try exact H9; try eassumption; eauto.
+            { right; right; left; reflexivity. }
+            { reflexivity. }
+            { repeat constructor; intro Hx; elim Hx. }
+            { apply SubList_cons; [assumption|].
+              apply SubList_nil.
+            }
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+            
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * clear -H12; solve_msi.
+          * clear -H12; solve_msi.
+            
+      - (** [parentGetDownRsI] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        red in Hibinv.
+        disc_rule_conds_ex.
+        specialize (H20 eq_refl); dest.
+        rewrite H20 in *.
+
+        assert (exists corq2,
+                   orqs@[child2Idx] = Some corq2 /\
+                   corq2@[upRq] <> None).
+        { clear Hnulinv Hpdlinv Hndlinv.
+          get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+          get_child_uplock_from_parent.
+          eauto.
+        }
+        destruct H33 as [corq2 [? ?]].
+
+        split.
+        + good_footprint_get parentIdx.
+          disc_rule_conds.
+          apply Forall_app.
+          * simpl.
+            red in H5; simpl in H5.
+            rewrite <-H7 in H41.
+            eapply atomic_rsUps_preserves_msg_out_preds
+              with (rsUps:= [(c1pRs, rmsg)]) in H5;
+              try exact H9; try eassumption; eauto.
+            { right; right; left; reflexivity. }
+            { reflexivity. }
+            { repeat constructor; intro Hx; elim Hx. }
+            { apply SubList_cons; [assumption|].
+              apply SubList_nil.
+            }
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * clear -H12; solve_msi.
+          * clear -H12; solve_msi.
+          * exfalso.
+            clear Hpulinv Hpdlinv Hndlinv.
+            get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+            destruct H46 as [[midx msg] ?]; dest; inv H47.
+            exfalso_uplock_rq_rs parentIdx c2pRq pc2.
+          * left; assumption.
+          * clear Hnulinv Hndlinv.
+            get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+            get_lock_inv parent impl.
+            apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            eapply invalidMsgs_rsUp_deq
+              with (cobj:= child child1Idx ec1 ce1 c1pRq c1pRs pc1)
+                   (pobj:= parent);
+              try exact Hr1; try eassumption; try reflexivity;
+                try (simpl; tauto).
+
+      - (** [parentEvictRqImmI] *)
+        disc_rule_conds_ex.
+
+        unfold getDir in *; simpl in *.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H7;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply msgExistsSig_enqMP_or in H31; destruct H31; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H31; auto.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+
+      - (** [parentEvictRqImmS] *)
+        disc_rule_conds_ex.
+
+        clear Hpulinv Hpdlinv Hndlinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        unfold getDir in *; simpl in *.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H7;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * right; eexists (_, _); split.
+            { apply InMP_or_enqMP; left; simpl; eauto. }
+            { reflexivity. }
+          * eapply invalidMsgs_if_rsDown_exists
+              with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2);
+              try exact Hr2; try eassumption; try reflexivity.
+            { simpl; tauto. }
+            { apply InMP_or_enqMP; left; auto. }
+            { reflexivity. }
+            { discriminate. }
+
+      - (** [parentEvictRqImmLastS] *)
+        disc_rule_conds_ex.
+
+        clear Hpulinv Hpdlinv Hndlinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        unfold getDir in *; simpl in *.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H7;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try solve_msi.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * right; eexists (_, _); split.
+            { apply InMP_or_enqMP; left; simpl; eauto. }
+            { reflexivity. }
+          * eapply invalidMsgs_if_rsDown_exists
+              with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2);
+              try exact Hr2; try eassumption; try reflexivity.
+            { simpl; tauto. }
+            { apply InMP_or_enqMP; left; auto. }
+            { reflexivity. }
+            { discriminate. }
+
+      - (** [parentEvictRqImmM] *)
+        disc_rule_conds_ex.
+
+        clear Hpulinv Hpdlinv Hndlinv.
+        get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        unfold getDir in *; simpl in *.
+        disc_rule_conds_ex.
+
+        red in Hibinv.
+        disc_rule_conds_ex.
+
+        split.
+        + pose proof H3.
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H30;
+            try exact H; eauto; [|red; auto].
+          subst; rewrite removeOnce_nil; simpl.
+          repeat constructor.
+          red; simpl.
+          solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * exfalso; clear -H14 H44; solve_msi.
+          * apply childInvalid_enqMP.
+            apply childInvalid_other_midx_deqMP; [|discriminate].
+            assumption.
+          * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
+            apply invalidMsgs_deqMP; assumption.
+          * right; eexists (_, _); split.
+            { apply InMP_or_enqMP; left; simpl; eauto. }
+            { reflexivity. }
+          * eapply invalidMsgs_if_rsDown_exists
+              with (cobj:= child child2Idx ec2 ce2 c2pRq c2pRs pc2);
+              try exact Hr2; try eassumption; try reflexivity.
+            { simpl; tauto. }
+            { apply InMP_or_enqMP; left; auto. }
+            { reflexivity. }
+            { discriminate. }
+    Qed.
 
     Lemma implInv_init:
       ImplInv (initsOf impl).
