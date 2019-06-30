@@ -1,30 +1,32 @@
-LIB:=$(wildcard *.v)
-EX:=$(wildcard Ex/*.v)
-MSISV:=$(wildcard Ex/MsiSv/*.v)
+VS:=$(shell find . -type f -name '*.v')
 
 .PHONY: lib ex msisv clean
 
-lib: Makefile.coq.lib
-	$(MAKE) -f Makefile.coq.lib
+all: Makefile.coq
+	$(MAKE) -f Makefile.coq
 
-Makefile.coq.lib: Makefile $(LIB)
-	$(COQBIN)coq_makefile $(LIB) -o Makefile.coq.lib
+DEPS=-R . Top
 
-ex: Makefile.coq.ex
-	$(MAKE) -f Makefile.coq.ex
+Makefile.coq: Makefile $(VS)
+	$(COQBIN)coq_makefile $(VS) $(DEPS) -o Makefile.coq
 
-Makefile.coq.ex: Makefile $(LIB) $(EX)
-	$(COQBIN)coq_makefile $(LIB) $(EX) -o Makefile.coq.ex
+LIB_REPR_VO=RqRsLang.vo
+EX_SPEC_REPR_VO=Ex/SpecSv.vo
+EX_MSISV_REPR_VO=Ex/MsiSv/MsiSvSim.vo
 
-msisv: Makefile.coq.msisv
-	$(MAKE) -f Makefile.coq.msisv
+lib: Makefile.coq
+	$(MAKE) -f Makefile.coq $(LIB_REPR_VO)
 
-Makefile.coq.msisv: Makefile $(LIB) $(EX) $(MSISV)
-	$(COQBIN)coq_makefile $(LIB) $(EX) $(MSISV) -o Makefile.coq.msisv
+spec: Makefile.coq
+	$(MAKE) -f Makefile.coq $(EX_SPEC_REPR_VO)
+
+msisv: Makefile.coq
+	$(MAKE) -f Makefile.coq $(EX_MSISV_REPR_VO)
 
 clean:
-	$(MAKE) -f Makefile.coq.msisv clean || $(MAKE) -f Makefile.coq.ex clean || $(MAKE) -f Makefile.coq.lib clean
+	$(MAKE) -f Makefile.coq clean || true
+	rm -f Makefile.coq
 	rm -f .*.aux *.v.d *.glob *.vo *~
 	rm -f */.*.aux */*.v.d */*.glob */*.vo */*~
-	rm -f Makefile.coq.*
-	rm -f .coqdeps.d
+	rm -f .coqdeps.d .lia.cache
+	rm -f */.coqdeps.d */.lia.cache
