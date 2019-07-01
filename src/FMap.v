@@ -7,12 +7,12 @@ Require Import ProofIrrelevance FMapInterface.
 Require Import Common.
 
 (* List manipulation lemmas are commonly used when using [FMap]s. *)
-Require Export ListSupport.
+Require Export Index ListSupport.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.
 
-Open Scope list.
+Local Open Scope list.
 
 Scheme Sorted_ind' := Induction for Sorted Sort Prop.
 Scheme HdRel_ind' := Induction for HdRel Sort Prop.
@@ -2264,18 +2264,48 @@ Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
   Proof. apply lt_irrel_leibniz, UOT.lt_irrel. Qed.
 End FMapListLeib.
 
-Module Nat_as_OT' <: UsualOrderedTypeLTI.
-  Include Nat_as_OT.
-  
+Module Idx_as_OT <: UsualOrderedTypeLTI.
+
+  Definition t := IdxT.
+  Definition eq: t -> t -> Prop := @eq t.
+  Definition lt: t -> t -> Prop := idx_lt.
+  Definition eq_refl: forall x : t, x = x :=
+    @eq_refl _.
+  Definition eq_sym: forall x y : t, x = y -> y = x :=
+    @eq_sym _.
+  Definition eq_trans : forall x y z : t, x = y -> y = z -> x = z :=
+    @eq_trans _.
+  Definition lt_trans: forall x y z : t, lt x y -> lt y z -> lt x z :=
+    idx_lt_trans.
+  Definition lt_not_eq: forall x y : t, lt x y -> ~ eq x y :=
+    idx_lt_not_eq.
+
+  Definition compare: forall x y : t, OrderedType.Compare lt eq x y.
+  Proof.
+    intros.
+    destruct (idx_lt_dec x y).
+    - apply LT; assumption.
+    - destruct (idx_dec x y).
+      + apply EQ; assumption.
+      + apply GT.
+        apply idx_total in n0.
+        destruct n0.
+        * elim n; assumption.
+        * assumption.
+  Defined.
+    
+  Definition eq_dec: forall x y : t, {eq x y} + {~ eq x y} :=
+    fun _ _ => idx_dec _ _.
+
   Lemma lt_irrel : forall (x y : t) (p q : lt x y), p = q.
   Proof.
     intros; apply proof_irrelevance.
   Qed.
   
-End Nat_as_OT'.
+End Idx_as_OT.
 
 Module M.
-  Module Map := FMapListLeib Nat_as_OT'.
+  Module Map := FMapListLeib Idx_as_OT.
   Include Map.
   Include (LeibnizFacts Map).
 End M.
@@ -2289,7 +2319,6 @@ Notation " [ k <- v ] " := (M.add k v (M.empty _)) : fmap_scope.
 Notation " m +[ k <- v ] " := (M.add k v m) (at level 0) : fmap_scope.
 Notation " m -[ k ] " := (M.remove k m) (at level 0) : fmap_scope.
 Notation " m @[ k ] " := (M.find k m) (at level 0) : fmap_scope.
-
 Delimit Scope fmap_scope with fmap.
 
 Ltac dest_mdisj :=
@@ -2472,6 +2501,4 @@ Ltac findeq_more := findeq_custom idtac.
 
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
 Ltac mdisj := mred; dest_mdisj; solve_mdisj; try findeq.
-
-Close Scope list.
 

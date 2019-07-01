@@ -30,33 +30,6 @@ Proof.
   decide equality.
 Defined.
 
-Definition IdxT := nat.
-
-Definition Id (A: Type) := (IdxT * A)%type.
-
-Definition idOf {A} (ida: Id A) := fst ida.
-Definition valOf {A} (ida: Id A) := snd ida.
-Definition idsOf {A} (ias: list (Id A)) := List.map fst ias.
-Definition valsOf {A} (ias: list (Id A)) := List.map snd ias.
-
-Definition liftI {A B: Type} (f: A -> B) (ida: Id A): Id B :=
-  (idOf ida, f (valOf ida)).
-
-Definition imap {A B: Type} (f: A -> B) (ias: list (Id A)): list (Id B) :=
-  List.map (liftI f) ias.
-Definition ifilterI {A} (ias: list (Id A)) (f: IdxT -> bool): list (Id A) :=
-  filter (fun ia => f (idOf ia)) ias.
-Definition ifilterV {A} (ias: list (Id A)) (f: A -> bool): list (Id A) :=
-  filter (fun ia => f (valOf ia)) ias.
-
-Definition id_dec {A} (a_dec: forall (a1 a2: A), {a1 = a2} + {a1 <> a2}):
-  forall (ida1 ida2: Id A), {ida1 = ida2} + {ida1 <> ida2}.
-Proof.
-  intros.
-  decide equality.
-  apply eq_nat_dec.
-Defined.
-
 Theorem tautology_0:
   forall (P Q: Prop), (P -> Q) -> P -> Q.
 Proof.

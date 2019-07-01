@@ -21,8 +21,8 @@ Qed.
 Lemma msiSv_topo_wf: WfDTree topo.
 Proof.
   split.
-  - compute; repeat constructor; firstorder.
-  - compute; repeat constructor; firstorder.
+  - compute; repeat constructor; solve_not_in.
+  - compute; repeat constructor; solve_not_in.
 Qed.
 
 Lemma msiSv_impl_RqRsChnsOnDTree: RqRsChnsOnDTree topo.

@@ -108,28 +108,28 @@ Section Sim.
       unfold SimExtMP; intros.
       disc_rule_conds_ex.
       repeat split.
-      - destruct (in_dec eq_nat_dec ec1 (idsOf eins)).
+      - destruct (in_dec idx_dec ec1 (idsOf eins)).
         + apply in_map_iff in i.
           destruct i as [[midx msg] ?]; dest; simpl in *; subst.
           do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
           rewrite ocons_app; congruence.
         + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
           assumption.
-      - destruct (in_dec eq_nat_dec ec2 (idsOf eins)).
+      - destruct (in_dec idx_dec ec2 (idsOf eins)).
         + apply in_map_iff in i.
           destruct i as [[midx msg] ?]; dest; simpl in *; subst.
           do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
           rewrite ocons_app; congruence.
         + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
           assumption.
-      - destruct (in_dec eq_nat_dec ce1 (idsOf eins)).
+      - destruct (in_dec idx_dec ce1 (idsOf eins)).
         + apply in_map_iff in i.
           destruct i as [[midx msg] ?]; dest; simpl in *; subst.
           do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
           congruence.
         + do 2 (rewrite findQ_not_In_enqMsgs by assumption).
           assumption.
-      - destruct (in_dec eq_nat_dec ce2 (idsOf eins)).
+      - destruct (in_dec idx_dec ce2 (idsOf eins)).
         + apply in_map_iff in i.
           destruct i as [[midx msg] ?]; dest; simpl in *; subst.
           do 2 (erewrite findQ_In_NoDup_enqMsgs; eauto).
@@ -170,19 +170,19 @@ Section Sim.
       unfold SimExtMP; intros.
       disc_rule_conds_ex.
       repeat split.
-      - destruct (in_dec eq_nat_dec ec1 (idsOf eouts)).
+      - destruct (in_dec idx_dec ec1 (idsOf eouts)).
         + exfalso.
           destruct H; apply H in i.
           dest_in; discriminate.
         + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
           assumption.
-      - destruct (in_dec eq_nat_dec ec2 (idsOf eouts)).
+      - destruct (in_dec idx_dec ec2 (idsOf eouts)).
         + exfalso.
           destruct H; apply H in i.
           dest_in; discriminate.
         + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
           assumption.
-      - destruct (in_dec eq_nat_dec ce1 (idsOf eouts)).
+      - destruct (in_dec idx_dec ce1 (idsOf eouts)).
         + assert (findQ ce1 imsgs <> nil).
           { apply in_map_iff in i.
             destruct i as [[midx msg] ?]; dest; simpl in *; subst.
@@ -198,7 +198,7 @@ Section Sim.
           congruence.
         + do 2 (rewrite findQ_not_In_deqMsgs by assumption).
           assumption.
-      - destruct (in_dec eq_nat_dec ce2 (idsOf eouts)).
+      - destruct (in_dec idx_dec ce2 (idsOf eouts)).
         + assert (findQ ce2 imsgs <> nil).
           { apply in_map_iff in i.
             destruct i as [[midx msg] ?]; dest; simpl in *; subst.
@@ -622,7 +622,7 @@ Section Sim.
         |spec_constr_step_get_ValidMsgs
         |solve_rule_conds_ex (* rule_precond *)
         |spec_constr_step_get_ValidMsgs
-        |solve_DisjList]
+        |solve_DisjList idx_dec]
       end.
 
     Ltac spec_constr_step_set ecmidx :=
@@ -638,7 +638,7 @@ Section Sim.
         |spec_constr_step_get_ValidMsgs
         |solve_rule_conds_ex (* rule_precond *)
         |spec_constr_step_get_ValidMsgs
-        |solve_DisjList]
+        |solve_DisjList idx_dec]
       end.
 
     Ltac spec_constr_step_evict ecmidx :=
@@ -654,7 +654,7 @@ Section Sim.
         |spec_constr_step_get_ValidMsgs
         |solve_rule_conds_ex (* rule_precond *)
         |spec_constr_step_get_ValidMsgs
-        |solve_DisjList]
+        |solve_DisjList idx_dec]
       end.
 
     Ltac spec_case_get cidx ecmidx :=
@@ -768,7 +768,7 @@ Section Sim.
           apply SimState_impl_other_midx_enqMsgs; [assumption|].
           destruct H1.
           eapply DisjList_SubList; [eassumption|].
-          solve_DisjList.
+          solve_DisjList idx_dec.
         * apply SimExtMP_enqMsgs; auto.
           apply H1.
     Qed.

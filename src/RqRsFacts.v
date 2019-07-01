@@ -14,10 +14,10 @@ Open Scope fmap.
 Ltac icase oidx :=
   match goal with
   | [H: In oidx (?h :: _) |- _] =>
-    destruct (eq_nat_dec oidx h);
+    destruct (idx_dec oidx h);
     [subst|destruct H; [exfalso; auto|]]
   | [H: ?h = oidx \/ In oidx _ |- _] =>
-    destruct (eq_nat_dec oidx h);
+    destruct (idx_dec oidx h);
     [subst|destruct H; [exfalso; auto|]]
   end.
 
@@ -335,7 +335,7 @@ Section RqRsDTree.
   Proof.
     unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom; intros.
     destruct Hsd as [? _].
-    destruct (eq_nat_dec oidx1 oidx2); subst.
+    destruct (idx_dec oidx1 oidx2); subst.
     - remember (parentChnsOf oidx2 dtr) as pchn.
       destruct pchn as [[root pidx]|]; [|discriminate].
       apply eq_sym in Heqpchn; simpl in *.
@@ -366,7 +366,7 @@ Section RqRsDTree.
   Proof.
     unfold rqEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo; intros.
     destruct Hsd as [? _].
-    destruct (eq_nat_dec oidx1 oidx2); subst.
+    destruct (idx_dec oidx1 oidx2); subst.
     - remember (parentChnsOf oidx2 dtr) as pchn.
       destruct pchn as [[root pidx]|]; [|discriminate].
       apply eq_sym in Heqpchn; simpl in *.
@@ -422,7 +422,7 @@ Section RqRsDTree.
   Proof.
     unfold rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo; intros.
     destruct Hsd as [? _].
-    destruct (eq_nat_dec oidx1 oidx2); subst.
+    destruct (idx_dec oidx1 oidx2); subst.
     - remember (parentChnsOf oidx2 dtr) as pchn.
       destruct pchn as [[root pidx]|]; [|discriminate].
       apply eq_sym in Heqpchn; simpl in *.
@@ -506,7 +506,7 @@ Section RqRsDTree.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
     destruct H0 as [cidx [down ?]]; dest.
-    destruct (eq_nat_dec oidx1 cidx); subst.
+    destruct (idx_dec oidx1 cidx); subst.
     - elim H1; assumption.
     - elim (rqrsDTree_rsUp_rsUp_not_eq n H H4); reflexivity.
   Qed.
@@ -570,7 +570,7 @@ Section RqRsDTree.
     intros; intro Hx.
     eapply RqRsDownMatch_rq_rs in H0; [|eassumption].
     destruct H0 as [cidx [down ?]]; dest.
-    destruct (eq_nat_dec oidx1 cidx); subst.
+    destruct (idx_dec oidx1 cidx); subst.
     - elim H1; assumption.
     - elim (rqrsDTree_down_down_not_eq n H H3); reflexivity.
   Qed.
@@ -597,12 +597,12 @@ Section RqRsDTree.
       DisjList rqTos1 rqTos2.
   Proof.
     intros.
-    apply (DisjList_false_spec eq_nat_dec); intros midx ? ?.
+    apply (DisjList_false_spec idx_dec); intros midx ? ?.
     eapply RqRsDownMatch_rq_rs in H2; [|eassumption].
     destruct H2 as [cidx1 [rsUp1 ?]]; dest.
     eapply RqRsDownMatch_rq_rs in H3; [|eassumption].
     destruct H3 as [cidx2 [rsUp2 ?]]; dest.
-    destruct (eq_nat_dec cidx1 cidx2); subst.
+    destruct (idx_dec cidx1 cidx2); subst.
     - rewrite H4 in H8; inv H8; auto.
     - elim (rqrsDTree_down_down_not_eq n H5 H9); reflexivity.
   Qed.
@@ -616,12 +616,12 @@ Section RqRsDTree.
       DisjList rssFrom1 rssFrom2.
   Proof.
     intros.
-    apply (DisjList_false_spec eq_nat_dec); intros midx ? ?.
+    apply (DisjList_false_spec idx_dec); intros midx ? ?.
     eapply RqRsDownMatch_rs_rq in H2; [|eassumption].
     destruct H2 as [cidx1 [down1 ?]]; dest.
     eapply RqRsDownMatch_rs_rq in H3; [|eassumption].
     destruct H3 as [cidx2 [down2 ?]]; dest.
-    destruct (eq_nat_dec cidx1 cidx2); subst.
+    destruct (idx_dec cidx1 cidx2); subst.
     - rewrite H4 in H8; inv H8; auto.
     - elim (rqrsDTree_rsUp_rsUp_not_eq n H6 H10); reflexivity.
   Qed.
@@ -639,7 +639,7 @@ Section RqRsDTree.
     elim H2; clear H2.
     eapply RqRsDownMatch_rq_rs in H3; eauto.
     destruct H3 as [rcidx [rrsUp ?]]; dest.
-    destruct (eq_nat_dec cidx rcidx); subst.
+    destruct (idx_dec cidx rcidx); subst.
     - rewrite H1 in H5; inv H5; assumption.
     - elim (rqrsDTree_down_down_not_eq n H0 H4); reflexivity.
   Qed.
@@ -652,7 +652,7 @@ Section RqRsDTree.
   Proof.
     unfold FootprintUpOk; intros.
     destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; dest.
-    destruct (eq_nat_dec cidx1 cidx2); subst.
+    destruct (idx_dec cidx1 cidx2); subst.
     - rewrite H7 in H3; inv H3.
       rewrite H8 in H4; inv H4.
       auto.
@@ -680,7 +680,7 @@ Section RqRsDTree.
       destruct H5 as [cidx1 ?]; destruct H3 as [cidx2 ?]; dest.
       simpl in *.
       f_equal.
-      + destruct (eq_nat_dec cidx1 cidx2); subst.
+      + destruct (idx_dec cidx1 cidx2); subst.
         * rewrite H10 in H5; inv H5; reflexivity.
         * exfalso.
           elim (rqrsDTree_down_down_not_eq n H9 H4); auto.
@@ -716,7 +716,7 @@ Section RqRsDTree.
     destruct H as [cidx1 [cobj1 ?]]; destruct H0 as [cidx2 [cobj2 ?]]; dest; subst.
     split.
     - eapply RqRsDownMatch_rs_eq; eauto.
-    - destruct (eq_nat_dec (obj_idx cobj1) (obj_idx cobj2)).
+    - destruct (idx_dec (obj_idx cobj1) (obj_idx cobj2)).
       + rewrite e in H9; rewrite H9 in H4; inv H4; reflexivity.
       + exfalso.
         elim (rqrsDTree_rqUp_rqUp_not_eq n H8 H3); auto.
@@ -919,7 +919,7 @@ Ltac disc_rule_minds :=
      H2: rqEdgeUpFrom _ ?idx2 = Some ?midx |- _] =>
     let Heq := fresh "Heq" in
     let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [Heq|Hneq];
+    destruct (idx_dec idx1 idx2) as [Heq|Hneq];
     [rewrite Heq in *; clear H2
     |elim (rqrsDTree_rqUp_rqUp_not_eq H Hneq H1 H2); reflexivity]
   | [H: RqRsDTree _ _,
@@ -927,7 +927,7 @@ Ltac disc_rule_minds :=
      H2: rsEdgeUpFrom _ ?idx2 = Some ?midx |- _] =>
     let Heq := fresh "Heq" in
     let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [Heq|Hneq];
+    destruct (idx_dec idx1 idx2) as [Heq|Hneq];
     [rewrite Heq in *; clear H2
     |elim (rqrsDTree_rsUp_rsUp_not_eq H Hneq H1 H2); reflexivity]
   | [H: RqRsDTree _ _,
@@ -935,7 +935,7 @@ Ltac disc_rule_minds :=
      H2: edgeDownTo _ ?idx2 = Some ?midx |- _] =>
     let Heq := fresh "Heq" in
     let Hneq := fresh "Hneq" in
-    destruct (eq_nat_dec idx1 idx2) as [Heq|Hneq];
+    destruct (idx_dec idx1 idx2) as [Heq|Hneq];
     [rewrite Heq in *; clear H2
     |elim (rqrsDTree_down_down_not_eq H Hneq H1 H2); reflexivity]
   end.
@@ -1525,11 +1525,11 @@ Ltac solve_midx_disj :=
     | [ |- _ <> _] => solve_midx_neq
     | [ |- ~ In _ _] => solve_midx_neq
     | [ |- DisjList (_ :: nil) (_ :: nil)] =>
-      apply (DisjList_singletons eq_nat_dec)
+      apply (DisjList_singletons idx_dec)
     | [ |- DisjList (_ :: nil) _] =>
-      apply (DisjList_singleton_1 eq_nat_dec)
+      apply (DisjList_singleton_1 idx_dec)
     | [ |- DisjList _ (_ :: nil)] =>
-      apply (DisjList_singleton_2 eq_nat_dec)
+      apply (DisjList_singleton_2 idx_dec)
     end.
 
 Ltac solve_midx_false :=

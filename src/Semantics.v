@@ -224,7 +224,7 @@ Section TMsg.
     - decide equality.
       decide equality.
       + apply msg_dec.
-      + decide equality.
+      + apply idx_dec.
     - decide equality.
   Defined.
 

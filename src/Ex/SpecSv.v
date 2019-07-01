@@ -1,4 +1,4 @@
-Require Import Bool Vector List String Peano_dec.
+Require Import Bool Vector List String Peano_dec Omega.
 Require Import Common FMap HVector ListSupport Syntax Semantics.
 Require Import Topology RqRsLang.
 
@@ -13,12 +13,12 @@ Open Scope fmap.
 Section System.
   Variable numC: nat. (* if [numC = 0], then the system has channels for a single child. *)
 
-  Definition erq (i: nat) := 2 * i.
-  Definition ers (i: nat) := 2 * i + 1.
+  Definition erq (i: nat): IdxT := extendIdx 0 [i].
+  Definition ers (i: nat): IdxT := extendIdx 1 [i].
 
   Section Spec.
 
-    Definition specIdx := 0.
+    Definition specIdx: IdxT := 0.
 
     Definition SpecOStateIfc: OStateIfc :=
       {| ost_sz := 1;
@@ -32,10 +32,8 @@ Section System.
     Section PerChn.
       Variable i: nat.
 
-      Definition specNumOfRules := 3.
-
       Definition specGetRq: Rule SpecOStateIfc :=
-        {| rule_idx := specNumOfRules * i + 0;
+        {| rule_idx := [i; 0];
            rule_precond :=
              MsgsFrom [erq i]
              /\oprec MsgIdsFrom [getRq]
@@ -50,7 +48,7 @@ Section System.
         |}.
 
       Definition specSetRq: Rule SpecOStateIfc :=
-        {| rule_idx := specNumOfRules * i + 1;
+        {| rule_idx := [i; 1];
            rule_precond :=
              MsgsFrom [erq i]
              /\oprec MsgIdsFrom [setRq]
@@ -70,7 +68,7 @@ Section System.
         |}.
 
       Definition specEvictRq: Rule SpecOStateIfc :=
-        {| rule_idx := specNumOfRules * i + 2;
+        {| rule_idx := [i; 2];
            rule_precond :=
              MsgsFrom [erq i]
              /\oprec MsgIdsFrom [evictRq]
@@ -95,10 +93,34 @@ Section System.
       | S i' => (specRulesI i) ++ (specRules i')
       end.
 
+    Lemma specRules_head:
+      forall i,
+        SubList
+          (map idxHd (map (@rule_idx _) (specRules i)))
+          (nat_seq_rev i).
+    Proof.
+      induction i; simpl; intros; [solve_SubList|].
+      repeat (apply SubList_cons; [left; reflexivity|]).
+      apply SubList_cons_right.
+      assumption.
+    Qed.
+      
     Lemma specObj_obj_rules_valid:
       forall i, NoDup (map (@rule_idx _) (specRules i)).
     Proof.
-    Admitted.
+      induction i; [solve_NoDup|].
+      simpl.
+      apply NoDup_DisjList with (l1:= [[S i; 0]; [S i; 1]; [S i; 2]]).
+      - solve_NoDup.
+      - assumption.
+      - apply idx_DisjList_head; simpl.
+        eapply DisjList_comm, DisjList_SubList.
+        * apply specRules_head.
+        * apply DisjList_comm.
+          repeat (apply (DisjList_cons_inv eq_nat_dec);
+                  [|apply nat_seq_rev_not_in; omega]).
+          apply DisjList_nil_1.
+    Qed.
 
     Definition specObj: Object SpecOStateIfc :=
       {| obj_idx := specIdx;
@@ -106,22 +128,30 @@ Section System.
          obj_rules_valid := specObj_obj_rules_valid numC
       |}.
 
-    Fixpoint specMerqs (i: nat): list IdxT :=
-      match i with
-      | O => [erq O]
-      | S i' => erq i :: specMerqs i'
-      end.
+    Definition specMerqs (i: nat): list IdxT :=
+      extendInds 0 (liftInds (nat_seq_rev i)).
 
-    Fixpoint specMerss (i: nat): list IdxT :=
-      match i with
-      | O => [ers O]
-      | S i' => ers i :: specMerss i'
-      end.
+    Definition specMerss (i: nat): list IdxT :=
+      extendInds 1 (liftInds (nat_seq_rev i)).
 
     Lemma spec_msg_inds_valid:
-      forall i, NoDup (nil ++ specMerqs i ++ specMerss i).
+      forall i, NoDup (specMerqs i ++ specMerss i).
     Proof.
-    Admitted.
+      intros.
+      apply NoDup_DisjList.
+      - apply extendIdx_NoDup.
+        apply liftInds_NoDup.
+        apply nat_seq_rev_NoDup.
+      - apply extendIdx_NoDup.
+        apply liftInds_NoDup.
+        apply nat_seq_rev_NoDup.
+      - apply idx_DisjList_head.
+        eapply DisjList_SubList; [apply extendInds_idxHd_SubList|].
+        eapply DisjList_comm, DisjList_SubList; [apply extendInds_idxHd_SubList|].
+        apply (DisjList_cons_inv eq_nat_dec).
+        + apply DisjList_nil_1.
+        + solve_not_in.
+    Qed.
 
     Definition spec: System SpecOStateIfc :=
       {| sys_objs := [specObj];

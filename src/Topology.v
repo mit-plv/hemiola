@@ -133,9 +133,9 @@ Section DTree.
     decide equality.
     - apply (list_eq_dec dtree_dec).
     - decide equality.
-      + apply (list_eq_dec eq_nat_dec).
-      + apply (list_eq_dec eq_nat_dec).
-      + apply eq_nat_dec.
+      + apply (list_eq_dec idx_dec).
+      + apply (list_eq_dec idx_dec).
+      + apply idx_dec.
   Defined.
 
   Section DTree_ind2.
@@ -174,7 +174,7 @@ Section DTree.
   Fixpoint parentOf (idx: IdxT) (dtr: DTree): option DTree :=
     match dtr with
     | DNode root cs =>
-      if in_dec eq_nat_dec idx (map rootOf cs)
+      if in_dec idx_dec idx (map rootOf cs)
       then Some dtr
       else find_some (parentOf idx) cs
     end.
@@ -194,7 +194,7 @@ Section DTree.
   Fixpoint subtree (idx: IdxT) (dtr: DTree): option DTree :=
     match dtr with
     | DNode root cs =>
-      if eq_nat_dec root.(dmc_me) idx
+      if idx_dec root.(dmc_me) idx
       then Some dtr
       else find_some (subtree idx) cs
     end.
@@ -210,7 +210,7 @@ Section DTree.
     (subtree idx dtr) >>=[nil] (fun tr => indsOf tr).
 
   Definition hasIdx (idx: IdxT) (dtr: DTree): option DTree :=
-    if eq_nat_dec (rootOf dtr) idx
+    if idx_dec (rootOf dtr) idx
     then Some dtr
     else None.
   
@@ -567,12 +567,12 @@ Section Facts.
     induction cs; [inv H0|].
     destruct H0; subst.
     - destruct H1; subst; [exfalso; auto|].
-      simpl in H7; apply (DisjList_NoDup eq_nat_dec) in H7.
+      simpl in H7; apply (DisjList_NoDup idx_dec) in H7.
       apply DisjList_comm in H7.
       eapply DisjList_comm, DisjList_SubList; [|eassumption].
       apply collect_in; auto.
     - destruct H1; subst.
-      + simpl in H7; apply (DisjList_NoDup eq_nat_dec) in H7.
+      + simpl in H7; apply (DisjList_NoDup idx_dec) in H7.
         apply DisjList_comm in H7.
         eapply DisjList_SubList; [|eassumption].
         apply collect_in; auto.
@@ -597,12 +597,12 @@ Section Facts.
     induction cs; [inv H0|].
     destruct H0; subst.
     - destruct H1; subst; [exfalso; auto|].
-      simpl in H3; apply (DisjList_NoDup eq_nat_dec) in H3.
+      simpl in H3; apply (DisjList_NoDup idx_dec) in H3.
       apply DisjList_comm in H3.
       eapply DisjList_comm, DisjList_SubList; [|eassumption].
       apply collect_in; auto.
     - destruct H1; subst.
-      + simpl in H3; apply (DisjList_NoDup eq_nat_dec) in H3.
+      + simpl in H3; apply (DisjList_NoDup idx_dec) in H3.
         apply DisjList_comm in H3.
         eapply DisjList_SubList; [|eassumption].
         apply collect_in; auto.
@@ -854,7 +854,7 @@ Section Facts.
     destruct dtr as [root cs]; intros; simpl.
     destruct H.
     red in H1; simpl in H1.
-    apply (DisjList_NoDup eq_nat_dec) in H1.
+    apply (DisjList_NoDup idx_dec) in H1.
     eapply DisjList_SubList; [|apply DisjList_comm; eassumption].
     apply parentChnsOf_child_chnsOf in H0.
     destruct H0 as [ctr ?]; dest; simpl in *.
@@ -926,7 +926,7 @@ Section Facts.
     destruct H0 as [ctr ?]; dest.
     disc_forall_in.
     specialize (H3 _ H2).
-    destruct (eq_nat_dec oidx (rootOf ctr)).
+    destruct (idx_dec oidx (rootOf ctr)).
     - exfalso; subst.
       eapply find_some_not_None; [..|eassumption]; eauto.
       unfold hasIdx.
@@ -1321,7 +1321,7 @@ Section Facts.
         cidx = oidx \/ ~ In cidx (subtreeIndsOf dtr oidx).
     Proof.
       intros.
-      destruct (eq_nat_dec cidx oidx); auto.
+      destruct (idx_dec cidx oidx); auto.
       right.
       intro Hx; elim H.
       eapply inside_parent_in; eauto.
@@ -1335,7 +1335,7 @@ Section Facts.
         cidx = oidx.
     Proof.
       intros.
-      destruct (eq_nat_dec cidx oidx); auto.
+      destruct (idx_dec cidx oidx); auto.
       eapply inside_parent_in in H; try eassumption.
       exfalso; auto.
     Qed.

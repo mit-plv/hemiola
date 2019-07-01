@@ -1,4 +1,5 @@
 Require Import Common List Omega.
+Require Import Index.
 
 Set Implicit Arguments.
 
@@ -1525,6 +1526,97 @@ Proof.
   omega.
 Qed.
 
+Lemma nat_seq_rev_not_in:
+  forall n m,
+    n < m -> ~ In m (nat_seq_rev n).
+Proof.
+  induction n; simpl; intros; [intuition|].
+  intro Hx; destruct Hx; [intuition|].
+  generalize H0; apply IHn.
+  omega.
+Qed.
+
+Lemma nat_seq_rev_NoDup:
+  forall n, NoDup (nat_seq_rev n).
+Proof.
+  induction n; simpl; intros.
+  - repeat constructor; intro; dest_in.
+  - constructor; auto.
+    apply nat_seq_rev_not_in; omega.
+Qed.
+
+Lemma liftInds_In:
+  forall n ns,
+    In (natToIdx n) (liftInds ns) ->
+    In n ns.
+Proof.
+  induction ns; simpl; intros; auto.
+  destruct H; auto.
+  inv H; auto.
+Qed.
+  
+Lemma liftInds_NoDup:
+  forall inds,
+    NoDup inds ->
+    NoDup (liftInds inds).
+Proof.
+  induction inds; simpl; intros; [constructor|].
+  inv H; constructor; auto.
+  intro Hx; elim H2.
+  apply liftInds_In; assumption.
+Qed.
+
+Lemma idx_DisjList_head:
+  forall (inds1 inds2: list IdxT),
+    DisjList (map idxHd inds1) (map idxHd inds2) ->
+    DisjList inds1 inds2.
+Proof.
+  induction inds1; simpl; intros; [apply DisjList_nil_1|].
+  apply DisjList_cons in H; dest.
+  apply (DisjList_cons_inv idx_dec); auto.
+  intro Hx; elim H.
+  apply in_map; assumption.
+Qed.
+
+Lemma extendIdx_inv:
+  forall ext idx1 idx2,
+    extendIdx ext idx1 = extendIdx ext idx2 ->
+    idx1 = idx2.
+Proof.
+  unfold extendIdx; intros.
+  inv H; reflexivity.
+Qed.
+
+Lemma extendIdx_In:
+  forall ext idx inds,
+    In (extendIdx ext idx) (extendInds ext inds) ->
+    In idx inds.
+Proof.
+  induction inds; simpl; intros; auto.
+  destruct H; auto.
+  apply extendIdx_inv in H; auto.
+Qed.
+
+Lemma extendIdx_NoDup:
+  forall ext inds,
+    NoDup inds -> NoDup (extendInds ext inds).
+Proof.
+  induction inds; simpl; intros; auto.
+  inv H; constructor; auto.
+  intro Hx; elim H2.
+  eapply extendIdx_In; eauto.
+Qed.
+
+Lemma extendInds_idxHd_SubList:
+  forall ext inds,
+    SubList (map idxHd (extendInds ext inds)) [ext].
+Proof.
+  induction inds; simpl; intros; [apply SubList_nil|].
+  apply SubList_cons.
+  - left; reflexivity.
+  - assumption.
+Qed.
+
 (** Tactics for solving predicates of constant lists *)
 
 Ltac solve_not_in :=
@@ -1533,12 +1625,15 @@ Ltac solve_not_in :=
 Ltac solve_SubList :=
   red; intros; dest_in; simpl; tauto.
 
-Ltac solve_DisjList :=
+Ltac solve_DisjList dec :=
   match goal with
   | [ |- DisjList ?ll ?rl] =>
     let e := fresh "e" in
     red; intro e;
-    destruct (in_dec eq_nat_dec e ll); [right|auto];
+    destruct (in_dec dec e ll); [right|auto];
     dest_in; solve_not_in
   end.
+
+Ltac solve_NoDup :=
+  simpl; repeat constructor; solve_not_in.
 

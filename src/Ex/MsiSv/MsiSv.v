@@ -17,20 +17,20 @@ Section System.
   Definition ce1 := ers 0.
   Definition ec2 := erq 1.
   Definition ce2 := ers 1.
-  Definition ecd1 := 4.
-  Definition ecd2 := 5.
-  Definition c1pRq := 6.
-  Definition c1pRs := 7.
-  Definition pc1 := 8.
-  Definition c2pRq := 9.
-  Definition c2pRs := 10.
-  Definition pc2 := 11.
+  Definition ecd1: IdxT := 4.
+  Definition ecd2: IdxT := 5.
+  Definition c1pRq: IdxT := 6.
+  Definition c1pRs: IdxT := 7.
+  Definition pc1: IdxT := 8.
+  Definition c2pRq: IdxT := 9.
+  Definition c2pRs: IdxT := 10.
+  Definition pc2: IdxT := 11.
     
-  Definition parentIdx := 0.
-  Definition child1Idx := 1.
-  Definition child2Idx := 2.
-  Definition ext1Idx := 3.
-  Definition ext2Idx := 4.
+  Definition parentIdx: IdxT := 0.
+  Definition child1Idx: IdxT := 1.
+  Definition child2Idx: IdxT := 2.
+  Definition ext1Idx: IdxT := 3.
+  Definition ext2Idx: IdxT := 4.
 
   Definition topo: DTree :=
     DNode
@@ -56,10 +56,10 @@ Section System.
   Definition dirInit: DirT := (msiS, msiS).
 
   Definition getDir (cidx: IdxT) (dir: DirT): MSI :=
-    if cidx ==n child1Idx then fst dir else snd dir.
+    if idx_dec cidx child1Idx then fst dir else snd dir.
 
   Definition setDir (cidx: IdxT) (stt: MSI) (dir: DirT): DirT :=
-    if cidx ==n child1Idx
+    if idx_dec cidx child1Idx
     then (stt, snd dir)
     else (fst dir, stt).
   
@@ -258,7 +258,7 @@ Section System.
                         [(ursb, {| msg_id := evictRs;
                                    msg_type := MRs;
                                    msg_value := VUnit |})]))).
-      
+
     Definition child: Object ImplOStateIfc :=
       {| obj_idx := coidx;
          obj_rules :=
@@ -274,7 +274,7 @@ Section System.
     Section Rules.
 
       Section PerChild.
-        Variable (ridxOfs: IdxT).
+        Variable (ridxOfs: nat).
         Variables (childIdx childIdx': IdxT)
                   (cpRq pc cpRs' pc': IdxT).
 

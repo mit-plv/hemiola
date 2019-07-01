@@ -424,9 +424,9 @@ Section MsgParam.
     - eapply STrsSlt.
     - eapply STrsIns; eauto.
     - instantiate
-        (1:= if subList_dec eq_nat_dec (idsOf mins) sys.(sys_merqs)
+        (1:= if subList_dec idx_dec (idsOf mins) sys.(sys_merqs)
              then _ else _).
-      destruct (subList_dec eq_nat_dec (idsOf mins) sys.(sys_merqs)).
+      destruct (subList_dec idx_dec (idsOf mins) sys.(sys_merqs)).
       + eapply STrsExtAtomic.
         econstructor; eauto.
         econstructor.
@@ -558,7 +558,7 @@ Section MsgParam.
       + simpl; omega.
     - specialize (IHAtomic H).
       destruct IHAtomic as [sn [? ?]].
-      destruct (subList_dec eq_nat_dec (idsOf rins) (sys_merqs sys)).
+      destruct (subList_dec idx_dec (idsOf rins) (sys_merqs sys)).
       + eexists; split.
         * econstructor; try reflexivity.
           { eassumption. }

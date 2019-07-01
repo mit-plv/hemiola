@@ -253,7 +253,7 @@ Proof.
 
   - inv H1; clear H4.
     destruct H5 as [inits [ins [outs [eouts ?]]]].
-    destruct (subList_dec eq_nat_dec (idsOf inits) (sys_merqs sys)) as [Hex|Hnex].
+    destruct (subList_dec idx_dec (idsOf inits) (sys_merqs sys)) as [Hex|Hnex].
     + left; constructor; [|reflexivity].
       constructor; auto.
       eapply TrsAtomic; econstructor; eauto.

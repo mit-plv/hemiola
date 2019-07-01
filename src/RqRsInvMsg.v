@@ -435,7 +435,7 @@ Section ExtRss.
     do 2 red in H; do 2 red; simpl in *.
     red; intros.
     specialize (H _ H2).
-    destruct (in_dec eq_nat_dec midx (idsOf eouts)).
+    destruct (in_dec idx_dec midx (idsOf eouts)).
     + eapply findQ_In_NoDup_deqMsgs with (mp:= msgs) in H1; eauto.
       * destruct H1 as [hmsg ?].
         rewrite <-H1 in H.
@@ -468,7 +468,7 @@ Section ExtRss.
       do 2 red in H0; do 2 red; simpl in *.
       red; intros.
       specialize (H0 _ H3).
-      destruct (in_dec eq_nat_dec midx (idsOf outs)).
+      destruct (in_dec idx_dec midx (idsOf outs)).
       + apply in_map_iff in i.
         destruct i as [[midx' msg] [? ?]]; simpl in *; subst.
         rewrite findQ_In_NoDup_enqMsgs with (msg:= msg); [|apply H10|assumption].

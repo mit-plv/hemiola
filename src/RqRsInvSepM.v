@@ -184,7 +184,7 @@ Section Separation.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      destruct (eq_nat_dec cidx cidx0); subst.
+      destruct (idx_dec cidx cidx0); subst.
       + disc_rule_conds.
         eapply downLockInvORq_down_rqsQ_length_one_locked in H9;
           try eassumption;
@@ -208,7 +208,7 @@ Section Separation.
         disc_rule_conds.
         elim (H8 pidx).
         do 2 eexists; repeat split; eauto.
-      + destruct (eq_nat_dec (obj_idx upCObj) cidx); subst.
+      + destruct (idx_dec (obj_idx upCObj) cidx); subst.
         * disc_rule_conds.
           eapply downLockInvORq_down_rqsQ_length_one_locked in H9;
             try eassumption;
@@ -237,7 +237,7 @@ Section Separation.
         specialize (H29 _ H2).
         destruct H29 as [down [rsUp ?]]; dest.
         disc_rule_conds.
-        destruct (in_dec eq_nat_dec rsUp rqi.(rqi_minds_rss)).
+        destruct (in_dec idx_dec rsUp rqi.(rqi_minds_rss)).
         * eapply RqRsDownMatch_rs_rq in H28; [|eassumption].
           destruct H28 as [rcidx [down ?]]; dest.
           disc_rule_conds.
@@ -262,7 +262,7 @@ Section Separation.
         specialize (H27 _ H2).
         destruct H27 as [down [rsUp ?]]; dest.
         disc_rule_conds.
-        destruct (in_dec eq_nat_dec rsUp rqi.(rqi_minds_rss)).
+        destruct (in_dec idx_dec rsUp rqi.(rqi_minds_rss)).
         * eapply RqRsDownMatch_rs_rq in H13; [|eassumption].
           destruct H13 as [rcidx [down ?]]; dest.
           disc_rule_conds.
@@ -686,9 +686,9 @@ Section Separation.
     generalize dependent s2.
     generalize dependent s1.
     induction H2; simpl; intros; subst.
-    - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
+    - destruct (in_dec idx_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
       + left; red; intros; dest_in; assumption.
-      + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
+      + right; apply (DisjList_singleton_1 idx_dec); assumption.
     - inv_steps.
       inv H3.
       assert (forall rsDown,
@@ -710,7 +710,7 @@ Section Separation.
         eapply atomic_messages_in_in in H12; try eassumption.
         intro Hx; subst.
         eapply step_rqDown_separation_inside_false; eauto.
-      + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+      + right; apply (DisjList_cons_inv idx_dec); [assumption|].
         pose proof (atomic_msg_outs_disj Hiorqs Hrrs H2 H15 H18 H3).
         eapply SubList_forall in H11; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
@@ -1108,7 +1108,7 @@ Section Separation.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      destruct (eq_nat_dec cidx (obj_idx cobj)); subst.
+      destruct (idx_dec cidx (obj_idx cobj)); subst.
       + disc_rule_conds.
         good_locking_get cobj.
         eapply upLockInvORq_rqUp_down_rssQ_False in H3; try eassumption.
@@ -1129,7 +1129,7 @@ Section Separation.
         try apply Hrrs; eassumption.
 
     - disc_rule_conds.
-      + destruct (eq_nat_dec cidx (obj_idx cobj)); subst.
+      + destruct (idx_dec cidx (obj_idx cobj)); subst.
         * disc_rule_conds.
           good_locking_get cobj.
           eapply upLockInvORq_rqUp_down_rssQ_False in H3; try eassumption.
@@ -1143,7 +1143,7 @@ Section Separation.
           specialize (n cidx); destruct n; auto.
           elim H9; eapply edgeDownTo_subtreeIndsOf_self_in; [apply Hrrs|].
           congruence.
-      + destruct (eq_nat_dec (obj_idx upCObj) (obj_idx cobj)); subst.
+      + destruct (idx_dec (obj_idx upCObj) (obj_idx cobj)); subst.
         * rewrite e in *.
           disc_rule_conds.
           good_locking_get cobj.
@@ -1357,9 +1357,9 @@ Section Separation.
   Proof.
     destruct Hrrs as [? [? ?]].
     induction 1; simpl; intros; subst.
-    - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
+    - destruct (in_dec idx_dec oidx (subtreeIndsOf dtr (obj_idx cobj))).
       + left; red; intros; dest_in; assumption.
-      + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
+      + right; apply (DisjList_singleton_1 idx_dec); assumption.
     - inv_steps.
       specialize (IHAtomic _ _ H8 H17 _ _ _ H10 H11 H12 H13 H14 H15 H16).
       destruct IHAtomic.
@@ -1371,7 +1371,7 @@ Section Separation.
         eapply atomic_messages_in_in in H17; try eassumption.
         intro Hx; subst.
         eapply step_rsDown_separation_inside_false with (cobj:= cobj); eauto.
-      + right; apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+      + right; apply (DisjList_cons_inv idx_dec); [assumption|].
         pose proof (atomic_msg_outs_disj Hiorqs Hrrs H2 H8 H17 H5).
         eapply SubList_forall in H6; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.

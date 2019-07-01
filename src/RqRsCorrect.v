@@ -244,7 +244,7 @@ Section Pushable.
       destruct H0 as [inits [ints [outs [eouts ?]]]].
       apply atomic_lastOIdxOf in H0.
       destruct H0 as [loidx ?].
-      destruct (in_dec eq_nat_dec loidx (subtreeIndsOf dtr oidx)).
+      destruct (in_dec idx_dec loidx (subtreeIndsOf dtr oidx)).
       - left; red; eauto.
       - right; red; eauto.
     Qed.
@@ -463,7 +463,7 @@ Section Pushable.
       destruct H0 as [inits [ints [outs [eouts ?]]]].
       apply atomic_lastOIdxOf in H0.
       destruct H0 as [loidx ?].
-      destruct (in_dec eq_nat_dec loidx (subtreeIndsOf dtr oidx)).
+      destruct (in_dec idx_dec loidx (subtreeIndsOf dtr oidx)).
       - left; red; eauto.
       - right; red; eauto.
     Qed.

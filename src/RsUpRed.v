@@ -151,7 +151,7 @@ Section RsUpReduction.
     specialize (H _ H7).
     destruct H as [down [rrsUp ?]]; dest.
     repeat disc_rule_minds.
-    destruct (in_dec eq_nat_dec rsUp (rqi_minds_rss rqi));
+    destruct (in_dec idx_dec rsUp (rqi_minds_rss rqi));
       [|elim n; rewrite <-H3; assumption].
 
     red in H12; dest.
@@ -220,7 +220,7 @@ Section RsUpReduction.
     good_rqrs_rule_get rule.
     good_rqrs_rule_get rule0.
 
-    destruct (eq_nat_dec (obj_idx obj0) (obj_idx obj1)).
+    destruct (idx_dec (obj_idx obj0) (obj_idx obj1)).
     - red_obj_rule; mred.
       good_rqrs_rule_cases rule0.
       + (** case [ImmDownRule] *)
@@ -274,7 +274,7 @@ Section RsUpReduction.
       + rewrite <-H45 in H21.
         good_rqrs_rule_cases rule0.
         * disc_rule_conds.
-          destruct (eq_nat_dec cidx (obj_idx upCObj));
+          destruct (idx_dec cidx (obj_idx upCObj));
             [subst; rewrite H58 in H15; elim n; inv H15; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * disc_rule_conds.
@@ -287,13 +287,13 @@ Section RsUpReduction.
           { split; [|split]; [|assumption|]; solve_midx_disj. }
         * good_footprint_get (obj_idx obj0).
           disc_rule_conds.
-          { destruct (eq_nat_dec cidx (obj_idx upCObj));
+          { destruct (idx_dec cidx (obj_idx upCObj));
               [subst; rewrite H14 in H15; elim n; inv H15; reflexivity|].
             split; [|split]; [|assumption|]; solve_midx_disj.
           }
           { split; [|split]; [|assumption|].
             { rewrite H54; eapply RqRsDownMatch_rss_disj; eauto. }
-            { destruct (eq_nat_dec (obj_idx upCObj0) (obj_idx upCObj));
+            { destruct (idx_dec (obj_idx upCObj0) (obj_idx upCObj));
               [rewrite e in *; rewrite H39 in H15; elim n; inv H15; reflexivity|].
               solve_midx_disj.
             }
@@ -353,7 +353,7 @@ Section RsUpReduction.
     pose proof (downLockInv_ok Hiorqs H0 H H1 H7).
     good_locking_get objTo; clear H10.
 
-    apply (DisjList_false_spec eq_nat_dec); intros rsUp Hin1 Hin2.
+    apply (DisjList_false_spec idx_dec); intros rsUp Hin1 Hin2.
     apply in_map_iff in Hin1; destruct Hin1 as [[rsUp' rsm1] ?]; dest; subst.
     apply in_map_iff in Hin2; destruct Hin2 as [[rsUp rsm2] ?]; dest; subst.
     simpl in H10; subst rsUp'.

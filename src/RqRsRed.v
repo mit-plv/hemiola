@@ -174,7 +174,7 @@ Section RqRsRed.
              solve_midx_false; fail).
     - intro Hx; rewrite Hx in *; clear Hx.
       repeat disc_rule_minds; auto.
-    - apply (DisjList_false_spec eq_nat_dec); intros midx Hin1 Hin2.
+    - apply (DisjList_false_spec idx_dec); intros midx Hin1 Hin2.
       rewrite Forall_forall in H8; specialize (H8 _ Hin1).
       destruct H8 as [cidx1 ?]; dest.
       rewrite Forall_forall in H7; specialize (H7 _ Hin2).
@@ -216,7 +216,7 @@ Section RqRsRed.
     - intro Hx; rewrite Forall_forall in H6; specialize (H6 _ Hx).
       destruct H6 as [rcidx ?]; dest.
       solve_midx_false.
-    - apply (DisjList_false_spec eq_nat_dec); intros midx Hin1 Hin2.
+    - apply (DisjList_false_spec idx_dec); intros midx Hin1 Hin2.
       rewrite Forall_forall in H8; specialize (H8 _ Hin1).
       destruct H8 as [cidx1 ?]; dest.
       rewrite Forall_forall in H7; specialize (H7 _ Hin2).
@@ -441,7 +441,7 @@ Section RqRsRed.
     - eassumption.
     - subst; econstructor.
     - subst; simpl.
-      apply (DisjList_singleton_2 eq_nat_dec); eassumption.
+      apply (DisjList_singleton_2 idx_dec); eassumption.
     - eassumption.
     - eapply reachable_steps; eassumption.
     - eassumption.

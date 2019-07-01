@@ -55,7 +55,7 @@ Section Msg.
     decide equality.
     - apply value_dec.
     - decide equality.
-    - apply eq_nat_dec.
+    - apply idx_dec.
   Defined.
 
   Class HasMsg (MsgT: Type) :=
@@ -70,9 +70,9 @@ Section Msg.
   Proof.
     decide equality.
     - decide equality.
-      + apply eq_nat_dec.
+      + apply idx_dec.
       + apply bool_dec.
-    - apply eq_nat_dec.
+    - apply idx_dec.
   Defined.
 
   Definition sigs_dec := list_eq_dec sig_dec.
@@ -80,7 +80,7 @@ Section Msg.
   Definition sigOf (idm: Id Msg): MSig :=
     (idOf idm, (msg_type (valOf idm), msg_id (valOf idm))).
   Definition sigsOf (msgs: list (Id Msg)): list MSig :=
-    map sigOf msgs.
+    List.map sigOf msgs.
 
   Lemma sigsOf_app:
     forall sigs1 sigs2,
@@ -173,13 +173,13 @@ Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
 Record Object oifc :=
   { obj_idx: IdxT;
     obj_rules: list (Rule oifc);
-    obj_rules_valid: NoDup (map (@rule_idx _) obj_rules)
+    obj_rules_valid: NoDup (List.map (@rule_idx _) obj_rules)
   }.
 
 Lemma rule_same_id_in_object_same:
   forall {oifc} (obj: Object oifc) (rule1 rule2: Rule oifc),
-    In rule1 (obj_rules obj) ->
-    In rule2 (obj_rules obj) ->
+    List.In rule1 (obj_rules obj) ->
+    List.In rule2 (obj_rules obj) ->
     rule_idx rule1 = rule_idx rule2 ->
     rule1 = rule2.
 Proof.
@@ -190,7 +190,7 @@ Qed.
 
 Record System oifc :=
   { sys_objs: list (Object oifc);
-    sys_oinds_valid: NoDup (map (@obj_idx _) sys_objs);
+    sys_oinds_valid: NoDup (List.map (@obj_idx _) sys_objs);
     sys_minds: list IdxT;
     sys_merqs: list IdxT;
     sys_merss: list IdxT;
@@ -201,8 +201,8 @@ Record System oifc :=
 
 Lemma obj_same_id_in_system_same:
   forall {oifc} (sys: System oifc) (obj1 obj2: Object oifc),
-    In obj1 (sys_objs sys) ->
-    In obj2 (sys_objs sys) ->
+    List.In obj1 (sys_objs sys) ->
+    List.In obj2 (sys_objs sys) ->
     obj_idx obj1 = obj_idx obj2 ->
     obj1 = obj2.
 Proof.
@@ -212,7 +212,9 @@ Proof.
 Qed.
 
 Ltac inds_valid_tac :=
-  abstract (compute; repeat (constructor; firstorder)).
+  compute;
+  repeat (constructor; [intro Hx; dest_in; discriminate|]);
+  constructor.
 
 Global Instance System_OStates_HasInit {oifc}: HasInit (System oifc) (OStates oifc) :=
   {| initsOf := @sys_oss_inits _ |}.

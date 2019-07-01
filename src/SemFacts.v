@@ -96,7 +96,7 @@ Lemma sys_minds_sys_merqs_DisjList:
   forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merqs sys).
 Proof.
   intros.
-  eapply DisjList_NoDup; [exact eq_nat_dec|].
+  eapply DisjList_NoDup; [exact idx_dec|].
   eapply NoDup_app_weakening_1.
   rewrite <-app_assoc.
   apply sys_msg_inds_valid.
@@ -106,7 +106,7 @@ Lemma sys_merqs_sys_merss_DisjList:
   forall {oifc} (sys: System oifc), DisjList (sys_merqs sys) (sys_merss sys).
 Proof.
   intros.
-  eapply DisjList_NoDup; [exact eq_nat_dec|].
+  eapply DisjList_NoDup; [exact idx_dec|].
   eapply NoDup_app_weakening_2.
   apply sys_msg_inds_valid.
 Qed.
@@ -115,7 +115,7 @@ Lemma sys_minds_sys_merss_DisjList:
   forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merss sys).
 Proof.
   intros.
-  eapply DisjList_NoDup; [exact eq_nat_dec|].
+  eapply DisjList_NoDup; [exact idx_dec|].
   pose proof (sys_msg_inds_valid sys).
   rewrite app_assoc in H.
   apply NoDup_app_comm in H.
@@ -234,7 +234,7 @@ Lemma steps_locks_unaffected:
 Proof.
   induction 1; simpl; intros; auto.
   inv H0; auto; simpl in *.
-  destruct (eq_nat_dec (obj_idx obj) oidx); subst; [exfalso; auto|].
+  destruct (idx_dec (obj_idx obj) oidx); subst; [exfalso; auto|].
   mred.
   apply IHsteps; auto.
 Qed.

@@ -1050,7 +1050,7 @@ Section Separation.
   Proof.
     destruct Hrrs as [? [? ?]].
     induction 1; simpl; intros; subst.
-    - destruct (in_dec eq_nat_dec oidx (subtreeIndsOf dtr soidx)).
+    - destruct (in_dec idx_dec oidx (subtreeIndsOf dtr soidx)).
       + left.
         destruct H.
         eapply subtreeIndsOf_composed in i; [|assumption].
@@ -1058,7 +1058,7 @@ Section Separation.
         destruct H6 as [cidx [? ?]].
         exists cidx; split; auto.
         apply SubList_cons; [assumption|apply SubList_nil].
-      + right; apply (DisjList_singleton_1 eq_nat_dec); assumption.
+      + right; apply (DisjList_singleton_1 idx_dec); assumption.
     - inv_steps.
       assert (oidx <> soidx /\ ~ In soidx (oindsOf hst)) by intuition idtac.
       dest.
@@ -1074,7 +1074,7 @@ Section Separation.
         eapply step_separation_inside_child_ok; eauto.
       + pose proof (atomic_msg_outs_disj H2 H8 H11 H7).
         right.
-        apply (DisjList_cons_inv eq_nat_dec); [assumption|].
+        apply (DisjList_cons_inv idx_dec); [assumption|].
         specialize (H7 oidx); destruct H7; [|assumption].
         eapply SubList_forall in H9; [|eassumption].
         assert (Reachable (steps step_m) sys st2) by eauto.
@@ -1120,7 +1120,7 @@ Section Separation.
       eapply atomic_separation_ok in H; try eassumption.
       destruct H.
       + destruct H as [rcidx [? ?]].
-        destruct (eq_nat_dec cidx rcidx); subst.
+        destruct (idx_dec cidx rcidx); subst.
         * disc_rule_conds; eauto.
         * exfalso.
           apply H6 in H9.
@@ -1160,7 +1160,7 @@ Section Separation.
       eapply atomic_separation_ok in H; try eassumption.
       destruct H.
       + destruct H as [cidx [? ?]].
-        destruct (eq_nat_dec cidx cidx0); subst.
+        destruct (idx_dec cidx cidx0); subst.
         * apply H4 in H13.
           destruct Hrrs as [[? _] _].
           generalize H13.

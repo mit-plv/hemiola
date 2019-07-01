@@ -331,7 +331,7 @@ Section RqUpReduction.
     eapply rqUpMsgs_RqToUpRule in H8; try eassumption.
     good_rqrs_rule_get rule0.
 
-    destruct (eq_nat_dec (obj_idx obj) (obj_idx obj0)); subst.
+    destruct (idx_dec (obj_idx obj) (obj_idx obj0)); subst.
     - red_obj_rule; rename obj0 into obj.
       good_rqrs_rule_cases rule0.
 
@@ -364,7 +364,7 @@ Section RqUpReduction.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
           { disc_rule_conds.
-            destruct (eq_nat_dec upCObj.(obj_idx) cidx1); subst.
+            destruct (idx_dec upCObj.(obj_idx) cidx1); subst.
             { exfalso.
               good_locking_get upCObj.
               red in H.
@@ -446,16 +446,16 @@ Section RqUpReduction.
       good_footprint_get (obj_idx obj0).
       good_rqrs_rule_cases rule0.
       + disc_rule_conds.
-        destruct (eq_nat_dec cidx0 cidx2);
+        destruct (idx_dec cidx0 cidx2);
           [subst; rewrite H56 in H9; elim n; inv H9; reflexivity|].
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
         split; [|split]; [|assumption|]; solve_midx_disj.
       + disc_rule_conds.
-        * destruct (eq_nat_dec cidx2 cidx0);
+        * destruct (idx_dec cidx2 cidx0);
             [subst; rewrite H0 in H46; elim n; inv H46; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
-        * destruct (eq_nat_dec cidx1 (obj_idx upCObj));
+        * destruct (idx_dec cidx1 (obj_idx upCObj));
             [subst; rewrite H47 in H15; elim n; inv H15; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * split; [|split]; [|assumption|]; solve_midx_disj.
@@ -730,7 +730,7 @@ Section RqUpReduction.
 
     - (** case [ImmDownRule] *)
       disc_rule_conds.
-      destruct (eq_nat_dec cidx0 cidx);
+      destruct (idx_dec cidx0 cidx);
         subst; [|solve_midx_disj].
       exfalso.
       rewrite H2 in H38; inv H38.
@@ -743,14 +743,14 @@ Section RqUpReduction.
     - (** case [RqFwdRule] *)
       disc_rule_conds.
       + (** case [RqUpUp] *)
-        destruct (eq_nat_dec cidx0 cidx);
+        destruct (idx_dec cidx0 cidx);
           subst; [|solve_midx_disj].
         rewrite H0 in H7; inv H7.
         congruence.
       + (** case [RqUpDown] *)
         pose proof (upLockInv_ok Hiorqs H10 H9 H) as HlockInv.
         good_locking_get upCObj.
-        destruct (eq_nat_dec (obj_idx upCObj) cidx);
+        destruct (idx_dec (obj_idx upCObj) cidx);
           subst; [|solve_midx_disj].
         exfalso.
         rewrite H0 in H12; inv H12.
@@ -906,7 +906,7 @@ Section RqUpReduction.
       disc_rule_conds.
       + (* [RqUpUp] is the only case that requires [UpLockInv] 
          * to draw a contradiction. *)
-        destruct (eq_nat_dec ruIdx (obj_idx obj));
+        destruct (idx_dec ruIdx (obj_idx obj));
           subst; [|solve_midx_disj].
         exfalso.
         destruct H2; [congruence|].

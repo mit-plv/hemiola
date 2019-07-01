@@ -299,7 +299,7 @@ Section Facts.
       FirstMP mp i m.
   Proof.
     unfold FirstMP, firstMP, enqMP, findQ; intros.
-    destruct (eq_nat_dec i ni); subst; [|mred].
+    destruct (idx_dec i ni); subst; [|mred].
     mred; simpl in H0.
     destruct (mp@[ni]).
     - simpl in *; destruct l; simpl in *; auto.
@@ -523,7 +523,7 @@ Section Facts.
     specialize (H1 midx).
     rewrite Forall_forall in H2.
     specialize (H2 _ H4); red in H2; simpl in H2.
-    destruct (in_dec eq_nat_dec midx (idsOf outs1)).
+    destruct (in_dec idx_dec midx (idsOf outs1)).
     - red; simpl.
       assert (In midx (idsOf ins2))
         by (eapply in_map with (f:= idOf) in H4; assumption).
@@ -633,7 +633,7 @@ Section Facts.
       InMP midx msg mp.
   Proof.
     unfold InMP, enqMP, findQ; intros.
-    destruct (eq_nat_dec midx nidx); subst.
+    destruct (idx_dec midx nidx); subst.
     - mred; unfold findQ in H; simpl in H.
       destruct (mp@[nidx]); simpl in *.
       + apply in_app_or in H; destruct H; auto.
@@ -695,7 +695,7 @@ Section Facts.
     unfold InMP, deqMP, findQ; intros.
     remember (mp@[ridx]) as rq; destruct rq; simpl in *; auto.
     destruct l; auto.
-    destruct (eq_nat_dec midx ridx); subst.
+    destruct (idx_dec midx ridx); subst.
     - mred; simpl in *; auto.
     - mred.
   Qed.
@@ -971,9 +971,9 @@ Section Facts.
   Proof.
     unfold enqMP, findQ; intros; split; intros.
     - remember (mp@[emidx]) as eq; destruct eq; simpl in *;
-        destruct (eq_nat_dec emidx midx); subst; mred.
+        destruct (idx_dec emidx midx); subst; mred.
     - remember (mp@[emidx]) as eq; destruct eq; simpl in *; dest;
-        destruct (eq_nat_dec emidx midx); subst; mred.
+        destruct (idx_dec emidx midx); subst; mred.
   Qed.
 
   Lemma enqMsgs_None:
@@ -1003,10 +1003,10 @@ Section Facts.
     unfold deqMP, findQ; split; intros.
     - remember (mp@[dmidx]) as dq; destruct dq; simpl in *; auto.
       destruct l; simpl in *; auto.
-      destruct (eq_nat_dec dmidx midx); subst; mred.
+      destruct (idx_dec dmidx midx); subst; mred.
     - remember (mp@[dmidx]) as dq; destruct dq; simpl in *; auto.
       destruct l; simpl in *; auto.
-      destruct (eq_nat_dec dmidx midx); subst; mred.
+      destruct (idx_dec dmidx midx); subst; mred.
   Qed.
 
   Lemma deqMsgs_None:
@@ -1266,7 +1266,7 @@ Section Facts.
         + apply countMsg_not_In_deqMP.
           destruct a as [amidx amsg], idm as [midx msg].
           simpl in *.
-          destruct (eq_nat_dec midx amidx); [|auto].
+          destruct (idx_dec midx amidx); [|auto].
           subst; right.
           intro Hx.
           pose proof (FirstMP_eq H2 Hx); simpl in *; subst.

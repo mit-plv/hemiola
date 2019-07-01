@@ -863,16 +863,16 @@ Section Inv.
 
       - apply exclInv_other_midx_enqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
       - apply exclInv_other_midx_enqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
       - apply invalidInv_other_midx_enqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
       - apply invalidInv_other_midx_enqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
     Qed.
 
     Lemma msiSv_impl_InvTrs_ext_out:
@@ -889,16 +889,16 @@ Section Inv.
 
       - apply exclInv_other_midx_deqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
       - apply exclInv_other_midx_deqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
       - apply invalidInv_other_midx_deqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
       - apply invalidInv_other_midx_deqMsgs; auto.
         eapply DisjList_SubList; [eassumption|].
-        solve_DisjList.
+        solve_DisjList idx_dec.
     Qed.
 
     Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
@@ -1864,7 +1864,6 @@ Section Inv.
         disc_rule_conds_ex.
         red in Hibinv.
         disc_rule_conds_ex.
-        specialize (H21 eq_refl); dest.
 
         assert (exists corq1,
                    orqs@[child1Idx] = Some corq1 /\
@@ -1874,7 +1873,7 @@ Section Inv.
           get_child_uplock_from_parent.
           eauto.
         }
-        destruct H33 as [corq1 [? ?]].
+        destruct H34 as [corq1 [? ?]].
 
         split.
         + good_footprint_get parentIdx.
@@ -1882,7 +1881,7 @@ Section Inv.
           apply Forall_app.
           * simpl.
             red in H5; simpl in H5.
-            rewrite <-H7 in H41.
+            rewrite <-H7 in H42.
             eapply atomic_rsUps_preserves_msg_out_preds
               with (rsUps:= [(c2pRs, rmsg)]) in H5;
               try exact H9; try eassumption; eauto.
@@ -1904,14 +1903,10 @@ Section Inv.
             
       - (** [parentGetDownRsI] *)
         disc_rule_conds_ex.
-
         disc_msg_preds H4.
         disc_rule_conds_ex.
-
         red in Hibinv.
         disc_rule_conds_ex.
-        specialize (H21 eq_refl); dest.
-        rewrite H21 in *.
 
         assert (exists corq1,
                    orqs@[child1Idx] = Some corq1 /\
@@ -2245,7 +2240,6 @@ Section Inv.
         disc_rule_conds_ex.
         red in Hibinv.
         disc_rule_conds_ex.
-        specialize (H20 eq_refl); dest.
 
         assert (exists corq2,
                    orqs@[child2Idx] = Some corq2 /\
@@ -2255,7 +2249,7 @@ Section Inv.
           get_child_uplock_from_parent.
           eauto.
         }
-        destruct H33 as [corq2 [? ?]].
+        destruct H34 as [corq2 [? ?]].
 
         split.
         + good_footprint_get parentIdx.
@@ -2263,7 +2257,7 @@ Section Inv.
           apply Forall_app.
           * simpl.
             red in H5; simpl in H5.
-            rewrite <-H7 in H41.
+            rewrite <-H7 in H42.
             eapply atomic_rsUps_preserves_msg_out_preds
               with (rsUps:= [(c1pRs, rmsg)]) in H5;
               try exact H9; try eassumption; eauto.
@@ -2291,8 +2285,6 @@ Section Inv.
 
         red in Hibinv.
         disc_rule_conds_ex.
-        specialize (H20 eq_refl); dest.
-        rewrite H20 in *.
 
         assert (exists corq2,
                    orqs@[child2Idx] = Some corq2 /\

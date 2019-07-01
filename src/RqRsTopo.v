@@ -58,8 +58,8 @@ Section RqRsTopo.
       Forall (fun idm => msg_type (valOf idm) = MRs) routs.
 
   (** Preconditions to check the lock state *)
-  Definition upRq := 0.
-  Definition downRq := 1.
+  Definition upRq: IdxT := 0.
+  Definition downRq: IdxT := 1.
 
   Definition UpLockFreeORq (orq: ORq Msg) :=
     orq@[upRq] = None.

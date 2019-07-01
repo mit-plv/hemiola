@@ -1238,7 +1238,7 @@ Section UpLockInv.
         + dest; split; [assumption|].
           eapply upLockedInv_orqs_preserved_parent_eq with (orqs1:= orqs).
           * disc_rule_conds.
-            destruct (eq_nat_dec cidx oidx); subst.
+            destruct (idx_dec cidx oidx); subst.
             { exists rqUp, down, (obj_idx obj).
               disc_rule_conds.
               assert (length (rssQ (enqMP rsTo rsm (deqMP rqFrom msgs)) rsTo) = 1).
@@ -1280,7 +1280,7 @@ Section UpLockInv.
             
         + eapply upLockFreeInv_orqs_preserved_parent_eq with (orqs1:= orqs).
           * disc_rule_conds.
-            destruct (eq_nat_dec cidx oidx); subst.
+            destruct (idx_dec cidx oidx); subst.
             { exfalso.
               destruct H; [congruence|].
               destruct H as [rqUp [down [pidx ?]]]; dest.
@@ -1341,7 +1341,7 @@ Section UpLockInv.
       - (** case [RqFwdRule] *)
         disc_rule_conds.
         + (** case [RqUpUp] *)
-          destruct (eq_nat_dec cidx oidx); subst.
+          destruct (idx_dec cidx oidx); subst.
           * match goal with
             | [ |- match ?ul with | Some _ => _ | None => _ end] =>
               destruct ul
@@ -1442,7 +1442,7 @@ Section UpLockInv.
             }
 
         + (** case [RqUpDown] *)
-          destruct (eq_nat_dec (obj_idx upCObj) oidx); subst.
+          destruct (idx_dec (obj_idx upCObj) oidx); subst.
           * match goal with
             | [ |- match ?ul with | Some _ => _ | None => _ end] =>
               destruct ul
@@ -1609,7 +1609,7 @@ Section UpLockInv.
         good_footprint_get (obj_idx obj).
         disc_rule_conds.
         + (** case [FootprintReleasingUp] *)
-          destruct (eq_nat_dec cidx oidx); subst.
+          destruct (idx_dec cidx oidx); subst.
           * match goal with
             | [ |- match ?ul with | Some _ => _ | None => _ end] =>
               destruct ul
@@ -1699,7 +1699,7 @@ Section UpLockInv.
             }
 
         + (** case [FootprintReleasingDown]-1 *)
-          destruct (eq_nat_dec (obj_idx upCObj) oidx); subst.
+          destruct (idx_dec (obj_idx upCObj) oidx); subst.
           * match goal with
             | [ |- match ?ul with | Some _ => _ | None => _ end] =>
               destruct ul
@@ -2251,7 +2251,7 @@ Section UpLockInv.
       - (** case [oidx <> obj_idx obj] *)
         remember (parentIdxOf dtr oidx) as opidx.
         destruct opidx as [pidx|].
-        + destruct (eq_nat_dec (obj_idx obj) pidx); subst.
+        + destruct (idx_dec (obj_idx obj) pidx); subst.
           * apply upLockInvORq_step_int_parent; auto.
           * apply upLockInvORq_step_int_other; auto.
             rewrite <-Heqopidx.

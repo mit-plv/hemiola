@@ -296,7 +296,7 @@ Section RqRsDown.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+      destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
       + eapply obj_same_id_in_system_same in e; eauto; subst.
         left; red; mred.
       + apply InMP_enqMP_or in H11; destruct H11;
@@ -318,13 +318,13 @@ Section RqRsDown.
           }
 
     - disc_rule_conds.
-      destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+      destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
       + eapply obj_same_id_in_system_same in e; eauto; subst.
         left; red; mred.
       + apply InMP_enqMP_or in H18; destruct H18;
           [exfalso; dest; subst; solve_midx_false|].
         apply InMP_deqMP in H14; specialize (H3 H14).
-        destruct (eq_nat_dec (obj_idx cobj) (obj_idx obj)).
+        destruct (idx_dec (obj_idx cobj) (obj_idx obj)).
         * exfalso.
           eapply obj_same_id_in_system_same in e; eauto; subst.
           disc_rule_conds.
@@ -360,7 +360,7 @@ Section RqRsDown.
           [exfalso; dest; subst; disc_rule_conds; auto|].
         apply InMP_deqMP in H14.
         specialize (H3 H14).
-        destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           destruct H3.
           { left; red in H3; red; repeat (simpl; mred). }
@@ -397,11 +397,11 @@ Section RqRsDown.
         }
         apply InMP_deqMP in H5.
         specialize (H3 H5).
-        destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           destruct H3; [|dest; exfalso; red in H3; mred].
           right; split.
-          { destruct (in_dec eq_nat_dec down (idsOf routs)).
+          { destruct (in_dec idx_dec down (idsOf routs)).
             { red; repeat (simpl; mred).
               intros; solve_q.
               destruct H19.
@@ -455,10 +455,10 @@ Section RqRsDown.
         }
         apply InMP_deqMP in H14.
         specialize (H3 H14).
-        destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           right; split.
-          { destruct (in_dec eq_nat_dec down (idsOf routs)).
+          { destruct (in_dec idx_dec down (idsOf routs)).
             { red; repeat (simpl; mred).
               intros; solve_q.
               destruct H19.
@@ -493,7 +493,7 @@ Section RqRsDown.
             }
           }
           
-        * destruct (eq_nat_dec (obj_idx obj) (obj_idx cobj)).
+        * destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             disc_rule_conds.
             exfalso; destruct H3.
@@ -533,7 +533,7 @@ Section RqRsDown.
         * dest; subst; disc_rule_conds.
           eapply obj_same_id_in_system_same in H26; eauto; subst.
           left; red; repeat (simpl; mred).
-        * destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+        * destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
           { apply InMP_deqMP in H26.
             specialize (H3 H26).
             eapply obj_same_id_in_system_same in e; eauto; subst.
@@ -548,7 +548,7 @@ Section RqRsDown.
               }
             }
           }
-          { destruct (eq_nat_dec (obj_idx obj) (obj_idx cobj)).
+          { destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
             { exfalso.
               eapply obj_same_id_in_system_same in e; eauto; subst.
               disc_rule_conds.
@@ -580,7 +580,7 @@ Section RqRsDown.
           left; red; repeat (simpl; mred).
         * apply InMP_deqMsgs in H6.
           specialize (H3 H6).
-          destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+          destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             left; red; repeat (simpl; mred).
           }
@@ -608,7 +608,7 @@ Section RqRsDown.
           [dest; subst; solve_midx_false|].
         apply InMP_deqMsgs in H22.
         specialize (H3 H22).
-        destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           left; red; repeat (simpl; mred).
         * destruct H3.
@@ -635,12 +635,12 @@ Section RqRsDown.
           simpl in H27; rewrite H26 in H27; discriminate.
       }
 
-      destruct (eq_nat_dec (obj_idx obj) (obj_idx pobj)).
+      destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
       + apply InMP_deqMP in H5.
         specialize (H3 H5).
         eapply obj_same_id_in_system_same in e; eauto; subst.
         right; split.
-        * destruct (in_dec eq_nat_dec down (idsOf routs)).
+        * destruct (in_dec idx_dec down (idsOf routs)).
           { red; repeat (simpl; mred).
             intros; solve_q.
             destruct H19.
@@ -673,7 +673,7 @@ Section RqRsDown.
             apply H33.
           }
 
-      + destruct (eq_nat_dec (obj_idx obj) (obj_idx cobj)).
+      + destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           disc_rule_conds.
           exfalso.
