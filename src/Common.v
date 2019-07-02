@@ -298,5 +298,3 @@ Ltac pmark_clear :=
     | [H: PMarker2 _ _ |- _] => clear H
     end.
 
-Axiom cheat: forall t, t.
-
