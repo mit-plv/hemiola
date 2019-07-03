@@ -700,6 +700,245 @@ Proof.
     eapply rsDown_WellInterleavedHst; eauto.
 Qed.
 
+(*! TODO: move to [SerialFacts.v] *)
+
+Lemma atomic_Transactional_ExtAtomic:
+  forall {oifc} (sys: System oifc) trs,
+    AtomicEx msg_dec trs ->
+    Transactional sys msg_dec trs ->
+    exists einits eouts,
+      ExtAtomic sys msg_dec einits trs eouts.
+Proof.
+  intros.
+  destruct H as [inits [ins [outs [eouts ?]]]].
+  inv H0; try (inv H; fail).
+  eauto.
+Qed.
+
+Lemma extAtomic_Discontinuous:
+  forall {oifc} (sys: System oifc) st1 trss st2,
+    steps step_m sys st1 (List.concat trss) st2 ->
+    Forall (AtomicEx msg_dec) trss ->
+    Forall (Transactional sys msg_dec) trss ->
+    forall trs1 trs2,
+      In trs1 trss -> In trs2 trss ->
+      Discontinuous trs1 trs2.
+Proof.
+  intros.
+  rewrite Forall_forall in H0, H1.
+  pose proof (H0 _ H2).
+  pose proof (H1 _ H2).
+  pose proof (H0 _ H3).
+  pose proof (H1 _ H3).
+  eapply atomic_Transactional_ExtAtomic in H5; [|eassumption].
+  destruct H5 as [einits1 [eouts1 ?]]; inv H5.
+  eapply atomic_Transactional_ExtAtomic in H7; [|eassumption].
+  destruct H7 as [einits2 [eouts2 ?]]; inv H5.
+
+  assert (exists st11 st12, steps step_m sys st11 trs1 st12).
+  { apply in_split in H2.
+    destruct H2 as [ptrss [ntrss ?]]; subst.
+    rewrite concat_app in H; simpl in H.
+    eapply steps_split in H; [|reflexivity].
+    destruct H as [sti1 [? ?]].
+    eapply steps_split in H; [|reflexivity].
+    destruct H as [sti2 [? ?]].
+    eauto.
+  }
+  destruct H5 as [st11 [st12 ?]].
+  eapply atomic_eouts_not_erqs in H5; [|eassumption].
+
+  do 8 eexists.
+  repeat ssplit; try eassumption.
+  red; intros idm.
+  destruct (in_dec (id_dec msg_dec) idm eouts1); [|auto].
+  rewrite Forall_forall in H5.
+  specialize (H5 _ i).
+  right; intro Hx.
+  apply in_map with (f:= idOf) in Hx.
+  apply H7 in Hx; auto.
+Qed.
+
+Lemma atomic_non_inits_InMPI_or:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall idm,
+        ~ In idm inits ->
+        InMPI st2.(bst_msgs) idm ->
+        InMPI st1.(bst_msgs) idm \/ In idm eouts.
+Proof.
+  intros.
+  eapply atomic_messages_non_inits_count_eq in H; [|eassumption..].
+  apply (countMsg_InMPI msg_dec) in H2.
+  assert (countMsg msg_dec idm st1.(bst_msgs) > 0 \/
+          count_occ (id_dec msg_dec) eouts idm > 0) by omega.
+  destruct H3.
+  - left; apply (countMsg_InMPI msg_dec); assumption.
+  - right; apply (count_occ_In (id_dec msg_dec)); assumption.
+Qed.
+
+Lemma extAtomic_non_inits_InMPI_or:
+  forall {oifc} (sys: System oifc) inits hst eouts,
+    ExtAtomic sys msg_dec inits hst eouts ->
+    forall st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall idm,
+        ~ In (idOf idm) (sys_merqs sys) ->
+        InMPI st2.(bst_msgs) idm ->
+        InMPI st1.(bst_msgs) idm \/ In idm eouts.
+Proof.
+  intros.
+  inv H.
+  eapply atomic_non_inits_InMPI_or; try eassumption.
+  intro Hx.
+  apply in_map with (f:= idOf) in Hx.
+  apply H3 in Hx; auto.
+Qed.
+
+Lemma extAtomic_multi_non_inits_InMPI_or:
+  forall {oifc} (sys: System oifc) st1,
+    Reachable (steps step_m) sys st1 ->
+    forall trss st2,
+      steps step_m sys st1 (List.concat trss) st2 ->
+      Forall (AtomicEx msg_dec) trss ->
+      Forall (Transactional sys msg_dec) trss ->
+      forall idm,
+        ~ In (idOf idm) (sys_merqs sys) ->
+        InMPI st2.(bst_msgs) idm ->
+        InMPI st1.(bst_msgs) idm \/
+        exists einits trs eouts,
+          In trs trss /\
+          ExtAtomic sys msg_dec einits trs eouts /\
+          In idm eouts.
+Proof.
+  induction trss as [|trs trss]; simpl; intros; [inv_steps; auto|].
+
+  eapply steps_split in H0; [|reflexivity].
+  destruct H0 as [sti [? ?]].
+  inv H1; inv H2.
+  pose proof (atomic_Transactional_ExtAtomic H8 H7).
+  destruct H1 as [einits [eouts ?]].
+
+  eapply extAtomic_non_inits_InMPI_or in H5; try eassumption.
+  destruct H5; [|eauto 8].
+
+  specialize (IHtrss _ H0 H9 H10 _ H3 H2).
+  destruct IHtrss; [auto|].
+  destruct H5 as [teinits [ttrs [teouts ?]]]; dest.
+  right; eauto 7.
+Qed.
+
+Corollary extAtomic_multi_IntMsgsEmpty_non_inits_InMPI:
+  forall {oifc} (sys: System oifc) st1,
+    Reachable (steps step_m) sys st1 ->
+    IntMsgsEmpty sys st1.(bst_msgs) ->
+    forall trss st2,
+      steps step_m sys st1 (List.concat trss) st2 ->
+      Forall (AtomicEx msg_dec) trss ->
+      Forall (Transactional sys msg_dec) trss ->
+      forall idm,
+        In (idOf idm) (sys_minds sys) ->
+        InMPI st2.(bst_msgs) idm ->
+        exists einits trs eouts,
+          In trs trss /\
+          ExtAtomic sys msg_dec einits trs eouts /\
+          In idm eouts.
+Proof.
+  intros.
+  eapply extAtomic_multi_non_inits_InMPI_or in H1; try eassumption.
+  - destruct H1; [|assumption].
+    exfalso.
+    specialize (H0 _ H4).
+    apply findQ_length_ge_one in H1.
+    rewrite H0 in H1; simpl in H1; omega.
+  - eapply DisjList_In_2.
+    + eapply sys_minds_sys_merqs_DisjList.
+    + assumption.
+Qed.
+
+Section NonMergeable.
+  Context {oifc: OStateIfc}.
+  Variables (dtr: DTree)
+            (sys: System oifc).
+  Hypothesis (Hrrs: RqRsSys dtr sys)
+             (Hiorqs: GoodORqsInit (initsOf sys)).
+
+  Lemma extAtomic_IntMsgsEmpty_next_ins:
+    forall st1,
+      Reachable (steps step_m) sys st1 ->
+      IntMsgsEmpty sys st1.(bst_msgs) ->
+      forall trss st2,
+        steps step_m sys st1 (List.concat trss) st2 ->
+        Forall (AtomicEx msg_dec) trss ->
+        Forall (Transactional sys msg_dec) trss ->
+        forall oidx ridx rins routs st3,
+          step_m sys st2 (RlblInt oidx ridx rins routs) st3 ->
+          exists einits trs eouts,
+            In trs trss /\
+            ExtAtomic sys msg_dec einits trs eouts /\
+            SubList rins eouts.
+  Proof.
+    intros.
+    pose proof H4.
+    eapply messages_in_cases in H5;
+      try apply Hiorqs; try apply Hrrs;
+        [|eapply reachable_steps; eassumption].
+    assert (Forall (InMPI st2.(bst_msgs)) rins /\
+            SubList (idsOf rins) (sys_minds sys)).
+    { inv_step.
+      split.
+      { apply FirstMPI_Forall_InMP; assumption. }
+      { destruct H16.
+        admit.
+      }
+    }
+    clear H4. (* clear [step_m] *)
+
+    (* destruct H5 as [|[|[|]]]. *)
+    (* - disc_messages_in. *)
+    
+  Admitted.
+
+  Theorem rqrs_NonMergeable:
+    RqRsSys dtr sys -> NonMergeable sys.
+  Proof.
+    intros.
+    red; intros.
+    eapply steps_split in H2; [|reflexivity].
+    destruct H2 as [stt [? ?]].
+
+    inv H5.
+    pose proof H8.
+    apply atomic_beginning_label in H5.
+    destruct H5 as [ttrs [oidx [ridx [routs ?]]]]; subst.
+    eapply steps_split in H6; [|reflexivity].
+    destruct H6 as [sti [? ?]].
+    inv_steps.
+
+    eapply extAtomic_IntMsgsEmpty_next_ins in H14; eauto.
+    destruct H14 as [pinits [ptrs [peouts ?]]]; dest.
+
+    apply in_split in H5.
+    destruct H5 as [hsts2 [hsts1 ?]]; subst.
+
+    exists ptrs; eexists.
+    exists hsts1, hsts2, nil; simpl.
+    repeat ssplit.
+    - reflexivity.
+    - red; eauto 10.
+    - apply Forall_forall.
+      intros hst ?.
+      eapply extAtomic_Discontinuous
+        with (trss:= hsts2 ++ ptrs :: hsts1); try eassumption.
+      + apply in_or_app; right.
+        left; reflexivity.
+      + apply in_or_app; left; assumption.
+  Qed.
+
+End NonMergeable.
+
 Corollary rqrs_Serializable:
   forall {oifc} (sys: System oifc) (Hiorqs: GoodORqsInit (initsOf sys))
          (dtr: DTree),
@@ -708,7 +947,8 @@ Corollary rqrs_Serializable:
 Proof.
   intros.
   apply well_interleaved_serializable.
-  eapply rqrs_WellInterleaved; eauto.
+  - eapply rqrs_NonMergeable; eauto.
+  - eapply rqrs_WellInterleaved; eauto.
 Qed.
 
 Close Scope list.

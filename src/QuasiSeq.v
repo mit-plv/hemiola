@@ -235,43 +235,26 @@ Proof.
     + omega.
 Qed.
 
-Lemma atomic_transactions_sequential_or_extInterleaved:
-  forall {oifc} (sys: System oifc) trss st1 st2,
-    IntMsgsEmpty sys st1.(bst_msgs) ->
-    steps step_m sys st1 (List.concat trss) st2 ->
-    Forall (AtomicEx msg_dec) trss ->
-    Sequential sys msg_dec (List.concat trss) trss \/
-    ExtInterleaved sys trss.
-Proof.
-  induction trss as [|trs trss]; simpl; intros;
-    [left; constructor; auto|].
-
-  eapply steps_split in H0; [|reflexivity].
-  destruct H0 as [sti [? ?]].
-  inv H1.
-  specialize (IHtrss _ _ H H0 H6); destruct IHtrss.
-
-  - inv H1; clear H4.
-    destruct H5 as [inits [ins [outs [eouts ?]]]].
-    destruct (subList_dec idx_dec (idsOf inits) (sys_merqs sys)) as [Hex|Hnex].
-    + left; constructor; [|reflexivity].
-      constructor; auto.
-      eapply TrsAtomic; econstructor; eauto.
-    + right.
-
-      (** This is true since each transaction in [trss] is [AtomicEx]. *)
-      admit.
-
-  - right.
-    clear -H1.
-    destruct H1 as [hst1 [l2 [hsts1 [hsts2 [hsts3 [? [? ?]]]]]]]; subst.
-    exists hst1, l2, hsts1, hsts2, (trs :: hsts3).
-    split; auto.
-Admitted.
+(** [NonMergeable] says that any transactions in a given system [sys] are
+ * executed without any merging, i.e., each [Atomic] history is either the start
+ * of a new transaction or a continuation of a previous transaction.
+ *)
+Definition NonMergeable {oifc} (sys: System oifc) :=
+  forall st1,
+    Reachable (steps step_m) sys st1 ->
+    IntMsgsEmpty sys (bst_msgs st1) ->
+    forall trss trs st2,
+      steps step_m sys st1 (trs ++ List.concat trss) st2 ->
+      Forall (AtomicEx msg_dec) trss ->
+      Forall (Transactional sys msg_dec) trss ->
+      forall eouts,
+        IntAtomic sys msg_dec trs eouts ->
+        ExtInterleaved sys (trs :: trss).
 
 Section WellInterleaved.
   Context {oifc: OStateIfc}.
   Variable (sys: System oifc).
+  Hypothesis (Hnmg: NonMergeable sys).
 
   Definition WellInterleavedHst (hst1: MHistory) (l2: MLabel) :=
     forall st1,
@@ -350,6 +333,41 @@ Section WellInterleaved.
     - simpl; omega.
   Qed.
 
+  Lemma atomic_transactions_sequential_or_extInterleaved:
+    forall trss st1 st2,
+      Reachable (steps step_m) sys st1 ->
+      IntMsgsEmpty sys st1.(bst_msgs) ->
+      steps step_m sys st1 (List.concat trss) st2 ->
+      Forall (AtomicEx msg_dec) trss ->
+      Sequential sys msg_dec (List.concat trss) trss \/
+      ExtInterleaved sys trss.
+  Proof.
+    induction trss as [|trs trss]; simpl; intros;
+      [left; constructor; auto|].
+
+    eapply steps_split in H1; [|reflexivity].
+    destruct H1 as [sti [? ?]].
+    inv H2.
+    specialize (IHtrss _ _ H H0 H1 H7); destruct IHtrss.
+
+    - inv H2; clear H5.
+      destruct H6 as [inits [ins [outs [eouts ?]]]].
+      destruct (subList_dec idx_dec (idsOf inits) (sys_merqs sys)) as [Hex|Hnex].
+      + left; constructor; [|reflexivity].
+        constructor; auto.
+        eapply TrsAtomic; econstructor; eauto.
+      + right.
+        eapply Hnmg; eauto.
+        * eapply steps_append; eassumption.
+        * econstructor; eassumption.
+
+    - right.
+      clear -H2.
+      destruct H2 as [hst1 [l2 [hsts1 [hsts2 [hsts3 [? [? ?]]]]]]]; subst.
+      exists hst1, l2, hsts1, hsts2, (trs :: hsts3).
+      split; auto.
+  Qed.
+
   Lemma well_interleaved_serializable:
     WellInterleaved -> SerializableSys sys.
   Proof.
@@ -375,8 +393,9 @@ Section WellInterleaved.
       { eapply insHistory_IntMsgsEmpty; eauto.
         apply init_IntMsgsEmpty.
       }
-      pose proof (atomic_transactions_sequential_or_extInterleaved H9 H8 H2).
-      destruct H10.
+      assert (Reachable (steps step_m) sys sti1) by (eexists; eassumption).
+      pose proof (atomic_transactions_sequential_or_extInterleaved H10 H9 H8 H2).
+      destruct H11.
       + left.
         exists (outs ++ List.concat atms ++ ins).
         eexists (lift_each outs ++ atms ++ lift_each ins).
@@ -390,12 +409,12 @@ Section WellInterleaved.
 
         apply ssequential_app_inv in H5.
         destruct H5 as [no [nai ?]]; dest; subst.
-        apply ssequential_app_inv in H11.
-        destruct H11 as [na [ni ?]]; dest; subst.
+        apply ssequential_app_inv in H12.
+        destruct H12 as [na [ni ?]]; dest; subst.
 
-        eapply extInterleaved_atomic_extInterleavedL in H10; eauto.
-        destruct H10 as [datms [? [? [? [m ?]]]]]; dest.
-        rewrite H10 in *; clear H10.
+        eapply extInterleaved_atomic_extInterleavedL in H11; eauto.
+        destruct H11 as [datms [? [? [? [m ?]]]]]; dest.
+        rewrite H11 in *; clear H11.
         
         eapply well_interleaved_reducible with (st1:= sti1) in H; eauto.
         destruct H as [ratms [rm ?]]; dest.
@@ -413,7 +432,6 @@ Section WellInterleaved.
             reflexivity.
           }
         * omega.
-        * econstructor; eauto.
   Qed.
 
 End WellInterleaved.

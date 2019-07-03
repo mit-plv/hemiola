@@ -10,7 +10,7 @@ DEPS=-R . Top
 Makefile.coq: Makefile $(VS)
 	$(COQBIN)coq_makefile $(VS) $(DEPS) -o Makefile.coq
 
-LIB_REPR_VO=RqRsLang.vo
+LIB_REPR_VO=RqRsLang.vo RqRsCorrect.vo
 EX_SPEC_REPR_VO=Ex/SpecSv.vo
 EX_MSISV_REPR_VO=Ex/MsiSv/MsiSvSim.vo
 
