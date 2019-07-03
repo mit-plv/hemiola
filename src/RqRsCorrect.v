@@ -865,6 +865,55 @@ Section NonMergeable.
   Hypothesis (Hrrs: RqRsSys dtr sys)
              (Hiorqs: GoodORqsInit (initsOf sys)).
 
+  Lemma rqrs_step_ins_or:
+    forall st1,
+      Reachable (steps step_m) sys st1 ->
+      forall oidx ridx rins routs st2,
+        step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
+        SubList (idsOf rins) (sys_merqs sys) \/
+        SubList (idsOf rins) (sys_minds sys).
+  Proof.
+    intros.
+    pose proof H0.
+    eapply messages_in_cases in H1;
+      try apply Hiorqs; try apply Hrrs; [|assumption].
+    destruct H1 as [|[|[|]]]; disc_messages_in.
+    - inv_step.
+      destruct H14; simpl in *.
+      apply SubList_singleton_In in H0.
+      apply in_app_or in H0.
+      destruct H0.
+      + right; apply SubList_cons; [assumption|apply SubList_nil].
+      + left; apply SubList_cons; [assumption|apply SubList_nil].
+    - inv_step.
+      destruct H14; simpl in *.
+      apply SubList_singleton_In in H0.
+      apply in_app_or in H0.
+      destruct H0.
+      + right; apply SubList_cons; [assumption|apply SubList_nil].
+      + left; apply SubList_cons; [assumption|apply SubList_nil].
+    - inv_step.
+      destruct H13.
+      right.
+      red; intros midx ?.
+      rewrite Forall_forall in H2; specialize (H2 _ H4).
+      destruct H2 as [cidx [? ?]].
+      apply H0 in H4.
+      apply in_app_or in H4; destruct H4; [assumption|].
+      exfalso.
+      apply Hrrs in H4.
+      destruct H4 as [eoidx ?].
+      eapply rqrsDTree_rqUp_rsUp_not_eq in H4; [|apply Hrrs|eassumption].
+      auto.
+    - inv_step.
+      destruct H14; simpl in *.
+      apply SubList_singleton_In in H0.
+      apply in_app_or in H0.
+      destruct H0.
+      + right; apply SubList_cons; [assumption|apply SubList_nil].
+      + left; apply SubList_cons; [assumption|apply SubList_nil].
+  Qed.
+
   Lemma extAtomic_IntMsgsEmpty_next_ins:
     forall st1,
       Reachable (steps step_m) sys st1 ->
@@ -874,6 +923,7 @@ Section NonMergeable.
         Forall (AtomicEx msg_dec) trss ->
         Forall (Transactional sys msg_dec) trss ->
         forall oidx ridx rins routs st3,
+          ~ SubList (idsOf rins) (sys_merqs sys) ->
           step_m sys st2 (RlblInt oidx ridx rins routs) st3 ->
           exists einits trs eouts,
             In trs trss /\
@@ -881,23 +931,48 @@ Section NonMergeable.
             SubList rins eouts.
   Proof.
     intros.
-    pose proof H4.
-    eapply messages_in_cases in H5;
+    pose proof H5.
+    eapply messages_in_cases in H6;
       try apply Hiorqs; try apply Hrrs;
         [|eapply reachable_steps; eassumption].
     assert (Forall (InMPI st2.(bst_msgs)) rins /\
             SubList (idsOf rins) (sys_minds sys)).
-    { inv_step.
+    { pose proof H5.
+      apply rqrs_step_ins_or in H7; [|eapply reachable_steps; eassumption].
+      inv_step.
       split.
       { apply FirstMPI_Forall_InMP; assumption. }
-      { destruct H16.
-        admit.
-      }
+      { destruct H7; [exfalso; auto|auto]. }
     }
-    clear H4. (* clear [step_m] *)
+    clear H4 H5. (* clear [step_m] *)
+    dest.
 
-    (* destruct H5 as [|[|[|]]]. *)
-    (* - disc_messages_in. *)
+    destruct H6 as [|[|[|]]]; disc_messages_in.
+    - apply SubList_singleton_In in H5.
+      inv H4; clear H12.
+      eapply extAtomic_multi_IntMsgsEmpty_non_inits_InMPI in H11;
+        try eassumption.
+      destruct H11 as [einits [trs [eouts ?]]]; dest.
+      exists einits, trs, eouts.
+      repeat ssplit; [assumption..|].
+      apply SubList_cons; [assumption|apply SubList_nil].
+    - apply SubList_singleton_In in H5.
+      inv H4; clear H12.
+      eapply extAtomic_multi_IntMsgsEmpty_non_inits_InMPI in H11;
+        try eassumption.
+      destruct H11 as [einits [trs [eouts ?]]]; dest.
+      exists einits, trs, eouts.
+      repeat ssplit; [assumption..|].
+      apply SubList_cons; [assumption|apply SubList_nil].
+    - admit.
+    - apply SubList_singleton_In in H5.
+      inv H4; clear H12.
+      eapply extAtomic_multi_IntMsgsEmpty_non_inits_InMPI in H11;
+        try eassumption.
+      destruct H11 as [einits [trs [eouts ?]]]; dest.
+      exists einits, trs, eouts.
+      repeat ssplit; [assumption..|].
+      apply SubList_cons; [assumption|apply SubList_nil].
     
   Admitted.
 
