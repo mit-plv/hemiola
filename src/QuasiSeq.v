@@ -150,6 +150,50 @@ Proof.
   do 8 eexists; repeat split; eauto.
 Qed.
 
+Lemma extAtomic_Discontinuous:
+  forall {oifc} (sys: System oifc) st1 trss st2,
+    steps step_m sys st1 (List.concat trss) st2 ->
+    Forall (AtomicEx msg_dec) trss ->
+    Forall (Transactional sys msg_dec) trss ->
+    forall trs1 trs2,
+      In trs1 trss -> In trs2 trss ->
+      Discontinuous trs1 trs2.
+Proof.
+  intros.
+  rewrite Forall_forall in H0, H1.
+  pose proof (H0 _ H2).
+  pose proof (H1 _ H2).
+  pose proof (H0 _ H3).
+  pose proof (H1 _ H3).
+  eapply atomic_Transactional_ExtAtomic in H5; [|eassumption].
+  destruct H5 as [einits1 [eouts1 ?]]; inv H5.
+  eapply atomic_Transactional_ExtAtomic in H7; [|eassumption].
+  destruct H7 as [einits2 [eouts2 ?]]; inv H5.
+
+  assert (exists st11 st12, steps step_m sys st11 trs1 st12).
+  { apply in_split in H2.
+    destruct H2 as [ptrss [ntrss ?]]; subst.
+    rewrite concat_app in H; simpl in H.
+    eapply steps_split in H; [|reflexivity].
+    destruct H as [sti1 [? ?]].
+    eapply steps_split in H; [|reflexivity].
+    destruct H as [sti2 [? ?]].
+    eauto.
+  }
+  destruct H5 as [st11 [st12 ?]].
+  eapply atomic_eouts_not_erqs in H5; [|eassumption].
+
+  do 8 eexists.
+  repeat ssplit; try eassumption.
+  red; intros idm.
+  destruct (in_dec (id_dec msg_dec) idm eouts1); [|auto].
+  rewrite Forall_forall in H5.
+  specialize (H5 _ i).
+  right; intro Hx.
+  apply in_map with (f:= idOf) in Hx.
+  apply H7 in Hx; auto.
+Qed.
+
 Lemma atomic_beginning_label:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->

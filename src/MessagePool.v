@@ -479,6 +479,65 @@ Section Facts.
     rewrite H in H0; discriminate.
   Qed.
 
+  Lemma findQ_length_zero:
+    forall (msgs: MessagePool MsgT) midx msg,
+      List.length (findQ midx msgs) <= 1 ->
+      FirstMP msgs midx msg ->
+      findQ midx (deqMP midx msgs) = nil.
+  Proof.
+    intros.
+    apply findQ_In_deqMP_FirstMP in H0.
+    unfold FirstMP, firstMP in *; simpl in *.
+    destruct (findQ midx msgs); [discriminate|].
+    inv H0.
+    simpl in H.
+    destruct (findQ _ _); [reflexivity|simpl in H; omega].
+  Qed.
+
+  Lemma findQ_length_ge_one:
+    forall (msgs: MessagePool MsgT) midx msg,
+      InMP midx msg msgs ->
+      List.length (findQ midx msgs) >= 1.
+  Proof.
+    unfold InMP; intros.
+    destruct (findQ midx msgs); simpl in *.
+    - exfalso; auto.
+    - omega.
+  Qed.
+
+  Lemma findQ_length_one:
+    forall (msgs: MessagePool MsgT) midx msg,
+      List.length (findQ midx msgs) <= 1 ->
+      FirstMP msgs midx msg ->
+      List.length (findQ midx msgs) = 1.
+  Proof.
+    intros.
+    remember (findQ midx msgs) as q; destruct q.
+    - exfalso; eapply FirstMP_findQ_False; eauto.
+    - simpl in *; omega.
+  Qed.
+
+  Lemma findQ_length_two:
+    forall (msgs: MessagePool MsgT) midx msg1 msg2,
+      msg1 <> msg2 ->
+      InMP midx msg1 msgs ->
+      InMP midx msg2 msgs ->
+      List.length (findQ midx msgs) >= 2.
+  Proof.
+    unfold InMP; intros.
+    induction (findQ midx msgs); simpl; intros; [intuition|].
+    inv H0.
+    - inv H1; [exfalso; auto|].
+      clear -H0.
+      induction q; [intuition|].
+      inv H0; simpl; omega.
+    - inv H1.
+      + clear -H2.
+        induction q; [intuition|].
+        inv H2; simpl; omega.
+      + specialize (IHq H2 H0); omega.
+  Qed.
+
   Lemma FirstMP_enqMsgs_order:
     forall midx msg1 outs1 minds2 msg2 (mp: MessagePool MsgT),
       NoDup (idsOf outs1) ->

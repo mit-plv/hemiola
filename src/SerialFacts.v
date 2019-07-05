@@ -188,6 +188,18 @@ Section MsgParam.
     intros; constructor.
   Qed.
 
+  Lemma extAtomic_unique:
+    forall {oifc} (sys: System oifc) inits1 hst eouts1,
+      ExtAtomic sys msgT_dec inits1 hst eouts1 ->
+      forall inits2 eouts2,
+        ExtAtomic sys msgT_dec inits2 hst eouts2 ->
+        inits1 = inits2 /\ eouts1 = eouts2.
+  Proof.
+    intros.
+    inv H; inv H0.
+    pose proof (atomic_unique H2 H3); dest; subst; auto.
+  Qed.
+
   Lemma extAtomic_preserved:
     forall {oifc} (impl1: System oifc) inits hst eouts,
       ExtAtomic impl1 msgT_dec inits hst eouts ->
@@ -596,6 +608,19 @@ Section MsgParam.
 
 End MsgParam.
 
+Lemma atomic_Transactional_ExtAtomic:
+  forall {oifc} (sys: System oifc) trs,
+    AtomicEx msg_dec trs ->
+    Transactional sys msg_dec trs ->
+    exists einits eouts,
+      ExtAtomic sys msg_dec einits trs eouts.
+Proof.
+  intros.
+  destruct H as [inits [ins [outs [eouts ?]]]].
+  inv H0; try (inv H; fail).
+  eauto.
+Qed.
+
 Lemma sequential_transactional_Forall:
   forall {oifc} (sys: System oifc) st1 trss st2,
     steps step_m sys st1 (List.concat trss) st2 ->
@@ -708,6 +733,105 @@ Proof.
   apply Forall_forall; intros idm ?.
   eapply atomic_messages_in_in; eauto.
   destruct (H2 idm); auto.
+Qed.
+
+Lemma atomic_non_inits_InMPI_or:
+  forall inits ins hst outs eouts,
+    Atomic msg_dec inits ins hst outs eouts ->
+    forall {oifc} (sys: System oifc) st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall idm,
+        ~ In idm inits ->
+        InMPI st2.(bst_msgs) idm ->
+        InMPI st1.(bst_msgs) idm \/ In idm eouts.
+Proof.
+  intros.
+  eapply atomic_messages_non_inits_count_eq in H; [|eassumption..].
+  apply (countMsg_InMPI msg_dec) in H2.
+  assert (countMsg msg_dec idm st1.(bst_msgs) > 0 \/
+          count_occ (id_dec msg_dec) eouts idm > 0) by omega.
+  destruct H3.
+  - left; apply (countMsg_InMPI msg_dec); assumption.
+  - right; apply (count_occ_In (id_dec msg_dec)); assumption.
+Qed.
+
+Lemma extAtomic_non_inits_InMPI_or:
+  forall {oifc} (sys: System oifc) inits hst eouts,
+    ExtAtomic sys msg_dec inits hst eouts ->
+    forall st1 st2,
+      steps step_m sys st1 hst st2 ->
+      forall idm,
+        ~ In (idOf idm) (sys_merqs sys) ->
+        InMPI st2.(bst_msgs) idm ->
+        InMPI st1.(bst_msgs) idm \/ In idm eouts.
+Proof.
+  intros.
+  inv H.
+  eapply atomic_non_inits_InMPI_or; try eassumption.
+  intro Hx.
+  apply in_map with (f:= idOf) in Hx.
+  apply H3 in Hx; auto.
+Qed.
+
+Lemma extAtomic_multi_non_inits_InMPI_or:
+  forall {oifc} (sys: System oifc) st1,
+    Reachable (steps step_m) sys st1 ->
+    forall trss st2,
+      steps step_m sys st1 (List.concat trss) st2 ->
+      Forall (AtomicEx msg_dec) trss ->
+      Forall (Transactional sys msg_dec) trss ->
+      forall idm,
+        ~ In (idOf idm) (sys_merqs sys) ->
+        InMPI st2.(bst_msgs) idm ->
+        InMPI st1.(bst_msgs) idm \/
+        exists einits trs eouts,
+          In trs trss /\
+          ExtAtomic sys msg_dec einits trs eouts /\
+          In idm eouts.
+Proof.
+  induction trss as [|trs trss]; simpl; intros; [inv_steps; auto|].
+
+  eapply steps_split in H0; [|reflexivity].
+  destruct H0 as [sti [? ?]].
+  inv H1; inv H2.
+  pose proof (atomic_Transactional_ExtAtomic H8 H7).
+  destruct H1 as [einits [eouts ?]].
+
+  eapply extAtomic_non_inits_InMPI_or in H5; try eassumption.
+  destruct H5; [|eauto 8].
+
+  specialize (IHtrss _ H0 H9 H10 _ H3 H2).
+  destruct IHtrss; [auto|].
+  destruct H5 as [teinits [ttrs [teouts ?]]]; dest.
+  right; eauto 7.
+Qed.
+
+Corollary extAtomic_multi_IntMsgsEmpty_non_inits_InMPI:
+  forall {oifc} (sys: System oifc) st1,
+    Reachable (steps step_m) sys st1 ->
+    IntMsgsEmpty sys st1.(bst_msgs) ->
+    forall trss st2,
+      steps step_m sys st1 (List.concat trss) st2 ->
+      Forall (AtomicEx msg_dec) trss ->
+      Forall (Transactional sys msg_dec) trss ->
+      forall idm,
+        In (idOf idm) (sys_minds sys) ->
+        InMPI st2.(bst_msgs) idm ->
+        exists einits trs eouts,
+          In trs trss /\
+          ExtAtomic sys msg_dec einits trs eouts /\
+          In idm eouts.
+Proof.
+  intros.
+  eapply extAtomic_multi_non_inits_InMPI_or in H1; try eassumption.
+  - destruct H1; [|assumption].
+    exfalso.
+    specialize (H0 _ H4).
+    apply findQ_length_ge_one in H1.
+    rewrite H0 in H1; simpl in H1; omega.
+  - eapply DisjList_In_2.
+    + eapply sys_minds_sys_merqs_DisjList.
+    + assumption.
 Qed.
 
 Lemma insLbl_IntMsgsEmpty:

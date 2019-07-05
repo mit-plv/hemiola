@@ -47,6 +47,9 @@ Section Sequential.
         Atomic rqs ins hst outs eouts ->
         ExtAtomic rqs hst eouts.
 
+  (* A history is [IntAtomic] iff it is [Atomic] and starts from some
+   * non-external requests. Note that initial messages cannot be [nil].
+   *)
   Inductive IntAtomic: History MsgT -> list (Id MsgT) -> Prop :=
   | IntAtomicIntro:
       forall inits ins hst outs eouts,
