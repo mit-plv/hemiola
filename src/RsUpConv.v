@@ -2,7 +2,7 @@ Require Import Peano_dec Omega List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
-Require Import RqRsTopo RqRsFacts RqRsInvAtomic.
+Require Import RqRsTopo RqRsFacts RqRsInvMsg RqRsInvAtomic.
 
 Set Implicit Arguments.
 
@@ -56,18 +56,29 @@ Section RsUpConv.
         DownLocked orqs1 oidx rqid ->
         DownLocked orqs2 oidx rqid.
 
-    Definition DLNewInits (inits: list (Id Msg)) :=
+    Definition DLTimeInits (inits: list (Id Msg)) :=
       forall oidx idm,
         (RqDownMsgTo dtr oidx idm \/ RsUpMsgFrom dtr oidx idm) ->
         ~ In idm inits.
 
-    Definition DLNewInv (inits eouts: list (Id Msg)) :=
-      DLNewInits inits -> DLNewOuts eouts /\ DLOldPreserved.
+    Definition DLTimeInv (inits eouts: list (Id Msg)) :=
+      DLTimeInits inits -> DLNewOuts eouts /\ DLOldPreserved.
     
   End LockStatus.
 
-  Hint Unfold DownLockedNew RqDownDLNew DLDLNew RsUpDLNew DLNewOuts
-       DLOldPreserved DLNewInits DLNewInv: RuleConds.
+  Lemma downLockedNew_irrefl:
+    forall (orqs1 orqs2: ORqs Msg) oidx,
+      (orqs1@[oidx] >>=[M.empty _] (fun orq => orq))@[downRq] =
+      (orqs2@[oidx] >>=[M.empty _] (fun orq => orq))@[downRq] ->
+      ~ DownLockedNew orqs1 orqs2 oidx.
+  Proof.
+    unfold DownLockedNew; intros.
+    intro Hx.
+    destruct (orqs2@[oidx]); [|auto].
+    simpl in *; dest.
+    destruct (orqs1@[oidx]); simpl in *; auto.
+    congruence.
+  Qed.
 
   Lemma downLocked_not_DownLockedNew:
     forall orqs1 rqid orqs2 oidx,
@@ -93,36 +104,195 @@ Section RsUpConv.
     exfalso; auto.
   Qed.
 
+  Lemma dlOldPreserved_eq:
+    forall (orqs1 orqs2: ORqs Msg),
+      (forall oidx,
+          (orqs1@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
+          (orqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq]) ->
+      DLOldPreserved orqs1 orqs2.
+  Proof.
+    unfold DLOldPreserved, DownLocked; intros.
+    specialize (H oidx).
+    destruct (orqs1@[oidx]); [|exfalso; auto].
+    simpl in *.
+    destruct (orqs2@[oidx]); simpl in *; mred.
+  Qed.
+
+  Lemma dlOldPreserved_new:
+    forall (orqs: ORqs Msg) oidx orq rqid,
+      (orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq] = None ->
+      orq@[downRq] = Some rqid ->
+      DLOldPreserved orqs (orqs +[oidx <- orq]).
+  Proof.
+    unfold DLOldPreserved, DownLocked; intros.
+    destruct (idx_dec oidx0 oidx); subst; mred.
+    destruct (orqs@[oidx]); [|exfalso; auto].
+    simpl in *; exfalso; congruence.
+  Qed.
+
   Ltac disc_rule_custom ::=
+    try disc_footprints_ok;
     try disc_msg_case.
 
-  Lemma step_rsUp_DownLockedNew:
+  Lemma step_down_lock_time_ok:
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall oidx ridx rins routs st2,
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
-        DLNewInv (bst_orqs st1) (bst_orqs st2) rins routs.
+        DLTimeInv (bst_orqs st1) (bst_orqs st2) rins routs.
   Proof.
-  Admitted.
+    destruct Hrrs as [? [? ?]].
+    intros.
 
-  Lemma atomic_rsUp_DownLockedNew:
+    pose proof (footprints_ok Hiorqs H0 H2) as Hftinv.
+
+    inv_step.
+    good_rqrs_rule_get rule.
+    good_rqrs_rule_cases rule.
+
+    - (** case [ImmDown] *)
+      disc_rule_conds.
+      replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
+      red; intros _.
+      repeat split.
+      + red; intros; dest_in; disc_rule_conds.
+      + red; intros.
+        exfalso; eapply downLockedNew_irrefl; eauto.
+      + red; intros; dest_in; disc_rule_conds; solve_midx_false.
+      + apply dlOldPreserved_eq; auto.
+
+    - (** case [ImmUp] *)
+      disc_rule_conds.
+      red; intros; exfalso.
+      eapply H3; [|left; reflexivity].
+      left; red; eauto.
+
+    - (** case [RqFwd] *)
+      disc_rule_conds.
+      + (** case [RqUpUp] *)
+        red; intros _.
+        repeat split.
+        * red; intros; dest_in; disc_rule_conds; solve_midx_false.
+        * red; intros.
+          exfalso; eapply downLockedNew_irrefl; [|eassumption].
+          repeat (simpl; mred).
+          destruct (idx_dec oidx (obj_idx obj)); subst; mred.
+        * red; intros; dest_in; disc_rule_conds.
+        * apply dlOldPreserved_eq.
+          intros.
+          destruct (idx_dec oidx (obj_idx obj));
+            subst; repeat (simpl; mred).
+
+      + (** case [RqUpDown] *)
+        red; intros _.
+        repeat split.
+        * red; intros.
+          apply in_map with (f:= idOf) in H22.
+          eapply RqRsDownMatch_rq_rs in H19; [|eassumption].
+          destruct H19 as [cidx [rsUp ?]]; dest.
+          disc_rule_conds.
+          red; repeat (simpl; mred).
+          split; [discriminate|reflexivity].
+        * red; intros.
+          destruct (idx_dec oidx (obj_idx obj)).
+          { subst; mred; solve_midx_false. }
+          { exfalso; eapply downLockedNew_irrefl; [|eassumption].
+            repeat (simpl; mred).
+          }
+        * red; intros.
+          apply in_map with (f:= idOf) in H22.
+          eapply RqRsDownMatch_rq_rs in H19; [|eassumption].
+          destruct H19 as [cidx [rsUp' ?]]; dest.
+          disc_rule_conds; solve_midx_false.
+        * eapply dlOldPreserved_new; mred.
+
+      + (** case [RqDownDown] *)
+        red; intros; exfalso.
+        eapply H6; [|left; reflexivity].
+        left; red; eauto.
+
+    - (** case [RsBack] *)
+      good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      + (** case [RsDownDown] *)
+        red; intros _.
+        repeat split.
+        * red; intros; dest_in; disc_rule_conds.
+        * red; intros.
+          exfalso; eapply downLockedNew_irrefl; [|eassumption].
+          repeat (simpl; mred).
+          destruct (idx_dec oidx (obj_idx obj)); subst; mred.
+        * red; intros; dest_in; disc_rule_conds; solve_midx_false.
+        * apply dlOldPreserved_eq.
+          intros.
+          destruct (idx_dec oidx (obj_idx obj));
+            subst; repeat (simpl; mred).
+
+      + (** case [RsUpDown] *)
+        red; intros; exfalso.
+        pose proof (RqRsDownMatch_rs_not_nil H21).
+        destruct rins as [|rin rins]; [auto|].
+        inv H17.
+        rewrite <-H28 in H21.
+        eapply RqRsDownMatch_rs_rq in H21; [|left; reflexivity].
+        destruct H21 as [cidx [down ?]]; dest.
+        eapply H5; [|left; reflexivity].
+        right; red; eauto.
+
+      + (** case [RsUpUp] *)
+        red; intros; exfalso.
+        pose proof (RqRsDownMatch_rs_not_nil H6). 
+        destruct rins as [|rin rins]; [auto|].
+        inv H17.
+        rewrite <-H28 in H6.
+        eapply RqRsDownMatch_rs_rq in H6; [|left; reflexivity].
+        destruct H6 as [cidx [down ?]]; dest.
+        eapply H10; [|left; reflexivity].
+        right; red; eauto.
+
+    - (** case [RsDownRqDown] *)
+      disc_rule_conds.
+      red; intros _.
+      repeat split.
+      * red; intros.
+        apply in_map with (f:= idOf) in H22.
+        eapply RqRsDownMatch_rq_rs in H19; [|eassumption].
+        destruct H19 as [cidx [rsUp ?]]; dest.
+        disc_rule_conds.
+        red; repeat (simpl; mred).
+        split; [discriminate|reflexivity].
+      * red; intros.
+        destruct (idx_dec oidx (obj_idx obj)).
+        { subst; mred.
+          rewrite H36 in *.
+          solve_midx_false.
+        }
+        { exfalso; eapply downLockedNew_irrefl; [|eassumption].
+          repeat (simpl; mred).
+        }
+      * red; intros.
+        apply in_map with (f:= idOf) in H22.
+        eapply RqRsDownMatch_rq_rs in H19; [|eassumption].
+        destruct H19 as [cidx [rsUp' ?]]; dest.
+        disc_rule_conds; solve_midx_false.
+      * eapply dlOldPreserved_new; mred.
+  Qed.
+
+  Lemma atomic_down_lock_time_ok:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
-        DLNewInv st1.(bst_orqs) st2.(bst_orqs) inits eouts.
+        DLTimeInv st1.(bst_orqs) st2.(bst_orqs) inits eouts.
   Proof.
     destruct Hrrs as [? [? ?]].
     induction 1; simpl; intros; subst;
-      [inv_steps; eapply step_rsUp_DownLockedNew; eauto|].
+      [inv_steps; eapply step_down_lock_time_ok; eauto|].
     inv_steps.
     specialize (IHAtomic _ _ H8 H10).
 
-    (* assert (Reachable (steps step_m) sys st2) by eauto. *)
-    (* pose proof (footprints_ok Hiorqs H0 H5) as Hftinv. *)
-    (* pose proof (downLockInv_ok Hiorqs H0 H H1 H5) as Hdlinv. *)
-    (* clear H5. *)
+    pose proof (footprints_ok Hiorqs H0 H8) as Hftinv.
     
     inv_step.
     good_rqrs_rule_get rule.
@@ -139,10 +309,10 @@ Section Corollaries.
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
-  Lemma extAtomic_DLNewInits:
+  Lemma extAtomic_DLTimeInits:
     forall inits trs eouts,
       ExtAtomic sys msg_dec inits trs eouts ->
-      DLNewInits dtr inits.
+      DLTimeInits dtr inits.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
     inv H2.
@@ -157,7 +327,7 @@ Section Corollaries.
     - disc_msg_case; solve_midx_false.
   Qed.
 
-  Corollary extAtomic_rsUp_DownLockedNew:
+  Corollary extAtomic_down_lock_time_ok:
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall trs st2,
@@ -171,9 +341,9 @@ Section Corollaries.
             DownLockedNew st1.(bst_orqs) st2.(bst_orqs) pidx.
   Proof.
     intros.
-    pose proof (extAtomic_DLNewInits H1).
+    pose proof (extAtomic_DLTimeInits H1).
     inv H1.
-    eapply atomic_rsUp_DownLockedNew in H7; eauto.
+    eapply atomic_down_lock_time_ok in H7; eauto.
     specialize (H7 H5); dest.
     red in H1; dest.
     eapply H9; eauto.
@@ -191,9 +361,9 @@ Section Corollaries.
             DownLocked st2.(bst_orqs) oidx rqid.
   Proof.
     intros.
-    pose proof (extAtomic_DLNewInits H1).
+    pose proof (extAtomic_DLTimeInits H1).
     inv H1.
-    eapply atomic_rsUp_DownLockedNew in H5; eauto.
+    eapply atomic_down_lock_time_ok in H5; eauto.
     specialize (H5 H3); dest.
     apply H5; assumption.
   Qed.
@@ -219,7 +389,7 @@ Section Corollaries.
     rewrite app_assoc in H1.
     eapply steps_split in H1; [|reflexivity].
     destruct H1 as [sti1 [? ?]].
-    eapply extAtomic_rsUp_DownLockedNew with (rsUp:= rsUp1) in H0; eauto.
+    eapply extAtomic_down_lock_time_ok with (rsUp:= rsUp1) in H0; eauto.
     apply downLockedNew_DownLocked in H0.
     destruct H0 as [rqid ?].
 
@@ -240,7 +410,7 @@ Section Corollaries.
       eapply extAtomic_rsUp_down_lock_preserved with (st1:= stii); eauto.
     }
 
-    eapply extAtomic_rsUp_DownLockedNew
+    eapply extAtomic_down_lock_time_ok
       with (rsUp:= rsUp2) (st1:= sti2) (st2:= st2) in H2; eauto;
       [|eapply reachable_steps; [|eassumption]; eauto].
     eapply downLocked_not_DownLockedNew; eauto.
