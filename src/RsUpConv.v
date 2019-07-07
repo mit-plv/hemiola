@@ -66,6 +66,8 @@ Section RsUpConv.
     
   End LockStatus.
 
+  (** Utility lemmas *)
+
   Lemma downLockedNew_irrefl:
     forall (orqs1 orqs2: ORqs Msg) oidx,
       (orqs1@[oidx] >>=[M.empty _] (fun orq => orq))@[downRq] =
@@ -78,6 +80,22 @@ Section RsUpConv.
     simpl in *; dest.
     destruct (orqs1@[oidx]); simpl in *; auto.
     congruence.
+  Qed.
+
+  Lemma downLockedNew_equiv:
+    forall (orqs1 porqs2: ORqs Msg) oidx,
+      DownLockedNew orqs1 porqs2 oidx ->
+      forall (norqs2: ORqs Msg),
+        (porqs2@[oidx] >>=[M.empty _] (fun orq => orq))@[downRq] =
+        (norqs2@[oidx] >>=[M.empty _] (fun orq => orq))@[downRq] ->
+        DownLockedNew orqs1 norqs2 oidx.
+  Proof.
+    unfold DownLockedNew; intros.
+    destruct (porqs2@[oidx]); [|exfalso; auto].
+    simpl in *; dest.
+    destruct (norqs2@[oidx]); [|exfalso; auto].
+    simpl in *.
+    split; [congruence|auto].
   Qed.
 
   Lemma downLocked_not_DownLockedNew:
@@ -104,7 +122,7 @@ Section RsUpConv.
     exfalso; auto.
   Qed.
 
-  Lemma dlOldPreserved_eq:
+  Lemma dlOldPreserved_orqs_eq:
     forall (orqs1 orqs2: ORqs Msg),
       (forall oidx,
           (orqs1@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
@@ -130,9 +148,124 @@ Section RsUpConv.
     simpl in *; exfalso; congruence.
   Qed.
 
+  Lemma dlOldPreserved_orqs_equiv:
+    forall (orqs1 porqs2: ORqs Msg),
+      DLOldPreserved orqs1 porqs2 ->
+      forall (norqs2: ORqs Msg),
+        (forall oidx,
+            (porqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
+            (norqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq]) ->
+        DLOldPreserved orqs1 norqs2.
+  Proof.
+    unfold DLOldPreserved, DownLocked; intros.
+    specialize (H oidx).
+    specialize (H0 oidx).
+    destruct (orqs1@[oidx]); [|exfalso; auto].
+    simpl in *.
+    specialize (H _ H1).
+    destruct (porqs2@[oidx]); [|exfalso; auto].
+    simpl in *.
+    destruct (norqs2@[oidx]); simpl in *; mred.
+  Qed.
+
+  Lemma dlNewOuts_app:
+    forall orqs1 orqs2 eouts1 eouts2,
+      DLNewOuts orqs1 orqs2 eouts1 ->
+      DLNewOuts orqs1 orqs2 eouts2 ->
+      DLNewOuts orqs1 orqs2 (eouts1 ++ eouts2).
+  Proof.
+    unfold DLNewOuts; intros; dest.
+    repeat ssplit; try assumption.
+    - red; intros.
+      apply in_app_or in H7; destruct H7; eauto.
+    - red; intros.
+      apply in_app_or in H7; destruct H7; eauto.
+  Qed.
+
+  Lemma dlNewOuts_removeOnce:
+    forall orqs1 orqs2 idm eouts,
+      DLNewOuts orqs1 orqs2 eouts ->
+      DLNewOuts orqs1 orqs2 (removeOnce (id_dec msg_dec) idm eouts).
+  Proof.
+    unfold DLNewOuts; intros; dest.
+    repeat ssplit; try assumption.
+    - red; intros.
+      apply removeOnce_In_2 in H4; eauto.
+    - red; intros.
+      apply removeOnce_In_2 in H4; eauto.
+  Qed.
+
+  Lemma dlNewOuts_removeL:
+    forall orqs1 orqs2 msgs eouts,
+      DLNewOuts orqs1 orqs2 eouts ->
+      DLNewOuts orqs1 orqs2 (removeL (id_dec msg_dec) eouts msgs).
+  Proof.
+    unfold DLNewOuts; intros; dest.
+    repeat ssplit; try assumption.
+    - red; intros.
+      apply removeL_In_2 in H4; eauto.
+    - red; intros.
+      apply removeL_In_2 in H4; eauto.
+  Qed.
+
+  Lemma dlDLNew_orqs_equiv:
+    forall (orqs1 porqs2: ORqs Msg),
+      DLDLNew orqs1 porqs2 ->
+      forall norqs2: ORqs Msg,
+        (forall oidx,
+            (porqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
+            (norqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq]) ->
+        DLDLNew orqs1 norqs2.
+  Proof.
+    red; intros.
+    eapply downLockedNew_equiv; eauto.
+    specialize (H0 oidx).
+    rewrite H2 in H0; simpl in H0.
+    rewrite H3 in H0.
+    destruct (porqs2@[oidx]) as [porq2|] eqn:Hporq2; [|discriminate].
+    simpl in H0.
+    eapply H.
+    1: {
+      instantiate (1:= oidx).
+      eapply downLockedNew_equiv; eauto.
+      rewrite Hporq2, H2; simpl; congruence.
+    }
+    all: eassumption.
+  Qed.
+
+  Lemma dlNewOuts_orqs_equiv:
+    forall (orqs1 porqs2: ORqs Msg) eouts,
+      DLNewOuts orqs1 porqs2 eouts ->
+      forall norqs2: ORqs Msg,
+        (forall oidx,
+            (porqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
+            (norqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq]) ->
+        DLNewOuts orqs1 norqs2 eouts.
+  Proof.
+    unfold DLNewOuts; intros; dest.
+    repeat ssplit.
+    - red; intros.
+      eapply downLockedNew_equiv; eauto.
+    - eapply dlDLNew_orqs_equiv; eauto.
+    - red; intros.
+      eapply downLockedNew_equiv; eauto.
+  Qed.
+
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try disc_msg_case.
+  
+  Ltac solve_RqDownDLNew_exfalso :=
+    match goal with
+    | |- RqDownDLNew _ _ _ =>
+      red; intros; dest_in; disc_rule_conds; solve_midx_false
+    end.
+
+  Ltac solve_RsUpDLNew_exfalso :=
+    match goal with
+    | |- RsUpDLNew _ _ _ =>
+      red; intros; dest_in; disc_rule_conds; solve_midx_false
+    end.
 
   Lemma step_down_lock_time_ok:
     forall st1,
@@ -155,11 +288,11 @@ Section RsUpConv.
       replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
       red; intros _.
       repeat split.
-      + red; intros; dest_in; disc_rule_conds.
+      + solve_RqDownDLNew_exfalso.
       + red; intros.
         exfalso; eapply downLockedNew_irrefl; eauto.
-      + red; intros; dest_in; disc_rule_conds; solve_midx_false.
-      + apply dlOldPreserved_eq; auto.
+      + solve_RsUpDLNew_exfalso.
+      + apply dlOldPreserved_orqs_eq; auto.
 
     - (** case [ImmUp] *)
       disc_rule_conds.
@@ -172,13 +305,13 @@ Section RsUpConv.
       + (** case [RqUpUp] *)
         red; intros _.
         repeat split.
-        * red; intros; dest_in; disc_rule_conds; solve_midx_false.
+        * solve_RqDownDLNew_exfalso.
         * red; intros.
           exfalso; eapply downLockedNew_irrefl; [|eassumption].
           repeat (simpl; mred).
           destruct (idx_dec oidx (obj_idx obj)); subst; mred.
-        * red; intros; dest_in; disc_rule_conds.
-        * apply dlOldPreserved_eq.
+        * solve_RsUpDLNew_exfalso.
+        * apply dlOldPreserved_orqs_eq.
           intros.
           destruct (idx_dec oidx (obj_idx obj));
             subst; repeat (simpl; mred).
@@ -217,13 +350,13 @@ Section RsUpConv.
       + (** case [RsDownDown] *)
         red; intros _.
         repeat split.
-        * red; intros; dest_in; disc_rule_conds.
+        * solve_RqDownDLNew_exfalso.
         * red; intros.
           exfalso; eapply downLockedNew_irrefl; [|eassumption].
           repeat (simpl; mred).
           destruct (idx_dec oidx (obj_idx obj)); subst; mred.
-        * red; intros; dest_in; disc_rule_conds; solve_midx_false.
-        * apply dlOldPreserved_eq.
+        * solve_RsUpDLNew_exfalso.
+        * apply dlOldPreserved_orqs_eq.
           intros.
           destruct (idx_dec oidx (obj_idx obj));
             subst; repeat (simpl; mred).
@@ -293,10 +426,111 @@ Section RsUpConv.
     specialize (IHAtomic _ _ H8 H10).
 
     pose proof (footprints_ok Hiorqs H0 H8) as Hftinv.
+    pose proof (atomic_msg_outs_ok Hiorqs Hrrs H2 H8 H10) as Hmoinv.
     
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
+
+    - (** case [ImmDown] *)
+      disc_rule_conds.
+      replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
+      red; intros.
+      specialize (IHAtomic H5); dest.
+      split.
+      + apply dlNewOuts_app.
+        * apply dlNewOuts_removeOnce; auto.
+        * repeat split.
+          { solve_RqDownDLNew_exfalso. }
+          { apply H6. }
+          { solve_RsUpDLNew_exfalso. }
+      + assumption.
+
+    - (** case [ImmUp] *)
+      disc_rule_conds.
+      replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
+      red; intros.
+      specialize (IHAtomic H5); dest.
+      split.
+      + apply dlNewOuts_app.
+        * apply dlNewOuts_removeOnce; auto.
+        * red; repeat ssplit.
+          { solve_RqDownDLNew_exfalso. }
+          { apply H6. }
+          { red; intros; dest_in; disc_rule_conds.
+            red in H6; dest.
+            eapply H6 with (rqDown:= (rqFrom, rqm)).
+            { red; eauto. }
+            { assumption. }
+            { apply SubList_singleton_In; assumption. }
+          }
+      + assumption.
+
+    - (** case [RqFwd] *)
+      disc_rule_conds.
+      + (** case [RqUpUp] *)
+        red; intros.
+        specialize (IHAtomic H17); dest.
+        split.
+        * apply dlNewOuts_app.
+          { apply dlNewOuts_removeOnce.
+            eapply dlNewOuts_orqs_equiv; eauto.
+            intros; repeat (simpl; mred).
+          }
+          { repeat split.
+            { solve_RqDownDLNew_exfalso. }
+            { eapply dlDLNew_orqs_equiv; [apply H23|].
+              intros; repeat (simpl; mred).
+            }
+            { solve_RsUpDLNew_exfalso. }
+          }
+        * eapply dlOldPreserved_orqs_equiv; [eassumption|].
+          intros; repeat (simpl; mred).
+
+      + (** case [RqUpDown] *)
+        (* .. Ltac? *)
+        inv Hmoinv; [|disc_rule_conds|].
+        2: {
+          apply rqDown_rsUp_inv_msg in H17; rewrite Forall_forall in H17.
+          apply SubList_singleton_In in H4.
+          specialize (H17 _ H4); destruct H17 as [oidx ?].
+          destruct H17; disc_rule_conds; solve_midx_false.
+        }
+        apply SubList_singleton in H4; subst.
+        rewrite removeOnce_nil; simpl.
+        disc_rule_conds.
+
+        red; intros.
+        specialize (IHAtomic H6); dest.
+        red in H32; dest.
+
+        split.
+        * repeat split.
+          { (** TODO: need to substitute [bst_orqs st1] to [orqs]
+             * by proving a lemma that relates [DLNewOuts] and [steps] *)
+            admit.
+          }
+          { red; intros.
+            destruct (idx_dec oidx (obj_idx obj)).
+            { subst; mred; solve_midx_false. }
+            { admit. }
+          }
+          { red; intros; exfalso.
+            apply in_map with (f:= idOf) in H39.
+            eapply RqRsDownMatch_rq_rs in H23; [|eassumption].
+            destruct H23 as [cidx [rsUp' ?]]; dest.
+            disc_rule_conds; solve_midx_false.
+          }
+        * admit.
+
+      + (** case [RqDownDown] *)
+        admit.
+
+    - (** case [RsBack] *)
+      admit.
+
+    - (** case [RsDownRqDown] *)
+      admit.
 
   Admitted.
 
