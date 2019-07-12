@@ -419,6 +419,52 @@ Section RsUpConv.
     eapply H; eauto.
   Qed.
 
+  Lemma DLDLNew_orqs_step_remove:
+    forall orqs1 orqs2,
+      DLDLNew orqs1 orqs2 ->
+      forall rpidx nporq,
+        nporq@[downRq] = None ->
+        (forall rcidx, parentIdxOf dtr rcidx = Some rpidx ->
+                       ~ DownLockedNew orqs1 orqs2 rcidx) ->
+        DLDLNew orqs1 (orqs2 +[rpidx <- nporq]).
+  Proof.
+    intros.
+    red; intros.
+    destruct (idx_dec pidx rpidx); subst.
+    - exfalso.
+      pose proof H5.
+      apply parentIdxOf_not_eq in H7; [|apply Hrrs].
+      eapply DownLockIntact_DownLockedNew_2 with (orqs3:= orqs2) in H2; [|red; smred].
+      eapply H1; eauto.
+    - eapply DownLockIntact_DownLockedNew_2 with (orqs2:= orqs2); [|red; smred].
+      destruct (idx_dec oidx rpidx); subst; smred.
+      eapply DownLockIntact_DownLockedNew_2 with (orqs3:= orqs2) in H2; [|red; smred].
+      eapply H; eauto.
+  Qed.
+
+  Lemma DLNewBackUpLockedNew_orqs_step_remove:
+    forall orqs1 orqs2,
+      DLNewBackUpLockedNew orqs1 orqs2 ->
+      forall oidx,
+        DownLockedNew orqs1 orqs2 oidx ->
+        forall norq,
+          norq@[downRq] = None ->
+          DLNewBackUpLockedNew orqs1 (orqs2 +[oidx <- norq]).
+  Proof.
+    intros.
+    red; intros.
+    red; intros.
+    destruct (idx_dec oidx pidx); subst; smred.
+    eapply DownLockIntact_DownLockedNew_2 in H2; [|red; smred].
+    destruct (idx_dec soidx oidx); subst.
+    - exfalso.
+      eapply DownLockedNew_not_DownLockIntact; [apply H0|].
+      eapply H; eauto.
+    - apply DownLockIntact_trans with (orqs2:= orqs2).
+      + eapply H; eauto.
+      + red; smred.
+  Qed.
+      
   Lemma DLOldPreserved_orqs_equiv:
     forall (orqs1 orqs2: ORqs Msg),
       (forall oidx,
@@ -431,6 +477,26 @@ Section RsUpConv.
     destruct (orqs1@[oidx]); [|exfalso; auto].
     simpl in *.
     destruct (orqs2@[oidx]); simpl in *; mred.
+  Qed.
+
+  Lemma DLOldPreserved_orqs_step:
+    forall (orqs1 porqs2: ORqs Msg),
+      DLOldPreserved orqs1 porqs2 ->
+      forall (norqs2: ORqs Msg),
+        (forall oidx,
+            (porqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
+            (norqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq]) ->
+        DLOldPreserved orqs1 norqs2.
+  Proof.
+    unfold DLOldPreserved, DownLocked; intros.
+    specialize (H oidx).
+    specialize (H0 oidx).
+    destruct (orqs1@[oidx]); [|exfalso; auto].
+    simpl in *.
+    specialize (H _ H1).
+    destruct (porqs2@[oidx]); [|exfalso; auto].
+    simpl in *.
+    destruct (norqs2@[oidx]); simpl in *; mred.
   Qed.
 
   Lemma DLOldPreserved_trans:
@@ -455,24 +521,21 @@ Section RsUpConv.
     simpl in *; exfalso; congruence.
   Qed.
 
-  Lemma DLOldPreserved_orqs_step:
-    forall (orqs1 porqs2: ORqs Msg),
-      DLOldPreserved orqs1 porqs2 ->
-      forall (norqs2: ORqs Msg),
-        (forall oidx,
-            (porqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq] =
-            (norqs2@[oidx] >>=[[]] (fun orq => orq))@[downRq]) ->
-        DLOldPreserved orqs1 norqs2.
+  Lemma DLOldPreserved_remove:
+    forall orqs1 orqs2,
+      DLOldPreserved orqs1 orqs2 ->
+      forall roidx norq,
+        DownLockedNew orqs1 orqs2 roidx ->
+        norq@[downRq] = None ->
+        DLOldPreserved orqs1 (orqs2 +[roidx <- norq]).
   Proof.
-    unfold DLOldPreserved, DownLocked; intros.
-    specialize (H oidx).
-    specialize (H0 oidx).
-    destruct (orqs1@[oidx]); [|exfalso; auto].
-    simpl in *.
-    specialize (H _ H1).
-    destruct (porqs2@[oidx]); [|exfalso; auto].
-    simpl in *.
-    destruct (norqs2@[oidx]); simpl in *; mred.
+    unfold DLOldPreserved; intros.
+    destruct (idx_dec oidx roidx); subst.
+    - exfalso; red in H0, H2.
+      destruct (orqs2@[roidx]) as [orq2|]; [|auto]; simpl in *; dest.
+      destruct (orqs1@[roidx]); [|auto]; simpl in *; congruence.
+    - red; smred.
+      apply H; auto.
   Qed.
 
   Lemma DLOutsInv_app:
@@ -1115,37 +1178,62 @@ Section RsUpConv.
           destruct H31; disc_rule_conds; solve_midx_false.
         }
         destruct (removeL _ eouts rins); [|destruct l; discriminate].
-        inv H7. 
+        inv H7.
+
+        (* inv Hmoinv. *)
+        (* 1: { *)
+        (*   exfalso. *)
+        (*   apply SubList_singleton_NoDup in H4; [|apply idsOf_NoDup, H18]. *)
+        (*   destruct H4; [auto|]; subst. *)
+        (*   disc_rule_conds. *)
+        (* } *)
+        (* 1: { *)
+        (*   exfalso. *)
+        (*   apply SubList_singleton_NoDup in H4; [|apply idsOf_NoDup, H18]. *)
+        (*   destruct H4; [auto|]; subst. *)
+        (*   rewrite <-H32 in H25. *)
+        (*   eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity]. *)
+        (*   destruct H25 as [cidx [down ?]]; dest. *)
+        (*   disc_rule_conds; solve_midx_false. *)
+        (* } *)
         
         disc_rule_conds.
         red; intros.
         specialize (IHAtomic H26); dest.
         red in H34, H35; dest.
-        repeat ssplit.
 
+        (* Below is used multiple times so prove it in advance. *)
+        assert (DownLockedNew (bst_orqs st1) orqs (obj_idx obj)) as Hdln.
+        { rewrite <-H32 in H25.
+          pose proof H25.
+          eapply RqRsDownMatch_rs_not_nil in H41.
+          destruct rins as [|rin rins]; [exfalso; auto|].
+          eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity].
+          destruct H25 as [cidx [down ?]]; dest.
+          disc_rule_conds.
+          eapply H40; [| |apply H4; left; reflexivity].
+          { red; eauto. }
+          { assumption. }
+        }
+        
+        repeat ssplit.
         * red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
           red; intros; dest_in; disc_rule_conds.
           eapply DLIntactBound_trans with (orqs2:= orqs).
-          { eapply H37; eauto.
-            rewrite <-H32 in H25.
-            pose proof (RqRsDownMatch_rs_not_nil H25).
-            destruct rins as [|rin rins]; [exfalso; auto|].
-            eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity].
-            destruct H25 as [cidx [down ?]]; dest.
-            disc_rule_conds.
-            eapply H40 with (oidx:= cidx); eauto.
-            { red; eauto. }
-            { apply H4; left; reflexivity. }
-          }
+          { eapply H37; eassumption. }
           { apply DLIntactBound_step_neq.
             apply parent_not_in_subtree; auto.
           }
 
         * red; repeat ssplit.
-          { admit. (* removal case *) }
-          { admit. (* removal case *) }
+          { apply DLDLNew_orqs_step_remove.
+            { assumption. }
+            { mred. }
+            { admit. (** TODO *) }
+          }
+          { apply DLNewBackUpLockedNew_orqs_step_remove; try assumption; mred. }
 
-        * admit. (* removal case *)
+        * apply DLOldPreserved_remove; try assumption; mred.
 
       + (** case [RsUpUp] *)
         admit.
