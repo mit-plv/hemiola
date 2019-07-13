@@ -9,7 +9,7 @@ Require Import RqRsInvMsg RqRsInvLock RqRsInvAtomic RqRsInvSep.
 (* Required to prove serializability *)
 Require Import RqRsRed RqUpRed RsUpRed RqDownRed RsDownRed.
 (* Required to prove nonmergeability *)
-Require Import RsUpConv.
+Require Import RqRsInvLockEx.
 
 Set Implicit Arguments.
 

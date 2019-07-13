@@ -33,23 +33,6 @@ Proof.
   dest; auto.
 Qed.
 
-(** TODO: move to [Topology.v], the one in [RqRsInvSepO.v] as well. *)
-Lemma parent_parent_in_False:
-  forall dtr (Hwf: WfDTree dtr) oidx1 oidx2 oidx3,
-    parentIdxOf dtr oidx1 = Some oidx2 ->
-    parentIdxOf dtr oidx2 = Some oidx3 ->
-    In oidx3 (subtreeIndsOf dtr oidx1) ->
-    False.
-Proof.
-  intros.
-  pose proof (subtreeIndsOf_child_in Hwf _ H).
-  pose proof (subtreeIndsOf_child_SubList Hwf _ H0).
-  apply H3 in H2.
-  pose proof (subtreeIndsOf_In_each_other_eq Hwf _ _ H1 H2); subst.
-  eapply parentIdxOf_asym; eassumption.
-Qed.
-
-(** TODO: move to [RqRsInvAtomic.v] *)
 Lemma upLockedNew_in_history:
   forall {oifc: OStateIfc} (sys: System oifc) st1 hst st2 oidx,
     steps step_m sys st1 hst st2 ->
@@ -61,7 +44,7 @@ Proof.
   exfalso; eapply steps_not_in_history_no_new_uplocks; eauto.
 Qed.
 
-Section RsUpConv.
+Section RqRsInvLockEx.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System oifc).
@@ -1406,7 +1389,7 @@ Section RsUpConv.
 
   Qed.
 
-End RsUpConv.
+End RqRsInvLockEx.
 
 Section Corollaries.
   Context {oifc: OStateIfc}.

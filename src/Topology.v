@@ -1350,6 +1350,21 @@ Section Facts.
       apply subtreeIndsOf_child_in; assumption.
     Qed.
 
+    Lemma parent_parent_in_False:
+      forall oidx1 oidx2 oidx3,
+        parentIdxOf dtr oidx1 = Some oidx2 ->
+        parentIdxOf dtr oidx2 = Some oidx3 ->
+        In oidx3 (subtreeIndsOf dtr oidx1) ->
+        False.
+    Proof.
+      intros.
+      pose proof (subtreeIndsOf_child_in _ H).
+      pose proof (subtreeIndsOf_child_SubList _ H0).
+      apply H3 in H2.
+      pose proof (subtreeIndsOf_In_each_other_eq _ _ H1 H2); subst.
+      eapply parentIdxOf_asym; eassumption.
+    Qed.
+
     Lemma parentChnsOf_NoDup:
       forall idx croot pidx,
         parentChnsOf idx dtr = Some (croot, pidx) ->

@@ -392,21 +392,6 @@ Section RqUpStart.
 
 End RqUpStart.
 
-Lemma parent_parent_in_False:
-  forall dtr (Hwf: WfDTree dtr) oidx1 oidx2 oidx3,
-    parentIdxOf dtr oidx1 = Some oidx2 ->
-    parentIdxOf dtr oidx2 = Some oidx3 ->
-    In oidx3 (subtreeIndsOf dtr oidx1) ->
-    False.
-Proof.
-  intros.
-  pose proof (subtreeIndsOf_child_in Hwf _ H).
-  pose proof (subtreeIndsOf_child_SubList Hwf _ H0).
-  apply H3 in H2.
-  pose proof (subtreeIndsOf_In_each_other_eq Hwf _ _ H1 H2); subst.
-  eapply parentIdxOf_asym; eassumption.
-Qed.
-
 Section Separation.
   Context {oifc: OStateIfc}.
   Variables (dtr: DTree)
