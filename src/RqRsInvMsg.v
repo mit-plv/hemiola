@@ -26,7 +26,7 @@ Section FootprintInv.
   Definition FootprintDownOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
     exists rqFrom rqTos rssFrom rsbTo,
       rqi.(rqi_minds_rss) = rssFrom /\
-      rqi.(rqi_midx_rsb) = rsbTo /\
+      rqi.(rqi_midx_rsb) = Some rsbTo /\
       (FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom rsbTo \/
        FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom rsbTo).
 
@@ -84,17 +84,25 @@ Section FootprintInv.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      apply footprints_ok_orqs_add; auto; try (mred; fail).
+      + apply footprints_ok_orqs_add; auto; try (mred; fail).
+      + apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
         do 4 eexists; repeat split; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        do 4 eexists; repeat split; left; eassumption.
+        do 4 eexists; repeat split; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        do 4 eexists; repeat split; right; eassumption.
+        do 4 eexists; repeat split.
+        * eassumption.
+        * left; eassumption.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
+        do 4 eexists; repeat split.
+        * eassumption.
+        * right; eassumption.
     - disc_rule_conds.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
     - disc_rule_conds.
@@ -159,6 +167,7 @@ Section IncomingMessageInv.
              (Hitr: GoodRqRsSys dtr sys).
 
   Definition RqUpMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    msgs = nil \/
     exists cidx rqUp,
       msgs = [rqUp] /\
       msg_type (valOf rqUp) = MRq /\
@@ -210,32 +219,36 @@ Section IncomingMessageInv.
 
     - left.
       disc_rule_conds.
-      constr_rule_conds.
+      + left; reflexivity.
+      + right; constr_rule_conds.
 
     - right; left.
       disc_rule_conds.
       constr_rule_conds.
 
     - disc_rule_conds.
-      + left; constr_rule_conds.
-      + left; constr_rule_conds.
+      + left; left; constr_rule_conds.
+      + left; right; constr_rule_conds.
+      + left; right; constr_rule_conds.
       + right; left; constr_rule_conds.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; right; right.
         constr_rule_conds.
+      + right; right; right.
+        constr_rule_conds.
       + right; right; left.
-        rewrite <-H26 in H19.
+        rewrite <-H26 in H20.
         split; auto.
-        clear -H19; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_rq in H19; [|eassumption].
+        clear -H20; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_rq in H20; [|eassumption].
         dest; eauto.
       + right; right; left.
-        rewrite <-H26 in H4.
+        rewrite <-H26 in H5.
         split; auto.
-        clear -H4; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_rq in H4; [|eassumption].
+        clear -H5; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_rq in H5; [|eassumption].
         dest; eauto.
 
     - right; right; right.
@@ -274,6 +287,7 @@ Section OutgoingMessageInv.
       rsEdgeUpFrom dtr oidx = Some (idOf rsUp).
 
   Definition RsDownOutMsgs (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
+    msgs = nil \/
     exists cidx rsDown,
       msgs = [rsDown] /\
       msg_type (valOf rsDown) = MRs /\
@@ -303,13 +317,15 @@ Section OutgoingMessageInv.
 
     - right; right; right.
       disc_rule_conds.
-      constr_rule_conds.
+      + left; reflexivity.
+      + right; constr_rule_conds.
 
     - right; right; left.
       disc_rule_conds.
       constr_rule_conds.
 
     - disc_rule_conds.
+      + left; constr_rule_conds.
       + left; constr_rule_conds.
       + right; left.
         constr_rule_conds.
@@ -325,9 +341,11 @@ Section OutgoingMessageInv.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; right; right.
-        constr_rule_conds.
+        right; constr_rule_conds.
       + right; right; right.
-        constr_rule_conds.
+        left; reflexivity.
+      + right; right; right.
+        right; constr_rule_conds.
       + right; right; left.
         constr_rule_conds.
 
@@ -344,9 +362,12 @@ End OutgoingMessageInv.
 Ltac disc_messages_in :=
   match goal with
   | [H: RqUpMsgs _ _ _ |- _] =>
-    let cidx := fresh "cidx" in
-    let rqUp := fresh "rqUp" in
-    destruct H as [cidx [rqUp ?]]; dest; subst
+    let Hr := fresh "H" in
+    destruct H as [|Hr];
+    [subst|
+     let cidx := fresh "cidx" in
+     let rqUp := fresh "rqUp" in
+     destruct Hr as [cidx [rqUp ?]]; dest; subst]
   | [H: RqDownMsgs _ _ _ _ |- _] =>
     let obj := fresh "obj" in
     let rqDown := fresh "rqDown" in
@@ -368,9 +389,12 @@ Ltac disc_messages_out :=
     let rsUp := fresh "rsUp" in
     destruct H as [rsUp ?]; dest; subst
   | [H: RsDownOutMsgs _ _ _ |- _] =>
-    let cidx := fresh "cidx" in
-    let rsDown := fresh "rsDown" in
-    destruct H as [cidx [rsDown ?]]; dest; subst
+    let Hr := fresh "H" in
+    destruct H as [|Hr];
+    [subst|
+     let cidx := fresh "cidx" in
+     let rsDown := fresh "rsDown" in
+     destruct Hr as [cidx [rsDown ?]]; dest; subst]
   end.
 
 Section MsgInitCases.

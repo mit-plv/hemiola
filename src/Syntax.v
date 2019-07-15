@@ -112,9 +112,9 @@ Section ORqs.
    * response and providing a proper locking mechanism.
    *)
   Record RqInfo (MsgT: Type) :=
-    { rqi_msg: MsgT;
+    { rqi_msg: option MsgT;
       rqi_minds_rss: list IdxT;
-      rqi_midx_rsb: IdxT
+      rqi_midx_rsb: option IdxT
     }.
 
   (* RqType |-> RqInfo *)
@@ -125,10 +125,15 @@ Section ORqs.
 
   Definition addRq {MsgT} (orq: ORq MsgT) (rqty: IdxT)
              (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
-    orq+[rqty <- {| rqi_msg := msg;
+    orq+[rqty <- {| rqi_msg := Some msg;
                     rqi_minds_rss := mrss;
-                    rqi_midx_rsb := mrsb
-                 |}].
+                    rqi_midx_rsb := Some mrsb |}].
+
+  Definition addRqS {MsgT} (orq: ORq MsgT) (rqty: IdxT)
+             (mrss: list IdxT): ORq MsgT :=
+    orq+[rqty <- {| rqi_msg := None;
+                    rqi_minds_rss := mrss;
+                    rqi_midx_rsb := None |}].
 
   Definition getRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): option (RqInfo MsgT) :=
     orq@[rqty] >>=[None] (fun rqinfo => Some rqinfo).

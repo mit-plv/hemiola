@@ -109,7 +109,8 @@ Section RqRsTopo.
       snd (rule.(rule_trs) ost orq2 mins).
 
   (** A rule making an upward request. *)
-  Definition FootprintingUp (porq norq: ORq Msg) (rqfm: Msg) (rsFrom rsbTo: IdxT) :=
+  Definition FootprintingUp (porq norq: ORq Msg)
+             (rqfm: option Msg) (rsFrom: IdxT) (rsbTo: option IdxT) :=
     exists rqi,
       norq = porq+[upRq <- rqi] /\
       rqi.(rqi_msg) = rqfm /\
@@ -121,9 +122,9 @@ Section RqRsTopo.
              (rssFrom: list IdxT) (rsbTo: IdxT) :=
     exists rqi,
       norq = porq+[downRq <- rqi] /\
-      rqi.(rqi_msg) = rqfm /\
+      rqi.(rqi_msg) = Some rqfm /\
       rqi.(rqi_minds_rss) = rssFrom /\
-      rqi.(rqi_midx_rsb) = rsbTo.
+      rqi.(rqi_midx_rsb) = Some rsbTo.
 
   Definition FootprintingUpToDown (porq norq: ORq Msg) (nrssFrom: list IdxT) :=
     exists prqi nrqi,
@@ -134,7 +135,8 @@ Section RqRsTopo.
       nrqi.(rqi_midx_rsb) = prqi.(rqi_midx_rsb).
   
   (** Upward-requested *)
-  Definition FootprintedUp (orq: ORq Msg) (rssFrom: list IdxT) (rsbTo: IdxT) :=
+  Definition FootprintedUp (orq: ORq Msg) (rssFrom: list IdxT)
+             (rsbTo: option IdxT) :=
     exists rqi,
       orq@[upRq] = Some rqi /\
       rqi.(rqi_minds_rss) = rssFrom /\
@@ -145,16 +147,19 @@ Section RqRsTopo.
     exists rqi,
       orq@[downRq] = Some rqi /\
       rqi.(rqi_minds_rss) = rssFrom /\
-      rqi.(rqi_midx_rsb) = rsbTo.
+      rqi.(rqi_midx_rsb) = Some rsbTo.
 
   Definition FootprintReleasingUpPost
              (post: OState oifc) (porq: ORq Msg) (rins: list (Id Msg))
              (nost: OState oifc) (norq: ORq Msg) (routs: list (Id Msg)) :=
-    exists rssFrom rsbTo rsm,
+    exists rssFrom rsbTo,
       FootprintedUp porq rssFrom rsbTo /\
       norq = porq -[upRq] /\
       idsOf rins = rssFrom /\
-      routs = [(rsbTo, rsm)].
+      (match rsbTo with
+       | Some rsbTo => idsOf routs = [rsbTo]
+       | None => routs = nil
+       end).
 
   (** A rule handling a _downward response_. *)
   Definition FootprintReleasingUp (rule: Rule oifc) :=
@@ -172,14 +177,16 @@ Section RqRsTopo.
   (** A rule handling _upward responses_. *)
   Definition FootprintReleasingDown (rule: Rule oifc) :=
     rule#post <= FootprintReleasingDownPost.
-  
-  Definition FootprintUpOk (oidx: IdxT) (rqFrom rqTo rsFrom rsbTo: IdxT) :=
+
+  Definition FootprintUpOk (oidx: IdxT)
+             (rqFrom: option IdxT) (rqTo: IdxT)
+             (rsFrom: IdxT) (rsbTo: option IdxT) :=
     exists cidx,
       parentIdxOf dtr cidx = Some oidx /\
-      rqEdgeUpFrom cidx = Some rqFrom /\
+      (rqFrom >>=[True] (fun rqFrom => rqEdgeUpFrom cidx = Some rqFrom)) /\
+      (rsbTo >>=[True] (fun rsbTo => edgeDownTo cidx = Some rsbTo)) /\
       rqEdgeUpFrom oidx = Some rqTo /\
-      edgeDownTo oidx = Some rsFrom /\
-      edgeDownTo cidx = Some rsbTo.
+      edgeDownTo oidx = Some rsFrom.
 
   Definition RqRsDownMatch (oidx: IdxT) (rqTos: list IdxT) (rssFrom: list IdxT)
              (P: IdxT (* each child index *) -> Prop) :=
@@ -256,6 +263,7 @@ Section RqRsTopo.
 
       Definition ImmDownOk (post: OState oifc) (porq: ORq Msg) (rins: list (Id Msg))
                  (nost: OState oifc) (norq: ORq Msg) (routs: list (Id Msg)) :=
+        (rins = nil /\ routs = nil) \/
         exists cidx rqFrom rqm rsTo rsm,
           rqEdgeUpFrom cidx = Some rqFrom /\
           edgeDownTo cidx = Some rsTo /\
@@ -293,7 +301,10 @@ Section RqRsTopo.
         exists rqFrom rqfm rqTo rqtm rsFrom rsbTo,
           FootprintingUp porq norq rqfm rsFrom rsbTo /\
           FootprintUpOk oidx rqFrom rqTo rsFrom rsbTo /\
-          rins = [(rqFrom, rqfm)] /\
+          (rins = nil \/
+           exists orqFrom orqfm,
+             rqFrom = Some orqFrom /\ rqfm = Some orqfm /\
+             rins = [(orqFrom, orqfm)]) /\
           routs = [(rqTo, rqtm)].
       
       Definition RqUpUp (rule: Rule oifc) :=
@@ -367,7 +378,7 @@ Section RqRsTopo.
         exists rsFrom rsm rqTos rqOrig rsbTo rssFrom,
           FootprintUpDownOk oidx rqOrig rqTos rssFrom rsbTo /\
           FootprintingUpToDown porq norq rssFrom /\
-          FootprintedUp porq [rsFrom] rsbTo /\
+          FootprintedUp porq [rsFrom] (Some rsbTo) /\
           edgeDownTo oidx = Some rsFrom /\
           rins = [(rsFrom, rsm)] /\
           idsOf routs = rqTos.

@@ -646,14 +646,14 @@ Section RqRsDTree.
 
   Lemma footprintUpOk_rs_eq:
     forall oidx rqFrom rqTo rsFrom1 rsbTo1 rsFrom2 rsbTo2,
-      FootprintUpOk dtr oidx rqFrom rqTo rsFrom1 rsbTo1 ->
-      FootprintUpOk dtr oidx rqFrom rqTo rsFrom2 rsbTo2 ->
+      FootprintUpOk dtr oidx (Some rqFrom) rqTo rsFrom1 (Some rsbTo1) ->
+      FootprintUpOk dtr oidx (Some rqFrom) rqTo rsFrom2 (Some rsbTo2) ->
       rsFrom1 = rsFrom2 /\ rsbTo1 = rsbTo2.
   Proof.
     unfold FootprintUpOk; intros.
     destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; dest.
-    destruct (idx_dec cidx1 cidx2); subst.
-    - rewrite H7 in H3; inv H3.
+    destruct (idx_dec cidx1 cidx2); subst; simpl in *.
+    - rewrite H6 in H2; inv H2.
       rewrite H8 in H4; inv H4.
       auto.
     - exfalso.
@@ -828,20 +828,30 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
   | [H: FootprintReleasingUpPost _ _ _ _ _ _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
-    let rsm := fresh "rsm" in
-    destruct H as [rssFrom [rsbTo [rsm ?]]]; dest
+    destruct H as [rssFrom [rsbTo ?]]; dest
+  | [H: match rqi_midx_rsb ?rqi with
+        | Some _ => idsOf _ = _
+        | None => _ = nil
+        end |- _] =>
+    let rsbTo := fresh "rsbTo" in
+    let Hrqi := fresh "H" in
+    destruct (rqi_midx_rsb rqi) as [rsbTo|] eqn:Hrqi; subst
+                                         
   | [H: FootprintReleasingDownPost _ _ _ _ _ _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
     let rsm := fresh "rsm" in
     destruct H as [rssFrom [rsbTo [rsm ?]]]; dest
   | [H: ImmDownOk _ _ _ _ _ _ _ _ |- _] =>
-    let cidx := fresh "cidx" in
-    let rqFrom := fresh "rqFrom" in
-    let rqm := fresh "rqm" in
-    let rsTo := fresh "rsTo" in
-    let rsm := fresh "rsm" in
-    destruct H as [cidx [rqFrom [rqm [rsTo [rsm ?]]]]]; dest
+    let Hr := fresh "H" in
+    destruct H as [|Hr];
+    [dest; subst|
+     let cidx := fresh "cidx" in
+     let rqFrom := fresh "rqFrom" in
+     let rqm := fresh "rqm" in
+     let rsTo := fresh "rsTo" in
+     let rsm := fresh "rsm" in
+     destruct Hr as [cidx [rqFrom [rqm [rsTo [rsm ?]]]]]; dest]
   | [H: ImmUpOk _ _ _ _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqm := fresh "rqm" in
@@ -856,6 +866,8 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
     let rsFrom := fresh "rsFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rqFrom [rqfm [rqTo [rqtm [rsFrom [rsbTo ?]]]]]]; dest
+  | [H: _ = nil \/ _ |- _] => destruct H (* further destruction of [RqUpUpOk] *)
+
   | [H: RqUpDownOk _ _ _ _ _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqfm := fresh "rqfm" in
