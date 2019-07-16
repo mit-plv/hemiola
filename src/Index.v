@@ -129,6 +129,9 @@ Defined.
 Definition extendIdx (ext: nat) (idx: IdxT): IdxT :=
   ext :: idx.
 
+Notation "i ~> e" :=
+  (extendIdx e i) (at level 7, left associativity, format "i '~>' e").
+
 Definition extendInds (ext: nat) (inds: list IdxT): list IdxT :=
   map (extendIdx ext) inds.
 
