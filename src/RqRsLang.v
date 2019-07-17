@@ -134,6 +134,10 @@ Definition getDownLockNatMsg {oifc} (st: StateM oifc): option nat :=
 Definition DownLocked {oifc}: OPrec oifc :=
   fun ost orq mins => orq@[downRq] <> None.
 
+Definition getDownLockIndsFrom {oifc} (st: StateM oifc): option (list IdxT) :=
+  ((snd (fst st))@[downRq])
+    >>= (fun rqid => Some (rqid.(rqi_minds_rss))).
+
 Definition getDownLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
   ((snd (fst st))@[downRq])
     >>= (fun rqid => Some rqid.(rqi_midx_rsb)).
@@ -170,7 +174,7 @@ Hint Unfold StateMBind TrsMTrs getFirstMsg
      UpLocked getUpLockIdxBack
      DownLockNatMsg getDownLockNatMsg
      DownLockMsgId getDownLockMsgId
-     DownLocked getDownLockIdxBack
+     DownLocked getDownLockIndsFrom getDownLockIdxBack
      MsgsFrom MsgIdsFrom MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
 Module RqRsNotations.
