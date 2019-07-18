@@ -296,25 +296,28 @@ Section RqRsDown.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds.
-      destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
-      + eapply obj_same_id_in_system_same in e; eauto; subst.
-        left; red; mred.
-      + apply InMP_enqMP_or in H11; destruct H11;
-          [exfalso; dest; subst; disc_rule_conds; auto|].
-        apply InMP_deqMP in H11.
-        specialize (H3 H11); destruct H3.
-        * left; red; mred.
-        * dest; right; split.
-          { red in H3; red; mred.
-            destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
-            destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-            intros; specialize (H3 _ _ H20 H23 H27).
-            assert (cidx <> cidx0) by (intro Hx; subst; disc_rule_conds; auto).
-            solve_q; assumption.
-          }
-          { apply FirstMP_enqMP.
-            apply FirstMP_deqMP; [|assumption].
-            solve_midx_neq.
+      + replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
+        apply H3; assumption.
+      + destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
+        * eapply obj_same_id_in_system_same in e; eauto; subst.
+          left; red; mred.
+        * apply InMP_enqMP_or in H11; destruct H11;
+            [exfalso; dest; subst; disc_rule_conds; auto|].
+          apply InMP_deqMP in H11.
+          specialize (H3 H11); destruct H3.
+          { left; red; mred. }
+          { dest; right; split.
+            { red in H3; red; mred.
+              destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+              destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+              intros; specialize (H3 _ _ H20 H23 H27).
+              assert (cidx <> cidx0) by (intro Hx; subst; disc_rule_conds; auto).
+              solve_q; assumption.
+            }
+            { apply FirstMP_enqMP.
+              apply FirstMP_deqMP; [|assumption].
+              solve_midx_neq.
+            }
           }
 
     - disc_rule_conds.
@@ -356,6 +359,33 @@ Section RqRsDown.
           }
 
     - disc_rule_conds.
+      + apply InMP_enqMP_or in H29; destruct H29;
+          [exfalso; dest; subst; disc_rule_conds; auto|].
+        specialize (H3 H14).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
+        * eapply obj_same_id_in_system_same in e; eauto; subst.
+          destruct H3.
+          { left; red in H3; red; repeat (simpl; mred). }
+          { dest; right; split.
+            { red in H3; red; repeat (simpl; mred).
+              destruct (porq@[downRq]) eqn:Hrqid; simpl in *; auto.
+              intros; specialize (H3 _ _ H26 H29 H30).
+              solve_q; assumption.
+            }
+            { apply FirstMP_enqMP; assumption. }
+          }
+        * destruct H3.
+          { left; red in H3; red; mred. }
+          { dest; right; split.
+            { red in H3; red; mred.
+              destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+              destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+              intros; specialize (H3 _ _ H26 H29 H30).
+              solve_q; assumption.
+            }
+            { apply FirstMP_enqMP; assumption. }
+          }
+      
       + apply InMP_enqMP_or in H31; destruct H31;
           [exfalso; dest; subst; disc_rule_conds; auto|].
         apply InMP_deqMP in H14.
@@ -553,7 +583,7 @@ Section RqRsDown.
               eapply obj_same_id_in_system_same in e; eauto; subst.
               disc_rule_conds.
               eapply rsDown_in_deqMP_false
-                with (cobj:= cobj) (rsdm1:= rmsg) (rsdm2:= rsdm); eauto.
+                with (cobj:= cobj) (rsdm1:= rmsg0) (rsdm2:= rsdm); eauto.
             }
             { apply InMP_deqMP in H26; specialize (H3 H26).
               destruct H3; [left; red in H3; red; mred|].
@@ -561,7 +591,7 @@ Section RqRsDown.
               { red in H3; red; mred.
                 destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
                 destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-                intros; specialize (H3 _ _ H32 H33 H34).
+                intros; specialize (H3 _ _ H33 H34 H35).
                 disc_rule_conds.
                 assert (cidx <> obj_idx cobj)
                   by (intro Hx; subst; disc_rule_conds; auto).
@@ -573,25 +603,62 @@ Section RqRsDown.
               }
             }
           }
+      
+      + destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
+        * apply InMP_deqMP in H26.
+          specialize (H3 H26).
+          eapply obj_same_id_in_system_same in e; eauto; subst.
+          destruct H3.
+          { left; red in H3; red; repeat (simpl; mred). }
+          { dest; right; split.
+            { red in H3; red; mred. }
+            { apply FirstMP_deqMP; [|assumption].
+              apply parentIdxOf_not_eq in H18; [|apply Hrrs].
+              solve_midx_neq.
+            }
+          }
+        * destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
+          { exfalso.
+            eapply obj_same_id_in_system_same in e; eauto; subst.
+            disc_rule_conds.
+            eapply rsDown_in_deqMP_false
+              with (cobj:= cobj) (rsdm1:= rmsg) (rsdm2:= rsdm); eauto.
+          }
+          { apply InMP_deqMP in H26; specialize (H3 H26).
+            destruct H3; [left; red in H3; red; mred|].
+            dest; right; split.
+            { red in H3; red; mred.
+              destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+              destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+              intros; specialize (H3 _ _ H32 H33 H34).
+              disc_rule_conds.
+              assert (cidx <> obj_idx cobj)
+                by (intro Hx; subst; disc_rule_conds; auto).
+              solve_q; assumption.
+            }
+            { apply FirstMP_deqMP; [|assumption].
+              solve_midx_neq.
+            }
+          }
 
       + apply InMP_enqMP_or in H27; destruct H27.
         * dest; subst; disc_rule_conds.
           eapply obj_same_id_in_system_same in H23; eauto; subst.
           left; red; repeat (simpl; mred).
-        * apply InMP_deqMsgs in H6.
-          specialize (H3 H6).
+        * apply InMP_deqMsgs in H7.
+          specialize (H3 H7).
           destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             left; red; repeat (simpl; mred).
           }
           { destruct H3.
             { left; red; repeat (simpl; mred). }
-            { rewrite <-H29 in H31.
+            { rewrite <-H29 in H32.
               dest; right; split.
               { red in H3; red; mred.
                 destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
                 destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-                intros; specialize (H3 _ _ H32 H33 H34).
+                intros; specialize (H3 _ _ H33 H34 H35).
                 disc_rule_conds.
                 assert (obj_idx upCObj <> obj_idx cobj)
                   by (intro Hx; rewrite Hx in *; disc_rule_conds; auto).
@@ -606,19 +673,19 @@ Section RqRsDown.
             
       + apply InMP_enqMP_or in H27; destruct H27;
           [dest; subst; solve_midx_false|].
-        apply InMP_deqMsgs in H22.
-        specialize (H3 H22).
+        apply InMP_deqMsgs in H27.
+        specialize (H3 H27).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           left; red; repeat (simpl; mred).
         * destruct H3.
           { left; red; repeat (simpl; mred). }
-          { rewrite <-H29 in H7.
+          { rewrite <-H29 in H22.
             dest; right; split.
             { red in H3; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H30 H31 H32).
+              intros; specialize (H3 _ _ H31 H32 H33).
               disc_rule_conds.
               solve_q; assumption.
             }
