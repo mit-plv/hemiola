@@ -825,9 +825,9 @@ Section DownLockInv.
         let rsFrom := fresh "rsFrom" in
         let rsbTo := fresh "rsbTo" in
         destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest
-      | [H: FootprintUpOk _ _ _ _ _ _ |- _] =>
+      | [H: FootprintUpOk _ _ _ _ _ |- _] =>
         let cidx := fresh "cidx" in
-        destruct H as [cidx ?]; dest
+        destruct H as [cidx ?]; dest; simpl in *; dest
 
       | [H: FootprintDownOkEx _ _ _ _ |- _] =>
         let rqFrom := fresh "rqFrom" in
@@ -845,6 +845,11 @@ Section DownLockInv.
         let upCObj := fresh "upCObj" in
         destruct H as [upCIdx [upCObj ?]]; dest
       | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
+
+      | [H: Some _ = (?rrFrom) >>= _ |- _] =>
+        let rqFrom := fresh "rqFrom" in
+        let rsbTo := fresh "rsbTo" in
+        destruct rrFrom as [[rqFrom rsbTo]|]; [|discriminate]; simpl in *; dest
       end.
 
     Lemma downLockInvORq_step_int_me:
@@ -877,7 +882,7 @@ Section DownLockInv.
 
       - (** case [RqFwdRule] *)
         disc_rule_conds.
-        + (** case [RqUpUp] *)
+        + (** case [RqUpUp-silent] *)
           destruct (porq@[downRq]) as [rqid|].
           * dest; split; [assumption|].
             apply downLockedInv_orqs_preserved_self_update.
@@ -886,7 +891,7 @@ Section DownLockInv.
           * apply downLockFreeInv_orqs_preserved_self_update.
             eapply downLockFreeInv_msgs_preserved; eauto.
             intros; split; intros; solve_q.
-        + (** case [RqUpUp-silent] *)
+        + (** case [RqUpUp] *)
           destruct (porq@[downRq]) as [rqid|].
           * dest; split; [assumption|].
             apply downLockedInv_orqs_preserved_self_update.

@@ -179,12 +179,15 @@ Section RqRsTopo.
     rule#post <= FootprintReleasingDownPost.
 
   Definition FootprintUpOk (oidx: IdxT)
-             (rqFrom: option IdxT) (rqTo: IdxT)
-             (rsFrom: IdxT) (rsbTo: option IdxT) :=
+             (rrFrom: option (IdxT * IdxT))
+             (rqTo rsFrom: IdxT) :=
     exists cidx,
       parentIdxOf dtr cidx = Some oidx /\
-      (rqFrom >>=[True] (fun rqFrom => rqEdgeUpFrom cidx = Some rqFrom)) /\
-      (rsbTo >>=[True] (fun rsbTo => edgeDownTo cidx = Some rsbTo)) /\
+      (rrFrom >>=[True]
+              (fun rrFrom =>
+                 let (rqFrom, rsbTo) := rrFrom in
+                 rqEdgeUpFrom cidx = Some rqFrom /\
+                 edgeDownTo cidx = Some rsbTo)) /\
       rqEdgeUpFrom oidx = Some rqTo /\
       edgeDownTo oidx = Some rsFrom.
 
@@ -298,13 +301,14 @@ Section RqRsTopo.
 
       Definition RqUpUpOk (post: OState oifc) (porq: ORq Msg) (rins: list (Id Msg))
                  (nost: OState oifc) (norq: ORq Msg) (routs: list (Id Msg)) :=
-        exists rqFrom rqfm rqTo rqtm rsFrom rsbTo,
-          FootprintingUp porq norq rqfm rsFrom rsbTo /\
-          FootprintUpOk oidx rqFrom rqTo rsFrom rsbTo /\
-          (rins = nil \/
-           exists orqFrom orqfm,
-             rqFrom = Some orqFrom /\ rqfm = Some orqfm /\
-             rins = [(orqFrom, orqfm)]) /\
+        exists rqTo rqtm rsFrom,
+          ((rins = nil /\
+            FootprintingUp porq norq None rsFrom None /\
+            FootprintUpOk oidx None rqTo rsFrom) \/
+           (exists rsbTo rqFrom rqfm,
+               rins = [(rqFrom, rqfm)] /\
+               FootprintingUp porq norq (Some rqfm) rsFrom (Some rsbTo) /\
+               FootprintUpOk oidx (Some (rqFrom, rsbTo)) rqTo rsFrom)) /\
           routs = [(rqTo, rqtm)].
       
       Definition RqUpUp (rule: Rule oifc) :=

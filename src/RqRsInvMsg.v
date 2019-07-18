@@ -18,10 +18,10 @@ Section FootprintInv.
              (Hitr: GoodRqRsSys dtr sys).
 
   Definition FootprintUpOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
-    exists rqFrom rqTo rsFrom rsbTo,
+    exists rrFrom rqTo rsFrom,
       rqi.(rqi_minds_rss) = [rsFrom] /\
-      rqi.(rqi_midx_rsb) = rsbTo /\
-      FootprintUpOk dtr oidx rqFrom rqTo rsFrom rsbTo.
+      rqi.(rqi_midx_rsb) = (rrFrom >>= (fun rrFrom => Some (snd rrFrom))) /\
+      FootprintUpOk dtr oidx rrFrom rqTo rsFrom.
 
   Definition FootprintDownOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
     exists rqFrom rqTos rssFrom rsbTo,
@@ -90,9 +90,9 @@ Section FootprintInv.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        do 4 eexists; repeat split; eassumption.
+        eexists None, _, _; repeat split; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        do 4 eexists; repeat split; eassumption.
+        eexists (Some (rqFrom, rsbTo)), _, _; repeat split; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
         do 4 eexists; repeat split.
         * eassumption.
@@ -131,21 +131,24 @@ Ltac good_footprint_get oidx :=
 Ltac disc_footprints_ok :=
   match goal with
   | [H: FootprintUpOkEx _ _ _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
+    let rrFrom := fresh "rrFrom" in
     let rqTo := fresh "rqTo" in
     let rsFrom := fresh "rsFrom" in
-    let rsbTo := fresh "rsbTo" in
-    destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest
+    destruct H as [rrFrom [rqTo [rsFrom ?]]]; dest
   | [H: FootprintDownOkEx _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqTos := fresh "rqTos" in
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rqFrom [rqTos [rssFrom [rsbTo ?]]]]; dest
+  | [H: Some _ = (?rrFrom) >>= _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct rrFrom as [[rqFrom rsbTo]|]; [|discriminate]; simpl in *; dest
 
-  | [H: FootprintUpOk _ _ _ _ _ _ |- _] =>
+  | [H: FootprintUpOk _ _ _ _ _ |- _] =>
     let cidx := fresh "cidx" in
-    destruct H as [cidx ?]; dest
+    destruct H as [cidx ?]; dest; simpl in *; dest
   | [H: FootprintUpDownOk _ _ _ _ _ _ _ \/
         FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
   | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
