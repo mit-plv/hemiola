@@ -148,6 +148,9 @@ Definition MsgsFrom {oifc} (froms: list IdxT): OPrec oifc :=
 Definition MsgIdsFrom {oifc} (msgIds: list IdxT): OPrec oifc :=
   fun _ _ mins => map msg_id (valsOf mins) = msgIds.
 
+Definition MsgIdFromEach {oifc} (msgId: IdxT): OPrec oifc :=
+  fun _ _ mins => Forall (fun idm => msg_id (valOf idm) = msgId) mins.
+
 Definition MsgsFromORq {oifc} (rqty: IdxT): OPrec oifc :=
   fun _ orq mins =>
     orq@[rqty] >>=[False]
@@ -175,7 +178,7 @@ Hint Unfold StateMBind TrsMTrs getFirstMsg
      DownLockNatMsg getDownLockNatMsg
      DownLockMsgId getDownLockMsgId
      DownLocked getDownLockIndsFrom getDownLockIdxBack
-     MsgsFrom MsgIdsFrom MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
+     MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
 Module RqRsNotations.
   Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
