@@ -22,6 +22,14 @@ Definition rsUpFrom (cidx: IdxT): IdxT :=
 Definition downTo (cidx: IdxT): IdxT :=
   cidx~>downIdx.
 
+(** * TODO: use [None] when silent transactions are supported. *)
+Definition addSilentUpRq (orq: ORq Msg) (mrss : list IdxT): ORq Msg :=
+  orq +[upRq <- {| rqi_msg := {| msg_id := 0;
+                                 msg_type := false;
+                                 msg_value := VUnit |};
+                   rqi_minds_rss := mrss;
+                   rqi_midx_rsb := 0 |}].
+
 (** Design choices:
  * - Multi-level (for arbitrary tree structure)
  * - MESI
@@ -56,6 +64,16 @@ Section System.
          dir_excl := ii;
          dir_sharers := nil (** FIXME: should be children indices. *) |}.
 
+    Import CaseNotations.
+    Definition getDir (oidx: IdxT) (dir: DirT): MESI :=
+      match case dir.(dir_st) on eq_nat_dec default mesiI with
+      | mesiM: if idx_dec oidx dir.(dir_excl) then mesiM else mesiI
+      | mesiE: if idx_dec oidx dir.(dir_excl) then mesiE else mesiI
+      | mesiS: if in_dec idx_dec oidx dir.(dir_sharers)
+               then mesiS else mesiI
+      | mesiI: mesiI
+      end.
+
     Definition setDirM (oidx: IdxT) :=
       {| dir_st := mesiM;
          dir_excl := oidx;
@@ -75,6 +93,11 @@ Section System.
       {| dir_st := mesiI;
          dir_excl := 0;
          dir_sharers := nil |}.
+
+    Definition removeSharer (oidx: IdxT) (dir: DirT): DirT :=
+      {| dir_st := dir.(dir_st);
+         dir_excl := dir.(dir_excl);
+         dir_sharers := removeOnce idx_dec oidx dir.(dir_sharers) |}.
 
   End Directory.
 
@@ -122,7 +145,7 @@ Section System.
         rule[0~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
-            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            RqAccepting /\ UpLockFree /\
             (fun (ost: OState ImplOStateIfc) orq mins =>
                summaryOf ost = mesiI))
         :transition
@@ -282,7 +305,7 @@ Section System.
         rule[1~>2]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
-            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            RqAccepting /\ UpLockFree /\
             (fun (ost: OState ImplOStateIfc) orq mins =>
                summaryOf ost <= mesiS))
         :transition
@@ -321,49 +344,15 @@ Section System.
            (do (rssFrom <-- getDownLockIndsFrom;
                   rsbTo <-- getDownLockIdxBack;
                   st {{ ImplOStateIfc }}
-                     --> (st.ost +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
-                          removeRq (st.orq) downRq,
-                          [(rsbTo, {| msg_id := mesiRsM;
-                                      msg_type := MRs;
-                                      msg_value := VUnit |})]))).
-
-      Definition downIRqUpDownS: Rule ImplOStateIfc :=
-        rule[1~>5]
-        :requires
-           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
-            RqAccepting /\ UpLockFree /\ DownLockFree /\
-            (fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implStatusIdx] = mesiS) /\
-            (fun (ost: OState ImplOStateIfc) orq mins =>
-               ost#[implDirIdx].(dir_st) = mesiS))
-        :transition
-           (do (msg <-- getFirstMsg;
-                  st {{ ImplOStateIfc }} -->
-                     let cinds := st.ost#[implDirIdx].(dir_sharers) in
-                     (st.ost,
-                      addRq (st.orq) downRq msg (map rsUpFrom cinds) oc,
-                      map (fun cidx =>
-                             (downTo cidx, {| msg_id := mesiDownRqI;
-                                              msg_type := MRq;
-                                              msg_value := VUnit |})) cinds))).
-
-      Definition downIRsUpDownS: Rule ImplOStateIfc :=
-        rule[1~>6]
-        :requires
-           (MsgsFromORq downRq /\ MsgIdFromEach mesiDownRsI /\
-            RsAccepting /\ DownLockMsgId MRq mesiDownRqI)
-        :transition
-           (do (rssFrom <-- getDownLockIndsFrom;
-                  rsbTo <-- getDownLockIdxBack;
-                  st {{ ImplOStateIfc }}
-                     --> (st.ost +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
+                     --> (st.ost +#[implStatusIdx <- mesiI]
+                                 +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
                           removeRq (st.orq) downRq,
                           [(rsbTo, {| msg_id := mesiRsM;
                                       msg_type := MRs;
                                       msg_value := VUnit |})]))).
 
       Definition downIImm: Rule ImplOStateIfc :=
-        rule[1~>7]
+        rule[1~>6]
         :requires
            (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqI] /\
             RqAccepting /\ DownLockFree /\
@@ -378,7 +367,7 @@ Section System.
                           msg_value := VUnit |})])).
 
       Definition downIRqDownDownME: Rule ImplOStateIfc :=
-        rule[1~>8]
+        rule[1~>7]
         :requires
            (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqI] /\
             RqAccepting /\ DownLockFree /\
@@ -397,7 +386,7 @@ Section System.
                                         msg_value := VUnit |})]))).
 
       Definition downIRqDownDownS: Rule ImplOStateIfc :=
-        rule[1~>9]
+        rule[1~>8]
         :requires
            (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqI] /\
             RqAccepting /\ DownLockFree /\
@@ -417,7 +406,7 @@ Section System.
                                               msg_value := VUnit |})) cinds))).
 
       Definition downIRsUpUp: Rule ImplOStateIfc :=
-        rule[1~>10]
+        rule[1~>9]
         :requires
            (MsgsFromORq downRq /\ MsgIdFromEach mesiDownRsI /\
             RsAccepting /\ DownLockMsgId MRq mesiDownRqI)
@@ -432,6 +421,129 @@ Section System.
                                       msg_value := VUnit |})]))).
 
     End SetTrs.
+
+    Section EvictTrs.
+
+      (* NOTE: in MESI protocol, it makes a crucial difference whether it is 
+       * required to send an up-to-date value or not during eviction. For example,
+       * when in E status we don't need to write the data back since it is never 
+       * written to a new value, i.e., the value is clean.
+       *)
+      
+      Definition putRqUp: Rule ImplOStateIfc :=
+        rule[2~>0]
+        :requires
+           (MsgsFrom nil /\ UpLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               ost#[implStatusIdx] < mesiM))
+        :transition
+           (do (st {{ ImplOStateIfc }}
+                   --> (st.ost,
+                        addSilentUpRq (st.orq) [po],
+                        [(opRs, {| msg_id := mesiRqI;
+                                   msg_type := MRq;
+                                   msg_value := VUnit
+                                |})]))).
+
+      Definition putRqUpM: Rule ImplOStateIfc :=
+        rule[2~>1]
+        :requires
+           (MsgsFrom nil /\ UpLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               ost#[implStatusIdx] = mesiM))
+        :transition
+           (do (st {{ ImplOStateIfc }}
+                   --> (st.ost,
+                        addSilentUpRq (st.orq) [po],
+                        [(opRs, {| msg_id := mesiRqI;
+                                   msg_type := MRq;
+                                   msg_value := VNat (st.ost#[implValueIdx])
+                                |})]))).
+
+      Definition putRsDown: Rule ImplOStateIfc :=
+        rule[2~>2]
+        :requires
+           (MsgsFromORq upRq /\ MsgIdsFrom [mesiRsI] /\
+            RsAccepting /\ UpLockMsgId MRq mesiRqI /\
+            DownLockFree)
+        :transition
+           (do (rsbTo <-- getUpLockIdxBack;
+                  st {{ ImplOStateIfc }}
+                     --> (st.ost +#[implStatusIdx <- mesiI],
+                          removeRq (st.orq) upRq,
+                          nil))).
+
+      Definition putImmI: Rule ImplOStateIfc :=
+        rule[2~>3]
+        :requires
+           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
+            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               getDir (objIdxOf coRq) ost#[implDirIdx] = mesiI))
+        :transition
+           (fun (ost: OState ImplOStateIfc) orq mins =>
+              (ost, orq,
+               [(oc, {| msg_id := mesiRsI;
+                        msg_type := MRs;
+                        msg_value := VUnit
+                     |})])).
+
+      Definition putImmS: Rule ImplOStateIfc :=
+        rule[2~>4]
+        :requires
+           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
+            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               getDir (objIdxOf coRq) ost#[implDirIdx] = mesiS))
+        :transition
+           (fun (ost: OState ImplOStateIfc) orq mins =>
+              (ost +#[implDirIdx <- removeSharer (objIdxOf coRq) ost#[implDirIdx]],
+               orq,
+               [(oc, {| msg_id := mesiRsI;
+                        msg_type := MRs;
+                        msg_value := VUnit
+                     |})])).
+
+      Definition putImmE: Rule ImplOStateIfc :=
+        rule[2~>5]
+        :requires
+           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
+            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               getDir (objIdxOf coRq) ost#[implDirIdx] = mesiE))
+        :transition
+           (fun (ost: OState ImplOStateIfc) orq mins =>
+              (ost +#[implStatusIdx <- mesiM]
+                   +#[implDirIdx <- setDirI],
+               orq,
+               [(oc, {| msg_id := mesiRsI;
+                        msg_type := MRs;
+                        msg_value := VUnit
+                     |})])).
+
+      Definition putImmM: Rule ImplOStateIfc :=
+        rule[2~>5]
+        :requires
+           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
+            RqAccepting /\ FirstNatMsg /\
+            UpLockFree /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               getDir (objIdxOf coRq) ost#[implDirIdx] = mesiM))
+        :transition
+           (do (n <-- getFirstNatMsg;
+                  st {{ ImplOStateIfc }} -->
+                     (st.ost +#[implStatusIdx <- mesiM]
+                             +#[implValueIdx <- n]
+                             +#[implDirIdx <- setDirI],
+                      st.orq,
+                      [(oc, {| msg_id := mesiRsI;
+                               msg_type := MRs;
+                               msg_value := VUnit |})]))).
+
+      (** TODO: fix bugs while setting directory status to E; 
+       * its status should be also E. *)
+
+    End EvictTrs.
 
   End CommonRules.
 
@@ -495,18 +607,20 @@ Section System.
                                     msg_type := MRs;
                                     msg_value := VNat n |})]))).
 
-    Definition getMRsDownDownI: Rule ImplOStateIfc :=
+    Definition getMRsDownDownSI: Rule ImplOStateIfc :=
       rule[3~>1]
       :requires
          (MsgsFromORq upRq /\ MsgIdsFrom [mesiRsM] /\
           RsAccepting /\ UpLockMsgId MRq mesiRqM /\
           DownLockFree /\
           (fun (ost: OState ImplOStateIfc) orq mins =>
-             ost#[implStatusIdx] = mesiI))
+             ost#[implStatusIdx] = mesiI \/
+             (ost#[implStatusIdx] = mesiS /\ ost#[implDirIdx].(dir_sharers) = nil)))
       :transition
          (do (rsbTo <-- getUpLockIdxBack;
                 st {{ ImplOStateIfc }}
-                   --> (st.ost +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
+                   --> (st.ost +#[implStatusIdx <- mesiI]
+                               +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
                         removeRq (st.orq) upRq,
                         [(rsbTo, {| msg_id := mesiRsM;
                                     msg_type := MRs;
@@ -532,7 +646,64 @@ Section System.
                                             msg_type := MRq;
                                             msg_value := VUnit |})) cinds))).
 
+    Definition downIRsUpDownS: Rule ImplOStateIfc :=
+      rule[3~>3]
+      :requires
+         (MsgsFromORq downRq /\ MsgIdFromEach mesiDownRsI /\
+          RsAccepting /\ DownLockMsgId MRq mesiDownRqI)
+      :transition
+         (do (rssFrom <-- getDownLockIndsFrom;
+                rsbTo <-- getDownLockIdxBack;
+                st {{ ImplOStateIfc }}
+                   --> (st.ost +#[implStatusIdx <- mesiI]
+                               +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
+                        removeRq (st.orq) downRq,
+                        [(rsbTo, {| msg_id := mesiRsM;
+                                    msg_type := MRs;
+                                    msg_value := VUnit |})]))).
+
   End LiRules.
+
+  Section LLCRules.
+    Variable (oidx: IdxT).
+    Variables (coRq coRs oc: IdxT).
+
+    Definition llcPutImmSNotLast: Rule ImplOStateIfc :=
+      rule[4~>0]
+      :requires
+         (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
+          RqAccepting /\ UpLockFree /\ DownLockFree /\
+          (fun (ost: OState ImplOStateIfc) orq mins =>
+             and (getDir (objIdxOf coRq) ost#[implDirIdx] = mesiS)
+                 (List.length ost#[implDirIdx].(dir_sharers) >= 2)))
+      :transition
+         (fun (ost: OState ImplOStateIfc) orq mins =>
+            (ost +#[implDirIdx <- removeSharer (objIdxOf coRq) ost#[implDirIdx]],
+             orq,
+             [(oc, {| msg_id := mesiRsI;
+                      msg_type := MRs;
+                      msg_value := VUnit
+                   |})])).
+
+    Definition llcPutImmSLast: Rule ImplOStateIfc :=
+      rule[4~>1]
+      :requires
+         (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
+          RqAccepting /\ UpLockFree /\ DownLockFree /\
+          (fun (ost: OState ImplOStateIfc) orq mins =>
+             and (getDir (objIdxOf coRq) ost#[implDirIdx] = mesiS)
+                 (List.length ost#[implDirIdx].(dir_sharers) = 1)))
+      :transition
+         (fun (ost: OState ImplOStateIfc) orq mins =>
+            (ost +#[implStatusIdx <- mesiM]
+                 +#[implDirIdx <- removeSharer (objIdxOf coRq) ost#[implDirIdx]],
+             orq,
+             [(oc, {| msg_id := mesiRsI;
+                      msg_type := MRs;
+                      msg_value := VUnit
+                   |})])).
+
+  End LLCRules.
 
 End System.
 
