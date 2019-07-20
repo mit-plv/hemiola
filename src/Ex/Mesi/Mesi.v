@@ -22,7 +22,7 @@ Definition rsUpFrom (cidx: IdxT): IdxT :=
 Definition downTo (cidx: IdxT): IdxT :=
   cidx~>downIdx.
 
-(** * TODO: use [None] when silent transactions are supported. *)
+(** FIXME: use [None] when silent transactions are supported. *)
 Definition addSilentUpRq (orq: ORq Msg) (mrss : list IdxT): ORq Msg :=
   orq +[upRq <- {| rqi_msg := {| msg_id := 0;
                                  msg_type := false;
@@ -36,7 +36,7 @@ Definition addSilentUpRq (orq: ORq Msg) (mrss : list IdxT): ORq Msg :=
  * - Directory (not snooping)
  * - Invalidate (not update)
  * - Write-back (not write-through)
- * - Inclusive (not exclusive)
+ * - NINE (non-inclusive non-exclusive)
  *)
 
 Section System.
@@ -269,7 +269,7 @@ Section System.
            (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqS] /\
             RqAccepting /\ DownLockFree /\
             (fun (ost: OState ImplOStateIfc) orq mins =>
-               mesiE <= ost#[implStatusIdx]))
+               mesiS <= ost#[implStatusIdx]))
         :transition
            (fun (ost: OState ImplOStateIfc) orq mins =>
               (ost +#[implStatusIdx <- mesiS],
@@ -278,8 +278,8 @@ Section System.
                           msg_type := MRs;
                           msg_value := VNat (ost#[implValueIdx]) |})])).
 
-      Definition liGetSRqUpDown: Rule ImplOStateIfc :=
-        rule[0~>4]
+      Definition liGetSRqUpDownME: Rule ImplOStateIfc :=
+        rule[0~>4~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -291,6 +291,24 @@ Section System.
            (do (msg <-- getFirstMsg;
                   st {{ ImplOStateIfc }} -->
                      let cidx := st.ost#[implDirIdx].(dir_excl) in
+                     (st.ost,
+                      addRq (st.orq) downRq msg [rsUpFrom cidx] oc,
+                      [(downTo cidx, {| msg_id := mesiDownRqS;
+                                        msg_type := MRq;
+                                        msg_value := VUnit |})]))).
+
+      Definition liGetSRqUpDownS: Rule ImplOStateIfc :=
+        rule[0~>4~>1]
+        :requires
+           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
+            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               and (ost#[implStatusIdx] = mesiI)
+                   (ost#[implDirIdx].(dir_st) = mesiS)))
+        :transition
+           (do (msg <-- getFirstMsg;
+                  st {{ ImplOStateIfc }} -->
+                     let cidx := hd ii (st.ost#[implDirIdx].(dir_sharers)) in
                      (st.ost,
                       addRq (st.orq) downRq msg [rsUpFrom cidx] oc,
                       [(downTo cidx, {| msg_id := mesiDownRqS;
@@ -316,8 +334,8 @@ Section System.
                                       msg_type := MRs;
                                       msg_value := VNat nv |})]))).
 
-      Definition liDownSRqDownDown: Rule ImplOStateIfc :=
-        rule[0~>6]
+      Definition liDownSRqDownDownME: Rule ImplOStateIfc :=
+        rule[0~>6~>0]
         :requires
            (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqS] /\
             RqAccepting /\ DownLockFree /\
@@ -335,7 +353,24 @@ Section System.
                                         msg_type := MRq;
                                         msg_value := VUnit |})]))).
 
-      (* NOTE: maybe it is not a good for performance to make all caches as inclusive? *)
+      Definition liDownSRqDownDownS: Rule ImplOStateIfc :=
+        rule[0~>6~>1]
+        :requires
+           (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqS] /\
+            RqAccepting /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               and (ost#[implStatusIdx] = mesiI)
+                   (ost#[implDirIdx].(dir_st) = mesiS)))
+        :transition
+           (do (msg <-- getFirstMsg;
+                  st {{ ImplOStateIfc }} -->
+                     let cidx := hd ii (st.ost#[implDirIdx].(dir_sharers)) in
+                     (st.ost,
+                      addRq (st.orq) downRq msg [rsUpFrom cidx] opRs,
+                      [(downTo cidx, {| msg_id := mesiDownRqS;
+                                        msg_type := MRq;
+                                        msg_value := VUnit |})]))).
+
       Definition liDownSRsUpUp: Rule ImplOStateIfc :=
         rule[0~>7]
         :requires
@@ -620,12 +655,6 @@ Section System.
     End SetTrs.
 
     Section EvictTrs.
-
-      (** FIXME: deal with an eviction problem that may break a
-       * cache-inclusiveness property, e.g., eviction of a S block of a parent.
-       * 
-       * NOTE: back-invalidation is required when evicting a S block 
-       *)
 
       (* NOTE: in MESI protocol, it makes a crucial difference whether it is 
        * required to send an up-to-date value or not during eviction. For example,
