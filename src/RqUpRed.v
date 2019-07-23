@@ -73,15 +73,21 @@ Section RqUpReduction.
     inv_step.
     red_obj_rule.
     disc_rule_conds.
-    pose proof (rqEdgeUpFrom_Some H7 _ H2).
-    destruct H11 as [rsUp [down [pidx ?]]]; dest.
-    repeat disc_rule_minds.
-    exists pidx.
-    red; do 2 eexists; repeat split; try eassumption.
+    - pose proof (rqEdgeUpFrom_Some H7 _ H2).
+      destruct H6 as [rsUp [down [pidx ?]]]; dest.
+      repeat disc_rule_minds.
+      exists pidx.
+      right; do 2 eexists; repeat split; try eassumption.
+    - pose proof (rqEdgeUpFrom_Some H7 _ H2).
+      destruct H11 as [rsUp [down [pidx ?]]]; dest.
+      repeat disc_rule_minds.
+      exists pidx.
+      right; do 2 eexists; repeat split; try eassumption.
   Qed.
-  
+
   Lemma rqUp_spec:
     forall oidxTo rqUps,
+      rqUps <> nil ->
       RqUpMsgs dtr oidxTo rqUps ->
       forall oidx ridx rins routs st1 st2,
         SubList rqUps routs ->
@@ -90,19 +96,22 @@ Section RqUpReduction.
         RqUpMsgs dtr oidx rins /\
         parentIdxOf dtr oidx = Some oidxTo /\
         routs = rqUps /\
-        exists cidx rqFrom rqfm rqTo rqtm down orq rqiu,
-          rins = [(rqFrom, rqfm)] /\
-          parentIdxOf dtr cidx = Some oidx /\
-          rqEdgeUpFrom dtr cidx = Some rqFrom /\
-          edgeDownTo dtr cidx = Some down /\
+        (exists orq rqiu,
+            st2.(bst_orqs)@[oidx] = Some orq /\
+            orq@[upRq] = Some rqiu /\
+            ((rins = nil /\ rqiu.(rqi_midx_rsb) = None) \/
+             exists cidx rqFrom rqfm down,
+               rins = [(rqFrom, rqfm)] /\
+               parentIdxOf dtr cidx = Some oidx /\
+               rqEdgeUpFrom dtr cidx = Some rqFrom /\
+               edgeDownTo dtr cidx = Some down /\
+               rqiu.(rqi_midx_rsb) = Some down)) /\
+        exists rqTo rqtm,
           rqUps = [(rqTo, rqtm)] /\
-          st2.(bst_orqs)@[oidx] = Some orq /\
-          orq@[upRq] = Some rqiu /\ rqiu.(rqi_midx_rsb) = down /\
           rqEdgeUpFrom dtr oidx = Some rqTo /\
           length (findQ rqTo st2.(bst_msgs)) = 1.
   Proof.
-    intros.
-    destruct Hrrs as [? [? ?]].
+    destruct Hrrs as [? [? ?]]; intros.
 
     assert (UpLockInv dtr sys st2) as Hlock.
     { apply upLockInv_ok; auto.
@@ -111,50 +120,64 @@ Section RqUpReduction.
       econstructor.
     }
 
-    inv H2; simpl in *.
-    destruct H as [oidx [[rqUp rqm] ?]];
+    inv_step; simpl in *.
+    destruct H3; [exfalso; auto|].
+    destruct H3 as [oidx [[rqUp rqm] ?]];
       dest; simpl in *; subst; simpl in *.
     
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
 
     - exfalso; disc_rule_conds.
+      specialize (H4 _ (or_introl eq_refl)); dest_in.
     - exfalso; disc_rule_conds.
 
     - disc_rule_conds.
-      + (** The only non-"exfalso" case *)
-        good_locking_get obj.
+      + good_locking_get obj.
         disc_rule_conds.
-        dest; repeat split.
-        * exists cidx; eexists.
-          repeat split; try assumption.
-        * do 8 eexists.
-          repeat split; try eassumption.
+        repeat split.
+        * left; reflexivity.
+        * do 2 eexists; repeat split.
           { mred. }
-          { clear -H26.
-            rewrite findQ_In_enqMP in *.
-            rewrite app_length in H26; simpl in H26.
-            rewrite app_length; simpl.
-            omega.
-          }
+          { left; auto. }
+        * do 2 eexists; repeat split.
+          rewrite findQ_In_enqMP in *.
+          rewrite app_length in H25; simpl in H25.
+          rewrite app_length; simpl.
+          omega.
+        
+      + good_locking_get obj.
+        disc_rule_conds.
+        repeat split.
+        * right; do 2 eexists; repeat split; try eassumption.
+        * do 2 eexists; repeat split.
+          { mred. }
+          { right; do 4 eexists; repeat split; try eassumption. }
+        * do 2 eexists; repeat split.
+          rewrite findQ_In_enqMP in *.
+          rewrite app_length in H27; simpl in H27.
+          rewrite app_length; simpl.
+          omega.
 
       + exfalso; disc_rule_conds.
-        apply SubList_singleton_In in H0.
-        eapply RqRsDownMatch_rq_rs in H24; [|apply in_map; eassumption].
-        destruct H24 as [cidx [rsUp ?]]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H24); auto.
+        apply SubList_singleton_In in H4.
+        eapply RqRsDownMatch_rq_rs in H25; [|apply in_map; eassumption].
+        destruct H25 as [cidx [rsUp ?]]; dest.
+        solve_midx_false.
       + exfalso; disc_rule_conds.
-        apply SubList_singleton_In in H0.
-        eapply RqRsDownMatch_rq_rs in H9; [|apply in_map; eassumption].
-        destruct H9 as [cidx [rsUp ?]]; dest.
-        pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H15); auto.
+        apply SubList_singleton_In in H4.
+        eapply RqRsDownMatch_rq_rs in H10; [|apply in_map; eassumption].
+        destruct H10 as [cidx [rsUp ?]]; dest.
+        solve_midx_false.
 
     - exfalso; disc_rule_conds.
+      specialize (H4 _ (or_introl eq_refl)); dest_in.
+      
     - exfalso; disc_rule_conds.
-      apply SubList_singleton_In in H0.
-      eapply RqRsDownMatch_rq_rs in H24; [|apply in_map; eassumption].
-      destruct H24 as [cidx [down ?]]; dest.
-      pose proof (rqrsDTree_rqUp_down_not_eq H3 _ _ H7 H25); auto.
+      apply SubList_singleton_In in H4.
+      eapply RqRsDownMatch_rq_rs in H25; [|apply in_map; eassumption].
+      destruct H25 as [cidx [down ?]]; dest.
+      solve_midx_false.
   Qed.
 
   Ltac disc_rule_custom ::=
@@ -167,30 +190,30 @@ Section RqUpReduction.
       GoodRqRsRule dtr sys oidx rule ->
       rule_precond rule post porq rins ->
       rule_trs rule post porq rins = (nost, norq, routs) ->
-      RqUpMsgs dtr oidxTo routs ->
+      routs <> nil -> RqUpMsgs dtr oidxTo routs ->
       RqToUpRule dtr oidx rule.
   Proof.
     intros; destruct Hrrs as [? [? ?]].
     good_rqrs_rule_cases rule.
-    - exfalso; disc_rule_conds.
-    - exfalso; disc_rule_conds.
+    - exfalso; disc_rule_conds; auto.
+    - exfalso; disc_rule_conds; auto.
     - destruct H.
       split; try assumption.
-      destruct H6 as [|[|]].
+      destruct H7 as [|[|]].
       + eauto.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_rs in H12; [|left; reflexivity].
-        destruct H12 as [cidx' [rsUp ?]]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H18 H12); reflexivity.
+        eapply RqRsDownMatch_rq_rs in H13; [|left; reflexivity].
+        destruct H13 as [cidx' [rsUp ?]]; dest.
+        solve_midx_false.
       + exfalso; disc_rule_conds.
-        eapply RqRsDownMatch_rq_rs in H7; [|left; reflexivity].
-        destruct H7 as [cidx' [rsUp ?]]; dest.
-        elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H12 H14); reflexivity.
+        eapply RqRsDownMatch_rq_rs in H8; [|left; reflexivity].
+        destruct H8 as [cidx' [rsUp ?]]; dest.
+        solve_midx_false.
     - exfalso; disc_rule_conds.
-    - exfalso; disc_rule_conds.
-      eapply RqRsDownMatch_rq_rs in H12; [|left; reflexivity].
-      destruct H12 as [cidx' [rsUp ?]]; dest.
-      elim (rqrsDTree_rqUp_down_not_eq H3 _ _ H15 H12); reflexivity.
+    - exfalso; disc_rule_conds; auto.
+      eapply RqRsDownMatch_rq_rs in H13; [|left; reflexivity].
+      destruct H13 as [cidx' [rsUp ?]]; dest.
+      solve_midx_false.
   Qed.
 
   Ltac disc_rule_custom ::=
@@ -212,7 +235,8 @@ Section RqUpReduction.
     red; intros.
     split.
     - disc_rule_conds.
-      eapply H12; [eassumption|mred].
+      + eapply H12; [eassumption|mred].
+      + eapply H12; [eassumption|mred].
     - remember (rule_trs rule2 nost1 norq1 ins2) as trs2.
       destruct trs2 as [[nost2 norq2] outs2]; apply eq_sym in Heqtrs2.
       remember (rule_trs rule2 post1 porq1 ins2) as rtrs2.
@@ -221,30 +245,54 @@ Section RqUpReduction.
       destruct rtrs1 as [[rnost1 rnorq1] routs1]; apply eq_sym in Heqrtrs1.
 
       assert (rule_precond rule2 post1 porq1 ins2)
-        by (disc_rule_conds; eapply H12; [eassumption|mred]).
+        by (disc_rule_conds; try (eapply H12; [eassumption|mred])).
       assert (rule_precond rule1 rnost2 rnorq2 ins1)
-        by (disc_rule_conds; eapply H10; [eassumption|mred]).
+        by (disc_rule_conds; try (eapply H10; [eassumption|mred])).
       disc_rule_conds.
-      specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) [(rqFrom, rqi_msg rqi)]).
-      rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
-      specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom1, rqi_msg rqi1)]).
-      rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
 
-      repeat split.
-      + eapply H11; [eassumption|mred].
-      + f_equal; meq.
-        * destruct rqi1 as [rqim1 rss1 rsb1].
-          destruct rqi2 as [rqim2 rss2 rsb2].
-          simpl in *; subst.
-          destruct Hrrs as [? _].
-          pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
-          reflexivity.
-        * destruct rqi as [rqim rss rsb].
-          destruct rqi0 as [rqim0 rss0 rsb0].
-          simpl in *; subst.
-          destruct Hrrs as [? _].
-          pose proof (footprintUpOk_rs_eq H0 H48 H54); dest; subst.
-          reflexivity.
+      + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) nil).
+        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom, rqfm)]).
+        rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
+        repeat split.
+        * eapply H11; [eassumption|mred].
+        * f_equal; meq.
+          { destruct rqi1 as [rqim1 rss1 rsb1].
+            destruct rqi2 as [rqim2 rss2 rsb2].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
+            reflexivity.
+          }
+          { destruct rqi as [rqim rss rsb].
+            destruct rqi0 as [rqim0 rss0 rsb0].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintUpOk_rs_None_eq H50 H56); dest; subst.
+            reflexivity.
+          }
+        
+      + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) [(rqFrom, rqfm)]).
+        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom1, rqfm1)]).
+        rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
+        repeat split.
+        * eapply H11; [eassumption|mred].
+        * f_equal; meq.
+          { destruct rqi1 as [rqim1 rss1 rsb1].
+            destruct rqi2 as [rqim2 rss2 rsb2].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
+            reflexivity.
+          }
+          { destruct rqi as [rqim rss rsb].
+            destruct rqi0 as [rqim0 rss0 rsb0].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintUpOk_rs_Some_eq H0 H50 H56); dest; subst.
+            reflexivity.
+          }
   Qed.
 
   Lemma rqUpUp_rqDownDown_reducible:
@@ -259,7 +307,8 @@ Section RqUpReduction.
     red; intros.
     split.
     - disc_rule_conds.
-      eapply H12; [eassumption|mred].
+      + eapply H12; [eassumption|mred].
+      + eapply H12; [eassumption|mred].
     - remember (rule_trs rule2 nost1 norq1 ins2) as trs2.
       destruct trs2 as [[nost2 norq2] outs2]; apply eq_sym in Heqtrs2.
       remember (rule_trs rule2 post1 porq1 ins2) as rtrs2.
@@ -268,30 +317,56 @@ Section RqUpReduction.
       destruct rtrs1 as [[rnost1 rnorq1] routs1]; apply eq_sym in Heqrtrs1.
 
       assert (rule_precond rule2 post1 porq1 ins2)
-        by (disc_rule_conds; eapply H12; [eassumption|mred]).
+        by (disc_rule_conds; try (eapply H12; [eassumption|mred])).
       assert (rule_precond rule1 rnost2 rnorq2 ins1)
-        by (disc_rule_conds; eapply H10; [eassumption|mred]).
+        by (disc_rule_conds; try (eapply H10; [eassumption|mred])).
       disc_rule_conds.
-      specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) [(rqFrom, rqi_msg rqi)]).
-      rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
-      specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom1, rqi_msg rqi1)]).
-      rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
 
-      repeat split.
-      + eapply H11; [eassumption|mred].
-      + f_equal; meq.
-        * destruct rqi1 as [rqim1 rss1 rsb1].
-          destruct rqi2 as [rqim2 rss2 rsb2].
-          simpl in *; subst.
-          destruct Hrrs as [? _].
-          pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
-          reflexivity.
-        * destruct rqi as [rqim rss rsb].
-          destruct rqi0 as [rqim0 rss0 rsb0].
-          simpl in *; subst.
-          destruct Hrrs as [? _].
-          pose proof (footprintUpOk_rs_eq H0 H48 H54); dest; subst.
-          reflexivity.
+      + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) nil).
+        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom, rqfm)]).
+        rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
+
+        repeat split.
+        * eapply H11; [eassumption|mred].
+        * f_equal; meq.
+          { destruct rqi1 as [rqim1 rss1 rsb1].
+            destruct rqi2 as [rqim2 rss2 rsb2].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
+            reflexivity.
+          }
+          { destruct rqi as [rqim rss rsb].
+            destruct rqi0 as [rqim0 rss0 rsb0].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintUpOk_rs_None_eq H50 H56); dest; subst.
+            reflexivity.
+          }
+
+      + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) [(rqFrom, rqfm)]).
+        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom1, rqfm1)]).
+        rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
+
+        repeat split.
+        * eapply H11; [eassumption|mred].
+        * f_equal; meq.
+          { destruct rqi1 as [rqim1 rss1 rsb1].
+            destruct rqi2 as [rqim2 rss2 rsb2].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
+            reflexivity.
+          }
+          { destruct rqi as [rqim rss rsb].
+            destruct rqi0 as [rqim0 rss0 rsb0].
+            simpl in *; subst.
+            destruct Hrrs as [? _].
+            pose proof (footprintUpOk_rs_Some_eq H0 H50 H56); dest; subst.
+            reflexivity.
+          }
   Qed.
 
   Ltac disc_rule_custom ::=
@@ -301,7 +376,8 @@ Section RqUpReduction.
     try disc_rqToUpRule.
 
   Lemma rqUp_lbl_commutes:
-    forall oidxTo rqUps st1 st2 oidx1 ridx1 rins1 routs1 oidx2 ridx2 rins2 routs2,
+    forall oidxTo rqUps (Hru: rqUps <> nil)
+           st1 st2 oidx1 ridx1 rins1 routs1 oidx2 ridx2 rins2 routs2,
       RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps routs1 ->
       DisjList routs1 rins2 ->
@@ -322,10 +398,11 @@ Section RqUpReduction.
     pose proof (footprints_ok Hiorqs H5 (reachable_steps H2 H10)) as HftInv.
     
     inv_steps.
-    pose proof (rqUp_spec H H0 H2 H13).
-    destruct H3 as [? [? [? ?]]].
-    destruct H9 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
-    dest; subst.
+    pose proof (rqUp_spec Hru H H0 H2 H13).
+    destruct H3 as [? [? [? [? ?]]]].
+    destruct H9 as [orq [rqiu [? [? ?]]]].
+    destruct H10 as [rqTo [rqtm [? [? ?]]]].
+    subst.
     inv_step; simpl in *.
     good_rqrs_rule_get rule.
     eapply rqUpMsgs_RqToUpRule in H8; try eassumption.
@@ -341,17 +418,19 @@ Section RqUpReduction.
       + (** case [ImmUpRule] *)
         assert (RsToUpRule dtr (obj_idx obj) rule0) by (left; assumption).
         good_rqUp_rsUp_get rule rule0.
-        disc_rule_conds.
+        phide H3; phide H8.
         repeat split; try assumption.
         * right; split; [reflexivity|].
           intros; red_obj_rule.
           assumption.
-        * solve_midx_disj.
-        * solve_midx_disj.
+        * destruct H14; dest; subst; disc_rule_conds.
+          { apply DisjList_nil_1. }
+          { solve_midx_disj. }
+        * disc_rule_conds; solve_midx_disj.
 
       + (** case [RqFwdRule] *)
         mred.
-        destruct H9; destruct H12 as [|[|]].
+        destruct H10; destruct H10 as [|[|]].
         * (** case [RqUpUp] *)
           exfalso; disc_rule_conds.
 
@@ -363,12 +442,13 @@ Section RqUpReduction.
             red in H8, H9; dest.
             eapply rqUpUp_rqUpDown_reducible; eauto.
           }
-          { disc_rule_conds.
-            destruct (idx_dec upCObj.(obj_idx) cidx1); subst.
+          { destruct H14; dest; subst; disc_rule_conds;
+              [apply DisjList_nil_1|].
+            destruct (idx_dec upCObj.(obj_idx) cidx0); subst.
             { exfalso.
               good_locking_get upCObj.
               red in H.
-              apply parentIdxOf_not_eq in H12;
+              apply parentIdxOf_not_eq in H10;
                 [|destruct Hrrs as [[? ?] _]; assumption]; mred.
               match goal with
               | [H: match ?ul with | Some _ => _ | None => _ end |- _] =>
@@ -388,7 +468,9 @@ Section RqUpReduction.
             }
             { solve_midx_disj. }
           }
-          { disc_rule_conds; solve_midx_disj. }
+          { phide H3; phide H8.
+            disc_rule_conds; solve_midx_disj.
+          }
           
         * (** case [RqDownDown] *)
           repeat split; try assumption.
@@ -398,30 +480,48 @@ Section RqUpReduction.
             red in H8, H9; dest.
             eapply rqUpUp_rqDownDown_reducible; eauto.
           }
-          { disc_rule_conds; solve_midx_disj. }
-          { disc_rule_conds; solve_midx_disj. }
+          { phide H3; phide H8.
+            destruct H14; dest; subst.
+            { apply DisjList_nil_1. }
+            { disc_rule_conds; solve_midx_disj. }
+          }
+          { phide H3; phide H8.
+            disc_rule_conds; solve_midx_disj.
+          }
 
       + (** case [RsBackRule] *)
         good_footprint_get (obj_idx obj).
-        mred; destruct H9; destruct H9; dest.
+        destruct H10; destruct H10; dest.
         * (** case [FootprintReleasingUp] *)
+          phide H3; phide H8.
           exfalso; disc_rule_conds.
-          good_locking_get obj.
-          disc_lock_conds; dest.
-          eapply upLockedInv_False_1; eauto.
-          { apply InMP_or_enqMP; auto. }
-          { apply FirstMP_InMP; auto. }
+          { good_locking_get obj.
+            disc_lock_conds; dest.
+            eapply upLockedInv_False_1; eauto.
+            { apply InMP_or_enqMP; auto. }
+            { apply FirstMP_InMP; auto. }
+          }
+          { good_locking_get obj.
+            disc_lock_conds; dest.
+            eapply upLockedInv_False_1; eauto.
+            { apply InMP_or_enqMP; auto. }
+            { apply FirstMP_InMP; auto. }
+          }
 
         * (** case [FootprintReleasingDown] *)
           assert (RsToUpRule dtr (obj_idx obj) rule0) by (right; eauto).
           good_rqUp_rsUp_get rule rule0.
+          phide H3; phide H8.
           disc_rule_conds.
           { repeat split; try assumption.
             { right; split; [reflexivity|].
               intros; red_obj_rule.
               assumption.
             }
-            { rewrite H49; solve_midx_disj. }
+            { destruct H14; dest; subst; [apply DisjList_nil_1|].
+              disc_rule_conds.
+              rewrite H47; solve_midx_disj.
+            }
             { solve_midx_disj. }
           }
           { repeat split; try assumption.
@@ -429,11 +529,15 @@ Section RqUpReduction.
               intros; red_obj_rule.
               assumption.
             }
-            { rewrite H49; solve_midx_disj. }
+            { destruct H14; dest; subst; [apply DisjList_nil_1|].
+              disc_rule_conds.
+              rewrite H47; solve_midx_disj.
+            }
             { solve_midx_disj. }
           }
 
       + (** case [RsDownRqDownRule] *)
+        phide H3; phide H8.
         exfalso; disc_rule_conds.
         good_locking_get obj.
         disc_lock_conds; dest.
@@ -443,34 +547,78 @@ Section RqUpReduction.
 
     - (* Better to extract as a lemma for arbitrary [Rule]s? *)
       split; [red; auto|].
-      good_footprint_get (obj_idx obj0).
-      good_rqrs_rule_cases rule0.
-      + disc_rule_conds.
-        destruct (idx_dec cidx0 cidx2);
-          [subst; rewrite H56 in H9; elim n; inv H9; reflexivity|].
-        split; [|split]; [|assumption|]; solve_midx_disj.
-      + disc_rule_conds.
-        split; [|split]; [|assumption|]; solve_midx_disj.
-      + disc_rule_conds.
-        * destruct (idx_dec cidx2 cidx0);
-            [subst; rewrite H0 in H46; elim n; inv H46; reflexivity|].
+      destruct H14; dest; subst; disc_rule_conds.
+        
+      + good_footprint_get (obj_idx obj0).
+        good_rqrs_rule_cases rule0.
+        * disc_rule_conds; [repeat ssplit; apply DisjList_nil_2|].
+          destruct (idx_dec cidx0 cidx).
+          { subst; rewrite H59 in H0; elim n; inv H0; reflexivity. }
+          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+        * disc_rule_conds.
+          repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj].
+        * disc_rule_conds.
+          { repeat ssplit; try apply DisjList_nil_2.
+            destruct (idx_dec cidx cidx0).
+            { subst; rewrite H0 in H9; elim n; inv H9; reflexivity. }
+            { solve_midx_disj. }
+          }
+          { repeat ssplit; try apply DisjList_nil_1.
+            { assumption. }
+            { solve_midx_disj. }
+          }
+          { destruct (idx_dec cidx (obj_idx upCObj)).
+            { subst; rewrite H11 in H0; elim n; inv H0; reflexivity. }
+            { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+          }
+          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+        * disc_rule_conds.
+          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+          { repeat ssplit; [apply DisjList_nil_1|assumption|apply DisjList_nil_2]. }
+          { rewrite H51.
+            repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+          { rewrite H51.
+            repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+        * disc_rule_conds.
+          repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj].
+
+      + good_footprint_get (obj_idx obj0).
+        good_rqrs_rule_cases rule0.
+        * disc_rule_conds; [repeat ssplit; apply DisjList_nil_2|].
+          destruct (idx_dec cidx0 cidx).
+          { subst; rewrite H63 in H12; elim n; inv H12; reflexivity. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+        * disc_rule_conds.
           split; [|split]; [|assumption|]; solve_midx_disj.
-        * destruct (idx_dec cidx1 (obj_idx upCObj));
-            [subst; rewrite H47 in H15; elim n; inv H15; reflexivity|].
+        * disc_rule_conds.
+          { repeat ssplit; try apply DisjList_nil_2.
+            destruct (idx_dec cidx cidx0).
+            { subst; rewrite H7 in H12; elim n; inv H12; reflexivity. }
+            { solve_midx_disj. }
+          }
+          { destruct (idx_dec cidx cidx0).
+            { subst; rewrite H7 in H12; elim n; inv H12; reflexivity. }
+            { split; [|split]; [|assumption|]; solve_midx_disj. }
+          }
+          { destruct (idx_dec cidx0 (obj_idx upCObj)).
+            { subst; rewrite H10 in H12; elim n; inv H12; reflexivity. }
+            { split; [|split]; [|assumption|]; solve_midx_disj. }
+          }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+        * disc_rule_conds.
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [solve_midx_disj|assumption|apply DisjList_nil_2]. }
+          { rewrite H55.
+            split; [|split]; [|assumption|]; solve_midx_disj. }
+          { rewrite H55.
+            split; [|split]; [|assumption|]; solve_midx_disj. }
+        * disc_rule_conds.
           split; [|split]; [|assumption|]; solve_midx_disj.
-        * split; [|split]; [|assumption|]; solve_midx_disj.
-      + disc_rule_conds.
-        * split; [|split]; [|assumption|]; solve_midx_disj.
-        * rewrite H50.
-          split; [|split]; [|assumption|]; solve_midx_disj.
-        * rewrite H50.
-          split; [|split]; [|assumption|]; solve_midx_disj.
-      + disc_rule_conds.
-        split; [|split]; [|assumption|]; solve_midx_disj.
   Qed.
 
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
+      rqUps <> nil ->
       RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps routs1 ->
       forall oidx2 ridx2 rins2 routs2,
@@ -502,6 +650,7 @@ Section RqUpReduction.
       RqUpMsgsFrom cidx pidx [(rqTo, rqtm)].
   Proof.
     intros.
+    destruct H; [discriminate|].
     destruct H as [rcidx [rqUp ?]]; dest; subst.
     inv H; simpl in *.
     econstructor; eauto.
@@ -514,7 +663,7 @@ Section RqUpReduction.
   Proof.
     intros.
     destruct H as [rqUp ?]; dest; subst.
-    econstructor; eauto.
+    right; do 2 eexists; eauto.
   Qed.
 
   Inductive RqUpHistory: MHistory -> IdxT -> list (Id Msg) -> Prop :=
@@ -540,7 +689,7 @@ Section RqUpReduction.
   Lemma rqUp_atomic:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
-      forall oidxTo rqUps,
+      forall oidxTo rqUps (Hru: rqUps <> nil),
         RqUpMsgs dtr oidxTo rqUps ->
         SubList rqUps eouts ->
         forall st1 st2,
@@ -551,28 +700,30 @@ Section RqUpReduction.
     induction 1; simpl; intros; subst.
     - inv_steps.
       eapply rqUp_spec in H8; try eassumption.
-      destruct H8 as [? [? [? ?]]].
-      destruct H5 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
-      dest; subst.
+      destruct H8 as [? [? [? [? ?]]]].
+      destruct H5 as [orq [rqiu [? [? ?]]]].
+      destruct H6 as [rqTo [rqtm ?]]; dest; subst.
       split; [reflexivity|].
       econstructor.
       eapply rqUpMsgsFrom_RqUpMsgs; eauto.
-    - destruct H5 as [cidx [rqUp ?]]; dest; subst.
-      inv H8.
+    - destruct H5; [exfalso; auto|].
+      destruct H2 as [cidx [rqUp ?]]; dest; subst.
+      inv_steps.
       apply SubList_singleton_In in H6.
       apply in_app_or in H6; destruct H6.
       + exfalso.
         pose proof (removeL_In_2 _ _ _ _ H2).
         assert (RqUpMsgs dtr oidxTo [rqUp] /\ SubList [rqUp] eouts).
         { split.
-          { exists cidx, rqUp; repeat split; assumption. }
+          { right; exists cidx, rqUp; repeat split; assumption. }
           { red; intros; dest_in; assumption. }
         }
-        destruct H8.
-        specialize (IHAtomic _ _ H8 H9 _ _ H7 H11); dest.
+        dest.
+        specialize (IHAtomic _ _ Hru H8 H9 _ _ H7 H11); dest.
         assert (exists oidxTo, RqUpMsgs dtr oidxTo eouts)
           by (inv H12; eauto).
         destruct H14 as [poidxTo ?].
+        destruct H14; [subst; discriminate|].
         destruct H14 as [pcidx [prqUp ?]]; dest; subst.
         inv H14.
         inv H13; destruct H26; red in H13.
@@ -588,19 +739,20 @@ Section RqUpReduction.
           elim H4; simpl; tauto.
       + assert (RqUpMsgs dtr oidxTo [rqUp] /\ SubList [rqUp] routs).
         { split.
-          { exists cidx, rqUp; repeat split; assumption. }
+          { right; exists cidx, rqUp; repeat split; assumption. }
           { red; intros; dest_in; assumption. }
         }
-        destruct H6.
+        dest.
         eapply rqUp_spec in H13; eauto.
-        destruct H13 as [? [? [? ?]]].
-        destruct H13 as [cidx' [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
-        dest; subst.
-        specialize (IHAtomic _ _ H9 H1 _ _ H7 H11); dest; subst.
+        destruct H13 as [? [? [? [? ?]]]].
+        destruct H13 as [orq [rqiu [? [? ?]]]].
+        destruct H14 as [rqTo [rqtm ?]]; dest; subst.
+        assert ([rqUp] <> nil) as HrqUp by discriminate.
+        specialize (IHAtomic _ _ H0 H9 H1 _ _ H7 H11); dest; subst.
         rewrite removeL_nil; simpl.
-        split; [reflexivity|].        
+        split; [reflexivity|].
         econstructor; eauto.
-        inv H17.
+        inv H14.
         eapply rqUpMsgsFrom_RqUpMsgs; eauto.
   Qed.
 
@@ -640,7 +792,8 @@ Section RqUpReduction.
           rqEdgeUpFrom dtr loidx = Some (idOf rqUp).
   Proof.
     intros.
-    eapply rqUp_atomic in H; eauto; [dest|apply SubList_refl].
+    eapply rqUp_atomic in H; eauto;
+      [dest|discriminate|apply SubList_refl].
     eapply rqUpHistory_lastOIdxOf; eauto.
   Qed.
 
@@ -687,12 +840,13 @@ Section RqUpReduction.
           SubList (oindsOf hst) (subtreeIndsOf dtr tidx).
   Proof.
     intros.
-    eapply rqUp_atomic in H2; eauto; [dest|apply SubList_refl].
+    eapply rqUp_atomic in H2; eauto; [dest|discriminate|apply SubList_refl].
     eapply rqUpHistory_bounded; eauto.
   Qed.
 
   Corollary rqUp_atomic_inside_tree:
     forall roidx rqUps,
+      rqUps <> nil ->
       RqUpMsgs dtr roidx rqUps ->
       forall inits ins hst outs,
         Atomic msg_dec inits ins hst outs rqUps ->
@@ -702,8 +856,9 @@ Section RqUpReduction.
           SubList (oindsOf hst) (subtreeIndsOf dtr roidx).
   Proof.
     intros.
-    pose proof H.
-    destruct H3 as [cidx [rqUp ?]]; dest; subst.
+    pose proof H0.
+    destruct H4; [exfalso; auto|].
+    destruct H4 as [cidx [rqUp ?]]; dest; subst.
     eapply rqUp_atomic_bounded; eauto.
     apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
   Qed.
@@ -717,7 +872,7 @@ Section RqUpReduction.
         edgeDownTo dtr cidx = Some down ->
         st1.(bst_orqs)@[cidx] = Some corq -> corq@[upRq] <> None ->
         st1.(bst_orqs)@[pidx] = Some porq ->
-        porq@[upRq] = Some prqi -> prqi.(rqi_midx_rsb) = down ->
+        porq@[upRq] = Some prqi -> prqi.(rqi_midx_rsb) = Some down ->
         forall oidx ridx rins routs st2,
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           DisjList (idsOf rins) [rqUp].
@@ -729,11 +884,11 @@ Section RqUpReduction.
     good_rqrs_rule_cases rule.
 
     - (** case [ImmDownRule] *)
-      disc_rule_conds.
+      disc_rule_conds; [apply DisjList_nil_1|].
       destruct (idx_dec cidx0 cidx);
         subst; [|solve_midx_disj].
       exfalso.
-      rewrite H2 in H38; inv H38.
+      rewrite H2 in H39; inv H39.
       congruence.
 
     - (** case [ImmUpRule] *)
@@ -742,10 +897,12 @@ Section RqUpReduction.
 
     - (** case [RqFwdRule] *)
       disc_rule_conds.
+      + (** case [RqUpUp-silent] *)
+        apply DisjList_nil_1.
       + (** case [RqUpUp] *)
         destruct (idx_dec cidx0 cidx);
           subst; [|solve_midx_disj].
-        rewrite H0 in H7; inv H7.
+        rewrite H0 in H8; inv H8.
         congruence.
       + (** case [RqUpDown] *)
         pose proof (upLockInv_ok Hiorqs H10 H9 H) as HlockInv.
@@ -753,15 +910,12 @@ Section RqUpReduction.
         destruct (idx_dec (obj_idx upCObj) cidx);
           subst; [|solve_midx_disj].
         exfalso.
-        rewrite H0 in H12; inv H12.
-        rewrite H1 in H13; inv H13.
-        red in H8; rewrite H3 in H8.
-        simpl in H8.
-        destruct (corq@[upRq]); [|elim H4; reflexivity].
-        destruct H8 as [rqUp [down [pidx ?]]]; dest.
-        rewrite H2 in H12; inv H12.
-        rewrite H1 in H8; inv H8.
         rewrite H0 in H13; inv H13.
+        rewrite H1 in H14; inv H14.
+        red in H12; rewrite H3 in H12; simpl in H12.
+        destruct (corq@[upRq]); [|elim H4; reflexivity].
+        dest; destruct H13 as [rqUp [rdown [pidx ?]]]; dest.
+        disc_rule_conds.
         eapply xor3_False_2; [eassumption| |].
         * eapply findQ_length_one; eauto.
         * red.
@@ -774,13 +928,14 @@ Section RqUpReduction.
       good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + solve_midx_disj.
-      + rewrite H35; solve_midx_disj.
-      + rewrite H35; solve_midx_disj.
+      + solve_midx_disj.
+      + rewrite H36; solve_midx_disj.
+      + rewrite H36; solve_midx_disj.
 
     - disc_rule_conds.
       solve_midx_disj.
   Qed.
-  
+
   Lemma rqUpHistory_lpush_lbl:
     forall phst oidxTo rqUps,
       RqUpHistory phst oidxTo rqUps ->
@@ -793,14 +948,16 @@ Section RqUpReduction.
             steps step_m sys st1 (phst ++ [RlblInt oidx ridx rins routs]) st2.
   Proof.
     induction 1; simpl; intros; subst.
-    - eapply rqUp_lbl_reducible; eauto.
-      + eapply rqUpMsgs_RqUpMsgsFrom; eauto.
-      + apply SubList_refl.
+    - eapply rqUp_lbl_reducible; eauto;
+        [|eapply rqUpMsgs_RqUpMsgsFrom; eauto
+         |apply SubList_refl].
+      red in H; dest; subst; discriminate.
     - eapply reducible_trans; eauto.
       + apply reducible_cons_2.
-        eapply rqUp_lbl_reducible; eauto.
-        * eapply rqUpMsgs_RqUpMsgsFrom; eauto.
-        * apply SubList_refl.
+        eapply rqUp_lbl_reducible; eauto;
+          [|eapply rqUpMsgs_RqUpMsgsFrom; eauto
+           |apply SubList_refl].
+        red in H1; dest; subst; discriminate.
       + destruct Hrrs as [? [? ?]].
         apply reducible_cons.
         red; intros.
@@ -821,34 +978,43 @@ Section RqUpReduction.
 
         pose proof H14 as Hru.
         eapply rqUp_spec with (rqUps:= routs) in Hru; eauto;
-          [|eapply rqUpMsgs_RqUpMsgsFrom; eauto
+          [|red in H1; dest; subst; discriminate
+           |eapply rqUpMsgs_RqUpMsgsFrom; eauto
            |apply SubList_refl
            |eapply reachable_steps;
             [eapply H4|apply steps_singleton; eassumption]].
-        destruct Hru as [? [? [? ?]]].
-        destruct H12 as [cidx [rqFrom [rqfm [rqTo [rqtm [down [orq [rqiu ?]]]]]]]].
-        dest; subst.
+        destruct Hru as [? [? [? [? ?]]]].
+        destruct H12 as [orq [rqiu ?]].
+        destruct H16 as [rqTo [rqtm ?]]; dest; subst.
+
+        destruct H20.
+        1: {
+          exfalso; dest; subst.
+          apply rqUpHistory_RqUpMsgsFrom in H; destruct H as [cidx ?].
+          red in H; dest; discriminate.
+        }
+        destruct H16 as [cidx [rqFrom [rqfm [down ?]]]]; dest; subst.
 
         pose proof H15 as Hru.
         eapply rqUp_spec with (rqUps:= [(rqFrom, rqfm)]) in Hru; eauto;
-          [|apply SubList_refl].
-        destruct Hru as [? [? [? ?]]].
-        destruct H25 as [ccidx [crqFrom [crqfm [crqTo [crqtm [cdown [corq [crqiu ?]]]]]]]].
-        dest; subst.
+          [|discriminate|apply SubList_refl].
+        destruct Hru as [? [? [? [? ?]]]].
+        destruct H26 as [corq [crqiu ?]].
+        destruct H27 as [crqTo [crqtm ?]]; dest; subst.
+        inv H27.
 
-        inv H29.
-        disc_rule_conds.
+        phide H16; disc_rule_conds; try discriminate.
         apply DisjList_comm, idsOf_DisjList; simpl.
         eapply rqUp_ins_disj.
         * instantiate (1:= st5).
           eapply reachable_steps; [|apply steps_singleton; eassumption].
           eapply reachable_steps; [|apply steps_singleton; eassumption].
           assumption.
-        * apply H26.
+        * apply H25.
         * assumption.
         * eassumption.
         * instantiate (1:= corq).
-          apply parentIdxOf_not_eq in H26;
+          apply parentIdxOf_not_eq in H25;
             [|destruct Hrrs as [[? ?]]; assumption].
           clear H13 H15.
           inv_step; simpl in *.
@@ -856,30 +1022,10 @@ Section RqUpReduction.
         * congruence.
         * instantiate (1:= orq); assumption.
         * eassumption.
-        * reflexivity.
+        * assumption.
         * eassumption.
   Qed.
   
-  Lemma rqUp_lpush_lbl:
-    forall pinits pins phst pouts peouts,
-      Atomic msg_dec pinits pins phst pouts peouts ->
-      forall oidxTo rqUps,
-        RqUpMsgs dtr oidxTo rqUps ->
-        SubList rqUps peouts ->
-        forall oidx ridx rins routs,
-          DisjList peouts rins ->
-          Reducible sys (RlblInt oidx ridx rins routs :: phst)
-                    (phst ++ [RlblInt oidx ridx rins routs]).
-  Proof.
-    intros.
-    red; intros.
-    inv H3.
-    eapply rqUp_atomic in H; eauto.
-    dest; subst.
-    eapply rqUpHistory_lpush_lbl; eauto.
-    econstructor; eauto.
-  Qed.
-
   Lemma rqUp_outs_disj:
     forall oidxTo rqUp st1 st2 oidx ridx rins routs,
       RqUpMsgs dtr oidxTo [rqUp] ->
@@ -892,6 +1038,7 @@ Section RqUpReduction.
     pose proof (footprints_ok Hiorqs H4 H0).
     pose proof (upLockInv_ok Hiorqs H4 H3 H0).
 
+    destruct H; [discriminate|].
     destruct H as [ruIdx [[rqUp' rqm] ?]]; dest.
     inv H; rename rqUp' into rqUp; simpl in *.
     apply idsOf_DisjList; simpl.
@@ -900,14 +1047,18 @@ Section RqUpReduction.
     good_rqrs_rule_cases rule.
 
     - disc_rule_conds; solve_midx_disj.
+      intro; dest_in.
     - disc_rule_conds; solve_midx_disj.
 
     - good_locking_get obj.
       disc_rule_conds.
-      + (* [RqUpUp] is the only case that requires [UpLockInv] 
-         * to draw a contradiction. *)
-        destruct (idx_dec ruIdx (obj_idx obj));
-          subst; [|solve_midx_disj].
+      + destruct (idx_dec ruIdx (obj_idx obj)); subst; [|solve_midx_disj].
+        exfalso.
+        destruct H2; [congruence|].
+        destruct H2 as [orqUp [down [pidx ?]]]; dest.
+        disc_rule_conds.
+        eapply InMP_findQ_False; eauto.
+      + destruct (idx_dec ruIdx (obj_idx obj)); subst; [|solve_midx_disj].
         exfalso.
         destruct H2; [congruence|].
         destruct H2 as [orqUp [down [pidx ?]]]; dest.
@@ -918,7 +1069,7 @@ Section RqUpReduction.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds; solve_midx_disj.
-
+      intro; dest_in.
     - disc_rule_conds; solve_midx_disj.
   Qed.
 
@@ -978,6 +1129,12 @@ Section RqUpReduction.
 
         assert (Reachable (steps step_m) sys st2)
           by (eapply reachable_steps; eauto).
+        destruct H.
+        1: {
+          subst.
+          apply rqUpHistory_RqUpMsgsFrom in H0.
+          destruct H0 as [cidx ?]; red in H; dest; discriminate.
+        }
         destruct H as [ruIdx [rqUp ?]]; dest; subst.
         eapply rqUpHistory_outs in H0; [|reflexivity|eassumption].
 
@@ -987,7 +1144,7 @@ Section RqUpReduction.
         induction H1; intros; subst.
         * inv_steps.
           eapply rqUp_outs_disj.
-          { exists ruIdx, rqUp; repeat split; eauto. }
+          { right; exists ruIdx, rqUp; repeat split; eauto. }
           { apply H4. }
           { assumption. }
           { eassumption. }
@@ -997,7 +1154,7 @@ Section RqUpReduction.
             [|eapply DisjList_In_2; [eassumption|left; reflexivity]].
           apply DisjList_app_4; [apply removeL_DisjList; assumption|].
           eapply rqUp_outs_disj.
-          { exists ruIdx, rqUp; repeat split; eauto. }
+          { right; exists ruIdx, rqUp; repeat split; eauto. }
           { eapply reachable_steps; eauto. }
           { assumption. }
           { eassumption. }
@@ -1007,15 +1164,15 @@ Section RqUpReduction.
     forall oidxTo rqUps inits ins hst outs eouts
            pinits pins phst pouts peouts,
       Atomic msg_dec pinits pins phst pouts peouts ->
-      RqUpMsgs dtr oidxTo rqUps ->
+      rqUps <> nil -> RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps peouts ->
       Atomic msg_dec inits ins hst outs eouts ->
       DisjList peouts inits ->
       Reducible sys (hst ++ phst) (phst ++ hst).
   Proof.
     intros; red; intros.
-    eapply steps_split in H4; [|reflexivity].
-    destruct H4 as [sti [? ?]].
+    eapply steps_split in H5; [|reflexivity].
+    destruct H5 as [sti [? ?]].
     eapply rqUpHistory_lpush_unit_reducible; eauto.
     - eapply rqUp_atomic in H; eauto.
       dest; subst; assumption.

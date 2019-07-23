@@ -644,7 +644,7 @@ Section RqRsDTree.
     - elim (rqrsDTree_down_down_not_eq n H0 H4); reflexivity.
   Qed.
 
-  Lemma footprintUpOk_rs_eq:
+  Lemma footprintUpOk_rs_Some_eq:
     forall oidx rqFrom rqTo rsFrom1 rsbTo1 rsFrom2 rsbTo2,
       FootprintUpOk dtr oidx (Some (rqFrom, rsbTo1)) rqTo rsFrom1 ->
       FootprintUpOk dtr oidx (Some (rqFrom, rsbTo2)) rqTo rsFrom2 ->
@@ -658,6 +658,18 @@ Section RqRsDTree.
       auto.
     - exfalso.
       elim (rqrsDTree_rqUp_rqUp_not_eq n H5 H1); auto.
+  Qed.
+
+  Lemma footprintUpOk_rs_None_eq:
+    forall oidx rqTo rsFrom1 rsFrom2,
+      FootprintUpOk dtr oidx None rqTo rsFrom1 ->
+      FootprintUpOk dtr oidx None rqTo rsFrom2 ->
+      rsFrom1 = rsFrom2.
+  Proof.
+    unfold FootprintUpOk; intros.
+    destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; simpl in *; dest.
+    rewrite H6 in H3; inv H3.
+    reflexivity.
   Qed.
 
   Lemma RqRsDownMatch_rs_eq:
