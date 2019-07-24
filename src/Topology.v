@@ -81,6 +81,51 @@ Section Collect.
     eauto.
   Qed.
 
+  Lemma collect_forall:
+    forall P al,
+      (forall a, In a al -> Forall P (f a)) ->
+      Forall P (collect al).
+  Proof.
+    induction al; intros; [constructor|].
+    simpl; apply Forall_app.
+    - apply H; left; reflexivity.
+    - apply IHal; intros.
+      apply H; right; assumption.
+  Qed.
+
+  Lemma collect_NoDup:
+    forall al,
+      (forall a, In a al -> NoDup (f a)) ->
+      (forall n1 n2 a1 a2,
+          n1 <> n2 ->
+          nth_error al n1 = Some a1 ->
+          nth_error al n2 = Some a2 ->
+          DisjList (f a1) (f a2)) ->
+      NoDup (collect al).
+  Proof.
+    induction al; simpl; intros; [constructor|].
+    apply NoDup_DisjList; auto.
+    - apply IHal; auto.
+      intros; apply H0 with (n1:= S n1) (n2:= S n2); auto.
+    - clear -H0.
+      assert (forall n na, nth_error al n = Some na ->
+                           DisjList (f a) (f na)).
+      { intros; apply H0 with (n1:= 0) (n2:= S n); auto. }
+      assert (forall n1 n2 a1 a2,
+                 n1 <> n2 ->
+                 nth_error al n1 = Some a1 ->
+                 nth_error al n2 = Some a2 -> DisjList (f a1) (f a2)).
+      { intros; apply H0 with (n1:= S n1) (n2:= S n2); auto. }
+      clear H0.
+      
+      induction al; simpl; intros; [apply DisjList_nil_2|].
+      apply DisjList_comm, DisjList_app_4; apply DisjList_comm.
+      + apply H with (n:= 0); reflexivity.
+      + apply IHal.
+        * intros; apply H with (n:= S n); assumption.
+        * intros; apply H1 with (n1:= S n1) (n2:= S n2); auto.
+  Qed.
+  
 End Collect.
 
 (** The Coq standard library already has an equivalent definition [Exists]

@@ -144,9 +144,14 @@ Definition idxHd (idx: IdxT): nat :=
 Definition idxTl (idx: IdxT): IdxT :=
   List.tl idx.
 
-Fixpoint nat_seq_rev (n: nat) :=
-  match n with
-  | O => O :: nil
-  | S n' => n :: nat_seq_rev n'
-  end.
+Definition IdxPrefix (i1 i2: IdxT) :=
+  exists ri, i2 = ri ++ i1.
+Infix "~<" := IdxPrefix (at level 8).
+
+Definition IdxDisj (i1 i2: IdxT) :=
+  ~ IdxPrefix i1 i2 /\ ~ IdxPrefix i2 i1.
+Infix "~*~" := IdxDisj (at level 8).
+
+Definition IndsDisj (is1 is2: list IdxT) :=
+  forall i1 i2, In i1 is1 -> In i2 is2 -> i1 ~*~ i2.
 

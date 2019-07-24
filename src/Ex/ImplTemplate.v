@@ -1,4 +1,4 @@
-Require Import List FMap.
+Require Import List FMap Omega.
 Require Import Common Index Topology Syntax.
 Require Import RqRsTopo.
 
@@ -38,6 +38,36 @@ Section IncMap.
     | av :: avs' =>
       f av (baseIdx~>ext) :: incMap avs' baseIdx (S ext)
     end.
+
+  Lemma incMap_In:
+    forall al base ext b,
+      In b (incMap al base ext) ->
+      exists a ofs,
+        nth_error al ofs = Some a /\ b = f a (base~>(ext + ofs)).
+  Proof.
+    induction al; simpl; intros; [exfalso; auto|].
+    destruct H; subst.
+    - exists a, 0; split; [reflexivity|].
+      rewrite Nat.add_0_r; reflexivity.
+    - specialize (IHal _ _ _ H).
+      destruct IHal as [pa [ofs ?]]; dest; subst.
+      exists pa, (S ofs); split; [assumption|].
+      rewrite Nat.add_succ_r; reflexivity.
+  Qed.
+
+  Lemma incMap_nth_error:
+    forall al base ext n b,
+      nth_error (incMap al base ext) n = Some b ->
+      exists a, nth_error al n = Some a /\ b = f a (base~>(ext + n)).
+  Proof.
+    induction al; simpl; intros; [destruct n; discriminate|].
+    destruct n.
+    - inv H; exists a; rewrite Nat.add_0_r; auto.
+    - specialize (IHal _ _ _ _ H).
+      destruct IHal as [na [? ?]]; subst.
+      exists na; split; [assumption|].
+      rewrite Nat.add_succ_r; reflexivity.
+  Qed.
 
 End IncMap.
 
@@ -83,24 +113,31 @@ Definition singletonDNode (idx: IdxT): DTree * CIfc :=
       c_minds := [idx~>rqUpIdx; idx~>rsUpIdx; idx~>downIdx];
       c_merqs := [eidx~>rqUpIdx];
       c_merss := [eidx~>downIdx] |}).
-      
+
+(** TODO: move to [ListSupport.v] *)
+Definition nil_dec {A}: forall l: list A, {l = nil} + {l <> nil}.
+Proof.
+  intros; destruct l; [left; reflexivity|right; discriminate].
+Defined.
+
 Fixpoint tree2Topo (tr: tree) (curIdx: IdxT): DTree * CIfc :=
   match tr with
-  | Node nil => singletonDNode curIdx
   | Node ctrs =>
-    let stp := incMap tree2Topo ctrs curIdx 0 in
-    let strs := map fst stp in
-    let sci := fold_left mergeCIfc (map snd stp) emptyCIfc in
-    (DNode {| dmc_me := curIdx;
-              dmc_ups := [curIdx~>rqUpIdx; curIdx~>rsUpIdx];
-              dmc_downs := [curIdx~>downIdx] |} strs,
-     mergeCIfc
-       {| c_li_indices := [curIdx];
-          c_l1_indices := nil;
-          c_minds := [curIdx~>rqUpIdx; curIdx~>rsUpIdx; curIdx~>downIdx];
-          c_merqs := nil;
-          c_merss := nil |}
-       sci)
+    if nil_dec ctrs then singletonDNode curIdx
+    else
+      let stp := incMap tree2Topo ctrs curIdx 0 in
+      let strs := map fst stp in
+      let sci := fold_left mergeCIfc (map snd stp) emptyCIfc in
+      (DNode {| dmc_me := curIdx;
+                dmc_ups := [curIdx~>rqUpIdx; curIdx~>rsUpIdx];
+                dmc_downs := [curIdx~>downIdx] |} strs,
+       mergeCIfc
+         {| c_li_indices := [curIdx];
+            c_l1_indices := nil;
+            c_minds := [curIdx~>rqUpIdx; curIdx~>rsUpIdx; curIdx~>downIdx];
+            c_merqs := nil;
+            c_merss := nil |}
+         sci)
   end.
 
 (* Eval compute in (tree2Topo (Node [Node [Node nil; Node nil]; *)

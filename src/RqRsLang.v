@@ -183,6 +183,21 @@ Hint Unfold StateMBind TrsMTrs getFirstMsg
 Definition initORqs (oinds: list IdxT): ORqs Msg :=
   fold_left (fun m i => m +[i <- []]) oinds [].
 
+Lemma initORqs_GoodORqsInit: forall oinds, GoodORqsInit (initORqs oinds).
+Proof.
+  red; intros.
+  unfold initORqs.
+  remember (M.empty (M.t (RqInfo Msg))) as m.
+  assert (forall oidx, m@[oidx] >>=[True] (fun orq => orq = []))
+    by (intros; subst; mred).
+  clear Heqm.
+  generalize dependent m.
+  induction oinds; simpl; intros; [auto|].
+  apply IHoinds.
+  intros.
+  mred; auto.
+Qed.
+
 Module RqRsNotations.
   Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
   Notation "N <-- F ; CONT" :=

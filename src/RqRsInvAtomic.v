@@ -1,5 +1,5 @@
-Require Import Peano_dec Omega List ListSupport.
-Require Import Common FMap.
+Require Import Peano_dec Omega List.
+Require Import Common FMap IndexSupport.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
 Require Import RqRsTopo RqRsFacts RqRsInvMsg RqRsInvLock RqRsInvSep.
