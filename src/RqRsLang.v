@@ -180,6 +180,9 @@ Hint Unfold StateMBind TrsMTrs getFirstMsg
      DownLocked getDownLockIndsFrom getDownLockIdxBack
      MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp MsgsTo : RuleConds.
 
+Definition initORqs (oinds: list IdxT): ORqs Msg :=
+  fold_left (fun m i => m +[i <- []]) oinds [].
+
 Module RqRsNotations.
   Notation "'do' ST" := (TrsMTrs ST) (at level 10): trs_scope.
   Notation "N <-- F ; CONT" :=

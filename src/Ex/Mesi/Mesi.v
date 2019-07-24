@@ -11,25 +11,6 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Definition ii: IdxT := nil.
-Definition idxTl (idx: IdxT): IdxT :=
-  List.tl idx.
-
-Definition rqUpFrom (cidx: IdxT): IdxT :=
-  cidx~>rqUpIdx.
-Definition rsUpFrom (cidx: IdxT): IdxT :=
-  cidx~>rsUpIdx.
-Definition downTo (cidx: IdxT): IdxT :=
-  cidx~>downIdx.
-
-(** FIXME: use [None] when silent transactions are supported. *)
-Definition addSilentUpRq (orq: ORq Msg) (mrss : list IdxT): ORq Msg :=
-  orq +[upRq <- {| rqi_msg := {| msg_id := 0;
-                                 msg_type := false;
-                                 msg_value := VUnit |};
-                   rqi_minds_rss := mrss;
-                   rqi_midx_rsb := 0 |}].
-
 (** Design choices:
  * - Multi-level (for arbitrary tree structure)
  * - MESI
@@ -108,10 +89,11 @@ Section System.
     (0, (mesiS, (dirInit, tt))).
   
   Definition implOStatesInit: OStates ImplOStateIfc :=
-    fold_left (fun m i => m +[i <- implOStateInit]) cifc.(c_indices) [].
+    fold_left (fun m i => m +[i <- implOStateInit])
+              (cifc.(c_l1_indices) ++ cifc.(c_li_indices)) [].
 
   Definition implORqsInit: ORqs Msg :=
-    fold_left (fun m i => m +[i <- []]) cifc.(c_indices) [].
+    initORqs (cifc.(c_l1_indices) ++ cifc.(c_li_indices)).
 
   (** A core idea: a "summary" status in each object *)
 
@@ -120,14 +102,21 @@ Section System.
     then ost#[implStatusIdx]
     else ost#[implDirIdx].(dir_st).
 
-  Section CommonRules.
-    Variable (oidx: IdxT).
-    Variables (coRq coRs oc opRq opRs po: IdxT).
+  Section Rules.
+    Variables (oidx cidx: IdxT).
+
+    Local Notation opRq := (rqUpFrom oidx).
+    Local Notation opRs := (rsUpFrom oidx).
+    Local Notation po := (downTo oidx).
+
+    Local Notation coRq := (rqUpFrom cidx).
+    Local Notation coRs := (rsUpFrom cidx).
+    Local Notation oc := (downTo cidx).
 
     Section GetTrs.
 
       Definition l1GetSImm: Rule ImplOStateIfc :=
-        rule[0~>0]
+        rule[cidx~>0~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -142,7 +131,7 @@ Section System.
                      |})])).
 
       Definition liGetSImmS: Rule ImplOStateIfc :=
-        rule[0~>0~>0]
+        rule[cidx~>0~>0~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -157,7 +146,7 @@ Section System.
                      |})])).
 
       Definition liGetSImmME: Rule ImplOStateIfc :=
-        rule[0~>0~>1]
+        rule[cidx~>0~>0~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -180,7 +169,7 @@ Section System.
 
       (* commonly used *)
       Definition getSRqUpUp: Rule ImplOStateIfc :=
-        rule[0~>1]
+        rule[cidx~>0~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\
@@ -279,7 +268,7 @@ Section System.
                           msg_value := VNat (ost#[implValueIdx]) |})])).
 
       Definition liGetSRqUpDownME: Rule ImplOStateIfc :=
-        rule[0~>4~>0]
+        rule[cidx~>0~>4~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -298,7 +287,7 @@ Section System.
                                         msg_value := VUnit |})]))).
 
       Definition liGetSRqUpDownS: Rule ImplOStateIfc :=
-        rule[0~>4~>1]
+        rule[cidx~>0~>4~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqS] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -315,7 +304,7 @@ Section System.
                                         msg_type := MRq;
                                         msg_value := VUnit |})]))).
 
-      Definition l1DownSRsUpDown: Rule ImplOStateIfc :=
+      Definition liDownSRsUpDown: Rule ImplOStateIfc :=
         rule[0~>5]
         :requires
            (MsgsFromORq downRq /\ MsgIdsFrom [mesiDownRsS] /\
@@ -394,7 +383,7 @@ Section System.
     Section SetTrs.
 
       Definition l1GetMImmE: Rule ImplOStateIfc :=
-        rule[1~>0~>0]
+        rule[cidx~>1~>0~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\ FirstNatMsg /\
@@ -411,7 +400,7 @@ Section System.
                                    msg_value := VUnit |})]))).
 
       Definition l1GetMImmM: Rule ImplOStateIfc :=
-        rule[1~>0~>1]
+        rule[cidx~>1~>0~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\ FirstNatMsg /\
@@ -427,7 +416,7 @@ Section System.
                                    msg_value := VUnit |})]))).
 
       Definition liGetMImm: Rule ImplOStateIfc :=
-        rule[1~>0]
+        rule[cidx~>1~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -444,7 +433,7 @@ Section System.
 
       (* commonly used *)
       Definition getMRqUpUp: Rule ImplOStateIfc :=
-        rule[1~>1]
+        rule[cidx~>1~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
             RqAccepting /\ UpLockFree /\
@@ -536,7 +525,7 @@ Section System.
                                       msg_value := VUnit |})]))).
 
       Definition liGetMRqUpDownME: Rule ImplOStateIfc :=
-        rule[1~>6]
+        rule[cidx~>1~>6]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -600,7 +589,7 @@ Section System.
                           msg_type := MRs;
                           msg_value := VUnit |})])).
 
-      Definition downIRqDownDownDirS: Rule ImplOStateIfc :=
+      Definition liDownIRqDownDownDirS: Rule ImplOStateIfc :=
         rule[1~>10]
         :requires
            (MsgsFrom [po] /\ MsgIdsFrom [mesiDownRqI] /\
@@ -637,7 +626,7 @@ Section System.
                                         msg_type := MRq;
                                         msg_value := VUnit |})]))).
 
-      Definition downIRsUpUp: Rule ImplOStateIfc :=
+      Definition liDownIRsUpUp: Rule ImplOStateIfc :=
         rule[1~>12]
         :requires
            (MsgsFromORq downRq /\ MsgIdFromEach mesiDownRsI /\
@@ -651,6 +640,26 @@ Section System.
                           [(rsbTo, {| msg_id := mesiDownRsI;
                                       msg_type := MRs;
                                       msg_value := VUnit |})]))).
+
+      Definition memGetMRqUpDownDirS: Rule ImplOStateIfc :=
+        rule[cidx~>1~>13]
+        :requires
+           (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqM] /\
+            RqAccepting /\ UpLockFree /\ DownLockFree /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               ost#[implStatusIdx] <= mesiS) /\
+            (fun (ost: OState ImplOStateIfc) orq mins =>
+               mesiE <= ost#[implDirIdx].(dir_st)))
+        :transition
+           (do (msg <-- getFirstMsg;
+                  st {{ ImplOStateIfc }} -->
+                     let cinds := st.ost#[implDirIdx].(dir_sharers) in
+                     (st.ost,
+                      addRq (st.orq) downRq msg (map rsUpFrom cinds) oc,
+                      map (fun cidx =>
+                             (downTo cidx, {| msg_id := mesiDownRqI;
+                                              msg_type := MRq;
+                                              msg_value := VUnit |})) cinds))).
 
     End SetTrs.
 
@@ -705,8 +714,8 @@ Section System.
                           removeRq (st.orq) upRq,
                           nil))).
 
-      Definition putImmI: Rule ImplOStateIfc :=
-        rule[2~>3]
+      Definition liPutImmI: Rule ImplOStateIfc :=
+        rule[cidx~>2~>3]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -721,7 +730,7 @@ Section System.
                      |})])).
 
       Definition liPutImmS: Rule ImplOStateIfc :=
-        rule[2~>4]
+        rule[cidx~>2~>4]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -736,8 +745,8 @@ Section System.
                         msg_value := VUnit
                      |})])).
 
-      Definition llcPutImmSNotLast: Rule ImplOStateIfc :=
-        rule[2~>4~>0]
+      Definition memPutImmSNotLast: Rule ImplOStateIfc :=
+        rule[cidx~>2~>4~>0]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -753,8 +762,8 @@ Section System.
                         msg_value := VUnit
                      |})])).
 
-      Definition llcPutImmSLast: Rule ImplOStateIfc :=
-        rule[2~>4~>1]
+      Definition memPutImmSLast: Rule ImplOStateIfc :=
+        rule[cidx~>2~>4~>1]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -771,8 +780,8 @@ Section System.
                         msg_value := VUnit
                      |})])).
 
-      Definition putImmE: Rule ImplOStateIfc :=
-        rule[2~>5]
+      Definition liPutImmE: Rule ImplOStateIfc :=
+        rule[cidx~>2~>5]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
             RqAccepting /\ UpLockFree /\ DownLockFree /\
@@ -788,8 +797,8 @@ Section System.
                         msg_value := VUnit
                      |})])).
 
-      Definition putImmM: Rule ImplOStateIfc :=
-        rule[2~>6]
+      Definition liPutImmM: Rule ImplOStateIfc :=
+        rule[cidx~>2~>6]
         :requires
            (MsgsFrom [coRq] /\ MsgIdsFrom [mesiRqI] /\
             RqAccepting /\ FirstNatMsg /\
@@ -809,7 +818,99 @@ Section System.
 
     End EvictTrs.
 
-  End CommonRules.
+  End Rules.
 
+  Section Objects.
+    Variable (oidx: IdxT).
+
+    Section L1.
+
+      Local Notation eidx := (l1ExtOf oidx).
+
+      Definition l1: Object ImplOStateIfc :=
+        {| obj_idx := oidx;
+           obj_rules :=
+             [(** rules involved with [GetS] *)
+               l1GetSImm eidx; getSRqUpUp oidx eidx;
+                 l1GetSRsDownDownS; l1GetSRsDownDownE; downSImm oidx;
+                   (** rules involved with [GetM] *)
+                   l1GetMImmE eidx; l1GetMImmM eidx;
+                     getMRqUpUp oidx eidx;
+                     l1GetMRsDownDown; l1DownIImm oidx;
+                       (** rules involved with [Put] *)
+                       putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
+           obj_rules_valid := ltac:(inds_valid_tac) |}.
+
+    End L1.
+
+    Definition liRulesFromChild (cidx: IdxT): list (Rule ImplOStateIfc) :=
+      [liGetSImmS cidx; liGetSImmME cidx; getSRqUpUp oidx cidx;
+         liGetSRqUpDownME cidx; liGetSRqUpDownS cidx;
+           liGetMImm cidx; getMRqUpUp oidx cidx; liGetMRsDownDownDirI;
+             liGetMRqUpDownME cidx;
+             liPutImmI cidx; liPutImmS cidx;
+               liPutImmE cidx; liPutImmM cidx].
+
+    Definition liRulesFromChildren (coinds: list IdxT): list (Rule ImplOStateIfc) :=
+      List.concat (map liRulesFromChild coinds).
+
+    Program Definition li: Object ImplOStateIfc :=
+      {| obj_idx := oidx;
+         obj_rules :=
+           (liRulesFromChildren (subtreeChildrenIndsOf topo oidx))
+             ++ [(** rules involved with [GetS] *)
+               liGetSRsDownDownS; liGetSRsDownDownE; downSImm oidx;
+                 liDownSRsUpDown;
+                 liDownSRqDownDownME oidx; liDownSRqDownDownS oidx;
+                   liDownSRsUpUp;
+                   (** rules involved with [GetM] *)
+                   liGetMRsDownDownDirI; liDownIRsUpDownME;
+                     liGetMRsDownRqDownDirS; liDownIRsUpDownDirS;
+                       liDownIImm oidx;
+                       liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx;
+                         liDownIRsUpUp;
+                         (** rules involved with [Put] *)
+                         putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
+         obj_rules_valid := _ |}.
+    Next Obligation.
+    Admitted.
+
+    Definition memRulesFromChild (cidx: IdxT): list (Rule ImplOStateIfc) :=
+      [liGetSImmS cidx; liGetSImmME cidx;
+         liGetSRqUpDownME cidx; liGetSRqUpDownS cidx;
+           liGetMImm cidx; liGetMRqUpDownME cidx; memGetMRqUpDownDirS cidx;
+             liPutImmI cidx;
+             memPutImmSNotLast cidx; memPutImmSLast cidx;
+               liPutImmE cidx; liPutImmM cidx].
+
+    Definition memRulesFromChildren (coinds: list IdxT): list (Rule ImplOStateIfc) :=
+      List.concat (map memRulesFromChild coinds).
+             
+    Program Definition mem: Object ImplOStateIfc :=
+      {| obj_idx := oidx;
+         obj_rules :=
+           (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
+             ++ [liDownSRsUpDown; liDownIRsUpDownME; liDownIRsUpDownDirS];
+         obj_rules_valid := _ |}.
+    Next Obligation.
+    Admitted.
+    
+  End Objects.
+
+  Program Definition impl: System ImplOStateIfc :=
+    {| sys_objs :=
+         (map li cifc.(c_li_indices)) ++ (map l1 cifc.(c_l1_indices));
+       sys_oinds_valid := _;
+       sys_minds := cifc.(c_minds);
+       sys_merqs := cifc.(c_merqs);
+       sys_merss := cifc.(c_merss);
+       sys_msg_inds_valid := _;
+       sys_oss_inits := implOStatesInit;
+       sys_orqs_inits := implORqsInit |}.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  
 End System.
 

@@ -209,6 +209,9 @@ Section DTree.
   Definition subtreeIndsOf (dtr: DTree) (idx: IdxT): list IdxT :=
     (subtree idx dtr) >>=[nil] (fun tr => indsOf tr).
 
+  Definition subtreeChildrenIndsOf (dtr: DTree) (idx: IdxT): list IdxT :=
+    (subtree idx dtr) >>=[nil] (fun tr => childrenIndsOf tr).
+
   Definition hasIdx (idx: IdxT) (dtr: DTree): option DTree :=
     if idx_dec (rootOf dtr) idx
     then Some dtr

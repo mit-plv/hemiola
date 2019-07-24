@@ -1,12 +1,28 @@
-Require Import List.
+Require Import List FMap.
 Require Import Common Index Topology Syntax.
+Require Import RqRsTopo.
 
 Set Implicit Arguments.
 
 Local Open Scope list.
+Local Open Scope fmap.
 
 Inductive tree :=
 | Node: list tree -> tree.
+
+Section tree_ind_l.
+  Variables (P: tree -> Prop)
+            (f: forall l, Forall P l -> P (Node l)).
+
+  Fixpoint tree_ind_l (t: tree): P t :=
+    match t with
+    | Node sts =>
+      f (list_ind (Forall P) (Forall_nil P)
+                  (fun st _ IHl => Forall_cons st (tree_ind_l st) IHl)
+                  sts)
+    end.
+
+End tree_ind_l.
 
 Definition rqUpIdx: nat := 0.
 Definition rsUpIdx: nat := 1.
@@ -25,32 +41,45 @@ Section IncMap.
 
 End IncMap.
 
+(* NOTE: [c_li_indices] contains the root which is a main memory.
+ * In order to access the main memory index, just use [rootOf].
+ *
+ * [tree] is general enough to represent memory structures that have an LLC
+ * (last-level cache) just before the main memory. In this case the root will
+ * have a single child that reflects to the LLC.
+ *)
 Record CIfc :=
-  { c_indices: list IdxT;
+  { c_li_indices: list IdxT;
+    c_l1_indices: list IdxT;
     c_minds: list IdxT;
     c_merqs: list IdxT;
     c_merss: list IdxT
   }.
 
 Definition emptyCIfc :=
-  {| c_indices := nil; c_minds := nil;
-     c_merqs := nil; c_merss := nil |}.
+  {| c_li_indices := nil; c_l1_indices := nil;
+     c_minds := nil; c_merqs := nil; c_merss := nil |}.
 
 Definition mergeCIfc (ci1 ci2: CIfc) :=
-  {| c_indices := ci1.(c_indices) ++ ci2.(c_indices);
+  {| c_li_indices := ci1.(c_li_indices) ++ ci2.(c_li_indices);
+     c_l1_indices := ci1.(c_l1_indices) ++ ci2.(c_l1_indices);
      c_minds := ci1.(c_minds) ++ ci2.(c_minds);
      c_merqs := ci1.(c_merqs) ++ ci2.(c_merqs);
      c_merss := ci1.(c_merss) ++ ci2.(c_merss) |}.
 
+Definition l1ExtOf (idx: IdxT): IdxT :=
+  idx~>0.
+
 Definition singletonDNode (idx: IdxT): DTree * CIfc :=
-  let eidx := idx~>0 in
+  let eidx := l1ExtOf idx in
   (DNode {| dmc_me := idx;
             dmc_ups := [idx~>rqUpIdx; idx~>rsUpIdx];
             dmc_downs := [idx~>downIdx] |}
          [DNode {| dmc_me := eidx;
                    dmc_ups := [eidx~>rqUpIdx; eidx~>rsUpIdx];
                    dmc_downs := [eidx~>downIdx] |} nil],
-   {| c_indices := [idx];
+   {| c_li_indices := nil;
+      c_l1_indices := [idx];
       c_minds := [idx~>rqUpIdx; idx~>rsUpIdx; idx~>downIdx];
       c_merqs := [eidx~>rqUpIdx];
       c_merss := [eidx~>downIdx] |}).
@@ -66,12 +95,29 @@ Fixpoint tree2Topo (tr: tree) (curIdx: IdxT): DTree * CIfc :=
               dmc_ups := [curIdx~>rqUpIdx; curIdx~>rsUpIdx];
               dmc_downs := [curIdx~>downIdx] |} strs,
      mergeCIfc
-       {| c_indices := [curIdx];
+       {| c_li_indices := [curIdx];
+          c_l1_indices := nil;
           c_minds := [curIdx~>rqUpIdx; curIdx~>rsUpIdx; curIdx~>downIdx];
           c_merqs := nil;
           c_merss := nil |}
        sci)
   end.
 
-(* Eval compute in (tree2Topo (Node [Node nil; Node nil]) 0). *)
+(* Eval compute in (tree2Topo (Node [Node [Node nil; Node nil]; *)
+(*                                     Node [Node nil; Node nil]]) 0). *)
+
+Definition rqUpFrom (cidx: IdxT): IdxT :=
+  cidx~>rqUpIdx.
+Definition rsUpFrom (cidx: IdxT): IdxT :=
+  cidx~>rsUpIdx.
+Definition downTo (cidx: IdxT): IdxT :=
+  cidx~>downIdx.
+
+(** TODO: use [None] when silent transactions are supported. *)
+Definition addSilentUpRq (orq: ORq Msg) (mrss : list IdxT): ORq Msg :=
+  orq +[upRq <- {| rqi_msg := {| msg_id := 0;
+                                 msg_type := false;
+                                 msg_value := VUnit |};
+                   rqi_minds_rss := mrss;
+                   rqi_midx_rsb := 0 |}].
 

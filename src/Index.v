@@ -5,6 +5,7 @@ Local Open Scope list.
 
 Definition IdxT := list nat.
 
+Definition ii: IdxT := nil.
 Definition natToIdx (n: nat): IdxT := n :: nil.
 Coercion natToIdx: nat >-> IdxT.
 
@@ -140,6 +141,8 @@ Definition liftInds (ns: list nat): list IdxT :=
 
 Definition idxHd (idx: IdxT): nat :=
   List.hd 0 idx.
+Definition idxTl (idx: IdxT): IdxT :=
+  List.tl idx.
 
 Fixpoint nat_seq_rev (n: nat) :=
   match n with
