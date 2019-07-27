@@ -307,14 +307,234 @@ Proof.
       specialize (H bidx~>ofs); simpl in H2; rewrite <-H2 in H; simpl in H.
       eapply H; eauto.
 Qed.
-    
+
+(** TODO: move to [Topology.v] *)
+Lemma root_parentChnsOf_None:
+  forall dtr oidx,
+    WfDTree dtr ->
+    oidx = rootOf dtr ->
+    parentChnsOf oidx dtr = None.
+Proof.
+  intros; subst.
+  destruct (parentChnsOf _ _) as [[dmc pidx]|] eqn:Hp; [|reflexivity].
+  exfalso.
+  apply parentChnsOf_case in Hp.
+  destruct Hp as [ctr [? ?]].
+  destruct H1; dest; subst.
+  - eapply parent_child_not_eq; eauto.
+  - apply parent_not_in_children in H0; [|assumption].
+    apply parentChnsOf_child_indsOf in H1; auto.
+Qed.
+
+Lemma parentChnsOf_subtree:
+  forall dtr (Hwf: WfDTree dtr) oidx root pidx,
+    parentChnsOf oidx dtr = Some (root, pidx) ->
+    exists odtr,
+      subtree oidx dtr = Some odtr /\
+      dmcOf odtr = root.
+Proof.
+  intros.
+  apply parentChnsOf_Subtree in H.
+  destruct H as [ctr [ptr ?]]; dest; subst.
+  exists ctr.
+  split; [|reflexivity].
+  eapply Subtree_child_Subtree in H3; [|eassumption].
+  rewrite <-rootOf_dmcOf.
+  apply Subtree_subtree; auto.
+Qed.
+
+Lemma in_app_or_4:
+  forall {A} (a: A) (l1 l2 l3 l4: list A),
+    In a ((l1 ++ l2) ++ (l3 ++ l4)) ->
+    In a (l1 ++ l3) \/ In a (l2 ++ l4).
+Proof.
+  intros.
+  apply in_app_or in H; destruct H.
+  - apply in_app_or in H; destruct H.
+    + left; apply in_or_app; auto.
+    + right; apply in_or_app; auto.
+  - apply in_app_or in H; destruct H.
+    + left; apply in_or_app; auto.
+    + right; apply in_or_app; auto.
+Qed.    
+
+Lemma tree2Topo_children_oidx_In:
+  forall oidx bidx ctrs oss bcifc,
+    In oidx ((c_li_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc))
+               ++ (c_l1_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc))) ->
+    In oidx (c_li_indices bcifc ++ c_l1_indices bcifc) \/
+    exists ctr ofs,
+      nth_error ctrs ofs = Some ctr /\
+      In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+         (map fst (incMap tree2Topo ctrs bidx oss)) /\
+      In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+         (map snd (incMap tree2Topo ctrs bidx oss)) /\
+      In oidx ((c_li_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                 ++ (c_l1_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))).
+Proof.
+  induction ctrs as [|ctr ctrs]; simpl; intros;
+    [left; assumption|].
+
+  specialize (IHctrs _ _ H).
+  destruct IHctrs.
+  - simpl in H0; apply in_app_or_4 in H0; destruct H0.
+    + left; assumption.
+    + right; exists ctr, 0.
+      rewrite Nat.add_0_r; auto.
+  - destruct H0 as [nctr [ofs ?]]; dest.
+    right; exists nctr, (S ofs).
+    rewrite Nat.add_succ_r; auto.
+Qed.
+
+Lemma fold_left_base_c_minds_In:
+  forall ifc ifcs bifc,
+    SubList (c_minds ifc) (c_minds bifc) ->
+    SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+Proof.
+  induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
+  apply IHifcs.
+  simpl; apply SubList_app_1; assumption.
+Qed.
+
+Lemma mergeCIfc_fold_left_c_minds_In:
+  forall ifc ifcs,
+    In ifc ifcs ->
+    forall bifc,
+      SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+Proof.
+  induction ifcs; simpl; intros; [exfalso; auto|].
+  destruct H; subst; [|auto].
+  apply fold_left_base_c_minds_In.
+  simpl; apply SubList_app_2, SubList_refl.
+Qed.
+
+(** TODO: move to [Topology.v] *)
+Lemma subtree_indsOf:
+  forall idx dtr str,
+    subtree idx dtr = Some str ->
+    In idx (indsOf dtr).
+Proof.
+  intros.
+  pose proof (subtree_Subtree _ _ H).
+  apply subtree_rootOf in H; subst.
+  apply Subtree_indsOf in H0.
+  apply H0.
+  apply indsOf_root_in.
+Qed.
+
+Lemma subtree_collect_NoDup_find_some:
+  forall trs,
+    NoDup (collect indsOf trs) ->
+    forall tr,
+      In tr trs ->
+      forall oidx otr,
+        subtree oidx tr = Some otr ->
+        find_some (subtree oidx) trs = Some otr.
+Proof.
+  induction trs as [|str trs]; simpl; intros; [exfalso; auto|].
+  destruct H0; subst; [rewrite H1; reflexivity|].
+  destruct (subtree oidx str) eqn:Hstr.
+  - exfalso.
+    apply subtree_indsOf in H1.
+    apply subtree_indsOf in Hstr.
+    apply (DisjList_NoDup idx_dec) in H.
+    specialize (H oidx).
+    destruct H; auto.
+    elim H; eapply collect_in; eauto.
+  - eapply IHtrs; eauto.
+    eapply NoDup_app_weakening_2; eauto.
+Qed.
+
+Lemma tree2Topo_RqRsChnsOnSystem_unfolded:
+  forall tr bidx topo cifc oinds minds,
+    tree2Topo tr bidx = (topo, cifc) ->
+    oinds = cifc.(c_li_indices) ++ cifc.(c_l1_indices) ->
+    minds = cifc.(c_minds) ->
+    (* body of [RqRsChnsOnDTree] *)
+    forall oidx,
+      In oidx oinds ->
+      exists odtr,
+        subtree oidx topo = Some odtr /\
+        SubList (dmcOf odtr).(dmc_ups) minds /\
+        SubList (dmcOf odtr).(dmc_downs) minds.
+Proof.
+  induction tr using tree_ind_l.
+  intros; subst.
+  pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf.
+  simpl in *; find_if_inside; subst.
+  - inv H0.
+    destruct H3; [subst|exfalso; auto].
+    eexists; repeat ssplit.
+    + unfold subtree, dmc_me.
+      destruct (idx_dec _ _); [|exfalso; auto].
+      reflexivity.
+    + simpl; solve_SubList.
+    + simpl; solve_SubList.
+
+  - inv H0.
+    simpl in H3.
+    destruct (idx_dec bidx oidx); subst.
+    1: {
+      eexists; repeat ssplit.
+      { unfold subtree, dmc_me.
+        destruct (idx_dec _ _); [|exfalso; auto].
+        reflexivity.
+      }
+      { simpl; solve_SubList. }
+      { simpl; solve_SubList. }
+    }
+    destruct H3; [exfalso; auto|].
+    simpl; destruct (idx_dec bidx oidx); [exfalso; auto|clear n1].
+
+    apply tree2Topo_children_oidx_In in H0.
+    destruct H0; [dest_in|].
+    destruct H0 as [ctr [ofs ?]]; dest; simpl in *.
+
+    destruct (tree2Topo ctr bidx~>ofs) as [cdtr cifc] eqn:Hchd; simpl in *.
+    pose proof (nth_error_In _ _ H0).
+    rewrite Forall_forall in H; specialize (H _ H4); clear H4.
+    specialize (H _ _ _ _ _ Hchd eq_refl eq_refl _ H3).
+    destruct H as [odtr ?]; dest.
+
+    exists odtr; repeat ssplit.
+    + eapply subtree_collect_NoDup_find_some; try eassumption.
+      destruct Hwf.
+      red in H6; simpl in H6; inv H6.
+      assumption.
+    + do 3 apply SubList_cons_right.
+      eapply SubList_trans; [eassumption|].
+      apply mergeCIfc_fold_left_c_minds_In; assumption.
+    + do 3 apply SubList_cons_right.
+      eapply SubList_trans; [eassumption|].
+      apply mergeCIfc_fold_left_c_minds_In; assumption.
+Qed.
+
+Lemma tree2Topo_RqRsChnsOnSystem:
+  forall {OStateIfc} tr bidx topo cifc (impl: System OStateIfc),
+    tree2Topo tr bidx = (topo, cifc) ->
+    map (@obj_idx _) impl.(sys_objs) = cifc.(c_li_indices) ++ cifc.(c_l1_indices) ->
+    impl.(sys_minds) = cifc.(c_minds) ->
+    RqRsChnsOnSystem topo impl.
+Proof.
+  intros.
+  red; intros.
+  eapply tree2Topo_RqRsChnsOnSystem_unfolded in H2; eauto.
+  destruct H2 as [odtr ?]; dest.
+  replace topo with (fst (tree2Topo tr bidx)) in * by (rewrite H; reflexivity).
+  pose proof (parentChnsOf_subtree (tree2Topo_WfDTree tr bidx) _ H3).
+  destruct H6 as [rodtr ?]; dest; subst.
+  rewrite H6 in H2; inv H2.
+  split; assumption.
+Qed.
+
 Section System.
   Variable tr: tree.
 
   Local Definition topo := fst (tree2Topo tr 0).
   Local Definition cifc := snd (tree2Topo tr 0).
+  Local Definition impl := impl tr.
 
-  Lemma mesi_GoodORqsInit: GoodORqsInit (initsOf (impl tr)).
+  Lemma mesi_GoodORqsInit: GoodORqsInit (initsOf impl).
   Proof.
     apply initORqs_GoodORqsInit.
   Qed.
@@ -327,6 +547,17 @@ Section System.
   Lemma mesi_RqRsChnsOnDTree: RqRsChnsOnDTree topo.
   Proof.
     apply tree2Topo_RqRsChnsOnDTree.
+  Qed.
+
+  Lemma mesi_impl_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
+  Proof.
+    eapply tree2Topo_RqRsChnsOnSystem with (tr0:= tr) (bidx:= [0]); try reflexivity.
+    - unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
+    - simpl; rewrite map_app; f_equal.
+      + induction (c_li_indices (Mesi.cifc tr)); [reflexivity|].
+        simpl; congruence.
+      + induction (c_l1_indices (Mesi.cifc tr)); [reflexivity|].
+        simpl; congruence.
   Qed.
 
 End System.
