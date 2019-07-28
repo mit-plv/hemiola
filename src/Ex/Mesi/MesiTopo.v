@@ -343,6 +343,28 @@ Proof.
   apply Subtree_subtree; auto.
 Qed.
 
+Lemma fold_left_base_c_minds_In:
+  forall ifc ifcs bifc,
+    SubList (c_minds ifc) (c_minds bifc) ->
+    SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+Proof.
+  induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
+  apply IHifcs.
+  simpl; apply SubList_app_1; assumption.
+Qed.
+
+Lemma mergeCIfc_fold_left_c_minds_In:
+  forall ifc ifcs,
+    In ifc ifcs ->
+    forall bifc,
+      SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+Proof.
+  induction ifcs; simpl; intros; [exfalso; auto|].
+  destruct H; subst; [|auto].
+  apply fold_left_base_c_minds_In.
+  simpl; apply SubList_app_2, SubList_refl.
+Qed.
+
 Lemma in_app_or_4:
   forall {A} (a: A) (l1 l2 l3 l4: list A),
     In a ((l1 ++ l2) ++ (l3 ++ l4)) ->
@@ -386,26 +408,56 @@ Proof.
     rewrite Nat.add_succ_r; auto.
 Qed.
 
-Lemma fold_left_base_c_minds_In:
-  forall ifc ifcs bifc,
-    SubList (c_minds ifc) (c_minds bifc) ->
-    SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+Lemma tree2Topo_children_ext_rq_In:
+  forall erq bidx ctrs oss bcifc,
+    In erq (c_merqs (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
+    In erq (c_merqs bcifc) \/
+    exists ctr ofs,
+      nth_error ctrs ofs = Some ctr /\
+      In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+         (map fst (incMap tree2Topo ctrs bidx oss)) /\
+      In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+         (map snd (incMap tree2Topo ctrs bidx oss)) /\
+      In erq (c_merqs (snd (tree2Topo ctr bidx~>(oss + ofs)))).
 Proof.
-  induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
-  apply IHifcs.
-  simpl; apply SubList_app_1; assumption.
+  induction ctrs as [|ctr ctrs]; simpl; intros;
+    [left; assumption|].
+
+  specialize (IHctrs _ _ H).
+  destruct IHctrs.
+  - simpl in H0; apply in_app_or in H0; destruct H0.
+    + left; assumption.
+    + right; exists ctr, 0.
+      rewrite Nat.add_0_r; auto.
+  - destruct H0 as [nctr [ofs ?]]; dest.
+    right; exists nctr, (S ofs).
+    rewrite Nat.add_succ_r; auto.
 Qed.
 
-Lemma mergeCIfc_fold_left_c_minds_In:
-  forall ifc ifcs,
-    In ifc ifcs ->
-    forall bifc,
-      SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+Lemma tree2Topo_children_ext_rs_In:
+  forall ers bidx ctrs oss bcifc,
+    In ers (c_merss (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
+    In ers (c_merss bcifc) \/
+    exists ctr ofs,
+      nth_error ctrs ofs = Some ctr /\
+      In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+         (map fst (incMap tree2Topo ctrs bidx oss)) /\
+      In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+         (map snd (incMap tree2Topo ctrs bidx oss)) /\
+      In ers (c_merss (snd (tree2Topo ctr bidx~>(oss + ofs)))).
 Proof.
-  induction ifcs; simpl; intros; [exfalso; auto|].
-  destruct H; subst; [|auto].
-  apply fold_left_base_c_minds_In.
-  simpl; apply SubList_app_2, SubList_refl.
+  induction ctrs as [|ctr ctrs]; simpl; intros;
+    [left; assumption|].
+
+  specialize (IHctrs _ _ H).
+  destruct IHctrs.
+  - simpl in H0; apply in_app_or in H0; destruct H0.
+    + left; assumption.
+    + right; exists ctr, 0.
+      rewrite Nat.add_0_r; auto.
+  - destruct H0 as [nctr [ofs ?]]; dest.
+    right; exists nctr, (S ofs).
+    rewrite Nat.add_succ_r; auto.
 Qed.
 
 (** TODO: move to [Topology.v] *)
@@ -443,6 +495,63 @@ Proof.
     elim H; eapply collect_in; eauto.
   - eapply IHtrs; eauto.
     eapply NoDup_app_weakening_2; eauto.
+Qed.
+
+Lemma parentChnsOf_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rp,
+      parentChnsOf oidx ctr = Some rp ->
+      parentChnsOf oidx dtr = Some rp.
+Proof.
+  intros.
+  destruct rp as [root pidx].
+  pose proof (parentChnsOf_child_indsOf _ _ H0).
+  rewrite parentChnsOf_child_eq with (ctr:= ctr); try assumption.
+  intro Hx; subst.
+  rewrite root_parentChnsOf_None in H0.
+  - discriminate.
+  - destruct dtr; simpl in *; eapply wfDTree_child; eauto.
+  - reflexivity.
+Qed.
+
+Lemma rqEdgeUpFrom_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rqUp,
+      rqEdgeUpFrom ctr oidx = Some rqUp ->
+      rqEdgeUpFrom dtr oidx = Some rqUp.
+Proof.
+  unfold rqEdgeUpFrom, upEdgesFrom; intros.
+  destruct (parentChnsOf oidx ctr) as [rp|] eqn:Hrp; [|discriminate].
+  apply parentChnsOf_child_Some_eq with (dtr:= dtr) in Hrp; auto.
+  rewrite Hrp; assumption.
+Qed.
+
+Lemma rsEdgeUpFrom_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rqUp,
+      rsEdgeUpFrom ctr oidx = Some rqUp ->
+      rsEdgeUpFrom dtr oidx = Some rqUp.
+Proof.
+  unfold rsEdgeUpFrom, upEdgesFrom; intros.
+  destruct (parentChnsOf oidx ctr) as [rp|] eqn:Hrp; [|discriminate].
+  apply parentChnsOf_child_Some_eq with (dtr:= dtr) in Hrp; auto.
+  rewrite Hrp; assumption.
+Qed.
+
+Lemma edgeDownTo_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rqUp,
+      edgeDownTo ctr oidx = Some rqUp ->
+      edgeDownTo dtr oidx = Some rqUp.
+Proof.
+  unfold edgeDownTo, downEdgesTo; intros.
+  destruct (parentChnsOf oidx ctr) as [rp|] eqn:Hrp; [|discriminate].
+  apply parentChnsOf_child_Some_eq with (dtr:= dtr) in Hrp; auto.
+  rewrite Hrp; assumption.
 Qed.
 
 Lemma tree2Topo_RqRsChnsOnSystem_unfolded:
@@ -527,6 +636,69 @@ Proof.
   split; assumption.
 Qed.
 
+Lemma tree2Topo_ExtsOnDTree_unfolded:
+  forall tr bidx topo cifc,
+    tree2Topo tr bidx = (topo, cifc) ->
+    (forall erq,
+        In erq cifc.(c_merqs) ->
+        exists eoidx, rqEdgeUpFrom topo eoidx = Some erq) /\
+    (forall ers,
+        In ers cifc.(c_merss) ->
+        exists eoidx, edgeDownTo topo eoidx = Some ers).
+Proof.
+  induction tr using tree_ind_l; intros.
+  pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf.
+  simpl in *; find_if_inside; subst.
+  - inv H0; clear; simpl.
+    split; intros.
+    + destruct H; [subst|exfalso; auto].
+      exists (l1ExtOf bidx).
+      cbv [rqEdgeUpFrom upEdgesFrom parentChnsOf]; simpl.
+      cbv [hasIdx]; destruct (idx_dec _ _); [reflexivity|exfalso; auto].
+    + destruct H; [subst|exfalso; auto].
+      exists (l1ExtOf bidx).
+      cbv [edgeDownTo downEdgesTo parentChnsOf]; simpl.
+      cbv [hasIdx]; destruct (idx_dec _ _); [reflexivity|exfalso; auto].
+    
+  - inv H0; simpl; split; intros.
+    + apply tree2Topo_children_ext_rq_In in H0.
+      destruct H0; [dest_in|].
+      destruct H0 as [ctr [ofs ?]]; dest; simpl in *.
+      destruct (tree2Topo ctr bidx~>ofs) as [cdtr cifc] eqn:Hchd; simpl in *.
+      pose proof (nth_error_In _ _ H0).
+      rewrite Forall_forall in H; specialize (H _ H4); clear H4.
+      specialize (H _ _ _ Hchd); dest.
+      specialize (H _ H3).
+      destruct H as [eoidx ?].
+      exists eoidx.
+      eapply rqEdgeUpFrom_child_Some_eq; eauto.
+
+    + apply tree2Topo_children_ext_rs_In in H0.
+      destruct H0; [dest_in|].
+      destruct H0 as [ctr [ofs ?]]; dest; simpl in *.
+      destruct (tree2Topo ctr bidx~>ofs) as [cdtr cifc] eqn:Hchd; simpl in *.
+      pose proof (nth_error_In _ _ H0).
+      rewrite Forall_forall in H; specialize (H _ H4); clear H4.
+      specialize (H _ _ _ Hchd); dest.
+      specialize (H4 _ H3).
+      destruct H4 as [eoidx ?].
+      exists eoidx.
+      eapply edgeDownTo_child_Some_eq; eauto.
+Qed.
+
+Lemma tree2Topo_ExtsOnDTree:
+  forall {OStateIfc} tr bidx topo cifc (impl: System OStateIfc),
+    tree2Topo tr bidx = (topo, cifc) ->
+    impl.(sys_merqs) = cifc.(c_merqs) -> impl.(sys_merss) = cifc.(c_merss) ->
+    ExtsOnDTree topo impl.
+Proof.
+  intros.
+  apply tree2Topo_ExtsOnDTree_unfolded in H; dest.
+  split; red; intros.
+  - rewrite H0 in H3; auto.
+  - rewrite H1 in H3; auto.
+Qed.
+
 Section System.
   Variable tr: tree.
 
@@ -549,7 +721,7 @@ Section System.
     apply tree2Topo_RqRsChnsOnDTree.
   Qed.
 
-  Lemma mesi_impl_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
+  Lemma mesi_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
   Proof.
     eapply tree2Topo_RqRsChnsOnSystem with (tr0:= tr) (bidx:= [0]); try reflexivity.
     - unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
@@ -558,6 +730,21 @@ Section System.
         simpl; congruence.
       + induction (c_l1_indices (Mesi.cifc tr)); [reflexivity|].
         simpl; congruence.
+  Qed.
+
+  Lemma mesi_ExtsOnDTree: ExtsOnDTree topo impl.
+  Proof.
+    eapply tree2Topo_ExtsOnDTree with (tr0:= tr) (bidx:= [0]); try reflexivity.
+    unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
+  Qed.
+  
+  Lemma mesi_impl_RqRsDTree: RqRsDTree topo impl.
+  Proof.
+    red; repeat ssplit.
+    - auto using mesi_WfDTree.
+    - auto using mesi_RqRsChnsOnDTree.
+    - auto using mesi_RqRsChnsOnSystem.
+    - auto using mesi_ExtsOnDTree.
   Qed.
 
 End System.
