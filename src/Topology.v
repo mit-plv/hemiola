@@ -599,6 +599,42 @@ Section Facts.
     apply collect_in; auto.
   Qed.
 
+  Lemma subtree_indsOf:
+    forall idx dtr str,
+      subtree idx dtr = Some str ->
+      In idx (indsOf dtr).
+  Proof.
+    intros.
+    pose proof (subtree_Subtree _ _ H).
+    apply subtree_rootOf in H; subst.
+    apply Subtree_indsOf in H0.
+    apply H0.
+    apply indsOf_root_in.
+  Qed.
+
+  Lemma subtree_collect_NoDup_find_some:
+    forall trs,
+      NoDup (collect indsOf trs) ->
+      forall tr,
+        In tr trs ->
+        forall oidx otr,
+          subtree oidx tr = Some otr ->
+          find_some (subtree oidx) trs = Some otr.
+  Proof.
+    induction trs as [|str trs]; simpl; intros; [exfalso; auto|].
+    destruct H0; subst; [rewrite H1; reflexivity|].
+    destruct (subtree oidx str) eqn:Hstr.
+    - exfalso.
+      apply subtree_indsOf in H1.
+      apply subtree_indsOf in Hstr.
+      apply (DisjList_NoDup idx_dec) in H.
+      specialize (H oidx).
+      destruct H; auto.
+      elim H; eapply collect_in; eauto.
+    - eapply IHtrs; eauto.
+      eapply NoDup_app_weakening_2; eauto.
+  Qed.
+
   Lemma indsOf_childrenOf_disj:
     forall dtr,
       WfDTree dtr ->
@@ -1084,6 +1120,39 @@ Section Facts.
       intros.
       unfold parentIdxOf.
       erewrite parentChnsOf_Subtree_eq; eauto.
+    Qed.
+
+    Lemma root_parentChnsOf_None:
+      forall oidx,
+        oidx = rootOf dtr ->
+        parentChnsOf oidx dtr = None.
+    Proof.
+      intros; subst.
+      destruct (parentChnsOf _ _) as [[dmc pidx]|] eqn:Hp; [|reflexivity].
+      exfalso.
+      apply parentChnsOf_case in Hp.
+      destruct Hp as [ctr [? ?]].
+      destruct H0; dest; subst.
+      - eapply parent_child_not_eq; eauto.
+      - apply parent_not_in_children in H; [|assumption].
+        apply parentChnsOf_child_indsOf in H0; auto.
+    Qed.
+
+    Lemma parentChnsOf_subtree:
+      forall oidx root pidx,
+        parentChnsOf oidx dtr = Some (root, pidx) ->
+        exists odtr,
+          subtree oidx dtr = Some odtr /\
+          dmcOf odtr = root.
+    Proof.
+      intros.
+      apply parentChnsOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      exists ctr.
+      split; [|reflexivity].
+      eapply Subtree_child_Subtree in H3; [|eassumption].
+      rewrite <-rootOf_dmcOf.
+      apply Subtree_subtree; auto.
     Qed.
 
     Lemma parentIdxOf_not_eq:
