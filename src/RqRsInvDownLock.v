@@ -10,9 +10,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section DownLockInv.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrr: GoodRqRsSys dtr sys)
@@ -93,7 +93,7 @@ Section DownLockInv.
 
   End OnMState.
   
-  Definition DownLockInv (st: MState oifc) :=
+  Definition DownLockInv (st: MState) :=
     DownLockInvMO st.(bst_orqs) st.(bst_msgs).
 
   Lemma downLockInv_init:
@@ -796,10 +796,10 @@ Section DownLockInv.
   Qed.
 
   Section InternalStep.
-    Variables (oss: OStates oifc) (orqs: ORqs Msg) (msgs: MessagePool Msg)
-              (obj: Object oifc) (rule: Rule oifc)
-              (post: OState oifc) (porq: ORq Msg) (mins: list (Id Msg))
-              (nost: OState oifc) (norq: ORq Msg) (mouts: list (Id Msg)).
+    Variables (oss: OStates) (orqs: ORqs Msg) (msgs: MessagePool Msg)
+              (obj: Object) (rule: Rule)
+              (post: OState) (porq: ORq Msg) (mins: list (Id Msg))
+              (nost: OState) (norq: ORq Msg) (mouts: list (Id Msg)).
 
     Hypotheses
       (Hfpok: FootprintsOk

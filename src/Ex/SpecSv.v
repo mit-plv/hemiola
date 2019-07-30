@@ -16,15 +16,16 @@ Section System.
   Definition erq (i: nat): IdxT := extendIdx 0 [i].
   Definition ers (i: nat): IdxT := extendIdx 1 [i].
 
+  Instance SpecOStateIfc: OStateIfc :=
+    {| ost_sz := 1;
+       ost_ty := [nat:Type]%vector |}.
+
   Section Spec.
 
     Definition specIdx: IdxT := 0.
 
-    Definition SpecOStateIfc: OStateIfc :=
-      {| ost_sz := 1;
-         ost_ty := [nat:Type]%vector |}.
     Definition specValueIdx: Fin.t 1 := Fin.F1.
-    Definition specOStatesInit: OStates SpecOStateIfc :=
+    Definition specOStatesInit: OStates :=
       [specIdx <- hvcons 0 hvnil].
     Definition specORqsInit: ORqs Msg :=
       [specIdx <- []].
@@ -32,14 +33,14 @@ Section System.
     Section PerChn.
       Variable i: nat.
 
-      Definition specGetRq: Rule SpecOStateIfc :=
+      Definition specGetRq: Rule :=
         {| rule_idx := [i; 0];
            rule_precond :=
              MsgsFrom [erq i]
              /\oprec MsgIdsFrom [getRq]
              /\oprec RqAccepting;
            rule_trs :=
-             fun (ost: OState SpecOStateIfc) orq mins =>
+             fun ost orq mins =>
                (ost, orq,
                 [(ers i, {| msg_id := getRs;
                             msg_type := MRs;
@@ -47,14 +48,14 @@ Section System.
                          |})])
         |}.
 
-      Definition specSetRq: Rule SpecOStateIfc :=
+      Definition specSetRq: Rule :=
         {| rule_idx := [i; 1];
            rule_precond :=
              MsgsFrom [erq i]
              /\oprec MsgIdsFrom [setRq]
              /\oprec RqAccepting;
            rule_trs :=
-             fun (ost: OState SpecOStateIfc) orq mins =>
+             fun (ost: OState) orq mins =>
                ((hd_error mins) >>=[ost]
                                 (fun idm =>
                                    match msg_value (valOf idm) with
@@ -67,14 +68,14 @@ Section System.
                             msg_value := VUnit |})])
         |}.
 
-      Definition specEvictRq: Rule SpecOStateIfc :=
+      Definition specEvictRq: Rule :=
         {| rule_idx := [i; 2];
            rule_precond :=
              MsgsFrom [erq i]
              /\oprec MsgIdsFrom [evictRq]
              /\oprec RqAccepting;
            rule_trs :=
-             fun (ost: OState SpecOStateIfc) orq mins =>
+             fun (ost: OState) orq mins =>
                (ost, orq,
                 [(ers i, {| msg_id := evictRs;
                             msg_type := MRs;
@@ -84,10 +85,10 @@ Section System.
 
     End PerChn.
     
-    Definition specRulesI (i: nat): list (Rule SpecOStateIfc) :=
+    Definition specRulesI (i: nat): list (Rule) :=
       [specGetRq i; specSetRq i; specEvictRq i].
 
-    Fixpoint specRules (i: nat): list (Rule SpecOStateIfc) :=
+    Fixpoint specRules (i: nat): list (Rule) :=
       match i with
       | O => specRulesI O
       | S i' => (specRulesI i) ++ (specRules i')
@@ -122,7 +123,7 @@ Section System.
           apply DisjList_nil_1.
     Qed.
 
-    Definition specObj: Object SpecOStateIfc :=
+    Definition specObj: Object :=
       {| obj_idx := specIdx;
          obj_rules := specRules numC;
          obj_rules_valid := specObj_obj_rules_valid numC
@@ -153,7 +154,7 @@ Section System.
         + solve_not_in.
     Qed.
 
-    Definition spec: System SpecOStateIfc :=
+    Definition spec: System :=
       {| sys_objs := [specObj];
          sys_oinds_valid := ltac:(inds_valid_tac);
          sys_minds := nil;

@@ -12,9 +12,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section InsideTree.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
@@ -144,9 +144,9 @@ Section InsideTree.
 End InsideTree.
 
 Section RqRsRed.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).

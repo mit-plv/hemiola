@@ -17,9 +17,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section Pushable.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
@@ -76,7 +76,7 @@ Section Pushable.
   Section RsUp.
     Hypothesis (Hru: RsUpMsgs dtr oidx rins).
 
-    Definition RsUpP: MState oifc -> Prop :=
+    Definition RsUpP: MState -> Prop :=
       fun st => Forall (InMPI st.(bst_msgs)) rins.
 
     Lemma rsUp_PInitializing:
@@ -168,7 +168,7 @@ Section Pushable.
   End RsUp.
 
   Section RqDown.
-    Variable pobj: Object oifc.
+    Variable pobj: Object.
     Hypothesis (Hrd: RqDownMsgs dtr sys oidx rins)
                (Hpobj: In pobj sys.(sys_objs))
                (Hcp: parentIdxOf dtr oidx = Some (obj_idx pobj)).
@@ -387,7 +387,7 @@ Section Pushable.
   End RqDown.
 
   Section RsDown.
-    Variable pobj: Object oifc.
+    Variable pobj: Object.
     Hypothesis (Hrd: RsDownMsgs dtr sys oidx rins)
                (Hpobj: In pobj sys.(sys_objs))
                (Hcp: parentIdxOf dtr oidx = Some (obj_idx pobj)).
@@ -658,7 +658,7 @@ Section Pushable.
 End Pushable.
 
 Theorem rqrs_WellInterleaved:
-  forall {oifc} (sys: System oifc) (Hiorqs: GoodORqsInit (initsOf sys))
+  forall `{oifc: OStateIfc} (sys: System) (Hiorqs: GoodORqsInit (initsOf sys))
          (dtr: DTree),
     RqRsSys dtr sys ->
     WellInterleaved sys.
@@ -705,9 +705,9 @@ Proof.
 Qed.
 
 Section NonMergeable.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypothesis (Hrrs: RqRsSys dtr sys)
              (Hiorqs: GoodORqsInit (initsOf sys)).
 
@@ -854,7 +854,6 @@ Section NonMergeable.
         eapply extAtomic_multi_rsUps_not_diverged
           with (n3:= n1) (n4:= n2) (rsUp1:= (rsUp1, rsm1)) (rsUp2:= (rsUp2, rsm2))
                (cidx1:= cidx1) (cidx2:= cidx2); eauto.
-        * assumption.
         * red; auto.
         * red; auto.
       
@@ -907,7 +906,7 @@ Section NonMergeable.
 End NonMergeable.
 
 Corollary rqrs_Serializable:
-  forall {oifc} (sys: System oifc) (Hiorqs: GoodORqsInit (initsOf sys))
+  forall `{oifc: OStateIfc} (sys: System) (Hiorqs: GoodORqsInit (initsOf sys))
          (dtr: DTree),
     RqRsSys dtr sys ->
     SerializableSys sys.

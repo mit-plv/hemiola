@@ -35,6 +35,6 @@ Definition Blocked (msgs: MessagePool TMsg) :=
  * [BlockedInv] ->
  * [ValidTrss] /\ [SimMP]
  *)
-Definition BlockedInv {oifc} (tst: TState oifc) :=
+Definition BlockedInv `{OStateIfc} (tst: TState) :=
   Blocked (tst_msgs tst).
 

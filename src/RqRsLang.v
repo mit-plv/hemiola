@@ -16,24 +16,24 @@ Definition rootDmc (ridx: IdxT) :=
      dmc_ups := nil;
      dmc_downs := nil |}.
 
-Definition StateM oifc :=
-  (OState oifc * ORq Msg * list (Id Msg))%type.
+Definition StateM `{OStateIfc} :=
+  (OState * ORq Msg * list (Id Msg))%type.
 
-Definition StateMTrs oifc :=
-  StateM oifc -> StateM oifc.
+Definition StateMTrs `{OStateIfc} :=
+  StateM -> StateM.
 
-Definition StateMBind {oifc A}
-           (f: StateM oifc -> option A)
-           (cont: A -> StateM oifc -> StateM oifc): StateMTrs oifc :=
+Definition StateMBind `{OStateIfc} {A}
+           (f: StateM -> option A)
+           (cont: A -> StateM -> StateM): StateMTrs :=
   fun st => (f st) >>=[st] (fun a => cont a st).
 
-Definition TrsMTrs {oifc} (mtrs: StateMTrs oifc): OTrs oifc :=
+Definition TrsMTrs `{OStateIfc} (mtrs: StateMTrs): OTrs :=
   fun ost orq mins => mtrs (ost, orq, mins).
 
-Definition getFirstMsg {oifc} (st: StateM oifc): option Msg :=
+Definition getFirstMsg `{OStateIfc} (st: StateM): option Msg :=
   (hd_error (snd st)) >>= (fun idm => Some (valOf idm)).
 
-Definition FirstNatMsg {oifc}: OPrec oifc :=
+Definition FirstNatMsg `{OStateIfc}: OPrec :=
   fun ost orq mins =>
     (hd_error mins)
       >>=[False]
@@ -43,7 +43,7 @@ Definition FirstNatMsg {oifc}: OPrec oifc :=
          | _ => False
          end).
 
-Definition getFirstNatMsg {oifc} (st: StateM oifc): option nat :=
+Definition getFirstNatMsg `{OStateIfc} (st: StateM): option nat :=
   (hd_error (snd st))
     >>= (fun idm =>
            match msg_value (valOf idm) with
@@ -51,7 +51,7 @@ Definition getFirstNatMsg {oifc} (st: StateM oifc): option nat :=
            | _ => None
            end).
 
-Definition UpLockMsgId {oifc} (mty: bool) (mid: IdxT): OPrec oifc :=
+Definition UpLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
   fun ost orq mins =>
     (orq@[upRq])
       >>=[False]
@@ -59,23 +59,23 @@ Definition UpLockMsgId {oifc} (mty: bool) (mid: IdxT): OPrec oifc :=
          rqiu.(rqi_msg).(msg_type) = mty /\
          rqiu.(rqi_msg).(msg_id) = mid).
 
-Definition getUpLockMsgId {oifc} (st: StateM oifc): option (bool * IdxT) :=
+Definition getUpLockMsgId `{OStateIfc} (st: StateM): option (bool * IdxT) :=
   ((snd (fst st))@[upRq])
     >>= (fun rqiu => Some (rqiu.(rqi_msg).(msg_type),
                            rqiu.(rqi_msg).(msg_id))).
 
-Definition UpLockMsg {oifc}: OPrec oifc :=
+Definition UpLockMsg `{OStateIfc}: OPrec :=
   fun ost orq mins =>
     match orq@[upRq] with
     | Some _ => True
     | _ => False
     end.
 
-Definition getUpLockMsg {oifc} (st: StateM oifc): option Msg :=
+Definition getUpLockMsg `{OStateIfc} (st: StateM): option Msg :=
   ((snd (fst st))@[upRq])
     >>= (fun rqiu => Some (rqi_msg rqiu)).
 
-Definition UpLockNatMsg {oifc}: OPrec oifc :=
+Definition UpLockNatMsg `{OStateIfc}: OPrec :=
   fun ost orq mins =>
     (orq@[upRq])
       >>=[False]
@@ -85,7 +85,7 @@ Definition UpLockNatMsg {oifc}: OPrec oifc :=
          | _ => False
          end).
 
-Definition getUpLockNatMsg {oifc} (st: StateM oifc): option nat :=
+Definition getUpLockNatMsg `{OStateIfc} (st: StateM): option nat :=
   ((snd (fst st))@[upRq])
     >>= (fun rqiu =>
            match msg_value (rqi_msg rqiu) with
@@ -93,14 +93,14 @@ Definition getUpLockNatMsg {oifc} (st: StateM oifc): option nat :=
            | _ => None
            end).
 
-Definition UpLocked {oifc}: OPrec oifc :=
+Definition UpLocked `{OStateIfc}: OPrec :=
   fun ost orq mins => orq@[upRq] <> None.
 
-Definition getUpLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
+Definition getUpLockIdxBack `{OStateIfc} (st: StateM): option IdxT :=
   ((snd (fst st))@[upRq])
     >>= (fun rqiu => Some rqiu.(rqi_midx_rsb)).
 
-Definition DownLockMsgId {oifc} (mty: bool) (mid: IdxT): OPrec oifc :=
+Definition DownLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
   fun ost orq mins =>
     (orq@[downRq])
       >>=[False]
@@ -108,23 +108,23 @@ Definition DownLockMsgId {oifc} (mty: bool) (mid: IdxT): OPrec oifc :=
          rqiu.(rqi_msg).(msg_type) = mty /\
          rqiu.(rqi_msg).(msg_id) = mid).
 
-Definition getDownLockMsgId {oifc} (st: StateM oifc): option (bool * IdxT) :=
+Definition getDownLockMsgId `{OStateIfc} (st: StateM): option (bool * IdxT) :=
   ((snd (fst st))@[downRq])
     >>= (fun rqiu => Some (rqiu.(rqi_msg).(msg_type),
                            rqiu.(rqi_msg).(msg_id))).
 
-Definition DownLockMsg {oifc}: OPrec oifc :=
+Definition DownLockMsg `{OStateIfc}: OPrec :=
   fun ost orq mins =>
     match orq@[downRq] with
     | Some _ => True
     | _ => False
     end.
 
-Definition getDownLockMsg {oifc} (st: StateM oifc): option Msg :=
+Definition getDownLockMsg `{OStateIfc} (st: StateM): option Msg :=
   ((snd (fst st))@[downRq])
     >>= (fun rqiu => Some (rqi_msg rqiu)).
 
-Definition DownLockNatMsg {oifc}: OPrec oifc :=
+Definition DownLockNatMsg `{OStateIfc}: OPrec :=
   fun ost orq mins =>
     (orq@[downRq])
       >>=[False]
@@ -134,7 +134,7 @@ Definition DownLockNatMsg {oifc}: OPrec oifc :=
          | _ => False
          end).
 
-Definition getDownLockNatMsg {oifc} (st: StateM oifc): option nat :=
+Definition getDownLockNatMsg `{OStateIfc} (st: StateM): option nat :=
   ((snd (fst st))@[downRq])
     >>= (fun rqid =>
            match msg_value (rqi_msg rqid) with
@@ -142,32 +142,32 @@ Definition getDownLockNatMsg {oifc} (st: StateM oifc): option nat :=
            | _ => None
            end).
 
-Definition DownLocked {oifc}: OPrec oifc :=
+Definition DownLocked `{OStateIfc}: OPrec :=
   fun ost orq mins => orq@[downRq] <> None.
 
-Definition getDownLockIndsFrom {oifc} (st: StateM oifc): option (list IdxT) :=
+Definition getDownLockIndsFrom `{OStateIfc} (st: StateM): option (list IdxT) :=
   ((snd (fst st))@[downRq])
     >>= (fun rqid => Some (rqid.(rqi_minds_rss))).
 
-Definition getDownLockIdxBack {oifc} (st: StateM oifc): option IdxT :=
+Definition getDownLockIdxBack `{OStateIfc} (st: StateM): option IdxT :=
   ((snd (fst st))@[downRq])
     >>= (fun rqid => Some rqid.(rqi_midx_rsb)).
 
-Definition MsgsFrom {oifc} (froms: list IdxT): OPrec oifc :=
+Definition MsgsFrom `{OStateIfc} (froms: list IdxT): OPrec :=
   fun _ _ mins => idsOf mins = froms.
 
-Definition MsgIdsFrom {oifc} (msgIds: list IdxT): OPrec oifc :=
+Definition MsgIdsFrom `{OStateIfc} (msgIds: list IdxT): OPrec :=
   fun _ _ mins => map msg_id (valsOf mins) = msgIds.
 
-Definition MsgIdFromEach {oifc} (msgId: IdxT): OPrec oifc :=
+Definition MsgIdFromEach `{OStateIfc} (msgId: IdxT): OPrec :=
   fun _ _ mins => Forall (fun idm => msg_id (valOf idm) = msgId) mins.
 
-Definition MsgsFromORq {oifc} (rqty: IdxT): OPrec oifc :=
+Definition MsgsFromORq `{OStateIfc} (rqty: IdxT): OPrec :=
   fun _ orq mins =>
     orq@[rqty] >>=[False]
        (fun rqi => idsOf mins = rqi_minds_rss rqi).
 
-Definition MsgsFromRsUp {oifc} (dtr: DTree) (orss: list IdxT): OPrec oifc :=
+Definition MsgsFromRsUp `{OStateIfc} (dtr: DTree) (orss: list IdxT): OPrec :=
   fun _ orq mins =>
     orq@[downRq] >>=[False]
        (fun rqid =>
@@ -176,7 +176,7 @@ Definition MsgsFromRsUp {oifc} (dtr: DTree) (orss: list IdxT): OPrec oifc :=
                      rsEdgeUpFrom dtr robj = Some rsUp)
                   (rqi_minds_rss rqid) orss).
 
-Definition MsgsTo {oifc} (tos: list IdxT) (rule: Rule oifc): Prop :=
+Definition MsgsTo `{OStateIfc} (tos: list IdxT) (rule: Rule): Prop :=
   forall ost orq mins,
     idsOf (snd (rule.(rule_trs) ost orq mins)) = tos.
 
@@ -233,16 +233,16 @@ Module RqRsNotations.
        rule_trs := TRS%trs |} (at level 5).
 End RqRsNotations.
 
-Definition AtomicMsgOutsInv {oifc} (mp: MsgOutPred oifc)
-           (eouts: list (Id Msg)) (nst: MState oifc): Prop :=
+Definition AtomicMsgOutsInv `{OStateIfc} (mp: MsgOutPred)
+           (eouts: list (Id Msg)) (nst: MState): Prop :=
   Forall (fun eout => mp eout nst.(bst_oss) nst.(bst_orqs)) eouts.
 
-Definition AtomicInv {oifc} (mp: MsgOutPred oifc):
+Definition AtomicInv `{OStateIfc} (mp: MsgOutPred):
   list (Id Msg) (* inits *) ->
-  MState oifc (* starting state *) ->
+  MState (* starting state *) ->
   MHistory (* atomic history *) ->
   list (Id Msg) (* eouts *) ->
-  MState oifc (* ending state *) -> Prop :=
+  MState (* ending state *) -> Prop :=
   fun inits st1 hst eouts st2 =>
     AtomicMsgOutsInv mp eouts st2.
 
@@ -288,12 +288,12 @@ Ltac disc_rule_conds_const_unit :=
       let Hrqi := fresh "Hrqi" in
       destruct (m@[i]) as [rqi|] eqn:Hrqi;
       [simpl in *|exfalso; auto]
-    | M.t (OState _) =>
+    | M.t (@OState _) =>
       let ost := fresh "ost" in
       let Host := fresh "Host" in
       destruct (m@[i]) as [ost|] eqn:Host;
       [simpl in *|exfalso; auto]
-    | OStates _ =>
+    | @OStates _ =>
       let ost := fresh "ost" in
       let Host := fresh "Host" in
       destruct (m@[i]) as [ost|] eqn:Host;

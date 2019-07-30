@@ -49,9 +49,9 @@ Proof.
 Qed.
 
 Section RqUpReduction.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
@@ -162,7 +162,7 @@ Section RqUpReduction.
     try disc_messages_in.
   
   Lemma rqUpMsgs_RqToUpRule:
-    forall {oifc} (sys: System oifc) oidx (rule: Rule oifc)
+    forall `{oifc: OStateIfc} (sys: System) oidx (rule: Rule)
            post porq rins nost norq routs oidxTo,
       GoodRqRsRule dtr sys oidx rule ->
       rule_precond rule post porq rins ->
@@ -201,7 +201,7 @@ Section RqUpReduction.
     end.
 
   Lemma rqUpUp_rqUpDown_reducible:
-    forall oidx (rule1 rule2: Rule oifc),
+    forall oidx (rule1 rule2: Rule),
       RqUpUp dtr oidx rule1 ->
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqUpDown dtr sys oidx rule2 ->
@@ -248,7 +248,7 @@ Section RqUpReduction.
   Qed.
 
   Lemma rqUpUp_rqDownDown_reducible:
-    forall oidx (rule1 rule2: Rule oifc),
+    forall oidx (rule1 rule2: Rule),
       RqUpUp dtr oidx rule1 ->
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqDownDown dtr oidx rule2 ->

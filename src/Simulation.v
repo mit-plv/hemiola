@@ -139,8 +139,9 @@ Section InvSim.
   
 End InvSim.
 
-Definition liftSim {iifc sifc} (ossSim: OStates iifc -> OStates sifc -> Prop):
-  MState iifc -> MState sifc -> Prop :=
+Definition liftSim {iifc sifc: OStateIfc}
+           (ossSim: @OStates iifc -> @OStates sifc -> Prop):
+  @MState iifc -> @MState sifc -> Prop :=
   fun ist sst => ossSim (bst_oss ist) (bst_oss sst).
 
 Close Scope list.

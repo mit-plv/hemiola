@@ -11,9 +11,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section Coverage.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
@@ -1660,12 +1660,12 @@ Section Coverage.
 
   Section InternalStep.
 
-    Variables (st0: MState oifc)
+    Variables (st0: MState)
               (inits ins: list (Id Msg)) (hst: MHistory) (outs eouts: list (Id Msg))
-              (oss: OStates oifc) (orqs: ORqs Msg) (msgs: MessagePool Msg)
-              (obj: Object oifc) (rule: Rule oifc)
-              (post: OState oifc) (porq: ORq Msg) (rins: list (Id Msg))
-              (nost: OState oifc) (norq: ORq Msg) (routs: list (Id Msg)).
+              (oss: OStates) (orqs: ORqs Msg) (msgs: MessagePool Msg)
+              (obj: Object) (rule: Rule)
+              (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
+              (nost: OState) (norq: ORq Msg) (routs: list (Id Msg)).
 
     Hypotheses
       (Hatm: Atomic msg_dec inits ins hst outs eouts)

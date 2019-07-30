@@ -31,7 +31,9 @@ Ltac get_lock_inv obj sys :=
 
 Section Inv.
 
-  Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+  Existing Instance MsiSv.ImplOStateIfc.
+
+  Definition ImplOStateMSI (cv: nat) (ost: OState): Prop :=
     msiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
 
   Definition MsgExistsSig (sig: MSig) (msgs: MessagePool Msg) :=
@@ -40,7 +42,7 @@ Section Inv.
   Section InvExcl.
     Variables (dir: MSI)
               (porq: ORq Msg)
-              (cost: OState ImplOStateIfc)
+              (cost: OState)
               (corq: ORq Msg)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
@@ -81,7 +83,7 @@ Section Inv.
 
   Section InvInvalid.
     Variables (dir: MSI)
-              (cost: OState ImplOStateIfc)
+              (cost: OState)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
@@ -96,7 +98,7 @@ Section Inv.
   End InvInvalid.
 
   Section InvDir.
-    Variables (post cost1 cost2: OState ImplOStateIfc)
+    Variables (post cost1 cost2: OState)
               (porq corq1 corq2: ORq Msg).
 
     (* Why soundness of the directory:
@@ -126,7 +128,7 @@ Section Inv.
 
   End InvDir.
 
-  Definition ImplInv (st: MState ImplOStateIfc): Prop :=
+  Definition ImplInv (st: MState): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       cost1 <-- (bst_oss st)@[child1Idx];
       cost2 <-- (bst_oss st)@[child2Idx];
@@ -901,7 +903,7 @@ Section Inv.
         solve_DisjList idx_dec.
     Qed.
 
-    Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
+    Definition MsiSvMsgOutPred: MsgOutPred :=
       fun eout oss orqs =>
         match case (sigOf eout) on sig_dec default True with
         | (ec1, (MRq, Spec.getRq)): False
@@ -1087,7 +1089,7 @@ Section Inv.
         ImplInv {| bst_oss := oss;
                    bst_orqs := orqs;
                    bst_msgs := msgs |} ->
-        forall cidx ost nv (noss: OStates ImplOStateIfc),
+        forall cidx ost nv (noss: OStates),
           oss@[cidx] = Some ost ->
           noss = oss +[cidx <- (nv, snd ost)] ->
           ImplInv {| bst_oss := noss;
@@ -1337,7 +1339,7 @@ Section Inv.
               forall rsm,
                 FirstMP msgs cpRs rsm ->
                 msg_type rsm = MRs ->
-                forall cost: OState ImplOStateIfc,
+                forall cost: OState,
                   cost#[implStatusIdx] = msiI ->
                   InvalidMsgs cost pc cpRq cpRs (deqMP cpRs msgs).
     Proof.

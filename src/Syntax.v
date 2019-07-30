@@ -95,15 +95,15 @@ End Msg.
 Class HasInit (SysT StateT: Type) :=
   { initsOf: SysT -> StateT }.
 
-Record OStateIfc :=
+Class OStateIfc :=
   { ost_sz: nat;
     ost_ty: Vector.t Type ost_sz
   }.
 
-Definition OState (ifc: OStateIfc) :=
-  hvec (ost_ty ifc).
+Definition OState `{OStateIfc} :=
+  hvec ost_ty.
 
-Definition OStates (ifc: OStateIfc) := M.t (OState ifc).
+Definition OStates `{OStateIfc} := M.t OState.
 
 Section ORqs.
 
@@ -139,13 +139,13 @@ Section ORqs.
 End ORqs.
 
 Section Rule.
-  Variables (ifc: OStateIfc).
+  Context `{OStateIfc}.
 
   Definition OPrec :=
-    OState ifc -> ORq Msg -> list (Id Msg) -> Prop.
+    OState -> ORq Msg -> list (Id Msg) -> Prop.
   Definition OTrs :=
-    OState ifc -> ORq Msg -> list (Id Msg) ->
-    (OState ifc * ORq Msg * list (Id Msg)).
+    OState -> ORq Msg -> list (Id Msg) ->
+    (OState * ORq Msg * list (Id Msg)).
 
   Definition OPrecAnd (p1 p2: OPrec): OPrec :=
     fun ost orq ins => p1 ost orq ins /\ p2 ost orq ins.
@@ -170,14 +170,14 @@ Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
 Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
   List.map (fun midx => (midx, msg)) minds.
 
-Record Object oifc :=
+Record Object `{OStateIfc} :=
   { obj_idx: IdxT;
-    obj_rules: list (Rule oifc);
+    obj_rules: list Rule;
     obj_rules_valid: NoDup (List.map (@rule_idx _) obj_rules)
   }.
 
 Lemma rule_same_id_in_object_same:
-  forall {oifc} (obj: Object oifc) (rule1 rule2: Rule oifc),
+  forall `{OStateIfc} (obj: Object) (rule1 rule2: Rule),
     List.In rule1 (obj_rules obj) ->
     List.In rule2 (obj_rules obj) ->
     rule_idx rule1 = rule_idx rule2 ->
@@ -188,19 +188,19 @@ Proof.
   exact (obj_rules_valid obj).
 Qed.
 
-Record System oifc :=
-  { sys_objs: list (Object oifc);
+Record System `{OStateIfc} :=
+  { sys_objs: list Object;
     sys_oinds_valid: NoDup (List.map (@obj_idx _) sys_objs);
     sys_minds: list IdxT;
     sys_merqs: list IdxT;
     sys_merss: list IdxT;
     sys_msg_inds_valid: NoDup (sys_minds ++ sys_merqs ++ sys_merss);
-    sys_oss_inits: OStates oifc;
+    sys_oss_inits: OStates;
     sys_orqs_inits: ORqs Msg
   }.
 
 Lemma obj_same_id_in_system_same:
-  forall {oifc} (sys: System oifc) (obj1 obj2: Object oifc),
+  forall `{OStateIfc} (sys: System) (obj1 obj2: Object),
     List.In obj1 (sys_objs sys) ->
     List.In obj2 (sys_objs sys) ->
     obj_idx obj1 = obj_idx obj2 ->
@@ -216,10 +216,10 @@ Ltac inds_valid_tac :=
   repeat (constructor; [intro Hx; dest_in; discriminate|]);
   constructor.
 
-Global Instance System_OStates_HasInit {oifc}: HasInit (System oifc) (OStates oifc) :=
+Global Instance System_OStates_HasInit `{OStateIfc}: HasInit System OStates :=
   {| initsOf := @sys_oss_inits _ |}.
 
-Global Instance System_ORqs_HasInit {oifc}: HasInit (System oifc) (ORqs Msg) :=
+Global Instance System_ORqs_HasInit `{OStateIfc}: HasInit System (ORqs Msg) :=
   {| initsOf := @sys_orqs_inits _ |}.
 
 Close Scope string.

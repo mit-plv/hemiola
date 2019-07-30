@@ -9,35 +9,35 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Definition StatesPred oifc := OStates oifc -> ORqs Msg -> Prop.
-Definition MsgOutPred oifc := Id Msg -> StatesPred oifc.
+Definition StatesPred `{OStateIfc} := OStates -> ORqs Msg -> Prop.
+Definition MsgOutPred `{OStateIfc} := Id Msg -> StatesPred.
 
 Section PerOStateIfc.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   
   Definition StatesEquivR (oinds: list IdxT)
-             (oss1: OStates oifc) (orqs1: ORqs Msg)
-             (oss2: OStates oifc) (orqs2: ORqs Msg): Prop :=
+             (oss1: OStates) (orqs1: ORqs Msg)
+             (oss2: OStates) (orqs2: ORqs Msg): Prop :=
     forall oidx,
       In oidx oinds ->
       oss1@[oidx] = oss2@[oidx] /\
       orqs1@[oidx] = orqs2@[oidx].
 
   Definition StatesEquivC (oinds: list IdxT)
-             (oss1: OStates oifc) (orqs1: ORqs Msg)
-             (oss2: OStates oifc) (orqs2: ORqs Msg) :=
+             (oss1: OStates) (orqs1: ORqs Msg)
+             (oss2: OStates) (orqs2: ORqs Msg) :=
     forall oidx,
       ~ In oidx oinds ->
       oss1@[oidx] = oss2@[oidx] /\
       orqs1@[oidx] = orqs2@[oidx].
 
-  Definition StatesPredR (oinds: list IdxT) (P: StatesPred oifc) :=
+  Definition StatesPredR (oinds: list IdxT) (P: StatesPred) :=
     forall oss1 orqs1 oss2 orqs2,
       P oss1 orqs1 ->
       StatesEquivR oinds oss1 orqs1 oss2 orqs2 ->
       P oss2 orqs2.
 
-  Definition StatesPredC (oinds: list IdxT) (P: StatesPred oifc) :=
+  Definition StatesPredC (oinds: list IdxT) (P: StatesPred) :=
     forall oss1 orqs1 oss2 orqs2,
       P oss1 orqs1 ->
       StatesEquivC oinds oss1 orqs1 oss2 orqs2 ->
@@ -46,7 +46,7 @@ Section PerOStateIfc.
 End PerOStateIfc.
 
 Lemma OStatesEquivR_add:
-  forall {oifc} oinds (oss: OStates oifc) orqs oidx nost norq,
+  forall `{oifc: OStateIfc} oinds (oss: OStates) orqs oidx nost norq,
     ~ In oidx oinds ->
     StatesEquivR oinds oss orqs (oss +[oidx <- nost]) (orqs +[oidx <- norq]).
 Proof.
@@ -54,25 +54,25 @@ Proof.
 Qed.
 
 Section PredMsg.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
-  Definition GoodRqDownPred (rqDown: Id Msg) (P: StatesPred oifc) :=
+  Definition GoodRqDownPred (rqDown: Id Msg) (P: StatesPred) :=
     forall oidx,
       RqDownMsgTo dtr oidx rqDown ->
       forall pidx,
         parentIdxOf dtr oidx = Some pidx ->
         StatesPredR [pidx] P.
 
-  Definition GoodRsUpPred (rsUp: Id Msg) (P: StatesPred oifc) :=
+  Definition GoodRsUpPred (rsUp: Id Msg) (P: StatesPred) :=
     forall oidx,
       RsUpMsgFrom dtr oidx rsUp ->
       StatesPredR (subtreeIndsOf dtr oidx) P.
 
-  Definition GoodMsgOutPred (P: MsgOutPred oifc) :=
+  Definition GoodMsgOutPred (P: MsgOutPred) :=
     forall eout: Id Msg,
       GoodRqDownPred eout (P eout) /\
       GoodRsUpPred eout (P eout).

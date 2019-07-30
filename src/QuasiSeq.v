@@ -11,9 +11,9 @@ Open Scope list.
 (*! Quasi-sequential histories *)
 
 Section QuasiSeq.
-  Context {oifc: OStateIfc}.
-  Variables (sys: System oifc)
-            (quasiSeq: forall (sys: System oifc) (hst: MHistory) (n: nat), Prop).
+  Context `{oifc: OStateIfc}.
+  Variables (sys: System)
+            (quasiSeq: forall (sys: System) (hst: MHistory) (n: nat), Prop).
 
   Definition QuasiSeqOkInit :=
     forall hst st,
@@ -58,7 +58,7 @@ Section QuasiSeq.
 
 End QuasiSeq.
 
-Definition ExtContinuous {oifc} (sys: System oifc)
+Definition ExtContinuous `{oifc: OStateIfc} (sys: System)
            (hst1 hst2: MHistory) :=
   exists inits1 eouts1 inits2 ins2 outs2 eouts2,
     ExtAtomic sys msg_dec inits1 hst1 eouts1 /\
@@ -66,7 +66,7 @@ Definition ExtContinuous {oifc} (sys: System oifc)
     ~ SubList (idsOf inits2) (sys_merqs sys) /\
     SubList inits2 eouts1.
 
-Definition ExtContinuousL {oifc} (sys: System oifc)
+Definition ExtContinuousL `{oifc: OStateIfc} (sys: System)
            (hst: MHistory) (l: MLabel) :=
   exists inits eouts oidx ridx rins routs,
     ExtAtomic sys msg_dec inits hst eouts /\
@@ -80,14 +80,14 @@ Definition Discontinuous (hst1 hst2: MHistory) :=
     Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
     DisjList eouts1 inits2.
 
-Definition ExtInterleaved {oifc} (sys: System oifc)
+Definition ExtInterleaved `{oifc: OStateIfc} (sys: System)
            (hsts: list MHistory) :=
   exists hst1 hst2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 /\
     ExtContinuous sys hst1 hst2 /\
     Forall (fun hst => Discontinuous hst1 hst) hsts2.
 
-Definition ExtInterleavedL {oifc} (sys: System oifc)
+Definition ExtInterleavedL `{oifc: OStateIfc} (sys: System)
            (hsts: list MHistory) :=
   exists hst1 l2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ [l2] :: hsts2 ++ hst1 :: hsts1 /\
@@ -95,7 +95,7 @@ Definition ExtInterleavedL {oifc} (sys: System oifc)
     Forall (fun hst => Discontinuous hst1 hst) hsts2.
 
 Lemma extContinuous_concat:
-  forall {oifc} (sys: System oifc) hst l,
+  forall `{oifc: OStateIfc} (sys: System) hst l,
     ExtContinuousL sys hst l ->
     exists inits neouts,
       ExtAtomic sys msg_dec inits (l :: hst) neouts.
@@ -110,7 +110,7 @@ Proof.
 Qed.
 
 Lemma extContinuous_hst_stransactional_length:
-  forall {oifc} (sys: System oifc) hst l tn,
+  forall `{oifc: OStateIfc} (sys: System) hst l tn,
     ExtContinuousL sys hst l ->
     STransactional sys msg_dec hst tn ->
     tn = 0.
@@ -124,7 +124,7 @@ Proof.
 Qed.
 
 Lemma extContinuous_label_stransactional_one:
-  forall {oifc} (sys: System oifc) hst l tn,
+  forall `{oifc: OStateIfc} (sys: System) hst l tn,
     ExtContinuousL sys hst l ->
     STransactional sys msg_dec [l] tn ->
     tn = 1.
@@ -151,7 +151,7 @@ Proof.
 Qed.
 
 Lemma extAtomic_Discontinuous:
-  forall {oifc} (sys: System oifc) st1 trss st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 trss st2,
     steps step_m sys st1 (List.concat trss) st2 ->
     Forall (AtomicEx msg_dec) trss ->
     Forall (Transactional sys msg_dec) trss ->
@@ -209,7 +209,7 @@ Proof.
 Qed.
 
 Lemma extInterleaved_atomic_extInterleavedL:
-  forall {oifc} (sys: System oifc) atms n,
+  forall `{oifc: OStateIfc} (sys: System) atms n,
     Forall (AtomicEx msg_dec) atms ->
     SSequential sys msg_dec atms n ->
     ExtInterleaved sys atms ->
@@ -283,7 +283,7 @@ Qed.
  * executed without any merging, i.e., each [Atomic] history is either the start
  * of a new transaction or a continuation of a previous transaction.
  *)
-Definition NonMergeable {oifc} (sys: System oifc) :=
+Definition NonMergeable `{oifc: OStateIfc} (sys: System) :=
   forall st1,
     Reachable (steps step_m) sys st1 ->
     IntMsgsEmpty sys (bst_msgs st1) ->
@@ -297,7 +297,7 @@ Definition NonMergeable {oifc} (sys: System oifc) :=
 
 Section WellInterleaved.
   Context {oifc: OStateIfc}.
-  Variable (sys: System oifc).
+  Variable (sys: System).
   Hypothesis (Hnmg: NonMergeable sys).
 
   Definition WellInterleavedHst (hst1: MHistory) (l2: MLabel) :=
@@ -482,7 +482,7 @@ End WellInterleaved.
 
 Section Pushable.
   Context {oifc: OStateIfc}.
-  Variables (sys: System oifc) (P: MState oifc -> Prop)
+  Variables (sys: System) (P: MState -> Prop)
             (hst1: MHistory) (l2: MLabel).
 
   Hypotheses (Hpinit: PInitializing sys P hst1).
@@ -691,7 +691,7 @@ End Pushable.
 
 Section LPushable.
   Context {oifc: OStateIfc}.
-  Variables (sys: System oifc).
+  Variables (sys: System).
 
   Definition LPushableHst (hst1: MHistory) (l2: MLabel) :=
     forall st1,
@@ -735,7 +735,7 @@ End LPushable.
 
 Section RPushable.
   Context {oifc: OStateIfc}.
-  Variables (sys: System oifc) (P: MState oifc -> Prop)
+  Variables (sys: System) (P: MState -> Prop)
             (hst1: MHistory) (l2: MLabel).
 
   Hypotheses (Hpinit: PInitializing sys P hst1).

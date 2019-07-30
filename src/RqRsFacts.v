@@ -167,9 +167,9 @@ Proof.
 Qed.
 
 Section RqRsDTree.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypothesis (Hsd: RqRsDTree dtr sys).
 
@@ -764,7 +764,8 @@ Section RqRsDTree.
   Qed.
   
   Lemma footprintUpDownOk_rs_eq:
-    forall {oifc} (sys: System oifc) oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
+    forall `{oifc: OStateIfc} (sys: System) oidx rqFrom rqTos
+           rssFrom1 rsbTo1 rssFrom2 rsbTo2,
       FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom1 rsbTo1 ->
       FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom2 rsbTo2 ->
       rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.

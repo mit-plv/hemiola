@@ -7,8 +7,8 @@ Open Scope list.
 (** [Atomic] and [Transactional] histories *)
 
 Section Sequential.
-  Context {oifc: OStateIfc}.
-  Variables sys: System oifc.
+  Context `{OStateIfc}.
+  Variables sys: System.
 
   Context {MsgT} `{HasMsg MsgT}.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
@@ -79,8 +79,8 @@ Section Sequential.
 End Sequential.
 
 Section Semi.
-  Context {oifc: OStateIfc}.
-  Variables sys: System oifc.
+  Context `{OStateIfc}.
+  Variables sys: System.
 
   Context {MsgT} `{HasMsg MsgT}.
   Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
@@ -119,22 +119,22 @@ End Semi.
 
 (*! Serializability *)
 
-Definition trsSteps {oifc} (sys: System oifc)
-           (st1: MState oifc) (hst: MHistory) (st2: MState oifc) :=
+Definition trsSteps `{OStateIfc} (sys: System)
+           (st1: MState) (hst: MHistory) (st2: MState) :=
   steps step_m sys st1 hst st2 /\
   Transactional sys msg_dec hst.
 
-Definition seqSteps {oifc} (sys: System oifc)
-           (st1: MState oifc) (hst: MHistory) (st2: MState oifc) :=
+Definition seqSteps `{OStateIfc} (sys: System)
+           (st1: MState) (hst: MHistory) (st2: MState) :=
   steps step_m sys st1 hst st2 /\
   exists trss, Sequential sys msg_dec hst trss.
 
-Definition Serializable {oifc} (sys: System oifc) (ll: MHistory) (st: MState oifc) :=
+Definition Serializable `{OStateIfc} (sys: System) (ll: MHistory) (st: MState) :=
   (* Legal and sequential *)
   exists sll, seqSteps sys (initsOf sys) sll st.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
-Definition SerializableSys {oifc} (sys: System oifc) :=
+Definition SerializableSys `{OStateIfc} (sys: System) :=
   forall ll st,
     steps step_m sys (initsOf sys) ll st ->
     Serializable sys ll st.

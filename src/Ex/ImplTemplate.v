@@ -634,7 +634,7 @@ Section Facts.
   Qed.
 
   Lemma tree2Topo_RqRsChnsOnSystem:
-    forall {OStateIfc} tr bidx topo cifc (impl: System OStateIfc),
+    forall `{oifc: OStateIfc} tr bidx topo cifc (impl: System),
       tree2Topo tr bidx = (topo, cifc) ->
       map (@obj_idx _) impl.(sys_objs) = cifc.(c_li_indices) ++ cifc.(c_l1_indices) ->
       impl.(sys_minds) = cifc.(c_minds) ->
@@ -702,7 +702,7 @@ Section Facts.
   Qed.
 
   Lemma tree2Topo_ExtsOnDTree:
-    forall {OStateIfc} tr bidx topo cifc (impl: System OStateIfc),
+    forall {oifc: OStateIfc} tr bidx topo cifc (impl: System),
       tree2Topo tr bidx = (topo, cifc) ->
       impl.(sys_merqs) = cifc.(c_merqs) -> impl.(sys_merss) = cifc.(c_merss) ->
       ExtsOnDTree topo impl.

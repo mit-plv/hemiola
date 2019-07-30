@@ -3,8 +3,8 @@ Require Import Common FMap Syntax Semantics.
 
 Open Scope fmap.
 
-Inductive step_m {oifc} (sys: System oifc):
-  MState oifc -> MLabel -> MState oifc -> Prop :=
+Inductive step_m `{OStateIfc} (sys: System):
+  MState -> MLabel -> MState -> Prop :=
 | SmSlt: forall st, step_m sys st (RlblEmpty _) st
 | SmIns: forall pst nst oss orqs msgs eins,
     eins <> nil ->

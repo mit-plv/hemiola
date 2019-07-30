@@ -18,6 +18,8 @@ Open Scope fmap.
 
 Section Sim.
 
+  Existing Instance MsiSv.ImplOStateIfc.
+
   Local Definition spec := SpecSv.spec 1.
   Local Definition impl := MsiSv.impl.
 
@@ -26,7 +28,7 @@ Section Sim.
   Section DirCoh.
     Variables (cv: nat)
               (dir: MSI)
-              (cost: OState ImplOStateIfc)
+              (cost: OState)
               (corq: ORq Msg)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
@@ -47,7 +49,7 @@ Section Sim.
 
   End DirCoh.
 
-  Definition ImplStateCoh (cv: nat) (st: MState ImplOStateIfc): Prop :=
+  Definition ImplStateCoh (cv: nat) (st: MState): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       cost1 <-- (bst_oss st)@[child1Idx];
       cost2 <-- (bst_oss st)@[child2Idx];
@@ -57,12 +59,12 @@ Section Sim.
       DirCoh cv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
       DirCoh cv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
 
-  Definition SpecStateCoh (cv: nat) (st: MState SpecOStateIfc): Prop :=
+  Definition SpecStateCoh (cv: nat) (st: @MState SpecOStateIfc): Prop :=
     sost <-- (bst_oss st)@[specIdx];
       sorq <-- (bst_orqs st)@[specIdx];
       sost#[specValueIdx] = cv.
 
-  Inductive SimState: MState ImplOStateIfc -> MState SpecOStateIfc -> Prop :=
+  Inductive SimState: MState -> @MState SpecOStateIfc -> Prop :=
   | SimStateIntro:
       forall cv ist sst,
         SpecStateCoh cv sst ->
@@ -80,7 +82,7 @@ Section Sim.
       findQ ce1 imsgs = findQ (ers 0) smsgs /\
       findQ ce2 imsgs = findQ (ers 1) smsgs.
   
-  Definition SimMSI (ist: MState ImplOStateIfc) (sst: MState SpecOStateIfc): Prop :=
+  Definition SimMSI (ist: MState) (sst: @MState SpecOStateIfc): Prop :=
     SimState ist sst /\
     SimExtMP ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
 
@@ -399,7 +401,7 @@ Section Sim.
     Qed.
 
     Lemma DirMsgsCoh_child_status:
-      forall cv (cost1 cost2: OState ImplOStateIfc) pc cpRq cpRs msgs,
+      forall cv (cost1 cost2: OState) pc cpRq cpRs msgs,
         DirMsgsCoh cv cost1 pc cpRq cpRs msgs ->
         cost2#[implStatusIdx] <= cost1#[implStatusIdx] ->
         DirMsgsCoh cv cost2 pc cpRq cpRs msgs.
@@ -414,7 +416,7 @@ Section Sim.
     Qed.
 
     Lemma DirMsgsCoh_no_RqI:
-      forall cv (cost1 cost2: OState ImplOStateIfc) pc cpRq cpRs msgs,
+      forall cv (cost1 cost2: OState) pc cpRq cpRs msgs,
         DirMsgsCoh cv cost1 pc cpRq cpRs msgs ->
         (forall idm, sigOf idm = (cpRq, (MRq, msiRqI)) -> ~ InMPI msgs idm) ->
         DirMsgsCoh cv cost2 pc cpRq cpRs msgs.
@@ -801,7 +803,7 @@ Section Sim.
         * apply SimExtMP_ext_outs_deqMsgs; auto.
     Qed.
 
-    Definition ImplInvEx (st: MState ImplOStateIfc) :=
+    Definition ImplInvEx (st: MState) :=
       ImplInv st /\ ImplInvB st.
 
     Hint Unfold ImplInvEx ImplInv ImplInvB: RuleConds.

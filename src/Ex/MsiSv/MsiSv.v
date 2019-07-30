@@ -63,9 +63,10 @@ Section System.
     then (stt, snd dir)
     else (fst dir, stt).
   
-  Definition ImplOStateIfc: OStateIfc :=
+  Instance ImplOStateIfc: OStateIfc :=
     {| ost_ty := [nat:Type; MSI:Type; DirT]%vector |}.
-  Definition implOStatesInit: OStates ImplOStateIfc :=
+  
+  Definition implOStatesInit: OStates :=
     [parentIdx <- (0, (msiS, (dirInit, tt)))]
     +[child1Idx <- (0, (msiS, (dirInit, tt)))]
     +[child2Idx <- (0, (msiS, (dirInit, tt)))].
@@ -78,7 +79,7 @@ Section System.
     Variable (coidx: IdxT).
     Variables (ec ce cpRq cpRs pc: IdxT).
 
-    Definition childGetRqImm: Rule ImplOStateIfc :=
+    Definition childGetRqImm: Rule :=
       rule[0]
       :requires
          (MsgsFrom [ec]
@@ -86,24 +87,24 @@ Section System.
           /\ RqAccepting
           /\ UpLockFree
           /\ DownLockFree
-          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+          /\ (fun ost orq mins =>
                 ost#[implStatusIdx] >= msiS))
       :transition
-         (fun (ost: OState ImplOStateIfc) orq mins =>
+         (fun ost orq mins =>
             (ost, orq,
              [(ce, {| msg_id := getRs;
                       msg_type := MRs;
                       msg_value := VNat (ost#[implValueIdx])
                    |})])).
     
-    Definition childGetRqS: Rule ImplOStateIfc :=
+    Definition childGetRqS: Rule :=
       rule[1]
       :requires
          (MsgsFrom [ec]
           /\ MsgIdsFrom [getRq]
           /\ RqAccepting
           /\ UpLockFree
-          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+          /\ (fun ost orq mins =>
                 ost#[implStatusIdx] = msiI))
       :transition
          (do (msg <-- getFirstMsg;
@@ -113,7 +114,7 @@ Section System.
                                    msg_type := MRq;
                                    msg_value := VUnit |})]))).
     
-    Definition childGetRsS: Rule ImplOStateIfc :=
+    Definition childGetRsS: Rule :=
       rule[2]
       :requires
          (MsgsFromORq upRq
@@ -125,32 +126,31 @@ Section System.
       :transition
          (do (n <-- getFirstNatMsg;
                 ursb <-- getUpLockIdxBack;
-                st {{ ImplOStateIfc }}
-                   --> (st.ost +#[implValueIdx <- n]
+                st --> (st.ost +#[implValueIdx <- n]
                                +#[implStatusIdx <- msiS],
                         removeRq (st.orq) upRq,
                         [(ursb, {| msg_id := getRs;
                                    msg_type := MRs;
                                    msg_value := VNat n |})]))).
 
-    Definition childDownRqS: Rule ImplOStateIfc :=
+    Definition childDownRqS: Rule :=
       rule[3]
       :requires
          (MsgsFrom [pc]
           /\ MsgIdsFrom [msiDownRqS]
           /\ RqAccepting
           /\ DownLockFree
-          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+          /\ (fun ost orq mins =>
                 ost#[implStatusIdx] >= msiS))
       :transition
-         (fun (ost: OState ImplOStateIfc) orq mins =>
+         (fun ost orq mins =>
             (ost+#[implStatusIdx <- msiS],
              orq,
              [(cpRs, {| msg_id := msiDownRsS;
                         msg_type := MRs;
                         msg_value := VNat (ost#[implValueIdx]) |})])).
 
-    Definition childSetRqImm: Rule ImplOStateIfc :=
+    Definition childSetRqImm: Rule :=
       rule[4]
       :requires
          (MsgsFrom [ec]
@@ -159,25 +159,24 @@ Section System.
           /\ UpLockFree
           /\ DownLockFree
           /\ FirstNatMsg
-          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+          /\ (fun ost orq mins =>
                 ost#[implStatusIdx] = msiM))
       :transition
          (do (n <-- getFirstNatMsg;
-                st {{ ImplOStateIfc }}
-                   --> (st.ost +#[implValueIdx <- n],
+                st --> (st.ost +#[implValueIdx <- n],
                         st.orq,
                         [(ce, {| msg_id := setRs;
                                  msg_type := MRs;
                                  msg_value := VUnit |})]))).
 
-    Definition childSetRqM: Rule ImplOStateIfc :=
+    Definition childSetRqM: Rule :=
       rule[5]
       :requires
          (MsgsFrom [ec]
           /\ MsgIdsFrom [setRq]
           /\ RqAccepting
           /\ UpLockFree
-          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+          /\ (fun ost orq mins =>
                 ost#[implStatusIdx] <= msiS))
       :transition
          (do (msg <-- getFirstMsg;
@@ -187,7 +186,7 @@ Section System.
                                    msg_type := MRq;
                                    msg_value := VUnit |})]))).
 
-    Definition childSetRsM: Rule ImplOStateIfc :=
+    Definition childSetRsM: Rule :=
       rule[6]
       :requires
          (MsgsFromORq upRq
@@ -199,8 +198,7 @@ Section System.
       :transition
          (do (n <-- getUpLockNatMsg;
                 ursb <-- getUpLockIdxBack;
-                st {{ ImplOStateIfc }}
-                   --> (st.ost +#[implValueIdx <- n]
+                st --> (st.ost +#[implValueIdx <- n]
                                +#[implStatusIdx <- msiM],
                         removeRq (st.orq) upRq,
                         (ursb,
@@ -208,24 +206,24 @@ Section System.
                             msg_type := MRs;
                             msg_value := VUnit |}) :: nil))).
 
-    Definition childDownRqI: Rule ImplOStateIfc :=
+    Definition childDownRqI: Rule :=
       rule[7]
       :requires
          (MsgsFrom [pc]
           /\ MsgIdsFrom [msiDownRqI]
           /\ RqAccepting
           /\ DownLockFree
-          /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+          /\ (fun ost orq mins =>
                 ost#[implStatusIdx] >= msiS))
       :transition
-         (fun (ost: OState ImplOStateIfc) orq mins =>
+         (fun ost orq mins =>
             (ost +#[implStatusIdx <- msiI],
              orq,
              [(cpRs, {| msg_id := msiDownRsI;
                         msg_type := MRs;
                         msg_value := VUnit |})])).
 
-    Definition childEvictRqI: Rule ImplOStateIfc :=
+    Definition childEvictRqI: Rule :=
       rule[8]
       :requires
          (MsgsFrom [ec]
@@ -234,15 +232,14 @@ Section System.
           /\ UpLockFree)
       :transition
          (do (msg <-- getFirstMsg;
-                st {{ ImplOStateIfc }}
-                   --> (st.ost,
+                st --> (st.ost,
                         addRq (st.orq) upRq msg [pc] ce,
                         [(cpRq, {| msg_id := msiRqI;
                                    msg_type := MRq;
                                    msg_value := VNat (st.ost#[implValueIdx])
                                 |})]))).
 
-    Definition childEvictRsI: Rule ImplOStateIfc :=
+    Definition childEvictRsI: Rule :=
       rule[9]
       :requires
          (MsgsFromORq upRq
@@ -252,14 +249,13 @@ Section System.
           /\ DownLockFree)
       :transition
          (do (ursb <-- getUpLockIdxBack;
-                st {{ ImplOStateIfc }}
-                   --> (st.ost +#[implStatusIdx <- msiI],
+                st --> (st.ost +#[implStatusIdx <- msiI],
                         removeRq (st.orq) upRq,
                         [(ursb, {| msg_id := evictRs;
                                    msg_type := MRs;
                                    msg_value := VUnit |})]))).
 
-    Definition child: Object ImplOStateIfc :=
+    Definition child: Object :=
       {| obj_idx := coidx;
          obj_rules :=
            [childGetRqImm; childGetRqS; childGetRsS; childDownRqS;
@@ -280,7 +276,7 @@ Section System.
 
         Definition parentNumOfRules := 10.
 
-        Definition parentGetRqImm: Rule ImplOStateIfc :=
+        Definition parentGetRqImm: Rule :=
           rule[parentNumOfRules * ridxOfs + 0]
           :requires
              (MsgsFrom [cpRq]
@@ -288,10 +284,10 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     msiS <= ost#[implStatusIdx]))
           :transition
-             (fun (ost: OState ImplOStateIfc) orq mins =>
+             (fun ost orq mins =>
                 (ost +#[implStatusIdx <- msiS]
                      +#[implDirIdx <- setDir childIdx msiS ost#[implDirIdx]],
                  orq,
@@ -299,28 +295,27 @@ Section System.
                           msg_type := MRs;
                           msg_value := VNat (ost#[implValueIdx]) |})])).
 
-        Definition parentGetDownRqS: Rule ImplOStateIfc :=
+        Definition parentGetDownRqS: Rule :=
           rule[parentNumOfRules * ridxOfs + 1]
           :requires
              (MsgsFrom [cpRq]
               /\ MsgIdsFrom [msiRqS]
               /\ RqAccepting
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiI)
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     ost#[implStatusIdx] = msiI))
           :transition
              (do (msg <-- getFirstMsg;
-                    st {{ ImplOStateIfc }}
-                       --> (st.ost,
+                    st --> (st.ost,
                             addRq (st.orq) downRq msg [cpRs'] pc,
                             [(pc', {| msg_id := msiDownRqS;
                                       msg_type := MRq;
                                       msg_value := VNat (st.ost#[implValueIdx])
                                    |})]))).
 
-        Definition parentSetRqImm: Rule ImplOStateIfc :=
+        Definition parentSetRqImm: Rule :=
           rule[parentNumOfRules * ridxOfs + 2]
           :requires
              (MsgsFrom [cpRq]
@@ -328,10 +323,10 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx' ost#[implDirIdx] = msiI))
           :transition
-             (fun (ost: OState ImplOStateIfc) orq mins =>
+             (fun ost orq mins =>
                 (ost +#[implStatusIdx <- msiI]
                      +#[implDirIdx <- setDir childIdx msiM ost#[implDirIdx]],
                  orq,
@@ -339,14 +334,14 @@ Section System.
                           msg_type := MRs;
                           msg_value := VUnit |})])).
 
-        Definition parentSetDownRqI: Rule ImplOStateIfc :=
+        Definition parentSetDownRqI: Rule :=
           rule[parentNumOfRules * ridxOfs + 3]
           :requires
              (MsgsFrom [cpRq]
               /\ MsgIdsFrom [msiRqM]
               /\ RqAccepting
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     msiS <= getDir childIdx' ost#[implDirIdx]))
           :transition
              (do (msg <-- getFirstMsg;
@@ -356,7 +351,7 @@ Section System.
                                       msg_type := MRq;
                                       msg_value := VUnit |})]))).
 
-        Definition parentGetDownRsS: Rule ImplOStateIfc :=
+        Definition parentGetDownRsS: Rule :=
           rule[parentNumOfRules * ridxOfs + 4]
           :requires
              (MsgsFromRsUp topo [childIdx']
@@ -367,8 +362,7 @@ Section System.
           :transition
              (do (nv <-- getFirstNatMsg;
                     ursb <-- getDownLockIdxBack;
-                    st {{ ImplOStateIfc }}
-                       --> (st.ost +#[implValueIdx <- nv]
+                    st --> (st.ost +#[implValueIdx <- nv]
                                    +#[implStatusIdx <- msiS]
                                    +#[implDirIdx <- setDir childIdx' msiS (setDir childIdx msiS (st.ost)#[implDirIdx])],
                             removeRq (st.orq) downRq,
@@ -376,7 +370,7 @@ Section System.
                                        msg_type := MRs;
                                        msg_value := VNat nv |})]))).
 
-        Definition parentSetDownRsI: Rule ImplOStateIfc :=
+        Definition parentSetDownRsI: Rule :=
           rule[parentNumOfRules * ridxOfs + 5]
           :requires
              (MsgsFromRsUp topo [childIdx']
@@ -386,8 +380,7 @@ Section System.
               /\ DownLockMsgId MRq msiDownRqI)
           :transition
              (do (ursb <-- getDownLockIdxBack;
-                    st {{ ImplOStateIfc }}
-                       --> (st.ost +#[implStatusIdx <- msiI]
+                    st --> (st.ost +#[implStatusIdx <- msiI]
                                    +#[implDirIdx <- (setDir childIdx' msiI
                                                             (setDir childIdx msiM
                                                                     (st.ost)#[implDirIdx]))],
@@ -396,7 +389,7 @@ Section System.
                                        msg_type := MRs;
                                        msg_value := VUnit |})]))).
 
-        Definition parentEvictRqImmI: Rule ImplOStateIfc :=
+        Definition parentEvictRqImmI: Rule :=
           rule[parentNumOfRules * ridxOfs + 6]
           :requires
              (MsgsFrom [cpRq]
@@ -404,17 +397,16 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiI))
           :transition
-             (do (st {{ ImplOStateIfc }}
-                     --> (st.ost,
+             (do (st --> (st.ost,
                           st.orq,
                           [(pc, {| msg_id := msiRsI;
                                    msg_type := MRs;
                                    msg_value := VUnit |})]))).
         
-        Definition parentEvictRqImmS: Rule ImplOStateIfc :=
+        Definition parentEvictRqImmS: Rule :=
           rule[parentNumOfRules * ridxOfs + 7]
           :requires
              (MsgsFrom [cpRq]
@@ -422,20 +414,19 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiS)
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx' ost#[implDirIdx] = msiS))
           :transition
-             (do (st {{ ImplOStateIfc }}
-                     --> (st.ost +#[implDirIdx <- (setDir childIdx msiI
+             (do (st --> (st.ost +#[implDirIdx <- (setDir childIdx msiI
                                                           (st.ost)#[implDirIdx])],
                           st.orq,
                           [(pc, {| msg_id := msiRsI;
                                    msg_type := MRs;
                                    msg_value := VUnit |})]))).
 
-        Definition parentEvictRqImmLastS: Rule ImplOStateIfc :=
+        Definition parentEvictRqImmLastS: Rule :=
           rule[parentNumOfRules * ridxOfs + 8]
           :requires
              (MsgsFrom [cpRq]
@@ -443,13 +434,12 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiS)
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx' ost#[implDirIdx] = msiI))
           :transition
-             (do (st {{ ImplOStateIfc }}
-                     --> (st.ost +#[implStatusIdx <- msiM]
+             (do (st --> (st.ost +#[implStatusIdx <- msiM]
                                  +#[implDirIdx <- (setDir childIdx msiI
                                                           (st.ost)#[implDirIdx])],
                           st.orq,
@@ -457,7 +447,7 @@ Section System.
                                    msg_type := MRs;
                                    msg_value := VUnit |})]))).
 
-        Definition parentEvictRqImmM: Rule ImplOStateIfc :=
+        Definition parentEvictRqImmM: Rule :=
           rule[parentNumOfRules * ridxOfs + 9]
           :requires
              (MsgsFrom [cpRq]
@@ -466,12 +456,11 @@ Section System.
               /\ UpLockFree
               /\ DownLockFree
               /\ FirstNatMsg
-              /\ (fun (ost: OState ImplOStateIfc) orq mins =>
+              /\ (fun ost orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiM))
           :transition
              (do (n <-- getFirstNatMsg;
-                    st {{ ImplOStateIfc }}
-                       --> (st.ost +#[implValueIdx <- n]
+                    st --> (st.ost +#[implValueIdx <- n]
                                    +#[implStatusIdx <- msiM]
                                    +#[implDirIdx <- (setDir childIdx msiI
                                                             (st.ost)#[implDirIdx])],
@@ -499,7 +488,7 @@ Section System.
 
     End Rules.
 
-    Definition parent: Object ImplOStateIfc :=
+    Definition parent: Object :=
       {| obj_idx := parentIdx;
          obj_rules := parentRules;
          obj_rules_valid := ltac:(inds_valid_tac)
@@ -507,7 +496,7 @@ Section System.
     
   End Parent.
 
-  Definition impl: System ImplOStateIfc :=
+  Definition impl: System :=
     {| sys_objs :=
          [child child1Idx ec1 ce1 c1pRq c1pRs pc1;
             child child2Idx ec2 ce2 c2pRq c2pRs pc2;
