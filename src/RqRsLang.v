@@ -113,6 +113,17 @@ Definition getDownLockMsgId {oifc} (st: StateM oifc): option (bool * IdxT) :=
     >>= (fun rqiu => Some (rqiu.(rqi_msg).(msg_type),
                            rqiu.(rqi_msg).(msg_id))).
 
+Definition DownLockMsg {oifc}: OPrec oifc :=
+  fun ost orq mins =>
+    match orq@[downRq] with
+    | Some _ => True
+    | _ => False
+    end.
+
+Definition getDownLockMsg {oifc} (st: StateM oifc): option Msg :=
+  ((snd (fst st))@[downRq])
+    >>= (fun rqiu => Some (rqi_msg rqiu)).
+
 Definition DownLockNatMsg {oifc}: OPrec oifc :=
   fun ost orq mins =>
     (orq@[downRq])
