@@ -94,7 +94,7 @@ Section System.
             (ost, orq,
              [(ce, {| msg_id := getRs;
                       msg_type := MRs;
-                      msg_value := VNat (ost#[implValueIdx])
+                      msg_value := ost#[implValueIdx]
                    |})])).
     
     Definition childGetRqS: Rule :=
@@ -112,7 +112,7 @@ Section System.
                                 addRq st.(orq) upRq msg [pc] ce,
                                 [(cpRq, {| msg_id := msiRqS;
                                            msg_type := MRq;
-                                           msg_value := VUnit |})] }}))).
+                                           msg_value := O |})] }}))).
     
     Definition childGetRsS: Rule :=
       rule[2]
@@ -120,18 +120,17 @@ Section System.
          (MsgsFromORq upRq
           /\ MsgIdsFrom [msiRsS]
           /\ RsAccepting
-          /\ FirstNatMsg
           /\ UpLockMsgId MRq Spec.getRq
           /\ DownLockFree)
       :transition
-         (do (st --> (n <-- getFirstNatMsg st.(msgs);
+         (do (st --> (msg <-- getFirstMsg st.(msgs);
                         ursb <-- getUpLockIdxBack st.(orq);
-                      return {{ st.(ost) +#[implValueIdx <- n]
+                      return {{ st.(ost) +#[implValueIdx <- msg_value msg]
                                          +#[implStatusIdx <- msiS],
                                 removeRq st.(orq) upRq,
                                 [(ursb, {| msg_id := getRs;
                                            msg_type := MRs;
-                                           msg_value := VNat n |})] }}))).
+                                           msg_value := msg_value msg |})] }}))).
 
     Definition childDownRqS: Rule :=
       rule[3]
@@ -147,7 +146,7 @@ Section System.
                                st.(orq),
                                [(cpRs, {| msg_id := msiDownRsS;
                                           msg_type := MRs;
-                                          msg_value := VNat (st.(ost)#[implValueIdx])
+                                          msg_value := st.(ost)#[implValueIdx]
                                        |})] }})).
 
     Definition childSetRqImm: Rule :=
@@ -158,16 +157,15 @@ Section System.
           /\ RqAccepting
           /\ UpLockFree
           /\ DownLockFree
-          /\ FirstNatMsg
           /\ (fun ost orq mins =>
                 ost#[implStatusIdx] = msiM))
       :transition
-         (do (st --> (n <-- getFirstNatMsg st.(msgs);
-                      return {{ st.(ost) +#[implValueIdx <- n],
+         (do (st --> (msg <-- getFirstMsg st.(msgs);
+                      return {{ st.(ost) +#[implValueIdx <- msg_value msg],
                                 st.(orq),
                                 [(ce, {| msg_id := setRs;
                                          msg_type := MRs;
-                                         msg_value := VUnit |})] }}))).
+                                         msg_value := O |})] }}))).
 
     Definition childSetRqM: Rule :=
       rule[5]
@@ -184,7 +182,7 @@ Section System.
                                 addRq st.(orq) upRq msg [pc] ce,
                                 [(cpRq, {| msg_id := msiRqM;
                                            msg_type := MRq;
-                                           msg_value := VUnit |})] }}))).
+                                           msg_value := O |})] }}))).
 
     Definition childSetRsM: Rule :=
       rule[6]
@@ -192,18 +190,17 @@ Section System.
          (MsgsFromORq upRq
           /\ MsgIdsFrom [msiRsM]
           /\ RsAccepting
-          /\ UpLockNatMsg
           /\ UpLockMsgId MRq Spec.setRq
           /\ DownLockFree)
       :transition
-         (do (st --> (n <-- getUpLockNatMsg st.(orq);
+         (do (st --> (msg <-- getUpLockMsg st.(orq);
                         ursb <-- getUpLockIdxBack st.(orq);
-                      return {{ st.(ost) +#[implValueIdx <- n]
+                      return {{ st.(ost) +#[implValueIdx <- msg_value msg]
                                          +#[implStatusIdx <- msiM],
                                 removeRq st.(orq) upRq,
                                 [(ursb, {| msg_id := setRs;
                                            msg_type := MRs;
-                                           msg_value := VUnit |})] }}))).
+                                           msg_value := O |})] }}))).
     
     Definition childDownRqI: Rule :=
       rule[7]
@@ -219,7 +216,7 @@ Section System.
                                st.(orq),
                                [(cpRs, {| msg_id := msiDownRsI;
                                           msg_type := MRs;
-                                          msg_value := VUnit |})] }})).
+                                          msg_value := O |})] }})).
 
     Definition childEvictRqI: Rule :=
       rule[8]
@@ -234,7 +231,7 @@ Section System.
                                 addRq st.(orq) upRq msg [pc] ce,
                                 [(cpRq, {| msg_id := msiRqI;
                                            msg_type := MRq;
-                                           msg_value := VNat (st.(ost)#[implValueIdx])
+                                           msg_value := st.(ost)#[implValueIdx]
                                         |})] }}))).
 
     Definition childEvictRsI: Rule :=
@@ -251,7 +248,7 @@ Section System.
                                 removeRq st.(orq) upRq,
                                 [(ursb, {| msg_id := evictRs;
                                            msg_type := MRs;
-                                           msg_value := VUnit |})] }}))).
+                                           msg_value := O |})] }}))).
 
     Definition child: Object :=
       {| obj_idx := coidx;
@@ -292,7 +289,7 @@ Section System.
                      st.(orq),
                      [(pc, {| msg_id := msiRsS;
                               msg_type := MRs;
-                              msg_value := VNat (st.(ost)#[implValueIdx]) |})] }})).
+                              msg_value := st.(ost)#[implValueIdx] |})] }})).
 
         Definition parentGetDownRqS: Rule :=
           rule[parentNumOfRules * ridxOfs + 1]
@@ -312,7 +309,7 @@ Section System.
                                 addRq st.(orq) downRq msg [cpRs'] pc,
                                 [(pc', {| msg_id := msiDownRqS;
                                           msg_type := MRq;
-                                          msg_value := VNat (st.(ost)#[implValueIdx])
+                                          msg_value := st.(ost)#[implValueIdx]
                                        |})] }}))).
 
         Definition parentSetRqImm: Rule :=
@@ -333,7 +330,7 @@ Section System.
                             st.(orq),
                             [(pc, {| msg_id := msiRsM;
                                      msg_type := MRs;
-                                     msg_value := VUnit |})] }})).
+                                     msg_value := O |})] }})).
 
         Definition parentSetDownRqI: Rule :=
           rule[parentNumOfRules * ridxOfs + 3]
@@ -350,7 +347,7 @@ Section System.
                                     addRq st.(orq) downRq msg [cpRs'] pc,
                                     [(pc', {| msg_id := msiDownRqI;
                                               msg_type := MRq;
-                                              msg_value := VUnit |})] }}))).
+                                              msg_value := O |})] }}))).
 
         Definition parentGetDownRsS: Rule :=
           rule[parentNumOfRules * ridxOfs + 4]
@@ -358,18 +355,17 @@ Section System.
              (MsgsFromRsUp topo [childIdx']
               /\ MsgIdsFrom [msiDownRsS]
               /\ RsAccepting
-              /\ FirstNatMsg
               /\ DownLockMsgId MRq msiDownRqS)
           :transition
-             (do (st --> (nv <-- getFirstNatMsg st.(msgs);
+             (do (st --> (msg <-- getFirstMsg st.(msgs);
                             ursb <-- getDownLockIdxBack st.(orq);
-                          return {{ st.(ost) +#[implValueIdx <- nv]
+                          return {{ st.(ost) +#[implValueIdx <- msg_value msg]
                                              +#[implStatusIdx <- msiS]
                                              +#[implDirIdx <- setDir childIdx' msiS (setDir childIdx msiS st.(ost)#[implDirIdx])],
                                     removeRq st.(orq) downRq,
                                     [(ursb, {| msg_id := msiRsS;
                                                msg_type := MRs;
-                                               msg_value := VNat nv |})] }}))).
+                                               msg_value := msg_value msg |})] }}))).
 
         Definition parentSetDownRsI: Rule :=
           rule[parentNumOfRules * ridxOfs + 5]
@@ -377,7 +373,6 @@ Section System.
              (MsgsFromRsUp topo [childIdx']
               /\ MsgIdsFrom [msiDownRsI]
               /\ RsAccepting
-              /\ FirstNatMsg
               /\ DownLockMsgId MRq msiDownRqI)
           :transition
              (do (st --> (ursb <-- getDownLockIdxBack st.(orq);
@@ -387,7 +382,7 @@ Section System.
                                     removeRq st.(orq) downRq,
                                     [(ursb, {| msg_id := msiRsM;
                                                msg_type := MRs;
-                                               msg_value := VUnit |})] }}))).
+                                               msg_value := O |})] }}))).
 
         Definition parentEvictRqImmI: Rule :=
           rule[parentNumOfRules * ridxOfs + 6]
@@ -404,7 +399,7 @@ Section System.
                                     st.(orq),
                                     [(pc, {| msg_id := msiRsI;
                                              msg_type := MRs;
-                                             msg_value := VUnit |})] }}))).
+                                             msg_value := O |})] }}))).
         
         Definition parentEvictRqImmS: Rule :=
           rule[parentNumOfRules * ridxOfs + 7]
@@ -424,7 +419,7 @@ Section System.
                                     st.(orq),
                                     [(pc, {| msg_id := msiRsI;
                                              msg_type := MRs;
-                                             msg_value := VUnit |})] }}))).
+                                             msg_value := O |})] }}))).
 
         Definition parentEvictRqImmLastS: Rule :=
           rule[parentNumOfRules * ridxOfs + 8]
@@ -445,7 +440,7 @@ Section System.
                                     st.(orq),
                                     [(pc, {| msg_id := msiRsI;
                                              msg_type := MRs;
-                                             msg_value := VUnit |})] }}))).
+                                             msg_value := O |})] }}))).
 
         Definition parentEvictRqImmM: Rule :=
           rule[parentNumOfRules * ridxOfs + 9]
@@ -455,19 +450,18 @@ Section System.
               /\ RqAccepting
               /\ UpLockFree
               /\ DownLockFree
-              /\ FirstNatMsg
               /\ (fun ost orq mins =>
                     getDir childIdx ost#[implDirIdx] = msiM))
           :transition
-             (do (st --> (n <-- getFirstNatMsg st.(msgs);
-                          return {{ st.(ost) +#[implValueIdx <- n]
+             (do (st --> (msg <-- getFirstMsg st.(msgs);
+                          return {{ st.(ost) +#[implValueIdx <- msg_value msg]
                                              +#[implStatusIdx <- msiM]
                                              +#[implDirIdx <- (setDir childIdx msiI
                                                                       st.(ost)#[implDirIdx])],
                                     st.(orq),
                                     [(pc, {| msg_id := msiRsI;
                                              msg_type := MRs;
-                                             msg_value := VUnit |})] }}))).
+                                             msg_value := O |})] }}))).
 
         Definition parentRulesPerChild :=
           [parentGetRqImm; parentGetDownRqS;

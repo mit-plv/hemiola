@@ -11,20 +11,9 @@ Definition AddrT := nat.
 
 Section Msg.
   
-  Inductive Value :=
-  | VUnit
-  | VBool (b: bool)
-  | VNat (n: nat)
-  | VPair (v1 v2: Value)
-  | VList (vl: list Value).
-
-  Fixpoint value_dec (v1 v2: Value): {v1 = v2} + {v1 <> v2}.
-  Proof.
-    decide equality.
-    - repeat decide equality.
-    - repeat decide equality.
-    - decide equality.
-  Defined.
+  Definition Value := nat.
+  Definition value_dec (v1 v2: Value): {v1 = v2} + {v1 <> v2} :=
+    eq_nat_dec v1 v2.
 
   Record Msg :=
     { msg_id: IdxT;

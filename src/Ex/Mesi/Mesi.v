@@ -25,7 +25,6 @@ Section System.
 
   Definition topo := fst (tree2Topo tr 0).
   Definition cifc := snd (tree2Topo tr 0).
-  Definition objIdxOf (midx: IdxT) := idxTl midx.
   Opaque topo cifc.
   
   Definition implValueIdx: Fin.t 3 := F1.
@@ -113,11 +112,9 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           ([|ost, _|] -->
-            return (ost, {| msg_id := mesiRsS;
-                            msg_type := MRs;
-                            msg_value := VNat (ost#[implValueIdx])
-                         |})).
+           ([|ost, _|] --> (ost, {| miv_id := mesiRsS;
+                                    miv_value := ost#[implValueIdx]
+                                 |})).
 
       Definition liGetSImmS: Rule :=
         rule.immd[cidx~>0~>0~>0]
@@ -125,11 +122,9 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiS)
         :transition
-           ([|ost, _|] -->
-            return (ost, {| msg_id := mesiRsS;
-                            msg_type := MRs;
-                            msg_value := VNat (ost#[implValueIdx])
-                         |})).
+           ([|ost, _|] --> (ost, {| miv_id := mesiRsS;
+                                    miv_value := ost#[implValueIdx]
+                                 |})).
 
       Definition liGetSImmME: Rule :=
         rule.immd[cidx~>0~>0~>1]
@@ -137,13 +132,12 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
         :transition
-           ([|ost, _|] -->
-            return (ost +#[implStatusIdx <- mesiS]
-                        +#[implDirIdx <- setDirS [cidx]],
-                    {| msg_id := mesiRsS;
-                       msg_type := MRs;
-                       msg_value := VNat (ost#[implValueIdx])
-                    |})).
+           ([|ost, _|]
+              --> (ost +#[implStatusIdx <- mesiS]
+                       +#[implDirIdx <- setDirS [cidx]],
+                   {| miv_id := mesiRsS;
+                      miv_value := ost#[implValueIdx]
+                   |})).
 
       (** NOTE (common rules): some rules do not require distinguishing L1 and Li 
        * caches. In correctness proof we may have to prove invariants, e.g., the
@@ -156,68 +150,58 @@ Section System.
         :accepts mesiRqS
         :from cidx
         :me oidx
-        :requires (fun ost orq mins => summaryOf ost = mesiI)
+        :requires (fun ost mins => summaryOf ost = mesiI)
         :transition
-           ([|ost, msg|] -->
-            return {| msg_id := mesiRqS;
-                      msg_type := MRq;
-                      msg_value := VUnit |}).
+           ([|ost, msg|] --> {| miv_id := mesiRqS;
+                                miv_value := O |}).
 
       Definition l1GetSRsDownDownS: Rule :=
         rule.rsdd[0~>2~>0]
         :accepts mesiRsS
         :holding mesiRqS
-        :requires FirstNatMsg
+        :requires ⊤
         :transition
            ([|ost, min, rq, rsbTo|]
-              --> (n <-- getNatMsg min;
-                   return (ost +#[implValueIdx <- n]
-                               +#[implStatusIdx <- mesiS],
-                           {| msg_id := mesiRsS;
-                              msg_type := MRs;
-                              msg_value := VNat n |}))).
+              --> (ost +#[implValueIdx <- msg_value min]
+                       +#[implStatusIdx <- mesiS],
+                   {| miv_id := mesiRsS;
+                      miv_value := msg_value min |})).
 
       Definition l1GetSRsDownDownE: Rule :=
         rule.rsdd[0~>2~>1]
         :accepts mesiRsE
         :holding mesiRqS
-        :requires FirstNatMsg
+        :requires ⊤
         :transition
            ([|ost, min, rq, rsbTo|]
-              --> (n <-- getNatMsg min;
-                   return (ost +#[implValueIdx <- n]
-                               +#[implStatusIdx <- mesiE],
-                           {| msg_id := mesiRsS;
-                              msg_type := MRs;
-                              msg_value := VNat n |}))).
+              --> (ost +#[implValueIdx <- msg_value min]
+                       +#[implStatusIdx <- mesiE],
+                   {| miv_id := mesiRsS;
+                      miv_value := msg_value min |})).
 
       Definition liGetSRsDownDownS: Rule :=
         rule.rsdd[0~>2~>0]
         :accepts mesiRsS
         :holding mesiRqS
-        :requires FirstNatMsg
+        :requires ⊤
         :transition
            ([|ost, min, rq, rsbTo|]
-              --> (n <-- getNatMsg min;
-                   return (ost +#[implValueIdx <- n]
-                               +#[implStatusIdx <- mesiS]
-                               +#[implDirIdx <- setDirS [objIdxOf rsbTo]],
-                           {| msg_id := mesiRsS;
-                              msg_type := MRs;
-                              msg_value := VNat n |}))).
+              --> (ost +#[implValueIdx <- msg_value min]
+                       +#[implStatusIdx <- mesiS]
+                       +#[implDirIdx <- setDirS [objIdxOf rsbTo]],
+                   {| miv_id := mesiRsS;
+                      miv_value := msg_value min |})).
 
       Definition liGetSRsDownDownE: Rule :=
         rule.rsdd[0~>2~>1]
         :accepts mesiRsE
         :holding mesiRqS
-        :requires FirstNatMsg
+        :requires ⊤
         :transition
            ([|ost, min, rq, rsbTo|]
-              --> (n <-- getNatMsg min;
-                   return (ost +#[implDirIdx <- setDirE (objIdxOf rsbTo)],
-                           {| msg_id := mesiRsE;
-                              msg_type := MRs;
-                              msg_value := VNat n |}))).
+              --> (ost +#[implDirIdx <- setDirE (objIdxOf rsbTo)],
+                   {| miv_id := mesiRsE;
+                      miv_value := msg_value min |})).
 
       (* commonly used *)
       Definition downSImm: Rule :=
@@ -226,11 +210,9 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           ([|ost, min|] -->
-            return (ost +#[implStatusIdx <- mesiS],
-                    {| msg_id := mesiDownRsS;
-                       msg_type := MRs;
-                       msg_value := VNat (ost#[implValueIdx]) |})).
+           ([|ost, min|] --> (ost +#[implStatusIdx <- mesiS],
+                              {| miv_id := mesiDownRsS;
+                                 miv_value := ost#[implValueIdx] |})).
 
       Definition liGetSRqUpDownME: Rule :=
         rule.rqud[cidx~>0~>4~>0]
@@ -238,14 +220,13 @@ Section System.
         :from cidx
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] = mesiI) /\
-            (fun ost orq mins => mesiE <= ost#[implDirIdx].(dir_st)))
+           (fun ost mins =>
+              and (ost#[implStatusIdx] = mesiI)
+                  (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] -->
-            return ([ost#[implDirIdx].(dir_excl)],
-                    {| msg_id := mesiDownRqS;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+                              {| miv_id := mesiDownRqS;
+                                 miv_value := O |})).
 
       (** TODO: if we pick a representative among sharers to get a clean value,
        * what is the difference between this protocol and MOSI? *)
@@ -255,72 +236,68 @@ Section System.
         :from cidx
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] = mesiI) /\
-            (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiS))
+           ((fun ost mins =>
+               and (ost#[implStatusIdx] = mesiI)
+                   (ost#[implDirIdx].(dir_st) = mesiS)))
         :transition
-           ([|ost, msg|] -->
-            return ([hd ii (ost#[implDirIdx].(dir_sharers))],
-                    {| msg_id := mesiDownRqS;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
+                              {| miv_id := mesiDownRqS;
+                                 miv_value := O |})).
 
       Definition liDownSRsUpDown: Rule :=
         rule.rsud[0~>5]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires FirstNatMsg
+        :requires FirstMsg
         :transition
            ([|ost, mins, rq, rssFrom, rsbTo|]
-              --> (nv <-- getFirstNatMsg mins;
-                   return (ost +#[implValueIdx <- nv]
-                               +#[implStatusIdx <- mesiS]
-                               +#[implDirIdx <- setDirS (objIdxOf rsbTo :: map objIdxOf rssFrom)],
-                           {| msg_id := mesiRsS;
-                              msg_type := MRs;
-                              msg_value := VNat nv |}))).
+              --> (msg ::= getFirstMsgI mins;
+                   (ost +#[implValueIdx <- msg_value msg]
+                        +#[implStatusIdx <- mesiS]
+                        +#[implDirIdx <- setDirS (objIdxOf rsbTo :: map objIdxOf rssFrom)],
+                    {| miv_id := mesiRsS;
+                       miv_value := msg_value msg |}))).
 
       Definition liDownSRqDownDownME: Rule :=
         rule.rqdd[0~>6~>0]
         :accepts mesiDownRqS
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] = mesiI) /\
-            (fun ost orq mins => mesiE <= ost#[implDirIdx].(dir_st)))
+           (fun ost mins =>
+              and (ost#[implStatusIdx] = mesiI)
+                  (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] -->
-            return ([ost#[implDirIdx].(dir_excl)],
-                    {| msg_id := mesiDownRqS;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+                              {| miv_id := mesiDownRqS;
+                                 miv_value := O |})).
 
       Definition liDownSRqDownDownS: Rule :=
         rule.rqdd[0~>6~>1]
         :accepts mesiDownRqS
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] = mesiI) /\
-            (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiS))
+           (fun ost mins =>
+              and (ost#[implStatusIdx] = mesiI)
+                  (ost#[implDirIdx].(dir_st) = mesiS))
         :transition
-           ([|ost, msg|] -->
-            return ([hd ii (ost#[implDirIdx].(dir_sharers))],
-                    {| msg_id := mesiDownRqS;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|]
+              --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
+                   {| miv_id := mesiDownRqS;
+                      miv_value := O |})).
 
       Definition liDownSRsUpUp: Rule :=
         rule.rsuu[0~>7]
         :accepts mesiDownRsS
         :holding mesiDownRqS
-        :requires FirstNatMsg
+        :requires FirstMsg
         :transition
            ([|ost, mins, rq, rssFrom, rsbTo|]
-              --> (n <-- getFirstNatMsg mins;
-                   return (ost +#[implValueIdx <- n]
-                               +#[implStatusIdx <- mesiS]
-                               +#[implDirIdx <- setDirS (map objIdxOf rssFrom)],
-                           {| msg_id := mesiDownRsS;
-                              msg_type := MRs;
-                              msg_value := VNat n |}))).
+              --> (msg ::= getFirstMsgI mins;
+                   (ost +#[implValueIdx <- msg_value msg]
+                        +#[implStatusIdx <- mesiS]
+                        +#[implDirIdx <- setDirS (map objIdxOf rssFrom)],
+                    {| miv_id := mesiDownRsS;
+                       miv_value := msg_value msg |}))).
 
     End GetTrs.
 
@@ -330,32 +307,24 @@ Section System.
         rule.immd[cidx~>1~>0~>0]
         :accepts mesiRqM
         :from cidx
-        :requires
-           (FirstNatMsg /\
-            (fun ost orq mins => ost#[implStatusIdx] = mesiE))
+        :requires (fun ost orq mins => ost#[implStatusIdx] = mesiE)
         :transition
            ([|ost, msg|]
-              --> (n <-- getNatMsg msg;
-                   return (ost +#[implStatusIdx <- mesiM]
-                               +#[implValueIdx <- n],
-                           {| msg_id := mesiRsM;
-                              msg_type := MRs;
-                              msg_value := VUnit |}))).
+              --> (ost +#[implStatusIdx <- mesiM]
+                       +#[implValueIdx <- msg_value msg],
+                   {| miv_id := mesiRsM;
+                      miv_value := O |})).
 
       Definition l1GetMImmM: Rule :=
         rule.immd[cidx~>1~>0~>1]
         :accepts mesiRqM
         :from cidx
-        :requires
-           (FirstNatMsg /\
-            (fun ost orq mins => ost#[implStatusIdx] = mesiM))
+        :requires (fun ost orq mins => ost#[implStatusIdx] = mesiM)
         :transition
            ([|ost, msg|]
-              --> (n <-- getNatMsg msg;
-                   return (ost +#[implValueIdx <- n],
-                           {| msg_id := mesiRsM;
-                              msg_type := MRs;
-                              msg_value := VUnit |}))).
+              --> (ost +#[implValueIdx <- msg_value msg],
+                   {| miv_id := mesiRsM;
+                      miv_value := O |})).
 
       Definition liGetMImm: Rule :=
         rule.immd[cidx~>1~>0]
@@ -363,12 +332,10 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
         :transition
-           ([|ost, msg|] -->
-            return (ost +#[implStatusIdx <- mesiI]
-                        +#[implDirIdx <- setDirM cidx],
-                    {| msg_id := mesiRsM;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> (ost +#[implStatusIdx <- mesiI]
+                                  +#[implDirIdx <- setDirM cidx],
+                              {| miv_id := mesiRsM;
+                                 miv_value := O |})).
 
       (* commonly used *)
       Definition getMRqUpUp: Rule :=
@@ -376,26 +343,22 @@ Section System.
         :accepts mesiRqM
         :from cidx
         :me oidx
-        :requires (fun ost orq mins => summaryOf ost <= mesiS)
+        :requires (fun ost mins => summaryOf ost <= mesiS)
         :transition
-           ([|ost, msg|] -->
-            return {| msg_id := mesiRqM;
-                      msg_type := MRq;
-                      msg_value := VUnit |}).
+           ([|ost, msg|] --> {| miv_id := mesiRqM;
+                                miv_value := O |}).
 
       Definition l1GetMRsDownDown: Rule :=
         rule.rsdd[1~>2]
         :accepts mesiRsM
         :holding mesiRqM
-        :requires (fun _ _ _ => True)
+        :requires ⊤
         :transition
            ([|ost, min, rq, rsbTo|]
-              --> (n <-- getNatMsg rq;
-                   return (ost +#[implStatusIdx <- mesiM]
-                               +#[implValueIdx <- n],
-                           {| msg_id := mesiRsM;
-                              msg_type := MRs;
-                              msg_value := VUnit |}))).
+              --> (ost +#[implStatusIdx <- mesiM]
+                       +#[implValueIdx <- msg_value min],
+                   {| miv_id := mesiRsM;
+                      miv_value := O |})).
 
       (* This is the case where it's possible to directly respond a [mesiRsM]
        * message back since there are no internal sharers to invalidate.
@@ -406,12 +369,11 @@ Section System.
         :holding mesiRqM
         :requires (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiI)
         :transition
-           ([|ost, min, rq, rsbTo|] -->
-            return (ost +#[implStatusIdx <- mesiI]
-                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
-                    {| msg_id := mesiRsM;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, min, rq, rsbTo|]
+              --> (ost +#[implStatusIdx <- mesiI]
+                       +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
+                   {| miv_id := mesiRsM;
+                      miv_value := O |})).
 
       (* This is the case where internal invalidation is required due to
        * sharers. 
@@ -420,28 +382,24 @@ Section System.
         rule.rsrq[1~>4]
         :accepts mesiRsM
         :holding mesiRqM
-        :requires
-           (fun ost orq mins =>
-              ost#[implDirIdx].(dir_st) = mesiS)
+        :me oidx
+        :requires (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiS)
         :transition
-           ([|ost, rq|] -->
-            return (ost#[implDirIdx].(dir_sharers),
-                    {| msg_id := mesiDownRqI;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, rq|] --> (ost#[implDirIdx].(dir_sharers),
+                             {| miv_id := mesiDownRqI;
+                                miv_value := O |})).
 
       Definition liDownIRsUpDownDirS: Rule :=
         rule.rsud[1~>5]
         :accepts mesiDownRsI
         :holding mesiRqM
-        :requires (fun _ _ _ => True)
+        :requires ⊤
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|] -->
-            return (ost +#[implStatusIdx <- mesiI]
-                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
-                    {| msg_id := mesiRsM;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, mins, rq, rssFrom, rsbTo|]
+              --> (ost +#[implStatusIdx <- mesiI]
+                       +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
+                   {| miv_id := mesiRsM;
+                      miv_value := O |})).
 
       Definition liGetMRqUpDownME: Rule :=
         rule.rqud[cidx~>1~>6]
@@ -449,27 +407,25 @@ Section System.
         :from cidx
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] = mesiI) /\
-            (fun ost orq mins => mesiE <= ost#[implDirIdx].(dir_st)))
+           (fun ost mins =>
+              and (ost#[implStatusIdx] = mesiI)
+                  (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] -->
-            return ([ost#[implDirIdx].(dir_excl)],
-                    {| msg_id := mesiDownRqI;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+                              {| miv_id := mesiDownRqI;
+                                 miv_value := O |})).
 
       Definition liDownIRsUpDownME: Rule :=
         rule.rsud[1~>7]
         :accepts mesiDownRsI
         :holding mesiRqM
-        :requires (fun _ _ _ => True)
+        :requires ⊤
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|] -->
-            return (ost +#[implStatusIdx <- mesiI]
-                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
-                    {| msg_id := mesiRsM;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, mins, rq, rssFrom, rsbTo|]
+              --> (ost +#[implStatusIdx <- mesiI]
+                       +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
+                   {| miv_id := mesiRsM;
+                      miv_value := O |})).
 
       Definition l1DownIImm: Rule :=
         rule.immu[1~>8]
@@ -477,11 +433,9 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           ([|ost, min|] -->
-            return (ost +#[implStatusIdx <- mesiI],
-                    {| msg_id := mesiDownRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, min|] --> (ost +#[implStatusIdx <- mesiI],
+                              {| miv_id := mesiDownRsI;
+                                 miv_value := O |})).
 
       Definition liDownIImm: Rule :=
         rule.immu[1~>9]
@@ -489,49 +443,43 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
         :transition
-           ([|ost, min|] -->
-            return (ost +#[implStatusIdx <- mesiI],
-                    {| msg_id := mesiDownRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, min|] --> (ost +#[implStatusIdx <- mesiI],
+                              {| miv_id := mesiDownRsI;
+                                 miv_value := O |})).
 
       Definition liDownIRqDownDownDirS: Rule :=
         rule.rqdd[1~>10]
         :accepts mesiDownRqI
         :me oidx
-        :requires (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiS)
+        :requires (fun ost mins => ost#[implDirIdx].(dir_st) = mesiS)
         :transition
-           ([|ost, msg|] -->
-            return (ost#[implDirIdx].(dir_sharers),
-                    {| msg_id := mesiDownRqI;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> (ost#[implDirIdx].(dir_sharers),
+                              {| miv_id := mesiDownRqI;
+                                 miv_value := O |})).
 
       Definition liDownIRqDownDownDirME: Rule :=
         rule.rqdd[1~>11]
         :accepts mesiDownRqI
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] = mesiI) /\
-            (fun ost orq mins => mesiE <= ost#[implDirIdx].(dir_st)))
+           (fun ost mins =>
+              and (ost#[implStatusIdx] = mesiI)
+                  (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] -->
-            return ([ost#[implDirIdx].(dir_excl)],
-                    {| msg_id := mesiDownRqI;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+                              {| miv_id := mesiDownRqI;
+                                 miv_value := O |})).
 
       Definition liDownIRsUpUp: Rule :=
         rule.rsuu[1~>12]
         :accepts mesiDownRsI
         :holding mesiDownRqI
-        :requires (fun _ _ _ => True)
+        :requires ⊤
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|] -->
-            return (ost +#[implDirIdx <- setDirI],
-                    {| msg_id := mesiDownRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit |})).
+           ([|ost, mins, rq, rssFrom, rsbTo|]
+              --> (ost +#[implDirIdx <- setDirI],
+                   {| miv_id := mesiDownRsI;
+                      miv_value := O |})).
 
       Definition memGetMRqUpDownDirS: Rule :=
         rule.rqud[cidx~>1~>13]
@@ -539,14 +487,13 @@ Section System.
         :from cidx
         :me oidx
         :requires
-           ((fun ost orq mins => ost#[implStatusIdx] <= mesiS) /\
-            (fun ost orq mins => mesiE <= ost#[implDirIdx].(dir_st)))
+           (fun ost mins =>
+              and (ost#[implStatusIdx] <= mesiS)
+                  (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] -->
-            return (ost#[implDirIdx].(dir_sharers),
-                    {| msg_id := mesiDownRqI;
-                       msg_type := MRq;
-                       msg_value := VUnit |})).
+           ([|ost, msg|] --> (ost#[implDirIdx].(dir_sharers),
+                              {| miv_id := mesiDownRqI;
+                                 miv_value := O |})).
 
     End SetTrs.
 
@@ -563,27 +510,24 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => ost#[implStatusIdx] < mesiM)
         :transition
-           (ost --> return {| msg_id := mesiRqI;
-                              msg_type := MRq;
-                              msg_value := VUnit |}).
+           (ost --> {| miv_id := mesiRqI;
+                       miv_value := O |}).
 
       Definition putRqUpUpM: Rule :=
         rule.rqu[2~>1]
         :me oidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiM)
         :transition
-           (ost --> return {| msg_id := mesiRqI;
-                              msg_type := MRq;
-                              msg_value := VNat (ost#[implValueIdx]) |}).
+           (ost --> {| miv_id := mesiRqI;
+                       miv_value := ost#[implValueIdx] |}).
 
       Definition putRsDownDown: Rule :=
         rule.rsd[2~>2]
         :accepts mesiRsI
         :holding mesiRqI
-        :requires (fun _ _ _ => True)
+        :requires ⊤
         :transition
-           ([|ost, _, _|] -->
-            return (ost +#[implStatusIdx <- mesiI])).
+           ([|ost, _, _|] --> ost +#[implStatusIdx <- mesiI]).
 
       Definition liPutImmI: Rule :=
         rule.immd[cidx~>2~>3]
@@ -591,10 +535,9 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiI)
         :transition
-           ([|ost, _|] --> return (ost, {| msg_id := mesiRsI;
-                                           msg_type := MRs;
-                                           msg_value := VUnit
-                                        |})).
+           ([|ost, _|] --> (ost, {| miv_id := mesiRsI;
+                                    miv_value := O
+                                 |})).
 
       Definition liPutImmS: Rule :=
         rule.immd[cidx~>2~>4]
@@ -602,12 +545,11 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS)
         :transition
-           ([|ost, _|] -->
-            return (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
-                    {| msg_id := mesiRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit
-                    |})).
+           ([|ost, _|]
+              --> (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
+                   {| miv_id := mesiRsI;
+                      miv_value := O
+                   |})).
 
       Definition memPutImmSNotLast: Rule :=
         rule.immd[cidx~>2~>4~>0]
@@ -617,12 +559,11 @@ Section System.
            ((fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS) /\
             (fun ost orq mins => List.length ost#[implDirIdx].(dir_sharers) >= 2))
         :transition
-           ([|ost, msg|] -->
-            return (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
-                    {| msg_id := mesiRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit
-                    |})).
+           ([|ost, msg|]
+              --> (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
+                   {| miv_id := mesiRsI;
+                      miv_value := O
+                   |})).
 
       Definition memPutImmSLast: Rule :=
         rule.immd[cidx~>2~>4~>1]
@@ -632,13 +573,11 @@ Section System.
            ((fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS) /\
             (fun ost orq mins => List.length ost#[implDirIdx].(dir_sharers) = 1))
         :transition
-           ([|ost, msg|] -->
-            return (ost +#[implStatusIdx <- mesiM]
-                        +#[implDirIdx <- setDirI],
-                    {| msg_id := mesiRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit
-                    |})).
+           ([|ost, msg|] --> (ost +#[implStatusIdx <- mesiM]
+                                  +#[implDirIdx <- setDirI],
+                              {| miv_id := mesiRsI;
+                                 miv_value := O
+                              |})).
 
       Definition liPutImmE: Rule :=
         rule.immd[cidx~>2~>5]
@@ -646,30 +585,24 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiE)
         :transition
-           ([|ost, msg|] -->
-            return (ost +#[implStatusIdx <- mesiM]
-                        +#[implDirIdx <- setDirI],
-                    {| msg_id := mesiRsI;
-                       msg_type := MRs;
-                       msg_value := VUnit
-                    |})).
+           ([|ost, msg|] --> (ost +#[implStatusIdx <- mesiM]
+                                  +#[implDirIdx <- setDirI],
+                              {| miv_id := mesiRsI;
+                                 miv_value := O
+                              |})).
 
       Definition liPutImmM: Rule :=
         rule.immd[cidx~>2~>6]
         :accepts mesiRqI
         :from cidx
-        :requires
-           (FirstNatMsg /\
-            (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiM))
+        :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiM)
         :transition
            ([|ost, msg|]
-              --> (n <-- getNatMsg msg;
-                   return (ost +#[implStatusIdx <- mesiM]
-                               +#[implValueIdx <- n]
-                               +#[implDirIdx <- setDirI],
-                           {| msg_id := mesiRsI;
-                              msg_type := MRs;
-                              msg_value := VUnit |}))).
+              --> (ost +#[implStatusIdx <- mesiM]
+                       +#[implValueIdx <- msg_value msg]
+                       +#[implDirIdx <- setDirI],
+                   {| miv_id := mesiRsI;
+                      miv_value := O |})).
 
     End EvictTrs.
 
@@ -720,7 +653,7 @@ Section System.
                    liDownSRsUpUp;
                    (** rules involved with [GetM] *)
                    liGetMRsDownDownDirI; liDownIRsUpDownME;
-                     liGetMRsDownRqDownDirS; liDownIRsUpDownDirS;
+                     liGetMRsDownRqDownDirS oidx; liDownIRsUpDownDirS;
                        liDownIImm oidx;
                        liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx;
                          liDownIRsUpUp;

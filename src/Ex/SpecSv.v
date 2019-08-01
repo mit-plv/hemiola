@@ -44,7 +44,7 @@ Section System.
                (ost, orq,
                 [(ers i, {| msg_id := getRs;
                             msg_type := MRs;
-                            msg_value := VNat (ost#[specValueIdx])
+                            msg_value := ost#[specValueIdx]
                          |})])
         |}.
 
@@ -56,16 +56,13 @@ Section System.
              /\oprec RqAccepting;
            rule_trs :=
              fun (ost: OState) orq mins =>
-               ((hd_error mins) >>=[ost]
-                                (fun idm =>
-                                   match msg_value (valOf idm) with
-                                   | VNat n => ost+#[specValueIdx <- n]
-                                   | _ => ost
-                                   end),
+               ((hd_error mins)
+                  >>=[ost] (fun idm =>
+                              ost+#[specValueIdx <- msg_value (valOf idm)]),
                 orq,
                 [(ers i, {| msg_id := setRs;
                             msg_type := MRs;
-                            msg_value := VUnit |})])
+                            msg_value := O |})])
         |}.
 
       Definition specEvictRq: Rule :=
@@ -79,7 +76,7 @@ Section System.
                (ost, orq,
                 [(ers i, {| msg_id := evictRs;
                             msg_type := MRs;
-                            msg_value := VUnit
+                            msg_value := O
                          |})])
         |}.
 

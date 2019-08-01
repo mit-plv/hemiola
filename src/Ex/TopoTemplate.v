@@ -146,14 +146,40 @@ Definition rsUpFrom (cidx: IdxT): IdxT :=
   cidx~>rsUpIdx.
 Definition downTo (cidx: IdxT): IdxT :=
   cidx~>downIdx.
+Definition objIdxOf (midx: IdxT) := idxTl midx.
 
-(** TODO: use [None] when silent transactions are supported. *)
-Definition addSilentUpRq (orq: ORq Msg) (mrss : list IdxT): ORq Msg :=
-  orq +[upRq <- {| rqi_msg := {| msg_id := 0;
-                                 msg_type := false;
-                                 msg_value := VUnit |};
-                   rqi_minds_rss := mrss;
-                   rqi_midx_rsb := 0 |}].
+Definition TreeTopoNode (dtr: DTree) :=
+  forall cidx oidx,
+    parentIdxOf dtr cidx = Some oidx ->
+    rqEdgeUpFrom dtr cidx = Some (rqUpFrom cidx) /\
+    rsEdgeUpFrom dtr cidx = Some (rsUpFrom cidx) /\
+    edgeDownTo dtr cidx = Some (downTo cidx).
+  
+Definition TreeTopoEdge (dtr: DTree) :=
+  forall oidx midx,
+    (rqEdgeUpFrom dtr oidx = Some midx \/
+     rsEdgeUpFrom dtr oidx = Some midx \/
+     edgeDownTo dtr oidx = Some midx) ->
+    oidx = objIdxOf midx.
+
+Definition TreeTopo (dtr: DTree) :=
+  TreeTopoNode dtr /\ TreeTopoEdge dtr.
+
+Section TreeTopo.
+
+  Lemma l1ExtOf_not_eq:
+    forall bidx, l1ExtOf bidx <> bidx.
+  Proof.
+    intros; induction bidx; [discriminate|].
+    intro Hx; inv Hx; auto.
+  Qed.
+
+  Lemma tree2Topo_TreeTopo:
+    forall tr bidx, TreeTopo (fst (tree2Topo tr bidx)).
+  Proof.
+  Admitted.
+
+End TreeTopo.
 
 Section Facts.
 
@@ -287,13 +313,6 @@ Section Facts.
       simpl; intros; dest; auto.
     - eapply Forall_impl; [|apply tree2Topo_chns_prefix_base].
       simpl; intros; dest; auto.
-  Qed.
-
-  Lemma l1ExtOf_not_eq:
-    forall bidx, l1ExtOf bidx <> bidx.
-  Proof.
-    intros; induction bidx; [discriminate|].
-    intro Hx; inv Hx; auto.
   Qed.
 
   Lemma singletonDNode_WfDTree:
