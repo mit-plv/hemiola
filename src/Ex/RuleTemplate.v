@@ -17,76 +17,81 @@ Section Template.
   (* Heads-up: [cidx] is not the index of itself, but of a child. *)
   Definition immDownRule (cidx: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> OState * Msg): Rule :=
+             (trs: OState -> Msg -> option (OState * Msg)): Rule :=
     rule[ridx]
     :requires (MsgsFrom [rqUpFrom cidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ UpLockFree /\ DownLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              st --> let (ost, out) := trs (st.ost) msg in
-                     (ost, st.orq, [(downTo cidx, out)]))).
-
+       (do (st --> (msg <-- getFirstMsg st.(msgs);
+                    nst <-- trs st.(ost) msg;
+                    return {{ fst nst, st.(orq), [(downTo cidx, snd nst)] }}))).
+  
   Definition immUpRule (oidx: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> OState * Msg): Rule :=
+             (trs: OState -> Msg -> option (OState * Msg)): Rule :=
     rule[ridx]
     :requires (MsgsFrom [downTo oidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ DownLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              st --> let (ost, out) := trs (st.ost) msg in
-                     (ost, st.orq, [(rqUpFrom oidx, out)]))).
+       (do (st --> (msg <-- getFirstMsg st.(msgs);
+                      nst <-- trs st.(ost) msg;
+                      return {{ fst nst, st.(orq), [(rqUpFrom oidx, snd nst)] }}))).
 
   Definition rqUpUpRule (cidx oidx: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> Msg): Rule :=
+             (trs: OState -> Msg -> option Msg): Rule :=
     rule[ridx]
     :requires (MsgsFrom [rqUpFrom cidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ UpLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              st --> (st.ost,
-                      addRq (st.orq) upRq msg [downTo oidx] (downTo cidx),
-                      [(rqUpFrom oidx, trs (st.ost) msg)]))).
+       (do (st --> (msg <-- getFirstMsg st.(msgs);
+                      out <-- trs st.(ost) msg;
+                      return {{ st.(ost),
+                                addRq st.(orq) upRq msg [downTo oidx] (downTo cidx),
+                                [(rqUpFrom oidx, out)] }}))).
 
   Definition rqUpUpRuleS (oidx: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg): Rule :=
+             (trs: OState -> option Msg): Rule :=
     rule[ridx]
     :requires (MsgsFrom nil /\ RqAccepting /\ UpLockFree /\ prec)
     :transition
-       (fun ost orq _ =>
-          (ost,
-           addSilentUpRq orq [downTo oidx],
-           [(rqUpFrom oidx, trs ost)])).
+       (do (st --> (out <-- trs st.(ost);
+                    return {{ st.(ost),
+                              addSilentUpRq st.(orq) [downTo oidx],
+                              [(rqUpFrom oidx, out)] }}))).
 
   (** * FIXME: need to know children indices from [trs] are sound. *)
   Definition rqUpDownRule (cidx oidx: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> list IdxT * Msg): Rule :=
+             (trs: OState -> Msg -> option (list IdxT * Msg)): Rule :=
     rule[ridx]
     :requires (MsgsFrom [rqUpFrom cidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ UpLockFree /\ DownLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              st --> let (cinds, out) := trs (st.ost) msg in
-                     (st.ost,
-                      addRq (st.orq) downRq msg (map rsUpFrom cinds) (downTo cidx),
-                      map (fun cidx => (downTo cidx, msg)) cinds))).
+       (do (st -->
+               (msg <-- getFirstMsg st.(msgs);
+                  nst <-- trs st.(ost) msg;
+                return {{ st.(ost),
+                          addRq st.(orq) downRq msg
+                                         (map rsUpFrom (fst nst)) (downTo cidx),
+                          map (fun cidx => (downTo cidx, snd nst)) (fst nst) }}))).
 
   (** * FIXME: need to know children indices from [trs] are sound. *)
   Definition rqDownDownRule (oidx: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> list IdxT * Msg): Rule :=
+             (trs: OState -> Msg -> option (list IdxT * Msg)): Rule :=
     rule[ridx]
     :requires (MsgsFrom [downTo oidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ DownLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              st --> let (cinds, out) := trs (st.ost) msg in
-                     (st.ost,
-                      addRq (st.orq) downRq msg (map rsUpFrom cinds) (rsUpFrom oidx),
-                      map (fun cidx => (downTo cidx, msg)) cinds))).
+       (do (st -->
+               (msg <-- getFirstMsg st.(msgs);
+                  nst <-- trs st.(ost) msg;
+                return {{ st.(ost),
+                          addRq st.(orq) downRq msg
+                                         (map rsUpFrom (fst nst)) (rsUpFrom oidx),
+                          map (fun cidx => (downTo cidx, snd nst)) (fst nst) }}))).
 
   Definition rsDownDownRule (rqId: IdxT)
              (prec: OPrec)
@@ -94,33 +99,34 @@ Section Template.
                    Msg (* an incoming message *) ->
                    Msg (* the original request *) ->
                    IdxT (* response back to *) ->
-                   OState * Msg) :=
+                   option (OState * Msg)) :=
     rule[ridx]
     :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\ UpLockMsgId MRq rqId /\
                RsAccepting /\ DownLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              rq <-- getUpLockMsg;
-              rsbTo <-- getUpLockIdxBack;
-              st --> let (ost, out) := trs (st.ost) msg rq rsbTo in
-                     (ost, removeRq (st.orq) upRq, [(rsbTo, out)]))).
+       (do (st --> (msg <-- getFirstMsg st.(msgs);
+                      rq <-- getUpLockMsg st.(orq);
+                      rsbTo <-- getUpLockIdxBack st.(orq);
+                      nst <-- trs st.(ost) msg rq rsbTo;
+                    return {{ fst nst,
+                              removeRq st.(orq) upRq,
+                              [(rsbTo, snd nst)] }}))).
 
   Definition rsDownDownRuleS (rqId: IdxT)
              (prec: OPrec)
              (trs: OState ->
                    Msg (* an incoming message *) ->
                    Msg (* the original request *) ->
-                   OState) :=
+                   option OState) :=
     rule[ridx]
     :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\ UpLockMsgId MRq rqId /\
                RsAccepting /\ DownLockFree /\ prec)
     :transition
-       (do (msg <-- getFirstMsg;
-              rq <-- getUpLockMsg;
-              rsbTo <-- getUpLockIdxBack;
-              st --> (trs (st.ost) msg rq,
-                      removeRq (st.orq) upRq,
-                      nil))).
+       (do (st --> (msg <-- getFirstMsg st.(msgs);
+                      rq <-- getUpLockMsg st.(orq);
+                      rsbTo <-- getUpLockIdxBack st.(orq);
+                      nst <-- trs st.(ost) msg rq;
+                    return {{ nst, removeRq st.(orq) upRq, nil }}))).
 
   Definition rsUpDownRule (rqId: IdxT)
              (prec: OPrec)
@@ -129,18 +135,18 @@ Section Template.
                    Msg (* the original request *) ->
                    list IdxT (* responses from *) ->
                    IdxT (* response back to *) ->
-                   OState * Msg) :=
+                   option (OState * Msg)) :=
     rule[ridx]
     :requires (MsgsFromORq downRq /\ MsgIdFromEach msgId /\
                DownLockMsgId MRq rqId /\ RsAccepting /\ prec)
     :transition
-       (do (rq <-- getDownLockMsg;
-              rssFrom <-- getDownLockIndsFrom;
-              rsbTo <-- getDownLockIdxBack;
-              st --> let (ost, out) := trs (st.ost) (st.msgs) rq rssFrom rsbTo in
-                     (ost,
-                      removeRq (st.orq) downRq,
-                      [(rsbTo, out)]))).
+       (do (st --> (rq <-- getDownLockMsg st.(orq);
+                      rssFrom <-- getDownLockIndsFrom st.(orq);
+                      rsbTo <-- getDownLockIdxBack st.(orq);
+                      nst <-- trs st.(ost) st.(msgs) rq rssFrom rsbTo;
+                    return {{ fst nst,
+                              removeRq st.(orq) downRq,
+                              [(rsbTo, snd nst)] }}))).
 
   Definition rsUpUpRule (rqId: IdxT)
              (prec: OPrec)
@@ -149,35 +155,36 @@ Section Template.
                    Msg (* the original request *) ->
                    list IdxT (* responses from *) ->
                    IdxT (* response back to *) ->
-                   OState * Msg) :=
+                   option (OState * Msg)) :=
     rule[ridx]
     :requires (MsgsFromORq downRq /\ MsgIdFromEach msgId /\
                DownLockMsgId MRq rqId /\ RsAccepting /\ prec)
     :transition
-       (do (rq <-- getDownLockMsg;
-              rssFrom <-- getDownLockIndsFrom;
-              rsbTo <-- getDownLockIdxBack;
-              st --> let (ost, out) := trs (st.ost) (st.msgs) rq rssFrom rsbTo in
-                     (ost,
-                      removeRq (st.orq) downRq,
-                      [(rsbTo, out)]))).
+       (do (st --> (rq <-- getDownLockMsg st.(orq);
+                      rssFrom <-- getDownLockIndsFrom st.(orq);
+                      rsbTo <-- getDownLockIdxBack st.(orq);
+                      nst <-- trs st.(ost) st.(msgs) rq rssFrom rsbTo;
+                    return {{ fst nst,
+                              removeRq st.(orq) downRq,
+                              [(rsbTo, snd nst)] }}))).
 
   (** * FIXME: need to know children indices from [trs] are sound. *)
   Definition rsDownRqDownRule (rqId: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> list IdxT * Msg) :=
+             (trs: OState -> Msg -> option (list IdxT * Msg)) :=
     rule[ridx]
     :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\
                UpLockMsgId MRq rqId /\
                RsAccepting /\ DownLockFree /\ prec)
     :transition
-       (do (rq <-- getUpLockMsg;
-              rsbTo <-- getUpLockIdxBack;
-              st --> let (cinds, out) := trs (st.ost) rq in
-                     (st.ost,
-                      addRq (removeRq (st.orq) upRq)
-                            downRq rq (map rsUpFrom cinds) rsbTo,
-                      map (fun cidx => (downTo cidx, out)) cinds))).
+       (do (st --> (rq <-- getUpLockMsg st.(orq);
+                      rsbTo <-- getUpLockIdxBack st.(orq);
+                      nst <-- trs st.(ost) rq;
+                    return {{ st.(ost),
+                              addRq (removeRq st.(orq) upRq)
+                                    downRq rq (map rsUpFrom (fst nst)) rsbTo,
+                              map (fun cidx => (downTo cidx, snd nst))
+                                  (fst nst) }}))).
   
 End Template.
 

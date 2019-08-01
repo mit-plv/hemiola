@@ -8,7 +8,7 @@ Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo.
 
 Set Implicit Arguments.
 
-Import MonadNotations.
+Import PropMonadNotations.
 Import CaseNotations.
 
 Open Scope list.

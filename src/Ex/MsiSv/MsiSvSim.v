@@ -9,7 +9,7 @@ Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo
 
 Set Implicit Arguments.
 
-Import MonadNotations.
+Import PropMonadNotations.
 Import CaseNotations.
 
 Open Scope list.
@@ -1350,9 +1350,9 @@ Section Sim.
             destruct (Compare_dec.le_gt_dec msiM (fst (snd post))).
             { disc_rule_conds_ex.
               intuition idtac.
-              { destruct H47.
+              { destruct H48.
                 { exfalso; simpl in *; solve_msi_false. }
-                { destruct H47 as [[midx msg] [? ?]]; inv H62.
+                { destruct H48 as [[midx msg] [? ?]]; inv H62.
                   clear Hpulinv.
                   get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
                   disc_rule_conds_const.
@@ -1389,12 +1389,12 @@ Section Sim.
                 }
               }
               { assert (fst (fst (snd (snd post))) = msiI)
-                  by (clear -H11 n; solve_msi).
+                  by (clear -H25 n; solve_msi).
                 disc_rule_conds_ex.
                 intuition idtac.
-                { destruct H47.
+                { destruct H48.
                   { exfalso; simpl in *; solve_msi_false. }
-                  { destruct H47 as [[midx msg] [? ?]]; inv H62.
+                  { destruct H48 as [[midx msg] [? ?]]; inv H62.
                     clear Hpulinv.
                     get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
                     disc_rule_conds_const.
@@ -1460,9 +1460,9 @@ Section Sim.
             { assert (fst (fst (snd (snd post))) = msiI) by (clear -g; solve_msi).
               disc_rule_conds_ex.
               intuition idtac; try solve_msi_false.
-              { destruct H40.
+              { destruct H48.
                 { exfalso; simpl in *; solve_msi_false. }
-                { destruct H40 as [[midx msg] [? ?]]; inv H63.
+                { destruct H48 as [[midx msg] [? ?]]; inv H63.
                   clear Hpulinv.
                   get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
                   disc_rule_conds_const.
@@ -1704,9 +1704,9 @@ Section Sim.
               { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
                 apply DirMsgsCoh_deqMP; assumption.
               }
-              { destruct H40.
+              { destruct H49.
                 { exfalso; simpl in *; solve_msi_false. }
-                { destruct H40 as [[midx msg] [? ?]]; inv H62.
+                { destruct H49 as [[midx msg] [? ?]]; inv H62.
                   clear Hpulinv.
                   get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
                   disc_rule_conds_const.
@@ -1740,15 +1740,15 @@ Section Sim.
                 }
               }
               { assert (snd (fst (snd (snd post))) = msiI)
-                  by (clear -H17 n; solve_msi).
+                  by (clear -H42 n; solve_msi).
                 disc_rule_conds_ex.
                 intuition idtac.
                 { apply DirMsgsCoh_other_midx_enqMP; [|solve_not_in].
                   apply DirMsgsCoh_deqMP; assumption.
                 }
-                { destruct H48.
+                { destruct H49.
                   { exfalso; simpl in *; solve_msi_false. }
-                  { destruct H48 as [[midx msg] [? ?]]; inv H62.
+                  { destruct H49 as [[midx msg] [? ?]]; inv H62.
                     clear Hpulinv.
                     get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
                     disc_rule_conds_const.
@@ -1811,9 +1811,9 @@ Section Sim.
             { assert (snd (fst (snd (snd post))) = msiI) by (clear -g; solve_msi).
               disc_rule_conds_ex.
               intuition idtac; try solve_msi_false.
-              { destruct H40.
+              { destruct H49.
                 { exfalso; simpl in *; solve_msi_false. }
-                { destruct H40 as [[midx msg] [? ?]]; inv H63.
+                { destruct H49 as [[midx msg] [? ?]]; inv H63.
                   clear Hpulinv.
                   get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
                   disc_rule_conds_const.
