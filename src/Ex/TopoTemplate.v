@@ -174,10 +174,136 @@ Section TreeTopo.
     intro Hx; inv Hx; auto.
   Qed.
 
+  Lemma tree2Topo_root_edges:
+    forall tr bidx dtr ifc,
+      tree2Topo tr bidx = (dtr, ifc) ->
+      hd_error (dmc_ups (dmcOf dtr)) = Some (rqUpFrom (rootOf dtr)) /\
+      hd_error (tl (dmc_ups (dmcOf dtr))) = Some (rsUpFrom (rootOf dtr)) /\
+      hd_error (dmc_downs (dmcOf dtr)) = Some (downTo (rootOf dtr)).
+  Proof.
+    destruct tr; simpl; intros; find_if_inside;
+      try (inv H; simpl; auto; fail).
+  Qed.
+
+  Lemma singletonDNode_TreeTopoNode:
+    forall bidx, TreeTopoNode (fst (singletonDNode bidx)).
+  Proof.
+    intros; red; intros.
+    pose proof (parentIdxOf_child_indsOf _ _ H).
+    cbv [rqEdgeUpFrom rsEdgeUpFrom edgeDownTo
+                      upEdgesFrom downEdgesTo parentChnsOf]; cbn.
+    dest_in; simpl in *.
+    - exfalso.
+      cbv [parentIdxOf parentChnsOf] in H; cbn in H.
+      destruct (hasIdx _ _) eqn:Hhi; [|discriminate].
+      unfold hasIdx in Hhi.
+      destruct (idx_dec _ _); [|discriminate].
+      simpl in e; eapply l1ExtOf_not_eq; eauto.
+    - clear.
+      unfold hasIdx.
+      destruct (idx_dec _ _); [auto|].
+      exfalso; simpl in n; auto.
+  Qed.
+
+  Lemma tree2Topo_TreeTopoNode:
+    forall tr bidx, TreeTopoNode (fst (tree2Topo tr bidx)).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    find_if_inside; [apply singletonDNode_TreeTopoNode|].
+    simpl; red; intros.
+    cbv [parentIdxOf rqEdgeUpFrom rsEdgeUpFrom edgeDownTo
+                     upEdgesFrom downEdgesTo] in *.
+    destruct (parentChnsOf _ _) as [[croot pidx]|] eqn:Hp;
+      [inv H0; simpl|discriminate].
+    apply parentChnsOf_case in Hp.
+    destruct Hp as [cdtr ?]; dest; simpl in *.
+    destruct H1; dest; subst.
+
+    - apply in_map_iff in H0.
+      destruct H0 as [[ctr cifc] [? ?]]; simpl in *; subst.
+      apply incMap_In in H1.
+      destruct H1 as [ctr [ofs [? ?]]]; simpl in *.
+      apply nth_error_In in H0.
+      eapply tree2Topo_root_edges; eauto.
+
+    - apply in_map_iff in H0.
+      destruct H0 as [[ctr cifc] [? ?]]; simpl in *; subst.
+      apply incMap_In in H2.
+      destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
+      apply nth_error_In in H0.
+      rewrite Forall_forall in H; specialize (H _ H0 bidx~>ofs).
+      rewrite <-H2 in H; simpl in H.
+      specialize (H cidx oidx).
+      cbv [parentIdxOf rqEdgeUpFrom rsEdgeUpFrom edgeDownTo
+                       upEdgesFrom downEdgesTo] in H.
+      rewrite H1 in H; simpl in H; auto.
+  Qed.
+
+  Lemma singletonDNode_TreeTopoEdge:
+    forall bidx, TreeTopoEdge (fst (singletonDNode bidx)).
+  Proof.
+    intros; red; intros.
+    cbv [rqEdgeUpFrom rsEdgeUpFrom edgeDownTo upEdgesFrom downEdgesTo] in H.
+    destruct (parentChnsOf oidx _) as [[croot pidx]|] eqn:Hp; simpl in H;
+      [|destruct H as [|[|]]; discriminate].
+    pose proof (parentChnsOf_child_indsOf _ _ Hp).
+    dest_in; simpl in *.
+    - exfalso.
+      destruct (hasIdx _ _) eqn:Hhi; [|discriminate].
+      unfold hasIdx in Hhi.
+      destruct (idx_dec _ _); [|discriminate].
+      simpl in e; eapply l1ExtOf_not_eq; eauto.
+    - unfold hasIdx in Hp.
+      destruct (idx_dec _ _).
+      + inv Hp; simpl in *.
+        destruct H as [|[|]]; inv H; reflexivity.
+      + exfalso; simpl in n; auto.
+  Qed.
+
+  Lemma tree2Topo_TreeTopoEdge:
+    forall tr bidx, TreeTopoEdge (fst (tree2Topo tr bidx)).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    find_if_inside; [apply singletonDNode_TreeTopoEdge|].
+    simpl; red; intros.
+    cbv [parentIdxOf rqEdgeUpFrom rsEdgeUpFrom edgeDownTo
+                     upEdgesFrom downEdgesTo] in H0.
+    destruct (parentChnsOf _ _) as [[croot pidx]|] eqn:Hp;
+      simpl in H0; [|destruct H0 as [|[|]]; discriminate].
+    apply parentChnsOf_case in Hp.
+    destruct Hp as [cdtr ?]; dest; simpl in *.
+    destruct H2; dest; subst.
+
+    - apply in_map_iff in H1.
+      destruct H1 as [[ctr cifc] [? ?]]; simpl in *; subst.
+      apply incMap_In in H2.
+      destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
+      pose proof (tree2Topo_root_edges _ _ (eq_sym H2)); dest.
+      destruct H0 as [|[|]].
+      + rewrite H0 in H3; inv H3; reflexivity.
+      + rewrite H0 in H4; inv H4; reflexivity.
+      + rewrite H0 in H5; inv H5; reflexivity.
+
+    - apply in_map_iff in H1.
+      destruct H1 as [[ctr cifc] [? ?]]; simpl in *; subst.
+      apply incMap_In in H3.
+      destruct H3 as [ctr [ofs [? ?]]]; simpl in *.
+      apply nth_error_In in H1.
+      rewrite Forall_forall in H; specialize (H _ H1 bidx~>ofs).
+      rewrite <-H3 in H; simpl in H.
+      specialize (H oidx midx).
+      cbv [parentIdxOf rqEdgeUpFrom rsEdgeUpFrom edgeDownTo
+                       upEdgesFrom downEdgesTo] in H.
+      rewrite H2 in H; simpl in H; auto.
+  Qed.
+
   Lemma tree2Topo_TreeTopo:
     forall tr bidx, TreeTopo (fst (tree2Topo tr bidx)).
   Proof.
-  Admitted.
+    intros; split.
+    - apply tree2Topo_TreeTopoNode.
+    - apply tree2Topo_TreeTopoEdge.
+  Qed.
 
 End TreeTopo.
 
