@@ -150,13 +150,13 @@ Module RqRsNotations.
   Notation "v ::= e ; c" := (let v := e in c) (at level 84): trs_scope.
   Notation "PST --> NST" :=
     (fun PST => NST) (at level 82, only parsing): trs_scope.
-  Notation "'[|' PST1 ',' PST2 '|]' --> NST" :=
+  Notation "'<|' PST1 ',' PST2 '|>' --> NST" :=
     (fun PST1 PST2 => NST) (at level 82, only parsing): trs_scope.
-  Notation "'[|' PST1 ',' PST2 ',' PST3 '|]' --> NST" :=
+  Notation "'<|' PST1 ',' PST2 ',' PST3 '|>' --> NST" :=
     (fun PST1 PST2 PST3 => NST) (at level 82, only parsing): trs_scope.
-  Notation "'[|' PST1 ',' PST2 ',' PST3 ',' PST4 '|]' --> NST" :=
+  Notation "'<|' PST1 ',' PST2 ',' PST3 ',' PST4 '|>' --> NST" :=
     (fun PST1 PST2 PST3 PST4 => NST) (at level 82, only parsing): trs_scope.
-  Notation "'[|' PST1 ',' PST2 ',' PST3 ',' PST4 ',' PST5 '|]' --> NST" :=
+  Notation "'<|' PST1 ',' PST2 ',' PST3 ',' PST4 ',' PST5 '|>' --> NST" :=
     (fun PST1 PST2 PST3 PST4 PST5 => NST) (at level 82, only parsing): trs_scope.
   Notation "'return' v" :=
     (Some v) (at level 80): trs_scope.

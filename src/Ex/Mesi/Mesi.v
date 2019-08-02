@@ -112,7 +112,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           ([|ost, _|] --> (ost, {| miv_id := mesiRsS;
+           (<|ost, _|> --> (ost, {| miv_id := mesiRsS;
                                     miv_value := ost#[implValueIdx]
                                  |})).
 
@@ -122,7 +122,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiS)
         :transition
-           ([|ost, _|] --> (ost, {| miv_id := mesiRsS;
+           (<|ost, _|> --> (ost, {| miv_id := mesiRsS;
                                     miv_value := ost#[implValueIdx]
                                  |})).
 
@@ -132,7 +132,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
         :transition
-           ([|ost, _|]
+           (<|ost, _|>
               --> (ost +#[implStatusIdx <- mesiS]
                        +#[implDirIdx <- setDirS [cidx]],
                    {| miv_id := mesiRsS;
@@ -152,7 +152,7 @@ Section System.
         :me oidx
         :requires (fun ost mins => summaryOf ost = mesiI)
         :transition
-           ([|ost, msg|] --> {| miv_id := mesiRqS;
+           (<|ost, msg|> --> {| miv_id := mesiRqS;
                                 miv_value := O |}).
 
       Definition l1GetSRsDownDownS: Rule :=
@@ -161,7 +161,7 @@ Section System.
         :holding mesiRqS
         :requires ⊤
         :transition
-           ([|ost, min, rq, rsbTo|]
+           (<|ost, min, rq, rsbTo|>
               --> (ost +#[implValueIdx <- msg_value min]
                        +#[implStatusIdx <- mesiS],
                    {| miv_id := mesiRsS;
@@ -173,7 +173,7 @@ Section System.
         :holding mesiRqS
         :requires ⊤
         :transition
-           ([|ost, min, rq, rsbTo|]
+           (<|ost, min, rq, rsbTo|>
               --> (ost +#[implValueIdx <- msg_value min]
                        +#[implStatusIdx <- mesiE],
                    {| miv_id := mesiRsS;
@@ -185,7 +185,7 @@ Section System.
         :holding mesiRqS
         :requires ⊤
         :transition
-           ([|ost, min, rq, rsbTo|]
+           (<|ost, min, rq, rsbTo|>
               --> (ost +#[implValueIdx <- msg_value min]
                        +#[implStatusIdx <- mesiS]
                        +#[implDirIdx <- setDirS [objIdxOf rsbTo]],
@@ -198,7 +198,7 @@ Section System.
         :holding mesiRqS
         :requires ⊤
         :transition
-           ([|ost, min, rq, rsbTo|]
+           (<|ost, min, rq, rsbTo|>
               --> (ost +#[implDirIdx <- setDirE (objIdxOf rsbTo)],
                    {| miv_id := mesiRsE;
                       miv_value := msg_value min |})).
@@ -210,7 +210,7 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           ([|ost, min|] --> (ost +#[implStatusIdx <- mesiS],
+           (<|ost, min|> --> (ost +#[implStatusIdx <- mesiS],
                               {| miv_id := mesiDownRsS;
                                  miv_value := ost#[implValueIdx] |})).
 
@@ -224,7 +224,7 @@ Section System.
               and (ost#[implStatusIdx] = mesiI)
                   (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+           (<|ost, msg|> --> ([ost#[implDirIdx].(dir_excl)],
                               {| miv_id := mesiDownRqS;
                                  miv_value := O |})).
 
@@ -240,7 +240,7 @@ Section System.
                and (ost#[implStatusIdx] = mesiI)
                    (ost#[implDirIdx].(dir_st) = mesiS)))
         :transition
-           ([|ost, msg|] --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
+           (<|ost, msg|> --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
                               {| miv_id := mesiDownRqS;
                                  miv_value := O |})).
 
@@ -250,7 +250,7 @@ Section System.
         :holding mesiRqS
         :requires FirstMsg
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|]
+           (<|ost, mins, rq, rssFrom, rsbTo|>
               --> (msg ::= getFirstMsgI mins;
                    (ost +#[implValueIdx <- msg_value msg]
                         +#[implStatusIdx <- mesiS]
@@ -267,7 +267,7 @@ Section System.
               and (ost#[implStatusIdx] = mesiI)
                   (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+           (<|ost, msg|> --> ([ost#[implDirIdx].(dir_excl)],
                               {| miv_id := mesiDownRqS;
                                  miv_value := O |})).
 
@@ -280,7 +280,7 @@ Section System.
               and (ost#[implStatusIdx] = mesiI)
                   (ost#[implDirIdx].(dir_st) = mesiS))
         :transition
-           ([|ost, msg|]
+           (<|ost, msg|>
               --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
                    {| miv_id := mesiDownRqS;
                       miv_value := O |})).
@@ -291,7 +291,7 @@ Section System.
         :holding mesiDownRqS
         :requires FirstMsg
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|]
+           (<|ost, mins, rq, rssFrom, rsbTo|>
               --> (msg ::= getFirstMsgI mins;
                    (ost +#[implValueIdx <- msg_value msg]
                         +#[implStatusIdx <- mesiS]
@@ -309,7 +309,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiE)
         :transition
-           ([|ost, msg|]
+           (<|ost, msg|>
               --> (ost +#[implStatusIdx <- mesiM]
                        +#[implValueIdx <- msg_value msg],
                    {| miv_id := mesiRsM;
@@ -321,7 +321,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiM)
         :transition
-           ([|ost, msg|]
+           (<|ost, msg|>
               --> (ost +#[implValueIdx <- msg_value msg],
                    {| miv_id := mesiRsM;
                       miv_value := O |})).
@@ -332,7 +332,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
         :transition
-           ([|ost, msg|] --> (ost +#[implStatusIdx <- mesiI]
+           (<|ost, msg|> --> (ost +#[implStatusIdx <- mesiI]
                                   +#[implDirIdx <- setDirM cidx],
                               {| miv_id := mesiRsM;
                                  miv_value := O |})).
@@ -345,7 +345,7 @@ Section System.
         :me oidx
         :requires (fun ost mins => summaryOf ost <= mesiS)
         :transition
-           ([|ost, msg|] --> {| miv_id := mesiRqM;
+           (<|ost, msg|> --> {| miv_id := mesiRqM;
                                 miv_value := O |}).
 
       Definition l1GetMRsDownDown: Rule :=
@@ -354,7 +354,7 @@ Section System.
         :holding mesiRqM
         :requires ⊤
         :transition
-           ([|ost, min, rq, rsbTo|]
+           (<|ost, min, rq, rsbTo|>
               --> (ost +#[implStatusIdx <- mesiM]
                        +#[implValueIdx <- msg_value min],
                    {| miv_id := mesiRsM;
@@ -369,7 +369,7 @@ Section System.
         :holding mesiRqM
         :requires (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiI)
         :transition
-           ([|ost, min, rq, rsbTo|]
+           (<|ost, min, rq, rsbTo|>
               --> (ost +#[implStatusIdx <- mesiI]
                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
                    {| miv_id := mesiRsM;
@@ -385,7 +385,7 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => ost#[implDirIdx].(dir_st) = mesiS)
         :transition
-           ([|ost, rq|] --> (ost#[implDirIdx].(dir_sharers),
+           (<|ost, rq|> --> (ost#[implDirIdx].(dir_sharers),
                              {| miv_id := mesiDownRqI;
                                 miv_value := O |})).
 
@@ -395,7 +395,7 @@ Section System.
         :holding mesiRqM
         :requires ⊤
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|]
+           (<|ost, mins, rq, rssFrom, rsbTo|>
               --> (ost +#[implStatusIdx <- mesiI]
                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
                    {| miv_id := mesiRsM;
@@ -411,7 +411,7 @@ Section System.
               and (ost#[implStatusIdx] = mesiI)
                   (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+           (<|ost, msg|> --> ([ost#[implDirIdx].(dir_excl)],
                               {| miv_id := mesiDownRqI;
                                  miv_value := O |})).
 
@@ -421,7 +421,7 @@ Section System.
         :holding mesiRqM
         :requires ⊤
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|]
+           (<|ost, mins, rq, rssFrom, rsbTo|>
               --> (ost +#[implStatusIdx <- mesiI]
                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
                    {| miv_id := mesiRsM;
@@ -433,7 +433,7 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           ([|ost, min|] --> (ost +#[implStatusIdx <- mesiI],
+           (<|ost, min|> --> (ost +#[implStatusIdx <- mesiI],
                               {| miv_id := mesiDownRsI;
                                  miv_value := O |})).
 
@@ -443,7 +443,7 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
         :transition
-           ([|ost, min|] --> (ost +#[implStatusIdx <- mesiI],
+           (<|ost, min|> --> (ost +#[implStatusIdx <- mesiI],
                               {| miv_id := mesiDownRsI;
                                  miv_value := O |})).
 
@@ -453,7 +453,7 @@ Section System.
         :me oidx
         :requires (fun ost mins => ost#[implDirIdx].(dir_st) = mesiS)
         :transition
-           ([|ost, msg|] --> (ost#[implDirIdx].(dir_sharers),
+           (<|ost, msg|> --> (ost#[implDirIdx].(dir_sharers),
                               {| miv_id := mesiDownRqI;
                                  miv_value := O |})).
 
@@ -466,7 +466,7 @@ Section System.
               and (ost#[implStatusIdx] = mesiI)
                   (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] --> ([ost#[implDirIdx].(dir_excl)],
+           (<|ost, msg|> --> ([ost#[implDirIdx].(dir_excl)],
                               {| miv_id := mesiDownRqI;
                                  miv_value := O |})).
 
@@ -476,7 +476,7 @@ Section System.
         :holding mesiDownRqI
         :requires ⊤
         :transition
-           ([|ost, mins, rq, rssFrom, rsbTo|]
+           (<|ost, mins, rq, rssFrom, rsbTo|>
               --> (ost +#[implDirIdx <- setDirI],
                    {| miv_id := mesiDownRsI;
                       miv_value := O |})).
@@ -491,7 +491,7 @@ Section System.
               and (ost#[implStatusIdx] <= mesiS)
                   (mesiE <= ost#[implDirIdx].(dir_st)))
         :transition
-           ([|ost, msg|] --> (ost#[implDirIdx].(dir_sharers),
+           (<|ost, msg|> --> (ost#[implDirIdx].(dir_sharers),
                               {| miv_id := mesiDownRqI;
                                  miv_value := O |})).
 
@@ -527,7 +527,7 @@ Section System.
         :holding mesiRqI
         :requires ⊤
         :transition
-           ([|ost, _, _|] --> ost +#[implStatusIdx <- mesiI]).
+           (<|ost, _, _|> --> ost +#[implStatusIdx <- mesiI]).
 
       Definition liPutImmI: Rule :=
         rule.immd[cidx~>2~>3]
@@ -535,7 +535,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiI)
         :transition
-           ([|ost, _|] --> (ost, {| miv_id := mesiRsI;
+           (<|ost, _|> --> (ost, {| miv_id := mesiRsI;
                                     miv_value := O
                                  |})).
 
@@ -545,7 +545,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS)
         :transition
-           ([|ost, _|]
+           (<|ost, _|>
               --> (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
                    {| miv_id := mesiRsI;
                       miv_value := O
@@ -559,7 +559,7 @@ Section System.
            ((fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS) /\
             (fun ost orq mins => List.length ost#[implDirIdx].(dir_sharers) >= 2))
         :transition
-           ([|ost, msg|]
+           (<|ost, msg|>
               --> (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
                    {| miv_id := mesiRsI;
                       miv_value := O
@@ -573,7 +573,7 @@ Section System.
            ((fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS) /\
             (fun ost orq mins => List.length ost#[implDirIdx].(dir_sharers) = 1))
         :transition
-           ([|ost, msg|] --> (ost +#[implStatusIdx <- mesiM]
+           (<|ost, msg|> --> (ost +#[implStatusIdx <- mesiM]
                                   +#[implDirIdx <- setDirI],
                               {| miv_id := mesiRsI;
                                  miv_value := O
@@ -585,7 +585,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiE)
         :transition
-           ([|ost, msg|] --> (ost +#[implStatusIdx <- mesiM]
+           (<|ost, msg|> --> (ost +#[implStatusIdx <- mesiM]
                                   +#[implDirIdx <- setDirI],
                               {| miv_id := mesiRsI;
                                  miv_value := O
@@ -597,7 +597,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiM)
         :transition
-           ([|ost, msg|]
+           (<|ost, msg|>
               --> (ost +#[implStatusIdx <- mesiM]
                        +#[implValueIdx <- msg_value msg]
                        +#[implDirIdx <- setDirI],
