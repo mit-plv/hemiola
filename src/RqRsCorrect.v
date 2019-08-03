@@ -49,6 +49,7 @@ Section Pushable.
       pose proof (atomic_unique H0 H2); dest; subst.
       pose proof (atomic_unique H5 H); dest; subst.
       eapply rqUp_lpush_unit_reducible; eauto.
+      intro Hx; subst; elim H3; apply SubList_nil.
     Qed.
     
     Lemma rqUp_LPushableHst: LPushableHst sys phst nlbl.
@@ -126,7 +127,8 @@ Section Pushable.
       pose proof (atomic_unique H0 H2); dest; subst.
       pose proof (atomic_unique H5 H); dest; subst.
       eapply rsUp_rpush_unit_reducible; eauto.
-      eapply DisjList_SubList; eauto.
+      - intro Hx; subst; elim H3; apply SubList_nil.
+      - eapply DisjList_SubList; eauto.
     Qed.
     
     Lemma rsUp_RPushableHst:
@@ -724,6 +726,7 @@ Section NonMergeable.
     eapply messages_in_cases in H1;
       try apply Hiorqs; try apply Hrrs; [|assumption].
     destruct H1 as [|[|[|]]]; disc_messages_in.
+    - left; apply SubList_nil.
     - inv_step.
       destruct H14; simpl in *.
       apply SubList_singleton_In in H0.
@@ -793,6 +796,7 @@ Section NonMergeable.
     clear H5; dest. (* clear [step_m] *)
 
     destruct H6 as [|[|[|]]]; disc_messages_in.
+    - elim H4; apply SubList_nil.
     - apply SubList_singleton_In in H7.
       inv H5; clear H13.
       eapply extAtomic_multi_IntMsgsEmpty_non_inits_InMPI in H12;

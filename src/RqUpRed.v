@@ -67,7 +67,7 @@ Section RqUpReduction.
       In obj sys.(sys_objs) -> obj.(obj_idx) = oidx ->
       In rule obj.(obj_rules) -> rule.(rule_idx) = ridx ->
       RqUpUp dtr oidx rule -> RqFwdRuleCommon rule ->
-      exists oidxTo, RqUpMsgs dtr oidxTo routs.
+      routs <> nil /\ exists oidxTo, RqUpMsgs dtr oidxTo routs.
   Proof.
     intros; destruct Hrrs as [? [? ?]].
     inv_step.
@@ -76,11 +76,13 @@ Section RqUpReduction.
     - pose proof (rqEdgeUpFrom_Some H7 _ H2).
       destruct H6 as [rsUp [down [pidx ?]]]; dest.
       repeat disc_rule_minds.
+      split; [discriminate|].
       exists pidx.
       right; do 2 eexists; repeat split; try eassumption.
     - pose proof (rqEdgeUpFrom_Some H7 _ H2).
       destruct H11 as [rsUp [down [pidx ?]]]; dest.
       repeat disc_rule_minds.
+      split; [discriminate|].
       exists pidx.
       right; do 2 eexists; repeat split; try eassumption.
   Qed.

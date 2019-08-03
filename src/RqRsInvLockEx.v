@@ -96,7 +96,7 @@ Section RqRsInvLockEx.
               orqs2@[oidx] = Some orq ->
               orq@[downRq] = Some rqid ->
               parentIdxOf dtr oidx = Some pidx ->
-              rsEdgeUpFrom dtr oidx = Some rqid.(rqi_midx_rsb) ->
+              rsEdgeUpFrom dtr oidx = rqid.(rqi_midx_rsb) ->
               DLNewRec pidx) ->
           DLNewRec oidx.
 
@@ -104,7 +104,7 @@ Section RqRsInvLockEx.
       forall orq rqid,
         orqs2@[oidx] = Some orq ->
         orq@[downRq] = Some rqid ->
-        rqid.(rqi_midx_rsb) <> midx.
+        rqid.(rqi_midx_rsb) <> Some midx.
     
     Definition RqDownDLNew (eouts: list (Id Msg)) :=
       forall oidx rqDown pidx,
@@ -112,15 +112,6 @@ Section RqRsInvLockEx.
         parentIdxOf dtr oidx = Some pidx ->
         In rqDown eouts ->
         DLNewRec pidx /\ DownLockNotTo pidx (idOf rqDown).
-
-    (* Definition DLDLNew := *)
-    (*   forall oidx orq rqid, *)
-    (*     DownLockedNew oidx -> *)
-    (*     orqs2@[oidx] = Some orq -> orq@[downRq] = Some rqid -> *)
-    (*     forall pidx, *)
-    (*       parentIdxOf dtr oidx = Some pidx -> *)
-    (*       rsEdgeUpFrom dtr oidx = Some rqid.(rqi_midx_rsb) -> *)
-    (*       DownLockedNew pidx. *)
 
     (** This invariant is the only necessary condition to prove non-mergeability,
      * used in [RqRsCorrect.v] *)
@@ -137,7 +128,7 @@ Section RqRsInvLockEx.
         orqs2@[pidx] = Some orq -> orq@[downRq] = Some rqid ->
         forall cidx,
           parentIdxOf dtr cidx = Some pidx ->
-          edgeDownTo dtr cidx = Some rqid.(rqi_midx_rsb) ->
+          edgeDownTo dtr cidx = rqid.(rqi_midx_rsb) ->
           DLIntactBound cidx.
 
     (** All together *)
@@ -147,9 +138,6 @@ Section RqRsInvLockEx.
       RsDownULNew eouts /\
       RqDownDLNew eouts /\
       RsUpDLNew eouts.
-
-    Definition DLLockInv :=
-      (* DLDLNew /\ *) DLNewBackUpLockedNew.
 
     (* An orthogonal invariant, also required in proving non-mergeability *)
     Definition DLOldPreserved :=
@@ -164,7 +152,7 @@ Section RqRsInvLockEx.
 
     Definition DLTimeInv (inits eouts: list (Id Msg)) :=
       DLTimeInits inits ->
-      DLOutsInv eouts /\ DLLockInv /\ DLOldPreserved.
+      DLOutsInv eouts /\ DLNewBackUpLockedNew /\ DLOldPreserved.
     
   End LockStatus.
 
@@ -418,45 +406,6 @@ Section RqRsInvLockEx.
         eapply inside_child_in; [apply Hrrs|..]; eauto.
   Qed.
 
-  (* Lemma DLDLNew_orqs_step_intact: *)
-  (*   forall orqs1 orqs2, *)
-  (*     DLDLNew orqs1 orqs2 -> *)
-  (*     forall norqs2, *)
-  (*       (forall oidx, DownLockIntact orqs2 norqs2 oidx) -> *)
-  (*       DLDLNew orqs1 norqs2. *)
-  (* Proof. *)
-  (*   unfold DLDLNew; intros. *)
-  (*   eapply DownLockIntact_DownLockedNew_2 in H1; [|apply eq_sym, H0]. *)
-  (*   eapply DownLockIntact_DownLockedNew_2; [|apply H0]. *)
-  (*   pose proof (H0 oidx). *)
-  (*   red in H6; smred. *)
-  (*   destruct (orqs2@[oidx]) as [orq2|] eqn:Horq2; smred. *)
-  (*   eapply H; eauto. *)
-  (* Qed. *)
-
-  (* Lemma DLDLNew_orqs_step_remove: *)
-  (*   forall orqs1 orqs2, *)
-  (*     DLDLNew orqs1 orqs2 -> *)
-  (*     forall rpidx nporq, *)
-  (*       nporq@[downRq] = None -> *)
-  (*       (forall rcidx, parentIdxOf dtr rcidx = Some rpidx -> *)
-  (*                      ~ DownLockedNew orqs1 orqs2 rcidx) -> *)
-  (*       DLDLNew orqs1 (orqs2 +[rpidx <- nporq]). *)
-  (* Proof. *)
-  (*   intros. *)
-  (*   red; intros. *)
-  (*   destruct (idx_dec pidx rpidx); subst. *)
-  (*   - exfalso. *)
-  (*     pose proof H5. *)
-  (*     apply parentIdxOf_not_eq in H7; [|apply Hrrs]. *)
-  (*     eapply DownLockIntact_DownLockedNew_2 with (orqs3:= orqs2) in H2; [|red; smred]. *)
-  (*     eapply H1; eauto. *)
-  (*   - eapply DownLockIntact_DownLockedNew_2 with (orqs2:= orqs2); [|red; smred]. *)
-  (*     destruct (idx_dec oidx rpidx); subst; smred. *)
-  (*     eapply DownLockIntact_DownLockedNew_2 with (orqs3:= orqs2) in H2; [|red; smred]. *)
-  (*     eapply H; eauto. *)
-  (* Qed. *)
-
   Lemma DLNewBackUpLockedNew_orqs_step_remove:
     forall orqs1 orqs2,
       DLNewBackUpLockedNew orqs1 orqs2 ->
@@ -661,15 +610,21 @@ Section RqRsInvLockEx.
 
     - (** case [ImmDown] *)
       disc_rule_conds.
-      replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
-      red; intros _.
-      repeat ssplit.
-      + red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
-        red; intros.
-        apply DLIntactBound_refl.
-        intros; reflexivity.
-      + red; repeat split; try (exfalso_wrong_msg_lock; fail).
-      + red; intros; assumption.
+      + replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
+        red; intros _.
+        repeat ssplit.
+        * red; repeat ssplit; try (red; intros; dest_in; fail).
+        * red; repeat split.
+        * red; intros; assumption.
+      + replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
+        red; intros _.
+        repeat ssplit.
+        * red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
+          red; intros.
+          apply DLIntactBound_refl.
+          intros; reflexivity.
+        * red; repeat split; try (exfalso_wrong_msg_lock; fail).
+        * red; intros; assumption.
 
     - (** case [ImmUp] *)
       disc_rule_conds.
@@ -679,6 +634,18 @@ Section RqRsInvLockEx.
 
     - (** case [RqFwd] *)
       disc_rule_conds.
+      + (** case [RqUpUp-silent] *)
+        red; intros _.
+        repeat ssplit.
+        * red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
+          red; intros; dest_in; disc_rule_conds.
+          red; intros; red; smred.
+        * red; intros.
+          red; intros.
+          red in H10; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
+        * apply DLOldPreserved_orqs_equiv.
+          intros; smred.
+        
       + (** case [RqUpUp] *)
         red; intros _.
         repeat ssplit.
@@ -705,7 +672,9 @@ Section RqRsInvLockEx.
             { disc_RqRsDownMatch_rq; disc_rule_conds.
               constructor.
               { red; smred; split; [discriminate|reflexivity]. }
-              { intros; smred; solve_midx_false. }
+              { intros; smred.
+                rewrite H38 in *; solve_midx_false.
+              }
             }
             { disc_RqRsDownMatch_rq; disc_rule_conds.
               red; intros; smred.
@@ -717,7 +686,7 @@ Section RqRsInvLockEx.
         * red; repeat ssplit.
           red; intros.
           red in H4; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
-          apply DLIntactBound_step_neq.
+          eapply DLIntactBound_step_neq; eauto.
           apply parent_not_in_subtree; auto.
         * eapply DLOldPreserved_new; mred.
 
@@ -738,30 +707,40 @@ Section RqRsInvLockEx.
           apply parent_not_in_subtree; auto.
         * red.
           red; intros; exfalso.
+          red in H24; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
+        * eapply DLOldPreserved_orqs_equiv.
+          intros; smred.
+
+      + (** case [RsDownDown-silent] *)
+        red; intros _.
+        repeat ssplit.
+        * red; repeat ssplit; try (red; intros; dest_in).
+        * red.
+          red; intros; exfalso.
           red in H23; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
         * eapply DLOldPreserved_orqs_equiv.
           intros; smred.
 
       + (** case [RsUpDown] *)
         red; intros; exfalso.
-        pose proof (RqRsDownMatch_rs_not_nil H21).
+        pose proof (RqRsDownMatch_rs_not_nil H22).
         destruct rins as [|rin rins]; [auto|].
         inv H17.
-        rewrite <-H28 in H21.
-        eapply RqRsDownMatch_rs_rq in H21; [|left; reflexivity].
-        destruct H21 as [cidx [down ?]]; dest.
-        eapply H5; [|left; reflexivity].
+        rewrite <-H28 in H22.
+        eapply RqRsDownMatch_rs_rq in H22; [|left; reflexivity].
+        destruct H22 as [cidx [down ?]]; dest.
+        eapply H6; [|left; reflexivity].
         right; red; eauto.
 
       + (** case [RsUpUp] *)
         red; intros; exfalso.
-        pose proof (RqRsDownMatch_rs_not_nil H6). 
+        pose proof (RqRsDownMatch_rs_not_nil H7). 
         destruct rins as [|rin rins]; [auto|].
         inv H17.
-        rewrite <-H28 in H6.
-        eapply RqRsDownMatch_rs_rq in H6; [|left; reflexivity].
-        destruct H6 as [cidx [down ?]]; dest.
-        eapply H10; [|left; reflexivity].
+        rewrite <-H28 in H7.
+        eapply RqRsDownMatch_rs_rq in H7; [|left; reflexivity].
+        destruct H7 as [cidx [down ?]]; dest.
+        eapply H19; [|left; reflexivity].
         right; red; eauto.
 
     - (** case [RsDownRqDown] *)
@@ -789,7 +768,7 @@ Section RqRsInvLockEx.
       + red.
         red; intros.
         red in H4; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
-        apply DLIntactBound_step_neq.
+        eapply DLIntactBound_step_neq; eauto.
         apply parent_not_in_subtree; auto.
       + eapply DLOldPreserved_new; mred.
 
@@ -828,7 +807,8 @@ Section RqRsInvLockEx.
 
     - (** case [ImmDown] *)
       disc_rule_conds.
-      inv Hmoinv; [|disc_rule_conds|].
+      inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|
+                   |disc_rule_conds|].
       2: {
         simpl in *.
         apply rqDown_rsUp_inv_msg in H6; rewrite Forall_forall in H6.
@@ -855,7 +835,8 @@ Section RqRsInvLockEx.
 
     - (** case [ImmUp] *)
       disc_rule_conds.
-      inv Hmoinv; [disc_rule_conds; solve_midx_false|disc_rule_conds|].
+      inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|
+                   disc_rule_conds; solve_midx_false|disc_rule_conds|].
       apply SubList_singleton_In in H4.
 
       replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
@@ -875,7 +856,8 @@ Section RqRsInvLockEx.
     - (** case [RqFwd] *)
       disc_rule_conds.
       + (** case [RqUpUp] *)
-        inv Hmoinv; [|disc_rule_conds|].
+        inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|
+                     |disc_rule_conds|].
         2: {
           simpl in *.
           apply rqDown_rsUp_inv_msg in H23; rewrite Forall_forall in H23.
@@ -914,18 +896,17 @@ Section RqRsInvLockEx.
           }
           { eapply DownLockIntact_DownLockedNew_2
               with (orqs3:= orqs) in H39; [|red; smred].
-            eapply DLIntactBound_trans.
-            { eapply H34; eauto. }
-            { eapply DLIntactBound_refl.
-              intros; red; smred.
-            }
+            eapply DLIntactBound_trans; eauto.
+            eapply DLIntactBound_refl.
+            intros; red; smred.
           }
 
         * eapply DLOldPreserved_orqs_step; [eassumption|].
           intros; smred.
 
       + (** case [RqUpDown] *)
-        inv Hmoinv; [|disc_rule_conds|].
+        inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|
+                     |disc_rule_conds|].
         2: {
           apply rqDown_rsUp_inv_msg in H17; rewrite Forall_forall in H17.
           apply SubList_singleton_In in H4.
@@ -951,7 +932,9 @@ Section RqRsInvLockEx.
               { eapply H32; [|left; reflexivity]; red; eauto. }
               { red; smred; split; [discriminate|reflexivity]. }
             }
-            { intros; smred; solve_midx_false. }
+            { intros; smred.
+              rewrite H42 in *; solve_midx_false.
+            }
           }
           { disc_RqRsDownMatch_rq; disc_rule_conds.
             red; intros; smred.
@@ -962,12 +945,12 @@ Section RqRsInvLockEx.
         * red; repeat ssplit.
           red; intros.
           destruct (idx_dec pidx (obj_idx obj)); subst; smred.
-          { eapply DLIntactBound_trans with (orqs2:= orqs).
+          { eapply DLIntactBound_trans with (orqs2:= orqs); eauto.
             { apply DLIntactAll_DLIntactBound.
               eapply H32; [|left; reflexivity]; red; eauto.
             }
-            { eapply DLIntactBound_step_neq.
-              apply parent_not_in_subtree; auto.
+            { eapply DLIntactBound_step_neq; eauto.
+              eapply parent_not_in_subtree; eauto.
             }
           }
           { eapply DownLockIntact_DownLockedNew_2
@@ -980,7 +963,8 @@ Section RqRsInvLockEx.
           eapply DLOldPreserved_new; smred.
 
       + (** case [RqDownDown] *)
-        inv Hmoinv; [disc_rule_conds; solve_midx_false|disc_rule_conds|].
+        inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|
+                     disc_rule_conds; solve_midx_false|disc_rule_conds|].
         apply SubList_singleton_In in H4; subst.
 
         pose proof H14.
@@ -997,18 +981,18 @@ Section RqRsInvLockEx.
         * apply DLOutsInv_app.
           { apply DLOutsInv_removeOnce.
             pose proof H14.
-            eapply rqDown_rsUp_inv_msg in H40; rewrite Forall_forall in H40.
+            eapply rqDown_rsUp_inv_msg in H41; rewrite Forall_forall in H41.
             red; repeat ssplit.
             { red; intros; exfalso.
-              specialize (H40 _ H42); destruct H40 as [rroidx ?].
-              destruct H40; disc_rule_conds; solve_midx_false.
+              specialize (H41 _ H44); destruct H41 as [rroidx ?].
+              destruct H41; disc_rule_conds; solve_midx_false.
             }
             { red; intros; exfalso.
-              specialize (H40 _ H42); destruct H40 as [rroidx ?].
-              destruct H40; disc_rule_conds; solve_midx_false.
+              specialize (H41 _ H44); destruct H41 as [rroidx ?].
+              destruct H41; disc_rule_conds; solve_midx_false.
             }
             { red; intros.
-              specialize (H38 _ _ _ H41 H42 H43); dest.
+              specialize (H38 _ _ _ H43 H44 H45); dest.
               split.
               { destruct (in_dec idx_dec pidx (subtreeIndsOf dtr (obj_idx obj))).
                 { exfalso; inv H38.
@@ -1022,13 +1006,13 @@ Section RqRsInvLockEx.
               }
               { destruct (idx_dec pidx (obj_idx obj)).
                 { subst; exfalso.
-                  inv H38; red in H45; smred.
+                  inv H38; red in H47; smred.
                 }
-                { red; intros; smred; eapply H44; eauto. }
+                { red; intros; smred; eapply H46; eauto. }
               }
             }
             { red; intros.
-              specialize (H39 _ _ _ H41 H42 H43).
+              specialize (H39 _ _ _ H43 H44 H45).
               destruct (in_dec idx_dec pidx (subtreeIndsOf dtr (obj_idx obj))).
               { exfalso; inv H39.
                 eapply DownLockedNew_in_history in H10; [|eassumption].
@@ -1060,40 +1044,43 @@ Section RqRsInvLockEx.
               { intros; smred.
                 eapply DLNewRec_orqs_step_intact.
                 { eapply H38; eauto; red; auto. }
-                { intro Hx; subst; apply parentIdxOf_not_eq in H49; auto. }
-                { intro Hx; apply parent_not_in_subtree in H49; auto. }
+                { intro Hx; subst; apply parentIdxOf_not_eq in H51; auto. }
+                { intro Hx; apply parent_not_in_subtree in H51; auto. }
               }
             }
-            { red; intros; smred; intro Hx; rewrite Hx in *; solve_midx_false. }
+            { red; intros; smred.
+              intro Hx; rewrite Hx in *; inv H42.
+              solve_midx_false.
+            }
           }
 
         * (** The trickiest case .. *)
           red.
           red; intros.
-          destruct (idx_dec pidx (obj_idx obj)); subst; smred; [solve_midx_false|].
-          eapply DownLockIntact_DownLockedNew_2 in H40; [|red; smred].
+          destruct (idx_dec pidx (obj_idx obj)); subst; smred;
+            [rewrite H42 in *; solve_midx_false|].
+          eapply DownLockIntact_DownLockedNew_2 in H41; [|red; smred].
           destruct (in_dec idx_dec (obj_idx obj) (subtreeIndsOf dtr cidx)).
           { exfalso.
             pose proof (edgeDownTo_Some H _ H5) as Hed.
             destruct Hed as [rqUp [rsUp [rpidx ?]]]; dest.
             disc_rule_conds.
 
-            assert (RqDownMsgTo dtr (obj_idx obj) (rqFrom, rqi_msg rqi)) by (red; auto).
-            specialize (H38 _ _ _ H46 H47 H4); dest.
+            assert (RqDownMsgTo dtr (obj_idx obj) (rqFrom, rqfm)) by (red; auto).
+            specialize (H38 _ _ _ H49 H50 H4); dest.
             
             assert (~ In rpidx (subtreeIndsOf dtr cidx)).
             { intro Hx.
               move H34 at bottom.
-              specialize (H34 _ _ _ H40 H41 H42 _ H43 H44 _ Hx).
+              specialize (H34 _ _ _ H41 H43 H44 _ H45 H46 _ Hx).
               inv H38; eapply DownLockedNew_not_DownLockIntact; eassumption.
             }
-            eapply inside_child_outside_parent_case in H49; eauto; subst.
+            eapply inside_child_outside_parent_case in H52; eauto; subst.
             disc_rule_conds.
-            specialize (H48 _ _ H41 H42); auto.
+            specialize (H51 _ _ H43 H44); auto.
           }
-          { apply DLIntactBound_trans with (orqs2:= orqs).
-            { eapply H34; eauto. }
-            { apply DLIntactBound_step_neq; assumption. }
+          { eapply DLIntactBound_trans with (orqs2:= orqs); eauto.
+            apply DLIntactBound_step_neq; assumption.
           }
 
         * eapply DLOldPreserved_trans; [eassumption|].
@@ -1103,7 +1090,47 @@ Section RqRsInvLockEx.
       good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + (** case [RsDownDown] *)
-        inv Hmoinv; [disc_rule_conds| |].
+        inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|disc_rule_conds| |].
+        2: {
+          simpl in *.
+          apply rqDown_rsUp_inv_msg in H29; rewrite Forall_forall in H29.
+          apply SubList_singleton_In in H4.
+          specialize (H29 _ H4); destruct H29 as [oidx ?].
+          destruct H29; disc_rule_conds; solve_midx_false.
+        }
+        
+        apply SubList_singleton in H4; subst.
+        rewrite removeOnce_nil; simpl.
+        disc_rule_conds.
+        red; intros.
+        specialize (IHAtomic H28); dest.
+        red in H34, H35; dest.
+        repeat ssplit.
+
+        * red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
+          red; intros; dest_in; disc_rule_conds.
+          eapply DLIntactBound_trans with (orqs2:= orqs).
+          { eapply DLIntactBound_child; [|eassumption].
+            eapply H37; [|left; reflexivity]; red; auto.
+          }
+          { apply DLIntactBound_step_neq.
+            apply parent_not_in_subtree; auto.
+          }
+
+        * red.
+          red; intros.
+          destruct (idx_dec pidx (obj_idx obj)); subst; smred.
+          eapply DownLockIntact_DownLockedNew_2
+            with (orqs3:= orqs) in H40; [|red; smred].
+          eapply DLIntactBound_trans; eauto.
+          eapply DLIntactBound_refl.
+          intros; red; smred.
+
+        * eapply DLOldPreserved_orqs_step; [eassumption|].
+          intros; smred.
+
+      + (** case [RsDownDown-silent] *)
+        inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|disc_rule_conds| |].
         2: {
           simpl in *.
           apply rqDown_rsUp_inv_msg in H28; rewrite Forall_forall in H28.
@@ -1120,75 +1147,66 @@ Section RqRsInvLockEx.
         red in H33, H34; dest.
         repeat ssplit.
 
-        * red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
-          red; intros; dest_in; disc_rule_conds.
-          eapply DLIntactBound_trans with (orqs2:= orqs).
-          { eapply DLIntactBound_child; [|eassumption].
-            eapply H36; [|left; reflexivity]; red; auto.
-          }
-          { apply DLIntactBound_step_neq.
-            apply parent_not_in_subtree; auto.
-          }
-
+        * red; repeat ssplit; try (red; intros; dest_in).
         * red.
           red; intros.
           destruct (idx_dec pidx (obj_idx obj)); subst; smred.
           eapply DownLockIntact_DownLockedNew_2
             with (orqs3:= orqs) in H39; [|red; smred].
-          eapply DLIntactBound_trans.
-          { eapply H34; eauto. }
-          { eapply DLIntactBound_refl.
-            intros; red; smred.
-          }
-
+          eapply DLIntactBound_trans; eauto.
+          eapply DLIntactBound_refl.
+          intros; red; smred.
         * eapply DLOldPreserved_orqs_step; [eassumption|].
           intros; smred.
 
       + (** case [RsUpDown] *)
         inv Hmoinv2.
+        1: { destruct (removeL _ _ _); discriminate. }
         1: {
           exfalso.
-          assert (rqUp = (rqi_midx_rsb rqi, rsm)); subst.
-          { destruct (removeL _ eouts rins); [inv H7; reflexivity|].
+          assert (rqUp = (rsbTo, rsm)); subst.
+          { destruct (removeL _ eouts rins); [inv H9; reflexivity|].
             destruct l; discriminate.
           }
           disc_rule_conds.
         }
         2: {
           exfalso.
-          apply rqDown_rsUp_inv_msg, Forall_app_inv in H26; dest.
-          inv H31; destruct H35 as [oidx ?].
-          destruct H31; disc_rule_conds; solve_midx_false.
+          apply rqDown_rsUp_inv_msg, Forall_app_inv in H28; dest.
+          inv H33; destruct H36 as [oidx ?].
+          destruct H33; disc_rule_conds; solve_midx_false.
         }
         destruct (removeL _ eouts rins); [|destruct l; discriminate].
-        inv H7.
+        inv H9.
         
         disc_rule_conds.
         red; intros.
-        specialize (IHAtomic H26); dest.
-        red in H34, H35; dest.
+        specialize (IHAtomic H28); dest.
+        red in H35, H36; dest.
 
         (* Below is used multiple times so prove it in advance. *)
         assert (DownLockedNew (bst_orqs st1) orqs (obj_idx obj)) as Hdln.
-        { rewrite <-H32 in H25.
-          pose proof H25.
-          eapply RqRsDownMatch_rs_not_nil in H40.
+        { rewrite <-H32 in H26.
+          pose proof H26.
+          eapply RqRsDownMatch_rs_not_nil in H41.
           destruct rins as [|rin rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity].
-          destruct H25 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H26; [|left; reflexivity].
+          destruct H26 as [cidx [down ?]]; dest.
           disc_rule_conds.
 
           assert (RsUpMsgFrom dtr cidx rin) by (red; eauto).
           assert (In rin eouts) by (apply H4; left; reflexivity).
-          specialize (H39 _ _ _ H17 H41 H21).
-          inv H39; assumption.
+          specialize (H40 _ _ _ H17 H42 H21).
+          inv H40; assumption.
         }
 
         repeat ssplit.
         * red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
           red; intros; dest_in; disc_rule_conds.
           eapply DLIntactBound_trans with (orqs2:= orqs).
-          { eapply H35; eassumption. }
+          { eapply H36; try eassumption.
+            congruence.
+          }
           { apply DLIntactBound_step_neq.
             apply parent_not_in_subtree; auto.
           }
@@ -1197,6 +1215,7 @@ Section RqRsInvLockEx.
 
       + (** case [RsUpUp] *)
         inv Hmoinv2.
+        1: { destruct (removeL _ _ _); discriminate. }
         1: {
           exfalso.
           destruct (removeL _ eouts rins); [|destruct l; discriminate].
@@ -1207,15 +1226,15 @@ Section RqRsInvLockEx.
           destruct (removeL _ eouts rins); [|destruct l; discriminate].
           inv H14; disc_rule_conds; solve_midx_false.
         }
-        clear H25 H26. (* Clear useless invariants, except [RqDownRsUpDisj]. *)
-        apply rqDown_rsUp_inv_msg in H23.
-        apply Forall_app_inv in H23; dest; clear H25.
-        rewrite Forall_forall in H23.
-        rename H14 into Hrrd, H23 into Hrri.
+        clear H26 H28. (* Clear useless invariants, except [RqDownRsUpDisj]. *)
+        apply rqDown_rsUp_inv_msg in H25.
+        apply Forall_app_inv in H25; dest; clear H26.
+        rewrite Forall_forall in H25.
+        rename H23 into Hrrd, H25 into Hrri.
 
         red; intros.
-        specialize (IHAtomic H14); dest.
-        red in H23, H25; dest.
+        specialize (IHAtomic H23); dest.
+        red in H25, H26; dest.
 
         (* Below is used multiple times so prove it in advance. *)
         assert (exists cidx rsUp,
@@ -1223,16 +1242,16 @@ Section RqRsInvLockEx.
                    RsUpMsgFrom dtr cidx rsUp /\
                    parentIdxOf dtr cidx = Some (obj_idx obj) /\
                    DLNewRec (bst_orqs st1) orqs (obj_idx obj)) as Hdln.
-        { rewrite <-H32 in H9.
-          pose proof H9.
-          eapply RqRsDownMatch_rs_not_nil in H33.
+        { rewrite <-H32 in H12.
+          pose proof H12.
+          eapply RqRsDownMatch_rs_not_nil in H34.
           destruct rins as [|rin rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H9; [|left; reflexivity].
-          destruct H9 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H12; [|left; reflexivity].
+          destruct H12 as [cidx [down ?]]; dest.
           disc_rule_conds.
           assert (RsUpMsgFrom dtr cidx rin) by (red; eauto).
           assert (In rin eouts) by (apply H4; left; reflexivity).
-          specialize (H31 _ _ _ H17 H34 H21).
+          specialize (H33 _ _ _ H17 H35 H21).
           exists cidx, rin; repeat ssplit; try assumption.
           left; reflexivity.
         }
@@ -1242,12 +1261,12 @@ Section RqRsInvLockEx.
         * apply DLOutsInv_app.
           { red; repeat ssplit.
             { red; intros; exfalso.
-              specialize (Hrri _ H38); destruct Hrri as [roidx ?].
-              destruct H39; disc_rule_conds; solve_midx_false.
+              specialize (Hrri _ H39); destruct Hrri as [roidx ?].
+              destruct H40; disc_rule_conds; solve_midx_false.
             }
             { red; intros; exfalso.
-              specialize (Hrri _ H38); destruct Hrri as [roidx ?].
-              destruct H39; disc_rule_conds; solve_midx_false.
+              specialize (Hrri _ H39); destruct Hrri as [roidx ?].
+              destruct H40; disc_rule_conds; solve_midx_false.
             }
             { red; intros.
               destruct (in_dec idx_dec pidx (subtreeIndsOf dtr (obj_idx obj))).
@@ -1266,10 +1285,10 @@ Section RqRsInvLockEx.
                 }
                 split.
                 { apply DLNewRec_orqs_step_intact; try assumption.
-                  eapply H30; eauto; eapply removeL_In_2; eauto.
+                  eapply H31; eauto; eapply removeL_In_2; eauto.
                 }
                 { red; smred.
-                  eapply H30; eauto; eapply removeL_In_2; eauto.
+                  eapply H31; eauto; eapply removeL_In_2; eauto.
                 }
               }
             }
@@ -1278,7 +1297,7 @@ Section RqRsInvLockEx.
               { exfalso.
                 assert (In oidx (subtreeIndsOf dtr (obj_idx obj)))
                   by (eapply inside_child_in; eauto).
-                eapply rqDownRsUpDisj_in_spec; try eapply H40; eauto.
+                eapply rqDownRsUpDisj_in_spec; try eapply H41; eauto.
                 { apply in_or_app; left; eassumption. }
                 { apply in_or_app; right; left; reflexivity. }
                 { intro Hx; subst; disc_rule_conds.
@@ -1292,7 +1311,7 @@ Section RqRsInvLockEx.
                   eapply parent_subtreeIndsOf_self_in; eauto.
                 }
                 apply DLNewRec_orqs_step_intact; try assumption.
-                eapply H31; eauto; eapply removeL_In_2; eauto.
+                eapply H33; eauto; eapply removeL_In_2; eauto.
               }
             }
           }
@@ -1300,19 +1319,21 @@ Section RqRsInvLockEx.
           { red; repeat ssplit; try (exfalso_wrong_msg_lock; fail).
             red; intros; dest_in; disc_rule_conds.
             eapply DLNewRec_orqs_step_intact.
-            { inv H36; eapply H41; eauto. }
+            { inv H37; eapply H42; eauto.
+              congruence.
+            }
             { intro Hx; subst.
-              apply parentIdxOf_not_eq in H38; auto.
+              apply parentIdxOf_not_eq in H39; auto.
             }
             { apply parent_not_in_subtree; auto. }
           }
 
-        * inv H36; red; apply DLNewBackUpLockedNew_orqs_step_remove; try assumption; mred.
-        * inv H36; apply DLOldPreserved_remove; try assumption; mred.
+        * inv H37; red; apply DLNewBackUpLockedNew_orqs_step_remove; try assumption; mred.
+        * inv H37; apply DLOldPreserved_remove; try assumption; mred.
 
     - (** case [RsDownRqDown] *)
       disc_rule_conds.
-      inv Hmoinv; [disc_rule_conds| |].
+      inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|disc_rule_conds| |].
       2: {
         simpl in *.
         apply rqDown_rsUp_inv_msg in H25; rewrite Forall_forall in H25.
@@ -1355,7 +1376,7 @@ Section RqRsInvLockEx.
         red; intros.
         destruct (idx_dec pidx (obj_idx obj)); subst; smred.
         * disc_rule_conds.
-          eapply DLIntactBound_trans with (orqs2:= orqs).
+          eapply DLIntactBound_trans with (orqs2:= orqs); eauto.
           { eapply DLIntactBound_child; [|eassumption].
             eapply H35; [|left; reflexivity].
             red; auto.
@@ -1374,14 +1395,13 @@ Section RqRsInvLockEx.
               elim n; eapply subtreeIndsOf_In_each_other_eq
                         with (dtr:= dtr); eauto.
             }
-            red in H28; specialize (H28 _ H10 H46).
+            red in H28; specialize (H28 _ H10 H48).
             apply DownLockedNew_DownLocked in H39.
             destruct H39 as [rrqid ?].
             red in H28, H39; smred.
           }
-          { apply DLIntactBound_trans with (orqs2:= orqs).
-            { eapply H31; eauto. }
-            { apply DLIntactBound_step_neq; assumption. }
+          { eapply DLIntactBound_trans with (orqs2:= orqs); eauto.
+            apply DLIntactBound_step_neq; assumption.
           }
 
       + eapply DLOldPreserved_trans; [eassumption|].

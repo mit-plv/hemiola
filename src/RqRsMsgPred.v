@@ -98,6 +98,7 @@ Section PredMsg.
       inv H2.
       - dest_in; reflexivity.
       - dest_in; reflexivity.
+      - dest_in; reflexivity.
       - exfalso.
         eapply rqDown_rsUp_inv_msg in H8.
         rewrite Forall_forall in H8; specialize (H8 _ H5).
@@ -121,6 +122,7 @@ Section PredMsg.
       destruct Hrrs as [? [? ?]]; intros.
       eapply atomic_msg_outs_ok in H2; eauto.
       inv H2.
+      - dest_in; reflexivity.
       - dest_in; reflexivity.
       - dest_in; reflexivity.
       - exfalso.
@@ -203,6 +205,7 @@ Section PredMsg.
       destruct Hrrs as [? [? ?]]; intros.
       eapply atomic_msg_outs_ok in H2; eauto.
       inv H2.
+      - dest_in.
       - exfalso; dest_in.
         disc_rule_conds.
         solve_midx_false.
@@ -315,6 +318,7 @@ Section PredMsg.
       pose proof H3.
       eapply atomic_msg_outs_ok in H16; eauto.
       inv H16.
+      - apply SubList_nil_inv in H9; subst; constructor.
       - exfalso; destruct rqUp as [rqUp rqm].
         apply SubList_singleton_NoDup in H9; [|apply idsOf_NoDup; assumption].
         destruct H9; subst;

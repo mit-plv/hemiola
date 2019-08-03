@@ -79,9 +79,9 @@ Section RqDownReduction.
         destruct H14 as [cidx [rqUp [? _]]]; subst.
         destruct H13; subst.
         + simpl in *; clear H10.
-          eapply rqUp_atomic_lastOIdxOf in H4; eauto; [|apply Hiorqs].
-          dest; eapply rqUp_atomic_bounded; eauto.
-          apply Hiorqs.
+          eapply rqUp_atomic_lastOIdxOf in H4; eauto; [|apply Hiorqs|right; eauto].
+          dest; eapply rqUp_atomic_bounded; eauto; [apply Hiorqs|].
+          right; auto.
         + destruct H13 as [nins [nouts ?]]; dest.
           rewrite oindsOf_app.
           eapply steps_split in H3; [|reflexivity].
@@ -108,7 +108,9 @@ Section RqDownReduction.
           apply subtreeIndsOf_SubList in H14; [|apply Hrrs].
           eapply SubList_trans; [|eapply H14].
           eapply rqUp_atomic_inside_tree; eauto.
-          apply Hiorqs.
+          * apply Hiorqs.
+          * discriminate.
+          * right; auto.
     Qed.
 
     Lemma rqDown_olast_outside_tree:
@@ -125,7 +127,7 @@ Section RqDownReduction.
             hst = nhst ++ ruhst /\
             (ruhst = nil \/
              exists roidx rqUps ruins ruouts,
-               RqUpMsgs dtr roidx rqUps /\
+               RqUpMsgsP dtr roidx rqUps /\
                ~ In roidx (subtreeIndsOf dtr cidx) /\
                Atomic msg_dec inits ruins ruhst ruouts rqUps /\
                SubList rqUps outs /\
@@ -163,7 +165,7 @@ Section RqDownReduction.
           repeat ssplit; [reflexivity| |apply DisjList_nil_1].
           right; exists roidx, [rqUp], ruins, ruouts.
           repeat ssplit; try assumption.
-          * eapply rqUp_atomic_lastOIdxOf in H6; eauto; [|apply Hiorqs].
+          * eapply rqUp_atomic_lastOIdxOf in H6; eauto; [|apply Hiorqs|right; eauto].
             dest; eapply outside_parent_out; try apply Hrrs; eauto.
           * left; reflexivity.
 
@@ -349,8 +351,10 @@ Section RqDownReduction.
           red; intros.
           eapply rqUpHistory_lpush_lbl with (rqUps0:= rqUps); try eassumption.
           * inv_steps.
-            eapply rqUp_atomic; eauto.
-            apply SubList_refl.
+            eapply rqUp_atomic with (rqUps0:= rqUps); eauto.
+            { red in H4; dest; subst; discriminate. }
+            { right; eauto. }
+            { apply SubList_refl. }
           * destruct Hrrs as [? [? ?]].
             clear -Hrqd H4 H13.
             destruct Hrqd as [dobj [[rqDown rqdm] ?]]; dest; subst.
@@ -434,9 +438,12 @@ Section RqDownReduction.
       - destruct H1 as [roidx [rqUps [ruins [ruouts ?]]]]; dest.
         destruct H11; subst.
         * simpl in *.
-          eapply rqUpHistory_lpush_unit_reducible; eauto.
-          { eapply rqUp_atomic; eauto; try apply Hiorqs.
-            apply SubList_refl.
+          eapply rqUpHistory_lpush_unit_reducible with (rqUps0:= rqUps); eauto.
+          { right; eauto. }
+          { eapply rqUp_atomic with (rqUps0:= rqUps); eauto; try apply Hiorqs.
+            { red in H1; dest; subst; discriminate. }
+            { right; auto. }
+            { apply SubList_refl. }
           }
           { assert (Reachable (steps step_m) sys sti)
               by (eapply reachable_steps; eassumption).
@@ -451,11 +458,14 @@ Section RqDownReduction.
           rewrite <-app_assoc.
           eapply reducible_app_1; try assumption.
           { instantiate (1:= lhst ++ ruhst).
-            eapply rqUpHistory_lpush_unit_reducible; eauto.
+            eapply rqUpHistory_lpush_unit_reducible with (rqUps0:= rqUps); eauto.
+            { right; eauto. }
             { eapply steps_split in H7; [|reflexivity].
               destruct H7 as [rsti [? ?]].
-              eapply rqUp_atomic; eauto.
-              apply SubList_refl.
+              eapply rqUp_atomic with (rqUps0:= rqUps); eauto.
+              { red in H1; dest; subst; discriminate. }
+              { right; auto. }
+              { apply SubList_refl. }
             }
             { assert (Reachable (steps step_m) sys sti)
                 by (eapply reachable_steps; eassumption).

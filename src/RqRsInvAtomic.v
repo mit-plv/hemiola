@@ -1750,7 +1750,7 @@ Section Coverage.
                  (removeL (id_dec msg_dec) eouts rins ++ routs).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
-      disc_rule_conds; [exfalso; auto|].
+      disc_rule_conds.
       replace (orqs+[obj_idx obj <- norq]) with orqs by meq.
       inv_MsgOutsInv.
       

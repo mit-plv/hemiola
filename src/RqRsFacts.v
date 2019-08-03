@@ -992,6 +992,7 @@ Ltac disc_rule_conds_unit_simpl :=
 
   | [H: _ :: nil = _ :: nil |- _] => inv H
   | [H: nil = nil |- _] => clear H
+  | [H: ?t <> ?t |- _] => exfalso; auto
 
   (* Below cases seem a bit ad-hoc, but appear quite frequently. *)
   | [H: In _ [_] |- _] => inv H

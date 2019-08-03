@@ -38,7 +38,7 @@ Section RsDownReduction.
             hst = nhst ++ ruhst /\
             (ruhst = nil \/
              exists roidx rqUps ruins ruouts,
-               RqUpMsgs dtr roidx rqUps /\
+               RqUpMsgsP dtr roidx rqUps /\
                ~ In roidx (subtreeIndsOf dtr cidx) /\
                Atomic msg_dec inits ruins ruhst ruouts rqUps /\
                exists nins nouts,
@@ -251,9 +251,12 @@ Section RsDownReduction.
         + destruct H9 as [roidx [rqUps [ruins [ruouts ?]]]].
           destruct H9 as [? [? [? ?]]].
           destruct H13 as [nins [nouts ?]].
-          eapply rqUpHistory_lpush_unit_reducible; eauto.
-          * eapply rqUp_atomic; eauto; try apply Hiorqs.
-            apply SubList_refl.
+          eapply rqUpHistory_lpush_unit_reducible with (rqUps0:= rqUps); eauto.
+          * right; eauto.
+          * eapply rqUp_atomic with (rqUps0:= rqUps); eauto; try apply Hiorqs.
+            { red in H9; dest; subst; discriminate. }
+            { right; assumption. }
+            { apply SubList_refl. }
           * assert (Reachable (steps step_m) sys sti)
               by (do 2 (eapply reachable_steps; [|eassumption]);
                   assumption).

@@ -71,18 +71,19 @@ Section InsideTree.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + destruct H2; disc_rule_conds.
-      + rewrite <-H32 in H25.
+      + destruct H2; disc_rule_conds.
+      + rewrite <-H32 in H26.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
-        eapply RqRsDownMatch_rs_rq in H25; [|eassumption].
-        destruct H25 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
+        destruct H26 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
         destruct H3; subst.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.
         * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
-      + rewrite <-H32 in H10.
+      + rewrite <-H32 in H11.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
-        eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
-        destruct H10 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+        destruct H11 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
         destruct H3; subst.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.
@@ -171,7 +172,10 @@ Section RqRsRed.
       unfold idOf in *; simpl in *; solve_midx_disj;
         try (intro Hx; rewrite Forall_forall in H6; specialize (H6 _ Hx);
              destruct H6 as [rcidx ?]; dest;
-             solve_midx_false; fail).
+             solve_midx_false; fail);
+        try (intro Hx; dest_in; fail);
+        try (apply DisjList_nil_1; fail);
+        try (apply DisjList_nil_2; fail).
     - intro Hx; rewrite Hx in *; clear Hx.
       repeat disc_rule_minds; auto.
     - apply (DisjList_false_spec idx_dec); intros midx Hin1 Hin2.
@@ -208,8 +212,10 @@ Section RqRsRed.
       unfold idOf in *; simpl in *; solve_midx_disj;
         try (intro Hx; rewrite Forall_forall in H7; specialize (H7 _ Hx);
              destruct H7 as [rcidx ?]; dest;
-             (solve_midx_false || (repeat disc_rule_minds; auto));
-             fail).
+             (solve_midx_false || (repeat disc_rule_minds; auto)); fail);
+        try (intro Hx; dest_in; fail);
+        try (apply DisjList_nil_1; fail);
+        try (apply DisjList_nil_2; fail).
     - intro Hx; rewrite Forall_forall in H6; specialize (H6 _ Hx).
       destruct H6 as [rcidx ?]; dest.
       solve_midx_false.

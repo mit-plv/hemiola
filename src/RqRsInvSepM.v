@@ -336,7 +336,7 @@ Section Separation.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
 
-    - disc_rule_conds; [exfalso; auto|].
+    - disc_rule_conds.
       elim H12; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
 
     - disc_rule_conds.
@@ -1123,7 +1123,7 @@ Section Separation.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
 
-    - disc_rule_conds; [exfalso; auto|].
+    - disc_rule_conds.
       destruct (idx_dec cidx (obj_idx cobj)); subst.
       + disc_rule_conds.
         good_locking_get cobj.

@@ -870,7 +870,7 @@ Section Separation.
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
-    - disc_rule_conds; [exfalso; auto|].
+    - disc_rule_conds.
       destruct H.
       eapply inside_parent_in; try eapply H; try eassumption.
       intro Hx; subst.
@@ -979,7 +979,7 @@ Section Separation.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
 
-    - disc_rule_conds; [exfalso; auto|].
+    - disc_rule_conds.
       destruct H.
       eapply outside_parent_out in H6; try eassumption.
     - disc_rule_conds.
