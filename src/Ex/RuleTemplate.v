@@ -85,7 +85,13 @@ Section Template.
                               addSilentUpRq st.(orq) [downTo oidx],
                               [(rqUpFrom oidx, rqMsg out)] }}))).
 
-  (** * FIXME: need to know children indices from [trs] are sound. *)
+  Definition RqUpDownSound (rcidx oidx: IdxT)
+             (trs: OState -> Msg -> list IdxT * Miv): Prop :=
+    forall ost min,
+      fst (trs ost min) <> nil /\
+      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost min)) /\
+      ~ In rcidx (fst (trs ost min)).
+
   Definition rqUpDownRule (cidx oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Msg -> list IdxT * Miv): Rule :=
@@ -103,7 +109,12 @@ Section Template.
                           map (fun cidx => (downTo cidx, rqMsg (snd nst)))
                               (fst nst) }}))).
 
-  (** * FIXME: need to know children indices from [trs] are sound. *)
+  Definition RqDownDownSound (oidx: IdxT)
+             (trs: OState -> Msg -> list IdxT * Miv): Prop :=
+    forall ost min,
+      fst (trs ost min) <> nil /\
+      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost min)).
+
   Definition rqDownDownRule (oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Msg -> list IdxT * Miv): Rule :=
@@ -196,7 +207,6 @@ Section Template.
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg (snd nst))] }}))).
 
-  (** * FIXME: need to know children indices from [trs] are sound. *)
   Definition rsDownRqDownRule (oidx: IdxT) (rqId: IdxT)
              (prec: OPrec)
              (trs: OState -> Msg -> list IdxT * Miv) :=
@@ -292,22 +302,13 @@ Section Facts.
       + apply Hdtr in H; dest; assumption.
   Qed.
 
-  Definition RqUpDownSound (rcidx oidx: IdxT)
-             (trs: OState -> Msg -> list IdxT * Miv) :=
-    forall ost msg,
-      fst (trs ost msg) <> nil /\
-      Forall (fun cidx =>
-                cidx <> rcidx /\
-                parentIdxOf dtr cidx = Some oidx)
-             (fst (trs ost msg)).
-  
   Lemma rqUpDownRule_RqFwdRule:
     forall sys oidx ridx msgId cidx
            (prec: OState -> list (Id Msg) -> Prop)
            (trs: OState -> Msg -> list IdxT * Miv),
       In cidx (map (@obj_idx _) (sys_objs sys)) ->
       parentIdxOf dtr cidx = Some oidx ->
-      RqUpDownSound cidx oidx trs ->
+      RqUpDownSound dtr cidx oidx trs ->
       RqFwdRule dtr sys oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
   Proof.
     unfold rqUpDownRule; intros; split.
@@ -331,26 +332,21 @@ Section Facts.
         * unfold idsOf; repeat rewrite map_length; reflexivity.
         * specialize (H1 nost rmsg); dest.
           apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
-          clear -Hdtr H1 H5.
-          induction (fst (trs nost rmsg)) as [|cidx cinds]; [dest_in|].
-          inv H1; simpl in H5; destruct H5; dest.
-          { inv H; destruct Hdtr; specialize (H _ _ H1); dest.
-            exists cidx; repeat split; assumption.
+          clear -Hdtr H1 H5 H6.
+          induction (fst (trs nost rmsg)) as [|cidx cinds]; [exfalso; auto|].
+          inv H1; simpl in *.
+          destruct H6; dest.
+          { inv H; destruct Hdtr; specialize (H _ _ H2); dest.
+            exists cidx; repeat split; try assumption.
+            intro Hx; subst; auto.
           }
           { eapply IHcinds; eauto. }
   Qed.
 
-  Definition RqDownDownSound (oidx: IdxT)
-             (trs: OState -> Msg -> list IdxT * Miv) :=
-    forall ost msg,
-      fst (trs ost msg) <> nil /\
-      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx)
-             (fst (trs ost msg)).
-
   Lemma rqDownDownRule_RqFwdRule:
     forall sys oidx pidx ridx msgId prec trs,
       parentIdxOf dtr oidx = Some pidx ->
-      RqDownDownSound oidx trs ->
+      RqDownDownSound dtr oidx trs ->
       RqFwdRule dtr sys oidx (rqDownDownRule ridx msgId oidx prec trs).
   Proof.
     unfold rqDownDownRule; intros; split.
@@ -421,7 +417,6 @@ Section Facts.
       destruct H1 as [midx ?]; dest; subst; reflexivity.
     - solve_rule_conds_ex.
     - solve_rule_conds_ex.
-      
       all: admit. (** TODO: existence of [upCObj] & valid children *)
   Admitted.
 
