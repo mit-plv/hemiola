@@ -94,7 +94,7 @@ Section Operations.
 
 End Operations.
 
-Definition liftInv {oifc} (ossInv: OStates oifc -> Prop): MState oifc -> Prop :=
+Definition liftInv `{OStateIfc} (ossInv: OStates -> Prop): MState -> Prop :=
   fun st => ossInv (bst_oss st).
 
 Ltac split_inv := apply inv_split.

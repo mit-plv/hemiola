@@ -5,6 +5,7 @@ Local Open Scope list.
 
 Definition IdxT := list nat.
 
+Definition ii: IdxT := nil.
 Definition natToIdx (n: nat): IdxT := n :: nil.
 Coercion natToIdx: nat >-> IdxT.
 
@@ -129,6 +130,9 @@ Defined.
 Definition extendIdx (ext: nat) (idx: IdxT): IdxT :=
   ext :: idx.
 
+Notation "i ~> e" :=
+  (extendIdx e i) (at level 7, left associativity, format "i '~>' e").
+
 Definition extendInds (ext: nat) (inds: list IdxT): list IdxT :=
   map (extendIdx ext) inds.
 
@@ -137,10 +141,17 @@ Definition liftInds (ns: list nat): list IdxT :=
 
 Definition idxHd (idx: IdxT): nat :=
   List.hd 0 idx.
+Definition idxTl (idx: IdxT): IdxT :=
+  List.tl idx.
 
-Fixpoint nat_seq_rev (n: nat) :=
-  match n with
-  | O => O :: nil
-  | S n' => n :: nat_seq_rev n'
-  end.
+Definition IdxPrefix (i1 i2: IdxT) :=
+  exists ri, i2 = ri ++ i1.
+Infix "~<" := IdxPrefix (at level 8).
+
+Definition IdxDisj (i1 i2: IdxT) :=
+  ~ IdxPrefix i1 i2 /\ ~ IdxPrefix i2 i1.
+Infix "~*~" := IdxDisj (at level 8).
+
+Definition IndsDisj (is1 is2: list IdxT) :=
+  forall i1 i2, In i1 is1 -> In i2 is2 -> i1 ~*~ i2.
 

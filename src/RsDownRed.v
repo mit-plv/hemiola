@@ -13,15 +13,15 @@ Open Scope list.
 Open Scope fmap.
 
 Section RsDownReduction.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
   Section OnRsDown.
-    Variables (cidx: IdxT) (pobj: Object oifc)
+    Variables (cidx: IdxT) (pobj: Object)
               (rsDowns: list (Id Msg)).
     Hypotheses (Hrsd: RsDownMsgs dtr sys cidx rsDowns)
                (Hpobj: In pobj sys.(sys_objs))
@@ -122,7 +122,7 @@ Section RsDownReduction.
       - eapply lastOIdxOf_Some_oindsOf_In; eauto.
     Qed.
 
-    Definition RsDownP (st: MState oifc) :=
+    Definition RsDownP (st: MState) :=
       Forall (InMPI st.(bst_msgs)) rsDowns.
 
     Ltac disc_rule_custom ::=

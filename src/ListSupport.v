@@ -1,5 +1,4 @@
 Require Import Common List Omega.
-Require Import Index.
 
 Set Implicit Arguments.
 
@@ -201,6 +200,26 @@ Section SubDisjEquiv.
     apply in_app_or in H; intuition.
   Qed.
 
+  Definition subList_dec:
+    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
+           l1 l2,
+      {SubList l1 l2} + {~ SubList l1 l2}.
+  Proof.
+    induction l1; intros.
+    - left; apply SubList_nil.
+    - destruct (IHl1 l2).
+      + destruct (in_dec deceqA a l2).
+        * left; apply SubList_cons; assumption.
+        * right; intro Hx; elim n.
+          apply SubList_cons_inv in Hx.
+          destruct Hx.
+          assumption.
+      + right; intro Hx; elim n.
+        apply SubList_cons_inv in Hx.
+        destruct Hx.
+        assumption.
+  Defined.
+
   Lemma EquivList_nil: EquivList nil nil.
   Proof. split; unfold SubList; intros; inv H. Qed.
 
@@ -261,6 +280,26 @@ Section SubDisjEquiv.
     - eapply SubList_app_4; eauto.
   Qed.
 
+  Lemma DisjList_spec_1:
+    forall (deceqA: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+           (l1 l2: list A),
+      (forall a, In a l1 -> ~ In a l2) ->
+      DisjList l1 l2.
+  Proof.
+    intros; red; intros.
+    destruct (in_dec deceqA e l1); auto.
+  Qed.
+
+  Lemma DisjList_spec_2:
+    forall (deceqA: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+           (l1 l2: list A),
+      (forall a, In a l2 -> ~ In a l1) ->
+      DisjList l1 l2.
+  Proof.
+    intros; red; intros.
+    destruct (in_dec deceqA e l2); auto.
+  Qed.
+  
   Lemma DisjList_false_spec:
     forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
            l1 l2,
@@ -431,26 +470,6 @@ Section SubDisjEquiv.
     destruct (deceqA e a1); subst; firstorder.
   Qed.
 
-  Definition subList_dec:
-    forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
-           l1 l2,
-      {SubList l1 l2} + {~ SubList l1 l2}.
-  Proof.
-    induction l1; intros.
-    - left; apply SubList_nil.
-    - destruct (IHl1 l2).
-      + destruct (in_dec deceqA a l2).
-        * left; apply SubList_cons; assumption.
-        * right; intro Hx; elim n.
-          apply SubList_cons_inv in Hx.
-          destruct Hx.
-          assumption.
-      + right; intro Hx; elim n.
-        apply SubList_cons_inv in Hx.
-        destruct Hx.
-        assumption.
-  Defined.
-  
 End SubDisjEquiv.
 
 Lemma SubList_map: forall {A B} (l1 l2: list A) (f: A -> B),
@@ -460,6 +479,17 @@ Proof.
   - apply in_map; apply H; left; reflexivity.
   - apply IHl1; auto.
     intros; specialize (H e0); apply H; right; assumption.
+Qed.
+
+Lemma DisjList_map:
+  forall {A B} (f: A -> B) (l1 l2: list A),
+    DisjList (map f l1) (map f l2) ->
+    DisjList l1 l2.
+Proof.
+  unfold DisjList; intros.
+  specialize (H (f e)); destruct H.
+  - left; intro Hx; elim H; apply in_map; assumption.
+  - right; intro Hx; elim H; apply in_map; assumption.
 Qed.
 
 Section Removal.
@@ -789,47 +819,6 @@ Section Removal.
 
 End Removal.
 
-Lemma removeOnce_idsOf_In:
-  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il iv i,
-    In i (idsOf (removeOnce (id_dec eq_dec) iv il)) ->
-    In i (idsOf il).
-Proof.
-  induction il; simpl; intros; auto.
-  destruct (id_dec eq_dec iv a); subst; auto.
-  simpl in H; destruct H; subst; eauto.
-Qed.
-
-Lemma removeL_idsOf_In:
-  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il2 il1 i,
-    In i (idsOf (removeL (id_dec eq_dec) il1 il2)) ->
-    In i (idsOf il1).
-Proof.
-  induction il2; simpl; intros; auto.
-  eapply removeOnce_idsOf_In; eauto.
-Qed.
-
-Lemma removeOnce_idsOf_NoDup:
-  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il iv,
-    NoDup (idsOf il) ->
-    NoDup (idsOf (removeOnce (id_dec eq_dec) iv il)).
-Proof.
-  induction il; simpl; intros; auto.
-  inv H.
-  destruct (id_dec eq_dec iv a); subst; auto.
-  simpl; constructor; eauto.
-  intro Hx; elim H2.
-  eapply removeOnce_idsOf_In; eauto.
-Qed.
-
-Lemma removeL_idsOf_NoDup:
-  forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y}) il2 il1,
-    NoDup (idsOf il1) ->
-    NoDup (idsOf (removeL (id_dec eq_dec) il1 il2)).
-Proof.
-  induction il2; simpl; intros; auto.
-  eapply IHil2, removeOnce_idsOf_NoDup; eauto.
-Qed.
-
 Lemma SubList_NoDup_removeL_nil:
   forall {A} (eq_dec: forall x y: A, {x = y} + {x <> y})
          (l1 l2: list A),
@@ -1090,6 +1079,23 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma app_eq_compare:
+  forall {A} (l m n o: list A),
+    l ++ m = n ++ o ->
+    exists p, (l = n ++ p /\ o = p ++ m) \/
+              (n = l ++ p /\ m = p ++ o).
+Proof.
+  induction l; simpl; intros.
+  - subst; eexists; right; eauto.
+  - destruct n as [|b n].
+    + simpl in *; subst.
+      eexists; left; eauto.
+    + simpl in H; inv H.
+      specialize (IHl _ _ _ H2).
+      destruct IHl as [p ?]; destruct H; dest; subst; [|eauto].
+      eexists; left; split; reflexivity.
+Qed.
+
 Lemma Forall_app:
   forall {A} (l1 l2: list A) P,
     Forall P l1 -> Forall P l2 -> Forall P (l1 ++ l2).
@@ -1296,80 +1302,13 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma idsOf_app:
-  forall {A} (ias1 ias2: list (Id A)),
-    idsOf (ias1 ++ ias2) = idsOf ias1 ++ idsOf ias2.
+Lemma nth_error_map_iff:
+  forall {A B} (f: A -> B) (l: list A) (n: nat) (b: B),
+    nth_error (map f l) n = Some b ->
+    exists a, f a = b /\ nth_error l n = Some a.
 Proof.
-  intros; apply map_app.
-Qed.
-
-Lemma valsOf_app:
-  forall {A} (ias1 ias2: list (Id A)),
-    valsOf (ias1 ++ ias2) = valsOf ias1 ++ valsOf ias2.
-Proof.
-  intros; apply map_app.
-Qed.
-
-Lemma idsOf_NoDup:
-  forall {A} (ias: list (Id A)),
-    NoDup (idsOf ias) -> NoDup ias.
-Proof.
-  unfold idsOf; intros.
-  eapply NoDup_map_inv; eauto.
-Qed.
-
-Lemma valsOf_NoDup:
-  forall {A} (ias: list (Id A)),
-    NoDup (valsOf ias) -> NoDup ias.
-Proof.
-  unfold valsOf; intros.
-  eapply NoDup_map_inv; eauto.
-Qed.
-
-Lemma idsOf_NoDup_In_value_eq:
-  forall {A} (ias: list (Id A)) i a1 a2,
-    NoDup (idsOf ias) ->
-    In (i, a1) ias -> In (i, a2) ias ->
-    a1 = a2.
-Proof.
-  induction ias as [|[i a] ias]; simpl; intros; [exfalso; auto|].
-  inv H.
-  destruct H0.
-  - inv H.
-    destruct H1.
-    + inv H; reflexivity.
-    + elim H4; apply in_map_iff; exists (i0, a2); auto.
-  - destruct H1.
-    + inv H0; elim H4; apply in_map_iff; exists (i0, a1); auto.
-    + eapply IHias; eauto.
-Qed.
-
-Lemma idsOf_DisjList:
-  forall {A} (ias1 ias2: list (Id A)),
-    DisjList (idsOf ias1) (idsOf ias2) ->
-    DisjList ias1 ias2.
-Proof.
-  unfold DisjList; intros.
-  destruct e as [idx a].
-  specialize (H idx); destruct H.
-  - left; intro Hx; elim H.
-    eapply in_map with (f:= idOf) in Hx; auto.
-  - right; intro Hx; elim H.
-    eapply in_map with (f:= idOf) in Hx; auto.
-Qed.
-
-Lemma valsOf_DisjList:
-  forall {A} (ias1 ias2: list (Id A)),
-    DisjList (valsOf ias1) (valsOf ias2) ->
-    DisjList ias1 ias2.
-Proof.
-  unfold DisjList; intros.
-  destruct e as [idx a].
-  specialize (H a); destruct H.
-  - left; intro Hx; elim H.
-    eapply in_map with (f:= valOf) in Hx; auto.
-  - right; intro Hx; elim H.
-    eapply in_map with (f:= valOf) in Hx; auto.
+  induction l; simpl; intros; [destruct n; discriminate|].
+  destruct n; [inv H; eauto|eauto].
 Qed.
 
 Lemma count_occ_app:
@@ -1526,6 +1465,12 @@ Proof.
   omega.
 Qed.
 
+Fixpoint nat_seq_rev (n: nat) :=
+  match n with
+  | O => O :: nil
+  | S n' => n :: nat_seq_rev n'
+  end.
+
 Lemma nat_seq_rev_not_in:
   forall n m,
     n < m -> ~ In m (nat_seq_rev n).
@@ -1543,78 +1488,6 @@ Proof.
   - repeat constructor; intro; dest_in.
   - constructor; auto.
     apply nat_seq_rev_not_in; omega.
-Qed.
-
-Lemma liftInds_In:
-  forall n ns,
-    In (natToIdx n) (liftInds ns) ->
-    In n ns.
-Proof.
-  induction ns; simpl; intros; auto.
-  destruct H; auto.
-  inv H; auto.
-Qed.
-  
-Lemma liftInds_NoDup:
-  forall inds,
-    NoDup inds ->
-    NoDup (liftInds inds).
-Proof.
-  induction inds; simpl; intros; [constructor|].
-  inv H; constructor; auto.
-  intro Hx; elim H2.
-  apply liftInds_In; assumption.
-Qed.
-
-Lemma idx_DisjList_head:
-  forall (inds1 inds2: list IdxT),
-    DisjList (map idxHd inds1) (map idxHd inds2) ->
-    DisjList inds1 inds2.
-Proof.
-  induction inds1; simpl; intros; [apply DisjList_nil_1|].
-  apply DisjList_cons in H; dest.
-  apply (DisjList_cons_inv idx_dec); auto.
-  intro Hx; elim H.
-  apply in_map; assumption.
-Qed.
-
-Lemma extendIdx_inv:
-  forall ext idx1 idx2,
-    extendIdx ext idx1 = extendIdx ext idx2 ->
-    idx1 = idx2.
-Proof.
-  unfold extendIdx; intros.
-  inv H; reflexivity.
-Qed.
-
-Lemma extendIdx_In:
-  forall ext idx inds,
-    In (extendIdx ext idx) (extendInds ext inds) ->
-    In idx inds.
-Proof.
-  induction inds; simpl; intros; auto.
-  destruct H; auto.
-  apply extendIdx_inv in H; auto.
-Qed.
-
-Lemma extendIdx_NoDup:
-  forall ext inds,
-    NoDup inds -> NoDup (extendInds ext inds).
-Proof.
-  induction inds; simpl; intros; auto.
-  inv H; constructor; auto.
-  intro Hx; elim H2.
-  eapply extendIdx_In; eauto.
-Qed.
-
-Lemma extendInds_idxHd_SubList:
-  forall ext inds,
-    SubList (map idxHd (extendInds ext inds)) [ext].
-Proof.
-  induction inds; simpl; intros; [apply SubList_nil|].
-  apply SubList_cons.
-  - left; reflexivity.
-  - assumption.
 Qed.
 
 (** Tactics for solving predicates of constant lists *)

@@ -70,6 +70,8 @@ Proof.
                 | [H: _ \/ _ |- _] => destruct H
                 end;
             simpl in *; subst; try discriminate; auto); fail).
+  - red; intros. solve_rule_conds_const.
+    
 Qed.
 
 Lemma msiSv_impl_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.

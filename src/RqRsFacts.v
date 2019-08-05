@@ -109,10 +109,67 @@ Proof.
     destruct (parentChnsOf _ _); simpl in *; [discriminate|auto].
 Qed.
 
+Lemma parentChnsOf_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rp,
+      parentChnsOf oidx ctr = Some rp ->
+      parentChnsOf oidx dtr = Some rp.
+Proof.
+  intros.
+  destruct rp as [root pidx].
+  pose proof (parentChnsOf_child_indsOf _ _ H0).
+  rewrite parentChnsOf_child_eq with (ctr:= ctr); try assumption.
+  intro Hx; subst.
+  rewrite root_parentChnsOf_None in H0.
+  - discriminate.
+  - destruct dtr; simpl in *; eapply wfDTree_child; eauto.
+  - reflexivity.
+Qed.
+
+Lemma rqEdgeUpFrom_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rqUp,
+      rqEdgeUpFrom ctr oidx = Some rqUp ->
+      rqEdgeUpFrom dtr oidx = Some rqUp.
+Proof.
+  unfold rqEdgeUpFrom, upEdgesFrom; intros.
+  destruct (parentChnsOf oidx ctr) as [rp|] eqn:Hrp; [|discriminate].
+  apply parentChnsOf_child_Some_eq with (dtr:= dtr) in Hrp; auto.
+  rewrite Hrp; assumption.
+Qed.
+
+Lemma rsEdgeUpFrom_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rqUp,
+      rsEdgeUpFrom ctr oidx = Some rqUp ->
+      rsEdgeUpFrom dtr oidx = Some rqUp.
+Proof.
+  unfold rsEdgeUpFrom, upEdgesFrom; intros.
+  destruct (parentChnsOf oidx ctr) as [rp|] eqn:Hrp; [|discriminate].
+  apply parentChnsOf_child_Some_eq with (dtr:= dtr) in Hrp; auto.
+  rewrite Hrp; assumption.
+Qed.
+
+Lemma edgeDownTo_child_Some_eq:
+  forall dtr (Hwf: WfDTree dtr) ctr,
+    In ctr (childrenOf dtr) ->
+    forall oidx rqUp,
+      edgeDownTo ctr oidx = Some rqUp ->
+      edgeDownTo dtr oidx = Some rqUp.
+Proof.
+  unfold edgeDownTo, downEdgesTo; intros.
+  destruct (parentChnsOf oidx ctr) as [rp|] eqn:Hrp; [|discriminate].
+  apply parentChnsOf_child_Some_eq with (dtr:= dtr) in Hrp; auto.
+  rewrite Hrp; assumption.
+Qed.
+
 Section RqRsDTree.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypothesis (Hsd: RqRsDTree dtr sys).
 
@@ -719,7 +776,8 @@ Section RqRsDTree.
   Qed.
   
   Lemma footprintUpDownOk_rs_eq:
-    forall {oifc} (sys: System oifc) oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
+    forall `{oifc: OStateIfc} (sys: System) oidx rqFrom rqTos
+           rssFrom1 rsbTo1 rssFrom2 rsbTo2,
       FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom1 rsbTo1 ->
       FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom2 rsbTo2 ->
       rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.

@@ -1,5 +1,5 @@
-Require Import Peano_dec Omega List ListSupport.
-Require Import Common FMap.
+Require Import Peano_dec Omega List.
+Require Import Common FMap IndexSupport.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -49,9 +49,9 @@ Proof.
 Qed.
 
 Section RqUpReduction.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
@@ -187,8 +187,7 @@ Section RqUpReduction.
     try disc_messages_in.
   
   Lemma rqUpMsgs_RqToUpRule:
-    forall {oifc} (sys: System oifc) oidx (rule: Rule oifc)
-           post porq rins nost norq routs oidxTo,
+    forall oidx (rule: Rule) post porq rins nost norq routs oidxTo,
       GoodRqRsRule dtr sys oidx rule ->
       rule_precond rule post porq rins ->
       rule_trs rule post porq rins = (nost, norq, routs) ->
@@ -226,7 +225,7 @@ Section RqUpReduction.
     end.
 
   Lemma rqUpUp_rqUpDown_reducible:
-    forall oidx (rule1 rule2: Rule oifc),
+    forall oidx (rule1 rule2: Rule),
       RqUpUp dtr oidx rule1 ->
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqUpDown dtr sys oidx rule2 ->
@@ -298,7 +297,7 @@ Section RqUpReduction.
   Qed.
 
   Lemma rqUpUp_rqDownDown_reducible:
-    forall oidx (rule1 rule2: Rule oifc),
+    forall oidx (rule1 rule2: Rule),
       RqUpUp dtr oidx rule1 ->
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqDownDown dtr oidx rule2 ->

@@ -8,16 +8,16 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Definition extRqsOf {StateT MsgT} `{HasMsg MsgT}
-           (sys: System StateT) (mp: MessagePool MsgT) :=
+Definition extRqsOf `{OStateIfc} {MsgT} `{HasMsg MsgT}
+           (sys: System) (mp: MessagePool MsgT) :=
   qsOf (sys_merqs sys) mp.
 
-Definition extRssOf {StateT MsgT} `{HasMsg MsgT}
-           (sys: System StateT) (mp: MessagePool MsgT) :=
+Definition extRssOf `{OStateIfc} {MsgT} `{HasMsg MsgT}
+           (sys: System) (mp: MessagePool MsgT) :=
   qsOf (sys_merss sys) mp.
 
 Section Validness.
-  Context {MsgT: Type} {oifc: OStateIfc}.
+  Context {MsgT: Type} `{OStateIfc}.
 
   (* A set of messages are "well-distributed" iff the sources of
    * all messages are different from each others.
@@ -29,7 +29,7 @@ Section Validness.
    * 1) each source is internal and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsIn (sys: System oifc) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsIn (sys: System) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_minds sys ++ sys_merqs sys) /\
     WellDistrMsgs msgs.
 
@@ -38,7 +38,7 @@ Section Validness.
    *    an external-response queue.
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsOut (sys: System oifc) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsOut (sys: System) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_minds sys ++ sys_merss sys) /\
     WellDistrMsgs msgs.
 
@@ -46,7 +46,7 @@ Section Validness.
    * 1) each message uses an external request queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtIn (sys: System oifc) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsExtIn (sys: System) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_merqs sys) /\
     WellDistrMsgs msgs.
 
@@ -54,7 +54,7 @@ Section Validness.
    * 1) each message uses an external response queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtOut (sys: System oifc) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsExtOut (sys: System) (msgs: list (Id MsgT)) :=
     SubList (idsOf msgs) (sys_merss sys) /\
     WellDistrMsgs msgs.
 
@@ -133,25 +133,25 @@ Notation "StI # StS |-- I ⊑ S" := (Refines StI StS I S) (at level 30).
 (** Some concrete state and label definitions *)
 
 (* A basis state with [Msg]s. *)
-Record MState oifc :=
-  { bst_oss: OStates oifc;
+Record MState `{OStateIfc} :=
+  { bst_oss: OStates;
     bst_orqs: ORqs Msg;
     bst_msgs: MessagePool Msg
   }.
 
-Definition getMStateInit {oifc} (sys: System oifc): MState oifc :=
+Definition getMStateInit `{OStateIfc} (sys: System): MState :=
   {| bst_oss := initsOf sys;
      bst_orqs := initsOf sys;
      bst_msgs := emptyMP _ |}.
 
-Global Instance MState_HasInit {oifc}: HasInit (System oifc) (MState oifc) :=
+Global Instance MState_HasInit `{OStateIfc}: HasInit System MState :=
   {| initsOf := getMStateInit |}.
 
 Definition GoodORqsInit (iorqs: ORqs Msg): Prop :=
   forall oidx,
     iorqs@[oidx] >>=[True] (fun orq => orq = []).
 
-Definition IntMsgsEmpty {oifc} (sys: System oifc) (msgs: MessagePool Msg) :=
+Definition IntMsgsEmpty `{OStateIfc} (sys: System) (msgs: MessagePool Msg) :=
   forall midx,
     In midx sys.(sys_minds) ->
     findQ midx msgs = nil.
@@ -187,7 +187,7 @@ Definition History (MsgT: Type) := list (RLabel MsgT).
 
 Definition MHistory := History Msg.
 
-Definition WfLbl {oifc} (sys: System oifc) (lbl: MLabel) :=
+Definition WfLbl `{OStateIfc} (sys: System) (lbl: MLabel) :=
   match lbl with
   | RlblEmpty _ => True
   | RlblIns eins => eins <> nil /\ ValidMsgsExtIn sys eins
@@ -201,7 +201,7 @@ Definition WfLbl {oifc} (sys: System oifc) (lbl: MLabel) :=
     DisjList (idsOf ins) (idsOf outs)
   end.
 
-Definition WfHistory {oifc} (sys: System oifc) (hst: MHistory) :=
+Definition WfHistory `{OStateIfc} (sys: System) (hst: MHistory) :=
   Forall (WfLbl sys) hst.
 
 Section TMsg.
@@ -263,8 +263,8 @@ Section TMsg.
 
 End TMsg.
 
-Record TState ifc :=
-  { tst_oss: OStates ifc;
+Record TState `{OStateIfc} :=
+  { tst_oss: OStates;
     tst_orqs: ORqs TMsg;
     tst_msgs: MessagePool TMsg;
     tst_trss: MessagePool TMsg;

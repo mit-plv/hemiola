@@ -7,23 +7,27 @@ Set Implicit Arguments.
 
 (** Message Ids *)
 
-Definition mosiRqS: IdxT := specNumMsgIds + 0.
-Definition mosiRsS: IdxT := specNumMsgIds + 1.
-Definition mosiDownRqS: IdxT := specNumMsgIds + 2.
-Definition mosiDownRsS: IdxT := specNumMsgIds + 3.
+Definition mosiMsgBase: IdxT := 0.
 
-Definition mosiRqM: IdxT := specNumMsgIds + 4.
-Definition mosiRsM: IdxT := specNumMsgIds + 5.
-Definition mosiDownRqM: IdxT := specNumMsgIds + 6.
-Definition mosiDownRsM: IdxT := specNumMsgIds + 7.
+Definition mosiRqS: IdxT := mosiMsgBase~>0.
+Definition mosiRsS: IdxT := mosiMsgBase~>1.
 
-Definition mosiRqI: IdxT := specNumMsgIds + 8.
-Definition mosiRsI: IdxT := specNumMsgIds + 9.
+Definition mosiDownRqS: IdxT := mosiMsgBase~>3.
+Definition mosiDownRsS: IdxT := mosiMsgBase~>4.
+
+Definition mosiRqM: IdxT := mosiMsgBase~>5.
+Definition mosiRsM: IdxT := mosiMsgBase~>6.
+Definition mosiDownRqI: IdxT := mosiMsgBase~>7.
+Definition mosiDownRsI: IdxT := mosiMsgBase~>8.
+
+Definition mosiRqI: IdxT := mosiMsgBase~>9.
+Definition mosiRsI: IdxT := mosiMsgBase~>10.
 
 (** Cache Status *)
 
-Definition mosiM := 3.
-Definition mosiO := 2.
-Definition mosiS := 1.
-Definition mosiI := 0.
+Notation MOSI := nat (only parsing).
+Definition mosiM: MOSI := 3.
+Definition mosiO: MOSI := 2.
+Definition mosiS: MOSI := 1.
+Definition mosiI: MOSI := 0.
 

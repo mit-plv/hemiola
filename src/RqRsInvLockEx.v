@@ -34,7 +34,7 @@ Proof.
 Qed.
 
 Lemma upLockedNew_in_history:
-  forall {oifc: OStateIfc} (sys: System oifc) st1 hst st2 oidx,
+  forall `{oifc: OStateIfc} (sys: System) st1 hst st2 oidx,
     steps step_m sys st1 hst st2 ->
     UpLockedNew (bst_orqs st1) (bst_orqs st2) oidx ->
     In oidx (oindsOf hst).
@@ -45,9 +45,9 @@ Proof.
 Qed.
 
 Section RqRsInvLockEx.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
@@ -1412,9 +1412,9 @@ Section RqRsInvLockEx.
 End RqRsInvLockEx.
 
 Section Corollaries.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 

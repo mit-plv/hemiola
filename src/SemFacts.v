@@ -77,7 +77,7 @@ Proof.
 Qed.
 
 Lemma steps_object_in_system:
-  forall {oifc} (sys: System oifc) st1 hst st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     forall oidx,
       In oidx (oindsOf hst) ->
@@ -93,7 +93,8 @@ Proof.
 Qed.
 
 Lemma sys_minds_sys_merqs_DisjList:
-  forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merqs sys).
+  forall `{oifc: OStateIfc} (sys: System),
+    DisjList (sys_minds sys) (sys_merqs sys).
 Proof.
   intros.
   eapply DisjList_NoDup; [exact idx_dec|].
@@ -103,7 +104,8 @@ Proof.
 Qed.
 
 Lemma sys_merqs_sys_merss_DisjList:
-  forall {oifc} (sys: System oifc), DisjList (sys_merqs sys) (sys_merss sys).
+  forall `{oifc: OStateIfc} (sys: System),
+    DisjList (sys_merqs sys) (sys_merss sys).
 Proof.
   intros.
   eapply DisjList_NoDup; [exact idx_dec|].
@@ -112,7 +114,8 @@ Proof.
 Qed.
 
 Lemma sys_minds_sys_merss_DisjList:
-  forall {oifc} (sys: System oifc), DisjList (sys_minds sys) (sys_merss sys).
+  forall `{oifc: OStateIfc} (sys: System),
+    DisjList (sys_minds sys) (sys_merss sys).
 Proof.
   intros.
   eapply DisjList_NoDup; [exact idx_dec|].
@@ -125,10 +128,10 @@ Proof.
 Qed.
 
 Lemma ValidMsgsIn_sys_minds:
-  forall {MsgT oifc} `{HasMsg MsgT}
-         (sys1: System oifc) (eins: list (Id MsgT)),
+  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT}
+         (sys1: System) (eins: list (Id MsgT)),
     ValidMsgsIn sys1 eins ->
-    forall (sys2: System oifc),
+    forall (sys2: System),
       sys_minds sys1 = sys_minds sys2 ->
       sys_merqs sys1 = sys_merqs sys2 ->
       ValidMsgsIn sys2 eins.
@@ -139,10 +142,10 @@ Proof.
 Qed.
 
 Lemma ValidMsgsOut_sys_minds_sys_merss:
-  forall {MsgT oifc} `{HasMsg MsgT} 
-         (sys1: System oifc) (eouts: list (Id MsgT)),
+  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT} 
+         (sys1: System) (eouts: list (Id MsgT)),
     ValidMsgsOut sys1 eouts ->
-    forall (sys2: System oifc),
+    forall (sys2: System),
       sys_minds sys1 = sys_minds sys2 ->
       sys_merss sys1 = sys_merss sys2 ->
       ValidMsgsOut sys2 eouts.
@@ -153,10 +156,10 @@ Proof.
 Qed.
 
 Lemma ValidMsgsExtIn_sys_merqs:
-  forall {MsgT oifc} `{HasMsg MsgT} 
-         (sys1: System oifc) (eins: list (Id MsgT)),
+  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT} 
+         (sys1: System) (eins: list (Id MsgT)),
     ValidMsgsExtIn sys1 eins ->
-    forall (sys2: System oifc),
+    forall (sys2: System),
       sys_merqs sys1 = sys_merqs sys2 ->
       ValidMsgsExtIn sys2 eins.
 Proof.
@@ -166,10 +169,10 @@ Proof.
 Qed.
   
 Lemma ValidMsgsExtOut_sys_merss:
-  forall {MsgT oifc} `{HasMsg MsgT} 
-         (sys1: System oifc) (eouts: list (Id MsgT)),
+  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT} 
+         (sys1: System) (eouts: list (Id MsgT)),
     ValidMsgsExtOut sys1 eouts ->
-    forall (sys2: System oifc),
+    forall (sys2: System),
       sys_merss sys1 = sys_merss sys2 ->
       ValidMsgsExtOut sys2 eouts.
 Proof.
@@ -179,7 +182,7 @@ Proof.
 Qed.
 
 Lemma extRssOf_In_sys_merss_FirstMP:
-  forall {oifc} (sys: System oifc) msgs1 msgs2,
+  forall `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mout,
       In (idOf mout) (sys_merss sys) ->
@@ -191,7 +194,7 @@ Proof.
 Qed.
 
 Corollary extRssOf_SubList_sys_merss_FirstMP:
-  forall {oifc} (sys: System oifc) msgs1 msgs2,
+  forall `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mouts,
       SubList (idsOf mouts) (sys_merss sys) ->
@@ -206,7 +209,7 @@ Proof.
 Qed.
 
 Corollary extRssOf_ValidMsgsExtOut_sys_merss_FirstMP:
-  forall {oifc} (sys: System oifc) msgs1 msgs2,
+  forall `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mouts,
       ValidMsgsExtOut sys mouts ->
@@ -219,14 +222,14 @@ Proof.
 Qed.
 
 Lemma init_IntMsgsEmpty:
-  forall {oifc} (sys: System oifc), IntMsgsEmpty sys (emptyMP Msg).
+  forall `{oifc: OStateIfc} (sys: System), IntMsgsEmpty sys (emptyMP Msg).
 Proof.
   intros; red; intros.
   reflexivity.
 Qed.
 
 Lemma steps_locks_unaffected:
-  forall {oifc} (sys: System oifc) s1 hst s2,
+  forall `{oifc: OStateIfc} (sys: System) s1 hst s2,
     steps step_m sys s1 hst s2 ->
     forall oidx,
       ~ In oidx (oindsOf hst) ->
@@ -240,7 +243,7 @@ Proof.
 Qed.
 
 Lemma steps_singleton:
-  forall {oifc} (sys: System oifc) st1 lbl st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 lbl st2,
     step_m sys st1 lbl st2 ->
     steps step_m sys st1 [lbl] st2.
 Proof.
@@ -250,7 +253,7 @@ Proof.
 Qed.
 
 Lemma steps_wfHistory:
-  forall {oifc} (sys: System oifc) st1 hst st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     WfHistory sys hst.
 Proof.

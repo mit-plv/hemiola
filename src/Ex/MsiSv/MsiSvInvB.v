@@ -8,7 +8,7 @@ Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo.
 
 Set Implicit Arguments.
 
-Import MonadNotations.
+Import PropMonadNotations.
 Import CaseNotations.
 
 Open Scope list.
@@ -34,8 +34,10 @@ Ltac solve_msi_false :=
 
 Section Inv.
 
+  Existing Instance MsiSv.ImplOStateIfc.
+
   Section InvDir.
-    Variables (post: OState ImplOStateIfc)
+    Variables (post: OState)
               (porq: ORq Msg).
 
     (* Why exclusiveness of the directory:
@@ -87,7 +89,7 @@ Section Inv.
   End InvDir.
 
   Section DownLockInv.
-    Variables (post: OState ImplOStateIfc)
+    Variables (post: OState)
               (porq: ORq Msg).
 
     Definition ParentDownRsS1 (rqid: RqInfo Msg): Prop :=
@@ -118,7 +120,7 @@ Section Inv.
 
   End DownLockInv.
 
-  Definition ImplInvB (st: MState ImplOStateIfc): Prop :=
+  Definition ImplInvB (st: MState): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       porq <-- (bst_orqs st)@[parentIdx];
       DirInvP post /\ DownLockInv post porq.

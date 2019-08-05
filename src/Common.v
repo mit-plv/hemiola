@@ -231,13 +231,19 @@ Notation "OA >>=[ NB ] F" :=
 
 Module MonadNotations.
   Notation "A <-- OA ; CONT" :=
+    (OA >>= (fun A => CONT)) (at level 84, right associativity): monad_scope.
+  Open Scope monad_scope.
+End MonadNotations.
+
+Module PropMonadNotations.
+  Notation "A <-- OA ; CONT" :=
     (OA >>=[False] (fun A => CONT)) (at level 84, right associativity): monad_scope.
   Notation "A <+- OA ; CONT" :=
     (OA >>=[True] (fun A => CONT)) (at level 84, right associativity): monad_scope.
   Notation "! OA ; CONT" :=
     (OA = None -> CONT) (at level 84, right associativity): monad_scope.
   Open Scope monad_scope.
-End MonadNotations.
+End PropMonadNotations.
 
 Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
          (a: A) (def: B) (cs: list (A * B)) :=

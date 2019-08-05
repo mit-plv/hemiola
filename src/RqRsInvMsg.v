@@ -10,9 +10,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section FootprintInv.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hitr: GoodRqRsSys dtr sys).
@@ -49,7 +49,7 @@ Section FootprintInv.
     mred; simpl; intros; auto.
   Qed.
   
-  Definition FootprintsOk (st: MState oifc) :=
+  Definition FootprintsOk (st: MState) :=
     FootprintsOkORqs st.(bst_orqs).
 
   Ltac disc_rule_custom ::=
@@ -162,9 +162,9 @@ Ltac disc_footprints_ok :=
   end.
 
 Section IncomingMessageInv.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hitr: GoodRqRsSys dtr sys).
@@ -262,9 +262,9 @@ Section IncomingMessageInv.
 End IncomingMessageInv.
 
 Section OutgoingMessageInv.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hitr: GoodRqRsSys dtr sys).
@@ -401,9 +401,9 @@ Ltac disc_messages_out :=
   end.
 
 Section MsgInitCases.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypothesis (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
@@ -430,9 +430,9 @@ Section MsgInitCases.
 End MsgInitCases.
 
 Section ExtRss.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypothesis (Hers: GoodExtRssSys sys).
 
   Definition ExtRssInvMP (msgs: MessagePool Msg) :=
@@ -440,7 +440,7 @@ Section ExtRss.
                In ers sys.(sys_merss) ->
                Forall (fun msg => msg_type msg = MRs) ersq) msgs.
 
-  Definition ExtRssInv (st: MState oifc) :=
+  Definition ExtRssInv (st: MState) :=
     ExtRssInvMP st.(bst_msgs).
     
   Lemma extRssInv_init: InvInit sys ExtRssInv.
@@ -520,7 +520,7 @@ Section ExtRss.
 End ExtRss.
 
 Lemma msgs_ext_out_rss:
-  forall {oifc} (sys: System oifc) msgs eouts,
+  forall `{oifc: OStateIfc} (sys: System) msgs eouts,
     SubList (idsOf eouts) sys.(sys_merss) ->
     Forall (FirstMPI msgs) eouts ->
     ExtRssInvMP sys msgs ->

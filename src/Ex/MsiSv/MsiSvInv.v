@@ -8,7 +8,7 @@ Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo Ex.MsiSv.MsiSvInvB.
 
 Set Implicit Arguments.
 
-Import MonadNotations.
+Import PropMonadNotations.
 Import CaseNotations.
 
 Open Scope list.
@@ -31,7 +31,9 @@ Ltac get_lock_inv obj sys :=
 
 Section Inv.
 
-  Definition ImplOStateMSI (cv: nat) (ost: OState ImplOStateIfc): Prop :=
+  Existing Instance MsiSv.ImplOStateIfc.
+
+  Definition ImplOStateMSI (cv: nat) (ost: OState): Prop :=
     msiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
 
   Definition MsgExistsSig (sig: MSig) (msgs: MessagePool Msg) :=
@@ -40,7 +42,7 @@ Section Inv.
   Section InvExcl.
     Variables (dir: MSI)
               (porq: ORq Msg)
-              (cost: OState ImplOStateIfc)
+              (cost: OState)
               (corq: ORq Msg)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
@@ -81,7 +83,7 @@ Section Inv.
 
   Section InvInvalid.
     Variables (dir: MSI)
-              (cost: OState ImplOStateIfc)
+              (cost: OState)
               (pc cpRq cpRs: IdxT)
               (msgs: MessagePool Msg).
 
@@ -96,7 +98,7 @@ Section Inv.
   End InvInvalid.
 
   Section InvDir.
-    Variables (post cost1 cost2: OState ImplOStateIfc)
+    Variables (post cost1 cost2: OState)
               (porq corq1 corq2: ORq Msg).
 
     (* Why soundness of the directory:
@@ -126,7 +128,7 @@ Section Inv.
 
   End InvDir.
 
-  Definition ImplInv (st: MState ImplOStateIfc): Prop :=
+  Definition ImplInv (st: MState): Prop :=
     post <-- (bst_oss st)@[parentIdx];
       cost1 <-- (bst_oss st)@[child1Idx];
       cost2 <-- (bst_oss st)@[child2Idx];
@@ -901,7 +903,7 @@ Section Inv.
         solve_DisjList idx_dec.
     Qed.
 
-    Definition MsiSvMsgOutPred: MsgOutPred ImplOStateIfc :=
+    Definition MsiSvMsgOutPred: MsgOutPred :=
       fun eout oss orqs =>
         match case (sigOf eout) on sig_dec default True with
         | (ec1, (MRq, Spec.getRq)): False
@@ -1087,7 +1089,7 @@ Section Inv.
         ImplInv {| bst_oss := oss;
                    bst_orqs := orqs;
                    bst_msgs := msgs |} ->
-        forall cidx ost nv (noss: OStates ImplOStateIfc),
+        forall cidx ost nv (noss: OStates),
           oss@[cidx] = Some ost ->
           noss = oss +[cidx <- (nv, snd ost)] ->
           ImplInv {| bst_oss := noss;
@@ -1337,7 +1339,7 @@ Section Inv.
               forall rsm,
                 FirstMP msgs cpRs rsm ->
                 msg_type rsm = MRs ->
-                forall cost: OState ImplOStateIfc,
+                forall cost: OState,
                   cost#[implStatusIdx] = msiI ->
                   InvalidMsgs cost pc cpRq cpRs (deqMP cpRs msgs).
     Proof.
@@ -1412,7 +1414,7 @@ Section Inv.
 
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H24;
+          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H22;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1421,8 +1423,8 @@ Section Inv.
           intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H36; auto.
+          * apply msgExistsSig_enqMP_or in H35; destruct H35; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H35; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1472,7 +1474,7 @@ Section Inv.
 
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H24;
+          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H22;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1486,11 +1488,11 @@ Section Inv.
               try exact Hr1; try reflexivity; try eassumption.
             { simpl; tauto. }
             { apply FirstMP_InMP; assumption. }
-            { rewrite H15; discriminate. }
+            { rewrite H14; discriminate. }
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H37; destruct H37; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H37; auto.
+          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H36; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1577,7 +1579,7 @@ Section Inv.
 
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H24;
+          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H22;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1586,8 +1588,8 @@ Section Inv.
           intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_msg_id_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H36; auto.
+          * apply msgExistsSig_enqMP_or in H35; destruct H35; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H35; auto.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1637,7 +1639,7 @@ Section Inv.
 
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H24;
+          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H22;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1646,8 +1648,8 @@ Section Inv.
           intuition idtac; try solve_msi_false; try solve_msi.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * apply msgExistsSig_enqMP_or in H37; destruct H37; [discriminate|].
-            apply msgExistsSig_deqMP_inv in H37; auto.
+          * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
+            apply msgExistsSig_deqMP_inv in H36; auto.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP.
             eapply invalidMsgs_if_rsDown_exists
@@ -1655,7 +1657,7 @@ Section Inv.
               try exact Hr1; try reflexivity; try eassumption.
             { simpl; tauto. }
             { apply FirstMP_InMP; assumption. }
-            { rewrite H15; discriminate. }
+            { rewrite H14; discriminate. }
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1873,49 +1875,6 @@ Section Inv.
           get_child_uplock_from_parent.
           eauto.
         }
-        destruct H34 as [corq1 [? ?]].
-
-        split.
-        + good_footprint_get parentIdx.
-          disc_rule_conds.
-          apply Forall_app.
-          * simpl.
-            red in H5; simpl in H5.
-            rewrite <-H7 in H42.
-            eapply atomic_rsUps_preserves_msg_out_preds
-              with (rsUps:= [(c2pRs, rmsg)]) in H5;
-              try exact H9; try eassumption; eauto.
-            { right; right; left; reflexivity. }
-            { reflexivity. }
-            { repeat constructor; intro Hx; elim Hx. }
-            { apply SubList_cons; [assumption|].
-              apply SubList_nil.
-            }
-          * repeat constructor.
-            red; simpl.
-            solve_rule_conds_ex.
-            
-        + red in H6; red.
-          disc_rule_conds_ex.
-          intuition idtac; try solve_msi_false; try discriminate.
-          * clear -H12; solve_msi.
-          * clear -H12; solve_msi.
-            
-      - (** [parentGetDownRsI] *)
-        disc_rule_conds_ex.
-        disc_msg_preds H4.
-        disc_rule_conds_ex.
-        red in Hibinv.
-        disc_rule_conds_ex.
-
-        assert (exists corq1,
-                   orqs@[child1Idx] = Some corq1 /\
-                   corq1@[upRq] <> None).
-        { clear Hnulinv Hpdlinv Hndlinv.
-          get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
-          get_child_uplock_from_parent.
-          eauto.
-        }
         destruct H33 as [corq1 [? ?]].
 
         split.
@@ -1937,15 +1896,58 @@ Section Inv.
           * repeat constructor.
             red; simpl.
             solve_rule_conds_ex.
+            
         + red in H6; red.
           disc_rule_conds_ex.
           intuition idtac; try solve_msi_false; try discriminate.
-          * clear -H12; solve_msi.
-          * clear -H12; solve_msi.
+          * clear -H11; solve_msi.
+          * clear -H11; solve_msi.
+            
+      - (** [parentGetDownRsI] *)
+        disc_rule_conds_ex.
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+        red in Hibinv.
+        disc_rule_conds_ex.
+
+        assert (exists corq1,
+                   orqs@[child1Idx] = Some corq1 /\
+                   corq1@[upRq] <> None).
+        { clear Hnulinv Hpdlinv Hndlinv.
+          get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
+          get_child_uplock_from_parent.
+          eauto.
+        }
+        destruct H32 as [corq1 [? ?]].
+
+        split.
+        + good_footprint_get parentIdx.
+          disc_rule_conds.
+          apply Forall_app.
+          * simpl.
+            red in H5; simpl in H5.
+            rewrite <-H7 in H40.
+            eapply atomic_rsUps_preserves_msg_out_preds
+              with (rsUps:= [(c2pRs, rmsg)]) in H5;
+              try exact H9; try eassumption; eauto.
+            { right; right; left; reflexivity. }
+            { reflexivity. }
+            { repeat constructor; intro Hx; elim Hx. }
+            { apply SubList_cons; [assumption|].
+              apply SubList_nil.
+            }
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * clear -H11; solve_msi.
+          * clear -H11; solve_msi.
           * exfalso.
             clear Hpulinv Hpdlinv Hndlinv.
             get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
-            destruct H46 as [[midx msg] ?]; dest; inv H47.
+            destruct H45 as [[midx msg] ?]; dest; inv H46.
             exfalso_uplock_rq_rs parentIdx c1pRq pc1.
           * left; assumption.
           * clear Hnulinv Hndlinv.
@@ -2077,7 +2079,7 @@ Section Inv.
 
         split.
         + pose proof H3.
-          eapply atomic_rqUp_singleton with (oidx:= child1Idx) in H30;
+          eapply atomic_rqUp_singleton with (oidx:= child1Idx) in H29;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -2088,7 +2090,7 @@ Section Inv.
           intuition idtac; try solve_msi_false.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * exfalso; clear -H14 H44; solve_msi.
+          * exfalso; clear -H13 H43; solve_msi.
           * right; eexists (_, _); split.
             { apply InMP_or_enqMP; left; simpl; eauto. }
             { reflexivity. }
@@ -2249,51 +2251,6 @@ Section Inv.
           get_child_uplock_from_parent.
           eauto.
         }
-        destruct H34 as [corq2 [? ?]].
-
-        split.
-        + good_footprint_get parentIdx.
-          disc_rule_conds.
-          apply Forall_app.
-          * simpl.
-            red in H5; simpl in H5.
-            rewrite <-H7 in H42.
-            eapply atomic_rsUps_preserves_msg_out_preds
-              with (rsUps:= [(c1pRs, rmsg)]) in H5;
-              try exact H9; try eassumption; eauto.
-            { right; right; left; reflexivity. }
-            { reflexivity. }
-            { repeat constructor; intro Hx; elim Hx. }
-            { apply SubList_cons; [assumption|].
-              apply SubList_nil.
-            }
-          * repeat constructor.
-            red; simpl.
-            solve_rule_conds_ex.
-            
-        + red in H6; red.
-          disc_rule_conds_ex.
-          intuition idtac; try solve_msi_false; try discriminate.
-          * clear -H12; solve_msi.
-          * clear -H12; solve_msi.
-            
-      - (** [parentGetDownRsI] *)
-        disc_rule_conds_ex.
-
-        disc_msg_preds H4.
-        disc_rule_conds_ex.
-
-        red in Hibinv.
-        disc_rule_conds_ex.
-
-        assert (exists corq2,
-                   orqs@[child2Idx] = Some corq2 /\
-                   corq2@[upRq] <> None).
-        { clear Hnulinv Hpdlinv Hndlinv.
-          get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
-          get_child_uplock_from_parent.
-          eauto.
-        }
         destruct H33 as [corq2 [? ?]].
 
         split.
@@ -2315,15 +2272,60 @@ Section Inv.
           * repeat constructor.
             red; simpl.
             solve_rule_conds_ex.
+            
         + red in H6; red.
           disc_rule_conds_ex.
           intuition idtac; try solve_msi_false; try discriminate.
-          * clear -H12; solve_msi.
-          * clear -H12; solve_msi.
+          * clear -H11; solve_msi.
+          * clear -H11; solve_msi.
+            
+      - (** [parentGetDownRsI] *)
+        disc_rule_conds_ex.
+
+        disc_msg_preds H4.
+        disc_rule_conds_ex.
+
+        red in Hibinv.
+        disc_rule_conds_ex.
+
+        assert (exists corq2,
+                   orqs@[child2Idx] = Some corq2 /\
+                   corq2@[upRq] <> None).
+        { clear Hnulinv Hpdlinv Hndlinv.
+          get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
+          get_child_uplock_from_parent.
+          eauto.
+        }
+        destruct H32 as [corq2 [? ?]].
+
+        split.
+        + good_footprint_get parentIdx.
+          disc_rule_conds.
+          apply Forall_app.
+          * simpl.
+            red in H5; simpl in H5.
+            rewrite <-H7 in H40.
+            eapply atomic_rsUps_preserves_msg_out_preds
+              with (rsUps:= [(c1pRs, rmsg)]) in H5;
+              try exact H9; try eassumption; eauto.
+            { right; right; left; reflexivity. }
+            { reflexivity. }
+            { repeat constructor; intro Hx; elim Hx. }
+            { apply SubList_cons; [assumption|].
+              apply SubList_nil.
+            }
+          * repeat constructor.
+            red; simpl.
+            solve_rule_conds_ex.
+        + red in H6; red.
+          disc_rule_conds_ex.
+          intuition idtac; try solve_msi_false; try discriminate.
+          * clear -H11; solve_msi.
+          * clear -H11; solve_msi.
           * exfalso.
             clear Hpulinv Hpdlinv Hndlinv.
             get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
-            destruct H46 as [[midx msg] ?]; dest; inv H47.
+            destruct H45 as [[midx msg] ?]; dest; inv H46.
             exfalso_uplock_rq_rs parentIdx c2pRq pc2.
           * left; assumption.
           * clear Hnulinv Hndlinv.
@@ -2455,7 +2457,7 @@ Section Inv.
 
         split.
         + pose proof H3.
-          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H30;
+          eapply atomic_rqUp_singleton with (oidx:= child2Idx) in H29;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -2466,7 +2468,7 @@ Section Inv.
           intuition idtac; try solve_msi_false.
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
-          * exfalso; clear -H14 H44; solve_msi.
+          * exfalso; clear -H13 H43; solve_msi.
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.

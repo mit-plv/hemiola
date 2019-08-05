@@ -42,9 +42,9 @@ Ltac disc_lock_conds :=
   end.
 
 Section RqRsDown.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 
@@ -62,7 +62,7 @@ Section RqRsDown.
                    In rsUp rqid.(rqi_minds_rss) ->
                    rqsQ msgs down <> nil)).
   
-  Definition NoRqRsDown (st: MState oifc) :=
+  Definition NoRqRsDown (st: MState) :=
     forall cobj pobj,
       In cobj sys.(sys_objs) ->
       In pobj sys.(sys_objs) ->
@@ -787,9 +787,9 @@ Section RqRsDown.
 End RqRsDown.
 
 Section Corollaries.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
 

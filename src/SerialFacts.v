@@ -1,5 +1,5 @@
 Require Import Bool List String Peano_dec.
-Require Import Common ListSupport FMap.
+Require Import Common IndexSupport FMap.
 Require Import Syntax Semantics SemFacts StepM Serial Invariant.
 
 Require Import Omega.
@@ -97,7 +97,7 @@ Section MsgParam.
   Lemma atomic_messages_spec_ValidDeqs:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
-      forall {oifc} (sys: System oifc) st1 st2,
+      forall `{oifc: OStateIfc} (sys: System) st1 st2,
         steps step_m sys st1 hst st2 ->
         bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)) /\
         ValidDeqs (enqMsgs outs (bst_msgs st1)) (idsOf ins).
@@ -130,7 +130,7 @@ Section MsgParam.
   Corollary atomic_messages_spec:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
-      forall {oifc} (sys: System oifc) st1 st2,
+      forall `{oifc: OStateIfc} (sys: System) st1 st2,
         steps step_m sys st1 hst st2 ->
         bst_msgs st2 = deqMsgs (idsOf ins) (enqMsgs outs (bst_msgs st1)).
   Proof.
@@ -140,7 +140,7 @@ Section MsgParam.
   Lemma atomic_messages_inits_valid:
     forall inits ins hst outs eouts,
       Atomic msg_dec inits ins hst outs eouts ->
-      forall {oifc} (sys: System oifc) st1 st2,
+      forall `{oifc: OStateIfc} (sys: System) st1 st2,
         steps step_m sys st1 hst st2 ->
         ValidMsgsIn sys inits.
   Proof.
@@ -189,7 +189,7 @@ Section MsgParam.
   Qed.
 
   Lemma extAtomic_unique:
-    forall {oifc} (sys: System oifc) inits1 hst eouts1,
+    forall `{oifc: OStateIfc} (sys: System) inits1 hst eouts1,
       ExtAtomic sys msgT_dec inits1 hst eouts1 ->
       forall inits2 eouts2,
         ExtAtomic sys msgT_dec inits2 hst eouts2 ->
@@ -201,9 +201,9 @@ Section MsgParam.
   Qed.
 
   Lemma extAtomic_preserved:
-    forall {oifc} (impl1: System oifc) inits hst eouts,
+    forall `{oifc: OStateIfc} (impl1: System) inits hst eouts,
       ExtAtomic impl1 msgT_dec inits hst eouts ->
-      forall (impl2: System oifc),
+      forall (impl2: System),
         sys_merqs impl1 = sys_merqs impl2 ->
         ExtAtomic impl2 msgT_dec inits hst eouts.
   Proof.
@@ -291,7 +291,7 @@ Section MsgParam.
   Qed.
   
   Lemma sequential_nil:
-    forall {oifc} (sys: System oifc), Sequential sys msgT_dec nil nil.
+    forall `{oifc: OStateIfc} (sys: System), Sequential sys msgT_dec nil nil.
   Proof.
     intros; hnf; intros.
     split.
@@ -300,7 +300,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_cons:
-    forall {oifc} (sys: System oifc) ll trss,
+    forall `{oifc: OStateIfc} (sys: System) ll trss,
       Sequential sys msgT_dec ll trss ->
       forall trs,
         Transactional sys msgT_dec trs ->
@@ -312,7 +312,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_silent:
-    forall {oifc} (sys: System oifc) ll trss,
+    forall `{oifc: OStateIfc} (sys: System) ll trss,
       Sequential sys msgT_dec ll trss ->
       Sequential sys msgT_dec (RlblEmpty _ :: ll) ([RlblEmpty _] :: trss).
   Proof.
@@ -325,7 +325,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_msg_ins:
-    forall {oifc} (sys: System oifc) ll trss eins,
+    forall `{oifc: OStateIfc} (sys: System) ll trss eins,
       Sequential sys msgT_dec ll trss ->
       Sequential sys msgT_dec (RlblIns eins :: ll) ([RlblIns eins] :: trss).
   Proof.
@@ -338,7 +338,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_msg_outs:
-    forall {oifc} (sys: System oifc) ll trss eouts,
+    forall `{oifc: OStateIfc} (sys: System) ll trss eouts,
       Sequential sys msgT_dec ll trss ->
       Sequential sys msgT_dec (RlblOuts eouts :: ll) ([RlblOuts eouts] :: trss).
   Proof.
@@ -351,7 +351,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_insHistory:
-    forall {oifc} (sys: System oifc) ins,
+    forall `{oifc: OStateIfc} (sys: System) ins,
       InsHistory ins ->
       Sequential sys msgT_dec ins (lift_each ins).
   Proof.
@@ -365,7 +365,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_outsHistory:
-    forall {oifc} (sys: System oifc) outs,
+    forall `{oifc: OStateIfc} (sys: System) outs,
       OutsHistory outs ->
       Sequential sys msgT_dec outs (lift_each outs).
   Proof.
@@ -379,7 +379,7 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_insHistory:
-    forall {oifc} (sys: System oifc) ins,
+    forall `{oifc: OStateIfc} (sys: System) ins,
       InsHistory ins ->
       SSequential sys msgT_dec (lift_each ins) 0.
   Proof.
@@ -392,7 +392,7 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_outsHistory:
-    forall {oifc} (sys: System oifc) outs,
+    forall `{oifc: OStateIfc} (sys: System) outs,
       OutsHistory outs ->
       SSequential sys msgT_dec (lift_each outs) 0.
   Proof.
@@ -405,7 +405,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_app:
-    forall {oifc} (sys: System oifc) ll1 trss1 ll2 trss2,
+    forall `{oifc: OStateIfc} (sys: System) ll1 trss1 ll2 trss2,
       Sequential sys msgT_dec ll1 trss1 ->
       Sequential sys msgT_dec ll2 trss2 ->
       Sequential sys msgT_dec (ll1 ++ ll2) (trss1 ++ trss2).
@@ -418,7 +418,7 @@ Section MsgParam.
   Qed.
 
   Lemma sequential_serializable:
-    forall {oifc} (sys: System oifc) hst trss st,
+    forall `{oifc: OStateIfc} (sys: System) hst trss st,
       steps step_m sys (initsOf sys) hst st ->
       Sequential sys msg_dec hst trss ->
       Serializable sys hst st.
@@ -428,7 +428,7 @@ Section MsgParam.
   Qed.
 
   Lemma stransactional_default:
-    forall {oifc} (sys: System oifc) lbl,
+    forall `{oifc: OStateIfc} (sys: System) lbl,
       exists n,
         STransactional sys msgT_dec [lbl] n.
   Proof.
@@ -449,7 +449,7 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_default:
-    forall {oifc} (sys: System oifc) hst,
+    forall `{oifc: OStateIfc} (sys: System) hst,
     exists n trss,
       SSequential sys msgT_dec trss n /\ hst = List.concat trss.
   Proof.
@@ -464,7 +464,7 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_add:
-    forall {oifc} (sys: System oifc) ll1 ll2 n,
+    forall `{oifc: OStateIfc} (sys: System) ll1 ll2 n,
       SSequential sys msgT_dec (ll1 ++ ll2) n ->
       forall trs tn,
         STransactional sys msgT_dec trs tn ->
@@ -481,7 +481,7 @@ Section MsgParam.
   Qed.
   
   Lemma ssequential_app:
-    forall {oifc} (sys: System oifc) ll1 n1 ll2 n2,
+    forall `{oifc: OStateIfc} (sys: System) ll1 n1 ll2 n2,
       SSequential sys msgT_dec ll1 n1 ->
       SSequential sys msgT_dec ll2 n2 ->
       SSequential sys msgT_dec (ll1 ++ ll2) (n1 + n2).
@@ -495,7 +495,7 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_app_inv:
-    forall {oifc} (sys: System oifc) ll1 ll2 n,
+    forall `{oifc: OStateIfc} (sys: System) ll1 ll2 n,
       SSequential sys msgT_dec (ll1 ++ ll2) n ->
       exists n1 n2,
         SSequential sys msgT_dec ll1 n1 /\
@@ -518,7 +518,7 @@ Section MsgParam.
   Qed.
 
   Lemma ssequential_distr_inv:
-    forall {oifc} (sys: System oifc) ll ll1 ll2,
+    forall `{oifc: OStateIfc} (sys: System) ll ll1 ll2,
       Distribution ll ll1 ll2 ->
       forall n,
         SSequential sys msgT_dec ll n ->
@@ -553,7 +553,7 @@ Section MsgParam.
   Qed.
 
   Lemma intAtomic_stransactional_split_each:
-    forall {oifc} (sys: System oifc) inits ins trs outs eouts,
+    forall `{oifc: OStateIfc} (sys: System) inits ins trs outs eouts,
       ~ SubList (idsOf inits) (sys_merqs sys) ->
       Atomic msgT_dec inits ins trs outs eouts ->
       exists sn,
@@ -590,7 +590,7 @@ Section MsgParam.
   Qed.
 
   Corollary internal_stransactional_split_each:
-    forall {oifc} (sys: System oifc) inits ins trs outs eouts tn,
+    forall `{oifc: OStateIfc} (sys: System) inits ins trs outs eouts tn,
       ~ SubList (idsOf inits) (sys_merqs sys) ->
       Atomic msgT_dec inits ins trs outs eouts ->
       STransactional sys msgT_dec trs tn ->
@@ -609,7 +609,7 @@ Section MsgParam.
 End MsgParam.
 
 Lemma atomic_Transactional_ExtAtomic:
-  forall {oifc} (sys: System oifc) trs,
+  forall `{oifc: OStateIfc} (sys: System) trs,
     AtomicEx msg_dec trs ->
     Transactional sys msg_dec trs ->
     exists einits eouts,
@@ -622,7 +622,7 @@ Proof.
 Qed.
 
 Lemma sequential_transactional_Forall:
-  forall {oifc} (sys: System oifc) st1 trss st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 trss st2,
     steps step_m sys st1 (List.concat trss) st2 ->
     Forall (Transactional sys msg_dec) trss ->
     Sequential sys msg_dec (List.concat trss) trss.
@@ -637,7 +637,7 @@ Qed.
 Lemma atomic_messages_eouts_count_le:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       forall idm,
         count_occ (id_dec msg_dec) eouts idm <=
@@ -660,7 +660,7 @@ Qed.
 Lemma atomic_messages_eouts_in:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       Forall (InMPI st2.(bst_msgs)) eouts.
 Proof.
@@ -675,7 +675,7 @@ Qed.
 Lemma atomic_messages_non_inits_count_eq:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       forall idm,
         ~ In idm inits ->
@@ -704,7 +704,7 @@ Qed.
 Lemma atomic_messages_in_in:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       forall idm,
         InMPI (bst_msgs st1) idm ->
@@ -721,7 +721,7 @@ Qed.
 Corollary atomic_messages_ins_ins:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       forall msgs,
         Forall (InMPI (bst_msgs st1)) msgs ->
@@ -738,7 +738,7 @@ Qed.
 Lemma atomic_non_inits_InMPI_or:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       forall idm,
         ~ In idm inits ->
@@ -756,7 +756,7 @@ Proof.
 Qed.
 
 Lemma extAtomic_non_inits_InMPI_or:
-  forall {oifc} (sys: System oifc) inits hst eouts,
+  forall `{oifc: OStateIfc} (sys: System) inits hst eouts,
     ExtAtomic sys msg_dec inits hst eouts ->
     forall st1 st2,
       steps step_m sys st1 hst st2 ->
@@ -774,7 +774,7 @@ Proof.
 Qed.
 
 Lemma extAtomic_multi_non_inits_InMPI_or:
-  forall {oifc} (sys: System oifc) st1,
+  forall `{oifc: OStateIfc} (sys: System) st1,
     Reachable (steps step_m) sys st1 ->
     forall trss st2,
       steps step_m sys st1 (List.concat trss) st2 ->
@@ -807,7 +807,7 @@ Proof.
 Qed.
 
 Corollary extAtomic_multi_IntMsgsEmpty_non_inits_InMPI:
-  forall {oifc} (sys: System oifc) st1,
+  forall `{oifc: OStateIfc} (sys: System) st1,
     Reachable (steps step_m) sys st1 ->
     IntMsgsEmpty sys st1.(bst_msgs) ->
     forall trss st2,
@@ -835,7 +835,7 @@ Proof.
 Qed.
 
 Lemma insLbl_IntMsgsEmpty:
-  forall {oifc} (sys: System oifc) st1 lbl st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 lbl st2,
     step_m sys st1 lbl st2 ->
     IntMsgsEmpty sys st1.(bst_msgs) ->
     InsLbl lbl ->
@@ -854,7 +854,7 @@ Proof.
 Qed.
 
 Lemma insHistory_IntMsgsEmpty:
-  forall {oifc} (sys: System oifc) st1 hst st2,
+  forall `{oifc: OStateIfc} (sys: System) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     IntMsgsEmpty sys st1.(bst_msgs) ->
     InsHistory hst ->
@@ -868,7 +868,7 @@ Qed.
 Lemma atomic_legal_eouts:
   forall (hst: MHistory) inits ins outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       (forall nouts,
           removeL (id_dec msg_dec) (inits ++ outs ++ nouts) ins =
@@ -900,7 +900,7 @@ Qed.
 Lemma atomic_eouts_not_erqs:
   forall inits ins hst outs eouts,
     Atomic msg_dec inits ins hst outs eouts ->
-    forall {oifc} (sys: System oifc) st1 st2,
+    forall `{oifc: OStateIfc} (sys: System) st1 st2,
       steps step_m sys st1 hst st2 ->
       Forall (fun eout => ~ In (idOf eout) sys.(sys_merqs)) eouts.
 Proof.
@@ -1038,7 +1038,7 @@ Proof.
 Qed.
 
 Lemma serializable_nil:
-  forall {oifc} (sys: System oifc), Serializable sys nil (initsOf sys).
+  forall `{oifc: OStateIfc} (sys: System), Serializable sys nil (initsOf sys).
 Proof.
   intros; hnf; intros.
   exists nil; split.
@@ -1047,7 +1047,7 @@ Proof.
 Qed.
 
 Lemma serializable_silent:
-  forall {oifc} (sys: System oifc) ll st,
+  forall `{oifc: OStateIfc} (sys: System) ll st,
     Serializable sys ll st ->
     Serializable sys (RlblEmpty _ :: ll) st.
 Proof.

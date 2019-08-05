@@ -1,5 +1,5 @@
-Require Import Peano_dec Omega List ListSupport.
-Require Import Common FMap.
+Require Import Peano_dec Omega List.
+Require Import Common FMap IndexSupport.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -13,15 +13,15 @@ Open Scope list.
 Open Scope fmap.
 
 Section RqDownReduction.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
   
   Section OnRqDown.
-    Variables (cidx: IdxT) (pobj: Object oifc)
+    Variables (cidx: IdxT) (pobj: Object)
               (rqDowns: list (Id Msg)).
     Hypotheses (Hrqd: RqDownMsgs dtr sys cidx rqDowns)
                (Hpobj: In pobj sys.(sys_objs))
@@ -38,8 +38,7 @@ Section RqDownReduction.
     Proof.
       intros.
       destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
-      eapply atomic_rqDown_covers with (rqDown0:= (rqDown, rqdm));
-        eauto; [apply Hiorqs|..].
+      eapply atomic_rqDown_covers with (rqDown0:= (rqDown, rqdm)); eauto. 
       - red; auto.
       - apply SubList_singleton_In; auto.
     Qed.
@@ -60,7 +59,7 @@ Section RqDownReduction.
       destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
       inv H2; clear H12.
       pose proof H0.
-      eapply rqUp_start_ok in H2; eauto; [|apply Hiorqs].
+      eapply rqUp_start_ok in H2; eauto.
       destruct H2 as [ruhst [nhst ?]]; dest; subst.
       assert (~ In (rqDown, rqdm) inits).
       { eapply DisjList_In_2; [eassumption|].
@@ -79,8 +78,8 @@ Section RqDownReduction.
         destruct H14 as [cidx [rqUp [? _]]]; subst.
         destruct H13; subst.
         + simpl in *; clear H10.
-          eapply rqUp_atomic_lastOIdxOf in H4; eauto; [|apply Hiorqs|right; eauto].
-          dest; eapply rqUp_atomic_bounded; eauto; [apply Hiorqs|].
+          eapply rqUp_atomic_lastOIdxOf in H4; eauto; [|right; eauto].
+          dest; eapply rqUp_atomic_bounded; eauto.
           right; auto.
         + destruct H13 as [nins [nouts ?]]; dest.
           rewrite oindsOf_app.
@@ -95,7 +94,7 @@ Section RqDownReduction.
             { intro Hx; apply H12 in Hx.
               eapply atomic_rqDown_inits_outs_disj
                 with (cidx0:= obj_idx cobj) (rqDown0:= (rqDown, rqdm))
-                     (hst:= nhst ++ ruhst); eauto; try apply Hiorqs.
+                     (hst:= nhst ++ ruhst); eauto.
               eapply steps_append; eauto.
             }
             { eapply lastOIdxOf_Some_oindsOf_In; eauto.
@@ -108,7 +107,6 @@ Section RqDownReduction.
           apply subtreeIndsOf_SubList in H14; [|apply Hrrs].
           eapply SubList_trans; [|eapply H14].
           eapply rqUp_atomic_inside_tree; eauto.
-          * apply Hiorqs.
           * discriminate.
           * right; auto.
     Qed.
@@ -140,7 +138,7 @@ Section RqDownReduction.
       destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
       inv H2; clear H12.
       pose proof H0.
-      eapply rqUp_start_ok in H2; eauto; [|apply Hiorqs].
+      eapply rqUp_start_ok in H2; eauto.
       destruct H2 as [ruhst [nhst ?]]; dest; subst.
       exists ruhst, nhst.
       assert (~ In (rqDown, rqdm) inits).
@@ -165,7 +163,7 @@ Section RqDownReduction.
           repeat ssplit; [reflexivity| |apply DisjList_nil_1].
           right; exists roidx, [rqUp], ruins, ruouts.
           repeat ssplit; try assumption.
-          * eapply rqUp_atomic_lastOIdxOf in H6; eauto; [|apply Hiorqs|right; eauto].
+          * eapply rqUp_atomic_lastOIdxOf in H6; eauto; [|right; eauto].
             dest; eapply outside_parent_out; try apply Hrrs; eauto.
           * left; reflexivity.
 
@@ -180,7 +178,7 @@ Section RqDownReduction.
             { intro Hx; apply H12 in Hx.
               eapply atomic_rqDown_inits_outs_disj
                 with (cidx0:= obj_idx cobj) (rqDown0:= (rqDown, rqdm))
-                     (hst:= nhst ++ ruhst); eauto; try apply Hiorqs.
+                     (hst:= nhst ++ ruhst); eauto.
               eapply steps_append; eauto.
             }
             { eapply lastOIdxOf_Some_oindsOf_In; eauto.
@@ -195,7 +193,7 @@ Section RqDownReduction.
           { right; eauto. }
     Qed.
 
-    Definition RqDownP (st: MState oifc) :=
+    Definition RqDownP (st: MState) :=
       Forall (InMPI st.(bst_msgs)) rqDowns.
 
     Lemma rqDown_lpush_rpush_messages_disj:
@@ -233,7 +231,7 @@ Section RqDownReduction.
         + eapply atomic_eouts_in; eauto.
       - eapply steps_split in H10; [|reflexivity].
         destruct H10 as [sti [? ?]].
-        eapply atomic_ext_outs_in_history in H3; eauto; try apply Hiorqs.
+        eapply atomic_ext_outs_in_history in H3; eauto.
         rewrite Forall_forall in H3; specialize (H3 _ H11).
         destruct H3 as [ofrom [? ?]].
         eapply atomic_inits_in_history with (s1:= sti) in H6; eauto.
@@ -450,7 +448,7 @@ Section RqDownReduction.
             clear Hr.
             destruct H1 as [rcidx [rqUp ?]]; dest; subst.
             eapply atomic_inside_tree_inits_disj_rqUps
-              with (rqFrom:= rcidx); eauto; try apply Hiorqs.
+              with (rqFrom:= rcidx); eauto.
             eapply outside_child_in; try apply Hrrs; eassumption.
           }
           { eapply steps_append; eauto. }

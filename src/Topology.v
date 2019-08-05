@@ -81,6 +81,51 @@ Section Collect.
     eauto.
   Qed.
 
+  Lemma collect_forall:
+    forall P al,
+      (forall a, In a al -> Forall P (f a)) ->
+      Forall P (collect al).
+  Proof.
+    induction al; intros; [constructor|].
+    simpl; apply Forall_app.
+    - apply H; left; reflexivity.
+    - apply IHal; intros.
+      apply H; right; assumption.
+  Qed.
+
+  Lemma collect_NoDup:
+    forall al,
+      (forall a, In a al -> NoDup (f a)) ->
+      (forall n1 n2 a1 a2,
+          n1 <> n2 ->
+          nth_error al n1 = Some a1 ->
+          nth_error al n2 = Some a2 ->
+          DisjList (f a1) (f a2)) ->
+      NoDup (collect al).
+  Proof.
+    induction al; simpl; intros; [constructor|].
+    apply NoDup_DisjList; auto.
+    - apply IHal; auto.
+      intros; apply H0 with (n1:= S n1) (n2:= S n2); auto.
+    - clear -H0.
+      assert (forall n na, nth_error al n = Some na ->
+                           DisjList (f a) (f na)).
+      { intros; apply H0 with (n1:= 0) (n2:= S n); auto. }
+      assert (forall n1 n2 a1 a2,
+                 n1 <> n2 ->
+                 nth_error al n1 = Some a1 ->
+                 nth_error al n2 = Some a2 -> DisjList (f a1) (f a2)).
+      { intros; apply H0 with (n1:= S n1) (n2:= S n2); auto. }
+      clear H0.
+      
+      induction al; simpl; intros; [apply DisjList_nil_2|].
+      apply DisjList_comm, DisjList_app_4; apply DisjList_comm.
+      + apply H with (n:= 0); reflexivity.
+      + apply IHal.
+        * intros; apply H with (n:= S n); assumption.
+        * intros; apply H1 with (n1:= S n1) (n2:= S n2); auto.
+  Qed.
+  
 End Collect.
 
 (** The Coq standard library already has an equivalent definition [Exists]
@@ -208,6 +253,9 @@ Section DTree.
 
   Definition subtreeIndsOf (dtr: DTree) (idx: IdxT): list IdxT :=
     (subtree idx dtr) >>=[nil] (fun tr => indsOf tr).
+
+  Definition subtreeChildrenIndsOf (dtr: DTree) (idx: IdxT): list IdxT :=
+    (subtree idx dtr) >>=[nil] (fun tr => childrenIndsOf tr).
 
   Definition hasIdx (idx: IdxT) (dtr: DTree): option DTree :=
     if idx_dec (rootOf dtr) idx
@@ -549,6 +597,42 @@ Section Facts.
     apply SubList_cons_right.
     eapply SubList_trans; [eauto|].
     apply collect_in; auto.
+  Qed.
+
+  Lemma subtree_indsOf:
+    forall idx dtr str,
+      subtree idx dtr = Some str ->
+      In idx (indsOf dtr).
+  Proof.
+    intros.
+    pose proof (subtree_Subtree _ _ H).
+    apply subtree_rootOf in H; subst.
+    apply Subtree_indsOf in H0.
+    apply H0.
+    apply indsOf_root_in.
+  Qed.
+
+  Lemma subtree_collect_NoDup_find_some:
+    forall trs,
+      NoDup (collect indsOf trs) ->
+      forall tr,
+        In tr trs ->
+        forall oidx otr,
+          subtree oidx tr = Some otr ->
+          find_some (subtree oidx) trs = Some otr.
+  Proof.
+    induction trs as [|str trs]; simpl; intros; [exfalso; auto|].
+    destruct H0; subst; [rewrite H1; reflexivity|].
+    destruct (subtree oidx str) eqn:Hstr.
+    - exfalso.
+      apply subtree_indsOf in H1.
+      apply subtree_indsOf in Hstr.
+      apply (DisjList_NoDup idx_dec) in H.
+      specialize (H oidx).
+      destruct H; auto.
+      elim H; eapply collect_in; eauto.
+    - eapply IHtrs; eauto.
+      eapply NoDup_app_weakening_2; eauto.
   Qed.
 
   Lemma indsOf_childrenOf_disj:
@@ -1036,6 +1120,39 @@ Section Facts.
       intros.
       unfold parentIdxOf.
       erewrite parentChnsOf_Subtree_eq; eauto.
+    Qed.
+
+    Lemma root_parentChnsOf_None:
+      forall oidx,
+        oidx = rootOf dtr ->
+        parentChnsOf oidx dtr = None.
+    Proof.
+      intros; subst.
+      destruct (parentChnsOf _ _) as [[dmc pidx]|] eqn:Hp; [|reflexivity].
+      exfalso.
+      apply parentChnsOf_case in Hp.
+      destruct Hp as [ctr [? ?]].
+      destruct H0; dest; subst.
+      - eapply parent_child_not_eq; eauto.
+      - apply parent_not_in_children in H; [|assumption].
+        apply parentChnsOf_child_indsOf in H0; auto.
+    Qed.
+
+    Lemma parentChnsOf_subtree:
+      forall oidx root pidx,
+        parentChnsOf oidx dtr = Some (root, pidx) ->
+        exists odtr,
+          subtree oidx dtr = Some odtr /\
+          dmcOf odtr = root.
+    Proof.
+      intros.
+      apply parentChnsOf_Subtree in H.
+      destruct H as [ctr [ptr ?]]; dest; subst.
+      exists ctr.
+      split; [|reflexivity].
+      eapply Subtree_child_Subtree in H3; [|eassumption].
+      rewrite <-rootOf_dmcOf.
+      apply Subtree_subtree; auto.
     Qed.
 
     Lemma parentIdxOf_not_eq:

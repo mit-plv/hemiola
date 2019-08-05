@@ -1,5 +1,5 @@
-Require Import Peano_dec Omega List ListSupport.
-Require Import Common FMap.
+Require Import Peano_dec Omega List.
+Require Import Common FMap IndexSupport.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -12,9 +12,9 @@ Open Scope list.
 Open Scope fmap.
 
 Section InsideTree.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
@@ -145,9 +145,9 @@ Section InsideTree.
 End InsideTree.
 
 Section RqRsRed.
-  Context {oifc: OStateIfc}.
+  Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System oifc).
+            (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys dtr sys).
