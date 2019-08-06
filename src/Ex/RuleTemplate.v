@@ -436,21 +436,37 @@ Section Facts.
       destruct H as [rq [? [? [? [rcidx [rqUp ?]]]]]]; dest.
       disc_rule_conds_ex.
       apply in_map_iff in H11; destruct H11 as [upCObj [? ?]]; subst.
-      solve_rule_conds_ex.
-      + destruct (fst (trs nost msg)); [auto|discriminate].
-      + unfold idsOf; repeat rewrite map_length; reflexivity.
-      + (* specialize (H0 _ _ H3); dest; simpl in *. *)
-        (* apply Forall_forall; intros [rqTo rsFrom] ?; simpl. *)
-        (* clear -Hdtr H1 H4. *)
-        (* induction (fst (trs nost rmsg)) as [|cidx cinds]; [dest_in|]. *)
-        (* inv H1; simpl in H4; destruct H4; dest. *)
-        (* { inv H; destruct Hdtr; specialize (H _ _ H2); dest. *)
-        (*   exists cidx; repeat split; assumption. *)
-        (* } *)
-        (* { eapply IHcinds; eauto. } *)
-        admit.
-      + admit.
-  Admitted.
+
+      (* NOTE: [eexists] in [solve_rule_conds_ex] does not work here,
+       * so we provide the existence manually. *)
+      do 5 eexists; repeat ssplit.
+      4, 5: reflexivity.
+      3: solve_rule_conds_ex.
+      2: {
+        exists rqi.
+        exists {| rqi_msg := Some msg;
+                  rqi_minds_rss := map rsUpFrom (fst (trs nost msg));
+                  rqi_midx_rsb := Some idx |}.
+        solve_rule_conds_ex.
+      }
+      1: {
+        solve_rule_conds_ex.
+        { destruct (fst (trs nost msg)); [auto|discriminate]. }
+        { unfold idsOf; repeat rewrite map_length; reflexivity. }
+        { apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
+          clear -Hdtr H3 H11 H12.
+          induction (fst (trs nost msg)) as [|cidx cinds]; [dest_in|].
+          inv H3; simpl in H11; destruct H11; dest.
+          { inv H; destruct Hdtr; specialize (H _ _ H1); dest.
+            exists cidx; repeat split; try assumption.
+            intro Hx; subst; elim H12; left; reflexivity.
+          }
+          { eapply IHcinds; eauto.
+            intro Hx; elim H12; right; assumption.
+          } 
+        }
+      }
+  Qed.
 
 End Facts.
 
