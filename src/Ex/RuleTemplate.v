@@ -78,11 +78,13 @@ Section Template.
                               [(rqUpFrom oidx, rqMsg out)] }}))).
 
   Definition RqUpDownSound (rcidx oidx: IdxT)
+             (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Msg -> list IdxT * Miv): Prop :=
     forall ost min,
-      fst (trs ost min) <> nil /\
-      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost min)) /\
-      ~ In rcidx (fst (trs ost min)).
+      prec ost [min] ->
+      fst (trs ost (valOf min)) <> nil /\
+      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost (valOf min))) /\
+       ~ In rcidx (fst (trs ost (valOf min))).
 
   Definition rqUpDownRule (cidx oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
@@ -102,10 +104,12 @@ Section Template.
                               (fst nst) }}))).
 
   Definition RqDownDownSound (oidx: IdxT)
+             (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Msg -> list IdxT * Miv): Prop :=
     forall ost min,
-      fst (trs ost min) <> nil /\
-      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost min)).
+      prec ost [min] ->
+      fst (trs ost (valOf min)) <> nil /\
+      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost (valOf min))).
 
   Definition rqDownDownRule (oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
@@ -200,6 +204,23 @@ Section Template.
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg (snd nst))] }}))).
+
+  Definition RsDownRqDownSound (sys: System) (oidx: IdxT)
+             (prec: OPrec) (trs: OState -> Msg -> list IdxT * Miv): Prop :=
+    forall ost orq rsin,
+      prec ost orq [rsin] ->
+      orq@[upRq] >>=[True]
+         (fun rqiu =>
+            exists rq,
+              rqiu.(rqi_msg) = Some rq /\
+              fst (trs ost rq) <> nil /\
+              Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost rq)) /\
+              exists rcidx rqUp,
+                parentIdxOf dtr rcidx = Some oidx /\
+                rqEdgeUpFrom dtr rcidx = Some rqUp /\
+                (orq@[upRq] >>=[True] (fun rqiu => edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb))) /\
+                In rcidx (map (@obj_idx _) (sys_objs sys)) /\
+                ~ In rcidx (fst (trs ost rq))).
 
   Definition rsDownRqDownRule (oidx: IdxT) (rqId: IdxT)
              (prec: OPrec)
@@ -298,7 +319,7 @@ Section Facts.
            (trs: OState -> Msg -> list IdxT * Miv),
       In cidx (map (@obj_idx _) (sys_objs sys)) ->
       parentIdxOf dtr cidx = Some oidx ->
-      RqUpDownSound dtr cidx oidx trs ->
+      RqUpDownSound dtr cidx oidx prec trs ->
       RqFwdRule dtr sys oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
   Proof.
     unfold rqUpDownRule; intros; split.
@@ -317,10 +338,11 @@ Section Facts.
       + solve_rule_conds_ex.
         * apply Hdtr in H0; dest; assumption.
         * apply Hdtr in H0; dest; assumption.
-        * specialize (H1 nost rmsg); dest.
-          destruct (fst (trs nost rmsg)); [auto|discriminate].
+        * specialize (H1 _ _ H4); dest.
+          eapply H1; eauto.
+          simpl; destruct (fst (trs nost rmsg)); [auto|discriminate].
         * unfold idsOf; repeat rewrite map_length; reflexivity.
-        * specialize (H1 nost rmsg); dest.
+        * specialize (H1 _ _ H4); dest; simpl in *.
           apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
           clear -Hdtr H1 H5 H6.
           induction (fst (trs nost rmsg)) as [|cidx cinds]; [exfalso; auto|].
@@ -336,7 +358,7 @@ Section Facts.
   Lemma rqDownDownRule_RqFwdRule:
     forall sys oidx pidx ridx msgId prec trs,
       parentIdxOf dtr oidx = Some pidx ->
-      RqDownDownSound dtr oidx trs ->
+      RqDownDownSound dtr oidx prec trs ->
       RqFwdRule dtr sys oidx (rqDownDownRule ridx msgId oidx prec trs).
   Proof.
     unfold rqDownDownRule; intros; split.
@@ -353,10 +375,10 @@ Section Facts.
       + solve_rule_conds_ex.
         * apply Hdtr in H; dest; assumption.
         * apply Hdtr in H; dest; assumption.
-        * specialize (H0 nost rmsg); dest.
+        * specialize (H0 _ _ H3); dest; simpl in *.
           destruct (fst (trs nost rmsg)); [auto|discriminate].
         * unfold idsOf; repeat rewrite map_length; reflexivity.
-        * specialize (H0 nost rmsg); dest.
+        * specialize (H0 _ _ H3); dest; simpl in *.
           apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
           clear -Hdtr H1 H4.
           induction (fst (trs nost rmsg)) as [|cidx cinds]; [dest_in|].
@@ -396,6 +418,7 @@ Section Facts.
 
   Lemma rsDownRqDownRule_RsDownRqDownRule:
     forall sys oidx ridx msgId rqId prec trs,
+      RsDownRqDownSound dtr sys oidx prec trs ->
       RsDownRqDownRule dtr sys oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
   Proof.
     unfold rsDownRqDownRule; intros; red; repeat ssplit.
@@ -403,10 +426,35 @@ Section Facts.
     - solve_rule_conds_ex.
     - solve_rule_conds_ex.
       apply Forall_forall; intros rq ?.
-      apply in_map_iff in H1.
-      destruct H1 as [midx ?]; dest; subst; reflexivity.
+      apply in_map_iff in H2.
+      destruct H2 as [midx ?]; dest; subst; reflexivity.
     - solve_rule_conds_ex.
-    - solve_rule_conds_ex.
+    - red; intros; simpl in *.
+      disc_rule_conds_ex.
+      specialize (H _ _ _ H7).
+      rewrite Hrqi in H; simpl in H.
+      destruct H as [rq [? [? [? [rcidx [rqUp ?]]]]]]; dest.
+      disc_rule_conds_ex.
+      apply in_map_iff in H11; destruct H11 as [upCObj [? ?]]; subst.
+      solve_rule_conds_ex.
+      + destruct (fst (trs nost msg)); [auto|discriminate].
+      + unfold idsOf; repeat rewrite map_length; reflexivity.
+      + (* specialize (H0 _ _ H3); dest; simpl in *. *)
+        (* apply Forall_forall; intros [rqTo rsFrom] ?; simpl. *)
+        (* clear -Hdtr H1 H4. *)
+        (* induction (fst (trs nost rmsg)) as [|cidx cinds]; [dest_in|]. *)
+        (* inv H1; simpl in H4; destruct H4; dest. *)
+        (* { inv H; destruct Hdtr; specialize (H _ _ H2); dest. *)
+        (*   exists cidx; repeat split; assumption. *)
+        (* } *)
+        (* { eapply IHcinds; eauto. } *)
+        admit.
+      + 
+        
+      + admit.
+      + admit.
+      + admit.
+      + 
       all: admit. (** TODO: existence of [upCObj] & valid children *)
   Admitted.
 
