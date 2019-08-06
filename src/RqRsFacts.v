@@ -954,11 +954,11 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
     destruct H as [rqFrom [rqfm [rqTos [rssFrom [rsbTo ?]]]]]; dest
   | [H: RsDownRqDownOk _ _ _ _ _ _ _ _ _ |- _] =>
     let rsFrom := fresh "rsFrom" in
-    let rsm := fresh "rsm" in
     let rqTos := fresh "rqTos" in
     let rqOrig := fresh "rqOrig" in
     let rsbTo := fresh "rsbTo" in
-    destruct H as [rsFrom [rsm [rqTos [rqOrig [rsbTo ?]]]]]; dest
+    let rssFrom := fresh "rssFrom" in
+    destruct H as [rsFrom [rqTos [rqOrig [rsbTo [rssFrom ?]]]]]; dest
   end.
 
 Ltac disc_rule_conds_unit_rule_preds_inst :=

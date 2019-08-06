@@ -254,8 +254,9 @@ Section IncomingMessageInv.
         eapply RqRsDownMatch_rs_rq in H5; [|eassumption].
         dest; eauto.
 
-    - right; right; right.
+    - good_footprint_get (obj_idx obj).
       disc_rule_conds.
+      right; right; right.
       constr_rule_conds.
   Qed.
 

@@ -89,7 +89,8 @@ Section InsideTree.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.
         * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
 
-    - disc_rule_conds.
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
       destruct H2; disc_rule_conds.
   Qed.
 

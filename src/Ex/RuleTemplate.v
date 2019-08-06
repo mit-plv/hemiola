@@ -449,13 +449,7 @@ Section Facts.
         (* } *)
         (* { eapply IHcinds; eauto. } *)
         admit.
-      + 
-        
       + admit.
-      + admit.
-      + admit.
-      + 
-      all: admit. (** TODO: existence of [upCObj] & valid children *)
   Admitted.
 
 End Facts.

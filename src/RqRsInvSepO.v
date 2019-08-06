@@ -609,7 +609,8 @@ Section Separation.
         eapply RqRsDownMatch_rs_rq in H8; [|eassumption].
         destruct H8 as [cidx [down ?]]; dest.
         right; left; eauto.
-    - disc_rule_conds.
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
       constructor; [|constructor].
       right; right; eauto.
   Qed.
@@ -950,12 +951,13 @@ Section Separation.
         intro Hx; subst.
         disc_rule_conds; auto.
 
-    - disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H35).
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
+      pose proof (edgeDownTo_Some H _ H18).
       destruct H.
-      destruct H7 as [rqUp [rsUp [rpidx ?]]]; dest.
+      destruct H28 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_RqRsMsgFrom.
-      eapply inside_child_in in H26; try eassumption.
+      eapply inside_child_in in H31; try eassumption.
   Qed.
 
   Lemma step_separation_outside_ok:
@@ -1051,13 +1053,14 @@ Section Separation.
         destruct H.
         eapply outside_parent_out in H28; try eassumption.
 
-    - disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H34).
-      destruct H.
-      destruct H6 as [rqUp [rsUp [rpidx ?]]]; dest.
+    - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      eapply outside_child_in in H25; try eassumption.
-      clear -H2 H25; firstorder.
+      pose proof (edgeDownTo_Some H _ H17).
+      destruct H.
+      destruct H27 as [rqUp [rsUp [rpidx ?]]]; dest.
+      disc_rule_conds.
+      eapply outside_child_in in H30; try eassumption.
+      clear -H2 H30; firstorder.
   Qed.
   
   Lemma atomic_separation_ok:

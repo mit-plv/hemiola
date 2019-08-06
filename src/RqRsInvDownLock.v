@@ -951,10 +951,11 @@ Section DownLockInv.
             { solve_q. }
 
       - (** case [RsDownRqDownRule] *)
+        good_footprint_get (obj_idx obj).
         disc_rule_conds.
         split.
         + apply Forall_forall; intros rrsFrom ?.
-          eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+          eapply RqRsDownMatch_rs_rq in H17; [|eassumption].
           dest; eauto.
         + destruct HmoutsV.
           eapply downLockedInv_requested; eauto.
@@ -1231,10 +1232,11 @@ Section DownLockInv.
             red in H12; mred.
 
       - (** case [RsDownRqDownRule] *)
+        good_footprint_get (obj_idx obj).
         disc_rule_conds.
         pose proof H2.
-        eapply parentIdxOf_Some in H5; [|eassumption].
-        destruct H5 as [rqUp [rsUp [down ?]]]; dest.
+        eapply parentIdxOf_Some in H1; [|eassumption].
+        destruct H1 as [rqUp [rsUp [down ?]]]; dest.
         repeat disc_rule_minds.
         assert (Some oidx <> Some (obj_idx obj)).
         { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
@@ -1248,7 +1250,7 @@ Section DownLockInv.
             }
             { solve_q. }
           * mred.
-          * intro Hx; rewrite H27 in Hx; inv Hx; solve_midx_false.
+          * intro Hx; rewrite H28 in Hx; inv Hx; solve_midx_false.
         + eapply downLockFreeInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
           * eapply downLockFreeInv_msgs_preserved; [eassumption|].
             intros; split.
@@ -1257,7 +1259,7 @@ Section DownLockInv.
             }
             { solve_q. }
           * mred.
-          * intro Hx; rewrite H27 in Hx; inv Hx; solve_midx_false.
+          * intro Hx; rewrite H28 in Hx; inv Hx; solve_midx_false.
     Qed.
 
     Lemma downLockInvORq_step_int_other:
@@ -1427,6 +1429,7 @@ Section DownLockInv.
             }
 
       - (** case [RsDownRqDownRule] *)
+        good_footprint_get (obj_idx obj).
         disc_rule_conds.
         destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
         + dest; split; [assumption|].

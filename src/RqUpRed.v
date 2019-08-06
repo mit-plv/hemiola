@@ -539,7 +539,9 @@ Section RqUpReduction.
 
       + (** case [RsDownRqDownRule] *)
         phide H3; phide H8.
-        exfalso; disc_rule_conds.
+        good_footprint_get (obj_idx obj).
+        disc_rule_conds.
+        exfalso.
         good_locking_get obj.
         disc_lock_conds; dest.
         eapply upLockedInv_False_1; eauto.
@@ -880,6 +882,7 @@ Section RqUpReduction.
   Proof.
     intros; destruct Hrrs as [? [? ?]].
 
+    pose proof (footprints_ok Hiorqs H10 H) as HftInv.
     inv_step; simpl in *.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -925,7 +928,7 @@ Section RqUpReduction.
       + (** case [RqDownDown] *)
         solve_midx_disj.
 
-    - pose proof (footprints_ok Hiorqs H10 H) as HftInv.
+    - (** case [RsBackRule] *)
       good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + solve_midx_disj.
@@ -933,7 +936,8 @@ Section RqUpReduction.
       + rewrite H36; solve_midx_disj.
       + rewrite H36; solve_midx_disj.
 
-    - disc_rule_conds.
+    - good_footprint_get (obj_idx obj).
+      disc_rule_conds.
       solve_midx_disj.
   Qed.
 

@@ -1232,17 +1232,18 @@ Section UpLockInv.
             }
 
       - (** case [RsDownRqDownRule] *)
+        good_footprint_get (obj_idx obj).
         disc_rule_conds.
         apply upLockFreeInv_orqs_preserved_self_update.
-        xor3_inv2 H19; [dest|eapply rssQ_length_one; eauto].
+        xor3_inv2 H22; [dest|eapply rssQ_length_one; eauto].
         red; right.
-        exists rqUp, rsFrom, pidx; repeat split; try assumption.
+        exists rqTo, rsFrom0, pidx; repeat split; try assumption.
         + solve_q.
           apply length_zero_iff_nil; omega.
         + solve_q.
-          apply findQ_In_deqMP_FirstMP in H7; simpl in H7.
-          unfold rssQ in H15; rewrite <-H7 in H15.
-          simpl in H15; rewrite H5 in H15; simpl in H15.
+          apply findQ_In_deqMP_FirstMP in H9; simpl in H9.
+          unfold rssQ in H17; rewrite <-H9 in H17.
+          simpl in H17; rewrite H7 in H17; simpl in H17.
           apply length_zero_iff_nil; omega.
         + apply not_ONoLockTo_OLockedTo; auto.
     Qed.
@@ -2031,6 +2032,8 @@ Section UpLockInv.
             }
 
       - (** case [RsDownRqDownRule] *)
+        good_footprint_get (obj_idx obj).
+        disc_rule_conds.
         match goal with
         | [ |- match ?ul with | Some _ => _ | None => _ end] =>
           destruct ul
@@ -2457,6 +2460,7 @@ Section UpLockInv.
             }
 
       - (** case [RsDownRqDownRule] *)
+        good_footprint_get (obj_idx obj).
         disc_rule_conds.
         match goal with
         | [ |- match ?ul with | Some _ => _ | None => _ end] =>

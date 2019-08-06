@@ -379,12 +379,11 @@ Section RqRsTopo.
 
       Definition RsDownRqDownOk (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
                  (nost: OState) (norq: ORq Msg) (routs: list (Id Msg)) :=
-        exists rsFrom rsm rqTos rqOrig rsbTo rssFrom,
+        exists rsFrom rqTos rqOrig rsbTo rssFrom,
           FootprintUpDownOk oidx rqOrig rqTos rssFrom rsbTo /\
           FootprintingUpToDown porq norq rssFrom /\
           FootprintedUp porq [rsFrom] (Some rsbTo) /\
-          edgeDownTo oidx = Some rsFrom /\
-          rins = [(rsFrom, rsm)] /\
+          idsOf rins = [rsFrom] /\
           idsOf routs = rqTos.
       
       Definition RsDownRqDownRule (rule: Rule) :=

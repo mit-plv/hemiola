@@ -123,9 +123,9 @@ Section RsUpReduction.
           }
         }
           
-    - exfalso; disc_rule_conds.
-      destruct H26 as [cidx ?]; dest.
-      elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H7 H34); reflexivity.
+    - good_footprint_get (obj_idx obj).
+      exfalso; disc_rule_conds.
+      solve_midx_false.
   Qed.
 
   Lemma rsUp_not_down_requested:
@@ -307,9 +307,10 @@ Section RsUpReduction.
             { rewrite H55; eapply RqRsDownMatch_rss_disj; eauto. }
             { solve_midx_disj. }
           }
-        * assert (Some (obj_idx obj1) <> Some (obj_idx obj0))
-            by (intro Hx; inv Hx; auto).
+        * good_footprint_get (obj_idx obj0).
           disc_rule_conds.
+          assert (Some (obj_idx obj1) <> Some (obj_idx obj0))
+            by (intro Hx; inv Hx; auto).
           split; [|split]; [|assumption|]; solve_midx_disj.
 
       + rewrite <-H45 in H17.
@@ -336,7 +337,8 @@ Section RsUpReduction.
             { rewrite H53; eapply RqRsDownMatch_rss_disj; eauto. }
             { solve_midx_disj. }
           }
-        * disc_rule_conds.
+        * good_footprint_get (obj_idx obj0).
+          disc_rule_conds.
           split; [|split]; [|assumption|]; solve_midx_disj.
   Qed.
 
