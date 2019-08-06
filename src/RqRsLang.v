@@ -278,6 +278,8 @@ Ltac disc_rule_conds_const_unit :=
     let rmsg := fresh "rmsg" in
     destruct rins as [|[rin rmsg] [|]]; try discriminate;
     simpl in H; inv H
+
+  | [H: [_]%list = [_]%list |- _] => inv H
   | [H: map msg_id (valsOf [_]%list) = [_]%list |- _] => simpl in H; inv H
   | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
   | [H: context [hd_error [_]%list] |- _] => progress simpl in H

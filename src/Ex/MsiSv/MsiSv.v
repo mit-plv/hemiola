@@ -121,6 +121,7 @@ Section System.
           /\ MsgIdsFrom [msiRsS]
           /\ RsAccepting
           /\ UpLockMsgId MRq Spec.getRq
+          /\ UpLockIdxBack
           /\ DownLockFree)
       :transition
          (do (st --> (msg <-- getFirstMsg st.(msgs);
@@ -191,6 +192,7 @@ Section System.
           /\ MsgIdsFrom [msiRsM]
           /\ RsAccepting
           /\ UpLockMsgId MRq Spec.setRq
+          /\ UpLockIdxBack
           /\ DownLockFree)
       :transition
          (do (st --> (msg <-- getUpLockMsg st.(orq);
@@ -241,6 +243,7 @@ Section System.
           /\ MsgIdsFrom [msiRsI]
           /\ RsAccepting
           /\ UpLockMsgId MRq Spec.evictRq
+          /\ UpLockIdxBack
           /\ DownLockFree)
       :transition
          (do (st --> (ursb <-- getUpLockIdxBack st.(orq);
@@ -355,7 +358,8 @@ Section System.
              (MsgsFromRsUp topo [childIdx']
               /\ MsgIdsFrom [msiDownRsS]
               /\ RsAccepting
-              /\ DownLockMsgId MRq msiDownRqS)
+              /\ DownLockMsgId MRq msiDownRqS
+              /\ DownLockIdxBack)
           :transition
              (do (st --> (msg <-- getFirstMsg st.(msgs);
                             ursb <-- getDownLockIdxBack st.(orq);
@@ -373,7 +377,8 @@ Section System.
              (MsgsFromRsUp topo [childIdx']
               /\ MsgIdsFrom [msiDownRsI]
               /\ RsAccepting
-              /\ DownLockMsgId MRq msiDownRqI)
+              /\ DownLockMsgId MRq msiDownRqI
+              /\ DownLockIdxBack)
           :transition
              (do (st --> (ursb <-- getDownLockIdxBack st.(orq);
                           return {{ st.(ost) +#[implStatusIdx <- msiI]

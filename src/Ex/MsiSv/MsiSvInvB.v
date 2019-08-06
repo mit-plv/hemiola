@@ -93,27 +93,37 @@ Section Inv.
               (porq: ORq Msg).
 
     Definition ParentDownRsS1 (rqid: RqInfo Msg): Prop :=
-      rqid.(rqi_msg).(msg_id) = msiDownRqS ->
-      msiM <= post#[implDirIdx].(snd).
+      (rqi_msg rqid)
+        >>=[True]
+        (fun rq => rq.(msg_id) = msiDownRqS ->
+                   msiM <= post#[implDirIdx].(snd)).
       
     Definition ParentDownRsS2 (rqid: RqInfo Msg): Prop :=
-      rqid.(rqi_msg).(msg_id) = msiDownRqS ->
-      msiM <= post#[implDirIdx].(fst).
+      (rqi_msg rqid)
+        >>=[True]
+        (fun rq => rq.(msg_id) = msiDownRqS ->
+                   msiM <= post#[implDirIdx].(fst)).
 
     Definition ParentDownRsI1 (rqid: RqInfo Msg): Prop :=
-      rqid.(rqi_msg).(msg_id) = msiDownRqI ->
-      msiS <= post#[implDirIdx].(snd).
+      (rqi_msg rqid)
+        >>=[True]
+        (fun rq => rq.(msg_id) = msiDownRqI ->
+                   msiS <= post#[implDirIdx].(snd)).
 
     Definition ParentDownRsI2 (rqid: RqInfo Msg): Prop :=
-      rqid.(rqi_msg).(msg_id) = msiDownRqI ->
-      msiS <= post#[implDirIdx].(fst).
+      (rqi_msg rqid)
+        >>=[True]
+        (fun rq => rq.(msg_id) = msiDownRqI ->
+                   msiS <= post#[implDirIdx].(fst)).
 
     Definition ParentDownLockBack: Prop :=
       rqid <+- porq@[downRq];
         (rqid.(rqi_minds_rss) = [c1pRs] ->
-         rqid.(rqi_midx_rsb) = pc2 /\ ParentDownRsS2 rqid /\ ParentDownRsS2 rqid) /\
+         rqid.(rqi_midx_rsb) = Some pc2 /\
+         ParentDownRsS2 rqid /\ ParentDownRsS2 rqid) /\
         (rqid.(rqi_minds_rss) = [c2pRs] ->
-         rqid.(rqi_midx_rsb) = pc1 /\ ParentDownRsS1 rqid /\ ParentDownRsI1 rqid).
+         rqid.(rqi_midx_rsb) = Some pc1 /\
+         ParentDownRsS1 rqid /\ ParentDownRsI1 rqid).
 
     Definition DownLockInv: Prop :=
       ParentDownLockBack.
@@ -158,7 +168,7 @@ Section Inv.
     inv H1; try assumption.
     dest_in.
 
-    (* It roughly takes 3 minutes to solve all 40 cases. *)
+    (* It roughly takes 5 minutes to solve all 40 cases. *)
     all: solve_rule_conds_ex; solve_msi; fail.
   Qed.
 

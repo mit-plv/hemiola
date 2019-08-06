@@ -70,8 +70,6 @@ Proof.
                 | [H: _ \/ _ |- _] => destruct H
                 end;
             simpl in *; subst; try discriminate; auto); fail).
-  - red; intros. solve_rule_conds_const.
-    
 Qed.
 
 Lemma msiSv_impl_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
@@ -225,30 +223,30 @@ Proof.
   (** For "child1" *)
   
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= ext1Idx).
     all:reflexivity.
 
   - rule_rquu; solve_rule_conds_const.
     + intros; destruct (hd_error mins); simpl; auto.
-    + instantiate (1:= ext1Idx).
-      reflexivity.
-    + reflexivity.
-    + reflexivity.
+    + right; solve_rule_conds_const.
+      instantiate (1:= ext1Idx).
+      all:reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
 
   - rule_immu; solve_rule_conds_const.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= ext1Idx).
     all:reflexivity.
 
   - rule_rquu; solve_rule_conds_const.
     + intros; destruct (hd_error mins); simpl; auto.
-    + instantiate (1:= ext1Idx).
-      reflexivity.
-    + reflexivity.
-    + reflexivity.
+    + right; solve_rule_conds_const.
+      instantiate (1:= ext1Idx).
+      all:reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
 
@@ -256,40 +254,39 @@ Proof.
 
   - rule_rquu; solve_rule_conds_const.
     + intros; destruct (hd_error mins); simpl; auto.
-    + instantiate (1:= ext1Idx).
-      reflexivity.
-    + reflexivity.
-    + reflexivity.
+    + right; solve_rule_conds_const.
+      instantiate (1:= ext1Idx).
+      all:reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
 
   (** For "child2" *)
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= ext2Idx).
     all:reflexivity.
 
   - rule_rquu; solve_rule_conds_const.
     + intros; destruct (hd_error mins); simpl; auto.
-    + instantiate (1:= ext2Idx).
-      reflexivity.
-    + reflexivity.
-    + reflexivity.
+    + right; solve_rule_conds_const.
+      instantiate (1:= ext2Idx).
+      all:reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
 
   - rule_immu; solve_rule_conds_const.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= ext2Idx).
     all:reflexivity.
 
   - rule_rquu; solve_rule_conds_const.
     + intros; destruct (hd_error mins); simpl; auto.
-    + instantiate (1:= ext2Idx).
-      reflexivity.
-    + reflexivity.
-    + reflexivity.
+    + right; solve_rule_conds_const.
+      instantiate (1:= ext2Idx).
+      all:reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
 
@@ -297,16 +294,16 @@ Proof.
 
   - rule_rquu; solve_rule_conds_const.
     + intros; destruct (hd_error mins); simpl; auto.
-    + instantiate (1:= ext2Idx).
-      reflexivity.
-    + reflexivity.
-    + reflexivity.
+    + right; solve_rule_conds_const.
+      instantiate (1:= ext2Idx).
+      all:reflexivity.
 
   - rule_rsdd; solve_rule_conds_const.
 
   (** For the parent *)
     
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
 
@@ -322,6 +319,7 @@ Proof.
     + reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
 
@@ -341,22 +339,27 @@ Proof.
   - rule_rsu; solve_rule_conds_const.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child1Idx).
     all:reflexivity.
     
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
 
@@ -372,6 +375,7 @@ Proof.
     + reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
 
@@ -391,18 +395,22 @@ Proof.
   - rule_rsu; solve_rule_conds_const.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
 
   - rule_immd; solve_rule_conds_const.
+    right; solve_rule_conds_const.
     instantiate (1:= child2Idx).
     all:reflexivity.
 

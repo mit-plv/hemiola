@@ -373,7 +373,6 @@ Section Facts.
   Proof.
     unfold rsDownDownRule; intros; split.
     - left; repeat red; repeat ssplit; solve_rule_conds_ex.
-      unfold rqi_midx_rsb in Hidx; rewrite Hidx; reflexivity.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
   Qed.
 

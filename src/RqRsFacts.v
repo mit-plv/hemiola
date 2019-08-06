@@ -1081,7 +1081,7 @@ Ltac disc_rule_conds :=
      try reflexivity; try eassumption).
 
 Ltac constr_rule_conds_step :=
-  repeat red;
+  repeat hnf;
   repeat
     match goal with
     | [ |- rule_precond _ _ _ _] => progress simpl

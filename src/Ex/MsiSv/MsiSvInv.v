@@ -20,7 +20,7 @@ Open Scope fmap.
  *)
 Ltac get_lock_minds oidx :=
   progress (good_footprint_get oidx);
-  repeat disc_footprints_ok;
+  repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok);
   disc_minds_const.
  
 Ltac get_lock_inv obj sys :=
@@ -1488,7 +1488,7 @@ Section Inv.
               try exact Hr1; try reflexivity; try eassumption.
             { simpl; tauto. }
             { apply FirstMP_InMP; assumption. }
-            { rewrite H14; discriminate. }
+            { rewrite H15; discriminate. }
           * apply invalidMsgs_other_midx_enqMP; [|solve_not_in].
             apply invalidMsgs_deqMP; assumption.
           * apply msgExistsSig_enqMP_or in H36; destruct H36; [discriminate|].
@@ -1539,7 +1539,7 @@ Section Inv.
         
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H20;
+          eapply atomic_rsDown_singleton with (oidx:= child1Idx) in H21;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1558,7 +1558,7 @@ Section Inv.
               try exact Hr1; try reflexivity; try eassumption.
             { simpl; tauto. }
             { apply FirstMP_InMP; assumption. }
-            { rewrite H14; discriminate. }
+            { rewrite H15; discriminate. }
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1657,7 +1657,7 @@ Section Inv.
               try exact Hr1; try reflexivity; try eassumption.
             { simpl; tauto. }
             { apply FirstMP_InMP; assumption. }
-            { rewrite H14; discriminate. }
+            { rewrite H15; discriminate. }
           * apply childInvalid_enqMP.
             apply childInvalid_other_midx_deqMP; [|discriminate].
             assumption.
@@ -1704,7 +1704,7 @@ Section Inv.
         
         split.
         + pose proof H3.
-          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H20;
+          eapply atomic_rsDown_singleton with (oidx:= child2Idx) in H21;
             try exact H; eauto; [|red; auto].
           subst; rewrite removeOnce_nil; simpl.
           repeat constructor.
@@ -1728,7 +1728,7 @@ Section Inv.
               try exact Hr1; try reflexivity; try eassumption.
             { simpl; tauto. }
             { apply FirstMP_InMP; assumption. }
-            { rewrite H14; discriminate. }
+            { rewrite H15; discriminate. }
             
       (*! Cases for [parent] with [child1] *)
       
@@ -1918,7 +1918,7 @@ Section Inv.
           get_child_uplock_from_parent.
           eauto.
         }
-        destruct H32 as [corq1 [? ?]].
+        destruct H21 as [corq1 [? ?]].
 
         split.
         + good_footprint_get parentIdx.
@@ -1947,7 +1947,7 @@ Section Inv.
           * exfalso.
             clear Hpulinv Hpdlinv Hndlinv.
             get_lock_inv (child child1Idx ec1 ce1 c1pRq c1pRs pc1) impl.
-            destruct H45 as [[midx msg] ?]; dest; inv H46.
+            destruct H45 as [[midx rq] ?]; dest; inv H46.
             exfalso_uplock_rq_rs parentIdx c1pRq pc1.
           * left; assumption.
           * clear Hnulinv Hndlinv.
@@ -2296,7 +2296,7 @@ Section Inv.
           get_child_uplock_from_parent.
           eauto.
         }
-        destruct H32 as [corq2 [? ?]].
+        destruct H20 as [corq2 [? ?]].
 
         split.
         + good_footprint_get parentIdx.
@@ -2325,7 +2325,7 @@ Section Inv.
           * exfalso.
             clear Hpulinv Hpdlinv Hndlinv.
             get_lock_inv (child child2Idx ec2 ce2 c2pRq c2pRs pc2) impl.
-            destruct H45 as [[midx msg] ?]; dest; inv H46.
+            destruct H45 as [[midx rq] ?]; dest; inv H46.
             exfalso_uplock_rq_rs parentIdx c2pRq pc2.
           * left; assumption.
           * clear Hnulinv Hndlinv.
