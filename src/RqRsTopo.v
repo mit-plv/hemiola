@@ -181,13 +181,13 @@ Section RqRsTopo.
   Definition FootprintUpOk (oidx: IdxT)
              (rrFrom: option (IdxT * IdxT))
              (rqTo rsFrom: IdxT) :=
-    exists cidx,
-      parentIdxOf dtr cidx = Some oidx /\
       (rrFrom >>=[True]
               (fun rrFrom =>
-                 let (rqFrom, rsbTo) := rrFrom in
-                 rqEdgeUpFrom cidx = Some rqFrom /\
-                 edgeDownTo cidx = Some rsbTo)) /\
+                 exists cidx,
+                   parentIdxOf dtr cidx = Some oidx /\
+                   let (rqFrom, rsbTo) := rrFrom in
+                   rqEdgeUpFrom cidx = Some rqFrom /\
+                   edgeDownTo cidx = Some rsbTo)) /\
       rqEdgeUpFrom oidx = Some rqTo /\
       edgeDownTo oidx = Some rsFrom.
 

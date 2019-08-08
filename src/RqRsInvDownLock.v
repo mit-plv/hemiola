@@ -825,9 +825,11 @@ Section DownLockInv.
         let rsFrom := fresh "rsFrom" in
         let rsbTo := fresh "rsbTo" in
         destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest
-      | [H: FootprintUpOk _ _ _ _ _ |- _] =>
+      | [H: FootprintUpOk _ _ (Some _) _ _ |- _] =>
+        red in H; simpl in H;
         let cidx := fresh "cidx" in
-        destruct H as [cidx ?]; dest; simpl in *; dest
+        destruct H as [[cidx ?] ?]; dest
+      | [H: FootprintUpOk _ _ None _ _ |- _] => red in H; simpl in H; dest
 
       | [H: FootprintDownOkEx _ _ _ _ |- _] =>
         let rqFrom := fresh "rqFrom" in
@@ -850,6 +852,8 @@ Section DownLockInv.
         let rqFrom := fresh "rqFrom" in
         let rsbTo := fresh "rsbTo" in
         destruct rrFrom as [[rqFrom rsbTo]|]; [|discriminate]; simpl in *; dest
+      | [H: None = (?rrFrom) >>= _ |- _] =>
+        destruct rrFrom; [discriminate|]; simpl in *
       end.
 
     Lemma downLockInvORq_step_int_me:
@@ -955,7 +959,7 @@ Section DownLockInv.
         disc_rule_conds.
         split.
         + apply Forall_forall; intros rrsFrom ?.
-          eapply RqRsDownMatch_rs_rq in H17; [|eassumption].
+          eapply RqRsDownMatch_rs_rq in H14; [|eassumption].
           dest; eauto.
         + destruct HmoutsV.
           eapply downLockedInv_requested; eauto.
@@ -1235,8 +1239,8 @@ Section DownLockInv.
         good_footprint_get (obj_idx obj).
         disc_rule_conds.
         pose proof H2.
-        eapply parentIdxOf_Some in H1; [|eassumption].
-        destruct H1 as [rqUp [rsUp [down ?]]]; dest.
+        eapply parentIdxOf_Some in H12; [|eassumption].
+        destruct H12 as [rqUp [rsUp [down ?]]]; dest.
         repeat disc_rule_minds.
         assert (Some oidx <> Some (obj_idx obj)).
         { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }

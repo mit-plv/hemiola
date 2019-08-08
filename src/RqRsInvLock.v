@@ -359,7 +359,7 @@ Section RqRsDown.
           }
 
     - disc_rule_conds.
-      + apply InMP_enqMP_or in H29; destruct H29;
+      + apply InMP_enqMP_or in H27; destruct H27;
           [exfalso; dest; subst; disc_rule_conds; auto|].
         specialize (H3 H14).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
@@ -369,7 +369,7 @@ Section RqRsDown.
           { dest; right; split.
             { red in H3; red; repeat (simpl; mred).
               destruct (porq@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H29 H30).
+              intros; specialize (H3 _ _ H26 H27 H29).
               solve_q; assumption.
             }
             { apply FirstMP_enqMP; assumption. }
@@ -380,7 +380,7 @@ Section RqRsDown.
             { red in H3; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H29 H30).
+              intros; specialize (H3 _ _ H26 H27 H29).
               solve_q; assumption.
             }
             { apply FirstMP_enqMP; assumption. }
@@ -630,10 +630,8 @@ Section RqRsDown.
             { red in H3; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H32 H33 H34).
+              intros; specialize (H3 _ _ H25 H31 H32).
               disc_rule_conds.
-              assert (cidx <> obj_idx cobj)
-                by (intro Hx; subst; disc_rule_conds; auto).
               solve_q; assumption.
             }
             { apply FirstMP_deqMP; [|assumption].

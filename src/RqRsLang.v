@@ -71,12 +71,16 @@ Definition UpLockIdxBack `{OStateIfc}: OPrec :=
 Definition getUpLockIdxBack (orq: ORq Msg): option IdxT :=
   rqiu <-- orq@[upRq]; rqi_midx_rsb rqiu.
 
+Definition UpLockBackNone `{OStateIfc}: OPrec :=
+  fun ost orq mins =>
+    (orq@[upRq]) >>=[False] (fun rqiu => rqiu.(rqi_midx_rsb) = None).
+
 Definition DownLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
   fun ost orq mins =>
     (orq@[downRq])
       >>=[False]
-      (fun rqiu =>
-         rqiu.(rqi_msg)
+      (fun rqid =>
+         rqid.(rqi_msg)
                 >>=[False] (fun rq => rq.(msg_type) = mty /\ rq.(msg_id) = mid)).
 Definition getDownLockMsgId (orq: ORq Msg): option (bool * IdxT) :=
   rqid <-- orq@[downRq];
@@ -128,7 +132,7 @@ Definition MsgsFromRsUp `{OStateIfc} (dtr: DTree) (orss: list IdxT): OPrec :=
 
 Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI
      UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
-     UpLockIdxBack getUpLockIdxBack
+     UpLockIdxBack getUpLockIdxBack UpLockBackNone
      DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
      DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack
      MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp : RuleConds.

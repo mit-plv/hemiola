@@ -73,13 +73,13 @@ Section RqUpReduction.
     inv_step.
     red_obj_rule.
     disc_rule_conds.
-    - pose proof (rqEdgeUpFrom_Some H7 _ H2).
-      destruct H6 as [rsUp [down [pidx ?]]]; dest.
+    - pose proof (rqEdgeUpFrom_Some H7 _ H1).
+      destruct H5 as [rsUp [down [pidx ?]]]; dest.
       repeat disc_rule_minds.
       split; [discriminate|].
       exists pidx.
       right; do 2 eexists; repeat split; try eassumption.
-    - pose proof (rqEdgeUpFrom_Some H7 _ H2).
+    - pose proof (rqEdgeUpFrom_Some H7 _ H1).
       destruct H11 as [rsUp [down [pidx ?]]]; dest.
       repeat disc_rule_minds.
       split; [discriminate|].
@@ -144,7 +144,7 @@ Section RqUpReduction.
           { left; auto. }
         * do 2 eexists; repeat split.
           rewrite findQ_In_enqMP in *.
-          rewrite app_length in H25; simpl in H25.
+          rewrite app_length in H22; simpl in H22.
           rewrite app_length; simpl.
           omega.
         
@@ -555,32 +555,25 @@ Section RqUpReduction.
       + good_footprint_get (obj_idx obj0).
         good_rqrs_rule_cases rule0.
         * disc_rule_conds; [repeat ssplit; apply DisjList_nil_2|].
-          destruct (idx_dec cidx0 cidx).
-          { subst; rewrite H59 in H0; elim n; inv H0; reflexivity. }
-          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+          repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj].
         * disc_rule_conds.
           repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj].
         * disc_rule_conds.
           { repeat ssplit; try apply DisjList_nil_2.
-            destruct (idx_dec cidx cidx0).
-            { subst; rewrite H0 in H9; elim n; inv H9; reflexivity. }
-            { solve_midx_disj. }
+            solve_midx_disj.
           }
           { repeat ssplit; try apply DisjList_nil_1.
             { assumption. }
             { solve_midx_disj. }
           }
-          { destruct (idx_dec cidx (obj_idx upCObj)).
-            { subst; rewrite H11 in H0; elim n; inv H0; reflexivity. }
-            { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
-          }
+          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
           { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
         * disc_rule_conds.
           { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
           { repeat ssplit; [apply DisjList_nil_1|assumption|apply DisjList_nil_2]. }
-          { rewrite H51.
+          { rewrite H50.
             repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
-          { rewrite H51.
+          { rewrite H50.
             repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
         * disc_rule_conds.
           repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj].
@@ -595,9 +588,7 @@ Section RqUpReduction.
           split; [|split]; [|assumption|]; solve_midx_disj.
         * disc_rule_conds.
           { repeat ssplit; try apply DisjList_nil_2.
-            destruct (idx_dec cidx cidx0).
-            { subst; rewrite H7 in H12; elim n; inv H12; reflexivity. }
-            { solve_midx_disj. }
+            solve_midx_disj.
           }
           { destruct (idx_dec cidx cidx0).
             { subst; rewrite H7 in H12; elim n; inv H12; reflexivity. }

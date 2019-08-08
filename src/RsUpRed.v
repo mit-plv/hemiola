@@ -60,8 +60,8 @@ Section RsUpReduction.
       red in H1; dest; destruct H1.
       + disc_rule_conds.
         * solve_midx_false.
-        * exfalso; destruct H30 as [ncidx [? ?]].
-          elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H28 H21); reflexivity.
+        * exfalso.
+          elim (rqrsDTree_rsUp_down_not_eq H2 _ _ H17 H8); reflexivity.
       + split.
         { disc_rule_conds.
           { split.

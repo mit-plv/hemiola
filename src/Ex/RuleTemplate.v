@@ -67,10 +67,11 @@ Section Template.
                               [(rqUpFrom oidx, rqMsg out)] }}))).
 
   Definition rqUpUpRuleS (oidx: IdxT)
-             (prec: OPrec)
+             (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Miv): Rule :=
     rule[ridx]
-    :requires (MsgsFrom nil /\ RqAccepting /\ UpLockFree /\ prec)
+    :requires (MsgsFrom nil /\ RqAccepting /\ UpLockFree /\
+               fun ost _ mins => prec ost mins)
     :transition
        (do (st --> (out ::= trs st.(ost);
                     return {{ st.(ost),
@@ -155,7 +156,8 @@ Section Template.
                    Msg (* the original request *) ->
                    OState) :=
     rule[ridx]
-    :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\ UpLockMsgId MRq rqId /\
+    :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\
+               UpLockMsgId MRq rqId /\ UpLockBackNone /\
                RsAccepting /\ DownLockFree /\ prec)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
@@ -313,6 +315,21 @@ Section Facts.
       + apply Hdtr in H0; dest; assumption.
   Qed.
 
+  Lemma rqUpUpRuleS_RqFwdRule:
+    forall sys oidx pidx ridx prec trs,
+      parentIdxOf dtr oidx = Some pidx ->
+      RqFwdRule dtr sys oidx (rqUpUpRuleS ridx oidx prec trs).
+  Proof.
+    unfold rqUpUpRuleS; intros; split.
+    - repeat split; solve_rule_conds_ex.
+    - left; repeat split; solve_rule_conds_ex.
+      + unfold addRqS; mred.
+      + left; solve_rule_conds_ex.
+        * destruct rins; [reflexivity|discriminate].
+        * apply Hdtr in H; dest; assumption.
+        * apply Hdtr in H; dest; assumption.
+  Qed.
+
   Lemma rqUpDownRule_RqFwdRule:
     forall sys oidx ridx msgId cidx
            (prec: OState -> list (Id Msg) -> Prop)
@@ -398,6 +415,15 @@ Section Facts.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
   Qed.
 
+  Lemma rsDownDownRuleS_RsBackRule:
+    forall ridx msgId rqId prec trs,
+      RsBackRule (rsDownDownRuleS ridx msgId rqId prec trs).
+  Proof.
+    unfold rsDownDownRuleS; intros; split.
+    - left; repeat red; repeat ssplit; solve_rule_conds_ex.
+    - repeat red; repeat ssplit; solve_rule_conds_ex.
+  Qed.
+
   Lemma rsUpDownRule_RsBackRule:
     forall ridx msgId rqId prec trs,
       RsBackRule (rsUpDownRule ridx msgId rqId prec trs).
@@ -469,4 +495,11 @@ Section Facts.
   Qed.
 
 End Facts.
+
+Hint Resolve immDownRule_ImmDownRule immUpRule_ImmUpRule
+     rqUpUpRule_RqFwdRule rqUpUpRuleS_RqFwdRule
+     rqUpDownRule_RqFwdRule rqDownDownRule_RqFwdRule
+     rsDownDownRule_RsBackRule rsDownDownRuleS_RsBackRule
+     rsUpDownRule_RsBackRule rsUpUpRule_RsBackRule
+     rsDownRqDownRule_RsDownRqDownRule.
 

@@ -90,9 +90,12 @@ Section FootprintInv.
       apply footprints_ok_orqs_add; auto; try (mred; fail).
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
+        red in H33; simpl in H33; dest.
         eexists None, _, _; repeat split; eassumption.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        eexists (Some (rqFrom, rsbTo)), _, _; repeat split; eassumption.
+        red in H33; simpl in H33; dest.
+        eexists (Some (rqFrom, rsbTo)), _, _; repeat split; try eassumption.
+        simpl; eauto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
         do 4 eexists; repeat split.
         * eassumption.
@@ -145,10 +148,14 @@ Ltac disc_footprints_ok :=
     let rqFrom := fresh "rqFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct rrFrom as [[rqFrom rsbTo]|]; [|discriminate]; simpl in *; dest
+  | [H: None = (?rrFrom) >>= _ |- _] =>
+    destruct rrFrom; [discriminate|]; simpl in *
 
-  | [H: FootprintUpOk _ _ _ _ _ |- _] =>
+  | [H: FootprintUpOk _ _ (Some _) _ _ |- _] =>
+    red in H; simpl in H;
     let cidx := fresh "cidx" in
-    destruct H as [cidx ?]; dest; simpl in *; dest
+    destruct H as [[cidx ?] ?]; dest
+  | [H: FootprintUpOk _ _ None _ _ |- _] => red in H; simpl in H; dest
   | [H: FootprintUpDownOk _ _ _ _ _ _ _ \/
         FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
   | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>

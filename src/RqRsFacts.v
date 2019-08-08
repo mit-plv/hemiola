@@ -707,14 +707,14 @@ Section RqRsDTree.
       FootprintUpOk dtr oidx (Some (rqFrom, rsbTo2)) rqTo rsFrom2 ->
       rsFrom1 = rsFrom2 /\ rsbTo1 = rsbTo2.
   Proof.
-    unfold FootprintUpOk; intros.
-    destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; simpl in *; dest.
+    unfold FootprintUpOk; simpl; intros.
+    destruct H as [[cidx1 ?] ?]; destruct H0 as [[cidx2 ?] ?]; simpl in *; dest.
     destruct (idx_dec cidx1 cidx2); subst; simpl in *.
-    - rewrite H7 in H3; inv H3.
-      rewrite H8 in H4; inv H4.
+    - rewrite H6 in H3; inv H3.
+      rewrite H8 in H5; inv H5.
       auto.
     - exfalso.
-      elim (rqrsDTree_rqUp_rqUp_not_eq n H5 H1); auto.
+      elim (rqrsDTree_rqUp_rqUp_not_eq n H7 H4); auto.
   Qed.
 
   Lemma footprintUpOk_rs_None_eq:
@@ -723,9 +723,8 @@ Section RqRsDTree.
       FootprintUpOk dtr oidx None rqTo rsFrom2 ->
       rsFrom1 = rsFrom2.
   Proof.
-    unfold FootprintUpOk; intros.
-    destruct H as [cidx1 ?]; destruct H0 as [cidx2 ?]; simpl in *; dest.
-    rewrite H6 in H3; inv H3.
+    unfold FootprintUpOk; simpl; intros; dest.
+    rewrite H4 in H2; inv H2.
     reflexivity.
   Qed.
 

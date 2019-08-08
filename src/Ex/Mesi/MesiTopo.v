@@ -60,5 +60,56 @@ Section System.
     - auto using mesi_ExtsOnDTree.
   Qed.
 
+  Ltac rule_immd := left.
+  Ltac rule_immu := right; left.
+  Ltac rule_rquu := do 2 right; left.
+  Ltac rule_rqud := do 2 right; left.
+  Ltac rule_rqdd := do 2 right; left.
+  Ltac rule_rsdd := do 3 right; left.
+  Ltac rule_rsu := do 3 right; left.
+  Ltac rule_rsrq := do 4 right.
+
+  Ltac solve_GoodRqRsRule :=
+    autounfold with MesiRules;
+    match goal with
+    | |- GoodRqRsRule _ _ _ _ =>
+      match goal with
+      (* | |- context[rqUpDownRule] *)
+      (* | |- context[rqDownDownRule] *)
+      (* | |- context[rsDownRqDownRule] *)
+      | |- context[immDownRule] => rule_immd; auto
+      | |- context[immUpRule] => rule_immu; auto
+      | |- context[rqUpUpRule] => rule_rquu; auto
+      | |- context[rsDownDownRule] => rule_rsdd; auto
+      | |- context[rsDownDownRuleS] => rule_rsdd; auto
+      | |- context[rsUpDownRule] => rule_rsu; auto
+      | |- context[rsUpUpRule] => rule_rsu; auto
+      end
+    end.
+  
+  Lemma mesi_impl_GoodRqRsSys: GoodRqRsSys topo impl.
+  Proof.
+    repeat
+      match goal with
+      | [ |- GoodRqRsSys _ _] => red
+      | [ |- GoodRqRsObj _ _ _] => red
+      | [ |- Forall _ _] => constructor; simpl
+      end.
+
+    apply Forall_forall; intros obj ?.
+    apply in_app_or in H; destruct H.
+
+    - (* Li caches *)
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; simpl.
+      repeat
+        match goal with
+        | |- Forall _ (_ ++ _) => apply Forall_app
+        | |- Forall _ (_ :: _) => constructor
+        | |- Forall _ nil => constructor
+        end; try (solve_GoodRqRsRule; fail).
+  Admitted.
+
 End System.
 

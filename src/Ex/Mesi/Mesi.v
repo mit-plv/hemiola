@@ -508,7 +508,7 @@ Section System.
       Definition putRqUpUp: Rule :=
         rule.rqu[2~>0]
         :me oidx
-        :requires (fun ost orq mins => ost#[implStatusIdx] < mesiM)
+        :requires (fun ost mins => ost#[implStatusIdx] < mesiM)
         :transition
            (ost --> {| miv_id := mesiRqI;
                        miv_value := O |}).
@@ -516,7 +516,7 @@ Section System.
       Definition putRqUpUpM: Rule :=
         rule.rqu[2~>1]
         :me oidx
-        :requires (fun ost orq mins => ost#[implStatusIdx] = mesiM)
+        :requires (fun ost mins => ost#[implStatusIdx] = mesiM)
         :transition
            (ost --> {| miv_id := mesiRqI;
                        miv_value := ost#[implValueIdx] |}).
@@ -702,3 +702,22 @@ Section System.
   
 End System.
 
+Hint Unfold l1GetSImm liGetSImmS liGetSImmME
+     getSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
+     liGetSRsDownDownS liGetSRsDownDownE
+     downSImm liGetSRqUpDownME liGetSRqUpDownS
+     liDownSRsUpDown liDownSRqDownDownME liDownSRqDownDownS liDownSRsUpUp
+  : MesiRules.
+
+Hint Unfold l1GetMImmE l1GetMImmM liGetMImm
+     getMRqUpUp l1GetMRsDownDown liGetMRsDownDownDirI liGetMRsDownRqDownDirS
+     liDownIRsUpDownDirS liGetMRqUpDownME liDownIRsUpDownME
+     l1DownIImm liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirME
+     liDownIRsUpUp memGetMRqUpDownDirS
+  : MesiRules.
+
+Hint Unfold putRqUpUp putRqUpUpM putRsDownDown
+     liPutImmI liPutImmS memPutImmSNotLast memPutImmSLast
+     liPutImmE liPutImmM
+  : MesiRules.
+     

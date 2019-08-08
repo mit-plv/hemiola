@@ -213,12 +213,12 @@ Section Separation.
         try apply Hrrs; eassumption.
 
     - disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H13).
+      + pose proof (edgeDownTo_Some H _ H12).
         destruct H7 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         elim (H8 pidx).
         do 2 eexists; repeat split; eauto.
-      + pose proof (edgeDownTo_Some H _ H13).
+      + pose proof (edgeDownTo_Some H _ H12).
         destruct H7 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         elim (H8 pidx).
@@ -241,13 +241,13 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H25).
+      + pose proof (edgeDownTo_Some H _ H23).
         destruct H32 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
       + pose proof (edgeDownTo_Some H _ H23).
-        destruct H31 as [rqUp [rsUp [pidx ?]]]; dest.
+        destruct H25 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -304,7 +304,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H23).
+      pose proof (edgeDownTo_Some H _ H11).
       destruct H30 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
@@ -354,7 +354,7 @@ Section Separation.
       apply FirstMP_InMP; assumption.
 
     - disc_rule_conds.
-      + elim H15; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+      + elim H14; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + elim H13; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + destruct rqDown as [rqDown rqdm]; simpl in *.
         assert (rqi_msg rqi <> Some rqdm)
@@ -1189,13 +1189,13 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H20).
+      + pose proof (edgeDownTo_Some H _ H17).
         destruct H31 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
       + pose proof (edgeDownTo_Some H _ H17).
-        destruct H30 as [rqUp [rsUp [pidx ?]]]; dest.
+        destruct H20 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -1258,7 +1258,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H20).
+      pose proof (edgeDownTo_Some H _ H10).
       destruct H29 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply parent_parent_in_False
@@ -1310,7 +1310,7 @@ Section Separation.
           try eassumption;
           [|apply rssQ_length_ge_one with (msg:= valOf rsDown); auto].
         dest; disc_rule_conds; auto.
-      + elim H13; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+      + elim H12; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + elim H11; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + eapply rsDown_in_rqDown_first_false
           with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown); eauto.
@@ -1376,7 +1376,7 @@ Section Separation.
       disc_rule_conds.
       destruct rsDown as [rsDown rsdm]; simpl in *.
       pose proof (edgeDownTo_Some H _ H4).
-      destruct H20 as [rqUp [rsUp [pidx ?]]]; dest.
+      destruct H13 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       assert (rmsg <> rsdm) by (intro Hx; subst; elim H8; auto); clear H8.
       good_locking_get obj.

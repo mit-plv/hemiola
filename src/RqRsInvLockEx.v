@@ -642,7 +642,7 @@ Section RqRsInvLockEx.
           red; intros; red; smred.
         * red; intros.
           red; intros.
-          red in H10; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
+          red in H6; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
         * apply DLOldPreserved_orqs_equiv.
           intros; smred.
         
@@ -717,7 +717,7 @@ Section RqRsInvLockEx.
         * red; repeat ssplit; try (red; intros; dest_in).
         * red.
           red; intros; exfalso.
-          red in H23; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
+          red in H13; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
         * eapply DLOldPreserved_orqs_equiv.
           intros; smred.
 
@@ -1133,18 +1133,18 @@ Section RqRsInvLockEx.
         inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|disc_rule_conds| |].
         2: {
           simpl in *.
-          apply rqDown_rsUp_inv_msg in H28; rewrite Forall_forall in H28.
+          apply rqDown_rsUp_inv_msg in H21; rewrite Forall_forall in H21.
           apply SubList_singleton_In in H4.
-          specialize (H28 _ H4); destruct H28 as [oidx ?].
-          destruct H28; disc_rule_conds; solve_midx_false.
+          specialize (H21 _ H4); destruct H21 as [oidx ?].
+          destruct H21; disc_rule_conds; solve_midx_false.
         }
         
         apply SubList_singleton in H4; subst.
         rewrite removeOnce_nil; simpl.
         disc_rule_conds.
         red; intros.
-        specialize (IHAtomic H27); dest.
-        red in H33, H34; dest.
+        specialize (IHAtomic H17); dest.
+        red in H30, H31; dest.
         repeat ssplit.
 
         * red; repeat ssplit; try (red; intros; dest_in).
@@ -1152,7 +1152,7 @@ Section RqRsInvLockEx.
           red; intros.
           destruct (idx_dec pidx (obj_idx obj)); subst; smred.
           eapply DownLockIntact_DownLockedNew_2
-            with (orqs3:= orqs) in H39; [|red; smred].
+            with (orqs3:= orqs) in H37; [|red; smred].
           eapply DLIntactBound_trans; eauto.
           eapply DLIntactBound_refl.
           intros; red; smred.

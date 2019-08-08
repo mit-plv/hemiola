@@ -75,12 +75,12 @@ Section RqUpStart.
 
     - disc_rule_conds.
       + left.
-        pose proof (rqEdgeUpFrom_Some H _ H6).
-        destruct H11 as [rsUp [down [pidx ?]]]; dest.
+        pose proof (rqEdgeUpFrom_Some H _ H5).
+        destruct H7 as [rsUp [down [pidx ?]]]; dest.
         eexists; red.
         do 2 eexists; eauto.
       + left.
-        pose proof (rqEdgeUpFrom_Some H _ H6).
+        pose proof (rqEdgeUpFrom_Some H _ H5).
         destruct H14 as [rsUp [down [pidx ?]]]; dest.
         eexists; red.
         do 2 eexists; eauto.
@@ -159,7 +159,7 @@ Section RqUpStart.
         repeat ssplit.
         * reflexivity.
         * right.
-          pose proof (rqEdgeUpFrom_Some H _ H11).
+          pose proof (rqEdgeUpFrom_Some H _ H9).
           destruct H7 as [rsUp [down [pidx ?]]]; dest.
           exists pidx, [(rqTo, rqtm)]; do 2 eexists.
           repeat ssplit.
@@ -221,11 +221,11 @@ Section RqUpStart.
       repeat constructor.
       disc_NonRqUpL.
     - disc_rule_conds.
-      + pose proof (rqEdgeUpFrom_Some H _ H6).
-        destruct H11 as [rsUp [down [pidx ?]]]; dest.
+      + pose proof (rqEdgeUpFrom_Some H _ H5).
+        destruct H7 as [rsUp [down [pidx ?]]]; dest.
         elim (H3 pidx).
         do 2 eexists; eauto.
-      + pose proof (rqEdgeUpFrom_Some H _ H6).
+      + pose proof (rqEdgeUpFrom_Some H _ H5).
         destruct H14 as [rsUp [down [pidx ?]]]; dest.
         elim (H3 pidx).
         do 2 eexists; eauto.
@@ -900,16 +900,16 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H22).
+      + pose proof (edgeDownTo_Some H _ H18).
         destruct H30 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
         eapply inside_child_in in H15; try eassumption.
       + pose proof (edgeDownTo_Some H _ H18).
-        destruct H29 as [rqUp [rsUp [rpidx ?]]]; dest.
+        destruct H22 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
-        eapply inside_child_in in H28; try eassumption.
+        eapply inside_child_in in H29; try eassumption.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
@@ -953,7 +953,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H18).
+      pose proof (edgeDownTo_Some H _ H9).
       destruct H.
       destruct H28 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_RqRsMsgFrom.
@@ -1004,18 +1004,18 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H21).
+      + pose proof (edgeDownTo_Some H _ H17).
         destruct H29 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
         eapply outside_child_in in H14; try eassumption.
         clear -H2 H14; firstorder.
       + pose proof (edgeDownTo_Some H _ H17).
-        destruct H28 as [rqUp [rsUp [rpidx ?]]]; dest.
+        destruct H21 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
-        eapply outside_child_in in H27; try eassumption.
-        clear -H2 H27; firstorder.
+        eapply outside_child_in in H28; try eassumption.
+        clear -H2 H28; firstorder.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
@@ -1055,7 +1055,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H17).
+      pose proof (edgeDownTo_Some H _ H8).
       destruct H.
       destruct H27 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_rule_conds.

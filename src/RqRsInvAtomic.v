@@ -657,11 +657,11 @@ Section Coverage.
       dest; congruence.
 
     - disc_rule_conds.
-      + pose proof (rqEdgeUpFrom_Some H _ H7).
-        destruct H12 as [rsUp [down [pidx ?]]]; dest.
+      + pose proof (rqEdgeUpFrom_Some H _ H6).
+        destruct H8 as [rsUp [down [pidx ?]]]; dest.
         elim (H4 pidx).
         red; do 2 eexists; eauto.
-      + pose proof (rqEdgeUpFrom_Some H _ H7).
+      + pose proof (rqEdgeUpFrom_Some H _ H6).
         destruct H15 as [rsUp [down [pidx ?]]]; dest.
         elim (H4 pidx).
         red; do 2 eexists; eauto.
@@ -1510,9 +1510,9 @@ Section Coverage.
           red; apply (DisjList_singleton_1 idx_dec).
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
         * red; intros; dest_in.
-          eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
+          eapply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
         * apply SubList_cons; [|apply SubList_nil].
-          eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
+          eapply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
         * red; intros; dest_in; simpl_locks.
           split; [discriminate|reflexivity].
       + eapply MsgOutsRqUp; [red; eauto|..].
@@ -1976,7 +1976,7 @@ Section Coverage.
         eapply atomic_separation_ok in H20; eauto; try apply Hiorqs.
         destruct H20; [|assumption].
         exfalso; destruct H20 as [ccidx [? ?]].
-        pose proof (edgeDownTo_Some H _ H7).
+        pose proof (edgeDownTo_Some H _ H5).
         destruct H22 as [rqUp [rrsUp [pidx ?]]]; dest.
         disc_rule_conds.
         pose proof Hatm.
@@ -2017,7 +2017,7 @@ Section Coverage.
             destruct n.
             1: {
               exfalso; destruct H31 as [rcidx [? ?]].
-              pose proof (edgeDownTo_Some H _ H7).
+              pose proof (edgeDownTo_Some H _ H5).
               destruct H33 as [rqUp [rrsUp [pidx ?]]]; dest.
               disc_rule_conds.
               pose proof Hatm.
@@ -2060,7 +2060,7 @@ Section Coverage.
           destruct n.
           1: {
             exfalso; destruct H21 as [ccidx [? ?]].
-            pose proof (edgeDownTo_Some H _ H7).
+            pose proof (edgeDownTo_Some H _ H5).
             destruct H23 as [rqUp [rrsUp [pidx ?]]]; dest.
             disc_rule_conds.
             pose proof Hatm.
@@ -2561,7 +2561,7 @@ Section Coverage.
                    SubList (oindsOf hst) (subtreeIndsOf dtr ccidx) ->
                    False) as Hcf.
         { intros.
-          pose proof (edgeDownTo_Some H _ H8).
+          pose proof (edgeDownTo_Some H _ H7).
           destruct H22 as [rqUp [rrsUp [pidx ?]]]; dest.
           disc_rule_conds.
           pose proof Hatm.
