@@ -63,9 +63,11 @@ Section System.
   Ltac rule_immd := left.
   Ltac rule_immu := right; left.
   Ltac rule_rquu := do 2 right; left.
+  Ltac rule_rqsu := do 2 right; left.
   Ltac rule_rqud := do 2 right; left.
   Ltac rule_rqdd := do 2 right; left.
   Ltac rule_rsdd := do 3 right; left.
+  Ltac rule_rsds := do 3 right; left.
   Ltac rule_rsu := do 3 right; left.
   Ltac rule_rsrq := do 4 right.
 
@@ -80,8 +82,9 @@ Section System.
       | |- context[immDownRule] => rule_immd; auto
       | |- context[immUpRule] => rule_immu; auto
       | |- context[rqUpUpRule] => rule_rquu; auto
+      | |- context[rqUpUpRuleS] => rule_rqsu; auto
       | |- context[rsDownDownRule] => rule_rsdd; auto
-      | |- context[rsDownDownRuleS] => rule_rsdd; auto
+      | |- context[rsDownDownRuleS] => rule_rsds; auto
       | |- context[rsUpDownRule] => rule_rsu; auto
       | |- context[rsUpUpRule] => rule_rsu; auto
       end
@@ -109,6 +112,19 @@ Section System.
         | |- Forall _ (_ :: _) => constructor
         | |- Forall _ nil => constructor
         end; try (solve_GoodRqRsRule; fail).
+      all: admit.
+
+    - (* L1 caches *)
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; simpl.
+      repeat
+        match goal with
+        | |- Forall _ (_ ++ _) => apply Forall_app
+        | |- Forall _ (_ :: _) => constructor
+        | |- Forall _ nil => constructor
+        end; try (solve_GoodRqRsRule; fail).
+      
   Admitted.
 
 End System.

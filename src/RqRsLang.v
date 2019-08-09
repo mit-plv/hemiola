@@ -107,6 +107,9 @@ Definition getDownLockIndsFrom (orq: ORq Msg): option (list IdxT) :=
 Definition getDownLockIdxBack (orq: ORq Msg): option IdxT :=
   rqid <-- orq@[downRq]; rqi_midx_rsb rqid.
 
+Definition getFirstIdxFromI (inds: list IdxT): IdxT :=
+  (hd_error inds) >>=[ii] (fun idx => idx).
+
 Definition MsgsFrom `{OStateIfc} (froms: list IdxT): OPrec :=
   fun _ _ mins => idsOf mins = froms.
 
@@ -134,7 +137,7 @@ Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI
      UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
      UpLockIdxBack getUpLockIdxBack UpLockBackNone
      DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
-     DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack
+     DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack getFirstIdxFromI
      MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp : RuleConds.
 
 Definition initORqs (oinds: list IdxT): ORqs Msg :=
@@ -160,16 +163,17 @@ Module RqRsNotations.
   Delimit Scope monad_scope with monad.
 
   Notation "'do' ST" := (TrsMTrs ST%monad) (at level 10): trs_scope.
-  Notation "v ::= e ; c" := (let v := e in c) (at level 84): trs_scope.
+  Notation "v ::= e ; c" :=
+    (let v := e in c) (at level 84, right associativity): trs_scope.
   Notation "PST --> NST" :=
     (fun PST => NST) (at level 82, only parsing): trs_scope.
-  Notation "'<|' PST1 ',' PST2 '|>' --> NST" :=
+  Notation "'!|' PST1 ',' PST2 '|' --> NST" :=
     (fun PST1 PST2 => NST) (at level 82, only parsing): trs_scope.
-  Notation "'<|' PST1 ',' PST2 ',' PST3 '|>' --> NST" :=
+  Notation "'!|' PST1 ',' PST2 ',' PST3 '|' --> NST" :=
     (fun PST1 PST2 PST3 => NST) (at level 82, only parsing): trs_scope.
-  Notation "'<|' PST1 ',' PST2 ',' PST3 ',' PST4 '|>' --> NST" :=
+  Notation "'!|' PST1 ',' PST2 ',' PST3 ',' PST4 '|' --> NST" :=
     (fun PST1 PST2 PST3 PST4 => NST) (at level 82, only parsing): trs_scope.
-  Notation "'<|' PST1 ',' PST2 ',' PST3 ',' PST4 ',' PST5 '|>' --> NST" :=
+  Notation "'!|' PST1 ',' PST2 ',' PST3 ',' PST4 ',' PST5 '|' --> NST" :=
     (fun PST1 PST2 PST3 PST4 PST5 => NST) (at level 82, only parsing): trs_scope.
   Notation "'return' v" :=
     (Some v) (at level 80, only parsing): trs_scope.
