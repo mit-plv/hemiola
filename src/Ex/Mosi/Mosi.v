@@ -134,9 +134,11 @@ Section System.
            (fun ost orq mins =>
               ost#[implStatusIdx] = mosiS \/ ost#[implStatusIdx] = mosiO)
         :transition
-           (!|ost, _| --> (ost, {| miv_id := mosiRsS;
-                                   miv_value := ost#[implValueIdx]
-                                |})).
+           (!|ost, _|
+            --> (ost +#[implDirIdx <- addSharer cidx ost#[implDirIdx]],
+                 {| miv_id := mosiRsS;
+                    miv_value := ost#[implValueIdx]
+                 |})).
 
       Definition liGetSImmM: Rule :=
         rule.immd[cidx~>0~>0~>1]

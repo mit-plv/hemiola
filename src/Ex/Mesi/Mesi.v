@@ -74,6 +74,11 @@ Section System.
          dir_excl := 0;
          dir_sharers := nil |}.
 
+    Definition addSharer (oidx: IdxT) (dir: DirT): DirT :=
+      {| dir_st := dir.(dir_st);
+         dir_excl := dir.(dir_excl);
+         dir_sharers := oidx :: dir.(dir_sharers) |}.
+
     Definition removeSharer (oidx: IdxT) (dir: DirT): DirT :=
       {| dir_st := dir.(dir_st);
          dir_excl := dir.(dir_excl);
@@ -122,9 +127,11 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiS)
         :transition
-           (!|ost, _| --> (ost, {| miv_id := mesiRsS;
-                                   miv_value := ost#[implValueIdx]
-                                |})).
+           (!|ost, _|
+            --> (ost +#[implDirIdx <- addSharer cidx ost#[implDirIdx]],
+                 {| miv_id := mesiRsS;
+                    miv_value := ost#[implValueIdx]
+                 |})).
 
       Definition liGetSImmME: Rule :=
         rule.immd[cidx~>0~>0~>1]
