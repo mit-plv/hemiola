@@ -193,9 +193,7 @@ Section System.
         :requires ⊤
         :transition
            (!|ost, min, rq, rsbTo|
-            --> (ost +#[implValueIdx <- msg_value min]
-                     +#[implStatusIdx <- mesiS]
-                     +#[implDirIdx <- setDirS [objIdxOf rsbTo]],
+            --> (ost +#[implDirIdx <- setDirS [objIdxOf rsbTo]],
                  {| miv_id := mesiRsS;
                     miv_value := msg_value min |})).
 
@@ -235,8 +233,9 @@ Section System.
                              {| miv_id := mesiDownRqS;
                                 miv_value := O |})).
 
-      (** TODO: if we pick a representative among sharers to get a clean value,
-       * what is the difference between this protocol and MOSI? *)
+      (* When a directory status is S, pick a representative among sharers 
+       * to get a clean value. 
+       *)
       Definition liGetSRqUpDownS: Rule :=
         rule.rqud[cidx~>0~>4~>1]
         :accepts mesiRqS
@@ -252,6 +251,18 @@ Section System.
                                 miv_value := O |})).
 
       Definition liDownSRsUpDown: Rule :=
+        rule.rsud[0~>5]
+        :accepts mesiDownRsS
+        :holding mesiRqS
+        :requires FirstMsg
+        :transition
+           (!|ost, mins, rq, rssFrom, rsbTo|
+            --> (msg ::= getFirstMsgI mins;
+                           (ost +#[implDirIdx <- setDirS (objIdxOf rsbTo :: map objIdxOf rssFrom)],
+                            {| miv_id := mesiRsS;
+                               miv_value := msg_value msg |}))).
+
+      Definition memDownSRsUpDown: Rule :=
         rule.rsud[0~>5]
         :accepts mesiDownRsS
         :holding mesiRqS
@@ -300,9 +311,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rssFrom, rsbTo|
             --> (msg ::= getFirstMsgI mins;
-                           (ost +#[implValueIdx <- msg_value msg]
-                                +#[implStatusIdx <- mesiS]
-                                +#[implDirIdx <- setDirS (map objIdxOf rssFrom)],
+                           (ost +#[implDirIdx <- setDirS (map objIdxOf rssFrom)],
                             {| miv_id := mesiDownRsS;
                                miv_value := msg_value msg |}))).
 
@@ -507,12 +516,11 @@ Section System.
 
     Section EvictTrs.
 
-      (* NOTE: in MESI protocol, it makes a crucial difference whether it is 
+      (** NOTE: in MESI protocol, it makes a crucial difference whether it is 
        * required to send an up-to-date value or not during eviction. For example,
        * when in E status we don't need to write the data back since it is never 
        * written to a new value, i.e., the value is clean.
        *)
-
       Definition putRqUpUp: Rule :=
         rule.rqu[2~>0]
         :me oidx
@@ -573,6 +581,9 @@ Section System.
                     miv_value := O
                  |})).
 
+      (* We DO NOT need to write the value back since in a globally-shared status
+       * the main memory always has a clean copy.
+       *)
       Definition memPutImmSLast: Rule :=
         rule.immd[cidx~>2~>4~>1]
         :accepts mesiRqI
@@ -593,7 +604,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiE)
         :transition
-           (!|ost, msg| --> (ost +#[implStatusIdx <- mesiM]
+           (!|ost, msg| --> (ost +#[implStatusIdx <- mesiE]
                                  +#[implDirIdx <- setDirI],
                              {| miv_id := mesiRsI;
                                 miv_value := O
@@ -686,7 +697,7 @@ Section System.
       {| obj_idx := oidx;
          obj_rules :=
            (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
-             ++ [liDownSRsUpDown; liDownIRsUpDownME; liDownIRsUpDownDirS];
+             ++ [memDownSRsUpDown; liDownIRsUpDownME; liDownIRsUpDownDirS];
          obj_rules_valid := _ |}.
     Next Obligation.
     Admitted.
@@ -714,7 +725,8 @@ Hint Unfold l1GetSImm liGetSImmS liGetSImmME
      getSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
      liGetSRsDownDownS liGetSRsDownDownE
      downSImm liGetSRqUpDownME liGetSRqUpDownS
-     liDownSRsUpDown liDownSRqDownDownME liDownSRqDownDownS liDownSRsUpUp
+     liDownSRsUpDown memDownSRsUpDown
+     liDownSRqDownDownME liDownSRqDownDownS liDownSRsUpUp
   : MesiRules.
 
 Hint Unfold l1GetMImmE l1GetMImmM liGetMImm
