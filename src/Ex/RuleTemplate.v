@@ -365,7 +365,8 @@ Section Facts.
           induction (fst (trs nost rmsg)) as [|cidx cinds]; [exfalso; auto|].
           inv H1; simpl in *.
           destruct H6; dest.
-          { inv H; destruct Hdtr; specialize (H _ _ H2); dest.
+          { inv H; destruct Hdtr as [[? ?] ?].
+            specialize (H _ _ H2); dest.
             exists cidx; repeat split; try assumption.
             intro Hx; subst; auto.
           }
@@ -400,7 +401,8 @@ Section Facts.
           clear -Hdtr H1 H4.
           induction (fst (trs nost rmsg)) as [|cidx cinds]; [dest_in|].
           inv H1; simpl in H4; destruct H4; dest.
-          { inv H; destruct Hdtr; specialize (H _ _ H2); dest.
+          { inv H; destruct Hdtr as [[? ?] ?].
+            specialize (H _ _ H2); dest.
             exists cidx; repeat split; assumption.
           }
           { eapply IHcinds; eauto. }
@@ -483,7 +485,8 @@ Section Facts.
           clear -Hdtr H3 H11 H12.
           induction (fst (trs nost msg)) as [|cidx cinds]; [dest_in|].
           inv H3; simpl in H11; destruct H11; dest.
-          { inv H; destruct Hdtr; specialize (H _ _ H1); dest.
+          { inv H; destruct Hdtr as [[? ?] ?].
+            specialize (H _ _ H1); dest.
             exists cidx; repeat split; try assumption.
             intro Hx; subst; elim H12; left; reflexivity.
           }

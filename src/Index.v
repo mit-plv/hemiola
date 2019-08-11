@@ -155,3 +155,17 @@ Infix "~*~" := IdxDisj (at level 8).
 Definition IndsDisj (is1 is2: list IdxT) :=
   forall i1 i2, In i1 is1 -> In i2 is2 -> i1 ~*~ i2.
 
+Fixpoint idxPrefixR (i1 i2: IdxT): bool :=
+  match i1 with
+  | nil => true
+  | n1 :: ti1 =>
+    match i2 with
+    | nil => false
+    | n2 :: ti2 =>
+      if eq_nat_dec n1 n2 then idxPrefixR ti1 ti2 else false
+    end
+  end.
+
+Definition idxPrefix (i1 i2: IdxT): bool :=
+  idxPrefixR (rev i1) (rev i2).
+

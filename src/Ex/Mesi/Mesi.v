@@ -1,5 +1,5 @@
 Require Import Bool Vector List String Peano_dec.
-Require Import Common FMap HVector ListSupport Syntax Semantics.
+Require Import Common FMap HVector IndexSupport Syntax Semantics.
 Require Import Topology RqRsTopo.
 Require Import RqRsLang. Import RqRsNotations.
 
@@ -10,6 +10,9 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
+
+Notation "i1 ~~ i2" :=
+  (i2 ++ i1) (at level 8, right associativity, format "i1 '~~' i2", only parsing).
 
 (** Design choices:
  * - Multi-level (for arbitrary tree structure)
@@ -25,7 +28,6 @@ Section System.
 
   Definition topo := fst (tree2Topo tr 0).
   Definition cifc := snd (tree2Topo tr 0).
-  Opaque topo cifc.
   
   Definition implValueIdx: Fin.t 3 := F1.
   Definition implStatusIdx: Fin.t 3 := F2.
@@ -122,7 +124,7 @@ Section System.
                                 |})).
 
       Definition liGetSImmS: Rule :=
-        rule.immd[cidx~>0~>0~>0]
+        rule.immd[0~>0~>0~~cidx]
         :accepts mesiRqS
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiS)
@@ -134,7 +136,7 @@ Section System.
                  |})).
 
       Definition liGetSImmME: Rule :=
-        rule.immd[cidx~>0~>0~>1]
+        rule.immd[0~>0~>1~~cidx]
         :accepts mesiRqS
         :from cidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
@@ -146,14 +148,18 @@ Section System.
                     miv_value := ost#[implValueIdx]
                  |})).
 
-      (** NOTE (common rules): some rules do not require distinguishing L1 and Li 
-       * caches. In correctness proof we may have to prove invariants, e.g., the
-       * directory status of L1 is always [mesiI] since it does not have children.
-       *)
-
-      (* commonly used *)
-      Definition getSRqUpUp: Rule :=
+      Definition l1GetSRqUpUp: Rule :=
         rule.rquu[cidx~>0~>1]
+        :accepts mesiRqS
+        :from cidx
+        :me oidx
+        :requires (fun ost mins => summaryOf ost = mesiI)
+        :transition
+           (!|ost, msg| --> {| miv_id := mesiRqS;
+                               miv_value := O |}).
+
+      Definition liGetSRqUpUp: Rule :=
+        rule.rquu[0~>1~~cidx]
         :accepts mesiRqS
         :from cidx
         :me oidx
@@ -208,7 +214,6 @@ Section System.
                  {| miv_id := mesiRsE;
                     miv_value := msg_value min |})).
 
-      (* commonly used *)
       Definition downSImm: Rule :=
         rule.immu[0~>3]
         :accepts mesiDownRqS
@@ -220,7 +225,7 @@ Section System.
                                 miv_value := ost#[implValueIdx] |})).
 
       Definition liGetSRqUpDownME: Rule :=
-        rule.rqud[cidx~>0~>4~>0]
+        rule.rqud[0~>4~>0~~cidx]
         :accepts mesiRqS
         :from cidx
         :me oidx
@@ -237,7 +242,7 @@ Section System.
        * to get a clean value. 
        *)
       Definition liGetSRqUpDownS: Rule :=
-        rule.rqud[cidx~>0~>4~>1]
+        rule.rqud[0~>4~>1~~cidx]
         :accepts mesiRqS
         :from cidx
         :me oidx
@@ -343,7 +348,7 @@ Section System.
                     miv_value := O |})).
 
       Definition liGetMImm: Rule :=
-        rule.immd[cidx~>1~>0]
+        rule.immd[1~>0~~cidx]
         :accepts mesiRqM
         :from cidx
         :requires (fun ost orq mins => mesiE <= ost#[implStatusIdx])
@@ -353,9 +358,18 @@ Section System.
                              {| miv_id := mesiRsM;
                                 miv_value := O |})).
 
-      (* commonly used *)
-      Definition getMRqUpUp: Rule :=
-        rule.rquu[cidx~>1~>1]
+      Definition l1GetMRqUpUp: Rule :=
+        rule.rquu[1~>1]
+        :accepts mesiRqM
+        :from cidx
+        :me oidx
+        :requires (fun ost mins => summaryOf ost <= mesiS)
+        :transition
+           (!|ost, msg| --> {| miv_id := mesiRqM;
+                               miv_value := O |}).
+
+      Definition liGetMRqUpUp: Rule :=
+        rule.rquu[1~>1~~cidx]
         :accepts mesiRqM
         :from cidx
         :me oidx
@@ -418,7 +432,7 @@ Section System.
                     miv_value := O |})).
 
       Definition liGetMRqUpDownME: Rule :=
-        rule.rqud[cidx~>1~>6]
+        rule.rqud[1~>6~~cidx]
         :accepts mesiRqM
         :from cidx
         :me oidx
@@ -499,7 +513,7 @@ Section System.
                     miv_value := O |})).
 
       Definition memGetMRqUpDownDirS: Rule :=
-        rule.rqud[cidx~>1~>13]
+        rule.rqud[1~>13~~cidx]
         :accepts mesiRqM
         :from cidx
         :me oidx
@@ -546,7 +560,7 @@ Section System.
            (!|ost, _, _| --> ost +#[implStatusIdx <- mesiI]).
 
       Definition liPutImmI: Rule :=
-        rule.immd[cidx~>2~>3]
+        rule.immd[2~>3~~cidx]
         :accepts mesiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiI)
@@ -556,7 +570,7 @@ Section System.
                                 |})).
 
       Definition liPutImmS: Rule :=
-        rule.immd[cidx~>2~>4]
+        rule.immd[2~>4~~cidx]
         :accepts mesiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiS)
@@ -568,7 +582,7 @@ Section System.
                  |})).
 
       Definition memPutImmSNotLast: Rule :=
-        rule.immd[cidx~>2~>4~>0]
+        rule.immd[2~>4~>0~~cidx]
         :accepts mesiRqI
         :from cidx
         :requires
@@ -585,7 +599,7 @@ Section System.
        * the main memory always has a clean copy.
        *)
       Definition memPutImmSLast: Rule :=
-        rule.immd[cidx~>2~>4~>1]
+        rule.immd[2~>4~>1~~cidx]
         :accepts mesiRqI
         :from cidx
         :requires
@@ -599,7 +613,7 @@ Section System.
                              |})).
 
       Definition liPutImmE: Rule :=
-        rule.immd[cidx~>2~>5]
+        rule.immd[2~>5~~cidx]
         :accepts mesiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiE)
@@ -611,7 +625,7 @@ Section System.
                              |})).
 
       Definition liPutImmM: Rule :=
-        rule.immd[cidx~>2~>6]
+        rule.immd[2~>6~~cidx]
         :accepts mesiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mesiM)
@@ -638,11 +652,11 @@ Section System.
         {| obj_idx := oidx;
            obj_rules :=
              [(** rules involved with [GetS] *)
-               l1GetSImm eidx; getSRqUpUp oidx eidx;
+               l1GetSImm eidx; l1GetSRqUpUp oidx eidx;
                  l1GetSRsDownDownS; l1GetSRsDownDownE; downSImm oidx;
                    (** rules involved with [GetM] *)
                    l1GetMImmE eidx; l1GetMImmM eidx;
-                     getMRqUpUp oidx eidx;
+                     l1GetMRqUpUp oidx eidx;
                      l1GetMRsDownDown; l1DownIImm oidx;
                        (** rules involved with [Put] *)
                        putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
@@ -650,15 +664,15 @@ Section System.
 
     End L1.
 
-    Definition liRulesFromChild (cidx: IdxT): list (Rule) :=
-      [liGetSImmS cidx; liGetSImmME cidx; getSRqUpUp oidx cidx;
+    Definition liRulesFromChild (cidx: IdxT): list Rule :=
+      [liGetSImmS cidx; liGetSImmME cidx; liGetSRqUpUp oidx cidx;
          liGetSRqUpDownME oidx cidx; liGetSRqUpDownS oidx cidx;
-           liGetMImm cidx; getMRqUpUp oidx cidx; liGetMRsDownDownDirI;
+           liGetMImm cidx; liGetMRqUpUp oidx cidx;
              liGetMRqUpDownME oidx cidx;
              liPutImmI cidx; liPutImmS cidx;
                liPutImmE cidx; liPutImmM cidx].
 
-    Definition liRulesFromChildren (coinds: list IdxT): list (Rule) :=
+    Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
 
     Program Definition li: Object :=
@@ -680,9 +694,65 @@ Section System.
                          putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
          obj_rules_valid := _ |}.
     Next Obligation.
-    Admitted.
+      (** * TODO: automate this process using Ltacs *)
+      rewrite map_app.
+      apply NoDup_DisjList.
+      - unfold liRulesFromChildren.
+        rewrite concat_map.
+        apply concat_NoDup; intros.
+        + apply in_map_iff in H; dest; subst.
+          apply in_map_iff in H0; dest; subst.
+          simpl.
+          eapply inds_NoDup_prefix.
+          * do 12 (instantiate (1:= _ :: _); simpl; f_equal).
+            instantiate (1:= nil); reflexivity.
+          * solve_NoDup.
+        + apply map_nth_error_inv in H0; destruct H0 as [rl1 [? ?]]; subst.
+          apply map_nth_error_inv in H2; destruct H2 as [i1 [? ?]]; subst.
+          apply map_nth_error_inv in H1; destruct H1 as [rl2 [? ?]]; subst.
+          apply map_nth_error_inv in H1; destruct H1 as [i2 [? ?]]; subst.
 
-    Definition memRulesFromChild (cidx: IdxT): list (Rule) :=
+          assert (i1 ~*~ i2) as Hidx.
+          { unfold topo, subtreeChildrenIndsOf in *.
+            destruct (subtree oidx (fst (tree2Topo tr 0))) as [str|] eqn:Hstr;
+              [|simpl in *; destruct n1; discriminate].
+            simpl in *.
+            pose proof (tree2Topo_TreeTopo tr 0).
+            destruct H0 as [_ ?]; eapply H0 with (sidx:= oidx); eauto.
+          }
+          destruct Hidx as [Hidx1 Hidx2].
+          simpl; apply IndsDisj_DisjList.
+
+          red; intros; dest_in;
+            try (split; abstract (intro Hx; apply IdxPrefix_prefix_red in Hx; auto));
+            try (split;
+                 intro Hx; apply IdxPrefix_idxPrefix in Hx;
+                 unfold idxPrefix in Hx;
+                 repeat rewrite rev_app_distr in Hx;
+                 simpl in Hx; discriminate).
+
+      - simpl; solve_NoDup.
+      - simpl.
+        unfold liRulesFromChildren.
+        rewrite concat_map.
+        apply DisjList_comm, concat_DisjList.
+        intros.
+        apply in_map_iff in H; dest; subst.
+        apply in_map_iff in H0; dest; subst.
+        simpl.
+        unfold extendIdx; simpl.
+        apply IndsDisj_DisjList.
+
+        red; intros; dest_in;
+          abstract
+            (split;
+             intro; apply IdxPrefix_idxPrefix in H;
+             unfold idxPrefix in H;
+             rewrite rev_app_distr in H;
+             simpl in H; discriminate).
+    Qed.
+
+    Definition memRulesFromChild (cidx: IdxT): list Rule :=
       [liGetSImmS cidx; liGetSImmME cidx;
          liGetSRqUpDownME oidx cidx; liGetSRqUpDownS oidx cidx;
            liGetMImm cidx; liGetMRqUpDownME oidx cidx; memGetMRqUpDownDirS oidx cidx;
@@ -690,7 +760,7 @@ Section System.
              memPutImmSNotLast cidx; memPutImmSLast cidx;
                liPutImmE cidx; liPutImmM cidx].
 
-    Definition memRulesFromChildren (coinds: list IdxT): list (Rule) :=
+    Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
     
     Program Definition mem: Object :=
@@ -722,15 +792,16 @@ Section System.
 End System.
 
 Hint Unfold l1GetSImm liGetSImmS liGetSImmME
-     getSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
-     liGetSRsDownDownS liGetSRsDownDownE
+     l1GetSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
+     liGetSRqUpUp liGetSRsDownDownS liGetSRsDownDownE
      downSImm liGetSRqUpDownME liGetSRqUpDownS
      liDownSRsUpDown memDownSRsUpDown
      liDownSRqDownDownME liDownSRqDownDownS liDownSRsUpUp
   : MesiRules.
 
 Hint Unfold l1GetMImmE l1GetMImmM liGetMImm
-     getMRqUpUp l1GetMRsDownDown liGetMRsDownDownDirI liGetMRsDownRqDownDirS
+     l1GetMRqUpUp l1GetMRsDownDown
+     liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
      liDownIRsUpDownDirS liGetMRqUpDownME liDownIRsUpDownME
      l1DownIImm liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirME
      liDownIRsUpUp memGetMRqUpDownDirS

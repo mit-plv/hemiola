@@ -162,8 +162,86 @@ Definition TreeTopoEdge (dtr: DTree) :=
      edgeDownTo dtr oidx = Some midx) ->
     oidx = objIdxOf midx.
 
+(** TODO: move to [Index.v] *)
+Definition NoPrefix (il: list IdxT) :=
+  forall n1 i1 n2 i2,
+    n1 <> n2 ->
+    nth_error il n1 = Some i1 ->
+    nth_error il n2 = Some i2 ->
+    i1 ~*~ i2.
+
+Lemma NoPrefix_nil: NoPrefix nil.
+Proof.
+  red; intros; destruct n1; discriminate.
+Qed.
+
+Lemma NoPrefix_singleton: forall i, NoPrefix [i].
+Proof.
+  unfold NoPrefix; intros.
+  destruct n1; simpl in *.
+  - destruct n2; [exfalso; auto|].
+    destruct n2; discriminate.
+  - destruct n1; discriminate.
+Qed.
+
+Lemma NoPrefix_cons_inv:
+  forall i il,
+    NoPrefix (i :: il) -> NoPrefix il.
+Proof.
+  unfold NoPrefix; intros.
+  eapply H with (n1:= S n1) (n2:= S n2); eauto.
+Qed.
+
+Lemma IdxDisj_comm:
+  forall i1 i2, i1 ~*~ i2 -> i2 ~*~ i1.
+Proof.
+  unfold IdxDisj; intros; dest; auto.
+Qed.
+
+Lemma NoPrefix_cons:
+  forall i il,
+    NoPrefix il ->
+    (forall ai, In ai il -> i ~*~ ai) ->
+    NoPrefix (i :: il).
+Proof.
+  induction il; simpl; intros.
+  - red; intros.
+    destruct n1 as [|[|]]; try discriminate.
+    destruct n2 as [|[|]]; try discriminate.
+    exfalso; auto.
+  - red; intros.
+    destruct n1 as [|n1]; simpl in H2.
+    + inv H2.
+      destruct n2 as [|n2]; [exfalso; auto|clear H1].
+      simpl in H3.
+      destruct n2 as [|n2]; simpl in H3.
+      * inv H3; apply H0; left; reflexivity.
+      * eapply IHil with (n1:= O) (n2:= S n2); eauto.
+        apply NoPrefix_cons_inv in H; assumption.
+    + destruct n2 as [|n2]; simpl in H3.
+      * inv H3.
+        apply nth_error_In in H2.
+        apply IdxDisj_comm; apply H0; auto.
+      * destruct n1 as [|n1]; simpl in H2.
+        { inv H2; destruct n2 as [|n2]; [exfalso; auto|simpl in H3].
+          eapply H with (n1:= O) (n2:= S n2); eauto.
+        }
+        { destruct n2 as [|n2]; simpl in H3.
+          { inv H3; eapply H with (n1:= S n1) (n2:= O); eauto. }
+          { eapply IHil with (n1:= S n1) (n2:= S n2); eauto.
+            apply NoPrefix_cons_inv in H; assumption.
+          }
+        }
+Qed.
+
+Definition TreeTopoChildrenInds (dtr: DTree) :=
+  forall sidx str,
+    subtree sidx dtr = Some str ->
+    NoPrefix (childrenIndsOf str).
+
 Definition TreeTopo (dtr: DTree) :=
-  TreeTopoNode dtr /\ TreeTopoEdge dtr.
+  (TreeTopoNode dtr /\ TreeTopoEdge dtr) /\
+  TreeTopoChildrenInds dtr.
 
 Section TreeTopo.
 
@@ -172,6 +250,14 @@ Section TreeTopo.
   Proof.
     intros; induction bidx; [discriminate|].
     intro Hx; inv Hx; auto.
+  Qed.
+
+  Lemma tree2Topo_root_idx:
+    forall tr bidx,
+      rootOf (fst (tree2Topo tr bidx)) = bidx.
+  Proof.
+    destruct tr; simpl; intros.
+    find_if_inside; reflexivity.
   Qed.
 
   Lemma tree2Topo_root_edges:
@@ -297,12 +383,67 @@ Section TreeTopo.
       rewrite H2 in H; simpl in H; auto.
   Qed.
 
+  Lemma singletonDNode_TreeTopoChildrenInds:
+    forall bidx, TreeTopoChildrenInds (fst (singletonDNode bidx)).
+  Proof.
+    intros; red; intros.
+    cbv [singletonDNode fst subtree dmc_me find_some] in H.
+    destruct (idx_dec bidx sidx).
+    - inv H; cbn.
+      apply NoPrefix_singleton.
+    - destruct (idx_dec _ _).
+      + inv H; cbn.
+        apply NoPrefix_nil.
+      + discriminate.
+  Qed.
+
+  Lemma tree2Topo_children_NoPrefix:
+    forall ctrs base ofs,
+      NoPrefix (map rootOf (map fst (incMap tree2Topo ctrs base ofs))).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros; [apply NoPrefix_nil|].
+    apply NoPrefix_cons; [apply IHctrs|].
+    intros.
+    apply in_map_iff in H; destruct H as [cdtr [? ?]]; subst.
+    apply in_map_iff in H0; destruct H0 as [[rcdtr cifc] [? ?]].
+    simpl in *; subst.
+    apply incMap_In in H0; destruct H0 as [rctr [rofs [? ?]]].
+    replace cdtr with (fst (tree2Topo rctr base~>(S ofs + rofs)))
+      by (rewrite <-H0; reflexivity).
+    do 2 rewrite tree2Topo_root_idx.
+    apply extendIdx_IdxDisj.
+    omega.
+  Qed.
+             
+  Lemma tree2Topo_TreeTopoChildrenInds:
+    forall tr bidx, TreeTopoChildrenInds (fst (tree2Topo tr bidx)).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    find_if_inside; [apply singletonDNode_TreeTopoChildrenInds|].
+    simpl; red; intros.
+    simpl in H0; find_if_inside; subst.
+    - inv H0.
+      unfold childrenIndsOf; simpl.
+      apply tree2Topo_children_NoPrefix.
+    - apply find_some_exist in H0.
+      destruct H0 as [sdtr [? ?]].
+      apply in_map_iff in H0; destruct H0 as [[dtr cifc] [? ?]].
+      simpl in *; subst.
+      apply incMap_In in H2.
+      destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
+      apply nth_error_In in H0.
+      rewrite Forall_forall in H; specialize (H _ H0 bidx~>ofs).
+      rewrite <-H2 in H; simpl in H.
+      eapply H; eauto.
+  Qed.
+
   Lemma tree2Topo_TreeTopo:
     forall tr bidx, TreeTopo (fst (tree2Topo tr bidx)).
   Proof.
-    intros; split.
+    intros; red; repeat ssplit.
     - apply tree2Topo_TreeTopoNode.
     - apply tree2Topo_TreeTopoEdge.
+    - apply tree2Topo_TreeTopoChildrenInds.
   Qed.
 
 End TreeTopo.
@@ -502,8 +643,8 @@ Section Facts.
             apply H.
           }
           { intros.
-            apply nth_error_map_iff in H1; destruct H1 as [[dtr1 cifc1] [? ?]].
-            apply nth_error_map_iff in H2; destruct H2 as [[dtr2 cifc2] [? ?]].
+            apply map_nth_error_inv in H1; destruct H1 as [[dtr1 cifc1] [? ?]].
+            apply map_nth_error_inv in H2; destruct H2 as [[dtr2 cifc2] [? ?]].
             simpl in *; subst.
             apply incMap_nth_error in H3; destruct H3 as [str1 [? ?]]. 
             apply incMap_nth_error in H4; destruct H4 as [str2 [? ?]].
@@ -535,8 +676,8 @@ Section Facts.
             apply H.
           }
           { intros.
-            apply nth_error_map_iff in H1; destruct H1 as [[dtr1 cifc1] [? ?]].
-            apply nth_error_map_iff in H2; destruct H2 as [[dtr2 cifc2] [? ?]].
+            apply map_nth_error_inv in H1; destruct H1 as [[dtr1 cifc1] [? ?]].
+            apply map_nth_error_inv in H2; destruct H2 as [[dtr2 cifc2] [? ?]].
             simpl in *; subst.
             apply incMap_nth_error in H3; destruct H3 as [str1 [? ?]]. 
             apply incMap_nth_error in H4; destruct H4 as [str2 [? ?]].

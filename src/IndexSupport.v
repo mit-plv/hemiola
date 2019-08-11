@@ -311,3 +311,88 @@ Proof.
   exfalso; eapply IdxDisj_not_eq; eauto.
 Qed.
 
+Lemma idxPrefixR_prefix:
+  forall pi i1 i2,
+    idxPrefixR (pi ++ i1) (pi ++ i2) =
+    idxPrefixR i1 i2.
+Proof.
+  induction pi; simpl; intros; [reflexivity|].
+  find_if_inside; auto.
+  elim n; reflexivity.
+Qed.
+
+Lemma idxPrefixR_IdxPrefix:
+  forall i1 i2, idxPrefixR i1 i2 = true ->
+                IdxPrefix (rev i1) (rev i2).
+Proof.
+  induction i1 as [|n1 i1]; simpl; intros;
+    [eexists; rewrite app_nil_r; reflexivity|].
+  destruct i2 as [|n2 i2]; [discriminate|].
+  destruct (eq_nat_dec n1 n2); subst; [|discriminate].
+  simpl.
+  specialize (IHi1 _ H).
+  red in IHi1; dest; rewrite H0.
+  eexists; rewrite app_assoc; reflexivity.
+Qed.
+
+Lemma IdxPrefix_idxPrefixR:
+  forall i1 i2, IdxPrefix i1 i2 ->
+                idxPrefixR (rev i1) (rev i2) = true.
+Proof.
+  induction i1 as [|n1 i1]; intros; [reflexivity|].
+  destruct i2 as [|n2 i2];
+    [red in H; dest; destruct x; discriminate|].
+  red in H; dest; rewrite H.
+  rewrite rev_app_distr; simpl.
+  rewrite <-app_assoc.
+  rewrite idxPrefixR_prefix.
+  simpl; find_if_inside; auto.
+Qed.
+
+Lemma idxPrefix_IdxPrefix:
+  forall i1 i2, idxPrefix i1 i2 = true -> IdxPrefix i1 i2.
+Proof.
+  intros.
+  rewrite <-rev_involutive with (l:= i1).
+  rewrite <-rev_involutive with (l:= i2).
+  apply idxPrefixR_IdxPrefix; auto.
+Qed.
+
+Lemma IdxPrefix_idxPrefix:
+  forall i1 i2, IdxPrefix i1 i2 -> idxPrefix i1 i2 = true.
+Proof.
+  intros; apply IdxPrefix_idxPrefixR; auto.
+Qed.
+
+Lemma inds_NoDup_prefix:
+  forall (pi: IdxT) (il pil: list IdxT),
+    pil = map (fun i => pi ++ i) il ->
+    NoDup il -> NoDup pil.
+Proof.
+  induction il as [|i il]; simpl; intros; subst; [constructor|].
+  inv H0.
+  constructor; auto.
+  intro Hx; apply in_map_iff in Hx.
+  destruct Hx as [ri [? ?]].
+  apply app_inv_head in H; subst; auto.
+Qed.
+
+Lemma IdxPrefix_prefix_red:
+  forall (pi i1 i2: IdxT),
+    (i1 ++ pi) ~< (i2 ++ pi) -> i1 ~< i2.
+Proof.
+  unfold IdxPrefix; intros.
+  destruct H as [ri ?].
+  rewrite app_assoc in H; apply app_inv_tail in H.
+  subst; eauto.
+Qed.
+
+Lemma IdxPrefix_prefix_ext:
+  forall (pi i1 i2: IdxT),
+    i1 ~< i2 -> (i1 ++ pi) ~< (i2 ++ pi).
+Proof.
+  unfold IdxPrefix; intros.
+  destruct H as [ri ?]; subst.
+  rewrite <-app_assoc; eauto.
+Qed.
+

@@ -1282,6 +1282,34 @@ Proof.
   intro Hx; elim n; eapply noDup_In; eauto.
 Qed.
 
+Lemma concat_DisjList:
+  forall {A} (l1: list A) (ll2: list (list A)),
+    (forall l2, In l2 ll2 -> DisjList l1 l2) ->
+    DisjList l1 (List.concat ll2).
+Proof.
+  induction ll2; simpl; intros; [apply DisjList_nil_2|].
+  apply DisjList_comm, DisjList_app_4; apply DisjList_comm; auto.
+Qed.
+
+Lemma concat_NoDup:
+  forall {A} (ll: list (list A)),
+    (forall l, In l ll -> NoDup l) ->
+    (forall n1 l1 n2 l2,
+        n1 <> n2 ->
+        nth_error ll n1 = Some l1 ->
+        nth_error ll n2 = Some l2 ->
+        DisjList l1 l2) ->
+    NoDup (List.concat ll).
+Proof.
+  induction ll; simpl; intros; [constructor|].
+  apply NoDup_DisjList; auto.
+  - apply IHll; auto.
+    intros; apply H0 with (n1:= S n1) (n2:= S n2); auto.
+  - apply concat_DisjList.
+    intros; apply In_nth_error in H1; destruct H1 as [n2 ?].
+    apply H0 with (n1:= O) (n2:= S n2); auto.
+Qed.
+
 Lemma hd_error_In:
   forall {A} (l: list A) v,
     hd_error l = Some v ->
@@ -1302,13 +1330,19 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma nth_error_map_iff:
-  forall {A B} (f: A -> B) (l: list A) (n: nat) (b: B),
+Lemma map_nth_error_inv:
+  forall {A B} (f: A -> B) (n: nat) (l: list A) (b: B),
     nth_error (map f l) n = Some b ->
     exists a, f a = b /\ nth_error l n = Some a.
 Proof.
-  induction l; simpl; intros; [destruct n; discriminate|].
-  destruct n; [inv H; eauto|eauto].
+  induction n; simpl; intros.
+  - destruct (map f l) eqn:Hml; [discriminate|].
+    inv H.
+    destruct l; [discriminate|].
+    simpl in Hml; inv Hml; eauto.
+  - destruct (map f l) eqn:Hml; [discriminate|].
+    destruct l; [discriminate|].
+    simpl in Hml; inv Hml; eauto.
 Qed.
 
 Lemma count_occ_app:
