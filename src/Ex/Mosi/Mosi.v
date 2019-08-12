@@ -127,7 +127,7 @@ Section System.
                                 |})).
 
       Definition liGetSImmOS: Rule :=
-        rule.immd[cidx~>0~>0~>0]
+        rule.immd[0~>0~>0~~cidx]
         :accepts mosiRqS
         :from cidx
         :requires
@@ -141,7 +141,7 @@ Section System.
                  |})).
 
       Definition liGetSImmM: Rule :=
-        rule.immd[cidx~>0~>0~>1]
+        rule.immd[0~>0~>1~~cidx]
         :accepts mosiRqS
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mosiM)
@@ -152,13 +152,7 @@ Section System.
                               miv_value := ost#[implValueIdx]
                            |})).
 
-      (** NOTE (common rules): some rules do not require distinguishing L1 and Li 
-       * caches. In correctness proof we may have to prove invariants, e.g., the
-       * directory status of L1 is always [mosiI] since it does not have children.
-       *)
-
-      (* commonly used *)
-      Definition getSRqUpUp: Rule :=
+      Definition l1GetSRqUpUp: Rule :=
         rule.rquu[cidx~>0~>1]
         :accepts mosiRqS
         :from cidx
@@ -166,6 +160,14 @@ Section System.
         :requires (fun ost mins => summaryOf ost = mosiI)
         :transition (!|ost, msg| --> {| miv_id := mosiRqS; miv_value := O |}).
 
+      Definition liGetSRqUpUp: Rule :=
+        rule.rquu[0~>1~~cidx]
+        :accepts mosiRqS
+        :from cidx
+        :me oidx
+        :requires (fun ost mins => summaryOf ost = mosiI)
+        :transition (!|ost, msg| --> {| miv_id := mosiRqS; miv_value := O |}).
+      
       Definition l1GetSRsDownDownS: Rule :=
         rule.rsdd[0~>2]
         :accepts mosiRsS
@@ -190,7 +192,7 @@ Section System.
                     miv_value := msg_value min |})).
 
       Definition liGetSRqUpDownS: Rule :=
-        rule.rqud[cidx~>0~>3~>0]
+        rule.rqud[0~>3~>0~~cidx]
         :accepts mosiRqS
         :from cidx
         :me oidx
@@ -204,7 +206,7 @@ Section System.
                                 miv_value := O |})).
 
       Definition liGetSRqUpDownMO: Rule :=
-        rule.rqud[cidx~>0~>3]
+        rule.rqud[0~>3~>1~~cidx]
         :accepts mosiRqS
         :from cidx
         :me oidx
@@ -335,7 +337,7 @@ Section System.
                     miv_value := O |})).
 
       Definition liGetMImm: Rule :=
-        rule.immd[cidx~>1~>0]
+        rule.immd[1~>0~~cidx]
         :accepts mosiRqM
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mosiM)
@@ -345,8 +347,7 @@ Section System.
                              {| miv_id := mosiRsM;
                                 miv_value := O |})).
 
-      (* commonly used *)
-      Definition getMRqUpUp: Rule :=
+      Definition l1GetMRqUpUp: Rule :=
         rule.rquu[cidx~>1~>1]
         :accepts mosiRqM
         :from cidx
@@ -354,6 +355,14 @@ Section System.
         :requires (fun ost mins => summaryOf ost < mosiM)
         :transition (!|ost, msg| --> {| miv_id := mosiRqM; miv_value := O |}).
 
+      Definition liGetMRqUpUp: Rule :=
+        rule.rquu[1~>1~~cidx]
+        :accepts mosiRqM
+        :from cidx
+        :me oidx
+        :requires (fun ost mins => summaryOf ost < mosiM)
+        :transition (!|ost, msg| --> {| miv_id := mosiRqM; miv_value := O |}).
+      
       Definition l1GetMRsDownDown: Rule :=
         rule.rsdd[1~>2]
         :accepts mosiRsM
@@ -398,7 +407,7 @@ Section System.
                                miv_value := O |})).
 
       Definition liGetMRqUpDownM: Rule :=
-        rule.rqud[cidx~>1~>5]
+        rule.rqud[1~>5~~cidx]
         :accepts mosiRqM
         :from cidx
         :me oidx
@@ -481,7 +490,7 @@ Section System.
                       miv_value := O |})).
 
       Definition memGetMRqUpDown: Rule :=
-        rule.rqud[cidx~>1~>12]
+        rule.rqud[1~>12~~cidx]
         :accepts mosiRqM
         :from cidx
         :me oidx
@@ -519,7 +528,7 @@ Section System.
         :transition (!|ost, _, _| --> ost +#[implStatusIdx <- mosiI]).
 
       Definition liPutImmI: Rule :=
-        rule.immd[cidx~>2~>3]
+        rule.immd[2~>3~~cidx]
         :accepts mosiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mosiI)
@@ -529,7 +538,7 @@ Section System.
                                 |})).
 
       Definition liPutImmS: Rule :=
-        rule.immd[cidx~>2~>4]
+        rule.immd[2~>4~~cidx]
         :accepts mosiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mosiS)
@@ -541,7 +550,7 @@ Section System.
                    |})).
 
       Definition memPutImmSNotLast: Rule :=
-        rule.immd[cidx~>2~>4~>0]
+        rule.immd[2~>4~>0~~cidx]
         :accepts mosiRqI
         :from cidx
         :requires
@@ -555,7 +564,7 @@ Section System.
                    |})).
 
       Definition memPutImmSLast: Rule :=
-        rule.immd[cidx~>2~>4~>1]
+        rule.immd[2~>4~>1~~cidx]
         :accepts mosiRqI
         :from cidx
         :requires
@@ -569,7 +578,7 @@ Section System.
                              |})).
 
       Definition liPutImmO: Rule :=
-        rule.immd[cidx~>2~>5]
+        rule.immd[2~>5~~cidx]
         :accepts mosiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mosiO)
@@ -582,7 +591,7 @@ Section System.
                              |})).
 
       Definition liPutImmM: Rule :=
-        rule.immd[cidx~>2~>6]
+        rule.immd[2~>6~~cidx]
         :accepts mosiRqI
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[implDirIdx] = mosiM)
@@ -609,10 +618,10 @@ Section System.
         {| obj_idx := oidx;
            obj_rules :=
              [(** rules involved with [GetS] *)
-               l1GetSImm eidx; getSRqUpUp oidx eidx;
+               l1GetSImm eidx; l1GetSRqUpUp oidx eidx;
                  l1GetSRsDownDownS; downSImmS oidx; downSImmMO oidx;
                    (** rules involved with [GetM] *)
-                   l1GetMImm eidx; getMRqUpUp oidx eidx;
+                   l1GetMImm eidx; l1GetMRqUpUp oidx eidx;
                      l1GetMRsDownDown; l1DownIImm oidx;
                        (** rules involved with [Put] *)
                        putRqUpUp oidx; putRqUpUpMO oidx; putRsDownDown];
@@ -621,16 +630,27 @@ Section System.
     End L1.
 
     Definition liRulesFromChild (cidx: IdxT): list Rule :=
-      [liGetSImmOS cidx; liGetSImmM cidx; getSRqUpUp oidx cidx;
+      [liGetSImmOS cidx; liGetSImmM cidx; liGetSRqUpUp oidx cidx;
          liGetSRqUpDownS oidx cidx; liGetSRqUpDownMO oidx cidx;
-           liGetMImm cidx; getMRqUpUp oidx cidx; liGetMRqUpDownM oidx cidx;
+           liGetMImm cidx; liGetMRqUpUp oidx cidx; liGetMRqUpDownM oidx cidx;
              liPutImmI cidx; liPutImmS cidx;
                liPutImmO cidx; liPutImmM cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
 
-    Program Definition li: Object :=
+    Hint Unfold liRulesFromChild liRulesFromChildren: RuleConds.
+
+    Ltac disc_child_inds_disj :=
+      pose proof (tree2Topo_TreeTopo tr 0);
+      try match goal with
+          | [Hn: ?n1 <> ?n2,
+             H1: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n1 = Some _,
+             H2: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n2 = Some _ |- _] =>
+            eapply TreeTopo_children_inds_disj in Hn; eauto; destruct Hn
+          end.
+
+    Definition li: Object :=
       {| obj_idx := oidx;
          obj_rules :=
            (liRulesFromChildren (subtreeChildrenIndsOf topo oidx))
@@ -646,9 +666,7 @@ Section System.
                          liDownIRsUpUp;
                          (** rules involved with [Put] *)
                          putRqUpUp oidx; putRqUpUpMO oidx; putRsDownDown];
-         obj_rules_valid := _ |}.
-    Next Obligation.
-    Admitted.
+         obj_rules_valid := ltac:(solve_inds_NoDup disc_child_inds_disj) |}.
 
     Definition memRulesFromChild (cidx: IdxT): list Rule :=
       [liGetSImmOS cidx; liGetSImmM cidx;
@@ -659,15 +677,15 @@ Section System.
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
-             
-    Program Definition mem: Object :=
+
+    Hint Unfold memRulesFromChild memRulesFromChildren: RuleConds.
+
+    Definition mem: Object :=
       {| obj_idx := oidx;
          obj_rules :=
            (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
              ++ [liDownSRsUpDownS; liDownSRsUpDownMO; liDownIRsUpDown];
-         obj_rules_valid := _ |}.
-    Next Obligation.
-    Admitted.
+         obj_rules_valid := ltac:(solve_inds_NoDup disc_child_inds_disj) |}.
     
   End Objects.
 

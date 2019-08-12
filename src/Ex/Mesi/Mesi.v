@@ -11,9 +11,6 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Notation "i1 ~~ i2" :=
-  (i2 ++ i1) (at level 8, right associativity, format "i1 '~~' i2", only parsing).
-
 (** Design choices:
  * - Multi-level (for arbitrary tree structure)
  * - MESI
@@ -675,7 +672,18 @@ Section System.
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
 
-    Program Definition li: Object :=
+    Hint Unfold liRulesFromChild liRulesFromChildren: RuleConds.
+
+    Ltac disc_child_inds_disj :=
+      pose proof (tree2Topo_TreeTopo tr 0);
+      try match goal with
+          | [Hn: ?n1 <> ?n2,
+             H1: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n1 = Some _,
+             H2: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n2 = Some _ |- _] =>
+            eapply TreeTopo_children_inds_disj in Hn; eauto; destruct Hn
+          end.
+    
+    Definition li: Object :=
       {| obj_idx := oidx;
          obj_rules :=
            (liRulesFromChildren (subtreeChildrenIndsOf topo oidx))
@@ -692,65 +700,7 @@ Section System.
                          liDownIRsUpUp;
                          (** rules involved with [Put] *)
                          putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
-         obj_rules_valid := _ |}.
-    Next Obligation.
-      (** * TODO: automate this process using Ltacs *)
-      rewrite map_app.
-      apply NoDup_DisjList.
-      - unfold liRulesFromChildren.
-        rewrite concat_map.
-        apply concat_NoDup; intros.
-        + apply in_map_iff in H; dest; subst.
-          apply in_map_iff in H0; dest; subst.
-          simpl.
-          eapply inds_NoDup_prefix.
-          * do 12 (instantiate (1:= _ :: _); simpl; f_equal).
-            instantiate (1:= nil); reflexivity.
-          * solve_NoDup.
-        + apply map_nth_error_inv in H0; destruct H0 as [rl1 [? ?]]; subst.
-          apply map_nth_error_inv in H2; destruct H2 as [i1 [? ?]]; subst.
-          apply map_nth_error_inv in H1; destruct H1 as [rl2 [? ?]]; subst.
-          apply map_nth_error_inv in H1; destruct H1 as [i2 [? ?]]; subst.
-
-          assert (i1 ~*~ i2) as Hidx.
-          { unfold topo, subtreeChildrenIndsOf in *.
-            destruct (subtree oidx (fst (tree2Topo tr 0))) as [str|] eqn:Hstr;
-              [|simpl in *; destruct n1; discriminate].
-            simpl in *.
-            pose proof (tree2Topo_TreeTopo tr 0).
-            destruct H0 as [_ ?]; eapply H0 with (sidx:= oidx); eauto.
-          }
-          destruct Hidx as [Hidx1 Hidx2].
-          simpl; apply IndsDisj_DisjList.
-
-          red; intros; dest_in;
-            try (split; abstract (intro Hx; apply IdxPrefix_prefix_red in Hx; auto));
-            try (split;
-                 intro Hx; apply IdxPrefix_idxPrefix in Hx;
-                 unfold idxPrefix in Hx;
-                 repeat rewrite rev_app_distr in Hx;
-                 simpl in Hx; discriminate).
-
-      - simpl; solve_NoDup.
-      - simpl.
-        unfold liRulesFromChildren.
-        rewrite concat_map.
-        apply DisjList_comm, concat_DisjList.
-        intros.
-        apply in_map_iff in H; dest; subst.
-        apply in_map_iff in H0; dest; subst.
-        simpl.
-        unfold extendIdx; simpl.
-        apply IndsDisj_DisjList.
-
-        red; intros; dest_in;
-          abstract
-            (split;
-             intro; apply IdxPrefix_idxPrefix in H;
-             unfold idxPrefix in H;
-             rewrite rev_app_distr in H;
-             simpl in H; discriminate).
-    Qed.
+         obj_rules_valid := ltac:(solve_inds_NoDup disc_child_inds_disj) |}.
 
     Definition memRulesFromChild (cidx: IdxT): list Rule :=
       [liGetSImmS cidx; liGetSImmME cidx;
@@ -762,15 +712,15 @@ Section System.
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
-    
-    Program Definition mem: Object :=
+
+    Hint Unfold memRulesFromChild memRulesFromChildren: RuleConds.
+
+    Definition mem: Object :=
       {| obj_idx := oidx;
          obj_rules :=
            (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
              ++ [memDownSRsUpDown; liDownIRsUpDownME; liDownIRsUpDownDirS];
-         obj_rules_valid := _ |}.
-    Next Obligation.
-    Admitted.
+         obj_rules_valid := ltac:(solve_inds_NoDup disc_child_inds_disj) |}.
     
   End Objects.
 
