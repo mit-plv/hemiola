@@ -171,3 +171,10 @@ Fixpoint idxPrefixR (i1 i2: IdxT): bool :=
 Definition idxPrefix (i1 i2: IdxT): bool :=
   idxPrefixR (rev i1) (rev i2).
 
+Definition NoPrefix (il: list IdxT) :=
+  forall n1 i1 n2 i2,
+    n1 <> n2 ->
+    nth_error il n1 = Some i1 ->
+    nth_error il n2 = Some i2 ->
+    i1 ~*~ i2.
+

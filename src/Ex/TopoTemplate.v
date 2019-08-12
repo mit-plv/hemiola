@@ -114,12 +114,6 @@ Definition singletonDNode (idx: IdxT): DTree * CIfc :=
       c_merqs := [eidx~>rqUpIdx];
       c_merss := [eidx~>downIdx] |}).
 
-(** TODO: move to [ListSupport.v] *)
-Definition nil_dec {A}: forall l: list A, {l = nil} + {l <> nil}.
-Proof.
-  intros; destruct l; [left; reflexivity|right; discriminate].
-Defined.
-
 Fixpoint tree2Topo (tr: tree) (curIdx: IdxT): DTree * CIfc :=
   match tr with
   | Node ctrs =>
@@ -161,78 +155,6 @@ Definition TreeTopoEdge (dtr: DTree) :=
      rsEdgeUpFrom dtr oidx = Some midx \/
      edgeDownTo dtr oidx = Some midx) ->
     oidx = objIdxOf midx.
-
-(** TODO: move to [Index.v] *)
-Definition NoPrefix (il: list IdxT) :=
-  forall n1 i1 n2 i2,
-    n1 <> n2 ->
-    nth_error il n1 = Some i1 ->
-    nth_error il n2 = Some i2 ->
-    i1 ~*~ i2.
-
-Lemma NoPrefix_nil: NoPrefix nil.
-Proof.
-  red; intros; destruct n1; discriminate.
-Qed.
-
-Lemma NoPrefix_singleton: forall i, NoPrefix [i].
-Proof.
-  unfold NoPrefix; intros.
-  destruct n1; simpl in *.
-  - destruct n2; [exfalso; auto|].
-    destruct n2; discriminate.
-  - destruct n1; discriminate.
-Qed.
-
-Lemma NoPrefix_cons_inv:
-  forall i il,
-    NoPrefix (i :: il) -> NoPrefix il.
-Proof.
-  unfold NoPrefix; intros.
-  eapply H with (n1:= S n1) (n2:= S n2); eauto.
-Qed.
-
-Lemma IdxDisj_comm:
-  forall i1 i2, i1 ~*~ i2 -> i2 ~*~ i1.
-Proof.
-  unfold IdxDisj; intros; dest; auto.
-Qed.
-
-Lemma NoPrefix_cons:
-  forall i il,
-    NoPrefix il ->
-    (forall ai, In ai il -> i ~*~ ai) ->
-    NoPrefix (i :: il).
-Proof.
-  induction il; simpl; intros.
-  - red; intros.
-    destruct n1 as [|[|]]; try discriminate.
-    destruct n2 as [|[|]]; try discriminate.
-    exfalso; auto.
-  - red; intros.
-    destruct n1 as [|n1]; simpl in H2.
-    + inv H2.
-      destruct n2 as [|n2]; [exfalso; auto|clear H1].
-      simpl in H3.
-      destruct n2 as [|n2]; simpl in H3.
-      * inv H3; apply H0; left; reflexivity.
-      * eapply IHil with (n1:= O) (n2:= S n2); eauto.
-        apply NoPrefix_cons_inv in H; assumption.
-    + destruct n2 as [|n2]; simpl in H3.
-      * inv H3.
-        apply nth_error_In in H2.
-        apply IdxDisj_comm; apply H0; auto.
-      * destruct n1 as [|n1]; simpl in H2.
-        { inv H2; destruct n2 as [|n2]; [exfalso; auto|simpl in H3].
-          eapply H with (n1:= O) (n2:= S n2); eauto.
-        }
-        { destruct n2 as [|n2]; simpl in H3.
-          { inv H3; eapply H with (n1:= S n1) (n2:= O); eauto. }
-          { eapply IHil with (n1:= S n1) (n2:= S n2); eauto.
-            apply NoPrefix_cons_inv in H; assumption.
-          }
-        }
-Qed.
 
 Definition TreeTopoChildrenInds (dtr: DTree) :=
   forall sidx str,
@@ -448,22 +370,166 @@ Section TreeTopo.
 
 End TreeTopo.
 
+Definition WfCIfc (cifc: CIfc) :=
+  NoDup (c_li_indices cifc ++ c_l1_indices cifc) /\
+  NoDup (c_minds cifc ++ c_merqs cifc ++ c_merss cifc).
+
 Section Facts.
 
-  Lemma in_app_or_4:
-    forall {A} (a: A) (l1 l2 l3 l4: list A),
-      In a ((l1 ++ l2) ++ (l3 ++ l4)) ->
-      In a (l1 ++ l3) \/ In a (l2 ++ l4).
+  Lemma fold_left_base_c_minds_In:
+    forall ifc ifcs bifc,
+      SubList (c_minds ifc) (c_minds bifc) ->
+      SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
   Proof.
-    intros.
-    apply in_app_or in H; destruct H.
-    - apply in_app_or in H; destruct H.
-      + left; apply in_or_app; auto.
-      + right; apply in_or_app; auto.
-    - apply in_app_or in H; destruct H.
-      + left; apply in_or_app; auto.
-      + right; apply in_or_app; auto.
-  Qed.    
+    induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
+    apply IHifcs.
+    simpl; apply SubList_app_1; assumption.
+  Qed.
+
+  Lemma mergeCIfc_fold_left_c_minds_In:
+    forall ifc ifcs,
+      In ifc ifcs ->
+      forall bifc,
+        SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
+  Proof.
+    induction ifcs; simpl; intros; [exfalso; auto|].
+    destruct H; subst; [|auto].
+    apply fold_left_base_c_minds_In.
+    simpl; apply SubList_app_2, SubList_refl.
+  Qed.
+
+  Lemma tree2Topo_children_oidx_In:
+    forall oidx bidx ctrs oss bcifc,
+      In oidx ((c_li_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc))
+                 ++ (c_l1_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc))) ->
+      In oidx (c_li_indices bcifc ++ c_l1_indices bcifc) \/
+      exists ctr ofs,
+        nth_error ctrs ofs = Some ctr /\
+        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+           (map fst (incMap tree2Topo ctrs bidx oss)) /\
+        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+           (map snd (incMap tree2Topo ctrs bidx oss)) /\
+        In oidx ((c_li_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                   ++ (c_l1_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros;
+      [left; assumption|].
+
+    specialize (IHctrs _ _ H).
+    destruct IHctrs.
+    - simpl in H0; apply in_app_or_4 in H0; destruct H0.
+      + left; assumption.
+      + right; exists ctr, 0.
+        rewrite Nat.add_0_r; auto.
+    - destruct H0 as [nctr [ofs ?]]; dest.
+      right; exists nctr, (S ofs).
+      rewrite Nat.add_succ_r; auto.
+  Qed.
+
+  Lemma tree2Topo_children_chns_In:
+    forall erq bidx ctrs oss bcifc,
+      let cifc := fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc in
+      In erq (c_minds cifc ++ c_merqs cifc ++ c_merss cifc) ->
+      In erq (c_minds bcifc ++ c_merqs bcifc ++ c_merss bcifc) \/
+      exists ctr ofs,
+        nth_error ctrs ofs = Some ctr /\
+        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+           (map fst (incMap tree2Topo ctrs bidx oss)) /\
+        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+           (map snd (incMap tree2Topo ctrs bidx oss)) /\
+        let ccifc := snd (tree2Topo ctr bidx~>(oss + ofs)) in
+        In erq (c_minds ccifc ++ c_merqs ccifc ++ c_merss ccifc).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros;
+      [left; assumption|].
+
+    specialize (IHctrs _ _ H).
+    destruct IHctrs.
+    - simpl in H0; apply in_app_or in H0; destruct H0.
+      + simpl in H0; apply in_app_or in H0; destruct H0.
+        * left; apply in_or_app; auto.
+        * right; exists ctr, 0.
+          rewrite Nat.add_0_r; auto.
+          repeat split; auto.
+          apply in_or_app; auto.
+      + simpl in H0; apply in_app_or in H0; destruct H0.
+        * simpl in H0; apply in_app_or in H0; destruct H0.
+          { left; apply in_or_app.
+            right; apply in_or_app; auto.
+          }
+          { right; exists ctr, 0.
+            rewrite Nat.add_0_r; auto.
+            repeat split; auto.
+            apply in_or_app.
+            right; apply in_or_app; auto.
+          }
+        * simpl in H0; apply in_app_or in H0; destruct H0.
+          { left; apply in_or_app.
+            right; apply in_or_app; auto.
+          }
+          { right; exists ctr, 0.
+            rewrite Nat.add_0_r; auto.
+            repeat split; auto.
+            apply in_or_app.
+            right; apply in_or_app; auto.
+          }
+
+    - destruct H0 as [nctr [ofs ?]]; dest.
+      right; exists nctr, (S ofs).
+      rewrite Nat.add_succ_r; auto.
+  Qed.
+
+  Lemma tree2Topo_children_ext_rq_In:
+    forall erq bidx ctrs oss bcifc,
+      In erq (c_merqs (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
+      In erq (c_merqs bcifc) \/
+      exists ctr ofs,
+        nth_error ctrs ofs = Some ctr /\
+        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+           (map fst (incMap tree2Topo ctrs bidx oss)) /\
+        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+           (map snd (incMap tree2Topo ctrs bidx oss)) /\
+        In erq (c_merqs (snd (tree2Topo ctr bidx~>(oss + ofs)))).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros;
+      [left; assumption|].
+
+    specialize (IHctrs _ _ H).
+    destruct IHctrs.
+    - simpl in H0; apply in_app_or in H0; destruct H0.
+      + left; assumption.
+      + right; exists ctr, 0.
+        rewrite Nat.add_0_r; auto.
+    - destruct H0 as [nctr [ofs ?]]; dest.
+      right; exists nctr, (S ofs).
+      rewrite Nat.add_succ_r; auto.
+  Qed.
+
+  Lemma tree2Topo_children_ext_rs_In:
+    forall ers bidx ctrs oss bcifc,
+      In ers (c_merss (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
+      In ers (c_merss bcifc) \/
+      exists ctr ofs,
+        nth_error ctrs ofs = Some ctr /\
+        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+           (map fst (incMap tree2Topo ctrs bidx oss)) /\
+        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+           (map snd (incMap tree2Topo ctrs bidx oss)) /\
+        In ers (c_merss (snd (tree2Topo ctr bidx~>(oss + ofs)))).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros;
+      [left; assumption|].
+
+    specialize (IHctrs _ _ H).
+    destruct IHctrs.
+    - simpl in H0; apply in_app_or in H0; destruct H0.
+      + left; assumption.
+      + right; exists ctr, 0.
+        rewrite Nat.add_0_r; auto.
+    - destruct H0 as [nctr [ofs ?]]; dest.
+      right; exists nctr, (S ofs).
+      rewrite Nat.add_succ_r; auto.
+  Qed.
 
   Lemma singletonDNode_inds_prefix_base:
     forall bidx,
@@ -480,6 +546,30 @@ Section Facts.
     forall bidx,
       Forall (fun idx => bidx ~< idx /\ List.length bidx < List.length idx)
              (chnsOf (fst (singletonDNode bidx))).
+  Proof.
+    intros; simpl.
+    repeat constructor;
+      try (eexists [_]; reflexivity);
+      try (eexists [_; _]; reflexivity).
+  Qed.
+
+  Lemma singletonDNode_cifc_inds_prefix_base:
+    forall bidx,
+      Forall (fun idx => bidx ~< idx)
+             ((c_li_indices (snd (singletonDNode bidx)))
+                ++ (c_l1_indices (snd (singletonDNode bidx)))).
+  Proof.
+    intros; simpl.
+    repeat constructor.
+    apply IdxPrefix_refl.
+  Qed.
+
+  Lemma singletonDNode_cifc_chns_prefix_base:
+    forall bidx,
+      Forall (fun idx => bidx ~< idx /\ List.length bidx < List.length idx)
+             ((c_minds (snd (singletonDNode bidx)))
+                ++ (c_merqs (snd (singletonDNode bidx)))
+                ++ (c_merss (snd (singletonDNode bidx)))).
   Proof.
     intros; simpl.
     repeat constructor;
@@ -555,6 +645,57 @@ Section Facts.
         eexists [_]; reflexivity.
   Qed.
 
+  Lemma tree2Topo_cifc_inds_prefix_base:
+    forall tr bidx,
+      Forall (fun idx => bidx ~< idx)
+             ((c_li_indices (snd (tree2Topo tr bidx)))
+                ++ (c_l1_indices (snd (tree2Topo tr bidx)))).
+  Proof.
+    induction tr using tree_ind_l.
+    intros; simpl.
+    find_if_inside.
+    - apply singletonDNode_cifc_inds_prefix_base.
+    - simpl; constructor.
+      + apply IdxPrefix_refl.
+      + apply Forall_forall; intros idx ?.
+        apply tree2Topo_children_oidx_In in H0.
+        destruct H0; [dest_in|].
+        destruct H0 as [ctr [ofs ?]]; dest; simpl in *.
+        pose proof (nth_error_In _ _ H0).
+        rewrite Forall_forall in H; specialize (H _ H4 bidx~>ofs); clear H4.
+        destruct (tree2Topo ctr bidx~>ofs) as [cdtr cifc] eqn:Hchd; simpl in *.
+        rewrite Forall_forall in H; specialize (H _ H3).
+        eapply IdxPrefix_trans; [|eassumption].
+        eexists [_]; reflexivity.
+  Qed.
+
+  Lemma tree2Topo_cifc_chns_prefix_base:
+    forall tr bidx,
+      Forall (fun idx => bidx ~< idx /\ List.length bidx < List.length idx)
+             ((c_minds (snd (tree2Topo tr bidx)))
+                ++ (c_merqs (snd (tree2Topo tr bidx)))
+                ++ (c_merss (snd (tree2Topo tr bidx)))).
+  Proof.
+    induction tr using tree_ind_l.
+    intros; simpl.
+    find_if_inside.
+    - apply singletonDNode_cifc_chns_prefix_base.
+    - simpl; repeat constructor.
+      1-3: (eexists [_]; reflexivity).
+      rewrite Forall_forall; intros idx ?.
+      apply tree2Topo_children_chns_In in H0.
+      destruct H0; [dest_in|].
+      destruct H0 as [ctr [ofs ?]]; dest; simpl in *.
+      pose proof (nth_error_In _ _ H0).
+      rewrite Forall_forall in H; specialize (H _ H4 bidx~>ofs); clear H4.
+      destruct (tree2Topo ctr bidx~>ofs) as [cdtr cifc] eqn:Hchd; simpl in *.
+      rewrite Forall_forall in H; specialize (H _ H3); dest.
+      split.
+      + eapply IdxPrefix_trans; [|eassumption].
+        eexists [_]; reflexivity.
+      + omega.
+  Qed.
+  
   Lemma tree2Topo_disj_inds:
     forall tr1 bidx1 tr2 bidx2,
       bidx1 ~*~ bidx2 ->
@@ -708,6 +849,176 @@ Section Facts.
           simpl in H5; omega.
   Qed.
 
+  Lemma singletonDNode_WfCIfc:
+    forall bidx, WfCIfc (snd (singletonDNode bidx)).
+  Proof.
+    intros; split.
+    - simpl; solve_NoDup.
+    - simpl.
+      match goal with
+      | |- NoDup (?i1 :: ?i2 :: ?i3 :: ?inds) =>
+        change (i1 :: i2 :: i3 :: inds) with ([i1; i2; i3] ++ inds)
+      end.
+      apply NoDup_DisjList.
+      + solve_NoDup.
+      + solve_NoDup.
+      + match goal with
+        | |- DisjList ?ll _ =>
+          let e := fresh "e" in
+          red; intro e; destruct (in_dec idx_dec e ll); [right|auto]; dest_in;
+            intro Hx; dest_in; try discriminate
+        end.
+        * inv H; eapply l1ExtOf_not_eq; eauto.
+        * inv H0; eapply l1ExtOf_not_eq; eauto.
+  Qed.
+
+  Lemma tree2Topo_cifc_inds_fold_left_NoDup:
+    forall bidx ctrs oss bcifc,
+      NoDup (c_li_indices bcifc ++ c_l1_indices bcifc) ->
+      (forall ctr ofs,
+          nth_error ctrs ofs = Some ctr ->
+          NoDup ((c_li_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                   ++ (c_l1_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))) /\
+          DisjList (c_li_indices bcifc ++ c_l1_indices bcifc)
+                   ((c_li_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                      ++ (c_l1_indices (snd (tree2Topo ctr bidx~>(oss + ofs)))))) ->
+      let mcifc := fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc in
+      NoDup (c_li_indices mcifc ++ c_l1_indices mcifc).
+  Proof.
+    induction ctrs; simpl; intros; auto.
+    apply IHctrs.
+    - simpl; apply (NoDup_app_comm_4 idx_dec).
+      replace oss with (oss + 0) by omega.
+      apply NoDup_DisjList; auto; apply H0; auto.
+    - intros; split.
+      + replace (S oss + ofs) with (oss + S ofs) by omega.
+        apply H0; assumption.
+      + simpl.
+        apply DisjList_SubList
+          with (l1 := ((c_li_indices bcifc ++ c_l1_indices bcifc)
+                         ++ ((c_li_indices (snd (tree2Topo a bidx~>oss)))
+                               ++ c_l1_indices (snd (tree2Topo a bidx~>oss))))).
+        * repeat apply SubList_app_3.
+          { do 2 apply SubList_app_1; apply SubList_refl. }
+          { apply SubList_app_2, SubList_app_1, SubList_refl. }
+          { apply SubList_app_1, SubList_app_2, SubList_refl. }
+          { do 2 apply SubList_app_2; apply SubList_refl. }
+        * apply DisjList_app_4.
+          { replace (S (oss + ofs)) with (oss + S ofs) by omega.
+            apply H0; assumption.
+          }
+          { apply IndsDisj_DisjList.
+            eapply IdxDisj_base_IndsDisj with (bidx1:= bidx~>oss) (bidx2:= bidx~>(S oss + ofs)).
+            { apply extendIdx_IdxDisj; omega. }
+            { apply tree2Topo_cifc_inds_prefix_base. }
+            { apply tree2Topo_cifc_inds_prefix_base. }
+          }
+  Qed.
+
+  Lemma tree2Topo_cifc_chns_fold_left_NoDup:
+    forall bidx ctrs oss bcifc,
+      NoDup (c_minds bcifc ++ c_merqs bcifc ++ c_merss bcifc) ->
+      (forall ctr ofs,
+          nth_error ctrs ofs = Some ctr ->
+          NoDup ((c_minds (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                   ++ (c_merqs (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                   ++ (c_merss (snd (tree2Topo ctr bidx~>(oss + ofs))))) /\
+          DisjList (c_minds bcifc ++ c_merqs bcifc ++ c_merss bcifc)
+                   ((c_minds (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                      ++ (c_merqs (snd (tree2Topo ctr bidx~>(oss + ofs))))
+                      ++ (c_merss (snd (tree2Topo ctr bidx~>(oss + ofs)))))) ->
+      let mcifc := fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc in
+      NoDup (c_minds mcifc ++ c_merqs mcifc ++ c_merss mcifc).
+  Proof.
+    induction ctrs; simpl; intros; auto.
+    apply IHctrs.
+    - simpl; apply (NoDup_app_comm_6 idx_dec).
+      replace oss with (oss + 0) by omega.
+      apply NoDup_DisjList; auto; apply H0; auto.
+    - intros; split.
+      + replace (S oss + ofs) with (oss + S ofs) by omega.
+        apply H0; assumption.
+      + simpl.
+        apply DisjList_SubList
+          with (l1 := ((c_minds bcifc ++ c_merqs bcifc ++ c_merss bcifc)
+                         ++ ((c_minds (snd (tree2Topo a bidx~>oss)))
+                               ++ c_merqs (snd (tree2Topo a bidx~>oss))
+                               ++ c_merss (snd (tree2Topo a bidx~>oss))))).
+        * repeat apply SubList_app_3.
+          { do 2 apply SubList_app_1; apply SubList_refl. }
+          { apply SubList_app_2, SubList_app_1, SubList_refl. }
+          { apply SubList_app_1, SubList_app_2, SubList_app_1, SubList_refl. }
+          { apply SubList_app_2, SubList_app_2, SubList_app_1, SubList_refl. }
+          { apply SubList_app_1; do 2 apply SubList_app_2; apply SubList_refl. }
+          { do 3 apply SubList_app_2; apply SubList_refl. }
+        * apply DisjList_app_4.
+          { replace (S (oss + ofs)) with (oss + S ofs) by omega.
+            apply H0; assumption.
+          }
+          { apply IndsDisj_DisjList.
+            eapply IdxDisj_base_IndsDisj with (bidx1:= bidx~>oss) (bidx2:= bidx~>(S oss + ofs)).
+            { apply extendIdx_IdxDisj; omega. }
+            { eapply Forall_impl; [|apply tree2Topo_cifc_chns_prefix_base].
+              simpl; intros; dest; assumption.
+            }
+            { eapply Forall_impl; [|apply tree2Topo_cifc_chns_prefix_base].
+              simpl; intros; dest; assumption.
+            }
+          }
+  Qed.
+
+  Lemma tree2Topo_WfCIfc:
+    forall tr bidx, WfCIfc (snd (tree2Topo tr bidx)).
+  Proof.
+    induction tr using tree_ind_l.
+    intros; simpl.
+    find_if_inside; subst.
+    - apply singletonDNode_WfCIfc.
+    - simpl; split.
+      + simpl.
+        constructor.
+        * intro Hx.
+          apply tree2Topo_children_oidx_In in Hx.
+          destruct Hx; [dest_in|].
+          destruct H0 as [ctr [ofs ?]]; dest; simpl in *.
+          pose proof (tree2Topo_cifc_inds_prefix_base ctr bidx~>ofs).
+          rewrite Forall_forall in H4; specialize (H4 _ H3).
+          eapply extendIdx_not_IdxPrefix; eassumption.
+        * apply tree2Topo_cifc_inds_fold_left_NoDup; [constructor|].
+          simpl; intros.
+          split; [|apply DisjList_nil_1].
+          apply nth_error_In in H0.
+          rewrite Forall_forall in H.
+          apply H; auto.
+
+      + simpl.
+        match goal with
+        | |- NoDup (?i1 :: ?i2 :: ?i3 :: ?inds) =>
+          change (i1 :: i2 :: i3 :: inds) with ([i1; i2; i3] ++ inds)
+        end.
+        apply NoDup_DisjList.
+        * solve_NoDup.
+        * apply tree2Topo_cifc_chns_fold_left_NoDup; [constructor|].
+          simpl; intros.
+          split; [|apply DisjList_nil_1].
+          apply nth_error_In in H0.
+          rewrite Forall_forall in H.
+          apply H; auto.
+        * apply DisjList_map with (f:= @List.length _).
+          apply (DisjList_spec_1 eq_nat_dec).
+          intros.
+          assert (a = S (List.length bidx)) by (dest_in; reflexivity).
+          clear H0; subst.
+          intro Hx; apply in_map_iff in Hx.
+          destruct Hx as [idx ?]; dest.
+          apply tree2Topo_children_chns_In in H1.
+          destruct H1; [dest_in|].
+          destruct H1 as [ctr [ofs ?]]; dest; simpl in *.
+          pose proof (tree2Topo_cifc_chns_prefix_base ctr bidx~>ofs).
+          rewrite Forall_forall in H5; specialize (H5 _ H4).
+          simpl in H5; dest; omega.
+  Qed.
+
   Lemma tree2Topo_RqRsChnsOnDTree_root:
     forall str bidx droot dstrs,
       fst (tree2Topo str bidx) = DNode droot dstrs ->
@@ -751,108 +1062,6 @@ Section Facts.
         rewrite Forall_forall in H; specialize (H _ H0).
         specialize (H bidx~>ofs); simpl in H2; rewrite <-H2 in H; simpl in H.
         eapply H; eauto.
-  Qed.
-
-  Lemma fold_left_base_c_minds_In:
-    forall ifc ifcs bifc,
-      SubList (c_minds ifc) (c_minds bifc) ->
-      SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
-  Proof.
-    induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
-    apply IHifcs.
-    simpl; apply SubList_app_1; assumption.
-  Qed.
-
-  Lemma mergeCIfc_fold_left_c_minds_In:
-    forall ifc ifcs,
-      In ifc ifcs ->
-      forall bifc,
-        SubList (c_minds ifc) (c_minds (fold_left mergeCIfc ifcs bifc)).
-  Proof.
-    induction ifcs; simpl; intros; [exfalso; auto|].
-    destruct H; subst; [|auto].
-    apply fold_left_base_c_minds_In.
-    simpl; apply SubList_app_2, SubList_refl.
-  Qed.
-
-  Lemma tree2Topo_children_oidx_In:
-    forall oidx bidx ctrs oss bcifc,
-      In oidx ((c_li_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc))
-                 ++ (c_l1_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc))) ->
-      In oidx (c_li_indices bcifc ++ c_l1_indices bcifc) \/
-      exists ctr ofs,
-        nth_error ctrs ofs = Some ctr /\
-        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
-           (map fst (incMap tree2Topo ctrs bidx oss)) /\
-        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
-           (map snd (incMap tree2Topo ctrs bidx oss)) /\
-        In oidx ((c_li_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))
-                   ++ (c_l1_indices (snd (tree2Topo ctr bidx~>(oss + ofs))))).
-  Proof.
-    induction ctrs as [|ctr ctrs]; simpl; intros;
-      [left; assumption|].
-
-    specialize (IHctrs _ _ H).
-    destruct IHctrs.
-    - simpl in H0; apply in_app_or_4 in H0; destruct H0.
-      + left; assumption.
-      + right; exists ctr, 0.
-        rewrite Nat.add_0_r; auto.
-    - destruct H0 as [nctr [ofs ?]]; dest.
-      right; exists nctr, (S ofs).
-      rewrite Nat.add_succ_r; auto.
-  Qed.
-
-  Lemma tree2Topo_children_ext_rq_In:
-    forall erq bidx ctrs oss bcifc,
-      In erq (c_merqs (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
-      In erq (c_merqs bcifc) \/
-      exists ctr ofs,
-        nth_error ctrs ofs = Some ctr /\
-        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
-           (map fst (incMap tree2Topo ctrs bidx oss)) /\
-        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
-           (map snd (incMap tree2Topo ctrs bidx oss)) /\
-        In erq (c_merqs (snd (tree2Topo ctr bidx~>(oss + ofs)))).
-  Proof.
-    induction ctrs as [|ctr ctrs]; simpl; intros;
-      [left; assumption|].
-
-    specialize (IHctrs _ _ H).
-    destruct IHctrs.
-    - simpl in H0; apply in_app_or in H0; destruct H0.
-      + left; assumption.
-      + right; exists ctr, 0.
-        rewrite Nat.add_0_r; auto.
-    - destruct H0 as [nctr [ofs ?]]; dest.
-      right; exists nctr, (S ofs).
-      rewrite Nat.add_succ_r; auto.
-  Qed.
-
-  Lemma tree2Topo_children_ext_rs_In:
-    forall ers bidx ctrs oss bcifc,
-      In ers (c_merss (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
-      In ers (c_merss bcifc) \/
-      exists ctr ofs,
-        nth_error ctrs ofs = Some ctr /\
-        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
-           (map fst (incMap tree2Topo ctrs bidx oss)) /\
-        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
-           (map snd (incMap tree2Topo ctrs bidx oss)) /\
-        In ers (c_merss (snd (tree2Topo ctr bidx~>(oss + ofs)))).
-  Proof.
-    induction ctrs as [|ctr ctrs]; simpl; intros;
-      [left; assumption|].
-
-    specialize (IHctrs _ _ H).
-    destruct IHctrs.
-    - simpl in H0; apply in_app_or in H0; destruct H0.
-      + left; assumption.
-      + right; exists ctr, 0.
-        rewrite Nat.add_0_r; auto.
-    - destruct H0 as [nctr [ofs ?]]; dest.
-      right; exists nctr, (S ofs).
-      rewrite Nat.add_succ_r; auto.
   Qed.
 
   Lemma tree2Topo_RqRsChnsOnSystem_unfolded:

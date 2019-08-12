@@ -260,6 +260,12 @@ Proof.
     eapply IdxPrefix_trans; eauto.
 Qed.
 
+Lemma IdxDisj_comm:
+  forall i1 i2, i1 ~*~ i2 -> i2 ~*~ i1.
+Proof.
+  unfold IdxDisj; intros; dest; auto.
+Qed.
+
 Lemma IdxDisj_not_eq:
   forall i1 i2, i1 ~*~ i2 -> i1 <> i2.
 Proof.
@@ -394,5 +400,63 @@ Proof.
   unfold IdxPrefix; intros.
   destruct H as [ri ?]; subst.
   rewrite <-app_assoc; eauto.
+Qed.
+
+Lemma NoPrefix_nil: NoPrefix nil.
+Proof.
+  red; intros; destruct n1; discriminate.
+Qed.
+
+Lemma NoPrefix_singleton: forall i, NoPrefix [i].
+Proof.
+  unfold NoPrefix; intros.
+  destruct n1; simpl in *.
+  - destruct n2; [exfalso; auto|].
+    destruct n2; discriminate.
+  - destruct n1; discriminate.
+Qed.
+
+Lemma NoPrefix_cons_inv:
+  forall i il,
+    NoPrefix (i :: il) -> NoPrefix il.
+Proof.
+  unfold NoPrefix; intros.
+  eapply H with (n1:= S n1) (n2:= S n2); eauto.
+Qed.
+
+Lemma NoPrefix_cons:
+  forall i il,
+    NoPrefix il ->
+    (forall ai, In ai il -> i ~*~ ai) ->
+    NoPrefix (i :: il).
+Proof.
+  induction il; simpl; intros.
+  - red; intros.
+    destruct n1 as [|[|]]; try discriminate.
+    destruct n2 as [|[|]]; try discriminate.
+    exfalso; auto.
+  - red; intros.
+    destruct n1 as [|n1]; simpl in H2.
+    + inv H2.
+      destruct n2 as [|n2]; [exfalso; auto|clear H1].
+      simpl in H3.
+      destruct n2 as [|n2]; simpl in H3.
+      * inv H3; apply H0; left; reflexivity.
+      * eapply IHil with (n1:= O) (n2:= S n2); eauto.
+        apply NoPrefix_cons_inv in H; assumption.
+    + destruct n2 as [|n2]; simpl in H3.
+      * inv H3.
+        apply nth_error_In in H2.
+        apply IdxDisj_comm; apply H0; auto.
+      * destruct n1 as [|n1]; simpl in H2.
+        { inv H2; destruct n2 as [|n2]; [exfalso; auto|simpl in H3].
+          eapply H with (n1:= O) (n2:= S n2); eauto.
+        }
+        { destruct n2 as [|n2]; simpl in H3.
+          { inv H3; eapply H with (n1:= S n1) (n2:= O); eauto. }
+          { eapply IHil with (n1:= S n1) (n2:= S n2); eauto.
+            apply NoPrefix_cons_inv in H; assumption.
+          }
+        }
 Qed.
 

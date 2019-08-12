@@ -645,7 +645,7 @@ Section System.
 
       Local Notation eidx := (l1ExtOf oidx).
 
-      Definition l1: Object :=
+      Program Definition l1: Object :=
         {| obj_idx := oidx;
            obj_rules :=
              [(** rules involved with [GetS] *)
@@ -657,7 +657,10 @@ Section System.
                      l1GetMRsDownDown; l1DownIImm oidx;
                        (** rules involved with [Put] *)
                        putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
-           obj_rules_valid := ltac:(inds_valid_tac) |}.
+           obj_rules_valid := _ |}.
+      Next Obligation.
+        inds_valid_tac.
+      Qed.
 
     End L1.
 
@@ -683,7 +686,7 @@ Section System.
             eapply TreeTopo_children_inds_disj in Hn; eauto; destruct Hn
           end.
     
-    Definition li: Object :=
+    Program Definition li: Object :=
       {| obj_idx := oidx;
          obj_rules :=
            (liRulesFromChildren (subtreeChildrenIndsOf topo oidx))
@@ -700,7 +703,10 @@ Section System.
                          liDownIRsUpUp;
                          (** rules involved with [Put] *)
                          putRqUpUp oidx; putRqUpUpM oidx; putRsDownDown];
-         obj_rules_valid := ltac:(solve_inds_NoDup disc_child_inds_disj) |}.
+         obj_rules_valid := _ |}.
+    Next Obligation.
+      solve_inds_NoDup disc_child_inds_disj.
+    Qed.
 
     Definition memRulesFromChild (cidx: IdxT): list Rule :=
       [liGetSImmS cidx; liGetSImmME cidx;
@@ -715,12 +721,15 @@ Section System.
 
     Hint Unfold memRulesFromChild memRulesFromChildren: RuleConds.
 
-    Definition mem: Object :=
+    Program Definition mem: Object :=
       {| obj_idx := oidx;
          obj_rules :=
            (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
              ++ [memDownSRsUpDown; liDownIRsUpDownME; liDownIRsUpDownDirS];
-         obj_rules_valid := ltac:(solve_inds_NoDup disc_child_inds_disj) |}.
+         obj_rules_valid := _ |}.
+    Next Obligation.
+      solve_inds_NoDup disc_child_inds_disj.
+    Qed.
     
   End Objects.
 
@@ -735,9 +744,15 @@ Section System.
        sys_oss_inits := implOStatesInit;
        sys_orqs_inits := implORqsInit |}.
   Next Obligation.
-  Admitted.
+    unfold li, l1.
+    rewrite map_app.
+    do 2 rewrite map_trans; simpl.
+    do 2 rewrite map_id.
+    apply tree2Topo_WfCIfc.
+  Qed.
   Next Obligation.
-  Admitted.
+    apply tree2Topo_WfCIfc.
+  Qed.
   
 End System.
 

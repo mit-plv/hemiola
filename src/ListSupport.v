@@ -2,6 +2,11 @@ Require Import Common List Omega.
 
 Set Implicit Arguments.
 
+Definition nil_dec {A}: forall l: list A, {l = nil} + {l <> nil}.
+Proof.
+  intros; destruct l; [left; reflexivity|right; discriminate].
+Defined.
+
 Definition ocons {A} (oa: option A) (l: list A) :=
   match oa with
   | Some a => a :: l
@@ -1172,6 +1177,44 @@ Proof.
   rewrite IHl; reflexivity.
 Qed.
 
+Lemma concat_SubList:
+  forall {A} (l: list A) (ll: list (list A)),
+    In l ll -> SubList l (List.concat ll).
+Proof.
+  induction ll; simpl; intros; [exfalso; auto|].
+  destruct H; subst.
+  - apply SubList_app_1, SubList_refl.
+  - apply SubList_app_2; auto.
+Qed.
+
+Lemma concat_DisjList:
+  forall {A} (l1: list A) (ll2: list (list A)),
+    (forall l2, In l2 ll2 -> DisjList l1 l2) ->
+    DisjList l1 (List.concat ll2).
+Proof.
+  induction ll2; simpl; intros; [apply DisjList_nil_2|].
+  apply DisjList_comm, DisjList_app_4; apply DisjList_comm; auto.
+Qed.
+
+Lemma concat_NoDup:
+  forall {A} (ll: list (list A)),
+    (forall l, In l ll -> NoDup l) ->
+    (forall n1 l1 n2 l2,
+        n1 <> n2 ->
+        nth_error ll n1 = Some l1 ->
+        nth_error ll n2 = Some l2 ->
+        DisjList l1 l2) ->
+    NoDup (List.concat ll).
+Proof.
+  induction ll; simpl; intros; [constructor|].
+  apply NoDup_DisjList; auto.
+  - apply IHll; auto.
+    intros; apply H0 with (n1:= S n1) (n2:= S n2); auto.
+  - apply concat_DisjList.
+    intros; apply In_nth_error in H1; destruct H1 as [n2 ?].
+    apply H0 with (n1:= O) (n2:= S n2); auto.
+Qed.
+
 Lemma NoDup_app_comm:
   forall {A} (l1 l2: list A),
     NoDup (l2 ++ l1) ->
@@ -1256,6 +1299,94 @@ Proof.
     apply in_map; auto.
 Qed.
 
+Lemma in_app_or_4:
+  forall {A} (a: A) (l1 l2 l3 l4: list A),
+    In a ((l1 ++ l2) ++ (l3 ++ l4)) ->
+    In a (l1 ++ l3) \/ In a (l2 ++ l4).
+Proof.
+  intros.
+  apply in_app_or in H; destruct H.
+  - apply in_app_or in H; destruct H.
+    + left; apply in_or_app; auto.
+    + right; apply in_or_app; auto.
+  - apply in_app_or in H; destruct H.
+    + left; apply in_or_app; auto.
+    + right; apply in_or_app; auto.
+Qed.
+
+Lemma NoDup_app_comm_4:
+  forall {A} (deceqA: forall x y : A, {x = y} + {x <> y})
+         (l1 l2 l3 l4: list A),
+    NoDup ((l1 ++ l2) ++ (l3 ++ l4)) ->
+    NoDup ((l1 ++ l3) ++ (l2 ++ l4)).
+Proof.
+  intros.
+  rewrite app_assoc in *.
+  pose proof (DisjList_NoDup deceqA _ _ H).
+  pose proof (NoDup_app_weakening_1 _ _ H).
+  pose proof (NoDup_app_weakening_2 _ _ H).
+  apply NoDup_DisjList; auto.
+  - rewrite <-app_assoc in *.
+    pose proof (DisjList_NoDup deceqA _ _ H1).
+    pose proof (NoDup_app_weakening_1 _ _ H1).
+    pose proof (NoDup_app_weakening_2 _ _ H1).
+    apply NoDup_DisjList; auto.
+    + apply NoDup_app_comm; assumption.
+    + pose proof (DisjList_app_1 _ _ H3).
+      pose proof (DisjList_app_2 _ _ H3).
+      apply DisjList_comm, DisjList_app_4; apply DisjList_comm; assumption.
+  - pose proof (DisjList_app_1 _ _ (DisjList_comm H0)).
+    pose proof (DisjList_app_2 _ _ (DisjList_comm H0)).
+    pose proof (DisjList_app_1 _ _ H3).
+    pose proof (DisjList_app_2 _ _ H3).
+    repeat apply DisjList_app_4; apply DisjList_comm; assumption.
+Qed.
+
+Lemma NoDup_app_comm_combine:
+  forall {A} (deceqA: forall x y : A, {x = y} + {x <> y})
+         (ll1 ll2: list (list A)),
+    List.length ll1 = List.length ll2 ->
+    NoDup (List.concat ll1 ++ List.concat ll2) ->
+    NoDup (List.concat (map (fun ee => fst ee ++ snd ee) (List.combine ll1 ll2))).
+Proof.
+  induction ll1 as [|l1 ll1]; simpl; intros; [constructor|].
+  destruct ll2 as [|l2 ll2]; [discriminate|].
+  inv H.
+  simpl in H0.
+  apply (NoDup_app_comm_4 deceqA) in H0.
+  pose proof (DisjList_NoDup deceqA _ _ H0).
+  pose proof (NoDup_app_weakening_1 _ _ H0).
+  pose proof (NoDup_app_weakening_2 _ _ H0).
+  simpl; apply NoDup_DisjList; auto.
+  apply concat_DisjList.
+  intros l ?.
+  apply in_map_iff in H4; destruct H4 as [[rl1 rl2] [? ?]].
+  simpl in *; subst.
+  eapply DisjList_comm, DisjList_SubList; [|apply DisjList_comm; eassumption].
+
+  clear -H5.
+  apply SubList_app_3.
+  - apply SubList_app_1.
+    apply in_combine_l in H5.
+    apply concat_SubList; auto.
+  - apply SubList_app_2.
+    apply in_combine_r in H5.
+    apply concat_SubList; auto.
+Qed.
+
+Corollary NoDup_app_comm_6:
+  forall {A} (deceqA: forall x y : A, {x = y} + {x <> y})
+         (l1 l2 l3 l4 l5 l6: list A),
+    NoDup ((l1 ++ l3 ++ l5) ++ (l2 ++ l4 ++ l6)) ->
+    NoDup ((l1 ++ l2) ++ (l3 ++ l4) ++ (l5 ++ l6)).
+Proof.
+  intros.
+  pose proof (@NoDup_app_comm_combine
+                _ deceqA [l1; l3; l5] [l2; l4; l6] eq_refl).
+  simpl in H0; repeat rewrite app_nil_r in H0.
+  apply H0; auto.
+Qed.
+
 Fixpoint noDup {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
          (l: list A) :=
   match l with
@@ -1280,34 +1411,6 @@ Proof.
   destruct (in_dec eq_dec a l); auto.
   constructor; auto.
   intro Hx; elim n; eapply noDup_In; eauto.
-Qed.
-
-Lemma concat_DisjList:
-  forall {A} (l1: list A) (ll2: list (list A)),
-    (forall l2, In l2 ll2 -> DisjList l1 l2) ->
-    DisjList l1 (List.concat ll2).
-Proof.
-  induction ll2; simpl; intros; [apply DisjList_nil_2|].
-  apply DisjList_comm, DisjList_app_4; apply DisjList_comm; auto.
-Qed.
-
-Lemma concat_NoDup:
-  forall {A} (ll: list (list A)),
-    (forall l, In l ll -> NoDup l) ->
-    (forall n1 l1 n2 l2,
-        n1 <> n2 ->
-        nth_error ll n1 = Some l1 ->
-        nth_error ll n2 = Some l2 ->
-        DisjList l1 l2) ->
-    NoDup (List.concat ll).
-Proof.
-  induction ll; simpl; intros; [constructor|].
-  apply NoDup_DisjList; auto.
-  - apply IHll; auto.
-    intros; apply H0 with (n1:= S n1) (n2:= S n2); auto.
-  - apply concat_DisjList.
-    intros; apply In_nth_error in H1; destruct H1 as [n2 ?].
-    apply H0 with (n1:= O) (n2:= S n2); auto.
 Qed.
 
 Lemma hd_error_In:
