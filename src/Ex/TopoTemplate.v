@@ -376,6 +376,26 @@ Definition WfCIfc (cifc: CIfc) :=
 
 Section Facts.
 
+  (* Lemma c_li_indices_fold_collect_SubList: *)
+  (*   forall ctrs bidx oss bcifc, *)
+  (*     SubList (c_li_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) *)
+  (*             ((collect indsOf (map fst (incMap tree2Topo ctrs bidx oss))) *)
+  (*                ++ c_li_indices bcifc). *)
+  (* Proof. *)
+  (*   induction ctrs; simpl; intros; [apply SubList_refl|]. *)
+  (*   eapply SubList_trans; [apply IHctrs|]. *)
+    
+
+  (* Lemma c_li_indices_inds_SubList: *)
+  (*   forall tr bidx, *)
+  (*     SubList (c_li_indices (snd (tree2Topo tr bidx))) *)
+  (*             (indsOf (fst (tree2Topo tr bidx))). *)
+  (* Proof. *)
+  (*   induction tr using tree_ind_l; simpl; intros. *)
+  (*   find_if_inside; [apply SubList_nil|]. *)
+  (*   simpl; apply SubList_cons; [left; reflexivity|]. *)
+  (*   apply SubList_cons_right. *)
+
   Lemma fold_left_base_c_minds_In:
     forall ifc ifcs bifc,
       SubList (c_minds ifc) (c_minds bifc) ->
@@ -396,6 +416,33 @@ Section Facts.
     destruct H; subst; [|auto].
     apply fold_left_base_c_minds_In.
     simpl; apply SubList_app_2, SubList_refl.
+  Qed.
+
+  Lemma tree2Topo_li_oidx_In:
+    forall oidx bidx ctrs oss bcifc,
+      In oidx (c_li_indices
+                 (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
+      In oidx (c_li_indices bcifc) \/
+      exists ctr ofs,
+        nth_error ctrs ofs = Some ctr /\
+        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+           (map fst (incMap tree2Topo ctrs bidx oss)) /\
+        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+           (map snd (incMap tree2Topo ctrs bidx oss)) /\
+        In oidx (c_li_indices (snd (tree2Topo ctr bidx~>(oss + ofs)))).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros;
+      [left; assumption|].
+
+    specialize (IHctrs _ _ H).
+    destruct IHctrs.
+    - simpl in H0; apply in_app_or in H0; destruct H0.
+      + left; assumption.
+      + right; exists ctr, 0.
+        rewrite Nat.add_0_r; auto.
+    - destruct H0 as [nctr [ofs ?]]; dest.
+      right; exists nctr, (S ofs).
+      rewrite Nat.add_succ_r; auto.
   Qed.
 
   Lemma tree2Topo_children_oidx_In:
@@ -1224,6 +1271,49 @@ Section Facts.
     simpl in *.
     destruct H as [_ ?]; eapply H with (sidx:= sidx); eauto.
   Qed.
+
+  Lemma c_li_indices_head_rootOf:
+    forall tr bidx,
+      tr <> Node nil ->
+      c_li_indices (snd (tree2Topo tr bidx)) =
+      rootOf (fst (tree2Topo tr bidx)) :: tl (c_li_indices (snd (tree2Topo tr bidx))).
+  Proof.
+    destruct tr; simpl; intros.
+    find_if_inside; [subst; exfalso; auto|].
+    reflexivity.
+  Qed.
+
+  Lemma c_li_indices_tail_has_parent:
+    forall tr bidx oidx,
+      In oidx (tl (c_li_indices (snd (tree2Topo tr bidx)))) ->
+      exists pidx, parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
+  Proof.
+    (* induction tr using tree_ind_l; simpl; intros. *)
+    (* find_if_inside; simpl in *; [exfalso; auto|]. *)
+    (* apply tree2Topo_li_oidx_In in H0. *)
+    (* destruct H0; [dest_in|]. *)
+    (* simpl in H0; destruct H0 as [ctr [ofs ?]]; dest. *)
+    (* destruct ctr as [cl]; simpl in H3. *)
+    (* find_if_inside; subst; simpl in H3; [exfalso; auto|]. *)
+    (* destruct H3; subst. *)
+    (* - exists bidx. *)
+    (*   replace bidx~>ofs with (rootOf (fst (tree2Topo (Node cl) bidx~>ofs))) *)
+    (*     by apply tree2Topo_root_idx. *)
+    (*   apply parentIdxOf_childrenOf; assumption. *)
+    (* - apply nth_error_In in H0. *)
+    (*   rewrite Forall_forall in H; specialize (H _ H0). *)
+    (*   specialize (H bidx~>ofs oidx); simpl in *. *)
+    (*   find_if_inside; [subst; exfalso; auto|simpl in *]. *)
+    (*   specialize (H H3); destruct H as [pidx ?]. *)
+    (*   exists pidx. *)
+    (*   erewrite parentIdxOf_Subtree_eq; [eassumption|..]. *)
+    (*   + pose proof (tree2Topo_WfDTree (Node l) bidx). *)
+    (*     simpl in H4; find_if_inside; [subst; exfalso; auto|assumption]. *)
+    (*   + apply childrenOf_Subtree; assumption. *)
+    (*   + simpl. clear -H. *)
+    (*     admit. *)
+    (*   + right. *)
+  Admitted.
 
 End Facts.
 

@@ -12,6 +12,38 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
+(** TODO: to [ListSupport.v] *)
+Lemma concat_In:
+  forall {A} (a: A) (ll: list (list A)),
+    In a (List.concat ll) ->
+    exists l, In l ll /\ In a l.
+Proof.
+  induction ll; simpl; intros; [exfalso; auto|].
+  apply in_app_or in H; destruct H; eauto.
+  specialize (IHll H); dest; eauto.
+Qed.
+
+(** TODO: to [Topology.v] *)
+Lemma subtreeChildrenIndsOf_parentIdxOf:
+  forall dtr (Hwf: WfDTree dtr) cidx oidx,
+    In cidx (subtreeChildrenIndsOf dtr oidx) ->
+    parentIdxOf dtr cidx = Some oidx.
+Proof.
+  intros.
+  unfold subtreeChildrenIndsOf in H.
+  destruct (subtree oidx dtr) eqn:Hstr; simpl in H; [|exfalso; auto].
+  pose proof (subtree_Subtree _ _ Hstr).
+  unfold childrenIndsOf in H.
+  apply in_map_iff in H; dest; subst.
+  rewrite parentIdxOf_Subtree_eq with (str:= d); auto.
+  - eapply parentIdxOf_childrenOf in H1.
+    apply subtree_rootOf in Hstr; subst; assumption.
+  - apply neq_sym, parent_child_not_eq; [|assumption].
+    eapply Subtree_wfDTree; eauto.
+  - eapply indsOf_childrenOf; [eassumption|].
+    apply indsOf_root_in.
+Qed.
+
 Section System.
   Variable tr: tree.
 
@@ -19,6 +51,9 @@ Section System.
   Local Definition cifc := snd (tree2Topo tr 0).
   Local Definition impl := impl tr.
 
+  Hint Extern 0 (TreeTopo topo) => apply tree2Topo_TreeTopo.
+  Hint Extern 0 (WfDTree topo) => apply tree2Topo_WfDTree.
+  
   Lemma mesi_GoodORqsInit: GoodORqsInit (initsOf impl).
   Proof.
     apply initORqs_GoodORqsInit.
@@ -73,23 +108,37 @@ Section System.
 
   Ltac solve_GoodRqRsRule :=
     autounfold with MesiRules;
-    match goal with
-    | |- GoodRqRsRule _ _ _ _ =>
+    repeat
       match goal with
-      (* | |- context[rqUpDownRule] *)
-      (* | |- context[rqDownDownRule] *)
-      (* | |- context[rsDownRqDownRule] *)
-      | |- context[immDownRule] => rule_immd; auto
-      | |- context[immUpRule] => rule_immu; auto
-      | |- context[rqUpUpRule] => rule_rquu; auto
-      | |- context[rqUpUpRuleS] => rule_rqsu; auto
-      | |- context[rsDownDownRule] => rule_rsdd; auto
-      | |- context[rsDownDownRuleS] => rule_rsds; auto
-      | |- context[rsUpDownRule] => rule_rsu; auto
-      | |- context[rsUpUpRule] => rule_rsu; auto
-      end
-    end.
-  
+      | |- GoodRqRsRule _ _ _ _ =>
+        match goal with
+        | |- context[immDownRule] =>
+          rule_immd; apply immDownRule_ImmDownRule; auto
+        | |- context[immUpRule] =>
+          rule_immu; apply immUpRule_ImmUpRule; auto
+        | |- context[rqUpUpRule] =>
+          rule_rquu; apply rqUpUpRule_RqFwdRule; auto
+        | |- context[rqUpUpRuleS] =>
+          rule_rqsu; apply rqUpUpRuleS_RqFwdRule; auto
+        | |- context[rqUpDownRule] =>
+          rule_rqud; apply rqUpDownRule_RqFwdRule; auto
+        | |- context[rqDownDownRule] =>
+          rule_rqdd; apply rqDownDownRule_RqFwdRule; auto
+        | |- context[rsDownDownRule] =>
+          rule_rsdd; apply rsDownDownRule_RsBackRule; auto
+        | |- context[rsDownDownRuleS] =>
+          rule_rsds; apply rsDownDownRuleS_RsBackRule; auto
+        | |- context[rsUpDownRule] =>
+          rule_rsu; apply rsUpDownRule_RsBackRule; auto
+        | |- context[rsUpUpRule] =>
+          rule_rsu; apply rsUpUpRule_RsBackRule; auto
+        | |- context[rsDownRqDownRule] =>
+          rule_rsrq; apply rsDownRqDownRule_RsDownRqDownRule; auto
+        end
+      | |- parentIdxOf _ _ = Some _ =>
+        apply subtreeChildrenIndsOf_parentIdxOf; auto; fail
+      end.
+
   Lemma mesi_impl_GoodRqRsSys: GoodRqRsSys topo impl.
   Proof.
     repeat
@@ -112,7 +161,22 @@ Section System.
         | |- Forall _ (_ :: _) => constructor
         | |- Forall _ nil => constructor
         end; try (solve_GoodRqRsRule; fail).
-      all: admit.
+
+      1: {
+        apply Forall_forall; intros.
+        unfold liRulesFromChildren in H.
+        apply concat_In in H; dest.
+        apply in_map_iff in H; dest; subst.
+        dest_in; try (solve_GoodRqRsRule; fail).
+
+        1: {
+          rule_rquu.
+          solve_GoodRqRsRule.
+          eapply rqUpUpRule_RqFwdRule; eauto.
+          
+        
+      }
+          
 
     - (* L1 caches *)
       apply in_map_iff in H.

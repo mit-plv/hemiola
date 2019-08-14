@@ -499,10 +499,3 @@ Section Facts.
 
 End Facts.
 
-Hint Resolve immDownRule_ImmDownRule immUpRule_ImmUpRule
-     rqUpUpRule_RqFwdRule rqUpUpRuleS_RqFwdRule
-     rqUpDownRule_RqFwdRule rqDownDownRule_RqFwdRule
-     rsDownDownRule_RsBackRule rsDownDownRuleS_RsBackRule
-     rsUpDownRule_RsBackRule rsUpUpRule_RsBackRule
-     rsDownRqDownRule_RsDownRqDownRule.
-

@@ -22,6 +22,7 @@ Local Open Scope fmap.
 
 Section System.
   Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
 
   Definition topo := fst (tree2Topo tr 0).
   Definition cifc := snd (tree2Topo tr 0).
@@ -735,7 +736,8 @@ Section System.
 
   Program Definition impl: System :=
     {| sys_objs :=
-         (map li cifc.(c_li_indices)) ++ (map l1 cifc.(c_l1_indices));
+         ((mem (rootOf topo) :: map li (tl cifc.(c_li_indices)))
+            ++ map l1 cifc.(c_l1_indices));
        sys_oinds_valid := _;
        sys_minds := cifc.(c_minds);
        sys_merqs := cifc.(c_merqs);
@@ -744,10 +746,13 @@ Section System.
        sys_oss_inits := implOStatesInit;
        sys_orqs_inits := implORqsInit |}.
   Next Obligation.
-    unfold li, l1.
+    unfold mem, li, l1.
     rewrite map_app.
-    do 2 rewrite map_trans; simpl.
+    do 2 rewrite map_trans.
     do 2 rewrite map_id.
+    unfold topo, cifc.
+    rewrite app_comm_cons.
+    rewrite <-c_li_indices_head_rootOf by assumption.
     apply tree2Topo_WfCIfc.
   Qed.
   Next Obligation.
