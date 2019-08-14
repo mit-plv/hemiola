@@ -46,10 +46,11 @@ Qed.
 
 Section System.
   Variable tr: tree.
+  Hypothesis (Htr: tr <> Node nil).
 
   Local Definition topo := fst (tree2Topo tr 0).
   Local Definition cifc := snd (tree2Topo tr 0).
-  Local Definition impl := impl tr.
+  Local Definition impl := impl Htr.
 
   Hint Extern 0 (TreeTopo topo) => apply tree2Topo_TreeTopo.
   Hint Extern 0 (WfDTree topo) => apply tree2Topo_WfDTree.
@@ -73,11 +74,14 @@ Section System.
   Proof.
     eapply tree2Topo_RqRsChnsOnSystem with (tr0:= tr) (bidx:= [0]); try reflexivity.
     - unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
-    - simpl; rewrite map_app; f_equal.
-      + induction (c_li_indices (Mesi.cifc tr)); [reflexivity|].
-        simpl; congruence.
-      + induction (c_l1_indices (Mesi.cifc tr)); [reflexivity|].
-        simpl; congruence.
+    - simpl.
+      rewrite map_app.
+      do 2 rewrite map_trans.
+      do 2 rewrite map_id.
+      change (Mesi.topo tr) with (fst (tree2Topo tr 0)).
+      rewrite app_comm_cons.
+      rewrite <-c_li_indices_head_rootOf by assumption.
+      reflexivity.
   Qed.
 
   Lemma mesi_ExtsOnDTree: ExtsOnDTree topo impl.
@@ -145,49 +149,55 @@ Section System.
       match goal with
       | [ |- GoodRqRsSys _ _] => red
       | [ |- GoodRqRsObj _ _ _] => red
-      | [ |- Forall _ _] => constructor; simpl
+      | [ |- Forall _ _] => simpl; constructor; simpl
       end.
 
-    apply Forall_forall; intros obj ?.
-    apply in_app_or in H; destruct H.
+    - (* Main memory, the root *)
+      admit.
 
-    - (* Li caches *)
-      apply in_map_iff in H.
-      destruct H as [oidx [? ?]]; subst.
-      red; simpl.
-      repeat
-        match goal with
-        | |- Forall _ (_ ++ _) => apply Forall_app
-        | |- Forall _ (_ :: _) => constructor
-        | |- Forall _ nil => constructor
-        end; try (solve_GoodRqRsRule; fail).
+    - apply Forall_forall; intros obj ?.
+      apply in_app_or in H; destruct H.
 
-      1: {
-        apply Forall_forall; intros.
-        unfold liRulesFromChildren in H.
-        apply concat_In in H; dest.
-        apply in_map_iff in H; dest; subst.
-        dest_in; try (solve_GoodRqRsRule; fail).
+      + (* Li caches *)
+        apply in_map_iff in H.
+        destruct H as [oidx [? ?]]; subst.
+        red; simpl.
+        repeat
+          match goal with
+          | |- Forall _ (_ ++ _) => apply Forall_app
+          | |- Forall _ (_ :: _) => constructor
+          | |- Forall _ nil => constructor
+          end; try (solve_GoodRqRsRule; fail).
 
         1: {
-          rule_rquu.
-          solve_GoodRqRsRule.
-          eapply rqUpUpRule_RqFwdRule; eauto.
-          
-        
-      }
-          
+          apply Forall_forall; intros.
+          unfold liRulesFromChildren in H.
+          apply concat_In in H; dest.
+          apply in_map_iff in H; dest; subst.
+          dest_in; try (solve_GoodRqRsRule; fail).
 
-    - (* L1 caches *)
-      apply in_map_iff in H.
-      destruct H as [oidx [? ?]]; subst.
-      red; simpl.
-      repeat
-        match goal with
-        | |- Forall _ (_ ++ _) => apply Forall_app
-        | |- Forall _ (_ :: _) => constructor
-        | |- Forall _ nil => constructor
-        end; try (solve_GoodRqRsRule; fail).
+          1: {
+            rule_rquu.
+            solve_GoodRqRsRule.
+            apply c_li_indices_tail_has_parent in H0; dest.
+            eapply rqUpUpRule_RqFwdRule; eauto.
+            apply subtreeChildrenIndsOf_parentIdxOf; auto.
+          }
+
+          all: admit.
+        }
+        all: admit.
+
+      + (* L1 caches *)
+        apply in_map_iff in H.
+        destruct H as [oidx [? ?]]; subst.
+        red; simpl.
+        repeat
+          match goal with
+          | |- Forall _ (_ ++ _) => apply Forall_app
+          | |- Forall _ (_ :: _) => constructor
+          | |- Forall _ nil => constructor
+          end; try (solve_GoodRqRsRule; fail).
       
   Admitted.
 
