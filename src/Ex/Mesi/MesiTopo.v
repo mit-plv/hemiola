@@ -90,7 +90,7 @@ Section System.
     unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
   Qed.
   
-  Lemma mesi_impl_RqRsDTree: RqRsDTree topo impl.
+  Lemma mesi_RqRsDTree: RqRsDTree topo impl.
   Proof.
     red; repeat ssplit.
     - auto using mesi_WfDTree.
@@ -143,7 +143,7 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf; auto; fail
       end.
 
-  Lemma mesi_impl_GoodRqRsSys: GoodRqRsSys topo impl.
+  Lemma mesi_GoodRqRsSys: GoodRqRsSys topo impl.
   Proof.
     repeat
       match goal with
@@ -183,7 +183,13 @@ Section System.
             eapply rqUpUpRule_RqFwdRule; eauto.
             apply subtreeChildrenIndsOf_parentIdxOf; auto.
           }
-
+          3: {
+            rule_rquu.
+            solve_GoodRqRsRule.
+            apply c_li_indices_tail_has_parent in H0; dest.
+            eapply rqUpUpRule_RqFwdRule; eauto.
+            apply subtreeChildrenIndsOf_parentIdxOf; auto.
+          }
           all: admit.
         }
         all: admit.

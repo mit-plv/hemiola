@@ -13,7 +13,7 @@ Makefile.coq: Makefile $(VS)
 LIB_REPR_VO=RqRsLang.vo RqRsCorrect.vo
 EX_SPEC_REPR_VO=Ex/SpecSv.vo
 EX_MSISV_REPR_VO=Ex/MsiSv/MsiSvSim.vo
-EX_MESI_REPR_VO=Ex/Mesi/Mesi.vo
+EX_MESI_REPR_VO=Ex/Mesi/MesiSim.vo
 EX_MOSI_REPR_VO=Ex/Mosi/Mosi.vo
 
 lib: Makefile.coq
