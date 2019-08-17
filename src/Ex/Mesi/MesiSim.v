@@ -3,7 +3,7 @@ Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
-Require Import Ex.Spec Ex.SpecSv Ex.Template.
+Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
 
 Set Implicit Arguments.
@@ -14,23 +14,6 @@ Import CaseNotations.
 Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
-
-(** TODO: to [MessagePool.v] *)
-Lemma findQ_deqMsgs_eq:
-  forall {MsgT} minds midx (msgs1 msgs2: MessagePool MsgT),
-    findQ midx msgs1 = findQ midx msgs2 ->
-    findQ midx (deqMsgs minds msgs1) =
-    findQ midx (deqMsgs minds msgs2).
-Proof.
-  induction minds; simpl; intros; auto.
-  apply IHminds.
-  destruct (idx_dec midx a); subst.
-  - unfold deqMP; rewrite H.
-    destruct (findQ a msgs2) eqn:Hf; [congruence|].
-    unfold findQ; mred.
-  - do 2 (rewrite findQ_not_In_deqMP by assumption).
-    assumption.
-Qed.
 
 (** TODO: will be used by MOSI as well. *)
 Section SimExtMP.
@@ -279,18 +262,22 @@ Section Sim.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
 
-  Local Definition topo := fst (tree2Topo tr 0).
-  Local Definition cifc := snd (tree2Topo tr 0).
-  Local Definition impl := Mesi.impl Htr.
-  Local Definition spec := SpecSv.spec (List.length (c_l1_indices cifc)).
+  Let topo := fst (tree2Topo tr 0).
+  Let cifc := snd (tree2Topo tr 0).
+  Let impl := Mesi.impl Htr.
+
+  Axiom c_l1_indices_NoPrefix: NoPrefix (c_l1_indices cifc).
+  Local Definition spec := @SpecInds.spec (c_l1_indices cifc) c_l1_indices_NoPrefix.
 
   Existing Instance Mesi.ImplOStateIfc.
 
   (** NOTE: simulation only states about coherent values. 
    * Exclusiveness is stated and proven as an invariant. *)
 
+  (** TODO: move to [MesiInv.v] *)
   Definition ImplOStateMESI (cv: nat) (ost: OState): Prop :=
     mesiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
+  Hint Unfold ImplOStateMESI: RuleConds.
 
   Section ObjCoh.
     Variables (cv: nat)
@@ -306,7 +293,7 @@ Section Sim.
       | (rqUpFrom cidx, (MRq, mesiRqI)):
           (cost#[implStatusIdx] = mesiM -> (valOf idm).(msg_value) = cv)
       end.
-    
+
     Definition DirMsgsCoh :=
       forall idm, InMPI msgs idm -> DirMsgCoh idm.
 
@@ -314,6 +301,37 @@ Section Sim.
       ImplOStateMESI cv cost /\ DirMsgsCoh.
 
   End ObjCoh.
+
+  Section DirMsgsCohFacts.
+    
+    Lemma DirMsgsCoh_other_midx_enqMP:
+      forall cv cidx cost msgs,
+        DirMsgsCoh cv cidx cost msgs ->
+        forall midx msg,
+          ~ In midx [rqUpFrom cidx; rsUpFrom cidx; downTo cidx] ->
+          DirMsgsCoh cv cidx cost (enqMP midx msg msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_enqMP_or in H1; destruct H1; auto.
+      destruct idm as [midx' msg']; simpl in *; dest; subst.
+      destruct msg as [mid mty mval].
+      red; cbv [sigOf idOf valOf fst snd msg_id msg_type].
+      unfold caseDec.
+      repeat (find_if_inside; [inv e; exfalso; intuition idtac|]).
+      auto.
+    Qed.
+
+    Lemma DirMsgsCoh_deqMP:
+      forall cv cidx cost msgs,
+        DirMsgsCoh cv cidx cost msgs ->
+        forall midx,
+          DirMsgsCoh cv cidx cost (deqMP midx msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_deqMP in H0; auto.
+    Qed.
+
+  End DirMsgsCohFacts.
 
   Definition ImplStateCoh (cv: nat) (st: MState): Prop :=
     (most <-- (bst_oss st)@[rootOf topo]; ImplOStateMESI cv most) /\
@@ -402,7 +420,6 @@ Section Sim.
       red in H; simpl in *; dest.
       destruct H2.
       unfold impl in H2; simpl in H2.
-      unfold Mesi.cifc in H2.
       rewrite c_merss_l1_downTo in H2.
       exists (RlblOuts eouts); eexists.
       repeat ssplit.
@@ -419,6 +436,80 @@ Section Sim.
       True. (* ImplInv st /\ ImplInvB st. *)
 
     Hint Unfold ImplInvEx (* ImplInv ImplInvB *): RuleConds.
+
+    Ltac spec_constr_step_get_FirstMPI :=
+      repeat constructor;
+      repeat
+        match goal with
+        | [H: SimExtMP _ _ _ _ |- _] => red in H
+        | [Hf: Forall _ ?l, Hin: In _ ?l |- _] =>
+          rewrite Forall_forall in Hf; specialize (Hf _ Hin);
+          disc_rule_conds_const; dest
+        end;
+      eapply findQ_eq_FirstMPI; eauto.
+
+    Ltac spec_constr_step_get_ValidMsgs :=
+      match goal with
+      | [H: In _ (c_l1_indices _) |- _] => clear -H
+      end; split;
+      [simpl; apply SubList_cons; [|apply SubList_nil];
+       do 2 apply in_map; assumption
+      |repeat constructor; intro; dest_in].
+
+    Ltac spec_constr_step_get cidx :=
+      eapply SmInt with (ins:= [(rqUpFrom (l1ExtOf cidx), _)]);
+      try reflexivity;
+      [left; reflexivity
+      |simpl; apply specGetRq_in_specRules, in_map; assumption
+      |reflexivity
+      |eassumption
+      |eassumption
+      |spec_constr_step_get_FirstMPI
+      |spec_constr_step_get_ValidMsgs
+      |solve_rule_conds_ex;
+       match goal with
+       | [H: msg_id ?msg = _ |- context[msg_id ?msg] ] => rewrite H
+       end; reflexivity
+      |spec_constr_step_get_ValidMsgs
+      |solve_DisjList idx_dec].
+
+    Ltac spec_case_get cidx :=
+      eexists (RlblInt specIdx (rule_idx (specGetRq (l1ExtOf cidx))) _ _);
+      eexists;
+      repeat ssplit;
+      [reflexivity|spec_constr_step_get cidx|].
+
+    Ltac solve_sim_ext_mp :=
+      repeat
+        (match goal with
+         | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
+           apply SimExtMP_orqs with (orqs1:= m);
+           [|apply Forall_forall; intros; mred]
+         | [ |- SimExtMP _ (enqMP _ _ _) _ (enqMP _ _ _) ] =>
+           apply SimExtMP_enqMP
+         | [ |- SimExtMP _ (deqMP ?midx _) _ (deqMP ?midx _) ] =>
+           eapply SimExtMP_outs_deqMP_child; eauto; mred; fail
+         | [ |- SimExtMP _ (enqMP _ _ _) _ _ ] =>
+           apply SimExtMP_impl_enqMP_indep; [solve_not_in; fail|]
+         | [ |- SimExtMP _ (deqMP _ _) _ _ ] =>
+           eapply SimExtMP_spec_deqMP_locked; eauto; [mred|reflexivity]; fail
+         | [ |- SimExtMP _ (deqMP _ _) _ _ ] =>
+           apply SimExtMP_impl_deqMP_indep; [solve_not_in; fail|]
+         | [ |- SimExtMP _ _ _ (deqMP _ _) ] =>
+           eapply SimExtMP_spec_deqMP_unlocked; eauto; [congruence|mred]; fail
+         end; try assumption).
+
+    Ltac disc_rule_custom ::=
+      repeat
+        match goal with
+        | [H: Forall _ (tl (c_li_indices _) ++ c_l1_indices _) |- _] =>
+          apply Forall_app_inv in H; dest
+        | [Hf: Forall _ (c_l1_indices ?ifc), Hin: In _ (c_l1_indices ?ifc) |- _] =>
+          rewrite Forall_forall in Hf; pose proof (Hf _ Hin);
+          disc_rule_conds_const; dest
+        | [H: fst ?ost = fst _ |- context[fst ?ost] ] =>
+          (* rewriting a coherent value *) rewrite H in *
+        end.
 
     Lemma simMesi_sim:
       InvSim step_m step_m ImplInvEx SimMESI impl spec.
@@ -446,9 +537,15 @@ Section Sim.
 
       destruct sst1 as [soss1 sorqs1 smsgs1].
       destruct H0; simpl in H0, H2; simpl.
-      (* inv H0. *) (** discharge [SimState] *)
+      inv H0.
+      red in H15; simpl in H15; dest. (** maybe need to discharge more? *)
+      red in H6; simpl in H6.
+      destruct (soss1@[specIdx]) as [sost|] eqn:Hsost; simpl in *; [|exfalso; auto].
+      destruct (sorqs1@[specIdx]) as [sorq|] eqn:Hsorq; simpl in *; [|exfalso; auto].
+      dest; subst.
 
-      move H4 at bottom.
+      (** TODO: need to ensure [oidx <> rootOf topo] for L1/Li cases. *)
+      
       simpl in H4; destruct H4; [subst|].
       1: {
         (*! Cases for the main memory *)
@@ -465,8 +562,53 @@ Section Sim.
         apply in_map_iff in H4; destruct H4 as [oidx [? ?]]; subst.
         dest_in.
 
-        all: admit.
-      
+        + (* [l1GetSImm] *)
+          disc_rule_conds_ex.
+          spec_case_get oidx.
+
+          red; simpl; split.
+          * eapply SimStateIntro with (cv:= fst sost).
+            { solve_rule_conds_ex. }
+            { red; simpl; split.
+              { solve_rule_conds_ex. }
+              { apply Forall_forall; intros lidx ?.
+                destruct (idx_dec lidx oidx); subst.
+                { disc_rule_conds_ex.
+                  split; auto.
+                  apply DirMsgsCoh_other_midx_enqMP;
+                    [|intro Hx; dest_in; try discriminate;
+                      inv H12; eapply l1ExtOf_not_eq; eauto].
+                  apply DirMsgsCoh_deqMP.
+                  assumption.
+                }
+                { apply in_app_or in H9; destruct H9.
+                  { rewrite Forall_forall in H4; specialize (H4 _ H9).
+                    disc_rule_conds_ex.
+                    split; auto.
+                    apply DirMsgsCoh_other_midx_enqMP.
+                    2: {
+                      intro Hx; dest_in; try discriminate.
+                      admit.
+                    }
+                    apply DirMsgsCoh_deqMP.
+                    assumption.
+                  }
+                  { specialize (H5 _ H9).
+                    disc_rule_conds_ex.
+                    split; auto.
+                    apply DirMsgsCoh_other_midx_enqMP.
+                    2: {
+                      intro Hx; dest_in; try discriminate.
+                      admit.
+                    }
+                    apply DirMsgsCoh_deqMP.
+                    assumption.
+                  }
+                }
+              }
+            }
+          * solve_sim_ext_mp.
+
     Admitted.
     
     Theorem Mesi_ok:

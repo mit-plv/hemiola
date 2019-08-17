@@ -1,5 +1,5 @@
 Require Import Bool Vector List String Peano_dec.
-Require Import Common FMap HVector ListSupport.
+Require Import Common FMap HVector IndexSupport.
 
 Require Import Ex.Spec.
 
@@ -7,18 +7,18 @@ Set Implicit Arguments.
 
 (** Message Ids *)
 
-Definition msiRqS: IdxT := specNumMsgIds + 0.
-Definition msiRsS: IdxT := specNumMsgIds + 1.
-Definition msiDownRqS: IdxT := specNumMsgIds + 2.
-Definition msiDownRsS: IdxT := specNumMsgIds + 3.
+Definition msiRqS: IdxT := 0~>2.
+Definition msiRsS: IdxT := 0~>3.
+Definition msiDownRqS: IdxT := 0~>4.
+Definition msiDownRsS: IdxT := 0~>5.
 
-Definition msiRqM: IdxT := specNumMsgIds + 4.
-Definition msiRsM: IdxT := specNumMsgIds + 5.
-Definition msiDownRqI: IdxT := specNumMsgIds + 6.
-Definition msiDownRsI: IdxT := specNumMsgIds + 7.
+Definition msiRqM: IdxT := 1~>2.
+Definition msiRsM: IdxT := 1~>3.
+Definition msiDownRqI: IdxT := 1~>4.
+Definition msiDownRsI: IdxT := 1~>5.
 
-Definition msiRqI: IdxT := specNumMsgIds + 8.
-Definition msiRsI: IdxT := specNumMsgIds + 9.
+Definition msiRqI: IdxT := 2~>2.
+Definition msiRsI: IdxT := 2~>3.
 
 (** Cache Status *)
 

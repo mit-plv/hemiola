@@ -1170,6 +1170,18 @@ Section Facts.
       apply indsOf_root_in.
     Qed.
 
+    Lemma parentIdxOf_child_not_root:
+      forall oidx pidx,
+        parentIdxOf dtr oidx = Some pidx ->
+        oidx <> rootOf dtr.
+    Proof.
+      intros.
+      intro Hx; subst.
+      assert (parentIdxOf dtr (rootOf dtr) <> None) by (rewrite H; discriminate).
+      elim H0.
+      unfold parentIdxOf; rewrite root_parentChnsOf_None; auto.
+    Qed.
+
     Lemma parentIdxOf_asym:
       forall oidx1 oidx2,
         parentIdxOf dtr oidx1 = Some oidx2 ->
@@ -1553,7 +1565,27 @@ Section Facts.
           apply DisjList_comm.
           eapply chnsOf_childrenOf_disj; eauto.
     Qed.
-    
+
+    Lemma subtreeChildrenIndsOf_parentIdxOf:
+      forall cidx oidx,
+        In cidx (subtreeChildrenIndsOf dtr oidx) ->
+        parentIdxOf dtr cidx = Some oidx.
+    Proof.
+      intros.
+      unfold subtreeChildrenIndsOf in H.
+      destruct (subtree oidx dtr) eqn:Hstr; simpl in H; [|exfalso; auto].
+      pose proof (subtree_Subtree _ _ Hstr).
+      unfold childrenIndsOf in H.
+      apply in_map_iff in H; dest; subst.
+      rewrite parentIdxOf_Subtree_eq with (str:= d); auto.
+      - eapply parentIdxOf_childrenOf in H1.
+        apply subtree_rootOf in Hstr; subst; assumption.
+      - apply neq_sym, parent_child_not_eq; [|assumption].
+        eapply Subtree_wfDTree; eauto.
+      - eapply indsOf_childrenOf; [eassumption|].
+        apply indsOf_root_in.
+    Qed.
+
   End Wf.
 
 End Facts.

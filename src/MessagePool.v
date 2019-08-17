@@ -458,6 +458,22 @@ Section Facts.
       intro Hx; subst; elim H4; assumption.
   Qed.
 
+  Lemma findQ_deqMsgs_eq:
+    forall minds midx (msgs1 msgs2: MessagePool MsgT),
+      findQ midx msgs1 = findQ midx msgs2 ->
+      findQ midx (deqMsgs minds msgs1) =
+      findQ midx (deqMsgs minds msgs2).
+  Proof.
+    induction minds; simpl; intros; auto.
+    apply IHminds.
+    destruct (idx_dec midx a); subst.
+    - unfold deqMP; rewrite H.
+      destruct (findQ a msgs2) eqn:Hf; [congruence|].
+      unfold findQ; mred.
+    - do 2 (rewrite findQ_not_In_deqMP by assumption).
+      assumption.
+  Qed.
+
   Lemma findQ_eq_FirstMPI:
     forall midx (msg: MsgT) msgs1,
       FirstMPI msgs1 (midx, msg) ->
@@ -823,7 +839,7 @@ Section Facts.
     eapply IHrminds; eauto.
     eapply deqMP_InMP_midx; auto.
   Qed.
-  
+
   Lemma qsOf_In_findQ_eq:
     forall (mp1 mp2: MessagePool MsgT) minds,
       qsOf minds mp1 = qsOf minds mp2 ->

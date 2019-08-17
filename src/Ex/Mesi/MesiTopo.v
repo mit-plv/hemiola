@@ -12,45 +12,13 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-(** TODO: to [ListSupport.v] *)
-Lemma concat_In:
-  forall {A} (a: A) (ll: list (list A)),
-    In a (List.concat ll) ->
-    exists l, In l ll /\ In a l.
-Proof.
-  induction ll; simpl; intros; [exfalso; auto|].
-  apply in_app_or in H; destruct H; eauto.
-  specialize (IHll H); dest; eauto.
-Qed.
-
-(** TODO: to [Topology.v] *)
-Lemma subtreeChildrenIndsOf_parentIdxOf:
-  forall dtr (Hwf: WfDTree dtr) cidx oidx,
-    In cidx (subtreeChildrenIndsOf dtr oidx) ->
-    parentIdxOf dtr cidx = Some oidx.
-Proof.
-  intros.
-  unfold subtreeChildrenIndsOf in H.
-  destruct (subtree oidx dtr) eqn:Hstr; simpl in H; [|exfalso; auto].
-  pose proof (subtree_Subtree _ _ Hstr).
-  unfold childrenIndsOf in H.
-  apply in_map_iff in H; dest; subst.
-  rewrite parentIdxOf_Subtree_eq with (str:= d); auto.
-  - eapply parentIdxOf_childrenOf in H1.
-    apply subtree_rootOf in Hstr; subst; assumption.
-  - apply neq_sym, parent_child_not_eq; [|assumption].
-    eapply Subtree_wfDTree; eauto.
-  - eapply indsOf_childrenOf; [eassumption|].
-    apply indsOf_root_in.
-Qed.
-
 Section System.
   Variable tr: tree.
   Hypothesis (Htr: tr <> Node nil).
 
-  Local Definition topo := fst (tree2Topo tr 0).
-  Local Definition cifc := snd (tree2Topo tr 0).
-  Local Definition impl := impl Htr.
+  Let topo := fst (tree2Topo tr 0).
+  Let cifc := snd (tree2Topo tr 0).
+  Let impl := impl Htr.
 
   Hint Extern 0 (TreeTopo topo) => apply tree2Topo_TreeTopo.
   Hint Extern 0 (WfDTree topo) => apply tree2Topo_WfDTree.
@@ -73,12 +41,11 @@ Section System.
   Lemma mesi_RqRsChnsOnSystem: RqRsChnsOnSystem topo impl.
   Proof.
     eapply tree2Topo_RqRsChnsOnSystem with (tr0:= tr) (bidx:= [0]); try reflexivity.
-    - unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
+    - destruct (tree2Topo _ _); reflexivity.
     - simpl.
       rewrite map_app.
       do 2 rewrite map_trans.
       do 2 rewrite map_id.
-      change (Mesi.topo tr) with (fst (tree2Topo tr 0)).
       rewrite app_comm_cons.
       rewrite <-c_li_indices_head_rootOf by assumption.
       reflexivity.
@@ -87,7 +54,7 @@ Section System.
   Lemma mesi_ExtsOnDTree: ExtsOnDTree topo impl.
   Proof.
     eapply tree2Topo_ExtsOnDTree with (tr0:= tr) (bidx:= [0]); try reflexivity.
-    unfold topo, Mesi.cifc; destruct (tree2Topo _ _); reflexivity.
+    destruct (tree2Topo _ _); reflexivity.
   Qed.
   
   Lemma mesi_RqRsDTree: RqRsDTree topo impl.

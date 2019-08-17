@@ -7,22 +7,19 @@ Set Implicit Arguments.
 
 (** Message Ids *)
 
-Definition mesiMsgBase: IdxT := 0.
+Definition mesiRqS: IdxT := 0~>2.
+Definition mesiRsS: IdxT := 0~>3.
+Definition mesiRsE: IdxT := 0~>4.
+Definition mesiDownRqS: IdxT := 0~>5.
+Definition mesiDownRsS: IdxT := 0~>6.
 
-Definition mesiRqS: IdxT := mesiMsgBase~>0.
-Definition mesiRsS: IdxT := mesiMsgBase~>1.
-Definition mesiRsE: IdxT := mesiMsgBase~>2.
+Definition mesiRqM: IdxT := 1~>2.
+Definition mesiRsM: IdxT := 1~>3.
+Definition mesiDownRqI: IdxT := 1~>4.
+Definition mesiDownRsI: IdxT := 1~>5.
 
-Definition mesiDownRqS: IdxT := mesiMsgBase~>3.
-Definition mesiDownRsS: IdxT := mesiMsgBase~>4.
-
-Definition mesiRqM: IdxT := mesiMsgBase~>5.
-Definition mesiRsM: IdxT := mesiMsgBase~>6.
-Definition mesiDownRqI: IdxT := mesiMsgBase~>7.
-Definition mesiDownRsI: IdxT := mesiMsgBase~>8.
-
-Definition mesiRqI: IdxT := mesiMsgBase~>9.
-Definition mesiRsI: IdxT := mesiMsgBase~>10.
+Definition mesiRqI: IdxT := 2~>2.
+Definition mesiRsI: IdxT := 2~>3.
 
 (** Cache Status *)
 

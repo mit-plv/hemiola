@@ -1177,6 +1177,16 @@ Proof.
   rewrite IHl; reflexivity.
 Qed.
 
+Lemma concat_In:
+  forall {A} (a: A) (ll: list (list A)),
+    In a (List.concat ll) ->
+    exists l, In l ll /\ In a l.
+Proof.
+  induction ll; simpl; intros; [exfalso; auto|].
+  apply in_app_or in H; destruct H; eauto.
+  specialize (IHll H); dest; eauto.
+Qed.
+
 Lemma concat_SubList:
   forall {A} (l: list A) (ll: list (list A)),
     In l ll -> SubList l (List.concat ll).

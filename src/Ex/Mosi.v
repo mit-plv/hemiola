@@ -7,21 +7,27 @@ Set Implicit Arguments.
 
 (** Message Ids *)
 
-Definition mosiMsgBase: IdxT := 0.
+Definition mosiRqS: IdxT := 0~>0.
+Definition mosiRsS: IdxT := 0~>1.
+Definition mosiDownRqS: IdxT := 0~>3.
+Definition mosiDownRsS: IdxT := 0~>4.
 
-Definition mosiRqS: IdxT := mosiMsgBase~>0.
-Definition mosiRsS: IdxT := mosiMsgBase~>1.
+Local Definition mosiRqS_getRq_eq: mosiRqS = getRq := eq_refl.
+Local Definition mosiRsS_getRs_eq: mosiRsS = getRs := eq_refl.
 
-Definition mosiDownRqS: IdxT := mosiMsgBase~>3.
-Definition mosiDownRsS: IdxT := mosiMsgBase~>4.
+Definition mosiRqM: IdxT := 1~>0.
+Definition mosiRsM: IdxT := 1~>1.
+Definition mosiDownRqI: IdxT := 1~>2.
+Definition mosiDownRsI: IdxT := 1~>3.
 
-Definition mosiRqM: IdxT := mosiMsgBase~>5.
-Definition mosiRsM: IdxT := mosiMsgBase~>6.
-Definition mosiDownRqI: IdxT := mosiMsgBase~>7.
-Definition mosiDownRsI: IdxT := mosiMsgBase~>8.
+Local Definition mosiRqM_setRq_eq: mosiRqM = setRq := eq_refl.
+Local Definition mosiRsM_setRs_eq: mosiRsM = setRs := eq_refl.
 
-Definition mosiRqI: IdxT := mosiMsgBase~>9.
-Definition mosiRsI: IdxT := mosiMsgBase~>10.
+Definition mosiRqI: IdxT := 2~>0.
+Definition mosiRsI: IdxT := 2~>1.
+
+Local Definition mosiRqI_evictRq_eq: mosiRqI = evictRq := eq_refl.
+Local Definition mosiRsI_evictRs_eq: mosiRsI = evictRs := eq_refl.
 
 (** Cache Status *)
 

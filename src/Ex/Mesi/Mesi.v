@@ -24,8 +24,8 @@ Section System.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
 
-  Definition topo := fst (tree2Topo tr 0).
-  Definition cifc := snd (tree2Topo tr 0).
+  Let topo := fst (tree2Topo tr 0).
+  Let cifc := snd (tree2Topo tr 0).
   
   Definition implValueIdx: Fin.t 3 := F1.
   Definition implStatusIdx: Fin.t 3 := F2.
@@ -113,11 +113,11 @@ Section System.
 
       Definition l1GetSImm: Rule :=
         rule.immd[cidx~>0~>0]
-        :accepts mesiRqS
+        :accepts Spec.getRq
         :from cidx
         :requires (fun ost orq mins => mesiS <= ost#[implStatusIdx])
         :transition
-           (!|ost, _| --> (ost, {| miv_id := mesiRsS;
+           (!|ost, _| --> (ost, {| miv_id := Spec.getRs;
                                    miv_value := ost#[implValueIdx]
                                 |})).
 
@@ -148,10 +148,10 @@ Section System.
 
       Definition l1GetSRqUpUp: Rule :=
         rule.rquu[cidx~>0~>1]
-        :accepts mesiRqS
+        :accepts Spec.getRq
         :from cidx
         :me oidx
-        :requires (fun ost mins => summaryOf ost = mesiI)
+        :requires (fun ost mins => ost#[implStatusIdx] = mesiI)
         :transition
            (!|ost, msg| --> {| miv_id := mesiRqS;
                                miv_value := O |}).
@@ -175,7 +175,7 @@ Section System.
            (!|ost, min, rq, rsbTo|
             --> (ost +#[implValueIdx <- msg_value min]
                      +#[implStatusIdx <- mesiS],
-                 {| miv_id := mesiRsS;
+                 {| miv_id := Spec.getRs;
                     miv_value := msg_value min |})).
 
       Definition l1GetSRsDownDownE: Rule :=
@@ -187,7 +187,7 @@ Section System.
            (!|ost, min, rq, rsbTo|
             --> (ost +#[implValueIdx <- msg_value min]
                      +#[implStatusIdx <- mesiE],
-                 {| miv_id := mesiRsS;
+                 {| miv_id := Spec.getRs;
                     miv_value := msg_value min |})).
 
       Definition liGetSRsDownDownS: Rule :=
@@ -324,25 +324,25 @@ Section System.
 
       Definition l1GetMImmE: Rule :=
         rule.immd[cidx~>1~>0~>0]
-        :accepts mesiRqM
+        :accepts Spec.setRq
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiE)
         :transition
            (!|ost, msg|
             --> (ost +#[implStatusIdx <- mesiM]
                      +#[implValueIdx <- msg_value msg],
-                 {| miv_id := mesiRsM;
+                 {| miv_id := Spec.setRs;
                     miv_value := O |})).
 
       Definition l1GetMImmM: Rule :=
         rule.immd[cidx~>1~>0~>1]
-        :accepts mesiRqM
+        :accepts Spec.setRq
         :from cidx
         :requires (fun ost orq mins => ost#[implStatusIdx] = mesiM)
         :transition
            (!|ost, msg|
             --> (ost +#[implValueIdx <- msg_value msg],
-                 {| miv_id := mesiRsM;
+                 {| miv_id := Spec.setRs;
                     miv_value := O |})).
 
       Definition liGetMImm: Rule :=
@@ -358,7 +358,7 @@ Section System.
 
       Definition l1GetMRqUpUp: Rule :=
         rule.rquu[1~>1]
-        :accepts mesiRqM
+        :accepts Spec.setRq
         :from cidx
         :me oidx
         :requires (fun ost mins => summaryOf ost <= mesiS)
@@ -385,7 +385,7 @@ Section System.
            (!|ost, min, rq, rsbTo|
             --> (ost +#[implStatusIdx <- mesiM]
                      +#[implValueIdx <- msg_value rq],
-                 {| miv_id := mesiRsM;
+                 {| miv_id := Spec.setRs;
                     miv_value := O |})).
 
       (* This is the case where it's possible to directly respond a [mesiRsM]

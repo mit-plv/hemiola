@@ -7,19 +7,6 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
-(** TODO: to [Topology.v] *)
-Lemma parentIdxOf_child_not_root:
-  forall dtr (Hwf: WfDTree dtr) oidx pidx,
-    parentIdxOf dtr oidx = Some pidx ->
-    oidx <> rootOf dtr.
-Proof.
-  intros.
-  intro Hx; subst.
-  assert (parentIdxOf dtr (rootOf dtr) <> None) by (rewrite H; discriminate).
-  elim H0.
-  unfold parentIdxOf; rewrite root_parentChnsOf_None; auto.
-Qed.
-
 Inductive tree :=
 | Node: list tree -> tree.
 
