@@ -139,14 +139,21 @@ Section System.
     |}.
 
   Definition specMerqs: list IdxT :=
-    extendInds rqUpIdx (extendInds 0 cinds).
+    map (fun cidx => rqUpFrom (l1ExtOf cidx)) cinds.
 
   Definition specMerss: list IdxT :=
-    extendInds downIdx (extendInds 0 cinds).
+    map (fun cidx => downTo (l1ExtOf cidx)) cinds.
 
   Lemma spec_msg_inds_valid:
     NoDup (specMerqs ++ specMerss).
   Proof.
+    replace specMerqs with (extendInds rqUpIdx (extendInds 0 cinds))
+      by (unfold specMerqs; clear; induction cinds;
+          [reflexivity|simpl; f_equal; assumption]).
+    replace specMerss with (extendInds downIdx (extendInds 0 cinds))
+      by (unfold specMerss; clear; induction cinds;
+          [reflexivity|simpl; f_equal; assumption]).
+    
     apply NoDup_DisjList.
     - do 2 apply extendIdx_NoDup.
       apply NoPrefix_NoDup; assumption.

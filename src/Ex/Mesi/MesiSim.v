@@ -507,12 +507,6 @@ Section Sim.
       - reflexivity.
       - eapply SmOuts with (msgs0:= smsgs1); eauto.
         + eapply SimExtMP_ext_outs_FirstMPI; eauto.
-          match goal with
-          | [H: SubList ?outs ?d1 |- SubList ?outs ?d2] =>
-            replace d2 with d1; [assumption|]
-          end.
-          clear; fold cifc; induction (c_l1_indices cifc); simpl; [reflexivity|].
-          f_equal; assumption.
         + split; assumption.
       - split.
         + inv H.
@@ -525,12 +519,6 @@ Section Sim.
           split; [assumption|].
           apply DirMsgsCoh_deqMsgs; assumption.
         + apply SimExtMP_ext_outs_deqMsgs; auto.
-          match goal with
-          | [H: SubList ?outs ?d1 |- SubList ?outs ?d2] =>
-            replace d2 with d1; [assumption|]
-          end.
-          clear; fold cifc; induction (c_l1_indices cifc); simpl; [reflexivity|].
-          f_equal; assumption.
     Qed.
 
     Definition ImplInvEx (st: MState) :=
@@ -551,11 +539,13 @@ Section Sim.
 
     Ltac spec_constr_step_get_ValidMsgs :=
       match goal with
-      | [H: In _ (c_l1_indices _) |- _] => clear -H
-      end; split;
-      [simpl; apply SubList_cons; [|apply SubList_nil];
-       do 2 apply in_map; assumption
-      |repeat constructor; intro; dest_in].
+      | [H: In _ (c_l1_indices _) |- _] =>
+        clear -H; split;
+        [simpl; apply SubList_cons; [|apply SubList_nil];
+         apply in_map with (f:= fun cidx => _ (l1ExtOf cidx));
+         assumption|
+         repeat constructor; intro; dest_in]
+      end.
 
     Ltac spec_constr_step_get cidx :=
       eapply SmInt with (ins:= [(rqUpFrom (l1ExtOf cidx), _)]);

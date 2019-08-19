@@ -379,7 +379,7 @@ Section Facts.
   Lemma c_merqs_l1_rqUpFrom:
     forall tr bidx,
       c_merqs (snd (tree2Topo tr bidx)) =
-      extendInds rqUpIdx (extendInds 0 (c_l1_indices (snd (tree2Topo tr bidx)))).
+      map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices (snd (tree2Topo tr bidx))).
   Proof.
     induction tr using tree_ind_l; simpl; intros.
     find_if_inside; [reflexivity|].
@@ -387,21 +387,20 @@ Section Facts.
     clear n.
 
     assert (c_merqs emptyCIfc =
-            extendInds rqUpIdx (extendInds 0 (c_l1_indices emptyCIfc)))
+            map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices emptyCIfc))
       by reflexivity.
     generalize H0; clear H0.
     generalize emptyCIfc as bcifc.
-    generalize 0 at 2 4 as ofs.
+    generalize 0 as ofs.
     induction l; simpl; intros; [assumption|].
     inv H; apply IHl; auto.
-    unfold extendInds in *.
-    simpl; do 2 rewrite map_app; congruence.
+    simpl; rewrite map_app; congruence.
   Qed.
 
   Lemma c_merss_l1_downTo:
     forall tr bidx,
       c_merss (snd (tree2Topo tr bidx)) =
-      extendInds downIdx (extendInds 0 (c_l1_indices (snd (tree2Topo tr bidx)))).
+      map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices (snd (tree2Topo tr bidx))).
   Proof.
     induction tr using tree_ind_l; simpl; intros.
     find_if_inside; [reflexivity|].
@@ -409,15 +408,14 @@ Section Facts.
     clear n.
 
     assert (c_merss emptyCIfc =
-            extendInds downIdx (extendInds 0 (c_l1_indices emptyCIfc)))
+            map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices emptyCIfc))
       by reflexivity.
     generalize H0; clear H0.
     generalize emptyCIfc as bcifc.
-    generalize 0 at 2 4 as ofs.
+    generalize 0 as ofs.
     induction l; simpl; intros; [assumption|].
     inv H; apply IHl; auto.
-    unfold extendInds in *.
-    simpl; do 2 rewrite map_app; congruence.
+    simpl; rewrite map_app; congruence.
   Qed.
 
   Lemma c_li_indices_fold_collect_SubList:
