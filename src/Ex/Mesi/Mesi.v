@@ -93,8 +93,18 @@ Section System.
     (0, (mesiS, (dirInit oidx, tt))).
 
   Definition implOStatesInit: OStates :=
-    fold_left (fun m i => m +[i <- implOStateInit i])
-              (cifc.(c_li_indices) ++ cifc.(c_l1_indices)) [].
+    fold_right (fun i m => m +[i <- implOStateInit i]) []
+               (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
+
+  Lemma implOStatesInit_value:
+    forall oidx,
+      In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      implOStatesInit@[oidx] = Some (implOStateInit oidx).
+  Proof.
+    intros; unfold implOStatesInit; fold cifc.
+    induction (c_li_indices cifc ++ c_l1_indices cifc); [dest_in|].
+    simpl; icase oidx; mred.
+  Qed.
 
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).

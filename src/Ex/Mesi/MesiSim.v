@@ -15,14 +15,35 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-(** TODO: will be used by MOSI as well. *)
+(** TODO: refactor; will be used by MOSI as well. *)
+Lemma tree2Topo_internal_chns_not_exts:
+  forall tr bidx oidx,
+    let cifc := snd (tree2Topo tr bidx) in
+    In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+    DisjList [rqUpFrom oidx; rsUpFrom oidx; downTo oidx]
+             ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+Proof.
+  intros.
+  eapply DisjList_SubList.
+  - apply tree2Topo_obj_chns_minds_SubList; eassumption.
+  - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+    apply DisjList_comm, DisjList_app_4.
+    + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+    + apply DisjList_comm, tree2Topo_minds_merss_disj.
+Qed.
+
+Ltac solve_not_in_ext_chns :=
+  eapply DisjList_In_2;
+  [eapply tree2Topo_internal_chns_not_exts;
+   apply in_or_app; eauto|simpl; tauto].
+
+(** TODO: refactor; will be used by MOSI as well. *)
 Section SimExtMP.
   Variable (l1s: list IdxT).
 
-  Local Notation erqs :=
-    (map (fun cidx => rqUpFrom (l1ExtOf cidx)) l1s).
-  Local Notation erss :=
-    (map (fun cidx => downTo (l1ExtOf cidx)) l1s).
+  Let erqs := map (fun cidx => rqUpFrom (l1ExtOf cidx)) l1s.
+  Let erss := map (fun cidx => downTo (l1ExtOf cidx)) l1s.
 
   Definition SimExtMP (imsgs: MessagePool Msg) (iorqs: ORqs Msg)
              (smsgs: MessagePool Msg) :=
@@ -425,7 +446,28 @@ Section Sim.
       - apply SimStateIntro with (cv:= 0).
         + reflexivity.
         + repeat split.
-    Admitted.
+          * simpl; rewrite implOStatesInit_value.
+            { compute; auto. }
+            { apply in_or_app; left.
+              rewrite c_li_indices_head_rootOf by assumption.
+              left; reflexivity.
+            }
+          * apply Forall_forall; intros oidx ?.
+            simpl; rewrite implOStatesInit_value.
+            { simpl; split; [compute; auto|].
+              red; intros.
+              do 2 red in H0; dest_in.
+            }
+            { apply in_or_app.
+              apply in_app_or in H; destruct H; auto.
+              apply tl_In in H; auto.
+            }
+      - red; apply Forall_forall; intros oidx ?.
+        repeat split.
+        simpl; unfold implORqsInit.
+        rewrite initORqs_value; [|apply in_or_app; auto].
+        simpl; mred.
+    Qed.
 
     Lemma simMesi_sim_silent:
       forall ist sst1,
@@ -580,21 +622,21 @@ Section Sim.
     Ltac solve_sim_ext_mp :=
       repeat
         (match goal with
-         | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
-           apply SimExtMP_orqs with (orqs1:= m);
-           [|apply Forall_forall; intros; mred]
          | [ |- SimExtMP _ (enqMP _ _ _) _ (enqMP _ _ _) ] =>
            apply SimExtMP_enqMP
          | [ |- SimExtMP _ (deqMP ?midx _) _ (deqMP ?midx _) ] =>
            eapply SimExtMP_outs_deqMP_child; eauto; mred; fail
          | [ |- SimExtMP _ (enqMP _ _ _) _ _ ] =>
-           apply SimExtMP_impl_enqMP_indep; [solve_not_in; fail|]
+           apply SimExtMP_impl_enqMP_indep; [solve_not_in_ext_chns; fail|]
          | [ |- SimExtMP _ (deqMP _ _) _ _ ] =>
            eapply SimExtMP_spec_deqMP_locked; eauto; [mred|reflexivity]; fail
          | [ |- SimExtMP _ (deqMP _ _) _ _ ] =>
-           apply SimExtMP_impl_deqMP_indep; [solve_not_in; fail|]
+           apply SimExtMP_impl_deqMP_indep; [solve_not_in_ext_chns; fail|]
          | [ |- SimExtMP _ _ _ (deqMP _ _) ] =>
            eapply SimExtMP_spec_deqMP_unlocked; eauto; [congruence|mred]; fail
+         | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
+           apply SimExtMP_orqs with (orqs1:= m);
+           [|apply Forall_forall; intros; mred]
          end; try assumption).
 
     Ltac disc_rule_custom ::=
@@ -642,8 +684,6 @@ Section Sim.
       destruct (sorqs1@[specIdx]) as [sorq|] eqn:Hsorq; simpl in *; [|exfalso; auto].
       dest; subst.
 
-      (** TODO: need to ensure [oidx <> rootOf topo] for L1/Li cases. *)
-      
       simpl in H4; destruct H4; [subst|].
       1: {
         (*! Cases for the main memory *)
@@ -739,8 +779,7 @@ Section Sim.
                 }
               }
             }
-          * eapply SimExtMP_impl_enqMP_indep; [admit|].
-            eapply SimExtMP_spec_deqMP_locked; eauto; [mred|reflexivity].
+          * solve_sim_ext_mp.
 
     Admitted.
     

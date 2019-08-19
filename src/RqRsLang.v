@@ -141,21 +141,21 @@ Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI
      MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp : RuleConds.
 
 Definition initORqs (oinds: list IdxT): ORqs Msg :=
-  fold_left (fun m i => m +[i <- []]) oinds [].
+  fold_right (fun i m => m +[i <- []]) [] oinds.
 
 Lemma initORqs_GoodORqsInit: forall oinds, GoodORqsInit (initORqs oinds).
 Proof.
   red; intros.
-  unfold initORqs.
-  remember (M.empty (M.t (RqInfo Msg))) as m.
-  assert (forall oidx, m@[oidx] >>=[True] (fun orq => orq = []))
-    by (intros; subst; mred).
-  clear Heqm.
-  generalize dependent m.
-  induction oinds; simpl; intros; [auto|].
-  apply IHoinds.
-  intros.
-  mred; auto.
+  induction oinds; simpl; intros; mred.
+Qed.
+
+Lemma initORqs_value:
+  forall oinds oidx,
+    In oidx oinds ->
+    (initORqs oinds)@[oidx] = Some [].
+Proof.
+  induction oinds; intros; [exfalso; auto|].
+  simpl; icase oidx; mred; auto.
 Qed.
 
 Module RqRsNotations.
