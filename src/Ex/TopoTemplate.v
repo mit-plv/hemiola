@@ -379,45 +379,45 @@ Section Facts.
   Lemma c_merqs_l1_rqUpFrom:
     forall tr bidx,
       c_merqs (snd (tree2Topo tr bidx)) =
-      map (fun cidx => rqUpFrom (l1ExtOf cidx))
-          (c_l1_indices (snd (tree2Topo tr bidx))).
+      extendInds rqUpIdx (extendInds 0 (c_l1_indices (snd (tree2Topo tr bidx)))).
   Proof.
     induction tr using tree_ind_l; simpl; intros.
     find_if_inside; [reflexivity|].
     simpl.
     clear n.
 
-    assert (c_merqs emptyCIfc = map (fun cidx => rqUpFrom (l1ExtOf cidx))
-                                    (c_l1_indices emptyCIfc))
+    assert (c_merqs emptyCIfc =
+            extendInds rqUpIdx (extendInds 0 (c_l1_indices emptyCIfc)))
       by reflexivity.
     generalize H0; clear H0.
     generalize emptyCIfc as bcifc.
-    generalize 0 as ofs.
+    generalize 0 at 2 4 as ofs.
     induction l; simpl; intros; [assumption|].
     inv H; apply IHl; auto.
-    simpl; rewrite map_app; congruence.
+    unfold extendInds in *.
+    simpl; do 2 rewrite map_app; congruence.
   Qed.
 
   Lemma c_merss_l1_downTo:
     forall tr bidx,
       c_merss (snd (tree2Topo tr bidx)) =
-      map (fun cidx => downTo (l1ExtOf cidx))
-          (c_l1_indices (snd (tree2Topo tr bidx))).
+      extendInds downIdx (extendInds 0 (c_l1_indices (snd (tree2Topo tr bidx)))).
   Proof.
     induction tr using tree_ind_l; simpl; intros.
     find_if_inside; [reflexivity|].
     simpl.
     clear n.
 
-    assert (c_merss emptyCIfc = map (fun cidx => downTo (l1ExtOf cidx))
-                                    (c_l1_indices emptyCIfc))
+    assert (c_merss emptyCIfc =
+            extendInds downIdx (extendInds 0 (c_l1_indices emptyCIfc)))
       by reflexivity.
     generalize H0; clear H0.
     generalize emptyCIfc as bcifc.
-    generalize 0 as ofs.
+    generalize 0 at 2 4 as ofs.
     induction l; simpl; intros; [assumption|].
     inv H; apply IHl; auto.
-    simpl; rewrite map_app; congruence.
+    unfold extendInds in *.
+    simpl; do 2 rewrite map_app; congruence.
   Qed.
 
   Lemma c_li_indices_fold_collect_SubList:
@@ -1128,6 +1128,40 @@ Section Facts.
           simpl in H5; dest; omega.
   Qed.
 
+  Corollary tree2Topo_minds_merqs_disj:
+    forall tr bidx,
+      DisjList (c_minds (snd (tree2Topo tr bidx)))
+               (c_merqs (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_WfCIfc tr bidx) as [_ ?].
+    apply (DisjList_NoDup idx_dec) in H.
+    apply DisjList_app_1 in H; assumption.
+  Qed.
+
+  Corollary tree2Topo_minds_merss_disj:
+    forall tr bidx,
+      DisjList (c_minds (snd (tree2Topo tr bidx)))
+               (c_merss (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_WfCIfc tr bidx) as [_ ?].
+    apply (DisjList_NoDup idx_dec) in H.
+    apply DisjList_app_2 in H; assumption.
+  Qed.
+
+  Corollary tree2Topo_merqs_merss_disj:
+    forall tr bidx,
+      DisjList (c_merqs (snd (tree2Topo tr bidx)))
+               (c_merss (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_WfCIfc tr bidx) as [_ ?].
+    apply NoDup_app_weakening_2 in H.
+    apply (DisjList_NoDup idx_dec) in H.
+    assumption.
+  Qed.
+
   Lemma tree2Topo_RqRsChnsOnDTree_root:
     forall str bidx droot dstrs,
       fst (tree2Topo str bidx) = DNode droot dstrs ->
@@ -1181,8 +1215,9 @@ Section Facts.
       (* body of [RqRsChnsOnDTree] *)
       forall oidx,
         In oidx oinds ->
-        exists odtr,
+        exists odtr otr obidx,
           subtree oidx topo = Some odtr /\
+          odtr = fst (tree2Topo otr obidx) /\
           SubList (dmcOf odtr).(dmc_ups) minds /\
           SubList (dmcOf odtr).(dmc_downs) minds.
   Proof.
@@ -1192,10 +1227,11 @@ Section Facts.
     simpl in *; find_if_inside; subst.
     - inv H0.
       destruct H3; [subst|exfalso; auto].
-      eexists; repeat ssplit.
+      eexists; exists (Node nil), oidx; repeat ssplit.
       + unfold subtree, dmc_me.
         destruct (idx_dec _ _); [|exfalso; auto].
         reflexivity.
+      + reflexivity.
       + simpl; solve_SubList.
       + simpl; solve_SubList.
 
@@ -1203,11 +1239,12 @@ Section Facts.
       simpl in H3.
       destruct (idx_dec bidx oidx); subst.
       1: {
-        eexists; repeat ssplit.
+        eexists; exists (Node l), oidx; repeat ssplit.
         { unfold subtree, dmc_me.
           destruct (idx_dec _ _); [|exfalso; auto].
           reflexivity.
         }
+        { simpl; find_if_inside; [exfalso; auto|]; reflexivity. }
         { simpl; solve_SubList. }
         { simpl; solve_SubList. }
       }
@@ -1222,13 +1259,14 @@ Section Facts.
       pose proof (nth_error_In _ _ H0).
       rewrite Forall_forall in H; specialize (H _ H4); clear H4.
       specialize (H _ _ _ _ _ Hchd eq_refl eq_refl _ H3).
-      destruct H as [odtr ?]; dest.
+      destruct H as [odtr [otr [obidx ?]]]; dest.
 
-      exists odtr; repeat ssplit.
+      exists odtr, otr, obidx; repeat ssplit.
       + eapply subtree_collect_NoDup_find_some; try eassumption.
         destruct Hwf.
-        red in H6; simpl in H6; inv H6.
+        red in H7; simpl in H7; inv H7.
         assumption.
+      + assumption.
       + do 3 apply SubList_cons_right.
         eapply SubList_trans; [eassumption|].
         apply mergeCIfc_fold_left_c_minds_In; assumption.
@@ -1247,11 +1285,11 @@ Section Facts.
     intros.
     red; intros.
     eapply tree2Topo_RqRsChnsOnSystem_unfolded in H2; eauto.
-    destruct H2 as [odtr ?]; dest.
+    destruct H2 as [odtr [otr [obidx ?]]]; dest.
     replace topo with (fst (tree2Topo tr bidx)) in * by (rewrite H; reflexivity).
     pose proof (parentChnsOf_subtree (tree2Topo_WfDTree tr bidx) _ H3).
-    destruct H6 as [rodtr ?]; dest; subst.
-    rewrite H6 in H2; inv H2.
+    destruct H7 as [rodtr ?]; dest; subst.
+    rewrite H7 in H2; inv H2.
     split; assumption.
   Qed.
 
@@ -1377,6 +1415,28 @@ Section Facts.
       + simpl; intro Hx; subst.
         apply parentIdxOf_child_not_root in H; auto.
       + apply H4; right; auto.
+  Qed.
+
+  Lemma tree2Topo_obj_chns_minds_SubList:
+    forall tr bidx oidx,
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ (c_l1_indices (snd (tree2Topo tr bidx)))) ->
+      SubList [rqUpFrom oidx; rsUpFrom oidx; downTo oidx]
+              (c_minds (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    destruct (tree2Topo tr bidx) as [topo cifc] eqn:Htc.
+    simpl in *.
+    eapply tree2Topo_RqRsChnsOnSystem_unfolded in H;
+      try reflexivity; try eassumption.
+    destruct H as [odtr [otr [obidx ?]]]; dest.
+    destruct (tree2Topo otr obidx) as [rodtr ocifc] eqn:Hotc; simpl in *; subst.
+    apply tree2Topo_root_edges in Hotc; dest.
+    apply subtree_rootOf in H; subst.
+    red; intros; dest_in.
+    - apply H1; apply hd_error_In in H0; assumption.
+    - apply H1; apply hd_error_In, tl_In in H3; assumption.
+    - apply H2; apply hd_error_In in H4; assumption.
   Qed.
 
 End Facts.

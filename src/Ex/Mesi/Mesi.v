@@ -39,10 +39,10 @@ Section System.
         dir_sharers: list IdxT
       }.
 
-    Definition dirInit: DirT :=
+    Definition dirInit (oidx: IdxT): DirT :=
       {| dir_st := mesiS;
          dir_excl := ii;
-         dir_sharers := nil (** FIXME: should be children indices. *) |}.
+         dir_sharers := subtreeChildrenIndsOf topo oidx |}.
 
     Import CaseNotations.
     Definition getDir (oidx: IdxT) (dir: DirT): MESI :=
@@ -89,15 +89,15 @@ Section System.
   Instance ImplOStateIfc: OStateIfc :=
     {| ost_ty := [nat:Type; MESI:Type; DirT:Type]%vector |}.
 
-  Definition implOStateInit: OState :=
-    (0, (mesiS, (dirInit, tt))).
-  
+  Definition implOStateInit (oidx: IdxT): OState :=
+    (0, (mesiS, (dirInit oidx, tt))).
+
   Definition implOStatesInit: OStates :=
-    fold_left (fun m i => m +[i <- implOStateInit])
-              (cifc.(c_l1_indices) ++ cifc.(c_li_indices)) [].
+    fold_left (fun m i => m +[i <- implOStateInit i])
+              (cifc.(c_li_indices) ++ cifc.(c_l1_indices)) [].
 
   Definition implORqsInit: ORqs Msg :=
-    initORqs (cifc.(c_l1_indices) ++ cifc.(c_li_indices)).
+    initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
 
   (** A core idea: a "summary" status in each object *)
 
