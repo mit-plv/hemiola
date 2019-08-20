@@ -756,6 +756,57 @@ Section Sim.
           (* rewriting a coherent value *) rewrite H in *
         end.
 
+    (*! To solve [SimMESI] *)
+    
+    Ltac solve_ImplStateCoh_mem :=
+      idtac.
+
+    Ltac solve_ImplStateCoh_li :=
+      idtac.
+
+    Ltac solve_ImplStateCoh :=
+      red; simpl; split;
+      [solve_ImplStateCoh_mem|solve_ImplStateCoh_li].
+    
+    Ltac solve_sim_state :=
+      eapply SimStateIntro; [solve_rule_conds_ex; fail|];
+      solve_ImplStateCoh.
+
+    Ltac solve_sim_mesi :=
+      match goal with
+      | |- SimMESI _ _ =>
+        red; simpl; split; [solve_sim_state|solve_sim_ext_mp]
+      end.
+
+    Ltac solve_ImplStateCoh_idx_not_in :=
+      intro; dest_in; try discriminate;
+      repeat
+        match goal with
+        | [H: rqUpFrom _ = rqUpFrom _ |- _] => inv H
+        | [H: rsUpFrom _ = rsUpFrom _ |- _] => inv H
+        | [H: downTo _ = downTo _ |- _] => inv H
+        | [H: ?oidx = l1ExtOf ?oidx |- _] =>
+          exfalso; eapply l1ExtOf_not_eq; eauto
+        end.
+
+    Ltac solve_DirMsgsCoh :=
+      repeat
+        (try match goal with
+             | |- DirMsgsCoh _ _ _ (enqMP _ _ _) =>
+               apply DirMsgsCoh_other_midx_enqMP;
+               [|solve_ImplStateCoh_idx_not_in; auto; fail]
+             | |- DirMsgsCoh _ _ _ (enqMP _ _ _) =>
+               apply DirMsgsCoh_other_msg_id_enqMP;
+               [|intro; dest_in; discriminate]
+             | |- DirMsgsCoh _ _ _ (enqMP _ _ _) =>
+               apply DirMsgsCoh_enqMP;
+               [|red; solve_caseDec; reflexivity]
+             | |- DirMsgsCoh _ _ _ (deqMP _ _) =>
+               apply DirMsgsCoh_deqMP
+             | |- DirMsgsCoh _ _ (_, (?stt, _)) _ =>
+               eapply DirMsgsCoh_state_update_indep; [|discriminate]
+             end; try eassumption).
+    
     Lemma simMesi_sim:
       InvSim step_m step_m ImplInvEx SimMESI impl spec.
     Proof.
@@ -802,89 +853,54 @@ Section Sim.
         admit.
 
       - (*! Cases for L1 caches *)
+        Ltac solve_ImplStateCoh_mem ::=
+          solve_rule_conds_ex.
+
+        Ltac solve_ImplStateCoh_li_me :=
+          disc_rule_conds_ex;
+          split; [auto; fail|];
+          solve_DirMsgsCoh.
+
+        Ltac solve_ImplStateCoh_li_others :=
+          repeat
+            match goal with
+            | [H: In _ (_ ++ _) |- _] => apply in_app_or in H; destruct H
+            | [Hf: Forall _ ?l, He: In _ ?l |- _] =>
+              rewrite Forall_forall in Hf;
+              specialize (Hf _ He); disc_rule_conds_ex
+            | [Hf: forall _, In _ ?l -> _, He: In _ ?l |- _] =>
+              specialize (Hf _ He); disc_rule_conds_ex
+            end;
+          match goal with
+          | |- _ /\ _ => split; [auto; fail|]; solve_DirMsgsCoh
+          end.
+
+        Ltac solve_ImplStateCoh_li ::=
+          match goal with
+          | [H: DirMsgsCoh _ ?oidx _ _ |- Forall _ _] =>
+            let lidx := fresh "lidx" in
+            apply Forall_forall;
+            intros lidx ?;
+                   destruct (idx_dec lidx oidx); subst;
+            [solve_ImplStateCoh_li_me
+            |try match goal with
+                 | [H: In oidx _ |- _] => clear H
+                 end;
+             solve_ImplStateCoh_li_others]
+          end.
+        
         apply in_map_iff in H4; destruct H4 as [oidx [? ?]]; subst.
         dest_in.
 
         + (* [l1GetSImm] *)
           disc_rule_conds_ex.
           spec_case_get oidx.
-
-          red; simpl; split.
-          * eapply SimStateIntro with (cv:= fst sost).
-            { solve_rule_conds_ex. }
-            { red; simpl; split.
-              { solve_rule_conds_ex. }
-              { apply Forall_forall; intros lidx ?.
-                destruct (idx_dec lidx oidx); subst.
-                { disc_rule_conds_ex.
-                  split; auto.
-                  apply DirMsgsCoh_other_midx_enqMP;
-                    [|intro Hx; dest_in; try discriminate;
-                      inv H12; eapply l1ExtOf_not_eq; eauto].
-                  apply DirMsgsCoh_deqMP.
-                  assumption.
-                }
-                { apply in_app_or in H9; destruct H9.
-                  { rewrite Forall_forall in H4; specialize (H4 _ H9).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                  { specialize (H5 _ H9).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                }
-              }
-            }
-          * solve_sim_ext_mp.
+          solve_sim_mesi.
 
         + (* [l1GetSRqUpUp] *)
           disc_rule_conds_ex.
           spec_case_silent.
-
-          red; simpl; split.
-          * eapply SimStateIntro with (cv:= fst sost).
-            { solve_rule_conds_ex. }
-            { red; simpl; split.
-              { solve_rule_conds_ex. }
-              { apply Forall_forall; intros lidx ?.
-                destruct (idx_dec lidx oidx); subst.
-                { disc_rule_conds_ex.
-                  split; auto.
-                  apply DirMsgsCoh_other_msg_id_enqMP;
-                    [|intro Hx; dest_in; try discriminate].
-                  apply DirMsgsCoh_deqMP.
-                  assumption.
-                }
-                { apply in_app_or in H9; destruct H9.
-                  { rewrite Forall_forall in H4; specialize (H4 _ H9).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                  { specialize (H5 _ H9).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                }
-              }
-            }
-          * solve_sim_ext_mp.
+          solve_sim_mesi.
 
         + (* [l1GetSRsDownDownS] *)
           disc_rule_conds_ex.
@@ -914,42 +930,7 @@ Section Sim.
             left; reflexivity.
           }
 
-          red; simpl; split.
-          * eapply SimStateIntro with (cv:= fst sost).
-            { solve_rule_conds_ex. }
-            { red; simpl; split.
-              { solve_rule_conds_ex. }
-              { apply Forall_forall; intros lidx ?.
-                destruct (idx_dec lidx oidx); subst.
-                { disc_rule_conds_ex.
-                  split; auto.
-                  apply DirMsgsCoh_other_msg_id_enqMP;
-                    [|intro Hx; dest_in; try discriminate].
-                  apply DirMsgsCoh_deqMP.
-                  eapply DirMsgsCoh_state_update_indep; [|discriminate].
-                  eassumption.
-                }
-                { apply in_app_or in H29; destruct H29.
-                  { rewrite Forall_forall in H4; specialize (H4 _ H29).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                  { specialize (H5 _ H29).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                }
-              }
-            }
-          * solve_sim_ext_mp.
+          solve_sim_mesi.
 
         + (* [l1GetSRsDownDownE] *)
           disc_rule_conds_ex.
@@ -979,92 +960,24 @@ Section Sim.
             left; reflexivity.
           }
 
-          red; simpl; split.
-          * eapply SimStateIntro with (cv:= fst sost).
-            { solve_rule_conds_ex. }
-            { red; simpl; split.
-              { solve_rule_conds_ex. }
-              { apply Forall_forall; intros lidx ?.
-                destruct (idx_dec lidx oidx); subst.
-                { disc_rule_conds_ex.
-                  split; auto.
-                  apply DirMsgsCoh_other_msg_id_enqMP;
-                    [|intro Hx; dest_in; try discriminate].
-                  apply DirMsgsCoh_deqMP.
-                  eapply DirMsgsCoh_state_update_indep; [|discriminate].
-                  eassumption.
-                }
-                { apply in_app_or in H29; destruct H29.
-                  { rewrite Forall_forall in H4; specialize (H4 _ H29).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                  { specialize (H5 _ H29).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_msg_id_enqMP;
-                      [|intro Hx; dest_in; try discriminate].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                }
-              }
-            }
-          * solve_sim_ext_mp.
+          solve_sim_mesi.
 
         + (* [downSImm] *)
           disc_rule_conds_ex.
           spec_case_silent.
-
-          red; simpl; split.
-          * eapply SimStateIntro with (cv:= fst sost).
-            { solve_rule_conds_ex. }
-            { red; simpl; split.
-              { solve_rule_conds_ex. }
-              { apply Forall_forall; intros lidx ?.
-                destruct (idx_dec lidx oidx); subst.
-                { disc_rule_conds_ex.
-                  split; auto.
-                  apply DirMsgsCoh_enqMP; [|red; solve_caseDec; reflexivity].
-                  apply DirMsgsCoh_deqMP.
-                  eapply DirMsgsCoh_state_update_indep; [|discriminate].
-                  eassumption.
-                }
-                { apply in_app_or in H9; destruct H9.
-                  { rewrite Forall_forall in H4; specialize (H4 _ H9).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_midx_enqMP;
-                      [|intro Hx; dest_in; try discriminate; inv H17; auto].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                  { specialize (H5 _ H9).
-                    disc_rule_conds_ex.
-                    split; auto.
-                    apply DirMsgsCoh_other_midx_enqMP;
-                      [|intro Hx; dest_in; try discriminate; inv H17; auto].
-                    apply DirMsgsCoh_deqMP.
-                    assumption.
-                  }
-                }
-              }
-            }
-          * solve_sim_ext_mp.
+          solve_sim_mesi.
 
         + (* [l1GetMImmE] *)
           disc_rule_conds_ex.
           spec_case_set oidx.
 
+          red; simpl; split; [|solve_sim_ext_mp].
+          eapply SimStateIntro; [solve_rule_conds_ex; fail|].
           red; simpl; split.
-          * eapply SimStateIntro with (cv:= msg_value rmsg).
-            { solve_rule_conds_ex. }
-            { admit. }
-          * solve_sim_ext_mp.
+          * (* mem *)
+            admit. (** Need an invariant now! Exclusiveness! *)
+          * (* li *)
+            admit.
           
         + (* [l1GetMImmM] *) admit.
         + (* [l1GetMRqUpUp] *) admit.
