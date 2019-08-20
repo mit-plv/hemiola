@@ -253,6 +253,19 @@ Section SimExtMP.
       assumption.
   Qed.
 
+  Lemma SimExtMP_impl_silent_locked:
+    forall imsgs (orqs: ORqs Msg) smsgs,
+      SimExtMP imsgs orqs smsgs ->
+      forall oidx porq norq,
+        orqs@[oidx] = Some porq -> porq@[upRq] = None ->
+        (norq@[upRq] >>= (fun rqiu => rqiu.(rqi_msg)) = None) ->
+        SimExtMP imsgs (orqs +[oidx <- norq]) smsgs.
+  Proof.
+    disc_SimExtMP.
+    disc_rule_conds_ex.
+    split; assumption.
+  Qed.
+
   Lemma SimExtMP_spec_deqMP_locked:
     forall cidx imsgs (orqs: ORqs Msg) smsgs porq norq rqiu msg,
       orqs@[cidx] = Some porq ->
@@ -358,6 +371,25 @@ Section Sim.
       apply InMP_enqMP_or in H1; destruct H1; auto.
       destruct idm as [midx' msg']; simpl in *; dest; subst.
       assumption.
+    Qed.
+
+    Lemma DirMsgsCoh_put_invalid_enqMP:
+      forall cv cidx cost msgs,
+        DirMsgsCoh cv cidx cost msgs ->
+        forall midx msg,
+          msg_id msg = mesiRqI ->
+          cost#[implStatusIdx] < mesiM ->
+          DirMsgsCoh cv cidx cost (enqMP midx msg msgs).
+    Proof.
+      unfold DirMsgsCoh; intros.
+      apply InMP_enqMP_or in H2; destruct H2; auto.
+      destruct idm as [midx' msg']; simpl in *; dest; subst.
+      destruct msg as [mid mty mval]; simpl in *; subst.
+      red; cbv [sigOf idOf valOf fst snd msg_id msg_type].
+      unfold caseDec.
+      repeat (find_if_inside; [inv e; exfalso; intuition idtac; fail|]).
+      find_if_inside; [|auto].
+      intros; simpl in H0; rewrite H0 in H1; lia.
     Qed.
 
     Lemma DirMsgsCoh_other_midx_enqMP:
@@ -741,9 +773,12 @@ Section Sim.
            eapply SimExtMP_spec_deqMP_unlocked; eauto; [congruence|mred]; fail
          | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
            apply SimExtMP_orqs with (orqs1:= m);
-           [|apply Forall_forall; intros; mred]
+           [|apply Forall_forall; intros; mred; fail]
+         | [ |- SimExtMP _ _ (_ +[_ <- addRqS _ _ _]) _] =>
+           eapply SimExtMP_impl_silent_locked;
+           [|eassumption|eassumption|unfold addRqS; mred]
          end; try assumption).
-
+    
     Ltac disc_rule_custom ::=
       repeat
         match goal with
@@ -801,6 +836,8 @@ Section Sim.
              | |- DirMsgsCoh _ _ _ (enqMP _ _ _) =>
                apply DirMsgsCoh_enqMP;
                [|red; solve_caseDec; reflexivity]
+             | |- DirMsgsCoh _ _ _ (enqMP _ {| msg_id := mesiRqI |} _) =>
+               apply DirMsgsCoh_put_invalid_enqMP; [|reflexivity|assumption]
              | |- DirMsgsCoh _ _ _ (deqMP _ _) =>
                apply DirMsgsCoh_deqMP
              | |- DirMsgsCoh _ _ (_, (?stt, _)) _ =>
@@ -975,15 +1012,68 @@ Section Sim.
           eapply SimStateIntro; [solve_rule_conds_ex; fail|].
           red; simpl; split.
           * (* mem *)
-            admit. (** Need an invariant now! Exclusiveness! *)
-          * (* li *)
+            disc_rule_conds_ex.
+            exfalso.
+            (** An invariant to prove (1): 
+             * if [obj_i.st >= E] then [obj_j.NoLock -> obj_j.st = I] for each [j ≠ i].
+             *)
             admit.
+            
+          * (* li *)
+            match goal with
+            | [H: DirMsgsCoh _ ?oidx _ _ |- Forall _ _] =>
+              let lidx := fresh "lidx" in
+              apply Forall_forall;
+                intros lidx ?;
+                       destruct (idx_dec lidx oidx); subst
+            end.
+            { solve_ImplStateCoh_li_me.
+              (** An invariant to prove (2):
+               * if [obj_i.st >= E] and [obj_i.NoLock] then [MsgsInvalid],
+               * i.e., no messages that hold a clean value, so it implies [DirMsgsCoh].
+               *)
+              admit.
+            }
+            { clear H6. (* In oidx .. *)
+              repeat
+                match goal with
+                | [H: In _ (_ ++ _) |- _] => apply in_app_or in H; destruct H
+                | [Hf: Forall _ ?l, He: In _ ?l |- _] =>
+                  rewrite Forall_forall in Hf;
+                    specialize (Hf _ He); disc_rule_conds_ex
+                | [Hf: forall _, In _ ?l -> _, He: In _ ?l |- _] =>
+                  specialize (Hf _ He); disc_rule_conds_ex
+                end.
+              { split.
+                { intros. (** An invariant required: (1) *)
+                  admit.
+                }
+                { solve_DirMsgsCoh. (** An invariant required: (2) *)
+                  admit.
+                }
+              }
+              { admit. (* same as above *) }
+            }
           
-        + (* [l1GetMImmM] *) admit.
-        + (* [l1GetMRqUpUp] *) admit.
+        + (* [l1GetMImmM] *) admit. (** Should be similar to [l1GetMImmE] *)
+
+        + (* [l1GetMRqUpUp] *)
+          disc_rule_conds_ex.
+          spec_case_silent.
+          solve_sim_mesi.
+          
         + (* [l1GetMRsDownDown] *) admit.
-        + (* [l1DownIImm] *) admit.
-        + (* [putRqUpUp] *) admit.
+          
+        + (* [l1DownIImm] *)
+          disc_rule_conds_ex.
+          spec_case_silent.
+          solve_sim_mesi.
+          
+        + (* [putRqUpUp] *)
+          disc_rule_conds_ex.
+          spec_case_silent.
+          solve_sim_mesi.
+          
         + (* [putRqUpUpM] *) admit.
             
     Admitted.
