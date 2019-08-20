@@ -179,7 +179,7 @@ Section System.
       Definition l1GetSRsDownDownS: Rule :=
         rule.rsdd[0~>2~>0]
         :accepts mesiRsS
-        :holding mesiRqS
+        :holding Spec.getRq
         :requires ⊤
         :transition
            (!|ost, min, rq, rsbTo|
@@ -191,7 +191,7 @@ Section System.
       Definition l1GetSRsDownDownE: Rule :=
         rule.rsdd[0~>2~>1]
         :accepts mesiRsE
-        :holding mesiRqS
+        :holding Spec.getRq
         :requires ⊤
         :transition
            (!|ost, min, rq, rsbTo|

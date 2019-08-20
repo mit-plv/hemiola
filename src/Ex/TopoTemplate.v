@@ -1437,6 +1437,22 @@ Section Facts.
     - apply H2; apply hd_error_In in H4; assumption.
   Qed.
 
+  Lemma singletonDNode_l1_child_ext:
+    forall bidx oidx cidx,
+      In oidx (c_l1_indices (snd (singletonDNode bidx))) ->
+      parentIdxOf (fst (singletonDNode bidx)) cidx = Some oidx ->
+      cidx = l1ExtOf oidx.
+  Proof.
+  Admitted.
+
+  Lemma tree2Topo_l1_child_ext:
+    forall tr bidx oidx cidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
+      cidx = l1ExtOf oidx.
+  Proof.
+  Admitted.
+
 End Facts.
 
 Ltac solve_inds_NoDup_prefix :=
