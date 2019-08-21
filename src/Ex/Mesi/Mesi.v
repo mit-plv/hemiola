@@ -389,7 +389,7 @@ Section System.
       Definition l1GetMRsDownDown: Rule :=
         rule.rsdd[1~>2]
         :accepts mesiRsM
-        :holding mesiRqM
+        :holding Spec.setRq
         :requires ⊤
         :transition
            (!|ost, min, rq, rsbTo|

@@ -15,6 +15,9 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
+Ltac solve_mesi :=
+  unfold mesiM, mesiE, mesiS, mesiI in *; lia.
+
 Lemma caseDec_head_eq:
   forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
          k (df: B) hd tl,
@@ -657,7 +660,7 @@ Section Sim.
       simpl in Hcd.
 
     Ltac solve_caseDec :=
-      cbv [sigOf idOf valOf fst snd msg_id msg_type];
+      (* cbv [sigOf idOf valOf snd msg_id msg_type]; *)
       repeat
         (first [rewrite caseDec_head_eq by reflexivity
                |rewrite caseDec_head_neq by discriminate]);
@@ -1062,8 +1065,73 @@ Section Sim.
           spec_case_silent.
           solve_sim_mesi.
           
-        + (* [l1GetMRsDownDown] *) admit.
-          
+        + (* [l1GetMRsDownDown] *)
+          disc_rule_conds_ex.
+          spec_case_set oidx.
+
+          (** TODO: automate below various dischargers *)
+          progress (good_footprint_get oidx).
+          repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
+          pose proof (edgeDownTo_Some (mesi_RqRsDTree Htr) _ H26).
+          destruct H29 as [rqUp [rsUp [pidx ?]]]; dest.
+          pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+          pose proof (Htn _ _ H11); dest.
+          pose proof (Htn _ _ H31); dest.
+          apply tree2Topo_l1_child_ext in H11; [|assumption]; subst.
+          disc_rule_conds_const.
+
+          (** TODO: automate this as well *)
+          assert (oidx <> rootOf topo) as Honr.
+          { intro Hx; subst.
+            pose proof (tree2Topo_WfCIfc tr 0) as [? _].
+            apply (DisjList_NoDup idx_dec) in H11.
+            eapply DisjList_In_1 in H11; [|eassumption].
+            elim H11; rewrite c_li_indices_head_rootOf by assumption.
+            left; reflexivity.
+          }
+
+          red; simpl; split; [|solve_sim_ext_mp].
+          eapply SimStateIntro; [solve_rule_conds_ex; fail|].
+          red; simpl; split.
+          * (* mem *)
+            disc_rule_conds_ex.
+            exfalso.
+            (** An invariant required: (1); for the next state. *)
+            admit.
+            
+          * (* li *)
+            match goal with
+            | [H: DirMsgsCoh _ ?oidx _ _ |- Forall _ _] =>
+              let lidx := fresh "lidx" in
+              apply Forall_forall;
+                intros lidx ?;
+                       destruct (idx_dec lidx oidx); subst
+            end.
+            { solve_ImplStateCoh_li_me.
+              (** An invariant required: (2); for the next state *)
+              admit.
+            }
+            { clear H6. (* In oidx .. *)
+              repeat
+                match goal with
+                | [H: In _ (_ ++ _) |- _] => apply in_app_or in H; destruct H
+                | [Hf: Forall _ ?l, He: In _ ?l |- _] =>
+                  rewrite Forall_forall in Hf;
+                    specialize (Hf _ He); disc_rule_conds_ex
+                | [Hf: forall _, In _ ?l -> _, He: In _ ?l |- _] =>
+                  specialize (Hf _ He); disc_rule_conds_ex
+                end.
+              { split.
+                { intros. (** An invariant required: (1) *)
+                  admit.
+                }
+                { solve_DirMsgsCoh. (** An invariant required: (2) *)
+                  admit.
+                }
+              }
+              { admit. (* same as above *) }
+            }
+            
         + (* [l1DownIImm] *)
           disc_rule_conds_ex.
           spec_case_silent.
@@ -1074,7 +1142,14 @@ Section Sim.
           spec_case_silent.
           solve_sim_mesi.
           
-        + (* [putRqUpUpM] *) admit.
+        + (* [putRqUpUpM] *)
+          disc_rule_conds_ex.
+          spec_case_silent.
+          solve_sim_mesi.
+
+          apply DirMsgsCoh_enqMP; [assumption|].
+          red; solve_caseDec.
+          intros; apply H15; solve_mesi.
             
     Admitted.
     
