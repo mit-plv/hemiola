@@ -34,86 +34,335 @@ Existing Instance Mesi.ImplOStateIfc.
 Definition MsgExistsSig (sig: MSig) (msgs: MessagePool Msg) :=
   exists idm, InMPI msgs idm /\ sigOf idm = sig.
 
-Section Inv.
+Definition MsgP (spl: list (MSig * (Id Msg -> Prop))) (idm: Id Msg) :=
+  caseDec sig_dec (sigOf idm) True
+          (map (fun sp => (fst sp, snd sp idm)) spl).
 
-  Section ObjUnit.
-    Variables (oidx: IdxT)
-              (orq: ORq Msg)
-              (ost: OState)
-              (msgs: MessagePool Msg).
+Definition MsgsP (spl: list (MSig * (Id Msg -> Prop))) (msgs: MessagePool Msg) :=
+  forall idm, InMPI msgs idm -> MsgP spl idm.
 
-    Definition MsgNotRsI (idm: Id Msg) :=
-      match case (sigOf idm) on sig_dec default True with
-        |! (downTo oidx, (MRs, mesiRsI)): False
-      end.
+Definition MsgsNotExist (sigs: list MSig) (msgs: MessagePool Msg) :=
+  MsgsP (map (fun sig => (sig, fun _ => False)) sigs) msgs.
 
-    Definition NoRsI :=
-      forall idm, InMPI msgs idm -> MsgNotRsI idm.
+Section ObjUnit.
+  Variables (oidx: IdxT)
+            (orq: ORq Msg)
+            (ost: OState)
+            (msgs: MessagePool Msg).
 
-    Definition ImplOStateMESI (cv: nat): Prop :=
-      mesiS <= ost#[implStatusIdx] -> NoRsI ->
-      ost#[implValueIdx] = cv.
+  Definition NoRsI :=
+    MsgsNotExist [(downTo oidx, (MRs, mesiRsI))] msgs.
 
-    Definition NotCohMsg (idm: Id Msg) :=
-      match case (sigOf idm) on sig_dec default True with
-      | (downTo oidx, (MRs, mesiRsS)): False
-      | (downTo oidx, (MRs, mesiRsE)): False
-      | (rsUpFrom oidx, (MRs, mesiDownRsS)): False
-      end.
+  Definition ImplOStateMESI (cv: nat): Prop :=
+    mesiS <= ost#[implStatusIdx] -> NoRsI ->
+    ost#[implValueIdx] = cv.
 
-    Definition NoCohMsgs :=
-      forall idm, InMPI msgs idm -> NotCohMsg idm.
+  Definition ObjExcl0 :=
+    mesiE <= ost#[implStatusIdx] /\ NoRsI.
 
-    Definition CohRqI :=
-      forall idm,
-        InMPI msgs idm ->
-        sigOf idm = (rqUpFrom oidx, (MRq, mesiRqI)) ->
-        msg_value (valOf idm) = ost#[implValueIdx].
+  Definition ObjExcl :=
+    ObjExcl0 \/
+    MsgExistsSig (downTo oidx, (MRs, mesiRsE)) msgs \/
+    MsgExistsSig (downTo oidx, (MRs, mesiRsM)) msgs.
 
-    Definition ObjExcl0 :=
-      mesiE <= ost#[implStatusIdx] /\ NoRsI /\ NoCohMsgs /\ CohRqI.
+  Definition NoCohMsgs :=
+    MsgsNotExist [(downTo oidx, (MRs, mesiRsS));
+                    (downTo oidx, (MRs, mesiRsE));
+                    (rsUpFrom oidx, (MRs, mesiDownRsS))] msgs.
 
-    Definition ObjExcl :=
-      ObjExcl0 \/
-      MsgExistsSig (downTo oidx, (MRs, mesiRsE)) msgs \/
-      MsgExistsSig (downTo oidx, (MRs, mesiRsM)) msgs.
+  Definition ObjInvalid0 :=
+    ost#[implStatusIdx] = mesiI /\ NoCohMsgs.
 
-    Definition ObjInvalid0 :=
-      ost#[implStatusIdx] = mesiI /\ NoCohMsgs.
+  Definition ObjInvalid :=
+    ObjInvalid0 \/
+    MsgExistsSig (downTo oidx, (MRs, mesiRsI)) msgs.
 
-    Definition ObjInvalid :=
-      ObjInvalid0 \/
-      MsgExistsSig (downTo oidx, (MRs, mesiRsI)) msgs.
+  Definition CohRqI :=
+    ost#[implStatusIdx] = mesiM ->
+    forall idm,
+      InMPI msgs idm ->
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiRqI)) ->
+      msg_value (valOf idm) = ost#[implValueIdx].
 
-    Section Facts.
+  Section Facts.
 
-      Lemma NoRsI_MsgExistsSig_false:
-        MsgExistsSig (downTo oidx, (MRs, mesiRsI)) msgs ->
-        NoRsI -> False.
-      Proof.
-        intros.
-        destruct H as [idm [? ?]].
-        specialize (H0 _ H).
-        red in H0; rewrite H1 in H0.
-        unfold caseDec in H0.
-        find_if_inside; auto.
-      Qed.
+    Lemma NoRsI_MsgExistsSig_false:
+      MsgExistsSig (downTo oidx, (MRs, mesiRsI)) msgs ->
+      NoRsI -> False.
+    Proof.
+      intros.
+      destruct H as [idm [? ?]].
+      specialize (H0 _ H).
+      unfold MsgP in H0.
+      rewrite H1 in H0.
+      unfold map, caseDec in H0.
+      find_if_inside; auto.
+    Qed.
 
-    End Facts.
-    
-  End ObjUnit.
+  End Facts.
+  
+End ObjUnit.
 
-  Definition InvExcl (st: MState): Prop :=
-    forall eidx,
-      eost <+- (bst_oss st)@[eidx];
-        (ObjExcl eidx eost (bst_msgs st) ->
-         forall oidx,
-           oidx <> eidx ->
-           ost <+- (bst_oss st)@[oidx];
-             ObjInvalid oidx ost (bst_msgs st)).
+Definition InvObjExcl0 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
+  ObjExcl0 oidx ost msgs ->
+  NoCohMsgs oidx msgs /\ CohRqI oidx ost msgs.
 
-End Inv.
+Definition InvExcl (st: MState): Prop :=
+  forall eidx,
+    eost <+- (bst_oss st)@[eidx];
+      (InvObjExcl0 eidx eost (bst_msgs st) /\
+       (ObjExcl eidx eost (bst_msgs st) ->
+        forall oidx,
+          oidx <> eidx ->
+          ost <+- (bst_oss st)@[oidx];
+            ObjInvalid oidx ost (bst_msgs st))).
 
-Hint Unfold NoRsI ImplOStateMESI ObjExcl0 ObjExcl
-     NoCohMsgs CohRqI ObjInvalid0 ObjInvalid: RuleConds.
+Lemma caseDec_head_eq:
+  forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+         k (df: B) hd tl,
+    k = fst hd ->
+    caseDec eq_dec k df (hd :: tl) = snd hd.
+Proof.
+  intros; subst.
+  destruct hd as [hk hv]; simpl.
+  find_if_inside; [reflexivity|exfalso; auto].
+Qed.
+
+Lemma caseDec_head_neq:
+  forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+         k (df: B) hd tl,
+    k <> fst hd ->
+    caseDec eq_dec k df (hd :: tl) = caseDec eq_dec k df tl.
+Proof.
+  intros; subst.
+  destruct hd as [hk hv]; simpl.
+  find_if_inside; [exfalso; auto|reflexivity].
+Qed.
+
+Ltac disc_caseDec Hcd :=
+  repeat
+    (first [rewrite caseDec_head_eq in Hcd by reflexivity
+           |rewrite caseDec_head_neq in Hcd by discriminate]);
+  simpl in Hcd.
+
+Ltac solve_caseDec :=
+  repeat
+    (first [rewrite caseDec_head_eq by reflexivity
+           |rewrite caseDec_head_neq by discriminate]);
+  simpl.
+
+Section Facts.
+
+  Lemma MsgsP_enqMP:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall midx msg,
+        MsgP spl (midx, msg) ->
+        MsgsP spl (enqMP midx msg msgs).
+  Proof.
+    unfold MsgsP, MsgP; intros.
+    apply InMP_enqMP_or in H1; destruct H1; auto.
+    destruct idm as [midx' msg']; simpl in *; dest; subst.
+    assumption.
+  Qed.
+
+  Lemma MsgsP_other_midx_enqMP:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall midx msg,
+        ~ In midx (map (fun sp => fst (fst sp)) spl) ->
+        MsgsP spl (enqMP midx msg msgs).
+  Proof.
+    unfold MsgsP, MsgP; intros.
+    apply InMP_enqMP_or in H1; destruct H1; auto.
+    destruct idm as [midx' msg']; simpl in *; dest; subst.
+    destruct msg as [mid mty mval].
+    unfold sigOf; simpl.
+    clear -H0.
+    induction spl; [simpl; auto|].
+    unfold map; rewrite caseDec_head_neq.
+    - apply IHspl.
+      intro Hx; elim H0; right; assumption.
+    - simpl; intro Hx.
+      elim H0; left.
+      unfold MSig in *; rewrite <-Hx; reflexivity.
+  Qed.
+
+  Lemma MsgsP_other_midx_enqMsgs:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall eins,
+        DisjList (idsOf eins) (map (fun sp => fst (fst sp)) spl) ->
+        MsgsP spl (enqMsgs eins msgs).
+  Proof.
+    intros.
+    generalize dependent msgs.
+    induction eins as [|ein eins]; simpl; intros; [assumption|].
+    destruct ein as [midx msg]; simpl in *.
+    apply DisjList_cons in H0; dest.
+    eapply IHeins; eauto.
+    apply MsgsP_other_midx_enqMP; auto.
+  Qed.
+
+  Lemma MsgsP_other_msg_id_enqMP:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall midx msg,
+        ~ In (msg_id msg) (map (fun sp => snd (snd (fst sp))) spl) ->
+        MsgsP spl (enqMP midx msg msgs).
+  Proof.
+    unfold MsgsP, MsgP; intros.
+    apply InMP_enqMP_or in H1; destruct H1; auto.
+    destruct idm as [midx' msg']; simpl in *; dest; subst.
+    destruct msg as [mid mty mval]; simpl in H0.
+    unfold sigOf; simpl.
+    clear -H0.
+    induction spl; [simpl; auto|].
+    unfold map; rewrite caseDec_head_neq.
+    - apply IHspl.
+      intro Hx; elim H0; right; assumption.
+    - simpl; intro Hx.
+      elim H0; left.
+      unfold MSig in *; rewrite <-Hx; reflexivity.
+  Qed.
+
+  Lemma MsgsP_other_msg_id_enqMsgs:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall eins,
+        DisjList (map (fun idm => msg_id (valOf idm)) eins)
+                 (map (fun sp => snd (snd (fst sp))) spl) ->
+        MsgsP spl (enqMsgs eins msgs).
+  Proof.
+    intros.
+    generalize dependent msgs.
+    induction eins as [|ein eins]; simpl; intros; [assumption|].
+    destruct ein as [midx msg]; simpl in *.
+    apply DisjList_cons in H0; dest.
+    eapply IHeins; eauto.
+    apply MsgsP_other_msg_id_enqMP; auto.
+  Qed.
+
+  Lemma MsgsP_enqMP_inv:
+    forall spl msgs midx msg,
+      MsgsP spl (enqMP midx msg msgs) ->
+      MsgsP spl msgs.
+  Proof.
+    unfold MsgsP; intros.
+    apply H.
+    apply InMP_or_enqMP; auto.
+  Qed.
+
+  Lemma MsgsP_enqMsgs_inv:
+    forall spl msgs eins,
+      MsgsP spl (enqMsgs eins msgs) ->
+      MsgsP spl msgs.
+  Proof.
+    unfold MsgsP; intros.
+    apply H.
+    apply InMP_or_enqMsgs; auto.
+  Qed.
+
+  Lemma MsgsP_deqMP:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall midx,
+        MsgsP spl (deqMP midx msgs).
+  Proof.
+    unfold MsgsP; intros.
+    apply InMP_deqMP in H0; auto.
+  Qed.
+
+  Lemma MsgsP_deqMsgs:
+    forall spl msgs,
+      MsgsP spl msgs ->
+      forall minds,
+        MsgsP spl (deqMsgs minds msgs).
+  Proof.
+    unfold MsgsP; intros.
+    apply InMP_deqMsgs in H0; auto.
+  Qed.
+
+  Lemma MsgsP_other_midx_deqMP_inv:
+    forall spl msgs midx,
+      MsgsP spl (deqMP midx msgs) ->
+      ~ In midx (map (fun sp => fst (fst sp)) spl) ->
+      MsgsP spl msgs.
+  Proof.
+    unfold MsgsP, MsgP; intros.
+    destruct (idx_dec midx (idOf idm)); subst;
+      [|apply H; apply deqMP_InMP_midx; auto].
+
+    clear -H0.
+    induction spl; [simpl; auto|].
+    unfold map; rewrite caseDec_head_neq.
+    - apply IHspl.
+      intro Hx; elim H0; right; assumption.
+    - simpl; intro Hx.
+      elim H0; left.
+      unfold MSig in *; rewrite <-Hx; reflexivity.
+  Qed.
+
+  Lemma MsgsP_other_midx_deqMsgs_inv:
+    forall spl minds msgs,
+      MsgsP spl (deqMsgs minds msgs) ->
+      DisjList minds (map (fun sp => fst (fst sp)) spl) ->
+      MsgsP spl msgs.
+  Proof.
+    intros.
+    generalize dependent msgs.
+    induction minds as [|mind minds]; simpl; intros; [assumption|].
+    apply DisjList_cons in H0; dest.
+    eapply MsgsP_other_midx_deqMP_inv.
+    - eapply IHminds; eauto.
+    - assumption.
+  Qed.
+
+  Lemma MsgsP_other_msg_id_deqMP_inv:
+    forall spl msgs midx msg,
+      MsgsP spl (deqMP midx msgs) ->
+      FirstMP msgs midx msg ->
+      ~ In (msg_id msg) (map (fun sp => snd (snd (fst sp))) spl) ->
+      MsgsP spl msgs.
+  Proof.
+    unfold MsgsP, MsgP; intros.
+    destruct (idx_dec midx (idOf idm)); subst;
+      [|apply H; apply deqMP_InMP_midx; auto].
+
+    destruct (msg_dec msg (valOf idm)); subst;
+      [|apply H; eapply deqMP_InMP; eauto; congruence].
+
+    clear -H1.
+    induction spl; [simpl; auto|].
+    unfold map; rewrite caseDec_head_neq.
+    - apply IHspl.
+      intro Hx; elim H1; right; assumption.
+    - simpl; intro Hx.
+      elim H1; left.
+      unfold MSig in *; rewrite <-Hx; reflexivity.
+  Qed.
+
+  Lemma MsgsP_other_msg_id_deqMsgs_inv:
+    forall spl rmsgs msgs,
+      MsgsP spl (deqMsgs (idsOf rmsgs) msgs) ->
+      NoDup (idsOf rmsgs) ->
+      Forall (FirstMPI msgs) rmsgs ->
+      DisjList (map (fun idm => msg_id (valOf idm)) rmsgs)
+               (map (fun sp => snd (snd (fst sp))) spl) ->
+      MsgsP spl msgs.
+  Proof.
+    intros.
+    generalize dependent msgs.
+    induction rmsgs as [|rmsg rmsgs]; simpl; intros; [assumption|].
+    inv H0; inv H1.
+    apply DisjList_cons in H2; dest.
+    eapply MsgsP_other_msg_id_deqMP_inv; eauto.
+    eapply IHrmsgs; eauto.
+    apply FirstMPI_Forall_deqMP; auto.
+  Qed.
+  
+End Facts.
+
+Hint Unfold MsgsNotExist NoRsI ImplOStateMESI ObjExcl0 ObjExcl
+     NoCohMsgs CohRqI ObjInvalid0 ObjInvalid InvObjExcl0: RuleConds.
 
