@@ -255,6 +255,7 @@ Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
 
 Module CaseNotations.
   Notation "x : t" := (x, t) (at level 90, only parsing): cases_scope.
+  Notation "|! xt" := (List.cons xt List.nil) (at level 95, only parsing): cases_scope.
   Notation "| xt1 | xt2 | .. | xtn" :=
     (List.cons xt1 (List.cons xt2 .. (List.cons xtn List.nil) ..))
       (at level 95, only parsing): cases_scope.
