@@ -360,9 +360,46 @@ Section Facts.
     eapply IHrmsgs; eauto.
     apply FirstMPI_Forall_deqMP; auto.
   Qed.
+
+  Lemma InvExcl_excl_invalid:
+    forall st (He: InvExcl st) msgs eidx eost,
+      bst_msgs st = msgs ->
+      (bst_oss st)@[eidx] = Some eost ->
+      NoRsI eidx msgs ->
+      mesiE <= eost#[implStatusIdx] ->
+      forall oidx ost,
+        oidx <> eidx ->
+        (bst_oss st)@[oidx] = Some ost ->
+        ObjInvalid oidx ost msgs.
+  Proof.
+    intros; subst.
+    specialize (He eidx).
+    disc_rule_conds_ex.
+    unfold ObjExcl, ObjExcl0 in H5; simpl in H5.
+    specialize (H5 (or_introl (conj H2 H1)) _ H3).
+    solve_rule_conds_ex.
+  Qed.
+
+  Corollary InvExcl_excl_invalid_status:
+    forall st (He: InvExcl st) eidx eost,
+      (bst_oss st)@[eidx] = Some eost ->
+      NoRsI eidx (bst_msgs st) ->
+      mesiE <= eost#[implStatusIdx] ->
+      forall oidx ost,
+        oidx <> eidx ->
+        (bst_oss st)@[oidx] = Some ost ->
+        NoRsI oidx (bst_msgs st) ->
+        ost#[implStatusIdx] = mesiI.
+  Proof.
+    intros.
+    eapply InvExcl_excl_invalid in H1; eauto.
+    destruct H1.
+    - apply H1.
+    - exfalso; eapply NoRsI_MsgExistsSig_false; eauto.
+  Qed.
   
 End Facts.
 
-Hint Unfold MsgsNotExist NoRsI ImplOStateMESI ObjExcl0 ObjExcl
-     NoCohMsgs CohRqI ObjInvalid0 ObjInvalid InvObjExcl0: RuleConds.
+Hint Unfold MsgsNotExist NoRsI ImplOStateMESI (* ObjExcl0 ObjExcl *)
+     (* NoCohMsgs *) (* CohRqI *) (* ObjInvalid0 ObjInvalid *) (* InvObjExcl0 *): RuleConds.
 
