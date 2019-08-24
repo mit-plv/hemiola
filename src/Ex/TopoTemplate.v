@@ -418,6 +418,29 @@ Section Facts.
     simpl; rewrite map_app; congruence.
   Qed.
 
+  Lemma c_l1_indices_fold_collect_SubList:
+    forall ctrs,
+      Forall
+        (fun ctr =>
+           forall bidx,
+             SubList (c_l1_indices (snd (tree2Topo ctr bidx)))
+                     (indsOf (fst (tree2Topo ctr bidx)))) ctrs ->
+      forall bidx oss bcifc,
+        SubList (c_l1_indices (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss))
+                                         bcifc))
+                ((collect indsOf (map fst (incMap tree2Topo ctrs bidx oss)))
+                   ++ c_l1_indices bcifc).
+  Proof.
+    induction ctrs; simpl; intros; [apply SubList_refl|].
+    inv H; specialize (IHctrs H3); clear H3.
+    eapply SubList_trans; [apply IHctrs|].
+    apply SubList_app_3.
+    - apply SubList_app_1, SubList_app_2, SubList_refl.
+    - simpl; apply SubList_app_3.
+      + apply SubList_app_2, SubList_refl.
+      + apply SubList_app_1, SubList_app_1; auto.
+  Qed.
+
   Lemma c_li_indices_fold_collect_SubList:
     forall ctrs,
       Forall
@@ -439,6 +462,20 @@ Section Facts.
     - simpl; apply SubList_app_3.
       + apply SubList_app_2, SubList_refl.
       + apply SubList_app_1, SubList_app_1; auto.
+  Qed.
+
+  Lemma c_l1_indices_inds_SubList:
+    forall tr bidx,
+      SubList (c_l1_indices (snd (tree2Topo tr bidx)))
+              (indsOf (fst (tree2Topo tr bidx))).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    find_if_inside; [solve_SubList|].
+    simpl; apply SubList_cons_right.
+    eapply c_l1_indices_fold_collect_SubList
+      with (bidx:= bidx) (oss:= 0) (bcifc:= emptyCIfc) in H.
+    simpl in H; rewrite app_nil_r in H.
+    assumption.
   Qed.
 
   Lemma c_li_indices_inds_SubList:
@@ -476,6 +513,33 @@ Section Facts.
     destruct H; subst; [|auto].
     apply fold_left_base_c_minds_In.
     simpl; apply SubList_app_2, SubList_refl.
+  Qed.
+
+  Lemma tree2Topo_l1_oidx_In:
+    forall oidx bidx ctrs oss bcifc,
+      In oidx (c_l1_indices
+                 (fold_left mergeCIfc (map snd (incMap tree2Topo ctrs bidx oss)) bcifc)) ->
+      In oidx (c_l1_indices bcifc) \/
+      exists ctr ofs,
+        nth_error ctrs ofs = Some ctr /\
+        In (fst (tree2Topo ctr bidx~>(oss + ofs)))
+           (map fst (incMap tree2Topo ctrs bidx oss)) /\
+        In (snd (tree2Topo ctr bidx~>(oss + ofs)))
+           (map snd (incMap tree2Topo ctrs bidx oss)) /\
+        In oidx (c_l1_indices (snd (tree2Topo ctr bidx~>(oss + ofs)))).
+  Proof.
+    induction ctrs as [|ctr ctrs]; simpl; intros;
+      [left; assumption|].
+
+    specialize (IHctrs _ _ H).
+    destruct IHctrs.
+    - simpl in H0; apply in_app_or in H0; destruct H0.
+      + left; assumption.
+      + right; exists ctr, 0.
+        rewrite Nat.add_0_r; auto.
+    - destruct H0 as [nctr [ofs ?]]; dest.
+      right; exists nctr, (S ofs).
+      rewrite Nat.add_succ_r; auto.
   Qed.
 
   Lemma tree2Topo_li_oidx_In:
@@ -1381,6 +1445,22 @@ Section Facts.
     reflexivity.
   Qed.
 
+  Lemma c_l1_indices_has_parent:
+    forall tr (Htr: tr <> Node nil) bidx oidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      exists pidx, parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    find_if_inside; [subst; exfalso; auto|].
+    simpl in *.
+    apply tree2Topo_l1_oidx_In in H0.
+    destruct H0; [dest_in|].
+    simpl in H0; destruct H0 as [ctr [ofs ?]]; dest.
+    pose proof (c_l1_indices_inds_SubList ctr bidx~>ofs).
+    pose proof (tree2Topo_WfDTree ctr bidx~>ofs) as Hwf.
+    destruct ctr as [cl]; simpl in H3, H4.
+  Admitted.
+
   Lemma c_li_indices_tail_has_parent:
     forall tr bidx oidx,
       In oidx (tl (c_li_indices (snd (tree2Topo tr bidx)))) ->
@@ -1436,14 +1516,6 @@ Section Facts.
     - apply H1; apply hd_error_In, tl_In in H3; assumption.
     - apply H2; apply hd_error_In in H4; assumption.
   Qed.
-
-  Lemma singletonDNode_l1_child_ext:
-    forall bidx oidx cidx,
-      In oidx (c_l1_indices (snd (singletonDNode bidx))) ->
-      parentIdxOf (fst (singletonDNode bidx)) cidx = Some oidx ->
-      cidx = l1ExtOf oidx.
-  Proof.
-  Admitted.
 
   Lemma tree2Topo_l1_child_ext:
     forall tr bidx oidx cidx,
