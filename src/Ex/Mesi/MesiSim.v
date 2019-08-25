@@ -978,17 +978,27 @@ Section Sim.
        * 1) Each L1 has a parent. *)
       pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
       pose proof (c_l1_indices_has_parent Htr _ _ H4).
-      destruct H0 as [pidx ?].
-      pose proof (Htn _ _ H0); dest.
+      destruct H0 as [pidx [? ?]].
+      pose proof (Htn _ _ H6); dest.
 
-      (** 2) Each L1 has its own object/lock. *)
-      assert (exists obj, In obj impl.(sys_objs) /\ obj.(obj_idx) = oidx).
-      { exists (l1 oidx); split; [|reflexivity].
-        right; apply in_or_app; right.
-        apply in_map; assumption.
+      (** 2) Each L1 has its own object, lock, and its parent object. *)
+      assert ((exists obj, In obj impl.(sys_objs) /\ obj.(obj_idx) = oidx) /\
+              (exists pobj, In pobj impl.(sys_objs) /\ pobj.(obj_idx) = pidx)).
+      { split.
+        { exists (l1 oidx); split; [|reflexivity].
+          right; apply in_or_app; right; apply in_map; assumption.
+        }
+        { rewrite c_li_indices_head_rootOf in H0 by assumption; inv H0.
+          { eexists; split; [left; reflexivity|reflexivity]. }
+          { eexists; split.
+            { right; apply in_or_app; left; eapply in_map; eassumption. }
+            { reflexivity. }
+          }
+        }
       }
-      destruct H18 as [obj [? ?]]; subst.
-      clear Hnulinv; progress (good_locking_get obj); clear H18.
+      destruct H19 as [[obj [? ?]] [pobj [? ?]]]; subst.
+      clear Hnulinv; progress (good_locking_get obj); clear H19.
+      progress (good_locking_get pobj); clear H21.
 
       Opaque In.
       disc_rule_conds_ex.

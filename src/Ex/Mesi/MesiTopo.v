@@ -174,5 +174,17 @@ Section System.
       
   Admitted.
 
+  Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl.
+  Proof.
+  Admitted.
+
+  Lemma mesi_RqRsSys: RqRsSys topo impl.
+  Proof.
+    red; repeat ssplit.
+    - apply mesi_RqRsDTree.
+    - apply mesi_GoodRqRsSys.
+    - apply mesi_GoodRqRsInterfSys.
+  Qed.  
+  
 End System.
 

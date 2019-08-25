@@ -1448,23 +1448,18 @@ Section Facts.
   Lemma c_l1_indices_has_parent:
     forall tr (Htr: tr <> Node nil) bidx oidx,
       In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
-      exists pidx, parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
+      exists pidx,
+        In pidx (c_li_indices (snd (tree2Topo tr bidx))) /\
+        parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
   Proof.
-    induction tr using tree_ind_l; simpl; intros.
-    find_if_inside; [subst; exfalso; auto|].
-    simpl in *.
-    apply tree2Topo_l1_oidx_In in H0.
-    destruct H0; [dest_in|].
-    simpl in H0; destruct H0 as [ctr [ofs ?]]; dest.
-    pose proof (c_l1_indices_inds_SubList ctr bidx~>ofs).
-    pose proof (tree2Topo_WfDTree ctr bidx~>ofs) as Hwf.
-    destruct ctr as [cl]; simpl in H3, H4.
   Admitted.
 
   Lemma c_li_indices_tail_has_parent:
     forall tr bidx oidx,
       In oidx (tl (c_li_indices (snd (tree2Topo tr bidx)))) ->
-      exists pidx, parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
+      exists pidx,
+        In pidx (c_li_indices (snd (tree2Topo tr bidx))) /\
+        parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
   Proof.
     induction tr using tree_ind_l; simpl; intros.
     find_if_inside; simpl in *; [exfalso; auto|].
@@ -1477,6 +1472,7 @@ Section Facts.
     find_if_inside; subst; simpl in H3, H4; [exfalso; auto|].
     destruct H3; subst.
     - exists bidx.
+      split; [left; reflexivity|].
       replace bidx~>ofs with (rootOf (fst (tree2Topo (Node cl) bidx~>ofs)))
         by apply tree2Topo_root_idx.
       apply parentIdxOf_childrenOf; assumption.
@@ -1484,16 +1480,17 @@ Section Facts.
       rewrite Forall_forall in H; specialize (H _ H0).
       specialize (H bidx~>ofs oidx); simpl in *.
       find_if_inside; [subst; exfalso; auto|simpl in *].
-      specialize (H H3); destruct H as [pidx ?].
-      exists pidx.
-      erewrite parentIdxOf_Subtree_eq; [eassumption|..].
-      + pose proof (tree2Topo_WfDTree (Node l) bidx).
-        simpl in H5; find_if_inside; [subst; exfalso; auto|assumption].
-      + apply childrenOf_Subtree; assumption.
-      + simpl; intro Hx; subst.
-        apply parentIdxOf_child_not_root in H; auto.
-      + apply H4; right; auto.
-  Qed.
+      specialize (H H3); destruct H as [pidx [? ?]].
+      exists pidx; split.
+      + admit.
+      + erewrite parentIdxOf_Subtree_eq; [eassumption|..].
+        * pose proof (tree2Topo_WfDTree (Node l) bidx).
+          simpl in H6; find_if_inside; [subst; exfalso; auto|assumption].
+        * apply childrenOf_Subtree; assumption.
+        * simpl; intro Hx; subst.
+          apply parentIdxOf_child_not_root in H5; auto.
+        * apply H4; right; auto.
+  Admitted.
 
   Lemma tree2Topo_obj_chns_minds_SubList:
     forall tr bidx oidx,
