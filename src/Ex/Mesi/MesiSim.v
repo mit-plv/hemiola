@@ -335,7 +335,7 @@ Section Sim.
   Section ObjCohFacts.
 
     Lemma ObjInvalid_ObjCoh:
-      forall oidx ost msgs,
+      forall oidx ost msgs (Hrsi: RsDownConflicts oidx msgs),
         ObjInvalid oidx ost msgs ->
         forall cv, ObjCoh cv oidx ost msgs.
     Proof.
@@ -354,45 +354,90 @@ Section Sim.
           exfalso; eapply NoRsI_MsgExistsSig_false; eauto.
         + destruct H as [idm [? ?]].
           red; intros.
-
+          specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
+                                      ltac:(rewrite H0; reflexivity) H); dest.
           red; intros.
           red; unfold cohMsgs, map, caseDec, fst.
-          find_if_inside.
-          
-          (** TODO: build a good automation that can deduce
-           * {rsD/rsD, rqU/rsD, rsU/rsD} cases are not possible. *)
-          admit. 
-    Admitted.
+          repeat find_if_inside; [..|auto].
+          * exfalso; eapply (H2 idm0); try rewrite H0; try rewrite e; auto.
+            destruct idm as [midx msg], idm0 as [midx0 msg0].
+            simpl in *; inv H0; inv e.
+            intro; subst; rewrite H8 in H9; discriminate.
+          * exfalso; eapply (H2 idm0); try rewrite H0; try rewrite e; auto.
+            destruct idm as [midx msg], idm0 as [midx0 msg0].
+            simpl in *; inv H0; inv e.
+            intro; subst; rewrite H8 in H9; discriminate.
+          * exfalso; eapply H3; try rewrite e; eauto.
+          * exfalso; eapply H1; try rewrite e; eauto.
+    Qed.
 
     Lemma ObjExcl_ObjCoh:
-      forall oidx ost msgs,
+      forall oidx ost msgs (Hrsi: RsDownConflicts oidx msgs),
         InvObjExcl0 oidx ost msgs ->
-        ObjExcl oidx ost msgs ->
+        ObjExcl0 oidx ost msgs ->
         ObjCoh ost#[implValueIdx] oidx ost msgs.
     Proof.
-      unfold InvObjExcl0, ObjExcl, ObjCoh; intros.
-      destruct H0 as [|[|]]; [|clear H|clear H].
-      - specialize (H H0); dest.
-        split; [red; intros; reflexivity|].
-        do 2 red; intros.
-        specialize (H _ H2); red in H.
-        red; unfold cohMsgs, map, caseDec, fst in *.
-        repeat (find_if_inside; [exfalso; auto; fail|]).
-        find_if_inside; [|auto].
-        simpl in *; intros; specialize (H1 H3 _ H2 e); assumption.
-      - split; [red; intros; reflexivity|].
-        destruct H0 as [idm [? ?]].
-        red; intros.
-        (** TODO: build a good automation that can deduce
-         * {rsD/rsD, rqU/rsD, rsU/rsD} cases are not possible. *)
-        admit.
-      - split; [red; intros; reflexivity|].
-        destruct H0 as [idm [? ?]].
-        red; intros.
-        (** TODO: build a good automation that can deduce
-         * {rsD/rsD, rqU/rsD, rsU/rsD} cases are not possible. *)
-        admit.
-    Admitted.
+      unfold InvObjExcl0, ObjCoh; intros.
+      specialize (H H0); dest.
+      split; [red; intros; reflexivity|].
+      do 2 red; intros.
+      specialize (H _ H2); red in H.
+      red; unfold cohMsgs, map, caseDec, fst in *.
+      repeat (find_if_inside; [exfalso; auto; fail|]).
+      find_if_inside; [|auto].
+      simpl in *; intros; eauto.
+    Qed.
+
+    (* Lemma ObjExcl_ObjCoh: *)
+    (*   forall oidx ost msgs (Hrsi: RsDownConflicts oidx msgs), *)
+    (*     InvObjExcl0 oidx ost msgs -> *)
+    (*     InvObjExcl1 oidx ost msgs -> *)
+    (*     ObjExcl0 oidx ost msgs -> *)
+    (*     exists cv, ObjCoh cv oidx ost msgs. *)
+    (* Proof. *)
+    (*   unfold InvObjExcl0, InvObjExcl1, ObjExcl, ObjCoh; intros. *)
+    (*   destruct H1 as [|[|]]; [|clear H|clear H]. *)
+    (*   - specialize (H H1); dest. *)
+    (*     eexists; split; [red; intros; reflexivity|]. *)
+    (*     do 2 red; intros. *)
+    (*     specialize (H _ H3); red in H. *)
+    (*     red; unfold cohMsgs, map, caseDec, fst in *. *)
+    (*     repeat (find_if_inside; [exfalso; auto; fail|]). *)
+    (*     find_if_inside; [|auto]. *)
+    (*     simpl in *; intros; eauto. *)
+    (*   - specialize (H0 (or_introl H1)). *)
+    (*     destruct H1 as [idm [? ?]]. *)
+    (*     exists (msg_value (valOf idm)); split; *)
+    (*       [red; intros; exfalso; rewrite H0 in H2; solve_mesi|]. *)
+    (*     red; intros. *)
+    (*     specialize (Hrsi idm ltac:(rewrite H1; reflexivity) *)
+    (*                                 ltac:(rewrite H1; reflexivity) H); dest. *)
+    (*     red; intros. *)
+    (*     red; unfold cohMsgs, map, caseDec, fst. *)
+    (*     repeat find_if_inside; [..|auto]. *)
+    (*     + exfalso; eapply (H3 idm0); try rewrite H1; try rewrite e; auto. *)
+    (*       intro; subst; rewrite H1 in e; discriminate. *)
+    (*     + simpl; destruct (id_dec msg_dec idm idm0); subst; [reflexivity|]. *)
+    (*       exfalso; eapply (H3 idm0); try rewrite e; eauto. *)
+    (*     + exfalso; eapply H4; try rewrite e; eauto. *)
+    (*     + exfalso; eapply H2; try rewrite e; eauto. *)
+    (*   - specialize (H0 (or_intror H1)). *)
+    (*     destruct H1 as [idm [? ?]]. *)
+    (*     exists (msg_value (valOf idm)); split; *)
+    (*       [red; intros; exfalso; rewrite H0 in H2; solve_mesi|]. *)
+    (*     red; intros. *)
+    (*     specialize (Hrsi idm ltac:(rewrite H1; reflexivity) *)
+    (*                                 ltac:(rewrite H1; reflexivity) H); dest. *)
+    (*     red; intros. *)
+    (*     red; unfold cohMsgs, map, caseDec, fst. *)
+    (*     repeat find_if_inside; [..|auto]. *)
+    (*     + exfalso; eapply (H3 idm0); try rewrite H1; try rewrite e; auto. *)
+    (*       intro; subst; rewrite H1 in e; discriminate. *)
+    (*     + exfalso; eapply (H3 idm0); try rewrite H1; try rewrite e; auto. *)
+    (*       intro; subst; rewrite H1 in e; discriminate. *)
+    (*     + exfalso; eapply H4; try rewrite e; eauto. *)
+    (*     + exfalso; eapply H2; try rewrite e; eauto. *)
+    (* Qed. *)
 
     Lemma MsgsCoh_enqMP:
       forall cv cidx cost msgs,
@@ -890,7 +935,7 @@ Section Sim.
     (* remained conditions *)
     try match goal with
         | [H1: msg_id ?msg1 = _, H2: msg_id ?msg2 = _
-           |- msg_id ?msg1 <> msg_id ?msg2] => rewrite H1, H2; discriminate
+           |- ?msg1 <> ?msg2] => intro; subst; rewrite H1 in H2; discriminate
         | |- InMP _ _ _ => solve_in_mp
         end.
 
@@ -911,6 +956,9 @@ Section Sim.
                   (mesi_GoodRqRsSys Htr)
                   (mesi_RqRsDTree Htr)
                   (reachable_steps H (steps_singleton H2))) as Hnulinv.
+    pose proof (mesi_RsDownConflicts H) as Hpmcf.
+    pose proof (mesi_RsDownConflicts
+                  (reachable_steps H (steps_singleton H2))) as Hnmcf.
 
     inv H2;
       [apply simMesi_sim_silent; assumption
@@ -988,8 +1036,6 @@ Section Sim.
         }
       }
       destruct H19 as [[obj [? ?]] [pobj [? ?]]]; subst.
-      (* clear Hnulinv; progress (good_locking_get obj); clear H19. *)
-      (* progress (good_locking_get pobj); clear H21. *)
 
       Opaque In.
       disc_rule_conds_ex.
@@ -1087,10 +1133,11 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           apply ObjExcl_ObjCoh.
+          { apply Hnmcf; apply in_or_app; right; assumption. }
           { specialize (H3 (obj_idx obj)); repeat (simpl in H3; mred); dest.
             assumption.
           }
-          { left; split.
+          { split.
             { simpl; solve_mesi. }
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
@@ -1109,14 +1156,16 @@ Section Sim.
           }
           destruct H4 as [lost ?]; rewrite H4; simpl.
           apply ObjInvalid_ObjCoh.
-          eapply InvExcl_excl_invalid; [eapply H3|..];
-            try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
-          do 2 red.
-          apply MsgsP_other_midx_enqMP;
-            [|intro; dest_in;
-              inv H23; eapply l1ExtOf_not_eq; eauto].
-          apply MsgsP_deqMP.
-          assumption.
+          { apply Hnmcf; assumption. }
+          { eapply InvExcl_excl_invalid; [eapply H3|..];
+              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
+            do 2 red.
+            apply MsgsP_other_midx_enqMP;
+              [|intro; dest_in;
+                inv H23; eapply l1ExtOf_not_eq; eauto].
+            apply MsgsP_deqMP.
+            assumption.
+          }
           
       + (* [l1GetMImmM] *)
         disc_rule_conds_ex.
@@ -1130,10 +1179,11 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           apply ObjExcl_ObjCoh.
+          { apply Hnmcf; apply in_or_app; right; assumption. }
           { specialize (H3 (obj_idx obj)); repeat (simpl in H3; mred); dest.
             assumption.
           }
-          { left; split.
+          { split.
             { simpl; solve_mesi. }
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
@@ -1152,14 +1202,16 @@ Section Sim.
           }
           destruct H4 as [lost ?]; rewrite H4; simpl.
           apply ObjInvalid_ObjCoh.
-          eapply InvExcl_excl_invalid; [eapply H3|..];
-            try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
-          do 2 red.
-          apply MsgsP_other_midx_enqMP;
-            [|intro; dest_in;
-              inv H23; eapply l1ExtOf_not_eq; eauto].
-          apply MsgsP_deqMP.
-          assumption.
+          { apply Hnmcf; assumption. }
+          { eapply InvExcl_excl_invalid; [eapply H3|..];
+              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
+            do 2 red.
+            apply MsgsP_other_midx_enqMP;
+              [|intro; dest_in;
+                inv H23; eapply l1ExtOf_not_eq; eauto].
+            apply MsgsP_deqMP.
+            assumption.
+          }
 
       + (* [l1GetMRqUpUp] *)
         disc_rule_conds_ex.
@@ -1196,10 +1248,11 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           apply ObjExcl_ObjCoh.
+          { apply Hnmcf; apply in_or_app; right; assumption. }
           { specialize (H3 (obj_idx obj)); repeat (simpl in H3; mred); dest.
             assumption.
           }
-          { left; split.
+          { split.
             { simpl; solve_mesi. }
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
@@ -1209,6 +1262,7 @@ Section Sim.
               assumption.
             }
           }
+          
         * clear H4. (* In (obj_idx obj) .. *)
           mred; simpl.
           assert (exists lost, oss@[lidx] = Some lost).
@@ -1217,15 +1271,16 @@ Section Sim.
           }
           destruct H4 as [lost ?]; rewrite H4; simpl.
           apply ObjInvalid_ObjCoh.
-          eapply InvExcl_excl_invalid; [eapply H3|..];
-            try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
-
-          do 2 red.
-          apply MsgsP_other_midx_enqMP;
-            [|intro; dest_in;
-              inv H35; eapply l1ExtOf_not_eq; eauto].
-          apply MsgsP_deqMP.
-          assumption.
+          { apply Hnmcf; assumption. }
+          { eapply InvExcl_excl_invalid; [eapply H3|..];
+              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
+            do 2 red.
+            apply MsgsP_other_midx_enqMP;
+              [|intro; dest_in;
+                inv H35; eapply l1ExtOf_not_eq; eauto].
+            apply MsgsP_deqMP.
+            assumption.
+          }
           
       + (* [l1DownIImm] *)
         disc_rule_conds_ex.
@@ -1240,12 +1295,9 @@ Section Sim.
       + (* [putRqUpUpM] *)
         disc_rule_conds_ex.
         spec_case_silent.
-
-        (** TODO: automate; "UpRq None" -> .. *)
         assert (NoRsI (obj_idx obj) msgs)
           by (solve_NoRsI_base; solve_NoRsI_by_no_locks).
         disc_rule_conds_ex.
-
         solve_sim_mesi.
 
         apply MsgsCoh_enqMP; [assumption|].

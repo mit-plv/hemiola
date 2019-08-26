@@ -851,7 +851,7 @@ Section Corollaries.
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall msgs rsdm1 rsdm2,
             st.(bst_msgs) = msgs ->
-            rsdm1.(msg_id) <> rsdm2.(msg_id) ->
+            rsdm1 <> rsdm2 ->
             InMP down rsdm1 msgs ->
             rsdm1.(msg_type) = MRs ->
             InMP down rsdm2 msgs ->
@@ -865,7 +865,6 @@ Section Corollaries.
     good_locking_get obj.
     eapply upLockInvORq_down_rssQ_length_two_False; eauto.
     apply rssQ_length_two with (midx:= down) (msg1:= rsdm1) (msg2:= rsdm2); eauto.
-      intuition congruence.
   Qed.
 
   Corollary upLocked_rqUp_in_false:
