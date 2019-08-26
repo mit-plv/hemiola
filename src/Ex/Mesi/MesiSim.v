@@ -41,28 +41,6 @@ Ltac solve_not_in_ext_chns :=
   [eapply tree2Topo_internal_chns_not_exts;
    apply in_or_app; eauto|simpl; tauto].
 
-(* Section TreeTopoChns. *)
-(*   Context `{OStateIfc}. *)
-(*   Variables (sys: System) *)
-(*             (msgs: MessagePool Msg). *)
-
-(*   Definition NoTwoMsgsInQ := *)
-(*     forall idm1 idm2, *)
-(*       InMPI msgs idm1 -> InMPI msgs idm2 -> *)
-(*       idOf idm1 = idOf idm2 -> *)
-(*       (valOf idm1).(msg_id) <> (valOf idm2).(msg_id) -> False. *)
-
-(*   Definition NoRqUpRsDown (oidx: IdxT) := *)
-(*     forall rqu rsd, *)
-(*       InMPI msgs rqu -> InMPI msgs rsd -> *)
-(*       fst (sigOf rqu) = rqUpFrom oidx -> *)
-(*       fst (sigOf rsd) = downTo oidx -> fst (snd (sigOf rsd)) = MRs -> *)
-(*       False. *)
-      
-    
-
-(* End TreeTopoChns. *)
-
 (** TODO: refactor; will be used by MOSI as well. *)
 Section SimExtMP.
   Variable (l1s: list IdxT).
@@ -799,18 +777,20 @@ Section Sim.
       match goal with
       (* get simulation propositions for the current impl. state *)
       | [Hf: Forall _ (c_li_indices ?cifc ++ c_l1_indices ?cifc),
-             Hin: In _ (c_li_indices ?cifc) |- _] =>
+             Hin: In ?oidx (c_li_indices ?cifc)
+         |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _]] =>
         rewrite Forall_forall in Hf;
         pose proof (Hf _ (in_or_app _ _ _ (or_introl Hin)))
       | [Hf: Forall _ (c_li_indices ?cifc ++ c_l1_indices ?cifc),
-             Hin: In _ (c_l1_indices ?cifc) |- _] =>
+             Hin: In ?oidx (c_l1_indices ?cifc)
+         |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _]] =>
         rewrite Forall_forall in Hf;
         pose proof (Hf _ (in_or_app _ _ _ (or_intror Hin)))
       (* rewrite a coherent value *)
       | [H: fst ?ost = fst _ |- context[fst ?ost] ] =>
         rewrite H in *
       end.
-
+  
   (*! To solve [SimMESI] *)
 
   Ltac solve_ImplStateCoh :=
@@ -896,13 +876,24 @@ Section Sim.
       end.
 
   Ltac solve_NoRsI_by_no_locks :=
-    repeat
-      (try match goal with
-           | [Hl: UpLockInvORq _ _ _ _ _ |- _] =>
-             eapply upLockInvORq_down_rssQ_length_one_locked in Hl; eauto;
-             [|eapply rssQ_length_ge_one; eauto; solve_in_mp; fail]
-           end; dest; auto).
-  
+    eapply upLocked_rsDown_in_false; eauto; assumption.
+
+  Ltac solve_NoRsI_by_rqDown :=
+    eapply rsDown_in_rqDown_first_false; eauto; assumption.
+
+  Ltac solve_NoRsI_by_rsDown :=
+    match goal with
+    | [H1: InMPI _ (_, ?msg1), H2: FirstMPI _ (_, ?msg2) |- _] =>
+      eapply rsDown_in_rsDown_in_false with (rsdm1:= msg1) (rsdm2:= msg2);
+      eauto; try eassumption
+    end;
+    (* remained conditions *)
+    try match goal with
+        | [H1: msg_id ?msg1 = _, H2: msg_id ?msg2 = _
+           |- msg_id ?msg1 <> msg_id ?msg2] => rewrite H1, H2; discriminate
+        | |- InMP _ _ _ => solve_in_mp
+        end.
+
   Lemma simMesi_sim:
     InvSim step_m step_m ImplInvEx SimMESI impl spec.
   Proof.
@@ -997,37 +988,30 @@ Section Sim.
         }
       }
       destruct H19 as [[obj [? ?]] [pobj [? ?]]]; subst.
-      clear Hnulinv; progress (good_locking_get obj); clear H19.
-      progress (good_locking_get pobj); clear H21.
+      (* clear Hnulinv; progress (good_locking_get obj); clear H19. *)
+      (* progress (good_locking_get pobj); clear H21. *)
 
       Opaque In.
       disc_rule_conds_ex.
       Transparent In.
-      dest_in. (** Do case analysis per a rule. *)
+      phide H19; phide H21.
+      (** Do case analysis per a rule. *)
+      dest_in; preveal H19; preveal H23.
 
       + (* [l1GetSImm] *)
         disc_rule_conds_ex.
         spec_case_get (obj_idx obj).
-
-        (** TODO: automate; "UpRq None" -> .. *)
         assert (NoRsI (obj_idx obj) msgs)
           by (solve_NoRsI_base; solve_NoRsI_by_no_locks).
         disc_rule_conds_ex.
-
         solve_sim_mesi.
 
       + (* [l1GetSRqUpUp] *)
         disc_rule_conds_ex.
         spec_case_silent.
-
-        (** TODO: automate; "UpRq None" -> .. *)
-        assert (NoRsI (obj_idx obj) msgs).
-        { solve_NoRsI_base.
-          solve_NoRsI_by_no_locks.
-        }
-          
+        assert (NoRsI (obj_idx obj) msgs)
+          by (solve_NoRsI_base; solve_NoRsI_by_no_locks).
         disc_rule_conds_ex.
-        
         solve_sim_mesi.
 
       + (* [l1GetSRsDownDownS] *)
@@ -1037,20 +1021,21 @@ Section Sim.
         (** TODO: automate below various dischargers *)
         progress (good_footprint_get (obj_idx obj)).
         repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
-        pose proof (Htn _ _ H5); dest.
-        apply tree2Topo_l1_child_ext in H5; [|assumption]; subst.
-        disc_rule_conds_const.
+        pose proof (Htn _ _ H11); dest.
+        apply tree2Topo_l1_child_ext in H11; [|assumption]; subst.
+        disc_rule_conds_ex.
+        
         assert (msg_value rmsg = fst sost)
-          by (disc_MsgsCoh_by_FirstMP H20 H26; assumption).
-        rewrite H5 in *.
+          by (disc_MsgsCoh_by_FirstMP H22 H28; assumption).
+        rewrite H11 in *.
 
         (** TODO: automate this as well *)
         assert (obj_idx obj <> rootOf topo) as Honr.
         { intro Hx; subst.
           pose proof (tree2Topo_WfCIfc tr 0) as [? _].
-          apply (DisjList_NoDup idx_dec) in H23.
-          eapply DisjList_In_1 in H23; [|eassumption].
-          elim H23; rewrite c_li_indices_head_rootOf by assumption.
+          apply (DisjList_NoDup idx_dec) in H25.
+          eapply DisjList_In_1 in H25; [|eassumption].
+          elim H25; rewrite c_li_indices_head_rootOf by assumption.
           left; auto.
         }
 
@@ -1063,20 +1048,20 @@ Section Sim.
         (** TODO: automate below various dischargers *)
         progress (good_footprint_get (obj_idx obj)).
         repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
-        pose proof (Htn _ _ H5); dest.
-        apply tree2Topo_l1_child_ext in H5; [|assumption]; subst.
-        disc_rule_conds_const.
+        pose proof (Htn _ _ H11); dest.
+        apply tree2Topo_l1_child_ext in H11; [|assumption]; subst.
+        disc_rule_conds_ex.
         assert (msg_value rmsg = fst sost)
-          by (disc_MsgsCoh_by_FirstMP H20 H26; assumption).
-        rewrite H5 in *.
+          by (disc_MsgsCoh_by_FirstMP H22 H28; assumption).
+        rewrite H11 in *.
 
         (** TODO: automate this as well *)
         assert (obj_idx obj <> rootOf topo) as Honr.
         { intro Hx; subst.
           pose proof (tree2Topo_WfCIfc tr 0) as [? _].
-          apply (DisjList_NoDup idx_dec) in H23.
-          eapply DisjList_In_1 in H23; [|eassumption].
-          elim H23; rewrite c_li_indices_head_rootOf by assumption.
+          apply (DisjList_NoDup idx_dec) in H25.
+          eapply DisjList_In_1 in H25; [|eassumption].
+          elim H25; rewrite c_li_indices_head_rootOf by assumption.
           left; auto.
         }
 
@@ -1085,18 +1070,14 @@ Section Sim.
       + (* [downSImm] *)
         disc_rule_conds_ex.
         spec_case_silent.
-
-        (** TODO: automate; rsD/rqD not possible *)
-        assert (NoRsI (obj_idx obj) msgs) by admit.
+        assert (NoRsI (obj_idx obj) msgs)
+          by (solve_NoRsI_base; solve_NoRsI_by_rqDown).
         disc_rule_conds_ex.
-
         solve_sim_mesi.
 
       + (* [l1GetMImmE] *)
         disc_rule_conds_ex.
         spec_case_set (obj_idx obj).
-
-        (** TODO: automate; "UpRq None" -> .. *)
         assert (NoRsI (obj_idx obj) msgs)
           by (solve_NoRsI_base; solve_NoRsI_by_no_locks).
         disc_rule_conds_ex.
@@ -1114,34 +1095,32 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H21; eapply l1ExtOf_not_eq; eauto].
+                  inv H23; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
           }
+
         * clear H4. (* In (obj_idx obj) .. *)
           mred; simpl.
           assert (exists lost, oss@[lidx] = Some lost).
-          { specialize (H15 _ H11).
+          { specialize (H15 _ H12).
             solve_rule_conds_ex.
           }
           destruct H4 as [lost ?]; rewrite H4; simpl.
           apply ObjInvalid_ObjCoh.
           eapply InvExcl_excl_invalid; [eapply H3|..];
             try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
-
           do 2 red.
           apply MsgsP_other_midx_enqMP;
             [|intro; dest_in;
-              inv H21; eapply l1ExtOf_not_eq; eauto].
+              inv H23; eapply l1ExtOf_not_eq; eauto].
           apply MsgsP_deqMP.
           assumption.
           
       + (* [l1GetMImmM] *)
         disc_rule_conds_ex.
         spec_case_set (obj_idx obj).
-
-        (** TODO: automate; "UpRq None" -> .. *)
         assert (NoRsI (obj_idx obj) msgs)
           by (solve_NoRsI_base; solve_NoRsI_by_no_locks).
         disc_rule_conds_ex.
@@ -1159,26 +1138,26 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H21; eapply l1ExtOf_not_eq; eauto].
+                  inv H23; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
           }
+
         * clear H4. (* In (obj_idx obj) .. *)
           mred; simpl.
           assert (exists lost, oss@[lidx] = Some lost).
-          { specialize (H15 _ H11).
+          { specialize (H15 _ H12).
             solve_rule_conds_ex.
           }
           destruct H4 as [lost ?]; rewrite H4; simpl.
           apply ObjInvalid_ObjCoh.
           eapply InvExcl_excl_invalid; [eapply H3|..];
             try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
-
           do 2 red.
           apply MsgsP_other_midx_enqMP;
             [|intro; dest_in;
-              inv H21; eapply l1ExtOf_not_eq; eauto].
+              inv H23; eapply l1ExtOf_not_eq; eauto].
           apply MsgsP_deqMP.
           assumption.
 
@@ -1194,22 +1173,22 @@ Section Sim.
         (** TODO: automate below various dischargers *)
         progress (good_footprint_get (obj_idx obj)).
         repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
-        pose proof (Htn _ _ H5); dest.
-        apply tree2Topo_l1_child_ext in H5; [|assumption]; subst.
+        pose proof (Htn _ _ H11); dest.
+        apply tree2Topo_l1_child_ext in H11; [|assumption]; subst.
         disc_rule_conds_const.
 
         (** TODO: automate this as well *)
         assert ((obj_idx obj) <> rootOf topo) as Honr.
         { intro Hx; subst.
           pose proof (tree2Topo_WfCIfc tr 0) as [? _].
-          apply (DisjList_NoDup idx_dec) in H5.
-          eapply DisjList_In_1 in H5; [|eassumption].
-          elim H5; rewrite c_li_indices_head_rootOf by assumption.
+          apply (DisjList_NoDup idx_dec) in H11.
+          eapply DisjList_In_1 in H11; [|eassumption].
+          elim H11; rewrite c_li_indices_head_rootOf by assumption.
           left; auto.
         }
 
-        (** TODO: automate; rsD/rsD not possible *)
-        assert (NoRsI (obj_idx obj) msgs) by admit.
+        assert (NoRsI (obj_idx obj) msgs)
+          by (solve_NoRsI_base; solve_NoRsI_by_rsDown).          
         disc_rule_conds_ex.
 
         solve_sim_mesi_ext_mp.
@@ -1225,7 +1204,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H33; eapply l1ExtOf_not_eq; eauto].
+                  inv H35; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1233,7 +1212,7 @@ Section Sim.
         * clear H4. (* In (obj_idx obj) .. *)
           mred; simpl.
           assert (exists lost, oss@[lidx] = Some lost).
-          { specialize (H15 _ H23).
+          { specialize (H15 _ H25).
             solve_rule_conds_ex.
           }
           destruct H4 as [lost ?]; rewrite H4; simpl.
@@ -1244,7 +1223,7 @@ Section Sim.
           do 2 red.
           apply MsgsP_other_midx_enqMP;
             [|intro; dest_in;
-              inv H33; eapply l1ExtOf_not_eq; eauto].
+              inv H35; eapply l1ExtOf_not_eq; eauto].
           apply MsgsP_deqMP.
           assumption.
           
@@ -1271,7 +1250,7 @@ Section Sim.
 
         apply MsgsCoh_enqMP; [assumption|].
         do 2 red; cbv [map cohMsgs]; solve_caseDec.
-        intros; apply H18; auto.
+        intros; apply H20; auto.
         solve_mesi.
         
   Admitted.
