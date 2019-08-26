@@ -93,11 +93,12 @@ End ObjUnit.
 
 Section MsgConflicts.
 
-  Definition RsDownConflicts (oidx: IdxT) (msgs: MessagePool Msg) :=
+  Definition RsDownConflicts (oidx: IdxT) (orq: ORq Msg) (msgs: MessagePool Msg) :=
     forall rsDown,
       fst (sigOf rsDown) = downTo oidx ->
       fst (snd (sigOf rsDown)) = MRs ->
       InMPI msgs rsDown ->
+      (orq@[upRq] <> None) /\
       (forall rqUp,
           fst (sigOf rqUp) = rqUpFrom oidx ->
           InMPI msgs rqUp -> False) /\
@@ -106,6 +107,10 @@ Section MsgConflicts.
           fst (snd (sigOf rrsDown)) = MRs ->
           valOf rsDown <> valOf rrsDown ->
           InMPI msgs rrsDown -> False) /\
+      (forall rqDown,
+          fst (sigOf rqDown) = downTo oidx ->
+          fst (snd (sigOf rqDown)) = MRq ->
+          FirstMPI msgs rqDown -> False) /\
       (forall rsUp,
           fst (sigOf rsUp) = rsUpFrom oidx ->
           InMPI msgs rsUp -> False).
@@ -124,9 +129,10 @@ Section MsgConflicts.
                               (map (@obj_idx _) (sys_objs sys))).
 
   Definition RsDownConflictsInv (st: MState) :=
-    forall oidx,
+    forall oidx orq,
       In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
-      RsDownConflicts oidx (bst_msgs st).
+      (bst_orqs st)@[oidx] = Some orq ->
+      RsDownConflicts oidx orq (bst_msgs st).
 
   Lemma tree2Topo_non_root_RsDownConflicts_inv_ok:
     InvReachable sys step_m RsDownConflictsInv.
@@ -149,54 +155,64 @@ Section MsgConflicts.
     assert (exists pidx,
                In pidx (c_li_indices cifc) /\
                parentIdxOf topo oidx = Some pidx).
-    { apply in_app_or in H2; destruct H2.
+    { apply in_app_or in H3; destruct H3.
       { apply c_li_indices_tail_has_parent; assumption. }
       { apply c_l1_indices_has_parent; assumption. }
     }
     destruct H1 as [pidx [? ?]].
 
     pose proof (tree2Topo_TreeTopo tr bidx).
-    destruct H4; dest.
-    specialize (H4 _ _ H3); dest.
+    destruct H5; dest.
+    specialize (H5 _ _ H4); dest.
 
     assert (exists obj, In obj (sys_objs sys) /\ obj_idx obj = oidx).
-    { apply in_app_or in H2; destruct H2.
-      { apply tl_In in H2.
-        apply SubList_app_4 in Hoinds; apply Hoinds in H2.
-        apply in_map_iff in H2; destruct H2 as [obj [? ?]]; subst.
+    { apply in_app_or in H3; destruct H3.
+      { apply tl_In in H3.
+        apply SubList_app_4 in Hoinds; apply Hoinds in H3.
+        apply in_map_iff in H3; destruct H3 as [obj [? ?]]; subst.
         exists obj; auto.
       }
-      { apply SubList_app_5 in Hoinds; apply Hoinds in H2.
-        apply in_map_iff in H2; destruct H2 as [obj [? ?]]; subst.
+      { apply SubList_app_5 in Hoinds; apply Hoinds in H3.
+        apply in_map_iff in H3; destruct H3 as [obj [? ?]]; subst.
         exists obj; auto.
       }
     }
-    destruct H9 as [obj [? ?]]; subst.
+    destruct H10 as [obj [? ?]]; subst.
 
     assert (exists pobj, In pobj (sys_objs sys) /\ obj_idx pobj = pidx).
     { apply SubList_app_4 in Hoinds; apply Hoinds in H1.
       apply in_map_iff in H1; destruct H1 as [pobj [? ?]]; subst.
       exists pobj; auto.
     }
-    destruct H10 as [pobj [? ?]]; subst.
+    destruct H11 as [pobj [? ?]]; subst.
 
     red; intros; repeat ssplit; intros.
+    - intro Hx.
+      eapply upLocked_rsDown_in_false
+        with (obj0:= obj) (down:= downTo (obj_idx obj))
+             (rsdm:= valOf rsDown); eauto.
+      unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
     - eapply rqUp_in_rsDown_in_false
         with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj)) (rqum:= valOf rqUp)
              (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto.
-      + unfold sigOf in H14; simpl in H14; red in H15; rewrite H14 in H15; assumption.
-      + unfold sigOf in H11; simpl in H11; red in H13; rewrite H11 in H13; assumption.
+      + unfold sigOf in H15; simpl in H15; red in H16; rewrite H15 in H16; assumption.
+      + unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
     - eapply rsDown_in_rsDown_in_false
         with (obj0:= obj) (down:= downTo (obj_idx obj))
              (rsdm1:= valOf rsDown) (rsdm2:= valOf rrsDown); eauto.
-      + unfold sigOf in H11; simpl in H11; red in H13; rewrite H11 in H13; assumption.
-      + unfold sigOf in H14; simpl in H14; red in H17; rewrite H14 in H17; assumption.
+      + unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
+      + unfold sigOf in H15; simpl in H15; red in H18; rewrite H15 in H18; assumption.
+    - eapply rsDown_in_rqDown_first_false
+        with (cobj:= obj) (pobj0:= pobj) (down:= downTo (obj_idx obj))
+             (rsdm:= valOf rsDown) (rqdm:= valOf rqDown); eauto.
+      + unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
+      + unfold sigOf in H15; simpl in H15; red in H17; rewrite H15 in H17; assumption.
     - eapply rsDown_in_rsUp_in_false
         with (cobj:= obj) (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
              (down:= downTo (obj_idx obj))
              (rsdm:= valOf rsDown) (rsum:= valOf rsUp); eauto.
-      + unfold sigOf in H11; simpl in H11; red in H13; rewrite H11 in H13; assumption.
-      + unfold sigOf in H14; simpl in H14; red in H15; rewrite H14 in H15; assumption.
+      + unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
+      + unfold sigOf in H15; simpl in H15; red in H16; rewrite H15 in H16; assumption.
   Admitted.
 
 End MsgConflicts.

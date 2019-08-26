@@ -109,6 +109,8 @@ Section System.
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
 
+  
+
   (** A core idea: a "summary" status in each object *)
 
   Definition summaryOf (ost: OState): MESI :=
