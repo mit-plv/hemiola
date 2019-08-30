@@ -73,7 +73,9 @@ Definition getUpLockIdxBack (orq: ORq Msg): option IdxT :=
 
 Definition UpLockBackNone `{OStateIfc}: OPrec :=
   fun ost orq mins =>
-    (orq@[upRq]) >>=[False] (fun rqiu => rqiu.(rqi_midx_rsb) = None).
+    (orq@[upRq])
+      >>=[False] (fun rqiu => rqiu.(rqi_midx_rsb) = None /\
+                              rqiu.(rqi_msg) = None).
 
 Definition DownLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
   fun ost orq mins =>

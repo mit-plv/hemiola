@@ -247,6 +247,18 @@ Section SimExtMP.
     split; assumption.
   Qed.
 
+  Lemma SimExtMP_impl_silent_unlocked:
+    forall cidx imsgs (orqs: ORqs Msg) smsgs porq rqiu norq,
+      orqs@[cidx] = Some porq ->
+      porq@[upRq] = Some rqiu -> rqiu.(rqi_msg) = None ->
+      norq@[upRq] = None ->
+      SimExtMP imsgs orqs smsgs ->
+      SimExtMP imsgs (orqs +[cidx <- norq]) smsgs.
+  Proof.
+    disc_SimExtMP.
+    disc_rule_conds_ex.
+  Qed.
+
   Lemma SimExtMP_spec_deqMP_locked:
     forall cidx imsgs (orqs: ORqs Msg) smsgs porq norq rqiu msg,
       orqs@[cidx] = Some porq ->
@@ -321,8 +333,10 @@ Section Sim.
       (| (downTo cidx, (MRs, mesiRsS)): fun idm => (valOf idm).(msg_value) = cv
        | (downTo cidx, (MRs, mesiRsE)): fun idm => (valOf idm).(msg_value) = cv
        | (rsUpFrom cidx, (MRs, mesiDownRsS)): fun idm => (valOf idm).(msg_value) = cv
-       | (rqUpFrom cidx, (MRq, mesiRqI)):
-           fun idm => (cost#[implStatusIdx] = mesiM -> (valOf idm).(msg_value) = cv))%cases.
+       | (rqUpFrom cidx, (MRq, mesiInvRq)):
+           fun idm => mesiM <= cost#[status] -> (valOf idm).(msg_value) = cv
+       | (rqUpFrom cidx, (MRq, mesiPushRq)):
+           fun idm => mesiS <= cost#[status] -> (valOf idm).(msg_value) = cv)%cases.
 
     Definition MsgCoh := MsgP cohMsgs.
     Definition MsgsCoh := MsgsP cohMsgs msgs.
@@ -347,45 +361,73 @@ Section Sim.
           specialize (H0 _ H1); red in H0.
           red; unfold cohMsgs, map, caseDec, fst in *.
           repeat (find_if_inside; [exfalso; auto; fail|]).
-          find_if_inside; [|auto].
-          simpl in *; intros; rewrite H2 in H; discriminate.
+          do 2 (find_if_inside; [simpl in *; intros; solve_mesi|]).
+          auto.
+
       - split.
         + red; intros.
-          exfalso; eapply NoRsI_MsgExistsSig_false; eauto.
-        + destruct H as [idm [? ?]].
-          red; intros.
-          specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
-                                      ltac:(rewrite H0; reflexivity) H); dest.
-          red; intros.
-          red; unfold cohMsgs, map, caseDec, fst.
-          repeat find_if_inside; [..|auto].
-          * exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
-            destruct idm as [midx msg], idm0 as [midx0 msg0].
-            simpl in *; inv H0; inv e.
-            intro; subst; rewrite H10 in H11; discriminate.
-          * exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
-            destruct idm as [midx msg], idm0 as [midx0 msg0].
-            simpl in *; inv H0; inv e.
-            intro; subst; rewrite H10 in H11; discriminate.
-          * exfalso; eapply H5; try rewrite e; eauto.
-          * exfalso; eapply H2; try rewrite e; eauto.
+          destruct H.
+          * exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
+          * exfalso; eapply NoRsI_MsgExistsSig_PushRs_false; eauto.
+        + destruct H.
+          * destruct H as [idm [? ?]].
+            red; intros.
+            specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
+                                        ltac:(rewrite H0; reflexivity) H); dest.
+            red; intros.
+            red; unfold cohMsgs, map, caseDec, fst.
+            repeat find_if_inside; [..|auto].
+            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
+              destruct idm as [midx msg], idm0 as [midx0 msg0].
+              simpl in *; inv H0; inv e.
+              intro; subst; rewrite H10 in H11; discriminate.
+            }
+            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
+              destruct idm as [midx msg], idm0 as [midx0 msg0].
+              simpl in *; inv H0; inv e.
+              intro; subst; rewrite H10 in H11; discriminate.
+            }
+            { exfalso; eapply H5; try rewrite e; eauto. }
+            { exfalso; eapply H2; try rewrite e; eauto. }
+            { exfalso; eapply H2; try rewrite e; eauto. }
+
+          * destruct H as [idm [? ?]].
+            red; intros.
+            specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
+                                        ltac:(rewrite H0; reflexivity) H); dest.
+            red; intros.
+            red; unfold cohMsgs, map, caseDec, fst.
+            repeat find_if_inside; [..|auto].
+            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
+              destruct idm as [midx msg], idm0 as [midx0 msg0].
+              simpl in *; inv H0; inv e.
+              intro; subst; rewrite H10 in H11; discriminate.
+            }
+            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
+              destruct idm as [midx msg], idm0 as [midx0 msg0].
+              simpl in *; inv H0; inv e.
+              intro; subst; rewrite H10 in H11; discriminate.
+            }
+            { exfalso; eapply H5; try rewrite e; eauto. }
+            { exfalso; eapply H2; try rewrite e; eauto. }
+            { exfalso; eapply H2; try rewrite e; eauto. }
     Qed.
 
     Lemma ObjExcl0_ObjCoh:
       forall oidx orq ost msgs (Hrsi: RsDownConflicts oidx orq msgs),
         InvObjExcl0 oidx ost msgs ->
         ObjExcl0 oidx ost msgs ->
-        ObjCoh ost#[implValueIdx] oidx ost msgs.
+        ObjCoh ost#[val] oidx ost msgs.
     Proof.
       unfold InvObjExcl0, ObjCoh; intros.
       specialize (H H0); dest.
       split; [red; intros; reflexivity|].
       do 2 red; intros.
-      specialize (H _ H2); red in H.
+      specialize (H _ H3); red in H.
       red; unfold cohMsgs, map, caseDec, fst in *.
       repeat (find_if_inside; [exfalso; auto; fail|]).
-      find_if_inside; [|auto].
-      simpl in *; intros; eauto.
+      do 2 (find_if_inside; [simpl in *; intros; eauto|]).
+      auto.
     Qed.
 
     Lemma MsgsCoh_enqMP:
@@ -398,12 +440,12 @@ Section Sim.
       intros; apply MsgsP_enqMP; auto.
     Qed.
 
-    Lemma MsgsCoh_put_invalid_enqMP:
+    Lemma MsgsCoh_InvRq_invalid_enqMP:
       forall cv cidx cost msgs,
         MsgsCoh cv cidx cost msgs ->
         forall midx msg,
-          msg_id msg = mesiRqI ->
-          cost#[implStatusIdx] < mesiM ->
+          msg_id msg = mesiInvRq ->
+          cost#[status] < mesiM ->
           MsgsCoh cv cidx cost (enqMP midx msg msgs).
     Proof.
       intros; apply MsgsP_enqMP; auto.
@@ -411,8 +453,9 @@ Section Sim.
       rewrite H0.
       unfold caseDec, map, cohMsgs.
       repeat (find_if_inside; [inv e; exfalso; intuition idtac; fail|]).
-      find_if_inside; [|auto].
-      intros; simpl in *; rewrite H2 in H1; lia.
+      find_if_inside; [intros; simpl in *; solve_mesi|].
+      find_if_inside; [inv e|].
+      auto.
     Qed.
 
     Lemma MsgsCoh_other_midx_enqMP:
@@ -446,7 +489,7 @@ Section Sim.
       forall cv cidx cost msgs,
         MsgsCoh cv cidx cost msgs ->
         forall midx msg,
-          ~ In (msg_id msg) [mesiRsS; mesiRsE; mesiDownRsS; mesiRqI] ->
+          ~ In (msg_id msg) [mesiRsS; mesiRsE; mesiDownRsS; mesiInvRq; mesiPushRq] ->
           MsgsCoh cv cidx cost (enqMP midx msg msgs).
     Proof.
       intros; apply MsgsP_other_msg_id_enqMP; auto.
@@ -457,7 +500,7 @@ Section Sim.
         MsgsCoh cv cidx cost msgs ->
         forall eins,
           DisjList (map (fun idm => msg_id (valOf idm)) eins)
-                   [mesiRsS; mesiRsE; mesiDownRsS; mesiRqI] ->
+                   [mesiRsS; mesiRsE; mesiDownRsS; mesiInvRq; mesiPushRq] ->
           MsgsCoh cv cidx cost (enqMsgs eins msgs).
     Proof.
       intros; apply MsgsP_other_msg_id_enqMsgs; auto.
@@ -484,16 +527,30 @@ Section Sim.
     Lemma MsgsCoh_state_update_indep:
       forall cv cidx cost msgs,
         MsgsCoh cv cidx cost msgs ->
+        NoRqI cidx msgs ->
+        forall nost: OState, MsgsCoh cv cidx nost msgs.
+    Proof.
+      unfold MsgsCoh, NoRqI, MsgsNotExist, MsgsP; intros.
+      specialize (H _ H1); specialize (H0 _ H1).
+      red in H, H0; red; unfold map, cohMsgs, caseDec, fst in *.
+      repeat (find_if_inside; [assumption|]).
+      do 2 (find_if_inside; [exfalso; auto|]).
+      auto.
+    Qed.
+
+    Lemma MsgsCoh_state_update_downgrade:
+      forall cv cidx cost msgs,
+        MsgsCoh cv cidx cost msgs ->
         forall nost: OState,
-          nost#[implStatusIdx] <> mesiM ->
+          nost#[status] <= cost#[status] ->
           MsgsCoh cv cidx nost msgs.
     Proof.
-      unfold MsgsCoh, MsgsP; intros.
+      unfold MsgsCoh, MsgsNotExist, MsgsP; intros.
       specialize (H _ H1).
       red in H; red; unfold map, cohMsgs, caseDec, fst in *.
       repeat (find_if_inside; [assumption|]).
-      find_if_inside; [|auto].
-      simpl in *; intros; exfalso; auto.
+      do 2 (find_if_inside; [simpl in *; intros; apply H; solve_mesi|]).
+      auto.
     Qed.
 
   End ObjCohFacts.
@@ -530,11 +587,22 @@ Section Sim.
     - apply SimStateIntro with (cv:= 0).
       + reflexivity.
       + apply Forall_forall; intros oidx ?.
-        simpl; rewrite implOStatesInit_value by assumption.
-        unfold implORqsInit; simpl; rewrite initORqs_value by assumption.
-        simpl; split; [compute; auto|].
-        do 3 red; intros.
-        do 2 red in H0; dest_in.
+        subst cifc; rewrite c_li_indices_head_rootOf in H by assumption.
+        simpl in H; icase oidx.
+        * simpl; rewrite implOStatesInit_value_root by assumption.
+          unfold implORqsInit; simpl.
+          rewrite initORqs_value
+            by (rewrite c_li_indices_head_rootOf by assumption; left; reflexivity).
+          simpl; split; [compute; auto|].
+          do 3 red; intros.
+          do 2 red in H0; dest_in.
+        * simpl; rewrite implOStatesInit_value_non_root by assumption.
+          unfold implORqsInit; simpl.
+          rewrite initORqs_value
+            by (rewrite c_li_indices_head_rootOf by assumption; right; assumption).
+          simpl; split; [compute; auto|].
+          do 3 red; intros.
+          do 2 red in H0; dest_in.
     - red; apply Forall_forall; intros oidx ?.
       repeat split.
       simpl; unfold implORqsInit.
@@ -768,6 +836,9 @@ Section Sim.
        | [ |- SimExtMP _ _ (_ +[_ <- addRqS _ _ _]) _] =>
          eapply SimExtMP_impl_silent_locked;
          [|eassumption|eassumption|unfold addRqS; mred]
+       | [H1: ?porq@[upRq] = Some ?rqi, H2: rqi_msg ?rqi = None
+          |- SimExtMP _ _ (_ +[_ <- ?porq -[upRq]]) _] =>
+         eapply SimExtMP_impl_silent_unlocked; eauto; mred; fail
        end; try assumption).
 
   Ltac disc_rule_custom ::=
@@ -805,8 +876,8 @@ Section Sim.
     solve_SpecStateCoh;
     solve_ImplStateCoh.
 
-  Ltac solve_ImplStateCoh_idx_not_in :=
-    intro; dest_in; try discriminate;
+  Ltac solve_chn_not_in :=
+    intro; dest_in; try discriminate; simpl in *;
     repeat
       match goal with
       | [H: rqUpFrom _ = rqUpFrom _ |- _] => inv H
@@ -814,12 +885,12 @@ Section Sim.
       | [H: downTo _ = downTo _ |- _] => inv H
       | [H: ?oidx = l1ExtOf ?oidx |- _] =>
         exfalso; eapply l1ExtOf_not_eq; eauto
-      end.
+      end; auto.
 
   Ltac disc_MsgsP H :=
     repeat
       (first [apply MsgsP_enqMP_inv in H
-             |apply MsgsP_other_midx_deqMP_inv in H; [|solve_not_in]
+             |apply MsgsP_other_midx_deqMP_inv in H; [|solve_chn_not_in]
              |eapply MsgsP_other_msg_id_deqMP_inv in H;
               [|eassumption
                |unfold valOf, snd;
@@ -830,34 +901,38 @@ Section Sim.
       ]).
 
   Ltac solve_ImplOStateMESI :=
-    intros; auto; (* can be solved automatically? *)
+    intros;
+    auto; try solve_mesi; (* can be solved automatically? *)
     match goal with
     | [H: _ -> ?P |- ?P] => apply H; auto
     | [H: _ -> _ -> ?P |- ?P] => apply H; auto
     end;
-    match goal with
-    | [H: MsgsP ?P _ |- MsgsP ?P _] => disc_MsgsP H
-    end;
-    try assumption.
+    try match goal with
+        | H:MsgsP ?P _ |- MsgsP ?P _ => disc_MsgsP H; assumption
+        end;
+    try solve_mesi.
 
   Ltac solve_MsgsCoh :=
     repeat
       (try match goal with
            | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
              apply MsgsCoh_other_midx_enqMP;
-             [|solve_ImplStateCoh_idx_not_in; auto; fail]
+             [|solve_chn_not_in; auto; fail]
            | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
              apply MsgsCoh_other_msg_id_enqMP;
              [|intro; dest_in; discriminate]
            | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
              apply MsgsCoh_enqMP;
              [|do 2 red; cbv [map cohMsgs]; solve_caseDec; reflexivity]
-           | |- MsgsCoh _ _ _ (enqMP _ {| msg_id := mesiRqI |} _) =>
-             apply MsgsCoh_put_invalid_enqMP; [|reflexivity|assumption]
+           | |- MsgsCoh _ _ _ (enqMP _ {| msg_id := mesiInvRq |} _) =>
+             apply MsgsCoh_InvRq_invalid_enqMP; [|reflexivity|assumption]
            | |- MsgsCoh _ _ _ (deqMP _ _) =>
              apply MsgsCoh_deqMP
            | |- MsgsCoh _ _ (_, (?stt, _)) _ =>
-             eapply MsgsCoh_state_update_indep; [|discriminate]
+             eapply MsgsCoh_state_update_indep; [|assumption]
+           | [H: MsgsCoh _ _ ?post _ |- MsgsCoh _ _ (_, (?stt, _)) _] =>
+             eapply MsgsCoh_state_update_downgrade with (cost:= post);
+             [|simpl; first [eassumption|solve_mesi]]
            end; try eassumption).
 
   Ltac solve_NoRsI_base :=
@@ -866,7 +941,7 @@ Section Sim.
       | |- NoRsI _ _ => do 3 red; intros
       | |- MsgP _ _ =>
         red; unfold cohMsgs, map, caseDec, fst;
-        find_if_inside; simpl; [|auto; fail]
+        repeat (find_if_inside; [simpl|auto])
       | [H: sigOf ?idm = _ |- _] =>
         let midx := fresh "midx" in
         let msg := fresh "msg" in
@@ -931,6 +1006,41 @@ Section Sim.
         let Hx := fresh "H" in
         destruct msg1, msg2; simpl in *; intro Hx; inv Hx; discriminate
       | |- InMPI _ _ => red; solve_in_mp
+      end.
+
+  Ltac solve_NoRqI_base :=
+    repeat
+      match goal with
+      | |- NoRqI _ _ => do 3 red; intros
+      | |- MsgP _ _ =>
+        red; unfold cohMsgs, map, caseDec, fst;
+        repeat (find_if_inside; [simpl|auto])
+      | [H: sigOf ?idm = _ |- _] =>
+        let midx := fresh "midx" in
+        let msg := fresh "msg" in
+        destruct idm as [midx msg]; inv H
+      end.
+
+  Ltac solve_NoRqI_by_rsDown oidx :=
+    repeat
+      match goal with
+      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+                Hin: In oidx (c_l1_indices _),
+                     Horq: ?orqs@[oidx] = Some _ |- _] =>
+        specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
+        simpl in Hmcfi
+      | [Hmcf: RsDownConflicts oidx _ ?msgs,
+               Hfmp: FirstMPI ?msgs (?down, ?msg),
+                     Hmt: msg_type ?msg = MRs,
+                          Hinm: InMPI ?msgs (?rqu, ?rmsg) |- _] =>
+        apply FirstMP_InMP in Hfmp;
+        specialize (Hmcf (down, msg) eq_refl
+                         ltac:(simpl; rewrite Hmt; reflexivity)
+                                Hfmp);
+        let Hrqu := fresh "H" in
+        destruct Hmcf as [_ [Hrqu _]];
+        eapply Hrqu with (rqUp:= (rqu, rmsg));
+        try eassumption; try reflexivity
       end.
 
   Lemma simMesi_sim:
@@ -1061,6 +1171,9 @@ Section Sim.
           left; auto.
         }
 
+        assert (NoRqI oidx msgs)
+          by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
+
         solve_sim_mesi.
 
       + (* [l1GetSRsDownDownE] *)
@@ -1087,9 +1200,11 @@ Section Sim.
           left; auto.
         }
 
+        assert (NoRqI oidx msgs)
+          by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
         solve_sim_mesi.
 
-      + (* [downSImm] *)
+      + (* [l1DownSImm] *)
         disc_rule_conds_ex.
         spec_case_silent.
         assert (NoRsI oidx msgs)
@@ -1119,7 +1234,9 @@ Section Sim.
             { simpl; solve_mesi. }
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
-                [|intro; dest_in; inv H21; eapply l1ExtOf_not_eq; eauto].
+                [|intro; dest_in;
+                  [inv H21; eapply l1ExtOf_not_eq; eauto
+                  |inv H12; eapply l1ExtOf_not_eq; eauto]].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1141,7 +1258,9 @@ Section Sim.
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
-              [|intro; dest_in; inv H27; eapply l1ExtOf_not_eq; eauto].
+              [|intro; dest_in;
+                [inv H27; eapply l1ExtOf_not_eq; eauto
+                |inv H21; eapply l1ExtOf_not_eq; eauto]].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1168,7 +1287,9 @@ Section Sim.
             { simpl; solve_mesi. }
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
-                [|intro; dest_in; inv H21; eapply l1ExtOf_not_eq; eauto].
+                [|intro; dest_in;
+                  [inv H21; eapply l1ExtOf_not_eq; eauto
+                  |inv H12; eapply l1ExtOf_not_eq; eauto]].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1190,7 +1311,9 @@ Section Sim.
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
-              [|intro; dest_in; inv H27; eapply l1ExtOf_not_eq; eauto].
+              [|intro; dest_in;
+                [inv H27; eapply l1ExtOf_not_eq; eauto
+                |inv H21; eapply l1ExtOf_not_eq; eauto]].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1240,7 +1363,9 @@ Section Sim.
             { simpl; solve_mesi. }
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
-                [|intro; dest_in; inv H33; eapply l1ExtOf_not_eq; eauto].
+                [|intro; dest_in;
+                  [inv H33; eapply l1ExtOf_not_eq; eauto
+                  |inv H32; eapply l1ExtOf_not_eq; eauto]].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1260,7 +1385,9 @@ Section Sim.
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
-              [|intro; dest_in; inv H34; eapply l1ExtOf_not_eq; eauto].
+              [|intro; dest_in;
+                [inv H34; eapply l1ExtOf_not_eq; eauto
+                |inv H33; eapply l1ExtOf_not_eq; eauto]].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1268,14 +1395,17 @@ Section Sim.
       + (* [l1DownIImm] *)
         disc_rule_conds_ex.
         spec_case_silent.
+        assert (NoRsI oidx msgs)
+          by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
+        disc_rule_conds_ex.
         solve_sim_mesi.
-        
-      + (* [putRqUpUp] *)
+
+      + (* [l1InvRqUpUp] *)
         disc_rule_conds_ex.
         spec_case_silent.
         solve_sim_mesi.
         
-      + (* [putRqUpUpM] *)
+      + (* [l1InvRqUpUpM] *)
         disc_rule_conds_ex.
         spec_case_silent.
         assert (NoRsI oidx msgs)
@@ -1287,6 +1417,16 @@ Section Sim.
         do 2 red; cbv [map cohMsgs]; solve_caseDec.
         intros; apply H19; auto.
         solve_mesi.
+
+      + (* [l1InvRsDownDown] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+
+        (** TODO: automate below various dischargers *)
+        progress (good_footprint_get oidx).
+        repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
+        disc_rule_conds_ex.
+        solve_sim_mesi.
         
   Admitted.
   

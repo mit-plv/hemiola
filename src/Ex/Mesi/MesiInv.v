@@ -32,21 +32,25 @@ Definition MsgsP (spl: list (MSig * (Id Msg -> Prop))) (msgs: MessagePool Msg) :
 Definition MsgsNotExist (sigs: list MSig) (msgs: MessagePool Msg) :=
   MsgsP (map (fun sig => (sig, fun _ => False)) sigs) msgs.
 
-Section ObjUnit.
+Section CoherenceUnit.
   Variables (oidx: IdxT)
             (orq: ORq Msg)
             (ost: OState)
             (msgs: MessagePool Msg).
 
   Definition NoRsI :=
-    MsgsNotExist [(downTo oidx, (MRs, mesiRsI))] msgs.
+    MsgsNotExist [(downTo oidx, (MRs, mesiInvRs));
+                    (downTo oidx, (MRs, mesiPushRs))] msgs.
+
+  Definition NoRqI :=
+    MsgsNotExist [(rqUpFrom oidx, (MRq, mesiInvRq));
+                    (rqUpFrom oidx, (MRq, mesiPushRq))] msgs.
 
   Definition ImplOStateMESI (cv: nat): Prop :=
-    mesiS <= ost#[implStatusIdx] -> NoRsI ->
-    ost#[implValueIdx] = cv.
+    mesiS <= ost#[status] -> NoRsI -> ost#[val] = cv.
 
   Definition ObjExcl0 :=
-    mesiE <= ost#[implStatusIdx] /\ NoRsI.
+    mesiE <= ost#[status] /\ NoRsI.
 
   Definition ObjExcl :=
     ObjExcl0 \/
@@ -59,23 +63,31 @@ Section ObjUnit.
                     (rsUpFrom oidx, (MRs, mesiDownRsS))] msgs.
 
   Definition ObjInvalid0 :=
-    ost#[implStatusIdx] = mesiI /\ NoCohMsgs.
+    ost#[status] = mesiI /\ NoCohMsgs.
 
   Definition ObjInvalid :=
     ObjInvalid0 \/
-    MsgExistsSig (downTo oidx, (MRs, mesiRsI)) msgs.
+    MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs \/
+    MsgExistsSig (downTo oidx, (MRs, mesiPushRs)) msgs.
 
-  Definition CohRqI :=
-    ost#[implStatusIdx] = mesiM ->
+  Definition CohInvRq :=
+    mesiM <= ost#[status] ->
     forall idm,
       InMPI msgs idm ->
-      sigOf idm = (rqUpFrom oidx, (MRq, mesiRqI)) ->
-      msg_value (valOf idm) = ost#[implValueIdx].
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiInvRq)) ->
+      msg_value (valOf idm) = ost#[val].
+
+  Definition CohPushRq :=
+    mesiS <= ost#[status] ->
+    forall idm,
+      InMPI msgs idm ->
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiPushRq)) ->
+      msg_value (valOf idm) = ost#[val].
 
   Section Facts.
 
-    Lemma NoRsI_MsgExistsSig_false:
-      MsgExistsSig (downTo oidx, (MRs, mesiRsI)) msgs ->
+    Lemma NoRsI_MsgExistsSig_InvRs_false:
+      MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs ->
       NoRsI -> False.
     Proof.
       intros.
@@ -87,9 +99,22 @@ Section ObjUnit.
       find_if_inside; auto.
     Qed.
 
+    Lemma NoRsI_MsgExistsSig_PushRs_false:
+      MsgExistsSig (downTo oidx, (MRs, mesiPushRs)) msgs ->
+      NoRsI -> False.
+    Proof.
+      intros.
+      destruct H as [idm [? ?]].
+      specialize (H0 _ H).
+      unfold MsgP in H0.
+      rewrite H1 in H0.
+      unfold map, caseDec in H0.
+      do 2 (find_if_inside; auto).
+    Qed.
+
   End Facts.
 
-End ObjUnit.
+End CoherenceUnit.
 
 Section MsgConflicts.
 
@@ -236,12 +261,12 @@ Qed.
 
 Definition InvObjExcl0 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   ObjExcl0 oidx ost msgs ->
-  NoCohMsgs oidx msgs /\ CohRqI oidx ost msgs.
+  NoCohMsgs oidx msgs /\ CohInvRq oidx ost msgs /\ CohPushRq oidx ost msgs.
 
 Definition InvObjExcl1 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   (MsgExistsSig (downTo oidx, (MRs, mesiRsE)) msgs \/
    MsgExistsSig (downTo oidx, (MRs, mesiRsM)) msgs) ->
-  ost#[implStatusIdx] = mesiI.
+  ost#[status] = mesiI.
 
 Definition InvExcl (st: MState): Prop :=
   forall eidx,
@@ -502,7 +527,7 @@ Section Facts.
       bst_msgs st = msgs ->
       (bst_oss st)@[eidx] = Some eost ->
       NoRsI eidx msgs ->
-      mesiE <= eost#[implStatusIdx] ->
+      mesiE <= eost#[status] ->
       forall oidx ost,
         oidx <> eidx ->
         (bst_oss st)@[oidx] = Some ost ->
@@ -520,18 +545,20 @@ Section Facts.
     forall st (He: InvExcl st) eidx eost,
       (bst_oss st)@[eidx] = Some eost ->
       NoRsI eidx (bst_msgs st) ->
-      mesiE <= eost#[implStatusIdx] ->
+      mesiE <= eost#[status] ->
       forall oidx ost,
         oidx <> eidx ->
         (bst_oss st)@[oidx] = Some ost ->
         NoRsI oidx (bst_msgs st) ->
-        ost#[implStatusIdx] = mesiI.
+        ost#[status] = mesiI.
   Proof.
     intros.
     eapply InvExcl_excl_invalid in H1; eauto.
     destruct H1.
     - apply H1.
-    - exfalso; eapply NoRsI_MsgExistsSig_false; eauto.
+    - destruct H1.
+      + exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
+      + exfalso; eapply NoRsI_MsgExistsSig_PushRs_false; eauto.
   Qed.
   
 End Facts.

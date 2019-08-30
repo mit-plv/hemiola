@@ -149,20 +149,16 @@ Section Template.
                               removeRq st.(orq) upRq,
                               [(rsbTo, rsMsg (snd nst))] }}))).
 
-  Definition rsDownDownRuleS (rqId: IdxT)
-             (prec: OPrec)
+  Definition rsDownDownRuleS (prec: OPrec)
              (trs: OState ->
                    Msg (* an incoming message *) ->
-                   Msg (* the original request *) ->
                    OState) :=
     rule[ridx]
     :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\
-               UpLockMsgId MRq rqId /\ UpLockBackNone /\
-               RsAccepting /\ DownLockFree /\ prec)
+               UpLockBackNone /\ RsAccepting /\ DownLockFree /\ prec)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      rq <-- getUpLockMsg st.(orq);
-                      nst ::= trs st.(ost) msg rq;
+                      nst ::= trs st.(ost) msg;
                     return {{ nst, removeRq st.(orq) upRq, nil }}))).
 
   Definition rsUpDownRule (rqId: IdxT)
@@ -259,8 +255,8 @@ Notation "'rule.rqdd' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':
 
 Notation "'rule.rsdd' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsDownDownRule RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
-Notation "'rule.rsd' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsDownDownRuleS RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
+Notation "'rule.rsd' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
+  (rsDownDownRuleS RIDX MSGID PREC%prec TRS%trs) (at level 5).
 Notation "'rule.rsud' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsUpDownRule RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
 Notation "'rule.rsuu' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
@@ -418,8 +414,8 @@ Section Facts.
   Qed.
 
   Lemma rsDownDownRuleS_RsBackRule:
-    forall ridx msgId rqId prec trs,
-      RsBackRule (rsDownDownRuleS ridx msgId rqId prec trs).
+    forall ridx msgId prec trs,
+      RsBackRule (rsDownDownRuleS ridx msgId prec trs).
   Proof.
     unfold rsDownDownRuleS; intros; split.
     - left; repeat red; repeat ssplit; solve_rule_conds_ex.

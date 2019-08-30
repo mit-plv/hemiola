@@ -18,8 +18,10 @@ Definition mesiRsM: IdxT := 1~>3.
 Definition mesiDownRqI: IdxT := 1~>4.
 Definition mesiDownRsI: IdxT := 1~>5.
 
-Definition mesiRqI: IdxT := 2~>2.
-Definition mesiRsI: IdxT := 2~>3.
+Definition mesiPushRq: IdxT := 2~>2.
+Definition mesiPushRs: IdxT := 2~>3.
+Definition mesiInvRq: IdxT := 2~>4.
+Definition mesiInvRs: IdxT := 2~>5.
 
 (** Cache Status *)
 
