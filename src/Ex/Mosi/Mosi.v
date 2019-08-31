@@ -522,9 +522,8 @@ Section System.
       Definition putRsDownDown: Rule :=
         rule.rsd[2~>2]
         :accepts mosiRsI
-        :holding mosiRqI
         :requires ⊤
-        :transition (!|ost, _, _| --> ost +#[implStatusIdx <- mosiI]).
+        :transition (!|ost, _| --> ost +#[implStatusIdx <- mosiI]).
 
       Definition liPutImmI: Rule :=
         rule.immd[2~>3~~cidx]

@@ -188,5 +188,5 @@ Section System.
   
 End System.
 
-Hint Resolve mesi_GoodORqsInit mesi_RqRsSys.
+Hint Resolve mesi_GoodORqsInit mesi_WfDTree mesi_RqRsSys.
 
