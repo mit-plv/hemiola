@@ -1249,7 +1249,6 @@ Section Sim.
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
           derive_child_idx_in.
-          
           (** TODO: need an invariant that if [E <= dir_st] then [dir_excl] is
            * always one of its children.
            *)
@@ -1257,11 +1256,17 @@ Section Sim.
         }
 
         { (* [liGetSRqUpDownS] *)
+          (** TODO: need an invariant that if [dir_st = S] then [dir_sharers] is
+           * always part of its children.
+           *)
           admit.
         }
 
         { (* [liGetMImm] *)
-          admit.
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
         }
 
         { (* [liGetMRqUpUp] *)
@@ -1286,7 +1291,14 @@ Section Sim.
           solve_sim_mesi.
         }
 
-        { (* [liInvImmS] *)
+        { (* [liInvImmS0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmS1] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
           derive_child_idx_in.
@@ -1297,9 +1309,10 @@ Section Sim.
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
           derive_child_idx_in.
-          assert (NoRqI oidx msgs) by admit.
-          (* by (solve_NoRqI_base; solve_NoRqI_by_no_lock oidx). *)
-
+          assert (NoRqI oidx msgs).
+          { solve_NoRqI_base.
+            all:admit.
+          }
           (** TODO: need an invariant any object of summary status E has a
            * coherent (clean) data.
            *)

@@ -103,6 +103,12 @@ Section System.
          dir_excl := dir.(dir_excl);
          dir_sharers := removeOnce idx_dec oidx dir.(dir_sharers) |}.
 
+    Definition LastSharer (dir: DirT) (cidx: IdxT) :=
+      dir.(dir_sharers) = [cidx].
+
+    Definition NotLastSharer (dir: DirT) :=
+      2 <= List.length dir.(dir_sharers).
+
   End Directory.
 
   Instance ImplOStateIfc: OStateIfc :=
@@ -434,6 +440,7 @@ Section System.
                             {| miv_id := mesiRsS;
                                miv_value := msg_value msg |}))).
 
+      (** * FIXME: need to separate when st = E and st = M? Do we need the case when st = S? *)
       Definition liDownSImm: Rule :=
         rule.immu[0~>5]
         :accepts mesiDownRqS
@@ -710,16 +717,32 @@ Section System.
         :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiI)
         :transition
            (!|ost, _| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
-      
-      Definition liInvImmS: Rule :=
-        rule.immd[2~>7~~cidx]
+
+      Definition liInvImmS0: Rule :=
+        rule.immd[2~>7~>0~~cidx]
         :accepts mesiInvRq
         :from cidx
-        :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiS)
+        :requires
+           (fun ost orq mins =>
+              and (getDir cidx ost#[dir] = mesiS)
+                  (LastSharer ost#[dir] cidx))
+        :transition
+           (!|ost, _| --> (ost +#[dir <- setDirI],
+                           {| miv_id := mesiInvRs; miv_value := O |})).
+
+      Definition liInvImmS1: Rule :=
+        rule.immd[2~>7~>1~~cidx]
+        :accepts mesiInvRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              and (getDir cidx ost#[dir] = mesiS)
+                  (NotLastSharer ost#[dir]))
         :transition
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            {| miv_id := mesiInvRs; miv_value := O |})).
 
+      (** * FIXME: how to distinguish whether to write back or not? *)
       Definition liInvImmE: Rule :=
         rule.immd[2~>8~~cidx]
         :accepts mesiInvRq
@@ -794,7 +817,7 @@ Section System.
          liGetSRqUpDownME oidx cidx; liGetSRqUpDownS oidx cidx;
            liGetMImm cidx; liGetMRqUpUp oidx cidx;
              liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
-               liInvImmI cidx; liInvImmS cidx; liInvImmE cidx; liInvImmM cidx;
+               liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx; liInvImmM cidx;
                  liPushImmESI cidx; liPushImmM cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
@@ -837,7 +860,7 @@ Section System.
       [liGetSImmS cidx; liGetSImmME cidx;
          liGetSRqUpDownME oidx cidx; liGetMImm cidx;
              liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
-               liInvImmI cidx; liInvImmS cidx; liInvImmE cidx; liInvImmM cidx;
+               liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx; liInvImmM cidx;
                  liPushImmESI cidx; liPushImmM cidx].
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
@@ -895,5 +918,6 @@ Hint Unfold liGetSImmS liGetSImmME liGetSRqUpUp liGetSRsDownDownS liGetSRsDownDo
      liDownIRsUpDownDirS liGetMRqUpDownME liGetMRqUpDownS liDownIRsUpDown
      liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRsUpUp
      liInvRqUpUp liInvRqUpUpM liInvRsDownDown liPushRqUpUp liPushRqUpUpM liPushRsDownDown
-     liInvImmI liInvImmS liInvImmE liInvImmM liPushImmESI liPushImmM: MesiRules.
+     liInvImmI liInvImmS0 liInvImmS1 liInvImmE liInvImmM
+     liPushImmESI liPushImmM: MesiRules.
 
