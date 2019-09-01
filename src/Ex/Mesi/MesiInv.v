@@ -43,8 +43,8 @@ Section CoherenceUnit.
                     (downTo oidx, (MRs, mesiPushRs))] msgs.
 
   Definition NoRqI :=
-    MsgsNotExist [(rqUpFrom oidx, (MRq, mesiInvRq));
-                    (rqUpFrom oidx, (MRq, mesiPushRq))] msgs.
+    MsgsNotExist [(rqUpFrom oidx, (MRq, mesiInvWRq));
+                    (rqUpFrom oidx, (MRq, mesiPushWRq))] msgs.
 
   Definition ImplOStateMESI (cv: nat): Prop :=
     mesiS <= ost#[status] -> NoRsI -> ost#[val] = cv.
@@ -74,14 +74,14 @@ Section CoherenceUnit.
     mesiM <= ost#[status] ->
     forall idm,
       InMPI msgs idm ->
-      sigOf idm = (rqUpFrom oidx, (MRq, mesiInvRq)) ->
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
       msg_value (valOf idm) = ost#[val].
 
   Definition CohPushRq :=
     mesiS <= ost#[status] ->
     forall idm,
       InMPI msgs idm ->
-      sigOf idm = (rqUpFrom oidx, (MRq, mesiPushRq)) ->
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiPushWRq)) ->
       msg_value (valOf idm) = ost#[val].
 
   Section Facts.

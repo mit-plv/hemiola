@@ -347,9 +347,9 @@ Section Sim.
       (| (downTo cidx, (MRs, mesiRsS)): fun idm => (valOf idm).(msg_value) = cv
        | (downTo cidx, (MRs, mesiRsE)): fun idm => (valOf idm).(msg_value) = cv
        | (rsUpFrom cidx, (MRs, mesiDownRsS)): fun idm => (valOf idm).(msg_value) = cv
-       | (rqUpFrom cidx, (MRq, mesiInvRq)):
+       | (rqUpFrom cidx, (MRq, mesiInvWRq)):
            fun idm => mesiM <= cost#[status] -> (valOf idm).(msg_value) = cv
-       | (rqUpFrom cidx, (MRq, mesiPushRq)):
+       | (rqUpFrom cidx, (MRq, mesiPushWRq)):
            fun idm => mesiS <= cost#[status] -> (valOf idm).(msg_value) = cv)%cases.
 
     Definition MsgCoh := MsgP cohMsgs.
@@ -458,7 +458,7 @@ Section Sim.
       forall cv cidx cost msgs,
         MsgsCoh cv cidx cost msgs ->
         forall midx msg,
-          msg_id msg = mesiInvRq ->
+          msg_id msg = mesiInvWRq ->
           cost#[status] < mesiM ->
           MsgsCoh cv cidx cost (enqMP midx msg msgs).
     Proof.
@@ -503,7 +503,7 @@ Section Sim.
       forall cv cidx cost msgs,
         MsgsCoh cv cidx cost msgs ->
         forall midx msg,
-          ~ In (msg_id msg) [mesiRsS; mesiRsE; mesiDownRsS; mesiInvRq; mesiPushRq] ->
+          ~ In (msg_id msg) [mesiRsS; mesiRsE; mesiDownRsS; mesiInvWRq; mesiPushWRq] ->
           MsgsCoh cv cidx cost (enqMP midx msg msgs).
     Proof.
       intros; apply MsgsP_other_msg_id_enqMP; auto.
@@ -514,7 +514,7 @@ Section Sim.
         MsgsCoh cv cidx cost msgs ->
         forall eins,
           DisjList (map (fun idm => msg_id (valOf idm)) eins)
-                   [mesiRsS; mesiRsE; mesiDownRsS; mesiInvRq; mesiPushRq] ->
+                   [mesiRsS; mesiRsE; mesiDownRsS; mesiInvWRq; mesiPushWRq] ->
           MsgsCoh cv cidx cost (enqMsgs eins msgs).
     Proof.
       intros; apply MsgsP_other_msg_id_enqMsgs; auto.

@@ -36,6 +36,18 @@ Local Open Scope fmap.
  *   inclusive, then we do not need such a summary status, since evicting a 
  *   cache line always requires back invalidation of its children. It implies
  *   the eviction always makes the summary status invalid (I).
+ *
+ * - A further remark about writeback: there can be 4 (= 2*2) writeback types,
+ *   based on whether 1) it is an invaliation or not and 2) it writes the dirty
+ *   data back. (1) happens when a cache has data and its directory status is I.
+ *   (2) happens when a cache has dirty data.
+ *     Note that both a child and the parent should be able to distinguish these
+ *   four writeback types so they can do state transitions appropriately.
+ *     For example, let's say an L1 cache previously had the E status and 
+ *   silently changed its status to M to make the cache line dirty. When this line
+ *   is evicted, the parent (L2) has no idea whether it needs to update the line.
+ *   In this case the child (L1) should send the dirty data with an appropriate
+ *   message id, in order for the parent to recognize the update is required.
  *)
 
 Section System.
@@ -158,11 +170,6 @@ Section System.
 
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
-
-  (* Definition summaryOf (ost: OState): MESI := *)
-  (*   if Compare_dec.le_gt_dec mesiS ost#[status] *)
-  (*   then ost#[status] *)
-  (*   else ost#[dir].(dir_st). *)
 
   Section Rules.
     Variables (oidx cidx: IdxT).
@@ -303,7 +310,7 @@ Section System.
         :me oidx
         :requires (fun ost mins => ost#[status] <= mesiM)
         :transition
-           (ost --> {| miv_id := mesiInvRq;
+           (ost --> {| miv_id := mesiInvWRq;
                        miv_value := ost#[val] |}).
 
       Definition l1InvRsDownDown: Rule :=
@@ -440,15 +447,16 @@ Section System.
                             {| miv_id := mesiRsS;
                                miv_value := msg_value msg |}))).
 
-      (** * FIXME: need to separate when st = E and st = M? Do we need the case when st = S? *)
+      (** NOTE: data should be sent along with [mesiDownRsS], even when the status 
+       * is S or E, since the parent might not have the up-to-date data (e.g., 
+       * when the line is evicted).
+       *)
       Definition liDownSImm: Rule :=
         rule.immu[0~>5]
         :accepts mesiDownRqS
         :me oidx
         :requires
-           (fun ost orq mins =>
-              and (mesiS <= ost#[status])
-                  (ost#[dir].(dir_st) = mesiI))
+           (fun ost orq mins => mesiS <= ost#[status])
         :transition
            (!|ost, min| --> (ost +#[summary <- mesiS]
                                  +#[status <- mesiS],
@@ -669,7 +677,7 @@ Section System.
               and (ost#[status] <= mesiM)
                   (ost#[dir].(dir_st) = mesiI))
         :transition
-           (ost --> {| miv_id := mesiInvRq;
+           (ost --> {| miv_id := mesiInvWRq;
                        miv_value := ost#[val] |}).
 
       Definition liInvRsDownDown: Rule :=
@@ -698,7 +706,7 @@ Section System.
               (and (ost#[summary] = mesiM) (ost#[status] = mesiS)) \/
               (ost#[summary] <= mesiE))
         :transition
-           (ost --> {| miv_id := mesiPushRq;
+           (ost --> {| miv_id := mesiPushWRq;
                        miv_value := ost#[val] |}).
 
       (** NOTE: no summary change; this is the case where the cache is just
@@ -706,7 +714,7 @@ Section System.
        *)
       Definition liPushRsDownDown: Rule :=
         rule.rsd[2~>5]
-        :accepts mesiInvRs
+        :accepts mesiPushRs
         :requires ⊤
         :transition (!|ost, _| --> (ost +#[status <- mesiI])).
 
@@ -742,7 +750,6 @@ Section System.
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            {| miv_id := mesiInvRs; miv_value := O |})).
 
-      (** * FIXME: how to distinguish whether to write back or not? *)
       Definition liInvImmE: Rule :=
         rule.immd[2~>8~~cidx]
         :accepts mesiInvRq
@@ -755,7 +762,7 @@ Section System.
 
       Definition liInvImmM: Rule :=
         rule.immd[2~>9~~cidx]
-        :accepts mesiInvRq
+        :accepts mesiInvWRq
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiM)
         :transition
