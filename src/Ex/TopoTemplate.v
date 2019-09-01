@@ -1522,6 +1522,15 @@ Section Facts.
   Proof.
   Admitted.
 
+  Lemma tree2Topo_li_child_li_l1:
+    forall tr bidx oidx cidx,
+      In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
+      In cidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))).
+  Proof.
+  Admitted.
+
 End Facts.
 
 Ltac solve_inds_NoDup_prefix :=

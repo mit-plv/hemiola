@@ -876,8 +876,9 @@ Section Sim.
         rewrite Forall_forall in Hf;
         pose proof (Hf _ (in_or_app _ _ _ (or_intror Hin)))
       (* rewrite a coherent value *)
-      | [H: fst ?ost = fst _ |- context[fst ?ost] ] =>
-        rewrite H in *
+      | [H: fst ?ost = fst _ |- context[fst ?ost] ] => rewrite H in *
+      (* rewrite inputs/outputs message ids *)
+      | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H
       end.
   
   (*! To solve [SimMESI] *)
@@ -905,14 +906,14 @@ Section Sim.
       | [H: downTo _ = downTo _ |- _] => inv H
       | [H: ?oidx = l1ExtOf ?oidx |- _] =>
         exfalso; eapply l1ExtOf_not_eq; eauto
-      | [H: parentIdxOf _ ?idx = Some ?idx |- _] =>
-        exfalso; eapply parentIdxOf_not_eq; eauto
+      | [H:parentIdxOf _ ?oidx = Some ?oidx |- _] =>
+        exfalso; eapply parentIdxOf_not_eq with (idx:= oidx) (pidx:= oidx); eauto
       end; auto.
 
   Ltac disc_MsgsP H :=
     repeat
       (first [apply MsgsP_enqMP_inv in H
-             |apply MsgsP_other_midx_deqMP_inv in H; [|solve_chn_not_in]
+             |apply MsgsP_other_midx_deqMP_inv in H; [|solve_chn_not_in; fail]
              |eapply MsgsP_other_msg_id_deqMP_inv in H;
               [|eassumption
                |unfold valOf, snd;
@@ -977,6 +978,11 @@ Section Sim.
                 Hin: In oidx (c_l1_indices _),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
+        simpl in Hmcfi
+      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+                Hin: In oidx (tl (c_li_indices _)),
+                     Horq: ?orqs@[oidx] = Some _ |- _] =>
+        specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))) Horq);
         simpl in Hmcfi
       | [Hmcf: RsDownConflicts oidx _ ?msgs,
                Hinm: InMPI ?msgs (?midx, ?msg),
@@ -1086,6 +1092,16 @@ Section Sim.
           apply tree2Topo_l1_child_ext in H2; [|assumption]; subst
         end.
 
+  Ltac derive_child_idx_in :=
+    match goal with
+    | [Hin: In ?oidx (c_li_indices _), Hp: parentIdxOf _ ?cidx = Some ?oidx
+       |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _] ] =>
+      pose proof (tree2Topo_li_child_li_l1 _ _ _ Hin Hp)
+    | [Hin: In ?oidx (tl (c_li_indices _)), Hp: parentIdxOf _ ?cidx = Some ?oidx
+       |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _] ] =>
+      pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ Hin) Hp)
+    end.
+
   Ltac derive_input_msg_coherent :=
     match goal with
     | [Hcoh: MsgsCoh ?cv _ _ _, Hfmp: FirstMPI _ (_, ?cmsg) |- _] =>
@@ -1094,7 +1110,15 @@ Section Sim.
         as Ha by (disc_MsgsCoh_by_FirstMP Hcoh Hfmp; assumption);
       rewrite Ha in *
     end.
-  
+
+  Ltac derive_obj_coherent oidx :=
+    match goal with
+    | [Hcoh: _ -> _ -> fst ?ost = ?cv, Host: ?oss@[oidx] = Some ?ost |- _] =>
+      let Ha := fresh "H" in
+      assert (fst ost = cv) as Ha by (apply Hcoh; auto; solve_mesi);
+      rewrite Ha in *
+    end.
+
   Lemma simMesi_sim:
     InvSim step_m step_m ImplInvEx SimMESI impl spec.
   Proof.
@@ -1183,37 +1207,150 @@ Section Sim.
       (** Do case analysis per a rule. *)
       apply in_app_or in H5; destruct H5.
       1: { (** Rules per a child *)
-        admit.
+        apply concat_In in H5; destruct H5 as [crls [? ?]].
+        apply in_map_iff in H5; destruct H5 as [cidx [? ?]]; subst.
+
+        (** 3) The child has the parent. *)
+        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
+
+        dest_in.
+
+        { (* [liGetSImmS] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          assert (NoRsI oidx msgs)
+            by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          derive_obj_coherent oidx.
+          solve_sim_mesi.
+          destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
+        }
+        
+        { (* [liGetSImmME] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          assert (NoRsI oidx msgs)
+            by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          derive_obj_coherent oidx.
+          solve_sim_mesi.
+          destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
+        }
+        
+        { (* [liGetSRqUpUp] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liGetSRqUpDownME] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          
+          (** TODO: need an invariant that if [E <= dir_st] then [dir_excl] is
+           * always one of its children.
+           *)
+          admit.
+        }
+
+        { (* [liGetSRqUpDownS] *)
+          admit.
+        }
+
+        { (* [liGetMImm] *)
+          admit.
+        }
+
+        { (* [liGetMRqUpUp] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liGetMRqUpDownME] *)
+          admit.
+        }
+
+        { (* [liGetMRqUpDownS] *)
+          admit.
+        }
+
+        { (* [liInvImmI] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmS] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmE] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          assert (NoRqI oidx msgs) by admit.
+          (* by (solve_NoRqI_base; solve_NoRqI_by_no_lock oidx). *)
+
+          (** TODO: need an invariant any object of summary status E has a
+           * coherent (clean) data.
+           *)
+          solve_sim_mesi.
+          admit.
+        }
+
+        { (* [liInvImmM] *)
+          admit.
+        }
+
+        { (* [liPushImmESI] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+          
+        { (* [liPushImmM] *)
+          admit.
+        }
       }
       dest_in.
 
-      1: { (** WIP sample proof *)
-        (* [liGetSRsDownDownS] *)
+      { (* [liGetSRsDownDownS] *)
         disc_rule_conds_ex; spec_case_silent.
 
         derive_footprint_info_basis oidx.
         derive_child_chns.
+        derive_child_idx_in.
         derive_input_msg_coherent.
         disc_rule_conds_ex.
         assert (NoRqI oidx msgs)
           by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
-        
-        solve_sim_mesi_ext_mp.
-        2: {
-          (** * TODO: need a lemma for below. *)
-          assert (In cidx (c_li_indices cifc ++ c_l1_indices cifc)).
-          { admit. }
-          solve_sim_ext_mp.
-        }
 
-        solve_SpecStateCoh.
-        case_ImplStateCoh_li_me_others.
-        { solve_ImplStateCoh_li_me. }
-        { solve_ImplStateCoh_li_others.
-          destruct (idx_dec lidx cidx); subst.
-          { solve_MsgsCoh. }
-          { solve_MsgsCoh. }
-        }
+        solve_sim_mesi.
+        destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
+      }
+
+      { (* [liGetSRsDownDownE] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx.
+        derive_child_chns.
+        derive_child_idx_in.
+        derive_input_msg_coherent.
+        disc_rule_conds_ex.
+        assert (NoRqI oidx msgs)
+          by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
+
+        solve_sim_mesi.
+        destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
       }
 
       all: admit.
