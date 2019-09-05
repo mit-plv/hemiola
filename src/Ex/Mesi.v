@@ -20,16 +20,16 @@ Definition mesiDownRsI: IdxT := 1~>5.
 
 Definition mesiPushRq: IdxT := 2~>2.
 Definition mesiPushWRq: IdxT := 2~>3.
-Definition mesiPushRs: IdxT := 2~>4.
-Definition mesiInvRq: IdxT := 2~>5.
-Definition mesiInvWRq: IdxT := 2~>6.
-Definition mesiInvRs: IdxT := 2~>7.
+Definition mesiInvRq: IdxT := 2~>4.
+Definition mesiInvWRq: IdxT := 2~>5.
+Definition mesiInvRs: IdxT := 2~>6.
 
 (** Cache Status *)
 
 Notation MESI := nat (only parsing).
-Definition mesiM: MESI := 3.
-Definition mesiE: MESI := 2.
-Definition mesiS: MESI := 1.
-Definition mesiI: MESI := 0.
+Definition mesiM: MESI := 4.
+Definition mesiE: MESI := 3.
+Definition mesiS: MESI := 2.
+Definition mesiI: MESI := 1.
+Definition mesiNP: MESI := 0. (* Not Present *)
 

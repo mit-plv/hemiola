@@ -16,7 +16,7 @@ Local Open Scope hvec.
 Local Open Scope fmap.
 
 Ltac solve_mesi :=
-  unfold mesiM, mesiE, mesiS, mesiI in *; lia.
+  unfold mesiM, mesiE, mesiS, mesiI, mesiNP in *; lia.
 
 (** TODO: refactor; will be used by MOSI as well. *)
 Lemma tree2Topo_internal_chns_not_exts:
@@ -380,51 +380,25 @@ Section Sim.
 
       - split.
         + red; intros.
-          destruct H.
-          * exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
-          * exfalso; eapply NoRsI_MsgExistsSig_PushRs_false; eauto.
-        + destruct H.
-          * destruct H as [idm [? ?]].
-            red; intros.
-            specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
-                                        ltac:(rewrite H0; reflexivity) H); dest.
-            red; intros.
-            red; unfold cohMsgs, map, caseDec, fst.
-            repeat find_if_inside; [..|auto].
-            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
-              destruct idm as [midx msg], idm0 as [midx0 msg0].
-              simpl in *; inv H0; inv e.
-              intro; subst; rewrite H10 in H11; discriminate.
-            }
-            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
-              destruct idm as [midx msg], idm0 as [midx0 msg0].
-              simpl in *; inv H0; inv e.
-              intro; subst; rewrite H10 in H11; discriminate.
-            }
-            { exfalso; eapply H5; try rewrite e; eauto. }
-            { exfalso; eapply H2; try rewrite e; eauto. }
-            { exfalso; eapply H2; try rewrite e; eauto. }
-
-          * destruct H as [idm [? ?]].
-            red; intros.
-            specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
-                                        ltac:(rewrite H0; reflexivity) H); dest.
-            red; intros.
-            red; unfold cohMsgs, map, caseDec, fst.
-            repeat find_if_inside; [..|auto].
-            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
-              destruct idm as [midx msg], idm0 as [midx0 msg0].
-              simpl in *; inv H0; inv e.
-              intro; subst; rewrite H10 in H11; discriminate.
-            }
-            { exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
-              destruct idm as [midx msg], idm0 as [midx0 msg0].
-              simpl in *; inv H0; inv e.
-              intro; subst; rewrite H10 in H11; discriminate.
-            }
-            { exfalso; eapply H5; try rewrite e; eauto. }
-            { exfalso; eapply H2; try rewrite e; eauto. }
-            { exfalso; eapply H2; try rewrite e; eauto. }
+          exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
+        + destruct H as [idm [? ?]].
+          red; intros.
+          specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
+                                      ltac:(rewrite H0; reflexivity) H); dest.
+          red; intros.
+          red; unfold cohMsgs, map, caseDec, fst.
+          repeat find_if_inside; [..|auto].
+          * exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
+            destruct idm as [midx msg], idm0 as [midx0 msg0].
+            simpl in *; inv H0; inv e.
+            intro; subst; rewrite H10 in H11; discriminate.
+          * exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
+            destruct idm as [midx msg], idm0 as [midx0 msg0].
+            simpl in *; inv H0; inv e.
+            intro; subst; rewrite H10 in H11; discriminate.
+          * exfalso; eapply H5; try rewrite e; eauto.
+          * exfalso; eapply H2; try rewrite e; eauto.
+          * exfalso; eapply H2; try rewrite e; eauto.
     Qed.
 
     Lemma ObjExcl0_ObjCoh:
@@ -730,7 +704,7 @@ Section Sim.
   Qed.
 
   Definition ImplInvEx (st: MState) :=
-    InvExcl st.
+    InvExcl st /\ InvExclC st.
 
   Hint Unfold ImplInvEx: RuleConds.
 
@@ -1277,10 +1251,12 @@ Section Sim.
         }
 
         { (* [liGetMRqUpDownME] *)
+          (** TODO: ditto [liGetSRqUpDownME] *)
           admit.
         }
 
         { (* [liGetMRqUpDownS] *)
+          (** TODO: ditto [liGetSRqUpDownS] *)
           admit.
         }
 
@@ -1313,27 +1289,56 @@ Section Sim.
           { solve_NoRqI_base.
             all:admit.
           }
-          (** TODO: need an invariant any object of summary status E has a
-           * coherent (clean) data.
+          (** TODO: need to have an invariant that the sender of [mesiInvRq]
+           * has the E status (and [NoRsI]) so the recipient has the clean data.
            *)
           solve_sim_mesi.
           admit.
         }
 
-        { (* [liInvImmM] *)
-          admit.
-        }
-
-        { (* [liPushImmESI] *)
+        { (* [liInvImmWBI] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
           derive_child_idx_in.
           solve_sim_mesi.
         }
-          
-        { (* [liPushImmM] *)
+
+        { (* [liInvImmWBS0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmWBS1] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmWBME] *)
           admit.
         }
+
+        { (* [liPushImm] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+
+        { (* [liPushImmWB0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in.
+          solve_sim_mesi.
+        }
+        
+        { (* [liPushImmWB1] *)
+          admit.
+        }
+        
       }
       dest_in.
 
@@ -1483,8 +1488,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  [inv H21; eapply l1ExtOf_not_eq; eauto
-                  |inv H12; eapply l1ExtOf_not_eq; eauto]].
+                  inv H23; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1507,8 +1511,7 @@ Section Sim.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                [inv H27; eapply l1ExtOf_not_eq; eauto
-                |inv H21; eapply l1ExtOf_not_eq; eauto]].
+                inv H29; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1536,8 +1539,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  [inv H21; eapply l1ExtOf_not_eq; eauto
-                  |inv H12; eapply l1ExtOf_not_eq; eauto]].
+                  inv H23; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1560,8 +1562,7 @@ Section Sim.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                [inv H27; eapply l1ExtOf_not_eq; eauto
-                |inv H21; eapply l1ExtOf_not_eq; eauto]].
+                inv H29; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1599,8 +1600,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  [inv H33; eapply l1ExtOf_not_eq; eauto
-                  |inv H32; eapply l1ExtOf_not_eq; eauto]].
+                  inv H35; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1610,10 +1610,10 @@ Section Sim.
           mred; simpl.
           assert (exists lost lorq, oss@[lidx] = Some lost /\
                                     orqs@[lidx] = Some lorq).
-          { specialize (H15 _ H23).
+          { specialize (H15 _ H25).
             solve_rule_conds_ex.
           }
-          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H32; simpl.
+          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H34; simpl.
           eapply ObjInvalid_ObjCoh.
           { apply Hnmcf; [assumption|simpl; mred]. }
           { eapply InvExcl_excl_invalid; [eapply H3|..];
@@ -1621,8 +1621,7 @@ Section Sim.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                [inv H34; eapply l1ExtOf_not_eq; eauto
-                |inv H33; eapply l1ExtOf_not_eq; eauto]].
+                inv H36; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1650,7 +1649,7 @@ Section Sim.
 
         apply MsgsCoh_enqMP; [assumption|].
         do 2 red; cbv [map cohMsgs]; solve_caseDec.
-        intros; apply H19; auto.
+        intros; apply H21; auto.
         solve_mesi.
 
       + (* [l1InvRsDownDown] *)

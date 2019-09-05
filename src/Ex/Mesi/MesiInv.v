@@ -39,16 +39,34 @@ Section CoherenceUnit.
             (msgs: MessagePool Msg).
 
   Definition NoRsI :=
-    MsgsNotExist [(downTo oidx, (MRs, mesiInvRs));
-                    (downTo oidx, (MRs, mesiPushRs))] msgs.
+    MsgsNotExist [(downTo oidx, (MRs, mesiInvRs))] msgs.
 
   Definition NoRqI :=
     MsgsNotExist [(rqUpFrom oidx, (MRq, mesiInvWRq));
                     (rqUpFrom oidx, (MRq, mesiPushWRq))] msgs.
 
+  (** 0) Coherence: which values are in a coherent state *)
+
   Definition ImplOStateMESI (cv: nat): Prop :=
     mesiS <= ost#[status] -> NoRsI -> ost#[val] = cv.
 
+  Definition CohInvRq :=
+    mesiM <= ost#[status] ->
+    forall idm,
+      InMPI msgs idm ->
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
+      msg_value (valOf idm) = ost#[val].
+
+  Definition CohPushRq :=
+    mesiS <= ost#[status] ->
+    forall idm,
+      InMPI msgs idm ->
+      sigOf idm = (rqUpFrom oidx, (MRq, mesiPushWRq)) ->
+      msg_value (valOf idm) = ost#[val].
+
+  (** 1) Exclusiveness: if a coherence unit is exclusive, then all other units
+   * are in an invalid status. *)
+  
   Definition ObjExcl0 :=
     mesiE <= ost#[status] /\ NoRsI.
 
@@ -67,22 +85,19 @@ Section CoherenceUnit.
 
   Definition ObjInvalid :=
     ObjInvalid0 \/
-    MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs \/
-    MsgExistsSig (downTo oidx, (MRs, mesiPushRs)) msgs.
+    MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs.
 
-  Definition CohInvRq :=
-    mesiM <= ost#[status] ->
-    forall idm,
-      InMPI msgs idm ->
-      sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
-      msg_value (valOf idm) = ost#[val].
+  (** 2) Clean "E" in MESI: the invariant says that owners have the same clean
+   * data if a bottom cache has E.
+   *)
 
-  Definition CohPushRq :=
-    mesiS <= ost#[status] ->
-    forall idm,
-      InMPI msgs idm ->
-      sigOf idm = (rqUpFrom oidx, (MRq, mesiPushWRq)) ->
-      msg_value (valOf idm) = ost#[val].
+  Definition ObjExclClean :=
+    ost#[status] = mesiE /\ NoRsI.
+
+  Definition ObjStillClean (cv: nat) :=
+    ost#[status] = mesiI ->
+    ost#[dir].(dir_st) = mesiE ->
+    ost#[val] = cv.
 
   Section Facts.
 
@@ -97,19 +112,6 @@ Section CoherenceUnit.
       rewrite H1 in H0.
       unfold map, caseDec in H0.
       find_if_inside; auto.
-    Qed.
-
-    Lemma NoRsI_MsgExistsSig_PushRs_false:
-      MsgExistsSig (downTo oidx, (MRs, mesiPushRs)) msgs ->
-      NoRsI -> False.
-    Proof.
-      intros.
-      destruct H as [idm [? ?]].
-      specialize (H0 _ H).
-      unfold MsgP in H0.
-      rewrite H1 in H0.
-      unfold map, caseDec in H0.
-      do 2 (find_if_inside; auto).
     Qed.
 
   End Facts.
@@ -263,11 +265,6 @@ Definition InvObjExcl0 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   ObjExcl0 oidx ost msgs ->
   NoCohMsgs oidx msgs /\ CohInvRq oidx ost msgs /\ CohPushRq oidx ost msgs.
 
-Definition InvObjExcl1 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
-  (MsgExistsSig (downTo oidx, (MRs, mesiRsE)) msgs \/
-   MsgExistsSig (downTo oidx, (MRs, mesiRsM)) msgs) ->
-  ost#[status] = mesiI.
-
 Definition InvExcl (st: MState): Prop :=
   forall eidx,
     eost <+- (bst_oss st)@[eidx];
@@ -277,6 +274,15 @@ Definition InvExcl (st: MState): Prop :=
           oidx <> eidx ->
           ost <+- (bst_oss st)@[oidx];
             ObjInvalid oidx ost (bst_msgs st))).
+
+Definition InvExclC (st: MState): Prop :=
+  forall eidx,
+    eost <+- (bst_oss st)@[eidx];
+      (ObjExclClean eidx eost (bst_msgs st) ->
+       forall oidx,
+         oidx <> eidx ->
+         ost <+- (bst_oss st)@[oidx];
+           ObjStillClean ost eost#[val]).
 
 Lemma caseDec_head_eq:
   forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
@@ -556,13 +562,10 @@ Section Facts.
     eapply InvExcl_excl_invalid in H1; eauto.
     destruct H1.
     - apply H1.
-    - destruct H1.
-      + exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
-      + exfalso; eapply NoRsI_MsgExistsSig_PushRs_false; eauto.
+    - exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
   Qed.
   
 End Facts.
 
-Hint Unfold MsgsNotExist NoRsI ImplOStateMESI (* ObjExcl0 ObjExcl *)
-     (* NoCohMsgs *) (* CohRqI *) (* ObjInvalid0 ObjInvalid *) (* InvObjExcl0 *): RuleConds.
+Hint Unfold MsgsNotExist NoRsI ImplOStateMESI: RuleConds.
 
