@@ -405,8 +405,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[status] <= mesiI)
-                  (mesiE <= ost#[dir].(dir_st)))
+              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
+                  (and (ost#[status] <= mesiI) (mesiE <= ost#[dir].(dir_st))))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -422,9 +422,10 @@ Section System.
         :from cidx
         :me oidx
         :requires
-           ((fun ost mins =>
-               and (ost#[status] <= mesiI)
-                   (ost#[dir].(dir_st) = mesiS)))
+           (fun ost mins =>
+              and (In (hd ii ost#[dir].(dir_sharers))
+                      (subtreeChildrenIndsOf topo oidx))
+                  (and (ost#[status] <= mesiI) (ost#[dir].(dir_st) = mesiS)))
         :transition
            (!|ost, msg| --> ([hd ii (ost#[dir].(dir_sharers))],
                              {| miv_id := mesiDownRqS;
@@ -577,8 +578,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[status] <= mesiI)
-                  (mesiE <= ost#[dir].(dir_st)))
+              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
+                  (and (ost#[status] <= mesiI) (mesiE <= ost#[dir].(dir_st))))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
@@ -591,8 +592,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[status] <= mesiI)
-                  (ost#[dir].(dir_st) = mesiS))
+              and (SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx))
+                  (and (ost#[status] <= mesiI) (ost#[dir].(dir_st) = mesiS)))
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),
                              {| miv_id := mesiDownRqI;

@@ -142,6 +142,20 @@ Section MsgConflicts.
           fst (sigOf rsUp) = rsUpFrom oidx ->
           InMPI msgs rsUp -> False).
 
+  Definition RqUpConflicts (oidx: IdxT) (orq: ORq Msg) (msgs: MessagePool Msg) :=
+    forall rqUp,
+      fst (sigOf rqUp) = rqUpFrom oidx ->
+      InMPI msgs rqUp ->
+      (orq@[upRq] <> None) /\
+      (forall rrqUp,
+          fst (sigOf rrqUp) = rqUpFrom oidx ->
+          valOf rqUp <> valOf rrqUp ->
+          InMPI msgs rrqUp -> False) /\
+      (forall rsDown,
+          fst (sigOf rsDown) = downTo oidx ->
+          fst (snd (sigOf rsDown)) = MRs ->
+          InMPI msgs rsDown -> False).
+
   Variable (tr: tree) (bidx: IdxT).
   Hypothesis (Htr: tr <> Node nil).
   Let topo := fst (tree2Topo tr bidx).
@@ -155,16 +169,17 @@ Section MsgConflicts.
              (Hoinds: SubList (c_li_indices cifc ++ c_l1_indices cifc)
                               (map (@obj_idx _) (sys_objs sys))).
 
-  Definition RsDownConflictsInv (st: MState) :=
+  Definition MsgConflictsInv (st: MState) :=
     forall oidx orq,
       In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
       (bst_orqs st)@[oidx] = Some orq ->
-      RsDownConflicts oidx orq (bst_msgs st).
+      RsDownConflicts oidx orq (bst_msgs st) /\
+      RqUpConflicts oidx orq (bst_msgs st).
 
-  Lemma tree2Topo_non_root_RsDownConflicts_inv_ok:
-    InvReachable sys step_m RsDownConflictsInv.
+  Lemma tree2Topo_MsgConflicts_inv_ok:
+    InvReachable sys step_m MsgConflictsInv.
   Proof.
-    unfold InvReachable, RsDownConflictsInv; intros.
+    unfold InvReachable, MsgConflictsInv; intros.
 
     unfold cifc in H1.
     rewrite c_li_indices_head_rootOf in H1 by assumption.
@@ -213,7 +228,7 @@ Section MsgConflicts.
     }
     destruct H11 as [pobj [? ?]]; subst.
 
-    red; intros; repeat ssplit; intros.
+    split; red; intros; repeat ssplit; intros.
     - intro Hx.
       eapply upLocked_rsDown_in_false
         with (obj0:= obj) (down:= downTo (obj_idx obj))
@@ -240,6 +255,21 @@ Section MsgConflicts.
              (rsdm:= valOf rsDown) (rsum:= valOf rsUp); eauto.
       + unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
       + unfold sigOf in H15; simpl in H15; red in H16; rewrite H15 in H16; assumption.
+    - intro Hx.
+      eapply upLocked_rqUp_in_false
+        with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj))
+             (rqum:= valOf rqUp); eauto.
+      unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
+    - eapply rqUp_in_rqUp_in_false
+        with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj))
+             (rqum1:= valOf rqUp) (rqum2:= valOf rrqUp); eauto.
+      + unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
+      + unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
+    - eapply rqUp_in_rsDown_in_false
+        with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj)) (rqum:= valOf rqUp)
+             (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto.
+      + unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
+      + unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
   Admitted.
 
 End MsgConflicts.
@@ -248,10 +278,10 @@ End MsgConflicts.
 
 Lemma mesi_RsDownConflicts:
   forall tr (Htr: tr <> Node nil),
-    InvReachable (impl Htr) step_m (RsDownConflictsInv tr 0).
+    InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).
 Proof.
   intros.
-  apply tree2Topo_non_root_RsDownConflicts_inv_ok; auto.
+  apply tree2Topo_MsgConflicts_inv_ok; auto.
   simpl; unfold mem, li, l1.
   rewrite map_app.
   do 2 rewrite map_trans.

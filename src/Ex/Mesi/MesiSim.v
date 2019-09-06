@@ -15,6 +15,15 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
+Ltac solve_DisjList_ex dec :=
+  repeat (rewrite map_trans; simpl);
+  apply (DisjList_spec_1 dec); intros;
+  repeat
+    match goal with
+    | [H: In _ (map _ _) |- _] => apply in_map_iff in H; dest; subst
+    end;
+  solve_not_in.
+
 Ltac solve_mesi :=
   unfold mesiM, mesiE, mesiS, mesiI, mesiNP in *; lia.
 
@@ -36,12 +45,44 @@ Proof.
     + apply DisjList_comm, tree2Topo_minds_merss_disj.
 Qed.
 
+Lemma tree2Topo_internal_downs_exts_disj:
+  forall tr bidx cinds,
+    let cifc := snd (tree2Topo tr bidx) in
+    SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
+    DisjList (map downTo cinds)
+             ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+Proof.
+  intros.
+  eapply DisjList_SubList with (l1:= c_minds cifc).
+  - red; intros.
+    apply in_map_iff in H0; dest; subst.
+    apply tree2Topo_obj_chns_minds_SubList with (oidx:= x); [auto|].
+    simpl; tauto.
+  - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+    apply DisjList_comm, DisjList_app_4.
+    + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+    + apply DisjList_comm, tree2Topo_minds_merss_disj.
+Qed.
+
+Lemma tree2Topo_li_children_li_l1:
+  forall tr bidx oidx,
+    In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
+    SubList (subtreeChildrenIndsOf (fst (tree2Topo tr bidx)) oidx)
+            (c_li_indices (snd (tree2Topo tr bidx)) ++ c_l1_indices (snd (tree2Topo tr bidx))).
+Proof.
+  intros; red; intros.
+  apply subtreeChildrenIndsOf_parentIdxOf in H0; [|apply tree2Topo_WfDTree].
+  eapply tree2Topo_li_child_li_l1; eauto.
+Qed.
+
 Ltac solve_in_l1_li :=
   repeat
     match goal with
     | [H: In ?oidx ?l |- In ?oidx ?l] => assumption
     | [H: In ?oidx ?l |- In ?oidx (?l ++ _) ] => apply in_or_app; auto
     | [H: In ?oidx ?l |- In ?oidx (_ ++ ?l) ] => apply in_or_app; auto
+    | [H: In ?oidx (tl ?l) |- In ?oidx ?l ] => apply tl_In; assumption
     | [H: In ?oidx (tl ?l) |- In ?oidx (?l ++ _) ] =>
       apply tl_In in H; apply in_or_app; auto
     end.
@@ -54,6 +95,18 @@ Ltac solve_not_in_ext_chns :=
      solve_in_l1_li; fail
     |simpl; tauto]
   end.
+
+Ltac solve_ext_chns_disj :=
+  repeat
+    match goal with
+    | |- context [idsOf (map _ _)] =>
+      unfold idsOf; rewrite map_trans; simpl
+    | |- DisjList (map _ _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_downs_exts_disj
+    | [H: SubList ?inds _ |- SubList ?inds _] => eapply SubList_trans; [eassumption|]
+    | |- SubList (subtreeChildrenIndsOf _ _) (c_li_indices _ ++ c_l1_indices _) =>
+      apply tree2Topo_li_children_li_l1; solve_in_l1_li; fail
+    end.
 
 (** TODO: refactor; will be used by MOSI as well. *)
 Section SimExtMP.
@@ -223,6 +276,27 @@ Section SimExtMP.
     - rewrite findQ_not_In_enqMP; [assumption|].
       intro; subst.
       elim H. apply in_or_app; right.
+      apply in_map with (f:= fun cidx => downTo (l1ExtOf cidx)) in He.
+      assumption.
+  Qed.
+
+  Lemma SimExtMP_impl_enqMsgs_indep:
+    forall nmsgs imsgs (orqs: ORqs Msg) smsgs,
+      DisjList (idsOf nmsgs) (erqs ++ erss) ->
+      SimExtMP imsgs orqs smsgs ->
+      SimExtMP (enqMsgs nmsgs imsgs) orqs smsgs.
+  Proof.
+    disc_SimExtMP.
+    disc_rule_conds_ex.
+    split.
+    - rewrite findQ_not_In_enqMsgs; [assumption|].
+      eapply DisjList_In_1; [eassumption|].
+      apply in_or_app; left.
+      apply in_map with (f:= fun cidx => rqUpFrom (l1ExtOf cidx)) in He.
+      assumption.
+    - rewrite findQ_not_In_enqMsgs; [assumption|].
+      eapply DisjList_In_1; [eassumption|].
+      apply in_or_app; right.
       apply in_map with (f:= fun cidx => downTo (l1ExtOf cidx)) in He.
       assumption.
   Qed.
@@ -819,6 +893,8 @@ Section Sim.
            apply SimExtMP_impl_deqMP_indep; [solve_not_in_ext_chns; fail|]
          | [ |- SimExtMP _ _ _ (deqMP _ _) ] =>
            eapply SimExtMP_spec_deqMP_unlocked; eauto; [congruence|mred]; fail
+         | [ |- SimExtMP _ (enqMsgs _ _) _ _ ] =>
+           apply SimExtMP_impl_enqMsgs_indep; [solve_ext_chns_disj; fail|]
          | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
            apply SimExtMP_orqs with (orqs1:= m);
            [|apply Forall_forall; intros; mred; fail]
@@ -886,7 +962,8 @@ Section Sim.
 
   Ltac disc_MsgsP H :=
     repeat
-      (first [apply MsgsP_enqMP_inv in H
+      (first [apply MsgsP_enqMsgs_inv in H
+             |apply MsgsP_enqMP_inv in H
              |apply MsgsP_other_midx_deqMP_inv in H; [|solve_chn_not_in; fail]
              |eapply MsgsP_other_msg_id_deqMP_inv in H;
               [|eassumption
@@ -916,8 +993,7 @@ Section Sim.
              apply MsgsCoh_other_midx_enqMP;
              [|solve_chn_not_in; auto; fail]
            | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
-             apply MsgsCoh_other_msg_id_enqMP;
-             [|intro; dest_in; discriminate]
+             apply MsgsCoh_other_msg_id_enqMP; [|solve_not_in]
            | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
              apply MsgsCoh_enqMP;
              [|do 2 red; cbv [map cohMsgs]; solve_caseDec; reflexivity]
@@ -925,6 +1001,8 @@ Section Sim.
              apply MsgsCoh_InvRq_invalid_enqMP; [|reflexivity|assumption]
            | |- MsgsCoh _ _ _ (deqMP _ _) =>
              apply MsgsCoh_deqMP
+           | |- MsgsCoh _ _ _ (enqMsgs _ _) =>
+             apply MsgsCoh_other_msg_id_enqMsgs; [|solve_DisjList_ex idx_dec]
            | |- MsgsCoh _ _ (_, (?stt, _)) _ =>
              eapply MsgsCoh_state_update_indep; [|assumption]
            | [H: MsgsCoh _ _ ?post _ |- MsgsCoh _ _ (_, (?stt, _)) _] =>
@@ -948,16 +1026,16 @@ Section Sim.
   Ltac solve_NoRsI_by_no_locks oidx :=
     repeat
       match goal with
-      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
                 Hin: In oidx (c_l1_indices _),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
-        simpl in Hmcfi
-      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+        simpl in Hmcfi; destruct Hmcfi
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
                 Hin: In oidx (tl (c_li_indices _)),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))) Horq);
-        simpl in Hmcfi
+        simpl in Hmcfi; destruct Hmcfi
       | [Hmcf: RsDownConflicts oidx _ ?msgs,
                Hinm: InMPI ?msgs (?midx, ?msg),
                      Hmt: msg_type ?msg = MRs |- _] =>
@@ -969,11 +1047,11 @@ Section Sim.
   Ltac solve_NoRsI_by_rqDown oidx :=
     repeat
       match goal with
-      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
                 Hin: In oidx (c_l1_indices _),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
-        simpl in Hmcfi
+        simpl in Hmcfi; destruct Hmcfi
       | [Hmcf: RsDownConflicts oidx _ ?msgs,
                Hinm: InMPI ?msgs (?midx, ?msg),
                      Hmt: msg_type ?msg = MRs |- _] =>
@@ -988,11 +1066,11 @@ Section Sim.
   Ltac solve_NoRsI_by_rsDown oidx :=
     repeat
       match goal with
-      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
                 Hin: In oidx (c_l1_indices _),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
-        simpl in Hmcfi
+        simpl in Hmcfi; destruct Hmcfi
       | [Hmcf: RsDownConflicts oidx _ ?msgs,
                Hinm: InMPI ?msgs (?midx, ?msg),
                      Hmt: msg_type ?msg = MRs,
@@ -1023,19 +1101,36 @@ Section Sim.
         destruct idm as [midx msg]; inv H
       end.
 
-  Ltac solve_NoRqI_by_rsDown oidx :=
+  Ltac solve_NoRqI_by_no_locks oidx :=
     repeat
       match goal with
-      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
                 Hin: In oidx (c_l1_indices _),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
-        simpl in Hmcfi
-      | [Hmcfi: RsDownConflictsInv _ _ {| bst_orqs:= ?orqs |},
+        simpl in Hmcfi; destruct Hmcfi
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
                 Hin: In oidx (tl (c_li_indices _)),
                      Horq: ?orqs@[oidx] = Some _ |- _] =>
         specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))) Horq);
-        simpl in Hmcfi
+        simpl in Hmcfi; destruct Hmcfi
+      | [Hmcf: RqUpConflicts oidx _ ?msgs, Hinm: InMPI ?msgs (?midx, ?msg) |- _] =>
+        specialize (Hmcf (midx, msg) eq_refl Hinm); dest; auto
+      end.
+
+  Ltac solve_NoRqI_by_rsDown oidx :=
+    repeat
+      match goal with
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+                Hin: In oidx (c_l1_indices _),
+                     Horq: ?orqs@[oidx] = Some _ |- _] =>
+        specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
+        simpl in Hmcfi; destruct Hmcfi
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+                Hin: In oidx (tl (c_li_indices _)),
+                     Horq: ?orqs@[oidx] = Some _ |- _] =>
+        specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))) Horq);
+        simpl in Hmcfi; destruct Hmcfi
       | [Hmcf: RsDownConflicts oidx _ ?msgs,
                Hfmp: FirstMPI ?msgs (?down, ?msg),
                      Hmt: msg_type ?msg = MRs,
@@ -1066,15 +1161,22 @@ Section Sim.
           apply tree2Topo_l1_child_ext in H2; [|assumption]; subst
         end.
 
-  Ltac derive_child_idx_in :=
+  Ltac derive_child_idx_in cidx :=
+    let idx := fresh "idx" in
+    remember cidx as idx;
+    try
+      match goal with
+      | [H: In idx (subtreeChildrenIndsOf _ _) |- _] =>
+        apply subtreeChildrenIndsOf_parentIdxOf in H; [|auto; fail]
+      end;
     match goal with
-    | [Hin: In ?oidx (c_li_indices _), Hp: parentIdxOf _ ?cidx = Some ?oidx
+    | [Hin: In ?oidx (c_li_indices _), Hp: parentIdxOf _ idx = Some ?oidx
        |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _] ] =>
       pose proof (tree2Topo_li_child_li_l1 _ _ _ Hin Hp)
-    | [Hin: In ?oidx (tl (c_li_indices _)), Hp: parentIdxOf _ ?cidx = Some ?oidx
+    | [Hin: In ?oidx (tl (c_li_indices _)), Hp: parentIdxOf _ idx = Some ?oidx
        |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _] ] =>
       pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ Hin) Hp)
-    end.
+    end; subst.
 
   Ltac derive_input_msg_coherent :=
     match goal with
@@ -1193,7 +1295,7 @@ Section Sim.
         { (* [liGetSImmS] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           assert (NoRsI oidx msgs)
             by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
           derive_obj_coherent oidx.
@@ -1204,7 +1306,7 @@ Section Sim.
         { (* [liGetSImmME] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           assert (NoRsI oidx msgs)
             by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
           derive_obj_coherent oidx.
@@ -1215,105 +1317,117 @@ Section Sim.
         { (* [liGetSRqUpUp] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liGetSRqUpDownME] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
-          (** TODO: need an invariant that if [E <= dir_st] then [dir_excl] is
-           * always one of its children.
-           *)
-          admit.
+          derive_child_idx_in cidx.
+          derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
+          solve_sim_mesi.
         }
 
         { (* [liGetSRqUpDownS] *)
-          (** TODO: need an invariant that if [dir_st = S] then [dir_sharers] is
-           * always part of its children.
-           *)
-          admit.
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          derive_child_idx_in (hd ii (dir_sharers (fst (snd (snd (snd pos)))))).
+          solve_sim_mesi.
         }
 
         { (* [liGetMImm] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liGetMRqUpUp] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liGetMRqUpDownME] *)
-          (** TODO: ditto [liGetSRqUpDownME] *)
-          admit.
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
+          solve_sim_mesi.
         }
 
         { (* [liGetMRqUpDownS] *)
-          (** TODO: ditto [liGetSRqUpDownS] *)
-          admit.
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
         }
 
         { (* [liInvImmI] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liInvImmS0] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liInvImmS1] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liInvImmE] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
-          assert (NoRqI oidx msgs).
-          { solve_NoRqI_base.
-            all:admit.
-          }
+          derive_child_idx_in cidx.
+          assert (NoRqI oidx msgs)
+            by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+
           (** TODO: need to have an invariant that the sender of [mesiInvRq]
            * has the E status (and [NoRsI]) so the recipient has the clean data.
            *)
-          solve_sim_mesi.
-          admit.
+
+          solve_sim_mesi_ext_mp.
+          solve_SpecStateCoh.
+          case_ImplStateCoh_li_me_others.
+          { disc_rule_conds_ex; split.
+            { (* solve_ImplOStateMESI. *)
+              admit.
+            }
+            { solve_MsgsCoh. }
+          }
+          { solve_ImplStateCoh_li_others. }
         }
 
         { (* [liInvImmWBI] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liInvImmWBS0] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liInvImmWBS1] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
@@ -1324,14 +1438,14 @@ Section Sim.
         { (* [liPushImm] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
 
         { (* [liPushImmWB0] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns.
-          derive_child_idx_in.
+          derive_child_idx_in cidx.
           solve_sim_mesi.
         }
         
@@ -1347,7 +1461,7 @@ Section Sim.
 
         derive_footprint_info_basis oidx.
         derive_child_chns.
-        derive_child_idx_in.
+        derive_child_idx_in cidx.
         derive_input_msg_coherent.
         disc_rule_conds_ex.
         assert (NoRqI oidx msgs)
@@ -1361,7 +1475,7 @@ Section Sim.
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx.
         derive_child_chns.
-        derive_child_idx_in.
+        derive_child_idx_in cidx.
         derive_input_msg_coherent.
         disc_rule_conds_ex.
         assert (NoRqI oidx msgs)

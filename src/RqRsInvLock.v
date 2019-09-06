@@ -801,7 +801,7 @@ Section Corollaries.
           rqEdgeUpFrom dtr (obj_idx obj) = Some rqUp ->
           forall msgs rqum1 rqum2,
             st.(bst_msgs) = msgs ->
-            rqum1.(msg_id) <> rqum2.(msg_id) ->
+            rqum1 <> rqum2 ->
             InMP rqUp rqum1 msgs ->
             InMP rqUp rqum2 msgs ->
             False.
