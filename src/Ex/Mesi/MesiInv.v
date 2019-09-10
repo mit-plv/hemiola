@@ -50,17 +50,18 @@ Section CoherenceUnit.
   Definition ImplOStateMESI (cv: nat): Prop :=
     mesiS <= ost#[status] -> NoRsI -> ost#[val] = cv.
 
+  Definition ObjOwned :=
+    mesiS <= ost#[status] /\ ost#[owned] = true.
+
   Definition CohInvRq :=
-    mesiI < ost#[status] ->
-    ost#[owned] = true ->
+    ObjOwned ->
     forall idm,
       InMPI msgs idm ->
       sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
       msg_value (valOf idm) = ost#[val].
 
   Definition CohPushRq :=
-    mesiI < ost#[status] ->
-    ost#[owned] = true ->
+    ObjOwned ->
     forall idm,
       InMPI msgs idm ->
       sigOf idm = (rqUpFrom oidx, (MRq, mesiPushWRq)) ->
@@ -89,10 +90,25 @@ Section CoherenceUnit.
     ObjInvalid0 \/
     MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs.
 
-  (** 2) Clean "E" in MESI -- TODO *)
+  (** 2) Clean "E" in MESI *)
 
+  Definition ObjClean :=
+    mesiS <= ost#[status] <= mesiE.
+
+  Definition ObjDirME (cidx: IdxT) :=
+    mesiE <= ost#[dir].(dir_st) /\ ost#[dir].(dir_excl) = cidx /\
+    orq@[downRq] = None.
+
+  Definition ObjDirE (cidx: IdxT) :=
+    ost#[dir].(dir_st) = mesiE /\ ost#[dir].(dir_excl) = cidx /\
+    orq@[downRq] = None.
+  
   Definition ObjInvRq :=
     MsgExistsSig (rqUpFrom oidx, (MRq, mesiInvRq)) msgs.
+
+  Definition ObjRqWB :=
+    MsgExistsSig (rqUpFrom oidx, (MRq, mesiInvWRq)) msgs \/
+    MsgExistsSig (rqUpFrom oidx, (MRq, mesiPushWRq)) msgs.
 
   Section Facts.
 
@@ -304,6 +320,26 @@ Definition InvWB (st: MState): Prop :=
     ost <+- (bst_oss st)@[oidx];
       (CohInvRq oidx ost (bst_msgs st) /\
        CohPushRq oidx ost (bst_msgs st)).
+
+Definition InvWBChild (topo: DTree) (st: MState): Prop :=
+  forall oidx pidx,
+    parentIdxOf topo oidx = Some pidx ->
+    ost <+- (bst_oss st)@[oidx];
+      post <+- (bst_oss st)@[pidx];
+      porq <+- (bst_orqs st)@[pidx];
+      (ObjDirME porq post oidx ->
+       ObjRqWB oidx (bst_msgs st) ->
+       ObjOwned ost).
+
+Definition InvNonWB (topo: DTree) (st: MState): Prop :=
+  forall oidx pidx,
+    parentIdxOf topo oidx = Some pidx ->
+    ost <+- (bst_oss st)@[oidx];
+      post <+- (bst_oss st)@[pidx];
+      porq <+- (bst_orqs st)@[pidx];
+      (ObjDirE porq post oidx ->
+       ObjInvRq oidx (bst_msgs st) ->
+       (ObjClean ost /\ ost#[val] = post#[val])).
 
 Lemma caseDec_head_eq:
   forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})

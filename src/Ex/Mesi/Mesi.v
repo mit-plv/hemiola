@@ -1,4 +1,4 @@
-Require Import Bool Vector List String Peano_dec.
+Require Import Bool Vector List String Peano_dec Lia.
 Require Import Common FMap HVector IndexSupport Syntax Semantics.
 Require Import Topology RqRsTopo.
 Require Import RqRsLang. Import RqRsNotations.
@@ -63,6 +63,9 @@ Local Open Scope fmap.
  *   child (L1) should send the dirty data with an appropriate message id, in
  *   order for the parent to recognize the update is required.
  *)
+
+Ltac solve_mesi :=
+  unfold mesiM, mesiE, mesiS, mesiI, mesiNP in *; lia.
 
 Section System.
   Variable (tr: tree).
@@ -135,6 +138,57 @@ Section System.
     Definition NotLastSharer (dir: DirT) :=
       2 <= List.length dir.(dir_sharers).
 
+    Section Facts.
+
+      Lemma getDir_M_imp:
+        forall oidx dir,
+          getDir oidx dir = mesiM ->
+          dir.(dir_st) = mesiM /\ dir.(dir_excl) = oidx.
+      Proof.
+        unfold getDir, caseDec; intros.
+        find_if_inside; [find_if_inside; [auto|discriminate]|].
+        repeat (find_if_inside; [find_if_inside; discriminate|]).
+        find_if_inside; discriminate.
+      Qed.
+
+      Lemma getDir_E_imp:
+        forall oidx dir,
+          getDir oidx dir = mesiE ->
+          dir.(dir_st) = mesiE /\ dir.(dir_excl) = oidx.
+      Proof.
+        unfold getDir, caseDec; intros.
+        find_if_inside; [find_if_inside; discriminate|].
+        find_if_inside; [find_if_inside; [auto|discriminate]|].
+        find_if_inside; [find_if_inside; discriminate|].
+        find_if_inside; discriminate.
+      Qed.
+
+      Lemma getDir_ME_imp:
+        forall oidx dir,
+          mesiE <= getDir oidx dir ->
+          mesiE <= dir.(dir_st) /\ dir.(dir_excl) = oidx.
+      Proof.
+        unfold getDir, caseDec; intros.
+        do 2 (find_if_inside; [find_if_inside;
+                               [split; auto; rewrite e; assumption
+                               |solve_mesi]|]).
+        find_if_inside; [find_if_inside; solve_mesi|].
+        find_if_inside; solve_mesi.
+      Qed.
+
+      Lemma getDir_S_imp:
+        forall oidx dir,
+          getDir oidx dir = mesiS ->
+          dir.(dir_st) = mesiS /\ In oidx dir.(dir_sharers).
+      Proof.
+        unfold getDir, caseDec; intros.
+        repeat (find_if_inside; [find_if_inside; discriminate|]).
+        find_if_inside; [find_if_inside; [auto|discriminate]|].
+        find_if_inside; discriminate.
+      Qed.
+
+    End Facts.
+    
   End Directory.
 
   Instance ImplOStateIfc: OStateIfc :=
