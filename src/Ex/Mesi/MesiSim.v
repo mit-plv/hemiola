@@ -420,11 +420,13 @@ Section Sim.
     Definition cohMsgs: list (MSig * (Id Msg -> Prop)) :=
       (| (downTo cidx, (MRs, mesiRsS)): fun idm => (valOf idm).(msg_value) = cv
        | (downTo cidx, (MRs, mesiRsE)): fun idm => (valOf idm).(msg_value) = cv
-       | (rsUpFrom cidx, (MRs, mesiDownRsS)): fun idm => (valOf idm).(msg_value) = cv
-       | (rqUpFrom cidx, (MRq, mesiInvWRq)):
-           fun idm => mesiM <= cost#[status] -> (valOf idm).(msg_value) = cv
-       | (rqUpFrom cidx, (MRq, mesiPushWRq)):
-           fun idm => mesiS <= cost#[status] -> (valOf idm).(msg_value) = cv)%cases.
+       | (rsUpFrom cidx, (MRs, mesiDownRsS)): fun idm => (valOf idm).(msg_value) = cv)%cases.
+    (* | (rqUpFrom cidx, (MRq, mesiInvWRq)): *)
+    (*     fun idm => mesiI < cost#[status] -> cost#[owned] = true -> *)
+    (*                (valOf idm).(msg_value) = cv *)
+    (* | (rqUpFrom cidx, (MRq, mesiPushWRq)): *)
+    (*     fun idm => mesiI < cost#[status] -> cost#[owned] = true -> *)
+    (*                (valOf idm).(msg_value) = cv)%cases. *)
 
     Definition MsgCoh := MsgP cohMsgs.
     Definition MsgsCoh := MsgsP cohMsgs msgs.
@@ -449,7 +451,6 @@ Section Sim.
           specialize (H0 _ H1); red in H0.
           red; unfold cohMsgs, map, caseDec, fst in *.
           repeat (find_if_inside; [exfalso; auto; fail|]).
-          do 2 (find_if_inside; [simpl in *; intros; solve_mesi|]).
           auto.
 
       - split.
@@ -471,61 +472,40 @@ Section Sim.
             simpl in *; inv H0; inv e.
             intro; subst; rewrite H10 in H11; discriminate.
           * exfalso; eapply H5; try rewrite e; eauto.
-          * exfalso; eapply H2; try rewrite e; eauto.
-          * exfalso; eapply H2; try rewrite e; eauto.
     Qed.
 
     Lemma ObjExcl0_ObjCoh:
-      forall oidx orq ost msgs (Hrsi: RsDownConflicts oidx orq msgs),
+      forall oidx ost msgs,
         InvObjExcl0 oidx ost msgs ->
         ObjExcl0 oidx ost msgs ->
         ObjCoh ost#[val] oidx ost msgs.
     Proof.
-      unfold InvObjExcl0, ObjCoh; intros.
-      specialize (H H0); dest.
+      unfold InvObjExcl0, CohInvRq, CohPushRq, ObjCoh; intros.
+      specialize (H H0).
       split; [red; intros; reflexivity|].
       do 2 red; intros.
-      specialize (H _ H3); red in H.
+      specialize (H _ H1); red in H.
       red; unfold cohMsgs, map, caseDec, fst in *.
       repeat (find_if_inside; [exfalso; auto; fail|]).
-      do 2 (find_if_inside; [simpl in *; intros; eauto|]).
       auto.
     Qed.
 
     Lemma MsgsCoh_enqMP:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall midx msg,
-          MsgCoh cv cidx cost (midx, msg) ->
-          MsgsCoh cv cidx cost (enqMP midx msg msgs).
+          MsgCoh cv cidx (midx, msg) ->
+          MsgsCoh cv cidx (enqMP midx msg msgs).
     Proof.
       intros; apply MsgsP_enqMP; auto.
-    Qed.
-
-    Lemma MsgsCoh_InvRq_invalid_enqMP:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
-        forall midx msg,
-          msg_id msg = mesiInvWRq ->
-          cost#[status] < mesiM ->
-          MsgsCoh cv cidx cost (enqMP midx msg msgs).
-    Proof.
-      intros; apply MsgsP_enqMP; auto.
-      red; cbv [sigOf idOf valOf fst snd].
-      rewrite H0.
-      unfold caseDec, map, cohMsgs.
-      repeat (find_if_inside; [inv e; exfalso; intuition idtac; fail|]).
-      find_if_inside; [intros; simpl in *; solve_mesi|].
-      find_if_inside; [inv e|].
-      auto.
     Qed.
 
     Lemma MsgsCoh_other_midx_enqMP:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall midx msg,
           ~ In midx [rqUpFrom cidx; rsUpFrom cidx; downTo cidx] ->
-          MsgsCoh cv cidx cost (enqMP midx msg msgs).
+          MsgsCoh cv cidx (enqMP midx msg msgs).
     Proof.
       intros.
       apply MsgsP_other_midx_enqMP; auto.
@@ -533,11 +513,11 @@ Section Sim.
     Qed.
 
     Lemma MsgsCoh_other_midx_enqMsgs:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall eins,
           DisjList (idsOf eins) [rqUpFrom cidx; rsUpFrom cidx; downTo cidx] ->
-          MsgsCoh cv cidx cost (enqMsgs eins msgs).
+          MsgsCoh cv cidx (enqMsgs eins msgs).
     Proof.
       intros.
       apply MsgsP_other_midx_enqMsgs; auto.
@@ -548,71 +528,42 @@ Section Sim.
     Qed.
 
     Lemma MsgsCoh_other_msg_id_enqMP:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall midx msg,
-          ~ In (msg_id msg) [mesiRsS; mesiRsE; mesiDownRsS; mesiInvWRq; mesiPushWRq] ->
-          MsgsCoh cv cidx cost (enqMP midx msg msgs).
+          ~ In (msg_id msg) [mesiRsS; mesiRsE; mesiDownRsS] ->
+          MsgsCoh cv cidx (enqMP midx msg msgs).
     Proof.
       intros; apply MsgsP_other_msg_id_enqMP; auto.
     Qed.
 
     Lemma MsgsCoh_other_msg_id_enqMsgs:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall eins,
           DisjList (map (fun idm => msg_id (valOf idm)) eins)
-                   [mesiRsS; mesiRsE; mesiDownRsS; mesiInvWRq; mesiPushWRq] ->
-          MsgsCoh cv cidx cost (enqMsgs eins msgs).
+                   [mesiRsS; mesiRsE; mesiDownRsS] ->
+          MsgsCoh cv cidx (enqMsgs eins msgs).
     Proof.
       intros; apply MsgsP_other_msg_id_enqMsgs; auto.
     Qed.
 
     Lemma MsgsCoh_deqMP:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall midx,
-          MsgsCoh cv cidx cost (deqMP midx msgs).
+          MsgsCoh cv cidx (deqMP midx msgs).
     Proof.
       intros; apply MsgsP_deqMP; auto.
     Qed.
 
     Lemma MsgsCoh_deqMsgs:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
+      forall cv cidx msgs,
+        MsgsCoh cv cidx msgs ->
         forall minds,
-          MsgsCoh cv cidx cost (deqMsgs minds msgs).
+          MsgsCoh cv cidx (deqMsgs minds msgs).
     Proof.
       intros; apply MsgsP_deqMsgs; auto.
-    Qed.
-
-    Lemma MsgsCoh_state_update_indep:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
-        NoRqI cidx msgs ->
-        forall nost: OState, MsgsCoh cv cidx nost msgs.
-    Proof.
-      unfold MsgsCoh, NoRqI, MsgsNotExist, MsgsP; intros.
-      specialize (H _ H1); specialize (H0 _ H1).
-      red in H, H0; red; unfold map, cohMsgs, caseDec, fst in *.
-      repeat (find_if_inside; [assumption|]).
-      do 2 (find_if_inside; [exfalso; auto|]).
-      auto.
-    Qed.
-
-    Lemma MsgsCoh_state_update_downgrade:
-      forall cv cidx cost msgs,
-        MsgsCoh cv cidx cost msgs ->
-        forall nost: OState,
-          nost#[status] <= cost#[status] ->
-          MsgsCoh cv cidx nost msgs.
-    Proof.
-      unfold MsgsCoh, MsgsNotExist, MsgsP; intros.
-      specialize (H _ H1).
-      red in H; red; unfold map, cohMsgs, caseDec, fst in *.
-      repeat (find_if_inside; [assumption|]).
-      do 2 (find_if_inside; [simpl in *; intros; apply H; solve_mesi|]).
-      auto.
     Qed.
 
   End ObjCohFacts.
@@ -778,7 +729,7 @@ Section Sim.
   Qed.
 
   Definition ImplInvEx (st: MState) :=
-    InvExcl st /\ InvExclC st.
+    InvExcl st /\ InvWB st.
 
   Hint Unfold ImplInvEx: RuleConds.
 
@@ -804,7 +755,6 @@ Section Sim.
       | [Hf: Forall _ ?l, Hin: In _ ?l |- _] =>
         rewrite Forall_forall in Hf; specialize (Hf _ Hin);
         disc_rule_conds_const; dest
-
       | [H: _ :: findQ ?eidx _ = findQ ?eidx ?msgs |-
          FirstMPI ?msgs (?eidx, _) ] =>
         unfold FirstMPI, FirstMP, firstMP;
@@ -989,25 +939,18 @@ Section Sim.
   Ltac solve_MsgsCoh :=
     repeat
       (try match goal with
-           | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
+           | |- MsgsCoh _ _ (enqMP _ _ _) =>
              apply MsgsCoh_other_midx_enqMP;
              [|solve_chn_not_in; auto; fail]
-           | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
+           | |- MsgsCoh _ _ (enqMP _ _ _) =>
              apply MsgsCoh_other_msg_id_enqMP; [|solve_not_in]
-           | |- MsgsCoh _ _ _ (enqMP _ _ _) =>
+           | |- MsgsCoh _ _ (enqMP _ _ _) =>
              apply MsgsCoh_enqMP;
              [|do 2 red; cbv [map cohMsgs]; solve_caseDec; reflexivity]
-           | |- MsgsCoh _ _ _ (enqMP _ {| msg_id := mesiInvRq |} _) =>
-             apply MsgsCoh_InvRq_invalid_enqMP; [|reflexivity|assumption]
-           | |- MsgsCoh _ _ _ (deqMP _ _) =>
+           | |- MsgsCoh _ _ (deqMP _ _) =>
              apply MsgsCoh_deqMP
-           | |- MsgsCoh _ _ _ (enqMsgs _ _) =>
+           | |- MsgsCoh _ _ (enqMsgs _ _) =>
              apply MsgsCoh_other_msg_id_enqMsgs; [|solve_DisjList_ex idx_dec]
-           | |- MsgsCoh _ _ (_, (?stt, _)) _ =>
-             eapply MsgsCoh_state_update_indep; [|assumption]
-           | [H: MsgsCoh _ _ ?post _ |- MsgsCoh _ _ (_, (?stt, _)) _] =>
-             eapply MsgsCoh_state_update_downgrade with (cost:= post);
-             [|simpl; first [eassumption|solve_mesi]]
            end; try eassumption).
 
   Ltac solve_NoRsI_base :=
@@ -1180,7 +1123,7 @@ Section Sim.
 
   Ltac derive_input_msg_coherent :=
     match goal with
-    | [Hcoh: MsgsCoh ?cv _ _ _, Hfmp: FirstMPI _ (_, ?cmsg) |- _] =>
+    | [Hcoh: MsgsCoh ?cv _ _, Hfmp: FirstMPI _ (_, ?cmsg) |- _] =>
       let Ha := fresh "H" in
       assert (msg_value cmsg = cv)
         as Ha by (disc_MsgsCoh_by_FirstMP Hcoh Hfmp; assumption);
@@ -1242,7 +1185,7 @@ Section Sim.
 
       Ltac solve_ImplStateCoh_li_others :=
         try match goal with
-            | [H: MsgsCoh _ ?oidx _ _, Hin: In ?oidx _ |- _] => clear Hin
+            | [H: MsgsCoh _ ?oidx _, Hin: In ?oidx _ |- _] => clear Hin
             end;
         match goal with
         | [Hf: forall _, In _ ?l -> _, He: In _ ?l |- _] =>
@@ -1253,7 +1196,7 @@ Section Sim.
       Ltac case_ImplStateCoh_li_me_others :=
         red; simpl;
         match goal with
-        | [H: MsgsCoh _ ?oidx _ _ |- Forall _ _] =>
+        | [H: MsgsCoh _ ?oidx _ |- Forall _ _] =>
           let lidx := fresh "lidx" in
           apply Forall_forall;
           intros lidx ?; destruct (idx_dec lidx oidx); subst
@@ -1397,7 +1340,6 @@ Section Sim.
           (** TODO: need to have an invariant that the sender of [mesiInvRq]
            * has the E status (and [NoRsI]) so the recipient has the clean data.
            *)
-
           solve_sim_mesi_ext_mp.
           solve_SpecStateCoh.
           case_ImplStateCoh_li_me_others.
@@ -1496,7 +1438,7 @@ Section Sim.
 
       Ltac solve_ImplStateCoh_l1_others :=
         try match goal with
-            | [H: MsgsCoh _ ?oidx _ _, Hin: In ?oidx _ |- _] => clear Hin
+            | [H: MsgsCoh _ ?oidx _, Hin: In ?oidx _ |- _] => clear Hin
             end;
         match goal with
         | [Hf: forall _, In _ ?l -> _, He: In _ ?l |- _] =>
@@ -1507,7 +1449,7 @@ Section Sim.
       Ltac case_ImplStateCoh_l1_me_others :=
         red; simpl;
         match goal with
-        | [H: MsgsCoh _ ?oidx _ _ |- Forall _ _] =>
+        | [H: MsgsCoh _ ?oidx _ |- Forall _ _] =>
           let lidx := fresh "lidx" in
           apply Forall_forall;
           intros lidx ?; destruct (idx_dec lidx oidx); subst
@@ -1591,9 +1533,6 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
-          { apply Hnmcf; [|simpl; mred].
-            apply in_or_app; right; assumption.
-          }
           { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
             assumption.
           }
@@ -1642,9 +1581,6 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
-          { apply Hnmcf; [|simpl; mred].
-            apply in_or_app; right; assumption.
-          }
           { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
             assumption.
           }
@@ -1703,9 +1639,6 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
-          { apply Hnmcf; [|simpl; mred].
-            apply in_or_app; right; assumption.
-          }
           { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
             assumption.
           }
@@ -1760,11 +1693,6 @@ Section Sim.
           by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
         disc_rule_conds_ex.
         solve_sim_mesi.
-
-        apply MsgsCoh_enqMP; [assumption|].
-        do 2 red; cbv [map cohMsgs]; solve_caseDec.
-        intros; apply H21; auto.
-        solve_mesi.
 
       + (* [l1InvRsDownDown] *)
         disc_rule_conds_ex.

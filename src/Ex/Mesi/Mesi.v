@@ -240,7 +240,8 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiS <= ost#[status])
         :transition
-           (!|ost, min| --> (ost +#[status <- mesiS],
+           (!|ost, min| --> (ost +#[owned <- false]
+                                 +#[status <- mesiS],
                              {| miv_id := mesiDownRsS;
                                 miv_value := ost#[val] |})).
 
@@ -297,7 +298,8 @@ Section System.
         :me oidx
         :requires (fun ost orq mins => mesiS <= ost#[status])
         :transition
-           (!|ost, min| --> (ost +#[status <- mesiI],
+           (!|ost, min| --> (ost +#[owned <- false]
+                                 +#[status <- mesiI],
                              {| miv_id := mesiDownRsI;
                                 miv_value := O |})).
 

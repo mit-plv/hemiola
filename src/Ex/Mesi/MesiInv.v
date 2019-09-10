@@ -51,14 +51,16 @@ Section CoherenceUnit.
     mesiS <= ost#[status] -> NoRsI -> ost#[val] = cv.
 
   Definition CohInvRq :=
-    mesiM <= ost#[status] ->
+    mesiI < ost#[status] ->
+    ost#[owned] = true ->
     forall idm,
       InMPI msgs idm ->
       sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
       msg_value (valOf idm) = ost#[val].
 
   Definition CohPushRq :=
-    mesiS <= ost#[status] ->
+    mesiI < ost#[status] ->
+    ost#[owned] = true ->
     forall idm,
       InMPI msgs idm ->
       sigOf idm = (rqUpFrom oidx, (MRq, mesiPushWRq)) ->
@@ -87,17 +89,10 @@ Section CoherenceUnit.
     ObjInvalid0 \/
     MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs.
 
-  (** 2) Clean "E" in MESI: the invariant says that owners have the same clean
-   * data if a bottom cache has E.
-   *)
+  (** 2) Clean "E" in MESI -- TODO *)
 
-  Definition ObjExclClean :=
-    ost#[status] = mesiE /\ NoRsI.
-
-  Definition ObjStillClean (cv: nat) :=
-    ost#[status] = mesiI ->
-    ost#[dir].(dir_st) = mesiE ->
-    ost#[val] = cv.
+  Definition ObjInvRq :=
+    MsgExistsSig (rqUpFrom oidx, (MRq, mesiInvRq)) msgs.
 
   Section Facts.
 
@@ -274,8 +269,6 @@ Section MsgConflicts.
 
 End MsgConflicts.
 
-(** End of the common invariants -- *)
-
 Lemma mesi_RsDownConflicts:
   forall tr (Htr: tr <> Node nil),
     InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).
@@ -291,9 +284,10 @@ Proof.
   apply SubList_refl.
 Qed.
 
+(** End of the common invariants -- *)
+
 Definition InvObjExcl0 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
-  ObjExcl0 oidx ost msgs ->
-  NoCohMsgs oidx msgs /\ CohInvRq oidx ost msgs /\ CohPushRq oidx ost msgs.
+  ObjExcl0 oidx ost msgs -> NoCohMsgs oidx msgs.
 
 Definition InvExcl (st: MState): Prop :=
   forall eidx,
@@ -305,14 +299,11 @@ Definition InvExcl (st: MState): Prop :=
           ost <+- (bst_oss st)@[oidx];
             ObjInvalid oidx ost (bst_msgs st))).
 
-Definition InvExclC (st: MState): Prop :=
-  forall eidx,
-    eost <+- (bst_oss st)@[eidx];
-      (ObjExclClean eidx eost (bst_msgs st) ->
-       forall oidx,
-         oidx <> eidx ->
-         ost <+- (bst_oss st)@[oidx];
-           ObjStillClean ost eost#[val]).
+Definition InvWB (st: MState): Prop :=
+  forall oidx,
+    ost <+- (bst_oss st)@[oidx];
+      (CohInvRq oidx ost (bst_msgs st) /\
+       CohPushRq oidx ost (bst_msgs st)).
 
 Lemma caseDec_head_eq:
   forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
