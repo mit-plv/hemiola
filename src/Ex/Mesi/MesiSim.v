@@ -985,6 +985,27 @@ Section Sim.
                                 Hinm); dest; auto
       end.
 
+  Ltac solve_NoRsI_by_rqUp oidx :=
+    repeat
+      match goal with
+      | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+                Hin: In oidx (c_li_indices _ ++ c_l1_indices _),
+                     Horq: ?orqs@[oidx] = Some _ |- _] =>
+        specialize (Hmcfi oidx _ Hin Horq);
+        simpl in Hmcfi; destruct Hmcfi
+      | [Hmcf: RsDownConflicts oidx _ ?msgs,
+               Hinm: InMPI ?msgs (?rsd, ?msg),
+                     Hmt: msg_type ?msg = MRs,
+                          Hfmp: FirstMPI ?msgs (?rqu, ?rmsg) |- _] =>
+        specialize (Hmcf (rsd, msg) eq_refl
+                         ltac:(simpl; rewrite Hmt; reflexivity)
+                                Hinm);
+        let Hrqu := fresh "H" in
+        destruct Hmcf as [_ [Hrqu _]];
+        apply Hrqu with (rqUp:= (rqu, rmsg)); auto
+      | |- InMPI _ _ => red; solve_in_mp
+      end.
+
   Ltac solve_NoRsI_by_rqDown oidx :=
     repeat
       match goal with
@@ -1134,6 +1155,97 @@ Section Sim.
       let Ha := fresh "H" in
       assert (fst ost = cv) as Ha by (apply Hcoh; auto; solve_mesi);
       rewrite Ha in *
+    end.
+
+  Ltac derive_coherence_of oidx :=
+    match goal with
+    | [Hf: forall _, In _ ?l -> _, He: In oidx ?l |- _] =>
+      specialize (Hf _ He); disc_rule_conds_ex
+    end.
+
+  Ltac disc_getDir :=
+    try match goal with
+        | [H: getDir _ _ = _ |- _] =>
+          first [apply getDir_M_imp in H; destruct H
+                |apply getDir_E_imp in H; destruct H
+                |apply getDir_S_imp in H; destruct H]
+        | [H: mesiE <= getDir _ _ |- _] =>
+          apply getDir_ME_imp in H; destruct H
+        end.
+
+  Ltac derive_ObjDirE oidx cidx :=
+    match goal with
+    | [Host: ?oss@[oidx] = Some ?ost,
+             Horq: ?orqs@[oidx] = Some ?orq |- _] =>
+      assert (ObjDirE orq ost cidx) by (repeat split; assumption)
+    end.
+
+  Ltac derive_ObjDirME oidx cidx :=
+    match goal with
+    | [Host: ?oss@[oidx] = Some ?ost,
+             Horq: ?orqs@[oidx] = Some ?orq |- _] =>
+      assert (ObjDirME orq ost cidx) by (repeat split; assumption)
+    end.
+
+  Ltac derive_ObjInvRq oidx :=
+    match goal with
+    | [H: FirstMPI ?msgs (rqUpFrom oidx, ?rmsg) |- _] =>
+      assert (ObjInvRq oidx msgs)
+        by (exists (rqUpFrom oidx, rmsg); split;
+                   [red; simpl; solve_in_mp|unfold sigOf; simpl; congruence])
+    end.
+
+  Ltac derive_ObjRqWB_inv oidx :=
+    match goal with
+    | [H: FirstMPI ?msgs (rqUpFrom oidx, ?rmsg) |- _] =>
+      assert (ObjRqWB oidx msgs)
+        by (left; eexists; split;
+            [eapply FirstMP_InMP; eassumption
+            |unfold sigOf; simpl; congruence])
+    end.
+
+  Ltac derive_ObjRqWB_push oidx :=
+    match goal with
+    | [H: FirstMPI ?msgs (rqUpFrom oidx, ?rmsg) |- _] =>
+      assert (ObjRqWB oidx msgs)
+        by (right; eexists; split;
+            [eapply FirstMP_InMP; eassumption
+            |unfold sigOf; simpl; congruence])
+    end.
+
+  Ltac disc_InvNonWB cidx Hinv :=
+    repeat
+      match goal with
+      | [Hp: parentIdxOf _ cidx = Some _ |- _] =>
+        specialize (Hinv _ _ Hp); simpl in Hinv;
+        disc_rule_conds_ex
+      end.
+
+  Ltac disc_InvWBChild cidx Hinv :=
+    match goal with
+    | [Hp: parentIdxOf _ cidx = Some _ |- _] =>
+      specialize (Hinv _ _ Hp); simpl in Hinv;
+      disc_rule_conds_ex
+    end.
+
+  Ltac disc_InvWB_inv cidx Hinv :=
+    specialize (Hinv cidx); simpl in Hinv;
+    disc_rule_conds_ex;
+    match goal with
+    | [Hcoh: CohInvRq cidx ?ost _, Ho: ObjOwned ?ost, Hfm: FirstMPI _ _ |- _] =>
+      specialize (Hcoh Ho _ (FirstMP_InMP Hfm));
+      unfold sigOf in Hcoh; simpl in Hcoh;
+      specialize (Hcoh ltac:(congruence))
+    end.
+
+  Ltac disc_InvWB_push cidx Hinv :=
+    specialize (Hinv cidx); simpl in Hinv;
+    disc_rule_conds_ex;
+    match goal with
+    | [Hcoh: CohPushRq cidx ?ost _, Ho: ObjOwned ?ost, Hfm: FirstMPI _ _ |- _] =>
+      specialize (Hcoh Ho _ (FirstMP_InMP Hfm));
+      unfold sigOf in Hcoh; simpl in Hcoh;
+      specialize (Hcoh ltac:(congruence))
     end.
 
   Lemma simMesi_sim:
@@ -1335,52 +1447,22 @@ Section Sim.
           assert (NoRqI oidx msgs)
             by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
 
-          (** TODO: need to have an invariant that the sender of [mesiInvRq]
-           * has the E status (and [NoRsI]) so the recipient has the clean data.
-           *)
           solve_sim_mesi_ext_mp.
           solve_SpecStateCoh.
           case_ImplStateCoh_li_me_others.
           { disc_rule_conds_ex; split.
-            { (* solve_ImplOStateMESI. *)
+            { (* Coherence of the object *)
               intros.
-
-              (* discharge [InvNonWB] *)
-              move H25 at bottom.
-              red in H25; simpl in H25.
-              specialize (H25 _ _ H29).
-              pose proof (H15 _ H30).
-              disc_rule_conds_ex.
-
-              assert (ObjDirE norq os cidx).
-              { apply getDir_E_imp in H33; dest.
-                repeat split; try assumption.
-              }
-              specialize (H25 H41); clear H41.
-
-              assert (ObjInvRq cidx msgs).
-              { eexists; split.
-                { eapply FirstMP_InMP; eassumption. }
-                { unfold sigOf; simpl; congruence. }
-              }
-              specialize (H25 H41); clear H41; dest.
-
+              derive_coherence_of cidx.
+              disc_getDir.
+              derive_ObjDirE oidx cidx.
+              derive_ObjInvRq cidx.
+              assert (NoRsI cidx msgs)
+                by (clear H40; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvNonWB cidx H25.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              assert (NoRsI cidx msgs).
-              { solve_NoRsI_base.
-
-                move Hpmcf at bottom.
-                specialize (Hpmcf cidx _ H30 Horq); dest.
-                specialize (H43 (downTo cidx, msg) eq_refl
-                                ltac:(simpl; rewrite H45; reflexivity)
-                                       H42).
-                dest.
-                apply H47 with (rqUp:= (rqUpFrom cidx, rmsg)); auto.
-                apply FirstMP_InMP; assumption.
-              }
               red in H25; dest.
-              specialize (H39 H25 H42).
-
+              specialize (H15 H25 H43).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1420,55 +1502,20 @@ Section Sim.
           solve_SpecStateCoh.
           case_ImplStateCoh_li_me_others.
           { disc_rule_conds_ex; split.
-            { (* solve_ImplOStateMESI. *)
+            { (* Coherence of the object *)
               intros.
-
-              (* discharge [InvWBChild] *)
-              move H24 at bottom.
-              red in H24; simpl in H24.
-              specialize (H24 _ _ H29).
-              pose proof (H15 _ H30).
-              disc_rule_conds_ex.
-
-              assert (ObjDirME norq os cidx).
-              { apply getDir_ME_imp in H33; dest.
-                repeat split; try assumption.
-              }
-              specialize (H24 H41); clear H41.
-
-              assert (ObjRqWB cidx msgs).
-              { left; eexists; split.
-                { eapply FirstMP_InMP; eassumption. }
-                { unfold sigOf; simpl; congruence. }
-              }
-              specialize (H24 H41); clear H41.
-
-              (* discharge [InvWB] *)
-              move H23 at bottom.
-              specialize (H23 cidx); simpl in H23.
-              disc_rule_conds_ex.
-
-              red in H23.
-              specialize (H23 H24 _ (FirstMP_InMP H35)).
-              unfold sigOf in H23; simpl in H23.
-              specialize (H23 ltac:(congruence)).
-
+              derive_coherence_of cidx.
+              disc_getDir.
+              derive_ObjDirME oidx cidx.
+              derive_ObjRqWB_inv cidx.
+              clear H40.
+              assert (NoRsI cidx msgs)
+                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvWBChild cidx H24.
+              disc_InvWB_inv cidx H23.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              assert (NoRsI cidx msgs).
-              { solve_NoRsI_base.
-
-                move Hpmcf at bottom.
-                specialize (Hpmcf cidx _ H30 Horq); dest.
-                specialize (H43 (downTo cidx, msg) eq_refl
-                                ltac:(simpl; rewrite H45; reflexivity)
-                                       H42).
-                dest.
-                apply H47 with (rqUp:= (rqUpFrom cidx, rmsg)); auto.
-                apply FirstMP_InMP; assumption.
-              }
               red in H24; dest.
-              specialize (H39 H24 H42).
-
+              specialize (H15 H24 H40).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1501,55 +1548,20 @@ Section Sim.
           solve_SpecStateCoh.
           case_ImplStateCoh_li_me_others.
           { disc_rule_conds_ex; split.
-            { (* solve_ImplOStateMESI. *)
+            { (* Coherence of the object *)
               intros.
-
-              (* discharge [InvWBChild] *)
-              move H24 at bottom.
-              red in H24; simpl in H24.
-              specialize (H24 _ _ H29).
-              pose proof (H15 _ H30).
-              disc_rule_conds_ex.
-
-              assert (ObjDirME norq os cidx).
-              { apply getDir_ME_imp in H33; dest.
-                repeat split; try assumption.
-              }
-              specialize (H24 H41); clear H41.
-
-              assert (ObjRqWB cidx msgs).
-              { right; eexists; split.
-                { eapply FirstMP_InMP; eassumption. }
-                { unfold sigOf; simpl; congruence. }
-              }
-              specialize (H24 H41); clear H41.
-
-              (* discharge [InvWB] *)
-              move H23 at bottom.
-              specialize (H23 cidx); simpl in H23.
-              disc_rule_conds_ex.
-
-              red in H41.
-              specialize (H41 H24 _ (FirstMP_InMP H35)).
-              unfold sigOf in H41; simpl in H41.
-              specialize (H41 ltac:(congruence)).
-
+              derive_coherence_of cidx.
+              disc_getDir.
+              derive_ObjDirME oidx cidx.
+              derive_ObjRqWB_push cidx.
+              clear H40.
+              assert (NoRsI cidx msgs)
+                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvWBChild cidx H24.
+              disc_InvWB_push cidx H23.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              assert (NoRsI cidx msgs).
-              { solve_NoRsI_base.
-
-                move Hpmcf at bottom.
-                specialize (Hpmcf cidx _ H30 Horq); dest.
-                specialize (H43 (downTo cidx, msg) eq_refl
-                                ltac:(simpl; rewrite H45; reflexivity)
-                                       H42).
-                dest.
-                apply H47 with (rqUp:= (rqUpFrom cidx, rmsg)); auto.
-                apply FirstMP_InMP; assumption.
-              }
               red in H24; dest.
-              specialize (H39 H24 H42).
-
+              specialize (H15 H24 H40).
               congruence.
             }
             { solve_MsgsCoh. }
