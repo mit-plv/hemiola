@@ -246,9 +246,9 @@ Section System.
         :requires
            (FirstMsg /\ (fun ost orq mins => ost#[implDirIdx].(dir_st) = mosiS))
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
-                 rsFrom ::= getFirstIdxFromI rssFrom;
+                 rsFrom ::= getFirstIdxFromI (idsOf mins);
                  (ost, {| miv_id := mosiRsS;
                           miv_value := msg_value msg |}))).
 
@@ -259,9 +259,9 @@ Section System.
         :requires
            (FirstMsg /\ (fun ost orq mins => mosiO <= ost#[implDirIdx].(dir_st)))
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
-                 rsFrom ::= getFirstIdxFromI rssFrom;
+                 rsFrom ::= getFirstIdxFromI (idsOf mins);
                  (ost +#[implDirIdx
                            <- addSharer (objIdxOf rsbTo) (setDirO (objIdxOf rsFrom))],
                   {| miv_id := mosiRsS;
@@ -300,9 +300,9 @@ Section System.
         :requires
            (FirstMsg /\ (fun ost orq mins => ost#[implDirIdx].(dir_st) = mosiS))
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
-                 rsFrom ::= getFirstIdxFromI rssFrom;
+                 rsFrom ::= getFirstIdxFromI (idsOf mins);
                  (ost, {| miv_id := mosiDownRsS;
                           miv_value := msg_value msg |}))).
 
@@ -313,9 +313,9 @@ Section System.
         :requires
            (FirstMsg /\ (fun ost orq mins => mosiO <= ost#[implDirIdx].(dir_st)))
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
-                 rsFrom ::= getFirstIdxFromI rssFrom;
+                 rsFrom ::= getFirstIdxFromI (idsOf mins);
                  (ost +#[implDirIdx <- setDirO (objIdxOf rsFrom)],
                   {| miv_id := mosiRsS;
                      miv_value := msg_value msg |}))).
@@ -425,7 +425,7 @@ Section System.
         :holding mosiRqM
         :requires ⊤
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
               --> (ost +#[implStatusIdx <- mosiI]
                        +#[implDirIdx <- setDirM (objIdxOf rsbTo)],
                    {| miv_id := mosiRsM;
@@ -482,7 +482,7 @@ Section System.
         :holding mosiDownRqI
         :requires ⊤
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (ost +#[implStatusIdx <- mosiI]
                      +#[implDirIdx <- setDirI],
                    {| miv_id := mosiDownRsI;
