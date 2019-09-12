@@ -488,33 +488,30 @@ Section System.
                                 miv_value := O |})).
 
       Definition liDownSRsUpDownME: Rule :=
-        rule.rsud[0~>4~>0]
+        rule.rsudo[0~>4~>0]
         :accepts mesiDownRsS
         :holding mesiRqS
         :requires (FirstMsg /\ (fun ost orq mins => mesiE <= ost#[dir].(dir_st)))
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
-            --> (msg ::= getFirstMsgI mins;
-                           (ost +#[val <- msg_value msg]
-                                +#[status <- mesiS]
-                                +#[dir <- setDirS ((objIdxOf rsbTo)
-                                                     :: map objIdxOf rssFrom)],
-                            {| miv_id := mesiRsS;
-                               miv_value := msg_value msg |}))).
+           (!|ost, idm, rq, rsbTo|
+            --> (ost +#[val <- msg_value (valOf idm)]
+                     +#[status <- mesiS]
+                     +#[dir <- setDirS [objIdxOf rsbTo; objIdxOf (idOf idm)]],
+                 {| miv_id := mesiRsS;
+                    miv_value := msg_value (valOf idm) |})).
 
       Definition liDownSRsUpDownS: Rule :=
-        rule.rsud[0~>4~>1]
+        rule.rsudo[0~>4~>1]
         :accepts mesiDownRsS
         :holding mesiRqS
         :requires (FirstMsg /\ (fun ost orq mins => ost#[dir].(dir_st) = mesiS))
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
-            --> (msg ::= getFirstMsgI mins;
-                           (ost +#[val <- msg_value msg]
-                                +#[status <- mesiS]
-                                +#[dir <- addSharer (objIdxOf rsbTo) ost#[dir]],
-                            {| miv_id := mesiRsS;
-                               miv_value := msg_value msg |}))).
+           (!|ost, idm, rq, rsbTo|
+            --> (ost +#[val <- msg_value (valOf idm)]
+                     +#[status <- mesiS]
+                     +#[dir <- addSharer (objIdxOf rsbTo) ost#[dir]],
+                 {| miv_id := mesiRsS;
+                    miv_value := msg_value (valOf idm) |})).
 
       (** NOTE: data should be sent along with [mesiDownRsS], even when the status 
        * is S or E, since the parent might not have the up-to-date data (e.g., 
@@ -538,8 +535,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[status] <= mesiI)
-                  (mesiE <= ost#[dir].(dir_st)))
+              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
+                  (and (ost#[status] <= mesiI) (mesiE <= ost#[dir].(dir_st))))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -551,8 +548,9 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[status] <= mesiI)
-                  (ost#[dir].(dir_st) = mesiS))
+              and (In (hd ii ost#[dir].(dir_sharers))
+                      (subtreeChildrenIndsOf topo oidx))
+                  (and (ost#[status] <= mesiI) (ost#[dir].(dir_st) = mesiS)))
         :transition
            (!|ost, msg|
             --> ([hd ii (ost#[dir].(dir_sharers))],
@@ -560,19 +558,18 @@ Section System.
                     miv_value := O |})).
 
       Definition liDownSRsUpUp: Rule :=
-        rule.rsuu[0~>7]
+        rule.rsuuo[0~>7]
         :accepts mesiDownRsS
         :holding mesiDownRqS
         :requires FirstMsg
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
-            --> (msg ::= getFirstMsgI mins;
-                           (ost +#[val <- msg_value msg]
-                                +#[owned <- false]
-                                +#[status <- mesiS]
-                                +#[dir <- setDirS (map objIdxOf rssFrom)],
-                            {| miv_id := mesiDownRsS;
-                               miv_value := msg_value msg |}))).
+           (!|ost, idm, rq, rsbTo|
+            --> (ost +#[val <- msg_value (valOf idm)]
+                     +#[owned <- false]
+                     +#[status <- mesiS]
+                     +#[dir <- setDirS [objIdxOf (idOf idm)]],
+                 {| miv_id := mesiDownRsS;
+                    miv_value := msg_value (valOf idm) |})).
 
       Definition liGetMImm: Rule :=
         rule.immd[1~>0~>0~~cidx]
@@ -661,9 +658,10 @@ Section System.
         :holding mesiRqM
         :requires ⊤
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI] (** TODO: may want to preserve [mesiNP] if it was *)
+                     (** TODO: may want to preserve [mesiNP] if it was *)
+                     +#[status <- mesiI] 
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  {| miv_id := mesiRsM;
                     miv_value := O |})).
@@ -683,7 +681,10 @@ Section System.
         rule.rqdd[1~>9~>0]
         :accepts mesiDownRqI
         :me oidx
-        :requires (fun ost mins => ost#[dir].(dir_st) = mesiS)
+        :requires
+           (fun ost mins =>
+              and (SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx))
+                  (ost#[dir].(dir_st) = mesiS))
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),
                              {| miv_id := mesiDownRqI;
@@ -693,7 +694,10 @@ Section System.
         rule.rqdd[1~>9~>1]
         :accepts mesiDownRqI
         :me oidx
-        :requires (fun ost mins => mesiE <= ost#[dir].(dir_st))
+        :requires
+           (fun ost mins =>
+              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
+                  (mesiE <= ost#[dir].(dir_st)))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
@@ -705,12 +709,11 @@ Section System.
         :holding mesiDownRqI
         :requires ⊤
         :transition
-           (!|ost, mins, rq, rssFrom, rsbTo|
+           (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- mesiI]
                      +#[dir <- setDirI],
-                 {| miv_id := mesiDownRsI;
-                    miv_value := O |})).
+                 {| miv_id := mesiDownRsI; miv_value := O |})).
 
       Definition liInvRqUpUp: Rule :=
         rule.rqu[2~>0]

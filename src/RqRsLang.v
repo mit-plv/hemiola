@@ -37,10 +37,15 @@ Definition FirstMsg `{OStateIfc}: OPrec :=
   fun ost orq mins => hd_error mins <> None.
 Definition nilMsg: Msg :=
   {| msg_id := ii; msg_type := MRq; msg_value := O |}.
+Definition nilIdMsg: Id Msg := (ii, nilMsg).
 Definition getFirstMsg (msgs: list (Id Msg)): option Msg :=
   idm <-- (hd_error msgs); Some (valOf idm).
 Definition getFirstMsgI (msgs: list (Id Msg)): Msg :=
   (hd_error msgs) >>=[nilMsg] (fun idm => valOf idm).
+Definition getFirstIdMsg (msgs: list (Id Msg)): option (Id Msg) :=
+  idm <-- (hd_error msgs); Some idm.
+Definition getFirstIdMsgI (msgs: list (Id Msg)): Id Msg :=
+  (hd_error msgs) >>=[nilIdMsg] (fun idm => idm).
 
 Definition UpLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
   fun ost orq mins =>
@@ -135,7 +140,7 @@ Definition MsgsFromRsUp `{OStateIfc} (dtr: DTree) (orss: list IdxT): OPrec :=
                      rsEdgeUpFrom dtr robj = Some rsUp)
                   (rqi_minds_rss rqid) orss).
 
-Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI
+Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMsgI
      UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
      UpLockIdxBack getUpLockIdxBack UpLockBackNone
      DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
