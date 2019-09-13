@@ -167,6 +167,7 @@ Ltac solve_ext_chns_disj :=
     match goal with
     | |- context [idsOf (map _ _)] =>
       unfold idsOf; rewrite map_trans; simpl
+    | |- context[fun x => ?f x] => change (fun x => f x) with f
     | |- DisjList (map rqUpFrom _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
       apply tree2Topo_internal_rqUp_exts_disj
     | |- DisjList (map rsUpFrom _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
@@ -1795,20 +1796,17 @@ Section Sim.
         derive_child_idx_in cidx.
         derive_coherence_of cidx.
         derive_input_msg_coherent.
-
         solve_sim_mesi.
       }
 
       { (* [liGetMRsDownDownDirI] *)
         disc_rule_conds_ex; spec_case_silent.
-
         derive_footprint_info_basis oidx.
         derive_child_chns.
         derive_child_idx_in cidx.
         disc_rule_conds_ex.
         assert (NoRqI oidx msgs)
           by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
-
         solve_sim_mesi.
       }
 
@@ -1839,8 +1837,7 @@ Section Sim.
       }
 
       { (* [liDownIRqDownDownDirS] *)
-        disc_rule_conds_ex.
-        spec_case_silent.
+        disc_rule_conds_ex; spec_case_silent.
         solve_sim_mesi.
       }
 
@@ -1850,7 +1847,41 @@ Section Sim.
         solve_sim_mesi.
       }
 
-      all: admit.
+      { (* [liDownIRsUpUp] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [exfalso_downlock_from oidx H27|].
+        disc_responses_from.
+        solve_sim_mesi.
+      }
+
+      { (* [liInvRqUpUp] *)
+        disc_rule_conds_ex; spec_case_silent.
+        solve_sim_mesi.
+      }
+
+      { (* [liInvRqUpUpWB] *)
+        disc_rule_conds_ex; spec_case_silent.
+        solve_sim_mesi.
+      }
+
+      { (* [liInvRsDownDown] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        derive_footprint_info_basis oidx.
+        disc_rule_conds_ex.
+        solve_sim_mesi.
+      }
+
+      { (* [liPushRqUpUp] *)
+        disc_rule_conds_ex; spec_case_silent.
+        solve_sim_mesi.
+      }
+
+      { (* [liPushRqUpUpWB] *)
+        disc_rule_conds_ex; spec_case_silent.
+        solve_sim_mesi.
+      }
 
     - (*! Cases for L1 caches *)
       apply in_map_iff in H0; destruct H0 as [oidx [? ?]]; subst.
