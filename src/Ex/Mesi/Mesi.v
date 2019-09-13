@@ -618,7 +618,10 @@ Section System.
         :accepts mesiRsM
         :holding mesiRqM
         :me oidx
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiS)
+        :requires
+           (fun ost orq mins =>
+              and (SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx))
+                  (ost#[dir].(dir_st) = mesiS))
         :transition
            (!|ost, rq| --> (ost#[dir].(dir_sharers),
                             {| miv_id := mesiDownRqI;

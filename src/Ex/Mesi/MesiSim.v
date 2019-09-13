@@ -42,7 +42,47 @@ Proof.
     + apply DisjList_comm, tree2Topo_minds_merss_disj.
 Qed.
 
-Lemma tree2Topo_internal_downs_exts_disj:
+Lemma tree2Topo_internal_rqUp_exts_disj:
+  forall tr bidx cinds,
+    let cifc := snd (tree2Topo tr bidx) in
+    SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
+    DisjList (map rqUpFrom cinds)
+             ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+Proof.
+  intros.
+  eapply DisjList_SubList with (l1:= c_minds cifc).
+  - red; intros.
+    apply in_map_iff in H0; dest; subst.
+    apply tree2Topo_obj_chns_minds_SubList with (oidx:= x); [auto|].
+    simpl; tauto.
+  - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+    apply DisjList_comm, DisjList_app_4.
+    + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+    + apply DisjList_comm, tree2Topo_minds_merss_disj.
+Qed.
+
+Lemma tree2Topo_internal_rsUp_exts_disj:
+  forall tr bidx cinds,
+    let cifc := snd (tree2Topo tr bidx) in
+    SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
+    DisjList (map rsUpFrom cinds)
+             ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+Proof.
+  intros.
+  eapply DisjList_SubList with (l1:= c_minds cifc).
+  - red; intros.
+    apply in_map_iff in H0; dest; subst.
+    apply tree2Topo_obj_chns_minds_SubList with (oidx:= x); [auto|].
+    simpl; tauto.
+  - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+    apply DisjList_comm, DisjList_app_4.
+    + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+    + apply DisjList_comm, tree2Topo_minds_merss_disj.
+Qed.
+
+Lemma tree2Topo_internal_down_exts_disj:
   forall tr bidx cinds,
     let cifc := snd (tree2Topo tr bidx) in
     SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
@@ -62,6 +102,8 @@ Proof.
     + apply DisjList_comm, tree2Topo_minds_merss_disj.
 Qed.
 
+
+
 Lemma tree2Topo_li_children_li_l1:
   forall tr bidx oidx,
     In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
@@ -71,6 +113,33 @@ Proof.
   intros; red; intros.
   apply subtreeChildrenIndsOf_parentIdxOf in H0; [|apply tree2Topo_WfDTree].
   eapply tree2Topo_li_child_li_l1; eauto.
+Qed.
+
+Lemma tree2Topo_li_RqRsDownMatch_children:
+  forall tr bidx oidx,
+    In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
+    forall (rssFrom: list (Id Msg)) rqTos P,
+      RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos (idsOf rssFrom) P ->
+      exists cinds,
+        idsOf rssFrom = map rsUpFrom cinds /\
+        SubList cinds ((c_li_indices (snd (tree2Topo tr bidx)))
+                         ++ c_l1_indices (snd (tree2Topo tr bidx))).
+Proof.
+  intros.
+  pose proof (tree2Topo_TreeTopo tr bidx).
+  destruct H1 as [[? _] _].
+  pose proof (RqRsDownMatch_rs_rq H0); clear H0.
+  apply Forall_forall in H2.
+  induction rssFrom; [exists nil; split; [reflexivity|apply SubList_nil]|].
+  inv H2; destruct H4 as [cidx [down ?]].
+  specialize (IHrssFrom H5); destruct IHrssFrom as [cinds ?]; dest.
+  pose proof (tree2Topo_li_child_li_l1 _ _ _ H H3).
+  specialize (H1 _ _ H3); dest.
+  disc_rule_conds_ex.
+  exists (cidx :: cinds).
+  split.
+  - simpl; congruence.
+  - apply SubList_cons; assumption.
 Qed.
 
 Ltac solve_in_l1_li :=
@@ -98,9 +167,14 @@ Ltac solve_ext_chns_disj :=
     match goal with
     | |- context [idsOf (map _ _)] =>
       unfold idsOf; rewrite map_trans; simpl
-    | |- DisjList (map _ _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
-      apply tree2Topo_internal_downs_exts_disj
-    | [H: SubList ?inds _ |- SubList ?inds _] => eapply SubList_trans; [eassumption|]
+    | |- DisjList (map rqUpFrom _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_rqUp_exts_disj
+    | |- DisjList (map rsUpFrom _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_rsUp_exts_disj
+    | |- DisjList (map downTo _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_down_exts_disj
+    | [H: SubList ?inds _ |- SubList ?inds _] =>
+      first [assumption|eapply SubList_trans; [eassumption|]]
     | |- SubList (subtreeChildrenIndsOf _ _) (c_li_indices _ ++ c_l1_indices _) =>
       apply tree2Topo_li_children_li_l1; solve_in_l1_li; fail
     end.
@@ -315,6 +389,27 @@ Section SimExtMP.
     - rewrite findQ_not_In_deqMP; [assumption|].
       intro; subst.
       elim H. apply in_or_app; right.
+      apply in_map with (f:= fun cidx => downTo (l1ExtOf cidx)) in He.
+      assumption.
+  Qed.
+
+  Lemma SimExtMP_impl_deqMsgs_indep:
+    forall minds imsgs (orqs: ORqs Msg) smsgs,
+      DisjList minds (erqs ++ erss) ->
+      SimExtMP imsgs orqs smsgs ->
+      SimExtMP (deqMsgs minds imsgs) orqs smsgs.
+  Proof.
+    disc_SimExtMP.
+    disc_rule_conds_ex.
+    split.
+    - rewrite findQ_not_In_deqMsgs; [assumption|].
+      eapply DisjList_In_1; [eassumption|].
+      apply in_or_app; left.
+      apply in_map with (f:= fun cidx => rqUpFrom (l1ExtOf cidx)) in He.
+      assumption.
+    - rewrite findQ_not_In_deqMsgs; [assumption|].
+      eapply DisjList_In_1; [eassumption|].
+      apply in_or_app; right.
       apply in_map with (f:= fun cidx => downTo (l1ExtOf cidx)) in He.
       assumption.
   Qed.
@@ -838,6 +933,8 @@ Section Sim.
            eapply SimExtMP_spec_deqMP_unlocked; eauto; [congruence|mred]; fail
          | [ |- SimExtMP _ (enqMsgs _ _) _ _ ] =>
            apply SimExtMP_impl_enqMsgs_indep; [solve_ext_chns_disj; fail|]
+         | [ |- SimExtMP _ (deqMsgs _ _) _ _ ] =>
+           apply SimExtMP_impl_deqMsgs_indep; [solve_ext_chns_disj; fail|]
          | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
            apply SimExtMP_orqs with (orqs1:= m);
            [|apply Forall_forall; intros; mred; fail]
@@ -907,6 +1004,7 @@ Section Sim.
     repeat
       (first [apply MsgsP_enqMsgs_inv in H
              |apply MsgsP_enqMP_inv in H
+             |apply MsgsP_other_midx_deqMsgs_inv in H; [|solve_DisjList_ex idx_dec]
              |apply MsgsP_other_midx_deqMP_inv in H; [|solve_chn_not_in; fail]
              |eapply MsgsP_other_msg_id_deqMP_inv in H;
               [|eassumption
@@ -940,10 +1038,10 @@ Section Sim.
            | |- MsgsCoh _ _ (enqMP _ _ _) =>
              apply MsgsCoh_enqMP;
              [|do 2 red; cbv [map cohMsgs]; solve_caseDec; reflexivity]
-           | |- MsgsCoh _ _ (deqMP _ _) =>
-             apply MsgsCoh_deqMP
            | |- MsgsCoh _ _ (enqMsgs _ _) =>
              apply MsgsCoh_other_msg_id_enqMsgs; [|solve_DisjList_ex idx_dec]
+           | |- MsgsCoh _ _ (deqMP _ _) => apply MsgsCoh_deqMP
+           | |- MsgsCoh _ _ (deqMsgs _ _) => apply MsgsCoh_deqMsgs
            end; try eassumption).
 
   Ltac solve_NoRsI_base :=
@@ -1254,13 +1352,21 @@ Section Sim.
       | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: _ = ?rss |- _] =>
         rewrite <-Hrss in Hrr
       end;
-    try match goal with
-        | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
-          let cidx := fresh "cidx" in
-          let down := fresh "down" in
-          eapply RqRsDownMatch_rs_rq in Hrr; [|left; reflexivity];
-          destruct Hrr as [cidx [down ?]]; dest
-        end.
+    repeat
+      match goal with
+      | [H: ValidMsgsIn _ ?rss |- _] => destruct H
+      | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
+        let cidx := fresh "cidx" in
+        let down := fresh "down" in
+        eapply RqRsDownMatch_rs_rq in Hrr; [|left; reflexivity];
+        destruct Hrr as [cidx [down ?]]; dest
+      | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
+         Hin: In ?oidx (tl (c_li_indices _)) |- _] =>
+        let Hc := fresh "H" in
+        pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrr) as Hc;
+        let Hic := fresh "H" in
+        destruct Hc as [cinds [Hic ?]]; rewrite Hic
+      end.
 
   Ltac exfalso_downlock_from oidx Hinv :=
     specialize (Hinv oidx); simpl in Hinv;
@@ -1359,7 +1465,7 @@ Section Sim.
       disc_rule_conds_ex.
       (** Do case analysis per a rule. *)
       apply in_app_or in H5; destruct H5.
-      
+
       1: { (** Rules per a child *)
         apply concat_In in H5; destruct H5 as [crls [? ?]].
         apply in_map_iff in H5; destruct H5 as [cidx [? ?]]; subst.
@@ -1703,6 +1809,44 @@ Section Sim.
         assert (NoRqI oidx msgs)
           by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
 
+        solve_sim_mesi.
+      }
+
+      { (* [liGetMRsDownRqDownDirS] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx.
+        solve_sim_mesi.
+      }
+
+      { (* [liDownIRsUpDown] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [|exfalso_downlock_from oidx H27].
+        derive_child_chns.
+        derive_child_idx_in upCIdx.
+        disc_responses_from.
+        disc_rule_conds_ex.
+        solve_sim_mesi.
+      }
+
+      { (* [liDownIImm] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        assert (NoRsI oidx msgs)
+          by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
+        disc_rule_conds_ex.
+        solve_sim_mesi.
+      }
+
+      { (* [liDownIRqDownDownDirS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        solve_sim_mesi.
+      }
+
+      { (* [liDownIRqDownDownDirME] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
         solve_sim_mesi.
       }
 
