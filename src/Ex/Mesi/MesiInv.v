@@ -4,7 +4,7 @@ Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
-Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
+Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo Ex.Mesi.MesiInvB.
 
 Set Implicit Arguments.
 
@@ -341,6 +341,27 @@ Definition InvNonWB (topo: DTree) (st: MState): Prop :=
        ObjInvRq oidx (bst_msgs st) ->
        (ObjClean ost /\ ost#[val] = post#[val])).
 
+Definition InvRoot (topo: DTree) (st: MState): Prop :=
+  NoRsI (rootOf topo) (bst_msgs st) /\
+  NoRqI (rootOf topo) (bst_msgs st).
+
+Definition InvForSim (topo: DTree) (st: MState): Prop :=
+  InvRoot topo st /\ InvExcl st /\
+  InvWB st /\ InvWBChild topo st /\ InvNonWB topo st /\
+  MesiFootprintsInv topo st.
+
+Lemma mesi_InvForSim_init:
+  forall tr (Htr: tr <> Node nil),
+    InvForSim (fst (tree2Topo tr 0)) (initsOf (impl Htr)).
+Proof.
+Admitted.
+
+Lemma mesi_InvForSim_ok:
+  forall tr (Htr: tr <> Node nil),
+    InvStep (impl Htr) step_m (InvForSim (fst (tree2Topo tr 0))).
+Proof.
+Admitted.
+
 Lemma caseDec_head_eq:
   forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
          k (df: B) hd tl,
@@ -625,4 +646,5 @@ Section Facts.
 End Facts.
 
 Hint Unfold MsgsNotExist NoRsI ImplOStateMESI: RuleConds.
+Hint Unfold InvForSim: RuleConds.
 

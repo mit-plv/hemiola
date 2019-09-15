@@ -680,7 +680,7 @@ Section Sim.
 
   Hint Unfold ObjCoh ImplStateCoh: RuleConds.
 
-  Lemma simMesi_init:
+  Lemma mesi_sim_init:
     SimMESI (initsOf impl) (initsOf spec).
   Proof.
     split.
@@ -710,7 +710,7 @@ Section Sim.
       simpl; mred.
   Qed.
 
-  Lemma simMesi_sim_silent:
+  Lemma mesi_sim_silent:
     forall ist sst1,
       SimMESI ist sst1 ->
       exists slbl sst2,
@@ -723,7 +723,7 @@ Section Sim.
     constructor.
   Qed.
 
-  Lemma simMesi_sim_ext_in:
+  Lemma sim_mesi_ext_in:
     forall oss orqs msgs sst1,
       SimMESI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
       forall eins,
@@ -766,7 +766,7 @@ Section Sim.
         apply H1.
   Qed.
 
-  Lemma simMesi_sim_ext_out:
+  Lemma sim_mesi_ext_out:
     forall oss orqs msgs sst1,
       SimMESI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
       forall eouts: list (Id Msg),
@@ -814,13 +814,6 @@ Section Sim.
       + rewrite c_merss_l1_downTo in H2.
         apply SimExtMP_ext_outs_deqMsgs; auto.
   Qed.
-
-  Definition ImplInvEx (st: MState) :=
-    InvExcl st /\
-    InvWB st /\ InvWBChild topo st /\ InvNonWB topo st /\
-    MesiFootprintsInv topo st.
-
-  Hint Unfold ImplInvEx: RuleConds.
 
   Ltac disc_MsgsCoh_by_FirstMP Hd Hf :=
     specialize (Hd _ (FirstMP_InMP Hf));
@@ -1367,6 +1360,12 @@ Section Sim.
         pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrr) as Hc;
         let Hic := fresh "H" in
         destruct Hc as [cinds [Hic ?]]; rewrite Hic
+      | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
+         Hin: In ?oidx (c_li_indices _) |- _] =>
+        let Hc := fresh "H" in
+        pose proof (tree2Topo_li_RqRsDownMatch_children _ _ Hin _ Hrr) as Hc;
+        let Hic := fresh "H" in
+        destruct Hc as [cinds [Hic ?]]; rewrite Hic
       end.
 
   Ltac exfalso_downlock_from oidx Hinv :=
@@ -1382,8 +1381,8 @@ Section Sim.
         red in Hdfp; dest; disc_rule_conds_ex; solve_midx_false
       end.
 
-  Lemma simMesi_sim:
-    InvSim step_m step_m ImplInvEx SimMESI impl spec.
+  Theorem mesi_sim_ok:
+    InvSim step_m step_m (MesiInv.InvForSim topo) SimMESI impl spec.
   Proof.
     red; intros.
 
@@ -1404,9 +1403,9 @@ Section Sim.
                   (reachable_steps H (steps_singleton H2))) as Hnmcf.
 
     inv H2;
-      [apply simMesi_sim_silent; assumption
-      |apply simMesi_sim_ext_in; assumption
-      |apply simMesi_sim_ext_out; assumption
+      [apply mesi_sim_silent; assumption
+      |apply sim_mesi_ext_in; assumption
+      |apply sim_mesi_ext_out; assumption
       |].
 
     destruct sst1 as [soss1 sorqs1 smsgs1].
@@ -1418,9 +1417,298 @@ Section Sim.
     destruct (sorqs1@[specIdx]) as [sorq|] eqn:Hsorq; simpl in *; [|exfalso; auto].
     subst.
     simpl in H4; destruct H4; [subst|apply in_app_or in H0; destruct H0].
-    
+
     - (*! Cases for the main memory *)
-      admit.
+      Ltac solve_ImplStateCoh_mem_me :=
+        disc_rule_conds_ex;
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
+
+      Ltac solve_ImplStateCoh_mem_others lidx :=
+        match goal with
+        | [Hf: forall _, In _ ?l -> _, He: In lidx ?l |- _] =>
+          specialize (Hf _ He); disc_rule_conds_ex
+        end;
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
+
+      Ltac case_ImplStateCoh_mem_me_others lidx :=
+        match goal with
+        | |- ImplStateCoh _ {| bst_oss := _ +[?oidx <- _] |} =>
+          red; simpl;
+          apply Forall_forall;
+          intros lidx ?; destruct (idx_dec lidx oidx); subst
+        end.
+
+      Ltac solve_ImplStateCoh ::=
+        let lidx := fresh "lidx" in
+        case_ImplStateCoh_mem_me_others lidx;
+        [solve_ImplStateCoh_mem_me|solve_ImplStateCoh_mem_others lidx].
+
+      (** Derive some properties of the root *)
+      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+      
+      assert (In (rootOf (fst (tree2Topo tr 0))) (c_li_indices (snd (tree2Topo tr 0)))).
+      { rewrite c_li_indices_head_rootOf by assumption.
+        left; reflexivity.
+      }
+
+      assert (~ In (rootOf (fst (tree2Topo tr 0))) (c_l1_indices (snd (tree2Topo tr 0)))).
+      { pose proof (tree2Topo_WfCIfc tr 0) as [? _].
+        apply (DisjList_NoDup idx_dec) in H4.
+        eapply DisjList_In_2; eassumption.
+      }
+
+      disc_rule_conds_ex.
+      destruct H1 as [Hnrsi Hnrqi].
+      unfold topo in Hnrsi, Hnrqi; simpl in Hnrsi, Hnrqi.
+
+      assert (rsEdgeUpFrom topo (rootOf (fst (tree2Topo tr 0))) = None).
+      { destruct (rsEdgeUpFrom _ _) eqn:Hrs; [|reflexivity].
+        exfalso.
+        apply rsEdgeUpFrom_Some with (sys:= impl) in Hrs;
+          [|subst topo impl; auto].
+        destruct Hrs as [rqUp [down [pidx ?]]]; dest.
+        apply parentIdxOf_child_not_root in H28; [|subst topo; auto].
+        auto.
+      }
+
+      (** Abstract the root. *)
+      remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
+      disc_rule_conds_ex.
+
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H5; destruct H5.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H5; destruct H5 as [crls [? ?]].
+        apply in_map_iff in H5; destruct H5 as [cidx [? ?]]; subst.
+
+        (** Derive that the child has the parent. *)
+        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
+
+        dest_in.
+
+        { (* [liGetSImmS] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          derive_obj_coherent oidx.
+          solve_sim_mesi.
+          destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
+        }
+
+        { (* [liGetSImmME] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          derive_obj_coherent oidx.
+          solve_sim_mesi.
+          destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
+        }
+        
+        { (* [liGetSRqUpDownME] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
+          solve_sim_mesi.
+        }
+
+        { (* [liGetMImm] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liGetMRqUpDownME] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
+          solve_sim_mesi.
+        }
+
+        { (* [liGetMRqUpDownS] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmI] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmS0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmS1] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmE] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+
+          solve_sim_mesi_ext_mp.
+          solve_SpecStateCoh.
+          case_ImplStateCoh_mem_me_others lidx.
+          { disc_rule_conds_ex; split.
+            { (* Coherence of the object *)
+              intros.
+              derive_coherence_of cidx.
+              disc_getDir.
+              derive_ObjDirE oidx cidx.
+              derive_ObjInvRq cidx.
+              assert (NoRsI cidx msgs)
+                by (clear H39; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvNonWB cidx H23.
+              (* discharge [ImplOStateMESI] of [cidx] *)
+              red in H23; dest.
+              specialize (H37 H23 H42).
+              congruence.
+            }
+            { solve_MsgsCoh. }
+          }
+          { solve_ImplStateCoh_mem_others lidx. }
+        }
+
+        { (* [liInvImmWBI] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmWBS0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmWBS1] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmWBME] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+
+          solve_sim_mesi_ext_mp.
+          solve_SpecStateCoh.
+          case_ImplStateCoh_mem_me_others lidx.
+          { disc_rule_conds_ex; split.
+            { (* Coherence of the object *)
+              intros.
+              derive_coherence_of cidx.
+              disc_getDir.
+              derive_ObjDirME oidx cidx.
+              derive_ObjRqWB_inv cidx.
+              clear H39.
+              assert (NoRsI cidx msgs)
+                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvWBChild cidx H22.
+              disc_InvWB_inv cidx H21.
+              (* discharge [ImplOStateMESI] of [cidx] *)
+              red in H22; dest.
+              specialize (H37 H22 H39).
+              congruence.
+            }
+            { solve_MsgsCoh. }
+          }
+          { solve_ImplStateCoh_mem_others lidx. }
+        }
+
+        { (* [liPushImm] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liPushImmWB0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+        
+        { (* [liPushImmWB1] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns.
+          derive_child_idx_in cidx.
+
+          solve_sim_mesi_ext_mp.
+          solve_SpecStateCoh.
+          case_ImplStateCoh_mem_me_others lidx.
+          { disc_rule_conds_ex; split.
+            { (* Coherence of the object *)
+              intros.
+              derive_coherence_of cidx.
+              disc_getDir.
+              derive_ObjDirME oidx cidx.
+              derive_ObjRqWB_push cidx.
+              clear H39.
+              assert (NoRsI cidx msgs)
+                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvWBChild cidx H22.
+              disc_InvWB_push cidx H21.
+              (* discharge [ImplOStateMESI] of [cidx] *)
+              red in H22; dest.
+              specialize (H37 H22 H39).
+              congruence.
+            }
+            { solve_MsgsCoh. }
+          }
+          { solve_ImplStateCoh_mem_others lidx. }
+        }
+        
+      }
+
+      dest_in.
+
+      { (* [liDownSRsUpDownME] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [|exfalso; subst topo; congruence].
+        derive_child_chns.
+        derive_child_idx_in upCIdx.
+        disc_responses_from.
+        derive_child_chns.
+        derive_child_idx_in cidx.
+        derive_coherence_of cidx.
+        derive_input_msg_coherent.
+        solve_sim_mesi.
+        destruct (idx_dec lidx (obj_idx upCObj)); subst; solve_MsgsCoh.
+      }
+
+      { (* [liDownIRsUpDown] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [|exfalso; subst topo; congruence].
+        derive_child_chns.
+        derive_child_idx_in upCIdx.
+        disc_responses_from.
+        disc_rule_conds_ex.
+        solve_sim_mesi.
+      }
 
     - (*! Cases for Li caches *)
       Ltac solve_ImplStateCoh_li_me :=
@@ -1590,11 +1878,11 @@ Section Sim.
               derive_ObjDirE oidx cidx.
               derive_ObjInvRq cidx.
               assert (NoRsI cidx msgs)
-                by (clear H43; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvNonWB cidx H26.
+                by (clear H45; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvNonWB cidx H28.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H26; dest.
-              specialize (H41 H26 H46).
+              red in H28; dest.
+              specialize (H43 H28 H48).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1640,14 +1928,14 @@ Section Sim.
               disc_getDir.
               derive_ObjDirME oidx cidx.
               derive_ObjRqWB_inv cidx.
-              clear H43.
+              clear H45.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWBChild cidx H25.
-              disc_InvWB_inv cidx H24.
+              disc_InvWBChild cidx H27.
+              disc_InvWB_inv cidx H26.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H25; dest.
-              specialize (H41 H25 H43).
+              red in H27; dest.
+              specialize (H43 H27 H45).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1686,14 +1974,14 @@ Section Sim.
               disc_getDir.
               derive_ObjDirME oidx cidx.
               derive_ObjRqWB_push cidx.
-              clear H43.
+              clear H45.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWBChild cidx H25.
-              disc_InvWB_push cidx H24.
+              disc_InvWBChild cidx H27.
+              disc_InvWB_push cidx H26.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H25; dest.
-              specialize (H41 H25 H43).
+              red in H27; dest.
+              specialize (H43 H27 H45).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1737,7 +2025,7 @@ Section Sim.
       { (* [liDownSRsUpDownME] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|exfalso_downlock_from oidx H27].
+          [|exfalso_downlock_from oidx H29].
         derive_child_chns.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1753,7 +2041,7 @@ Section Sim.
       { (* liDownSRsUpDownS] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|exfalso_downlock_from oidx H27].
+          [|exfalso_downlock_from oidx H29].
         derive_child_chns.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1790,7 +2078,7 @@ Section Sim.
       { (* [liDownSRsUpUp] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [exfalso_downlock_from oidx H27|].
+          [exfalso_downlock_from oidx H29|].
         disc_responses_from.
         derive_child_chns.
         derive_child_idx_in cidx.
@@ -1819,7 +2107,7 @@ Section Sim.
       { (* [liDownIRsUpDown] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|exfalso_downlock_from oidx H27].
+          [|exfalso_downlock_from oidx H29].
         derive_child_chns.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1850,7 +2138,7 @@ Section Sim.
       { (* [liDownIRsUpUp] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [exfalso_downlock_from oidx H27|].
+          [exfalso_downlock_from oidx H29|].
         disc_responses_from.
         solve_sim_mesi.
       }
@@ -1987,7 +2275,7 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
-          { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
+          { specialize (H19 oidx); repeat (simpl in H19; mred); dest.
             assumption.
           }
           { split.
@@ -1995,7 +2283,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H29; eapply l1ExtOf_not_eq; eauto].
+                  inv H31; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -2013,12 +2301,12 @@ Section Sim.
           { apply Hnmcf; [|simpl; mred].
             assumption.
           }
-          { eapply InvExcl_excl_invalid; [eapply H3|..];
+          { eapply InvExcl_excl_invalid; [eapply H19|..];
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                inv H35; eapply l1ExtOf_not_eq; eauto].
+                inv H37; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -2035,7 +2323,7 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
-          { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
+          { specialize (H19 oidx); repeat (simpl in H19; mred); dest.
             assumption.
           }
           { split.
@@ -2043,7 +2331,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H29; eapply l1ExtOf_not_eq; eauto].
+                  inv H31; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -2061,12 +2349,12 @@ Section Sim.
           { apply Hnmcf; [|simpl; mred].
             assumption.
           }
-          { eapply InvExcl_excl_invalid; [eapply H3|..];
+          { eapply InvExcl_excl_invalid; [eapply H19|..];
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                inv H35; eapply l1ExtOf_not_eq; eauto].
+                inv H37; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -2093,7 +2381,7 @@ Section Sim.
         case_ImplStateCoh_l1_me_others.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
-          { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
+          { specialize (H19 oidx); repeat (simpl in H19; mred); dest.
             assumption.
           }
           { split.
@@ -2101,7 +2389,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H41; eapply l1ExtOf_not_eq; eauto].
+                  inv H43; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -2111,18 +2399,18 @@ Section Sim.
           mred; simpl.
           assert (exists lost lorq, oss@[lidx] = Some lost /\
                                     orqs@[lidx] = Some lorq).
-          { specialize (H15 _ H31).
+          { specialize (H15 _ H33).
             solve_rule_conds_ex.
           }
-          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H40; simpl.
+          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H42; simpl.
           eapply ObjInvalid_ObjCoh.
           { apply Hnmcf; [assumption|simpl; mred]. }
-          { eapply InvExcl_excl_invalid; [eapply H3|..];
+          { eapply InvExcl_excl_invalid; [eapply H19|..];
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                inv H42; eapply l1ExtOf_not_eq; eauto].
+                inv H44; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -2155,17 +2443,18 @@ Section Sim.
         disc_rule_conds_ex.
         solve_sim_mesi.
         
-  Admitted.
-  
-  Theorem Mesi_ok:
+  Qed.
+
+  Theorem mesi_ok:
     (steps step_m) # (steps step_m) |-- impl ⊑ spec.
   Proof.
-    apply invSim_implies_refinement with (ginv:= ImplInvEx) (sim:= SimMESI).
-    - apply simMesi_sim.
-    - admit.
-    - apply simMesi_init.
-    - admit.
-  Admitted.
+    apply invSim_implies_refinement
+      with (ginv:= MesiInv.InvForSim topo) (sim:= SimMESI).
+    - apply mesi_sim_ok.
+    - apply mesi_InvForSim_ok.
+    - apply mesi_sim_init.
+    - apply mesi_InvForSim_init.
+  Qed.
 
 End Sim.
 
