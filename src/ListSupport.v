@@ -1060,6 +1060,63 @@ Section Distribution.
   
 End Distribution.
 
+(** [caseDec], a case statement by decidability *)
+
+Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+         (a: A) (def: B) (cs: list (A * B)) :=
+  match cs with
+  | List.nil => def
+  | List.cons (ca, cp) cs' =>
+    if dec a ca then cp else caseDec dec a def cs'
+  end.
+
+Module CaseNotations.
+  Notation "x : t" := (x, t) (at level 90, only parsing): cases_scope.
+  Notation "|! xt" := (List.cons xt List.nil) (at level 95, only parsing): cases_scope.
+  Notation "| xt1 | xt2 | .. | xtn" :=
+    (List.cons xt1 (List.cons xt2 .. (List.cons xtn List.nil) ..))
+      (at level 95, only parsing): cases_scope.
+  Delimit Scope cases_scope with cases.
+  Notation "'match' 'case' X 'on' DEC 'default' DEF 'with' CS 'end'" :=
+    (caseDec DEC X DEF CS%cases) (only parsing).
+End CaseNotations.
+
+Lemma caseDec_head_eq:
+  forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+         k (df: B) hd tl,
+    k = fst hd ->
+    caseDec eq_dec k df (hd :: tl) = snd hd.
+Proof.
+  intros; subst.
+  destruct hd as [hk hv]; simpl.
+  find_if_inside; [reflexivity|exfalso; auto].
+Qed.
+
+Lemma caseDec_head_neq:
+  forall {A B} (eq_dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
+         k (df: B) hd tl,
+    k <> fst hd ->
+    caseDec eq_dec k df (hd :: tl) = caseDec eq_dec k df tl.
+Proof.
+  intros; subst.
+  destruct hd as [hk hv]; simpl.
+  find_if_inside; [exfalso; auto|reflexivity].
+Qed.
+
+Ltac disc_caseDec Hcd :=
+  repeat
+    (first [rewrite caseDec_head_eq in Hcd by reflexivity
+           |rewrite caseDec_head_neq in Hcd by discriminate]);
+  simpl in Hcd.
+
+Ltac solve_caseDec :=
+  repeat
+    (first [rewrite caseDec_head_eq by reflexivity
+           |rewrite caseDec_head_neq by discriminate]);
+  simpl.
+
+(** Utility lemmas for general lists *)
+
 Lemma tl_In:
   forall {A} (a: A) (l: list A),
     In a (tl l) ->
@@ -1653,6 +1710,15 @@ Ltac solve_DisjList dec :=
     destruct (in_dec dec e ll); [right|auto];
     dest_in; solve_not_in
   end.
+
+Ltac solve_DisjList_ex dec :=
+  repeat (rewrite map_trans; simpl);
+  apply (DisjList_spec_1 dec); intros;
+  repeat
+    match goal with
+    | [H: In _ (map _ _) |- _] => apply in_map_iff in H; dest; subst
+    end;
+  solve_not_in.
 
 Ltac solve_NoDup :=
   simpl; repeat constructor; solve_not_in.

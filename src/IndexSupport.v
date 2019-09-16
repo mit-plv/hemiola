@@ -460,3 +460,55 @@ Proof.
         }
 Qed.
 
+(** Some useful tactics about indices *)
+
+Ltac solve_inds_NoDup_prefix :=
+  eapply inds_NoDup_prefix;
+  [repeat
+     match goal with
+     | |- _ :: _ = map _ ?l => is_evar l; instantiate (1:= _ :: _); simpl; f_equal
+     | |- nil = map _ ?l => is_evar l; instantiate (1:= nil); reflexivity
+     end|];
+  solve_NoDup.
+
+Ltac solve_inds_NoDup_pre :=
+  repeat
+    (repeat autounfold with RuleConds;
+     repeat
+       match goal with
+       | [H: In _ (map _ _) |- _] => apply in_map_iff in H; dest; subst
+       | [H: nth_error (map _ _) _ = Some _ |- _] =>
+         apply map_nth_error_inv in H; dest; subst
+
+       | |- context [List.map _ (_ ++ _)] => rewrite map_app
+       | |- context [List.concat (List.map _ _)] => rewrite concat_map
+                                                            
+       | |- NoDup (_ ++ _) => apply NoDup_DisjList
+       | |- NoDup (List.concat _) => apply concat_NoDup; intros
+       | |- NoDup ((?pi ++ _) :: (?pi ++ _) :: _) => solve_inds_NoDup_prefix
+       | |- NoDup ((_ ~> _) :: _) => solve_NoDup
+
+       | |- DisjList (List.concat _) _ => apply DisjList_comm
+       | |- DisjList _ (List.concat _) => apply concat_DisjList; intros
+       end; simpl in * ).
+
+Ltac solve_IndsDisj :=
+  repeat
+    match goal with
+    | |- IndsDisj _ _ => red; intros; dest_in
+    | |- _ ~*~ _ => split; intro
+    | [H: _ ~< _ |- _] =>
+      apply IdxPrefix_idxPrefix in H; unfold idxPrefix in H;
+      repeat rewrite rev_app_distr in H; discriminate
+    | [H: (_ ++ ?pi) ~< (_ ++ ?pi) |- _] =>
+      apply IdxPrefix_prefix_red in H; auto
+    end.
+
+Ltac solve_inds_NoDup itac :=
+  solve_inds_NoDup_pre;
+  match goal with
+  | |- DisjList _ _ => apply IndsDisj_DisjList
+  end;
+  itac;
+  solve_IndsDisj.
+

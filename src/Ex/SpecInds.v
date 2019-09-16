@@ -1,8 +1,8 @@
 Require Import Bool Vector List String Peano_dec Omega.
-Require Import Common FMap HVector IndexSupport Syntax Semantics.
+Require Import Common FMap HVector IndexSupport Syntax Semantics StepM.
 Require Import Topology RqRsLang.
 
-Require Import Ex.Spec Ex.TopoTemplate.
+Require Import Ex.Spec Ex.TopoTemplate Ex.SimTemplate.
 
 Set Implicit Arguments.
 
@@ -199,4 +199,84 @@ Section Facts.
   Qed.
 
 End Facts.
+
+Ltac spec_constr_step_FirstMPI :=
+  repeat constructor;
+  repeat
+    match goal with
+    | [H: SimExtMP _ _ _ _ |- _] => red in H
+    | [Hf: Forall _ ?l, Hin: In _ ?l |- _] =>
+      rewrite Forall_forall in Hf; specialize (Hf _ Hin);
+      disc_rule_conds_const; dest
+    | [H: _ :: findQ ?eidx _ = findQ ?eidx ?msgs |-
+       FirstMPI ?msgs (?eidx, _) ] =>
+      unfold FirstMPI, FirstMP, firstMP;
+      simpl; rewrite <-H; reflexivity
+    | [H: findQ ?eidx _ = findQ ?eidx ?msgs |-
+       FirstMPI ?msgs (?eidx, _) ] =>
+      eapply findQ_eq_FirstMPI; eauto; fail
+    end.
+
+Ltac spec_constr_step_ValidMsgs :=
+  match goal with
+  | [H: In _ (c_l1_indices _) |- _] =>
+    clear -H; split;
+    [simpl; apply SubList_cons; [|apply SubList_nil];
+     apply in_map with (f:= fun cidx => _ (l1ExtOf cidx));
+     assumption|
+     repeat constructor; intro; dest_in]
+  end.
+
+Ltac spec_constr_step_get cidx :=
+  eapply SmInt with (ins:= [(rqUpFrom (l1ExtOf cidx), _)]);
+  try reflexivity;
+  [left; reflexivity
+  |simpl; apply specGetRq_in_specRules, in_map; assumption
+  |reflexivity
+  |eassumption
+  |eassumption
+  |spec_constr_step_FirstMPI
+  |spec_constr_step_ValidMsgs
+  |solve_rule_conds_ex;
+   match goal with
+   | [H: msg_id ?msg = _ |- context[msg_id ?msg] ] => rewrite H
+   end; reflexivity
+  |spec_constr_step_ValidMsgs
+  |solve_DisjList idx_dec].
+
+Ltac spec_constr_step_set cidx :=
+  eapply SmInt with (ins:= [(rqUpFrom (l1ExtOf cidx), _)]);
+  try reflexivity;
+  [left; reflexivity
+  |simpl; apply specSetRq_in_specRules, in_map; assumption
+  |reflexivity
+  |eassumption
+  |eassumption
+  |spec_constr_step_FirstMPI
+  |spec_constr_step_ValidMsgs
+  |solve_rule_conds_ex;
+   match goal with
+   | [H: msg_id ?msg = _ |- context[msg_id ?msg] ] => rewrite H
+   end; reflexivity
+  |spec_constr_step_ValidMsgs
+  |solve_DisjList idx_dec].
+
+Ltac spec_case_get cidx :=
+  eexists (RlblInt specIdx (rule_idx (specGetRq (l1ExtOf cidx))) _ _);
+  eexists;
+  repeat ssplit;
+  [reflexivity|spec_constr_step_get cidx|].
+
+Ltac spec_case_set cidx :=
+  eexists (RlblInt specIdx (rule_idx (specSetRq (l1ExtOf cidx))) _ _);
+  eexists;
+  repeat ssplit;
+  [reflexivity|spec_constr_step_set cidx|].
+
+Ltac spec_case_silent :=
+  idtac; exists (RlblEmpty _); eexists;
+  repeat ssplit;
+  [reflexivity
+  |econstructor
+  |].
 

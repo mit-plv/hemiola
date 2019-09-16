@@ -42,3 +42,16 @@ Section Footprints.
 
 End Footprints.
 
+Ltac exfalso_downlock_from oidx Hinv :=
+  specialize (Hinv oidx); simpl in Hinv;
+  disc_rule_conds_ex;
+  repeat
+    match goal with
+    | [Hrqi: rqi_msg _ = Some ?msg, Hmsg: msg_id ?msg = _ |- _] =>
+      rewrite Hmsg in Hinv; simpl in Hinv
+    | [Hdfc: DownLockFromChild _ _ _ |- _] =>
+      red in Hdfc; dest; disc_rule_conds_ex
+    | [Hdfp: DownLockFromParent _ _ |- _] =>
+      red in Hdfp; dest; disc_rule_conds_ex; solve_midx_false
+    end.
+

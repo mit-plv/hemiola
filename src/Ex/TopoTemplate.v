@@ -1,5 +1,5 @@
 Require Import List FMap Omega.
-Require Import Common Topology Syntax IndexSupport.
+Require Import Common Topology IndexSupport Syntax Semantics.
 Require Import RqRsLang.
 
 Set Implicit Arguments.
@@ -1531,55 +1531,199 @@ Section Facts.
   Proof.
   Admitted.
 
+  Lemma tree2Topo_internal_chns_not_exts:
+    forall tr bidx oidx,
+      let cifc := snd (tree2Topo tr bidx) in
+      In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      DisjList [rqUpFrom oidx; rsUpFrom oidx; downTo oidx]
+               ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                  ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+  Proof.
+    intros.
+    eapply DisjList_SubList.
+    - apply tree2Topo_obj_chns_minds_SubList; eassumption.
+    - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+      apply DisjList_comm, DisjList_app_4.
+      + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+      + apply DisjList_comm, tree2Topo_minds_merss_disj.
+  Qed.
+
+  Lemma tree2Topo_internal_rqUp_exts_disj:
+    forall tr bidx cinds,
+      let cifc := snd (tree2Topo tr bidx) in
+      SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
+      DisjList (map rqUpFrom cinds)
+               ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                  ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+  Proof.
+    intros.
+    eapply DisjList_SubList with (l1:= c_minds cifc).
+    - red; intros.
+      apply in_map_iff in H0; dest; subst.
+      apply tree2Topo_obj_chns_minds_SubList with (oidx:= x); [auto|].
+      simpl; tauto.
+    - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+      apply DisjList_comm, DisjList_app_4.
+      + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+      + apply DisjList_comm, tree2Topo_minds_merss_disj.
+  Qed.
+
+  Lemma tree2Topo_internal_rsUp_exts_disj:
+    forall tr bidx cinds,
+      let cifc := snd (tree2Topo tr bidx) in
+      SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
+      DisjList (map rsUpFrom cinds)
+               ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                  ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+  Proof.
+    intros.
+    eapply DisjList_SubList with (l1:= c_minds cifc).
+    - red; intros.
+      apply in_map_iff in H0; dest; subst.
+      apply tree2Topo_obj_chns_minds_SubList with (oidx:= x); [auto|].
+      simpl; tauto.
+    - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+      apply DisjList_comm, DisjList_app_4.
+      + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+      + apply DisjList_comm, tree2Topo_minds_merss_disj.
+  Qed.
+
+  Lemma tree2Topo_internal_down_exts_disj:
+    forall tr bidx cinds,
+      let cifc := snd (tree2Topo tr bidx) in
+      SubList cinds (c_li_indices cifc ++ c_l1_indices cifc) ->
+      DisjList (map downTo cinds)
+               ((map (fun cidx => rqUpFrom (l1ExtOf cidx)) (c_l1_indices cifc))
+                  ++ map (fun cidx => downTo (l1ExtOf cidx)) (c_l1_indices cifc)).
+  Proof.
+    intros.
+    eapply DisjList_SubList with (l1:= c_minds cifc).
+    - red; intros.
+      apply in_map_iff in H0; dest; subst.
+      apply tree2Topo_obj_chns_minds_SubList with (oidx:= x); [auto|].
+      simpl; tauto.
+    - subst cifc; rewrite <-c_merqs_l1_rqUpFrom, <-c_merss_l1_downTo.
+      apply DisjList_comm, DisjList_app_4.
+      + apply DisjList_comm, tree2Topo_minds_merqs_disj.
+      + apply DisjList_comm, tree2Topo_minds_merss_disj.
+  Qed.
+
+  Lemma tree2Topo_li_children_li_l1:
+    forall tr bidx oidx,
+      In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
+      SubList (subtreeChildrenIndsOf (fst (tree2Topo tr bidx)) oidx)
+              (c_li_indices (snd (tree2Topo tr bidx)) ++ c_l1_indices (snd (tree2Topo tr bidx))).
+  Proof.
+    intros; red; intros.
+    apply subtreeChildrenIndsOf_parentIdxOf in H0; [|apply tree2Topo_WfDTree].
+    eapply tree2Topo_li_child_li_l1; eauto.
+  Qed.
+
+  Lemma tree2Topo_li_RqRsDownMatch_children:
+    forall tr bidx oidx,
+      In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
+      forall (rssFrom: list (Id Msg)) rqTos P,
+        RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos (idsOf rssFrom) P ->
+        exists cinds,
+          idsOf rssFrom = map rsUpFrom cinds /\
+          SubList cinds ((c_li_indices (snd (tree2Topo tr bidx)))
+                           ++ c_l1_indices (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_TreeTopo tr bidx).
+    destruct H1 as [[? _] _].
+    pose proof (RqRsDownMatch_rs_rq H0); clear H0.
+    apply Forall_forall in H2.
+    induction rssFrom; [exists nil; split; [reflexivity|apply SubList_nil]|].
+    inv H2; destruct H4 as [cidx [down ?]].
+    specialize (IHrssFrom H5); destruct IHrssFrom as [cinds ?]; dest.
+    pose proof (tree2Topo_li_child_li_l1 _ _ _ H H3).
+    specialize (H1 _ _ H3); dest.
+    disc_rule_conds_ex.
+    exists (cidx :: cinds).
+    split.
+    - simpl; congruence.
+    - apply SubList_cons; assumption.
+  Qed.
+  
 End Facts.
 
-Ltac solve_inds_NoDup_prefix :=
-  eapply inds_NoDup_prefix;
-  [repeat
-     match goal with
-     | |- _ :: _ = map _ ?l => is_evar l; instantiate (1:= _ :: _); simpl; f_equal
-     | |- nil = map _ ?l => is_evar l; instantiate (1:= nil); reflexivity
-     end|];
-  solve_NoDup.
-
-Ltac solve_inds_NoDup_pre :=
-  repeat
-    (repeat autounfold with RuleConds;
-     repeat
-       match goal with
-       | [H: In _ (map _ _) |- _] => apply in_map_iff in H; dest; subst
-       | [H: nth_error (map _ _) _ = Some _ |- _] =>
-         apply map_nth_error_inv in H; dest; subst
-
-       | |- context [List.map _ (_ ++ _)] => rewrite map_app
-       | |- context [List.concat (List.map _ _)] => rewrite concat_map
-                                                            
-       | |- NoDup (_ ++ _) => apply NoDup_DisjList
-       | |- NoDup (List.concat _) => apply concat_NoDup; intros
-       | |- NoDup ((?pi ++ _) :: (?pi ++ _) :: _) => solve_inds_NoDup_prefix
-       | |- NoDup ((_ ~> _) :: _) => solve_NoDup
-
-       | |- DisjList (List.concat _) _ => apply DisjList_comm
-       | |- DisjList _ (List.concat _) => apply concat_DisjList; intros
-       end; simpl in * ).
-
-Ltac solve_IndsDisj :=
+Ltac solve_in_l1_li :=
   repeat
     match goal with
-    | |- IndsDisj _ _ => red; intros; dest_in
-    | |- _ ~*~ _ => split; intro
-    | [H: _ ~< _ |- _] =>
-      apply IdxPrefix_idxPrefix in H; unfold idxPrefix in H;
-      repeat rewrite rev_app_distr in H; discriminate
-    | [H: (_ ++ ?pi) ~< (_ ++ ?pi) |- _] =>
-      apply IdxPrefix_prefix_red in H; auto
+    | [H: In ?oidx ?l |- In ?oidx ?l] => assumption
+    | [H: In ?oidx ?l |- In ?oidx (?l ++ _) ] => apply in_or_app; auto
+    | [H: In ?oidx ?l |- In ?oidx (_ ++ ?l) ] => apply in_or_app; auto
+    | [H: In ?oidx (tl ?l) |- In ?oidx ?l ] => apply tl_In; assumption
+    | [H: In ?oidx (tl ?l) |- In ?oidx (?l ++ _) ] =>
+      apply tl_In in H; apply in_or_app; auto
     end.
 
-Ltac solve_inds_NoDup itac :=
-  solve_inds_NoDup_pre;
+Ltac solve_not_in_ext_chns :=
   match goal with
-  | |- DisjList _ _ => apply IndsDisj_DisjList
-  end;
-  itac;
-  solve_IndsDisj.
+  | |- ~ In (_ ?idx) _ =>
+    eapply DisjList_In_2;
+    [eapply tree2Topo_internal_chns_not_exts with (oidx:= idx);
+     solve_in_l1_li; fail
+    |simpl; tauto]
+  end.
+
+Ltac solve_ext_chns_disj :=
+  repeat
+    match goal with
+    | |- context [idsOf (map _ _)] =>
+      unfold idsOf; rewrite map_trans; simpl
+    | |- context[fun x => ?f x] => change (fun x => f x) with f
+    | |- DisjList (map rqUpFrom _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_rqUp_exts_disj
+    | |- DisjList (map rsUpFrom _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_rsUp_exts_disj
+    | |- DisjList (map downTo _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
+      apply tree2Topo_internal_down_exts_disj
+    | [H: SubList ?inds _ |- SubList ?inds _] =>
+      first [assumption|eapply SubList_trans; [eassumption|]]
+    | |- SubList (subtreeChildrenIndsOf _ _) (c_li_indices _ ++ c_l1_indices _) =>
+      apply tree2Topo_li_children_li_l1; solve_in_l1_li; fail
+    end.
+
+Ltac solve_chn_not_in :=
+  intro; dest_in; try discriminate; simpl in *;
+  repeat
+    match goal with
+    | [H: rqUpFrom _ = rqUpFrom _ |- _] => inv H
+    | [H: rsUpFrom _ = rsUpFrom _ |- _] => inv H
+    | [H: downTo _ = downTo _ |- _] => inv H
+    | [H: ?oidx = l1ExtOf ?oidx |- _] =>
+      exfalso; eapply l1ExtOf_not_eq; eauto
+    | [H:parentIdxOf _ ?oidx = Some ?oidx |- _] =>
+      exfalso; eapply parentIdxOf_not_eq with (idx:= oidx) (pidx:= oidx); eauto
+    end; auto.
+
+Ltac disc_responses_from :=
+  repeat
+    match goal with
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: _ = ?rss |- _] =>
+      rewrite <-Hrss in Hrr
+    end;
+  repeat
+    match goal with
+    | [H: ValidMsgsIn _ ?rss |- _] => destruct H
+    | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
+      let cidx := fresh "cidx" in
+      let down := fresh "down" in
+      eapply RqRsDownMatch_rs_rq in Hrr; [|left; reflexivity];
+      destruct Hrr as [cidx [down ?]]; dest
+    | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
+            Hin: In ?oidx (tl (c_li_indices _)) |- _] =>
+      let Hc := fresh "H" in
+      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrr) as Hc;
+      let Hic := fresh "H" in
+      destruct Hc as [cinds [Hic ?]]; rewrite Hic
+    | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
+            Hin: In ?oidx (c_li_indices _) |- _] =>
+      let Hc := fresh "H" in
+      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ Hin _ Hrr) as Hc;
+      let Hic := fresh "H" in
+      destruct Hc as [cinds [Hic ?]]; rewrite Hic
+    end.
 

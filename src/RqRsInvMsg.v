@@ -168,6 +168,10 @@ Ltac disc_footprints_ok :=
   | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
   end.
 
+Ltac derive_footprint_info_basis oidx :=
+  progress (good_footprint_get oidx);
+  repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
+
 Section IncomingMessageInv.
   Context `{oifc: OStateIfc}.
   Variables (dtr: DTree)
