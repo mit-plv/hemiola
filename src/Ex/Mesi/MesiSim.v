@@ -25,8 +25,8 @@ Section Sim.
   Let cifc := snd (tree2Topo tr 0).
   Let impl := Mesi.impl Htr.
 
-  Axiom c_l1_indices_NoPrefix: NoPrefix (c_l1_indices cifc).
-  Local Definition spec := @SpecInds.spec (c_l1_indices cifc) c_l1_indices_NoPrefix.
+  Local Definition spec :=
+    @SpecInds.spec (c_l1_indices cifc) (tree2Topo_l1_NoPrefix tr 0).
 
   Existing Instance Mesi.ImplOStateIfc.
 
@@ -848,7 +848,7 @@ Section Sim.
 
       (** Derive some necessary information: 1) each Li has a parent. *)
       pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
-      pose proof (c_li_indices_tail_has_parent _ _ _ H4).
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H4).
       destruct H0 as [pidx [? ?]].
       pose proof (Htn _ _ H6); dest.
 

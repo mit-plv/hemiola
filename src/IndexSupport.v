@@ -307,6 +307,38 @@ Proof.
   assumption.
 Qed.
 
+Lemma IndsDisj_app_1:
+  forall il1 il2 il3,
+    IndsDisj il1 il3 -> IndsDisj il2 il3 ->
+    IndsDisj (il1 ++ il2) il3.
+Proof.
+  unfold IndsDisj; intros.
+  apply in_app_or in H1; destruct H1; auto.
+Qed.
+
+Lemma IndsDisj_app_2:
+  forall il1 il2 il3,
+    IndsDisj il1 il2 -> IndsDisj il1 il3 ->
+    IndsDisj il1 (il2 ++ il3).
+Proof.
+  unfold IndsDisj; intros.
+  apply in_app_or in H2; destruct H2; auto.
+Qed.
+
+Lemma IndsDisj_SubList_1:
+  forall sl1 l1 l2,
+    IndsDisj l1 l2 -> SubList sl1 l1 -> IndsDisj sl1 l2.
+Proof.
+  unfold IndsDisj; intros; auto.
+Qed.
+
+Lemma IndsDisj_SubList_2:
+  forall l1 sl2 l2,
+    IndsDisj l1 l2 -> SubList sl2 l2 -> IndsDisj l1 sl2.
+Proof.
+  unfold IndsDisj; intros; auto.
+Qed.
+
 Lemma IndsDisj_DisjList:
   forall inds1 inds2, IndsDisj inds1 inds2 -> DisjList inds1 inds2.
 Proof.
@@ -325,6 +357,44 @@ Proof.
   induction pi; simpl; intros; [reflexivity|].
   find_if_inside; auto.
   elim n; reflexivity.
+Qed.
+
+Lemma IndsDisj_cons_inv_1:
+  forall i il1 il2,
+    IndsDisj (i :: il1) il2 -> IndsDisj il1 il2.
+Proof.
+  unfold IndsDisj; intros.
+  apply H; auto.
+  right; assumption.
+Qed.
+
+Lemma IndsDisj_cons_inv_2:
+  forall i il1 il2,
+    IndsDisj il1 (i :: il2) -> IndsDisj il1 il2.
+Proof.
+  unfold IndsDisj; intros.
+  apply H; auto.
+  right; assumption.
+Qed.
+
+Lemma IndsDisj_cons_hd_1:
+  forall i il1 il2,
+    IndsDisj (i :: il1) il2 ->
+    forall j, In j il2 -> i ~*~ j.
+Proof.
+  unfold IndsDisj; intros.
+  apply H; auto.
+  left; reflexivity.
+Qed.
+
+Lemma IndsDisj_cons_hd_2:
+  forall i il1 il2,
+    IndsDisj il1 (i :: il2) ->
+    forall j, In j il1 -> j ~*~ i.
+Proof.
+  unfold IndsDisj; intros.
+  apply H; auto.
+  left; reflexivity.
 Qed.
 
 Lemma idxPrefixR_IdxPrefix:
@@ -424,6 +494,17 @@ Proof.
   eapply H with (n1:= S n1) (n2:= S n2); eauto.
 Qed.
 
+Lemma NoPrefix_cons_hd:
+  forall i il,
+    NoPrefix (i :: il) ->
+    forall j,
+      In j il -> i ~*~ j.
+Proof.
+  unfold NoPrefix; intros.
+  apply In_nth_error in H0; destruct H0 as [n ?].
+  eapply H with (n1:= O) (n2:= S n); eauto.
+Qed.
+
 Lemma NoPrefix_cons:
   forall i il,
     NoPrefix il ->
@@ -458,6 +539,23 @@ Proof.
             apply NoPrefix_cons_inv in H; assumption.
           }
         }
+Qed.
+
+Lemma NoPrefix_IndsDisj:
+  forall il1 il2,
+    NoPrefix il1 -> NoPrefix il2 ->
+    IndsDisj il1 il2 ->
+    NoPrefix (il1 ++ il2).
+Proof.
+  induction il1; simpl; intros; [assumption|].
+  apply NoPrefix_cons.
+  - apply IHil1.
+    + eapply NoPrefix_cons_inv; eassumption.
+    + assumption.
+    + eapply IndsDisj_cons_inv_1; eassumption.
+  - intros; apply in_app_or in H2; destruct H2.
+    + eapply NoPrefix_cons_hd; eassumption.
+    + eapply IndsDisj_cons_hd_1; eassumption.
 Qed.
 
 (** Some useful tactics about indices *)

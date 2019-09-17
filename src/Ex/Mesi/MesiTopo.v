@@ -146,14 +146,16 @@ Section System.
           1: {
             rule_rquu.
             solve_GoodRqRsRule.
-            apply c_li_indices_tail_has_parent in H0; dest.
+            apply c_li_indices_tail_has_parent in H0; [|assumption].
+            dest.
             eapply rqUpUpRule_RqFwdRule; eauto.
             apply subtreeChildrenIndsOf_parentIdxOf; auto.
           }
           3: {
             rule_rquu.
             solve_GoodRqRsRule.
-            apply c_li_indices_tail_has_parent in H0; dest.
+            apply c_li_indices_tail_has_parent in H0; [|assumption].
+            dest.
             eapply rqUpUpRule_RqFwdRule; eauto.
             apply subtreeChildrenIndsOf_parentIdxOf; auto.
           }

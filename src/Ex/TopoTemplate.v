@@ -503,6 +503,26 @@ Section Facts.
     simpl; apply SubList_app_1; assumption.
   Qed.
 
+  Lemma fold_left_base_c_l1_indices_In:
+    forall ifc ifcs bifc,
+      SubList (c_l1_indices ifc) (c_l1_indices bifc) ->
+      SubList (c_l1_indices ifc) (c_l1_indices (fold_left mergeCIfc ifcs bifc)).
+  Proof.
+    induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
+    apply IHifcs.
+    simpl; apply SubList_app_1; assumption.
+  Qed.
+
+  Lemma fold_left_base_c_li_indices_In:
+    forall ifc ifcs bifc,
+      SubList (c_li_indices ifc) (c_li_indices bifc) ->
+      SubList (c_li_indices ifc) (c_li_indices (fold_left mergeCIfc ifcs bifc)).
+  Proof.
+    induction ifcs as [|hifc ifcs]; simpl; intros; [assumption|].
+    apply IHifcs.
+    simpl; apply SubList_app_1; assumption.
+  Qed.
+
   Lemma mergeCIfc_fold_left_c_minds_In:
     forall ifc ifcs,
       In ifc ifcs ->
@@ -512,6 +532,30 @@ Section Facts.
     induction ifcs; simpl; intros; [exfalso; auto|].
     destruct H; subst; [|auto].
     apply fold_left_base_c_minds_In.
+    simpl; apply SubList_app_2, SubList_refl.
+  Qed.
+
+  Lemma mergeCIfc_fold_left_c_l1_indices_In:
+    forall ifc ifcs,
+      In ifc ifcs ->
+      forall bifc,
+        SubList (c_l1_indices ifc) (c_l1_indices (fold_left mergeCIfc ifcs bifc)).
+  Proof.
+    induction ifcs; simpl; intros; [exfalso; auto|].
+    destruct H; subst; [|auto].
+    apply fold_left_base_c_l1_indices_In.
+    simpl; apply SubList_app_2, SubList_refl.
+  Qed.
+
+  Lemma mergeCIfc_fold_left_c_li_indices_In:
+    forall ifc ifcs,
+      In ifc ifcs ->
+      forall bifc,
+        SubList (c_li_indices ifc) (c_li_indices (fold_left mergeCIfc ifcs bifc)).
+  Proof.
+    induction ifcs; simpl; intros; [exfalso; auto|].
+    destruct H; subst; [|auto].
+    apply fold_left_base_c_li_indices_In.
     simpl; apply SubList_app_2, SubList_refl.
   Qed.
 
@@ -1434,6 +1478,18 @@ Section Facts.
     destruct H as [_ ?]; eapply H with (sidx:= sidx); eauto.
   Qed.
 
+  Lemma c_li_l1_indices_inds_SubList:
+    forall tr bidx,
+      SubList ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx)))
+              (indsOf (fst (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    apply SubList_app_3.
+    - apply c_li_indices_inds_SubList.
+    - apply c_l1_indices_inds_SubList.
+  Qed.
+
   Lemma c_li_indices_head_rootOf:
     forall tr bidx,
       tr <> Node nil ->
@@ -1445,52 +1501,134 @@ Section Facts.
     reflexivity.
   Qed.
 
-  Lemma c_l1_indices_has_parent:
+  Lemma c_li_l1_indices_has_parent:
+    forall tr (Htr: tr <> Node nil) bidx oidx,
+      In oidx ((tl (c_li_indices (snd (tree2Topo tr bidx))))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+      exists pidx,
+        parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
+  Proof.
+    intros.
+    assert (In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                       ++ c_l1_indices (snd (tree2Topo tr bidx)))).
+    { apply in_app_or in H; destruct H.
+      { apply in_or_app; left; apply tl_In; assumption. }
+      { apply in_or_app; right; assumption. }
+    }
+    assert (oidx <> rootOf (fst (tree2Topo tr bidx))).
+    { pose proof (tree2Topo_WfCIfc tr bidx).
+      destruct H1 as [? _].
+      rewrite c_li_indices_head_rootOf in H0, H1 by assumption.
+      inv H1; inv H0.
+      { exfalso; auto. }
+      { intro Hx; subst; auto. }
+    }
+    apply c_li_l1_indices_inds_SubList in H0.
+    pose proof (indsOf_parentChnsOf_not_None _ H0 H1).
+    destruct (parentChnsOf _ _) as [[dmc pidx]|] eqn:Hpc; [|exfalso; auto].
+    exists pidx.
+    unfold parentIdxOf; rewrite Hpc; reflexivity.
+  Qed.
+
+  Lemma tree2Topo_li_l1_parent_li:
+    forall tr bidx oidx pidx,
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx ->
+      In pidx (c_li_indices (snd (tree2Topo tr bidx))).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf; simpl in Hwf.
+    find_if_inside; simpl in *.
+    1: {
+      destruct H0; subst; auto.
+      unfold parentIdxOf in H1; simpl in H1.
+      unfold hasIdx in H1.
+      find_if_inside; [eapply l1ExtOf_not_eq; eauto|].
+      discriminate.
+    }
+      
+    destruct H0; subst;
+      [exfalso; apply parentIdxOf_child_not_root in H1; [|assumption]; auto|].
+    apply tree2Topo_children_oidx_In in H0.
+    destruct H0; [dest_in|].
+    destruct H0 as [ctr [ofs ?]]; simpl in *; dest.
+
+    destruct (idx_dec oidx (rootOf (fst (tree2Topo ctr bidx~>ofs)))); [subst|].
+    - rewrite parentIdxOf_childrenOf in H1 by assumption.
+      inv H1; left; reflexivity.
+    - erewrite parentIdxOf_Subtree_eq in H1; try eassumption;
+        [|apply childrenOf_Subtree; assumption
+         |apply c_li_l1_indices_inds_SubList; assumption].
+      apply nth_error_In in H0.
+      rewrite Forall_forall in H; specialize (H _ H0).
+      specialize (H _ _ _ H4 H1).
+      right.
+      eapply mergeCIfc_fold_left_c_li_indices_In; eassumption.
+  Qed.
+
+  (* Lemma parentIdxOf_root_child_exists: *)
+  (*   forall dtr cidx pidx, *)
+  (*     parentIdxOf dtr cidx = Some pidx -> *)
+  (*     pidx = rootOf dtr -> *)
+  (*     exists ctr, *)
+  (*       In ctr (childrenOf dtr) /\ *)
+  (*       rootOf ctr = cidx. *)
+  (* Proof. *)
+
+  Lemma tree2Topo_li_child_li_l1:
+    forall tr bidx oidx cidx,
+      In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
+      In cidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))).
+  Proof.
+    (* induction tr using tree_ind_l; simpl; intros. *)
+    (* pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf; simpl in Hwf. *)
+    (* find_if_inside; simpl in *; [exfalso; auto|]. *)
+      
+    (* destruct H0; subst. *)
+    (* - apply parentIdxOf_root_child_exists in H1; [|reflexivity]. *)
+    (*   simpl in H1; destruct H1 as [ctr [? ?]]; subst. *)
+    (*   right. *)
+  Admitted.
+
+  Corollary c_l1_indices_has_parent:
     forall tr (Htr: tr <> Node nil) bidx oidx,
       In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
       exists pidx,
         In pidx (c_li_indices (snd (tree2Topo tr bidx))) /\
         parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
   Proof.
-  Admitted.
+    intros.
+    assert (In oidx ((tl (c_li_indices (snd (tree2Topo tr bidx))))
+                       ++ c_l1_indices (snd (tree2Topo tr bidx))))
+      by (apply in_or_app; auto).
+    apply c_li_l1_indices_has_parent in H0; [|assumption].
+    destruct H0 as [pidx ?].
+    exists pidx; split; [|assumption].
+    eapply tree2Topo_li_l1_parent_li; [|eassumption].
+    apply in_or_app; right; assumption.
+  Qed.
 
-  Lemma c_li_indices_tail_has_parent:
-    forall tr bidx oidx,
+  Corollary c_li_indices_tail_has_parent:
+    forall tr (Htr: tr <> Node nil) bidx oidx,
       In oidx (tl (c_li_indices (snd (tree2Topo tr bidx)))) ->
       exists pidx,
         In pidx (c_li_indices (snd (tree2Topo tr bidx))) /\
         parentIdxOf (fst (tree2Topo tr bidx)) oidx = Some pidx.
   Proof.
-    induction tr using tree_ind_l; simpl; intros.
-    find_if_inside; simpl in *; [exfalso; auto|].
-    apply tree2Topo_li_oidx_In in H0.
-    destruct H0; [dest_in|].
-    simpl in H0; destruct H0 as [ctr [ofs ?]]; dest.
-    pose proof (c_li_indices_inds_SubList ctr bidx~>ofs).
-    pose proof (tree2Topo_WfDTree ctr bidx~>ofs) as Hwf.
-    destruct ctr as [cl]; simpl in H3, H4.
-    find_if_inside; subst; simpl in H3, H4; [exfalso; auto|].
-    destruct H3; subst.
-    - exists bidx.
-      split; [left; reflexivity|].
-      replace bidx~>ofs with (rootOf (fst (tree2Topo (Node cl) bidx~>ofs)))
-        by apply tree2Topo_root_idx.
-      apply parentIdxOf_childrenOf; assumption.
-    - apply nth_error_In in H0.
-      rewrite Forall_forall in H; specialize (H _ H0).
-      specialize (H bidx~>ofs oidx); simpl in *.
-      find_if_inside; [subst; exfalso; auto|simpl in *].
-      specialize (H H3); destruct H as [pidx [? ?]].
-      exists pidx; split.
-      + admit.
-      + erewrite parentIdxOf_Subtree_eq; [eassumption|..].
-        * pose proof (tree2Topo_WfDTree (Node l) bidx).
-          simpl in H6; find_if_inside; [subst; exfalso; auto|assumption].
-        * apply childrenOf_Subtree; assumption.
-        * simpl; intro Hx; subst.
-          apply parentIdxOf_child_not_root in H5; auto.
-        * apply H4; right; auto.
-  Admitted.
+    intros.
+    assert (In oidx ((tl (c_li_indices (snd (tree2Topo tr bidx))))
+                       ++ c_l1_indices (snd (tree2Topo tr bidx))))
+      by (apply in_or_app; auto).
+    apply c_li_l1_indices_has_parent in H0; [|assumption].
+    destruct H0 as [pidx ?].
+    exists pidx; split; [|assumption].
+    eapply tree2Topo_li_l1_parent_li; [|eassumption].
+    apply in_or_app; left.
+    apply tl_In; assumption.
+  Qed.
 
   Lemma tree2Topo_obj_chns_minds_SubList:
     forall tr bidx oidx,
@@ -1513,23 +1651,6 @@ Section Facts.
     - apply H1; apply hd_error_In, tl_In in H3; assumption.
     - apply H2; apply hd_error_In in H4; assumption.
   Qed.
-
-  Lemma tree2Topo_l1_child_ext:
-    forall tr bidx oidx cidx,
-      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
-      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
-      cidx = l1ExtOf oidx.
-  Proof.
-  Admitted.
-
-  Lemma tree2Topo_li_child_li_l1:
-    forall tr bidx oidx cidx,
-      In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
-      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
-      In cidx ((c_li_indices (snd (tree2Topo tr bidx)))
-                 ++ c_l1_indices (snd (tree2Topo tr bidx))).
-  Proof.
-  Admitted.
 
   Lemma tree2Topo_internal_chns_not_exts:
     forall tr bidx oidx,
@@ -1644,6 +1765,66 @@ Section Facts.
     split.
     - simpl; congruence.
     - apply SubList_cons; assumption.
+  Qed.
+
+  Lemma tree2Topo_l1_child_ext:
+    forall tr bidx oidx cidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
+      cidx = l1ExtOf oidx.
+  Proof.
+    (* induction tr using tree_ind_l; simpl; intros. *)
+    (* pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf; simpl in Hwf. *)
+    (* pose proof (tree2Topo_WfCIfc (Node l) bidx) as Hwfc; simpl in Hwfc. *)
+
+    (* find_if_inside; simpl in *. *)
+    (* 1: { *)
+    (*   destruct H0; [subst|exfalso; auto]. *)
+    (*   unfold parentIdxOf in H1; simpl in H1. *)
+    (*   unfold hasIdx in H1. *)
+    (*   find_if_inside; [inv H1; reflexivity|discriminate]. *)
+    (* } *)
+
+    (* apply tree2Topo_l1_oidx_In in H0. *)
+    (* destruct H0; [dest_in|]. *)
+    (* destruct H0 as [ctr [ofs ?]]; dest; simpl in *. *)
+  Admitted.
+
+  Lemma tree2Topo_l1_NoPrefix:
+    forall tr bidx,
+      NoPrefix (c_l1_indices (snd (tree2Topo tr bidx))).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    find_if_inside; simpl in *; [apply NoPrefix_singleton|].
+
+    clear n.
+    assert (NoPrefix (c_l1_indices emptyCIfc)) by apply NoPrefix_nil.
+    assert (forall str n,
+               nth_error l n = Some str ->
+               IndsDisj (c_l1_indices emptyCIfc)
+                        (c_l1_indices (snd (tree2Topo str bidx~>(0 + n)))))
+      by (simpl; intros; red; intros; dest_in).
+    generalize dependent bidx.
+    generalize 0 as ofs.
+    generalize dependent H0.
+    generalize emptyCIfc as bcifc.
+    induction l; intros; [assumption|].
+
+    inv H.
+    specialize (IHl H5); clear H5.
+    simpl; apply IHl.
+    - simpl; apply NoPrefix_IndsDisj; auto.
+      replace ofs with (ofs + 0) by omega.
+      apply H1; reflexivity.
+    - simpl; intros; apply IndsDisj_app_1.
+      + replace (S (ofs + n)) with (ofs + S n) by omega.
+        apply H1; assumption.
+      + eapply IndsDisj_SubList_1; [|apply c_l1_indices_inds_SubList].
+        eapply IndsDisj_SubList_2; [|apply c_l1_indices_inds_SubList].
+        eapply IdxDisj_base_IndsDisj;
+          [|apply tree2Topo_inds_prefix_base
+           |apply tree2Topo_inds_prefix_base].
+        apply extendIdx_IdxDisj; omega.
   Qed.
   
 End Facts.
