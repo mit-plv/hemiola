@@ -1908,3 +1908,14 @@ Ltac disc_responses_from :=
       destruct Hc as [cinds [Hic ?]]; rewrite Hic
     end.
 
+Ltac derive_child_chns cidx :=
+  match goal with
+  | [Htn: TreeTopoNode _, H: parentIdxOf _ cidx = Some ?oidx |- _] =>
+    pose proof (Htn _ _ H); dest
+  end;
+  (* For L1 caches derive some more information about "the" child. *)
+  try match goal with
+      | [H1: In ?oidx (c_l1_indices _), H2: parentIdxOf _ _ = Some ?oidx |- _] =>
+        apply tree2Topo_l1_child_ext in H2; [|assumption]; subst
+      end.
+

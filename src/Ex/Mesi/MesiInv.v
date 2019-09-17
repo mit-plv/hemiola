@@ -5,7 +5,8 @@ Require Import RqRsLang RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
-Require Import Ex.InvTemplate Ex.Mesi.MesiInvB.
+
+Require Export Ex.Mesi.MesiInvB.
 
 Set Implicit Arguments.
 
@@ -19,7 +20,8 @@ Local Open Scope fmap.
 Existing Instance Mesi.ImplOStateIfc.
 
 Lemma mesi_RsDownConflicts:
-  forall tr (Htr: tr <> Node nil),
+  forall tr (Htr: tr <> Node nil)
+         (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),
     InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).
 Proof.
   intros.
@@ -169,16 +171,37 @@ Definition InvNonWB (topo: DTree) (st: MState): Prop :=
        ObjInvRq oidx (bst_msgs st) ->
        (ObjClean ost /\ ost#[val] = post#[val])).
 
-Definition InvRoot (topo: DTree) (st: MState): Prop :=
-  NoRsI (rootOf topo) (bst_msgs st) /\
-  NoRqI (rootOf topo) (bst_msgs st).
-
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
-  InvRoot topo st /\ InvExcl st /\
+  InvExcl st /\
   InvWB st /\ InvWBChild topo st /\ InvNonWB topo st /\
   MesiFootprintsInv topo st.
 
 Section Facts.
+
+  Lemma RootChnInv_root_NoRsI:
+    forall tr bidx st,
+      RootChnInv tr bidx st ->
+      NoRsI (rootOf (fst (tree2Topo tr bidx))) (bst_msgs st).
+  Proof.
+    intros.
+    do 3 red; intros.
+    red; unfold map, fst, snd, caseDec.
+    find_if_inside; auto.
+    eapply H; [|eassumption].
+    inv e; auto.
+  Qed.
+    
+  Lemma RootChnInv_root_NoRqI:
+    forall tr bidx st,
+      RootChnInv tr bidx st ->
+      NoRqI (rootOf (fst (tree2Topo tr bidx))) (bst_msgs st).
+  Proof.
+    intros.
+    do 3 red; intros.
+    red; unfold map, fst, snd, caseDec.
+    do 2 (find_if_inside; [eapply H; [|eassumption]; inv e; auto|]).
+    auto.
+  Qed.
 
   Lemma InvExcl_excl_invalid:
     forall st (He: InvExcl st) msgs eidx eost,

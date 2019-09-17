@@ -76,6 +76,13 @@ Section MsgConflicts.
              (Hoinds: SubList (c_li_indices cifc ++ c_l1_indices cifc)
                               (map (@obj_idx _) (sys_objs sys))).
 
+  Definition RootChnInv (st: MState) :=
+    forall idm,
+      (idOf idm = downTo (rootOf topo) \/
+       idOf idm = rqUpFrom (rootOf topo) \/
+       idOf idm = rsUpFrom (rootOf topo)) ->
+      ~ InMPI (bst_msgs st) idm.
+  
   Definition MsgConflictsInv (st: MState) :=
     forall oidx orq,
       In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
@@ -84,20 +91,26 @@ Section MsgConflicts.
       RqUpConflicts oidx orq (bst_msgs st).
 
   Lemma tree2Topo_MsgConflicts_inv_ok:
-    InvReachable sys step_m MsgConflictsInv.
+    forall (Hrcinv: InvReachable sys step_m RootChnInv),
+      InvReachable sys step_m MsgConflictsInv.
   Proof.
     unfold InvReachable, MsgConflictsInv; intros.
+    specialize (Hrcinv _ H0).
 
     unfold cifc in H1.
     rewrite c_li_indices_head_rootOf in H1 by assumption.
     inv H1.
 
     1: { (* the root case *)
-      (** TODO: need to prove an invariant about the root (main memory):
-       * no messages exist in any channel of the root, i.e., the RqUp, RsUp,
-       * and Down queues are all empty for the root.
-       *)
-      admit.
+      split.
+      { red; intros; exfalso.
+        eapply Hrcinv; eauto.
+        left; assumption.
+      }
+      { red; intros; exfalso.
+        eapply Hrcinv; eauto.
+        right; left; assumption.
+      }
     }
 
     (* non-root cases *)
@@ -177,7 +190,7 @@ Section MsgConflicts.
              (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto.
       + unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
       + unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
-  Admitted.
+  Qed.
 
 End MsgConflicts.
 
