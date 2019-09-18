@@ -427,23 +427,6 @@ Section Sim.
            | |- MsgsCoh _ _ (deqMsgs _ _) => apply MsgsCoh_deqMsgs
            end; try eassumption).
 
-  Ltac derive_child_idx_in cidx :=
-    let idx := fresh "idx" in
-    remember cidx as idx;
-    try
-      match goal with
-      | [H: In idx (subtreeChildrenIndsOf _ _) |- _] =>
-        apply subtreeChildrenIndsOf_parentIdxOf in H; [|auto; fail]
-      end;
-    match goal with
-    | [Hin: In ?oidx (c_li_indices _), Hp: parentIdxOf _ idx = Some ?oidx
-       |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _] ] =>
-      pose proof (tree2Topo_li_child_li_l1 _ _ _ Hin Hp)
-    | [Hin: In ?oidx (tl (c_li_indices _)), Hp: parentIdxOf _ idx = Some ?oidx
-       |- context[SimMESI {| bst_oss := _ +[?oidx <- _] |} _] ] =>
-      pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ Hin) Hp)
-    end; subst.
-
   Ltac derive_input_msg_coherent :=
     match goal with
     | [Hcoh: MsgsCoh ?cv _ _, Hfmp: FirstMPI _ (_, ?cmsg) |- _] =>
