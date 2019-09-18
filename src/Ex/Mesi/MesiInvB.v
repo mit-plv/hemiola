@@ -77,7 +77,7 @@ Section Footprints.
       parentIdxOf topo cidx = Some oidx.
 
   Definition DownLockFromParent (oidx: IdxT) (rqid: RqInfo Msg) :=
-    rqid.(rqi_midx_rsb) = Some (rqUpFrom oidx).
+    rqid.(rqi_midx_rsb) = Some (rsUpFrom oidx).
 
   Definition MesiFootprintsInv (st: MState): Prop :=
     forall oidx,
@@ -108,7 +108,7 @@ Section FootprintsOk.
 
 End FootprintsOk.
 
-Ltac exfalso_downlock_from oidx Hinv :=
+Ltac disc_mesi_footprints_inv oidx Hinv :=
   specialize (Hinv oidx); simpl in Hinv;
   disc_rule_conds_ex;
   repeat
@@ -174,8 +174,8 @@ Section InvProof.
       | [H: parentIdxOf _ ?oidx = Some ?oidx |- _] =>
         exfalso; eapply parentIdxOf_not_eq; eauto
       | [H1: ?oidx = rootOf _, H2: parentIdxOf _ ?oidx = Some _ |- _] => rewrite H1 in H2
-      | [H: parentIdxOf _ (rootOf _) = Some _ |- _] =>
-        eapply parentIdxOf_child_not_root; eauto
+      | [H: parentIdxOf _ (rootOf _) = Some ?idx |- _] =>
+        eapply parentIdxOf_child_not_root with (pidx:= idx); eauto
       | [H: In (rootOf _) (tl (c_li_indices _)) |- _] =>
         exfalso; eapply tree2Topo_root_not_in_tl_li; eauto
       | [H: In (rootOf _) (c_l1_indices _) |- _] =>
@@ -234,37 +234,26 @@ Section InvProof.
       }
 
       dest_in.
-      { disc_RootChnInv.
-        red in Hmftinv; simpl in Hmftinv.
-        specialize (Hmftinv oidx).
-        disc_rule_conds_ex.
-        rewrite H4 in Hmftinv.
-        simpl in Hmftinv; destruct Hmftinv as [cidx [? ?]].
-        rewrite Hidx in H7; inv H7.
-        solve_RootChnInv.
-      }
-      { disc_RootChnInv.
-        move Hmftinv at bottom.
-        red in Hmftinv; simpl in Hmftinv.
-        specialize (Hmftinv oidx).
-        disc_rule_conds_ex.
-        rewrite H9 in Hmftinv.
-        simpl in Hmftinv; destruct Hmftinv as [cidx [? ?]].
-        rewrite Hidx in H10; inv H10.
-        solve_RootChnInv.
-      }
+      all: try (disc_RootChnInv;
+                disc_mesi_footprints_inv oidx Hmftinv;
+                solve_RootChnInv).
 
     - (*! Cases for Li caches *)
       unfold RootChnInv in *; simpl in *.
 
-      (** Do case analysis per a rule. *)
+      (** Derive some necessary information: each Li has a parent. *)
       apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
+      destruct H1 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+      
+      (** Do case analysis per a rule. *)
       apply in_app_or in H3; destruct H3.
 
       1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-        dest_in; abstract (disc_RootChnInv; solve_RootChnInv; fail).
+        apply concat_In in H3; destruct H3 as [crls [? ?]].
+        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
+        dest_in; try (disc_RootChnInv; solve_RootChnInv; fail).
       }
 
       dest_in.
@@ -277,64 +266,32 @@ Section InvProof.
                 fail).
       all: try (disc_RootChnInv;
                 derive_footprint_info_basis oidx;
-                [|exfalso_downlock_from oidx Hmftinv;
-                  derive_child_chns x;
-                  solve_midx_false];
+                [|disc_mesi_footprints_inv oidx Hmftinv];
                 derive_child_chns upCIdx;
                 disc_rule_conds_ex;
                 solve_RootChnInv;
                 fail).
-
-      { disc_RootChnInv.
-        derive_footprint_info_basis oidx.
-        1: {
-          exfalso_downlock_from oidx Hmftinv.
-          derive_child_chns (obj_idx upCObj).
-          disc_rule_conds_ex.
-        }
-        eapply edgeDownTo_Some in H10; eauto; dest.
-        derive_child_chns oidx.
-        disc_rule_conds_ex.
-        solve_RootChnInv.
-      }
-      { disc_RootChnInv.
-        derive_footprint_info_basis oidx.
-        1: {
-          exfalso_downlock_from oidx Hmftinv.
-          derive_child_chns (obj_idx upCObj).
-          disc_rule_conds_ex.
-        }
-        eapply edgeDownTo_Some in H17; eauto; dest.
-        derive_child_chns oidx.
-        disc_rule_conds_ex.
-        solve_RootChnInv.
-      }
+      all: try (disc_RootChnInv;
+                derive_footprint_info_basis oidx;
+                [disc_mesi_footprints_inv oidx Hmftinv|];
+                disc_rule_conds_ex;
+                solve_RootChnInv).
 
     - (*! Cases for L1 caches *)
       unfold RootChnInv in *; simpl in *.
 
       (** Do case analysis per a rule. *)
       apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
-      dest_in; try (disc_RootChnInv; solve_RootChnInv; fail).
+      dest_in.
+      all: try (disc_RootChnInv; solve_RootChnInv; fail).
+      all: try (disc_RootChnInv;
+                derive_footprint_info_basis oidx;
+                derive_child_chns cidx;
+                disc_rule_conds_ex;
+                solve_RootChnInv).
 
-      + disc_RootChnInv.
-        derive_footprint_info_basis oidx.
-        derive_child_chns cidx.
-        disc_rule_conds_ex.
-        solve_RootChnInv.
-      + disc_RootChnInv.
-        derive_footprint_info_basis oidx.
-        derive_child_chns cidx.
-        disc_rule_conds_ex.
-        solve_RootChnInv.
-      + disc_RootChnInv.
-        derive_footprint_info_basis oidx.
-        derive_child_chns cidx.
-        disc_rule_conds_ex.
-        solve_RootChnInv.
-
-        Unshelve.
-        all: assumption.
+      Unshelve.
+      all: assumption.
   Qed.
 
   Theorem mesi_RootChnInv_ok:

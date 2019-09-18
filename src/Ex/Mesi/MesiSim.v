@@ -1127,7 +1127,7 @@ Section Sim.
       { (* [liDownSRsUpDownME] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|exfalso_downlock_from oidx H27].
+          [|disc_mesi_footprints_inv oidx H27].
         derive_child_chns upCIdx.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1143,7 +1143,7 @@ Section Sim.
       { (* liDownSRsUpDownS] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|exfalso_downlock_from oidx H27].
+          [|disc_mesi_footprints_inv oidx H27].
         derive_child_chns upCIdx.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1180,7 +1180,7 @@ Section Sim.
       { (* [liDownSRsUpUp] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [exfalso_downlock_from oidx H27|].
+          [disc_mesi_footprints_inv oidx H27|].
         disc_responses_from.
         derive_child_chns cidx.
         derive_child_idx_in cidx.
@@ -1209,7 +1209,7 @@ Section Sim.
       { (* [liDownIRsUpDown] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|exfalso_downlock_from oidx H27].
+          [|disc_mesi_footprints_inv oidx H27].
         derive_child_chns upCIdx.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1240,7 +1240,7 @@ Section Sim.
       { (* [liDownIRsUpUp] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [exfalso_downlock_from oidx H27|].
+          [disc_mesi_footprints_inv oidx H27|].
         disc_responses_from.
         solve_sim_mesi.
       }
