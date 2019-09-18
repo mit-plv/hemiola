@@ -101,10 +101,165 @@ Section FootprintsOk.
   Let cifc: CIfc := snd (tree2Topo tr 0).
   Let impl: System := impl Htr.
 
+  Lemma mesi_footprints_init:
+    Invariant.InvInit impl (MesiFootprintsInv topo).
+  Proof.
+    do 2 (red; simpl).
+    intros.
+    destruct (implORqsInit tr)@[oidx] as [orq|] eqn:Horq; simpl; auto.
+    unfold implORqsInit in Horq.
+    destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
+                                     ++ c_l1_indices (snd (tree2Topo tr 0)))).
+    - rewrite initORqs_value in Horq by assumption.
+      inv Horq.
+      mred.
+    - rewrite initORqs_None in Horq by assumption.
+      discriminate.
+  Qed.
+
+  Lemma MesiFootprintsInv_update_None:
+    forall poss orqs pmsgs,
+      MesiFootprintsInv topo {| bst_oss := poss;
+                                bst_orqs := orqs;
+                                bst_msgs := pmsgs |} ->
+      forall noss oidx norq nmsgs,
+        norq@[downRq] = None ->
+        MesiFootprintsInv topo {| bst_oss := noss;
+                                  bst_orqs := orqs +[oidx <- norq];
+                                  bst_msgs := nmsgs |}.
+  Proof.
+    unfold MesiFootprintsInv; simpl; intros.
+    mred; auto.
+    simpl; rewrite H0; simpl; auto.
+  Qed.
+
+  Lemma MesiFootprintsInv_no_update:
+    forall poss orqs pmsgs,
+      MesiFootprintsInv topo {| bst_oss := poss;
+                                bst_orqs := orqs;
+                                bst_msgs := pmsgs |} ->
+      forall noss oidx porq norq nmsgs,
+        orqs@[oidx] = Some porq ->
+        norq@[downRq] = porq@[downRq] ->
+        MesiFootprintsInv topo {| bst_oss := noss;
+                                  bst_orqs := orqs +[oidx <- norq];
+                                  bst_msgs := nmsgs |}.
+  Proof.
+    unfold MesiFootprintsInv; simpl; intros.
+    mred; auto.
+    simpl; rewrite H1.
+    specialize (H oidx).
+    rewrite H0 in H; simpl in H.
+    assumption.
+  Qed.
+
+  Lemma MesiFootprintsInv_case_from_child:
+    forall poss orqs pmsgs,
+      MesiFootprintsInv topo {| bst_oss := poss;
+                                bst_orqs := orqs;
+                                bst_msgs := pmsgs |} ->
+      forall noss oidx norq rqid rmsg cidx nmsgs,
+        norq@[downRq] = Some rqid ->
+        rqid.(rqi_msg) = Some rmsg ->
+        (rmsg.(msg_id) = mesiRqS \/ rmsg.(msg_id) = mesiRqM) ->
+        In cidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+        parentIdxOf topo cidx = Some oidx ->
+        edgeDownTo topo cidx = rqid.(rqi_midx_rsb) ->
+        MesiFootprintsInv topo {| bst_oss := noss;
+                                  bst_orqs := orqs +[oidx <- norq];
+                                  bst_msgs := nmsgs |}.
+  Proof.
+    unfold MesiFootprintsInv; simpl; intros.
+    mred; auto.
+    simpl; rewrite H0; simpl.
+    rewrite H1; simpl.
+    destruct H2.
+    - rewrite H2; simpl.
+      exists cidx; split; [|assumption].
+      rewrite <-H5.
+      pose proof (tree2Topo_TreeTopoNode tr 0).
+      specialize (H6 _ _ H4); dest; assumption.
+    - rewrite H2; simpl.
+      exists cidx; split; [|assumption].
+      rewrite <-H5.
+      pose proof (tree2Topo_TreeTopoNode tr 0).
+      specialize (H6 _ _ H4); dest; assumption.
+  Qed.
+  
+  Lemma mesi_footprints_step:
+    Invariant.InvStep impl step_m (MesiFootprintsInv topo).
+  Proof.
+    red; intros.
+    pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+    inv H1; [assumption..|].
+
+    simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
+
+    - (*! Cases for the main memory *)
+
+      (** Abstract the root. *)
+      remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
+      simpl in *.
+
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H3; destruct H3.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H1; destruct H1 as [crls [? ?]].
+        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+        dest_in;
+          disc_rule_conds_ex.
+        all: try (eapply MesiFootprintsInv_update_None; eauto; fail).
+        all: admit.
+      }
+
+      dest_in.
+      all: try (disc_rule_conds_ex;
+                eapply MesiFootprintsInv_update_None; eauto; mred).
+
+    - (*! Cases for Li caches *)
+
+      (** Derive some necessary information: each Li has a parent. *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
+      destruct H1 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+      
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H3; destruct H3.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H3; destruct H3 as [crls [? ?]].
+        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
+        dest_in;
+          disc_rule_conds_ex.
+        all: try (eapply MesiFootprintsInv_update_None; eauto; fail).
+        all: try (eapply MesiFootprintsInv_no_update; eauto; mred; fail).
+        all: admit.
+      }
+
+      dest_in.
+      all: admit.
+
+    - (*! Cases for L1 caches *)
+
+      (** Do case analysis per a rule. *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
+      dest_in;
+        disc_rule_conds_ex.
+      all: try (eapply MesiFootprintsInv_update_None; eauto; mred; fail).
+      all: try (eapply MesiFootprintsInv_no_update; eauto;
+                unfold addRqS; mred; fail).
+    
+  Admitted.
+
   Theorem mesi_footprints_ok:
     InvReachable impl step_m (MesiFootprintsInv topo).
   Proof.
-  Admitted.
+    apply inv_reachable.
+    - apply mesi_footprints_init.
+    - apply mesi_footprints_step.
+  Qed.
 
 End FootprintsOk.
 

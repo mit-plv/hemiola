@@ -165,6 +165,18 @@ Proof.
   simpl; icase oidx; mred; auto.
 Qed.
 
+Lemma initORqs_None:
+  forall oinds oidx,
+    ~ In oidx oinds ->
+    (initORqs oinds)@[oidx] = None.
+Proof.
+  induction oinds; intros; [reflexivity|].
+  simpl; mred.
+  - elim H; left; reflexivity.
+  - apply IHoinds.
+    intro Hx; elim H; right; assumption.
+Qed.
+
 Module RqRsNotations.
   Include MonadNotations.
   Delimit Scope monad_scope with monad.
