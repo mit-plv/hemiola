@@ -15,58 +15,23 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-(** Move to [TopoTemplate.v] *)
-Lemma tree2Topo_root_not_in_tl_li:
-  forall tr (Htr: tr <> Node nil) bidx,
-    ~ In (rootOf (fst (tree2Topo tr bidx))) (tl (c_li_indices (snd (tree2Topo tr bidx)))).
-Proof.
-  intros.
-  pose proof (tree2Topo_WfCIfc tr bidx).
-  destruct H as [? _].
-  rewrite c_li_indices_head_rootOf in H by assumption.
-  inv H.
-  intro Hx; elim H2.
-  apply in_or_app; left; assumption.
-Qed.
-
-Lemma tree2Topo_root_not_in_l1:
-  forall tr (Htr: tr <> Node nil) bidx,
-    ~ In (rootOf (fst (tree2Topo tr bidx))) (c_l1_indices (snd (tree2Topo tr bidx))).
-Proof.
-  intros.
-  pose proof (tree2Topo_WfCIfc tr bidx).
-  destruct H as [? _].
-  rewrite c_li_indices_head_rootOf in H by assumption.
-  inv H.
-  intro Hx; elim H2.
-  apply in_or_app; right; assumption.
-Qed.
-
-Lemma tree2Topo_root_not_l1ExtOf:
-  forall tr (Htr: tr <> Node nil) bidx oidx,
-    In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
-    l1ExtOf oidx <> rootOf (fst (tree2Topo tr bidx)).
-Proof.
-  intros.
-  assert (In (rqUpFrom (l1ExtOf oidx)) (c_merqs (snd (tree2Topo tr bidx)))).
-  { rewrite c_merqs_l1_rqUpFrom.
-    apply in_map_iff.
-    eexists; repeat split.
-    assumption.
-  }
-  assert (In (rqUpFrom (rootOf (fst (tree2Topo tr bidx))))
-             (c_minds (snd (tree2Topo tr bidx)))).
-  { eapply tree2Topo_obj_chns_minds_SubList.
-    { rewrite c_li_indices_head_rootOf by assumption.
-      left; reflexivity.
-    }
-    { simpl; tauto. }
-  }
-  intro Hx; rewrite Hx in H0.
-  eapply DisjList_In_1; [apply tree2Topo_minds_merqs_disj| |]; eauto.
-Qed.
-
 Existing Instance Mesi.ImplOStateIfc.
+
+Lemma mesi_RsDownConflicts:
+  forall tr (Htr: tr <> Node nil)
+         (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),
+    InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).
+Proof.
+  intros.
+  apply tree2Topo_MsgConflicts_inv_ok; auto.
+  simpl; unfold mem, li, l1.
+  rewrite map_app.
+  do 2 rewrite map_trans.
+  do 2 rewrite map_id.
+  rewrite app_comm_cons.
+  rewrite <-c_li_indices_head_rootOf by assumption.
+  apply SubList_refl.
+Qed.
 
 Section Footprints.
   Variable topo: DTree.

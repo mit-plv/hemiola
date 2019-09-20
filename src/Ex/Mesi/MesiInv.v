@@ -19,22 +19,6 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
-Lemma mesi_RsDownConflicts:
-  forall tr (Htr: tr <> Node nil)
-         (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),
-    InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).
-Proof.
-  intros.
-  apply tree2Topo_MsgConflicts_inv_ok; auto.
-  simpl; unfold mem, li, l1.
-  rewrite map_app.
-  do 2 rewrite map_trans.
-  do 2 rewrite map_id.
-  rewrite app_comm_cons.
-  rewrite <-c_li_indices_head_rootOf by assumption.
-  apply SubList_refl.
-Qed.
-
 Section CoherenceUnit.
   Variables (oidx: IdxT)
             (orq: ORq Msg)
