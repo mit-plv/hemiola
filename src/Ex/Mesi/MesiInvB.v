@@ -17,6 +17,27 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
+Lemma mesi_InObjInds:
+  forall tr (Htr: tr <> Node nil),
+    InvReachable (impl Htr) step_m (InObjInds tr 0).
+Proof.
+  intros.
+  apply tree2Topo_InObjInds_inv_ok.
+  - red; simpl; intros.
+    destruct ((implOStatesInit tr)@[oidx]) as [ost|] eqn:Host; simpl; auto.
+    destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
+                                     ++ c_l1_indices (snd (tree2Topo tr 0)))); auto.
+    rewrite implOStatesInit_None in Host by assumption.
+    discriminate.
+  - simpl; rewrite c_li_indices_head_rootOf by assumption.
+    apply SubList_cons; [left; reflexivity|].
+    simpl; apply SubList_cons_right.
+    rewrite map_app.
+    do 2 rewrite map_map.
+    apply SubList_app_6.
+    all: simpl; rewrite map_id; apply SubList_refl.
+Qed.
+
 Lemma mesi_RsDownConflicts:
   forall tr (Htr: tr <> Node nil)
          (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),

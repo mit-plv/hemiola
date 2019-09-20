@@ -1,9 +1,11 @@
 Require Import List FMap Lia.
 Require Import Common Topology ListSupport IndexSupport.
 Require Import Syntax MessagePool Semantics StepM Invariant.
-Require Import RqRsLang. Import RqRsNotations.
+Require Import RqRsLang.
 
 Require Import Ex.TopoTemplate Ex.RuleTemplate.
+
+Import PropMonadNotations.
 
 Set Implicit Arguments.
 
@@ -24,6 +26,45 @@ Definition MsgsP (spl: list (MSig * (Id Msg -> Prop))) (msgs: MessagePool Msg) :
 
 Definition MsgsNotExist (sigs: list MSig) (msgs: MessagePool Msg) :=
   MsgsP (map (fun sig => (sig, fun _ => False)) sigs) msgs.
+
+Section InObjInds.
+  Variable (tr: tree) (bidx: IdxT).
+  Let topo := fst (tree2Topo tr bidx).
+  Let cifc := snd (tree2Topo tr bidx).
+
+  Context `{OStateIfc}.
+  Variable (sys: System).
+
+  Definition InObjInds (st: MState) :=
+    forall oidx,
+      _ <+- (bst_oss st)@[oidx];
+        In oidx (c_li_indices cifc ++ c_l1_indices cifc).
+
+  Hypothesis (Hinit: InObjInds (initsOf sys))
+             (Hinds: SubList (map obj_idx (sys_objs sys))
+                             (c_li_indices cifc ++ c_l1_indices cifc)).
+
+  Lemma tree2Topo_InObjInds_step:
+    InvStep sys step_m InObjInds.
+  Proof.
+    red; intros.
+    inv H2; [assumption..|].
+    red; simpl; intros.
+    mred; auto.
+    simpl.
+    apply Hinds.
+    apply in_map; assumption.
+  Qed.
+  
+  Lemma tree2Topo_InObjInds_inv_ok:
+    InvReachable sys step_m InObjInds.
+  Proof.
+    apply inv_reachable.
+    - apply Hinit.
+    - apply tree2Topo_InObjInds_step.
+  Qed.
+
+End InObjInds.
 
 Section MsgConflicts.
 

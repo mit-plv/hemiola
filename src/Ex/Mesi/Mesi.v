@@ -236,6 +236,27 @@ Section System.
     induction (tl (c_li_indices cifc) ++ c_l1_indices cifc); mred.
   Qed.
 
+  Lemma implOStatesInit_None:
+    forall oidx,
+      ~ In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      implOStatesInit@[oidx] = None.
+  Proof.
+    unfold implOStatesInit; intros.
+    mred.
+    - elim H.
+      subst topo cifc.
+      rewrite c_li_indices_head_rootOf by assumption.
+      left; reflexivity.
+    - assert (~ In oidx (tl (c_li_indices cifc) ++ c_l1_indices cifc)).
+      { subst topo cifc; rewrite c_li_indices_head_rootOf in H by assumption.
+        intro Hx; elim H; right; assumption.
+      }
+      clear -H0.
+      generalize dependent (tl (c_li_indices cifc) ++ c_l1_indices cifc).
+      induction l; simpl; intros; [reflexivity|].
+      mred.
+  Qed.
+
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
 
