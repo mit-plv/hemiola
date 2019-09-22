@@ -289,7 +289,7 @@ Section System.
         rule.rsdd[0~>2~>0]
         :accepts mesiRsS
         :holding Spec.getRq
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
@@ -301,7 +301,7 @@ Section System.
         rule.rsdd[0~>2~>1]
         :accepts mesiRsE
         :holding Spec.getRq
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
@@ -358,7 +358,7 @@ Section System.
         rule.rsdd[1~>2]
         :accepts mesiRsM
         :holding Spec.setRq
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[status <- mesiM]
@@ -403,7 +403,7 @@ Section System.
       Definition l1InvRsDownDown: Rule :=
         rule.rsd[2~>2]
         :accepts mesiInvRs
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]
                                         +#[status <- mesiNP])).
 
@@ -440,9 +440,8 @@ Section System.
         :accepts mesiRqS
         :from cidx
         :me oidx
-        :requires (fun ost mins =>
-                     and (ost#[status] <= mesiI)
-                         (ost#[dir].(dir_st) = mesiI))
+        :requires
+           (fun ost mins => ost#[status] <= mesiI /\ ost#[dir].(dir_st) = mesiI)
         :transition
            (!|ost, msg| --> {| miv_id := mesiRqS;
                                miv_value := O |}).
@@ -451,7 +450,7 @@ Section System.
         rule.rsdd[0~>2~>0]
         :accepts mesiRsS
         :holding mesiRqS
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
@@ -465,7 +464,7 @@ Section System.
         rule.rsdd[0~>2~>1]
         :accepts mesiRsE
         :holding mesiRqS
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
@@ -482,8 +481,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
-                  (and (ost#[status] <= mesiI) (mesiE <= ost#[dir].(dir_st))))
+              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -500,9 +499,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (In (hd ii ost#[dir].(dir_sharers))
-                      (subtreeChildrenIndsOf topo oidx))
-                  (and (ost#[status] <= mesiI) (ost#[dir].(dir_st) = mesiS)))
+              In (hd ii ost#[dir].(dir_sharers)) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[status] <= mesiI /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg| --> ([hd ii (ost#[dir].(dir_sharers))],
                              {| miv_id := mesiDownRqS;
@@ -512,7 +510,9 @@ Section System.
         rule.rsudo[0~>4~>0]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires (FirstMsg /\ (fun ost orq mins => mesiE <= ost#[dir].(dir_st)))
+        :requires
+           (fun ost orq mins =>
+              FirstMsg ost orq mins /\ mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
@@ -525,7 +525,9 @@ Section System.
         rule.rsudo[0~>4~>1]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires (FirstMsg /\ (fun ost orq mins => ost#[dir].(dir_st) = mesiS))
+        :requires
+           (fun ost orq mins =>
+              FirstMsg ost orq mins /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
@@ -556,8 +558,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
-                  (and (ost#[status] <= mesiI) (mesiE <= ost#[dir].(dir_st))))
+              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -569,9 +571,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (In (hd ii ost#[dir].(dir_sharers))
-                      (subtreeChildrenIndsOf topo oidx))
-                  (and (ost#[status] <= mesiI) (ost#[dir].(dir_st) = mesiS)))
+              In (hd ii ost#[dir].(dir_sharers)) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[status] <= mesiI /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg|
             --> ([hd ii (ost#[dir].(dir_sharers))],
@@ -608,9 +609,9 @@ Section System.
         :accepts mesiRqM
         :from cidx
         :me oidx
-        :requires (fun ost mins =>
-                     and (ost#[status] <= mesiS)
-                         (ost#[dir].(dir_st) <= mesiS))
+        :requires
+           (fun ost mins =>
+              ost#[status] <= mesiS /\ ost#[dir].(dir_st) <= mesiS)
         :transition
            (!|ost, msg| --> {| miv_id := mesiRqM;
                                miv_value := O |}).
@@ -641,8 +642,8 @@ Section System.
         :me oidx
         :requires
            (fun ost orq mins =>
-              and (SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx))
-                  (ost#[dir].(dir_st) = mesiS))
+              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, rq| --> (ost#[dir].(dir_sharers),
                             {| miv_id := mesiDownRqI;
@@ -655,8 +656,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
-                  (and (ost#[status] <= mesiI) (mesiE <= ost#[dir].(dir_st))))
+              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
@@ -669,8 +670,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx))
-                  (and (ost#[status] <= mesiI) (ost#[dir].(dir_st) = mesiS)))
+              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[status] <= mesiI /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),
                              {| miv_id := mesiDownRqI;
@@ -680,7 +681,7 @@ Section System.
         rule.rsud[1~>6]
         :accepts mesiDownRsI
         :holding mesiRqM
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -707,8 +708,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx))
-                  (ost#[dir].(dir_st) = mesiS))
+              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),
                              {| miv_id := mesiDownRqI;
@@ -720,8 +721,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx))
-                  (mesiE <= ost#[dir].(dir_st)))
+              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+              mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
@@ -731,7 +732,7 @@ Section System.
         rule.rsuu[1~>10]
         :accepts mesiDownRsI
         :holding mesiDownRqI
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -744,8 +745,9 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[owned] = false)
-                  (ost#[dir].(dir_st) = mesiI))
+              ost#[owned] = false /\
+              mesiNP < ost#[status] < mesiM /\
+              ost#[dir].(dir_st) = mesiI)
         :transition
            (ost --> {| miv_id := mesiInvRq; miv_value := O |}).
 
@@ -755,23 +757,29 @@ Section System.
       Definition liInvRqUpUpWB: Rule :=
         rule.rqu[2~>1]
         :me oidx
-        :requires (fun ost mins => ost#[dir].(dir_st) = mesiI)
+        :requires
+           (fun ost mins =>
+              ost#[dir].(dir_st) = mesiI /\
+              ((ost#[owned] = true /\ mesiI < ost#[status]) \/
+               (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE)))
         :transition
            (ost --> {| miv_id := mesiInvWRq; miv_value := ost#[val] |}).
 
       Definition liInvRsDownDown: Rule :=
         rule.rsd[2~>2]
         :accepts mesiInvRs
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]
                                         +#[status <- mesiNP])).
 
       Definition liPushRqUpUp: Rule :=
         rule.rqu[2~>3]
         :me oidx
-        :requires (fun ost mins =>
-                     and (ost#[owned] = false)
-                         (ost#[dir].(dir_st) <> mesiE))
+        :requires
+           (fun ost mins =>
+              ost#[owned] = false /\
+              ((ost#[status] = mesiS /\ ost#[dir].(dir_st) = mesiS) \/
+               ost#[status] = mesiI))
         :transition
            (ost --> {| miv_id := mesiPushRq; miv_value := O |}).
 
@@ -783,7 +791,11 @@ Section System.
       Definition liPushRqUpUpWB: Rule :=
         rule.rqu[2~>4]
         :me oidx
-        :requires (fun ost mins => ost#[dir].(dir_st) < mesiE)
+        :requires
+           (fun ost mins =>
+              (ost#[status] = mesiS /\ ost#[dir].(dir_st) = mesiS) \/
+              (ost#[owned] = false /\ ost#[status] = mesiI /\
+               ost#[dir].(dir_st) = mesiI))
         :transition
            (ost --> {| miv_id := mesiPushWRq; miv_value := ost#[val] |}).
 
@@ -801,8 +813,7 @@ Section System.
         :from cidx
         :requires
            (fun ost orq mins =>
-              and (getDir cidx ost#[dir] = mesiS)
-                  (LastSharer ost#[dir] cidx))
+              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
         :transition
            (!|ost, _| --> (ost +#[dir <- setDirI],
                            {| miv_id := mesiInvRs; miv_value := O |})).
@@ -813,8 +824,7 @@ Section System.
         :from cidx
         :requires
            (fun ost orq mins =>
-              and (getDir cidx ost#[dir] = mesiS)
-                  (NotLastSharer ost#[dir]))
+              getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir])
         :transition
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            {| miv_id := mesiInvRs; miv_value := O |})).
@@ -846,8 +856,7 @@ Section System.
         :from cidx
         :requires
            (fun ost orq mins =>
-              and (getDir cidx ost#[dir] = mesiS)
-                  (LastSharer ost#[dir] cidx))
+              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
         :transition
            (!|ost, _| --> (ost +#[dir <- setDirI],
                            {| miv_id := mesiInvRs; miv_value := O |})).
@@ -858,8 +867,7 @@ Section System.
         :from cidx
         :requires
            (fun ost orq mins =>
-              and (getDir cidx ost#[dir] = mesiS)
-                  (NotLastSharer ost#[dir]))
+              getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir])
         :transition
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            {| miv_id := mesiInvRs; miv_value := O |})).
@@ -883,10 +891,14 @@ Section System.
         rule.immd[2~>11~~cidx]
         :accepts mesiPushRq
         :from cidx
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, _| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
 
+      (** NOTE: it's fine to ignore the writeback value when the directory 
+       * status is S, since it implies either it has the clean data or it
+       * wrote back.
+       *)
       Definition liPushImmWB0: Rule :=
         rule.immd[2~>12~>0~~cidx]
         :accepts mesiPushWRq

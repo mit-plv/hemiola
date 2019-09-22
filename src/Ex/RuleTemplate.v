@@ -276,34 +276,34 @@ Section Template.
 End Template.
 
 Notation "'rule.immd' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':requires' PREC ':transition' TRS" :=
-  (immDownRule RIDX MSGID FROM PREC%prec TRS%trs) (at level 5, only parsing).
+  (immDownRule RIDX MSGID FROM PREC TRS%trs) (at level 5, only parsing).
 Notation "'rule.immu' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':transition' TRS" :=
-  (immUpRule RIDX MSGID ME PREC%prec TRS%trs) (at level 5).
+  (immUpRule RIDX MSGID ME PREC TRS%trs) (at level 5).
 
 Notation "'rule.rquu' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':me' ME ':requires' PREC ':transition' TRS" :=
-  (rqUpUpRule RIDX MSGID FROM ME PREC%prec TRS%trs) (at level 5).
+  (rqUpUpRule RIDX MSGID FROM ME PREC TRS%trs) (at level 5).
 Notation "'rule.rqu' '[' RIDX ']' ':me' ME ':requires' PREC ':transition' TRS" :=
-  (rqUpUpRuleS RIDX ME PREC%prec TRS%trs) (at level 5).
+  (rqUpUpRuleS RIDX ME PREC TRS%trs) (at level 5).
 Notation "'rule.rqud' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':me' ME ':requires' PREC ':transition' TRS" :=
-  (rqUpDownRule RIDX MSGID FROM ME PREC%prec TRS%trs) (at level 5).
+  (rqUpDownRule RIDX MSGID FROM ME PREC TRS%trs) (at level 5).
 Notation "'rule.rqdd' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':transition' TRS" :=
-  (rqDownDownRule RIDX MSGID ME PREC%prec TRS%trs) (at level 5).
+  (rqDownDownRule RIDX MSGID ME PREC TRS%trs) (at level 5).
 
 Notation "'rule.rsdd' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsDownDownRule RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
+  (rsDownDownRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsd' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
-  (rsDownDownRuleS RIDX MSGID PREC%prec TRS%trs) (at level 5).
+  (rsDownDownRuleS RIDX MSGID PREC TRS%trs) (at level 5).
 Notation "'rule.rsud' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpDownRule RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
+  (rsUpDownRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsudo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpDownRuleOne RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
+  (rsUpDownRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsuu' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpUpRule RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
+  (rsUpUpRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsuuo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpUpRuleOne RIDX MSGID RQID PREC%prec TRS%trs) (at level 5).
+  (rsUpUpRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
 
 Notation "'rule.rsrq' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':me' ME ':requires' PREC ':transition' TRS" :=
-  (rsDownRqDownRule RIDX MSGID ME RQID PREC%prec TRS%trs) (at level 5).
+  (rsDownRqDownRule RIDX MSGID ME RQID PREC TRS%trs) (at level 5).
 
 Hint Unfold rqMsg rsMsg: RuleConds.
 

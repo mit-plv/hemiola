@@ -171,7 +171,7 @@ Section System.
         rule.rsdd[0~>2]
         :accepts mosiRsS
         :holding mosiRqS
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[implValueIdx <- msg_value min]
@@ -183,7 +183,7 @@ Section System.
         rule.rsdd[0~>2]
         :accepts mosiRsS
         :holding mosiRqS
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[implDirIdx <- setDirS [objIdxOf rsbTo]],
@@ -197,8 +197,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[implStatusIdx] = mosiI)
-                  (ost#[implDirIdx].(dir_st) = mosiS))
+              ost#[implStatusIdx] = mosiI /\
+              ost#[implDirIdx].(dir_st) = mosiS)
         :transition
            (!|ost, msg| --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
                              {| miv_id := mosiDownRqS;
@@ -211,8 +211,8 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[implStatusIdx] = mosiI)
-                  (mosiS <= ost#[implDirIdx].(dir_st)))
+              ost#[implStatusIdx] = mosiI /\
+              mosiS <= ost#[implDirIdx].(dir_st))
         :transition
            (!|ost, msg| --> ([ost#[implDirIdx].(dir_owner)],
                              {| miv_id := mosiDownRqS;
@@ -244,7 +244,8 @@ Section System.
         :accepts mosiDownRsS
         :holding mosiRqS
         :requires
-           (FirstMsg /\ (fun ost orq mins => ost#[implDirIdx].(dir_st) = mosiS))
+           (fun ost orq mins =>
+              FirstMsg ost orq mins /\ ost#[implDirIdx].(dir_st) = mosiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
@@ -257,7 +258,8 @@ Section System.
         :accepts mosiDownRsS
         :holding mosiRqS
         :requires
-           (FirstMsg /\ (fun ost orq mins => mosiO <= ost#[implDirIdx].(dir_st)))
+           (fun ost orq mins =>
+              FirstMsg ost orq mins /\ mosiO <= ost#[implDirIdx].(dir_st))
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
@@ -273,8 +275,7 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[implStatusIdx] = mosiI)
-                  (ost#[implDirIdx].(dir_st) = mosiS))
+              ost#[implStatusIdx] = mosiI /\ ost#[implDirIdx].(dir_st) = mosiS)
         :transition
            (!|ost, msg| --> ([hd ii (ost#[implDirIdx].(dir_sharers))],
                              {| miv_id := mosiDownRqS;
@@ -286,8 +287,7 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[implStatusIdx] = mosiI)
-                  (mosiO <= ost#[implDirIdx].(dir_st)))
+              ost#[implStatusIdx] = mosiI /\ mosiO <= ost#[implDirIdx].(dir_st))
         :transition
            (!|ost, msg| --> ([ost#[implDirIdx].(dir_owner)],
                              {| miv_id := mosiDownRqS;
@@ -298,7 +298,8 @@ Section System.
         :accepts mosiDownRsS
         :holding mosiDownRqS
         :requires
-           (FirstMsg /\ (fun ost orq mins => ost#[implDirIdx].(dir_st) = mosiS))
+           (fun ost orq mins =>
+              FirstMsg ost orq mins /\ ost#[implDirIdx].(dir_st) = mosiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
@@ -311,7 +312,8 @@ Section System.
         :accepts mosiDownRsS
         :holding mosiDownRqS
         :requires
-           (FirstMsg /\ (fun ost orq mins => mosiO <= ost#[implDirIdx].(dir_st)))
+           (fun ost orq mins =>
+              FirstMsg ost orq mins /\ mosiO <= ost#[implDirIdx].(dir_st))
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (msg ::= getFirstMsgI mins;
@@ -366,7 +368,7 @@ Section System.
         rule.rsdd[1~>2]
         :accepts mosiRsM
         :holding mosiRqM
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[implStatusIdx <- mosiM]
@@ -412,8 +414,7 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[implStatusIdx] = mosiI)
-                  (ost#[implDirIdx].(dir_st) = mosiM))
+              ost#[implStatusIdx] = mosiI /\ ost#[implDirIdx].(dir_st) = mosiM)
         :transition
            (!|ost, msg| --> ([ost#[implDirIdx].(dir_owner)],
                              {| miv_id := mosiDownRqI;
@@ -423,7 +424,7 @@ Section System.
         rule.rsud[1~>6]
         :accepts mosiDownRsI
         :holding mosiRqM
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
               --> (ost +#[implStatusIdx <- mosiI]
@@ -469,8 +470,7 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              and (ost#[implStatusIdx] = mosiI)
-                  (ost#[implDirIdx].(dir_st) = mosiM))
+              ost#[implStatusIdx] = mosiI /\ ost#[implDirIdx].(dir_st) = mosiM)
         :transition
            (!|ost, msg| --> ([ost#[implDirIdx].(dir_owner)],
                               {| miv_id := mosiDownRqI;
@@ -480,7 +480,7 @@ Section System.
         rule.rsuu[1~>11]
         :accepts mosiDownRsI
         :holding mosiDownRqI
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[implStatusIdx <- mosiI]
@@ -522,7 +522,7 @@ Section System.
       Definition putRsDownDown: Rule :=
         rule.rsd[2~>2]
         :accepts mosiRsI
-        :requires ⊤
+        :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> ost +#[implStatusIdx <- mosiI]).
 
       Definition liPutImmI: Rule :=
@@ -552,8 +552,9 @@ Section System.
         :accepts mosiRqI
         :from cidx
         :requires
-           ((fun ost orq mins => getDir cidx ost#[implDirIdx] = mosiS) /\
-            (fun ost orq mins => List.length ost#[implDirIdx].(dir_sharers) >= 2))
+           (fun ost orq mins =>
+              getDir cidx ost#[implDirIdx] = mosiS /\
+              List.length ost#[implDirIdx].(dir_sharers) >= 2)
         :transition
            (!|ost, msg|
               --> (ost +#[implDirIdx <- removeSharer cidx ost#[implDirIdx]],
@@ -566,8 +567,9 @@ Section System.
         :accepts mosiRqI
         :from cidx
         :requires
-           ((fun ost orq mins => getDir cidx ost#[implDirIdx] = mosiS) /\
-            (fun ost orq mins => List.length ost#[implDirIdx].(dir_sharers) = 1))
+           (fun ost orq mins =>
+              getDir cidx ost#[implDirIdx] = mosiS /\
+              List.length ost#[implDirIdx].(dir_sharers) = 1)
         :transition
            (!|ost, msg| --> (ost +#[implStatusIdx <- mosiM]
                                  +#[implDirIdx <- setDirI],
