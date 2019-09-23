@@ -671,7 +671,7 @@ Section System.
         :requires
            (fun ost mins =>
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ ost#[dir].(dir_st) = mesiS)
+              ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),
                              {| miv_id := mesiDownRqI;
