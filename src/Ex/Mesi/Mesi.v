@@ -611,6 +611,7 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
+              (** * FIXME: add [ost#[owned] = false] ?!?! *)
               ost#[status] <= mesiS /\ ost#[dir].(dir_st) <= mesiS)
         :transition
            (!|ost, msg| --> {| miv_id := mesiRqM;
@@ -671,6 +672,7 @@ Section System.
         :requires
            (fun ost mins =>
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              (** * FIXME: add [ost#[owned] = true] ?!?! *)
               ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),

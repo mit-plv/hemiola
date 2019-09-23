@@ -58,6 +58,10 @@ Section Template.
     rule[ridx]
     :requires (MsgsFrom [rqUpFrom cidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ UpLockFree /\
+               (* NOTE: may need more fine-grained down-lock-free condition that
+                * uses which downlock is not set in terms of [rqi_msg] ..
+                *)
+               DownLockFree /\
                fun ost _ mins => prec ost mins)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);

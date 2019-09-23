@@ -158,7 +158,7 @@ Definition InvNonWB (topo: DTree) (st: MState): Prop :=
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
   InvExcl st /\
   InvWB st /\ InvWBChild topo st /\ InvNonWB topo st /\
-  MesiFootprintsInv topo st.
+  MesiDownLockInv topo st.
 
 Section Facts.
 
