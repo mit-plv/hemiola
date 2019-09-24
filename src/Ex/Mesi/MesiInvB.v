@@ -95,7 +95,8 @@ Section Footprints.
         match case rmsg.(msg_id) on idx_dec default True with
         | mesiRqS: DownLockFromChild oidx rqid /\
                    ost#[status] <= mesiI /\ mesiI < ost#[dir].(dir_st)
-        | mesiRqM: DownLockFromChild oidx rqid /\ mesiI < ost#[dir].(dir_st)
+        | mesiRqM: DownLockFromChild oidx rqid /\
+                   ost#[owned] = true /\ mesiI < ost#[dir].(dir_st)
         | mesiDownRqS: DownLockFromParent oidx rqid /\
                        ost#[status] <= mesiI /\ mesiI < ost#[dir].(dir_st)
         | mesiDownRqI: DownLockFromParent oidx rqid /\ mesiI < ost#[dir].(dir_st)
@@ -254,6 +255,8 @@ Section FootprintsOk.
         rewrite H11 in H1; simpl in H1; dest.
 
         solve_MesiUpLockInv.
+        find_if_inside; [dest; rewrite H0 in H16; discriminate|].
+        repeat (find_if_inside; [dest; solve_mesi|]).
         
       }
 
