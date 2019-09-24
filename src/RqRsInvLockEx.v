@@ -760,7 +760,7 @@ Section RqRsInvLockEx.
           }
           { disc_RqRsDownMatch_rq; disc_rule_conds.
             red; intros; smred.
-            rewrite <-H36 in *.
+            rewrite <-H33 in *.
             intro Hx; rewrite Hx in *.
             disc_rule_conds; auto.
           }
@@ -1360,7 +1360,7 @@ Section RqRsInvLockEx.
         split.
         * constructor.
           { eapply DownLockIntact_DownLockedNew_1 with (orqs2:= orqs).
-            { eapply H37; [|left; reflexivity|].
+            { eapply H34; [|left; reflexivity|].
               { red; eauto. }
               { eapply parent_subtreeIndsOf_self_in; eauto. }
             }
@@ -1378,14 +1378,14 @@ Section RqRsInvLockEx.
         * disc_rule_conds.
           eapply DLIntactBound_trans with (orqs2:= orqs); eauto.
           { eapply DLIntactBound_child; [|eassumption].
-            eapply H37; [|left; reflexivity].
+            eapply H34; [|left; reflexivity].
             red; auto.
           }
           { apply DLIntactBound_step_neq.
             apply parent_not_in_subtree; auto.
           }
         * eapply DownLockIntact_DownLockedNew_2
-            with (orqs3:= orqs) in H44; [|red; smred].
+            with (orqs3:= orqs) in H41; [|red; smred].
           destruct (in_dec idx_dec (obj_idx obj) (subtreeIndsOf dtr cidx)).
           { exfalso.
             eapply DownLockedNew_in_history in H10; [|eassumption].
@@ -1395,10 +1395,10 @@ Section RqRsInvLockEx.
               elim n; eapply subtreeIndsOf_In_each_other_eq
                         with (dtr:= dtr); eauto.
             }
-            specialize (H31 _ H10 H50).
-            apply DownLockedNew_DownLocked in H44.
-            destruct H44 as [rrqid ?].
-            red in H31, H44; smred.
+            specialize (H33 _ H10 H47).
+            apply DownLockedNew_DownLocked in H41.
+            destruct H41 as [rrqid ?].
+            red in H33, H41; smred.
           }
           { eapply DLIntactBound_trans with (orqs2:= orqs); eauto.
             apply DLIntactBound_step_neq; assumption.

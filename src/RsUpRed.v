@@ -264,7 +264,7 @@ Section RsUpReduction.
         exfalso; phide_clear.
         disc_rule_conds.
         destruct H33.
-        rewrite <-H54 in H18.
+        rewrite <-H51 in H19.
         eapply rsUp_not_down_requested; eauto.
 
     - phide_clear.

@@ -1254,7 +1254,7 @@ Section DownLockInv.
             }
             { solve_q. }
           * mred.
-          * intro Hx; rewrite H28 in Hx; inv Hx; solve_midx_false.
+          * intro Hx; rewrite H25 in Hx; inv Hx; solve_midx_false.
         + eapply downLockFreeInv_orqs_preserved_downRq_rsbTo_1; try eassumption.
           * eapply downLockFreeInv_msgs_preserved; [eassumption|].
             intros; split.
@@ -1263,7 +1263,7 @@ Section DownLockInv.
             }
             { solve_q. }
           * mred.
-          * intro Hx; rewrite H28 in Hx; inv Hx; solve_midx_false.
+          * intro Hx; rewrite H25 in Hx; inv Hx; solve_midx_false.
     Qed.
 
     Lemma downLockInvORq_step_int_other:

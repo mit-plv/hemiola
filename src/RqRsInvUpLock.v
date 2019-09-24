@@ -1240,15 +1240,15 @@ Section UpLockInv.
         good_footprint_get (obj_idx obj).
         disc_rule_conds.
         apply upLockFreeInv_orqs_preserved_self_update.
-        xor3_inv2 H22; [dest|eapply rssQ_length_one; eauto].
+        xor3_inv2 H23; [dest|eapply rssQ_length_one; eauto].
         red; right.
         exists rqTo, rsFrom0, pidx; repeat split; try assumption.
         + solve_q.
           apply length_zero_iff_nil; omega.
         + solve_q.
-          apply findQ_In_deqMP_FirstMP in H9; simpl in H9.
-          unfold rssQ in H19; rewrite <-H9 in H19.
-          simpl in H19; rewrite H7 in H19; simpl in H19.
+          apply findQ_In_deqMP_FirstMP in H10; simpl in H10.
+          unfold rssQ in H20; rewrite <-H10 in H20.
+          simpl in H20; rewrite H7 in H20; simpl in H20.
           apply length_zero_iff_nil; omega.
         + apply not_ONoLockTo_OLockedTo; auto.
     Qed.

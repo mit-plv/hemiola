@@ -695,15 +695,15 @@ Section RqRsDown.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      apply InMP_enqMsgs_or in H26; destruct H26.
+      apply InMP_enqMsgs_or in H27; destruct H27.
       1:{ exfalso.
-          rewrite Forall_forall in H29; specialize (H29 _ H26).
-          simpl in H29; rewrite H24 in H29; discriminate.
+          rewrite Forall_forall in H26; specialize (H26 _ H27).
+          simpl in H26; rewrite H25 in H26; discriminate.
       }
 
       destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
-      + apply InMP_deqMP in H26.
-        specialize (H3 H26).
+      + apply InMP_deqMP in H27.
+        specialize (H3 H27).
         eapply obj_same_id_in_system_same in e; eauto; subst.
         right; split.
         * destruct (in_dec idx_dec down (idsOf routs)).
@@ -713,16 +713,16 @@ Section RqRsDown.
             apply in_map_iff in i; destruct i as [[down' rqdm] ?]; dest.
             simpl in *; subst.
             erewrite findQ_In_NoDup_enqMsgs; try eassumption.
-            rewrite Forall_forall in H29; specialize (H29 _ H41); simpl in H29.
+            rewrite Forall_forall in H26; specialize (H26 _ H41); simpl in H26.
             rewrite filter_app; simpl.
-            rewrite H29; simpl.
+            rewrite H26; simpl.
             destruct (filter _ _); discriminate.
           }
           { red; repeat (simpl; mred).
             intros; disc_rule_conds.
             elim n; clear n.
-            eapply RqRsDownMatch_rs_rq in H35; [|eassumption].
-            destruct H35 as [cidx [rdown ?]]; dest.
+            eapply RqRsDownMatch_rs_rq in H39; [|eassumption].
+            destruct H39 as [cidx [rdown ?]]; dest.
             disc_rule_conds.
           }
         * apply FirstMP_enqMsgs.
@@ -736,7 +736,7 @@ Section RqRsDown.
             specialize (H32 _ H22).
             destruct H32 as [rdown [rsUp ?]]; dest.
             disc_rule_conds.
-            apply H34.
+            apply H38.
           }
 
       + destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
@@ -745,14 +745,14 @@ Section RqRsDown.
           exfalso.
           eapply rsDown_in_deqMP_false
             with (cobj:= cobj) (rsdm1:= rmsg) (rsdm2:= rsdm); eauto.
-        * apply InMP_deqMP in H26.
-          specialize (H3 H26).
+        * apply InMP_deqMP in H27.
+          specialize (H3 H27).
           destruct H3; [left; red; mred|].
           dest; right; split.
           { red in H3; red; mred.
             destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
             destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-            intros; specialize (H3 _ _ H32 H33 H34).
+            intros; specialize (H3 _ _ H32 H34 H38).
             disc_rule_conds.
             assert (Some (obj_idx pobj) <> Some (obj_idx obj)) by congruence.
             solve_q; assumption.

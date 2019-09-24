@@ -385,12 +385,11 @@ Section RqRsTopo.
           FootprintedUp porq [rsFrom] (Some rsbTo) /\
           idsOf rins = [rsFrom] /\
           idsOf routs = rqTos.
-      
+
       Definition RsDownRqDownRule (rule: Rule) :=
         rule#prec <= RsAccepting /\
         rule#prec <= DownLockFree /\
         RqReleasing rule /\
-        StateSilent rule /\
         rule#post <= RsDownRqDownOk.
       
       Definition GoodRqRsRule (rule: Rule) :=

@@ -957,7 +957,7 @@ Section Separation.
       destruct H.
       destruct H28 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_RqRsMsgFrom.
-      eapply inside_child_in in H31; try eassumption.
+      eapply inside_child_in in H33; try eassumption.
   Qed.
 
   Lemma step_separation_outside_ok:
@@ -1059,8 +1059,8 @@ Section Separation.
       destruct H.
       destruct H27 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_rule_conds.
-      eapply outside_child_in in H30; try eassumption.
-      clear -H2 H30; firstorder.
+      eapply outside_child_in in H32; try eassumption.
+      clear -H2 H32; firstorder.
   Qed.
   
   Lemma atomic_separation_ok:

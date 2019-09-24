@@ -58,10 +58,6 @@ Section Template.
     rule[ridx]
     :requires (MsgsFrom [rqUpFrom cidx] /\ MsgIdsFrom [msgId] /\
                RqAccepting /\ UpLockFree /\
-               (* NOTE: may need more fine-grained down-lock-free condition that
-                * uses which downlock is not set in terms of [rqi_msg] ..
-                *)
-               DownLockFree /\
                fun ost _ mins => prec ost mins)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
@@ -244,25 +240,25 @@ Section Template.
                               [(rsbTo, rsMsg (snd nst))] }}))).
 
   Definition RsDownRqDownSound (sys: System) (oidx: IdxT)
-             (prec: OPrec) (trs: OState -> Msg -> list IdxT * Miv): Prop :=
+             (prec: OPrec) (trs: OState -> Msg -> OState * (list IdxT * Miv)): Prop :=
     forall ost orq rsin,
       prec ost orq [rsin] ->
       orq@[upRq] >>=[True]
          (fun rqiu =>
             exists rq,
               rqiu.(rqi_msg) = Some rq /\
-              fst (trs ost rq) <> nil /\
-              Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost rq)) /\
+              fst (snd (trs ost rq)) <> nil /\
+              Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (snd (trs ost rq))) /\
               exists rcidx rqUp,
                 parentIdxOf dtr rcidx = Some oidx /\
                 rqEdgeUpFrom dtr rcidx = Some rqUp /\
                 (orq@[upRq] >>=[True] (fun rqiu => edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb))) /\
                 In rcidx (map (@obj_idx _) (sys_objs sys)) /\
-                ~ In rcidx (fst (trs ost rq))).
+                ~ In rcidx (fst (snd (trs ost rq)))).
 
   Definition rsDownRqDownRule (oidx: IdxT) (rqId: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> list IdxT * Miv) :=
+             (trs: OState -> Msg -> OState * (list IdxT * Miv)) :=
     rule[ridx]
     :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\
                UpLockMsgId MRq rqId /\ UpLockIdxBack /\
@@ -271,11 +267,11 @@ Section Template.
        (do (st --> (rq <-- getUpLockMsg st.(orq);
                       rsbTo <-- getUpLockIdxBack st.(orq);
                       nst ::= trs st.(ost) rq;
-                    return {{ st.(ost),
+                    return {{ fst nst,
                               addRq (removeRq st.(orq) upRq)
-                                    downRq rq (map rsUpFrom (fst nst)) rsbTo,
-                              map (fun cidx => (downTo cidx, rqMsg (snd nst)))
-                                  (fst nst) }}))).
+                                    downRq rq (map rsUpFrom (fst (snd nst))) rsbTo,
+                              map (fun cidx => (downTo cidx, rqMsg (snd (snd nst))))
+                                  (fst (snd nst)) }}))).
   
 End Template.
 
@@ -514,7 +510,6 @@ Section Facts.
       apply Forall_forall; intros rq ?.
       apply in_map_iff in H2.
       destruct H2 as [midx ?]; dest; subst; reflexivity.
-    - solve_rule_conds_ex.
     - red; intros; simpl in *.
       disc_rule_conds_ex.
       specialize (H _ _ _ H7).
@@ -531,17 +526,17 @@ Section Facts.
       2: {
         exists rqi.
         exists {| rqi_msg := Some msg;
-                  rqi_minds_rss := map rsUpFrom (fst (trs nost msg));
+                  rqi_minds_rss := map rsUpFrom (fst (snd (trs post msg)));
                   rqi_midx_rsb := Some idx |}.
         solve_rule_conds_ex.
       }
       1: {
         solve_rule_conds_ex.
-        { destruct (fst (trs nost msg)); [auto|discriminate]. }
+        { destruct (fst (snd (trs post msg))); [auto|discriminate]. }
         { unfold idsOf; repeat rewrite map_length; reflexivity. }
         { apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
           clear -Hdtr H3 H11 H12.
-          induction (fst (trs nost msg)) as [|cidx cinds]; [dest_in|].
+          induction (fst (snd (trs post msg))) as [|cidx cinds]; [dest_in|].
           inv H3; simpl in H11; destruct H11; dest.
           { inv H; destruct Hdtr as [[? ?] ?].
             specialize (H _ _ H1); dest.

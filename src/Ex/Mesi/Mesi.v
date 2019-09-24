@@ -611,7 +611,7 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              (** * FIXME: add [ost#[owned] = false] ?!?! *)
+              ost#[owned] = false /\
               ost#[status] <= mesiS /\ ost#[dir].(dir_st) <= mesiS)
         :transition
            (!|ost, msg| --> {| miv_id := mesiRqM;
@@ -646,9 +646,10 @@ Section System.
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
               ost#[dir].(dir_st) = mesiS)
         :transition
-           (!|ost, rq| --> (ost#[dir].(dir_sharers),
-                            {| miv_id := mesiDownRqI;
-                               miv_value := O |})).
+           (!|ost, rq| --> (ost +#[owned <- true],
+                            (ost#[dir].(dir_sharers),
+                             {| miv_id := mesiDownRqI;
+                                miv_value := O |}))).
 
       Definition liGetMRqUpDownME: Rule :=
         rule.rqud[1~>4~~cidx]
@@ -672,8 +673,7 @@ Section System.
         :requires
            (fun ost mins =>
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-              (** * FIXME: add [ost#[owned] = true] ?!?! *)
-              ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
+              ost#[owned] = true /\ ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, msg| --> (ost#[dir].(dir_sharers),
                              {| miv_id := mesiDownRqI;

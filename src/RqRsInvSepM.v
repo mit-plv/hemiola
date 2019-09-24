@@ -886,8 +886,8 @@ Section Separation.
       + solve_midx_false.
 
     - disc_rule_conds.
-      rewrite Forall_forall in H33; specialize (H33 _ Hx).
-      simpl in H33; rewrite H33 in H6; discriminate.
+      rewrite Forall_forall in H30; specialize (H30 _ Hx).
+      simpl in H30; rewrite H30 in H6; discriminate.
   Qed.
 
   Lemma atomic_rsDown_inits_outs_disj:
