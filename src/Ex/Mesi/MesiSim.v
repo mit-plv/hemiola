@@ -95,7 +95,7 @@ Section Sim.
         ObjExcl0 oidx ost msgs ->
         ObjCoh ost#[val] oidx ost msgs.
     Proof.
-      unfold InvObjExcl0, CohInvRq, CohPushRq, ObjCoh; intros.
+      unfold InvObjExcl0, CohInvRq, ObjCoh; intros.
       specialize (H H0).
       split; [red; intros; reflexivity|].
       do 2 red; intros.
@@ -703,7 +703,7 @@ Section Sim.
               derive_coherence_of cidx.
               disc_getDir.
               derive_ObjDirME oidx cidx.
-              derive_ObjRqWB_inv cidx.
+              derive_ObjRqWB cidx.
               clear H38.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
@@ -719,50 +719,6 @@ Section Sim.
           { solve_ImplStateCoh_mem_others lidx. }
         }
 
-        { (* [liPushImm] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liPushImmWB0] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-        
-        { (* [liPushImmWB1] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-
-          solve_sim_mesi_ext_mp.
-          solve_SpecStateCoh.
-          case_ImplStateCoh_mem_me_others lidx.
-          { disc_rule_conds_ex; split.
-            { (* Coherence of the object *)
-              intros.
-              derive_coherence_of cidx.
-              disc_getDir.
-              derive_ObjDirME oidx cidx.
-              derive_ObjRqWB_push cidx.
-              clear H38.
-              assert (NoRsI cidx msgs)
-                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWBChild cidx H20.
-              disc_InvWB_push cidx H19.
-              (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H20; dest.
-              specialize (H36 H20 H38).
-              congruence.
-            }
-            { solve_MsgsCoh. }
-          }
-          { solve_ImplStateCoh_mem_others lidx. }
-        }
-        
       }
 
       dest_in.
@@ -1010,7 +966,7 @@ Section Sim.
               derive_coherence_of cidx.
               disc_getDir.
               derive_ObjDirME oidx cidx.
-              derive_ObjRqWB_inv cidx.
+              derive_ObjRqWB cidx.
               clear H43.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
@@ -1026,52 +982,6 @@ Section Sim.
           { solve_ImplStateCoh_li_others lidx. }
         }
 
-        { (* [liPushImm] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liPushImmWB0] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-        
-        { (* [liPushImmWB1] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          assert (NoRqI oidx msgs)
-            by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-
-          solve_sim_mesi_ext_mp.
-          solve_SpecStateCoh.
-          case_ImplStateCoh_li_me_others lidx.
-          { disc_rule_conds_ex; split.
-            { (* Coherence of the object *)
-              intros.
-              derive_coherence_of cidx.
-              disc_getDir.
-              derive_ObjDirME oidx cidx.
-              derive_ObjRqWB_push cidx.
-              clear H43.
-              assert (NoRsI cidx msgs)
-                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWBChild cidx H25.
-              disc_InvWB_push cidx H24.
-              (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H25; dest.
-              specialize (H41 H25 H43).
-              congruence.
-            }
-            { solve_MsgsCoh. }
-          }
-          { solve_ImplStateCoh_li_others lidx. }
-        }
-        
       }
 
       dest_in.
@@ -1244,14 +1154,13 @@ Section Sim.
         solve_sim_mesi.
       }
 
-      { (* [liPushRqUpUp] *)
+      { (* [liPushImm] *)
         disc_rule_conds_ex; spec_case_silent.
-        solve_sim_mesi.
-      }
-
-      { (* [liPushRqUpUpWB] *)
-        disc_rule_conds_ex; spec_case_silent.
-        solve_sim_mesi.
+        solve_sim_mesi_ext_mp.
+        solve_SpecStateCoh.
+        case_ImplStateCoh_li_me_others lidx.
+        { solve_ImplStateCoh_li_me. }
+        { specialize (H15 _ H12); disc_rule_conds_ex. }
       }
 
     - (*! Cases for L1 caches *)

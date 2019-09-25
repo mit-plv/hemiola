@@ -27,6 +27,12 @@ Section Template.
   Context `{oifc: OStateIfc}.
   Variables (ridx msgId: IdxT).
 
+  Definition immRule (prec: OPrec) (trs: OState -> OState): Rule :=
+    rule[ridx]
+    :requires (MsgsFrom nil /\ UpLockFree /\ DownLockFree /\ prec)
+    :transition
+       (do (st --> return {{ trs st.(ost), st.(orq), nil }})).
+
   (* Heads-up: [cidx] is not the index of itself, but of a child. *)
   Definition immDownRule (cidx: IdxT)
              (prec: OPrec)
@@ -275,6 +281,8 @@ Section Template.
   
 End Template.
 
+Notation "'rule.imm' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
+  (immRule RIDX PREC TRS%trs) (at level 5, only parsing).
 Notation "'rule.immd' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':requires' PREC ':transition' TRS" :=
   (immDownRule RIDX MSGID FROM PREC TRS%trs) (at level 5, only parsing).
 Notation "'rule.immu' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':transition' TRS" :=
@@ -311,6 +319,16 @@ Section Facts.
   Variable (dtr: DTree).
   Hypothesis (Hdtr: TreeTopo dtr).
   Context `{oifc: OStateIfc}.
+
+  Lemma immRule_ImmDownRule:
+    forall oidx ridx prec trs,
+      ImmDownRule dtr oidx (immRule ridx prec trs).
+  Proof.
+    unfold immRule; intros; repeat split; solve_rule_conds_ex.
+    - destruct ins; [constructor|discriminate].
+    - left; repeat split.
+      destruct rins; [reflexivity|discriminate].
+  Qed.
 
   Lemma immDownRule_ImmDownRule:
     forall oidx ridx msgId cidx prec trs,

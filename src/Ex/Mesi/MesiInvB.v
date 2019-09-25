@@ -72,10 +72,6 @@ Section Footprints.
             ost#[dir].(dir_st) = mesiI /\
             ((ost#[owned] = true /\ mesiI < ost#[status]) \/
              (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE))
-        | mesiPushWRq:
-            (ost#[status] = mesiS /\ ost#[dir].(dir_st) = mesiS) \/
-            (ost#[owned] = false /\ ost#[status] = mesiI /\
-             ost#[dir].(dir_st) = mesiI)
         end.
 
   Definition DownLockFromChild (oidx: IdxT) (rqid: RqInfo Msg) :=
@@ -96,7 +92,8 @@ Section Footprints.
         | mesiRqS: DownLockFromChild oidx rqid /\
                    ost#[status] <= mesiI /\ mesiI < ost#[dir].(dir_st)
         | mesiRqM: DownLockFromChild oidx rqid /\
-                   ost#[owned] = true /\ mesiI < ost#[dir].(dir_st)
+                   ((ost#[owned] = true /\ mesiI < ost#[dir].(dir_st)) \/
+                    mesiS < ost#[dir].(dir_st))
         | mesiDownRqS: DownLockFromParent oidx rqid /\
                        ost#[status] <= mesiI /\ mesiI < ost#[dir].(dir_st)
         | mesiDownRqI: DownLockFromParent oidx rqid /\ mesiI < ost#[dir].(dir_st)
@@ -172,6 +169,51 @@ Section FootprintsOk.
     assumption.
   Qed.
 
+  Ltac solve_MesiUpLockInv :=
+    let oidx := fresh "oidx" in
+    red; simpl; intro oidx;
+    match goal with
+    | [H: MesiUpLockInv _ |- _] => specialize (H oidx); simpl in H
+    end;
+    repeat (mred; simpl);
+    repeat
+      match goal with
+      | |- _ <+- ?ov; _ =>
+        first [match goal with
+               | [H: ov = _ |- _] => rewrite H in *; simpl in *
+               end
+              |let Hov := fresh "H" in
+               let v := fresh "v" in
+               destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]]
+      end;
+    try match goal with
+        | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H; simpl
+        end;
+    try (repeat split; solve_mesi);
+    repeat (find_if_inside;
+            [dest; try congruence;
+             repeat split;
+             intuition solve_mesi|]);
+    auto.
+
+  Ltac disc_MesiDownLockInv_internal oidx :=
+    match goal with
+    | [Hdl: MesiDownLockInv _ _ |- _] =>
+      specialize (Hdl oidx); simpl in Hdl;
+      repeat
+        match type of Hdl with
+        | _ <+- ?ov; _ =>
+          match goal with
+          | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
+          end
+        end;
+      repeat
+        match goal with
+        | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
+        end;
+      simpl in Hdl; dest
+    end.
+
   Lemma MesiUpLockInv_mutual_step:
     Invariant.MutualInvStep1 impl step_m MesiUpLockInv (MesiDownLockInv topo).
   Proof.
@@ -212,52 +254,10 @@ Section FootprintsOk.
       }
 
       dest_in; disc_rule_conds_ex.
-      { move H1 at bottom.
-        red in H1; simpl in H1.
-        specialize (H1 oidx).
-        rewrite H6, H7 in H1; simpl in H1.
-        rewrite Hrqi in H1; simpl in H1.
-        rewrite Hmsg in H1; simpl in H1.
-        rewrite H5 in H1; simpl in H1; dest.
-
-        Ltac solve_MesiUpLockInv :=
-          let oidx := fresh "oidx" in
-          red; simpl; intro oidx;
-          match goal with
-          | [H: MesiUpLockInv _ |- _] => specialize (H oidx); simpl in H
-          end;
-          repeat (mred; simpl);
-          repeat
-            match goal with
-            | |- _ <+- ?ov; _ =>
-              first [match goal with
-                     | [H: ov = _ |- _] => rewrite H in *; simpl in *
-                     end
-                    |let Hov := fresh "H" in
-                     let v := fresh "v" in
-                     destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]]
-            end;
-          try match goal with
-              | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H; simpl
-              end;
-          try (repeat split; solve_mesi);
-          repeat (find_if_inside; [dest; solve_mesi|]);
-          auto.
-
-        solve_MesiUpLockInv.
-      }
-      { move H1 at bottom.
-        red in H1; simpl in H1.
-        specialize (H1 oidx).
-        rewrite H6, H7 in H1; simpl in H1.
-        rewrite Hrqi in H1; simpl in H1.
-        rewrite Hmsg in H1; simpl in H1.
-        rewrite H11 in H1; simpl in H1; dest.
-
-        solve_MesiUpLockInv.
-        find_if_inside; [dest; rewrite H0 in H16; discriminate|].
-        repeat (find_if_inside; [dest; solve_mesi|]).
-        
+      all: try (disc_MesiDownLockInv_internal oidx; solve_MesiUpLockInv; fail).
+      { disc_MesiDownLockInv_internal oidx.
+        destruct H16; dest.
+        all: solve_MesiUpLockInv.
       }
 
     - (*! Cases for Li caches *)
@@ -289,35 +289,22 @@ Section FootprintsOk.
       all: try (eapply MesiUpLockInv_update_None; eauto; mred; fail).
       all: try (eapply MesiUpLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
-      { solve_MesiUpLockInv. }
-      { solve_MesiUpLockInv. }
-      { solve_MesiUpLockInv.
-        find_if_inside.
-        { dest; repeat split; try solve_mesi.
-          right; split; [reflexivity|solve_mesi].
-        }
-        find_if_inside; [left; split; [reflexivity|solve_mesi]|].
-        auto.
-      }
-      { move H1 at bottom.
-        red in H1; simpl in H1.
-        specialize (H1 oidx).
-        rewrite H6, H7 in H1; simpl in H1.
-        rewrite Hrqi in H1; simpl in H1.
-        rewrite Hmsg in H1; simpl in H1.
-        rewrite H10 in H1; simpl in H1; dest.
-
-        solve_MesiUpLockInv.
+      all: try (solve_MesiUpLockInv; fail).
+      all: try (disc_MesiDownLockInv_internal oidx; solve_MesiUpLockInv; fail).
+      all: try (solve_MesiUpLockInv; exfalso; unfold addRqS in *; mred; fail).
+      { disc_MesiDownLockInv_internal oidx.
+        destruct H21; dest.
+        all: solve_MesiUpLockInv.
       }
 
     - (*! Cases for L1 caches *)
 
       (** Do case analysis per a rule. *)
-      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
+      apply in_map_iff in H2; destruct H2 as [oidx [? ?]]; subst.
       dest_in; disc_rule_conds_ex.
       all: try (eapply MesiUpLockInv_update_None; eauto; mred; fail).
-      all: try (eapply MesiUpLockInv_no_update; eauto;
-                unfold addRqS; mred; fail).
+      all: try (solve_MesiUpLockInv; fail).
+      all: solve_MesiUpLockInv; exfalso; unfold addRqS in *; mred.
   Qed.
 
   (*! [MesiDownLockInv] *)
@@ -363,6 +350,7 @@ Section FootprintsOk.
                               bst_msgs := pmsgs |} ->
       forall oidx post porq nost norq nmsgs,
         oss@[oidx] = Some post ->
+        nost#[owned] = post#[owned] ->
         nost#[status] = post#[status] ->
         nost#[dir].(dir_st) = post#[dir].(dir_st) ->
         orqs@[oidx] = Some porq ->
@@ -373,89 +361,49 @@ Section FootprintsOk.
   Proof.
     unfold MesiDownLockInv; simpl; intros.
     mred; auto.
-    simpl; rewrite H1, H2, H4.
+    simpl; rewrite H1, H2, H3, H5.
     specialize (H oidx).
-    rewrite H0, H3 in H; simpl in H.
+    rewrite H0, H4 in H; simpl in H.
     assumption.
   Qed.
 
-  Lemma MesiDownLockInv_case_from_child:
-    forall oss orqs pmsgs,
-      MesiDownLockInv topo {| bst_oss := oss;
-                              bst_orqs := orqs;
-                              bst_msgs := pmsgs |} ->
-      forall oidx (nost: OState) norq rqid rmsg cidx nmsgs,
-        norq@[downRq] = Some rqid ->
-        rqid.(rqi_msg) = Some rmsg ->
-        ((rmsg.(msg_id) = mesiRqS /\ nost#[status] <= mesiI /\ mesiI < nost#[dir].(dir_st)) \/
-         (rmsg.(msg_id) = mesiRqM /\ nost#[status] <= mesiS /\ mesiI < nost#[dir].(dir_st))) ->
-        In cidx (c_li_indices cifc ++ c_l1_indices cifc) ->
-        parentIdxOf topo cidx = Some oidx ->
-        edgeDownTo topo cidx = rqid.(rqi_midx_rsb) ->
-        MesiDownLockInv topo {| bst_oss := oss +[oidx <- nost];
-                                bst_orqs := orqs +[oidx <- norq];
-                                bst_msgs := nmsgs |}.
-  Proof.
-    unfold MesiDownLockInv; simpl; intros.
-    mred; auto.
-    simpl; rewrite H0; simpl.
-    rewrite H1; simpl.
-    destruct H2; dest.
-    - rewrite H2; simpl.
-      repeat split; try assumption.
-      exists cidx; split; [|assumption].
-      rewrite <-H5.
-      pose proof (tree2Topo_TreeTopoNode tr 0).
-      specialize (H8 _ _ H4); dest; assumption.
-    - rewrite H2; simpl.
-      repeat split; try assumption.
-      exists cidx; split; [|assumption].
-      rewrite <-H5.
-      pose proof (tree2Topo_TreeTopoNode tr 0).
-      specialize (H8 _ _ H4); dest; assumption.
-  Qed.
+  Ltac solve_MesiDownLockInv :=
+    let oidx := fresh "oidx" in
+    red; simpl; intro oidx;
+    match goal with
+    | [H: MesiDownLockInv _ _ |- _] => specialize (H oidx); simpl in H
+    end;
+    repeat (mred; simpl);
+    repeat
+      match goal with
+      | |- _ <+- ?ov; _ =>
+        first [match goal with
+               | [H: ov = _ |- _] => rewrite H in *; simpl in *
+               end
+              |let Hov := fresh "H" in
+               let v := fresh "v" in
+               destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]]
+      end;
+    try match goal with
+        | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H; simpl
+        end;
+    repeat split;
+    try match goal with
+        | |- DownLockFromChild _ _ _ => red; simpl; eauto; fail
+        | |- _ => repeat split; intuition solve_mesi
+        end.
 
-  Lemma MesiDownLockInv_case_from_parent:
-    forall oss orqs pmsgs,
-      MesiDownLockInv topo {| bst_oss := oss;
-                              bst_orqs := orqs;
-                              bst_msgs := pmsgs |} ->
-      forall oidx pidx nost norq rqid rmsg nmsgs,
-        parentIdxOf topo oidx = Some pidx ->
-        norq@[downRq] = Some rqid ->
-        rqid.(rqi_msg) = Some rmsg ->
-        (rmsg.(msg_id) = mesiDownRqS \/ rmsg.(msg_id) = mesiDownRqI) ->
-        rsEdgeUpFrom topo oidx = rqid.(rqi_midx_rsb) ->
-        MesiDownLockInv topo {| bst_oss := oss +[oidx <- nost];
-                                bst_orqs := orqs +[oidx <- norq];
-                                bst_msgs := nmsgs |}.
-  Proof.
-    unfold MesiDownLockInv; simpl; intros.
-    mred; auto.
-    simpl; rewrite H1; simpl.
-    rewrite H2; simpl.
-    destruct H3.
-    - rewrite H3; simpl.
-      red; rewrite <-H4.
-      pose proof (tree2Topo_TreeTopoNode tr 0).
-      specialize (H5 _ _ H0); dest; assumption.
-    - rewrite H3; simpl.
-      red; rewrite <-H4.
-      pose proof (tree2Topo_TreeTopoNode tr 0).
-      specialize (H5 _ _ H0); dest; assumption.
-  Qed.
-  
-  Lemma MesiDownLockInv_step:
-    Invariant.InvStep impl step_m (MesiDownLockInv topo).
+  Lemma MesiDownLockInv_mutual_step:
+    Invariant.MutualInvStep2 impl step_m MesiUpLockInv (MesiDownLockInv topo).
   Proof.
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
                   (mesi_GoodRqRsSys Htr) H) as Hftinv.
-    inv H1; [assumption..|].
+    inv H2; [assumption..|].
 
-    simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
+    simpl in H3; destruct H3; [subst|apply in_app_or in H2; destruct H2].
 
     - (*! Cases for the main memory *)
 
@@ -469,54 +417,7 @@ Section FootprintsOk.
       simpl in *.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
-
-      1: { (** Rules per a child *)
-        apply concat_In in H2; destruct H2 as [crls [? ?]].
-        apply in_map_iff in H2; destruct H2 as [cidx [? ?]]; subst.
-
-        (** Derive that the child has the parent. *)
-        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
-          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-        
-        dest_in; disc_rule_conds_ex.
-        all: try (eapply MesiDownLockInv_update_None; eauto; fail).
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          left; repeat split; try assumption.
-          simpl; solve_mesi.
-        }
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          right; repeat split; try assumption.
-          all: simpl; solve_mesi.
-        }
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          right; repeat split; try assumption.
-          all: simpl; solve_mesi.
-        }
-      }
-
-      dest_in; disc_rule_conds_ex.
-      all: try (eapply MesiDownLockInv_update_None; eauto; mred).
-
-    - (*! Cases for Li caches *)
-
-      (** Derive some necessary information: each Li has a parent. *)
-      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
-      pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
-      destruct H1 as [pidx [? ?]].
-      pose proof (Htn _ _ H4); dest.
-      
-      (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
+      apply in_app_or in H4; destruct H4.
 
       1: { (** Rules per a child *)
         apply concat_In in H3; destruct H3 as [crls [? ?]].
@@ -525,71 +426,86 @@ Section FootprintsOk.
         (** Derive that the child has the parent. *)
         assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
           by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
+        
+        dest_in; disc_rule_conds_ex.
+        all: try (eapply MesiDownLockInv_update_None; eauto; fail).
+        all: derive_child_chns cidx; derive_child_idx_in cidx; solve_MesiDownLockInv.
+      }
+
+      dest_in; disc_rule_conds_ex.
+      all: try (eapply MesiDownLockInv_update_None; eauto; mred).
+
+    - (*! Cases for Li caches *)
+
+      (** Derive some necessary information: each Li has a parent. *)
+      apply in_map_iff in H2; destruct H2 as [oidx [? ?]]; subst; simpl in *.
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H3).
+      destruct H2 as [pidx [? ?]].
+      pose proof (Htn _ _ H5); dest.
+      
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H4; destruct H4.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H4; destruct H4 as [crls [? ?]].
+        apply in_map_iff in H4; destruct H4 as [cidx [? ?]]; subst.
+
+        (** Derive that the child has the parent. *)
+        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
 
         dest_in; disc_rule_conds_ex.
         all: try (eapply MesiDownLockInv_update_None; eauto; fail).
         all: try (eapply MesiDownLockInv_no_update; eauto; mred; fail).
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          left; repeat split; try assumption.
-          simpl; solve_mesi.
-        }
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          left; repeat split; try assumption.
-          simpl; solve_mesi.
-        }
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          right; repeat split; try assumption.
-          all: simpl; solve_mesi.
-        }
-        { derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          eapply MesiDownLockInv_case_from_child with (rmsg:= rmsg);
-            [|mred|..]; eauto.
-          right; repeat split; try assumption.
-          all: simpl; solve_mesi.
-        }
+        all: try (derive_child_chns cidx;
+                  derive_child_idx_in cidx;
+                  solve_MesiDownLockInv).
       }
 
       dest_in; disc_rule_conds_ex.
       all: try (eapply MesiDownLockInv_update_None; eauto; mred; fail).
       all: try (eapply MesiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
-      all: try (eapply MesiDownLockInv_case_from_parent with (rmsg:= rmsg);
-                [| |mred|..]; eauto; fail).
+      all: try (solve_MesiDownLockInv; fail).
       { derive_footprint_info_basis oidx.
+        derive_child_chns cidx.
         derive_child_idx_in cidx.
-        eapply MesiDownLockInv_case_from_child with (rmsg:= msg);
-          [|mred|..]; eauto.
-        right; repeat split; try assumption.
-        all: simpl; try solve_mesi.
-        admit. (** FIXME: need to extend the invariant to cover [liGetMRqUpUp] *) 
+        disc_rule_conds_ex.
+        solve_MesiDownLockInv.
       }
 
     - (*! Cases for L1 caches *)
 
       (** Do case analysis per a rule. *)
-      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
+      apply in_map_iff in H2; destruct H2 as [oidx [? ?]]; subst.
       dest_in; disc_rule_conds_ex.
       all: try (eapply MesiDownLockInv_update_None; eauto; mred; fail).
       all: try (eapply MesiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
   Qed.
 
-  Theorem MesiDownLockInv_ok:
+  Theorem MesiLockInv_ok:
+    InvReachable impl step_m (fun st => MesiUpLockInv st /\ MesiDownLockInv topo st).
+  Proof.
+    apply mutual_inv_reachable.
+    - apply MesiUpLockInv_init.
+    - apply MesiDownLockInv_init.
+    - apply MesiUpLockInv_mutual_step.
+    - apply MesiDownLockInv_mutual_step.
+  Qed.
+
+  Corollary MesiUpLockInv_ok:
+    InvReachable impl step_m MesiUpLockInv.
+  Proof.
+    red; intros.
+    apply MesiLockInv_ok; assumption.
+  Qed.
+
+  Corollary MesiDownLockInv_ok:
     InvReachable impl step_m (MesiDownLockInv topo).
   Proof.
-    apply inv_reachable.
-    - apply MesiDownLockInv_init.
-    - apply MesiDownLockInv_step.
+    red; intros.
+    apply MesiLockInv_ok; assumption.
   Qed.
 
 End FootprintsOk.
@@ -601,6 +517,8 @@ Ltac disc_MesiDownLockInv oidx Hinv :=
     match goal with
     | [Hrqi: rqi_msg _ = Some ?msg, Hmsg: msg_id ?msg = _ |- _] =>
       rewrite Hmsg in Hinv; simpl in Hinv
+    | [H: DownLockFromChild _ _ _ /\ _ |- _] => destruct H
+    | [H: DownLockFromParent _ _ /\ _ |- _] => destruct H
     | [Hdfc: DownLockFromChild _ _ _ |- _] =>
       red in Hdfc; dest; disc_rule_conds_ex
     | [Hdfp: DownLockFromParent _ _ |- _] =>
@@ -722,7 +640,7 @@ Section InvProof.
       dest_in.
       all: try (disc_RootChnInv;
                 disc_MesiDownLockInv oidx Hmftinv;
-                solve_RootChnInv).
+                solve_RootChnInv; fail).
 
     - (*! Cases for Li caches *)
       unfold RootChnInv in *; simpl in *.

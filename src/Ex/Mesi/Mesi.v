@@ -774,32 +774,12 @@ Section System.
         :transition (!|ost, _| --> (ost +#[owned <- false]
                                         +#[status <- mesiNP])).
 
-      Definition liPushRqUpUp: Rule :=
-        rule.rqu[2~>3]
-        :me oidx
+      Definition liPushImm: Rule :=
+        rule.imm[2~>3]
         :requires
-           (fun ost mins =>
-              ost#[owned] = false /\
-              ((ost#[status] = mesiS /\ ost#[dir].(dir_st) = mesiS) \/
-               ost#[status] = mesiI))
-        :transition
-           (ost --> {| miv_id := mesiPushRq; miv_value := O |}).
-
-      (** NOTE: ditto [liInvRqUpUpWB]; a cache controller should not use this
-       * rule when [owned = false]. Furthermore, we should not allow the case
-       * where the directory status is E or M, in order for the cache to 
-       * maintain the clean copy.
-       *)
-      Definition liPushRqUpUpWB: Rule :=
-        rule.rqu[2~>4]
-        :me oidx
-        :requires
-           (fun ost mins =>
-              (ost#[status] = mesiS /\ ost#[dir].(dir_st) = mesiS) \/
-              (ost#[owned] = false /\ ost#[status] = mesiI /\
-               ost#[dir].(dir_st) = mesiI))
-        :transition
-           (ost --> {| miv_id := mesiPushWRq; miv_value := ost#[val] |}).
+           (fun ost orq mins => ost#[status] = mesiI /\
+                                ost#[dir].(dir_st) <> mesiE)
+        :transition (ost --> ost +#[status <- mesiNP]).
 
       Definition liInvImmI: Rule :=
         rule.immd[2~>5~~cidx]
@@ -889,38 +869,6 @@ Section System.
                                  +#[val <- msg_value msg],
                              {| miv_id := mesiInvRs; miv_value := O |})).
 
-      Definition liPushImm: Rule :=
-        rule.immd[2~>11~~cidx]
-        :accepts mesiPushRq
-        :from cidx
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, _| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
-
-      (** NOTE: it's fine to ignore the writeback value when the directory 
-       * status is S, since it implies either it has the clean data or it
-       * wrote back.
-       *)
-      Definition liPushImmWB0: Rule :=
-        rule.immd[2~>12~>0~~cidx]
-        :accepts mesiPushWRq
-        :from cidx
-        :requires (fun ost orq mins => getDir cidx ost#[dir] < mesiE)
-        :transition
-           (!|ost, msg| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
-
-      Definition liPushImmWB1: Rule :=
-        rule.immd[2~>12~>1~~cidx]
-        :accepts mesiPushWRq
-        :from cidx
-        :requires (fun ost orq mins => mesiE <= getDir cidx ost#[dir])
-        :transition
-           (!|ost, msg| --> (ost +#[owned <- true]
-                                 +#[status <- mesiS]
-                                 +#[val <- msg_value msg]
-                                 +#[dir <- setDirS [cidx]],
-                             {| miv_id := mesiInvRs; miv_value := O |})).
-
     End Li.
 
   End Rules.
@@ -957,8 +905,7 @@ Section System.
              liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
                liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx;
                  liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
-                   liInvImmWBME cidx; liPushImm cidx;
-                     liPushImmWB0 cidx; liPushImmWB1 cidx].
+                   liInvImmWBME cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -988,8 +935,7 @@ Section System.
                    liDownIImm oidx; liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx;
                        liDownIRsUpUp]
              (** rules involved with [Put] *)
-             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown;
-                   liPushRqUpUp oidx; liPushRqUpUpWB oidx];
+             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.
@@ -1001,8 +947,7 @@ Section System.
            liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
              liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx;
                liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
-                 liInvImmWBME cidx; liPushImm cidx;
-                   liPushImmWB0 cidx; liPushImmWB1 cidx].
+                 liInvImmWBME cidx].
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
@@ -1060,8 +1005,6 @@ Hint Unfold liGetSImmS liGetSImmME
      liGetMRqUpDownME liGetMRqUpDownS liDownIRsUpDown
      liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRsUpUp
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
-     liPushRqUpUp liPushRqUpUpWB
      liInvImmI liInvImmS0 liInvImmS1 liInvImmE
-     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBME
-     liPushImm liPushImmWB0 liPushImmWB1: MesiRules.
+     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.
 
