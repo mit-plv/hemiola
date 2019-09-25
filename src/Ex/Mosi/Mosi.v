@@ -403,9 +403,9 @@ Section System.
                      ost#[implDirIdx].(dir_st) = mosiO \/
                      ost#[implDirIdx].(dir_st) = mosiS)
         :transition
-           (!|ost, rq| --> (ost#[implDirIdx].(dir_sharers),
-                            {| miv_id := mosiDownRqI;
-                               miv_value := O |})).
+           (!|ost, rq| --> (ost, (ost#[implDirIdx].(dir_sharers),
+                                  {| miv_id := mosiDownRqI;
+                                     miv_value := O |}))).
 
       Definition liGetMRqUpDownM: Rule :=
         rule.rqud[1~>5~~cidx]
