@@ -38,7 +38,7 @@ Proof.
     all: simpl; rewrite map_id; apply SubList_refl.
 Qed.
 
-Lemma mesi_RsDownConflicts:
+Lemma mesi_MsgConflictsInv:
   forall tr (Htr: tr <> Node nil)
          (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),
     InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).

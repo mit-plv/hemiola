@@ -478,9 +478,9 @@ Section Sim.
                   (mesi_RqRsDTree Htr)
                   (reachable_steps H (steps_singleton H2))) as Hnulinv.
     pose proof (mesi_RootChnInv_ok H) as Hprc.
-    pose proof (mesi_RsDownConflicts
+    pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
-    pose proof (mesi_RsDownConflicts
+    pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr)
                   (reachable_steps H (steps_singleton H2))) as Hnmcf.
 
