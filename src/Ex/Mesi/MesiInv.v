@@ -29,7 +29,8 @@ Section CoherenceUnit.
     MsgsNotExist [(downTo oidx, (MRs, mesiInvRs))] msgs.
 
   Definition NoRqI :=
-    MsgsNotExist [(rqUpFrom oidx, (MRq, mesiInvWRq))] msgs.
+    MsgsNotExist [(rqUpFrom oidx, (MRq, mesiInvRq));
+                    (rqUpFrom oidx, (MRq, mesiInvWRq))] msgs.
 
   (** 0) Coherence: which values are in a coherent state *)
 
@@ -85,7 +86,7 @@ Section CoherenceUnit.
   Definition ObjInvRq :=
     MsgExistsSig (rqUpFrom oidx, (MRq, mesiInvRq)) msgs.
 
-  Definition ObjRqWB :=
+  Definition ObjInvWRq :=
     MsgExistsSig (rqUpFrom oidx, (MRq, mesiInvWRq)) msgs.
 
   Section Facts.
@@ -120,34 +121,25 @@ Definition InvExcl (st: MState): Prop :=
           ost <+- (bst_oss st)@[oidx];
             ObjInvalid oidx ost (bst_msgs st))).
 
-Definition InvWB (st: MState): Prop :=
+Definition InvWBCoh (st: MState): Prop :=
   forall oidx,
     ost <+- (bst_oss st)@[oidx];
       CohInvRq oidx ost (bst_msgs st).
 
-Definition InvWBChild (topo: DTree) (st: MState): Prop :=
+Definition InvWB (topo: DTree) (st: MState): Prop :=
   forall oidx pidx,
     parentIdxOf topo oidx = Some pidx ->
     ost <+- (bst_oss st)@[oidx];
       post <+- (bst_oss st)@[pidx];
       porq <+- (bst_orqs st)@[pidx];
-      (ObjDirME porq post oidx ->
-       ObjRqWB oidx (bst_msgs st) ->
-       ObjOwned ost).
-
-Definition InvNonWB (topo: DTree) (st: MState): Prop :=
-  forall oidx pidx,
-    parentIdxOf topo oidx = Some pidx ->
-    ost <+- (bst_oss st)@[oidx];
-      post <+- (bst_oss st)@[pidx];
-      porq <+- (bst_orqs st)@[pidx];
-      (ObjDirE porq post oidx ->
-       ObjInvRq oidx (bst_msgs st) ->
-       (ObjClean ost /\ ost#[val] = post#[val])).
+      ((ObjDirME porq post oidx -> ObjInvWRq oidx (bst_msgs st) ->
+        ObjOwned ost) /\
+       (ObjDirE porq post oidx -> ObjInvRq oidx (bst_msgs st) ->
+        (ObjClean ost /\ ost#[val] = post#[val]))).
 
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
   InvExcl st /\
-  InvWB st /\ InvWBChild topo st /\ InvNonWB topo st /\
+  InvWBCoh st /\ InvWB topo st /\
   MesiDownLockInv topo st.
 
 Section Facts.
@@ -173,7 +165,7 @@ Section Facts.
     intros.
     do 3 red; intros.
     red; unfold map, fst, snd, caseDec.
-    find_if_inside; [eapply H; [|eassumption]; inv e; auto|].
+    do 2 (find_if_inside; [eapply H; [|eassumption]; inv e; auto|]).
     auto.
   Qed.
 
@@ -391,7 +383,183 @@ Section InvWB.
   Let impl: System := impl Htr.
 
   Lemma mesi_InvWB_init:
-    Invariant.InvInit impl InvWB.
+    Invariant.InvInit impl (InvWB topo).
+  Proof.
+    do 2 (red; simpl); intros.
+    destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
+    destruct (implOStatesInit tr)@[pidx] as [post|] eqn:Hpost; simpl; auto.
+    destruct (implORqsInit tr)@[pidx] as [porq|] eqn:Hporq; simpl; auto.
+    split; intros.
+    - do 2 (red in H1); dest.
+      do 2 (red in H1); dest_in.
+    - do 2 (red in H1); dest.
+      do 2 (red in H1); dest_in.
+  Qed.
+
+  Lemma mesi_InvWB_ext_in:
+    forall oss orqs msgs,
+      InvWB topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      forall eins,
+        ValidMsgsExtIn impl eins ->
+        InvWB topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+  Proof.
+    red; simpl; intros.
+    specialize (H _ _ H2); simpl in H.
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
+    dest; split; intros.
+    - destruct H5 as [idm [? ?]].
+      apply InMP_enqMsgs_or in H5.
+      destruct H5; [|apply H; auto; do 2 red; eauto].
+      apply in_map with (f:= idOf) in H5; simpl in H5.
+      apply H1 in H5; simpl in H5.
+      exfalso; eapply DisjList_In_1.
+      + apply tree2Topo_minds_merqs_disj.
+      + eassumption.
+      + eapply tree2Topo_obj_chns_minds_SubList.
+        * specialize (H0 oidx); simpl in H0.
+          rewrite Host in H0; simpl in H0.
+          eassumption.
+        * destruct idm as [midx msg]; inv H6.
+          simpl; tauto.
+    - destruct H5 as [idm [? ?]].
+      apply InMP_enqMsgs_or in H5.
+      destruct H5; [|apply H3; auto; do 2 red; eauto].
+      apply in_map with (f:= idOf) in H5; simpl in H5.
+      apply H1 in H5; simpl in H5.
+      exfalso; eapply DisjList_In_1.
+      + apply tree2Topo_minds_merqs_disj.
+      + eassumption.
+      + eapply tree2Topo_obj_chns_minds_SubList.
+        * specialize (H0 oidx); simpl in H0.
+          rewrite Host in H0; simpl in H0.
+          eassumption.
+        * destruct idm as [midx msg]; inv H6.
+          simpl; tauto.
+  Qed.
+
+  Lemma mesi_InvWB_ext_out:
+    forall oss orqs msgs,
+      InvWB topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      forall (eouts: list (Id Msg)),
+        InvWB topo {| bst_oss := oss;
+                      bst_orqs := orqs;
+                      bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+  Proof.
+    red; simpl; intros.
+    specialize (H _ _ H1); simpl in H.
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
+    dest; split; intros.
+    - destruct H4 as [idm [? ?]].
+      apply InMP_deqMsgs in H4.
+      apply H; auto.
+      do 2 red; eauto.
+    - destruct H4 as [idm [? ?]].
+      apply InMP_deqMsgs in H4.
+      apply H2; auto.
+      do 2 red; eauto.
+  Qed.
+
+  Lemma mesi_InvWB_step:
+    Invariant.InvStep impl step_m (InvWB topo).
+  Proof.
+    red; intros.
+    pose proof (footprints_ok
+                  (mesi_GoodORqsInit Htr)
+                  (mesi_GoodRqRsSys Htr) H) as Hftinv.
+    pose proof (mesi_InObjInds H) as Hioi.
+    pose proof (mesi_MsgConflictsInv
+                  (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
+    pose proof (MesiDownLockInv_ok H) as Hmdl.
+    inv H1; [assumption
+            |apply mesi_InvWB_ext_in; auto
+            |apply mesi_InvWB_ext_out; auto
+            |].
+
+    simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
+
+    - (*! Cases for the main memory *)
+
+      (** Abstract the root. *)
+      assert (In (rootOf (fst (tree2Topo tr 0)))
+                 (c_li_indices (snd (tree2Topo tr 0)))) as Hin.
+      { rewrite c_li_indices_head_rootOf by assumption.
+        left; reflexivity.
+      }
+
+      remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
+
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H3; destruct H3.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H1; destruct H1 as [crls [? ?]].
+        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+        dest_in.
+
+        all: admit.
+
+      }
+
+      dest_in.
+      all: admit.
+
+    - (*! Cases for Li caches *)
+
+      (** Derive some necessary information: each Li has a parent. *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
+
+      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
+      destruct H1 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+      
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H3; destruct H3.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H3; destruct H3 as [crls [? ?]].
+        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
+        dest_in.
+        all: admit.
+      }
+
+      dest_in.
+      all: admit.
+
+    - (*! Cases for L1 caches *)
+
+      (** Derive some necessary information: each Li has a parent. *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
+
+      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+      pose proof (c_l1_indices_has_parent Htr _ _ H2).
+      destruct H1 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+
+      (** Do case analysis per a rule. *)
+      dest_in.
+      all: admit.
+
+  Admitted.
+
+End InvWB.
+
+Section InvWBCoh.
+  Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
+
+  Let topo: DTree := fst (tree2Topo tr 0).
+  Let cifc: CIfc := snd (tree2Topo tr 0).
+  Let impl: System := impl Htr.
+
+  Lemma mesi_InvWBCoh_init:
+    Invariant.InvInit impl InvWBCoh.
   Proof.
     do 2 (red; simpl).
     intros.
@@ -411,13 +579,13 @@ Section InvWB.
       discriminate.
   Qed.
 
-  Lemma mesi_InvWB_ext_in:
+  Lemma mesi_InvWBCoh_ext_in:
     forall oss orqs msgs,
-      InvWB {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvWBCoh {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvWB {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+        InvWBCoh {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -438,12 +606,12 @@ Section InvWB.
         simpl; tauto.
   Qed.
 
-  Lemma mesi_InvWB_ext_out:
+  Lemma mesi_InvWBCoh_ext_out:
     forall oss orqs msgs,
-      InvWB {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvWBCoh {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
-        InvWB {| bst_oss := oss;
+        InvWBCoh {| bst_oss := oss;
                  bst_orqs := orqs;
                  bst_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
@@ -453,19 +621,19 @@ Section InvWB.
     red; intros; apply InMP_deqMsgs in H1; auto.
   Qed.
 
-  Lemma InvWB_no_update:
+  Lemma InvWBCoh_no_update:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall oidx (post nost: OState),
         oss@[oidx] = Some post ->
         nost#[val] = post#[val] ->
         nost#[owned] = post#[owned] ->
         nost#[status] = post#[status] ->
         nost#[dir].(dir_st) = post#[dir].(dir_st) ->
-        InvWB {| bst_oss:= oss +[oidx <- nost];
+        InvWBCoh {| bst_oss:= oss +[oidx <- nost];
                  bst_orqs:= orqs; bst_msgs:= msgs |}.
   Proof.
-    unfold InvWB; simpl; intros.
+    unfold InvWBCoh; simpl; intros.
     mred; simpl; auto.
     specialize (H oidx).
     rewrite H0 in H; simpl in H.
@@ -480,37 +648,38 @@ Section InvWB.
     - rewrite <-H2; assumption.
   Qed.
 
-  Lemma InvWB_update_status_NoRqI:
+  Lemma InvWBCoh_update_status_NoRqI:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall oidx (ost: OState),
         NoRqI oidx msgs ->
-        InvWB {| bst_oss:= oss +[oidx <- ost];
+        InvWBCoh {| bst_oss:= oss +[oidx <- ost];
                  bst_orqs:= orqs; bst_msgs:= msgs |}.
   Proof.
-    unfold InvWB; simpl; intros.
+    unfold InvWBCoh; simpl; intros.
     mred; simpl; auto.
     red; intros.
     specialize (H0 _ H1).
     red in H0; rewrite H2 in H0.
     unfold map in H0.
+    rewrite caseDec_head_neq in H0 by discriminate.
     rewrite caseDec_head_eq in H0 by reflexivity.
     exfalso; auto.
   Qed.
 
-  Lemma InvWB_enqMP_valid:
+  Lemma InvWBCoh_enqMP_valid:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall oidx ost midx msg,
         oss@[oidx] = Some ost ->
         ost#[dir].(dir_st) = mesiI ->
         midx = rqUpFrom oidx ->
         msg.(msg_id) = mesiInvWRq ->
         msg.(msg_value) = ost#[val] ->
-        InvWB {| bst_oss:= oss; bst_orqs:= orqs;
+        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
                  bst_msgs:= enqMP midx msg msgs |}.
   Proof.
-    unfold InvWB; simpl; intros.
+    unfold InvWBCoh; simpl; intros.
     destruct (idx_dec oidx0 oidx); subst.
     - specialize (H oidx).
       rewrite H0 in *; simpl in *.
@@ -529,15 +698,15 @@ Section InvWB.
       + apply H; auto.
   Qed.
 
-  Lemma InvWB_other_msg_id_enqMP:
+  Lemma InvWBCoh_other_msg_id_enqMP:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> mesiInvWRq ->
-        InvWB {| bst_oss:= oss; bst_orqs:= orqs;
+        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
                  bst_msgs:= enqMP midx msg msgs |}.
   Proof.
-    unfold InvWB; simpl; intros.
+    unfold InvWBCoh; simpl; intros.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     red; intros.
@@ -547,12 +716,12 @@ Section InvWB.
     inv H2; exfalso; auto.
   Qed.
   
-  Lemma InvWB_other_msg_id_enqMsgs:
+  Lemma InvWBCoh_other_msg_id_enqMsgs:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq) nmsgs ->
-        InvWB {| bst_oss:= oss; bst_orqs:= orqs;
+        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
                  bst_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
     intros.
@@ -560,64 +729,64 @@ Section InvWB.
     induction nmsgs as [|[nmidx nmsg] nmsgs]; simpl; intros; auto.
     inv H0; dest.
     apply IHnmsgs; auto.
-    apply InvWB_other_msg_id_enqMP; assumption.
+    apply InvWBCoh_other_msg_id_enqMP; assumption.
   Qed.
 
-  Lemma InvWB_deqMP:
+  Lemma InvWBCoh_deqMP:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall midx,
-        InvWB {| bst_oss:= oss; bst_orqs:= orqs;
+        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
                  bst_msgs:= deqMP midx msgs |}.
   Proof.
-    unfold InvWB; simpl; intros.
+    unfold InvWBCoh; simpl; intros.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     red; intros; apply InMP_deqMP in H0; auto.
   Qed.
 
-  Lemma InvWB_deqMsgs:
+  Lemma InvWBCoh_deqMsgs:
     forall oss orqs msgs,
-      InvWB {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall minds,
-        InvWB {| bst_oss:= oss; bst_orqs:= orqs;
+        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
                  bst_msgs:= deqMsgs minds msgs |}.
   Proof.
-    unfold InvWB; simpl; intros.
+    unfold InvWBCoh; simpl; intros.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     red; intros; apply InMP_deqMsgs in H0; auto.
   Qed.
 
-  Ltac simpl_InvWB_enqMP :=
+  Ltac simpl_InvWBCoh_enqMP :=
     simpl;
     try match goal with
         | [H: msg_id ?rmsg = _ |- msg_id ?rmsg <> _] => rewrite H
         end;
     discriminate.
 
-  Ltac simpl_InvWB_enqMsgs :=
+  Ltac simpl_InvWBCoh_enqMsgs :=
     let idm := fresh "idm" in
     let Hin := fresh "H" in
     apply Forall_forall; intros idm Hin;
     apply in_map_iff in Hin; dest; subst;
-    simpl_InvWB_enqMP.
+    simpl_InvWBCoh_enqMP.
 
-  Ltac simpl_InvWB :=
+  Ltac simpl_InvWBCoh :=
     repeat
-      (first [apply InvWB_other_msg_id_enqMP; [|simpl_InvWB_enqMP..]
-             |apply InvWB_other_msg_id_enqMsgs; [|simpl_InvWB_enqMsgs]
-             |apply InvWB_deqMP
-             |apply InvWB_deqMsgs
-             |apply InvWB_update_status_NoRqI; [|assumption]
-             |eapply InvWB_no_update; [|eauto; fail..]
+      (first [apply InvWBCoh_other_msg_id_enqMP; [|simpl_InvWBCoh_enqMP..]
+             |apply InvWBCoh_other_msg_id_enqMsgs; [|simpl_InvWBCoh_enqMsgs]
+             |apply InvWBCoh_deqMP
+             |apply InvWBCoh_deqMsgs
+             |apply InvWBCoh_update_status_NoRqI; [|assumption]
+             |eapply InvWBCoh_no_update; [|eauto; fail..]
              |assumption]).
 
-  Ltac solve_InvWB :=
+  Ltac solve_InvWBCoh :=
     let oidx := fresh "oidx" in
     red; simpl; intros oidx;
     match goal with
-    | [Hi: InvWB _ |- _] =>
+    | [Hi: InvWBCoh _ |- _] =>
       specialize (Hi oidx); simpl in Hi
     end;
     mred; simpl;
@@ -652,8 +821,8 @@ Section InvWB.
       simpl in Hdl; dest
     end.
 
-  Lemma mesi_InvWB_step:
-    Invariant.InvStep impl step_m InvWB.
+  Lemma mesi_InvWBCoh_step:
+    Invariant.InvStep impl step_m InvWBCoh.
   Proof.
     red; intros.
     pose proof (footprints_ok
@@ -664,8 +833,8 @@ Section InvWB.
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
     pose proof (MesiDownLockInv_ok H) as Hmdl.
     inv H1; [assumption
-            |apply mesi_InvWB_ext_in; auto
-            |apply mesi_InvWB_ext_out; auto
+            |apply mesi_InvWBCoh_ext_in; auto
+            |apply mesi_InvWBCoh_ext_out; auto
             |].
 
     simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
@@ -689,20 +858,20 @@ Section InvWB.
         apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
         dest_in; disc_rule_conds_ex.
 
-        all: try (simpl_InvWB; fail).
+        all: try (simpl_InvWBCoh; fail).
         all: try (assert (NoRqI oidx msgs)
                    by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                  simpl_InvWB).
+                  simpl_InvWBCoh).
       }
 
       dest_in.
       { disc_rule_conds_ex.
         derive_MesiDownLockInv oidx.
-        simpl_InvWB; solve_InvWB.
+        simpl_InvWBCoh; solve_InvWBCoh.
       }
       { disc_rule_conds_ex.
         derive_MesiDownLockInv oidx.
-        simpl_InvWB; solve_InvWB.
+        simpl_InvWBCoh; solve_InvWBCoh.
       }
 
     - (*! Cases for Li caches *)
@@ -723,26 +892,26 @@ Section InvWB.
         apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
         dest_in; disc_rule_conds_ex.
 
-        all: try (simpl_InvWB; fail).
+        all: try (simpl_InvWBCoh; fail).
         all: try (assert (NoRqI oidx msgs)
                    by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                  simpl_InvWB).
+                  simpl_InvWBCoh).
       }
 
       dest_in; disc_rule_conds_ex.
 
-      all: try (simpl_InvWB; fail).
+      all: try (simpl_InvWBCoh; fail).
       all: try (assert (NoRqI oidx msgs)
                  by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                simpl_InvWB).
+                simpl_InvWBCoh).
       all: try (derive_footprint_info_basis oidx;
                 assert (NoRqI oidx msgs)
                   by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx);
-                simpl_InvWB).
-      all: try (simpl_InvWB; solve_InvWB; fail).
+                simpl_InvWBCoh).
+      all: try (simpl_InvWBCoh; solve_InvWBCoh; fail).
       all: try (derive_MesiDownLockInv oidx;
-                simpl_InvWB; solve_InvWB; fail).
-      { eapply InvWB_enqMP_valid; eauto. }
+                simpl_InvWBCoh; solve_InvWBCoh; fail).
+      { eapply InvWBCoh_enqMP_valid; eauto. }
 
     - (*! Cases for L1 caches *)
 
@@ -757,28 +926,28 @@ Section InvWB.
       (** Do case analysis per a rule. *)
       dest_in; disc_rule_conds_ex.
 
-      all: try (simpl_InvWB; fail).
+      all: try (simpl_InvWBCoh; fail).
       all: try (assert (NoRqI oidx msgs)
                  by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                simpl_InvWB).
+                simpl_InvWBCoh).
       all: try (derive_footprint_info_basis oidx;
                 assert (NoRqI oidx msgs)
                   by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx);
-                simpl_InvWB).
-      all: try (simpl_InvWB; solve_InvWB; fail).
-      { eapply InvWB_enqMP_valid; eauto. }
+                simpl_InvWBCoh).
+      all: try (simpl_InvWBCoh; solve_InvWBCoh; fail).
+      { eapply InvWBCoh_enqMP_valid; eauto. }
 
   Qed.
 
-  Theorem mesi_InvWB_ok:
-    InvReachable impl step_m InvWB.
+  Theorem mesi_InvWBCoh_ok:
+    InvReachable impl step_m InvWBCoh.
   Proof.
     apply inv_reachable.
-    - apply mesi_InvWB_init.
-    - apply mesi_InvWB_step.
+    - apply mesi_InvWBCoh_init.
+    - apply mesi_InvWBCoh_step.
   Qed.
 
-End InvWB.
+End InvWBCoh.
 
 (** The invariants proof starts here -- *)
 
@@ -816,10 +985,10 @@ Ltac derive_ObjInvRq oidx :=
                  [red; simpl; solve_in_mp|unfold sigOf; simpl; congruence])
   end.
 
-Ltac derive_ObjRqWB oidx :=
+Ltac derive_ObjInvWRq oidx :=
   match goal with
   | [H: FirstMPI ?msgs (rqUpFrom oidx, ?rmsg) |- _] =>
-    assert (ObjRqWB oidx msgs)
+    assert (ObjInvWRq oidx msgs)
       by (eexists; split;
           [eapply FirstMP_InMP; eassumption
           |unfold sigOf; simpl; congruence])
@@ -833,17 +1002,19 @@ Ltac disc_InvNonWB cidx Hinv :=
       disc_rule_conds_ex
     end.
 
-Ltac disc_InvWB_inv cidx Hinv :=
+Ltac disc_InvWBCoh_inv cidx Hinv :=
   specialize (Hinv cidx); simpl in Hinv;
   disc_rule_conds_ex;
   match goal with
   | [Hcoh: CohInvRq cidx ?ost _, Ho: ObjOwned ?ost, Hfm: FirstMPI _ _ |- _] =>
-    specialize (Hcoh Ho _ (FirstMP_InMP Hfm));
+    specialize (Hcoh _ (FirstMP_InMP Hfm));
     unfold sigOf in Hcoh; simpl in Hcoh;
-    specialize (Hcoh ltac:(congruence))
+    specialize (Hcoh ltac:(congruence));
+    destruct Hcoh as [_ Hcoh];
+    specialize (Hcoh Ho)
   end.
 
-Ltac disc_InvWBChild cidx Hinv :=
+Ltac disc_InvWB cidx Hinv :=
   match goal with
   | [Hp: parentIdxOf _ cidx = Some _ |- _] =>
     specialize (Hinv _ _ Hp); simpl in Hinv;

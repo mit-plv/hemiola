@@ -550,7 +550,7 @@ Section Sim.
         apply rsEdgeUpFrom_Some with (sys:= impl) in Hrs;
           [|subst topo impl; auto].
         destruct Hrs as [rqUp [down [pidx ?]]]; dest.
-        apply parentIdxOf_child_not_root in H27; [|subst topo; auto].
+        apply parentIdxOf_child_not_root in H25; [|subst topo; auto].
         auto.
       }
 
@@ -656,11 +656,11 @@ Section Sim.
               derive_ObjDirE oidx cidx.
               derive_ObjInvRq cidx.
               assert (NoRsI cidx msgs)
-                by (clear H38; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvNonWB cidx H21.
+                by (clear H36; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvWB cidx H19.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H21; dest.
-              specialize (H36 H21 H41).
+              red in H36; dest.
+              specialize (H34 H36 H39).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -703,15 +703,15 @@ Section Sim.
               derive_coherence_of cidx.
               disc_getDir.
               derive_ObjDirME oidx cidx.
-              derive_ObjRqWB cidx.
-              clear H38.
+              derive_ObjInvWRq cidx.
+              clear H36.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWBChild cidx H20.
-              disc_InvWB_inv cidx H19.
+              disc_InvWB cidx H19.
+              disc_InvWBCoh_inv cidx H18.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H20; dest.
-              specialize (H36 H20 H38).
+              red in H19; dest.
+              specialize (H34 H19 H36).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -917,11 +917,11 @@ Section Sim.
               derive_ObjDirE oidx cidx.
               derive_ObjInvRq cidx.
               assert (NoRsI cidx msgs)
-                by (clear H43; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvNonWB cidx H26.
+                by (clear H41; solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+              disc_InvWB cidx H24.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H26; dest.
-              specialize (H41 H26 H46).
+              red in H41; dest.
+              specialize (H39 H41 H44).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -966,15 +966,15 @@ Section Sim.
               derive_coherence_of cidx.
               disc_getDir.
               derive_ObjDirME oidx cidx.
-              derive_ObjRqWB cidx.
-              clear H43.
+              derive_ObjInvWRq cidx.
+              clear H41.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWBChild cidx H25.
-              disc_InvWB_inv cidx H24.
+              disc_InvWB cidx H24.
+              disc_InvWBCoh_inv cidx H23.
               (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H25; dest.
-              specialize (H41 H25 H43).
+              red in H24; dest.
+              specialize (H39 H24 H41).
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1018,7 +1018,7 @@ Section Sim.
       { (* [liDownSRsUpDownME] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|disc_MesiDownLockInv oidx H27].
+          [|disc_MesiDownLockInv oidx H25].
         derive_child_chns upCIdx.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1034,7 +1034,7 @@ Section Sim.
       { (* liDownSRsUpDownS] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|disc_MesiDownLockInv oidx H27].
+          [|disc_MesiDownLockInv oidx H25].
         derive_child_chns upCIdx.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1071,7 +1071,7 @@ Section Sim.
       { (* [liDownSRsUpUp] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [disc_MesiDownLockInv oidx H27|].
+          [disc_MesiDownLockInv oidx H25|].
         disc_responses_from.
         derive_child_chns cidx.
         derive_child_idx_in cidx.
@@ -1100,7 +1100,7 @@ Section Sim.
       { (* [liDownIRsUpDown] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [|disc_MesiDownLockInv oidx H27].
+          [|disc_MesiDownLockInv oidx H25].
         derive_child_chns upCIdx.
         derive_child_idx_in upCIdx.
         disc_responses_from.
@@ -1131,7 +1131,7 @@ Section Sim.
       { (* [liDownIRsUpUp] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
-          [disc_MesiDownLockInv oidx H27|].
+          [disc_MesiDownLockInv oidx H25|].
         disc_responses_from.
         solve_sim_mesi.
       }
@@ -1275,7 +1275,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H29; eapply l1ExtOf_not_eq; eauto].
+                  inv H27; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1298,7 +1298,7 @@ Section Sim.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                inv H35; eapply l1ExtOf_not_eq; eauto].
+                inv H33; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1323,7 +1323,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H29; eapply l1ExtOf_not_eq; eauto].
+                  inv H27; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1346,7 +1346,7 @@ Section Sim.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                inv H35; eapply l1ExtOf_not_eq; eauto].
+                inv H33; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
@@ -1381,7 +1381,7 @@ Section Sim.
             { do 2 red; simpl.
               apply MsgsP_other_midx_enqMP;
                 [|intro; dest_in;
-                  inv H41; eapply l1ExtOf_not_eq; eauto].
+                  inv H39; eapply l1ExtOf_not_eq; eauto].
               apply MsgsP_deqMP.
               assumption.
             }
@@ -1391,10 +1391,10 @@ Section Sim.
           mred; simpl.
           assert (exists lost lorq, oss@[lidx] = Some lost /\
                                     orqs@[lidx] = Some lorq).
-          { specialize (H15 _ H31).
+          { specialize (H15 _ H29).
             solve_rule_conds_ex.
           }
-          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H40; simpl.
+          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H38; simpl.
           eapply ObjInvalid_ObjCoh.
           { apply Hnmcf; [assumption|simpl; mred]. }
           { eapply InvExcl_excl_invalid; [eapply H3|..];
@@ -1402,7 +1402,7 @@ Section Sim.
             do 2 red.
             apply MsgsP_other_midx_enqMP;
               [|intro; dest_in;
-                inv H42; eapply l1ExtOf_not_eq; eauto].
+                inv H40; eapply l1ExtOf_not_eq; eauto].
             apply MsgsP_deqMP.
             assumption.
           }
