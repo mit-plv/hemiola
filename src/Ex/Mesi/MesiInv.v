@@ -19,6 +19,29 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
+Lemma MsgExistsSig_MsgsNotExist_false:
+  forall msgs sigs,
+    MsgsNotExist sigs msgs ->
+    forall sig,
+      In sig sigs ->
+      MsgExistsSig sig msgs -> False.
+Proof.
+  intros.
+  destruct H1 as [idm [? ?]]; subst.
+  specialize (H _ H1); clear H1.
+  induction sigs; [dest_in|].
+  destruct (sig_dec (sigOf idm) a); subst.
+  - red in H.
+    do 2 rewrite map_cons in H.
+    rewrite caseDec_head_eq in H by reflexivity.
+    auto.
+  - inv H0; [auto|].
+    red in H.
+    do 2 rewrite map_cons in H.
+    rewrite caseDec_head_neq in H by assumption.
+    auto.
+Qed.
+
 Section CoherenceUnit.
   Variables (oidx: IdxT)
             (orq: ORq Msg)
@@ -465,6 +488,159 @@ Section InvWB.
       do 2 red; eauto.
   Qed.
 
+  Lemma InvWB_other_msg_id_enqMP:
+    forall oss orqs msgs,
+      InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall midx msg,
+        msg.(msg_id) <> mesiInvWRq ->
+        msg.(msg_id) <> mesiInvRq ->
+        InvWB topo {| bst_oss:= oss; bst_orqs:= orqs;
+                      bst_msgs:= enqMP midx msg msgs |}.
+  Proof.
+    unfold InvWB; simpl; intros.
+    specialize (H _ _ H2).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
+    dest; split; intros.
+    - apply H; auto.
+      destruct H5 as [idm [? ?]].
+      apply InMP_enqMP_or in H5; destruct H5.
+      + dest; subst.
+        exfalso; inv H6; auto.
+      + do 2 red; eauto.
+    - apply H3; auto.
+      destruct H5 as [idm [? ?]].
+      apply InMP_enqMP_or in H5; destruct H5.
+      + dest; subst.
+        exfalso; inv H6; auto.
+      + do 2 red; eauto.
+  Qed.
+  
+  Lemma InvWB_other_msg_id_enqMsgs:
+    forall oss orqs msgs,
+      InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall nmsgs,
+        Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq /\
+                           (valOf idm).(msg_id) <> mesiInvRq) nmsgs ->
+        InvWB topo {| bst_oss:= oss; bst_orqs:= orqs;
+                      bst_msgs:= enqMsgs nmsgs msgs |}.
+  Proof.
+    intros.
+    generalize dependent msgs.
+    induction nmsgs as [|[nmidx nmsg] nmsgs]; simpl; intros; auto.
+    inv H0; dest.
+    apply IHnmsgs; auto.
+    apply InvWB_other_msg_id_enqMP; assumption.
+  Qed.
+
+  Lemma InvWB_deqMP:
+    forall oss orqs msgs,
+      InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall midx,
+        InvWB topo {| bst_oss:= oss; bst_orqs:= orqs;
+                      bst_msgs:= deqMP midx msgs |}.
+  Proof.
+    unfold InvWB; simpl; intros.
+    specialize (H _ _ H0).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
+    dest; split; intros.
+    - apply H; auto.
+      destruct H3 as [idm [? ?]].
+      apply InMP_deqMP in H3.
+      do 2 red; eauto.
+    - apply H1; auto.
+      destruct H3 as [idm [? ?]].
+      apply InMP_deqMP in H3.
+      do 2 red; eauto.
+  Qed.
+
+  Lemma InvWB_deqMsgs:
+    forall oss orqs msgs,
+      InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall minds,
+        InvWB topo {| bst_oss:= oss; bst_orqs:= orqs;
+                      bst_msgs:= deqMsgs minds msgs |}.
+  Proof.
+    unfold InvWB; simpl; intros.
+    specialize (H _ _ H0).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
+    dest; split; intros.
+    - apply H; auto.
+      destruct H3 as [idm [? ?]].
+      apply InMP_deqMsgs in H3.
+      do 2 red; eauto.
+    - apply H1; auto.
+      destruct H3 as [idm [? ?]].
+      apply InMP_deqMsgs in H3.
+      do 2 red; eauto.
+  Qed.
+
+  (* Lemma InvWB_update_status_NoRqI: *)
+  (*   forall oss orqs msgs, *)
+  (*     InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} -> *)
+  (*     forall oidx (ost: OState) orq rqid, *)
+  (*       NoRqI oidx msgs -> *)
+  (*       orq@[downRq] = Some rqid -> *)
+  (*       InvWB topo {| bst_oss:= oss +[oidx <- ost]; *)
+  (*                     bst_orqs:= orqs +[oidx <- orq]; *)
+  (*                     bst_msgs:= msgs |}. *)
+  (* Proof. *)
+  (*   unfold InvWB; simpl; intros. *)
+  (*   specialize (H _ _ H2). *)
+  (*   mred; simpl. *)
+  (*   - exfalso. *)
+  (*     apply parentIdxOf_not_eq in H2; [|apply mesi_WfDTree]. *)
+  (*     auto. *)
+  (*   - destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto. *)
+  (*     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto. *)
+  (*     split; intros. *)
+  (*     + exfalso. *)
+  (*       destruct H4 as [idm [? ?]]. *)
+  (*       specialize (H0 _ H4). *)
+  (*       red in H0; rewrite H5 in H0. *)
+  (*       unfold map in H0. *)
+  (*       rewrite caseDec_head_neq in H0 by discriminate. *)
+  (*       rewrite caseDec_head_eq in H0 by reflexivity. *)
+  (*       auto. *)
+  (*     + exfalso. *)
+  (*       destruct H4 as [idm [? ?]]. *)
+  (*       specialize (H0 _ H4). *)
+  (*       red in H0; rewrite H5 in H0. *)
+  (*       unfold map in H0. *)
+  (*       rewrite caseDec_head_eq in H0 by reflexivity. *)
+  (*       auto. *)
+  (*   - destruct (oss@[oidx0]) as [ost0|] eqn:Host0; simpl in *; auto. *)
+  (*     split; intros. *)
+  (*     all: exfalso; red in H3; dest; congruence. *)
+  (* Qed. *)
+
+  Ltac simpl_InvWB_msgs_enqMP :=
+    simpl;
+    try match goal with
+        | [H: msg_id ?rmsg = _ |- msg_id ?rmsg <> _] => rewrite H
+        end;
+    discriminate.
+
+  Ltac simpl_InvWB_msgs_enqMsgs :=
+    let idm := fresh "idm" in
+    let Hin := fresh "H" in
+    apply Forall_forall; intros idm Hin;
+    apply in_map_iff in Hin; dest; subst;
+    split; simpl_InvWB_msgs_enqMP.
+
+  Ltac simpl_InvWB_msgs :=
+    repeat
+      (first [apply InvWB_other_msg_id_enqMP; [|simpl_InvWB_msgs_enqMP..]
+             |apply InvWB_other_msg_id_enqMsgs; [|simpl_InvWB_msgs_enqMsgs]
+             |apply InvWB_deqMP
+             |apply InvWB_deqMsgs
+             |assumption]).
+
   Lemma mesi_InvWB_step:
     Invariant.InvStep impl step_m (InvWB topo).
   Proof.
@@ -502,7 +678,169 @@ Section InvWB.
         apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
         dest_in.
 
-        all: admit.
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+
+          Ltac disc_bind_true :=
+            repeat
+              match goal with
+              | |- _ <+- ?ov; _ =>
+                let Hv := fresh "H" in
+                let v := fresh "v" in
+                destruct ov as [v|] eqn:Hv; simpl in *; [|auto]
+              end.
+
+          Ltac disc_InvWB :=
+            repeat
+              match goal with
+              | [Hi: InvWB _ _ |- InvWB _ _] =>
+                let Hp := fresh "H" in
+                red; simpl; intros ? ? Hp;
+                specialize (Hi _ _ Hp); simpl in Hi;
+                mred; simpl;
+                try (exfalso; eapply parentIdxOf_not_eq; subst topo; eauto; fail)
+              | |- _ <+- _; _ => disc_bind_true
+              end.
+
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+
+            Ltac solve_InvWB_by_NoRqI :=
+              repeat
+                match goal with
+                | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvWRq ?oidx ?msgs |- _] =>
+                  exfalso; eapply MsgExistsSig_MsgsNotExist_false;
+                  [eassumption| |eassumption]; simpl; tauto
+                | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvRq ?oidx ?msgs |- _] =>
+                  exfalso; eapply MsgExistsSig_MsgsNotExist_false;
+                  [eassumption| |eassumption]; simpl; tauto
+                end.
+
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { admit. (* must [oidx0 = cidx] by [ObjDirME]; then not [ObjInvWRq] .. *) }
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+
+          Ltac solve_InvWB_by_downlock :=
+            repeat
+              match goal with
+              | [Hn: ObjDirME _ _ _ |- _] => red in Hn; dest; mred; fail
+              | [Hn: ObjDirE _ _ _ |- _] => red in Hn; dest; mred; fail
+              end.
+
+          split; intros.
+          all: solve_InvWB_by_downlock.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            { (* must [oidx0 = cidx] by [ObjDirME]; then not [ObjInvWRq] .. *)
+              admit.
+            }
+            { Ltac solve_InvWB_by_diff_dir :=
+                match goal with
+                | [Hn: ObjDirME _ _ _ |- _] =>
+                  red in Hn; dest; simpl in *; solve_mesi
+                | [Hn: ObjDirE _ _ _ |- _] =>
+                  red in Hn; dest; simpl in *; solve_mesi
+                end.
+                solve_InvWB_by_diff_dir.
+            }
+          }
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_downlock.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_downlock.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            all: solve_InvWB_by_diff_dir.
+          }
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            all: solve_InvWB_by_diff_dir.
+          }
+        }
 
       }
 
