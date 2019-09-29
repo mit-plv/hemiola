@@ -68,10 +68,6 @@ Section Footprints.
         | mesiRqM:
             ost#[owned] = false /\ ost#[status] <= mesiS /\
             ost#[dir].(dir_st) <= mesiS
-        | mesiInvWRq:
-            ost#[dir].(dir_st) = mesiI /\
-            ((ost#[owned] = true /\ mesiI < ost#[status]) \/
-             (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE))
         end.
 
   Definition DownLockFromChild (oidx: IdxT) (rqid: RqInfo Msg) :=

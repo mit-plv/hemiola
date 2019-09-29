@@ -381,7 +381,9 @@ Section System.
       Definition l1InvRqUpUp: Rule :=
         rule.rqu[2~>0]
         :me oidx
-        :requires (fun ost mins => mesiNP < ost#[status] < mesiM)
+        :requires
+           (fun ost mins =>
+              ost#[dir].(dir_st) = mesiI /\ mesiNP < ost#[status] < mesiM)
         :transition
            (ost --> {| miv_id := mesiInvRq; miv_value := O |}).
 
@@ -397,7 +399,8 @@ Section System.
         rule.rqu[2~>1]
         :me oidx
         :requires
-           (fun ost mins => ost#[dir].(dir_st) = mesiI /\ mesiNP < ost#[status])
+           (fun ost mins =>
+              ost#[dir].(dir_st) = mesiI /\ mesiNP < ost#[status])
         :transition
            (ost --> {| miv_id := mesiInvWRq; miv_value := ost#[val] |}).
 
