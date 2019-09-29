@@ -842,6 +842,37 @@ Section Corollaries.
     - eapply rssQ_length_ge_one; eauto.
   Qed.
 
+  Corollary rqUp_parent_locked_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall obj,
+        In obj (sys_objs sys) ->
+        forall rqUp pidx down,
+          rqEdgeUpFrom dtr (obj_idx obj) = Some rqUp ->
+          parentIdxOf dtr (obj_idx obj) = Some pidx ->
+          edgeDownTo dtr (obj_idx obj) = Some down ->
+          forall msgs rqum,
+            st.(bst_msgs) = msgs ->
+            InMP rqUp rqum msgs ->
+            forall orqs,
+              st.(bst_orqs) = orqs ->
+              OLockedTo orqs pidx (Some down) ->
+              False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
+    good_locking_get obj.
+    assert (UpLockedInv dtr st.(bst_orqs) st.(bst_msgs) obj.(obj_idx))
+      by (eapply upLockInvORq_parent_locked_locked; eauto).
+    red in H6.
+    destruct H6 as [rrqUp [rdown [rpidx ?]]]; dest.
+    disc_rule_conds.
+    xor3_contra2 H13.
+    red in H5.
+    destruct (findQ rrqUp (bst_msgs st)) as [|e q]; [dest_in|].
+    destruct q; [reflexivity|simpl in H10; omega].
+  Qed.
+
   Corollary rsDown_in_rsDown_in_false:
     forall st,
       Reachable (steps step_m) sys st ->
@@ -865,6 +896,36 @@ Section Corollaries.
     good_locking_get obj.
     eapply upLockInvORq_down_rssQ_length_two_False; eauto.
     apply rssQ_length_two with (midx:= down) (msg1:= rsdm1) (msg2:= rsdm2); eauto.
+  Qed.
+
+  Corollary rsDown_parent_locked_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall obj,
+        In obj (sys_objs sys) ->
+        forall pidx down,
+          parentIdxOf dtr (obj_idx obj) = Some pidx ->
+          edgeDownTo dtr (obj_idx obj) = Some down ->
+          forall msgs rsdm,
+            st.(bst_msgs) = msgs ->
+            InMP down rsdm msgs ->
+            rsdm.(msg_type) = MRs ->
+            forall orqs,
+              st.(bst_orqs) = orqs ->
+              OLockedTo orqs pidx (Some down) ->
+              False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
+    good_locking_get obj.
+    assert (UpLockedInv dtr st.(bst_orqs) st.(bst_msgs) obj.(obj_idx))
+      by (eapply upLockInvORq_parent_locked_locked; eauto).
+    red in H6.
+    destruct H6 as [rqUp [rdown [rpidx ?]]]; dest.
+    disc_rule_conds.
+    xor3_contra3 H13.
+    apply rssQ_length_ge_one in H4; [|assumption].
+    omega.
   Qed.
 
   Corollary upLocked_rqUp_in_false:

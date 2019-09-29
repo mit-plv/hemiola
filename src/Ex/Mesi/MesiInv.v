@@ -1429,6 +1429,53 @@ Section InvWB.
              |apply InvWB_deqMsgs
              |assumption]).
 
+  Ltac disc_bind_true :=
+    repeat
+      match goal with
+      | |- _ <+- ?ov; _ =>
+        let Hv := fresh "H" in
+        let v := fresh "v" in
+        destruct ov as [v|] eqn:Hv; simpl in *; [|auto]
+      end.
+
+  Ltac disc_InvWB :=
+    repeat
+      match goal with
+      | [Hi: InvWB _ _ |- InvWB _ _] =>
+        let Hp := fresh "H" in
+        red; simpl; intros ? ? Hp;
+        specialize (Hi _ _ Hp); simpl in Hi;
+        mred; simpl;
+        try (exfalso; eapply parentIdxOf_not_eq; subst topo; eauto; fail)
+      | |- _ <+- _; _ => disc_bind_true
+      end.
+
+  Ltac solve_InvWB_by_NoRqI :=
+    repeat
+      match goal with
+      | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvWRq ?oidx ?msgs |- _] =>
+        exfalso; eapply MsgExistsSig_MsgsNotExist_false;
+        [eassumption| |eassumption]; simpl; tauto
+      | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvRq ?oidx ?msgs |- _] =>
+        exfalso; eapply MsgExistsSig_MsgsNotExist_false;
+        [eassumption| |eassumption]; simpl; tauto
+      end.
+
+  Ltac solve_InvWB_by_downlock :=
+    repeat
+      match goal with
+      | [Hn: ObjDirME _ _ _ |- _] => red in Hn; dest; mred; fail
+      | [Hn: ObjDirE _ _ _ |- _] => red in Hn; dest; mred; fail
+      end.
+
+  Ltac solve_InvWB_by_diff_dir :=
+    match goal with
+    | [Hn: ObjDirME _ _ _ |- _] =>
+      red in Hn; dest; simpl in *; solve_mesi
+    | [Hn: ObjDirE _ _ _ |- _] =>
+      red in Hn; dest; simpl in *; solve_mesi
+    end.
+  
   Lemma mesi_InvWB_step:
     Invariant.InvStep impl step_m (InvWB topo).
   Proof.
@@ -1439,6 +1486,9 @@ Section InvWB.
     pose proof (mesi_InObjInds H) as Hioi.
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
+    pose proof (mesi_MsgConflictsInv
+                  (@mesi_RootChnInv_ok _ Htr)
+                  (reachable_steps H (steps_singleton H1))) as Hnmcf.
     pose proof (MesiDownLockInv_ok H) as Hmdl.
     pose proof (mesi_InvWBDir_ok H) as Hidir.
     inv H1; [assumption
@@ -1469,28 +1519,6 @@ Section InvWB.
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
-
-          Ltac disc_bind_true :=
-            repeat
-              match goal with
-              | |- _ <+- ?ov; _ =>
-                let Hv := fresh "H" in
-                let v := fresh "v" in
-                destruct ov as [v|] eqn:Hv; simpl in *; [|auto]
-              end.
-
-          Ltac disc_InvWB :=
-            repeat
-              match goal with
-              | [Hi: InvWB _ _ |- InvWB _ _] =>
-                let Hp := fresh "H" in
-                red; simpl; intros ? ? Hp;
-                specialize (Hi _ _ Hp); simpl in Hi;
-                mred; simpl;
-                try (exfalso; eapply parentIdxOf_not_eq; subst topo; eauto; fail)
-              | |- _ <+- _; _ => disc_bind_true
-              end.
-
           disc_InvWB.
         }
 
@@ -1500,18 +1528,6 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-
-            Ltac solve_InvWB_by_NoRqI :=
-              repeat
-                match goal with
-                | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvWRq ?oidx ?msgs |- _] =>
-                  exfalso; eapply MsgExistsSig_MsgsNotExist_false;
-                  [eassumption| |eassumption]; simpl; tauto
-                | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvRq ?oidx ?msgs |- _] =>
-                  exfalso; eapply MsgExistsSig_MsgsNotExist_false;
-                  [eassumption| |eassumption]; simpl; tauto
-                end.
-
             split; intros.
             all: solve_InvWB_by_NoRqI.
           }
@@ -1532,14 +1548,6 @@ Section InvWB.
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-
-          Ltac solve_InvWB_by_downlock :=
-            repeat
-              match goal with
-              | [Hn: ObjDirME _ _ _ |- _] => red in Hn; dest; mred; fail
-              | [Hn: ObjDirE _ _ _ |- _] => red in Hn; dest; mred; fail
-              end.
-
           split; intros.
           all: solve_InvWB_by_downlock.
         }
@@ -1548,7 +1556,6 @@ Section InvWB.
           derive_child_idx_in cidx.
           simpl_InvWB_msgs.
           disc_InvWB.
-
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
             split; intros.
@@ -1560,15 +1567,7 @@ Section InvWB.
                 by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
               solve_InvWB_by_NoRqI.
             }
-            { Ltac solve_InvWB_by_diff_dir :=
-                match goal with
-                | [Hn: ObjDirME _ _ _ |- _] =>
-                  red in Hn; dest; simpl in *; solve_mesi
-                | [Hn: ObjDirE _ _ _ |- _] =>
-                  red in Hn; dest; simpl in *; solve_mesi
-                end.
-                solve_InvWB_by_diff_dir.
-            }
+            { solve_InvWB_by_diff_dir. }
           }
         }
 
@@ -1666,6 +1665,7 @@ Section InvWB.
           all: solve_InvWB_by_diff_dir.
         }
       }
+
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
@@ -1676,8 +1676,12 @@ Section InvWB.
           { specialize (Hidir (or_intror H22)); solve_mesi. }
         }
         { split; intros.
-          { (** TODO: need [solve_NoRqI_by_parent_lock] *)
-            admit.
+          { assert (NoRqI oidx0 msgs).
+            { solve_NoRqI_base.
+              (** TODO: need [solve_NoRqI_by_parent_lock] *)
+              all: admit.
+            }
+            solve_InvWB_by_NoRqI.
           }
           { solve_InvWB_by_diff_dir. }
         }
@@ -1700,10 +1704,178 @@ Section InvWB.
         apply concat_In in H3; destruct H3 as [crls [? ?]].
         apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
         dest_in.
-        all: admit.
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          derive_child_idx_in cidx.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            { red in H23; simpl in H23; dest; subst.
+              assert (NoRqI oidx0 msgs)
+                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+              solve_InvWB_by_NoRqI.
+            }
+            { red in H23; simpl in H23; dest; subst.
+              assert (NoRqI oidx0 msgs)
+                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+              solve_InvWB_by_NoRqI.
+            }
+          }
+        }
+
+        {
+          Ltac solve_InvWB_by_silent :=
+            match goal with
+            | [H: (_ -> _ -> ObjOwned _) /\ (_ -> _ -> ObjClean _ /\ _) |- _] => apply H
+            | [H: _ -> _ -> ObjOwned _ |- _] => apply H
+            | [H: _ -> _ -> ObjClean _ /\ _ |- _] => apply H
+            end;
+            try assumption;
+            repeat
+              match goal with
+              | [Hd: ObjDirME _ _ _ |- ObjDirME _ _ _] =>
+                red in Hd; dest; simpl in *;
+                red; simpl; repeat split; solve [assumption|mred]
+              | [Hd: ObjDirE _ _ _ |- ObjDirE _ _ _] =>
+                red in Hd; dest; simpl in *;
+                red; simpl; repeat split; solve [assumption|mred]
+              end.
+
+          disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_silent.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_downlock.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_silent.
+        }
+
+        { disc_rule_conds_ex.
+          derive_child_idx_in cidx.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            { red in H23; simpl in H23; dest; subst.
+              assert (NoRqI oidx0 msgs)
+                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+              solve_InvWB_by_NoRqI.
+            }
+            { solve_InvWB_by_diff_dir. }
+          }
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_silent.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_silent.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_silent.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            all: solve_InvWB_by_diff_dir.
+          }
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+        }
+
+        { disc_rule_conds_ex.
+          simpl_InvWB_msgs.
+          disc_InvWB.
+          { assert (NoRqI oidx msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+            split; intros.
+            all: solve_InvWB_by_NoRqI.
+          }
+          { split; intros.
+            all: solve_InvWB_by_diff_dir.
+          }
+        }
+
       }
 
       dest_in.
+
       all: admit.
 
     - (*! Cases for L1 caches *)
