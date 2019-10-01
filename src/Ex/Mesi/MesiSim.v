@@ -5,7 +5,7 @@ Require Import RqRsLang RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
-Require Import Ex.Mesi.MesiInv.
+Require Import Ex.Mesi.MesiInvOk.
 
 Set Implicit Arguments.
 
@@ -461,7 +461,7 @@ Section Sim.
         end.
 
   Theorem mesi_sim_ok:
-    InvSim step_m step_m (MesiInv.InvForSim topo) SimMESI impl spec.
+    InvSim step_m step_m (MesiInvOk.InvForSim topo) SimMESI impl spec.
   Proof.
     red; intros.
 
@@ -1443,7 +1443,7 @@ Section Sim.
     (steps step_m) # (steps step_m) |-- impl ⊑ spec.
   Proof.
     apply invSim_implies_refinement
-      with (ginv:= MesiInv.InvForSim topo) (sim:= SimMESI).
+      with (ginv:= MesiInvOk.InvForSim topo) (sim:= SimMESI).
     - apply mesi_sim_ok.
     - apply mesi_InvForSim_ok.
     - apply mesi_sim_init.

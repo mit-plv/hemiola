@@ -237,6 +237,29 @@ End MsgConflicts.
 
 Section Facts.
 
+  Lemma MsgExistsSig_MsgsNotExist_false:
+    forall msgs sigs,
+      MsgsNotExist sigs msgs ->
+      forall sig,
+        In sig sigs ->
+        MsgExistsSig sig msgs -> False.
+  Proof.
+    intros.
+    destruct H1 as [idm [? ?]]; subst.
+    specialize (H _ H1); clear H1.
+    induction sigs; [dest_in|].
+    destruct (sig_dec (sigOf idm) a); subst.
+    - red in H.
+      do 2 rewrite map_cons in H.
+      rewrite caseDec_head_eq in H by reflexivity.
+      auto.
+    - inv H0; [auto|].
+      red in H.
+      do 2 rewrite map_cons in H.
+      rewrite caseDec_head_neq in H by assumption.
+      auto.
+  Qed.
+
   Lemma MsgsP_enqMP:
     forall spl msgs,
       MsgsP spl msgs ->
