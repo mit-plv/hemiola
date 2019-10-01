@@ -129,8 +129,11 @@ Theorem invSeq_serializable_invStep:
 Proof.
   unfold InvInit, InvSeq, SerializableSys, InvStep, Invariant.InvStep.
   intros.
-  red in H2; destruct H2 as [ll ?].
-  specialize (H1 _ _ (StepsCons H2 _ _ H4)).
+  assert (Reachable (steps step_m) impl ist2).
+  { eapply reachable_steps; [eassumption|].
+    apply steps_singleton; eassumption.
+  }
+  specialize (H1 _ H5).
   red in H1; destruct H1 as [sll ?].
   eapply H0; [| |eassumption]; auto.
   apply reachable_init.

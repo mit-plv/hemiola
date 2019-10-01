@@ -129,15 +129,15 @@ Definition seqSteps `{OStateIfc} (sys: System)
   steps step_m sys st1 hst st2 /\
   exists trss, Sequential sys msg_dec hst trss.
 
-Definition Serializable `{OStateIfc} (sys: System) (ll: MHistory) (st: MState) :=
+Definition Serializable `{OStateIfc} (sys: System) (st: MState) :=
   (* Legal and sequential *)
   exists sll, seqSteps sys (initsOf sys) sll st.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
 Definition SerializableSys `{OStateIfc} (sys: System) :=
-  forall ll st,
-    steps step_m sys (initsOf sys) ll st ->
-    Serializable sys ll st.
+  forall st,
+    Reachable (steps step_m) sys st ->
+    Serializable sys st.
 
 Close Scope list.
 

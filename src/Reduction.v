@@ -101,17 +101,6 @@ Proof.
   apply reducible_app_2; auto.
 Qed.
 
-Lemma reducible_serializable:
-  forall `{oifc: OStateIfc} (sys: System) st1 hfr st2,
-    steps step_m sys st1 hfr st2 ->
-    forall hto,
-      steps step_m sys st1 hto st2 ->
-      Serializable sys hto st2 ->
-      Serializable sys hfr st2.
-Proof.
-  intros; auto.
-Qed.
-
 Lemma reducibleP_refl:
   forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hst,
     ReducibleP sys P hst hst.

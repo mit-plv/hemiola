@@ -421,7 +421,7 @@ Section MsgParam.
     forall `{oifc: OStateIfc} (sys: System) hst trss st,
       steps step_m sys (initsOf sys) hst st ->
       Sequential sys msg_dec hst trss ->
-      Serializable sys hst st.
+      Serializable sys st.
   Proof.
     intros; red; intros.
     eexists; split; eauto.
@@ -1035,26 +1035,6 @@ Proof.
   intros.
   pose proof (atomic_app_SSubList H H0 H1 H2).
   dest; eauto.
-Qed.
-
-Lemma serializable_nil:
-  forall `{oifc: OStateIfc} (sys: System), Serializable sys nil (initsOf sys).
-Proof.
-  intros; hnf; intros.
-  exists nil; split.
-  - constructor.
-  - exists nil; constructor; auto.
-Qed.
-
-Lemma serializable_silent:
-  forall `{oifc: OStateIfc} (sys: System) ll st,
-    Serializable sys ll st ->
-    Serializable sys (RlblEmpty _ :: ll) st.
-Proof.
-  intros.
-  hnf; hnf in H; intros; dest.
-  destruct H; dest.
-  eexists; split; eauto.
 Qed.
 
 Close Scope list.

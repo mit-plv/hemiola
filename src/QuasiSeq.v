@@ -36,7 +36,7 @@ Section QuasiSeq.
     forall n hst st,
       steps step_m sys (initsOf sys) hst st ->
       quasiSeq sys hst n ->
-      Serializable sys hst st.
+      Serializable sys st.
   Proof.
     induction n as [n IHn] using (well_founded_induction lt_wf).
     intros.
@@ -45,13 +45,14 @@ Section QuasiSeq.
       exists rhst; split; eauto.
     - destruct H as [rhst [m ?]]; dest.
       specialize (IHn _ H3 _ _ H H2).
-      eapply reducible_serializable with (hto:= rhst); eauto.
+      assumption.
   Qed.
 
   Lemma quasiSeqOk_implies_serializableSys:
     QuasiSeqOkInit -> QuasiSeqOkStep -> SerializableSys sys.
   Proof.
     intros; red; intros.
+    destruct H1 as [ll H1].
     specialize (H _ _ H1); destruct H as [n ?].
     eapply quasiSeq_implies_serializableSys; eauto.
   Qed.
