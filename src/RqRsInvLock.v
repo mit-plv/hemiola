@@ -928,7 +928,7 @@ Section Corollaries.
     omega.
   Qed.
 
-  Corollary upLocked_rqUp_in_false:
+  Corollary upLockFree_rqUp_in_false:
     forall st,
       Reachable (steps step_m) sys st ->
       forall obj,
@@ -954,7 +954,7 @@ Section Corollaries.
     - eapply findQ_length_ge_one; eauto.
   Qed.
 
-  Corollary upLocked_rsDown_in_false:
+  Corollary upLockFree_rsDown_in_false:
     forall st,
       Reachable (steps step_m) sys st ->
       forall obj,
@@ -1128,6 +1128,131 @@ Section Corollaries.
         simpl in *; omega.
       + apply findQ_length_ge_one in H11.
         omega.
+  Qed.
+
+  Corollary rqDown_in_rqDown_in_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall oidx rqDown,
+          parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+          edgeDownTo dtr oidx = Some rqDown ->
+          forall msgs rqdm1 rqdm2,
+            st.(bst_msgs) = msgs ->
+            rqdm1 <> rqdm2 ->
+            InMP rqDown rqdm1 msgs ->
+            rqdm1.(msg_type) = MRq ->
+            InMP rqDown rqdm2 msgs ->
+            rqdm2.(msg_type) = MRq ->
+            False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    eapply downLockInvORq_down_rqsQ_length_two_False; eauto.
+    apply rqsQ_length_two with (midx:= rqDown) (msg1:= rqdm1) (msg2:= rqdm2);
+      intuition congruence.
+  Qed.
+
+  Corollary rqDown_in_rsUp_in_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall oidx rqDown rsUp,
+          parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+          edgeDownTo dtr oidx = Some rqDown ->
+          rsEdgeUpFrom dtr oidx = Some rsUp ->
+          forall msgs rqdm rsum,
+            st.(bst_msgs) = msgs ->
+            InMP rqDown rqdm msgs ->
+            rqdm.(msg_type) = MRq ->
+            InMP rsUp rsum msgs ->
+            False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    eapply downLockInvORq_down_rqsQ_rsUp_False; eauto.
+    - eapply rqsQ_length_ge_one; eauto.
+    - eapply findQ_length_ge_one; eauto.
+  Qed.
+
+  Corollary rsUp_in_rsUp_in_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall oidx rsUp,
+          parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+          rsEdgeUpFrom dtr oidx = Some rsUp ->
+          forall msgs rsum1 rsum2,
+            st.(bst_msgs) = msgs ->
+            rsum1 <> rsum2 ->
+            InMP rsUp rsum1 msgs ->
+            InMP rsUp rsum2 msgs ->
+            False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    eapply downLockInvORq_rsUp_length_two_False; eauto.
+    apply findQ_length_two with (midx:= rsUp) (msg1:= rsum1) (msg2:= rsum2);
+      intuition congruence.
+  Qed.
+
+  Corollary downLockFree_rqDown_in_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall orqs porq,
+          st.(bst_orqs) = orqs ->
+          orqs@[obj_idx pobj] = Some porq ->
+          porq@[downRq] = None ->
+          forall oidx rqDown,
+            parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+            edgeDownTo dtr oidx = Some rqDown ->
+            forall msgs rqdm,
+              st.(bst_msgs) = msgs ->
+              InMP rqDown rqdm msgs ->
+              rqdm.(msg_type) = MRq ->
+              False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    eapply downLockInvORq_down_rqsQ_length_one_locked in H1; eauto;
+      [|eapply rqsQ_length_ge_one; eassumption].
+    destruct H1 as [rqid ?]; dest.
+    disc_rule_conds.
+  Qed.
+
+  Corollary downLockFree_rsUp_in_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall orqs porq,
+          st.(bst_orqs) = orqs ->
+          orqs@[obj_idx pobj] = Some porq ->
+          porq@[downRq] = None ->
+          forall oidx rsUp,
+            parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+            rsEdgeUpFrom dtr oidx = Some rsUp ->
+            forall msgs rsum,
+              st.(bst_msgs) = msgs ->
+              InMP rsUp rsum msgs ->
+              False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    eapply downLockInvORq_rsUp_length_one_locked in H1; eauto;
+      [|eapply findQ_length_ge_one; eassumption].
+    destruct H1 as [rqid ?]; dest.
+    disc_rule_conds.
   Qed.
 
 End Corollaries.

@@ -719,6 +719,183 @@ Section InvWB.
         }
       }
 
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { disc_MesiDownLockInv oidx Hmdl.
+          split; intros.
+          { specialize (H0 H29 H30).
+            red in H0; dest; simpl in *; solve_mesi.
+          }
+          { specialize (H24 H29 H30); dest.
+            red in H24; dest; simpl in *; solve_mesi.
+          }
+        }
+        { split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { disc_MesiDownLockInv oidx Hmdl.
+          derive_InvWBDir oidx.
+          split; intros.
+          { specialize (Hidir (or_introl H30)); solve_mesi. }
+          { specialize (Hidir (or_intror H30)); solve_mesi. }
+        }
+        { split; intros.
+          { assert (NoRqI oidx0 msgs).
+            { solve_NoRqI_base.
+              (** TODO: need [solve_NoRqI_by_parent_lock] *)
+              all: admit.
+            }
+            solve_InvWB_by_NoRqI.
+          }
+          { solve_InvWB_by_diff_dir. }
+        }
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+
+        Ltac derive_downlock_by_rqDown cidx :=
+          disc_MsgConflictsInv cidx;
+          (* TODO: must be in [disc_MsgConflictsInv]? *)
+          match goal with
+          | [Hcf: forall _ _, parentIdxOf _ cidx = Some _ -> _,
+               Hp: parentIdxOf _ cidx = Some ?pidx,
+               Ho: _@[?pidx] = Some _ |- _] =>
+            specialize (Hcf _ _ Hp Ho); destruct Hcf
+          end;
+          match goal with
+          | [H: RqDownConflicts cidx _ _,
+                Ht: msg_type ?rmsg = MRq,
+                    Hr: FirstMPI _ (downTo cidx, ?rmsg) |- _] =>
+            specialize (H (downTo cidx, rmsg) eq_refl Ht (FirstMP_InMP Hr)); dest
+          end.
+
+        subst topo; disc_rule_conds_ex.
+        split; intros.
+        all: derive_downlock_by_rqDown oidx; solve_InvWB_by_downlock.
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        split; intros.
+        all: solve_InvWB_by_downlock.
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        split; intros.
+        all: solve_InvWB_by_downlock.
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { split; intros.
+          (** TODO: need [derive_downlock_by_child_uplock] *)
+          all: admit.
+        }
+        { split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+      }
+
+      { disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { assert (NoRqI oidx msgs)
+            by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
+          split; intros.
+          all: solve_InvWB_by_NoRqI.
+        }
+        { (** TODO: need [solve_NoRqI_by_parent_lock] *)
+          all: admit.
+        }
+      }
+
+      { disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { assert (NoRqI oidx msgs)
+            by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
+          split; intros.
+          all: solve_InvWB_by_NoRqI.
+        }
+        { split; intros.
+          all: solve_InvWB_by_downlock.
+        }
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { disc_MesiDownLockInv oidx Hmdl.
+          derive_InvWBDir oidx.
+          split; intros.
+          { specialize (Hidir (or_introl H28)); solve_mesi. }
+          { specialize (Hidir (or_intror H28)); solve_mesi. }
+        }
+        { split; intros.
+          { assert (NoRqI oidx0 msgs).
+            { solve_NoRqI_base.
+              (** TODO: need [solve_NoRqI_by_parent_lock] *)
+              all: admit.
+            }
+            solve_InvWB_by_NoRqI.
+          }
+          { solve_InvWB_by_diff_dir. }
+        }
+      } 
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        subst topo; disc_rule_conds_ex.
+        split; intros.
+        all: derive_downlock_by_rqDown oidx; solve_InvWB_by_downlock.
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        split; intros.
+        all: solve_InvWB_by_downlock.
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        split; intros.
+        all: solve_InvWB_by_downlock.
+      }
+
+      { disc_rule_conds_ex.
+        simpl_InvWB_msgs.
+        disc_InvWB.
+        { split; intros.
+          (** TODO: need [derive_downlock_by_child_uplock] *)
+          all: admit.
+        }
+        { split; intros.
+          all: solve_InvWB_by_diff_dir.
+        }
+      }
+
+      { (** [liInvRqUpUp] *)
+        
+        admit.
+      }
+
       all: admit.
 
     - (*! Cases for L1 caches *)

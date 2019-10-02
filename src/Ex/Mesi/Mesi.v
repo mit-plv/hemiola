@@ -510,6 +510,11 @@ Section System.
                              {| miv_id := mesiDownRqS;
                                 miv_value := O |})).
 
+      (** * FIXME: need to set [owned <- true] when the owner loses its ownership 
+       * after handling [mesiDownRqS]. This is not decidable by looking at the 
+       * directory state, since when the directory status is E then the parent
+       * has no idea whether the exclusive child internally modified the line.
+       *)
       Definition liDownSRsUpDownME: Rule :=
         rule.rsudo[0~>4~>0]
         :accepts mesiDownRsS
@@ -746,6 +751,10 @@ Section System.
                      +#[dir <- setDirI],
                  {| miv_id := mesiDownRsI; miv_value := O |})).
 
+      (** NOTE: Here having [ost#[owned] = false] as a precondition is very 
+       * important since there's a chance that the object has a _dirty_ line
+       * even if the status is S.
+       *)
       Definition liInvRqUpUp: Rule :=
         rule.rqu[2~>0]
         :me oidx
