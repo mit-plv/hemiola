@@ -510,11 +510,6 @@ Section System.
                              {| miv_id := mesiDownRqS;
                                 miv_value := O |})).
 
-      (** * FIXME: need to set [owned <- true] when the owner loses its ownership 
-       * after handling [mesiDownRqS]. This is not decidable by looking at the 
-       * directory state, since when the directory status is E then the parent
-       * has no idea whether the exclusive child internally modified the line.
-       *)
       Definition liDownSRsUpDownME: Rule :=
         rule.rsudo[0~>4~>0]
         :accepts mesiDownRsS
@@ -524,7 +519,8 @@ Section System.
               FirstMsg ost orq mins /\ mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, idm, rq, rsbTo|
-            --> (ost +#[val <- msg_value (valOf idm)]
+            --> (ost +#[owned <- true]
+                     +#[val <- msg_value (valOf idm)]
                      +#[status <- mesiS]
                      +#[dir <- setDirS [objIdxOf rsbTo; objIdxOf (idOf idm)]],
                  {| miv_id := mesiRsS;
