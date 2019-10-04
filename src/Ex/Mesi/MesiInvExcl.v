@@ -19,9 +19,6 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
-Definition NoDirE (oss: OStates) :=
-  forall oidx, ost <+- oss@[oidx]; ost#[dir].(dir_st) <> mesiE.
-
 Definition ObjsInvalid (eidx: IdxT) (oss: OStates) (msgs: MessagePool Msg) :=
   forall oidx,
     oidx <> eidx ->
@@ -30,7 +27,7 @@ Definition ObjsInvalid (eidx: IdxT) (oss: OStates) (msgs: MessagePool Msg) :=
 Definition InvObjExcl0 (oidx: IdxT) (ost: OState) (oss: OStates)
            (msgs: MessagePool Msg) :=
   ObjExcl0 oidx ost msgs ->
-  ObjsInvalid oidx oss msgs /\ NoCohMsgs oidx msgs /\ NoDirE oss.
+  ObjsInvalid oidx oss msgs /\ NoCohMsgs oidx msgs.
 
 Definition InvExcl (st: MState): Prop :=
   forall eidx,

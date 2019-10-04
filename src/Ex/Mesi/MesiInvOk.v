@@ -23,7 +23,7 @@ Existing Instance Mesi.ImplOStateIfc.
 
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
   InvExcl st /\
-  InvWBCoh st /\ InvWB topo st /\
+  InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\
   MesiDownLockInv topo st.
 
 Lemma mesi_InvForSim_init:

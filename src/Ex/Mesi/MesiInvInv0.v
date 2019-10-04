@@ -19,13 +19,13 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
+Definition ObjWBDir (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
+  (ObjInvWRq oidx msgs \/ ObjInvRq oidx msgs \/ ObjInvRs oidx msgs) ->
+  ost#[dir].(dir_st) = mesiI.
+
 Definition InvWBDir (st: MState): Prop :=
   forall oidx,
-    ost <+- (bst_oss st)@[oidx];
-      ((ObjInvWRq oidx (bst_msgs st)
-        \/ ObjInvRq oidx (bst_msgs st)
-        \/ ObjInvRs oidx (bst_msgs st)) ->
-       ost#[dir].(dir_st) = mesiI).
+    ost <+- (bst_oss st)@[oidx]; ObjWBDir oidx ost (bst_msgs st).
 
 (** NOTE: [InvWBCoh] requires [InvWBDir] during the proof *)
 Definition InvWBCoh (st: MState): Prop :=
@@ -47,7 +47,7 @@ Section InvWBDir.
     do 2 (red; simpl).
     intros.
     destruct (implOStatesInit tr)@[oidx] as [orq|] eqn:Host; simpl; auto.
-    intros.
+    red; intros.
     exfalso; destruct H as [|[|]].
     - destruct H as [idm [? ?]].
       do 2 red in H; dest_in.
@@ -68,7 +68,7 @@ Section InvWBDir.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-    intros.
+    red; intros.
     destruct H2 as [|[|]].
     - destruct H2 as [idm [? ?]].
       apply InMP_enqMsgs_or in H2.
@@ -126,7 +126,7 @@ Section InvWBDir.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-    intros.
+    red; intros.
     destruct H1 as [|[|]].
     - destruct H1 as [idm [? ?]].
       apply InMP_deqMsgs in H1.
@@ -152,8 +152,8 @@ Section InvWBDir.
     mred; simpl; auto.
     specialize (H oidx).
     rewrite H0 in H; simpl in H.
-    intros.
-    rewrite H1; auto.
+    red; intros.
+    simpl; rewrite H1; auto.
   Qed.
 
   Lemma InvWBDir_update_status_NoRqI_NoRsI:
@@ -167,7 +167,7 @@ Section InvWBDir.
   Proof.
     unfold InvWBDir; simpl; intros.
     mred; simpl; auto.
-    intros.
+    red; intros.
     exfalso; destruct H2 as [|[|]].
     - eapply MsgExistsSig_MsgsNotExist_false; [apply H0| |eassumption].
       simpl; tauto.  
@@ -192,10 +192,10 @@ Section InvWBDir.
     destruct (idx_dec oidx0 oidx); subst.
     - specialize (H oidx).
       rewrite H0 in *; simpl in *.
-      intros; auto.
+      red; intros; auto.
     - specialize (H oidx0).
       destruct (oss@[oidx0]) as [ost0|]; simpl in *; auto.
-      intros.
+      red; intros.
       destruct H2 as [|[|]].
       + destruct H2 as [idm [? ?]].
         apply InMP_enqMP_or in H2; destruct H2.
@@ -228,7 +228,7 @@ Section InvWBDir.
     destruct (idx_dec oidx0 oidx); subst.
     - specialize (H oidx).
       destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-      intros; apply H.
+      red; intros; apply H.
       destruct H1.
       + left; do 2 red.
         exists (rqUpFrom oidx, rqm); split.
@@ -242,7 +242,7 @@ Section InvWBDir.
           rewrite H1, H2; reflexivity.
     - specialize (H oidx0).
       destruct (oss@[oidx0]) as [ost0|]; simpl in *; auto.
-      intros.
+      red; intros.
       destruct H3 as [|[|]].
       + destruct H3 as [idm [? ?]].
         apply InMP_enqMP_or in H3; destruct H3.
@@ -275,7 +275,7 @@ Section InvWBDir.
     unfold InvWBDir; simpl; intros.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-    intros.
+    red; intros.
     destruct H3 as [|[|]].
     - destruct H3 as [idm [? ?]].
       apply InMP_enqMP_or in H3; destruct H3.
@@ -319,7 +319,7 @@ Section InvWBDir.
     unfold InvWBDir; simpl; intros.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-    intros.
+    red; intros.
     destruct H0 as [|[|]].
     - destruct H0 as [idm [? ?]].
       apply InMP_deqMP in H0.
@@ -342,7 +342,7 @@ Section InvWBDir.
     unfold InvWBDir; simpl; intros.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-    intros.
+    red; intros.
     destruct H0 as [|[|]].
     - destruct H0 as [idm [? ?]].
       apply InMP_deqMsgs in H0.
@@ -391,6 +391,8 @@ Section InvWBDir.
       specialize (Hi Hinv)
     end;
     solve_mesi.
+
+  Hint Unfold ObjWBDir: RuleConds.
 
   Lemma mesi_InvWBDir_step:
     Invariant.InvStep impl step_m InvWBDir.

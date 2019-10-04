@@ -565,5 +565,14 @@ Ltac disc_MsgsP H :=
               end]
     ]).
 
+Ltac solve_MsgsP :=
+  repeat
+    (first [assumption
+           |apply MsgsP_other_msg_id_enqMP; [|solve_not_in]
+           |apply MsgsP_other_midx_enqMP; [|solve_chn_not_in]
+           |apply MsgsP_other_msg_id_enqMsgs; [|solve_DisjList_ex idx_dec]
+           |apply MsgsP_deqMP
+           |apply MsgsP_deqMsgs]).
+
 Hint Unfold MsgsNotExist: RuleConds.
 
