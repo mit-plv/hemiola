@@ -212,7 +212,7 @@ Section FootprintsOk.
 
   Lemma MesiUpLockInv_mutual_step:
     Invariant.MutualInvStep1 impl step_m MesiUpLockInv (MesiDownLockInv topo).
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -301,6 +301,8 @@ Section FootprintsOk.
       all: try (eapply MesiUpLockInv_update_None; eauto; mred; fail).
       all: try (solve_MesiUpLockInv; fail).
       all: solve_MesiUpLockInv; exfalso; unfold addRqS in *; mred.
+
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   (*! [MesiDownLockInv] *)
@@ -391,7 +393,7 @@ Section FootprintsOk.
 
   Lemma MesiDownLockInv_mutual_step:
     Invariant.MutualInvStep2 impl step_m MesiUpLockInv (MesiDownLockInv topo).
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -478,6 +480,8 @@ Section FootprintsOk.
       all: try (eapply MesiDownLockInv_update_None; eauto; mred; fail).
       all: try (eapply MesiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
+
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem MesiLockInv_ok:
@@ -586,7 +590,7 @@ Section RootChnInv.
 
   Lemma mesi_RootChnInv_step:
     Invariant.InvStep impl step_m (RootChnInv tr 0).
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -692,6 +696,8 @@ Section RootChnInv.
 
       Unshelve.
       all: assumption.
+
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_RootChnInv_ok:

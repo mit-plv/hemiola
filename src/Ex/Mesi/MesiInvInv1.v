@@ -308,7 +308,7 @@ Section InvWB.
 
   Lemma mesi_InvWB_step:
     Invariant.InvStep impl step_m (InvWB topo).
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -912,6 +912,8 @@ Section InvWB.
       dest_in.
       all: admit.
 
+      (* END_SKIP_PROOF_OFF *)
+      
   Admitted.
 
 End InvWB.
