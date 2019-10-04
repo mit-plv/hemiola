@@ -291,9 +291,9 @@ Section InvWB.
 
   Ltac solve_InvWB_by_silent :=
     match goal with
-    | [H: (_ -> _ -> ObjOwned _) /\ (_ -> _ -> ObjClean _ /\ _) |- _] => apply H
+    | [H: (_ -> _ -> ObjOwned _) /\ (_ -> _ -> ObjClean _) |- _] => apply H
     | [H: _ -> _ -> ObjOwned _ |- _] => apply H
-    | [H: _ -> _ -> ObjClean _ /\ _ |- _] => apply H
+    | [H: _ -> _ -> ObjClean _ |- _] => apply H
     end;
     try assumption;
     repeat
@@ -502,8 +502,8 @@ Section InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
           derive_InvWBDir oidx.
           split; intros.
-          { specialize (Hidir (or_introl H22)); solve_mesi. }
-          { specialize (Hidir (or_intror H22)); solve_mesi. }
+          { specialize (Hidir (or_introl H22)); simpl in *; solve_mesi. }
+          { specialize (Hidir (or_intror (or_introl H22))); simpl in *; solve_mesi. }
         }
         { split; intros.
           { assert (NoRqI oidx0 msgs).
@@ -742,8 +742,8 @@ Section InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
           derive_InvWBDir oidx.
           split; intros.
-          { specialize (Hidir (or_introl H30)); solve_mesi. }
-          { specialize (Hidir (or_intror H30)); solve_mesi. }
+          { specialize (Hidir (or_introl H30)); simpl in *; solve_mesi. }
+          { specialize (Hidir (or_intror (or_introl H30))); simpl in *; solve_mesi. }
         }
         { split; intros.
           { assert (NoRqI oidx0 msgs).
@@ -842,8 +842,8 @@ Section InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
           derive_InvWBDir oidx.
           split; intros.
-          { specialize (Hidir (or_introl H28)); solve_mesi. }
-          { specialize (Hidir (or_intror H28)); solve_mesi. }
+          { specialize (Hidir (or_introl H28)); simpl in *; solve_mesi. }
+          { specialize (Hidir (or_intror (or_introl H28))); simpl in *; solve_mesi. }
         }
         { split; intros.
           { assert (NoRqI oidx0 msgs).
@@ -892,7 +892,6 @@ Section InvWB.
       }
 
       { (** [liInvRqUpUp] *)
-        
         admit.
       }
 
