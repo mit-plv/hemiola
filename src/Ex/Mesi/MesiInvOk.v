@@ -8,6 +8,7 @@ Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
 
 Require Export Ex.Mesi.MesiInvB.
 Require Export Ex.Mesi.MesiInv Ex.Mesi.MesiInvInv0 Ex.Mesi.MesiInvInv1.
+Require Export Ex.Mesi.MesiInvExcl.
 
 Set Implicit Arguments.
 
@@ -20,67 +21,10 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
-(** TODO: make a new file (maybe [MesiInvExcl.v]), move below definitions,
- * and prove them in that file. *)
-Definition InvObjExcl0 (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
-  ObjExcl0 oidx ost msgs -> NoCohMsgs oidx msgs.
-
-Definition InvExcl (st: MState): Prop :=
-  forall eidx,
-    eost <+- (bst_oss st)@[eidx];
-      (InvObjExcl0 eidx eost (bst_msgs st) /\
-       (ObjExcl eidx eost (bst_msgs st) ->
-        forall oidx,
-          oidx <> eidx ->
-          ost <+- (bst_oss st)@[oidx];
-            ObjInvalid oidx ost (bst_msgs st))).
-(** -- end of the exclusiveness invariants *)
-
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
   InvExcl st /\
   InvWBCoh st /\ InvWB topo st /\
   MesiDownLockInv topo st.
-
-Section Facts.
-
-  Lemma InvExcl_excl_invalid:
-    forall st (He: InvExcl st) msgs eidx eost,
-      bst_msgs st = msgs ->
-      (bst_oss st)@[eidx] = Some eost ->
-      NoRsI eidx msgs ->
-      mesiE <= eost#[status] ->
-      forall oidx ost,
-        oidx <> eidx ->
-        (bst_oss st)@[oidx] = Some ost ->
-        ObjInvalid oidx ost msgs.
-  Proof.
-    intros; subst.
-    specialize (He eidx).
-    disc_rule_conds_ex.
-    unfold ObjExcl, ObjExcl0 in H5; simpl in H5.
-    specialize (H5 (or_introl (conj H2 H1)) _ H3).
-    solve_rule_conds_ex.
-  Qed.
-
-  Corollary InvExcl_excl_invalid_status:
-    forall st (He: InvExcl st) eidx eost,
-      (bst_oss st)@[eidx] = Some eost ->
-      NoRsI eidx (bst_msgs st) ->
-      mesiE <= eost#[status] ->
-      forall oidx ost,
-        oidx <> eidx ->
-        (bst_oss st)@[oidx] = Some ost ->
-        NoRsI oidx (bst_msgs st) ->
-        ost#[status] = mesiI.
-  Proof.
-    intros.
-    eapply InvExcl_excl_invalid in H1; eauto.
-    destruct H1.
-    - apply H1.
-    - exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
-  Qed.
-  
-End Facts.
 
 Lemma mesi_InvForSim_init:
   forall tr (Htr: tr <> Node nil),

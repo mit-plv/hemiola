@@ -521,7 +521,7 @@ Ltac disc_MesiDownLockInv oidx Hinv :=
       red in Hdfp; dest; disc_rule_conds_ex; solve_midx_false
     end.
 
-Section InvProof.
+Section RootChnInv.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
 
@@ -702,5 +702,5 @@ Section InvProof.
     - apply mesi_RootChnInv_step.
   Qed.
   
-End InvProof.
+End RootChnInv.
 

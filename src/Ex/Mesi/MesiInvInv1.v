@@ -7,6 +7,8 @@ Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
 
 Require Import Ex.Mesi.MesiInv Ex.Mesi.MesiInvInv0.
+Require Import Ex.Mesi.MesiInvEClean.
+        
 
 Set Implicit Arguments.
 
@@ -855,7 +857,7 @@ Section InvWB.
           }
           { solve_InvWB_by_diff_dir. }
         }
-      } 
+      }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.

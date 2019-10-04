@@ -89,20 +89,29 @@ Section Sim.
           * exfalso; eapply H5; try rewrite e; eauto.
     Qed.
 
-    Lemma ObjExcl0_ObjCoh:
-      forall oidx ost msgs,
-        InvObjExcl0 oidx ost msgs ->
-        ObjExcl0 oidx ost msgs ->
-        ObjCoh ost#[val] oidx ost msgs.
+    Lemma NoCohMsgs_MsgsCoh:
+      forall oidx msgs,
+        NoCohMsgs oidx msgs ->
+        forall cv, MsgsCoh cv oidx msgs.
     Proof.
-      unfold InvObjExcl0, CohInvRq, ObjCoh; intros.
-      specialize (H H0).
-      split; [red; intros; reflexivity|].
+      intros.
       do 2 red; intros.
-      specialize (H _ H1); red in H.
+      specialize (H _ H0); red in H.
       red; unfold cohMsgs, map, caseDec, fst in *.
       repeat (find_if_inside; [exfalso; auto; fail|]).
       auto.
+    Qed.
+
+    Lemma ObjExcl0_ObjCoh:
+      forall oidx ost oss msgs,
+        InvObjExcl0 oidx ost oss msgs ->
+        ObjExcl0 oidx ost msgs ->
+        ObjCoh ost#[val] oidx ost msgs.
+    Proof.
+      intros.
+      specialize (H H0); dest.
+      split; [red; intros; reflexivity|].
+      apply NoCohMsgs_MsgsCoh; assumption.
     Qed.
 
     Lemma MsgsCoh_enqMP:
@@ -1188,7 +1197,7 @@ Section Sim.
           apply Forall_forall;
           intros lidx ?; destruct (idx_dec lidx oidx); subst
         end.
-          
+      
       Ltac solve_ImplStateCoh ::=
         case_ImplStateCoh_l1_me_others;
         [solve_ImplStateCoh_l1_me|solve_ImplStateCoh_l1_others].
@@ -1268,7 +1277,7 @@ Section Sim.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
           { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
-            assumption.
+            eassumption.
           }
           { split.
             { simpl; solve_mesi. }
@@ -1316,7 +1325,7 @@ Section Sim.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
           { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
-            assumption.
+            eassumption.
           }
           { split.
             { simpl; solve_mesi. }
@@ -1374,7 +1383,7 @@ Section Sim.
         * mred; simpl.
           eapply ObjExcl0_ObjCoh.
           { specialize (H3 oidx); repeat (simpl in H3; mred); dest.
-            assumption.
+            eassumption.
           }
           { split.
             { simpl; solve_mesi. }
