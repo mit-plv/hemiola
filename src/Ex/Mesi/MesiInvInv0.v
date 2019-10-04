@@ -22,7 +22,9 @@ Existing Instance Mesi.ImplOStateIfc.
 Definition InvWBDir (st: MState): Prop :=
   forall oidx,
     ost <+- (bst_oss st)@[oidx];
-      ((ObjInvWRq oidx (bst_msgs st) \/ ObjInvRq oidx (bst_msgs st)) ->
+      ((ObjInvWRq oidx (bst_msgs st)
+        \/ ObjInvRq oidx (bst_msgs st)
+        \/ ObjInvRs oidx (bst_msgs st)) ->
        ost#[dir].(dir_st) = mesiI).
 
 (** NOTE: [InvWBCoh] requires [InvWBDir] during the proof *)
@@ -46,7 +48,9 @@ Section InvWBDir.
     intros.
     destruct (implOStatesInit tr)@[oidx] as [orq|] eqn:Host; simpl; auto.
     intros.
-    exfalso; destruct H.
+    exfalso; destruct H as [|[|]].
+    - destruct H as [idm [? ?]].
+      do 2 red in H; dest_in.
     - destruct H as [idm [? ?]].
       do 2 red in H; dest_in.
     - destruct H as [idm [? ?]].
@@ -65,7 +69,7 @@ Section InvWBDir.
     specialize (H oidx); simpl in H.
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     intros.
-    destruct H2.
+    destruct H2 as [|[|]].
     - destruct H2 as [idm [? ?]].
       apply InMP_enqMsgs_or in H2.
       destruct H2; [|apply H; left; do 2 red; eauto].
@@ -82,7 +86,21 @@ Section InvWBDir.
           simpl; tauto.
     - destruct H2 as [idm [? ?]].
       apply InMP_enqMsgs_or in H2.
-      destruct H2; [|apply H; right; do 2 red; eauto].
+      destruct H2; [|apply H; right; left; do 2 red; eauto].
+      apply in_map with (f:= idOf) in H2; simpl in H2.
+      apply H1 in H2; simpl in H2.
+      exfalso; eapply DisjList_In_1.
+      + apply tree2Topo_minds_merqs_disj.
+      + eassumption.
+      + eapply tree2Topo_obj_chns_minds_SubList.
+        * specialize (H0 oidx); simpl in H0.
+          rewrite Host in H0; simpl in H0.
+          eassumption.
+        * destruct idm as [midx msg]; inv H3.
+          simpl; tauto.
+    - destruct H2 as [idm [? ?]].
+      apply InMP_enqMsgs_or in H2.
+      destruct H2; [|apply H; right; right; do 2 red; eauto].
       apply in_map with (f:= idOf) in H2; simpl in H2.
       apply H1 in H2; simpl in H2.
       exfalso; eapply DisjList_In_1.
@@ -102,20 +120,23 @@ Section InvWBDir.
       InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
         InvWBDir {| bst_oss := oss;
-                 bst_orqs := orqs;
-                 bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+                    bst_orqs := orqs;
+                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     intros.
-    destruct H1.
+    destruct H1 as [|[|]].
     - destruct H1 as [idm [? ?]].
       apply InMP_deqMsgs in H1.
       apply H; left; do 2 red; eauto.
     - destruct H1 as [idm [? ?]].
       apply InMP_deqMsgs in H1.
-      apply H; right; do 2 red; eauto.
+      apply H; right; left; do 2 red; eauto.
+    - destruct H1 as [idm [? ?]].
+      apply InMP_deqMsgs in H1.
+      apply H; right; right; do 2 red; eauto.
   Qed.
 
   Lemma InvWBDir_no_update:
@@ -135,23 +156,28 @@ Section InvWBDir.
     rewrite H1; auto.
   Qed.
 
-  Lemma InvWBDir_update_status_NoRqI:
+  Lemma InvWBDir_update_status_NoRqI_NoRsI:
     forall oss orqs msgs,
       InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall oidx (ost: OState),
         NoRqI oidx msgs ->
+        NoRsI oidx msgs ->
         InvWBDir {| bst_oss:= oss +[oidx <- ost];
                     bst_orqs:= orqs; bst_msgs:= msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     mred; simpl; auto.
     intros.
-    exfalso; destruct H1.
-    all: eapply MsgExistsSig_MsgsNotExist_false; try eassumption;
-      simpl; tauto.
+    exfalso; destruct H2 as [|[|]].
+    - eapply MsgExistsSig_MsgsNotExist_false; [apply H0| |eassumption].
+      simpl; tauto.  
+    - eapply MsgExistsSig_MsgsNotExist_false; [apply H0| |eassumption].
+      simpl; tauto.  
+    - eapply MsgExistsSig_MsgsNotExist_false; [apply H1| |eassumption].
+      simpl; tauto.  
   Qed.
 
-  Lemma InvWBDir_enqMP_valid:
+  Lemma InvWBDir_enqMP_rq_valid:
     forall oss orqs msgs,
       InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall oidx ost midx msg,
@@ -170,7 +196,7 @@ Section InvWBDir.
     - specialize (H oidx0).
       destruct (oss@[oidx0]) as [ost0|]; simpl in *; auto.
       intros.
-      destruct H2.
+      destruct H2 as [|[|]].
       + destruct H2 as [idm [? ?]].
         apply InMP_enqMP_or in H2; destruct H2.
         * dest; inv H4; rewrite H2 in H7; inv H7.
@@ -180,7 +206,60 @@ Section InvWBDir.
         apply InMP_enqMP_or in H2; destruct H2.
         * dest; inv H4; rewrite H2 in H7; inv H7.
           exfalso; auto.
-        * apply H; right; do 2 red; eauto.
+        * apply H; right; left; do 2 red; eauto.
+      + destruct H2 as [idm [? ?]].
+        apply InMP_enqMP_or in H2; destruct H2.
+        * dest; inv H4; rewrite H2 in H7; inv H7.
+        * apply H; right; right; do 2 red; eauto.
+  Qed.
+
+  Lemma InvWBDir_enqMP_rs_valid:
+    forall oss orqs msgs,
+      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall oidx rqm midx msg,
+        FirstMP msgs (rqUpFrom oidx) rqm ->
+        (rqm.(msg_id) = mesiInvWRq \/ rqm.(msg_id) = mesiInvRq) ->
+        rqm.(msg_type) = MRq ->
+        midx = downTo oidx ->
+        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
+                    bst_msgs:= enqMP midx msg (deqMP (rqUpFrom oidx) msgs) |}.
+  Proof.
+    unfold InvWBDir; simpl; intros.
+    destruct (idx_dec oidx0 oidx); subst.
+    - specialize (H oidx).
+      destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+      intros; apply H.
+      destruct H1.
+      + left; do 2 red.
+        exists (rqUpFrom oidx, rqm); split.
+        * apply FirstMP_InMP; assumption.
+        * unfold sigOf; simpl.
+          rewrite H1, H2; reflexivity.
+      + right; left; do 2 red.
+        exists (rqUpFrom oidx, rqm); split.
+        * apply FirstMP_InMP; assumption.
+        * unfold sigOf; simpl.
+          rewrite H1, H2; reflexivity.
+    - specialize (H oidx0).
+      destruct (oss@[oidx0]) as [ost0|]; simpl in *; auto.
+      intros.
+      destruct H3 as [|[|]].
+      + destruct H3 as [idm [? ?]].
+        apply InMP_enqMP_or in H3; destruct H3.
+        * dest; inv H4; rewrite H3 in H7; inv H7.
+        * apply InMP_deqMP in H3.
+          apply H; left; do 2 red; eauto.
+      + destruct H3 as [idm [? ?]].
+        apply InMP_enqMP_or in H3; destruct H3.
+        * dest; inv H4; rewrite H3 in H7; inv H7.
+        * apply InMP_deqMP in H3.
+          apply H; right; left; do 2 red; eauto.
+      + destruct H3 as [idm [? ?]].
+        apply InMP_enqMP_or in H3; destruct H3.
+        * dest; inv H4; rewrite H3 in H7; inv H7.
+          exfalso; auto.
+        * apply InMP_deqMP in H3.
+          apply H; right; right; do 2 red; eauto.
   Qed.
 
   Lemma InvWBDir_other_msg_id_enqMP:
@@ -189,6 +268,7 @@ Section InvWBDir.
       forall midx msg,
         msg.(msg_id) <> mesiInvWRq ->
         msg.(msg_id) <> mesiInvRq ->
+        msg.(msg_id) <> mesiInvRs ->
         InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
                     bst_msgs:= enqMP midx msg msgs |}.
   Proof.
@@ -196,15 +276,19 @@ Section InvWBDir.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     intros.
-    destruct H2.
-    - destruct H2 as [idm [? ?]].
-      apply InMP_enqMP_or in H2; destruct H2.
-      + dest; subst; inv H3; exfalso; auto.
+    destruct H3 as [|[|]].
+    - destruct H3 as [idm [? ?]].
+      apply InMP_enqMP_or in H3; destruct H3.
+      + dest; subst; inv H4; exfalso; auto.
       + apply H; left; do 2 red; eauto.
-    - destruct H2 as [idm [? ?]].
-      apply InMP_enqMP_or in H2; destruct H2.
-      + dest; subst; inv H3; exfalso; auto.
-      + apply H; right; do 2 red; eauto.
+    - destruct H3 as [idm [? ?]].
+      apply InMP_enqMP_or in H3; destruct H3.
+      + dest; subst; inv H4; exfalso; auto.
+      + apply H; right; left; do 2 red; eauto.
+    - destruct H3 as [idm [? ?]].
+      apply InMP_enqMP_or in H3; destruct H3.
+      + dest; subst; inv H4; exfalso; auto.
+      + apply H; right; right; do 2 red; eauto.
   Qed.
 
   Lemma InvWBDir_other_msg_id_enqMsgs:
@@ -212,7 +296,8 @@ Section InvWBDir.
       InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq /\
-                           (valOf idm).(msg_id) <> mesiInvRq) nmsgs ->
+                           (valOf idm).(msg_id) <> mesiInvRq /\
+                           (valOf idm).(msg_id) <> mesiInvRs) nmsgs ->
         InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
                     bst_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
@@ -235,13 +320,16 @@ Section InvWBDir.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     intros.
-    destruct H0.
+    destruct H0 as [|[|]].
     - destruct H0 as [idm [? ?]].
       apply InMP_deqMP in H0.
       apply H; left; do 2 red; eauto.
     - destruct H0 as [idm [? ?]].
       apply InMP_deqMP in H0.
-      apply H; right; do 2 red; eauto.
+      apply H; right; left; do 2 red; eauto.
+    - destruct H0 as [idm [? ?]].
+      apply InMP_deqMP in H0.
+      apply H; right; right; do 2 red; eauto.
   Qed.
 
   Lemma InvWBDir_deqMsgs:
@@ -255,13 +343,16 @@ Section InvWBDir.
     specialize (H oidx).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     intros.
-    destruct H0.
+    destruct H0 as [|[|]].
     - destruct H0 as [idm [? ?]].
       apply InMP_deqMsgs in H0.
       apply H; left; do 2 red; eauto.
     - destruct H0 as [idm [? ?]].
       apply InMP_deqMsgs in H0.
-      apply H; right; do 2 red; eauto.
+      apply H; right; left; do 2 red; eauto.
+    - destruct H0 as [idm [? ?]].
+      apply InMP_deqMsgs in H0.
+      apply H; right; right; do 2 red; eauto.
   Qed.
 
   Ltac simpl_InvWBDir_enqMP :=
@@ -276,7 +367,7 @@ Section InvWBDir.
     let Hin := fresh "H" in
     apply Forall_forall; intros idm Hin;
     apply in_map_iff in Hin; dest; subst;
-    split; simpl_InvWBDir_enqMP.
+    repeat ssplit; simpl_InvWBDir_enqMP.
 
   Ltac simpl_InvWBDir :=
     repeat
@@ -284,7 +375,7 @@ Section InvWBDir.
              |apply InvWBDir_other_msg_id_enqMsgs; [|simpl_InvWBDir_enqMsgs]
              |apply InvWBDir_deqMP
              |apply InvWBDir_deqMsgs
-             |apply InvWBDir_update_status_NoRqI; [|assumption]
+             |apply InvWBDir_update_status_NoRqI_NoRsI; [|assumption..]
              |eapply InvWBDir_no_update; [|eauto; fail..]
              |assumption]).
 
@@ -341,7 +432,11 @@ Section InvWBDir.
         all: try (simpl_InvWBDir; fail).
         all: try (assert (NoRqI oidx msgs)
                    by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                  assert (NoRsI oidx msgs)
+                    by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx);
                   simpl_InvWBDir).
+        all: try (eapply InvWBDir_enqMP_rs_valid; eauto;
+                  simpl_InvWBDir; fail).
       }
 
       dest_in.
@@ -375,7 +470,11 @@ Section InvWBDir.
         all: try (simpl_InvWBDir; fail).
         all: try (assert (NoRqI oidx msgs)
                    by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                  assert (NoRsI oidx msgs)
+                    by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx);
                   simpl_InvWBDir).
+        all: try (eapply InvWBDir_enqMP_rs_valid; eauto;
+                  simpl_InvWBDir; fail).
       }
 
       dest_in; disc_rule_conds_ex.
@@ -384,16 +483,18 @@ Section InvWBDir.
       all: try (derive_footprint_info_basis oidx;
                 assert (NoRqI oidx msgs)
                   by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx);
+                assert (NoRsI oidx msgs)
+                  by (solve_NoRsI_base; solve_NoRsI_by_rsDown oidx);
                 simpl_InvWBDir).
       all: try (simpl_InvWBDir; solve_InvWBDir; fail).
       all: try (derive_MesiDownLockInv oidx;
                 simpl_InvWBDir; solve_InvWBDir; fail).
-      { eapply InvWBDir_enqMP_valid; eauto.
+      { eapply InvWBDir_enqMP_rq_valid; eauto.
         { solve_InvWBDir. }
         { mred. }
         { assumption. }
       }
-      { eapply InvWBDir_enqMP_valid; eauto.
+      { eapply InvWBDir_enqMP_rq_valid; eauto.
         { solve_InvWBDir. }
         { mred. }
         { assumption. }
@@ -413,12 +514,12 @@ Section InvWBDir.
       dest_in; disc_rule_conds_ex.
 
       all: try (simpl_InvWBDir; fail).
-      { eapply InvWBDir_enqMP_valid; eauto.
+      { eapply InvWBDir_enqMP_rq_valid; eauto.
         { solve_InvWBDir. }
         { mred. }
         { assumption. }
       }
-      { eapply InvWBDir_enqMP_valid; eauto.
+      { eapply InvWBDir_enqMP_rq_valid; eauto.
         { solve_InvWBDir. }
         { mred. }
         { assumption. }
@@ -692,7 +793,7 @@ Section InvWBCoh.
     repeat 
       match goal with
       | [Hc: CohInvRq _ _ _ |- _] => specialize (Hc _ Hin Hsig); dest
-      | [Hi: ObjInvWRq _ _ \/ ObjInvRq _ _ -> _ |- _] =>
+      | [Hi: ObjInvWRq _ _ \/ _ -> _ |- _] =>
         specialize (Hi (or_introl (@ex_intro _ _ _ (conj Hin Hsig))))
       end;
     simpl in *;

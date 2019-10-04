@@ -65,9 +65,11 @@ Section CoherenceUnit.
   Definition ObjInvalid0 :=
     ost#[status] = mesiI /\ NoCohMsgs.
 
-  Definition ObjInvalid :=
-    ObjInvalid0 \/
+  Definition ObjInvRs :=
     MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs.
+  
+  Definition ObjInvalid :=
+    ObjInvalid0 \/ ObjInvRs.
 
   (** 2) Clean "E" in MESI *)
 
