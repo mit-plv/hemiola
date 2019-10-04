@@ -26,10 +26,8 @@ Definition InvWB (topo: DTree) (st: MState): Prop :=
       orq <+- (bst_orqs st)@[oidx];
       post <+- (bst_oss st)@[pidx];
       porq <+- (bst_orqs st)@[pidx];
-      ((ObjDirME porq post oidx -> ObjInvWRq oidx (bst_msgs st) ->
-        ObjOwned ost) /\
-       (ObjDirE porq post oidx -> ObjInvRq oidx (bst_msgs st) ->
-        ObjClean ost)).
+      (ObjDirME porq post oidx -> ObjInvWRq oidx (bst_msgs st) ->
+       ObjOwned ost).
 
 Section InvWB.
   Variable (tr: tree).
@@ -68,35 +66,22 @@ Section InvWB.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-    dest; split; intros.
-    - destruct H5 as [idm [? ?]].
-      apply InMP_enqMsgs_or in H5.
-      destruct H5; [|apply H; auto; do 2 red; eauto].
-      apply in_map with (f:= idOf) in H5; simpl in H5.
-      apply H1 in H5; simpl in H5.
-      exfalso; eapply DisjList_In_1.
-      + apply tree2Topo_minds_merqs_disj.
-      + eassumption.
-      + eapply tree2Topo_obj_chns_minds_SubList.
-        * specialize (H0 oidx); simpl in H0.
-          rewrite Host in H0; simpl in H0.
-          eassumption.
-        * destruct idm as [midx msg]; inv H6.
-          simpl; tauto.
-    - destruct H5 as [idm [? ?]].
-      apply InMP_enqMsgs_or in H5.
-      destruct H5; [|apply H3; auto; do 2 red; eauto].
-      apply in_map with (f:= idOf) in H5; simpl in H5.
-      apply H1 in H5; simpl in H5.
-      exfalso; eapply DisjList_In_1.
-      + apply tree2Topo_minds_merqs_disj.
-      + eassumption.
-      + eapply tree2Topo_obj_chns_minds_SubList.
-        * specialize (H0 oidx); simpl in H0.
-          rewrite Host in H0; simpl in H0.
-          eassumption.
-        * destruct idm as [midx msg]; inv H6.
-          simpl; tauto.
+    intros.
+
+    destruct H4 as [idm [? ?]].
+    apply InMP_enqMsgs_or in H4.
+    destruct H4; [|apply H; auto; do 2 red; eauto].
+    apply in_map with (f:= idOf) in H4; simpl in H4.
+    apply H1 in H4; simpl in H4.
+    exfalso; eapply DisjList_In_1.
+    - apply tree2Topo_minds_merqs_disj.
+    - eassumption.
+    - eapply tree2Topo_obj_chns_minds_SubList.
+      + specialize (H0 oidx); simpl in H0.
+        rewrite Host in H0; simpl in H0.
+        eassumption.
+      + destruct idm as [midx msg]; inv H5.
+        simpl; tauto.
   Qed.
 
   Lemma mesi_InvWB_ext_out:
@@ -114,15 +99,12 @@ Section InvWB.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-    dest; split; intros.
-    - destruct H4 as [idm [? ?]].
-      apply InMP_deqMsgs in H4.
-      apply H; auto.
-      do 2 red; eauto.
-    - destruct H4 as [idm [? ?]].
-      apply InMP_deqMsgs in H4.
-      apply H2; auto.
-      do 2 red; eauto.
+    intros.
+
+    destruct H3 as [idm [? ?]].
+    apply InMP_deqMsgs in H3.
+    apply H; auto.
+    do 2 red; eauto.
   Qed.
 
   Lemma InvWB_other_msg_id_enqMP:
@@ -140,19 +122,14 @@ Section InvWB.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-    dest; split; intros.
-    - apply H; auto.
-      destruct H5 as [idm [? ?]].
-      apply InMP_enqMP_or in H5; destruct H5.
-      + dest; subst.
-        exfalso; inv H6; auto.
-      + do 2 red; eauto.
-    - apply H3; auto.
-      destruct H5 as [idm [? ?]].
-      apply InMP_enqMP_or in H5; destruct H5.
-      + dest; subst.
-        exfalso; inv H6; auto.
-      + do 2 red; eauto.
+    intros.
+    
+    apply H; auto.
+    destruct H4 as [idm [? ?]].
+    apply InMP_enqMP_or in H4; destruct H4.
+    - dest; subst.
+      exfalso; inv H5; auto.
+    - do 2 red; eauto.
   Qed.
   
   Lemma InvWB_other_msg_id_enqMsgs:
@@ -185,15 +162,12 @@ Section InvWB.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-    dest; split; intros.
-    - apply H; auto.
-      destruct H3 as [idm [? ?]].
-      apply InMP_deqMP in H3.
-      do 2 red; eauto.
-    - apply H1; auto.
-      destruct H3 as [idm [? ?]].
-      apply InMP_deqMP in H3.
-      do 2 red; eauto.
+    intros.
+
+    apply H; auto.
+    destruct H2 as [idm [? ?]].
+    apply InMP_deqMP in H2.
+    do 2 red; eauto.
   Qed.
 
   Lemma InvWB_deqMsgs:
@@ -209,15 +183,12 @@ Section InvWB.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-    dest; split; intros.
-    - apply H; auto.
-      destruct H3 as [idm [? ?]].
-      apply InMP_deqMsgs in H3.
-      do 2 red; eauto.
-    - apply H1; auto.
-      destruct H3 as [idm [? ?]].
-      apply InMP_deqMsgs in H3.
-      do 2 red; eauto.
+
+    intros.
+    apply H; auto.
+    destruct H2 as [idm [? ?]].
+    apply InMP_deqMsgs in H2.
+    do 2 red; eauto.
   Qed.
 
   Ltac simpl_InvWB_msgs_enqMP :=
@@ -264,6 +235,7 @@ Section InvWB.
       end.
 
   Ltac solve_InvWB_by_NoRqI :=
+    intros;
     repeat
       match goal with
       | [Hn: NoRqI ?oidx ?msgs, Hi: ObjInvWRq ?oidx ?msgs |- _] =>
@@ -275,6 +247,7 @@ Section InvWB.
       end.
 
   Ltac solve_InvWB_by_downlock :=
+    intros;
     repeat
       match goal with
       | [Hn: ObjDirME _ _ _ |- _] => red in Hn; dest; mred; fail
@@ -282,6 +255,7 @@ Section InvWB.
       end.
 
   Ltac solve_InvWB_by_diff_dir :=
+    intros;
     match goal with
     | [Hn: ObjDirME _ _ _ |- _] =>
       red in Hn; dest; simpl in *; solve_mesi
@@ -290,12 +264,10 @@ Section InvWB.
     end.
 
   Ltac solve_InvWB_by_silent :=
+    intros;
     match goal with
-    | [H: (_ -> _ -> ObjOwned _) /\ (_ -> _ -> ObjClean _) |- _] => apply H
-    | [H: _ -> _ -> ObjOwned _ |- _] => apply H
-    | [H: _ -> _ -> ObjClean _ |- _] => apply H
+    | [H: _ -> _ -> ObjOwned _ |- _] => apply H; try assumption
     end;
-    try assumption;
     repeat
       match goal with
       | [Hd: ObjDirME _ _ _ |- ObjDirME _ _ _] =>
@@ -358,28 +330,20 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            { red in H17; simpl in H17; dest; subst.
-              assert (NoRqI oidx0 msgs)
-                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
-              solve_InvWB_by_NoRqI.
-            }
-            { red in H17; simpl in H17; dest; subst.
-              assert (NoRqI oidx0 msgs)
-                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
-              solve_InvWB_by_NoRqI.
-            }
+          { intros.
+            red in H17; simpl in H17; dest; subst.
+            assert (NoRqI oidx0 msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+            solve_InvWB_by_NoRqI.
           }
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_downlock.
+          solve_InvWB_by_downlock.
         }
 
         { disc_rule_conds_ex.
@@ -388,31 +352,26 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            { red in H17; simpl in H17; dest; subst.
-              assert (NoRqI oidx0 msgs)
-                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
-              solve_InvWB_by_NoRqI.
-            }
-            { solve_InvWB_by_diff_dir. }
+          { intros.
+            red in H17; simpl in H17; dest; subst.
+            assert (NoRqI oidx0 msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+            solve_InvWB_by_NoRqI.
           }
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_downlock.
+          solve_InvWB_by_downlock.
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_downlock.
+          solve_InvWB_by_downlock.
         }
 
         { disc_rule_conds_ex.
@@ -423,8 +382,7 @@ Section InvWB.
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_diff_dir.
+          solve_InvWB_by_diff_dir.
         }
 
         { disc_rule_conds_ex.
@@ -437,12 +395,9 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            all: solve_InvWB_by_diff_dir.
-          }
+          { solve_InvWB_by_diff_dir. }
         }
 
         { disc_rule_conds_ex.
@@ -453,8 +408,7 @@ Section InvWB.
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_diff_dir.
+          solve_InvWB_by_diff_dir.
         }
 
         { disc_rule_conds_ex.
@@ -467,12 +421,9 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            all: solve_InvWB_by_diff_dir.
-          }
+          { solve_InvWB_by_diff_dir. }
         }
 
       }
@@ -483,17 +434,9 @@ Section InvWB.
         simpl_InvWB_msgs.
         disc_InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
-          split; intros.
-          { specialize (H0 H23 H24).
-            red in H0; dest; simpl in *; solve_mesi.
-          }
-          { specialize (H18 H23 H24); dest.
-            red in H18; dest; simpl in *; solve_mesi.
-          }
+          intros; red in H0; dest; simpl in *; solve_mesi.
         }
-        { split; intros.
-          all: solve_InvWB_by_diff_dir.
-        }
+        { solve_InvWB_by_diff_dir. }
       }
 
       { disc_rule_conds_ex.
@@ -501,19 +444,15 @@ Section InvWB.
         disc_InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
           derive_InvWBDir oidx.
-          split; intros.
-          { specialize (Hidir (or_introl H22)); simpl in *; solve_mesi. }
-          { specialize (Hidir (or_intror (or_introl H22))); simpl in *; solve_mesi. }
+          intros; specialize (Hidir (or_introl H18)); simpl in *; solve_mesi.
         }
-        { split; intros.
-          { assert (NoRqI oidx0 msgs).
-            { solve_NoRqI_base.
-              (** TODO: need [solve_NoRqI_by_parent_lock] *)
-              all: admit.
-            }
-            solve_InvWB_by_NoRqI.
+        { intros.
+          assert (NoRqI oidx0 msgs).
+          { solve_NoRqI_base.
+            (** TODO: need [solve_NoRqI_by_parent_lock] *)
+            all: admit.
           }
-          { solve_InvWB_by_diff_dir. }
+          solve_InvWB_by_NoRqI.
         }
       }
 
@@ -546,42 +485,32 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            { red in H23; simpl in H23; dest; subst.
-              assert (NoRqI oidx0 msgs)
-                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
-              solve_InvWB_by_NoRqI.
-            }
-            { red in H23; simpl in H23; dest; subst.
-              assert (NoRqI oidx0 msgs)
-                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
-              solve_InvWB_by_NoRqI.
-            }
+          { intros.
+            red in H23; simpl in H23; dest; subst.
+            assert (NoRqI oidx0 msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+            solve_InvWB_by_NoRqI.
           }
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_silent.
+          solve_InvWB_by_silent.
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_downlock.
+          solve_InvWB_by_downlock.
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_silent.
+          solve_InvWB_by_silent.
         }
 
         { disc_rule_conds_ex.
@@ -590,38 +519,32 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            { red in H23; simpl in H23; dest; subst.
-              assert (NoRqI oidx0 msgs)
-                by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
-              solve_InvWB_by_NoRqI.
-            }
-            { solve_InvWB_by_diff_dir. }
+          { intros.
+            red in H23; simpl in H23; dest; subst.
+            assert (NoRqI oidx0 msgs)
+              by (solve_NoRqI_base; solve_NoRqI_by_rqUp oidx0).
+            solve_InvWB_by_NoRqI.
           }
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_silent.
+          solve_InvWB_by_silent.
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_silent.
+          solve_InvWB_by_silent.
         }
 
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_silent.
+          solve_InvWB_by_silent.
         }
 
         { disc_rule_conds_ex.
@@ -632,8 +555,7 @@ Section InvWB.
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_diff_dir.
+          solve_InvWB_by_diff_dir.
         }
 
         { disc_rule_conds_ex.
@@ -646,12 +568,9 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            all: solve_InvWB_by_diff_dir.
-          }
+          { solve_InvWB_by_diff_dir. }
         }
 
         { disc_rule_conds_ex.
@@ -662,8 +581,7 @@ Section InvWB.
         { disc_rule_conds_ex.
           simpl_InvWB_msgs.
           disc_InvWB.
-          split; intros.
-          all: solve_InvWB_by_diff_dir.
+          solve_InvWB_by_diff_dir.
         }
 
         { disc_rule_conds_ex.
@@ -676,12 +594,9 @@ Section InvWB.
           disc_InvWB.
           { assert (NoRqI oidx msgs)
               by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
-            split; intros.
-            all: solve_InvWB_by_NoRqI.
+            solve_InvWB_by_NoRqI.
           }
-          { split; intros.
-            all: solve_InvWB_by_diff_dir.
-          }
+          { solve_InvWB_by_diff_dir. }
         }
 
       }
@@ -695,12 +610,9 @@ Section InvWB.
         { subst topo; disc_rule_conds_ex.
           assert (NoRqI oidx msgs)
             by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
-          split; intros.
-          all: solve_InvWB_by_NoRqI.
+          solve_InvWB_by_NoRqI.
         }
-        { split; intros.
-          all: solve_InvWB_by_diff_dir.
-        }
+        { solve_InvWB_by_diff_dir. }
       }
 
       { disc_rule_conds_ex.
@@ -710,10 +622,9 @@ Section InvWB.
         { subst topo; disc_rule_conds_ex.
           assert (NoRqI oidx msgs)
             by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
-          split; intros.
-          all: solve_InvWB_by_NoRqI.
+          solve_InvWB_by_NoRqI.
         }
-        { split; intros.
+        { intros.
           (** TODO: need [solve_NoRqI_by_parent_lock] *)
           all: admit.
         }
@@ -723,17 +634,9 @@ Section InvWB.
         simpl_InvWB_msgs.
         disc_InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
-          split; intros.
-          { specialize (H0 H29 H30).
-            red in H0; dest; simpl in *; solve_mesi.
-          }
-          { specialize (H24 H29 H30); dest.
-            red in H24; dest; simpl in *; solve_mesi.
-          }
+          intros; red in H0; dest; simpl in *; solve_mesi.
         }
-        { split; intros.
-          all: solve_InvWB_by_diff_dir.
-        }
+        { solve_InvWB_by_diff_dir. }
       }
 
       { disc_rule_conds_ex.
@@ -741,19 +644,15 @@ Section InvWB.
         disc_InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
           derive_InvWBDir oidx.
-          split; intros.
-          { specialize (Hidir (or_introl H30)); simpl in *; solve_mesi. }
-          { specialize (Hidir (or_intror (or_introl H30))); simpl in *; solve_mesi. }
+          intros; specialize (Hidir (or_introl H25)); simpl in *; solve_mesi.
         }
-        { split; intros.
-          { assert (NoRqI oidx0 msgs).
-            { solve_NoRqI_base.
-              (** TODO: need [solve_NoRqI_by_parent_lock] *)
-              all: admit.
-            }
-            solve_InvWB_by_NoRqI.
+        { intros.
+          assert (NoRqI oidx0 msgs).
+          { solve_NoRqI_base.
+            (** TODO: need [solve_NoRqI_by_parent_lock] *)
+            all: admit.
           }
-          { solve_InvWB_by_diff_dir. }
+          solve_InvWB_by_NoRqI.
         }
       }
 
@@ -778,34 +677,28 @@ Section InvWB.
           end.
 
         subst topo; disc_rule_conds_ex.
-        split; intros.
-        all: derive_downlock_by_rqDown oidx; solve_InvWB_by_downlock.
+        intros; derive_downlock_by_rqDown oidx; solve_InvWB_by_downlock.
       }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
-        split; intros.
-        all: solve_InvWB_by_downlock.
+        solve_InvWB_by_downlock.
       }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
-        split; intros.
-        all: solve_InvWB_by_downlock.
+        solve_InvWB_by_downlock.
       }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
-        { split; intros.
-          (** TODO: need [derive_downlock_by_child_uplock] *)
+        { (** TODO: need [derive_downlock_by_child_uplock] *)
           all: admit.
         }
-        { split; intros.
-          all: solve_InvWB_by_diff_dir.
-        }
+        { solve_InvWB_by_diff_dir. }
       }
 
       { disc_rule_conds_ex.
@@ -814,8 +707,7 @@ Section InvWB.
         disc_InvWB.
         { assert (NoRqI oidx msgs)
             by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
-          split; intros.
-          all: solve_InvWB_by_NoRqI.
+          solve_InvWB_by_NoRqI.
         }
         { (** TODO: need [solve_NoRqI_by_parent_lock] *)
           all: admit.
@@ -828,12 +720,9 @@ Section InvWB.
         disc_InvWB.
         { assert (NoRqI oidx msgs)
             by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
-          split; intros.
-          all: solve_InvWB_by_NoRqI.
+          solve_InvWB_by_NoRqI.
         }
-        { split; intros.
-          all: solve_InvWB_by_downlock.
-        }
+        { solve_InvWB_by_downlock. }
       }
 
       { disc_rule_conds_ex.
@@ -841,19 +730,15 @@ Section InvWB.
         disc_InvWB.
         { disc_MesiDownLockInv oidx Hmdl.
           derive_InvWBDir oidx.
-          split; intros.
-          { specialize (Hidir (or_introl H28)); simpl in *; solve_mesi. }
-          { specialize (Hidir (or_intror (or_introl H28))); simpl in *; solve_mesi. }
+          intros; specialize (Hidir (or_introl H24)); simpl in *; solve_mesi.
         }
-        { split; intros.
-          { assert (NoRqI oidx0 msgs).
-            { solve_NoRqI_base.
-              (** TODO: need [solve_NoRqI_by_parent_lock] *)
-              all: admit.
-            }
-            solve_InvWB_by_NoRqI.
+        { intros.
+          assert (NoRqI oidx0 msgs).
+          { solve_NoRqI_base.
+            (** TODO: need [solve_NoRqI_by_parent_lock] *)
+            all: admit.
           }
-          { solve_InvWB_by_diff_dir. }
+          solve_InvWB_by_NoRqI.
         }
       }
 
@@ -861,34 +746,28 @@ Section InvWB.
         simpl_InvWB_msgs.
         disc_InvWB.
         subst topo; disc_rule_conds_ex.
-        split; intros.
-        all: derive_downlock_by_rqDown oidx; solve_InvWB_by_downlock.
+        intros; derive_downlock_by_rqDown oidx; solve_InvWB_by_downlock.
       }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
-        split; intros.
-        all: solve_InvWB_by_downlock.
+        solve_InvWB_by_downlock.
       }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
-        split; intros.
-        all: solve_InvWB_by_downlock.
+        solve_InvWB_by_downlock.
       }
 
       { disc_rule_conds_ex.
         simpl_InvWB_msgs.
         disc_InvWB.
-        { split; intros.
-          (** TODO: need [derive_downlock_by_child_uplock] *)
+        { (** TODO: need [derive_downlock_by_child_uplock] *)
           all: admit.
         }
-        { split; intros.
-          all: solve_InvWB_by_diff_dir.
-        }
+        { solve_InvWB_by_diff_dir. }
       }
 
       { (** [liInvRqUpUp] *)
