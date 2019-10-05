@@ -45,11 +45,9 @@ Section InvWB.
     destruct (implORqsInit tr)@[oidx] as [orq|] eqn:Horq; simpl; auto.
     destruct (implOStatesInit tr)@[pidx] as [post|] eqn:Hpost; simpl; auto.
     destruct (implORqsInit tr)@[pidx] as [porq|] eqn:Hporq; simpl; auto.
-    split; intros.
-    - do 2 (red in H1); dest.
-      do 2 (red in H1); dest_in.
-    - do 2 (red in H1); dest.
-      do 2 (red in H1); dest_in.
+    intros.
+    do 2 (red in H1); dest.
+    do 2 (red in H1); dest_in.
   Qed.
 
   Lemma mesi_InvWB_ext_in:
@@ -67,7 +65,6 @@ Section InvWB.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
     intros.
-
     destruct H4 as [idm [? ?]].
     apply InMP_enqMsgs_or in H4.
     destruct H4; [|apply H; auto; do 2 red; eauto].
@@ -100,7 +97,6 @@ Section InvWB.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
     intros.
-
     destruct H3 as [idm [? ?]].
     apply InMP_deqMsgs in H3.
     apply H; auto.
@@ -112,23 +108,21 @@ Section InvWB.
       InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> mesiInvWRq ->
-        msg.(msg_id) <> mesiInvRq ->
         InvWB topo {| bst_oss:= oss; bst_orqs:= orqs;
                       bst_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvWB; simpl; intros.
-    specialize (H _ _ H2).
+    specialize (H _ _ H1).
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
     intros.
-    
     apply H; auto.
-    destruct H4 as [idm [? ?]].
-    apply InMP_enqMP_or in H4; destruct H4.
+    destruct H3 as [idm [? ?]].
+    apply InMP_enqMP_or in H3; destruct H3.
     - dest; subst.
-      exfalso; inv H5; auto.
+      exfalso; inv H4; auto.
     - do 2 red; eauto.
   Qed.
   
@@ -136,8 +130,7 @@ Section InvWB.
     forall oss orqs msgs,
       InvWB topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
       forall nmsgs,
-        Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq /\
-                           (valOf idm).(msg_id) <> mesiInvRq) nmsgs ->
+        Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq) nmsgs ->
         InvWB topo {| bst_oss:= oss; bst_orqs:= orqs;
                       bst_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
@@ -163,7 +156,6 @@ Section InvWB.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
     intros.
-
     apply H; auto.
     destruct H2 as [idm [? ?]].
     apply InMP_deqMP in H2.
@@ -183,7 +175,6 @@ Section InvWB.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-
     intros.
     apply H; auto.
     destruct H2 as [idm [? ?]].
@@ -203,7 +194,7 @@ Section InvWB.
     let Hin := fresh "H" in
     apply Forall_forall; intros idm Hin;
     apply in_map_iff in Hin; dest; subst;
-    split; simpl_InvWB_msgs_enqMP.
+    simpl_InvWB_msgs_enqMP.
 
   Ltac simpl_InvWB_msgs :=
     repeat

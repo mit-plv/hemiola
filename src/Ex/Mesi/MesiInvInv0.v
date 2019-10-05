@@ -390,7 +390,7 @@ Section InvWBDir.
       intros Hinv;
       specialize (Hi Hinv)
     end;
-    solve_mesi.
+    simpl in *; solve_mesi.
 
   Hint Unfold ObjWBDir: RuleConds.
 
