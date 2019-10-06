@@ -392,8 +392,6 @@ Section InvWBDir.
     end;
     simpl in *; solve_mesi.
 
-  Hint Unfold ObjWBDir: RuleConds.
-
   Lemma mesi_InvWBDir_step:
     Invariant.InvStep impl step_m InvWBDir.
   Proof. (* SKIP_PROOF_OFF *)
@@ -541,17 +539,19 @@ Section InvWBDir.
 End InvWBDir.
 
 Ltac derive_InvWBDir oidx :=
-  match goal with
-  | [Hi: InvWBDir _ |- _] =>
-    specialize (Hi oidx); simpl in Hi;
-    repeat
-      match type of Hi with
-      | _ <+- ?ov; _ =>
-        match goal with
-        | [Hv: ov = Some _ |- _] => rewrite Hv in Hi; simpl in Hi
+  repeat
+    match goal with
+    | [Hi: InvWBDir _ |- _] =>
+      specialize (Hi oidx); simpl in Hi;
+      repeat
+        match type of Hi with
+        | _ <+- ?ov; _ =>
+          match goal with
+          | [Hv: ov = Some _ |- _] => rewrite Hv in Hi; simpl in Hi
+          end
         end
-      end
-  end.
+    | [Ho: ObjWBDir _ _ _ |- _] => red in Ho
+    end.
 
 Section InvWBCoh.
   Variable (tr: tree).
@@ -852,8 +852,7 @@ Section InvWBCoh.
       { disc_rule_conds_ex.
         derive_MesiDownLockInv oidx.
         derive_InvWBDir oidx.
-        simpl_InvWBCoh.
-        solve_InvWBCoh.
+        simpl_InvWBCoh; solve_InvWBCoh.
       }
       { disc_rule_conds_ex.
         derive_MesiDownLockInv oidx.
