@@ -153,32 +153,7 @@ Ltac solve_NoRsI_base :=
       destruct idm as [midx msg]; inv H
     end.
 
-Ltac disc_MsgConflictsInv oidx :=
-  repeat
-    match goal with
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
-              Hin: In oidx (c_li_indices _ ++ c_l1_indices _),
-                   Horq: ?orqs@[oidx] = Some _ |- _] =>
-      specialize (Hmcfi oidx _ Hin Horq);
-      simpl in Hmcfi; dest
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
-              Hin: In oidx (c_l1_indices _),
-                   Horq: ?orqs@[oidx] = Some _ |- _] =>
-      specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
-      simpl in Hmcfi; dest
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
-              Hin: In oidx (c_li_indices _),
-                   Horq: ?orqs@[oidx] = Some _ |- _] =>
-      specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl Hin)) Horq);
-      simpl in Hmcfi; dest
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
-              Hin: In oidx (tl (c_li_indices _)),
-                   Horq: ?orqs@[oidx] = Some _ |- _] =>
-      specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))) Horq);
-      simpl in Hmcfi; dest
-    end.
-
-Ltac solve_NoRsI_by_no_locks oidx :=
+Ltac solve_NoRsI_by_no_uplock oidx :=
   disc_MsgConflictsInv oidx;
   repeat
     match goal with

@@ -858,7 +858,7 @@ Section Sim.
           derive_child_chns cidx.
           derive_child_idx_in cidx.
           assert (NoRsI oidx msgs)
-            by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+            by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
           derive_obj_coherent oidx.
           solve_sim_mesi.
           destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
@@ -869,7 +869,7 @@ Section Sim.
           derive_child_chns cidx.
           derive_child_idx_in cidx.
           assert (NoRsI oidx msgs)
-            by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+            by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
           derive_obj_coherent oidx.
           solve_sim_mesi.
           destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
@@ -1251,7 +1251,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_get oidx.        
         assert (NoRsI oidx msgs)
-          by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
         solve_sim_mesi.
 
@@ -1259,7 +1259,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_silent.
         assert (NoRsI oidx msgs)
-          by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
         solve_sim_mesi.
 
@@ -1301,7 +1301,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_set oidx.
         assert (NoRsI oidx msgs)
-          by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
 
         solve_sim_mesi_ext_mp.
@@ -1336,7 +1336,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_set oidx.
         assert (NoRsI oidx msgs) 
-          by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
         
         solve_sim_mesi_ext_mp.
@@ -1427,7 +1427,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_silent.
         assert (NoRsI oidx msgs)
-          by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx).
+          by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
         solve_sim_mesi.
 

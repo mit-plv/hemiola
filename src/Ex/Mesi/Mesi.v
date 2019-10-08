@@ -94,7 +94,7 @@ Section System.
 
     Import CaseNotations.
     Definition getDir (oidx: IdxT) (dir: DirT): MESI :=
-      match case dir.(dir_st) on eq_nat_dec default mesiI with
+      match case dir.(dir_st) on eq_nat_dec default mesiNP with
       | mesiM: if idx_dec oidx dir.(dir_excl) then mesiM else mesiI
       | mesiE: if idx_dec oidx dir.(dir_excl) then mesiE else mesiI
       | mesiS: if in_dec idx_dec oidx dir.(dir_sharers)
@@ -842,20 +842,17 @@ Section System.
         :transition
            (!|ost, _| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
 
-      Definition liInvImmWBS0: Rule :=
-        rule.immd[2~>9~>0~~cidx]
-        :accepts mesiInvWRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
-        :transition
-           (!|ost, _| --> (ost +#[dir <- setDirI],
-                           {| miv_id := mesiInvRs; miv_value := O |})).
-
+      (** NOTE: accepting [mesiInvWRq] implies that the requestor is the owner,
+       * which also implies that actually the parent's directory status is
+       * either E or M. Having the directory status of S happens when the parent
+       * requested [mesiDownRqS] to the requestor. After dealing with the down
+       * request the parent can deal with [mesiInvWRq], which implies that
+       * the number of sharers is always larger than 1 (at least the downgraded
+       * requestor and the [mesiRqS] requestor).
+       *)
       Definition liInvImmWBS1: Rule :=
-        rule.immd[2~>9~>1~~cidx]
-        :accepts mesiInvRq
+        rule.immd[2~>9~~cidx]
+        :accepts mesiInvWRq
         :from cidx
         :requires
            (fun ost orq mins =>
@@ -914,7 +911,7 @@ Section System.
            liGetMImm cidx; liGetMRqUpUp oidx cidx;
              liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
                liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx;
-                 liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
+                 liInvImmWBI cidx; liInvImmWBS1 cidx;
                    liInvImmWBME cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
@@ -956,7 +953,7 @@ Section System.
          liGetSRqUpDownME oidx cidx; liGetMImm cidx;
            liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
              liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx;
-               liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
+               liInvImmWBI cidx; liInvImmWBS1 cidx;
                  liInvImmWBME cidx].
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
@@ -1016,5 +1013,5 @@ Hint Unfold liGetSImmS liGetSImmME
      liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRsUpUp
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS0 liInvImmS1 liInvImmE
-     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.
+     liInvImmWBI liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.
 

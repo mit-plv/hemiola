@@ -433,7 +433,7 @@ Section InvWBDir.
         all: try (assert (NoRqI oidx msgs)
                    by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
                   assert (NoRsI oidx msgs)
-                    by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx);
+                    by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx);
                   simpl_InvWBDir).
         all: try (eapply InvWBDir_enqMP_rs_valid; eauto;
                   simpl_InvWBDir; fail).
@@ -471,7 +471,7 @@ Section InvWBDir.
         all: try (assert (NoRqI oidx msgs)
                    by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
                   assert (NoRsI oidx msgs)
-                    by (solve_NoRsI_base; solve_NoRsI_by_no_locks oidx);
+                    by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx);
                   simpl_InvWBDir).
         all: try (eapply InvWBDir_enqMP_rs_valid; eauto;
                   simpl_InvWBDir; fail).
