@@ -928,6 +928,29 @@ Section Corollaries.
     omega.
   Qed.
 
+  Corollary upLockFree_parent_locked_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall obj,
+        In obj (sys_objs sys) ->
+        forall pidx down,
+          parentIdxOf dtr (obj_idx obj) = Some pidx ->
+          edgeDownTo dtr (obj_idx obj) = Some down ->
+          forall orqs orq,
+            st.(bst_orqs) = orqs ->
+            orqs@[obj_idx obj] = Some orq ->
+            orq@[upRq] = None ->
+            OLockedTo orqs pidx (Some down) ->
+            False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
+    good_locking_get obj.
+    revert H5.
+    eapply upLockInvORq_parent_locked_locked; eauto.
+    rewrite H4 in H3; eassumption.
+  Qed.
+
   Corollary upLockFree_rqUp_in_false:
     forall st,
       Reachable (steps step_m) sys st ->

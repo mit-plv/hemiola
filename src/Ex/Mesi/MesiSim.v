@@ -473,16 +473,6 @@ Section Sim.
       pose proof (Hf _ He); disc_rule_conds_ex
     end.
 
-  Ltac disc_getDir :=
-    try match goal with
-        | [H: getDir _ _ = _ |- _] =>
-          first [apply getDir_M_imp in H; destruct H
-                |apply getDir_E_imp in H; destruct H
-                |apply getDir_S_imp in H; destruct H]
-        | [H: mesiE <= getDir _ _ |- _] =>
-          apply getDir_ME_imp in H; destruct H
-        end.
-
   Theorem mesi_sim_ok:
     InvSim step_m step_m (MesiInvOk.InvForSim topo) SimMESI impl spec.
   Proof.
@@ -522,32 +512,6 @@ Section Sim.
     destruct (sorqs1@[specIdx]) as [sorq|] eqn:Hsorq; simpl in *; [|exfalso; auto].
     subst.
     simpl in H4; destruct H4; [subst|apply in_app_or in H0; destruct H0].
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 
     - (*! Cases for the main memory *)
       Ltac solve_ImplStateCoh_mem_me :=
@@ -717,13 +681,6 @@ Section Sim.
         }
 
         { (* [liInvImmWBI] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmWBS0] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
           derive_child_idx_in cidx.
@@ -971,13 +928,6 @@ Section Sim.
         }
 
         { (* [liInvImmWBI] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmWBS0] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
           derive_child_idx_in cidx.

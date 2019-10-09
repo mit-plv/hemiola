@@ -431,7 +431,9 @@ Section System.
         rule.immd[0~>0~>1~~cidx]
         :accepts mesiRqS
         :from cidx
-        :requires (fun ost orq mins => mesiE <= ost#[status])
+        :requires
+           (fun ost orq mins =>
+              mesiE <= ost#[status] /\ ost#[dir].(dir_st) = mesiI)
         :transition
            (!|ost, _| --> (ost +#[status <- mesiI]
                                +#[dir <- setDirE cidx],

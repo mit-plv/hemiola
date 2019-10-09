@@ -143,6 +143,10 @@ Section MsgConflicts.
     (forall rqUp,
         fst (sigOf rqUp) = rqUpFrom oidx ->
         InMPI msgs rqUp ->
+        False) /\
+    (forall orq,
+        orqs@[oidx] = Some orq ->
+        orq@[upRq] = None ->
         False).
 
   Variable (tr: tree) (bidx: IdxT).
@@ -288,7 +292,7 @@ Section MsgConflicts.
         * unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
 
     - intros; split.
-      + red; intros; split.
+      + red; intros; repeat ssplit.
         * intros.
           disc_rule_conds.
           eapply rsDown_parent_locked_false with (obj0:= obj); eauto.
@@ -297,6 +301,9 @@ Section MsgConflicts.
           disc_rule_conds.
           eapply rqUp_parent_locked_false with (obj0:= obj); eauto.
           destruct rqUp as [rqUp rqum]; simpl in *; subst; eassumption.
+        * intros.
+          disc_rule_conds.
+          eapply upLockFree_parent_locked_false with (obj0:= obj); eauto.
 
       + intros; split.
         * red; intros.

@@ -140,6 +140,16 @@ Section Facts.
   
 End Facts.
 
+Ltac disc_getDir :=
+  try match goal with
+      | [H: getDir _ _ = _ |- _] =>
+        first [apply getDir_M_imp in H; destruct H
+              |apply getDir_E_imp in H; destruct H
+              |apply getDir_S_imp in H; destruct H]
+      | [H: mesiE <= getDir _ _ |- _] =>
+        apply getDir_ME_imp in H; destruct H
+      end.
+
 Ltac solve_NoRsI_base :=
   repeat
     match goal with
@@ -164,6 +174,16 @@ Ltac solve_NoRsI_by_no_uplock oidx :=
                        ltac:(simpl; rewrite Hmt; reflexivity)
                               Hinm); dest; auto
     end.
+
+Ltac solve_NoRsI_by_parent_lock oidx :=
+  disc_MsgConflictsInv oidx;
+  match goal with
+  | [Hmcfp: ParentLockConflicts _ oidx _ _,
+            Hin: InMPI _ (downTo oidx, ?msg) |- _] =>
+    specialize (Hmcfp ltac:(red; mred; simpl; eauto));
+    destruct Hmcfp as [Hmcfp _];
+    eapply (Hmcfp (downTo oidx, msg)); eauto
+  end.
 
 Ltac solve_NoRsI_by_rqUp oidx :=
   disc_MsgConflictsInv oidx;

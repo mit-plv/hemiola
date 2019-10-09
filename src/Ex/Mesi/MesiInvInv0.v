@@ -394,7 +394,7 @@ Section InvWBDir.
 
   Lemma mesi_InvWBDir_step:
     Invariant.InvStep impl step_m InvWBDir.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -525,7 +525,7 @@ Section InvWBDir.
         { assumption. }
       }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvWBDir_ok:
@@ -806,7 +806,7 @@ Section InvWBCoh.
 
   Lemma mesi_InvWBCoh_step:
     Invariant.InvStep impl step_m InvWBCoh.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -923,7 +923,7 @@ Section InvWBCoh.
       all: try (simpl_InvWBCoh; solve_InvWBCoh; fail).
       { eapply InvWBCoh_enqMP_valid; eauto. }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvWBCoh_ok:
