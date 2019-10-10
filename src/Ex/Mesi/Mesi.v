@@ -123,12 +123,12 @@ Section System.
          dir_sharers := nil |}.
 
     Definition addSharer (oidx: IdxT) (dir: DirT): DirT :=
-      {| dir_st := dir.(dir_st);
+      {| dir_st := mesiS;
          dir_excl := dir.(dir_excl);
          dir_sharers := oidx :: dir.(dir_sharers) |}.
 
     Definition removeSharer (oidx: IdxT) (dir: DirT): DirT :=
-      {| dir_st := dir.(dir_st);
+      {| dir_st := mesiS;
          dir_excl := dir.(dir_excl);
          dir_sharers := removeOnce idx_dec oidx dir.(dir_sharers) |}.
 
@@ -419,7 +419,9 @@ Section System.
         rule.immd[0~>0~>0~~cidx]
         :accepts mesiRqS
         :from cidx
-        :requires (fun ost orq mins => ost#[status] = mesiS)
+        :requires
+           (fun ost orq mins =>
+              ost#[dir].(dir_st) <= mesiS /\ ost#[status] = mesiS)
         :transition
            (!|ost, _| --> (ost +#[dir <- addSharer cidx ost#[dir]],
                            {| miv_id := mesiRsS;
