@@ -39,8 +39,10 @@ Definition NoRsSI (oidx: IdxT) (msgs: MessagePool Msg) :=
   MsgsNotExist [(downTo oidx, (MRs, mesiRsS));
                   (downTo oidx, (MRs, mesiInvRs))] msgs.
 
-Definition ObjInS (ost: OState) :=
-  ost#[dir].(dir_st) <= mesiS ->
+Definition ObjInS (ost: OState) (orq: ORq Msg) :=
+  (* ost#[dir].(dir_st) <= mesiS -> *)
+  (ost#[dir].(dir_st) <= mesiI \/
+   (ost#[dir].(dir_st) = mesiS /\ orq@[downRq] = None)) ->
   (ost#[status] = mesiS /\ ost#[owned] = true) \/
   mesiE <= ost#[status].
 
@@ -53,7 +55,7 @@ Definition InvDirME (topo: DTree) (st: MState): Prop :=
       porq <+- (bst_orqs st)@[pidx];
       (ObjDirME porq post oidx ->
        NoRsME oidx (bst_msgs st) ->
-       (NoRsSI oidx (bst_msgs st) /\ ObjInS ost)).
+       (NoRsSI oidx (bst_msgs st) /\ ObjInS ost orq)).
 
 Section InvDirME.
   Variable (tr: tree).
@@ -336,14 +338,13 @@ Section InvDirME.
 
   Ltac solve_ObjInS_valid :=
     try assumption;
-    try
-      match goal with
-      | |- ObjInS _ => red; simpl; intuition solve_mesi
-      | [Ho:ObjInS _ |- ObjInS _] =>
-        red in Ho; red; simpl in *;
-        solve [intuition solve_mesi|
-               intros; apply Ho; intuition solve_mesi]
-      end.
+    try match goal with
+        | |- ObjInS _ _ => red; simpl; intuition solve_mesi
+        | [Ho:ObjInS _ _ |- ObjInS _ _] =>
+          red in Ho; red; simpl in *;
+          solve [intuition solve_mesi|
+                 intros; apply Ho; intuition solve_mesi]
+        end.
 
   Ltac disc_ObjDirME :=
     match goal with
@@ -433,7 +434,16 @@ Section InvDirME.
         dest_in.
 
         { disc_rule_conds_ex; disc.
-          { solve_valid. }
+          { split; [solve_NoRsSI_by_silent|].
+
+            (* TODO: automate *)
+            red in H22; red; simpl in *.
+            intros; apply H22.
+            rewrite H14 in *.
+            assert (dir_st (fst (snd (snd (snd os)))) <= mesiI \/
+                    dir_st (fst (snd (snd (snd os)))) = mesiS) by solve_mesi.
+            intuition idtac.
+          }
           { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
             { solve_by_idx_false. }
@@ -453,7 +463,8 @@ Section InvDirME.
         }
 
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          disc_ObjDirME; mred.
+          { solve_valid. }
+          { disc_ObjDirME; mred. }
         }
 
         { disc_rule_conds_ex; disc_pre.
@@ -468,10 +479,12 @@ Section InvDirME.
         }
 
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          disc_ObjDirME; mred.
+          { solve_valid. }
+          { disc_ObjDirME; mred. }
         }
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          disc_ObjDirME; mred.
+          { solve_valid. }
+          { disc_ObjDirME; mred. }
         }
 
         { disc_rule_conds_ex; disc.
@@ -595,7 +608,16 @@ Section InvDirME.
         dest_in.
 
         { disc_rule_conds_ex; disc.
-          { solve_valid. }
+          { solve_valid.
+
+            (* TODO: automate *)
+            red in H28; red; simpl in *.
+            intros; apply H28.
+            rewrite H20 in *.
+            assert (dir_st (fst (snd (snd (snd os)))) <= mesiI \/
+                    dir_st (fst (snd (snd (snd os)))) = mesiS) by solve_mesi.
+            intuition idtac.
+          }
           { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
             { solve_by_idx_false. }
@@ -615,13 +637,16 @@ Section InvDirME.
         }
 
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          solve_by_silent.
+          { solve_valid. }
+          { solve_by_silent. }
         }
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          solve_by_silent.
+          { solve_valid. }
+          { solve_by_silent. }
         }
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          solve_by_silent.
+          { solve_valid. }
+          { solve_by_silent. }
         }
 
         { disc_rule_conds_ex; disc_pre.
@@ -636,13 +661,19 @@ Section InvDirME.
         }
 
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          solve_by_silent.
+          { split; [solve_NoRsSI_by_silent|].
+            (* TODO: automate *)
+            red in H26; red; simpl in *; mred.
+          }
+          { solve_by_silent. }
         }
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          solve_by_silent.
+          { solve_valid. }
+          { solve_by_silent. }
         }
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          solve_by_silent.
+          { solve_valid. }
+          { solve_by_silent. }
         }
 
         { disc_rule_conds_ex; disc.
@@ -801,7 +832,9 @@ Section InvDirME.
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         disc.
-        { solve_valid. }
+        { split; [solve_NoRsSI_by_silent|].
+          admit. (* I think this rule will be removed anyway..? *)
+        }
         { solve_by_diff_dir. }
         { destruct (idx_dec x oidx0); subst.
           { solve_by_idx_false. }
@@ -832,16 +865,19 @@ Section InvDirME.
       }
 
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-        disc_ObjDirME; mred.
+        { solve_valid. }
+        { disc_ObjDirME; mred. }
       }
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-        disc_ObjDirME; mred.
+        { solve_valid. }
+        { disc_ObjDirME; mred. }
       }
 
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirME_msgs; disc.
-        { admit. }
+        { admit. (* child locked to parent, 
+                  * contradicting the parent is downlock-free *) }
         { solve_by_diff_dir. }
       }
 
@@ -864,8 +900,24 @@ Section InvDirME.
       }
         
       { (** [liGetMRsDownRqDownDirS] *)
-        (** * FIXME: the invariant doesn't hold here.. :( *)
-        admit.
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        simpl_InvDirME_msgs.
+        disc.
+        { split.
+          { solve_MsgsP.
+            solve_NoRsSI_by_rsDown oidx.
+          }
+          { (* TODO: automate *)
+            red; simpl; intros.
+            destruct H34; [solve_mesi|].
+            dest; mred.
+          }
+        }
+        { disc_ObjDirME; mred. }
+        { solve_valid. }
       }
       
       { admit. }
@@ -881,22 +933,24 @@ Section InvDirME.
       }
 
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-        disc_ObjDirME; mred.
+        { solve_valid. }
+        { disc_ObjDirME; mred. }
       }
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-        disc_ObjDirME; mred.
+        { solve_valid. }
+        { disc_ObjDirME; mred. }
       }
 
       { admit. }
 
-      { disc_rule_conds_ex; simpl_InvDirME_msgs.
-        disc.
-        disc_ObjDirME; solve_mesi.
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        { solve_valid. }
+        { disc_ObjDirME; solve_mesi. }
       }
 
-      { disc_rule_conds_ex; simpl_InvDirME_msgs.
-        disc.
-        disc_ObjDirME; solve_mesi.
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        { solve_valid. }
+        { disc_ObjDirME; solve_mesi. }
       }
 
       { disc_rule_conds_ex.
