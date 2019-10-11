@@ -714,9 +714,6 @@ Section Sim.
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
               disc_InvWB cidx H21.
               disc_InvWBCoh_inv cidx H20.
-              (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H21; dest.
-              specialize (H37 H21 H40).
               congruence.
             }
             { solve_DirECoh. }
@@ -847,14 +844,6 @@ Section Sim.
           solve_sim_mesi.
         }
 
-        { (* [liGetSRqUpDownS] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          derive_child_idx_in (hd ii (dir_sharers (fst (snd (snd (snd pos)))))).
-          solve_sim_mesi.
-        }
-
         { (* [liGetMImm] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
@@ -963,9 +952,6 @@ Section Sim.
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
               disc_InvWB cidx H26.
               disc_InvWBCoh_inv cidx H25.
-              (* discharge [ImplOStateMESI] of [cidx] *)
-              red in H26; dest.
-              specialize (H42 H26 H45).
               congruence.
             }
             { solve_DirECoh. }
@@ -1023,22 +1009,6 @@ Section Sim.
         destruct (idx_dec lidx (obj_idx upCObj)); subst; solve_MsgsCoh.
       }
 
-      { (* liDownSRsUpDownS] *)
-        disc_rule_conds_ex; spec_case_silent.
-        derive_footprint_info_basis oidx;
-          [|disc_MesiDownLockInv oidx H27].
-        derive_child_chns upCIdx.
-        derive_child_idx_in upCIdx.
-        disc_responses_from.
-        derive_child_chns cidx.
-        derive_child_idx_in cidx.
-        derive_coherence_of cidx.
-        derive_input_msg_coherent.
-
-        solve_sim_mesi.
-        destruct (idx_dec lidx (obj_idx upCObj)); subst; solve_MsgsCoh.
-      }
-
       { (* [liDownSImm] *)
         disc_rule_conds_ex.
         spec_case_silent.
@@ -1051,12 +1021,6 @@ Section Sim.
       { (* [liDownSRqDownDownME] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
-        solve_sim_mesi.
-      }
-
-      { (* [liDownSRqDownDownS] *)
-        disc_rule_conds_ex; spec_case_silent.
-        derive_child_idx_in (hd ii (dir_sharers (fst (snd (snd (snd pos)))))).
         solve_sim_mesi.
       }
 

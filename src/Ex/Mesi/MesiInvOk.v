@@ -83,7 +83,7 @@ Ltac disc_InvWBCoh_inv cidx Hinv :=
   specialize (Hinv cidx); simpl in Hinv;
   disc_rule_conds_ex;
   match goal with
-  | [Hcoh: CohInvRq cidx ?ost _, Ho: ObjOwned ?ost, Hfm: FirstMPI _ _ |- _] =>
+  | [Hcoh: CohInvRq cidx ?ost _, Ho: mesiS <= _, Hfm: FirstMPI _ _ |- _] =>
     specialize (Hcoh _ (FirstMP_InMP Hfm));
     unfold sigOf in Hcoh; simpl in Hcoh;
     specialize (Hcoh ltac:(congruence));

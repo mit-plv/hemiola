@@ -638,6 +638,24 @@ Section Facts.
   
 End Facts.
 
+Ltac disc_MsgExistsSig :=
+  repeat
+    match goal with
+    | [H: MsgExistsSig _ _ |- _] =>
+      let midx := fresh "midx" in
+      let msg := fresh "msg" in
+      destruct H as [[midx msg] ?]; dest
+    | [H: sigOf _ = (_, (_, _)) |- _] => inv H
+    end.
+  
+Ltac solve_MsgsP_false H :=
+  red in H; unfold map in H;
+  repeat (first [rewrite caseDec_head_eq in H
+                  by (unfold sigOf; simpl; congruence)
+                |rewrite caseDec_head_neq in H
+                  by (unfold sigOf; simpl; congruence)]);
+  simpl in H.
+
 Ltac solve_DisjList_ex dec :=
   repeat (rewrite map_trans; simpl);
   apply (DisjList_spec_1 dec); intros;

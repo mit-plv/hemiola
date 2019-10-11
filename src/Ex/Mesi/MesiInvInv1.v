@@ -40,7 +40,6 @@ Definition NoRsSI (oidx: IdxT) (msgs: MessagePool Msg) :=
                   (downTo oidx, (MRs, mesiInvRs))] msgs.
 
 Definition ObjInS (ost: OState) (orq: ORq Msg) :=
-  (* ost#[dir].(dir_st) <= mesiS -> *)
   (ost#[dir].(dir_st) <= mesiI \/
    (ost#[dir].(dir_st) = mesiS /\ orq@[downRq] = None)) ->
   (ost#[status] = mesiS /\ ost#[owned] = true) \/
@@ -387,7 +386,23 @@ Section InvDirME.
   Ltac solve_valid :=
     split; [solve_NoRsSI_by_silent
            |disc_getDir; solve_ObjInS_valid].
-  
+
+  Ltac solve_by_NoRsSI_false :=
+    exfalso;
+    match goal with
+    | [Hn: NoRsSI _ ?msgs, Hf: FirstMPI ?msgs (?midx, ?msg) |- _] =>
+      specialize (Hn (midx, msg) (FirstMP_InMP Hf));
+      solve_MsgsP_false Hn;
+      auto
+    end.
+
+  Ltac solve_NoRsSI_by_rsDown oidx :=
+    disc_MsgConflictsInv oidx;
+    apply not_MsgExistsSig_MsgsNotExist;
+    intros; dest_in;
+    disc_MsgExistsSig;
+    solve_RsDown_by_rsDown oidx.
+
   Lemma mesi_InvDirME_step:
     Invariant.InvStep impl step_m (InvDirME topo).
   Proof. (* SKIP_PROOF_OFF *)
@@ -398,9 +413,7 @@ Section InvDirME.
     pose proof (mesi_InObjInds H) as Hioi.
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
-    (* pose proof (mesi_MsgConflictsInv *)
-    (*               (@mesi_RootChnInv_ok _ Htr) *)
-    (*               (reachable_steps H (steps_singleton H1))) as Hnmcf. *)
+    pose proof (mesi_InvWBDir_ok H) as Hwd.
     pose proof (MesiDownLockInv_ok H) as Hmdl.
     inv H1; [assumption
             |apply mesi_InvDirME_ext_in; auto
@@ -637,13 +650,13 @@ Section InvDirME.
         }
 
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          { solve_valid. }
+          { split; [solve_NoRsSI_by_silent|].
+            (* TODO: automate *)
+            red in H26; red; simpl in *; mred.
+          }
           { solve_by_silent. }
         }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          { solve_valid. }
-          { solve_by_silent. }
-        }
+        
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
           { solve_valid. }
           { solve_by_silent. }
@@ -667,6 +680,7 @@ Section InvDirME.
           }
           { solve_by_silent. }
         }
+
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
           { solve_valid. }
           { solve_by_silent. }
@@ -754,27 +768,7 @@ Section InvDirME.
         derive_child_chns cidx.
         disc_rule_conds_ex.
         disc.
-        { 
-
-          Ltac solve_MsgsP_false H :=
-            red in H; unfold map in H;
-            repeat (first [rewrite caseDec_head_eq in H
-                            by (unfold sigOf; simpl; congruence)
-                          |rewrite caseDec_head_neq in H
-                            by (unfold sigOf; simpl; congruence)]);
-            simpl in H.
-
-          Ltac solve_by_NoRsSI_false :=
-            exfalso;
-            match goal with
-            | [Hn: NoRsSI _ ?msgs, Hf: FirstMPI ?msgs (?midx, ?msg) |- _] =>
-              specialize (Hn (midx, msg) (FirstMP_InMP Hf));
-              solve_MsgsP_false Hn;
-              auto
-            end.
-
-          solve_by_NoRsSI_false.
-        }
+        { solve_by_NoRsSI_false. }
         { solve_by_diff_dir. }
         { destruct (idx_dec cidx oidx0); subst.
           { solve_by_idx_false. }
@@ -788,27 +782,7 @@ Section InvDirME.
         disc_rule_conds_ex.
         disc_pre.
         { split.
-          { solve_MsgsP.
-
-            Ltac disc_MsgExistsSig :=
-              repeat
-                match goal with
-                | [H: MsgExistsSig _ _ |- _] =>
-                  let midx := fresh "midx" in
-                  let msg := fresh "msg" in
-                  destruct H as [[midx msg] ?]; dest
-                | [H: sigOf _ = (_, (_, _)) |- _] => inv H
-                end.
-
-            Ltac solve_NoRsSI_by_rsDown oidx :=
-              disc_MsgConflictsInv oidx;
-              apply not_MsgExistsSig_MsgsNotExist;
-              intros; dest_in;
-              disc_MsgExistsSig;
-              solve_RsDown_by_rsDown oidx.
-
-            solve_NoRsSI_by_rsDown oidx.
-          }
+          { solve_MsgsP; solve_NoRsSI_by_rsDown oidx. }
           { solve_ObjInS_valid. }
         }
         { disc_ObjDirME; solve_by_NoRsME_false. }
@@ -829,45 +803,15 @@ Section InvDirME.
         }
       }
 
-      { disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        disc.
-        { split; [solve_NoRsSI_by_silent|].
-          admit. (* I think this rule will be removed anyway..? *)
-        }
-        { solve_by_diff_dir. }
-        { destruct (idx_dec x oidx0); subst.
-          { solve_by_idx_false. }
-          { solve_valid. }
-        }
-      }
-        
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         exfalso.
         subst topo; disc_rule_conds_ex.
         disc_ObjDirME.
         remember (dir_excl _) as oidx; clear Heqoidx.
-
-        disc_MsgConflictsInv oidx.
-
-        Ltac derive_parent_downlock_by_RqDown :=
-          try match goal with
-              | [Hmcf: RqDownConflicts _ _ ?msgs,
-                       Hf: FirstMPI ?msgs (?midx, ?msg),
-                           Hmt: msg_type ?msg = MRq |- _] =>
-                specialize (Hmcf (midx, msg) eq_refl 
-                                 ltac:(simpl; rewrite Hmt; reflexivity)
-                                        (FirstMP_InMP Hf)); dest
-              end.
-
-        derive_parent_downlock_by_RqDown.
+        derive_parent_downlock_by_RqDown oidx.
         auto.
       }
 
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-        { solve_valid. }
-        { disc_ObjDirME; mred. }
-      }
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         { solve_valid. }
         { disc_ObjDirME; mred. }
@@ -887,9 +831,7 @@ Section InvDirME.
         disc_rule_conds_ex.
         disc_pre.
         { split.
-          { solve_MsgsP.
-            solve_NoRsSI_by_rsDown oidx.
-          }
+          { solve_MsgsP; solve_NoRsSI_by_rsDown oidx. }
           { solve_ObjInS_valid. }
         }
         { disc_ObjDirME; solve_by_NoRsME_false. }
@@ -898,7 +840,7 @@ Section InvDirME.
           { disc_NoRsME; solve_valid. }
         }
       }
-        
+
       { (** [liGetMRsDownRqDownDirS] *)
         disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
@@ -920,16 +862,25 @@ Section InvDirME.
         { solve_valid. }
       }
       
-      { admit. }
+      { disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        disc_pre.
+        { disc_NoRsME; solve_valid. }
+        { disc_ObjDirME; solve_by_NoRsME_false. }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
+      }
 
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+      { (** [liDownIImm] *)
+        disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         exfalso.
         subst topo; disc_rule_conds_ex.
         disc_ObjDirME.
         remember (dir_excl _) as oidx; clear Heqoidx.
-
-        (* The parent is DLF but there is [mesiDownRqI] *)
-        admit.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
       }
 
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
@@ -941,7 +892,14 @@ Section InvDirME.
         { disc_ObjDirME; mred. }
       }
 
-      { admit. }
+      { (** [liDownIRsUpUp] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirME_msgs; disc.
+        { admit. (* child locked to parent, 
+                  * contradicting the parent is downlock-free *) }
+        { solve_by_diff_dir. }
+      }
 
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         { solve_valid. }
@@ -955,14 +913,43 @@ Section InvDirME.
 
       { disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
+        derive_InvWBDir oidx.
+        assert (ObjInvRs oidx msgs) as Hirs.
+        { do 2 red.
+          eexists; split; [apply FirstMP_InMP; eassumption|].
+          unfold sigOf; simpl; congruence.
+        }
+        specialize (Hwd (or_intror (or_intror Hirs))); clear Hirs.
+        derive_footprint_info_basis oidx.
         simpl_InvDirME_msgs.
         disc.
-        all: admit.
+        { exfalso.
+          specialize (H0 (downTo oidx, rmsg) (FirstMP_InMP H20)).
+          move H0 at bottom.
+
+          (* TODO: fix [solve_by_NoRsSI_false] *)
+          red in H0; unfold map in H0.
+          rewrite caseDec_head_neq in H0.
+          2: {
+            unfold sigOf; simpl.
+            intro Hx; inv Hx.
+            rewrite H21 in H34.
+            discriminate.
+          }
+          rewrite caseDec_head_eq in H0 by (unfold sigOf; simpl; congruence).
+          auto.
+        }
+        { disc_ObjDirME; solve_mesi. }
       }
 
-      { disc_rule_conds_ex; simpl_InvDirME_msgs.
-        disc.
-        all: admit.
+      { disc_rule_conds_ex; disc.
+        split; [solve_NoRsSI_by_silent|].
+
+        red in H23; red; simpl in *; intros; exfalso.
+        specialize (H23 H26).
+        destruct H23; dest.
+        { destruct H18; [solve_mesi|dest; congruence]. }
+        { destruct H18; solve_mesi. }
       }
       
     - (*! Cases for L1 caches *)
@@ -977,8 +964,7 @@ Section InvDirME.
 
       (** Do case analysis per a rule. *)
       dest_in.
-      all: disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-
+      all: admit.
       (* END_SKIP_PROOF_OFF *)
   Qed.
 
@@ -994,5 +980,4 @@ Definition InvWB (topo: DTree) (st: MState): Prop :=
       (ObjDirME porq post oidx ->
        ObjInvWRq oidx (bst_msgs st) ->
        mesiS <= ost#[status]).
-
 

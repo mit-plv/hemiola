@@ -394,7 +394,7 @@ Section InvWBDir.
 
   Lemma mesi_InvWBDir_step:
     Invariant.InvStep impl step_m InvWBDir.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -525,7 +525,7 @@ Section InvWBDir.
         { assumption. }
       }
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_InvWBDir_ok:
@@ -642,12 +642,10 @@ Section InvWBCoh.
     rewrite H0 in H; simpl in H.
     red; intros.
     specialize (H _ H5 H6).
-    unfold ObjOwned in *; simpl in *; dest.
+    simpl in *.
     rewrite H1.
-    apply H.
-    split.
-    - rewrite <-H3; assumption.
-    - rewrite <-H2; assumption.
+    apply H; auto.
+    congruence.
   Qed.
 
   Lemma InvWBCoh_update_status_NoRqI:
@@ -800,13 +798,11 @@ Section InvWBCoh.
         specialize (Hi (or_introl (@ex_intro _ _ _ (conj Hin Hsig))))
       end;
     simpl in *;
-    solve [exfalso; solve_mesi|
-           (* this is so arbitrary, but it works for all the remains *)
-           unfold ObjOwned; simpl; intros; dest; discriminate].
+    solve [exfalso; solve_mesi|simpl; intros; intuition solve_mesi].
 
   Lemma mesi_InvWBCoh_step:
     Invariant.InvStep impl step_m InvWBCoh.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -923,7 +919,7 @@ Section InvWBCoh.
       all: try (simpl_InvWBCoh; solve_InvWBCoh; fail).
       { eapply InvWBCoh_enqMP_valid; eauto. }
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_InvWBCoh_ok:

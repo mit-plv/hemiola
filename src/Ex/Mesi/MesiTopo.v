@@ -151,7 +151,7 @@ Section System.
             eapply rqUpUpRule_RqFwdRule; eauto.
             apply subtreeChildrenIndsOf_parentIdxOf; auto.
           }
-          3: {
+          2: {
             rule_rquu.
             solve_GoodRqRsRule.
             apply c_li_indices_tail_has_parent in H0; [|assumption].

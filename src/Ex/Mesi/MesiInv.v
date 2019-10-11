@@ -37,14 +37,11 @@ Section CoherenceUnit.
   Definition ImplOStateMESI (cv: nat): Prop :=
     mesiS <= ost#[status] -> NoRsI -> ost#[val] = cv.
 
-  Definition ObjOwned :=
-    mesiS <= ost#[status] /\ ost#[owned] = true.
-
   Definition CohInvRq :=
     forall idm,
       InMPI msgs idm ->
       sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
-      ObjOwned -> msg_value (valOf idm) = ost#[val].
+      mesiS <= ost#[status] -> msg_value (valOf idm) = ost#[val].
 
   (** 1) Exclusiveness: if a coherence unit is exclusive, then all other units
    * are in an invalid status. *)
@@ -303,6 +300,17 @@ Ltac solve_NoRqI_by_rsDown oidx :=
       eapply Hrqu with (rqUp:= (rqu, rmsg));
       try eassumption; try reflexivity
     end.
+
+Ltac derive_parent_downlock_by_RqDown oidx :=
+  disc_MsgConflictsInv oidx;
+  try match goal with
+      | [Hmcf: RqDownConflicts _ _ ?msgs,
+               Hf: FirstMPI ?msgs (?midx, ?msg),
+                   Hmt: msg_type ?msg = MRq |- _] =>
+        specialize (Hmcf (midx, msg) eq_refl 
+                         ltac:(simpl; rewrite Hmt; reflexivity)
+                                (FirstMP_InMP Hf)); dest
+      end.
 
 Ltac derive_MesiDownLockInv oidx :=
   match goal with

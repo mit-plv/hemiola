@@ -64,7 +64,9 @@ Section Footprints.
         rqiu <+- orq@[upRq];
         rmsg <+- rqiu.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
-        | mesiRqS: ost#[status] <= mesiI /\ ost#[dir].(dir_st) = mesiI
+        | mesiRqS:
+            ost#[owned] = false /\ ost#[status] <= mesiI /\
+            ost#[dir].(dir_st) <= mesiS
         | mesiRqM:
             ost#[owned] = false /\ ost#[status] <= mesiS /\
             ost#[dir].(dir_st) <= mesiS
@@ -86,12 +88,13 @@ Section Footprints.
         rmsg <+- rqid.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
         | mesiRqS: DownLockFromChild oidx rqid /\
-                   ost#[status] <= mesiI /\ mesiI < ost#[dir].(dir_st)
+                   ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
         | mesiRqM: DownLockFromChild oidx rqid /\
-                   ((ost#[owned] = true /\ mesiI < ost#[dir].(dir_st)) \/
+                   ost#[status] <= mesiS /\
+                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS) \/
                     mesiS < ost#[dir].(dir_st))
         | mesiDownRqS: DownLockFromParent oidx rqid /\
-                       ost#[status] <= mesiI /\ mesiI < ost#[dir].(dir_st)
+                       ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
         | mesiDownRqI: DownLockFromParent oidx rqid /\ mesiI < ost#[dir].(dir_st)
         end.
 
@@ -192,6 +195,24 @@ Section FootprintsOk.
              intuition solve_mesi|]);
     auto.
 
+  Ltac disc_MesiUpLockInv_internal oidx :=
+    match goal with
+    | [Hdl: MesiUpLockInv _ |- _] =>
+      specialize (Hdl oidx); simpl in Hdl;
+      repeat
+        match type of Hdl with
+        | _ <+- ?ov; _ =>
+          match goal with
+          | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
+          end
+        end;
+      repeat
+        match goal with
+        | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
+        end;
+      simpl in Hdl; dest
+    end.
+
   Ltac disc_MesiDownLockInv_internal oidx :=
     match goal with
     | [Hdl: MesiDownLockInv _ _ |- _] =>
@@ -212,7 +233,7 @@ Section FootprintsOk.
 
   Lemma MesiUpLockInv_mutual_step:
     Invariant.MutualInvStep1 impl step_m MesiUpLockInv (MesiDownLockInv topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -252,7 +273,7 @@ Section FootprintsOk.
       dest_in; disc_rule_conds_ex.
       all: try (disc_MesiDownLockInv_internal oidx; solve_MesiUpLockInv; fail).
       { disc_MesiDownLockInv_internal oidx.
-        destruct H16; dest.
+        destruct H17; dest.
         all: solve_MesiUpLockInv.
       }
 
@@ -289,7 +310,7 @@ Section FootprintsOk.
       all: try (disc_MesiDownLockInv_internal oidx; solve_MesiUpLockInv; fail).
       all: try (solve_MesiUpLockInv; exfalso; unfold addRqS in *; mred; fail).
       { disc_MesiDownLockInv_internal oidx.
-        destruct H21; dest.
+        destruct H22; dest.
         all: solve_MesiUpLockInv.
       }
 
@@ -302,7 +323,7 @@ Section FootprintsOk.
       all: try (solve_MesiUpLockInv; fail).
       all: solve_MesiUpLockInv; exfalso; unfold addRqS in *; mred.
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   (*! [MesiDownLockInv] *)
@@ -393,7 +414,7 @@ Section FootprintsOk.
 
   Lemma MesiDownLockInv_mutual_step:
     Invariant.MutualInvStep2 impl step_m MesiUpLockInv (MesiDownLockInv topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -465,7 +486,8 @@ Section FootprintsOk.
       all: try (eapply MesiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
       all: try (solve_MesiDownLockInv; fail).
-      { derive_footprint_info_basis oidx.
+      { disc_MesiUpLockInv_internal oidx.
+        derive_footprint_info_basis oidx.
         derive_child_chns cidx.
         derive_child_idx_in cidx.
         disc_rule_conds_ex.
@@ -481,7 +503,7 @@ Section FootprintsOk.
       all: try (eapply MesiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem MesiLockInv_ok:
@@ -590,7 +612,7 @@ Section RootChnInv.
 
   Lemma mesi_RootChnInv_step:
     Invariant.InvStep impl step_m (RootChnInv tr 0).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -697,7 +719,7 @@ Section RootChnInv.
       Unshelve.
       all: assumption.
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_RootChnInv_ok:
