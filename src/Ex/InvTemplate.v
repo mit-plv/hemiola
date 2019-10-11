@@ -410,6 +410,24 @@ Section Facts.
       auto.
   Qed.
 
+  Lemma not_MsgExistsSig_MsgsNotExist:
+    forall (sigs: list MSig) (msgs: MessagePool Msg),
+      (forall sig, In sig sigs -> MsgExistsSig sig msgs -> False) ->
+      MsgsNotExist sigs msgs.
+  Proof.
+    induction sigs; simpl; intros;
+      [hnf; intros; reflexivity|].
+
+    do 2 red; intros.
+    red; do 2 rewrite map_cons.
+    destruct (sig_dec (sigOf idm) a).
+    - subst; elim (H _ (or_introl eq_refl)).
+      red; eauto.
+    - rewrite caseDec_head_neq by assumption.
+      eapply IHsigs; [|eassumption].
+      intros; eapply H; eauto.
+  Qed.
+
   Lemma MsgsP_enqMP:
     forall spl msgs,
       MsgsP spl msgs ->
@@ -620,6 +638,18 @@ Section Facts.
   
 End Facts.
 
+Ltac solve_DisjList_ex dec :=
+  repeat (rewrite map_trans; simpl);
+  apply (DisjList_spec_1 dec); intros;
+  repeat
+    match goal with
+    | [H: In _ (map _ _) |- _] => apply in_map_iff in H; dest; subst
+    | [H: Forall _ ?l, Hin: In _ ?l |- _] =>
+      rewrite Forall_forall in H; specialize (H _ Hin)
+    | [H: ?e = _ |- ~ In ?e _] => rewrite H
+    end;
+  solve_not_in.
+
 Ltac disc_MsgsP H :=
   repeat
     (first [apply MsgsP_enqMsgs_inv in H
@@ -633,6 +663,8 @@ Ltac disc_MsgsP H :=
               | [Hi: msg_id ?rmsg = _, Hf: FirstMPI _ (_, ?rmsg) |- _] =>
                 rewrite Hi; solve_not_in
               end]
+           |eapply MsgsP_other_msg_id_deqMsgs_inv in H;
+            [|eassumption|eassumption|solve_DisjList_ex idx_dec]
     ]).
 
 Ltac solve_MsgsP :=

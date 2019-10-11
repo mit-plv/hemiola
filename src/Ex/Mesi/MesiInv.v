@@ -163,30 +163,32 @@ Ltac solve_NoRsI_base :=
       destruct idm as [midx msg]; inv H
     end.
 
+Ltac solve_RsDown_by_no_uplock oidx :=
+  try match goal with
+      | [Hmcf: RsDownConflicts oidx _ ?msgs,
+               Hinm: InMPI ?msgs (?midx, ?msg),
+                     Hmt: msg_type ?msg = MRs |- _] =>
+        specialize (Hmcf (midx, msg) eq_refl
+                         ltac:(simpl; rewrite Hmt; reflexivity)
+                                Hinm); dest; auto
+      end.
+
 Ltac solve_NoRsI_by_no_uplock oidx :=
-  disc_MsgConflictsInv oidx;
-  repeat
-    match goal with
-    | [Hmcf: RsDownConflicts oidx _ ?msgs,
-             Hinm: InMPI ?msgs (?midx, ?msg),
-                   Hmt: msg_type ?msg = MRs |- _] =>
-      specialize (Hmcf (midx, msg) eq_refl
-                       ltac:(simpl; rewrite Hmt; reflexivity)
-                              Hinm); dest; auto
-    end.
+  disc_MsgConflictsInv oidx; solve_RsDown_by_no_uplock oidx.
+
+Ltac solve_RsDown_by_parent_lock oidx :=
+  try match goal with
+      | [Hmcfp: ParentLockConflicts _ oidx _ _,
+                Hin: InMPI _ (downTo oidx, ?msg) |- _] =>
+        specialize (Hmcfp ltac:(red; mred; simpl; eauto));
+        destruct Hmcfp as [Hmcfp _];
+        eapply (Hmcfp (downTo oidx, msg)); eauto
+      end.
 
 Ltac solve_NoRsI_by_parent_lock oidx :=
-  disc_MsgConflictsInv oidx;
-  match goal with
-  | [Hmcfp: ParentLockConflicts _ oidx _ _,
-            Hin: InMPI _ (downTo oidx, ?msg) |- _] =>
-    specialize (Hmcfp ltac:(red; mred; simpl; eauto));
-    destruct Hmcfp as [Hmcfp _];
-    eapply (Hmcfp (downTo oidx, msg)); eauto
-  end.
+  disc_MsgConflictsInv oidx; solve_RsDown_by_parent_lock oidx.
 
-Ltac solve_NoRsI_by_rqUp oidx :=
-  disc_MsgConflictsInv oidx;
+Ltac solve_RsDown_by_rqUp oidx :=
   repeat
     match goal with
     | [Hmcf: RsDownConflicts oidx _ ?msgs,
@@ -202,8 +204,10 @@ Ltac solve_NoRsI_by_rqUp oidx :=
     | |- InMPI _ _ => red; solve_in_mp
     end.
 
-Ltac solve_NoRsI_by_rqDown oidx :=
-  disc_MsgConflictsInv oidx;
+Ltac solve_NoRsI_by_rqUp oidx :=
+  disc_MsgConflictsInv oidx; solve_RsDown_by_rqUp oidx.
+
+Ltac solve_RsDown_by_rqDown oidx :=
   repeat
     match goal with
     | [Hmcf: RsDownConflicts oidx _ ?msgs,
@@ -217,8 +221,10 @@ Ltac solve_NoRsI_by_rqDown oidx :=
       eapply Hrqd; try eassumption; try reflexivity; assumption
     end.
 
-Ltac solve_NoRsI_by_rsDown oidx :=
-  disc_MsgConflictsInv oidx;
+Ltac solve_NoRsI_by_rqDown oidx :=
+  disc_MsgConflictsInv oidx; solve_RsDown_by_rqDown oidx.
+
+Ltac solve_RsDown_by_rsDown oidx :=
   repeat
     match goal with
     | [Hmcf: RsDownConflicts oidx _ ?msgs,
@@ -237,6 +243,9 @@ Ltac solve_NoRsI_by_rsDown oidx :=
       destruct msg1, msg2; simpl in *; intro Hx; inv Hx; discriminate
     | |- InMPI _ _ => red; solve_in_mp
     end.
+
+Ltac solve_NoRsI_by_rsDown oidx :=
+  disc_MsgConflictsInv oidx; solve_RsDown_by_rsDown oidx.
 
 Ltac solve_NoRqI_base :=
   repeat

@@ -1711,15 +1711,6 @@ Ltac solve_DisjList dec :=
     dest_in; solve_not_in
   end.
 
-Ltac solve_DisjList_ex dec :=
-  repeat (rewrite map_trans; simpl);
-  apply (DisjList_spec_1 dec); intros;
-  repeat
-    match goal with
-    | [H: In _ (map _ _) |- _] => apply in_map_iff in H; dest; subst
-    end;
-  solve_not_in.
-
 Ltac solve_NoDup :=
   simpl; repeat constructor; solve_not_in.
 

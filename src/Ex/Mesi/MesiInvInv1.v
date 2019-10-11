@@ -101,20 +101,20 @@ Section InvDirME.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
     intros.
-    (* intros; specialize (H H3 H4); dest. *)
-    (* split; [|assumption]. *)
-    (* apply MsgsP_other_midx_enqMsgs; [assumption|]. *)
-    (* destruct H1; simpl. *)
-    (* eapply DisjList_SubList; [eassumption|]. *)
-    (* eapply DisjList_comm, DisjList_SubList. *)
-    (* - eapply SubList_trans; *)
-    (*     [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)]. *)
-    (*   + solve_SubList. *)
-    (*   + specialize (H0 oidx); simpl in H0. *)
-    (*     rewrite Host in H0; simpl in H0. *)
-    (*     eassumption. *)
-    (* - apply tree2Topo_minds_merqs_disj. *)
-    admit.
+    apply MsgsP_enqMsgs_inv in H4.
+    specialize (H H3 H4); dest.
+    split; [|assumption].
+    apply MsgsP_other_midx_enqMsgs; [assumption|].
+    destruct H1; simpl.
+    eapply DisjList_SubList; [eassumption|].
+    eapply DisjList_comm, DisjList_SubList.
+    - eapply SubList_trans;
+        [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)].
+      + solve_SubList.
+      + specialize (H0 oidx); simpl in H0.
+        rewrite Host in H0; simpl in H0.
+        eassumption.
+    - apply tree2Topo_minds_merqs_disj.
   Qed.
 
   Lemma mesi_InvDirME_ext_out:
@@ -122,20 +122,32 @@ Section InvDirME.
       InvDirME topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
+        ValidMsgsExtOut impl eouts ->
         InvDirME topo {| bst_oss := oss;
                          bst_orqs := orqs;
                          bst_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
-    specialize (H _ _ H1); simpl in H.
+    specialize (H _ _ H2); simpl in H.
     destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
     destruct (orqs@[oidx]) as [orq|] eqn:Horq; simpl in *; auto.
     destruct (oss@[pidx]) as [post|] eqn:Hpost; simpl in *; auto.
     destruct (orqs@[pidx]) as [porq|] eqn:Hporq; simpl in *; auto.
-    (* intros; specialize (H H2 H3); dest. *)
-    (* split; [|assumption]. *)
-    (* apply MsgsP_deqMsgs; assumption. *)
-    admit.
+    intros.
+    apply MsgsP_other_midx_deqMsgs_inv in H4.
+    - specialize (H H3 H4); dest.
+      split; [|assumption].
+      apply MsgsP_deqMsgs; assumption.
+    - destruct H1.
+      simpl; eapply DisjList_SubList; [eassumption|].
+      eapply DisjList_comm, DisjList_SubList.
+      + eapply SubList_trans;
+          [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)].
+        * solve_SubList.
+        * specialize (H0 oidx); simpl in H0.
+          rewrite Host in H0; simpl in H0.
+          eassumption.
+      + apply tree2Topo_minds_merss_disj.
   Qed.
 
   Lemma InvDirME_enqMP:
@@ -233,40 +245,40 @@ Section InvDirME.
       intro; dest_in; auto.
   Qed.
 
-  Ltac solve_InvDirME_msg :=
+  Ltac solve_msg :=
     simpl;
     try match goal with
         | [H: msg_id ?rmsg = _ |- msg_id ?rmsg <> _] => rewrite H
         end;
     discriminate.
 
-  Ltac solve_InvDirME_enqMsgs :=
+  Ltac solve_enqMsgs :=
     let idm := fresh "idm" in
     let Hin := fresh "H" in
     apply Forall_forall; intros idm Hin;
     apply in_map_iff in Hin; dest; subst;
-    split; solve_InvDirME_msg.
+    split; solve_msg.
 
-  Ltac solve_InvDirME_deqMsgs_NoDup :=
+  Ltac solve_deqMsgs_NoDup :=
     match goal with
     | [H: ValidMsgsIn _ ?msgs |- NoDup (idsOf ?msgs)] => apply H
     end.
 
-  Ltac solve_InvDirME_deqMsgs_msg_id :=
+  Ltac solve_deqMsgs_msg_id :=
     match goal with
     | [H: Forall (fun _ => msg_id _ = _) ?msgs |- Forall _ ?msgs] =>
       eapply Forall_impl; [|eapply H];
-      simpl; intros; split; solve_InvDirME_msg
+      simpl; intros; split; solve_msg
     end.
   
   Ltac simpl_InvDirME_msgs :=
     repeat
-      (first [apply InvDirME_enqMP; [|solve_InvDirME_msg..]
-             |apply InvDirME_enqMsgs; [|solve_InvDirME_enqMsgs]
-             |eapply InvDirME_deqMP; [|eassumption|solve_InvDirME_msg..]
+      (first [apply InvDirME_enqMP; [|solve_msg..]
+             |apply InvDirME_enqMsgs; [|solve_enqMsgs]
+             |eapply InvDirME_deqMP; [|eassumption|solve_msg..]
              |apply InvDirME_deqMsgs; [|eassumption
-                                       |solve_InvDirME_deqMsgs_NoDup
-                                       |solve_InvDirME_deqMsgs_msg_id]
+                                       |solve_deqMsgs_NoDup
+                                       |solve_deqMsgs_msg_id]
              |assumption]).
 
   Ltac disc_bind_true :=
@@ -281,7 +293,7 @@ Section InvDirME.
                destruct ov as [v|] eqn:Hov; simpl in *; [|auto]]
       end.
 
-  Ltac disc_InvDirME_pre :=
+  Ltac disc_pre :=
     repeat
       match goal with
       | [Hi: InvDirME _ _ |- InvDirME _ _] =>
@@ -302,26 +314,32 @@ Section InvDirME.
   Ltac disc_NoRsME :=
     repeat
       match goal with
+      | [H: ValidMsgsIn _ _ |- _] => destruct H
+      | [H: ValidMsgsOut _ _ |- _] => destruct H
+      end;
+    repeat
+      match goal with
       | [H: NoRsME _ _ |- _] => disc_MsgsP H
       | [Hi: NoRsME _ ?msgs -> _ /\ _,  Hm: MsgsP _ ?msgs |- _] =>
         specialize (Hi Hm); dest
       end.
 
-  Ltac disc_InvDirME :=
-    disc_InvDirME_pre; disc_NoRsME.
+  Ltac disc :=
+    disc_pre; disc_NoRsME.
 
-  Ltac solve_InvDirME_NoRsSI_by_silent :=
+  Ltac solve_NoRsSI_by_silent :=
     intros;
     solve_MsgsP;
     match goal with
     | [H: _ -> NoRsSI _ _ |- _] => apply H; auto; fail
     end.
 
-  Ltac solve_InvDirME_ObjInS_valid :=
+  Ltac solve_ObjInS_valid :=
     try assumption;
     try
       match goal with
-      | Ho:ObjInS _ |- ObjInS _ =>
+      | |- ObjInS _ => red; simpl; intuition solve_mesi
+      | [Ho:ObjInS _ |- ObjInS _] =>
         red in Ho; red; simpl in *;
         solve [intuition solve_mesi|
                intros; apply Ho; intuition solve_mesi]
@@ -333,7 +351,14 @@ Section InvDirME.
       red in H; simpl in H; dest; subst
     end.
 
-  Ltac solve_InvDirME_by_NoRsME_false :=
+  Ltac solve_by_silent :=
+    repeat
+      match goal with
+      | [H: _ -> _ -> ?p |- ?p] => apply H; auto
+      | [H: ObjDirME _ _ _ |- ObjDirME _ _ _] => disc_ObjDirME; red; mred
+      end.
+
+  Ltac solve_by_NoRsME_false :=
     exfalso;
     match goal with
     | [Hn: NoRsME _ (enqMP ?midx ?msg ?msgs) |- _] =>
@@ -344,23 +369,23 @@ Section InvDirME.
       disc_caseDec Hn; auto
     end.
 
-  Ltac solve_InvDirME_by_idx_false :=
+  Ltac solve_by_idx_false :=
     intros; subst topo; congruence.
 
-  Ltac solve_InvDirME_by_dir_I :=
+  Ltac solve_by_dir_I :=
     intros; exfalso;
     eapply getDir_I_ObjDirMETo_false; eauto.
 
-  Ltac solve_InvDirME_by_diff_dir :=
+  Ltac solve_by_diff_dir :=
     intros;
     match goal with
     | [Hn: ObjDirME _ _ _ |- _] =>
       red in Hn; dest; simpl in *; solve_mesi
     end.
 
-  Ltac solve_InvDirME_valid :=
-    split; [solve_InvDirME_NoRsSI_by_silent
-           |disc_getDir; solve_InvDirME_ObjInS_valid].
+  Ltac solve_valid :=
+    split; [solve_NoRsSI_by_silent
+           |disc_getDir; solve_ObjInS_valid].
   
   Lemma mesi_InvDirME_step:
     Invariant.InvStep impl step_m (InvDirME topo).
@@ -372,6 +397,9 @@ Section InvDirME.
     pose proof (mesi_InObjInds H) as Hioi.
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
+    (* pose proof (mesi_MsgConflictsInv *)
+    (*               (@mesi_RootChnInv_ok _ Htr) *)
+    (*               (reachable_steps H (steps_singleton H1))) as Hnmcf. *)
     pose proof (MesiDownLockInv_ok H) as Hmdl.
     inv H1; [assumption
             |apply mesi_InvDirME_ext_in; auto
@@ -404,114 +432,114 @@ Section InvDirME.
 
         dest_in.
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
         
-        { disc_rule_conds_ex; disc_InvDirME_pre.
-          { disc_NoRsME; solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc_pre.
+          { disc_NoRsME; solve_valid. }
           { disc_ObjDirME.
-            solve_InvDirME_by_NoRsME_false.
+            solve_by_NoRsME_false.
           }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { disc_NoRsME; solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { disc_NoRsME; solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
           disc_ObjDirME; mred.
         }
 
-        { disc_rule_conds_ex; disc_InvDirME_pre.
-          { disc_NoRsME; solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc_pre.
+          { disc_NoRsME; solve_valid. }
           { disc_ObjDirME.
-            solve_InvDirME_by_NoRsME_false.
+            solve_by_NoRsME_false.
           }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { disc_NoRsME; solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { disc_NoRsME; solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
           disc_ObjDirME; mred.
         }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
           disc_ObjDirME; mred.
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_dir_I. }
-            { solve_InvDirME_valid. }
+            { solve_by_dir_I. }
+            { solve_valid. }
           }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { disc_getDir; solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { disc_getDir; solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_dir_I. }
-            { solve_InvDirME_valid. }
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { disc_getDir; solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_dir_I. }
+            { solve_valid. }
+          }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { disc_getDir; solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
+          }
+        }
+
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
@@ -521,35 +549,25 @@ Section InvDirME.
 
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
-        disc_InvDirME.
-        { solve_InvDirME_valid. }
-        { solve_InvDirME_by_diff_dir. }
+        disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
         { destruct (idx_dec x oidx0); subst.
-          { solve_InvDirME_by_idx_false. }
-          { solve_InvDirME_valid. }
+          { solve_by_idx_false. }
+          { solve_valid. }
         }
       }
 
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
-        disc_InvDirME_pre.
-        { disc_NoRsME.
-          apply MsgsP_other_msg_id_deqMsgs_inv in H21;
-            [|apply H8|assumption|admit].
-          disc_NoRsME.
-          solve_InvDirME_valid.
-        }
+        disc_pre.
+        { disc_NoRsME; solve_valid. }
         { disc_ObjDirME.
-          solve_InvDirME_by_NoRsME_false.
+          solve_by_NoRsME_false.
         }
         { destruct (idx_dec x oidx0); subst.
-          { solve_InvDirME_by_idx_false. }
-          { disc_NoRsME.
-            apply MsgsP_other_msg_id_deqMsgs_inv in H23;
-              [|apply H8|assumption|admit].
-            disc_NoRsME.
-            solve_InvDirME_valid.
-          }
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
         }
       }
 
@@ -576,126 +594,123 @@ Section InvDirME.
 
         dest_in.
 
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          solve_InvDirME_valid.
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
+          }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc_pre.
+          { disc_NoRsME; solve_valid. }
           { disc_ObjDirME.
-            derive_child_idx_in oidx0.
-            solve_InvDirME_by_upRq_false oidx0.
+            solve_by_NoRsME_false.
           }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { disc_InvDirME; solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { disc_NoRsME; solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          { mred. }
-          { apply H0; auto; red; disc_ObjDirME; mred. }
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+          solve_by_silent.
         }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          { mred. }
-          { apply H0; auto; red; disc_ObjDirME; mred. }
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+          solve_by_silent.
         }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          { mred. }
-          { apply H0; auto; red; disc_ObjDirME; mred. }
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+          solve_by_silent.
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc_pre.
+          { disc_NoRsME; solve_valid. }
           { disc_ObjDirME.
-            derive_child_idx_in oidx0.
-            solve_InvDirME_by_upRq_false oidx0.
+            solve_by_NoRsME_false.
           }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { disc_InvDirME; solve_InvDirME_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          { mred. }
-          { apply H0; auto; red; disc_ObjDirME; mred. }
-        }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          { mred. }
-          { apply H0; auto; red; disc_ObjDirME; mred. }
-        }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-          { mred. }
-          { apply H0; auto; red; disc_ObjDirME; mred. }
-        }
-
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_dir_I. }
-            { solve_InvDirME_valid. }
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { disc_NoRsME; solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+          solve_by_silent.
+        }
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+          solve_by_silent.
+        }
+        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+          solve_by_silent.
+        }
+
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_dir_I. }
+            { solve_valid. }
+          }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { disc_getDir; solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { disc_getDir; solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_dir_I. }
-            { solve_InvDirME_valid. }
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { disc_getDir; solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_dir_I. }
+            { solve_valid. }
+          }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
-        { disc_rule_conds_ex; disc_InvDirME.
-          { solve_InvDirME_valid. }
-          { solve_InvDirME_by_diff_dir. }
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { disc_getDir; solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
-            { solve_InvDirME_by_idx_false. }
-            { solve_InvDirME_valid. }
+            { solve_by_idx_false. }
+            { solve_valid. }
+          }
+        }
+
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
           }
         }
 
@@ -705,77 +720,196 @@ Section InvDirME.
 
       { disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
-        simpl_InvDirME_msgs; disc_InvDirME.
-        { split.
-          { admit. }
-          { TODO. }
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        disc.
+        { 
+
+          Ltac solve_MsgsP_false H :=
+            red in H; unfold map in H;
+            repeat (first [rewrite caseDec_head_eq in H
+                            by (unfold sigOf; simpl; congruence)
+                          |rewrite caseDec_head_neq in H
+                            by (unfold sigOf; simpl; congruence)]);
+            simpl in H.
+
+          Ltac solve_by_NoRsSI_false :=
+            exfalso;
+            match goal with
+            | [Hn: NoRsSI _ ?msgs, Hf: FirstMPI ?msgs (?midx, ?msg) |- _] =>
+              specialize (Hn (midx, msg) (FirstMP_InMP Hf));
+              solve_MsgsP_false Hn;
+              auto
+            end.
+
+          solve_by_NoRsSI_false.
         }
-        { solve_InvDirME_by_diff_dir. }
+        { solve_by_diff_dir. }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { solve_valid. }
+        }
       }
 
       { disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
         disc_rule_conds_ex.
-        simpl_InvDirME_msgs.
-        disc_InvDirME.
-        intros.
-        red in H29; simpl in H29; dest; subst.
-        derive_child_idx_in oidx0.
-        solve_NoRsI_base.
-        solve_NoRsI_by_parent_lock oidx0.
+        disc_pre.
+        { split.
+          { solve_MsgsP.
+
+            Ltac disc_MsgExistsSig :=
+              repeat
+                match goal with
+                | [H: MsgExistsSig _ _ |- _] =>
+                  let midx := fresh "midx" in
+                  let msg := fresh "msg" in
+                  destruct H as [[midx msg] ?]; dest
+                | [H: sigOf _ = (_, (_, _)) |- _] => inv H
+                end.
+
+            Ltac solve_NoRsSI_by_rsDown oidx :=
+              disc_MsgConflictsInv oidx;
+              apply not_MsgExistsSig_MsgsNotExist;
+              intros; dest_in;
+              disc_MsgExistsSig;
+              solve_RsDown_by_rsDown oidx.
+
+            solve_NoRsSI_by_rsDown oidx.
+          }
+          { solve_ObjInS_valid. }
+        }
+        { disc_ObjDirME; solve_by_NoRsME_false. }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
       }
-
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-        solve_InvDirME_by_diff_dir.
-      }
-
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-        solve_InvDirME_by_diff_dir.
-      }
-
-      { disc_rule_conds_ex.
-        derive_footprint_info_basis oidx.
-        derive_child_chns cidx.
-        disc_rule_conds_ex.
-        simpl_InvDirME_msgs.
-        disc_InvDirME.
-        intros.
-        red in H29; simpl in H29; dest; subst.
-        derive_child_idx_in oidx0.
-        solve_NoRsI_base.
-        solve_NoRsI_by_parent_lock oidx0.
-      }
-
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
 
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
+        disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { solve_valid. }
+        }
+      }
+
+      { disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { solve_valid. }
+        }
+      }
+        
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirME.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+
+        disc_MsgConflictsInv oidx.
+
+        Ltac derive_parent_downlock_by_RqDown :=
+          try match goal with
+              | [Hmcf: RqDownConflicts _ _ ?msgs,
+                       Hf: FirstMPI ?msgs (?midx, ?msg),
+                           Hmt: msg_type ?msg = MRq |- _] =>
+                specialize (Hmcf (midx, msg) eq_refl 
+                                 ltac:(simpl; rewrite Hmt; reflexivity)
+                                        (FirstMP_InMP Hf)); dest
+              end.
+
+        derive_parent_downlock_by_RqDown.
+        auto.
+      }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        disc_ObjDirME; mred.
+      }
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        disc_ObjDirME; mred.
+      }
+
+      { disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirME_msgs; disc.
+        { admit. }
+        { solve_by_diff_dir. }
+      }
+
+      { disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        disc_pre.
+        { split.
+          { solve_MsgsP.
+            solve_NoRsSI_by_rsDown oidx.
+          }
+          { solve_ObjInS_valid. }
+        }
+        { disc_ObjDirME; solve_by_NoRsME_false. }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
+      }
+        
+      { (** [liGetMRsDownRqDownDirS] *)
+        (** * FIXME: the invariant doesn't hold here.. :( *)
+        admit.
+      }
+      
+      { admit. }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirME.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+
+        (* The parent is DLF but there is [mesiDownRqI] *)
+        admit.
+      }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        disc_ObjDirME; mred.
+      }
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        disc_ObjDirME; mred.
+      }
+
+      { admit. }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs.
+        disc.
+        disc_ObjDirME; solve_mesi.
+      }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs.
+        disc.
+        disc_ObjDirME; solve_mesi.
+      }
+
+      { disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
         simpl_InvDirME_msgs.
-        disc_InvDirME.
-        intros.
-        red in H26; simpl in H26; dest; subst.
-        derive_child_idx_in oidx0.
-        solve_NoRsI_base.
-        solve_NoRsI_by_parent_lock oidx0.
+        disc.
+        all: admit.
       }
 
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
-        solve_InvDirME_by_diff_dir.
+      { disc_rule_conds_ex; simpl_InvDirME_msgs.
+        disc.
+        all: admit.
       }
-
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
-      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME. }
       
     - (*! Cases for L1 caches *)
 
@@ -789,7 +923,7 @@ Section InvDirME.
 
       (** Do case analysis per a rule. *)
       dest_in.
-      all: disc_rule_conds_ex; simpl_InvDirME_msgs; disc_InvDirME.
+      all: disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
 
       (* END_SKIP_PROOF_OFF *)
   Qed.
