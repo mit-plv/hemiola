@@ -415,6 +415,7 @@ Section InvDirME.
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
     pose proof (mesi_InvWBDir_ok H) as Hwd.
     pose proof (MesiDownLockInv_ok H) as Hmdl.
+    pose proof (mesi_InvL1DirI_ok H) as Hl1d.
     inv H1; [assumption
             |apply mesi_InvDirME_ext_in; auto
             |apply mesi_InvDirME_ext_out; auto
@@ -820,8 +821,23 @@ Section InvDirME.
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirME_msgs; disc.
-        { admit. (* child locked to parent, 
-                  * contradicting the parent is downlock-free *) }
+        { disc_ObjDirME.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+
+          Ltac solve_by_child_downlock_to_parent oidx :=
+            exfalso;
+            disc_MsgConflictsInv oidx;
+            match goal with
+            | [Hp: ParentLockFreeConflicts oidx ?porq ?orq,
+                   Ho: ?orq@[downRq] = None,
+                       Hpo: ?porq@[downRq] = Some _ |- _] =>
+              specialize (Hp Ho); rewrite Hpo in Hp;
+              simpl in Hp; auto
+            end.
+
+          solve_by_child_downlock_to_parent oidx.
+        }
         { solve_by_diff_dir. }
       }
 
@@ -896,8 +912,12 @@ Section InvDirME.
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirME_msgs; disc.
-        { admit. (* child locked to parent, 
-                  * contradicting the parent is downlock-free *) }
+        { subst topo; disc_rule_conds_ex.
+          disc_ObjDirME.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+          solve_by_child_downlock_to_parent oidx.
+        }
         { solve_by_diff_dir. }
       }
 
@@ -964,6 +984,16 @@ Section InvDirME.
 
       (** Do case analysis per a rule. *)
       dest_in.
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc. }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        { split; [solve_NoRsSI_by_silent|].
+          red in H22; red; simpl in *; mred.
+        }
+        { solve_by_silent. }
+      }
+      
       all: admit.
       (* END_SKIP_PROOF_OFF *)
   Qed.

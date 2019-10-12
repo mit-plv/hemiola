@@ -1278,6 +1278,34 @@ Section Corollaries.
     disc_rule_conds.
   Qed.
 
+  Corollary downLockFree_child_lock_to_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall orqs porq,
+          st.(bst_orqs) = orqs ->
+          orqs@[obj_idx pobj] = Some porq ->
+          porq@[downRq] = None ->
+          forall oidx rsUp orq rqid,
+            parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+            rsEdgeUpFrom dtr oidx = Some rsUp ->
+            orqs@[oidx] = Some orq ->
+            orq@[downRq] = Some rqid ->
+            rqid.(rqi_midx_rsb) = Some rsUp ->
+            False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    red in H1; disc_rule_conds.
+    specialize (H1 _ H4).
+    destruct H1 as [down [rrsUp ?]]; dest.
+    disc_rule_conds.
+    red in H10; dest.
+    red in H11; disc_rule_conds.
+  Qed.
+
 End Corollaries.
       
 Close Scope list.

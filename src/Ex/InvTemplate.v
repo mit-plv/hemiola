@@ -149,6 +149,12 @@ Section MsgConflicts.
         orq@[upRq] = None ->
         False).
 
+  Definition ParentLockFreeConflicts (oidx: IdxT) (orq porq: ORq Msg) :=
+    porq@[downRq] = None ->
+    (rqid <-- orq@[downRq];
+       rqid.(rqi_midx_rsb) = Some (rsUpFrom oidx) ->
+       False).
+
   Variable (tr: tree) (bidx: IdxT).
   Hypothesis (Htr: tr <> Node nil).
   Let topo := fst (tree2Topo tr bidx).
@@ -180,6 +186,7 @@ Section MsgConflicts.
           ParentLockConflicts (bst_orqs st) oidx pidx (bst_msgs st) /\
           (forall porq,
               (bst_orqs st)@[pidx] = Some porq ->
+              ParentLockFreeConflicts oidx orq porq /\
               RqDownConflicts oidx porq (bst_msgs st) /\
               RsUpConflicts oidx porq (bst_msgs st))).
 
@@ -305,7 +312,13 @@ Section MsgConflicts.
           disc_rule_conds.
           eapply upLockFree_parent_locked_false with (obj0:= obj); eauto.
 
-      + intros; split.
+      + intros; repeat ssplit.
+        * disc_rule_conds.
+          red; intros.
+          destruct (orq@[downRq]) as [rqid|] eqn:Hrqid; simpl in *; [|auto].
+          eapply downLockFree_child_lock_to_false
+            with (pobj0:= pobj) (porq0:= porq); eauto.
+          
         * red; intros.
           disc_rule_conds.
           repeat ssplit; intros.
@@ -349,6 +362,7 @@ Section MsgConflicts.
             { destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption. }
             { destruct rrsUp as [rrsUp rsum]; simpl in *; subst. assumption. }
           }
+
   Qed.
 
 End MsgConflicts.
@@ -382,7 +396,7 @@ Ltac disc_MsgConflictsInv oidx :=
       specialize (Hmcfp _ Hp); destruct Hmcfp
     | [Ho: ?orqs@[?pidx] = Some _,
            Hmcfp: forall _, ?orqs@[?pidx] = Some _ -> _ /\ _ |- _] =>
-      specialize (Hmcfp _ Ho); destruct Hmcfp
+      specialize (Hmcfp _ Ho); destruct Hmcfp as [? [? ?]]
     end.
 
 Section Facts.

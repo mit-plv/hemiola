@@ -19,6 +19,87 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
+Definition InvL1DirI (cifc: CIfc) (st: MState): Prop :=
+  Forall (fun oidx =>
+            ost <+- (bst_oss st)@[oidx];
+              ost#[dir].(dir_st) = mesiI)
+         (c_l1_indices cifc).
+
+Section InvL1DirI.
+  Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
+
+  Let topo: DTree := fst (tree2Topo tr 0).
+  Let cifc: CIfc := snd (tree2Topo tr 0).
+  Let impl: System := impl Htr.
+
+  Lemma mesi_InvL1DirI_init:
+    Invariant.InvInit impl (InvL1DirI cifc).
+  Proof.
+    do 2 (red; simpl); intros.
+    apply Forall_forall; intros oidx ?.
+    destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
+    rewrite implOStatesInit_value_non_root in Host;
+      [|assumption|apply in_or_app; auto].
+    inv Host.
+    reflexivity.
+  Qed.
+
+  Lemma mesi_InvL1DirI_step:
+    Invariant.InvStep impl step_m (InvL1DirI cifc).
+  Proof. (* SKIP_PROOF_OFF *)
+    red; intros.
+    inv H1; [assumption..|].
+    simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
+    
+    - (*! Cases for the main memory *)
+      red; simpl.
+      apply Forall_forall; intros oidx ?.
+      red in H0; simpl in H0.
+      rewrite Forall_forall in H0; specialize (H0 _ H1).
+      mred.
+
+      exfalso.
+      eapply tree2Topo_root_not_in_l1; eauto.
+
+    - (*! Cases for Li caches *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
+
+      apply Forall_forall; intros roidx ?; simpl.
+      red in H0; simpl in H0.
+      rewrite Forall_forall in H0; specialize (H0 _ H1).
+      mred.
+      
+      exfalso.
+      pose proof (tree2Topo_WfCIfc tr 0) as [? _].
+      apply (DisjList_NoDup idx_dec) in H4.
+      apply tl_In in H2.
+      eapply DisjList_In_1; eassumption.
+
+    - (*! Cases for L1 caches *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
+
+      apply Forall_forall; intros roidx ?; simpl.
+      red in H0; simpl in H0.
+      rewrite Forall_forall in H0; specialize (H0 _ H1).
+      mred; clear H1; simpl.
+      simpl in H5; rewrite H5 in H0; simpl in H0.
+
+      (** Do case analysis per a rule. *)
+      dest_in.
+      all: disc_rule_conds_ex. (* takes 10 seconds *)
+  Qed.
+
+  Theorem mesi_InvL1DirI_ok:
+    InvReachable impl step_m (InvL1DirI cifc).
+  Proof.
+    apply inv_reachable.
+    - apply mesi_InvL1DirI_init.
+    - apply mesi_InvL1DirI_step.
+  Qed.
+
+End InvL1DirI.
+
 Definition ObjWBDir (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   (ObjInvWRq oidx msgs \/ ObjInvRq oidx msgs \/ ObjInvRs oidx msgs) ->
   ost#[dir].(dir_st) = mesiI.
@@ -509,6 +590,12 @@ Section InvWBDir.
       pose proof (c_l1_indices_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
+
+      (** Register an invariant that holds only for L1 caches. *)
+      pose proof (mesi_InvL1DirI_ok H) as Hl1d.
+      red in Hl1d; simpl in Hl1d.
+      rewrite Forall_forall in Hl1d; specialize (Hl1d _ H2).
+      simpl in H5; rewrite H5 in Hl1d; simpl in Hl1d.
 
       (** Do case analysis per a rule. *)
       dest_in; disc_rule_conds_ex.
