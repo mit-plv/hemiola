@@ -1767,6 +1767,29 @@ Section Facts.
     - apply SubList_cons; assumption.
   Qed.
 
+  Lemma tree2Topo_l1_ext_parent:
+    forall tr bidx oidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) (l1ExtOf oidx) = Some oidx.
+  Proof.
+    (* induction tr using tree_ind_l; simpl; intros. *)
+
+    (* find_if_inside; simpl in *. *)
+    (* - destruct H0; [subst|exfalso; auto]. *)
+    (*   unfold parentIdxOf; simpl. *)
+    (*   unfold hasIdx. *)
+    (*   find_if_inside; [reflexivity|]. *)
+    (*   elim n; reflexivity. *)
+
+    (* - apply tree2Topo_l1_oidx_In in H0. *)
+    (*   destruct H0; [dest_in|]. *)
+    (*   destruct H0 as [ctr [ofs ?]]; dest; simpl in *. *)
+
+    (* rewrite Forall_forall in H. *)
+    (* specialize (H _ (nth_error_In _ _ H0) _ _ H3). *)
+      
+  Admitted.    
+
   Lemma tree2Topo_l1_child_ext:
     forall tr bidx oidx cidx,
       In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->

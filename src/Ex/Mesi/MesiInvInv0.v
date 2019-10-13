@@ -47,7 +47,7 @@ Section InvL1DirI.
 
   Lemma mesi_InvL1DirI_step:
     Invariant.InvStep impl step_m (InvL1DirI cifc).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     inv H1; [assumption..|].
     simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
@@ -88,6 +88,8 @@ Section InvL1DirI.
       (** Do case analysis per a rule. *)
       dest_in.
       all: disc_rule_conds_ex. (* takes 10 seconds *)
+
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvL1DirI_ok:
@@ -475,7 +477,7 @@ Section InvWBDir.
 
   Lemma mesi_InvWBDir_step:
     Invariant.InvStep impl step_m InvWBDir.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -612,7 +614,7 @@ Section InvWBDir.
         { assumption. }
       }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvWBDir_ok:
@@ -889,7 +891,7 @@ Section InvWBCoh.
 
   Lemma mesi_InvWBCoh_step:
     Invariant.InvStep impl step_m InvWBCoh.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -1006,7 +1008,7 @@ Section InvWBCoh.
       all: try (simpl_InvWBCoh; solve_InvWBCoh; fail).
       { eapply InvWBCoh_enqMP_valid; eauto. }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvWBCoh_ok:

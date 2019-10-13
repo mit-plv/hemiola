@@ -1033,8 +1033,10 @@ Section InvDirME.
         }
         { disc_ObjDirME; solve_mesi. }
         { destruct (idx_dec (l1ExtOf oidx) oidx0); subst.
-          { exfalso; clear -H3 n0.
-            admit.
+          { exfalso.
+            subst topo.
+            rewrite tree2Topo_l1_ext_parent in H3 by assumption.
+            congruence.
           }
           { disc_NoRsME; solve_valid. }
         }
@@ -1071,8 +1073,10 @@ Section InvDirME.
         }
         { disc_ObjDirME; solve_mesi. }
         { destruct (idx_dec (l1ExtOf oidx) oidx0); subst.
-          { exfalso; clear -H3 n0.
-            admit.
+          { exfalso.
+            subst topo.
+            rewrite tree2Topo_l1_ext_parent in H3 by assumption.
+            congruence.
           }
           { disc_NoRsME; solve_valid. }
         }
@@ -1132,6 +1136,14 @@ Section InvDirME.
       (* END_SKIP_PROOF_OFF *)
   Qed.
 
+  Theorem mesi_InvDirME_ok:
+    InvReachable impl step_m (InvDirME topo).
+  Proof.
+    apply inv_reachable.
+    - apply mesi_InvDirME_init.
+    - apply mesi_InvDirME_step.
+  Qed.
+  
 End InvDirME.
 
 Definition InvWB (topo: DTree) (st: MState): Prop :=
@@ -1144,4 +1156,58 @@ Definition InvWB (topo: DTree) (st: MState): Prop :=
       (ObjDirME porq post oidx ->
        ObjInvWRq oidx (bst_msgs st) ->
        mesiS <= ost#[status]).
+
+Section InvWB.
+  Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
+
+  Let topo: DTree := fst (tree2Topo tr 0).
+  Let cifc: CIfc := snd (tree2Topo tr 0).
+  Let impl: System := impl Htr.
+
+  Theorem mesi_InvWB_ok:
+    InvReachable impl step_m (InvWB topo).
+  Proof.
+    red; intros.
+    pose proof (mesi_InObjInds H) as Ho.
+    pose proof (mesi_MsgConflictsInv (@mesi_RootChnInv_ok _ Htr) H) as Hm.
+    pose proof (mesi_InvDirME_ok H) as Hd.
+    pose proof (mesi_InvWBDir_ok H) as Hw.
+    red; intros.
+    specialize (Ho oidx).
+    specialize (Hm oidx).
+    specialize (Hd _ _ H0).
+    specialize (Hw oidx).
+
+    destruct (bst_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
+    destruct (bst_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
+    destruct (bst_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (bst_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
+
+    specialize (Hm _ Ho eq_refl); dest.
+    intros.
+    specialize (Hw (or_introl H5)).
+
+    assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
+    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+      apply not_MsgExistsSig_MsgsNotExist.
+      intros; dest_in.
+      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
+        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      }
+      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
+        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      }
+    }
+    specialize (Hd H4 Hnrs); dest.
+
+    red in H7.
+    assert (ost#[dir].(dir_st) <= mesiI) as Hdi by solve_mesi.
+    specialize (H7 (or_introl Hdi)).
+    destruct H7; dest; simpl in *; solve_mesi.
+  Qed.
+
+End InvWB.
 
