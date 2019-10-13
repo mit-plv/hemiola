@@ -34,49 +34,6 @@ Definition InvExcl (st: MState): Prop :=
     eost <+- (bst_oss st)@[eidx];
       InvObjExcl0 eidx eost (bst_oss st) (bst_msgs st).
 
-Section Facts.
-
-  Lemma InvExcl_excl_invalid:
-    forall st (He: InvExcl st) msgs eidx eost,
-      bst_msgs st = msgs ->
-      (bst_oss st)@[eidx] = Some eost ->
-      NoRsI eidx msgs ->
-      mesiE <= eost#[status] ->
-      forall oidx ost,
-        oidx <> eidx ->
-        (bst_oss st)@[oidx] = Some ost ->
-        ObjInvalid oidx ost msgs.
-  Proof.
-    intros; subst.
-    specialize (He eidx).
-    disc_rule_conds_ex.
-    red in He.
-    unfold ObjExcl0 in He; simpl in He.
-    specialize (He (conj H2 H1)); dest.
-    specialize (H _ H3).
-    rewrite H4 in H; auto.
-  Qed.
-
-  Corollary InvExcl_excl_invalid_status:
-    forall st (He: InvExcl st) eidx eost,
-      (bst_oss st)@[eidx] = Some eost ->
-      NoRsI eidx (bst_msgs st) ->
-      mesiE <= eost#[status] ->
-      forall oidx ost,
-        oidx <> eidx ->
-        (bst_oss st)@[oidx] = Some ost ->
-        NoRsI oidx (bst_msgs st) ->
-        ost#[status] = mesiI.
-  Proof.
-    intros.
-    eapply InvExcl_excl_invalid in H1; eauto.
-    destruct H1.
-    - apply H1.
-    - exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
-  Qed.
-  
-End Facts.
-
 Section InvExcl.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
@@ -85,10 +42,77 @@ Section InvExcl.
   Let cifc: CIfc := snd (tree2Topo tr 0).
   Let impl: System := impl Htr.
 
+  Lemma mesi_InvExcl_init:
+    Invariant.InvInit impl InvExcl.
+  Proof.
+    do 2 (red; simpl); intros.
+    destruct (implOStatesInit tr)@[eidx] as [eost|] eqn:Heost; simpl; auto.
+    red; intros.
+    red in H; dest.
+
+    destruct (in_dec idx_dec eidx (c_li_indices cifc ++ c_l1_indices cifc)).
+    - subst cifc; rewrite c_li_indices_head_rootOf in i by assumption.
+      inv i.
+      + split.
+        * red; intros.
+          destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
+          red.
+          destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
+                                           ++ c_l1_indices (snd (tree2Topo tr 0)))).
+          { rewrite c_li_indices_head_rootOf in i by assumption.
+            inv i; [exfalso; auto|].
+            rewrite implOStatesInit_value_non_root in Host by assumption.
+            inv Host.
+            left; repeat split; [simpl; solve_mesi..|].
+            do 3 red; intros; do 2 red in H3; dest_in.
+          }
+          { rewrite implOStatesInit_None in Host by assumption.
+            discriminate.
+          }
+        * do 3 red; intros; do 2 red in H1; dest_in.
+      + exfalso.
+        rewrite implOStatesInit_value_non_root in Heost by assumption.
+        inv Heost.
+        simpl in *; solve_mesi.
+    - exfalso.
+      rewrite implOStatesInit_None in Heost by assumption.
+      discriminate.
+  Qed.
+
+  Lemma mesi_InvExcl_ext_in:
+    forall oss orqs msgs,
+      InvExcl {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      forall eins,
+        ValidMsgsExtIn impl eins ->
+        InvExcl {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+  Proof.
+  Admitted.
+
+  Lemma mesi_InvExcl_ext_out:
+    forall oss orqs msgs,
+      InvExcl {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      forall (eouts: list (Id Msg)),
+        ValidMsgsExtOut impl eouts ->
+        InvExcl {| bst_oss := oss;
+                   bst_orqs := orqs;
+                   bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+  Proof.
+  Admitted.
+
+  Lemma mesi_InvExcl_step:
+    Invariant.InvStep impl step_m InvExcl.
+  Proof.
+  Admitted.
+
   Lemma mesi_InvExcl_ok:
     Invariant.InvReachable impl step_m InvExcl.
   Proof.
-  Admitted.
+    apply inv_reachable.
+    - apply mesi_InvExcl_init.
+    - apply mesi_InvExcl_step.
+  Qed.
 
 End InvExcl.
 

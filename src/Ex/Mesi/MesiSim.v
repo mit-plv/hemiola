@@ -16,6 +16,27 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
+Lemma InvExcl_excl_invalid:
+  forall st (He: InvExcl st) msgs eidx eost,
+    bst_msgs st = msgs ->
+    (bst_oss st)@[eidx] = Some eost ->
+    NoRsI eidx msgs ->
+    mesiE <= eost#[status] ->
+    forall oidx ost,
+      oidx <> eidx ->
+      (bst_oss st)@[oidx] = Some ost ->
+      ObjInvalid oidx ost msgs.
+Proof.
+  intros; subst.
+  specialize (He eidx).
+  disc_rule_conds_ex.
+  red in He.
+  unfold ObjExcl0 in He; simpl in He.
+  specialize (He (conj H2 H1)); dest.
+  specialize (H _ H3).
+  rewrite H4 in H; auto.
+Qed.
+
 Section Sim.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).

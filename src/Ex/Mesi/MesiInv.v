@@ -60,7 +60,7 @@ Section CoherenceUnit.
                     (rsUpFrom oidx, (MRs, mesiDownRsS))] msgs.
 
   Definition ObjInvalid0 :=
-    ost#[status] = mesiI /\
+    ost#[status] <= mesiI /\
     ost#[dir].(dir_st) <> mesiE /\
     NoCohMsgs.
 
