@@ -87,7 +87,52 @@ Section InvExcl.
         ValidMsgsExtIn impl eins ->
         InvExcl {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
   Proof.
-  Admitted.
+    red; simpl; intros.
+    specialize (H eidx); simpl in H.
+    destruct (oss@[eidx]) as [eost|] eqn:Heost; simpl in *; auto.
+    red; intros.
+
+    destruct H2.
+    apply MsgsP_enqMsgs_inv in H3.
+    specialize (H (conj H2 H3)); dest.
+
+    split.
+    - red; intros.
+      specialize (H _ H5).
+      destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+      destruct H.
+      + left.
+        red in H; dest.
+        repeat split; [assumption..|].
+        apply MsgsP_other_midx_enqMsgs; [assumption|].
+        destruct H1; simpl.
+        eapply DisjList_SubList; [eassumption|].
+        eapply DisjList_comm, DisjList_SubList.
+        * eapply SubList_trans;
+            [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)].
+          { solve_SubList. }
+          { specialize (H0 oidx); simpl in H0.
+            rewrite Host in H0; simpl in H0.
+            eassumption.
+          }
+        * apply tree2Topo_minds_merqs_disj.
+      + right.
+        destruct H as [idm ?]; dest.
+        exists idm; split; [|assumption].
+        apply InMP_or_enqMsgs; auto.
+
+    - apply MsgsP_other_midx_enqMsgs; [assumption|].
+      destruct H1; simpl.
+      eapply DisjList_SubList; [eassumption|].
+      eapply DisjList_comm, DisjList_SubList.
+      + eapply SubList_trans;
+          [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= eidx)].
+        * solve_SubList.
+        * specialize (H0 eidx); simpl in H0.
+          rewrite Heost in H0; simpl in H0.
+          eassumption.
+      + apply tree2Topo_minds_merqs_disj.
+  Qed.
 
   Lemma mesi_InvExcl_ext_out:
     forall oss orqs msgs,
@@ -99,7 +144,54 @@ Section InvExcl.
                    bst_orqs := orqs;
                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
-  Admitted.
+    red; simpl; intros.
+    specialize (H eidx); simpl in H.
+    destruct (oss@[eidx]) as [eost|] eqn:Heost; simpl in *; auto.
+    red; intros.
+
+    destruct H2.
+    apply MsgsP_other_midx_deqMsgs_inv in H3.
+    - specialize (H (conj H2 H3)); dest.
+      split.
+      + red; intros.
+        specialize (H _ H5).
+        destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+        destruct H.
+        * left.
+          red in H; dest.
+          repeat split; [assumption..|].
+          apply MsgsP_deqMsgs; assumption.
+        * right.
+          destruct H as [idm ?]; dest.
+          exists idm; split; [|assumption].
+          apply deqMsgs_InMP_midx; [assumption|].
+          destruct H1.
+          eapply DisjList_In_1.
+          { eapply DisjList_SubList; [eassumption|].
+            apply DisjList_comm, tree2Topo_minds_merss_disj.
+          }
+          { eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx).
+            { specialize (H0 oidx); simpl in H0.
+              rewrite Host in H0; simpl in H0.
+              eassumption.
+            }
+            { inv H6; rewrite H9.
+              solve_SubList.
+            }
+          }
+      + apply MsgsP_deqMsgs; assumption.
+
+    - destruct H1.
+      simpl; eapply DisjList_SubList; [eassumption|].
+      eapply DisjList_comm, DisjList_SubList.
+      + eapply SubList_trans;
+          [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= eidx)].
+        * solve_SubList.
+        * specialize (H0 eidx); simpl in H0.
+          rewrite Heost in H0; simpl in H0.
+          eassumption.
+      + apply tree2Topo_minds_merss_disj.
+  Qed.      
 
   Lemma mesi_InvExcl_step:
     Invariant.InvStep impl step_m InvExcl.
