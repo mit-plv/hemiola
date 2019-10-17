@@ -139,17 +139,49 @@ Section Facts.
     Section FMap.
       Context {A: Type}.
 
-      Lemma liftFMap_find:
-        forall k (m: M.t A),
-          (liftFMap ln m)@[k~>ln] = m@[k].
+      Lemma transpose_neqkey_lift_add:
+        M.F.P.transpose_neqkey eq (fun k v (m: M.t A) => m +[k~>ln <- v]).
       Proof.
-      Admitted.
+        red; intros.
+        assert (k~>ln <> k'~>ln) by (intro Hx; inv Hx; auto).
+        meq.
+      Qed.
+
+      Local Hint Resolve transpose_neqkey_lift_add.
 
       Lemma liftFMap_add:
         forall k v (m: M.t A),
           liftFMap ln (m +[k <- v]) = (liftFMap ln m) +[k~>ln <- v].
       Proof.
-      Admitted.
+        intros.
+        revert k v.
+        M.mind m; intros; [reflexivity|].
+        M.cmp k k0.
+        - rewrite M.add_idempotent.
+          rewrite (H0 k0 v).
+          rewrite M.add_idempotent.
+          auto.
+        - unfold liftFMap in H0.
+          rewrite M.add_comm by auto.
+          unfold liftFMap.
+          rewrite M.F.P.fold_add; auto.
+          + rewrite H0.
+            rewrite M.F.P.fold_add with (eqA:= eq); auto.
+          + findeq.
+      Qed.
+
+      Lemma liftFMap_find:
+        forall k (m: M.t A),
+          (liftFMap ln m)@[k~>ln] = m@[k].
+      Proof.
+        intros.
+        M.mind m; [reflexivity|].
+        rewrite liftFMap_add.
+        M.cmp k k0.
+        - findeq.
+        - assert (k~>ln <> k0~>ln) by (intro Hx; inv Hx; auto).
+          findeq.
+      Qed.
 
     End FMap.
 
@@ -363,6 +395,20 @@ Section Facts.
         apply step_lifted; assumption.
       Qed.
 
+      Lemma liftLabel_liftMLabel:
+        forall ll,
+          map liftLabel (behaviorOf ll) = behaviorOf (map liftMLabel ll).
+      Proof.
+        induction ll as [|lbl ll]; simpl; [reflexivity|].
+        destruct lbl; simpl; auto.
+        - unfold liftMsgs, imap, liftI.
+          do 2 rewrite map_trans; simpl.
+          rewrite IHll; reflexivity.
+        - unfold liftMsgs, imap, liftI.
+          do 2 rewrite map_trans; simpl.
+          rewrite IHll; reflexivity.
+      Qed.
+        
       Lemma Behavior_lifted:
         forall tr,
           Behavior (steps step_m) sys tr ->
@@ -374,23 +420,83 @@ Section Facts.
         - instantiate (1:= liftMState st).
           instantiate (1:= map liftMLabel ll).
           apply steps_lifted in H1; assumption.
-        - clear; induction ll as [|lbl ll]; simpl; [reflexivity|].
-          destruct lbl; simpl; auto.
-          + unfold liftMsgs, imap, liftI.
-            do 2 rewrite map_trans; simpl.
-            rewrite IHll; reflexivity.
-          + unfold liftMsgs, imap, liftI.
-            do 2 rewrite map_trans; simpl.
-            rewrite IHll; reflexivity.
+        - apply liftLabel_liftMLabel.
+      Qed.
+
+      Lemma step_unlifted:
+        forall st1 llbl lst2,
+          step_m (liftSystem ln sys) (liftMState st1) llbl lst2 ->
+          exists lbl st2,
+            step_m sys st1 lbl st2 /\
+            lst2 = liftMState st2 /\ llbl = liftMLabel lbl.
+      Proof.
+        intros.
+        remember (liftMState st1) as lst1.
+        inv H0.
+        - do 2 eexists; repeat split.
+          + constructor.
+          + reflexivity.
+
+        - destruct st1 as [oss1 orqs1 msgs1]; inv H3.
+          assert (exists reins,
+                     ValidMsgsExtIn sys reins /\ eins = liftMsgs ln reins).
+          { admit. }
+          destruct H0 as [reins [? ?]]; subst.
+                     
+          do 2 eexists; repeat split.
+          + econstructor 2.
+            * instantiate (1:= reins).
+              intro Hx; subst; auto.
+            * assumption.
+            * reflexivity.
+            * reflexivity.
+          + unfold liftMState; simpl.
+            rewrite liftFMap_enqMsgs; reflexivity.
+          + reflexivity.
+
+      Admitted.
+
+      Lemma steps_unlifted:
+        forall st1 lhst lst1 lst2,
+          lst1 = liftMState st1 ->
+          steps step_m (liftSystem ln sys) lst1 lhst lst2 ->
+          exists hst st2,
+            steps step_m sys st1 hst st2 /\
+            lst2 = liftMState st2 /\ lhst = map liftMLabel hst.
+      Proof.
+        induction 2; intros; subst.
+        - do 2 eexists; repeat split.
+          + constructor.
+          + reflexivity.
+        - specialize (IHsteps eq_refl).
+          destruct IHsteps as [hst [rst2 ?]]; dest; subst.
+          apply step_unlifted in H2.
+          destruct H2 as [rlbl [st2 ?]]; dest; subst.
+          eexists (_ :: _), _; repeat split.
+          econstructor; eauto.
+      Qed.
+
+      Lemma liftSystem_initsOf:
+        initsOf (liftSystem ln sys) = liftMState (initsOf sys).
+      Proof.
+        reflexivity.
       Qed.
 
       Lemma Behavior_unlifted:
-        forall ln tr,
+        forall tr,
           Behavior (steps step_m) (liftSystem ln sys) tr ->
           exists utr,
             Behavior (steps step_m) sys utr /\ tr = map liftLabel utr.
       Proof.
-      Admitted.
+        intros.
+        inv H0.
+        rewrite liftSystem_initsOf in H1.
+        eapply steps_unlifted in H1; [|reflexivity].
+        destruct H1 as [hst [st2 ?]]; dest; subst.
+        eexists; split.
+        - econstructor; [eassumption|reflexivity].
+        - apply eq_sym, liftLabel_liftMLabel.
+      Qed.
 
     End System.
 
