@@ -185,6 +185,16 @@ Proof.
   eapply extendIdx_In; eauto.
 Qed.
 
+Lemma extendIdx_NoDup_inv:
+  forall ext inds,
+    NoDup (extendInds ext inds) -> NoDup inds.
+Proof.
+  induction inds; simpl; intros; auto.
+  inv H; constructor; auto.
+  intro Hx; elim H2.
+  apply in_map; assumption.
+Qed.
+
 Lemma extendInds_idxHd_SubList:
   forall ext inds,
     SubList (map idxHd (extendInds ext inds)) [ext].

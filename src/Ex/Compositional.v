@@ -2,7 +2,7 @@ Require Import List FMap Omega.
 Require Import Common Topology IndexSupport Syntax Semantics StepM.
 Require Import RqRsLang.
 
-Require Import Ex.TopoTemplate.
+(* Require Import Ex.TopoTemplate. *)
 
 Set Implicit Arguments.
 
@@ -270,6 +270,29 @@ Section Facts.
         apply liftFMap_FirstMP; assumption.
       Qed.
 
+      Lemma liftFMap_FirstMP_inv:
+        forall midx msg (mp: MessagePool MsgT),
+          FirstMP (liftFMap ln mp) midx~>ln msg ->
+          FirstMP mp midx msg.
+      Proof.
+        unfold FirstMP, firstMP, findQ; intros.
+        rewrite liftFMap_find in H0.
+        assumption.
+      Qed.
+
+      Lemma liftFMap_FirstMPI_Forall_inv:
+        forall msgs (mp: MessagePool MsgT),
+          Forall (FirstMPI (liftFMap ln mp)) (liftMsgs ln msgs) ->
+          Forall (FirstMPI mp) msgs.
+      Proof.
+        intros.
+        apply Forall_forall; intros midx ?.
+        apply liftFMap_FirstMP_inv.
+        rewrite Forall_forall in H0.
+        apply (H0 ((idOf midx)~>ln, valOf midx)).
+        eapply in_map in H1; exact H1.
+      Qed.
+
     End Messages.
 
     Definition liftMLabel (lbl: MLabel): MLabel :=
@@ -423,6 +446,75 @@ Section Facts.
         - apply liftLabel_liftMLabel.
       Qed.
 
+      Lemma SubList_unlifted:
+        forall (l1: list IdxT) l2,
+          SubList l1 (extendInds ln l2) ->
+          exists rl1, SubList rl1 l2 /\ l1 = extendInds ln rl1.
+      Proof.
+        induction l1; simpl; intros.
+        - exists nil; split; auto.
+          apply SubList_nil.
+        - apply SubList_cons_inv in H0; dest.
+          apply in_map_iff in H0; destruct H0 as [ra [? ?]]; subst.
+          specialize (IHl1 _ H1).
+          destruct IHl1 as [rl1 [? ?]]; subst.
+          exists (ra :: rl1); split; auto.
+          apply SubList_cons; auto.
+      Qed.
+
+      Lemma idsOf_unlifted:
+        forall {A} (l1: list (Id A)) l2,
+          idsOf l1 = extendInds ln l2 ->
+          exists rl1, idsOf rl1 = l2 /\ l1 = liftMsgs ln rl1.
+      Proof.
+        induction l1; simpl; intros.
+        - destruct l2; [|discriminate].
+          exists nil; split; auto.
+        - destruct l2; [discriminate|].
+          inv H0.
+          specialize (IHl1 _ H3); destruct IHl1 as [rl1 [? ?]]; subst.
+          exists ((i, snd a) :: rl1).
+          split; auto.
+          destruct a; simpl in *; subst; reflexivity.
+      Qed.
+
+      Lemma ValidMsgsExtIn_unlifted:
+        forall {MsgT} (eins: list (Id MsgT)),
+          ValidMsgsExtIn (liftSystem ln sys) eins ->
+          exists reins, ValidMsgsExtIn sys reins /\ eins = liftMsgs ln reins.
+      Proof.
+        intros.
+        destruct H0; simpl in H0.
+        red in H1.
+        apply SubList_unlifted in H0.
+        destruct H0 as [rl [? ?]].
+        rewrite H2 in H1.
+        apply idsOf_unlifted in H2.
+        destruct H2 as [reins [? ?]]; subst.
+        exists reins; split; [|reflexivity].
+        split; auto.
+        eapply extendIdx_NoDup_inv; eauto.
+      Qed.
+
+      Lemma ValidMsgsExtOut_unlifted:
+        forall {MsgT} (eouts: list (Id MsgT)),
+          ValidMsgsExtOut (liftSystem ln sys) eouts ->
+          exists reouts,
+            ValidMsgsExtOut sys reouts /\ eouts = liftMsgs ln reouts.
+      Proof.
+        intros.
+        destruct H0; simpl in H0.
+        red in H1.
+        apply SubList_unlifted in H0.
+        destruct H0 as [rl [? ?]].
+        rewrite H2 in H1.
+        apply idsOf_unlifted in H2.
+        destruct H2 as [reouts [? ?]]; subst.
+        exists reouts; split; [|reflexivity].
+        split; auto.
+        eapply extendIdx_NoDup_inv; eauto.
+      Qed.
+
       Lemma step_unlifted:
         forall st1 llbl lst2,
           step_m (liftSystem ln sys) (liftMState st1) llbl lst2 ->
@@ -438,10 +530,8 @@ Section Facts.
           + reflexivity.
 
         - destruct st1 as [oss1 orqs1 msgs1]; inv H3.
-          assert (exists reins,
-                     ValidMsgsExtIn sys reins /\ eins = liftMsgs ln reins).
-          { admit. }
-          destruct H0 as [reins [? ?]]; subst.
+          apply ValidMsgsExtIn_unlifted in H2.
+          destruct H2 as [reins [? ?]]; subst.
                      
           do 2 eexists; repeat split.
           + econstructor 2.
@@ -453,6 +543,27 @@ Section Facts.
           + unfold liftMState; simpl.
             rewrite liftFMap_enqMsgs; reflexivity.
           + reflexivity.
+
+        - destruct st1 as [oss1 orqs1 msgs1]; inv H4.
+          apply ValidMsgsExtOut_unlifted in H3.
+          destruct H3 as [reouts [? ?]]; subst.
+          apply liftFMap_FirstMPI_Forall_inv in H2.
+                     
+          do 2 eexists; repeat split.
+          + econstructor 3.
+            * instantiate (1:= reouts).
+              intro Hx; subst; auto.
+            * eassumption.
+            * assumption.
+            * reflexivity.
+            * reflexivity.
+          + unfold liftMState; simpl.
+            rewrite liftFMap_deqMsgs.
+            rewrite <-extendInds_idsOf_liftMsgs.
+            reflexivity.
+          + reflexivity.
+
+        - destruct st1 as [oss1 orqs1 msgs1]; inv H12.
 
       Admitted.
 
