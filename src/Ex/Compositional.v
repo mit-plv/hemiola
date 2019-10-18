@@ -10,7 +10,6 @@ Local Open Scope list.
 Local Open Scope fmap.
 
 Axiom cheat: forall t, t.
-Ltac admit := apply cheat.
 
 Lemma extendInds_DisjList:
   forall inds1 inds2,
@@ -26,6 +25,19 @@ Proof.
   apply in_map_iff in Hx; destruct Hx as [oidx2 [? ?]]; subst.
   inv H0.
   eapply DisjList_In_1; eauto.
+Qed.
+
+Lemma extendInds_DisjList_inv:
+  forall inds1 inds2 ext,
+    DisjList (extendInds ext inds1) (extendInds ext inds2) ->
+    DisjList inds1 inds2.
+Proof.
+  intros.
+  apply (DisjList_spec_1 idx_dec).
+  intros idx ?; intro Hx.
+  eapply DisjList_In_1 with (a:= idx~>ext); [eassumption|..].
+  - apply in_map; assumption.
+  - apply in_map; assumption.
 Qed.
 
 Section Lift.
@@ -515,6 +527,89 @@ Section Facts.
         eapply extendIdx_NoDup_inv; eauto.
       Qed.
 
+      Lemma obj_rule_unlifted:
+        forall sys obj rule,
+          In obj (sys_objs (liftSystem ln sys)) ->
+          In rule (obj_rules obj) ->
+          exists robj rrule,
+            In robj (sys_objs sys) /\
+            obj = liftObject ln robj /\
+            In rrule (obj_rules robj) /\
+            rule = liftRule ln rrule.
+      Proof.
+        intros.
+        apply in_map_iff in H0.
+        destruct H0 as [robj [? ?]]; subst.
+        apply in_map_iff in H1.
+        destruct H1 as [rrule [? ?]]; subst.
+        exists robj, rrule; auto.
+      Qed.
+
+      Lemma ValidMsgsIn_unlifted:
+        forall {MsgT} (ins: list (Id MsgT)),
+          ValidMsgsIn (liftSystem ln sys) ins ->
+          exists rins, ValidMsgsIn sys rins /\ ins = liftMsgs ln rins.
+      Proof.
+        intros.
+        destruct H0; simpl in H0.
+        red in H1.
+        unfold extendInds in H0; rewrite <-map_app in H0.
+        apply SubList_unlifted in H0.
+        destruct H0 as [rl [? ?]].
+        rewrite H2 in H1.
+        apply idsOf_unlifted in H2.
+        destruct H2 as [rins [? ?]]; subst.
+        exists rins; split; [|reflexivity].
+        split; auto.
+        eapply extendIdx_NoDup_inv; eauto.
+      Qed.
+
+      Lemma ValidMsgsOut_unlifted:
+        forall {MsgT} (outs: list (Id MsgT)),
+          ValidMsgsOut (liftSystem ln sys) outs ->
+          exists routs, ValidMsgsOut sys routs /\ outs = liftMsgs ln routs.
+      Proof.
+        intros.
+        destruct H0; simpl in H0.
+        red in H1.
+        unfold extendInds in H0; rewrite <-map_app in H0.
+        apply SubList_unlifted in H0.
+        destruct H0 as [rl [? ?]].
+        rewrite H2 in H1.
+        apply idsOf_unlifted in H2.
+        destruct H2 as [routs [? ?]]; subst.
+        exists routs; split; [|reflexivity].
+        split; auto.
+        eapply extendIdx_NoDup_inv; eauto.
+      Qed.
+
+      Lemma rule_prec_unlifted:
+        forall rule ost orq ins,
+          liftRulePrec (rule_precond rule) ost orq (liftMsgs ln ins) ->
+          rule_precond rule ost orq ins.
+      Proof.
+        intros.
+        red in H0.
+        rewrite liftMsgs_unliftMsgs in H0.
+        assumption.
+      Qed.
+
+      Lemma rule_trs_unlifted:
+        forall rule post porq ins nost norq outs,
+          liftRuleTrs ln (rule_trs rule) post porq (liftMsgs ln ins) =
+          (nost, norq, liftMsgs ln outs) ->
+          rule_trs rule post porq ins = (nost, norq, outs).
+      Proof.
+        intros.
+        unfold liftRuleTrs in H0.
+        rewrite liftMsgs_unliftMsgs in H0.
+        destruct (rule_trs rule post porq ins) as [[nost' norq'] outs'].
+        inv H0.
+        apply f_equal with (f:= unliftMsgs) in H4.
+        do 2 rewrite liftMsgs_unliftMsgs in H4.
+        subst; reflexivity.
+      Qed.
+
       Lemma step_unlifted:
         forall st1 llbl lst2,
           step_m (liftSystem ln sys) (liftMState st1) llbl lst2 ->
@@ -564,8 +659,30 @@ Section Facts.
           + reflexivity.
 
         - destruct st1 as [oss1 orqs1 msgs1]; inv H12.
+          eapply obj_rule_unlifted in H1; [|eassumption].
+          clear H2; destruct H1 as [robj [rrule ?]]; dest; subst.
+          simpl in H4; rewrite liftFMap_find in H4.
+          simpl in H5; rewrite liftFMap_find in H5.
+          apply ValidMsgsIn_unlifted in H7.
+          destruct H7 as [rins [? ?]]; subst.
+          apply liftFMap_FirstMPI_Forall_inv in H6.
+          apply rule_prec_unlifted in H8.
+          apply ValidMsgsOut_unlifted in H10.
+          destruct H10 as [routs [? ?]]; subst.
+          apply rule_trs_unlifted in H9.
+          do 2 rewrite <-extendInds_idsOf_liftMsgs in H11.
+          apply extendInds_DisjList_inv in H11.
 
-      Admitted.
+          do 2 eexists; repeat split.
+          + econstructor 4; eauto.
+          + unfold liftMState; simpl.
+            do 2 rewrite liftFMap_add.
+            rewrite liftFMap_enqMsgs, liftFMap_deqMsgs.
+            rewrite <-extendInds_idsOf_liftMsgs.
+            reflexivity.
+          + reflexivity.
+
+      Qed.
 
       Lemma steps_unlifted:
         forall st1 lhst lst1 lst2,
