@@ -7,7 +7,8 @@ Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
 
 Require Export Ex.Mesi.MesiInvB.
-Require Export Ex.Mesi.MesiInv Ex.Mesi.MesiInvInv0 Ex.Mesi.MesiInvInv1.
+Require Export Ex.Mesi.MesiInv.
+Require Import Ex.Mesi.MesiInvInv0 Ex.Mesi.MesiInvInv1 Ex.Mesi.MesiInvInv2.
 Require Export Ex.Mesi.MesiInvExcl.
 
 Set Implicit Arguments.
@@ -23,7 +24,7 @@ Existing Instance Mesi.ImplOStateIfc.
 
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
   InvExcl st /\
-  InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\
+  InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\ InvNWB topo st /\
   MesiDownLockInv topo st.
 
 Lemma mesi_InvForSim_init:
@@ -91,6 +92,13 @@ Ltac disc_InvWBCoh_inv cidx Hinv :=
   end.
 
 Ltac disc_InvWB cidx Hinv :=
+  match goal with
+  | [Hp: parentIdxOf _ cidx = Some _ |- _] =>
+    specialize (Hinv _ _ Hp); simpl in Hinv;
+    disc_rule_conds_ex
+  end.
+
+Ltac disc_InvNWB cidx Hinv :=
   match goal with
   | [Hp: parentIdxOf _ cidx = Some _ |- _] =>
     specialize (Hinv _ _ Hp); simpl in Hinv;

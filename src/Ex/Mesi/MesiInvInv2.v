@@ -1422,5 +1422,109 @@ Section InvDirE.
       (* END_SKIP_PROOF_OFF *)
   Qed.
 
+  Theorem mesi_InvDirE_ok:
+    InvReachable impl step_m (InvDirE topo).
+  Proof.
+    apply inv_reachable.
+    - apply mesi_InvDirE_init.
+    - apply mesi_InvDirE_step.
+  Qed.
+
 End InvDirE.
-  
+
+Definition InvNWB (topo: DTree) (st: MState): Prop :=
+  forall oidx pidx,
+    parentIdxOf topo oidx = Some pidx ->
+    ost <+- (bst_oss st)@[oidx];
+      orq <+- (bst_orqs st)@[oidx];
+      post <+- (bst_oss st)@[pidx];
+      porq <+- (bst_orqs st)@[pidx];
+      (ObjDirE porq post oidx ->
+       ObjInvRq oidx (bst_msgs st) ->
+       NoRsI oidx (bst_msgs st) /\ mesiS <= ost#[status] /\
+       ost#[val] = post#[val]).
+
+Section InvNWB.
+  Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
+
+  Let topo: DTree := fst (tree2Topo tr 0).
+  Let cifc: CIfc := snd (tree2Topo tr 0).
+  Let impl: System := impl Htr.
+
+  Theorem mesi_InvNWB_ok:
+    InvReachable impl step_m (InvNWB topo).
+  Proof.
+    red; intros.
+    pose proof (mesi_InObjInds H) as Hoin.
+    pose proof (mesi_MsgConflictsInv (@mesi_RootChnInv_ok _ Htr) H) as Hmcf.
+    pose proof (mesi_InvDirME_ok H) as Hdme.
+    pose proof (mesi_InvNotOwned_ok H) as Hno.
+    pose proof (mesi_InvDirE_ok H) as Hde.
+    pose proof (mesi_InvWBDir_ok H) as Hwd.
+    
+    red; intros.
+    specialize (Hoin oidx).
+    specialize (Hmcf oidx).
+    specialize (Hdme _ _ H0).
+    specialize (Hno oidx).
+    specialize (Hde _ _ H0).
+    specialize (Hwd oidx).
+
+    destruct (bst_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
+    destruct (bst_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
+    destruct (bst_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (bst_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
+
+    specialize (Hmcf _ Hoin eq_refl); dest.
+    intros.
+    specialize (Hwd (or_intror (or_introl H5))).
+    specialize (Hno H5).
+    specialize (Hde H4).
+    destruct Hde as [_ Hde].
+    specialize (Hdme (ObjDirE_ObjDirME H4)).
+
+    assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
+    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+      apply not_MsgExistsSig_MsgsNotExist.
+      intros; dest_in.
+      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
+        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      }
+      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
+        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      }
+    }
+
+    specialize (Hdme Hnrs); destruct Hdme as [Hnrsi Hdme].
+
+    assert (mesiS <= ost#[status]) as Hs.
+    { specialize (Hdme ltac:(solve_mesi)).
+      destruct Hdme; dest; simpl in *; solve_mesi.
+    }
+
+    assert (ObjCohDirE ost) as Hode.
+    { split; [assumption|left; assumption]. }
+    specialize (Hde Hnrs Hode).
+
+    repeat split.
+    - clear -Hnrsi.
+      do 3 red; intros.
+      specialize (Hnrsi _ H).
+      red in Hnrsi.
+      rewrite map_trans in Hnrsi; do 2 rewrite map_cons in Hnrsi.
+      red in Hnrsi.
+      do 2 (destruct (sig_dec _ _); [exfalso; auto|]).
+      clear Hnrsi.
+      red.
+      rewrite map_trans, map_cons.
+      rewrite caseDec_head_neq by assumption.
+      simpl; auto.
+    - assumption.
+    - apply eq_sym; assumption.
+  Qed.
+
+End InvNWB.
+
