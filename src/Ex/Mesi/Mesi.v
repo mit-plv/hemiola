@@ -337,7 +337,9 @@ Section System.
         rule.immd[1~>0~>1]
         :accepts Spec.setRq
         :from cidx
-        :requires (fun ost orq mins => ost#[status] = mesiM)
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = true /\ ost#[status] = mesiM)
         :transition
            (!|ost, msg|
             --> (ost +#[val <- msg_value msg],

@@ -47,6 +47,16 @@ Definition InvDirE (topo: DTree) (st: MState): Prop :=
          ObjCohDirE ost ->
          post#[val] = ost#[val]))).
 
+Lemma ObjDirE_ObjDirME:
+  forall orq ost cidx,
+    ObjDirE orq ost cidx -> ObjDirME orq ost cidx.
+Proof.
+  intros.
+  red in H; dest.
+  red; repeat split; try assumption.
+  solve_mesi.
+Qed.
+
 Section InvDirE.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
@@ -358,16 +368,37 @@ Section InvDirE.
     intros;
     match goal with
     | [H: ObjCohDirE _ |- _] =>
-      red in H; simpl in *; dest; solve [discriminate|solve_mesi]
+      red in H; simpl in *; dest; solve [congruence|solve_mesi]
     end.
 
   Ltac solve_valid :=
     split; [solve_MsgsP|solve_coh].
 
+  Ltac solve_by_child_downlock_to_parent oidx :=
+    exfalso;
+    disc_MsgConflictsInv oidx;
+    match goal with
+    | [Hp: ParentLockFreeConflicts oidx ?porq ?orq,
+           Ho: ?orq@[downRq] = None,
+               Hpo: ?porq@[downRq] = Some _ |- _] =>
+      specialize (Hp Ho); rewrite Hpo in Hp;
+      simpl in Hp; auto
+    end.
+
+  Ltac solve_by_NoRsSI_false :=
+    exfalso;
+    match goal with
+    | [Hn: NoRsSI _ ?msgs, Hf: FirstMPI ?msgs (?midx, ?msg) |- _] =>
+      specialize (Hn (midx, msg) (FirstMP_InMP Hf));
+      solve_MsgsP_false Hn;
+      auto
+    end.
+
   Lemma mesi_InvDirE_step:
     Invariant.InvStep impl step_m (InvDirE topo).
   Proof. (* SKIP_PROOF_OFF *)
     red; intros.
+    pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
                   (mesi_GoodRqRsSys Htr) H) as Hftinv.
@@ -425,7 +456,13 @@ Section InvDirE.
           { disc_ObjDirE.
             split; intros.
             { apply MsgsP_enqMP.
-              { admit. (** TODO: since [RsE] is already there .. *) }
+              { derive_child_idx_in oidx0.
+                disc_MsgConflictsInv oidx0.
+                apply MsgsNotExist_MsgsP; simpl.
+                apply MsgsP_deqMP.
+                solve_MsgsNotExist_base.
+                solve_RsDown_by_rqUp oidx0.
+              }
               { red; unfold map.
                 rewrite caseDec_head_eq by reflexivity.
                 reflexivity.
@@ -526,7 +563,6 @@ Section InvDirE.
       (** Derive some necessary information: each Li has a parent. *)
       apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
 
-      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
@@ -560,7 +596,13 @@ Section InvDirE.
           { disc_ObjDirE.
             split; intros.
             { apply MsgsP_enqMP.
-              { admit. (** TODO: since [RsE] is already there .. *) }
+              { derive_child_idx_in oidx0.
+                disc_MsgConflictsInv oidx0.
+                apply MsgsNotExist_MsgsP; simpl.
+                apply MsgsP_deqMP.
+                solve_MsgsNotExist_base.
+                solve_RsDown_by_rqUp oidx0.
+              }
               { red; unfold map.
                 rewrite caseDec_head_eq by reflexivity.
                 reflexivity.
@@ -660,9 +702,22 @@ Section InvDirE.
         derive_child_chns cidx.
         disc_rule_conds_ex.
         disc.
-        { (** TODO: need to have [InvDirME]? *)
-          admit.
-        }
+        { split; [solve_MsgsP|].
+
+          subst topo; disc_rule_conds_ex.
+          intros.
+
+          (** TODO: make an Ltac [disc_InvDirME] .. *)
+          move Hdme at bottom.
+          red in Hdme; simpl in Hdme.
+          specialize (Hdme _ _ H4).
+          disc_rule_conds_ex.
+          disc_NoRsME.
+          specialize (Hdme (ObjDirE_ObjDirME H29)).
+          specialize (Hdme H31); dest.
+
+          solve_by_NoRsSI_false.
+        }          
         { solve_by_diff_dir. }
         { destruct (idx_dec cidx oidx0); subst.
           { solve_by_idx_false. }
@@ -689,7 +744,13 @@ Section InvDirE.
         { disc_ObjDirE.
           split; intros.
           { apply MsgsP_enqMP.
-            { admit. (** TODO: since [RsE] is already there .. *) }
+            { derive_child_idx_in oidx0.
+              disc_MsgConflictsInv oidx0.
+              apply MsgsNotExist_MsgsP; simpl.
+              apply MsgsP_deqMP.
+              solve_MsgsNotExist_base.
+              solve_RsDown_by_parent_lock oidx0.
+            }
             { red; unfold map.
               rewrite caseDec_head_eq by reflexivity.
               reflexivity.
@@ -731,17 +792,6 @@ Section InvDirE.
         { disc_ObjDirE.
           remember (dir_excl _) as oidx; clear Heqoidx.
           disc_MsgConflictsInv oidx.
-
-          Ltac solve_by_child_downlock_to_parent oidx :=
-            exfalso;
-            disc_MsgConflictsInv oidx;
-            match goal with
-            | [Hp: ParentLockFreeConflicts oidx ?porq ?orq,
-                   Ho: ?orq@[downRq] = None,
-                       Hpo: ?porq@[downRq] = Some _ |- _] =>
-              specialize (Hp Ho); rewrite Hpo in Hp;
-              simpl in Hp; auto
-            end.
 
           solve_by_child_downlock_to_parent oidx.
         }
@@ -846,7 +896,6 @@ Section InvDirE.
       (** Derive some necessary information: each Li has a parent. *)
       apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
 
-      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
       pose proof (c_l1_indices_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
@@ -871,9 +920,21 @@ Section InvDirE.
         derive_child_chns cidx.
         disc_rule_conds_ex.
         disc.
-        { (** TODO: need to have [InvDirME]. *)
-          admit.
-        }
+        { split; [solve_MsgsP|].
+
+          subst topo; disc_rule_conds_ex.
+          intros.
+
+          (** TODO: make an Ltac [disc_InvDirME] .. *)
+          move Hdme at bottom.
+          red in Hdme; simpl in Hdme.
+          specialize (Hdme _ _ H4).
+          disc_rule_conds_ex.
+          specialize (Hdme (ObjDirE_ObjDirME H28)).
+          specialize (Hdme H30); dest.
+
+          solve_by_NoRsSI_false.
+        }          
         { solve_by_diff_dir. }
       }
 
@@ -919,9 +980,7 @@ Section InvDirE.
       }
 
       { disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-        { split; [solve_MsgsP|].
-          admit. (** TODO: well we know [owned = T] here.. *)
-        }
+        { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
         { solve_by_diff_dir. }
       }
 
@@ -965,8 +1024,7 @@ Section InvDirE.
         disc_ObjDirE; solve_mesi.
       }
 
-      { (* [liInvRsDownDown] *)
-        disc_rule_conds_ex.
+      { disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
         derive_InvWBDir oidx.
         assert (ObjInvRs oidx msgs) as Hirs.

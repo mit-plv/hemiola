@@ -403,6 +403,17 @@ Section InvDirME.
     disc_MsgExistsSig;
     solve_RsDown_by_rsDown oidx.
 
+  Ltac solve_by_child_downlock_to_parent oidx :=
+    exfalso;
+    disc_MsgConflictsInv oidx;
+    match goal with
+    | [Hp: ParentLockFreeConflicts oidx ?porq ?orq,
+           Ho: ?orq@[downRq] = None,
+               Hpo: ?porq@[downRq] = Some _ |- _] =>
+      specialize (Hp Ho); rewrite Hpo in Hp;
+      simpl in Hp; auto
+    end.
+  
   Lemma mesi_InvDirME_step:
     Invariant.InvStep impl step_m (InvDirME topo).
   Proof. (* SKIP_PROOF_OFF *)
@@ -830,18 +841,6 @@ Section InvDirME.
         { disc_ObjDirME.
           remember (dir_excl _) as oidx; clear Heqoidx.
           disc_MsgConflictsInv oidx.
-
-          Ltac solve_by_child_downlock_to_parent oidx :=
-            exfalso;
-            disc_MsgConflictsInv oidx;
-            match goal with
-            | [Hp: ParentLockFreeConflicts oidx ?porq ?orq,
-                   Ho: ?orq@[downRq] = None,
-                       Hpo: ?porq@[downRq] = Some _ |- _] =>
-              specialize (Hp Ho); rewrite Hpo in Hp;
-              simpl in Hp; auto
-            end.
-
           solve_by_child_downlock_to_parent oidx.
         }
         { solve_by_diff_dir. }

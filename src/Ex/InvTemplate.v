@@ -401,6 +401,27 @@ Ltac disc_MsgConflictsInv oidx :=
 
 Section Facts.
 
+  Lemma MsgsNotExist_MsgsP:
+    forall msgs spl,
+      MsgsNotExist (map fst spl) msgs ->
+      MsgsP spl msgs.
+  Proof.
+    intros.
+    red; intros.
+    specialize (H _ H0).
+    clear -H.
+    induction spl; simpl; intros; [auto|].
+    red in H.
+    repeat rewrite map_trans in H; rewrite map_cons in H.
+    unfold caseDec in H.
+    destruct (sig_dec _ _); [exfalso; auto|].
+    red; rewrite map_cons.
+    rewrite caseDec_head_neq by assumption.
+    apply IHspl.
+    red; repeat rewrite map_trans.
+    assumption.
+  Qed.
+
   Lemma MsgExistsSig_MsgsNotExist_false:
     forall msgs sigs,
       MsgsNotExist sigs msgs ->

@@ -147,10 +147,11 @@ Ltac disc_getDir :=
         apply getDir_ME_imp in H; destruct H
       end.
 
-Ltac solve_NoRsI_base :=
+Ltac solve_MsgsNotExist_base :=
   repeat
     match goal with
-    | |- NoRsI _ _ => do 3 red; intros
+    | |- MsgsNotExist _ _ => red
+    | |- MsgsP _ _ => red; intros
     | |- MsgP _ _ =>
       red; unfold map, caseDec, fst;
       repeat (find_if_inside; [simpl|auto])
@@ -159,6 +160,9 @@ Ltac solve_NoRsI_base :=
       let msg := fresh "msg" in
       destruct idm as [midx msg]; inv H
     end.
+
+Ltac solve_NoRsI_base :=
+  red; solve_MsgsNotExist_base.
 
 Ltac solve_RsDown_by_no_uplock oidx :=
   try match goal with
@@ -245,17 +249,7 @@ Ltac solve_NoRsI_by_rsDown oidx :=
   disc_MsgConflictsInv oidx; solve_RsDown_by_rsDown oidx.
 
 Ltac solve_NoRqI_base :=
-  repeat
-    match goal with
-    | |- NoRqI _ _ => do 3 red; intros
-    | |- MsgP _ _ =>
-      red; unfold map, caseDec, fst;
-      repeat (find_if_inside; [simpl|auto])
-    | [H: sigOf ?idm = _ |- _] =>
-      let midx := fresh "midx" in
-      let msg := fresh "msg" in
-      destruct idm as [midx msg]; inv H
-    end.
+  red; solve_MsgsNotExist_base.
 
 Ltac solve_NoRqI_by_no_locks oidx :=
   disc_MsgConflictsInv oidx;
