@@ -382,7 +382,8 @@ Section System.
         rule.rqu[2~>0]
         :me oidx
         :requires
-           (fun ost mins => mesiNP < ost#[status] < mesiM)
+           (fun ost mins =>
+              ost#[owned] = false /\ mesiNP < ost#[status] < mesiM)
         :transition
            (ost --> {| miv_id := mesiInvRq; miv_value := O |}).
 

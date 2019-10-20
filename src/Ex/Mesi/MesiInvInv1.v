@@ -1211,3 +1211,75 @@ Section InvWB.
 
 End InvWB.
 
+Definition InvNWB (topo: DTree) (st: MState): Prop :=
+  forall oidx pidx,
+    parentIdxOf topo oidx = Some pidx ->
+    ost <+- (bst_oss st)@[oidx];
+      orq <+- (bst_orqs st)@[oidx];
+      post <+- (bst_oss st)@[pidx];
+      porq <+- (bst_orqs st)@[pidx];
+      (ObjDirE porq post oidx ->
+       ObjInvRq oidx (bst_msgs st) ->
+       NoRsSI oidx (bst_msgs st) /\ mesiS <= ost#[status]).
+
+Section InvNWB.
+  Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
+
+  Let topo: DTree := fst (tree2Topo tr 0).
+  Let cifc: CIfc := snd (tree2Topo tr 0).
+  Let impl: System := impl Htr.
+
+  Theorem mesi_InvNWB_ok:
+    InvReachable impl step_m (InvNWB topo).
+  Proof.
+    red; intros.
+    pose proof (mesi_InObjInds H) as Ho.
+    pose proof (mesi_MsgConflictsInv (@mesi_RootChnInv_ok _ Htr) H) as Hm.
+    pose proof (mesi_InvDirME_ok H) as Hd.
+    pose proof (mesi_InvWBDir_ok H) as Hw.
+    red; intros.
+    specialize (Ho oidx).
+    specialize (Hm oidx).
+    specialize (Hd _ _ H0).
+    specialize (Hw oidx).
+
+    destruct (bst_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
+    destruct (bst_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
+    destruct (bst_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (bst_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
+
+    specialize (Hm _ Ho eq_refl); dest.
+    intros.
+    specialize (Hw (or_intror (or_introl H5))).
+
+    assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
+    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+      apply not_MsgExistsSig_MsgsNotExist.
+      intros; dest_in.
+      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
+        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      }
+      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
+        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      }
+    }
+
+    assert (ObjDirME porq post oidx).
+    { red in H4; dest.
+      red; repeat split; [|assumption..].
+      solve_mesi.
+    }
+    specialize (Hd H6 Hnrs); dest.
+
+    split; [assumption|].
+    red in H8.
+    assert (ost#[dir].(dir_st) <= mesiI) as Hdi by solve_mesi.
+    specialize (H8 (or_introl Hdi)).
+    destruct H8; dest; simpl in *; solve_mesi.
+  Qed.
+
+End InvNWB.
+

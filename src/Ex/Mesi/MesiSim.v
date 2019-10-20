@@ -59,9 +59,6 @@ Section Sim.
               (cost: OState)
               (msgs: MessagePool Msg).
 
-    Definition DirECoh :=
-      cost#[dir].(dir_st) = mesiE -> cost#[val] = cv.
-    
     Definition cohMsgs: list (MSig * (Id Msg -> Prop)) :=
       (| (downTo cidx, (MRs, mesiRsS)): fun idm => (valOf idm).(msg_value) = cv
        | (downTo cidx, (MRs, mesiRsE)): fun idm => (valOf idm).(msg_value) = cv
@@ -71,7 +68,7 @@ Section Sim.
     Definition MsgsCoh := MsgsP cohMsgs msgs.
 
     Definition ObjCoh :=
-      ImplOStateMESI cidx cost msgs cv /\ DirECoh /\ MsgsCoh.
+      ImplOStateMESI cidx cost msgs cv /\ MsgsCoh.
 
   End ObjCoh.
 
@@ -88,7 +85,6 @@ Section Sim.
       destruct H.
       - red in H; dest; repeat ssplit.
         + red; intros; rewrite H in H2; solve_mesi.
-        + red; intros; exfalso; auto.
         + do 2 red; intros.
           specialize (H1 _ H2); red in H1.
           red; unfold cohMsgs, map, caseDec, fst in *.
@@ -98,8 +94,6 @@ Section Sim.
       - repeat ssplit.
         + red; intros.
           exfalso; eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
-        + specialize (Hwd (or_intror (or_intror H))).
-          red; intros; solve_mesi.
         + destruct H as [idm [? ?]].
           red; intros.
           specialize (Hrsi idm ltac:(rewrite H0; reflexivity)
@@ -321,7 +315,6 @@ Section Sim.
         { intros; apply H4; auto.
           eapply MsgsP_enqMsgs_inv; eauto.
         }
-        { assumption. }
         { apply MsgsCoh_other_midx_enqMsgs; [assumption|].
           destruct H1; simpl in H1.
           eapply DisjList_SubList; [eassumption|].
@@ -377,7 +370,6 @@ Section Sim.
             apply DisjList_comm, tree2Topo_minds_merss_disj.
           }
         }
-        { assumption. }
         { apply MsgsCoh_deqMsgs; assumption. }
       + rewrite c_merss_l1_downTo in H2.
         apply SimExtMP_ext_outs_deqMsgs; auto.
@@ -449,10 +441,6 @@ Section Sim.
         | H:MsgsP ?P _ |- MsgsP ?P _ => disc_MsgsP H; assumption
         end;
     try solve_mesi.
-
-  Ltac solve_DirECoh :=
-    try assumption;
-    red; simpl; intros; auto; try solve_mesi.
 
   Ltac solve_MsgsCoh :=
     repeat
@@ -537,14 +525,14 @@ Section Sim.
     - (*! Cases for the main memory *)
       Ltac solve_ImplStateCoh_mem_me :=
         disc_rule_conds_ex;
-        split; [|split]; [solve_ImplOStateMESI|solve_DirECoh|solve_MsgsCoh].
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
 
       Ltac solve_ImplStateCoh_mem_others lidx :=
         match goal with
         | [Hf: forall _, In _ ?l -> _, He: In lidx ?l |- _] =>
           specialize (Hf _ He); disc_rule_conds_ex
         end;
-        split; [|split]; [solve_ImplOStateMESI|solve_DirECoh|solve_MsgsCoh].
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
 
       Ltac case_ImplStateCoh_mem_me_others lidx :=
         match goal with
@@ -584,7 +572,7 @@ Section Sim.
         apply rsEdgeUpFrom_Some with (sys:= impl) in Hrs;
           [|subst topo impl; auto].
         destruct Hrs as [rqUp [down [pidx ?]]]; dest.
-        apply parentIdxOf_child_not_root in H28; [|subst topo; auto].
+        apply parentIdxOf_child_not_root in H27; [|subst topo; auto].
         auto.
       }
 
@@ -682,20 +670,12 @@ Section Sim.
           solve_sim_mesi_ext_mp.
           solve_SpecStateCoh.
           case_ImplStateCoh_mem_me_others lidx.
-          { disc_rule_conds_ex; split; [|split].
+          { disc_rule_conds_ex; split.
             { (* Coherence of the object *)
               intros.
               disc_getDir.
-
-              Ltac solve_by_DirECoh :=
-                match goal with
-                | [H: DirECoh ?cv ?ost |- fst ?ost = ?cv] =>
-                  apply H; solve [assumption|solve_mesi]
-                end.
-
-              solve_by_DirECoh.
+              admit.
             }
-            { solve_DirECoh. }
             { solve_MsgsCoh. }
           }
           { solve_ImplStateCoh_mem_others lidx. }
@@ -723,7 +703,7 @@ Section Sim.
           solve_sim_mesi_ext_mp.
           solve_SpecStateCoh.
           case_ImplStateCoh_mem_me_others lidx.
-          { disc_rule_conds_ex; split; [|split].
+          { disc_rule_conds_ex; split.
             { (* Coherence of the object *)
               intros.
               derive_coherence_of cidx.
@@ -737,7 +717,6 @@ Section Sim.
               disc_InvWBCoh_inv cidx H20.
               congruence.
             }
-            { solve_DirECoh. }
             { solve_MsgsCoh. }
           }
           { solve_ImplStateCoh_mem_others lidx. }
@@ -776,14 +755,14 @@ Section Sim.
     - (*! Cases for Li caches *)
       Ltac solve_ImplStateCoh_li_me :=
         disc_rule_conds_ex;
-        split; [|split]; [solve_ImplOStateMESI|solve_DirECoh|solve_MsgsCoh].
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
 
       Ltac solve_ImplStateCoh_li_others lidx :=
         match goal with
         | [Hf: forall _, In _ ?l -> _, He: In lidx ?l |- _] =>
           specialize (Hf _ He); disc_rule_conds_ex
         end;
-        split; [|split]; [solve_ImplOStateMESI|solve_DirECoh|solve_MsgsCoh].
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
 
       Ltac case_ImplStateCoh_li_me_others lidx :=
         match goal with
@@ -919,19 +898,16 @@ Section Sim.
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
           derive_child_idx_in cidx.
-          assert (NoRqI oidx msgs)
-            by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
 
           solve_sim_mesi_ext_mp.
           solve_SpecStateCoh.
           case_ImplStateCoh_li_me_others lidx.
-          { disc_rule_conds_ex; split; [|split].
+          { disc_rule_conds_ex; split.
             { (* Coherence of the object *)
               intros.
               disc_getDir.
-              solve_by_DirECoh.
+              admit.
             }
-            { solve_DirECoh. }
             { solve_MsgsCoh. }
           }
           { solve_ImplStateCoh_li_others lidx. }
@@ -961,7 +937,7 @@ Section Sim.
           solve_sim_mesi_ext_mp.
           solve_SpecStateCoh.
           case_ImplStateCoh_li_me_others lidx.
-          { disc_rule_conds_ex; split; [|split].
+          { disc_rule_conds_ex; split.
             { (* Coherence of the object *)
               intros.
               derive_coherence_of cidx.
@@ -975,7 +951,6 @@ Section Sim.
               disc_InvWBCoh_inv cidx H25.
               congruence.
             }
-            { solve_DirECoh. }
             { solve_MsgsCoh. }
           }
           { solve_ImplStateCoh_li_others lidx. }
@@ -1145,7 +1120,7 @@ Section Sim.
 
       Ltac solve_ImplStateCoh_l1_me :=
         disc_rule_conds_ex;
-        split; [|split]; [solve_ImplOStateMESI|solve_DirECoh|solve_MsgsCoh].
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
 
       Ltac solve_ImplStateCoh_l1_others :=
         try match goal with
@@ -1155,7 +1130,7 @@ Section Sim.
         | [Hf: forall _, In _ ?l -> _, He: In _ ?l |- _] =>
           specialize (Hf _ He); disc_rule_conds_ex
         end;
-        split; [|split]; [solve_ImplOStateMESI|solve_DirECoh|solve_MsgsCoh].
+        split; [solve_ImplOStateMESI|solve_MsgsCoh].
 
       Ltac case_ImplStateCoh_l1_me_others :=
         red; simpl;
@@ -1333,10 +1308,10 @@ Section Sim.
           mred; simpl.
           assert (exists lost lorq, oss@[lidx] = Some lost /\
                                     orqs@[lidx] = Some lorq).
-          { specialize (H15 _ H32).
+          { specialize (H15 _ H31).
             solve_rule_conds_ex.
           }
-          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H41; simpl.
+          destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H40; simpl.
           eapply ObjInvalid_ObjCoh.
           { apply Hnmcf; [assumption|simpl; mred]. }
           { specialize (H19 lidx); simpl in H19; mred. }
