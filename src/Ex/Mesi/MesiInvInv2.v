@@ -26,6 +26,386 @@ Definition InvNotOwned (st: MState): Prop :=
   forall oidx,
     ost <+- (bst_oss st)@[oidx]; ObjInvNotOwned oidx ost (bst_msgs st).
 
+Section InvNotOwned.
+  Variable (tr: tree).
+  Hypothesis (Htr: tr <> Node nil).
+
+  Let topo: DTree := fst (tree2Topo tr 0).
+  Let cifc: CIfc := snd (tree2Topo tr 0).
+  Let impl: System := impl Htr.
+
+  Lemma mesi_InvNotOwned_init:
+    Invariant.InvInit impl InvNotOwned.
+  Proof.
+    do 2 (red; simpl).
+    intros.
+    destruct (implOStatesInit tr)@[oidx] as [orq|] eqn:Host; simpl; auto.
+    red; intros.
+    destruct H as [idm [? ?]].
+    do 2 red in H; dest_in.
+  Qed.      
+
+  Lemma mesi_InvNotOwned_ext_in:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      forall eins,
+        ValidMsgsExtIn impl eins ->
+        InvNotOwned {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+  Proof.
+    red; simpl; intros.
+    specialize (H oidx); simpl in H.
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    red; intros.
+    destruct H2 as [idm [? ?]].
+    apply InMP_enqMsgs_or in H2.
+    destruct H2; [|apply H; do 2 red; eauto].
+    apply in_map with (f:= idOf) in H2; simpl in H2.
+    apply H1 in H2; simpl in H2.
+    exfalso; eapply DisjList_In_1.
+    - apply tree2Topo_minds_merqs_disj.
+    - eassumption.
+    - eapply tree2Topo_obj_chns_minds_SubList.
+      + specialize (H0 oidx); simpl in H0.
+        rewrite Host in H0; simpl in H0.
+        eassumption.
+      + destruct idm as [midx msg]; inv H3.
+        simpl; tauto.
+  Qed.
+
+  Lemma mesi_InvNotOwned_ext_out:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      forall (eouts: list (Id Msg)),
+        InvNotOwned {| bst_oss := oss;
+                       bst_orqs := orqs;
+                       bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+  Proof.
+    red; simpl; intros.
+    specialize (H oidx); simpl in H.
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    red; intros.
+    destruct H1 as [idm [? ?]].
+    apply InMP_deqMsgs in H1.
+    apply H; do 2 red; eauto.
+  Qed.
+
+  Lemma InvNotOwned_no_update:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall oidx (post nost: OState),
+        oss@[oidx] = Some post ->
+        nost#[owned] = post#[owned] ->
+        InvNotOwned {| bst_oss:= oss +[oidx <- nost];
+                       bst_orqs:= orqs; bst_msgs:= msgs |}.
+  Proof.
+    unfold InvNotOwned; simpl; intros.
+    mred; simpl; auto.
+    specialize (H oidx).
+    rewrite H0 in H; simpl in H.
+    red; intros.
+    simpl; rewrite H1; auto.
+  Qed.
+
+  Lemma InvNotOwned_update_status_NoRqI_NoRsI:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall oidx (ost: OState),
+        NoRqI oidx msgs ->
+        InvNotOwned {| bst_oss:= oss +[oidx <- ost];
+                       bst_orqs:= orqs; bst_msgs:= msgs |}.
+  Proof.
+    unfold InvNotOwned; simpl; intros.
+    mred; simpl; auto.
+    red; intros.
+    exfalso.
+    eapply MsgExistsSig_MsgsNotExist_false; [apply H0| |eassumption].
+    simpl; tauto.
+  Qed.
+
+  Lemma InvNotOwned_enqMP_rq_valid:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall oidx ost midx msg,
+        oss@[oidx] = Some ost ->
+        ost#[owned] = false ->
+        midx = rqUpFrom oidx ->
+        msg.(msg_id) = mesiInvRq ->
+        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
+                       bst_msgs:= enqMP midx msg msgs |}.
+  Proof.
+    unfold InvNotOwned; simpl; intros.
+    destruct (idx_dec oidx0 oidx); subst.
+    - specialize (H oidx).
+      rewrite H0 in *; simpl in *.
+      red; intros; auto.
+    - specialize (H oidx0).
+      destruct (oss@[oidx0]) as [ost0|]; simpl in *; auto.
+      red; intros.
+      destruct H2 as [idm [? ?]].
+      apply InMP_enqMP_or in H2; destruct H2.
+      + dest; inv H4; rewrite H2 in H7; inv H7.
+        exfalso; auto.
+      + apply H; do 2 red; eauto.
+  Qed.
+
+  Lemma InvNotOwned_other_msg_id_enqMP:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall midx msg,
+        msg.(msg_id) <> mesiInvRq ->
+        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
+                       bst_msgs:= enqMP midx msg msgs |}.
+  Proof.
+    unfold InvNotOwned; simpl; intros.
+    specialize (H oidx).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    red; intros.
+    destruct H1 as [idm [? ?]].
+    apply InMP_enqMP_or in H1; destruct H1.
+    - dest; subst; inv H2; exfalso; auto.
+    - apply H; do 2 red; eauto.
+  Qed.
+
+  Lemma InvNotOwned_other_msg_id_enqMsgs:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall nmsgs,
+        Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq /\
+                           (valOf idm).(msg_id) <> mesiInvRq /\
+                           (valOf idm).(msg_id) <> mesiInvRs) nmsgs ->
+        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
+                       bst_msgs:= enqMsgs nmsgs msgs |}.
+  Proof.
+    intros.
+    generalize dependent msgs.
+    induction nmsgs as [|[nmidx nmsg] nmsgs]; simpl; intros; auto.
+    inv H0; dest.
+    apply IHnmsgs; auto.
+    apply InvNotOwned_other_msg_id_enqMP; assumption.
+  Qed.
+
+  Lemma InvNotOwned_deqMP:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall midx,
+        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
+                       bst_msgs:= deqMP midx msgs |}.
+  Proof.
+    unfold InvNotOwned; simpl; intros.
+    specialize (H oidx).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    red; intros.
+    destruct H0 as [idm [? ?]].
+    apply InMP_deqMP in H0.
+    apply H; do 2 red; eauto.
+  Qed.
+
+  Lemma InvNotOwned_deqMsgs:
+    forall oss orqs msgs,
+      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      forall minds,
+        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
+                       bst_msgs:= deqMsgs minds msgs |}.
+  Proof.
+    unfold InvNotOwned; simpl; intros.
+    specialize (H oidx).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    red; intros.
+    destruct H0 as [idm [? ?]].
+    apply InMP_deqMsgs in H0.
+    apply H; do 2 red; eauto.
+  Qed.
+
+  Ltac simpl_InvNotOwned_enqMP :=
+    simpl;
+    try match goal with
+        | [H: msg_id ?rmsg = _ |- msg_id ?rmsg <> _] => rewrite H
+        end;
+    discriminate.
+
+  Ltac simpl_InvNotOwned_enqMsgs :=
+    let idm := fresh "idm" in
+    let Hin := fresh "H" in
+    apply Forall_forall; intros idm Hin;
+    apply in_map_iff in Hin; dest; subst;
+    repeat ssplit; simpl_InvNotOwned_enqMP.
+
+  Ltac simpl_InvNotOwned :=
+    repeat
+      (first [apply InvNotOwned_other_msg_id_enqMP; [|simpl_InvNotOwned_enqMP..]
+             |apply InvNotOwned_other_msg_id_enqMsgs; [|simpl_InvNotOwned_enqMsgs]
+             |apply InvNotOwned_deqMP
+             |apply InvNotOwned_deqMsgs
+             |apply InvNotOwned_update_status_NoRqI_NoRsI; [|assumption..]
+             |eapply InvNotOwned_no_update; [|eauto; fail..]
+             |assumption]).
+
+  Ltac solve_InvNotOwned :=
+    let oidx := fresh "oidx" in
+    red; simpl; intros oidx;
+    match goal with
+    | [Hi: InvNotOwned _ |- _] =>
+      specialize (Hi oidx); simpl in Hi;
+      mred; simpl;
+      let Hinv := fresh "H" in
+      intros Hinv;
+      specialize (Hi Hinv)
+    end;
+    simpl in *; try reflexivity; try solve_mesi.
+
+  Lemma mesi_InvNotOwned_step:
+    Invariant.InvStep impl step_m InvNotOwned.
+  Proof. (* SKIP_PROOF_OFF *)
+    red; intros.
+    pose proof (footprints_ok
+                  (mesi_GoodORqsInit Htr)
+                  (mesi_GoodRqRsSys Htr) H) as Hftinv.
+    pose proof (mesi_InObjInds H) as Hioi.
+    pose proof (mesi_MsgConflictsInv
+                  (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
+    pose proof (MesiDownLockInv_ok H) as Hmdl.
+    pose proof (mesi_InvWBDir_ok H) as Hwd.
+    inv H1; [assumption
+            |apply mesi_InvNotOwned_ext_in; auto
+            |apply mesi_InvNotOwned_ext_out; auto
+            |].
+
+    simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
+
+    - (*! Cases for the main memory *)
+
+      (** Abstract the root. *)
+      assert (In (rootOf (fst (tree2Topo tr 0)))
+                 (c_li_indices (snd (tree2Topo tr 0)))) as Hin.
+      { rewrite c_li_indices_head_rootOf by assumption.
+        left; reflexivity.
+      }
+
+      remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
+
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H3; destruct H3.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H1; destruct H1 as [crls [? ?]].
+        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+        dest_in; disc_rule_conds_ex.
+
+        all: try (simpl_InvNotOwned; fail).
+        all: try (assert (NoRqI oidx msgs)
+                   by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                  simpl_InvNotOwned).
+      }
+
+      dest_in.
+      { disc_rule_conds_ex.
+        derive_MesiDownLockInv oidx.
+        simpl_InvNotOwned; solve_InvNotOwned.
+        derive_InvWBDir oidx.
+        specialize (Hwd (or_intror (or_introl H18))).
+        simpl in Hwd; solve_mesi.
+      }
+      { disc_rule_conds_ex.
+        derive_MesiDownLockInv oidx.
+        simpl_InvNotOwned; solve_InvNotOwned.
+      }
+
+    - (*! Cases for Li caches *)
+
+      (** Derive some necessary information: each Li has a parent. *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst; simpl in *.
+
+      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
+      destruct H1 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+      
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H3; destruct H3.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H3; destruct H3 as [crls [? ?]].
+        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
+        dest_in; disc_rule_conds_ex.
+
+        all: try (simpl_InvNotOwned; fail).
+        all: try (assert (NoRqI oidx msgs)
+                   by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                  simpl_InvNotOwned).
+      }
+
+      dest_in; disc_rule_conds_ex.
+
+      all: try (simpl_InvNotOwned; fail).
+      all: try (derive_footprint_info_basis oidx;
+                assert (NoRqI oidx msgs)
+                  by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx);
+                simpl_InvNotOwned).
+      all: try (simpl_InvNotOwned; solve_InvNotOwned; fail).
+      { derive_MesiDownLockInv oidx.
+        simpl_InvNotOwned; solve_InvNotOwned.
+        derive_InvWBDir oidx.
+        specialize (Hwd (or_intror (or_introl H24))).
+        simpl in Hwd; solve_mesi.
+      }
+      { eapply InvNotOwned_enqMP_rq_valid; eauto.
+        { solve_InvNotOwned. }
+        { mred. }
+        { assumption. }
+      }
+
+    - (*! Cases for L1 caches *)
+
+      (** Derive some necessary information: each Li has a parent. *)
+      apply in_map_iff in H1; destruct H1 as [oidx [? ?]]; subst.
+
+      pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+      pose proof (c_l1_indices_has_parent Htr _ _ H2).
+      destruct H1 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+
+      (** Register an invariant that holds only for L1 caches. *)
+      pose proof (mesi_InvL1DirI_ok H) as Hl1d.
+      red in Hl1d; simpl in Hl1d.
+      rewrite Forall_forall in Hl1d; specialize (Hl1d _ H2).
+      simpl in H5; rewrite H5 in Hl1d; simpl in Hl1d.
+
+      (** Do case analysis per a rule. *)
+      dest_in; disc_rule_conds_ex.
+
+      all: try (simpl_InvNotOwned; fail).
+      all: try (simpl_InvNotOwned; solve_InvNotOwned; fail).
+      { derive_footprint_info_basis oidx.
+        assert (NoRqI oidx msgs)
+          by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx).
+        simpl_InvNotOwned.
+      }
+      { derive_footprint_info_basis oidx.
+        assert (NoRqI oidx msgs)
+          by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx).
+        simpl_InvNotOwned.
+      }
+      { eapply InvNotOwned_enqMP_rq_valid; eauto.
+        { solve_InvNotOwned. }
+        { mred. }
+        { assumption. }
+      }
+
+      (* END_SKIP_PROOF_OFF *)
+  Qed.
+
+  Theorem mesi_InvNotOwned_ok:
+    InvReachable impl step_m InvNotOwned.
+  Proof.
+    apply inv_reachable.
+    - apply mesi_InvNotOwned_init.
+    - apply mesi_InvNotOwned_step.
+  Qed.
+
+End InvNotOwned.
+
 Definition CohRsE (oidx: IdxT) (msgs: MessagePool Msg) (cv: nat) :=
   MsgsP [((downTo oidx, (MRs, mesiRsE)),
           (fun idm => (valOf idm).(msg_value) = cv))] msgs.
