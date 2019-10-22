@@ -1942,8 +1942,7 @@ Ltac solve_ext_chns_disj :=
       apply tree2Topo_li_children_li_l1; solve_in_l1_li; fail
     end.
 
-Ltac solve_chn_not_in :=
-  intro; dest_in; try discriminate; simpl in *;
+Ltac solve_chn_contra :=
   repeat
     match goal with
     | [H: rqUpFrom _ = rqUpFrom _ |- _] => inv H
@@ -1954,6 +1953,13 @@ Ltac solve_chn_not_in :=
     | [H:parentIdxOf _ ?oidx = Some ?oidx |- _] =>
       exfalso; eapply parentIdxOf_not_eq with (idx:= oidx) (pidx:= oidx); eauto
     end; auto.
+
+Ltac solve_chn_neq :=
+  intro; solve_chn_contra.
+
+Ltac solve_chn_not_in :=
+  intro; dest_in; try discriminate; simpl in *;
+  solve_chn_contra.
 
 Ltac disc_responses_from :=
   repeat
