@@ -17,22 +17,22 @@ Local Open Scope hvec.
 Local Open Scope fmap.
 
 Lemma InvExcl_excl_invalid:
-  forall st (He: InvExcl st) msgs eidx eost,
+  forall topo st (He: InvExcl topo st) msgs eidx eost,
     bst_msgs st = msgs ->
     (bst_oss st)@[eidx] = Some eost ->
     NoRsI eidx msgs ->
     mesiE <= eost#[status] ->
     forall oidx ost,
-      oidx <> eidx ->
+      eidx <> oidx ->
       (bst_oss st)@[oidx] = Some ost ->
       ObjInvalid oidx ost msgs.
 Proof.
   intros; subst.
   specialize (He eidx).
   disc_rule_conds_ex.
-  red in He.
-  unfold ObjExcl0 in He; simpl in He.
-  specialize (He (conj H2 H1)); dest.
+  red in H.
+  unfold ObjExcl0 in H; simpl in H.
+  specialize (H (conj H2 H1)); dest.
   specialize (H _ H3).
   rewrite H4 in H; auto.
 Qed.
@@ -83,9 +83,9 @@ Section Sim.
       unfold ObjInvalid, ObjCoh; intros.
       destruct H.
       - red in H; dest; repeat ssplit.
-        + red; intros; rewrite H in H2; solve_mesi.
+        + red; intros; solve_mesi.
         + do 2 red; intros.
-          specialize (H1 _ H2); red in H1.
+          specialize (H0 _ H1); red in H0.
           red; unfold cohMsgs, map, caseDec, fst in *.
           repeat (find_if_inside; [exfalso; auto; fail|]).
           auto.
@@ -1241,8 +1241,8 @@ Section Sim.
           { apply Hnmcf; [|simpl; mred].
             assumption.
           }
-          { eapply InvExcl_excl_invalid; [eapply H3|..];
-              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
+          { eapply InvExcl_excl_invalid with (eidx:= oidx); [eapply H3|..];
+              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi; auto.
             solve_MsgsP.
           }
           
@@ -1275,8 +1275,8 @@ Section Sim.
           { apply Hnmcf; [|simpl; mred].
             assumption.
           }
-          { eapply InvExcl_excl_invalid; [eapply H3|..];
-              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
+          { eapply InvExcl_excl_invalid with (eidx:= oidx); [eapply H3|..];
+              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi; auto.
             solve_MsgsP.
           }
 
@@ -1317,8 +1317,8 @@ Section Sim.
           destruct H4 as [lost [lorq [? ?]]]; rewrite H4, H42; simpl.
           eapply ObjInvalid_ObjCoh.
           { apply Hnmcf; [assumption|simpl; mred]. }
-          { eapply InvExcl_excl_invalid; [eapply H3|..];
-              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi.
+          { eapply InvExcl_excl_invalid with (eidx:= oidx); [eapply H3|..];
+              try eassumption; try reflexivity; try (simpl; mred); try solve_mesi; auto.
             solve_MsgsP.
           }
           

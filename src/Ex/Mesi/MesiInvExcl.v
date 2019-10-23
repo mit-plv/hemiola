@@ -126,6 +126,25 @@ Section Facts.
     intro Hx; dest_in; auto.
   Qed.
 
+  Lemma ObjsInvalid_obj_status_false:
+    forall eidx oss msgs,
+      ObjsInvalid (fun oidx : IdxT => eidx <> oidx) oss msgs ->
+      forall oidx,
+        eidx <> oidx ->
+        NoRsI oidx msgs ->
+        forall ost,
+          oss@[oidx] = Some ost ->
+          mesiS <= ost#[status] ->
+          False.
+  Proof.
+    intros.
+    specialize (H _ H0).
+    rewrite H2 in H; simpl in H.
+    destruct H.
+    - red in H; solve_mesi.
+    - eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
+  Qed.
+
 End Facts.
 
 Ltac disc_ObjExcl0_msgs H :=
@@ -137,7 +156,10 @@ Ltac disc_ObjExcl0_msgs H :=
            |apply ObjExcl0_other_midx_deqMsgs_inv in H;
             [|eassumption|eassumption|] (** FIXME: need to debug when not working *)
            |eapply ObjExcl0_other_msg_id_deqMP_inv in H;
-            [|eassumption|congruence]
+            [|eassumption
+             |simpl; try match goal with
+                         | [H: ?lh = _ |- ?lh <> _] => rewrite H
+                         end; discriminate]
            |eapply ObjExcl0_other_msg_id_deqMsgs_inv in H;
             [|eassumption|eassumption|] (** FIXME: need to debug when not working *)
     ]).
@@ -525,25 +547,25 @@ Section InvExcl.
               admit.
             }
             { (* others *)
-              
-              (* red; intros. *)
-              (* disc_ObjExcl0_msgs H11. *)
+              specialize (H6 eidx); simpl in H6.
+              disc_bind_true; dest; split.
+              { (* [InvObjExcl0] *)
+                red; intros.
+                disc_ObjExcl0_msgs H18.
+                specialize (H6 H18); dest.
 
-              (* eapply ObjExcl0_other_msg_id_deqMP_inv in H11. *)
-              (* 2: eassumption. *)
-              (* 2: simpl; rewrite H12; discriminate. *)
+                assert (NoRsI oidx msgs).
+                { solve_NoRsI_base.
+                  solve_NoRsI_by_no_uplock oidx.
+                }
 
-              (* specialize (H6 H11); dest. *)
-
-              (* assert (NoRsI oidx msgs). *)
-              (* { solve_NoRsI_base. *)
-              (*   solve_NoRsI_by_no_uplock oidx. *)
-              (* } *)
-
-              (** TODO: develop lemmas to draw contradiction
-               * using [ObjsInvalid], state of [oidx], and [NoRsI].
-               *)
-              admit.
+                exfalso.
+                eapply ObjsInvalid_obj_status_false with (eidx:= eidx) (oidx:= oidx); eauto.
+                simpl; solve_mesi.
+              }
+              { (* [InvObjOwned] *)
+                admit.
+              }
             }
           }
         }

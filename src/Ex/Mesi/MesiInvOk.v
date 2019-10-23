@@ -23,7 +23,7 @@ Local Open Scope fmap.
 Existing Instance Mesi.ImplOStateIfc.
 
 Definition InvForSim (topo: DTree) (st: MState): Prop :=
-  InvExcl st /\
+  InvExcl topo st /\
   InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\ InvNWB topo st /\
   MesiDownLockInv topo st.
 
