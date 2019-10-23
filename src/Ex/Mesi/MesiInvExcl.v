@@ -127,10 +127,10 @@ Section Facts.
   Qed.
 
   Lemma ObjsInvalid_obj_status_false:
-    forall eidx oss msgs,
-      ObjsInvalid (fun oidx : IdxT => eidx <> oidx) oss msgs ->
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
       forall oidx,
-        eidx <> oidx ->
+        inP oidx ->
         NoRsI oidx msgs ->
         forall ost,
           oss@[oidx] = Some ost ->
@@ -540,31 +540,111 @@ Section InvExcl.
 
         { (* [liGetSImmS] *)
           disc_rule_conds_ex.
+
+          assert (NoRsI oidx msgs).
+          { solve_NoRsI_base.
+            solve_NoRsI_by_no_uplock oidx.
+          }
+
           split.
           { admit. }
           { red; simpl; intros; mred; simpl.
             { (* "this" updated *)
-              admit.
+              specialize (H6 oidx); simpl in H6.
+              rewrite H16 in H6; simpl in H6; dest.
+              split.
+              { (* [InvObjExcl0] *)
+                move H6 at bottom.
+
+                red; intros.
+                exfalso.
+                red in H18; dest; simpl in *.
+                solve_mesi.
+              }
+              { (* [InvObjOwned] *)
+                move H11 at bottom.
+                red; simpl; intros.
+                specialize (H11 H18).
+
+                red; intros.
+                mred.
+                { exfalso.
+                  elim H21.
+                  eapply parent_subtreeIndsOf_self_in; eauto.
+                  apply tree2Topo_WfDTree.
+                }
+                { specialize (H11 _ H21).
+                  disc_bind_true.
+                  
+                  destruct (idx_dec oidx0 cidx); subst.
+                  { exfalso.
+                    elim H21.
+                    apply subtreeIndsOf_child_in; auto.
+                    apply tree2Topo_WfDTree.
+                  }
+                  { destruct H11.
+                    { left.
+                      destruct H11.
+                      split; [assumption|solve_MsgsP].
+                    }
+                    { right.
+                      destruct H11 as [idm [? ?]].
+                      exists idm; split; [|assumption].
+                      apply InMP_or_enqMP; right.
+                      apply deqMP_InMP_midx;
+                        [|inv H27; rewrite H29; solve_chn_not_in].
+                      assumption.
+                    }
+                  }
+                }
+              }
             }
             { (* others *)
               specialize (H6 eidx); simpl in H6.
               disc_bind_true; dest; split.
               { (* [InvObjExcl0] *)
                 red; intros.
-                disc_ObjExcl0_msgs H18.
-                specialize (H6 H18); dest.
-
-                assert (NoRsI oidx msgs).
-                { solve_NoRsI_base.
-                  solve_NoRsI_by_no_uplock oidx.
-                }
-
+                disc_ObjExcl0_msgs H21.
+                specialize (H6 H21); dest.
                 exfalso.
-                eapply ObjsInvalid_obj_status_false with (eidx:= eidx) (oidx:= oidx); eauto.
+                eapply ObjsInvalid_obj_status_false with (oidx:= oidx); eauto.
                 simpl; solve_mesi.
               }
               { (* [InvObjOwned] *)
-                admit.
+                red; intros.
+                specialize (H18 H21).
+
+                assert (In oidx (subtreeIndsOf topo eidx)).
+                { destruct (in_dec idx_dec oidx (subtreeIndsOf topo eidx)); [assumption|].
+                  exfalso.
+                  eapply ObjsInvalid_obj_status_false with (oidx:= oidx); eauto.
+                  simpl; solve_mesi.
+                }
+
+                red; simpl; intros.
+                specialize (H18 _ H27).
+                move H18 at bottom.
+                mred.
+                disc_bind_true.
+
+                destruct (idx_dec oidx0 cidx); subst.
+                { exfalso.
+                  eapply outside_parent_out with (cidx:= cidx); eauto.
+                }
+                { destruct H18.
+                  { left.
+                    destruct H18.
+                    split; [assumption|solve_MsgsP].
+                  }
+                  { right.
+                    destruct H18 as [idm [? ?]].
+                    exists idm; split; [|assumption].
+                    apply InMP_or_enqMP; right.
+                    apply deqMP_InMP_midx;
+                      [|inv H29; rewrite H31; solve_chn_not_in].
+                    assumption.
+                  }
+                }
               }
             }
           }
