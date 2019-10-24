@@ -480,6 +480,244 @@ Section InvExcl.
   Ltac disc_rule_custom ::=
     try disc_AtomicInv.
 
+  (*! Ltacs about [InvExcl] *)
+
+  Ltac case_InvExcl_me_others :=
+    match goal with
+    | |- InvExcl _ _ => red; simpl; intros; mred; simpl
+    end.
+
+  Ltac case_InvObjOwned :=
+    match goal with
+    | [H: InvObjOwned _ _ _ _ _ |- InvObjOwned _ _ _ _ _] =>
+      let Ho := fresh "H" in
+      red; simpl; intros Ho; specialize (H Ho);
+      red; intros; mred; simpl
+    end.
+
+  Ltac case_ObjInvalid_with oidx :=
+    match goal with
+    | |- ObjInvalid ?eidx _ _ =>
+      destruct (idx_dec eidx oidx); subst
+    end.
+
+  Ltac case_ObjInvalid :=
+    match goal with
+    | [H: ObjInvalid _ _ _ |- ObjInvalid _ _ _] =>
+      destruct H; [left|right]
+    end.
+
+  Ltac disc_InvExcl_this :=
+    repeat
+      match goal with
+      | [H: InvExcl _ _ |- InvObjExcl0 ?oidx _ _ _ /\ _] =>
+        specialize (H oidx); simpl in H
+      | [He: _ <+- ?ov; _, Ho: ?ov = Some _ |- _] =>
+        rewrite Ho in He; simpl in He; dest; split
+      end.
+
+  Ltac disc_InvExcl_others :=
+    match goal with
+    | [H: InvExcl _ _ |- _ <+- _@[?eidx]; _] =>
+      specialize (H eidx); simpl in H;
+      disc_bind_true; dest; split
+    end.
+
+  Ltac disc_ObjsInvalid oidx :=
+    match goal with
+    | [Hi: ObjsInvalid _ _ _ |- _] =>
+      specialize (Hi oidx ltac:(auto)); disc_bind_true
+    end.
+
+  Ltac disc_InvObjExcl0 :=
+    match goal with
+    | [H: InvObjExcl0 _ _ _ _ |- InvObjExcl0 _ _ _ _] =>
+      let He := fresh "H" in
+      red; intros He; disc_ObjExcl0_msgs He;
+      specialize (H He); dest
+    end.
+
+  Ltac derive_not_InvalidObj_not_in roidx :=
+    match goal with
+    | [H: ObjsInvalid (fun _ => ~ In _ ?inds) _ _ |- _] =>
+      assert (In roidx inds)
+        by (destruct (in_dec idx_dec roidx inds); [assumption|];
+            exfalso;
+            eapply ObjsInvalid_obj_status_false with (oidx:= roidx); eauto;
+            simpl; solve_mesi)
+    end.
+
+  Ltac solve_InvObjExcl0_by_ObjExcl0_false :=
+    red; intros; exfalso;
+    match goal with
+    | [H: ObjExcl0 _ _ _ |- _] =>
+      red in H; dest; simpl in *; solve_mesi
+    end.
+
+  Local Hint Extern 0 (WfDTree topo) => apply tree2Topo_WfDTree.
+  Ltac solve_by_topo_false :=
+    match goal with
+    | [H: ~ In ?oidx (subtreeIndsOf topo ?oidx) |- _] =>
+      elim H; eapply parent_subtreeIndsOf_self_in; eauto; fail
+    | [Hp: parentIdxOf _ ?cidx = Some ?pidx, Hi: ~ In ?cidx (subtreeIndsOf topo ?oidx) |- _] =>
+      elim Hi; apply subtreeIndsOf_child_in; auto; fail
+    | [Hp: parentIdxOf _ ?cidx = Some ?pidx, Hip: In ?pidx (subtreeIndsOf topo ?oidx), Hic: ~ In ?cidx (subtreeIndsOf topo ?oidx) |- _] =>
+      elim Hic; eapply inside_child_in; eauto; fail
+    end.
+
+  Ltac solve_ObjInvalid0 :=
+    match goal with
+    | [H: ObjInvalid0 _ _ _ |- ObjInvalid0 _ _ _] =>
+      destruct H; split; [assumption|solve_MsgsP]
+    end.
+
+  Ltac solve_ObjInvRs :=
+    match goal with
+    | [H: ObjInvRs _ _ |- ObjInvRs _ _] =>
+      let midx := fresh "midx" in
+      let msg := fresh "msg" in
+      destruct H as [[midx msg] [? ?]];
+      exists (midx, msg); split; [|assumption]
+    end.
+
+  Ltac solve_by_ObjsInvalid_false roidx :=
+    exfalso;
+    eapply ObjsInvalid_obj_status_false with (oidx:= roidx); eauto;
+    simpl in *; solve_mesi.
+
+  Lemma ObjsInvalid_deq_rqs:
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
+      forall rmsgs,
+        NoDup (idsOf rmsgs) ->
+        Forall (FirstMPI msgs) rmsgs ->
+        Forall (fun idm => In (msg_id (valOf idm))
+                              [mesiRqS; mesiDownRqS;
+                                 mesiRqM; mesiDownRqI;
+                                   mesiInvRq; mesiInvWRq]) rmsgs ->
+        ObjsInvalid inP oss (deqMsgs (idsOf rmsgs) msgs).
+  Proof.
+    red; intros.
+    specialize (H _ H3).
+    disc_bind_true.
+    case_ObjInvalid.
+    - solve_ObjInvalid0.
+    - solve_ObjInvRs.
+      inv H5.
+      apply deqMsgs_InMP; try assumption.
+      simpl; intro Hx.
+      rewrite Forall_forall in H2; specialize (H2 _ Hx).
+      simpl in H2; rewrite H9 in H2.
+      intuition discriminate.
+  Qed.
+
+  Lemma ObjsInvalid_enq_rqs:
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
+      forall nmsgs,
+        Forall (fun idm => In (msg_id (valOf idm))
+                              [mesiRqS; mesiDownRqS;
+                                 mesiRqM; mesiDownRqI;
+                                   mesiInvRq; mesiInvWRq]) nmsgs ->
+        ObjsInvalid inP oss (enqMsgs nmsgs msgs).
+  Proof.
+    red; intros.
+    specialize (H _ H1).
+    disc_bind_true.
+    case_ObjInvalid.
+    - solve_ObjInvalid0.
+      apply MsgsP_other_msg_id_enqMsgs; [assumption|].
+      simpl.
+      apply (DisjList_spec_1 idx_dec); intros midx ?.
+      apply in_map_iff in H4; destruct H4 as [[rmidx msg] [? ?]].
+      simpl in *; subst.
+      rewrite Forall_forall in H0; specialize (H0 _ H5); simpl in H0.
+      intro Hx.
+      repeat
+        match goal with
+        | [H: _ \/ _ |- _] => destruct H
+        | [H1: _ = msg_id ?msg, H2: _ = msg_id ?msg |- _] =>
+          rewrite <-H1 in H2; discriminate
+        | [H: False |- False] => auto
+        end.
+    - solve_ObjInvRs.
+      apply InMP_or_enqMsgs; auto.
+  Qed.
+
+  Lemma InvExcl_deq_rqs:
+    forall oss porqs norqs msgs,
+      InvExcl topo {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
+      forall rmsgs,
+        NoDup (idsOf rmsgs) ->
+        Forall (FirstMPI msgs) rmsgs ->
+        Forall (fun idm => In (msg_id (valOf idm))
+                              [mesiRqS; mesiDownRqS;
+                                 mesiRqM; mesiDownRqI;
+                                   mesiInvRq; mesiInvWRq]) rmsgs ->
+        InvExcl topo {| bst_oss := oss;
+                        bst_orqs := norqs;
+                        bst_msgs := deqMsgs (idsOf rmsgs) msgs |}.
+  Proof.
+    intros.
+    red; simpl; intros.
+    specialize (H eidx); simpl in H.
+    disc_bind_true; dest; split.
+    - red; intros.
+      destruct H5.
+      apply MsgsP_other_msg_id_deqMsgs_inv in H6; try assumption.
+      + specialize (H (conj H5 H6)); dest; split.
+        * apply ObjsInvalid_deq_rqs; auto.
+        * solve_MsgsP.
+      + simpl.
+        apply (DisjList_spec_1 idx_dec); intros midx ?.
+        apply in_map_iff in H7; destruct H7 as [[rmidx msg] [? ?]].
+        simpl in *; subst.
+        rewrite Forall_forall in H2; specialize (H2 _ H8); simpl in H2.
+        intro Hx; destruct Hx; [|auto].
+        rewrite <-H7 in H2.
+        intuition discriminate.
+    - red; intros.
+      specialize (H4 H5).
+      apply ObjsInvalid_deq_rqs; auto.
+  Qed.
+
+  Lemma InvExcl_enq_rqs:
+    forall oss porqs norqs msgs,
+      InvExcl topo {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
+      forall nmsgs,
+        Forall (fun idm => In (msg_id (valOf idm))
+                              [mesiRqS; mesiDownRqS;
+                                 mesiRqM; mesiDownRqI;
+                                   mesiInvRq; mesiInvWRq]) nmsgs ->
+        InvExcl topo {| bst_oss := oss;
+                        bst_orqs := norqs;
+                        bst_msgs := enqMsgs nmsgs msgs |}.
+  Proof.
+    intros.
+    red; simpl; intros.
+    specialize (H eidx); simpl in H.
+    disc_bind_true; dest; split.
+    - disc_InvObjExcl0; split.
+      + apply ObjsInvalid_enq_rqs; auto.
+      + apply MsgsP_other_msg_id_enqMsgs; [assumption|].
+        simpl.
+        apply (DisjList_spec_1 idx_dec); intros midx ?.
+        apply in_map_iff in H5; destruct H5 as [[rmidx msg] [? ?]].
+        simpl in *; subst.
+        rewrite Forall_forall in H0; specialize (H0 _ H6); simpl in H0.
+        intro Hx.
+        repeat
+          match goal with
+          | [H: _ \/ _ |- _] => destruct H
+          | [H1: _ = msg_id ?msg, H2: _ = msg_id ?msg |- _] =>
+            rewrite <-H1 in H2; discriminate
+          | [H: False |- False] => auto
+          end.
+    - red; intros.
+      specialize (H2 H3).
+      apply ObjsInvalid_enq_rqs; auto.
+  Qed.
+
   Lemma mesi_InvExcl_InvTrs: InvTrs impl (InvExcl topo).
   Proof.
     eapply inv_atomic_InvTrs;
@@ -545,107 +783,135 @@ Section InvExcl.
           { solve_NoRsI_base.
             solve_NoRsI_by_no_uplock oidx.
           }
-
+          
           split.
           { admit. }
-          { red; simpl; intros; mred; simpl.
-            { (* "this" updated *)
-              specialize (H6 oidx); simpl in H6.
-              rewrite H16 in H6; simpl in H6; dest.
-              split.
-              { (* [InvObjExcl0] *)
-                move H6 at bottom.
-
-                red; intros.
-                exfalso.
-                red in H18; dest; simpl in *.
-                solve_mesi.
-              }
-              { (* [InvObjOwned] *)
-                move H11 at bottom.
-                red; simpl; intros.
-                specialize (H11 H18).
-
-                red; intros.
-                mred.
-                { exfalso.
-                  elim H21.
-                  eapply parent_subtreeIndsOf_self_in; eauto.
-                  apply tree2Topo_WfDTree.
-                }
-                { specialize (H11 _ H21).
-                  disc_bind_true.
-                  
-                  destruct (idx_dec oidx0 cidx); subst.
-                  { exfalso.
-                    elim H21.
-                    apply subtreeIndsOf_child_in; auto.
-                    apply tree2Topo_WfDTree.
-                  }
-                  { destruct H11.
-                    { left.
-                      destruct H11.
-                      split; [assumption|solve_MsgsP].
-                    }
-                    { right.
-                      destruct H11 as [idm [? ?]].
-                      exists idm; split; [|assumption].
+          { case_InvExcl_me_others.
+            { disc_InvExcl_this.
+              { solve_InvObjExcl0_by_ObjExcl0_false. }
+              { case_InvObjOwned.
+                { solve_by_topo_false. }
+                { disc_ObjsInvalid oidx0.
+                  case_ObjInvalid_with cidx.
+                  { solve_by_topo_false. }
+                  { case_ObjInvalid.
+                    { solve_ObjInvalid0. }
+                    { solve_ObjInvRs.
+                      inv H27.
                       apply InMP_or_enqMP; right.
-                      apply deqMP_InMP_midx;
-                        [|inv H27; rewrite H29; solve_chn_not_in].
+                      apply deqMP_InMP_midx; [|solve_chn_not_in].
                       assumption.
                     }
                   }
                 }
               }
             }
-            { (* others *)
-              specialize (H6 eidx); simpl in H6.
-              disc_bind_true; dest; split.
-              { (* [InvObjExcl0] *)
-                red; intros.
-                disc_ObjExcl0_msgs H21.
-                specialize (H6 H21); dest.
-                exfalso.
-                eapply ObjsInvalid_obj_status_false with (oidx:= oidx); eauto.
-                simpl; solve_mesi.
+
+            { disc_InvExcl_others.
+              { disc_InvObjExcl0.
+                solve_by_ObjsInvalid_false oidx.
               }
-              { (* [InvObjOwned] *)
-                red; intros.
-                specialize (H18 H21).
-
-                assert (In oidx (subtreeIndsOf topo eidx)).
-                { destruct (in_dec idx_dec oidx (subtreeIndsOf topo eidx)); [assumption|].
-                  exfalso.
-                  eapply ObjsInvalid_obj_status_false with (oidx:= oidx); eauto.
-                  simpl; solve_mesi.
-                }
-
-                red; simpl; intros.
-                specialize (H18 _ H27).
-                move H18 at bottom.
-                mred.
-                disc_bind_true.
-
-                destruct (idx_dec oidx0 cidx); subst.
-                { exfalso.
-                  eapply outside_parent_out with (cidx:= cidx); eauto.
-                }
-                { destruct H18.
-                  { left.
-                    destruct H18.
-                    split; [assumption|solve_MsgsP].
-                  }
-                  { right.
-                    destruct H18 as [idm [? ?]].
-                    exists idm; split; [|assumption].
-                    apply InMP_or_enqMP; right.
-                    apply deqMP_InMP_midx;
-                      [|inv H29; rewrite H31; solve_chn_not_in].
-                    assumption.
+              { case_InvObjOwned.
+                { solve_by_ObjsInvalid_false oidx. }
+                { derive_not_InvalidObj_not_in oidx.
+                  disc_ObjsInvalid oidx0.
+                  case_ObjInvalid_with cidx.
+                  { solve_by_topo_false. }
+                  { case_ObjInvalid.
+                    { solve_ObjInvalid0. }
+                    { solve_ObjInvRs.
+                      inv H29.
+                      apply InMP_or_enqMP; right.
+                      apply deqMP_InMP_midx; [|solve_chn_not_in].
+                      assumption.
+                    }
                   }
                 }
               }
+            }
+          }
+        }
+
+        { (* [liGetSImmME] *)
+          disc_rule_conds_ex.
+
+          assert (NoRsI oidx msgs).
+          { solve_NoRsI_base.
+            solve_NoRsI_by_no_uplock oidx.
+          }
+
+          split.
+          { admit. }
+          { case_InvExcl_me_others.
+            { disc_InvExcl_this.
+              { solve_InvObjExcl0_by_ObjExcl0_false. }
+              { case_InvObjOwned.
+                { solve_by_topo_false. }
+                { disc_ObjsInvalid oidx0.
+                  case_ObjInvalid_with cidx.
+                  { solve_by_topo_false. }
+                  { case_ObjInvalid.
+                    { solve_ObjInvalid0. }
+                    { solve_ObjInvRs.
+                      inv H27.
+                      apply InMP_or_enqMP; right.
+                      apply deqMP_InMP_midx; [|solve_chn_not_in].
+                      assumption.
+                    }
+                  }
+                }
+              }
+            }
+
+            { disc_InvExcl_others.
+              { disc_InvObjExcl0.
+                solve_by_ObjsInvalid_false oidx.
+              }
+              { case_InvObjOwned.
+                { solve_by_ObjsInvalid_false oidx. }
+                { derive_not_InvalidObj_not_in oidx.
+                  disc_ObjsInvalid oidx0.
+                  case_ObjInvalid_with cidx.
+                  { solve_by_topo_false. }
+                  { case_ObjInvalid.
+                    { solve_ObjInvalid0. }
+                    { solve_ObjInvRs.
+                      inv H29.
+                      apply InMP_or_enqMP; right.
+                      apply deqMP_InMP_midx; [|solve_chn_not_in].
+                      assumption.
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        { (* [liGetSRqUpDownME] *)
+          disc_rule_conds_ex.
+          split.
+          { admit. }
+          { replace (oss +[oidx <- pos]) with oss by meq.
+            repeat
+              match goal with
+              | [He: InvExcl _ {| bst_orqs := ?orqs |}
+                 |- InvExcl _ {| bst_msgs := enqMP ?midx ?msg _ |}] =>
+                eapply InvExcl_enq_rqs
+                  with (porqs:= orqs) (nmsgs:= [(midx, msg)])
+              | [He: InvExcl _ {| bst_orqs := ?orqs |},
+                     Hf: FirstMPI _ (?midx, ?msg)
+                 |- InvExcl _ {| bst_msgs := deqMP ?midx _ |}] =>
+                eapply InvExcl_deq_rqs
+                  with (porqs:= orqs) (rmsgs:= [(midx, msg)])
+              end; [eassumption|..].
+            { repeat constructor; intro; dest_in. }
+            { repeat constructor; assumption. }
+            { constructor; [|constructor].
+              simpl; rewrite H12; tauto.
+            }
+            { constructor; [|constructor].
+              simpl; tauto.
             }
           }
         }
