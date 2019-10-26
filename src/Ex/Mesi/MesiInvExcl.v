@@ -519,9 +519,8 @@ Section InvExcl.
   (*   (valOf eout).(msg_type) = MRs -> *)
   (*   (valOf eout).(msg_id) = mesiRsE -> *)
   (*   ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf topo oidx)) oss msgs. *)
-
   Definition InvExclMsgOutPred: MsgOutPred :=
-    fun eout oss orqs =>
+    fun eout oss orqs msgs =>
       forall oidx,
         GetRqPred oidx eout /\ SetRqPred oidx eout.
 
