@@ -1,6 +1,6 @@
 Require Import List FMap Omega.
 Require Import Common Topology Syntax IndexSupport.
-Require Import RqRsLang. Import RqRsNotations.
+Require Import RqRsLangEx. Import RqRsNotations.
 
 Require Import Ex.TopoTemplate.
 

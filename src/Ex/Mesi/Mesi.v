@@ -1,7 +1,7 @@
 Require Import Bool Vector List String Peano_dec Lia.
 Require Import Common FMap HVector IndexSupport Syntax Semantics.
 Require Import Topology RqRsTopo.
-Require Import RqRsLang. Import RqRsNotations.
+Require Import RqRsLangEx. Import RqRsNotations.
 
 Require Import Ex.Spec Ex.SpecSv Ex.Template Ex.Mesi.
 

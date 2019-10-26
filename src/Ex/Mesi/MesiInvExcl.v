@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec Lia.
 Require Import Common FMap IndexSupport HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsLang RqRsInvMsg RqRsCorrect.
+Require Import RqRsLangEx RqRsInvMsg RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
@@ -503,14 +503,27 @@ Section InvExcl.
     apply (mesi_InObjInds H).
   Qed.
 
+  Definition GetRqPred (oidx: IdxT) (eout: Id Msg): Prop :=
+    idOf eout = rqUpFrom oidx ->
+    (valOf eout).(msg_type) = MRq ->
+    (valOf eout).(msg_id) = Spec.getRq -> False.
+
+  Definition SetRqPred (oidx: IdxT) (eout: Id Msg): Prop :=
+    idOf eout = rqUpFrom oidx ->
+    (valOf eout).(msg_type) = MRq ->
+    (valOf eout).(msg_id) = Spec.setRq -> False.
+
+  (** TODO: we definitely need to extend [MsgOutPred] to cover messages. *)
+  (* Definition RsEPred (oidx: IdxT) (eout: Id Msg) (oss: OStates): Prop := *)
+  (*   idOf eout = downTo oidx -> *)
+  (*   (valOf eout).(msg_type) = MRs -> *)
+  (*   (valOf eout).(msg_id) = mesiRsE -> *)
+  (*   ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf topo oidx)) oss msgs. *)
+
   Definition InvExclMsgOutPred: MsgOutPred :=
     fun eout oss orqs =>
-      caseDec sig_dec (sigOf eout) True
-              (List.concat
-                 (map (fun oidx =>
-                         [((rqUpFrom (l1ExtOf oidx), (MRq, Spec.getRq)), False);
-                            ((rqUpFrom (l1ExtOf oidx), (MRq, Spec.setRq)), False)])
-                      (c_l1_indices cifc))).
+      forall oidx,
+        GetRqPred oidx eout /\ SetRqPred oidx eout.
 
   Lemma InvExclMsgOutPred_good:
     GoodMsgOutPred topo InvExclMsgOutPred.

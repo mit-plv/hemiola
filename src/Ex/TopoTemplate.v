@@ -1,6 +1,6 @@
 Require Import List FMap Omega.
 Require Import Common Topology IndexSupport Syntax Semantics.
-Require Import RqRsLang.
+Require Import RqRsLangEx.
 
 Set Implicit Arguments.
 

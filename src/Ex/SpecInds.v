@@ -1,6 +1,6 @@
 Require Import Bool Vector List String Peano_dec Omega.
 Require Import Common FMap HVector IndexSupport Syntax Semantics StepM.
-Require Import Topology RqRsLang.
+Require Import Topology RqRsLangEx.
 
 Require Import Ex.Spec Ex.TopoTemplate Ex.SimTemplate.
 

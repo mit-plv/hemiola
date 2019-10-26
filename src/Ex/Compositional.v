@@ -1,6 +1,5 @@
 Require Import List FMap Omega.
 Require Import Common Topology IndexSupport Syntax Semantics StepM.
-Require Import RqRsLang.
 
 (* Require Import Ex.TopoTemplate. *)
 
