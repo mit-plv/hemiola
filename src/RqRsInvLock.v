@@ -898,6 +898,25 @@ Section Corollaries.
     apply rssQ_length_two with (midx:= down) (msg1:= rsdm1) (msg2:= rsdm2); eauto.
   Qed.
 
+  Corollary rsDown_in_length_two_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall obj,
+        In obj (sys_objs sys) ->
+        forall down,
+          edgeDownTo dtr (obj_idx obj) = Some down ->
+          forall msgs,
+            st.(bst_msgs) = msgs ->
+            length (rssQ msgs down) >= 2 -> False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
+    pose proof (edgeDownTo_Some Hsd _ H1).
+    destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
+    good_locking_get obj.
+    eapply upLockInvORq_down_rssQ_length_two_False; eauto.
+  Qed.
+
   Corollary rsDown_parent_locked_false:
     forall st,
       Reachable (steps step_m) sys st ->

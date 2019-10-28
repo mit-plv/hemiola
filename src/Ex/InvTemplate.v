@@ -82,6 +82,7 @@ Section MsgConflicts.
           fst (snd (sigOf rrsDown)) = MRs ->
           valOf rsDown <> valOf rrsDown ->
           InMPI msgs rrsDown -> False) /\
+      (length (rssQ msgs (downTo oidx)) >= 2 -> False) /\
       (forall rqDown,
           fst (sigOf rqDown) = downTo oidx ->
           fst (snd (sigOf rqDown)) = MRq ->
@@ -269,6 +270,7 @@ Section MsgConflicts.
                (rsdm1:= valOf rsDown) (rsdm2:= valOf rrsDown); eauto.
         * unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
         * unfold sigOf in H15; simpl in H15; red in H18; rewrite H15 in H18; assumption.
+      + eapply rsDown_in_length_two_false with (obj0:= obj); eauto.
       + eapply rsDown_in_rqDown_first_false
           with (cobj:= obj) (pobj0:= pobj) (down:= downTo (obj_idx obj))
                (rsdm:= valOf rsDown) (rqdm:= valOf rqDown); eauto.
