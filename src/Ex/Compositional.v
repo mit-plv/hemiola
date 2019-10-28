@@ -1,7 +1,5 @@
 Require Import List FMap Omega.
-Require Import Common Topology IndexSupport Syntax Semantics StepM.
-
-(* Require Import Ex.TopoTemplate. *)
+Require Import Common Topology IndexSupport Syntax Semantics StepM SemFacts.
 
 Set Implicit Arguments.
 
@@ -37,6 +35,25 @@ Proof.
   eapply DisjList_In_1 with (a:= idx~>ext); [eassumption|..].
   - apply in_map; assumption.
   - apply in_map; assumption.
+Qed.
+
+Lemma behaviorOf_cons_inv:
+  forall {LabelT} `{HasLabel LabelT} (ll: list LabelT) lbl rll,
+    behaviorOf ll = lbl :: rll ->
+    exists hll tll,
+      hll ++ tll = ll /\
+      behaviorOf hll = [lbl] /\
+      behaviorOf tll = rll.
+Proof.
+  induction ll as [|rlbl ll]; simpl; intros; [discriminate|].
+  destruct (getLabel rlbl) as [lbl'|] eqn:Hlbl; simpl in *.
+  - inv H0.
+    exists [rlbl], ll; repeat split.
+    simpl; rewrite Hlbl; reflexivity.
+  - specialize (IHll _ _ H0).
+    destruct IHll as [hll [tll ?]]; dest; subst.
+    exists (rlbl :: hll), tll; repeat split.
+    simpl; rewrite Hlbl; simpl; assumption.
 Qed.
 
 Section Lift.
@@ -144,7 +161,7 @@ End Replicate.
 Section Facts.
   Context `{OStateIfc}.
 
-  Section Lifted.
+  Section Lift.
     Variable ln: nat.
 
     Section FMap.
@@ -739,7 +756,257 @@ Section Facts.
       apply Behavior_lifted; auto.
     Qed.
 
-  End Lifted.
+  End Lift.
+
+  Section Merge.
+
+    Definition mergeMState (st1 st2: MState): MState :=
+      {| bst_oss := M.union (bst_oss st1) (bst_oss st2);
+         bst_orqs := M.union (bst_orqs st1) (bst_orqs st2);
+         bst_msgs := M.union (bst_msgs st1) (bst_msgs st2) |}.
+
+    Inductive HistoryMerged: list MLabel -> list MLabel -> list MLabel -> Prop :=
+    | NilMerged: HistoryMerged nil nil nil
+    | HLeftMerged:
+        forall hst1 hst2 hst,
+          HistoryMerged hst1 hst2 hst ->
+          forall lbl,
+            HistoryMerged (lbl :: hst1) hst2 (lbl :: hst)
+    | HRightMerged:
+        forall hst1 hst2 hst,
+          HistoryMerged hst1 hst2 hst ->
+          forall lbl,
+            HistoryMerged hst1 (lbl :: hst2) (lbl :: hst).
+
+    Lemma HistoryMerged_left:
+      forall ll, HistoryMerged ll nil ll.
+    Proof.
+      induction ll; [constructor|].
+      constructor; assumption.
+    Qed.
+
+    Lemma HistoryMerged_right:
+      forall ll, HistoryMerged nil ll ll.
+    Proof.
+      induction ll; [constructor|].
+      constructor; assumption.
+    Qed.
+
+    Lemma HistoryMerged_basic_1:
+      forall ll1 ll2, HistoryMerged ll1 ll2 (ll1 ++ ll2).
+    Proof.
+      induction ll1; simpl; intros.
+      - apply HistoryMerged_right.
+      - constructor; auto.
+    Qed.
+
+    Lemma HistoryMerged_basic_2:
+      forall ll1 ll2, HistoryMerged ll1 ll2 (ll2 ++ ll1).
+    Proof.
+      induction ll2; simpl; intros.
+      - apply HistoryMerged_left.
+      - constructor; auto.
+    Qed.
+
+    Lemma HistoryMerged_app_1:
+      forall ll1 ll2 ll,
+        HistoryMerged ll1 ll2 ll ->
+        forall nll,
+          HistoryMerged (nll ++ ll1) ll2 (nll ++ ll).
+    Proof.
+      induction nll; simpl; intros; [assumption|].
+      constructor; auto.
+    Qed.
+
+    Lemma HistoryMerged_app_2:
+      forall ll1 ll2 ll,
+        HistoryMerged ll1 ll2 ll ->
+        forall nll,
+          HistoryMerged ll1 (nll ++ ll2) (nll ++ ll).
+    Proof.
+      induction nll; simpl; intros; [assumption|].
+      constructor; auto.
+    Qed.
+
+  End Merge.
+
+  Section Compose.
+    Variables (sys1 sys2: System).
+    Hypotheses
+      (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
+      (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
+                         ++ (sys_merqs sys1 ++ sys_merqs sys2)
+                         ++ (sys_merss sys1 ++ sys_merss sys2))).
+
+    Lemma mergeMState_init:
+      initsOf (mergeSystem sys1 sys2 HoidxOk HmidxOk) =
+      mergeMState (initsOf sys1) (initsOf sys2).
+    Proof.
+      reflexivity.
+    Qed.
+
+    Lemma step_mergeSystem_lifted_1:
+      forall st11 lbl st12,
+        step_m sys1 st11 lbl st12 ->
+        forall st2,
+          step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+                 (mergeMState st11 st2) lbl (mergeMState st12 st2).
+    Proof.
+      (* intros. *)
+      (* inv H0; [constructor|..]. *)
+
+      (* - destruct st2 as [oss2 orqs2 msgs2]. *)
+      (*   eapply SmIns; [assumption| |reflexivity|]. *)
+    Admitted.
+
+    Lemma step_mergeSystem_lifted_2:
+      forall st21 lbl st22,
+        step_m sys2 st21 lbl st22 ->
+        forall st1,
+          step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+                 (mergeMState st1 st21) lbl (mergeMState st1 st22).
+    Proof.
+    Admitted.
+
+    Lemma steps_mergeSystem_lifted_1:
+      forall st11 ll st12,
+        steps step_m sys1 st11 ll st12 ->
+        forall st2,
+          steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+                (mergeMState st11 st2) ll (mergeMState st12 st2).
+    Proof.
+      induction 1; simpl; intros; [constructor|].
+      econstructor; eauto.
+      apply step_mergeSystem_lifted_1; auto.
+    Qed.
+
+    Lemma steps_mergeSystem_lifted_2:
+      forall st21 ll st22,
+        steps step_m sys2 st21 ll st22 ->
+        forall st1,
+          steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+                (mergeMState st1 st21) ll (mergeMState st1 st22).
+    Proof.
+      induction 1; simpl; intros; [constructor|].
+      econstructor; eauto.
+      apply step_mergeSystem_lifted_2; auto.
+    Qed.
+
+    Lemma steps_composed:
+      forall ll1 ll2 ll,
+        HistoryMerged ll1 ll2 ll ->
+        forall st11 st12,
+          steps step_m sys1 st11 ll1 st12 ->
+          forall st21 st22,
+            steps step_m sys2 st21 ll2 st22 ->
+            steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+                  (mergeMState st11 st21) ll (mergeMState st12 st22).
+    Proof.
+      induction 1; simpl; intros.
+      - inv H0; inv H1; constructor.
+      - inv H1.
+        specialize (IHHistoryMerged _ _ H6 _ _ H2).
+        econstructor; [eassumption|].
+        apply step_mergeSystem_lifted_1; assumption.
+      - inv H2.
+        specialize (IHHistoryMerged _ _ H1 _ _ H6).
+        econstructor; [eassumption|].
+        apply step_mergeSystem_lifted_2; assumption.
+    Qed.
+
+  End Compose.
+
+  Section Split.
+    Variables (sys1 sys2: System).
+    Hypotheses
+      (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
+      (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
+                         ++ (sys_merqs sys1 ++ sys_merqs sys2)
+                         ++ (sys_merss sys1 ++ sys_merss sys2))).
+
+    Lemma step_mergeSystem_unlifted:
+      forall st11 st21 lbl st2,
+        step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+               (mergeMState st11 st21) lbl st2 ->
+        (exists st12, step_m sys1 st11 lbl st12 /\
+                      mergeMState st12 st21 = st2) \/
+        (exists st22, step_m sys2 st21 lbl st22 /\
+                      mergeMState st11 st22 = st2).
+    Proof.
+    Admitted.
+
+    Lemma steps_split:
+      forall st1 ll st2,
+        steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk) st1 ll st2 ->
+        forall st11 st21,
+          mergeMState st11 st21 = st1 ->
+          exists ll1 st12 ll2 st22,
+            steps step_m sys1 st11 ll1 st12 /\
+            steps step_m sys2 st21 ll2 st22 /\
+            mergeMState st12 st22 = st2 /\
+            HistoryMerged ll1 ll2 ll.
+    Proof.
+      induction 1; simpl; intros.
+      - eexists nil, _, nil, _.
+        repeat split; try constructor; assumption.
+      - specialize (IHsteps _ _ H2).
+        destruct IHsteps as [ll1 [st12 [ll2 [st22 ?]]]]; dest.
+        subst st2; apply step_mergeSystem_unlifted in H1.
+        destruct H1.
+        + destruct H1 as [st13 [? ?]].
+          do 4 eexists; repeat split.
+          * eapply StepsCons; eassumption.
+          * eassumption.
+          * assumption.
+          * constructor; assumption.
+        + destruct H1 as [st23 [? ?]].
+          do 4 eexists; repeat split.
+          * eassumption.
+          * eapply StepsCons; eassumption.
+          * assumption.
+          * constructor; assumption.
+    Qed.          
+
+  End Split.
+
+  Lemma HistoryMerged_behaviorOf_compositional:
+    forall hst1 hst2 hst,
+      HistoryMerged hst1 hst2 hst ->
+      forall rhst1 rhst2,
+        behaviorOf hst1 = behaviorOf rhst1 ->
+        behaviorOf hst2 = behaviorOf rhst2 ->
+        exists rhst,
+          HistoryMerged rhst1 rhst2 rhst /\
+          behaviorOf hst = behaviorOf rhst.
+  Proof.
+    induction 1; simpl; intros.
+    - exists (rhst1 ++ rhst2); split.
+      + apply HistoryMerged_basic_1.
+      + rewrite behaviorOf_app.
+        rewrite <-H0, <-H1; reflexivity.
+
+    - destruct (rToLabel lbl) as [lbl1|]; simpl in *; [|eauto; fail].
+      apply eq_sym, behaviorOf_cons_inv in H1.
+      destruct H1 as [hll1 [tll1 ?]]; dest; subst.
+      apply eq_sym in H4.
+      specialize (IHHistoryMerged _ _ H4 H2).
+      destruct IHHistoryMerged as [prhst [? ?]].
+      exists (hll1 ++ prhst); split.
+      + apply HistoryMerged_app_1; assumption.
+      + rewrite behaviorOf_app, H3.
+        simpl; congruence.
+
+    - destruct (rToLabel lbl) as [lbl2|]; simpl in *; [|eauto; fail].
+      apply eq_sym, behaviorOf_cons_inv in H2.
+      destruct H2 as [hll2 [tll2 ?]]; dest; subst.
+      apply eq_sym in H4.
+      specialize (IHHistoryMerged _ _ H1 H4).
+      destruct IHHistoryMerged as [prhst [? ?]].
+      exists (hll2 ++ prhst); split.
+      + apply HistoryMerged_app_2; assumption.
+      + rewrite behaviorOf_app, H3.
+        simpl; congruence.
+  Qed.
 
   Theorem refines_compositional:
     forall impl1 spec1,
@@ -758,7 +1025,28 @@ Section Facts.
                   (mergeSystem impl1 impl2 HoidxOkI HmidxOkI)
                   (mergeSystem spec1 spec2 HoidxOkS HmidxOkS).
   Proof.
-  Admitted.
+    intros.
+    red; intros.
+    inv H2.
+    eapply steps_split in H3; [|apply eq_sym, mergeMState_init].
+    destruct H3 as [ll1 [st12 [ll2 [st22 ?]]]]; dest.
+    assert (Behavior (steps step_m) impl1 (behaviorOf ll1)).
+    { econstructor; [eassumption|reflexivity]. }
+    specialize (H0 _ H6).
+    assert (Behavior (steps step_m) impl2 (behaviorOf ll2)).
+    { econstructor; [eassumption|reflexivity]. }
+    specialize (H1 _ H7).
+    inv H0; rename ll0 into rll1.
+    inv H1; rename ll0 into rll2.
+
+    eapply HistoryMerged_behaviorOf_compositional in H5; [|eassumption..].
+    destruct H5 as [rll [? ?]]; rewrite H5.
+
+    econstructor.
+    - rewrite mergeMState_init.
+      eapply steps_composed; eassumption.
+    - reflexivity.
+  Qed.
 
   Theorem refines_replicates:
     forall impl spec,

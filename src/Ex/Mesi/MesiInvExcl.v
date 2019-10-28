@@ -513,16 +513,18 @@ Section InvExcl.
     (valOf eout).(msg_type) = MRq ->
     (valOf eout).(msg_id) = Spec.setRq -> False.
 
-  (** TODO: we definitely need to extend [MsgOutPred] to cover messages. *)
-  (* Definition RsEPred (oidx: IdxT) (eout: Id Msg) (oss: OStates): Prop := *)
-  (*   idOf eout = downTo oidx -> *)
-  (*   (valOf eout).(msg_type) = MRs -> *)
-  (*   (valOf eout).(msg_id) = mesiRsE -> *)
-  (*   ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf topo oidx)) oss msgs. *)
+  Definition RsEPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
+             (msgs: MessagePool Msg): Prop :=
+    idOf eout = downTo oidx ->
+    (valOf eout).(msg_type) = MRs ->
+    (valOf eout).(msg_id) = mesiRsE ->
+    ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf topo oidx)) oss msgs.
+
   Definition InvExclMsgOutPred: MsgOutPred :=
     fun eout oss orqs msgs =>
       forall oidx,
-        GetRqPred oidx eout /\ SetRqPred oidx eout.
+        GetRqPred oidx eout /\ SetRqPred oidx eout /\
+        RsEPred oidx eout oss msgs.
 
   Lemma InvExclMsgOutPred_good:
     GoodMsgOutPred topo InvExclMsgOutPred.
@@ -1176,6 +1178,8 @@ Section InvExcl.
               { (* solve_by_topo_false. *)
                 elim H34.
                 eapply rqEdgeUpFrom_subtreeIndsOf_self_in; eauto.
+                (** TODO: well this unfold is not good at all *)
+                unfold InvExclMsgOutPred, RsEPred in *.
                 subst topo; rewrite H11; discriminate.
               }
               { disc_ObjsInvalid oidx0.
