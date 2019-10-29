@@ -272,6 +272,41 @@ Section Facts.
       rewrite H5 in H10; discriminate.
   Qed.
 
+  Lemma ObjsInvalid_rsM_false:
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
+      forall oidx ost orq,
+        oss@[oidx] = Some ost ->
+        inP oidx ->
+        RsDownConflicts oidx orq msgs ->
+        forall rsdm,
+          InMP (downTo oidx) rsdm msgs ->
+          rsdm.(msg_type) = MRs ->
+          rsdm.(msg_id) = mesiRsM ->
+          False.
+  Proof.
+    intros.
+    specialize (H _ H1).
+    rewrite H0 in H; simpl in H.
+    destruct H.
+    - red in H; dest.
+      specialize (H6 (downTo oidx, rsdm) H3).
+      red in H6; rewrite map_trans, map_cons in H6.
+      do 2 (rewrite caseDec_head_neq in H6
+             by (unfold sigOf; simpl; intro Hx; inv Hx;
+                 rewrite H5 in H9; discriminate);
+            rewrite map_cons in H6).
+      rewrite caseDec_head_eq in H6
+        by (unfold sigOf; simpl; congruence).
+      auto.
+    - destruct H as [[midx msg] [? ?]]; simpl in *.
+      unfold sigOf in H6; simpl in H6; inv H6.
+      specialize (H2 (downTo oidx, rsdm) eq_refl H4 H3); dest.
+      eapply (H7 (downTo oidx, msg)); eauto.
+      simpl; intro Hx; subst.
+      rewrite H5 in H10; discriminate.
+  Qed.
+
   Lemma NoCohMsgs_rsDown_deq:
     forall msgs oidx rmsg,
       FirstMPI msgs (downTo oidx, rmsg) ->
@@ -1005,7 +1040,7 @@ Section InvExcl.
       | [H: (_, _) = (_, _) |- _] => inv H
       end.
 
-  Ltac msg_pred_admit := admit.
+  Ltac admit_msg_pred := admit.
 
   Ltac exfalso_InvTrs_init :=
     exfalso;
@@ -1195,19 +1230,19 @@ Section InvExcl.
 
       { (* [liInvRqUpUp] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
 
       { (* [liInvRqUpUpWB] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
 
       { (* [liPushImm] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { eapply InvExcl_state_transition_sound with (porqs:= orqs); eauto.
           simpl; intuition solve_mesi.
         }
@@ -1225,13 +1260,13 @@ Section InvExcl.
 
       { (* [l1GetSImm] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
 
       { (* [l1GetSRqUpUp] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
 
@@ -1260,7 +1295,7 @@ Section InvExcl.
         }
 
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial.
           case_InvExcl_me_others.
           { assert (ObjExcl0 oidx os msgs)
@@ -1291,7 +1326,7 @@ Section InvExcl.
 
       { (* [l1GetMImmM] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { eapply InvExcl_state_transition_sound with (porqs:= orqs); eauto.
           solve_InvExcl_trivial.
         }
@@ -1299,7 +1334,7 @@ Section InvExcl.
 
       { (* [l1GetMRqUpUp] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
         
@@ -1316,13 +1351,13 @@ Section InvExcl.
 
       { (* [l1InvRqUpUp] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
       
       { (* [l1InvRqUpUpWB] *)
         disc_rule_conds_ex; split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { solve_InvExcl_trivial. }
       }
       
@@ -1402,7 +1437,7 @@ Section InvExcl.
           }
           
           split.
-          { msg_pred_admit. }
+          { admit_msg_pred. }
           { case_InvExcl_me_others.
             { disc_InvExcl_this.
               { solve_InvObjExcl0_by_ObjExcl0_false. }
@@ -1458,7 +1493,7 @@ Section InvExcl.
           }
 
           split.
-          { msg_pred_admit. }
+          { admit_msg_pred. }
           { case_InvExcl_me_others.
             { disc_InvExcl_this.
               { solve_InvObjExcl0_by_ObjExcl0_false. }
@@ -1507,7 +1542,7 @@ Section InvExcl.
 
         { (* [liGetSRqUpDownME] *)
           disc_rule_conds_ex; split.
-          { msg_pred_admit. }
+          { admit_msg_pred. }
           { solve_InvExcl_trivial. }
         }
 
@@ -1515,12 +1550,12 @@ Section InvExcl.
 
         { (* [liGetMRqUpDownME] *)
           disc_rule_conds_ex; split.
-          { msg_pred_admit. }
+          { admit_msg_pred. }
           { solve_InvExcl_trivial. }
         }
         { (* [liGetMRqUpDownS] *)
           disc_rule_conds_ex; split.
-          { msg_pred_admit. }
+          { admit_msg_pred. }
           { solve_InvExcl_trivial. }
         }
 
@@ -1603,7 +1638,7 @@ Section InvExcl.
         disc_rule_conds_ex.
 
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { (** TODO: from [solve_InvExcl_trivial] *)
           match goal with
           | [He: InvExcl _ {| bst_orqs := ?orqs |}
@@ -1687,7 +1722,7 @@ Section InvExcl.
         }
 
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { (** TODO: from [solve_InvExcl_trivial] *)
           match goal with
           | [He: InvExcl _ {| bst_orqs := ?orqs |}
@@ -1778,7 +1813,7 @@ Section InvExcl.
         }
         
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
@@ -1832,7 +1867,7 @@ Section InvExcl.
         }
 
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { (** TODO: from [solve_InvExcl_trivial] *)
           match goal with
           | [He: InvExcl _ {| bst_orqs := ?orqs |}
@@ -1897,9 +1932,23 @@ Section InvExcl.
               simpl; eauto.
               solve_mesi.
             }
-            { (** TODO: ∃rsM -> .. *)
-              (** [ObjInvalid] contains [owned = false]? *)
-              admit.
+            { case_InvObjOwned.
+              { (* [solve_by_ObjsInvalid_false] *)
+                disc_MsgConflictsInv oidx.
+                exfalso.
+                eapply ObjsInvalid_rsM_false with (oidx:= oidx);
+                  [eapply H36|..]; simpl in *; eauto.
+                apply FirstMP_InMP; assumption.
+              }
+              { disc_ObjsInvalid oidx0.
+                case_ObjInvalid.
+                { solve_ObjInvalid0. }
+                { solve_ObjInvRs.
+                  inv H40.
+                  apply deqMP_InMP_midx; [|solve_chn_not_in].
+                  assumption.
+                }
+              }
             }
           }
         }
@@ -1914,7 +1963,7 @@ Section InvExcl.
         }
         
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
@@ -1956,7 +2005,7 @@ Section InvExcl.
         derive_footprint_info_basis oidx.
 
         split.
-        { msg_pred_admit. }
+        { admit_msg_pred. }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
