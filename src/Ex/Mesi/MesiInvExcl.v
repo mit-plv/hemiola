@@ -291,6 +291,9 @@ Section Facts.
     - destruct H8 as [[midx msg] [? ?]]; inv H8.
       apply H4.
       eapply rssQ_deq_in_length_two; eauto.
+    - destruct H8 as [[midx msg] [? ?]]; inv H8.
+      apply H4.
+      eapply rssQ_deq_in_length_two; eauto.
     - destruct H8 as [rsUp [? ?]]; inv H8.
       apply H6 with (rsUp:= rsUp); auto.
       eapply InMP_deqMP; eauto.

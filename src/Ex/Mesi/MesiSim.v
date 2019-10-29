@@ -88,6 +88,8 @@ Section Sim.
           specialize (H0 _ H1); red in H0.
           red; unfold cohMsgs, map, caseDec, fst in *.
           repeat (find_if_inside; [exfalso; auto; fail|]).
+          destruct (sig_dec _ (_, (MRs, mesiRsM))); [exfalso; auto|].
+          repeat (find_if_inside; [exfalso; auto; fail|]).
           auto.
 
       - repeat ssplit.
@@ -120,6 +122,8 @@ Section Sim.
       do 2 red; intros.
       specialize (H _ H0); red in H.
       red; unfold cohMsgs, map, caseDec, fst in *.
+      repeat (find_if_inside; [exfalso; auto; fail|]).
+      destruct (sig_dec _ (_, (MRs, mesiRsM))); [exfalso; auto|].
       repeat (find_if_inside; [exfalso; auto; fail|]).
       auto.
     Qed.

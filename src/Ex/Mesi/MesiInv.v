@@ -57,6 +57,7 @@ Section CoherenceUnit.
   Definition NoCohMsgs :=
     MsgsNotExist [(downTo oidx, (MRs, mesiRsS));
                     (downTo oidx, (MRs, mesiRsE));
+                    (downTo oidx, (MRs, mesiRsM));
                     (rsUpFrom oidx, (MRs, mesiDownRsS))] msgs.
 
   Definition ObjInvalid0 :=
