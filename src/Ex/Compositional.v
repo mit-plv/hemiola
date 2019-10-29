@@ -852,11 +852,18 @@ Section Facts.
           step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                  (mergeMState st11 st2) lbl (mergeMState st12 st2).
     Proof.
-      (* intros. *)
-      (* inv H0; [constructor|..]. *)
+      intros.
+      inv H0; [constructor|..].
 
-      (* - destruct st2 as [oss2 orqs2 msgs2]. *)
-      (*   eapply SmIns; [assumption| |reflexivity|]. *)
+      - destruct st2 as [oss2 orqs2 msgs2].
+        eapply SmIns; [assumption| |reflexivity|].
+        + destruct H2.
+          split; [|eassumption].
+          simpl; apply SubList_app_1; assumption.
+        + simpl.
+          
+
+        
     Admitted.
 
     Lemma step_mergeSystem_lifted_2:

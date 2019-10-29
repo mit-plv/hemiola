@@ -7,6 +7,35 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
+(** TODO: move to [Topology.v] *)
+Lemma subtree_subtree_eq:
+  forall tr (Hwf: WfDTree tr) str,
+    Subtree str tr ->
+    forall idx,
+      In idx (indsOf str) ->
+      subtree idx str = subtree idx tr.
+Proof.
+  intros.
+  apply indsOf_in_Subtree in H0.
+  destruct H0 as [sitr [? ?]]; subst.
+  pose proof H1.
+  apply Subtree_subtree in H0; [|eapply Subtree_wfDTree; eauto].
+  rewrite Subtree_subtree with (dtr:= tr); [assumption..|].
+  eapply Subtree_trans; eauto.
+Qed.
+
+Lemma subtree_child_subtree_eq:
+  forall tr (Hwf: WfDTree tr) ctr,
+    In ctr (childrenOf tr) ->
+    forall idx,
+      In idx (indsOf ctr) ->
+      subtree idx ctr = subtree idx tr.
+Proof.
+  intros.
+  eapply subtree_subtree_eq; eauto.
+  apply childrenOf_Subtree; assumption.
+Qed.
+
 Inductive tree :=
 | Node: list tree -> tree.
 
@@ -40,6 +69,21 @@ Section IncMap.
     end.
 
   Lemma incMap_In:
+    forall al ofs a,
+      nth_error al ofs = Some a ->
+      forall base ext,
+        In (f a (base~>(ext + ofs))) (incMap al base ext).
+  Proof.
+    induction al; simpl; intros; [destruct ofs; discriminate|].
+    destruct ofs; simpl in *.
+    - inv H; left; rewrite Nat.add_0_r; reflexivity.
+    - right.
+      specialize (IHal _ _ H base (S ext)).
+      rewrite Nat.add_succ_r.
+      assumption.
+  Qed.
+
+  Lemma incMap_In_implies:
     forall al base ext b,
       In b (incMap al base ext) ->
       exists a ofs,
@@ -229,14 +273,14 @@ Section TreeTopo.
 
     - apply in_map_iff in H0.
       destruct H0 as [[ctr cifc] [? ?]]; simpl in *; subst.
-      apply incMap_In in H1.
+      apply incMap_In_implies in H1.
       destruct H1 as [ctr [ofs [? ?]]]; simpl in *.
       apply nth_error_In in H0.
       eapply tree2Topo_root_edges; eauto.
 
     - apply in_map_iff in H0.
       destruct H0 as [[ctr cifc] [? ?]]; simpl in *; subst.
-      apply incMap_In in H2.
+      apply incMap_In_implies in H2.
       destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
       apply nth_error_In in H0.
       rewrite Forall_forall in H; specialize (H _ H0 bidx~>ofs).
@@ -284,7 +328,7 @@ Section TreeTopo.
 
     - apply in_map_iff in H1.
       destruct H1 as [[ctr cifc] [? ?]]; simpl in *; subst.
-      apply incMap_In in H2.
+      apply incMap_In_implies in H2.
       destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
       pose proof (tree2Topo_root_edges _ _ (eq_sym H2)); dest.
       destruct H0 as [|[|]].
@@ -294,7 +338,7 @@ Section TreeTopo.
 
     - apply in_map_iff in H1.
       destruct H1 as [[ctr cifc] [? ?]]; simpl in *; subst.
-      apply incMap_In in H3.
+      apply incMap_In_implies in H3.
       destruct H3 as [ctr [ofs [? ?]]]; simpl in *.
       apply nth_error_In in H1.
       rewrite Forall_forall in H; specialize (H _ H1 bidx~>ofs).
@@ -329,7 +373,7 @@ Section TreeTopo.
     apply in_map_iff in H; destruct H as [cdtr [? ?]]; subst.
     apply in_map_iff in H0; destruct H0 as [[rcdtr cifc] [? ?]].
     simpl in *; subst.
-    apply incMap_In in H0; destruct H0 as [rctr [rofs [? ?]]].
+    apply incMap_In_implies in H0; destruct H0 as [rctr [rofs [? ?]]].
     replace cdtr with (fst (tree2Topo rctr base~>(S ofs + rofs)))
       by (rewrite <-H0; reflexivity).
     do 2 rewrite tree2Topo_root_idx.
@@ -351,7 +395,7 @@ Section TreeTopo.
       destruct H0 as [sdtr [? ?]].
       apply in_map_iff in H0; destruct H0 as [[dtr cifc] [? ?]].
       simpl in *; subst.
-      apply incMap_In in H2.
+      apply incMap_In_implies in H2.
       destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
       apply nth_error_In in H0.
       rewrite Forall_forall in H; specialize (H _ H0 bidx~>ofs).
@@ -814,7 +858,7 @@ Section Facts.
           intros dstr ?.
           apply in_map_iff in H.
           destruct H as [[dtr sifc] [? ?]]; simpl in *; subst.
-          apply incMap_In in H0.
+          apply incMap_In_implies in H0.
           destruct H0 as [str [ofs ?]]; dest.
           apply nth_error_In in H.
           rewrite Forall_forall in H3; specialize (H3 _ H bidx~>(1 + ofs)).
@@ -848,7 +892,7 @@ Section Facts.
         intros dstr ?.
         apply in_map_iff in H.
         destruct H as [[dtr sifc] [? ?]]; simpl in *; subst.
-        apply incMap_In in H0.
+        apply incMap_In_implies in H0.
         destruct H0 as [str [ofs ?]]; dest.
         apply nth_error_In in H.
         rewrite Forall_forall in H3; specialize (H3 _ H bidx~>(1 + ofs)).
@@ -979,7 +1023,7 @@ Section Facts.
           destruct Hx as [a [? ?]].
           apply in_map_iff in H0; destruct H0 as [[dtr cifc] [? ?]].
           simpl in *; subst.
-          apply incMap_In in H2.
+          apply incMap_In_implies in H2.
           destruct H2 as [str [ofs ?]]; dest; simpl in *.
           apply nth_error_In in H0.
           pose proof (tree2Topo_inds_prefix_base str bidx~>ofs).
@@ -991,7 +1035,7 @@ Section Facts.
           { intros.
             apply in_map_iff in H0; destruct H0 as [[dtr cifc] [? ?]].
             simpl in *; subst.
-            apply incMap_In in H1.
+            apply incMap_In_implies in H1.
             destruct H1 as [str [extb ?]]; dest; simpl in *.
             apply nth_error_In in H0.
             rewrite Forall_forall in H; specialize (H _ H0 bidx~>extb).
@@ -1024,7 +1068,7 @@ Section Facts.
           { intros.
             apply in_map_iff in H0; destruct H0 as [[dtr cifc] [? ?]].
             simpl in *; subst.
-            apply incMap_In in H1.
+            apply incMap_In_implies in H1.
             destruct H1 as [str [extb ?]]; dest; simpl in *.
             apply nth_error_In in H0.
             rewrite Forall_forall in H; specialize (H _ H0 bidx~>extb).
@@ -1055,7 +1099,7 @@ Section Facts.
           apply collect_in_exist in H1; destruct H1 as [sdtr [? ?]].
           apply in_map_iff in H1; destruct H1 as [[dtr sifc] [? ?]].
           simpl in *; subst.
-          apply incMap_In in H3; destruct H3 as [str [ofs [? ?]]].
+          apply incMap_In_implies in H3; destruct H3 as [str [ofs [? ?]]].
           simpl in *.
           replace sdtr with (fst (tree2Topo str bidx~>ofs)) in H2
             by (rewrite <-H3; reflexivity).
@@ -1299,14 +1343,14 @@ Section Facts.
         apply hasIdx_Some in H0; dest; subst.
         apply in_map_iff in H; destruct H as [[dtr sifc] [? ?]].
         simpl in *; subst.
-        apply incMap_In in H0; destruct H0 as [str [ofs [? ?]]].
+        apply incMap_In_implies in H0; destruct H0 as [str [ofs [? ?]]].
         eapply tree2Topo_RqRsChnsOnDTree_root.
         rewrite <-H0; reflexivity.
       + apply find_some_exist in H0.
         destruct H0 as [sdtr [? ?]].
         apply in_map_iff in H0; destruct H0 as [[dtr sifc] [? ?]].
         simpl in *; subst.
-        apply incMap_In in H2; destruct H2 as [str [ofs [? ?]]].
+        apply incMap_In_implies in H2; destruct H2 as [str [ofs [? ?]]].
         apply nth_error_In in H0.
         rewrite Forall_forall in H; specialize (H _ H0).
         specialize (H bidx~>ofs); simpl in H2; rewrite <-H2 in H; simpl in H.
@@ -1813,6 +1857,14 @@ Section Facts.
     (* destruct H0 as [ctr [ofs ?]]; dest; simpl in *. *)
   Admitted.
 
+  Lemma tree2Topo_l1_child_ext_not_in:
+    forall tr bidx oidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      ~ In (l1ExtOf oidx) ((c_li_indices (snd (tree2Topo tr bidx)))
+                             ++ c_l1_indices (snd (tree2Topo tr bidx))).
+  Proof.
+  Admitted.
+
   Lemma tree2Topo_l1_NoPrefix:
     forall tr bidx,
       NoPrefix (c_l1_indices (snd (tree2Topo tr bidx))).
@@ -1900,6 +1952,44 @@ Section Facts.
     }
     intro Hx; rewrite Hx in H0.
     eapply DisjList_In_1; [apply tree2Topo_minds_merqs_disj| |]; eauto.
+  Qed.
+
+  Lemma tree2Topo_l1_subtreeIndsOf:
+    forall tr bidx oidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      subtreeIndsOf (fst (tree2Topo tr bidx)) oidx = [oidx; l1ExtOf oidx].
+  Proof.
+    induction tr using tree_ind_l; intros.
+    pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf.
+    simpl in *.
+    find_if_inside; simpl in *.
+
+    - destruct H0; [subst|exfalso; auto].
+      cbv [subtreeIndsOf subtree dmc_me].
+      find_if_inside; [clear e|exfalso; auto].
+      reflexivity.
+
+    - apply tree2Topo_l1_oidx_In in H0.
+      destruct H0; [dest_in|].
+      simpl in H0; destruct H0 as [ctr [ofs ?]]; dest.
+      rewrite Forall_forall in H; specialize (H _ (nth_error_In _ _ H0) _ _ H3).
+      
+      assert (subtree oidx (DNode {| dmc_me := bidx;
+                                     dmc_ups := [bidx~>rqUpIdx; bidx~>rsUpIdx];
+                                     dmc_downs := [bidx~>downIdx] |}
+                                  (map fst (incMap tree2Topo l bidx 0))) =
+              subtree oidx (fst (tree2Topo ctr bidx~>ofs))).
+      { apply eq_sym, subtree_child_subtree_eq; [assumption|..].
+        { simpl; apply in_map.
+          change ofs with (0 + ofs).
+          eapply incMap_In; assumption.
+        }
+        { apply c_l1_indices_inds_SubList; assumption. }
+      }
+
+      unfold subtreeIndsOf in *.
+      rewrite H4.
+      assumption.
   Qed.
   
 End Facts.

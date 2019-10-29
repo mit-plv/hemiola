@@ -170,30 +170,6 @@ Section Facts.
     - eapply NoRsI_MsgExistsSig_InvRs_false; eauto.
   Qed.
 
-  Lemma NoCohMsgs_rsDown_deq:
-    forall msgs oidx rmsg,
-      FirstMPI msgs (downTo oidx, rmsg) ->
-      rmsg.(msg_type) = MRs ->
-      forall orq,
-        RsDownConflicts oidx orq msgs ->
-        NoCohMsgs oidx (deqMP (downTo oidx) msgs).
-  Proof.
-    intros.
-    specialize (H1 (downTo oidx, rmsg) eq_refl H0 (FirstMP_InMP H)); dest.
-
-    apply not_MsgExistsSig_MsgsNotExist.
-    intros; dest_in.
-    - destruct H8 as [[midx msg] [? ?]]; inv H8.
-      apply H4.
-      eapply rssQ_deq_in_length_two; eauto.
-    - destruct H8 as [[midx msg] [? ?]]; inv H8.
-      apply H4.
-      eapply rssQ_deq_in_length_two; eauto.
-    - destruct H8 as [rsUp [? ?]]; inv H8.
-      apply H6 with (rsUp:= rsUp); auto.
-      eapply InMP_deqMP; eauto.
-  Qed.
-
   Lemma ObjsInvalid_this_state_silent:
     forall inP oss msgs,
       ObjsInvalid inP oss msgs ->
@@ -295,6 +271,59 @@ Section Facts.
       simpl; intro Hx; subst.
       rewrite H5 in H10; discriminate.
   Qed.
+
+  Lemma NoCohMsgs_rsDown_deq:
+    forall msgs oidx rmsg,
+      FirstMPI msgs (downTo oidx, rmsg) ->
+      rmsg.(msg_type) = MRs ->
+      forall orq,
+        RsDownConflicts oidx orq msgs ->
+        NoCohMsgs oidx (deqMP (downTo oidx) msgs).
+  Proof.
+    intros.
+    specialize (H1 (downTo oidx, rmsg) eq_refl H0 (FirstMP_InMP H)); dest.
+
+    apply not_MsgExistsSig_MsgsNotExist.
+    intros; dest_in.
+    - destruct H8 as [[midx msg] [? ?]]; inv H8.
+      apply H4.
+      eapply rssQ_deq_in_length_two; eauto.
+    - destruct H8 as [[midx msg] [? ?]]; inv H8.
+      apply H4.
+      eapply rssQ_deq_in_length_two; eauto.
+    - destruct H8 as [rsUp [? ?]]; inv H8.
+      apply H6 with (rsUp:= rsUp); auto.
+      eapply InMP_deqMP; eauto.
+  Qed.
+
+  Section OnTree.
+    Variable (tr: tree).
+    Hypothesis (Htr: tr <> Node nil).
+
+    Let topo: DTree := fst (tree2Topo tr 0).
+    Let cifc: CIfc := snd (tree2Topo tr 0).
+
+    Lemma ObjsInvalid_shrinked:
+      forall eidx,
+        In eidx (c_l1_indices cifc) ->
+        forall oss msgs,
+          ObjsInvalid (fun oidx => ~ In oidx (subtreeIndsOf topo eidx)) oss msgs ->
+          (forall oidx, _ <+- oss@[oidx]; In oidx (c_li_indices cifc ++ c_l1_indices cifc)) ->
+          ObjsInvalid (fun oidx => eidx <> oidx) oss msgs.
+    Proof.
+      intros.
+      red; intros.
+      destruct (oss@[oidx]) as [ost|] eqn:Host; simpl; [|auto].
+      specialize (H1 oidx); rewrite Host in H1; simpl in H1.
+      specialize (H0 oidx); simpl in H0.
+      rewrite Host in H0; simpl in H0.
+      apply H0.
+      subst topo; rewrite tree2Topo_l1_subtreeIndsOf; [|eassumption].
+      intro Hx; dest_in; [auto|].
+      eapply tree2Topo_l1_child_ext_not_in; eauto.
+    Qed.
+
+  End OnTree.
 
 End Facts.
 
@@ -1032,6 +1061,7 @@ Section InvExcl.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
                   (mesi_GoodRqRsSys Htr) H) as Hftinv.
+    pose proof (mesi_InObjInds H) as Hioi.
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
     pose proof (@MesiUpLockInv_ok _ Htr _ H) as Hulinv.
@@ -1325,6 +1355,7 @@ Section InvExcl.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
                   (mesi_GoodRqRsSys Htr) Hr1) as Hftinv.
+    pose proof (mesi_InObjInds Hr1) as Hioi.
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) Hr1) as Hpmcf.
     pose proof (@MesiUpLockInv_ok _ Htr _ Hr1) as Hulinv.
@@ -1672,14 +1703,17 @@ Section InvExcl.
             red in H5.
             rewrite Forall_forall in H5; specialize (H5 _ H4 oidx); simpl in H5; dest.
 
-            (* discharge [RsEPred] *)
+            (* discharge [RsMEPred] *)
             red in H34.
             specialize (H34 eq_refl H30 (or_intror H29)).
 
             disc_InvExcl_this.
             { (* [InvObjExcl0] *)
               red; intros; split.
-              { admit. }
+              { apply ObjsInvalid_this_deqMP_silent; [|auto].
+                apply ObjsInvalid_this_state_silent; [|auto].
+                eapply ObjsInvalid_shrinked; eassumption.
+              }
               { disc_MsgConflictsInv oidx.
                 eapply NoCohMsgs_rsDown_deq; eauto.
               }
@@ -1808,20 +1842,25 @@ Section InvExcl.
             simpl; tauto.
           }
 
+          (* discharge [AtomicMsgOutsInv] *)
+          move H5 at bottom.
+          red in H5.
+          rewrite Forall_forall in H5; specialize (H5 _ H4 oidx).
+          simpl in H5; dest.
+
+          (* discharge [RsMEPred] *)
+          red in H34.
+          specialize (H34 eq_refl H30 (or_introl H29)).
+          
           case_InvExcl_me_others.
-          { (* discharge [AtomicMsgOutsInv] *)
-            move H5 at bottom.
-            red in H5.
-            rewrite Forall_forall in H5; specialize (H5 _ H4 oidx); simpl in H5; dest.
-
-            (* discharge [RsEPred] *)
-            red in H34.
-            specialize (H34 eq_refl H30 (or_introl H29)).
-
+          { 
             disc_InvExcl_this.
             { (* [InvObjExcl0] *)
               red; intros; split.
-              { admit. }
+              { apply ObjsInvalid_this_deqMP_silent; [|auto].
+                apply ObjsInvalid_this_state_silent; [|auto].
+                eapply ObjsInvalid_shrinked; eassumption.
+              }
               { disc_MsgConflictsInv oidx.
                 eapply NoCohMsgs_rsDown_deq; eauto.
               }
@@ -1842,7 +1881,24 @@ Section InvExcl.
               assumption.
             }
           }
-          { admit. }
+
+          { apply ObjsInvalid_shrinked in H34; [|eassumption..].
+            disc_InvExcl_others.
+            { disc_InvObjExcl0.
+              (** TODO: fix [solve_by_ObjsInvalid_false] *)
+              exfalso.
+              red in H37; dest.
+              exfalso.
+              eapply ObjsInvalid_obj_status_false with (oidx := eidx);
+                simpl in *; eauto.
+              simpl; eauto.
+              solve_mesi.
+            }
+            { (** TODO: ∃rsM -> .. *)
+              (** [ObjInvalid] contains [owned = false]? *)
+              admit.
+            }
+          }
         }
       }
 
