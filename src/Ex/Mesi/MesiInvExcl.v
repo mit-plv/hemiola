@@ -616,20 +616,6 @@ Section InvExcl.
   Proof.
   Admitted.
 
-  Lemma mesi_InvExcl_InvTrs_init:
-    forall st1,
-      Reachable (steps step_m) impl st1 ->
-      InvExcl topo st1 ->
-      forall oidx ridx ins outs st2,
-        SubList (idsOf ins) (sys_merqs impl) ->
-        step_m impl st1 (RlblInt oidx ridx ins outs) st2 ->
-        AtomicInv
-          InvExclMsgOutPred
-          ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
-        InvExcl topo st2.
-  Proof.
-  Admitted.
-
   Ltac disc_bind_true :=
     repeat
       match goal with
@@ -1001,6 +987,308 @@ Section InvExcl.
       simpl in Hdl; dest
     end.
 
+  Lemma mesi_InvExcl_InvTrs_init:
+    forall st1,
+      Reachable (steps step_m) impl st1 ->
+      InvExcl topo st1 ->
+      forall oidx ridx ins outs st2,
+        SubList (idsOf ins) (sys_merqs impl) ->
+        step_m impl st1 (RlblInt oidx ridx ins outs) st2 ->
+        AtomicInv
+          InvExclMsgOutPred
+          ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
+        InvExcl topo st2.
+  Proof.
+    intros.
+
+    pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+    pose proof (footprints_ok
+                  (mesi_GoodORqsInit Htr)
+                  (mesi_GoodRqRsSys Htr) H) as Hftinv.
+    pose proof (mesi_MsgConflictsInv
+                  (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
+    pose proof (@MesiUpLockInv_ok _ Htr _ H) as Hulinv.
+    pose proof (@MesiDownLockInv_ok _ Htr _ H) as Hdlinv.
+
+    inv_step.
+
+    simpl in H7; destruct H7; [subst|apply in_app_or in H2; destruct H2].
+
+    - (*! Cases for the main memory *)
+      
+      (** Abstract the root. *)
+      assert (In (rootOf (fst (tree2Topo tr 0)))
+                 (c_li_indices (snd (tree2Topo tr 0)))) as Hin.
+      { rewrite c_li_indices_head_rootOf by assumption.
+        left; reflexivity.
+      }
+
+      remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
+
+      (** The root does not belong to [c_l1_indices]. *)
+      assert (~ In oidx (c_l1_indices (snd (tree2Topo tr 0)))).
+      { pose proof (tree2Topo_WfCIfc tr 0) as [? _].
+        apply (DisjList_NoDup idx_dec) in H2.
+        eapply DisjList_In_2; [eassumption|].
+        assumption.
+      }
+
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H8; destruct H8.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H3; destruct H3 as [crls [? ?]].
+        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
+
+        (** Derive that the child has the parent. *)
+        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
+
+        dest_in; disc_rule_conds_ex.
+
+        Ltac exfalso_InvTrs_init :=
+          exfalso;
+          repeat
+            match goal with
+            | [H: In _ (c_merqs _) |- _] =>
+              rewrite c_merqs_l1_rqUpFrom in H;
+              apply in_map_iff in H;
+              let oidx := fresh "oidx" in
+              destruct H as [oidx [? ?]]
+            | [H: parentIdxOf _ (l1ExtOf _) = Some _ |- _] =>
+              rewrite tree2Topo_l1_ext_parent in H by assumption
+            | [H: rqUpFrom (l1ExtOf _) = rqUpFrom _ |- _] => inv H
+            | [H: rqUpFrom (l1ExtOf _) = rsUpFrom _ |- _] => inv H
+            | [H: rqUpFrom (l1ExtOf _) = downTo _ |- _] => inv H
+            | [H: Some _ = Some _ |- _] => inv H
+            | [H1: ~ In ?i ?l, H2: In ?i ?l |- _] => elim H1; assumption
+            end.
+
+        all: try (exfalso_InvTrs_init; fail).
+      }
+
+      dest_in.
+
+      { disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx;
+          [|derive_child_chns x; solve_midx_false].
+        disc_responses_from.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+      { disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx;
+          [|derive_child_chns x; solve_midx_false].
+        (* disc_responses_from. *)
+
+        Ltac pick_disc_response_from :=
+          repeat
+            match goal with
+            | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: _ = ?rss |- _] =>
+              rewrite <-Hrss in Hrr
+            end;
+          repeat
+            match goal with
+            | [Hrr: RqRsDownMatch _ _ _ (idsOf ?ins) _ |- _] =>
+              pose proof (RqRsDownMatch_rs_not_nil Hrr);
+              let midx := fresh "midx" in
+              let msg := fresh "msg" in
+              destruct ins as [|[midx msg] ins]; [exfalso; auto|];
+              simpl in Hrr; eapply RqRsDownMatch_rs_rq in Hrr; [|left; reflexivity];
+              let cidx := fresh "cidx" in
+              let down := fresh "down" in
+              destruct Hrr as [cidx [down ?]]; dest
+            | [H: SubList (idsOf (_ :: _)) _ |- _] =>
+              simpl in H; apply SubList_cons_inv in H; dest
+            end.
+
+        pick_disc_response_from.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+
+    - (*! Cases for Li caches *)
+      apply in_map_iff in H2; destruct H2 as [oidx [? ?]]; subst; simpl in *.
+
+      pose proof (c_li_indices_tail_has_parent Htr _ _ H3).
+      destruct H2 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+
+      (** The object index does not belong to [c_l1_indices]. *)
+      assert (~ In oidx (c_l1_indices (snd (tree2Topo tr 0)))).
+      { pose proof (tree2Topo_WfCIfc tr 0) as [? _].
+        apply (DisjList_NoDup idx_dec) in H9.
+        eapply DisjList_In_2; [eassumption|].
+        apply tl_In; assumption.
+      }
+
+      (** Do case analysis per a rule. *)
+      apply in_app_or in H8; destruct H8.
+
+      1: { (** Rules per a child *)
+        apply concat_In in H8; destruct H8 as [crls [? ?]].
+        apply in_map_iff in H8; destruct H8 as [cidx [? ?]]; subst.
+
+        (** Derive that the child has the parent. *)
+        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
+
+        dest_in; disc_rule_conds_ex.
+        all: try (exfalso_InvTrs_init; fail).
+      }
+
+      dest_in; disc_rule_conds_ex.
+
+      all: try (derive_footprint_info_basis oidx; exfalso_InvTrs_init; fail).
+
+      { disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx.
+        disc_responses_from.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+      { disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx; [solve_midx_false|].
+        disc_responses_from.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+
+      { disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx.
+        pick_disc_response_from.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+      { disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx; [solve_midx_false|].
+        pick_disc_response_from.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+
+      { (* [liInvRqUpUp] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liInvRqUpUpWB] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liPushImm] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { admit. }
+      }
+
+    - (*! Cases for L1 caches *)
+      apply in_map_iff in H2; destruct H2 as [oidx [? ?]]; subst.
+
+      pose proof (c_l1_indices_has_parent Htr _ _ H3).
+      destruct H2 as [pidx [? ?]].
+      pose proof (Htn _ _ H4); dest.
+
+      (** Discharge an invariant that holds only for L1 caches. *)
+      (* red in Hl1d; simpl in Hl1d. *)
+      (* rewrite Forall_forall in Hl1d; specialize (Hl1d _ H2). *)
+      (* simpl in H5; rewrite H5 in Hl1d; simpl in Hl1d. *)
+
+      (** Do case analysis per a rule. *)
+      dest_in.
+
+      { (* [l1GetSImm] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [l1GetSRqUpUp] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [l1GetSRsDownDownS] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        exfalso_InvTrs_init.
+      }
+      
+      { (* [l1GetSRsDownDownE] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        exfalso_InvTrs_init.
+      }
+
+      { (* [l1DownSImm] *)
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+
+      { (* [l1GetMImmE] *)
+        admit.
+      }
+
+      { (* [l1GetMImmM] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { eapply InvExcl_state_transition_sound with (porqs:= orqs); eauto.
+          solve_InvExcl_trivial.
+        }
+      }
+
+      { (* [l1GetMRqUpUp] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+        
+      { (* [l1GetMRsDownDown] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        exfalso_InvTrs_init.
+      }
+
+      { (* [l1DownIImm] *)
+        disc_rule_conds_ex.
+        exfalso_InvTrs_init.
+      }
+
+      { (* [l1InvRqUpUp] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+      
+      { (* [l1InvRqUpUpWB] *)
+        disc_rule_conds_ex; split.
+        { msg_pred_admit. }
+        { solve_InvExcl_trivial. }
+      }
+      
+      { (* [l1InvRsDownDown] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        exfalso_InvTrs_init.
+      }
+
+      Unshelve.
+      all: assumption.
+      
+  Admitted.
+  
   Lemma mesi_InvExcl_InvTrs: InvTrs impl (InvExcl topo).
   Proof.
     eapply inv_atomic_InvTrs;
@@ -1023,10 +1311,6 @@ Section InvExcl.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
                   (mesi_GoodRqRsSys Htr) Hr1) as Hftinv.
-    (* pose proof (upLockInv_ok *)
-    (*               msiSv_impl_ORqsInit *)
-    (*               msiSv_impl_GoodRqRsSys *)
-    (*               msiSv_impl_RqRsDTree Hr1) as Hpulinv. *)
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) Hr1) as Hpmcf.
     pose proof (@MesiUpLockInv_ok _ Htr _ Hr1) as Hulinv.
@@ -1246,15 +1530,22 @@ Section InvExcl.
       dest_in.
 
       { (* [l1GetSImm] *)
-        disc_rule_conds_ex; split.
-        { msg_pred_admit. }
-        { solve_InvExcl_trivial. }
+        disc_rule_conds_ex.
+        exfalso.
+        Ltac disc_AtomicMsgOutsInv oidx :=
+          match goal with
+          | [Ha: AtomicMsgOutsInv _ ?eouts _, Hin: In _ ?eouts |- _] =>
+            red in Ha; rewrite Forall_forall in Ha; specialize (Ha _ Hin oidx);
+            simpl in Ha; dest
+          end.
+
+        disc_AtomicMsgOutsInv (l1ExtOf oidx).
+        eauto.
       }
 
       { (* [l1GetSRqUpUp] *)
-        disc_rule_conds_ex; split.
-        { msg_pred_admit. }
-        { solve_InvExcl_trivial. }
+        disc_rule_conds_ex.
+        exfalso; disc_AtomicMsgOutsInv (l1ExtOf oidx); eauto.
       }
 
       { (* [l1GetSRsDownDownS] *)
@@ -1265,7 +1556,7 @@ Section InvExcl.
 
         split.
         { msg_pred_admit. }
-        { (* from [solve_InvExcl_trivial] *)
+        { (** TODO: from [solve_InvExcl_trivial] *)
           match goal with
           | [He: InvExcl _ {| bst_orqs := ?orqs |}
              |- InvExcl _ {| bst_msgs := enqMP ?midx ?msg _ |}] =>
@@ -1349,7 +1640,7 @@ Section InvExcl.
 
         split.
         { msg_pred_admit. }
-        { (* from [solve_InvExcl_trivial] *)
+        { (** TODO: from [solve_InvExcl_trivial] *)
           match goal with
           | [He: InvExcl _ {| bst_orqs := ?orqs |}
              |- InvExcl _ {| bst_msgs := enqMP ?midx ?msg _ |}] =>
@@ -1463,20 +1754,19 @@ Section InvExcl.
         }
       }
 
-      { (* [l1GetMImmE] *) admit. }
+      { (* [l1GetMImmE] *)
+        disc_rule_conds_ex.
+        exfalso; disc_AtomicMsgOutsInv (l1ExtOf oidx); eauto.
+      }
 
       { (* [l1GetMImmM] *)
-        disc_rule_conds_ex; split.
-        { msg_pred_admit. }
-        { eapply InvExcl_state_transition_sound with (porqs:= orqs); eauto.
-          solve_InvExcl_trivial.
-        }
+        disc_rule_conds_ex.
+        exfalso; disc_AtomicMsgOutsInv (l1ExtOf oidx); eauto.
       }
 
       { (* [l1GetMRqUpUp] *)
-        disc_rule_conds_ex; split.
-        { msg_pred_admit. }
-        { solve_InvExcl_trivial. }
+        disc_rule_conds_ex.
+        exfalso; disc_AtomicMsgOutsInv (l1ExtOf oidx); eauto.
       }
         
       { (* [l1GetMRsDownDown] *)
@@ -1492,7 +1782,7 @@ Section InvExcl.
 
         split.
         { msg_pred_admit. }
-        { (* from [solve_InvExcl_trivial] *)
+        { (** TODO: from [solve_InvExcl_trivial] *)
           match goal with
           | [He: InvExcl _ {| bst_orqs := ?orqs |}
              |- InvExcl _ {| bst_msgs := enqMP ?midx ?msg _ |}] =>
@@ -1579,15 +1869,13 @@ Section InvExcl.
       }
 
       { (* [l1InvRqUpUp] *)
-        disc_rule_conds_ex; split.
-        { msg_pred_admit. }
-        { solve_InvExcl_trivial. }
+        disc_rule_conds_ex.
+        exfalso; destruct rins; [auto|discriminate].
       }
       
       { (* [l1InvRqUpUpWB] *)
-        disc_rule_conds_ex; split.
-        { msg_pred_admit. }
-        { solve_InvExcl_trivial. }
+        disc_rule_conds_ex.
+        exfalso; destruct rins; [auto|discriminate].
       }
       
       { (* [l1InvRsDownDown] *)

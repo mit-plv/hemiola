@@ -103,12 +103,12 @@ Section Sim.
           * exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
             destruct idm as [midx msg], idm0 as [midx0 msg0].
             simpl in *; inv H0; inv e.
-            intro; subst; rewrite H10 in H11; discriminate.
+            intro; subst; rewrite H11 in H12; discriminate.
           * exfalso; eapply (H3 idm0); try rewrite H0; try rewrite e; auto.
             destruct idm as [midx msg], idm0 as [midx0 msg0].
             simpl in *; inv H0; inv e.
-            intro; subst; rewrite H10 in H11; discriminate.
-          * exfalso; eapply H5; try rewrite e; eauto.
+            intro; subst; rewrite H11 in H12; discriminate.
+          * exfalso; eapply H6; try rewrite e; eauto.
     Qed.
 
     Lemma NoCohMsgs_MsgsCoh:
