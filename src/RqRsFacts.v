@@ -1306,6 +1306,30 @@ Proof.
       simpl; omega.
 Qed.
 
+Lemma rssQ_deq_in_length_two:
+  forall msgs midx msg1,
+    FirstMPI msgs (midx, msg1) ->
+    msg_type msg1 = MRs ->
+    forall msg2,
+      InMP midx msg2 (deqMP midx msgs) ->
+      msg_type msg2 = MRs ->
+      List.length (rssQ msgs midx) >= 2.
+Proof.
+  cbv [FirstMPI FirstMP firstMP InMP rssQ deqMP]; simpl; intros.
+  destruct (findQ midx msgs) as [|emsg q]; [discriminate|].
+  simpl in *; inv H.
+  rewrite H0; simpl.
+  unfold findQ in H1; mred; simpl in H1.
+
+  clear -H1 H2.
+  induction q; intros; [dest_in|].
+  inv H1.
+  - simpl; rewrite H2; simpl; omega.
+  - simpl; destruct (msg_type a).
+    + simpl; omega.
+    + apply IHq; assumption.
+Qed.
+
 Lemma rssQ_enqMP_rq:
   forall msgs rqMIdx rqm midx,
     msg_type rqm = MRq ->

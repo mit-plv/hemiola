@@ -597,7 +597,7 @@ Section System.
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI] (** TODO: may want to preserve [mesiNP] if it was *)
+                     +#[status <- mesiI]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  {| miv_id := mesiRsM;
                     miv_value := O |})).
@@ -656,7 +656,6 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     (** TODO: may want to preserve [mesiNP] if it was *)
                      +#[status <- mesiI] 
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  {| miv_id := mesiRsM;

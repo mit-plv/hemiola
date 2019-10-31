@@ -29,31 +29,6 @@ Ltac derive_NoRsI_by_rqDown oidx msgs :=
   assert (NoRsI oidx msgs)
   by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
 
-(** TODO: move to the proper site. *)
-Lemma rssQ_deq_in_length_two:
-  forall msgs midx msg1,
-    FirstMPI msgs (midx, msg1) ->
-    msg_type msg1 = MRs ->
-    forall msg2,
-      InMP midx msg2 (deqMP midx msgs) ->
-      msg_type msg2 = MRs ->
-      List.length (rssQ msgs midx) >= 2.
-Proof.
-  cbv [FirstMPI FirstMP firstMP InMP rssQ deqMP]; simpl; intros.
-  destruct (findQ midx msgs) as [|emsg q]; [discriminate|].
-  simpl in *; inv H.
-  rewrite H0; simpl.
-  unfold findQ in H1; mred; simpl in H1.
-
-  clear -H1 H2.
-  induction q; intros; [dest_in|].
-  inv H1.
-  - simpl; rewrite H2; simpl; lia.
-  - simpl; destruct (msg_type a).
-    + simpl; lia.
-    + apply IHq; assumption.
-Qed.
-
 Existing Instance Mesi.ImplOStateIfc.
 
 Definition ObjsInvalid (inP: IdxT -> Prop) (oss: OStates) (msgs: MessagePool Msg) :=
@@ -417,14 +392,14 @@ Ltac disc_ObjExcl0_msgs H :=
            |apply ObjExcl0_other_midx_deqMP_inv in H;
             [|solve_chn_neq; fail]
            |apply ObjExcl0_other_midx_deqMsgs_inv in H;
-            [|eassumption|eassumption|] (** FIXME: need to debug when not working *)
+            [|eassumption|eassumption|]
            |eapply ObjExcl0_other_msg_id_deqMP_inv in H;
             [|eassumption
              |simpl; try match goal with
                          | [H: ?lh = _ |- ?lh <> _] => rewrite H
                          end; discriminate]
            |eapply ObjExcl0_other_msg_id_deqMsgs_inv in H;
-            [|eassumption|eassumption|] (** FIXME: need to debug when not working *)
+            [|eassumption|eassumption|]
     ]).
 
 Section InvExcl.
@@ -932,7 +907,7 @@ Section InvExcl.
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
                                  mesiRqM; mesiDownRqI; mesiDownRsI;
-                                   mesiInvRq; mesiInvWRq;
+                                   mesiInvRq; mesiInvWRq; mesiInvRs;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
         ObjsInvalid inP oss (enqMsgs nmsgs msgs).
   Proof.
@@ -1004,7 +979,7 @@ Section InvExcl.
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
                                  mesiRqM; mesiDownRqI; mesiDownRsI;
-                                   mesiInvRq; mesiInvWRq;
+                                   mesiInvRq; mesiInvWRq; mesiInvRs;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
         InvExcl topo {| bst_oss := oss;
                         bst_orqs := norqs;
@@ -1652,114 +1627,180 @@ Section InvExcl.
 
         dest_in.
 
-        (* { (* [liGetSImmS] *) *)
-        (*   disc_rule_conds_ex. *)
-        (*   derive_NoRsI_by_no_uplock oidx msgs. *)
+        { (* [liGetSImmS] *)
+          disc_rule_conds_ex.
+          derive_NoRsI_by_no_uplock oidx msgs.
           
-        (*   split. *)
-        (*   { admit_msg_pred. } *)
-        (*   { case_InvExcl_me_others. *)
-        (*     { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|]. *)
-        (*       case_InvObjOwned; [solve_by_topo_false|]. *)
-        (*       disc_ObjsInvalid_by oidx0. *)
-        (*       case_ObjInvalid_with cidx; [solve_by_topo_false|]. *)
-        (*       case_ObjInvalid; [solve_ObjInvalid0|]. *)
-        (*       solve_ObjInvRs. *)
-        (*     } *)
+          split.
+          { admit_msg_pred. }
+          { case_InvExcl_me_others.
+            { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+              case_InvObjOwned; [solve_by_topo_false|].
+              disc_ObjsInvalid_by oidx0.
+              case_ObjInvalid_with cidx; [solve_by_topo_false|].
+              case_ObjInvalid; [solve_ObjInvalid0|].
+              solve_ObjInvRs.
+            }
 
-        (*     { disc_InvExcl_others. *)
-        (*       { disc_InvObjExcl0. *)
-        (*         solve_by_ObjsInvalid_status_false oidx. *)
-        (*       } *)
-        (*       { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|]. *)
-        (*         derive_not_InvalidObj_not_in oidx. *)
-        (*         disc_ObjsInvalid_by oidx0. *)
-        (*         case_ObjInvalid_with cidx; [solve_by_topo_false|]. *)
-        (*         case_ObjInvalid; [solve_ObjInvalid0|]. *)
-        (*         solve_ObjInvRs. *)
-        (*       } *)
-        (*     } *)
-        (*   } *)
-        (* } *)
+            { disc_InvExcl_others.
+              { disc_InvObjExcl0.
+                solve_by_ObjsInvalid_status_false oidx.
+              }
+              { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|].
+                derive_not_InvalidObj_not_in oidx.
+                disc_ObjsInvalid_by oidx0.
+                case_ObjInvalid_with cidx; [solve_by_topo_false|].
+                case_ObjInvalid; [solve_ObjInvalid0|].
+                solve_ObjInvRs.
+              }
+            }
+          }
+        }
 
-        (* { (* [liGetSImmME] *) *)
-        (*   disc_rule_conds_ex. *)
-        (*   derive_NoRsI_by_no_uplock oidx msgs. *)
+        { (* [liGetSImmME] *)
+          disc_rule_conds_ex.
+          derive_NoRsI_by_no_uplock oidx msgs.
           
-        (*   split. *)
-        (*   { admit_msg_pred. } *)
-        (*   { case_InvExcl_me_others. *)
-        (*     { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|]. *)
-        (*       case_InvObjOwned; [solve_by_topo_false|]. *)
-        (*       disc_ObjsInvalid_by oidx0. *)
-        (*       case_ObjInvalid_with cidx; [solve_by_topo_false|]. *)
-        (*       case_ObjInvalid; [solve_ObjInvalid0|]. *)
-        (*       solve_ObjInvRs. *)
-        (*     } *)
+          split.
+          { admit_msg_pred. }
+          { case_InvExcl_me_others.
+            { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+              case_InvObjOwned; [solve_by_topo_false|].
+              disc_ObjsInvalid_by oidx0.
+              case_ObjInvalid_with cidx; [solve_by_topo_false|].
+              case_ObjInvalid; [solve_ObjInvalid0|].
+              solve_ObjInvRs.
+            }
 
-        (*     { disc_InvExcl_others. *)
-        (*       { disc_InvObjExcl0. *)
-        (*         solve_by_ObjsInvalid_status_false oidx. *)
-        (*       } *)
-        (*       { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|]. *)
-        (*         derive_not_InvalidObj_not_in oidx. *)
-        (*         disc_ObjsInvalid_by oidx0. *)
-        (*         case_ObjInvalid_with cidx; [solve_by_topo_false|]. *)
-        (*         case_ObjInvalid; [solve_ObjInvalid0|]. *)
-        (*         solve_ObjInvRs. *)
-        (*       } *)
-        (*     } *)
-        (*   } *)
-        (* } *)
+            { disc_InvExcl_others.
+              { disc_InvObjExcl0.
+                solve_by_ObjsInvalid_status_false oidx.
+              }
+              { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|].
+                derive_not_InvalidObj_not_in oidx.
+                disc_ObjsInvalid_by oidx0.
+                case_ObjInvalid_with cidx; [solve_by_topo_false|].
+                case_ObjInvalid; [solve_ObjInvalid0|].
+                solve_ObjInvRs.
+              }
+            }
+          }
+        }
           
-        (* { (* [liGetSRqUpUp] *) *)
-        (*   disc_rule_conds_ex; split. *)
-        (*   { admit_msg_pred. } *)
-        (*   { solve_InvExcl_trivial. } *)
-        (* } *)
+        { (* [liGetSRqUpUp] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
 
-        (* { (* [liGetSRqUpDownME] *) *)
-        (*   disc_rule_conds_ex; split. *)
-        (*   { admit_msg_pred. } *)
-        (*   { solve_InvExcl_trivial. } *)
-        (* } *)
+        { (* [liGetSRqUpDownME] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
 
-        (* { (* [liGetMImm] *) *)
-        (*   disc_rule_conds_ex. *)
-        (*   derive_NoRsI_by_no_uplock oidx msgs. *)
+        { (* [liGetMImm] *)
+          disc_rule_conds_ex.
+          derive_NoRsI_by_no_uplock oidx msgs.
           
-        (*   split. *)
-        (*   { admit_msg_pred. } *)
-        (*   { case_InvExcl_me_others. *)
-        (*     { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|]. *)
-        (*       case_InvObjOwned; [solve_by_topo_false|]. *)
-        (*       disc_ObjsInvalid_by oidx0. *)
-        (*       case_ObjInvalid_with cidx; [solve_by_topo_false|]. *)
-        (*       case_ObjInvalid; [solve_ObjInvalid0|]. *)
-        (*       solve_ObjInvRs. *)
-        (*     } *)
+          split.
+          { admit_msg_pred. }
+          { case_InvExcl_me_others.
+            { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+              case_InvObjOwned; [solve_by_topo_false|].
+              disc_ObjsInvalid_by oidx0.
+              case_ObjInvalid_with cidx; [solve_by_topo_false|].
+              case_ObjInvalid; [solve_ObjInvalid0|].
+              solve_ObjInvRs.
+            }
 
-        (*     { disc_InvExcl_others. *)
-        (*       { disc_InvObjExcl0. *)
-        (*         solve_by_ObjsInvalid_status_false oidx. *)
-        (*       } *)
-        (*       { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|]. *)
-        (*         derive_not_InvalidObj_not_in oidx. *)
-        (*         disc_ObjsInvalid_by oidx0. *)
-        (*         case_ObjInvalid_with cidx; [solve_by_topo_false|]. *)
-        (*         case_ObjInvalid; [solve_ObjInvalid0|]. *)
-        (*         solve_ObjInvRs. *)
-        (*       } *)
-        (*     } *)
-        (*   } *)
-        (* } *)
+            { disc_InvExcl_others.
+              { disc_InvObjExcl0.
+                solve_by_ObjsInvalid_status_false oidx.
+              }
+              { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|].
+                derive_not_InvalidObj_not_in oidx.
+                disc_ObjsInvalid_by oidx0.
+                case_ObjInvalid_with cidx; [solve_by_topo_false|].
+                case_ObjInvalid; [solve_ObjInvalid0|].
+                solve_ObjInvRs.
+              }
+            }
+          }
+        }
 
-        (* { (* [liGetMRqUpUp] *) *)
-        (*   disc_rule_conds_ex; split. *)
-        (*   { admit_msg_pred. } *)
-        (*   { solve_InvExcl_trivial. } *)
-        (* } *)
-        all: admit.
+        { (* [liGetMRqUpUp] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
+
+        { (* [liGetMRqUpDownME] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
+
+        { (* [liGetMRqUpDownS] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
+
+        { (* [liInvImmI] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
+
+        { (* [liInvImmS0] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial.
+            eapply InvExcl_state_transition_sound; try eassumption.
+            { simpl; auto. }
+            { simpl; intuition. }
+          }
+        }
+          
+        { (* [liInvImmS1] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial.
+            eapply InvExcl_state_transition_sound; try eassumption.
+            { simpl; auto. }
+            { simpl; intuition. }
+          }
+        }
+
+        { (* [liInvImmE] *)
+          (** TODO: need to draw (maybe from Dir-Invalid invariant?)
+           * If dirE(C) then ObjsInvalid(~ tr(C)). *)
+          admit.
+        }
+
+        { (* [liInvImmWBI] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial. }
+        }
+
+        { (* [liInvImmWBS1] *)
+          disc_rule_conds_ex; split.
+          { admit_msg_pred. }
+          { solve_InvExcl_trivial.
+            eapply InvExcl_state_transition_sound; try eassumption.
+            { simpl; auto. }
+            { simpl; intuition. }
+          }
+        }
+
+        { (* [liInvImmWBME] *)
+          (** TODO: need to draw (maybe from Dir-Invalid invariant?)
+           * If dirM(C) then ObjsInvalid(~ tr(C)). *)
+          admit.
+        }
+        
       }
 
       dest_in.
