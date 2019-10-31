@@ -319,6 +319,39 @@ Section Facts.
       rewrite H5 in H10; discriminate.
   Qed.
 
+  Lemma ObjsInvalid_downRsS_false:
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
+      forall oidx ost orq,
+        oss@[oidx] = Some ost ->
+        inP oidx ->
+        RsDownConflicts oidx orq msgs ->
+        forall rsum,
+          InMP (rsUpFrom oidx) rsum msgs ->
+          rsum.(msg_type) = MRs ->
+          rsum.(msg_id) = mesiDownRsS ->
+          False.
+  Proof.
+    intros.
+    specialize (H _ H1).
+    rewrite H0 in H; simpl in H.
+    destruct H.
+    - red in H; dest.
+      specialize (H6 (rsUpFrom oidx, rsum) H3).
+      red in H6; rewrite map_trans, map_cons in H6.
+      do 3 (rewrite caseDec_head_neq in H6
+             by (unfold sigOf; simpl; intro Hx; inv Hx;
+                 rewrite H5 in H9; discriminate);
+            rewrite map_cons in H6).
+      rewrite caseDec_head_eq in H6
+        by (unfold sigOf; simpl; congruence).
+      auto.
+    - destruct H as [[midx msg] [? ?]]; simpl in *.
+      unfold sigOf in H6; simpl in H6; inv H6.
+      specialize (H2 (downTo oidx, msg) eq_refl H9 H); dest.
+      eapply (H12 (rsUpFrom oidx, rsum)); eauto.
+  Qed.
+  
   Lemma NoCohMsgs_rsDown_deq:
     forall msgs oidx rmsg,
       FirstMPI msgs (downTo oidx, rmsg) ->
@@ -767,7 +800,8 @@ Section InvExcl.
   Ltac disc_ObjsInvalid_by oidx :=
     match goal with
     | [Hi: ObjsInvalid _ _ _ |- _] =>
-      specialize (Hi oidx ltac:(auto)); disc_bind_true
+      (* specialize (Hi oidx ltac:(auto)); disc_bind_true *)
+      pose proof (Hi oidx ltac:(auto)); disc_bind_true
     end.
 
   Ltac disc_InvObjExcl0 :=
@@ -873,7 +907,7 @@ Section InvExcl.
         Forall (FirstMPI msgs) rmsgs ->
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
-                                 mesiRqM; mesiDownRqI;
+                                 mesiRqM; mesiDownRqI; mesiDownRsI;
                                    mesiInvRq; mesiInvWRq;
                                      getRq; getRs; setRq; setRs]) rmsgs ->
         ObjsInvalid inP oss (deqMsgs (idsOf rmsgs) msgs).
@@ -897,7 +931,7 @@ Section InvExcl.
       forall nmsgs,
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
-                                 mesiRqM; mesiDownRqI;
+                                 mesiRqM; mesiDownRqI; mesiDownRsI;
                                    mesiInvRq; mesiInvWRq;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
         ObjsInvalid inP oss (enqMsgs nmsgs msgs).
@@ -933,7 +967,7 @@ Section InvExcl.
         Forall (FirstMPI msgs) rmsgs ->
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
-                                 mesiRqM; mesiDownRqI;
+                                 mesiRqM; mesiDownRqI; mesiDownRsI;
                                    mesiInvRq; mesiInvWRq;
                                      getRq; getRs; setRq; setRs]) rmsgs ->
         InvExcl topo {| bst_oss := oss;
@@ -969,7 +1003,7 @@ Section InvExcl.
       forall nmsgs,
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
-                                 mesiRqM; mesiDownRqI;
+                                 mesiRqM; mesiDownRqI; mesiDownRsI;
                                    mesiInvRq; mesiInvWRq;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
         InvExcl topo {| bst_oss := oss;
@@ -1007,7 +1041,7 @@ Section InvExcl.
       forall oidx (post nost: OState) norqs,
         oss@[oidx] = Some post ->
         nost#[status] <= post#[status] ->
-        post#[owned] = nost#[owned] ->
+        post#[owned] || negb (nost#[owned]) = true ->
         InvExcl topo {| bst_oss := oss +[oidx <- nost];
                         bst_orqs := norqs; bst_msgs := msgs |}.
   Proof.
@@ -1024,8 +1058,9 @@ Section InvExcl.
         red; intros; mred.
         apply H; assumption.
       + red; intros.
-        setoid_rewrite <-H2 in H4.
-        specialize (H3 H4).
+        rewrite H4 in H2; simpl in H2.
+        rewrite orb_false_r in H2.
+        specialize (H3 H2).
         red; intros; specialize (H3 _ H5).
         mred; simpl; auto.
         destruct H3; [left|right; assumption].
@@ -1148,7 +1183,7 @@ Section InvExcl.
           InvExclMsgOutPred
           ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
         InvExcl topo st2.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
 
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
@@ -1299,8 +1334,10 @@ Section InvExcl.
       { (* [liPushImm] *)
         disc_rule_conds_ex; split.
         { admit_msg_pred. }
-        { eapply InvExcl_state_transition_sound with (porqs:= orqs); eauto.
-          simpl; intuition solve_mesi.
+        { eapply InvExcl_state_transition_sound with (porqs:= orqs);
+            try eassumption.
+          { simpl; intuition solve_mesi. }
+          { simpl; intuition. }
         }
       }
 
@@ -1380,8 +1417,11 @@ Section InvExcl.
       { (* [l1GetMImmM] *)
         disc_rule_conds_ex; split.
         { admit_msg_pred. }
-        { eapply InvExcl_state_transition_sound with (porqs:= orqs); eauto.
-          solve_InvExcl_trivial.
+        { eapply InvExcl_state_transition_sound with (porqs:= orqs);
+            try eassumption.
+          { solve_InvExcl_trivial. }
+          { simpl; auto. }
+          { simpl; intuition. }
         }
       }
 
@@ -1423,7 +1463,7 @@ Section InvExcl.
       Unshelve.
       all: assumption.
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac disc_AtomicMsgOutsInv oidx :=
@@ -1723,7 +1763,319 @@ Section InvExcl.
       }
 
       dest_in.
-      all: admit.
+
+      { (* [liGetSRsDownDownS] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+
+        split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial.
+          case_InvExcl_me_others.
+          { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+            solve_InvObjOwned_by_false.
+          }
+
+          { disc_MsgConflictsInv oidx.
+            disc_InvExcl_others.
+            { disc_InvObjExcl0.
+              solve_by_ObjsInvalid_rsS_false oidx.
+            }
+            { case_InvObjOwned; [solve_by_ObjsInvalid_rsS_false oidx|].
+              disc_ObjsInvalid_by oidx0; case_ObjInvalid.
+              { destruct (idx_dec oidx0 cidx); [subst|solve_ObjInvalid0].
+                eapply outside_parent_out in H40; eauto.
+                solve_by_ObjsInvalid_rsS_false oidx.
+              }
+              { solve_ObjInvRs. }
+            }
+          }
+        }
+      }
+
+      { (* [liGetSRsDownDownE] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+
+        split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial.
+          case_InvExcl_me_others.
+          { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+            solve_InvObjOwned_by_false.
+          }
+
+          { disc_MsgConflictsInv oidx.
+            disc_InvExcl_others.
+            { disc_InvObjExcl0.
+              solve_by_ObjsInvalid_rsE_false oidx.
+            }
+            { case_InvObjOwned; [solve_by_ObjsInvalid_rsE_false oidx|].
+              disc_ObjsInvalid_by oidx0; case_ObjInvalid.
+              { destruct (idx_dec oidx0 cidx); [subst|solve_ObjInvalid0].
+                eapply outside_parent_out in H40; eauto.
+                solve_by_ObjsInvalid_rsE_false oidx.
+              }
+              { solve_ObjInvRs. }
+            }
+          }
+        }
+      }
+
+      { (* [liDownSRsUpDownME] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx.
+
+        split.
+        { admit_msg_pred. }
+        { case_InvExcl_me_others.
+          { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+            (** TODO: need to draw (maybe from Dir-Invalid invariant?)
+             * If dirE(C) then ObjsInvalid(~ tr(C)). *)
+            admit.
+          }
+          { (** TODO: need to know (from predicate message)
+             * ∃downRsS(C) -> ∀ O ∈ tr(C), ~ InvExcl0(O).
+             *)
+            admit.
+          }
+        }
+      }
+
+      { (* [liDownSImm] *)
+        disc_rule_conds_ex.
+        derive_NoRsI_by_rqDown oidx msgs.
+        
+        split.
+        { admit_msg_pred. }
+        { case_InvExcl_me_others.
+          { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+            solve_InvObjOwned_by_false.
+          }
+          { disc_InvExcl_others.
+            { disc_InvObjExcl0.
+              solve_by_ObjsInvalid_status_false oidx.
+            }
+            { case_InvObjOwned; [solve_by_ObjsInvalid_status_false oidx|].
+              disc_ObjsInvalid_by oidx0.
+              case_ObjInvalid; [solve_ObjInvalid0|solve_ObjInvRs].
+            }
+          }
+        }
+      }
+
+      { (* [liDownSRqDownDownME] *)
+        disc_rule_conds_ex; split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liDownSRsUpUp] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx; [solve_midx_false|].
+
+        split.
+        { admit_msg_pred. }
+        { case_InvExcl_me_others.
+          { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
+            solve_InvObjOwned_by_false.
+          }
+
+          { disc_MsgConflictsInv oidx.
+            disc_InvExcl_others.
+            { disc_InvObjExcl0.
+              (** TODO: need to know (from predicate message)
+               * ∃downRsS(C) -> ∀ O ∈ tr(C), ~ InvExcl0(O).
+               *)
+              admit.
+            }
+            { admit. }
+          }
+        }
+      }
+
+      { (* [liGetMRsDownDownDirI] *)
+        (** TODO: need to draw (from Dir-Invalid invariant)
+         * dirI(O) -> ObjsInvalid(tr(O)). *)
+        admit.
+      }
+
+      { (* [liGetMRsDownRqDownDirS] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+        derive_child_chns cidx.
+        disc_rule_conds_ex.
+
+        split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial.
+          case_InvExcl_me_others.
+          { disc_InvExcl_this.
+            { disc_InvObjExcl0; split.
+              { apply ObjsInvalid_this_deqMP_silent; [|auto].
+                apply ObjsInvalid_this_state_silent; [|auto].
+                assumption.
+              }
+              { solve_MsgsP. }
+            }
+            { disc_AtomicMsgOutsInv oidx.
+              disc_RsMEPred.
+              red; intros _.
+              apply ObjsInvalid_this_deqMP_silent; [|intro; solve_by_topo_false].
+              apply ObjsInvalid_this_state_silent; [|intro; solve_by_topo_false].
+              assumption.
+            }
+          }
+
+          { disc_InvExcl_others.
+            { disc_InvObjExcl0.
+              disc_MsgConflictsInv oidx.
+              solve_by_ObjsInvalid_rsM_false oidx.
+            }
+            { case_InvObjOwned.
+              { disc_MsgConflictsInv oidx.
+                solve_by_ObjsInvalid_rsM_false oidx.
+              }
+              { disc_ObjsInvalid_by oidx0.
+                case_ObjInvalid; [solve_ObjInvalid0|solve_ObjInvRs].
+              }
+            }
+          }
+        }
+      }
+
+      { (* [liDownIRsUpDown] *)
+        (** TODOs:
+         * 1) Invariant for DL(mesiRqM): [rss] are from [dir >= S], others [dir = I].
+         * 2) Predicate message for downRsI(C): ObjsInvalid tr(C).
+         *)
+        admit.
+      }
+
+      { (* [liDownIImm] *)
+        disc_rule_conds_ex.
+        split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial.
+          eapply InvExcl_state_transition_sound; try eassumption.
+          { simpl.
+            admit. (** FIXME: should maintain [mesiNP] if it was. *)
+          }
+          { simpl; intuition. }
+        }
+      }
+
+      { (* [liDownIRqDownDownDirS] *)
+        disc_rule_conds_ex; split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liDownIRqDownDownDirME] *)
+        disc_rule_conds_ex; split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liDownIRsUpUp] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hdlinv.
+        derive_footprint_info_basis oidx; [solve_midx_false|].
+        
+        split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial.
+
+          eapply InvExcl_deq_sound with (porqs := orqs).
+          { eapply InvExcl_state_transition_sound; try eassumption.
+            { simpl.
+              admit. (** FIXME: should maintain [mesiNP] if it was. *)
+            }
+            { simpl; intuition. }
+          }
+          (** TODO: extend [solve_InvExcl_msgs] *)
+          { match goal with
+            | [H: ValidMsgsIn _ ?msgs |- NoDup (idsOf ?msgs)] =>
+              apply H
+            end.
+          }
+          { solve_InvExcl_msgs. }
+          { let midx := fresh "midx" in
+            let msg := fresh "msg" in
+            let Hin := fresh "H" in
+            apply Forall_forall; intros [midx msg] Hin.
+            rewrite Forall_forall in H15; specialize (H15 _ H30).
+            simpl in H15.
+            solve_InvExcl_msgs.
+          }
+        }
+      }
+
+      { (* [liInvRqUpUp] *)
+        disc_rule_conds_ex; split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liInvRqUpUpWB] *)
+        disc_rule_conds_ex; split.
+        { admit_msg_pred. }
+        { solve_InvExcl_trivial. }
+      }
+
+      { (* [liInvRsDownDown] *)
+        disc_rule_conds_ex.
+        derive_footprint_info_basis oidx.
+
+        split.
+        { admit_msg_pred. }
+        { case_InvExcl_me_others.
+          { disc_InvExcl_this.
+            { solve_InvObjExcl0_by_ObjExcl0_false. }
+            { solve_InvObjOwned_by_false. }
+          }
+          { disc_InvExcl_others.
+            { disc_InvObjExcl0; split.
+              { disc_ObjsInvalid.
+                { left; split; simpl.
+                  { solve_mesi. }
+                  { disc_MsgConflictsInv oidx.
+                    eapply NoCohMsgs_rsDown_deq; eauto.
+                  }
+                }
+                { case_ObjInvalid; [solve_ObjInvalid0|solve_ObjInvRs]. }
+              }
+              { solve_MsgsP. }
+            }
+            { case_InvObjOwned.
+              { left.
+                red; simpl; split; [solve_mesi|].
+                disc_MsgConflictsInv oidx.
+                eapply NoCohMsgs_rsDown_deq; eauto.
+              }
+              { disc_ObjsInvalid_by oidx0.
+                case_ObjInvalid; [solve_ObjInvalid0|solve_ObjInvRs].
+              }
+            }
+          }
+        }
+      }
+
+      { (* [liPushImm] *)
+        disc_rule_conds_ex; split.
+        { admit_msg_pred. }
+        { eapply InvExcl_state_transition_sound with (porqs:= orqs);
+            try eassumption.
+          { simpl; intuition solve_mesi. }
+          { simpl; intuition. }
+        }
+      }
 
     - (*! Cases for L1 caches *)
       apply in_map_iff in H7; destruct H7 as [oidx [? ?]]; subst.
@@ -1805,8 +2157,8 @@ Section InvExcl.
             }
             { red; simpl; intros.
               specialize (H35 H36).
-              apply ObjsInvalid_this_state_silent; [|intro; solve_by_topo_false].
               apply ObjsInvalid_this_deqMP_silent; [|intro; solve_by_topo_false].
+              apply ObjsInvalid_this_state_silent; [|intro; solve_by_topo_false].
               assumption.
             }
           }
@@ -1978,6 +2330,9 @@ Section InvExcl.
           }
         }
       }
+
+      Unshelve.
+      all: assumption.
 
   Qed.
 
