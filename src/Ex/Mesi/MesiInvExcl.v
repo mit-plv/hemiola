@@ -1015,7 +1015,7 @@ Section InvExcl.
       InvExcl topo {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
       forall oidx (post nost: OState) norqs,
         oss@[oidx] = Some post ->
-        nost#[status] <= post#[status] ->
+        (nost#[status] <= mesiI \/ nost#[status] <= post#[status]) ->
         post#[owned] || negb (nost#[owned]) = true ->
         InvExcl topo {| bst_oss := oss +[oidx <- nost];
                         bst_orqs := norqs; bst_msgs := msgs |}.
@@ -1073,12 +1073,21 @@ Section InvExcl.
       | [H: msg_id ?msg = _ |- context [msg_id ?msg]] => rewrite H
       | |- _ \/ _ => tauto
       (* For multiple enqs/deqs *)
+      | [H: ValidMsgsIn _ ?msgs |- NoDup (idsOf ?msgs)] => apply H
       | |- Forall _ (map _ _) =>
         let midx := fresh "midx" in
         let msg := fresh "msg" in
         let Hin := fresh "H" in
         apply Forall_forall; intros [midx msg] Hin;
         apply in_map_iff in Hin; dest
+      | [Hf: Forall (fun _ => msg_id _ = _) ?msgs
+         |- Forall (fun _ => In _ _) ?msgs] =>
+        let midx := fresh "midx" in
+        let msg := fresh "msg" in
+        let Hin := fresh "H" in
+        apply Forall_forall; intros [midx msg] Hin;
+        rewrite Forall_forall in Hf; specialize (Hf _ Hin);
+        simpl in Hf
       | [H: (_, _) = (_, _) |- _] => inv H
       end.
   
@@ -2005,9 +2014,7 @@ Section InvExcl.
         { admit_msg_pred. }
         { solve_InvExcl_trivial.
           eapply InvExcl_state_transition_sound; try eassumption.
-          { simpl.
-            admit. (** FIXME: should maintain [mesiNP] if it was. *)
-          }
+          { simpl; auto. }
           { simpl; intuition. }
         }
       }
@@ -2028,33 +2035,12 @@ Section InvExcl.
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hdlinv.
         derive_footprint_info_basis oidx; [solve_midx_false|].
-        
         split.
         { admit_msg_pred. }
         { solve_InvExcl_trivial.
-
-          eapply InvExcl_deq_sound with (porqs := orqs).
-          { eapply InvExcl_state_transition_sound; try eassumption.
-            { simpl.
-              admit. (** FIXME: should maintain [mesiNP] if it was. *)
-            }
-            { simpl; intuition. }
-          }
-          (** TODO: extend [solve_InvExcl_msgs] *)
-          { match goal with
-            | [H: ValidMsgsIn _ ?msgs |- NoDup (idsOf ?msgs)] =>
-              apply H
-            end.
-          }
-          { solve_InvExcl_msgs. }
-          { let midx := fresh "midx" in
-            let msg := fresh "msg" in
-            let Hin := fresh "H" in
-            apply Forall_forall; intros [midx msg] Hin.
-            rewrite Forall_forall in H15; specialize (H15 _ H30).
-            simpl in H15.
-            solve_InvExcl_msgs.
-          }
+          eapply InvExcl_state_transition_sound; try eassumption.
+          { simpl; auto. }
+          { simpl; intuition. }
         }
       }
 
