@@ -17,17 +17,43 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Ltac derive_NoRsI_by_no_uplock oidx msgs :=
-  assert (NoRsI oidx msgs)
-  by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
-
-Ltac derive_NoRsI_by_rsDown oidx msgs :=
-  assert (NoRsI oidx msgs)
-  by (solve_NoRsI_base; solve_NoRsI_by_rsDown oidx).
-
-Ltac derive_NoRsI_by_rqDown oidx msgs :=
-  assert (NoRsI oidx msgs)
-  by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
+(** TODO: move to [Topology.v] *)
+Lemma root_not_in_subtree:
+  forall dtr (Hwf: WfDTree dtr) oidx,
+    oidx <> rootOf dtr ->
+    In oidx (indsOf dtr) ->
+    ~ In (rootOf dtr) (subtreeIndsOf dtr oidx).
+Proof.
+  intros; intro Hx.
+  erewrite <-subtreeIndsOf_indsOf in H0; [|eassumption|apply Subtree_refl].
+  eapply subtreeIndsOf_In_each_other_eq in Hx; eauto.
+Qed.
+  
+Lemma subtreeIndsOf_in_has_parent:
+  forall dtr (Hwf: WfDTree dtr) cidx oidx pidx,
+    parentIdxOf dtr oidx = Some pidx ->
+    In cidx (subtreeIndsOf dtr oidx) ->
+    exists cpidx, parentIdxOf dtr cidx = Some cpidx.
+Proof.
+  intros.
+  assert (parentChnsOf cidx dtr <> None).
+  { apply indsOf_parentChnsOf_not_None.
+    { apply parentIdxOf_child_indsOf in H.
+      erewrite <-subtreeIndsOf_indsOf in H; [|eassumption|apply Subtree_refl].
+      apply subtreeIndsOf_SubList in H; auto.
+      erewrite <-subtreeIndsOf_indsOf; [|eassumption|apply Subtree_refl].
+      auto.
+    }
+    { intro Hx; subst.
+      eapply root_not_in_subtree; eauto;
+        [|eapply parentIdxOf_child_indsOf; eauto].
+      intro Hx; subst.
+      apply parentIdxOf_child_not_root in H; auto.
+    }
+  }
+  destruct (parentChnsOf cidx dtr) as [rd|] eqn:Hpchn; [|exfalso; auto].
+  unfold parentIdxOf; rewrite Hpchn; simpl; eauto.
+Qed.  
 
 Existing Instance Mesi.ImplOStateIfc.
 
@@ -47,11 +73,21 @@ Definition InvObjOwned (topo: DTree) (eidx: IdxT) (eost: OState) (oss: OStates)
   eost#[owned] = true ->
   ObjsInvalid (fun oidx => ~ In oidx (subtreeIndsOf topo eidx)) oss msgs.
 
+Definition InvDirInv (topo: DTree) (eidx: IdxT) (eost: OState) (oss: OStates)
+           (msgs: MessagePool Msg) :=
+  forall cidx,
+    parentIdxOf topo cidx = Some eidx ->
+    (getDir cidx eost#[dir] <= mesiI ->
+     ObjsInvalid (fun oidx => In oidx (subtreeIndsOf topo cidx)) oss msgs) /\
+    (mesiE <= getDir cidx eost#[dir] ->
+     ObjsInvalid (fun oidx => ~ In oidx (subtreeIndsOf topo cidx)) oss msgs).
+
 Definition InvExcl (topo: DTree) (st: MState): Prop :=
   forall eidx,
     eost <+- (bst_oss st)@[eidx];
       (InvObjExcl0 eidx eost (bst_oss st) (bst_msgs st) /\
-       InvObjOwned topo eidx eost (bst_oss st) (bst_msgs st)).
+       InvObjOwned topo eidx eost (bst_oss st) (bst_msgs st) /\
+       InvDirInv topo eidx eost (bst_oss st) (bst_msgs st)).
 
 Section Facts.
 
@@ -136,6 +172,16 @@ Section Facts.
     apply in_map_iff in H4; dest; subst.
     rewrite Forall_forall in H2; specialize (H2 _ H5).
     intro Hx; dest_in; auto.
+  Qed.
+
+  Lemma ObjsInvalid_impl:
+    forall inP1 oss msgs,
+      ObjsInvalid inP1 oss msgs ->
+      forall (inP2: IdxT -> Prop),
+        (forall oidx, inP2 oidx -> inP1 oidx) ->
+        ObjsInvalid inP2 oss msgs.
+  Proof.
+    unfold ObjsInvalid; intros; auto.
   Qed.
 
   Lemma ObjsInvalid_obj_status_false:
@@ -406,77 +452,145 @@ Section InvExcl.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
 
-  (* Let topo: DTree := fst (tree2Topo tr 0). *)
-  (* Let cifc: CIfc := snd (tree2Topo tr 0). *)
-  (* Let impl: System := impl Htr. *)
   Local Notation topo := (fst (tree2Topo tr 0)).
   Local Notation cifc := (snd (tree2Topo tr 0)).
   Local Notation impl := (impl Htr).
+
+  Lemma ObjInvalid_init:
+    forall oidx, ObjInvalid oidx implOStateInit (emptyMP Msg).
+  Proof.
+    intros; left.
+    split; [simpl; solve_mesi|].
+    do 3 red; intros.
+    do 2 red in H; dest_in.
+  Qed.
+
+  Lemma ObjsInvalid_init:
+    ObjsInvalid (fun oidx => oidx <> rootOf topo) (implOStatesInit tr) (emptyMP Msg).
+  Proof.
+    unfold ObjsInvalid; intros.
+    destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
+    destruct (in_dec idx_dec oidx (c_li_indices cifc ++ c_l1_indices cifc));
+      [|exfalso; rewrite implOStatesInit_None in Host by assumption; discriminate].
+    rewrite c_li_indices_head_rootOf in i by assumption; inv i; [exfalso; auto|].
+    rewrite implOStatesInit_value_non_root in Host by assumption; inv Host.
+    apply ObjInvalid_init.
+  Qed.
 
   Lemma mesi_InvExcl_init:
     Invariant.InvInit impl (InvExcl topo).
   Proof.
     do 2 (red; simpl); intros.
     destruct (implOStatesInit tr)@[eidx] as [eost|] eqn:Heost; simpl; auto.
-    split.
+    repeat ssplit.
 
     - red; intros.
       red in H; dest.
-      destruct (in_dec idx_dec eidx (c_li_indices cifc ++ c_l1_indices cifc)).
-      + rewrite c_li_indices_head_rootOf in i by assumption.
-        inv i.
-        * split.
-          { red; intros.
-            destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
-            red.
-            destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
-                                             ++ c_l1_indices (snd (tree2Topo tr 0)))).
-            { rewrite c_li_indices_head_rootOf in i by assumption.
-              inv i; [exfalso; auto|].
-              rewrite implOStatesInit_value_non_root in Host by assumption.
-              inv Host.
-              left; repeat split; [simpl; solve_mesi..|].
-              do 3 red; intros; do 2 red in H3; dest_in.
-            }
-            { rewrite implOStatesInit_None in Host by assumption.
-              discriminate.
-            }
-          }
-          { do 3 red; intros; do 2 red in H1; dest_in. }
-        * exfalso.
-          rewrite implOStatesInit_value_non_root in Heost by assumption.
-          inv Heost.
-          simpl in *; solve_mesi.
-      + exfalso.
-        rewrite implOStatesInit_None in Heost by assumption.
-        discriminate.
-
-    - red; intros.
-      destruct (in_dec idx_dec eidx (c_li_indices cifc ++ c_l1_indices cifc)).
-      + rewrite c_li_indices_head_rootOf in i by assumption.
-        inv i.
+      destruct (in_dec idx_dec eidx (c_li_indices cifc ++ c_l1_indices cifc));
+        [|exfalso; rewrite implOStatesInit_None in Heost by assumption; discriminate].
+      rewrite c_li_indices_head_rootOf in i by assumption; inv i.
+      + split.
         * red; intros.
           destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
           red.
           destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
                                            ++ c_l1_indices (snd (tree2Topo tr 0)))).
           { rewrite c_li_indices_head_rootOf in i by assumption.
-            inv i.
-            { elim H0.
-              apply subtreeIndsOf_root_in.
-              { apply tree2Topo_WfDTree. }
-              { apply Subtree_refl. }
-            }
-            { rewrite implOStatesInit_value_non_root in Host by assumption.
-              inv Host.
-              left; repeat split; [simpl; solve_mesi..|].
-              do 3 red; intros; do 2 red in H2; dest_in.
-            }
+            inv i; [exfalso; auto|].
+            rewrite implOStatesInit_value_non_root in Host by assumption.
+            inv Host.
+            left; repeat split; [simpl; solve_mesi..|].
+            do 3 red; intros; do 2 red in H3; dest_in.
           }
-          { rewrite implOStatesInit_None in Host by assumption; discriminate. }
-        * rewrite implOStatesInit_value_non_root in Heost by assumption.
-          inv Heost; discriminate.
-      + rewrite implOStatesInit_None in Heost by assumption; discriminate.
+          { rewrite implOStatesInit_None in Host by assumption.
+            discriminate.
+          }
+        * do 3 red; intros; do 2 red in H1; dest_in.
+      + exfalso.
+        rewrite implOStatesInit_value_non_root in Heost by assumption.
+        inv Heost.
+        simpl in *; solve_mesi.
+
+    - red; intros.
+      destruct (in_dec idx_dec eidx (c_li_indices cifc ++ c_l1_indices cifc));
+        [|rewrite implOStatesInit_None in Heost by assumption; discriminate].
+      rewrite c_li_indices_head_rootOf in i by assumption; inv i.
+      + red; intros.
+        destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
+        red.
+        destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
+                                         ++ c_l1_indices (snd (tree2Topo tr 0)))).
+        * rewrite c_li_indices_head_rootOf in i by assumption.
+          inv i.
+          { elim H0.
+            apply subtreeIndsOf_root_in.
+            { apply tree2Topo_WfDTree. }
+            { apply Subtree_refl. }
+          }
+          { rewrite implOStatesInit_value_non_root in Host by assumption.
+            inv Host.
+            left; repeat split; [simpl; solve_mesi..|].
+            do 3 red; intros; do 2 red in H2; dest_in.
+          }
+        * rewrite implOStatesInit_None in Host by assumption; discriminate.
+      + rewrite implOStatesInit_value_non_root in Heost by assumption.
+        inv Heost; discriminate.
+
+    - red; intros.
+      destruct (in_dec idx_dec eidx (c_li_indices cifc ++ c_l1_indices cifc));
+        [|rewrite implOStatesInit_None in Heost by assumption; discriminate].
+      rewrite c_li_indices_head_rootOf in i by assumption; inv i.
+      + rewrite implOStatesInit_value_root in Heost by assumption; inv Heost.
+        split; [|intros; exfalso; cbn in H0; solve_mesi].
+        intros.
+        eapply ObjsInvalid_impl; [apply ObjsInvalid_init|].
+        simpl; intros.
+        intro Hx; subst.
+        eapply parent_not_in_subtree; eauto.
+      + rewrite implOStatesInit_value_non_root in Heost by assumption; inv Heost.
+        split; [|intros; exfalso; cbn in H1; solve_mesi].
+        intros.
+        eapply ObjsInvalid_impl; [apply ObjsInvalid_init|].
+        simpl; intros.
+        intro Hx; subst.
+        pose proof (parentIdxOf_child_indsOf _ _ H).
+        rewrite <-subtreeIndsOf_indsOf with (dtr:= fst (tree2Topo tr 0)) in H3;
+          eauto; [|apply Subtree_refl].
+        eapply subtreeIndsOf_In_each_other_eq in H3; eauto; subst.
+        apply parentIdxOf_child_not_root in H; auto.
+  Qed.
+
+  Lemma ObjsInvalid_ext_in:
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
+      forall orqs,
+        InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall eins,
+          ValidMsgsExtIn impl eins ->
+          ObjsInvalid inP oss (enqMsgs eins msgs).
+  Proof.
+    unfold ObjsInvalid; intros.
+    specialize (H _ H2).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct H.
+    - left.
+      red in H; dest.
+      repeat split; [assumption..|].
+      apply MsgsP_other_midx_enqMsgs; [assumption|].
+      destruct H1; simpl.
+      eapply DisjList_SubList; [eassumption|].
+      eapply DisjList_comm, DisjList_SubList.
+      + eapply SubList_trans;
+          [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)].
+        * solve_SubList.
+        * specialize (H0 oidx); simpl in H0.
+          rewrite Host in H0; simpl in H0.
+          eassumption.
+      + apply tree2Topo_minds_merqs_disj.
+    - right.
+      destruct H as [idm ?]; dest.
+      exists idm; split; [|assumption].
+      apply InMP_or_enqMsgs; auto.
   Qed.
 
   Lemma mesi_InvExcl_ext_in:
@@ -492,40 +606,16 @@ Section InvExcl.
     red; simpl; intros.
     specialize (H eidx); simpl in H.
     destruct (oss@[eidx]) as [eost|] eqn:Heost; simpl in *; auto.
-    dest; split.
+    dest; repeat ssplit.
 
-    - clear H2.
+    - clear H2 H3.
       red; intros.
       destruct H2.
       apply MsgsP_enqMsgs_inv in H3.
       specialize (H (conj H2 H3)); dest.
 
       split.
-      + red; intros.
-        specialize (H _ H5).
-        destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-        destruct H.
-        * left.
-          red in H; dest.
-          repeat split; [assumption..|].
-          apply MsgsP_other_midx_enqMsgs; [assumption|].
-          destruct H1; simpl.
-          eapply DisjList_SubList; [eassumption|].
-          eapply DisjList_comm, DisjList_SubList.
-          { eapply SubList_trans;
-              [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)].
-            { solve_SubList. }
-            { specialize (H0 oidx); simpl in H0.
-              rewrite Host in H0; simpl in H0.
-              eassumption.
-            }
-          }
-          { apply tree2Topo_minds_merqs_disj. }
-        * right.
-          destruct H as [idm ?]; dest.
-          exists idm; split; [|assumption].
-          apply InMP_or_enqMsgs; auto.
-
+      + eapply ObjsInvalid_ext_in; eauto.
       + apply MsgsP_other_midx_enqMsgs; [assumption|].
         destruct H1; simpl.
         eapply DisjList_SubList; [eassumption|].
@@ -539,33 +629,19 @@ Section InvExcl.
           }
         * apply tree2Topo_minds_merqs_disj.
 
-    - clear H.
+    - clear H H3.
       red; intros.
       specialize (H2 H).
+      eapply ObjsInvalid_ext_in; eauto.
 
+    - clear H H2.
       red; intros.
-      specialize (H2 _ H3).
-      destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-      destruct H2.
-      + left.
-        red in H2; dest.
-        repeat split; [assumption..|].
-        apply MsgsP_other_midx_enqMsgs; [assumption|].
-        destruct H1; simpl.
-        eapply DisjList_SubList; [eassumption|].
-        eapply DisjList_comm, DisjList_SubList.
-        * eapply SubList_trans;
-            [|eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx)].
-          { solve_SubList. }
-          { specialize (H0 oidx); simpl in H0.
-            rewrite Host in H0; simpl in H0.
-            eassumption.
-          }
-        * apply tree2Topo_minds_merqs_disj.
-      + right.
-        destruct H2 as [idm ?]; dest.
-        exists idm; split; [|assumption].
-        apply InMP_or_enqMsgs; auto.
+      specialize (H3 _ H); dest.
+      split; intros.
+      + clear H3; specialize (H2 H4).
+        eapply ObjsInvalid_ext_in; eauto.
+      + clear H2; specialize (H3 H4).
+        eapply ObjsInvalid_ext_in; eauto.
   Qed.
 
   Corollary mesi_InvExcl_InvTrsIns: InvTrsIns impl (InvExcl topo).
@@ -574,6 +650,39 @@ Section InvExcl.
     inv H1.
     eapply mesi_InvExcl_ext_in; eauto.
     apply (mesi_InObjInds H).
+  Qed.
+
+  Lemma ObjsInvalid_ext_out:
+    forall inP oss msgs,
+      ObjsInvalid inP oss msgs ->
+      forall orqs,
+        InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall (eouts: list (Id Msg)),
+          ValidMsgsExtOut impl eouts ->
+          ObjsInvalid inP oss (deqMsgs (idsOf eouts) msgs).
+  Proof.
+    unfold ObjsInvalid; intros.
+    specialize (H _ H2).
+    destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
+    destruct H.
+    - left.
+      red in H; dest.
+      repeat split; [assumption..|].
+      apply MsgsP_deqMsgs; assumption.
+    - right.
+      destruct H as [idm ?]; dest.
+      exists idm; split; [|assumption].
+      apply deqMsgs_InMP_midx; [assumption|].
+      destruct H1.
+      eapply DisjList_In_1.
+      + eapply DisjList_SubList; [eassumption|].
+        apply DisjList_comm, tree2Topo_minds_merss_disj.
+      + eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx).
+        * specialize (H0 oidx); simpl in H0.
+          rewrite Host in H0; simpl in H0.
+          eassumption.
+        * inv H3; rewrite H6.
+          solve_SubList.
   Qed.
 
   Lemma mesi_InvExcl_ext_out:
@@ -589,44 +698,16 @@ Section InvExcl.
     red; simpl; intros.
     specialize (H eidx); simpl in H.
     destruct (oss@[eidx]) as [eost|] eqn:Heost; simpl in *; auto.
-    dest; split.
+    dest; repeat ssplit.
 
-    - clear H2.
+    - clear H2 H3.
       red; intros.
       destruct H2.
       apply MsgsP_other_midx_deqMsgs_inv in H3.
       + specialize (H (conj H2 H3)); dest.
         split.
-        * red; intros.
-          specialize (H _ H5).
-          destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-          destruct H.
-          { left.
-            red in H; dest.
-            repeat split; [assumption..|].
-            apply MsgsP_deqMsgs; assumption.
-          }
-          { right.
-            destruct H as [idm ?]; dest.
-            exists idm; split; [|assumption].
-            apply deqMsgs_InMP_midx; [assumption|].
-            destruct H1.
-            eapply DisjList_In_1.
-            { eapply DisjList_SubList; [eassumption|].
-              apply DisjList_comm, tree2Topo_minds_merss_disj.
-            }
-            { eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx).
-              { specialize (H0 oidx); simpl in H0.
-                rewrite Host in H0; simpl in H0.
-                eassumption.
-              }
-              { inv H6; rewrite H9.
-                solve_SubList.
-              }
-            }
-          }
+        * eapply ObjsInvalid_ext_out; eauto.
         * apply MsgsP_deqMsgs; assumption.
-
       + destruct H1.
         simpl; eapply DisjList_SubList; [eassumption|].
         eapply DisjList_comm, DisjList_SubList.
@@ -639,35 +720,19 @@ Section InvExcl.
           }
         * apply tree2Topo_minds_merss_disj.
 
-    - clear H.
+    - clear H H3.
       red; intros.
       specialize (H2 H).
+      eapply ObjsInvalid_ext_out; eauto.
+
+    - clear H H2.
       red; intros.
-      specialize (H2 _ H3).
-      destruct (oss@[oidx]) as [ost|] eqn:Host; simpl in *; auto.
-      destruct H2.
-      + left.
-        red in H2; dest.
-        repeat split; [assumption..|].
-        apply MsgsP_deqMsgs; assumption.
-      + right.
-        destruct H2 as [idm ?]; dest.
-        exists idm; split; [|assumption].
-        apply deqMsgs_InMP_midx; [assumption|].
-        destruct H1.
-        eapply DisjList_In_1.
-        { eapply DisjList_SubList; [eassumption|].
-          apply DisjList_comm, tree2Topo_minds_merss_disj.
-        }
-        { eapply tree2Topo_obj_chns_minds_SubList with (oidx:= oidx).
-          { specialize (H0 oidx); simpl in H0.
-            rewrite Host in H0; simpl in H0.
-            eassumption.
-          }
-          { inv H4; rewrite H7.
-            solve_SubList.
-          }
-        }
+      specialize (H3 _ H); dest.
+      split; intros.
+      + clear H3; specialize (H2 H4).
+        eapply ObjsInvalid_ext_out; eauto.
+      + clear H2; specialize (H3 H4).
+        eapply ObjsInvalid_ext_out; eauto.
   Qed.
 
   Corollary mesi_InvExcl_InvTrsOuts: InvTrsOuts impl (InvExcl topo).
@@ -695,16 +760,26 @@ Section InvExcl.
     ((valOf eout).(msg_id) = mesiRsM \/ (valOf eout).(msg_id) = mesiRsE) ->
     ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf topo oidx)) oss msgs.
 
+  Definition DownRsSPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
+             (msgs: MessagePool Msg): Prop :=
+    idOf eout = rsUpFrom oidx ->
+    (valOf eout).(msg_type) = MRs ->
+    (valOf eout).(msg_id) = mesiDownRsS ->
+    ost <+- oss@[oidx]; ost#[owned] = false.
+             
+  Definition DownRsIPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
+             (msgs: MessagePool Msg): Prop :=
+    idOf eout = rsUpFrom oidx ->
+    (valOf eout).(msg_type) = MRs ->
+    (valOf eout).(msg_id) = mesiDownRsI ->
+    ObjsInvalid (fun idx => In idx (subtreeIndsOf topo oidx)) oss msgs.
+
   Definition InvExclMsgOutPred: MsgOutPred :=
     fun eout oss orqs msgs =>
       forall oidx,
         GetRqPred oidx eout /\ SetRqPred oidx eout /\
-        RsMEPred oidx eout oss msgs.
-
-  Lemma InvExclMsgOutPred_good:
-    GoodMsgOutPred topo InvExclMsgOutPred.
-  Proof.
-  Admitted.
+        RsMEPred oidx eout oss msgs /\
+        DownRsSPred oidx eout oss msgs /\ DownRsIPred oidx eout oss msgs.
 
   Ltac disc_bind_true :=
     repeat
@@ -717,6 +792,68 @@ Section InvExcl.
                let v := fresh "v" in
                destruct ov as [v|] eqn:Hov; simpl in *; [|auto]]
       end.
+
+  Lemma InvExclMsgOutPred_good:
+    GoodMsgOutPred topo InvExclMsgOutPred.
+  Proof.
+    pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
+    red; intros; split.
+
+    - (* No RqDown predicates at all *)
+      red; intros; destruct H.
+      do 2 (red; intros).
+      specialize (H2 oidx0); dest.
+      repeat ssplit;
+        try (red; intros; rewrite H8 in H1;
+             derive_child_chns oidx; disc_rule_conds_ex; fail).
+
+    - red; intros; destruct H.
+      pose proof (rsEdgeUpFrom_Some (mesi_RqRsDTree Htr) _ H0).
+      destruct H1 as [rqUp [down [pidx ?]]]; dest.
+      do 2 (red; intros).
+      specialize (H4 oidx0); dest.
+      repeat ssplit;
+        try (red; intros; rewrite H10 in H0;
+             derive_child_chns oidx; disc_rule_conds_ex; fail).
+
+      + (* [DownRsSPred] *)
+        red; intros; rewrite H10 in H0.
+        derive_child_chns oidx; disc_rule_conds_ex.
+        assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) oidx))
+          by (eapply rqEdgeUpFrom_subtreeIndsOf_self_in;
+              [eauto|congruence]).
+        pose proof (H5 _ H13); dest.
+        rewrite <-H14; apply H8; assumption.
+
+      + (* [DownRsIPred] *)
+        red; intros; rewrite H10 in H0.
+        derive_child_chns oidx; disc_rule_conds_ex.
+        red; intros.
+        specialize (H9 H10 H11 H12 _ H13).
+        specialize (H5 _ H13); dest.
+        rewrite <-H5.
+        assert (exists pidx0, parentIdxOf (fst (tree2Topo tr 0)) oidx0 = Some pidx0).
+        { eapply subtreeIndsOf_in_has_parent; eauto. }
+        destruct H16 as [pidx0 ?].
+        derive_child_chns oidx0.
+        
+        red in H15; dest.
+        specialize (H15 _ H17).
+        specialize (H20 _ H18).
+        specialize (H21 _ H19).
+        destruct (oss1@[oidx0]) as [ost0|]; simpl in *; auto.
+        destruct H9; [left|right].
+        * destruct H9; split; [assumption|].
+          apply not_MsgExistsSig_MsgsNotExist; intros.
+          eapply MsgExistsSig_MsgsNotExist_false in H22; eauto.
+          dest_in.
+          all: try (destruct H24 as [[midx msg] [? ?]];
+                    exists (midx, msg); split; [|assumption]; inv H24;
+                    do 2 red in H23; do 2 red; simpl in *; congruence).
+        * destruct H9 as [[midx msg] [? ?]].
+          exists (midx, msg); split; [|assumption]; inv H22.
+          do 2 red in H9; do 2 red; simpl in *; congruence.
+  Qed.
 
   Ltac disc_rule_custom ::=
     try disc_AtomicInv.
@@ -952,24 +1089,32 @@ Section InvExcl.
     intros.
     red; simpl; intros.
     specialize (H eidx); simpl in H.
-    disc_bind_true; dest; split.
+    disc_bind_true; dest; repeat ssplit.
+
     - red; intros.
-      destruct H5.
-      apply MsgsP_other_msg_id_deqMsgs_inv in H6; try assumption.
-      + specialize (H (conj H5 H6)); dest; split.
+      destruct H6.
+      apply MsgsP_other_msg_id_deqMsgs_inv in H7; try assumption.
+      + specialize (H (conj H6 H7)); dest; split.
         * apply ObjsInvalid_deq_sound; auto.
         * solve_MsgsP.
       + simpl.
         apply (DisjList_spec_1 idx_dec); intros midx ?.
-        apply in_map_iff in H7; destruct H7 as [[rmidx msg] [? ?]].
+        apply in_map_iff in H8; destruct H8 as [[rmidx msg] [? ?]].
         simpl in *; subst.
-        rewrite Forall_forall in H2; specialize (H2 _ H8); simpl in H2.
+        rewrite Forall_forall in H2; specialize (H2 _ H9); simpl in H2.
         intro Hx; destruct Hx; [|auto].
-        rewrite <-H7 in H2.
+        rewrite <-H8 in H2.
         intuition discriminate.
     - red; intros.
-      specialize (H4 H5).
+      specialize (H4 H6).
       apply ObjsInvalid_deq_sound; auto.
+    - red; intros.
+      specialize (H5 _ H6); dest.
+      split; intros.
+      + specialize (H5 H8).
+        apply ObjsInvalid_deq_sound; auto.
+      + specialize (H7 H8).
+        apply ObjsInvalid_deq_sound; auto.
   Qed.
 
   Lemma InvExcl_enq_sound:
@@ -988,15 +1133,16 @@ Section InvExcl.
     intros.
     red; simpl; intros.
     specialize (H eidx); simpl in H.
-    disc_bind_true; dest; split.
+    disc_bind_true; dest; repeat ssplit.
+
     - disc_InvObjExcl0; split.
       + apply ObjsInvalid_enq_sound; auto.
       + apply MsgsP_other_msg_id_enqMsgs; [assumption|].
         simpl.
         apply (DisjList_spec_1 idx_dec); intros midx ?.
-        apply in_map_iff in H5; destruct H5 as [[rmidx msg] [? ?]].
+        apply in_map_iff in H6; destruct H6 as [[rmidx msg] [? ?]].
         simpl in *; subst.
-        rewrite Forall_forall in H0; specialize (H0 _ H6); simpl in H0.
+        rewrite Forall_forall in H0; specialize (H0 _ H7); simpl in H0.
         intro Hx.
         repeat
           match goal with
@@ -1006,10 +1152,18 @@ Section InvExcl.
           | [H: False |- False] => auto
           end.
     - red; intros.
-      specialize (H2 H3).
+      specialize (H2 H4).
       apply ObjsInvalid_enq_sound; auto.
+    - red; intros.
+      specialize (H3 _ H4); dest.
+      split; intros.
+      + specialize (H3 H6).
+        apply ObjsInvalid_enq_sound; auto.
+      + specialize (H5 H6).
+        apply ObjsInvalid_enq_sound; auto.
   Qed.
 
+  (** * TODO: work from here. *)
   Lemma InvExcl_state_transition_sound:
     forall oss porqs msgs,
       InvExcl topo {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
@@ -1886,12 +2040,10 @@ Section InvExcl.
         { case_InvExcl_me_others.
           { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false|].
             (** TODO: need to draw (maybe from Dir-Invalid invariant?)
-             * If dirE(C) then ObjsInvalid(~ tr(C)). *)
+             * If dirME(C) then ObjsInvalid(~ tr(C)). *)
             admit.
           }
-          { (** TODO: need to know (from predicate message)
-             * ∃downRsS(C) -> ∀ O ∈ tr(C), ~ InvExcl0(O).
-             *)
+          { (** TODO: need to know: ∃downRsS(C) -> C.owned = false *)
             admit.
           }
         }
@@ -1940,9 +2092,7 @@ Section InvExcl.
           { disc_MsgConflictsInv oidx.
             disc_InvExcl_others.
             { disc_InvObjExcl0.
-              (** TODO: need to know (from predicate message)
-               * ∃downRsS(C) -> ∀ O ∈ tr(C), ~ InvExcl0(O).
-               *)
+              (** TODO: need to know: ∃downRsS(C) -> C.owned = false *)
               admit.
             }
             { admit. }
