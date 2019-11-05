@@ -17,7 +17,7 @@ Local Open Scope hvec.
 Local Open Scope fmap.
 
 Lemma InvExcl_excl_invalid:
-  forall topo st (He: InvExcl topo st) msgs eidx eost,
+  forall topo cifc st (He: InvExcl topo cifc st) msgs eidx eost,
     bst_msgs st = msgs ->
     (bst_oss st)@[eidx] = Some eost ->
     NoRsI eidx msgs ->
@@ -486,7 +486,7 @@ Section Sim.
     end.
 
   Theorem mesi_sim_ok:
-    InvSim step_m step_m (MesiInvOk.InvForSim topo) SimMESI impl spec.
+    InvSim step_m step_m (MesiInvOk.InvForSim topo cifc) SimMESI impl spec.
   Proof.
     red; intros.
 
