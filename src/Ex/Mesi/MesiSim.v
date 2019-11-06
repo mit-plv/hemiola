@@ -1363,7 +1363,7 @@ Section Sim.
     (steps step_m) # (steps step_m) |-- impl ⊑ spec.
   Proof.
     apply invSim_implies_refinement
-      with (ginv:= MesiInvOk.InvForSim topo) (sim:= SimMESI).
+      with (ginv:= MesiInvOk.InvForSim topo cifc) (sim:= SimMESI).
     - apply mesi_sim_ok.
     - apply mesi_InvForSim_ok.
     - apply mesi_sim_init.
