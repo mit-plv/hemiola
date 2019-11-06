@@ -309,12 +309,13 @@ Ltac solve_NoRqI_by_rsDown oidx :=
 Ltac derive_parent_downlock_by_RqDown oidx :=
   disc_MsgConflictsInv oidx;
   try match goal with
-      | [Hmcf: RqDownConflicts _ _ ?msgs,
+      | [Hmcf: ParentRqDownRsUpLocked _ _ ?msgs,
                Hf: FirstMPI ?msgs (?midx, ?msg),
                    Hmt: msg_type ?msg = MRq |- _] =>
+        destruct Hmcf as [Hmcf _];
         specialize (Hmcf (midx, msg) eq_refl 
                          ltac:(simpl; rewrite Hmt; reflexivity)
-                                (FirstMP_InMP Hf)); dest
+                                (FirstMP_InMP Hf))
       end.
 
 Ltac derive_MesiDownLockInv oidx :=

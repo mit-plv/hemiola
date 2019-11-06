@@ -401,6 +401,46 @@ Section Facts.
       specialize (H2 (downTo oidx, msg) eq_refl H9 H); dest.
       eapply (H12 (rsUpFrom oidx, rsum)); eauto.
   Qed.
+
+  Lemma NoCohMsgs_enq:
+    forall msgs oidx,
+      NoCohMsgs oidx msgs ->
+      forall midx msg,
+        ~ In msg.(msg_id) [mesiRsS; mesiRsE; mesiRsM; mesiDownRsS] ->
+        NoCohMsgs oidx (enqMP midx msg msgs).
+  Proof.
+    intros; apply MsgsP_other_msg_id_enqMP; assumption.
+  Qed.
+
+  Lemma NoCohMsgs_rqDown_deq:
+    forall msgs oidx rmsg,
+      FirstMPI msgs (downTo oidx, rmsg) ->
+      rmsg.(msg_type) = MRq ->
+      forall orq,
+        RsDownConflicts oidx orq msgs ->
+        RqDownConflicts oidx msgs ->
+        NoCohMsgs oidx (deqMP (downTo oidx) msgs).
+  Proof.
+    intros.
+    specialize (H2 (downTo oidx, rmsg) eq_refl H0 (FirstMP_InMP H)); dest.
+    apply not_MsgExistsSig_MsgsNotExist.
+    intros; dest_in.
+    - destruct H5 as [[rsDown rsdm] [? ?]]; inv H5.
+      apply InMP_deqMP in H4.
+      specialize (H1 (downTo oidx, rsdm) eq_refl H8 H4); dest.
+      eapply H10 with (rqDown:= (downTo oidx, rmsg)); eauto.
+    - destruct H5 as [[rsDown rsdm] [? ?]]; inv H5.
+      apply InMP_deqMP in H4.
+      specialize (H1 (downTo oidx, rsdm) eq_refl H8 H4); dest.
+      eapply H10 with (rqDown:= (downTo oidx, rmsg)); eauto.
+    - destruct H5 as [[rsDown rsdm] [? ?]]; inv H5.
+      apply InMP_deqMP in H4.
+      specialize (H1 (downTo oidx, rsdm) eq_refl H8 H4); dest.
+      eapply H10 with (rqDown:= (downTo oidx, rmsg)); eauto.
+    - destruct H5 as [rsUp [? ?]]; inv H5.
+      apply H3 with (rsUp:= rsUp); auto.
+      eapply InMP_deqMP; eauto.
+  Qed.
   
   Lemma NoCohMsgs_rsDown_deq:
     forall msgs oidx rmsg,
@@ -485,6 +525,27 @@ Section Facts.
       apply H0.
       subst topo; rewrite tree2Topo_l1_subtreeIndsOf; [|eassumption].
       intro Hx; dest_in; [auto|].
+      eapply tree2Topo_l1_child_ext_not_in; eauto.
+    Qed.
+
+    Lemma ObjsInvalid_l1_singleton:
+      forall oss orqs msgs,
+        InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        forall eidx,
+          In eidx (c_l1_indices cifc) ->
+          forall eost,
+            oss@[eidx] = Some eost ->
+            ObjInvalid eidx eost msgs ->
+            ObjsInvalid (fun oidx => In oidx (subtreeIndsOf topo eidx)) oss msgs.
+    Proof.
+      intros; subst topo.
+      red; intros.
+      destruct (oss@[oidx]) as [ost|] eqn:Host; simpl; [|auto].
+      rewrite tree2Topo_l1_subtreeIndsOf in H3 by assumption.
+      dest_in; [congruence|].
+      exfalso.
+      specialize (H (l1ExtOf eidx)); simpl in H.
+      rewrite Host in H; simpl in H.
       eapply tree2Topo_l1_child_ext_not_in; eauto.
     Qed.
 
@@ -915,7 +976,8 @@ Section InvExcl.
           exists (midx, msg); split; [|assumption]; inv H22.
           do 2 red in H9; do 2 red; simpl in *; congruence.
   Qed.
-
+  Local Hint Resolve InvExclMsgOutPred_good.
+  
   Ltac disc_rule_custom ::=
     try disc_AtomicInv.
 
@@ -1439,6 +1501,11 @@ Section InvExcl.
       red; simpl; intros Ho; specialize (H Ho)
     end.
 
+  Ltac solve_AtomicInv_init :=
+    do 2 red; simpl;
+    repeat constructor;
+    try (red; simpl; intros; intuition discriminate).
+
   Lemma mesi_InvExcl_InvTrs_init:
     forall st1,
       Reachable (steps step_m) impl st1 ->
@@ -1588,19 +1655,19 @@ Section InvExcl.
 
       { (* [liInvRqUpUp] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
 
       { (* [liInvRqUpUpWB] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
 
       { (* [liPushImm] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { eapply InvExcl_state_transition_sound with (porqs:= orqs);
             try eassumption.
           { simpl; intuition solve_mesi. }
@@ -1621,13 +1688,13 @@ Section InvExcl.
 
       { (* [l1GetSImm] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
 
       { (* [l1GetSRqUpUp] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
 
@@ -1653,7 +1720,7 @@ Section InvExcl.
         derive_NoRsI_by_no_uplock oidx msgs.
 
         split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial.
           case_InvExcl_me_others.
           { assert (ObjExcl0 oidx os msgs)
@@ -1699,7 +1766,7 @@ Section InvExcl.
 
       { (* [l1GetMImmM] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { eapply InvExcl_state_transition_sound with (porqs:= orqs);
             try eassumption.
           { solve_InvExcl_trivial. }
@@ -1711,7 +1778,7 @@ Section InvExcl.
 
       { (* [l1GetMRqUpUp] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
         
@@ -1728,13 +1795,13 @@ Section InvExcl.
 
       { (* [l1InvRqUpUp] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
       
       { (* [l1InvRqUpUpWB] *)
         disc_rule_conds_ex; split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_init. }
         { solve_InvExcl_trivial. }
       }
       
@@ -1769,6 +1836,44 @@ Section InvExcl.
       specialize (Hp eq_refl Ht (or_intror Hi))
     end.
 
+  Ltac solve_AtomicInv_rsDown :=
+    match goal with
+    | [Hr: Reachable _ _ ?st,
+           Hs: steps _ _ ?st ?hst _,
+               Ha: Atomic _ _ _ ?hst _ ?eouts,
+                   Hin: In (downTo ?roidx, _) ?eouts
+       |- AtomicInv _ _ _ _ _ _] =>
+      do 2 red; simpl;
+      eapply atomic_rsDown_singleton with (oidx:= roidx) in Ha;
+      try exact Hr; eauto; [|red; auto];
+      subst; rewrite removeOnce_nil; simpl;
+      repeat constructor; try (red; simpl; intros; intuition discriminate)
+    end.
+
+  Ltac solve_AtomicInv_rqDown :=
+    match goal with
+    | [Hr: Reachable _ _ ?st,
+           Hs: steps _ _ ?st ?hst _,
+               Ha: Atomic _ _ _ ?hst _ ?eouts,
+                   H: FirstMPI _ (?midx, ?msg) |- context [deqMP ?midx _] ] =>
+      do 2 red; simpl;
+      apply Forall_app;
+      [change midx with (idOf (midx, msg)) at 1;
+       eapply atomic_rqDown_preserves_msg_out_preds;
+       try exact Hr; eauto;
+       red; auto
+      |repeat constructor;
+       try (red; simpl; intros; intuition discriminate)]
+    end.
+
+  Ltac solve_DownRsSPred :=
+    let Hmidx := fresh "H" in
+    red; simpl; intros Hmidx ? ?; inv Hmidx; mred.
+
+  Ltac solve_DownRsIPred :=
+    let Hmidx := fresh "H" in
+    red; simpl; intros Hmidx _ _; inv Hmidx.
+
   Lemma mesi_InvExcl_InvTrs: InvTrs impl (InvExcl topo cifc).
   Proof.
     eapply inv_atomic_InvTrs;
@@ -1791,7 +1896,8 @@ Section InvExcl.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
                   (mesi_GoodRqRsSys Htr) Hr1) as Hftinv.
-    pose proof (mesi_InObjInds Hr1) as Hioi.
+    pose proof (mesi_InObjInds Hr1) as Hioi1.
+    pose proof (mesi_InObjInds Hr2) as Hioi2.
     pose proof (mesi_MsgConflictsInv
                   (@mesi_RootChnInv_ok _ Htr) Hr1) as Hpmcf.
     pose proof (@MesiUpLockInv_ok _ Htr _ Hr1) as Hulinv.
@@ -2437,7 +2543,7 @@ Section InvExcl.
         disc_rule_conds_ex.
 
         split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_rsDown. }
         { solve_InvExcl_trivial.
           case_InvExcl_me_others.
           { disc_InvExcl_this; [solve_InvObjExcl0_by_ObjExcl0_false| |].
@@ -2490,7 +2596,7 @@ Section InvExcl.
         derive_NoRsI_by_rsDown oidx msgs.
 
         split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_rsDown. }
         { solve_InvExcl_trivial.
           case_InvExcl_me_others.
           { disc_AtomicMsgOutsInv oidx.
@@ -2542,7 +2648,9 @@ Section InvExcl.
         derive_NoRsI_by_rqDown oidx msgs.
         
         split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_rqDown.
+          solve_DownRsSPred.
+        }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
@@ -2591,7 +2699,7 @@ Section InvExcl.
         derive_NoRsI_by_rsDown oidx msgs.
 
         split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_rsDown. }
         { solve_InvExcl_trivial.
           disc_AtomicMsgOutsInv oidx.
           disc_RsMEPred.
@@ -2647,7 +2755,14 @@ Section InvExcl.
         derive_NoRsI_by_rqDown oidx msgs.
         
         split.
-        { admit_msg_pred. }
+        { disc_MsgConflictsInv oidx.
+          solve_AtomicInv_rqDown.
+          solve_DownRsIPred.
+          eapply ObjsInvalid_l1_singleton; eauto; mred.
+          left; split; simpl; [solve_mesi|].
+          apply NoCohMsgs_enq; [|solve_not_in].
+          eapply NoCohMsgs_rqDown_deq; eauto.
+        }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
@@ -2689,7 +2804,7 @@ Section InvExcl.
         derive_footprint_info_basis oidx.
 
         split.
-        { admit_msg_pred. }
+        { solve_AtomicInv_rsDown. }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }

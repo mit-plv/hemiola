@@ -179,6 +179,139 @@ Section PredMsg.
         + disc_rule_conds; solve_midx_false.
     Qed.
 
+    Lemma rqDown_preserves_msg_out_preds:
+      forall eouts,
+        RqDownRsUpDisj dtr eouts ->
+        Forall (fun eout =>
+                  exists oidx, RqDownRsUpIdx dtr oidx eout) eouts ->
+        forall oidx rqDown,
+          In rqDown eouts ->
+          RqDownMsgTo dtr oidx rqDown ->
+          forall P oss orqs msgs nost norq orsUp rsum,
+            GoodMsgOutPred P ->
+            Forall (fun eout => P eout oss orqs msgs) eouts ->
+            rsEdgeUpFrom dtr oidx = Some orsUp ->
+            Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])
+                                  (enqMP orsUp rsum (deqMP (idOf rqDown) msgs)))
+                   (removeOnce (id_dec msg_dec) rqDown eouts).
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      apply Forall_forall; intros [midx msg] ?.
+      apply removeOnce_In_NoDup in H9;
+        [|apply idsOf_NoDup; eapply rqDownRsUpDisj_NoDup; eauto].
+      dest.
+      
+      specialize (H6 (midx, msg)); dest.
+      rewrite Forall_forall in H7; specialize (H7 _ H10).
+      rewrite Forall_forall in H3; pose proof (H3 _ H10).
+      destruct H12 as [cidx ?].
+      destruct H12.
+
+      - specialize (H6 _ H12).
+        red in H12; simpl in *; dest.
+        pose proof (edgeDownTo_Some H _ H13).
+        destruct H14 as [rqUp [rsUp [pidx ?]]]; dest.
+        specialize (H6 _ H16).
+        eapply H6; [eassumption|].
+        eapply OStatesEquivR_add
+          with (nmsgs:= [(orsUp, rsum)]) (rminds:= [(idOf rqDown)]).
+        + intro Hx; dest_in.
+          eapply rqDownRsUpDisj_in_spec
+            with (oidx1:= cidx) (eout1:= (midx, msg))
+                 (oidx2:= oidx) (eout2:= rqDown) in H2; eauto.
+          * elim H2.
+            apply subtreeIndsOf_child_in; [apply H|assumption].
+          * left; red; auto.
+          * red; auto.
+
+        + red; intros; dest_in.
+          rename oidx0 into pidx.
+          repeat ssplit.
+          * intros; intro Hx; dest_in; solve_midx_false.
+          * intros; intro Hx; dest_in; simpl in *; disc_rule_conds.
+            eapply rqDownRsUpDisj_in_spec
+              with (eout1:= (midx, msg)) (eout2:= rqDown); eauto.
+            { left; red; eauto. }
+            { left; red; eauto. }
+            { apply subtreeIndsOf_child_in; auto; apply Hrrs. }
+          * intros; intro Hx; dest_in; solve_midx_false.
+          
+        + red; intros; dest_in.
+          rename oidx0 into pidx.
+          repeat ssplit.
+          * intros; intro Hx; dest_in; disc_rule_conds; solve_midx_false.
+          * intros; intro Hx; dest_in; disc_rule_conds; solve_midx_false.
+          * intros; intro Hx; dest_in; simpl in *; disc_rule_conds.
+            eapply rqDownRsUpDisj_in_spec
+              with (eout1:= (midx, msg)) (eout2:= rqDown); eauto.
+            { left; red; eauto. }
+            { left; red; eauto. }
+            { apply subtreeIndsOf_child_in; auto; apply Hrrs. }
+
+      - specialize (H11 _ H12).
+        red in H12; simpl in *; dest.
+        pose proof (rsEdgeUpFrom_Some H _ H13).
+        destruct H14 as [rqUp [down [pidx ?]]]; dest.
+        eapply H11; [eassumption|].
+        eapply OStatesEquivR_add
+          with (nmsgs:= [(orsUp, rsum)]) (rminds:= [(idOf rqDown)]).
+        + eapply rqDownRsUpDisj_in_spec
+            with (oidx1:= oidx) (eout1:= rqDown)
+                 (oidx2:= cidx) (eout2:= (midx, msg)); eauto.
+          * left; assumption.
+          * right; red; auto.
+
+        + red; intros; dest_in.
+          repeat ssplit.
+          * intros; intro Hx; dest_in; solve_midx_false.
+          * intros; intro Hx; dest_in; simpl in *; disc_rule_conds.
+            eapply rqDownRsUpDisj_in_spec
+              with (eout1:= rqDown) (oidx2:= cidx) (eout2:= (midx, msg)); eauto.
+            { left; red; eauto. }
+            { right; red; eauto. }
+          * intros; intro Hx; dest_in; solve_midx_false.
+          
+        + red; intros.
+          repeat ssplit.
+          * intros; intro Hx; dest_in; disc_rule_conds; solve_midx_false.
+          * intros; intro Hx; dest_in; disc_rule_conds; solve_midx_false.
+          * intros; intro Hx; dest_in; simpl in *; disc_rule_conds.
+            eapply rqDownRsUpDisj_in_spec
+              with (eout1:= rqDown) (eout2:= (midx, msg)); eauto.
+            { left; red; eauto. }
+            { right; red; eauto. }
+    Qed.
+
+    Corollary atomic_rqDown_preserves_msg_out_preds:
+      forall inits ins hst outs eouts,
+        Atomic msg_dec inits ins hst outs eouts ->
+        forall s1 s2,
+          Reachable (steps step_m) sys s1 ->
+          steps step_m sys s1 hst s2 ->
+          forall oidx rqDown,
+            In rqDown eouts ->
+            RqDownMsgTo dtr oidx rqDown ->
+            forall P oss orqs msgs nost norq orsUp rsum,
+              GoodMsgOutPred P ->
+              Forall (fun eout => P eout oss orqs msgs) eouts ->
+              rsEdgeUpFrom dtr oidx = Some orsUp ->
+              Forall (fun eout => P eout (oss +[oidx <- nost]) (orqs +[oidx <- norq])
+                                    (enqMP orsUp rsum (deqMP (idOf rqDown) msgs)))
+                     (removeOnce (id_dec msg_dec) rqDown eouts).
+    Proof.
+      destruct Hrrs as [? [? ?]]; intros.
+      eapply atomic_msg_outs_ok in H2; eauto.
+      inv H2.
+      - dest_in.
+      - exfalso; dest_in.
+        disc_rule_conds.
+        solve_midx_false.
+      - exfalso; dest_in.
+        disc_rule_conds.
+      - eapply rqDown_preserves_msg_out_preds; eauto.
+        eapply rqDown_rsUp_inv_msg; eauto.
+    Qed.
+
     Lemma rsUps_preserves_msg_out_preds:
       forall eouts,
         RqDownRsUpDisj dtr eouts ->

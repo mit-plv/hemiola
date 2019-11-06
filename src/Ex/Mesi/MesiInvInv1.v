@@ -1185,27 +1185,27 @@ Section InvWB.
 
     specialize (Hm _ Ho eq_refl); dest.
     intros.
-    specialize (Hw (or_introl H5)).
+    specialize (Hw (or_introl H7)).
 
     assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
-    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+    { destruct H7 as [[rqUp rqm] ?]; dest; inv H8.
       apply not_MsgExistsSig_MsgsNotExist.
       intros; dest_in.
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
     }
-    specialize (Hd H4 Hnrs); dest.
+    specialize (Hd H6 Hnrs); dest.
 
-    red in H7.
+    red in H9.
     assert (ost#[dir].(dir_st) <= mesiI) as Hdi by solve_mesi.
-    specialize (H7 (or_introl Hdi)).
-    destruct H7; dest; simpl in *; solve_mesi.
+    specialize (H9 (or_introl Hdi)).
+    destruct H9; dest; simpl in *; solve_mesi.
   Qed.
 
 End InvWB.

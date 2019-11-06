@@ -1478,23 +1478,23 @@ Section InvNWB.
 
     specialize (Hmcf _ Hoin eq_refl); dest.
     intros.
-    specialize (Hwd (or_intror (or_introl H5))).
-    specialize (Hno H5).
-    specialize (Hde H4).
+    specialize (Hwd (or_intror (or_introl H7))).
+    specialize (Hno H7).
+    specialize (Hde H6).
     destruct Hde as [_ Hde].
-    specialize (Hdme (ObjDirE_ObjDirME H4)).
+    specialize (Hdme (ObjDirE_ObjDirME H6)).
 
     assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
-    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+    { destruct H7 as [[rqUp rqm] ?]; dest; inv H8.
       apply not_MsgExistsSig_MsgsNotExist.
       intros; dest_in.
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
     }
 
