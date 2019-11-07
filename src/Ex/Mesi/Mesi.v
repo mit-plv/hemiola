@@ -94,12 +94,11 @@ Section System.
 
     Import CaseNotations.
     Definition getDir (oidx: IdxT) (dir: DirT): MESI :=
-      match case dir.(dir_st) on eq_nat_dec default mesiNP with
+      match case dir.(dir_st) on eq_nat_dec default mesiI with
       | mesiM: if idx_dec oidx dir.(dir_excl) then mesiM else mesiI
       | mesiE: if idx_dec oidx dir.(dir_excl) then mesiE else mesiI
       | mesiS: if in_dec idx_dec oidx dir.(dir_sharers)
                then mesiS else mesiI
-      | mesiI: mesiI
       end.
 
     Definition setDirM (oidx: IdxT) :=
@@ -125,7 +124,9 @@ Section System.
     Definition addSharer (oidx: IdxT) (dir: DirT): DirT :=
       {| dir_st := mesiS;
          dir_excl := dir.(dir_excl);
-         dir_sharers := oidx :: dir.(dir_sharers) |}.
+         dir_sharers :=
+           if eq_nat_dec dir.(dir_st) mesiS
+           then oidx :: dir.(dir_sharers) else [oidx] |}.
 
     Definition removeSharer (oidx: IdxT) (dir: DirT): DirT :=
       {| dir_st := mesiS;
@@ -148,7 +149,7 @@ Section System.
         unfold getDir, caseDec; intros.
         find_if_inside; [find_if_inside; [auto|discriminate]|].
         repeat (find_if_inside; [find_if_inside; discriminate|]).
-        find_if_inside; discriminate.
+        discriminate.
       Qed.
 
       Lemma getDir_E_imp:
@@ -160,7 +161,7 @@ Section System.
         find_if_inside; [find_if_inside; discriminate|].
         find_if_inside; [find_if_inside; [auto|discriminate]|].
         find_if_inside; [find_if_inside; discriminate|].
-        find_if_inside; discriminate.
+        discriminate.
       Qed.
 
       Lemma getDir_ME_imp:
@@ -173,7 +174,7 @@ Section System.
                                [split; auto; rewrite e; assumption
                                |solve_mesi]|]).
         find_if_inside; [find_if_inside; solve_mesi|].
-        find_if_inside; solve_mesi.
+        solve_mesi.
       Qed.
 
       Lemma getDir_S_imp:
@@ -184,7 +185,7 @@ Section System.
         unfold getDir, caseDec; intros.
         repeat (find_if_inside; [find_if_inside; discriminate|]).
         find_if_inside; [find_if_inside; [auto|discriminate]|].
-        find_if_inside; discriminate.
+        discriminate.
       Qed.
 
     End Facts.
@@ -467,7 +468,7 @@ Section System.
             --> (ost +#[val <- msg_value min]
                      +#[owned <- false]
                      +#[status <- mesiS]
-                     +#[dir <- setDirS [objIdxOf rsbTo]],
+                     +#[dir <- addSharer (objIdxOf rsbTo) ost#[dir]],
                  {| miv_id := mesiRsS;
                     miv_value := msg_value min |})).
 
@@ -528,7 +529,8 @@ Section System.
         :accepts mesiDownRqS
         :me oidx
         :requires
-           (fun ost orq mins => mesiS <= ost#[status])
+           (fun ost orq mins =>
+              mesiS <= ost#[status] /\ ost#[dir].(dir_st) <= mesiS)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiS],

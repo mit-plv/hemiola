@@ -532,6 +532,24 @@ Section FootprintsOk.
 
 End FootprintsOk.
 
+Ltac disc_MesiUpLockInv oidx :=
+  match goal with
+  | [Hdl: MesiUpLockInv _ |- _] =>
+    specialize (Hdl oidx); simpl in Hdl;
+    repeat
+      match type of Hdl with
+      | _ <+- ?ov; _ =>
+        match goal with
+        | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
+        end
+      end;
+    repeat
+      match goal with
+      | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
+      end;
+    simpl in Hdl; dest
+  end.
+
 Ltac disc_MesiDownLockInv oidx Hinv :=
   specialize (Hinv oidx); simpl in Hinv;
   disc_rule_conds_ex;

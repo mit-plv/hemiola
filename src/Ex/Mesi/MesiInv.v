@@ -71,11 +71,8 @@ Section CoherenceUnit.
 
   (** 2) Clean "E" in MESI *)
 
-  Definition ObjClean :=
-    mesiS <= ost#[status] <= mesiE.
-
   Definition ObjDirME (cidx: IdxT) :=
-    mesiE <= ost#[dir].(dir_st) /\ ost#[dir].(dir_excl) = cidx /\
+    mesiE <= ost#[dir].(dir_st) <= mesiM /\ ost#[dir].(dir_excl) = cidx /\
     orq@[downRq] = None.
 
   Definition ObjDirE (cidx: IdxT) :=

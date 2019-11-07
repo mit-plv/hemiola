@@ -27,8 +27,8 @@ Proof.
   unfold getDir, ObjDirME; intros; dest.
   simpl in H.
   do 2 (find_if_inside; [find_if_inside; [discriminate|auto]|]).
-  do 2 (find_if_inside; [simpl in *; solve_mesi|]).
-  discriminate.
+  find_if_inside; [simpl in *; solve_mesi|].
+  simpl in *; solve_mesi.
 Qed.
 
 Definition NoRsME (oidx: IdxT) (msgs: MessagePool Msg) :=

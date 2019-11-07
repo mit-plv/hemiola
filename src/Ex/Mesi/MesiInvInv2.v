@@ -433,8 +433,7 @@ Lemma ObjDirE_ObjDirME:
 Proof.
   intros.
   red in H; dest.
-  red; repeat split; try assumption.
-  solve_mesi.
+  red; repeat split; try assumption; solve_mesi.
 Qed.
 
 Section InvDirE.
