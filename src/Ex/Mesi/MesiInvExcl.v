@@ -2882,43 +2882,75 @@ Section InvExcl.
           solve_DownRsSPred.
           simpl; intuition solve_mesi.
         }
-        { case_InvExcl_me_others.
+        { apply subtreeChildrenIndsOf_parentIdxOf in H30; auto.
+          case_InvExcl_me_others.
           { disc_InvExcl_this.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
             { solve_InvObjOwned_by_false. }
-            { admit. }
+            { remember (dir_excl _) as rcidx.
+              split_InvDirInv.
+              { apply getDir_setDirS_I_imp in H44.
+                case_idx_eq rcidx cidx0; [exfalso; elim H44; left; reflexivity|clear H44].
+                solve_ObjsInvalid_trivial.
+                apply H40.
+                eapply getDir_excl_neq; [reflexivity|intuition solve_mesi|simpl; congruence].
+              }
+              { exfalso.
+                pose proof (getDir_setDirS_sound cidx0 [rcidx]).
+                simpl in *; solve_mesi.
+              }
+            }
           }
 
-          { disc_MsgConflictsInv oidx.
+          { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H39 into Hpmcf'.
+            disc_MsgConflictsInv oidx.
+            remember (dir_excl _) as rcidx; clear Heqrcidx.
+            disc_AtomicMsgOutsInv rcidx.
+
+            (** TODO: Ltac [derive_child_st rcidx] *)
+            pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H8) H30).
+            pose proof (Hosi _ H50); simpl in H51.
+            destruct H51 as [[rcost ?] [rcorq ?]].
+            disc_MsgPred.
+            rewrite H51 in H48; simpl in H48; dest.
+            preveal Hpmcf'; disc_MsgConflictsInv rcidx.
+            
             disc_InvExcl_others.
-            { disc_InvObjExcl0; split.
-              { case_idx_eq eidx cidx.
-                { derive_child_chns cidx; disc_rule_conds.
-                  remember (dir_excl _) as cidx; clear Heqcidx.
-                  (** TODO: Ltac solve_by_NoCohMsgs_false_downRsS *)
-                  exfalso.
-                  eapply MsgExistsSig_MsgsNotExist_false;
-                    [eassumption|right; right; right; left; reflexivity|].
-                  exists (rsUpFrom cidx, rmsg); eauto; split.
-                  { apply FirstMP_InMP; assumption. }
-                  { unfold sigOf; simpl; congruence. }
+            { disc_InvObjExcl0.
+              exfalso.
+              case_idx_eq eidx rcidx.
+              { disc_rule_conds; disc_ObjExcl0; solve_mesi. }
+              { solve_by_ObjsInvalid_downRsS_false rcidx. }
+            }
+            { case_in_subtree rcidx eidx;
+                [|disc_InvObjOwned; solve_by_ObjsInvalid_downRsS_false rcidx].
+              case_idx_eq eidx rcidx;
+                [disc_rule_conds; disc_InvObjOwned; congruence|].
+              disc_InvObjOwned.
+              (* Too complicated to put in [solve_by_topo_false]? *)
+              assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) eidx)).
+              { eapply inside_parent_in with (cidx:= rcidx); eauto. }
+              solve_ObjsInvalid_trivial.
+            }
+            { split_InvDirInv_apply.
+              { case_in_subtree oidx cidx0.
+                { assert (In rcidx (subtreeIndsOf (fst (tree2Topo tr 0)) cidx0)).
+                  { eapply inside_child_in; eauto. }
+                  solve_by_ObjsInvalid_downRsS_false rcidx.
                 }
-                { (** TODO: Ltac solve_by_ObjsInvalid_downRsS_false *)
-                  (* solve_by_ObjsInvalid_downRsS_false cidx. *)
-                  exfalso.
-                  match goal with
-                  | [H: ObjsInvalid _ _ _ |- _] =>
-                    eapply ObjsInvalid_downRsS_false with (oidx:= cidx);
-                      [eapply H|..]; simpl in *; eauto
-                  end.
-                  (** TODO.. need to know oss@[cidx] exists :P *)
-                  all: admit.
+                { case_in_subtree rcidx cidx0; [solve_by_ObjsInvalid_downRsS_false rcidx|].
+                  solve_ObjsInvalid_trivial.
                 }
               }
-              { solve_MsgsP. }
+              { case_in_subtree rcidx cidx0;
+                  [|solve_by_ObjsInvalid_downRsS_false rcidx].
+                case_idx_eq rcidx cidx0; [disc_rule_conds|].
+                (* Too complicated to put in [solve_by_topo_false]? *)
+                assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) cidx0)).
+                { eapply inside_parent_in with (cidx:= rcidx); eauto. }
+                solve_ObjsInvalid_trivial.
+              }
             }
-            { admit. }
-            { admit. }
           }
         }
       }
@@ -3167,9 +3199,12 @@ Section InvExcl.
             { solve_InvObjOwned_by_false. }
             { split_InvDirInv_apply.
               { solve_ObjsInvalid_trivial. }
-              { admit. }
+              { eapply ObjsInvalid_invRs; eauto.
+                apply parent_not_in_subtree; auto.
+              }
             }
           }
+
           { disc_InvExcl_others.
             { disc_InvObjExcl0; split.
               { eapply ObjsInvalid_invRs; eauto. }
@@ -3184,7 +3219,16 @@ Section InvExcl.
                 case_ObjInvalid; [solve_ObjInvalid0|solve_ObjInvRs].
               }
             }
-            { admit. }
+            { split_InvDirInv_apply.
+              { case_in_subtree oidx cidx.
+                { eapply ObjsInvalid_invRs; eauto. }
+                { solve_ObjsInvalid_trivial. }
+              }
+              { case_in_subtree oidx cidx.
+                { solve_ObjsInvalid_trivial. }
+                { eapply ObjsInvalid_invRs; eauto. }
+              }
+            }
           }
         }
       }
