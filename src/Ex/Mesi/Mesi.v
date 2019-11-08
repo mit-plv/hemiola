@@ -494,7 +494,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -542,7 +542,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -628,7 +628,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
@@ -692,7 +692,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              mesiE <= ost#[dir].(dir_st))
+              mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
