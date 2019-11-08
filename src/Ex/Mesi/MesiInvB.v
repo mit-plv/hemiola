@@ -38,6 +38,21 @@ Proof.
     all: simpl; rewrite map_id; apply SubList_refl.
 Qed.
 
+Lemma mesi_OstInds:
+  forall tr (Htr: tr <> Node nil),
+    InvReachable (impl Htr) step_m (OstInds tr 0).
+Proof.
+  intros.
+  apply tree2Topo_OstInds_inv_ok.
+  red; simpl; intros.
+  split.
+  - rewrite c_li_indices_head_rootOf in H by assumption.
+    inv H.
+    + rewrite implOStatesInit_value_root by assumption; eauto.
+    + rewrite implOStatesInit_value_non_root by assumption; eauto.
+  - rewrite implORqsInit_value by assumption; eauto.
+Qed.
+
 Lemma mesi_MsgConflictsInv:
   forall tr (Htr: tr <> Node nil)
          (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),

@@ -40,7 +40,14 @@ Section InObjInds.
       _ <+- (bst_oss st)@[oidx];
         In oidx (c_li_indices cifc ++ c_l1_indices cifc).
 
-  Hypothesis (Hinit: InObjInds (initsOf sys))
+  Definition OstInds (st: MState) :=
+    forall oidx,
+      In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      (exists ost, (bst_oss st)@[oidx] = Some ost) /\
+      (exists orq, (bst_orqs st)@[oidx] = Some orq).
+
+  Hypothesis (Hinit1: InObjInds (initsOf sys))
+             (Hinit2: OstInds (initsOf sys))
              (Hinds: SubList (map obj_idx (sys_objs sys))
                              (c_li_indices cifc ++ c_l1_indices cifc)).
 
@@ -60,8 +67,25 @@ Section InObjInds.
     InvReachable sys step_m InObjInds.
   Proof.
     apply inv_reachable.
-    - apply Hinit.
+    - apply Hinit1.
     - apply tree2Topo_InObjInds_step.
+  Qed.
+
+  Lemma tree2Topo_OstInds_step:
+    InvStep sys step_m OstInds.
+  Proof.
+    red; intros.
+    inv H2; [assumption..|].
+    red; simpl; intros.
+    mred; eauto.
+  Qed.
+  
+  Lemma tree2Topo_OstInds_inv_ok:
+    InvReachable sys step_m OstInds.
+  Proof.
+    apply inv_reachable.
+    - apply Hinit2.
+    - apply tree2Topo_OstInds_step.
   Qed.
 
 End InObjInds.

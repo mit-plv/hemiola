@@ -261,6 +261,16 @@ Section System.
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
 
+  Lemma implORqsInit_value:
+    forall oidx,
+      In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      implORqsInit@[oidx] = Some [].
+  Proof.
+    intros; unfold implORqsInit; fold cifc.
+    induction (c_li_indices cifc ++ c_l1_indices cifc); [dest_in|].
+    simpl; icase oidx; mred.
+  Qed.
+
   Section Rules.
     Variables (oidx cidx: IdxT).
 
