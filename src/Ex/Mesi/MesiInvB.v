@@ -88,17 +88,28 @@ Section Footprints.
         rmsg <+- rqid.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
         | mesiRqS: DownLockFromChild oidx rqid /\
-                   ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st) /\
+                   ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) /\
+                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
                    rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
         | mesiRqM: DownLockFromChild oidx rqid /\
                    ost#[status] <= mesiS /\
                    ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS /\
+                     SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
                      rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
-                    (mesiS < ost#[dir].(dir_st) /\
+                    (mesiE <= ost#[dir].(dir_st) /\
+                     In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
                      rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
         | mesiDownRqS: DownLockFromParent oidx rqid /\
-                       ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
-        | mesiDownRqI: DownLockFromParent oidx rqid /\ mesiI < ost#[dir].(dir_st)
+                       ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) /\
+                       In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                       rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+        | mesiDownRqI: DownLockFromParent oidx rqid /\
+                       ((ost#[dir].(dir_st) = mesiS /\
+                         SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+                         rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                        (mesiE <= ost#[dir].(dir_st) /\
+                         In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                         rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
         end.
 
 End Footprints.
