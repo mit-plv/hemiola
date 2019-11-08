@@ -630,7 +630,7 @@ Section RootChnInv.
       | [H: downTo _ = downTo _ |- _] => inv H
 
       | [H: parentIdxOf _ ?oidx = Some ?oidx |- _] =>
-        exfalso; eapply parentIdxOf_not_eq; eauto
+        exfalso; eapply parentIdxOf_not_eq in H; eauto
       | [H1: ?oidx = rootOf _, H2: parentIdxOf _ ?oidx = Some _ |- _] => rewrite H1 in H2
       | [H: parentIdxOf _ (rootOf _) = Some ?idx |- _] =>
         eapply parentIdxOf_child_not_root with (pidx:= idx); eauto

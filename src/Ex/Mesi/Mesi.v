@@ -504,9 +504,7 @@ Section System.
         rule.rsudo[0~>4]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires
-           (fun ost orq mins =>
-              FirstMsg ost orq mins /\ mesiE <= ost#[dir].(dir_st))
+        :requires (fun ost orq mins => FirstMsg ost orq mins)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
