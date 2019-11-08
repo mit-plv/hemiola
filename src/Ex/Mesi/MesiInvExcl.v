@@ -19,6 +19,7 @@ Local Open Scope fmap.
 
 Local Arguments idx_dec: simpl never.
 
+(** TODO: move to [Mesi/Mesi.v] *)
 Ltac dir_crush :=
   repeat find_if_inside; try reflexivity;
   repeat
@@ -1200,14 +1201,18 @@ Section InvExcl.
       destruct H; [left|right]
     end.
 
-  Ltac disc_InvExcl_this :=
+  Ltac disc_InvExcl oidx :=
     repeat
       match goal with
-      | [H: InvExcl _ _ _ |- InvObjExcl0 ?oidx _ _ _ /\ _] =>
-        specialize (H oidx); simpl in H
+      | [H: InvExcl _ _ _ |- _] => specialize (H oidx); simpl in H
       | [He: _ <+- ?ov; _, Ho: ?ov = Some _ |- _] =>
         rewrite Ho in He; simpl in He; dest; repeat ssplit
       end.
+
+  Ltac disc_InvExcl_this :=
+    match goal with
+    | |- InvObjExcl0 ?oidx _ _ _ /\ _ => disc_InvExcl oidx
+    end.
 
   Ltac disc_InvExcl_others :=
     match goal with
@@ -1676,7 +1681,19 @@ Section InvExcl.
       | [H1: ~ In ?i ?l, H2: In ?i ?l |- _] => elim H1; assumption
       end.
 
-  Ltac pick_disc_response_from :=
+  Ltac pick_rsUp_single :=
+    match goal with
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = ?rss |- _] =>
+      rewrite <-Hrss in Hrr;
+      let Hrr0 := fresh "H" in
+      pose proof Hrr as Hrr0;
+      eapply RqRsDownMatch_rs_rq in Hrr0; [|left; reflexivity];
+      let cidx := fresh "cidx" in 
+      let down := fresh "down" in
+      destruct Hrr0 as [cidx [down ?]]; dest
+    end.
+
+  Ltac pick_rsUps_one :=
     repeat
       match goal with
       | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: _ = ?rss |- _] =>
@@ -1697,6 +1714,9 @@ Section InvExcl.
         simpl in H; apply SubList_cons_inv in H; dest
       end.
 
+  Ltac case_idx_eq oidx1 oidx2 :=
+    destruct (idx_dec oidx1 oidx2); [subst|].
+
   Ltac case_in_subtree oidx sidx :=
     destruct (in_dec idx_dec oidx (subtreeIndsOf (fst (tree2Topo tr 0)) sidx)).
 
@@ -1715,7 +1735,7 @@ Section InvExcl.
     match goal with
     | [H: InvObjOwned _ _ _ _ _ |- InvObjOwned _ _ _ _ _] =>
       let Ho := fresh "H" in
-      red; simpl; intros Ho; specialize (H Ho)
+      red; simpl; intros Ho; try specialize (H Ho)
     end.
 
   Ltac solve_AtomicInv_init :=
@@ -1800,7 +1820,7 @@ Section InvExcl.
         disc_MesiDownLockInv oidx Hdlinv.
         derive_footprint_info_basis oidx;
           [|derive_child_chns x; solve_midx_false].
-        pick_disc_response_from.
+        pick_rsUps_one.
         derive_child_chns cidx.
         disc_rule_conds_ex.
         exfalso_InvTrs_init.
@@ -1857,14 +1877,14 @@ Section InvExcl.
 
       { disc_MesiDownLockInv oidx Hdlinv.
         derive_footprint_info_basis oidx.
-        pick_disc_response_from.
+        pick_rsUps_one.
         derive_child_chns cidx.
         disc_rule_conds_ex.
         exfalso_InvTrs_init.
       }
       { disc_MesiDownLockInv oidx Hdlinv.
         derive_footprint_info_basis oidx; [solve_midx_false|].
-        pick_disc_response_from.
+        pick_rsUps_one.
         derive_child_chns cidx.
         disc_rule_conds_ex.
         exfalso_InvTrs_init.
@@ -2106,14 +2126,42 @@ Section InvExcl.
     do 2 red; simpl;
     repeat constructor;
     try (red; simpl; intros; intuition discriminate).
-  
-  Ltac solve_DownRsSPred :=
-    let Hmidx := fresh "H" in
-    red; simpl; intros Hmidx ? ?; inv Hmidx; mred.
 
-  Ltac solve_DownRsIPred :=
-    let Hmidx := fresh "H" in
-    red; simpl; intros Hmidx _ _; inv Hmidx.
+  Ltac solve_msg_pred_base :=
+    let Hm := fresh "H" in
+    red; simpl; intros Hm _ _; inv Hm; mred.
+
+  Ltac solve_DownRsSPred :=
+    solve_msg_pred_base; mred.
+
+  Ltac disc_dir :=
+    repeat
+      match goal with
+      | [H: context[getDir _ _] |- _] => progress simpl in H
+      | [H: context[getDir _ (addSharer _ _)] |- _] =>
+        rewrite getDir_addSharer_spec in H by solve_mesi;
+        destruct (idx_dec _ _) in H; try solve_mesi
+
+      | [H: context[getDir ?cidx (setDirE ?cidx)] |- _] =>
+        rewrite getDir_setDirE_eq in H
+      | [Hn: ?oidx1 <> ?oidx2, H: context[getDir ?oidx1 (setDirE ?oidx2)] |- _] =>
+        rewrite getDir_setDirE_neq in H by auto
+      | [Hn: ?oidx2 <> ?oidx1, H: context[getDir ?oidx1 (setDirE ?oidx2)] |- _] =>
+        rewrite getDir_setDirE_neq in H by auto
+
+      | [H: context[getDir ?cidx (setDirM ?cidx)] |- _] =>
+        rewrite getDir_setDirM_eq in H
+      | [Hn: ?oidx1 <> ?oidx2, H: context[getDir ?oidx1 (setDirM ?oidx2)] |- _] =>
+        rewrite getDir_setDirM_neq in H by auto
+      | [Hn: ?oidx2 <> ?oidx1, H: context[getDir ?oidx1 (setDirM ?oidx2)] |- _] =>
+        rewrite getDir_setDirM_neq in H by auto
+      end;
+    try match goal with
+        | [H: mesiS <= getDir ?cidx ?dir |- _] =>
+          pose proof (getDir_st_sound dir cidx ltac:(solve_mesi))
+        | [H: mesiE <= getDir ?cidx ?dir |- _] =>
+          pose proof (getDir_st_sound dir cidx ltac:(solve_mesi))
+        end.
 
   Lemma mesi_InvExcl_InvTrs: InvTrs impl (InvExcl topo cifc).
   Proof.
@@ -2478,6 +2526,44 @@ Section InvExcl.
 
       dest_in.
 
+      (* 3: { (* [liDownSRsUpDownME] *) *)
+      (*   disc_rule_conds_ex. *)
+      (*   disc_MesiDownLockInv oidx Hdlinv. *)
+      (*   derive_footprint_info_basis oidx. *)
+
+      (*   split. *)
+      (*   { solve_AtomicInv_rsUps_rsDown Hrsd. } *)
+      (*   { case_InvExcl_me_others. *)
+      (*     { disc_InvExcl_this. *)
+      (*       { solve_InvObjExcl0_by_ObjExcl0_false. } *)
+      (*       { (** TODO: need to draw (maybe from Dir-Invalid invariant?) *) *)
+      (*         (** If dirME(C) then ObjsInvalid(~ tr(C)). *) *)
+      (*         remember (dir_excl _) as rcidx; clear Heqrcidx. *)
+      (*         disc_InvObjOwned. *)
+
+      (*         apply subtreeChildrenIndsOf_parentIdxOf in H31. *)
+
+      (*         (** TODO Ltac [disc_InvDirInv cidx] *) *)
+      (*         move H40 at bottom. *)
+      (*         red in H40. *)
+      (*         specialize (H40 (tl_In _ _ H8)). *)
+      (*         specialize (H40 _ H31); dest. *)
+
+              
+              
+      (*         admit. *)
+      (*       } *)
+      (*       { admit. *)
+      (*       } *)
+      (*     } *)
+
+      (*     { (** TODO: need to know: ∃downRsS(C) -> C.owned = false *) *)
+      (*       admit. *)
+      (*     } *)
+      (*   } *)
+      (* } *)
+
+
       { (* [liGetSRsDownDownS] *)
         disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
@@ -2493,21 +2579,11 @@ Section InvExcl.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
             { solve_InvObjOwned_by_false. }
             { split_InvDirInv.
-              { (** TODO: directory-reduction ltac *)
-                simpl in H41.
-                rewrite getDir_addSharer_spec in H41 by solve_mesi.
-                destruct (idx_dec _ _) in H41; [solve_mesi|].
+              { disc_dir.
                 specialize (H37 H41).
                 solve_ObjsInvalid_trivial.
               }
-              { exfalso.
-                (** TODO: directory-reduction ltac *)
-                simpl in H41.
-                rewrite getDir_addSharer_spec in H41 by solve_mesi.
-                destruct (idx_dec _ _) in H41; [solve_mesi|].
-                pose proof (getDir_st_sound (fst (snd (snd (snd os)))) cidx0 ltac:(solve_mesi)).
-                solve_mesi.
-              }
+              { exfalso; disc_dir; solve_mesi. }
             }
           }
 
@@ -2518,7 +2594,7 @@ Section InvExcl.
             }
             { case_InvObjOwned; [solve_by_ObjsInvalid_rsS_false oidx|].
               disc_ObjsInvalid_by oidx0; case_ObjInvalid.
-              { destruct (idx_dec oidx0 cidx); [subst|solve_ObjInvalid0].
+              { case_idx_eq oidx0 cidx; [|solve_ObjInvalid0].
                 eapply outside_parent_out in H46; eauto.
                 solve_by_ObjsInvalid_rsS_false oidx.
               }
@@ -2549,8 +2625,8 @@ Section InvExcl.
         { solve_AtomicInv_rsDown.
           disc_AtomicMsgOutsInv oidx.
           disc_RsMEPred.
-          move H34 at bottom.
-          red; simpl; intros Hm _ _; inv Hm; mred.
+
+          solve_msg_pred_base.
           solve_ObjsInvalid_trivial.
           eapply ObjsInvalid_rsE; eauto.
         }
@@ -2560,8 +2636,7 @@ Section InvExcl.
             { solve_InvObjExcl0_by_ObjExcl0_false. }
             { solve_InvObjOwned_by_false. }
             { split_InvDirInv.
-              { destruct (idx_dec cidx cidx0); subst;
-                  [rewrite getDir_setDirE_eq in H44; discriminate|].
+              { case_idx_eq cidx cidx0; [disc_dir; discriminate|].
                 disc_AtomicMsgOutsInv oidx.
                 disc_RsMEPred.
                 solve_ObjsInvalid_trivial.
@@ -2569,8 +2644,7 @@ Section InvExcl.
                 simpl; intros.
                 intro; subst; solve_by_topo_false.
               }
-              { destruct (idx_dec cidx cidx0); subst;
-                  [|simpl in H44; rewrite getDir_setDirE_neq in H44 by auto; solve_mesi].
+              { case_idx_eq cidx cidx0; [|disc_dir; solve_mesi].
                 disc_AtomicMsgOutsInv oidx.
                 disc_RsMEPred.
                 solve_ObjsInvalid_trivial.
@@ -2589,7 +2663,7 @@ Section InvExcl.
             }
             { case_InvObjOwned; [solve_by_ObjsInvalid_rsE_false oidx|].
               disc_ObjsInvalid_by oidx0; case_ObjInvalid.
-              { destruct (idx_dec oidx0 cidx); [subst|solve_ObjInvalid0].
+              { case_idx_eq oidx0 cidx; [|solve_ObjInvalid0].
                 eapply outside_parent_out in H43; eauto.
                 solve_by_ObjsInvalid_rsE_false oidx.
               }
@@ -2646,12 +2720,7 @@ Section InvExcl.
             { solve_InvObjOwned_by_false. }
             { split_InvDirInv_apply.
               { solve_ObjsInvalid_trivial. }
-              { exfalso.
-                (** TODO: directory-reduction ltac *)
-                simpl in H20.
-                pose proof (getDir_st_sound (fst (snd (snd (snd os)))) cidx ltac:(solve_mesi)).
-                solve_mesi.
-              }
+              { exfalso; disc_dir; solve_mesi. }
             }
           }
           { disc_InvExcl_others.
@@ -2692,11 +2761,7 @@ Section InvExcl.
         disc_MesiDownLockInv oidx Hdlinv.
         derive_footprint_info_basis oidx; [solve_midx_false|].
 
-        (** Ltac pick_rsUp_single *)
-        rewrite <-H14 in H33.
-        pose proof H33.
-        eapply RqRsDownMatch_rs_rq in H31; [|left; reflexivity].
-        destruct H31 as [cidx [down ?]]; dest.
+        pick_rsUp_single.
 
         split.
         { (** TODO: Ltac [solve_AtomicInv_rsUps_rsUp] *)
@@ -2733,8 +2798,9 @@ Section InvExcl.
           { disc_MsgConflictsInv oidx.
             disc_InvExcl_others.
             { disc_InvObjExcl0; split.
-              { destruct (idx_dec eidx cidx); subst.
+              { case_idx_eq eidx cidx.
                 { derive_child_chns cidx; disc_rule_conds.
+                  remember (dir_excl _) as cidx; clear Heqcidx.
                   (** TODO: Ltac solve_by_NoCohMsgs_false_downRsS *)
                   exfalso.
                   eapply MsgExistsSig_MsgsNotExist_false;
@@ -2743,7 +2809,7 @@ Section InvExcl.
                   { apply FirstMP_InMP; assumption. }
                   { unfold sigOf; simpl; congruence. }
                 }
-                { (** solve_by_ObjsInvalid_downRsS_false *)
+                { (** TODO: Ltac solve_by_ObjsInvalid_downRsS_false *)
                   exfalso.
                   match goal with
                   | [H: ObjsInvalid _ _ _ |- _] =>
@@ -2774,16 +2840,8 @@ Section InvExcl.
         { solve_AtomicInv_rsDown.
           disc_AtomicMsgOutsInv oidx.
           disc_RsMEPred.
-
-          (** TODO: Ltac for discharging [InvExcl] *)
-          repeat
-            match goal with
-            | [H: InvExcl _ _ _ |- _] => specialize (H oidx); simpl in H
-            | [He: _ <+- ?ov; _, Ho: ?ov = Some _ |- _] =>
-              rewrite Ho in He; simpl in He; dest; repeat ssplit
-            end.
-
-          red; simpl; intros Hm _ _; inv Hm; mred.
+          disc_InvExcl oidx.
+          solve_msg_pred_base.
           solve_ObjsInvalid_trivial.
           eapply ObjsInvalid_rsM; eauto.
           { apply tl_In; assumption. }
@@ -2796,13 +2854,11 @@ Section InvExcl.
             { solve_InvObjOwned_by_false. }
             { pose proof H37.
               split_InvDirInv.
-              { destruct (idx_dec cidx cidx0); subst;
-                  [rewrite getDir_setDirM_eq in H48; discriminate|].
+              { case_idx_eq cidx cidx0; [disc_dir; discriminate|].
                 specialize (H44 (getDir_st_I _ H27 _)).
                 solve_ObjsInvalid_trivial.
               }
-              { destruct (idx_dec cidx cidx0); subst;
-                  [|simpl in H48; rewrite getDir_setDirM_neq in H48 by auto; solve_mesi].
+              { case_idx_eq cidx cidx0; [|disc_dir; solve_mesi].
                 disc_AtomicMsgOutsInv oidx.
                 disc_RsMEPred.
                 solve_ObjsInvalid_trivial.
@@ -2818,7 +2874,7 @@ Section InvExcl.
             }
             { case_InvObjOwned; [solve_by_ObjsInvalid_rsM_false oidx|].
               disc_ObjsInvalid_by oidx0; case_ObjInvalid.
-              { destruct (idx_dec oidx0 cidx); [subst|solve_ObjInvalid0].
+              { case_idx_eq oidx0 cidx; [|solve_ObjInvalid0].
                 eapply outside_parent_out in H46; eauto.
                 solve_by_ObjsInvalid_rsM_false oidx.
               }
@@ -2909,7 +2965,7 @@ Section InvExcl.
         disc_rule_conds_ex.
         split.
         { solve_AtomicInv_rqDown_rsUp.
-          solve_DownRsIPred.
+          solve_msg_pred_base.
 
           disc_MsgConflictsInv oidx0.
           (** TODO: Ltac for discharging [InvExcl] *)
@@ -3295,7 +3351,7 @@ Section InvExcl.
         split.
         { disc_MsgConflictsInv oidx.
           solve_AtomicInv_rqDown_rsUp.
-          solve_DownRsIPred.
+          solve_msg_pred_base.
           eapply ObjsInvalid_l1_singleton; eauto; mred.
           left; split; simpl; [solve_mesi|].
           apply NoCohMsgs_enq; [|solve_not_in].
