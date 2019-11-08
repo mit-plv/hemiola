@@ -88,11 +88,14 @@ Section Footprints.
         rmsg <+- rqid.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
         | mesiRqS: DownLockFromChild oidx rqid /\
-                   ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
+                   ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st) /\
+                   rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
         | mesiRqM: DownLockFromChild oidx rqid /\
                    ost#[status] <= mesiS /\
-                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS) \/
-                    mesiS < ost#[dir].(dir_st))
+                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS /\
+                     rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                    (mesiS < ost#[dir].(dir_st) /\
+                     rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
         | mesiDownRqS: DownLockFromParent oidx rqid /\
                        ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
         | mesiDownRqI: DownLockFromParent oidx rqid /\ mesiI < ost#[dir].(dir_st)
@@ -371,7 +374,7 @@ Section FootprintsOk.
         oss@[oidx] = Some post ->
         nost#[owned] = post#[owned] ->
         nost#[status] = post#[status] ->
-        nost#[dir].(dir_st) = post#[dir].(dir_st) ->
+        nost#[dir] = post#[dir] ->
         orqs@[oidx] = Some porq ->
         norq@[downRq] = porq@[downRq] ->
         MesiDownLockInv topo {| bst_oss := oss +[oidx <- nost];
@@ -448,7 +451,7 @@ Section FootprintsOk.
         
         dest_in; disc_rule_conds_ex.
         all: try (eapply MesiDownLockInv_update_None; eauto; fail).
-        all: derive_child_chns cidx; derive_child_idx_in cidx; solve_MesiDownLockInv.
+        all: try (derive_child_chns cidx; derive_child_idx_in cidx; solve_MesiDownLockInv; fail).
       }
 
       dest_in; disc_rule_conds_ex.
