@@ -140,7 +140,7 @@ Ltac disc_getDir :=
               |apply getDir_E_imp in H; destruct H
               |apply getDir_S_imp in H; destruct H]
       | [H: mesiE <= getDir _ _ |- _] =>
-        apply getDir_ME_imp in H; destruct H
+        apply getDir_ME_imp in H; dest
       end.
 
 Ltac solve_MsgsNotExist_base :=

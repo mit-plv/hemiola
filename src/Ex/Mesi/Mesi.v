@@ -167,11 +167,11 @@ Section System.
       Lemma getDir_ME_imp:
         forall oidx dir,
           mesiE <= getDir oidx dir ->
-          mesiE <= dir.(dir_st) /\ dir.(dir_excl) = oidx.
+          mesiE <= dir.(dir_st) <= mesiM /\ dir.(dir_excl) = oidx.
       Proof.
         unfold getDir, caseDec; intros.
         do 2 (find_if_inside; [find_if_inside;
-                               [split; auto; rewrite e; assumption
+                               [repeat split; [..|auto]; rewrite e; solve_mesi
                                |solve_mesi]|]).
         find_if_inside; [find_if_inside; solve_mesi|].
         solve_mesi.

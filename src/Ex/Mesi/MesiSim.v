@@ -727,7 +727,6 @@ Section Sim.
           }
           { solve_ImplStateCoh_mem_others lidx. }
         }
-
       }
 
       dest_in.
@@ -964,7 +963,6 @@ Section Sim.
           }
           { solve_ImplStateCoh_li_others lidx. }
         }
-
       }
 
       dest_in.
