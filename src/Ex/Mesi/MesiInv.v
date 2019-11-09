@@ -58,7 +58,8 @@ Section CoherenceUnit.
     MsgsNotExist [(downTo oidx, (MRs, mesiRsS));
                     (downTo oidx, (MRs, mesiRsE));
                     (downTo oidx, (MRs, mesiRsM));
-                    (rsUpFrom oidx, (MRs, mesiDownRsS))] msgs.
+                    (rsUpFrom oidx, (MRs, mesiDownRsS));
+                    (rsUpFrom oidx, (MRs, mesiDownRsI))] msgs.
 
   Definition ObjInvalid0 :=
     ost#[status] <= mesiI /\ NoCohMsgs.

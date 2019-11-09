@@ -487,7 +487,8 @@ Section Facts.
     forall msgs oidx,
       NoCohMsgs oidx msgs ->
       forall midx msg,
-        ~ In msg.(msg_id) [mesiRsS; mesiRsE; mesiRsM; mesiDownRsS] ->
+        ~ In msg.(msg_id) [mesiRsS; mesiRsE; mesiRsM;
+                             mesiDownRsS; mesiDownRsI] ->
         NoCohMsgs oidx (enqMP midx msg msgs).
   Proof.
     intros; apply MsgsP_other_msg_id_enqMP; assumption.
@@ -521,8 +522,11 @@ Section Facts.
     - destruct H5 as [rsUp [? ?]]; inv H5.
       apply H3 with (rsUp:= rsUp); auto.
       eapply InMP_deqMP; eauto.
+    - destruct H5 as [rsUp [? ?]]; inv H5.
+      apply H3 with (rsUp:= rsUp); auto.
+      eapply InMP_deqMP; eauto.
   Qed.
-  
+
   Lemma NoCohMsgs_rsDown_deq:
     forall msgs oidx rmsg,
       FirstMPI msgs (downTo oidx, rmsg) ->
@@ -545,6 +549,9 @@ Section Facts.
     - destruct H8 as [[midx msg] [? ?]]; inv H8.
       apply H4.
       eapply rssQ_deq_in_length_two; eauto.
+    - destruct H8 as [rsUp [? ?]]; inv H8.
+      apply H6 with (rsUp:= rsUp); auto.
+      eapply InMP_deqMP; eauto.
     - destruct H8 as [rsUp [? ?]]; inv H8.
       apply H6 with (rsUp:= rsUp); auto.
       eapply InMP_deqMP; eauto.
@@ -614,16 +621,28 @@ Section Facts.
         InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
         forall eidx,
           In eidx (c_l1_indices cifc) ->
-          forall eost,
-            oss@[eidx] = Some eost ->
-            ObjInvalid eidx eost msgs ->
-            ObjsInvalid (fun oidx => In oidx (subtreeIndsOf topo eidx)) oss msgs.
+          ObjsInvalid
+            (fun oidx =>
+               exists ecidx,
+                 parentIdxOf topo ecidx = Some eidx /\
+                 In oidx (subtreeIndsOf topo ecidx)) oss msgs.
     Proof.
       intros; subst topo.
       red; intros.
       destruct (oss@[oidx]) as [ost|] eqn:Host; simpl; [|auto].
-      rewrite tree2Topo_l1_subtreeIndsOf in H3 by assumption.
-      dest_in; [congruence|].
+      assert (oidx <> eidx /\
+              In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) eidx)).
+      { destruct H1 as [ecidx [? ?]].
+        split.
+        { intro; subst.
+          eapply parent_not_in_subtree; eauto.
+        }
+        { eapply subtreeIndsOf_child_SubList; eauto. }
+      }
+      clear H1; dest.
+
+      rewrite tree2Topo_l1_subtreeIndsOf in H2 by assumption.
+      dest_in; [exfalso; auto|].
       exfalso.
       specialize (H (l1ExtOf eidx)); simpl in H.
       rewrite Host in H; simpl in H.
@@ -722,19 +741,21 @@ Section Facts.
           FirstMPI msgs (downTo oidx, rqm) ->
           rqm.(msg_type) = MRq ->
           rsm.(msg_id) = mesiDownRsI ->
-          ObjsInvalid (fun idx => In idx (subtreeIndsOf topo oidx))
-                      (oss +[oidx <- nost])
-                      (enqMP (rsUpFrom oidx) rsm (deqMP (downTo oidx) msgs)).
+          ObjsInvalid
+            (fun idx =>
+               exists cidx,
+                 parentIdxOf topo cidx = Some oidx /\
+                 In idx (subtreeIndsOf topo cidx))
+            (oss +[oidx <- nost])
+            (enqMP (rsUpFrom oidx) rsm (deqMP (downTo oidx) msgs)).
     Proof.
       intros; subst topo.
       red; intros; mred.
-      - simpl; left; split; [simpl in *; solve_mesi|].
-        apply NoCohMsgs_enq; [|rewrite H7; solve_not_in].
-        eapply NoCohMsgs_rqDown_deq; eauto.
-      - destruct (oss@[oidx0]) as [ost0|] eqn:Host; simpl; auto.
-        apply subtreeIndsOf_composed in H8; auto.
-        destruct H8; [exfalso; auto|].
+      - exfalso.
         destruct H8 as [cidx [? ?]].
+        eapply parent_not_in_subtree; eauto.
+      - destruct H8 as [cidx [? ?]].
+        destruct (oss@[oidx0]) as [ost0|] eqn:Host; simpl; auto.
 
         (* Discharge [InvDirInv] *)
         specialize (H3 H _ H8); destruct H3 as [? _].
@@ -1098,13 +1119,18 @@ Section InvExcl.
     (valOf eout).(msg_type) = MRs ->
     (valOf eout).(msg_id) = mesiDownRsS ->
     ost <+- oss@[oidx]; (ost#[status] <= mesiS /\ ost#[owned] = false).
-             
+
   Definition DownRsIPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
              (msgs: MessagePool Msg): Prop :=
     idOf eout = rsUpFrom oidx ->
     (valOf eout).(msg_type) = MRs ->
     (valOf eout).(msg_id) = mesiDownRsI ->
-    ObjsInvalid (fun idx => In idx (subtreeIndsOf topo oidx)) oss msgs.
+    (ost <+- oss@[oidx]; ost#[status] = mesiI /\ ost#[owned] = false) /\
+    ObjsInvalid
+      (fun idx =>
+         exists cidx,
+           parentIdxOf topo cidx = Some oidx /\
+           In idx (subtreeIndsOf topo cidx)) oss msgs.
 
   Definition InvExclMsgOutPred: MsgOutPred :=
     fun eout oss orqs msgs =>
@@ -1160,31 +1186,42 @@ Section InvExcl.
       + (* [DownRsIPred] *)
         red; intros; rewrite H11 in H0.
         derive_child_chns oidx; disc_rule_conds_ex.
-        red; intros.
-        specialize (H10 H11 H12 H13 _ H14).
-        specialize (H5 _ H14); dest.
-        rewrite <-H5.
-        assert (exists pidx0, parentIdxOf (fst (tree2Topo tr 0)) oidx0 = Some pidx0).
-        { eapply subtreeIndsOf_in_has_parent; eauto. }
-        destruct H17 as [pidx0 ?].
-        derive_child_chns oidx0.
+        split.
+        * assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) oidx))
+            by (eapply rqEdgeUpFrom_subtreeIndsOf_self_in;
+                [eauto|congruence]).
+          pose proof (H5 _ H14); dest.
+          rewrite <-H15; apply H10; assumption.
+        * red; intros.
+          specialize (H10 H11 H12 H13); destruct H10 as [? ?].
+          specialize (H15 _ H14).
+          destruct H14 as [cidx [? ?]].
+          eapply subtreeIndsOf_child_SubList in H16; eauto.
+          specialize (H5 _ H16); dest.
+          rewrite <-H5.
+          assert (exists pidx0, parentIdxOf (fst (tree2Topo tr 0)) oidx0 = Some pidx0).
+          { eapply subtreeIndsOf_in_has_parent with (oidx:= oidx); eauto. }
+          destruct H19 as [pidx0 ?].
+          derive_child_chns oidx0.
         
-        red in H16; dest.
-        specialize (H16 _ H18).
-        specialize (H21 _ H19).
-        specialize (H22 _ H20).
-        destruct (oss1@[oidx0]) as [ost0|]; simpl in *; auto.
-        destruct H10; [left|right].
-        * destruct H10; split; [assumption|].
-          apply not_MsgExistsSig_MsgsNotExist; intros.
-          eapply MsgExistsSig_MsgsNotExist_false in H23; eauto.
-          dest_in.
-          all: try (destruct H25 as [[midx msg] [? ?]];
-                    exists (midx, msg); split; [|assumption]; inv H25;
-                    do 2 red in H24; do 2 red; simpl in *; congruence).
-        * destruct H10 as [[midx msg] [? ?]].
-          exists (midx, msg); split; [|assumption]; inv H23.
-          do 2 red in H10; do 2 red; simpl in *; congruence.
+          red in H18; dest.
+          specialize (H18 _ H20).
+          specialize (H23 _ H21).
+          specialize (H24 _ H22).
+          destruct (oss1@[oidx0]) as [ost0|]; simpl in *; auto.
+          destruct H15; [left|right].
+          { destruct H15; split; [assumption|].
+            apply not_MsgExistsSig_MsgsNotExist; intros.
+            eapply MsgExistsSig_MsgsNotExist_false in H25; eauto.
+            dest_in.
+            all: try (destruct H27 as [[midx msg] [? ?]];
+                      exists (midx, msg); split; [|assumption]; inv H27;
+                      do 2 red in H26; do 2 red; simpl in *; congruence).
+          }
+          { destruct H15 as [[midx msg] [? ?]].
+            exists (midx, msg); split; [|assumption]; inv H25.
+            do 2 red in H15; do 2 red; simpl in *; congruence.
+          }
   Qed.
   Local Hint Resolve InvExclMsgOutPred_good.
   
@@ -1442,7 +1479,7 @@ Section InvExcl.
       forall nmsgs,
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
-                                 mesiRqM; mesiDownRqI; mesiDownRsI;
+                                 mesiRqM; mesiDownRqI;
                                    mesiInvRq; mesiInvWRq; mesiInvRs;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
         ObjsInvalid inP oss (enqMsgs nmsgs msgs).
@@ -1522,7 +1559,7 @@ Section InvExcl.
       forall nmsgs,
         Forall (fun idm => In (msg_id (valOf idm))
                               [mesiRqS; mesiDownRqS;
-                                 mesiRqM; mesiDownRqI; mesiDownRsI;
+                                 mesiRqM; mesiDownRqI;
                                    mesiInvRq; mesiInvWRq; mesiInvRs;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
         InvExcl topo cifc {| bst_oss := oss;
@@ -3091,27 +3128,45 @@ Section InvExcl.
       { (* [liDownIImm] *)
         disc_rule_conds_ex.
         split.
-        { solve_AtomicInv_rqDown_rsUp.
-          solve_msg_pred_base.
+        { 
+          match goal with
+          | [Hr: Reachable _ _ ?st,
+                 Hs: steps _ _ ?st ?hst _,
+                     Ha: Atomic _ _ _ ?hst _ ?eouts,
+                         H: FirstMPI _ (?midx, ?msg) |- context [deqMP ?midx _] ] =>
+            do 2 red; simpl;
+              apply Forall_app;
+              [change midx with (idOf (midx, msg)) at 1;
+               eapply atomic_rqDown_rsUp_preserves_msg_out_preds;
+               try exact Hr; eauto; [red; auto|..]
+              |repeat constructor;
+               try (red; simpl; intros; intuition discriminate)]
+          end.
 
-          disc_MsgConflictsInv oidx0.
-          (** TODO: Ltac for discharging [InvExcl] *)
-          repeat
-            match goal with
-            | [H: InvExcl _ _ _ |- _] => specialize (H oidx0); simpl in H
-            | [He: _ <+- ?ov; _, Ho: ?ov = Some _ |- _] =>
-              rewrite Ho in He; simpl in He; dest; repeat ssplit
-            end.
+          { simpl in *; inv H14; mred.
+            simpl; intuition solve_mesi.
+          }
+          { simpl in *; inv H14; mred.
+            disc_MsgConflictsInv oidx0.
+            (** TODO: Ltac for discharging [InvExcl] *)
+            repeat
+              match goal with
+              | [H: InvExcl _ _ _ |- _] => specialize (H oidx0); simpl in H
+              | [He: _ <+- ?ov; _, Ho: ?ov = Some _ |- _] =>
+                rewrite Ho in He; simpl in He; dest; repeat ssplit
+              end.
 
-          eapply ObjsInvalid_downRsI; eauto.
-          { apply tl_In; assumption. }
-          { apply H24. }
+            eapply ObjsInvalid_downRsI; eauto.
+            { apply tl_In; assumption. }
+            { apply H24. }
+          }
         }
-        { solve_InvExcl_trivial.
-          eapply InvExcl_state_transition_sound; try eassumption.
-          { simpl; auto. }
-          { simpl; intuition. }
-          { reflexivity. }
+        { (* solve_InvExcl_trivial. *)
+          (* eapply InvExcl_state_transition_sound; try eassumption. *)
+          (* { simpl; auto. } *)
+          (* { simpl; intuition. } *)
+          (* { reflexivity. } *)
+          admit.
         }
       }
 
@@ -3491,11 +3546,12 @@ Section InvExcl.
         split.
         { disc_MsgConflictsInv oidx.
           solve_AtomicInv_rqDown_rsUp.
-          solve_msg_pred_base.
-          eapply ObjsInvalid_l1_singleton; eauto; mred.
-          left; split; simpl; [solve_mesi|].
-          apply NoCohMsgs_enq; [|solve_not_in].
-          eapply NoCohMsgs_rqDown_deq; eauto.
+          { simpl in *; inv H31; mred.
+            simpl; intuition solve_mesi.
+          }
+          { simpl in *; inv H31; mred.
+            eapply ObjsInvalid_l1_singleton; eauto; mred.
+          }
         }
         { case_InvExcl_me_others.
           { disc_InvExcl_this.
