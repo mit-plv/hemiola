@@ -675,7 +675,8 @@ Section System.
         rule.immu[1~>7]
         :accepts mesiDownRqI
         :me oidx
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiI)
+        :requires (fun ost orq mins =>
+                     mesiS <= ost#[status] /\ ost#[dir].(dir_st) = mesiI)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiI],
