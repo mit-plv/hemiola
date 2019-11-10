@@ -151,6 +151,7 @@ Section MsgConflicts.
           fst (sigOf rqDown) = downTo oidx ->
           fst (snd (sigOf rqDown)) = MRq ->
           InMPI msgs rqDown -> False) /\
+      (length (findQ (rsUpFrom oidx) msgs) >= 2 -> False) /\
       (forall rrsUp,
           fst (sigOf rrsUp) = rsUpFrom oidx ->
           valOf rsUp <> valOf rrsUp ->
@@ -361,6 +362,7 @@ Section MsgConflicts.
                (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
         * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
         * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
+      + eapply rsUp_in_length_two_false with (pobj0:= pobj); eauto.
       + intros; disc_rule_conds.
         eapply rsUp_in_rsUp_in_false
           with (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))

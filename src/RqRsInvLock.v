@@ -1244,6 +1244,24 @@ Section Corollaries.
       intuition congruence.
   Qed.
 
+  Corollary rsUp_in_length_two_false:
+    forall st,
+      Reachable (steps step_m) sys st ->
+      forall pobj,
+        In pobj (sys_objs sys) ->
+        forall oidx rsUp,
+          parentIdxOf dtr oidx = Some (obj_idx pobj) ->
+          rsEdgeUpFrom dtr oidx = Some rsUp ->
+          forall msgs,
+            st.(bst_msgs) = msgs ->
+            length (findQ rsUp msgs) >= 2 -> False.
+  Proof.
+    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    good_locking_get pobj.
+    eapply downLockInvORq_rsUp_length_two_False; eauto.
+  Qed.
+
   Corollary downLockFree_rqDown_in_false:
     forall st,
       Reachable (steps step_m) sys st ->
