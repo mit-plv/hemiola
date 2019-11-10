@@ -6,7 +6,8 @@ Require Import RqRsLangEx RqRsInvMsg RqRsCorrect.
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
 
-Require Import Ex.Mesi.MesiInv.
+Require Import Ex.Mesi.MesiInv Ex.Mesi.MesiInvB.
+Require Export Ex.Mesi.MesiInvInv0 Ex.Mesi.MesiInvInv1 Ex.Mesi.MesiInvInv2.
 
 Set Implicit Arguments.
 
@@ -1419,12 +1420,27 @@ Section InvExcl.
            parentIdxOf topo cidx = Some oidx /\
            In idx (subtreeIndsOf topo cidx)) oss msgs.
 
+  Definition InvRqPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
+             (msgs: MessagePool Msg): Prop :=
+    idOf eout = rqUpFrom oidx ->
+    (valOf eout).(msg_type) = MRq ->
+    (valOf eout).(msg_id) = mesiInvRq ->
+    ost <+- oss@[oidx]; ost#[dir].(dir_st) = mesiI.
+
+  Definition InvWRqPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
+             (msgs: MessagePool Msg): Prop :=
+    idOf eout = rqUpFrom oidx ->
+    (valOf eout).(msg_type) = MRq ->
+    (valOf eout).(msg_id) = mesiInvWRq ->
+    ost <+- oss@[oidx]; ost#[dir].(dir_st) = mesiI.
+
   Definition InvExclMsgOutPred: MsgOutPred :=
     fun eout oss orqs msgs =>
       forall oidx,
         GetRqPred oidx eout /\ SetRqPred oidx eout /\
         RsMPred oidx eout oss msgs /\ RsEPred oidx eout oss msgs /\
-        DownRsSPred oidx eout oss msgs /\ DownRsIPred oidx eout oss msgs.
+        DownRsSPred oidx eout oss msgs /\ DownRsIPred oidx eout oss msgs /\
+        InvRqPred oidx eout oss msgs /\ InvWRqPred oidx eout oss msgs.
 
   Ltac disc_bind_true :=
     repeat
@@ -1449,7 +1465,7 @@ Section InvExcl.
       do 2 (red; intros).
       specialize (H2 oidx0); dest.
       repeat ssplit;
-        try (red; intros; rewrite H9 in H1;
+        try (red; intros; rewrite H11 in H1;
              derive_child_chns oidx; disc_rule_conds_ex; fail).
 
     - red; intros; destruct H.
@@ -1458,56 +1474,56 @@ Section InvExcl.
       do 2 (red; intros).
       specialize (H4 oidx0); dest.
       repeat ssplit;
-        try (red; intros; rewrite H11 in H0;
+        try (red; intros; rewrite H13 in H0;
              derive_child_chns oidx; disc_rule_conds_ex; fail).
 
       + (* [DownRsSPred] *)
-        red; intros; rewrite H11 in H0.
+        red; intros; rewrite H13 in H0.
         derive_child_chns oidx; disc_rule_conds_ex.
         assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) oidx))
           by (eapply rqEdgeUpFrom_subtreeIndsOf_self_in;
               [eauto|congruence]).
-        pose proof (H5 _ H14); dest.
-        rewrite <-H15; apply H9; assumption.
+        pose proof (H5 _ H16); dest.
+        rewrite <-H17; apply H9; assumption.
 
       + (* [DownRsIPred] *)
-        red; intros; rewrite H11 in H0.
+        red; intros; rewrite H13 in H0.
         derive_child_chns oidx; disc_rule_conds_ex.
         split.
         * assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) oidx))
             by (eapply rqEdgeUpFrom_subtreeIndsOf_self_in;
                 [eauto|congruence]).
-          pose proof (H5 _ H14); dest.
-          rewrite <-H15; apply H10; assumption.
+          pose proof (H5 _ H16); dest.
+          rewrite <-H17; apply H10; assumption.
         * red; intros.
-          specialize (H10 H11 H12 H13); destruct H10 as [? ?].
-          specialize (H15 _ H14).
-          destruct H14 as [cidx [? ?]].
-          eapply subtreeIndsOf_child_SubList in H16; eauto.
-          specialize (H5 _ H16); dest.
+          specialize (H10 H13 H14 H15); destruct H10 as [? ?].
+          specialize (H17 _ H16).
+          destruct H16 as [cidx [? ?]].
+          eapply subtreeIndsOf_child_SubList in H18; eauto.
+          specialize (H5 _ H18); dest.
           rewrite <-H5.
           assert (exists pidx0, parentIdxOf (fst (tree2Topo tr 0)) oidx0 = Some pidx0).
           { eapply subtreeIndsOf_in_has_parent with (oidx:= oidx); eauto. }
-          destruct H19 as [pidx0 ?].
+          destruct H21 as [pidx0 ?].
           derive_child_chns oidx0.
         
-          red in H18; dest.
-          specialize (H18 _ H20).
-          specialize (H23 _ H21).
-          specialize (H24 _ H22).
+          red in H20; dest.
+          specialize (H20 _ H22).
+          specialize (H25 _ H23).
+          specialize (H26 _ H24).
           destruct (oss1@[oidx0]) as [ost0|]; simpl in *; auto.
-          destruct H15; [left|right].
-          { destruct H15; split; [assumption|].
+          destruct H17; [left|right].
+          { destruct H17; split; [assumption|].
             apply not_MsgExistsSig_MsgsNotExist; intros.
-            eapply MsgExistsSig_MsgsNotExist_false in H25; eauto.
+            eapply MsgExistsSig_MsgsNotExist_false in H27; eauto.
             dest_in.
-            all: try (destruct H27 as [[midx msg] [? ?]];
-                      exists (midx, msg); split; [|assumption]; inv H27;
-                      do 2 red in H26; do 2 red; simpl in *; congruence).
+            all: try (destruct H29 as [[midx msg] [? ?]];
+                      exists (midx, msg); split; [|assumption]; inv H29;
+                      do 2 red in H28; do 2 red; simpl in *; congruence).
           }
-          { destruct H15 as [[midx msg] [? ?]].
-            exists (midx, msg); split; [|assumption]; inv H25.
-            do 2 red in H15; do 2 red; simpl in *; congruence.
+          { destruct H17 as [[midx msg] [? ?]].
+            exists (midx, msg); split; [|assumption]; inv H27.
+            do 2 red in H17; do 2 red; simpl in *; congruence.
           }
   Qed.
   Local Hint Resolve InvExclMsgOutPred_good.
@@ -2133,10 +2149,24 @@ Section InvExcl.
       red; simpl; intros Ho; try specialize (H Ho)
     end.
 
+  Ltac solve_msg_pred_base :=
+    let Hm := fresh "H" in
+    red; simpl; intros Hm _ _; inv Hm; mred.
+
   Ltac solve_AtomicInv_init :=
     do 2 red; simpl;
     repeat constructor;
-    try (red; simpl; intros; intuition discriminate).
+    try (red; simpl; intros; intuition discriminate);
+    solve_msg_pred_base.
+
+  Ltac disc_L1DirI oidx :=
+    match goal with
+    | [Hl: InvL1DirI _ {| bst_oss := ?oss |},
+           Hoin: In oidx (c_l1_indices _),
+                 Host: ?oss@[oidx] = Some _ |- _] =>
+      red in Hl; rewrite Forall_forall in Hl;
+      specialize (Hl _ Hoin); simpl in Hl; rewrite Host in Hl
+    end.
 
   Lemma mesi_InvExcl_InvTrs_init:
     forall st1,
@@ -2149,7 +2179,7 @@ Section InvExcl.
           InvExclMsgOutPred
           ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
         InvExcl topo cifc st2.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     intros.
 
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
@@ -2161,6 +2191,7 @@ Section InvExcl.
                   (@mesi_RootChnInv_ok _ Htr) H) as Hpmcf.
     pose proof (@MesiUpLockInv_ok _ Htr _ H) as Hulinv.
     pose proof (@MesiDownLockInv_ok _ Htr _ H) as Hdlinv.
+    pose proof (@mesi_InvL1DirI_ok _ Htr _ H) as Hl1d.
 
     inv_step.
 
@@ -2427,13 +2458,17 @@ Section InvExcl.
 
       { (* [l1InvRqUpUp] *)
         disc_rule_conds_ex; split.
-        { solve_AtomicInv_init. }
+        { solve_AtomicInv_init.
+          disc_L1DirI oidx0; assumption.
+        }
         { solve_InvExcl_trivial. }
       }
       
       { (* [l1InvRqUpUpWB] *)
         disc_rule_conds_ex; split.
-        { solve_AtomicInv_init. }
+        { solve_AtomicInv_init.
+          disc_L1DirI oidx0; assumption.
+        }
         { solve_InvExcl_trivial. }
       }
       
@@ -2446,7 +2481,7 @@ Section InvExcl.
       Unshelve.
       all: assumption.
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Ltac disc_AtomicMsgOutsInv oidx :=
@@ -2473,6 +2508,14 @@ Section InvExcl.
     | [Hp: DownRsIPred _ (_, ?rmsg) _ _,
            Ht: msg_type ?rmsg = _,
                Hi: msg_id ?rmsg = mesiDownRsI |- _] =>
+      specialize (Hp eq_refl Ht Hi)
+    | [Hp: InvRqPred _ (_, ?rmsg) _ _,
+           Ht: msg_type ?rmsg = _,
+               Hi: msg_id ?rmsg = mesiInvRq |- _] =>
+      specialize (Hp eq_refl Ht Hi)
+    | [Hp: InvWRqPred _ (_, ?rmsg) _ _,
+           Ht: msg_type ?rmsg = _,
+               Hi: msg_id ?rmsg = mesiInvWRq |- _] =>
       specialize (Hp eq_refl Ht Hi)
     end.
 
@@ -2590,10 +2633,6 @@ Section InvExcl.
       subst; rewrite removeOnce_nil; simpl;
       repeat constructor; try (red; simpl; intros; intuition discriminate)
     end.
-
-  Ltac solve_msg_pred_base :=
-    let Hm := fresh "H" in
-    red; simpl; intros Hm _ _; inv Hm; mred.
 
   Ltac solve_DownRsSPred :=
     solve_msg_pred_base; mred;
@@ -3392,7 +3431,7 @@ Section InvExcl.
 
           derive_child_st rcidx.
           disc_MsgPred.
-          rewrite H51 in H48; simpl in H48; dest.
+          rewrite H53 in H48; simpl in H48; dest.
           preveal Hpmcf'; disc_MsgConflictsInv rcidx.
 
           disc_InvExcl_others.
@@ -3536,7 +3575,7 @@ Section InvExcl.
 
           derive_child_st rcidx.
           disc_MsgPred.
-          rewrite H50 in H47; simpl in H47; dest.
+          rewrite H52 in H47; simpl in H47; dest.
           preveal Hpmcf'; disc_MsgConflictsInv rcidx.
           
           disc_InvExcl_others.
@@ -3776,7 +3815,7 @@ Section InvExcl.
           specialize (H43 eq_refl H23 H14); dest.
           derive_child_st rcidx.
           disc_MsgConflictsInv rcidx.
-          rewrite H46 in H43; simpl in H43; dest.
+          rewrite H48 in H43; simpl in H43; dest.
           solve_ObjsInvalid_trivial.
 
           eapply ObjsInvalid_in_composed; eauto.
@@ -3792,8 +3831,8 @@ Section InvExcl.
           }
           { eapply ObjsInvalid_this_rsUps_deqMsgs_silent; eauto.
             intro Hx; destruct Hx as [ccidx [? ?]].
-            eapply subtreeIndsOf_child_SubList in H57; eauto.
-            apply parent_not_in_subtree in H57; auto.
+            eapply subtreeIndsOf_child_SubList in H59; eauto.
+            apply parent_not_in_subtree in H59; auto.
           }
         }
         { disc_InvExcl oidx.
@@ -3910,21 +3949,21 @@ Section InvExcl.
 
           derive_child_st cidx.
           disc_MsgPred.
-          rewrite H58 in H56; simpl in H56; dest.
+          rewrite H60 in H56; simpl in H56; dest.
           preveal Hpmcf'; disc_MsgConflictsInv cidx.
           
           disc_InvExcl_others.
           { disc_InvObjExcl0.
             change (deqMsgs (idsOf rins) (deqMP (rsUpFrom cidx) msgs))
-              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H72.
-            apply ObjExcl0_other_msg_id_deqMsgs_inv in H72; auto.
+              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H74.
+            apply ObjExcl0_other_msg_id_deqMsgs_inv in H74; auto.
             2: { constructor; simpl; [rewrite H50; discriminate|].
                  eapply Forall_impl; [|apply H51]; simpl; intros.
-                 rewrite H73; discriminate.
+                 rewrite H75; discriminate.
             }
-            specialize (H4 H72); dest.
+            specialize (H4 H74); dest.
 
-            clear H60.
+            clear H62.
             exfalso.
             case_idx_eq eidx cidx.
             { disc_rule_conds; disc_ObjExcl0; solve_mesi. }
@@ -3933,7 +3972,7 @@ Section InvExcl.
 
           { case_in_subtree cidx eidx;
               [|disc_InvObjOwned; dest;
-                clear H60; solve_by_ObjsInvalid_downRsI_false cidx].
+                clear H62; solve_by_ObjsInvalid_downRsI_false cidx].
             case_idx_eq eidx cidx;
               [disc_rule_conds; disc_InvObjOwned; congruence|].
             disc_InvObjOwned; dest; split.
@@ -4126,7 +4165,7 @@ Section InvExcl.
           specialize (H36 eq_refl H23 H14); dest.
           derive_child_st rcidx.
           disc_MsgConflictsInv rcidx.
-          rewrite H39 in H36; simpl in H36; dest.
+          rewrite H41 in H36; simpl in H36; dest.
           solve_ObjsInvalid_trivial.
 
           eapply ObjsInvalid_in_composed; eauto.
@@ -4142,8 +4181,8 @@ Section InvExcl.
           }
           { eapply ObjsInvalid_this_rsUps_deqMsgs_silent; eauto.
             intro Hx; destruct Hx as [ccidx [? ?]].
-            eapply subtreeIndsOf_child_SubList in H50; eauto.
-            apply parent_not_in_subtree in H50; auto.
+            eapply subtreeIndsOf_child_SubList in H52; eauto.
+            apply parent_not_in_subtree in H52; auto.
           }
         }
         { disc_InvExcl oidx.
@@ -4200,21 +4239,21 @@ Section InvExcl.
 
           derive_child_st cidx.
           disc_MsgPred.
-          rewrite H52 in H50; simpl in H50; dest.
+          rewrite H54 in H50; simpl in H50; dest.
           preveal Hpmcf'; disc_MsgConflictsInv cidx.
           
           disc_InvExcl_others.
           { disc_InvObjExcl0.
             change (deqMsgs (idsOf rins) (deqMP (rsUpFrom cidx) msgs))
-              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H66.
-            apply ObjExcl0_other_msg_id_deqMsgs_inv in H66; auto.
+              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H68.
+            apply ObjExcl0_other_msg_id_deqMsgs_inv in H68; auto.
             2: { constructor; simpl; [rewrite H43; discriminate|].
                  eapply Forall_impl; [|apply H44]; simpl; intros.
-                 rewrite H67; discriminate.
+                 rewrite H69; discriminate.
             }
-            specialize (H4 H66); dest.
+            specialize (H4 H68); dest.
 
-            clear H54.
+            clear H56.
             exfalso.
             case_idx_eq eidx cidx.
             { disc_rule_conds; disc_ObjExcl0; solve_mesi. }
@@ -4222,7 +4261,7 @@ Section InvExcl.
           }
           { case_in_subtree cidx eidx;
               [|disc_InvObjOwned; dest;
-                clear H54; solve_by_ObjsInvalid_downRsI_false cidx].
+                clear H56; solve_by_ObjsInvalid_downRsI_false cidx].
             case_idx_eq eidx cidx;
               [disc_rule_conds; disc_InvObjOwned; congruence|].
             disc_InvObjOwned; dest; split.
