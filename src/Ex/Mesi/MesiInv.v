@@ -249,6 +249,10 @@ Ltac derive_NoRsI_by_no_uplock oidx msgs :=
   assert (NoRsI oidx msgs)
   by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
 
+Ltac derive_NoRsI_by_rqUp oidx msgs :=
+  assert (NoRsI oidx msgs)
+  by (solve_NoRsI_base; solve_NoRsI_by_rqUp oidx).
+
 Ltac derive_NoRsI_by_rsDown oidx msgs :=
   assert (NoRsI oidx msgs)
   by (solve_NoRsI_base; solve_NoRsI_by_rsDown oidx).
