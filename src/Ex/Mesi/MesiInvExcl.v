@@ -64,6 +64,18 @@ Lemma getDir_removeSharer_sound:
     getDir oidx (removeSharer sidx dir) <= mesiS.
 Proof. dir_crush. Qed.
 
+Lemma getDir_removeSharer_neq:
+  forall oidx sidx dir,
+    getDir sidx dir = mesiS ->
+    oidx <> sidx ->
+    getDir oidx (removeSharer sidx dir) = getDir oidx dir.
+Proof.
+  dir_crush.
+  - exfalso; apply removeOnce_In_2 in i; auto.
+  - exfalso; elim n.
+    apply removeOnce_In_1; assumption.
+Qed.
+
 Lemma getDir_LastSharer_neq:
   forall oidx sidx dir,
     getDir sidx dir = mesiS ->
@@ -3357,7 +3369,21 @@ Section InvExcl.
           { disc_InvObjOwned; dest.
             split; [solve_ObjsInvalid_trivial|solve_MsgsP].
           }
-          { admit. }
+          { split_InvDirInv;
+              [|exfalso;
+                pose proof (getDir_removeSharer_sound cidx0 cidx os#[dir]);
+                simpl in *; solve_mesi].
+            case_idx_eq cidx0 cidx.
+            { disc_AtomicMsgOutsInv cidx.
+              disc_MsgPred.
+              eapply InvExcl_inv_ObjsInvalid; eauto.
+              preveal Hi; assumption.
+            }
+            { solve_ObjsInvalid_trivial.
+              simpl in H38; rewrite getDir_removeSharer_neq in H38 by assumption.
+              apply H34; assumption.
+            }
+          }
         }
         
         { disc_InvExcl_others.
@@ -3414,7 +3440,21 @@ Section InvExcl.
           { disc_InvObjOwned; dest.
             split; [solve_ObjsInvalid_trivial|solve_MsgsP].
           }
-          { admit. }
+          { split_InvDirInv;
+              [|exfalso;
+                pose proof (getDir_removeSharer_sound cidx0 cidx os#[dir]);
+                simpl in *; solve_mesi].
+            case_idx_eq cidx0 cidx.
+            { disc_AtomicMsgOutsInv cidx.
+              disc_MsgPred.
+              eapply InvExcl_inv_ObjsInvalid; eauto.
+              preveal Hi; assumption.
+            }
+            { solve_ObjsInvalid_trivial.
+              simpl in H38; rewrite getDir_removeSharer_neq in H38 by assumption.
+              apply H34; assumption.
+            }
+          }
         }
         
         { disc_InvExcl_others.
@@ -3450,7 +3490,7 @@ Section InvExcl.
          * If dirM(C) then ObjsInvalid(~ tr(C)). *)
         admit.
       }
-      
+
     }
 
     dest_in.
@@ -4167,15 +4207,15 @@ Section InvExcl.
           disc_InvExcl_others.
           { disc_InvObjExcl0.
             change (deqMsgs (idsOf rins) (deqMP (rsUpFrom cidx) msgs))
-              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H74.
-            apply ObjExcl0_other_msg_id_deqMsgs_inv in H74; auto.
+              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H73.
+            apply ObjExcl0_other_msg_id_deqMsgs_inv in H73; auto.
             2: { constructor; simpl; [rewrite H50; discriminate|].
                  eapply Forall_impl; [|apply H51]; simpl; intros.
-                 rewrite H75; discriminate.
+                 rewrite H74; discriminate.
             }
-            specialize (H4 H74); dest.
+            specialize (H4 H73); dest.
 
-            clear H62.
+            clear H67.
             exfalso.
             case_idx_eq eidx cidx.
             { disc_rule_conds; disc_ObjExcl0; solve_mesi. }
@@ -4184,9 +4224,9 @@ Section InvExcl.
 
           { case_in_subtree cidx eidx;
               [|disc_InvObjOwned; dest;
-                clear H62; solve_by_ObjsInvalid_downRsI_false cidx].
+                clear H67; solve_by_ObjsInvalid_downRsI_false cidx].
             case_idx_eq eidx cidx;
-              [disc_rule_conds; disc_InvObjOwned; congruence|].
+              [disc_rule_conds_ex; disc_InvObjOwned; congruence|].
             disc_InvObjOwned; dest; split.
             { assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) eidx)).
               { eapply inside_parent_in with (cidx:= cidx); eauto. }
@@ -4456,15 +4496,15 @@ Section InvExcl.
           disc_InvExcl_others.
           { disc_InvObjExcl0.
             change (deqMsgs (idsOf rins) (deqMP (rsUpFrom cidx) msgs))
-              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H68.
-            apply ObjExcl0_other_msg_id_deqMsgs_inv in H68; auto.
+              with (deqMsgs (idsOf ((rsUpFrom cidx, msg0) :: rins)) msgs) in H67.
+            apply ObjExcl0_other_msg_id_deqMsgs_inv in H67; auto.
             2: { constructor; simpl; [rewrite H43; discriminate|].
                  eapply Forall_impl; [|apply H44]; simpl; intros.
-                 rewrite H69; discriminate.
+                 rewrite H68; discriminate.
             }
-            specialize (H4 H68); dest.
+            specialize (H4 H67); dest.
 
-            clear H56.
+            clear H61.
             exfalso.
             case_idx_eq eidx cidx.
             { disc_rule_conds; disc_ObjExcl0; solve_mesi. }
@@ -4472,9 +4512,9 @@ Section InvExcl.
           }
           { case_in_subtree cidx eidx;
               [|disc_InvObjOwned; dest;
-                clear H56; solve_by_ObjsInvalid_downRsI_false cidx].
+                clear H61; solve_by_ObjsInvalid_downRsI_false cidx].
             case_idx_eq eidx cidx;
-              [disc_rule_conds; disc_InvObjOwned; congruence|].
+              [disc_rule_conds_ex; disc_InvObjOwned; congruence|].
             disc_InvObjOwned; dest; split.
             { assert (In oidx (subtreeIndsOf (fst (tree2Topo tr 0)) eidx)).
               { eapply inside_parent_in with (cidx:= cidx); eauto. }
@@ -4992,6 +5032,7 @@ Section InvExcl.
         }
       }
     }
+
     (* END_SKIP_PROOF_OFF *)
   Qed.
 
