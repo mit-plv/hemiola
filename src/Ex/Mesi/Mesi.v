@@ -12,11 +12,12 @@ Local Open Scope hvec.
 Local Open Scope fmap.
 
 (** Design choices:
- * - Multi-level (for arbitrary tree structure)
+ * - Hierarchical (for an arbitrary tree topology)
  * - MESI
  * - Directory (not snooping)
  * - Invalidate (not update)
  * - Write-back (not write-through)
+ * - Non-inclusive
  *)
 
 (* - Distinguishing I (Invalid) and NP (Not Present):
@@ -51,11 +52,9 @@ Local Open Scope fmap.
  *   but this optimization requires so many sophisticated corner cases, e.g.,
  *   request-from-the-exclusive-cache.
  *
- * - A further remark about write-back: there can be 4 (= 2*2) writeback types,
- *   based on whether 1) it is an invaliation or not and 2) it writes the dirty
- *   data back. (1) happens when a cache has data and its directory status is I.
- *   (2) happens when a cache has dirty data.
- *     Both a child and the parent should be able to distinguish four writeback
+ * - A further remark about write-back: there are two writeback types, based on
+ *   whether it writes the dirty data back or not.
+ *     Both a child and the parent should be able to distinguish these writeback
  *   types so they can do state transitions appropriately. For example, let's
  *   say an L1 cache previously had the E status and silently changed its status
  *   to M to make the cache line dirty. When this line is evicted, the parent
@@ -400,6 +399,7 @@ Section System.
     Variables (oidx cidx: IdxT).
 
     Section L1.
+      (** NOTE: [cidx] will be instantiated to [l1ExtOf oidx]. *)
 
       Definition l1GetSImm: Rule :=
         rule.immd[0~>0]
@@ -407,9 +407,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => mesiS <= ost#[status])
         :transition
-           (!|ost, _| --> (ost, {| miv_id := Spec.getRs;
-                                   miv_value := ost#[val]
-                                |})).
+           (!|ost, _| --> (ost, <| Spec.getRs; ost#[val] |>)).
 
       Definition l1GetSRqUpUp: Rule :=
         rule.rquu[0~>1]
@@ -418,8 +416,7 @@ Section System.
         :me oidx
         :requires (fun ost mins => ost#[status] <= mesiI)
         :transition
-           (!|ost, msg| --> {| miv_id := mesiRqS;
-                               miv_value := O |}).
+           (!|ost, msg| --> <| mesiRqS; O |>).
 
       Definition l1GetSRsDownDownS: Rule :=
         rule.rsdd[0~>2~>0]
@@ -430,8 +427,7 @@ Section System.
            (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
                      +#[status <- mesiS],
-                 {| miv_id := Spec.getRs;
-                    miv_value := msg_value min |})).
+                 <| Spec.getRs; msg_value min |>)).
 
       Definition l1GetSRsDownDownE: Rule :=
         rule.rsdd[0~>2~>1]
@@ -442,8 +438,7 @@ Section System.
            (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
                      +#[status <- mesiE],
-                 {| miv_id := Spec.getRs;
-                    miv_value := msg_value min |})).
+                 <| Spec.getRs; msg_value min |>)).
 
       Definition l1DownSImm: Rule :=
         rule.immu[0~>3]
@@ -453,8 +448,7 @@ Section System.
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiS],
-                             {| miv_id := mesiDownRsS;
-                                miv_value := ost#[val] |})).
+                             <| mesiDownRsS; ost#[val] |>)).
 
       Definition l1GetMImmE: Rule :=
         rule.immd[1~>0~>0]
@@ -466,8 +460,7 @@ Section System.
             --> (ost +#[owned <- true]
                      +#[status <- mesiM]
                      +#[val <- msg_value msg],
-                 {| miv_id := Spec.setRs;
-                    miv_value := O |})).
+                 <| Spec.setRs; O |>)).
 
       Definition l1GetMImmM: Rule :=
         rule.immd[1~>0~>1]
@@ -479,8 +472,7 @@ Section System.
         :transition
            (!|ost, msg|
             --> (ost +#[val <- msg_value msg],
-                 {| miv_id := Spec.setRs;
-                    miv_value := O |})).
+                 <| Spec.setRs; O |>)).
 
       Definition l1GetMRqUpUp: Rule :=
         rule.rquu[1~>1]
@@ -489,8 +481,7 @@ Section System.
         :me oidx
         :requires (fun ost mins => ost#[status] <= mesiS)
         :transition
-           (!|ost, msg| --> {| miv_id := mesiRqM;
-                               miv_value := O |}).
+           (!|ost, msg| --> <| mesiRqM; O |>).
 
       Definition l1GetMRsDownDown: Rule :=
         rule.rsdd[1~>2]
@@ -502,8 +493,7 @@ Section System.
             --> (ost +#[status <- mesiM]
                      +#[owned <- true]
                      +#[val <- msg_value rq],
-                 {| miv_id := Spec.setRs;
-                    miv_value := O |})).
+                 <| Spec.setRs; O |>)).
 
       Definition l1DownIImm: Rule :=
         rule.immu[1~>3]
@@ -513,8 +503,7 @@ Section System.
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiI],
-                             {| miv_id := mesiDownRsI;
-                                miv_value := O |})).
+                             <| mesiDownRsI; O |>)).
 
       Definition l1InvRqUpUp: Rule :=
         rule.rqu[2~>0]
@@ -523,7 +512,7 @@ Section System.
            (fun ost mins =>
               ost#[owned] = false /\ mesiNP < ost#[status] < mesiM)
         :transition
-           (ost --> {| miv_id := mesiInvRq; miv_value := O |}).
+           (ost --> <| mesiInvRq; O |>).
 
       (** NOTE: L1 writes back only when it is an owner, but here the
        * precondition allows to write back regardless of its ownership.
@@ -539,7 +528,7 @@ Section System.
         :requires
            (fun ost mins => mesiNP < ost#[status])
         :transition
-           (ost --> {| miv_id := mesiInvWRq; miv_value := ost#[val] |}).
+           (ost --> <| mesiInvWRq; ost#[val] |>).
 
       Definition l1InvRsDownDown: Rule :=
         rule.rsd[2~>2]
@@ -561,9 +550,7 @@ Section System.
               ost#[dir].(dir_st) <= mesiS /\ ost#[status] = mesiS)
         :transition
            (!|ost, _| --> (ost +#[dir <- addSharer cidx ost#[dir]],
-                           {| miv_id := mesiRsS;
-                              miv_value := ost#[val]
-                           |})).
+                           <| mesiRsS; ost#[val] |>)).
 
       (** NOTE: it is important to note that the "owned" bit is not changed. *)
       Definition liGetSImmME: Rule :=
@@ -576,9 +563,7 @@ Section System.
         :transition
            (!|ost, _| --> (ost +#[status <- mesiI]
                                +#[dir <- setDirE cidx],
-                           {| miv_id := mesiRsE;
-                              miv_value := ost#[val]
-                           |})).
+                           <| mesiRsE; ost#[val] |>)).
 
       Definition liGetSRqUpUp: Rule :=
         rule.rquu[0~>1~~cidx]
@@ -589,9 +574,7 @@ Section System.
            (fun ost mins =>
               ost#[owned] = false /\
               ost#[status] <= mesiI /\ ost#[dir].(dir_st) <= mesiS)
-        :transition
-           (!|ost, msg| --> {| miv_id := mesiRqS;
-                               miv_value := O |}).
+        :transition (!|ost, msg| --> <| mesiRqS; O |>).
 
       Definition liGetSRsDownDownS: Rule :=
         rule.rsdd[0~>2~>0]
@@ -604,8 +587,7 @@ Section System.
                      +#[owned <- false]
                      +#[status <- mesiS]
                      +#[dir <- addSharer (objIdxOf rsbTo) ost#[dir]],
-                 {| miv_id := mesiRsS;
-                    miv_value := msg_value min |})).
+                 <| mesiRsS; msg_value min |>)).
 
       Definition liGetSRsDownDownE: Rule :=
         rule.rsdd[0~>2~>1]
@@ -618,8 +600,7 @@ Section System.
                      +#[owned <- false]
                      +#[status <- mesiI]
                      +#[dir <- setDirE (objIdxOf rsbTo)],
-                 {| miv_id := mesiRsE;
-                    miv_value := msg_value min |})).
+                 <| mesiRsE; msg_value min |>)).
 
       Definition liGetSRqUpDownME: Rule :=
         rule.rqud[0~>3~~cidx]
@@ -632,8 +613,7 @@ Section System.
               ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
-                             {| miv_id := mesiDownRqS;
-                                miv_value := O |})).
+                             <| mesiDownRqS; O |>)).
 
       Definition liDownSRsUpDownME: Rule :=
         rule.rsudo[0~>4]
@@ -646,14 +626,12 @@ Section System.
                      +#[val <- msg_value (valOf idm)]
                      +#[status <- mesiS]
                      +#[dir <- setDirS [objIdxOf rsbTo; objIdxOf (idOf idm)]],
-                 {| miv_id := mesiRsS;
-                    miv_value := msg_value (valOf idm) |})).
+                 <| mesiRsS; msg_value (valOf idm) |>)).
 
       (** NOTE: 
        * 1) data should be sent along with [mesiDownRsS], even when the status
        * is S or E, since the parent might not have the up-to-date data (e.g., 
        * when the line is evicted).
-       *
        * 2) when the status is S, it should be the owner since it previously had
        * the status E or M.
        *)
@@ -667,8 +645,7 @@ Section System.
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiS],
-                             {| miv_id := mesiDownRsS;
-                                miv_value := ost#[val] |})).
+                             <| mesiDownRsS; ost#[val] |>)).
 
       Definition liDownSRqDownDownME: Rule :=
         rule.rqdd[0~>6]
@@ -680,8 +657,7 @@ Section System.
               ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
-                             {| miv_id := mesiDownRqS;
-                                miv_value := O |})).
+                             <| mesiDownRqS; O |>)).
 
       Definition liDownSRsUpUp: Rule :=
         rule.rsuuo[0~>7]
@@ -694,8 +670,7 @@ Section System.
                      +#[owned <- false]
                      +#[status <- mesiS]
                      +#[dir <- setDirS [objIdxOf (idOf idm)]],
-                 {| miv_id := mesiDownRsS;
-                    miv_value := msg_value (valOf idm) |})).
+                 <| mesiDownRsS; msg_value (valOf idm) |>)).
 
       Definition liGetMImm: Rule :=
         rule.immd[1~>0~>0~~cidx]
@@ -705,8 +680,7 @@ Section System.
         :transition
            (!|ost, msg| --> (ost +#[status <- mesiI]
                                  +#[dir <- setDirM cidx],
-                             {| miv_id := mesiRsM;
-                                miv_value := O |})).
+                             <| mesiRsM; O |>)).
 
       Definition liGetMRqUpUp: Rule :=
         rule.rquu[1~>1~~cidx]
@@ -718,8 +692,7 @@ Section System.
               ost#[owned] = false /\
               ost#[status] <= mesiS /\ ost#[dir].(dir_st) <= mesiS)
         :transition
-           (!|ost, msg| --> {| miv_id := mesiRqM;
-                               miv_value := O |}).
+           (!|ost, msg| --> <| mesiRqM; O |>).
 
       (** This is the case where it's possible to directly respond a [mesiRsM]
        * message back since there are no internal sharers to invalidate.
@@ -734,8 +707,7 @@ Section System.
             --> (ost +#[owned <- false]
                      +#[status <- mesiI]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
-                 {| miv_id := mesiRsM;
-                    miv_value := O |})).
+                 <| mesiRsM; O |>)).
 
       (** This is the case where internal invalidation is required 
        * due to sharers.
@@ -752,8 +724,7 @@ Section System.
         :transition
            (!|ost, rq| --> (ost +#[owned <- true],
                             (ost#[dir].(dir_sharers),
-                             {| miv_id := mesiDownRqI;
-                                miv_value := O |}))).
+                             <| mesiDownRqI; O |>))).
 
       Definition liGetMRqUpDownME: Rule :=
         rule.rqud[1~>4~~cidx]
@@ -765,9 +736,7 @@ Section System.
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
               ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)],
-                             {| miv_id := mesiDownRqI;
-                                miv_value := O |})).
+           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqI; O |>)).
 
       Definition liGetMRqUpDownS: Rule :=
         rule.rqud[1~>5~~cidx]
@@ -779,9 +748,7 @@ Section System.
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
               ost#[owned] = true /\ ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
         :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers),
-                             {| miv_id := mesiDownRqI;
-                                miv_value := O |})).
+           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqI; O |>)).
 
       Definition liDownIRsUpDown: Rule :=
         rule.rsud[1~>6]
@@ -793,8 +760,7 @@ Section System.
             --> (ost +#[owned <- false]
                      +#[status <- mesiI] 
                      +#[dir <- setDirM (objIdxOf rsbTo)],
-                 {| miv_id := mesiRsM;
-                    miv_value := O |})).
+                 <| mesiRsM; O |>)).
 
       Definition liDownIImm: Rule :=
         rule.immu[1~>7]
@@ -805,8 +771,7 @@ Section System.
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiI],
-                             {| miv_id := mesiDownRsI;
-                                miv_value := O |})).
+                             <| mesiDownRsI; O |>)).
 
       Definition liDownIRqDownDownDirS: Rule :=
         rule.rqdd[1~>9~>0]
@@ -817,9 +782,7 @@ Section System.
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
               ost#[dir].(dir_st) = mesiS)
         :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers),
-                             {| miv_id := mesiDownRqI;
-                                miv_value := O |})).
+           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqI; O |>)).
 
       Definition liDownIRqDownDownDirME: Rule :=
         rule.rqdd[1~>9~>1]
@@ -830,9 +793,7 @@ Section System.
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
               mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)],
-                             {| miv_id := mesiDownRqI;
-                                miv_value := O |})).
+           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqI; O |>)).
 
       Definition liDownIRsUpUp: Rule :=
         rule.rsuu[1~>10]
@@ -844,7 +805,7 @@ Section System.
             --> (ost +#[owned <- false]
                      +#[status <- mesiI]
                      +#[dir <- setDirI],
-                 {| miv_id := mesiDownRsI; miv_value := O |})).
+                 <| mesiDownRsI; O |>)).
 
       (** NOTE: Here having [ost#[owned] = false] as a precondition is very 
        * important since there's a chance that the object has a _dirty_ line
@@ -858,8 +819,7 @@ Section System.
               ost#[owned] = false /\
               mesiNP < ost#[status] < mesiM /\
               ost#[dir].(dir_st) = mesiI)
-        :transition
-           (ost --> {| miv_id := mesiInvRq; miv_value := O |}).
+        :transition (ost --> <| mesiInvRq; O |>).
 
       (** NOTE: ditto [l1InvRqUpUpWB]; a cache controller should not use this
        * rule when [owned = false]; it's meaningless.
@@ -872,8 +832,7 @@ Section System.
               ost#[dir].(dir_st) = mesiI /\
               ((ost#[owned] = true /\ mesiI < ost#[status]) \/
                (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE)))
-        :transition
-           (ost --> {| miv_id := mesiInvWRq; miv_value := ost#[val] |}).
+        :transition (ost --> <| mesiInvWRq; ost#[val] |>).
 
       Definition liInvRsDownDown: Rule :=
         rule.rsd[2~>2]
@@ -897,7 +856,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiI)
         :transition
-           (!|ost, _| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
+           (!|ost, _| --> (ost, <| mesiInvRs; O |>)).
 
       Definition liInvImmS0: Rule :=
         rule.immd[2~>6~>0~~cidx]
@@ -907,8 +866,7 @@ Section System.
            (fun ost orq mins =>
               getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
         :transition
-           (!|ost, _| --> (ost +#[dir <- setDirI],
-                           {| miv_id := mesiInvRs; miv_value := O |})).
+           (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>)).
 
       Definition liInvImmS1: Rule :=
         rule.immd[2~>6~>1~~cidx]
@@ -919,7 +877,7 @@ Section System.
               getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir])
         :transition
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
-                           {| miv_id := mesiInvRs; miv_value := O |})).
+                           <| mesiInvRs; O |>)).
 
       (** NOTE: using [mesiInvRq] to evict an E line implies the line is not
        * dirty, thus the parent can just use its data to upgrade to E.
@@ -932,7 +890,7 @@ Section System.
         :transition
            (!|ost, msg| --> (ost +#[status <- mesiE]
                                  +#[dir <- setDirI],
-                             {| miv_id := mesiInvRs; miv_value := O |})).
+                             <| mesiInvRs; O |>)).
 
       Definition liInvImmWBI: Rule :=
         rule.immd[2~>8~~cidx]
@@ -940,7 +898,7 @@ Section System.
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiI)
         :transition
-           (!|ost, _| --> (ost, {| miv_id := mesiInvRs; miv_value := O |})).
+           (!|ost, _| --> (ost, <| mesiInvRs; O |>)).
 
       (** NOTE: accepting [mesiInvWRq] implies that the requestor is the owner,
        * which also implies that actually the parent's directory status is
@@ -959,7 +917,7 @@ Section System.
               getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir])
         :transition
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
-                           {| miv_id := mesiInvRs; miv_value := O |})).
+                           <| mesiInvRs; O |>)).
 
       (** NOTE: using [mesiInvWRq] to evict an E line implies the line is dirty,
        * thus the parent should take the value and upgrade its status to M.
@@ -974,7 +932,7 @@ Section System.
                                  +#[owned <- true]
                                  +#[status <- mesiM]
                                  +#[val <- msg_value msg],
-                             {| miv_id := mesiInvRs; miv_value := O |})).
+                             <| mesiInvRs; O |>)).
 
     End Li.
 
