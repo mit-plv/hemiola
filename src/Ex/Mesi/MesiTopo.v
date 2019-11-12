@@ -16,12 +16,21 @@ Section System.
   Variable tr: tree.
   Hypothesis (Htr: tr <> Node nil).
 
-  Let topo := fst (tree2Topo tr 0).
-  Let cifc := snd (tree2Topo tr 0).
-  Let impl := impl Htr.
+  Local Notation topo := (fst (tree2Topo tr 0)).
+  Local Notation cifc := (snd (tree2Topo tr 0)).
+  Local Notation impl := (impl Htr).
 
-  Hint Extern 0 (TreeTopo topo) => apply tree2Topo_TreeTopo.
-  Hint Extern 0 (WfDTree topo) => apply tree2Topo_WfDTree.
+  Hint Extern 0 (TreeTopo _) => apply tree2Topo_TreeTopo.
+  Hint Extern 0 (WfDTree _) => apply tree2Topo_WfDTree.
+
+  Lemma mesi_indices:
+    map obj_idx (sys_objs impl) = c_li_indices cifc ++ c_l1_indices cifc.
+  Proof.
+    simpl; rewrite c_li_indices_head_rootOf at 2 by assumption.
+    simpl; f_equal.
+    rewrite map_app, map_map, map_id; simpl.
+    rewrite map_map, map_id; reflexivity.
+  Qed.
   
   Lemma mesi_GoodORqsInit: GoodORqsInit (initsOf impl).
   Proof.
@@ -83,98 +92,248 @@ Section System.
       match goal with
       | |- GoodRqRsRule _ _ _ _ =>
         match goal with
+        | |- context[immRule] =>
+          rule_immd; eapply immRule_ImmDownRule; eauto
         | |- context[immDownRule] =>
-          rule_immd; apply immDownRule_ImmDownRule; auto
+          rule_immd; eapply immDownRule_ImmDownRule; eauto
         | |- context[immUpRule] =>
-          rule_immu; apply immUpRule_ImmUpRule; auto
+          rule_immu; eapply immUpRule_ImmUpRule; eauto
         | |- context[rqUpUpRule] =>
-          rule_rquu; apply rqUpUpRule_RqFwdRule; auto
+          rule_rquu; eapply rqUpUpRule_RqFwdRule; eauto
         | |- context[rqUpUpRuleS] =>
-          rule_rqsu; apply rqUpUpRuleS_RqFwdRule; auto
+          rule_rqsu; eapply rqUpUpRuleS_RqFwdRule; eauto
         | |- context[rqUpDownRule] =>
-          rule_rqud; apply rqUpDownRule_RqFwdRule; auto
+          rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto
         | |- context[rqDownDownRule] =>
-          rule_rqdd; apply rqDownDownRule_RqFwdRule; auto
+          rule_rqdd; eapply rqDownDownRule_RqFwdRule; eauto
         | |- context[rsDownDownRule] =>
-          rule_rsdd; apply rsDownDownRule_RsBackRule; auto
+          rule_rsdd; eapply rsDownDownRule_RsBackRule; eauto
         | |- context[rsDownDownRuleS] =>
-          rule_rsds; apply rsDownDownRuleS_RsBackRule; auto
+          rule_rsds; eapply rsDownDownRuleS_RsBackRule; eauto
         | |- context[rsUpDownRule] =>
-          rule_rsu; apply rsUpDownRule_RsBackRule; auto
+          rule_rsu; eapply rsUpDownRule_RsBackRule; eauto
+        | |- context[rsUpDownRuleOne] =>
+          rule_rsu; eapply rsUpDownRuleOne_RsBackRule; eauto
         | |- context[rsUpUpRule] =>
-          rule_rsu; apply rsUpUpRule_RsBackRule; auto
+          rule_rsu; eapply rsUpUpRule_RsBackRule; eauto
+        | |- context[rsUpUpRuleOne] =>
+          rule_rsu; eapply rsUpUpRuleOne_RsBackRule; eauto
         | |- context[rsDownRqDownRule] =>
-          rule_rsrq; apply rsDownRqDownRule_RsDownRqDownRule; auto
+          rule_rsrq; eapply rsDownRqDownRule_RsDownRqDownRule; eauto
         end
       | |- parentIdxOf _ _ = Some _ =>
         apply subtreeChildrenIndsOf_parentIdxOf; auto; fail
+      | |- parentIdxOf _ (l1ExtOf _) = Some _ =>
+        apply tree2Topo_l1_ext_parent; auto; fail
       end.
 
   Lemma mesi_GoodRqRsSys: GoodRqRsSys topo impl.
   Proof.
     repeat
       match goal with
-      | [ |- GoodRqRsSys _ _] => red
-      | [ |- GoodRqRsObj _ _ _] => red
-      | [ |- Forall _ _] => simpl; constructor; simpl
+      | |- GoodRqRsSys _ _ => red
+      | |- GoodRqRsObj _ _ _ => red
+      | |- Forall _ _ => simpl; constructor; simpl
+      | |- Forall _ (_ ++ _) => apply Forall_app
       end.
 
-    - (* Main memory, the root *)
-      admit.
+    - (** Main memory *)
 
-    - apply Forall_forall; intros obj ?.
-      apply in_app_or in H; destruct H.
-
-      + (* Li caches *)
-        apply in_map_iff in H.
-        destruct H as [oidx [? ?]]; subst.
-        red; simpl.
-        repeat
-          match goal with
-          | |- Forall _ (_ ++ _) => apply Forall_app
-          | |- Forall _ (_ :: _) => constructor
-          | |- Forall _ nil => constructor
-          end; try (solve_GoodRqRsRule; fail).
-
-        1: {
-          apply Forall_forall; intros.
-          unfold liRulesFromChildren in H.
-          apply concat_In in H; dest.
-          apply in_map_iff in H; dest; subst.
-          dest_in; try (solve_GoodRqRsRule; fail).
-
-          1: {
-            rule_rquu.
-            solve_GoodRqRsRule.
-            apply c_li_indices_tail_has_parent in H0; [|assumption].
-            dest.
-            eapply rqUpUpRule_RqFwdRule; eauto.
-            apply subtreeChildrenIndsOf_parentIdxOf; auto.
-          }
-          2: {
-            rule_rquu.
-            solve_GoodRqRsRule.
-            apply c_li_indices_tail_has_parent in H0; [|assumption].
-            dest.
-            eapply rqUpUpRule_RqFwdRule; eauto.
-            apply subtreeChildrenIndsOf_parentIdxOf; auto.
-          }
-          all: admit.
-        }
-        all: admit.
-
-      + (* L1 caches *)
-        apply in_map_iff in H.
-        destruct H as [oidx [? ?]]; subst.
-        red; simpl.
-        repeat
-          match goal with
-          | |- Forall _ (_ ++ _) => apply Forall_app
-          | |- Forall _ (_ :: _) => constructor
-          | |- Forall _ nil => constructor
-          end; try (solve_GoodRqRsRule; fail).
+      assert (In (rootOf topo) (c_li_indices cifc)) as Hrin.
+      { rewrite c_li_indices_head_rootOf by assumption.
+        left; reflexivity.
+      }
       
-  Admitted.
+      simpl.
+      repeat
+        match goal with
+        | |- Forall _ (_ ++ _) => apply Forall_app
+        | |- Forall _ (_ :: _) => constructor
+        | |- Forall _ nil => constructor
+        end.
+      2-3: try (solve_GoodRqRsRule; fail).
+
+      apply Forall_forall; intros.
+      unfold liRulesFromChildren in H.
+      apply concat_In in H; dest.
+      apply in_map_iff in H; dest; subst.
+      dest_in.
+      all: try (solve_GoodRqRsRule; fail).
+
+      { (* [liGetSRqUpDownME] *)
+        apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
+        pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
+        rewrite <-mesi_indices in H.
+        
+        rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
+
+        (** [RqUpDownSound] *)
+        red; simpl; intros; dest.
+        apply subtreeChildrenIndsOf_parentIdxOf in H2; [|apply tree2Topo_WfDTree].
+        repeat ssplit; [discriminate| |intuition auto].
+        repeat constructor; try assumption.
+      }
+
+      { (* [liGetMRqUpDownME] *)
+        apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
+        pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
+        rewrite <-mesi_indices in H.
+        
+        rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
+
+        (** [RqUpDownSound] *)
+        red; simpl; intros; dest.
+        apply subtreeChildrenIndsOf_parentIdxOf in H2; [|apply tree2Topo_WfDTree].
+        repeat ssplit; [discriminate| |intuition auto].
+        repeat constructor; try assumption.
+      }
+
+      { (* [liGetMRqUpDownS] *)
+        apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
+        pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
+        rewrite <-mesi_indices in H.
+        
+        rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
+
+        (** [RqUpDownSound] *)
+        red; simpl; intros; dest.
+        repeat ssplit; [assumption| |intuition auto].
+        apply Forall_forall; intros.
+        apply H3 in H7.
+        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
+    - (** Li caches *)
+      apply Forall_forall; intros.
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; simpl.
+
+      (* pre-register a fact: an Li cache always has a parent *)
+      pose proof (c_li_l1_indices_has_parent
+                    Htr _ _ (in_or_app _ _ _ (or_introl H0))).
+      destruct H as [pidx ?].
+      
+      repeat
+        match goal with
+        | |- Forall _ (_ ++ _) => apply Forall_app
+        | |- Forall _ (_ :: _) => constructor
+        | |- Forall _ nil => constructor
+        end.
+      all: try (solve_GoodRqRsRule; fail).
+
+      1: {
+        apply Forall_forall; intros.
+        unfold liRulesFromChildren in H1.
+        apply concat_In in H1; dest.
+        apply in_map_iff in H1; dest; subst.
+        dest_in.
+        all: try (solve_GoodRqRsRule; fail).
+
+        { (* [liGetSRqUpDownME] *)
+          apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
+          pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
+          rewrite <-mesi_indices in H1.
+          
+          rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
+
+          (** [RqUpDownSound] *)
+          red; simpl; intros; dest.
+          apply subtreeChildrenIndsOf_parentIdxOf in H4; [|apply tree2Topo_WfDTree].
+          repeat ssplit; [discriminate| |intuition auto].
+          repeat constructor; try assumption.
+        }
+
+        { (* [liGetMRqUpDownME] *)
+          apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
+          pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
+          rewrite <-mesi_indices in H1.
+          
+          rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
+
+          (** [RqUpDownSound] *)
+          red; simpl; intros; dest.
+          apply subtreeChildrenIndsOf_parentIdxOf in H4; [|apply tree2Topo_WfDTree].
+          repeat ssplit; [discriminate| |intuition auto].
+          repeat constructor; try assumption.
+        }
+
+        { (* [liGetMRqUpDownS] *)
+          apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
+          pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
+          rewrite <-mesi_indices in H1.
+          
+          rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
+
+          (** [RqUpDownSound] *)
+          red; simpl; intros; dest.
+          repeat ssplit; [assumption| |intuition auto].
+          apply Forall_forall; intros.
+          apply H5 in H9.
+          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        }
+      }
+
+      { (* [liDownSRqDownDownME] *)
+        rule_rqdd.
+        eapply rqDownDownRule_RqFwdRule; eauto.
+
+        (** [RqDownDownSound] *)
+        red; simpl; intros; dest.
+        repeat ssplit; [discriminate|].
+        repeat constructor.
+        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
+      { (* [liGetMRsDownRqDownDirS] *)
+        rule_rsrq; eapply rsDownRqDownRule_RsDownRqDownRule; eauto.
+
+        (** [RsDownRqDownSound] *)
+        admit.
+      }
+
+      { (* [liDownIRqDownDownDirS] *)
+        rule_rqdd.
+        eapply rqDownDownRule_RqFwdRule; eauto.
+
+        (** [RqDownDownSound] *)
+        red; simpl; intros; dest.
+        repeat ssplit; [assumption|].
+        apply Forall_forall; intros.
+        apply H2 in H4.
+        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
+      { (* [liDownIRqDownDownDirME] *)
+        rule_rqdd.
+        eapply rqDownDownRule_RqFwdRule; eauto.
+
+        (** [RqDownDownSound] *)
+        red; simpl; intros; dest.
+        repeat ssplit; [discriminate|].
+        repeat constructor.
+        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
+    - (** L1 caches *)
+      apply Forall_forall; intros.
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; simpl.
+
+      (* pre-register a fact: an L1 cache always has a parent *)
+      pose proof (c_li_l1_indices_has_parent
+                    Htr _ _ (in_or_app _ _ _ (or_intror H0))).
+      destruct H as [pidx ?].
+      
+      repeat
+        match goal with
+        | |- Forall _ (_ ++ _) => apply Forall_app
+        | |- Forall _ (_ :: _) => constructor
+        | |- Forall _ nil => constructor
+        end.
+      all: try (solve_GoodRqRsRule; fail).
+  Qed.
 
   Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl.
   Proof.
