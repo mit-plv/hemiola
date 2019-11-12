@@ -38,6 +38,21 @@ Proof.
     all: simpl; rewrite map_id; apply SubList_refl.
 Qed.
 
+Lemma mesi_OstInds:
+  forall tr (Htr: tr <> Node nil),
+    InvReachable (impl Htr) step_m (OstInds tr 0).
+Proof.
+  intros.
+  apply tree2Topo_OstInds_inv_ok.
+  red; simpl; intros.
+  split.
+  - rewrite c_li_indices_head_rootOf in H by assumption.
+    inv H.
+    + rewrite implOStatesInit_value_root by assumption; eauto.
+    + rewrite implOStatesInit_value_non_root by assumption; eauto.
+  - rewrite implORqsInit_value by assumption; eauto.
+Qed.
+
 Lemma mesi_MsgConflictsInv:
   forall tr (Htr: tr <> Node nil)
          (Hrcinv: InvReachable (impl Htr) step_m (RootChnInv tr 0)),
@@ -88,14 +103,28 @@ Section Footprints.
         rmsg <+- rqid.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
         | mesiRqS: DownLockFromChild oidx rqid /\
-                   ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
+                   ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM /\
+                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                   rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
         | mesiRqM: DownLockFromChild oidx rqid /\
                    ost#[status] <= mesiS /\
-                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS) \/
-                    mesiS < ost#[dir].(dir_st))
+                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS /\
+                     SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+                     rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                    (mesiE <= ost#[dir].(dir_st) <= mesiM /\
+                     In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                     rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
         | mesiDownRqS: DownLockFromParent oidx rqid /\
-                       ost#[status] <= mesiI /\ mesiS < ost#[dir].(dir_st)
-        | mesiDownRqI: DownLockFromParent oidx rqid /\ mesiI < ost#[dir].(dir_st)
+                       ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM /\
+                       In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                       rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+        | mesiDownRqI: DownLockFromParent oidx rqid /\
+                       ((ost#[dir].(dir_st) = mesiS /\
+                         SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+                         rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                        (mesiE <= ost#[dir].(dir_st) <= mesiM /\
+                         In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                         rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
         end.
 
 End Footprints.
@@ -371,7 +400,7 @@ Section FootprintsOk.
         oss@[oidx] = Some post ->
         nost#[owned] = post#[owned] ->
         nost#[status] = post#[status] ->
-        nost#[dir].(dir_st) = post#[dir].(dir_st) ->
+        nost#[dir] = post#[dir] ->
         orqs@[oidx] = Some porq ->
         norq@[downRq] = porq@[downRq] ->
         MesiDownLockInv topo {| bst_oss := oss +[oidx <- nost];
@@ -448,7 +477,7 @@ Section FootprintsOk.
         
         dest_in; disc_rule_conds_ex.
         all: try (eapply MesiDownLockInv_update_None; eauto; fail).
-        all: derive_child_chns cidx; derive_child_idx_in cidx; solve_MesiDownLockInv.
+        all: try (derive_child_chns cidx; derive_child_idx_in cidx; solve_MesiDownLockInv; fail).
       }
 
       dest_in; disc_rule_conds_ex.
@@ -532,6 +561,24 @@ Section FootprintsOk.
 
 End FootprintsOk.
 
+Ltac disc_MesiUpLockInv oidx :=
+  match goal with
+  | [Hdl: MesiUpLockInv _ |- _] =>
+    specialize (Hdl oidx); simpl in Hdl;
+    repeat
+      match type of Hdl with
+      | _ <+- ?ov; _ =>
+        match goal with
+        | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
+        end
+      end;
+    repeat
+      match goal with
+      | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
+      end;
+    simpl in Hdl; dest
+  end.
+
 Ltac disc_MesiDownLockInv oidx Hinv :=
   specialize (Hinv oidx); simpl in Hinv;
   disc_rule_conds_ex;
@@ -598,7 +645,7 @@ Section RootChnInv.
       | [H: downTo _ = downTo _ |- _] => inv H
 
       | [H: parentIdxOf _ ?oidx = Some ?oidx |- _] =>
-        exfalso; eapply parentIdxOf_not_eq; eauto
+        exfalso; eapply parentIdxOf_not_eq in H; eauto
       | [H1: ?oidx = rootOf _, H2: parentIdxOf _ ?oidx = Some _ |- _] => rewrite H1 in H2
       | [H: parentIdxOf _ (rootOf _) = Some ?idx |- _] =>
         eapply parentIdxOf_child_not_root with (pidx:= idx); eauto

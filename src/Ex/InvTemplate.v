@@ -40,7 +40,14 @@ Section InObjInds.
       _ <+- (bst_oss st)@[oidx];
         In oidx (c_li_indices cifc ++ c_l1_indices cifc).
 
-  Hypothesis (Hinit: InObjInds (initsOf sys))
+  Definition OstInds (st: MState) :=
+    forall oidx,
+      In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      (exists ost, (bst_oss st)@[oidx] = Some ost) /\
+      (exists orq, (bst_orqs st)@[oidx] = Some orq).
+
+  Hypothesis (Hinit1: InObjInds (initsOf sys))
+             (Hinit2: OstInds (initsOf sys))
              (Hinds: SubList (map obj_idx (sys_objs sys))
                              (c_li_indices cifc ++ c_l1_indices cifc)).
 
@@ -60,8 +67,25 @@ Section InObjInds.
     InvReachable sys step_m InObjInds.
   Proof.
     apply inv_reachable.
-    - apply Hinit.
+    - apply Hinit1.
     - apply tree2Topo_InObjInds_step.
+  Qed.
+
+  Lemma tree2Topo_OstInds_step:
+    InvStep sys step_m OstInds.
+  Proof.
+    red; intros.
+    inv H2; [assumption..|].
+    red; simpl; intros.
+    mred; eauto.
+  Qed.
+  
+  Lemma tree2Topo_OstInds_inv_ok:
+    InvReachable sys step_m OstInds.
+  Proof.
+    apply inv_reachable.
+    - apply Hinit2.
+    - apply tree2Topo_OstInds_step.
   Qed.
 
 End InObjInds.
@@ -105,12 +129,11 @@ Section MsgConflicts.
           fst (snd (sigOf rsDown)) = MRs ->
           InMPI msgs rsDown -> False).
 
-  Definition RqDownConflicts (oidx: IdxT) (porq: ORq Msg) (msgs: MessagePool Msg) :=
+  Definition RqDownConflicts (oidx: IdxT) (msgs: MessagePool Msg) :=
     forall rqDown,
       fst (sigOf rqDown) = downTo oidx ->
       fst (snd (sigOf rqDown)) = MRq ->
       InMPI msgs rqDown ->
-      (porq@[downRq] <> None) /\
       (forall rrqDown,
           fst (sigOf rrqDown) = downTo oidx ->
           fst (snd (sigOf rrqDown)) = MRq ->
@@ -120,19 +143,28 @@ Section MsgConflicts.
           fst (sigOf rsUp) = rsUpFrom oidx ->
           InMPI msgs rsUp -> False).
 
-  Definition RsUpConflicts (oidx: IdxT) (porq: ORq Msg) (msgs: MessagePool Msg) :=
+  Definition RsUpConflicts (oidx: IdxT) (msgs: MessagePool Msg) :=
     forall rsUp,
       fst (sigOf rsUp) = rsUpFrom oidx ->
       InMPI msgs rsUp ->
-      (porq@[downRq] <> None) /\
       (forall rqDown,
           fst (sigOf rqDown) = downTo oidx ->
           fst (snd (sigOf rqDown)) = MRq ->
           InMPI msgs rqDown -> False) /\
+      (length (findQ (rsUpFrom oidx) msgs) >= 2 -> False) /\
       (forall rrsUp,
           fst (sigOf rrsUp) = rsUpFrom oidx ->
           valOf rsUp <> valOf rrsUp ->
           InMPI msgs rrsUp -> False).
+
+  Definition ParentRqDownRsUpLocked (oidx: IdxT) (porq: ORq Msg) (msgs: MessagePool Msg) :=
+    (forall rqDown,
+        fst (sigOf rqDown) = downTo oidx ->
+        fst (snd (sigOf rqDown)) = MRq ->
+        InMPI msgs rqDown -> porq@[downRq] <> None) /\
+    (forall rsUp,
+        fst (sigOf rsUp) = rsUpFrom oidx ->
+        InMPI msgs rsUp -> porq@[downRq] <> None).
 
   Definition ParentLockConflicts (orqs: ORqs Msg) (oidx pidx: IdxT) (msgs: MessagePool Msg) :=
     OLockedTo orqs pidx (Some (downTo oidx)) ->
@@ -182,14 +214,15 @@ Section MsgConflicts.
       (bst_orqs st)@[oidx] = Some orq ->
       RsDownConflicts oidx orq (bst_msgs st) /\
       RqUpConflicts oidx orq (bst_msgs st) /\
+      RqDownConflicts oidx (bst_msgs st) /\
+      RsUpConflicts oidx (bst_msgs st) /\
       (forall pidx,
           parentIdxOf topo oidx = Some pidx ->
           ParentLockConflicts (bst_orqs st) oidx pidx (bst_msgs st) /\
           (forall porq,
               (bst_orqs st)@[pidx] = Some porq ->
               ParentLockFreeConflicts oidx orq porq /\
-              RqDownConflicts oidx porq (bst_msgs st) /\
-              RsUpConflicts oidx porq (bst_msgs st))).
+              ParentRqDownRsUpLocked oidx porq (bst_msgs st))).
 
   Lemma tree2Topo_MsgConflicts_inv_ok:
     forall (Hrcinv: InvReachable sys step_m RootChnInv),
@@ -211,6 +244,14 @@ Section MsgConflicts.
       { red; intros; exfalso.
         eapply Hrcinv; eauto.
         right; left; assumption.
+      }
+      { intros.
+        red; intros; exfalso.
+        eapply Hrcinv; eauto; intuition idtac.
+      }
+      { intros.
+        red; intros; exfalso.
+        eapply Hrcinv; eauto; intuition idtac.
       }
       { intros.
         exfalso; apply parentIdxOf_child_not_root in H1; auto.
@@ -300,6 +341,35 @@ Section MsgConflicts.
         * unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
         * unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
 
+    - red; intros; repeat ssplit.
+      + intros; disc_rule_conds.
+        eapply rqDown_in_rqDown_in_false
+          with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
+               (rqdm1:= valOf rqDown) (rqdm2:= valOf rrqDown); eauto.
+        * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
+        * destruct rrqDown as [rrqDown rqdm]; simpl in *; subst; assumption.
+      + intros; disc_rule_conds.
+        eapply rqDown_in_rsUp_in_false
+          with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
+               (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
+        * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
+        * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
+
+    - red; intros; repeat ssplit.
+      + intros; disc_rule_conds.
+        eapply rqDown_in_rsUp_in_false
+          with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
+               (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
+        * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
+        * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
+      + eapply rsUp_in_length_two_false with (pobj0:= pobj); eauto.
+      + intros; disc_rule_conds.
+        eapply rsUp_in_rsUp_in_false
+          with (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
+               (rsum1:= valOf rsUp) (rsum2:= valOf rrsUp); eauto.
+        * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
+        * destruct rrsUp as [rrsUp rsum]; simpl in *; subst. assumption.
+          
     - intros; split.
       + red; intros; repeat ssplit.
         * intros.
@@ -321,50 +391,19 @@ Section MsgConflicts.
           eapply downLockFree_child_lock_to_false
             with (pobj0:= pobj) (porq0:= porq); eauto.
           
-        * red; intros.
-          disc_rule_conds.
-          repeat ssplit; intros.
+        * red; repeat ssplit; intros; disc_rule_conds.
           { intro Hx.
             eapply downLockFree_rqDown_in_false
               with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
                    (rqdm:= valOf rqDown); eauto.
             destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
           }
-          { eapply rqDown_in_rqDown_in_false
-              with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-                   (rqdm1:= valOf rqDown) (rqdm2:= valOf rrqDown); eauto.
-            { destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption. }
-            { destruct rrqDown as [rrqDown rqdm]; simpl in *; subst; assumption. }
-          }
-          { eapply rqDown_in_rsUp_in_false
-              with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-                   (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
-            { destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption. }
-            { destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption. }
-          }
-
-        * red; intros.
-          disc_rule_conds.
-          repeat ssplit; intros.
           { intro Hx.
             eapply downLockFree_rsUp_in_false
               with (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
                    (rsum:= valOf rsUp); eauto.
             destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
           }
-          { eapply rqDown_in_rsUp_in_false
-              with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-                   (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
-            { destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption. }
-            { destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption. }
-          }
-          { eapply rsUp_in_rsUp_in_false
-              with (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
-                   (rsum1:= valOf rsUp) (rsum2:= valOf rrsUp); eauto.
-            { destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption. }
-            { destruct rrsUp as [rrsUp rsum]; simpl in *; subst. assumption. }
-          }
-
   Qed.
 
 End MsgConflicts.
@@ -398,7 +437,7 @@ Ltac disc_MsgConflictsInv oidx :=
       specialize (Hmcfp _ Hp); destruct Hmcfp
     | [Ho: ?orqs@[?pidx] = Some _,
            Hmcfp: forall _, ?orqs@[?pidx] = Some _ -> _ /\ _ |- _] =>
-      specialize (Hmcfp _ Ho); destruct Hmcfp as [? [? ?]]
+      specialize (Hmcfp _ Ho); destruct Hmcfp as [? ?]
     end.
 
 Section Facts.

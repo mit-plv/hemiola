@@ -304,7 +304,7 @@ Section InvNotOwned.
         derive_MesiDownLockInv oidx.
         simpl_InvNotOwned; solve_InvNotOwned.
         derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H18))).
+        specialize (Hwd (or_intror (or_introl H20))).
         simpl in Hwd; solve_mesi.
       }
       { disc_rule_conds_ex.
@@ -347,7 +347,7 @@ Section InvNotOwned.
       { derive_MesiDownLockInv oidx.
         simpl_InvNotOwned; solve_InvNotOwned.
         derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H24))).
+        specialize (Hwd (or_intror (or_introl H26))).
         simpl in Hwd; solve_mesi.
       }
       { eapply InvNotOwned_enqMP_rq_valid; eauto.
@@ -433,8 +433,7 @@ Lemma ObjDirE_ObjDirME:
 Proof.
   intros.
   red in H; dest.
-  red; repeat split; try assumption.
-  solve_mesi.
+  red; repeat split; try assumption; solve_mesi.
 Qed.
 
 Section InvDirE.
@@ -657,18 +656,6 @@ Section InvDirE.
                                       |solve_deqMsgs_NoDup
                                       |solve_deqMsgs_msg_id]
              |assumption]).
-
-  Ltac disc_bind_true :=
-    repeat
-      match goal with
-      | |- _ <+- ?ov; _ =>
-        first [match goal with
-               | [H: ov = _ |- _] => rewrite H in *; simpl in *
-               end
-              |let Hov := fresh "H" in
-               let v := fresh "v" in
-               destruct ov as [v|] eqn:Hov; simpl in *; [|auto]]
-      end.
 
   Ltac disc_ObjDirE :=
     match goal with
@@ -1478,23 +1465,23 @@ Section InvNWB.
 
     specialize (Hmcf _ Hoin eq_refl); dest.
     intros.
-    specialize (Hwd (or_intror (or_introl H5))).
-    specialize (Hno H5).
-    specialize (Hde H4).
+    specialize (Hwd (or_intror (or_introl H7))).
+    specialize (Hno H7).
+    specialize (Hde H6).
     destruct Hde as [_ Hde].
-    specialize (Hdme (ObjDirE_ObjDirME H4)).
+    specialize (Hdme (ObjDirE_ObjDirME H6)).
 
     assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
-    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+    { destruct H7 as [[rqUp rqm] ?]; dest; inv H8.
       apply not_MsgExistsSig_MsgsNotExist.
       intros; dest_in.
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
     }
 

@@ -94,12 +94,11 @@ Section System.
 
     Import CaseNotations.
     Definition getDir (oidx: IdxT) (dir: DirT): MESI :=
-      match case dir.(dir_st) on eq_nat_dec default mesiNP with
+      match case dir.(dir_st) on eq_nat_dec default mesiI with
       | mesiM: if idx_dec oidx dir.(dir_excl) then mesiM else mesiI
       | mesiE: if idx_dec oidx dir.(dir_excl) then mesiE else mesiI
       | mesiS: if in_dec idx_dec oidx dir.(dir_sharers)
                then mesiS else mesiI
-      | mesiI: mesiI
       end.
 
     Definition setDirM (oidx: IdxT) :=
@@ -125,7 +124,9 @@ Section System.
     Definition addSharer (oidx: IdxT) (dir: DirT): DirT :=
       {| dir_st := mesiS;
          dir_excl := dir.(dir_excl);
-         dir_sharers := oidx :: dir.(dir_sharers) |}.
+         dir_sharers :=
+           if eq_nat_dec dir.(dir_st) mesiS
+           then oidx :: dir.(dir_sharers) else [oidx] |}.
 
     Definition removeSharer (oidx: IdxT) (dir: DirT): DirT :=
       {| dir_st := mesiS;
@@ -140,6 +141,19 @@ Section System.
 
     Section Facts.
 
+      Ltac dir_crush :=
+        cbv [getDir addSharer removeSharer
+                    setDirI setDirS setDirE setDirM];
+        simpl; intros;
+        repeat find_if_inside;
+        repeat
+          (try match goal with
+               | [H: ~ In ?oidx (?oidx :: _) |- _] => elim H; left; reflexivity
+               | [Ht: In ?oidx ?l, Hn: ~ In ?oidx (_ :: ?l) |- _] => elim Hn; right; assumption
+               | [H: In _ (_ :: _) |- _] => inv H
+               | [H: _ |- _] => exfalso; auto; fail
+               end; try subst; try reflexivity; try assumption; try solve_mesi).
+
       Lemma getDir_M_imp:
         forall oidx dir,
           getDir oidx dir = mesiM ->
@@ -148,7 +162,7 @@ Section System.
         unfold getDir, caseDec; intros.
         find_if_inside; [find_if_inside; [auto|discriminate]|].
         repeat (find_if_inside; [find_if_inside; discriminate|]).
-        find_if_inside; discriminate.
+        discriminate.
       Qed.
 
       Lemma getDir_E_imp:
@@ -160,20 +174,20 @@ Section System.
         find_if_inside; [find_if_inside; discriminate|].
         find_if_inside; [find_if_inside; [auto|discriminate]|].
         find_if_inside; [find_if_inside; discriminate|].
-        find_if_inside; discriminate.
+        discriminate.
       Qed.
 
       Lemma getDir_ME_imp:
         forall oidx dir,
           mesiE <= getDir oidx dir ->
-          mesiE <= dir.(dir_st) /\ dir.(dir_excl) = oidx.
+          mesiE <= dir.(dir_st) <= mesiM /\ dir.(dir_excl) = oidx.
       Proof.
         unfold getDir, caseDec; intros.
         do 2 (find_if_inside; [find_if_inside;
-                               [split; auto; rewrite e; assumption
+                               [repeat split; [..|auto]; rewrite e; solve_mesi
                                |solve_mesi]|]).
         find_if_inside; [find_if_inside; solve_mesi|].
-        find_if_inside; solve_mesi.
+        solve_mesi.
       Qed.
 
       Lemma getDir_S_imp:
@@ -184,8 +198,120 @@ Section System.
         unfold getDir, caseDec; intros.
         repeat (find_if_inside; [find_if_inside; discriminate|]).
         find_if_inside; [find_if_inside; [auto|discriminate]|].
-        find_if_inside; discriminate.
+        discriminate.
       Qed.
+
+      Lemma getDir_addSharer_spec:
+        forall dir,
+          dir.(dir_st) <= mesiS ->
+          forall oidx sidx,
+            getDir oidx (addSharer sidx dir) =
+            if idx_dec sidx oidx
+            then mesiS else getDir oidx dir.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_removeSharer_sound:
+        forall oidx sidx dir,
+          getDir oidx (removeSharer sidx dir) <= mesiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_removeSharer_neq:
+        forall oidx sidx dir,
+          getDir sidx dir = mesiS ->
+          oidx <> sidx ->
+          getDir oidx (removeSharer sidx dir) = getDir oidx dir.
+      Proof.
+        dir_crush.
+        - exfalso; apply removeOnce_In_2 in i; auto.
+        - exfalso; elim n.
+          apply removeOnce_In_1; assumption.
+      Qed.
+
+      Lemma getDir_LastSharer_neq:
+        forall oidx sidx dir,
+          getDir sidx dir = mesiS ->
+          LastSharer dir sidx -> oidx <> sidx ->
+          getDir oidx dir = mesiI.
+      Proof.
+        unfold LastSharer; dir_crush.
+        rewrite H0 in *; dest_in; exfalso; auto.
+      Qed.
+
+      Lemma getDir_S_sharer:
+        forall dir,
+          dir.(dir_st) = mesiS ->
+          forall oidx,
+            In oidx dir.(dir_sharers) ->
+            getDir oidx dir = mesiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_S_non_sharer:
+        forall dir,
+          dir.(dir_st) = mesiS ->
+          forall oidx,
+            ~ In oidx dir.(dir_sharers) ->
+            getDir oidx dir = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_st_I:
+        forall dir,
+          dir.(dir_st) = mesiI ->
+          forall oidx, getDir oidx dir = mesiI.
+      Proof. dir_crush. Qed.
+      
+      Lemma getDir_st_sound:
+        forall dir oidx,
+          mesiS <= getDir oidx dir ->
+          getDir oidx dir <= dir.(dir_st).
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirI:
+        forall oidx, getDir oidx setDirI = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_I_imp:
+        forall oidx shs, getDir oidx (setDirS shs) = mesiI -> ~ In oidx shs.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_S_imp:
+        forall oidx shs, getDir oidx (setDirS shs) = mesiS -> In oidx shs.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_sound:
+        forall oidx shs, getDir oidx (setDirS shs) <= mesiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirE_eq:
+        forall oidx, getDir oidx (setDirE oidx) = mesiE.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirE_neq:
+        forall oidx eidx, eidx <> oidx -> getDir oidx (setDirE eidx) = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirM_eq:
+        forall oidx, getDir oidx (setDirM oidx) = mesiM.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirM_neq:
+        forall oidx eidx, eidx <> oidx -> getDir oidx (setDirM eidx) = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_excl_eq:
+        forall dir eidx,
+          eidx = dir.(dir_excl) ->
+          mesiE <= dir.(dir_st) <= mesiM ->
+          getDir eidx dir = dir.(dir_st).
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_excl_neq:
+        forall dir eidx,
+          eidx = dir.(dir_excl) ->
+          mesiE <= dir.(dir_st) <= mesiM ->
+          forall oidx,
+            oidx <> eidx ->
+            getDir oidx dir = mesiI.
+      Proof. dir_crush. Qed.
 
     End Facts.
     
@@ -259,6 +385,16 @@ Section System.
 
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
+
+  Lemma implORqsInit_value:
+    forall oidx,
+      In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
+      implORqsInit@[oidx] = Some [].
+  Proof.
+    intros; unfold implORqsInit; fold cifc.
+    induction (c_li_indices cifc ++ c_l1_indices cifc); [dest_in|].
+    simpl; icase oidx; mred.
+  Qed.
 
   Section Rules.
     Variables (oidx cidx: IdxT).
@@ -467,7 +603,7 @@ Section System.
             --> (ost +#[val <- msg_value min]
                      +#[owned <- false]
                      +#[status <- mesiS]
-                     +#[dir <- setDirS [objIdxOf rsbTo]],
+                     +#[dir <- addSharer (objIdxOf rsbTo) ost#[dir]],
                  {| miv_id := mesiRsS;
                     miv_value := msg_value min |})).
 
@@ -493,7 +629,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -503,9 +639,7 @@ Section System.
         rule.rsudo[0~>4]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires
-           (fun ost orq mins =>
-              FirstMsg ost orq mins /\ mesiE <= ost#[dir].(dir_st))
+        :requires (fun ost orq mins => FirstMsg ost orq mins)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
@@ -528,7 +662,8 @@ Section System.
         :accepts mesiDownRqS
         :me oidx
         :requires
-           (fun ost orq mins => mesiS <= ost#[status])
+           (fun ost orq mins =>
+              mesiS <= ost#[status] /\ ost#[dir].(dir_st) <= mesiS)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiS],
@@ -542,7 +677,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqS;
@@ -628,7 +763,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st))
+              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;
@@ -665,7 +800,8 @@ Section System.
         rule.immu[1~>7]
         :accepts mesiDownRqI
         :me oidx
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiI)
+        :requires (fun ost orq mins =>
+                     mesiS <= ost#[status] /\ ost#[dir].(dir_st) = mesiI)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- mesiI],
@@ -692,7 +828,7 @@ Section System.
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              mesiE <= ost#[dir].(dir_st))
+              mesiE <= ost#[dir].(dir_st) <= mesiM)
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)],
                              {| miv_id := mesiDownRqI;

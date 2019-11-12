@@ -1494,6 +1494,43 @@ Section Facts.
       eapply parentIdxOf_asym; eassumption.
     Qed.
 
+    Lemma root_not_in_subtree:
+      forall oidx,
+        oidx <> rootOf dtr ->
+        In oidx (indsOf dtr) ->
+        ~ In (rootOf dtr) (subtreeIndsOf dtr oidx).
+    Proof.
+      intros; intro Hx.
+      erewrite <-subtreeIndsOf_indsOf in H0; [|eassumption|apply Subtree_refl].
+      eapply subtreeIndsOf_In_each_other_eq in Hx; eauto.
+    Qed.
+
+    Lemma subtreeIndsOf_in_has_parent:
+      forall cidx oidx pidx,
+        parentIdxOf dtr oidx = Some pidx ->
+        In cidx (subtreeIndsOf dtr oidx) ->
+        exists cpidx, parentIdxOf dtr cidx = Some cpidx.
+    Proof.
+      intros.
+      assert (parentChnsOf cidx dtr <> None).
+      { apply indsOf_parentChnsOf_not_None.
+        { apply parentIdxOf_child_indsOf in H.
+          erewrite <-subtreeIndsOf_indsOf in H; [|eassumption|apply Subtree_refl].
+          apply subtreeIndsOf_SubList in H; auto.
+          erewrite <-subtreeIndsOf_indsOf; [|eassumption|apply Subtree_refl].
+          auto.
+        }
+        { intro Hx; subst.
+          eapply root_not_in_subtree; eauto;
+            [|eapply parentIdxOf_child_indsOf; eauto].
+          intro Hx; subst.
+          apply parentIdxOf_child_not_root in H; auto.
+        }
+      }
+      destruct (parentChnsOf cidx dtr) as [rd|] eqn:Hpchn; [|exfalso; auto].
+      unfold parentIdxOf; rewrite Hpchn; simpl; eauto.
+    Qed.  
+
     Lemma parentChnsOf_NoDup:
       forall idx croot pidx,
         parentChnsOf idx dtr = Some (croot, pidx) ->

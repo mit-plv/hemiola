@@ -8,7 +8,7 @@ Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
 
 Require Export Ex.Mesi.MesiInvB.
 Require Export Ex.Mesi.MesiInv.
-Require Import Ex.Mesi.MesiInvInv0 Ex.Mesi.MesiInvInv1 Ex.Mesi.MesiInvInv2.
+Require Export Ex.Mesi.MesiInvInv0 Ex.Mesi.MesiInvInv1 Ex.Mesi.MesiInvInv2.
 Require Export Ex.Mesi.MesiInvExcl.
 
 Set Implicit Arguments.
@@ -22,20 +22,21 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
-Definition InvForSim (topo: DTree) (st: MState): Prop :=
-  InvExcl topo st /\
+Definition InvForSim (topo: DTree) (cifc: CIfc) (st: MState): Prop :=
+  InvExcl topo cifc st /\
   InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\ InvNWB topo st /\
   MesiDownLockInv topo st.
 
 Lemma mesi_InvForSim_init:
   forall tr (Htr: tr <> Node nil),
-    InvForSim (fst (tree2Topo tr 0)) (initsOf (impl Htr)).
+    InvForSim (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0)) (initsOf (impl Htr)).
 Proof.
 Admitted.
 
 Lemma mesi_InvForSim_ok:
   forall tr (Htr: tr <> Node nil),
-    InvStep (impl Htr) step_m (InvForSim (fst (tree2Topo tr 0))).
+    InvStep (impl Htr) step_m
+            (InvForSim (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0))).
 Proof.
 Admitted.
 

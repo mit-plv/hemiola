@@ -58,7 +58,8 @@ Section CoherenceUnit.
     MsgsNotExist [(downTo oidx, (MRs, mesiRsS));
                     (downTo oidx, (MRs, mesiRsE));
                     (downTo oidx, (MRs, mesiRsM));
-                    (rsUpFrom oidx, (MRs, mesiDownRsS))] msgs.
+                    (rsUpFrom oidx, (MRs, mesiDownRsS));
+                    (rsUpFrom oidx, (MRs, mesiDownRsI))] msgs.
 
   Definition ObjInvalid0 :=
     ost#[status] <= mesiI /\ NoCohMsgs.
@@ -71,11 +72,8 @@ Section CoherenceUnit.
 
   (** 2) Clean "E" in MESI *)
 
-  Definition ObjClean :=
-    mesiS <= ost#[status] <= mesiE.
-
   Definition ObjDirME (cidx: IdxT) :=
-    mesiE <= ost#[dir].(dir_st) /\ ost#[dir].(dir_excl) = cidx /\
+    mesiE <= ost#[dir].(dir_st) <= mesiM /\ ost#[dir].(dir_excl) = cidx /\
     orq@[downRq] = None.
 
   Definition ObjDirE (cidx: IdxT) :=
@@ -136,6 +134,18 @@ Section Facts.
   
 End Facts.
 
+Ltac disc_bind_true :=
+  repeat
+    match goal with
+    | |- _ <+- ?ov; _ =>
+      first [match goal with
+             | [H: ov = _ |- _] => rewrite H in *; simpl in *
+             end
+            |let Hov := fresh "H" in
+             let v := fresh "v" in
+             destruct ov as [v|] eqn:Hov; simpl in *; [|auto]]
+    end.
+
 Ltac disc_getDir :=
   try match goal with
       | [H: getDir _ _ = _ |- _] =>
@@ -143,7 +153,7 @@ Ltac disc_getDir :=
               |apply getDir_E_imp in H; destruct H
               |apply getDir_S_imp in H; destruct H]
       | [H: mesiE <= getDir _ _ |- _] =>
-        apply getDir_ME_imp in H; destruct H
+        apply getDir_ME_imp in H; dest
       end.
 
 Ltac solve_MsgsNotExist_base :=
@@ -247,6 +257,22 @@ Ltac solve_RsDown_by_rsDown oidx :=
 Ltac solve_NoRsI_by_rsDown oidx :=
   disc_MsgConflictsInv oidx; solve_RsDown_by_rsDown oidx.
 
+Ltac derive_NoRsI_by_no_uplock oidx msgs :=
+  assert (NoRsI oidx msgs)
+  by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
+
+Ltac derive_NoRsI_by_rqUp oidx msgs :=
+  assert (NoRsI oidx msgs)
+  by (solve_NoRsI_base; solve_NoRsI_by_rqUp oidx).
+
+Ltac derive_NoRsI_by_rsDown oidx msgs :=
+  assert (NoRsI oidx msgs)
+  by (solve_NoRsI_base; solve_NoRsI_by_rsDown oidx).
+
+Ltac derive_NoRsI_by_rqDown oidx msgs :=
+  assert (NoRsI oidx msgs)
+  by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
+
 Ltac solve_NoRqI_base :=
   red; solve_MsgsNotExist_base.
 
@@ -297,12 +323,13 @@ Ltac solve_NoRqI_by_rsDown oidx :=
 Ltac derive_parent_downlock_by_RqDown oidx :=
   disc_MsgConflictsInv oidx;
   try match goal with
-      | [Hmcf: RqDownConflicts _ _ ?msgs,
+      | [Hmcf: ParentRqDownRsUpLocked _ _ ?msgs,
                Hf: FirstMPI ?msgs (?midx, ?msg),
                    Hmt: msg_type ?msg = MRq |- _] =>
+        destruct Hmcf as [Hmcf _];
         specialize (Hmcf (midx, msg) eq_refl 
                          ltac:(simpl; rewrite Hmt; reflexivity)
-                                (FirstMP_InMP Hf)); dest
+                                (FirstMP_InMP Hf))
       end.
 
 Ltac derive_MesiDownLockInv oidx :=

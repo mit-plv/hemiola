@@ -27,8 +27,8 @@ Proof.
   unfold getDir, ObjDirME; intros; dest.
   simpl in H.
   do 2 (find_if_inside; [find_if_inside; [discriminate|auto]|]).
-  do 2 (find_if_inside; [simpl in *; solve_mesi|]).
-  discriminate.
+  find_if_inside; [simpl in *; solve_mesi|].
+  simpl in *; solve_mesi.
 Qed.
 
 Definition NoRsME (oidx: IdxT) (msgs: MessagePool Msg) :=
@@ -281,18 +281,6 @@ Section InvDirME.
                                        |solve_deqMsgs_NoDup
                                        |solve_deqMsgs_msg_id]
              |assumption]).
-
-  Ltac disc_bind_true :=
-    repeat
-      match goal with
-      | |- _ <+- ?ov; _ =>
-        first [match goal with
-               | [H: ov = _ |- _] => rewrite H in *; simpl in *
-               end
-              |let Hov := fresh "H" in
-               let v := fresh "v" in
-               destruct ov as [v|] eqn:Hov; simpl in *; [|auto]]
-      end.
 
   Ltac disc_pre :=
     repeat
@@ -1185,27 +1173,27 @@ Section InvWB.
 
     specialize (Hm _ Ho eq_refl); dest.
     intros.
-    specialize (Hw (or_introl H5)).
+    specialize (Hw (or_introl H7)).
 
     assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
-    { destruct H5 as [[rqUp rqm] ?]; dest; inv H6.
+    { destruct H7 as [[rqUp rqm] ?]; dest; inv H8.
       apply not_MsgExistsSig_MsgsNotExist.
       intros; dest_in.
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
-      { destruct H7 as [[rsDown rsm] ?]; dest; inv H7.
-        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H5); dest.
-        eapply H8 with (rsDown:= (downTo oidx, rsm)); eauto.
+      { destruct H9 as [[rsDown rsm] ?]; dest; inv H9.
+        specialize (H2 (rqUpFrom oidx, rqm) eq_refl H7); dest.
+        eapply H10 with (rsDown:= (downTo oidx, rsm)); eauto.
       }
     }
-    specialize (Hd H4 Hnrs); dest.
+    specialize (Hd H6 Hnrs); dest.
 
-    red in H7.
+    red in H9.
     assert (ost#[dir].(dir_st) <= mesiI) as Hdi by solve_mesi.
-    specialize (H7 (or_introl Hdi)).
-    destruct H7; dest; simpl in *; solve_mesi.
+    specialize (H9 (or_introl Hdi)).
+    destruct H9; dest; simpl in *; solve_mesi.
   Qed.
 
 End InvWB.
