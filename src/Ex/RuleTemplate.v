@@ -252,8 +252,8 @@ Section Template.
       prec ost orq [rsin] ->
       orq@[upRq] >>=[True]
          (fun rqiu =>
-            exists rq,
-              rqiu.(rqi_msg) = Some rq /\
+            forall rq,
+              rqiu.(rqi_msg) = Some rq ->
               fst (snd (trs ost rq)) <> nil /\
               Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (snd (trs ost rq))) /\
               exists rcidx rqUp,
@@ -533,9 +533,10 @@ Section Facts.
       disc_rule_conds_ex.
       specialize (H _ _ _ H7).
       rewrite Hrqi in H; simpl in H.
-      destruct H as [rq [? [? [? [rcidx [rqUp ?]]]]]]; dest.
+      specialize (H _ Hmsg).
+      destruct H as [? [? [rcidx [rqUp ?]]]]; dest.
       disc_rule_conds_ex.
-      apply in_map_iff in H11; destruct H11 as [upCObj [? ?]]; subst.
+      apply in_map_iff in H10; destruct H10 as [upCObj [? ?]]; subst.
 
       (* NOTE: [eexists] in [solve_rule_conds_ex] does not work here,
        * so we provide the existence manually. *)
@@ -554,16 +555,16 @@ Section Facts.
         { destruct (fst (snd (trs post msg))); [auto|discriminate]. }
         { unfold idsOf; repeat rewrite map_length; reflexivity. }
         { apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
-          clear -Hdtr H3 H11 H12.
+          clear -Hdtr H2 H10 H11.
           induction (fst (snd (trs post msg))) as [|cidx cinds]; [dest_in|].
-          inv H3; simpl in H11; destruct H11; dest.
+          inv H2; simpl in H10; destruct H10; dest.
           { inv H; destruct Hdtr as [[? ?] ?].
             specialize (H _ _ H1); dest.
             exists cidx; repeat split; try assumption.
-            intro Hx; subst; elim H12; left; reflexivity.
+            intro Hx; subst; elim H11; left; reflexivity.
           }
           { eapply IHcinds; eauto.
-            intro Hx; elim H12; right; assumption.
+            intro Hx; elim H11; right; assumption.
           } 
         }
       }

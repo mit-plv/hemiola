@@ -5248,7 +5248,7 @@ Section InvExcl.
           }
           { split_InvDirInv_apply.
             { solve_ObjsInvalid_trivial. }
-            { simpl in H34.
+            { simpl in H35.
               pose proof (getDir_st_sound (fst (snd (snd (snd os)))) cidx0 ltac:(solve_mesi)).
               solve_mesi.
             }
@@ -5628,7 +5628,7 @@ Section InvExcl.
         { apply Forall_forall; intros.
           apply in_map_iff in H13; dest; subst.
           apply in_map_iff in H14; dest; subst.
-          apply H23 in H14.
+          apply H25 in H14.
           apply subtreeChildrenIndsOf_parentIdxOf in H14; auto.
           derive_child_chns x.
           eauto.

@@ -720,6 +720,7 @@ Section System.
         :me oidx
         :requires
            (fun ost orq mins =>
+              ost#[dir].(dir_sharers) <> nil /\
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
               ost#[dir].(dir_st) = mesiS)
         :transition

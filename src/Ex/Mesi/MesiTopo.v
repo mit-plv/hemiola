@@ -289,7 +289,15 @@ Section System.
         rule_rsrq; eapply rsDownRqDownRule_RsDownRqDownRule; eauto.
 
         (** [RsDownRqDownSound] *)
-        admit.
+        red; simpl; intros; dest.
+        destruct (orq@[upRq]) as [rqiu|]; simpl; auto.
+        intros; repeat ssplit.
+        { assumption. }
+        { apply Forall_forall; intros.
+          apply H2 in H5.
+          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        }
+        { admit. }
       }
 
       { (* [liDownIRqDownDownDirS] *)
