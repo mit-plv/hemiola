@@ -657,18 +657,6 @@ Section InvDirE.
                                       |solve_deqMsgs_msg_id]
              |assumption]).
 
-  Ltac disc_bind_true :=
-    repeat
-      match goal with
-      | |- _ <+- ?ov; _ =>
-        first [match goal with
-               | [H: ov = _ |- _] => rewrite H in *; simpl in *
-               end
-              |let Hov := fresh "H" in
-               let v := fresh "v" in
-               destruct ov as [v|] eqn:Hov; simpl in *; [|auto]]
-      end.
-
   Ltac disc_ObjDirE :=
     match goal with
     | [H: ObjDirE _ _ _ |- _] =>

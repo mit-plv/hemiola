@@ -12,6 +12,7 @@ Local Open Scope fmap.
 Record Miv :=
   { miv_id: IdxT;
     miv_value: Value }.
+Notation "<| MID ; MV |>" := {| miv_id := MID; miv_value := MV |}.
 
 Definition rqMsg (miv: Miv) :=
   {| msg_id := miv_id miv;

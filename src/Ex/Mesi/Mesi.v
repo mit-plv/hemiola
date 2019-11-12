@@ -141,6 +141,19 @@ Section System.
 
     Section Facts.
 
+      Ltac dir_crush :=
+        cbv [getDir addSharer removeSharer
+                    setDirI setDirS setDirE setDirM];
+        simpl; intros;
+        repeat find_if_inside;
+        repeat
+          (try match goal with
+               | [H: ~ In ?oidx (?oidx :: _) |- _] => elim H; left; reflexivity
+               | [Ht: In ?oidx ?l, Hn: ~ In ?oidx (_ :: ?l) |- _] => elim Hn; right; assumption
+               | [H: In _ (_ :: _) |- _] => inv H
+               | [H: _ |- _] => exfalso; auto; fail
+               end; try subst; try reflexivity; try assumption; try solve_mesi).
+
       Lemma getDir_M_imp:
         forall oidx dir,
           getDir oidx dir = mesiM ->
@@ -187,6 +200,118 @@ Section System.
         find_if_inside; [find_if_inside; [auto|discriminate]|].
         discriminate.
       Qed.
+
+      Lemma getDir_addSharer_spec:
+        forall dir,
+          dir.(dir_st) <= mesiS ->
+          forall oidx sidx,
+            getDir oidx (addSharer sidx dir) =
+            if idx_dec sidx oidx
+            then mesiS else getDir oidx dir.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_removeSharer_sound:
+        forall oidx sidx dir,
+          getDir oidx (removeSharer sidx dir) <= mesiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_removeSharer_neq:
+        forall oidx sidx dir,
+          getDir sidx dir = mesiS ->
+          oidx <> sidx ->
+          getDir oidx (removeSharer sidx dir) = getDir oidx dir.
+      Proof.
+        dir_crush.
+        - exfalso; apply removeOnce_In_2 in i; auto.
+        - exfalso; elim n.
+          apply removeOnce_In_1; assumption.
+      Qed.
+
+      Lemma getDir_LastSharer_neq:
+        forall oidx sidx dir,
+          getDir sidx dir = mesiS ->
+          LastSharer dir sidx -> oidx <> sidx ->
+          getDir oidx dir = mesiI.
+      Proof.
+        unfold LastSharer; dir_crush.
+        rewrite H0 in *; dest_in; exfalso; auto.
+      Qed.
+
+      Lemma getDir_S_sharer:
+        forall dir,
+          dir.(dir_st) = mesiS ->
+          forall oidx,
+            In oidx dir.(dir_sharers) ->
+            getDir oidx dir = mesiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_S_non_sharer:
+        forall dir,
+          dir.(dir_st) = mesiS ->
+          forall oidx,
+            ~ In oidx dir.(dir_sharers) ->
+            getDir oidx dir = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_st_I:
+        forall dir,
+          dir.(dir_st) = mesiI ->
+          forall oidx, getDir oidx dir = mesiI.
+      Proof. dir_crush. Qed.
+      
+      Lemma getDir_st_sound:
+        forall dir oidx,
+          mesiS <= getDir oidx dir ->
+          getDir oidx dir <= dir.(dir_st).
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirI:
+        forall oidx, getDir oidx setDirI = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_I_imp:
+        forall oidx shs, getDir oidx (setDirS shs) = mesiI -> ~ In oidx shs.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_S_imp:
+        forall oidx shs, getDir oidx (setDirS shs) = mesiS -> In oidx shs.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_sound:
+        forall oidx shs, getDir oidx (setDirS shs) <= mesiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirE_eq:
+        forall oidx, getDir oidx (setDirE oidx) = mesiE.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirE_neq:
+        forall oidx eidx, eidx <> oidx -> getDir oidx (setDirE eidx) = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirM_eq:
+        forall oidx, getDir oidx (setDirM oidx) = mesiM.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirM_neq:
+        forall oidx eidx, eidx <> oidx -> getDir oidx (setDirM eidx) = mesiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_excl_eq:
+        forall dir eidx,
+          eidx = dir.(dir_excl) ->
+          mesiE <= dir.(dir_st) <= mesiM ->
+          getDir eidx dir = dir.(dir_st).
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_excl_neq:
+        forall dir eidx,
+          eidx = dir.(dir_excl) ->
+          mesiE <= dir.(dir_st) <= mesiM ->
+          forall oidx,
+            oidx <> eidx ->
+            getDir oidx dir = mesiI.
+      Proof. dir_crush. Qed.
 
     End Facts.
     

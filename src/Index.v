@@ -15,6 +15,7 @@ Proof.
   decide equality.
   apply eq_nat_dec.
 Defined.
+Arguments idx_dec: simpl never.
 
 Fixpoint idx_lt (idx1 idx2: IdxT): Prop :=
   match idx1 with

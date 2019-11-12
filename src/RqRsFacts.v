@@ -1111,6 +1111,21 @@ Ltac constr_rule_conds_step :=
 Ltac constr_rule_conds :=
   repeat constr_rule_conds_step.
 
+Lemma findQ_deq_in_length_two:
+  forall (msgs: MessagePool Msg) midx msg1,
+    FirstMPI msgs (midx, msg1) ->
+    forall msg2,
+      InMP midx msg2 (deqMP midx msgs) ->
+      List.length (findQ midx msgs) >= 2.
+Proof.
+  cbv [FirstMPI FirstMP firstMP InMP deqMP]; simpl; intros.
+  destruct (findQ midx msgs) as [|emsg q]; [discriminate|].
+  simpl in *; inv H.
+  unfold findQ in H0; mred; simpl in H0.
+  destruct q; [dest_in|].
+  simpl; omega.
+Qed.
+
 Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
   filter (fun msg => negb (msg.(msg_type))) (findQ midx msgs).
 
