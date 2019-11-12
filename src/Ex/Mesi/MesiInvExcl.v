@@ -3944,10 +3944,11 @@ Section InvExcl.
         case_InvExcl_me_others.
         { disc_InvExcl_this.
           { solve_InvObjExcl0_by_ObjExcl0_false. }
-          { disc_InvDirInv cidx.
-            rewrite getDir_excl_eq in H40; [|reflexivity|intuition solve_mesi].
+          { remember (dir_excl _) as rcidx.
+            disc_InvDirInv rcidx.
+            rewrite getDir_excl_eq in H40; [|assumption|intuition solve_mesi].
             specialize (H40 H23).
-            remember (dir_excl _) as rcidx; clear Heqrcidx.
+            clear Heqrcidx.
             
             disc_InvObjOwned; split.
             { solve_ObjsInvalid_trivial.
