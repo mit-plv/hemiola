@@ -290,14 +290,20 @@ Section System.
 
         (** [RsDownRqDownSound] *)
         red; simpl; intros; dest.
-        destruct (orq@[upRq]) as [rqiu|]; simpl; auto.
+        red in H1.
+        destruct (orq@[upRq]) as [rqiu|]; simpl in *; auto.
+        destruct H1 as [rcidx [rqUp ?]]; dest.
+        pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H1).
+        rewrite <-mesi_indices in H8.
         intros; repeat ssplit.
         { assumption. }
         { apply Forall_forall; intros.
-          apply H2 in H5.
+          apply H3 in H10.
           eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
         }
-        { admit. }
+        { exists rcidx, rqUp.
+          repeat split; try assumption.
+        }
       }
 
       { (* [liDownIRqDownDownDirS] *)

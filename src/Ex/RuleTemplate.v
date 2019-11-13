@@ -246,6 +246,16 @@ Section Template.
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg (snd nst))] }}))).
 
+  Definition RsDownRqDownSoundPrec (oidx: IdxT) (orq: ORq Msg)
+             (outInds: list IdxT): Prop :=
+    orq@[upRq] >>=[True]
+       (fun rqiu =>
+          exists rcidx rqUp,
+            parentIdxOf dtr rcidx = Some oidx /\
+            rqEdgeUpFrom dtr rcidx = Some rqUp /\
+            (orq@[upRq] >>=[True] (fun rqiu => edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb))) /\
+            ~ In rcidx outInds).
+  
   Definition RsDownRqDownSound (sys: System) (oidx: IdxT)
              (prec: OPrec) (trs: OState -> Msg -> OState * (list IdxT * Miv)): Prop :=
     forall ost orq rsin,
@@ -259,7 +269,7 @@ Section Template.
               exists rcidx rqUp,
                 parentIdxOf dtr rcidx = Some oidx /\
                 rqEdgeUpFrom dtr rcidx = Some rqUp /\
-                (orq@[upRq] >>=[True] (fun rqiu => edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb))) /\
+                edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb) /\
                 In rcidx (map (@obj_idx _) (sys_objs sys)) /\
                 ~ In rcidx (fst (snd (trs ost rq)))).
 

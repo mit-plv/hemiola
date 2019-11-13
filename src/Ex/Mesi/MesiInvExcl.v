@@ -5248,7 +5248,7 @@ Section InvExcl.
           }
           { split_InvDirInv_apply.
             { solve_ObjsInvalid_trivial. }
-            { simpl in H35.
+            { simpl in H36.
               pose proof (getDir_st_sound (fst (snd (snd (snd os)))) cidx0 ltac:(solve_mesi)).
               solve_mesi.
             }

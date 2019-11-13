@@ -864,7 +864,7 @@ Section InvDirME.
           }
           { (* TODO: automate *)
             red; simpl; intros.
-            destruct H34; [solve_mesi|].
+            destruct H36; [solve_mesi|].
             dest; mred.
           }
         }
