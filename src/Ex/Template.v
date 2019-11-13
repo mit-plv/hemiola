@@ -4,5 +4,3 @@ Require Import RqRsLangEx.
 
 Require Export Ex.TopoTemplate Ex.RuleTemplate Ex.InvTemplate Ex.SimTemplate.
 
-Axiom cheat: forall t, t.
-Ltac admit := apply cheat.
