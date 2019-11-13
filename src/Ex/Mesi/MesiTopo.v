@@ -587,6 +587,15 @@ Proof.
     apply f_equal with (f:= fun m => m@[upRq]) in H3; mred.
 Qed.
 
+Lemma map_add_remove_comm:
+  forall {A} (m: M.t A) k1 v k2,
+    k1 <> k2 ->
+    M.remove k2 (M.add k1 v m) = M.add k1 v (M.remove k2 m).
+Proof.
+  intros; meq.
+  M.cmp y k2; mred.
+Qed.
+
 Section System.
   Variable tr: tree.
   Hypothesis (Htr: tr <> Node nil).
@@ -993,11 +1002,121 @@ Section System.
       | |- Forall _ (_ ++ _) => apply Forall_app
       end.
 
-    - (** The main memory *)
-      admit.
+    - (** The main memory: no RqUp rules *)
+      red; intros.
+      simpl in H; apply in_app_or in H; destruct H;
+        [unfold liRulesFromChildren in H;
+         apply concat_In in H; dest;
+         apply in_map_iff in H; dest; subst;
+         dest_in|dest_in].
+      all: try (exfalso_RqToUpRule; fail).
 
     - (** Li cache *)
-      admit.
+      apply Forall_forall; intros.
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; intros.
+
+      simpl in H; apply in_app_or in H; destruct H;
+        [unfold liRulesFromChildren in H;
+         apply concat_In in H; dest;
+         apply in_map_iff in H; dest; subst;
+         dest_in|dest_in].
+      all: try (exfalso_RqToUpRule; fail).
+
+      + simpl in H2; apply in_app_or in H2; destruct H2;
+          [unfold liRulesFromChildren in H;
+           apply concat_In in H; dest;
+           apply in_map_iff in H; dest; subst;
+           dest_in|dest_in].
+        all: try (exfalso_RsToUpRule; fail).
+        all: try (clear; solve_rule_conds_ex; solve_mesi).
+        { clear; solve_rule_conds_const.
+          all: try (destruct H6; dest; try solve [congruence|solve_mesi]).
+        }
+        { clear; solve_rule_conds_const.
+          { mred; rewrite Hmsg; simpl; split; [assumption|congruence]. }
+          { mred; rewrite Hidx; simpl; auto. }
+          { mred; simpl; rewrite Hmsg, Hidx; simpl.
+            repeat split; auto; simpl; try solve [mred|solve_mesi].
+            f_equal; apply map_add_remove_comm; discriminate.
+          }
+        }
+
+      + simpl in H2; apply in_app_or in H2; destruct H2;
+          [unfold liRulesFromChildren in H;
+           apply concat_In in H; dest;
+           apply in_map_iff in H; dest; subst;
+           dest_in|dest_in].
+        all: try (exfalso_RsToUpRule; fail).
+        all: try (clear; solve_rule_conds_ex; solve_mesi).
+        { clear; solve_rule_conds_const.
+          all: try (destruct H6; dest; try solve [congruence|solve_mesi]).
+        }
+        { clear; solve_rule_conds_const.
+          { mred; rewrite Hmsg; simpl; split; [assumption|congruence]. }
+          { mred; rewrite Hidx; simpl; auto. }
+          { mred; simpl; rewrite Hmsg, Hidx; simpl.
+            repeat split; auto; simpl; try solve [mred|solve_mesi].
+            f_equal; apply map_add_remove_comm; discriminate.
+          }
+        }
+
+      + simpl in H2; apply in_app_or in H2; destruct H2;
+          [unfold liRulesFromChildren in H;
+           apply concat_In in H; dest;
+           apply in_map_iff in H; dest; subst;
+           dest_in|dest_in].
+        all: try (exfalso_RsToUpRule; fail).
+        all: try (clear; solve_rule_conds_ex; solve_mesi).
+        { clear; solve_rule_conds_const; try solve_mesi.
+          unfold addRqS in H0; mred.
+        }
+        { clear; solve_rule_conds_const; try solve_mesi.
+          unfold addRqS in H0; mred.
+        }
+        { clear; solve_rule_conds_const.
+          { unfold addRqS in Hrqi; mred. }
+          { unfold addRqS in Hrqi; mred.
+            rewrite Hmsg; simpl; split; [assumption|congruence].
+          }
+          { unfold addRqS in Hrqi; mred.
+            mred; rewrite Hidx; simpl; auto.
+          }
+          { unfold addRqS in Hrqi; mred.
+            simpl; rewrite Hmsg, Hidx; simpl.
+            repeat split; auto; simpl; try solve [mred|solve_mesi].
+            f_equal; apply map_add_remove_comm; discriminate.
+          }
+        }
+        
+      + simpl in H2; apply in_app_or in H2; destruct H2;
+          [unfold liRulesFromChildren in H;
+           apply concat_In in H; dest;
+           apply in_map_iff in H; dest; subst;
+           dest_in|dest_in].
+        all: try (exfalso_RsToUpRule; fail).
+        all: try (clear; solve_rule_conds_ex; solve_mesi).
+        { clear; solve_rule_conds_const; try intuition solve_mesi.
+          unfold addRqS in H0; mred.
+        }
+        { clear; solve_rule_conds_const; try intuition solve_mesi.
+          unfold addRqS in H0; mred.
+        }
+        { clear; solve_rule_conds_const; try intuition solve_mesi.
+          { unfold addRqS in Hrqi; mred. }
+          { unfold addRqS in Hrqi; mred.
+            rewrite Hmsg; simpl; split; [assumption|congruence].
+          }
+          { unfold addRqS in Hrqi; mred.
+            mred; rewrite Hidx; simpl; auto.
+          }
+          { unfold addRqS in Hrqi; mred.
+            simpl; rewrite Hmsg, Hidx; simpl.
+            repeat split; auto; simpl; try solve [mred|intuition solve_mesi].
+            f_equal; apply map_add_remove_comm; discriminate.
+          }
+        }
 
     - (** L1 cache *)
       apply Forall_forall; intros.
