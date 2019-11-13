@@ -487,7 +487,7 @@ Section Sim.
 
   Theorem mesi_sim_ok:
     InvSim step_m step_m (MesiInvOk.InvForSim topo cifc) SimMESI impl spec.
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
 
     pose proof (footprints_ok
@@ -1355,17 +1355,17 @@ Section Sim.
         Unshelve.
         all: eassumption.
 
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_ok:
     (steps step_m) # (steps step_m) |-- impl ⊑ spec.
   Proof.
-    apply invSim_implies_refinement
+    apply invRSim_implies_refinement
       with (ginv:= MesiInvOk.InvForSim topo cifc) (sim:= SimMESI).
-    - apply mesi_sim_ok.
     - apply mesi_InvForSim_ok.
     - apply mesi_sim_init.
-    - apply mesi_InvForSim_init.
+    - apply mesi_sim_ok.
   Qed.
 
 End Sim.

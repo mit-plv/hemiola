@@ -27,18 +27,21 @@ Definition InvForSim (topo: DTree) (cifc: CIfc) (st: MState): Prop :=
   InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\ InvNWB topo st /\
   MesiDownLockInv topo st.
 
-Lemma mesi_InvForSim_init:
-  forall tr (Htr: tr <> Node nil),
-    InvForSim (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0)) (initsOf (impl Htr)).
-Proof.
-Admitted.
-
 Lemma mesi_InvForSim_ok:
   forall tr (Htr: tr <> Node nil),
-    InvStep (impl Htr) step_m
-            (InvForSim (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0))).
+    InvReachable (impl Htr) step_m
+                 (InvForSim (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0))).
 Proof.
-Admitted.
+  intros.
+  red; intros.
+  red; repeat ssplit.
+  - eapply mesi_InvExcl_ok; eauto.
+  - eapply mesi_InvWBDir_ok; eauto.
+  - eapply mesi_InvWBCoh_ok; eauto.
+  - eapply mesi_InvWB_ok; eauto.
+  - eapply mesi_InvNWB_ok; eauto.
+  - eapply MesiDownLockInv_ok; eauto.
+Qed.
 
 (*! Useful tactics to be used when using the invariants *)
 

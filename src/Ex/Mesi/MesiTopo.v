@@ -994,7 +994,7 @@ Section System.
     end.
 
   Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     repeat
       match goal with
       | |- RqUpRsUpOkSys _ _ => red
@@ -1154,6 +1154,8 @@ Section System.
         { clear; solve_rule_conds_const; try solve_mesi.
           unfold addRqS in H0; mred.
         }
+
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac solve_GoodExtRssSys :=
@@ -1184,7 +1186,7 @@ Section System.
       end.
 
   Lemma mesi_GoodExtRssSys: GoodExtRssSys impl.
-  Proof.
+  Proof. (* SKIP_PROOF_OFF *)
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
@@ -1247,6 +1249,8 @@ Section System.
       red; simpl.
       repeat constructor.
       all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl.
