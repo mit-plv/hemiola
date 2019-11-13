@@ -12,6 +12,48 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
+Lemma tree2Topo_obj_rqUpFrom_not_in_merss:
+  forall tr bidx oidx,
+    In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+               ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+    ~ In (rqUpFrom oidx) (c_merss (snd (tree2Topo tr bidx))).
+Proof.
+  intros.
+  pose proof (tree2Topo_obj_chns_minds_SubList tr bidx H).
+  pose proof (tree2Topo_minds_merss_disj tr bidx).
+  intro Hx.
+  eapply DisjList_In_1; [eapply H1|..]; eauto.
+  apply H0; simpl; tauto.
+Qed.
+
+Lemma tree2Topo_obj_rsUpFrom_not_in_merss:
+  forall tr bidx oidx,
+    In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+               ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+    ~ In (rsUpFrom oidx) (c_merss (snd (tree2Topo tr bidx))).
+Proof.
+  intros.
+  pose proof (tree2Topo_obj_chns_minds_SubList tr bidx H).
+  pose proof (tree2Topo_minds_merss_disj tr bidx).
+  intro Hx.
+  eapply DisjList_In_1; [eapply H1|..]; eauto.
+  apply H0; simpl; tauto.
+Qed.
+
+Lemma tree2Topo_obj_downTo_not_in_merss:
+  forall tr bidx oidx,
+    In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+               ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+    ~ In (downTo oidx) (c_merss (snd (tree2Topo tr bidx))).
+Proof.
+  intros.
+  pose proof (tree2Topo_obj_chns_minds_SubList tr bidx H).
+  pose proof (tree2Topo_minds_merss_disj tr bidx).
+  intro Hx.
+  eapply DisjList_In_1; [eapply H1|..]; eauto.
+  apply H0; simpl; tauto.
+Qed.
+
 Section System.
   Variable tr: tree.
   Hypothesis (Htr: tr <> Node nil).
@@ -349,9 +391,109 @@ Section System.
       all: try (solve_GoodRqRsRule; fail).
   Qed.
 
-  Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl.
+  Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
   Proof.
   Admitted.
+
+  Ltac solve_GoodExtRssSys :=
+    repeat
+      match goal with
+      | [H: In ?oidx (c_l1_indices _) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
+        apply in_or_app; auto
+      | [H: In ?oidx (c_li_indices _) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
+        apply in_or_app; auto
+      | [H: In ?oidx (tl (c_li_indices _)) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
+        apply tl_In in H; apply in_or_app; auto
+      | [H: In ?oidx (tl (c_li_indices _)) |- In ?oidx (c_li_indices _)] =>
+        apply tl_In in H; assumption
+
+      | [H: In _ (subtreeChildrenIndsOf _ _) |- _] =>
+        apply subtreeChildrenIndsOf_parentIdxOf in H; [|apply tree2Topo_WfDTree];
+        eapply tree2Topo_li_child_li_l1; eauto
+      | |- In (rootOf _) (c_li_indices _) =>
+        rewrite c_li_indices_head_rootOf by assumption; left; reflexivity
+
+      | [H: In (rqUpFrom _) (c_merss _) |- MRq = MRs] =>
+        exfalso; eapply tree2Topo_obj_rqUpFrom_not_in_merss; eauto
+      | [H: In (rsUpFrom _) (c_merss _) |- MRq = MRs] =>
+        exfalso; eapply tree2Topo_obj_rsUpFrom_not_in_merss; eauto
+      | [H: In (downTo _) (c_merss _) |- MRq = MRs] =>
+        exfalso; eapply tree2Topo_obj_downTo_not_in_merss; eauto
+      | [H: False |- _] => exfalso; auto
+      end.
+
+  Lemma mesi_GoodExtRssSys: GoodExtRssSys impl.
+  Proof.
+    red; simpl.
+    constructor; [|apply Forall_app].
+    - (** the main memory *)
+      red; simpl; apply Forall_app.
+      + apply Forall_forall; intros.
+        unfold memRulesFromChildren in H.
+        apply concat_In in H; dest.
+        apply in_map_iff in H; dest; subst.
+        dest_in.
+        all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+        { (* [liGetMRqUpDownS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H2; dest; subst.
+          apply H5 in H11.
+          simpl in *; solve_GoodExtRssSys.
+        }
+
+      + repeat constructor.
+        all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+
+    - (** Li cache *)
+      apply Forall_forall; intros.
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; simpl.
+      apply Forall_app.
+
+      + apply Forall_forall; intros.
+        unfold liRulesFromChildren in H.
+        apply concat_In in H; dest.
+        apply in_map_iff in H; dest; subst.
+        dest_in.
+        all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+        { (* [liGetMRqUpDownS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H3; dest; subst.
+          apply H6 in H12.
+          simpl in *; solve_GoodExtRssSys.
+        }
+
+      + repeat constructor.
+        all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+        { (* [liGetMRsDownRqDownDirS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H2; dest; subst.
+          apply H11 in H5.
+          simpl in *; solve_GoodExtRssSys.
+        }
+        { (* [liDownIRqDownDownDirS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H2; dest; subst.
+          apply H4 in H7.
+          simpl in *; solve_GoodExtRssSys.
+        }
+
+    - (** L1 cache *)
+      apply Forall_forall; intros.
+      apply in_map_iff in H.
+      destruct H as [oidx [? ?]]; subst.
+      red; simpl.
+      repeat constructor.
+      all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+  Qed.
+
+  Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl.
+  Proof.
+    split.
+    - apply mesi_RqUpRsUpOkSys.
+    - apply mesi_GoodExtRssSys.
+  Qed.
 
   Lemma mesi_RqRsSys: RqRsSys topo impl.
   Proof.
