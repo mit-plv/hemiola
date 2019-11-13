@@ -304,7 +304,7 @@ Section InvNotOwned.
         derive_MesiDownLockInv oidx.
         simpl_InvNotOwned; solve_InvNotOwned.
         derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H20))).
+        specialize (Hwd (or_intror (or_introl H21))).
         simpl in Hwd; solve_mesi.
       }
       { disc_rule_conds_ex.
@@ -347,7 +347,7 @@ Section InvNotOwned.
       { derive_MesiDownLockInv oidx.
         simpl_InvNotOwned; solve_InvNotOwned.
         derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H26))).
+        specialize (Hwd (or_intror (or_introl H27))).
         simpl in Hwd; solve_mesi.
       }
       { eapply InvNotOwned_enqMP_rq_valid; eauto.
@@ -1306,7 +1306,6 @@ Section InvDirE.
       }
 
       { disc_rule_conds_ex.
-        disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
         disc_rule_conds_ex.
