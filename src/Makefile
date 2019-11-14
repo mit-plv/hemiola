@@ -1,6 +1,6 @@
 VS:=$(shell find . -type f -name '*.v')
 
-.PHONY: lib spec msitwo mesi clean
+.PHONY: lib spec msitwo msi mesi clean
 
 all: Makefile.coq
 	$(MAKE) -f Makefile.coq
@@ -13,6 +13,7 @@ Makefile.coq: Makefile $(VS)
 LIB_REPR_VO=RqRsLang.vo RqRsCorrect.vo
 EX_SPEC_REPR_VO=Ex/SpecSv.vo
 EX_MSITWO_REPR_VO=Ex/MsiTwo/MsiTwoSim.vo
+EX_MSI_REPR_VO=Ex/Msi/Msi.vo
 EX_MESI_REPR_VO=Ex/Mesi/MesiSim.vo
 
 lib: Makefile.coq
@@ -23,6 +24,9 @@ spec: Makefile.coq
 
 msitwo: Makefile.coq
 	$(MAKE) -f Makefile.coq $(EX_MSITWO_REPR_VO)
+
+msi: Makefile.coq
+	$(MAKE) -f Makefile.coq $(EX_MSI_REPR_VO)
 
 mesi: Makefile.coq
 	$(MAKE) -f Makefile.coq $(EX_MESI_REPR_VO)
