@@ -7,9 +7,6 @@ Require Import Ex.Spec Ex.SpecSv Ex.Template Ex.Msi.
 
 Set Implicit Arguments.
 
-Axiom cheat: forall t, t.
-Ltac admit := apply cheat.
-
 Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
