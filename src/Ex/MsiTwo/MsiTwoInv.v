@@ -3,8 +3,8 @@ Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
-Require Import Ex.Msi Ex.SpecSv.
-Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo Ex.MsiSv.MsiSvInvB.
+Require Import Ex.SpecSv.
+Require Import Ex.MsiTwo.Msi Ex.MsiTwo.MsiTwo Ex.MsiTwo.MsiTwoTopo Ex.MsiTwo.MsiTwoInvB.
 
 Set Implicit Arguments.
 
@@ -31,7 +31,7 @@ Ltac get_lock_inv obj sys :=
 
 Section Inv.
 
-  Existing Instance MsiSv.ImplOStateIfc.
+  Existing Instance MsiTwo.ImplOStateIfc.
 
   Definition ImplOStateMSI (cv: nat) (ost: OState): Prop :=
     msiS <= ost#[implStatusIdx] -> ost#[implValueIdx] = cv.
@@ -903,7 +903,7 @@ Section Inv.
         solve_DisjList idx_dec.
     Qed.
 
-    Definition MsiSvMsgOutPred: MsgOutPred :=
+    Definition MsiTwoMsgOutPred: MsgOutPred :=
       fun eout oss orqs =>
         match case (sigOf eout) on sig_dec default True with
         | (ec1, (MRq, Spec.getRq)): False
@@ -1031,7 +1031,7 @@ Section Inv.
         end.
 
     Lemma msiSvMsgOutPred_good:
-      GoodMsgOutPred topo MsiSvMsgOutPred.
+      GoodMsgOutPred topo MsiTwoMsgOutPred.
     Proof.
       red; intros; repeat split.
 
@@ -1112,7 +1112,7 @@ Section Inv.
           SubList (idsOf ins) (sys_merqs impl) ->
           step_m impl st1 (RlblInt oidx ridx ins outs) st2 ->
           AtomicInv
-            MsiSvMsgOutPred
+            MsiTwoMsgOutPred
             ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
           ImplInv st2.
     Proof.
@@ -1364,7 +1364,7 @@ Section Inv.
         [red; intros; eapply msiSv_impl_InvTrs_ext_in; eauto
         |red; intros; eapply msiSv_impl_InvTrs_ext_out; eauto
         |].
-      instantiate (1:= AtomicInv MsiSvMsgOutPred).
+      instantiate (1:= AtomicInv MsiTwoMsgOutPred).
       red; intros.
       destruct H1.
       generalize dependent ist2.
@@ -1402,8 +1402,8 @@ Section Inv.
 
       (*! Cases for [child1] *)
 
-      - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
-      - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
+      - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
 
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
@@ -1457,8 +1457,8 @@ Section Inv.
             apply invalidMsgs_deqMP.
             assumption.
 
-      - (** [childSetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
-      - (** [childSetRqM] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childSetRqImm] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
+      - (** [childSetRqM] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
 
       - (** [childSetRsM] *)
         disc_rule_conds_ex.
@@ -1524,7 +1524,7 @@ Section Inv.
             apply invalidMsgs_deqMP.
             assumption.
 
-      - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
       - (** [childEvictRsI] *)
         disc_rule_conds_ex.
         get_lock_minds child1Idx.
@@ -1567,8 +1567,8 @@ Section Inv.
 
       (*! Cases for [child2] *)
 
-      - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
-      - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childGetRqImm] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
+      - (** [childGetRqS] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
 
       - (** [childGetRsS] *)
         disc_rule_conds_ex.
@@ -1622,8 +1622,8 @@ Section Inv.
             apply invalidMsgs_deqMP.
             assumption.
 
-      - (** [childSetRqImm] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
-      - (** [childSetRqM] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childSetRqImm] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
+      - (** [childSetRqM] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
 
       - (** [childSetRsM] *)
         disc_rule_conds_ex.
@@ -1689,7 +1689,7 @@ Section Inv.
             apply invalidMsgs_deqMP.
             assumption.
 
-      - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiSvMsgOutPred.
+      - (** [childEvictRqI] *) atomic_cont_exfalso_bound MsiTwoMsgOutPred.
       - (** [childEvictRsI] *)
         disc_rule_conds_ex.
         get_lock_minds child2Idx.

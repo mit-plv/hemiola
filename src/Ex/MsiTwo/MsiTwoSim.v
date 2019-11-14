@@ -3,9 +3,9 @@ Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
-Require Import Ex.Msi Ex.SpecSv.
-Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo
-        Ex.MsiSv.MsiSvInvB Ex.MsiSv.MsiSvInv.
+Require Import Ex.SpecSv.
+Require Import Ex.MsiTwo.Msi Ex.MsiTwo.MsiTwo Ex.MsiTwo.MsiTwoTopo
+        Ex.MsiTwo.MsiTwoInvB Ex.MsiTwo.MsiTwoInv.
 
 Set Implicit Arguments.
 
@@ -18,10 +18,10 @@ Open Scope fmap.
 
 Section Sim.
 
-  Existing Instance MsiSv.ImplOStateIfc.
+  Existing Instance MsiTwo.ImplOStateIfc.
 
   Local Definition spec := SpecSv.spec 1.
-  Local Definition impl := MsiSv.impl.
+  Local Definition impl := MsiTwo.impl.
 
   (** Simulation between states *)
 
@@ -90,7 +90,7 @@ Section Sim.
 
   Section Facts.
 
-    Lemma simMsiSv_init:
+    Lemma simMsiTwo_init:
       SimMSI (initsOf impl) (initsOf spec).
     Proof.
       split.
@@ -738,7 +738,7 @@ Section Sim.
         end
       end.
 
-    Lemma simMsiSv_sim_silent:
+    Lemma simMsiTwo_sim_silent:
       forall ist sst1,
         SimMSI ist sst1 ->
         exists slbl sst2,
@@ -751,7 +751,7 @@ Section Sim.
       constructor.
     Qed.
 
-    Lemma simMsiSv_sim_ext_in:
+    Lemma simMsiTwo_sim_ext_in:
       forall oss orqs msgs sst1,
         SimMSI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
         forall eins,
@@ -779,7 +779,7 @@ Section Sim.
           apply H1.
     Qed.
 
-    Lemma simMsiSv_sim_ext_out:
+    Lemma simMsiTwo_sim_ext_out:
       forall oss orqs msgs sst1,
         SimMSI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
         forall eouts: list (Id Msg),
@@ -812,7 +812,7 @@ Section Sim.
 
     Hint Unfold ImplInvEx ImplInv ImplInvB: RuleConds.
 
-    Lemma simMsiSv_sim:
+    Lemma simMsiTwo_sim:
       InvSim step_m step_m ImplInvEx SimMSI impl spec.
     Proof.
       red; intros.
@@ -831,9 +831,9 @@ Section Sim.
                     (reachable_steps H (steps_singleton H2))) as Hnulinv.
 
       inv H2;
-        [apply simMsiSv_sim_silent; assumption
-        |apply simMsiSv_sim_ext_in; assumption
-        |apply simMsiSv_sim_ext_out; assumption
+        [apply simMsiTwo_sim_silent; assumption
+        |apply simMsiTwo_sim_ext_in; assumption
+        |apply simMsiTwo_sim_ext_out; assumption
         |].
 
       destruct sst1 as [soss1 sorqs1 smsgs1].
@@ -2038,16 +2038,16 @@ Section Sim.
         + solve_sim_ext_mp.
     Qed.          
     
-    Theorem MsiSv_ok:
+    Theorem MsiTwo_ok:
       (steps step_m) # (steps step_m) |-- impl ⊑ spec.
     Proof.
       apply invSim_implies_refinement with (ginv:= ImplInvEx) (sim:= SimMSI).
-      - apply simMsiSv_sim.
+      - apply simMsiTwo_sim.
       - red; unfold ImplInvEx; intros.
         dest; split.
         + eapply implInv_invStep; eauto.
         + eapply implInvB_invStep; eauto.
-      - apply simMsiSv_init.
+      - apply simMsiTwo_init.
       - split.
         + apply implInv_init.
         + apply implInvB_init.

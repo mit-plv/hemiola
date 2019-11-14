@@ -3,8 +3,8 @@ Require Import Common FMap HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLang RqRsCorrect.
 
-Require Import Ex.Msi Ex.SpecSv.
-Require Import Ex.MsiSv.MsiSv Ex.MsiSv.MsiSvTopo.
+Require Import Ex.SpecSv.
+Require Import Ex.MsiTwo.Msi Ex.MsiTwo.MsiTwo Ex.MsiTwo.MsiTwoTopo.
 
 Set Implicit Arguments.
 
@@ -34,7 +34,7 @@ Ltac solve_msi_false :=
 
 Section Inv.
 
-  Existing Instance MsiSv.ImplOStateIfc.
+  Existing Instance MsiTwo.ImplOStateIfc.
 
   Section InvDir.
     Variables (post: OState)

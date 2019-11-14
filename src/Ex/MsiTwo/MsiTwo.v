@@ -3,7 +3,8 @@ Require Import Common FMap HVector ListSupport Syntax Semantics.
 Require Import Topology RqRsTopo.
 Require Import RqRsLang. Import RqRsNotations.
 
-Require Import Ex.Spec Ex.SpecSv Ex.Msi.
+Require Import Ex.Spec Ex.SpecSv.
+Require Import Ex.MsiTwo.Msi.
 
 Set Implicit Arguments.
 

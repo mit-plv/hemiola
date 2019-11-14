@@ -2,8 +2,8 @@ Require Import Bool Vector List String Peano_dec Omega.
 Require Import Common FMap HVector ListSupport Syntax Topology Semantics.
 Require Import RqRsLang.
 
-Require Import Ex.Spec Ex.SpecSv Ex.Msi.
-Require Import Ex.MsiSv.MsiSv.
+Require Import Ex.Spec Ex.SpecSv.
+Require Import Ex.MsiTwo.Msi Ex.MsiTwo.MsiTwo.
 
 Set Implicit Arguments.
 
