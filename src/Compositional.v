@@ -6,8 +6,6 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
-Axiom cheat: forall t, t.
-
 Lemma extendInds_DisjList:
   forall inds1 inds2,
     DisjList inds1 inds2 ->
@@ -157,6 +155,117 @@ Section Replicate.
     end.
 
 End Replicate.
+
+Section ValidState.
+  Context `{OStateIfc}.
+  Variable (sys: System).
+
+  Definition ValidState (st: MState) :=
+    M.KeysSubset (bst_oss st) (map (@obj_idx _) (sys_objs sys)) /\
+    M.KeysSubset (bst_orqs st) (map (@obj_idx _) (sys_objs sys)) /\
+    M.KeysSubset (bst_msgs st) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
+
+  Definition InitStateValid := ValidState (initsOf sys).
+
+  Lemma enqMP_msgs_valid:
+    forall (msgs: MessagePool Msg),
+      M.KeysSubset msgs (sys_minds sys ++ sys_merqs sys ++ sys_merss sys) ->
+      forall midx msg,
+        In midx (sys_minds sys ++ sys_merqs sys ++ sys_merss sys) ->
+        M.KeysSubset (enqMP midx msg msgs) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
+  Proof.
+    intros; unfold enqMP.
+    apply M.KeysSubset_add; auto.
+  Qed.
+
+  Lemma enqMsgs_msgs_valid:
+    forall (nmsgs: list (Id Msg)) (msgs: MessagePool Msg),
+      M.KeysSubset msgs (sys_minds sys ++ sys_merqs sys ++ sys_merss sys) ->
+      SubList (idsOf nmsgs) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys) ->
+      M.KeysSubset (enqMsgs nmsgs msgs) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
+  Proof.
+    induction nmsgs as [|[midx msg] nmsgs]; simpl; intros; auto.
+    apply SubList_cons_inv in H1; dest.
+    apply IHnmsgs; auto.
+    apply enqMP_msgs_valid; auto.
+  Qed.
+
+  Lemma deqMP_msgs_valid:
+    forall (msgs: MessagePool Msg),
+      M.KeysSubset msgs (sys_minds sys ++ sys_merqs sys ++ sys_merss sys) ->
+      forall midx,
+        M.KeysSubset (deqMP midx msgs) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
+  Proof.
+    intros; unfold deqMP.
+    unfold findQ.
+    destruct (msgs@[midx]) as [q|] eqn:Hq; simpl; [|assumption].
+    destruct q; [assumption|].
+    apply M.KeysSubset_add; auto.
+    apply H0; findeq.
+  Qed.
+
+  Lemma deqMsgs_msgs_valid:
+    forall (rminds: list IdxT) (msgs: MessagePool Msg),
+      M.KeysSubset msgs (sys_minds sys ++ sys_merqs sys ++ sys_merss sys) ->
+      M.KeysSubset (deqMsgs rminds msgs) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
+  Proof.
+    induction rminds as [|rmidx rminds]; simpl; intros; auto.
+    apply IHrminds; auto.
+    apply deqMP_msgs_valid; auto.
+  Qed.
+
+  Lemma step_ValidState:
+    forall st1,
+      ValidState st1 ->
+      forall lbl st2,
+        step_m sys st1 lbl st2 -> ValidState st2.
+  Proof.
+    intros; inv H1; auto.
+    - red in H0; simpl in H0; dest.
+      red; simpl; repeat ssplit; try assumption.
+      apply enqMsgs_msgs_valid; auto.
+      destruct H3.
+      eapply SubList_trans; [eassumption|].
+      apply SubList_app_2, SubList_app_1, SubList_refl.
+    - red in H0; simpl in H0; dest.
+      red; simpl; repeat ssplit; try assumption.
+      apply deqMsgs_msgs_valid; auto.
+    - red in H0; simpl in H0; dest.
+      red; simpl; repeat ssplit.
+      + apply M.KeysSubset_add; auto; apply in_map; assumption.
+      + apply M.KeysSubset_add; auto; apply in_map; assumption.
+      + destruct H11.
+        apply enqMsgs_msgs_valid.
+        * apply deqMsgs_msgs_valid; auto.
+        * eapply SubList_trans; [eassumption|].
+          apply SubList_app_3.
+          { apply SubList_app_1, SubList_refl. }
+          { apply SubList_app_2, SubList_app_2, SubList_refl. }
+  Qed.
+
+  Lemma steps_ValidState:
+    forall st1,
+      ValidState st1 ->
+      forall hst st2,
+        steps step_m sys st1 hst st2 -> ValidState st2.
+  Proof.
+    induction 2; simpl; intros; auto.
+    eapply step_ValidState; [|eassumption].
+    auto.
+  Qed.
+
+  Lemma reachable_state_valid:
+    InitStateValid ->
+    forall st,
+      Reachable (steps step_m) sys st ->
+      ValidState st.
+  Proof.
+    unfold Reachable; intros.
+    destruct H1 as [hst ?].
+    eapply steps_ValidState; eauto.
+  Qed.
+
+End ValidState.
 
 Section Facts.
   Context `{OStateIfc}.
@@ -833,6 +942,8 @@ Section Facts.
   Section Compose.
     Variables (sys1 sys2: System).
     Hypotheses
+      (Hvi1: InitStateValid sys1)
+      (Hvi2: InitStateValid sys2)
       (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
       (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
                          ++ (sys_merqs sys1 ++ sys_merqs sys2)
@@ -845,80 +956,410 @@ Section Facts.
       reflexivity.
     Qed.
 
+    Section DisjMP.
+      Variables (msgs1 msgs2: MessagePool Msg).
+
+      Local Notation chns1 := (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1).
+      Local Notation chns2 := (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2).
+      
+      Hypotheses (Hks1: M.KeysSubset msgs1 chns1)
+                 (Hks2: M.KeysSubset msgs2 chns2).
+
+      Lemma chns_disj: DisjList chns1 chns2.
+      Proof.
+      Admitted.
+
+      Lemma disj_mp_findQ_1:
+        forall midx,
+          In midx chns1 ->
+          findQ midx msgs1 = findQ midx (M.union msgs1 msgs2).
+      Proof.
+      Admitted.
+
+      Lemma disj_mp_findQ_2:
+        forall midx,
+          In midx chns2 ->
+          findQ midx msgs2 = findQ midx (M.union msgs1 msgs2).
+      Proof.
+      Admitted.
+
+      Lemma disj_mp_FirstMP_1:
+        forall midx msg,
+          In midx chns1 ->
+          FirstMP msgs1 midx msg <->
+          FirstMP (M.union msgs1 msgs2) midx msg.
+      Proof.
+        unfold FirstMP, firstMP; intros.
+        rewrite <-disj_mp_findQ_1 by assumption.
+        split; intros; assumption.
+      Qed.
+
+      Lemma disj_mp_FirstMP_2:
+        forall midx msg,
+          In midx chns2 ->
+          FirstMP msgs2 midx msg <->
+          FirstMP (M.union msgs1 msgs2) midx msg.
+      Proof.
+        unfold FirstMP, firstMP; intros.
+        rewrite <-disj_mp_findQ_2 by assumption.
+        split; intros; assumption.
+      Qed.
+
+      Lemma disj_mp_enqMP_1:
+        forall midx msg,
+          In midx chns1 ->
+          M.union (enqMP midx msg msgs1) msgs2 = enqMP midx msg (M.union msgs1 msgs2).
+      Proof.
+        unfold enqMP; intros.
+        rewrite M.union_add.
+        rewrite disj_mp_findQ_1 by assumption.
+        reflexivity.
+      Qed.
+
+      Lemma disj_mp_enqMP_2:
+        forall midx msg,
+          In midx chns2 ->
+          M.union msgs1 (enqMP midx msg msgs2) = enqMP midx msg (M.union msgs1 msgs2).
+      Proof.
+        unfold enqMP; intros.
+        rewrite M.union_comm
+          by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
+              apply M.KeysSubset_add; auto).
+        rewrite M.union_comm with (m1:= msgs1) (m2:= msgs2) at 2
+          by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|eassumption..]).
+        rewrite M.union_add.
+        rewrite disj_mp_findQ_2 by assumption.
+        reflexivity.
+      Qed.
+
+      Lemma disj_mp_enqMsgs_1:
+        forall nmsgs,
+          SubList (idsOf nmsgs) chns1 ->
+          M.union (enqMsgs nmsgs msgs1) msgs2 = enqMsgs nmsgs (M.union msgs1 msgs2).
+      Proof.
+      Admitted.
+
+      Lemma disj_mp_enqMsgs_2:
+        forall nmsgs,
+          SubList (idsOf nmsgs) chns2 ->
+          M.union msgs1 (enqMsgs nmsgs msgs2) = enqMsgs nmsgs (M.union msgs1 msgs2).
+      Proof.
+      Admitted.
+
+      Lemma disj_mp_deqMP_1:
+        forall midx,
+          In midx chns1 ->
+          M.union (deqMP midx msgs1) msgs2 = deqMP midx (M.union msgs1 msgs2).
+      Proof.
+        unfold deqMP; intros.
+        rewrite <-disj_mp_findQ_1 by assumption.
+        destruct (findQ midx msgs1); [reflexivity|].
+        rewrite M.union_add.
+        reflexivity.
+      Qed.
+
+      Lemma disj_mp_deqMP_2:
+        forall midx,
+          In midx chns2 ->
+          M.union msgs1 (deqMP midx msgs2) = deqMP midx (M.union msgs1 msgs2).
+      Proof.
+        unfold deqMP; intros.
+        rewrite <-disj_mp_findQ_2 by assumption.
+        destruct (findQ midx msgs2); [reflexivity|].
+        rewrite M.union_comm
+          by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
+              apply M.KeysSubset_add; auto).
+        rewrite M.union_add.
+        rewrite M.union_comm
+          by (eapply M.DisjList_KeysSubset_Disj;
+              [apply DisjList_comm, chns_disj|assumption..]).
+        reflexivity.
+      Qed.
+
+      Lemma disj_mp_deqMsgs_1:
+        forall rminds,
+          SubList rminds chns1 ->
+          M.union (deqMsgs rminds msgs1) msgs2 = deqMsgs rminds (M.union msgs1 msgs2).
+      Proof.
+      Admitted.
+
+      Lemma disj_mp_deqMsgs_2:
+        forall rminds,
+          SubList rminds chns2 ->
+          M.union msgs1 (deqMsgs rminds msgs2) = deqMsgs rminds (M.union msgs1 msgs2).
+      Proof.
+      Admitted.
+
+    End DisjMP.
+
     Lemma step_mergeSystem_lifted_1:
       forall st11 lbl st12,
+        Reachable (steps step_m) sys1 st11 ->
         step_m sys1 st11 lbl st12 ->
         forall st2,
+          Reachable (steps step_m) sys2 st2 ->
           step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                  (mergeMState st11 st2) lbl (mergeMState st12 st2).
     Proof.
       intros.
-      inv H0; [constructor|..].
+      apply reachable_state_valid in H0; [|assumption].
+      red in H0; dest.
+      apply reachable_state_valid in H2; [|assumption].
+      red in H2; dest.
+      inv H1; [constructor|..].
 
       - destruct st2 as [oss2 orqs2 msgs2].
         eapply SmIns; [assumption| |reflexivity|].
-        + destruct H2.
+        + destruct H8.
           split; [|eassumption].
           simpl; apply SubList_app_1; assumption.
-        + simpl.
-          
+        + unfold mergeMState; simpl.
+          destruct H8.
+          f_equal.
+          apply disj_mp_enqMsgs_1; try assumption.
+          eapply SubList_trans; [eassumption|].
+          apply SubList_app_2, SubList_app_1, SubList_refl.
 
-        
-    Admitted.
+      - destruct st2 as [oss2 orqs2 msgs2].
+        eapply SmOuts; [assumption| | |reflexivity|].
+        + simpl.
+          apply Forall_forall; intros.
+          rewrite Forall_forall in H8; specialize (H8 _ H1).
+          eapply disj_mp_FirstMP_1 with (msgs1:= msgs) (msgs2:= msgs2); eauto.
+          destruct H9.
+          do 2 (apply in_or_app; right).
+          apply H9; apply in_map; assumption.
+        + destruct H9.
+          split; [|eassumption].
+          simpl; apply SubList_app_1; assumption.
+        + unfold mergeMState; simpl.
+          destruct H9.
+          f_equal.
+          apply disj_mp_deqMsgs_1; try assumption.
+          eapply SubList_trans; [eassumption|].
+          do 2 apply SubList_app_2; apply SubList_refl.
+
+      - destruct st2 as [oss2 orqs2 msgs2].
+        eapply SmInt.
+        + apply in_or_app; left; eassumption.
+        + assumption.
+        + reflexivity.
+        + instantiate (1:= os).
+          instantiate (1:= M.union oss oss2).
+          apply M.Disj_find_union_1.
+          * eapply M.DisjList_KeysSubset_Disj.
+            { rewrite map_app in HoidxOk.
+              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
+            }
+            { assumption. }
+            { assumption. }
+          * assumption.
+        + instantiate (1:= porq).
+          instantiate (1:= M.union orqs orqs2).
+          apply M.Disj_find_union_1.
+          * eapply M.DisjList_KeysSubset_Disj.
+            { rewrite map_app in HoidxOk.
+              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
+            }
+            { assumption. }
+            { assumption. }
+          * assumption.
+
+        + instantiate (1:= M.union msgs msgs2).
+          apply Forall_forall; intros.
+          rewrite Forall_forall in H12; specialize (H12 _ H1).
+          eapply disj_mp_FirstMP_1 with (msgs1:= msgs) (msgs2:= msgs2); eauto.
+          destruct H13.
+          apply in_map with (f:= idOf) in H1.
+          apply H9 in H1.
+          apply in_app_or in H1; destruct H1.
+          * apply in_or_app; left; assumption.
+          * apply in_or_app; right; apply in_or_app; left; assumption.
+
+        + destruct H13.
+          split; [|assumption].
+          simpl; eapply SubList_trans; [eassumption|].
+          apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_1, SubList_refl.
+          * apply SubList_app_2, SubList_app_1, SubList_refl.
+
+        + assumption.
+        + eassumption.
+        + destruct H16.
+          split; [|assumption].
+          simpl; eapply SubList_trans; [eassumption|].
+          apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_1, SubList_refl.
+          * apply SubList_app_2, SubList_app_1, SubList_refl.
+
+        + assumption.
+        + reflexivity.
+        + unfold mergeMState; simpl.
+          do 2 rewrite M.union_add; f_equal.
+          rewrite disj_mp_enqMsgs_1; try assumption.
+          * f_equal.
+            apply disj_mp_deqMsgs_1; try assumption.
+            destruct H13.
+            simpl; eapply SubList_trans; [eassumption|].
+            apply SubList_app_3.
+            { apply SubList_app_1, SubList_refl. }
+            { apply SubList_app_2, SubList_app_1, SubList_refl. }
+          * apply deqMsgs_msgs_valid; assumption.
+          * destruct H16.
+            eapply SubList_trans; [eassumption|].
+            apply SubList_app_3.
+            { apply SubList_app_1, SubList_refl. }
+            { apply SubList_app_2, SubList_app_2, SubList_refl. }
+    Qed.
 
     Lemma step_mergeSystem_lifted_2:
       forall st21 lbl st22,
+        Reachable (steps step_m) sys2 st21 ->
         step_m sys2 st21 lbl st22 ->
         forall st1,
+          Reachable (steps step_m) sys1 st1 ->
           step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                  (mergeMState st1 st21) lbl (mergeMState st1 st22).
     Proof.
-    Admitted.
+      intros.
+      apply reachable_state_valid in H0; [|assumption].
+      red in H0; dest.
+      apply reachable_state_valid in H2; [|assumption].
+      red in H2; dest.
+      inv H1; [constructor|..].
 
-    Lemma steps_mergeSystem_lifted_1:
-      forall st11 ll st12,
-        steps step_m sys1 st11 ll st12 ->
-        forall st2,
-          steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                (mergeMState st11 st2) ll (mergeMState st12 st2).
-    Proof.
-      induction 1; simpl; intros; [constructor|].
-      econstructor; eauto.
-      apply step_mergeSystem_lifted_1; auto.
-    Qed.
+      - destruct st1 as [oss1 orqs1 msgs1].
+        eapply SmIns; [assumption| |reflexivity|].
+        + destruct H8.
+          split; [|eassumption].
+          simpl; apply SubList_app_2; assumption.
+        + unfold mergeMState; simpl.
+          destruct H8.
+          f_equal.
+          apply disj_mp_enqMsgs_2; try assumption.
+          eapply SubList_trans; [eassumption|].
+          apply SubList_app_2, SubList_app_1, SubList_refl.
 
-    Lemma steps_mergeSystem_lifted_2:
-      forall st21 ll st22,
-        steps step_m sys2 st21 ll st22 ->
-        forall st1,
-          steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                (mergeMState st1 st21) ll (mergeMState st1 st22).
-    Proof.
-      induction 1; simpl; intros; [constructor|].
-      econstructor; eauto.
-      apply step_mergeSystem_lifted_2; auto.
+      - destruct st1 as [oss1 orqs1 msgs1].
+        eapply SmOuts; [assumption| | |reflexivity|].
+        + simpl.
+          apply Forall_forall; intros.
+          rewrite Forall_forall in H8; specialize (H8 _ H1).
+          eapply disj_mp_FirstMP_2 with (msgs1:= msgs1) (msgs2:= msgs); eauto.
+          destruct H9.
+          do 2 (apply in_or_app; right).
+          apply H9; apply in_map; assumption.
+        + destruct H9.
+          split; [|eassumption].
+          simpl; apply SubList_app_2; assumption.
+        + unfold mergeMState; simpl.
+          destruct H9.
+          f_equal.
+          apply disj_mp_deqMsgs_2; try assumption.
+          eapply SubList_trans; [eassumption|].
+          do 2 apply SubList_app_2; apply SubList_refl.
+
+      - destruct st1 as [oss1 orqs1 msgs1].
+        eapply SmInt.
+        + apply in_or_app; right; eassumption.
+        + assumption.
+        + reflexivity.
+        + instantiate (1:= os).
+          instantiate (1:= M.union oss1 oss).
+          apply M.Disj_find_union_2.
+          * eapply M.DisjList_KeysSubset_Disj.
+            { rewrite map_app in HoidxOk.
+              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
+            }
+            { assumption. }
+            { assumption. }
+          * assumption.
+        + instantiate (1:= porq).
+          instantiate (1:= M.union orqs1 orqs).
+          apply M.Disj_find_union_2.
+          * eapply M.DisjList_KeysSubset_Disj.
+            { rewrite map_app in HoidxOk.
+              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
+            }
+            { assumption. }
+            { assumption. }
+          * assumption.
+
+        + instantiate (1:= M.union msgs1 msgs).
+          apply Forall_forall; intros.
+          rewrite Forall_forall in H12; specialize (H12 _ H1).
+          eapply disj_mp_FirstMP_2 with (msgs1:= msgs1) (msgs2:= msgs); eauto.
+          destruct H13.
+          apply in_map with (f:= idOf) in H1.
+          apply H9 in H1.
+          apply in_app_or in H1; destruct H1.
+          * apply in_or_app; left; assumption.
+          * apply in_or_app; right; apply in_or_app; left; assumption.
+
+        + destruct H13.
+          split; [|assumption].
+          simpl; eapply SubList_trans; [eassumption|].
+          apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_2, SubList_refl.
+          * apply SubList_app_2, SubList_app_2, SubList_refl.
+
+        + assumption.
+        + eassumption.
+        + destruct H16.
+          split; [|assumption].
+          simpl; eapply SubList_trans; [eassumption|].
+          apply SubList_app_3.
+          * apply SubList_app_1, SubList_app_2, SubList_refl.
+          * apply SubList_app_2, SubList_app_2, SubList_refl.
+
+        + assumption.
+        + reflexivity.
+        + unfold mergeMState; simpl.
+          f_equal; [admit|admit|].
+          rewrite disj_mp_enqMsgs_2; try assumption.
+          * f_equal.
+            apply disj_mp_deqMsgs_2; try assumption.
+            destruct H13.
+            simpl; eapply SubList_trans; [eassumption|].
+            apply SubList_app_3.
+            { apply SubList_app_1, SubList_refl. }
+            { apply SubList_app_2, SubList_app_1, SubList_refl. }
+          * apply deqMsgs_msgs_valid; assumption.
+          * destruct H16.
+            eapply SubList_trans; [eassumption|].
+            apply SubList_app_3.
+            { apply SubList_app_1, SubList_refl. }
+            { apply SubList_app_2, SubList_app_2, SubList_refl. }
     Qed.
 
     Lemma steps_composed:
       forall ll1 ll2 ll,
         HistoryMerged ll1 ll2 ll ->
         forall st11 st12,
+          Reachable (steps step_m) sys1 st11 ->
           steps step_m sys1 st11 ll1 st12 ->
           forall st21 st22,
+            Reachable (steps step_m) sys2 st21 ->
             steps step_m sys2 st21 ll2 st22 ->
             steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                   (mergeMState st11 st21) ll (mergeMState st12 st22).
     Proof.
       induction 1; simpl; intros.
-      - inv H0; inv H1; constructor.
-      - inv H1.
-        specialize (IHHistoryMerged _ _ H6 _ _ H2).
-        econstructor; [eassumption|].
-        apply step_mergeSystem_lifted_1; assumption.
+      - inv H1; inv H3; constructor.
       - inv H2.
-        specialize (IHHistoryMerged _ _ H1 _ _ H6).
+        specialize (IHHistoryMerged _ _ H1 H8 _ _ H3 H4).
         econstructor; [eassumption|].
-        apply step_mergeSystem_lifted_2; assumption.
+        apply step_mergeSystem_lifted_1.
+        + eapply reachable_steps; eauto.
+        + assumption.
+        + eapply reachable_steps; eauto.
+      - inv H4.
+        specialize (IHHistoryMerged _ _ H1 H2 _ _ H3 H8).
+        econstructor; [eassumption|].
+        apply step_mergeSystem_lifted_2.
+        + eapply reachable_steps; eauto.
+        + assumption.
+        + eapply reachable_steps; eauto.
     Qed.
 
   End Compose.
@@ -1016,9 +1457,9 @@ Section Facts.
   Qed.
 
   Theorem refines_compositional:
-    forall impl1 spec1,
+    forall impl1 spec1 (Hspec1: InitStateValid spec1),
       Refines (steps step_m) (steps step_m) impl1 spec1 ->
-      forall impl2 spec2,
+      forall impl2 spec2 (Hspec2: InitStateValid spec2),
         Refines (steps step_m) (steps step_m) impl2 spec2 ->
         forall (HoidxOkI: NoDup (map obj_idx (sys_objs impl1 ++ sys_objs impl2)))
                (HmidxOkI: NoDup ((sys_minds impl1 ++ sys_minds impl2)
@@ -1051,12 +1492,13 @@ Section Facts.
 
     econstructor.
     - rewrite mergeMState_init.
-      eapply steps_composed; eassumption.
+      eapply steps_composed; try eassumption.
+      all: apply reachable_init.
     - reflexivity.
   Qed.
 
   Theorem refines_replicates:
-    forall impl spec,
+    forall impl spec (Hspec: InitStateValid spec),
       Refines (steps step_m) (steps step_m) impl spec ->
       forall n,
         Refines (steps step_m) (steps step_m)
@@ -1065,7 +1507,9 @@ Section Facts.
     induction n; simpl; intros.
     - apply refines_liftSystem; assumption.
     - apply refines_compositional.
+      + admit.
       + apply refines_liftSystem; assumption.
+      + admit.
       + assumption.
   Qed.
   
