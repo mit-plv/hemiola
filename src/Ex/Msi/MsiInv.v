@@ -47,7 +47,7 @@ Section CoherenceUnit.
    * are in an invalid status. *)
   
   Definition ObjExcl0 :=
-    ost#[status] = msiM /\ NoRsI.
+    msiM <= ost#[status] /\ NoRsI.
 
   Definition ObjExcl :=
     ObjExcl0 \/

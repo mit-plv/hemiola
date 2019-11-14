@@ -7,6 +7,9 @@ Require Import Ex.Spec Ex.SpecSv Ex.Template Ex.Msi.
 
 Set Implicit Arguments.
 
+Axiom cheat: forall t, t.
+Ltac admit := apply cheat.
+
 Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
@@ -204,6 +207,18 @@ Section System.
 
       Lemma getDir_setDirS_sound:
         forall oidx shs, getDir oidx (setDirS shs) <= msiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_in:
+        forall oidx shs, In oidx shs -> getDir oidx (setDirS shs) = msiS.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_not_in:
+        forall oidx shs, ~ In oidx shs -> getDir oidx (setDirS shs) = msiI.
+      Proof. dir_crush. Qed.
+
+      Lemma getDir_setDirS_eq:
+        forall oidx, getDir oidx (setDirS [oidx]) = msiS.
       Proof. dir_crush. Qed.
 
       Lemma getDir_setDirM_eq:
