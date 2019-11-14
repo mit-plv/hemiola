@@ -1611,15 +1611,100 @@ Section Facts.
       eapply mergeCIfc_fold_left_c_li_indices_In; eassumption.
   Qed.
 
-  (* Lemma parentIdxOf_root_child_exists: *)
-  (*   forall dtr cidx pidx, *)
-  (*     parentIdxOf dtr cidx = Some pidx -> *)
-  (*     pidx = rootOf dtr -> *)
-  (*     exists ctr, *)
-  (*       In ctr (childrenOf dtr) /\ *)
-  (*       rootOf ctr = cidx. *)
-  (* Proof. *)
+  Lemma tree2Topo_child_in:
+    forall tr bidx oidx cidx,
+      parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
+      (In oidx (c_l1_indices (snd (tree2Topo tr bidx))) /\ cidx = l1ExtOf oidx) \/
+      (In oidx (c_li_indices (snd (tree2Topo tr bidx))) /\
+       In cidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                  ++ c_l1_indices (snd (tree2Topo tr bidx)))).
+  Proof.
+    induction tr using tree_ind_l; simpl; intros.
+    pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf; simpl in Hwf.
+    find_if_inside; simpl in *.
 
+    - left.
+      unfold parentIdxOf in H0; simpl in H0.
+      destruct (hasIdx _ _) eqn:Hhi; [|discriminate].
+      destruct d; inv H0.
+      apply hasIdx_Some in Hhi; simpl in Hhi; dest; subst.
+      auto.
+
+    - unfold parentIdxOf in H0.
+      destruct (parentChnsOf _ _) as [[croot pidx]|] eqn:Hp;
+        simpl in H0; [inv H0|discriminate].
+      apply parentChnsOf_case in Hp.
+      destruct Hp as [cdtr ?]; dest.
+      destruct H1.
+
+      + dest; subst; simpl in *.
+        apply in_map_iff in H0; destruct H0 as [[cdtr' cifc] [? ?]]; simpl in *; subst.
+        apply incMap_In_implies in H1.
+        destruct H1 as [ctr [ofs [? ?]]]; simpl in *.
+
+        right; split; [left; reflexivity|].
+        right; apply in_or_app.
+        destruct ctr as [cl].
+        destruct (nil_dec cl); subst.
+        * simpl in H1; unfold singletonDNode in H1; inv H1; simpl in *.
+          right.
+          eapply mergeCIfc_fold_left_c_l1_indices_In.
+          { apply in_map; apply incMap_In; eassumption. }
+          { left; reflexivity. }
+        * left.
+          eapply mergeCIfc_fold_left_c_li_indices_In with (ifc:= cifc).
+          { replace cifc with (snd (tree2Topo (Node cl) bidx~>ofs))
+              by (rewrite <-H1; reflexivity).
+            apply in_map.
+            change ofs with (0 + ofs).
+            apply incMap_In; assumption.
+          }
+          { replace cifc with (snd (tree2Topo (Node cl) bidx~>ofs))
+              by (rewrite <-H1; reflexivity).
+            rewrite c_li_indices_head_rootOf by (intro Hx; inv Hx; auto).
+            left; rewrite <-H1; reflexivity.
+          }
+
+      + simpl in H0.
+        apply in_map_iff in H0; destruct H0 as [[cdtr' cifc] [? ?]]; simpl in *; subst.
+        apply incMap_In_implies in H2.
+        destruct H2 as [ctr [ofs [? ?]]]; simpl in *.
+        pose proof (nth_error_In _ _ H0).
+        rewrite Forall_forall in H; specialize (H _ H3).
+        assert (parentIdxOf (fst (tree2Topo ctr bidx~>ofs)) cidx = Some oidx).
+        { rewrite <-H2; simpl.
+          unfold parentIdxOf; rewrite H1; reflexivity.
+        }
+
+        specialize (H _ _ _ H4).
+        destruct H; dest; [left|right].
+        * split; [|assumption].
+          eapply mergeCIfc_fold_left_c_l1_indices_In; [|eassumption].
+          apply in_map.
+          change ofs with (0 + ofs).
+          apply incMap_In; assumption.
+        * split.
+          { right.
+            eapply mergeCIfc_fold_left_c_li_indices_In; [|eassumption].
+            apply in_map.
+            change ofs with (0 + ofs).
+            apply incMap_In; assumption.
+          }
+          { right.
+            apply in_or_app; apply in_app_or in H5; destruct H5; [left|right].
+            { eapply mergeCIfc_fold_left_c_li_indices_In; [|eassumption].
+              apply in_map.
+              change ofs with (0 + ofs).
+              apply incMap_In; assumption.
+            }
+            { eapply mergeCIfc_fold_left_c_l1_indices_In; [|eassumption].
+              apply in_map.
+              change ofs with (0 + ofs).
+              apply incMap_In; assumption.
+            }
+          }
+  Qed.
+  
   Lemma tree2Topo_li_child_li_l1:
     forall tr bidx oidx cidx,
       In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
@@ -1627,15 +1712,15 @@ Section Facts.
       In cidx ((c_li_indices (snd (tree2Topo tr bidx)))
                  ++ c_l1_indices (snd (tree2Topo tr bidx))).
   Proof.
-    (* induction tr using tree_ind_l; simpl; intros. *)
-    (* pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf; simpl in Hwf. *)
-    (* find_if_inside; simpl in *; [exfalso; auto|]. *)
-      
-    (* destruct H0; subst. *)
-    (* - apply parentIdxOf_root_child_exists in H1; [|reflexivity]. *)
-    (*   simpl in H1; destruct H1 as [ctr [? ?]]; subst. *)
-    (*   right. *)
-  Admitted.
+    intros.
+    apply tree2Topo_child_in in H0.
+    destruct H0; dest; auto.
+    exfalso.
+    pose proof (tree2Topo_WfCIfc tr bidx).
+    destruct H2 as [? _].
+    apply (DisjList_NoDup idx_dec) in H2.
+    eapply DisjList_In_1; eauto.
+  Qed.
 
   Corollary c_l1_indices_has_parent:
     forall tr (Htr: tr <> Node nil) bidx oidx,
@@ -1811,51 +1896,21 @@ Section Facts.
     - apply SubList_cons; assumption.
   Qed.
 
-  Lemma tree2Topo_l1_ext_parent:
-    forall tr bidx oidx,
-      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
-      parentIdxOf (fst (tree2Topo tr bidx)) (l1ExtOf oidx) = Some oidx.
-  Proof.
-    (* induction tr using tree_ind_l; simpl; intros. *)
-
-    (* find_if_inside; simpl in *. *)
-    (* - destruct H0; [subst|exfalso; auto]. *)
-    (*   unfold parentIdxOf; simpl. *)
-    (*   unfold hasIdx. *)
-    (*   find_if_inside; [reflexivity|]. *)
-    (*   elim n; reflexivity. *)
-
-    (* - apply tree2Topo_l1_oidx_In in H0. *)
-    (*   destruct H0; [dest_in|]. *)
-    (*   destruct H0 as [ctr [ofs ?]]; dest; simpl in *. *)
-
-    (* rewrite Forall_forall in H. *)
-    (* specialize (H _ (nth_error_In _ _ H0) _ _ H3). *)
-      
-  Admitted.    
-
   Lemma tree2Topo_l1_child_ext:
     forall tr bidx oidx cidx,
       In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
       parentIdxOf (fst (tree2Topo tr bidx)) cidx = Some oidx ->
       cidx = l1ExtOf oidx.
   Proof.
-    (* induction tr using tree_ind_l; simpl; intros. *)
-    (* pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf; simpl in Hwf. *)
-    (* pose proof (tree2Topo_WfCIfc (Node l) bidx) as Hwfc; simpl in Hwfc. *)
-
-    (* find_if_inside; simpl in *. *)
-    (* 1: { *)
-    (*   destruct H0; [subst|exfalso; auto]. *)
-    (*   unfold parentIdxOf in H1; simpl in H1. *)
-    (*   unfold hasIdx in H1. *)
-    (*   find_if_inside; [inv H1; reflexivity|discriminate]. *)
-    (* } *)
-
-    (* apply tree2Topo_l1_oidx_In in H0. *)
-    (* destruct H0; [dest_in|]. *)
-    (* destruct H0 as [ctr [ofs ?]]; dest; simpl in *. *)
-  Admitted.
+    intros.
+    apply tree2Topo_child_in in H0.
+    destruct H0; dest; auto.
+    exfalso.
+    pose proof (tree2Topo_WfCIfc tr bidx).
+    destruct H2 as [? _].
+    apply (DisjList_NoDup idx_dec) in H2.
+    eapply DisjList_In_1; eauto.
+  Qed.
 
   Lemma tree2Topo_l1_child_ext_not_in:
     forall tr bidx oidx,
@@ -1863,7 +1918,20 @@ Section Facts.
       ~ In (l1ExtOf oidx) ((c_li_indices (snd (tree2Topo tr bidx)))
                              ++ c_l1_indices (snd (tree2Topo tr bidx))).
   Proof.
-  Admitted.
+    intros.
+    assert (In (rqUpFrom (l1ExtOf oidx)) (c_merqs (snd (tree2Topo tr bidx)))).
+    { rewrite c_merqs_l1_rqUpFrom.
+      apply in_map_iff.
+      eexists; repeat split.
+      assumption.
+    }
+    intro Hx.
+    assert (In (rqUpFrom (l1ExtOf oidx)) (c_minds (snd (tree2Topo tr bidx)))).
+    { eapply tree2Topo_obj_chns_minds_SubList; [eassumption|].
+      left; reflexivity.
+    }
+    eapply DisjList_In_1; [apply tree2Topo_minds_merqs_disj| |]; eauto.
+  Qed.
 
   Lemma tree2Topo_l1_NoPrefix:
     forall tr bidx,
@@ -1931,27 +1999,65 @@ Section Facts.
   Qed.
 
   Lemma tree2Topo_root_not_l1ExtOf:
-    forall tr (Htr: tr <> Node nil) bidx oidx,
+    forall tr bidx oidx,
       In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
       l1ExtOf oidx <> rootOf (fst (tree2Topo tr bidx)).
   Proof.
     intros.
-    assert (In (rqUpFrom (l1ExtOf oidx)) (c_merqs (snd (tree2Topo tr bidx)))).
-    { rewrite c_merqs_l1_rqUpFrom.
-      apply in_map_iff.
-      eexists; repeat split.
-      assumption.
-    }
-    assert (In (rqUpFrom (rootOf (fst (tree2Topo tr bidx))))
-               (c_minds (snd (tree2Topo tr bidx)))).
-    { eapply tree2Topo_obj_chns_minds_SubList.
-      { rewrite c_li_indices_head_rootOf by assumption.
-        left; reflexivity.
+    destruct tr as [l]; destruct (nil_dec l); subst.
+    - simpl in *.
+      destruct H; subst.
+      + apply l1ExtOf_not_eq.
+      + exfalso; auto.
+
+    - assert (In (rqUpFrom (l1ExtOf oidx)) (c_merqs (snd (tree2Topo (Node l) bidx)))).
+      { rewrite c_merqs_l1_rqUpFrom.
+        apply in_map_iff.
+        eexists; repeat split.
+        assumption.
       }
-      { simpl; tauto. }
-    }
-    intro Hx; rewrite Hx in H0.
-    eapply DisjList_In_1; [apply tree2Topo_minds_merqs_disj| |]; eauto.
+      assert (In (rqUpFrom (rootOf (fst (tree2Topo (Node l) bidx))))
+                 (c_minds (snd (tree2Topo (Node l) bidx)))).
+      { eapply tree2Topo_obj_chns_minds_SubList.
+        { rewrite c_li_indices_head_rootOf by (intro Hx; inv Hx; auto).
+          left; reflexivity.
+        }
+        { simpl; tauto. }
+      }
+      intro Hx; rewrite Hx in H0.
+      eapply DisjList_In_1; [apply tree2Topo_minds_merqs_disj| |]; eauto.
+  Qed.
+
+  Lemma tree2Topo_l1_ext_parent:
+    forall tr bidx oidx,
+      In oidx (c_l1_indices (snd (tree2Topo tr bidx))) ->
+      parentIdxOf (fst (tree2Topo tr bidx)) (l1ExtOf oidx) = Some oidx.
+  Proof.
+    induction tr using tree_ind_l; intros.
+    pose proof (tree2Topo_WfDTree (Node l) bidx) as Hwf.
+    simpl in *.
+    find_if_inside; simpl in *.
+
+    - destruct H0; [subst|exfalso; auto].
+      unfold parentIdxOf; simpl.
+      destruct (hasIdx _ _) eqn:Hhi; simpl.
+      + apply hasIdx_Some in Hhi; simpl in Hhi; dest; subst.
+        reflexivity.
+      + unfold hasIdx in Hhi; simpl in Hhi.
+        find_if_inside; [discriminate|exfalso; auto].
+
+    - apply tree2Topo_l1_oidx_In in H0.
+      destruct H0; [dest_in|].
+      simpl in H0; destruct H0 as [ctr [ofs ?]]; dest.
+      rewrite Forall_forall in H; specialize (H _ (nth_error_In _ _ H0) _ _ H3).
+      rewrite <-H.
+      eapply parentIdxOf_Subtree_eq; [assumption|..].
+      + apply childrenOf_Subtree; simpl.
+        apply in_map.
+        change ofs with (0 + ofs).
+        apply incMap_In; assumption.
+      + apply tree2Topo_root_not_l1ExtOf; assumption.
+      + eapply parentIdxOf_child_indsOf; eassumption.
   Qed.
 
   Lemma tree2Topo_l1_subtreeIndsOf:
