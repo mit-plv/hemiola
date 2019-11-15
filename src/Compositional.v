@@ -6,6 +6,14 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
+Lemma union_add_2:
+  forall {A} (m m': M.t A) k v,
+    M.find k m = None ->
+    M.union m (M.add k v m') = M.add k v (M.union m m').
+Proof.
+  intros; meq.
+Qed.
+
 Lemma extendInds_DisjList:
   forall inds1 inds2,
     DisjList inds1 inds2 ->
@@ -463,6 +471,12 @@ Section Facts.
 
     Section System.
       Variable sys: System.
+
+      Lemma InitStateValid_lifted:
+        InitStateValid sys ->
+        InitStateValid (liftSystem ln sys).
+      Proof.
+      Admitted.
 
       Lemma step_lifted:
         forall st1 lbl st2,
@@ -949,6 +963,36 @@ Section Facts.
                          ++ (sys_merqs sys1 ++ sys_merqs sys2)
                          ++ (sys_merss sys1 ++ sys_merss sys2))).
 
+    Local Notation chns1 := (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1).
+    Local Notation chns2 := (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2).
+
+    Lemma chns_disj: DisjList chns1 chns2.
+    Proof.
+      intros.
+      pose proof (NoDup_app_weakening_1 _ _ HmidxOk).
+      pose proof (NoDup_app_weakening_2 _ _ HmidxOk).
+      apply (DisjList_NoDup idx_dec) in HmidxOk.
+      apply DisjList_app_3 in HmidxOk; destruct HmidxOk; clear HmidxOk.
+      repeat
+        match goal with
+        | [H: NoDup (_ ++ _) |- _] =>
+          pose proof (NoDup_app_weakening_1 _ _ H);
+            pose proof (NoDup_app_weakening_2 _ _ H);
+            apply (DisjList_NoDup idx_dec) in H
+        | [H: DisjList (_ ++ _) _ |- _] =>
+          apply DisjList_app_3 in H; dest
+        | [H: DisjList _ (_ ++ _) |- _] =>
+          apply DisjList_comm, DisjList_app_3 in H; dest
+        end.
+      repeat
+        match goal with
+        | |- DisjList (_ ++ _) _ => apply DisjList_app_4
+        | |- DisjList _ (_ ++ _) => apply DisjList_comm, DisjList_app_4
+        | [H: DisjList ?l1 ?l2 |- DisjList ?l2 ?l1] => apply DisjList_comm
+        | _ => assumption
+        end.
+    Qed.
+
     Lemma mergeMState_init:
       initsOf (mergeSystem sys1 sys2 HoidxOk HmidxOk) =
       mergeMState (initsOf sys1) (initsOf sys2).
@@ -956,139 +1000,234 @@ Section Facts.
       reflexivity.
     Qed.
 
+    Lemma mergeSystem_InitStateValid:
+      InitStateValid (mergeSystem sys1 sys2 HoidxOk HmidxOk).
+    Proof.
+      unfold InitStateValid, ValidState in *; simpl.
+      destruct Hvi1 as [? [? ?]]; destruct Hvi2 as [? [? ?]]; clear Hvi1 Hvi2.
+      repeat split.
+      - rewrite map_app; apply M.KeysSubset_union_app; auto.
+      - rewrite map_app; apply M.KeysSubset_union_app; auto.
+      - apply M.KeysSubset_empty.
+    Qed.
+
     Section DisjMP.
-      Variables (msgs1 msgs2: MessagePool Msg).
 
-      Local Notation chns1 := (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1).
-      Local Notation chns2 := (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2).
-      
-      Hypotheses (Hks1: M.KeysSubset msgs1 chns1)
-                 (Hks2: M.KeysSubset msgs2 chns2).
+      Section PerMsgs.
+        Variables (msgs1 msgs2: MessagePool Msg).
+        
+        Hypotheses (Hks1: M.KeysSubset msgs1 chns1)
+                   (Hks2: M.KeysSubset msgs2 chns2).
 
-      Lemma chns_disj: DisjList chns1 chns2.
-      Proof.
-      Admitted.
+        Lemma msgs_disj: M.Disj msgs1 msgs2.
+        Proof.
+          eapply M.DisjList_KeysSubset_Disj; [apply chns_disj| |].
+          all: assumption.
+        Qed.
+        Hint Resolve msgs_disj.
 
-      Lemma disj_mp_findQ_1:
-        forall midx,
-          In midx chns1 ->
-          findQ midx msgs1 = findQ midx (M.union msgs1 msgs2).
-      Proof.
-      Admitted.
+        Lemma disj_mp_find_1:
+          forall midx,
+            In midx chns1 ->
+            (M.union msgs1 msgs2)@[midx] = msgs1@[midx].
+        Proof.
+          intros.
+          destruct (msgs1@[midx]) as [q|] eqn:Hq; simpl.
+          - erewrite M.Disj_find_union_1; [|auto|eassumption].
+            reflexivity.
+          - rewrite M.find_union, Hq.
+            eapply M.find_KeysSubset; [eassumption|].
+            eapply DisjList_In_2; eauto.
+            apply chns_disj.
+        Qed.
 
-      Lemma disj_mp_findQ_2:
-        forall midx,
-          In midx chns2 ->
-          findQ midx msgs2 = findQ midx (M.union msgs1 msgs2).
-      Proof.
-      Admitted.
+        Lemma disj_mp_find_2:
+          forall midx,
+            In midx chns2 ->
+            (M.union msgs1 msgs2)@[midx] = msgs2@[midx].
+        Proof.
+          intros.
+          destruct (msgs2@[midx]) as [q2|] eqn:Hq2; simpl.
+          - erewrite M.Disj_find_union_2; [|auto|eassumption].
+            reflexivity.
+          - rewrite M.find_union, Hq2.
+            replace (match msgs1@[midx] with | Some v => Some v | None => None end)
+              with msgs1@[midx] by (destruct (msgs1@[midx]); reflexivity).
+            eapply M.find_KeysSubset; [eassumption|].
+            eapply DisjList_In_1; eauto.
+            apply chns_disj.
+        Qed.
 
-      Lemma disj_mp_FirstMP_1:
-        forall midx msg,
-          In midx chns1 ->
-          FirstMP msgs1 midx msg <->
-          FirstMP (M.union msgs1 msgs2) midx msg.
-      Proof.
-        unfold FirstMP, firstMP; intros.
-        rewrite <-disj_mp_findQ_1 by assumption.
-        split; intros; assumption.
-      Qed.
+        Lemma disj_mp_findQ_1:
+          forall midx,
+            In midx chns1 ->
+            findQ midx msgs1 = findQ midx (M.union msgs1 msgs2).
+        Proof.
+          unfold findQ; intros.
+          destruct (msgs1@[midx]) as [q|] eqn:Hq; simpl.
+          - erewrite M.Disj_find_union_1; [|auto|eassumption].
+            reflexivity.
+          - rewrite disj_mp_find_1 by assumption.
+            rewrite Hq; reflexivity.
+        Qed.
 
-      Lemma disj_mp_FirstMP_2:
-        forall midx msg,
-          In midx chns2 ->
-          FirstMP msgs2 midx msg <->
-          FirstMP (M.union msgs1 msgs2) midx msg.
-      Proof.
-        unfold FirstMP, firstMP; intros.
-        rewrite <-disj_mp_findQ_2 by assumption.
-        split; intros; assumption.
-      Qed.
+        Lemma disj_mp_findQ_2:
+          forall midx,
+            In midx chns2 ->
+            findQ midx msgs2 = findQ midx (M.union msgs1 msgs2).
+        Proof.
+          unfold findQ; intros.
+          destruct (msgs2@[midx]) as [q|] eqn:Hq; simpl.
+          - erewrite M.Disj_find_union_2; [|auto|eassumption].
+            reflexivity.
+          - rewrite disj_mp_find_2 by assumption.
+            rewrite Hq; reflexivity.
+        Qed.
 
-      Lemma disj_mp_enqMP_1:
-        forall midx msg,
-          In midx chns1 ->
-          M.union (enqMP midx msg msgs1) msgs2 = enqMP midx msg (M.union msgs1 msgs2).
-      Proof.
-        unfold enqMP; intros.
-        rewrite M.union_add.
-        rewrite disj_mp_findQ_1 by assumption.
-        reflexivity.
-      Qed.
+        Lemma disj_mp_FirstMP_1:
+          forall midx msg,
+            In midx chns1 ->
+            FirstMP msgs1 midx msg <->
+            FirstMP (M.union msgs1 msgs2) midx msg.
+        Proof.
+          unfold FirstMP, firstMP; intros.
+          rewrite <-disj_mp_findQ_1 by assumption.
+          split; intros; assumption.
+        Qed.
 
-      Lemma disj_mp_enqMP_2:
-        forall midx msg,
-          In midx chns2 ->
-          M.union msgs1 (enqMP midx msg msgs2) = enqMP midx msg (M.union msgs1 msgs2).
-      Proof.
-        unfold enqMP; intros.
-        rewrite M.union_comm
-          by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
-              apply M.KeysSubset_add; auto).
-        rewrite M.union_comm with (m1:= msgs1) (m2:= msgs2) at 2
-          by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|eassumption..]).
-        rewrite M.union_add.
-        rewrite disj_mp_findQ_2 by assumption.
-        reflexivity.
-      Qed.
+        Lemma disj_mp_FirstMP_2:
+          forall midx msg,
+            In midx chns2 ->
+            FirstMP msgs2 midx msg <->
+            FirstMP (M.union msgs1 msgs2) midx msg.
+        Proof.
+          unfold FirstMP, firstMP; intros.
+          rewrite <-disj_mp_findQ_2 by assumption.
+          split; intros; assumption.
+        Qed.
+
+        Lemma disj_mp_enqMP_1:
+          forall midx msg,
+            In midx chns1 ->
+            M.union (enqMP midx msg msgs1) msgs2 = enqMP midx msg (M.union msgs1 msgs2).
+        Proof.
+          unfold enqMP; intros.
+          rewrite M.union_add.
+          rewrite disj_mp_findQ_1 by assumption.
+          reflexivity.
+        Qed.
+
+        Lemma disj_mp_enqMP_2:
+          forall midx msg,
+            In midx chns2 ->
+            M.union msgs1 (enqMP midx msg msgs2) = enqMP midx msg (M.union msgs1 msgs2).
+        Proof.
+          unfold enqMP; intros.
+          rewrite M.union_comm
+            by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
+                apply M.KeysSubset_add; auto).
+          rewrite M.union_comm with (m1:= msgs1) (m2:= msgs2) at 2
+            by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|eassumption..]).
+          rewrite M.union_add.
+          rewrite disj_mp_findQ_2 by assumption.
+          reflexivity.
+        Qed.
+
+        Lemma disj_mp_deqMP_1:
+          forall midx,
+            In midx chns1 ->
+            M.union (deqMP midx msgs1) msgs2 = deqMP midx (M.union msgs1 msgs2).
+        Proof.
+          unfold deqMP; intros.
+          rewrite <-disj_mp_findQ_1 by assumption.
+          destruct (findQ midx msgs1); [reflexivity|].
+          rewrite M.union_add.
+          reflexivity.
+        Qed.
+
+        Lemma disj_mp_deqMP_2:
+          forall midx,
+            In midx chns2 ->
+            M.union msgs1 (deqMP midx msgs2) = deqMP midx (M.union msgs1 msgs2).
+        Proof.
+          unfold deqMP; intros.
+          rewrite <-disj_mp_findQ_2 by assumption.
+          destruct (findQ midx msgs2); [reflexivity|].
+          rewrite M.union_comm
+            by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
+                apply M.KeysSubset_add; auto).
+          rewrite M.union_add.
+          rewrite M.union_comm
+            by (eapply M.DisjList_KeysSubset_Disj;
+                [apply DisjList_comm, chns_disj|assumption..]).
+          reflexivity.
+        Qed.
+        
+      End PerMsgs.
 
       Lemma disj_mp_enqMsgs_1:
         forall nmsgs,
           SubList (idsOf nmsgs) chns1 ->
-          M.union (enqMsgs nmsgs msgs1) msgs2 = enqMsgs nmsgs (M.union msgs1 msgs2).
+          forall (msgs1 msgs2: MessagePool Msg),
+            M.KeysSubset msgs1 chns1 ->
+            M.KeysSubset msgs2 chns2 ->
+            M.union (enqMsgs nmsgs msgs1) msgs2 = enqMsgs nmsgs (M.union msgs1 msgs2).
       Proof.
-      Admitted.
+        induction nmsgs as [|[midx msg] nmsgs]; simpl; intros; auto.
+        apply SubList_cons_inv in H0; dest.
+        rewrite IHnmsgs; auto.
+        - rewrite disj_mp_enqMP_1; auto.
+        - apply M.KeysSubset_add; auto.
+      Qed.
 
       Lemma disj_mp_enqMsgs_2:
         forall nmsgs,
           SubList (idsOf nmsgs) chns2 ->
-          M.union msgs1 (enqMsgs nmsgs msgs2) = enqMsgs nmsgs (M.union msgs1 msgs2).
+          forall (msgs1 msgs2: MessagePool Msg),
+            M.KeysSubset msgs1 chns1 ->
+            M.KeysSubset msgs2 chns2 ->
+            M.union msgs1 (enqMsgs nmsgs msgs2) = enqMsgs nmsgs (M.union msgs1 msgs2).
       Proof.
-      Admitted.
-
-      Lemma disj_mp_deqMP_1:
-        forall midx,
-          In midx chns1 ->
-          M.union (deqMP midx msgs1) msgs2 = deqMP midx (M.union msgs1 msgs2).
-      Proof.
-        unfold deqMP; intros.
-        rewrite <-disj_mp_findQ_1 by assumption.
-        destruct (findQ midx msgs1); [reflexivity|].
-        rewrite M.union_add.
-        reflexivity.
-      Qed.
-
-      Lemma disj_mp_deqMP_2:
-        forall midx,
-          In midx chns2 ->
-          M.union msgs1 (deqMP midx msgs2) = deqMP midx (M.union msgs1 msgs2).
-      Proof.
-        unfold deqMP; intros.
-        rewrite <-disj_mp_findQ_2 by assumption.
-        destruct (findQ midx msgs2); [reflexivity|].
-        rewrite M.union_comm
-          by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
-              apply M.KeysSubset_add; auto).
-        rewrite M.union_add.
-        rewrite M.union_comm
-          by (eapply M.DisjList_KeysSubset_Disj;
-              [apply DisjList_comm, chns_disj|assumption..]).
-        reflexivity.
+        induction nmsgs as [|[midx msg] nmsgs]; simpl; intros; auto.
+        apply SubList_cons_inv in H0; dest.
+        rewrite IHnmsgs; auto.
+        - rewrite disj_mp_enqMP_2; auto.
+        - apply M.KeysSubset_add; auto.
       Qed.
 
       Lemma disj_mp_deqMsgs_1:
         forall rminds,
           SubList rminds chns1 ->
-          M.union (deqMsgs rminds msgs1) msgs2 = deqMsgs rminds (M.union msgs1 msgs2).
+          forall (msgs1 msgs2: MessagePool Msg),
+            M.KeysSubset msgs1 chns1 ->
+            M.KeysSubset msgs2 chns2 ->
+            M.union (deqMsgs rminds msgs1) msgs2 = deqMsgs rminds (M.union msgs1 msgs2).
       Proof.
-      Admitted.
+        induction rminds as [|midx rminds]; simpl; intros; auto.
+        apply SubList_cons_inv in H0; dest.
+        rewrite IHrminds; auto.
+        - rewrite disj_mp_deqMP_1; auto.
+        - unfold deqMP.
+          destruct (findQ midx msgs1); auto.
+          apply M.KeysSubset_add; auto.
+      Qed.
 
       Lemma disj_mp_deqMsgs_2:
         forall rminds,
           SubList rminds chns2 ->
-          M.union msgs1 (deqMsgs rminds msgs2) = deqMsgs rminds (M.union msgs1 msgs2).
+          forall (msgs1 msgs2: MessagePool Msg),
+            M.KeysSubset msgs1 chns1 ->
+            M.KeysSubset msgs2 chns2 ->
+            M.union msgs1 (deqMsgs rminds msgs2) = deqMsgs rminds (M.union msgs1 msgs2).
       Proof.
-      Admitted.
+        induction rminds as [|midx rminds]; simpl; intros; auto.
+        apply SubList_cons_inv in H0; dest.
+        rewrite IHrminds; auto.
+        - rewrite disj_mp_deqMP_2; auto.
+        - unfold deqMP.
+          destruct (findQ midx msgs2); auto.
+          apply M.KeysSubset_add; auto.
+      Qed.
 
     End DisjMP.
 
@@ -1204,12 +1343,12 @@ Section Facts.
             apply SubList_app_3.
             { apply SubList_app_1, SubList_refl. }
             { apply SubList_app_2, SubList_app_1, SubList_refl. }
-          * apply deqMsgs_msgs_valid; assumption.
           * destruct H16.
             eapply SubList_trans; [eassumption|].
             apply SubList_app_3.
             { apply SubList_app_1, SubList_refl. }
             { apply SubList_app_2, SubList_app_2, SubList_refl. }
+          * apply deqMsgs_msgs_valid; assumption.
     Qed.
 
     Lemma step_mergeSystem_lifted_2:
@@ -1314,8 +1453,25 @@ Section Facts.
 
         + assumption.
         + reflexivity.
-        + unfold mergeMState; simpl.
-          f_equal; [admit|admit|].
+        + rewrite map_app in HoidxOk.
+          apply (DisjList_NoDup idx_dec) in HoidxOk.
+          unfold mergeMState; simpl.
+          rewrite union_add_2 with (m:= oss1).
+          2: {
+            assert (M.Disj oss1 oss)
+              by (eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..]; eassumption).
+            apply M.Disj_find_None with (k:= obj_idx obj) in H1.
+            destruct H1; [auto|congruence].
+          }
+          rewrite union_add_2 with (m:= orqs1).
+          2: {
+            assert (M.Disj orqs1 orqs)
+              by (eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..]; eassumption).
+            apply M.Disj_find_None with (k:= obj_idx obj) in H1.
+            destruct H1; [auto|congruence].
+          }
+          
+          f_equal.
           rewrite disj_mp_enqMsgs_2; try assumption.
           * f_equal.
             apply disj_mp_deqMsgs_2; try assumption.
@@ -1324,12 +1480,12 @@ Section Facts.
             apply SubList_app_3.
             { apply SubList_app_1, SubList_refl. }
             { apply SubList_app_2, SubList_app_1, SubList_refl. }
-          * apply deqMsgs_msgs_valid; assumption.
           * destruct H16.
             eapply SubList_trans; [eassumption|].
             apply SubList_app_3.
             { apply SubList_app_1, SubList_refl. }
             { apply SubList_app_2, SubList_app_2, SubList_refl. }
+          * apply deqMsgs_msgs_valid; assumption.
     Qed.
 
     Lemma steps_composed:
@@ -1497,6 +1653,17 @@ Section Facts.
     - reflexivity.
   Qed.
 
+  Lemma repSystem_InitStateValid:
+    forall sys,
+      InitStateValid sys ->
+      forall n, InitStateValid (repSystem n sys).
+  Proof.
+    induction n; intros.
+    - apply InitStateValid_lifted; assumption.
+    - simpl; apply mergeSystem_InitStateValid; [|assumption].
+      apply InitStateValid_lifted; assumption.
+  Qed.
+
   Theorem refines_replicates:
     forall impl spec (Hspec: InitStateValid spec),
       Refines (steps step_m) (steps step_m) impl spec ->
@@ -1507,9 +1674,9 @@ Section Facts.
     induction n; simpl; intros.
     - apply refines_liftSystem; assumption.
     - apply refines_compositional.
-      + admit.
+      + apply InitStateValid_lifted; assumption.
       + apply refines_liftSystem; assumption.
-      + admit.
+      + apply repSystem_InitStateValid; assumption.
       + assumption.
   Qed.
   
