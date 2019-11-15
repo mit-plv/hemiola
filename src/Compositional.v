@@ -328,6 +328,21 @@ Section Facts.
           findeq.
       Qed.
 
+      Lemma liftFMap_KeysSubset:
+        forall (m: M.t A) d,
+          M.KeysSubset m d ->
+          M.KeysSubset (liftFMap ln m) (extendInds ln d).
+      Proof.
+        intros.
+        M.mind m; [apply M.KeysSubset_empty|].
+        rewrite liftFMap_add.
+        pose proof H2; apply M.KeysSubset_add_1 in H2.
+        apply M.KeysSubset_add_2 in H3.
+        apply M.KeysSubset_add.
+        - apply H0; assumption.
+        - apply in_map; assumption.
+      Qed.
+
     End FMap.
 
     Section Messages.
@@ -476,7 +491,22 @@ Section Facts.
         InitStateValid sys ->
         InitStateValid (liftSystem ln sys).
       Proof.
-      Admitted.
+        unfold InitStateValid, ValidState; simpl; intros.
+        dest; repeat split.
+        - clear -H0.
+          rewrite map_map; simpl.
+          replace (map (fun x => (obj_idx x)~>ln) (sys_objs sys))
+            with (extendInds ln (map obj_idx (sys_objs sys)))
+            by (unfold extendInds; rewrite map_map; reflexivity).
+          apply liftFMap_KeysSubset; assumption.
+        - clear -H1.
+          rewrite map_map; simpl.
+          replace (map (fun x => (obj_idx x)~>ln) (sys_objs sys))
+            with (extendInds ln (map obj_idx (sys_objs sys)))
+            by (unfold extendInds; rewrite map_map; reflexivity).
+          apply liftFMap_KeysSubset; assumption.
+        - apply M.KeysSubset_empty.
+      Qed.
 
       Lemma step_lifted:
         forall st1 lbl st2,
