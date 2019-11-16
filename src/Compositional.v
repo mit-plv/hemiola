@@ -925,17 +925,50 @@ Section Facts.
 
   End Lift.
 
+  Section FilterMsgs.
+
+    Definition filterMsgs (d: list IdxT) (eins: list (Id Msg)) :=
+      List.filter (fun ein =>
+                     if in_dec idx_dec (idOf ein) d
+                     then true else false) eins.
+
+    Lemma filterMsgs_idsOf_SubList:
+      forall msgs d,
+        SubList (idsOf (filterMsgs d msgs)) d.
+    Proof.
+      unfold SubList; intros.
+      apply in_map_iff in H0; dest; subst.
+      apply filter_In in H1; dest.
+      find_if_inside; auto.
+      discriminate.
+    Qed.
+
+    Lemma filterMsgs_idsOf_NoDup:
+      forall msgs d,
+        NoDup (idsOf msgs) ->
+        NoDup (idsOf (filterMsgs d msgs)).
+    Proof.
+      induction msgs; intros; [constructor|].
+      simpl in H0; inv H0.
+      simpl; find_if_inside; auto.
+      simpl; constructor; auto.
+      intro Hx.
+      apply in_map_iff in Hx; destruct Hx as [[midx msg] ?]; dest.
+      simpl in *; subst.
+      apply filter_In in H1; dest; simpl in *.
+      find_if_inside; [|discriminate].
+      elim H3.
+      apply in_map with (f:= idOf) in H0; assumption.
+    Qed.
+
+  End FilterMsgs.
+  
   Section Merge.
 
     Definition mergeMState (st1 st2: MState): MState :=
       {| bst_oss := M.union (bst_oss st1) (bst_oss st2);
          bst_orqs := M.union (bst_orqs st1) (bst_orqs st2);
          bst_msgs := M.union (bst_msgs st1) (bst_msgs st2) |}.
-
-    Definition filterMsgs (d: list IdxT) (eins: list (Id Msg)) :=
-      List.filter (fun ein =>
-                     if in_dec idx_dec (idOf ein) d
-                     then true else false) eins.
 
     Definition filterIns (d: list IdxT) (eins: list (Id Msg)) :=
       if nil_dec (filterMsgs d eins)
@@ -1802,6 +1835,52 @@ Section Facts.
         apply in_or_app; left; assumption.
     Qed.
 
+    Lemma filterMsgs_ext_ins_eq_1:
+      forall eins,
+        SubList (idsOf eins) (sys_merqs sys1 ++ sys_merqs sys2) ->
+        filterMsgs (sys_merqs sys2) eins = nil ->
+        filterMsgs (sys_merqs sys1) eins = eins.
+    Proof.
+      induction eins as [|[midx msg] eins]; simpl; intros; auto.
+      destruct (in_dec _ _ _); [discriminate|].
+      simpl in H0; apply SubList_cons_inv in H0; dest.
+      destruct (in_dec _ _ _).
+      - f_equal; auto.
+      - exfalso; apply in_app_or in H0; destruct H0; auto.
+    Qed.
+
+    Lemma filterMsgs_ext_ins_eq_2:
+      forall eins,
+        SubList (idsOf eins) (sys_merqs sys1 ++ sys_merqs sys2) ->
+        filterMsgs (sys_merqs sys1) eins = nil ->
+        filterMsgs (sys_merqs sys2) eins = eins.
+    Proof.
+      induction eins as [|[midx msg] eins]; simpl; intros; auto.
+      destruct (in_dec _ _ _); [discriminate|].
+      simpl in H0; apply SubList_cons_inv in H0; dest.
+      destruct (in_dec _ _ _).
+      - f_equal; auto.
+      - exfalso; apply in_app_or in H0; destruct H0; auto.
+    Qed.
+
+    Lemma ext_ins_exfalso_nil:
+      forall eins,
+        eins <> nil ->
+        SubList (idsOf eins) (sys_merqs sys1 ++ sys_merqs sys2) ->
+        filterMsgs (sys_merqs sys1) eins = nil ->
+        filterMsgs (sys_merqs sys2) eins = nil ->
+        False.
+    Proof.
+      intros.
+      destruct eins as [|[midx msg] eins]; [exfalso; auto|].
+      simpl in H1; apply SubList_cons_inv in H1; dest.
+      apply in_app_or in H1; destruct H1.
+      + simpl in H2.
+        destruct (in_dec idx_dec _ _); [discriminate|auto].
+      + simpl in H3.
+        destruct (in_dec idx_dec _ _); [discriminate|auto].
+    Qed.
+
     Lemma ext_ins_composed:
       forall eins,
         eins <> nil ->
@@ -1824,40 +1903,14 @@ Section Facts.
       unfold filterIns in *.
       do 2 find_if_inside.
 
-      - exfalso.
-        destruct eins as [|[midx msg] eins]; [exfalso; auto|].
-        simpl in H1; apply SubList_cons_inv in H1; dest.
-        apply in_app_or in H1; destruct H1.
-        + simpl in e0.
-          destruct (in_dec idx_dec _ _); [discriminate|auto].
-        + simpl in e.
-          destruct (in_dec idx_dec _ _); [discriminate|auto].
-
+      - exfalso; eapply ext_ins_exfalso_nil; eauto.
       - inv H5.
-        assert (filterMsgs (sys_merqs sys1) eins = eins).
-        { clear -e H1.
-          induction eins as [|[midx msg] eins]; simpl; intros; auto.
-          simpl in e.
-          destruct (in_dec _ _ _); [discriminate|].
-          simpl in H1; apply SubList_cons_inv in H1; dest.
-          destruct (in_dec _ _ _).
-          { f_equal; auto. }
-          { exfalso; apply in_app_or in H0; destruct H0; auto. }
-        }
+        pose proof (filterMsgs_ext_ins_eq_1 _ H1 e).
         rewrite H5 in *; clear H5.
         eapply step_mergeSystem_lifted_1; eauto.
 
       - inv H3.
-        assert (filterMsgs (sys_merqs sys2) eins = eins).
-        { clear -e H1.
-          induction eins as [|[midx msg] eins]; simpl; intros; auto.
-          simpl in e.
-          destruct (in_dec _ _ _); [discriminate|].
-          simpl in H1; apply SubList_cons_inv in H1; dest.
-          destruct (in_dec _ _ _).
-          { f_equal; auto. }
-          { exfalso; apply in_app_or in H0; destruct H0; auto. }
-        }
+        pose proof (filterMsgs_ext_ins_eq_2 _ H1 e).
         rewrite H3 in *; clear H3.
         eapply step_mergeSystem_lifted_2; eauto.
 
@@ -1948,6 +2001,52 @@ Section Facts.
       - apply deqMsgs_msgs_valid; assumption.
     Qed.
 
+    Lemma filterMsgs_ext_outs_eq_1:
+      forall eouts,
+        SubList (idsOf eouts) (sys_merss sys1 ++ sys_merss sys2) ->
+        filterMsgs (sys_merss sys2) eouts = nil ->
+        filterMsgs (sys_merss sys1) eouts = eouts.
+    Proof.
+      induction eouts as [|[midx msg] eouts]; simpl; intros; auto.
+      destruct (in_dec _ _ _); [discriminate|].
+      simpl in H0; apply SubList_cons_inv in H0; dest.
+      destruct (in_dec _ _ _).
+      - f_equal; auto.
+      - exfalso; apply in_app_or in H0; destruct H0; auto.
+    Qed.
+
+    Lemma filterMsgs_ext_outs_eq_2:
+      forall eouts,
+        SubList (idsOf eouts) (sys_merss sys1 ++ sys_merss sys2) ->
+        filterMsgs (sys_merss sys1) eouts = nil ->
+        filterMsgs (sys_merss sys2) eouts = eouts.
+    Proof.
+      induction eouts as [|[midx msg] eouts]; simpl; intros; auto.
+      destruct (in_dec _ _ _); [discriminate|].
+      simpl in H0; apply SubList_cons_inv in H0; dest.
+      destruct (in_dec _ _ _).
+      - f_equal; auto.
+      - exfalso; apply in_app_or in H0; destruct H0; auto.
+    Qed.
+
+    Lemma ext_outs_exfalso_nil:
+      forall eouts,
+        eouts <> nil ->
+        SubList (idsOf eouts) (sys_merss sys1 ++ sys_merss sys2) ->
+        filterMsgs (sys_merss sys1) eouts = nil ->
+        filterMsgs (sys_merss sys2) eouts = nil ->
+        False.
+    Proof.
+      intros.
+      destruct eouts as [|[midx msg] eouts]; [exfalso; auto|].
+      simpl in H1; apply SubList_cons_inv in H1; dest.
+      apply in_app_or in H1; destruct H1.
+      + simpl in H2.
+        destruct (in_dec idx_dec _ _); [discriminate|auto].
+      + simpl in H3.
+        destruct (in_dec idx_dec _ _); [discriminate|auto].
+    Qed.
+
     Lemma ext_outs_composed:
       forall eouts,
         eouts <> nil ->
@@ -1970,40 +2069,14 @@ Section Facts.
       unfold filterOuts in *.
       do 2 find_if_inside.
 
-      - exfalso.
-        destruct eouts as [|[midx msg] eouts]; [exfalso; auto|].
-        simpl in H1; apply SubList_cons_inv in H1; dest.
-        apply in_app_or in H1; destruct H1.
-        + simpl in e0.
-          destruct (in_dec idx_dec _ _); [discriminate|auto].
-        + simpl in e.
-          destruct (in_dec idx_dec _ _); [discriminate|auto].
-
+      - exfalso; eapply ext_outs_exfalso_nil; eauto.
       - inv H5.
-        assert (filterMsgs (sys_merss sys1) eouts = eouts).
-        { clear -e H1.
-          induction eouts as [|[midx msg] eouts]; simpl; intros; auto.
-          simpl in e.
-          destruct (in_dec _ _ _); [discriminate|].
-          simpl in H1; apply SubList_cons_inv in H1; dest.
-          destruct (in_dec _ _ _).
-          { f_equal; auto. }
-          { exfalso; apply in_app_or in H0; destruct H0; auto. }
-        }
+        pose proof (filterMsgs_ext_outs_eq_1 _ H1 e).
         rewrite H5 in *; clear H5.
         eapply step_mergeSystem_lifted_1; eauto.
 
       - inv H3.
-        assert (filterMsgs (sys_merss sys2) eouts = eouts).
-        { clear -e H1.
-          induction eouts as [|[midx msg] eouts]; simpl; intros; auto.
-          simpl in e.
-          destruct (in_dec _ _ _); [discriminate|].
-          simpl in H1; apply SubList_cons_inv in H1; dest.
-          destruct (in_dec _ _ _).
-          { f_equal; auto. }
-          { exfalso; apply in_app_or in H0; destruct H0; auto. }
-        }
+        pose proof (filterMsgs_ext_outs_eq_2 _ H1 e).
         rewrite H3 in *; clear H3.
         eapply step_mergeSystem_lifted_2; eauto.
 
@@ -2300,6 +2373,233 @@ Section Facts.
           * apply deqMsgs_msgs_valid; assumption.
     Qed.
 
+    Lemma filterMsgs_ext_ins_SubList_1:
+      forall mins,
+        SubList (idsOf mins) (sys_merqs sys1 ++ sys_merqs sys2) ->
+        filterMsgs (sys_merqs sys2) mins = nil ->
+        SubList (idsOf mins) (sys_merqs sys1).
+    Proof.
+      unfold SubList; intros.
+      specialize (H0 _ H2).
+      apply in_app_or in H0; destruct H0; auto.
+      exfalso.
+      unfold filterMsgs in H1.
+      apply in_map_iff in H2; dest; subst.
+      eapply filter_not_nil; eauto.
+      simpl; find_if_inside; auto.
+    Qed.
+
+    Lemma filterMsgs_ext_ins_SubList_2:
+      forall mins,
+        SubList (idsOf mins) (sys_merqs sys1 ++ sys_merqs sys2) ->
+        filterMsgs (sys_merqs sys1) mins = nil ->
+        SubList (idsOf mins) (sys_merqs sys2).
+    Proof.
+      unfold SubList; intros.
+      specialize (H0 _ H2).
+      apply in_app_or in H0; destruct H0; auto.
+      exfalso.
+      unfold filterMsgs in H1.
+      apply in_map_iff in H2; dest; subst.
+      eapply filter_not_nil; eauto.
+      simpl; find_if_inside; auto.
+    Qed.
+
+    Lemma step_ext_ins_split:
+      forall st11 st21 mins st2,
+        ValidState sys1 st11 -> ValidState sys2 st21 ->
+        step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+               (mergeMState st11 st21) (RlblIns mins) st2 ->
+        exists st12 st22,
+          step_m sys1 st11 (filterIns (sys_merqs sys1) mins) st12 /\
+          step_m sys2 st21 (filterIns (sys_merqs sys2) mins) st22 /\
+          mergeMState st12 st22 = st2.
+    Proof.
+      intros.
+      inv_step; inv H6; simpl in *.
+      unfold filterIns; destruct (nil_dec _).
+      - exists st11.
+        destruct (nil_dec _).
+        + exfalso.
+          destruct H5; simpl in *.
+          destruct mins as [|[midx msg] mins]; auto.
+          simpl in H2; apply SubList_cons_inv in H2; dest.
+          apply in_app_or in H2; destruct H2.
+          * simpl in e; destruct (in_dec _ _ _); [discriminate|auto].
+          * simpl in e0; destruct (in_dec _ _ _); [discriminate|auto].
+
+        + destruct st21 as [oss2 orqs2 msgs2].
+          eexists; repeat ssplit.
+          * constructor.
+          * econstructor; try reflexivity; try eassumption.
+            destruct H5; simpl in *.
+            erewrite filterMsgs_ext_ins_eq_2 by eassumption.
+            split; [|assumption].
+            apply filterMsgs_ext_ins_SubList_2; auto.
+          * unfold mergeMState; simpl; f_equal.
+            destruct H5; simpl in *.
+            erewrite filterMsgs_ext_ins_eq_2 by eassumption.
+            apply filterMsgs_ext_ins_SubList_2 in H2; [|assumption].
+            eapply disj_mp_enqMsgs_2; try reflexivity; try eassumption.
+            { eapply SubList_trans; [eassumption|].
+              apply SubList_app_2, SubList_app_1, SubList_refl.
+            }
+            { apply H0. }
+            { apply H1. }
+
+      - destruct (nil_dec _).
+        + destruct st11 as [oss1 orqs1 msgs1].
+          do 2 eexists; repeat ssplit.
+          * econstructor; try reflexivity; try eassumption.
+            destruct H5; simpl in *.
+            erewrite filterMsgs_ext_ins_eq_1 by eassumption.
+            split; [|assumption].
+            apply filterMsgs_ext_ins_SubList_1; auto.
+          * constructor.
+          * unfold mergeMState; simpl; f_equal.
+            destruct H5; simpl in *.
+            erewrite filterMsgs_ext_ins_eq_1 by eassumption.
+            apply filterMsgs_ext_ins_SubList_1 in H2; [|assumption].
+            eapply disj_mp_enqMsgs_1; try reflexivity; try eassumption.
+            { eapply SubList_trans; [eassumption|].
+              apply SubList_app_2, SubList_app_1, SubList_refl.
+            }
+            { apply H0. }
+            { apply H1. }
+
+        + destruct st11 as [oss1 orqs1 msgs1].
+          destruct st21 as [oss2 orqs2 msgs2].
+          do 2 eexists; repeat ssplit.
+          * econstructor; try reflexivity; try eassumption.
+            destruct H5; simpl in *; split.
+            { apply filterMsgs_idsOf_SubList. }
+            { apply filterMsgs_idsOf_NoDup; assumption. }
+          * econstructor; try reflexivity; try eassumption.
+            destruct H5; simpl in *; split.
+            { apply filterMsgs_idsOf_SubList. }
+            { apply filterMsgs_idsOf_NoDup; assumption. }
+          * unfold mergeMState; simpl; f_equal.
+            apply enqMsgs_composed; auto; [apply H5|apply H0|apply H1].
+    Qed.
+
+    Lemma filterMsgs_ext_outs_SubList_1:
+      forall mouts,
+        SubList (idsOf mouts) (sys_merss sys1 ++ sys_merss sys2) ->
+        filterMsgs (sys_merss sys2) mouts = nil ->
+        SubList (idsOf mouts) (sys_merss sys1).
+    Proof.
+      unfold SubList; intros.
+      specialize (H0 _ H2).
+      apply in_app_or in H0; destruct H0; auto.
+      exfalso.
+      unfold filterMsgs in H1.
+      apply in_map_iff in H2; dest; subst.
+      eapply filter_not_nil; eauto.
+      simpl; find_if_inside; auto.
+    Qed.
+
+    Lemma filterMsgs_ext_outs_SubList_2:
+      forall mouts,
+        SubList (idsOf mouts) (sys_merss sys1 ++ sys_merss sys2) ->
+        filterMsgs (sys_merss sys1) mouts = nil ->
+        SubList (idsOf mouts) (sys_merss sys2).
+    Proof.
+      unfold SubList; intros.
+      specialize (H0 _ H2).
+      apply in_app_or in H0; destruct H0; auto.
+      exfalso.
+      unfold filterMsgs in H1.
+      apply in_map_iff in H2; dest; subst.
+      eapply filter_not_nil; eauto.
+      simpl; find_if_inside; auto.
+    Qed.
+
+    Lemma step_ext_outs_split:
+      forall st11 st21 mouts st2,
+        ValidState sys1 st11 -> ValidState sys2 st21 ->
+        step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
+               (mergeMState st11 st21) (RlblOuts mouts) st2 ->
+        exists st12 st22,
+          step_m sys1 st11 (filterOuts (sys_merss sys1) mouts) st12 /\
+          step_m sys2 st21 (filterOuts (sys_merss sys2) mouts) st22 /\
+          mergeMState st12 st22 = st2.
+    Proof.
+      intros.
+      inv_step; inv H6; simpl in *.
+      unfold filterOuts; destruct (nil_dec _).
+      - exists st11.
+        destruct (nil_dec _).
+        + exfalso.
+          destruct H7; simpl in *.
+          destruct mouts as [|[midx msg] mouts]; auto.
+          simpl in H2; apply SubList_cons_inv in H2; dest.
+          apply in_app_or in H2; destruct H2.
+          * simpl in e; destruct (in_dec _ _ _); [discriminate|auto].
+          * simpl in e0; destruct (in_dec _ _ _); [discriminate|auto].
+
+        + destruct st11 as [oss1 orqs1 msgs1].
+          destruct st21 as [oss2 orqs2 msgs2].
+          inv H7.
+          eexists; repeat ssplit.
+          * constructor.
+          * econstructor; try reflexivity; try eassumption.
+            { admit. }
+            { erewrite filterMsgs_ext_outs_eq_2 by eassumption.
+              split; [|assumption].
+              apply filterMsgs_ext_outs_SubList_2; auto.
+            }
+          * unfold mergeMState; simpl; f_equal.
+            erewrite filterMsgs_ext_outs_eq_2 by eassumption.
+            apply filterMsgs_ext_outs_SubList_2 in H2; [|assumption].
+            eapply disj_mp_deqMsgs_2; try reflexivity; try eassumption.
+            { eapply SubList_trans; [eassumption|].
+              apply SubList_app_2, SubList_app_2, SubList_refl.
+            }
+            { apply H0. }
+            { apply H1. }
+
+      - destruct (nil_dec _).
+        + destruct st11 as [oss1 orqs1 msgs1].
+          destruct st21 as [oss2 orqs2 msgs2].
+          inv H7.
+          do 2 eexists; repeat ssplit.
+          * econstructor; try reflexivity; try eassumption.
+            { admit. }
+            { erewrite filterMsgs_ext_outs_eq_1 by eassumption.
+              split; [|assumption].
+              apply filterMsgs_ext_outs_SubList_1; auto.
+            }
+          * constructor.
+          * unfold mergeMState; simpl; f_equal.
+            erewrite filterMsgs_ext_outs_eq_1 by eassumption.
+            apply filterMsgs_ext_outs_SubList_1 in H2; [|assumption].
+            eapply disj_mp_deqMsgs_1; try reflexivity; try eassumption.
+            { eapply SubList_trans; [eassumption|].
+              apply SubList_app_2, SubList_app_2, SubList_refl.
+            }
+            { apply H0. }
+            { apply H1. }
+
+        + destruct st11 as [oss1 orqs1 msgs1].
+          destruct st21 as [oss2 orqs2 msgs2].
+          inv H7.
+          do 2 eexists; repeat ssplit.
+          * econstructor; try reflexivity; try eassumption.
+            { admit. }
+            { split.
+              { apply filterMsgs_idsOf_SubList. }
+              { apply filterMsgs_idsOf_NoDup; assumption. }
+            }
+          * econstructor; try reflexivity; try eassumption.
+            { admit. }
+            { split.
+              { apply filterMsgs_idsOf_SubList. }
+              { apply filterMsgs_idsOf_NoDup; assumption. }
+            }
+          * unfold mergeMState; simpl; f_equal.
+            apply deqMsgs_composed; auto; [apply H0|apply H1].
+    Qed.
+
     Lemma steps_split:
       forall st1 ll st2,
         steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk) st1 ll st2 ->
@@ -2328,11 +2628,23 @@ Section Facts.
           * econstructor; [eassumption|constructor].
           * constructor; auto.
 
-        + admit.
-          (* exists (filterIns (sys_merqs sys1) mins :: ll1); eexists _. *)
-          (* exists (filterIns (sys_merqs sys2) mins :: ll2); eexists _. *)
-
-        + apply step_internal_split in H1.
+        + assert (mins <> nil /\ SubList (idsOf mins) (sys_merqs sys1 ++ sys_merqs sys2)).
+          { inv H1; destruct H10; auto. }
+          dest.
+          apply step_ext_ins_split in H1;
+            [|eapply steps_ValidState; [|eassumption]; assumption
+             |eapply steps_ValidState; [|eassumption]; assumption].
+          destruct H1 as [st13 [st23 ?]]; dest; subst.
+          eexists (_ :: _), _, (_ :: _), _.
+          repeat ssplit.
+          * econstructor; eassumption.
+          * econstructor; eassumption.
+          * reflexivity.
+          * econstructor; eauto.
+          
+        + apply step_internal_split in H1;
+            [|eapply steps_ValidState; [|eassumption]; assumption
+             |eapply steps_ValidState; [|eassumption]; assumption].
           destruct H1.
           * destruct H1 as [st13 [? ?]].
             do 4 eexists; repeat split.
@@ -2346,10 +2658,20 @@ Section Facts.
             { eapply StepsCons; eassumption. }
             { assumption. }
             { constructor; assumption. }
-          * eapply steps_ValidState; [|eassumption]; assumption.
-          * eapply steps_ValidState; [|eassumption]; assumption.
 
-        + admit.
+        + assert (mouts <> nil /\ SubList (idsOf mouts) (sys_merss sys1 ++ sys_merss sys2)).
+          { inv H1; destruct H11; auto. }
+          dest.
+          apply step_ext_outs_split in H1;
+            [|eapply steps_ValidState; [|eassumption]; assumption
+             |eapply steps_ValidState; [|eassumption]; assumption].
+          destruct H1 as [st13 [st23 ?]]; dest; subst.
+          eexists (_ :: _), _, (_ :: _), _.
+          repeat ssplit.
+          * econstructor; eassumption.
+          * econstructor; eassumption.
+          * reflexivity.
+          * econstructor; eauto.
     Qed.          
 
   End Split.
@@ -2382,9 +2704,17 @@ Section Facts.
       destruct IHHistoryMerged as [rhst [? ?]].
       exists rhst; auto.
 
-    - eexists (RlblIns eins :: _); split; [|reflexivity].
-      unfold filterIns, filterMsgs in H3; find_if_inside;
-        unfold filterIns, filterMsgs in H4; find_if_inside.
+    - (* eexists (RlblIns eins :: _); split; [|reflexivity]. *)
+      unfold filterIns in H3; find_if_inside;
+        unfold filterIns in H4; find_if_inside.
+      (* + exfalso; eapply ext_ins_exfalso_nil; eauto. *)
+      (* + simpl in *. *)
+      (*   apply eq_sym, behaviorOf_cons_inv in H4. *)
+      (*   destruct H4 as [hll [tll ?]]; dest; subst. *)
+      (*   specialize (IHHistoryMerged _ _ H3 (eq_sym H6)). *)
+      (*   destruct IHHistoryMerged as [prhst [? ?]]. *)
+      (*   erewrite filterMsgs_ext_ins_eq_2 in H5 by eassumption. *)
+      (*   exists (hll ++ prhst). *)
       all: admit.
 
     - eexists (RlblOuts eouts :: _); split; [|reflexivity].
