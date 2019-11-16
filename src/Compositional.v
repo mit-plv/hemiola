@@ -283,25 +283,179 @@ End Lift.
 Section Replicate.
   Context `{OStateIfc}.
 
-  Definition mergeSystem (sys1 sys2: System)
-             (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
-             (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
-                                ++ (sys_merqs sys1 ++ sys_merqs sys2)
-                                ++ (sys_merss sys1 ++ sys_merss sys2))): System :=
+  Program Definition mergeSystem (sys1 sys2: System)
+          (HoidxOk: DisjList (map obj_idx (sys_objs sys1))
+                             (map obj_idx (sys_objs sys2)))
+          (HmidxOk: DisjList (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1)
+                             (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2)): System :=
     {| sys_objs := sys1.(sys_objs) ++ sys2.(sys_objs);
-       sys_oinds_valid := HoidxOk;
+       sys_oinds_valid := _;
        sys_minds := sys1.(sys_minds) ++ sys2.(sys_minds);
        sys_merqs := sys1.(sys_merqs) ++ sys2.(sys_merqs);
        sys_merss := sys1.(sys_merss) ++ sys2.(sys_merss);
-       sys_msg_inds_valid := HmidxOk;
+       sys_msg_inds_valid := _;
        sys_oss_inits := M.union sys1.(sys_oss_inits) sys2.(sys_oss_inits);
        sys_orqs_inits := M.union sys1.(sys_orqs_inits) sys2.(sys_orqs_inits) |}.
-
-  Fixpoint repSystem (n: nat) (osys: System): System :=
+  Next Obligation.
+  Proof.
+    rewrite map_app; apply NoDup_DisjList; [apply sys1|apply sys2|].
+    assumption.
+  Qed.
+  Next Obligation.
+  Proof.
+    apply (NoDup_app_comm_6 idx_dec).
+    apply NoDup_DisjList; [apply sys1|apply sys2|].
+    assumption.
+  Qed.
+  
+  Fixpoint nats (n: nat): list nat :=
     match n with
-    | O => liftSystem O osys
-    | S n' => mergeSystem (liftSystem n osys) (repSystem n' osys) (cheat _) (cheat _)
+    | O => [O]
+    | S n' => (S n') :: (nats n')
     end.
+
+  Lemma nats_DisjList:
+    forall n m, n < m -> DisjList (nats n) [m].
+  Proof.
+    induction n; simpl; intros.
+    - apply (DisjList_spec_1 eq_nat_dec); intros; dest_in.
+      intro Hx; dest_in; omega.
+    - apply (DisjList_cons_inv eq_nat_dec).
+      + apply IHn; omega.
+      + intro Hx; dest_in; omega.
+  Qed.
+
+  (* Definition IdxExtBound (exts: list nat) (idx: IdxT) := *)
+  (*   exists ext, In ext exts /\ idxHd idx = ext.  *)
+
+  (* Lemma exts_disj_disj: *)
+  (*   forall exts1 exts2, *)
+  (*     (forall ext1 ext2, In ext1 exts1 -> In ext2 exts2 -> ext1 <> ext2) -> *)
+  (*     forall inds1 inds2, *)
+  (*       Forall (IdxExtBound exts1) inds1 -> *)
+  (*       Forall (IdxExtBound exts2) inds2 -> *)
+  (*       DisjList inds1 inds2. *)
+  (* Proof. *)
+  (*   intros. *)
+
+  (*   rewrite Forall_forall in H1, H2. *)
+  (*   red; intros. *)
+  (*   specialize (H1 _ H3); specialize (H2 _ H4). *)
+  (*   destruct H1 as [pre1 ?]; dest. *)
+  (*   destruct H2 as [pre2 ?]; dest. *)
+  (*   eapply IdxPrefix_disj_1; [|eassumption]. *)
+  (*   eapply IdxPrefix_disj_2; [|eassumption]. *)
+  (*   apply H0; assumption. *)
+  (* Qed. *)
+
+  Definition SystemBound (n: nat) (sys: System) :=
+    SubList (map idxHd (map obj_idx (sys_objs sys))) (nats n) /\
+    SubList (map idxHd (sys_minds sys ++ sys_merqs sys ++ sys_merss sys)) (nats n).
+
+  Lemma liftObject_ext_bound:
+    forall objs n,
+      SubList (map idxHd (map obj_idx (map (liftObject n) objs))) [n].
+  Proof.
+    intros; rewrite map_map; simpl.
+    red; intros.
+    apply in_map_iff in H0; dest; subst.
+    apply in_map_iff in H1; dest; subst.
+    left; reflexivity.
+  Qed.
+
+  Lemma liftChns_ext_bound:
+    forall sys n,
+      SubList (map idxHd ((extendInds n (sys_minds sys))
+                            ++ (extendInds n (sys_merqs sys))
+                            ++ (extendInds n (sys_merss sys)))) [n].
+  Proof.
+    intros; red; intros.
+    apply in_map_iff in H0; dest; subst.
+    apply in_app_or in H1; destruct H1.
+    - apply in_map_iff in H0; dest; subst.
+      left; reflexivity.
+    - apply in_app_or in H0; destruct H0.
+      + apply in_map_iff in H0; dest; subst.
+        left; reflexivity.
+      + apply in_map_iff in H0; dest; subst.
+        left; reflexivity.
+  Qed.
+
+  Lemma liftSystem_SystemBound:
+    forall sys n, SystemBound n (liftSystem n sys).
+  Proof.
+    intros; split.
+    - eapply SubList_trans.
+      + apply liftObject_ext_bound.
+      + destruct n; simpl; [apply SubList_refl|].
+        apply SubList_cons; [left; reflexivity|apply SubList_nil].
+    - eapply SubList_trans.
+      + apply liftChns_ext_bound.
+      + destruct n; simpl; [apply SubList_refl|].
+        apply SubList_cons; [left; reflexivity|apply SubList_nil].
+  Qed.
+
+  Lemma SubList_map_idxHd_app_6:
+    forall (l1 l2 l3 l4 l5 l6: list IdxT),
+      SubList
+        (map idxHd ((l1 ++ l2) ++ (l3 ++ l4) ++ (l5 ++ l6)))
+        (map idxHd (l1 ++ l3 ++ l5) ++ map idxHd (l2 ++ l4 ++ l6)).
+  Proof.
+    intros; repeat rewrite map_app.
+    repeat apply SubList_app_3.
+    - apply SubList_app_1, SubList_app_1, SubList_refl.
+    - apply SubList_app_2, SubList_app_1, SubList_refl.
+    - apply SubList_app_1, SubList_app_2, SubList_app_1, SubList_refl.
+    - apply SubList_app_2, SubList_app_2, SubList_app_1, SubList_refl.
+    - apply SubList_app_1, SubList_app_2, SubList_app_2, SubList_refl.
+    - apply SubList_app_2, SubList_app_2, SubList_app_2, SubList_refl.
+  Qed.
+
+  Program Fixpoint repSystem (n: nat) (osys: System) {struct n}
+    : {rsys: System & SystemBound n rsys} :=
+    match n with
+    | O => existT _ (liftSystem O osys) _
+    | S n' => existT _ (mergeSystem (liftSystem n osys) (projT1 (repSystem n' osys)) _ _) _
+    end.
+  Next Obligation.
+  Proof. apply liftSystem_SystemBound. Qed.
+  Next Obligation.
+  Proof.
+    simpl; apply idx_DisjList_head.
+    eapply DisjList_SubList.
+    - apply liftObject_ext_bound.
+    - eapply DisjList_comm, DisjList_SubList.
+      + apply s.
+      + apply nats_DisjList; omega.
+  Qed.
+  Next Obligation.
+  Proof.
+    simpl; apply idx_DisjList_head.
+    eapply DisjList_SubList.
+    - apply liftChns_ext_bound.
+    - eapply DisjList_comm, DisjList_SubList.
+      + apply s.
+      + apply nats_DisjList; omega.
+  Qed.
+  Next Obligation.
+  Proof.
+    split; simpl.
+    - repeat rewrite map_app.
+      apply SubList_app_3.
+      + change (S n' :: nats n') with ([S n'] ++ nats n').
+        apply SubList_app_1.
+        apply liftObject_ext_bound.
+      + apply SubList_cons_right.
+        apply (projT2 (repSystem n' osys)).
+    - eapply SubList_trans.
+      + apply SubList_map_idxHd_app_6.
+      + apply SubList_app_3.
+        * change (S n' :: nats n') with ([S n'] ++ nats n').
+          apply SubList_app_1.
+          apply liftChns_ext_bound.
+        * apply SubList_cons_right.
+          apply (projT2 (repSystem n' osys)).
+  Qed. (** FIXME: the proof is done but termination check doesn't work here :-P *)
 
 End Replicate.
 
