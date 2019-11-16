@@ -2514,6 +2514,44 @@ Section Facts.
       simpl; find_if_inside; auto.
     Qed.
 
+    Lemma filterMsgs_Forall_1:
+      forall (msgs1 msgs2: MessagePool Msg),
+        M.KeysSubset msgs1 (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1) ->
+        M.KeysSubset msgs2 (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2) ->
+        forall nmsgs,
+          SubList (idsOf nmsgs) (sys_merss sys1 ++ sys_merss sys2) ->
+          Forall (FirstMPI (M.union msgs1 msgs2)) nmsgs ->
+          Forall (FirstMPI msgs1) (filterMsgs (sys_merss sys1) nmsgs).
+    Proof.
+      intros.
+      apply Forall_forall; intros [midx msg] ?.
+      apply filter_In in H4; dest.
+      find_if_inside; [|discriminate].
+      rewrite Forall_forall in H3; specialize (H3 _ H4).
+      eapply disj_mp_FirstMP_1; eauto.
+      simpl; apply in_or_app; right; apply in_or_app; right.
+      assumption.
+    Qed.          
+
+    Lemma filterMsgs_Forall_2:
+      forall (msgs1 msgs2: MessagePool Msg),
+        M.KeysSubset msgs1 (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1) ->
+        M.KeysSubset msgs2 (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2) ->
+        forall nmsgs,
+          SubList (idsOf nmsgs) (sys_merss sys1 ++ sys_merss sys2) ->
+          Forall (FirstMPI (M.union msgs1 msgs2)) nmsgs ->
+          Forall (FirstMPI msgs2) (filterMsgs (sys_merss sys2) nmsgs).
+    Proof.
+      intros.
+      apply Forall_forall; intros [midx msg] ?.
+      apply filter_In in H4; dest.
+      find_if_inside; [|discriminate].
+      rewrite Forall_forall in H3; specialize (H3 _ H4).
+      eapply disj_mp_FirstMP_2; eauto.
+      simpl; apply in_or_app; right; apply in_or_app; right.
+      assumption.
+    Qed.          
+
     Lemma step_ext_outs_split:
       forall st11 st21 mouts st2,
         ValidState sys1 st11 -> ValidState sys2 st21 ->
@@ -2543,7 +2581,9 @@ Section Facts.
           eexists; repeat ssplit.
           * constructor.
           * econstructor; try reflexivity; try eassumption.
-            { admit. }
+            { red in H0, H1; simpl in *; dest.
+              eapply filterMsgs_Forall_2; eauto.
+            }
             { erewrite filterMsgs_ext_outs_eq_2 by eassumption.
               split; [|assumption].
               apply filterMsgs_ext_outs_SubList_2; auto.
@@ -2564,7 +2604,9 @@ Section Facts.
           inv H7.
           do 2 eexists; repeat ssplit.
           * econstructor; try reflexivity; try eassumption.
-            { admit. }
+            { red in H0, H1; simpl in *; dest.
+              eapply filterMsgs_Forall_1; eauto.
+            }
             { erewrite filterMsgs_ext_outs_eq_1 by eassumption.
               split; [|assumption].
               apply filterMsgs_ext_outs_SubList_1; auto.
@@ -2585,13 +2627,17 @@ Section Facts.
           inv H7.
           do 2 eexists; repeat ssplit.
           * econstructor; try reflexivity; try eassumption.
-            { admit. }
+            { red in H0, H1; simpl in *; dest.
+              eapply filterMsgs_Forall_1; eauto.
+            }
             { split.
               { apply filterMsgs_idsOf_SubList. }
               { apply filterMsgs_idsOf_NoDup; assumption. }
             }
           * econstructor; try reflexivity; try eassumption.
-            { admit. }
+            { red in H0, H1; simpl in *; dest.
+              eapply filterMsgs_Forall_2; eauto.
+            }
             { split.
               { apply filterMsgs_idsOf_SubList. }
               { apply filterMsgs_idsOf_NoDup; assumption. }
