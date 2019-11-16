@@ -55,6 +55,37 @@ Proof.
   - apply in_map; assumption.
 Qed.
 
+Definition ostep `{OStateIfc} (sys: System)
+           (st1: MState) (olbl: option MLabel) (st2: MState): Prop :=
+  match olbl with
+  | Some lbl => step_m sys st1 lbl st2
+  | None => st1 = st2
+  end.
+
+Lemma ocons_steps:
+  forall `{OStateIfc} (sys: System) st1 ll st2,
+    steps step_m sys st1 ll st2 ->
+    forall olbl st3,
+      ostep sys st2 olbl st3 ->
+      steps step_m sys st1 (olbl ::> ll) st3.
+Proof.
+  intros.
+  destruct olbl as [lbl|]; simpl in *; eauto.
+  - econstructor; eauto.
+  - subst; assumption.
+Qed.
+
+Lemma steps_ocons_inv:
+  forall `{OStateIfc} (sys: System) st1 olbl ll st2,
+    steps step_m sys st1 (olbl ::> ll) st2 ->
+    exists sti,
+      steps step_m sys st1 ll sti /\ ostep sys sti olbl st2.
+Proof.
+  intros.
+  destruct olbl as [lbl|]; simpl in *; eauto.
+  inv_steps; eauto.
+Qed.
+
 Lemma behaviorOf_cons_inv:
   forall {LabelT} `{HasLabel LabelT} (ll: list LabelT) lbl rll,
     behaviorOf ll = lbl :: rll ->
@@ -72,6 +103,103 @@ Proof.
     destruct IHll as [hll [tll ?]]; dest; subst.
     exists (rlbl :: hll), tll; repeat split.
     simpl; rewrite Hlbl; simpl; assumption.
+Qed.
+
+Lemma behaviorOf_app_inv:
+  forall {LabelT} `{HasLabel LabelT} (ll1 ll2 ll: list LabelT),
+    behaviorOf ll = behaviorOf (ll1 ++ ll2) ->
+    exists rll1 rll2,
+      rll1 ++ rll2 = ll /\
+      behaviorOf rll1 = behaviorOf ll1 /\
+      behaviorOf rll2 = behaviorOf ll2.
+Proof.
+  induction ll1; simpl; intros; [exists nil, ll; auto|].
+  destruct (getLabel a); simpl in *; auto.
+  apply behaviorOf_cons_inv in H0.
+  destruct H0 as [hll [tll ?]]; dest; subst.
+  specialize (IHll1 _ _ H2).
+  destruct IHll1 as [prll1 [prll2 ?]]; dest; subst.
+  exists (hll ++ prll1), prll2.
+  repeat split.
+  - apply eq_sym, app_assoc.
+  - rewrite behaviorOf_app.
+    rewrite H1; simpl; congruence.
+  - assumption.
+Qed.
+  
+Lemma behaviorOf_ocons_inv:
+  forall {LabelT} `{HasLabel LabelT} (ll: list LabelT) olbl rll,
+    behaviorOf ll = behaviorOf (olbl ::> rll) ->
+    exists hll tll,
+      hll ++ tll = ll /\
+      behaviorOf hll = behaviorOf (o2l olbl) /\
+      behaviorOf tll = behaviorOf rll.
+Proof.
+  intros.
+  replace (olbl ::> rll) with (o2l olbl ++ rll) in H0
+    by (destruct olbl; reflexivity).
+  apply behaviorOf_app_inv in H0.
+  destruct H0 as [rll1 [rll2 ?]]; dest; subst.
+  eauto.
+Qed.
+
+Lemma imap_id:
+  forall {A} (il: list (Id A)), imap id il = il.
+Proof.
+  induction il; simpl; intros; auto.
+  unfold liftI; destruct a; simpl.
+  rewrite IHil; reflexivity.
+Qed.
+  
+Lemma rToLabel_inv:
+  forall (rlbl1 rlbl2: RLabel Msg),
+    rToLabel rlbl1 <> None ->
+    rToLabel rlbl1 = rToLabel rlbl2 ->
+    rlbl1 = rlbl2.
+Proof.
+  destruct rlbl1, rlbl2; intros.
+  all: try discriminate; try reflexivity.
+  all: try (exfalso; auto; fail).
+  - simpl in H0; inv H0.
+    do 2 rewrite imap_id in H2; subst.
+    reflexivity.
+  - simpl in H0; inv H0.
+    do 2 rewrite imap_id in H2; subst.
+    reflexivity.
+Qed.
+
+Lemma behaviorOf_o2l_inv:
+  forall olbl: option (RLabel Msg),
+    match olbl with
+    | Some lbl => rToLabel lbl <> None
+    | None => True
+    end ->
+    forall ll,
+      behaviorOf ll = behaviorOf (o2l olbl) ->
+      exists ll1 ll2,
+        behaviorOf ll1 = nil /\ behaviorOf ll2 = nil /\
+        ll1 ++ olbl ::> ll2 = ll.
+Proof.
+  induction ll; simpl; intros.
+  - destruct olbl as [lbl|]; simpl in *.
+    + destruct (rToLabel lbl); [discriminate|exfalso; auto].
+    + exists nil, nil; auto.
+  - destruct (rToLabel a) eqn:Ha; simpl in *.
+    + destruct olbl as [lbl|] eqn:Hlbl; simpl in *; [|discriminate].
+      destruct (rToLabel lbl) eqn:Hrlbl; [|exfalso; auto].
+      exists nil, ll; eauto.
+      inv H0; rewrite H3.
+      repeat split; simpl.
+      rewrite rToLabel_inv with (rlbl1:= a) (rlbl2:= lbl).
+      * reflexivity.
+      * congruence.
+      * congruence.
+    + specialize (IHll H0).
+      destruct IHll as [pll1 [pll2 ?]]; dest; subst.
+      exists (a :: pll1), pll2.
+      repeat split.
+      * simpl; rewrite Ha; assumption.
+      * assumption.
 Qed.
 
 Section Lift.
@@ -972,11 +1100,11 @@ Section Facts.
 
     Definition filterIns (d: list IdxT) (eins: list (Id Msg)) :=
       if nil_dec (filterMsgs d eins)
-      then RlblEmpty _ else RlblIns (filterMsgs d eins).
+      then None else Some (RlblIns (filterMsgs d eins)).
 
     Definition filterOuts (d: list IdxT) (eouts: list (Id Msg)) :=
       if nil_dec (filterMsgs d eouts)
-      then RlblEmpty _ else RlblOuts (filterMsgs d eouts).
+      then None else Some (RlblOuts (filterMsgs d eouts)).
 
     Section HistoryMerged.
       Variables (erqd1 ersd1 erqd2 ersd2: list IdxT).
@@ -999,8 +1127,8 @@ Section Facts.
               eins <> nil ->
               SubList (idsOf eins) (erqd1 ++ erqd2) ->
               HistoryMerged
-                (filterIns erqd1 eins :: hst1)
-                (filterIns erqd2 eins :: hst2)
+                ((filterIns erqd1 eins) ::> hst1)
+                ((filterIns erqd2 eins) ::> hst2)
                 (RlblIns eins :: hst)
       | HMOuts:
           forall hst1 hst2 hst,
@@ -1009,8 +1137,8 @@ Section Facts.
               eouts <> nil ->
               SubList (idsOf eouts) (ersd1 ++ ersd2) ->
               HistoryMerged
-                (filterOuts ersd1 eouts :: hst1)
-                (filterOuts ersd2 eouts :: hst2)
+                ((filterOuts ersd1 eouts) ::> hst1)
+                ((filterOuts ersd2 eouts) ::> hst2)
                 (RlblOuts eouts :: hst)
       | HMIntLeft:
           forall hst1 hst2 hst,
@@ -1093,6 +1221,19 @@ Section Facts.
         destruct a; simpl in *; try discriminate.
         - constructor; auto.
         - constructor; auto.
+      Qed.
+
+      Lemma HistoryMerged_app:
+        forall ll1 ll2 ll,
+          HistoryMerged ll1 ll2 ll ->
+          forall nll1 nll2 nll,
+            HistoryMerged nll1 nll2 nll ->
+            HistoryMerged (nll1 ++ ll1) (nll2 ++ ll2) (nll ++ ll).
+      Proof.
+        induction 2; simpl; intros; auto;
+          try (constructor; auto; fail).
+        - do 2 rewrite <-ocons_app; constructor; auto.
+        - do 2 rewrite <-ocons_app; constructor; auto.
       Qed.
 
     End HistoryMerged.
@@ -1887,10 +2028,10 @@ Section Facts.
         SubList (idsOf eins) (sys_merqs sys1 ++ sys_merqs sys2) ->
         forall st11 st12,
           Reachable (steps step_m) sys1 st11 ->
-          step_m sys1 st11 (filterIns (sys_merqs sys1) eins) st12 ->
+          ostep sys1 st11 (filterIns (sys_merqs sys1) eins) st12 ->
           forall st21 st22,
             Reachable (steps step_m) sys2 st21 ->
-            step_m sys2 st21 (filterIns (sys_merqs sys2) eins) st22 ->
+            ostep sys2 st21 (filterIns (sys_merqs sys2) eins) st22 ->
             step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                    (mergeMState st11 st21) (RlblIns eins) (mergeMState st12 st22).
     Proof.
@@ -1900,12 +2041,11 @@ Section Facts.
       pose proof (reachable_state_valid Hvi2 H4) as Hsv2.
       red in Hsv2; dest.
       destruct st11 as [oss1 orqs1 msgs1], st12 as [oss2 orqs2 msgs2].
-      unfold filterIns in *.
-      do 2 find_if_inside.
+      unfold filterIns in *; simpl in *.
+      do 2 find_if_inside; simpl in *; subst.
 
       - exfalso; eapply ext_ins_exfalso_nil; eauto.
-      - inv H5.
-        pose proof (filterMsgs_ext_ins_eq_1 _ H1 e).
+      - pose proof (filterMsgs_ext_ins_eq_1 _ H1 e).
         rewrite H5 in *; clear H5.
         eapply step_mergeSystem_lifted_1; eauto.
 
@@ -2053,10 +2193,10 @@ Section Facts.
         SubList (idsOf eouts) (sys_merss sys1 ++ sys_merss sys2) ->
         forall st11 st12,
           Reachable (steps step_m) sys1 st11 ->
-          step_m sys1 st11 (filterOuts (sys_merss sys1) eouts) st12 ->
+          ostep sys1 st11 (filterOuts (sys_merss sys1) eouts) st12 ->
           forall st21 st22,
             Reachable (steps step_m) sys2 st21 ->
-            step_m sys2 st21 (filterOuts (sys_merss sys2) eouts) st22 ->
+            ostep sys2 st21 (filterOuts (sys_merss sys2) eouts) st22 ->
             step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                    (mergeMState st11 st21) (RlblOuts eouts) (mergeMState st12 st22).
     Proof.
@@ -2067,11 +2207,10 @@ Section Facts.
       red in Hsv2; dest.
       destruct st11 as [oss1 orqs1 msgs1], st12 as [oss2 orqs2 msgs2].
       unfold filterOuts in *.
-      do 2 find_if_inside.
+      do 2 find_if_inside; simpl in *; subst.
 
       - exfalso; eapply ext_outs_exfalso_nil; eauto.
-      - inv H5.
-        pose proof (filterMsgs_ext_outs_eq_1 _ H1 e).
+      - pose proof (filterMsgs_ext_outs_eq_1 _ H1 e).
         rewrite H5 in *; clear H5.
         eapply step_mergeSystem_lifted_1; eauto.
 
@@ -2133,13 +2272,15 @@ Section Facts.
         econstructor; eauto.
         constructor.
 
-      - inv_steps.
+      - apply steps_ocons_inv in H4; destruct H4 as [sti1 [? ?]].
+        apply steps_ocons_inv in H6; destruct H6 as [sti2 [? ?]].
         econstructor; eauto.
         apply ext_ins_composed; auto.
         + eapply reachable_steps; eassumption.
         + eapply reachable_steps; eassumption.
 
-      - inv_steps.
+      - apply steps_ocons_inv in H4; destruct H4 as [sti1 [? ?]].
+        apply steps_ocons_inv in H6; destruct H6 as [sti2 [? ?]].
         econstructor; eauto.
         apply ext_outs_composed; auto.
         + eapply reachable_steps; eassumption.
@@ -2411,8 +2552,8 @@ Section Facts.
         step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                (mergeMState st11 st21) (RlblIns mins) st2 ->
         exists st12 st22,
-          step_m sys1 st11 (filterIns (sys_merqs sys1) mins) st12 /\
-          step_m sys2 st21 (filterIns (sys_merqs sys2) mins) st22 /\
+          ostep sys1 st11 (filterIns (sys_merqs sys1) mins) st12 /\
+          ostep sys2 st21 (filterIns (sys_merqs sys2) mins) st22 /\
           mergeMState st12 st22 = st2.
     Proof.
       intros.
@@ -2558,8 +2699,8 @@ Section Facts.
         step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
                (mergeMState st11 st21) (RlblOuts mouts) st2 ->
         exists st12 st22,
-          step_m sys1 st11 (filterOuts (sys_merss sys1) mouts) st12 /\
-          step_m sys2 st21 (filterOuts (sys_merss sys2) mouts) st22 /\
+          ostep sys1 st11 (filterOuts (sys_merss sys1) mouts) st12 /\
+          ostep sys2 st21 (filterOuts (sys_merss sys2) mouts) st22 /\
           mergeMState st12 st22 = st2.
     Proof.
       intros.
@@ -2681,10 +2822,10 @@ Section Facts.
             [|eapply steps_ValidState; [|eassumption]; assumption
              |eapply steps_ValidState; [|eassumption]; assumption].
           destruct H1 as [st13 [st23 ?]]; dest; subst.
-          eexists (_ :: _), _, (_ :: _), _.
+          eexists (_ ::> _), _, (_ ::> _), _.
           repeat ssplit.
-          * econstructor; eassumption.
-          * econstructor; eassumption.
+          * eapply ocons_steps; eassumption.
+          * eapply ocons_steps; eassumption.
           * reflexivity.
           * econstructor; eauto.
           
@@ -2712,15 +2853,85 @@ Section Facts.
             [|eapply steps_ValidState; [|eassumption]; assumption
              |eapply steps_ValidState; [|eassumption]; assumption].
           destruct H1 as [st13 [st23 ?]]; dest; subst.
-          eexists (_ :: _), _, (_ :: _), _.
+          eexists (_ ::> _), _, (_ ::> _), _.
           repeat ssplit.
-          * econstructor; eassumption.
-          * econstructor; eassumption.
+          * eapply ocons_steps; eassumption.
+          * eapply ocons_steps; eassumption.
           * reflexivity.
           * econstructor; eauto.
     Qed.          
 
   End Split.
+
+  Lemma HistoryMerged_behaviorOf_ext_ins_compositional:
+    forall eins,
+      eins <> nil ->
+      forall sys1 sys2,
+        SubList (idsOf eins) (sys_merqs sys1 ++ sys_merqs sys2) ->
+        forall ll1 ll2,
+          behaviorOf ll1 = behaviorOf (o2l (filterIns (sys_merqs sys1) eins)) ->
+          behaviorOf ll2 = behaviorOf (o2l (filterIns (sys_merqs sys2) eins)) ->
+          exists ll,
+            HistoryMerged
+              (sys_merqs sys1) (sys_merss sys1) (sys_merqs sys2) (sys_merss sys2)
+              ll1 ll2 ll /\
+            [LblIns (imap id eins)] = behaviorOf ll.
+  Proof.
+    intros.
+    apply behaviorOf_o2l_inv in H2;
+      [|unfold filterIns; find_if_inside; [auto|discriminate]].
+    destruct H2 as [all1 [bll1 ?]]; dest; subst.
+    apply behaviorOf_o2l_inv in H3;
+      [|unfold filterIns; find_if_inside; [auto|discriminate]].
+    destruct H3 as [all2 [bll2 ?]]; dest; subst.
+    exists (all1 ++ all2 ++ (RlblIns eins) :: bll1 ++ bll2).
+    split.
+    - apply HistoryMerged_app_1; [|assumption].
+      apply HistoryMerged_app_2; [|assumption].
+      constructor; auto.
+      apply HistoryMerged_basic_1; auto.
+    - repeat rewrite behaviorOf_app.
+      unfold MLabel.
+      rewrite H2, H3; simpl.
+      rewrite behaviorOf_app.
+      rewrite H4, H5; simpl.
+      reflexivity.
+  Qed.
+
+  Lemma HistoryMerged_behaviorOf_ext_outs_compositional:
+    forall eouts,
+      eouts <> nil ->
+      forall sys1 sys2,
+        SubList (idsOf eouts) (sys_merss sys1 ++ sys_merss sys2) ->
+        forall ll1 ll2,
+          behaviorOf ll1 = behaviorOf (o2l (filterOuts (sys_merss sys1) eouts)) ->
+          behaviorOf ll2 = behaviorOf (o2l (filterOuts (sys_merss sys2) eouts)) ->
+          exists ll,
+            HistoryMerged
+              (sys_merqs sys1) (sys_merss sys1) (sys_merqs sys2) (sys_merss sys2)
+              ll1 ll2 ll /\
+            [LblOuts (imap id eouts)] = behaviorOf ll.
+  Proof.
+    intros.
+    apply behaviorOf_o2l_inv in H2;
+      [|unfold filterOuts; find_if_inside; [auto|discriminate]].
+    destruct H2 as [all1 [bll1 ?]]; dest; subst.
+    apply behaviorOf_o2l_inv in H3;
+      [|unfold filterOuts; find_if_inside; [auto|discriminate]].
+    destruct H3 as [all2 [bll2 ?]]; dest; subst.
+    exists (all1 ++ all2 ++ (RlblOuts eouts) :: bll1 ++ bll2).
+    split.
+    - apply HistoryMerged_app_1; [|assumption].
+      apply HistoryMerged_app_2; [|assumption].
+      constructor; auto.
+      apply HistoryMerged_basic_1; auto.
+    - repeat rewrite behaviorOf_app.
+      unfold MLabel.
+      rewrite H2, H3; simpl.
+      rewrite behaviorOf_app.
+      rewrite H4, H5; simpl.
+      reflexivity.
+  Qed.
 
   Lemma HistoryMerged_behaviorOf_compositional:
     forall sys1 sys2 hst1 hst2 hst,
@@ -2750,23 +2961,35 @@ Section Facts.
       destruct IHHistoryMerged as [rhst [? ?]].
       exists rhst; auto.
 
-    - (* eexists (RlblIns eins :: _); split; [|reflexivity]. *)
-      unfold filterIns in H3; find_if_inside;
-        unfold filterIns in H4; find_if_inside.
-      (* + exfalso; eapply ext_ins_exfalso_nil; eauto. *)
-      (* + simpl in *. *)
-      (*   apply eq_sym, behaviorOf_cons_inv in H4. *)
-      (*   destruct H4 as [hll [tll ?]]; dest; subst. *)
-      (*   specialize (IHHistoryMerged _ _ H3 (eq_sym H6)). *)
-      (*   destruct IHHistoryMerged as [prhst [? ?]]. *)
-      (*   erewrite filterMsgs_ext_ins_eq_2 in H5 by eassumption. *)
-      (*   exists (hll ++ prhst). *)
-      all: admit.
+    - apply eq_sym, behaviorOf_ocons_inv in H3.
+      destruct H3 as [hll1 [tll1 ?]]; dest; subst.
+      apply eq_sym, behaviorOf_ocons_inv in H4.
+      destruct H4 as [hll2 [tll2 ?]]; dest; subst.
+      apply eq_sym in H6; apply eq_sym in H7.
+      specialize (IHHistoryMerged _ _ H6 H7).
+      destruct IHHistoryMerged as [prhst [? ?]].
+      eapply HistoryMerged_behaviorOf_ext_ins_compositional in H2; eauto.
+      destruct H2 as [hll [? ?]].
+      eexists (hll ++ prhst).
+      split.
+      + apply HistoryMerged_app; assumption.
+      + rewrite behaviorOf_app.
+        rewrite cons_app; congruence.
 
-    - eexists (RlblOuts eouts :: _); split; [|reflexivity].
-      unfold filterOuts, filterMsgs in H3; find_if_inside;
-        unfold filterOuts, filterMsgs in H4; find_if_inside.
-      all: admit.
+    - apply eq_sym, behaviorOf_ocons_inv in H3.
+      destruct H3 as [hll1 [tll1 ?]]; dest; subst.
+      apply eq_sym, behaviorOf_ocons_inv in H4.
+      destruct H4 as [hll2 [tll2 ?]]; dest; subst.
+      apply eq_sym in H6; apply eq_sym in H7.
+      specialize (IHHistoryMerged _ _ H6 H7).
+      destruct IHHistoryMerged as [prhst [? ?]].
+      eapply HistoryMerged_behaviorOf_ext_outs_compositional in H2; eauto.
+      destruct H2 as [hll [? ?]].
+      eexists (hll ++ prhst).
+      split.
+      + apply HistoryMerged_app; try assumption.
+      + rewrite behaviorOf_app.
+        rewrite cons_app; congruence.
 
     - apply IHHistoryMerged; auto.
     - apply IHHistoryMerged; auto.
