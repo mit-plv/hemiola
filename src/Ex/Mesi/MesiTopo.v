@@ -455,7 +455,7 @@ Section System.
           { mred; rewrite Hidx; simpl; auto. }
           { mred; simpl; rewrite Hmsg, Hidx; simpl.
             repeat split; auto; simpl; try solve [mred|solve_mesi].
-            f_equal; apply map_add_remove_comm; discriminate.
+            f_equal; apply M.add_remove_comm; discriminate.
           }
         }
 
@@ -474,7 +474,7 @@ Section System.
           { mred; rewrite Hidx; simpl; auto. }
           { mred; simpl; rewrite Hmsg, Hidx; simpl.
             repeat split; auto; simpl; try solve [mred|solve_mesi].
-            f_equal; apply map_add_remove_comm; discriminate.
+            f_equal; apply M.add_remove_comm; discriminate.
           }
         }
 
@@ -502,7 +502,7 @@ Section System.
           { unfold addRqS in Hrqi; mred.
             simpl; rewrite Hmsg, Hidx; simpl.
             repeat split; auto; simpl; try solve [mred|solve_mesi].
-            f_equal; apply map_add_remove_comm; discriminate.
+            f_equal; apply M.add_remove_comm; discriminate.
           }
         }
         
@@ -530,7 +530,7 @@ Section System.
           { unfold addRqS in Hrqi; mred.
             simpl; rewrite Hmsg, Hidx; simpl.
             repeat split; auto; simpl; try solve [mred|intuition solve_mesi].
-            f_equal; apply map_add_remove_comm; discriminate.
+            f_equal; apply M.add_remove_comm; discriminate.
           }
         }
 

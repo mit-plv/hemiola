@@ -354,7 +354,7 @@ Module LeibnizFacts (M : MapLeibniz).
     cmp k k1; try cmp k k2; find_add_tac.
   Qed.
 
-  Lemma map_add_remove_comm:
+  Lemma add_remove_comm:
     forall {A} (m: t A) k1 v k2,
       k1 <> k2 ->
       remove k2 (add k1 v m) = add k1 v (remove k2 m).
