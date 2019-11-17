@@ -838,6 +838,73 @@ Section RqRsDTree.
   
 End RqRsDTree.
 
+(** TODO: merge with [.._Some] lemmas above. *)
+Section RqRsChnsOnDTree.
+  Variables (dtr: DTree).
+  Hypothesis (Hd: RqRsChnsOnDTree dtr).
+
+  Lemma rqEdgeUpFrom_Some_light:
+    forall oidx rqUp,
+      rqEdgeUpFrom dtr oidx = Some rqUp ->
+      exists rsUp down pidx,
+        rsEdgeUpFrom dtr oidx = Some rsUp /\
+        edgeDownTo dtr oidx = Some down /\
+        parentIdxOf dtr oidx = Some pidx.
+  Proof.
+    unfold rqEdgeUpFrom, upEdgesFrom; intros.
+    remember (parentChnsOf oidx dtr) as pchns.
+    destruct pchns as [[root pidx]|]; simpl in *; [|discriminate].
+    unfold rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo, parentIdxOf.
+    apply eq_sym in Heqpchns.
+    rewrite Heqpchns; simpl.
+    apply Hd in Heqpchns.
+    destruct Heqpchns as [rqUp' [rsUp [down ?]]]; dest; subst; simpl.
+    rewrite H0, H1.
+    repeat eexists.
+  Qed.
+
+  Lemma rsEdgeUpFrom_Some_light:
+    forall oidx rsUp,
+      rsEdgeUpFrom dtr oidx = Some rsUp ->
+      exists rqUp down pidx,
+        rqEdgeUpFrom dtr oidx = Some rqUp /\
+        edgeDownTo dtr oidx = Some down /\
+        parentIdxOf dtr oidx = Some pidx.
+  Proof.
+    unfold rsEdgeUpFrom, upEdgesFrom; intros.
+    remember (parentChnsOf oidx dtr) as pchns.
+    destruct pchns as [[root pidx]|]; simpl in *; [|discriminate].
+    unfold rqEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo, parentIdxOf.
+    apply eq_sym in Heqpchns.
+    rewrite Heqpchns; simpl.
+    apply Hd in Heqpchns.
+    destruct Heqpchns as [rqUp [rsUp' [down ?]]]; dest; subst; simpl.
+    rewrite H0, H1.
+    repeat eexists.
+  Qed.
+
+  Lemma edgeDownTo_Some_light:
+    forall oidx down,
+      edgeDownTo dtr oidx = Some down ->
+      exists rqUp rsUp pidx,
+        rqEdgeUpFrom dtr oidx = Some rqUp /\
+        rsEdgeUpFrom dtr oidx = Some rsUp /\
+        parentIdxOf dtr oidx = Some pidx.
+  Proof.
+    unfold edgeDownTo, downEdgesTo; intros.
+    remember (parentChnsOf oidx dtr) as pchns.
+    destruct pchns as [[root pidx]|]; simpl in *; [|discriminate].
+    unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom, parentIdxOf.
+    apply eq_sym in Heqpchns.
+    rewrite Heqpchns; simpl.
+    apply Hd in Heqpchns.
+    destruct Heqpchns as [rqUp [rsUp [down' ?]]]; dest; subst; simpl.
+    rewrite H0.
+    repeat eexists.
+  Qed.
+
+End RqRsChnsOnDTree.
+
 (** Ltacs for discharging conditions *)
 
 Ltac disc_rule_custom := idtac.

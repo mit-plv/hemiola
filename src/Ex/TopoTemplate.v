@@ -7,35 +7,6 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
-(** TODO: move to [Topology.v] *)
-Lemma subtree_subtree_eq:
-  forall tr (Hwf: WfDTree tr) str,
-    Subtree str tr ->
-    forall idx,
-      In idx (indsOf str) ->
-      subtree idx str = subtree idx tr.
-Proof.
-  intros.
-  apply indsOf_in_Subtree in H0.
-  destruct H0 as [sitr [? ?]]; subst.
-  pose proof H1.
-  apply Subtree_subtree in H0; [|eapply Subtree_wfDTree; eauto].
-  rewrite Subtree_subtree with (dtr:= tr); [assumption..|].
-  eapply Subtree_trans; eauto.
-Qed.
-
-Lemma subtree_child_subtree_eq:
-  forall tr (Hwf: WfDTree tr) ctr,
-    In ctr (childrenOf tr) ->
-    forall idx,
-      In idx (indsOf ctr) ->
-      subtree idx ctr = subtree idx tr.
-Proof.
-  intros.
-  eapply subtree_subtree_eq; eauto.
-  apply childrenOf_Subtree; assumption.
-Qed.
-
 Inductive tree :=
 | Node: list tree -> tree.
 
@@ -50,7 +21,6 @@ Section tree_ind_l.
                   (fun st _ IHl => Forall_cons st (tree_ind_l st) IHl)
                   sts)
     end.
-
 End tree_ind_l.
 
 Definition rqUpIdx: nat := 0.
@@ -2096,6 +2066,90 @@ Section Facts.
       unfold subtreeIndsOf in *.
       rewrite H4.
       assumption.
+  Qed.
+
+  Lemma tree2Topo_obj_rqUpFrom_not_in_merss:
+    forall tr bidx oidx,
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+      ~ In (rqUpFrom oidx) (c_merss (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_obj_chns_minds_SubList tr bidx H).
+    pose proof (tree2Topo_minds_merss_disj tr bidx).
+    intro Hx.
+    eapply DisjList_In_1; [eapply H1|..]; eauto.
+    apply H0; simpl; tauto.
+  Qed.
+
+  Lemma tree2Topo_obj_rsUpFrom_not_in_merss:
+    forall tr bidx oidx,
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+      ~ In (rsUpFrom oidx) (c_merss (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_obj_chns_minds_SubList tr bidx H).
+    pose proof (tree2Topo_minds_merss_disj tr bidx).
+    intro Hx.
+    eapply DisjList_In_1; [eapply H1|..]; eauto.
+    apply H0; simpl; tauto.
+  Qed.
+
+  Lemma tree2Topo_obj_downTo_not_in_merss:
+    forall tr bidx oidx,
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ c_l1_indices (snd (tree2Topo tr bidx))) ->
+      ~ In (downTo oidx) (c_merss (snd (tree2Topo tr bidx))).
+  Proof.
+    intros.
+    pose proof (tree2Topo_obj_chns_minds_SubList tr bidx H).
+    pose proof (tree2Topo_minds_merss_disj tr bidx).
+    intro Hx.
+    eapply DisjList_In_1; [eapply H1|..]; eauto.
+    apply H0; simpl; tauto.
+  Qed.
+
+  Lemma rqEdgeUpFrom_rqUpFrom:
+    forall tr bidx oidx midx,
+      rqEdgeUpFrom (fst (tree2Topo tr bidx)) oidx = Some midx ->
+      midx = rqUpFrom oidx.
+  Proof.
+    intros.
+    pose proof H.
+    eapply rqEdgeUpFrom_Some_light in H; [|apply tree2Topo_RqRsChnsOnDTree].
+    dest.
+    pose proof (tree2Topo_TreeTopoNode tr bidx).
+    specialize (H3 _ _ H2); dest.
+    repeat disc_rule_minds; auto.
+  Qed.
+
+  Lemma rsEdgeUpFrom_rsUpFrom:
+    forall tr bidx oidx midx,
+      rsEdgeUpFrom (fst (tree2Topo tr bidx)) oidx = Some midx ->
+      midx = rsUpFrom oidx.
+  Proof.
+    intros.
+    pose proof H.
+    eapply rsEdgeUpFrom_Some_light in H; [|apply tree2Topo_RqRsChnsOnDTree].
+    dest.
+    pose proof (tree2Topo_TreeTopoNode tr bidx).
+    specialize (H3 _ _ H2); dest.
+    repeat disc_rule_minds; auto.
+  Qed.
+
+  Lemma edgeDownTo_downTo:
+    forall tr bidx oidx midx,
+      edgeDownTo (fst (tree2Topo tr bidx)) oidx = Some midx ->
+      midx = downTo oidx.
+  Proof.
+    intros.
+    pose proof H.
+    eapply edgeDownTo_Some_light in H; [|apply tree2Topo_RqRsChnsOnDTree].
+    dest.
+    pose proof (tree2Topo_TreeTopoNode tr bidx).
+    specialize (H3 _ _ H2); dest.
+    repeat disc_rule_minds; auto.
   Qed.
   
 End Facts.

@@ -1505,6 +1505,34 @@ Section Facts.
       eapply subtreeIndsOf_In_each_other_eq in Hx; eauto.
     Qed.
 
+    Lemma subtree_subtree_eq:
+      forall str,
+        Subtree str dtr ->
+        forall idx,
+          In idx (indsOf str) ->
+          subtree idx str = subtree idx dtr.
+    Proof.
+      intros.
+      apply indsOf_in_Subtree in H0.
+      destruct H0 as [sitr [? ?]]; subst.
+      pose proof H1.
+      apply Subtree_subtree in H0; [|eapply Subtree_wfDTree; eauto].
+      rewrite Subtree_subtree with (dtr:= dtr); [assumption..|].
+      eapply Subtree_trans; eauto.
+    Qed.
+
+    Lemma subtree_child_subtree_eq:
+      forall ctr,
+        In ctr (childrenOf dtr) ->
+        forall idx,
+          In idx (indsOf ctr) ->
+          subtree idx ctr = subtree idx dtr.
+    Proof.
+      intros.
+      eapply subtree_subtree_eq; eauto.
+      apply childrenOf_Subtree; assumption.
+    Qed.
+
     Lemma subtreeIndsOf_in_has_parent:
       forall cidx oidx pidx,
         parentIdxOf dtr oidx = Some pidx ->
