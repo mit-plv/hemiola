@@ -314,6 +314,16 @@ Section Replicate.
     | S n' => (S n') :: (nats n')
     end.
 
+  Lemma nats_SubList:
+    forall n m, n < m -> SubList (nats n) (nats m).
+  Proof.
+    induction m; simpl; intros; [omega|].
+    inv H0.
+    - apply SubList_cons_right, SubList_refl.
+    - apply SubList_cons_right.
+      apply IHm; omega.
+  Qed.
+
   Lemma nats_DisjList:
     forall n m, n < m -> DisjList (nats n) [m].
   Proof.
@@ -324,29 +334,6 @@ Section Replicate.
       + apply IHn; omega.
       + intro Hx; dest_in; omega.
   Qed.
-
-  (* Definition IdxExtBound (exts: list nat) (idx: IdxT) := *)
-  (*   exists ext, In ext exts /\ idxHd idx = ext.  *)
-
-  (* Lemma exts_disj_disj: *)
-  (*   forall exts1 exts2, *)
-  (*     (forall ext1 ext2, In ext1 exts1 -> In ext2 exts2 -> ext1 <> ext2) -> *)
-  (*     forall inds1 inds2, *)
-  (*       Forall (IdxExtBound exts1) inds1 -> *)
-  (*       Forall (IdxExtBound exts2) inds2 -> *)
-  (*       DisjList inds1 inds2. *)
-  (* Proof. *)
-  (*   intros. *)
-
-  (*   rewrite Forall_forall in H1, H2. *)
-  (*   red; intros. *)
-  (*   specialize (H1 _ H3); specialize (H2 _ H4). *)
-  (*   destruct H1 as [pre1 ?]; dest. *)
-  (*   destruct H2 as [pre2 ?]; dest. *)
-  (*   eapply IdxPrefix_disj_1; [|eassumption]. *)
-  (*   eapply IdxPrefix_disj_2; [|eassumption]. *)
-  (*   apply H0; assumption. *)
-  (* Qed. *)
 
   Definition SystemBound (n: nat) (sys: System) :=
     SubList (map idxHd (map obj_idx (sys_objs sys))) (nats n) /\
@@ -411,51 +398,91 @@ Section Replicate.
     - apply SubList_app_2, SubList_app_2, SubList_app_2, SubList_refl.
   Qed.
 
-  Program Fixpoint repSystem (n: nat) (osys: System) {struct n}
-    : {rsys: System & SystemBound n rsys} :=
-    match n with
-    | O => existT _ (liftSystem O osys) _
-    | S n' => existT _ (mergeSystem (liftSystem n osys) (projT1 (repSystem n' osys)) _ _) _
-    end.
-  Next Obligation.
-  Proof. apply liftSystem_SystemBound. Qed.
-  Next Obligation.
+  Lemma repSystem_liftObject_disj:
+    forall n oinds nobjs,
+      SubList (map idxHd oinds) (nats n) ->
+      DisjList (map obj_idx (map (liftObject (S n)) nobjs)) oinds.
   Proof.
-    simpl; apply idx_DisjList_head.
+    intros; simpl; apply idx_DisjList_head.
     eapply DisjList_SubList.
     - apply liftObject_ext_bound.
     - eapply DisjList_comm, DisjList_SubList.
-      + apply s.
+      + eassumption.
       + apply nats_DisjList; omega.
   Qed.
-  Next Obligation.
+
+  Lemma repSystem_liftChns_disj:
+    forall n chns nsys,
+      SubList (map idxHd chns) (nats n) ->
+      DisjList
+        ((extendInds (S n) (sys_minds nsys))
+           ++ (extendInds (S n) (sys_merqs nsys))
+           ++ extendInds (S n) (sys_merss nsys)) chns.
   Proof.
-    simpl; apply idx_DisjList_head.
+    intros; simpl; apply idx_DisjList_head.
     eapply DisjList_SubList.
     - apply liftChns_ext_bound.
     - eapply DisjList_comm, DisjList_SubList.
-      + apply s.
+      + eassumption.
       + apply nats_DisjList; omega.
   Qed.
-  Next Obligation.
+
+  Lemma mergeSystem_SystemBound:
+    forall sys1 sys2
+           (HoidxOk: DisjList (map obj_idx (sys_objs sys1))
+                              (map obj_idx (sys_objs sys2)))
+           (HmidxOk: DisjList (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1)
+                              (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2)) n,
+      SystemBound n sys1 ->
+      SystemBound n sys2 ->
+      SystemBound n (mergeSystem sys1 sys2 HoidxOk HmidxOk).
   Proof.
-    split; simpl.
-    - repeat rewrite map_app.
-      apply SubList_app_3.
-      + change (S n' :: nats n') with ([S n'] ++ nats n').
-        apply SubList_app_1.
-        apply liftObject_ext_bound.
-      + apply SubList_cons_right.
-        apply (projT2 (repSystem n' osys)).
-    - eapply SubList_trans.
+    unfold SystemBound; intros; dest.
+    split.
+    - simpl; repeat rewrite map_app.
+      apply SubList_app_3; assumption.
+    - simpl; eapply SubList_trans.
       + apply SubList_map_idxHd_app_6.
-      + apply SubList_app_3.
-        * change (S n' :: nats n') with ([S n'] ++ nats n').
-          apply SubList_app_1.
-          apply liftChns_ext_bound.
-        * apply SubList_cons_right.
-          apply (projT2 (repSystem n' osys)).
-  Qed. (** FIXME: the proof is done but termination check doesn't work here :-P *)
+      + apply SubList_app_3; assumption.
+  Qed.
+
+  Lemma SystemBound_weakening:
+    forall n sys,
+      SystemBound n sys ->
+      forall m, n < m -> SystemBound m sys.
+  Proof.
+    unfold SystemBound; intros; dest.
+    split.
+    - eapply SubList_trans; [eassumption|].
+      apply nats_SubList; assumption.
+    - eapply SubList_trans; [eassumption|].
+      apply nats_SubList; assumption.
+  Qed.
+
+  Fixpoint repSystemPf (n: nat) (osys: System) {struct n}
+    : {rsys: System & SystemBound n rsys}.
+  Proof.
+    destruct n.
+    - exact (existT _ (liftSystem O osys) (liftSystem_SystemBound osys O)).
+    - refine (existT _ (mergeSystem (liftSystem (S n) osys)
+                                    (projT1 (repSystemPf n osys))
+                                    _ _) _).
+      apply mergeSystem_SystemBound.
+      + apply liftSystem_SystemBound.
+      + apply SystemBound_weakening with (n:= n); [|abstract omega].
+        apply (projT2 (repSystemPf n osys)).
+
+        Unshelve.
+        { apply repSystem_liftObject_disj.
+          apply (projT2 (repSystemPf n osys)).
+        }
+        { apply repSystem_liftChns_disj.
+          apply (projT2 (repSystemPf n osys)).
+        }
+  Defined.
+
+  Definition repSystem (n: nat) (osys: System): System :=
+    projT1 (repSystemPf n osys).
 
 End Replicate.
 
@@ -1399,44 +1426,17 @@ Section Facts.
     Hypotheses
       (Hvi1: InitStateValid sys1)
       (Hvi2: InitStateValid sys2)
-      (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
-      (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
-                         ++ (sys_merqs sys1 ++ sys_merqs sys2)
-                         ++ (sys_merss sys1 ++ sys_merss sys2))).
+      (HoidxOk: DisjList (map obj_idx (sys_objs sys1))
+                         (map obj_idx (sys_objs sys2)))
+      (HmidxOk: DisjList (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1)
+                         (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2)).
 
     Local Notation chns1 := (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1).
     Local Notation chns2 := (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2).
 
-    Lemma chns_disj: DisjList chns1 chns2.
-    Proof.
-      intros.
-      pose proof (NoDup_app_weakening_1 _ _ HmidxOk).
-      pose proof (NoDup_app_weakening_2 _ _ HmidxOk).
-      apply (DisjList_NoDup idx_dec) in HmidxOk.
-      apply DisjList_app_3 in HmidxOk; destruct HmidxOk; clear HmidxOk.
-      repeat
-        match goal with
-        | [H: NoDup (_ ++ _) |- _] =>
-          pose proof (NoDup_app_weakening_1 _ _ H);
-            pose proof (NoDup_app_weakening_2 _ _ H);
-            apply (DisjList_NoDup idx_dec) in H
-        | [H: DisjList (_ ++ _) _ |- _] =>
-          apply DisjList_app_3 in H; dest
-        | [H: DisjList _ (_ ++ _) |- _] =>
-          apply DisjList_comm, DisjList_app_3 in H; dest
-        end.
-      repeat
-        match goal with
-        | |- DisjList (_ ++ _) _ => apply DisjList_app_4
-        | |- DisjList _ (_ ++ _) => apply DisjList_comm, DisjList_app_4
-        | [H: DisjList ?l1 ?l2 |- DisjList ?l2 ?l1] => apply DisjList_comm
-        | _ => assumption
-        end.
-    Qed.
-
     Lemma erqs_disj: DisjList (sys_merqs sys1) (sys_merqs sys2).
     Proof.
-      pose proof chns_disj.
+      pose proof HmidxOk.
       apply DisjList_app_2, DisjList_app_1 in H0.
       apply DisjList_comm in H0.
       apply DisjList_app_2, DisjList_app_1 in H0.
@@ -1446,7 +1446,7 @@ Section Facts.
 
     Lemma erss_disj: DisjList (sys_merss sys1) (sys_merss sys2).
     Proof.
-      pose proof chns_disj.
+      pose proof HmidxOk.
       apply DisjList_app_2, DisjList_app_2 in H0.
       apply DisjList_comm in H0.
       apply DisjList_app_2, DisjList_app_2 in H0.
@@ -1474,14 +1474,6 @@ Section Facts.
 
     Section DisjMP.
 
-      Lemma objs_disj:
-        DisjList (map obj_idx (sys_objs sys1)) (map obj_idx (sys_objs sys2)).
-      Proof.
-        rewrite map_app in HoidxOk.
-        apply (DisjList_NoDup idx_dec); assumption.
-      Qed.
-      Hint Resolve objs_disj.
-
       Lemma disj_objs_find_1:
         forall oidx,
           In oidx (map (@obj_idx _) (sys_objs sys1)) ->
@@ -1494,7 +1486,8 @@ Section Facts.
         destruct (oss1@[oidx]) as [ost|] eqn:Host; simpl.
         - erewrite M.Disj_find_union_1.
           + reflexivity.
-          + eapply M.DisjList_KeysSubset_Disj; eauto.
+          + eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..].
+            all: assumption.
           + assumption.
         - rewrite M.find_union, Host.
           eapply M.find_KeysSubset; [eassumption|].
@@ -1513,7 +1506,8 @@ Section Facts.
         destruct (oss2@[oidx]) as [ost|] eqn:Host; simpl.
         - erewrite M.Disj_find_union_2.
           + reflexivity.
-          + eapply M.DisjList_KeysSubset_Disj; eauto.
+          + eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..].
+            all: assumption.
           + assumption.
         - rewrite M.find_union, Host.
           replace (match oss1@[oidx] with | Some v => Some v | None => None end)
@@ -1530,7 +1524,7 @@ Section Facts.
 
         Lemma msgs_disj: M.Disj msgs1 msgs2.
         Proof.
-          eapply M.DisjList_KeysSubset_Disj; [apply chns_disj| |].
+          eapply M.DisjList_KeysSubset_Disj; [apply HmidxOk| |].
           all: assumption.
         Qed.
         Hint Resolve msgs_disj.
@@ -1547,7 +1541,6 @@ Section Facts.
           - rewrite M.find_union, Hq.
             eapply M.find_KeysSubset; [eassumption|].
             eapply DisjList_In_2; eauto.
-            apply chns_disj.
         Qed.
 
         Lemma disj_mp_find_2:
@@ -1564,7 +1557,6 @@ Section Facts.
               with msgs1@[midx] by (destruct (msgs1@[midx]); reflexivity).
             eapply M.find_KeysSubset; [eassumption|].
             eapply DisjList_In_1; eauto.
-            apply chns_disj.
         Qed.
 
         Lemma disj_mp_findQ_1:
@@ -1633,10 +1625,10 @@ Section Facts.
         Proof.
           unfold enqMP; intros.
           rewrite M.union_comm
-            by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
+            by (eapply M.DisjList_KeysSubset_Disj; [apply HmidxOk|assumption|];
                 apply M.KeysSubset_add; auto).
           rewrite M.union_comm with (m1:= msgs1) (m2:= msgs2) at 2
-            by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|eassumption..]).
+            by (eapply M.DisjList_KeysSubset_Disj; [apply HmidxOk|eassumption..]).
           rewrite M.union_add.
           rewrite disj_mp_findQ_2 by assumption.
           reflexivity.
@@ -1663,12 +1655,12 @@ Section Facts.
           rewrite <-disj_mp_findQ_2 by assumption.
           destruct (findQ midx msgs2); [reflexivity|].
           rewrite M.union_comm
-            by (eapply M.DisjList_KeysSubset_Disj; [apply chns_disj|assumption|];
+            by (eapply M.DisjList_KeysSubset_Disj; [apply HmidxOk|assumption|];
                 apply M.KeysSubset_add; auto).
           rewrite M.union_add.
           rewrite M.union_comm
             by (eapply M.DisjList_KeysSubset_Disj;
-                [apply DisjList_comm, chns_disj|assumption..]).
+                [apply DisjList_comm, HmidxOk|assumption..]).
           reflexivity.
         Qed.
         
@@ -1795,22 +1787,14 @@ Section Facts.
         + instantiate (1:= os).
           instantiate (1:= M.union oss oss2).
           apply M.Disj_find_union_1.
-          * eapply M.DisjList_KeysSubset_Disj.
-            { rewrite map_app in HoidxOk.
-              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
-            }
-            { assumption. }
-            { assumption. }
+          * eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..].
+            all: assumption.
           * assumption.
         + instantiate (1:= porq).
           instantiate (1:= M.union orqs orqs2).
           apply M.Disj_find_union_1.
-          * eapply M.DisjList_KeysSubset_Disj.
-            { rewrite map_app in HoidxOk.
-              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
-            }
-            { assumption. }
-            { assumption. }
+          * eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..].
+            all: assumption.
           * assumption.
 
         + instantiate (1:= M.union msgs msgs2).
@@ -1915,22 +1899,14 @@ Section Facts.
         + instantiate (1:= os).
           instantiate (1:= M.union oss1 oss).
           apply M.Disj_find_union_2.
-          * eapply M.DisjList_KeysSubset_Disj.
-            { rewrite map_app in HoidxOk.
-              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
-            }
-            { assumption. }
-            { assumption. }
+          * eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..].
+            all: assumption.
           * assumption.
         + instantiate (1:= porq).
           instantiate (1:= M.union orqs1 orqs).
           apply M.Disj_find_union_2.
-          * eapply M.DisjList_KeysSubset_Disj.
-            { rewrite map_app in HoidxOk.
-              eapply (DisjList_NoDup idx_dec); [apply HoidxOk|..]; eassumption.
-            }
-            { assumption. }
-            { assumption. }
+          * eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..].
+            all: assumption.
           * assumption.
 
         + instantiate (1:= M.union msgs1 msgs).
@@ -1962,9 +1938,7 @@ Section Facts.
 
         + assumption.
         + reflexivity.
-        + rewrite map_app in HoidxOk.
-          apply (DisjList_NoDup idx_dec) in HoidxOk.
-          unfold mergeMState; simpl.
+        + unfold mergeMState; simpl.
           rewrite union_add_2 with (m:= oss1).
           2: {
             assert (M.Disj oss1 oss)
@@ -2509,10 +2483,10 @@ Section Facts.
 
     Lemma mergeSystem_WfSys:
       forall sys1 sys2
-             (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
-             (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
-                                ++ (sys_merqs sys1 ++ sys_merqs sys2)
-                                ++ (sys_merss sys1 ++ sys_merss sys2))),
+             (HoidxOk: DisjList (map obj_idx (sys_objs sys1))
+                                (map obj_idx (sys_objs sys2)))
+             (HmidxOk: DisjList (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1)
+                                (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2)),
         WfSys sys1 -> WfSys sys2 ->
         WfSys (mergeSystem sys1 sys2 HoidxOk HmidxOk).
     Proof.
@@ -2565,10 +2539,10 @@ Section Facts.
     Variables (sys1 sys2: System).
     Hypotheses
       (Hwf1: WfSys sys1) (Hwf2: WfSys sys2)
-      (HoidxOk: NoDup (map obj_idx (sys_objs sys1 ++ sys_objs sys2)))
-      (HmidxOk: NoDup ((sys_minds sys1 ++ sys_minds sys2)
-                         ++ (sys_merqs sys1 ++ sys_merqs sys2)
-                         ++ (sys_merss sys1 ++ sys_merss sys2))).
+      (HoidxOk: DisjList (map obj_idx (sys_objs sys1))
+                         (map obj_idx (sys_objs sys2)))
+      (HmidxOk: DisjList (sys_minds sys1 ++ sys_merqs sys1 ++ sys_merss sys1)
+                         (sys_minds sys2 ++ sys_merqs sys2 ++ sys_merss sys2)).
 
     Lemma step_internal_split:
       forall st11 st21 oidx ridx mins mouts st2,
@@ -2636,21 +2610,18 @@ Section Facts.
             apply (proj1 Hwf2).
           * destruct H21; split; [|assumption].
             apply (proj2 Hwf2).
-        + pose proof HoidxOk as Hod.
-          rewrite map_app in Hod.
-          apply (DisjList_NoDup idx_dec) in Hod.
-          unfold mergeMState; simpl.
+        + unfold mergeMState; simpl.
           rewrite union_add_2 with (m:= oss1).
           2: {
             assert (M.Disj oss1 oss2)
-              by (eapply M.DisjList_KeysSubset_Disj; [apply Hod|..]; eassumption).
+              by (eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..]; eassumption).
             apply M.Disj_find_None with (k:= obj_idx obj) in H7.
             destruct H7; [auto|congruence].
           }
           rewrite union_add_2 with (m:= orqs1).
           2: {
             assert (M.Disj orqs1 orqs2)
-              by (eapply M.DisjList_KeysSubset_Disj; [apply Hod|..]; eassumption).
+              by (eapply M.DisjList_KeysSubset_Disj; [apply HoidxOk|..]; eassumption).
             apply M.Disj_find_None with (k:= obj_idx obj) in H7.
             destruct H7; [auto|congruence].
           }
@@ -3160,14 +3131,14 @@ Section Facts.
              (Heins2: sys_merqs impl2 = sys_merqs spec2)
              (Heouts2: sys_merss impl2 = sys_merss spec2),
         Refines (steps step_m) (steps step_m) impl2 spec2 ->
-        forall (HoidxOkI: NoDup (map obj_idx (sys_objs impl1 ++ sys_objs impl2)))
-               (HmidxOkI: NoDup ((sys_minds impl1 ++ sys_minds impl2)
-                                   ++ (sys_merqs impl1 ++ sys_merqs impl2)
-                                   ++ (sys_merss impl1 ++ sys_merss impl2)))
-               (HoidxOkS: NoDup (map obj_idx (sys_objs spec1 ++ sys_objs spec2)))
-               (HmidxOkS: NoDup ((sys_minds spec1 ++ sys_minds spec2)
-                                   ++ (sys_merqs spec1 ++ sys_merqs spec2)
-                                   ++ (sys_merss spec1 ++ sys_merss spec2))),
+        forall (HoidxOkI: DisjList (map obj_idx (sys_objs impl1))
+                                   (map obj_idx (sys_objs impl2)))
+               (HmidxOkI: DisjList (sys_minds impl1 ++ sys_merqs impl1 ++ sys_merss impl1)
+                                   (sys_minds impl2 ++ sys_merqs impl2 ++ sys_merss impl2))
+               (HoidxOkS: DisjList (map obj_idx (sys_objs spec1))
+                                   (map obj_idx (sys_objs spec2)))
+               (HmidxOkS: DisjList (sys_minds spec1 ++ sys_merqs spec1 ++ sys_merss spec1)
+                                   (sys_minds spec2 ++ sys_merqs spec2 ++ sys_merss spec2)),
           Refines (steps step_m) (steps step_m)
                   (mergeSystem impl1 impl2 HoidxOkI HmidxOkI)
                   (mergeSystem spec1 spec2 HoidxOkS HmidxOkS).
@@ -3220,6 +3191,7 @@ Section Facts.
         Refines (steps step_m) (steps step_m)
                 (repSystem n impl) (repSystem n spec).
   Proof.
+    unfold repSystem.
     induction n; simpl; intros.
     - apply refines_liftSystem; assumption.
     - apply refines_compositional.
