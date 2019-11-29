@@ -10,7 +10,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section UpLockInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -18,7 +18,7 @@ Section UpLockInv.
              (Hrr: GoodRqRsSys dtr sys)
              (Hsd: RqRsDTree dtr sys).
 
-  Section OnMState.
+  Section OnState.
     Variables (orqs: ORqs Msg)
               (msgs: MessagePool Msg).
 
@@ -90,14 +90,14 @@ Section UpLockInv.
 
     Definition UpLockInvMO :=
       forall oidx,
-        In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+        In oidx (map obj_idx sys.(sys_objs)) ->
         let orq := orqs@[oidx] >>=[[]] (fun orq => orq) in
         UpLockInvORq oidx orq.
 
-  End OnMState.
+  End OnState.
   
-  Definition UpLockInv (st: MState) :=
-    UpLockInvMO st.(bst_orqs) st.(bst_msgs).
+  Definition UpLockInv (st: State) :=
+    UpLockInvMO st.(st_orqs) st.(st_msgs).
 
   Lemma upLockInv_init:
     InvInit sys UpLockInv.
@@ -112,7 +112,7 @@ Section UpLockInv.
     rewrite H0; mred.
     destruct (parentIdxOf dtr oidx) as [pidx|] eqn:Hpidx; [right|left; auto].
     pose proof Hpidx.
-    eapply parentIdxOf_Some in H1; [|eassumption].
+    eapply parentIdxOf_Some in H1; [|apply Hsd].
     destruct H1 as [rqUp [rsUp [down ?]]]; dest.
     do 3 eexists; repeat split; try eassumption.
     red.
@@ -741,12 +741,12 @@ Section UpLockInv.
 
   Lemma upLockInv_step_ext_in:
     forall oss orqs msgs eins,
-      UpLockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      UpLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       eins <> nil ->
       ValidMsgsExtIn sys eins ->
-      UpLockInv {| bst_oss := oss;
-                   bst_orqs := orqs;
-                   bst_msgs := enqMsgs eins msgs |}.
+      UpLockInv {| st_oss := oss;
+                   st_orqs := orqs;
+                   st_msgs := enqMsgs eins msgs |}.
   Proof.
     unfold UpLockInv; simpl; intros.
     red; intros.
@@ -801,13 +801,13 @@ Section UpLockInv.
 
   Lemma upLockInv_step_ext_out:
     forall oss orqs msgs eouts,
-      UpLockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      UpLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       eouts <> nil ->
       Forall (FirstMPI msgs) eouts ->
       ValidMsgsExtOut sys eouts ->
-      UpLockInv {| bst_oss := oss;
-                   bst_orqs := orqs;
-                   bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+      UpLockInv {| st_oss := oss;
+                   st_orqs := orqs;
+                   st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     unfold UpLockInv; simpl; intros.
     red; intros.
@@ -868,7 +868,7 @@ Section UpLockInv.
 
     Hypotheses
       (Hfpok: FootprintsOk
-                dtr sys {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+                dtr sys {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |})
       (HobjIn: In obj (sys_objs sys))
       (HruleIn: In rule (obj_rules obj))
       (Hporq: orqs@[obj_idx obj] = Some porq)
@@ -967,7 +967,7 @@ Section UpLockInv.
 
     Lemma upLockInvORq_step_int_me:
       UpLockInvORq orqs msgs (obj_idx obj) porq ->
-      In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
+      In (obj_idx obj) (map obj_idx (sys_objs sys)) ->
       GoodRqRsRule dtr sys (obj_idx obj) rule ->
       UpLockInvORq (orqs+[obj_idx obj <- norq])
                    (enqMsgs mouts (deqMsgs (idsOf mins) msgs))
@@ -1013,7 +1013,7 @@ Section UpLockInv.
         + (** case [RqUpUp-silent]; setting an uplock. *)
           split; [exists rsFrom; auto|].
           apply upLockedInv_orqs_preserved_self_update.
-          pose proof (rqEdgeUpFrom_Some Hsd _ H4).
+          pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H4).
           destruct H6 as [rsUp [down [pidx ?]]]; dest.
           red in H; disc_rule_conds.
           destruct H; [discriminate|].
@@ -1037,7 +1037,7 @@ Section UpLockInv.
         + (** case [RqUpUp]; setting an uplock. *)
           split; [exists rsFrom; auto|].
           apply upLockedInv_orqs_preserved_self_update.
-          pose proof (rqEdgeUpFrom_Some Hsd _ H4).
+          pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H4).
           destruct H10 as [rsUp [down [pidx ?]]]; dest.
           red in H; disc_rule_conds.
           destruct H; [discriminate|].
@@ -1256,7 +1256,7 @@ Section UpLockInv.
     Lemma upLockInvORq_step_int_parent:
       forall oidx,
         UpLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
-        In oidx (map (@obj_idx _) (sys_objs sys)) ->
+        In oidx (map obj_idx (sys_objs sys)) ->
         GoodRqRsRule dtr sys (obj_idx obj) rule ->
         parentIdxOf dtr oidx = Some (obj_idx obj) ->
         UpLockInvORq (orqs+[obj_idx obj <- norq])
@@ -2023,7 +2023,7 @@ Section UpLockInv.
     Lemma upLockInvORq_step_int_other:
       forall oidx orq,
         UpLockInvORq orqs msgs oidx orq ->
-        In oidx (map (@obj_idx _) (sys_objs sys)) ->
+        In oidx (map obj_idx (sys_objs sys)) ->
         GoodRqRsRule dtr sys (obj_idx obj) rule ->
         obj_idx obj <> oidx ->
         parentIdxOf dtr oidx <> Some (obj_idx obj) ->
@@ -2441,10 +2441,10 @@ Section UpLockInv.
     Qed.
     
     Lemma upLockInv_step_int:
-      UpLockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      UpLockInv {| bst_oss := (oss) +[ obj_idx obj <- nost];
-                   bst_orqs := (orqs) +[ obj_idx obj <- norq];
-                   bst_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
+      UpLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      UpLockInv {| st_oss := (oss) +[ obj_idx obj <- nost];
+                   st_orqs := (orqs) +[ obj_idx obj <- norq];
+                   st_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
     Proof.
       intros.
       do 2 red; simpl; intros.
@@ -2483,7 +2483,8 @@ Section UpLockInv.
   Lemma upLockInv_ok:
     InvReachable sys step_m UpLockInv.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply upLockInv_init.
     - apply upLockInv_step.
   Qed.
@@ -2491,7 +2492,7 @@ Section UpLockInv.
 End UpLockInv.
 
 Lemma upLockInvORq_rqUp_length_one_locked:
-  forall dtr orqs msgs oidx orq pidx rqUp,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq pidx rqUp,
     UpLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr oidx = Some pidx ->
     rqEdgeUpFrom dtr oidx = Some rqUp ->
@@ -2508,7 +2509,7 @@ Proof.
 Qed.
 
 Lemma upLockInvORq_down_rssQ_length_one_locked:
-  forall dtr orqs msgs oidx orq down pidx,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq down pidx,
     UpLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr oidx = Some pidx ->
     edgeDownTo dtr oidx = Some down ->
@@ -2525,7 +2526,7 @@ Proof.
 Qed.
 
 Lemma upLockInvORq_parent_locked_locked:
-  forall dtr orqs msgs oidx orq down pidx,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq down pidx,
     UpLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr oidx = Some pidx ->
     edgeDownTo dtr oidx = Some down ->
@@ -2542,7 +2543,7 @@ Proof.
 Qed.
 
 Lemma upLockInvORq_rqUp_down_rssQ_False:
-  forall dtr orqs msgs oidx orq pidx rqUp down,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq pidx rqUp down,
     UpLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr oidx = Some pidx ->
     rqEdgeUpFrom dtr oidx = Some rqUp ->
@@ -2564,7 +2565,7 @@ Proof.
 Qed.
 
 Lemma upLockInvORq_rqUp_length_two_False:
-  forall dtr orqs msgs oidx orq pidx rqUp,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq pidx rqUp,
     UpLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr oidx = Some pidx ->
     rqEdgeUpFrom dtr oidx = Some rqUp ->
@@ -2584,7 +2585,7 @@ Proof.
 Qed.
 
 Lemma upLockInvORq_down_rssQ_length_two_False:
-  forall dtr orqs msgs oidx orq pidx down,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq pidx down,
     UpLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr oidx = Some pidx ->
     edgeDownTo dtr oidx = Some down ->

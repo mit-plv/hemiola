@@ -13,6 +13,7 @@ Local Open Scope fmap.
 Import PropMonadNotations.
 
 Section SimExtMP.
+  Context `{dv: DecValue}.
   Variable (l1s: list IdxT).
 
   Let erqs := map (fun cidx => rqUpFrom (l1ExtOf cidx)) l1s.

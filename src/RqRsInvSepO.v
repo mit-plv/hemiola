@@ -11,7 +11,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section RqUpStart.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -25,9 +25,9 @@ Section RqUpStart.
       parentIdxOf dtr cidx = Some oidx /\
       rqEdgeUpFrom dtr cidx = Some (idOf rqUp).
 
-  Definition NonRqUpL (lbl: MLabel) :=
+  Definition NonRqUpL (lbl: RLabel) :=
     match lbl with
-    | RlblEmpty _ => True
+    | RlblEmpty => True
     | RlblIns _ => True
     | RlblOuts _ => True
     | RlblInt _ _ _ routs => forall oidxTo, ~ RqUpMsgsP oidxTo routs
@@ -75,12 +75,12 @@ Section RqUpStart.
 
     - disc_rule_conds.
       + left.
-        pose proof (rqEdgeUpFrom_Some H _ H5).
+        pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H5).
         destruct H7 as [rsUp [down [pidx ?]]]; dest.
         eexists; red.
         do 2 eexists; eauto.
       + left.
-        pose proof (rqEdgeUpFrom_Some H _ H5).
+        pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H5).
         destruct H14 as [rsUp [down [pidx ?]]]; dest.
         eexists; red.
         do 2 eexists; eauto.
@@ -112,7 +112,7 @@ Section RqUpStart.
       msg_type (valOf rqUp) = MRq ->
       parentIdxOf dtr cidx = Some roidx ->
       rqEdgeUpFrom dtr cidx = Some (idOf rqUp) ->
-      Atomic msg_dec inits ruins pruhst ruouts [rqUp] ->
+      Atomic inits ruins pruhst ruouts [rqUp] ->
       forall oidx ridx routs st1 st2,
         Reachable (steps step_m) sys st1 ->
         step_m sys st1 (RlblInt oidx ridx [rqUp] routs) st2 ->
@@ -121,11 +121,11 @@ Section RqUpStart.
           (ruhst = nil \/
            (exists roidx0 rqUps ruins0 ruouts0,
                RqUpMsgsP roidx0 rqUps /\
-               Atomic msg_dec inits ruins0 ruhst ruouts0 rqUps /\
+               Atomic inits ruins0 ruhst ruouts0 rqUps /\
                SubList rqUps (ruouts ++ routs) /\
                (nhst = nil \/
                 (exists nins nouts,
-                    Atomic msg_dec rqUps nins nhst nouts routs /\
+                    Atomic rqUps nins nhst nouts routs /\
                     In roidx0 (oindsOf nhst))))) /\
           Forall NonRqUpL nhst.
   Proof.
@@ -159,7 +159,7 @@ Section RqUpStart.
         repeat ssplit.
         * reflexivity.
         * right.
-          pose proof (rqEdgeUpFrom_Some H _ H9).
+          pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H9).
           destruct H7 as [rsUp [down [pidx ?]]]; dest.
           exists pidx, [(rqTo, rqtm)]; do 2 eexists.
           repeat ssplit.
@@ -221,11 +221,11 @@ Section RqUpStart.
       repeat constructor.
       disc_NonRqUpL.
     - disc_rule_conds.
-      + pose proof (rqEdgeUpFrom_Some H _ H5).
+      + pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H5).
         destruct H7 as [rsUp [down [pidx ?]]]; dest.
         elim (H3 pidx).
         do 2 eexists; eauto.
-      + pose proof (rqEdgeUpFrom_Some H _ H5).
+      + pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H5).
         destruct H14 as [rsUp [down [pidx ?]]]; dest.
         elim (H3 pidx).
         do 2 eexists; eauto.
@@ -255,7 +255,7 @@ Section RqUpStart.
 
   Lemma nonRqUpL_atomic_msg_outs_no_rqUp:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       Forall NonRqUpL hst ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
@@ -312,7 +312,7 @@ Section RqUpStart.
 
   Lemma rqUp_start_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -321,11 +321,11 @@ Section RqUpStart.
           (ruhst = nil \/
            exists roidx rqUps ruins ruouts,
              RqUpMsgsP roidx rqUps /\
-             Atomic msg_dec inits ruins ruhst ruouts rqUps /\
+             Atomic inits ruins ruhst ruouts rqUps /\
              SubList rqUps outs /\
              (nhst = nil \/
               exists nins nouts,
-                Atomic msg_dec rqUps nins nhst nouts eouts /\
+                Atomic rqUps nins nhst nouts eouts /\
                 In roidx (oindsOf nhst))) /\
           Forall NonRqUpL nhst.
   Proof.
@@ -414,7 +414,7 @@ Section RqUpStart.
 End RqUpStart.
 
 Section Separation.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -617,7 +617,7 @@ Section Separation.
 
   Lemma atomic_inits_bounded:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -642,7 +642,7 @@ Section Separation.
 
   Corollary atomic_inits_in_history:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -711,7 +711,7 @@ Section Separation.
 
   Lemma atomic_ext_outs_bounded:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -742,7 +742,7 @@ Section Separation.
 
   Corollary atomic_ext_outs_in_history:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -757,7 +757,7 @@ Section Separation.
 
   Corollary atomic_rqUp_out_in_history:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -777,7 +777,7 @@ Section Separation.
 
   Corollary atomic_rsUp_out_in_history:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -797,7 +797,7 @@ Section Separation.
 
   Corollary atomic_down_out_in_history:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -818,7 +818,7 @@ Section Separation.
   
   Lemma atomic_msg_outs_disj:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -877,7 +877,7 @@ Section Separation.
       intro Hx; subst.
       disc_rule_conds; auto.
     - disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H27).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H27).
       destruct H.
       destruct H9 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_RqRsMsgFrom.
@@ -892,7 +892,7 @@ Section Separation.
         eapply inside_parent_in; try eapply H; try eassumption.
         intro Hx; subst.
         disc_rule_conds; auto.
-      + pose proof (edgeDownTo_Some H _ H5).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
         destruct H.
         destruct H15 as [rqUp [rsUp [rpidx ?]]]; dest.
         disc_RqRsMsgFrom.
@@ -900,12 +900,12 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H18).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H18).
         destruct H30 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
         eapply inside_child_in in H15; try eassumption.
-      + pose proof (edgeDownTo_Some H _ H18).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H18).
         destruct H22 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
@@ -953,7 +953,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H9).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H9).
       destruct H.
       destruct H28 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_RqRsMsgFrom.
@@ -985,7 +985,7 @@ Section Separation.
       destruct H.
       eapply outside_parent_out in H6; try eassumption.
     - disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H26).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H26).
       destruct H.
       destruct H8 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_rule_conds.
@@ -995,7 +995,7 @@ Section Separation.
     - disc_rule_conds.
       + destruct H; eapply outside_parent_out in H17; try eassumption.
       + destruct H; eapply outside_parent_out in H8; try eassumption.
-      + pose proof (edgeDownTo_Some H _ H4).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H4).
         destruct H.
         destruct H14 as [rqUp [rsUp [rpidx ?]]]; dest.
         disc_rule_conds.
@@ -1004,13 +1004,13 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H17).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
         destruct H29 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
         eapply outside_child_in in H14; try eassumption.
         clear -H2 H14; firstorder.
-      + pose proof (edgeDownTo_Some H _ H17).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
         destruct H21 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
@@ -1055,7 +1055,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H8).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H8).
       destruct H.
       destruct H27 as [rqUp [rsUp [rpidx ?]]]; dest.
       disc_rule_conds.
@@ -1065,7 +1065,7 @@ Section Separation.
   
   Lemma atomic_separation_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -1114,7 +1114,7 @@ Section Separation.
    *)
   Lemma atomic_non_visiting_rsUps_one:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -1208,7 +1208,7 @@ Section Separation.
 
   Corollary atomic_non_visiting_rsUp_one:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->

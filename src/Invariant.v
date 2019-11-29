@@ -48,8 +48,7 @@ Section Invariant.
         ginv ist2.
   Proof.
     induction 3; simpl; intros; eauto.
-
-    eapply Hinvs; [| |exact H4]; auto.
+    eapply Hinvs; [| |exact H5]; auto.
     eapply reachable_steps; eauto.
   Qed.
 
@@ -63,7 +62,7 @@ Section Invariant.
   Corollary inv_reachable: InvReachable.
   Proof.
     unfold InvReachable; intros.
-    destruct H1 as [ll ?].
+    destruct H2 as [ll ?].
     eapply inv_steps; eauto.
   Qed.
   
@@ -131,7 +130,7 @@ Section MutualInvariant.
     InvReachable impl stepI (fun st => inv1 st /\ inv2 st).
   Proof.
     unfold InvReachable; intros.
-    destruct H1 as [ll ?].
+    destruct H2 as [ll ?].
     eapply mutual_inv_steps; eauto.
   Qed.
 
@@ -161,11 +160,6 @@ Section Operations.
   Qed.
 
 End Operations.
-
-Definition liftInv `{OStateIfc} (ossInv: OStates -> Prop): MState -> Prop :=
-  fun st => ossInv (bst_oss st).
-
-Ltac split_inv := apply inv_split.
 
 Infix "/\i" := invAnd (at level 80).
 Infix "->i" := invImp (at level 99).

@@ -9,12 +9,12 @@ Set Implicit Arguments.
 Open Scope list.
 Open Scope fmap.
 
-Definition StatesPred `{OStateIfc} :=
+Definition StatesPred `{DecValue} `{OStateIfc} :=
   OStates -> ORqs Msg -> MessagePool Msg -> Prop.
-Definition MsgOutPred `{OStateIfc} := Id Msg -> StatesPred.
+Definition MsgOutPred `{DecValue} `{OStateIfc} := Id Msg -> StatesPred.
 
 Section PerOStateIfc.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variable (dtr: DTree).
 
   Definition MsgsEquiv (oidx: IdxT)
@@ -66,7 +66,8 @@ Definition DisjMInds (dtr: DTree) (oinds: list IdxT) (minds: list IdxT): Prop :=
     (forall down, edgeDownTo dtr oidx = Some down -> ~ In down minds).
 
 Lemma OStatesEquivR_add:
-  forall `{oifc: OStateIfc} dtr oinds (oss: OStates) orqs msgs oidx nost norq nmsgs rminds,
+  forall `{dv: DecValue} `{oifc: OStateIfc}
+         dtr oinds (oss: OStates) orqs msgs oidx nost norq nmsgs rminds,
     ~ In oidx oinds ->
     DisjMInds dtr oinds (idsOf nmsgs) ->
     DisjMInds dtr oinds rminds ->
@@ -99,7 +100,7 @@ Proof.
 Qed.
 
 Section PredMsg.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -129,7 +130,7 @@ Section PredMsg.
 
     Lemma atomic_rqUp_singleton:
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
@@ -155,7 +156,7 @@ Section PredMsg.
 
     Lemma atomic_rsDown_singleton:
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
@@ -209,7 +210,7 @@ Section PredMsg.
 
       - specialize (H6 _ H12).
         red in H12; simpl in *; dest.
-        pose proof (edgeDownTo_Some H _ H13).
+        pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H13).
         destruct H14 as [rqUp [rsUp [pidx ?]]]; dest.
         specialize (H6 _ H16).
         eapply H6; [eassumption|].
@@ -250,7 +251,7 @@ Section PredMsg.
 
       - specialize (H11 _ H12).
         red in H12; simpl in *; dest.
-        pose proof (rsEdgeUpFrom_Some H _ H13).
+        pose proof (rsEdgeUpFrom_Some (proj1 (proj2 H)) _ H13).
         destruct H14 as [rqUp [down [pidx ?]]]; dest.
         eapply H11; [eassumption|].
         eapply OStatesEquivR_add
@@ -284,7 +285,7 @@ Section PredMsg.
 
     Corollary atomic_rqDown_rsUp_preserves_msg_out_preds:
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
@@ -345,7 +346,7 @@ Section PredMsg.
 
       - specialize (H6 _ H12).
         red in H12; simpl in *; dest.
-        pose proof (edgeDownTo_Some H _ H13).
+        pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H13).
         destruct H14 as [rqUp [rsUp [pidx ?]]]; dest.
         specialize (H6 _ H16).
         eapply H6; [eassumption|].
@@ -393,7 +394,7 @@ Section PredMsg.
 
       - specialize (H11 _ H12).
         red in H12; simpl in *; dest.
-        pose proof (rsEdgeUpFrom_Some H _ H13).
+        pose proof (rsEdgeUpFrom_Some (proj1 (proj2 H)) _ H13).
         destruct H14 as [rqUp [down [pidx ?]]]; dest.
         eapply H11; [eassumption|].
         eapply OStatesEquivR_add with (nmsgs:= rqDowns) (rminds:= [(idOf rqDown)]).
@@ -448,7 +449,7 @@ Section PredMsg.
 
     Corollary atomic_rqDown_rqDowns_preserves_msg_out_preds:
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
@@ -515,7 +516,7 @@ Section PredMsg.
       - specialize (H7 _ H13).
         rewrite Forall_forall in H6; specialize (H6 _ H11 _ H13).
         red in H13; simpl in *; dest.
-        pose proof (edgeDownTo_Some H _ H14).
+        pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H14).
         destruct H15 as [rqUp [rsUp [pidx ?]]]; dest.
         specialize (H7 _ H17).
         eapply H7; [eassumption|].
@@ -635,7 +636,7 @@ Section PredMsg.
 
     Corollary atomic_rsUps_rsUp_preserves_msg_out_preds:
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
@@ -646,7 +647,7 @@ Section PredMsg.
             SubList rsUps eouts ->
             RqRsDownMatch dtr oidx rqTos (idsOf rsUps) Rp ->
             forall orq rqid,
-              s2.(bst_orqs)@[oidx] = Some orq ->
+              s2.(st_orqs)@[oidx] = Some orq ->
               orq@[downRq] = Some rqid ->
               rqid.(rqi_minds_rss) = idsOf rsUps ->
               forall P oss orqs msgs nost norq orsUp rsum,
@@ -693,13 +694,13 @@ Section PredMsg.
            * same time.
            *)
           destruct H17; simpl in *.
-          pose proof (edgeDownTo_Some H _ H22).
+          pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H22).
           destruct H23 as [rqUp [rsUp [pidx ?]]]; dest.
           disc_rule_conds.
           pose proof (downLockInv_ok Hiorqs H0 H H2 (reachable_steps H4 H5)).
           good_locking_get obj.
 
-          assert (length (rqsQ (bst_msgs s2) rqDown) >= 1).
+          assert (length (rqsQ (st_msgs s2) rqDown) >= 1).
           { eapply rqsQ_length_ge_one; eauto.
             eapply atomic_messages_eouts_in in H3; [|eassumption].
             rewrite Forall_forall in H3.

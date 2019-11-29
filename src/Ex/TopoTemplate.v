@@ -1396,9 +1396,9 @@ Section Facts.
   Qed.
 
   Lemma tree2Topo_RqRsChnsOnSystem:
-    forall `{oifc: OStateIfc} tr bidx topo cifc (impl: System),
+    forall `{dv: DecValue} `{oifc: OStateIfc} tr bidx topo cifc (impl: System),
       tree2Topo tr bidx = (topo, cifc) ->
-      map (@obj_idx _) impl.(sys_objs) = cifc.(c_li_indices) ++ cifc.(c_l1_indices) ->
+      map obj_idx impl.(sys_objs) = cifc.(c_li_indices) ++ cifc.(c_l1_indices) ->
       impl.(sys_minds) = cifc.(c_minds) ->
       RqRsChnsOnSystem topo impl.
   Proof.
@@ -1464,7 +1464,7 @@ Section Facts.
   Qed.
 
   Lemma tree2Topo_ExtsOnDTree:
-    forall {oifc: OStateIfc} tr bidx topo cifc (impl: System),
+    forall `{dv: DecValue} `{oifc: OStateIfc} tr bidx topo cifc (impl: System),
       tree2Topo tr bidx = (topo, cifc) ->
       impl.(sys_merqs) = cifc.(c_merqs) -> impl.(sys_merss) = cifc.(c_merss) ->
       ExtsOnDTree topo impl.
@@ -1840,7 +1840,7 @@ Section Facts.
   Qed.
 
   Lemma tree2Topo_li_RqRsDownMatch_children:
-    forall tr bidx oidx,
+    forall `{dv: DecValue} tr bidx oidx,
       In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
       forall (rssFrom: list (Id Msg)) rqTos P,
         RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos (idsOf rssFrom) P ->
@@ -2117,7 +2117,7 @@ Section Facts.
   Proof.
     intros.
     pose proof H.
-    eapply rqEdgeUpFrom_Some_light in H; [|apply tree2Topo_RqRsChnsOnDTree].
+    eapply rqEdgeUpFrom_Some in H; [|apply tree2Topo_RqRsChnsOnDTree].
     dest.
     pose proof (tree2Topo_TreeTopoNode tr bidx).
     specialize (H3 _ _ H2); dest.
@@ -2131,7 +2131,7 @@ Section Facts.
   Proof.
     intros.
     pose proof H.
-    eapply rsEdgeUpFrom_Some_light in H; [|apply tree2Topo_RqRsChnsOnDTree].
+    eapply rsEdgeUpFrom_Some in H; [|apply tree2Topo_RqRsChnsOnDTree].
     dest.
     pose proof (tree2Topo_TreeTopoNode tr bidx).
     specialize (H3 _ _ H2); dest.
@@ -2145,7 +2145,7 @@ Section Facts.
   Proof.
     intros.
     pose proof H.
-    eapply edgeDownTo_Some_light in H; [|apply tree2Topo_RqRsChnsOnDTree].
+    eapply edgeDownTo_Some in H; [|apply tree2Topo_RqRsChnsOnDTree].
     dest.
     pose proof (tree2Topo_TreeTopoNode tr bidx).
     specialize (H3 _ _ H2); dest.

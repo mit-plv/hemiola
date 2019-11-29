@@ -10,6 +10,12 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
+Global Instance NatDecValue: DecValue :=
+  {| t_type := nat;
+     t_default := O;
+     t_eq_dec := eq_nat_dec
+  |}.
+
 Section System.
   Variable numC: nat. (* if [numC = 0], then the system has channels for a single child. *)
 
@@ -94,7 +100,7 @@ Section System.
     Lemma specRules_head:
       forall i,
         SubList
-          (map idxHd (map (@rule_idx _) (specRules i)))
+          (map idxHd (map rule_idx (specRules i)))
           (nat_seq_rev i).
     Proof.
       induction i; simpl; intros; [solve_SubList|].
@@ -104,7 +110,7 @@ Section System.
     Qed.
       
     Lemma specObj_obj_rules_valid:
-      forall i, NoDup (map (@rule_idx _) (specRules i)).
+      forall i, NoDup (map rule_idx (specRules i)).
     Proof.
       induction i; [solve_NoDup|].
       simpl.

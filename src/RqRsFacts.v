@@ -25,8 +25,8 @@ Ltac red_obj_rule :=
   repeat
     match goal with
     | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
-    | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
-          {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
+    | [H: {| st_oss := _; st_orqs := _; st_msgs := _ |} =
+          {| st_oss := _; st_orqs := _; st_msgs := _ |} |- _] => inv H
     | [H0: In ?obj1 (sys_objs ?sys),
        H1: In ?obj2 (sys_objs ?sys),
        H2: obj_idx ?obj1 = obj_idx ?obj2 |- _] =>
@@ -167,96 +167,11 @@ Proof.
 Qed.
 
 Section RqRsDTree.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
   Hypothesis (Hsd: RqRsDTree dtr sys).
-
-  Lemma rqEdgeUpFrom_Some:
-    forall oidx rqUp,
-      rqEdgeUpFrom dtr oidx = Some rqUp ->
-      exists rsUp down pidx,
-        rsEdgeUpFrom dtr oidx = Some rsUp /\
-        edgeDownTo dtr oidx = Some down /\
-        parentIdxOf dtr oidx = Some pidx.
-  Proof.
-    unfold rqEdgeUpFrom, upEdgesFrom; intros.
-    remember (parentChnsOf oidx dtr) as pchns.
-    destruct pchns as [[root pidx]|]; simpl in *; [|discriminate].
-    unfold rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo, parentIdxOf.
-    destruct Hsd as [? [? ?]].
-    apply eq_sym in Heqpchns.
-    rewrite Heqpchns; simpl.
-    apply H1 in Heqpchns.
-    destruct Heqpchns as [rqUp' [rsUp [down ?]]]; dest; subst; simpl.
-    rewrite H3, H5.
-    repeat eexists.
-  Qed.
-
-  Lemma rsEdgeUpFrom_Some:
-    forall oidx rsUp,
-      rsEdgeUpFrom dtr oidx = Some rsUp ->
-      exists rqUp down pidx,
-        rqEdgeUpFrom dtr oidx = Some rqUp /\
-        edgeDownTo dtr oidx = Some down /\
-        parentIdxOf dtr oidx = Some pidx.
-  Proof.
-    unfold rsEdgeUpFrom, upEdgesFrom; intros.
-    remember (parentChnsOf oidx dtr) as pchns.
-    destruct pchns as [[root pidx]|]; simpl in *; [|discriminate].
-    unfold rqEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo, parentIdxOf.
-    destruct Hsd as [? [? ?]].
-    apply eq_sym in Heqpchns.
-    rewrite Heqpchns; simpl.
-    apply H1 in Heqpchns.
-    destruct Heqpchns as [rqUp [rsUp' [down ?]]]; dest; subst; simpl.
-    rewrite H3, H5.
-    repeat eexists.
-  Qed.
-
-  Lemma edgeDownTo_Some:
-    forall oidx down,
-      edgeDownTo dtr oidx = Some down ->
-      exists rqUp rsUp pidx,
-        rqEdgeUpFrom dtr oidx = Some rqUp /\
-        rsEdgeUpFrom dtr oidx = Some rsUp /\
-        parentIdxOf dtr oidx = Some pidx.
-  Proof.
-    unfold edgeDownTo, downEdgesTo; intros.
-    remember (parentChnsOf oidx dtr) as pchns.
-    destruct pchns as [[root pidx]|]; simpl in *; [|discriminate].
-    unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom, parentIdxOf.
-    destruct Hsd as [? [? ?]].
-    apply eq_sym in Heqpchns.
-    rewrite Heqpchns; simpl.
-    apply H1 in Heqpchns.
-    destruct Heqpchns as [rqUp [rsUp [down' ?]]]; dest; subst; simpl.
-    rewrite H3.
-    repeat eexists.
-  Qed.
-
-  Lemma parentIdxOf_Some:
-    forall oidx pidx,
-      parentIdxOf dtr oidx = Some pidx ->
-      exists rqUp rsUp down,
-        rqEdgeUpFrom dtr oidx = Some rqUp /\
-        rsEdgeUpFrom dtr oidx = Some rsUp /\
-        edgeDownTo dtr oidx = Some down.
-  Proof.
-    unfold parentIdxOf; intros.
-    remember (parentChnsOf oidx dtr) as pchns.
-    destruct pchns as [[root pidx']|]; simpl in *; [|discriminate].
-    inv H.
-    unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo.
-    destruct Hsd as [? [? ?]].
-    apply eq_sym in Heqpchns.
-    rewrite Heqpchns; simpl.
-    apply H0 in Heqpchns.
-    destruct Heqpchns as [rqUp [rsUp [down ?]]]; dest; subst; simpl.
-    rewrite H2, H4.
-    repeat eexists.
-  Qed.
 
   Lemma RqRsDownMatch_rq_rs:
     forall oidx rssFrom rqTos P,
@@ -314,7 +229,7 @@ Section RqRsDTree.
   
   Lemma rqrsDTree_rqEdgeUpFrom_sys_minds:
     forall oidx midx,
-      In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+      In oidx (map obj_idx sys.(sys_objs)) ->
       rqEdgeUpFrom dtr oidx = Some midx ->
       In midx sys.(sys_minds).
   Proof.
@@ -330,7 +245,7 @@ Section RqRsDTree.
 
   Lemma rqrsDTree_rsEdgeUpFrom_sys_minds:
     forall oidx midx,
-      In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+      In oidx (map obj_idx sys.(sys_objs)) ->
       rsEdgeUpFrom dtr oidx = Some midx ->
       In midx sys.(sys_minds).
   Proof.
@@ -346,7 +261,7 @@ Section RqRsDTree.
 
   Lemma rqrsDTree_edgeDownTo_sys_minds:
     forall oidx midx,
-      In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+      In oidx (map obj_idx sys.(sys_objs)) ->
       edgeDownTo dtr oidx = Some midx ->
       In midx sys.(sys_minds).
   Proof.
@@ -838,12 +753,11 @@ Section RqRsDTree.
   
 End RqRsDTree.
 
-(** TODO: merge with [.._Some] lemmas above. *)
 Section RqRsChnsOnDTree.
   Variables (dtr: DTree).
   Hypothesis (Hd: RqRsChnsOnDTree dtr).
 
-  Lemma rqEdgeUpFrom_Some_light:
+  Lemma rqEdgeUpFrom_Some:
     forall oidx rqUp,
       rqEdgeUpFrom dtr oidx = Some rqUp ->
       exists rsUp down pidx,
@@ -863,7 +777,7 @@ Section RqRsChnsOnDTree.
     repeat eexists.
   Qed.
 
-  Lemma rsEdgeUpFrom_Some_light:
+  Lemma rsEdgeUpFrom_Some:
     forall oidx rsUp,
       rsEdgeUpFrom dtr oidx = Some rsUp ->
       exists rqUp down pidx,
@@ -883,7 +797,7 @@ Section RqRsChnsOnDTree.
     repeat eexists.
   Qed.
 
-  Lemma edgeDownTo_Some_light:
+  Lemma edgeDownTo_Some:
     forall oidx down,
       edgeDownTo dtr oidx = Some down ->
       exists rqUp rsUp pidx,
@@ -900,6 +814,27 @@ Section RqRsChnsOnDTree.
     apply Hd in Heqpchns.
     destruct Heqpchns as [rqUp [rsUp [down' ?]]]; dest; subst; simpl.
     rewrite H0.
+    repeat eexists.
+  Qed.
+
+  Lemma parentIdxOf_Some:
+    forall oidx pidx,
+      parentIdxOf dtr oidx = Some pidx ->
+      exists rqUp rsUp down,
+        rqEdgeUpFrom dtr oidx = Some rqUp /\
+        rsEdgeUpFrom dtr oidx = Some rsUp /\
+        edgeDownTo dtr oidx = Some down.
+  Proof.
+    unfold parentIdxOf; intros.
+    remember (parentChnsOf oidx dtr) as pchns.
+    destruct pchns as [[root pidx']|]; simpl in *; [|discriminate].
+    inv H.
+    unfold rqEdgeUpFrom, rsEdgeUpFrom, upEdgesFrom, edgeDownTo, downEdgesTo.
+    apply eq_sym in Heqpchns.
+    rewrite Heqpchns; simpl.
+    apply Hd in Heqpchns.
+    destruct Heqpchns as [rqUp [rsUp [down ?]]]; dest; subst; simpl.
+    rewrite H, H0.
     repeat eexists.
   Qed.
 
@@ -1179,7 +1114,7 @@ Ltac constr_rule_conds :=
   repeat constr_rule_conds_step.
 
 Lemma findQ_deq_in_length_two:
-  forall (msgs: MessagePool Msg) midx msg1,
+  forall `{dv: DecValue} (msgs: MessagePool Msg) midx msg1,
     FirstMPI msgs (midx, msg1) ->
     forall msg2,
       InMP midx msg2 (deqMP midx msgs) ->
@@ -1193,313 +1128,318 @@ Proof.
   simpl; omega.
 Qed.
 
-Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
-  filter (fun msg => negb (msg.(msg_type))) (findQ midx msgs).
+Section DecValue.
+  Context `{dv: DecValue}.
 
-Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
-  filter (fun msg => msg.(msg_type)) (findQ midx msgs).
+  Definition rqsQ (msgs: MessagePool Msg) (midx: IdxT) :=
+    filter (fun msg => negb (msg.(msg_type))) (findQ midx msgs).
 
-Lemma rqsQ_rssQ_length:
-  forall (msgs: MessagePool Msg) midx,
-    length (findQ midx msgs) = length (rqsQ msgs midx) + length (rssQ msgs midx).
-Proof.
-  unfold rqsQ, rssQ; intros.
-  induction (findQ midx msgs); simpl; [reflexivity|].
-  destruct (msg_type a) eqn:Heq; simpl; rewrite IHq; omega.
-Qed.
+  Definition rssQ (msgs: MessagePool Msg) (midx: IdxT) :=
+    filter (fun msg => msg.(msg_type)) (findQ midx msgs).
 
-Lemma rqsQ_length_zero:
-  forall (msgs: MessagePool Msg) midx msg,
-    length (rqsQ msgs midx) <= 1 ->
-    FirstMP msgs midx msg ->
-    msg_type msg = MRq ->
-    rqsQ (deqMP midx msgs) midx = nil.
-Proof.
-  intros.
-  apply findQ_In_deqMP_FirstMP in H0.
-  unfold rqsQ, FirstMP, firstMP in *; simpl in *.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H0.
-  simpl in H; rewrite H1 in H; simpl in H.
-  destruct (filter _ _); [reflexivity|simpl in H; omega].
-Qed.
+  Lemma rqsQ_rssQ_length:
+    forall (msgs: MessagePool Msg) midx,
+      length (findQ midx msgs) = length (rqsQ msgs midx) + length (rssQ msgs midx).
+  Proof.
+    unfold rqsQ, rssQ; intros.
+    induction (findQ midx msgs); simpl; [reflexivity|].
+    destruct (msg_type a) eqn:Heq; simpl; rewrite IHq; omega.
+  Qed.
 
-Lemma rqsQ_length_zero_False:
-  forall msgs midx msg,
-    rqsQ msgs midx = nil ->
-    msg_type msg = MRq ->
-    FirstMP msgs midx msg ->
-    False.
-Proof.
-  unfold rqsQ, FirstMP, firstMP; simpl; intros.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H1.
-  simpl in H; rewrite H0 in H; simpl in H.
-  discriminate.
-Qed.
+  Lemma rqsQ_length_zero:
+    forall (msgs: MessagePool Msg) midx msg,
+      length (rqsQ msgs midx) <= 1 ->
+      FirstMP msgs midx msg ->
+      msg_type msg = MRq ->
+      rqsQ (deqMP midx msgs) midx = nil.
+  Proof.
+    intros.
+    apply findQ_In_deqMP_FirstMP in H0.
+    unfold rqsQ, FirstMP, firstMP in *; simpl in *.
+    destruct (findQ midx msgs); [discriminate|].
+    inv H0.
+    simpl in H; rewrite H1 in H; simpl in H.
+    destruct (filter _ _); [reflexivity|simpl in H; omega].
+  Qed.
 
-Lemma rqsQ_length_ge_one:
-  forall msgs midx msg,
-    msg_type msg = MRq ->
-    InMP midx msg msgs ->
-    length (rqsQ msgs midx) >= 1.
-Proof.
-  unfold rqsQ, InMP; intros.
-  induction (findQ midx msgs); simpl; intros.
-  - elim H0.
-  - inv H0.
-    + rewrite H; simpl; omega.
-    + find_if_inside; simpl; [omega|auto].
-Qed.
+  Lemma rqsQ_length_zero_False:
+    forall msgs midx msg,
+      rqsQ msgs midx = nil ->
+      msg_type msg = MRq ->
+      FirstMP msgs midx msg ->
+      False.
+  Proof.
+    unfold rqsQ, FirstMP, firstMP; simpl; intros.
+    destruct (findQ midx msgs); [discriminate|].
+    inv H1.
+    simpl in H; rewrite H0 in H; simpl in H.
+    discriminate.
+  Qed.
 
-Lemma rqsQ_length_one:
-  forall msgs midx msg,
-    length (rqsQ msgs midx) <= 1 ->
-    msg_type msg = MRq ->
-    FirstMP msgs midx msg ->
-    length (rqsQ msgs midx) = 1.
-Proof.
-  intros.
-  apply FirstMP_InMP in H1.
-  eapply rqsQ_length_ge_one in H1; [|assumption].
-  omega.
-Qed.
+  Lemma rqsQ_length_ge_one:
+    forall msgs midx msg,
+      msg_type msg = MRq ->
+      InMP midx msg msgs ->
+      length (rqsQ msgs midx) >= 1.
+  Proof.
+    unfold rqsQ, InMP; intros.
+    induction (findQ midx msgs); simpl; intros.
+    - elim H0.
+    - inv H0.
+      + rewrite H; simpl; omega.
+      + find_if_inside; simpl; [omega|auto].
+  Qed.
 
-Lemma rqsQ_length_two:
-  forall msgs midx msg1 msg2,
-    msg_type msg1 = MRq ->
-    msg_type msg2 = MRq ->
-    msg1 <> msg2 ->
-    InMP midx msg1 msgs ->
-    InMP midx msg2 msgs ->
-    length (rqsQ msgs midx) >= 2.
-Proof.
-  unfold rqsQ, InMP; intros.
-  induction (findQ midx msgs); simpl; intros; [intuition|].
-  inv H2.
-  - rewrite H; simpl.
-    inv H3; [exfalso; auto|].
-    clear -H0 H2.
-    induction q; [intuition|].
+  Lemma rqsQ_length_one:
+    forall msgs midx msg,
+      length (rqsQ msgs midx) <= 1 ->
+      msg_type msg = MRq ->
+      FirstMP msgs midx msg ->
+      length (rqsQ msgs midx) = 1.
+  Proof.
+    intros.
+    apply FirstMP_InMP in H1.
+    eapply rqsQ_length_ge_one in H1; [|assumption].
+    omega.
+  Qed.
+
+  Lemma rqsQ_length_two:
+    forall msgs midx msg1 msg2,
+      msg_type msg1 = MRq ->
+      msg_type msg2 = MRq ->
+      msg1 <> msg2 ->
+      InMP midx msg1 msgs ->
+      InMP midx msg2 msgs ->
+      length (rqsQ msgs midx) >= 2.
+  Proof.
+    unfold rqsQ, InMP; intros.
+    induction (findQ midx msgs); simpl; intros; [intuition|].
     inv H2.
-    + simpl; rewrite H0; simpl; omega.
-    + simpl; destruct (msg_type a); eauto.
-      simpl; omega.
-  - inv H3.
-    + rewrite H0; simpl.
-      clear -H H4.
+    - rewrite H; simpl.
+      inv H3; [exfalso; auto|].
+      clear -H0 H2.
       induction q; [intuition|].
-      inv H4.
-      * simpl; rewrite H; simpl; omega.
-      * simpl; destruct (msg_type a); eauto.
+      inv H2.
+      + simpl; rewrite H0; simpl; omega.
+      + simpl; destruct (msg_type a); eauto.
         simpl; omega.
-    + specialize (IHq H4 H2).
-      destruct (msg_type a); eauto.
-      simpl; omega.
-Qed.
-
-Lemma rssQ_length_zero:
-  forall (msgs: MessagePool Msg) midx msg,
-    length (rssQ msgs midx) <= 1 ->
-    FirstMP msgs midx msg ->
-    msg_type msg = MRs ->
-    rssQ (deqMP midx msgs) midx = nil.
-Proof.
-  intros.
-  apply findQ_In_deqMP_FirstMP in H0.
-  unfold rssQ, FirstMP, firstMP in *; simpl in *.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H0.
-  simpl in H; rewrite H1 in H; simpl in H.
-  destruct (filter _ _); [reflexivity|simpl in H; omega].
-Qed.
-
-Lemma rssQ_length_zero_False:
-  forall msgs midx msg,
-    rssQ msgs midx = nil ->
-    msg_type msg = MRs ->
-    FirstMP msgs midx msg ->
-    False.
-Proof.
-  unfold rssQ, FirstMP, firstMP; simpl; intros.
-  destruct (findQ midx msgs); [discriminate|].
-  inv H1.
-  simpl in H; rewrite H0 in H; simpl in H.
-  discriminate.
-Qed.
-
-Lemma rssQ_length_ge_one:
-  forall msgs midx msg,
-    msg_type msg = MRs ->
-    InMP midx msg msgs ->
-    length (rssQ msgs midx) >= 1.
-Proof.
-  unfold rssQ, InMP; intros.
-  induction (findQ midx msgs); simpl; intros.
-  - elim H0.
-  - inv H0.
-    + rewrite H; simpl; omega.
-    + find_if_inside; simpl; [omega|auto].
-Qed.
-
-Lemma rssQ_length_one:
-  forall msgs midx msg,
-    length (rssQ msgs midx) <= 1 ->
-    msg_type msg = MRs ->
-    FirstMP msgs midx msg ->
-    length (rssQ msgs midx) = 1.
-Proof.
-  intros.
-  apply FirstMP_InMP in H1.
-  eapply rssQ_length_ge_one in H1; [|assumption].
-  omega.
-Qed.
-
-Lemma rssQ_length_two:
-  forall msgs midx msg1 msg2,
-    msg_type msg1 = MRs ->
-    msg_type msg2 = MRs ->
-    msg1 <> msg2 ->
-    InMP midx msg1 msgs ->
-    InMP midx msg2 msgs ->
-    length (rssQ msgs midx) >= 2.
-Proof.
-  unfold rssQ, InMP; intros.
-  induction (findQ midx msgs); simpl; intros; [intuition|].
-  inv H2.
-  - rewrite H; simpl.
-    inv H3; [exfalso; auto|].
-    clear -H0 H2.
-    induction q; [intuition|].
-    inv H2.
-    + simpl; rewrite H0; simpl; omega.
-    + simpl; destruct (msg_type a); eauto.
-      simpl; omega.
-  - inv H3.
-    + rewrite H0; simpl.
-      clear -H H4.
-      induction q; [intuition|].
-      inv H4.
-      * simpl; rewrite H; simpl; omega.
-      * simpl; destruct (msg_type a); eauto.
+    - inv H3.
+      + rewrite H0; simpl.
+        clear -H H4.
+        induction q; [intuition|].
+        inv H4.
+        * simpl; rewrite H; simpl; omega.
+        * simpl; destruct (msg_type a); eauto.
+          simpl; omega.
+      + specialize (IHq H4 H2).
+        destruct (msg_type a); eauto.
         simpl; omega.
-    + specialize (IHq H4 H2).
-      destruct (msg_type a); eauto.
-      simpl; omega.
-Qed.
+  Qed.
 
-Lemma rssQ_deq_in_length_two:
-  forall msgs midx msg1,
-    FirstMPI msgs (midx, msg1) ->
-    msg_type msg1 = MRs ->
-    forall msg2,
-      InMP midx msg2 (deqMP midx msgs) ->
+  Lemma rssQ_length_zero:
+    forall (msgs: MessagePool Msg) midx msg,
+      length (rssQ msgs midx) <= 1 ->
+      FirstMP msgs midx msg ->
+      msg_type msg = MRs ->
+      rssQ (deqMP midx msgs) midx = nil.
+  Proof.
+    intros.
+    apply findQ_In_deqMP_FirstMP in H0.
+    unfold rssQ, FirstMP, firstMP in *; simpl in *.
+    destruct (findQ midx msgs); [discriminate|].
+    inv H0.
+    simpl in H; rewrite H1 in H; simpl in H.
+    destruct (filter _ _); [reflexivity|simpl in H; omega].
+  Qed.
+
+  Lemma rssQ_length_zero_False:
+    forall msgs midx msg,
+      rssQ msgs midx = nil ->
+      msg_type msg = MRs ->
+      FirstMP msgs midx msg ->
+      False.
+  Proof.
+    unfold rssQ, FirstMP, firstMP; simpl; intros.
+    destruct (findQ midx msgs); [discriminate|].
+    inv H1.
+    simpl in H; rewrite H0 in H; simpl in H.
+    discriminate.
+  Qed.
+
+  Lemma rssQ_length_ge_one:
+    forall msgs midx msg,
+      msg_type msg = MRs ->
+      InMP midx msg msgs ->
+      length (rssQ msgs midx) >= 1.
+  Proof.
+    unfold rssQ, InMP; intros.
+    induction (findQ midx msgs); simpl; intros.
+    - elim H0.
+    - inv H0.
+      + rewrite H; simpl; omega.
+      + find_if_inside; simpl; [omega|auto].
+  Qed.
+
+  Lemma rssQ_length_one:
+    forall msgs midx msg,
+      length (rssQ msgs midx) <= 1 ->
+      msg_type msg = MRs ->
+      FirstMP msgs midx msg ->
+      length (rssQ msgs midx) = 1.
+  Proof.
+    intros.
+    apply FirstMP_InMP in H1.
+    eapply rssQ_length_ge_one in H1; [|assumption].
+    omega.
+  Qed.
+
+  Lemma rssQ_length_two:
+    forall msgs midx msg1 msg2,
+      msg_type msg1 = MRs ->
       msg_type msg2 = MRs ->
-      List.length (rssQ msgs midx) >= 2.
-Proof.
-  cbv [FirstMPI FirstMP firstMP InMP rssQ deqMP]; simpl; intros.
-  destruct (findQ midx msgs) as [|emsg q]; [discriminate|].
-  simpl in *; inv H.
-  rewrite H0; simpl.
-  unfold findQ in H1; mred; simpl in H1.
+      msg1 <> msg2 ->
+      InMP midx msg1 msgs ->
+      InMP midx msg2 msgs ->
+      length (rssQ msgs midx) >= 2.
+  Proof.
+    unfold rssQ, InMP; intros.
+    induction (findQ midx msgs); simpl; intros; [intuition|].
+    inv H2.
+    - rewrite H; simpl.
+      inv H3; [exfalso; auto|].
+      clear -H0 H2.
+      induction q; [intuition|].
+      inv H2.
+      + simpl; rewrite H0; simpl; omega.
+      + simpl; destruct (msg_type a); eauto.
+        simpl; omega.
+    - inv H3.
+      + rewrite H0; simpl.
+        clear -H H4.
+        induction q; [intuition|].
+        inv H4.
+        * simpl; rewrite H; simpl; omega.
+        * simpl; destruct (msg_type a); eauto.
+          simpl; omega.
+      + specialize (IHq H4 H2).
+        destruct (msg_type a); eauto.
+        simpl; omega.
+  Qed.
 
-  clear -H1 H2.
-  induction q; intros; [dest_in|].
-  inv H1.
-  - simpl; rewrite H2; simpl; omega.
-  - simpl; destruct (msg_type a).
-    + simpl; omega.
-    + apply IHq; assumption.
-Qed.
+  Lemma rssQ_deq_in_length_two:
+    forall msgs midx msg1,
+      FirstMPI msgs (midx, msg1) ->
+      msg_type msg1 = MRs ->
+      forall msg2,
+        InMP midx msg2 (deqMP midx msgs) ->
+        msg_type msg2 = MRs ->
+        List.length (rssQ msgs midx) >= 2.
+  Proof.
+    cbv [FirstMPI FirstMP firstMP InMP rssQ deqMP]; simpl; intros.
+    destruct (findQ midx msgs) as [|emsg q]; [discriminate|].
+    simpl in *; inv H.
+    rewrite H0; simpl.
+    unfold findQ in H1; mred; simpl in H1.
 
-Lemma rssQ_enqMP_rq:
-  forall msgs rqMIdx rqm midx,
-    msg_type rqm = MRq ->
-    rssQ (enqMP rqMIdx rqm msgs) midx =
-    rssQ msgs midx.
-Proof.
-  unfold rssQ, findQ, enqMP; intros.
-  mred; simpl.
-  rewrite filter_app; simpl.
-  rewrite H; simpl.
-  rewrite app_nil_r; reflexivity.
-Qed.
+    clear -H1 H2.
+    induction q; intros; [dest_in|].
+    inv H1.
+    - simpl; rewrite H2; simpl; omega.
+    - simpl; destruct (msg_type a).
+      + simpl; omega.
+      + apply IHq; assumption.
+  Qed.
 
-Lemma rssQ_enqMsgs_rqs:
-  forall rqs msgs midx,
-    Forall (fun idm => msg_type (valOf idm) = MRq) rqs ->
-    rssQ (enqMsgs rqs msgs) midx =
-    rssQ msgs midx.
-Proof.
-  induction rqs; simpl; intros; [reflexivity|].
-  inv H.
-  destruct a as [rqMIdx rqm]; simpl in *.
-  rewrite IHrqs by assumption.
-  apply rssQ_enqMP_rq; auto.
-Qed.
+  Lemma rssQ_enqMP_rq:
+    forall msgs rqMIdx rqm midx,
+      msg_type rqm = MRq ->
+      rssQ (enqMP rqMIdx rqm msgs) midx =
+      rssQ msgs midx.
+  Proof.
+    unfold rssQ, findQ, enqMP; intros.
+    mred; simpl.
+    rewrite filter_app; simpl.
+    rewrite H; simpl.
+    rewrite app_nil_r; reflexivity.
+  Qed.
 
-Lemma rqsQ_enqMP_rs:
-  forall msgs rsMIdx rsm midx,
-    msg_type rsm = MRs ->
-    rqsQ (enqMP rsMIdx rsm msgs) midx =
-    rqsQ msgs midx.
-Proof.
-  unfold rqsQ, findQ, enqMP; intros.
-  mred; simpl.
-  rewrite filter_app; simpl.
-  rewrite H; simpl.
-  rewrite app_nil_r; reflexivity.
-Qed.
+  Lemma rssQ_enqMsgs_rqs:
+    forall rqs msgs midx,
+      Forall (fun idm => msg_type (valOf idm) = MRq) rqs ->
+      rssQ (enqMsgs rqs msgs) midx =
+      rssQ msgs midx.
+  Proof.
+    induction rqs; simpl; intros; [reflexivity|].
+    inv H.
+    destruct a as [rqMIdx rqm]; simpl in *.
+    rewrite IHrqs by assumption.
+    apply rssQ_enqMP_rq; auto.
+  Qed.
 
-Lemma rqsQ_enqMsgs_rss:
-  forall rss msgs midx,
-    Forall (fun idm => msg_type (valOf idm) = MRs) rss ->
-    rqsQ (enqMsgs rss msgs) midx =
-    rqsQ msgs midx.
-Proof.
-  induction rss; simpl; intros; [reflexivity|].
-  inv H.
-  destruct a as [rsMIdx rsm]; simpl in *.
-  rewrite IHrss by assumption.
-  apply rqsQ_enqMP_rs; auto.
-Qed.
+  Lemma rqsQ_enqMP_rs:
+    forall msgs rsMIdx rsm midx,
+      msg_type rsm = MRs ->
+      rqsQ (enqMP rsMIdx rsm msgs) midx =
+      rqsQ msgs midx.
+  Proof.
+    unfold rqsQ, findQ, enqMP; intros.
+    mred; simpl.
+    rewrite filter_app; simpl.
+    rewrite H; simpl.
+    rewrite app_nil_r; reflexivity.
+  Qed.
 
-Lemma rqsQ_deqMP_rs:
-  forall rsMIdx rsm msgs midx,
-    FirstMP msgs rsMIdx rsm ->
-    msg_type rsm = MRs ->
-    rqsQ (deqMP rsMIdx msgs) midx =
-    rqsQ msgs midx.
-Proof.
-  unfold rqsQ, FirstMP, firstMP, deqMP; intros.
-  remember (findQ rsMIdx msgs) as q.
-  destruct q as [|msg q]; [discriminate|].
-  inv H.
-  unfold findQ in *; mred; simpl.
-  rewrite <-Heqq.
-  simpl; rewrite H0; reflexivity.
-Qed.
+  Lemma rqsQ_enqMsgs_rss:
+    forall rss msgs midx,
+      Forall (fun idm => msg_type (valOf idm) = MRs) rss ->
+      rqsQ (enqMsgs rss msgs) midx =
+      rqsQ msgs midx.
+  Proof.
+    induction rss; simpl; intros; [reflexivity|].
+    inv H.
+    destruct a as [rsMIdx rsm]; simpl in *.
+    rewrite IHrss by assumption.
+    apply rqsQ_enqMP_rs; auto.
+  Qed.
 
-Lemma rqsQ_deqMsgs_rss:
-  forall rss msgs midx,
-    NoDup (idsOf rss) ->
-    Forall (FirstMPI msgs) rss ->
-    Forall (fun idm => msg_type (valOf idm) = MRs) rss ->
-    rqsQ (deqMsgs (idsOf rss) msgs) midx =
-    rqsQ msgs midx.
-Proof.
-  induction rss; simpl; intros; [reflexivity|].
-  inv H; inv H0; inv H1.
-  destruct a as [rsMIdx rsm]; simpl in *.
-  rewrite IHrss; auto.
-  - eapply rqsQ_deqMP_rs; eauto.
-  - apply Forall_forall; intros [nrsMIdx nrsm] ?.
-    apply FirstMP_deqMP; simpl.
-    + intro Hx; subst; elim H4.
-      apply in_map with (f:= idOf) in H; auto.
-    + rewrite Forall_forall in H6.
-      specialize (H6 _ H); assumption.
-Qed.
+  Lemma rqsQ_deqMP_rs:
+    forall rsMIdx rsm msgs midx,
+      FirstMP msgs rsMIdx rsm ->
+      msg_type rsm = MRs ->
+      rqsQ (deqMP rsMIdx msgs) midx =
+      rqsQ msgs midx.
+  Proof.
+    unfold rqsQ, FirstMP, firstMP, deqMP; intros.
+    remember (findQ rsMIdx msgs) as q.
+    destruct q as [|msg q]; [discriminate|].
+    inv H.
+    unfold findQ in *; mred; simpl.
+    rewrite <-Heqq.
+    simpl; rewrite H0; reflexivity.
+  Qed.
+
+  Lemma rqsQ_deqMsgs_rss:
+    forall rss msgs midx,
+      NoDup (idsOf rss) ->
+      Forall (FirstMPI msgs) rss ->
+      Forall (fun idm => msg_type (valOf idm) = MRs) rss ->
+      rqsQ (deqMsgs (idsOf rss) msgs) midx =
+      rqsQ msgs midx.
+  Proof.
+    induction rss; simpl; intros; [reflexivity|].
+    inv H; inv H0; inv H1.
+    destruct a as [rsMIdx rsm]; simpl in *.
+    rewrite IHrss; auto.
+    - eapply rqsQ_deqMP_rs; eauto.
+    - apply Forall_forall; intros [nrsMIdx nrsm] ?.
+      apply FirstMP_deqMP; simpl.
+      + intro Hx; subst; elim H4.
+        apply in_map with (f:= idOf) in H; auto.
+      + rewrite Forall_forall in H6.
+        specialize (H6 _ H); assumption.
+  Qed.
+
+End DecValue.
 
 Ltac solve_midx_neq_unit :=
   match goal with

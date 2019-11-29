@@ -5,31 +5,31 @@ Require Export MessagePool.
 
 Set Implicit Arguments.
 
-Open Scope list.
-Open Scope fmap.
+Local Open Scope list.
+Local Open Scope fmap.
 
-Definition extRqsOf `{OStateIfc} {MsgT} `{HasMsg MsgT}
-           (sys: System) (mp: MessagePool MsgT) :=
+Definition extRqsOf `{DecValue} `{OStateIfc}
+           (sys: System) (mp: MessagePool Msg) :=
   qsOf (sys_merqs sys) mp.
 
-Definition extRssOf `{OStateIfc} {MsgT} `{HasMsg MsgT}
-           (sys: System) (mp: MessagePool MsgT) :=
+Definition extRssOf `{DecValue} `{OStateIfc}
+           (sys: System) (mp: MessagePool Msg) :=
   qsOf (sys_merss sys) mp.
 
 Section Validness.
-  Context {MsgT: Type} `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
 
   (* A set of messages are "well-distributed" iff the sources of
    * all messages are different from each others.
    *)
-  Definition WellDistrMsgs (msgs: list (Id MsgT)) :=
+  Definition WellDistrMsgs (msgs: list (Id Msg)) :=
     NoDup (idsOf msgs).
 
   (* A set of messages are "valid internal inputs" iff
    * 1) each source is internal and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsIn (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsIn (sys: System) (msgs: list (Id Msg)) :=
     SubList (idsOf msgs) (sys_minds sys ++ sys_merqs sys) /\
     WellDistrMsgs msgs.
 
@@ -38,7 +38,7 @@ Section Validness.
    *    an external-response queue.
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsOut (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsOut (sys: System) (msgs: list (Id Msg)) :=
     SubList (idsOf msgs) (sys_minds sys ++ sys_merss sys) /\
     WellDistrMsgs msgs.
 
@@ -46,7 +46,7 @@ Section Validness.
    * 1) each message uses an external request queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtIn (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsExtIn (sys: System) (msgs: list (Id Msg)) :=
     SubList (idsOf msgs) (sys_merqs sys) /\
     WellDistrMsgs msgs.
 
@@ -54,13 +54,14 @@ Section Validness.
    * 1) each message uses an external response queue and
    * 2) they are well-distributed.
    *)
-  Definition ValidMsgsExtOut (sys: System) (msgs: list (Id MsgT)) :=
+  Definition ValidMsgsExtOut (sys: System) (msgs: list (Id Msg)) :=
     SubList (idsOf msgs) (sys_merss sys) /\
     WellDistrMsgs msgs.
 
 End Validness.
 
 Section HasLabel.
+  Context `{DecValue}.
 
   Inductive Label :=
   | LblIns (mins: list (Id Msg)): Label
@@ -97,29 +98,34 @@ End Transition.
 
 Section Behavior.
 
-  Definition Trace := list Label.
+  Section Labeled.
+    Context {LabelT} `{HasLabel LabelT}.
 
-  Definition Reachable {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
-             (ss: Steps SystemT StateT LabelT) (sys: SystemT) (st: StateT): Prop :=
-    exists ll, ss sys (initsOf sys) ll st.
-  
-  Fixpoint behaviorOf {LabelT} `{HasLabel LabelT} (ll: list LabelT): Trace :=
-    match ll with
-    | nil => nil
-    | l :: ll' => (getLabel l) ::> (behaviorOf ll')
-    end.
+    Definition Trace := list Label.
 
-  Inductive Behavior {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
-            (ss: Steps SystemT StateT LabelT) : SystemT -> Trace -> Prop :=
-  | Behv: forall sys ll st,
-      ss sys (initsOf sys) ll st ->
-      forall tr,
-        tr = behaviorOf ll ->
-        Behavior ss sys tr.
+    Definition Reachable {SystemT StateT} `{HasInit SystemT StateT}
+               (ss: Steps SystemT StateT LabelT) (sys: SystemT) (st: StateT): Prop :=
+      exists ll, ss sys (initsOf sys) ll st.
+    
+    Fixpoint behaviorOf  (ll: list LabelT): Trace :=
+      match ll with
+      | nil => nil
+      | l :: ll' => (getLabel l) ::> (behaviorOf ll')
+      end.
 
-  Definition Refines {SystemI StateI LabelI SystemS StateS LabelS}
+    Inductive Behavior {SystemT StateT} `{HasInit SystemT StateT}
+              (ss: Steps SystemT StateT LabelT) : SystemT -> Trace -> Prop :=
+    | Behv: forall sys ll st,
+        ss sys (initsOf sys) ll st ->
+        forall tr,
+          tr = behaviorOf ll ->
+          Behavior ss sys tr.
+
+  End Labeled.
+
+  Definition Refines `{dv: DecValue} {SystemI StateI LabelI SystemS StateS LabelS}
              `{HasInit SystemI StateI} `{HasInit SystemS StateS}
-             `{HasLabel LabelI} `{HasLabel LabelS}
+             `{@HasLabel dv LabelI} `{@HasLabel dv LabelS}
              (ssI: Steps SystemI StateI LabelI) (ssS: Steps SystemS StateS LabelS)
              (impl: SystemI) (spec: SystemS) :=
     forall tr, Behavior ssI impl tr ->
@@ -132,26 +138,26 @@ Notation "StI # StS |-- I ⊑ S" := (Refines StI StS I S) (at level 30).
 
 (** Some concrete state and label definitions *)
 
-(* A basis state with [Msg]s. *)
-Record MState `{OStateIfc} :=
-  { bst_oss: OStates;
-    bst_orqs: ORqs Msg;
-    bst_msgs: MessagePool Msg
+Record State `{DecValue} `{OStateIfc} :=
+  { st_oss: OStates;
+    st_orqs: ORqs Msg;
+    st_msgs: MessagePool Msg
   }.
 
-Definition getMStateInit `{OStateIfc} (sys: System): MState :=
-  {| bst_oss := initsOf sys;
-     bst_orqs := initsOf sys;
-     bst_msgs := emptyMP _ |}.
+Definition getStateInit `{DecValue} `{OStateIfc} (sys: System): State :=
+  {| st_oss := initsOf sys;
+     st_orqs := initsOf sys;
+     st_msgs := emptyMP _ |}.
 
-Global Instance MState_HasInit `{OStateIfc}: HasInit System MState :=
-  {| initsOf := getMStateInit |}.
+Global Instance State_HasInit `{DecValue} `{OStateIfc}: HasInit System State :=
+  {| initsOf := getStateInit |}.
 
-Definition GoodORqsInit (iorqs: ORqs Msg): Prop :=
+Definition GoodORqsInit `{DecValue} (iorqs: ORqs Msg): Prop :=
   forall oidx,
     iorqs@[oidx] >>=[True] (fun orq => orq = []).
 
-Definition IntMsgsEmpty `{OStateIfc} (sys: System) (msgs: MessagePool Msg) :=
+Definition IntMsgsEmpty `{DecValue} `{OStateIfc}
+           (sys: System) (msgs: MessagePool Msg) :=
   forall midx,
     In midx sys.(sys_minds) ->
     findQ midx msgs = nil.
@@ -160,21 +166,20 @@ Definition IntMsgsEmpty `{OStateIfc} (sys: System) (msgs: MessagePool Msg) :=
  * is being handled now.
  *)
 Section RLabel.
-  Variable MsgT: Type.
-  Context `{HasMsg MsgT}.
+  Context `{DecValue}.
 
   Inductive RLabel :=
   | RlblEmpty
-  | RlblIns (mins: list (Id MsgT)): RLabel
-  | RlblInt (oidx ridx: IdxT) (mins: list (Id MsgT)) (mouts: list (Id MsgT)): RLabel
-  | RlblOuts (mouts: list (Id MsgT)): RLabel.
+  | RlblIns (mins: list (Id Msg)): RLabel
+  | RlblInt (oidx ridx: IdxT) (mins: list (Id Msg)) (mouts: list (Id Msg)): RLabel
+  | RlblOuts (mouts: list (Id Msg)): RLabel.
   
   Definition rToLabel (l: RLabel): option Label :=
     match l with
     | RlblEmpty => None
-    | RlblIns mins => Some (LblIns (imap getMsg mins))
+    | RlblIns mins => Some (LblIns mins)
     | RlblInt _ _ _ _ => None
-    | RlblOuts mouts => Some (LblOuts (imap getMsg mouts))
+    | RlblOuts mouts => Some (LblOuts mouts)
     end.
 
   Global Instance RLabel_HasLabel: HasLabel RLabel :=
@@ -182,14 +187,11 @@ Section RLabel.
 
 End RLabel.
 
-Definition MLabel := RLabel Msg.
-Definition History (MsgT: Type) := list (RLabel MsgT).
+Definition History `{DecValue} := list RLabel.
 
-Definition MHistory := History Msg.
-
-Definition WfLbl `{OStateIfc} (sys: System) (lbl: MLabel) :=
+Definition WfLbl `{DecValue} `{OStateIfc} (sys: System) (lbl: RLabel) :=
   match lbl with
-  | RlblEmpty _ => True
+  | RlblEmpty => True
   | RlblIns eins => eins <> nil /\ ValidMsgsExtIn sys eins
   | RlblOuts eouts => eouts <> nil /\ ValidMsgsExtOut sys eouts
   | RlblInt oidx ridx ins outs =>
@@ -201,76 +203,6 @@ Definition WfLbl `{OStateIfc} (sys: System) (lbl: MLabel) :=
     DisjList (idsOf ins) (idsOf outs)
   end.
 
-Definition WfHistory `{OStateIfc} (sys: System) (hst: MHistory) :=
+Definition WfHistory `{DecValue} `{OStateIfc} (sys: System) (hst: History) :=
   Forall (WfLbl sys) hst.
-
-Section TMsg.
-
-  Definition TrsId := nat.
-  Definition trsIdInit: TrsId := 0.
-
-  Record TInfo :=
-    { (* a unique transaction id, assigned when the transaction starts. *)
-      tinfo_tid : TrsId; 
-      tinfo_rqin : list (Id Msg)
-    }.
-
-  Definition buildTInfo tid rqin :=
-    {| tinfo_tid := tid; tinfo_rqin := rqin |}.
-
-  Definition tinfo_dec : forall ti1 ti2: TInfo, {ti1 = ti2} + {ti1 <> ti2}.
-  Proof.
-    decide equality.
-    - decide equality.
-      decide equality.
-      + apply msg_dec.
-      + apply idx_dec.
-    - decide equality.
-  Defined.
-
-  Record TMsg :=
-    { tmsg_msg : Msg;
-      tmsg_info : option TInfo;
-    }.
-
-  Definition tmsg_dec : forall m1 m2 : TMsg, {m1 = m2} + {m1 <> m2}.
-  Proof.
-    decide equality.
-    - decide equality.
-      apply tinfo_dec.
-    - apply msg_dec.
-  Defined.
-
-  Definition toTMsg tinfo m :=
-    {| tmsg_msg := m;
-       tmsg_info := Some tinfo |}.
-  Definition toTMsgs tinfo msgs := map (toTMsg tinfo) msgs.
-
-  Definition toTMsgU m := {| tmsg_msg := m; tmsg_info := None |}.
-  Definition toTMsgsU msgs := map toTMsgU msgs.
-
-  Global Instance TMsg_HsgMsg : HasMsg TMsg :=
-    { getMsg := tmsg_msg }.
-
-  Definition TLabel := RLabel TMsg.
-  Definition THistory := list TLabel.
-
-  Definition liftTmap (mmap: Msg -> Msg): TMsg -> TMsg :=
-    fun tmsg =>
-      {| tmsg_msg := mmap (tmsg_msg tmsg);
-         tmsg_info := tmsg_info tmsg
-      |}.
-
-End TMsg.
-
-Record TState `{OStateIfc} :=
-  { tst_oss: OStates;
-    tst_orqs: ORqs TMsg;
-    tst_msgs: MessagePool TMsg;
-    tst_trss: MessagePool TMsg;
-    tst_tid: TrsId
-  }.
-
-Close Scope list.
-Close Scope fmap.
 

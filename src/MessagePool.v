@@ -3,8 +3,8 @@ Require Import Common ListSupport FMap Syntax.
 
 Set Implicit Arguments.
 
-Open Scope list.
-Open Scope fmap.
+Local Open Scope list.
+Local Open Scope fmap.
 
 Section MessagePool.
   Variable (MsgT: Type).
@@ -1363,19 +1363,4 @@ Section Facts.
 End Facts.
 
 Global Opaque ForallMP.
-
-Section Map.
-  Variables (MsgT1 MsgT2: Type).
-  Context `{HasMsg MsgT1} `{HasMsg MsgT2}.
-
-  Variable (mmap: MsgT1 -> MsgT2).
-  Hypothesis (Hmmap: forall msg, getMsg (mmap msg) = getMsg msg).
-
-  Definition mpmap (mp: MessagePool MsgT1): MessagePool MsgT2 :=
-    M.map (map mmap) mp.
-
-End Map.
-
-Close Scope list.
-Close Scope fmap.
 

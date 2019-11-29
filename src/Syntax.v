@@ -1,24 +1,28 @@
-Require Import Bool Vector List String Peano_dec.
+Require Import Bool Vector List String Peano_dec DecidableClass.
 Require Import Common FMap HVector.
 
 Set Implicit Arguments.
 
-Open Scope string.
-Open Scope list.
-Open Scope fmap.
+Local Open Scope string.
+Local Open Scope list.
+Local Open Scope fmap.
 
 Definition AddrT := nat.
 
+Class DecValue :=
+  { t_type: Type;
+    t_default: t_type;
+    t_eq_dec: forall t1 t2: t_type, {t1 = t2} + {t1 <> t2}
+  }.
+Global Coercion t_type: DecValue >-> Sortclass.
+
 Section Msg.
-  
-  Definition Value := nat.
-  Definition value_dec (v1 v2: Value): {v1 = v2} + {v1 <> v2} :=
-    eq_nat_dec v1 v2.
+  Context `{Value: DecValue}.
 
   Record Msg :=
     { msg_id: IdxT;
       msg_type: bool;
-      msg_value: Value
+      msg_value: Value;
     }.
 
   Definition MRq: bool := false.
@@ -42,16 +46,10 @@ Section Msg.
   Definition msg_dec: forall m1 m2: Msg, {m1 = m2} + {m1 <> m2}.
   Proof.
     decide equality.
-    - apply value_dec.
+    - apply t_eq_dec.
     - decide equality.
     - apply idx_dec.
   Defined.
-
-  Class HasMsg (MsgT: Type) :=
-    { getMsg : MsgT -> Msg }.
-
-  Global Instance Msg_HasMsg : HasMsg Msg :=
-    { getMsg := id }.
 
   Definition MSig := (IdxT * (bool * IdxT))%type.
 
@@ -133,7 +131,7 @@ Section ORqs.
 End ORqs.
 
 Section Rule.
-  Context `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
 
   Definition OPrec :=
     OState -> ORq Msg -> list (Id Msg) -> Prop.
@@ -164,14 +162,14 @@ Notation "'=otrs'" := (fun post porq pmsgs => (post, porq, pmsgs)).
 Definition broadcaster {MsgT} (minds: list IdxT) (msg: MsgT): list (Id MsgT) :=
   List.map (fun midx => (midx, msg)) minds.
 
-Record Object `{OStateIfc} :=
+Record Object `{DecValue} `{OStateIfc} :=
   { obj_idx: IdxT;
     obj_rules: list Rule;
-    obj_rules_valid: NoDup (List.map (@rule_idx _) obj_rules)
+    obj_rules_valid: NoDup (List.map rule_idx obj_rules)
   }.
 
 Lemma rule_same_id_in_object_same:
-  forall `{OStateIfc} (obj: Object) (rule1 rule2: Rule),
+  forall `{DecValue} `{OStateIfc} (obj: Object) (rule1 rule2: Rule),
     List.In rule1 (obj_rules obj) ->
     List.In rule2 (obj_rules obj) ->
     rule_idx rule1 = rule_idx rule2 ->
@@ -182,9 +180,9 @@ Proof.
   exact (obj_rules_valid obj).
 Qed.
 
-Record System `{OStateIfc} :=
+Record System `{DecValue} `{OStateIfc} :=
   { sys_objs: list Object;
-    sys_oinds_valid: NoDup (List.map (@obj_idx _) sys_objs);
+    sys_oinds_valid: NoDup (List.map obj_idx sys_objs);
     sys_minds: list IdxT;
     sys_merqs: list IdxT;
     sys_merss: list IdxT;
@@ -194,7 +192,7 @@ Record System `{OStateIfc} :=
   }.
 
 Lemma obj_same_id_in_system_same:
-  forall `{OStateIfc} (sys: System) (obj1 obj2: Object),
+  forall `{DecValue} `{OStateIfc} (sys: System) (obj1 obj2: Object),
     List.In obj1 (sys_objs sys) ->
     List.In obj2 (sys_objs sys) ->
     obj_idx obj1 = obj_idx obj2 ->
@@ -210,13 +208,11 @@ Ltac inds_valid_tac :=
   repeat (constructor; [intro Hx; dest_in; discriminate|]);
   constructor.
 
-Global Instance System_OStates_HasInit `{OStateIfc}: HasInit System OStates :=
-  {| initsOf := @sys_oss_inits _ |}.
+Global Instance System_OStates_HasInit `{DecValue} `{OStateIfc}
+  : HasInit System OStates :=
+  {| initsOf := sys_oss_inits |}.
 
-Global Instance System_ORqs_HasInit `{OStateIfc}: HasInit System (ORqs Msg) :=
-  {| initsOf := @sys_orqs_inits _ |}.
-
-Close Scope string.
-Close Scope list.
-Close Scope fmap.
+Global Instance System_ORqs_HasInit `{DecValue} `{OStateIfc}
+  : HasInit System (ORqs Msg) :=
+  {| initsOf := sys_orqs_inits |}.
 

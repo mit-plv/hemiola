@@ -10,7 +10,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section DownLockInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -19,7 +19,7 @@ Section DownLockInv.
              (Hsd: RqRsDTree dtr sys)
              (Hers: GoodExtRssSys sys).
 
-  Section OnMState.
+  Section OnState.
     Variables (orqs: ORqs Msg)
               (msgs: MessagePool Msg).
 
@@ -87,14 +87,14 @@ Section DownLockInv.
 
     Definition DownLockInvMO :=
       forall oidx,
-        In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+        In oidx (map obj_idx sys.(sys_objs)) ->
         let orq := orqs@[oidx] >>=[[]] (fun orq => orq) in
         DownLockInvORq oidx orq.
 
-  End OnMState.
+  End OnState.
   
-  Definition DownLockInv (st: MState) :=
-    DownLockInvMO st.(bst_orqs) st.(bst_msgs).
+  Definition DownLockInv (st: State) :=
+    DownLockInvMO st.(st_orqs) st.(st_msgs).
 
   Lemma downLockInv_init:
     InvInit sys DownLockInv.
@@ -108,7 +108,7 @@ Section DownLockInv.
     }
     rewrite H0; mred.
     red; intros.
-    eapply parentIdxOf_Some in H1; [|eassumption].
+    eapply parentIdxOf_Some in H1; [|apply Hsd].
     destruct H1 as [rqUp [rsUp [down ?]]]; dest.
     exists down, rsUp; repeat split; try assumption.
     red.
@@ -749,12 +749,12 @@ Section DownLockInv.
   
   Lemma downLockInv_step_ext_in:
     forall oss orqs msgs eins,
-      DownLockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      DownLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       eins <> nil ->
       ValidMsgsExtIn sys eins ->
-      DownLockInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := enqMsgs eins msgs |}.
+      DownLockInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := enqMsgs eins msgs |}.
   Proof.
     unfold DownLockInv; simpl; intros.
     red; intros.
@@ -772,14 +772,14 @@ Section DownLockInv.
 
   Lemma downLockInv_step_ext_out:
     forall oss orqs msgs eouts,
-      DownLockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      DownLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       eouts <> nil ->
       Forall (FirstMPI msgs) eouts ->
       ValidMsgsExtOut sys eouts ->
       Forall (fun emsg : Id Msg => msg_type (valOf emsg) = MRs) eouts ->
-      DownLockInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+      DownLockInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     unfold DownLockInv; simpl; intros.
     red; intros.
@@ -803,7 +803,7 @@ Section DownLockInv.
 
     Hypotheses
       (Hfpok: FootprintsOk
-                dtr sys {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |})
+                dtr sys {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |})
       (HobjIn: In obj (sys_objs sys))
       (HruleIn: In rule (obj_rules obj))
       (Hporq: orqs@[obj_idx obj] = Some porq)
@@ -858,7 +858,7 @@ Section DownLockInv.
 
     Lemma downLockInvORq_step_int_me:
       DownLockInvORq orqs msgs (obj_idx obj) porq ->
-      In (obj_idx obj) (map (@obj_idx _) (sys_objs sys)) ->
+      In (obj_idx obj) (map obj_idx (sys_objs sys)) ->
       GoodRqRsRule dtr sys (obj_idx obj) rule ->
       DownLockInvORq (orqs+[obj_idx obj <- norq])
                      (enqMsgs mouts (deqMsgs (idsOf mins) msgs))
@@ -970,7 +970,7 @@ Section DownLockInv.
     Lemma downLockInvORq_step_int_child:
       forall oidx,
         DownLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
-        In oidx (map (@obj_idx _) (sys_objs sys)) ->
+        In oidx (map obj_idx (sys_objs sys)) ->
         GoodRqRsRule dtr sys (obj_idx obj) rule ->
         parentIdxOf dtr (obj_idx obj) = Some oidx ->
         DownLockInvORq (orqs+[obj_idx obj <- norq])
@@ -1269,7 +1269,7 @@ Section DownLockInv.
     Lemma downLockInvORq_step_int_other:
       forall oidx,
         DownLockInvORq orqs msgs oidx ((orqs@[oidx]) >>=[[]] (fun orq => orq)) ->
-        In oidx (map (@obj_idx _) (sys_objs sys)) ->
+        In oidx (map obj_idx (sys_objs sys)) ->
         GoodRqRsRule dtr sys (obj_idx obj) rule ->
         oidx <> obj_idx obj ->
         parentIdxOf dtr (obj_idx obj) <> Some oidx ->
@@ -1452,10 +1452,10 @@ Section DownLockInv.
     Qed.
 
     Lemma downLockInv_step_int:
-      DownLockInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      DownLockInv {| bst_oss := (oss) +[ obj_idx obj <- nost];
-                     bst_orqs := (orqs) +[ obj_idx obj <- norq];
-                     bst_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
+      DownLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      DownLockInv {| st_oss := (oss) +[ obj_idx obj <- nost];
+                     st_orqs := (orqs) +[ obj_idx obj <- norq];
+                     st_msgs := enqMsgs mouts (deqMsgs (idsOf mins) msgs) |}.
     Proof.
       intros.
       do 2 red; simpl; intros.
@@ -1497,7 +1497,8 @@ Section DownLockInv.
   Lemma downLockInv_ok:
     InvReachable sys step_m DownLockInv.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply downLockInv_init.
     - apply downLockInv_step.
   Qed.
@@ -1505,7 +1506,7 @@ Section DownLockInv.
 End DownLockInv.
 
 Lemma downLockInvORq_down_rqsQ_length_one_locked:
-  forall dtr orqs msgs oidx orq cidx down,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq cidx down,
     DownLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr cidx = Some oidx ->
     edgeDownTo dtr cidx = Some down ->
@@ -1533,7 +1534,7 @@ Proof.
 Qed.
 
 Lemma downLockInvORq_rsUp_length_one_locked:
-  forall dtr orqs msgs oidx orq cidx rsUp,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq cidx rsUp,
     DownLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr cidx = Some oidx ->
     rsEdgeUpFrom dtr cidx = Some rsUp ->
@@ -1559,7 +1560,7 @@ Proof.
 Qed.
 
 Lemma downLockInvORq_down_rqsQ_rsUp_False:
-  forall dtr orqs msgs oidx orq cidx down rsUp,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq cidx down rsUp,
     DownLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr cidx = Some oidx ->
     edgeDownTo dtr cidx = Some down ->
@@ -1585,7 +1586,7 @@ Proof.
 Qed.
 
 Lemma downLockInvORq_down_rqsQ_length_two_False:
-  forall dtr orqs msgs oidx orq cidx down,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq cidx down,
     DownLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr cidx = Some oidx ->
     edgeDownTo dtr cidx = Some down ->
@@ -1608,7 +1609,7 @@ Proof.
 Qed.
     
 Lemma downLockInvORq_rsUp_length_two_False:
-  forall dtr orqs msgs oidx orq cidx rsUp,
+  forall `{dv: DecValue} dtr orqs msgs oidx orq cidx rsUp,
     DownLockInvORq dtr orqs msgs oidx orq ->
     parentIdxOf dtr cidx = Some oidx ->
     rsEdgeUpFrom dtr cidx = Some rsUp ->

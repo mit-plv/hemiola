@@ -16,127 +16,134 @@ Definition rootDmc (ridx: IdxT) :=
      dmc_ups := nil;
      dmc_downs := nil |}.
 
-Record StateM `{OStateIfc} :=
-  { ost: OState;
-    orq: ORq Msg;
-    msgs: list (Id Msg) }.
+Section DecValue.
+  Context `{DecValue}.
 
-Definition StateMTrs `{OStateIfc} :=
-  StateM -> option StateM.
+  Record StateM `{OStateIfc} :=
+    { ost: OState;
+      orq: ORq Msg;
+      msgs: list (Id Msg) }.
 
-Definition TrsMTrs `{OStateIfc} (mtrs: StateMTrs): OTrs :=
-  fun post porq pmsgs =>
-    match mtrs (Build_StateM _ post porq pmsgs) with
-    | Some st => (st.(ost), st.(orq), st.(msgs))
-    | None => (post, porq, pmsgs)
-    end.
+  Definition StateMTrs `{OStateIfc} :=
+    StateM -> option StateM.
 
-Definition FirstMsg `{OStateIfc}: OPrec :=
-  fun ost orq mins => hd_error mins <> None.
-Definition nilMsg: Msg :=
-  {| msg_id := ii; msg_type := MRq; msg_value := O |}.
-Definition nilIdMsg: Id Msg := (ii, nilMsg).
-Definition getFirstMsg (msgs: list (Id Msg)): option Msg :=
-  idm <-- (hd_error msgs); Some (valOf idm).
-Definition getFirstMsgI (msgs: list (Id Msg)): Msg :=
-  (hd_error msgs) >>=[nilMsg] (fun idm => valOf idm).
-Definition getFirstIdMsg (msgs: list (Id Msg)): option (Id Msg) :=
-  idm <-- (hd_error msgs); Some idm.
-Definition getFirstIdMsgI (msgs: list (Id Msg)): Id Msg :=
-  (hd_error msgs) >>=[nilIdMsg] (fun idm => idm).
+  Definition TrsMTrs `{OStateIfc} (mtrs: StateMTrs): OTrs :=
+    fun post porq pmsgs =>
+      match mtrs (Build_StateM _ post porq pmsgs) with
+      | Some st => (st.(ost), st.(orq), st.(msgs))
+      | None => (post, porq, pmsgs)
+      end.
 
-Definition UpLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
-  fun ost orq mins =>
-    (orq@[upRq])
-      >>=[False]
-      (fun rqiu =>
-         rqiu.(rqi_msg)
-                >>=[False] (fun rq => rq.(msg_type) = mty /\ rq.(msg_id) = mid)).
-Definition getUpLockMsgId (orq: ORq Msg): option (bool * IdxT) :=
-  rqiu <-- orq@[upRq];
-    rq <-- rqiu.(rqi_msg);
-    Some (rq.(msg_type), rq.(msg_id)).
+  Definition FirstMsg `{OStateIfc}: OPrec :=
+    fun ost orq mins => hd_error mins <> None.
 
-Definition UpLockMsg `{OStateIfc}: OPrec :=
-  fun ost orq mins =>
-    match orq@[upRq] with
-    | Some _ => True
-    | _ => False
-    end.
-Definition getUpLockMsg (orq: ORq Msg): option Msg :=
-  rqiu <-- orq@[upRq]; rqi_msg rqiu.
+  Definition nilMsg : Msg :=
+    {| msg_id := ii; msg_type := MRq; msg_value := t_default |}.
 
-Definition UpLockIdxBack `{OStateIfc}: OPrec :=
-  fun ost orq mins =>
-    (orq@[upRq])
-      >>=[False]
-      (fun rqiu => rqiu.(rqi_midx_rsb) >>=[False] (fun _ => True)).
-Definition getUpLockIdxBack (orq: ORq Msg): option IdxT :=
-  rqiu <-- orq@[upRq]; rqi_midx_rsb rqiu.
+  Definition nilIdMsg : Id Msg := (ii, nilMsg).
+  Definition getFirstMsg  (msgs: list (Id Msg)): option Msg :=
+    idm <-- (hd_error msgs); Some (valOf idm).
+  Definition getFirstMsgI (msgs: list (Id Msg)): Msg :=
+    (hd_error msgs) >>=[nilMsg] (fun idm => valOf idm).
+  Definition getFirstIdMsg (msgs: list (Id Msg)): option (Id Msg) :=
+    idm <-- (hd_error msgs); Some idm.
+  Definition getFirstIdMsgI (msgs: list (Id Msg)): Id Msg :=
+    (hd_error msgs) >>=[nilIdMsg] (fun idm => idm).
 
-Definition UpLockBackNone `{OStateIfc}: OPrec :=
-  fun ost orq mins =>
-    (orq@[upRq])
-      >>=[False] (fun rqiu => rqiu.(rqi_midx_rsb) = None /\
-                              rqiu.(rqi_msg) = None).
+  Definition UpLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
+    fun ost orq mins =>
+      (orq@[upRq])
+        >>=[False]
+        (fun rqiu =>
+           rqiu.(rqi_msg)
+                  >>=[False] (fun rq => rq.(msg_type) = mty /\ rq.(msg_id) = mid)).
+  Definition getUpLockMsgId (orq: ORq Msg): option (bool * IdxT) :=
+    rqiu <-- orq@[upRq];
+      rq <-- rqiu.(rqi_msg);
+      Some (rq.(msg_type), rq.(msg_id)).
 
-Definition DownLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
-  fun ost orq mins =>
-    (orq@[downRq])
-      >>=[False]
-      (fun rqid =>
-         rqid.(rqi_msg)
-                >>=[False] (fun rq => rq.(msg_type) = mty /\ rq.(msg_id) = mid)).
-Definition getDownLockMsgId (orq: ORq Msg): option (bool * IdxT) :=
-  rqid <-- orq@[downRq];
-    rq <-- rqid.(rqi_msg);
-    Some (rq.(msg_type), rq.(msg_id)).
+  Definition UpLockMsg `{OStateIfc}: OPrec :=
+    fun ost orq mins =>
+      match orq@[upRq] with
+      | Some _ => True
+      | _ => False
+      end.
+  Definition getUpLockMsg (orq: ORq Msg): option Msg :=
+    rqiu <-- orq@[upRq]; rqi_msg rqiu.
 
-Definition DownLockMsg `{OStateIfc}: OPrec :=
-  fun ost orq mins =>
-    match orq@[downRq] with
-    | Some _ => True
-    | _ => False
-    end.
-Definition getDownLockMsg (orq: ORq Msg): option Msg :=
-  rqid <-- orq@[downRq]; rqi_msg rqid.
+  Definition UpLockIdxBack `{OStateIfc}: OPrec :=
+    fun ost orq mins =>
+      (orq@[upRq])
+        >>=[False]
+        (fun rqiu => rqiu.(rqi_midx_rsb) >>=[False] (fun _ => True)).
+  Definition getUpLockIdxBack (orq: ORq Msg): option IdxT :=
+    rqiu <-- orq@[upRq]; rqi_midx_rsb rqiu.
 
-Definition DownLockIdxBack `{OStateIfc}: OPrec :=
-  fun ost orq mins =>
-    (orq@[downRq])
-      >>=[False]
-      (fun rqid =>
-         rqid.(rqi_midx_rsb) >>=[False] (fun _ => True)).
-Definition getDownLockIndsFrom (orq: ORq Msg): option (list IdxT) :=
-  rqid <-- orq@[downRq]; Some (rqi_minds_rss rqid).
-Definition getDownLockIdxBack (orq: ORq Msg): option IdxT :=
-  rqid <-- orq@[downRq]; rqi_midx_rsb rqid.
+  Definition UpLockBackNone `{OStateIfc}: OPrec :=
+    fun ost orq mins =>
+      (orq@[upRq])
+        >>=[False] (fun rqiu => rqiu.(rqi_midx_rsb) = None /\
+                                rqiu.(rqi_msg) = None).
 
-Definition getFirstIdxFromI (inds: list IdxT): IdxT :=
-  (hd_error inds) >>=[ii] (fun idx => idx).
+  Definition DownLockMsgId `{OStateIfc} (mty: bool) (mid: IdxT): OPrec :=
+    fun ost orq mins =>
+      (orq@[downRq])
+        >>=[False]
+        (fun rqid =>
+           rqid.(rqi_msg)
+                  >>=[False] (fun rq => rq.(msg_type) = mty /\ rq.(msg_id) = mid)).
+  Definition getDownLockMsgId (orq: ORq Msg): option (bool * IdxT) :=
+    rqid <-- orq@[downRq];
+      rq <-- rqid.(rqi_msg);
+      Some (rq.(msg_type), rq.(msg_id)).
 
-Definition MsgsFrom `{OStateIfc} (froms: list IdxT): OPrec :=
-  fun _ _ mins => idsOf mins = froms.
+  Definition DownLockMsg `{OStateIfc}: OPrec :=
+    fun ost orq mins =>
+      match orq@[downRq] with
+      | Some _ => True
+      | _ => False
+      end.
+  Definition getDownLockMsg (orq: ORq Msg): option Msg :=
+    rqid <-- orq@[downRq]; rqi_msg rqid.
 
-Definition MsgIdsFrom `{OStateIfc} (msgIds: list IdxT): OPrec :=
-  fun _ _ mins => map msg_id (valsOf mins) = msgIds.
+  Definition DownLockIdxBack `{OStateIfc}: OPrec :=
+    fun ost orq mins =>
+      (orq@[downRq])
+        >>=[False]
+        (fun rqid =>
+           rqid.(rqi_midx_rsb) >>=[False] (fun _ => True)).
+  Definition getDownLockIndsFrom (orq: ORq Msg): option (list IdxT) :=
+    rqid <-- orq@[downRq]; Some (rqi_minds_rss rqid).
+  Definition getDownLockIdxBack (orq: ORq Msg): option IdxT :=
+    rqid <-- orq@[downRq]; rqi_midx_rsb rqid.
 
-Definition MsgIdFromEach `{OStateIfc} (msgId: IdxT): OPrec :=
-  fun _ _ mins => Forall (fun idm => msg_id (valOf idm) = msgId) mins.
+  Definition getFirstIdxFromI (inds: list IdxT): IdxT :=
+    (hd_error inds) >>=[ii] (fun idx => idx).
 
-Definition MsgsFromORq `{OStateIfc} (rqty: IdxT): OPrec :=
-  fun _ orq mins =>
-    orq@[rqty] >>=[False]
-       (fun rqi => idsOf mins = rqi_minds_rss rqi).
+  Definition MsgsFrom `{OStateIfc} (froms: list IdxT): OPrec :=
+    fun _ _ mins => idsOf mins = froms.
 
-Definition MsgsFromRsUp `{OStateIfc} (dtr: DTree) (orss: list IdxT): OPrec :=
-  fun _ orq mins =>
-    orq@[downRq] >>=[False]
-       (fun rqid =>
-          idsOf mins = rqi_minds_rss rqid /\
-          Forall2 (fun rsUp robj =>
-                     rsEdgeUpFrom dtr robj = Some rsUp)
-                  (rqi_minds_rss rqid) orss).
+  Definition MsgIdsFrom `{OStateIfc} (msgIds: list IdxT): OPrec :=
+    fun _ _ mins => map msg_id (valsOf mins) = msgIds.
+
+  Definition MsgIdFromEach `{OStateIfc} (msgId: IdxT): OPrec :=
+    fun _ _ mins => Forall (fun idm => msg_id (valOf idm) = msgId) mins.
+
+  Definition MsgsFromORq `{OStateIfc} (rqty: IdxT): OPrec :=
+    fun _ orq mins =>
+      orq@[rqty] >>=[False]
+         (fun rqi => idsOf mins = rqi_minds_rss rqi).
+
+  Definition MsgsFromRsUp `{OStateIfc} (dtr: DTree) (orss: list IdxT): OPrec :=
+    fun _ orq mins =>
+      orq@[downRq] >>=[False]
+         (fun rqid =>
+            idsOf mins = rqi_minds_rss rqid /\
+            Forall2 (fun rsUp robj =>
+                       rsEdgeUpFrom dtr robj = Some rsUp)
+                    (rqi_minds_rss rqid) orss).
+
+End DecValue.
 
 Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMsgI
      UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
@@ -145,17 +152,18 @@ Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMs
      DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack getFirstIdxFromI
      MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp : RuleConds.
 
-Definition initORqs (oinds: list IdxT): ORqs Msg :=
+Definition initORqs `{DecValue} (oinds: list IdxT): ORqs Msg :=
   fold_right (fun i m => m +[i <- []]) [] oinds.
 
-Lemma initORqs_GoodORqsInit: forall oinds, GoodORqsInit (initORqs oinds).
+Lemma initORqs_GoodORqsInit:
+  forall `{DecValue} oinds, GoodORqsInit (initORqs oinds).
 Proof.
   red; intros.
   induction oinds; simpl; intros; mred.
 Qed.
 
 Lemma initORqs_value:
-  forall oinds oidx,
+  forall `{DecValue} oinds oidx,
     In oidx oinds ->
     (initORqs oinds)@[oidx] = Some [].
 Proof.
@@ -164,15 +172,15 @@ Proof.
 Qed.
 
 Lemma initORqs_None:
-  forall oinds oidx,
+  forall `{DecValue} oinds oidx,
     ~ In oidx oinds ->
     (initORqs oinds)@[oidx] = None.
 Proof.
   induction oinds; intros; [reflexivity|].
   simpl; mred.
-  - elim H; left; reflexivity.
+  - elim H0; left; reflexivity.
   - apply IHoinds.
-    intro Hx; elim H; right; assumption.
+    intro Hx; elim H0; right; assumption.
 Qed.
 
 Module RqRsNotations.
@@ -268,12 +276,12 @@ Ltac disc_rule_conds_const_unit :=
   | [H1: ?t = _, H2: context[?t] |- _] =>
     match type of t with
     | option _ => rewrite H1 in H2; simpl in H2
-    | Value => rewrite H1 in H2; simpl in H2
+    | nat => rewrite H1 in H2; simpl in H2
     end
   | [H1: ?t = _ |- context[?t] ] =>
     match type of t with
     | option _ => rewrite H1; simpl
-    | Value => rewrite H1; simpl
+    | nat => rewrite H1; simpl
     end
 
   | [H: (_ /\oprec _) _ _ _ |- _] => destruct H

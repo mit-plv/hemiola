@@ -14,17 +14,17 @@ Local Open Scope fmap.
 
 (** Common Invariants that might be shared among various protocols *)
 
-Definition MsgExistsSig (sig: MSig) (msgs: MessagePool Msg) :=
+Definition MsgExistsSig `{DecValue} (sig: MSig) (msgs: MessagePool Msg) :=
   exists idm, InMPI msgs idm /\ sigOf idm = sig.
 
-Definition MsgP (spl: list (MSig * (Id Msg -> Prop))) (idm: Id Msg) :=
+Definition MsgP `{DecValue} (spl: list (MSig * (Id Msg -> Prop))) (idm: Id Msg) :=
   caseDec sig_dec (sigOf idm) True
           (map (fun sp => (fst sp, snd sp idm)) spl).
 
-Definition MsgsP (spl: list (MSig * (Id Msg -> Prop))) (msgs: MessagePool Msg) :=
+Definition MsgsP `{DecValue} (spl: list (MSig * (Id Msg -> Prop))) (msgs: MessagePool Msg) :=
   forall idm, InMPI msgs idm -> MsgP spl idm.
 
-Definition MsgsNotExist (sigs: list MSig) (msgs: MessagePool Msg) :=
+Definition MsgsNotExist `{DecValue} (sigs: list MSig) (msgs: MessagePool Msg) :=
   MsgsP (map (fun sig => (sig, fun _ => False)) sigs) msgs.
 
 Section InObjInds.
@@ -32,19 +32,19 @@ Section InObjInds.
   Let topo := fst (tree2Topo tr bidx).
   Let cifc := snd (tree2Topo tr bidx).
 
-  Context `{OStateIfc}.
+  Context `{dv: DecValue} `{OStateIfc}.
   Variable (sys: System).
 
-  Definition InObjInds (st: MState) :=
+  Definition InObjInds (st: State) :=
     forall oidx,
-      _ <+- (bst_oss st)@[oidx];
+      _ <+- (st_oss st)@[oidx];
         In oidx (c_li_indices cifc ++ c_l1_indices cifc).
 
-  Definition OstInds (st: MState) :=
+  Definition OstInds (st: State) :=
     forall oidx,
       In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
-      (exists ost, (bst_oss st)@[oidx] = Some ost) /\
-      (exists orq, (bst_orqs st)@[oidx] = Some orq).
+      (exists ost, (st_oss st)@[oidx] = Some ost) /\
+      (exists orq, (st_orqs st)@[oidx] = Some orq).
 
   Hypothesis (Hinit1: InObjInds (initsOf sys))
              (Hinit2: OstInds (initsOf sys))
@@ -66,7 +66,8 @@ Section InObjInds.
   Lemma tree2Topo_InObjInds_inv_ok:
     InvReachable sys step_m InObjInds.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply Hinit1.
     - apply tree2Topo_InObjInds_step.
   Qed.
@@ -83,7 +84,8 @@ Section InObjInds.
   Lemma tree2Topo_OstInds_inv_ok:
     InvReachable sys step_m OstInds.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply Hinit2.
     - apply tree2Topo_OstInds_step.
   Qed.
@@ -91,6 +93,7 @@ Section InObjInds.
 End InObjInds.
 
 Section MsgConflicts.
+  Context `{dv: DecValue}.
 
   Definition RsDownConflicts (oidx: IdxT) (orq: ORq Msg) (msgs: MessagePool Msg) :=
     forall rsDown,
@@ -199,30 +202,30 @@ Section MsgConflicts.
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hrrs: RqRsSys topo sys)
              (Hoinds: SubList (c_li_indices cifc ++ c_l1_indices cifc)
-                              (map (@obj_idx _) (sys_objs sys))).
+                              (map obj_idx (sys_objs sys))).
 
-  Definition RootChnInv (st: MState) :=
+  Definition RootChnInv (st: State) :=
     forall idm,
       (idOf idm = downTo (rootOf topo) \/
        idOf idm = rqUpFrom (rootOf topo) \/
        idOf idm = rsUpFrom (rootOf topo)) ->
-      ~ InMPI (bst_msgs st) idm.
+      ~ InMPI (st_msgs st) idm.
   
-  Definition MsgConflictsInv (st: MState) :=
+  Definition MsgConflictsInv (st: State) :=
     forall oidx orq,
       In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
-      (bst_orqs st)@[oidx] = Some orq ->
-      RsDownConflicts oidx orq (bst_msgs st) /\
-      RqUpConflicts oidx orq (bst_msgs st) /\
-      RqDownConflicts oidx (bst_msgs st) /\
-      RsUpConflicts oidx (bst_msgs st) /\
+      (st_orqs st)@[oidx] = Some orq ->
+      RsDownConflicts oidx orq (st_msgs st) /\
+      RqUpConflicts oidx orq (st_msgs st) /\
+      RqDownConflicts oidx (st_msgs st) /\
+      RsUpConflicts oidx (st_msgs st) /\
       (forall pidx,
           parentIdxOf topo oidx = Some pidx ->
-          ParentLockConflicts (bst_orqs st) oidx pidx (bst_msgs st) /\
+          ParentLockConflicts (st_orqs st) oidx pidx (st_msgs st) /\
           (forall porq,
-              (bst_orqs st)@[pidx] = Some porq ->
+              (st_orqs st)@[pidx] = Some porq ->
               ParentLockFreeConflicts oidx orq porq /\
-              ParentRqDownRsUpLocked oidx porq (bst_msgs st))).
+              ParentRqDownRsUpLocked oidx porq (st_msgs st))).
 
   Lemma tree2Topo_MsgConflicts_inv_ok:
     forall (Hrcinv: InvReachable sys step_m RootChnInv),
@@ -411,22 +414,22 @@ End MsgConflicts.
 Ltac disc_MsgConflictsInv oidx :=
   repeat
     match goal with
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+    | [Hmcfi: MsgConflictsInv _ _ {| st_orqs:= ?orqs |},
               Hin: In oidx (c_li_indices _ ++ c_l1_indices _),
                    Horq: ?orqs@[oidx] = Some _ |- _] =>
       specialize (Hmcfi oidx _ Hin Horq);
       simpl in Hmcfi; dest
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+    | [Hmcfi: MsgConflictsInv _ _ {| st_orqs:= ?orqs |},
               Hin: In oidx (c_l1_indices _),
                    Horq: ?orqs@[oidx] = Some _ |- _] =>
       specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_intror Hin)) Horq);
       simpl in Hmcfi; dest
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+    | [Hmcfi: MsgConflictsInv _ _ {| st_orqs:= ?orqs |},
               Hin: In oidx (c_li_indices _),
                    Horq: ?orqs@[oidx] = Some _ |- _] =>
       specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl Hin)) Horq);
       simpl in Hmcfi; dest
-    | [Hmcfi: MsgConflictsInv _ _ {| bst_orqs:= ?orqs |},
+    | [Hmcfi: MsgConflictsInv _ _ {| st_orqs:= ?orqs |},
               Hin: In oidx (tl (c_li_indices _)),
                    Horq: ?orqs@[oidx] = Some _ |- _] =>
       specialize (Hmcfi oidx _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))) Horq);
@@ -441,7 +444,8 @@ Ltac disc_MsgConflictsInv oidx :=
     end.
 
 Section Facts.
-
+  Context `{dv: DecValue}.
+  
   Lemma MsgsNotExist_MsgsP:
     forall msgs spl,
       MsgsNotExist (map fst spl) msgs ->

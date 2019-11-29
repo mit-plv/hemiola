@@ -6,14 +6,14 @@ Require Import Omega Wf.
 
 Set Implicit Arguments.
 
-Open Scope list.
+Local Open Scope list.
 
 (*! Quasi-sequential histories *)
 
 Section QuasiSeq.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (sys: System)
-            (quasiSeq: forall (sys: System) (hst: MHistory) (n: nat), Prop).
+            (quasiSeq: forall (sys: System) (hst: History) (n: nat), Prop).
 
   Definition QuasiSeqOkInit :=
     forall hst st,
@@ -26,7 +26,7 @@ Section QuasiSeq.
       quasiSeq sys hst n ->
       ((exists rhst rtrss,
            steps step_m sys (initsOf sys) rhst st /\
-           Sequential sys msg_dec rhst rtrss) \/
+           Sequential sys rhst rtrss) \/
        (exists rhst m,
            steps step_m sys (initsOf sys) rhst st /\
            quasiSeq sys rhst m /\ m < n)).
@@ -59,47 +59,47 @@ Section QuasiSeq.
 
 End QuasiSeq.
 
-Definition ExtContinuous `{oifc: OStateIfc} (sys: System)
-           (hst1 hst2: MHistory) :=
+Definition ExtContinuous `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (hst1 hst2: History) :=
   exists inits1 eouts1 inits2 ins2 outs2 eouts2,
-    ExtAtomic sys msg_dec inits1 hst1 eouts1 /\
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
+    ExtAtomic sys inits1 hst1 eouts1 /\
+    Atomic inits2 ins2 hst2 outs2 eouts2 /\
     ~ SubList (idsOf inits2) (sys_merqs sys) /\
     SubList inits2 eouts1.
 
-Definition ExtContinuousL `{oifc: OStateIfc} (sys: System)
-           (hst: MHistory) (l: MLabel) :=
+Definition ExtContinuousL `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (hst: History) (l: RLabel) :=
   exists inits eouts oidx ridx rins routs,
-    ExtAtomic sys msg_dec inits hst eouts /\
+    ExtAtomic sys inits hst eouts /\
     l = RlblInt oidx ridx rins routs /\
     ~ SubList (idsOf rins) (sys_merqs sys) /\
     SubList rins eouts.
 
-Definition Discontinuous (hst1 hst2: MHistory) :=
+Definition Discontinuous `{DecValue} (hst1 hst2: History) :=
   exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
-    Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 /\
-    Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 /\
+    Atomic inits1 ins1 hst1 outs1 eouts1 /\
+    Atomic inits2 ins2 hst2 outs2 eouts2 /\
     DisjList eouts1 inits2.
 
-Definition ExtInterleaved `{oifc: OStateIfc} (sys: System)
-           (hsts: list MHistory) :=
+Definition ExtInterleaved `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (hsts: list History) :=
   exists hst1 hst2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ hst2 :: hsts2 ++ hst1 :: hsts1 /\
     ExtContinuous sys hst1 hst2 /\
     Forall (fun hst => Discontinuous hst1 hst) hsts2.
 
-Definition ExtInterleavedL `{oifc: OStateIfc} (sys: System)
-           (hsts: list MHistory) :=
+Definition ExtInterleavedL `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (hsts: list History) :=
   exists hst1 l2 hsts1 hsts2 hsts3,
     hsts = hsts3 ++ [l2] :: hsts2 ++ hst1 :: hsts1 /\
     ExtContinuousL sys hst1 l2 /\
     Forall (fun hst => Discontinuous hst1 hst) hsts2.
 
 Lemma extContinuous_concat:
-  forall `{oifc: OStateIfc} (sys: System) hst l,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst l,
     ExtContinuousL sys hst l ->
     exists inits neouts,
-      ExtAtomic sys msg_dec inits (l :: hst) neouts.
+      ExtAtomic sys inits (l :: hst) neouts.
 Proof.
   unfold ExtContinuousL; intros; dest; subst.
   inv H.
@@ -111,9 +111,9 @@ Proof.
 Qed.
 
 Lemma extContinuous_hst_stransactional_length:
-  forall `{oifc: OStateIfc} (sys: System) hst l tn,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst l tn,
     ExtContinuousL sys hst l ->
-    STransactional sys msg_dec hst tn ->
+    STransactional sys hst tn ->
     tn = 0.
 Proof.
   unfold ExtContinuousL; intros.
@@ -125,9 +125,9 @@ Proof.
 Qed.
 
 Lemma extContinuous_label_stransactional_one:
-  forall `{oifc: OStateIfc} (sys: System) hst l tn,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst l tn,
     ExtContinuousL sys hst l ->
-    STransactional sys msg_dec [l] tn ->
+    STransactional sys [l] tn ->
     tn = 1.
 Proof.
   unfold ExtContinuousL; intros.
@@ -139,7 +139,7 @@ Proof.
 Qed.
 
 Lemma discontinuous_tail_right:
-  forall hst1 hst2 lbl2,
+  forall `{dv: DecValue} hst1 hst2 lbl2,
     hst2 <> nil ->
     Discontinuous hst1 (lbl2 :: hst2) ->
     Discontinuous hst1 hst2.
@@ -152,10 +152,10 @@ Proof.
 Qed.
 
 Lemma extAtomic_Discontinuous:
-  forall `{oifc: OStateIfc} (sys: System) st1 trss st2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) st1 trss st2,
     steps step_m sys st1 (List.concat trss) st2 ->
-    Forall (AtomicEx msg_dec) trss ->
-    Forall (Transactional sys msg_dec) trss ->
+    Forall AtomicEx trss ->
+    Forall (Transactional sys) trss ->
     forall trs1 trs2,
       In trs1 trss -> In trs2 trss ->
       Discontinuous trs1 trs2.
@@ -196,8 +196,8 @@ Proof.
 Qed.
 
 Lemma atomic_beginning_label:
-  forall inits ins hst outs eouts,
-    Atomic msg_dec inits ins hst outs eouts ->
+  forall `{dv: DecValue} inits ins hst outs eouts,
+    Atomic inits ins hst outs eouts ->
     exists hhst oidx ridx routs,
       hst = hhst ++ [RlblInt oidx ridx inits routs].
 Proof.
@@ -210,16 +210,16 @@ Proof.
 Qed.
 
 Lemma extInterleaved_atomic_extInterleavedL:
-  forall `{oifc: OStateIfc} (sys: System) atms n,
-    Forall (AtomicEx msg_dec) atms ->
-    SSequential sys msg_dec atms n ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) atms n,
+    Forall AtomicEx atms ->
+    SSequential sys atms n ->
     ExtInterleaved sys atms ->
     exists datms,
       List.concat atms = List.concat datms /\
-      Forall (AtomicEx msg_dec) datms /\
+      Forall AtomicEx datms /\
       ExtInterleavedL sys datms /\
       exists m,
-        SSequential sys msg_dec datms m /\
+        SSequential sys datms m /\
         m <= n.
 Proof.
   unfold ExtInterleaved, ExtInterleavedL; intros.
@@ -280,34 +280,34 @@ Proof.
     + omega.
 Qed.
 
-(** [NonMergeable] says that any transactions in a given system [sys] are
+(** [NonConfluent] says that any transactions in a given system [sys] are
  * executed without any merging, i.e., each [Atomic] history is either the start
  * of a new transaction or a continuation of a previous transaction.
  *)
-Definition NonMergeable `{oifc: OStateIfc} (sys: System) :=
+Definition NonConfluent `{dv: DecValue} `{oifc: OStateIfc} (sys: System) :=
   forall st1,
     Reachable (steps step_m) sys st1 ->
-    IntMsgsEmpty sys (bst_msgs st1) ->
+    IntMsgsEmpty sys (st_msgs st1) ->
     forall trss trs st2,
       steps step_m sys st1 (trs ++ List.concat trss) st2 ->
-      Forall (AtomicEx msg_dec) trss ->
-      Forall (Transactional sys msg_dec) trss ->
+      Forall AtomicEx trss ->
+      Forall (Transactional sys) trss ->
       forall eouts,
-        IntAtomic sys msg_dec trs eouts ->
+        IntAtomic sys trs eouts ->
         ExtInterleaved sys (trs :: trss).
 
 Section WellInterleaved.
-  Context {oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variable (sys: System).
-  Hypothesis (Hnmg: NonMergeable sys).
+  Hypothesis (Hnmg: NonConfluent sys).
 
-  Definition WellInterleavedHst (hst1: MHistory) (l2: MLabel) :=
+  Definition WellInterleavedHst (hst1: History) (l2: RLabel) :=
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall st2 hsts,
         steps step_m sys st1 (l2 :: List.concat hsts ++ hst1) st2 ->
         Forall (Discontinuous hst1) hsts ->
-        Forall (AtomicEx msg_dec) hsts ->
+        Forall AtomicEx hsts ->
         exists rhst1 rhst2,
           steps step_m sys st1
                 (List.concat rhst2 ++ l2 :: hst1 ++ List.concat rhst1) st2 /\
@@ -322,12 +322,12 @@ Section WellInterleaved.
     forall (Hwi: WellInterleaved) trss n st1 st2
            (Hr: Reachable (steps step_m) sys st1),
       steps step_m sys st1 (List.concat trss) st2 ->
-      Forall (AtomicEx msg_dec) trss ->
-      SSequential sys msg_dec trss n ->
+      Forall AtomicEx trss ->
+      SSequential sys trss n ->
       ExtInterleavedL sys trss ->
-      exists (rtrss: list MHistory) (m: nat),
+      exists (rtrss: list History) (m: nat),
         steps step_m sys st1 (List.concat rtrss) st2 /\
-        SSequential sys msg_dec rtrss m /\ m < n.
+        SSequential sys rtrss m /\ m < n.
   Proof.
     intros.
     destruct H2 as [hst1 [l2 [hsts1 [hsts2 [hsts3 ?]]]]]; dest; subst.
@@ -381,10 +381,10 @@ Section WellInterleaved.
   Lemma atomic_transactions_sequential_or_extInterleaved:
     forall trss st1 st2,
       Reachable (steps step_m) sys st1 ->
-      IntMsgsEmpty sys st1.(bst_msgs) ->
+      IntMsgsEmpty sys st1.(st_msgs) ->
       steps step_m sys st1 (List.concat trss) st2 ->
-      Forall (AtomicEx msg_dec) trss ->
-      Sequential sys msg_dec (List.concat trss) trss \/
+      Forall AtomicEx trss ->
+      Sequential sys (List.concat trss) trss \/
       ExtInterleaved sys trss.
   Proof.
     induction trss as [|trs trss]; simpl; intros;
@@ -420,7 +420,7 @@ Section WellInterleaved.
     apply quasiSeqOk_implies_serializableSys
       with (quasiSeq := fun sys hst n =>
                           exists trss,
-                            SSequential sys msg_dec trss n /\
+                            SSequential sys trss n /\
                             hst = List.concat trss).
     - red; intros.
       apply ssequential_default.
@@ -434,7 +434,7 @@ Section WellInterleaved.
       eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti2 [? ?]].
       eapply steps_split in H6; [|reflexivity]; destruct H6 as [sti1 [? ?]].
 
-      assert (IntMsgsEmpty sys sti1.(bst_msgs)).
+      assert (IntMsgsEmpty sys sti1.(st_msgs)).
       { eapply insHistory_IntMsgsEmpty; eauto.
         apply init_IntMsgsEmpty.
       }
@@ -482,13 +482,13 @@ Section WellInterleaved.
 End WellInterleaved.
 
 Section Pushable.
-  Context {oifc: OStateIfc}.
-  Variables (sys: System) (P: MState -> Prop)
-            (hst1: MHistory) (l2: MLabel).
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
+  Variables (sys: System) (P: State -> Prop)
+            (hst1: History) (l2: RLabel).
 
   Hypotheses (Hpinit: PInitializing sys P hst1).
 
-  Definition LRPushable (lpush rpush: MHistory -> Prop) (hsts: list MHistory) :=
+  Definition LRPushable (lpush rpush: History -> Prop) (hsts: list History) :=
     forall lhst rhst hsts1 hsts2 hsts3,
       hsts = hsts3 ++ lhst :: hsts2 ++ rhst :: hsts1 ->
       lpush lhst -> rpush rhst ->
@@ -572,11 +572,11 @@ Section Pushable.
   Qed.
 
   Definition PushableHst :=
-    exists (lpush rpush: MHistory -> Prop),
+    exists (lpush rpush: History -> Prop),
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall hsts st2,
-        Forall (AtomicEx msg_dec) hsts ->
+        Forall AtomicEx hsts ->
         steps step_m sys st1 (l2 :: List.concat hsts ++ hst1) st2 ->
         Forall (Discontinuous hst1) hsts ->
         Forall (PPreserving sys P) hsts /\
@@ -691,14 +691,14 @@ Section Pushable.
 End Pushable.
 
 Section LPushable.
-  Context {oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (sys: System).
 
-  Definition LPushableHst (hst1: MHistory) (l2: MLabel) :=
+  Definition LPushableHst (hst1: History) (l2: RLabel) :=
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall hsts st2,
-        Forall (AtomicEx msg_dec) hsts ->
+        Forall AtomicEx hsts ->
         steps step_m sys st1 (l2 :: List.concat hsts ++ hst1) st2 ->
         Forall (Discontinuous hst1) hsts ->
         Forall (fun hst => Reducible sys (hst ++ hst1) (hst1 ++ hst)) hsts.
@@ -735,9 +735,9 @@ Section LPushable.
 End LPushable.
 
 Section RPushable.
-  Context {oifc: OStateIfc}.
-  Variables (sys: System) (P: MState -> Prop)
-            (hst1: MHistory) (l2: MLabel).
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
+  Variables (sys: System) (P: State -> Prop)
+            (hst1: History) (l2: RLabel).
 
   Hypotheses (Hpinit: PInitializing sys P hst1).
 
@@ -745,7 +745,7 @@ Section RPushable.
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall hsts st2,
-        Forall (AtomicEx msg_dec) hsts ->
+        Forall AtomicEx hsts ->
         steps step_m sys st1 (l2 :: List.concat hsts ++ hst1) st2 ->
         Forall (fun hst => Discontinuous hst1 hst) hsts ->
         Forall (fun hst => PPreserving sys P hst /\
@@ -780,6 +780,4 @@ Section RPushable.
   Qed.
 
 End RPushable.
-
-Close Scope list.
 

@@ -4,7 +4,7 @@ Require Import Topology Serial SerialFacts.
 
 Set Implicit Arguments.
 
-Open Scope list.
+Local Open Scope list.
 
 Ltac dest_steps :=
   repeat match goal with
@@ -14,16 +14,16 @@ Ltac dest_steps :=
 Ltac dest_step_m :=
   repeat match goal with
          | [H: step_m _ _ _ _ |- _] => inv H
-         | [H: {| bst_oss := _ |} = {| bst_oss := _ |} |- _] => inv H
+         | [H: {| st_oss := _ |} = {| st_oss := _ |} |- _] => inv H
          end; simpl in *.
 
-Definition Reducible `{oifc: OStateIfc} (sys: System) (hfr hto: MHistory) :=
+Definition Reducible `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (hfr hto: History) :=
   forall st1 (Hr: Reachable (steps step_m) sys st1) st2,
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2.
 
-Definition ReducibleP `{oifc: OStateIfc} (sys: System)
-           (P: MState -> Prop) (hfr hto: MHistory) :=
+Definition ReducibleP `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (P: State -> Prop) (hfr hto: History) :=
   forall st1 (Hr: Reachable (steps step_m) sys st1) (Hp: P st1) st2,
     steps step_m sys st1 hfr st2 ->
     steps step_m sys st1 hto st2.
@@ -40,13 +40,14 @@ Ltac reachable_by_steps :=
 Hint Extern 1 (Reachable _ _ _) => reachable_by_steps.
 
 Lemma reducible_refl:
-  forall `{oifc: OStateIfc} (sys: System) hst, Reducible sys hst hst.
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst,
+    Reducible sys hst hst.
 Proof.
   congruence.
 Qed.
 
 Lemma reducible_trans:
-  forall `{oifc: OStateIfc} (sys: System) hst1 hst2 hst3,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst1 hst2 hst3,
     Reducible sys hst1 hst2 ->
     Reducible sys hst2 hst3 ->
     Reducible sys hst1 hst3.
@@ -55,7 +56,7 @@ Proof.
 Qed.
 
 Lemma reducible_app_1:
-  forall `{oifc: OStateIfc} (sys: System) hfr hto,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hfr hto,
     Reducible sys hfr hto ->
     forall hst,
       Reducible sys (hst ++ hfr) (hst ++ hto).
@@ -67,7 +68,7 @@ Proof.
 Qed.
 
 Lemma reducible_app_2:
-  forall `{oifc: OStateIfc} (sys: System) hfr hto,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hfr hto,
     Reducible sys hfr hto ->
     forall hst,
       Reducible sys (hfr ++ hst) (hto ++ hst).
@@ -78,7 +79,7 @@ Proof.
 Qed.
 
 Corollary reducible_cons:
-  forall `{oifc: OStateIfc} (sys: System) hfr hto,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hfr hto,
     Reducible sys hfr hto ->
     forall lbl,
       Reducible sys (lbl :: hfr) (lbl :: hto).
@@ -90,7 +91,7 @@ Proof.
 Qed.
 
 Corollary reducible_cons_2:
-  forall `{oifc: OStateIfc} (sys: System) lbl1 lbl2 lbl3 lbl4,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) lbl1 lbl2 lbl3 lbl4,
     Reducible sys [lbl1; lbl2] [lbl3; lbl4] ->
     forall hst,
       Reducible sys (lbl1 :: lbl2 :: hst) (lbl3 :: lbl4 :: hst).
@@ -102,25 +103,25 @@ Proof.
 Qed.
 
 Lemma reducibleP_refl:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hst,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hst,
     ReducibleP sys P hst hst.
 Proof.
   congruence.
 Qed.
 
-Definition PInitializing `{oifc: OStateIfc} (sys: System)
-           (P: MState -> Prop) (hst1: MHistory) :=
+Definition PInitializing `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (P: State -> Prop) (hst1: History) :=
   forall st1 st2, steps step_m sys st1 hst1 st2 -> P st2.
 
-Definition PPreserving `{oifc: OStateIfc} (sys: System)
-           (P: MState -> Prop) (hst: MHistory) :=
+Definition PPreserving `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (P: State -> Prop) (hst: History) :=
   forall st1,
     P st1 ->
     forall st2,
       steps step_m sys st1 hst st2 -> P st2.
 
 Lemma PPreserving_Forall_concat:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hsts,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hsts,
     Forall (PPreserving sys P) hsts ->
     PPreserving sys P (List.concat hsts).
 Proof.
@@ -135,7 +136,7 @@ Proof.
 Qed.
 
 Lemma reducibleP_trans:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hst1 hst2 hst3,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hst1 hst2 hst3,
     ReducibleP sys P hst1 hst2 ->
     ReducibleP sys P hst2 hst3 ->
     ReducibleP sys P hst1 hst3.
@@ -144,7 +145,7 @@ Proof.
 Qed.
 
 Lemma reducibleP_app_1:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hfr hto,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hfr hto,
     ReducibleP sys P hfr hto ->
     forall hst,
       ReducibleP sys P (hst ++ hfr) (hst ++ hto).
@@ -156,7 +157,7 @@ Proof.
 Qed.
 
 Lemma reducibleP_app_2:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hfr hto,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hfr hto,
     ReducibleP sys P hfr hto ->
     forall hst,
       PPreserving sys P hst ->
@@ -168,7 +169,7 @@ Proof.
 Qed.
 
 Corollary reducibleP_cons:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) hfr hto,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hfr hto,
     ReducibleP sys P hfr hto ->
     forall lbl,
       ReducibleP sys P (lbl :: hfr) (lbl :: hto).
@@ -180,7 +181,7 @@ Proof.
 Qed.
 
 Corollary reducibleP_cons_2:
-  forall `{oifc: OStateIfc} (sys: System) (P: MState -> Prop) lbl1 lbl2 lbl3 lbl4,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) lbl1 lbl2 lbl3 lbl4,
     ReducibleP sys P [lbl1; lbl2] [lbl3; lbl4] ->
     forall hst,
       PPreserving sys P hst ->
@@ -195,16 +196,16 @@ Qed.
 (*! Reducibility of silent, incoming, and outgoing labels *)
 
 Lemma silent_ignored_1:
-  forall `{oifc: OStateIfc} (sys: System) hst,
-    Reducible sys (RlblEmpty _ :: hst) hst.
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst,
+    Reducible sys (RlblEmpty :: hst) hst.
 Proof.
   unfold Reducible; intros.
   inv H; inv H5; assumption.
 Qed.
 
 Lemma silent_ignored_2:
-  forall `{oifc: OStateIfc} (sys: System) hst,
-    Reducible sys (hst ++ [RlblEmpty _]) hst.
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst,
+    Reducible sys (hst ++ [RlblEmpty]) hst.
 Proof.
   unfold Reducible; intros.
   eapply steps_split in H; [|reflexivity].
@@ -214,8 +215,8 @@ Proof.
 Qed.
 
 Lemma silent_commutes_1:
-  forall `{oifc: OStateIfc} (sys: System) lbl,
-    Reducible sys [RlblEmpty _; lbl] [lbl; RlblEmpty _].
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) lbl,
+    Reducible sys [RlblEmpty; lbl] [lbl; RlblEmpty].
 Proof.
   unfold Reducible; intros.
   inv H; inv H3; inv H2; inv H5.
@@ -223,8 +224,8 @@ Proof.
 Qed.
 
 Lemma silent_commutes_2:
-  forall `{oifc: OStateIfc} (sys: System) lbl,
-    Reducible sys [lbl; RlblEmpty _] [RlblEmpty _; lbl].
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) lbl,
+    Reducible sys [lbl; RlblEmpty] [RlblEmpty; lbl].
 Proof.
   unfold Reducible; intros.
   inv H; inv H3; inv H2; inv H6.
@@ -232,12 +233,12 @@ Proof.
 Qed.
 
 Lemma silent_reducible_1:
-  forall `{oifc: OStateIfc} (sys: System) hst,
-    Reducible sys (RlblEmpty _ :: hst) (hst ++ [RlblEmpty _]).
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst,
+    Reducible sys (RlblEmpty :: hst) (hst ++ [RlblEmpty]).
 Proof.
   unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
 
-  change (RlblEmpty _ :: lbl :: hst) with ([RlblEmpty _; lbl] ++ hst) in H.
+  change (RlblEmpty :: lbl :: hst) with ([RlblEmpty; lbl] ++ hst) in H.
   eapply steps_split in H; [|reflexivity].
   destruct H as [sti [? ?]].
   eapply silent_commutes_1 in H0; eauto.
@@ -247,15 +248,15 @@ Proof.
 Qed.
 
 Lemma silent_reducible_2:
-  forall `{oifc: OStateIfc} (sys: System) hst,
-    Reducible sys (hst ++ [RlblEmpty _]) (RlblEmpty _ :: hst).
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst,
+    Reducible sys (hst ++ [RlblEmpty]) (RlblEmpty :: hst).
 Proof.
   unfold Reducible; induction hst as [|lbl ?]; simpl; intros; auto.
 
   inv H.
   specialize (IHhst _ Hr _ H3).
   pose proof (StepsCons IHhst _ _ H5).
-  change (lbl :: RlblEmpty _ :: hst) with ([lbl; RlblEmpty _] ++ hst) in H.
+  change (lbl :: RlblEmpty :: hst) with ([lbl; RlblEmpty] ++ hst) in H.
   eapply steps_split in H; [|reflexivity].
   destruct H as [sti [? ?]].
   eapply silent_commutes_2 in H0; eauto.
@@ -263,7 +264,7 @@ Proof.
 Qed.
 
 Lemma outs_ins_commutes:
-  forall `{oifc: OStateIfc} (sys: System) eins eouts,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) eins eouts,
     Reducible sys [RlblIns eins; RlblOuts eouts] [RlblOuts eouts; RlblIns eins].
 Proof.
   unfold Reducible; intros.
@@ -280,7 +281,7 @@ Proof.
 Qed.
 
 Lemma int_ins_commutes:
-  forall `{oifc: OStateIfc} (sys: System) eins oidx ridx ins outs,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) eins oidx ridx ins outs,
     Reducible sys [RlblIns eins; RlblInt oidx ridx ins outs]
               [RlblInt oidx ridx ins outs; RlblIns eins].
 Proof.
@@ -307,7 +308,7 @@ Proof.
 Qed.
 
 Lemma ins_commutes:
-  forall `{oifc: OStateIfc} (sys: System) eins lbl,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) eins lbl,
     NonInsLbl lbl ->
     Reducible sys [RlblIns eins; lbl] [lbl; RlblIns eins].
 Proof.
@@ -319,7 +320,7 @@ Proof.
 Qed.
 
 Lemma ins_reducible:
-  forall `{oifc: OStateIfc} (sys: System) eins hst,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) eins hst,
     NonInsHistory hst ->
     Reducible sys (RlblIns eins :: hst) (hst ++ [RlblIns eins]).
 Proof.
@@ -334,7 +335,7 @@ Proof.
 Qed.
 
 Lemma outs_int_commutes:
-  forall `{oifc: OStateIfc} (sys: System) oidx ridx ins outs eouts,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oidx ridx ins outs eouts,
     Reducible sys [RlblInt oidx ridx ins outs; RlblOuts eouts]
               [RlblOuts eouts; RlblInt oidx ridx ins outs].
 Proof.
@@ -372,7 +373,7 @@ Proof.
 Qed.
 
 Lemma outs_commutes:
-  forall `{oifc: OStateIfc} (sys: System) eouts lbl,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) eouts lbl,
     NonOutsLbl lbl ->
     Reducible sys [lbl; RlblOuts eouts] [RlblOuts eouts; lbl].
 Proof.
@@ -384,7 +385,7 @@ Proof.
 Qed.
 
 Lemma outs_reducible:
-  forall `{oifc: OStateIfc} (sys: System) eouts hst,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) eouts hst,
     NonOutsHistory hst ->
     Reducible sys (hst ++ [RlblOuts eouts]) (RlblOuts eouts :: hst).
 Proof.
@@ -406,14 +407,14 @@ Qed.
 (*! Reducing a history to (Ins -> Internals -> Outs) *)
 
 Theorem trss_reducible_to_ins_atomics_outs:
-  forall `{oifc: OStateIfc} (sys: System) trss n,
-    SSequential sys msg_dec trss n ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) trss n,
+    SSequential sys trss n ->
     exists ins atms outs,
       InsHistory ins /\
-      Forall (AtomicEx msg_dec) atms /\
+      Forall AtomicEx atms /\
       OutsHistory outs /\
       Reducible sys (List.concat trss) (outs ++ List.concat atms ++ ins) /\
-      SSequential sys msg_dec (lift_each outs ++ atms ++ lift_each ins) n.
+      SSequential sys (lift_each outs ++ atms ++ lift_each ins) n.
 Proof.
   induction 1; simpl; intros; subst.
 

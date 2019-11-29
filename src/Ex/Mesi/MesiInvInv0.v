@@ -19,9 +19,9 @@ Local Open Scope fmap.
 
 Existing Instance Mesi.ImplOStateIfc.
 
-Definition InvL1DirI (cifc: CIfc) (st: MState): Prop :=
+Definition InvL1DirI (cifc: CIfc) (st: State): Prop :=
   Forall (fun oidx =>
-            ost <+- (bst_oss st)@[oidx];
+            ost <+- (st_oss st)@[oidx];
               ost#[dir].(dir_st) = mesiI)
          (c_l1_indices cifc).
 
@@ -95,7 +95,8 @@ Section InvL1DirI.
   Theorem mesi_InvL1DirI_ok:
     InvReachable impl step_m (InvL1DirI cifc).
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply mesi_InvL1DirI_init.
     - apply mesi_InvL1DirI_step.
   Qed.
@@ -106,15 +107,15 @@ Definition ObjWBDir (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   (ObjInvWRq oidx msgs \/ ObjInvRq oidx msgs \/ ObjInvRs oidx msgs) ->
   ost#[dir].(dir_st) = mesiI.
 
-Definition InvWBDir (st: MState): Prop :=
+Definition InvWBDir (st: State): Prop :=
   forall oidx,
-    ost <+- (bst_oss st)@[oidx]; ObjWBDir oidx ost (bst_msgs st).
+    ost <+- (st_oss st)@[oidx]; ObjWBDir oidx ost (st_msgs st).
 
 (** NOTE: [InvWBCoh] requires [InvWBDir] during the proof *)
-Definition InvWBCoh (st: MState): Prop :=
+Definition InvWBCoh (st: State): Prop :=
   forall oidx,
-    ost <+- (bst_oss st)@[oidx];
-      CohInvRq oidx ost (bst_msgs st).
+    ost <+- (st_oss st)@[oidx];
+      CohInvRq oidx ost (st_msgs st).
 
 Section InvWBDir.
   Variable (tr: tree).
@@ -142,11 +143,11 @@ Section InvWBDir.
 
   Lemma mesi_InvWBDir_ext_in:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvWBDir {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvWBDir {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+        InvWBDir {| st_oss := oss; st_orqs := orqs; st_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -199,12 +200,12 @@ Section InvWBDir.
 
   Lemma mesi_InvWBDir_ext_out:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvWBDir {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
-        InvWBDir {| bst_oss := oss;
-                    bst_orqs := orqs;
-                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+        InvWBDir {| st_oss := oss;
+                    st_orqs := orqs;
+                    st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -224,12 +225,12 @@ Section InvWBDir.
 
   Lemma InvWBDir_no_update:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx (post nost: OState),
         oss@[oidx] = Some post ->
         nost#[dir].(dir_st) = post#[dir].(dir_st) ->
-        InvWBDir {| bst_oss:= oss +[oidx <- nost];
-                    bst_orqs:= orqs; bst_msgs:= msgs |}.
+        InvWBDir {| st_oss:= oss +[oidx <- nost];
+                    st_orqs:= orqs; st_msgs:= msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     mred; simpl; auto.
@@ -241,12 +242,12 @@ Section InvWBDir.
 
   Lemma InvWBDir_update_status_NoRqI_NoRsI:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx (ost: OState),
         NoRqI oidx msgs ->
         NoRsI oidx msgs ->
-        InvWBDir {| bst_oss:= oss +[oidx <- ost];
-                    bst_orqs:= orqs; bst_msgs:= msgs |}.
+        InvWBDir {| st_oss:= oss +[oidx <- ost];
+                    st_orqs:= orqs; st_msgs:= msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     mred; simpl; auto.
@@ -262,14 +263,14 @@ Section InvWBDir.
 
   Lemma InvWBDir_enqMP_rq_valid:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx ost midx msg,
         oss@[oidx] = Some ost ->
         ost#[dir].(dir_st) = mesiI ->
         midx = rqUpFrom oidx ->
         msg.(msg_id) = mesiInvWRq \/ msg.(msg_id) = mesiInvRq ->
-        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMP midx msg msgs |}.
+        InvWBDir {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     destruct (idx_dec oidx0 oidx); subst.
@@ -298,14 +299,14 @@ Section InvWBDir.
 
   Lemma InvWBDir_enqMP_rs_valid:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx rqm midx msg,
         FirstMP msgs (rqUpFrom oidx) rqm ->
         (rqm.(msg_id) = mesiInvWRq \/ rqm.(msg_id) = mesiInvRq) ->
         rqm.(msg_type) = MRq ->
         midx = downTo oidx ->
-        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMP midx msg (deqMP (rqUpFrom oidx) msgs) |}.
+        InvWBDir {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMP midx msg (deqMP (rqUpFrom oidx) msgs) |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     destruct (idx_dec oidx0 oidx); subst.
@@ -347,13 +348,13 @@ Section InvWBDir.
 
   Lemma InvWBDir_other_msg_id_enqMP:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> mesiInvWRq ->
         msg.(msg_id) <> mesiInvRq ->
         msg.(msg_id) <> mesiInvRs ->
-        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMP midx msg msgs |}.
+        InvWBDir {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     specialize (H oidx).
@@ -376,13 +377,13 @@ Section InvWBDir.
 
   Lemma InvWBDir_other_msg_id_enqMsgs:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq /\
                            (valOf idm).(msg_id) <> mesiInvRq /\
                            (valOf idm).(msg_id) <> mesiInvRs) nmsgs ->
-        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMsgs nmsgs msgs |}.
+        InvWBDir {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
     intros.
     generalize dependent msgs.
@@ -394,10 +395,10 @@ Section InvWBDir.
 
   Lemma InvWBDir_deqMP:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx,
-        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= deqMP midx msgs |}.
+        InvWBDir {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= deqMP midx msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     specialize (H oidx).
@@ -417,10 +418,10 @@ Section InvWBDir.
 
   Lemma InvWBDir_deqMsgs:
     forall oss orqs msgs,
-      InvWBDir {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBDir {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall minds,
-        InvWBDir {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= deqMsgs minds msgs |}.
+        InvWBDir {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= deqMsgs minds msgs |}.
   Proof.
     unfold InvWBDir; simpl; intros.
     specialize (H oidx).
@@ -620,7 +621,8 @@ Section InvWBDir.
   Theorem mesi_InvWBDir_ok:
     InvReachable impl step_m InvWBDir.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply mesi_InvWBDir_init.
     - apply mesi_InvWBDir_step.
   Qed.
@@ -673,11 +675,11 @@ Section InvWBCoh.
 
   Lemma mesi_InvWBCoh_ext_in:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvWBCoh {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvWBCoh {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+        InvWBCoh {| st_oss := oss; st_orqs := orqs; st_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -700,12 +702,12 @@ Section InvWBCoh.
 
   Lemma mesi_InvWBCoh_ext_out:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvWBCoh {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
-        InvWBCoh {| bst_oss := oss;
-                    bst_orqs := orqs;
-                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+        InvWBCoh {| st_oss := oss;
+                    st_orqs := orqs;
+                    st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -715,15 +717,15 @@ Section InvWBCoh.
 
   Lemma InvWBCoh_no_update:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx (post nost: OState),
         oss@[oidx] = Some post ->
         nost#[val] = post#[val] ->
         nost#[owned] = post#[owned] ->
         nost#[status] = post#[status] ->
         nost#[dir].(dir_st) = post#[dir].(dir_st) ->
-        InvWBCoh {| bst_oss:= oss +[oidx <- nost];
-                    bst_orqs:= orqs; bst_msgs:= msgs |}.
+        InvWBCoh {| st_oss:= oss +[oidx <- nost];
+                    st_orqs:= orqs; st_msgs:= msgs |}.
   Proof.
     unfold InvWBCoh; simpl; intros.
     mred; simpl; auto.
@@ -739,11 +741,11 @@ Section InvWBCoh.
 
   Lemma InvWBCoh_update_status_NoRqI:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx (ost: OState),
         NoRqI oidx msgs ->
-        InvWBCoh {| bst_oss:= oss +[oidx <- ost];
-                    bst_orqs:= orqs; bst_msgs:= msgs |}.
+        InvWBCoh {| st_oss:= oss +[oidx <- ost];
+                    st_orqs:= orqs; st_msgs:= msgs |}.
   Proof.
     unfold InvWBCoh; simpl; intros.
     mred; simpl; auto.
@@ -758,14 +760,14 @@ Section InvWBCoh.
 
   Lemma InvWBCoh_enqMP_valid:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx ost midx msg,
         oss@[oidx] = Some ost ->
         midx = rqUpFrom oidx ->
         msg.(msg_id) = mesiInvWRq ->
         msg.(msg_value) = ost#[val] ->
-        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMP midx msg msgs |}.
+        InvWBCoh {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvWBCoh; simpl; intros.
     destruct (idx_dec oidx0 oidx); subst.
@@ -787,11 +789,11 @@ Section InvWBCoh.
 
   Lemma InvWBCoh_other_msg_id_enqMP:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> mesiInvWRq ->
-        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMP midx msg msgs |}.
+        InvWBCoh {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvWBCoh; simpl; intros.
     specialize (H oidx).
@@ -805,11 +807,11 @@ Section InvWBCoh.
   
   Lemma InvWBCoh_other_msg_id_enqMsgs:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq) nmsgs ->
-        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= enqMsgs nmsgs msgs |}.
+        InvWBCoh {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
     intros.
     generalize dependent msgs.
@@ -821,10 +823,10 @@ Section InvWBCoh.
 
   Lemma InvWBCoh_deqMP:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx,
-        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= deqMP midx msgs |}.
+        InvWBCoh {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= deqMP midx msgs |}.
   Proof.
     unfold InvWBCoh; simpl; intros.
     specialize (H oidx).
@@ -834,10 +836,10 @@ Section InvWBCoh.
 
   Lemma InvWBCoh_deqMsgs:
     forall oss orqs msgs,
-      InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall minds,
-        InvWBCoh {| bst_oss:= oss; bst_orqs:= orqs;
-                    bst_msgs:= deqMsgs minds msgs |}.
+        InvWBCoh {| st_oss:= oss; st_orqs:= orqs;
+                    st_msgs:= deqMsgs minds msgs |}.
   Proof.
     unfold InvWBCoh; simpl; intros.
     specialize (H oidx).
@@ -1014,7 +1016,8 @@ Section InvWBCoh.
   Theorem mesi_InvWBCoh_ok:
     InvReachable impl step_m InvWBCoh.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply mesi_InvWBCoh_init.
     - apply mesi_InvWBCoh_step.
   Qed.

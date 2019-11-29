@@ -11,16 +11,16 @@ Open Scope list.
 Open Scope hvec.
 Open Scope fmap.
 
-Definition AtomicMsgOutsInv `{OStateIfc} (mp: MsgOutPred)
-           (eouts: list (Id Msg)) (nst: MState): Prop :=
-  Forall (fun eout => mp eout nst.(bst_oss) nst.(bst_orqs)) eouts.
+Definition AtomicMsgOutsInv `{DecValue} `{OStateIfc} (mp: MsgOutPred)
+           (eouts: list (Id Msg)) (nst: State): Prop :=
+  Forall (fun eout => mp eout nst.(st_oss) nst.(st_orqs)) eouts.
 
-Definition AtomicInv `{OStateIfc} (mp: MsgOutPred):
+Definition AtomicInv `{DecValue} `{OStateIfc} (mp: MsgOutPred):
   list (Id Msg) (* inits *) ->
-  MState (* starting state *) ->
-  MHistory (* atomic history *) ->
+  State (* starting state *) ->
+  History (* atomic history *) ->
   list (Id Msg) (* eouts *) ->
-  MState (* ending state *) -> Prop :=
+  State (* ending state *) -> Prop :=
   fun inits st1 hst eouts st2 =>
     AtomicMsgOutsInv mp eouts st2.
 

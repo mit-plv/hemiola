@@ -72,10 +72,10 @@ Qed.
 Section Footprints.
   Variable topo: DTree.
 
-  Definition MesiUpLockInv (st: MState): Prop :=
+  Definition MesiUpLockInv (st: State): Prop :=
     forall oidx,
-      ost <+- (bst_oss st)@[oidx];
-        orq <+- (bst_orqs st)@[oidx];
+      ost <+- (st_oss st)@[oidx];
+        orq <+- (st_orqs st)@[oidx];
         rqiu <+- orq@[upRq];
         rmsg <+- rqiu.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
@@ -95,10 +95,10 @@ Section Footprints.
   Definition DownLockFromParent (oidx: IdxT) (rqid: RqInfo Msg) :=
     rqid.(rqi_midx_rsb) = Some (rsUpFrom oidx).
 
-  Definition MesiDownLockInv (st: MState): Prop :=
+  Definition MesiDownLockInv (st: State): Prop :=
     forall oidx,
-      ost <+- (bst_oss st)@[oidx];
-        orq <+- (bst_orqs st)@[oidx];
+      ost <+- (st_oss st)@[oidx];
+        orq <+- (st_orqs st)@[oidx];
         rqid <+- orq@[downRq];
         rmsg <+- rqid.(rqi_msg);
         match case rmsg.(msg_id) on idx_dec default True with
@@ -158,14 +158,14 @@ Section FootprintsOk.
 
   Lemma MesiUpLockInv_update_None:
     forall oss orqs pmsgs,
-      MesiUpLockInv {| bst_oss := oss;
-                       bst_orqs := orqs;
-                       bst_msgs := pmsgs |} ->
+      MesiUpLockInv {| st_oss := oss;
+                       st_orqs := orqs;
+                       st_msgs := pmsgs |} ->
       forall oidx nost norq nmsgs,
         norq@[upRq] = None ->
-        MesiUpLockInv {| bst_oss := oss +[oidx <- nost];
-                         bst_orqs := orqs +[oidx <- norq];
-                         bst_msgs := nmsgs |}.
+        MesiUpLockInv {| st_oss := oss +[oidx <- nost];
+                         st_orqs := orqs +[oidx <- norq];
+                         st_msgs := nmsgs |}.
   Proof.
     unfold MesiUpLockInv; simpl; intros.
     specialize (H oidx0).
@@ -175,9 +175,9 @@ Section FootprintsOk.
 
   Lemma MesiUpLockInv_no_update:
     forall oss orqs pmsgs,
-      MesiUpLockInv {| bst_oss := oss;
-                       bst_orqs := orqs;
-                       bst_msgs := pmsgs |} ->
+      MesiUpLockInv {| st_oss := oss;
+                       st_orqs := orqs;
+                       st_msgs := pmsgs |} ->
       forall oidx post porq nost norq nmsgs,
         oss@[oidx] = Some post ->
         nost#[owned] = post#[owned] ->
@@ -185,9 +185,9 @@ Section FootprintsOk.
         nost#[dir].(dir_st) = post#[dir].(dir_st) ->
         orqs@[oidx] = Some porq ->
         norq@[upRq] = porq@[upRq] ->
-        MesiUpLockInv {| bst_oss := oss +[oidx <- nost];
-                         bst_orqs := orqs +[oidx <- norq];
-                         bst_msgs := nmsgs |}.
+        MesiUpLockInv {| st_oss := oss +[oidx <- nost];
+                         st_orqs := orqs +[oidx <- norq];
+                         st_msgs := nmsgs |}.
   Proof.
     unfold MesiUpLockInv; simpl; intros.
     mred; auto.
@@ -376,14 +376,14 @@ Section FootprintsOk.
 
   Lemma MesiDownLockInv_update_None:
     forall oss orqs pmsgs,
-      MesiDownLockInv topo {| bst_oss := oss;
-                              bst_orqs := orqs;
-                              bst_msgs := pmsgs |} ->
+      MesiDownLockInv topo {| st_oss := oss;
+                              st_orqs := orqs;
+                              st_msgs := pmsgs |} ->
       forall oidx nost norq nmsgs,
         norq@[downRq] = None ->
-        MesiDownLockInv topo {| bst_oss := oss +[oidx <- nost];
-                                bst_orqs := orqs +[oidx <- norq];
-                                bst_msgs := nmsgs |}.
+        MesiDownLockInv topo {| st_oss := oss +[oidx <- nost];
+                                st_orqs := orqs +[oidx <- norq];
+                                st_msgs := nmsgs |}.
   Proof.
     unfold MesiDownLockInv; simpl; intros.
     specialize (H oidx0).
@@ -393,9 +393,9 @@ Section FootprintsOk.
 
   Lemma MesiDownLockInv_no_update:
     forall oss orqs pmsgs,
-      MesiDownLockInv topo {| bst_oss := oss;
-                              bst_orqs := orqs;
-                              bst_msgs := pmsgs |} ->
+      MesiDownLockInv topo {| st_oss := oss;
+                              st_orqs := orqs;
+                              st_msgs := pmsgs |} ->
       forall oidx post porq nost norq nmsgs,
         oss@[oidx] = Some post ->
         nost#[owned] = post#[owned] ->
@@ -403,9 +403,9 @@ Section FootprintsOk.
         nost#[dir] = post#[dir] ->
         orqs@[oidx] = Some porq ->
         norq@[downRq] = porq@[downRq] ->
-        MesiDownLockInv topo {| bst_oss := oss +[oidx <- nost];
-                                bst_orqs := orqs +[oidx <- norq];
-                                bst_msgs := nmsgs |}.
+        MesiDownLockInv topo {| st_oss := oss +[oidx <- nost];
+                                st_orqs := orqs +[oidx <- norq];
+                                st_msgs := nmsgs |}.
   Proof.
     unfold MesiDownLockInv; simpl; intros.
     mred; auto.
@@ -538,7 +538,8 @@ Section FootprintsOk.
   Theorem MesiLockInv_ok:
     InvReachable impl step_m (fun st => MesiUpLockInv st /\ MesiDownLockInv topo st).
   Proof.
-    apply mutual_inv_reachable.
+    eapply mutual_inv_reachable.
+    - typeclasses eauto.
     - apply MesiUpLockInv_init.
     - apply MesiDownLockInv_init.
     - apply MesiUpLockInv_mutual_step.
@@ -772,7 +773,8 @@ Section RootChnInv.
   Theorem mesi_RootChnInv_ok:
     InvReachable impl step_m (RootChnInv tr 0).
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply mesi_RootChnInv_init.
     - apply mesi_RootChnInv_step.
   Qed.

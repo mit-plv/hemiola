@@ -10,7 +10,7 @@ Local Open Scope list.
 Local Open Scope fmap.
 
 Lemma upLockedNew_equiv_false:
-  forall (orqs1 orqs2: ORqs Msg) oidx,
+  forall `{dv: DecValue} (orqs1 orqs2: ORqs Msg) oidx,
     (orqs1@[oidx] >>=[[]] (fun orq => orq))@[upRq] = 
     (orqs2@[oidx] >>=[[]] (fun orq => orq))@[upRq] ->
     UpLockedNew orqs1 orqs2 oidx ->
@@ -23,7 +23,7 @@ Proof.
 Qed.
 
 Lemma upLockedNew_weakened_false:
-  forall (orqs1 orqs2: ORqs Msg) oidx,
+  forall `{dv: DecValue} (orqs1 orqs2: ORqs Msg) oidx,
     orqs2@[oidx] >>=[[]] (fun orq => orq)@[upRq] = None ->
     UpLockedNew orqs1 orqs2 oidx ->
     False.
@@ -34,9 +34,9 @@ Proof.
 Qed.
 
 Lemma upLockedNew_in_history:
-  forall `{oifc: OStateIfc} (sys: System) st1 hst st2 oidx,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) st1 hst st2 oidx,
     steps step_m sys st1 hst st2 ->
-    UpLockedNew (bst_orqs st1) (bst_orqs st2) oidx ->
+    UpLockedNew (st_orqs st1) (st_orqs st2) oidx ->
     In oidx (oindsOf hst).
 Proof.
   intros.
@@ -45,7 +45,7 @@ Proof.
 Qed.
 
 Section RqRsInvLockEx.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -339,7 +339,7 @@ Section RqRsInvLockEx.
     forall st1 oidx ridx rins routs st2 uidx,
       step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
       uidx <> oidx ->
-      DownLockIntact st1.(bst_orqs) st2.(bst_orqs) uidx.
+      DownLockIntact st1.(st_orqs) st2.(st_orqs) uidx.
   Proof.
     intros.
     inv H; simpl in *.
@@ -350,7 +350,7 @@ Section RqRsInvLockEx.
     forall st1 hst st2 oidx,
       steps step_m sys st1 hst st2 ->
       ~ In oidx (oindsOf hst) ->
-      DownLockIntact st1.(bst_orqs) st2.(bst_orqs) oidx.
+      DownLockIntact st1.(st_orqs) st2.(st_orqs) oidx.
   Proof.
     induction 1; simpl; intros; [red; reflexivity|].
     destruct lbl; try (inv H0; simpl in *; auto; fail).
@@ -376,7 +376,7 @@ Section RqRsInvLockEx.
   Lemma DownLockedNew_in_history:
     forall st1 hst st2 oidx,
       steps step_m sys st1 hst st2 ->
-      DownLockedNew (bst_orqs st1) (bst_orqs st2) oidx ->
+      DownLockedNew (st_orqs st1) (st_orqs st2) oidx ->
       In oidx (oindsOf hst).
   Proof.
     intros.
@@ -597,7 +597,7 @@ Section RqRsInvLockEx.
       Reachable (steps step_m) sys st1 ->
       forall oidx ridx rins routs st2,
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
-        DLTimeInv (bst_orqs st1) (bst_orqs st2) rins routs.
+        DLTimeInv (st_orqs st1) (st_orqs st2) rins routs.
   Proof.
     destruct Hrrs as [? [? ?]].
     intros.
@@ -776,11 +776,11 @@ Section RqRsInvLockEx.
 
   Lemma atomic_down_lock_time_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
-        DLTimeInv st1.(bst_orqs) st2.(bst_orqs) inits eouts.
+        DLTimeInv st1.(st_orqs) st2.(st_orqs) inits eouts.
   Proof.
     destruct Hrrs as [? [? ?]].
     induction 1; simpl; intros; subst;
@@ -794,7 +794,7 @@ Section RqRsInvLockEx.
                                (reachable_steps H8 H10)) as Hdlinv.
     pose proof (atomic_msg_outs_ok Hiorqs Hrrs H2 H8 H10) as Hmoinv.
     assert (MsgOutsInv dtr (oindsOf (RlblInt oidx ridx rins routs :: hst))
-                       (bst_orqs st1) (bst_orqs st2)
+                       (st_orqs st1) (st_orqs st2)
                        (removeL (id_dec msg_dec) eouts rins ++ routs)) as Hmoinv2.
     { eapply atomic_msg_outs_ok; eauto.
       { econstructor; eauto. }
@@ -1062,7 +1062,7 @@ Section RqRsInvLockEx.
           eapply DownLockIntact_DownLockedNew_2 in H41; [|red; smred].
           destruct (in_dec idx_dec (obj_idx obj) (subtreeIndsOf dtr cidx)).
           { exfalso.
-            pose proof (edgeDownTo_Some H _ H5) as Hed.
+            pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5) as Hed.
             destruct Hed as [rqUp [rsUp [rpidx ?]]]; dest.
             disc_rule_conds.
 
@@ -1185,7 +1185,7 @@ Section RqRsInvLockEx.
         red in H35, H36; dest.
 
         (* Below is used multiple times so prove it in advance. *)
-        assert (DownLockedNew (bst_orqs st1) orqs (obj_idx obj)) as Hdln.
+        assert (DownLockedNew (st_orqs st1) orqs (obj_idx obj)) as Hdln.
         { rewrite <-H32 in H26.
           pose proof H26.
           eapply RqRsDownMatch_rs_not_nil in H41.
@@ -1241,7 +1241,7 @@ Section RqRsInvLockEx.
                    In rsUp rins /\
                    RsUpMsgFrom dtr cidx rsUp /\
                    parentIdxOf dtr cidx = Some (obj_idx obj) /\
-                   DLNewRec (bst_orqs st1) orqs (obj_idx obj)) as Hdln.
+                   DLNewRec (st_orqs st1) orqs (obj_idx obj)) as Hdln.
         { rewrite <-H32 in H12.
           pose proof H12.
           eapply RqRsDownMatch_rs_not_nil in H34.
@@ -1412,7 +1412,7 @@ Section RqRsInvLockEx.
 End RqRsInvLockEx.
 
 Section Corollaries.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -1420,7 +1420,7 @@ Section Corollaries.
 
   Lemma extAtomic_DLTimeInits:
     forall inits trs eouts,
-      ExtAtomic sys msg_dec inits trs eouts ->
+      ExtAtomic sys inits trs eouts ->
       DLTimeInits dtr inits.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
@@ -1442,12 +1442,12 @@ Section Corollaries.
       forall trs st2,
         steps step_m sys st1 trs st2 ->
         forall inits eouts,
-          ExtAtomic sys msg_dec inits trs eouts ->
+          ExtAtomic sys inits trs eouts ->
           forall cidx rsUp pidx,
             RsUpMsgFrom dtr cidx rsUp ->
             parentIdxOf dtr cidx = Some pidx ->
             In rsUp eouts ->
-            DownLockedNew st1.(bst_orqs) st2.(bst_orqs) pidx.
+            DownLockedNew st1.(st_orqs) st2.(st_orqs) pidx.
   Proof.
     intros.
     pose proof (extAtomic_DLTimeInits H1).
@@ -1465,10 +1465,10 @@ Section Corollaries.
       forall trs st2,
         steps step_m sys st1 trs st2 ->
         forall inits eouts,
-          ExtAtomic sys msg_dec inits trs eouts ->
+          ExtAtomic sys inits trs eouts ->
           forall oidx rqid,
-            DownLocked st1.(bst_orqs) oidx rqid ->
-            DownLocked st2.(bst_orqs) oidx rqid.
+            DownLocked st1.(st_orqs) oidx rqid ->
+            DownLocked st2.(st_orqs) oidx rqid.
   Proof.
     intros.
     pose proof (extAtomic_DLTimeInits H1).
@@ -1482,12 +1482,12 @@ Section Corollaries.
     forall st1,
       Reachable (steps step_m) sys st1 ->
       forall inits1 trs1 eouts1,
-        ExtAtomic sys msg_dec inits1 trs1 eouts1 ->
+        ExtAtomic sys inits1 trs1 eouts1 ->
         forall trss inits2 trs2 eouts2 st2,
           steps step_m sys st1 (trs2 ++ List.concat trss ++ trs1) st2 ->
-          ExtAtomic sys msg_dec inits2 trs2 eouts2 ->
-          Forall (AtomicEx msg_dec) trss ->
-          Forall (Transactional sys msg_dec) trss ->
+          ExtAtomic sys inits2 trs2 eouts2 ->
+          Forall AtomicEx trss ->
+          Forall (Transactional sys) trss ->
           forall cidx1 rsUp1 cidx2 rsUp2 pidx,
             RsUpMsgFrom dtr cidx1 rsUp1 ->
             parentIdxOf dtr cidx1 = Some pidx ->
@@ -1505,7 +1505,7 @@ Section Corollaries.
 
     eapply steps_split in H11; [|reflexivity].
     destruct H11 as [sti2 [? ?]].
-    assert (DownLocked (bst_orqs sti2) pidx rqid).
+    assert (DownLocked (st_orqs sti2) pidx rqid).
     { assert (Reachable (steps step_m) sys sti1) by eauto.
       clear -Hiorqs Hrrs H0 H3 H4 H11 H13.
       generalize dependent sti2.
@@ -1531,14 +1531,14 @@ Section Corollaries.
       Reachable (steps step_m) sys st1 ->
       forall trss st2,
         steps step_m sys st1 (List.concat trss) st2 ->
-        Forall (AtomicEx msg_dec) trss ->
-        Forall (Transactional sys msg_dec) trss ->
+        Forall AtomicEx trss ->
+        Forall (Transactional sys) trss ->
         forall n1 inits1 trs1 eouts1 n2 inits2 trs2 eouts2,
           n1 > n2 ->
           nth_error trss n1 = Some trs1 ->
           nth_error trss n2 = Some trs2 ->
-          ExtAtomic sys msg_dec inits1 trs1 eouts1 ->
-          ExtAtomic sys msg_dec inits2 trs2 eouts2 ->
+          ExtAtomic sys inits1 trs1 eouts1 ->
+          ExtAtomic sys inits2 trs2 eouts2 ->
           forall cidx1 rsUp1 cidx2 rsUp2 pidx,
             RsUpMsgFrom dtr cidx1 rsUp1 ->
             parentIdxOf dtr cidx1 = Some pidx ->
@@ -1586,14 +1586,14 @@ Section Corollaries.
       Reachable (steps step_m) sys st1 ->
       forall trss st2,
         steps step_m sys st1 (List.concat trss) st2 ->
-        Forall (AtomicEx msg_dec) trss ->
-        Forall (Transactional sys msg_dec) trss ->
+        Forall AtomicEx trss ->
+        Forall (Transactional sys) trss ->
         forall n1 inits1 trs1 eouts1 n2 inits2 trs2 eouts2,
           n1 <> n2 ->
           nth_error trss n1 = Some trs1 ->
           nth_error trss n2 = Some trs2 ->
-          ExtAtomic sys msg_dec inits1 trs1 eouts1 ->
-          ExtAtomic sys msg_dec inits2 trs2 eouts2 ->
+          ExtAtomic sys inits1 trs1 eouts1 ->
+          ExtAtomic sys inits2 trs2 eouts2 ->
           forall cidx1 rsUp1 cidx2 rsUp2 pidx,
             RsUpMsgFrom dtr cidx1 rsUp1 ->
             parentIdxOf dtr cidx1 = Some pidx ->

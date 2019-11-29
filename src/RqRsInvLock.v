@@ -17,14 +17,14 @@ Ltac good_locking_get obj :=
         let H := fresh "H" in
         pose proof Hlock as H;
         specialize (H (obj_idx obj)); simpl in H;
-        specialize (H (in_map (@obj_idx _) _ _ Ho)); dest
+        specialize (H (in_map obj_idx _ _ Ho)); dest
       end;
   try match goal with
       | [Hlock: DownLockInv _ ?sys _, Ho: In obj (sys_objs ?sys) |- _] =>
         let H := fresh "H" in
         pose proof Hlock as H;
         specialize (H (obj_idx obj)); simpl in H;
-        specialize (H (in_map (@obj_idx _) _ _ Ho)); dest
+        specialize (H (in_map obj_idx _ _ Ho)); dest
       end.
 
 Ltac disc_lock_conds :=
@@ -42,7 +42,7 @@ Ltac disc_lock_conds :=
   end.
 
 Section RqRsDown.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -62,7 +62,7 @@ Section RqRsDown.
                    In rsUp rqid.(rqi_minds_rss) ->
                    rqsQ msgs down <> nil)).
   
-  Definition NoRqRsDown (st: MState) :=
+  Definition NoRqRsDown (st: State) :=
     forall cobj pobj,
       In cobj sys.(sys_objs) ->
       In pobj sys.(sys_objs) ->
@@ -71,10 +71,10 @@ Section RqRsDown.
         edgeDownTo dtr (obj_idx cobj) = Some down ->
         forall rsdm,
           rsdm.(msg_type) = MRs ->
-          InMP down rsdm st.(bst_msgs) ->
-          ONoDownLock st.(bst_orqs) (obj_idx pobj) \/
-          (ODownRq st.(bst_orqs) st.(bst_msgs) (obj_idx pobj) down /\
-           FirstMP st.(bst_msgs) down rsdm).
+          InMP down rsdm st.(st_msgs) ->
+          ONoDownLock st.(st_orqs) (obj_idx pobj) \/
+          (ODownRq st.(st_orqs) st.(st_msgs) (obj_idx pobj) down /\
+           FirstMP st.(st_msgs) down rsdm).
   
   Lemma noRqRsDown_InvInit:
     InvInit sys NoRqRsDown.
@@ -102,12 +102,12 @@ Section RqRsDown.
 
   Lemma noRqRsDown_step_ext_in:
     forall oss orqs msgs eins,
-      NoRqRsDown {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      NoRqRsDown {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       eins <> nil ->
       ValidMsgsExtIn sys eins ->
-      NoRqRsDown {| bst_oss := oss;
-                    bst_orqs := orqs;
-                    bst_msgs := enqMsgs eins msgs |}.
+      NoRqRsDown {| st_oss := oss;
+                    st_orqs := orqs;
+                    st_msgs := enqMsgs eins msgs |}.
   Proof.
     intros; disc_NoRqRsDown.
     assert (~ In down (idsOf eins)).
@@ -140,13 +140,13 @@ Section RqRsDown.
 
   Lemma noRqRsDown_step_ext_out:
     forall oss orqs msgs eouts,
-      NoRqRsDown {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      NoRqRsDown {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       eouts <> nil ->
       Forall (FirstMPI msgs) eouts ->
       ValidMsgsExtOut sys eouts ->
-      NoRqRsDown {| bst_oss := oss;
-                    bst_orqs := orqs;
-                    bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+      NoRqRsDown {| st_oss := oss;
+                    st_orqs := orqs;
+                    st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     intros; disc_NoRqRsDown.
     apply InMP_deqMsgs in H8.
@@ -185,7 +185,7 @@ Section RqRsDown.
       forall cobj,
         In cobj sys.(sys_objs) ->
         forall msgs down rsdm,
-          st.(bst_msgs) = msgs ->
+          st.(st_msgs) = msgs ->
           edgeDownTo dtr (obj_idx cobj) = Some down ->
           rsdm.(msg_type) = MRs ->
           InMP down rsdm msgs ->
@@ -195,7 +195,7 @@ Section RqRsDown.
     destruct Hrrs as [? [? ?]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs H0 H H2).
     good_locking_get cobj.
-    pose proof (edgeDownTo_Some H _ H5).
+    pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
     destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
     eapply upLockInvORq_down_rssQ_length_one_locked in H9; eauto;
       [|eapply rssQ_length_ge_one; eauto].
@@ -213,7 +213,7 @@ Section RqRsDown.
       forall cobj,
         In cobj sys.(sys_objs) ->
         forall msgs down rsdm1 rsdm2,
-          st.(bst_msgs) = msgs ->
+          st.(st_msgs) = msgs ->
           edgeDownTo dtr (obj_idx cobj) = Some down ->
           rsdm1.(msg_type) = MRs ->
           FirstMP msgs down rsdm1 ->
@@ -224,7 +224,7 @@ Section RqRsDown.
     destruct Hrrs as [? [? ?]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs H0 H H2).
     good_locking_get cobj.
-    pose proof (edgeDownTo_Some H _ H5).
+    pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
     destruct H11 as [rqUp [rsUp [pidx ?]]]; dest.
     eapply upLockInvORq_down_rssQ_length_one_locked in H10; eauto.
     - dest; red in H14.
@@ -233,7 +233,7 @@ Section RqRsDown.
 
       clear -H6 H7 H8 H9 H18.
       unfold InMP, FirstMP, firstMP, rssQ, deqMP in *.
-      destruct (findQ rdown (bst_msgs st)); [discriminate|].
+      destruct (findQ rdown (st_msgs st)); [discriminate|].
       simpl in H7; inv H7.
       simpl in H18; rewrite H6 in H18; simpl in H18.
       unfold findQ in H9; mred; simpl in H9.
@@ -254,7 +254,7 @@ Section RqRsDown.
       forall pobj,
         In pobj sys.(sys_objs) ->
         forall cidx msgs rsUp rsum1 rsum2,
-          st.(bst_msgs) = msgs ->
+          st.(st_msgs) = msgs ->
           parentIdxOf dtr cidx = Some (obj_idx pobj) ->
           rsEdgeUpFrom dtr cidx = Some rsUp ->
           FirstMP msgs rsUp rsum1 ->
@@ -268,7 +268,7 @@ Section RqRsDown.
 
     clear -H8 H9.
     unfold InMP, FirstMP, firstMP, deqMP in *.
-    destruct (findQ rsUp (bst_msgs st)); [discriminate|].
+    destruct (findQ rsUp (st_msgs st)); [discriminate|].
     simpl in H8; inv H8.
     unfold findQ in H9; mred; simpl in H9.
     destruct q; [elim H9|].
@@ -778,7 +778,8 @@ Section RqRsDown.
   Lemma noRqRsDown_ok:
     InvReachable sys step_m NoRqRsDown.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply noRqRsDown_InvInit.
     - apply noRqRsDown_InvStep.
   Qed.
@@ -786,7 +787,7 @@ Section RqRsDown.
 End RqRsDown.
 
 Section Corollaries.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -800,7 +801,7 @@ Section Corollaries.
         forall rqUp,
           rqEdgeUpFrom dtr (obj_idx obj) = Some rqUp ->
           forall msgs rqum1 rqum2,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             rqum1 <> rqum2 ->
             InMP rqUp rqum1 msgs ->
             InMP rqUp rqum2 msgs ->
@@ -808,7 +809,7 @@ Section Corollaries.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
-    pose proof (rqEdgeUpFrom_Some Hsd _ H1).
+    pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H2 as [rsUp [down [pidx ?]]]; dest.
     good_locking_get obj.
     eapply upLockInvORq_rqUp_length_two_False; eauto.
@@ -825,7 +826,7 @@ Section Corollaries.
           rqEdgeUpFrom dtr (obj_idx obj) = Some rqUp ->
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall msgs rqum rsdm,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             InMP rqUp rqum msgs ->
             InMP down rsdm msgs ->
             rsdm.(msg_type) = MRs ->
@@ -833,7 +834,7 @@ Section Corollaries.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
-    pose proof (rqEdgeUpFrom_Some Hsd _ H1).
+    pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H3 as [rsUp [rdown [pidx ?]]]; dest.
     disc_rule_conds.
     good_locking_get obj.
@@ -852,24 +853,24 @@ Section Corollaries.
           parentIdxOf dtr (obj_idx obj) = Some pidx ->
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall msgs rqum,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             InMP rqUp rqum msgs ->
             forall orqs,
-              st.(bst_orqs) = orqs ->
+              st.(st_orqs) = orqs ->
               OLockedTo orqs pidx (Some down) ->
               False.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     good_locking_get obj.
-    assert (UpLockedInv dtr st.(bst_orqs) st.(bst_msgs) obj.(obj_idx))
+    assert (UpLockedInv dtr st.(st_orqs) st.(st_msgs) obj.(obj_idx))
       by (eapply upLockInvORq_parent_locked_locked; eauto).
     red in H6.
     destruct H6 as [rrqUp [rdown [rpidx ?]]]; dest.
     disc_rule_conds.
     xor3_contra2 H13.
     red in H5.
-    destruct (findQ rrqUp (bst_msgs st)) as [|e q]; [dest_in|].
+    destruct (findQ rrqUp (st_msgs st)) as [|e q]; [dest_in|].
     destruct q; [reflexivity|simpl in H10; omega].
   Qed.
 
@@ -881,7 +882,7 @@ Section Corollaries.
         forall down,
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall msgs rsdm1 rsdm2,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             rsdm1 <> rsdm2 ->
             InMP down rsdm1 msgs ->
             rsdm1.(msg_type) = MRs ->
@@ -891,7 +892,7 @@ Section Corollaries.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
-    pose proof (edgeDownTo_Some Hsd _ H1).
+    pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
     good_locking_get obj.
     eapply upLockInvORq_down_rssQ_length_two_False; eauto.
@@ -906,12 +907,12 @@ Section Corollaries.
         forall down,
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall msgs,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             length (rssQ msgs down) >= 2 -> False.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
-    pose proof (edgeDownTo_Some Hsd _ H1).
+    pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
     good_locking_get obj.
     eapply upLockInvORq_down_rssQ_length_two_False; eauto.
@@ -926,18 +927,18 @@ Section Corollaries.
           parentIdxOf dtr (obj_idx obj) = Some pidx ->
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall msgs rsdm,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             InMP down rsdm msgs ->
             rsdm.(msg_type) = MRs ->
             forall orqs,
-              st.(bst_orqs) = orqs ->
+              st.(st_orqs) = orqs ->
               OLockedTo orqs pidx (Some down) ->
               False.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     good_locking_get obj.
-    assert (UpLockedInv dtr st.(bst_orqs) st.(bst_msgs) obj.(obj_idx))
+    assert (UpLockedInv dtr st.(st_orqs) st.(st_msgs) obj.(obj_idx))
       by (eapply upLockInvORq_parent_locked_locked; eauto).
     red in H6.
     destruct H6 as [rqUp [rdown [rpidx ?]]]; dest.
@@ -956,7 +957,7 @@ Section Corollaries.
           parentIdxOf dtr (obj_idx obj) = Some pidx ->
           edgeDownTo dtr (obj_idx obj) = Some down ->
           forall orqs orq,
-            st.(bst_orqs) = orqs ->
+            st.(st_orqs) = orqs ->
             orqs@[obj_idx obj] = Some orq ->
             orq@[upRq] = None ->
             OLockedTo orqs pidx (Some down) ->
@@ -976,19 +977,19 @@ Section Corollaries.
       forall obj,
         In obj (sys_objs sys) ->
         forall orqs orq,
-          st.(bst_orqs) = orqs ->
+          st.(st_orqs) = orqs ->
           orqs@[obj_idx obj] = Some orq ->
           orq@[upRq] = None ->
           forall rqUp,
             rqEdgeUpFrom dtr (obj_idx obj) = Some rqUp ->
             forall msgs rqum,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             InMP rqUp rqum msgs ->
             False.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
-    pose proof (rqEdgeUpFrom_Some Hsd _ H4).
+    pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H4).
     destruct H1 as [rsUp [down [pidx ?]]]; dest.
     good_locking_get obj.
     eapply upLockInvORq_rqUp_length_one_locked in H8; eauto.
@@ -1002,20 +1003,20 @@ Section Corollaries.
       forall obj,
         In obj (sys_objs sys) ->
         forall orqs orq,
-          st.(bst_orqs) = orqs ->
+          st.(st_orqs) = orqs ->
           orqs@[obj_idx obj] = Some orq ->
           orq@[upRq] = None ->
           forall down,
             edgeDownTo dtr (obj_idx obj) = Some down ->
             forall msgs rsdm,
-              st.(bst_msgs) = msgs ->
+              st.(st_msgs) = msgs ->
               rsdm.(msg_type) = MRs ->
               InMP down rsdm msgs ->
               False.
   Proof.
     destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
-    pose proof (edgeDownTo_Some Hsd _ H4).
+    pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H4).
     destruct H1 as [rqUp [rsUp [pidx ?]]]; dest.
     good_locking_get obj.
     eapply upLockInvORq_down_rssQ_length_one_locked in H9; eauto.
@@ -1033,7 +1034,7 @@ Section Corollaries.
         forall down,
           edgeDownTo dtr (obj_idx cobj) = Some down ->
           forall msgs rsdm rqdm,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             msg_type rsdm = MRs ->
             InMP down rsdm msgs ->
             msg_type rqdm = MRq ->
@@ -1047,9 +1048,9 @@ Section Corollaries.
     specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H8 H9).
     destruct Hrrinv.
     - good_locking_get pobj.
-      assert (DownLockFreeInv dtr (bst_orqs st) (bst_msgs st) (obj_idx pobj)).
+      assert (DownLockFreeInv dtr (st_orqs st) (st_msgs st) (obj_idx pobj)).
       { red in H7, H12.
-        destruct ((bst_orqs st)@[obj_idx pobj]) eqn:Horq; simpl in *.
+        destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; simpl in *.
         { rewrite H7 in H12; assumption. }
         { assumption. }
       }
@@ -1074,7 +1075,7 @@ Section Corollaries.
         forall down,
           edgeDownTo dtr (obj_idx cobj) = Some down ->
           forall msgs dq rqdm rsdm,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             msg_type rqdm = MRq ->
             In rqdm dq ->
             msg_type rsdm = MRs ->
@@ -1085,7 +1086,7 @@ Section Corollaries.
     pose proof (upLockInv_ok Hiorqs H0 H H2) as Hulinv.
     pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
     pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
-    assert (InMP down rsdm st.(bst_msgs)).
+    assert (InMP down rsdm st.(st_msgs)).
     { red; rewrite H11.
       apply in_or_app; right; left; reflexivity.
     }
@@ -1099,7 +1100,7 @@ Section Corollaries.
           red; rewrite H11; apply in_or_app; left; assumption].
       destruct H13 as [rqid ?]; dest.
       red in H7.
-      destruct ((bst_orqs st)@[obj_idx pobj]) eqn:Horq; [simpl in *|discriminate].
+      destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; [simpl in *|discriminate].
       destruct (o@[downRq]) eqn:Hrqid; [simpl in *|discriminate].
       discriminate.
     - good_locking_get cobj.
@@ -1127,7 +1128,7 @@ Section Corollaries.
           edgeDownTo dtr (obj_idx cobj) = Some down ->
           rsEdgeUpFrom dtr (obj_idx cobj) = Some rsUp ->
           forall msgs rsdm rsum,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             msg_type rsdm = MRs ->
             InMP down rsdm msgs ->
             InMP rsUp rsum msgs ->
@@ -1140,9 +1141,9 @@ Section Corollaries.
     specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H9 H10).
     destruct Hrrinv.
     - good_locking_get pobj.
-      assert (DownLockFreeInv dtr (bst_orqs st) (bst_msgs st) (obj_idx pobj)).
+      assert (DownLockFreeInv dtr (st_orqs st) (st_msgs st) (obj_idx pobj)).
       { red in H8, H12.
-        destruct ((bst_orqs st)@[obj_idx pobj]) eqn:Horq; simpl in *.
+        destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; simpl in *.
         { rewrite H8 in H12; assumption. }
         { assumption. }
       }
@@ -1157,7 +1158,7 @@ Section Corollaries.
         [|eapply findQ_length_ge_one; eassumption].
       destruct H13 as [rqid ?]; dest.
       red in H8.
-      destruct ((bst_orqs st)@[obj_idx pobj]) eqn:Horq; [simpl in *|exfalso; auto].
+      destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; [simpl in *|exfalso; auto].
       destruct (o@[downRq]) eqn:Hrqid; [simpl in *|exfalso; auto].
       inv H13.
       specialize (H8 _ _ H6 H7 H15).
@@ -1166,7 +1167,7 @@ Section Corollaries.
       destruct (in_dec _ _ _); auto.
       red in H16; dest.
       xor3_contra1 H16.
-      + destruct (rqsQ (bst_msgs st) rdown); [exfalso; auto|].
+      + destruct (rqsQ (st_msgs st) rdown); [exfalso; auto|].
         simpl in *; omega.
       + apply findQ_length_ge_one in H11.
         omega.
@@ -1181,7 +1182,7 @@ Section Corollaries.
           parentIdxOf dtr oidx = Some (obj_idx pobj) ->
           edgeDownTo dtr oidx = Some rqDown ->
           forall msgs rqdm1 rqdm2,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             rqdm1 <> rqdm2 ->
             InMP rqDown rqdm1 msgs ->
             rqdm1.(msg_type) = MRq ->
@@ -1207,7 +1208,7 @@ Section Corollaries.
           edgeDownTo dtr oidx = Some rqDown ->
           rsEdgeUpFrom dtr oidx = Some rsUp ->
           forall msgs rqdm rsum,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             InMP rqDown rqdm msgs ->
             rqdm.(msg_type) = MRq ->
             InMP rsUp rsum msgs ->
@@ -1230,7 +1231,7 @@ Section Corollaries.
           parentIdxOf dtr oidx = Some (obj_idx pobj) ->
           rsEdgeUpFrom dtr oidx = Some rsUp ->
           forall msgs rsum1 rsum2,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             rsum1 <> rsum2 ->
             InMP rsUp rsum1 msgs ->
             InMP rsUp rsum2 msgs ->
@@ -1253,7 +1254,7 @@ Section Corollaries.
           parentIdxOf dtr oidx = Some (obj_idx pobj) ->
           rsEdgeUpFrom dtr oidx = Some rsUp ->
           forall msgs,
-            st.(bst_msgs) = msgs ->
+            st.(st_msgs) = msgs ->
             length (findQ rsUp msgs) >= 2 -> False.
   Proof.
     destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
@@ -1268,14 +1269,14 @@ Section Corollaries.
       forall pobj,
         In pobj (sys_objs sys) ->
         forall orqs porq,
-          st.(bst_orqs) = orqs ->
+          st.(st_orqs) = orqs ->
           orqs@[obj_idx pobj] = Some porq ->
           porq@[downRq] = None ->
           forall oidx rqDown,
             parentIdxOf dtr oidx = Some (obj_idx pobj) ->
             edgeDownTo dtr oidx = Some rqDown ->
             forall msgs rqdm,
-              st.(bst_msgs) = msgs ->
+              st.(st_msgs) = msgs ->
               InMP rqDown rqdm msgs ->
               rqdm.(msg_type) = MRq ->
               False.
@@ -1295,14 +1296,14 @@ Section Corollaries.
       forall pobj,
         In pobj (sys_objs sys) ->
         forall orqs porq,
-          st.(bst_orqs) = orqs ->
+          st.(st_orqs) = orqs ->
           orqs@[obj_idx pobj] = Some porq ->
           porq@[downRq] = None ->
           forall oidx rsUp,
             parentIdxOf dtr oidx = Some (obj_idx pobj) ->
             rsEdgeUpFrom dtr oidx = Some rsUp ->
             forall msgs rsum,
-              st.(bst_msgs) = msgs ->
+              st.(st_msgs) = msgs ->
               InMP rsUp rsum msgs ->
               False.
   Proof.
@@ -1321,7 +1322,7 @@ Section Corollaries.
       forall pobj,
         In pobj (sys_objs sys) ->
         forall orqs porq,
-          st.(bst_orqs) = orqs ->
+          st.(st_orqs) = orqs ->
           orqs@[obj_idx pobj] = Some porq ->
           porq@[downRq] = None ->
           forall oidx rsUp orq rqid,
@@ -1344,7 +1345,7 @@ Section Corollaries.
   Qed.
 
 End Corollaries.
-      
+
 Close Scope list.
 Close Scope fmap.
 

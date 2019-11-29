@@ -50,12 +50,12 @@ Definition InvDirInv (topo: DTree) (cifc: CIfc) (eidx: IdxT) (eost: OState) (oss
     (msiM <= getDir cidx eost#[dir] ->
      ObjsInvalid (fun oidx => ~ In oidx (subtreeIndsOf topo cidx)) oss msgs).
 
-Definition InvExcl (topo: DTree) (cifc: CIfc) (st: MState): Prop :=
+Definition InvExcl (topo: DTree) (cifc: CIfc) (st: State): Prop :=
   forall eidx,
-    eost <+- (bst_oss st)@[eidx];
-      (InvObjExcl0 eidx eost (bst_oss st) (bst_msgs st) /\
-       InvObjOwned topo eidx eost (bst_oss st) (bst_msgs st) /\
-       InvDirInv topo cifc eidx eost (bst_oss st) (bst_msgs st)).
+    eost <+- (st_oss st)@[eidx];
+      (InvObjExcl0 eidx eost (st_oss st) (st_msgs st) /\
+       InvObjOwned topo eidx eost (st_oss st) (st_msgs st) /\
+       InvDirInv topo cifc eidx eost (st_oss st) (st_msgs st)).
 
 Section Facts.
 
@@ -590,7 +590,7 @@ Section Facts.
 
     Lemma ObjsInvalid_l1_singleton:
       forall oss orqs msgs,
-        InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall eidx,
           In eidx (c_l1_indices cifc) ->
           ObjsInvalid
@@ -1053,7 +1053,7 @@ Section InvExcl.
     forall inP oss msgs,
       ObjsInvalid inP oss msgs ->
       forall orqs,
-        InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall eins,
           ValidMsgsExtIn impl eins ->
           ObjsInvalid inP oss (enqMsgs eins msgs).
@@ -1084,13 +1084,13 @@ Section InvExcl.
 
   Lemma msi_InvExcl_ext_in:
     forall oss orqs msgs,
-      InvExcl topo cifc {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvExcl topo cifc {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvExcl topo cifc {| bst_oss := oss;
-                             bst_orqs := orqs;
-                             bst_msgs := enqMsgs eins msgs |}.
+        InvExcl topo cifc {| st_oss := oss;
+                             st_orqs := orqs;
+                             st_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H eidx); simpl in H.
@@ -1154,7 +1154,7 @@ Section InvExcl.
     forall inP oss msgs,
       ObjsInvalid inP oss msgs ->
       forall orqs,
-        InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall (eouts: list (Id Msg)),
           ValidMsgsExtOut impl eouts ->
           ObjsInvalid inP oss (deqMsgs (idsOf eouts) msgs).
@@ -1185,13 +1185,13 @@ Section InvExcl.
 
   Lemma msi_InvExcl_ext_out:
     forall oss orqs msgs,
-      InvExcl topo cifc {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvExcl topo cifc {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
         ValidMsgsExtOut impl eouts ->
-        InvExcl topo cifc {| bst_oss := oss;
-                             bst_orqs := orqs;
-                             bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+        InvExcl topo cifc {| st_oss := oss;
+                             st_orqs := orqs;
+                             st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H eidx); simpl in H.
@@ -1682,7 +1682,7 @@ Section InvExcl.
 
   Lemma InvExcl_deq_sound:
     forall oss porqs norqs msgs,
-      InvExcl topo cifc {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
+      InvExcl topo cifc {| st_oss := oss; st_orqs := porqs; st_msgs := msgs |} ->
       forall rmsgs,
         NoDup (idsOf rmsgs) ->
         Forall (FirstMPI msgs) rmsgs ->
@@ -1691,9 +1691,9 @@ Section InvExcl.
                                  msiRqM; msiDownRqI; msiDownRsI;
                                    msiInvRq; msiInvWRq;
                                      getRq; getRs; setRq; setRs]) rmsgs ->
-        InvExcl topo cifc {| bst_oss := oss;
-                             bst_orqs := norqs;
-                             bst_msgs := deqMsgs (idsOf rmsgs) msgs |}.
+        InvExcl topo cifc {| st_oss := oss;
+                             st_orqs := norqs;
+                             st_msgs := deqMsgs (idsOf rmsgs) msgs |}.
   Proof.
     intros.
     red; simpl; intros.
@@ -1738,16 +1738,16 @@ Section InvExcl.
 
   Lemma InvExcl_enq_sound:
     forall oss porqs norqs msgs,
-      InvExcl topo cifc {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
+      InvExcl topo cifc {| st_oss := oss; st_orqs := porqs; st_msgs := msgs |} ->
       forall nmsgs,
         Forall (fun idm => In (msg_id (valOf idm))
                               [msiRqS; msiDownRqS;
                                  msiRqM; msiDownRqI;
                                    msiInvRq; msiInvWRq; msiInvRs;
                                      getRq; getRs; setRq; setRs]) nmsgs ->
-        InvExcl topo cifc {| bst_oss := oss;
-                             bst_orqs := norqs;
-                             bst_msgs := enqMsgs nmsgs msgs |}.
+        InvExcl topo cifc {| st_oss := oss;
+                             st_orqs := norqs;
+                             st_msgs := enqMsgs nmsgs msgs |}.
   Proof.
     intros.
     red; simpl; intros.
@@ -1830,14 +1830,14 @@ Section InvExcl.
 
   Lemma InvExcl_state_transition_sound:
     forall oss porqs msgs,
-      InvExcl topo cifc {| bst_oss := oss; bst_orqs := porqs; bst_msgs := msgs |} ->
+      InvExcl topo cifc {| st_oss := oss; st_orqs := porqs; st_msgs := msgs |} ->
       forall oidx (post nost: OState) norqs,
         oss@[oidx] = Some post ->
         (nost#[status] <= msiI \/ nost#[status] <= post#[status]) ->
         post#[owned] || negb (nost#[owned]) = true ->
         nost#[dir] = post#[dir] ->
-        InvExcl topo cifc {| bst_oss := oss +[oidx <- nost];
-                             bst_orqs := norqs; bst_msgs := msgs |}.
+        InvExcl topo cifc {| st_oss := oss +[oidx <- nost];
+                             st_orqs := norqs; st_msgs := msgs |}.
   Proof.
     intros.
     red; simpl; intros.
@@ -1882,8 +1882,8 @@ Section InvExcl.
 
   Lemma InvExcl_inv_ObjsInvalid:
     forall oss orqs msgs
-           (Hioi: InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |}),
-      InvExcl topo cifc {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+           (Hioi: InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |}),
+      InvExcl topo cifc {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall oidx nost cidx cost,
         In cidx (c_li_indices cifc ++ c_l1_indices cifc) ->
         parentIdxOf topo cidx = Some oidx ->
@@ -1975,25 +1975,25 @@ Section InvExcl.
   
   Ltac solve_InvExcl_trivial :=
     try match goal with
-        | |- InvExcl _ _ {| bst_oss := ?oss +[?oidx <- ?pos] |} =>
+        | |- InvExcl _ _ {| st_oss := ?oss +[?oidx <- ?pos] |} =>
           replace (oss +[oidx <- pos]) with oss by meq
         end;
     repeat
       match goal with
-      | [He: InvExcl _ _ {| bst_orqs := ?orqs |}
-         |- InvExcl _ _ {| bst_msgs := enqMP ?midx ?msg _ |}] =>
+      | [He: InvExcl _ _ {| st_orqs := ?orqs |}
+         |- InvExcl _ _ {| st_msgs := enqMP ?midx ?msg _ |}] =>
         eapply InvExcl_enq_sound with (porqs:= orqs) (nmsgs:= [(midx, msg)]);
         [|solve_InvExcl_msgs; fail]
-      | [He: InvExcl _ _ {| bst_orqs := ?orqs |},
+      | [He: InvExcl _ _ {| st_orqs := ?orqs |},
              Hf: FirstMPI _ (?midx, ?msg)
-         |- InvExcl _ _ {| bst_msgs := deqMP ?midx _ |}] =>
+         |- InvExcl _ _ {| st_msgs := deqMP ?midx _ |}] =>
         eapply InvExcl_deq_sound with (porqs:= orqs) (rmsgs:= [(midx, msg)]);
         [|solve_InvExcl_msgs; fail..]
-      | [He: InvExcl _ _ {| bst_orqs := ?orqs |}
-         |- InvExcl _ _ {| bst_msgs := enqMsgs _ _ |}] =>
+      | [He: InvExcl _ _ {| st_orqs := ?orqs |}
+         |- InvExcl _ _ {| st_msgs := enqMsgs _ _ |}] =>
         eapply InvExcl_enq_sound with (porqs:= orqs); [|solve_InvExcl_msgs; fail]
-      | [He: InvExcl _ _ {| bst_orqs := ?orqs |}
-         |- InvExcl _ _ {| bst_msgs := deqMsgs _ _ |}] =>
+      | [He: InvExcl _ _ {| st_orqs := ?orqs |}
+         |- InvExcl _ _ {| st_msgs := deqMsgs _ _ |}] =>
         eapply InvExcl_deq_sound with (porqs:= orqs); [|solve_InvExcl_msgs; fail..]
       end; try eassumption.
 
@@ -2091,7 +2091,7 @@ Section InvExcl.
 
   Ltac disc_L1DirI oidx :=
     match goal with
-    | [Hl: InvL1DirI _ {| bst_oss := ?oss |},
+    | [Hl: InvL1DirI _ {| st_oss := ?oss |},
            Hoin: In oidx (c_l1_indices _),
                  Host: ?oss@[oidx] = Some _ |- _] =>
       red in Hl; rewrite Forall_forall in Hl;
@@ -5869,7 +5869,8 @@ Section InvExcl.
   Lemma msi_InvExcl_ok:
     Invariant.InvReachable impl step_m (InvExcl topo cifc).
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply msi_InvExcl_init.
     - apply msi_InvExcl_step.
   Qed.

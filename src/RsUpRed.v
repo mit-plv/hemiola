@@ -12,7 +12,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section RsUpReduction.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -39,9 +39,9 @@ Section RsUpReduction.
             In rule obj.(obj_rules) /\ rule.(rule_idx) = ridx /\
             RsUp rule /\ RsBackRuleCommon rule) /\
         (exists oorq orqid,
-            st1.(bst_orqs)@[oidx] = Some oorq /\
+            st1.(st_orqs)@[oidx] = Some oorq /\
             oorq@[downRq] = Some orqid /\
-            DownLockedInv dtr st1.(bst_orqs) st1.(bst_msgs) oidx orqid).
+            DownLockedInv dtr st1.(st_orqs) st1.(st_msgs) oidx orqid).
   Proof.
     intros; destruct Hrrs as [? [? [_ ?]]].
     pose proof (footprints_ok Hiorqs H3 H0).
@@ -355,7 +355,7 @@ Section RsUpReduction.
         DisjList rsUps rins ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rsUps ->
+          Forall (InMPI st1.(st_msgs)) rsUps ->
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           DisjList (idsOf rsUps) (idsOf rins).
   Proof.
@@ -370,16 +370,16 @@ Section RsUpReduction.
     destruct (msg_dec rsm1 rsm2); subst;
       [specialize (H6 (rsUp, rsm2)); destruct H6; auto|].
 
-    assert (length (findQ rsUp st1.(bst_msgs)) >= 2).
+    assert (length (findQ rsUp st1.(st_msgs)) >= 2).
     { rewrite Forall_forall in H8; specialize (H8 _ H12).
-      assert (InMPI (bst_msgs st1) (rsUp, rsm2)).
+      assert (InMPI (st_msgs st1) (rsUp, rsm2)).
       { inv_step; simpl.
         apply FirstMPI_Forall_InMP in H22.
         rewrite Forall_forall in H22; auto.
       }
       clear -H8 H10 n.
       unfold InMPI, InMP in *; simpl in *.
-      destruct (findQ rsUp (bst_msgs st1)); [elim H8|].
+      destruct (findQ rsUp (st_msgs st1)); [elim H8|].
       destruct q; [dest_in; exfalso; auto|].
       simpl; omega.
     }
@@ -402,7 +402,7 @@ Section RsUpReduction.
         DisjList rsUps rins ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rsUps ->
+          Forall (InMPI st1.(st_msgs)) rsUps ->
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           DisjList routs rsUps.
   Proof.
@@ -452,11 +452,11 @@ Section RsUpReduction.
                   parentIdxOf dtr cidx = Some objTo.(obj_idx) /\
                   rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         DisjList rsUps inits ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rsUps ->
+          Forall (InMPI st1.(st_msgs)) rsUps ->
           steps step_m sys st1 hst st2 ->
           DisjList outs rsUps.
   Proof.
@@ -496,7 +496,7 @@ Section RsUpReduction.
                 exists cidx,
                   parentIdxOf dtr cidx = Some oidxTo /\
                   rsEdgeUpFrom dtr cidx = Some (idOf rsUp)) rsUps ->
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       DisjList outs rsUps ->
       Reducible sys (RlblInt oidx ridx rsUps routs :: hst)
                 (hst ++ [RlblInt oidx ridx rsUps routs]).
@@ -514,10 +514,10 @@ Section RsUpReduction.
     forall oidxTo rsUps (HrsUps: rsUps <> nil)
            inits ins hst outs eouts oidx ridx routs,
       RsUpMsgs dtr oidxTo rsUps ->
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       DisjList rsUps inits ->
       ReducibleP
-        sys (fun st => Forall (InMPI st.(bst_msgs)) rsUps)
+        sys (fun st => Forall (InMPI st.(st_msgs)) rsUps)
         (RlblInt oidx ridx rsUps routs :: hst)
         (hst ++ [RlblInt oidx ridx rsUps routs]).
   Proof.

@@ -2,23 +2,20 @@ Require Import Bool List String Peano_dec.
 Require Import Common ListSupport FMap Syntax Semantics StepM.
 Require Import Topology.
 
-Open Scope list.
+Local Open Scope list.
 
 (** [Atomic] and [Transactional] histories *)
 
 Section Sequential.
-  Context `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
   Variables sys: System.
 
-  Context {MsgT} `{HasMsg MsgT}.
-  Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
-
   Inductive Atomic:
-    list (Id MsgT) (* initially-dequeued messages *) ->
-    list (Id MsgT) (* all-dequeued *) ->
-    History MsgT (* history *) ->
-    list (Id MsgT) (* all-enqueued *) ->
-    list (Id MsgT) (* eventual outputs *) ->
+    list (Id Msg) (* initially-dequeued messages *) ->
+    list (Id Msg) (* all-dequeued *) ->
+    History (* history *) ->
+    list (Id Msg) (* all-enqueued *) ->
+    list (Id Msg) (* eventual outputs *) ->
     Prop :=
   | AtomicStart:
       forall oidx ridx ins outs,
@@ -30,17 +27,17 @@ Section Sequential.
         SubList rins eouts ->
         nins = ins ++ rins ->
         nouts = outs ++ routs ->
-        neouts = removeL (id_dec msgT_dec) eouts rins ++ routs ->
+        neouts = removeL (id_dec msg_dec) eouts rins ++ routs ->
         Atomic inits nins (RlblInt oidx ridx rins routs :: hst) nouts neouts.
 
-  Definition AtomicEx (hst: History MsgT): Prop :=
+  Definition AtomicEx (hst: History): Prop :=
     exists inits ins outs eouts,
       Atomic inits ins hst outs eouts.
 
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from some
    * external requests (possibly [nil]) 
    *)
-  Inductive ExtAtomic: list (Id MsgT) -> History MsgT -> list (Id MsgT) -> Prop :=
+  Inductive ExtAtomic: list (Id Msg) -> History -> list (Id Msg) -> Prop :=
   | ExtAtomicIntro:
       forall rqs ins hst outs eouts,
         SubList (idsOf rqs) (sys_merqs sys) ->
@@ -50,16 +47,16 @@ Section Sequential.
   (* A history is [IntAtomic] iff it is [Atomic] and starts from some
    * non-external requests. Note that initial messages cannot be [nil].
    *)
-  Inductive IntAtomic: History MsgT -> list (Id MsgT) -> Prop :=
+  Inductive IntAtomic: History -> list (Id Msg) -> Prop :=
   | IntAtomicIntro:
       forall inits ins hst outs eouts,
         ~ SubList (idsOf inits) (sys_merqs sys) ->
         Atomic inits ins hst outs eouts ->
         IntAtomic hst eouts.
 
-  Inductive Transactional: History MsgT -> Prop :=
+  Inductive Transactional: History -> Prop :=
   | TrsSlt:
-      Transactional (RlblEmpty _ :: nil)
+      Transactional (RlblEmpty :: nil)
   | TrsIns:
       forall eins tin,
         tin = RlblIns eins ->
@@ -73,21 +70,18 @@ Section Sequential.
         ExtAtomic inits hst eouts ->
         Transactional hst.
 
-  Definition Sequential (hst: History MsgT) (trss: list (History MsgT)) :=
+  Definition Sequential (hst: History) (trss: list History) :=
     Forall Transactional trss /\ hst = List.concat trss.
 
 End Sequential.
 
 Section Semi.
-  Context `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
   Variables sys: System.
 
-  Context {MsgT} `{HasMsg MsgT}.
-  Hypothesis (msgT_dec: forall m1 m2: MsgT, {m1 = m2} + {m1 <> m2}).
-
-  Inductive STransactional: History MsgT -> nat -> Prop :=
+  Inductive STransactional: History -> nat -> Prop :=
   | STrsSlt:
-      STransactional (RlblEmpty _ :: nil) 0
+      STransactional (RlblEmpty :: nil) 0
   | STrsIns:
       forall eins tin,
         tin = RlblIns eins ->
@@ -98,14 +92,14 @@ Section Semi.
         STransactional (tout :: nil) 0
   | STrsIntAtomic:
       forall hst eouts,
-        IntAtomic sys msgT_dec hst eouts ->
+        IntAtomic sys hst eouts ->
         STransactional hst (List.length hst)
   | STrsExtAtomic:
       forall inits hst eouts,
-        ExtAtomic sys msgT_dec inits hst eouts ->
+        ExtAtomic sys inits hst eouts ->
         STransactional hst 0.
 
-  Inductive SSequential: list (History MsgT) -> nat -> Prop :=
+  Inductive SSequential: list History -> nat -> Prop :=
   | SSeqNil: SSequential nil 0
   | SSeqConcat:
       forall trss n trs tn ntrss nn,
@@ -119,25 +113,23 @@ End Semi.
 
 (*! Serializability *)
 
-Definition trsSteps `{OStateIfc} (sys: System)
-           (st1: MState) (hst: MHistory) (st2: MState) :=
+Definition trsSteps `{DecValue} `{OStateIfc} (sys: System)
+           (st1: State) (hst: History) (st2: State) :=
   steps step_m sys st1 hst st2 /\
-  Transactional sys msg_dec hst.
+  Transactional sys hst.
 
-Definition seqSteps `{OStateIfc} (sys: System)
-           (st1: MState) (hst: MHistory) (st2: MState) :=
+Definition seqSteps `{DecValue} `{OStateIfc} (sys: System)
+           (st1: State) (hst: History) (st2: State) :=
   steps step_m sys st1 hst st2 /\
-  exists trss, Sequential sys msg_dec hst trss.
+  exists trss, Sequential sys hst trss.
 
-Definition Serializable `{OStateIfc} (sys: System) (st: MState) :=
+Definition Serializable `{DecValue} `{OStateIfc} (sys: System) (st: State) :=
   (* Legal and sequential *)
   exists sll, seqSteps sys (initsOf sys) sll st.
 
 (* A system is serializable when all possible behaviors are [Serializable]. *)
-Definition SerializableSys `{OStateIfc} (sys: System) :=
+Definition SerializableSys `{DecValue} `{OStateIfc} (sys: System) :=
   forall st,
     Reachable (steps step_m) sys st ->
     Serializable sys st.
-
-Close Scope list.
 

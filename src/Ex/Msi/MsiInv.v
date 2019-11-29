@@ -104,7 +104,7 @@ Section Facts.
   Lemma RootChnInv_root_NoRsI:
     forall tr bidx st,
       RootChnInv tr bidx st ->
-      NoRsI (rootOf (fst (tree2Topo tr bidx))) (bst_msgs st).
+      NoRsI (rootOf (fst (tree2Topo tr bidx))) (st_msgs st).
   Proof.
     intros.
     do 3 red; intros.
@@ -117,7 +117,7 @@ Section Facts.
   Lemma RootChnInv_root_NoRqI:
     forall tr bidx st,
       RootChnInv tr bidx st ->
-      NoRqI (rootOf (fst (tree2Topo tr bidx))) (bst_msgs st).
+      NoRqI (rootOf (fst (tree2Topo tr bidx))) (st_msgs st).
   Proof.
     intros.
     do 3 red; intros.

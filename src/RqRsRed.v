@@ -12,7 +12,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section InsideTree.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -96,7 +96,7 @@ Section InsideTree.
 
   Lemma atomic_inside_tree_ins_disj_outs:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -123,7 +123,7 @@ Section InsideTree.
 
   Corollary atomic_inside_tree_inits_disj_rqUps:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -146,7 +146,7 @@ Section InsideTree.
 End InsideTree.
 
 Section RqRsRed.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -235,7 +235,7 @@ Section RqRsRed.
 
   Lemma rqrs_lbl_atomic_ins_disj:
     forall inits1 ins1 hst1 outs1 eouts1,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
       forall st11 st21,
         Reachable (steps step_m) sys st11 ->
         Reachable (steps step_m) sys st21 ->
@@ -257,8 +257,8 @@ Section RqRsRed.
 
   Lemma rqrs_atomic_ins_disj:
     forall inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits2 ins2 hst2 outs2 eouts2 ->
       DisjList (oindsOf hst1) (oindsOf hst2) ->
       forall st11 st21,
         Reachable (steps step_m) sys st11 ->
@@ -285,7 +285,7 @@ Section RqRsRed.
   
   Lemma rqrs_lbl_atomic_outs_disj:
     forall inits1 ins1 hst1 outs1 eouts1,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
       forall st11 st21,
         Reachable (steps step_m) sys st11 ->
         Reachable (steps step_m) sys st21 ->
@@ -307,8 +307,8 @@ Section RqRsRed.
 
   Lemma rqrs_atomic_outs_disj:
     forall inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits2 ins2 hst2 outs2 eouts2 ->
       DisjList (oindsOf hst1) (oindsOf hst2) ->
       forall st11 st21,
         Reachable (steps step_m) sys st11 ->
@@ -335,8 +335,8 @@ Section RqRsRed.
 
   Lemma rqrs_atomic_eouts_ins_disj:
     forall inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits2 ins2 hst2 outs2 eouts2 ->
       DisjList (oindsOf hst1) (oindsOf hst2) ->
       DisjList eouts1 inits2 ->
       forall st11 st21,
@@ -361,8 +361,8 @@ Section RqRsRed.
 
   Lemma rqrs_atomic_outs_inits_disj:
     forall inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits2 ins2 hst2 outs2 eouts2 ->
       DisjList (oindsOf hst1) (oindsOf hst2) ->
       DisjList eouts1 inits2 ->
       forall st11 st21,
@@ -388,7 +388,7 @@ Section RqRsRed.
 
   Lemma rqrs_lbl_reducible':
     forall inits1 ins1 hst1 outs1 eouts1 lbl2 oidx2 ridx2 rins2 routs2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
       lbl2 = RlblInt oidx2 ridx2 rins2 routs2 ->
       ~ In oidx2 (oindsOf hst1) ->
       DisjList outs1 rins2 ->
@@ -433,7 +433,7 @@ Section RqRsRed.
   
   Lemma rqrs_lbl_reducible:
     forall inits1 ins1 hst1 outs1 eouts1 lbl2 oidx2 ridx2 rins2 routs2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
       lbl2 = RlblInt oidx2 ridx2 rins2 routs2 ->
       ~ In oidx2 (oindsOf hst1) ->
       DisjList eouts1 rins2 ->
@@ -457,8 +457,8 @@ Section RqRsRed.
 
   Lemma rqrs_reducible':
     forall inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits2 ins2 hst2 outs2 eouts2 ->
       DisjList (oindsOf hst1) (oindsOf hst2) ->
       DisjList eouts1 ins2 ->
       Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
@@ -484,8 +484,8 @@ Section RqRsRed.
 
   Theorem rqrs_reducible:
     forall inits1 ins1 hst1 outs1 eouts1 inits2 ins2 hst2 outs2 eouts2,
-      Atomic msg_dec inits1 ins1 hst1 outs1 eouts1 ->
-      Atomic msg_dec inits2 ins2 hst2 outs2 eouts2 ->
+      Atomic inits1 ins1 hst1 outs1 eouts1 ->
+      Atomic inits2 ins2 hst2 outs2 eouts2 ->
       DisjList (oindsOf hst1) (oindsOf hst2) ->
       DisjList eouts1 inits2 ->
       Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).

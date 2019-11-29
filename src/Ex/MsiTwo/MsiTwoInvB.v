@@ -130,9 +130,9 @@ Section Inv.
 
   End DownLockInv.
 
-  Definition ImplInvB (st: MState): Prop :=
-    post <-- (bst_oss st)@[parentIdx];
-      porq <-- (bst_orqs st)@[parentIdx];
+  Definition ImplInvB (st: State): Prop :=
+    post <-- (st_oss st)@[parentIdx];
+      porq <-- (st_orqs st)@[parentIdx];
       DirInvP post /\ DownLockInv post porq.
 
   Hint Unfold DirSoundS DirExcl1 DirExcl2
@@ -175,7 +175,8 @@ Section Inv.
   Lemma implInvB_ok:
     InvReachable impl step_m ImplInvB.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply implInvB_init.
     - apply implInvB_invStep.
   Qed.

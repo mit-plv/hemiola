@@ -7,13 +7,13 @@ Require Import Omega.
 Set Implicit Arguments.
 
 Section TrsInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
 
   Variables (impl: System)
-            (ginv: MState -> Prop).
+            (ginv: State -> Prop).
 
-  Definition Invariant := @Invariant (MState).
-  Definition InvInit := @InvInit (System) (MState) _ impl ginv.
+  Definition Invariant := @Invariant (State).
+  Definition InvInit := @InvInit (System) (State) _ impl ginv.
 
   Definition InvTrs :=
     forall ist1,
@@ -66,15 +66,15 @@ Section TrsInv.
 End TrsInv.
 
 Section AtomicInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
 
   Variables (impl: System)
-            (ginv: MState -> Prop)
+            (ginv: State -> Prop)
             (ainv: list (Id Msg) (* inits *) ->
-                   MState (* starting state *) ->
-                   MHistory (* atomic history *) ->
+                   State (* starting state *) ->
+                   History (* atomic history *) ->
                    list (Id Msg) (* eouts *) ->
-                   MState (* ending state *) -> Prop).
+                   State (* ending state *) -> Prop).
 
   Definition InvTrsIns :=
     forall ist1,
@@ -97,7 +97,7 @@ Section AtomicInv.
       Reachable (steps step_m) impl ist1 ->
       ginv ist1 ->
       forall inits hst eouts ist2,
-        ExtAtomic impl msg_dec inits hst eouts ->
+        ExtAtomic impl inits hst eouts ->
         steps step_m impl ist1 hst ist2 ->
         ainv inits ist1 hst eouts ist2 /\ ginv ist2.
 
@@ -121,7 +121,7 @@ Section AtomicInv.
 End AtomicInv.
 
 Theorem invSeq_serializable_invStep:
-  forall `{oifc: OStateIfc} (impl: System) ginv,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (impl: System) ginv,
     InvInit impl ginv ->
     InvSeq impl ginv ->
     SerializableSys impl ->

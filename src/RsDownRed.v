@@ -13,7 +13,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section RsDownReduction.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -30,7 +30,7 @@ Section RsDownReduction.
     Lemma rsDown_oinds:
       forall inits ins hst outs eouts,
         SubList rsDowns eouts ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
@@ -40,9 +40,9 @@ Section RsDownReduction.
              exists roidx rqUps ruins ruouts,
                RqUpMsgsP dtr roidx rqUps /\
                ~ In roidx (subtreeIndsOf dtr cidx) /\
-               Atomic msg_dec inits ruins ruhst ruouts rqUps /\
+               Atomic inits ruins ruhst ruouts rqUps /\
                exists nins nouts,
-                 Atomic msg_dec rqUps nins nhst nouts eouts) /\
+                 Atomic rqUps nins nhst nouts eouts) /\
             DisjList (oindsOf nhst) (subtreeIndsOf dtr cidx).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
@@ -79,10 +79,10 @@ Section RsDownReduction.
     Lemma rsDown_olast_inside_tree:
       forall inits ins hst outs eouts,
         DisjList rsDowns inits ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2 loidx,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rsDowns ->
+          Forall (InMPI st1.(st_msgs)) rsDowns ->
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
           In loidx (subtreeIndsOf dtr cidx) ->
@@ -90,7 +90,7 @@ Section RsDownReduction.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       destruct Hrsd as [cobj [rsDown ?]]; dest; subst.
-      pose proof (edgeDownTo_Some H _ H11).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H11).
       destruct H9 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply atomic_rsDown_separation_inside
@@ -102,10 +102,10 @@ Section RsDownReduction.
     Lemma rsDown_olast_outside_tree:
       forall inits ins hst outs eouts,
         DisjList rsDowns inits ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2 loidx,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rsDowns ->
+          Forall (InMPI st1.(st_msgs)) rsDowns ->
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
           ~ In loidx (subtreeIndsOf dtr cidx) ->
@@ -113,7 +113,7 @@ Section RsDownReduction.
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
       destruct Hrsd as [cobj [rsDown ?]]; dest; subst.
-      pose proof (edgeDownTo_Some H _ H11).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H11).
       destruct H9 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply atomic_rsDown_separation_outside
@@ -122,8 +122,8 @@ Section RsDownReduction.
       - eapply lastOIdxOf_Some_oindsOf_In; eauto.
     Qed.
 
-    Definition RsDownP (st: MState) :=
-      Forall (InMPI st.(bst_msgs)) rsDowns.
+    Definition RsDownP (st: State) :=
+      Forall (InMPI st.(st_msgs)) rsDowns.
 
     Ltac disc_rule_custom ::=
       try disc_footprints_ok.
@@ -132,10 +132,10 @@ Section RsDownReduction.
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
         DisjList rsDowns rinits ->
-        Atomic msg_dec rinits rins rhst routs reouts ->
+        Atomic rinits rins rhst routs reouts ->
         DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
         DisjList rsDowns linits ->
-        Atomic msg_dec linits lins lhst louts leouts ->
+        Atomic linits lins lhst louts leouts ->
         SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         forall st1,
           Reachable (steps step_m) sys st1 ->
@@ -201,9 +201,9 @@ Section RsDownReduction.
     Lemma rsDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
-        Atomic msg_dec rinits rins rhst routs reouts ->
+        Atomic rinits rins rhst routs reouts ->
         DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
-        Atomic msg_dec linits lins lhst louts leouts ->
+        Atomic linits lins lhst louts leouts ->
         SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         DisjList reouts linits ->
         Reducible sys (lhst ++ rhst) (rhst ++ lhst).
@@ -218,9 +218,9 @@ Section RsDownReduction.
       forall pinits pins phst pouts peouts
              inits ins hst outs eouts loidx,
         PInitializing sys RsDownP phst ->
-        Atomic msg_dec pinits pins phst pouts peouts ->
+        Atomic pinits pins phst pouts peouts ->
         SubList rsDowns peouts ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         lastOIdxOf hst = Some loidx ->
         In loidx (subtreeIndsOf dtr cidx) ->
         DisjList peouts inits ->
@@ -279,7 +279,7 @@ Section RsDownReduction.
 
     Lemma rsDown_rpush_unit_reducible:
       forall inits ins hst outs eouts loidx ridx routs,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         lastOIdxOf hst = Some loidx ->
         ~ In loidx (subtreeIndsOf dtr cidx) ->
         DisjList rsDowns inits ->
@@ -303,7 +303,7 @@ Section RsDownReduction.
           inv Hp; clear H14.
           apply (DisjList_singleton_1 (id_dec msg_dec)).
           simpl in H8.
-          pose proof (edgeDownTo_Some H _ H8).
+          pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H8).
           destruct H6 as [rqUp [rsUp [pidx ?]]]; dest.
           eapply atomic_rsDown_inits_outs_disj; eauto.
           destruct (H5 (rsDown, rsdm)); [|auto].
@@ -314,11 +314,11 @@ Section RsDownReduction.
     Lemma rsDown_LRPushable_unit_reducible:
       forall rinits rins rhst routs reouts rloidx
              linits lins lhst louts leouts lloidx,
-        Atomic msg_dec rinits rins rhst routs reouts ->
+        Atomic rinits rins rhst routs reouts ->
         DisjList rsDowns rinits ->
         lastOIdxOf rhst = Some rloidx ->
         ~ In rloidx (subtreeIndsOf dtr cidx) ->
-        Atomic msg_dec linits lins lhst louts leouts ->
+        Atomic linits lins lhst louts leouts ->
         DisjList rsDowns linits ->
         lastOIdxOf lhst = Some lloidx ->
         In lloidx (subtreeIndsOf dtr cidx) ->

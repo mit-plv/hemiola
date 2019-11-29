@@ -49,22 +49,22 @@ Section Sim.
 
   End DirCoh.
 
-  Definition ImplStateCoh (cv: nat) (st: MState): Prop :=
-    post <-- (bst_oss st)@[parentIdx];
-      cost1 <-- (bst_oss st)@[child1Idx];
-      cost2 <-- (bst_oss st)@[child2Idx];
-      corq1 <-- (bst_orqs st)@[child1Idx];
-      corq2 <-- (bst_orqs st)@[child2Idx];
+  Definition ImplStateCoh (cv: nat) (st: State): Prop :=
+    post <-- (st_oss st)@[parentIdx];
+      cost1 <-- (st_oss st)@[child1Idx];
+      cost2 <-- (st_oss st)@[child2Idx];
+      corq1 <-- (st_orqs st)@[child1Idx];
+      corq2 <-- (st_orqs st)@[child2Idx];
       ImplOStateMSI cv post /\
-      DirCoh cv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
-      DirCoh cv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
+      DirCoh cv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (st_msgs st) /\
+      DirCoh cv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (st_msgs st).
 
-  Definition SpecStateCoh (cv: nat) (st: @MState SpecOStateIfc): Prop :=
-    sost <-- (bst_oss st)@[specIdx];
-      sorq <-- (bst_orqs st)@[specIdx];
+  Definition SpecStateCoh (cv: nat) (st: @State SpecOStateIfc): Prop :=
+    sost <-- (st_oss st)@[specIdx];
+      sorq <-- (st_orqs st)@[specIdx];
       sost#[specValueIdx] = cv.
 
-  Inductive SimState: MState -> @MState SpecOStateIfc -> Prop :=
+  Inductive SimState: State -> @State SpecOStateIfc -> Prop :=
   | SimStateIntro:
       forall cv ist sst,
         SpecStateCoh cv sst ->
@@ -82,9 +82,9 @@ Section Sim.
       findQ ce1 imsgs = findQ (ers 0) smsgs /\
       findQ ce2 imsgs = findQ (ers 1) smsgs.
   
-  Definition SimMSI (ist: MState) (sst: @MState SpecOStateIfc): Prop :=
+  Definition SimMSI (ist: State) (sst: @State SpecOStateIfc): Prop :=
     SimState ist sst /\
-    SimExtMP ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
+    SimExtMP ist.(st_msgs) ist.(st_orqs) sst.(st_msgs).
 
   Hint Unfold DirCoh ImplStateCoh: RuleConds.
 
@@ -541,11 +541,11 @@ Section Sim.
 
     Lemma SimState_impl_other_midx_enqMsgs:
       forall ioss iorqs imsgs sst,
-        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
+        SimState {| st_oss := ioss; st_orqs := iorqs; st_msgs := imsgs |} sst ->
         forall nmsgs,
           DisjList (idsOf nmsgs) cohMinds ->
-          SimState {| bst_oss := ioss; bst_orqs := iorqs;
-                      bst_msgs := enqMsgs nmsgs imsgs |} sst.
+          SimState {| st_oss := ioss; st_orqs := iorqs;
+                      st_msgs := enqMsgs nmsgs imsgs |} sst.
     Proof.
       intros.
       inv H.
@@ -566,20 +566,20 @@ Section Sim.
 
     Lemma SimState_spec_enqMsgs:
       forall ist soss sorqs smsgs,
-        SimState ist {| bst_oss := soss; bst_orqs := sorqs; bst_msgs := smsgs |} ->
+        SimState ist {| st_oss := soss; st_orqs := sorqs; st_msgs := smsgs |} ->
         forall nmsgs,
-          SimState ist {| bst_oss := soss; bst_orqs := sorqs;
-                          bst_msgs := enqMsgs nmsgs smsgs |}.
+          SimState ist {| st_oss := soss; st_orqs := sorqs;
+                          st_msgs := enqMsgs nmsgs smsgs |}.
     Proof.
       intros; inv H; econstructor; eauto.
     Qed.
 
     Lemma SimState_impl_deqMsgs:
       forall ioss iorqs imsgs sst,
-        SimState {| bst_oss := ioss; bst_orqs := iorqs; bst_msgs := imsgs |} sst ->
+        SimState {| st_oss := ioss; st_orqs := iorqs; st_msgs := imsgs |} sst ->
         forall minds,
-          SimState {| bst_oss := ioss; bst_orqs := iorqs;
-                      bst_msgs := deqMsgs minds imsgs |} sst.
+          SimState {| st_oss := ioss; st_orqs := iorqs;
+                      st_msgs := deqMsgs minds imsgs |} sst.
     Proof.
       intros.
       inv H.
@@ -594,10 +594,10 @@ Section Sim.
 
     Lemma SimState_spec_deqMsgs:
       forall ist soss sorqs smsgs,
-        SimState ist {| bst_oss := soss; bst_orqs := sorqs; bst_msgs := smsgs |} ->
+        SimState ist {| st_oss := soss; st_orqs := sorqs; st_msgs := smsgs |} ->
         forall minds,
-          SimState ist {| bst_oss := soss; bst_orqs := sorqs;
-                          bst_msgs := deqMsgs minds smsgs |}.
+          SimState ist {| st_oss := soss; st_orqs := sorqs;
+                          st_msgs := deqMsgs minds smsgs |}.
     Proof.
       intros; inv H; econstructor; eauto.
     Qed.
@@ -753,15 +753,15 @@ Section Sim.
 
     Lemma simMsiTwo_sim_ext_in:
       forall oss orqs msgs sst1,
-        SimMSI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
+        SimMSI {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} sst1 ->
         forall eins,
           eins <> nil -> ValidMsgsExtIn impl eins ->
           exists slbl sst2,
             getLabel (RlblIns eins) = getLabel slbl /\
             step_m spec sst1 slbl sst2 /\
-            SimMSI {| bst_oss := oss;
-                      bst_orqs := orqs;
-                      bst_msgs := enqMsgs eins msgs |} sst2.
+            SimMSI {| st_oss := oss;
+                      st_orqs := orqs;
+                      st_msgs := enqMsgs eins msgs |} sst2.
     Proof.
       destruct sst1 as [soss1 sorqs1 smsgs1]; simpl; intros.
       red in H; simpl in *; dest.
@@ -781,7 +781,7 @@ Section Sim.
 
     Lemma simMsiTwo_sim_ext_out:
       forall oss orqs msgs sst1,
-        SimMSI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
+        SimMSI {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} sst1 ->
         forall eouts: list (Id Msg),
           eouts <> nil ->
           Forall (FirstMPI msgs) eouts ->
@@ -789,9 +789,9 @@ Section Sim.
           exists slbl sst2,
             getLabel (RlblOuts eouts) = getLabel slbl /\
             step_m spec sst1 slbl sst2 /\
-            SimMSI {| bst_oss := oss;
-                      bst_orqs := orqs;
-                      bst_msgs := deqMsgs (idsOf eouts) msgs |} sst2.
+            SimMSI {| st_oss := oss;
+                      st_orqs := orqs;
+                      st_msgs := deqMsgs (idsOf eouts) msgs |} sst2.
     Proof.
       destruct sst1 as [soss1 sorqs1 smsgs1]; simpl; intros.
       red in H; simpl in *; dest.
@@ -807,7 +807,7 @@ Section Sim.
         * apply SimExtMP_ext_outs_deqMsgs; auto.
     Qed.
 
-    Definition ImplInvEx (st: MState) :=
+    Definition ImplInvEx (st: State) :=
       ImplInv st /\ ImplInvB st.
 
     Hint Unfold ImplInvEx ImplInv ImplInvB: RuleConds.

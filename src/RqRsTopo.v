@@ -5,11 +5,11 @@ Require Import Reduction Commutativity QuasiSeq Topology.
 
 Set Implicit Arguments.
 
-Open Scope list.
-Open Scope fmap.
+Local Open Scope list.
+Local Open Scope fmap.
 
 Section RqRsTopo.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variable (dtr: DTree) (sys: System).
 
   Definition rqEdgeUpFrom (oidx: IdxT): option IdxT :=
@@ -231,7 +231,7 @@ Section RqRsTopo.
 
     Definition RqRsChnsOnSystem :=
       forall oidx root pidx,
-        In oidx (map (@obj_idx _) sys.(sys_objs)) ->
+        In oidx (map obj_idx sys.(sys_objs)) ->
         parentChnsOf oidx dtr = Some (root, pidx) ->
         SubList root.(dmc_ups) sys.(sys_minds) /\
         SubList root.(dmc_downs) sys.(sys_minds).

@@ -5,8 +5,8 @@ Require Import Omega.
 
 Set Implicit Arguments.
 
-Open Scope list.
-Open Scope fmap.
+Local Open Scope list.
+Local Open Scope fmap.
 
 Ltac inv_steps :=
   repeat
@@ -18,34 +18,34 @@ Ltac inv_steps :=
 Ltac inv_step :=
   repeat
     match goal with
-    | [H: step_m _ _ (RlblEmpty _) _ |- _] => inv H
+    | [H: step_m _ _ RlblEmpty _ |- _] => inv H
     | [H: step_m _ _ (RlblIns _) _ |- _] => inv H
     | [H: step_m _ _ (RlblOuts _) _ |- _] => inv H
     | [H: step_m _ _ (RlblInt _ _ _ _) _ |- _] => inv H
-    | [H: {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} =
-          {| bst_oss := _; bst_orqs := _; bst_msgs := _ |} |- _] => inv H
+    | [H: {| st_oss := _; st_orqs := _; st_msgs := _ |} =
+          {| st_oss := _; st_orqs := _; st_msgs := _ |} |- _] => inv H
     end.
 
-Definition lastOIdxOf {MsgT} (hst: History MsgT): option IdxT :=
+Definition lastOIdxOf `{DecValue} (hst: History): option IdxT :=
   match hst with
   | RlblInt oidx _ _ _ :: _ => Some oidx
   | _ => None
   end.
 
-Definition oidxOf {MsgT} (lbl: RLabel MsgT) :=
+Definition oidxOf `{DecValue} (lbl: RLabel) :=
   match lbl with
   | RlblInt oidx _ _ _ => Some oidx
   | _ => None
   end.
 
-Fixpoint oindsOf {MsgT} (hst: History MsgT) :=
+Fixpoint oindsOf `{DecValue} (hst: History) :=
   match hst with
   | nil => nil
   | lbl :: hst' => (oidxOf lbl) ::> (oindsOf hst')
   end.
 
 Lemma oindsOf_app:
-  forall {MsgT} (hst1 hst2: History MsgT),
+  forall `{DecValue} (hst1 hst2: History),
     oindsOf (hst1 ++ hst2) = oindsOf hst1 ++ oindsOf hst2.
 Proof.
   induction hst1 as [|lbl hst1]; simpl; intros; [reflexivity|].
@@ -54,7 +54,7 @@ Proof.
 Qed.
 
 Lemma lastOIdxOf_app:
-  forall {MsgT} (hst1 hst2: History MsgT),
+  forall `{DecValue} (hst1 hst2: History),
     hst2 <> nil ->
     lastOIdxOf (hst2 ++ hst1) = lastOIdxOf hst2.
 Proof.
@@ -64,7 +64,7 @@ Proof.
 Qed.
 
 Lemma lastOIdxOf_Some_oindsOf_In:
-  forall {MsgT} (hst: History MsgT) loidx,
+  forall `{dv: DecValue} (hst: History) loidx,
     lastOIdxOf hst = Some loidx ->
     In loidx (oindsOf hst).
 Proof.
@@ -77,7 +77,7 @@ Proof.
 Qed.
 
 Lemma steps_object_in_system:
-  forall `{oifc: OStateIfc} (sys: System) st1 hst st2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     forall oidx,
       In oidx (oindsOf hst) ->
@@ -93,7 +93,7 @@ Proof.
 Qed.
 
 Lemma sys_minds_sys_merqs_DisjList:
-  forall `{oifc: OStateIfc} (sys: System),
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System),
     DisjList (sys_minds sys) (sys_merqs sys).
 Proof.
   intros.
@@ -104,7 +104,7 @@ Proof.
 Qed.
 
 Lemma sys_merqs_sys_merss_DisjList:
-  forall `{oifc: OStateIfc} (sys: System),
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System),
     DisjList (sys_merqs sys) (sys_merss sys).
 Proof.
   intros.
@@ -114,7 +114,7 @@ Proof.
 Qed.
 
 Lemma sys_minds_sys_merss_DisjList:
-  forall `{oifc: OStateIfc} (sys: System),
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System),
     DisjList (sys_minds sys) (sys_merss sys).
 Proof.
   intros.
@@ -128,8 +128,8 @@ Proof.
 Qed.
 
 Lemma ValidMsgsIn_sys_minds:
-  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT}
-         (sys1: System) (eins: list (Id MsgT)),
+  forall `{DecValue} `{oifc: OStateIfc}
+         (sys1: System) (eins: list (Id Msg)),
     ValidMsgsIn sys1 eins ->
     forall (sys2: System),
       sys_minds sys1 = sys_minds sys2 ->
@@ -142,8 +142,8 @@ Proof.
 Qed.
 
 Lemma ValidMsgsOut_sys_minds_sys_merss:
-  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT} 
-         (sys1: System) (eouts: list (Id MsgT)),
+  forall `{DecValue} `{oifc: OStateIfc}
+         (sys1: System) (eouts: list (Id Msg)),
     ValidMsgsOut sys1 eouts ->
     forall (sys2: System),
       sys_minds sys1 = sys_minds sys2 ->
@@ -156,8 +156,8 @@ Proof.
 Qed.
 
 Lemma ValidMsgsExtIn_sys_merqs:
-  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT} 
-         (sys1: System) (eins: list (Id MsgT)),
+  forall `{DecValue} `{oifc: OStateIfc}
+         (sys1: System) (eins: list (Id Msg)),
     ValidMsgsExtIn sys1 eins ->
     forall (sys2: System),
       sys_merqs sys1 = sys_merqs sys2 ->
@@ -169,8 +169,8 @@ Proof.
 Qed.
   
 Lemma ValidMsgsExtOut_sys_merss:
-  forall `{oifc: OStateIfc} {MsgT} `{HasMsg MsgT} 
-         (sys1: System) (eouts: list (Id MsgT)),
+  forall `{DecValue} `{oifc: OStateIfc}
+         (sys1: System) (eouts: list (Id Msg)),
     ValidMsgsExtOut sys1 eouts ->
     forall (sys2: System),
       sys_merss sys1 = sys_merss sys2 ->
@@ -182,7 +182,7 @@ Proof.
 Qed.
 
 Lemma extRssOf_In_sys_merss_FirstMP:
-  forall `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
+  forall `{DecValue} `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mout,
       In (idOf mout) (sys_merss sys) ->
@@ -194,7 +194,7 @@ Proof.
 Qed.
 
 Corollary extRssOf_SubList_sys_merss_FirstMP:
-  forall `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mouts,
       SubList (idsOf mouts) (sys_merss sys) ->
@@ -209,7 +209,7 @@ Proof.
 Qed.
 
 Corollary extRssOf_ValidMsgsExtOut_sys_merss_FirstMP:
-  forall `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) msgs1 msgs2,
     extRssOf sys msgs1 = extRssOf sys msgs2 ->
     forall mouts,
       ValidMsgsExtOut sys mouts ->
@@ -222,18 +222,19 @@ Proof.
 Qed.
 
 Lemma init_IntMsgsEmpty:
-  forall `{oifc: OStateIfc} (sys: System), IntMsgsEmpty sys (emptyMP Msg).
+  forall `{DecValue} `{oifc: OStateIfc} (sys: System),
+    IntMsgsEmpty sys (emptyMP Msg).
 Proof.
   intros; red; intros.
   reflexivity.
 Qed.
 
 Lemma steps_locks_unaffected:
-  forall `{oifc: OStateIfc} (sys: System) s1 hst s2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) s1 hst s2,
     steps step_m sys s1 hst s2 ->
     forall oidx,
       ~ In oidx (oindsOf hst) ->
-      s1.(bst_orqs)@[oidx] = s2.(bst_orqs)@[oidx].
+      s1.(st_orqs)@[oidx] = s2.(st_orqs)@[oidx].
 Proof.
   induction 1; simpl; intros; auto.
   inv H0; auto; simpl in *.
@@ -243,7 +244,7 @@ Proof.
 Qed.
 
 Lemma steps_singleton:
-  forall `{oifc: OStateIfc} (sys: System) st1 lbl st2,
+  forall `{DecValue} `{oifc: OStateIfc} (sys: System) st1 lbl st2,
     step_m sys st1 lbl st2 ->
     steps step_m sys st1 [lbl] st2.
 Proof.
@@ -253,7 +254,7 @@ Proof.
 Qed.
 
 Lemma steps_wfHistory:
-  forall `{oifc: OStateIfc} (sys: System) st1 hst st2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) st1 hst st2,
     steps step_m sys st1 hst st2 ->
     WfHistory sys hst.
 Proof.
@@ -349,10 +350,7 @@ Theorem refines_trans:
     ss1 # ss3 |-- s1 ⊑ s3.
 Proof.
   unfold Refines; intros.
-  specialize (H2 _ (H1 _ H3)).
+  specialize (H3 _ (H2 _ H4)).
   assumption.
 Qed.
-
-Close Scope list.
-Close Scope fmap.
 

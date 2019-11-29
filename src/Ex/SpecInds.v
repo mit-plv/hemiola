@@ -10,6 +10,12 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
+Global Instance NatDecValue: DecValue :=
+  {| t_type := nat;
+     t_default := O;
+     t_eq_dec := eq_nat_dec
+  |}.
+
 Lemma NoPrefix_NoDup:
   forall inds, NoPrefix inds -> NoDup inds.
 Proof.

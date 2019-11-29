@@ -22,9 +22,9 @@ Existing Instance Mesi.ImplOStateIfc.
 Definition ObjInvNotOwned (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   ObjInvRq oidx msgs -> ost#[owned] = false.
 
-Definition InvNotOwned (st: MState): Prop :=
+Definition InvNotOwned (st: State): Prop :=
   forall oidx,
-    ost <+- (bst_oss st)@[oidx]; ObjInvNotOwned oidx ost (bst_msgs st).
+    ost <+- (st_oss st)@[oidx]; ObjInvNotOwned oidx ost (st_msgs st).
 
 Section InvNotOwned.
   Variable (tr: tree).
@@ -47,11 +47,11 @@ Section InvNotOwned.
 
   Lemma mesi_InvNotOwned_ext_in:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvNotOwned {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvNotOwned {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+        InvNotOwned {| st_oss := oss; st_orqs := orqs; st_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -75,12 +75,12 @@ Section InvNotOwned.
 
   Lemma mesi_InvNotOwned_ext_out:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvNotOwned {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
-        InvNotOwned {| bst_oss := oss;
-                       bst_orqs := orqs;
-                       bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+        InvNotOwned {| st_oss := oss;
+                       st_orqs := orqs;
+                       st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H oidx); simpl in H.
@@ -93,12 +93,12 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_no_update:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx (post nost: OState),
         oss@[oidx] = Some post ->
         nost#[owned] = post#[owned] ->
-        InvNotOwned {| bst_oss:= oss +[oidx <- nost];
-                       bst_orqs:= orqs; bst_msgs:= msgs |}.
+        InvNotOwned {| st_oss:= oss +[oidx <- nost];
+                       st_orqs:= orqs; st_msgs:= msgs |}.
   Proof.
     unfold InvNotOwned; simpl; intros.
     mred; simpl; auto.
@@ -110,11 +110,11 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_update_status_NoRqI_NoRsI:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx (ost: OState),
         NoRqI oidx msgs ->
-        InvNotOwned {| bst_oss:= oss +[oidx <- ost];
-                       bst_orqs:= orqs; bst_msgs:= msgs |}.
+        InvNotOwned {| st_oss:= oss +[oidx <- ost];
+                       st_orqs:= orqs; st_msgs:= msgs |}.
   Proof.
     unfold InvNotOwned; simpl; intros.
     mred; simpl; auto.
@@ -126,14 +126,14 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_enqMP_rq_valid:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall oidx ost midx msg,
         oss@[oidx] = Some ost ->
         ost#[owned] = false ->
         midx = rqUpFrom oidx ->
         msg.(msg_id) = mesiInvRq ->
-        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
-                       bst_msgs:= enqMP midx msg msgs |}.
+        InvNotOwned {| st_oss:= oss; st_orqs:= orqs;
+                       st_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvNotOwned; simpl; intros.
     destruct (idx_dec oidx0 oidx); subst.
@@ -152,11 +152,11 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_other_msg_id_enqMP:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> mesiInvRq ->
-        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
-                       bst_msgs:= enqMP midx msg msgs |}.
+        InvNotOwned {| st_oss:= oss; st_orqs:= orqs;
+                       st_msgs:= enqMP midx msg msgs |}.
   Proof.
     unfold InvNotOwned; simpl; intros.
     specialize (H oidx).
@@ -170,13 +170,13 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_other_msg_id_enqMsgs:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> mesiInvWRq /\
                            (valOf idm).(msg_id) <> mesiInvRq /\
                            (valOf idm).(msg_id) <> mesiInvRs) nmsgs ->
-        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
-                       bst_msgs:= enqMsgs nmsgs msgs |}.
+        InvNotOwned {| st_oss:= oss; st_orqs:= orqs;
+                       st_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
     intros.
     generalize dependent msgs.
@@ -188,10 +188,10 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_deqMP:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx,
-        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
-                       bst_msgs:= deqMP midx msgs |}.
+        InvNotOwned {| st_oss:= oss; st_orqs:= orqs;
+                       st_msgs:= deqMP midx msgs |}.
   Proof.
     unfold InvNotOwned; simpl; intros.
     specialize (H oidx).
@@ -204,10 +204,10 @@ Section InvNotOwned.
 
   Lemma InvNotOwned_deqMsgs:
     forall oss orqs msgs,
-      InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvNotOwned {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall minds,
-        InvNotOwned {| bst_oss:= oss; bst_orqs:= orqs;
-                       bst_msgs:= deqMsgs minds msgs |}.
+        InvNotOwned {| st_oss:= oss; st_orqs:= orqs;
+                       st_msgs:= deqMsgs minds msgs |}.
   Proof.
     unfold InvNotOwned; simpl; intros.
     specialize (H oidx).
@@ -399,7 +399,8 @@ Section InvNotOwned.
   Theorem mesi_InvNotOwned_ok:
     InvReachable impl step_m InvNotOwned.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply mesi_InvNotOwned_init.
     - apply mesi_InvNotOwned_step.
   Qed.
@@ -414,16 +415,16 @@ Definition ObjCohDirE (ost: OState) :=
   ost#[owned] = false /\
   (mesiS <= ost#[status] \/ ost#[dir].(dir_st) = mesiE).
 
-Definition InvDirE (topo: DTree) (st: MState): Prop :=
+Definition InvDirE (topo: DTree) (st: State): Prop :=
   forall oidx pidx,
     parentIdxOf topo oidx = Some pidx ->
-    ost <+- (bst_oss st)@[oidx];
-      orq <+- (bst_orqs st)@[oidx];
-      post <+- (bst_oss st)@[pidx];
-      porq <+- (bst_orqs st)@[pidx];
+    ost <+- (st_oss st)@[oidx];
+      orq <+- (st_orqs st)@[oidx];
+      post <+- (st_oss st)@[pidx];
+      porq <+- (st_orqs st)@[pidx];
       (ObjDirE porq post oidx ->
-       (CohRsE oidx (bst_msgs st) post#[val] /\
-        (NoRsME oidx (bst_msgs st) ->
+       (CohRsE oidx (st_msgs st) post#[val] /\
+        (NoRsME oidx (st_msgs st) ->
          ObjCohDirE ost ->
          post#[val] = ost#[val]))).
 
@@ -469,13 +470,13 @@ Section InvDirE.
 
   Lemma mesi_InvDirE_ext_in:
     forall oss orqs msgs,
-      InvDirE topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvDirE topo {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvDirE topo {| bst_oss := oss;
-                        bst_orqs := orqs;
-                        bst_msgs := enqMsgs eins msgs |}.
+        InvDirE topo {| st_oss := oss;
+                        st_orqs := orqs;
+                        st_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H _ _ H2); simpl in H.
@@ -501,13 +502,13 @@ Section InvDirE.
 
   Lemma mesi_InvDirE_ext_out:
     forall oss orqs msgs,
-      InvDirE topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvDirE topo {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
         ValidMsgsExtOut impl eouts ->
-        InvDirE topo {| bst_oss := oss;
-                         bst_orqs := orqs;
-                         bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+        InvDirE topo {| st_oss := oss;
+                         st_orqs := orqs;
+                         st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H _ _ H2); simpl in H.
@@ -533,11 +534,11 @@ Section InvDirE.
 
   Lemma InvDirE_enqMP:
     forall oss orqs msgs,
-      InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirE topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> mesiRsE ->
-        InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= enqMP midx msg msgs |}.
+        InvDirE topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= enqMP midx msg msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H _ _ H1); simpl in H.
@@ -554,11 +555,11 @@ Section InvDirE.
   
   Lemma InvDirE_enqMsgs:
     forall oss orqs msgs,
-      InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirE topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> mesiRsE) nmsgs ->
-        InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= enqMsgs nmsgs msgs |}.
+        InvDirE topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
     intros.
     generalize dependent msgs.
@@ -570,13 +571,13 @@ Section InvDirE.
 
   Lemma InvDirE_deqMP:
     forall oss orqs msgs,
-      InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirE topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         FirstMP msgs midx msg ->
         msg.(msg_id) <> mesiRsM ->
         msg.(msg_id) <> mesiRsE ->
-        InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= deqMP midx msgs |}.
+        InvDirE topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= deqMP midx msgs |}.
   Proof.
     unfold InvDirE; simpl; intros.
     specialize (H _ _ H3).
@@ -594,14 +595,14 @@ Section InvDirE.
 
   Lemma InvDirE_deqMsgs:
     forall oss orqs msgs,
-      InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirE topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall rmsgs,
         Forall (FirstMPI msgs) rmsgs ->
         NoDup (idsOf rmsgs) ->
         Forall (fun idm => (valOf idm).(msg_id) <> mesiRsM /\
                            (valOf idm).(msg_id) <> mesiRsE) rmsgs ->
-        InvDirE topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= deqMsgs (idsOf rmsgs) msgs |}.
+        InvDirE topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= deqMsgs (idsOf rmsgs) msgs |}.
   Proof.
     unfold InvDirE; simpl; intros.
     specialize (H _ _ H3).
@@ -1411,23 +1412,24 @@ Section InvDirE.
   Theorem mesi_InvDirE_ok:
     InvReachable impl step_m (InvDirE topo).
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply mesi_InvDirE_init.
     - apply mesi_InvDirE_step.
   Qed.
 
 End InvDirE.
 
-Definition InvNWB (topo: DTree) (st: MState): Prop :=
+Definition InvNWB (topo: DTree) (st: State): Prop :=
   forall oidx pidx,
     parentIdxOf topo oidx = Some pidx ->
-    ost <+- (bst_oss st)@[oidx];
-      orq <+- (bst_orqs st)@[oidx];
-      post <+- (bst_oss st)@[pidx];
-      porq <+- (bst_orqs st)@[pidx];
+    ost <+- (st_oss st)@[oidx];
+      orq <+- (st_orqs st)@[oidx];
+      post <+- (st_oss st)@[pidx];
+      porq <+- (st_orqs st)@[pidx];
       (ObjDirE porq post oidx ->
-       ObjInvRq oidx (bst_msgs st) ->
-       NoRsI oidx (bst_msgs st) /\ mesiS <= ost#[status] /\
+       ObjInvRq oidx (st_msgs st) ->
+       NoRsI oidx (st_msgs st) /\ mesiS <= ost#[status] /\
        ost#[val] = post#[val]).
 
 Section InvNWB.
@@ -1457,10 +1459,10 @@ Section InvNWB.
     specialize (Hde _ _ H0).
     specialize (Hwd oidx).
 
-    destruct (bst_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
-    destruct (bst_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
-    destruct (bst_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
-    destruct (bst_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
+    destruct (st_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
+    destruct (st_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
+    destruct (st_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (st_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
 
     specialize (Hmcf _ Hoin eq_refl); dest.
     intros.
@@ -1470,7 +1472,7 @@ Section InvNWB.
     destruct Hde as [_ Hde].
     specialize (Hdme (ObjDirE_ObjDirME H6)).
 
-    assert (NoRsME oidx (bst_msgs ist)) as Hnrs.
+    assert (NoRsME oidx (st_msgs ist)) as Hnrs.
     { destruct H7 as [[rqUp rqm] ?]; dest; inv H8.
       apply not_MsgExistsSig_MsgsNotExist.
       intros; dest_in.

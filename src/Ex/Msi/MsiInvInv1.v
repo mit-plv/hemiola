@@ -43,16 +43,16 @@ Definition ObjInS (ost: OState) (orq: ORq Msg) :=
    (ost#[dir].(dir_st) = msiS /\ orq@[downRq] = None)) ->
   msiS <= ost#[status] /\ ost#[owned] = true.
 
-Definition InvDirM (topo: DTree) (st: MState): Prop :=
+Definition InvDirM (topo: DTree) (st: State): Prop :=
   forall oidx pidx,
     parentIdxOf topo oidx = Some pidx ->
-    ost <+- (bst_oss st)@[oidx];
-      orq <+- (bst_orqs st)@[oidx];
-      post <+- (bst_oss st)@[pidx];
-      porq <+- (bst_orqs st)@[pidx];
+    ost <+- (st_oss st)@[oidx];
+      orq <+- (st_orqs st)@[oidx];
+      post <+- (st_oss st)@[pidx];
+      porq <+- (st_orqs st)@[pidx];
       (ObjDirM porq post oidx ->
-       NoRsM oidx (bst_msgs st) ->
-       (NoRsSI oidx (bst_msgs st) /\ ObjInS ost orq)).
+       NoRsM oidx (st_msgs st) ->
+       (NoRsSI oidx (st_msgs st) /\ ObjInS ost orq)).
 
 Section InvDirM.
   Variable (tr: tree).
@@ -87,11 +87,11 @@ Section InvDirM.
 
   Lemma msi_InvDirM_ext_in:
     forall oss orqs msgs,
-      InvDirM topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvDirM topo {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall eins,
         ValidMsgsExtIn impl eins ->
-        InvDirM topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := enqMsgs eins msgs |}.
+        InvDirM topo {| st_oss := oss; st_orqs := orqs; st_msgs := enqMsgs eins msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H _ _ H2); simpl in H.
@@ -118,13 +118,13 @@ Section InvDirM.
 
   Lemma msi_InvDirM_ext_out:
     forall oss orqs msgs,
-      InvDirM topo {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
-      InObjInds tr 0 {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      InvDirM topo {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+      InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       forall (eouts: list (Id Msg)),
         ValidMsgsExtOut impl eouts ->
-        InvDirM topo {| bst_oss := oss;
-                        bst_orqs := orqs;
-                        bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+        InvDirM topo {| st_oss := oss;
+                        st_orqs := orqs;
+                        st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H _ _ H2); simpl in H.
@@ -151,12 +151,12 @@ Section InvDirM.
 
   Lemma InvDirM_enqMP:
     forall oss orqs msgs,
-      InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirM topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         msg.(msg_id) <> msiInvRs ->
         msg.(msg_id) <> msiRsS ->
-        InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= enqMP midx msg msgs |}.
+        InvDirM topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= enqMP midx msg msgs |}.
   Proof.
     red; simpl; intros.
     specialize (H _ _ H2); simpl in H.
@@ -177,12 +177,12 @@ Section InvDirM.
   
   Lemma InvDirM_enqMsgs:
     forall oss orqs msgs,
-      InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirM topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall nmsgs,
         Forall (fun idm => (valOf idm).(msg_id) <> msiInvRs /\
                            (valOf idm).(msg_id) <> msiRsS) nmsgs ->
-        InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= enqMsgs nmsgs msgs |}.
+        InvDirM topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= enqMsgs nmsgs msgs |}.
   Proof.
     intros.
     generalize dependent msgs.
@@ -194,12 +194,12 @@ Section InvDirM.
 
   Lemma InvDirM_deqMP:
     forall oss orqs msgs,
-      InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirM topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall midx msg,
         FirstMP msgs midx msg ->
         msg.(msg_id) <> msiRsM ->
-        InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= deqMP midx msgs |}.
+        InvDirM topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= deqMP midx msgs |}.
   Proof.
     unfold InvDirM; simpl; intros.
     specialize (H _ _ H2).
@@ -216,13 +216,13 @@ Section InvDirM.
 
   Lemma InvDirM_deqMsgs:
     forall oss orqs msgs,
-      InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs; bst_msgs:= msgs |} ->
+      InvDirM topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
       forall rmsgs,
         Forall (FirstMPI msgs) rmsgs ->
         NoDup (idsOf rmsgs) ->
         Forall (fun idm => (valOf idm).(msg_id) <> msiRsM) rmsgs ->
-        InvDirM topo {| bst_oss:= oss; bst_orqs:= orqs;
-                        bst_msgs:= deqMsgs (idsOf rmsgs) msgs |}.
+        InvDirM topo {| st_oss:= oss; st_orqs:= orqs;
+                        st_msgs:= deqMsgs (idsOf rmsgs) msgs |}.
   Proof.
     unfold InvDirM; simpl; intros.
     specialize (H _ _ H3).
@@ -1072,22 +1072,23 @@ Section InvDirM.
   Theorem msi_InvDirM_ok:
     InvReachable impl step_m (InvDirM topo).
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply msi_InvDirM_init.
     - apply msi_InvDirM_step.
   Qed.
   
 End InvDirM.
 
-Definition InvWB (topo: DTree) (st: MState): Prop :=
+Definition InvWB (topo: DTree) (st: State): Prop :=
   forall oidx pidx,
     parentIdxOf topo oidx = Some pidx ->
-    ost <+- (bst_oss st)@[oidx];
-      orq <+- (bst_orqs st)@[oidx];
-      post <+- (bst_oss st)@[pidx];
-      porq <+- (bst_orqs st)@[pidx];
+    ost <+- (st_oss st)@[oidx];
+      orq <+- (st_orqs st)@[oidx];
+      post <+- (st_oss st)@[pidx];
+      porq <+- (st_orqs st)@[pidx];
       (ObjDirM porq post oidx ->
-       ObjInvWRq oidx (bst_msgs st) ->
+       ObjInvWRq oidx (st_msgs st) ->
        msiS <= ost#[status]).
 
 Section InvWB.
@@ -1112,16 +1113,16 @@ Section InvWB.
     specialize (Hd _ _ H0).
     specialize (Hw oidx).
 
-    destruct (bst_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
-    destruct (bst_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
-    destruct (bst_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
-    destruct (bst_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
+    destruct (st_oss ist)@[oidx] as [ost|] eqn:Host; simpl in *; auto.
+    destruct (st_orqs ist)@[oidx] as [orq|] eqn:Horq; simpl in *; auto.
+    destruct (st_oss ist)@[pidx] as [post|] eqn:Hpost; simpl in *; auto.
+    destruct (st_orqs ist)@[pidx] as [porq|] eqn:Hporq; simpl in *; auto.
 
     specialize (Hm _ Ho eq_refl); dest.
     intros.
     specialize (Hw (or_introl H7)).
 
-    assert (NoRsM oidx (bst_msgs ist)) as Hnrs.
+    assert (NoRsM oidx (st_msgs ist)) as Hnrs.
     { destruct H7 as [[rqUp rqm] ?]; dest; inv H8.
       apply not_MsgExistsSig_MsgsNotExist.
       intros; dest_in.

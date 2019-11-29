@@ -6,9 +6,10 @@ Set Implicit Arguments.
 Open Scope list.
 
 Section Simulation.
-  Context {SystemI StateI LabelI SystemS StateS LabelS: Type}
-          `{HasInit SystemI StateI} `{HasLabel LabelI}
-          `{HasInit SystemS StateS} `{HasLabel LabelS}.
+  Context `{dv: DecValue}
+          {SystemI StateI LabelI SystemS StateS LabelS: Type}
+          `{HasInit SystemI StateI} `{@HasLabel dv LabelI}
+          `{HasInit SystemS StateS} `{@HasLabel dv LabelS}.
   Variables (stepI: Step SystemI StateI LabelI) (stepS: Step SystemS StateS LabelS)
             (sim: StateI -> StateS -> Prop).
 
@@ -67,9 +68,10 @@ Section Simulation.
 End Simulation.
 
 Section InvSim.
-  Context {SystemI StateI LabelI SystemS StateS LabelS: Type}
-          `{HasInit SystemI StateI} `{HasLabel LabelI}
-          `{HasInit SystemS StateS} `{HasLabel LabelS}.
+  Context `{dv: DecValue}
+          {SystemI StateI LabelI SystemS StateS LabelS: Type}
+          `{HasInit SystemI StateI} `{@HasLabel dv LabelI}
+          `{HasInit SystemS StateS} `{@HasLabel dv LabelS}.
   Variables (stepI: Step SystemI StateI LabelI) (stepS: Step SystemS StateS LabelS)
             (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop).
@@ -140,9 +142,10 @@ Section InvSim.
 End InvSim.
 
 Section InvRSim.
-  Context {SystemI StateI LabelI SystemS StateS LabelS: Type}
-          `{HasInit SystemI StateI} `{HasLabel LabelI}
-          `{HasInit SystemS StateS} `{HasLabel LabelS}.
+  Context `{dv: DecValue}
+          {SystemI StateI LabelI SystemS StateS LabelS: Type}
+          `{HasInit SystemI StateI} `{@HasLabel dv LabelI}
+          `{HasInit SystemS StateS} `{@HasLabel dv LabelS}.
   Variables (stepI: Step SystemI StateI LabelI) (stepS: Step SystemS StateS LabelS)
             (ginv: StateI -> Prop)
             (sim: StateI -> StateS -> Prop).
@@ -199,10 +202,10 @@ Section InvRSim.
   
 End InvRSim.
 
-Definition liftSim {iifc sifc: OStateIfc}
+Definition liftSim `{dv: DecValue} {iifc sifc: OStateIfc}
            (ossSim: @OStates iifc -> @OStates sifc -> Prop):
-  @MState iifc -> @MState sifc -> Prop :=
-  fun ist sst => ossSim (bst_oss ist) (bst_oss sst).
+  @State dv iifc -> @State dv sifc -> Prop :=
+  fun ist sst => ossSim (st_oss ist) (st_oss sst).
 
 Close Scope list.
 

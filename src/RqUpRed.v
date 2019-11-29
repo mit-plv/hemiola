@@ -20,7 +20,7 @@ Ltac disc_rqToUpRule :=
   end.
 
 Lemma upLockedInv_False_1:
-  forall dtr orqs msgs oidx rqUp rqm down rsm,
+  forall `{dv: DecValue} dtr orqs msgs oidx rqUp rqm down rsm,
     UpLockedInv dtr orqs msgs oidx ->
     rqEdgeUpFrom dtr oidx = Some rqUp ->
     edgeDownTo dtr oidx = Some down ->
@@ -49,7 +49,7 @@ Proof.
 Qed.
 
 Section RqUpReduction.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -73,13 +73,13 @@ Section RqUpReduction.
     inv_step.
     red_obj_rule.
     disc_rule_conds.
-    - pose proof (rqEdgeUpFrom_Some H7 _ H1).
+    - pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H7)) _ H1).
       destruct H5 as [rsUp [down [pidx ?]]]; dest.
       repeat disc_rule_minds.
       split; [discriminate|].
       exists pidx.
       right; do 2 eexists; repeat split; try eassumption.
-    - pose proof (rqEdgeUpFrom_Some H7 _ H1).
+    - pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H7)) _ H1).
       destruct H11 as [rsUp [down [pidx ?]]]; dest.
       repeat disc_rule_minds.
       split; [discriminate|].
@@ -99,7 +99,7 @@ Section RqUpReduction.
         parentIdxOf dtr oidx = Some oidxTo /\
         routs = rqUps /\
         (exists orq rqiu,
-            st2.(bst_orqs)@[oidx] = Some orq /\
+            st2.(st_orqs)@[oidx] = Some orq /\
             orq@[upRq] = Some rqiu /\
             ((rins = nil /\ rqiu.(rqi_midx_rsb) = None) \/
              exists cidx rqFrom rqfm down,
@@ -111,7 +111,7 @@ Section RqUpReduction.
         exists rqTo rqtm,
           rqUps = [(rqTo, rqtm)] /\
           rqEdgeUpFrom dtr oidx = Some rqTo /\
-          length (findQ rqTo st2.(bst_msgs)) = 1.
+          length (findQ rqTo st2.(st_msgs)) = 1.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
 
@@ -660,7 +660,7 @@ Section RqUpReduction.
     right; do 2 eexists; eauto.
   Qed.
 
-  Inductive RqUpHistory: MHistory -> IdxT -> list (Id Msg) -> Prop :=
+  Inductive RqUpHistory: History -> IdxT -> list (Id Msg) -> Prop :=
   | RqUpIntro:
       forall oidx ridx rins routs oidxTo,
         RqUpMsgsFrom oidx oidxTo routs ->
@@ -682,7 +682,7 @@ Section RqUpReduction.
   
   Lemma rqUp_atomic:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall oidxTo rqUps (Hru: rqUps <> nil),
         RqUpMsgs dtr oidxTo rqUps ->
         SubList rqUps eouts ->
@@ -775,7 +775,7 @@ Section RqUpReduction.
   
   Lemma rqUp_atomic_lastOIdxOf:
     forall inits ins hst outs rqUp,
-      Atomic msg_dec inits ins hst outs [rqUp] ->
+      Atomic inits ins hst outs [rqUp] ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -825,7 +825,7 @@ Section RqUpReduction.
       rqEdgeUpFrom dtr rcidx = Some (idOf rqUp) ->
       RqUpMsgs dtr roidx [rqUp] ->
       forall inits ins hst outs,
-        Atomic msg_dec inits ins hst outs [rqUp] ->
+        Atomic inits ins hst outs [rqUp] ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
@@ -843,7 +843,7 @@ Section RqUpReduction.
       rqUps <> nil ->
       RqUpMsgs dtr roidx rqUps ->
       forall inits ins hst outs,
-        Atomic msg_dec inits ins hst outs rqUps ->
+        Atomic inits ins hst outs rqUps ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
@@ -864,8 +864,8 @@ Section RqUpReduction.
         parentIdxOf dtr cidx = Some pidx ->
         rqEdgeUpFrom dtr cidx = Some rqUp ->
         edgeDownTo dtr cidx = Some down ->
-        st1.(bst_orqs)@[cidx] = Some corq -> corq@[upRq] <> None ->
-        st1.(bst_orqs)@[pidx] = Some porq ->
+        st1.(st_orqs)@[cidx] = Some corq -> corq@[upRq] <> None ->
+        st1.(st_orqs)@[pidx] = Some porq ->
         porq@[upRq] = Some prqi -> prqi.(rqi_midx_rsb) = Some down ->
         forall oidx ridx rins routs st2,
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
@@ -1026,7 +1026,7 @@ Section RqUpReduction.
     forall oidxTo rqUp st1 st2 oidx ridx rins routs,
       RqUpMsgs dtr oidxTo [rqUp] ->
       Reachable (steps step_m) sys st1 ->
-      InMPI st1.(bst_msgs) rqUp ->
+      InMPI st1.(st_msgs) rqUp ->
       step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
       DisjList routs [rqUp].
   Proof.
@@ -1075,7 +1075,7 @@ Section RqUpReduction.
       forall rqUp st1 st2,
         outs = [rqUp] ->
         steps step_m sys st1 hst st2 ->
-        InMPI st2.(bst_msgs) rqUp.
+        InMPI st2.(st_msgs) rqUp.
   Proof.
     induction 1; simpl; intros; subst.
     - inv_steps; inv_step.
@@ -1091,7 +1091,7 @@ Section RqUpReduction.
       RqUpMsgs dtr oidxTo rqUps ->
       RqUpHistory phst oidxTo rqUps ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         DisjList rqUps inits ->
         Reducible sys (hst ++ phst) (phst ++ hst).
   Proof.
@@ -1159,10 +1159,10 @@ Section RqUpReduction.
   Lemma rqUp_lpush_unit_reducible:
     forall oidxTo rqUps inits ins hst outs eouts
            pinits pins phst pouts peouts,
-      Atomic msg_dec pinits pins phst pouts peouts ->
+      Atomic pinits pins phst pouts peouts ->
       rqUps <> nil -> RqUpMsgs dtr oidxTo rqUps ->
       SubList rqUps peouts ->
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       DisjList peouts inits ->
       Reducible sys (hst ++ phst) (phst ++ hst).
   Proof.

@@ -11,7 +11,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section Separation.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -28,7 +28,7 @@ Section Separation.
       msg_type (valOf rqDown) = MRq ->
       forall st1 oidx ridx rins routs st2,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rqDown ->
+        InMPI (st_msgs st1) rqDown ->
         ~ In rqDown rins ->
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         ~ In rqDown routs.
@@ -113,11 +113,11 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rqDown) ->
       msg_type (valOf rqDown) = MRq ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         ~ In rqDown inits ->
         forall st1,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rqDown ->
+          InMPI (st_msgs st1) rqDown ->
           forall st2,
             steps step_m sys st1 hst st2 ->
             ~ In rqDown outs.
@@ -140,11 +140,11 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rqDown) ->
       msg_type (valOf rqDown) = MRq ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         ~ In rqDown inits ->
         forall st1,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rqDown ->
+          InMPI (st_msgs st1) rqDown ->
           forall st2,
             steps step_m sys st1 hst st2 ->
             ~ In rqDown ins.
@@ -170,7 +170,7 @@ Section Separation.
       msg_type (valOf rqDown) = MRq ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rqDown ->
+        InMPI (st_msgs st1) rqDown ->
         forall rins,
           Forall (fun rin =>
                     exists oidx,
@@ -206,19 +206,19 @@ Section Separation.
           congruence.
 
     - disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H29).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H29).
       destruct H11 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply parent_parent_in_False with (oidx2:= obj_idx obj);
         try apply Hrrs; eassumption.
 
     - disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H12).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H12).
         destruct H7 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         elim (H8 pidx).
         do 2 eexists; repeat split; eauto.
-      + pose proof (edgeDownTo_Some H _ H12).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H12).
         destruct H7 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         elim (H8 pidx).
@@ -233,7 +233,7 @@ Section Separation.
           specialize (n (obj_idx upCObj)); destruct n; auto.
           elim H7; eapply edgeDownTo_subtreeIndsOf_self_in; [apply Hrrs|].
           congruence.
-      + pose proof (edgeDownTo_Some H _ H10).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H10).
         destruct H19 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx2:= obj_idx obj);
@@ -241,12 +241,12 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H23).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H23).
         destruct H32 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
-      + pose proof (edgeDownTo_Some H _ H23).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H23).
         destruct H25 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
@@ -304,7 +304,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H11).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H11).
       destruct H30 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
@@ -319,7 +319,7 @@ Section Separation.
       msg_type (valOf rqDown) = MRq ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rqDown ->
+        InMPI (st_msgs st1) rqDown ->
         forall rins (Hrins: rins <> nil),
           ~ In rqDown rins ->
           (forall rsDown,
@@ -429,7 +429,7 @@ Section Separation.
       msg_type (valOf rqDown) = MRq ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rqDown ->
+        InMPI (st_msgs st1) rqDown ->
         forall oidx ridx rins routs st2,
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           ~ In rqDown rins ->
@@ -465,10 +465,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rqDown) ->
       msg_type (valOf rqDown) = MRq ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rqDown ->
+          InMPI (st_msgs st1) rqDown ->
           steps step_m sys st1 hst st2 ->
           ~ In rqDown inits ->
           forall rsDown,
@@ -503,7 +503,7 @@ Section Separation.
       msg_type (valOf rqDown1) = MRq ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rqDown1 ->
+        InMPI (st_msgs st1) rqDown1 ->
         forall oidx ridx rins routs st2,
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           ~ In rqDown1 rins ->
@@ -541,10 +541,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rqDown1) ->
       msg_type (valOf rqDown1) = MRq ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rqDown1 ->
+          InMPI (st_msgs st1) rqDown1 ->
           steps step_m sys st1 hst st2 ->
           ~ In rqDown1 inits ->
           forall rqDown2,
@@ -577,10 +577,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rqDown) ->
       msg_type (valOf rqDown) = MRq ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rqDown ->
+          InMPI (st_msgs st1) rqDown ->
           steps step_m sys st1 hst st2 ->
           ~ In rqDown inits ->
           forall dmsg,
@@ -601,10 +601,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rqDown) ->
       msg_type (valOf rqDown) = MRq ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rqDown ->
+          InMPI (st_msgs st1) rqDown ->
           steps step_m sys st1 hst st2 ->
           ~ In rqDown inits ->
           forall rsDown,
@@ -664,7 +664,7 @@ Section Separation.
       edgeDownTo dtr cidx = Some down ->
       DisjList (oindsOf hst) (subtreeIndsOf dtr cidx) ->
       forall inits ins outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall s1 s2,
           Reachable (steps step_m) sys s1 ->
           steps step_m sys s1 hst s2 ->
@@ -688,7 +688,7 @@ Section Separation.
 
   Lemma atomic_NonRqUp_rqDown_separation_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       Forall (NonRqUpL dtr) hst ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
@@ -699,7 +699,7 @@ Section Separation.
           parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
           edgeDownTo dtr (obj_idx cobj) = Some (idOf rqDown) ->
           msg_type (valOf rqDown) = MRq ->
-          InMPI s1.(bst_msgs) rqDown ->
+          InMPI s1.(st_msgs) rqDown ->
           ~ In rqDown inits ->
           SubList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)) \/
           DisjList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
@@ -761,7 +761,7 @@ Section Separation.
 
   Lemma atomic_NonRqUp_rqDown_separation_inside:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       Forall (NonRqUpL dtr) hst ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
@@ -772,7 +772,7 @@ Section Separation.
           parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
           edgeDownTo dtr (obj_idx cobj) = Some (idOf rqDown) ->
           msg_type (valOf rqDown) = MRq ->
-          InMPI s1.(bst_msgs) rqDown ->
+          InMPI s1.(st_msgs) rqDown ->
           ~ In rqDown inits ->
           forall ioidx,
             In ioidx (oindsOf hst) ->
@@ -788,7 +788,7 @@ Section Separation.
 
   Lemma atomic_NonRqUp_rqDown_separation_outside:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       Forall (NonRqUpL dtr) hst ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
@@ -799,7 +799,7 @@ Section Separation.
           parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
           edgeDownTo dtr (obj_idx cobj) = Some (idOf rqDown) ->
           msg_type (valOf rqDown) = MRq ->
-          InMPI s1.(bst_msgs) rqDown ->
+          InMPI s1.(st_msgs) rqDown ->
           ~ In rqDown inits ->
           forall ioidx,
             In ioidx (oindsOf hst) ->
@@ -825,7 +825,7 @@ Section Separation.
         msg_type (valOf rsDown) = MRs ->
         forall st1 oidx ridx rins routs st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rsDown ->
+          InMPI (st_msgs st1) rsDown ->
           ~ In rsDown rins ->
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           ~ In rsDown routs.
@@ -899,11 +899,11 @@ Section Separation.
         edgeDownTo dtr cidx = Some (idOf rsDown) ->
         msg_type (valOf rsDown) = MRs ->
         forall inits ins hst outs eouts,
-          Atomic msg_dec inits ins hst outs eouts ->
+          Atomic inits ins hst outs eouts ->
           ~ In rsDown inits ->
           forall st1,
             Reachable (steps step_m) sys st1 ->
-            InMPI (bst_msgs st1) rsDown ->
+            InMPI (st_msgs st1) rsDown ->
             forall st2,
               steps step_m sys st1 hst st2 ->
               ~ In rsDown outs.
@@ -932,11 +932,11 @@ Section Separation.
         edgeDownTo dtr cidx = Some (idOf rsDown) ->
         msg_type (valOf rsDown) = MRs ->
         forall inits ins hst outs eouts,
-          Atomic msg_dec inits ins hst outs eouts ->
+          Atomic inits ins hst outs eouts ->
           ~ In rsDown inits ->
           forall st1,
             Reachable (steps step_m) sys st1 ->
-            InMPI (bst_msgs st1) rsDown ->
+            InMPI (st_msgs st1) rsDown ->
             forall st2,
               steps step_m sys st1 hst st2 ->
               ~ In rsDown ins.
@@ -960,7 +960,7 @@ Section Separation.
       msg_type (valOf rsDown) = MRs ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rsDown ->
+        InMPI (st_msgs st1) rsDown ->
         forall oidx ridx rins routs st2,
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           forall rqDown,
@@ -986,10 +986,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rsDown) ->
       msg_type (valOf rsDown) = MRs ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rsDown ->
+          InMPI (st_msgs st1) rsDown ->
           steps step_m sys st1 hst st2 ->
           ~ In rsDown inits ->
           forall rqDown,
@@ -1019,7 +1019,7 @@ Section Separation.
       msg_type (valOf rsDown1) = MRs ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rsDown1 ->
+        InMPI (st_msgs st1) rsDown1 ->
         forall oidx ridx rins routs st2,
           step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
           ~ In rsDown1 rins ->
@@ -1051,10 +1051,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rsDown1) ->
       msg_type (valOf rsDown1) = MRs ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rsDown1 ->
+          InMPI (st_msgs st1) rsDown1 ->
           steps step_m sys st1 hst st2 ->
           ~ In rsDown1 inits ->
           forall rsDown2,
@@ -1087,10 +1087,10 @@ Section Separation.
       edgeDownTo dtr cidx = Some (idOf rsDown) ->
       msg_type (valOf rsDown) = MRs ->
       forall inits ins hst outs eouts,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rsDown ->
+          InMPI (st_msgs st1) rsDown ->
           steps step_m sys st1 hst st2 ->
           ~ In rsDown inits ->
           forall dmsg,
@@ -1113,7 +1113,7 @@ Section Separation.
         msg_type (valOf rsDown) = MRs ->
         forall st1,
           Reachable (steps step_m) sys st1 ->
-          InMPI (bst_msgs st1) rsDown ->
+          InMPI (st_msgs st1) rsDown ->
           forall rins (Hrins: rins <> nil),
             Forall (fun rin =>
                       exists oidx,
@@ -1145,7 +1145,7 @@ Section Separation.
         congruence.
 
     - disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H28).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H28).
       destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply parent_parent_in_False with (oidx2:= obj_idx obj);
@@ -1181,7 +1181,7 @@ Section Separation.
           specialize (n (obj_idx upCObj)); destruct n; auto.
           elim H9; eapply edgeDownTo_subtreeIndsOf_self_in; [apply Hrrs|].
           congruence.
-      + pose proof (edgeDownTo_Some H _ H3).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H3).
         destruct H14 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx2:= obj_idx obj);
@@ -1189,12 +1189,12 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some H _ H17).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
         destruct H31 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
-      + pose proof (edgeDownTo_Some H _ H17).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
         destruct H20 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
@@ -1258,7 +1258,7 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      pose proof (edgeDownTo_Some H _ H10).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H10).
       destruct H29 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       eapply parent_parent_in_False
@@ -1274,7 +1274,7 @@ Section Separation.
       msg_type (valOf rsDown) = MRs ->
       forall st1,
         Reachable (steps step_m) sys st1 ->
-        InMPI (bst_msgs st1) rsDown ->
+        InMPI (st_msgs st1) rsDown ->
         forall rins,
           ~ In rsDown rins ->
           Forall (fun rin =>
@@ -1375,7 +1375,7 @@ Section Separation.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       destruct rsDown as [rsDown rsdm]; simpl in *.
-      pose proof (edgeDownTo_Some H _ H4).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H4).
       destruct H13 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       assert (rmsg <> rsdm) by (intro Hx; subst; elim H8; auto); clear H8.
@@ -1387,7 +1387,7 @@ Section Separation.
 
   Lemma atomic_rsDown_separation_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -1397,7 +1397,7 @@ Section Separation.
           parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
           edgeDownTo dtr (obj_idx cobj) = Some (idOf rsDown) ->
           msg_type (valOf rsDown) = MRs ->
-          InMPI s1.(bst_msgs) rsDown ->
+          InMPI s1.(st_msgs) rsDown ->
           ~ In rsDown inits ->
           SubList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)) \/
           DisjList (oindsOf hst) (subtreeIndsOf dtr (obj_idx cobj)).
@@ -1434,7 +1434,7 @@ Section Separation.
 
   Corollary atomic_rsDown_separation_inside:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -1444,7 +1444,7 @@ Section Separation.
           parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
           edgeDownTo dtr (obj_idx cobj) = Some (idOf rsDown) ->
           msg_type (valOf rsDown) = MRs ->
-          InMPI s1.(bst_msgs) rsDown ->
+          InMPI s1.(st_msgs) rsDown ->
           ~ In rsDown inits ->
           forall ioidx,
             In ioidx (oindsOf hst) ->
@@ -1460,7 +1460,7 @@ Section Separation.
 
   Corollary atomic_rsDown_separation_outside:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -1470,7 +1470,7 @@ Section Separation.
           parentIdxOf dtr (obj_idx cobj) = Some (obj_idx pobj) ->
           edgeDownTo dtr (obj_idx cobj) = Some (idOf rsDown) ->
           msg_type (valOf rsDown) = MRs ->
-          InMPI s1.(bst_msgs) rsDown ->
+          InMPI s1.(st_msgs) rsDown ->
           ~ In rsDown inits ->
           forall ioidx,
             In ioidx (oindsOf hst) ->

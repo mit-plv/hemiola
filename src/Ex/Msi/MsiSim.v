@@ -18,13 +18,13 @@ Local Open Scope fmap.
 
 Lemma InvExcl_excl_invalid:
   forall topo cifc st (He: InvExcl topo cifc st) msgs eidx eost,
-    bst_msgs st = msgs ->
-    (bst_oss st)@[eidx] = Some eost ->
+    st_msgs st = msgs ->
+    (st_oss st)@[eidx] = Some eost ->
     NoRsI eidx msgs ->
     msiM <= eost#[status] ->
     forall oidx ost,
       eidx <> oidx ->
-      (bst_oss st)@[oidx] = Some ost ->
+      (st_oss st)@[oidx] = Some ost ->
       ObjInvalid oidx ost msgs.
 Proof.
   intros; subst.
@@ -213,28 +213,28 @@ Section Sim.
 
   End ObjCohFacts.
 
-  Definition ImplStateCoh (cv: nat) (st: MState): Prop :=
+  Definition ImplStateCoh (cv: nat) (st: State): Prop :=
     Forall (fun oidx =>
-              ost <-- (bst_oss st)@[oidx];
-                _ <-- (bst_orqs st)@[oidx];
-                ObjCoh cv oidx ost (bst_msgs st))
+              ost <-- (st_oss st)@[oidx];
+                _ <-- (st_orqs st)@[oidx];
+                ObjCoh cv oidx ost (st_msgs st))
            (c_li_indices cifc ++ c_l1_indices cifc).
 
-  Definition SpecStateCoh (cv: nat) (st: @MState SpecOStateIfc): Prop :=
-    sost <-- (bst_oss st)@[specIdx];
-      sorq <-- (bst_orqs st)@[specIdx];
+  Definition SpecStateCoh (cv: nat) (st: @State SpecOStateIfc): Prop :=
+    sost <-- (st_oss st)@[specIdx];
+      sorq <-- (st_orqs st)@[specIdx];
       sost#[specValueIdx] = cv.
 
-  Inductive SimState: MState -> @MState SpecOStateIfc -> Prop :=
+  Inductive SimState: State -> @State SpecOStateIfc -> Prop :=
   | SimStateIntro:
       forall cv ist sst,
         SpecStateCoh cv sst ->
         ImplStateCoh cv ist ->
         SimState ist sst.
 
-  Definition SimMSI (ist: MState) (sst: @MState SpecOStateIfc): Prop :=
+  Definition SimMSI (ist: State) (sst: @State SpecOStateIfc): Prop :=
     SimState ist sst /\
-    SimExtMP (c_l1_indices cifc) ist.(bst_msgs) ist.(bst_orqs) sst.(bst_msgs).
+    SimExtMP (c_l1_indices cifc) ist.(st_msgs) ist.(st_orqs) sst.(st_msgs).
 
   Hint Unfold ObjCoh ImplStateCoh: RuleConds.
 
@@ -283,15 +283,15 @@ Section Sim.
 
   Lemma msi_sim_ext_in:
     forall oss orqs msgs sst1,
-      SimMSI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
+      SimMSI {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} sst1 ->
       forall eins,
         eins <> nil -> ValidMsgsExtIn impl eins ->
         exists slbl sst2,
           getLabel (RlblIns eins) = getLabel slbl /\
           step_m spec sst1 slbl sst2 /\
-          SimMSI {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := enqMsgs eins msgs |} sst2.
+          SimMSI {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := enqMsgs eins msgs |} sst2.
   Proof.
     destruct sst1 as [soss1 sorqs1 smsgs1]; simpl; intros.
     red in H; simpl in *; dest.
@@ -326,7 +326,7 @@ Section Sim.
 
   Lemma msi_sim_ext_out:
     forall oss orqs msgs sst1,
-      SimMSI {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} sst1 ->
+      SimMSI {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} sst1 ->
       forall eouts: list (Id Msg),
         eouts <> nil ->
         Forall (FirstMPI msgs) eouts ->
@@ -334,9 +334,9 @@ Section Sim.
         exists slbl sst2,
           getLabel (RlblOuts eouts) = getLabel slbl /\
           step_m spec sst1 slbl sst2 /\
-          SimMSI {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := deqMsgs (idsOf eouts) msgs |} sst2.
+          SimMSI {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := deqMsgs (idsOf eouts) msgs |} sst2.
   Proof.
     destruct sst1 as [soss1 sorqs1 smsgs1]; simpl; intros.
     red in H; simpl in *; dest.
@@ -393,17 +393,17 @@ Section Sim.
       (* get simulation propositions for the current impl. state *)
       | [Hf: Forall _ (c_li_indices ?cifc ++ c_l1_indices ?cifc),
              Hin: In ?oidx (c_li_indices ?cifc)
-         |- context[SimMSI {| bst_oss := _ +[?oidx <- _] |} _]] =>
+         |- context[SimMSI {| st_oss := _ +[?oidx <- _] |} _]] =>
         rewrite Forall_forall in Hf;
         pose proof (Hf _ (in_or_app _ _ _ (or_introl Hin)))
       | [Hf: Forall _ (c_li_indices ?cifc ++ c_l1_indices ?cifc),
              Hin: In ?oidx (tl (c_li_indices ?cifc))
-         |- context[SimMSI {| bst_oss := _ +[?oidx <- _] |} _]] =>
+         |- context[SimMSI {| st_oss := _ +[?oidx <- _] |} _]] =>
         rewrite Forall_forall in Hf;
         pose proof (Hf _ (in_or_app _ _ _ (or_introl (tl_In _ _ Hin))))
       | [Hf: Forall _ (c_li_indices ?cifc ++ c_l1_indices ?cifc),
              Hin: In ?oidx (c_l1_indices ?cifc)
-         |- context[SimMSI {| bst_oss := _ +[?oidx <- _] |} _]] =>
+         |- context[SimMSI {| st_oss := _ +[?oidx <- _] |} _]] =>
         rewrite Forall_forall in Hf;
         pose proof (Hf _ (in_or_app _ _ _ (or_intror Hin)))
       (* rewrite a coherent value *)
@@ -534,7 +534,7 @@ Section Sim.
 
       Ltac case_ImplStateCoh_mem_me_others lidx :=
         match goal with
-        | |- ImplStateCoh _ {| bst_oss := _ +[?oidx <- _] |} =>
+        | |- ImplStateCoh _ {| st_oss := _ +[?oidx <- _] |} =>
           red; simpl;
           apply Forall_forall;
           intros lidx ?; destruct (idx_dec lidx oidx); subst
@@ -743,7 +743,7 @@ Section Sim.
 
       Ltac case_ImplStateCoh_li_me_others lidx :=
         match goal with
-        | |- ImplStateCoh _ {| bst_oss := _ +[?oidx <- _] |} =>
+        | |- ImplStateCoh _ {| st_oss := _ +[?oidx <- _] |} =>
           red; simpl;
           apply Forall_forall;
           intros lidx ?; destruct (idx_dec lidx oidx); subst

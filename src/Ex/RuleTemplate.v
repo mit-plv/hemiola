@@ -9,23 +9,23 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
-Record Miv :=
+Record Miv `{DecValue} :=
   { miv_id: IdxT;
-    miv_value: Value }.
+    miv_value: t_type }.
 Notation "<| MID ; MV |>" := {| miv_id := MID; miv_value := MV |}.
 
-Definition rqMsg (miv: Miv) :=
+Definition rqMsg `{DecValue} (miv: Miv) :=
   {| msg_id := miv_id miv;
      msg_type := MRq;
      msg_value := miv_value miv |}.
-Definition rsMsg (miv: Miv) :=
+Definition rsMsg `{DecValue} (miv: Miv) :=
   {| msg_id := miv_id miv;
      msg_type := MRs;
      msg_value := miv_value miv |}.
 
 Section Template.
   Variable (dtr: DTree).
-  Context `{oifc: OStateIfc}.
+  Context `{dv:DecValue} `{oifc: OStateIfc}.
   Variables (ridx msgId: IdxT).
 
   Definition immRule (prec: OPrec) (trs: OState -> OState): Rule :=
@@ -270,7 +270,7 @@ Section Template.
                 parentIdxOf dtr rcidx = Some oidx /\
                 rqEdgeUpFrom dtr rcidx = Some rqUp /\
                 edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb) /\
-                In rcidx (map (@obj_idx _) (sys_objs sys)) /\
+                In rcidx (map obj_idx (sys_objs sys)) /\
                 ~ In rcidx (fst (snd (trs ost rq)))).
 
   Definition rsDownRqDownRule (oidx: IdxT) (rqId: IdxT)
@@ -329,7 +329,7 @@ Hint Unfold rqMsg rsMsg: RuleConds.
 Section Facts.
   Variable (dtr: DTree).
   Hypothesis (Hdtr: TreeTopo dtr).
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
 
   Lemma immRule_ImmDownRule:
     forall oidx ridx prec trs,
@@ -399,7 +399,7 @@ Section Facts.
     forall sys oidx ridx msgId cidx
            (prec: OState -> list (Id Msg) -> Prop)
            (trs: OState -> Msg -> list IdxT * Miv),
-      In cidx (map (@obj_idx _) (sys_objs sys)) ->
+      In cidx (map obj_idx (sys_objs sys)) ->
       parentIdxOf dtr cidx = Some oidx ->
       RqUpDownSound dtr cidx oidx prec trs ->
       RqFwdRule dtr sys oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
@@ -582,424 +582,429 @@ Section Facts.
 
 End Facts.
 
-Lemma tree2Topo_immRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx prec trs ost orq ins,
-    rule_precond (immRule ridx prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (immRule ridx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest; discriminate.
-Qed.
+Section DecValue.
+  Context `{dv: DecValue} `{OStateIfc}.
 
-Lemma tree2Topo_immDownRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId cidx prec trs ost orq ins,
-    rule_precond (immDownRule ridx msgId cidx prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (immDownRule ridx msgId cidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H0.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    apply rqEdgeUpFrom_rqUpFrom in H7; discriminate.
-Qed.
-
-Lemma tree2Topo_immUpRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (immUpRule ridx msgId oidx prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (immUpRule ridx msgId oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H0.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
-Qed.
-
-Lemma tree2Topo_rqUpDownRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx cidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rqUpDownRule ridx msgId cidx oidx prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H0.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    destruct (fst (trs ost x4)); [discriminate|].
-    inv H1; apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
-Qed.
-
-Lemma tree2Topo_rqDownDownRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rqDownDownRule ridx msgId oidx prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rqDownDownRule ridx msgId oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H0.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    destruct (fst (trs ost x4)); [discriminate|].
-    inv H1; apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
-Qed.
-
-Lemma tree2Topo_rsDownDownRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsDownDownRule ridx msgId rqId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRule ridx msgId rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H2.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    clear -H5.
-    apply f_equal with (f:= fun m => m@[upRq]) in H5; mred.
-Qed.
-
-Lemma tree2Topo_rsDownDownRuleS_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rsDownDownRuleS ridx msgId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRuleS ridx msgId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H3.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    clear -H7.
-    apply f_equal with (f:= fun m => m@[upRq]) in H7; mred.
-Qed.
-
-Lemma tree2Topo_rsUpDownRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsUpDownRule ridx msgId rqId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpDownRule ridx msgId rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H1; dest.
-  clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
-  specialize (H3 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H3 _ _ _ eq_refl).
-  inv H3; discriminate.
-Qed.
-
-Lemma tree2Topo_rsUpDownRuleOne_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsUpDownRuleOne ridx msgId rqId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpDownRuleOne ridx msgId rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H1; dest.
-  clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
-  specialize (H3 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H3 _ _ _ eq_refl).
-  inv H3; discriminate.
-Qed.
-
-Lemma tree2Topo_rsUpUpRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsUpUpRule ridx msgId rqId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRule ridx msgId rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H1; dest.
-  clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
-  specialize (H3 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H3 _ _ _ eq_refl).
-  inv H3; discriminate.
-Qed.
-
-Lemma tree2Topo_rsUpUpRuleOne_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsUpUpRuleOne ridx msgId rqId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleOne ridx msgId rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H1; dest.
-  clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
-  specialize (H3 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H3 _ _ _ eq_refl).
-  inv H3; discriminate.
-Qed.
-
-Lemma tree2Topo_rsDownRqDownRule_not_RqToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsDownRqDownRule ridx msgId oidx rqId prec trs) ost orq ins ->
-    ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  red in H2; dest.
-  clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
-  specialize (H5 _ _ _ H0).
-  disc_rule_conds_ex.
-  specialize (H5 _ _ _ eq_refl); dest.
-  destruct H2.
-  - dest; discriminate.
-  - dest; disc_rule_conds_ex.
-    destruct (fst (snd (trs ost msg))); [discriminate|].
-    inv H4; apply rqEdgeUpFrom_rqUpFrom in H10; discriminate.
-Qed.
-
-
-Lemma tree2Topo_immRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx prec trs ost orq ins,
-    rule_precond (immRule ridx prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (immRule ridx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_immRule_not_RqToUpRule:
+    forall tr bidx oidx ridx prec trs ost orq ins,
+      rule_precond (immRule ridx prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (immRule ridx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest; discriminate.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest; discriminate.
-Qed.
+  Qed.
 
-Lemma tree2Topo_immDownRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx cidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (immDownRule ridx msgId cidx prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (immDownRule ridx msgId cidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_immDownRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId cidx prec trs ost orq ins,
+      rule_precond (immDownRule ridx msgId cidx prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (immDownRule ridx msgId cidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest.
-    inv H5.
-    apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest; discriminate.
-Qed.
+    destruct H0.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      apply rqEdgeUpFrom_rqUpFrom in H7; discriminate.
+  Qed.
 
-Lemma tree2Topo_rqUpUpRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx cidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rqUpUpRule ridx msgId cidx oidx prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpUpRule ridx msgId cidx oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_immUpRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (immUpRule ridx msgId oidx prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (immUpRule ridx msgId oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest.
-    inv H5.
-    apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
-Qed.
+    destruct H0.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
+  Qed.
 
-Lemma tree2Topo_rqUpUpRuleS_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx prec trs ost orq ins,
-    rule_precond (rqUpUpRuleS ridx oidx prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpUpRuleS ridx oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_rqUpDownRule_not_RqToUpRule:
+    forall tr bidx cidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rqUpDownRule ridx msgId cidx oidx prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest.
-    destruct ins; discriminate.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    unfold addRqS in H5.
-    apply f_equal with (f:= fun m => m@[upRq]) in H5; mred.
-Qed.
+    destruct H0.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      destruct (fst (trs ost x4)); [discriminate|].
+      inv H1; apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
+  Qed.
 
-Lemma tree2Topo_rqUpDownRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx cidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rqUpDownRule ridx msgId cidx oidx prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_rqDownDownRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rqDownDownRule ridx msgId oidx prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rqDownDownRule ridx msgId oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest.
-    destruct (fst (trs ost rmsg)); [discriminate|].
-    inv H5.
-    apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
-Qed.
+    destruct H0.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      destruct (fst (trs ost x4)); [discriminate|].
+      inv H1; apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
+  Qed.
 
-Lemma tree2Topo_rqDownDownRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rqDownDownRule ridx msgId oidx prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqDownDownRule ridx msgId oidx prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_rsDownDownRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsDownDownRule ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRule ridx msgId rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest.
-    destruct (fst (trs ost rmsg)); [discriminate|].
-    inv H5.
-    apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
-Qed.
+    destruct H2.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      clear -H5.
+      apply f_equal with (f:= fun m => m@[upRq]) in H5; mred.
+  Qed.
 
-Lemma tree2Topo_rsDownDownRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsDownDownRule ridx msgId rqId prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRule ridx msgId rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
-    red in H4.
-    clear -H0 H4. (* [rule_precond] and [RulePostSat] *)
-    specialize (H4 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H4 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H4; mred.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H3; mred.
-Qed.
-
-Lemma tree2Topo_rsDownDownRuleS_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId prec trs ost orq ins,
-    rule_precond (rsDownDownRuleS ridx msgId prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRuleS ridx msgId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
-    red in H4.
-    clear -H0 H4. (* [rule_precond] and [RulePostSat] *)
-    specialize (H4 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H4 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H4; mred.
-  - dest.
-    red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H4; mred.
-Qed.
-
-Lemma tree2Topo_rsDownRqDownRule_not_RsToUpRule:
-  forall `{OStateIfc} tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-    rule_precond (rsDownRqDownRule ridx msgId oidx rqId prec trs) ost orq ins ->
-    ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
-Proof.
-  intros; intro.
-  destruct H1.
-  - red in H1; dest.
+  Lemma tree2Topo_rsDownDownRuleS_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rsDownDownRuleS ridx msgId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRuleS ridx msgId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
     clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
     specialize (H5 _ _ _ H0).
     disc_rule_conds_ex.
     specialize (H5 _ _ _ eq_refl); dest.
-    destruct (fst (snd (trs ost msg))); [discriminate|].
-    inv H8.
-    apply rsEdgeUpFrom_rsUpFrom in H4; discriminate.
-  - dest.
+    destruct H3.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      clear -H7.
+      apply f_equal with (f:= fun m => m@[upRq]) in H7; mred.
+  Qed.
+
+  Lemma tree2Topo_rsUpDownRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsUpDownRule ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpDownRule ridx msgId rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
     red in H1; dest.
-    red in H1.
-    clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
-    specialize (H1 _ _ _ H0).
+    clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
+    specialize (H3 _ _ _ H0).
     disc_rule_conds_ex.
-    specialize (H1 _ _ _ eq_refl); dest.
-    apply f_equal with (f:= fun m => m@[upRq]) in H3; mred.
-Qed.
+    specialize (H3 _ _ _ eq_refl).
+    inv H3; discriminate.
+  Qed.
+
+  Lemma tree2Topo_rsUpDownRuleOne_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsUpDownRuleOne ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpDownRuleOne ridx msgId rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H1; dest.
+    clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
+    specialize (H3 _ _ _ H0).
+    disc_rule_conds_ex.
+    specialize (H3 _ _ _ eq_refl).
+    inv H3; discriminate.
+  Qed.
+
+  Lemma tree2Topo_rsUpUpRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsUpUpRule ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRule ridx msgId rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H1; dest.
+    clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
+    specialize (H3 _ _ _ H0).
+    disc_rule_conds_ex.
+    specialize (H3 _ _ _ eq_refl).
+    inv H3; discriminate.
+  Qed.
+
+  Lemma tree2Topo_rsUpUpRuleOne_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsUpUpRuleOne ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleOne ridx msgId rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H1; dest.
+    clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
+    specialize (H3 _ _ _ H0).
+    disc_rule_conds_ex.
+    specialize (H3 _ _ _ eq_refl).
+    inv H3; discriminate.
+  Qed.
+
+  Lemma tree2Topo_rsDownRqDownRule_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsDownRqDownRule ridx msgId oidx rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
+    clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+    specialize (H5 _ _ _ H0).
+    disc_rule_conds_ex.
+    specialize (H5 _ _ _ eq_refl); dest.
+    destruct H2.
+    - dest; discriminate.
+    - dest; disc_rule_conds_ex.
+      destruct (fst (snd (trs ost msg))); [discriminate|].
+      inv H4; apply rqEdgeUpFrom_rqUpFrom in H10; discriminate.
+  Qed.
+
+
+  Lemma tree2Topo_immRule_not_RsToUpRule:
+    forall tr bidx oidx ridx prec trs ost orq ins,
+      rule_precond (immRule ridx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (immRule ridx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest; discriminate.
+  Qed.
+
+  Lemma tree2Topo_immDownRule_not_RsToUpRule:
+    forall tr bidx cidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (immDownRule ridx msgId cidx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (immDownRule ridx msgId cidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      inv H5.
+      apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest; discriminate.
+  Qed.
+
+  Lemma tree2Topo_rqUpUpRule_not_RsToUpRule:
+    forall tr bidx cidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rqUpUpRule ridx msgId cidx oidx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpUpRule ridx msgId cidx oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      inv H5.
+      apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
+  Qed.
+
+  Lemma tree2Topo_rqUpUpRuleS_not_RsToUpRule:
+    forall tr bidx oidx ridx prec trs ost orq ins,
+      rule_precond (rqUpUpRuleS ridx oidx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpUpRuleS ridx oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      destruct ins; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      unfold addRqS in H5.
+      apply f_equal with (f:= fun m => m@[upRq]) in H5; mred.
+  Qed.
+
+  Lemma tree2Topo_rqUpDownRule_not_RsToUpRule:
+    forall tr bidx cidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rqUpDownRule ridx msgId cidx oidx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      destruct (fst (trs ost rmsg)); [discriminate|].
+      inv H5.
+      apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
+  Qed.
+
+  Lemma tree2Topo_rqDownDownRule_not_RsToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rqDownDownRule ridx msgId oidx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqDownDownRule ridx msgId oidx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      destruct (fst (trs ost rmsg)); [discriminate|].
+      inv H5.
+      apply rsEdgeUpFrom_rsUpFrom in H1; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
+  Qed.
+
+  Lemma tree2Topo_rsDownDownRule_not_RsToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsDownDownRule ridx msgId rqId prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRule ridx msgId rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      red in H4.
+      clear -H0 H4. (* [rule_precond] and [RulePostSat] *)
+      specialize (H4 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H4 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H4; mred.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H3; mred.
+  Qed.
+
+  Lemma tree2Topo_rsDownDownRuleS_not_RsToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rsDownDownRuleS ridx msgId prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownDownRuleS ridx msgId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      red in H4.
+      clear -H0 H4. (* [rule_precond] and [RulePostSat] *)
+      specialize (H4 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H4 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H4; mred.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H4; mred.
+  Qed.
+
+  Lemma tree2Topo_rsDownRqDownRule_not_RsToUpRule:
+    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
+      rule_precond (rsDownRqDownRule ridx msgId oidx rqId prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      destruct (fst (snd (trs ost msg))); [discriminate|].
+      inv H8.
+      apply rsEdgeUpFrom_rsUpFrom in H4; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[upRq]) in H3; mred.
+  Qed.
+
+End DecValue.
 

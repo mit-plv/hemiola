@@ -128,20 +128,20 @@ Section Inv.
 
   End InvDir.
 
-  Definition ImplInv (st: MState): Prop :=
-    post <-- (bst_oss st)@[parentIdx];
-      cost1 <-- (bst_oss st)@[child1Idx];
-      cost2 <-- (bst_oss st)@[child2Idx];
-      porq <-- (bst_orqs st)@[parentIdx];
-      corq1 <-- (bst_orqs st)@[child1Idx];
-      corq2 <-- (bst_orqs st)@[child2Idx];
+  Definition ImplInv (st: State): Prop :=
+    post <-- (st_oss st)@[parentIdx];
+      cost1 <-- (st_oss st)@[child1Idx];
+      cost2 <-- (st_oss st)@[child2Idx];
+      porq <-- (st_orqs st)@[parentIdx];
+      corq1 <-- (st_orqs st)@[child1Idx];
+      corq2 <-- (st_orqs st)@[child2Idx];
       DirInv post cost1 cost2 porq corq1 corq2 /\
       ExclInv (fst post#[implDirIdx]) porq cost1 corq1
-              pc1 c1pRq c1pRs (bst_msgs st) /\
+              pc1 c1pRq c1pRs (st_msgs st) /\
       ExclInv (snd post#[implDirIdx]) porq cost2 corq2
-              pc2 c2pRq c2pRs (bst_msgs st) /\
-      InvalidInv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (bst_msgs st) /\
-      InvalidInv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (bst_msgs st).
+              pc2 c2pRq c2pRs (st_msgs st) /\
+      InvalidInv post#[implDirIdx].(fst) cost1 pc1 c1pRq c1pRs (st_msgs st) /\
+      InvalidInv post#[implDirIdx].(snd) cost2 pc2 c2pRq c2pRs (st_msgs st).
 
   Hint Unfold ImplOStateMSI ChildExcl DirExcl ExclInv InvalidInv
        DirSound1 DirSound2 DirComplete1 DirComplete2 DirInv: RuleConds.
@@ -208,13 +208,13 @@ Section Inv.
 
     Lemma implInv_orqs_weakened:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall oidx porq norq rty rqi,
           orqs@[oidx] = Some porq ->
           norq = porq +[rty <- rqi] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs +[oidx <- norq];
-                     bst_msgs := msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs +[oidx <- norq];
+                     st_msgs := msgs |}.
     Proof.
       unfold ImplInv; simpl; intros.
       disc_rule_conds_const; dest.
@@ -706,12 +706,12 @@ Section Inv.
 
     Lemma implInv_other_midx_enqMP:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall midx msg,
           ~ In midx [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := enqMP midx msg msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := enqMP midx msg msgs |}.
     Proof.
       intros.
       red in H; red; simpl in *.
@@ -729,12 +729,12 @@ Section Inv.
 
     Lemma implInv_other_midx_enqMsgs:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall nmsgs,
           DisjList (idsOf nmsgs) [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := enqMsgs nmsgs msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := enqMsgs nmsgs msgs |}.
     Proof.
       intros.
       red in H; red; simpl in *.
@@ -760,12 +760,12 @@ Section Inv.
 
     Lemma implInv_other_msg_id_enqMP:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall midx msg,
           ~ In msg.(msg_id) [msiRsS; msiDownRsS; msiRqI] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := enqMP midx msg msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := enqMP midx msg msgs |}.
     Proof.
       intros.
       red in H; red; simpl in *.
@@ -779,13 +779,13 @@ Section Inv.
 
     Lemma implInv_other_msg_id_enqMsgs:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall nmsgs,
           DisjList (map (fun idm => (valOf idm).(msg_id)) nmsgs)
                    [msiRsS; msiDownRsS; msiRqI] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := enqMsgs nmsgs msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := enqMsgs nmsgs msgs |}.
     Proof.
       intros.
       red in H; red; simpl in *.
@@ -799,12 +799,12 @@ Section Inv.
     
     Lemma implInv_other_midx_deqMP:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall rmidx,
           ~ In rmidx [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := deqMP rmidx msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := deqMP rmidx msgs |}.
     Proof.
       intros.
       red in H; red; simpl in *.
@@ -822,12 +822,12 @@ Section Inv.
 
     Lemma implInv_other_midx_deqMsgs:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
         forall rminds,
           DisjList rminds [pc1; c1pRq; c1pRs; pc2; c2pRq; c2pRs] ->
-          ImplInv {| bst_oss := oss;
-                     bst_orqs := orqs;
-                     bst_msgs := deqMsgs rminds msgs |}.
+          ImplInv {| st_oss := oss;
+                     st_orqs := orqs;
+                     st_msgs := deqMsgs rminds msgs |}.
     Proof.
       intros.
       red in H; red; simpl in *.
@@ -1086,15 +1086,15 @@ Section Inv.
 
     Lemma implInv_value_changed:
       forall oss orqs msgs,
-        ImplInv {| bst_oss := oss;
-                   bst_orqs := orqs;
-                   bst_msgs := msgs |} ->
+        ImplInv {| st_oss := oss;
+                   st_orqs := orqs;
+                   st_msgs := msgs |} ->
         forall cidx ost nv (noss: OStates),
           oss@[cidx] = Some ost ->
           noss = oss +[cidx <- (nv, snd ost)] ->
-          ImplInv {| bst_oss := noss;
-                     bst_orqs := orqs;
-                     bst_msgs := msgs |}.
+          ImplInv {| st_oss := noss;
+                     st_orqs := orqs;
+                     st_msgs := msgs |}.
     Proof.
       unfold ImplInv; simpl; intros.
       disc_rule_conds_ex.
@@ -1288,7 +1288,7 @@ Section Inv.
           In cobj impl.(sys_objs) ->
           forall orqs msgs oidx orq,
             cobj.(obj_idx) = oidx ->
-            bst_msgs st = msgs ->
+            st_msgs st = msgs ->
             UpLockInvORq topo orqs msgs oidx orq ->
             forall pc cpRq cpRs,
               parentIdxOf topo oidx = Some parentIdx ->
@@ -1328,7 +1328,7 @@ Section Inv.
           In pobj impl.(sys_objs) ->
           forall orqs msgs pidx orq,
             pobj.(obj_idx) = pidx ->
-            bst_msgs st = msgs ->
+            st_msgs st = msgs ->
             DownLockInvORq topo orqs msgs pidx orq ->
             forall cidx pc cpRq cpRs,
               cobj.(obj_idx) = cidx ->

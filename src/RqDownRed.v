@@ -13,7 +13,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section RqDownReduction.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -30,7 +30,7 @@ Section RqDownReduction.
     Lemma rqDown_oinds:
       forall hst inits ins outs eouts,
         SubList rqDowns eouts ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
@@ -46,10 +46,10 @@ Section RqDownReduction.
     Lemma rqDown_olast_inside_tree:
       forall inits ins hst outs eouts,
         DisjList rqDowns inits ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2 loidx,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rqDowns ->
+          Forall (InMPI st1.(st_msgs)) rqDowns ->
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
           In loidx (subtreeIndsOf dtr cidx) ->
@@ -114,10 +114,10 @@ Section RqDownReduction.
     Lemma rqDown_olast_outside_tree:
       forall inits ins hst outs eouts,
         DisjList rqDowns inits ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2 loidx,
           Reachable (steps step_m) sys st1 ->
-          Forall (InMPI st1.(bst_msgs)) rqDowns ->
+          Forall (InMPI st1.(st_msgs)) rqDowns ->
           steps step_m sys st1 hst st2 ->
           lastOIdxOf hst = Some loidx ->
           ~ In loidx (subtreeIndsOf dtr cidx) ->
@@ -127,11 +127,11 @@ Section RqDownReduction.
              exists roidx rqUps ruins ruouts,
                RqUpMsgsP dtr roidx rqUps /\
                ~ In roidx (subtreeIndsOf dtr cidx) /\
-               Atomic msg_dec inits ruins ruhst ruouts rqUps /\
+               Atomic inits ruins ruhst ruouts rqUps /\
                SubList rqUps outs /\
                (nhst = nil \/
                 exists nins nouts,
-                  Atomic msg_dec rqUps nins nhst nouts eouts)) /\
+                  Atomic rqUps nins nhst nouts eouts)) /\
             DisjList (oindsOf nhst) (subtreeIndsOf dtr cidx).
     Proof.
       intros.
@@ -193,17 +193,17 @@ Section RqDownReduction.
           { right; eauto. }
     Qed.
 
-    Definition RqDownP (st: MState) :=
-      Forall (InMPI st.(bst_msgs)) rqDowns.
+    Definition RqDownP (st: State) :=
+      Forall (InMPI st.(st_msgs)) rqDowns.
 
     Lemma rqDown_lpush_rpush_messages_disj:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
         DisjList rqDowns rinits ->
-        Atomic msg_dec rinits rins rhst routs reouts ->
+        Atomic rinits rins rhst routs reouts ->
         DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
         DisjList rqDowns linits ->
-        Atomic msg_dec linits lins lhst louts leouts ->
+        Atomic linits lins lhst louts leouts ->
         SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         forall st1,
           Reachable (steps step_m) sys st1 ->
@@ -265,9 +265,9 @@ Section RqDownReduction.
     Lemma rqDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
-        Atomic msg_dec rinits rins rhst routs reouts ->
+        Atomic rinits rins rhst routs reouts ->
         DisjList (oindsOf rhst) (subtreeIndsOf dtr cidx) ->
-        Atomic msg_dec linits lins lhst louts leouts ->
+        Atomic linits lins lhst louts leouts ->
         SubList (oindsOf lhst) (subtreeIndsOf dtr cidx) ->
         DisjList reouts linits ->
         Reducible sys (lhst ++ rhst) (rhst ++ lhst).
@@ -282,9 +282,9 @@ Section RqDownReduction.
       forall pinits pins phst pouts peouts
              inits ins hst outs eouts loidx,
         PInitializing sys RqDownP phst ->
-        Atomic msg_dec pinits pins phst pouts peouts ->
+        Atomic pinits pins phst pouts peouts ->
         SubList rqDowns peouts ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         lastOIdxOf hst = Some loidx ->
         In loidx (subtreeIndsOf dtr cidx) ->
         DisjList peouts inits ->
@@ -310,7 +310,7 @@ Section RqDownReduction.
 
     Lemma rqDown_rpush_unit_reducible:
       forall inits ins hst outs eouts loidx ridx routs,
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         lastOIdxOf hst = Some loidx ->
         ~ In loidx (subtreeIndsOf dtr cidx) ->
         DisjList rqDowns inits ->
@@ -397,11 +397,11 @@ Section RqDownReduction.
     Lemma rqDown_LRPushable_unit_reducible:
       forall rinits rins rhst routs reouts rloidx
              linits lins lhst louts leouts lloidx,
-        Atomic msg_dec rinits rins rhst routs reouts ->
+        Atomic rinits rins rhst routs reouts ->
         DisjList rqDowns rinits ->
         lastOIdxOf rhst = Some rloidx ->
         ~ In rloidx (subtreeIndsOf dtr cidx) ->
-        Atomic msg_dec linits lins lhst louts leouts ->
+        Atomic linits lins lhst louts leouts ->
         DisjList rqDowns linits ->
         lastOIdxOf lhst = Some lloidx ->
         In lloidx (subtreeIndsOf dtr cidx) ->

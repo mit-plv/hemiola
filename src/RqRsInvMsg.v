@@ -10,7 +10,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section FootprintInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -49,8 +49,8 @@ Section FootprintInv.
     mred; simpl; intros; auto.
   Qed.
   
-  Definition FootprintsOk (st: MState) :=
-    FootprintsOkORqs st.(bst_orqs).
+  Definition FootprintsOk (st: State) :=
+    FootprintsOkORqs st.(st_orqs).
 
   Ltac disc_rule_custom ::=
     repeat
@@ -117,6 +117,7 @@ Section FootprintInv.
     InvReachable sys step_m FootprintsOk.
   Proof.
     eapply inv_reachable.
+    - typeclasses eauto.
     - apply footprints_ok_init.
     - apply footprints_ok_step.
   Qed.
@@ -173,7 +174,7 @@ Ltac derive_footprint_info_basis oidx :=
   repeat (repeat disc_rule_conds_unit_simpl; try disc_footprints_ok).
 
 Section IncomingMessageInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -274,7 +275,7 @@ Section IncomingMessageInv.
 End IncomingMessageInv.
 
 Section OutgoingMessageInv.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
 
@@ -413,7 +414,7 @@ Ltac disc_messages_out :=
   end.
 
 Section MsgInitCases.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypothesis (Hiorqs: GoodORqsInit (initsOf sys))
@@ -421,7 +422,7 @@ Section MsgInitCases.
 
   Lemma msg_init_cases_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
@@ -442,7 +443,7 @@ Section MsgInitCases.
 End MsgInitCases.
 
 Section ExtRss.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypothesis (Hers: GoodExtRssSys sys).
@@ -452,8 +453,8 @@ Section ExtRss.
                In ers sys.(sys_merss) ->
                Forall (fun msg => msg_type msg = MRs) ersq) msgs.
 
-  Definition ExtRssInv (st: MState) :=
-    ExtRssInvMP st.(bst_msgs).
+  Definition ExtRssInv (st: State) :=
+    ExtRssInvMP st.(st_msgs).
     
   Lemma extRssInv_init: InvInit sys ExtRssInv.
   Proof.
@@ -463,12 +464,12 @@ Section ExtRss.
 
   Lemma extRssInv_case_outs:
     forall oss orqs msgs (eouts: list (Id Msg)),
-      ExtRssInv {| bst_oss := oss; bst_orqs := orqs; bst_msgs := msgs |} ->
+      ExtRssInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
       Forall (FirstMPI msgs) eouts ->
       NoDup (idsOf eouts) ->
-      ExtRssInv {| bst_oss := oss;
-                   bst_orqs := orqs;
-                   bst_msgs := deqMsgs (idsOf eouts) msgs |}.
+      ExtRssInv {| st_oss := oss;
+                   st_orqs := orqs;
+                   st_msgs := deqMsgs (idsOf eouts) msgs |}.
   Proof.
     intros.
     do 2 red in H; do 2 red; simpl in *.
@@ -524,7 +525,8 @@ Section ExtRss.
 
   Lemma extRssInv_ok: InvReachable sys step_m ExtRssInv.
   Proof.
-    apply inv_reachable.
+    eapply inv_reachable.
+    - typeclasses eauto.
     - apply extRssInv_init.
     - apply extRssInv_step.
   Qed.
@@ -532,7 +534,7 @@ Section ExtRss.
 End ExtRss.
 
 Lemma msgs_ext_out_rss:
-  forall `{oifc: OStateIfc} (sys: System) msgs eouts,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) msgs eouts,
     SubList (idsOf eouts) sys.(sys_merss) ->
     Forall (FirstMPI msgs) eouts ->
     ExtRssInvMP sys msgs ->

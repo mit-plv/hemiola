@@ -55,15 +55,15 @@ Proof.
   - apply in_map; assumption.
 Qed.
 
-Definition ostep `{OStateIfc} (sys: System)
-           (st1: MState) (olbl: option MLabel) (st2: MState): Prop :=
+Definition ostep `{DecValue} `{OStateIfc} (sys: System)
+           (st1: State) (olbl: option RLabel) (st2: State): Prop :=
   match olbl with
   | Some lbl => step_m sys st1 lbl st2
   | None => st1 = st2
   end.
 
 Lemma ocons_steps:
-  forall `{OStateIfc} (sys: System) st1 ll st2,
+  forall `{DecValue} `{OStateIfc} (sys: System) st1 ll st2,
     steps step_m sys st1 ll st2 ->
     forall olbl st3,
       ostep sys st2 olbl st3 ->
@@ -76,7 +76,7 @@ Proof.
 Qed.
 
 Lemma steps_ocons_inv:
-  forall `{OStateIfc} (sys: System) st1 olbl ll st2,
+  forall `{DecValue} `{OStateIfc} (sys: System) st1 olbl ll st2,
     steps step_m sys st1 (olbl ::> ll) st2 ->
     exists sti,
       steps step_m sys st1 ll sti /\ ostep sys sti olbl st2.
@@ -96,10 +96,10 @@ Lemma behaviorOf_cons_inv:
 Proof.
   induction ll as [|rlbl ll]; simpl; intros; [discriminate|].
   destruct (getLabel rlbl) as [lbl'|] eqn:Hlbl; simpl in *.
-  - inv H0.
+  - inv H1.
     exists [rlbl], ll; repeat split.
     simpl; rewrite Hlbl; reflexivity.
-  - specialize (IHll _ _ H0).
+  - specialize (IHll _ _ H1).
     destruct IHll as [hll [tll ?]]; dest; subst.
     exists (rlbl :: hll), tll; repeat split.
     simpl; rewrite Hlbl; simpl; assumption.
@@ -115,15 +115,15 @@ Lemma behaviorOf_app_inv:
 Proof.
   induction ll1; simpl; intros; [exists nil, ll; auto|].
   destruct (getLabel a); simpl in *; auto.
-  apply behaviorOf_cons_inv in H0.
-  destruct H0 as [hll [tll ?]]; dest; subst.
-  specialize (IHll1 _ _ H2).
+  apply behaviorOf_cons_inv in H1.
+  destruct H1 as [hll [tll ?]]; dest; subst.
+  specialize (IHll1 _ _ H3).
   destruct IHll1 as [prll1 [prll2 ?]]; dest; subst.
   exists (hll ++ prll1), prll2.
   repeat split.
   - apply eq_sym, app_assoc.
   - rewrite behaviorOf_app.
-    rewrite H1; simpl; congruence.
+    rewrite H2; simpl; congruence.
   - assumption.
 Qed.
   
@@ -136,10 +136,10 @@ Lemma behaviorOf_ocons_inv:
       behaviorOf tll = behaviorOf rll.
 Proof.
   intros.
-  replace (olbl ::> rll) with (o2l olbl ++ rll) in H0
+  replace (olbl ::> rll) with (o2l olbl ++ rll) in H1
     by (destruct olbl; reflexivity).
-  apply behaviorOf_app_inv in H0.
-  destruct H0 as [rll1 [rll2 ?]]; dest; subst.
+  apply behaviorOf_app_inv in H1.
+  destruct H1 as [rll1 [rll2 ?]]; dest; subst.
   eauto.
 Qed.
 
@@ -152,7 +152,7 @@ Proof.
 Qed.
   
 Lemma rToLabel_inv:
-  forall (rlbl1 rlbl2: RLabel Msg),
+  forall `{dv: DecValue} (rlbl1 rlbl2: RLabel),
     rToLabel rlbl1 <> None ->
     rToLabel rlbl1 = rToLabel rlbl2 ->
     rlbl1 = rlbl2.
@@ -160,16 +160,12 @@ Proof.
   destruct rlbl1, rlbl2; intros.
   all: try discriminate; try reflexivity.
   all: try (exfalso; auto; fail).
-  - simpl in H0; inv H0.
-    do 2 rewrite imap_id in H2; subst.
-    reflexivity.
-  - simpl in H0; inv H0.
-    do 2 rewrite imap_id in H2; subst.
-    reflexivity.
+  - simpl in H0; inv H0; reflexivity.
+  - simpl in H0; inv H0; reflexivity.
 Qed.
 
 Lemma behaviorOf_o2l_inv:
-  forall olbl: option (RLabel Msg),
+  forall `{dv: DecValue} (olbl: option RLabel),
     match olbl with
     | Some lbl => rToLabel lbl <> None
     | None => True
@@ -203,13 +199,13 @@ Proof.
 Qed.
 
 Section Lift.
-  Context `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
   Variable (ln: nat).
 
-  Definition liftMsgs {MsgT} (msgs: list (Id MsgT)): list (Id MsgT) :=
+  Definition liftMsgs (msgs: list (Id Msg)): list (Id Msg) :=
     map (fun idm => ((fst idm)~>ln, snd idm)) msgs.
 
-  Definition unliftMsgs {MsgT} (msgs: list (Id MsgT)): list (Id MsgT) :=
+  Definition unliftMsgs (msgs: list (Id Msg)): list (Id Msg) :=
     map (fun idm => (idxTl (fst idm), snd idm)) msgs.
 
   Definition liftRulePrec (prec: OPrec): OPrec :=
@@ -249,8 +245,8 @@ Section Lift.
       NoDup (map obj_idx (map liftObject objs)).
   Proof.
     intros.
-    apply extendIdx_NoDup with (ext:= ln) in H0.
-    unfold extendInds in H0; rewrite map_trans in H0.
+    apply extendIdx_NoDup with (ext:= ln) in H1.
+    unfold extendInds in H1; rewrite map_trans in H1.
     rewrite map_trans; assumption.
   Qed.
 
@@ -281,7 +277,7 @@ Section Lift.
 End Lift.
 
 Section Replicate.
-  Context `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
 
   Program Definition mergeSystem (sys1 sys2: System)
           (HoidxOk: DisjList (map obj_idx (sys_objs sys1))
@@ -318,7 +314,7 @@ Section Replicate.
     forall n m, n < m -> SubList (nats n) (nats m).
   Proof.
     induction m; simpl; intros; [omega|].
-    inv H0.
+    inv H1.
     - apply SubList_cons_right, SubList_refl.
     - apply SubList_cons_right.
       apply IHm; omega.
@@ -345,8 +341,8 @@ Section Replicate.
   Proof.
     intros; rewrite map_map; simpl.
     red; intros.
-    apply in_map_iff in H0; dest; subst.
     apply in_map_iff in H1; dest; subst.
+    apply in_map_iff in H2; dest; subst.
     left; reflexivity.
   Qed.
 
@@ -357,14 +353,14 @@ Section Replicate.
                             ++ (extendInds n (sys_merss sys)))) [n].
   Proof.
     intros; red; intros.
-    apply in_map_iff in H0; dest; subst.
-    apply in_app_or in H1; destruct H1.
-    - apply in_map_iff in H0; dest; subst.
+    apply in_map_iff in H1; dest; subst.
+    apply in_app_or in H2; destruct H2.
+    - apply in_map_iff in H1; dest; subst.
       left; reflexivity.
-    - apply in_app_or in H0; destruct H0.
-      + apply in_map_iff in H0; dest; subst.
+    - apply in_app_or in H1; destruct H1.
+      + apply in_map_iff in H1; dest; subst.
         left; reflexivity.
-      + apply in_map_iff in H0; dest; subst.
+      + apply in_map_iff in H1; dest; subst.
         left; reflexivity.
   Qed.
 
@@ -487,13 +483,13 @@ Section Replicate.
 End Replicate.
 
 Section ValidState.
-  Context `{OStateIfc}.
+  Context `{DecValue} `{OStateIfc}.
   Variable (sys: System).
 
-  Definition ValidState (st: MState) :=
-    M.KeysSubset (bst_oss st) (map (@obj_idx _) (sys_objs sys)) /\
-    M.KeysSubset (bst_orqs st) (map (@obj_idx _) (sys_objs sys)) /\
-    M.KeysSubset (bst_msgs st) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
+  Definition ValidState (st: State) :=
+    M.KeysSubset (st_oss st) (map obj_idx (sys_objs sys)) /\
+    M.KeysSubset (st_orqs st) (map obj_idx (sys_objs sys)) /\
+    M.KeysSubset (st_msgs st) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
 
   Definition InitStateValid := ValidState (initsOf sys).
 
@@ -515,7 +511,7 @@ Section ValidState.
       M.KeysSubset (enqMsgs nmsgs msgs) (sys_minds sys ++ sys_merqs sys ++ sys_merss sys).
   Proof.
     induction nmsgs as [|[midx msg] nmsgs]; simpl; intros; auto.
-    apply SubList_cons_inv in H1; dest.
+    apply SubList_cons_inv in H2; dest.
     apply IHnmsgs; auto.
     apply enqMP_msgs_valid; auto.
   Qed.
@@ -531,7 +527,7 @@ Section ValidState.
     destruct (msgs@[midx]) as [q|] eqn:Hq; simpl; [|assumption].
     destruct q; [assumption|].
     apply M.KeysSubset_add; auto.
-    apply H0; findeq.
+    apply H1; findeq.
   Qed.
 
   Lemma deqMsgs_msgs_valid:
@@ -550,21 +546,21 @@ Section ValidState.
       forall lbl st2,
         step_m sys st1 lbl st2 -> ValidState st2.
   Proof.
-    intros; inv H1; auto.
-    - red in H0; simpl in H0; dest.
+    intros; inv H2; auto.
+    - red in H1; simpl in H1; dest.
       red; simpl; repeat ssplit; try assumption.
       apply enqMsgs_msgs_valid; auto.
-      destruct H3.
+      destruct H4.
       eapply SubList_trans; [eassumption|].
       apply SubList_app_2, SubList_app_1, SubList_refl.
-    - red in H0; simpl in H0; dest.
+    - red in H1; simpl in H1; dest.
       red; simpl; repeat ssplit; try assumption.
       apply deqMsgs_msgs_valid; auto.
-    - red in H0; simpl in H0; dest.
+    - red in H1; simpl in H1; dest.
       red; simpl; repeat ssplit.
       + apply M.KeysSubset_add; auto; apply in_map; assumption.
       + apply M.KeysSubset_add; auto; apply in_map; assumption.
-      + destruct H11.
+      + destruct H12.
         apply enqMsgs_msgs_valid.
         * apply deqMsgs_msgs_valid; auto.
         * eapply SubList_trans; [eassumption|].
@@ -591,14 +587,14 @@ Section ValidState.
       ValidState st.
   Proof.
     unfold Reachable; intros.
-    destruct H1 as [hst ?].
+    destruct H2 as [hst ?].
     eapply steps_ValidState; eauto.
   Qed.
 
 End ValidState.
 
 Section Facts.
-  Context `{OStateIfc}.
+  Context `{dv: DecValue} `{OStateIfc}.
 
   Section Lift.
     Variable ln: nat.
@@ -668,10 +664,9 @@ Section Facts.
     End FMap.
 
     Section Messages.
-      Context {MsgT: Type}.
 
       Lemma liftMsgs_unliftMsgs:
-        forall (msgs: list (Id MsgT)),
+        forall (msgs: list (Id Msg)),
           unliftMsgs (liftMsgs ln msgs) = msgs.
       Proof.
         induction msgs as [|msg msgs]; simpl; intros; auto.
@@ -680,7 +675,7 @@ Section Facts.
       Qed.
 
       Lemma extendInds_idsOf_liftMsgs:
-        forall (msgs: list (Id MsgT)),
+        forall (msgs: list (Id Msg)),
           map (extendIdx ln) (idsOf msgs) = idsOf (liftMsgs ln msgs).
       Proof.
         unfold idsOf, liftMsgs; intros.
@@ -689,7 +684,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_enqMP:
-        forall midx msg (mp: MessagePool MsgT),
+        forall midx msg (mp: MessagePool Msg),
           liftFMap ln (enqMP midx msg mp) =
           enqMP midx~>ln msg (liftFMap ln mp).
       Proof.
@@ -699,7 +694,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_enqMsgs:
-        forall msgs (mp: MessagePool MsgT),
+        forall msgs (mp: MessagePool Msg),
           liftFMap ln (enqMsgs msgs mp) =
           enqMsgs (liftMsgs ln msgs) (liftFMap ln mp).
       Proof.
@@ -708,7 +703,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_deqMP:
-        forall midx (mp: MessagePool MsgT),
+        forall midx (mp: MessagePool Msg),
           liftFMap ln (deqMP midx mp) =
           deqMP midx~>ln (liftFMap ln mp).
       Proof.
@@ -721,7 +716,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_deqMsgs:
-        forall minds (mp: MessagePool MsgT),
+        forall minds (mp: MessagePool Msg),
           liftFMap ln (deqMsgs minds mp) =
           deqMsgs (extendInds ln minds) (liftFMap ln mp).
       Proof.
@@ -730,7 +725,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_FirstMP:
-        forall midx msg (mp: MessagePool MsgT),
+        forall midx msg (mp: MessagePool Msg),
           FirstMP mp midx msg ->
           FirstMP (liftFMap ln mp) midx~>ln msg.
       Proof.
@@ -740,7 +735,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_FirstMPI_Forall:
-        forall msgs (mp: MessagePool MsgT),
+        forall msgs (mp: MessagePool Msg),
           Forall (FirstMPI mp) msgs ->
           Forall (FirstMPI (liftFMap ln mp)) (liftMsgs ln msgs).
       Proof.
@@ -753,7 +748,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_FirstMP_inv:
-        forall midx msg (mp: MessagePool MsgT),
+        forall midx msg (mp: MessagePool Msg),
           FirstMP (liftFMap ln mp) midx~>ln msg ->
           FirstMP mp midx msg.
       Proof.
@@ -763,7 +758,7 @@ Section Facts.
       Qed.
 
       Lemma liftFMap_FirstMPI_Forall_inv:
-        forall msgs (mp: MessagePool MsgT),
+        forall msgs (mp: MessagePool Msg),
           Forall (FirstMPI (liftFMap ln mp)) (liftMsgs ln msgs) ->
           Forall (FirstMPI mp) msgs.
       Proof.
@@ -777,18 +772,18 @@ Section Facts.
 
     End Messages.
 
-    Definition liftMLabel (lbl: MLabel): MLabel :=
+    Definition liftRLabel (lbl: RLabel): RLabel :=
       match lbl with
-      | RlblEmpty _ => RlblEmpty _
+      | RlblEmpty => RlblEmpty
       | RlblIns ins => RlblIns (liftMsgs ln ins)
       | RlblOuts outs => RlblOuts (liftMsgs ln outs)
       | RlblInt oidx ridx rins routs =>
         RlblInt oidx~>ln ridx (liftMsgs ln rins) (liftMsgs ln routs)
       end.
 
-    Definition unliftMLabel (lbl: MLabel): MLabel :=
+    Definition unliftRLabel (lbl: RLabel): RLabel :=
       match lbl with
-      | RlblEmpty _ => RlblEmpty _
+      | RlblEmpty => RlblEmpty
       | RlblIns ins => RlblIns (unliftMsgs ins)
       | RlblOuts outs => RlblOuts (unliftMsgs outs)
       | RlblInt oidx ridx rins routs =>
@@ -801,10 +796,10 @@ Section Facts.
       | LblOuts outs => LblOuts (liftMsgs ln outs)
       end.
 
-    Definition liftMState (st: MState): MState :=
-      {| bst_oss := liftFMap ln st.(bst_oss);
-         bst_orqs := liftFMap ln st.(bst_orqs);
-         bst_msgs := liftFMap ln st.(bst_msgs) |}.
+    Definition liftState (st: State): State :=
+      {| st_oss := liftFMap ln st.(st_oss);
+         st_orqs := liftFMap ln st.(st_orqs);
+         st_msgs := liftFMap ln st.(st_msgs) |}.
 
     Section System.
       Variable sys: System.
@@ -833,7 +828,7 @@ Section Facts.
       Lemma step_lifted:
         forall st1 lbl st2,
           step_m sys st1 lbl st2 ->
-          step_m (liftSystem ln sys) (liftMState st1) (liftMLabel lbl) (liftMState st2).
+          step_m (liftSystem ln sys) (liftState st1) (liftRLabel lbl) (liftState st2).
       Proof.
         intros; inv H0.
         - constructor.
@@ -847,7 +842,7 @@ Section Facts.
             * red; rewrite <-extendInds_idsOf_liftMsgs.
               apply extendIdx_NoDup; assumption.
           + reflexivity.
-          + unfold liftMState; simpl.
+          + unfold liftState; simpl.
             rewrite liftFMap_enqMsgs.
             reflexivity.
 
@@ -862,7 +857,7 @@ Section Facts.
             * red; rewrite <-extendInds_idsOf_liftMsgs.
               apply extendIdx_NoDup; assumption.
           + reflexivity.
-          + unfold liftMState; simpl.
+          + unfold liftState; simpl.
             rewrite liftFMap_deqMsgs.
             rewrite <-extendInds_idsOf_liftMsgs.
             reflexivity.
@@ -903,7 +898,7 @@ Section Facts.
           + do 2 rewrite <-extendInds_idsOf_liftMsgs.
             apply extendInds_DisjList; assumption.
           + reflexivity.
-          + unfold liftMState; simpl.
+          + unfold liftState; simpl.
             do 2 rewrite liftFMap_add.
             rewrite liftFMap_enqMsgs.
             rewrite liftFMap_deqMsgs.
@@ -915,24 +910,22 @@ Section Facts.
         forall st1 hst st2,
           steps step_m sys st1 hst st2 ->
           steps step_m (liftSystem ln sys)
-                (liftMState st1) (map liftMLabel hst) (liftMState st2).
+                (liftState st1) (map liftRLabel hst) (liftState st2).
       Proof.
         induction 1; simpl; intros; [constructor|].
         econstructor; [eassumption|].
         apply step_lifted; assumption.
       Qed.
 
-      Lemma liftLabel_liftMLabel:
+      Lemma liftLabel_liftRLabel:
         forall ll,
-          map liftLabel (behaviorOf ll) = behaviorOf (map liftMLabel ll).
+          map liftLabel (behaviorOf ll) = behaviorOf (map liftRLabel ll).
       Proof.
         induction ll as [|lbl ll]; simpl; [reflexivity|].
         destruct lbl; simpl; auto.
         - unfold liftMsgs, imap, liftI.
-          do 2 rewrite map_trans; simpl.
           rewrite IHll; reflexivity.
         - unfold liftMsgs, imap, liftI.
-          do 2 rewrite map_trans; simpl.
           rewrite IHll; reflexivity.
       Qed.
         
@@ -944,10 +937,10 @@ Section Facts.
         intros.
         inv H0.
         econstructor.
-        - instantiate (1:= liftMState st).
-          instantiate (1:= map liftMLabel ll).
+        - instantiate (1:= liftState st).
+          instantiate (1:= map liftRLabel ll).
           apply steps_lifted in H1; assumption.
-        - apply liftLabel_liftMLabel.
+        - apply liftLabel_liftRLabel.
       Qed.
 
       Lemma SubList_unlifted:
@@ -967,7 +960,7 @@ Section Facts.
       Qed.
 
       Lemma idsOf_unlifted:
-        forall {A} (l1: list (Id A)) l2,
+        forall (l1: list (Id Msg)) l2,
           idsOf l1 = extendInds ln l2 ->
           exists rl1, idsOf rl1 = l2 /\ l1 = liftMsgs ln rl1.
       Proof.
@@ -983,7 +976,7 @@ Section Facts.
       Qed.
 
       Lemma ValidMsgsExtIn_unlifted:
-        forall {MsgT} (eins: list (Id MsgT)),
+        forall (eins: list (Id Msg)),
           ValidMsgsExtIn (liftSystem ln sys) eins ->
           exists reins, ValidMsgsExtIn sys reins /\ eins = liftMsgs ln reins.
       Proof.
@@ -1001,7 +994,7 @@ Section Facts.
       Qed.
 
       Lemma ValidMsgsExtOut_unlifted:
-        forall {MsgT} (eouts: list (Id MsgT)),
+        forall (eouts: list (Id Msg)),
           ValidMsgsExtOut (liftSystem ln sys) eouts ->
           exists reouts,
             ValidMsgsExtOut sys reouts /\ eouts = liftMsgs ln reouts.
@@ -1038,7 +1031,7 @@ Section Facts.
       Qed.
 
       Lemma ValidMsgsIn_unlifted:
-        forall {MsgT} (ins: list (Id MsgT)),
+        forall (ins: list (Id Msg)),
           ValidMsgsIn (liftSystem ln sys) ins ->
           exists rins, ValidMsgsIn sys rins /\ ins = liftMsgs ln rins.
       Proof.
@@ -1057,7 +1050,7 @@ Section Facts.
       Qed.
 
       Lemma ValidMsgsOut_unlifted:
-        forall {MsgT} (outs: list (Id MsgT)),
+        forall (outs: list (Id Msg)),
           ValidMsgsOut (liftSystem ln sys) outs ->
           exists routs, ValidMsgsOut sys routs /\ outs = liftMsgs ln routs.
       Proof.
@@ -1104,13 +1097,13 @@ Section Facts.
 
       Lemma step_unlifted:
         forall st1 llbl lst2,
-          step_m (liftSystem ln sys) (liftMState st1) llbl lst2 ->
+          step_m (liftSystem ln sys) (liftState st1) llbl lst2 ->
           exists lbl st2,
             step_m sys st1 lbl st2 /\
-            lst2 = liftMState st2 /\ llbl = liftMLabel lbl.
+            lst2 = liftState st2 /\ llbl = liftRLabel lbl.
       Proof.
         intros.
-        remember (liftMState st1) as lst1.
+        remember (liftState st1) as lst1.
         inv H0.
         - do 2 eexists; repeat split.
           + constructor.
@@ -1127,7 +1120,7 @@ Section Facts.
             * assumption.
             * reflexivity.
             * reflexivity.
-          + unfold liftMState; simpl.
+          + unfold liftState; simpl.
             rewrite liftFMap_enqMsgs; reflexivity.
           + reflexivity.
 
@@ -1144,7 +1137,7 @@ Section Facts.
             * assumption.
             * reflexivity.
             * reflexivity.
-          + unfold liftMState; simpl.
+          + unfold liftState; simpl.
             rewrite liftFMap_deqMsgs.
             rewrite <-extendInds_idsOf_liftMsgs.
             reflexivity.
@@ -1167,7 +1160,7 @@ Section Facts.
 
           do 2 eexists; repeat split.
           + econstructor 4; eauto.
-          + unfold liftMState; simpl.
+          + unfold liftState; simpl.
             do 2 rewrite liftFMap_add.
             rewrite liftFMap_enqMsgs, liftFMap_deqMsgs.
             rewrite <-extendInds_idsOf_liftMsgs.
@@ -1178,11 +1171,11 @@ Section Facts.
 
       Lemma steps_unlifted:
         forall st1 lhst lst1 lst2,
-          lst1 = liftMState st1 ->
+          lst1 = liftState st1 ->
           steps step_m (liftSystem ln sys) lst1 lhst lst2 ->
           exists hst st2,
             steps step_m sys st1 hst st2 /\
-            lst2 = liftMState st2 /\ lhst = map liftMLabel hst.
+            lst2 = liftState st2 /\ lhst = map liftRLabel hst.
       Proof.
         induction 2; intros; subst.
         - do 2 eexists; repeat split.
@@ -1197,7 +1190,7 @@ Section Facts.
       Qed.
 
       Lemma liftSystem_initsOf:
-        initsOf (liftSystem ln sys) = liftMState (initsOf sys).
+        initsOf (liftSystem ln sys) = liftState (initsOf sys).
       Proof.
         reflexivity.
       Qed.
@@ -1215,7 +1208,7 @@ Section Facts.
         destruct H1 as [hst [st2 ?]]; dest; subst.
         eexists; split.
         - econstructor; [eassumption|reflexivity].
-        - apply eq_sym, liftLabel_liftMLabel.
+        - apply eq_sym, liftLabel_liftRLabel.
       Qed.
 
     End System.
@@ -1274,10 +1267,10 @@ Section Facts.
   
   Section Merge.
 
-    Definition mergeMState (st1 st2: MState): MState :=
-      {| bst_oss := M.union (bst_oss st1) (bst_oss st2);
-         bst_orqs := M.union (bst_orqs st1) (bst_orqs st2);
-         bst_msgs := M.union (bst_msgs st1) (bst_msgs st2) |}.
+    Definition mergeState (st1 st2: State): State :=
+      {| st_oss := M.union (st_oss st1) (st_oss st2);
+         st_orqs := M.union (st_orqs st1) (st_orqs st2);
+         st_msgs := M.union (st_msgs st1) (st_msgs st2) |}.
 
     Definition filterIns (d: list IdxT) (eins: list (Id Msg)) :=
       if nil_dec (filterMsgs d eins)
@@ -1291,16 +1284,16 @@ Section Facts.
       Variables (erqd1 ersd1 erqd2 ersd2: list IdxT).
       
       Inductive HistoryMerged
-        : list MLabel -> list MLabel -> list MLabel -> Prop :=
+        : list RLabel -> list RLabel -> list RLabel -> Prop :=
       | HMNil: HistoryMerged nil nil nil
       | HMSilentLeft:
           forall hst1 hst2 hst,
             HistoryMerged hst1 hst2 hst ->
-            HistoryMerged (RlblEmpty _ :: hst1) hst2 (RlblEmpty _ :: hst)
+            HistoryMerged (RlblEmpty :: hst1) hst2 (RlblEmpty :: hst)
       | HMSilentRight:
           forall hst1 hst2 hst,
             HistoryMerged hst1 hst2 hst ->
-            HistoryMerged hst1 (RlblEmpty _ :: hst2) (RlblEmpty _ :: hst)
+            HistoryMerged hst1 (RlblEmpty :: hst2) (RlblEmpty :: hst)
       | HMIns:
           forall hst1 hst2 hst,
             HistoryMerged hst1 hst2 hst ->
@@ -1454,9 +1447,9 @@ Section Facts.
       assumption.
     Qed.
 
-    Lemma mergeMState_init:
+    Lemma mergeState_init:
       initsOf (mergeSystem sys1 sys2 HoidxOk HmidxOk) =
-      mergeMState (initsOf sys1) (initsOf sys2).
+      mergeState (initsOf sys1) (initsOf sys2).
     Proof.
       reflexivity.
     Qed.
@@ -1476,7 +1469,7 @@ Section Facts.
 
       Lemma disj_objs_find_1:
         forall oidx,
-          In oidx (map (@obj_idx _) (sys_objs sys1)) ->
+          In oidx (map obj_idx (sys_objs sys1)) ->
           forall {A} (oss1 oss2: M.t A),
             M.KeysSubset oss1 (map obj_idx (sys_objs sys1)) ->
             M.KeysSubset oss2 (map obj_idx (sys_objs sys2)) ->
@@ -1496,7 +1489,7 @@ Section Facts.
 
       Lemma disj_objs_find_2:
         forall oidx,
-          In oidx (map (@obj_idx _) (sys_objs sys2)) ->
+          In oidx (map obj_idx (sys_objs sys2)) ->
           forall {A} (oss1 oss2: M.t A),
             M.KeysSubset oss1 (map obj_idx (sys_objs sys1)) ->
             M.KeysSubset oss2 (map obj_idx (sys_objs sys2)) ->
@@ -1739,7 +1732,7 @@ Section Facts.
         forall st2,
           Reachable (steps step_m) sys2 st2 ->
           step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                 (mergeMState st11 st2) lbl (mergeMState st12 st2).
+                 (mergeState st11 st2) lbl (mergeState st12 st2).
     Proof.
       intros.
       apply reachable_state_valid in H0; [|assumption].
@@ -1753,7 +1746,7 @@ Section Facts.
         + destruct H8.
           split; [|eassumption].
           simpl; apply SubList_app_1; assumption.
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           destruct H8.
           f_equal.
           apply disj_mp_enqMsgs_1; try assumption.
@@ -1772,7 +1765,7 @@ Section Facts.
         + destruct H9.
           split; [|eassumption].
           simpl; apply SubList_app_1; assumption.
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           destruct H9.
           f_equal.
           apply disj_mp_deqMsgs_1; try assumption.
@@ -1826,7 +1819,7 @@ Section Facts.
 
         + assumption.
         + reflexivity.
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           do 2 rewrite M.union_add; f_equal.
           rewrite disj_mp_enqMsgs_1; try assumption.
           * f_equal.
@@ -1851,7 +1844,7 @@ Section Facts.
         forall st1,
           Reachable (steps step_m) sys1 st1 ->
           step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                 (mergeMState st1 st21) lbl (mergeMState st1 st22).
+                 (mergeState st1 st21) lbl (mergeState st1 st22).
     Proof.
       intros.
       apply reachable_state_valid in H0; [|assumption].
@@ -1865,7 +1858,7 @@ Section Facts.
         + destruct H8.
           split; [|eassumption].
           simpl; apply SubList_app_2; assumption.
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           destruct H8.
           f_equal.
           apply disj_mp_enqMsgs_2; try assumption.
@@ -1884,7 +1877,7 @@ Section Facts.
         + destruct H9.
           split; [|eassumption].
           simpl; apply SubList_app_2; assumption.
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           destruct H9.
           f_equal.
           apply disj_mp_deqMsgs_2; try assumption.
@@ -1938,7 +1931,7 @@ Section Facts.
 
         + assumption.
         + reflexivity.
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           rewrite union_add_2 with (m:= oss1).
           2: {
             assert (M.Disj oss1 oss)
@@ -2161,7 +2154,7 @@ Section Facts.
             Reachable (steps step_m) sys2 st21 ->
             ostep sys2 st21 (filterIns (sys_merqs sys2) eins) st22 ->
             step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                   (mergeMState st11 st21) (RlblIns eins) (mergeMState st12 st22).
+                   (mergeState st11 st21) (RlblIns eins) (mergeState st12 st22).
     Proof.
       intros.
       pose proof (reachable_state_valid Hvi1 H2) as Hsv1.
@@ -2189,7 +2182,7 @@ Section Facts.
           destruct H14, H16.
           eapply WellDistrMsgs_composed; eauto.
         + reflexivity.
-        + unfold mergeMState; simpl; f_equal.
+        + unfold mergeState; simpl; f_equal.
           apply enqMsgs_composed; auto.
     Qed.
 
@@ -2326,7 +2319,7 @@ Section Facts.
             Reachable (steps step_m) sys2 st21 ->
             ostep sys2 st21 (filterOuts (sys_merss sys2) eouts) st22 ->
             step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                   (mergeMState st11 st21) (RlblOuts eouts) (mergeMState st12 st22).
+                   (mergeState st11 st21) (RlblOuts eouts) (mergeState st12 st22).
     Proof.
       intros.
       pose proof (reachable_state_valid Hvi1 H2) as Hsv1.
@@ -2373,7 +2366,7 @@ Section Facts.
           destruct H15, H19.
           eapply WellDistrMsgs_composed; eauto.
         + reflexivity.
-        + unfold mergeMState; simpl; f_equal.
+        + unfold mergeState; simpl; f_equal.
           eapply deqMsgs_composed; auto.
     Qed.
 
@@ -2389,7 +2382,7 @@ Section Facts.
             Reachable (steps step_m) sys2 st21 ->
             steps step_m sys2 st21 ll2 st22 ->
             steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-                  (mergeMState st11 st21) ll (mergeMState st12 st22).
+                  (mergeState st11 st21) ll (mergeState st12 st22).
     Proof.
       induction 1; simpl; intros.
       - inv_steps; constructor.
@@ -2548,11 +2541,11 @@ Section Facts.
       forall st11 st21 oidx ridx mins mouts st2,
         ValidState sys1 st11 -> ValidState sys2 st21 ->
         step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-               (mergeMState st11 st21) (RlblInt oidx ridx mins mouts) st2 ->
+               (mergeState st11 st21) (RlblInt oidx ridx mins mouts) st2 ->
         (exists st12, step_m sys1 st11 (RlblInt oidx ridx mins mouts) st12 /\
-                      mergeMState st12 st21 = st2) \/
+                      mergeState st12 st21 = st2) \/
         (exists st22, step_m sys2 st21 (RlblInt oidx ridx mins mouts) st22 /\
-                      mergeMState st11 st22 = st2).
+                      mergeState st11 st22 = st2).
     Proof.
       intros.
       red in H0, H1; dest.
@@ -2579,7 +2572,7 @@ Section Facts.
             apply (proj1 Hwf1).
           * destruct H21; split; [|assumption].
             apply (proj2 Hwf1).
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           do 2 rewrite M.union_add.
           f_equal.
           erewrite disj_mp_enqMsgs_1; eauto.
@@ -2610,7 +2603,7 @@ Section Facts.
             apply (proj1 Hwf2).
           * destruct H21; split; [|assumption].
             apply (proj2 Hwf2).
-        + unfold mergeMState; simpl.
+        + unfold mergeState; simpl.
           rewrite union_add_2 with (m:= oss1).
           2: {
             assert (M.Disj oss1 oss2)
@@ -2675,11 +2668,11 @@ Section Facts.
       forall st11 st21 mins st2,
         ValidState sys1 st11 -> ValidState sys2 st21 ->
         step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-               (mergeMState st11 st21) (RlblIns mins) st2 ->
+               (mergeState st11 st21) (RlblIns mins) st2 ->
         exists st12 st22,
           ostep sys1 st11 (filterIns (sys_merqs sys1) mins) st12 /\
           ostep sys2 st21 (filterIns (sys_merqs sys2) mins) st22 /\
-          mergeMState st12 st22 = st2.
+          mergeState st12 st22 = st2.
     Proof.
       intros.
       inv_step; inv H6; simpl in *.
@@ -2702,7 +2695,7 @@ Section Facts.
             erewrite filterMsgs_ext_ins_eq_2 by eassumption.
             split; [|assumption].
             apply filterMsgs_ext_ins_SubList_2; auto.
-          * unfold mergeMState; simpl; f_equal.
+          * unfold mergeState; simpl; f_equal.
             destruct H5; simpl in *.
             erewrite filterMsgs_ext_ins_eq_2 by eassumption.
             apply filterMsgs_ext_ins_SubList_2 in H2; [|assumption].
@@ -2722,7 +2715,7 @@ Section Facts.
             split; [|assumption].
             apply filterMsgs_ext_ins_SubList_1; auto.
           * constructor.
-          * unfold mergeMState; simpl; f_equal.
+          * unfold mergeState; simpl; f_equal.
             destruct H5; simpl in *.
             erewrite filterMsgs_ext_ins_eq_1 by eassumption.
             apply filterMsgs_ext_ins_SubList_1 in H2; [|assumption].
@@ -2744,7 +2737,7 @@ Section Facts.
             destruct H5; simpl in *; split.
             { apply filterMsgs_idsOf_SubList. }
             { apply filterMsgs_idsOf_NoDup; assumption. }
-          * unfold mergeMState; simpl; f_equal.
+          * unfold mergeState; simpl; f_equal.
             apply enqMsgs_composed; auto; [apply H5|apply H0|apply H1].
     Qed.
 
@@ -2822,11 +2815,11 @@ Section Facts.
       forall st11 st21 mouts st2,
         ValidState sys1 st11 -> ValidState sys2 st21 ->
         step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk)
-               (mergeMState st11 st21) (RlblOuts mouts) st2 ->
+               (mergeState st11 st21) (RlblOuts mouts) st2 ->
         exists st12 st22,
           ostep sys1 st11 (filterOuts (sys_merss sys1) mouts) st12 /\
           ostep sys2 st21 (filterOuts (sys_merss sys2) mouts) st22 /\
-          mergeMState st12 st22 = st2.
+          mergeState st12 st22 = st2.
     Proof.
       intros.
       inv_step; inv H6; simpl in *.
@@ -2854,7 +2847,7 @@ Section Facts.
               split; [|assumption].
               apply filterMsgs_ext_outs_SubList_2; auto.
             }
-          * unfold mergeMState; simpl; f_equal.
+          * unfold mergeState; simpl; f_equal.
             erewrite filterMsgs_ext_outs_eq_2 by eassumption.
             apply filterMsgs_ext_outs_SubList_2 in H2; [|assumption].
             eapply disj_mp_deqMsgs_2; try reflexivity; try eassumption.
@@ -2878,7 +2871,7 @@ Section Facts.
               apply filterMsgs_ext_outs_SubList_1; auto.
             }
           * constructor.
-          * unfold mergeMState; simpl; f_equal.
+          * unfold mergeState; simpl; f_equal.
             erewrite filterMsgs_ext_outs_eq_1 by eassumption.
             apply filterMsgs_ext_outs_SubList_1 in H2; [|assumption].
             eapply disj_mp_deqMsgs_1; try reflexivity; try eassumption.
@@ -2908,7 +2901,7 @@ Section Facts.
               { apply filterMsgs_idsOf_SubList. }
               { apply filterMsgs_idsOf_NoDup; assumption. }
             }
-          * unfold mergeMState; simpl; f_equal.
+          * unfold mergeState; simpl; f_equal.
             apply deqMsgs_composed; auto; [apply H0|apply H1].
     Qed.
 
@@ -2917,11 +2910,11 @@ Section Facts.
         steps step_m (mergeSystem sys1 sys2 HoidxOk HmidxOk) st1 ll st2 ->
         forall st11 st21,
           ValidState sys1 st11 -> ValidState sys2 st21 ->
-          mergeMState st11 st21 = st1 ->
+          mergeState st11 st21 = st1 ->
           exists ll1 st12 ll2 st22,
             steps step_m sys1 st11 ll1 st12 /\
             steps step_m sys2 st21 ll2 st22 /\
-            mergeMState st12 st22 = st2 /\
+            mergeState st12 st22 = st2 /\
             HistoryMerged
               (sys_merqs sys1) (sys_merss sys1) (sys_merqs sys2) (sys_merss sys2)
               ll1 ll2 ll.
@@ -2935,7 +2928,7 @@ Section Facts.
         destruct lbl.
 
         + inv H1.
-          exists (RlblEmpty _ :: ll1), st12, ll2, st22.
+          exists (RlblEmpty :: ll1), st12, ll2, st22.
           repeat split; auto.
           * econstructor; [eassumption|constructor].
           * constructor; auto.
@@ -3000,7 +2993,7 @@ Section Facts.
             HistoryMerged
               (sys_merqs sys1) (sys_merss sys1) (sys_merqs sys2) (sys_merss sys2)
               ll1 ll2 ll /\
-            [LblIns (imap id eins)] = behaviorOf ll.
+            [LblIns eins] = behaviorOf ll.
   Proof.
     intros.
     apply behaviorOf_o2l_inv in H2;
@@ -3016,7 +3009,6 @@ Section Facts.
       constructor; auto.
       apply HistoryMerged_basic_1; auto.
     - repeat rewrite behaviorOf_app.
-      unfold MLabel.
       rewrite H2, H3; simpl.
       rewrite behaviorOf_app.
       rewrite H4, H5; simpl.
@@ -3035,7 +3027,7 @@ Section Facts.
             HistoryMerged
               (sys_merqs sys1) (sys_merss sys1) (sys_merqs sys2) (sys_merss sys2)
               ll1 ll2 ll /\
-            [LblOuts (imap id eouts)] = behaviorOf ll.
+            [LblOuts eouts] = behaviorOf ll.
   Proof.
     intros.
     apply behaviorOf_o2l_inv in H2;
@@ -3051,7 +3043,6 @@ Section Facts.
       constructor; auto.
       apply HistoryMerged_basic_1; auto.
     - repeat rewrite behaviorOf_app.
-      unfold MLabel.
       rewrite H2, H3; simpl.
       rewrite behaviorOf_app.
       rewrite H4, H5; simpl.
@@ -3147,7 +3138,7 @@ Section Facts.
     red; intros.
     inv H2.
     eapply steps_split in H3; try eassumption.
-    2: { apply eq_sym, mergeMState_init. }
+    2: { apply eq_sym, mergeState_init. }
     destruct H3 as [ll1 [st12 [ll2 [st22 ?]]]]; dest.
     assert (Behavior (steps step_m) impl1 (behaviorOf ll1)).
     { econstructor; [eassumption|reflexivity]. }
@@ -3162,7 +3153,7 @@ Section Facts.
     destruct H5 as [rll [? ?]]; rewrite H5.
 
     econstructor.
-    - rewrite mergeMState_init.
+    - rewrite mergeState_init.
       eapply steps_composed; try eassumption.
       + instantiate (1:= rll); congruence.
       + apply reachable_init.

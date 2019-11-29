@@ -11,7 +11,7 @@ Open Scope list.
 Open Scope fmap.
 
 Section Coverage.
-  Context `{oifc: OStateIfc}.
+  Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
@@ -640,7 +640,7 @@ Section Coverage.
       Reachable (steps step_m) sys st1 ->
       step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
       NonRqUpL dtr (RlblInt oidx ridx rins routs) ->
-      ~ UpLockedNew st1.(bst_orqs) st2.(bst_orqs) oidx.
+      ~ UpLockedNew st1.(st_orqs) st2.(st_orqs) oidx.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
     pose proof (footprints_ok Hiorqs H0 H2).
@@ -657,11 +657,11 @@ Section Coverage.
       dest; congruence.
 
     - disc_rule_conds.
-      + pose proof (rqEdgeUpFrom_Some H _ H6).
+      + pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H6).
         destruct H8 as [rsUp [down [pidx ?]]]; dest.
         elim (H4 pidx).
         red; do 2 eexists; eauto.
-      + pose proof (rqEdgeUpFrom_Some H _ H6).
+      + pose proof (rqEdgeUpFrom_Some (proj1 (proj2 H)) _ H6).
         destruct H15 as [rsUp [down [pidx ?]]]; dest.
         elim (H4 pidx).
         red; do 2 eexists; eauto.
@@ -707,7 +707,7 @@ Section Coverage.
     forall st1 oidx ridx rins routs st2 uidx,
       step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
       uidx <> oidx ->
-      ~ UpLockedNew st1.(bst_orqs) st2.(bst_orqs) uidx.
+      ~ UpLockedNew st1.(st_orqs) st2.(st_orqs) uidx.
   Proof.
     intros.
     inv H; simpl in *.
@@ -720,7 +720,7 @@ Section Coverage.
     forall st1 hst st2 oidx,
       steps step_m sys st1 hst st2 ->
       ~ In oidx (oindsOf hst) ->
-      ~ UpLockedNew st1.(bst_orqs) st2.(bst_orqs) oidx.
+      ~ UpLockedNew st1.(st_orqs) st2.(st_orqs) oidx.
   Proof.
     induction 1; simpl; intros; [apply upLockedNew_not_refl|].
     destruct lbl; try (inv H0; simpl in *; auto; fail).
@@ -761,12 +761,12 @@ Section Coverage.
 
   Lemma atomic_NonRqUp_no_new_uplocks:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       Forall (NonRqUpL dtr) hst ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
-        Forall (fun oidx => ~ UpLockedNew s1.(bst_orqs) s2.(bst_orqs) oidx)
+        Forall (fun oidx => ~ UpLockedNew s1.(st_orqs) s2.(st_orqs) oidx)
                (oindsOf hst).
   Proof.
     destruct Hrrs as [? [? ?]].
@@ -1012,7 +1012,7 @@ Section Coverage.
       apply subtreeIndsOf_composed in H2; [|apply Hrrs]; destruct H2;
         [subst; exfalso; auto|].
       destruct H2 as [rcidx [? ?]].
-      pose proof (parentIdxOf_Some H _ H2).
+      pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H2).
       destruct H12 as [rqUp [rsUp [down ?]]]; dest.
       destruct (option_dec idx_dec (rqi_midx_rsb rqiu) (Some down)); [subst; disc_rule_conds|].
       specialize (H3 _ _ H2 H14 n0).
@@ -1053,7 +1053,7 @@ Section Coverage.
     destruct i; [exfalso; auto|].
     destruct H10 as [rcidx [? ?]].
     destruct (idx_dec rcidx cidx); subst; [exfalso; auto|].
-    pose proof (parentIdxOf_Some H _ H10).
+    pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H10).
     destruct H12 as [rrqUp [rrsUp [rdown ?]]]; dest.
     assert (rdown <> down).
     { intro Hx; subst; disc_rule_conds; auto. }
@@ -1104,7 +1104,7 @@ Section Coverage.
   
   Lemma rsUp_outs_case_isolated:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -1167,13 +1167,13 @@ Section Coverage.
 
     destruct H18.
     - destruct H18.
-      pose proof (edgeDownTo_Some H _ H19).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H19).
       destruct H20 as [rqUp [rsUp [pidx ?]]]; dest.
       apply in_map with (f:= idOf) in H17.
       pose proof (atomic_down_out_in_history Hiorqs Hrrs H2 H3 H4 _ H19 H22 H17).
       eapply inside_child_in; [apply Hrrs|..]; eauto.
     - destruct H18.
-      pose proof (rsEdgeUpFrom_Some H _ H19).
+      pose proof (rsEdgeUpFrom_Some (proj1 (proj2 H)) _ H19).
       apply in_map with (f:= idOf) in H17.
       pose proof (atomic_rsUp_out_in_history Hiorqs Hrrs H2 H3 H4 _ H19 H17).
       auto.
@@ -1181,7 +1181,7 @@ Section Coverage.
 
   Lemma rsUp_no_other_messages_in:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -1192,7 +1192,7 @@ Section Coverage.
 
           In oidx (oindsOf hst) ->
           RqRsDownMatch dtr oidx rqTos (idsOf rins) P ->
-          (bst_orqs st2)@[oidx] = Some orq -> orq@[downRq] = Some rqid ->
+          (st_orqs st2)@[oidx] = Some orq -> orq@[downRq] = Some rqid ->
           DownLockCoverInv (oindsOf hst) oidx rqid ->
           rsEdgeUpFrom dtr oidx = rqid.(rqi_midx_rsb) ->
           idsOf rins = rqid.(rqi_minds_rss) ->
@@ -1232,7 +1232,7 @@ Section Coverage.
       + eapply subtreeIndsOf_child_in; [apply Hrrs|assumption].
 
     - destruct H19 as [cidx [? ?]].
-      pose proof (parentIdxOf_Some H _ H19).
+      pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H19).
       destruct H21 as [rqUp [rsUp [down ?]]]; dest.
 
       destruct (in_dec idx_dec rsUp (idsOf rins)).
@@ -1255,7 +1255,7 @@ Section Coverage.
 
         destruct H18.
         * disc_rule_conds.
-          pose proof (edgeDownTo_Some H _ H24).
+          pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H24).
           destruct H25 as [rrqUp [rrsUp [rpidx ?]]]; dest.
           apply removeL_In_2 in H17.
           pose proof H17.
@@ -1272,7 +1272,7 @@ Section Coverage.
           good_locking_get obj.
 
           eapply downLockInvORq_down_rqsQ_length_one_locked
-            with (cidx:= cidx) in H26; try eassumption.
+            with (cidx0:= cidx) in H26; try eassumption.
           { destruct H26 as [rrqid ?]; dest.
             mred; disc_rule_conds; auto.
           }
@@ -1293,7 +1293,7 @@ Section Coverage.
   
   Lemma rsUp_outs_case_back:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 hst st2 ->
@@ -1307,11 +1307,11 @@ Section Coverage.
           
           In roidx (oindsOf hst) ->
           RqRsDownMatch dtr roidx rqTos (idsOf rins) P ->
-          (bst_orqs st2)@[roidx] = Some rorq -> rorq@[downRq] = Some rqid ->
+          (st_orqs st2)@[roidx] = Some rorq -> rorq@[downRq] = Some rqid ->
           DownLockCoverInv (oindsOf hst) roidx rqid ->
           idsOf rins = rqid.(rqi_minds_rss) ->
           
-          DownLockRoot (oindsOf hst) (bst_orqs st1) (bst_orqs st2)
+          DownLockRoot (oindsOf hst) (st_orqs st1) (st_orqs st2)
                        roidx rqid rcidx ->
           DownLockCoverInv (oindsOf hst) roidx rqid ->
           OutsInRoot roidx rcidx eouts ->
@@ -1333,13 +1333,13 @@ Section Coverage.
     { destruct H8.
       { clear H20.
         pose proof H8; destruct H20; simpl in *.
-        pose proof (edgeDownTo_Some H _ H25).
+        pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H25).
         destruct H26 as [rqUp [rsUp [pidx ?]]]; dest.
         eauto.
       }
       { clear H18.
         pose proof H8; destruct H18; simpl in *.
-        pose proof (rsEdgeUpFrom_Some H _ H25).
+        pose proof (rsEdgeUpFrom_Some (proj1 (proj2 H)) _ H25).
         destruct H26 as [rqUp [down [pidx ?]]]; dest.
         eauto.
       }
@@ -1353,7 +1353,7 @@ Section Coverage.
       + (** case RqDown *)
         exfalso; clear H20.
         destruct H8; simpl in *.
-        pose proof (parentIdxOf_Some H _ H25).
+        pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H25).
         destruct H26 as [rqUp [rsUp [down ?]]]; dest.
         disc_rule_conds.
         pose proof (steps_object_in_system H4 _ H10).
@@ -1395,7 +1395,7 @@ Section Coverage.
       + (** case RsUp *)
         clear H18.
         destruct H8; simpl in *.
-        pose proof (parentIdxOf_Some H _ H25).
+        pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H25).
         destruct H26 as [rqUp [rsUp [down ?]]]; dest.
         disc_rule_conds.
         pose proof (steps_object_in_system H4 _ H10).
@@ -1414,7 +1414,7 @@ Section Coverage.
           destruct (msg_dec rsum rmsg); subst; auto.
           exfalso.
           eapply downLockInvORq_rsUp_length_two_False
-            with (cidx:= cidx) in H31; try eassumption.
+            with (cidx0:= cidx) in H31; try eassumption.
           eapply findQ_length_two with (msg1:= rsum) (msg2:= rmsg); eauto.
           { apply H7 in H38; specialize (H32 _ H38); assumption. }
           { specialize (H32 _ H19); assumption. }
@@ -1432,7 +1432,7 @@ Section Coverage.
     - (** case message-not-from-the-root *)
       exfalso.
       destruct H26 as [cidx ?]; dest.
-      pose proof (parentIdxOf_Some H _ H26).
+      pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H26).
       destruct H29 as [rqUp [rsUp [down ?]]]; dest.
       
       destruct (in_dec idx_dec rsUp (rqi_minds_rss rqid)).
@@ -1473,7 +1473,7 @@ Section Coverage.
     forall st1 st2 oidx ridx rins routs,
       Reachable (steps step_m) sys st1 ->
       step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
-      MsgOutsInv [oidx] st1.(bst_orqs) st2.(bst_orqs) routs.
+      MsgOutsInv [oidx] st1.(st_orqs) st2.(st_orqs) routs.
   Proof.
     destruct Hrrs as [? [? ?]]; intros.
     pose proof (footprints_ok Hiorqs H0 H2).
@@ -1681,28 +1681,28 @@ Section Coverage.
 
   Section InternalStep.
 
-    Variables (st0: MState)
-              (inits ins: list (Id Msg)) (hst: MHistory) (outs eouts: list (Id Msg))
+    Variables (st0: State)
+              (inits ins: list (Id Msg)) (hst: History) (outs eouts: list (Id Msg))
               (oss: OStates) (orqs: ORqs Msg) (msgs: MessagePool Msg)
               (obj: Object) (rule: Rule)
               (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
               (nost: OState) (norq: ORq Msg) (routs: list (Id Msg)).
 
     Hypotheses
-      (Hatm: Atomic msg_dec inits ins hst outs eouts)
+      (Hatm: Atomic inits ins hst outs eouts)
       (Hrch: Reachable (steps step_m) sys st0)
-      (Hsteps: steps step_m sys st0 hst {| bst_oss := oss;
-                                           bst_orqs := orqs;
-                                           bst_msgs := msgs |})
+      (Hsteps: steps step_m sys st0 hst {| st_oss := oss;
+                                           st_orqs := orqs;
+                                           st_msgs := msgs |})
       (Hrins: rins <> nil)
       (Hosub: SubList rins eouts)
-      (Hmoc: MsgOutsInv (oindsOf hst) st0.(bst_orqs) orqs eouts)
-      (Hftinv: FootprintsOk dtr sys {| bst_oss := oss;
-                                       bst_orqs := orqs;
-                                       bst_msgs := msgs |})
-      (Hdlinv: DownLockInv dtr sys {| bst_oss := oss;
-                                      bst_orqs := orqs;
-                                      bst_msgs := msgs |}).
+      (Hmoc: MsgOutsInv (oindsOf hst) st0.(st_orqs) orqs eouts)
+      (Hftinv: FootprintsOk dtr sys {| st_oss := oss;
+                                       st_orqs := orqs;
+                                       st_msgs := msgs |})
+      (Hdlinv: DownLockInv dtr sys {| st_oss := oss;
+                                      st_orqs := orqs;
+                                      st_msgs := msgs |}).
 
     Hypotheses
       (HobjIn: In obj (sys_objs sys))
@@ -1746,7 +1746,7 @@ Section Coverage.
     Lemma step_msg_outs_ok_ImmDownRule:
       ImmDownRule dtr (obj_idx obj) rule ->
       MsgOutsInv (obj_idx obj :: oindsOf hst)
-                 (bst_orqs st0) (orqs +[obj_idx obj <- norq])
+                 (st_orqs st0) (orqs +[obj_idx obj <- norq])
                  (removeL (id_dec msg_dec) eouts rins ++ routs).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
@@ -1780,7 +1780,7 @@ Section Coverage.
     Lemma step_msg_outs_ok_ImmUpRule:
       ImmUpRule dtr (obj_idx obj) rule ->
       MsgOutsInv (obj_idx obj :: oindsOf hst)
-                   (bst_orqs st0) (orqs +[obj_idx obj <- norq])
+                   (st_orqs st0) (orqs +[obj_idx obj <- norq])
                    (removeL (id_dec msg_dec) eouts rins ++ routs).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
@@ -1788,7 +1788,7 @@ Section Coverage.
       replace (orqs+[obj_idx obj <- norq]) with orqs by meq.
       inv_MsgOutsInv.
 
-      pose proof (edgeDownTo_Some H _ H11).
+      pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H11).
       destruct H14 as [rqUp [rsUp [pidx ?]]]; dest.
       disc_rule_conds.
       assert (In rqFrom (idsOf eouts))
@@ -1839,9 +1839,9 @@ Section Coverage.
               destruct H24; [subst|auto].
               split.
               { eapply steps_not_in_history_no_new_uplocks
-                  with (st2:= {| bst_oss := oss;
-                                 bst_orqs := orqs;
-                                 bst_msgs := msgs |}); eauto.
+                  with (st2:= {| st_oss := oss;
+                                 st_orqs := orqs;
+                                 st_msgs := msgs |}); eauto.
                 eapply DisjList_In_1; [eassumption|].
                 apply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
               }
@@ -1862,9 +1862,9 @@ Section Coverage.
             destruct H19.
             { subst; split.
               { eapply steps_not_in_history_no_new_uplocks
-                  with (st2:= {| bst_oss := oss;
-                                 bst_orqs := orqs;
-                                 bst_msgs := msgs |}); eauto.
+                  with (st2:= {| st_oss := oss;
+                                 st_orqs := orqs;
+                                 st_msgs := msgs |}); eauto.
                 eapply DisjList_In_1; [eassumption|].
                 apply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|congruence].
               }
@@ -1906,7 +1906,7 @@ Section Coverage.
 
       - (** [DownLockRootInv] *)
         intros.
-        assert (DownLockRoot (oindsOf hst) (bst_orqs st0) orqs
+        assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
                              roidx rrqid rcidx).
         { red in H19; dest.
           destruct H19; subst; [exfalso; simpl_locks|].
@@ -1956,7 +1956,7 @@ Section Coverage.
     Lemma step_msg_outs_ok_RsDownRqDownRule:
       RsDownRqDownRule dtr sys (obj_idx obj) rule ->
       MsgOutsInv (obj_idx obj :: oindsOf hst)
-                   st0.(bst_orqs) (orqs +[obj_idx obj <- norq])
+                   st0.(st_orqs) (orqs +[obj_idx obj <- norq])
                                   (removeL (id_dec msg_dec) eouts rins ++ routs).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
@@ -1968,7 +1968,7 @@ Section Coverage.
       simpl in *.
       disc_rule_conds.
 
-      assert (UpLockedBound (obj_idx obj :: oindsOf hst) (bst_orqs st0)
+      assert (UpLockedBound (obj_idx obj :: oindsOf hst) (st_orqs st0)
                             (orqs +[obj_idx obj <- ((porq) -[ upRq]) +[ downRq <- rqi0]])
                             (obj_idx upCObj)) as Hulb.
       { eapply upLockedBound_child; eauto; [|congruence|mred].
@@ -1976,7 +1976,7 @@ Section Coverage.
         eapply atomic_separation_ok in H20; eauto; try apply Hiorqs.
         destruct H20; [|assumption].
         exfalso; destruct H20 as [ccidx [? ?]].
-        pose proof (edgeDownTo_Some H _ H5).
+        pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
         destruct H26 as [rqUp [rrsUp [pidx ?]]]; dest.
         disc_rule_conds.
         pose proof Hatm.
@@ -2017,7 +2017,7 @@ Section Coverage.
             destruct n.
             1: {
               exfalso; destruct H31 as [rcidx [? ?]].
-              pose proof (edgeDownTo_Some H _ H5).
+              pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
               destruct H33 as [rqUp [rrsUp [pidx ?]]]; dest.
               disc_rule_conds.
               pose proof Hatm.
@@ -2060,7 +2060,7 @@ Section Coverage.
           destruct n.
           1: {
             exfalso; destruct H22 as [ccidx [? ?]].
-            pose proof (edgeDownTo_Some H _ H5).
+            pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
             destruct H27 as [rqUp [rrsUp [pidx ?]]]; dest.
             disc_rule_conds.
             pose proof Hatm.
@@ -2125,7 +2125,7 @@ Section Coverage.
     Lemma step_msg_outs_ok_RqFwdRule:
       RqFwdRule dtr sys (obj_idx obj) rule ->
       MsgOutsInv (obj_idx obj :: oindsOf hst)
-                   (bst_orqs st0) (orqs +[obj_idx obj <- norq])
+                   (st_orqs st0) (orqs +[obj_idx obj <- norq])
                    (removeL (id_dec msg_dec) eouts rins ++ routs).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
@@ -2304,7 +2304,7 @@ Section Coverage.
                 
       - (** [RqDownDown] *)
         inv_MsgOutsInv.
-        pose proof (edgeDownTo_Some H _ H2).
+        pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H2).
         destruct H18 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         assert (In rqFrom (idsOf eouts))
@@ -2330,10 +2330,10 @@ Section Coverage.
             destruct H24 as [oidx ?].
 
             assert (forall oidx,
-                       OutsideUpLocked (oindsOf hst) (bst_orqs st0) orqs oidx ->
+                       OutsideUpLocked (oindsOf hst) (st_orqs st0) orqs oidx ->
                        OutsideUpLocked
                          (obj_idx obj :: oindsOf hst) 
-                         (bst_orqs st0)
+                         (st_orqs st0)
                          (orqs +[obj_idx obj <- (porq +[downRq <- rqi])]) oidx)
               as Houl.
             { intros; red; intros.
@@ -2467,7 +2467,7 @@ Section Coverage.
           intros.
           destruct (idx_dec roidx (obj_idx obj)); subst;
             [red in H19; dest; simpl_locks; rewrite H27 in H28; solve_midx_false|].
-          assert (DownLockRoot (oindsOf hst) (bst_orqs st0) orqs roidx rrqid rcidx).
+          assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs roidx rrqid rcidx).
           { red in H19; dest.
             destruct H19; [exfalso; auto|].
             red; repeat ssplit; try assumption.
@@ -2545,7 +2545,7 @@ Section Coverage.
     Lemma step_msg_outs_ok_RsBackRule:
       RsBackRule rule ->
       MsgOutsInv (obj_idx obj :: oindsOf hst)
-                   (bst_orqs st0) (orqs +[obj_idx obj <- norq])
+                   (st_orqs st0) (orqs +[obj_idx obj <- norq])
                    (removeL (id_dec msg_dec) eouts rins ++ routs).
     Proof.
       destruct Hrrs as [? [? ?]]; intros.
@@ -2561,7 +2561,7 @@ Section Coverage.
                    SubList (oindsOf hst) (subtreeIndsOf dtr ccidx) ->
                    False) as Hcf.
         { intros.
-          pose proof (edgeDownTo_Some H _ H7).
+          pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H7).
           destruct H22 as [rqUp [rrsUp [pidx ?]]]; dest.
           disc_rule_conds.
           pose proof Hatm.
@@ -2622,7 +2622,7 @@ Section Coverage.
 
         destruct (in_dec idx_dec (obj_idx obj) (oindsOf hst)).
         + (** If the history has visited the root *)
-          assert (~ UpLockedNew (bst_orqs st0) orqs (obj_idx obj)).
+          assert (~ UpLockedNew (st_orqs st0) orqs (obj_idx obj)).
           { assert (exists rsUp rsum, In (rsUp, rsum) rins).
             { destruct rins as [|[rsUp rsum] ?]; [exfalso; auto|].
               do 2 eexists; left; reflexivity.
@@ -2643,7 +2643,7 @@ Section Coverage.
             elim H25; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
           }
           assert (DownLocked orqs (obj_idx obj) rqi) by simpl_locks.
-          assert (DownLockRoot (oindsOf hst) (bst_orqs st0) orqs
+          assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
                                (obj_idx obj) rqi (obj_idx upCObj)).
           { red; repeat ssplit; try eassumption; congruence. }
           specialize (H16 _ _ _ H20).
@@ -2685,7 +2685,7 @@ Section Coverage.
             { simpl_locks; apply H23; assumption. }
           * eapply noDownLockOutside_child_in; eauto; [|mred].
             intros.
-            pose proof (parentIdxOf_Some H _ H20).
+            pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H20).
             destruct H27 as [orqUp [orsUp [down ?]]]; dest.
             disc_rule_conds.
             specialize (H15 _ _ _ H20 H28 H25).
@@ -2739,7 +2739,7 @@ Section Coverage.
               try apply Hrrs; eauto.
           }
 
-          assert (RsUpMsgOutInv (oindsOf hst) (bst_orqs st0) orqs ccidx (rsFrom, rsfm)).
+          assert (RsUpMsgOutInv (oindsOf hst) (st_orqs st0) orqs ccidx (rsFrom, rsfm)).
           { rewrite Forall_forall in H13.
             specialize (H13 _ H18); destruct H13 as [oidx ?].
             destruct H13; [destruct H13; disc_rule_conds|].
@@ -2847,7 +2847,7 @@ Section Coverage.
 
         destruct (in_dec idx_dec (obj_idx obj) (oindsOf hst)).
         + (** If the history has visited the join *)
-          assert (~ UpLockedNew (bst_orqs st0) orqs (obj_idx obj)) as Hnul.
+          assert (~ UpLockedNew (st_orqs st0) orqs (obj_idx obj)) as Hnul.
           { rewrite Forall_forall in H10; specialize (H10 _ H15).
             destruct H10 as [oidx ?].
             destruct H10; [destruct H10; disc_rule_conds; solve_midx_false|].
@@ -2917,7 +2917,7 @@ Section Coverage.
                 apply subtreeIndsOf_composed in H25; [|apply Hrrs].
                 destruct H25; [exfalso; auto|].
                 destruct H25 as [cidx [? ?]].
-                pose proof (parentIdxOf_Some H _ H25).
+                pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H25).
                 destruct H27 as [crqUp [crsUp [cdown ?]]]; dest.
                 destruct (in_dec idx_dec crsUp rqi.(rqi_minds_rss)).
                 { rewrite <-H17 in i0.
@@ -2966,7 +2966,7 @@ Section Coverage.
               red in H23; dest.
               simpl_locks; solve_midx_false.
             }
-            assert (DownLockRoot (oindsOf hst) (bst_orqs st0) orqs
+            assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
                                  roidx rrqid rcidx).
             { red in H23; dest.
               destruct H23; [exfalso; auto|].
@@ -3049,7 +3049,7 @@ Section Coverage.
               try apply Hrrs; eauto.
           }
 
-          assert (RsUpMsgOutInv (oindsOf hst) (bst_orqs st0) orqs ccidx (rsFrom, rsfm)).
+          assert (RsUpMsgOutInv (oindsOf hst) (st_orqs st0) orqs ccidx (rsFrom, rsfm)).
           { rewrite Forall_forall in H10.
             specialize (H10 _ H15); destruct H10 as [oidx ?].
             destruct H10; [destruct H10; disc_rule_conds|].
@@ -3115,7 +3115,7 @@ Section Coverage.
           * intros.
             destruct (idx_dec (obj_idx obj) roidx); subst;
               [exfalso; red in H31; dest; simpl_locks|].
-            assert (DownLockRoot (oindsOf hst) (bst_orqs st0) orqs
+            assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
                                  roidx rrqid rcidx).
             { red in H31; dest.
               red; repeat ssplit; try eassumption; simpl_locks.
@@ -3177,11 +3177,11 @@ Section Coverage.
   
   Lemma atomic_msg_outs_ok:
     forall inits ins hst outs eouts,
-      Atomic msg_dec inits ins hst outs eouts ->
+      Atomic inits ins hst outs eouts ->
       forall s1 s2,
         Reachable (steps step_m) sys s1 ->
         steps step_m sys s1 hst s2 ->
-        MsgOutsInv (oindsOf hst) s1.(bst_orqs) s2.(bst_orqs) eouts.
+        MsgOutsInv (oindsOf hst) s1.(st_orqs) s2.(st_orqs) eouts.
   Proof.
     destruct Hrrs as [? [? [_ ?]]].
     induction 1; simpl; intros; subst;
@@ -3207,7 +3207,7 @@ Section Coverage.
       RqDownMsgTo oidx rqDown ->
       forall inits ins hst outs eouts,
         In rqDown eouts ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
           steps step_m sys st1 hst st2 ->
@@ -3245,7 +3245,7 @@ Section Coverage.
       RsDownMsgTo oidx rsDown ->
       forall inits ins hst outs eouts,
         In rsDown eouts ->
-        Atomic msg_dec inits ins hst outs eouts ->
+        Atomic inits ins hst outs eouts ->
         Forall (NonRqUpL dtr) hst ->
         forall st1 st2,
           Reachable (steps step_m) sys st1 ->
