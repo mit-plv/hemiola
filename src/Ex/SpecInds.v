@@ -280,7 +280,7 @@ Ltac spec_case_set cidx :=
   [reflexivity|spec_constr_step_set cidx|].
 
 Ltac spec_case_silent :=
-  idtac; exists (RlblEmpty _); eexists;
+  idtac; exists RlblEmpty; eexists;
   repeat ssplit;
   [reflexivity
   |econstructor

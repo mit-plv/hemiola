@@ -276,12 +276,10 @@ Ltac disc_rule_conds_const_unit :=
   | [H1: ?t = _, H2: context[?t] |- _] =>
     match type of t with
     | option _ => rewrite H1 in H2; simpl in H2
-    | nat => rewrite H1 in H2; simpl in H2
     end
   | [H1: ?t = _ |- context[?t] ] =>
     match type of t with
     | option _ => rewrite H1; simpl
-    | nat => rewrite H1; simpl
     end
 
   | [H: (_ /\oprec _) _ _ _ |- _] => destruct H

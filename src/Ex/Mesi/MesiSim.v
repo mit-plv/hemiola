@@ -225,19 +225,19 @@ Section Sim.
                 ObjCoh cv oidx ost (st_msgs st))
            (c_li_indices cifc ++ c_l1_indices cifc).
 
-  Definition SpecStateCoh (cv: nat) (st: @State SpecOStateIfc): Prop :=
+  Definition SpecStateCoh (cv: nat) (st: @State SpecInds.NatDecValue SpecOStateIfc): Prop :=
     sost <-- (st_oss st)@[specIdx];
       sorq <-- (st_orqs st)@[specIdx];
       sost#[specValueIdx] = cv.
 
-  Inductive SimState: State -> @State SpecOStateIfc -> Prop :=
+  Inductive SimState: State -> @State SpecInds.NatDecValue SpecOStateIfc -> Prop :=
   | SimStateIntro:
       forall cv ist sst,
         SpecStateCoh cv sst ->
         ImplStateCoh cv ist ->
         SimState ist sst.
 
-  Definition SimMESI (ist: State) (sst: @State SpecOStateIfc): Prop :=
+  Definition SimMESI (ist: State) (sst: @State SpecInds.NatDecValue SpecOStateIfc): Prop :=
     SimState ist sst /\
     SimExtMP (c_l1_indices cifc) ist.(st_msgs) ist.(st_orqs) sst.(st_msgs).
 
@@ -277,11 +277,11 @@ Section Sim.
     forall ist sst1,
       SimMESI ist sst1 ->
       exists slbl sst2,
-        getLabel (RlblEmpty Msg) = getLabel slbl /\
+        getLabel RlblEmpty = getLabel slbl /\
         step_m spec sst1 slbl sst2 /\ SimMESI ist sst2.
   Proof.
     simpl; intros.
-    exists (RlblEmpty _); eexists.
+    exists RlblEmpty; eexists.
     repeat ssplit; eauto.
     constructor.
   Qed.
@@ -572,8 +572,7 @@ Section Sim.
       assert (rsEdgeUpFrom topo (rootOf (fst (tree2Topo tr 0))) = None).
       { destruct (rsEdgeUpFrom _ _) eqn:Hrs; [|reflexivity].
         exfalso.
-        apply rsEdgeUpFrom_Some with (sys:= impl) in Hrs;
-          [|subst topo impl; auto].
+        apply rsEdgeUpFrom_Some in Hrs; [|apply mesi_RqRsChnsOnDTree].
         destruct Hrs as [rqUp [down [pidx ?]]]; dest.
         apply parentIdxOf_child_not_root in H29; [|subst topo; auto].
         auto.

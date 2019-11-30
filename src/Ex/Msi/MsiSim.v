@@ -272,11 +272,11 @@ Section Sim.
     forall ist sst1,
       SimMSI ist sst1 ->
       exists slbl sst2,
-        getLabel (RlblEmpty Msg) = getLabel slbl /\
+        getLabel RlblEmpty = getLabel slbl /\
         step_m spec sst1 slbl sst2 /\ SimMSI ist sst2.
   Proof.
     simpl; intros.
-    exists (RlblEmpty _); eexists.
+    exists RlblEmpty; eexists.
     repeat ssplit; eauto.
     constructor.
   Qed.
@@ -567,8 +567,7 @@ Section Sim.
       assert (rsEdgeUpFrom topo (rootOf (fst (tree2Topo tr 0))) = None).
       { destruct (rsEdgeUpFrom _ _) eqn:Hrs; [|reflexivity].
         exfalso.
-        apply rsEdgeUpFrom_Some with (sys:= impl) in Hrs;
-          [|subst topo impl; auto].
+        apply rsEdgeUpFrom_Some in Hrs; [|apply msi_RqRsChnsOnDTree].
         destruct Hrs as [rqUp [down [pidx ?]]]; dest.
         apply parentIdxOf_child_not_root in H27; [|subst topo; auto].
         auto.

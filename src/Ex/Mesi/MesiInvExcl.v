@@ -1371,7 +1371,7 @@ Section InvExcl.
              derive_child_chns oidx; disc_rule_conds_ex; fail).
 
     - red; intros; destruct H.
-      pose proof (rsEdgeUpFrom_Some (mesi_RqRsDTree Htr) _ H0).
+      pose proof (rsEdgeUpFrom_Some (mesi_RqRsChnsOnDTree tr) _ H0).
       destruct H1 as [rqUp [down [pidx ?]]]; dest.
       do 2 (red; intros).
       specialize (H4 oidx0); dest.
@@ -1537,7 +1537,8 @@ Section InvExcl.
       red in H; dest; simpl in *; solve_mesi
     end.
 
-  Local Hint Extern 0 (WfDTree topo) => apply tree2Topo_WfDTree.
+  Local Hint Extern 0 (WfDTree _) => apply mesi_WfDTree.
+  Local Hint Extern 0 (RqRsChnsOnDTree _) => apply mesi_RqRsChnsOnDTree.
   Ltac solve_by_topo_false :=
     match goal with
     | [H: ~ In ?oidx (subtreeIndsOf _ ?oidx) |- _] =>
@@ -2511,7 +2512,7 @@ Section InvExcl.
     match goal with
     | [Hr: Reachable _ _ ?st,
            Hs: steps _ _ ?st ?hst _,
-               Ha: Atomic _ _ _ ?hst _ ?eouts,
+               Ha: Atomic _ _ ?hst _ ?eouts,
                    H: FirstMPI _ (?midx, ?msg)
        |- context [enqMP ?nmidx ?nmsg (deqMP ?midx _)] ] =>
       do 2 red; simpl;
@@ -2525,7 +2526,7 @@ Section InvExcl.
 
     | [Hr: Reachable _ _ ?st,
            Hs: steps _ _ ?st ?hst _,
-               Ha: Atomic _ _ _ ?hst _ ?eouts,
+               Ha: Atomic _ _ ?hst _ ?eouts,
                    H: FirstMPI _ (?midx, ?msg)
        |- context [enqMsgs _ (deqMP ?midx _)] ] =>
       do 2 red; simpl;
@@ -2541,12 +2542,12 @@ Section InvExcl.
     match goal with
     | [Hr: Reachable _ _ ?st,
            Hs: steps step_m _ ?st ?hst _,
-               Ha: Atomic _ _ _ ?hst _ ?eouts,
+               Ha: Atomic _ _ ?hst _ ?eouts,
                    Hin: In (downTo ?roidx, _) ?eouts
        |- AtomicInv _ _ _ _ _ _] =>
       do 2 red; simpl;
-      eapply atomic_rsDown_singleton with (oidx:= roidx) in Ha;
-      try exact Hr; eauto; [|red; auto];
+      eapply atomic_rsDown_singleton in Ha;
+      try exact Hr; eauto; [|red; eauto];
       subst; rewrite removeOnce_nil; simpl;
       repeat constructor; try (red; simpl; intros; intuition discriminate)
     end.
@@ -2555,7 +2556,7 @@ Section InvExcl.
     match goal with
     | [Hr: Reachable _ _ ?st,
            Hs: steps _ _ ?st ?hst _,
-               Ha: Atomic _ _ _ ?hst _ ?eouts,
+               Ha: Atomic _ _ ?hst _ ?eouts,
                    H: FirstMPI _ (?midx, ?msg) |- context [deqMP ?midx _] ] =>
       do 2 red; simpl;
       apply Forall_app;
@@ -2582,7 +2583,7 @@ Section InvExcl.
 
       | [Hr: Reachable _ _ ?st,
              Hs: steps _ _ ?st ?hst _,
-                 Ha: Atomic _ _ _ ?hst _ ?eouts,
+                 Ha: Atomic _ _ ?hst _ ?eouts,
                      H: FirstMPI _ (?midx, ?msg) |- context [deqMP ?midx _] ] =>
         do 2 red; simpl; apply Forall_app;
         [change midx with (idOf (midx, msg)) at 1;
@@ -2594,7 +2595,7 @@ Section InvExcl.
       | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hr: _ = ?rss |- _] => rewrite <-Hr in Hrr
       | [Hr: Reachable _ _ ?st,
              Hs: steps _ _ ?st ?hst _,
-                 Ha: Atomic _ _ _ ?hst _ ?eouts,
+                 Ha: Atomic _ _ ?hst _ ?eouts,
                      H: Forall (FirstMPI _) ?rss |- _] =>
         do 2 red; simpl; apply Forall_app;
         [eapply atomic_rsUps_rsUp_preserves_msg_out_preds
@@ -2612,12 +2613,12 @@ Section InvExcl.
     match goal with
     | [Hr: Reachable _ _ ?st,
            Hs: steps step_m _ ?st ?hst _,
-               Ha: Atomic _ _ _ ?hst _ ?eouts,
+               Ha: Atomic _ _ ?hst _ ?eouts,
                    Hin: In (rqUpFrom ?roidx, _) ?eouts
        |- AtomicInv _ _ _ _ _ _] =>
       do 2 red; simpl;
-      eapply atomic_rqUp_singleton with (oidx:= roidx) in Ha;
-      try exact Hr; eauto; [|red; auto];
+      eapply atomic_rqUp_singleton in Ha;
+      try exact Hr; eauto; [|red; eauto];
       subst; rewrite removeOnce_nil; simpl;
       repeat constructor; try (red; simpl; intros; intuition discriminate)
     end.
@@ -2702,7 +2703,7 @@ Section InvExcl.
       forall inits,
         SubList (idsOf inits) (sys_merqs impl) ->
         forall ins hst outs eouts oidx ridx rins routs,
-          Atomic msg_dec inits ins hst outs eouts ->
+          Atomic inits ins hst outs eouts ->
           rins <> nil ->
           SubList rins eouts ->
           forall (Hrsd: forall (oidx : IdxT) (rsDown : Id Msg),
@@ -2782,7 +2783,7 @@ Section InvExcl.
       { (* [liGetSImmS] *)
         disc_rule_conds_ex.
         derive_NoRsI_by_no_uplock oidx msgs.
-        
+
         split; [solve_AtomicInv_rqUp|].
         case_InvExcl_me_others.
         { disc_InvExcl_this.
@@ -3943,7 +3944,7 @@ Section InvExcl.
       forall inits,
         SubList (idsOf inits) (sys_merqs impl) ->
         forall ins hst outs eouts oidx ridx rins routs,
-          Atomic msg_dec inits ins hst outs eouts ->
+          Atomic inits ins hst outs eouts ->
           rins <> nil ->
           SubList rins eouts ->
           forall (Hrsd: forall (oidx : IdxT) (rsDown : Id Msg),
@@ -5943,7 +5944,7 @@ Section InvExcl.
       forall inits,
         SubList (idsOf inits) (sys_merqs impl) ->
         forall ins hst outs eouts oidx ridx rins routs,
-          Atomic msg_dec inits ins hst outs eouts ->
+          Atomic inits ins hst outs eouts ->
           rins <> nil ->
           SubList rins eouts ->
           forall (Hrsd: forall (oidx : IdxT) (rsDown : Id Msg),
@@ -6357,7 +6358,7 @@ Section InvExcl.
     induction H3; simpl; intros; subst;
       [inv_steps; apply mesi_InvExcl_InvTrs_init; auto|].
 
-    assert (Atomic msg_dec inits (ins ++ rins) (RlblInt oidx ridx rins routs :: hst)
+    assert (Atomic inits (ins ++ rins) (RlblInt oidx ridx rins routs :: hst)
                    (outs ++ routs) (removeL (id_dec msg_dec) eouts rins ++ routs)) as Hnatm
         by (econstructor; eauto).
     pose proof (atomic_rsDown_singleton
