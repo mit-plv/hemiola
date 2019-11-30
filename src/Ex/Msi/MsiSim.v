@@ -220,19 +220,19 @@ Section Sim.
                 ObjCoh cv oidx ost (st_msgs st))
            (c_li_indices cifc ++ c_l1_indices cifc).
 
-  Definition SpecStateCoh (cv: nat) (st: @State SpecOStateIfc): Prop :=
+  Definition SpecStateCoh (cv: nat) (st: @State SpecInds.NatDecValue SpecOStateIfc): Prop :=
     sost <-- (st_oss st)@[specIdx];
       sorq <-- (st_orqs st)@[specIdx];
       sost#[specValueIdx] = cv.
 
-  Inductive SimState: State -> @State SpecOStateIfc -> Prop :=
+  Inductive SimState: State -> @State SpecInds.NatDecValue SpecOStateIfc -> Prop :=
   | SimStateIntro:
       forall cv ist sst,
         SpecStateCoh cv sst ->
         ImplStateCoh cv ist ->
         SimState ist sst.
 
-  Definition SimMSI (ist: State) (sst: @State SpecOStateIfc): Prop :=
+  Definition SimMSI (ist: State) (sst: @State SpecInds.NatDecValue SpecOStateIfc): Prop :=
     SimState ist sst /\
     SimExtMP (c_l1_indices cifc) ist.(st_msgs) ist.(st_orqs) sst.(st_msgs).
 
