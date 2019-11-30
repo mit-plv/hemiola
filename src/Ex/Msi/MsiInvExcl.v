@@ -2471,8 +2471,8 @@ Section InvExcl.
                    Hin: In (downTo ?roidx, _) ?eouts
        |- AtomicInv _ _ _ _ _ _] =>
       do 2 red; simpl;
-      eapply atomic_rsDown_singleton with (oidx:= roidx) in Ha;
-      try exact Hr; eauto; [|red; auto];
+      eapply atomic_rsDown_singleton in Ha;
+      try exact Hr; eauto; [|red; eauto];
       subst; rewrite removeOnce_nil; simpl;
       repeat constructor; try (red; simpl; intros; intuition discriminate)
     end.
@@ -2542,8 +2542,8 @@ Section InvExcl.
                    Hin: In (rqUpFrom ?roidx, _) ?eouts
        |- AtomicInv _ _ _ _ _ _] =>
       do 2 red; simpl;
-      eapply atomic_rqUp_singleton with (oidx:= roidx) in Ha;
-      try exact Hr; eauto; [|red; auto];
+      eapply atomic_rqUp_singleton in Ha;
+      try exact Hr; eauto; [|red; eauto];
       subst; rewrite removeOnce_nil; simpl;
       repeat constructor; try (red; simpl; intros; intuition discriminate)
     end.
