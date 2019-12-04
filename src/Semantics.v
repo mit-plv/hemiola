@@ -189,20 +189,3 @@ End RLabel.
 
 Definition History `{DecValue} := list RLabel.
 
-Definition WfLbl `{DecValue} `{OStateIfc} (sys: System) (lbl: RLabel) :=
-  match lbl with
-  | RlblEmpty => True
-  | RlblIns eins => eins <> nil /\ ValidMsgsExtIn sys eins
-  | RlblOuts eouts => eouts <> nil /\ ValidMsgsExtOut sys eouts
-  | RlblInt oidx ridx ins outs =>
-    exists obj rule,
-    In obj (sys_objs sys) /\ obj_idx obj = oidx /\
-    In rule (obj_rules obj) /\ rule_idx rule = ridx /\
-    ValidMsgsIn sys ins /\
-    ValidMsgsOut sys outs /\
-    DisjList (idsOf ins) (idsOf outs)
-  end.
-
-Definition WfHistory `{DecValue} `{OStateIfc} (sys: System) (hst: History) :=
-  Forall (WfLbl sys) hst.
-

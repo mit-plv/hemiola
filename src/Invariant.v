@@ -1,7 +1,10 @@
 Require Import Bool List String Peano_dec.
 Require Import Common FMap ListSupport Syntax Semantics StepM SemFacts.
-
 Require Import Omega.
+
+Import PropMonadNotations.
+
+Local Open Scope fmap.
 
 Set Implicit Arguments.
 
@@ -163,4 +166,116 @@ End Operations.
 
 Infix "/\i" := invAnd (at level 80).
 Infix "->i" := invImp (at level 99).
+
+Section ObjInvariant.
+  Context `{DecValue} `{OStateIfc}.
+
+  Variable oidx: IdxT.
+
+  Definition ObjReachable (sys: System) (ost: OState) (orq: ORq Msg): Prop :=
+    exists st,
+      (st_oss st)@[oidx] = Some ost /\
+      (st_orqs st)@[oidx] = Some orq /\
+      Reachable (steps step_m) sys st.
+
+  Definition ObjInv := OState -> ORq Msg -> Prop.
+
+  Variable (impl: System).
+  Variables (oinv: ObjInv).
+
+  Definition liftObjInv (st: State) :=
+    osti <+- (st_oss st)@[oidx];
+      orqi <+- (st_orqs st)@[oidx];
+      oinv osti orqi.
+
+  Definition ObjInvInit :=
+    liftObjInv (initsOf impl).
+
+  (* Definition ObjInvStep := *)
+  (*   forall ost orq, *)
+  (*     ObjReachable impl ost orq -> *)
+  (*     oinv ost orq -> *)
+  (*     forall ist1, *)
+  (*       (st_oss ist1)@[oidx] = Some ost -> *)
+  (*       (st_orqs ist1)@[oidx] = Some orq -> *)
+  (*       forall ridx mins mouts ist2, *)
+  (*         step_m impl ist1 (RlblInt oidx ridx mins mouts) ist2 -> *)
+  (*         liftObjInv ist2. *)
+  Definition ObjInvStep :=
+    forall ist1,
+      Reachable (steps step_m) impl ist1 ->
+      forall ost orq,
+        (st_oss ist1)@[oidx] = Some ost ->
+        (st_orqs ist1)@[oidx] = Some orq ->
+        oinv ost orq ->
+        forall ridx mins mouts ist2,
+          step_m impl ist1 (RlblInt oidx ridx mins mouts) ist2 ->
+          liftObjInv ist2.
+
+  Definition ObjInvSteps :=
+    forall hst ist2,
+      steps step_m impl (initsOf impl) hst ist2 ->
+      liftObjInv ist2.
+
+  Definition ObjInvReachable :=
+    forall ost orq,
+      ObjReachable impl ost orq -> oinv ost orq.
+  
+  Hypotheses (Hoinvi: ObjInvInit)
+             (Hoinvs: ObjInvStep).
+
+  Lemma obj_inv_steps':
+    forall ist1,
+      Reachable (steps step_m) impl ist1 ->
+      (forall ost orq,
+          (st_oss ist1)@[oidx] = Some ost ->
+          (st_orqs ist1)@[oidx] = Some orq ->
+          oinv ost orq) ->
+      forall ihst ist2,
+        steps step_m impl ist1 ihst ist2 ->
+        liftObjInv ist2.
+  Proof.
+    induction 3; simpl; intros.
+    - red.
+      destruct (st_oss st)@[oidx] as [ost|]; [|simpl; auto].
+      destruct (st_orqs st)@[oidx] as [orq|]; [|simpl; auto].
+      simpl; auto.
+
+    - specialize (IHsteps H1 H2).
+      pose proof H4 as Hstep.
+      inv H4; auto.
+      destruct (idx_dec oidx (obj_idx obj));
+        [|red; simpl; mred].
+
+      red in IHsteps; simpl in IHsteps.
+      subst oidx; rewrite H8, H9 in IHsteps; simpl in IHsteps.
+      
+      eapply Hoinvs; subst oidx; [..|eassumption].
+      + eapply reachable_steps; eauto.
+      + eassumption.
+      + eassumption.
+      + assumption.
+  Qed.
+
+  Lemma obj_inv_steps: ObjInvSteps.
+  Proof.
+    unfold ObjInvSteps; intros.
+    eapply obj_inv_steps'; [..|eassumption].
+    - apply reachable_init.
+    - intros.
+      do 2 red in Hoinvi.
+      rewrite H2, H3 in Hoinvi; auto.
+  Qed.
+
+  Corollary obj_inv_reachable: ObjInvReachable.
+  Proof.
+    unfold ObjInvReachable; intros.
+    destruct H1 as [st ?]; dest.
+    destruct H3 as [ll ?].
+    apply obj_inv_steps in H3; red in H3.
+    rewrite H1, H2 in H3; auto.
+  Qed.
+
+End ObjInvariant.
+
 

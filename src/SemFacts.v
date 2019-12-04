@@ -253,17 +253,6 @@ Proof.
   assumption.
 Qed.
 
-Lemma steps_wfHistory:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) st1 hst st2,
-    steps step_m sys st1 hst st2 ->
-    WfHistory sys hst.
-Proof.
-  induction 1; simpl; intros; [constructor|].
-  constructor; auto.
-  clear H; inv H0; red; auto 7.
-  do 2 eexists; eauto 9.
-Qed.
-
 Lemma steps_split:
   forall {SystemT StateT LabelT} 
          (step: Step SystemT StateT LabelT) sys st1 st2 ll,
