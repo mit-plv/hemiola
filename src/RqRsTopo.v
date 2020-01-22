@@ -10,7 +10,8 @@ Local Open Scope fmap.
 
 Section RqRsTopo.
   Context `{dv: DecValue} `{oifc: OStateIfc}.
-  Variable (dtr: DTree) (sys: System).
+  Variables (dtr: DTree) (sys: System)
+            (oinvs: IdxT -> ObjInv).
 
   Definition rqEdgeUpFrom (oidx: IdxT): option IdxT :=
     hd_error (upEdgesFrom dtr oidx).
@@ -416,14 +417,15 @@ Section RqRsTopo.
       ImmUpRule oidx rule \/
       (RsUp rule /\ RsBackRuleCommon rule).
     
-    Definition RqUpRsUpOkObj (obj: Object) :=
+    Definition RqUpRsUpOkObj (obj: Object) (oinv: ObjInv) :=
       forall rqUpRule rsUpRule,
         In rqUpRule obj.(obj_rules) -> RqToUpRule obj.(obj_idx) rqUpRule ->
         In rsUpRule obj.(obj_rules) -> RsToUpRule obj.(obj_idx) rsUpRule ->
-        NonConflictingR rqUpRule rsUpRule.
+        NonConflictingR oinv rqUpRule rsUpRule.
 
     Definition RqUpRsUpOkSys :=
-      Forall RqUpRsUpOkObj sys.(sys_objs).
+      Forall (fun obj => RqUpRsUpOkObj obj (oinvs obj.(obj_idx)))
+             sys.(sys_objs).
     
   End RqUpRsUpComm.
 

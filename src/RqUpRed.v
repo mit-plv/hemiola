@@ -52,9 +52,9 @@ Section RqUpReduction.
   Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
             (sys: System).
-
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Ltac disc_rule_custom ::=
     try disc_lock_conds;
@@ -230,14 +230,14 @@ Section RqUpReduction.
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqUpDown dtr sys oidx rule2 ->
       StateSilent rule2 -> MsgOutsOrthORq rule2 ->
-      NonConflictingR rule1 rule2.
+      NonConflictingR (oinvs oidx) rule1 rule2.
   Proof.
     intros.
     red; intros.
     split.
     - disc_rule_conds.
-      + eapply H12; [eassumption|mred].
-      + eapply H12; [eassumption|mred].
+      + eapply H14; [eassumption|mred].
+      + eapply H14; [eassumption|mred].
     - remember (rule_trs rule2 nost1 norq1 ins2) as trs2.
       destruct trs2 as [[nost2 norq2] outs2]; apply eq_sym in Heqtrs2.
       remember (rule_trs rule2 post1 porq1 ins2) as rtrs2.
@@ -246,52 +246,52 @@ Section RqUpReduction.
       destruct rtrs1 as [[rnost1 rnorq1] routs1]; apply eq_sym in Heqrtrs1.
 
       assert (rule_precond rule2 post1 porq1 ins2)
-        by (disc_rule_conds; try (eapply H12; [eassumption|mred])).
+        by (disc_rule_conds; try (eapply H14; [eassumption|mred])).
       assert (rule_precond rule1 rnost2 rnorq2 ins1)
-        by (disc_rule_conds; try (eapply H10; [eassumption|mred])).
+        by (disc_rule_conds; try (eapply H12; [eassumption|mred])).
       disc_rule_conds.
 
       + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) nil).
-        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        rewrite H7, Heqrtrs1 in H1; simpl in H1; inv H1.
         specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom, rqfm)]).
         rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
         repeat split.
-        * eapply H11; [eassumption|mred].
+        * eapply H13; [eassumption|mred].
         * f_equal; meq.
           { destruct rqi1 as [rqim1 rss1 rsb1].
             destruct rqi2 as [rqim2 rss2 rsb2].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
+            pose proof (footprintUpDownOk_rs_eq H0 H62 H68); dest; subst.
             reflexivity.
           }
           { destruct rqi as [rqim rss rsb].
             destruct rqi0 as [rqim0 rss0 rsb0].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintUpOk_rs_None_eq H50 H56); dest; subst.
+            pose proof (footprintUpOk_rs_None_eq H52 H58); dest; subst.
             reflexivity.
           }
         
       + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) [(rqFrom, rqfm)]).
-        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        rewrite H7, Heqrtrs1 in H1; simpl in H1; inv H1.
         specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom1, rqfm1)]).
         rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
         repeat split.
-        * eapply H11; [eassumption|mred].
+        * eapply H13; [eassumption|mred].
         * f_equal; meq.
           { destruct rqi1 as [rqim1 rss1 rsb1].
             destruct rqi2 as [rqim2 rss2 rsb2].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintUpDownOk_rs_eq H0 H60 H66); dest; subst.
+            pose proof (footprintUpDownOk_rs_eq H0 H62 H68); dest; subst.
             reflexivity.
           }
           { destruct rqi as [rqim rss rsb].
             destruct rqi0 as [rqim0 rss0 rsb0].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintUpOk_rs_Some_eq H0 H50 H56); dest; subst.
+            pose proof (footprintUpOk_rs_Some_eq H0 H52 H58); dest; subst.
             reflexivity.
           }
   Qed.
@@ -302,14 +302,14 @@ Section RqUpReduction.
       StateSilent rule1 -> MsgOutsOrthORq rule1 ->
       RqDownDown dtr oidx rule2 ->
       StateSilent rule2 -> MsgOutsOrthORq rule2 ->
-      NonConflictingR rule1 rule2.
+      NonConflictingR (oinvs oidx) rule1 rule2.
   Proof.
     intros.
     red; intros.
     split.
     - disc_rule_conds.
-      + eapply H12; [eassumption|mred].
-      + eapply H12; [eassumption|mred].
+      + eapply H14; [eassumption|mred].
+      + eapply H14; [eassumption|mred].
     - remember (rule_trs rule2 nost1 norq1 ins2) as trs2.
       destruct trs2 as [[nost2 norq2] outs2]; apply eq_sym in Heqtrs2.
       remember (rule_trs rule2 post1 porq1 ins2) as rtrs2.
@@ -318,54 +318,54 @@ Section RqUpReduction.
       destruct rtrs1 as [[rnost1 rnorq1] routs1]; apply eq_sym in Heqrtrs1.
 
       assert (rule_precond rule2 post1 porq1 ins2)
-        by (disc_rule_conds; try (eapply H12; [eassumption|mred])).
+        by (disc_rule_conds; try (eapply H14; [eassumption|mred])).
       assert (rule_precond rule1 rnost2 rnorq2 ins1)
-        by (disc_rule_conds; try (eapply H10; [eassumption|mred])).
+        by (disc_rule_conds; try (eapply H12; [eassumption|mred])).
       disc_rule_conds.
 
       + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) nil).
-        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        rewrite H7, Heqrtrs1 in H1; simpl in H1; inv H1.
         specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom, rqfm)]).
         rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
 
         repeat split.
-        * eapply H11; [eassumption|mred].
+        * eapply H13; [eassumption|mred].
         * f_equal; meq.
           { destruct rqi1 as [rqim1 rss1 rsb1].
             destruct rqi2 as [rqim2 rss2 rsb2].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
+            pose proof (footprintDownDownOk_rs_eq H0 H62 H68); dest; subst.
             reflexivity.
           }
           { destruct rqi as [rqim rss rsb].
             destruct rqi0 as [rqim0 rss0 rsb0].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintUpOk_rs_None_eq H50 H56); dest; subst.
+            pose proof (footprintUpOk_rs_None_eq H52 H58); dest; subst.
             reflexivity.
           }
 
       + specialize (H1 nost2 porq1 (porq1 +[downRq <- rqi2]) [(rqFrom, rqfm)]).
-        rewrite H6, Heqrtrs1 in H1; simpl in H1; inv H1.
+        rewrite H7, Heqrtrs1 in H1; simpl in H1; inv H1.
         specialize (H4 nost2 porq1 (porq1 +[upRq <- rqi]) [(rqFrom1, rqfm1)]).
         rewrite Heqtrs2, Heqrtrs2 in H4; simpl in H4; inv H4.
 
         repeat split.
-        * eapply H11; [eassumption|mred].
+        * eapply H13; [eassumption|mred].
         * f_equal; meq.
           { destruct rqi1 as [rqim1 rss1 rsb1].
             destruct rqi2 as [rqim2 rss2 rsb2].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintDownDownOk_rs_eq H0 H60 H66); dest; subst.
+            pose proof (footprintDownDownOk_rs_eq H0 H62 H68); dest; subst.
             reflexivity.
           }
           { destruct rqi as [rqim rss rsb].
             destruct rqi0 as [rqim0 rss0 rsb0].
             simpl in *; subst.
             destruct Hrrs as [? _].
-            pose proof (footprintUpOk_rs_Some_eq H0 H50 H56); dest; subst.
+            pose proof (footprintUpOk_rs_Some_eq H0 H52 H58); dest; subst.
             reflexivity.
           }
   Qed.
@@ -386,7 +386,7 @@ Section RqUpReduction.
       steps step_m sys st1
             [RlblInt oidx2 ridx2 rins2 routs2;
                RlblInt oidx1 ridx1 rins1 routs1] st2 ->
-      NonConflictingL sys oidx1 ridx1 oidx2 ridx2 /\
+      NonConflictingL sys oinvs oidx1 ridx1 oidx2 ridx2 /\
       DisjList (idsOf rins1) (idsOf rins2) /\
       DisjList routs1 rins2 /\
       DisjList (idsOf routs1) (idsOf routs2).
@@ -610,6 +610,8 @@ Section RqUpReduction.
           split; [|split]; [|assumption|]; solve_midx_disj.
   Qed.
 
+  Hypothesis (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)).
+  
   Lemma rqUp_lbl_reducible:
     forall oidxTo rqUps oidx1 ridx1 rins1 routs1,
       rqUps <> nil ->
@@ -625,8 +627,8 @@ Section RqUpReduction.
   Proof.
     intros.
     destruct Hrrs as [? [? ?]].
-    apply internal_steps_commutes; intros.
-    eapply rqUp_lbl_commutes; eauto.
+    eapply internal_steps_commutes; eauto.
+    intros; eapply rqUp_lbl_commutes; eauto.
   Qed.
 
   Definition RqUpMsgsFrom (ruFrom ruTo: IdxT) (msgs: list (Id Msg)) :=

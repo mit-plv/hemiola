@@ -15,7 +15,8 @@ Section Separation.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   (*! Separation by an RqDown message *)
 
@@ -447,7 +448,7 @@ Section Separation.
     eapply rqDown_in_rsDown_push_false
       with (cobj0:= cobj) (pobj0:= pobj)
            (dq:= findQ (idOf rqDown) (deqMsgs (idsOf rins) msgs))
-      in H0; eauto.
+      in H0; eauto; try apply Hrrs.
     - destruct H21; red in H8.
       destruct rqDown as [rqDown rqdm]; simpl in *.
       eapply deqMsgs_InMP; eauto.
@@ -974,7 +975,7 @@ Section Separation.
     rewrite Forall_forall in H18.
     specialize (H18 _ Hx).
     eapply rsDown_in_rqDown_first_false
-      with (cobj0:= cobj) (pobj0:= pobj); eauto.
+      with (cobj0:= cobj) (pobj0:= pobj); eauto; try apply Hrrs.
     simpl; rewrite <-H9; assumption.
   Qed.
 
@@ -1226,7 +1227,7 @@ Section Separation.
         eapply rsDown_in_rsUp_in_false
           with (cobj0:= cobj) (pobj:= obj)
                (down:= idOf rsDown) (rsdm:= valOf rsDown)
-               (rsUp0:= rsUp) (rsum0:= rsum); eauto.
+               (rsUp0:= rsUp) (rsum0:= rsum); eauto; try apply Hrrs.
 
       + (* Not possible for RsDown and RsUp to be together *)
         assert (exists rsUp rsum,
@@ -1254,7 +1255,7 @@ Section Separation.
         eapply rsDown_in_rsUp_in_false
           with (cobj0:= cobj) (pobj:= obj)
                (down:= idOf rsDown) (rsdm:= valOf rsDown)
-               (rsUp0:= rsUp) (rsum0:= rsum); eauto.
+               (rsUp0:= rsUp) (rsum0:= rsum); eauto; try apply Hrrs.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
@@ -1302,7 +1303,8 @@ Section Separation.
 
     - disc_rule_conds.
       eapply rsDown_in_rqDown_first_false
-        with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown); eauto.
+        with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown);
+        eauto; try apply Hrrs.
 
     - disc_rule_conds.
       + good_locking_get obj.
@@ -1313,7 +1315,8 @@ Section Separation.
       + elim H12; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + elim H11; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
       + eapply rsDown_in_rqDown_first_false
-          with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown); eauto.
+          with (cobj:= obj) (pobj0:= pobj) (rsdm:= valOf rsDown);
+          eauto; try apply Hrrs.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.

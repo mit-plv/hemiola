@@ -46,7 +46,9 @@ Section RqRsDown.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (Hrr: GoodRqRsSys dtr sys)
+             (Hsd: RqRsDTree dtr sys)
+             (Hers: GoodExtRssSys sys).
 
   Definition ONoDownLock (orqs: ORqs Msg) (oidx: IdxT) :=
     orqs@[oidx] >>=[True] (fun orq => orq@[downRq] = None).
@@ -117,7 +119,7 @@ Section RqRsDown.
         apply DisjList_comm.
         apply sys_minds_sys_merqs_DisjList.
       }
-      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|..]; eauto.
+      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hsd|..]; eauto.
         apply in_map; assumption.
       }
     }
@@ -159,7 +161,7 @@ Section RqRsDown.
         apply DisjList_comm.
         apply sys_minds_sys_merss_DisjList.
       }
-      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hrrs|..]; eauto.
+      { eapply rqrsDTree_edgeDownTo_sys_minds; [apply Hsd|..]; eauto.
         apply in_map; assumption.
       }
     }
@@ -192,18 +194,18 @@ Section RqRsDown.
           rqsQ msgs down = nil ->
           FirstMP msgs down rsdm.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros; subst.
-    pose proof (upLockInv_ok Hiorqs H0 H H2).
+    intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H).
     good_locking_get cobj.
-    pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
-    destruct H10 as [rqUp [rsUp [pidx ?]]]; dest.
-    eapply upLockInvORq_down_rssQ_length_one_locked in H9; eauto;
+    pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H2).
+    destruct H7 as [rqUp [rsUp [pidx ?]]]; dest.
+    eapply upLockInvORq_down_rssQ_length_one_locked in H6; eauto;
       [|eapply rssQ_length_ge_one; eauto].
-    destruct H9 as [rrqUp [rdown [rpidx ?]]]; dest.
+    destruct H6 as [rrqUp [rdown [rpidx ?]]]; dest.
     repeat disc_rule_minds.
     apply InMP_FirstMP; [assumption|].
     rewrite rqsQ_rssQ_length.
-    rewrite H8; simpl.
+    rewrite H5; simpl.
     assumption.
   Qed.
 
@@ -221,29 +223,29 @@ Section RqRsDown.
           InMP down rsdm2 (deqMP down msgs) ->
           False.
   Proof.
-    destruct Hrrs as [? [? ?]]; intros; subst.
-    pose proof (upLockInv_ok Hiorqs H0 H H2).
+    intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H).
     good_locking_get cobj.
-    pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H5).
-    destruct H11 as [rqUp [rsUp [pidx ?]]]; dest.
-    eapply upLockInvORq_down_rssQ_length_one_locked in H10; eauto.
-    - dest; red in H14.
-      destruct H14 as [rrqUp [rdown [rpidx ?]]]; dest.
+    pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H2).
+    destruct H8 as [rqUp [rsUp [pidx ?]]]; dest.
+    eapply upLockInvORq_down_rssQ_length_one_locked in H7; eauto.
+    - dest; red in H11.
+      destruct H11 as [rrqUp [rdown [rpidx ?]]]; dest.
       repeat disc_rule_minds.
 
-      clear -H6 H7 H8 H9 H18.
+      clear -H3 H4 H5 H6 H15.
       unfold InMP, FirstMP, firstMP, rssQ, deqMP in *.
       destruct (findQ rdown (st_msgs st)); [discriminate|].
-      simpl in H7; inv H7.
-      simpl in H18; rewrite H6 in H18; simpl in H18.
-      unfold findQ in H9; mred; simpl in H9.
+      simpl in H4; inv H4.
+      simpl in H15; rewrite H3 in H15; simpl in H15.
+      unfold findQ in H6; mred; simpl in H6.
       destruct (filter (fun msg => msg_type msg) q) eqn:Hq.
       + assert (In rsdm2 (filter (fun msg => msg_type msg) q)).
         { apply filter_In.
           split; auto.
         }
         rewrite Hq in H; elim H.
-      + simpl in H18; omega.
+      + simpl in H15; omega.
     - eapply rssQ_length_ge_one; eauto.
       eapply InMP_deqMP; eassumption.
   Qed.
@@ -261,17 +263,17 @@ Section RqRsDown.
           InMP rsUp rsum2 (deqMP rsUp msgs) ->
           False.
   Proof.
-    destruct Hrrs as [? [? [? ?]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs H0 H H2 H3).
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H).
     good_locking_get pobj.
-    eapply downLockInvORq_rsUp_length_two_False in H10; eauto.
+    eapply downLockInvORq_rsUp_length_two_False in H6; eauto.
 
-    clear -H8 H9.
+    clear -H4 H5.
     unfold InMP, FirstMP, firstMP, deqMP in *.
     destruct (findQ rsUp (st_msgs st)); [discriminate|].
-    simpl in H8; inv H8.
-    unfold findQ in H9; mred; simpl in H9.
-    destruct q; [elim H9|].
+    simpl in H4; inv H4.
+    unfold findQ in H5; mred; simpl in H5.
+    destruct q; [elim H5|].
     simpl; omega.
   Qed.
 
@@ -283,12 +285,12 @@ Section RqRsDown.
         step_m sys st1 (RlblInt oidx ridx rins routs) st2 ->
         NoRqRsDown st2.
   Proof.
-    destruct Hrrs as [? [? [_ ?]]]; intros.
-    pose proof (footprints_ok Hiorqs H0 H2) as Hftinv.
+    intros.
+    pose proof (footprints_ok Hiorqs Hrr H) as Hftinv.
     assert (Reachable (steps step_m) sys st2) as Hnrch
       by (eapply reachable_steps; [eassumption|apply steps_singleton; eassumption]).
-    pose proof (upLockInv_ok Hiorqs H0 H Hnrch) as Hulinv.
-    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd Hnrch) as Hulinv.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     clear Hnrch.
 
     inv_step.
@@ -297,20 +299,20 @@ Section RqRsDown.
 
     - disc_rule_conds.
       + replace (orqs +[obj_idx obj <- norq]) with orqs by meq.
-        apply H3; assumption.
+        apply H0; assumption.
       + destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           left; red; mred.
-        * apply InMP_enqMP_or in H11; destruct H11;
+        * apply InMP_enqMP_or in H8; destruct H8;
             [exfalso; dest; subst; disc_rule_conds; auto|].
-          apply InMP_deqMP in H11.
-          specialize (H3 H11); destruct H3.
+          apply InMP_deqMP in H8.
+          specialize (H0 H8); destruct H0.
           { left; red; mred. }
           { dest; right; split.
-            { red in H3; red; mred.
+            { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H20 H23 H27).
+              intros; specialize (H0 _ _ H17 H20 H24).
               assert (cidx <> cidx0) by (intro Hx; subst; disc_rule_conds; auto).
               solve_q; assumption.
             }
@@ -324,33 +326,33 @@ Section RqRsDown.
       destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
       + eapply obj_same_id_in_system_same in e; eauto; subst.
         left; red; mred.
-      + apply InMP_enqMP_or in H18; destruct H18;
+      + apply InMP_enqMP_or in H15; destruct H15;
           [exfalso; dest; subst; solve_midx_false|].
-        apply InMP_deqMP in H14; specialize (H3 H14).
+        apply InMP_deqMP in H11; specialize (H0 H11).
         destruct (idx_dec (obj_idx cobj) (obj_idx obj)).
         * exfalso.
           eapply obj_same_id_in_system_same in e; eauto; subst.
           disc_rule_conds.
-          destruct H3.
+          destruct H0.
           { good_locking_get pobj.
-            eapply downLockInvORq_down_rqsQ_length_one_locked in H6; eauto;
+            eapply downLockInvORq_down_rqsQ_length_one_locked in H3; eauto;
               [|eapply rqsQ_length_ge_one; eauto;
                 apply FirstMP_InMP; auto].
-            destruct H6 as [rqid ?]; dest.
-            red in H3.
+            destruct H3 as [rqid ?]; dest.
+            red in H0.
             destruct (orqs@[obj_idx pobj]) as [orq|]; simpl in *; [|discriminate].
             congruence.
           }
-          { dest; pose proof (FirstMP_eq H7 H24).
+          { dest; pose proof (FirstMP_eq H4 H21).
             subst; simpl in *.
-            rewrite H8 in H27; discriminate.
+            rewrite H5 in H24; discriminate.
           }
-        * destruct H3; [left; red; mred|].
+        * destruct H0; [left; red; mred|].
           dest; right; split.
-          { red in H3; red; mred.
+          { red in H0; red; mred.
             destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
             destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-            intros; specialize (H3 _ _ H20 H22 H26).
+            intros; specialize (H0 _ _ H17 H19 H23).
             solve_q; assumption.
           }
           { apply FirstMP_enqMP.
@@ -359,45 +361,45 @@ Section RqRsDown.
           }
 
     - disc_rule_conds.
-      + apply InMP_enqMP_or in H27; destruct H27;
+      + apply InMP_enqMP_or in H24; destruct H24;
           [exfalso; dest; subst; disc_rule_conds; auto|].
-        specialize (H3 H14).
+        specialize (H0 H11).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
-          destruct H3.
-          { left; red in H3; red; repeat (simpl; mred). }
+          destruct H0.
+          { left; red in H0; red; repeat (simpl; mred). }
           { dest; right; split.
-            { red in H3; red; repeat (simpl; mred).
+            { red in H0; red; repeat (simpl; mred).
               destruct (porq@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H27 H29).
+              intros; specialize (H0 _ _ H23 H24 H26).
               solve_q; assumption.
             }
             { apply FirstMP_enqMP; assumption. }
           }
-        * destruct H3.
-          { left; red in H3; red; mred. }
+        * destruct H0.
+          { left; red in H0; red; mred. }
           { dest; right; split.
-            { red in H3; red; mred.
+            { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H27 H29).
+              intros; specialize (H0 _ _ H23 H24 H26).
               solve_q; assumption.
             }
             { apply FirstMP_enqMP; assumption. }
           }
       
-      + apply InMP_enqMP_or in H31; destruct H31;
+      + apply InMP_enqMP_or in H28; destruct H28;
           [exfalso; dest; subst; disc_rule_conds; auto|].
-        apply InMP_deqMP in H14.
-        specialize (H3 H14).
+        apply InMP_deqMP in H11.
+        specialize (H0 H11).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
-          destruct H3.
-          { left; red in H3; red; repeat (simpl; mred). }
+          destruct H0.
+          { left; red in H0; red; repeat (simpl; mred). }
           { dest; right; split.
-            { red in H3; red; repeat (simpl; mred).
+            { red in H0; red; repeat (simpl; mred).
               destruct (porq@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H31 H34).
+              intros; specialize (H0 _ _ H23 H28 H31).
               solve_q; assumption.
             }
             { apply FirstMP_enqMP.
@@ -405,13 +407,13 @@ Section RqRsDown.
               solve_midx_neq.
             }
           }
-        * destruct H3.
-          { left; red in H3; red; mred. }
+        * destruct H0.
+          { left; red in H0; red; mred. }
           { dest; right; split.
-            { red in H3; red; mred.
+            { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H31 H34).
+              intros; specialize (H0 _ _ H23 H28 H31).
               solve_q; assumption.
             }
             { apply FirstMP_enqMP.
@@ -420,34 +422,34 @@ Section RqRsDown.
             }
           }
 
-      + apply InMP_enqMsgs_or in H33; destruct H33.
+      + apply InMP_enqMsgs_or in H30; destruct H30.
         1:{ exfalso.
-            rewrite Forall_forall in H32; specialize (H32 _ H5).
-            simpl in H32; rewrite H31 in H32; discriminate.
+            rewrite Forall_forall in H29; specialize (H29 _ H2).
+            simpl in H29; rewrite H28 in H29; discriminate.
         }
-        apply InMP_deqMP in H5.
-        specialize (H3 H5).
+        apply InMP_deqMP in H2.
+        specialize (H0 H2).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
-          destruct H3; [|dest; exfalso; red in H3; mred].
+          destruct H0; [|dest; exfalso; red in H0; mred].
           right; split.
           { destruct (in_dec idx_dec down (idsOf routs)).
             { red; repeat (simpl; mred).
               intros; solve_q.
-              destruct H19.
+              destruct H16.
               apply in_map_iff in i; destruct i as [[down' rqdm] ?]; dest.
               simpl in *; subst.
               erewrite findQ_In_NoDup_enqMsgs; try eassumption.
-              rewrite Forall_forall in H32; specialize (H32 _ H36); simpl in H32.
+              rewrite Forall_forall in H29; specialize (H29 _ H33); simpl in H29.
               rewrite filter_app; simpl.
-              rewrite H32; simpl.
+              rewrite H29; simpl.
               destruct (filter _ _); discriminate.
             }
             { red; repeat (simpl; mred).
               intros; disc_rule_conds.
               elim n; clear n.
-              eapply RqRsDownMatch_rs_rq in H20; [|eassumption].
-              destruct H20 as [cidx [rdown ?]]; dest.
+              eapply RqRsDownMatch_rs_rq in H17; [|eassumption].
+              destruct H17 as [cidx [rdown ?]]; dest.
               disc_rule_conds.
             }
           }
@@ -456,19 +458,19 @@ Section RqRsDown.
             { solve_midx_neq. }
             { eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
               good_locking_get pobj.
-              red in H24; mred.
-              specialize (H24 _ H27).
-              destruct H24 as [rdown [rsUp ?]]; dest.
+              red in H21; mred.
+              specialize (H21 _ H24).
+              destruct H21 as [rdown [rsUp ?]]; dest.
               disc_rule_conds.
-              apply H34.
+              apply H31.
             }
           }
-        * destruct H3; [left; red; mred|].
+        * destruct H0; [left; red; mred|].
           dest; right; split.
-          { red in H3; red; mred.
+          { red in H0; red; mred.
             destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
             destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-            intros; specialize (H3 _ _ H24 H33 H34).
+            intros; specialize (H0 _ _ H21 H30 H31).
             disc_rule_conds.
             assert (Some (obj_idx pobj) <> Some (obj_idx obj)) by congruence.
             solve_q; assumption.
@@ -478,75 +480,75 @@ Section RqRsDown.
             solve_midx_neq.
           }
 
-      + apply InMP_enqMsgs_or in H27; destruct H27.
+      + apply InMP_enqMsgs_or in H24; destruct H24.
         1:{ exfalso.
-            rewrite Forall_forall in H32; specialize (H32 _ H14).
-            simpl in H32; rewrite H25 in H32; discriminate.
+            rewrite Forall_forall in H29; specialize (H29 _ H11).
+            simpl in H29; rewrite H22 in H29; discriminate.
         }
-        apply InMP_deqMP in H14.
-        specialize (H3 H14).
+        apply InMP_deqMP in H11.
+        specialize (H0 H11).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           right; split.
           { destruct (in_dec idx_dec down (idsOf routs)).
             { red; repeat (simpl; mred).
               intros; solve_q.
-              destruct H19.
+              destruct H16.
               apply in_map_iff in i; destruct i as [[down' rqdm] ?]; dest.
               simpl in *; subst.
               erewrite findQ_In_NoDup_enqMsgs; try eassumption.
-              rewrite Forall_forall in H32; specialize (H32 _ H34); simpl in H32.
+              rewrite Forall_forall in H29; specialize (H29 _ H31); simpl in H29.
               rewrite filter_app; simpl.
-              rewrite H32; simpl.
+              rewrite H29; simpl.
               destruct (filter _ _); discriminate.
             }
             { red; repeat (simpl; mred).
               intros; disc_rule_conds.
               elim n; clear n.
-              eapply RqRsDownMatch_rs_rq in H6; [|eassumption].
-              destruct H6 as [cidx [rdown ?]]; dest.
+              eapply RqRsDownMatch_rs_rq in H3; [|eassumption].
+              destruct H3 as [cidx [rdown ?]]; dest.
               disc_rule_conds.
             }
           }
           { apply FirstMP_enqMsgs.
             apply FirstMP_deqMP.
-            { apply parentIdxOf_not_eq in H20; [|apply Hrrs].
+            { apply parentIdxOf_not_eq in H17; [|apply Hsd].
               solve_midx_neq.
             }
             { eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
               good_locking_get pobj.
-              red in H26; mred.
-              specialize (H26 _ H20).
-              destruct H26 as [rdown [rsUp ?]]; dest.
+              red in H23; mred.
+              specialize (H23 _ H17).
+              destruct H23 as [rdown [rsUp ?]]; dest.
               disc_rule_conds.
-              apply H31.
+              apply H28.
             }
           }
           
         * destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             disc_rule_conds.
-            exfalso; destruct H3.
+            exfalso; destruct H0.
             { good_locking_get pobj.
-              eapply downLockInvORq_down_rqsQ_length_one_locked in H20; eauto;
+              eapply downLockInvORq_down_rqsQ_length_one_locked in H17; eauto;
                 [|eapply rqsQ_length_ge_one; eauto;
                   apply FirstMP_InMP; auto].
-              destruct H20 as [rqid ?]; dest.
-              red in H3.
+              destruct H17 as [rqid ?]; dest.
+              red in H0.
               destruct (orqs@[obj_idx pobj]) as [orq|]; simpl in *; [|discriminate].
               congruence.
             }
-            { dest; pose proof (FirstMP_eq H23 H29).
+            { dest; pose proof (FirstMP_eq H20 H26).
               subst; simpl in *.
-              rewrite H25 in H30; discriminate.
+              rewrite H22 in H27; discriminate.
             }
           }
-          { destruct H3; [left; red; mred|].
+          { destruct H0; [left; red; mred|].
             dest; right; split.
-            { red in H3; red; mred.
+            { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H26 H27 H31).
+              intros; specialize (H0 _ _ H23 H24 H28).
               disc_rule_conds.
               assert (Some (obj_idx pobj) <> Some (obj_idx obj)) by congruence.
               solve_q; assumption.
@@ -559,21 +561,21 @@ Section RqRsDown.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + apply InMP_enqMP_or in H26; destruct H26.
+      + apply InMP_enqMP_or in H23; destruct H23.
         * dest; subst; disc_rule_conds.
-          eapply obj_same_id_in_system_same in H26; eauto; subst.
+          eapply obj_same_id_in_system_same in H23; eauto; subst.
           left; red; repeat (simpl; mred).
         * destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
-          { apply InMP_deqMP in H26.
-            specialize (H3 H26).
+          { apply InMP_deqMP in H23.
+            specialize (H0 H23).
             eapply obj_same_id_in_system_same in e; eauto; subst.
-            destruct H3.
-            { left; red in H3; red; repeat (simpl; mred). }
+            destruct H0.
+            { left; red in H0; red; repeat (simpl; mred). }
             { dest; right; split.
-              { red in H3; red; mred. }
+              { red in H0; red; mred. }
               { apply FirstMP_enqMP.
                 apply FirstMP_deqMP; [|assumption].
-                apply parentIdxOf_not_eq in H18; [|apply Hrrs].
+                apply parentIdxOf_not_eq in H15; [|apply Hsd].
                 solve_midx_neq.
               }
             }
@@ -585,13 +587,13 @@ Section RqRsDown.
               eapply rsDown_in_deqMP_false
                 with (cobj:= cobj) (rsdm1:= rmsg0) (rsdm2:= rsdm); eauto.
             }
-            { apply InMP_deqMP in H26; specialize (H3 H26).
-              destruct H3; [left; red in H3; red; mred|].
+            { apply InMP_deqMP in H23; specialize (H0 H23).
+              destruct H0; [left; red in H0; red; mred|].
               dest; right; split.
-              { red in H3; red; mred.
+              { red in H0; red; mred.
                 destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
                 destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-                intros; specialize (H3 _ _ H33 H34 H35).
+                intros; specialize (H0 _ _ H30 H31 H32).
                 disc_rule_conds.
                 assert (cidx <> obj_idx cobj)
                   by (intro Hx; subst; disc_rule_conds; auto).
@@ -605,15 +607,15 @@ Section RqRsDown.
           }
       
       + destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
-        * apply InMP_deqMP in H26.
-          specialize (H3 H26).
+        * apply InMP_deqMP in H23.
+          specialize (H0 H23).
           eapply obj_same_id_in_system_same in e; eauto; subst.
-          destruct H3.
-          { left; red in H3; red; repeat (simpl; mred). }
+          destruct H0.
+          { left; red in H0; red; repeat (simpl; mred). }
           { dest; right; split.
-            { red in H3; red; mred. }
+            { red in H0; red; mred. }
             { apply FirstMP_deqMP; [|assumption].
-              apply parentIdxOf_not_eq in H18; [|apply Hrrs].
+              apply parentIdxOf_not_eq in H15; [|apply Hsd].
               solve_midx_neq.
             }
           }
@@ -624,13 +626,13 @@ Section RqRsDown.
             eapply rsDown_in_deqMP_false
               with (cobj:= cobj) (rsdm1:= rmsg) (rsdm2:= rsdm); eauto.
           }
-          { apply InMP_deqMP in H26; specialize (H3 H26).
-            destruct H3; [left; red in H3; red; mred|].
+          { apply InMP_deqMP in H23; specialize (H0 H23).
+            destruct H0; [left; red in H0; red; mred|].
             dest; right; split.
-            { red in H3; red; mred.
+            { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H25 H31 H32).
+              intros; specialize (H0 _ _ H22 H28 H29).
               disc_rule_conds.
               solve_q; assumption.
             }
@@ -639,24 +641,24 @@ Section RqRsDown.
             }
           }
 
-      + apply InMP_enqMP_or in H27; destruct H27.
+      + apply InMP_enqMP_or in H24; destruct H24.
         * dest; subst; disc_rule_conds.
-          eapply obj_same_id_in_system_same in H23; eauto; subst.
+          eapply obj_same_id_in_system_same in H20; eauto; subst.
           left; red; repeat (simpl; mred).
-        * apply InMP_deqMsgs in H7.
-          specialize (H3 H7).
+        * apply InMP_deqMsgs in H4.
+          specialize (H0 H4).
           destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             left; red; repeat (simpl; mred).
           }
-          { destruct H3.
+          { destruct H0.
             { left; red; repeat (simpl; mred). }
-            { rewrite <-H29 in H32.
+            { rewrite <-H26 in H29.
               dest; right; split.
-              { red in H3; red; mred.
+              { red in H0; red; mred.
                 destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
                 destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-                intros; specialize (H3 _ _ H33 H34 H35).
+                intros; specialize (H0 _ _ H30 H31 H32).
                 disc_rule_conds.
                 assert (obj_idx upCObj <> obj_idx cobj)
                   by (intro Hx; rewrite Hx in *; disc_rule_conds; auto).
@@ -669,21 +671,21 @@ Section RqRsDown.
             }
           }
             
-      + apply InMP_enqMP_or in H27; destruct H27;
+      + apply InMP_enqMP_or in H24; destruct H24;
           [dest; subst; solve_midx_false|].
-        apply InMP_deqMsgs in H27.
-        specialize (H3 H27).
+        apply InMP_deqMsgs in H24.
+        specialize (H0 H24).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           left; red; repeat (simpl; mred).
-        * destruct H3.
+        * destruct H0.
           { left; red; repeat (simpl; mred). }
-          { rewrite <-H29 in H22.
+          { rewrite <-H26 in H19.
             dest; right; split.
-            { red in H3; red; mred.
+            { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H3 _ _ H31 H32 H33).
+              intros; specialize (H0 _ _ H28 H29 H30).
               disc_rule_conds.
               solve_q; assumption.
             }
@@ -695,48 +697,48 @@ Section RqRsDown.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      apply InMP_enqMsgs_or in H27; destruct H27.
+      apply InMP_enqMsgs_or in H24; destruct H24.
       1:{ exfalso.
-          rewrite Forall_forall in H26; specialize (H26 _ H27).
-          simpl in H26; rewrite H25 in H26; discriminate.
+          rewrite Forall_forall in H23; specialize (H23 _ H24).
+          simpl in H23; rewrite H22 in H23; discriminate.
       }
 
       destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
-      + apply InMP_deqMP in H27.
-        specialize (H3 H27).
+      + apply InMP_deqMP in H24.
+        specialize (H0 H24).
         eapply obj_same_id_in_system_same in e; eauto; subst.
         right; split.
         * destruct (in_dec idx_dec down (idsOf routs)).
           { red; repeat (simpl; mred).
             intros; solve_q.
-            destruct H19.
+            destruct H16.
             apply in_map_iff in i; destruct i as [[down' rqdm] ?]; dest.
             simpl in *; subst.
             erewrite findQ_In_NoDup_enqMsgs; try eassumption.
-            rewrite Forall_forall in H26; specialize (H26 _ H41); simpl in H26.
+            rewrite Forall_forall in H23; specialize (H23 _ H38); simpl in H23.
             rewrite filter_app; simpl.
-            rewrite H26; simpl.
+            rewrite H23; simpl.
             destruct (filter _ _); discriminate.
           }
           { red; repeat (simpl; mred).
             intros; disc_rule_conds.
             elim n; clear n.
-            eapply RqRsDownMatch_rs_rq in H39; [|eassumption].
-            destruct H39 as [cidx [rdown ?]]; dest.
+            eapply RqRsDownMatch_rs_rq in H36; [|eassumption].
+            destruct H36 as [cidx [rdown ?]]; dest.
             disc_rule_conds.
           }
         * apply FirstMP_enqMsgs.
           apply FirstMP_deqMP.
-          { apply parentIdxOf_not_eq in H22; [|apply Hrrs].
+          { apply parentIdxOf_not_eq in H19; [|apply Hsd].
             solve_midx_neq.
           }
           { eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
             good_locking_get pobj.
-            red in H32; mred.
-            specialize (H32 _ H22).
-            destruct H32 as [rdown [rsUp ?]]; dest.
+            red in H29; mred.
+            specialize (H29 _ H19).
+            destruct H29 as [rdown [rsUp ?]]; dest.
             disc_rule_conds.
-            apply H38.
+            apply H35.
           }
 
       + destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
@@ -745,14 +747,14 @@ Section RqRsDown.
           exfalso.
           eapply rsDown_in_deqMP_false
             with (cobj:= cobj) (rsdm1:= rmsg) (rsdm2:= rsdm); eauto.
-        * apply InMP_deqMP in H27.
-          specialize (H3 H27).
-          destruct H3; [left; red; mred|].
+        * apply InMP_deqMP in H24.
+          specialize (H0 H24).
+          destruct H0; [left; red; mred|].
           dest; right; split.
-          { red in H3; red; mred.
+          { red in H0; red; mred.
             destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
             destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-            intros; specialize (H3 _ _ H32 H34 H38).
+            intros; specialize (H0 _ _ H29 H31 H35).
             disc_rule_conds.
             assert (Some (obj_idx pobj) <> Some (obj_idx obj)) by congruence.
             solve_q; assumption.
@@ -766,8 +768,8 @@ Section RqRsDown.
   Lemma noRqRsDown_InvStep:
     InvStep sys step_m NoRqRsDown.
   Proof.
-    destruct Hrrs as [? [? ?]]; red; intros.
-    inv H4.
+    red; intros.
+    inv H1.
     - assumption.
     - apply noRqRsDown_step_ext_in; auto.
     - apply noRqRsDown_step_ext_out; auto.
@@ -791,7 +793,9 @@ Section Corollaries.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (Hsd: RqRsDTree dtr sys)
+             (Hrr: GoodRqRsSys dtr sys)
+             (Hers: GoodExtRssSys sys).
 
   Corollary rqUp_in_rqUp_in_false:
     forall st,
@@ -807,7 +811,7 @@ Section Corollaries.
             InMP rqUp rqum2 msgs ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H2 as [rsUp [down [pidx ?]]]; dest.
@@ -832,7 +836,7 @@ Section Corollaries.
             rsdm.(msg_type) = MRs ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H3 as [rsUp [rdown [pidx ?]]]; dest.
@@ -860,7 +864,7 @@ Section Corollaries.
               OLockedTo orqs pidx (Some down) ->
               False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     good_locking_get obj.
     assert (UpLockedInv dtr st.(st_orqs) st.(st_msgs) obj.(obj_idx))
@@ -890,7 +894,7 @@ Section Corollaries.
             rsdm2.(msg_type) = MRs ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
@@ -910,7 +914,7 @@ Section Corollaries.
             st.(st_msgs) = msgs ->
             length (rssQ msgs down) >= 2 -> False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H1).
     destruct H2 as [rqUp [rsUp [pidx ?]]]; dest.
@@ -935,7 +939,7 @@ Section Corollaries.
               OLockedTo orqs pidx (Some down) ->
               False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     good_locking_get obj.
     assert (UpLockedInv dtr st.(st_orqs) st.(st_msgs) obj.(obj_idx))
@@ -963,7 +967,7 @@ Section Corollaries.
             OLockedTo orqs pidx (Some down) ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     good_locking_get obj.
     revert H5.
@@ -987,7 +991,7 @@ Section Corollaries.
             InMP rqUp rqum msgs ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     pose proof (rqEdgeUpFrom_Some (proj1 (proj2 Hsd)) _ H4).
     destruct H1 as [rsUp [down [pidx ?]]]; dest.
@@ -1014,7 +1018,7 @@ Section Corollaries.
               InMP down rsdm msgs ->
               False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr _]]; intros; subst.
+    intros; subst.
     pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
     pose proof (edgeDownTo_Some (proj1 (proj2 Hsd)) _ H4).
     destruct H1 as [rqUp [rsUp [pidx ?]]]; dest.
@@ -1041,28 +1045,28 @@ Section Corollaries.
             FirstMP msgs down rqdm ->
             False.
   Proof.
-    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
-    pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
+    pose proof (noRqRsDown_ok Hiorqs Hrr Hsd Hers H) as Hrrinv.
     red in Hrrinv.
-    specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H8 H9).
+    specialize (Hrrinv _ _ H0 H1 H2 _ H3 _ H5 H6).
     destruct Hrrinv.
     - good_locking_get pobj.
       assert (DownLockFreeInv dtr (st_orqs st) (st_msgs st) (obj_idx pobj)).
-      { red in H7, H12.
+      { red in H4, H9.
         destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; simpl in *.
-        { rewrite H7 in H12; assumption. }
+        { rewrite H4 in H9; assumption. }
         { assumption. }
       }
-      specialize (H13 _ H5); destruct H13 as [rdown [rsUp ?]]; dest.
+      specialize (H10 _ H2); destruct H10 as [rdown [rsUp ?]]; dest.
       repeat disc_rule_minds.
-      red in H15; dest.
-      apply FirstMP_InMP in H11.
-      apply rqsQ_length_ge_one in H11; [|assumption].
-      rewrite H13 in H11; simpl in H11; omega.
+      red in H12; dest.
+      apply FirstMP_InMP in H8.
+      apply rqsQ_length_ge_one in H8; [|assumption].
+      rewrite H10 in H8; simpl in H8; omega.
     - dest.
-      pose proof (FirstMP_eq H11 H12); subst.
-      rewrite H8 in H10; discriminate.
+      pose proof (FirstMP_eq H8 H9); subst.
+      rewrite H5 in H7; discriminate.
   Qed.
 
   Corollary rqDown_in_rsDown_push_false:
@@ -1082,38 +1086,38 @@ Section Corollaries.
             findQ down msgs = dq ++ [rsdm] ->
             False.
   Proof.
-    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
-    pose proof (upLockInv_ok Hiorqs H0 H H2) as Hulinv.
-    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
-    pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
+    intros; subst.
+    pose proof (upLockInv_ok Hiorqs Hrr Hsd H) as Hulinv.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
+    pose proof (noRqRsDown_ok Hiorqs Hrr Hsd Hers H) as Hrrinv.
     assert (InMP down rsdm st.(st_msgs)).
-    { red; rewrite H11.
+    { red; rewrite H8.
       apply in_or_app; right; left; reflexivity.
     }
     
     red in Hrrinv.
-    specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H10 H7); clear H7.
+    specialize (Hrrinv _ _ H0 H1 H2 _ H3 _ H7 H4); clear H4.
     destruct Hrrinv; dest.
     - good_locking_get pobj.
-      eapply downLockInvORq_down_rqsQ_length_one_locked in H13; eauto;
+      eapply downLockInvORq_down_rqsQ_length_one_locked in H10; eauto;
         [|eapply rqsQ_length_ge_one; eauto;
-          red; rewrite H11; apply in_or_app; left; assumption].
-      destruct H13 as [rqid ?]; dest.
-      red in H7.
+          red; rewrite H8; apply in_or_app; left; assumption].
+      destruct H10 as [rqid ?]; dest.
+      red in H4.
       destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; [simpl in *|discriminate].
       destruct (o@[downRq]) eqn:Hrqid; [simpl in *|discriminate].
       discriminate.
     - good_locking_get cobj.
-      eapply upLockInvORq_down_rssQ_length_two_False in H13; eauto.
-      unfold rssQ; rewrite H11.
+      eapply upLockInvORq_down_rssQ_length_two_False in H10; eauto.
+      unfold rssQ; rewrite H8.
       rewrite filter_app; simpl.
-      rewrite H10; simpl.
+      rewrite H7; simpl.
       rewrite app_length; simpl.
-      unfold FirstMP, firstMP in H12.
-      rewrite H11 in H12.
-      destruct dq as [|dmsg dq]; [elim H9|].
-      simpl in H12; inv H12.
-      simpl; rewrite H10; simpl.
+      unfold FirstMP, firstMP in H9.
+      rewrite H8 in H9.
+      destruct dq as [|dmsg dq]; [elim H6|].
+      simpl in H9; inv H9.
+      simpl; rewrite H7; simpl.
       omega.
   Qed.
 
@@ -1134,42 +1138,42 @@ Section Corollaries.
             InMP rsUp rsum msgs ->
             False.
   Proof.
-    destruct Hrrs as [? [? [_ ?]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs H0 H H1 H2) as Hdlinv.
-    pose proof (noRqRsDown_ok Hiorqs Hrrs H2) as Hrrinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
+    pose proof (noRqRsDown_ok Hiorqs Hrr Hsd Hers H) as Hrrinv.
     red in Hrrinv.
-    specialize (Hrrinv _ _ H3 H4 H5 _ H6 _ H9 H10).
+    specialize (Hrrinv _ _ H0 H1 H2 _ H3 _ H6 H7).
     destruct Hrrinv.
     - good_locking_get pobj.
       assert (DownLockFreeInv dtr (st_orqs st) (st_msgs st) (obj_idx pobj)).
-      { red in H8, H12.
+      { red in H5, H9.
         destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; simpl in *.
-        { rewrite H8 in H12; assumption. }
+        { rewrite H5 in H9; assumption. }
         { assumption. }
       }
-      specialize (H13 _ H5); destruct H13 as [rdown [rrsUp ?]]; dest.
+      specialize (H10 _ H2); destruct H10 as [rdown [rrsUp ?]]; dest.
       repeat disc_rule_minds.
-      red in H15; dest.
-      apply findQ_length_ge_one in H11.
-      rewrite H14 in H11; simpl in H11; omega.
+      red in H12; dest.
+      apply findQ_length_ge_one in H8.
+      rewrite H11 in H8; simpl in H8; omega.
     - dest.
       good_locking_get pobj.
-      eapply downLockInvORq_rsUp_length_one_locked in H13; eauto;
+      eapply downLockInvORq_rsUp_length_one_locked in H10; eauto;
         [|eapply findQ_length_ge_one; eassumption].
-      destruct H13 as [rqid ?]; dest.
-      red in H8.
+      destruct H10 as [rqid ?]; dest.
+      red in H5.
       destruct ((st_orqs st)@[obj_idx pobj]) eqn:Horq; [simpl in *|exfalso; auto].
       destruct (o@[downRq]) eqn:Hrqid; [simpl in *|exfalso; auto].
-      inv H13.
-      specialize (H8 _ _ H6 H7 H15).
-      specialize (H14 _ H5); destruct H14 as [rdown [rrsUp ?]]; dest.
+      inv H10.
+      specialize (H5 _ _ H3 H4 H12).
+      specialize (H11 _ H2); destruct H11 as [rdown [rrsUp ?]]; dest.
       repeat disc_rule_minds.
       destruct (in_dec _ _ _); auto.
-      red in H16; dest.
-      xor3_contra1 H16.
+      red in H13; dest.
+      xor3_contra1 H13.
       + destruct (rqsQ (st_msgs st) rdown); [exfalso; auto|].
         simpl in *; omega.
-      + apply findQ_length_ge_one in H11.
+      + apply findQ_length_ge_one in H8.
         omega.
   Qed.
 
@@ -1190,8 +1194,8 @@ Section Corollaries.
             rqdm2.(msg_type) = MRq ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     eapply downLockInvORq_down_rqsQ_length_two_False; eauto.
     apply rqsQ_length_two with (midx:= rqDown) (msg1:= rqdm1) (msg2:= rqdm2);
@@ -1214,8 +1218,8 @@ Section Corollaries.
             InMP rsUp rsum msgs ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     eapply downLockInvORq_down_rqsQ_rsUp_False; eauto.
     - eapply rqsQ_length_ge_one; eauto.
@@ -1237,8 +1241,8 @@ Section Corollaries.
             InMP rsUp rsum2 msgs ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     eapply downLockInvORq_rsUp_length_two_False; eauto.
     apply findQ_length_two with (midx:= rsUp) (msg1:= rsum1) (msg2:= rsum2);
@@ -1257,8 +1261,8 @@ Section Corollaries.
             st.(st_msgs) = msgs ->
             length (findQ rsUp msgs) >= 2 -> False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     eapply downLockInvORq_rsUp_length_two_False; eauto.
   Qed.
@@ -1281,8 +1285,8 @@ Section Corollaries.
               rqdm.(msg_type) = MRq ->
               False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     eapply downLockInvORq_down_rqsQ_length_one_locked in H1; eauto;
       [|eapply rqsQ_length_ge_one; eassumption].
@@ -1307,8 +1311,8 @@ Section Corollaries.
               InMP rsUp rsum msgs ->
               False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     eapply downLockInvORq_rsUp_length_one_locked in H1; eauto;
       [|eapply findQ_length_ge_one; eassumption].
@@ -1333,8 +1337,8 @@ Section Corollaries.
             rqid.(rqi_midx_rsb) = Some rsUp ->
             False.
   Proof.
-    destruct Hrrs as [Hsd [Hrr [_ Hge]]]; intros; subst.
-    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hge H) as Hdlinv.
+    intros; subst.
+    pose proof (downLockInv_ok Hiorqs Hrr Hsd Hers H) as Hdlinv.
     good_locking_get pobj.
     red in H1; disc_rule_conds.
     specialize (H1 _ H4).

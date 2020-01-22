@@ -413,35 +413,6 @@ Ltac disc_messages_out :=
      destruct Hr as [cidx [rsDown ?]]; dest; subst]
   end.
 
-Section MsgInitCases.
-  Context `{dv: DecValue} `{oifc: OStateIfc}.
-  Variables (dtr: DTree)
-            (sys: System).
-  Hypothesis (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
-
-  Lemma msg_init_cases_ok:
-    forall inits ins hst outs eouts,
-      Atomic inits ins hst outs eouts ->
-      forall s1 s2,
-        Reachable (steps step_m) sys s1 ->
-        steps step_m sys s1 hst s2 ->
-        exists oidx,
-          RqUpMsgs dtr oidx inits \/
-          RqDownMsgs dtr sys oidx inits \/
-          RsUpMsgs dtr oidx inits \/
-          RsDownMsgs dtr sys oidx inits.
-  Proof.
-    destruct Hrrs as [? [? ?]].
-    induction 1; simpl; intros; subst.
-    - inv_steps.
-      exists oidx.
-      eapply messages_in_cases; eauto.
-    - inv_steps; eauto.
-  Qed.
-
-End MsgInitCases.
-
 Section ExtRss.
   Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)

@@ -102,13 +102,6 @@ Proof.
   apply reducible_app_2; auto.
 Qed.
 
-Lemma reducibleP_refl:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hst,
-    ReducibleP sys P hst hst.
-Proof.
-  congruence.
-Qed.
-
 Definition PInitializing `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
            (P: State -> Prop) (hst1: History) :=
   forall st1 st2, steps step_m sys st1 hst1 st2 -> P st2.
@@ -133,6 +126,13 @@ Proof.
     destruct H0 as [sti [? ?]].
     eapply H2; [|eassumption].
     eapply IHhsts; eauto.
+Qed.
+
+Lemma reducibleP_refl:
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (P: State -> Prop) hst,
+    ReducibleP sys P hst hst.
+Proof.
+  congruence.
 Qed.
 
 Lemma reducibleP_trans:

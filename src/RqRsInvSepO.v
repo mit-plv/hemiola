@@ -16,7 +16,8 @@ Section RqUpStart.
             (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Definition RqUpMsgsP (oidx: IdxT) (msgs: list (Id Msg)): Prop :=
     exists cidx rqUp,
@@ -418,7 +419,8 @@ Section Separation.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Definition RqRsMsgFrom (oidx: IdxT) (idm: Id Msg) :=
     rqEdgeUpFrom dtr oidx = Some (idOf idm) \/
@@ -1238,15 +1240,15 @@ Ltac disc_RqRsMsgFrom :=
   | [H: exists _, RqRsMsgFrom _ _ _ /\ _ |- _] =>
     let oidx := fresh "oidx" in
     destruct H as [oidx [? ?]]
-  | [H0: RqRsSys _ _,
+  | [H0: RqRsSys _ _ _,
      H1: rqEdgeUpFrom _ ?oidx1 = Some ?rqUp,
      H2: RqRsMsgFrom _ ?oidx2 (?rqUp, _) |- _] =>
     eapply RqRsMsgFrom_rqEdgeUpFrom_eq in H2; [|eapply H0|eapply H1]; subst
-  | [H0: RqRsSys _ _,
+  | [H0: RqRsSys _ _ _,
      H1: rsEdgeUpFrom _ ?oidx1 = Some ?rsUp,
      H2: RqRsMsgFrom _ ?oidx2 (?rsUp, _) |- _] =>
     eapply RqRsMsgFrom_rsEdgeUpFrom_eq in H2; [|eapply H0|eapply H1]; subst
-  | [H0: RqRsSys _ _,
+  | [H0: RqRsSys _ _ _,
      H1: edgeDownTo _ ?cidx = Some ?down,
      H2: parentIdxOf _ ?cidx = Some ?oidx1,
      H3: RqRsMsgFrom _ ?oidx2 (?down, _) |- _] =>
@@ -1259,19 +1261,19 @@ Ltac disc_RqRsMsgTo :=
   | [H: exists _, RqRsMsgTo _ _ _ /\ _ |- _] =>
     let oidx := fresh "oidx" in
     destruct H as [oidx [? ?]]
-  | [H0: RqRsSys _ _,
+  | [H0: RqRsSys _ _ _,
      H1: parentIdxOf _ ?cidx = Some ?oidx1,
      H2: rqEdgeUpFrom _ ?cidx = Some ?rqUp,
      H3: RqRsMsgTo _ ?oidx2 (?rqUp, _) |- _] =>
     eapply RqRsMsgTo_rqEdgeUpFrom_eq in H3;
     [|eapply H0|eapply H1|eapply H2]; subst
-  | [H0: RqRsSys _ _,
+  | [H0: RqRsSys _ _ _,
      H1: parentIdxOf _ ?cidx = Some ?oidx1,
      H2: rsEdgeUpFrom _ ?oidx1 = Some ?rsUp,
      H3: RqRsMsgTo _ ?oidx2 (?rsUp, _) |- _] =>
     eapply RqRsMsgTo_rsEdgeUpFrom_eq in H3;
     [|eapply H0|eapply H1|eapply H2]; subst
-  | [H0: RqRsSys _ _,
+  | [H0: RqRsSys _ _ _,
      H1: edgeDownTo _ ?cidx = Some ?down,
      H2: RqRsMsgTo _ ?oidx2 (?down, _) |- _] =>
     eapply RqRsMsgTo_edgeDownTo_eq in H2;

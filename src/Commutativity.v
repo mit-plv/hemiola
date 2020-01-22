@@ -8,11 +8,12 @@ Local Open Scope list.
 
 (*! Reducibility (commutativity) of internal state transitions *)
 
-Definition NonConflictingR `{dv: DecValue} `{ifc: OStateIfc} (rule1 rule2: Rule) :=
+Definition NonConflictingR `{dv: DecValue} `{ifc: OStateIfc}
+           (oinv: ObjInv) (rule1 rule2: Rule) :=
   forall post1 porq1 ins1 nost1 norq1 outs1 ins2,
-    rule_precond rule1 post1 porq1 ins1 ->
+    oinv post1 porq1 -> rule_precond rule1 post1 porq1 ins1 ->
     rule_trs rule1 post1 porq1 ins1 = (nost1, norq1, outs1) ->
-    rule_precond rule2 nost1 norq1 ins2 ->
+    oinv nost1 norq1 -> rule_precond rule2 nost1 norq1 ins2 ->
     (* 1) Preconditions of [rule2] hold if the ones of [rule1] hold. *)
     rule_precond rule2 post1 porq1 ins2 /\
     let (no2, outs2) := rule_trs rule2 nost1 norq1 ins2 in
@@ -25,6 +26,7 @@ Definition NonConflictingR `{dv: DecValue} `{ifc: OStateIfc} (rule1 rule2: Rule)
     no2 = rno1 /\ outs1 = routs1 /\ routs2 = outs2.
 
 Definition NonConflictingL `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (oinvs: IdxT -> ObjInv)
            (oidx1 ridx1 oidx2 ridx2: IdxT) :=
   oidx1 <> oidx2 \/
   (oidx1 = oidx2 /\
@@ -32,13 +34,15 @@ Definition NonConflictingL `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
      In obj (sys_objs sys) -> obj_idx obj = oidx1 ->
      In rule1 (obj_rules obj) -> rule_idx rule1 = ridx1 ->
      In rule2 (obj_rules obj) -> rule_idx rule2 = ridx2 ->
-     NonConflictingR rule1 rule2).
+     NonConflictingR (oinvs oidx1) rule1 rule2).
 
-Definition NonConflicting `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (hst1 hst2: History) :=
+Definition NonConflicting `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+           (oinvs: IdxT -> ObjInv)
+           (hst1 hst2: History) :=
   forall oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
     In (RlblInt oidx1 ridx1 ins1 outs1) hst1 ->
     In (RlblInt oidx2 ridx2 ins2 outs2) hst2 ->
-    NonConflictingL sys oidx1 ridx1 oidx2 ridx2.
+    NonConflictingL sys oinvs oidx1 ridx1 oidx2 ridx2.
 
 Definition MDisjoint `{DecValue} (hst1 hst2: History) :=
   exists inits1 ins1 outs1 eouts1 inits2 ins2 outs2 eouts2,
@@ -88,9 +92,9 @@ Proof.
 Qed.
 
 Lemma nonconflicting_head_1:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) lbl1 hst1 hst2,
-    NonConflicting sys (lbl1 :: hst1) hst2 ->
-    NonConflicting sys [lbl1] hst2.
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs lbl1 hst1 hst2,
+    NonConflicting sys oinvs (lbl1 :: hst1) hst2 ->
+    NonConflicting sys oinvs [lbl1] hst2.
 Proof.
   unfold NonConflicting; intros.
   dest_in.
@@ -99,9 +103,9 @@ Proof.
 Qed.
 
 Lemma nonconflicting_head_2:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst1 lbl2 hst2,
-    NonConflicting sys hst1 (lbl2 :: hst2) ->
-    NonConflicting sys hst1 [lbl2].
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs hst1 lbl2 hst2,
+    NonConflicting sys oinvs hst1 (lbl2 :: hst2) ->
+    NonConflicting sys oinvs hst1 [lbl2].
 Proof.
   unfold NonConflicting; intros.
   dest_in.
@@ -110,9 +114,9 @@ Proof.
 Qed.
 
 Lemma nonconflicting_tail_1:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) lbl1 hst1 hst2,
-    NonConflicting sys (lbl1 :: hst1) hst2 ->
-    NonConflicting sys hst1 hst2.
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs lbl1 hst1 hst2,
+    NonConflicting sys oinvs (lbl1 :: hst1) hst2 ->
+    NonConflicting sys oinvs hst1 hst2.
 Proof.
   unfold NonConflicting; intros.
   eapply H; eauto.
@@ -120,18 +124,23 @@ Proof.
 Qed.
 
 Lemma nonconflicting_tail_2:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst1 lbl2 hst2,
-    NonConflicting sys hst1 (lbl2 :: hst2) ->
-    NonConflicting sys hst1 hst2.
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs hst1 lbl2 hst2,
+    NonConflicting sys oinvs hst1 (lbl2 :: hst2) ->
+    NonConflicting sys oinvs hst1 hst2.
 Proof.
   unfold NonConflicting; intros.
   eapply H; eauto.
   right; eauto.
 Qed.
 
+Definition liftObjInvs `{DecValue} `{OStateIfc} (oinvs: IdxT -> ObjInv): State -> Prop :=
+  fun st => forall oidx, liftObjInv oidx (oinvs oidx) st.
+
 Lemma internal_commutes:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
-    NonConflictingL sys oidx1 ridx1 oidx2 ridx2 ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+         oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
+    NonConflictingL sys oinvs oidx1 ridx1 oidx2 ridx2 ->
     DisjList (idsOf ins1) (idsOf ins2) ->
     DisjList outs1 ins2 ->
     DisjList (idsOf outs1) (idsOf outs2) ->
@@ -139,7 +148,12 @@ Lemma internal_commutes:
               [RlblInt oidx1 ridx1 ins1 outs1; RlblInt oidx2 ridx2 ins2 outs2].
 Proof.
   unfold Reducible; intros.
-  dest_steps; dest_step_m.
+  dest_steps.
+  assert (Reachable (steps step_m) sys st3) as Hr2.
+  { eapply reachable_steps; [exact Hr|].
+    apply steps_singleton; eassumption.
+  }
+  dest_step_m.
 
   destruct H; dest.
   - econstructor.
@@ -184,7 +198,18 @@ Proof.
     specialize (H3 _ _ _ H7 eq_refl H8 eq_refl H11 eq_refl).
 
     red in H3.
-    specialize (H3 _ _ _ _ _ _ _ H16 H17 H25); dest.
+    assert (oinvs (obj_idx obj0) os porq) as Hoinvs1.
+    { specialize (Hoinvs _ Hr (obj_idx obj0)).
+      red in Hoinvs; simpl in Hoinvs.
+      rewrite H12, H13 in Hoinvs; simpl in Hoinvs.
+      assumption.
+    }
+    assert (oinvs (obj_idx obj0) os0 porq0) as Hoinvs2.
+    { specialize (Hoinvs _ Hr2 (obj_idx obj0)).
+      red in Hoinvs; simpl in Hoinvs; mred.
+    } 
+      
+    specialize (H3 _ _ _ _ _ _ _ Hoinvs1 H16 H17 Hoinvs2 H25); dest.
 
     remember (rule_trs rule0 os0 porq0 ins2) as trs2.
     destruct trs2 as [[tnost2 tnorq2] touts2]; inv H26.
@@ -243,12 +268,14 @@ Proof.
 Qed.
 
 Lemma internal_steps_commutes:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+         oidx1 ridx1 ins1 outs1 oidx2 ridx2 ins2 outs2,
     (forall st1 st2,
         Reachable (steps step_m) sys st1 ->
         steps step_m sys st1 [RlblInt oidx2 ridx2 ins2 outs2;
                                 RlblInt oidx1 ridx1 ins1 outs1] st2 ->
-        NonConflictingL sys oidx1 ridx1 oidx2 ridx2 /\
+        NonConflictingL sys oinvs oidx1 ridx1 oidx2 ridx2 /\
         DisjList (idsOf ins1) (idsOf ins2) /\
         DisjList outs1 ins2 /\
         DisjList (idsOf outs1) (idsOf outs2)) ->
@@ -258,22 +285,24 @@ Proof.
   intros.
   red; intros.
   specialize (H _ _ Hr H0); dest.
-  apply internal_commutes; auto.
+  eapply internal_commutes; eauto.
 Qed.
 
 Lemma nonconflicting_mdisj_commutative_atomic_0:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+         oidx1 ridx1 mins1 mouts1 inits2 ins2 hst2 outs2 eouts2,
     Atomic inits2 ins2 hst2 outs2 eouts2 ->
-    NonConflicting sys [RlblInt oidx1 ridx1 mins1 mouts1] hst2 ->
+    NonConflicting sys oinvs [RlblInt oidx1 ridx1 mins1 mouts1] hst2 ->
     DisjList (idsOf mins1) (idsOf ins2) ->
     DisjList mouts1 ins2 ->
     DisjList (idsOf mouts1) (idsOf outs2) ->
     Reducible sys (hst2 ++ [RlblInt oidx1 ridx1 mins1 mouts1])
               (RlblInt oidx1 ridx1 mins1 mouts1 :: hst2).
 Proof.
-  induction 1; simpl; intros; subst.
+  induction 2; simpl; intros; subst.
 
-  - apply internal_commutes; auto.
+  - eapply internal_commutes; eauto.
     eapply H; try (left; reflexivity; fail).
   - eapply reducible_trans.
     + change (RlblInt oidx ridx rins routs :: hst ++ [RlblInt oidx1 ridx1 mins1 mouts1])
@@ -295,7 +324,8 @@ Proof.
       change (RlblInt oidx1 ridx1 mins1 mouts1 :: RlblInt oidx ridx rins routs :: hst)
         with ([RlblInt oidx1 ridx1 mins1 mouts1; RlblInt oidx ridx rins routs] ++ hst).
       apply reducible_app_2.
-      apply internal_commutes.
+      eapply internal_commutes.
+      * eassumption.
       * apply nonconflicting_head_2 in H5.
         eapply H5; try (left; reflexivity; fail).
       * rewrite idsOf_app in H6.
@@ -309,8 +339,10 @@ Proof.
 Qed.
 
 Lemma nonconflicting_mdisjoint0_commutative_atomic:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst1 hst2,
-    NonConflicting sys hst1 hst2 ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+         hst1 hst2,
+    NonConflicting sys oinvs hst1 hst2 ->
     MDisjoint0 hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
@@ -329,6 +361,7 @@ Proof.
   - apply reducible_app_2.
     eapply nonconflicting_mdisj_commutative_atomic_0;
       try (eapply H1; eauto).
+    + eassumption.
     + eapply nonconflicting_head_1; eauto.
     + rewrite idsOf_app in H2.
       apply DisjList_app_3 in H2; dest; auto.
@@ -346,21 +379,25 @@ Proof.
 Qed.
 
 Lemma nonconflicting_mdisjoint_commutative_atomic:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst1 hst2,
-    NonConflicting sys hst1 hst2 ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+         hst1 hst2,
+    NonConflicting sys oinvs hst1 hst2 ->
     MDisjoint hst1 hst2 ->
     Reducible sys (hst2 ++ hst1) (hst1 ++ hst2).
 Proof.
   intros.
   apply MDisjoint_MDisjoint0 in H0.
-  apply nonconflicting_mdisjoint0_commutative_atomic; auto.
+  eapply nonconflicting_mdisjoint0_commutative_atomic; eauto.
 Qed.
 
 Corollary nonconflicting_steps_mdisjoint_commutative_atomic:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst1 hst2,
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+         hst1 hst2,
     (forall st1 st2,
         steps step_m sys st1 (hst2 ++ hst1) st2 ->
-        NonConflicting sys hst1 hst2) ->
+        NonConflicting sys oinvs hst1 hst2) ->
     (forall st1 st2,
         steps step_m sys st1 (hst2 ++ hst1) st2 ->
         MDisjoint hst1 hst2) ->
@@ -370,7 +407,6 @@ Proof.
   red; intros.
   specialize (H _ _ H1).
   specialize (H0 _ _ H1).
-  pose proof (nonconflicting_mdisjoint_commutative_atomic H H0).
-  apply H2; auto.
+  eapply nonconflicting_mdisjoint_commutative_atomic; eauto.
 Qed.
 

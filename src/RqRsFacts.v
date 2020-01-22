@@ -60,7 +60,7 @@ Ltac good_rqrs_rule_cases rule :=
 
 Ltac good_rqUp_rsUp_get rqRule rsRule :=
   match goal with
-  | [H: RqUpRsUpOkSys _ ?sys,
+  | [H: RqUpRsUpOkSys _ ?sys _,
      HobjIn: In ?obj (sys_objs ?sys),
      HrqIn: In rqRule (obj_rules ?obj),
      Hrq: RqToUpRule _ _ rqRule,
