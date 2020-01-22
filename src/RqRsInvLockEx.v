@@ -49,7 +49,8 @@ Section RqRsInvLockEx.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Section LockStatus.
     Variables (orqs1 orqs2: ORqs Msg).
@@ -1416,7 +1417,8 @@ Section Corollaries.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Lemma extAtomic_DLTimeInits:
     forall inits trs eouts,

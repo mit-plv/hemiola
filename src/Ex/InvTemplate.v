@@ -200,7 +200,8 @@ Section MsgConflicts.
   Variable (sys: System).
   
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys topo sys)
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys topo sys oinvs)
              (Hoinds: SubList (c_li_indices cifc ++ c_l1_indices cifc)
                               (map obj_idx (sys_objs sys))).
 
@@ -302,28 +303,28 @@ Section MsgConflicts.
       + intro Hx.
         eapply upLockFree_rsDown_in_false
           with (obj0:= obj) (down:= downTo (obj_idx obj))
-               (rsdm:= valOf rsDown); eauto.
+               (rsdm:= valOf rsDown); eauto; try apply Hrrs.
         unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
       + eapply rqUp_in_rsDown_in_false
           with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj)) (rqum:= valOf rqUp)
-               (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto.
+               (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto; try apply Hrrs.
         * unfold sigOf in H15; simpl in H15; red in H16; rewrite H15 in H16; assumption.
         * unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
       + eapply rsDown_in_rsDown_in_false
           with (obj0:= obj) (down:= downTo (obj_idx obj))
-               (rsdm1:= valOf rsDown) (rsdm2:= valOf rrsDown); eauto.
+               (rsdm1:= valOf rsDown) (rsdm2:= valOf rrsDown); eauto; try apply Hrrs.
         * unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
         * unfold sigOf in H15; simpl in H15; red in H18; rewrite H15 in H18; assumption.
-      + eapply rsDown_in_length_two_false with (obj0:= obj); eauto.
+      + eapply rsDown_in_length_two_false with (obj0:= obj); eauto; try apply Hrrs.
       + eapply rsDown_in_rqDown_first_false
           with (cobj:= obj) (pobj0:= pobj) (down:= downTo (obj_idx obj))
-               (rsdm:= valOf rsDown) (rqdm:= valOf rqDown); eauto.
+               (rsdm:= valOf rsDown) (rqdm:= valOf rqDown); eauto; try apply Hrrs.
         * unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
         * unfold sigOf in H15; simpl in H15; red in H17; rewrite H15 in H17; assumption.
       + eapply rsDown_in_rsUp_in_false
           with (cobj:= obj) (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
                (down:= downTo (obj_idx obj))
-               (rsdm:= valOf rsDown) (rsum:= valOf rsUp); eauto.
+               (rsdm:= valOf rsDown) (rsum:= valOf rsUp); eauto; try apply Hrrs.
         * unfold sigOf in H12; simpl in H12; red in H14; rewrite H12 in H14; assumption.
         * unfold sigOf in H15; simpl in H15; red in H16; rewrite H15 in H16; assumption.
 
@@ -331,16 +332,16 @@ Section MsgConflicts.
       + intro Hx.
         eapply upLockFree_rqUp_in_false
           with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj))
-               (rqum:= valOf rqUp); eauto.
+               (rqum:= valOf rqUp); eauto; try apply Hrrs.
         unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
       + eapply rqUp_in_rqUp_in_false
           with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj))
-               (rqum1:= valOf rqUp) (rqum2:= valOf rrqUp); eauto.
+               (rqum1:= valOf rqUp) (rqum2:= valOf rrqUp); eauto; try apply Hrrs.
         * unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
         * unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
       + eapply rqUp_in_rsDown_in_false
           with (obj0:= obj) (rqUp0:= rqUpFrom (obj_idx obj)) (rqum:= valOf rqUp)
-               (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto.
+               (down:= downTo (obj_idx obj)) (rsdm:= valOf rsDown); eauto; try apply Hrrs.
         * unfold sigOf in H12; simpl in H12; red in H13; rewrite H12 in H13; assumption.
         * unfold sigOf in H14; simpl in H14; red in H16; rewrite H14 in H16; assumption.
 
@@ -348,13 +349,13 @@ Section MsgConflicts.
       + intros; disc_rule_conds.
         eapply rqDown_in_rqDown_in_false
           with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-               (rqdm1:= valOf rqDown) (rqdm2:= valOf rrqDown); eauto.
+               (rqdm1:= valOf rqDown) (rqdm2:= valOf rrqDown); eauto; try apply Hrrs.
         * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
         * destruct rrqDown as [rrqDown rqdm]; simpl in *; subst; assumption.
       + intros; disc_rule_conds.
         eapply rqDown_in_rsUp_in_false
           with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-               (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
+               (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto; try apply Hrrs.
         * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
         * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
 
@@ -362,14 +363,14 @@ Section MsgConflicts.
       + intros; disc_rule_conds.
         eapply rqDown_in_rsUp_in_false
           with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-               (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto.
+               (rqdm:= valOf rqDown) (rsum:= valOf rsUp); eauto; try apply Hrrs.
         * destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
         * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
-      + eapply rsUp_in_length_two_false with (pobj0:= pobj); eauto.
+      + eapply rsUp_in_length_two_false with (pobj0:= pobj); eauto; try apply Hrrs.
       + intros; disc_rule_conds.
         eapply rsUp_in_rsUp_in_false
           with (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
-               (rsum1:= valOf rsUp) (rsum2:= valOf rrsUp); eauto.
+               (rsum1:= valOf rsUp) (rsum2:= valOf rrsUp); eauto; try apply Hrrs.
         * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
         * destruct rrsUp as [rrsUp rsum]; simpl in *; subst. assumption.
           
@@ -377,34 +378,34 @@ Section MsgConflicts.
       + red; intros; repeat ssplit.
         * intros.
           disc_rule_conds.
-          eapply rsDown_parent_locked_false with (obj0:= obj); eauto.
+          eapply rsDown_parent_locked_false with (obj0:= obj); eauto; try apply Hrrs.
           destruct rsDown as [rsDown rsdm]; simpl in *; subst; assumption.
         * intros.
           disc_rule_conds.
-          eapply rqUp_parent_locked_false with (obj0:= obj); eauto.
+          eapply rqUp_parent_locked_false with (obj0:= obj); eauto; try apply Hrrs.
           destruct rqUp as [rqUp rqum]; simpl in *; subst; eassumption.
         * intros.
           disc_rule_conds.
-          eapply upLockFree_parent_locked_false with (obj0:= obj); eauto.
+          eapply upLockFree_parent_locked_false with (obj0:= obj); eauto; try apply Hrrs.
 
       + intros; repeat ssplit.
         * disc_rule_conds.
           red; intros.
           destruct (orq@[downRq]) as [rqid|] eqn:Hrqid; simpl in *; [|auto].
           eapply downLockFree_child_lock_to_false
-            with (pobj0:= pobj) (porq0:= porq); eauto.
+            with (pobj0:= pobj) (porq0:= porq); eauto; try apply Hrrs.
           
         * red; repeat ssplit; intros; disc_rule_conds.
           { intro Hx.
             eapply downLockFree_rqDown_in_false
               with (pobj0:= pobj) (rqDown0:= downTo (obj_idx obj))
-                   (rqdm:= valOf rqDown); eauto.
+                   (rqdm:= valOf rqDown); eauto; try apply Hrrs.
             destruct rqDown as [rqDown rqdm]; simpl in *; subst; assumption.
           }
           { intro Hx.
             eapply downLockFree_rsUp_in_false
               with (pobj0:= pobj) (rsUp0:= rsUpFrom (obj_idx obj))
-                   (rsum:= valOf rsUp); eauto.
+                   (rsum:= valOf rsUp); eauto; try apply Hrrs.
             destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
           }
   Qed.

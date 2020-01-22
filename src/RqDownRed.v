@@ -18,7 +18,8 @@ Section RqDownReduction.
             (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
   
   Section OnRqDown.
     Variables (cidx: IdxT) (pobj: Object)
@@ -261,6 +262,8 @@ Section RqDownReduction.
             try apply Hrrs; eauto; subst.
           disc_rule_conds.
     Qed.
+
+    Hypothesis (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)).
 
     Lemma rqDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts

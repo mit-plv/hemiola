@@ -22,7 +22,9 @@ Section Pushable.
             (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Variables (phst: History)
             (oidx ridx: IdxT)
@@ -660,9 +662,11 @@ Section Pushable.
 End Pushable.
 
 Theorem rqrs_WellInterleaved:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (Hiorqs: GoodORqsInit (initsOf sys))
-         (dtr: DTree),
-    RqRsSys dtr sys ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+         (Hiorqs: GoodORqsInit (initsOf sys)) (dtr: DTree)
+         (oinvs: IdxT -> ObjInv)
+         (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)),
+    RqRsSys dtr sys oinvs ->
     WellInterleaved sys.
 Proof.
   intros; red; intros.
@@ -709,10 +713,12 @@ Qed.
 Section NonConfluent.
   Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
-            (sys: System).
-  Hypothesis (Hrrs: RqRsSys dtr sys)
-             (Hiorqs: GoodORqsInit (initsOf sys)).
-
+            (sys: System)
+            (oinvs: IdxT -> ObjInv).
+  Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
+             (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
+             (Hrrs: RqRsSys dtr sys oinvs).
+             
   Lemma rqrs_step_ins_or:
     forall st1,
       Reachable (steps step_m) sys st1 ->
@@ -872,7 +878,7 @@ Section NonConfluent.
   Qed.
 
   Theorem rqrs_NonConfluent:
-    RqRsSys dtr sys -> NonConfluent sys.
+    RqRsSys dtr sys oinvs -> NonConfluent sys.
   Proof.
     intros.
     red; intros.
@@ -910,9 +916,10 @@ Section NonConfluent.
 End NonConfluent.
 
 Corollary rqrs_Serializable:
-  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) (Hiorqs: GoodORqsInit (initsOf sys))
-         (dtr: DTree),
-    RqRsSys dtr sys ->
+  forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System)
+         (Hiorqs: GoodORqsInit (initsOf sys)) (dtr: DTree)
+         (oinvs: IdxT -> ObjInv) (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)),
+    RqRsSys dtr sys oinvs ->
     SerializableSys sys.
 Proof.
   intros.
