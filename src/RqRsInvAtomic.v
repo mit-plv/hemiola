@@ -15,7 +15,8 @@ Section Coverage.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Definition RqUpMsgFrom (oidx: IdxT) (idm: Id Msg) :=
     msg_type (valOf idm) = MRq /\

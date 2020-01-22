@@ -17,7 +17,8 @@ Section InsideTree.
             (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
@@ -151,7 +152,8 @@ Section RqRsRed.
             (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Lemma rqrs_lbl_ins_disj:
     forall st11 st21,
@@ -386,6 +388,8 @@ Section RqRsRed.
       [eassumption|eassumption| | | |eassumption|eassumption]; eauto.
   Qed.
 
+  Hypothesis (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)).
+
   Lemma rqrs_lbl_reducible':
     forall inits1 ins1 hst1 outs1 eouts1 lbl2 oidx2 ridx2 rins2 routs2,
       Atomic inits1 ins1 hst1 outs1 eouts1 ->
@@ -395,7 +399,7 @@ Section RqRsRed.
       Reducible sys (lbl2 :: hst1) (hst1 ++ [lbl2]).
   Proof.
     unfold Reducible; induction 1; simpl; intros; subst.
-    - apply internal_commutes; auto.
+    - eapply internal_commutes; eauto.
       + red; intuition.
       + inv_steps.
         eapply rqrs_lbl_ins_disj; [| | |eassumption|eassumption]; eauto.
@@ -412,7 +416,7 @@ Section RqRsRed.
             in H8.
           eapply steps_split in H8; [|reflexivity].
           destruct H8 as [sti [? ?]].
-          apply internal_commutes; auto.
+          eapply internal_commutes; eauto.
           { red; intuition. }
           { inv_steps.
             eapply rqrs_lbl_ins_disj; [| | |eassumption|eassumption]; eauto.

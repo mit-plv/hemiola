@@ -58,7 +58,8 @@ Section PredMsg.
   Variables (dtr: DTree)
             (sys: System).
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Definition GoodRqDownPred (rqDown: Id Msg) (P: StatesPred) :=
     forall oidx,

@@ -17,7 +17,8 @@ Section RsUpReduction.
             (sys: System).
 
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
-             (Hrrs: RqRsSys dtr sys).
+             (oinvs: IdxT -> ObjInv)
+             (Hrrs: RqRsSys dtr sys oinvs).
 
   Ltac disc_rule_custom ::=
     try disc_lock_conds;
@@ -187,6 +188,8 @@ Section RsUpReduction.
     try disc_rqUpMsgs;
     try disc_rqToUpRule.
 
+  Hypothesis (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)).
+  
   Lemma rsUp_lbl_reducible:
     forall oidxTo rsUps (HrsUps: rsUps <> nil),
       RsUpMsgs dtr oidxTo rsUps ->
@@ -200,7 +203,8 @@ Section RsUpReduction.
   Proof.
     intros.
     destruct Hrrs as [? [? ?]].
-    apply internal_steps_commutes; intros.
+    eapply internal_steps_commutes; eauto.
+    intros.
 
     (* Register necessary invariants. *)
     inv_steps.
