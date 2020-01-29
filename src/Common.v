@@ -232,6 +232,8 @@ Definition tbind {A B} (nb: B) (oa: option A) (f: A -> B): B :=
 Notation "OA >>=[ NB ] F" :=
   (tbind NB OA F) (at level 0, format "OA  '>>=[' NB ] '/' F").
 
+Declare Scope monad_scope.
+
 Module MonadNotations.
   Notation "A <-- OA ; CONT" :=
     (OA >>= (fun A => CONT)) (at level 84, right associativity): monad_scope.

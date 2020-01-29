@@ -1,2 +1,3 @@
 -R "." Top
 -I "."
+-arg "-w" -arg "-implicit-core-hint-db"

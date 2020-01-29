@@ -116,6 +116,7 @@ Notation F6 := (Fin.FS (Fin.FS (Fin.FS (Fin.FS (Fin.FS Fin.F1))))).
 Notation F7 := (Fin.FS (Fin.FS (Fin.FS (Fin.FS (Fin.FS (Fin.FS Fin.F1)))))).
 Notation F8 := (Fin.FS (Fin.FS (Fin.FS (Fin.FS (Fin.FS (Fin.FS (Fin.FS Fin.F1))))))).
 
+Declare Scope hvec_scope.
 Notation "HVEC #[ I ]" := (hvec_ith HVEC I) (at level 0): hvec_scope.
 Notation "HVEC +#[ I <- V ]" := (hvec_upd HVEC I V) (at level 0): hvec_scope.
 

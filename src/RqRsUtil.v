@@ -7,9 +7,9 @@ Set Implicit Arguments.
 
 Import MonadNotations.
 
-Open Scope list.
-Open Scope hvec.
-Open Scope fmap.
+Local Open Scope list.
+Local Open Scope hvec.
+Local Open Scope fmap.
 
 Definition rootDmc (ridx: IdxT) :=
   {| dmc_me := ridx;
@@ -182,6 +182,9 @@ Proof.
   - apply IHoinds.
     intro Hx; elim H0; right; assumption.
 Qed.
+
+Declare Scope trs_scope.
+Declare Scope prec_scope.
 
 Module RqRsNotations.
   Include MonadNotations.
@@ -468,8 +471,4 @@ Ltac rule_rqdd := do 2 right; left; split; [|right; right].
 Ltac rule_rsdd := do 3 right; left; split; [left|].
 Ltac rule_rsu := do 3 right; left; split; [right|].
 Ltac rule_rsrq := do 4 right.
-
-Close Scope list.
-Close Scope hvec.
-Close Scope fmap.
 

@@ -1070,6 +1070,8 @@ Fixpoint caseDec {A B} (dec: forall a1 a2: A, {a1 = a2} + {a1 <> a2})
     if dec a ca then cp else caseDec dec a def cs'
   end.
 
+Declare Scope cases_scope.
+
 Module CaseNotations.
   Notation "x : t" := (x, t) (at level 90, only parsing): cases_scope.
   Notation "|! xt" := (List.cons xt List.nil) (at level 95, only parsing): cases_scope.

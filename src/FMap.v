@@ -2335,6 +2335,7 @@ Global Opaque M.find.
 
 (** FMap Notations *)
 
+Declare Scope fmap_scope.
 Notation "'[]'" := (M.empty _) : fmap_scope.
 Notation " [ k <- v ] " := (M.add k v (M.empty _)) : fmap_scope.
 Notation " m +[ k <- v ] " := (M.add k v m) (at level 0) : fmap_scope.
