@@ -1,10 +1,10 @@
 Require Import Bool Vector List String Peano_dec Omega.
 Require Import Common FMap HVector ListSupport IndexSupport.
-Require Import Syntax Topology Semantics.
+Require Import Syntax Topology Semantics Invariant.
 Require Import RqRsLangEx.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template Ex.Mesi.
-Require Import Ex.Mesi.Mesi.
+Require Import Ex.Mesi.Mesi Ex.Mesi.MesiObjInv.
 
 Set Implicit Arguments.
 
@@ -409,11 +409,13 @@ Section System.
       end
     end.
 
-  Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl.
-  Proof. (* SKIP_PROOF_OFF *)
+  Ltac disc_rule_custom ::= disc_mesi_obj_invs.
+
+  Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl (MesiObjInvs topo).
+  Proof. (* SKIP_PROOF_ON
     repeat
       match goal with
-      | |- RqUpRsUpOkSys _ _ => red
+      | |- RqUpRsUpOkSys _ _ _ => red
       | |- Forall _ _ => simpl; constructor; simpl
       | |- Forall _ (_ ++ _) => apply Forall_app
       end.
@@ -446,16 +448,19 @@ Section System.
            apply in_map_iff in H; dest; subst;
            dest_in|dest_in].
         all: try (exfalso_RsToUpRule; fail).
-        all: try (clear; solve_rule_conds_ex; solve_mesi).
-        { clear; solve_rule_conds_const.
-          all: try (destruct H6; dest; try solve [congruence|solve_mesi]).
+
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex.
+          { destruct H17; dest; try solve [congruence|solve_mesi]. }
+          { destruct H17; dest; try solve [congruence|solve_mesi]. }
         }
-        { clear; solve_rule_conds_const.
-          { mred; rewrite Hmsg; simpl; split; [assumption|congruence]. }
-          { mred; rewrite Hidx; simpl; auto. }
-          { mred; simpl; rewrite Hmsg, Hidx; simpl.
-            repeat split; auto; simpl; try solve [mred|solve_mesi].
-            f_equal; apply M.add_remove_comm; discriminate.
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex.
+          { destruct H16; dest; try solve [congruence|solve_mesi]. }
+          { destruct H16; dest; try solve [congruence|solve_mesi].
+            f_equal. apply M.add_remove_comm; discriminate.
           }
         }
 
@@ -465,16 +470,19 @@ Section System.
            apply in_map_iff in H; dest; subst;
            dest_in|dest_in].
         all: try (exfalso_RsToUpRule; fail).
-        all: try (clear; solve_rule_conds_ex; solve_mesi).
-        { clear; solve_rule_conds_const.
-          all: try (destruct H6; dest; try solve [congruence|solve_mesi]).
+
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex.
+          all: try (destruct H17; dest; try solve [congruence|solve_mesi]).
         }
-        { clear; solve_rule_conds_const.
-          { mred; rewrite Hmsg; simpl; split; [assumption|congruence]. }
-          { mred; rewrite Hidx; simpl; auto. }
-          { mred; simpl; rewrite Hmsg, Hidx; simpl.
-            repeat split; auto; simpl; try solve [mred|solve_mesi].
-            f_equal; apply M.add_remove_comm; discriminate.
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex.
+          { destruct H16; dest; try solve [congruence|solve_mesi]. }
+          { destruct H16; dest; try solve [congruence|solve_mesi]. }
+          { destruct H16; dest; try solve [congruence|solve_mesi].
+            f_equal. apply M.add_remove_comm; discriminate.
           }
         }
 
@@ -484,27 +492,17 @@ Section System.
            apply in_map_iff in H; dest; subst;
            dest_in|dest_in].
         all: try (exfalso_RsToUpRule; fail).
-        all: try (clear; solve_rule_conds_ex; solve_mesi).
+
+        { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
-        { clear; solve_rule_conds_const.
-          { unfold addRqS in Hrqi; mred. }
-          { unfold addRqS in Hrqi; mred.
-            rewrite Hmsg; simpl; split; [assumption|congruence].
-          }
-          { unfold addRqS in Hrqi; mred.
-            mred; rewrite Hidx; simpl; auto.
-          }
-          { unfold addRqS in Hrqi; mred.
-            simpl; rewrite Hmsg, Hidx; simpl.
-            repeat split; auto; simpl; try solve [mred|solve_mesi].
-            f_equal; apply M.add_remove_comm; discriminate.
-          }
-        }
+        { clear; solve_rule_conds_ex; solve_mesi. }
         
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -512,27 +510,17 @@ Section System.
            apply in_map_iff in H; dest; subst;
            dest_in|dest_in].
         all: try (exfalso_RsToUpRule; fail).
-        all: try (clear; solve_rule_conds_ex; solve_mesi).
+
+        { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_const; try intuition solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_const; try intuition solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
-        { clear; solve_rule_conds_const; try intuition solve_mesi.
-          { unfold addRqS in Hrqi; mred. }
-          { unfold addRqS in Hrqi; mred.
-            rewrite Hmsg; simpl; split; [assumption|congruence].
-          }
-          { unfold addRqS in Hrqi; mred.
-            mred; rewrite Hidx; simpl; auto.
-          }
-          { unfold addRqS in Hrqi; mred.
-            simpl; rewrite Hmsg, Hidx; simpl.
-            repeat split; auto; simpl; try solve [mred|intuition solve_mesi].
-            f_equal; apply M.add_remove_comm; discriminate.
-          }
-        }
+        { clear; solve_rule_conds_ex; solve_mesi. }
 
     - (** L1 cache *)
       apply Forall_forall; intros.
@@ -556,22 +544,22 @@ Section System.
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
         { clear; solve_rule_conds_const; try solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
         { clear; solve_rule_conds_const; try solve_mesi.
-          unfold addRqS in H0; mred.
+          unfold addRqS in H1; mred.
         }
 
-        (* END_SKIP_PROOF_OFF *)
+        END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Ltac solve_GoodExtRssSys :=
@@ -602,7 +590,7 @@ Section System.
       end.
 
   Lemma mesi_GoodExtRssSys: GoodExtRssSys impl.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
@@ -666,17 +654,17 @@ Section System.
       repeat constructor.
       all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
-  Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl.
+  Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl (MesiObjInvs topo).
   Proof.
     split.
     - apply mesi_RqUpRsUpOkSys.
     - apply mesi_GoodExtRssSys.
   Qed.
 
-  Lemma mesi_RqRsSys: RqRsSys topo impl.
+  Lemma mesi_RqRsSys: RqRsSys topo impl (MesiObjInvs topo).
   Proof.
     red; repeat ssplit.
     - apply mesi_RqRsDTree.

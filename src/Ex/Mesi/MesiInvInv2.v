@@ -257,7 +257,7 @@ Section InvNotOwned.
 
   Lemma mesi_InvNotOwned_step:
     Invariant.InvStep impl step_m InvNotOwned.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -301,14 +301,13 @@ Section InvNotOwned.
 
       dest_in.
       { disc_rule_conds_ex.
-        derive_MesiDownLockInv oidx.
+        disc_MesiDownLockInv oidx Hmdl.
         simpl_InvNotOwned; solve_InvNotOwned.
         derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H21))).
+        specialize (Hwd (or_intror (or_introl H18))).
         simpl in Hwd; solve_mesi.
       }
       { disc_rule_conds_ex.
-        derive_MesiDownLockInv oidx.
         simpl_InvNotOwned; solve_InvNotOwned.
       }
 
@@ -344,10 +343,10 @@ Section InvNotOwned.
                   by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx);
                 simpl_InvNotOwned).
       all: try (simpl_InvNotOwned; solve_InvNotOwned; fail).
-      { derive_MesiDownLockInv oidx.
+      { disc_MesiDownLockInv oidx Hmdl.
         simpl_InvNotOwned; solve_InvNotOwned.
         derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H27))).
+        specialize (Hwd (or_intror (or_introl H24))).
         simpl in Hwd; solve_mesi.
       }
       { eapply InvNotOwned_enqMP_rq_valid; eauto.
@@ -393,7 +392,7 @@ Section InvNotOwned.
         { assumption. }
       }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem mesi_InvNotOwned_ok:
@@ -764,7 +763,7 @@ Section InvDirE.
 
   Lemma mesi_InvDirE_step:
     Invariant.InvStep impl step_m (InvDirE topo).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -1406,7 +1405,7 @@ Section InvDirE.
         { disc_ObjDirE; solve_mesi. }
       }
       
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) apply cheat.
   Qed.
 
   Theorem mesi_InvDirE_ok:

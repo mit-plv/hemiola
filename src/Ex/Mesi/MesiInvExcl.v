@@ -3533,44 +3533,44 @@ Section InvExcl.
       derive_footprint_info_basis oidx.
       2: {
         exfalso.
-        eapply edgeDownTo_Some in H28; eauto.
+        eapply edgeDownTo_Some in H27; eauto.
         dest; derive_child_chns oidx.
         disc_rule_conds_ex.
       }
 
       split.
       { solve_AtomicInv_rsUps_rsDown Hrsd. }
-      { apply subtreeChildrenIndsOf_parentIdxOf in H23; auto.
+      { apply subtreeChildrenIndsOf_parentIdxOf in H21; auto.
         case_InvExcl_me_others.
         { disc_InvExcl_this.
           { solve_InvObjExcl0_by_ObjExcl0_false. }
           { remember (dir_excl _) as rcidx.
             disc_InvDirInv rcidx.
-            rewrite getDir_excl_eq in H35; [|assumption|intuition solve_mesi].
-            specialize (H35 H20).
+            rewrite getDir_excl_eq in H34; [|assumption|intuition solve_mesi].
+            specialize (H34 H20).
             clear Heqrcidx.
             
             disc_InvObjOwned; split.
             { solve_ObjsInvalid_trivial.
               eapply ObjsInvalid_impl; [eassumption|].
               simpl; intros.
-              intro Hx; elim H38.
+              intro Hx; elim H37.
               eapply subtreeIndsOf_child_SubList with (cidx:= rcidx); eauto.
             }
             { disc_MsgConflictsInv oidx.
-              apply parent_not_in_subtree in H23; auto.
-              specialize (H35 _ H23); rewrite H15 in H35; simpl in H35.
+              apply parent_not_in_subtree in H21; auto.
+              specialize (H34 _ H21); rewrite H15 in H34; simpl in H34.
               solve_MsgsP.
               eapply ObjInvalid_NoCohMsgs; eauto.
             }
           }
           { remember (dir_excl _) as rcidx.
             split_InvDirInv.
-            { apply getDir_setDirS_I_imp in H38.
-              case_idx_eq x cidx; [exfalso; elim H38; left; reflexivity|].
-              case_idx_eq rcidx cidx; [exfalso; elim H38; right; left; reflexivity|].
+            { apply getDir_setDirS_I_imp in H37.
+              case_idx_eq x cidx; [exfalso; elim H37; left; reflexivity|].
+              case_idx_eq rcidx cidx; [exfalso; elim H37; right; left; reflexivity|].
               solve_ObjsInvalid_trivial.
-              apply H34.
+              apply H33.
               eapply getDir_excl_neq; [reflexivity|intuition solve_mesi|simpl; congruence].
             }
             { exfalso.
@@ -3580,7 +3580,7 @@ Section InvExcl.
           }
         }
 
-        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H34 into Hpmcf'.
+        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H33 into Hpmcf'.
           disc_MsgConflictsInv oidx.
           remember (dir_excl _) as rcidx; clear Heqrcidx.
           disc_AtomicMsgOutsInv rcidx.
@@ -4918,37 +4918,37 @@ Section InvExcl.
 
       split.
       { solve_AtomicInv_rsUps_rsDown Hrsd. }
-      { apply subtreeChildrenIndsOf_parentIdxOf in H30; auto.
+      { apply subtreeChildrenIndsOf_parentIdxOf in H29; auto.
         case_InvExcl_me_others.
         { disc_InvExcl_this.
           { solve_InvObjExcl0_by_ObjExcl0_false. }
           { remember (dir_excl _) as rcidx.
             disc_InvDirInv rcidx.
-            rewrite getDir_excl_eq in H41; [|assumption|intuition solve_mesi].
-            specialize (H41 H23).
+            rewrite getDir_excl_eq in H40; [|assumption|intuition solve_mesi].
+            specialize (H40 H23).
             clear Heqrcidx.
             
             disc_InvObjOwned; split.
             { solve_ObjsInvalid_trivial.
               eapply ObjsInvalid_impl; [eassumption|].
               simpl; intros.
-              intro Hx; elim H44.
+              intro Hx; elim H43.
               eapply subtreeIndsOf_child_SubList with (cidx:= rcidx); eauto.
             }
             { disc_MsgConflictsInv oidx.
-              apply parent_not_in_subtree in H30; auto.
-              specialize (H41 _ H30); rewrite H15 in H41; simpl in H41.
+              apply parent_not_in_subtree in H29; auto.
+              specialize (H40 _ H29); rewrite H15 in H40; simpl in H40.
               solve_MsgsP.
               eapply ObjInvalid_NoCohMsgs; eauto.
             }
           }
           { remember (dir_excl _) as rcidx.
             split_InvDirInv.
-            { apply getDir_setDirS_I_imp in H44.
-              case_idx_eq x cidx; [exfalso; elim H44; left; reflexivity|].
-              case_idx_eq rcidx cidx; [exfalso; elim H44; right; left; reflexivity|].
+            { apply getDir_setDirS_I_imp in H43.
+              case_idx_eq x cidx; [exfalso; elim H43; left; reflexivity|].
+              case_idx_eq rcidx cidx; [exfalso; elim H43; right; left; reflexivity|].
               solve_ObjsInvalid_trivial.
-              apply H40.
+              apply H39.
               eapply getDir_excl_neq; [reflexivity|intuition solve_mesi|simpl; congruence].
             }
             { exfalso.
@@ -4958,7 +4958,7 @@ Section InvExcl.
           }
         }
 
-        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H40 into Hpmcf'.
+        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H39 into Hpmcf'.
           disc_MsgConflictsInv oidx.
           remember (dir_excl _) as rcidx; clear Heqrcidx.
           disc_AtomicMsgOutsInv rcidx.
@@ -5078,17 +5078,17 @@ Section InvExcl.
       { solve_AtomicInv_rsUps_rsUp.
         solve_DownRsSPred.
       }
-      { apply subtreeChildrenIndsOf_parentIdxOf in H30; auto.
+      { apply subtreeChildrenIndsOf_parentIdxOf in H29; auto.
         case_InvExcl_me_others.
         { disc_InvExcl_this.
           { solve_InvObjExcl0_by_ObjExcl0_false. }
           { solve_InvObjOwned_by_false. }
           { remember (dir_excl _) as rcidx.
             split_InvDirInv.
-            { apply getDir_setDirS_I_imp in H44.
-              case_idx_eq rcidx cidx0; [exfalso; elim H44; left; reflexivity|clear H44].
+            { apply getDir_setDirS_I_imp in H43.
+              case_idx_eq rcidx cidx0; [exfalso; elim H43; left; reflexivity|clear H43].
               solve_ObjsInvalid_trivial.
-              apply H40.
+              apply H39.
               eapply getDir_excl_neq; [reflexivity|intuition solve_mesi|simpl; congruence].
             }
             { exfalso.
@@ -5098,7 +5098,7 @@ Section InvExcl.
           }
         }
 
-        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H39 into Hpmcf'.
+        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H38 into Hpmcf'.
           disc_MsgConflictsInv oidx.
           remember (dir_excl _) as rcidx; clear Heqrcidx.
           disc_AtomicMsgOutsInv rcidx.
@@ -6391,6 +6391,7 @@ Section InvExcl.
       apply mesi_InvExcl_InvTrs.
     - eapply rqrs_Serializable.
       + apply mesi_GoodORqsInit.
+      + apply MesiObjInvs_ok.
       + apply mesi_RqRsSys.
   Qed.
 

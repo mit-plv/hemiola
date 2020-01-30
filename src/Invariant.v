@@ -191,16 +191,6 @@ Section ObjInvariant.
   Definition ObjInvInit :=
     liftObjInv (initsOf impl).
 
-  (* Definition ObjInvStep := *)
-  (*   forall ost orq, *)
-  (*     ObjReachable impl ost orq -> *)
-  (*     oinv ost orq -> *)
-  (*     forall ist1, *)
-  (*       (st_oss ist1)@[oidx] = Some ost -> *)
-  (*       (st_orqs ist1)@[oidx] = Some orq -> *)
-  (*       forall ridx mins mouts ist2, *)
-  (*         step_m impl ist1 (RlblInt oidx ridx mins mouts) ist2 -> *)
-  (*         liftObjInv ist2. *)
   Definition ObjInvStep :=
     forall ist1,
       Reachable (steps step_m) impl ist1 ->
@@ -278,4 +268,6 @@ Section ObjInvariant.
 
 End ObjInvariant.
 
+Definition liftObjInvs `{DecValue} `{OStateIfc} (oinvs: IdxT -> ObjInv): State -> Prop :=
+  fun st => forall oidx, liftObjInv oidx (oinvs oidx) st.
 

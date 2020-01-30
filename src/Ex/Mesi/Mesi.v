@@ -620,8 +620,7 @@ Section System.
         rule.rsudo[0~>4]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires
-           (fun ost orq mins => mesiE <= ost#[dir].(dir_st) /\ FirstMsg ost orq mins)
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
@@ -665,8 +664,7 @@ Section System.
         rule.rsuuo[0~>7]
         :accepts mesiDownRsS
         :holding mesiDownRqS
-        :requires
-           (fun ost orq mins => mesiE <= ost#[dir].(dir_st) /\ FirstMsg ost orq mins)
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
@@ -762,9 +760,7 @@ Section System.
         rule.rsud[1~>6]
         :accepts mesiDownRsI
         :holding mesiRqM
-        :requires (fun ost orq mins =>
-                     (ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS) \/
-                     mesiE <= ost#[dir].(dir_st))
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]

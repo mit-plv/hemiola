@@ -133,9 +133,6 @@ Proof.
   right; eauto.
 Qed.
 
-Definition liftObjInvs `{DecValue} `{OStateIfc} (oinvs: IdxT -> ObjInv): State -> Prop :=
-  fun st => forall oidx, liftObjInv oidx (oinvs oidx) st.
-
 Lemma internal_commutes:
   forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) oinvs
          (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
