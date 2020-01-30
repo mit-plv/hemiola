@@ -412,7 +412,7 @@ Section System.
   Ltac disc_rule_custom ::= disc_mesi_obj_invs.
 
   Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl (MesiObjInvs topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     repeat
       match goal with
       | |- RqUpRsUpOkSys _ _ _ => red
@@ -559,7 +559,7 @@ Section System.
           unfold addRqS in H1; mred.
         }
 
-        END_SKIP_PROOF_ON *) apply cheat.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac solve_GoodExtRssSys :=
@@ -590,7 +590,7 @@ Section System.
       end.
 
   Lemma mesi_GoodExtRssSys: GoodExtRssSys impl.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
@@ -654,7 +654,7 @@ Section System.
       repeat constructor.
       all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
 
-      END_SKIP_PROOF_ON *) apply cheat.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl (MesiObjInvs topo).

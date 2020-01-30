@@ -486,7 +486,7 @@ Section Sim.
     end.
 
   Theorem mesi_sim_ok:
-    InvSim step_m step_m (MesiInvOk.InvForSim topo cifc) SimMESI impl spec.
+    InvSim step_m step_m (MesiInvOk.InvForSim tr) SimMESI impl spec.
   Proof. (* SKIP_PROOF_OFF *)
     red; intros.
 
@@ -1361,7 +1361,7 @@ Section Sim.
     (steps step_m) # (steps step_m) |-- impl ⊑ spec.
   Proof.
     apply invRSim_implies_refinement
-      with (ginv:= MesiInvOk.InvForSim topo cifc) (sim:= SimMESI).
+      with (ginv:= MesiInvOk.InvForSim tr) (sim:= SimMESI).
     - apply mesi_InvForSim_ok.
     - apply mesi_sim_init.
     - apply mesi_sim_ok.
