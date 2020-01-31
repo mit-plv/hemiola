@@ -22,15 +22,15 @@ Local Open Scope fmap.
 
 Existing Instance Msi.ImplOStateIfc.
 
-Definition InvForSim (topo: DTree) (cifc: CIfc) (st: State): Prop :=
-  InvExcl topo cifc st /\
-  InvWBDir st /\ InvWBCoh st /\ InvWB topo st /\
-  MsiDownLockInv topo st.
+Definition InvForSim (tr: tree) (st: State): Prop :=
+  InvExcl (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0)) st /\
+  InvWBDir st /\ InvWBCoh st /\
+  InvWB (fst (tree2Topo tr 0)) st /\
+  MsiDownLockInv tr st.
 
 Lemma msi_InvForSim_ok:
   forall tr (Htr: tr <> Node nil),
-    InvReachable (impl Htr) step_m
-                 (InvForSim (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0))).
+    InvReachable (impl Htr) step_m (InvForSim tr).
 Proof.
   intros.
   red; intros.

@@ -4,7 +4,7 @@ Require Import Invariant TrsInv Simulation Serial SerialFacts.
 Require Import RqRsLangEx RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
-Require Import Ex.Msi Ex.Msi.Msi Ex.Msi.MsiTopo.
+Require Import Ex.Msi Ex.Msi.Msi Ex.Msi.MsiObjInv Ex.Msi.MsiTopo.
 
 Set Implicit Arguments.
 
@@ -59,7 +59,8 @@ Lemma msi_MsgConflictsInv:
     InvReachable (impl Htr) step_m (MsgConflictsInv tr 0).
 Proof.
   intros.
-  apply tree2Topo_MsgConflicts_inv_ok; auto.
+  apply tree2Topo_MsgConflicts_inv_ok
+    with (oinvs:= MsiObjInvs (fst (tree2Topo tr 0))); auto.
   simpl; unfold mem, li, l1.
   rewrite map_app.
   do 2 rewrite map_trans.
@@ -69,67 +70,7 @@ Proof.
   apply SubList_refl.
 Qed.
 
-Section Footprints.
-  Variable topo: DTree.
-
-  Definition MsiUpLockInv (st: State): Prop :=
-    forall oidx,
-      ost <+- (st_oss st)@[oidx];
-        orq <+- (st_orqs st)@[oidx];
-        rqiu <+- orq@[upRq];
-        rmsg <+- rqiu.(rqi_msg);
-        match case rmsg.(msg_id) on idx_dec default True with
-        | msiRqS:
-            ost#[owned] = false /\ ost#[status] <= msiI /\
-            ost#[dir].(dir_st) <= msiS
-        | msiRqM:
-            ost#[owned] = false /\ ost#[status] <= msiS /\
-            ost#[dir].(dir_st) <= msiS
-        end.
-
-  Definition DownLockFromChild (oidx: IdxT) (rqid: RqInfo Msg) :=
-    exists cidx,
-      rqid.(rqi_midx_rsb) = Some (downTo cidx) /\
-      parentIdxOf topo cidx = Some oidx.
-
-  Definition DownLockFromParent (oidx: IdxT) (rqid: RqInfo Msg) :=
-    rqid.(rqi_midx_rsb) = Some (rsUpFrom oidx).
-
-  Definition MsiDownLockInv (st: State): Prop :=
-    forall oidx,
-      ost <+- (st_oss st)@[oidx];
-        orq <+- (st_orqs st)@[oidx];
-        rqid <+- orq@[downRq];
-        rmsg <+- rqid.(rqi_msg);
-        match case rmsg.(msg_id) on idx_dec default True with
-        | msiRqS: DownLockFromChild oidx rqid /\
-                   ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
-                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                   rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
-        | msiRqM: DownLockFromChild oidx rqid /\
-                   ost#[status] <= msiS /\
-                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = msiS /\
-                     SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                     rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
-                    (ost#[dir].(dir_st) = msiM /\
-                     In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                     rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
-        | msiDownRqS: DownLockFromParent oidx rqid /\
-                       ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
-                       In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                       rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
-        | msiDownRqI: DownLockFromParent oidx rqid /\
-                       ((ost#[dir].(dir_st) = msiS /\
-                         SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                         rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
-                        (ost#[dir].(dir_st) = msiM /\
-                         In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                         rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
-        end.
-
-End Footprints.
-
-Section FootprintsOk.
+Section ObjInvOk.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
 
@@ -137,15 +78,21 @@ Section FootprintsOk.
   Let cifc: CIfc := snd (tree2Topo tr 0).
   Let impl: System := impl Htr.
 
+  Definition MsiUpLockInv (st: State): Prop :=
+    liftObjInvs MsiUpLockObjInv st.
+
+  Definition MsiDownLockInv (st: State): Prop :=
+    liftObjInvs (MsiDownLockObjInv topo) st.
+
   (*! [MsiUpLockInv] *)
 
   Lemma MsiUpLockInv_init:
     Invariant.InvInit impl MsiUpLockInv.
   Proof.
-    do 2 (red; simpl).
-    intros.
+    do 3 (red; simpl); intros; red; simpl.
     destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
     destruct (implORqsInit tr)@[oidx] as [orq|] eqn:Horq; simpl; auto.
+    red; simpl.
     unfold implORqsInit in Horq.
     destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
                                      ++ c_l1_indices (snd (tree2Topo tr 0)))).
@@ -167,7 +114,7 @@ Section FootprintsOk.
                          st_orqs := orqs +[oidx <- norq];
                          st_msgs := nmsgs |}.
   Proof.
-    unfold MsiUpLockInv; simpl; intros.
+    cbv [MsiUpLockInv liftObjInvs liftObjInv MsiUpLockObjInv]; simpl; intros.
     specialize (H oidx0).
     mred; simpl.
     rewrite H0; simpl; auto.
@@ -189,7 +136,7 @@ Section FootprintsOk.
                          st_orqs := orqs +[oidx <- norq];
                          st_msgs := nmsgs |}.
   Proof.
-    unfold MsiUpLockInv; simpl; intros.
+    cbv [MsiUpLockInv liftObjInvs liftObjInv MsiUpLockObjInv]; simpl; intros.
     mred; auto.
     simpl; rewrite H1, H2, H3, H5.
     specialize (H oidx).
@@ -197,71 +144,51 @@ Section FootprintsOk.
     assumption.
   Qed.
 
-  Ltac solve_MsiUpLockInv :=
-    let oidx := fresh "oidx" in
-    red; simpl; intro oidx;
-    match goal with
-    | [H: MsiUpLockInv _ |- _] => specialize (H oidx); simpl in H
-    end;
-    repeat (mred; simpl);
-    repeat
-      match goal with
-      | |- _ <+- ?ov; _ =>
-        first [match goal with
-               | [H: ov = _ |- _] => rewrite H in *; simpl in *
-               end
-              |let Hov := fresh "H" in
-               let v := fresh "v" in
-               destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]]
-      end;
-    try match goal with
-        | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H; simpl
-        end;
-    try (repeat split; solve_msi);
-    repeat (find_if_inside;
-            [dest; try congruence;
-             repeat split;
-             intuition solve_msi|]);
-    auto.
-
   Ltac disc_MsiUpLockInv_internal oidx :=
-    match goal with
-    | [Hdl: MsiUpLockInv _ |- _] =>
-      specialize (Hdl oidx); simpl in Hdl;
-      repeat
-        match type of Hdl with
-        | _ <+- ?ov; _ =>
-          match goal with
-          | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
-          end
-        end;
-      repeat
-        match goal with
-        | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
-        end;
-      simpl in Hdl; dest
-    end.
+    repeat 
+      match goal with
+      | [Hdl: MsiUpLockInv _ |- _] =>
+        (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
+      | [Hmv: ?m@[?i] = Some ?v, H: context [?m@[?i]] |- _] =>
+        rewrite Hmv in H; simpl in H
+      end;
+    disc_msi_obj_invs; dest.
 
   Ltac disc_MsiDownLockInv_internal oidx :=
-    match goal with
-    | [Hdl: MsiDownLockInv _ _ |- _] =>
-      specialize (Hdl oidx); simpl in Hdl;
-      repeat
-        match type of Hdl with
-        | _ <+- ?ov; _ =>
-          match goal with
-          | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
-          end
+    repeat 
+      match goal with
+      | [Hdl: MsiDownLockInv _ |- _] =>
+        (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
+      | [Hmv: ?m@[?i] = Some ?v, H: context [?m@[?i]] |- _] =>
+        rewrite Hmv in H; simpl in H
+      end;
+    disc_msi_obj_invs; dest.
+
+  Ltac solve_MsiUpLockInv oidx :=
+    try match goal with
+        | [Hul: MsiUpLockInv _ |- _] =>
+          let noidx := fresh "oidx" in
+          do 2 red; simpl; intro noidx;
+          red; simpl;
+          repeat (mred; simpl); [|apply Hul; fail]
         end;
-      repeat
-        match goal with
-        | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
-        end;
-      simpl in Hdl; dest
-    end.
+    disc_MsiUpLockInv_internal oidx;
+    red; mred; simpl;
+    repeat
+      match goal with
+      | [H: _ <+- ?ov; _ |- _ <+- ?ov; _] =>
+        let Hov := fresh "H" in
+        let v := fresh "v" in
+        destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]
+      | [H: msg_id ?rmsg = _ |- context [msg_id ?rmsg] ] =>
+        rewrite H; simpl
+      end;
+    repeat (find_if_inside;
+            [dest; try congruence; repeat split; intuition solve_msi|]);
+    auto.
 
   Lemma MsiUpLockInv_mutual_step:
-    Invariant.MutualInvStep1 impl step_m MsiUpLockInv (MsiDownLockInv topo).
+    Invariant.MutualInvStep1 impl step_m MsiUpLockInv MsiDownLockInv.
   Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
@@ -300,10 +227,13 @@ Section FootprintsOk.
       }
 
       dest_in; disc_rule_conds_ex.
-      all: try (disc_MsiDownLockInv_internal oidx; solve_MsiUpLockInv; fail).
+      { disc_MsiDownLockInv_internal oidx.
+        solve_MsiUpLockInv oidx.
+      }
       { disc_MsiDownLockInv_internal oidx.
         destruct H17; dest.
-        all: solve_MsiUpLockInv.
+        { solve_MsiUpLockInv oidx. }
+        { solve_MsiUpLockInv oidx. }
       }
 
     - (*! Cases for Li caches *)
@@ -328,19 +258,19 @@ Section FootprintsOk.
         dest_in; disc_rule_conds_ex.
         all: try (eapply MsiUpLockInv_update_None; eauto; fail).
         all: try (eapply MsiUpLockInv_no_update; eauto; mred; fail).
-        all: solve_MsiUpLockInv.
+        all: solve_MsiUpLockInv oidx.
       }
 
       dest_in; disc_rule_conds_ex.
       all: try (eapply MsiUpLockInv_update_None; eauto; mred; fail).
       all: try (eapply MsiUpLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
-      all: try (solve_MsiUpLockInv; fail).
-      all: try (disc_MsiDownLockInv_internal oidx; solve_MsiUpLockInv; fail).
-      all: try (solve_MsiUpLockInv; exfalso; unfold addRqS in *; mred; fail).
+      all: try (solve_MsiUpLockInv oidx; fail).
+      all: try (solve_MsiUpLockInv oidx; unfold addRqS; mred; fail).
+      all: try (disc_MsiDownLockInv_internal oidx; solve_MsiUpLockInv oidx; fail).
       { disc_MsiDownLockInv_internal oidx.
         destruct H22; dest.
-        all: solve_MsiUpLockInv.
+        all: solve_MsiUpLockInv oidx.
       }
 
     - (*! Cases for L1 caches *)
@@ -349,8 +279,8 @@ Section FootprintsOk.
       apply in_map_iff in H2; destruct H2 as [oidx [? ?]]; subst.
       dest_in; disc_rule_conds_ex.
       all: try (eapply MsiUpLockInv_update_None; eauto; mred; fail).
-      all: try (solve_MsiUpLockInv; fail).
-      all: solve_MsiUpLockInv; exfalso; unfold addRqS in *; mred.
+      all: try (solve_MsiUpLockInv oidx; fail).
+      all: solve_MsiUpLockInv oidx; unfold addRqS; mred.
 
       (* END_SKIP_PROOF_OFF *)
   Qed.
@@ -358,12 +288,12 @@ Section FootprintsOk.
   (*! [MsiDownLockInv] *)
 
   Lemma MsiDownLockInv_init:
-    Invariant.InvInit impl (MsiDownLockInv topo).
+    Invariant.InvInit impl MsiDownLockInv.
   Proof.
-    do 2 (red; simpl).
-    intros.
+    do 3 (red; simpl); intros; red; simpl.
     destruct (implOStatesInit tr)@[oidx] as [ost|] eqn:Host; simpl; auto.
     destruct (implORqsInit tr)@[oidx] as [orq|] eqn:Horq; simpl; auto.
+    red; simpl.
     unfold implORqsInit in Horq.
     destruct (in_dec idx_dec oidx ((c_li_indices (snd (tree2Topo tr 0)))
                                      ++ c_l1_indices (snd (tree2Topo tr 0)))).
@@ -376,16 +306,14 @@ Section FootprintsOk.
 
   Lemma MsiDownLockInv_update_None:
     forall oss orqs pmsgs,
-      MsiDownLockInv topo {| st_oss := oss;
-                              st_orqs := orqs;
-                              st_msgs := pmsgs |} ->
+      MsiDownLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := pmsgs |} ->
       forall oidx nost norq nmsgs,
         norq@[downRq] = None ->
-        MsiDownLockInv topo {| st_oss := oss +[oidx <- nost];
-                                st_orqs := orqs +[oidx <- norq];
-                                st_msgs := nmsgs |}.
+        MsiDownLockInv {| st_oss := oss +[oidx <- nost];
+                          st_orqs := orqs +[oidx <- norq];
+                          st_msgs := nmsgs |}.
   Proof.
-    unfold MsiDownLockInv; simpl; intros.
+    cbv [MsiDownLockInv liftObjInvs liftObjInv MsiDownLockObjInv]; simpl; intros.
     specialize (H oidx0).
     mred; simpl.
     rewrite H0; simpl; auto.
@@ -393,9 +321,7 @@ Section FootprintsOk.
 
   Lemma MsiDownLockInv_no_update:
     forall oss orqs pmsgs,
-      MsiDownLockInv topo {| st_oss := oss;
-                              st_orqs := orqs;
-                              st_msgs := pmsgs |} ->
+      MsiDownLockInv {| st_oss := oss; st_orqs := orqs; st_msgs := pmsgs |} ->
       forall oidx post porq nost norq nmsgs,
         oss@[oidx] = Some post ->
         nost#[owned] = post#[owned] ->
@@ -403,11 +329,11 @@ Section FootprintsOk.
         nost#[dir] = post#[dir] ->
         orqs@[oidx] = Some porq ->
         norq@[downRq] = porq@[downRq] ->
-        MsiDownLockInv topo {| st_oss := oss +[oidx <- nost];
-                                st_orqs := orqs +[oidx <- norq];
-                                st_msgs := nmsgs |}.
+        MsiDownLockInv {| st_oss := oss +[oidx <- nost];
+                          st_orqs := orqs +[oidx <- norq];
+                          st_msgs := nmsgs |}.
   Proof.
-    unfold MsiDownLockInv; simpl; intros.
+    cbv [MsiDownLockInv liftObjInvs liftObjInv MsiDownLockObjInv]; simpl; intros.
     mred; auto.
     simpl; rewrite H1, H2, H3, H5.
     specialize (H oidx).
@@ -415,26 +341,25 @@ Section FootprintsOk.
     assumption.
   Qed.
 
-  Ltac solve_MsiDownLockInv :=
-    let oidx := fresh "oidx" in
-    red; simpl; intro oidx;
-    match goal with
-    | [H: MsiDownLockInv _ _ |- _] => specialize (H oidx); simpl in H
-    end;
-    repeat (mred; simpl);
+  Ltac solve_MsiDownLockInv oidx :=
+    try match goal with
+        | [Hdl: MsiDownLockInv _ |- _] =>
+          let noidx := fresh "oidx" in
+          do 2 red; simpl; intro noidx;
+          red; simpl;
+          repeat (mred; simpl); [|apply Hdl; fail]
+        end;
+    disc_MsiDownLockInv_internal oidx;
+    red; mred; simpl;
     repeat
       match goal with
-      | |- _ <+- ?ov; _ =>
-        first [match goal with
-               | [H: ov = _ |- _] => rewrite H in *; simpl in *
-               end
-              |let Hov := fresh "H" in
-               let v := fresh "v" in
-               destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]]
+      | [H: _ <+- ?ov; _ |- _ <+- ?ov; _] =>
+        let Hov := fresh "H" in
+        let v := fresh "v" in
+        destruct ov as [v|] eqn:Hov; simpl in *; [|auto; fail]
+      | [H: msg_id ?rmsg = _ |- context [msg_id ?rmsg] ] =>
+        rewrite H; simpl
       end;
-    try match goal with
-        | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H; simpl
-        end;
     repeat split;
     try match goal with
         | |- DownLockFromChild _ _ _ => red; simpl; eauto; fail
@@ -442,7 +367,7 @@ Section FootprintsOk.
         end.
 
   Lemma MsiDownLockInv_mutual_step:
-    Invariant.MutualInvStep2 impl step_m MsiUpLockInv (MsiDownLockInv topo).
+    Invariant.MutualInvStep2 impl step_m MsiUpLockInv MsiDownLockInv.
   Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
@@ -477,7 +402,8 @@ Section FootprintsOk.
         
         dest_in; disc_rule_conds_ex.
         all: try (eapply MsiDownLockInv_update_None; eauto; fail).
-        all: try (derive_child_chns cidx; derive_child_idx_in cidx; solve_MsiDownLockInv; fail).
+        all: try (derive_child_chns cidx; derive_child_idx_in cidx;
+                  solve_MsiDownLockInv oidx; fail).
       }
 
       dest_in; disc_rule_conds_ex.
@@ -507,20 +433,20 @@ Section FootprintsOk.
         all: try (eapply MsiDownLockInv_no_update; eauto; mred; fail).
         all: try (derive_child_chns cidx;
                   derive_child_idx_in cidx;
-                  solve_MsiDownLockInv).
+                  solve_MsiDownLockInv oidx).
       }
 
       dest_in; disc_rule_conds_ex.
       all: try (eapply MsiDownLockInv_update_None; eauto; mred; fail).
       all: try (eapply MsiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
-      all: try (solve_MsiDownLockInv; fail).
+      all: try (solve_MsiDownLockInv oidx; fail).
       { disc_MsiUpLockInv_internal oidx.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
         derive_child_idx_in cidx.
         disc_rule_conds_ex.
-        solve_MsiDownLockInv.
+        solve_MsiDownLockInv oidx.
       }
 
     - (*! Cases for L1 caches *)
@@ -536,7 +462,7 @@ Section FootprintsOk.
   Qed.
 
   Theorem MsiLockInv_ok:
-    InvReachable impl step_m (fun st => MsiUpLockInv st /\ MsiDownLockInv topo st).
+    InvReachable impl step_m (fun st => MsiUpLockInv st /\ MsiDownLockInv st).
   Proof.
     eapply mutual_inv_reachable.
     - typeclasses eauto.
@@ -544,6 +470,19 @@ Section FootprintsOk.
     - apply MsiDownLockInv_init.
     - apply MsiUpLockInv_mutual_step.
     - apply MsiDownLockInv_mutual_step.
+  Qed.
+
+  Corollary MsiObjInvs_ok:
+    InvReachable impl step_m (liftObjInvs (MsiObjInvs topo)).
+  Proof.
+    red; intros.
+    apply MsiLockInv_ok in H; dest.
+    red; intros.
+    specialize (H oidx); specialize (H0 oidx).
+    red; red in H, H0.
+    destruct (st_oss ist)@[oidx] as [ost|]; simpl in *; [|auto].
+    destruct (st_orqs ist)@[oidx] as [orq|]; simpl in *; [|auto].
+    split; assumption.
   Qed.
 
   Corollary MsiUpLockInv_ok:
@@ -554,35 +493,27 @@ Section FootprintsOk.
   Qed.
 
   Corollary MsiDownLockInv_ok:
-    InvReachable impl step_m (MsiDownLockInv topo).
+    InvReachable impl step_m MsiDownLockInv.
   Proof.
     red; intros.
     apply MsiLockInv_ok; assumption.
   Qed.
 
-End FootprintsOk.
+End ObjInvOk.
 
 Ltac disc_MsiUpLockInv oidx :=
-  match goal with
-  | [Hdl: MsiUpLockInv _ |- _] =>
-    specialize (Hdl oidx); simpl in Hdl;
-    repeat
-      match type of Hdl with
-      | _ <+- ?ov; _ =>
-        match goal with
-        | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
-        end
-      end;
-    repeat
-      match goal with
-      | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
-      end;
-    simpl in Hdl; dest
-  end.
+  repeat 
+    match goal with
+    | [Hdl: MsiUpLockInv _ |- _] =>
+      (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
+    | [Hmv: ?m@[?i] = Some ?v, H: context [?m@[?i]] |- _] =>
+      rewrite Hmv in H; simpl in H
+    end;
+  disc_msi_obj_invs; dest.
 
 Ltac disc_MsiDownLockInv oidx Hinv :=
-  specialize (Hinv oidx); simpl in Hinv;
-  disc_rule_conds_ex;
+  specialize (Hinv oidx); do 2 red in Hinv; simpl in Hinv;
+  disc_rule_conds_ex; disc_msi_obj_invs; dest;
   repeat
     match goal with
     | [Hrqi: rqi_msg _ = Some ?msg, Hmsg: msg_id ?msg = _ |- _] =>

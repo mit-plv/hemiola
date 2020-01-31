@@ -323,23 +323,5 @@ Ltac derive_parent_downlock_by_RqDown oidx :=
                                 (FirstMP_InMP Hf))
       end.
 
-Ltac derive_MsiDownLockInv oidx :=
-  match goal with
-  | [Hdl: MsiDownLockInv _ _ |- _] =>
-    specialize (Hdl oidx); simpl in Hdl;
-    repeat
-      match type of Hdl with
-      | _ <+- ?ov; _ =>
-        match goal with
-        | [H: ov = Some _ |- _] => rewrite H in Hdl; simpl in Hdl
-        end
-      end;
-    repeat
-      match goal with
-      | [H: msg_id ?rmsg = _ |- _] => rewrite H in Hdl
-      end;
-    simpl in Hdl; dest
-  end.
-
 Hint Unfold NoRsI ImplOStateMSI: RuleConds.
 

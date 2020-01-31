@@ -525,11 +525,11 @@ Section InvWBDir.
 
       dest_in.
       { disc_rule_conds_ex.
-        derive_MsiDownLockInv oidx.
+        disc_MsiDownLockInv oidx Hmdl.
         simpl_InvWBDir; solve_InvWBDir.
       }
       { disc_rule_conds_ex.
-        derive_MsiDownLockInv oidx.
+        disc_MsiDownLockInv oidx Hmdl.
         simpl_InvWBDir; solve_InvWBDir.
       }
 
@@ -571,7 +571,7 @@ Section InvWBDir.
                   by (solve_NoRsI_base; solve_NoRsI_by_rsDown oidx);
                 simpl_InvWBDir).
       all: try (simpl_InvWBDir; solve_InvWBDir; fail).
-      all: try (derive_MsiDownLockInv oidx;
+      all: try (disc_MsiDownLockInv oidx Hmdl;
                 simpl_InvWBDir; solve_InvWBDir; fail).
       { eapply InvWBDir_enqMP_rq_valid; eauto.
         { solve_InvWBDir. }
@@ -937,12 +937,12 @@ Section InvWBCoh.
 
       dest_in.
       { disc_rule_conds_ex.
-        derive_MsiDownLockInv oidx.
+        disc_MsiDownLockInv oidx Hmdl.
         derive_InvWBDir oidx.
         simpl_InvWBCoh; solve_InvWBCoh.
       }
       { disc_rule_conds_ex.
-        derive_MsiDownLockInv oidx.
+        disc_MsiDownLockInv oidx Hmdl.
         simpl_InvWBCoh; solve_InvWBCoh.
       }
 
@@ -981,7 +981,7 @@ Section InvWBCoh.
                   by (solve_NoRqI_base; solve_NoRqI_by_rsDown oidx);
                 simpl_InvWBCoh).
       all: try (simpl_InvWBCoh; solve_InvWBCoh; fail).
-      all: try (derive_MsiDownLockInv oidx;
+      all: try (disc_MsiDownLockInv oidx Hmdl;
                 derive_InvWBDir oidx;
                 simpl_InvWBCoh; solve_InvWBCoh; fail).
       { eapply InvWBCoh_enqMP_valid; eauto. }
