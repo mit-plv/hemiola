@@ -24,11 +24,12 @@ Section FootprintInv.
       FootprintUpOk dtr oidx rrFrom rqTo rsFrom.
 
   Definition FootprintDownOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
-    exists rqFrom rqTos rssFrom rsbTo,
+    exists rrFrom rqTos rssFrom,
       rqi.(rqi_minds_rss) = rssFrom /\
-      rqi.(rqi_midx_rsb) = Some rsbTo /\
-      (FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom rsbTo \/
-       FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom rsbTo).
+      rqi.(rqi_midx_rsb) = (rrFrom >>= (fun rrFrom => Some (snd rrFrom))) /\
+      (FootprintUpDownOk dtr sys oidx rrFrom rqTos rssFrom \/
+       (rrFrom >>=[False] (fun rrFrom => FootprintDownDownOk
+                                           dtr oidx (fst rrFrom) rqTos rssFrom (snd rrFrom)))).
 
   Definition FootprintsOkORqs (orqs: ORqs Msg) :=
     forall oidx,
@@ -96,21 +97,23 @@ Section FootprintInv.
         red in H33; simpl in H33; dest.
         eexists (Some (rqFrom, rsbTo)), _, _; repeat split; try eassumption.
         simpl; eauto.
-      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        do 4 eexists; repeat split.
-        * eassumption.
-        * left; eassumption.
-      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
-        do 4 eexists; repeat split.
-        * eassumption.
-        * right; eassumption.
+      + apply footprints_ok_orqs_add; disc_rule_conds.
+        eexists None, _, _; repeat split; try eassumption.
+        left; eassumption.
+      + apply footprints_ok_orqs_add; disc_rule_conds.
+        eexists (Some (rqFrom, rsbTo)), _, _; repeat split; try eassumption.
+        left; eassumption.
+      + apply footprints_ok_orqs_add; disc_rule_conds.
+        eexists (Some (rqFrom, rsbTo)), _, _; repeat split; try eassumption.
+        right; eassumption.
     - disc_rule_conds.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
     - disc_rule_conds.
       apply footprints_ok_orqs_add; disc_rule_conds; auto.
-      do 4 eexists; repeat split; disc_rule_conds; eauto.
+      eexists (Some (rqOrig, rsbTo)), _, _; repeat split; try eassumption.
+      left; eassumption.
   Qed.
 
   Lemma footprints_ok:
@@ -140,32 +143,40 @@ Ltac disc_footprints_ok :=
     let rsFrom := fresh "rsFrom" in
     destruct H as [rrFrom [rqTo [rsFrom ?]]]; dest
   | [H: FootprintDownOkEx _ _ _ _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
+    let rrFrom := fresh "rrFrom" in
     let rqTos := fresh "rqTos" in
     let rssFrom := fresh "rssFrom" in
-    let rsbTo := fresh "rsbTo" in
-    destruct H as [rqFrom [rqTos [rssFrom [rsbTo ?]]]]; dest
+    destruct H as [rrFrom [rqTos [rssFrom ?]]]; dest
   | [H: Some _ = (?rrFrom) >>= _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct rrFrom as [[rqFrom rsbTo]|]; [|discriminate]; simpl in *; dest
   | [H: None = (?rrFrom) >>= _ |- _] =>
     destruct rrFrom; [discriminate|]; simpl in *
+  | [H: (?rrFrom) >>=[False] _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct rrFrom as [[rqFrom rsbTo]|]; [|exfalso; auto]; simpl in *; dest
 
   | [H: FootprintUpOk _ _ (Some _) _ _ |- _] =>
     red in H; simpl in H;
     let cidx := fresh "cidx" in
     destruct H as [[cidx ?] ?]; dest
   | [H: FootprintUpOk _ _ None _ _ |- _] => red in H; simpl in H; dest
-  | [H: FootprintUpDownOk _ _ _ _ _ _ _ \/
-        FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
-  | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
-    let rsFrom := fresh "rqFrom" in
-    destruct H as [rqFrom ?]; dest
-  | [H: FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
+  | [H: FootprintUpDownOk _ _ _ _ _ _ \/ FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
+  | [H: FootprintUpDownOk _ _ _ None _ _ |- _] => red in H; simpl in H; dest
+  | [H: FootprintUpDownOk _ _ _ (Some (_, _)) _ _ |- _] =>
+    red in H; simpl in H;
     let upCIdx := fresh "upCIdx" in
     let upCObj := fresh "upCObj" in
     destruct H as [upCIdx [upCObj ?]]; dest
+  | [H: FootprintUpDownOk _ _ _ ?rrFrom _ _ |- _] =>
+    let rqFrom := fresh "rqFrom" in
+    let rsbTo := fresh "rsbTo" in
+    destruct rrFrom as [[rqFrom rsbTo]|]; simpl in H;
+    [let upCIdx := fresh "upCIdx" in
+     let upCObj := fresh "upCObj" in
+     destruct H as [upCIdx [upCObj ?]]; dest|]
   | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
   end.
 
@@ -244,9 +255,10 @@ Section IncomingMessageInv.
     - disc_rule_conds.
       + left; left; constr_rule_conds.
       + left; right; constr_rule_conds.
+      + left; left; constr_rule_conds.
       + left; right; constr_rule_conds.
       + right; left; constr_rule_conds.
-
+        
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; right; right.
@@ -254,16 +266,16 @@ Section IncomingMessageInv.
       + right; right; right.
         constr_rule_conds.
       + right; right; left.
-        rewrite <-H26 in H20.
+        rewrite <-H26 in H19.
         split; auto.
-        clear -H20; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_rq in H20; [|eassumption].
+        clear -H19; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_rq in H19; [|eassumption].
         dest; eauto.
       + right; right; left.
-        rewrite <-H26 in H5.
+        rewrite <-H26 in H4.
         split; auto.
-        clear -H5; apply Forall_forall; intros.
-        eapply RqRsDownMatch_rs_rq in H5; [|eassumption].
+        clear -H4; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rs_rq in H4; [|eassumption].
         dest; eauto.
 
     - good_footprint_get (obj_idx obj).
@@ -343,6 +355,11 @@ Section OutgoingMessageInv.
     - disc_rule_conds.
       + left; constr_rule_conds.
       + left; constr_rule_conds.
+      + right; left.
+        constr_rule_conds.
+        clear -H33; apply Forall_forall; intros.
+        eapply RqRsDownMatch_rq_rs in H33; [|eassumption].
+        dest; eauto.
       + right; left.
         constr_rule_conds.
         clear -H17; apply Forall_forall; intros.

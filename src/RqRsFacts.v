@@ -688,12 +688,12 @@ Section RqRsDTree.
     destruct rqTos; auto.
     simpl in H0; discriminate.
   Qed.
-  
+
   Lemma footprintUpDownOk_rs_eq:
     forall `{oifc: OStateIfc} (sys: System) oidx rqFrom rqTos
            rssFrom1 rsbTo1 rssFrom2 rsbTo2,
-      FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom1 rsbTo1 ->
-      FootprintUpDownOk dtr sys oidx rqFrom rqTos rssFrom2 rsbTo2 ->
+      FootprintUpDownOk dtr sys oidx (Some (rqFrom, rsbTo1)) rqTos rssFrom1 ->
+      FootprintUpDownOk dtr sys oidx (Some (rqFrom, rsbTo2)) rqTos rssFrom2 ->
       rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.
   Proof.
     unfold FootprintUpDownOk; intros.
@@ -936,16 +936,14 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
     let rsbTo := fresh "rsbTo" in
     let rqFrom := fresh "rqFrom" in
     let rqfm := fresh "rqfm" in
-    destruct H as [rqTo [rqtm [rsFrom [[|[rsbTo [rqFrom [rqfm ?]]]] ?]]]];
-    dest
-
+    destruct H as [rqTo [rqtm [rsFrom [[|[rsbTo [rqFrom [rqfm ?]]]] ?]]]]; dest
   | [H: RqUpDownOk _ _ _ _ _ _ _ _ _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
-    let rqfm := fresh "rqfm" in
     let rqTos := fresh "rqTos" in
     let rssFrom := fresh "rssFrom" in
+    let rqFrom := fresh "rqFrom" in
+    let rqfm := fresh "rqfm" in
     let rsbTo := fresh "rsbTo" in
-    destruct H as [rqFrom [rqfm [rqTos [rssFrom [rsbTo ?]]]]]; dest
+    destruct H as [rqTos [rssFrom [[|[rqFrom [rqfm [rsbTo ?]]]] ?]]]; dest
   | [H: RqDownDownOk _ _ _ _ _ _ _ _ |- _] =>
     let rqFrom := fresh "rqFrom" in
     let rqfm := fresh "rqfm" in

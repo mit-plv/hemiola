@@ -119,13 +119,13 @@ Section RqRsTopo.
       rqi.(rqi_midx_rsb) = rsbTo.
 
   (** A rule making downward requests. *)
-  Definition FootprintingDown (porq norq: ORq Msg) (rqfm: Msg)
-             (rssFrom: list IdxT) (rsbTo: IdxT) :=
+  Definition FootprintingDown (porq norq: ORq Msg) (rqfm: option Msg)
+             (rssFrom: list IdxT) (rsbTo: option IdxT) :=
     exists rqi,
       norq = porq+[downRq <- rqi] /\
-      rqi.(rqi_msg) = Some rqfm /\
+      rqi.(rqi_msg) = rqfm /\
       rqi.(rqi_minds_rss) = rssFrom /\
-      rqi.(rqi_midx_rsb) = Some rsbTo.
+      rqi.(rqi_midx_rsb) = rsbTo.
 
   Definition FootprintingUpToDown (porq norq: ORq Msg) (nrssFrom: list IdxT) :=
     exists prqi nrqi,
@@ -205,15 +205,20 @@ Section RqRsTopo.
            (combine rqTos rssFrom).
   
   Definition FootprintUpDownOk (oidx: IdxT)
-             (rqFrom: IdxT) (rqTos: list IdxT)
-             (rssFrom: list IdxT) (rsbTo: IdxT) :=
-    exists upCIdx upCObj,
-      In upCObj sys.(sys_objs) /\
-      upCObj.(obj_idx) = upCIdx /\
-      parentIdxOf dtr upCIdx = Some oidx /\
-      rqEdgeUpFrom upCIdx = Some rqFrom /\
-      edgeDownTo upCIdx = Some rsbTo /\
-      RqRsDownMatch oidx rqTos rssFrom (fun cidx => cidx <> upCIdx).
+             (rrFrom: option (IdxT * IdxT)) (rqTos: list IdxT)
+             (rssFrom: list IdxT) :=
+    match rrFrom with
+    | Some (rqFrom, rsbTo) =>
+      (exists upCIdx upCObj,
+          In upCObj sys.(sys_objs) /\
+          upCObj.(obj_idx) = upCIdx /\
+          parentIdxOf dtr upCIdx = Some oidx /\
+          rqEdgeUpFrom upCIdx = Some rqFrom /\
+          edgeDownTo upCIdx = Some rsbTo /\
+          RqRsDownMatch oidx rqTos rssFrom (fun cidx => cidx <> upCIdx))
+    | None =>
+      RqRsDownMatch oidx rqTos rssFrom (fun _ => True)
+    end.
 
   Definition FootprintDownDownOk (oidx: IdxT)
              (rqFrom: IdxT) (rqTos: list IdxT)
@@ -320,10 +325,14 @@ Section RqRsTopo.
 
       Definition RqUpDownOk (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
                  (nost: OState) (norq: ORq Msg) (routs: list (Id Msg)) :=
-        exists rqFrom rqfm rqTos rssFrom rsbTo,
-          FootprintingDown porq norq rqfm rssFrom rsbTo /\
-          FootprintUpDownOk oidx rqFrom rqTos rssFrom rsbTo /\
-          rins = [(rqFrom, rqfm)] /\
+        exists rqTos rssFrom,
+          ((rins = nil /\
+            FootprintingDown porq norq None rssFrom None /\
+            FootprintUpDownOk oidx None rqTos rssFrom) \/
+           (exists rqFrom rqfm rsbTo,
+               rins = [(rqFrom, rqfm)] /\
+               FootprintingDown porq norq (Some rqfm) rssFrom (Some rsbTo) /\
+               FootprintUpDownOk oidx (Some (rqFrom, rsbTo)) rqTos rssFrom)) /\
           idsOf routs = rqTos.
 
       Definition RqUpDown (rule: Rule) :=
@@ -335,7 +344,7 @@ Section RqRsTopo.
       Definition RqDownDownOk (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
                  (nost: OState) (norq: ORq Msg) (routs: list (Id Msg)) :=
         exists rqFrom rqfm rqTos rssFrom rsbTo,
-          FootprintingDown porq norq rqfm rssFrom rsbTo /\
+          FootprintingDown porq norq (Some rqfm) rssFrom (Some rsbTo) /\
           FootprintDownDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           rins = [(rqFrom, rqfm)] /\
           idsOf routs = rqTos.
@@ -381,7 +390,7 @@ Section RqRsTopo.
       Definition RsDownRqDownOk (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
                  (nost: OState) (norq: ORq Msg) (routs: list (Id Msg)) :=
         exists rsFrom rqTos rqOrig rsbTo rssFrom,
-          FootprintUpDownOk oidx rqOrig rqTos rssFrom rsbTo /\
+          FootprintUpDownOk oidx (Some (rqOrig, rsbTo)) rqTos rssFrom /\
           FootprintingUpToDown porq norq rssFrom /\
           FootprintedUp porq [rsFrom] (Some rsbTo) /\
           idsOf rins = [rsFrom] /\
@@ -455,6 +464,8 @@ Section RqRsTopo.
     RqRsDTree /\ GoodRqRsSys /\ GoodRqRsInterfSys.
   
 End RqRsTopo.
+
+Arguments FootprintUpDownOk: simpl never.
 
 Hint Unfold RqAccepting RsAccepting RqReleasing RsReleasing
      UpLockFreeORq DownLockFreeORq

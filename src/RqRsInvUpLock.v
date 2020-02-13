@@ -919,51 +919,14 @@ Section UpLockInv.
     Qed.
 
     Ltac disc_rule_custom ::=
-      match goal with
-      | [H: FootprintUpOkEx _ _ _ /\ _ |- _] => destruct H
-      | [H: _ /\ FootprintDownOkEx _ _ _ _ |- _] => destruct H
-      | [H: FootprintUpOkEx _ _ _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        let rqTo := fresh "rqTo" in
-        let rsFrom := fresh "rsFrom" in
-        let rsbTo := fresh "rsbTo" in
-        destruct H as [rqFrom [rqTo [rsFrom [rsbTo ?]]]]; dest
-
-      | [H: FootprintUpOk _ _ (Some _) _ _ |- _] =>
-        red in H; simpl in H;
-        let cidx := fresh "cidx" in
-        destruct H as [[cidx ?] ?]; dest
-      | [H: FootprintUpOk _ _ None _ _ |- _] => red in H; simpl in H; dest
-      | [H: FootprintDownOkEx _ _ _ _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        let rqTos := fresh "rqTos" in
-        let rssFrom := fresh "rssFrom" in
-        let rsbTo := fresh "rsbTo" in
-        destruct H as [rqFrom [rqTos [rssFrom [rsbTo ?]]]]; dest
-      | [H: FootprintUpDownOk _ _ _ _ _ _ _ \/
-            FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
-      | [H: exists _, FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        destruct H as [rqFrom ?]
-      | [H: FootprintUpDownOk _ _ _ _ _ _ _ |- _] =>
-        let upCIdx := fresh "upCIdx" in
-        let upCObj := fresh "upCObj" in
-        destruct H as [upCIdx [upCObj ?]]; dest
-      | [H: FootprintDownDownOk _ _ _ _ _ _ |- _] => red in H; dest
-
-      | [H: Some _ = (?rrFrom) >>= _ |- _] =>
-        let rqFrom := fresh "rqFrom" in
-        let rsbTo := fresh "rsbTo" in
-        destruct rrFrom as [[rqFrom rsbTo]|]; [|discriminate]; simpl in *; dest
-      | [H: None = (?rrFrom) >>= _ |- _] =>
-        destruct rrFrom; [discriminate|]; simpl in *
-
-      | [H: UpLockedInv _ _ _ |- _] =>
-        let rqUp := fresh "rqUp" in
-        let down := fresh "down" in
-        let pidx := fresh "pidx" in
-        destruct H as [rqUp [down [pidx ?]]]; dest
-      end.
+      try match goal with
+          | [H: UpLockedInv _ _ _ |- _] =>
+            let rqUp := fresh "rqUp" in
+            let down := fresh "down" in
+            let pidx := fresh "pidx" in
+            destruct H as [rqUp [down [pidx ?]]]; dest
+          end;
+      try disc_footprints_ok.
 
     Lemma upLockInvORq_step_int_me:
       UpLockInvORq orqs msgs (obj_idx obj) porq ->
@@ -994,7 +957,7 @@ Section UpLockInv.
       - (** case [ImmUpRule] *)
         disc_rule_conds.
         destruct (norq@[upRq]).
-        + dest; split; [assumption|].
+        + dest; split; [assumption|].          
           apply upLockedInv_orqs_preserved_self_update.
           eapply upLockedInv_msgs_preserved; eauto.
           * disc_rule_conds; solve_q.
@@ -1059,6 +1022,38 @@ Section UpLockInv.
             }
             { apply ONoLockTo_not_OLockedTo; assumption. }
 
+        + (** case [RqUpDown-silent]; setting a downlock. *)
+          remember (porq@[upRq]) as orqiu; destruct orqiu as [rqiu|].
+          * dest; split; [assumption|].
+            apply upLockedInv_orqs_preserved_self_update.
+            apply upLockedInv_msgs_preserved with (msgs1:= msgs);
+              [assumption| |].
+            { disc_rule_conds; solve_q. }
+            { disc_rule_conds; solve_q. }
+          * apply upLockFreeInv_orqs_preserved_self_update.
+            apply upLockFreeInv_msgs_preserved with (msgs1:= msgs);
+              [assumption| |].
+            { destruct H.
+              { remember (rqEdgeUpFrom dtr (obj_idx obj)) as orqUp.
+                destruct orqUp; auto.
+                eapply eq_sym, rqEdgeUpFrom_Some in HeqorqUp; [|eassumption].
+                dest; disc_rule_conds.
+              }
+              { destruct H as [rqUp [down [pidx ?]]]; dest.
+                disc_rule_conds; solve_q.
+              }
+            }
+            { destruct H.
+              { remember (edgeDownTo dtr (obj_idx obj)) as odown.
+                destruct odown; auto.
+                eapply eq_sym, edgeDownTo_Some in Heqodown; [|eassumption].
+                dest; disc_rule_conds.
+              }
+              { destruct H as [rqUp [down [pidx ?]]]; dest.
+                disc_rule_conds; solve_q.
+              }
+            }
+
         + (** case [RqUpDown]; setting a downlock. *)
           remember (porq@[upRq]) as orqiu; destruct orqiu as [rqiu|].
           * dest; split; [assumption|].
@@ -1067,7 +1062,6 @@ Section UpLockInv.
               [assumption| |].
             { disc_rule_conds; solve_q. }
             { disc_rule_conds; solve_q. }
-
           * apply upLockFreeInv_orqs_preserved_self_update.
             apply upLockFreeInv_msgs_preserved with (msgs1:= msgs);
               [assumption| |].
@@ -1102,7 +1096,6 @@ Section UpLockInv.
             { disc_rule_conds; solve_q.
               eapply deqMP_rq_filter_rs_eq; eauto.
             }
-
           * apply upLockFreeInv_orqs_preserved_self_update.
             apply upLockFreeInv_msgs_preserved with (msgs1:= msgs);
               [assumption| |].
@@ -1135,15 +1128,15 @@ Section UpLockInv.
         disc_rule_conds.
         + (** case [FootprintReleasingUp]; releasing the uplock. *)
           apply upLockFreeInv_orqs_preserved_self_update.
-          xor3_inv2 H21; [dest|eapply rssQ_length_one; eauto].
+          xor3_inv2 H19; [dest|eapply rssQ_length_one; eauto].
           right; exists rqTo, rsFrom, pidx.
           repeat split; try assumption.
           * solve_q.
             apply length_zero_iff_nil; omega.
           * solve_q.
-            apply findQ_In_deqMP_FirstMP in H10; simpl in H10.
-            unfold rssQ in H19; rewrite <-H10 in H19.
-            simpl in H19; rewrite H13 in H19; simpl in H19.
+            apply findQ_In_deqMP_FirstMP in H11; simpl in H11.
+            unfold rssQ in H16; rewrite <-H11 in H16.
+            simpl in H16; rewrite H14 in H16; simpl in H16.
             apply length_zero_iff_nil; omega.
           * apply not_ONoLockTo_OLockedTo; auto.
         + (** case [FootprintReleasingUp-silent]; releasing the uplock. *)
@@ -1154,9 +1147,9 @@ Section UpLockInv.
           * solve_q.
             apply length_zero_iff_nil; omega.
           * solve_q.
-            apply findQ_In_deqMP_FirstMP in H10; simpl in H10.
-            unfold rssQ in H15; rewrite <-H10 in H15.
-            simpl in H15; rewrite H11 in H15; simpl in H15.
+            apply findQ_In_deqMP_FirstMP in H11; simpl in H11.
+            unfold rssQ in H15; rewrite <-H11 in H15.
+            simpl in H15; rewrite H13 in H15; simpl in H15.
             apply length_zero_iff_nil; omega.
           * apply not_ONoLockTo_OLockedTo; auto.
 
@@ -1240,15 +1233,15 @@ Section UpLockInv.
         good_footprint_get (obj_idx obj).
         disc_rule_conds.
         apply upLockFreeInv_orqs_preserved_self_update.
-        xor3_inv2 H23; [dest|eapply rssQ_length_one; eauto].
+        xor3_inv2 H18; [dest|eapply rssQ_length_one; eauto].
         red; right.
         exists rqTo, rsFrom0, pidx; repeat split; try assumption.
         + solve_q.
           apply length_zero_iff_nil; omega.
         + solve_q.
           apply findQ_In_deqMP_FirstMP in H10; simpl in H10.
-          unfold rssQ in H20; rewrite <-H10 in H20.
-          simpl in H20; rewrite H7 in H20; simpl in H20.
+          unfold rssQ in H14; rewrite <-H10 in H14.
+          simpl in H14; rewrite H7 in H14; simpl in H14.
           apply length_zero_iff_nil; omega.
         + apply not_ONoLockTo_OLockedTo; auto.
     Qed.
@@ -1432,7 +1425,7 @@ Section UpLockInv.
               eapply parentIdxOf_Some in H2; [|apply Hsd].
               dest; congruence.
             }
-
+            
         + (** case [RqUpUp] *)
           destruct (idx_dec cidx oidx); subst.
           * match goal with
@@ -1532,6 +1525,65 @@ Section UpLockInv.
                 reflexivity.
               }
             }
+
+        + (** case [RqUpDown-silent] *)
+          match goal with
+          | [ |- match ?ul with | Some _ => _ | None => _ end] =>
+            destruct ul
+          end.
+          { dest; split; [assumption|].
+            apply upLockedInv_orqs_preserved_parent_some_down
+              with (orqs1:= orqs) (pidx:= obj_idx obj) (rqiu:= rqi);
+              auto; try (repeat (mred; simpl); fail).
+            { eapply upLockedInv_msgs_preserved; [eassumption| |].
+              { destruct H1 as [rqUp [down [pidx ?]]]; dest.
+                disc_rule_conds.
+                solve_q.
+              }
+              { destruct H1 as [rqUp [down [pidx ?]]]; dest.
+                disc_rule_conds.
+                rewrite rssQ_enqMsgs_rqs by assumption.
+                solve_q.
+              }
+            }
+            { intro Hx; rewrite H29 in Hx.
+              apply parentIdxOf_Some in H2; [|apply Hsd].
+              dest; congruence.
+            }
+          }
+          { apply upLockFreeInv_orqs_preserved_parent_some_down
+              with (orqs1:= orqs) (pidx:= obj_idx obj) (rqiu:= rqi);
+              auto; try (repeat (mred; simpl); fail).
+            { eapply upLockFreeInv_msgs_preserved; [eassumption| |].
+              { destruct H.
+                { remember (rqEdgeUpFrom dtr oidx) as orqUp.
+                  destruct orqUp; auto.
+                  eapply eq_sym, rqEdgeUpFrom_Some in HeqorqUp; [|eassumption].
+                  dest; disc_rule_conds.
+                }
+                { destruct H as [rqUp [down [pidx ?]]]; dest.
+                  disc_rule_conds.
+                  solve_q.
+                }
+              }
+              { destruct H.
+                { remember (edgeDownTo dtr oidx) as odown.
+                  destruct odown; auto.
+                  eapply eq_sym, edgeDownTo_Some in Heqodown; [|eassumption].
+                  dest; disc_rule_conds.
+                }
+                { destruct H as [rqUp [down [pidx ?]]]; dest.
+                  disc_rule_conds.
+                  rewrite rssQ_enqMsgs_rqs by assumption.
+                  solve_q.
+                }
+              }
+            }
+            { intro Hx; rewrite H29 in Hx.
+              apply parentIdxOf_Some in H2; [|apply Hsd].
+              dest; congruence.
+            }
+          }
             
         + (** case [RqUpDown] *)
           destruct (idx_dec (obj_idx upCObj) oidx); subst.
@@ -1707,26 +1759,26 @@ Section UpLockInv.
             end.
             { dest; split; [assumption|].
               disc_rule_conds.
-              exists rqFrom0, rsbTo1, (obj_idx obj).
-              xor3_inv3 H21; [dest|red; disc_rule_conds; eexists; intuition].
-              assert (length (findQ rqFrom0 (enqMP rsbTo1 rmsg (deqMP rsFrom msgs))) = 0).
+              exists rqFrom, rsbTo0, (obj_idx obj).
+              xor3_inv3 H22; [dest|red; disc_rule_conds; eexists; intuition].
+              assert (length (findQ rqFrom (enqMP rsbTo0 rmsg (deqMP rsFrom msgs))) = 0).
               { solve_q; omega. }
-              rewrite H14; clear H14.
+              rewrite H15; clear H15.
 
-              assert (length (rssQ (enqMP rsbTo1 rmsg (deqMP rsFrom msgs)) rsbTo1) = 1).
+              assert (length (rssQ (enqMP rsbTo0 rmsg (deqMP rsFrom msgs)) rsbTo0) = 1).
               { solve_q.
                 rewrite filter_app; simpl.
-                rewrite H10; simpl.
+                rewrite H12; simpl.
                 rewrite app_length; simpl.
-                unfold rssQ in H9, H18; omega.
+                unfold rssQ in H10, H20; omega.
               }
-              rewrite H14; clear H14.
+              rewrite H15; clear H15.
 
               repeat split; try assumption; try omega.
               { red; mred; simpl; mred. }
               { xsnd; [discriminate|reflexivity|].
                 apply ONoLockTo_not_OLockedTo.
-                red in H20; red; mred.
+                red in H21; red; mred.
                 simpl; mred; split; auto.
               }
             }
@@ -1734,7 +1786,7 @@ Section UpLockInv.
               destruct H as [rqUp [down [pidx ?]]]; dest.
               exfalso.
               disc_rule_conds.
-              red in H20; mred.
+              red in H21; mred.
             }
           * match goal with
             | [ |- match ?ul with | Some _ => _ | None => _ end] =>
@@ -1745,17 +1797,17 @@ Section UpLockInv.
                 with (orqs1:= orqs) (pidx:= obj_idx obj) (rqiu:= rqi);
                 auto; try (repeat (mred; simpl); fail).
               { eapply upLockedInv_msgs_preserved; [eassumption| |].
-                { destruct H15 as [rqUp [down [pidx ?]]]; dest.
+                { destruct H16 as [rqUp [down [pidx ?]]]; dest.
                   disc_rule_conds.
                   solve_q.
                 }
-                { destruct H15 as [rqUp [down [pidx ?]]]; dest.
+                { destruct H16 as [rqUp [down [pidx ?]]]; dest.
                   disc_rule_conds.
                   solve_q.
                 }
               }
-              { intro Hx; rewrite H7 in Hx.
-                elim (rqrsDTree_down_down_not_eq Hsd n H14 Hx).
+              { intro Hx; rewrite H8 in Hx.
+                elim (rqrsDTree_down_down_not_eq Hsd n H15 Hx).
                 reflexivity.
               }
             }
@@ -1800,7 +1852,7 @@ Section UpLockInv.
               { disc_rule_conds; solve_q. }
               { disc_rule_conds; solve_q. }
             }
-            { intro Hx; rewrite H7 in Hx.
+            { intro Hx; rewrite H8 in Hx.
               eapply parentIdxOf_Some in H2; [|apply Hsd].
               dest; congruence.
             }
@@ -1839,22 +1891,22 @@ Section UpLockInv.
             end.
             { dest; split; [assumption|].
               disc_rule_conds.
-              exists rqFrom, rsbTo, (obj_idx obj).
-              xor3_inv3 H21; [dest|red; disc_rule_conds; eexists; intuition].
-              assert (length (findQ rqFrom (enqMP rsbTo rsm (deqMsgs (idsOf mins) msgs))) = 0).
+              exists rqFrom, rsbTo0, (obj_idx obj).
+              xor3_inv3 H20; [dest|red; disc_rule_conds; eexists; intuition].
+              assert (length (findQ rqFrom (enqMP rsbTo0 rsm (deqMsgs (idsOf mins) msgs))) = 0).
               { rewrite H19; solve_q.
                 omega.
               }
-              rewrite H15; clear H15.
+              rewrite H13; clear H13.
 
-              assert (length (rssQ (enqMP rsbTo rsm (deqMsgs (idsOf mins) msgs)) rsbTo) = 1).
+              assert (length (rssQ (enqMP rsbTo0 rsm (deqMsgs (idsOf mins) msgs)) rsbTo0) = 1).
               { rewrite H19; solve_q.
                 rewrite filter_app; simpl.
                 rewrite H9; simpl.
                 rewrite app_length; simpl.
-                unfold rssQ in H12, H18; omega.
+                unfold rssQ in H11, H17; omega.
               }
-              rewrite H15; clear H15.
+              rewrite H13; clear H13.
 
               repeat split; try assumption; try omega.
               { red; mred; simpl; mred.
@@ -1862,11 +1914,11 @@ Section UpLockInv.
               }
               { xsnd; [discriminate|reflexivity|].
                 apply ONoLockTo_not_OLockedTo.
-                red in H20; red; mred.
+                red in H18; red; mred.
                 simpl; split.
                 { mred.
                   destruct (porq@[upRq]) as [rqiu|]; auto.
-                  destruct H20; auto.
+                  destruct H18; auto.
                 }
                 { mred. }
               }
@@ -1875,7 +1927,7 @@ Section UpLockInv.
               destruct H as [rqUp [down [pidx ?]]]; dest.
               exfalso.
               disc_rule_conds.
-              red in H20; mred.
+              red in H18; mred.
             }
           * match goal with
             | [ |- match ?ul with | Some _ => _ | None => _ end] =>
@@ -1893,8 +1945,8 @@ Section UpLockInv.
                   rewrite H19; solve_q.
                 }
               }
-              { intro Hx; rewrite H6 in Hx.
-                elim (rqrsDTree_down_down_not_eq Hsd n H12 Hx).
+              { intro Hx; rewrite H22 in Hx.
+                elim (rqrsDTree_down_down_not_eq Hsd n H11 Hx).
                 reflexivity.
               }
             }
@@ -1943,8 +1995,8 @@ Section UpLockInv.
                 rewrite H19; solve_q.
               }
             }
-            { intro Hx; rewrite H6 in Hx.
-              elim (rqrsDTree_rsUp_down_not_eq Hsd _ _ H7 Hx).
+            { intro Hx; rewrite H22 in Hx.
+              elim (rqrsDTree_rsUp_down_not_eq Hsd _ _ H6 Hx).
               reflexivity.
             }
           * apply upLockFreeInv_orqs_preserved_parent_none_down
@@ -2252,6 +2304,42 @@ Section UpLockInv.
               }
             }
 
+        + match goal with
+          | [ |- match ?ul with | Some _ => _ | None => _ end] =>
+            destruct ul
+          end.
+          * dest; split; [assumption|].
+            apply upLockedInv_orqs_preserved_non_parent_update; auto.
+            apply upLockedInv_msgs_preserved with (msgs1:= msgs);
+              [assumption| |].
+            { disc_rule_conds; solve_q. }
+            { disc_rule_conds; solve_q. }
+          * apply upLockFreeInv_orqs_preserved_non_parent_update; auto.
+            apply upLockFreeInv_msgs_preserved with (msgs1:= msgs);
+              [assumption| |].
+            { destruct H.
+              { remember (rqEdgeUpFrom dtr oidx) as orqUp.
+                destruct orqUp; auto.
+                eapply eq_sym, rqEdgeUpFrom_Some in HeqorqUp; [|eassumption].
+                dest; disc_rule_conds.
+              }
+              { destruct H as [rqUp [down [pidx ?]]]; dest.
+                disc_rule_conds.
+                solve_q.
+              }
+            }
+            { destruct H.
+              { remember (edgeDownTo dtr oidx) as odown.
+                destruct odown; auto.
+                eapply eq_sym, edgeDownTo_Some in Heqodown; [|eassumption].
+                dest; disc_rule_conds.
+              }
+              { destruct H as [rqUp [down [pidx ?]]]; dest.
+                disc_rule_conds.
+                solve_q.
+              }
+            }
+            
       - (** case [RsBackRule] *)
         good_footprint_get (obj_idx obj).
         disc_rule_conds.
@@ -2328,7 +2416,7 @@ Section UpLockInv.
               }
             }
 
-        + rewrite <-H20 in H14.
+        + rewrite <-H20 in H13.
           match goal with
           | [ |- match ?ul with | Some _ => _ | None => _ end] =>
             destruct ul
@@ -2365,7 +2453,7 @@ Section UpLockInv.
               }
             }
 
-        + rewrite <-H20 in H9.
+        + rewrite <-H20 in H8.
           match goal with
           | [ |- match ?ul with | Some _ => _ | None => _ end] =>
             destruct ul

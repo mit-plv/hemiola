@@ -422,6 +422,57 @@ Section RqRsDown.
             }
           }
 
+      + apply InMP_enqMsgs_or in H17; destruct H17.
+        1:{ exfalso.
+            rewrite Forall_forall in H29; specialize (H29 _ H11).
+            simpl in H29; rewrite H8 in H29; discriminate.
+        }
+        specialize (H0 H11).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
+        * eapply obj_same_id_in_system_same in e; eauto; subst.
+          destruct H0; [|dest; exfalso; red in H0; mred].
+          right; split.
+          { destruct (in_dec idx_dec down (idsOf routs)).
+            { red; repeat (simpl; mred).
+              intros; solve_q.
+              destruct H16.
+              apply in_map_iff in i; destruct i as [[down' rqdm] ?]; dest.
+              simpl in *; subst.
+              erewrite findQ_In_NoDup_enqMsgs; try eassumption.
+              rewrite Forall_forall in H29; specialize (H29 _ H24); simpl in H29.
+              rewrite filter_app; simpl.
+              rewrite H29; simpl.
+              destruct (filter _ _); discriminate.
+            }
+            { red; repeat (simpl; mred).
+              intros; disc_rule_conds.
+              elim n; clear n.
+              eapply RqRsDownMatch_rs_rq in H33; [|eassumption].
+              destruct H33 as [cidx [rdown ?]]; dest.
+              disc_rule_conds.
+            }
+          }
+          { apply FirstMP_enqMsgs.
+            eapply rsDown_rqsQ_nil_in_first with (cobj:= cobj); eauto.
+            good_locking_get pobj.
+            red in H20; mred.
+            specialize (H20 _ H3).
+            destruct H20 as [rdown [rsUp ?]]; dest.
+            disc_rule_conds.
+            apply H22.
+          }
+        * destruct H0; [left; red; mred|].
+          dest; right; split.
+          { red in H0; red; mred.
+            destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+            destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+            intros; specialize (H0 _ _ H20 H21 H22).
+            disc_rule_conds.
+            assert (Some (obj_idx pobj) <> Some (obj_idx obj)) by congruence.
+            solve_q; assumption.
+          }
+          { apply FirstMP_enqMsgs; assumption. }
+          
       + apply InMP_enqMsgs_or in H30; destruct H30.
         1:{ exfalso.
             rewrite Forall_forall in H29; specialize (H29 _ H2).
@@ -645,15 +696,15 @@ Section RqRsDown.
         * dest; subst; disc_rule_conds.
           eapply obj_same_id_in_system_same in H20; eauto; subst.
           left; red; repeat (simpl; mred).
-        * apply InMP_deqMsgs in H4.
-          specialize (H0 H4).
+        * apply InMP_deqMsgs in H3.
+          specialize (H0 H3).
           destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             left; red; repeat (simpl; mred).
           }
           { destruct H0.
             { left; red; repeat (simpl; mred). }
-            { rewrite <-H26 in H29.
+            { rewrite <-H26 in H28.
               dest; right; split.
               { red in H0; red; mred.
                 destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
@@ -673,19 +724,19 @@ Section RqRsDown.
             
       + apply InMP_enqMP_or in H24; destruct H24;
           [dest; subst; solve_midx_false|].
-        apply InMP_deqMsgs in H24.
-        specialize (H0 H24).
+        apply InMP_deqMsgs in H19.
+        specialize (H0 H19).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           left; red; repeat (simpl; mred).
         * destruct H0.
           { left; red; repeat (simpl; mred). }
-          { rewrite <-H26 in H19.
+          { rewrite <-H26 in H4.
             dest; right; split.
             { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H0 _ _ H28 H29 H30).
+              intros; specialize (H0 _ _ H25 H28 H30).
               disc_rule_conds.
               solve_q; assumption.
             }
