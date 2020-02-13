@@ -10,6 +10,8 @@ Makefile.coq.msisv.conf
 *.glob
 *.v.d
 *.vo
+*.vok
+*.vos
 .coqdeps.d
 .lia.cache
 *~
