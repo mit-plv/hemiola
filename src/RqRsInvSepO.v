@@ -86,6 +86,10 @@ Section RqUpStart.
         eexists; red.
         do 2 eexists; eauto.
       + right; disc_NonRqUpL; subst.
+        eapply RqRsDownMatch_rq_rs in H36; [|left; reflexivity].
+        destruct H36 as [rcidx [rsUp ?]]; dest.
+        solve_midx_false.
+      + right; disc_NonRqUpL; subst.
         eapply RqRsDownMatch_rq_rs in H20; [|left; reflexivity].
         destruct H20 as [rcidx [rsUp ?]]; dest.
         solve_midx_false.
@@ -230,6 +234,12 @@ Section RqUpStart.
         destruct H14 as [rsUp [down [pidx ?]]]; dest.
         elim (H3 pidx).
         do 2 eexists; eauto.
+      + apply Forall_forall; intros [midx msg] ?.
+        apply in_map with (f:= idOf) in H4; simpl in H4.
+        disc_NonRqUpL.
+        eapply RqRsDownMatch_rq_rs in H36; [|eassumption].
+        destruct H36 as [rcidx [rsUp ?]]; dest.
+        solve_midx_false.
       + apply Forall_forall; intros [midx msg] ?.
         apply in_map with (f:= idOf) in H5; simpl in H5.
         disc_NonRqUpL.
@@ -589,6 +599,7 @@ Section Separation.
       + constructor.
       + constructor; [|constructor].
         left; eauto.
+      + constructor.
       + constructor; [|constructor].
         left; eauto.
       + constructor; [|constructor].
@@ -599,17 +610,17 @@ Section Separation.
         right; right; eauto.
       + constructor; [|constructor].
         right; right; eauto.
-      + rewrite <-H29 in H23.
+      + rewrite <-H29 in H22.
         apply Forall_forall; intros [midx msg] ?.
-        apply in_map with (f:= idOf) in H7.
-        eapply RqRsDownMatch_rs_rq in H23; [|eassumption].
-        destruct H23 as [cidx [down ?]]; dest.
+        apply in_map with (f:= idOf) in H6.
+        eapply RqRsDownMatch_rs_rq in H22; [|eassumption].
+        destruct H22 as [cidx [down ?]]; dest.
         right; left; eauto.
-      + rewrite <-H29 in H8.
+      + rewrite <-H29 in H7.
         apply Forall_forall; intros [midx msg] ?.
-        apply in_map with (f:= idOf) in H20.
-        eapply RqRsDownMatch_rs_rq in H8; [|eassumption].
-        destruct H8 as [cidx [down ?]]; dest.
+        apply in_map with (f:= idOf) in H8.
+        eapply RqRsDownMatch_rs_rq in H7; [|eassumption].
+        destruct H7 as [cidx [down ?]]; dest.
         right; left; eauto.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
@@ -684,6 +695,11 @@ Section Separation.
         left; eauto.
       + constructor; [|constructor].
         left; eauto.
+      + apply Forall_forall; intros [midx msg] ?.
+        apply in_map with (f:= idOf) in H3.
+        eapply RqRsDownMatch_rq_rs in H36; [|eassumption].
+        destruct H36 as [cidx [rsUp ?]]; dest.
+        right; right; eauto.
       + apply Forall_forall; intros [midx msg] ?.
         apply in_map with (f:= idOf) in H5.
         eapply RqRsDownMatch_rq_rs in H20; [|eassumption].
@@ -917,17 +933,17 @@ Section Separation.
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    In rcidx (subtreeIndsOf dtr cidx)).
-        { rewrite <-H33 in H27.
-          pose proof (RqRsDownMatch_rs_not_nil H27).
+        { rewrite <-H33 in H26.
+          pose proof (RqRsDownMatch_rs_not_nil H26).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H27; [|left; reflexivity].
-          destruct H27 as [rcidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H26; [|left; reflexivity].
+          destruct H26 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H7; repeat disc_RqRsMsgFrom.
           do 3 eexists.
           repeat ssplit; [left; reflexivity| | |]; try eassumption.
         }
-        destruct H11 as [rcidx [rsUp [rsum ?]]]; dest.
+        destruct H10 as [rcidx [rsUp [rsum ?]]]; dest.
         destruct H.
         eapply inside_parent_in; try eapply H; try eassumption.
         intro Hx; subst.
@@ -937,17 +953,17 @@ Section Separation.
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    In rcidx (subtreeIndsOf dtr cidx)).
-        { rewrite <-H33 in H12.
-          pose proof (RqRsDownMatch_rs_not_nil H12).
+        { rewrite <-H33 in H11.
+          pose proof (RqRsDownMatch_rs_not_nil H11).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H12; [|left; reflexivity].
-          destruct H12 as [rcidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H11; [|left; reflexivity].
+          destruct H11 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H7; repeat disc_RqRsMsgFrom.
           do 3 eexists.
           repeat ssplit; [left; reflexivity| | |]; try eassumption.
         }
-        destruct H24 as [rcidx [rsUp [rsum ?]]]; dest.
+        destruct H12 as [rcidx [rsUp [rsum ?]]]; dest.
         destruct H.
         eapply inside_parent_in; try eapply H; try eassumption.
         intro Hx; subst.
@@ -1023,37 +1039,37 @@ Section Separation.
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    ~ In rcidx (subtreeIndsOf dtr soidx)).
-        { rewrite <-H32 in H26.
-          pose proof (RqRsDownMatch_rs_not_nil H26).
+        { rewrite <-H32 in H25.
+          pose proof (RqRsDownMatch_rs_not_nil H25).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H26; [|left; reflexivity].
-          destruct H26 as [rcidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity].
+          destruct H25 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H6; repeat disc_RqRsMsgFrom.
           do 3 eexists.
           repeat ssplit; [left; reflexivity| | |]; try eassumption.
         }
-        destruct H10 as [rcidx [rsUp [rsum ?]]]; dest.
+        destruct H9 as [rcidx [rsUp [rsum ?]]]; dest.
         destruct H.
-        eapply outside_parent_out in H31; try eassumption.
+        eapply outside_parent_out in H30; try eassumption.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    ~ In rcidx (subtreeIndsOf dtr soidx)).
-        { rewrite <-H32 in H11.
-          pose proof (RqRsDownMatch_rs_not_nil H11).
+        { rewrite <-H32 in H10.
+          pose proof (RqRsDownMatch_rs_not_nil H10).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H11; [|left; reflexivity].
-          destruct H11 as [rcidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+          destruct H10 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H6; repeat disc_RqRsMsgFrom.
           do 3 eexists.
           repeat ssplit; [left; reflexivity| | |]; try eassumption.
         }
-        destruct H23 as [rcidx [rsUp [rsum ?]]]; dest.
+        destruct H11 as [rcidx [rsUp [rsum ?]]]; dest.
         destruct H.
-        eapply outside_parent_out in H28; try eassumption.
+        eapply outside_parent_out in H26; try eassumption.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.

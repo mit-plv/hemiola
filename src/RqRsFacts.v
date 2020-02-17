@@ -689,21 +689,31 @@ Section RqRsDTree.
     simpl in H0; discriminate.
   Qed.
 
-  Lemma footprintUpDownOk_rs_eq:
+  Lemma footprintUpDownOk_rs_eq_rss:
+    forall `{oifc: OStateIfc} (sys: System) oidx rqTos
+           rrFrom1 rrFrom2 rssFrom1 rssFrom2,
+      FootprintUpDownOk dtr sys oidx rrFrom1 rqTos rssFrom1 ->
+      FootprintUpDownOk dtr sys oidx rrFrom2 rqTos rssFrom2 ->
+      rssFrom1 = rssFrom2.
+  Proof.
+    unfold FootprintUpDownOk; intros.
+    destruct rrFrom1 as [[rqFrom1 rsbTo1]|], rrFrom2 as [[rqFrom2 rsbTo2]|].
+    all: dest; subst; eapply RqRsDownMatch_rs_eq; eauto.
+  Qed.
+
+  Lemma footprintUpDownOk_rs_eq_back:
     forall `{oifc: OStateIfc} (sys: System) oidx rqFrom rqTos
            rssFrom1 rsbTo1 rssFrom2 rsbTo2,
       FootprintUpDownOk dtr sys oidx (Some (rqFrom, rsbTo1)) rqTos rssFrom1 ->
       FootprintUpDownOk dtr sys oidx (Some (rqFrom, rsbTo2)) rqTos rssFrom2 ->
-      rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.
+      rsbTo1 = rsbTo2.
   Proof.
     unfold FootprintUpDownOk; intros.
     destruct H as [cidx1 [cobj1 ?]]; destruct H0 as [cidx2 [cobj2 ?]]; dest; subst.
-    split.
-    - eapply RqRsDownMatch_rs_eq; eauto.
-    - destruct (idx_dec (obj_idx cobj1) (obj_idx cobj2)).
-      + rewrite e in H9; rewrite H9 in H4; inv H4; reflexivity.
-      + exfalso.
-        elim (rqrsDTree_rqUp_rqUp_not_eq n H8 H3); auto.
+    destruct (idx_dec (obj_idx cobj1) (obj_idx cobj2)).
+    - rewrite e in H9; rewrite H9 in H4; inv H4; reflexivity.
+    - exfalso.
+      elim (rqrsDTree_rqUp_rqUp_not_eq n H8 H3); auto.
   Qed.
 
   Lemma footprintDownDownOk_rs_eq:
