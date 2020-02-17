@@ -73,18 +73,18 @@ Section InsideTree.
       disc_rule_conds.
       + destruct H2; disc_rule_conds.
       + destruct H2; disc_rule_conds.
-      + rewrite <-H32 in H26.
+      + rewrite <-H32 in H25.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
-        eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
-        destruct H26 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H25; [|eassumption].
+        destruct H25 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
         destruct H3; subst.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.
         * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
-      + rewrite <-H32 in H11.
+      + rewrite <-H32 in H10.
         apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
-        eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
-        destruct H11 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
+        destruct H10 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
         destruct H3; subst.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.

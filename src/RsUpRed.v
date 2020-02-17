@@ -66,47 +66,47 @@ Section RsUpReduction.
       + split.
         { disc_rule_conds.
           { split.
-            { rewrite <-H33 in H29.
+            { rewrite <-H33 in H27.
               assert (exists rsUp, In rsUp (idsOf rsUps)).
-              { apply RqRsDownMatch_rs_not_nil in H29.
+              { apply RqRsDownMatch_rs_not_nil in H27.
                 destruct (idsOf rsUps); [exfalso; auto|].
                 eexists; left; reflexivity.
               }
-              destruct H14 as [rsUp ?].
-              rewrite Forall_forall in H7; specialize (H7 _ H14).
+              destruct H11 as [rsUp ?].
+              rewrite Forall_forall in H7; specialize (H7 _ H11).
               destruct H7 as [cidx ?]; dest.
-              eapply RqRsDownMatch_rs_rq in H29; [|eassumption].
-              destruct H29 as [rcidx [down ?]]; dest.
+              eapply RqRsDownMatch_rs_rq in H27; [|eassumption].
+              destruct H27 as [rcidx [down ?]]; dest.
               repeat disc_rule_minds.
               reflexivity.
             }
-            { rewrite <-H33 in H29.
+            { rewrite <-H33 in H27.
               apply Forall_forall; intros rsUp ?.
-              apply in_map with (f:= idOf) in H14.
-              eapply RqRsDownMatch_rs_rq in H29; [|eassumption].
-              destruct H29 as [cidx [down ?]]; dest; eauto.
+              apply in_map with (f:= idOf) in H11.
+              eapply RqRsDownMatch_rs_rq in H27; [|eassumption].
+              destruct H27 as [cidx [down ?]]; dest; eauto.
             }
           }
           { split.
-            { rewrite <-H33 in H21.
+            { rewrite <-H33 in H14.
               assert (exists rsUp, In rsUp (idsOf rsUps)).
-              { apply RqRsDownMatch_rs_not_nil in H21.
+              { apply RqRsDownMatch_rs_not_nil in H14.
                 destruct (idsOf rsUps); [exfalso; auto|].
                 eexists; left; reflexivity.
               }
-              destruct H26 as [rsUp ?].
-              rewrite Forall_forall in H7; specialize (H7 _ H26).
+              destruct H21 as [rsUp ?].
+              rewrite Forall_forall in H7; specialize (H7 _ H21).
               destruct H7 as [cidx ?]; dest.
-              eapply RqRsDownMatch_rs_rq in H21; [|eassumption].
-              destruct H21 as [rcidx [down ?]]; dest.
+              eapply RqRsDownMatch_rs_rq in H14; [|eassumption].
+              destruct H14 as [rcidx [down ?]]; dest.
               repeat disc_rule_minds.
               reflexivity.
             }
-            { rewrite <-H33 in H21.
+            { rewrite <-H33 in H14.
               apply Forall_forall; intros rsUp ?.
-              apply in_map with (f:= idOf) in H26.
-              eapply RqRsDownMatch_rs_rq in H21; [|eassumption].
-              destruct H21 as [cidx [down ?]]; dest; eauto.
+              apply in_map with (f:= idOf) in H21.
+              eapply RqRsDownMatch_rs_rq in H14; [|eassumption].
+              destruct H14 as [cidx [down ?]]; dest; eauto.
             }
           }
         }
@@ -276,11 +276,11 @@ Section RsUpReduction.
       good_footprint_get (obj_idx obj1).
       disc_rule_conds.
       
-      + rewrite <-H45 in H22.
+      + rewrite <-H45 in H21.
         good_rqrs_rule_cases rule0.
         * disc_rule_conds; [repeat split; apply DisjList_nil_1|].
           destruct (idx_dec cidx (obj_idx upCObj));
-            [subst; rewrite H59 in H17; elim n; inv H17; reflexivity|].
+            [subst; rewrite H59 in H15; elim n; inv H15; reflexivity|].
           split; [|split]; [|assumption|]; solve_midx_disj.
         * disc_rule_conds.
           split; [|split]; [|assumption|]; solve_midx_disj.
@@ -289,12 +289,13 @@ Section RsUpReduction.
           disc_rule_conds.
           { split; [|split]; [apply DisjList_nil_1|assumption|solve_midx_disj]. } 
           { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
           { split; [|split]; [|assumption|]; solve_midx_disj. }
           { split; [|split]; [|assumption|]; solve_midx_disj. }
         * good_footprint_get (obj_idx obj0).
           disc_rule_conds.
           { destruct (idx_dec cidx (obj_idx upCObj));
-              [subst; rewrite H15 in H17; elim n; inv H17; reflexivity|].
+              [subst; rewrite H14 in H15; elim n; inv H15; reflexivity|].
             split; [|split]; [|assumption|]; solve_midx_disj.
           }
           { split; [|split];
@@ -303,7 +304,7 @@ Section RsUpReduction.
           { split; [|split]; [|assumption|].
             { rewrite H55; eapply RqRsDownMatch_rss_disj; eauto. }
             { destruct (idx_dec (obj_idx upCObj0) (obj_idx upCObj));
-                [rewrite e in *; rewrite H43 in H17; elim n; inv H17; reflexivity|].
+                [rewrite e in *; rewrite H39 in H15; elim n; inv H15; reflexivity|].
               solve_midx_disj.
             }
           }
@@ -317,7 +318,7 @@ Section RsUpReduction.
             by (intro Hx; inv Hx; auto).
           split; [|split]; [|assumption|]; solve_midx_disj.
 
-      + rewrite <-H45 in H17.
+      + rewrite <-H45 in H15.
         good_rqrs_rule_cases rule0.
         * disc_rule_conds.
           { split; [|split]; apply DisjList_nil_1. }
@@ -327,6 +328,7 @@ Section RsUpReduction.
         * disc_rule_conds.
           { split; [|split]; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
           { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
           { split; [|split]; [|assumption|]; solve_midx_disj. }
           { split; [|split]; [|assumption|]; solve_midx_disj. }
         * good_footprint_get (obj_idx obj0).

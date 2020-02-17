@@ -154,9 +154,12 @@ Ltac disc_footprints_ok :=
   | [H: None = (?rrFrom) >>= _ |- _] =>
     destruct rrFrom; [discriminate|]; simpl in *
   | [H: (?rrFrom) >>=[False] _ |- _] =>
-    let rqFrom := fresh "rqFrom" in
-    let rsbTo := fresh "rsbTo" in
-    destruct rrFrom as [[rqFrom rsbTo]|]; [|exfalso; auto]; simpl in *; dest
+    match type of rrFrom with
+    | option (IdxT * IdxT) =>
+      let rqFrom := fresh "rqFrom" in
+      let rsbTo := fresh "rsbTo" in
+      destruct rrFrom as [[rqFrom rsbTo]|]; [|exfalso; auto]; simpl in *; dest
+    end
 
   | [H: FootprintUpOk _ _ (Some _) _ _ |- _] =>
     red in H; simpl in H;
