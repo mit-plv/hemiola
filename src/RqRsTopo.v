@@ -484,7 +484,7 @@ Hint Unfold RqAccepting RsAccepting RqReleasing RsReleasing
 
 Hint Unfold RqToUpRule RsToUpRule : RuleConds.
 
-Hint Unfold getRq addRq removeRq : RuleConds.
+Hint Unfold getRq addRq addRqS removeRq : RuleConds.
 
 Global Opaque upRq downRq.
 

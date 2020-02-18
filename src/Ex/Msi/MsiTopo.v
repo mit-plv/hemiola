@@ -493,14 +493,10 @@ Section System.
         all: try (exfalso_RsToUpRule; fail).
 
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_const; try solve_msi.
-          unfold addRqS in H1; mred.
-        }
+        { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_const; try solve_msi.
-          unfold addRqS in H1; mred.
-        }
+        { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         
       + simpl in H2; apply in_app_or in H2; destruct H2;
@@ -511,14 +507,10 @@ Section System.
         all: try (exfalso_RsToUpRule; fail).
         
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_const; try intuition solve_msi.
-          unfold addRqS in H1; mred.
-        }
+        { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_const; try intuition solve_msi.
-          unfold addRqS in H1; mred.
-        }
+        { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
 
     - (** L1 cache *)
@@ -542,21 +534,13 @@ Section System.
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
-        { clear; solve_rule_conds_const; try solve_msi.
-          unfold addRqS in H1; mred.
-        }
-        { clear; solve_rule_conds_const; try solve_msi.
-          unfold addRqS in H1; mred.
-        }
+        { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_const; try solve_msi. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
-        { clear; solve_rule_conds_const; try solve_msi.
-          unfold addRqS in H1; mred.
-        }
-        { clear; solve_rule_conds_const; try solve_msi.
-          unfold addRqS in H1; mred.
-        }
+        { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_const; try solve_msi. }
 
         (* END_SKIP_PROOF_OFF *)
   Qed.

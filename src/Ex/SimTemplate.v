@@ -343,9 +343,9 @@ Ltac solve_sim_ext_mp :=
        | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
          apply SimExtMP_orqs with (orqs1:= m);
          [|apply Forall_forall; intros; mred; fail]
-       | [ |- SimExtMP _ _ (_ +[_ <- addRqS _ _ _]) _] =>
+       | [ |- SimExtMP _ _ (?m +[?k <- ?v]) _ ] =>
          eapply SimExtMP_impl_silent_locked;
-         [|eassumption|eassumption|unfold addRqS; mred]
+         [|eassumption|eassumption|mred; fail]
        | [H1: ?porq@[upRq] = Some ?rqi, H2: rqi_msg ?rqi = None
           |- SimExtMP _ _ (_ +[_ <- ?porq -[upRq]]) _] =>
          eapply SimExtMP_impl_silent_unlocked; eauto; mred; fail

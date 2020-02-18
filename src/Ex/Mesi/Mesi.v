@@ -506,11 +506,9 @@ Section System.
                              <| mesiDownRsI; O |>)).
 
       Definition l1InvRqUpUp: Rule :=
-        rule.rqu[2~>0]
+        rule.rqsu[2~>0]
         :me oidx
-        :requires
-           (fun ost mins =>
-              ost#[owned] = false /\ mesiNP < ost#[status] < mesiM)
+        :requires (fun ost => ost#[owned] = false /\ mesiNP < ost#[status] < mesiM)
         :transition
            (ost --> <| mesiInvRq; O |>).
 
@@ -523,10 +521,9 @@ Section System.
        * directory status.
        *)
       Definition l1InvRqUpUpWB: Rule :=
-        rule.rqu[2~>1]
+        rule.rqsu[2~>1]
         :me oidx
-        :requires
-           (fun ost mins => mesiNP < ost#[status])
+        :requires (fun ost => mesiNP < ost#[status])
         :transition
            (ost --> <| mesiInvWRq; ost#[val] |>).
 
@@ -819,23 +816,22 @@ Section System.
        * even if the status is S.
        *)
       Definition liInvRqUpUp: Rule :=
-        rule.rqu[2~>0]
+        rule.rqsu[2~>0]
         :me oidx
         :requires
-           (fun ost mins =>
-              ost#[owned] = false /\
-              mesiNP < ost#[status] < mesiM /\
-              ost#[dir].(dir_st) = mesiI)
+           (fun ost => ost#[owned] = false /\
+                       mesiNP < ost#[status] < mesiM /\
+                       ost#[dir].(dir_st) = mesiI)
         :transition (ost --> <| mesiInvRq; O |>).
 
       (** NOTE: ditto [l1InvRqUpUpWB]; a cache controller should not use this
        * rule when [owned = false]; it's meaningless.
        *)
       Definition liInvRqUpUpWB: Rule :=
-        rule.rqu[2~>1]
+        rule.rqsu[2~>1]
         :me oidx
         :requires
-           (fun ost mins =>
+           (fun ost =>
               ost#[dir].(dir_st) = mesiI /\
               ((ost#[owned] = true /\ mesiI < ost#[status]) \/
                (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE)))

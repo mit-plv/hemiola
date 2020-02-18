@@ -74,11 +74,11 @@ Section Template.
                               [(rqUpFrom oidx, rqMsg out)] }}))).
 
   Definition rqUpUpRuleS (oidx: IdxT)
-             (prec: OState -> list (Id Msg) -> Prop)
+             (prec: OState -> Prop)
              (trs: OState -> Miv): Rule :=
     rule[ridx]
     :requires (MsgsFrom nil /\ RqAccepting /\ UpLockFree /\
-               fun ost _ mins => prec ost mins)
+               fun ost _ _ => prec ost)
     :transition
        (do (st --> (out ::= trs st.(ost);
                     return {{ st.(ost),
@@ -111,6 +111,27 @@ Section Template.
                           map (fun cidx => (downTo cidx, rqMsg (snd nst)))
                               (fst nst) }}))).
 
+  Definition RqUpDownSoundS (oidx: IdxT)
+             (prec: OState -> Prop)
+             (trs: OState -> list IdxT * Miv): Prop :=
+    forall ost,
+      prec ost ->
+      fst (trs ost) <> nil /\
+      Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost)).
+
+  Definition rqUpDownRuleS (oidx: IdxT) (prec: OState -> Prop)
+             (trs: OState -> list IdxT * Miv): Rule :=
+    rule[ridx]
+    :requires (MsgsFrom nil /\ RqAccepting /\ DownLockFree /\
+               fun ost _ _ => prec ost)
+    :transition
+       (do (st -->
+               (nst ::= trs st.(ost);
+                return {{ st.(ost),
+                          addRqS st.(orq) downRq (map rsUpFrom (fst nst)),
+                          map (fun cidx => (downTo cidx, rqMsg (snd nst)))
+                              (fst nst) }}))).
+  
   Definition RqDownDownSound (oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Msg -> list IdxT * Miv): Prop :=
@@ -301,10 +322,12 @@ Notation "'rule.immu' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':
 
 Notation "'rule.rquu' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':me' ME ':requires' PREC ':transition' TRS" :=
   (rqUpUpRule RIDX MSGID FROM ME PREC TRS%trs) (at level 5).
-Notation "'rule.rqu' '[' RIDX ']' ':me' ME ':requires' PREC ':transition' TRS" :=
+Notation "'rule.rqsu' '[' RIDX ']' ':me' ME ':requires' PREC ':transition' TRS" :=
   (rqUpUpRuleS RIDX ME PREC TRS%trs) (at level 5).
 Notation "'rule.rqud' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':me' ME ':requires' PREC ':transition' TRS" :=
   (rqUpDownRule RIDX MSGID FROM ME PREC TRS%trs) (at level 5).
+Notation "'rule.rqsd' '[' RIDX ']' ':me' ME ':requires' PREC ':transition' TRS" :=
+  (rqUpDownRuleS RIDX ME PREC TRS%trs) (at level 5).
 Notation "'rule.rqdd' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':transition' TRS" :=
   (rqDownDownRule RIDX MSGID ME PREC TRS%trs) (at level 5).
 
@@ -388,11 +411,10 @@ Section Facts.
     unfold rqUpUpRuleS; intros; split.
     - repeat split; solve_rule_conds_ex.
     - left; repeat split; solve_rule_conds_ex.
-      + unfold addRqS; mred.
-      + left; solve_rule_conds_ex.
-        * destruct rins; [reflexivity|discriminate].
-        * apply Hdtr in H; dest; assumption.
-        * apply Hdtr in H; dest; assumption.
+      left; solve_rule_conds_ex.
+      + destruct rins; [reflexivity|discriminate].
+      + apply Hdtr in H; dest; assumption.
+      + apply Hdtr in H; dest; assumption.
   Qed.
 
   Lemma rqUpDownRule_RqFwdRule:
@@ -418,6 +440,7 @@ Section Facts.
       + solve_rule_conds_ex.
       + solve_rule_conds_ex.
       + solve_rule_conds_ex.
+        right; solve_rule_conds_ex.
         * apply Hdtr in H0; dest; assumption.
         * apply Hdtr in H0; dest; assumption.
         * specialize (H1 _ _ H4); dest.
@@ -434,6 +457,40 @@ Section Facts.
             specialize (H _ _ H2); dest.
             exists cidx; repeat split; try assumption.
             intro Hx; subst; auto.
+          }
+          { eapply IHcinds; eauto. }
+  Qed.
+
+  Lemma rqUpDownRuleS_RqFwdRule:
+    forall sys oidx ridx (prec: OState -> Prop)
+           (trs: OState -> list IdxT * Miv),
+      RqUpDownSoundS dtr oidx prec trs ->
+      RqFwdRule dtr sys oidx (rqUpDownRuleS ridx oidx prec trs).
+  Proof.
+    unfold rqUpDownRuleS; intros; split.
+    - repeat split; solve_rule_conds_ex.
+      apply Forall_forall; intros msg ?.
+      apply in_map_iff in H4.
+      destruct H4 as [midx ?]; dest; subst; reflexivity.
+    - right; left; repeat red; repeat ssplit.
+      + solve_rule_conds_ex.
+      + solve_rule_conds_ex.
+      + solve_rule_conds_ex.
+      + solve_rule_conds_ex.
+        left; solve_rule_conds_ex.
+        * destruct rins; [reflexivity|discriminate].
+        * specialize (H _ H3); dest.
+          eapply H.
+          destruct (fst (trs nost)); [auto|discriminate].
+        * unfold idsOf; repeat rewrite map_length; reflexivity.
+        * specialize (H _ H3); dest; simpl in *.
+          apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
+          clear -Hdtr H4 H5.
+          induction (fst (trs nost)) as [|cidx cinds]; [exfalso; auto|].
+          inv H4; inv H5; simpl in *; dest.
+          { inv H; destruct Hdtr as [[? ?] ?].
+            specialize (H _ _ H1); dest.
+            exists cidx; repeat split; try assumption.
           }
           { eapply IHcinds; eauto. }
   Qed.

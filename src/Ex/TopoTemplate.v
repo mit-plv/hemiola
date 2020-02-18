@@ -2214,8 +2214,10 @@ Ltac solve_chn_not_in :=
 Ltac disc_responses_from :=
   repeat
     match goal with
-    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: _ = ?rss |- _] =>
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = ?rss |- _] =>
       rewrite <-Hrss in Hrr
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: ?rss = [_] |- _] =>
+      rewrite Hrss in Hrr
     end;
   repeat
     match goal with
