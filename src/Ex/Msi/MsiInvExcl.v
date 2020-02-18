@@ -2018,8 +2018,7 @@ Section InvExcl.
 
   Ltac pick_rsUp_single :=
     match goal with
-    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = ?rss |- _] =>
-      rewrite <-Hrss in Hrr;
+    | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
       let Hrr0 := fresh "H" in
       pose proof Hrr as Hrr0;
       eapply RqRsDownMatch_rs_rq in Hrr0; [|left; reflexivity];
@@ -2029,11 +2028,6 @@ Section InvExcl.
     end.
 
   Ltac pick_rsUps_one :=
-    repeat
-      match goal with
-      | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: _ = ?rss |- _] =>
-        rewrite <-Hrss in Hrr
-      end;
     repeat
       match goal with
       | [Hrr: RqRsDownMatch _ _ _ (idsOf ?ins) _ |- _] =>
@@ -2169,7 +2163,7 @@ Section InvExcl.
         derive_footprint_info_basis oidx;
           [|derive_child_chns x; solve_midx_false].
         disc_responses_from.
-        derive_child_chns cidx.
+        derive_child_chns upCIdx.
         disc_rule_conds_ex.
         exfalso_InvTrs_init.
       }
@@ -2517,7 +2511,6 @@ Section InvExcl.
          try exact Hr; eauto
         |repeat constructor;
          try (red; simpl; intros; intuition discriminate)]
-      | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hr: _ = ?rss |- _] => rewrite <-Hr in Hrr
       | [Hr: Reachable _ _ ?st,
              Hs: steps _ _ ?st ?hst _,
                  Ha: Atomic _ _ ?hst _ ?eouts,
@@ -3290,7 +3283,7 @@ Section InvExcl.
       derive_footprint_info_basis oidx.
       2: {
         exfalso.
-        eapply edgeDownTo_Some in H26; eauto.
+        eapply edgeDownTo_Some in H7; eauto.
         dest; derive_child_chns oidx.
         disc_rule_conds_ex.
       }
@@ -3400,11 +3393,10 @@ Section InvExcl.
       derive_footprint_info_basis oidx.
       2: {
         exfalso.
-        eapply edgeDownTo_Some in H25; eauto.
+        eapply edgeDownTo_Some in H7; eauto.
         dest; derive_child_chns oidx.
         disc_rule_conds_ex.
       }
-      rewrite <-H7 in *.
 
       (** 1) Each RsUp message is from a child *)
       assert (Forall
@@ -4816,7 +4808,6 @@ Section InvExcl.
       disc_rule_conds_ex.
       disc_MsiDownLockInv oidx Hdlinv.
       derive_footprint_info_basis oidx.
-      rewrite <-H13 in *.
 
       (** 1) Each RsUp message is from a child *)
       assert (Forall
@@ -5193,7 +5184,6 @@ Section InvExcl.
       disc_rule_conds_ex.
       disc_MsiDownLockInv oidx Hdlinv.
       derive_footprint_info_basis oidx; [solve_midx_false|].
-      rewrite <-H13 in *.
 
       (** 1) Each RsUp message is from a child *)
       assert (Forall
@@ -5241,7 +5231,7 @@ Section InvExcl.
                      (oss +[oidx <- nost])
                      (enqMP (rsUpFrom oidx) rsTo (deqMsgs (idsOf rins) msgs))) as Hcsi.
       { intros.
-        specialize (Hcs _ H29); find_if_inside.
+        specialize (Hcs _ H13); find_if_inside.
         { apply in_map_iff in i; destruct i as [[midx rs] ?]; simpl in *; dest; subst.
           rewrite Forall_forall in H14; specialize (H14 _ H32).
           rewrite Forall_forall in H23; specialize (H23 _ H32); simpl in *.
@@ -5273,7 +5263,7 @@ Section InvExcl.
         { disc_InvExcl oidx.
           specialize (H32 (tl_In _ _ H8)).
           move H32 at bottom.
-          specialize (H32 _ H29); destruct H32 as [? _].
+          specialize (H32 _ H13); destruct H32 as [? _].
           specialize (H32 Hcs).
           solve_ObjsInvalid_trivial.
           eapply ObjsInvalid_this_rsUps_deqMsgs_silent with (pidx:= oidx); eauto.
@@ -5294,8 +5284,8 @@ Section InvExcl.
       
       split.
       { solve_AtomicInv_rsUps_rsUp.
-        { simpl in *; inv H29; mred; simpl; intuition solve_msi. }
-        { simpl in *; inv H29; apply Hrc. }
+        { simpl in *; inv H13; mred; simpl; intuition solve_msi. }
+        { simpl in *; inv H13; apply Hrc. }
       }
 
       { case_InvExcl_me_others.
@@ -5311,7 +5301,7 @@ Section InvExcl.
           }
         }
 
-        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H29 into Hpmcf'.
+        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H13 into Hpmcf'.
           disc_MsgConflictsInv oidx.
 
           pick_rsUps_one.
