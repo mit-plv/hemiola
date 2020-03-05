@@ -100,7 +100,7 @@ Section ORqs.
    *)
   Record RqInfo (MsgT: Type) :=
     { rqi_msg: option MsgT;
-      rqi_minds_rss: list IdxT;
+      rqi_rss: list (IdxT * option MsgT);
       rqi_midx_rsb: option IdxT
     }.
 
@@ -113,13 +113,13 @@ Section ORqs.
   Definition addRq {MsgT} (orq: ORq MsgT) (rqty: IdxT)
              (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
     orq+[rqty <- {| rqi_msg := Some msg;
-                    rqi_minds_rss := mrss;
+                    rqi_rss := map (fun rs => (rs, None)) mrss;
                     rqi_midx_rsb := Some mrsb |}].
 
   Definition addRqS {MsgT} (orq: ORq MsgT) (rqty: IdxT)
              (mrss: list IdxT): ORq MsgT :=
     orq+[rqty <- {| rqi_msg := None;
-                    rqi_minds_rss := mrss;
+                    rqi_rss := map (fun rs => (rs, None)) mrss;
                     rqi_midx_rsb := None |}].
 
   Definition getRq {MsgT} (orq: ORq MsgT) (rqty: IdxT): option (RqInfo MsgT) :=

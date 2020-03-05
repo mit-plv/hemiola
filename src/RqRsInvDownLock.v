@@ -67,7 +67,7 @@ Section DownLockInv.
         exists down rsUp,
           edgeDownTo dtr cidx = Some down /\ 
           rsEdgeUpFrom dtr cidx = Some rsUp /\
-          if in_dec idx_dec rsUp rqi.(rqi_minds_rss)
+          if in_dec idx_dec rsUp (map fst rqi.(rqi_rss))
           then DownLockedChildInv cidx down rsUp
           else DownLockFreeChildInv cidx down rsUp.
 
@@ -76,7 +76,8 @@ Section DownLockInv.
         (fun rs =>
            exists cidx,
              parentIdxOf dtr cidx = Some oidx /\
-             rsEdgeUpFrom dtr cidx = Some rs) rqid.(rqi_minds_rss).
+             rsEdgeUpFrom dtr cidx = Some rs)
+        (map fst rqid.(rqi_rss)).
 
     Definition DownLockInvORq (oidx: IdxT) (orq: ORq Msg) :=
       match orq@[downRq] with
@@ -631,10 +632,10 @@ Section DownLockInv.
       edgeDownTo dtr cidx = Some down ->
       rsEdgeUpFrom dtr cidx = Some rsUp ->
       DownLockFreeChildInv orqs msgs cidx down rsUp ->
-      In rsUp (rqi_minds_rss rqi) ->      
+      In rsUp (map fst (rqi_rss rqi)) ->      
       NoDup (idsOf mouts) ->
       Forall (fun idm => msg_type (valOf idm) = MRq) mouts ->
-      RqRsDownMatch dtr oidx (idsOf mouts) (rqi_minds_rss rqi) P ->
+      RqRsDownMatch dtr oidx (idsOf mouts) (rqi_rss rqi) P ->
       DownLockedChildInv (orqs +[oidx <- porq +[ downRq <- rqi]])
                          (enqMsgs mouts msgs) cidx down rsUp.
   Proof.
@@ -676,7 +677,7 @@ Section DownLockInv.
   Lemma downLockedInv_requested:
     forall orqs msgs oidx mouts P rqi porq,
       DownLockFreeInv orqs msgs oidx ->
-      RqRsDownMatch dtr oidx (idsOf mouts) (rqi_minds_rss rqi) P ->
+      RqRsDownMatch dtr oidx (idsOf mouts) (rqi_rss rqi) P ->
       NoDup (idsOf mouts) ->
       Forall (fun idm : Id Msg => msg_type (valOf idm) = MRq) mouts ->
       DownLockedInv (orqs +[oidx <- porq +[downRq <- rqi]])
@@ -701,8 +702,8 @@ Section DownLockInv.
       NoDup (idsOf mins) ->
       Forall (FirstMPI msgs) mins ->
       Forall (fun idm => msg_type (valOf idm) = MRs) mins ->
-      RqRsDownMatch dtr oidx rqTos (idsOf mins) P ->
-      idsOf mins = rqi.(rqi_minds_rss) ->
+      RqRsDownMatch dtr oidx rqTos rqi.(rqi_rss) P ->
+      idsOf mins = map fst rqi.(rqi_rss) ->
       DownLockFreeInv (orqs +[oidx <- porq -[downRq]])
                       (deqMsgs (idsOf mins) msgs) oidx.
   Proof.
@@ -742,7 +743,7 @@ Section DownLockInv.
         intro Hx; elim H13; eauto.
       }
     - eapply downLockFreeChildInv_msgs_preserved; try eassumption.
-      + solve_q.
+      + rewrite H4; solve_q.
       + rewrite findQ_not_In_deqMsgs; auto.
         rewrite H4; assumption.
   Qed.
@@ -909,17 +910,17 @@ Section DownLockInv.
         + (** case [RsUp(Down)] *)
           eapply downLockFreeInv_msgs_preserved.
           * destruct HminsV.
-            rewrite <-H18 in H12.
             eapply downLockFreeChildInv_responded; eauto.
-          * intros; split.
+          * rewrite H18.
+            intros; split.
             { rewrite rqsQ_enqMP_rs; [reflexivity|assumption]. }
             { solve_q. }
         + (** case [RsUp(Up)] *)
           eapply downLockFreeInv_msgs_preserved.
           * destruct HminsV.
-            rewrite <-H18 in H6.
             eapply downLockFreeChildInv_responded; eauto.
-          * intros; split.
+          * rewrite H18.
+            intros; split.
             { rewrite rqsQ_enqMP_rs; [reflexivity|assumption]. }
             { solve_q. }
 
@@ -1161,7 +1162,6 @@ Section DownLockInv.
           destruct H6 as [rqUp [rsUp [down ?]]]; dest.
           assert (Some oidx <> Some (obj_idx obj)).
           { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
-          rewrite H19.
           destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
           * dest; split; [assumption|].
             eapply downLockedInv_orqs_preserved_downRq_rsbTo_2; try eassumption.
@@ -1196,12 +1196,12 @@ Section DownLockInv.
               { red in H15; red; dest.
                 xor3_inv3 H11;
                   [dest|red; mred; simpl; eexists; repeat split; eassumption].
-                replace (length (rqsQ (enqMP orsUp rsm (deqMsgs (idsOf mins) msgs))
+                replace (length (rqsQ (enqMP orsUp rsm (deqMsgs (map fst (rqi_rss rqi)) msgs))
                                       odown)) with 0;
-                  [|rewrite H19; solve_q; unfold rqsQ in H1, H11; omega].
+                  [|solve_q; unfold rqsQ in H1, H11; omega].
                 replace (length (findQ orsUp (enqMP orsUp rsm
-                                                    (deqMsgs (idsOf mins) msgs))))
-                  with 1; [|rewrite H19; solve_q; rewrite app_length; simpl; omega].
+                                                    (deqMsgs (map fst (rqi_rss rqi)) msgs))))
+                  with 1; [|solve_q; rewrite app_length; simpl; omega].
                 repeat split; try omega.
                 xsnd; [omega|omega|].
                 intro Hx; red in Hx; mred; simpl in Hx.
@@ -1211,8 +1211,7 @@ Section DownLockInv.
                 red in H11; mred.
               }
             }
-            { rewrite H19.
-              assert (Some oidx <> Some (obj_idx obj)).
+            { assert (Some oidx <> Some (obj_idx obj)).
               { intro Hx; inv Hx; apply parentIdxOf_not_eq in H2; auto. }
               clear H13; find_if_inside.
               { eapply downLockedChildInv_orqs_preserved_not_child_update; eauto.
@@ -1408,19 +1407,16 @@ Section DownLockInv.
             eapply downLockedInv_orqs_preserved_not_child_update; [|eassumption].
             eapply downLockedInv_msgs_preserved; [eassumption|].
             assert (Some oidx <> Some (obj_idx obj)) by congruence.
-            rewrite <-H20 in H13.
             intros; split; solve_q.
           * eapply downLockFreeInv_orqs_preserved_not_child_update; [|eassumption].
             eapply downLockFreeInv_msgs_preserved; [eassumption|].
             assert (Some oidx <> Some (obj_idx obj)) by congruence.
-            rewrite <-H20 in H13.
             intros; split; solve_q.
         + destruct ((orqs@[oidx] >>=[[]] (fun orq => orq))@[downRq]).
           * dest; split; [assumption|].
             eapply downLockedInv_orqs_preserved_not_child_update; [|eassumption].
             eapply downLockedInv_msgs_preserved; [eassumption|].
             assert (Some oidx <> Some (obj_idx obj)) by congruence.
-            rewrite <-H20 in H8.
             intros; split.
             { solve_q. }
             { destruct (idx_dec cidx (obj_idx obj)); subst; [elim H3; assumption|].
@@ -1429,7 +1425,6 @@ Section DownLockInv.
           * eapply downLockFreeInv_orqs_preserved_not_child_update; [|eassumption].
             eapply downLockFreeInv_msgs_preserved; [eassumption|].
             assert (Some oidx <> Some (obj_idx obj)) by congruence.
-            rewrite <-H20 in H8.
             intros; split.
             { solve_q. }
             { destruct (idx_dec cidx (obj_idx obj)); subst; [elim H3; assumption|].
@@ -1520,7 +1515,7 @@ Lemma downLockInvORq_down_rqsQ_length_one_locked:
       DownLockedInv dtr orqs msgs oidx rqid /\
       exists rsUp,
         rsEdgeUpFrom dtr cidx = Some rsUp /\
-        In rsUp rqid.(rqi_minds_rss).
+        In rsUp (map fst rqid.(rqi_rss)).
 Proof.
   intros.
   red in H; destruct (orq@[downRq]).
@@ -1546,7 +1541,7 @@ Lemma downLockInvORq_rsUp_length_one_locked:
     exists rqid,
       orq@[downRq] = Some rqid /\
       DownLockedInv dtr orqs msgs oidx rqid /\
-      In rsUp rqid.(rqi_minds_rss).
+      In rsUp (map fst rqid.(rqi_rss)).
 Proof.
   intros.
   red in H; destruct (orq@[downRq]).
