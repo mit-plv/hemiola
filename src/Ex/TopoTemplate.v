@@ -1,6 +1,6 @@
 Require Import List FMap Omega.
 Require Import Common Topology IndexSupport Syntax Semantics.
-Require Import RqRsLangEx.
+Require Import RqRsLang.
 
 Set Implicit Arguments.
 
@@ -1842,23 +1842,25 @@ Section Facts.
   Lemma tree2Topo_li_RqRsDownMatch_children:
     forall `{dv: DecValue} tr bidx oidx,
       In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
-      forall (rssFrom: list (Id Msg)) rqTos P,
-        RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos (idsOf rssFrom) P ->
+      forall (rss: list (Id Msg)) rqTos rssFrom P,
+        idsOf rss = map fst rssFrom ->
+        RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos rssFrom P ->
         exists cinds,
-          idsOf rssFrom = map rsUpFrom cinds /\
+          idsOf rss = map rsUpFrom cinds /\
           SubList cinds ((c_li_indices (snd (tree2Topo tr bidx)))
                            ++ c_l1_indices (snd (tree2Topo tr bidx))).
   Proof.
     intros.
     pose proof (tree2Topo_TreeTopo tr bidx).
-    destruct H1 as [[? _] _].
-    pose proof (RqRsDownMatch_rs_rq H0); clear H0.
-    apply Forall_forall in H2.
-    induction rssFrom; [exists nil; split; [reflexivity|apply SubList_nil]|].
-    inv H2; destruct H4 as [cidx [down ?]].
-    specialize (IHrssFrom H5); destruct IHrssFrom as [cinds ?]; dest.
+    destruct H2 as [[? _] _].
+    pose proof (RqRsDownMatch_rs_rq H1); clear H1.
+    rewrite <-H0 in H3; clear H0 rssFrom.
+    rewrite <-Forall_forall in H3.
+    induction rss; [exists nil; split; [reflexivity|apply SubList_nil]|].
+    inv H3; destruct H4 as [cidx [down ?]].
+    specialize (IHrss H5); destruct IHrss as [cinds ?]; dest.
     pose proof (tree2Topo_li_child_li_l1 _ _ _ H H3).
-    specialize (H1 _ _ H3); dest.
+    specialize (H2 _ _ H3); dest.
     disc_rule_conds_ex.
     exists (cidx :: cinds).
     split.

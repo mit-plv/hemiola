@@ -1,7 +1,7 @@
 Require Import List FMap Lia.
 Require Import Common Topology ListSupport IndexSupport.
 Require Import Syntax MessagePool Semantics StepM Invariant.
-Require Import RqRsLangEx.
+Require Import RqRsLang.
 
 Require Import Ex.TopoTemplate Ex.RuleTemplate Ex.InvTemplate.
 

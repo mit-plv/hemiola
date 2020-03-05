@@ -610,15 +610,15 @@ Section Separation.
         right; right; eauto.
       + constructor; [|constructor].
         right; right; eauto.
-      + rewrite <-H29 in H22.
-        apply Forall_forall; intros [midx msg] ?.
+      + apply Forall_forall; intros [midx msg] ?.
         apply in_map with (f:= idOf) in H6.
+        setoid_rewrite H29 in H6.
         eapply RqRsDownMatch_rs_rq in H22; [|eassumption].
         destruct H22 as [cidx [down ?]]; dest.
         right; left; eauto.
-      + rewrite <-H29 in H7.
-        apply Forall_forall; intros [midx msg] ?.
+      + apply Forall_forall; intros [midx msg] ?.
         apply in_map with (f:= idOf) in H8.
+        setoid_rewrite H29 in H8.
         eapply RqRsDownMatch_rs_rq in H7; [|eassumption].
         destruct H7 as [cidx [down ?]]; dest.
         right; left; eauto.
@@ -918,25 +918,24 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H18).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H11).
         destruct H30 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
-        eapply inside_child_in in H15; try eassumption.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H18).
-        destruct H22 as [rqUp [rsUp [rpidx ?]]]; dest.
+        eapply inside_child_in; try eassumption.
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H11).
+        destruct H26 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_RqRsMsgFrom.
-        eapply inside_child_in in H29; try eassumption.
+        eapply inside_child_in; try eassumption.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    In rcidx (subtreeIndsOf dtr cidx)).
-        { rewrite <-H33 in H26.
-          pose proof (RqRsDownMatch_rs_not_nil H26).
+        { pose proof (RqRsDownMatch_rs_not_nil H26).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H26; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H26; [|rewrite <-H33; left; reflexivity].
           destruct H26 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H7; repeat disc_RqRsMsgFrom.
@@ -953,10 +952,9 @@ Section Separation.
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    In rcidx (subtreeIndsOf dtr cidx)).
-        { rewrite <-H33 in H11.
-          pose proof (RqRsDownMatch_rs_not_nil H11).
+        { pose proof (RqRsDownMatch_rs_not_nil H11).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H11; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H11; [|rewrite <-H33; left; reflexivity].
           destruct H11 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H7; repeat disc_RqRsMsgFrom.
@@ -1022,27 +1020,26 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H10).
         destruct H29 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
-        eapply outside_child_in in H14; try eassumption.
-        clear -H2 H14; firstorder.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
-        destruct H21 as [rqUp [rsUp [rpidx ?]]]; dest.
+        eapply outside_child_in in H31; try eassumption.
+        intuition idtac.
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H10).
+        destruct H25 as [rqUp [rsUp [rpidx ?]]]; dest.
         destruct H.
         disc_rule_conds.
         eapply outside_child_in in H28; try eassumption.
-        clear -H2 H28; firstorder.
+        intuition idtac.
       + assert (exists rcidx rsUp rsm,
                    In (rsUp, rsm) rins /\
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    ~ In rcidx (subtreeIndsOf dtr soidx)).
-        { rewrite <-H32 in H25.
-          pose proof (RqRsDownMatch_rs_not_nil H25).
+        { pose proof (RqRsDownMatch_rs_not_nil H25).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H25; [|rewrite <-H32; left; reflexivity].
           destruct H25 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H6; repeat disc_RqRsMsgFrom.
@@ -1057,10 +1054,9 @@ Section Separation.
                    parentIdxOf dtr rcidx = Some (obj_idx obj) /\
                    rsEdgeUpFrom dtr rcidx = Some rsUp /\
                    ~ In rcidx (subtreeIndsOf dtr soidx)).
-        { rewrite <-H32 in H10.
-          pose proof (RqRsDownMatch_rs_not_nil H10).
+        { pose proof (RqRsDownMatch_rs_not_nil H10).
           destruct rins as [|[rmidx rmsg] rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H32; left; reflexivity].
           destruct H10 as [rcidx [down ?]]; dest.
           simpl in *.
           inv H6; repeat disc_RqRsMsgFrom.

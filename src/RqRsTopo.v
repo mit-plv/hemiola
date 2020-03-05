@@ -202,6 +202,7 @@ Section RqRsTopo.
                 P cidx /\
                 parentIdxOf dtr cidx = Some oidx /\
                 edgeDownTo cidx = Some (fst rqrs) /\
+                snd (snd rqrs) = None /\
                 rsEdgeUpFrom cidx = Some (fst (snd rqrs)))
            (combine rqTos rssFrom).
   

@@ -1,6 +1,6 @@
 Require Import List FMap Omega.
 Require Import Common Topology Syntax IndexSupport.
-Require Import RqRsLangEx. Import RqRsNotations.
+Require Import RqRsLang. Import RqRsNotations.
 
 Require Import Ex.TopoTemplate.
 
@@ -276,7 +276,7 @@ Section Template.
             rqEdgeUpFrom dtr rcidx = Some rqUp /\
             (orq@[upRq] >>=[True] (fun rqiu => edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb))) /\
             ~ In rcidx outInds).
-  
+
   Definition RsDownRqDownSound (sys: System) (oidx: IdxT)
              (prec: OPrec) (trs: OState -> Msg -> OState * (list IdxT * Miv)): Prop :=
     forall ost orq rsin,

@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec Lia.
 Require Import Common FMap IndexSupport HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsLangEx RqRsCorrect.
+Require Import RqRsLang RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Msi Ex.Msi.Msi.

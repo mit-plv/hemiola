@@ -647,7 +647,7 @@ Section RqRsDTree.
     forall oidx rqTos rssFrom1 rssFrom2 P1 P2,
       RqRsDownMatch dtr oidx rqTos rssFrom1 P1 ->
       RqRsDownMatch dtr oidx rqTos rssFrom2 P2 ->
-      map fst rssFrom1 = map fst rssFrom2.
+      rssFrom1 = rssFrom2.
   Proof.
     unfold RqRsDownMatch; intros; dest.
     clear H H0.
@@ -656,17 +656,17 @@ Section RqRsDTree.
     induction rqTos; simpl; intros.
     - destruct rssFrom1, rssFrom2; simpl in *; try discriminate.
       reflexivity.
-    - destruct rssFrom1 as [|rsFrom1 rssFrom1]; [discriminate|].
-      destruct rssFrom2 as [|rsFrom2 rssFrom2]; [discriminate|].
+    - destruct rssFrom1 as [|[rsFrom1 rsVal1] rssFrom1]; [discriminate|].
+      destruct rssFrom2 as [|[rsFrom2 rsVal2] rssFrom2]; [discriminate|].
       simpl in *.
       inv H1; inv H2; inv H3; inv H4.
       destruct H5 as [cidx1 ?]; destruct H3 as [cidx2 ?]; dest.
       simpl in *.
       f_equal.
       + destruct (idx_dec cidx1 cidx2); subst.
-        * rewrite H10 in H5; inv H5; reflexivity.
+        * rewrite H12 in H8; inv H8; reflexivity.
         * exfalso.
-          elim (rqrsDTree_down_down_not_eq n H9 H4); auto.
+          elim (rqrsDTree_down_down_not_eq n H10 H4); auto.
       + eapply IHrqTos; eauto.
   Qed.
 
@@ -694,7 +694,7 @@ Section RqRsDTree.
            rrFrom1 rrFrom2 rssFrom1 rssFrom2,
       FootprintUpDownOk dtr sys oidx rrFrom1 rqTos rssFrom1 ->
       FootprintUpDownOk dtr sys oidx rrFrom2 rqTos rssFrom2 ->
-      map fst rssFrom1 = map fst rssFrom2.
+      rssFrom1 = rssFrom2.
   Proof.
     unfold FootprintUpDownOk; intros.
     destruct rrFrom1 as [[rqFrom1 rsbTo1]|], rrFrom2 as [[rqFrom2 rsbTo2]|].
@@ -720,7 +720,7 @@ Section RqRsDTree.
     forall oidx rqFrom rqTos rssFrom1 rsbTo1 rssFrom2 rsbTo2,
       FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom1 rsbTo1 ->
       FootprintDownDownOk dtr oidx rqFrom rqTos rssFrom2 rsbTo2 ->
-      map fst rssFrom1 = map fst rssFrom2 /\ rsbTo1 = rsbTo2.
+      rssFrom1 = rssFrom2 /\ rsbTo1 = rsbTo2.
   Proof.
     unfold FootprintDownDownOk; intros.
     dest; split.

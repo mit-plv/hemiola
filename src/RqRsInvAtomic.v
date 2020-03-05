@@ -118,7 +118,7 @@ Section Coverage.
         parentIdxOf dtr cidx = Some oidx ->
         rsEdgeUpFrom dtr cidx = Some rsUp ->
         edgeDownTo dtr cidx = Some down ->
-        ~ In rsUp rqid.(rqi_minds_rss) ->
+        ~ In rsUp (map fst rqid.(rqi_rss)) ->
         rqid.(rqi_midx_rsb) <> Some down ->
         IndsDisjTree cidx.
 
@@ -575,12 +575,13 @@ Section Coverage.
     forall eouts,
       Forall (fun eout => exists oidx, RqDownRsUpIdx oidx eout) eouts ->
       RqDownRsUpDisj eouts ->
-      forall oidx rins pmsg rqTos P,
+      forall oidx rins pmsg rqTos rssFrom P,
         RqDownRsUpIdx oidx pmsg ->
+        idsOf rins = map fst rssFrom ->
         NoDup (idsOf rins) ->
         Forall (fun rin => msg_type (valOf rin) = MRs) rins ->
         SubList rins eouts ->
-        RqRsDownMatch dtr oidx rqTos (idsOf rins) P ->
+        RqRsDownMatch dtr oidx rqTos rssFrom P ->
         Forall (fun reout =>
                   forall ridx,
                     RqDownRsUpIdx ridx reout ->
@@ -594,30 +595,34 @@ Section Coverage.
       |apply rqDownRsUpDisj_singleton|].
 
     intros; dest_in.
-    rewrite Forall_forall in H9; specialize (H9 _ H10 _ H11).
+    rewrite Forall_forall in H10; specialize (H10 _ H11 _ H12).
     eapply rqDownRsUpIdx_oidx_eq in H4; [|eassumption]; subst.
 
     split; [assumption|].
     assert (exists rin, In rin rins).
-    { red in H8; dest.
+    { red in H9; dest.
       destruct rins.
-      { exfalso; destruct rqTos; [auto|discriminate]. }
+      { exfalso; destruct rqTos; [auto|].
+        apply eq_sym, map_eq_nil in H5; subst.
+        discriminate.
+      }
       { eexists; left; reflexivity. }
     }
     destruct H4 as [rin ?].
-    pose proof H4; apply in_map with (f:= idOf) in H12.
-    eapply RqRsDownMatch_rs_rq in H8; [|eassumption].
-    destruct H8 as [cidx [down ?]]; dest.
-    rewrite Forall_forall in H6; specialize (H6 _ H4).
-    apply H7 in H4.
-    apply removeL_In_2 in H10.
+    pose proof H4; apply in_map with (f:= idOf) in H13.
+    setoid_rewrite H5 in H13.
+    eapply RqRsDownMatch_rs_rq in H9; [|eassumption].
+    destruct H9 as [cidx [down ?]]; dest.
+    rewrite Forall_forall in H7; specialize (H7 _ H4).
+    apply H8 in H4.
+    apply removeL_In_2 in H11.
 
     eapply outside_parent_out; [apply Hrrs| |eassumption].
     eapply rqDownRsUpDisj_in_spec with (eout1:= rin) (eout2:= eout1); eauto.
     - intro Hx; subst.
-      destruct H11; [disc_rule_conds; solve_midx_false|].
+      destruct H12; [disc_rule_conds; solve_midx_false|].
       disc_rule_conds.
-      elim H9; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+      elim H10; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
     - right; red; auto.
   Qed.
 
@@ -1193,11 +1198,11 @@ Section Coverage.
           SubList rins eouts ->
 
           In oidx (oindsOf hst) ->
-          RqRsDownMatch dtr oidx rqTos (idsOf rins) P ->
+          RqRsDownMatch dtr oidx rqTos rqid.(rqi_rss) P ->
           (st_orqs st2)@[oidx] = Some orq -> orq@[downRq] = Some rqid ->
           DownLockCoverInv (oindsOf hst) oidx rqid ->
           rsEdgeUpFrom dtr oidx = rqid.(rqi_midx_rsb) ->
-          idsOf rins = rqid.(rqi_minds_rss) ->
+          idsOf rins = map fst rqid.(rqi_rss) ->
           
           Forall (fun eout => exists oidx, RqDownRsUpIdx oidx eout) eouts ->
           RqDownRsUpDisj eouts ->
@@ -1215,12 +1220,17 @@ Section Coverage.
     destruct Hx; subst.
     - assert (exists rin, In rin rins).
       { red in H9; dest.
-        destruct rins; [destruct rqTos; [exfalso; auto|discriminate]|].
-        eexists; left; reflexivity.
+        destruct rins.
+        { exfalso; destruct rqTos; [auto|].
+          apply eq_sym, map_eq_nil in H14.
+          rewrite H14 in H19; discriminate.
+        }
+        { eexists; left; reflexivity. }
       }
       destruct H19 as [[rsUp rsm] ?].
       pose proof H19.
       apply in_map with (f:= idOf) in H20.
+      setoid_rewrite H14 in H20.
       eapply RqRsDownMatch_rs_rq in H9; [|eassumption]; clear H20.
       destruct H9 as [cidx [down ?]]; dest; simpl in *.
       rewrite Forall_forall in H6; specialize (H6 _ H19).
@@ -1308,10 +1318,10 @@ Section Coverage.
           RqDownRsUpDisj eouts ->
           
           In roidx (oindsOf hst) ->
-          RqRsDownMatch dtr roidx rqTos (idsOf rins) P ->
+          RqRsDownMatch dtr roidx rqTos rqid.(rqi_rss) P ->
           (st_orqs st2)@[roidx] = Some rorq -> rorq@[downRq] = Some rqid ->
           DownLockCoverInv (oindsOf hst) roidx rqid ->
-          idsOf rins = rqid.(rqi_minds_rss) ->
+          idsOf rins = map fst rqid.(rqi_rss) ->
           
           DownLockRoot (oindsOf hst) (st_orqs st1) (st_orqs st2)
                        roidx rqid rcidx ->
@@ -1363,7 +1373,7 @@ Section Coverage.
         pose proof (downLockInv_ok Hiorqs H0 H H1 (reachable_steps H3 H4)).
         good_locking_get robj.
 
-        destruct (in_dec idx_dec rsUp (rqi_minds_rss rqid)).
+        destruct (in_dec idx_dec rsUp (map fst rqid.(rqi_rss))).
         * (* case RqDown-in-responses *)
           eapply downLockInvORq_down_rqsQ_rsUp_False
             with (cidx:= oidx) in H31; try eassumption.
@@ -1372,9 +1382,9 @@ Section Coverage.
             rewrite Forall_forall in H32; specialize (H32 _ H19).
             assumption.
           }
-          { rewrite <-H15 in i.
-            eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+          { eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
             destruct H11 as [cidx [rdown ?]]; dest.
+            rewrite <-H15 in i.
             apply in_map_iff in i; destruct i as [[rsUp' rsum] [? ?]]; simpl in *; subst.
             apply H7 in H37.
             eapply findQ_length_ge_one with (msg:= rsum); auto.
@@ -1407,11 +1417,11 @@ Section Coverage.
         pose proof (atomic_messages_eouts_in H2 H4).
         rewrite Forall_forall in H32.
 
-        destruct (in_dec idx_dec rsUp (rqi_minds_rss rqid)).
+        destruct (in_dec idx_dec rsUp (map fst rqid.(rqi_rss))).
         * (* case RsUp-in-responses *)
-          rewrite <-H15 in i.
           eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
           destruct H11 as [cidx [rdown ?]]; dest.
+          rewrite <-H15 in i.
           apply in_map_iff in i; destruct i as [[rsUp' rsum] [? ?]]; simpl in *; subst.
           destruct (msg_dec rsum rmsg); subst; auto.
           exfalso.
@@ -1437,7 +1447,7 @@ Section Coverage.
       pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H26).
       destruct H29 as [rqUp [rsUp [down ?]]]; dest.
       
-      destruct (in_dec idx_dec rsUp (rqi_minds_rss rqid)).
+      destruct (in_dec idx_dec rsUp (map fst rqid.(rqi_rss))).
       + (** Case message-in-responses *)
         rewrite <-H15 in i.
         apply in_map_iff in i; destruct i as [[rsUp' rsum] [? ?]]; simpl in *; subst.
@@ -2627,8 +2637,7 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          rewrite <-H17 in H10.
-          eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; left; reflexivity].
           destruct H10 as [cidx [down ?]]; dest.
           disc_rule_conds.
         }
@@ -2637,8 +2646,7 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          rewrite <-H17 in H10.
-          eapply RqRsDownMatch_rs_rq in H10; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; left; reflexivity].
           destruct H10 as [cidx [down ?]]; dest.
           disc_rule_conds.
           solve_midx_false.
@@ -2654,8 +2662,7 @@ Section Coverage.
             destruct H16 as [rsUp [rsum ?]].
             pose proof H16.
             apply in_map with (f:= idOf) in H18; simpl in H18.
-            rewrite <-H17 in H10.
-            eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
+            eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; eassumption].
             destruct H10 as [cidx [down ?]]; dest.
             apply Hosub in H16.
             rewrite Forall_forall in H11; specialize (H11 _ H16).
@@ -2674,8 +2681,7 @@ Section Coverage.
           red in H15; dest.
           specialize (H13 _ _ i H16 H18).
           assert (SubList eouts rins).
-          { rewrite <-H17 in H10.
-            eapply rsUp_outs_case_back; eauto.
+          { eapply rsUp_outs_case_back; eauto.
             { apply HminsV. }
             { eapply rqDown_rsUp_inv_msg; eauto. }
           }
@@ -2713,7 +2719,7 @@ Section Coverage.
             destruct H27 as [orqUp [orsUp [down ?]]]; dest.
             disc_rule_conds.
             specialize (H13 _ _ _ H19 H28 H25).
-            destruct (in_dec idx_dec orsUp (rqi_minds_rss rqi));
+            destruct (in_dec idx_dec orsUp (map fst (rqi_rss rqi)));
               [left|right; apply H13; [auto|congruence]].
             eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
             destruct H10 as [cidx [odown ?]]; dest.
@@ -2737,8 +2743,7 @@ Section Coverage.
           specialize (H8 _ H16); simpl in H8.
           assert (In rsFrom (idsOf rins))
             by (apply in_map with (f:= idOf) in H16; assumption).
-          rewrite <-H17 in H10.
-          eapply RqRsDownMatch_rs_rq in H10; [|eassumption]; clear H18.
+          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; eassumption]; clear H18.
           destruct H10 as [ccidx [down ?]]; dest.
           eapply Hosub in H16.
           assert (In rsFrom (idsOf eouts))
@@ -2831,8 +2836,7 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          rewrite <-H17 in H5.
-          eapply RqRsDownMatch_rs_rq in H5; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H5; [|rewrite <-H17; left; reflexivity].
           destruct H5 as [cidx [down ?]]; dest.
           disc_rule_conds.
         }
@@ -2841,8 +2845,7 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          rewrite <-H17 in H5.
-          eapply RqRsDownMatch_rs_rq in H5; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H5; [|rewrite <-H17; left; reflexivity].
           destruct H5 as [cidx [down ?]]; dest.
           disc_rule_conds.
           solve_midx_false.
@@ -2859,9 +2862,8 @@ Section Coverage.
         specialize (H15 _ H13); simpl in H15.
         assert (In rsFrom (idsOf rins))
           by (apply in_map with (f:= idOf) in H13; assumption).
-        rewrite <-H17 in H5.
         pose proof H5.
-        eapply RqRsDownMatch_rs_rq in H18; [|eassumption]; clear H16.
+        eapply RqRsDownMatch_rs_rq in H18; [|rewrite <-H17; eassumption]; clear H16.
         destruct H18 as [ccidx [down ?]]; dest.
         eapply Hosub in H13.
         assert (In rsFrom (idsOf eouts))
@@ -2943,7 +2945,7 @@ Section Coverage.
                 destruct H25 as [cidx [? ?]].
                 pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H25).
                 destruct H27 as [crqUp [crsUp [cdown ?]]]; dest.
-                destruct (in_dec idx_dec crsUp rqi.(rqi_minds_rss)).
+                destruct (in_dec idx_dec crsUp (map fst rqi.(rqi_rss))).
                 { rewrite <-H17 in i0.
                   apply in_map_iff in i0.
                   destruct i0 as [[crsUp' crsm] [? ?]]; simpl in *; subst.
