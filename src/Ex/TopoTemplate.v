@@ -2216,31 +2216,26 @@ Ltac solve_chn_not_in :=
 Ltac disc_responses_from :=
   repeat
     match goal with
-    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = ?rss |- _] =>
-      rewrite <-Hrss in Hrr
-    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: ?rss = [_] |- _] =>
-      rewrite Hrss in Hrr
-    end;
-  repeat
-    match goal with
-    | [H: ValidMsgsIn _ ?rss |- _] => destruct H
-    | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
+    | [H: ValidMsgsIn _ _ |- _] => destruct H
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrrs: _ = map fst ?rss |- _] =>
       let cidx := fresh "cidx" in
       let down := fresh "down" in
-      eapply RqRsDownMatch_rs_rq in Hrr; [|left; reflexivity];
+      eapply RqRsDownMatch_rs_rq in Hrr; [|rewrite <-Hrrs; left; reflexivity];
       destruct Hrr as [cidx [down ?]]; dest
-    | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
-            Hin: In ?oidx (tl (c_li_indices _)) |- _] =>
+    | [Hrr: RqRsDownMatch _ ?oidx _ ?rss _,
+            Hrrs: idsOf _ = map fst ?rss,
+                  Hin: In ?oidx (tl (c_li_indices _)) |- _] =>
       let Hc := fresh "H" in
-      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrr) as Hc;
+      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrrs Hrr) as Hc;
       let Hic := fresh "H" in
-      destruct Hc as [cinds [Hic ?]]; rewrite Hic
-    | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
-            Hin: In ?oidx (c_li_indices _) |- _] =>
+      destruct Hc as [cinds [Hic ?]]; try (rewrite <-Hrrs, Hic)
+    | [Hrr: RqRsDownMatch _ ?oidx _ ?rss _,
+            Hrrs: idsOf _ = map fst ?rss,
+                  Hin: In ?oidx (c_li_indices _) |- _] =>
       let Hc := fresh "H" in
-      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ Hin _ Hrr) as Hc;
+      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ Hin _ Hrrs Hrr) as Hc;
       let Hic := fresh "H" in
-      destruct Hc as [cinds [Hic ?]]; rewrite Hic
+      destruct Hc as [cinds [Hic ?]]; try (rewrite <-Hrrs, Hic)
     end.
 
 Ltac derive_child_chns cidx :=

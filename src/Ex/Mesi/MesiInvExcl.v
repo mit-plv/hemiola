@@ -2072,10 +2072,10 @@ Section InvExcl.
 
   Ltac pick_rsUp_single :=
     match goal with
-    | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = map fst ?rss |- _] =>
       let Hrr0 := fresh "H" in
       pose proof Hrr as Hrr0;
-      eapply RqRsDownMatch_rs_rq in Hrr0; [|left; reflexivity];
+      eapply RqRsDownMatch_rs_rq in Hrr0; [|rewrite <-Hrss; left; reflexivity];
       let cidx := fresh "cidx" in 
       let down := fresh "down" in
       destruct Hrr0 as [cidx [down ?]]; dest
@@ -5059,18 +5059,7 @@ Section InvExcl.
       disc_rule_conds_ex.
       disc_MesiDownLockInv oidx Hdlinv.
       derive_footprint_info_basis oidx; [solve_midx_false|].
-
-      (** * TODO *)
-      (* pick_rsUp_single. *)
-      match goal with
-      | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = map fst ?rss |- _] =>
-        let Hrr0 := fresh "H" in
-        pose proof Hrr as Hrr0;
-          eapply RqRsDownMatch_rs_rq in Hrr0; [|rewrite <-Hrss; left; reflexivity];
-            let cidx := fresh "cidx" in 
-            let down := fresh "down" in
-            destruct Hrr0 as [cidx [down ?]]; dest
-      end.
+      pick_rsUp_single.
 
       split.
       { solve_AtomicInv_rsUps_rsUp.
