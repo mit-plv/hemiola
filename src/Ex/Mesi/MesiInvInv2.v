@@ -648,6 +648,9 @@ Section InvDirE.
     end.
 
   Ltac simpl_InvDirE_msgs :=
+    try match goal with
+        | [Hr: idsOf _ = map fst ?rss |- context [map fst ?rss] ] => rewrite <-Hr
+        end;
     repeat
       (first [apply InvDirE_enqMP; [|solve_msg..]
              |apply InvDirE_enqMsgs; [|solve_enqMsgs]

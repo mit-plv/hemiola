@@ -362,13 +362,11 @@ Section ObjInvOk.
         rewrite H; simpl
       end;
     repeat split;
-    try match goal with
-        | |- DownLockFromChild _ _ _ => red; simpl; eauto; fail
-        | |- _ => repeat split; intuition solve_mesi
-        end.
-    (* repeat (find_if_inside; *)
-    (*         [dest; try congruence; repeat split; intuition solve_mesi|]); *)
-    (* auto. *)
+    repeat match goal with
+           | |- DownLockFromChild _ _ _ => red; simpl; eauto; fail
+           | |- context [map _ (map _ _)] => rewrite rqi_rss_map_map
+           | |- _ => repeat split; intuition solve_mesi
+           end.
 
   Lemma MesiDownLockInv_mutual_step:
     Invariant.MutualInvStep2 impl step_m MesiUpLockInv MesiDownLockInv.

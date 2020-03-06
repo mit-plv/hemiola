@@ -271,8 +271,11 @@ Section InvDirME.
       eapply Forall_impl; [|eapply H];
       simpl; intros; split; solve_msg
     end.
-  
+
   Ltac simpl_InvDirME_msgs :=
+    try match goal with
+        | [Hr: idsOf _ = map fst ?rss |- context [map fst ?rss] ] => rewrite <-Hr
+        end;
     repeat
       (first [apply InvDirME_enqMP; [|solve_msg..]
              |apply InvDirME_enqMsgs; [|solve_enqMsgs]
@@ -305,6 +308,7 @@ Section InvDirME.
       match goal with
       | [H: ValidMsgsIn _ _ |- _] => destruct H
       | [H: ValidMsgsOut _ _ |- _] => destruct H
+      | [Hr: idsOf _ = map fst _, H: NoRsME _ _ |- _] => rewrite <-Hr in H
       end;
     repeat
       match goal with

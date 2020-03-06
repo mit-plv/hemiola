@@ -166,6 +166,13 @@ Proof.
   rewrite Hrp; assumption.
 Qed.
 
+Lemma rqi_rss_map_map:
+  forall {A} (rss: list IdxT),
+    map fst (map (fun rs => (rs, @None A)) rss) = rss.
+Proof.
+  intros; rewrite map_map, map_id; reflexivity.
+Qed.
+
 Section RqRsDTree.
   Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
