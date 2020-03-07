@@ -49,26 +49,26 @@ Section ObjInv.
       | msiRqS: DownLockFromChild oidx rqid /\
                 ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
                 In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+                map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
       | msiRqM: DownLockFromChild oidx rqid /\
                 ost#[status] <= msiS /\
                 ((ost#[owned] = true /\ ost#[dir].(dir_st) = msiS /\
                   SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                  rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                  map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
                  (ost#[dir].(dir_st) = msiM /\
                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                  rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+                  map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
       | msiDownRqS: DownLockFromParent oidx rqid /\
                     ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
                     In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                    rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+                    map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
       | msiDownRqI: DownLockFromParent oidx rqid /\
                     ((ost#[dir].(dir_st) = msiS /\
                       SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                      rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                      map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
                      (ost#[dir].(dir_st) = msiM /\
                       In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                      rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+                      map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
       end).
 
   Definition MsiObjInvs (oidx: IdxT): ObjInv :=

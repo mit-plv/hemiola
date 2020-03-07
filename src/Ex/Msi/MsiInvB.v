@@ -361,10 +361,11 @@ Section ObjInvOk.
         rewrite H; simpl
       end;
     repeat split;
-    try match goal with
-        | |- DownLockFromChild _ _ _ => red; simpl; eauto; fail
-        | |- _ => repeat split; intuition solve_msi
-        end.
+    repeat match goal with
+           | |- DownLockFromChild _ _ _ => red; simpl; eauto; fail
+           | |- context [map _ (map _ _)] => rewrite rqi_rss_map_map
+           | |- _ => repeat split; intuition solve_msi
+           end.
 
   Lemma MsiDownLockInv_mutual_step:
     Invariant.MutualInvStep2 impl step_m MsiUpLockInv MsiDownLockInv.
