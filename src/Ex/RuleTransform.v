@@ -9,7 +9,7 @@ Set Implicit Arguments.
 Local Open Scope list.
 Local Open Scope fmap.
 
-Section Transform.
+Section RssHolder.
   Variable (dtr: DTree).
   Context `{dv:DecValue} `{oifc: OStateIfc}.
 
@@ -54,43 +54,64 @@ Section Transform.
   Definition getRss (orq: ORq Msg) :=
     (orq@[downRq]) >>=[nil] (fun rqid => retRss rqid.(rqi_rss)).
   
-  Section RssHolder.
+  Variables
+    (ridx msgId rqId: IdxT)
+    (prec: OPrec).
 
-    Variables
-      (ridx msgId rqId: IdxT)
-      (prec: OPrec)
-      (trs: OState ->
-            list (Id Msg) (* incoming messages *) ->
-            Msg (* the original request *) ->
-            IdxT (* response back to *) ->
-            OState * Miv).
+  Variable (cidx: IdxT).
 
-    Variable (cidx: IdxT).
+  Definition rsTakeOne :=
+    rule[ridx]
+    :requires (MsgsFrom [rsUpFrom cidx] /\ MsgIdsFrom [msgId] /\
+               DownLockMsgId MRq rqId /\
+               RsAccepting /\ RsWaiting cidx)
+    :transition
+       (do (st --> (msg <-- getFirstMsg st.(msgs);
+                    return {{ st.(ost),
+                              addRs st.(orq) (rsUpFrom cidx) msg,
+                              nil }}))).
 
-    Definition rsTakeOne :=
-      rule[ridx]
-      :requires (MsgsFrom [rsUpFrom cidx] /\ MsgIdsFrom [msgId] /\
-                 DownLockMsgId MRq rqId /\
-                 RsAccepting /\ RsWaiting cidx)
-      :transition
-         (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      return {{ st.(ost),
-                                addRs st.(orq) (rsUpFrom cidx) msg,
-                                nil }}))).
+  Definition rsRelease (trs: OState ->
+                             list (Id Msg) (* incoming messages *) ->
+                             Msg (* the original request *) ->
+                             IdxT (* response back to *) ->
+                             OState * Miv) :=
+    rule[ridx]
+    :requires (MsgsFrom nil (* /\ DownLockMsgId MRq rqId *) (** required? *) /\
+               RssFull /\ prec)
+    :transition
+       (do (st --> (rq <-- getDownLockMsg st.(orq);
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) (getRss st.(orq)) rq rsbTo;
+                    return {{ fst nst,
+                              removeRq st.(orq) downRq,
+                              [(rsbTo, rsMsg (snd nst))] }}))).
 
-    Definition rsRelease :=
-      rule[ridx]
-      :requires (MsgsFrom nil (* /\ DownLockMsgId MRq rqId *) (** required? *) /\
-                 RssFull /\ prec)
-      :transition
-         (do (st --> (rq <-- getDownLockMsg st.(orq);
-                      rsbTo <-- getDownLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) (getRss st.(orq)) rq rsbTo;
-                      return {{ fst nst,
-                                removeRq st.(orq) downRq,
-                                [(rsbTo, rsMsg (snd nst))] }}))).
+  Definition rsReleaseOne (trs: OState ->
+                                Id Msg (* incoming messages *) ->
+                                Msg (* the original request *) ->
+                                IdxT (* response back to *) ->
+                                OState * Miv) :=
+    rule[ridx]
+    :requires (MsgsFrom nil (* /\ DownLockMsgId MRq rqId *) (** required? *) /\
+               RssFull /\ prec)
+    :transition
+       (do (st --> (idm <-- getFirstIdMsg (getRss st.(orq));
+                   rq <-- getDownLockMsg st.(orq);
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) idm rq rsbTo;
+                    return {{ fst nst,
+                              removeRq st.(orq) downRq,
+                              [(rsbTo, rsMsg (snd nst))] }}))).
 
-  End RssHolder.
+End RssHolder.
 
-End Transform.
+Notation "'rule.rsuo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':from' FROM" :=
+  (rsTakeOne RIDX MSGID RQID FROM) (at level 5).
+
+Notation "'rule.rsr' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
+  (rsRelease RIDX PREC TRS%trs) (at level 5).
+
+Notation "'rule.rsro' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
+  (rsReleaseOne RIDX PREC TRS%trs) (at level 5).
 
