@@ -19,13 +19,13 @@ Section FootprintInv.
 
   Definition FootprintUpOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
     exists rrFrom rqTo rsFrom,
-      rqi.(rqi_minds_rss) = [rsFrom] /\
+      rqi.(rqi_rss) = [(rsFrom, None)] /\
       rqi.(rqi_midx_rsb) = (rrFrom >>= (fun rrFrom => Some (snd rrFrom))) /\
       FootprintUpOk dtr oidx rrFrom rqTo rsFrom.
 
   Definition FootprintDownOkEx (oidx: IdxT) (rqi: RqInfo Msg) :=
     exists rrFrom rqTos rssFrom,
-      rqi.(rqi_minds_rss) = rssFrom /\
+      rqi.(rqi_rss) = rssFrom /\
       rqi.(rqi_midx_rsb) = (rrFrom >>= (fun rrFrom => Some (snd rrFrom))) /\
       (FootprintUpDownOk dtr sys oidx rrFrom rqTos rssFrom \/
        (rrFrom >>=[False] (fun rrFrom => FootprintDownDownOk
@@ -269,15 +269,15 @@ Section IncomingMessageInv.
       + right; right; right.
         constr_rule_conds.
       + right; right; left.
-        rewrite <-H26 in H19.
         split; auto.
-        clear -H19; apply Forall_forall; intros.
+        clear -H19 H26; apply Forall_forall; intros.
+        rewrite H26 in H.
         eapply RqRsDownMatch_rs_rq in H19; [|eassumption].
         dest; eauto.
       + right; right; left.
-        rewrite <-H26 in H4.
         split; auto.
-        clear -H4; apply Forall_forall; intros.
+        clear -H4 H26; apply Forall_forall; intros.
+        rewrite H26 in H.
         eapply RqRsDownMatch_rs_rq in H4; [|eassumption].
         dest; eauto.
 

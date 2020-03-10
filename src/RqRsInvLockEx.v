@@ -759,10 +759,10 @@ Section RqRsInvLockEx.
       + (** case [RsUpDown] *)
         red; intros; exfalso.
         pose proof (RqRsDownMatch_rs_not_nil H21).
-        destruct rins as [|rin rins]; [auto|].
+        destruct rins as [|rin rins];
+          [apply eq_sym, map_eq_nil in H28; auto|].
         inv H17.
-        rewrite <-H28 in H21.
-        eapply RqRsDownMatch_rs_rq in H21; [|left; reflexivity].
+        eapply RqRsDownMatch_rs_rq in H21; [|rewrite <-H28; left; reflexivity].
         destruct H21 as [cidx [down ?]]; dest.
         eapply H5; [|left; reflexivity].
         right; red; eauto.
@@ -770,10 +770,10 @@ Section RqRsInvLockEx.
       + (** case [RsUpUp] *)
         red; intros; exfalso.
         pose proof (RqRsDownMatch_rs_not_nil H6). 
-        destruct rins as [|rin rins]; [auto|].
+        destruct rins as [|rin rins];
+          [apply eq_sym, map_eq_nil in H28; auto|].
         inv H17.
-        rewrite <-H28 in H6.
-        eapply RqRsDownMatch_rs_rq in H6; [|left; reflexivity].
+        eapply RqRsDownMatch_rs_rq in H6; [|rewrite <-H28; left; reflexivity].
         destruct H6 as [cidx [down ?]]; dest.
         eapply H7; [|left; reflexivity].
         right; red; eauto.
@@ -795,7 +795,6 @@ Section RqRsInvLockEx.
           }
           { disc_RqRsDownMatch_rq; disc_rule_conds.
             red; intros; smred.
-            rewrite <-H33 in *.
             intro Hx; rewrite Hx in *.
             disc_rule_conds; auto.
           }
@@ -1167,11 +1166,10 @@ Section RqRsInvLockEx.
       + (** case [RsDownDown-silent] *)
         inv Hmoinv; [apply SubList_nil_inv in H4; discriminate|disc_rule_conds| |].
         2: {
-          simpl in *.
-          apply rqDown_rsUp_inv_msg in H21; rewrite Forall_forall in H21.
+          apply rqDown_rsUp_inv_msg in H25; rewrite Forall_forall in H25.
           apply SubList_singleton_In in H4.
-          specialize (H21 _ H4); destruct H21 as [oidx ?].
-          destruct H21; disc_rule_conds; solve_midx_false.
+          specialize (H25 _ H4); destruct H25 as [oidx ?].
+          destruct H25; disc_rule_conds; solve_midx_false.
         }
         
         apply SubList_singleton in H4; subst.
@@ -1221,11 +1219,10 @@ Section RqRsInvLockEx.
 
         (* Below is used multiple times so prove it in advance. *)
         assert (DownLockedNew (st_orqs st1) orqs (obj_idx obj)) as Hdln.
-        { rewrite <-H32 in H25.
-          pose proof H25.
+        { pose proof H25.
           eapply RqRsDownMatch_rs_not_nil in H41.
           destruct rins as [|rin rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H25; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H25; [|rewrite <-H32; left; reflexivity].
           destruct H25 as [cidx [down ?]]; dest.
           disc_rule_conds.
 
@@ -1277,11 +1274,10 @@ Section RqRsInvLockEx.
                    RsUpMsgFrom dtr cidx rsUp /\
                    parentIdxOf dtr cidx = Some (obj_idx obj) /\
                    DLNewRec (st_orqs st1) orqs (obj_idx obj)) as Hdln.
-        { rewrite <-H32 in H9.
-          pose proof H9.
+        { pose proof H9.
           eapply RqRsDownMatch_rs_not_nil in H33.
           destruct rins as [|rin rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H9; [|left; reflexivity].
+          eapply RqRsDownMatch_rs_rq in H9; [|rewrite <-H32; left; reflexivity].
           destruct H9 as [cidx [down ?]]; dest.
           disc_rule_conds.
           assert (RsUpMsgFrom dtr cidx rin) by (red; eauto).

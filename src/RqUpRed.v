@@ -576,8 +576,7 @@ Section RqUpReduction.
               assumption.
             }
             { destruct H14; dest; subst; [apply DisjList_nil_1|].
-              disc_rule_conds.
-              rewrite H47; solve_midx_disj.
+              disc_rule_conds; solve_midx_disj.
             }
             { solve_midx_disj. }
           }
@@ -587,8 +586,7 @@ Section RqUpReduction.
               assumption.
             }
             { destruct H14; dest; subst; [apply DisjList_nil_1|].
-              disc_rule_conds.
-              rewrite H47; solve_midx_disj.
+              disc_rule_conds; solve_midx_disj.
             }
             { solve_midx_disj. }
           }
@@ -622,10 +620,8 @@ Section RqUpReduction.
         * disc_rule_conds.
           { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
           { repeat ssplit; [apply DisjList_nil_1|assumption|apply DisjList_nil_2]. }
-          { rewrite H50.
-            repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
-          { rewrite H50.
-            repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
+          { repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj]. }
         * disc_rule_conds.
           repeat ssplit; [apply DisjList_nil_1|assumption|solve_midx_disj].
 
@@ -654,10 +650,8 @@ Section RqUpReduction.
         * disc_rule_conds.
           { split; [|split]; [|assumption|]; solve_midx_disj. }
           { split; [|split]; [solve_midx_disj|assumption|apply DisjList_nil_2]. }
-          { rewrite H55.
-            split; [|split]; [|assumption|]; solve_midx_disj. }
-          { rewrite H55.
-            split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
+          { split; [|split]; [|assumption|]; solve_midx_disj. }
         * disc_rule_conds.
           split; [|split]; [|assumption|]; solve_midx_disj.
   Qed.
@@ -978,10 +972,7 @@ Section RqUpReduction.
     - (** case [RsBackRule] *)
       good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + solve_midx_disj.
-      + solve_midx_disj.
-      + rewrite H36; solve_midx_disj.
-      + rewrite H36; solve_midx_disj.
+      all: solve_midx_disj.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.

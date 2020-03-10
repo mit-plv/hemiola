@@ -113,7 +113,7 @@ Section DecValue.
         (fun rqid =>
            rqid.(rqi_midx_rsb) >>=[False] (fun _ => True)).
   Definition getDownLockIndsFrom (orq: ORq Msg): option (list IdxT) :=
-    rqid <-- orq@[downRq]; Some (rqi_minds_rss rqid).
+    rqid <-- orq@[downRq]; Some (map fst (rqi_rss rqid)).
   Definition getDownLockIdxBack (orq: ORq Msg): option IdxT :=
     rqid <-- orq@[downRq]; rqi_midx_rsb rqid.
 
@@ -132,16 +132,7 @@ Section DecValue.
   Definition MsgsFromORq `{OStateIfc} (rqty: IdxT): OPrec :=
     fun _ orq mins =>
       orq@[rqty] >>=[False]
-         (fun rqi => idsOf mins = rqi_minds_rss rqi).
-
-  Definition MsgsFromRsUp `{OStateIfc} (dtr: DTree) (orss: list IdxT): OPrec :=
-    fun _ orq mins =>
-      orq@[downRq] >>=[False]
-         (fun rqid =>
-            idsOf mins = rqi_minds_rss rqid /\
-            Forall2 (fun rsUp robj =>
-                       rsEdgeUpFrom dtr robj = Some rsUp)
-                    (rqi_minds_rss rqid) orss).
+         (fun rqi => idsOf mins = map fst (rqi_rss rqi)).
 
 End DecValue.
 
@@ -150,7 +141,7 @@ Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMs
      UpLockIdxBack getUpLockIdxBack UpLockBackNone
      DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
      DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack getFirstIdxFromI
-     MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq MsgsFromRsUp : RuleConds.
+     MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq : RuleConds.
 
 Definition initORqs `{DecValue} (oinds: list IdxT): ORqs Msg :=
   fold_right (fun i m => m +[i <- []]) [] oinds.
@@ -300,7 +291,7 @@ Ltac disc_rule_conds_const_unit :=
   | [H: map _ [_]%list = [_]%list |- _] => progress simpl in H
   | [H: context [hd_error [_]%list] |- _] => progress simpl in H
   | [H: SubList [_] _ |- _] => apply SubList_singleton_In in H
-  | [H: [_]%list = rqi_minds_rss _ |- _] => rewrite <-H in *
+  | [H: [_]%list = map fst (rqi_rss _) |- _] => rewrite <-H in *
   | [H: [_]%list = rqi_midx_rsb _ |- _] => rewrite <-H in *
   | [H: Forall2 _ [_]%list [_]%list |- _] => inv H
   | [H: Forall2 _ nil nil |- _] => clear H

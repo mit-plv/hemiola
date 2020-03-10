@@ -1,6 +1,6 @@
 Require Import List FMap Omega.
 Require Import Common Topology IndexSupport Syntax Semantics.
-Require Import RqRsLangEx.
+Require Import RqRsLang.
 
 Set Implicit Arguments.
 
@@ -1842,23 +1842,25 @@ Section Facts.
   Lemma tree2Topo_li_RqRsDownMatch_children:
     forall `{dv: DecValue} tr bidx oidx,
       In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
-      forall (rssFrom: list (Id Msg)) rqTos P,
-        RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos (idsOf rssFrom) P ->
+      forall (rss: list (Id Msg)) rqTos rssFrom P,
+        idsOf rss = map fst rssFrom ->
+        RqRsDownMatch (fst (tree2Topo tr bidx)) oidx rqTos rssFrom P ->
         exists cinds,
-          idsOf rssFrom = map rsUpFrom cinds /\
+          idsOf rss = map rsUpFrom cinds /\
           SubList cinds ((c_li_indices (snd (tree2Topo tr bidx)))
                            ++ c_l1_indices (snd (tree2Topo tr bidx))).
   Proof.
     intros.
     pose proof (tree2Topo_TreeTopo tr bidx).
-    destruct H1 as [[? _] _].
-    pose proof (RqRsDownMatch_rs_rq H0); clear H0.
-    apply Forall_forall in H2.
-    induction rssFrom; [exists nil; split; [reflexivity|apply SubList_nil]|].
-    inv H2; destruct H4 as [cidx [down ?]].
-    specialize (IHrssFrom H5); destruct IHrssFrom as [cinds ?]; dest.
+    destruct H2 as [[? _] _].
+    pose proof (RqRsDownMatch_rs_rq H1); clear H1.
+    rewrite <-H0 in H3; clear H0 rssFrom.
+    rewrite <-Forall_forall in H3.
+    induction rss; [exists nil; split; [reflexivity|apply SubList_nil]|].
+    inv H3; destruct H4 as [cidx [down ?]].
+    specialize (IHrss H5); destruct IHrss as [cinds ?]; dest.
     pose proof (tree2Topo_li_child_li_l1 _ _ _ H H3).
-    specialize (H1 _ _ H3); dest.
+    specialize (H2 _ _ H3); dest.
     disc_rule_conds_ex.
     exists (cidx :: cinds).
     split.
@@ -2214,31 +2216,26 @@ Ltac solve_chn_not_in :=
 Ltac disc_responses_from :=
   repeat
     match goal with
-    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: [_] = ?rss |- _] =>
-      rewrite <-Hrss in Hrr
-    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrss: ?rss = [_] |- _] =>
-      rewrite Hrss in Hrr
-    end;
-  repeat
-    match goal with
-    | [H: ValidMsgsIn _ ?rss |- _] => destruct H
-    | [Hrr: RqRsDownMatch _ _ _ [_] _ |- _] =>
+    | [H: ValidMsgsIn _ _ |- _] => destruct H
+    | [Hrr: RqRsDownMatch _ _ _ ?rss _, Hrrs: _ = map fst ?rss |- _] =>
       let cidx := fresh "cidx" in
       let down := fresh "down" in
-      eapply RqRsDownMatch_rs_rq in Hrr; [|left; reflexivity];
+      eapply RqRsDownMatch_rs_rq in Hrr; [|rewrite <-Hrrs; left; reflexivity];
       destruct Hrr as [cidx [down ?]]; dest
-    | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
-            Hin: In ?oidx (tl (c_li_indices _)) |- _] =>
+    | [Hrr: RqRsDownMatch _ ?oidx _ ?rss _,
+            Hrrs: idsOf _ = map fst ?rss,
+                  Hin: In ?oidx (tl (c_li_indices _)) |- _] =>
       let Hc := fresh "H" in
-      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrr) as Hc;
+      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ (tl_In _ _ Hin) _ Hrrs Hrr) as Hc;
       let Hic := fresh "H" in
-      destruct Hc as [cinds [Hic ?]]; rewrite Hic
-    | [Hrr: RqRsDownMatch _ ?oidx _ (idsOf ?rss) _,
-            Hin: In ?oidx (c_li_indices _) |- _] =>
+      destruct Hc as [cinds [Hic ?]]; try (rewrite <-Hrrs, Hic)
+    | [Hrr: RqRsDownMatch _ ?oidx _ ?rss _,
+            Hrrs: idsOf _ = map fst ?rss,
+                  Hin: In ?oidx (c_li_indices _) |- _] =>
       let Hc := fresh "H" in
-      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ Hin _ Hrr) as Hc;
+      pose proof (tree2Topo_li_RqRsDownMatch_children _ _ Hin _ Hrrs Hrr) as Hc;
       let Hic := fresh "H" in
-      destruct Hc as [cinds [Hic ?]]; rewrite Hic
+      destruct Hc as [cinds [Hic ?]]; try (rewrite <-Hrrs, Hic)
     end.
 
 Ltac derive_child_chns cidx :=

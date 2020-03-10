@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec Lia.
 Require Import Common FMap IndexSupport HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsLangEx RqRsCorrect.
+Require Import RqRsLang RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Msi Ex.Msi.Msi.
@@ -49,26 +49,26 @@ Section ObjInv.
       | msiRqS: DownLockFromChild oidx rqid /\
                 ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
                 In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+                map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
       | msiRqM: DownLockFromChild oidx rqid /\
                 ost#[status] <= msiS /\
                 ((ost#[owned] = true /\ ost#[dir].(dir_st) = msiS /\
                   SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                  rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                  map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
                  (ost#[dir].(dir_st) = msiM /\
                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                  rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+                  map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
       | msiDownRqS: DownLockFromParent oidx rqid /\
                     ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
                     In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                    rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+                    map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
       | msiDownRqI: DownLockFromParent oidx rqid /\
                     ((ost#[dir].(dir_st) = msiS /\
                       SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                      rqid.(rqi_minds_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                      map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
                      (ost#[dir].(dir_st) = msiM /\
                       In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                      rqid.(rqi_minds_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+                      map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
       end).
 
   Definition MsiObjInvs (oidx: IdxT): ObjInv :=

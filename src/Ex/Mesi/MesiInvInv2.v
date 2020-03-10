@@ -1,7 +1,7 @@
 Require Import Bool List String Peano_dec Lia.
 Require Import Common FMap IndexSupport HVector Syntax Topology Semantics SemFacts StepM.
 Require Import Invariant TrsInv Simulation Serial SerialFacts.
-Require Import RqRsLangEx RqRsInvMsg RqRsCorrect.
+Require Import RqRsLang RqRsInvMsg RqRsCorrect.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template.
 Require Import Ex.Mesi Ex.Mesi.Mesi Ex.Mesi.MesiTopo.
@@ -648,6 +648,9 @@ Section InvDirE.
     end.
 
   Ltac simpl_InvDirE_msgs :=
+    try match goal with
+        | [Hr: idsOf _ = map fst ?rss |- context [map fst ?rss] ] => rewrite <-Hr
+        end;
     repeat
       (first [apply InvDirE_enqMP; [|solve_msg..]
              |apply InvDirE_enqMsgs; [|solve_enqMsgs]

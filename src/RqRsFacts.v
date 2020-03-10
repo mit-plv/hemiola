@@ -166,6 +166,13 @@ Proof.
   rewrite Hrp; assumption.
 Qed.
 
+Lemma rqi_rss_map_map:
+  forall {A} (rss: list IdxT),
+    map fst (map (fun rs => (rs, @None A)) rss) = rss.
+Proof.
+  intros; rewrite map_map, map_id; reflexivity.
+Qed.
+
 Section RqRsDTree.
   Context `{dv: DecValue} `{oifc: OStateIfc}.
   Variables (dtr: DTree)
@@ -183,7 +190,7 @@ Section RqRsDTree.
           parentIdxOf dtr cidx = Some oidx /\
           edgeDownTo dtr cidx = Some down /\
           rsEdgeUpFrom dtr cidx = Some rsUp /\
-          In rsUp rssFrom.
+          In rsUp (map fst rssFrom).
   Proof.
     intros.
     red in H; dest; clear H.
@@ -204,7 +211,7 @@ Section RqRsDTree.
     forall oidx rssFrom rqTos P,
       RqRsDownMatch dtr oidx rqTos rssFrom P ->
       forall rsUp,
-        In rsUp rssFrom ->
+        In rsUp (map fst rssFrom) ->
         exists cidx down,
           P cidx /\
           parentIdxOf dtr cidx = Some oidx /\
@@ -447,7 +454,7 @@ Section RqRsDTree.
     forall oidx1 oidx2 rqUp1 downs2 ups2 P,
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
       RqRsDownMatch dtr oidx2 downs2 ups2 P ->
-      ~ In rqUp1 ups2.
+      ~ In rqUp1 (map fst ups2).
   Proof.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
@@ -459,7 +466,7 @@ Section RqRsDTree.
     forall oidx rsUp1 downs2 ups2 P,
       rsEdgeUpFrom dtr oidx = Some rsUp1 ->
       RqRsDownMatch dtr oidx downs2 ups2 P ->
-      ~ In rsUp1 ups2.
+      ~ In rsUp1 (map fst ups2).
   Proof.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
@@ -473,7 +480,7 @@ Section RqRsDTree.
       rsEdgeUpFrom dtr oidx1 = Some rsUp1 ->
       RqRsDownMatch dtr oidx2 downs2 ups2 P ->
       parentIdxOf dtr oidx1 <> Some oidx2 ->
-      ~ In rsUp1 ups2.
+      ~ In rsUp1 (map fst ups2).
   Proof.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
@@ -487,7 +494,7 @@ Section RqRsDTree.
     forall oidx1 oidx2 down1 downs2 ups2 P,
       edgeDownTo dtr oidx1 = Some down1 ->
       RqRsDownMatch dtr oidx2 downs2 ups2 P ->
-      ~ In down1 ups2.
+      ~ In down1 (map fst ups2).
   Proof.
     intros; intro Hx.
     eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
@@ -585,7 +592,7 @@ Section RqRsDTree.
       oidx1 <> oidx2 ->
       RqRsDownMatch dtr oidx1 rqTos1 rssFrom1 P1 ->
       RqRsDownMatch dtr oidx2 rqTos2 rssFrom2 P2 ->
-      DisjList rssFrom1 rssFrom2.
+      DisjList (map fst rssFrom1) (map fst rssFrom2).
   Proof.
     intros.
     apply (DisjList_false_spec idx_dec); intros midx ? ?.
@@ -603,7 +610,7 @@ Section RqRsDTree.
       parentIdxOf dtr cidx = Some oidx ->
       edgeDownTo dtr cidx = Some down ->
       rsEdgeUpFrom dtr cidx = Some rsUp ->
-      ~ In rsUp ups ->
+      ~ In rsUp (map fst ups) ->
       RqRsDownMatch dtr oidx downs ups P ->
       ~ In down downs.
   Proof.
@@ -656,17 +663,17 @@ Section RqRsDTree.
     induction rqTos; simpl; intros.
     - destruct rssFrom1, rssFrom2; simpl in *; try discriminate.
       reflexivity.
-    - destruct rssFrom1 as [|rsFrom1 rssFrom1]; [discriminate|].
-      destruct rssFrom2 as [|rsFrom2 rssFrom2]; [discriminate|].
+    - destruct rssFrom1 as [|[rsFrom1 rsVal1] rssFrom1]; [discriminate|].
+      destruct rssFrom2 as [|[rsFrom2 rsVal2] rssFrom2]; [discriminate|].
       simpl in *.
       inv H1; inv H2; inv H3; inv H4.
       destruct H5 as [cidx1 ?]; destruct H3 as [cidx2 ?]; dest.
       simpl in *.
       f_equal.
       + destruct (idx_dec cidx1 cidx2); subst.
-        * rewrite H10 in H5; inv H5; reflexivity.
+        * rewrite H12 in H8; inv H8; reflexivity.
         * exfalso.
-          elim (rqrsDTree_down_down_not_eq n H9 H4); auto.
+          elim (rqrsDTree_down_down_not_eq n H10 H4); auto.
       + eapply IHrqTos; eauto.
   Qed.
 
@@ -1056,6 +1063,7 @@ Ltac disc_rule_conds_unit_simpl :=
     destruct rins as [|[rin rmsg] [|]]; try discriminate;
     simpl in H; inv H
   | [H: idsOf [_] = [_]%list |- _] => simpl in H; inv H
+  | [H: idsOf _ = map fst _ |- _] => rewrite H in *
 
   | [H: _ :: nil = _ :: nil |- _] => inv H
   | [H: nil = nil |- _] => clear H
@@ -1069,7 +1077,7 @@ Ltac disc_rule_conds_unit_simpl :=
   | [H1: msg_type ?msg = MRq, H2: msg_type ?msg = MRs |- _] =>
     rewrite H1 in H2; discriminate
   | [H: rqi_msg _ = _ |- _] => rewrite H in *
-  | [H: rqi_minds_rss _ = _ |- _] => rewrite H in *
+  | [H: rqi_rss _ = _ |- _] => rewrite H in *
   | [H: rqi_midx_rsb _ = _ |- _] => rewrite H in *
   end.
 
@@ -1534,19 +1542,19 @@ Ltac solve_midx_neq_unit :=
     eapply rqrsDTree_down_downs_not_in; eauto
 
   | [Hru1: rqEdgeUpFrom _ ?idx1 = Some ?rqUp1,
-     Hdowns2: RqRsDownMatch _ ?idx2 _ ?ups2 _ |- ~ In ?rqUp1 ?ups2] =>
+     Hdowns2: RqRsDownMatch _ ?idx2 _ ?ups2 _ |- ~ In ?rqUp1 (map fst ?ups2)] =>
     eapply rqrsDTree_rqUp_ups_not_in; eauto
   | [Hru1: rsEdgeUpFrom _ ?idx = Some ?rsUp1,
-     Hdowns2: RqRsDownMatch _ ?idx _ ?ups2 _ |- ~ In ?rsUp1 ?ups2] =>
+     Hdowns2: RqRsDownMatch _ ?idx _ ?ups2 _ |- ~ In ?rsUp1 (map fst ?ups2)] =>
     eapply rqrsDTree_rsUp_ups_not_in; eauto
   | [Hdown1: edgeDownTo _ ?idx1 = Some ?down1,
-     Hdowns2: RqRsDownMatch _ ?idx2 _ ?ups2 _ |- ~ In ?down1 ?ups2] =>
+     Hdowns2: RqRsDownMatch _ ?idx2 _ ?ups2 _ |- ~ In ?down1 (map fst ?ups2)] =>
     eapply rqrsDTree_down_ups_not_in; eauto
 
   | [Hru1: rsEdgeUpFrom _ ?idx1 = Some ?rsUp1,
      Hdowns2: RqRsDownMatch _ ?idx2 _ ?ups2 _,
      Hp: parentIdxOf _ ?idx1 = Some ?pidx,
-     Hnp: Some ?pidx <> Some ?idx2 |- ~ In ?rqUp1 ?ups2] =>
+     Hnp: Some ?pidx <> Some ?idx2 |- ~ In ?rqUp1 (map fst ?ups2)] =>
     rewrite <-Hp in Hnp;
     eapply rqrsDTree_rsUp_ups_not_in_parent; eauto
   | [Hdown1: edgeDownTo _ ?idx1 = Some ?down1,
@@ -1563,7 +1571,7 @@ Ltac solve_midx_neq_unit :=
   | [Hp: parentIdxOf _ ?cidx = Some ?oidx,
      Hdown: edgeDownTo _ ?cidx = Some ?down,
      Hup: rsEdgeUpFrom _ ?cidx = Some ?rsUp,
-     Hnin: ~ In ?rsUp ?ups,
+     Hnin: ~ In ?rsUp (map fst ?ups),
      Hud: RqRsDownMatch _ ?oidx ?downs ?ups _ |- ~ In ?down ?downs] =>
     eapply rqrsDTree_down_downs_not_in_child; eauto
   end.

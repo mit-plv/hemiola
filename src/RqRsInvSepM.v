@@ -105,7 +105,7 @@ Section Separation.
       destruct H26 as [rcidx [rsUp ?]]; dest.
       repeat disc_rule_minds; subst.
       eapply downLockInvORq_down_rqsQ_length_two_False; try eassumption.
-      assert (rqDown <> rsFrom).
+      assert (rqDown <> fst rsFrom).
       { intro; subst.
         eapply DisjList_In_2 in H25; [|left; reflexivity].
         apply in_map with (f:= idOf) in Hx; auto.
@@ -262,13 +262,13 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H23).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H13).
         destruct H32 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H23).
-        destruct H25 as [rqUp [rsUp [pidx ?]]]; dest.
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H13).
+        destruct H28 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= cidx) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -278,7 +278,7 @@ Section Separation.
         specialize (H29 _ H2).
         destruct H29 as [down [rsUp ?]]; dest.
         disc_rule_conds.
-        destruct (in_dec idx_dec rsUp rqi.(rqi_minds_rss)).
+        destruct (in_dec idx_dec rsUp (map fst rqi.(rqi_rss))).
         * eapply RqRsDownMatch_rs_rq in H28; [|eassumption].
           destruct H28 as [rcidx [down ?]]; dest.
           disc_rule_conds.
@@ -303,7 +303,7 @@ Section Separation.
         specialize (H27 _ H2).
         destruct H27 as [down [rsUp ?]]; dest.
         disc_rule_conds.
-        destruct (in_dec idx_dec rsUp rqi.(rqi_minds_rss)).
+        destruct (in_dec idx_dec rsUp (map fst rqi.(rqi_rss))).
         * eapply RqRsDownMatch_rs_rq in H13; [|eassumption].
           destruct H13 as [rcidx [down ?]]; dest.
           disc_rule_conds.
@@ -389,25 +389,26 @@ Section Separation.
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + disc_rule_conds.
-        elim (H9 (idOf rqDown, rmsg0) eq_refl H32).
+        elim (H9 (idOf rqDown, rmsg0) eq_refl H26).
         left; reflexivity.
       + disc_rule_conds.
-        elim (H9 (idOf rqDown, rmsg) eq_refl H30).
+        elim (H9 (idOf rqDown, rmsg) eq_refl H26).
         left; reflexivity.
 
-      + rewrite <-H37 in H30.
-        assert (exists rin, In rin rins).
+      + assert (exists rin, In rin rins).
         { destruct rins.
           { exfalso.
             red in H30; dest.
             destruct rqTos; [auto|].
-            discriminate.
+            apply eq_sym, map_eq_nil in H37.
+            congruence.
           }
           { eexists; left; reflexivity. }
         }
         destruct H14 as [[rsUp rsum] ?].
         assert (In rsUp (idsOf rins))
           by (apply in_map with (f:= idOf) in H14; assumption).
+        rewrite H37 in H31.
         eapply RqRsDownMatch_rs_rq in H30; [|eassumption].
         destruct H30 as [cidx [down ?]]; dest.
         rewrite Forall_forall in H10; specialize (H10 _ H14).
@@ -415,19 +416,20 @@ Section Separation.
         disc_rule_conds.
         elim H39; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
 
-      + rewrite <-H37 in H15.
-        assert (exists rin, In rin rins).
+      + assert (exists rin, In rin rins).
         { destruct rins.
           { exfalso.
             red in H15; dest.
             destruct rqTos; [auto|].
-            discriminate.
+            apply eq_sym, map_eq_nil in H37.
+            congruence.
           }
           { eexists; left; reflexivity. }
         }
         destruct H12 as [[rsUp rsum] ?].
         assert (In rsUp (idsOf rins))
           by (apply in_map with (f:= idOf) in H12; assumption).
+        rewrite H37 in H16.
         eapply RqRsDownMatch_rs_rq in H15; [|eassumption].
         destruct H15 as [cidx [down ?]]; dest.
         rewrite Forall_forall in H10; specialize (H10 _ H12).
@@ -894,7 +896,6 @@ Section Separation.
         unfold rssQ in H8; simpl in H8.
         omega.
       + eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
-        rewrite <-H35 in H28.
         solve_q.
         rewrite filter_app; simpl.
         rewrite H17; simpl.
@@ -1208,13 +1209,13 @@ Section Separation.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H12).
         destruct H31 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
-      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H17).
-        destruct H20 as [rqUp [rsUp [pidx ?]]]; dest.
+      + pose proof (edgeDownTo_Some (proj1 (proj2 H)) _ H12).
+        destruct H26 as [rqUp [rsUp [pidx ?]]]; dest.
         disc_rule_conds.
         eapply parent_parent_in_False with (oidx1:= obj_idx cobj) (oidx2:= obj_idx obj);
           try apply Hrrs; eassumption.
@@ -1224,13 +1225,13 @@ Section Separation.
                    In (rsUp, rsum) rins /\
                    rsEdgeUpFrom dtr (obj_idx cobj) = Some rsUp /\
                    InMP rsUp rsum msgs).
-        { rewrite <-H34 in H26.
-          destruct rins as [|[rsUp rsum] ?].
+        { destruct rins as [|[rsUp rsum] ?].
           { red in H26; dest.
-            destruct rqTos; [exfalso; auto|discriminate].
+            apply eq_sym, map_eq_nil in H34.
+            destruct rqTos; [exfalso; auto|congruence].
           }
           { inv H9; destruct H30 as [oidx [? ?]].
-            eapply RqRsDownMatch_rs_rq in H26; [|left; reflexivity].
+            eapply RqRsDownMatch_rs_rq in H26; [|rewrite <-H34; left; reflexivity].
             destruct H26 as [cidx [down ?]]; dest; simpl in *.
             disc_rule_conds.
             eapply inside_child_outside_parent_case in H28;
@@ -1252,13 +1253,13 @@ Section Separation.
                    In (rsUp, rsum) rins /\
                    rsEdgeUpFrom dtr (obj_idx cobj) = Some rsUp /\
                    InMP rsUp rsum msgs).
-        { rewrite <-H34 in H12.
-          destruct rins as [|[rsUp rsum] ?].
+        { destruct rins as [|[rsUp rsum] ?].
           { red in H12; dest.
-            destruct rqTos; [exfalso; auto|discriminate].
+            apply eq_sym, map_eq_nil in H34.
+            destruct rqTos; [exfalso; auto|congruence].
           }
           { inv H9; destruct H26 as [oidx [? ?]].
-            eapply RqRsDownMatch_rs_rq in H12; [|left; reflexivity].
+            eapply RqRsDownMatch_rs_rq in H12; [|rewrite <-H34; left; reflexivity].
             destruct H12 as [cidx [down ?]]; dest; simpl in *.
             disc_rule_conds.
             eapply inside_child_outside_parent_case in H24;
@@ -1348,19 +1349,20 @@ Section Separation.
         eapply rssQ_length_two with (msg1:= rmsg) (msg2:= rsdm); try eassumption.
         apply FirstMP_InMP; assumption.
 
-      + rewrite <-H36 in H29.
-        assert (exists rin, In rin rins).
+      + assert (exists rin, In rin rins).
         { destruct rins.
           { exfalso.
             red in H29; dest.
             destruct rqTos; [auto|].
-            discriminate.
+            apply eq_sym, map_eq_nil in H36.
+            congruence.
           }
           { eexists; left; reflexivity. }
         }
         destruct H13 as [[rsUp rsum] ?].
         assert (In rsUp (idsOf rins))
           by (apply in_map with (f:= idOf) in H13; assumption).
+        rewrite H36 in H30.
         eapply RqRsDownMatch_rs_rq in H29; [|eassumption].
         destruct H29 as [cidx [down ?]]; dest.
         rewrite Forall_forall in H10; specialize (H10 _ H13).
@@ -1368,19 +1370,20 @@ Section Separation.
         disc_rule_conds.
         elim H38; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
 
-      + rewrite <-H36 in H14.
-        assert (exists rin, In rin rins).
+      + assert (exists rin, In rin rins).
         { destruct rins.
           { exfalso.
             red in H14; dest.
             destruct rqTos; [auto|].
-            discriminate.
+            apply eq_sym, map_eq_nil in H36.
+            congruence.
           }
           { eexists; left; reflexivity. }
         }
         destruct H11 as [[rsUp rsum] ?].
         assert (In rsUp (idsOf rins))
           by (apply in_map with (f:= idOf) in H11; assumption).
+        rewrite H36 in H15.
         eapply RqRsDownMatch_rs_rq in H14; [|eassumption].
         destruct H14 as [cidx [down ?]]; dest.
         rewrite Forall_forall in H10; specialize (H10 _ H11).

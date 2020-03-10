@@ -1,6 +1,6 @@
 Require Import List FMap Omega.
 Require Import Common Topology Syntax IndexSupport.
-Require Import RqRsLangEx. Import RqRsNotations.
+Require Import RqRsLang. Import RqRsNotations.
 
 Require Import Ex.TopoTemplate.
 
@@ -276,7 +276,7 @@ Section Template.
             rqEdgeUpFrom dtr rcidx = Some rqUp /\
             (orq@[upRq] >>=[True] (fun rqiu => edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb))) /\
             ~ In rcidx outInds).
-  
+
   Definition RsDownRqDownSound (sys: System) (oidx: IdxT)
              (prec: OPrec) (trs: OState -> Msg -> OState * (list IdxT * Miv)): Prop :=
     forall ost orq rsin,
@@ -604,16 +604,20 @@ Section Facts.
       destruct H as [? [? [rcidx [rqUp ?]]]]; dest.
       disc_rule_conds_ex.
       apply in_map_iff in H10; destruct H10 as [upCObj [? ?]]; subst.
-
+      destruct (rqi_rss rqi) as [|[rsF rsV] rss] eqn:Hrss; [discriminate|].
+      destruct rss; [|discriminate].
+      simpl in *; inv H0.
+      
       (* NOTE: [eexists] in [solve_rule_conds_ex] does not work here,
        * so we provide the existence manually. *)
-      do 5 eexists; repeat ssplit.
+      exists (rsF, rsV); do 4 eexists; repeat ssplit.
       4, 5: reflexivity.
       3: solve_rule_conds_ex.
       2: {
         exists rqi.
         exists {| rqi_msg := Some msg;
-                  rqi_minds_rss := map rsUpFrom (fst (snd (trs post msg)));
+                  rqi_rss := map (fun rs => (rs, None))
+                                 (map rsUpFrom (fst (snd (trs post msg))));
                   rqi_midx_rsb := Some idx |}.
         solve_rule_conds_ex.
       }
@@ -622,11 +626,11 @@ Section Facts.
         { destruct (fst (snd (trs post msg))); [auto|discriminate]. }
         { unfold idsOf; repeat rewrite map_length; reflexivity. }
         { apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
-          clear -Hdtr H2 H10 H11.
+          clear -Hdtr H0 H2 H11.
           induction (fst (snd (trs post msg))) as [|cidx cinds]; [dest_in|].
-          inv H2; simpl in H10; destruct H10; dest.
+          inv H2; simpl in H0; destruct H0; dest.
           { inv H; destruct Hdtr as [[? ?] ?].
-            specialize (H _ _ H1); dest.
+            specialize (H _ _ H3); dest.
             exists cidx; repeat split; try assumption.
             intro Hx; subst; elim H11; left; reflexivity.
           }

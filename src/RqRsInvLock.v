@@ -61,7 +61,7 @@ Section RqRsDown.
                  forall cidx rsUp,
                    edgeDownTo dtr cidx = Some down ->
                    rsEdgeUpFrom dtr cidx = Some rsUp ->
-                   In rsUp rqid.(rqi_minds_rss) ->
+                   In rsUp (map fst rqid.(rqi_rss)) ->
                    rqsQ msgs down <> nil)).
   
   Definition NoRqRsDown (st: State) :=
@@ -99,7 +99,7 @@ Section RqRsDown.
       let rsdm := fresh "rsdm" in
       let H4 := fresh in
       red; intros cobj pobj H0 H1 H2 down H3 rsdm H4 ?;
-                  specialize (H _ _ H0 H1 H2 _ H3 _ H4); simpl in *
+      specialize (H _ _ H0 H1 H2 _ H3 _ H4); simpl in *
     end.
 
   Lemma noRqRsDown_step_ext_in:
@@ -683,7 +683,7 @@ Section RqRsDown.
             { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H0 _ _ H22 H28 H29).
+              intros; specialize (H0 _ _ H27 H28 H29).
               disc_rule_conds.
               solve_q; assumption.
             }
@@ -704,8 +704,7 @@ Section RqRsDown.
           }
           { destruct H0.
             { left; red; repeat (simpl; mred). }
-            { rewrite <-H26 in H28.
-              dest; right; split.
+            { dest; right; split.
               { red in H0; red; mred.
                 destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
                 destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
@@ -731,8 +730,7 @@ Section RqRsDown.
           left; red; repeat (simpl; mred).
         * destruct H0.
           { left; red; repeat (simpl; mred). }
-          { rewrite <-H26 in H4.
-            dest; right; split.
+          { dest; right; split.
             { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
