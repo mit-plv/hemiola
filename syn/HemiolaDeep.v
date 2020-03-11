@@ -1,6 +1,6 @@
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
 Require Import Hemiola.Topology Hemiola.Syntax.
-Require Import Hemiola.RqRsLangEx.
+Require Import Hemiola.RqRsLang.
         
 Set Implicit Arguments.
 
@@ -50,7 +50,6 @@ Section Reify.
   | HRsAccepting: HOPrecR
   | HUpLockFree: HOPrecR
   | HDownLockFree: HOPrecR
-  (* | HFirstMsg: HOPrecR *)
   | HUpLockMsgId (mty: bool) (mid: IdxT): HOPrecR
   | HUpLockMsg: HOPrecR
   | HUpLockIdxBack: HOPrecR
@@ -58,10 +57,9 @@ Section Reify.
   | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
   | HDownLockMsg: HOPrecR
   | HDownLockIdxBack: HOPrecR
-  | HMsgsFrom (froms: list IdxT): HOPrecR
-  | HMsgIdsFrom (msgIds: list IdxT): HOPrecR
-  | HMsgIdFromEach (msgId: IdxT): HOPrecR
-  | HMsgsFromORq (rqty: IdxT): HOPrecR.
+  | HMsgFromParent: HOPrecR
+  | HMsgFromChild (cidx: IdxT): HOPrecR
+  | HMsgIdFrom (msgId: IdxT): HOPrecR.
 
   Inductive HOPrec: Type :=
   | HOPrecAnd: HOPrec -> HOPrec -> HOPrec
@@ -112,7 +110,6 @@ Section Reify.
       | HRsAccepting => RsAccepting ost orq mins
       | HUpLockFree => UpLockFree ost orq mins
       | HDownLockFree => DownLockFree ost orq mins
-      (* | HFirstMsg => FirstMsg ost orq mins *)
       | HUpLockMsgId mty mid => UpLockMsgId mty mid ost orq mins
       | HUpLockMsg => UpLockMsg ost orq mins
       | HUpLockIdxBack => UpLockIdxBack ost orq mins
@@ -120,10 +117,9 @@ Section Reify.
       | HDownLockMsgId mty mid => DownLockMsgId mty mid ost orq mins
       | HDownLockMsg => DownLockMsg ost orq mins
       | HDownLockIdxBack => DownLockIdxBack ost orq mins
-      | HMsgsFrom froms => MsgsFrom froms ost orq mins
-      | HMsgIdsFrom msgIds => MsgIdsFrom msgIds ost orq mins
-      | HMsgIdFromEach msgId => MsgIdFromEach msgId ost orq mins
-      | HMsgsFromORq rqty => MsgsFromORq rqty ost orq mins
+      | HMsgFromParent => MsgsFromORq upRq ost orq mins
+      | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
+      | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
       end.
 
     Definition interpBindValue {bt} (bv: HBindValue bt): option bt :=

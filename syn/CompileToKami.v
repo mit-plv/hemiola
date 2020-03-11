@@ -1,4 +1,6 @@
-Require Import Hemiola.Common Hemiola.Syntax HemiolaDeep.
+Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
+Require Import Hemiola.Ex.TopoTemplate.
+Require Import HemiolaDeep.
 
 Require Import Kami.Lib.Struct Kami.
 
@@ -17,7 +19,7 @@ Section Compile.
   Section PreEval.
 
     Definition HOIdx := Bit 8.
-    Definition HMIdx := Bit 4.
+    Definition HMIdx := Bit 5.
     Definition HValue := Bit 32.
 
     Definition HMsg :=
@@ -39,44 +41,56 @@ Section Compile.
                "dl_rssFrom" :: Array HOIdx 8;
                "dl_rsbTo" :: HOIdx }.
 
+    Fixpoint idxToNat (deg: nat) (midx: IdxT): nat :=
+      match midx with
+      | nil => 0
+      | d :: ds => d + deg * (idxToNat deg ds)
+      end.
+    Notation "% i %: d" :=
+      (Const _ (natToWord _ (idxToNat d i))) (at level 5): kami_expr_scope.
+
     Context {var: K.Kind -> Type}.
-    Variables (msgIn: var (Struct HMsg))
+    Variables (oidx: IdxT)
+              (msgIn: var (Struct HMsg))
               (ul: var (Struct UpLock))
               (dl: var (Struct DownLock)).
 
     Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
-               (cont: K.ActionT var K.Void): K.ActionT var K.Void :=
+               (midxCont: option IdxT) (cont: K.ActionT var K.Void)
+      : option IdxT (* midx *) * K.ActionT var K.Void :=
       (match rrp with
-       | HRqAccepting => (Assert (!(#msgIn!HMsg@."type")); cont)
-       | HRsAccepting => (Assert (#msgIn!HMsg@."type"); cont)
-       | HUpLockFree => (Assert (!(#ul!UpLock@."ul_valid")); cont)
-       | HDownLockFree => (Assert (!(#dl!DownLock@."dl_valid")); cont)
+       | HRqAccepting => (None, Assert (!(#msgIn!HMsg@."type")); cont)
+       | HRsAccepting => (None, Assert (#msgIn!HMsg@."type"); cont)
+       | HUpLockFree => (None, Assert (!(#ul!UpLock@."ul_valid")); cont)
+       | HDownLockFree => (None, Assert (!(#dl!DownLock@."dl_valid")); cont)
        | HUpLockMsgId mty mid =>
-         (Assert (#ul!UpLock@."ul_valid");
+         (None,
+          Assert (#ul!UpLock@."ul_valid");
          Assert (#ul!UpLock@."ul_rsb");
          Assert (#ul!UpLock@."ul_msg"!HMsg@."type" == Const _ (ConstBool mty));
-         (* Assert (#ul!UpLock@."ul_msg"!HMsg@."id" == $mid); *) (** FIXME *)
+         Assert (#ul!UpLock@."ul_msg"!HMsg@."id" == %mid%:5);
          cont)
        | HUpLockMsg =>
-         (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
+         (None, Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
        | HUpLockIdxBack =>
-         (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
+         (None, Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
        | HUpLockBackNone =>
-         (Assert (#ul!UpLock@."ul_valid"); Assert (!(#ul!UpLock@."ul_rsb")); cont)
+         (None, Assert (#ul!UpLock@."ul_valid"); Assert (!(#ul!UpLock@."ul_rsb")); cont)
        | HDownLockMsgId mty mid =>
-         (Assert (#dl!DownLock@."dl_valid");
+         (None,
+          Assert (#dl!DownLock@."dl_valid");
          Assert (#dl!DownLock@."dl_rsb");
          Assert (#dl!DownLock@."dl_msg"!HMsg@."type" == Const _ (ConstBool mty));
-         (* Assert (#dl!DownLock@."dl_msg"!HMsg@."id" == $mid); *) (** FIXME *)
+         Assert (#dl!DownLock@."dl_msg"!HMsg@."id" == %mid%:5);
          cont)
        | HDownLockMsg =>
-         (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
+         (None, Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
        | HDownLockIdxBack =>
-         (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
-       | HMsgsFrom _ => cont (** TODO: how to deal with multiple input messages? *)
-       | HMsgIdsFrom _ => cont (** TODO: ditto *)
-       | HMsgIdFromEach _ => cont (** TODO: ditto *)
-       | HMsgsFromORq _ => cont (** TODO: ditto *)
+         (None, Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
+       | HMsgFromParent => (Some (downTo oidx), cont)
+       | HMsgFromChild cidx => (Some (rsUpFrom cidx), cont)
+       | HMsgIdFrom msgId =>
+         (None, Assert (#msgIn!HMsg@."id" == %msgId%:5); cont)
        end)%kami_action.
     
     Definition compile_Rule_prop_prec (pp: HOPrecP)
@@ -89,7 +103,8 @@ Section Compile.
       | HOPrecAnd prec1 prec2 =>
         let crule1 := compile_Rule_prec prec1 cont in
         compile_Rule_prec prec2 crule1
-      | HOPrecRqRs rrprec => compile_Rule_rqrs_prec rrprec cont
+      | HOPrecRqRs rrprec =>
+        snd (compile_Rule_rqrs_prec rrprec None cont) (** FIXME *)
       | HOPrecProp pprec => compile_Rule_prop_prec pprec cont
       end.
 
