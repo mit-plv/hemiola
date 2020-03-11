@@ -1,3 +1,5 @@
+Require Import Numbers.DecimalString.
+
 Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
 Require Import Hemiola.Ex.TopoTemplate.
 Require Import HemiolaDeep.
@@ -10,6 +12,9 @@ Import MonadNotations.
 Module H := Hemiola.Syntax.
 Module K := Kami.Syntax.
 
+Definition nat_to_string (n: nat): string :=
+  NilEmpty.string_of_uint (Nat.to_uint n).
+
 Section Compile.
   Context `{DecValue} `{oifc: OStateIfc}.
 
@@ -19,11 +24,11 @@ Section Compile.
   Section PreEval.
 
     Definition HOIdx := Bit 8.
-    Definition HMIdx := Bit 5.
+    Definition HMsgId := Bit 5.
     Definition HValue := Bit 32.
 
     Definition HMsg :=
-      STRUCT { "id" :: HMIdx;
+      STRUCT { "id" :: HMsgId;
                "type" :: Bool;
                "value" :: HValue }.
 
@@ -41,8 +46,8 @@ Section Compile.
                "dl_rssFrom" :: Array HOIdx 8;
                "dl_rsbTo" :: HOIdx }.
 
-    Fixpoint idxToNat (deg: nat) (midx: IdxT): nat :=
-      match midx with
+    Fixpoint idxToNat (deg: nat) (idx: IdxT): nat :=
+      match idx with
       | nil => 0
       | d :: ds => d + deg * (idxToNat deg ds)
       end.
@@ -51,77 +56,92 @@ Section Compile.
 
     Context {var: K.Kind -> Type}.
     Variables (oidx: IdxT)
-              (msgIn: var (Struct HMsg))
               (ul: var (Struct UpLock))
               (dl: var (Struct DownLock)).
 
+    Fixpoint idx_to_string (idx: IdxT): string :=
+      match idx with
+      | nil => ""
+      | i :: idx' => idx_to_string idx' ++ "_" ++ nat_to_string i
+      end.
+    (* Eval compute in (idx_to_string (0~>1~>2)). *)
+
+    Definition kamiDeqOf (midx: IdxT): Attribute K.SignatureT :=
+      {| attrName := "fifo" ++ idx_to_string midx;
+         attrType := {| K.arg := Void;
+                        K.ret := Struct HMsg |} |}.
+
+    Definition compile_Rule_msg_from (mf: HMsgFrom)
+               (cont: var (Struct HMsg) -> ActionT var Void): ActionT var Void :=
+      (match mf with
+       | HMsgFromParent =>
+         (Call msgIn <- (kamiDeqOf (downTo oidx))(); cont msgIn)
+       | HMsgFromChild cidx =>
+         (Call msgIn <- (kamiDeqOf (rsUpFrom oidx))(); cont msgIn)
+       end)%kami_action.
+
+    Variable msgIn: var (Struct HMsg).
+
     Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
-               (midxCont: option IdxT) (cont: K.ActionT var K.Void)
-      : option IdxT (* midx *) * K.ActionT var K.Void :=
+               (cont: ActionT var Void): ActionT var Void :=
       (match rrp with
-       | HRqAccepting => (None, Assert (!(#msgIn!HMsg@."type")); cont)
-       | HRsAccepting => (None, Assert (#msgIn!HMsg@."type"); cont)
-       | HUpLockFree => (None, Assert (!(#ul!UpLock@."ul_valid")); cont)
-       | HDownLockFree => (None, Assert (!(#dl!DownLock@."dl_valid")); cont)
+       | HRqAccepting => (Assert (!(#msgIn!HMsg@."type")); cont)
+       | HRsAccepting => (Assert (#msgIn!HMsg@."type"); cont)
+       | HUpLockFree => (Assert (!(#ul!UpLock@."ul_valid")); cont)
+       | HDownLockFree => (Assert (!(#dl!DownLock@."dl_valid")); cont)
        | HUpLockMsgId mty mid =>
-         (None,
-          Assert (#ul!UpLock@."ul_valid");
+         (Assert (#ul!UpLock@."ul_valid");
          Assert (#ul!UpLock@."ul_rsb");
          Assert (#ul!UpLock@."ul_msg"!HMsg@."type" == Const _ (ConstBool mty));
          Assert (#ul!UpLock@."ul_msg"!HMsg@."id" == %mid%:5);
          cont)
        | HUpLockMsg =>
-         (None, Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
+         (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
        | HUpLockIdxBack =>
-         (None, Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
+         (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
        | HUpLockBackNone =>
-         (None, Assert (#ul!UpLock@."ul_valid"); Assert (!(#ul!UpLock@."ul_rsb")); cont)
+         (Assert (#ul!UpLock@."ul_valid"); Assert (!(#ul!UpLock@."ul_rsb")); cont)
        | HDownLockMsgId mty mid =>
-         (None,
-          Assert (#dl!DownLock@."dl_valid");
+         (Assert (#dl!DownLock@."dl_valid");
          Assert (#dl!DownLock@."dl_rsb");
          Assert (#dl!DownLock@."dl_msg"!HMsg@."type" == Const _ (ConstBool mty));
          Assert (#dl!DownLock@."dl_msg"!HMsg@."id" == %mid%:5);
          cont)
        | HDownLockMsg =>
-         (None, Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
+         (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
        | HDownLockIdxBack =>
-         (None, Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
-       | HMsgFromParent => (Some (downTo oidx), cont)
-       | HMsgFromChild cidx => (Some (rsUpFrom cidx), cont)
-       | HMsgIdFrom msgId =>
-         (None, Assert (#msgIn!HMsg@."id" == %msgId%:5); cont)
+         (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
+       | HMsgIdFrom msgId => (Assert (#msgIn!HMsg@."id" == %msgId%:5); cont)
        end)%kami_action.
-    
+
     Definition compile_Rule_prop_prec (pp: HOPrecP)
-               (cont: K.ActionT var K.Void): K.ActionT var K.Void :=
+               (cont: ActionT var Void): ActionT var Void :=
       cont. (** TODO *)
 
     Fixpoint compile_Rule_prec (rp: HOPrec)
-             (cont: K.ActionT var K.Void): K.ActionT var K.Void :=
+             (cont: ActionT var Void): ActionT var Void :=
       match rp with
       | HOPrecAnd prec1 prec2 =>
         let crule1 := compile_Rule_prec prec1 cont in
         compile_Rule_prec prec2 crule1
-      | HOPrecRqRs rrprec =>
-        snd (compile_Rule_rqrs_prec rrprec None cont) (** FIXME *)
+      | HOPrecRqRs rrprec => compile_Rule_rqrs_prec rrprec cont
       | HOPrecProp pprec => compile_Rule_prop_prec pprec cont
       end.
 
-    Definition compile_Rule_trs (rtrs: HOTrs): K.Action K.Void :=
+    Definition compile_Rule_trs (rtrs: HOTrs): Action Void :=
       cheat _.
 
   End PreEval.
 
   Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
-    Attribute (K.Action K.Void) :=
+    Attribute (Action Void) :=
     (* let ctrs := compile_Rule_trs (hrule_trs (projT2 rule)) in *)
     (* let crule := compile_Rule_prec (hrule_precond (projT2 rule)) ctrs in *)
     (* {| attrName := ""; attrType := crule |}. *)
     cheat _. (** FIXME *)
   
   Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
-    list (Attribute (K.Action K.Void)) :=
+    list (Attribute (Action Void)) :=
     map compile_Rule rules.
   
   Definition compile_Object (obj: HObject): option K.Modules :=

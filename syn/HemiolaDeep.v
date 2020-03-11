@@ -57,9 +57,11 @@ Section Reify.
   | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
   | HDownLockMsg: HOPrecR
   | HDownLockIdxBack: HOPrecR
-  | HMsgFromParent: HOPrecR
-  | HMsgFromChild (cidx: IdxT): HOPrecR
   | HMsgIdFrom (msgId: IdxT): HOPrecR.
+
+  Inductive HMsgFrom: Type :=
+  | HMsgFromParent: HMsgFrom
+  | HMsgFromChild (cidx: IdxT): HMsgFrom.
 
   Inductive HOPrec: Type :=
   | HOPrecAnd: HOPrec -> HOPrec -> HOPrec
@@ -117,9 +119,13 @@ Section Reify.
       | HDownLockMsgId mty mid => DownLockMsgId mty mid ost orq mins
       | HDownLockMsg => DownLockMsg ost orq mins
       | HDownLockIdxBack => DownLockIdxBack ost orq mins
+      | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
+      end.
+
+    Definition interpMsgFrom (mf: HMsgFrom): Prop :=
+      match mf with
       | HMsgFromParent => MsgsFromORq upRq ost orq mins
       | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
-      | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
       end.
 
     Definition interpBindValue {bt} (bv: HBindValue bt): option bt :=
@@ -160,10 +166,13 @@ Section HemiolaDeep.
   Context `{DecValue} `{OStateIfc}.
 
   Record HRule (sr: Rule) :=
-    { hrule_precond: HOPrec;
+    { hrule_msg_from: HMsgFrom;
+      hrule_precond: HOPrec;
       hrule_precond_ok:
         forall ost orq mins,
-          interpOPrec hrule_precond ost orq mins = rule_precond sr ost orq mins;
+          (interpMsgFrom ost orq mins hrule_msg_from /\
+           interpOPrec hrule_precond ost orq mins)
+          <-> rule_precond sr ost orq mins;
       hrule_trs: HOTrs;
       hrule_trs_ok:
         forall ost orq mins,
