@@ -23,28 +23,28 @@ Section Compile.
 
   Section PreEval.
 
-    Definition HOIdx := Bit 8.
-    Definition HMsgId := Bit 5.
-    Definition HValue := Bit 32.
+    Definition KOIdx := Bit 8.
+    Definition KMsgId := Bit 5.
+    Definition KValue := Bit 32.
 
-    Definition HMsg :=
-      STRUCT { "id" :: HMsgId;
+    Definition KMsg :=
+      STRUCT { "id" :: KMsgId;
                "type" :: Bool;
-               "value" :: HValue }.
+               "value" :: KValue }.
 
     Definition UpLock :=
       STRUCT { "ul_valid" :: Bool;
                "ul_rsb" :: Bool;
-               "ul_msg" :: Struct HMsg;
-               "ul_rssFrom" :: Array HOIdx 8;
-               "ul_rsbTo" :: HOIdx }.
+               "ul_msg" :: Struct KMsg;
+               "ul_rssFrom" :: Array KOIdx 8;
+               "ul_rsbTo" :: KOIdx }.
 
     Definition DownLock :=
       STRUCT { "dl_valid" :: Bool;
                "dl_rsb" :: Bool;
-               "dl_msg" :: Struct HMsg;
-               "dl_rssFrom" :: Array HOIdx 8;
-               "dl_rsbTo" :: HOIdx }.
+               "dl_msg" :: Struct KMsg;
+               "dl_rssFrom" :: Array KOIdx 8;
+               "dl_rsbTo" :: KOIdx }.
 
     Fixpoint idxToNat (deg: nat) (idx: IdxT): nat :=
       match idx with
@@ -69,10 +69,10 @@ Section Compile.
     Definition kamiDeqOf (midx: IdxT): Attribute K.SignatureT :=
       {| attrName := "fifo" ++ idx_to_string midx;
          attrType := {| K.arg := Void;
-                        K.ret := Struct HMsg |} |}.
+                        K.ret := Struct KMsg |} |}.
 
     Definition compile_Rule_msg_from (mf: HMsgFrom)
-               (cont: var (Struct HMsg) -> ActionT var Void): ActionT var Void :=
+               (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
       (match mf with
        | HMsgFromParent =>
          (Call msgIn <- (kamiDeqOf (downTo oidx))(); cont msgIn)
@@ -80,20 +80,20 @@ Section Compile.
          (Call msgIn <- (kamiDeqOf (rsUpFrom oidx))(); cont msgIn)
        end)%kami_action.
 
-    Variable msgIn: var (Struct HMsg).
+    Variable msgIn: var (Struct KMsg).
 
     Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
                (cont: ActionT var Void): ActionT var Void :=
       (match rrp with
-       | HRqAccepting => (Assert (!(#msgIn!HMsg@."type")); cont)
-       | HRsAccepting => (Assert (#msgIn!HMsg@."type"); cont)
+       | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
+       | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
        | HUpLockFree => (Assert (!(#ul!UpLock@."ul_valid")); cont)
        | HDownLockFree => (Assert (!(#dl!DownLock@."dl_valid")); cont)
        | HUpLockMsgId mty mid =>
          (Assert (#ul!UpLock@."ul_valid");
          Assert (#ul!UpLock@."ul_rsb");
-         Assert (#ul!UpLock@."ul_msg"!HMsg@."type" == Const _ (ConstBool mty));
-         Assert (#ul!UpLock@."ul_msg"!HMsg@."id" == %mid%:5);
+         Assert (#ul!UpLock@."ul_msg"!KMsg@."type" == Const _ (ConstBool mty));
+         Assert (#ul!UpLock@."ul_msg"!KMsg@."id" == %mid%:5);
          cont)
        | HUpLockMsg =>
          (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
@@ -104,31 +104,60 @@ Section Compile.
        | HDownLockMsgId mty mid =>
          (Assert (#dl!DownLock@."dl_valid");
          Assert (#dl!DownLock@."dl_rsb");
-         Assert (#dl!DownLock@."dl_msg"!HMsg@."type" == Const _ (ConstBool mty));
-         Assert (#dl!DownLock@."dl_msg"!HMsg@."id" == %mid%:5);
+         Assert (#dl!DownLock@."dl_msg"!KMsg@."type" == Const _ (ConstBool mty));
+         Assert (#dl!DownLock@."dl_msg"!KMsg@."id" == %mid%:5);
          cont)
        | HDownLockMsg =>
          (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
        | HDownLockIdxBack =>
          (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
-       | HMsgIdFrom msgId => (Assert (#msgIn!HMsg@."id" == %msgId%:5); cont)
+       | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == %msgId%:5); cont)
        end)%kami_action.
 
-    Definition compile_Rule_prop_prec (pp: HOPrecP)
-               (cont: ActionT var Void): ActionT var Void :=
-      cont. (** TODO *)
+    Definition compile_bool (hv: HValue bool): Expr var (SyntaxKind Bool) :=
+      match hv in (HValue T) return (T = bool -> Expr var (SyntaxKind Bool)) with
+      | @HConst _ ty c =>
+        fun Heq => eq_rect _ (fun ty => ty -> Expr var (SyntaxKind Bool))
+                           (fun b => (Const _ (ConstBool b))) _ (eq_sym Heq) c
+      | HOstVal idx => cheat _ (** FIXME *)
+      end eq_refl.
+
+    Definition compile_nat (sz: nat) (hv: HValue nat): Expr var (SyntaxKind (Bit sz)) :=
+      match hv in (HValue T) return (T = nat -> Expr var (SyntaxKind (Bit sz))) with
+      | @HConst _ ty c =>
+        fun Heq => eq_rect _ (fun ty => ty -> Expr var (SyntaxKind (Bit sz)))
+                           (fun c => ($c)%kami_expr) _ (eq_sym Heq) c
+      | HOstVal idx => cheat _ (** FIXME *)
+      end eq_refl.
+    
+    Fixpoint compile_Rule_prop_prec (pp: HOPrecP): Expr var (SyntaxKind Bool) :=
+      (match pp with
+       | HAnd pp1 pp2 =>
+         (compile_Rule_prop_prec pp1) && (compile_Rule_prop_prec pp2)
+       | HOr pp1 pp2 =>
+         (compile_Rule_prop_prec pp1) || (compile_Rule_prop_prec pp2)
+       | HBoolT b => compile_bool b == $$true
+       | HBoolF b => compile_bool b == $$false
+       | HNatEq sz v1 v2 => compile_nat sz v1 == compile_nat sz v2
+       | HNatNe sz v1 v2 => compile_nat sz v1 != compile_nat sz v2
+       | HNatLt sz v1 v2 => compile_nat sz v1 < compile_nat sz v2
+       | HNatLe sz v1 v2 => compile_nat sz v1 <= compile_nat sz v2
+       | HNatGt sz v1 v2 => compile_nat sz v1 > compile_nat sz v2
+       | HNatGe sz v1 v2 => compile_nat sz v1 >= compile_nat sz v2
+       end)%kami_expr.
 
     Fixpoint compile_Rule_prec (rp: HOPrec)
              (cont: ActionT var Void): ActionT var Void :=
       match rp with
       | HOPrecAnd prec1 prec2 =>
-        let crule1 := compile_Rule_prec prec1 cont in
-        compile_Rule_prec prec2 crule1
+        let crule2 := compile_Rule_prec prec2 cont in
+        compile_Rule_prec prec1 crule2
       | HOPrecRqRs rrprec => compile_Rule_rqrs_prec rrprec cont
-      | HOPrecProp pprec => compile_Rule_prop_prec pprec cont
+      | HOPrecProp pprec =>
+        (Assert (compile_Rule_prop_prec pprec); cont)%kami_action
       end.
 
-    Definition compile_Rule_trs (rtrs: HOTrs): Action Void :=
+    Definition compile_Rule_trs (rtrs: HOTrs): ActionT var Void :=
       cheat _.
 
   End PreEval.

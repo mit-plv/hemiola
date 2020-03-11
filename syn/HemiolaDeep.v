@@ -38,12 +38,14 @@ Section Reify.
   Inductive HOPrecP: Type :=
   | HAnd: HOPrecP -> HOPrecP -> HOPrecP
   | HOr: HOPrecP -> HOPrecP -> HOPrecP
-  | HEq: HValue nat -> HValue nat -> HOPrecP
-  | HNe: HValue nat -> HValue nat -> HOPrecP
-  | HLt: HValue nat -> HValue nat -> HOPrecP
-  | HLe: HValue nat -> HValue nat -> HOPrecP
-  | HGt: HValue nat -> HValue nat -> HOPrecP
-  | HGe: HValue nat -> HValue nat -> HOPrecP.
+  | HBoolT: HValue bool -> HOPrecP
+  | HBoolF: HValue bool -> HOPrecP
+  | HNatEq (sz: nat): HValue nat -> HValue nat -> HOPrecP
+  | HNatNe (sz: nat): HValue nat -> HValue nat -> HOPrecP
+  | HNatLt (sz: nat): HValue nat -> HValue nat -> HOPrecP
+  | HNatLe (sz: nat): HValue nat -> HValue nat -> HOPrecP
+  | HNatGt (sz: nat): HValue nat -> HValue nat -> HOPrecP
+  | HNatGe (sz: nat): HValue nat -> HValue nat -> HOPrecP.
 
   Inductive HOPrecR: Type :=
   | HRqAccepting: HOPrecR
@@ -71,7 +73,7 @@ Section Reify.
   (* -- for transition *)
 
   Inductive HBindValue: Type -> Type :=
-  | HGetFirstMsg: HBindValue Msg.
+  | HNatGetFirstMsg: HBindValue Msg.
 
   Inductive HMonad: Type :=
   | HBind: forall {bt} (bv: HBindValue bt) (cont: bt -> HMonad), HMonad
@@ -98,12 +100,14 @@ Section Reify.
       match p with
       | HAnd p1 p2 => interpOPrecP p1 /\ interpOPrecP p2
       | HOr p1 p2 => interpOPrecP p1 \/ interpOPrecP p2
-      | HEq v1 v2 => interpValue v1 = interpValue v2
-      | HNe v1 v2 => interpValue v1 <> interpValue v2
-      | HLt v1 v2 => interpValue v1 < interpValue v2
-      | HLe v1 v2 => interpValue v1 <= interpValue v2
-      | HGt v1 v2 => interpValue v1 > interpValue v2
-      | HGe v1 v2 => interpValue v1 >= interpValue v2
+      | HBoolT b => interpValue b = true
+      | HBoolF b => interpValue b = false
+      | HNatEq _ v1 v2 => interpValue v1 = interpValue v2
+      | HNatNe _ v1 v2 => interpValue v1 <> interpValue v2
+      | HNatLt _ v1 v2 => interpValue v1 < interpValue v2
+      | HNatLe _ v1 v2 => interpValue v1 <= interpValue v2
+      | HNatGt _ v1 v2 => interpValue v1 > interpValue v2
+      | HNatGe _ v1 v2 => interpValue v1 >= interpValue v2
       end.
 
     Definition interpOPrecR (p: HOPrecR): Prop :=
@@ -130,7 +134,7 @@ Section Reify.
 
     Definition interpBindValue {bt} (bv: HBindValue bt): option bt :=
       match bv with
-      | HGetFirstMsg => getFirstMsg mins
+      | HNatGetFirstMsg => getFirstMsg mins
       end.
 
   End Interp.
