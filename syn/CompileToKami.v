@@ -54,6 +54,14 @@ Section Compile.
     Notation "% i %: d" :=
       (Const _ (natToWord _ (idxToNat d i))) (at level 5): kami_expr_scope.
 
+    Definition kind_of (ht: htype): Kind :=
+      match ht with
+      | HMsg => Struct KMsg
+      end.
+
+    Definition hvar_of (var: Kind -> Type): htype -> Type :=
+      fun ht => var (kind_of ht).
+
     Context {var: K.Kind -> Type}.
     Variables (oidx: IdxT)
               (ul: var (Struct UpLock))
@@ -157,8 +165,31 @@ Section Compile.
         (Assert (compile_Rule_prop_prec pprec); cont)%kami_action
       end.
 
+    Definition compile_BindValue {ht} (hv: HBindValue ht)
+      : Expr var (SyntaxKind (kind_of ht)) :=
+      (match hv with
+       | HNatGetFirstMsg => #msgIn
+       end)%kami_expr.
+
+    Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
+      (match hm with
+       | @HBind _ ht hv cont =>
+         Let_ (compile_BindValue hv) (fun x: var (kind_of ht) => compile_MonadT (cont x))
+       | @HRet _ _ _ _ => cheat _
+       end)%kami_action.
+
+    Definition compile_Monad (hm: HMonad): ActionT var Void :=
+      compile_MonadT (hm (hvar_of var)).
+    
+    Definition compile_state_trs (mtrs: HStateMTrs): ActionT var Void :=
+      match mtrs with
+      | HMTrs mn => compile_Monad mn
+      end.
+    
     Definition compile_Rule_trs (rtrs: HOTrs): ActionT var Void :=
-      cheat _.
+      match rtrs with
+      | HTrsMTrs mtrs => compile_state_trs mtrs
+      end.
 
   End PreEval.
 

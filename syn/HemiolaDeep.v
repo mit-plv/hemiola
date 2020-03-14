@@ -72,12 +72,31 @@ Section Reify.
 
   (* -- for transition *)
 
-  Inductive HBindValue: Type -> Type :=
-  | HNatGetFirstMsg: HBindValue Msg.
+  Inductive htype :=
+  | HMsg.
 
-  Inductive HMonad: Type :=
-  | HBind: forall {bt} (bv: HBindValue bt) (cont: bt -> HMonad), HMonad
-  | HRet: forall (rst: StateM), HMonad.
+  Definition htypeDenote (ht: htype): Type :=
+    match ht with
+    | HMsg => Msg
+    end.
+
+  Section Transition.
+    Variable var: htype -> Type.
+    
+    Inductive HBindValue: htype -> Type :=
+    | HNatGetFirstMsg: HBindValue HMsg.
+
+    Inductive HOState := .
+    Inductive HORq := .
+    Inductive HMsgsOut := .
+
+    Inductive HMonadT: Type :=
+    | HBind: forall {ht} (bv: HBindValue ht) (cont: var ht -> HMonadT), HMonadT
+    | HRet: HOState -> HORq -> HMsgsOut -> HMonadT.
+
+  End Transition.
+
+  Definition HMonad := forall var, HMonadT var.
 
   Inductive HStateMTrs: Type :=
   | HMTrs: HMonad -> HStateMTrs.
@@ -132,7 +151,7 @@ Section Reify.
       | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
       end.
 
-    Definition interpBindValue {bt} (bv: HBindValue bt): option bt :=
+    Definition interpBindValue {bt} (bv: HBindValue bt): option (htypeDenote bt) :=
       match bv with
       | HNatGetFirstMsg => getFirstMsg mins
       end.
@@ -146,17 +165,17 @@ Section Reify.
     | HOPrecProp pp => fun ost _ _ => interpOPrecP ost pp
     end.
 
-  Fixpoint interpMonad (hm: HMonad) (stm: StateM): option StateM :=
+  Fixpoint interpMonad (hm: HMonadT htypeDenote) (stm: StateM): option StateM :=
     match hm with
     | HBind bv cont =>
       (msg <-- interpBindValue (msgs stm) bv;
       interpMonad (cont msg) stm)
-    | HRet rv => Some rv
+    | HRet _ _ _ _ => None
     end.
 
   Definition interpMTrs (trs: HStateMTrs): StateMTrs :=
     match trs with
-    | HMTrs hm => interpMonad hm
+    | HMTrs hm => interpMonad (hm htypeDenote)
     end.
 
   Definition interpOTrs (trs: HOTrs): OTrs :=
