@@ -73,10 +73,11 @@ Section Reify.
   (* -- for transition *)
 
   Inductive htype :=
-  | HMsg.
+  | HIdx | HMsg.
 
   Definition htypeDenote (ht: htype): Type :=
     match ht with
+    | HIdx => IdxT
     | HMsg => Msg
     end.
 
@@ -84,7 +85,11 @@ Section Reify.
     Variable var: htype -> Type.
     
     Inductive HBindValue: htype -> Type :=
-    | HNatGetFirstMsg: HBindValue HMsg.
+    | HGetFirstMsg: HBindValue HMsg
+    | HGetUpLockMsg: HBindValue HMsg
+    | HGetDownLockMsg: HBindValue HMsg
+    | HGetUpLockIdxBack: HBindValue HIdx
+    | HGetDownLockIdxBack: HBindValue HIdx.
 
     Inductive HOState := .
     Inductive HORq := .
@@ -153,7 +158,11 @@ Section Reify.
 
     Definition interpBindValue {bt} (bv: HBindValue bt): option (htypeDenote bt) :=
       match bv with
-      | HNatGetFirstMsg => getFirstMsg mins
+      | HGetFirstMsg => getFirstMsg mins
+      | HGetUpLockMsg => getUpLockMsg orq
+      | HGetDownLockMsg => getDownLockMsg orq
+      | HGetUpLockIdxBack => getUpLockIdxBack orq
+      | HGetDownLockIdxBack => getDownLockIdxBack orq
       end.
 
   End Interp.
@@ -168,7 +177,7 @@ Section Reify.
   Fixpoint interpMonad (hm: HMonadT htypeDenote) (stm: StateM): option StateM :=
     match hm with
     | HBind bv cont =>
-      (msg <-- interpBindValue (msgs stm) bv;
+      (msg <-- interpBindValue (orq stm) (msgs stm) bv;
       interpMonad (cont msg) stm)
     | HRet _ _ _ _ => None
     end.
@@ -202,11 +211,17 @@ Section HemiolaDeep.
           interpOTrs hrule_trs ost orq mins = rule_trs sr ost orq mins
     }.
 
-  Record HObject :=
-    { hobj_rules: list {sr: Rule & HRule sr} }.
+  Record HObject (sobj: Object) :=
+    { hobj_rules: list {sr: Rule & HRule sr};
+      hobj_rules_ok:
+        List.map (@projT1 _ _) hobj_rules = obj_rules sobj
+    }.
 
-  Record HSystem :=
-    { hsys_objs: list HObject }.
+  Record HSystem (ssys: System) :=
+    { hsys_objs: list {sobj: Object & HObject sobj};
+      hsys_objs_ok:
+        List.map (@projT1 _ _) hsys_objs = sys_objs ssys
+    }.
 
 End HemiolaDeep.
 

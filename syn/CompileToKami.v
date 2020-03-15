@@ -19,7 +19,7 @@ Section Compile.
   Context `{DecValue} `{oifc: OStateIfc}.
 
   Definition compile_OState_init: list K.RegInitT :=
-    nil. (** TODO *)
+    cheat _.
 
   Section PreEval.
 
@@ -57,15 +57,14 @@ Section Compile.
     Definition kind_of (ht: htype): Kind :=
       match ht with
       | HMsg => Struct KMsg
+      | HIdx => KOIdx (** FIXME: isn't it an index for message queues? *)
       end.
 
     Definition hvar_of (var: Kind -> Type): htype -> Type :=
       fun ht => var (kind_of ht).
 
     Context {var: K.Kind -> Type}.
-    Variables (oidx: IdxT)
-              (ul: var (Struct UpLock))
-              (dl: var (Struct DownLock)).
+    Variable oidx: IdxT.
 
     Fixpoint idx_to_string (idx: IdxT): string :=
       match idx with
@@ -88,7 +87,17 @@ Section Compile.
          (Call msgIn <- (kamiDeqOf (rsUpFrom oidx))(); cont msgIn)
        end)%kami_action.
 
-    Variable msgIn: var (Struct KMsg).
+    Variables (msgIn: var (Struct KMsg))
+              (ul: var (Struct UpLock))
+              (dl: var (Struct DownLock)).
+
+    Definition compile_Rule_uplock (uln: string)
+               (cont: var (Struct UpLock) -> ActionT var Void): ActionT var Void :=
+      (Read ul: Struct UpLock <- uln; cont ul)%kami_action.
+
+    Definition compile_Rule_downlock (dln: string)
+               (cont: var (Struct DownLock) -> ActionT var Void): ActionT var Void :=
+      (Read dl: Struct DownLock <- dln; cont dl)%kami_action.
 
     Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
                (cont: ActionT var Void): ActionT var Void :=
@@ -168,7 +177,11 @@ Section Compile.
     Definition compile_BindValue {ht} (hv: HBindValue ht)
       : Expr var (SyntaxKind (kind_of ht)) :=
       (match hv with
-       | HNatGetFirstMsg => #msgIn
+       | HGetFirstMsg => #msgIn
+       | HGetUpLockMsg => (#ul!UpLock@."ul_msg")
+       | HGetDownLockMsg => (#dl!DownLock@."dl_msg")
+       | HGetUpLockIdxBack => (#ul!UpLock@."ul_rsbTo")
+       | HGetDownLockIdxBack => (#dl!DownLock@."dl_rsbTo")
        end)%kami_expr.
 
     Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
@@ -193,23 +206,49 @@ Section Compile.
 
   End PreEval.
 
-  Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
-    Attribute (Action Void) :=
-    (* let ctrs := compile_Rule_trs (hrule_trs (projT2 rule)) in *)
-    (* let crule := compile_Rule_prec (hrule_precond (projT2 rule)) ctrs in *)
-    (* {| attrName := ""; attrType := crule |}. *)
-    cheat _. (** FIXME *)
+  Section WithObj.
+    Variables (oidx: IdxT) (uln dln: string).
   
-  Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
-    list (Attribute (Action Void)) :=
-    map compile_Rule rules.
+    Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
+      Attribute (Action Void) :=
+      let hr := projT2 rule in
+      {| attrName := "";
+         attrType :=
+           fun var =>
+             compile_Rule_msg_from
+               oidx (hrule_msg_from hr)
+               (fun msgIn =>
+                  compile_Rule_uplock
+                    uln (fun ul =>
+                           compile_Rule_downlock
+                             dln (fun dl =>
+                                    compile_Rule_prec
+                                      msgIn ul dl (hrule_precond hr)
+                                      (compile_Rule_trs msgIn ul dl (hrule_trs hr)))))
+      |}.
+    
+    Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
+      list (Attribute (Action Void)) :=
+      map compile_Rule rules.
+
+  End WithObj.
+
+  Definition upLockReg (oidx: IdxT): string :=
+    "ul" ++ idx_to_string oidx.
+  Definition downLockReg (oidx: IdxT): string :=
+    "dl" ++ idx_to_string oidx.
   
-  Definition compile_Object (obj: HObject): option K.Modules :=
+  Definition compile_Object (obj: {sobj: H.Object & HObject sobj})
+    : option K.Modules :=
     let cregs := compile_OState_init in
-    let crules := compile_Rules (hobj_rules obj) in
+    let crules := compile_Rules (obj_idx (projT1 obj))
+                                (upLockReg (obj_idx (projT1 obj)))
+                                (downLockReg (obj_idx (projT1 obj)))
+                                (hobj_rules (projT2 obj)) in
     Some (K.Mod cregs crules nil).
   
-  Fixpoint compile_Objects (objs: list HObject): option Kami.Syntax.Modules :=
+  Fixpoint compile_Objects (objs: list {sobj: H.Object & HObject sobj})
+    : option Kami.Syntax.Modules :=
     match objs with
     | nil => None
     | obj :: objs' =>
@@ -218,8 +257,9 @@ Section Compile.
       Some (ConcatMod cmod cmods))
     end.
   
-  Definition compile_System (sys: HSystem): option Kami.Syntax.Modules :=
-    compile_Objects sys.(hsys_objs).
+  Definition compile_System (sys: {ssys: H.System & HSystem ssys})
+    : option Kami.Syntax.Modules :=
+    compile_Objects (hsys_objs (projT2 sys)).
 
 End Compile.
 
