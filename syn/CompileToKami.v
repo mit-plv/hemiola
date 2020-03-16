@@ -15,20 +15,36 @@ Module K := Kami.Syntax.
 Definition nat_to_string (n: nat): string :=
   NilEmpty.string_of_uint (Nat.to_uint n).
 
+Fixpoint idxToNat (deg: nat) (idx: IdxT): nat :=
+  match idx with
+  | nil => 0
+  | d :: ds => d + deg * (idxToNat deg ds)
+  end.
+Notation "% i %: d" :=
+  (Const _ (natToWord _ (idxToNat d i))) (at level 5): kami_expr_scope.
+
+Fixpoint idx_to_string (idx: IdxT): string :=
+  match idx with
+  | nil => ""
+  | i :: idx' => idx_to_string idx' ++ "_" ++ nat_to_string i
+  end.
+(* Eval compute in (idx_to_string (0~>1~>2)). *)
+
 Section Compile.
-  Context `{DecValue} `{oifc: OStateIfc}.
+  Context `{DecValue} `{oifc: OStateIfc} `{hconfig}.
 
   Definition compile_OState_init: list K.RegInitT :=
-    cheat _.
+    TODO _.
 
   Section PreEval.
 
-    Definition KOIdx := Bit 8.
-    Definition KMsgId := Bit 5.
-    Definition KValue := Bit 32.
+    Definition KIdxO := Bit hcfg_oidx_sz.
+    Definition KIdxM := Bit hcfg_midx_sz.
+    Definition KMid := Bit hcfg_msg_id_sz.
+    Definition KValue := Bit hcfg_value_sz.
 
     Definition KMsg :=
-      STRUCT { "id" :: KMsgId;
+      STRUCT { "id" :: KMid;
                "type" :: Bool;
                "value" :: KValue }.
 
@@ -36,28 +52,24 @@ Section Compile.
       STRUCT { "ul_valid" :: Bool;
                "ul_rsb" :: Bool;
                "ul_msg" :: Struct KMsg;
-               "ul_rssFrom" :: Array KOIdx 8;
-               "ul_rsbTo" :: KOIdx }.
+               "ul_rssFrom" :: Array KIdxM 8;
+               "ul_rsbTo" :: KIdxM }.
 
     Definition DownLock :=
       STRUCT { "dl_valid" :: Bool;
                "dl_rsb" :: Bool;
                "dl_msg" :: Struct KMsg;
-               "dl_rssFrom" :: Array KOIdx 8;
-               "dl_rsbTo" :: KOIdx }.
-
-    Fixpoint idxToNat (deg: nat) (idx: IdxT): nat :=
-      match idx with
-      | nil => 0
-      | d :: ds => d + deg * (idxToNat deg ds)
-      end.
-    Notation "% i %: d" :=
-      (Const _ (natToWord _ (idxToNat d i))) (at level 5): kami_expr_scope.
+               "dl_rssFrom" :: Array KIdxM 8;
+               "dl_rsbTo" :: KIdxM }.
 
     Definition kind_of (ht: htype): Kind :=
       match ht with
+      | HBool => Bool
+      | HIdx w => Bit w
+      | HNat w => Bit w
+      | HValue => Bit hcfg_value_sz
       | HMsg => Struct KMsg
-      | HIdx => KOIdx (** FIXME: isn't it an index for message queues? *)
+      | HPair ht1 ht2 => Void (** weird? *)
       end.
 
     Definition hvar_of (var: Kind -> Type): htype -> Type :=
@@ -65,13 +77,6 @@ Section Compile.
 
     Context {var: K.Kind -> Type}.
     Variable oidx: IdxT.
-
-    Fixpoint idx_to_string (idx: IdxT): string :=
-      match idx with
-      | nil => ""
-      | i :: idx' => idx_to_string idx' ++ "_" ++ nat_to_string i
-      end.
-    (* Eval compute in (idx_to_string (0~>1~>2)). *)
 
     Definition kamiDeqOf (midx: IdxT): Attribute K.SignatureT :=
       {| attrName := "fifo" ++ idx_to_string midx;
@@ -131,50 +136,56 @@ Section Compile.
        | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == %msgId%:5); cont)
        end)%kami_action.
 
-    Definition compile_bool (hv: HValue bool): Expr var (SyntaxKind Bool) :=
-      match hv in (HValue T) return (T = bool -> Expr var (SyntaxKind Bool)) with
-      | @HConst _ ty c =>
-        fun Heq => eq_rect _ (fun ty => ty -> Expr var (SyntaxKind Bool))
-                           (fun b => (Const _ (ConstBool b))) _ (eq_sym Heq) c
-      | HOstVal idx => cheat _ (** FIXME *)
-      end eq_refl.
-
-    Definition compile_nat (sz: nat) (hv: HValue nat): Expr var (SyntaxKind (Bit sz)) :=
-      match hv in (HValue T) return (T = nat -> Expr var (SyntaxKind (Bit sz))) with
-      | @HConst _ ty c =>
-        fun Heq => eq_rect _ (fun ty => ty -> Expr var (SyntaxKind (Bit sz)))
-                           (fun c => ($c)%kami_expr) _ (eq_sym Heq) c
-      | HOstVal idx => cheat _ (** FIXME *)
-      end eq_refl.
+    Definition compile_const {ht} (hc: hconst ht)
+      : ConstT (kind_of ht) :=
+      match hc with
+      | HConstBool b => ConstBool b
+      | HConstNat w n => ConstBit (natToWord w n)
+      | HConstIdx w deg i => ConstBit (natToWord w (idxToNat deg i)) 
+      end.
     
-    Fixpoint compile_Rule_prop_prec (pp: HOPrecP): Expr var (SyntaxKind Bool) :=
+    Fixpoint compile_exp {ht} (he: hexp (hvar_of var) ht)
+      : Expr var (SyntaxKind (kind_of ht)) :=
+      match he with
+      | HConst _ c => Const _ (compile_const c)
+      | HVar _ _ v => Var _ (SyntaxKind _) v
+      | HMsgB mid mty mval =>
+        (STRUCT { "id" ::= compile_exp mid;
+                  "type" ::= compile_exp mty;
+                  "value" ::= compile_exp mval })%kami_expr
+      | HIdm _ _ => TODO _
+      | HOstVal _ _ _ _ => TODO _
+      end.
+    
+    Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
+      : Expr var (SyntaxKind Bool) :=
       (match pp with
        | HAnd pp1 pp2 =>
          (compile_Rule_prop_prec pp1) && (compile_Rule_prop_prec pp2)
        | HOr pp1 pp2 =>
          (compile_Rule_prop_prec pp1) || (compile_Rule_prop_prec pp2)
-       | HBoolT b => compile_bool b == $$true
-       | HBoolF b => compile_bool b == $$false
-       | HNatEq sz v1 v2 => compile_nat sz v1 == compile_nat sz v2
-       | HNatNe sz v1 v2 => compile_nat sz v1 != compile_nat sz v2
-       | HNatLt sz v1 v2 => compile_nat sz v1 < compile_nat sz v2
-       | HNatLe sz v1 v2 => compile_nat sz v1 <= compile_nat sz v2
-       | HNatGt sz v1 v2 => compile_nat sz v1 > compile_nat sz v2
-       | HNatGe sz v1 v2 => compile_nat sz v1 >= compile_nat sz v2
+       | HBoolT b => compile_exp b == $$true
+       | HBoolF b => compile_exp b == $$false
+       | HEq v1 v2 => compile_exp v1 == compile_exp v2
+       | HNe v1 v2 => compile_exp v1 != compile_exp v2
+       | HNatLt v1 v2 => compile_exp v1 < compile_exp v2
+       | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
+       | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
+       | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
        end)%kami_expr.
 
-    Fixpoint compile_Rule_prec (rp: HOPrec)
+    Fixpoint compile_Rule_prec (rp: HOPrecT (hvar_of var))
              (cont: ActionT var Void): ActionT var Void :=
       match rp with
       | HOPrecAnd prec1 prec2 =>
         let crule2 := compile_Rule_prec prec2 cont in
         compile_Rule_prec prec1 crule2
-      | HOPrecRqRs rrprec => compile_Rule_rqrs_prec rrprec cont
+      | HOPrecRqRs _ rrprec => compile_Rule_rqrs_prec rrprec cont
       | HOPrecProp pprec =>
         (Assert (compile_Rule_prop_prec pprec); cont)%kami_action
       end.
 
-    Definition compile_BindValue {ht} (hv: HBindValue ht)
+    Definition compile_bval {ht} (hv: hbval ht)
       : Expr var (SyntaxKind (kind_of ht)) :=
       (match hv with
        | HGetFirstMsg => #msgIn
@@ -186,9 +197,9 @@ Section Compile.
 
     Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
       (match hm with
-       | @HBind _ ht hv cont =>
-         Let_ (compile_BindValue hv) (fun x: var (kind_of ht) => compile_MonadT (cont x))
-       | @HRet _ _ _ _ => cheat _
+       | HBind hv cont =>
+         Let_ (compile_bval hv) (fun x: var (kind_of _) => compile_MonadT (cont x))
+       | HRet _ _ _ => TODO _
        end)%kami_action.
 
     Definition compile_Monad (hm: HMonad): ActionT var Void :=
@@ -223,7 +234,7 @@ Section Compile.
                            compile_Rule_downlock
                              dln (fun dl =>
                                     compile_Rule_prec
-                                      msgIn ul dl (hrule_precond hr)
+                                      msgIn ul dl (hrule_precond hr (hvar_of var))
                                       (compile_Rule_trs msgIn ul dl (hrule_trs hr)))))
       |}.
     
