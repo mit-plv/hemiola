@@ -20,269 +20,337 @@ Class hconfig :=
     hcfg_value_sz: nat }.
 
 Section Reify.
-  Context `{DecValue} `{oifc: OStateIfc}.
-  Context `{hconfig}.
+  Context `{DecValue} `{OStateIfc} `{hconfig}.
 
   (** Reified syntax *)
 
-  Inductive htype :=
+  Inductive hbtype :=
   | HBool
   | HIdx (width: nat)
   | HNat (width: nat)
   | HValue
   | HMsg
-  | HPair: htype -> htype -> htype.
+  | HPair: hbtype -> hbtype -> hbtype.
 
   Definition HIdxO := HIdx hcfg_oidx_sz.
   Definition HIdxQ := HIdx hcfg_midx_sz.
   Definition HIdxM := HIdx hcfg_msg_id_sz.
 
-  Fixpoint htypeDenote (ht: htype): Type :=
+  Fixpoint hbtypeDenote (ht: hbtype): Type :=
     match ht with
     | HBool => bool
     | HIdx _ => IdxT
     | HNat _ => nat
     | HValue => t_type
     | HMsg => Msg
-    | HPair ht1 ht2 => htypeDenote ht1 * htypeDenote ht2
+    | HPair ht1 ht2 => hbtypeDenote ht1 * hbtypeDenote ht2
     end.
 
-  Section Phoas.
-    Variable var: htype -> Type.
+  Section Basis.
+    Variable var: hbtype -> Type.
+
+    (* -- basic constants and expressions *)
+
+    Inductive hbconst: hbtype -> Type :=
+    | HBConstBool: forall b: bool, hbconst HBool
+    | HBConstNat: forall w (n: nat), hbconst (HNat w)
+    | HBConstIdx: forall w (deg: nat) (i: IdxT), hbconst (HIdx w).
+
+    Inductive hbexp: hbtype -> Type :=
+    | HBConst: forall ht (c: hbconst ht), hbexp ht
+    | HVar: forall ht, var ht -> hbexp ht
+    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HValue -> hbexp HMsg
+    | HIdm: hbexp HIdxQ -> hbexp HMsg -> hbexp (HPair HIdxQ HMsg).
+
+  End Basis.
+
+  Class ExtExp :=
+    { hetype: Set;
+      hetypeDenote: hetype -> Type;
+      heexp: (hetype -> Type) -> hetype -> Type;
+      interp_heexp:
+        OState -> ORq Msg -> list (Id Msg) ->
+        forall {het} (e: heexp hetypeDenote het), hetypeDenote het
+    }.
+
+  Section ExpExtended.
+    Context `{ExtExp}.
+
+    Inductive htype :=
+    | HBType: hbtype -> htype
+    | HEType: hetype -> htype.
+    Coercion HBType: hbtype >-> htype.
+
+    Fixpoint htypeDenote (ht: htype): Type :=
+      match ht with
+      | HBType hbt => hbtypeDenote hbt
+      | HEType het => hetypeDenote het
+      end.
     
-    (* -- constants and expressions *)
+    Class HOStateIfc :=
+      { host_ty: Vector.t htype ost_sz;
+        host_ty_ok: Vector.map htypeDenote host_ty = ost_ty
+      }.
+    Context `{HOStateIfc}.
 
-    Inductive hconst: htype -> Type :=
-    | HConstBool: forall b: bool, hconst HBool
-    | HConstNat: forall w (n: nat), hconst (HNat w)
-    | HConstIdx: forall w (deg: nat) (i: IdxT), hconst (HIdx w).
+    Section ExtPhoas.
+      Variables (var: htype -> Type).
 
-    Inductive hexp: htype -> Type :=
-    | HConst: forall ht (c: hconst ht), hexp ht
-    | HVar: forall ht, var ht -> hexp ht
-    | HMsgB: hexp HIdxM -> hexp HBool -> hexp HValue -> hexp HMsg
-    | HIdm: hexp HIdxQ -> hexp HMsg -> hexp (HPair HIdxQ HMsg)
-    | HOstVal: forall i ht,
-        Vector.nth (@ost_ty oifc) i = htypeDenote ht -> hexp ht.
+      Definition bvar: hbtype -> Type :=
+        fun hbt => var (HBType hbt).
+      Definition evar: hetype -> Type :=
+        fun het => var (HEType het).
 
-    (* -- precondition *)
-    
-    Inductive HOPrecP: Type :=
-    | HAnd: HOPrecP -> HOPrecP -> HOPrecP
-    | HOr: HOPrecP -> HOPrecP -> HOPrecP
-    | HBoolT: hexp HBool -> HOPrecP
-    | HBoolF: hexp HBool -> HOPrecP
-    | HEq: forall {ht}, hexp ht -> hexp ht -> HOPrecP
-    | HNe: forall {ht}, hexp ht -> hexp ht -> HOPrecP
-    | HNatLt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-    | HNatLe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-    | HNatGt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-    | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP.
-
-    Inductive HOPrecR: Type :=
-    | HRqAccepting: HOPrecR
-    | HRsAccepting: HOPrecR
-    | HUpLockFree: HOPrecR
-    | HDownLockFree: HOPrecR
-    | HUpLockMsgId (mty: bool) (mid: IdxT): HOPrecR
-    | HUpLockMsg: HOPrecR
-    | HUpLockIdxBack: HOPrecR
-    | HUpLockBackNone: HOPrecR
-    | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
-    | HDownLockMsg: HOPrecR
-    | HDownLockIdxBack: HOPrecR
-    | HMsgIdFrom (msgId: IdxT): HOPrecR.
-
-    Inductive HMsgFrom: Type :=
-    | HMsgFromParent: HMsgFrom
-    | HMsgFromChild (cidx: IdxT): HMsgFrom.
-
-    Inductive HOPrecT: Type :=
-    | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
-    | HOPrecRqRs: HOPrecR -> HOPrecT
-    | HOPrecProp: HOPrecP -> HOPrecT.
-
-    (* -- transition *)
-
-    Inductive hbval: htype -> Type :=
-    | HGetFirstMsg: hbval HMsg
-    | HGetUpLockMsg: hbval HMsg
-    | HGetDownLockMsg: hbval HMsg
-    | HGetUpLockIdxBack: hbval HIdxQ
-    | HGetDownLockIdxBack: hbval HIdxQ.
-
-    Inductive HOState :=
-    | HOStateI: HOState.
+      Inductive hexp: htype -> Type :=
+      | HBExp: forall {hbt} (hbe: hbexp bvar hbt), hexp (HBType hbt)
+      | HEExp: forall {het} (hee: heexp evar het), hexp (HEType het)
+      | HOstVal: forall i, hexp (Vector.nth host_ty i).
       
-    Inductive HORq :=
-    | HORqI: HORq
-    | HUpdUpLock: hexp HMsg ->
-                  hexp HIdxQ (* response-from *) ->
-                  hexp HIdxQ (* response-back-to *) -> HORq
-    | HRelUpLock: HORq
-    | HUpdDownLock: hexp HMsg ->
-                    list (hexp HIdxQ) (* responses-from *) ->
+      (* -- precondition *)
+      
+      Inductive HOPrecP: Type :=
+      | HAnd: HOPrecP -> HOPrecP -> HOPrecP
+      | HOr: HOPrecP -> HOPrecP -> HOPrecP
+      | HBoolT: hexp HBool -> HOPrecP
+      | HBoolF: hexp HBool -> HOPrecP
+      | HEq: forall {ht}, hexp ht -> hexp ht -> HOPrecP
+      | HNe: forall {ht}, hexp ht -> hexp ht -> HOPrecP
+      | HNatLt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+      | HNatLe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+      | HNatGt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+      | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP.
+
+      Inductive HOPrecR: Type :=
+      | HRqAccepting: HOPrecR
+      | HRsAccepting: HOPrecR
+      | HUpLockFree: HOPrecR
+      | HDownLockFree: HOPrecR
+      | HUpLockMsgId (mty: bool) (mid: IdxT): HOPrecR
+      | HUpLockMsg: HOPrecR
+      | HUpLockIdxBack: HOPrecR
+      | HUpLockBackNone: HOPrecR
+      | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
+      | HDownLockMsg: HOPrecR
+      | HDownLockIdxBack: HOPrecR
+      | HMsgIdFrom (msgId: IdxT): HOPrecR.
+
+      Inductive HMsgFrom: Type :=
+      | HMsgFromParent: HMsgFrom
+      | HMsgFromChild (cidx: IdxT): HMsgFrom.
+
+      Inductive HOPrecT: Type :=
+      | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
+      | HOPrecRqRs: HOPrecR -> HOPrecT
+      | HOPrecProp: HOPrecP -> HOPrecT.
+
+      (* -- transition *)
+
+      Inductive hbval: htype -> Type :=
+      | HGetFirstMsg: hbval HMsg
+      | HGetUpLockMsg: hbval HMsg
+      | HGetDownLockMsg: hbval HMsg
+      | HGetUpLockIdxBack: hbval HIdxQ
+      | HGetDownLockIdxBack: hbval HIdxQ.
+
+      Inductive HOState :=
+      | HOStateI: HOState.
+      
+      Inductive HORq :=
+      | HORqI: HORq
+      | HUpdUpLock: hexp HMsg ->
+                    hexp HIdxQ (* response-from *) ->
                     hexp HIdxQ (* response-back-to *) -> HORq
-    | HRelDownLock.
-    
-    Inductive HMsgsOut :=
-    | HMsgsOutI: list (hexp (HPair HIdxQ HMsg)) -> HMsgsOut.
+      | HRelUpLock: HORq
+      | HUpdDownLock: hexp HMsg ->
+                      list (hexp HIdxQ) (* responses-from *) ->
+                      hexp HIdxQ (* response-back-to *) -> HORq
+      | HRelDownLock.
+      
+      Inductive HMsgsOut :=
+      | HMsgsOutI: list (hexp (HPair HIdxQ HMsg)) -> HMsgsOut.
 
-    Inductive HMonadT: Type :=
-    | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
-    | HRet: HOState -> HORq -> HMsgsOut -> HMonadT.
+      Inductive HMonadT: Type :=
+      | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
+      | HRet: HOState -> HORq -> HMsgsOut -> HMonadT.
 
-  End Phoas.
+    End ExtPhoas.
 
-  Arguments HConst {var}.
+    Definition HOPrec := forall var, HOPrecT var.
+    Definition HMonad := forall var, HMonadT var.
+
+    Inductive HStateMTrs: Type :=
+    | HMTrs: HMonad -> HStateMTrs.
+
+    Inductive HOTrs: Type :=
+    | HTrsMTrs: HStateMTrs -> HOTrs.
+
+  End ExpExtended.
+
+  Arguments HBConst {var}.
   Arguments HVar {var}.
   Arguments HMsgB {var}.
   Arguments HIdm {var}.
-  Arguments HOstVal {var}.
-  Arguments HORqI {var}.
-  Arguments HUpdUpLock {var}.
-  Arguments HRelUpLock {var}.
-  Arguments HUpdDownLock {var}.
-  Arguments HRelDownLock {var}.
-  Arguments HMsgsOutI {var}.
-  Arguments HOPrecRqRs {var}.
-
-  Definition HOPrec := forall var, HOPrecT var.
-  Definition HMonad := forall var, HMonadT var.
-
-  Inductive HStateMTrs: Type :=
-  | HMTrs: HMonad -> HStateMTrs.
-
-  Inductive HOTrs: Type :=
-  | HTrsMTrs: HStateMTrs -> HOTrs.
+  Arguments HBExp {_ _} {var} {hbt}.
+  Arguments HEExp {_ _} {var} {het}.
+  Arguments HOstVal {_ _} {var}.
+  Arguments HORqI {_ _} {var}.
+  Arguments HUpdUpLock {_ _} {var}.
+  Arguments HRelUpLock {_ _} {var}.
+  Arguments HUpdDownLock {_ _} {var}.
+  Arguments HRelDownLock {_ _} {var}.
+  Arguments HMsgsOutI {_ _} {var}.
+  Arguments HOPrecRqRs {_ _} {var}.
 
   (** Interpretation *)
-  
-  Section WithPreState.
-    Variables (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)).
 
-    Definition interpConst {ht} (c: hconst ht): htypeDenote ht :=
-      match c with
-      | HConstBool b => b
-      | HConstNat _ n => n
-      | HConstIdx _ _ i => i
-      end.
+  Definition interpConst {ht} (c: hbconst ht): hbtypeDenote ht :=
+    match c with
+    | HBConstBool b => b
+    | HBConstNat _ n => n
+    | HBConstIdx _ _ i => i
+    end.
 
-    Fixpoint interpExp {ht} (e: hexp htypeDenote ht): htypeDenote ht :=
-      match e with
-      | HConst _ c => interpConst c
-      | HVar _ hv => hv
-      | HMsgB mid mty mval =>
-        {| msg_id := interpExp mid;
-           msg_type := interpExp mty;
-           msg_value := interpExp mval |}
-      | HIdm midx msg => (interpExp midx, interpExp msg)
-      | HOstVal i ht Heq =>
-        match Heq with
-        | eq_refl => (ost#[i])%hvec
-        end
-      end.
+  Fixpoint interpBExp {ht} (e: hbexp hbtypeDenote ht): hbtypeDenote ht :=
+    match e with
+    | HBConst _ c => interpConst c
+    | HVar _ hv => hv
+    | HMsgB mid mty mval =>
+      {| msg_id := interpBExp mid;
+         msg_type := interpBExp mty;
+         msg_value := interpBExp mval |}
+    | HIdm midx msg => (interpBExp midx, interpBExp msg)
+    end.
 
-    Fixpoint interpOPrecP (p: HOPrecP htypeDenote): Prop :=
-      match p with
-      | HAnd p1 p2 => interpOPrecP p1 /\ interpOPrecP p2
-      | HOr p1 p2 => interpOPrecP p1 \/ interpOPrecP p2
-      | HBoolT b => interpExp b = true
-      | HBoolF b => interpExp b = false
-      | HEq v1 v2 => interpExp v1 = interpExp v2
-      | HNe v1 v2 => interpExp v1 <> interpExp v2
-      | HNatLt v1 v2 => interpExp v1 < interpExp v2
-      | HNatLe v1 v2 => interpExp v1 <= interpExp v2
-      | HNatGt v1 v2 => interpExp v1 > interpExp v2
-      | HNatGe v1 v2 => interpExp v1 >= interpExp v2
-      end.
-
-    Definition interpOPrecR (p: HOPrecR): Prop :=
-      match p with
-      | HRqAccepting => RqAccepting ost orq mins
-      | HRsAccepting => RsAccepting ost orq mins
-      | HUpLockFree => UpLockFree ost orq mins
-      | HDownLockFree => DownLockFree ost orq mins
-      | HUpLockMsgId mty mid => UpLockMsgId mty mid ost orq mins
-      | HUpLockMsg => UpLockMsg ost orq mins
-      | HUpLockIdxBack => UpLockIdxBack ost orq mins
-      | HUpLockBackNone => UpLockBackNone ost orq mins
-      | HDownLockMsgId mty mid => DownLockMsgId mty mid ost orq mins
-      | HDownLockMsg => DownLockMsg ost orq mins
-      | HDownLockIdxBack => DownLockIdxBack ost orq mins
-      | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
-      end.
-
-    Definition interpMsgFrom (mf: HMsgFrom): Prop :=
-      match mf with
-      | HMsgFromParent => MsgsFromORq upRq ost orq mins
-      | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
-      end.
-
-    Definition interpBindValue {bt} (bv: hbval bt): option (htypeDenote bt) :=
-      match bv with
-      | HGetFirstMsg => getFirstMsg mins
-      | HGetUpLockMsg => getUpLockMsg orq
-      | HGetDownLockMsg => getDownLockMsg orq
-      | HGetUpLockIdxBack => getUpLockIdxBack orq
-      | HGetDownLockIdxBack => getDownLockIdxBack orq
-      end.
-
-    Definition interpOState (host: HOState): OState :=
-      match host with
-      | HOStateI => ost
-      end.
-
-    Definition interpORq (horq: HORq htypeDenote): ORq Msg :=
-      match horq with
-      | HORqI => orq
-      | HUpdUpLock rq rsf rsb =>
-        addRq orq upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
-      | HRelUpLock => removeRq orq upRq
-      | HUpdDownLock rq rssf rsb =>
-        addRq orq downRq (interpExp rq) (List.map interpExp rssf) (interpExp rsb)
-      | HRelDownLock => removeRq orq downRq
-      end.
-
-    Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
-      match houts with
-      | HMsgsOutI outs => List.map interpExp outs
-      end.
+  Section InterpExtended.
+    Context `{ExtExp} `{HOStateIfc}.
     
-  End WithPreState.
+    Section WithPreState.
+      Variables (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)).
 
-  Fixpoint interpOPrec (p: HOPrecT htypeDenote): OPrec :=
-    match p with
-    | HOPrecAnd p1 p2 => interpOPrec p1 /\oprec interpOPrec p2
-    | HOPrecRqRs rp => fun ost orq mins => interpOPrecR ost orq mins rp
-    | HOPrecProp pp => fun ost _ _ => interpOPrecP ost pp
-    end.
+      Lemma host_ty_ok_i:
+        forall i: Fin.t ost_sz,
+          Vector.nth ost_ty i = htypeDenote (Vector.nth host_ty i).
+      Proof.
+        intros.
+        rewrite <-host_ty_ok.
+        erewrite Vector.nth_map; reflexivity.
+      Qed.
 
-  Fixpoint interpMonad (hm: HMonadT htypeDenote) (stm: StateM): option StateM :=
-    match hm with
-    | HBind bv cont =>
-      (msg <-- interpBindValue (orq stm) (msgs stm) bv;
-      interpMonad (cont msg) stm)
-    | HRet host horq houts =>
-      Some {| ost := interpOState (ost stm) host;
-              orq := interpORq (ost stm) (orq stm) horq;
-              msgs := interpMsgOuts (ost stm) houts |}
-    end.
+      Definition interpExp {ht} (e: hexp htypeDenote ht): htypeDenote ht :=
+        match e with
+        | HBExp hbe => interpBExp hbe
+        | HEExp hee => interp_heexp ost orq mins hee
+        | HOstVal i =>
+          match host_ty_ok_i i with
+          | eq_refl => (ost#[i])%hvec
+          end
+        end.
+      
+      Fixpoint interpOPrecP (p: HOPrecP htypeDenote): Prop :=
+        match p with
+        | HAnd p1 p2 => interpOPrecP p1 /\ interpOPrecP p2
+        | HOr p1 p2 => interpOPrecP p1 \/ interpOPrecP p2
+        | HBoolT b => interpExp b = true
+        | HBoolF b => interpExp b = false
+        | HEq v1 v2 => interpExp v1 = interpExp v2
+        | HNe v1 v2 => interpExp v1 <> interpExp v2
+        | HNatLt v1 v2 => interpExp v1 < interpExp v2
+        | HNatLe v1 v2 => interpExp v1 <= interpExp v2
+        | HNatGt v1 v2 => interpExp v1 > interpExp v2
+        | HNatGe v1 v2 => interpExp v1 >= interpExp v2
+        end.
 
-  Definition interpMTrs (trs: HStateMTrs): StateMTrs :=
-    match trs with
-    | HMTrs hm => interpMonad (hm htypeDenote)
-    end.
+      Definition interpOPrecR (p: HOPrecR): Prop :=
+        match p with
+        | HRqAccepting => RqAccepting ost orq mins
+        | HRsAccepting => RsAccepting ost orq mins
+        | HUpLockFree => UpLockFree ost orq mins
+        | HDownLockFree => DownLockFree ost orq mins
+        | HUpLockMsgId mty mid => UpLockMsgId mty mid ost orq mins
+        | HUpLockMsg => UpLockMsg ost orq mins
+        | HUpLockIdxBack => UpLockIdxBack ost orq mins
+        | HUpLockBackNone => UpLockBackNone ost orq mins
+        | HDownLockMsgId mty mid => DownLockMsgId mty mid ost orq mins
+        | HDownLockMsg => DownLockMsg ost orq mins
+        | HDownLockIdxBack => DownLockIdxBack ost orq mins
+        | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
+        end.
 
-  Definition interpOTrs (trs: HOTrs): OTrs :=
-    match trs with
-    | HTrsMTrs mtrs => TrsMTrs (interpMTrs mtrs)
-    end.
+      Definition interpMsgFrom (mf: HMsgFrom): Prop :=
+        match mf with
+        | HMsgFromParent => MsgsFromORq upRq ost orq mins
+        | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
+        end.
+
+      Definition interpBindValue {bt} (bv: hbval bt): option (htypeDenote bt) :=
+        match bv with
+        | HGetFirstMsg => getFirstMsg mins
+        | HGetUpLockMsg => getUpLockMsg orq
+        | HGetDownLockMsg => getDownLockMsg orq
+        | HGetUpLockIdxBack => getUpLockIdxBack orq
+        | HGetDownLockIdxBack => getDownLockIdxBack orq
+        end.
+
+      Definition interpOState (host: HOState): OState :=
+        match host with
+        | HOStateI => ost
+        end.
+
+      Definition interpORq (horq: HORq htypeDenote): ORq Msg :=
+        match horq with
+        | HORqI => orq
+        | HUpdUpLock rq rsf rsb =>
+          addRq orq upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
+        | HRelUpLock => removeRq orq upRq
+        | HUpdDownLock rq rssf rsb =>
+          addRq orq downRq (interpExp rq) (List.map interpExp rssf) (interpExp rsb)
+        | HRelDownLock => removeRq orq downRq
+        end.
+
+      Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
+        match houts with
+        | HMsgsOutI outs => List.map interpExp outs
+        end.
+      
+    End WithPreState.
+
+    Fixpoint interpOPrec (p: HOPrecT htypeDenote): OPrec :=
+      match p with
+      | HOPrecAnd p1 p2 => interpOPrec p1 /\oprec interpOPrec p2
+      | HOPrecRqRs rp => fun ost orq mins => interpOPrecR ost orq mins rp
+      | HOPrecProp pp => fun ost orq mins => interpOPrecP ost orq mins pp
+      end.
+
+    Fixpoint interpMonad (hm: HMonadT htypeDenote) (stm: StateM): option StateM :=
+      match hm with
+      | HBind bv cont =>
+        (msg <-- interpBindValue (orq stm) (msgs stm) bv;
+        interpMonad (cont msg) stm)
+      | HRet host horq houts =>
+        Some {| ost := interpOState (ost stm) host;
+                orq := interpORq (ost stm) (orq stm) (msgs stm) horq;
+                msgs := interpMsgOuts (ost stm) (orq stm) (msgs stm) houts |}
+      end.
+
+    Definition interpMTrs (trs: HStateMTrs): StateMTrs :=
+      match trs with
+      | HMTrs hm => interpMonad (hm htypeDenote)
+      end.
+
+    Definition interpOTrs (trs: HOTrs): OTrs :=
+      match trs with
+      | HTrsMTrs mtrs => TrsMTrs (interpMTrs mtrs)
+      end.
+
+  End InterpExtended.
   
 End Reify.
 
 Section HemiolaDeep.
-  Context `{DecValue} `{OStateIfc} `{hconfig}.
+  Context `{dv: DecValue}
+          `{oifc: OStateIfc} `{ee: @ExtExp dv oifc}
+          `{hoifc: @HOStateIfc dv oifc ee}
+          `{hconfig}.
 
   Record HRule (sr: Rule) :=
     { hrule_msg_from: HMsgFrom;
@@ -348,7 +416,12 @@ Section Tests.
        hcfg_msg_id_deg := 4;
        hcfg_value_sz := 32 |}.
 
+  Existing Instance SpecInds.NatDecValue.
   Existing Instance Mesi.ImplOStateIfc.
+  Instance MesiHOStateIfc: HOStateIfc :=
+    {| host_ty := [HValue; HBool; HNat 3; HBool]%vector;
+       host_ty_ok := eq_refl
+    |}.
 
   Definition hl1GetSImm: HRule (l1GetSImm (l1ExtOf oidx)).
   Proof.
@@ -388,8 +461,8 @@ Section Tests.
 
         instantiate (1:= HOPrecProp _); simpl.
         instantiate (1:= HNatLe (w:= 2) _ _); simpl.
-        instantiate (2:= HConst _ (HConstNat _ Mesi.mesiS)); simpl.
-        instantiate (1:= HOstVal _ status (HNat _) eq_refl).
+        instantiate (2:= HBConst _ (HBConstNat _ Mesi.mesiS)); simpl.
+        instantiate (1:= HOstVal status).
         apply iff_refl.
 
     - intros.
@@ -411,12 +484,12 @@ Section Tests.
         simpl; repeat f_equal.
         instantiate (1:= HIdm _ _).
         simpl; repeat f_equal.
-        { instantiate (1:= HConst _ (HConstIdx _ hcfg_midx_deg _)); reflexivity. }
+        { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_midx_deg _)); reflexivity. }
         { cbv [rsMsg miv_id miv_value].
           instantiate (1:= HMsgB _ _ _).
           simpl; f_equal.
-          { instantiate (1:= HConst _ (HConstIdx _ hcfg_msg_id_deg _)); reflexivity. }
-          { instantiate (1:= HConst _ (HConstBool _)); reflexivity. }
+          { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_msg_id_deg _)); reflexivity. }
+          { instantiate (1:= HBConst _ (HBConstBool _)); reflexivity. }
           { instantiate (1:= HOstVal _ val HValue eq_refl); reflexivity. }
         }
       }
