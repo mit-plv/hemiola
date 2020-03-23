@@ -64,18 +64,14 @@ Section Reify.
 
   End Basis.
 
-  Class ExtExp :=
+  Class ExtType :=
     { hetype: Set;
-      hetypeDenote: hetype -> Type;
-      heexp: (hetype -> Type) -> hetype -> Type;
-      interp_heexp:
-        OState -> ORq Msg -> list (Id Msg) ->
-        forall {het} (e: heexp hetypeDenote het), hetypeDenote het
+      hetypeDenote: hetype -> Type
     }.
 
-  Section ExpExtended.
-    Context `{ExtExp}.
-
+  Section TypeExtended.
+    Context `{het: ExtType}.
+    
     Inductive htype :=
     | HBType: hbtype -> htype
     | HEType: hetype -> htype.
@@ -86,120 +82,132 @@ Section Reify.
       | HBType hbt => hbtypeDenote hbt
       | HEType het => hetypeDenote het
       end.
-    
-    Class HOStateIfc :=
-      { host_ty: Vector.t htype ost_sz;
-        host_ty_ok: Vector.map htypeDenote host_ty = ost_ty
+
+    Class ExtExp :=
+      { heexp: (htype -> Type) -> htype -> Type;
+        interp_heexp:
+          OState -> ORq Msg -> list (Id Msg) ->
+          forall {ht} (e: heexp htypeDenote ht), htypeDenote ht
       }.
-    Context `{HOStateIfc}.
 
-    Section ExtPhoas.
-      Variables (var: htype -> Type).
+    Section ExpExtended.
+      Context `{ExtExp}.
 
-      Definition bvar: hbtype -> Type :=
-        fun hbt => var (HBType hbt).
-      Definition evar: hetype -> Type :=
-        fun het => var (HEType het).
+      Class HOStateIfc :=
+        { host_ty: Vector.t htype ost_sz;
+          host_ty_ok: Vector.map htypeDenote host_ty = ost_ty
+        }.
+      Context `{HOStateIfc}.
 
-      Inductive hexp: htype -> Type :=
-      | HBExp: forall {hbt} (hbe: hbexp bvar hbt), hexp (HBType hbt)
-      | HEExp: forall {het} (hee: heexp evar het), hexp (HEType het)
-      | HOstVal: forall i, hexp (Vector.nth host_ty i).
-      
-      (* -- precondition *)
-      
-      Inductive HOPrecP: Type :=
-      | HAnd: HOPrecP -> HOPrecP -> HOPrecP
-      | HOr: HOPrecP -> HOPrecP -> HOPrecP
-      | HBoolT: hexp HBool -> HOPrecP
-      | HBoolF: hexp HBool -> HOPrecP
-      | HEq: forall {ht}, hexp ht -> hexp ht -> HOPrecP
-      | HNe: forall {ht}, hexp ht -> hexp ht -> HOPrecP
-      | HNatLt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-      | HNatLe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-      | HNatGt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-      | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP.
+      Section ExtPhoas.
+        Variables (var: htype -> Type).
 
-      Inductive HOPrecR: Type :=
-      | HRqAccepting: HOPrecR
-      | HRsAccepting: HOPrecR
-      | HUpLockFree: HOPrecR
-      | HDownLockFree: HOPrecR
-      | HUpLockMsgId (mty: bool) (mid: IdxT): HOPrecR
-      | HUpLockMsg: HOPrecR
-      | HUpLockIdxBack: HOPrecR
-      | HUpLockBackNone: HOPrecR
-      | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
-      | HDownLockMsg: HOPrecR
-      | HDownLockIdxBack: HOPrecR
-      | HMsgIdFrom (msgId: IdxT): HOPrecR.
+        Definition bvar: hbtype -> Type :=
+          fun hbt => var (HBType hbt).
+        Definition evar: hetype -> Type :=
+          fun het => var (HEType het).
 
-      Inductive HMsgFrom: Type :=
-      | HMsgFromParent: HMsgFrom
-      | HMsgFromChild (cidx: IdxT): HMsgFrom.
+        Inductive hexp: htype -> Type :=
+        | HBExp: forall {hbt} (hbe: hbexp bvar hbt), hexp (HBType hbt)
+        | HEExp: forall {ht} (hee: heexp var ht), hexp ht
+        | HOstVal: forall i, hexp (Vector.nth host_ty i).
+        
+        (* -- precondition *)
+        
+        Inductive HOPrecP: Type :=
+        | HAnd: HOPrecP -> HOPrecP -> HOPrecP
+        | HOr: HOPrecP -> HOPrecP -> HOPrecP
+        | HBoolT: hexp HBool -> HOPrecP
+        | HBoolF: hexp HBool -> HOPrecP
+        | HEq: forall {ht}, hexp ht -> hexp ht -> HOPrecP
+        | HNe: forall {ht}, hexp ht -> hexp ht -> HOPrecP
+        | HNatLt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+        | HNatLe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+        | HNatGt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+        | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP.
 
-      Inductive HOPrecT: Type :=
-      | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
-      | HOPrecRqRs: HOPrecR -> HOPrecT
-      | HOPrecProp: HOPrecP -> HOPrecT.
+        Inductive HOPrecR: Type :=
+        | HRqAccepting: HOPrecR
+        | HRsAccepting: HOPrecR
+        | HUpLockFree: HOPrecR
+        | HDownLockFree: HOPrecR
+        | HUpLockMsgId (mty: bool) (mid: IdxT): HOPrecR
+        | HUpLockMsg: HOPrecR
+        | HUpLockIdxBack: HOPrecR
+        | HUpLockBackNone: HOPrecR
+        | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
+        | HDownLockMsg: HOPrecR
+        | HDownLockIdxBack: HOPrecR
+        | HMsgIdFrom (msgId: IdxT): HOPrecR.
 
-      (* -- transition *)
+        Inductive HMsgFrom: Type :=
+        | HMsgFromParent: HMsgFrom
+        | HMsgFromChild (cidx: IdxT): HMsgFrom.
 
-      Inductive hbval: htype -> Type :=
-      | HGetFirstMsg: hbval HMsg
-      | HGetUpLockMsg: hbval HMsg
-      | HGetDownLockMsg: hbval HMsg
-      | HGetUpLockIdxBack: hbval HIdxQ
-      | HGetDownLockIdxBack: hbval HIdxQ.
+        Inductive HOPrecT: Type :=
+        | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
+        | HOPrecRqRs: HOPrecR -> HOPrecT
+        | HOPrecProp: HOPrecP -> HOPrecT.
 
-      Inductive HOState :=
-      | HOStateI: HOState.
-      
-      Inductive HORq :=
-      | HORqI: HORq
-      | HUpdUpLock: hexp HMsg ->
-                    hexp HIdxQ (* response-from *) ->
-                    hexp HIdxQ (* response-back-to *) -> HORq
-      | HRelUpLock: HORq
-      | HUpdDownLock: hexp HMsg ->
-                      list (hexp HIdxQ) (* responses-from *) ->
+        (* -- transition *)
+
+        Inductive hbval: hbtype -> Type :=
+        | HGetFirstMsg: hbval HMsg
+        | HGetUpLockMsg: hbval HMsg
+        | HGetDownLockMsg: hbval HMsg
+        | HGetUpLockIdxBack: hbval HIdxQ
+        | HGetDownLockIdxBack: hbval HIdxQ.
+
+        Inductive HOState :=
+        | HOStateI: HOState.
+        
+        Inductive HORq :=
+        | HORqI: HORq
+        | HUpdUpLock: hexp HMsg ->
+                      hexp HIdxQ (* response-from *) ->
                       hexp HIdxQ (* response-back-to *) -> HORq
-      | HRelDownLock.
-      
-      Inductive HMsgsOut :=
-      | HMsgsOutI: list (hexp (HPair HIdxQ HMsg)) -> HMsgsOut.
+        | HRelUpLock: HORq
+        | HUpdDownLock: hexp HMsg ->
+                        list (hexp HIdxQ) (* responses-from *) ->
+                        hexp HIdxQ (* response-back-to *) -> HORq
+        | HRelDownLock.
+        
+        Inductive HMsgsOut :=
+        | HMsgsOutI: list (hexp (HPair HIdxQ HMsg)) -> HMsgsOut.
 
-      Inductive HMonadT: Type :=
-      | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
-      | HRet: HOState -> HORq -> HMsgsOut -> HMonadT.
+        Inductive HMonadT: Type :=
+        | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
+        | HRet: HOState -> HORq -> HMsgsOut -> HMonadT.
 
-    End ExtPhoas.
+      End ExtPhoas.
 
-    Definition HOPrec := forall var, HOPrecT var.
-    Definition HMonad := forall var, HMonadT var.
+      Definition HOPrec := forall var, HOPrecT var.
+      Definition HMonad := forall var, HMonadT var.
 
-    Inductive HStateMTrs: Type :=
-    | HMTrs: HMonad -> HStateMTrs.
+      Inductive HStateMTrs: Type :=
+      | HMTrs: HMonad -> HStateMTrs.
 
-    Inductive HOTrs: Type :=
-    | HTrsMTrs: HStateMTrs -> HOTrs.
+      Inductive HOTrs: Type :=
+      | HTrsMTrs: HStateMTrs -> HOTrs.
 
-  End ExpExtended.
+    End ExpExtended.
+
+  End TypeExtended.
 
   Arguments HBConst {var}.
   Arguments HVar {var}.
   Arguments HMsgB {var}.
   Arguments HIdm {var}.
-  Arguments HBExp {_ _} {var} {hbt}.
-  Arguments HEExp {_ _} {var} {het}.
-  Arguments HOstVal {_ _} {var}.
-  Arguments HORqI {_ _} {var}.
-  Arguments HUpdUpLock {_ _} {var}.
-  Arguments HRelUpLock {_ _} {var}.
-  Arguments HUpdDownLock {_ _} {var}.
-  Arguments HRelDownLock {_ _} {var}.
-  Arguments HMsgsOutI {_ _} {var}.
-  Arguments HOPrecRqRs {_ _} {var}.
+  Arguments HBExp {_ _ _} {var} {hbt}.
+  Arguments HEExp {_ _ _} {var} {ht}.
+  Arguments HOstVal {_ _ _} {var}.
+  Arguments HORqI {_ _ _} {var}.
+  Arguments HUpdUpLock {_ _ _} {var}.
+  Arguments HRelUpLock {_ _ _} {var}.
+  Arguments HUpdDownLock {_ _ _} {var}.
+  Arguments HRelDownLock {_ _ _} {var}.
+  Arguments HMsgsOutI {_ _ _} {var}.
+  Arguments HOPrecRqRs {_ _ _} {var}.
 
   (** Interpretation *)
 
@@ -222,7 +230,7 @@ Section Reify.
     end.
 
   Section InterpExtended.
-    Context `{ExtExp} `{HOStateIfc}.
+    Context `{het: ExtType} `{@ExtExp het} `{@HOStateIfc het}.
     
     Section WithPreState.
       Variables (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)).
@@ -282,7 +290,8 @@ Section Reify.
         | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
         end.
 
-      Definition interpBindValue {bt} (bv: hbval bt): option (htypeDenote bt) :=
+      Definition interpBindValue {bt} (bv: hbval bt)
+        : option (htypeDenote (HBType bt)) :=
         match bv with
         | HGetFirstMsg => getFirstMsg mins
         | HGetUpLockMsg => getUpLockMsg orq
@@ -348,8 +357,10 @@ End Reify.
 
 Section HemiolaDeep.
   Context `{dv: DecValue}
-          `{oifc: OStateIfc} `{ee: @ExtExp dv oifc}
-          `{hoifc: @HOStateIfc dv oifc ee}
+          `{oifc: OStateIfc}
+          `{het: ExtType}
+          `{ee: @ExtExp dv oifc het}
+          `{hoifc: @HOStateIfc dv oifc het}
           `{hconfig}.
 
   Record HRule (sr: Rule) :=
@@ -390,10 +401,10 @@ Require Import Hemiola.Ex.Mesi.Mesi.
 
 Require Import FunctionalExtensionality.
 
-Lemma abcd: forall A B C D, (A <-> B) -> (C <-> D) -> (A /\ C <-> B /\ D).
-Proof. firstorder. Qed.
-
 Section Tests.
+
+  Lemma abcd: forall A B C D, (A <-> B) -> (C <-> D) -> (A /\ C <-> B /\ D).
+  Proof. firstorder. Qed.
 
   Lemma TrsMTrs_ext:
     forall `{DecValue} `{OStateIfc} (trs1 trs2: StateMTrs),
@@ -418,6 +429,42 @@ Section Tests.
 
   Existing Instance SpecInds.NatDecValue.
   Existing Instance Mesi.ImplOStateIfc.
+
+  Definition HMesi := HNat 3.
+
+  Section DirExt.
+
+    Inductive htype_dir: Set :=
+    | HDir: htype_dir.
+
+    Definition htypeDenote_dir (ht: htype_dir): Type :=
+      match ht with
+      | HDir => Mesi.DirT
+      end.
+
+    Instance DirExtType: ExtType :=
+      {| hetype := htype_dir;
+         hetypeDenote := htypeDenote_dir
+      |}.
+
+    Inductive hexp_dir (var: htype -> Type): htype -> Type :=
+    | HDirGet: hbexp (bvar var) HIdxO ->
+               hexp_dir var (HEType HDir) -> (** FIXME *)
+               hexp_dir var (HBType (HNat 3)).
+
+    Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
+             {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
+      match he with
+      | HDirGet oidx dir => getDir (interpBExp oidx) (interp_hexp_dir ost orq mins dir)
+      end.
+
+    Instance DirExtExp: ExtExp :=
+      {| heexp := hexp_dir;
+         interp_heexp := interp_hexp_dir
+      |}.
+
+  End DirExt.
+  
   Instance MesiHOStateIfc: HOStateIfc :=
     {| host_ty := [HValue; HBool; HNat 3; HBool]%vector;
        host_ty_ok := eq_refl
