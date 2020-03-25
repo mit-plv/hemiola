@@ -46,6 +46,17 @@ Section Reify.
     | HPair ht1 ht2 => hbtypeDenote ht1 * hbtypeDenote ht2
     end.
 
+  Class HOStateIfc :=
+    { host_ty: Vector.t (option hbtype) ost_sz;
+      host_ty_ok:
+        forall i: Fin.t ost_sz,
+          match Vector.nth host_ty i with
+          | Some hbt => Vector.nth ost_ty i = hbtypeDenote hbt
+          | None => True
+          end
+    }.
+  Context `{HOStateIfc}.
+
   Section Basis.
     Variable var: hbtype -> Type.
 
@@ -60,7 +71,8 @@ Section Reify.
     | HBConst: forall ht (c: hbconst ht), hbexp ht
     | HVar: forall ht, var ht -> hbexp ht
     | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HValue -> hbexp HMsg
-    | HIdm: hbexp HIdxQ -> hbexp HMsg -> hbexp (HPair HIdxQ HMsg).
+    | HIdm: hbexp HIdxQ -> hbexp HMsg -> hbexp (HPair HIdxQ HMsg)
+    | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt.
 
   End Basis.
 
@@ -93,12 +105,6 @@ Section Reify.
     Section ExpExtended.
       Context `{ExtExp}.
 
-      Class HOStateIfc :=
-        { host_ty: Vector.t htype ost_sz;
-          host_ty_ok: Vector.map htypeDenote host_ty = ost_ty
-        }.
-      Context `{HOStateIfc}.
-
       Section ExtPhoas.
         Variables (var: htype -> Type).
 
@@ -109,8 +115,7 @@ Section Reify.
 
         Inductive hexp: htype -> Type :=
         | HBExp: forall {hbt} (hbe: hbexp bvar hbt), hexp (HBType hbt)
-        | HEExp: forall {ht} (hee: heexp var ht), hexp ht
-        | HOstVal: forall i, hexp (Vector.nth host_ty i).
+        | HEExp: forall {ht} (hee: heexp var ht), hexp ht.
         
         (* -- precondition *)
         
@@ -198,16 +203,16 @@ Section Reify.
   Arguments HVar {var}.
   Arguments HMsgB {var}.
   Arguments HIdm {var}.
-  Arguments HBExp {_ _ _} {var} {hbt}.
-  Arguments HEExp {_ _ _} {var} {ht}.
-  Arguments HOstVal {_ _ _} {var}.
-  Arguments HORqI {_ _ _} {var}.
-  Arguments HUpdUpLock {_ _ _} {var}.
-  Arguments HRelUpLock {_ _ _} {var}.
-  Arguments HUpdDownLock {_ _ _} {var}.
-  Arguments HRelDownLock {_ _ _} {var}.
-  Arguments HMsgsOutI {_ _ _} {var}.
-  Arguments HOPrecRqRs {_ _ _} {var}.
+  Arguments HOstVal {var}.
+  Arguments HBExp {_ _} {var} {hbt}.
+  Arguments HEExp {_ _} {var} {ht}.
+  Arguments HORqI {_ _} {var}.
+  Arguments HUpdUpLock {_ _} {var}.
+  Arguments HRelUpLock {_ _} {var}.
+  Arguments HUpdDownLock {_ _} {var}.
+  Arguments HRelDownLock {_ _} {var}.
+  Arguments HMsgsOutI {_ _} {var}.
+  Arguments HOPrecRqRs {_ _} {var}.
 
   (** Interpretation *)
 
@@ -218,40 +223,42 @@ Section Reify.
     | HBConstIdx _ _ i => i
     end.
 
-  Fixpoint interpBExp {ht} (e: hbexp hbtypeDenote ht): hbtypeDenote ht :=
-    match e with
-    | HBConst _ c => interpConst c
-    | HVar _ hv => hv
-    | HMsgB mid mty mval =>
-      {| msg_id := interpBExp mid;
-         msg_type := interpBExp mty;
-         msg_value := interpBExp mval |}
-    | HIdm midx msg => (interpBExp midx, interpBExp msg)
-    end.
-
   Section InterpExtended.
-    Context `{het: ExtType} `{@ExtExp het} `{@HOStateIfc het}.
+    Context `{het: ExtType} `{@ExtExp het}.
     
     Section WithPreState.
       Variables (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)).
 
       Lemma host_ty_ok_i:
-        forall i: Fin.t ost_sz,
-          Vector.nth ost_ty i = htypeDenote (Vector.nth host_ty i).
+        forall (i: Fin.t ost_sz) hbt,
+          Vector.nth host_ty i = Some hbt ->
+          Vector.nth ost_ty i = hbtypeDenote hbt.
       Proof.
         intros.
-        rewrite <-host_ty_ok.
-        erewrite Vector.nth_map; reflexivity.
+        pose proof (host_ty_ok i).
+        rewrite H4 in H5.
+        assumption.
       Qed.
+
+      Fixpoint interpBExp {ht} (e: hbexp hbtypeDenote ht): hbtypeDenote ht :=
+        match e with
+        | HBConst _ c => interpConst c
+        | HVar _ hv => hv
+        | HMsgB mid mty mval =>
+          {| msg_id := interpBExp mid;
+             msg_type := interpBExp mty;
+             msg_value := interpBExp mval |}
+        | HIdm midx msg => (interpBExp midx, interpBExp msg)
+        | HOstVal i hbt Heq =>
+          match host_ty_ok_i _ Heq with
+          | eq_refl => (ost#[i])%hvec
+          end
+        end.
 
       Definition interpExp {ht} (e: hexp htypeDenote ht): htypeDenote ht :=
         match e with
         | HBExp hbe => interpBExp hbe
         | HEExp hee => interp_heexp ost orq mins hee
-        | HOstVal i =>
-          match host_ty_ok_i i with
-          | eq_refl => (ost#[i])%hvec
-          end
         end.
       
       Fixpoint interpOPrecP (p: HOPrecP htypeDenote): Prop :=
@@ -360,7 +367,7 @@ Section HemiolaDeep.
           `{oifc: OStateIfc}
           `{het: ExtType}
           `{ee: @ExtExp dv oifc het}
-          `{hoifc: @HOStateIfc dv oifc het}
+          `{hoifc: @HOStateIfc dv oifc}
           `{hconfig}.
 
   Record HRule (sr: Rule) :=
@@ -432,6 +439,11 @@ Section Tests.
 
   Definition HMesi := HNat 3.
 
+  Instance MesiHOStateIfc: HOStateIfc :=
+    {| host_ty := [Some HValue; Some HBool; Some HMesi; None]%vector;
+       host_ty_ok := cheat _
+    |}.
+
   Section DirExt.
 
     Inductive htype_dir: Set :=
@@ -448,14 +460,16 @@ Section Tests.
       |}.
 
     Inductive hexp_dir (var: htype -> Type): htype -> Type :=
+    | HDirC: hexp_dir var (HEType HDir)
     | HDirGet: hbexp (bvar var) HIdxO ->
-               hexp_dir var (HEType HDir) -> (** FIXME *)
+               hexp_dir var (HEType HDir) ->
                hexp_dir var (HBType (HNat 3)).
 
     Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
              {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
-      match he with
-      | HDirGet oidx dir => getDir (interpBExp oidx) (interp_hexp_dir ost orq mins dir)
+      match he in (hexp_dir _ h) return (htypeDenote h) with
+      | HDirC _ => (ost#[dir])%hvec
+      | HDirGet oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
       end.
 
     Instance DirExtExp: ExtExp :=
@@ -464,12 +478,9 @@ Section Tests.
       |}.
 
   End DirExt.
-  
-  Instance MesiHOStateIfc: HOStateIfc :=
-    {| host_ty := [HValue; HBool; HNat 3; HBool]%vector;
-       host_ty_ok := eq_refl
-    |}.
 
+  Existing Instance DirExtType.
+  Existing Instance DirExtExp.
   Definition hl1GetSImm: HRule (l1GetSImm (l1ExtOf oidx)).
   Proof.
     refine {| hrule_msg_from := _ |}.
@@ -507,9 +518,10 @@ Section Tests.
                    |instantiate (1:= HMsgIdFrom _); apply iff_refl; fail].
 
         instantiate (1:= HOPrecProp _); simpl.
-        instantiate (1:= HNatLe (w:= 2) _ _); simpl.
-        instantiate (2:= HBConst _ (HBConstNat _ Mesi.mesiS)); simpl.
-        instantiate (1:= HOstVal status).
+        instantiate (1:= HNatLe (w:= 3) _ _); simpl.
+        instantiate (2:= HBExp (HBConst _ (HBConstNat _ Mesi.mesiS))); simpl.
+        instantiate (1:= HBExp (HOstVal _ status eq_refl)); simpl.
+        setoid_rewrite <-eq_rect_eq.
         apply iff_refl.
 
     - intros.
@@ -529,7 +541,7 @@ Section Tests.
       { instantiate (1:= HORqI _); reflexivity. }
       { instantiate (1:= HMsgsOutI [_]).
         simpl; repeat f_equal.
-        instantiate (1:= HIdm _ _).
+        instantiate (1:= HBExp (HIdm _ _)).
         simpl; repeat f_equal.
         { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_midx_deg _)); reflexivity. }
         { cbv [rsMsg miv_id miv_value].
@@ -537,7 +549,10 @@ Section Tests.
           simpl; f_equal.
           { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_msg_id_deg _)); reflexivity. }
           { instantiate (1:= HBConst _ (HBConstBool _)); reflexivity. }
-          { instantiate (1:= HOstVal _ val HValue eq_refl); reflexivity. }
+          { instantiate (1:= HOstVal _ val eq_refl).
+            simpl; setoid_rewrite <-eq_rect_eq.
+            reflexivity.
+          }
         }
       }
   Defined.
