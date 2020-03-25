@@ -164,7 +164,11 @@ Section Reify.
         | HGetDownLockIdxBack: hbval HIdxQ.
 
         Inductive HOState :=
-        | HOStateI: HOState.
+        | HOStateI: HOState
+        | HOstUpdate:
+            forall (i: Fin.t ost_sz) {ht},
+              htypeDenote ht = Vector.nth ost_ty i ->
+              hexp ht -> HOState -> HOState.
         
         Inductive HORq :=
         | HORqI: HORq
@@ -307,10 +311,14 @@ Section Reify.
         | HGetDownLockIdxBack => getDownLockIdxBack orq
         end.
 
-      Definition interpOState (host: HOState): OState :=
-        match host with
-        | HOStateI => ost
-        end.
+      Fixpoint interpOState (host: HOState htypeDenote): OState :=
+        (match host with
+         | HOStateI _ => ost
+         | HOstUpdate i Heq hval host' =>
+           (interpOState host') +#[i <- match Heq with
+                                        | eq_refl => interpExp hval
+                                        end]
+         end)%hvec.
 
       Definition interpORq (horq: HORq htypeDenote): ORq Msg :=
         match horq with
@@ -343,7 +351,7 @@ Section Reify.
         (msg <-- interpBindValue (orq stm) (msgs stm) bv;
         interpMonad (cont msg) stm)
       | HRet host horq houts =>
-        Some {| ost := interpOState (ost stm) host;
+        Some {| ost := interpOState (ost stm) (orq stm) (msgs stm) host;
                 orq := interpORq (ost stm) (orq stm) (msgs stm) horq;
                 msgs := interpMsgOuts (ost stm) (orq stm) (msgs stm) houts |}
       end.
@@ -537,7 +545,7 @@ Section Tests.
       simpl; repeat f_equal.
       apply functional_extensionality; intros msg.
       repeat f_equal.
-      { instantiate (1:= HOStateI); reflexivity. }
+      { instantiate (1:= HOStateI _); reflexivity. }
       { instantiate (1:= HORqI _); reflexivity. }
       { instantiate (1:= HMsgsOutI [_]).
         simpl; repeat f_equal.

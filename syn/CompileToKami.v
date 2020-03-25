@@ -243,7 +243,9 @@ Section Compile.
         (match hm with
          | HBind hv cont =>
            Let_ (compile_bval hv) (fun x: var (kind_of_hbtype _) => compile_MonadT (cont x))
-         | HRet _ _ _ => TODO _
+         | HRet host horq hmsgs =>
+           (** FIXME *)
+           Retv
          end)%kami_action.
 
       Definition compile_Monad (hm: HMonad): ActionT var Void :=
@@ -271,7 +273,7 @@ Section Compile.
     Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
-      {| attrName := "";
+      {| attrName := ""; (** FIXME *)
          attrType :=
            fun var =>
              compile_Rule_msg_from
@@ -322,3 +324,37 @@ Section Compile.
 
 End Compile.
 
+
+
+
+(** * Temporary Testing Section *)
+Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate.
+Require Import Hemiola.Ex.Mesi.Mesi.
+
+Section Tests.
+
+  Definition oidx: IdxT := 1.
+  Definition uln: string := "UpLock". 
+  Definition dln: string := "DownLock".
+
+  Context `{@CompOStateIfc SpecInds.NatDecValue
+                           Mesi.ImplOStateIfc
+                           mesiHConfig
+                           MesiHOStateIfc}.
+
+  Context `{cet: @CompExtType DirExtType}
+          `{@CompExtExp SpecInds.NatDecValue
+                        Mesi.ImplOStateIfc
+                        mesiHConfig
+                        DirExtType
+                        DirExtExp
+                        cet}.
+
+  Definition cl1GetSImm := compile_Rule oidx uln dln (existT _ _ (hl1GetSImm oidx)).
+
+  Goal True.
+    pose cl1GetSImm as r.
+    compute in r.
+  Abort.
+
+End Tests.
