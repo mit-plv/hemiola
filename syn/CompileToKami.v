@@ -163,6 +163,14 @@ Section Compile.
          | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == %msgId%:5); cont)
          end)%kami_action.
 
+      Class CompOStateIfc :=
+        { comp_ostval:
+            forall (var: K.Kind -> Type) (i: Fin.t ost_sz) {hbt},
+              Vector.nth host_ty i = Some hbt ->
+              var (kind_of_hbtype hbt)
+        }.
+      Context `{CompOStateIfc}.
+
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
         match he with
@@ -175,7 +183,7 @@ Section Compile.
         | HIdm i m =>
           (STRUCT { "pair_1" ::= compile_bexp i;
                     "pair_2" ::= compile_bexp m })%kami_expr
-        | HOstVal _ i Heq => TODO _ (** we need sth. like "compiled [OStateIfc]" *)
+        | HOstVal _ i Heq => Var _ (SyntaxKind _) (comp_ostval var i Heq)
         end.
 
       Class CompExtExp :=
@@ -255,7 +263,7 @@ Section Compile.
 
   End ExtComp.
 
-  Context `{CompExtExp}.
+  Context `{CompOStateIfc} `{CompExtExp}.
 
   Section WithObj.
     Variables (oidx: IdxT) (uln dln: string).
