@@ -31,8 +31,7 @@ Section Reify.
   | HIdx (width: nat)
   | HNat (width: nat)
   | HValue
-  | HMsg
-  | HPair: hbtype -> hbtype -> hbtype.
+  | HMsg.
 
   Definition HIdxO := HIdx hcfg_oidx_sz.
   Definition HIdxQ := HIdx hcfg_midx_sz.
@@ -45,7 +44,6 @@ Section Reify.
     | HNat _ => nat
     | HValue => t_type
     | HMsg => Msg
-    | HPair ht1 ht2 => hbtypeDenote ht1 * hbtypeDenote ht2
     end.
 
   Class HOStateIfc :=
@@ -73,7 +71,6 @@ Section Reify.
     | HBConst: forall ht (c: hbconst ht), hbexp ht
     | HVar: forall ht, var ht -> hbexp ht
     | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HValue -> hbexp HMsg
-    | HIdm: hbexp HIdxQ -> hbexp HMsg -> hbexp (HPair HIdxQ HMsg)
     | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt.
 
   End Basis.
@@ -149,7 +146,8 @@ Section Reify.
 
         Inductive HMsgFrom: Type :=
         | HMsgFromParent: HMsgFrom
-        | HMsgFromChild (cidx: IdxT): HMsgFrom.
+        | HMsgFromChild (cmidx: IdxT): HMsgFrom
+        | HMsgFromExt (emidx: IdxT): HMsgFrom.
 
         Inductive HOPrecT: Type :=
         | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
@@ -186,7 +184,9 @@ Section Reify.
         | HRelDownLock.
         
         Inductive HMsgsOut :=
-        | HMsgsOutI: list (hexp (HPair HIdxQ HMsg)) -> HMsgsOut.
+        | HMsgOutUp: hexp HIdxQ -> hexp HMsg -> HMsgsOut
+        | HMsgsOutDown: list (hexp HIdxQ * hexp HMsg) -> HMsgsOut
+        | HMsgOutExt: hexp HIdxQ -> hexp HMsg -> HMsgsOut.
 
         Inductive HMonadT: Type :=
         | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
@@ -210,7 +210,6 @@ Section Reify.
   Arguments HBConst {var}.
   Arguments HVar {var}.
   Arguments HMsgB {var}.
-  Arguments HIdm {var}.
   Arguments HOstVal {var}.
   Arguments HBExp {_ _} {var} {hbt}.
   Arguments HEExp {_ _} {var} {ht}.
@@ -221,7 +220,9 @@ Section Reify.
   Arguments HUpdDownLock {_ _} {var}.
   Arguments HUpdDownLockS {_ _} {var}.
   Arguments HRelDownLock {_ _} {var}.
-  Arguments HMsgsOutI {_ _} {var}.
+  Arguments HMsgOutUp {_ _} {var}.
+  Arguments HMsgsOutDown {_ _} {var}.
+  Arguments HMsgOutExt {_ _} {var}.
   Arguments HOPrecRqRs {_ _} {var}.
 
   (** Interpretation *)
@@ -258,7 +259,6 @@ Section Reify.
           {| msg_id := interpBExp mid;
              msg_type := interpBExp mty;
              msg_value := interpBExp mval |}
-        | HIdm midx msg => (interpBExp midx, interpBExp msg)
         | HOstVal i hbt Heq =>
           match host_ty_ok_i _ Heq with
           | eq_refl => (ost#[i])%hvec
@@ -304,7 +304,8 @@ Section Reify.
       Definition interpMsgFrom (mf: HMsgFrom): Prop :=
         match mf with
         | HMsgFromParent => MsgsFromORq upRq ost orq mins
-        | HMsgFromChild cidx => MsgsFrom [cidx] ost orq mins
+        | HMsgFromChild cmidx => MsgsFrom [cmidx] ost orq mins
+        | HMsgFromExt emidx => MsgsFrom [emidx] ost orq mins
         end.
 
       Definition interpBindValue {bt} (bv: hbval bt)
@@ -341,7 +342,10 @@ Section Reify.
 
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
         match houts with
-        | HMsgsOutI outs => List.map interpExp outs
+        | HMsgOutUp midx msg => [(interpExp midx, interpExp msg)]
+        | HMsgsOutDown outs =>
+          List.map (fun hidm => (interpExp (fst hidm), interpExp (snd hidm))) outs
+        | HMsgOutExt midx msg => [(interpExp midx, interpExp msg)]
         end.
       
     End WithPreState.
@@ -511,7 +515,7 @@ Section Tests.
       apply abcd.
 
       + cbv [interpMsgFrom].
-        instantiate (1:= HMsgFromChild _).
+        instantiate (1:= HMsgFromExt _).
         apply iff_refl.
 
       + instantiate (1:= fun var => HOPrecAnd (var:= var) _ _); simpl; apply abcd.
@@ -557,13 +561,11 @@ Section Tests.
       repeat f_equal.
       { instantiate (1:= HOStateI _); reflexivity. }
       { instantiate (1:= HORqI _); reflexivity. }
-      { instantiate (1:= HMsgsOutI [_]).
+      { instantiate (1:= HMsgOutExt _ _).
         simpl; repeat f_equal.
-        instantiate (1:= HBExp (HIdm _ _)).
-        simpl; repeat f_equal.
-        { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_midx_deg _)); reflexivity. }
+        { instantiate (1:= HBExp (HBConst _ (HBConstIdx _ hcfg_midx_deg _))); reflexivity. }
         { cbv [rsMsg miv_id miv_value].
-          instantiate (1:= HMsgB _ _ _).
+          instantiate (1:= HBExp (HMsgB _ _ _)).
           simpl; f_equal.
           { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_msg_id_deg _)); reflexivity. }
           { instantiate (1:= HBConst _ (HBConstBool _)); reflexivity. }

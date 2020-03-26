@@ -44,9 +44,6 @@ Section Compile.
   Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
           `{hoifc: @HOStateIfc dv oifc}.
 
-  Definition Pair (k1 k2: Kind) :=
-    STRUCT { "pair_1" :: k1; "pair_2" :: k2 }.
-
   Definition KIdxO := Bit hcfg_oidx_sz.
   Definition KIdxQ := Bit hcfg_midx_sz.
   Definition KIdxM := Bit hcfg_msg_id_sz.
@@ -79,7 +76,6 @@ Section Compile.
     | HNat w => Bit w
     | HValue => Bit hcfg_value_sz
     | HMsg => Struct KMsg
-    | HPair ht1 ht2 => Struct (Pair (kind_of_hbtype ht1) (kind_of_hbtype ht2))
     end.
 
   Definition compile_const {hbt} (hc: hbconst hbt)
@@ -109,22 +105,27 @@ Section Compile.
     Definition hvar_of (var: Kind -> Type): htype -> Type :=
       fun ht => var (kind_of ht).
 
+    (** FIXME: finalize the "parent-children" interface *)
+    Definition msgDeqFrom (midx: IdxT): Attribute K.SignatureT :=
+      {| attrName := "fifo" ++ idx_to_string midx ++ ".deq";
+         attrType := {| K.arg := Void;
+                        K.ret := Struct KMsg |} |}.
+
     Section Phoas.
       Context {var: K.Kind -> Type}.
       Variable oidx: IdxT.
-
-      Definition kamiDeqOf (midx: IdxT): Attribute K.SignatureT :=
-        {| attrName := "fifo" ++ idx_to_string midx;
-           attrType := {| K.arg := Void;
-                          K.ret := Struct KMsg |} |}.
 
       Definition compile_Rule_msg_from (mf: HMsgFrom)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match mf with
          | HMsgFromParent =>
-           (Call msgIn <- (kamiDeqOf (downTo oidx))(); cont msgIn)
-         | HMsgFromChild cidx =>
-           (Call msgIn <- (kamiDeqOf (rsUpFrom oidx))(); cont msgIn)
+           (Call msgIn <- (msgDeqFrom (downTo oidx))(); cont msgIn)
+         | HMsgFromChild cmidx =>
+           (** FIXME: this case should use the "parent-children" interface *)
+           (Call msgIn <- (msgDeqFrom cmidx)(); cont msgIn)
+         | HMsgFromExt emidx =>
+           (** FIXME: this case should use the L1 external interface *)
+           (Call msgIn <- (msgDeqFrom emidx)(); cont msgIn)
          end)%kami_action.
 
       Variables (msgIn: var (Struct KMsg))
@@ -188,9 +189,6 @@ Section Compile.
           (STRUCT { "id" ::= compile_bexp mid;
                     "type" ::= compile_bexp mty;
                     "value" ::= compile_bexp mval })%kami_expr
-        | HIdm i m =>
-          (STRUCT { "pair_1" ::= compile_bexp i;
-                    "pair_2" ::= compile_bexp m })%kami_expr
         | HOstVal _ i Heq => Var _ (SyntaxKind _) (comp_ostval var i Heq)
         end.
 
@@ -311,10 +309,12 @@ Section Compile.
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
-        (match hmsgs with
-         | HMsgsOutI _ => cont (** FIXME *)
+        (match hmsgs with (** FIXME *)
+         | HMsgOutUp midx msg => TODO _
+         | HMsgsOutDown msgs => TODO _
+         | HMsgOutExt midx msg => TODO _
          end)%kami_action.
-      
+
       Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
         (match hm with
          | HBind hv cont =>
