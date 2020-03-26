@@ -17,7 +17,9 @@ Class hconfig :=
     hcfg_midx_deg: nat;
     hcfg_msg_id_sz: nat;
     hcfg_msg_id_deg: nat;
-    hcfg_value_sz: nat }.
+    hcfg_value_sz: nat;
+    hcfg_children_max: nat
+  }.
 
 Section Reify.
   Context `{DecValue} `{OStateIfc} `{hconfig}.
@@ -175,10 +177,12 @@ Section Reify.
         | HUpdUpLock: hexp HMsg ->
                       hexp HIdxQ (* response-from *) ->
                       hexp HIdxQ (* response-back-to *) -> HORq
+        | HUpdUpLockS: hexp HIdxQ (* response-from *) -> HORq
         | HRelUpLock: HORq
         | HUpdDownLock: hexp HMsg ->
                         list (hexp HIdxQ) (* responses-from *) ->
                         hexp HIdxQ (* response-back-to *) -> HORq
+        | HUpdDownLockS: list (hexp HIdxQ) (* responses-from *) -> HORq
         | HRelDownLock.
         
         Inductive HMsgsOut :=
@@ -212,8 +216,10 @@ Section Reify.
   Arguments HEExp {_ _} {var} {ht}.
   Arguments HORqI {_ _} {var}.
   Arguments HUpdUpLock {_ _} {var}.
+  Arguments HUpdUpLockS {_ _} {var}.
   Arguments HRelUpLock {_ _} {var}.
   Arguments HUpdDownLock {_ _} {var}.
+  Arguments HUpdDownLockS {_ _} {var}.
   Arguments HRelDownLock {_ _} {var}.
   Arguments HMsgsOutI {_ _} {var}.
   Arguments HOPrecRqRs {_ _} {var}.
@@ -325,9 +331,11 @@ Section Reify.
         | HORqI => orq
         | HUpdUpLock rq rsf rsb =>
           addRq orq upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
+        | HUpdUpLockS rsf => addRqS orq upRq [interpExp rsf]
         | HRelUpLock => removeRq orq upRq
         | HUpdDownLock rq rssf rsb =>
           addRq orq downRq (interpExp rq) (List.map interpExp rssf) (interpExp rsb)
+        | HUpdDownLockS rssf => addRqS orq downRq (List.map interpExp rssf)
         | HRelDownLock => removeRq orq downRq
         end.
 
@@ -440,7 +448,9 @@ Section Tests.
        hcfg_midx_deg := 16;
        hcfg_msg_id_sz := 5;
        hcfg_msg_id_deg := 4;
-       hcfg_value_sz := 32 |}.
+       hcfg_value_sz := 32;
+       hcfg_children_max := 4
+    |}.
 
   Existing Instance SpecInds.NatDecValue.
   Existing Instance Mesi.ImplOStateIfc.

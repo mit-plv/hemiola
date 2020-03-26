@@ -30,6 +30,16 @@ Fixpoint idx_to_string (idx: IdxT): string :=
   end.
 (* Eval compute in (idx_to_string (0~>1~>2)). *)
 
+Fixpoint array_of_list {A} (def: A) (l: list A) sz: Vector.t A sz :=
+  match l with
+  | nil => vector_repeat sz def
+  | a :: l' =>
+    match sz with
+    | O => Vector.nil _
+    | S sz' => Vector.cons _ a _ (@array_of_list A def l' sz')
+    end
+  end.
+
 Section Compile.
   Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
           `{hoifc: @HOStateIfc dv oifc}.
@@ -38,12 +48,12 @@ Section Compile.
     STRUCT { "pair_1" :: k1; "pair_2" :: k2 }.
 
   Definition KIdxO := Bit hcfg_oidx_sz.
-  Definition KIdxM := Bit hcfg_midx_sz.
-  Definition KMid := Bit hcfg_msg_id_sz.
+  Definition KIdxQ := Bit hcfg_midx_sz.
+  Definition KIdxM := Bit hcfg_msg_id_sz.
   Definition KValue := Bit hcfg_value_sz.
 
   Definition KMsg :=
-    STRUCT { "id" :: KMid;
+    STRUCT { "id" :: KIdxM;
              "type" :: Bool;
              "value" :: KValue }.
 
@@ -51,15 +61,16 @@ Section Compile.
     STRUCT { "ul_valid" :: Bool;
              "ul_rsb" :: Bool;
              "ul_msg" :: Struct KMsg;
-             "ul_rssFrom" :: Array KIdxM 8;
-             "ul_rsbTo" :: KIdxM }.
+             "ul_rsFrom" :: KIdxQ;
+             "ul_rsbTo" :: KIdxQ }.
 
   Definition DownLock :=
     STRUCT { "dl_valid" :: Bool;
              "dl_rsb" :: Bool;
              "dl_msg" :: Struct KMsg;
-             "dl_rssFrom" :: Array KIdxM 8;
-             "dl_rsbTo" :: KIdxM }.
+             (** FIXME: add the actual size of "dl_rssFrom" as a field value *)
+             "dl_rssFrom" :: Array KIdxQ hcfg_children_max;
+             "dl_rsbTo" :: KIdxQ }.
 
   Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
@@ -117,14 +128,14 @@ Section Compile.
          end)%kami_action.
 
       Variables (msgIn: var (Struct KMsg))
-                (ul: var (Struct UpLock))
-                (dl: var (Struct DownLock)).
+                (uln: string) (ul: var (Struct UpLock))
+                (dln: string) (dl: var (Struct DownLock)).
 
-      Definition compile_Rule_uplock (uln: string)
+      Definition compile_Rule_uplock
                  (cont: var (Struct UpLock) -> ActionT var Void): ActionT var Void :=
         (Read ul: Struct UpLock <- uln; cont ul)%kami_action.
 
-      Definition compile_Rule_downlock (dln: string)
+      Definition compile_Rule_downlock
                  (cont: var (Struct DownLock) -> ActionT var Void): ActionT var Void :=
         (Read dl: Struct DownLock <- dln; cont dl)%kami_action.
 
@@ -254,7 +265,48 @@ Section Compile.
                (cont: ActionT var Void): ActionT var Void :=
         (match horq with
          | HORqI _ => cont
-         | _ => cont (** FIXME *)
+         | HUpdUpLock rq rsf rsb =>
+           (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
+                                                 "ul_rsb" ::= $$true;
+                                                 "ul_msg" ::= compile_exp rq;
+                                                 "ul_rsFrom" ::= compile_exp rsf;
+                                                 "ul_rsbTo" ::= compile_exp rsb }; cont)
+         | HUpdUpLockS rsf =>
+           (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
+                                                 "ul_rsb" ::= $$false;
+                                                 "ul_msg" ::= $$Default;
+                                                 "ul_rsFrom" ::= compile_exp rsf;
+                                                 "ul_rsbTo" ::= $$Default }; cont)
+         | HRelUpLock _ =>
+           (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$false;
+                                                 "ul_rsb" ::= $$Default;
+                                                 "ul_msg" ::= $$Default;
+                                                 "ul_rsFrom" ::= $$Default;
+                                                 "ul_rsbTo" ::= $$Default }; cont)
+         | HUpdDownLock rq rssf rsb =>
+           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
+                                                   "dl_rsb" ::= $$true;
+                                                   "dl_msg" ::= compile_exp rq;
+                                                   "dl_rssFrom" ::=
+                                                     BuildArray
+                                                       (array_of_list
+                                                          $$Default (List.map compile_exp rssf) _);
+                                                   "dl_rsbTo" ::= compile_exp rsb }; cont)
+         | HUpdDownLockS rssf =>
+           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
+                                                   "dl_rsb" ::= $$false;
+                                                   "dl_msg" ::= $$Default;
+                                                   "dl_rssFrom" ::=
+                                                     BuildArray
+                                                       (array_of_list
+                                                          $$Default (List.map compile_exp rssf) _);
+                                                   "dl_rsbTo" ::= $$Default }; cont)
+         | HRelDownLock _ =>
+           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$false;
+                                                   "dl_rsb" ::= $$Default;
+                                                   "dl_msg" ::= $$Default;
+                                                   "dl_rssFrom" ::= $$Default;
+                                                   "dl_rsbTo" ::= $$Default }; cont)
          end)%kami_action.
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
@@ -293,10 +345,14 @@ Section Compile.
   Section WithObj.
     Variables (oidx: IdxT) (uln dln ostin: string).
 
+    Definition ruleNameBase: string := "rule".
+    Definition ruleNameI (ridx: IdxT) :=
+      (ruleNameBase ++ "_" ++ idx_to_string oidx ++ "_" ++ idx_to_string ridx)%string.
+
     Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
-      {| attrName := ""; (** FIXME *)
+      {| attrName := ruleNameI (rule_idx (projT1 rule));
          attrType :=
            fun var =>
              compile_Rule_msg_from
@@ -309,7 +365,7 @@ Section Compile.
                                     compile_Rule_prec
                                       msgIn ul dl (hrule_precond hr (hvar_of var))
                                       (compile_Rule_trs
-                                         msgIn ul dl ostin (hrule_trs hr)))))
+                                         msgIn uln ul dln dl ostin (hrule_trs hr)))))
       |}.
     
     Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
