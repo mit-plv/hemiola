@@ -34,9 +34,6 @@ Section Compile.
   Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
           `{hoifc: @HOStateIfc dv oifc}.
 
-  Definition compile_OState_init: list K.RegInitT :=
-    TODO _.
-
   Definition Pair (k1 k2: Kind) :=
     STRUCT { "pair_1" :: k1; "pair_2" :: k2 }.
 
@@ -239,13 +236,39 @@ Section Compile.
          | HGetDownLockIdxBack => (#dl!DownLock@."dl_rsbTo")
          end)%kami_expr.
 
+      Variable ostin: string.
+
+      Definition ostValName {sz} (i: Fin.t sz) :=
+        (ostin ++ "_" ++ nat_to_string (proj1_sig (Fin.to_nat i)))%string.
+
+      Fixpoint compile_OState_trs (host: HOState (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
+        (match host with
+         | HOStateI _ => cont
+         | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
+           (Write (ostValName i) : (kind_of ht) <- (compile_exp he);
+           compile_OState_trs host' cont)
+         end)%kami_action.
+
+      Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
+        (match horq with
+         | HORqI _ => cont
+         | _ => cont (** FIXME *)
+         end)%kami_action.
+
+      Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (match hmsgs with
+         | HMsgsOutI _ => cont (** FIXME *)
+         end)%kami_action.
+      
       Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
         (match hm with
          | HBind hv cont =>
            Let_ (compile_bval hv) (fun x: var (kind_of_hbtype _) => compile_MonadT (cont x))
          | HRet host horq hmsgs =>
-           (** FIXME *)
-           Retv
+           compile_OState_trs host (compile_ORq_trs horq (compile_MsgsOut_trs hmsgs Retv))
          end)%kami_action.
 
       Definition compile_Monad (hm: HMonad): ActionT var Void :=
@@ -268,7 +291,7 @@ Section Compile.
   Context `{CompOStateIfc} `{CompExtExp}.
 
   Section WithObj.
-    Variables (oidx: IdxT) (uln dln: string).
+    Variables (oidx: IdxT) (uln dln ostin: string).
 
     Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
       Attribute (Action Void) :=
@@ -285,7 +308,8 @@ Section Compile.
                              dln (fun dl =>
                                     compile_Rule_prec
                                       msgIn ul dl (hrule_precond hr (hvar_of var))
-                                      (compile_Rule_trs msgIn ul dl (hrule_trs hr)))))
+                                      (compile_Rule_trs
+                                         msgIn ul dl ostin (hrule_trs hr)))))
       |}.
     
     Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
@@ -298,6 +322,11 @@ Section Compile.
     "ul" ++ idx_to_string oidx.
   Definition downLockReg (oidx: IdxT): string :=
     "dl" ++ idx_to_string oidx.
+  Definition ostIReg (oidx: IdxT): string :=
+    "ost" ++ idx_to_string oidx.
+
+  Definition compile_OState_init: list K.RegInitT :=
+    TODO _.
   
   Definition compile_Object (obj: {sobj: H.Object & HObject sobj})
     : option K.Modules :=
@@ -305,6 +334,7 @@ Section Compile.
     let crules := compile_Rules (obj_idx (projT1 obj))
                                 (upLockReg (obj_idx (projT1 obj)))
                                 (downLockReg (obj_idx (projT1 obj)))
+                                (ostIReg (obj_idx (projT1 obj)))
                                 (hobj_rules (projT2 obj)) in
     Some (K.Mod cregs crules nil).
   
@@ -336,6 +366,7 @@ Section Tests.
   Definition oidx: IdxT := 1.
   Definition uln: string := "UpLock". 
   Definition dln: string := "DownLock".
+  Definition ostin: string := "ost".
 
   Context `{@CompOStateIfc SpecInds.NatDecValue
                            Mesi.ImplOStateIfc
@@ -350,7 +381,7 @@ Section Tests.
                         DirExtExp
                         cet}.
 
-  Definition cl1GetSImm := compile_Rule oidx uln dln (existT _ _ (hl1GetSImm oidx)).
+  Definition cl1GetSImm := compile_Rule oidx uln dln ostin (existT _ _ (hl1GetSImm oidx)).
 
   Goal True.
     pose cl1GetSImm as r.
