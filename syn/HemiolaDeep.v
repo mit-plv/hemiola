@@ -12,13 +12,10 @@ Import MonadNotations.
 
 Class hconfig :=
   { hcfg_oidx_sz: nat;
-    hcfg_oidx_deg: nat;
     hcfg_midx_sz: nat;
-    hcfg_midx_deg: nat;
     hcfg_msg_id_sz: nat;
-    hcfg_msg_id_deg: nat;
     hcfg_value_sz: nat;
-    hcfg_children_max: nat
+    hcfg_children_max_lg: nat
   }.
 
 Section Reify.
@@ -65,7 +62,7 @@ Section Reify.
     Inductive hbconst: hbtype -> Type :=
     | HBConstBool: forall b: bool, hbconst HBool
     | HBConstNat: forall w (n: nat), hbconst (HNat w)
-    | HBConstIdx: forall w (deg: nat) (i: IdxT), hbconst (HIdx w).
+    | HBConstIdx: forall w (i: IdxT), hbconst (HIdx w).
 
     Inductive hbexp: hbtype -> Type :=
     | HBConst: forall ht (c: hbconst ht), hbexp ht
@@ -185,7 +182,7 @@ Section Reify.
         
         Inductive HMsgsOut :=
         | HMsgOutUp: hexp HIdxQ -> hexp HMsg -> HMsgsOut
-        | HMsgsOutDown: list (hexp HIdxQ * hexp HMsg) -> HMsgsOut
+        | HMsgsOutDown: list (hexp HIdxQ) -> hexp HMsg -> HMsgsOut
         | HMsgOutExt: hexp HIdxQ -> hexp HMsg -> HMsgsOut.
 
         Inductive HMonadT: Type :=
@@ -231,7 +228,7 @@ Section Reify.
     match c with
     | HBConstBool b => b
     | HBConstNat _ n => n
-    | HBConstIdx _ _ i => i
+    | HBConstIdx _ i => i
     end.
 
   Section InterpExtended.
@@ -343,8 +340,8 @@ Section Reify.
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
         match houts with
         | HMsgOutUp midx msg => [(interpExp midx, interpExp msg)]
-        | HMsgsOutDown outs =>
-          List.map (fun hidm => (interpExp (fst hidm), interpExp (snd hidm))) outs
+        | HMsgsOutDown minds msg =>
+          List.map (fun midx => (interpExp midx, interpExp msg)) minds
         | HMsgOutExt midx msg => [(interpExp midx, interpExp msg)]
         end.
       
@@ -446,14 +443,11 @@ Section Tests.
   Variable oidx: IdxT.
 
   Instance mesiHConfig: hconfig :=
-    {| hcfg_oidx_sz := 8;
-       hcfg_oidx_deg := 4;
-       hcfg_midx_sz := 10;
-       hcfg_midx_deg := 16;
+    {| hcfg_oidx_sz := 5;
+       hcfg_midx_sz := 8;
        hcfg_msg_id_sz := 5;
-       hcfg_msg_id_deg := 4;
        hcfg_value_sz := 32;
-       hcfg_children_max := 4
+       hcfg_children_max_lg := 2;
     |}.
 
   Existing Instance SpecInds.NatDecValue.
@@ -563,11 +557,11 @@ Section Tests.
       { instantiate (1:= HORqI _); reflexivity. }
       { instantiate (1:= HMsgOutExt _ _).
         simpl; repeat f_equal.
-        { instantiate (1:= HBExp (HBConst _ (HBConstIdx _ hcfg_midx_deg _))); reflexivity. }
+        { instantiate (1:= HBExp (HBConst _ (HBConstIdx hcfg_midx_sz _))); reflexivity. }
         { cbv [rsMsg miv_id miv_value].
           instantiate (1:= HBExp (HMsgB _ _ _)).
           simpl; f_equal.
-          { instantiate (1:= HBConst _ (HBConstIdx _ hcfg_msg_id_deg _)); reflexivity. }
+          { instantiate (1:= HBConst _ (HBConstIdx hcfg_msg_id_sz _)); reflexivity. }
           { instantiate (1:= HBConst _ (HBConstBool _)); reflexivity. }
           { instantiate (1:= HOstVal _ val eq_refl).
             simpl; setoid_rewrite <-eq_rect_eq.

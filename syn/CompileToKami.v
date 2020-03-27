@@ -65,8 +65,8 @@ Section Compile.
     STRUCT { "dl_valid" :: Bool;
              "dl_rsb" :: Bool;
              "dl_msg" :: Struct KMsg;
-             (** FIXME: add the actual size of "dl_rssFrom" as a field value *)
-             "dl_rssFrom" :: Array KIdxQ hcfg_children_max;
+             "dl_rss_size" :: Bit hcfg_children_max_lg;
+             "dl_rssFrom" :: Array KIdxQ (Nat.pow 2 hcfg_children_max_lg);
              "dl_rsbTo" :: KIdxQ }.
 
   Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
@@ -83,7 +83,9 @@ Section Compile.
     match hc with
     | HBConstBool b => ConstBool b
     | HBConstNat w n => ConstBit (natToWord w n)
-    | HBConstIdx w deg i => ConstBit (natToWord w (idxToNat deg i)) 
+    | HBConstIdx w i =>
+      (** FIXME: "16" should be in [hconfig] *)
+      ConstBit (natToWord w (idxToNat 16 i)) 
     end.
 
   Section ExtComp.
@@ -105,27 +107,95 @@ Section Compile.
     Definition hvar_of (var: Kind -> Type): htype -> Type :=
       fun ht => var (kind_of ht).
 
-    (** FIXME: finalize the "parent-children" interface *)
-    Definition msgDeqFrom (midx: IdxT): Attribute K.SignatureT :=
-      {| attrName := "fifo" ++ idx_to_string midx ++ ".deq";
-         attrType := {| K.arg := Void;
-                        K.ret := Struct KMsg |} |}.
+    Section QueueIfc.
+
+      Definition fifoBaseName: string := "fifo".
+
+      Definition deqFrom (midx: IdxT): Attribute K.SignatureT :=
+        {| attrName := fifoBaseName ++ idx_to_string midx ++ ".deq";
+           attrType := {| K.arg := Void;
+                          K.ret := Struct KMsg |} |}.
+
+      Definition enqTo (midx: IdxT): Attribute K.SignatureT :=
+        {| attrName := fifoBaseName ++ idx_to_string midx ++ ".enq";
+           attrType := {| K.arg := Struct KMsg;
+                          K.ret := Void |} |}.
+
+      Definition pcBaseName: string := "parentChildren".
+      
+      Definition deqFromChild (oidx: IdxT): Attribute K.SignatureT :=
+        {| attrName := pcBaseName ++ idx_to_string oidx ++ ".deq";
+           attrType := {| K.arg := KIdxQ;
+                          K.ret := Struct KMsg |} |}.
+
+      Definition EnqToCs :=
+        STRUCT { "cs_size" :: Bit hcfg_children_max_lg;
+                 "cs_q_inds" :: Array KIdxQ (Nat.pow 2 hcfg_children_max_lg);
+                 "cs_msg" :: Struct KMsg
+               }.
+      
+      Definition enqToCs (oidx: IdxT): Attribute K.SignatureT :=
+        {| attrName := pcBaseName ++ idx_to_string oidx ++ ".enq";
+           attrType := {| K.arg := Struct EnqToCs;
+                          K.ret := Void |} |}.
+
+    End QueueIfc.
+
+    Local Notation deqFromParent := deqFrom.
+    Local Notation deqFromExt := deqFrom.
+    Local Notation enqToParent := enqTo.
+    Local Notation enqToExt := enqTo.
 
     Section Phoas.
       Context {var: K.Kind -> Type}.
       Variable oidx: IdxT.
 
+      Class CompOStateIfc :=
+        { comp_ostval:
+            forall (var: K.Kind -> Type) (i: Fin.t ost_sz) {hbt},
+              Vector.nth host_ty i = Some hbt ->
+              var (kind_of_hbtype hbt)
+        }.
+      Context `{CompOStateIfc}.
+
+      Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
+        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
+        match he with
+        | HBConst _ c => Const _ (compile_const c)
+        | HVar _ _ v => Var _ (SyntaxKind _) v
+        | HMsgB mid mty mval =>
+          (STRUCT { "id" ::= compile_bexp mid;
+                    "type" ::= compile_bexp mty;
+                    "value" ::= compile_bexp mval })%kami_expr
+        | HOstVal _ i Heq => Var _ (SyntaxKind _) (comp_ostval var i Heq)
+        end.
+
+      Class CompExtExp :=
+        { compile_eexp:
+            forall (var: K.Kind -> Type) {het},
+              heexp (hvar_of var) het ->
+              Expr var (SyntaxKind (kind_of het))
+        }.
+      Context `{CompExtExp}.
+
+      Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
+        : Expr var (SyntaxKind (kind_of ht)) :=
+        match he with
+        | HBExp hbe => compile_bexp hbe
+        | HEExp _ hee => compile_eexp var hee
+        end.
+
       Definition compile_Rule_msg_from (mf: HMsgFrom)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match mf with
          | HMsgFromParent =>
-           (Call msgIn <- (msgDeqFrom (downTo oidx))(); cont msgIn)
+           (Call msgIn <- (deqFromParent (downTo oidx))(); cont msgIn)
          | HMsgFromChild cmidx =>
-           (** FIXME: this case should use the "parent-children" interface *)
-           (Call msgIn <- (msgDeqFrom cmidx)(); cont msgIn)
+           (Call msgIn <-
+            (deqFromChild oidx)(compile_exp (HBExp (HBConst _ (HBConstIdx _ cmidx))));
+           cont msgIn)
          | HMsgFromExt emidx =>
-           (** FIXME: this case should use the L1 external interface *)
-           (Call msgIn <- (msgDeqFrom emidx)(); cont msgIn)
+           (Call msgIn <- (deqFromExt emidx)(); cont msgIn)
          end)%kami_action.
 
       Variables (msgIn: var (Struct KMsg))
@@ -171,41 +241,6 @@ Section Compile.
            (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
          | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == %msgId%:5); cont)
          end)%kami_action.
-
-      Class CompOStateIfc :=
-        { comp_ostval:
-            forall (var: K.Kind -> Type) (i: Fin.t ost_sz) {hbt},
-              Vector.nth host_ty i = Some hbt ->
-              var (kind_of_hbtype hbt)
-        }.
-      Context `{CompOStateIfc}.
-
-      Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
-        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
-        match he with
-        | HBConst _ c => Const _ (compile_const c)
-        | HVar _ _ v => Var _ (SyntaxKind _) v
-        | HMsgB mid mty mval =>
-          (STRUCT { "id" ::= compile_bexp mid;
-                    "type" ::= compile_bexp mty;
-                    "value" ::= compile_bexp mval })%kami_expr
-        | HOstVal _ i Heq => Var _ (SyntaxKind _) (comp_ostval var i Heq)
-        end.
-
-      Class CompExtExp :=
-        { compile_eexp:
-            forall (var: K.Kind -> Type) {het},
-              heexp (hvar_of var) het ->
-              Expr var (SyntaxKind (kind_of het))
-        }.
-      Context `{CompExtExp}.
-
-      Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
-        : Expr var (SyntaxKind (kind_of ht)) :=
-        match he with
-        | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var hee
-        end.
 
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
         : Expr var (SyntaxKind Bool) :=
@@ -285,6 +320,8 @@ Section Compile.
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
                                                    "dl_rsb" ::= $$true;
                                                    "dl_msg" ::= compile_exp rq;
+                                                   "dl_rss_size" ::=
+                                                     $$(natToWord _ (List.length rssf));
                                                    "dl_rssFrom" ::=
                                                      BuildArray
                                                        (array_of_list
@@ -294,6 +331,8 @@ Section Compile.
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
                                                    "dl_rsb" ::= $$false;
                                                    "dl_msg" ::= $$Default;
+                                                   "dl_rss_size" ::=
+                                                     $$(natToWord _ (List.length rssf));
                                                    "dl_rssFrom" ::=
                                                      BuildArray
                                                        (array_of_list
@@ -303,16 +342,27 @@ Section Compile.
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$false;
                                                    "dl_rsb" ::= $$Default;
                                                    "dl_msg" ::= $$Default;
+                                                   "dl_rss_size" ::= $$Default;
                                                    "dl_rssFrom" ::= $$Default;
                                                    "dl_rsbTo" ::= $$Default }; cont)
          end)%kami_action.
 
+      (** FIXME: compile [midx] to the *name* of the target fifo.. huh? *)
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
-        (match hmsgs with (** FIXME *)
-         | HMsgOutUp midx msg => TODO _
-         | HMsgsOutDown msgs => TODO _
-         | HMsgOutExt midx msg => TODO _
+        (match hmsgs with (** FIXME: TODOs *)
+         | HMsgOutUp midx msg =>
+           (Call (enqToParent (TODO _))(compile_exp msg); cont)
+         | HMsgsOutDown minds msg =>
+           (Call (enqToCs oidx)(STRUCT { "cs_size" ::= TODO _;
+                                         "cs_q_inds" ::=
+                                           BuildArray
+                                             (array_of_list
+                                                $$Default (List.map compile_exp minds) _);
+                                         "cs_msg" ::= compile_exp msg });
+           cont)
+         | HMsgOutExt midx msg =>
+           (Call (enqToExt (TODO _))(compile_exp msg); cont)
          end)%kami_action.
 
       Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
@@ -365,7 +415,7 @@ Section Compile.
                                     compile_Rule_prec
                                       msgIn ul dl (hrule_precond hr (hvar_of var))
                                       (compile_Rule_trs
-                                         msgIn uln ul dln dl ostin (hrule_trs hr)))))
+                                         oidx msgIn uln ul dln dl ostin (hrule_trs hr)))))
       |}.
     
     Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
