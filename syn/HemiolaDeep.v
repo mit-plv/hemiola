@@ -11,9 +11,9 @@ Import MonadNotations.
 (** Configuration class *)
 
 Class hconfig :=
-  { hcfg_oidx_sz: nat;
-    hcfg_midx_sz: nat;
-    hcfg_msg_id_sz: nat;
+  { hcfg_oidx_sz: nat (* log of degree *) * nat (* width *);
+    hcfg_midx_sz: nat * nat;
+    hcfg_msg_id_sz: nat * nat;
     hcfg_value_sz: nat;
     hcfg_children_max_lg: nat
   }.
@@ -25,7 +25,7 @@ Section Reify.
 
   Inductive hbtype :=
   | HBool
-  | HIdx (width: nat)
+  | HIdx (sz: nat (* log of degree *) * nat (* width *))
   | HNat (width: nat)
   | HValue
   | HMsg.
@@ -443,9 +443,9 @@ Section Tests.
   Variable oidx: IdxT.
 
   Instance mesiHConfig: hconfig :=
-    {| hcfg_oidx_sz := 5;
-       hcfg_midx_sz := 8;
-       hcfg_msg_id_sz := 5;
+    {| hcfg_oidx_sz := (2, 3);
+       hcfg_midx_sz := (4, 4);
+       hcfg_msg_id_sz := (3, 2);
        hcfg_value_sz := 32;
        hcfg_children_max_lg := 2;
     |}.

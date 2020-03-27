@@ -12,16 +12,21 @@ Import MonadNotations.
 Module H := Hemiola.Syntax.
 Module K := Kami.Syntax.
 
+Notation "∘ sz" := (fst sz + snd sz) (at level 0).
+
 Definition nat_to_string (n: nat): string :=
   NilEmpty.string_of_uint (Nat.to_uint n).
 
-Fixpoint idxToNat (deg: nat) (idx: IdxT): nat :=
+Fixpoint idx_to_nat (deg: nat) (idx: IdxT): nat :=
   match idx with
   | nil => 0
-  | d :: ds => d + deg * (idxToNat deg ds)
+  | d :: ds => d + deg * (idx_to_nat deg ds)
   end.
-Notation "% i %: d" :=
-  (Const _ (natToWord _ (idxToNat d i))) (at level 5): kami_expr_scope.
+
+Definition idx_to_word (sz: nat * nat) (idx: IdxT): word ∘sz :=
+  natToWord _ (idx_to_nat (fst sz) idx).
+
+Notation "% i %: sz" := (idx_to_word sz i) (at level 5): kami_expr_scope.
 
 Fixpoint idx_to_string (idx: IdxT): string :=
   match idx with
@@ -44,9 +49,9 @@ Section Compile.
   Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
           `{hoifc: @HOStateIfc dv oifc}.
 
-  Definition KIdxO := Bit hcfg_oidx_sz.
-  Definition KIdxQ := Bit hcfg_midx_sz.
-  Definition KIdxM := Bit hcfg_msg_id_sz.
+  Definition KIdxO := Bit ∘hcfg_oidx_sz.
+  Definition KIdxQ := Bit ∘hcfg_midx_sz.
+  Definition KIdxM := Bit ∘hcfg_msg_id_sz.
   Definition KValue := Bit hcfg_value_sz.
 
   Definition KMsg :=
@@ -72,7 +77,7 @@ Section Compile.
   Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
     | HBool => Bool
-    | HIdx w => Bit w
+    | HIdx w => Bit ∘w
     | HNat w => Bit w
     | HValue => Bit hcfg_value_sz
     | HMsg => Struct KMsg
@@ -83,9 +88,7 @@ Section Compile.
     match hc with
     | HBConstBool b => ConstBool b
     | HBConstNat w n => ConstBit (natToWord w n)
-    | HBConstIdx w i =>
-      (** FIXME: "16" should be in [hconfig] *)
-      ConstBit (natToWord w (idxToNat 16 i)) 
+    | HBConstIdx w i => ConstBit (idx_to_word w i)
     end.
 
   Section ExtComp.
@@ -221,7 +224,7 @@ Section Compile.
            (Assert (#ul!UpLock@."ul_valid");
            Assert (#ul!UpLock@."ul_rsb");
            Assert (#ul!UpLock@."ul_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#ul!UpLock@."ul_msg"!KMsg@."id" == %mid%:5);
+           Assert (#ul!UpLock@."ul_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
            cont)
          | HUpLockMsg =>
            (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
@@ -233,13 +236,13 @@ Section Compile.
            (Assert (#dl!DownLock@."dl_valid");
            Assert (#dl!DownLock@."dl_rsb");
            Assert (#dl!DownLock@."dl_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#dl!DownLock@."dl_msg"!KMsg@."id" == %mid%:5);
+           Assert (#dl!DownLock@."dl_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
            cont)
          | HDownLockMsg =>
            (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
          | HDownLockIdxBack =>
            (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
-         | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == %msgId%:5); cont)
+         | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
          end)%kami_action.
 
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
