@@ -181,9 +181,9 @@ Section Reify.
         | HRelDownLock.
         
         Inductive HMsgsOut :=
-        | HMsgOutUp: hexp HIdxQ -> hexp HMsg -> HMsgsOut
+        | HMsgOutUp: IdxT (* midx *) -> hexp HMsg -> HMsgsOut
         | HMsgsOutDown: list (hexp HIdxQ) -> hexp HMsg -> HMsgsOut
-        | HMsgOutExt: hexp HIdxQ -> hexp HMsg -> HMsgsOut.
+        | HMsgOutExt: IdxT (* midx *) -> hexp HMsg -> HMsgsOut.
 
         Inductive HMonadT: Type :=
         | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
@@ -339,10 +339,10 @@ Section Reify.
 
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
         match houts with
-        | HMsgOutUp midx msg => [(interpExp midx, interpExp msg)]
+        | HMsgOutUp midx msg => [(midx, interpExp msg)]
         | HMsgsOutDown minds msg =>
           List.map (fun midx => (interpExp midx, interpExp msg)) minds
-        | HMsgOutExt midx msg => [(interpExp midx, interpExp msg)]
+        | HMsgOutExt midx msg => [(midx, interpExp msg)]
         end.
       
     End WithPreState.
@@ -557,7 +557,6 @@ Section Tests.
       { instantiate (1:= HORqI _); reflexivity. }
       { instantiate (1:= HMsgOutExt _ _).
         simpl; repeat f_equal.
-        { instantiate (1:= HBExp (HBConst _ (HBConstIdx hcfg_midx_sz _))); reflexivity. }
         { cbv [rsMsg miv_id miv_value].
           instantiate (1:= HBExp (HMsgB _ _ _)).
           simpl; f_equal.

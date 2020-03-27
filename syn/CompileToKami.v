@@ -347,14 +347,14 @@ Section Compile.
                                                    "dl_rsbTo" ::= $$Default }; cont)
          end)%kami_action.
 
-      (** FIXME: compile [midx] to the *name* of the target fifo.. huh? *)
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
-        (match hmsgs with (** FIXME: TODOs *)
+        (match hmsgs with
          | HMsgOutUp midx msg =>
-           (Call (enqToParent (TODO _))(compile_exp msg); cont)
+           (Call (enqToParent midx)(compile_exp msg); cont)
          | HMsgsOutDown minds msg =>
-           (Call (enqToCs oidx)(STRUCT { "cs_size" ::= TODO _;
+           (Call (enqToCs oidx)(STRUCT { "cs_size" ::=
+                                           $$(natToWord _ (List.length minds));
                                          "cs_q_inds" ::=
                                            BuildArray
                                              (array_of_list
@@ -362,7 +362,7 @@ Section Compile.
                                          "cs_msg" ::= compile_exp msg });
            cont)
          | HMsgOutExt midx msg =>
-           (Call (enqToExt (TODO _))(compile_exp msg); cont)
+           (Call (enqToExt midx)(compile_exp msg); cont)
          end)%kami_action.
 
       Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
