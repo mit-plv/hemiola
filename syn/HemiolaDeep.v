@@ -91,6 +91,11 @@ Section Reify.
       | HEType het => hetypeDenote het
       end.
 
+    Class HOStateIfcFull :=
+      { hostf_ty: Vector.t htype ost_sz;
+        hostf_ty_ok: Vector.map htypeDenote hostf_ty = ost_ty
+      }.
+
     Class ExtExp :=
       { heexp: (htype -> Type) -> htype -> Type;
         interp_heexp:
@@ -497,6 +502,12 @@ Section Tests.
 
   Existing Instance DirExtType.
   Existing Instance DirExtExp.
+
+  Instance MesiHOStateIfcFull: HOStateIfcFull :=
+    {| hostf_ty := [HBType HValue; HBType HBool; HBType HMesi; HEType HDir];
+       hostf_ty_ok := eq_refl;
+    |}.
+  
   Definition hl1GetSImm: HRule (l1GetSImm (l1ExtOf oidx)).
   Proof.
     refine {| hrule_msg_from := _ |}.

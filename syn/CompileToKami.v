@@ -47,7 +47,9 @@ Fixpoint array_of_list {A} (def: A) (l: list A) sz: Vector.t A sz :=
 
 Section Compile.
   Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
-          `{hoifc: @HOStateIfc dv oifc}.
+          (* `{hoifc: @HOStateIfc dv oifc}. *)
+          `{het: ExtType}
+          `{hoifc: @HOStateIfcFull dv oifc het}.
 
   Definition KIdxO := Bit ∘hcfg_oidx_sz.
   Definition KIdxQ := Bit ∘hcfg_midx_sz.
@@ -92,7 +94,7 @@ Section Compile.
     end.
 
   Section ExtComp.
-    Context `{het: ExtType} `{@ExtExp dv oifc het}.
+    Context `{@ExtExp dv oifc het}.
   
     Class CompExtType :=
       { kind_of_hetype: hetype -> Kind }.
@@ -153,14 +155,39 @@ Section Compile.
       Context {var: K.Kind -> Type}.
       Variable oidx: IdxT.
 
-      Class CompOStateIfc :=
-        { comp_ostval:
-            forall (var: K.Kind -> Type) (i: Fin.t ost_sz) {hbt},
-              Vector.nth host_ty i = Some hbt ->
-              var (kind_of_hbtype hbt)
-        }.
-      Context `{CompOStateIfc}.
+      Variable ostin: string.
 
+      Definition ostValNameN (n: nat) :=
+        (ostin ++ "_" ++ nat_to_string n)%string.
+
+      Definition ostValNameI {sz} (i: Fin.t sz) :=
+        ostValNameN (proj1_sig (Fin.to_nat i)).
+
+      Fixpoint compile_Rule_ost_vars (n: nat) {sz} (htys: Vector.t htype sz)
+               (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) htys) ->
+                      ActionT var Void) {struct htys}: ActionT var Void :=
+        match htys in Vector.t _ sz
+              return (HVector.hvec (Vector.map (fun hty => var (kind_of hty)) htys) ->
+                      ActionT var Void) -> ActionT var Void with
+        | Vector.nil _ => fun cont => cont tt
+        | Vector.cons _ hty _ htys =>
+          fun cont =>
+            (Read ov: (kind_of hty) <- (ostValNameN n);
+            compile_Rule_ost_vars
+              (S n) htys (fun vars => cont (HVector.hvcons ov vars)))%kami_action
+        end cont.
+
+      Variable (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
+
+      (* Class CompOStateIfc := *)
+      (*   { comp_ostval: *)
+      (*       forall (var: K.Kind -> Type) (i: Fin.t ost_sz) {hbt}, *)
+      (*         Vector.nth host_ty i = Some hbt -> *)
+      (*         var (kind_of_hbtype hbt) *)
+      (*   }. *)
+      (* Context `{CompOStateIfc}. *)
+
+      (** * TODO: fix from here *)
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
         match he with
@@ -283,17 +310,12 @@ Section Compile.
          | HGetDownLockIdxBack => (#dl!DownLock@."dl_rsbTo")
          end)%kami_expr.
 
-      Variable ostin: string.
-
-      Definition ostValName {sz} (i: Fin.t sz) :=
-        (ostin ++ "_" ++ nat_to_string (proj1_sig (Fin.to_nat i)))%string.
-
       Fixpoint compile_OState_trs (host: HOState (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
         (match host with
          | HOStateI _ => cont
          | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
-           (Write (ostValName i) : (kind_of ht) <- (compile_exp he);
+           (Write (ostValNameI i) : (kind_of ht) <- (compile_exp he);
            compile_OState_trs host' cont)
          end)%kami_action.
 
