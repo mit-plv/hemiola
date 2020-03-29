@@ -47,9 +47,9 @@ Fixpoint array_of_list {A} (def: A) (l: list A) sz: Vector.t A sz :=
 
 Section Compile.
   Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
-          (* `{hoifc: @HOStateIfc dv oifc}. *)
           `{het: ExtType}
-          `{hoifc: @HOStateIfcFull dv oifc het}.
+          `{hoifc: @HOStateIfc dv oifc}
+          `{hoifcf: @HOStateIfcFull dv oifc hoifc het}.
 
   Definition KIdxO := Bit ∘hcfg_oidx_sz.
   Definition KIdxQ := Bit ∘hcfg_midx_sz.
@@ -163,7 +163,7 @@ Section Compile.
       Definition ostValNameI {sz} (i: Fin.t sz) :=
         ostValNameN (proj1_sig (Fin.to_nat i)).
 
-      Fixpoint compile_Rule_ost_vars (n: nat) {sz} (htys: Vector.t htype sz)
+      Fixpoint compile_Rule_ost_vars_fix (n: nat) {sz} (htys: Vector.t htype sz)
                (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) htys) ->
                       ActionT var Void) {struct htys}: ActionT var Void :=
         match htys in Vector.t _ sz
@@ -173,33 +173,33 @@ Section Compile.
         | Vector.cons _ hty _ htys =>
           fun cont =>
             (Read ov: (kind_of hty) <- (ostValNameN n);
-            compile_Rule_ost_vars
+            compile_Rule_ost_vars_fix
               (S n) htys (fun vars => cont (HVector.hvcons ov vars)))%kami_action
         end cont.
 
+      Definition compile_Rule_ost_vars :=
+        compile_Rule_ost_vars_fix O hostf_ty.
+      
       Variable (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
-
-      (* Class CompOStateIfc := *)
-      (*   { comp_ostval: *)
-      (*       forall (var: K.Kind -> Type) (i: Fin.t ost_sz) {hbt}, *)
-      (*         Vector.nth host_ty i = Some hbt -> *)
-      (*         var (kind_of_hbtype hbt) *)
-      (*   }. *)
-      (* Context `{CompOStateIfc}. *)
-
-      (** * TODO: fix from here *)
+      
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
-        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
-        match he with
-        | HBConst _ c => Const _ (compile_const c)
-        | HVar _ _ v => Var _ (SyntaxKind _) v
-        | HMsgB mid mty mval =>
-          (STRUCT { "id" ::= compile_bexp mid;
-                    "type" ::= compile_bexp mty;
-                    "value" ::= compile_bexp mval })%kami_expr
-        | HOstVal _ i Heq => Var _ (SyntaxKind _) (comp_ostval var i Heq)
-        end.
-
+        : Expr var (SyntaxKind (kind_of_hbtype hbt)).
+        refine match he with
+               | HBConst _ c => Const _ (compile_const c)
+               | HVar _ _ v => Var _ (SyntaxKind _) v
+               | HMsgB mid mty mval =>
+                 (STRUCT { "id" ::= compile_bexp _ mid;
+                           "type" ::= compile_bexp _ mty;
+                           "value" ::= compile_bexp _ mval })%kami_expr
+               | HOstVal _ i Heq => Var _ (SyntaxKind _) _
+               end.
+        set (ostvar:= HVector.hvec_ith ostVars i).
+        erewrite Vector.nth_map with (p2:= i) in ostvar by reflexivity.
+        simpl.
+        erewrite hostf_ty_compat in ostvar by eassumption.
+        exact ostvar.
+      Defined. (** FIXME: simplify the definition *)
+                
       Class CompExtExp :=
         { compile_eexp:
             forall (var: K.Kind -> Type) {het},
@@ -415,7 +415,7 @@ Section Compile.
 
   End ExtComp.
 
-  Context `{CompOStateIfc} `{CompExtExp}.
+  Context `{CompExtExp}.
 
   Section WithObj.
     Variables (oidx: IdxT) (uln dln ostin: string).
@@ -424,23 +424,22 @@ Section Compile.
     Definition ruleNameI (ridx: IdxT) :=
       (ruleNameBase ++ "_" ++ idx_to_string oidx ++ "_" ++ idx_to_string ridx)%string.
 
+    Local Notation "v <- f ; cont" := (f (fun v => cont)) (at level 99, right associativity).
+    Local Notation "f ;; cont" := (f cont) (at level 60, right associativity).
     Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
       {| attrName := ruleNameI (rule_idx (projT1 rule));
          attrType :=
            fun var =>
-             compile_Rule_msg_from
-               oidx (hrule_msg_from hr)
-               (fun msgIn =>
-                  compile_Rule_uplock
-                    uln (fun ul =>
-                           compile_Rule_downlock
-                             dln (fun dl =>
-                                    compile_Rule_prec
-                                      msgIn ul dl (hrule_precond hr (hvar_of var))
-                                      (compile_Rule_trs
-                                         oidx msgIn uln ul dln dl ostin (hrule_trs hr)))))
+             (ostVars <- compile_Rule_ost_vars ostin;
+             msgIn <- compile_Rule_msg_from oidx ostVars (hrule_msg_from hr);
+             ul <- compile_Rule_uplock uln;
+             dl <- compile_Rule_downlock dln;
+             compile_Rule_prec
+               ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
+             compile_Rule_trs
+               oidx ostin ostVars msgIn uln ul dln dl (hrule_trs hr))
       |}.
     
     Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
@@ -499,11 +498,6 @@ Section Tests.
   Definition dln: string := "DownLock".
   Definition ostin: string := "ost".
 
-  Context `{@CompOStateIfc SpecInds.NatDecValue
-                           Mesi.ImplOStateIfc
-                           mesiHConfig
-                           MesiHOStateIfc}.
-
   Context `{cet: @CompExtType DirExtType}
           `{@CompExtExp SpecInds.NatDecValue
                         Mesi.ImplOStateIfc
@@ -512,8 +506,8 @@ Section Tests.
                         DirExtExp
                         cet}.
 
+  Existing Instance MesiHOStateIfcFull.
   Definition cl1GetSImm := compile_Rule oidx uln dln ostin (existT _ _ (hl1GetSImm oidx)).
-
   Goal True.
     pose cl1GetSImm as r.
     compute in r.
