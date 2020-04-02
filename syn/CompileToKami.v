@@ -8,6 +8,18 @@ Require Import Kami.Lib.Struct Kami.
 
 Set Implicit Arguments.
 
+Section VectorComp.
+
+  Lemma Vector_nth_map_comp {A B} (f: A -> B) {n} (v: Vector.t A n) (p: Fin.t n):
+    Vector.nth (Vector.map f v) p = f (Vector.nth v p).
+  Proof.
+    induction p.
+    - revert n v; refine (@Vector.caseS _ _ _); now simpl.
+    - revert n v p IHp; refine (@Vector.caseS _  _ _); now simpl.
+  Defined.
+
+End VectorComp.
+
 Import MonadNotations.
 Module H := Hemiola.Syntax.
 Module K := Kami.Syntax.
@@ -181,24 +193,29 @@ Section Compile.
         compile_Rule_ost_vars_fix O hostf_ty.
       
       Variable (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
-      
+
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
-        : Expr var (SyntaxKind (kind_of_hbtype hbt)).
-        refine match he with
-               | HBConst _ c => Const _ (compile_const c)
-               | HVar _ _ v => Var _ (SyntaxKind _) v
-               | HMsgB mid mty mval =>
-                 (STRUCT { "id" ::= compile_bexp _ mid;
-                           "type" ::= compile_bexp _ mty;
-                           "value" ::= compile_bexp _ mval })%kami_expr
-               | HOstVal _ i Heq => Var _ (SyntaxKind _) _
-               end.
-        set (ostvar:= HVector.hvec_ith ostVars i).
-        erewrite Vector.nth_map with (p2:= i) in ostvar by reflexivity.
-        simpl.
-        erewrite hostf_ty_compat in ostvar by eassumption.
-        exact ostvar.
-      Defined. (** FIXME: simplify the definition *)
+        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
+        match he with
+        | HBConst _ c => Const _ (compile_const c)
+        | HVar _ _ v => Var _ (SyntaxKind _) v
+        | HMsgB mid mty mval =>
+          (STRUCT { "id" ::= compile_bexp mid;
+                    "type" ::= compile_bexp mty;
+                    "value" ::= compile_bexp mval })%kami_expr
+        | @HOstVal _ _ _ _ _ i hbt0 Heq =>
+          Var _ (SyntaxKind _)
+              (eq_rect
+                 hostf_ty[@i]
+                 (fun h => var (kind_of h))
+                 (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
+                          (fun T => T)
+                          (HVector.hvec_ith ostVars i)
+                          (var (kind_of hostf_ty[@i]))
+                          (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
+                 (HBType hbt0)
+                 (hostf_ty_compat i Heq))
+        end.
                 
       Class CompExtExp :=
         { compile_eexp:

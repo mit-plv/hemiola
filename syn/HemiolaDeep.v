@@ -462,9 +462,44 @@ Section Tests.
 
   Definition HMesi := HNat 3.
 
+  Lemma MesiHOStateIfc_host_ty_ok:
+    forall i: Fin.t ost_sz,
+      match Vector.nth [Some HValue; Some HBool; Some HMesi; None]%vector i with
+      | Some hbt => Vector.nth ost_ty i = hbtypeDenote hbt
+      | None => True
+      end.
+  Proof.
+    intros.
+    refine (match i with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       reflexivity
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    refine (match t with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       reflexivity
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    refine (match t0 with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       reflexivity
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    refine (match t1 with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       reflexivity
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    apply Fin.case0; assumption.
+  Defined.
+
   Instance MesiHOStateIfc: HOStateIfc :=
     {| host_ty := [Some HValue; Some HBool; Some HMesi; None]%vector;
-       host_ty_ok := cheat _;
+       host_ty_ok := MesiHOStateIfc_host_ty_ok;
     |}.
 
   Section DirExt.
@@ -505,10 +540,43 @@ Section Tests.
   Existing Instance DirExtType.
   Existing Instance DirExtExp.
 
+  Lemma MesiHOStateIfcFull_hostf_ty_compat:
+    forall i hbt,
+      host_ty[@i] = Some hbt ->
+      [HBType HValue; HBType HBool; HBType HMesi; HEType HDir][@i] = HBType hbt.
+  Proof.
+    intros i.
+    refine (match i with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       simpl; intros; congruence
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    refine (match t with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       simpl; intros; congruence
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    refine (match t0 with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       simpl; intros; congruence
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    refine (match t1 with | Fin.F1 => _ | Fin.FS _ => _ end);
+      [repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp];
+       simpl; intros; congruence
+      |repeat (destruct n; [exact idProp|]);
+       destruct n; [|exact idProp]].
+    apply Fin.case0; assumption.
+  Defined.
+
   Instance MesiHOStateIfcFull: HOStateIfcFull :=
     {| hostf_ty := [HBType HValue; HBType HBool; HBType HMesi; HEType HDir];
        hostf_ty_ok := eq_refl;
-       hostf_ty_compat := cheat _;
+       hostf_ty_compat := MesiHOStateIfcFull_hostf_ty_compat;
     |}.
   
   Definition hl1GetSImm: HRule (l1GetSImm (l1ExtOf oidx)).
