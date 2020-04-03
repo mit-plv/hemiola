@@ -1,5 +1,6 @@
 Require Import String.
 
+Require Import Kami.Kami.
 Require Import Compiler.Compiler.
 Require Import MesiDeep.
 
@@ -15,7 +16,7 @@ Section Tests.
   Context `{cet: @CompExtType DirExtType}
           `{@CompExtExp SpecInds.NatDecValue
                         Mesi.ImplOStateIfc
-                        mesiHConfig
+                        MesiHConfig
                         DirExtType
                         DirExtExp
                         cet}.

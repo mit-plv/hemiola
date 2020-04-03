@@ -253,7 +253,7 @@ Section Reify.
         pose proof (host_ty_ok i).
         rewrite H4 in H5.
         assumption.
-      Qed.
+      Defined.
 
       Fixpoint interpBExp {ht} (e: hbexp hbtypeDenote ht): hbtypeDenote ht :=
         match e with
