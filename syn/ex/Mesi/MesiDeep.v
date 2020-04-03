@@ -39,9 +39,12 @@ Instance MesiHConfig: hconfig :=
      hcfg_children_max_lg := 2;
   |}.
 
+Instance HNatDecValue: HDecValue :=
+  {| ht_value_ok := eq_refl |}.
+
 Lemma MesiHOStateIfc_host_ty_ok:
   forall i: Fin.t ost_sz,
-    match Vector.nth [Some HValue; Some HBool; Some HMesi; None]%vector i with
+    match Vector.nth [Some hdv_type; Some HBool; Some HMesi; None]%vector i with
     | Some hbt => Vector.nth ost_ty i = hbtypeDenote hbt
     | None => True
     end.
@@ -75,7 +78,7 @@ Proof.
 Defined.
 
 Instance MesiHOStateIfc: HOStateIfc :=
-  {| host_ty := [Some HValue; Some HBool; Some HMesi; None]%vector;
+  {| host_ty := [Some hdv_type; Some HBool; Some HMesi; None]%vector;
      host_ty_ok := MesiHOStateIfc_host_ty_ok;
   |}.
 
@@ -120,7 +123,7 @@ Existing Instance DirExtExp.
 Lemma MesiHOStateIfcFull_hostf_ty_compat:
   forall i hbt,
     host_ty[@i] = Some hbt ->
-    [HBType HValue; HBType HBool; HBType HMesi; HEType HDir][@i] = HBType hbt.
+    [HBType hdv_type; HBType HBool; HBType HMesi; HEType HDir][@i] = HBType hbt.
 Proof.
   intros i.
   refine (match i with | Fin.F1 => _ | Fin.FS _ => _ end);
@@ -151,57 +154,12 @@ Proof.
 Defined.
 
 Instance MesiHOStateIfcFull: HOStateIfcFull :=
-  {| hostf_ty := [HBType HValue; HBType HBool; HBType HMesi; HEType HDir];
+  {| hostf_ty := [HBType hdv_type; HBType HBool; HBType HMesi; HEType HDir];
      hostf_ty_ok := eq_refl;
      hostf_ty_compat := MesiHOStateIfcFull_hostf_ty_compat;
   |}.
 
 (** * Reification *)
-
-(* Inductive OTT := One | Two | Three. *)
-(* Definition denoteOTT (n: OTT) := *)
-(*   match n with *)
-(*   | One => 1 *)
-(*   | Two => 2 *)
-(*   | Three => 3 *)
-(*   end. *)
-
-(* Inductive FFS := Four | Five | Six. *)
-(* Definition denoteFFS (n: FFS) := *)
-(*   match n with *)
-(*   | Four => 4 *)
-(*   | Five => 5 *)
-(*   | Six => 6 *)
-(*   end. *)
-
-(* Inductive Nat := *)
-(* | NatOTT: OTT -> Nat *)
-(* | NatFFS: FFS -> Nat *)
-(* | NatAdd: Nat -> Nat -> Nat. *)
-
-(* Fixpoint denoteNat (n: Nat) := *)
-(*   match n with *)
-(*   | NatOTT no => denoteOTT no *)
-(*   | NatFFS nf => denoteFFS nf *)
-(*   | NatAdd n1 n2 => denoteNat n1 + denoteNat n2 *)
-(*   end. *)
-
-(* Goal (exists n, denoteNat n = 3 + 4). *)
-(* Proof. *)
-(*   eexists. *)
-(*   cbv [denoteNat denoteOTT denoteFFS]. *)
-(*   instantiate (1:= NatAdd _ _). *)
-(*   cbv [denoteNat denoteOTT denoteFFS]. *)
-(*   f_equal. *)
-(*   - instantiate (1:= NatOTT _). *)
-(*     cbv [denoteNat denoteOTT denoteFFS]. *)
-(*     instantiate (1:= Three). *)
-(*     reflexivity. *)
-(*   - instantiate (1:= NatFFS _). *)
-(*     cbv [denoteNat denoteOTT denoteFFS]. *)
-(*     instantiate (1:= Four). *)
-(*     reflexivity. *)
-(* Abort. *)
 
 Section Deep.
   Variable (tr: tree).
@@ -349,10 +307,11 @@ Section Deep.
           { instantiate (1:= HBConst _ (HBConstBool _)).
             simpl; reflexivity.
           }
-          { apply TODO. (* HValue constant (inst. NatDecValue) *)
+          { instantiate (1:= HBConst _ (HBConstNat _ _)).
+            simpl; reflexivity.
           }
         }
-    Abort.
+    Defined.
 
   End L1Rules.
     
@@ -371,6 +330,7 @@ Section Deep.
 
       Unshelve. all: cbv beta.
       1: exact (hl1GetSImm _).
+      1: exact (hl1GetSRqUpUp _).
       all: apply TODO.
     Defined.
     

@@ -27,7 +27,6 @@ Section Reify.
   | HBool
   | HIdx (sz: nat (* log of degree *) * nat (* width *))
   | HNat (width: nat)
-  | HValue
   | HMsg.
 
   Definition HIdxO := HIdx hcfg_oidx_sz.
@@ -39,9 +38,11 @@ Section Reify.
     | HBool => bool
     | HIdx _ => IdxT
     | HNat _ => nat
-    | HValue => t_type
     | HMsg => Msg
     end.
+
+  Class HDecValue :=
+    { ht_value_ok: hbtypeDenote (HNat hcfg_value_sz) = t_type }.
 
   Class HOStateIfc :=
     { host_ty: Vector.t (option hbtype) ost_sz;
@@ -52,7 +53,8 @@ Section Reify.
           | None => True
           end
     }.
-  Context `{HOStateIfc}.
+  Context `{HDecValue} `{HOStateIfc}.
+  Definition hdv_type := HNat hcfg_value_sz.
 
   Section Basis.
     Variable var: hbtype -> Type.
@@ -67,7 +69,7 @@ Section Reify.
     Inductive hbexp: hbtype -> Type :=
     | HBConst: forall ht (c: hbconst ht), hbexp ht
     | HVar: forall ht, var ht -> hbexp ht
-    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HValue -> hbexp HMsg
+    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp hdv_type -> hbexp HMsg
     | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt.
 
   End Basis.
@@ -251,7 +253,7 @@ Section Reify.
       Proof.
         intros.
         pose proof (host_ty_ok i).
-        rewrite H4 in H5.
+        rewrite H5 in H6.
         assumption.
       Defined.
 
@@ -262,7 +264,10 @@ Section Reify.
         | HMsgB mid mty mval =>
           {| msg_id := interpBExp mid;
              msg_type := interpBExp mty;
-             msg_value := interpBExp mval |}
+             msg_value := match ht_value_ok in (_ = T) return T with
+                          | eq_refl => interpBExp mval
+                          end
+          |}
         | HOstVal i hbt Heq =>
           match host_ty_ok_i _ Heq with
           | eq_refl => (ost#[i])%hvec
@@ -387,13 +392,14 @@ Section Reify.
 End Reify.
 
 Section HemiolaDeep.
-  Context `{dv: DecValue}
+  Context `{hcfg: hconfig}
+          `{dv: DecValue}
+          `{hdv: @HDecValue dv hcfg}
           `{oifc: OStateIfc}
           `{het: ExtType}
           `{ee: @ExtExp dv oifc het}
-          `{hoifc: @HOStateIfc dv oifc}
-          `{hconfig}.
-
+          `{hoifc: @HOStateIfc dv oifc}.
+          
   Record HRule (sr: Rule) :=
     { hrule_msg_from: HMsgFrom;
       hrule_precond: HOPrec;

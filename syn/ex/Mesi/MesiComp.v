@@ -14,9 +14,9 @@ Section Tests.
   Definition ostin: string := "ost".
 
   Context `{cet: @CompExtType DirExtType}
-          `{@CompExtExp SpecInds.NatDecValue
+          `{@CompExtExp MesiHConfig
+                        SpecInds.NatDecValue
                         Mesi.ImplOStateIfc
-                        MesiHConfig
                         DirExtType
                         DirExtExp
                         cet}.

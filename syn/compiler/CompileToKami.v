@@ -58,7 +58,8 @@ Fixpoint array_of_list {A} (def: A) (l: list A) sz: Vector.t A sz :=
   end.
 
 Section Compile.
-  Context `{dv: DecValue} `{oifc: OStateIfc} `{hconfig}
+  Context `{hcfg: hconfig} `{dv: DecValue} `{hdv: @HDecValue dv hcfg}
+          `{oifc: OStateIfc} 
           `{het: ExtType}
           `{hoifc: @HOStateIfc dv oifc}
           `{hoifcf: @HOStateIfcFull dv oifc hoifc het}.
@@ -93,7 +94,6 @@ Section Compile.
     | HBool => Bool
     | HIdx w => Bit ∘w
     | HNat w => Bit w
-    | HValue => Bit hcfg_value_sz
     | HMsg => Struct KMsg
     end.
 
