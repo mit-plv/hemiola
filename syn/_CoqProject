@@ -1,3 +1,5 @@
 -R ../src Hemiola
 -R kami/Kami Kami
+-R compiler Compiler
+-R ex Ex
 -arg "-w" -arg "-implicit-core-hint-db"

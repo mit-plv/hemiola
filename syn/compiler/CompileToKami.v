@@ -2,9 +2,9 @@ Require Import Numbers.DecimalString.
 
 Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
 Require Import Hemiola.Ex.TopoTemplate.
-Require Import HemiolaDeep.
 
-Require Import Kami.Lib.Struct Kami.
+Require Import Compiler.HemiolaDeep. (* source *)
+Require Import Kami.Lib.Struct Kami. (* target *)
 
 Set Implicit Arguments.
 
@@ -500,34 +500,3 @@ Section Compile.
     compile_Objects (hsys_objs (projT2 sys)).
 
 End Compile.
-
-
-
-
-(** * Temporary Testing Section *)
-Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate.
-Require Import Hemiola.Ex.Mesi.Mesi.
-
-Section Tests.
-
-  Definition oidx: IdxT := 1.
-  Definition uln: string := "UpLock". 
-  Definition dln: string := "DownLock".
-  Definition ostin: string := "ost".
-
-  Context `{cet: @CompExtType DirExtType}
-          `{@CompExtExp SpecInds.NatDecValue
-                        Mesi.ImplOStateIfc
-                        mesiHConfig
-                        DirExtType
-                        DirExtExp
-                        cet}.
-
-  Existing Instance MesiHOStateIfcFull.
-  Definition cl1GetSImm := compile_Rule oidx uln dln ostin (existT _ _ (hl1GetSImm oidx)).
-  Goal True.
-    pose cl1GetSImm as r.
-    compute in r.
-  Abort.
-
-End Tests.
