@@ -220,6 +220,7 @@ Section Compile.
       Class CompExtExp :=
         { compile_eexp:
             forall (var: K.Kind -> Type) {het},
+              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
               Expr var (SyntaxKind (kind_of het))
         }.
@@ -229,7 +230,7 @@ Section Compile.
         : Expr var (SyntaxKind (kind_of ht)) :=
         match he with
         | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var hee
+        | HEExp _ hee => compile_eexp var ostVars hee
         end.
 
       Definition compile_Rule_msg_from (mf: HMsgFrom)
