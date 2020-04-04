@@ -226,7 +226,9 @@ Ltac renote_bexp :=
            match t with
            | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
            | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _); simpl; f_equal
-           | _ => is_const t; instantiate (1:= HBConst _ _); simpl; renote_const
+           | _ =>
+             tryif is_var t then fail
+             else (instantiate (1:= HBConst _ _); simpl; renote_const)
            | _ => instantiate (1:= HVar _ _ _); reflexivity
            end
          end).
@@ -394,17 +396,6 @@ Section Deep.
         repeat autounfold with MesiRules.
         cbv [rqUpUpRule rule_trs].
         renote_OTrs.
-
-        + instantiate (1:= HBExp _); simpl.
-          (* [is_const] fails with [downTo oidx] *)
-          instantiate (1:= HBConst _ (HBConstIdx _ _)); reflexivity.
-        + instantiate (1:= HBExp _); simpl.
-          (* [is_const] fails with [downTo (l1ExtOf oidx)] *)
-          instantiate (1:= HBConst _ (HBConstIdx _ _)); reflexivity.
-        + instantiate (1:= HBExp _); simpl.
-          renote_bexp.
-          (* [is_const] fails with [0] *)
-          instantiate (1:= HBConst _ (HBConstNat _ _)); reflexivity.
     Defined.
 
   End L1Rules.
