@@ -1,6 +1,6 @@
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
 Require Import Hemiola.Topology Hemiola.Syntax.
-Require Import Hemiola.RqRsLang.
+Require Import Hemiola.RqRsLang Hemiola.Ex.Template Hemiola.Ex.RuleTransform.
         
 Set Implicit Arguments.
 
@@ -70,6 +70,9 @@ Section Reify.
     | HBConst: forall ht (c: hbconst ht), hbexp ht
     | HVar: forall ht, var ht -> hbexp ht
     | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp hdv_type -> hbexp HMsg
+    | HMsgId: hbexp HMsg -> hbexp HIdxM
+    | HMsgType: hbexp HMsg -> hbexp HBool
+    | HMsgValue: hbexp HMsg -> hbexp hdv_type
     | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt.
 
   End Basis.
@@ -125,6 +128,7 @@ Section Reify.
         (* -- precondition *)
         
         Inductive HOPrecP: Type :=
+        | HTrue: HOPrecP
         | HAnd: HOPrecP -> HOPrecP -> HOPrecP
         | HOr: HOPrecP -> HOPrecP -> HOPrecP
         | HBoolT: hexp HBool -> HOPrecP
@@ -151,9 +155,11 @@ Section Reify.
         | HMsgIdFrom (msgId: IdxT): HOPrecR.
 
         Inductive HMsgFrom: Type :=
-        | HMsgFromParent: HMsgFrom
+        | HMsgFromParent (pmidx: IdxT): HMsgFrom
         | HMsgFromChild (cmidx: IdxT): HMsgFrom
-        | HMsgFromExt (emidx: IdxT): HMsgFrom.
+        | HMsgFromExt (emidx: IdxT): HMsgFrom
+        | HMsgFromUpLock: HMsgFrom
+        | HMsgFromDownLock (cidx: IdxT): HMsgFrom.
 
         Inductive HOPrecT: Type :=
         | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
@@ -216,6 +222,9 @@ Section Reify.
   Arguments HBConst {var}.
   Arguments HVar {var}.
   Arguments HMsgB {var}.
+  Arguments HMsgId {var}.
+  Arguments HMsgType {var}.
+  Arguments HMsgValue {var}.
   Arguments HOstVal {var}.
   Arguments HBExp {_ _} {var} {hbt}.
   Arguments HEExp {_ _} {var} {ht}.
@@ -268,6 +277,12 @@ Section Reify.
                           | eq_refl => interpBExp mval
                           end
           |}
+        | HMsgId msg => msg_id (interpBExp msg)
+        | HMsgType msg => msg_type (interpBExp msg)
+        | HMsgValue msg =>
+          match eq_sym ht_value_ok in (_ = T) return T with
+          | eq_refl => msg_value (interpBExp msg)
+          end
         | HOstVal i hbt Heq =>
           match host_ty_ok_i _ Heq with
           | eq_refl => (ost#[i])%hvec
@@ -282,6 +297,7 @@ Section Reify.
       
       Fixpoint interpOPrecP (p: HOPrecP htypeDenote): Prop :=
         match p with
+        | HTrue _ => True
         | HAnd p1 p2 => interpOPrecP p1 /\ interpOPrecP p2
         | HOr p1 p2 => interpOPrecP p1 \/ interpOPrecP p2
         | HBoolT b => interpExp b = true
@@ -312,9 +328,13 @@ Section Reify.
 
       Definition interpMsgFrom (mf: HMsgFrom): Prop :=
         match mf with
-        | HMsgFromParent => MsgsFromORq upRq ost orq mins
+        | HMsgFromParent pmidx => MsgsFrom [pmidx] ost orq mins
         | HMsgFromChild cmidx => MsgsFrom [cmidx] ost orq mins
         | HMsgFromExt emidx => MsgsFrom [emidx] ost orq mins
+        | HMsgFromUpLock => MsgsFromORq upRq ost orq mins
+        | HMsgFromDownLock cidx =>
+          MsgsFrom [rqUpFrom cidx] ost orq mins /\
+          RsWaiting cidx ost orq mins
         end.
 
       Definition interpBindValue {bt} (bv: hbval bt)
@@ -429,3 +449,4 @@ Section HemiolaDeep.
 End HemiolaDeep.
 
 Arguments hvec_ith: simpl never.
+Arguments hvec_upd: simpl never.

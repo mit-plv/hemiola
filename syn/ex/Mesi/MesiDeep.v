@@ -174,7 +174,6 @@ Instance MesiHOStateIfcFull: HOStateIfcFull :=
 
 (** * Reification *)
 
-
 Ltac reify_MsgFrom t :=
   match t with
   | MsgsFrom [?midx] _ _ _ =>
@@ -183,6 +182,7 @@ Ltac reify_MsgFrom t :=
     | downTo _ => constr:(HMsgFromParent)
     | _ => constr:(HMsgFromChild midx)
     end
+  | MsgsFromORq upRq _ _ _ => constr:(HMsgFromUpLock)
   end.
 
 Ltac reify_OPrecR t :=
@@ -226,6 +226,9 @@ Ltac renote_bexp :=
            match t with
            | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
            | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _); simpl; f_equal
+           | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
+           | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal
+           | msg_value _ => instantiate (1:= HMsgValue _); simpl; f_equal
            | _ =>
              tryif is_var t then fail
              else (instantiate (1:= HBConst _ _); simpl; renote_const)
@@ -245,6 +248,7 @@ Ltac renote_OPrecP :=
     match goal with
     | |- interpOPrecP _ _ _ _ <-> ?t =>
       match t with
+      | True => instantiate (1:= HTrue _); simpl; apply iff_refl
       | _ /\ _ => instantiate (1:= HAnd _ _); simpl; apply and_iff_sep
       | _ \/ _ => instantiate (1:= HAnd _ _); simpl; apply or_iff_sep
       | _ = true => instantiate (1:= HBoolT _); simpl; apply eq_iff_sep;
@@ -255,7 +259,6 @@ Ltac renote_OPrecP :=
       | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl; apply le_iff_sep; renote_exp
       | _ > _ => instantiate (1:= HNatGt (w:= _) _ _); simpl; apply gt_iff_sep; renote_exp
       | _ >= _ => instantiate (1:= HNatGe (w:= _) _ _); simpl; apply ge_iff_sep; renote_exp
-      | _ => idtac "FIXME:"
       end
     end.
 
@@ -298,7 +301,9 @@ Ltac renote_OState :=
     match goal with
     | |- interpOState _ _ _ _ = ?t =>
       match t with
-      | hvec_upd _ _ _ => idtac "FIXME: [renote_OState] :: update"
+      | hvec_upd _ ?i _ =>
+        instantiate (1 := HOstUpdate (ht:= hostf_ty[@i]) i eq_refl _ _);
+        simpl; f_equal; [|renote_exp]
       | _ => instantiate (1:= HOStateI _); reflexivity
       end
     end.
@@ -330,9 +335,9 @@ Ltac renote_MsgOuts :=
       | downTo (l1ExtOf _) =>
         instantiate (1:= HMsgOutExt _ _); simpl; repeat f_equal; renote_exp
       | _ => instantiate (1:= HMsgOutUp _ _); simpl; repeat f_equal; renote_exp
+      | _ => instantiate (1:= HMsgsOutDown [_] _); simpl; repeat f_equal; renote_exp
       end
-    | _ => instantiate (1:= HMsgsOutDown _ _); simpl;
-           idtac "FIXME: [renote_MsgOuts] :: HMsgsOutDown"
+    | _ => idtac "FIXME: [renote_MsgOuts]"
     end
   end.
 
@@ -359,6 +364,22 @@ Ltac renote_OTrs :=
     renote_trs_monad
   end.
 
+Ltac renote_rule_init :=
+  refine {| hrule_msg_from := _ |};
+  intros; repeat autounfold with MesiRules;
+  cbv [immRule immDownRule immUpRule
+               rqUpUpRule rqUpUpRuleS rqUpDownRule rqUpDownRuleS rqDownDownRule
+               rsDownDownRule rsDownDownRuleS rsUpDownRule rsUpDownRuleOne
+               rsUpUpRule rsUpUpRuleOne rsDownRqDownRule];
+  cbv [rule_precond rule_trs].
+
+Ltac renote_rule :=
+  renote_rule_init;
+  [apply and_iff_sep; [renote_MsgFrom|renote_OPrec]
+  |renote_OTrs].
+
+Tactic Notation "⇑rule" := renote_rule.
+
 Section Deep.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
@@ -367,36 +388,16 @@ Section Deep.
     Variable oidx: IdxT.
     
     Definition hl1GetSImm: HRule (l1GetSImm (l1ExtOf oidx)).
-    Proof.
-      refine {| hrule_msg_from := _ |}.
-
-      - intros; repeat autounfold with MesiRules.
-        cbv [immDownRule rule_precond].
-        apply and_iff_sep.
-        + renote_MsgFrom.
-        + renote_OPrec.
-
-      - intros.
-        repeat autounfold with MesiRules.
-        cbv [immDownRule rule_trs].
-        renote_OTrs.
-    Defined.
+    Proof. ⇑rule. Defined.
 
     Definition hl1GetSRqUpUp: HRule (l1GetSRqUpUp oidx (l1ExtOf oidx)).
-    Proof.
-      refine {| hrule_msg_from := _ |}.
+    Proof. ⇑rule. Defined.
 
-      - intros; repeat autounfold with MesiRules.
-        cbv [rqUpUpRule rule_precond].
-        apply and_iff_sep.
-        + renote_MsgFrom.
-        + renote_OPrec.
+    Definition hl1GetSRsDownDownS: HRule l1GetSRsDownDownS.
+    Proof. ⇑rule. Defined.
 
-      - intros.
-        repeat autounfold with MesiRules.
-        cbv [rqUpUpRule rule_trs].
-        renote_OTrs.
-    Defined.
+    Definition hl1GetSRsDownDownE: HRule l1GetSRsDownDownE.
+    Proof. ⇑rule. Defined.
 
   End L1Rules.
     
@@ -416,6 +417,8 @@ Section Deep.
       Unshelve. all: cbv beta.
       1: exact (hl1GetSImm _).
       1: exact (hl1GetSRqUpUp _).
+      1: exact hl1GetSRsDownDownS.
+      1: exact hl1GetSRsDownDownE.
       all: apply TODO.
     Defined.
     

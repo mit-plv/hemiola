@@ -203,6 +203,9 @@ Section Compile.
           (STRUCT { "id" ::= compile_bexp mid;
                     "type" ::= compile_bexp mty;
                     "value" ::= compile_bexp mval })%kami_expr
+        | HMsgId msg => ((compile_bexp msg)!KMsg@."id")%kami_expr
+        | HMsgType msg => ((compile_bexp msg)!KMsg@."type")%kami_expr
+        | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")%kami_expr
         | @HOstVal _ _ _ _ _ i hbt0 Heq =>
           Var _ (SyntaxKind _)
               (eq_rect
@@ -233,19 +236,6 @@ Section Compile.
         | HEExp _ hee => compile_eexp var ostVars hee
         end.
 
-      Definition compile_Rule_msg_from (mf: HMsgFrom)
-                 (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
-        (match mf with
-         | HMsgFromParent =>
-           (Call msgIn <- (deqFromParent (downTo oidx))(); cont msgIn)
-         | HMsgFromChild cmidx =>
-           (Call msgIn <-
-            (deqFromChild oidx)(compile_exp (HBExp (HBConst _ (HBConstIdx _ cmidx))));
-           cont msgIn)
-         | HMsgFromExt emidx =>
-           (Call msgIn <- (deqFromExt emidx)(); cont msgIn)
-         end)%kami_action.
-
       Variables (msgIn: var (Struct KMsg))
                 (uln: string) (ul: var (Struct UpLock))
                 (dln: string) (dl: var (Struct DownLock)).
@@ -257,6 +247,25 @@ Section Compile.
       Definition compile_Rule_downlock
                  (cont: var (Struct DownLock) -> ActionT var Void): ActionT var Void :=
         (Read dl: Struct DownLock <- dln; cont dl)%kami_action.
+
+      Definition compile_Rule_msg_from (mf: HMsgFrom)
+                 (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
+        (match mf with
+         | HMsgFromParent pmidx =>
+           (Call msgIn <- (deqFromParent pmidx)(); cont msgIn)
+         | HMsgFromChild cmidx =>
+           (Call msgIn <-
+            (deqFromChild oidx)(compile_exp (HBExp (HBConst _ (HBConstIdx _ cmidx))));
+           cont msgIn)
+         | HMsgFromExt emidx =>
+           (Call msgIn <- (deqFromExt emidx)(); cont msgIn)
+         | HMsgFromUpLock =>
+           (Call msgIn <- (deqFromParent (downTo oidx))(); cont msgIn)
+         | HMsgFromDownLock cidx =>
+           (Call msgIn <-
+            (deqFromChild oidx)(compile_exp (HBExp (HBConst _ (HBConstIdx _ (rqUpFrom cidx)))));
+           cont msgIn)
+         end)%kami_action.
 
       Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
                  (cont: ActionT var Void): ActionT var Void :=
@@ -293,6 +302,7 @@ Section Compile.
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
         : Expr var (SyntaxKind Bool) :=
         (match pp with
+         | HTrue _ => $$true
          | HAnd pp1 pp2 =>
            (compile_Rule_prop_prec pp1) && (compile_Rule_prop_prec pp2)
          | HOr pp1 pp2 =>
