@@ -251,6 +251,7 @@ Section Compile.
       Definition compile_Rule_msg_from (mf: HMsgFrom)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match mf with
+         | HMsgFromNil => cont (TODO _) (** FIXME: no input messages *)
          | HMsgFromParent pmidx =>
            (Call msgIn <- (deqFromParent pmidx)(); cont msgIn)
          | HMsgFromChild cmidx =>
@@ -403,6 +404,7 @@ Section Compile.
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
         (match hmsgs with
+         | HMsgOutNil _ => cont
          | HMsgOutUp midx msg =>
            (Call (enqToParent midx)(compile_exp msg); cont)
          | HMsgsOutDown minds msg =>

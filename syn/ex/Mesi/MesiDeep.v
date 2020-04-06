@@ -17,7 +17,7 @@ Proof. firstorder. Qed.
 Lemma or_iff_sep: forall A B C D, (A <-> B) -> (C <-> D) -> (A \/ C <-> B \/ D).
 Proof. firstorder. Qed.
 
-Lemma eq_iff_sep: forall (A B C D: Type), A = B -> C = D -> (A = C <-> B = D).
+Lemma eq_iff_sep: forall {t} (A B C D: t), A = B -> C = D -> (A = C <-> B = D).
 Proof. intuition congruence. Qed.
 Lemma lt_iff_sep: forall A B C D, A = B -> C = D -> (A < C <-> B < D).
 Proof. firstorder. Qed.
@@ -174,17 +174,6 @@ Instance MesiHOStateIfcFull: HOStateIfcFull :=
 
 (** * Reification *)
 
-Ltac reify_MsgFrom t :=
-  match t with
-  | MsgsFrom [?midx] _ _ _ =>
-    match midx with
-    | rqUpFrom (l1ExtOf _) => constr:(HMsgFromExt midx)
-    | downTo _ => constr:(HMsgFromParent)
-    | _ => constr:(HMsgFromChild midx)
-    end
-  | MsgsFromORq upRq _ _ _ => constr:(HMsgFromUpLock)
-  end.
-
 Ltac reify_OPrecR t :=
   match t with
   | RqAccepting _ _ _ => constr:(HRqAccepting)
@@ -255,10 +244,16 @@ Ltac renote_OPrecP :=
                     [renote_exp|reflexivity]
       | _ = false => instantiate (1:= HBoolF _); simpl; apply eq_iff_sep;
                      [renote_exp|reflexivity]
-      | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl; apply lt_iff_sep; renote_exp
-      | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl; apply le_iff_sep; renote_exp
-      | _ > _ => instantiate (1:= HNatGt (w:= _) _ _); simpl; apply gt_iff_sep; renote_exp
-      | _ >= _ => instantiate (1:= HNatGe (w:= _) _ _); simpl; apply ge_iff_sep; renote_exp
+      | @eq nat _ _ => instantiate (1:= HEq (ht:= HBType (HNat _)) _ _); simpl;
+                       apply eq_iff_sep; renote_exp
+      | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl;
+                 apply lt_iff_sep; renote_exp
+      | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl;
+                  apply le_iff_sep; renote_exp
+      | _ > _ => instantiate (1:= HNatGt (w:= _) _ _); simpl;
+                 apply gt_iff_sep; renote_exp
+      | _ >= _ => instantiate (1:= HNatGe (w:= _) _ _); simpl;
+                  apply ge_iff_sep; renote_exp
       end
     end.
 
@@ -279,6 +274,18 @@ Ltac renote_OPrec :=
     | |- _ => renote_OPrecRqRs; fail
     | |- _ => renote_OPrecProp
     end.
+
+Ltac reify_MsgFrom t :=
+  match t with
+  | MsgsFrom [] _ _ _ => constr:(HMsgFromNil)
+  | MsgsFrom [?midx] _ _ _ =>
+    match midx with
+    | rqUpFrom (l1ExtOf _) => constr:(HMsgFromExt midx)
+    | downTo _ => constr:(HMsgFromParent midx)
+    | _ => constr:(HMsgFromChild midx)
+    end
+  | MsgsFromORq upRq _ _ _ => constr:(HMsgFromUpLock)
+  end.
 
 Ltac renote_MsgFrom :=
   match goal with
@@ -330,6 +337,7 @@ Ltac renote_MsgOuts :=
   match goal with
   | |- interpMsgOuts _ _ _ _ = ?t =>
     match t with
+    | []%list => instantiate (1:= HMsgOutNil _); reflexivity
     | [(?midx, _)]%list =>
       match midx with
       | downTo (l1ExtOf _) =>
@@ -337,7 +345,6 @@ Ltac renote_MsgOuts :=
       | _ => instantiate (1:= HMsgOutUp _ _); simpl; repeat f_equal; renote_exp
       | _ => instantiate (1:= HMsgsOutDown [_] _); simpl; repeat f_equal; renote_exp
       end
-    | _ => idtac "FIXME: [renote_MsgOuts]"
     end
   end.
 
@@ -384,23 +391,6 @@ Section Deep.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
 
-  Section L1Rules.
-    Variable oidx: IdxT.
-    
-    Definition hl1GetSImm: HRule (l1GetSImm (l1ExtOf oidx)).
-    Proof. ⇑rule. Defined.
-
-    Definition hl1GetSRqUpUp: HRule (l1GetSRqUpUp oidx (l1ExtOf oidx)).
-    Proof. ⇑rule. Defined.
-
-    Definition hl1GetSRsDownDownS: HRule l1GetSRsDownDownS.
-    Proof. ⇑rule. Defined.
-
-    Definition hl1GetSRsDownDownE: HRule l1GetSRsDownDownE.
-    Proof. ⇑rule. Defined.
-
-  End L1Rules.
-    
   Section Object.
     Variable (oidx: IdxT).
 
@@ -414,13 +404,10 @@ Section Deep.
              end.
       all: instantiate (1:= existT _ _ _); reflexivity.
 
-      Unshelve. all: cbv beta.
-      1: exact (hl1GetSImm _).
-      1: exact (hl1GetSRqUpUp _).
-      1: exact hl1GetSRsDownDownS.
-      1: exact hl1GetSRsDownDownE.
-      all: apply TODO.
-    Defined.
+      Unshelve.
+      all: cbv beta.
+      all: ⇑rule.
+    Time Defined. (* takes ~30 seconds *)
     
     Definition hli: HObject (Mesi.li tr oidx) := TODO _.
     Definition hmem: HObject (Mesi.mem tr oidx) := TODO _.

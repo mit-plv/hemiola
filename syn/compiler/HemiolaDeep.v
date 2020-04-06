@@ -155,6 +155,7 @@ Section Reify.
         | HMsgIdFrom (msgId: IdxT): HOPrecR.
 
         Inductive HMsgFrom: Type :=
+        | HMsgFromNil: HMsgFrom
         | HMsgFromParent (pmidx: IdxT): HMsgFrom
         | HMsgFromChild (cmidx: IdxT): HMsgFrom
         | HMsgFromExt (emidx: IdxT): HMsgFrom
@@ -194,8 +195,9 @@ Section Reify.
                         hexp HIdxQ (* response-back-to *) -> HORq
         | HUpdDownLockS: list (hexp HIdxQ) (* responses-from *) -> HORq
         | HRelDownLock.
-        
+
         Inductive HMsgsOut :=
+        | HMsgOutNil: HMsgsOut
         | HMsgOutUp: IdxT (* midx *) -> hexp HMsg -> HMsgsOut
         | HMsgsOutDown: list (hexp HIdxQ) -> hexp HMsg -> HMsgsOut
         | HMsgOutExt: IdxT (* midx *) -> hexp HMsg -> HMsgsOut.
@@ -235,6 +237,7 @@ Section Reify.
   Arguments HUpdDownLock {_ _} {var}.
   Arguments HUpdDownLockS {_ _} {var}.
   Arguments HRelDownLock {_ _} {var}.
+  Arguments HMsgOutNil {_ _} {var}.
   Arguments HMsgOutUp {_ _} {var}.
   Arguments HMsgsOutDown {_ _} {var}.
   Arguments HMsgOutExt {_ _} {var}.
@@ -328,6 +331,7 @@ Section Reify.
 
       Definition interpMsgFrom (mf: HMsgFrom): Prop :=
         match mf with
+        | HMsgFromNil => MsgsFrom [] ost orq mins
         | HMsgFromParent pmidx => MsgsFrom [pmidx] ost orq mins
         | HMsgFromChild cmidx => MsgsFrom [cmidx] ost orq mins
         | HMsgFromExt emidx => MsgsFrom [emidx] ost orq mins
@@ -371,6 +375,7 @@ Section Reify.
 
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
         match houts with
+        | HMsgOutNil => []
         | HMsgOutUp midx msg => [(midx, interpExp msg)]
         | HMsgsOutDown minds msg =>
           List.map (fun midx => (interpExp midx, interpExp msg)) minds
