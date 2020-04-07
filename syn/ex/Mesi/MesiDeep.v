@@ -19,6 +19,8 @@ Proof. firstorder. Qed.
 
 Lemma eq_iff_sep: forall {t} (A B C D: t), A = B -> C = D -> (A = C <-> B = D).
 Proof. intuition congruence. Qed.
+Lemma ne_iff_sep: forall {t} (A B C D: t), A = B -> C = D -> (A <> C <-> B <> D).
+Proof. intuition congruence. Qed.
 Lemma lt_iff_sep: forall A B C D, A = B -> C = D -> (A < C <-> B < D).
 Proof. firstorder. Qed.
 Lemma le_iff_sep: forall A B C D, A = B -> C = D -> (A <= C <-> B <= D).
@@ -112,15 +114,39 @@ Section DirExt.
 
   Inductive hexp_dir (var: htype -> Type): htype -> Type :=
   | HDirC: hexp_dir var (HEType HDir)
-  | HDirGet: hbexp (bvar var) HIdxO ->
-             hexp_dir var (HEType HDir) ->
-             hexp_dir var (HBType (HNat 3)).
+  | HDirGetSt: hexp_dir var (HEType HDir) ->
+               hexp_dir var (HBType (HNat 3))
+  | HDirGetExcl: hexp_dir var (HEType HDir) ->
+                 hexp_dir var (HBType HIdxO)
+  | HDirGetStO: hbexp (bvar var) HIdxO ->
+                hexp_dir var (HEType HDir) ->
+                hexp_dir var (HBType (HNat 3))
+  | HDirAddSharer: hbexp (bvar var) HIdxO ->
+                   hexp_dir var (HEType HDir) ->
+                   hexp_dir var (HEType HDir)
+  | HDirRemoveSharer: hbexp (bvar var) HIdxO ->
+                      hexp_dir var (HEType HDir) ->
+                      hexp_dir var (HEType HDir)
+  | HDirSetM: hbexp (bvar var) HIdxO -> hexp_dir var (HEType HDir)
+  | HDirSetE: hbexp (bvar var) HIdxO -> hexp_dir var (HEType HDir)
+  | HDirSetS: list (hbexp (bvar var) HIdxO) -> hexp_dir var (HEType HDir)
+  | HDirSetI: hexp_dir var (HEType HDir).
 
   Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
            {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
     match he in (hexp_dir _ h) return (htypeDenote h) with
     | HDirC _ => (ost#[dir])%hvec
-    | HDirGet oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+    | HDirGetSt dir => dir_st (interp_hexp_dir ost orq mins dir)
+    | HDirGetExcl dir => dir_excl (interp_hexp_dir ost orq mins dir)
+    | HDirGetStO oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+    | HDirAddSharer oidx dir =>
+      addSharer (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+    | HDirRemoveSharer oidx dir =>
+      removeSharer (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+    | HDirSetM oidx => setDirM (interpBExp ost oidx)
+    | HDirSetE oidx => setDirE (interpBExp ost oidx)
+    | HDirSetS oinds => setDirS (map (interpBExp ost) oinds)
+    | HDirSetI _ => setDirI
     end.
 
   Instance DirExtExp: ExtExp :=
@@ -214,6 +240,7 @@ Ltac renote_bexp :=
          | |- interpBExp _ _ = ?t =>
            match t with
            | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
+           | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
            | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _); simpl; f_equal
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
            | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal
@@ -225,11 +252,14 @@ Ltac renote_bexp :=
            end
          end).
 
+Ltac renote_eexp := idtac "Error: redefine [renote_eexp]".
+
 Ltac renote_exp :=
   match goal with
   | |- interpExp _ _ _ _ = _ =>
     instantiate (1:= HBExp _); simpl; renote_bexp; fail
-  | |- interpExp _ _ _ _ = _ => idtac "FIXME: need [renote_eexp]"
+  | |- interpExp _ _ _ _ = _ =>
+    instantiate (1:= HEExp _ _); simpl; renote_eexp
   end.
 
 Ltac renote_OPrecP :=
@@ -239,13 +269,16 @@ Ltac renote_OPrecP :=
       match t with
       | True => instantiate (1:= HTrue _); simpl; apply iff_refl
       | _ /\ _ => instantiate (1:= HAnd _ _); simpl; apply and_iff_sep
-      | _ \/ _ => instantiate (1:= HAnd _ _); simpl; apply or_iff_sep
+      | _ \/ _ => instantiate (1:= HOr _ _); simpl; apply or_iff_sep
       | _ = true => instantiate (1:= HBoolT _); simpl; apply eq_iff_sep;
                     [renote_exp|reflexivity]
       | _ = false => instantiate (1:= HBoolF _); simpl; apply eq_iff_sep;
                      [renote_exp|reflexivity]
       | @eq nat _ _ => instantiate (1:= HEq (ht:= HBType (HNat _)) _ _); simpl;
                        apply eq_iff_sep; renote_exp
+      | not (@eq nat _ _) =>
+        instantiate (1:= HNe (ht:= HBType (HNat _)) _ _); simpl;
+        apply ne_iff_sep; renote_exp
       | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl;
                  apply lt_iff_sep; renote_exp
       | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl;
@@ -324,8 +357,8 @@ Ltac renote_ORq :=
     | addRqS _ upRq _ =>
       instantiate (1:= HUpdUpLockS _); simpl; repeat f_equal; renote_exp
     | removeRq _ upRq => instantiate (1:= HRelUpLock _); reflexivity
-    | addRq _ downRq _ _ _ =>
-      instantiate (1:= HUpdDownLock _ _ _); simpl; repeat f_equal; renote_exp
+    | addRq _ downRq _ [_] _ =>
+      instantiate (1:= HUpdDownLock _ [_] _); simpl; repeat f_equal; renote_exp
     | addRqS _ downRq _ =>
       instantiate (1:= HUpdDownLockS _); simpl; repeat f_equal; renote_exp
     | removeRq _ downRq => instantiate (1:= HRelDownLock _); reflexivity
@@ -387,6 +420,29 @@ Ltac renote_rule :=
 
 Tactic Notation "⇑rule" := renote_rule.
 
+(* Specific to the MESI protocol *)
+Ltac renote_eexp_dir :=
+  repeat
+    match goal with
+    | |- interp_hexp_dir _ _ _ _ = ?t =>
+      match t with
+      | hvec_ith _ dir => instantiate (1:= HDirC _); reflexivity
+      | dir_st _ => instantiate (1:= HDirGetSt _); simpl; f_equal
+      | dir_excl _ => instantiate (1:= HDirGetExcl _); simpl; f_equal
+      | getDir _ _ => instantiate (1:= HDirGetStO _ _); simpl; f_equal; [renote_bexp|]
+      | addSharer _ _ =>
+        instantiate (1:= HDirAddSharer _ _); simpl; f_equal; [renote_bexp|]
+      | removeSharer _ _ =>
+        instantiate (1:= HDirRemoveSharer _ _); simpl; f_equal; [renote_bexp|]
+      | setDirM _ => instantiate (1:= HDirSetM _); simpl; f_equal; renote_bexp
+      | setDirE _ => instantiate (1:= HDirSetE _); simpl; f_equal; renote_bexp
+      | setDirS _ => instantiate (1:= HDirSetS _); simpl; f_equal;
+                     idtac "FIXME: [renote_eexp_dir] :: setDirS"
+      | setDirI => instantiate (1:= HDirSetI _); reflexivity
+      end
+    end.
+Ltac renote_eexp ::= renote_eexp_dir.
+
 Section Deep.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
@@ -403,13 +459,64 @@ Section Deep.
              | |- map _ _ = nil => instantiate (1:= nil); reflexivity
              end.
       all: instantiate (1:= existT _ _ _); reflexivity.
-
       Unshelve.
       all: cbv beta.
       all: ⇑rule.
-    Time Defined. (* takes ~30 seconds *)
-    
-    Definition hli: HObject (Mesi.li tr oidx) := TODO _.
+    Defined. (* takes ~30 seconds *)
+
+    Definition hli: HObject (Mesi.li tr oidx).
+    Proof.
+      refine {| hobj_rules_ok := _ |}.
+      cbv [li obj_rules].
+      repeat match goal with
+             | |- map _ _ = (_ ++ _)%list =>
+               instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
+             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+             end.
+
+      1: { cbv [liRulesFromChildren].
+           admit.
+      }
+
+      all: instantiate (1:= existT _ _ _); reflexivity.
+
+      Unshelve.
+      1: admit.
+
+      all: cbv beta.
+
+      - ⇑rule.
+      - ⇑rule.
+      - admit. (* rsud *)
+      - ⇑rule.
+      - ⇑rule.
+        + admit. (* [In _ (Topology.subtreeChildrenIndsOf _ _)] in precondition *)
+        + admit. (* [rsUpFrom] exp *)
+        + admit. (* [downTo] exp *)
+
+      - admit. (* rsuu *)
+      - ⇑rule.
+      - admit. (* rsdrqd *)
+      - admit. (* rsud *)
+      - ⇑rule.
+      - ⇑rule.
+        + admit. (* [dir_sharers _ <> nil] in precondition *)
+        + admit. (* [SubList (dir_sharers _)
+                  *          (Topology.subtreeChildrenIndsOf _ _)] in precondition *)
+        + instantiate (1:= HRet _ _ _); simpl; repeat f_equal.
+          * renote_OState.
+          * admit. (* [renote_ORq] :: addRq to sharers *)
+          * admit. (* [renote_MsgOuts] :: msgs to sharers *)
+
+      - admit. (* rqdd ditto *)
+      - admit. (* rsuu *)
+      - ⇑rule.
+      - ⇑rule.
+      - ⇑rule.
+      - ⇑rule.
+    Defined.
+
     Definition hmem: HObject (Mesi.mem tr oidx) := TODO _.
 
   End Object.

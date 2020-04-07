@@ -69,6 +69,22 @@ Section Compile.
   Definition KIdxM := Bit ∘hcfg_msg_id_sz.
   Definition KValue := Bit hcfg_value_sz.
 
+  Definition KObjIdxOf {var} (midx: Expr var (SyntaxKind KIdxQ))
+    : Expr var (SyntaxKind KIdxO) :=
+    TODO _.
+
+  Definition KRqUpFrom {var} (midx: Expr var (SyntaxKind KIdxO))
+    : Expr var (SyntaxKind KIdxQ) :=
+    TODO _.
+
+  Definition KRsUpFrom {var} (midx: Expr var (SyntaxKind KIdxO))
+    : Expr var (SyntaxKind KIdxQ) :=
+    TODO _.
+
+  Definition KDownTo {var} (midx: Expr var (SyntaxKind KIdxO))
+    : Expr var (SyntaxKind KIdxQ) :=
+    TODO _.
+
   Definition KMsg :=
     STRUCT { "id" :: KIdxM;
              "type" :: Bool;
@@ -199,6 +215,10 @@ Section Compile.
         match he with
         | HBConst _ c => Const _ (compile_const c)
         | HVar _ _ v => Var _ (SyntaxKind _) v
+        | HObjIdxOf midx => KObjIdxOf (compile_bexp midx)
+        | HRqUpFrom oidx => KRqUpFrom (compile_bexp oidx)
+        | HRsUpFrom oidx => KRsUpFrom (compile_bexp oidx)
+        | HDownTo oidx => KDownTo (compile_bexp oidx)
         | HMsgB mid mty mval =>
           (STRUCT { "id" ::= compile_bexp mid;
                     "type" ::= compile_bexp mty;

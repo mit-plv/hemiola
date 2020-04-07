@@ -69,6 +69,10 @@ Section Reify.
     Inductive hbexp: hbtype -> Type :=
     | HBConst: forall ht (c: hbconst ht), hbexp ht
     | HVar: forall ht, var ht -> hbexp ht
+    | HObjIdxOf: hbexp HIdxQ -> hbexp HIdxO
+    | HRqUpFrom: hbexp HIdxO -> hbexp HIdxQ
+    | HRsUpFrom: hbexp HIdxO -> hbexp HIdxQ
+    | HDownTo: hbexp HIdxO -> hbexp HIdxQ
     | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp hdv_type -> hbexp HMsg
     | HMsgId: hbexp HMsg -> hbexp HIdxM
     | HMsgType: hbexp HMsg -> hbexp HBool
@@ -223,6 +227,10 @@ Section Reify.
 
   Arguments HBConst {var}.
   Arguments HVar {var}.
+  Arguments HObjIdxOf {var}.
+  Arguments HRqUpFrom {var}.
+  Arguments HRsUpFrom {var}.
+  Arguments HDownTo {var}.
   Arguments HMsgB {var}.
   Arguments HMsgId {var}.
   Arguments HMsgType {var}.
@@ -273,6 +281,10 @@ Section Reify.
         match e with
         | HBConst _ c => interpConst c
         | HVar _ hv => hv
+        | HObjIdxOf midx => objIdxOf (interpBExp midx)
+        | HRqUpFrom oidx => rqUpFrom (interpBExp oidx)
+        | HRsUpFrom oidx => rsUpFrom (interpBExp oidx)
+        | HDownTo oidx => downTo (interpBExp oidx)
         | HMsgB mid mty mval =>
           {| msg_id := interpBExp mid;
              msg_type := interpBExp mty;
