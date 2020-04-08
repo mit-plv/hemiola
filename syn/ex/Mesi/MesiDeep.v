@@ -3,8 +3,8 @@ Require Import List.
 Require Import Compiler.Compiler.
 
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
-Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate.
-Require Import Hemiola.Ex.Mesi.Mesi.
+Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate Hemiola.Ex.RuleTransform.
+Require Import Hemiola.Ex.Mesi.Mesi Hemiola.Ex.Mesi.MesiImp.
 
 Require Import FunctionalExtensionality.
 
@@ -51,7 +51,7 @@ Instance MesiHConfig: hconfig :=
      hcfg_midx_sz := (4, 4);
      hcfg_msg_id_sz := (3, 2);
      hcfg_value_sz := 32;
-     hcfg_children_max_lg := 2;
+     hcfg_children_max := 3; (* #children = 4 *)
   |}.
 
 Instance HNatDecValue: HDecValue :=
@@ -130,7 +130,10 @@ Section DirExt.
   | HDirSetM: hbexp (bvar var) HIdxO -> hexp_dir var (HEType HDir)
   | HDirSetE: hbexp (bvar var) HIdxO -> hexp_dir var (HEType HDir)
   | HDirSetS: list (hbexp (bvar var) HIdxO) -> hexp_dir var (HEType HDir)
-  | HDirSetI: hexp_dir var (HEType HDir).
+  | HDirSetI: hexp_dir var (HEType HDir)
+  | HRqUpFrom: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ)
+  | HRsUpFrom: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ)
+  | HDownTo: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ).
 
   Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
            {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
@@ -147,6 +150,9 @@ Section DirExt.
     | HDirSetE oidx => setDirE (interpBExp ost oidx)
     | HDirSetS oinds => setDirS (map (interpBExp ost) oinds)
     | HDirSetI _ => setDirI
+    | HRqUpFrom oidx => rqUpFrom (interp_hexp_dir ost orq mins oidx)
+    | HRsUpFrom oidx => rsUpFrom (interp_hexp_dir ost orq mins oidx)
+    | HDownTo oidx => downTo (interp_hexp_dir ost orq mins oidx)
     end.
 
   Instance DirExtExp: ExtExp :=
@@ -214,6 +220,7 @@ Ltac reify_OPrecR t :=
   | DownLockMsg _ _ _ => constr:(HDownLockMsg)
   | DownLockIdxBack _ _ _ => constr:(HDownLockIdxBack)
   | MsgIdsFrom [?msgId] _ _ _ => constr:(HMsgIdFrom msgId)
+  | RssFull _ _ _ => constr:(HRssFull)
   end.
 
 Ltac renote_OPrecRqRs :=
@@ -240,6 +247,8 @@ Ltac renote_bexp :=
          | |- interpBExp _ _ = ?t =>
            match t with
            | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
+           | idOf _ => instantiate (1:= HIdmId _); simpl; f_equal
+           | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
            | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
            | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _); simpl; f_equal
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
@@ -251,6 +260,15 @@ Ltac renote_bexp :=
            | _ => instantiate (1:= HVar _ _ _); reflexivity
            end
          end).
+
+Ltac renote_list_bexp :=
+  repeat
+    match goal with
+    | |- map (interpBExp _) _ = (_ :: _)%list =>
+      instantiate (1:= (_ :: _)%list); simpl; f_equal
+    | |- map (interpBExp _) _ = nil =>
+      instantiate (1:= nil); reflexivity
+    end; renote_bexp.
 
 Ltac renote_eexp := idtac "Error: redefine [renote_eexp]".
 
@@ -278,6 +296,9 @@ Ltac renote_OPrecP :=
                        apply eq_iff_sep; renote_exp
       | not (@eq nat _ _) =>
         instantiate (1:= HNe (ht:= HBType (HNat _)) _ _); simpl;
+        apply ne_iff_sep; renote_exp
+      | not (@eq IdxT _ _) =>
+        instantiate (1:= HNe (ht:= HBType (HIdx _)) _ _); simpl;
         apply ne_iff_sep; renote_exp
       | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl;
                  apply lt_iff_sep; renote_exp
@@ -334,6 +355,7 @@ Ltac reify_bvalue bv :=
   | getDownLockMsg _ => constr:(HGetDownLockMsg)
   | getUpLockIdxBack _ => constr:(HGetUpLockIdxBack)
   | getDownLockIdxBack _ => constr:(HGetDownLockIdxBack)
+  | getFirstIdMsg (getRss _) => constr:(HGetDownLockFirstRs)
   end.
 
 Ltac renote_OState :=
@@ -411,6 +433,7 @@ Ltac renote_rule_init :=
                rqUpUpRule rqUpUpRuleS rqUpDownRule rqUpDownRuleS rqDownDownRule
                rsDownDownRule rsDownDownRuleS rsUpDownRule rsUpDownRuleOne
                rsUpUpRule rsUpUpRuleOne rsDownRqDownRule];
+  cbv [rsTakeOne rsRelease rsReleaseOne];
   cbv [rule_precond rule_trs].
 
 Ltac renote_rule :=
@@ -436,9 +459,11 @@ Ltac renote_eexp_dir :=
         instantiate (1:= HDirRemoveSharer _ _); simpl; f_equal; [renote_bexp|]
       | setDirM _ => instantiate (1:= HDirSetM _); simpl; f_equal; renote_bexp
       | setDirE _ => instantiate (1:= HDirSetE _); simpl; f_equal; renote_bexp
-      | setDirS _ => instantiate (1:= HDirSetS _); simpl; f_equal;
-                     idtac "FIXME: [renote_eexp_dir] :: setDirS"
+      | setDirS _ => instantiate (1:= HDirSetS _); simpl; f_equal; renote_list_bexp
       | setDirI => instantiate (1:= HDirSetI _); reflexivity
+      | rqUpFrom _ => instantiate (1:= HRqUpFrom _); simpl; f_equal
+      | rsUpFrom _ => instantiate (1:= HRsUpFrom _); simpl; f_equal
+      | downTo _ => instantiate (1:= HDownTo _); simpl; f_equal
       end
     end.
 Ltac renote_eexp ::= renote_eexp_dir.
@@ -464,10 +489,10 @@ Section Deep.
       all: ⇑rule.
     Defined. (* takes ~30 seconds *)
 
-    Definition hli: HObject (Mesi.li tr oidx).
+    Definition hli: HObject (MesiImp.li tr oidx).
     Proof.
       refine {| hobj_rules_ok := _ |}.
-      cbv [li obj_rules].
+      cbv [MesiImp.li obj_rules].
       repeat match goal with
              | |- map _ _ = (_ ++ _)%list =>
                instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
@@ -475,56 +500,64 @@ Section Deep.
              | |- map _ _ = nil => instantiate (1:= nil); reflexivity
              end.
 
-      1: { cbv [liRulesFromChildren].
-           admit.
+      1: {
+        (* cbv [liRulesFromChildren]. *)
+        (* instantiate (1:= concat _). *)
+        (* rewrite concat_map, map_map; do 2 f_equal. *)
+        (* apply functional_extensionality; intros cidx. *)
+        (* instantiate (1:= fun cidx => _); simpl. *)
+
+        (* cbv [liRulesFromChild]; simpl. *)
+        (* repeat match goal with *)
+        (*        | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal *)
+        (*        | |- map _ _ = nil => instantiate (1:= nil); reflexivity *)
+        (*        end. *)
+        (* all: instantiate (1:= existT _ _ _); reflexivity. *)
+        (* Unshelve. *)
+        (* 1-17: admit. *)
+
+        (* all: cbv beta. *)
+
+        (* all: try (⇑rule; fail). *)
+        (* all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail). *)
+        admit.
       }
 
       all: instantiate (1:= existT _ _ _); reflexivity.
 
       Unshelve.
       1: admit.
-
       all: cbv beta.
+      all: try (⇑rule; fail).
 
       - ⇑rule.
+        admit. (* [In _ (Topology.subtreeChildrenIndsOf _ _)] in HOPrecP *)
       - ⇑rule.
-      - admit. (* rsud *)
-      - ⇑rule.
-      - ⇑rule.
-        + admit. (* [In _ (Topology.subtreeChildrenIndsOf _ _)] in precondition *)
-        + admit. (* [rsUpFrom] exp *)
-        + admit. (* [downTo] exp *)
-
-      - admit. (* rsuu *)
-      - ⇑rule.
-      - admit. (* rsdrqd *)
-      - admit. (* rsud *)
-      - ⇑rule.
-      - ⇑rule.
-        + admit. (* [dir_sharers _ <> nil] in precondition *)
-        + admit. (* [SubList (dir_sharers _)
-                  *          (Topology.subtreeChildrenIndsOf _ _)] in precondition *)
-        + instantiate (1:= HRet _ _ _); simpl; repeat f_equal.
+        + (* [RsDownRqDownSoundPrec] in HOPrec *) admit.
+        + (* [dir_sharers _ <> nil] in HOPrec *) admit.
+        + (* [SubList (dir_sharers _)
+           *          (Topology.subtreeChildrenIndsOf _ _)] in HOPrec *)
+          admit.
+        + instantiate (1:= HRet _ _ _); simpl.
+          repeat f_equal.
           * renote_OState.
-          * admit. (* [renote_ORq] :: addRq to sharers *)
-          * admit. (* [renote_MsgOuts] :: msgs to sharers *)
-
+          * admit. (* [renote_ORq] :: addRq
+                    *                   (removeRq upRq _) 
+                    *                   downRq _ (map rsUpFrom (dir_sharers _ _)) *)
+          * admit. (* [renote_MsgOuts] :: map (fun cidx => ..) (dir_sharers ..) *)
       - admit. (* rqdd ditto *)
-      - admit. (* rsuu *)
       - ⇑rule.
-      - ⇑rule.
-      - ⇑rule.
-      - ⇑rule.
-    Defined.
+        admit. (* [In _ (Topology.subtreeChildrenIndsOf _ _)] in HOPrecP *)
+    Admitted.
 
-    Definition hmem: HObject (Mesi.mem tr oidx) := TODO _.
+    Definition hmem: HObject (MesiImp.mem tr oidx) := TODO _.
 
   End Object.
   
-  Definition himpl: HSystem (Mesi.impl Htr).
+  Definition himpl: HSystem (MesiImp.impl Htr).
   Proof.
     refine {| hsys_objs_ok := _ |}.
-    cbv [impl sys_objs].
+    cbv [MesiImp.impl sys_objs].
     instantiate (1:= (_ ++ _)%list); rewrite map_app; f_equal.
 
     - instantiate (1:= (_ :: _)%list); simpl; f_equal.

@@ -15,7 +15,7 @@ Class hconfig :=
     hcfg_midx_sz: nat * nat;
     hcfg_msg_id_sz: nat * nat;
     hcfg_value_sz: nat;
-    hcfg_children_max_lg: nat
+    hcfg_children_max: nat
   }.
 
 Section Reify.
@@ -27,7 +27,8 @@ Section Reify.
   | HBool
   | HIdx (sz: nat (* log of degree *) * nat (* width *))
   | HNat (width: nat)
-  | HMsg.
+  | HMsg
+  | HIdm.
 
   Definition HIdxO := HIdx hcfg_oidx_sz.
   Definition HIdxQ := HIdx hcfg_midx_sz.
@@ -39,6 +40,7 @@ Section Reify.
     | HIdx _ => IdxT
     | HNat _ => nat
     | HMsg => Msg
+    | HIdm => IdxT * Msg
     end.
 
   Class HDecValue :=
@@ -69,10 +71,9 @@ Section Reify.
     Inductive hbexp: hbtype -> Type :=
     | HBConst: forall ht (c: hbconst ht), hbexp ht
     | HVar: forall ht, var ht -> hbexp ht
+    | HIdmId: hbexp HIdm -> hbexp HIdxQ
+    | HIdmMsg: hbexp HIdm -> hbexp HMsg
     | HObjIdxOf: hbexp HIdxQ -> hbexp HIdxO
-    | HRqUpFrom: hbexp HIdxO -> hbexp HIdxQ
-    | HRsUpFrom: hbexp HIdxO -> hbexp HIdxQ
-    | HDownTo: hbexp HIdxO -> hbexp HIdxQ
     | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp hdv_type -> hbexp HMsg
     | HMsgId: hbexp HMsg -> hbexp HIdxM
     | HMsgType: hbexp HMsg -> hbexp HBool
@@ -156,7 +157,8 @@ Section Reify.
         | HDownLockMsgId (mty: bool) (mid: IdxT): HOPrecR
         | HDownLockMsg: HOPrecR
         | HDownLockIdxBack: HOPrecR
-        | HMsgIdFrom (msgId: IdxT): HOPrecR.
+        | HMsgIdFrom (msgId: IdxT): HOPrecR
+        | HRssFull: HOPrecR.
 
         Inductive HMsgFrom: Type :=
         | HMsgFromNil: HMsgFrom
@@ -178,8 +180,9 @@ Section Reify.
         | HGetUpLockMsg: hbval HMsg
         | HGetDownLockMsg: hbval HMsg
         | HGetUpLockIdxBack: hbval HIdxQ
-        | HGetDownLockIdxBack: hbval HIdxQ.
-
+        | HGetDownLockIdxBack: hbval HIdxQ
+        | HGetDownLockFirstRs: hbval HIdm.
+        
         Inductive HOState :=
         | HOStateI: HOState
         | HOstUpdate:
@@ -227,10 +230,9 @@ Section Reify.
 
   Arguments HBConst {var}.
   Arguments HVar {var}.
+  Arguments HIdmId {var}.
+  Arguments HIdmMsg {var}.
   Arguments HObjIdxOf {var}.
-  Arguments HRqUpFrom {var}.
-  Arguments HRsUpFrom {var}.
-  Arguments HDownTo {var}.
   Arguments HMsgB {var}.
   Arguments HMsgId {var}.
   Arguments HMsgType {var}.
@@ -281,10 +283,12 @@ Section Reify.
         match e with
         | HBConst _ c => interpConst c
         | HVar _ hv => hv
+        | HIdmId idm => idOf (interpBExp idm)
+        | HIdmMsg idm => valOf (interpBExp idm)
         | HObjIdxOf midx => objIdxOf (interpBExp midx)
-        | HRqUpFrom oidx => rqUpFrom (interpBExp oidx)
-        | HRsUpFrom oidx => rsUpFrom (interpBExp oidx)
-        | HDownTo oidx => downTo (interpBExp oidx)
+        (* | HRqUpFrom oidx => rqUpFrom (interpBExp oidx) *)
+        (* | HRsUpFrom oidx => rsUpFrom (interpBExp oidx) *)
+        (* | HDownTo oidx => downTo (interpBExp oidx) *)
         | HMsgB mid mty mval =>
           {| msg_id := interpBExp mid;
              msg_type := interpBExp mty;
@@ -339,6 +343,7 @@ Section Reify.
         | HDownLockMsg => DownLockMsg ost orq mins
         | HDownLockIdxBack => DownLockIdxBack ost orq mins
         | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
+        | HRssFull => RssFull ost orq mins
         end.
 
       Definition interpMsgFrom (mf: HMsgFrom): Prop :=
@@ -361,6 +366,7 @@ Section Reify.
         | HGetDownLockMsg => getDownLockMsg orq
         | HGetUpLockIdxBack => getUpLockIdxBack orq
         | HGetDownLockIdxBack => getDownLockIdxBack orq
+        | HGetDownLockFirstRs => getFirstIdMsg (getRss orq)
         end.
 
       Fixpoint interpOState (host: HOState htypeDenote): OState :=

@@ -32,22 +32,11 @@ Section Tests.
            match he in (hexp_dir _ h) return (kind_of h) @ (var) with
            | HDirC _ =>
              #(HVector.hvec_ith ostVars (Fin.FS (Fin.FS (Fin.FS Fin.F1))))
-           | HDirGet _ _ => TODO _
+           | _ => TODO _
            end%kami_expr
     |}.
 
   (* Opaque icons'. *)
   Existing Instance MesiHOStateIfcFull.
-  Definition cl1GetSImm := compile_Rule oidx uln dln ostin (existT _ _ (hl1GetSImm oidx)).
-  Goal True.
-    pose cl1GetSImm as r.
-    compute in r.
-  Abort.
-
-  Definition cl1GetSRqUpUp := compile_Rule oidx uln dln ostin (existT _ _ (hl1GetSRqUpUp oidx)).
-  Goal True.
-    pose cl1GetSRqUpUp as r.
-    compute in r.
-  Abort.
 
 End Tests.
