@@ -399,6 +399,7 @@ Ltac renote_ORq :=
       | addRqS _ downRq _ =>
         instantiate (1:= HUpdDownLockS _ _); simpl; repeat f_equal; [|renote_exp]
       | removeRq _ downRq => instantiate (1:= HRelDownLock _); simpl; f_equal
+      | addRs _ _ _ => instantiate (1:= HAddRs _ _ _); simpl; f_equal; [|renote_exp..]
       | _ => instantiate (1:= HORqI _); reflexivity
       end
     end.
@@ -515,7 +516,8 @@ Section Deep.
       Unshelve.
       all: cbv beta.
       all: ⇑rule.
-    Defined. (* takes ~30 seconds *)
+      all: idtac "Reifying the L1 cache..".
+    Time Defined. (* takes ~30 seconds *)
 
     Definition hli: HObject (MesiImp.li tr oidx).
     Proof.
@@ -529,37 +531,61 @@ Section Deep.
              end.
 
       1: {
-        (* cbv [liRulesFromChildren]. *)
-        (* instantiate (1:= concat _). *)
-        (* rewrite concat_map, map_map; do 2 f_equal. *)
-        (* apply functional_extensionality; intros cidx. *)
-        (* instantiate (1:= fun cidx => _); simpl. *)
+        cbv [liRulesFromChildren].
+        instantiate (1:= concat _).
+        rewrite concat_map, map_map; do 2 f_equal.
+        apply functional_extensionality; intros cidx.
+        instantiate (1:= fun cidx => _); simpl.
 
-        (* cbv [liRulesFromChild]; simpl. *)
-        (* repeat match goal with *)
-        (*        | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal *)
-        (*        | |- map _ _ = nil => instantiate (1:= nil); reflexivity *)
-        (*        end. *)
-        (* all: instantiate (1:= existT _ _ _); reflexivity. *)
-        (* Unshelve. *)
-        (* 1-17: admit. *)
-
-        (* all: cbv beta. *)
-
-        (* all: try (⇑rule; fail). *)
-        (* all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail). *)
-        admit.
+        cbv [liRulesFromChild]; simpl.
+        repeat match goal with
+               | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+               | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+               end.
+        all: instantiate (1:= existT _ _ _); reflexivity.
       }
 
       all: instantiate (1:= existT _ _ _); reflexivity.
 
       Unshelve.
-      1: admit.
-      all: cbv beta.
-      all: try (⇑rule; fail).
-    Admitted.
+      all: cbv beta; try (⇑rule; fail).
+      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: idtac "Reifying the Li cache..".
+    Time Defined. (* takes ~4 minutes *)
 
-    Definition hmem: HObject (MesiImp.mem tr oidx) := TODO _.
+    Definition hmem: HObject (MesiImp.mem tr oidx).
+    Proof.
+      refine {| hobj_rules_ok := _ |}.
+      cbv [MesiImp.mem obj_rules].
+      repeat match goal with
+             | |- map _ _ = (_ ++ _)%list =>
+               instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
+             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+             end.
+
+      1: {
+        cbv [memRulesFromChildren].
+        instantiate (1:= concat _).
+        rewrite concat_map, map_map; do 2 f_equal.
+        apply functional_extensionality; intros cidx.
+        instantiate (1:= fun cidx => _); simpl.
+
+        cbv [memRulesFromChild]; simpl.
+        repeat match goal with
+               | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+               | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+               end.
+        all: instantiate (1:= existT _ _ _); reflexivity.
+      }
+
+      all: instantiate (1:= existT _ _ _); reflexivity.
+
+      Unshelve.
+      all: cbv beta; try (⇑rule; fail).
+      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: idtac "Reifying the main memory..".
+    Time Defined. (* takes ~90 seconds *)
 
   End Object.
   
@@ -580,6 +606,8 @@ Section Deep.
                            (c_l1_indices (snd (tree2Topo tr 0)))).
       rewrite map_map.
       reflexivity.
+
+      all: idtac "Reifying the entire memory subsystem..".
   Defined.
 
 End Deep.

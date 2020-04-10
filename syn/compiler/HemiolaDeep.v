@@ -208,7 +208,8 @@ Section Reify.
         | HUpdDownLockS: HORq ->
                          hexp (HList HIdxQ) (* responses-from *) ->
                          HORq
-        | HRelDownLock: HORq -> HORq.
+        | HRelDownLock: HORq -> HORq
+        | HAddRs: HORq -> hexp HIdxQ -> hexp HMsg -> HORq.
 
         Inductive HMsgsOut :=
         | HMsgOutNil: HMsgsOut
@@ -255,6 +256,7 @@ Section Reify.
   Arguments HUpdDownLock {_ _} {var}.
   Arguments HUpdDownLockS {_ _} {var}.
   Arguments HRelDownLock {_ _} {var}.
+  Arguments HAddRs {_ _} {var}.
   Arguments HMsgOutNil {_ _} {var}.
   Arguments HMsgOutUp {_ _} {var}.
   Arguments HMsgOutDown {_ _} {var}.
@@ -399,6 +401,7 @@ Section Reify.
         | HUpdDownLockS porq rssf =>
           addRqS (interpORq porq) downRq (interpExp rssf)
         | HRelDownLock porq => removeRq (interpORq porq) downRq
+        | HAddRs porq midx msg => addRs (interpORq porq) (interpExp midx) (interpExp msg)
         end.
 
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=

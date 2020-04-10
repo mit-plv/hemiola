@@ -425,6 +425,7 @@ Section Compile.
          | HRelDownLock porq =>
            (Write dln: Struct DownLock <- $$Default;
            compile_ORq_trs porq cont)
+         | HAddRs porq midx msg => TODO _
          end)%kami_action.
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
