@@ -115,6 +115,10 @@ Section Compile.
     | HNat w => Bit w
     | HMsg => Struct KMsg
     | HIdm => Struct KIdm
+    | HList hbt' =>
+      (* This is very arbitrary, but [HList] is only used for
+       * sharer indices in a directory.. *)
+      Array (kind_of_hbtype hbt') (S hcfg_children_max)
     end.
 
   Definition compile_const {hbt} (hc: hbconst hbt)
@@ -222,9 +226,6 @@ Section Compile.
         | HIdmId pe => ((compile_bexp pe)!KIdm@."midx")%kami_expr
         | HIdmMsg pe => ((compile_bexp pe)!KIdm@."msg")%kami_expr
         | HObjIdxOf midx => KObjIdxOf (compile_bexp midx)
-        (* | HRqUpFrom oidx => KRqUpFrom (compile_bexp oidx) *)
-        (* | HRsUpFrom oidx => KRsUpFrom (compile_bexp oidx) *)
-        (* | HDownTo oidx => KDownTo (compile_bexp oidx) *)
         | HMsgB mid mty mval =>
           (STRUCT { "id" ::= compile_bexp mid;
                     "type" ::= compile_bexp mty;
@@ -355,6 +356,7 @@ Section Compile.
         | HOPrecRqRs _ rrprec => compile_Rule_rqrs_prec rrprec cont
         | HOPrecProp pprec =>
           (Assert (compile_Rule_prop_prec pprec); cont)%kami_action
+        | HOPrecNative _ _ => cont
         end.
 
       Definition compile_bval {hbt} (hv: hbval hbt)
@@ -384,48 +386,45 @@ Section Compile.
                (cont: ActionT var Void): ActionT var Void :=
         (match horq with
          | HORqI _ => cont
-         | HUpdUpLock rq rsf rsb =>
+         | HUpdUpLock porq rq rsf rsb =>
            (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
                                                  "ul_rsb" ::= $$true;
                                                  "ul_msg" ::= compile_exp rq;
                                                  "ul_rsFrom" ::= compile_exp rsf;
-                                                 "ul_rsbTo" ::= compile_exp rsb }; cont)
-         | HUpdUpLockS rsf =>
+                                                 "ul_rsbTo" ::= compile_exp rsb };
+           compile_ORq_trs porq cont)
+         | HUpdUpLockS porq rsf =>
            (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
                                                  "ul_rsb" ::= $$false;
                                                  "ul_msg" ::= $$Default;
                                                  "ul_rsFrom" ::= compile_exp rsf;
-                                                 "ul_rsbTo" ::= $$Default }; cont)
+                                                 "ul_rsbTo" ::= $$Default };
+           compile_ORq_trs porq cont)
          | HRelUpLock _ =>
            (Write uln: Struct UpLock <- $$Default; cont)
-         | HUpdDownLock rq rssf rsb =>
+         | HUpdDownLock porq rq rssf rsb =>
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
                                                    "dl_rsb" ::= $$true;
                                                    "dl_msg" ::= compile_exp rq;
-                                                   "dl_rss_size" ::=
-                                                     $$(natToWord _ (List.length rssf));
-                                                   "dl_rss_from" ::=
-                                                     BuildArray
-                                                       (array_of_list
-                                                          $$Default (List.map compile_exp rssf) _);
+                                                   "dl_rss_size" ::= $$(natToWord _ (TODO _));
+                                                   "dl_rss_from" ::= compile_exp rssf;
                                                    "dl_rss_recv" ::= $$Default;
                                                    "dl_rss" ::= $$Default;
-                                                   "dl_rsbTo" ::= compile_exp rsb }; cont)
-         | HUpdDownLockS rssf =>
+                                                   "dl_rsbTo" ::= compile_exp rsb };
+           compile_ORq_trs porq cont)
+         | HUpdDownLockS porq rssf =>
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
                                                    "dl_rsb" ::= $$false;
                                                    "dl_msg" ::= $$Default;
-                                                   "dl_rss_size" ::=
-                                                     $$(natToWord _ (List.length rssf));
-                                                   "dl_rss_from" ::=
-                                                     BuildArray
-                                                       (array_of_list
-                                                          $$Default (List.map compile_exp rssf) _);
+                                                   "dl_rss_size" ::= $$(natToWord _ (TODO _));
+                                                   "dl_rss_from" ::= compile_exp rssf;
                                                    "dl_rss_recv" ::= $$Default;
                                                    "dl_rss" ::= $$Default;
-                                                   "dl_rsbTo" ::= $$Default }; cont)
-         | HRelDownLock _ =>
-           (Write dln: Struct DownLock <- $$Default; cont)
+                                                   "dl_rsbTo" ::= $$Default };
+           compile_ORq_trs porq cont)
+         | HRelDownLock porq =>
+           (Write dln: Struct DownLock <- $$Default;
+           compile_ORq_trs porq cont)
          end)%kami_action.
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
@@ -434,13 +433,18 @@ Section Compile.
          | HMsgOutNil _ => cont
          | HMsgOutUp midx msg =>
            (Call (enqToParent midx)(compile_exp msg); cont)
-         | HMsgsOutDown minds msg =>
-           (Call (enqToCs oidx)(STRUCT { "cs_size" ::=
-                                           $$(natToWord _ (List.length minds));
+         | HMsgOutDown midx msg =>
+           (Call (enqToCs oidx)(STRUCT { "cs_size" ::= $1;
                                          "cs_q_inds" ::=
-                                           BuildArray
-                                             (array_of_list
-                                                $$Default (List.map compile_exp minds) _);
+                                           UpdateArray
+                                             $$Default
+                                             $$(natToWord (S hcfg_children_max) 0)
+                                             (compile_exp midx);
+                                         "cs_msg" ::= compile_exp msg });
+           cont)
+         | HMsgsOutDown minds msg =>
+           (Call (enqToCs oidx)(STRUCT { "cs_size" ::= $$(natToWord _ (TODO _));
+                                         "cs_q_inds" ::= compile_exp minds;
                                          "cs_msg" ::= compile_exp msg });
            cont)
          | HMsgOutExt midx msg =>

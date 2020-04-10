@@ -121,6 +121,8 @@ Section DirExt.
   | HDirGetStO: hbexp (bvar var) HIdxO ->
                 hexp_dir var (HEType HDir) ->
                 hexp_dir var (HBType (HNat 3))
+  | HDirGetSh: hexp_dir var (HEType HDir) ->
+               hexp_dir var (HBType (HList HIdxO))
   | HDirAddSharer: hbexp (bvar var) HIdxO ->
                    hexp_dir var (HEType HDir) ->
                    hexp_dir var (HEType HDir)
@@ -133,7 +135,11 @@ Section DirExt.
   | HDirSetI: hexp_dir var (HEType HDir)
   | HRqUpFrom: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ)
   | HRsUpFrom: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ)
-  | HDownTo: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ).
+  | HDownTo: hexp_dir var (HBType HIdxO) -> hexp_dir var (HBType HIdxQ)
+  | HRqUpFromM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
+  | HRsUpFromM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
+  | HDownToM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
+  | HSingleton: forall {hbt}, hexp_dir var (HBType hbt) -> hexp_dir var (HBType (HList hbt)).
 
   Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
            {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
@@ -141,6 +147,7 @@ Section DirExt.
     | HDirC _ => (ost#[dir])%hvec
     | HDirGetSt dir => dir_st (interp_hexp_dir ost orq mins dir)
     | HDirGetExcl dir => dir_excl (interp_hexp_dir ost orq mins dir)
+    | HDirGetSh dir => dir_sharers (interp_hexp_dir ost orq mins dir)
     | HDirGetStO oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
     | HDirAddSharer oidx dir =>
       addSharer (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
@@ -153,6 +160,10 @@ Section DirExt.
     | HRqUpFrom oidx => rqUpFrom (interp_hexp_dir ost orq mins oidx)
     | HRsUpFrom oidx => rsUpFrom (interp_hexp_dir ost orq mins oidx)
     | HDownTo oidx => downTo (interp_hexp_dir ost orq mins oidx)
+    | HRqUpFromM oinds => map rqUpFrom (interp_hexp_dir ost orq mins oinds)
+    | HRsUpFromM oinds => map rsUpFrom (interp_hexp_dir ost orq mins oinds)
+    | HDownToM oinds => map downTo (interp_hexp_dir ost orq mins oinds)
+    | HSingleton she => [interp_hexp_dir ost orq mins she]%list
     end.
 
   Instance DirExtExp: ExtExp :=
@@ -254,6 +265,7 @@ Ltac renote_bexp :=
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
            | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal
            | msg_value _ => instantiate (1:= HMsgValue _); simpl; f_equal
+           | [_]%list => instantiate (1:= HSingleton _); simpl; f_equal
            | _ =>
              tryif is_var t then fail
              else (instantiate (1:= HBConst _ _); simpl; renote_const)
@@ -326,7 +338,9 @@ Ltac renote_OPrec :=
     | |- interpOPrec _ _ _ _ <-> (_ /\oprec _) _ _ _ =>
       instantiate (1:= HOPrecAnd _ _); simpl; apply and_iff_sep
     | |- _ => renote_OPrecRqRs; fail
-    | |- _ => renote_OPrecProp
+    | |- _ => renote_OPrecProp; fail
+    | |- _ => instantiate (1:= HOPrecNative _ (fun ost orq mins => _));
+              simpl; apply iff_refl
     end.
 
 Ltac reify_MsgFrom t :=
@@ -371,22 +385,23 @@ Ltac renote_OState :=
     end.
 
 Ltac renote_ORq :=
-  match goal with
-  | |- interpORq _ _ _ _ = ?t =>
-    match t with
-    | addRq _ upRq _ _ _ =>
-      instantiate (1:= HUpdUpLock _ _ _); simpl; repeat f_equal; renote_exp
-    | addRqS _ upRq _ =>
-      instantiate (1:= HUpdUpLockS _); simpl; repeat f_equal; renote_exp
-    | removeRq _ upRq => instantiate (1:= HRelUpLock _); reflexivity
-    | addRq _ downRq _ [_] _ =>
-      instantiate (1:= HUpdDownLock _ [_] _); simpl; repeat f_equal; renote_exp
-    | addRqS _ downRq _ =>
-      instantiate (1:= HUpdDownLockS _); simpl; repeat f_equal; renote_exp
-    | removeRq _ downRq => instantiate (1:= HRelDownLock _); reflexivity
-    | _ => instantiate (1:= HORqI _); reflexivity
-    end
-  end.
+  repeat
+    match goal with
+    | |- interpORq _ _ _ _ = ?t =>
+      match t with
+      | addRq _ upRq _ _ _ =>
+        instantiate (1:= HUpdUpLock _ _ _ _); simpl; repeat f_equal; [|renote_exp..]
+      | addRqS _ upRq _ =>
+        instantiate (1:= HUpdUpLockS _ _); simpl; repeat f_equal; [|renote_exp..]
+      | removeRq _ upRq => instantiate (1:= HRelUpLock _); simpl; f_equal
+      | addRq _ downRq _ _ _ =>
+        instantiate (1:= HUpdDownLock _ _ _ _); simpl; repeat f_equal; [|renote_exp..]
+      | addRqS _ downRq _ =>
+        instantiate (1:= HUpdDownLockS _ _); simpl; repeat f_equal; [|renote_exp]
+      | removeRq _ downRq => instantiate (1:= HRelDownLock _); simpl; f_equal
+      | _ => instantiate (1:= HORqI _); reflexivity
+      end
+    end.
 
 Ltac renote_MsgOuts :=
   match goal with
@@ -398,8 +413,16 @@ Ltac renote_MsgOuts :=
       | downTo (l1ExtOf _) =>
         instantiate (1:= HMsgOutExt _ _); simpl; repeat f_equal; renote_exp
       | _ => instantiate (1:= HMsgOutUp _ _); simpl; repeat f_equal; renote_exp
-      | _ => instantiate (1:= HMsgsOutDown [_] _); simpl; repeat f_equal; renote_exp
+      | _ => instantiate (1:= HMsgOutDown _ _); simpl; repeat f_equal; renote_exp
       end
+    | map ?f _ =>
+      match f with
+      | (fun _ => (downTo _, _)) =>
+        instantiate (1:= HMsgsOutDown _ _); simpl;
+        instantiate (1:= HEExp _ (HDownToM _)); simpl; rewrite map_map; simpl;
+        f_equal; [apply functional_extensionality; intros; f_equal; renote_exp|renote_eexp]
+      end
+    | _ => idtac "FIXME: [renote_MsgOuts]"
     end
   end.
 
@@ -452,6 +475,7 @@ Ltac renote_eexp_dir :=
       | hvec_ith _ dir => instantiate (1:= HDirC _); reflexivity
       | dir_st _ => instantiate (1:= HDirGetSt _); simpl; f_equal
       | dir_excl _ => instantiate (1:= HDirGetExcl _); simpl; f_equal
+      | dir_sharers _ => instantiate (1:= HDirGetSh _); simpl; f_equal
       | getDir _ _ => instantiate (1:= HDirGetStO _ _); simpl; f_equal; [renote_bexp|]
       | addSharer _ _ =>
         instantiate (1:= HDirAddSharer _ _); simpl; f_equal; [renote_bexp|]
@@ -464,6 +488,10 @@ Ltac renote_eexp_dir :=
       | rqUpFrom _ => instantiate (1:= HRqUpFrom _); simpl; f_equal
       | rsUpFrom _ => instantiate (1:= HRsUpFrom _); simpl; f_equal
       | downTo _ => instantiate (1:= HDownTo _); simpl; f_equal
+      | map rqUpFrom _ => instantiate (1:= HRqUpFromM _); simpl; f_equal
+      | map rsUpFrom _ => instantiate (1:= HRsUpFromM _); simpl; f_equal
+      | map downTo _ => instantiate (1:= HDownToM _); simpl; f_equal
+      | [_]%list => instantiate (1:= HSingleton _); simpl; f_equal
       end
     end.
 Ltac renote_eexp ::= renote_eexp_dir.
@@ -529,25 +557,6 @@ Section Deep.
       1: admit.
       all: cbv beta.
       all: try (⇑rule; fail).
-
-      - ⇑rule.
-        admit. (* [In _ (Topology.subtreeChildrenIndsOf _ _)] in HOPrecP *)
-      - ⇑rule.
-        + (* [RsDownRqDownSoundPrec] in HOPrec *) admit.
-        + (* [dir_sharers _ <> nil] in HOPrec *) admit.
-        + (* [SubList (dir_sharers _)
-           *          (Topology.subtreeChildrenIndsOf _ _)] in HOPrec *)
-          admit.
-        + instantiate (1:= HRet _ _ _); simpl.
-          repeat f_equal.
-          * renote_OState.
-          * admit. (* [renote_ORq] :: addRq
-                    *                   (removeRq upRq _) 
-                    *                   downRq _ (map rsUpFrom (dir_sharers _ _)) *)
-          * admit. (* [renote_MsgOuts] :: map (fun cidx => ..) (dir_sharers ..) *)
-      - admit. (* rqdd ditto *)
-      - ⇑rule.
-        admit. (* [In _ (Topology.subtreeChildrenIndsOf _ _)] in HOPrecP *)
     Admitted.
 
     Definition hmem: HObject (MesiImp.mem tr oidx) := TODO _.

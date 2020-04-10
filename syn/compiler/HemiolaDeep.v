@@ -28,7 +28,8 @@ Section Reify.
   | HIdx (sz: nat (* log of degree *) * nat (* width *))
   | HNat (width: nat)
   | HMsg
-  | HIdm.
+  | HIdm
+  | HList: hbtype -> hbtype.
 
   Definition HIdxO := HIdx hcfg_oidx_sz.
   Definition HIdxQ := HIdx hcfg_midx_sz.
@@ -41,6 +42,7 @@ Section Reify.
     | HNat _ => nat
     | HMsg => Msg
     | HIdm => IdxT * Msg
+    | HList eht => list (hbtypeDenote eht)
     end.
 
   Class HDecValue :=
@@ -171,7 +173,8 @@ Section Reify.
         Inductive HOPrecT: Type :=
         | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
         | HOPrecRqRs: HOPrecR -> HOPrecT
-        | HOPrecProp: HOPrecP -> HOPrecT.
+        | HOPrecProp: HOPrecP -> HOPrecT
+        | HOPrecNative: (OState -> ORq Msg -> list (Id Msg) -> Prop) -> HOPrecT.
 
         (* -- transition *)
 
@@ -192,21 +195,26 @@ Section Reify.
         
         Inductive HORq :=
         | HORqI: HORq
-        | HUpdUpLock: hexp HMsg ->
+        | HUpdUpLock: HORq ->
+                      hexp HMsg ->
                       hexp HIdxQ (* response-from *) ->
                       hexp HIdxQ (* response-back-to *) -> HORq
-        | HUpdUpLockS: hexp HIdxQ (* response-from *) -> HORq
-        | HRelUpLock: HORq
-        | HUpdDownLock: hexp HMsg ->
-                        list (hexp HIdxQ) (* responses-from *) ->
+        | HUpdUpLockS: HORq -> hexp HIdxQ (* response-from *) -> HORq
+        | HRelUpLock: HORq -> HORq
+        | HUpdDownLock: HORq ->
+                        hexp HMsg ->
+                        hexp (HList HIdxQ) (* responses-from *) ->
                         hexp HIdxQ (* response-back-to *) -> HORq
-        | HUpdDownLockS: list (hexp HIdxQ) (* responses-from *) -> HORq
-        | HRelDownLock.
+        | HUpdDownLockS: HORq ->
+                         hexp (HList HIdxQ) (* responses-from *) ->
+                         HORq
+        | HRelDownLock: HORq -> HORq.
 
         Inductive HMsgsOut :=
         | HMsgOutNil: HMsgsOut
         | HMsgOutUp: IdxT (* midx *) -> hexp HMsg -> HMsgsOut
-        | HMsgsOutDown: list (hexp HIdxQ) -> hexp HMsg -> HMsgsOut
+        | HMsgOutDown: hexp HIdxQ -> hexp HMsg -> HMsgsOut
+        | HMsgsOutDown: hexp (HList HIdxQ) -> hexp HMsg -> HMsgsOut
         | HMsgOutExt: IdxT (* midx *) -> hexp HMsg -> HMsgsOut.
 
         Inductive HMonadT: Type :=
@@ -249,6 +257,7 @@ Section Reify.
   Arguments HRelDownLock {_ _} {var}.
   Arguments HMsgOutNil {_ _} {var}.
   Arguments HMsgOutUp {_ _} {var}.
+  Arguments HMsgOutDown {_ _} {var}.
   Arguments HMsgsOutDown {_ _} {var}.
   Arguments HMsgOutExt {_ _} {var}.
   Arguments HOPrecRqRs {_ _} {var}.
@@ -378,25 +387,27 @@ Section Reify.
                                         end]
          end)%hvec.
 
-      Definition interpORq (horq: HORq htypeDenote): ORq Msg :=
+      Fixpoint interpORq (horq: HORq htypeDenote): ORq Msg :=
         match horq with
         | HORqI => orq
-        | HUpdUpLock rq rsf rsb =>
-          addRq orq upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
-        | HUpdUpLockS rsf => addRqS orq upRq [interpExp rsf]
-        | HRelUpLock => removeRq orq upRq
-        | HUpdDownLock rq rssf rsb =>
-          addRq orq downRq (interpExp rq) (List.map interpExp rssf) (interpExp rsb)
-        | HUpdDownLockS rssf => addRqS orq downRq (List.map interpExp rssf)
-        | HRelDownLock => removeRq orq downRq
+        | HUpdUpLock porq rq rsf rsb =>
+          addRq (interpORq porq) upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
+        | HUpdUpLockS porq rsf => addRqS (interpORq porq) upRq [interpExp rsf]
+        | HRelUpLock porq => removeRq (interpORq porq) upRq
+        | HUpdDownLock porq rq rssf rsb =>
+          addRq (interpORq porq) downRq (interpExp rq) (interpExp rssf) (interpExp rsb)
+        | HUpdDownLockS porq rssf =>
+          addRqS (interpORq porq) downRq (interpExp rssf)
+        | HRelDownLock porq => removeRq (interpORq porq) downRq
         end.
 
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
         match houts with
         | HMsgOutNil => []
         | HMsgOutUp midx msg => [(midx, interpExp msg)]
+        | HMsgOutDown midx msg => [(interpExp midx, interpExp msg)]
         | HMsgsOutDown minds msg =>
-          List.map (fun midx => (interpExp midx, interpExp msg)) minds
+          List.map (fun midx => (midx, interpExp msg)) (interpExp minds)
         | HMsgOutExt midx msg => [(midx, interpExp msg)]
         end.
       
@@ -407,6 +418,7 @@ Section Reify.
       | HOPrecAnd p1 p2 => interpOPrec p1 /\oprec interpOPrec p2
       | HOPrecRqRs rp => fun ost orq mins => interpOPrecR ost orq mins rp
       | HOPrecProp pp => fun ost orq mins => interpOPrecP ost orq mins pp
+      | HOPrecNative _ pp => pp
       end.
 
     Fixpoint interpMonad (hm: HMonadT htypeDenote) (stm: StateM): option StateM :=
