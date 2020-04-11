@@ -21,8 +21,6 @@ Section VectorComp.
 End VectorComp.
 
 Import MonadNotations.
-Module H := Hemiola.Syntax.
-Module K := Kami.Syntax.
 
 Notation "∘ sz" := (fst sz + snd sz) (at level 0).
 
@@ -74,14 +72,17 @@ Section Compile.
     : Expr var (SyntaxKind KIdxO) :=
     TODO _.
 
-  (* Definition KRqUpFrom {var} (midx: Expr var (SyntaxKind KIdxO)) *)
-  (*   : Expr var (SyntaxKind KIdxQ) := *)
+  Definition KRqUpFrom {var} (midx: Expr var (SyntaxKind KIdxO))
+    : Expr var (SyntaxKind KIdxQ) :=
+    TODO _.
 
-  (* Definition KRsUpFrom {var} (midx: Expr var (SyntaxKind KIdxO)) *)
-  (*   : Expr var (SyntaxKind KIdxQ) := *)
+  Definition KRsUpFrom {var} (midx: Expr var (SyntaxKind KIdxO))
+    : Expr var (SyntaxKind KIdxQ) :=
+    TODO _.
 
-  (* Definition KDownTo {var} (midx: Expr var (SyntaxKind KIdxO)) *)
-  (*   : Expr var (SyntaxKind KIdxQ) := *)
+  Definition KDownTo {var} (midx: Expr var (SyntaxKind KIdxO))
+    : Expr var (SyntaxKind KIdxQ) :=
+    TODO _.
 
   Definition KMsg :=
     STRUCT { "id" :: KIdxM;
@@ -131,7 +132,7 @@ Section Compile.
 
   Section ExtComp.
     Context `{@ExtExp dv oifc het}.
-  
+    
     Class CompExtType :=
       { kind_of_hetype: hetype -> Kind }.
     Context `{CompExtType}.
@@ -152,22 +153,22 @@ Section Compile.
 
       Definition fifoBaseName: string := "fifo".
 
-      Definition deqFrom (midx: IdxT): Attribute K.SignatureT :=
+      Definition deqFrom (midx: IdxT): Attribute SignatureT :=
         {| attrName := fifoBaseName ++ idx_to_string midx ++ ".deq";
-           attrType := {| K.arg := Void;
-                          K.ret := Struct KMsg |} |}.
+           attrType := {| arg := Void;
+                          ret := Struct KMsg |} |}.
 
-      Definition enqTo (midx: IdxT): Attribute K.SignatureT :=
+      Definition enqTo (midx: IdxT): Attribute SignatureT :=
         {| attrName := fifoBaseName ++ idx_to_string midx ++ ".enq";
-           attrType := {| K.arg := Struct KMsg;
-                          K.ret := Void |} |}.
+           attrType := {| arg := Struct KMsg;
+                          ret := Void |} |}.
 
       Definition pcBaseName: string := "parentChildren".
       
-      Definition deqFromChild (oidx: IdxT): Attribute K.SignatureT :=
+      Definition deqFromChild (oidx: IdxT): Attribute SignatureT :=
         {| attrName := pcBaseName ++ idx_to_string oidx ++ ".deq";
-           attrType := {| K.arg := KIdxQ;
-                          K.ret := Struct KMsg |} |}.
+           attrType := {| arg := KIdxQ;
+                          ret := Struct KMsg |} |}.
 
       Definition EnqToCs :=
         STRUCT { "cs_size" :: Bit hcfg_children_max_lg;
@@ -175,10 +176,10 @@ Section Compile.
                  "cs_msg" :: Struct KMsg
                }.
       
-      Definition enqToCs (oidx: IdxT): Attribute K.SignatureT :=
+      Definition enqToCs (oidx: IdxT): Attribute SignatureT :=
         {| attrName := pcBaseName ++ idx_to_string oidx ++ ".enq";
-           attrType := {| K.arg := Struct EnqToCs;
-                          K.ret := Void |} |}.
+           attrType := {| arg := Struct EnqToCs;
+                          ret := Void |} |}.
 
     End QueueIfc.
 
@@ -188,7 +189,7 @@ Section Compile.
     Local Notation enqToExt := enqTo.
 
     Section Phoas.
-      Context {var: K.Kind -> Type}.
+      Context {var: Kind -> Type}.
       Variable oidx: IdxT.
 
       Variable ostin: string.
@@ -246,10 +247,10 @@ Section Compile.
                  (HBType hbt0)
                  (hostf_ty_compat i Heq))
         end.
-                
+      
       Class CompExtExp :=
         { compile_eexp:
-            forall (var: K.Kind -> Type) {het},
+            forall (var: Kind -> Type) {het},
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
               Expr var (SyntaxKind (kind_of het))
@@ -278,7 +279,9 @@ Section Compile.
       Definition compile_Rule_msg_from (mf: HMsgFrom)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match mf with
-         | HMsgFromNil => cont (TODO _) (** FIXME: no input messages *)
+         | HMsgFromNil =>
+           (* This is a hack, just by feeding a random value to the continuation *)
+           (LET msgIn <- $$Default; cont msgIn)
          | HMsgFromParent pmidx =>
            (Call msgIn <- (deqFromParent pmidx)(); cont msgIn)
          | HMsgFromChild cmidx =>
@@ -326,7 +329,7 @@ Section Compile.
            (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
          | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
          | HRssFull => (Assert (#dl!DownLock@."dl_rss_recv" ==
-                                $$(ConstArray (K.vector_repeat _ (ConstBool true)))); cont)
+                                              $$(ConstArray (vector_repeat _ (ConstBool true)))); cont)
          end)%kami_action.
 
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -488,7 +491,7 @@ Section Compile.
 
     Local Notation "v <- f ; cont" := (f (fun v => cont)) (at level 99, right associativity).
     Local Notation "f ;; cont" := (f cont) (at level 60, right associativity).
-    Definition compile_Rule (rule: {sr: H.Rule & HRule sr}):
+    Definition compile_Rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
       {| attrName := ruleNameI (rule_idx (projT1 rule));
@@ -504,7 +507,7 @@ Section Compile.
                oidx ostin ostVars msgIn uln ul dln dl (hrule_trs hr))
       |}.
     
-    Definition compile_Rules (rules: list {sr: H.Rule & HRule sr}):
+    Definition compile_Rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
       map compile_Rule rules.
 
@@ -517,20 +520,29 @@ Section Compile.
   Definition ostIReg (oidx: IdxT): string :=
     "ost" ++ idx_to_string oidx.
 
-  Definition compile_OState_init: list K.RegInitT :=
-    TODO _.
+  Fixpoint compile_inits (oidx: IdxT) (n: nat) (hts: list htype): list RegInitT :=
+    match hts with
+    | nil => nil
+    | ht :: hts' =>
+      {| attrName := ostValNameN (ostIReg oidx) n;
+         attrType := RegInitDefault (SyntaxKind (kind_of ht)) |}
+        :: compile_inits oidx (S n) hts'
+    end.
   
-  Definition compile_Object (obj: {sobj: H.Object & HObject sobj})
-    : option K.Modules :=
-    let cregs := compile_OState_init in
+  Definition compile_OState_init (oidx: IdxT): list RegInitT :=
+    compile_inits oidx 0 (Vector.to_list hostf_ty).
+  
+  Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
+    : option Modules :=
+    let cregs := compile_OState_init (obj_idx (projT1 obj)) in
     let crules := compile_Rules (obj_idx (projT1 obj))
                                 (upLockReg (obj_idx (projT1 obj)))
                                 (downLockReg (obj_idx (projT1 obj)))
                                 (ostIReg (obj_idx (projT1 obj)))
                                 (hobj_rules (projT2 obj)) in
-    Some (K.Mod cregs crules nil).
+    Some (Mod cregs crules nil).
   
-  Fixpoint compile_Objects (objs: list {sobj: H.Object & HObject sobj})
+  Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
     : option Kami.Syntax.Modules :=
     match objs with
     | nil => None
@@ -540,7 +552,7 @@ Section Compile.
       Some (ConcatMod cmod cmods))
     end.
   
-  Definition compile_System (sys: {ssys: H.System & HSystem ssys})
+  Definition compile_System (sys: {ssys: Hemiola.Syntax.System & HSystem ssys})
     : option Kami.Syntax.Modules :=
     compile_Objects (hsys_objs (projT2 sys)).
 
