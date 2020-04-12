@@ -6,23 +6,27 @@ Require Import MesiDeep.
 
 Set Implicit Arguments.
 
-Section Tests.
-
-  Definition oidx: IdxT := 1.
-  Definition uln: string := "UpLock". 
-  Definition dln: string := "DownLock".
-  Definition ostin: string := "ost".
+Section Directory.
 
   Definition KMesi: Kind := Bit 3.
   Definition mesiM {var}: Expr var (SyntaxKind KMesi) := ($3)%kami_expr.
   Definition mesiE {var}: Expr var (SyntaxKind KMesi) := ($2)%kami_expr.
   Definition mesiS {var}: Expr var (SyntaxKind KMesi) := ($1)%kami_expr.
   Definition mesiI {var}: Expr var (SyntaxKind KMesi) := ($0)%kami_expr.
-  
+
   Definition KDir :=
     STRUCT { "dir_st" :: KMesi;
              "dir_excl" :: KIdxO;
              "dir_sharers" :: Array KIdxO (S hcfg_children_max) }.
+
+End Directory.
+
+Section Tests.
+
+  Definition oidx: IdxT := 1.
+  Definition uln: string := "UpLock". 
+  Definition dln: string := "DownLock".
+  Definition ostin: string := "ost".
 
   Instance MesiCompExtType: CompExtType :=
     {| kind_of_hetype :=

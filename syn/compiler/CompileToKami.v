@@ -8,34 +8,38 @@ Require Import Kami.Lib.Struct Kami. (* target *)
 
 Set Implicit Arguments.
 
-Section VectorComp.
+(* Definition extr: tree := *)
+(*   Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]. *)
+(* Eval compute in (fst (tree2Topo extr 0)). *)
 
-  Lemma Vector_nth_map_comp {A B} (f: A -> B) {n} (v: Vector.t A n) (p: Fin.t n):
-    Vector.nth (Vector.map f v) p = f (Vector.nth v p).
-  Proof.
-    induction p.
-    - revert n v; refine (@Vector.caseS _ _ _); now simpl.
-    - revert n v p IHp; refine (@Vector.caseS _  _ _); now simpl.
-  Defined.
-
-End VectorComp.
+Lemma Vector_nth_map_comp {A B} (f: A -> B) {n} (v: Vector.t A n) (p: Fin.t n):
+  Vector.nth (Vector.map f v) p = f (Vector.nth v p).
+Proof.
+  induction p.
+  - revert n v; refine (@Vector.caseS _ _ _); now simpl.
+  - revert n v p IHp; refine (@Vector.caseS _  _ _); now simpl.
+Defined.
 
 Import MonadNotations.
 
-Notation "∘ sz" := (fst sz + snd sz) (at level 0).
+Notation "∘ sz" := (snd sz * fst sz) (at level 0).
 
 Definition nat_to_string (n: nat): string :=
   NilEmpty.string_of_uint (Nat.to_uint n).
 
-Fixpoint idx_to_nat (deg: nat) (idx: IdxT): nat :=
-  match idx with
-  | nil => 0
-  | d :: ds => d + deg * (idx_to_nat deg ds)
+Fixpoint idx_to_word_fix (deg width: nat) (idx: IdxT): word (width * deg) :=
+  match width with
+  | O => WO
+  | S w =>
+    match idx with
+    | nil => wzero _
+    | n :: i => combine (natToWord deg n) (idx_to_word_fix deg w i)
+    end
   end.
 
 Definition idx_to_word (sz: nat * nat) (idx: IdxT): word ∘sz :=
-  natToWord _ (idx_to_nat (fst sz) idx).
-
+  idx_to_word_fix (fst sz) (snd sz) idx.
+  
 Notation "% i %: sz" := (idx_to_word sz i) (at level 5): kami_expr_scope.
 
 Fixpoint idx_to_string (idx: IdxT): string :=
