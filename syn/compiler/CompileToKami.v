@@ -70,7 +70,6 @@ Section Compile.
   Definition KIdxQ := Bit ∘hcfg_midx_sz.
   Definition KIdxM := Bit ∘hcfg_msg_id_sz.
   Definition KValue := Bit hcfg_value_sz.
-  Definition hcfg_children_max_lg := Nat.log2 (S hcfg_children_max).
 
   Definition KObjIdxOf {var} (midx: Expr var (SyntaxKind KIdxQ))
     : Expr var (SyntaxKind KIdxO) :=
@@ -105,9 +104,9 @@ Section Compile.
              "dl_rsb" :: Bool;
              "dl_msg" :: Struct KMsg;
              "dl_rss_size" :: Bit hcfg_children_max_lg;
-             "dl_rss_from" :: Array KIdxQ (S hcfg_children_max);
-             "dl_rss_recv" :: Array Bool (S hcfg_children_max);
-             "dl_rss" :: Array (Struct KMsg) (S hcfg_children_max);
+             "dl_rss_from" :: Array KIdxQ hcfg_children_max;
+             "dl_rss_recv" :: Array Bool hcfg_children_max;
+             "dl_rss" :: Array (Struct KMsg) hcfg_children_max;
              "dl_rsbTo" :: KIdxQ }.
 
   Definition KIdm :=
@@ -123,7 +122,7 @@ Section Compile.
     | HList hbt' =>
       (* This is very arbitrary, but [HList] is only used for
        * sharer indices in a directory.. *)
-      Array (kind_of_hbtype hbt') (S hcfg_children_max)
+      Array (kind_of_hbtype hbt') hcfg_children_max
     end.
 
   Definition compile_const {hbt} (hc: hbconst hbt)
@@ -176,7 +175,7 @@ Section Compile.
 
       Definition EnqToCs :=
         STRUCT { "cs_size" :: Bit hcfg_children_max_lg;
-                 "cs_q_inds" :: Array KIdxQ (S hcfg_children_max);
+                 "cs_q_inds" :: Array KIdxQ hcfg_children_max;
                  "cs_msg" :: Struct KMsg
                }.
       
@@ -446,7 +445,7 @@ Section Compile.
                                          "cs_q_inds" ::=
                                            UpdateArray
                                              $$Default
-                                             $$(natToWord (S hcfg_children_max) 0)
+                                             $$(natToWord hcfg_children_max 0)
                                              (compile_exp midx);
                                          "cs_msg" ::= compile_exp msg });
            cont)

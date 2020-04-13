@@ -15,8 +15,10 @@ Class hconfig :=
     hcfg_midx_sz: nat * nat;
     hcfg_msg_id_sz: nat * nat;
     hcfg_value_sz: nat;
-    hcfg_children_max: nat
+    hcfg_children_max_pred: nat
   }.
+Definition hcfg_children_max `{hconfig} := S hcfg_children_max_pred.
+Definition hcfg_children_max_lg `{hconfig} := Nat.log2 hcfg_children_max.
 
 Section Reify.
   Context `{DecValue} `{OStateIfc} `{hconfig}.

@@ -7,7 +7,8 @@ Require Import MesiDeep.
 Set Implicit Arguments.
 
 Section Directory.
-
+  Context `{hconfig}.
+  
   Definition KMesi: Kind := Bit 3.
   Definition mesiM {var}: Expr var (SyntaxKind KMesi) := ($3)%kami_expr.
   Definition mesiE {var}: Expr var (SyntaxKind KMesi) := ($2)%kami_expr.

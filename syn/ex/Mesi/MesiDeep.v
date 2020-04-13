@@ -51,7 +51,7 @@ Instance MesiHConfig: hconfig :=
      hcfg_midx_sz := (4, 4);
      hcfg_msg_id_sz := (3, 2);
      hcfg_value_sz := 32;
-     hcfg_children_max := 3; (* #children = 4 *)
+     hcfg_children_max_pred := 3; (* #children = 4 *)
   |}.
 
 Instance HNatDecValue: HDecValue :=
