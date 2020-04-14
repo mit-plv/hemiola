@@ -1,4 +1,5 @@
-Require Import String.
+Require Import String List.
+Import ListNotations.
 
 Require Import Kami.Kami.
 Require Import Compiler.Compiler.
@@ -32,12 +33,7 @@ Section Directory.
 
 End Directory.
 
-Section Tests.
-
-  Definition oidx: IdxT := 1.
-  Definition uln: string := "UpLock". 
-  Definition dln: string := "DownLock".
-  Definition ostin: string := "ost".
+Section DirComp.
 
   Instance MesiCompExtType: CompExtType :=
     {| kind_of_hetype :=
@@ -99,22 +95,43 @@ Section Tests.
   Instance MesiCompExtExp: CompExtExp :=
     {| compile_eexp := compile_dir_exp |}.
 
-  (* Opaque icons'. *)
-  Existing Instance MesiHOStateIfcFull.
+End DirComp.
 
-  Definition hrule: HRule (Mesi.l1InvRqUpUp oidx).
-  Proof.
-    ⇑rule.
-  Defined.
-  Definition crule :=
-    Eval vm_compute in (compile_Rule oidx uln dln ostin (existT _ _ hrule)).
+Existing Instance MesiHOStateIfcFull.
+Existing Instance MesiCompExtType.
+Existing Instance MesiCompExtExp.
+
+Require Import Hemiola.Ex.TopoTemplate.
+
+Local Notation oidx := ([0]%list).
+
+Definition okl1 :=
+  Eval vm_compute in (compile_Object (existT _ _ (hl1 oidx))).
+
+Definition kl1: Modules :=
+  Eval simpl in (match okl1 with
+                 | Some m => m
+                 | None => Mod nil nil nil
+                 end).
+
+Definition topo: tree :=
+  Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]].
+
+Definition okli :=
+  Eval vm_compute in (compile_Object (existT _ _ (hli topo oidx))).
+
+Definition kli: Modules :=
+  Eval simpl in (match okli with
+                 | Some m => m
+                 | None => Mod nil nil nil
+                 end).
+
+Definition okmem :=
+  Eval vm_compute in (compile_Object (existT _ _ (hmem topo oidx))).
+
+Definition kmem: Modules :=
+  Eval simpl in (match okmem with
+                 | Some m => m
+                 | None => Mod nil nil nil
+                 end).
   
-  Definition okl1 :=
-    Eval vm_compute in (compile_Object (existT _ _ (hl1 oidx))).
-  Definition kl1: Modules :=
-    Eval simpl in (match okl1 with
-                   | Some m => m
-                   | None => Mod nil nil nil
-                   end).
-
-End Tests.
