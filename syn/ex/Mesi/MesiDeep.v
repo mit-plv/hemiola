@@ -47,9 +47,7 @@ Existing Instance Mesi.ImplOStateIfc.
 Definition HMesi := HNat 3.
 
 Instance MesiHConfig: hconfig :=
-  {| hcfg_oidx_sz := (2, 3);
-     hcfg_midx_sz := (4, 4);
-     hcfg_msg_id_sz := (3, 2);
+  {| hcfg_msg_id_sz := (3, 2);
      hcfg_value_sz := 32;
      hcfg_children_max_pred := 3; (* #children = 4 *)
   |}.
@@ -247,7 +245,9 @@ Ltac renote_const :=
     match type of t with
     | bool => instantiate (1:= HBConstBool _); reflexivity
     | nat => instantiate (1:= HBConstNat _ _); reflexivity
-    | IdxT => instantiate (1:= HBConstIdx _ _); reflexivity
+    | IdxT => instantiate (1:= HBConstIdxO _); reflexivity
+    | IdxT => instantiate (1:= HBConstIdxQ _); reflexivity
+    | IdxT => instantiate (1:= HBConstIdxM _); reflexivity
     end
   end.
 
@@ -309,9 +309,9 @@ Ltac renote_OPrecP :=
       | not (@eq nat _ _) =>
         instantiate (1:= HNe (ht:= HBType (HNat _)) _ _); simpl;
         apply ne_iff_sep; renote_exp
-      | not (@eq IdxT _ _) =>
-        instantiate (1:= HNe (ht:= HBType (HIdx _)) _ _); simpl;
-        apply ne_iff_sep; renote_exp
+      (* | not (@eq IdxT _ _) => *)
+      (*   instantiate (1:= HNe (ht:= HBType (HIdx _)) _ _); simpl; *)
+      (*   apply ne_iff_sep; renote_exp *)
       | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl;
                  apply lt_iff_sep; renote_exp
       | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl;

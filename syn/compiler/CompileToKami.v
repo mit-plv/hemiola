@@ -59,6 +59,23 @@ Fixpoint array_of_list {A} (def: A) (l: list A) sz: Vector.t A sz :=
     end
   end.
 
+Section Bitvector.
+  Variable sz: nat.
+  Local Notation sz_lg := (Nat.log2 sz).
+
+  Context {var: Kind -> Type}.
+
+  Definition bvSet (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): (Bit sz) @ var :=
+    (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr.
+
+  Definition bvAll (bv: (Bit sz) @ var): Bool @ var :=
+    (bv == $$(wones _))%kami_expr.
+
+  Definition bvFirstSet (bv: (Bit sz) @ var): (Bit sz_lg) @ var :=
+    TODO _.
+
+End Bitvector.
+
 Section Compile.
   Context `{hcfg: hconfig} `{dv: DecValue} `{hdv: @HDecValue dv hcfg}
           `{oifc: OStateIfc} 
@@ -66,26 +83,10 @@ Section Compile.
           `{hoifc: @HOStateIfc dv oifc}
           `{hoifcf: @HOStateIfcFull dv oifc hoifc het}.
 
-  Definition KIdxO := Bit ∘hcfg_oidx_sz.
-  Definition KIdxQ := Bit ∘hcfg_midx_sz.
+  Definition KCIdx := Bit hcfg_children_max_lg.
+  Definition KCBv := Bit hcfg_children_max. (* as a bitvector *)
   Definition KIdxM := Bit ∘hcfg_msg_id_sz.
   Definition KValue := Bit hcfg_value_sz.
-
-  Definition KObjIdxOf {var} (midx: Expr var (SyntaxKind KIdxQ))
-    : Expr var (SyntaxKind KIdxO) :=
-    TODO _.
-
-  Definition KRqUpFrom {var} (midx: Expr var (SyntaxKind KIdxO))
-    : Expr var (SyntaxKind KIdxQ) :=
-    TODO _.
-
-  Definition KRsUpFrom {var} (midx: Expr var (SyntaxKind KIdxO))
-    : Expr var (SyntaxKind KIdxQ) :=
-    TODO _.
-
-  Definition KDownTo {var} (midx: Expr var (SyntaxKind KIdxO))
-    : Expr var (SyntaxKind KIdxQ) :=
-    TODO _.
 
   Definition KMsg :=
     STRUCT { "id" :: KIdxM;
@@ -96,33 +97,44 @@ Section Compile.
     STRUCT { "ul_valid" :: Bool;
              "ul_rsb" :: Bool;
              "ul_msg" :: Struct KMsg;
-             "ul_rsFrom" :: KIdxQ;
-             "ul_rsbTo" :: KIdxQ }.
+             "ul_rsbTo" :: KCIdx }.
 
   Definition DownLock :=
     STRUCT { "dl_valid" :: Bool;
              "dl_rsb" :: Bool;
              "dl_msg" :: Struct KMsg;
-             "dl_rss_size" :: Bit hcfg_children_max_lg;
-             "dl_rss_from" :: Array KIdxQ hcfg_children_max;
-             "dl_rss_recv" :: Array Bool hcfg_children_max;
+             "dl_rss_from" :: KCBv;
+             "dl_rss_recv" :: KCBv;
              "dl_rss" :: Array (Struct KMsg) hcfg_children_max;
-             "dl_rsbTo" :: KIdxQ }.
+             "dl_rsbTo" :: KCIdx }.
 
-  Definition KIdm :=
-    STRUCT { "midx" :: KIdxQ; "msg" :: Struct KMsg }.
-  
+  Definition KCIdm :=
+    STRUCT { "cidx" :: KCIdx; "msg" :: Struct KMsg }.
+
   Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
     | HBool => Bool
-    | HIdx w => Bit ∘w
+    | HIdxO => KCIdx
+    | HIdxQ => KCIdx
+    | HIdxM => Bit ∘hcfg_msg_id_sz
     | HNat w => Bit w
     | HMsg => Struct KMsg
-    | HIdm => Struct KIdm
-    | HList hbt' =>
-      (* This is very arbitrary, but [HList] is only used for
-       * sharer indices in a directory.. *)
-      Array (kind_of_hbtype hbt') hcfg_children_max
+    | HIdm => Struct KCIdm
+    (* This is very arbitrary, but [HList] is only used for
+     * sharer indices in a directory.. *)
+    | HList hbt' => KCBv
+    end.
+
+  Definition compile_midx_to_cidx_const (midx: IdxT): ConstT KCIdx :=
+    match midx with
+    | (_ :: cidx :: _)%list => $cidx
+    | _ => Default
+    end.
+
+  Definition compile_oidx_to_cidx_const (oidx: IdxT): ConstT KCIdx :=
+    match oidx with
+    | (cidx :: _)%list => $cidx
+    | _ => Default
     end.
 
   Definition compile_const {hbt} (hc: hbconst hbt)
@@ -130,7 +142,9 @@ Section Compile.
     match hc with
     | HBConstBool b => ConstBool b
     | HBConstNat w n => ConstBit (natToWord w n)
-    | HBConstIdx w i => ConstBit (idx_to_word w i)
+    | HBConstIdxO i => compile_oidx_to_cidx_const i
+    | HBConstIdxQ i => compile_midx_to_cidx_const i
+    | HBConstIdxM i => ConstBit (idx_to_word hcfg_msg_id_sz i)
     end.
 
   Section ExtComp.
@@ -170,12 +184,11 @@ Section Compile.
       
       Definition deqFromChild (oidx: IdxT): Attribute SignatureT :=
         {| attrName := pcBaseName ++ idx_to_string oidx ++ ".deq";
-           attrType := {| arg := KIdxQ;
+           attrType := {| arg := KCIdx;
                           ret := Struct KMsg |} |}.
 
       Definition EnqToCs :=
-        STRUCT { "cs_size" :: Bit hcfg_children_max_lg;
-                 "cs_q_inds" :: Array KIdxQ hcfg_children_max;
+        STRUCT { "cs_inds" :: KCBv;
                  "cs_msg" :: Struct KMsg
                }.
       
@@ -184,12 +197,12 @@ Section Compile.
            attrType := {| arg := Struct EnqToCs;
                           ret := Void |} |}.
 
-    End QueueIfc.
+      Definition deqFromParent := deqFrom.
+      Definition deqFromExt := deqFrom.
+      Definition enqToParent := enqTo.
+      Definition enqToExt := enqTo.
 
-    Local Notation deqFromParent := deqFrom.
-    Local Notation deqFromExt := deqFrom.
-    Local Notation enqToParent := enqTo.
-    Local Notation enqToExt := enqTo.
+    End QueueIfc.
 
     Section Phoas.
       Context {var: Kind -> Type}.
@@ -227,9 +240,9 @@ Section Compile.
         match he with
         | HBConst _ c => Const _ (compile_const c)
         | HVar _ _ v => Var _ (SyntaxKind _) v
-        | HIdmId pe => ((compile_bexp pe)!KIdm@."midx")%kami_expr
-        | HIdmMsg pe => ((compile_bexp pe)!KIdm@."msg")%kami_expr
-        | HObjIdxOf midx => KObjIdxOf (compile_bexp midx)
+        | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")%kami_expr
+        | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")%kami_expr
+        | HObjIdxOf midx => compile_bexp midx
         | HMsgB mid mty mval =>
           (STRUCT { "id" ::= compile_bexp mid;
                     "type" ::= compile_bexp mty;
@@ -279,6 +292,12 @@ Section Compile.
                  (cont: var (Struct DownLock) -> ActionT var Void): ActionT var Void :=
         (Read dl: Struct DownLock <- dln; cont dl)%kami_action.
 
+      Definition compile_midx_to_cidx (midx: IdxT): Expr var (SyntaxKind KCIdx) :=
+        Const _ (compile_midx_to_cidx_const midx).
+
+      Definition compile_oidx_to_cidx (oidx: IdxT): Expr var (SyntaxKind KCIdx) :=
+        Const _ (compile_oidx_to_cidx_const oidx).
+
       Definition compile_Rule_msg_from (mf: HMsgFrom)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match mf with
@@ -288,16 +307,14 @@ Section Compile.
          | HMsgFromParent pmidx =>
            (Call msgIn <- (deqFromParent pmidx)(); cont msgIn)
          | HMsgFromChild cmidx =>
-           (Call msgIn <-
-            (deqFromChild oidx)(compile_exp (HBExp (HBConst _ (HBConstIdx _ cmidx))));
+           (Call msgIn <- (deqFromChild oidx)(compile_midx_to_cidx cmidx);
            cont msgIn)
          | HMsgFromExt emidx =>
            (Call msgIn <- (deqFromExt emidx)(); cont msgIn)
          | HMsgFromUpLock =>
            (Call msgIn <- (deqFromParent (downTo oidx))(); cont msgIn)
          | HMsgFromDownLock cidx =>
-           (Call msgIn <-
-            (deqFromChild oidx)(compile_exp (HBExp (HBConst _ (HBConstIdx _ (rqUpFrom cidx)))));
+           (Call msgIn <- (deqFromChild oidx)(compile_oidx_to_cidx cidx);
            cont msgIn)
          end)%kami_action.
 
@@ -331,8 +348,7 @@ Section Compile.
          | HDownLockIdxBack =>
            (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
          | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-         | HRssFull => (Assert (#dl!DownLock@."dl_rss_recv" ==
-                                              $$(ConstArray (vector_repeat _ (ConstBool true)))); cont)
+         | HRssFull => (Assert (#dl!DownLock@."dl_rss_recv" == $$(wones _)); cont)
          end)%kami_action.
 
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -374,9 +390,9 @@ Section Compile.
          | HGetUpLockIdxBack => (#ul!UpLock@."ul_rsbTo")
          | HGetDownLockIdxBack => (#dl!DownLock@."dl_rsbTo")
          | HGetDownLockFirstRs =>
-           (STRUCT { "midx" ::= (#dl!DownLock@."dl_rss_from")#[$$(natToWord hcfg_children_max 0)];
-                     "msg" ::= (#dl!DownLock@."dl_rss")#[$$(natToWord hcfg_children_max 0)]
-           })
+           (let fs := bvFirstSet (#dl!DownLock@."dl_rss_from") in
+            STRUCT { "cidx" ::= fs;
+                     "msg" ::= (#dl!DownLock@."dl_rss")#[fs] })
          end)%kami_expr.
 
       Fixpoint compile_OState_trs (host: HOState (hvar_of var))
@@ -396,14 +412,12 @@ Section Compile.
            (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
                                                  "ul_rsb" ::= $$true;
                                                  "ul_msg" ::= compile_exp rq;
-                                                 "ul_rsFrom" ::= compile_exp rsf;
                                                  "ul_rsbTo" ::= compile_exp rsb };
            compile_ORq_trs porq cont)
          | HUpdUpLockS porq rsf =>
            (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
                                                  "ul_rsb" ::= $$false;
                                                  "ul_msg" ::= $$Default;
-                                                 "ul_rsFrom" ::= compile_exp rsf;
                                                  "ul_rsbTo" ::= $$Default };
            compile_ORq_trs porq cont)
          | HRelUpLock _ =>
@@ -412,7 +426,6 @@ Section Compile.
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
                                                    "dl_rsb" ::= $$true;
                                                    "dl_msg" ::= compile_exp rq;
-                                                   "dl_rss_size" ::= $$(natToWord _ (TODO _));
                                                    "dl_rss_from" ::= compile_exp rssf;
                                                    "dl_rss_recv" ::= $$Default;
                                                    "dl_rss" ::= $$Default;
@@ -422,7 +435,6 @@ Section Compile.
            (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
                                                    "dl_rsb" ::= $$false;
                                                    "dl_msg" ::= $$Default;
-                                                   "dl_rss_size" ::= $$(natToWord _ (TODO _));
                                                    "dl_rss_from" ::= compile_exp rssf;
                                                    "dl_rss_recv" ::= $$Default;
                                                    "dl_rss" ::= $$Default;
@@ -431,7 +443,21 @@ Section Compile.
          | HRelDownLock porq =>
            (Write dln: Struct DownLock <- $$Default;
            compile_ORq_trs porq cont)
-         | HAddRs porq midx msg => TODO _
+         | HAddRs porq midx msg =>
+           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= #dl!DownLock@."dl_valid";
+                                                   "dl_rsb" ::= #dl!DownLock@."dl_rsb";
+                                                   "dl_msg" ::= #dl!DownLock@."dl_msg";
+                                                   "dl_rss_from" ::= #dl!DownLock@."dl_rss_from";
+                                                   "dl_rss_recv" ::=
+                                                     bvSet (#dl!DownLock@."dl_rss_recv")
+                                                           (compile_exp midx);
+                                                   "dl_rss" ::=
+                                                     UpdateArray
+                                                       (#dl!DownLock@."dl_rss")
+                                                       (compile_exp midx)
+                                                       (compile_exp msg);
+                                                   "dl_rsbTo" ::= #dl!DownLock@."dl_rsbTo" };
+           compile_ORq_trs porq cont)
          end)%kami_action.
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
@@ -441,17 +467,11 @@ Section Compile.
          | HMsgOutUp midx msg =>
            (Call (enqToParent midx)(compile_exp msg); cont)
          | HMsgOutDown midx msg =>
-           (Call (enqToCs oidx)(STRUCT { "cs_size" ::= $1;
-                                         "cs_q_inds" ::=
-                                           UpdateArray
-                                             $$Default
-                                             $$(natToWord hcfg_children_max 0)
-                                             (compile_exp midx);
+           (Call (enqToCs oidx)(STRUCT { "cs_inds" ::= bvSet $$Default (compile_exp midx);
                                          "cs_msg" ::= compile_exp msg });
            cont)
          | HMsgsOutDown minds msg =>
-           (Call (enqToCs oidx)(STRUCT { "cs_size" ::= $$(natToWord _ (TODO _));
-                                         "cs_q_inds" ::= compile_exp minds;
+           (Call (enqToCs oidx)(STRUCT { "cs_inds" ::= compile_exp minds;
                                          "cs_msg" ::= compile_exp msg });
            cont)
          | HMsgOutExt midx msg =>
@@ -501,7 +521,7 @@ Section Compile.
          attrType :=
            fun var =>
              (ostVars <- compile_Rule_ost_vars ostin;
-             msgIn <- compile_Rule_msg_from oidx ostVars (hrule_msg_from hr);
+             msgIn <- compile_Rule_msg_from oidx (hrule_msg_from hr);
              ul <- compile_Rule_uplock uln;
              dl <- compile_Rule_downlock dln;
              compile_Rule_prec

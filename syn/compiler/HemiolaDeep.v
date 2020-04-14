@@ -11,9 +11,7 @@ Import MonadNotations.
 (** Configuration class *)
 
 Class hconfig :=
-  { hcfg_oidx_sz: nat (* log of degree *) * nat (* width *);
-    hcfg_midx_sz: nat * nat;
-    hcfg_msg_id_sz: nat * nat;
+  { hcfg_msg_id_sz: nat (* log of degree *) * nat (* width *);
     hcfg_value_sz: nat;
     hcfg_children_max_pred: nat
   }.
@@ -27,20 +25,18 @@ Section Reify.
 
   Inductive hbtype :=
   | HBool
-  | HIdx (sz: nat (* log of degree *) * nat (* width *))
+  | HIdxO | HIdxQ | HIdxM
   | HNat (width: nat)
   | HMsg
   | HIdm
   | HList: hbtype -> hbtype.
 
-  Definition HIdxO := HIdx hcfg_oidx_sz.
-  Definition HIdxQ := HIdx hcfg_midx_sz.
-  Definition HIdxM := HIdx hcfg_msg_id_sz.
-
   Fixpoint hbtypeDenote (ht: hbtype): Type :=
     match ht with
     | HBool => bool
-    | HIdx _ => IdxT
+    | HIdxO
+    | HIdxQ
+    | HIdxM => IdxT
     | HNat _ => nat
     | HMsg => Msg
     | HIdm => IdxT * Msg
@@ -70,7 +66,9 @@ Section Reify.
     Inductive hbconst: hbtype -> Type :=
     | HBConstBool: forall b: bool, hbconst HBool
     | HBConstNat: forall w (n: nat), hbconst (HNat w)
-    | HBConstIdx: forall w (i: IdxT), hbconst (HIdx w).
+    | HBConstIdxO: forall (i: IdxT), hbconst HIdxO
+    | HBConstIdxQ: forall (i: IdxT), hbconst HIdxQ
+    | HBConstIdxM: forall (i: IdxT), hbconst HIdxM.
 
     Inductive hbexp: hbtype -> Type :=
     | HBConst: forall ht (c: hbconst ht), hbexp ht
@@ -272,7 +270,9 @@ Section Reify.
     match c with
     | HBConstBool b => b
     | HBConstNat _ n => n
-    | HBConstIdx _ i => i
+    | HBConstIdxO i => i
+    | HBConstIdxQ i => i
+    | HBConstIdxM i => i
     end.
 
   Section InterpExtended.

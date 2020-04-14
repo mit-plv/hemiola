@@ -17,8 +17,8 @@ Section Directory.
 
   Definition KDir :=
     STRUCT { "dir_st" :: KMesi;
-             "dir_excl" :: KIdxO;
-             "dir_sharers" :: Array KIdxO (S hcfg_children_max) }.
+             "dir_excl" :: KCIdx;
+             "dir_sharers" :: KCBv }.
 
 End Directory.
 
