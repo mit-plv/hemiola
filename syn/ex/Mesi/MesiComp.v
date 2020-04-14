@@ -20,6 +20,16 @@ Section Directory.
              "dir_excl" :: KCIdx;
              "dir_sharers" :: KCBv }.
 
+  Definition compile_dir_get {var}
+             (oidx: KCIdx @ var) (dir: (Struct KDir) @ var): KMesi @ var :=
+    (let dir_st := dir!KDir@."dir_st" in
+     let dir_excl := dir!KDir@."dir_excl" in
+     let dir_sharers := dir!KDir@."dir_sharers" in
+     IF (dir_st == mesiM && dir_excl == oidx) then mesiM
+     else IF (dir_st == mesiE && dir_excl == oidx) then mesiE
+     else IF (dir_st == mesiS && bvTest dir_sharers oidx) then mesiS
+     else mesiI)%kami_expr.
+
 End Directory.
 
 Section Tests.
@@ -44,27 +54,46 @@ Section Tests.
      | HDirC _ => #(HVector.hvec_ith ostvars (Fin.FS (Fin.FS (Fin.FS Fin.F1))))
      | HDirGetSt dir => ((compile_dir_exp ostvars dir)!KDir@."dir_st")
      | HDirGetExcl dir => ((compile_dir_exp ostvars dir)!KDir@."dir_excl")
-     | HDirGetStO oidx dir => TODO _
+     | HDirGetStO oidx dir => compile_dir_get (compile_bexp ostvars oidx)
+                                              (compile_dir_exp ostvars dir)
      | HDirGetSh dir => ((compile_dir_exp ostvars dir)!KDir@."dir_sharers")
-     | HDirAddSharer oidx dir => TODO _
-     | HDirRemoveSharer oidx dir => TODO _
+     | HDirAddSharer oidx dir =>
+       (let kdir := compile_dir_exp ostvars dir in
+        STRUCT { "dir_st" ::= mesiS;
+                 "dir_excl" ::= kdir!KDir@."dir_excl";
+                 "dir_sharers" ::= bvSet (kdir!KDir@."dir_sharers")
+                                         (compile_bexp ostvars oidx) })
+     | HDirRemoveSharer oidx dir =>
+       (let kdir := compile_dir_exp ostvars dir in
+        STRUCT { "dir_st" ::= mesiS;
+                 "dir_excl" ::= kdir!KDir@."dir_excl";
+                 "dir_sharers" ::= bvUnset (kdir!KDir@."dir_sharers")
+                                           (compile_bexp ostvars oidx) })
+
      | HDirSetM oidx => (STRUCT { "dir_st" ::= mesiM;
                                   "dir_excl" ::= compile_bexp ostvars oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetE oidx => (STRUCT { "dir_st" ::= mesiE;
                                   "dir_excl" ::= compile_bexp ostvars oidx;
                                   "dir_sharers" ::= $$Default })
-     | HDirSetS oinds => TODO _
+     | HDirSetS oinds => (STRUCT { "dir_st" ::= mesiS;
+                                   "dir_excl" ::= $$Default;
+                                   "dir_sharers" ::=
+                                     List.fold_left
+                                       (fun bv i => bvSet bv i)
+                                       (map (compile_bexp ostvars) oinds)
+                                       $$Default })
      | HDirSetI _ => (STRUCT { "dir_st" ::= mesiI;
                                "dir_excl" ::= $$Default;
                                "dir_sharers" ::= $$Default })
-     | HRqUpFrom oidx => TODO _
-     | HRsUpFrom oidx => TODO _
-     | HDownTo oidx => TODO _
-     | HRqUpFromM oinds => TODO _
-     | HRsUpFromM oinds => TODO _
-     | HDownToM oinds => TODO _
-     | HSingleton se => TODO _
+
+     | HRqUpFrom oidx => compile_dir_exp ostvars oidx
+     | HRsUpFrom oidx => compile_dir_exp ostvars oidx
+     | HDownTo oidx => compile_dir_exp ostvars oidx
+     | HRqUpFromM oinds => compile_dir_exp ostvars oinds
+     | HRsUpFromM oinds => compile_dir_exp ostvars oinds
+     | HDownToM oinds => compile_dir_exp ostvars oinds
+     | HSingleton se => bvSet $$Default (compile_dir_exp ostvars se)
      end)%kami_expr.
 
   Instance MesiCompExtExp: CompExtExp :=

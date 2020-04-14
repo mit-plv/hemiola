@@ -68,6 +68,14 @@ Section Bitvector.
   Definition bvSet (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): (Bit sz) @ var :=
     (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr.
 
+  Definition bvUnset (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): (Bit sz) @ var :=
+    (* (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr. *)
+    TODO _.
+
+  Definition bvTest (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): Bool @ var :=
+    (* (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr. *)
+    TODO _.
+
   Definition bvAll (bv: (Bit sz) @ var): Bool @ var :=
     (bv == $$(wones _))%kami_expr.
 

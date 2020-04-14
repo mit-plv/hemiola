@@ -137,7 +137,7 @@ Section DirExt.
   | HRqUpFromM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
   | HRsUpFromM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
   | HDownToM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
-  | HSingleton: forall {hbt}, hexp_dir var (HBType hbt) -> hexp_dir var (HBType (HList hbt)).
+  | HSingleton: hexp_dir var (HBType HIdxQ) -> hexp_dir var (HBType (HList HIdxQ)).
 
   Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
            {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
