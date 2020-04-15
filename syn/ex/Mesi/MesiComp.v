@@ -103,7 +103,7 @@ Existing Instance MesiCompExtExp.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
-Local Definition oidx: IdxT := 0~>1~>2.
+Local Definition oidx: IdxT := 0~>0.
 
 Definition kl1: Modules :=
   Eval vm_compute in (compile_Object (existT _ _ (hl1 oidx))).
@@ -112,33 +112,21 @@ Definition kl1c: Modules :=
   Eval vm_compute in
     (kl1 ++ build_int_fifos oidx ++ build_down_forward oidx ++ build_ext_fifos oidx)%kami.
 
-(* Definition topo: tree := *)
-(*   Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]. *)
+Definition topo: tree :=
+  Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]].
 
-(* Definition okli := *)
-(*   Eval vm_compute in (compile_Object (existT _ _ (hli topo oidx))). *)
+Definition kli :=
+  Eval vm_compute in (compile_Object (existT _ _ (hli topo oidx))).
 
-(* Definition kli: Modules := *)
-(*   Eval simpl in (match okli with *)
-(*                  | Some m => m *)
-(*                  | None => Mod nil nil nil *)
-(*                  end). *)
+Definition klic :=
+  Eval vm_compute in (kli ++ build_int_fifos oidx ++ build_broadcaster oidx)%kami.
 
-(* Definition okmem := *)
-(*   Eval vm_compute in (compile_Object (existT _ _ (hmem topo oidx))). *)
+Definition kmem :=
+  Eval vm_compute in (compile_Object (existT _ _ (hmem topo 0))).
 
-(* Definition kmem: Modules := *)
-(*   Eval simpl in (match okmem with *)
-(*                  | Some m => m *)
-(*                  | None => Mod nil nil nil *)
-(*                  end). *)
-
-(* Time Definition ok: option Modules := *)
-(*   Eval vm_compute in (compile_System (existT _ _ (@himpl topo ltac:(discriminate)))). *)
+Definition kmemc :=
+  Eval vm_compute in (kmem ++ build_broadcaster 0)%kami.
 
 (* Time Definition k: Modules := *)
-(*   Eval simpl in (match ok with *)
-(*                  | Some m => m *)
-(*                  | None => Mod nil nil nil *)
-(*                  end). *)
+(*   Eval vm_compute in (compile_System (existT _ _ (@himpl topo ltac:(discriminate)))). *)
 

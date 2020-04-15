@@ -49,7 +49,7 @@ Definition HMesi := HNat 3.
 Instance MesiHConfig: hconfig :=
   {| hcfg_msg_id_sz := (3, 2);
      hcfg_value_sz := 32;
-     hcfg_children_max_pred := 3; (* #children = 4 *)
+     hcfg_children_max_pred := 1; (* #children = 2 *)
   |}.
 
 Instance HNatDecValue: HDecValue :=
@@ -519,96 +519,96 @@ Section Deep.
       all: idtac "Reifying the L1 cache..".
     Time Defined. (* takes ~30 seconds *)
 
-    (* Definition hli: HObject (MesiImp.li tr oidx). *)
-    (* Proof. *)
-    (*   refine {| hobj_rules_ok := _ |}. *)
-    (*   cbv [MesiImp.li obj_rules]. *)
-    (*   repeat match goal with *)
-    (*          | |- map _ _ = (_ ++ _)%list => *)
-    (*            instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal *)
-    (*          | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal *)
-    (*          | |- map _ _ = nil => instantiate (1:= nil); reflexivity *)
-    (*          end. *)
+    Definition hli: HObject (MesiImp.li tr oidx).
+    Proof.
+      refine {| hobj_rules_ok := _ |}.
+      cbv [MesiImp.li obj_rules].
+      repeat match goal with
+             | |- map _ _ = (_ ++ _)%list =>
+               instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
+             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+             end.
 
-    (*   1: { *)
-    (*     cbv [liRulesFromChildren]. *)
-    (*     instantiate (1:= concat _). *)
-    (*     rewrite concat_map, map_map; do 2 f_equal. *)
-    (*     apply functional_extensionality; intros cidx. *)
-    (*     instantiate (1:= fun cidx => _); simpl. *)
+      1: {
+        cbv [liRulesFromChildren].
+        instantiate (1:= concat _).
+        rewrite concat_map, map_map; do 2 f_equal.
+        apply functional_extensionality; intros cidx.
+        instantiate (1:= fun cidx => _); simpl.
 
-    (*     cbv [liRulesFromChild]; simpl. *)
-    (*     repeat match goal with *)
-    (*            | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal *)
-    (*            | |- map _ _ = nil => instantiate (1:= nil); reflexivity *)
-    (*            end. *)
-    (*     all: instantiate (1:= existT _ _ _); reflexivity. *)
-    (*   } *)
+        cbv [liRulesFromChild]; simpl.
+        repeat match goal with
+               | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+               | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+               end.
+        all: instantiate (1:= existT _ _ _); reflexivity.
+      }
 
-    (*   all: instantiate (1:= existT _ _ _); reflexivity. *)
+      all: instantiate (1:= existT _ _ _); reflexivity.
 
-    (*   Unshelve. *)
-    (*   all: cbv beta; try (⇑rule; fail). *)
-    (*   all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail). *)
-    (*   all: idtac "Reifying the Li cache..". *)
-    (* Time Defined. (* takes ~4 minutes *) *)
+      Unshelve.
+      all: cbv beta; try (⇑rule; fail).
+      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: idtac "Reifying the Li cache..".
+    Time Defined. (* takes ~4 minutes *)
 
-    (* Definition hmem: HObject (MesiImp.mem tr oidx). *)
-    (* Proof. *)
-    (*   refine {| hobj_rules_ok := _ |}. *)
-    (*   cbv [MesiImp.mem obj_rules]. *)
-    (*   repeat match goal with *)
-    (*          | |- map _ _ = (_ ++ _)%list => *)
-    (*            instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal *)
-    (*          | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal *)
-    (*          | |- map _ _ = nil => instantiate (1:= nil); reflexivity *)
-    (*          end. *)
+    Definition hmem: HObject (MesiImp.mem tr oidx).
+    Proof.
+      refine {| hobj_rules_ok := _ |}.
+      cbv [MesiImp.mem obj_rules].
+      repeat match goal with
+             | |- map _ _ = (_ ++ _)%list =>
+               instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
+             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+             end.
 
-    (*   1: { *)
-    (*     cbv [memRulesFromChildren]. *)
-    (*     instantiate (1:= concat _). *)
-    (*     rewrite concat_map, map_map; do 2 f_equal. *)
-    (*     apply functional_extensionality; intros cidx. *)
-    (*     instantiate (1:= fun cidx => _); simpl. *)
+      1: {
+        cbv [memRulesFromChildren].
+        instantiate (1:= concat _).
+        rewrite concat_map, map_map; do 2 f_equal.
+        apply functional_extensionality; intros cidx.
+        instantiate (1:= fun cidx => _); simpl.
 
-    (*     cbv [memRulesFromChild]; simpl. *)
-    (*     repeat match goal with *)
-    (*            | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal *)
-    (*            | |- map _ _ = nil => instantiate (1:= nil); reflexivity *)
-    (*            end. *)
-    (*     all: instantiate (1:= existT _ _ _); reflexivity. *)
-    (*   } *)
+        cbv [memRulesFromChild]; simpl.
+        repeat match goal with
+               | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+               | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+               end.
+        all: instantiate (1:= existT _ _ _); reflexivity.
+      }
 
-    (*   all: instantiate (1:= existT _ _ _); reflexivity. *)
+      all: instantiate (1:= existT _ _ _); reflexivity.
 
-    (*   Unshelve. *)
-    (*   all: cbv beta; try (⇑rule; fail). *)
-    (*   all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail). *)
-    (*   all: idtac "Reifying the main memory..". *)
-    (* Time Defined. (* takes ~90 seconds *) *)
+      Unshelve.
+      all: cbv beta; try (⇑rule; fail).
+      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: idtac "Reifying the main memory..".
+    Time Defined. (* takes ~90 seconds *)
 
   End Object.
   
-  (* Definition himpl: HSystem (MesiImp.impl Htr). *)
-  (* Proof. *)
-  (*   refine {| hsys_objs_ok := _ |}. *)
-  (*   cbv [MesiImp.impl sys_objs]. *)
-  (*   instantiate (1:= (_ ++ _)%list); rewrite map_app; f_equal. *)
+  Definition himpl: HSystem (MesiImp.impl Htr).
+  Proof.
+    refine {| hsys_objs_ok := _ |}.
+    cbv [MesiImp.impl sys_objs].
+    instantiate (1:= (_ ++ _)%list); rewrite map_app; f_equal.
 
-  (*   - instantiate (1:= (_ :: _)%list); simpl; f_equal. *)
-  (*     + instantiate (1:= existT _ _ (hmem _)); reflexivity. *)
-  (*     + instantiate (1:= map (fun i => existT _ _ (hli i)) *)
-  (*                            (tl (c_li_indices (snd (tree2Topo tr 0))))). *)
-  (*       rewrite map_map. *)
-  (*       reflexivity. *)
+    - instantiate (1:= (_ :: _)%list); simpl; f_equal.
+      + instantiate (1:= existT _ _ (hmem _)); reflexivity.
+      + instantiate (1:= map (fun i => existT _ _ (hli i))
+                             (tl (c_li_indices (snd (tree2Topo tr 0))))).
+        rewrite map_map.
+        reflexivity.
 
-  (*   - instantiate (1:= map (fun i => existT _ _ (hl1 i)) *)
-  (*                          (c_l1_indices (snd (tree2Topo tr 0)))). *)
-  (*     rewrite map_map. *)
-  (*     reflexivity. *)
+    - instantiate (1:= map (fun i => existT _ _ (hl1 i))
+                           (c_l1_indices (snd (tree2Topo tr 0)))).
+      rewrite map_map.
+      reflexivity.
 
-  (*     all: idtac "Reifying the entire memory subsystem..". *)
-  (* Time Defined. *)
+      all: idtac "Reifying the entire memory subsystem..".
+  Time Defined.
 
 End Deep.
 
