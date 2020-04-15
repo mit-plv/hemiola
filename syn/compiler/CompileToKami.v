@@ -586,6 +586,7 @@ Section Compile.
     : option Kami.Syntax.Modules :=
     match objs with
     | nil => None
+    | obj :: nil => compile_Object obj
     | obj :: objs' =>
       (cmod <-- compile_Object obj;
       cmods <-- compile_Objects objs';

@@ -103,35 +103,44 @@ Existing Instance MesiCompExtExp.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
-Local Notation oidx := ([0]%list).
+(* Local Notation oidx := ([0]%list). *)
 
-Definition okl1 :=
-  Eval vm_compute in (compile_Object (existT _ _ (hl1 oidx))).
+(* Definition okl1 := *)
+(*   Eval vm_compute in (compile_Object (existT _ _ (hl1 oidx))). *)
 
-Definition kl1: Modules :=
-  Eval simpl in (match okl1 with
-                 | Some m => m
-                 | None => Mod nil nil nil
-                 end).
+(* Definition kl1: Modules := *)
+(*   Eval simpl in (match okl1 with *)
+(*                  | Some m => m *)
+(*                  | None => Mod nil nil nil *)
+(*                  end). *)
 
 Definition topo: tree :=
   Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]].
 
-Definition okli :=
-  Eval vm_compute in (compile_Object (existT _ _ (hli topo oidx))).
+(* Definition okli := *)
+(*   Eval vm_compute in (compile_Object (existT _ _ (hli topo oidx))). *)
 
-Definition kli: Modules :=
-  Eval simpl in (match okli with
+(* Definition kli: Modules := *)
+(*   Eval simpl in (match okli with *)
+(*                  | Some m => m *)
+(*                  | None => Mod nil nil nil *)
+(*                  end). *)
+
+(* Definition okmem := *)
+(*   Eval vm_compute in (compile_Object (existT _ _ (hmem topo oidx))). *)
+
+(* Definition kmem: Modules := *)
+(*   Eval simpl in (match okmem with *)
+(*                  | Some m => m *)
+(*                  | None => Mod nil nil nil *)
+(*                  end). *)
+
+Time Definition ok: option Modules :=
+  Eval vm_compute in (compile_System (existT _ _ (@himpl topo ltac:(discriminate)))).
+
+Time Definition k: Modules :=
+  Eval simpl in (match ok with
                  | Some m => m
                  | None => Mod nil nil nil
                  end).
 
-Definition okmem :=
-  Eval vm_compute in (compile_Object (existT _ _ (hmem topo oidx))).
-
-Definition kmem: Modules :=
-  Eval simpl in (match okmem with
-                 | Some m => m
-                 | None => Mod nil nil nil
-                 end).
-  
