@@ -4,13 +4,9 @@ Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
 Require Import Hemiola.Ex.TopoTemplate.
 
 Require Import Compiler.HemiolaDeep. (* source *)
-Require Import Kami.Lib.Struct Kami. (* target *)
+Require Import Kami.Lib.Struct Kami Kami.PrimFifo. (* target *)
 
 Set Implicit Arguments.
-
-(* Definition extr: tree := *)
-(*   Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]. *)
-(* Eval compute in (fst (tree2Topo extr 0)). *)
 
 Lemma Vector_nth_map_comp {A B} (f: A -> B) {n} (v: Vector.t A n) (p: Fin.t n):
   Vector.nth (Vector.map f v) p = f (Vector.nth v p).
@@ -128,6 +124,60 @@ Section Compile.
   Definition KCIdm :=
     STRUCT { "cidx" :: KCIdx; "msg" :: Struct KMsg }.
 
+  Section QueueIfc.
+
+    Definition fifoBaseName: string := "fifo".
+    Definition pcBaseName: string := "parentChildren".
+    Definition enqN: string := "enq".
+    Definition broadcastN: string := "broadcast".
+    Definition deqN: string := "deq".
+
+    Definition enqFn (midx: IdxT) :=
+      (fifoBaseName ++ idx_to_string midx) -- enqN.
+    Definition deqFn (midx: IdxT) :=
+      (fifoBaseName ++ idx_to_string midx) -- deqN.
+    Definition enqToChildFn (oidx: IdxT) :=
+      (pcBaseName ++ idx_to_string oidx) -- enqN.
+    Definition broadcastFn (oidx: IdxT) :=
+      (pcBaseName ++ idx_to_string oidx) -- broadcastN.
+
+    Definition deqFrom (midx: IdxT): Attribute SignatureT :=
+      {| attrName := deqFn midx;
+         attrType := {| arg := Void;
+                        ret := Struct KMsg |} |}.
+    Definition deqFromParent := deqFrom.
+    Definition deqFromExt := deqFrom.
+    Definition deqFromChild := deqFrom.
+
+    Definition enqTo (midx: IdxT): Attribute SignatureT :=
+      {| attrName := enqFn midx;
+         attrType := {| arg := Struct KMsg;
+                        ret := Void |} |}.
+    Definition enqToParent := enqTo.
+    Definition enqToExt := enqTo.
+
+    Definition EnqToChild :=
+      STRUCT { "ch_idx" :: KCIdx;
+               "ch_msg" :: Struct KMsg
+             }.
+
+    Definition enqToChild (oidx: IdxT): Attribute SignatureT :=
+      {| attrName := enqToChildFn oidx;
+         attrType := {| arg := Struct EnqToChild;
+                        ret := Void |} |}.
+
+    Definition BroadcastToCs :=
+      STRUCT { "cs_inds" :: KCBv;
+               "cs_msg" :: Struct KMsg
+             }.
+
+    Definition broadcastToCs (oidx: IdxT): Attribute SignatureT :=
+      {| attrName := broadcastFn oidx;
+         attrType := {| arg := Struct BroadcastToCs;
+                        ret := Void |} |}.
+
+  End QueueIfc.
+
   Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
     | HBool => Bool
@@ -182,44 +232,6 @@ Section Compile.
 
     Definition hvar_of (var: Kind -> Type): htype -> Type :=
       fun ht => var (kind_of ht).
-
-    Section QueueIfc.
-
-      Definition fifoBaseName: string := "fifo".
-
-      Definition deqFrom (midx: IdxT): Attribute SignatureT :=
-        {| attrName := fifoBaseName ++ idx_to_string midx ++ ".deq";
-           attrType := {| arg := Void;
-                          ret := Struct KMsg |} |}.
-
-      Definition enqTo (midx: IdxT): Attribute SignatureT :=
-        {| attrName := fifoBaseName ++ idx_to_string midx ++ ".enq";
-           attrType := {| arg := Struct KMsg;
-                          ret := Void |} |}.
-
-      Definition pcBaseName: string := "parentChildren".
-      
-      Definition deqFromChild (oidx: IdxT): Attribute SignatureT :=
-        {| attrName := pcBaseName ++ idx_to_string oidx ++ ".deq";
-           attrType := {| arg := KCIdx;
-                          ret := Struct KMsg |} |}.
-
-      Definition EnqToCs :=
-        STRUCT { "cs_inds" :: KCBv;
-                 "cs_msg" :: Struct KMsg
-               }.
-      
-      Definition enqToCs (oidx: IdxT): Attribute SignatureT :=
-        {| attrName := pcBaseName ++ idx_to_string oidx ++ ".enq";
-           attrType := {| arg := Struct EnqToCs;
-                          ret := Void |} |}.
-
-      Definition deqFromParent := deqFrom.
-      Definition deqFromExt := deqFrom.
-      Definition enqToParent := enqTo.
-      Definition enqToExt := enqTo.
-
-    End QueueIfc.
 
     Section Phoas.
       Context {var: Kind -> Type}.
@@ -324,15 +336,13 @@ Section Compile.
          | HMsgFromParent pmidx =>
            (Call msgIn <- (deqFromParent pmidx)(); cont msgIn)
          | HMsgFromChild cmidx =>
-           (Call msgIn <- (deqFromChild oidx)(compile_midx_to_cidx cmidx);
-           cont msgIn)
+           (Call msgIn <- (deqFromChild cmidx)(); cont msgIn)
          | HMsgFromExt emidx =>
            (Call msgIn <- (deqFromExt emidx)(); cont msgIn)
          | HMsgFromUpLock =>
            (Call msgIn <- (deqFromParent (downTo oidx))(); cont msgIn)
          | HMsgFromDownLock cidx =>
-           (Call msgIn <- (deqFromChild oidx)(compile_oidx_to_cidx cidx);
-           cont msgIn)
+           (Call msgIn <- (deqFromChild cidx)(); cont msgIn)
          end)%kami_action.
 
       Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
@@ -484,12 +494,12 @@ Section Compile.
          | HMsgOutUp midx msg =>
            (Call (enqToParent midx)(compile_exp msg); cont)
          | HMsgOutDown midx msg =>
-           (Call (enqToCs oidx)(STRUCT { "cs_inds" ::= bvSet $$Default (compile_exp midx);
-                                         "cs_msg" ::= compile_exp msg });
+           (Call (enqToChild oidx)(STRUCT { "ch_idx" ::= compile_exp midx;
+                                            "ch_msg" ::= compile_exp msg });
            cont)
          | HMsgsOutDown minds msg =>
-           (Call (enqToCs oidx)(STRUCT { "cs_inds" ::= compile_exp minds;
-                                         "cs_msg" ::= compile_exp msg });
+           (Call (broadcastToCs oidx)(STRUCT { "cs_inds" ::= compile_exp minds;
+                                               "cs_msg" ::= compile_exp msg });
            cont)
          | HMsgOutExt midx msg =>
            (Call (enqToExt midx)(compile_exp msg); cont)
@@ -571,25 +581,86 @@ Section Compile.
   
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
     compile_inits oidx 0 (Vector.to_list hostf_ty).
-  
+
+  Definition build_int_fifos (oidx: IdxT): Modules :=
+    ((fifo primNormalFifoName
+           (fifoBaseName ++ idx_to_string (rqUpFrom oidx)) (Struct KMsg))
+       ++ (fifo primNormalFifoName
+                (fifoBaseName ++ idx_to_string (rsUpFrom oidx)) (Struct KMsg))
+       ++ (fifo primNormalFifoName
+                (fifoBaseName ++ idx_to_string (downTo oidx)) (Struct KMsg))
+    )%kami.
+
+  Definition build_ext_fifos (oidx: IdxT): Modules :=
+    ((fifo primNormalFifoName
+           (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx)))
+           (Struct KMsg))
+       ++ (fifo primNormalFifoName
+                (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx)))
+                (Struct KMsg))
+    )%kami.
+
+  Definition build_down_forward (oidx: IdxT): Modules :=
+    MODULE {
+      Method (enqToChildFn oidx)(e: Struct EnqToChild): Void :=
+        LET msg <- #e!EnqToChild@."ch_msg";
+        Call (enqTo (downTo (l1ExtOf oidx)))(#msg);
+        Retv
+    }.
+
+  Fixpoint build_enq_child_fix (oidx: IdxT)
+           {var} (cidx: KCIdx @ var) (msg: (Struct KMsg) @ var) (n: nat)
+    : ActionT var Void :=
+    (match n with
+     | O => (If (cidx == $0) then (Call (enqTo (downTo (oidx~>0)))(msg); Retv); Retv)
+     | S n' => (If (cidx == $n)
+                then (Call (enqTo (downTo (oidx~>n)))(msg); Retv)
+                else (build_enq_child_fix oidx cidx msg n');
+               Retv)
+     end)%kami_action.
+
+  Fixpoint build_broadcast_fix (oidx: IdxT)
+           {var} (cinds: KCBv @ var) (msg: (Struct KMsg) @ var) (n: nat)
+    : ActionT var Void :=
+    (match n with
+     | O => (If (bvTest cinds $0) then (Call (enqTo (downTo (oidx~>0)))(msg); Retv); Retv)
+     | S n' => (If (bvTest cinds $n) then (Call (enqTo (downTo (oidx~>n)))(msg); Retv);
+                build_broadcast_fix oidx cinds msg n')
+     end)%kami_action.
+
+  Definition build_broadcaster (oidx: IdxT): Modules :=
+    MODULE {
+      Method (enqToChildFn oidx)(e: Struct EnqToChild): Void :=
+        LET cidx <- #e!EnqToChild@."ch_idx";
+        LET msg <- #e!EnqToChild@."ch_msg";
+        build_enq_child_fix oidx (#cidx)%kami_expr (#msg)%kami_expr
+                            hcfg_children_max_pred
+      with Method (broadcastFn oidx)
+           (e: Struct BroadcastToCs): Void :=
+        LET cinds <- #e!BroadcastToCs@."cs_inds";
+        LET msg <- #e!BroadcastToCs@."cs_msg";
+        build_broadcast_fix oidx (#cinds)%kami_expr (#msg)%kami_expr
+                            hcfg_children_max_pred
+    }.
+
   Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
-    : option Modules :=
+    : Modules :=
     let cregs := compile_OState_init (obj_idx (projT1 obj)) in
     let crules := compile_Rules (obj_idx (projT1 obj))
                                 (upLockReg (obj_idx (projT1 obj)))
                                 (downLockReg (obj_idx (projT1 obj)))
                                 (ostIReg (obj_idx (projT1 obj)))
                                 (hobj_rules (projT2 obj)) in
-    Some (Mod cregs crules nil).
-  
+    Mod cregs crules nil.
+
   Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
     : option Kami.Syntax.Modules :=
     match objs with
     | nil => None
-    | obj :: nil => compile_Object obj
+    | obj :: nil => Some (compile_Object obj)
     | obj :: objs' =>
-      (cmod <-- compile_Object obj;
-      cmods <-- compile_Objects objs';
+      (let cmod := compile_Object obj in
+       cmods <-- compile_Objects objs';
       Some (ConcatMod cmod cmods))
     end.
   

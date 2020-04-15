@@ -10,9 +10,9 @@ Unset Extraction AutoInline.
 
 Require Import MesiComp.
 
-Definition targetM: Kami.Syntax.Modules := k.
+Definition targetM: Kami.Syntax.Modules := kl1c.
 Definition targetS := getModuleS targetM.
 Definition targetB := ModulesSToBModules targetS.
 
-(* Time Extraction "./Target.ml" targetB. *)
+Time Extraction "./Target.ml" targetB.
 
