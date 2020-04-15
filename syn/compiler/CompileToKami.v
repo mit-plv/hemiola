@@ -66,21 +66,30 @@ Section Bitvector.
   Context {var: Kind -> Type}.
 
   Definition bvSet (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): (Bit sz) @ var :=
-    (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr.
+    (bv ~| ($1 << i))%kami_expr.
 
   Definition bvUnset (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): (Bit sz) @ var :=
-    (* (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr. *)
-    TODO _.
+    (bv ~& UniBit (Inv _) ($1 << i))%kami_expr.
 
   Definition bvTest (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): Bool @ var :=
-    (* (bv ~| (($1 << $$(natToWord sz_lg (sz - 1))) >> i))%kami_expr. *)
-    TODO _.
+    ((bv ~& ($1 << i)) == bv)%kami_expr.
 
   Definition bvAll (bv: (Bit sz) @ var): Bool @ var :=
     (bv == $$(wones _))%kami_expr.
 
+  Fixpoint bvFirstSetFix {n} (bv: (Bit n) @ var) {m}: (Bit m) @ var :=
+    (match n return (((Bit n) @ var) -> forall m, (Bit m) @ var)
+     with
+     | O => fun _ _ => $$Default
+     | S n' =>
+       fun bv _ => 
+         (IF (UniBit (Trunc 1 _) bv == $$(WO~1))
+          then $0
+          else $1 + bvFirstSetFix (UniBit (TruncLsb 1 _) bv))
+     end bv m)%kami_expr.
+
   Definition bvFirstSet (bv: (Bit sz) @ var): (Bit sz_lg) @ var :=
-    TODO _.
+    bvFirstSetFix bv.
 
 End Bitvector.
 
