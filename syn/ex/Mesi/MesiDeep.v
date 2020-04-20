@@ -1,7 +1,6 @@
 Require Import List.
 
 Require Import Compiler.Compiler.
-
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
 Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate Hemiola.Ex.RuleTransform.
 Require Import Hemiola.Ex.Mesi.Mesi Hemiola.Ex.Mesi.MesiImp.
@@ -29,6 +28,9 @@ Lemma gt_iff_sep: forall A B C D, A = B -> C = D -> (A > C <-> B > D).
 Proof. firstorder. Qed.
 Lemma ge_iff_sep: forall A B C D, A = B -> C = D -> (A >= C <-> B >= D).
 Proof. firstorder. Qed.
+
+Lemma p_f_equal: forall {t} (f: t -> Prop) A B, A = B -> (f A <-> f B).
+Proof. intuition congruence. Qed.
 
 Lemma TrsMTrs_ext:
   forall `{DecValue} `{OStateIfc} (trs1 trs2: StateMTrs),
@@ -139,34 +141,47 @@ Section DirExt.
   | HDownToM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
   | HSingleton: hexp_dir var (HBType HIdxQ) -> hexp_dir var (HBType (HList HIdxQ)).
 
-  Fixpoint interp_hexp_dir (ost: OState) (orq: ORq Msg) (mins: list (Id Msg))
-           {ht} (he: hexp_dir htypeDenote ht): htypeDenote ht :=
+  Fixpoint interp_hexp_dir ht (he: hexp_dir htypeDenote ht)
+           (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)): htypeDenote ht :=
     match he in (hexp_dir _ h) return (htypeDenote h) with
     | HDirC _ => (ost#[dir])%hvec
-    | HDirGetSt dir => dir_st (interp_hexp_dir ost orq mins dir)
-    | HDirGetExcl dir => dir_excl (interp_hexp_dir ost orq mins dir)
-    | HDirGetSh dir => dir_sharers (interp_hexp_dir ost orq mins dir)
-    | HDirGetStO oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+    | HDirGetSt dir => dir_st (interp_hexp_dir dir ost orq mins)
+    | HDirGetExcl dir => dir_excl (interp_hexp_dir dir ost orq mins)
+    | HDirGetSh dir => dir_sharers (interp_hexp_dir dir ost orq mins)
+    | HDirGetStO oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir dir ost orq mins)
     | HDirAddSharer oidx dir =>
-      addSharer (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+      addSharer (interpBExp ost oidx) (interp_hexp_dir dir ost orq mins)
     | HDirRemoveSharer oidx dir =>
-      removeSharer (interpBExp ost oidx) (interp_hexp_dir ost orq mins dir)
+      removeSharer (interpBExp ost oidx) (interp_hexp_dir dir ost orq mins)
     | HDirSetM oidx => setDirM (interpBExp ost oidx)
     | HDirSetE oidx => setDirE (interpBExp ost oidx)
     | HDirSetS oinds => setDirS (map (interpBExp ost) oinds)
     | HDirSetI _ => setDirI
-    | HRqUpFrom oidx => rqUpFrom (interp_hexp_dir ost orq mins oidx)
-    | HRsUpFrom oidx => rsUpFrom (interp_hexp_dir ost orq mins oidx)
-    | HDownTo oidx => downTo (interp_hexp_dir ost orq mins oidx)
-    | HRqUpFromM oinds => map rqUpFrom (interp_hexp_dir ost orq mins oinds)
-    | HRsUpFromM oinds => map rsUpFrom (interp_hexp_dir ost orq mins oinds)
-    | HDownToM oinds => map downTo (interp_hexp_dir ost orq mins oinds)
-    | HSingleton she => [interp_hexp_dir ost orq mins she]%list
+    | HRqUpFrom oidx => rqUpFrom (interp_hexp_dir oidx ost orq mins)
+    | HRsUpFrom oidx => rsUpFrom (interp_hexp_dir oidx ost orq mins)
+    | HDownTo oidx => downTo (interp_hexp_dir oidx ost orq mins)
+    | HRqUpFromM oinds => map rqUpFrom (interp_hexp_dir oinds ost orq mins)
+    | HRsUpFromM oinds => map rsUpFrom (interp_hexp_dir oinds ost orq mins)
+    | HDownToM oinds => map downTo (interp_hexp_dir oinds ost orq mins)
+    | HSingleton she => [interp_hexp_dir she ost orq mins]%list
+    end.
+
+  Inductive OPrecDir (var: htype -> Type): Type :=
+  | DirLastSharer: hbexp (bvar var) HIdxO -> OPrecDir var
+  | DirNotLastSharer.
+
+  Definition interp_OPrecDir (pd: OPrecDir htypeDenote)
+             (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)): Prop :=
+    match pd with
+    | DirLastSharer cidx => LastSharer (ost#[dir])%hvec (interpBExp ost cidx)
+    | DirNotLastSharer _ => NotLastSharer (ost#[dir])%hvec
     end.
 
   Instance DirExtExp: ExtExp :=
     {| heexp := hexp_dir;
-       interp_heexp := interp_hexp_dir
+       interp_heexp := interp_hexp_dir;
+       heoprec := OPrecDir;
+       interp_heoprec := interp_OPrecDir
     |}.
 
 End DirExt.
@@ -292,6 +307,8 @@ Ltac renote_exp :=
     instantiate (1:= HEExp _ _); simpl; renote_eexp
   end.
 
+Ltac renote_OPrec_ext := idtac "Error: redefine [renote_OPrec_ext]".
+
 Ltac renote_OPrecP :=
   repeat
     match goal with
@@ -320,8 +337,8 @@ Ltac renote_OPrecP :=
                  apply gt_iff_sep; renote_exp
       | _ >= _ => instantiate (1:= HNatGe (w:= _) _ _); simpl;
                   apply ge_iff_sep; renote_exp
-      | _ => (* idtac "[renote_OPrecP]: instantiating with [HNativeP]: " t; *)
-             instantiate (1:= HNativeP _ (fun ost orq mins => _));
+      | _ => instantiate (1:= HExtP _ _); simpl; renote_OPrec_ext
+      | _ => instantiate (1:= HNativeP _ (fun ost orq mins => _));
              simpl; apply iff_refl
       end
     end.
@@ -341,7 +358,7 @@ Ltac renote_OPrec :=
     | |- interpOPrec _ _ _ _ <-> (_ /\oprec _) _ _ _ =>
       instantiate (1:= HOPrecAnd _ _); simpl; apply and_iff_sep
     | |- _ => renote_OPrecRqRs; fail
-    | |- _ => renote_OPrecProp; fail
+    | |- _ => renote_OPrecProp
     end.
 
 Ltac reify_MsgFrom t :=
@@ -498,6 +515,18 @@ Ltac renote_eexp_dir :=
     end.
 Ltac renote_eexp ::= renote_eexp_dir.
 
+Ltac renote_OPrec_dir :=
+  match goal with
+  | |- interp_OPrecDir _ _ _ _ <-> ?t =>
+    match t with
+    | NotLastSharer _ =>
+      instantiate (1:= DirNotLastSharer _); simpl; apply iff_refl
+    | LastSharer _ _ =>
+      instantiate (1:= DirLastSharer _); simpl; apply p_f_equal
+    end
+  end.
+Ltac renote_OPrec_ext ::= renote_OPrec_dir.
+
 Section Deep.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).
@@ -550,8 +579,7 @@ Section Deep.
 
       Unshelve.
       all: cbv beta; try (⇑rule; fail).
-      all: try (⇑rule; try renote_OPrecProp;
-                instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
       all: idtac "Reifying the Li cache..".
     Time Defined. (* takes ~4 minutes *)
 
@@ -585,8 +613,7 @@ Section Deep.
 
       Unshelve.
       all: cbv beta; try (⇑rule; fail).
-      all: try (⇑rule; try renote_OPrecProp;
-                instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
       all: idtac "Reifying the main memory..".
     Time Defined. (* takes ~90 seconds *)
 

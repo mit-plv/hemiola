@@ -87,6 +87,22 @@ Section Bitvector.
   Definition bvFirstSet (bv: (Bit sz) @ var): (Bit sz_lg) @ var :=
     bvFirstSetFix bv.
 
+  Definition bvSingleton (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): Bool @ var :=
+    (bv == ($1 << i))%kami_expr.
+
+  Fixpoint bvCountFix {n} (bv: (Bit n) @ var) {m}: (Bit m) @ var :=
+    (match n return (((Bit n) @ var) -> forall m, (Bit m) @ var)
+     with
+     | O => fun _ _ => $$Default
+     | S n' =>
+       fun bv _ => 
+         ((IF (UniBit (Trunc 1 _) bv == $$(WO~1)) then $1 else $0)
+          + bvCountFix (UniBit (TruncLsb 1 _) bv))
+     end bv m)%kami_expr.
+
+  Definition bvCount (bv: (Bit sz) @ var): (Bit sz_lg) @ var :=
+    bvCountFix bv.
+  
 End Bitvector.
 
 Section Compile.
@@ -298,7 +314,12 @@ Section Compile.
             forall (var: Kind -> Type) {het},
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
-              Expr var (SyntaxKind (kind_of het))
+              Expr var (SyntaxKind (kind_of het));
+          compile_eoprec:
+            forall (var: Kind -> Type), 
+              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+              heoprec (hvar_of var) ->
+              Expr var (SyntaxKind Bool);
         }.
       Context `{CompExtExp}.
 
@@ -394,6 +415,7 @@ Section Compile.
          | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
          | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
          | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
+         | HExtP _ ep => compile_eoprec _ ostVars ep
          | HNativeP _ _ => $$true
          end)%kami_expr.
 

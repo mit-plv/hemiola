@@ -33,6 +33,8 @@ Section Directory.
 
 End Directory.
 
+Existing Instance MesiHOStateIfcFull.
+
 Section DirComp.
 
   Instance MesiCompExtType: CompExtType :=
@@ -47,7 +49,7 @@ Section DirComp.
            (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
            (he: heexp (hvar_of var) het): Expr var (SyntaxKind (kind_of het)) :=
     (match he in (hexp_dir _ h) return (Expr var (SyntaxKind (kind_of h))) with
-     | HDirC _ => #(HVector.hvec_ith ostvars (Fin.FS (Fin.FS (Fin.FS Fin.F1))))
+     | HDirC _ => #(HVector.hvec_ith ostvars Mesi.dir)
      | HDirGetSt dir => ((compile_dir_exp ostvars dir)!KDir@."dir_st")
      | HDirGetExcl dir => ((compile_dir_exp ostvars dir)!KDir@."dir_excl")
      | HDirGetStO oidx dir => compile_dir_get (compile_bexp ostvars oidx)
@@ -92,12 +94,25 @@ Section DirComp.
      | HSingleton se => bvSet $$Default (compile_dir_exp ostvars se)
      end)%kami_expr.
 
+  Definition compile_dir_OPrec
+             (var: Kind -> Type)
+             (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+             (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
+    (match pd with
+     | DirLastSharer cidx =>
+       bvSingleton (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
+                   (compile_bexp ostvars cidx)
+     | DirNotLastSharer _ =>
+       bvCount (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers") > $1
+     end)%kami_expr.
+
   Instance MesiCompExtExp: CompExtExp :=
-    {| compile_eexp := compile_dir_exp |}.
+    {| compile_eexp := compile_dir_exp;
+       compile_eoprec := compile_dir_OPrec
+    |}.
 
 End DirComp.
 
-Existing Instance MesiHOStateIfcFull.
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
 

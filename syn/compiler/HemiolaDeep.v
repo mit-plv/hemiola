@@ -111,8 +111,12 @@ Section Reify.
     Class ExtExp :=
       { heexp: (htype -> Type) -> htype -> Type;
         interp_heexp:
-          OState -> ORq Msg -> list (Id Msg) ->
-          forall {ht} (e: heexp htypeDenote ht), htypeDenote ht
+          forall {ht} (e: heexp htypeDenote ht),
+            OState -> ORq Msg -> list (Id Msg) ->
+            htypeDenote ht;
+        heoprec: (htype -> Type) -> Type;
+        interp_heoprec:
+          heoprec htypeDenote -> OState -> ORq Msg -> list (Id Msg) -> Prop
       }.
 
     Section ExpExtended.
@@ -144,6 +148,7 @@ Section Reify.
         | HNatLe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
         | HNatGt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
         | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+        | HExtP: heoprec var -> HOPrecP
         | HNativeP: (OState -> ORq Msg -> list (Id Msg) -> Prop) -> HOPrecP.
 
         Inductive HOPrecR: Type :=
@@ -322,7 +327,7 @@ Section Reify.
       Definition interpExp {ht} (e: hexp htypeDenote ht): htypeDenote ht :=
         match e with
         | HBExp hbe => interpBExp hbe
-        | HEExp hee => interp_heexp ost orq mins hee
+        | HEExp hee => interp_heexp hee ost orq mins
         end.
       
       Fixpoint interpOPrecP (p: HOPrecP htypeDenote): Prop :=
@@ -338,6 +343,7 @@ Section Reify.
         | HNatLe v1 v2 => interpExp v1 <= interpExp v2
         | HNatGt v1 v2 => interpExp v1 > interpExp v2
         | HNatGe v1 v2 => interpExp v1 >= interpExp v2
+        | HExtP _ ep => interp_heoprec ep ost orq mins
         | HNativeP _ p => p ost orq mins
         end.
 
