@@ -77,7 +77,7 @@ Section RssHolder.
                              IdxT (* response back to *) ->
                              OState * Miv) :=
     rule[ridx]
-    :requires (MsgsFrom nil (* /\ DownLockMsgId MRq rqId *) (** required? *) /\
+    :requires (MsgsFrom nil /\ DownLockMsgId MRq rqId /\
                RssFull /\ prec)
     :transition
        (do (st --> (rq <-- getDownLockMsg st.(orq);
@@ -93,7 +93,7 @@ Section RssHolder.
                                 IdxT (* response back to *) ->
                                 OState * Miv) :=
     rule[ridx]
-    :requires (MsgsFrom nil (* /\ DownLockMsgId MRq rqId *) (** required? *) /\
+    :requires (MsgsFrom nil /\ DownLockMsgId MRq rqId /\
                RssFull /\ prec)
     :transition
        (do (st --> (idm <-- getFirstIdMsg (getRss st.(orq));
@@ -109,9 +109,9 @@ End RssHolder.
 Notation "'rule.rsuo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':from' FROM" :=
   (rsTakeOne RIDX MSGID RQID FROM) (at level 5).
 
-Notation "'rule.rsr' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
-  (rsRelease RIDX PREC TRS%trs) (at level 5).
+Notation "'rule.rsr' '[' RIDX ']' ':holding' RQID ':requires' PREC ':transition' TRS" :=
+  (rsRelease RIDX RQID PREC TRS%trs) (at level 5).
 
-Notation "'rule.rsro' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
-  (rsReleaseOne RIDX PREC TRS%trs) (at level 5).
+Notation "'rule.rsro' '[' RIDX ']' ':holding' RQID ':requires' PREC ':transition' TRS" :=
+  (rsReleaseOne RIDX RQID PREC TRS%trs) (at level 5).
 

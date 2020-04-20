@@ -36,6 +36,7 @@ Section System.
 
       Definition liDownSRsUpDownRel: Rule :=
         rule.rsro[0~>4~>1]
+        :holding mesiRqS
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
@@ -53,6 +54,7 @@ Section System.
 
       Definition liDownSRsUpUpRel: Rule :=
         rule.rsro[0~>7~>1]
+        :holding mesiDownRqS
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
@@ -70,6 +72,7 @@ Section System.
 
       Definition liDownIRsUpDownRel: Rule :=
         rule.rsr[1~>6~>1]
+        :holding mesiRqM
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
@@ -86,6 +89,7 @@ Section System.
 
       Definition liDownIRsUpUpRel: Rule :=
         rule.rsr[1~>10~>1]
+        :holding mesiDownRqI
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
