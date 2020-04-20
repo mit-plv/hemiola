@@ -103,30 +103,36 @@ Existing Instance MesiCompExtExp.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
-Local Definition oidx: IdxT := 0~>0.
-
-Definition kl1: Modules :=
-  Eval vm_compute in (compile_Object (existT _ _ (hl1 oidx))).
-
-Definition kl1c: Modules :=
-  Eval vm_compute in
-    (kl1 ++ build_int_fifos oidx ++ build_down_forward oidx ++ build_ext_fifos oidx)%kami.
-
 Definition topo: tree :=
   Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]].
 
-Definition kli :=
-  Eval vm_compute in (compile_Object (existT _ _ (hli topo oidx))).
-
-Definition klic :=
-  Eval vm_compute in (kli ++ build_int_fifos oidx ++ build_broadcaster oidx)%kami.
-
-Definition kmem :=
-  Eval vm_compute in (compile_Object (existT _ _ (hmem topo 0))).
-
-Definition kmemc :=
-  Eval vm_compute in (kmem ++ build_broadcaster 0)%kami.
-
 (* Time Definition k: Modules := *)
 (*   Eval vm_compute in (compile_System (existT _ _ (@himpl topo ltac:(discriminate)))). *)
+
+Definition kl1c (oidx: IdxT): Modules :=
+  ((compile_Object (existT _ _ (hl1 oidx)))
+     ++ build_int_fifos oidx
+     ++ build_down_forward oidx
+     ++ build_ext_fifos oidx)%kami.
+
+Definition klic (oidx: IdxT): Modules :=
+  ((compile_Object (existT _ _ (hli topo oidx)))
+     ++ build_int_fifos oidx
+     ++ build_broadcaster oidx)%kami.
+
+Definition kmemc :=
+  (compile_Object (existT _ _ (hmem topo [0]%list)) ++ build_broadcaster [0]%list)%kami.
+
+(* Time Definition kl1c0: Modules := *)
+(*   Eval vm_compute in (kl1c 0~>0~>0). *)
+
+(* Eval compute in (tree2Topo topo 0). *)
+(* Time Definition k: Modules := *)
+(*   Eval vm_compute in *)
+(*     (kmemc ++ (klic 0~>0 ++ (kl1c 0~>0~>0 ++ kl1c 0~>0~>1)) *)
+(*            ++ (klic 0~>1 ++ (kl1c 0~>1~>0 ++ kl1c 0~>1~>1)))%kami. *)
+
+Time Definition k: Modules :=
+  Eval vm_compute in
+    (kmemc ++ (kl1c 0~>0 ++ kl1c 0~>1))%kami.
 

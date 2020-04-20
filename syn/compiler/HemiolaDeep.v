@@ -4,8 +4,6 @@ Require Import Hemiola.RqRsLang Hemiola.Ex.Template Hemiola.Ex.RuleTransform.
         
 Set Implicit Arguments.
 
-Definition TODO := cheat.
-
 Import MonadNotations.
 
 (** Configuration class *)
@@ -145,7 +143,8 @@ Section Reify.
         | HNatLt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
         | HNatLe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
         | HNatGt: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
-        | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP.
+        | HNatGe: forall {w}, hexp (HNat w) -> hexp (HNat w) -> HOPrecP
+        | HNativeP: (OState -> ORq Msg -> list (Id Msg) -> Prop) -> HOPrecP.
 
         Inductive HOPrecR: Type :=
         | HRqAccepting: HOPrecR
@@ -173,8 +172,7 @@ Section Reify.
         Inductive HOPrecT: Type :=
         | HOPrecAnd: HOPrecT -> HOPrecT -> HOPrecT
         | HOPrecRqRs: HOPrecR -> HOPrecT
-        | HOPrecProp: HOPrecP -> HOPrecT
-        | HOPrecNative: (OState -> ORq Msg -> list (Id Msg) -> Prop) -> HOPrecT.
+        | HOPrecProp: HOPrecP -> HOPrecT.
 
         (* -- transition *)
 
@@ -340,6 +338,7 @@ Section Reify.
         | HNatLe v1 v2 => interpExp v1 <= interpExp v2
         | HNatGt v1 v2 => interpExp v1 > interpExp v2
         | HNatGe v1 v2 => interpExp v1 >= interpExp v2
+        | HNativeP _ p => p ost orq mins
         end.
 
       Definition interpOPrecR (p: HOPrecR): Prop :=
@@ -423,7 +422,6 @@ Section Reify.
       | HOPrecAnd p1 p2 => interpOPrec p1 /\oprec interpOPrec p2
       | HOPrecRqRs rp => fun ost orq mins => interpOPrecR ost orq mins rp
       | HOPrecProp pp => fun ost orq mins => interpOPrecP ost orq mins pp
-      | HOPrecNative _ pp => pp
       end.
 
     Fixpoint interpMonad (hm: HMonadT htypeDenote) (stm: StateM): option StateM :=

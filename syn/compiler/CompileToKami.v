@@ -394,6 +394,7 @@ Section Compile.
          | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
          | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
          | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
+         | HNativeP _ _ => $$true
          end)%kami_expr.
 
       Fixpoint compile_Rule_prec (rp: HOPrecT (hvar_of var))
@@ -405,7 +406,6 @@ Section Compile.
         | HOPrecRqRs _ rrprec => compile_Rule_rqrs_prec rrprec cont
         | HOPrecProp pprec =>
           (Assert (compile_Rule_prop_prec pprec); cont)%kami_action
-        | HOPrecNative _ _ => cont
         end.
 
       Definition compile_bval {hbt} (hv: hbval hbt)
@@ -580,7 +580,11 @@ Section Compile.
     end.
   
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    compile_inits oidx 0 (Vector.to_list hostf_ty).
+    {| attrName := upLockReg oidx;
+       attrType := RegInitDefault (SyntaxKind (Struct UpLock)) |}
+      :: {| attrName := downLockReg oidx;
+            attrType := RegInitDefault (SyntaxKind (Struct DownLock)) |}
+      :: compile_inits oidx 0 (Vector.to_list hostf_ty).
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
     ((fifo primNormalFifoName

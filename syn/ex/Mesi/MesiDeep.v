@@ -320,6 +320,9 @@ Ltac renote_OPrecP :=
                  apply gt_iff_sep; renote_exp
       | _ >= _ => instantiate (1:= HNatGe (w:= _) _ _); simpl;
                   apply ge_iff_sep; renote_exp
+      | _ => (* idtac "[renote_OPrecP]: instantiating with [HNativeP]: " t; *)
+             instantiate (1:= HNativeP _ (fun ost orq mins => _));
+             simpl; apply iff_refl
       end
     end.
 
@@ -339,8 +342,6 @@ Ltac renote_OPrec :=
       instantiate (1:= HOPrecAnd _ _); simpl; apply and_iff_sep
     | |- _ => renote_OPrecRqRs; fail
     | |- _ => renote_OPrecProp; fail
-    | |- _ => instantiate (1:= HOPrecNative _ (fun ost orq mins => _));
-              simpl; apply iff_refl
     end.
 
 Ltac reify_MsgFrom t :=
@@ -549,7 +550,8 @@ Section Deep.
 
       Unshelve.
       all: cbv beta; try (⇑rule; fail).
-      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: try (⇑rule; try renote_OPrecProp;
+                instantiate (1:= HBConst _ _); simpl; renote_const; fail).
       all: idtac "Reifying the Li cache..".
     Time Defined. (* takes ~4 minutes *)
 
@@ -583,7 +585,8 @@ Section Deep.
 
       Unshelve.
       all: cbv beta; try (⇑rule; fail).
-      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+      all: try (⇑rule; try renote_OPrecProp;
+                instantiate (1:= HBConst _ _); simpl; renote_const; fail).
       all: idtac "Reifying the main memory..".
     Time Defined. (* takes ~90 seconds *)
 
