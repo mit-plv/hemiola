@@ -100,7 +100,7 @@ Section Bitvector.
           + bvCountFix (UniBit (TruncLsb 1 _) bv))
      end bv m)%kami_expr.
 
-  Definition bvCount (bv: (Bit sz) @ var): (Bit sz_lg) @ var :=
+  Definition bvCount (bv: (Bit sz) @ var): (Bit (S sz_lg)) @ var :=
     bvCountFix bv.
   
 End Bitvector.
