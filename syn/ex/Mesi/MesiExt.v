@@ -1,12 +1,5 @@
-(** TODO: better to have a file in Kami that "exports" such modules *)
-Require Import Kami.Synthesize.
-Require Import Kami.Ext.BSyntax.
-Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString.
-Extraction Language OCaml.
-
-Set Extraction Optimize.
-Set Extraction KeepSingleton.
-Unset Extraction AutoInline.
+Require Import Kami.Kami.
+Require Import Kami.Ext.Extraction.
 
 Require Import MesiComp.
 

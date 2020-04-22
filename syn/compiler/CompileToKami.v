@@ -68,7 +68,7 @@ Section Bitvector.
     (bv ~& UniBit (Inv _) ($1 << i))%kami_expr.
 
   Definition bvTest (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): Bool @ var :=
-    ((bv ~& ($1 << i)) == bv)%kami_expr.
+    ((bv ~| ($1 << i)) == bv)%kami_expr.
 
   Definition bvAll (bv: (Bit sz) @ var): Bool @ var :=
     (bv == $$(wones _))%kami_expr.
@@ -396,7 +396,7 @@ Section Compile.
          | HDownLockIdxBack =>
            (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
          | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-         | HRssFull => (Assert (#dl!DownLock@."dl_rss_recv" == $$(wones _)); cont)
+         | HRssFull => (Assert (#dl!DownLock@."dl_rss_recv" == #dl!DownLock@."dl_rss_from"); cont)
          end)%kami_action.
 
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -678,6 +678,16 @@ Section Compile.
                                 (ostIReg (obj_idx (projT1 obj)))
                                 (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
+
+  Definition compile_Object_with_init
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
+             (kinit: list RegInitT) :=
+    let crules := compile_Rules (obj_idx (projT1 obj))
+                                (upLockReg (obj_idx (projT1 obj)))
+                                (downLockReg (obj_idx (projT1 obj)))
+                                (ostIReg (obj_idx (projT1 obj)))
+                                (hobj_rules (projT2 obj)) in
+    Mod kinit crules nil.
 
   Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
     : option Kami.Syntax.Modules :=
