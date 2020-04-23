@@ -12,7 +12,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Mesi.ImplOStateIfc. 
+Existing Instance Mesi.ImplOStateIfc.
 
 Section System.
   Variable (tr: tree).
@@ -25,7 +25,7 @@ Section System.
     Variables (oidx cidx: IdxT).
 
     (** L1 caches remain the same. *)
-    
+
     Section Li.
 
       Definition liDownSRsUpDownOne: Rule :=
@@ -77,7 +77,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI] 
+                     +#[status <- mesiI]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
@@ -119,11 +119,11 @@ Section System.
       pose proof (tree2Topo_TreeTopo tr 0);
       try match goal with
           | [Hn: ?n1 <> ?n2,
-             H1: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n1 = Some _,
-             H2: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n2 = Some _ |- _] =>
+                 H1: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n1 = Some _,
+                     H2: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n2 = Some _ |- _] =>
             eapply TreeTopo_children_inds_disj in Hn; eauto; destruct Hn
           end.
-    
+
     Program Definition li: Object :=
       {| obj_idx := oidx;
          obj_rules :=
@@ -144,8 +144,7 @@ Section System.
 
     Definition memRulesFromChild (cidx: IdxT): list Rule :=
       (Mesi.memRulesFromChild tr oidx cidx)
-        ++ [liDownSRsUpDownOne cidx; liDownSRsUpUpOne cidx;
-           liDownIRsUpDownOne cidx; liDownIRsUpUpOne cidx].
+        ++ [liDownSRsUpDownOne cidx; liDownIRsUpDownOne cidx].
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
@@ -188,11 +187,10 @@ Section System.
   Next Obligation.
     apply tree2Topo_WfCIfc.
   Qed.
-  
+
 End System.
 
 Hint Unfold liDownSRsUpDownOne liDownSRsUpDownRel
      liDownSRsUpUpOne liDownSRsUpUpRel
      liDownIRsUpDownOne liDownIRsUpDownRel
      liDownIRsUpUpOne liDownIRsUpUpRel: MesiRules.
-
