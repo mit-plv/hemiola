@@ -861,16 +861,29 @@ Section System.
         :transition
            (!|ost, _| --> (ost, <| mesiInvRs; O |>)).
 
-      Definition liInvImmS0: Rule :=
-        rule.immd[2~>6~>0~~cidx]
+      Definition liInvImmS00: Rule :=
+        rule.immd[2~>6~>0~>0~~cidx]
         :accepts mesiInvRq
         :from cidx
         :requires
            (fun ost orq mins =>
+              ost#[owned] = false /\
               getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
         :transition
            (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>)).
 
+      Definition liInvImmS01: Rule :=
+        rule.immd[2~>6~>0~>1~~cidx]
+        :accepts mesiInvRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = true /\ ost#[status] = mesiS /\
+              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
+        :transition
+           (!|ost, _| --> (ost +#[status <- mesiM]
+                               +#[dir <- setDirI], <| mesiInvRs; O |>)).
+      
       Definition liInvImmS1: Rule :=
         rule.immd[2~>6~>1~~cidx]
         :accepts mesiInvRq
@@ -952,13 +965,13 @@ Section System.
            obj_rules :=
              [(** rules involved with [GetS] *)
                l1GetSImm eidx; l1GetSRqUpUp oidx eidx;
-                 l1GetSRsDownDownS; l1GetSRsDownDownE; l1DownSImm oidx;
-                   (** rules involved with [GetM] *)
-                   l1GetMImmE eidx; l1GetMImmM eidx;
-                     l1GetMRqUpUp oidx eidx;
-                     l1GetMRsDownDown; l1DownIImm oidx;
-                       (** rules involved with [Put] *)
-                       l1InvRqUpUp oidx; l1InvRqUpUpWB oidx; l1InvRsDownDown];
+             l1GetSRsDownDownS; l1GetSRsDownDownE; l1DownSImm oidx;
+             (** rules involved with [GetM] *)
+             l1GetMImmE eidx; l1GetMImmM eidx;
+             l1GetMRqUpUp oidx eidx;
+             l1GetMRsDownDown; l1DownIImm oidx;
+             (** rules involved with [Put] *)
+             l1InvRqUpUp oidx; l1InvRqUpUpWB oidx; l1InvRsDownDown];
            obj_rules_valid := _ |}.
       Next Obligation.
         inds_valid_tac.
@@ -968,11 +981,11 @@ Section System.
 
     Definition liRulesFromChild (cidx: IdxT): list Rule :=
       [liGetSImmS cidx; liGetSImmME cidx; liGetSRqUpUp oidx cidx;
-         liGetSRqUpDownME oidx cidx; liGetMImm cidx; liGetMRqUpUp oidx cidx;
-             liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
-               liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx;
-                 liInvImmWBI cidx; liInvImmWBS1 cidx;
-                   liInvImmWBME cidx].
+      liGetSRqUpDownME oidx cidx; liGetMImm cidx; liGetMRqUpUp oidx cidx;
+      liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
+      liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
+      liInvImmE cidx; liInvImmWBI cidx; liInvImmWBS1 cidx;
+      liInvImmWBME cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -994,11 +1007,11 @@ Section System.
            (liRulesFromChildren (subtreeChildrenIndsOf topo oidx))
              (** rules involved with [GetS] *)
              ++ [liGetSRsDownDownS; liGetSRsDownDownE; liDownSRsUpDownME;
-                   liDownSImm oidx; liDownSRqDownDownME oidx; liDownSRsUpUp]
+                liDownSImm oidx; liDownSRqDownDownME oidx; liDownSRsUpUp]
              (** rules involved with [GetM] *)
              ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS oidx; liDownIRsUpDown;
-                   liDownIImm oidx; liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx;
-                       liDownIRsUpUp]
+                liDownIImm oidx; liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx;
+                liDownIRsUpUp]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
          obj_rules_valid := _ |}.
@@ -1008,11 +1021,10 @@ Section System.
 
     Definition memRulesFromChild (cidx: IdxT): list Rule :=
       [liGetSImmS cidx; liGetSImmME cidx;
-         liGetSRqUpDownME oidx cidx; liGetMImm cidx;
-           liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
-             liInvImmI cidx; liInvImmS0 cidx; liInvImmS1 cidx; liInvImmE cidx;
-               liInvImmWBI cidx; liInvImmWBS1 cidx;
-                 liInvImmWBME cidx].
+      liGetSRqUpDownME oidx cidx; liGetMImm cidx;
+      liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
+      liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
+      liInvImmE cidx; liInvImmWBI cidx; liInvImmWBS1 cidx; liInvImmWBME cidx].
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
@@ -1070,6 +1082,6 @@ Hint Unfold liGetSImmS liGetSImmME
      liGetMRqUpDownME liGetMRqUpDownS liDownIRsUpDown
      liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRsUpUp
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
-     liInvImmI liInvImmS0 liInvImmS1 liInvImmE
+     liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
      liInvImmWBI liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.
 

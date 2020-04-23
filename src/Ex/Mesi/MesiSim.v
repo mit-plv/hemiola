@@ -650,7 +650,14 @@ Section Sim.
           solve_sim_mesi.
         }
 
-        { (* [liInvImmS0] *)
+        { (* [liInvImmS00] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns cidx.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmS01] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
           derive_child_idx_in cidx.
@@ -884,7 +891,14 @@ Section Sim.
           solve_sim_mesi.
         }
 
-        { (* [liInvImmS0] *)
+        { (* [liInvImmS00] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns cidx.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmS01] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
           derive_child_idx_in cidx.

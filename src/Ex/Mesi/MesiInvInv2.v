@@ -874,9 +874,15 @@ Section InvDirE.
           disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
         }
 
-        { (* [liInvImmS0] *)
+        { (* [liInvImmS00] *)
           disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
           { solve_valid. }
+          { solve_by_diff_dir. }
+        }
+
+        { (* [liInvImmS01] *)
+          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+          { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
           { solve_by_diff_dir. }
         }
 
@@ -1028,9 +1034,15 @@ Section InvDirE.
           disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
         }
 
-        { (* [liInvImmS0] *)
+        { (* [liInvImmS00] *)
           disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
           { solve_valid. }
+          { solve_by_diff_dir. }
+        }
+
+        { (* [liInvImmS01] *)
+          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+          { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
           { solve_by_diff_dir. }
         }
 
