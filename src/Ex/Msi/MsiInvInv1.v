@@ -527,6 +527,15 @@ Section InvDirM.
 
         { disc_rule_conds_ex; disc.
           { solve_valid. }
+          { solve_by_diff_dir. }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
+          }
+        }
+
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
           { disc_getDir; solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
             { solve_by_idx_false. }
@@ -695,6 +704,15 @@ Section InvDirM.
             { solve_by_dir_I. }
             { solve_valid. }
           }
+          { destruct (idx_dec cidx oidx0); subst.
+            { solve_by_idx_false. }
+            { solve_valid. }
+          }
+        }
+
+        { disc_rule_conds_ex; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
           { destruct (idx_dec cidx oidx0); subst.
             { solve_by_idx_false. }
             { solve_valid. }
