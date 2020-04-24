@@ -85,13 +85,13 @@ Section DirComp.
                                "dir_excl" ::= $$Default;
                                "dir_sharers" ::= $$Default })
 
-     | HRqUpFrom oidx => compile_dir_exp ostvars oidx
-     | HRsUpFrom oidx => compile_dir_exp ostvars oidx
-     | HDownTo oidx => compile_dir_exp ostvars oidx
+     | HRqUpFrom oidx => {$TopoTemplate.rqUpIdx, compile_dir_exp ostvars oidx}
+     | HRsUpFrom oidx => {$TopoTemplate.rsUpIdx, compile_dir_exp ostvars oidx}
+     | HDownTo oidx => {$TopoTemplate.downIdx, compile_dir_exp ostvars oidx}
      | HRqUpFromM oinds => compile_dir_exp ostvars oinds
      | HRsUpFromM oinds => compile_dir_exp ostvars oinds
      | HDownToM oinds => compile_dir_exp ostvars oinds
-     | HSingleton se => bvSet $$Default (compile_dir_exp ostvars se)
+     | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp ostvars se))
      end)%kami_expr.
 
   Definition compile_dir_OPrec
@@ -142,12 +142,11 @@ Definition kmemc :=
 (*   Eval vm_compute in (kl1c 0~>0~>0). *)
 
 (* Eval compute in (tree2Topo topo 0). *)
-(* Time Definition k: Modules := *)
-(*   Eval vm_compute in *)
-(*     (kmemc ++ (klic 0~>0 ++ (kl1c 0~>0~>0 ++ kl1c 0~>0~>1)) *)
-(*            ++ (klic 0~>1 ++ (kl1c 0~>1~>0 ++ kl1c 0~>1~>1)))%kami. *)
-
 Time Definition k: Modules :=
   Eval vm_compute in
-    (kmemc ++ (kl1c 0~>0 ++ kl1c 0~>1))%kami.
+    (kmemc ++ (klic 0~>0 ++ (kl1c 0~>0~>0 ++ kl1c 0~>0~>1))
+           ++ (klic 0~>1 ++ (kl1c 0~>1~>0 ++ kl1c 0~>1~>1)))%kami.
 
+(* Time Definition k: Modules := *)
+(*   Eval vm_compute in *)
+(*     (kmemc ++ (kl1c 0~>0 ++ kl1c 0~>1))%kami. *)

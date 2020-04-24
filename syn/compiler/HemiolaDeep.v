@@ -1,7 +1,7 @@
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
 Require Import Hemiola.Topology Hemiola.Syntax.
 Require Import Hemiola.RqRsLang Hemiola.Ex.Template Hemiola.Ex.RuleTransform.
-        
+
 Set Implicit Arguments.
 
 Import MonadNotations.
@@ -89,7 +89,7 @@ Section Reify.
 
   Section TypeExtended.
     Context `{het: ExtType}.
-    
+
     Inductive htype :=
     | HBType: hbtype -> htype
     | HEType: hetype -> htype.
@@ -133,9 +133,9 @@ Section Reify.
         Inductive hexp: htype -> Type :=
         | HBExp: forall {hbt} (hbe: hbexp bvar hbt), hexp (HBType hbt)
         | HEExp: forall {ht} (hee: heexp var ht), hexp ht.
-        
+
         (* -- precondition *)
-        
+
         Inductive HOPrecP: Type :=
         | HTrue: HOPrecP
         | HAnd: HOPrecP -> HOPrecP -> HOPrecP
@@ -188,14 +188,14 @@ Section Reify.
         | HGetUpLockIdxBack: hbval HIdxQ
         | HGetDownLockIdxBack: hbval HIdxQ
         | HGetDownLockFirstRs: hbval HIdm.
-        
+
         Inductive HOState :=
         | HOStateI: HOState
         | HOstUpdate:
             forall (i: Fin.t ost_sz) {ht},
               htypeDenote ht = Vector.nth ost_ty i ->
               hexp ht -> HOState -> HOState.
-        
+
         Inductive HORq :=
         | HORqI: HORq
         | HUpdUpLock: HORq ->
@@ -216,10 +216,8 @@ Section Reify.
 
         Inductive HMsgsOut :=
         | HMsgOutNil: HMsgsOut
-        | HMsgOutUp: IdxT (* midx *) -> hexp HMsg -> HMsgsOut
-        | HMsgOutDown: hexp HIdxQ -> hexp HMsg -> HMsgsOut
-        | HMsgsOutDown: hexp (HList HIdxQ) -> hexp HMsg -> HMsgsOut
-        | HMsgOutExt: IdxT (* midx *) -> hexp HMsg -> HMsgsOut.
+        | HMsgOutOne: hexp HIdxQ -> hexp HMsg -> HMsgsOut
+        | HMsgsOutDown: hexp (HList HIdxQ) -> hexp HMsg -> HMsgsOut.
 
         Inductive HMonadT: Type :=
         | HBind: forall {ht} (bv: hbval ht) (cont: var ht -> HMonadT), HMonadT
@@ -261,10 +259,8 @@ Section Reify.
   Arguments HRelDownLock {_ _} {var}.
   Arguments HAddRs {_ _} {var}.
   Arguments HMsgOutNil {_ _} {var}.
-  Arguments HMsgOutUp {_ _} {var}.
-  Arguments HMsgOutDown {_ _} {var}.
+  Arguments HMsgOutOne {_ _} {var}.
   Arguments HMsgsOutDown {_ _} {var}.
-  Arguments HMsgOutExt {_ _} {var}.
   Arguments HOPrecRqRs {_ _} {var}.
 
   (** Interpretation *)
@@ -280,7 +276,7 @@ Section Reify.
 
   Section InterpExtended.
     Context `{het: ExtType} `{@ExtExp het}.
-    
+
     Section WithPreState.
       Variables (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)).
 
@@ -329,7 +325,7 @@ Section Reify.
         | HBExp hbe => interpBExp hbe
         | HEExp hee => interp_heexp hee ost orq mins
         end.
-      
+
       Fixpoint interpOPrecP (p: HOPrecP htypeDenote): Prop :=
         match p with
         | HTrue _ => True
@@ -414,13 +410,11 @@ Section Reify.
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=
         match houts with
         | HMsgOutNil => []
-        | HMsgOutUp midx msg => [(midx, interpExp msg)]
-        | HMsgOutDown midx msg => [(interpExp midx, interpExp msg)]
+        | HMsgOutOne midx msg => [(interpExp midx, interpExp msg)]
         | HMsgsOutDown minds msg =>
           List.map (fun midx => (midx, interpExp msg)) (interpExp minds)
-        | HMsgOutExt midx msg => [(midx, interpExp msg)]
         end.
-      
+
     End WithPreState.
 
     Fixpoint interpOPrec (p: HOPrecT htypeDenote): OPrec :=
@@ -452,7 +446,7 @@ Section Reify.
       end.
 
   End InterpExtended.
-  
+
 End Reify.
 
 Section HemiolaDeep.
@@ -463,7 +457,7 @@ Section HemiolaDeep.
           `{het: ExtType}
           `{ee: @ExtExp dv oifc het}
           `{hoifc: @HOStateIfc dv oifc}.
-          
+
   Record HRule (sr: Rule) :=
     { hrule_msg_from: HMsgFrom;
       hrule_precond: HOPrec;

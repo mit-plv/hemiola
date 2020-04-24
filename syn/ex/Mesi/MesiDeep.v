@@ -427,13 +427,7 @@ Ltac renote_MsgOuts :=
   | |- interpMsgOuts _ _ _ _ = ?t =>
     match t with
     | []%list => instantiate (1:= HMsgOutNil _); reflexivity
-    | [(?midx, _)]%list =>
-      match midx with
-      | downTo (l1ExtOf _) =>
-        instantiate (1:= HMsgOutExt _ _); simpl; repeat f_equal; renote_exp
-      | _ => instantiate (1:= HMsgOutUp _ _); simpl; repeat f_equal; renote_exp
-      | _ => instantiate (1:= HMsgOutDown _ _); simpl; repeat f_equal; renote_exp
-      end
+    | [(?midx, _)]%list => instantiate (1:= HMsgOutOne _ _); simpl; repeat f_equal; renote_exp
     | map ?f _ =>
       match f with
       | (fun _ => (downTo _, _)) =>
@@ -533,7 +527,7 @@ Section Deep.
 
   Section Object.
     Variable (oidx: IdxT).
-    
+
     Definition hl1: HObject (Mesi.l1 oidx).
     Proof.
       refine {| hobj_rules_ok := _ |}.
@@ -618,7 +612,7 @@ Section Deep.
     Time Defined. (* takes ~90 seconds *)
 
   End Object.
-  
+
   Definition himpl: HSystem (MesiImp.impl Htr).
   Proof.
     refine {| hsys_objs_ok := _ |}.
@@ -641,4 +635,3 @@ Section Deep.
   Time Defined.
 
 End Deep.
-
