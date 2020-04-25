@@ -54,7 +54,9 @@ Section ObjInv.
                  ost#[status] <= mesiS /\
                  ((ost#[owned] = true /\ ost#[dir].(dir_st) = mesiS /\
                    SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                   map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                   (rsb <+- rqid.(rqi_midx_rsb);
+                   map fst rqid.(rqi_rss) =
+                   map rsUpFrom (remove idx_dec (objIdxOf rsb) ost#[dir].(dir_sharers)))) \/
                   (mesiE <= ost#[dir].(dir_st) <= mesiM /\
                    In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
                    map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))

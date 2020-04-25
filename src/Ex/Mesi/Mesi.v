@@ -25,7 +25,7 @@ Local Open Scope fmap.
  *   line if a protocol never employes the invalid value. However, in a MESI
  *   protocol, especially if the protocol is non-inclusive, the two lines should
  *   be distinguished. For instance, when an L2 cache has a summary status of E
- *   but has its own status of I, it needs to know if it still has the (clean) 
+ *   but has its own status of I, it needs to know if it still has the (clean)
  *   line so it updates its status appropriately when the exclusive child evicts
  *   the line (without write-back).
  *)
@@ -47,7 +47,7 @@ Local Open Scope fmap.
  *   owners, the "origin" cache that previously had M and the new cache that
  *   just got M (from E). But at this moment the origin cache has an Invalid (I)
  *   data, thus write-back has no meaning.
- *     For simplicity we decided _not_ to allow any evictions of such data 
+ *     For simplicity we decided _not_ to allow any evictions of such data
  *   (owned but invalid). We could design a protocol which allows such cases,
  *   but this optimization requires so many sophisticated corner cases, e.g.,
  *   request-from-the-exclusive-cache.
@@ -79,7 +79,7 @@ Section System.
   Definition dir: Fin.t 4 := F4.
 
   Section Directory.
-    
+
     Record DirT: Set :=
       { dir_st: MESI; (* the summary status of children *)
         dir_excl: IdxT;
@@ -114,7 +114,7 @@ Section System.
       {| dir_st := mesiS;
          dir_excl := 0;
          dir_sharers := oinds |}.
-    
+
     Definition setDirI :=
       {| dir_st := mesiI;
          dir_excl := 0;
@@ -137,6 +137,9 @@ Section System.
 
     Definition NotLastSharer (dir: DirT) :=
       2 <= List.length dir.(dir_sharers).
+
+    Definition OtherSharerExists (dir: DirT) (cidx: IdxT) :=
+      remove idx_dec cidx dir.(dir_sharers) <> nil.
 
     Section Facts.
 
@@ -226,6 +229,16 @@ Section System.
           apply removeOnce_In_1; assumption.
       Qed.
 
+      Lemma getDir_LastSharer_eq:
+        forall sidx dir,
+          dir_st dir = mesiS ->
+          LastSharer dir sidx ->
+          getDir sidx dir = mesiS.
+      Proof.
+        unfold LastSharer; dir_crush.
+        rewrite H0 in *; firstorder idtac.
+      Qed.
+
       Lemma getDir_LastSharer_neq:
         forall oidx sidx dir,
           getDir sidx dir = mesiS ->
@@ -257,7 +270,7 @@ Section System.
           dir.(dir_st) = mesiI ->
           forall oidx, getDir oidx dir = mesiI.
       Proof. dir_crush. Qed.
-      
+
       Lemma getDir_st_sound:
         forall dir oidx,
           mesiS <= getDir oidx dir ->
@@ -313,7 +326,7 @@ Section System.
       Proof. dir_crush. Qed.
 
     End Facts.
-    
+
   End Directory.
 
   Instance ImplOStateIfc: OStateIfc :=
@@ -626,9 +639,9 @@ Section System.
                      +#[dir <- setDirS [objIdxOf rsbTo; objIdxOf (idOf idm)]],
                  <| mesiRsS; msg_value (valOf idm) |>)).
 
-      (** NOTE: 
+      (** NOTE:
        * 1) data should be sent along with [mesiDownRsS], even when the status
-       * is S or E, since the parent might not have the up-to-date data (e.g., 
+       * is S or E, since the parent might not have the up-to-date data (e.g.,
        * when the line is evicted).
        * 2) when the status is S, it should be the owner since it previously had
        * the status E or M.
@@ -671,12 +684,17 @@ Section System.
                  <| mesiDownRsS; msg_value (valOf idm) |>)).
 
       Definition liGetMImm: Rule :=
-        rule.immd[1~>0~>0~~cidx]
+        rule.immd[1~>0~~cidx]
         :accepts mesiRqM
         :from cidx
-        :requires (fun ost orq mins => mesiE <= ost#[status])
+        :requires
+           (fun ost orq mins =>
+              mesiE <= ost#[status] \/
+              (ost#[status] = mesiS /\ ost#[owned] = true /\
+               ost#[dir].(dir_st) = mesiS /\ LastSharer ost#[dir] cidx))
         :transition
-           (!|ost, msg| --> (ost +#[status <- mesiI]
+           (!|ost, msg| --> (ost +#[owned <- false]
+                                 +#[status <- mesiI]
                                  +#[dir <- setDirM cidx],
                              <| mesiRsM; O |>)).
 
@@ -699,7 +717,11 @@ Section System.
         rule.rsdd[1~>2]
         :accepts mesiRsM
         :holding mesiRqM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiI)
+        :requires
+           (fun ost orq mins =>
+              ost#[dir].(dir_st) = mesiI \/
+              (ost#[dir].(dir_st) = mesiS /\
+               LastSharer ost#[dir] (objIdxOf (getUpLockIdxBackI orq))))
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -707,7 +729,7 @@ Section System.
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
-      (** This is the case where internal invalidation is required 
+      (** This is the case where internal invalidation is required
        * due to sharers.
        *)
       Definition liGetMRsDownRqDownDirS: Rule :=
@@ -717,14 +739,18 @@ Section System.
         :me oidx
         :requires
            (fun ost orq mins =>
-              RsDownRqDownSoundPrec topo oidx orq ost#[dir].(dir_sharers) /\
+              RsDownRqDownSoundPrec
+                topo oidx orq
+                (remove idx_dec (objIdxOf (getUpLockIdxBackI orq))
+                        ost#[dir].(dir_sharers)) /\
               ost#[dir].(dir_sharers) <> nil /\
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              OtherSharerExists ost#[dir] (objIdxOf (getUpLockIdxBackI orq)) /\
               ost#[dir].(dir_st) = mesiS)
         :transition
-           (!|ost, rq| --> (ost +#[owned <- true],
-                            (ost#[dir].(dir_sharers),
-                             <| mesiDownRqI; O |>))).
+           (!|ost, rq, rsbTo| --> (ost +#[owned <- true],
+                                   (remove idx_dec (objIdxOf rsbTo) ost#[dir].(dir_sharers),
+                                    <| mesiDownRqI; O |>))).
 
       Definition liGetMRqUpDownME: Rule :=
         rule.rqud[1~>4~~cidx]
@@ -746,12 +772,13 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              ~ In cidx ost#[dir].(dir_sharers) /\
               ost#[dir].(dir_sharers) <> nil /\
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              OtherSharerExists ost#[dir] cidx /\
               ost#[owned] = true /\ ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
         :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqI; O |>)).
+           (!|ost, msg| --> (remove idx_dec cidx ost#[dir].(dir_sharers),
+                             <| mesiDownRqI; O |>)).
 
       Definition liDownIRsUpDown: Rule :=
         rule.rsud[1~>6]
@@ -761,7 +788,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI] 
+                     +#[status <- mesiI]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
@@ -811,7 +838,7 @@ Section System.
                      +#[dir <- setDirI],
                  <| mesiDownRsI; O |>)).
 
-      (** NOTE: Here having [ost#[owned] = false] as a precondition is very 
+      (** NOTE: Here having [ost#[owned] = false] as a precondition is very
        * important since there's a chance that the object has a _dirty_ line
        * even if the status is S.
        *)
@@ -883,7 +910,7 @@ Section System.
         :transition
            (!|ost, _| --> (ost +#[status <- mesiM]
                                +#[dir <- setDirI], <| mesiInvRs; O |>)).
-      
+
       Definition liInvImmS1: Rule :=
         rule.immd[2~>6~>1~~cidx]
         :accepts mesiInvRq
@@ -1000,7 +1027,7 @@ Section System.
              H2: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n2 = Some _ |- _] =>
             eapply TreeTopo_children_inds_disj in Hn; eauto; destruct Hn
           end.
-    
+
     Program Definition li: Object :=
       {| obj_idx := oidx;
          obj_rules :=
@@ -1040,7 +1067,7 @@ Section System.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.
     Qed.
-    
+
   End Objects.
 
   Program Definition impl: System :=
@@ -1067,7 +1094,7 @@ Section System.
   Next Obligation.
     apply tree2Topo_WfCIfc.
   Qed.
-  
+
 End System.
 
 Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
@@ -1084,4 +1111,3 @@ Hint Unfold liGetSImmS liGetSImmME
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
      liInvImmWBI liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.
-

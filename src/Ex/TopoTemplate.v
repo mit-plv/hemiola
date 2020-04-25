@@ -162,7 +162,7 @@ Definition TreeTopoNode (dtr: DTree) :=
     rqEdgeUpFrom dtr cidx = Some (rqUpFrom cidx) /\
     rsEdgeUpFrom dtr cidx = Some (rsUpFrom cidx) /\
     edgeDownTo dtr cidx = Some (downTo cidx).
-  
+
 Definition TreeTopoEdge (dtr: DTree) :=
   forall oidx midx,
     (rqEdgeUpFrom dtr oidx = Some midx \/
@@ -350,7 +350,7 @@ Section TreeTopo.
     apply extendIdx_IdxDisj.
     omega.
   Qed.
-             
+
   Lemma tree2Topo_TreeTopoChildrenInds:
     forall tr bidx, TreeTopoChildrenInds (fst (tree2Topo tr bidx)).
   Proof.
@@ -506,7 +506,7 @@ Section Facts.
     simpl in H; rewrite app_nil_r in H.
     assumption.
   Qed.
-    
+
   Lemma fold_left_base_c_minds_In:
     forall ifc ifcs bifc,
       SubList (c_minds ifc) (c_minds bifc) ->
@@ -924,7 +924,7 @@ Section Facts.
         eexists [_]; reflexivity.
       + omega.
   Qed.
-  
+
   Lemma tree2Topo_disj_inds:
     forall tr1 bidx1 tr2 bidx2,
       bidx1 ~*~ bidx2 ->
@@ -1016,7 +1016,7 @@ Section Facts.
             apply map_nth_error_inv in H1; destruct H1 as [[dtr1 cifc1] [? ?]].
             apply map_nth_error_inv in H2; destruct H2 as [[dtr2 cifc2] [? ?]].
             simpl in *; subst.
-            apply incMap_nth_error in H3; destruct H3 as [str1 [? ?]]. 
+            apply incMap_nth_error in H3; destruct H3 as [str1 [? ?]].
             apply incMap_nth_error in H4; destruct H4 as [str2 [? ?]].
             simpl in *.
             replace a1 with (fst (tree2Topo str1 bidx~>n1))
@@ -1049,7 +1049,7 @@ Section Facts.
             apply map_nth_error_inv in H1; destruct H1 as [[dtr1 cifc1] [? ?]].
             apply map_nth_error_inv in H2; destruct H2 as [[dtr2 cifc2] [? ?]].
             simpl in *; subst.
-            apply incMap_nth_error in H3; destruct H3 as [str1 [? ?]]. 
+            apply incMap_nth_error in H3; destruct H3 as [str1 [? ?]].
             apply incMap_nth_error in H4; destruct H4 as [str2 [? ?]].
             simpl in *.
             replace a1 with (fst (tree2Topo str1 bidx~>n1))
@@ -1291,7 +1291,7 @@ Section Facts.
     destruct str; simpl; intros.
     find_if_inside; inv H; simpl; eauto.
   Qed.
-  
+
   Lemma tree2Topo_RqRsChnsOnDTree:
     forall tr bidx, RqRsChnsOnDTree (fst (tree2Topo tr bidx)).
   Proof.
@@ -1436,7 +1436,7 @@ Section Facts.
         exists (l1ExtOf bidx).
         cbv [edgeDownTo downEdgesTo parentChnsOf]; simpl.
         cbv [hasIdx]; destruct (idx_dec _ _); [reflexivity|exfalso; auto].
-        
+
     - inv H0; simpl; split; intros.
       + apply tree2Topo_children_ext_rq_In in H0.
         destruct H0; [dest_in|].
@@ -1561,7 +1561,7 @@ Section Facts.
       find_if_inside; [eapply l1ExtOf_not_eq; eauto|].
       discriminate.
     }
-      
+
     destruct H0; subst;
       [exfalso; apply parentIdxOf_child_not_root in H1; [|assumption]; auto|].
     apply tree2Topo_children_oidx_In in H0.
@@ -1674,7 +1674,7 @@ Section Facts.
             }
           }
   Qed.
-  
+
   Lemma tree2Topo_li_child_li_l1:
     forall tr bidx oidx cidx,
       In oidx (c_li_indices (snd (tree2Topo tr bidx))) ->
@@ -2051,7 +2051,7 @@ Section Facts.
       destruct H0; [dest_in|].
       simpl in H0; destruct H0 as [ctr [ofs ?]]; dest.
       rewrite Forall_forall in H; specialize (H _ (nth_error_In _ _ H0) _ _ H3).
-      
+
       assert (subtree oidx (DNode {| dmc_me := bidx;
                                      dmc_ups := [bidx~>rqUpIdx; bidx~>rsUpIdx];
                                      dmc_downs := [bidx~>downIdx] |}
@@ -2153,7 +2153,7 @@ Section Facts.
     specialize (H3 _ _ H2); dest.
     repeat disc_rule_minds; auto.
   Qed.
-  
+
 End Facts.
 
 Ltac solve_in_l1_li :=
@@ -2188,6 +2188,7 @@ Ltac solve_ext_chns_disj :=
       apply tree2Topo_internal_rsUp_exts_disj
     | |- DisjList (map downTo _) (map _ (c_l1_indices _) ++ map _ (c_l1_indices _)) =>
       apply tree2Topo_internal_down_exts_disj
+    | |- SubList (remove _ _ _) _ => eapply SubList_trans; [apply remove_SubList|]
     | [H: SubList ?inds _ |- SubList ?inds _] =>
       first [assumption|eapply SubList_trans; [eassumption|]]
     | |- SubList (subtreeChildrenIndsOf _ _) (c_li_indices _ ++ c_l1_indices _) =>
@@ -2263,4 +2264,3 @@ Ltac derive_child_idx_in cidx :=
   | [Hin: In ?oidx (tl (c_li_indices _)), Hp: parentIdxOf _ idx = Some ?oidx |- _] =>
     pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ Hin) Hp)
   end; subst.
-

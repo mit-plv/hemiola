@@ -1211,6 +1211,20 @@ Proof.
   destruct H; auto.
 Qed.
 
+Lemma in_remove_neq:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a x: A) (l: list A),
+    In a l -> a <> x -> In a (remove eq_dec x l).
+Proof.
+  induction l; simpl; intros; auto.
+  destruct (eq_dec _ _); subst.
+  - destruct H; [exfalso; auto|].
+    apply IHl; auto.
+  - destruct H; subst.
+    + left; reflexivity.
+    + right; apply IHl; auto.
+Qed.
+
 Lemma remove_cons:
   forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
          (a: A) (l: list A),
@@ -1219,6 +1233,15 @@ Proof.
   intros; simpl.
   destruct (eq_dec _ _); auto.
   elim n; auto.
+Qed.
+
+Lemma remove_SubList:
+  forall {A} (eq_dec : forall x y : A, {x = y} + {x <> y})
+         (a: A) (l: list A),
+    SubList (remove eq_dec a l) l.
+Proof.
+  unfold SubList; intros.
+  eapply in_remove; eassumption.
 Qed.
 
 Lemma map_id:

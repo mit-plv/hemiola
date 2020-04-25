@@ -176,7 +176,7 @@ Section InvDirME.
       destruct Hx; auto.
       destruct H6; auto.
   Qed.
-  
+
   Lemma InvDirME_enqMsgs:
     forall oss orqs msgs,
       InvDirME topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
@@ -405,7 +405,7 @@ Section InvDirME.
       specialize (Hp Ho); rewrite Hpo in Hp;
       simpl in Hp; auto
     end.
-  
+
   Lemma mesi_InvDirME_step:
     Invariant.InvStep impl step_m (InvDirME topo).
   Proof. (* SKIP_PROOF_OFF *)
@@ -425,7 +425,7 @@ Section InvDirME.
             |].
 
     simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
-    
+
     - (*! Cases for the main memory *)
 
       (** Abstract the root. *)
@@ -467,7 +467,7 @@ Section InvDirME.
             { solve_valid. }
           }
         }
-        
+
         { disc_rule_conds_ex; disc_pre.
           { disc_NoRsME; solve_valid. }
           { disc_ObjDirME.
@@ -669,7 +669,7 @@ Section InvDirME.
           }
           { solve_by_silent. }
         }
-        
+
         { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
           { solve_valid. }
           { solve_by_silent. }
@@ -886,14 +886,14 @@ Section InvDirME.
           }
           { (* TODO: automate *)
             red; simpl; intros.
-            destruct H36; [solve_mesi|].
+            destruct H37; [solve_mesi|].
             dest; mred.
           }
         }
         { disc_ObjDirME; mred. }
         { solve_valid. }
       }
-      
+
       { (* [liDownIRsUpDown] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
@@ -994,7 +994,7 @@ Section InvDirME.
         { destruct H18; [solve_mesi|dest; congruence]. }
         { destruct H18; solve_mesi. }
       }
-      
+
     - (*! Cases for L1 caches *)
 
       (** Derive some necessary information: each Li has a parent. *)
@@ -1021,7 +1021,7 @@ Section InvDirME.
         }
         { solve_by_silent. }
       }
-      
+
       { disc_rule_conds_ex; simpl_InvDirME_msgs.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
@@ -1141,7 +1141,7 @@ Section InvDirME.
         }
         { disc_ObjDirME; solve_mesi. }
       }
-      
+
       (* END_SKIP_PROOF_OFF *)
   Qed.
 
@@ -1153,7 +1153,7 @@ Section InvDirME.
     - apply mesi_InvDirME_init.
     - apply mesi_InvDirME_step.
   Qed.
-  
+
 End InvDirME.
 
 Definition InvWB (topo: DTree) (st: State): Prop :=
@@ -1220,4 +1220,3 @@ Section InvWB.
   Qed.
 
 End InvWB.
-

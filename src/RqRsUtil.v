@@ -78,6 +78,8 @@ Section DecValue.
         (fun rqiu => rqiu.(rqi_midx_rsb) >>=[False] (fun _ => True)).
   Definition getUpLockIdxBack (orq: ORq Msg): option IdxT :=
     rqiu <-- orq@[upRq]; rqi_midx_rsb rqiu.
+  Definition getUpLockIdxBackI (orq: ORq Msg): IdxT :=
+    (getUpLockIdxBack orq) >>=[ii] (fun idx => idx).
 
   Definition UpLockBackNone `{OStateIfc}: OPrec :=
     fun ost orq mins =>
@@ -116,6 +118,8 @@ Section DecValue.
     rqid <-- orq@[downRq]; Some (map fst (rqi_rss rqid)).
   Definition getDownLockIdxBack (orq: ORq Msg): option IdxT :=
     rqid <-- orq@[downRq]; rqi_midx_rsb rqid.
+  Definition getDownLockIdxBackI (orq: ORq Msg): IdxT :=
+    (getDownLockIdxBack orq) >>=[ii] (fun idx => idx).
 
   Definition getFirstIdxFromI (inds: list IdxT): IdxT :=
     (hd_error inds) >>=[ii] (fun idx => idx).
@@ -138,10 +142,10 @@ End DecValue.
 
 Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMsgI
      UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
-     UpLockIdxBack getUpLockIdxBack UpLockBackNone
+     UpLockIdxBack getUpLockIdxBack getUpLockIdxBackI UpLockBackNone
      DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
-     DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack getFirstIdxFromI
-     MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq : RuleConds.
+     DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack getDownLockIdxBackI
+     getFirstIdxFromI MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq : RuleConds.
 
 Definition initORqs `{DecValue} (oinds: list IdxT): ORqs Msg :=
   fold_right (fun i m => m +[i <- []]) [] oinds.

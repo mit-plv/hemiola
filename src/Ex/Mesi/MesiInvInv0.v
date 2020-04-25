@@ -51,7 +51,7 @@ Section InvL1DirI.
     red; intros.
     inv H1; [assumption..|].
     simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
-    
+
     - (*! Cases for the main memory *)
       red; simpl.
       apply Forall_forall; intros oidx ?.
@@ -69,7 +69,7 @@ Section InvL1DirI.
       red in H0; simpl in H0.
       rewrite Forall_forall in H0; specialize (H0 _ H1).
       mred.
-      
+
       exfalso.
       pose proof (tree2Topo_WfCIfc tr 0) as [? _].
       apply (DisjList_NoDup idx_dec) in H4.
@@ -139,7 +139,7 @@ Section InvWBDir.
       do 2 red in H; dest_in.
     - destruct H as [idm [? ?]].
       do 2 red in H; dest_in.
-  Qed.      
+  Qed.
 
   Lemma mesi_InvWBDir_ext_in:
     forall oss orqs msgs,
@@ -254,11 +254,11 @@ Section InvWBDir.
     red; intros.
     exfalso; destruct H2 as [|[|]].
     - eapply MsgExistsSig_MsgsNotExist_false; [apply H0| |eassumption].
-      simpl; tauto.  
+      simpl; tauto.
     - eapply MsgExistsSig_MsgsNotExist_false; [apply H0| |eassumption].
-      simpl; tauto.  
+      simpl; tauto.
     - eapply MsgExistsSig_MsgsNotExist_false; [apply H1| |eassumption].
-      simpl; tauto.  
+      simpl; tauto.
   Qed.
 
   Lemma InvWBDir_enqMP_rq_valid:
@@ -542,7 +542,7 @@ Section InvWBDir.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H3; destruct H3.
 
@@ -804,7 +804,7 @@ Section InvWBCoh.
     destruct idm as [midx msg]; simpl in *.
     inv H2; exfalso; auto.
   Qed.
-  
+
   Lemma InvWBCoh_other_msg_id_enqMsgs:
     forall oss orqs msgs,
       InvWBCoh {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
@@ -882,7 +882,7 @@ Section InvWBCoh.
     let Hin := fresh "H" in
     let Hsig := fresh "H" in
     red; intros ? Hin Hsig;
-    repeat 
+    repeat
       match goal with
       | [Hc: CohInvRq _ _ _ |- _] => specialize (Hc _ Hin Hsig); dest
       | [Hi: ObjInvWRq _ _ \/ _ -> _ |- _] =>
@@ -955,7 +955,7 @@ Section InvWBCoh.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H3; destruct H3.
 
@@ -1023,4 +1023,3 @@ Section InvWBCoh.
   Qed.
 
 End InvWBCoh.
-

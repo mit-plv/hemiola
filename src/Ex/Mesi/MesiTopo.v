@@ -31,7 +31,7 @@ Section System.
     rewrite map_app, map_map, map_id; simpl.
     rewrite map_map, map_id; reflexivity.
   Qed.
-  
+
   Lemma mesi_GoodORqsInit: GoodORqsInit (initsOf impl).
   Proof.
     apply initORqs_GoodORqsInit.
@@ -65,7 +65,7 @@ Section System.
     eapply tree2Topo_ExtsOnDTree with (tr0:= tr) (bidx:= [0]); try reflexivity.
     destruct (tree2Topo _ _); reflexivity.
   Qed.
-  
+
   Lemma mesi_RqRsDTree: RqRsDTree topo impl.
   Proof.
     red; repeat ssplit.
@@ -143,7 +143,7 @@ Section System.
       { rewrite c_li_indices_head_rootOf by assumption.
         left; reflexivity.
       }
-      
+
       simpl.
       repeat
         match goal with
@@ -164,7 +164,7 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
         pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
         rewrite <-mesi_indices in H.
-        
+
         rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
         (** [RqUpDownSound] *)
@@ -178,7 +178,7 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
         pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
         rewrite <-mesi_indices in H.
-        
+
         rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
         (** [RqUpDownSound] *)
@@ -192,15 +192,19 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
         pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
         rewrite <-mesi_indices in H.
-        
+
         rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
         (** [RqUpDownSound] *)
         red; simpl; intros; dest.
-        repeat ssplit; [assumption| |intuition auto].
-        apply Forall_forall; intros.
-        apply H3 in H7.
-        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        repeat ssplit.
+        { assumption. }
+        { apply Forall_forall; intros.
+          apply in_remove in H7.
+          apply H2 in H7.
+          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        }
+        { apply remove_In. }
       }
 
     - (** Li caches *)
@@ -213,7 +217,7 @@ Section System.
       pose proof (c_li_l1_indices_has_parent
                     Htr _ _ (in_or_app _ _ _ (or_introl H0))).
       destruct H as [pidx ?].
-      
+
       repeat
         match goal with
         | |- Forall _ (_ ++ _) => apply Forall_app
@@ -234,7 +238,7 @@ Section System.
           apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
           pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
           rewrite <-mesi_indices in H1.
-          
+
           rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
           (** [RqUpDownSound] *)
@@ -248,7 +252,7 @@ Section System.
           apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
           pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
           rewrite <-mesi_indices in H1.
-          
+
           rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
           (** [RqUpDownSound] *)
@@ -262,15 +266,19 @@ Section System.
           apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
           pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
           rewrite <-mesi_indices in H1.
-          
+
           rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
           (** [RqUpDownSound] *)
           red; simpl; intros; dest.
-          repeat ssplit; [assumption| |intuition auto].
-          apply Forall_forall; intros.
-          apply H5 in H9.
-          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+          repeat ssplit.
+          { assumption. }
+          { apply Forall_forall; intros.
+            apply in_remove in H9.
+            apply H4 in H9.
+            eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+          }
+          { apply remove_In. }
         }
       }
 
@@ -291,14 +299,17 @@ Section System.
         (** [RsDownRqDownSound] *)
         red; simpl; intros; dest.
         red in H1.
+        unfold getUpLockIdxBackI, getUpLockIdxBack in *.
         destruct (orq@[upRq]) as [rqiu|]; simpl in *; auto.
         destruct H1 as [rcidx [rqUp ?]]; dest.
         pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H1).
-        rewrite <-mesi_indices in H8.
-        intros; repeat ssplit.
+        rewrite <-mesi_indices in H9.
+        intros; rewrite H11 in *.
+        repeat ssplit.
         { assumption. }
         { apply Forall_forall; intros.
-          apply H3 in H10.
+          apply in_remove in H12.
+          apply H3 in H12.
           eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
         }
         { exists rcidx, rqUp.
@@ -339,7 +350,7 @@ Section System.
       pose proof (c_li_l1_indices_has_parent
                     Htr _ _ (in_or_app _ _ _ (or_intror H0))).
       destruct H as [pidx ?].
-      
+
       repeat
         match goal with
         | |- Forall _ (_ ++ _) => apply Forall_app
@@ -499,7 +510,7 @@ Section System.
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        
+
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
            apply concat_In in H; dest;
@@ -588,7 +599,8 @@ Section System.
         { (* [liGetMRqUpDownS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
-          apply H5 in H11.
+          apply in_remove in H11.
+          apply H4 in H11.
           simpl in *; solve_GoodExtRssSys.
         }
 
@@ -611,7 +623,8 @@ Section System.
         { (* [liGetMRqUpDownS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H3; dest; subst.
-          apply H6 in H12.
+          apply in_remove in H12.
+          apply H5 in H12.
           simpl in *; solve_GoodExtRssSys.
         }
 
@@ -620,6 +633,7 @@ Section System.
         { (* [liGetMRsDownRqDownDirS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
+          apply in_remove in H5.
           apply H11 in H5.
           simpl in *; solve_GoodExtRssSys.
         }
@@ -654,9 +668,8 @@ Section System.
     - apply mesi_RqRsDTree.
     - apply mesi_GoodRqRsSys.
     - apply mesi_GoodRqRsInterfSys.
-  Qed.  
-  
+  Qed.
+
 End System.
 
 Hint Resolve mesi_GoodORqsInit mesi_WfDTree mesi_RqRsDTree mesi_RqRsSys.
-

@@ -50,7 +50,7 @@ Section Sim.
 
   Existing Instance Mesi.ImplOStateIfc.
 
-  (** NOTE: simulation only states about coherent values. 
+  (** NOTE: simulation only states about coherent values.
    * Exclusiveness is stated and proven as an invariant. *)
 
   Section ObjCoh.
@@ -416,15 +416,15 @@ Section Sim.
       (* rewrite inputs/outputs message ids *)
       | [H: msg_id ?rmsg = _ |- context[msg_id ?rmsg] ] => rewrite H
       end.
-  
+
   (*! Prove [SimMESI] for internal steps *)
 
   Ltac solve_ImplStateCoh :=
     idtac.
-  
+
   Ltac solve_SpecStateCoh :=
     eapply SimStateIntro; [solve_rule_conds_ex|].
-  
+
   Ltac solve_sim_mesi_ext_mp :=
     red; simpl; split; [|solve_sim_ext_mp].
 
@@ -552,7 +552,7 @@ Section Sim.
 
       (** Derive some properties of the root *)
       pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
-      
+
       assert (In (rootOf (fst (tree2Topo tr 0))) (c_li_indices (snd (tree2Topo tr 0)))).
       { rewrite c_li_indices_head_rootOf by assumption.
         left; reflexivity.
@@ -612,7 +612,7 @@ Section Sim.
           solve_sim_mesi.
           destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
         }
-        
+
         { (* [liGetSRqUpDownME] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
@@ -828,7 +828,7 @@ Section Sim.
           solve_sim_mesi.
           destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
         }
-        
+
         { (* [liGetSImmME] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
@@ -839,7 +839,7 @@ Section Sim.
           solve_sim_mesi.
           destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
         }
-        
+
         { (* [liGetSRqUpUp] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
@@ -1160,7 +1160,7 @@ Section Sim.
           apply Forall_forall;
           intros lidx ?; destruct (idx_dec lidx oidx); subst
         end.
-      
+
       Ltac solve_ImplStateCoh ::=
         case_ImplStateCoh_l1_me_others;
         [solve_ImplStateCoh_l1_me|solve_ImplStateCoh_l1_others].
@@ -1179,7 +1179,7 @@ Section Sim.
 
       + (* [l1GetSImm] *)
         disc_rule_conds_ex.
-        spec_case_get oidx.        
+        spec_case_get oidx.
         assert (NoRsI oidx msgs)
           by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
@@ -1260,14 +1260,14 @@ Section Sim.
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi; auto.
             solve_MsgsP.
           }
-          
+
       + (* [l1GetMImmM] *)
         disc_rule_conds_ex.
         spec_case_set oidx.
-        assert (NoRsI oidx msgs) 
+        assert (NoRsI oidx msgs)
           by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
         disc_rule_conds_ex.
-        
+
         solve_sim_mesi_ext_mp.
         solve_SpecStateCoh.
         case_ImplStateCoh_l1_me_others.
@@ -1321,7 +1321,7 @@ Section Sim.
             eassumption.
           }
           { split; [simpl; solve_mesi|solve_MsgsP]. }
-          
+
         * clear H4. (* In oidx .. *)
           mred; simpl.
           assert (exists lost lorq, oss@[lidx] = Some lost /\
@@ -1336,7 +1336,7 @@ Section Sim.
               try eassumption; try reflexivity; try (simpl; mred); try solve_mesi; auto.
             solve_MsgsP.
           }
-          
+
       + (* [l1DownIImm] *)
         disc_rule_conds_ex.
         spec_case_silent.
@@ -1349,7 +1349,7 @@ Section Sim.
         disc_rule_conds_ex.
         spec_case_silent.
         solve_sim_mesi.
-        
+
       + (* [l1InvRqUpUpM] *)
         disc_rule_conds_ex.
         spec_case_silent.
@@ -1382,4 +1382,3 @@ Section Sim.
   Qed.
 
 End Sim.
-

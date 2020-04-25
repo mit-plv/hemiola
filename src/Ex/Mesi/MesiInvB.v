@@ -145,7 +145,7 @@ Section ObjInvOk.
   Qed.
 
   Ltac disc_MesiUpLockInv_internal oidx :=
-    repeat 
+    repeat
       match goal with
       | [Hdl: MesiUpLockInv _ |- _] =>
         (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
@@ -155,7 +155,7 @@ Section ObjInvOk.
     disc_mesi_obj_invs; dest.
 
   Ltac disc_MesiDownLockInv_internal oidx :=
-    repeat 
+    repeat
       match goal with
       | [Hdl: MesiDownLockInv _ |- _] =>
         (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
@@ -243,7 +243,7 @@ Section ObjInvOk.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H3).
       destruct H2 as [pidx [? ?]].
       pose proof (Htn _ _ H5); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H4; destruct H4.
 
@@ -401,7 +401,7 @@ Section ObjInvOk.
         (** Derive that the child has the parent. *)
         assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
           by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-        
+
         dest_in; disc_rule_conds_ex.
         all: try (eapply MesiDownLockInv_update_None; eauto; fail).
         all: try (derive_child_chns cidx; derive_child_idx_in cidx;
@@ -418,7 +418,7 @@ Section ObjInvOk.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H3).
       destruct H2 as [pidx [? ?]].
       pose proof (Htn _ _ H5); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H4; destruct H4.
 
@@ -503,7 +503,7 @@ Section ObjInvOk.
 End ObjInvOk.
 
 Ltac disc_MesiUpLockInv oidx :=
-  repeat 
+  repeat
     match goal with
     | [Hdl: MesiUpLockInv _ |- _] =>
       (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
@@ -566,6 +566,7 @@ Section RootChnInv.
   Ltac solve_RootChnInv :=
     repeat
       match goal with
+      | [H: In _ (remove _ _ (dir_sharers _)) |- _] => apply in_remove in H
       | [H1: In _ ?l, H2: SubList ?l (subtreeChildrenIndsOf _ _) |- _] =>
         apply H2 in H1
       | [H: In _ (subtreeChildrenIndsOf _ _) |- _] =>
@@ -652,7 +653,7 @@ Section RootChnInv.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H3; destruct H3.
 
@@ -710,6 +711,5 @@ Section RootChnInv.
     - apply mesi_RootChnInv_init.
     - apply mesi_RootChnInv_step.
   Qed.
-  
-End RootChnInv.
 
+End RootChnInv.

@@ -46,7 +46,7 @@ Section Template.
                       nst ::= trs st.(ost) msg;
                     return {{ fst nst, st.(orq),
                               [(downTo cidx, rsMsg (snd nst))] }}))).
-  
+
   Definition immUpRule (oidx: IdxT)
              (prec: OPrec)
              (trs: OState -> Msg -> OState * Miv): Rule :=
@@ -131,7 +131,7 @@ Section Template.
                           addRqS st.(orq) downRq (map rsUpFrom (fst nst)),
                           map (fun cidx => (downTo cidx, rqMsg (snd nst)))
                               (fst nst) }}))).
-  
+
   Definition RqDownDownSound (oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
              (trs: OState -> Msg -> list IdxT * Miv): Prop :=
@@ -227,7 +227,7 @@ Section Template.
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg (snd nst))] }}))).
-  
+
   Definition rsUpUpRule (rqId: IdxT)
              (prec: OPrec)
              (trs: OState ->
@@ -278,25 +278,28 @@ Section Template.
             ~ In rcidx outInds).
 
   Definition RsDownRqDownSound (sys: System) (oidx: IdxT)
-             (prec: OPrec) (trs: OState -> Msg -> OState * (list IdxT * Miv)): Prop :=
+             (prec: OPrec) (trs: OState -> Msg -> IdxT -> OState * (list IdxT * Miv)): Prop :=
     forall ost orq rsin,
       prec ost orq [rsin] ->
       orq@[upRq] >>=[True]
          (fun rqiu =>
-            forall rq,
+            forall rq rsbTo,
               rqiu.(rqi_msg) = Some rq ->
-              fst (snd (trs ost rq)) <> nil /\
-              Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (snd (trs ost rq))) /\
+              rqiu.(rqi_midx_rsb) = Some rsbTo ->
+              fst (snd (trs ost rq rsbTo)) <> nil /\
+              Forall (fun cidx => parentIdxOf dtr cidx = Some oidx)
+                     (fst (snd (trs ost rq rsbTo))) /\
               exists rcidx rqUp,
                 parentIdxOf dtr rcidx = Some oidx /\
                 rqEdgeUpFrom dtr rcidx = Some rqUp /\
                 edgeDownTo dtr rcidx = rqiu.(rqi_midx_rsb) /\
                 In rcidx (map obj_idx (sys_objs sys)) /\
-                ~ In rcidx (fst (snd (trs ost rq)))).
+                ~ In rcidx (fst (snd (trs ost rq rsbTo)))).
 
   Definition rsDownRqDownRule (oidx: IdxT) (rqId: IdxT)
              (prec: OPrec)
-             (trs: OState -> Msg -> OState * (list IdxT * Miv)) :=
+             (trs: OState -> Msg (* rq *) -> IdxT (* rsbTo *) ->
+                   OState * (list IdxT * Miv)) :=
     rule[ridx]
     :requires (MsgsFromORq upRq /\ MsgIdsFrom [msgId] /\
                UpLockMsgId MRq rqId /\ UpLockIdxBack /\
@@ -304,13 +307,13 @@ Section Template.
     :transition
        (do (st --> (rq <-- getUpLockMsg st.(orq);
                       rsbTo <-- getUpLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) rq;
+                      nst ::= trs st.(ost) rq rsbTo;
                     return {{ fst nst,
                               addRq (removeRq st.(orq) upRq)
                                     downRq rq (map rsUpFrom (fst (snd nst))) rsbTo,
                               map (fun cidx => (downTo cidx, rqMsg (snd (snd nst))))
                                   (fst (snd nst)) }}))).
-  
+
 End Template.
 
 Notation "'rule.imm' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
@@ -600,14 +603,14 @@ Section Facts.
       disc_rule_conds_ex.
       specialize (H _ _ _ H7).
       rewrite Hrqi in H; simpl in H.
-      specialize (H _ Hmsg).
+      specialize (H _ _ Hmsg Hidx).
       destruct H as [? [? [rcidx [rqUp ?]]]]; dest.
       disc_rule_conds_ex.
       apply in_map_iff in H10; destruct H10 as [upCObj [? ?]]; subst.
       destruct (rqi_rss rqi) as [|[rsF rsV] rss] eqn:Hrss; [discriminate|].
       destruct rss; [|discriminate].
       simpl in *; inv H0.
-      
+
       (* NOTE: [eexists] in [solve_rule_conds_ex] does not work here,
        * so we provide the existence manually. *)
       exists (rsF, rsV); do 4 eexists; repeat ssplit.
@@ -617,17 +620,17 @@ Section Facts.
         exists rqi.
         exists {| rqi_msg := Some msg;
                   rqi_rss := map (fun rs => (rs, None))
-                                 (map rsUpFrom (fst (snd (trs post msg))));
+                                 (map rsUpFrom (fst (snd (trs post msg idx))));
                   rqi_midx_rsb := Some idx |}.
         solve_rule_conds_ex.
       }
       1: {
         solve_rule_conds_ex.
-        { destruct (fst (snd (trs post msg))); [auto|discriminate]. }
+        { destruct (fst (snd (trs post msg idx))); [auto|discriminate]. }
         { unfold idsOf; repeat rewrite map_length; reflexivity. }
         { apply Forall_forall; intros [rqTo rsFrom] ?; simpl.
           clear -Hdtr H0 H2 H11.
-          induction (fst (snd (trs post msg))) as [|cidx cinds]; [dest_in|].
+          induction (fst (snd (trs post msg idx))) as [|cidx cinds]; [dest_in|].
           inv H2; simpl in H0; destruct H0; dest.
           { inv H; destruct Hdtr as [[? ?] ?].
             specialize (H _ _ H3); dest.
@@ -636,7 +639,7 @@ Section Facts.
           }
           { eapply IHcinds; eauto.
             intro Hx; elim H11; right; assumption.
-          } 
+          }
         }
       }
   Qed.
@@ -847,10 +850,9 @@ Section DecValue.
     destruct H2.
     - dest; discriminate.
     - dest; disc_rule_conds_ex.
-      destruct (fst (snd (trs ost msg))); [discriminate|].
+      destruct (fst (snd (trs ost msg idx))); [discriminate|].
       inv H4; apply rqEdgeUpFrom_rqUpFrom in H10; discriminate.
   Qed.
-
 
   Lemma tree2Topo_immRule_not_RsToUpRule:
     forall tr bidx oidx ridx prec trs ost orq ins,
@@ -1054,7 +1056,7 @@ Section DecValue.
       specialize (H5 _ _ _ H0).
       disc_rule_conds_ex.
       specialize (H5 _ _ _ eq_refl); dest.
-      destruct (fst (snd (trs ost msg))); [discriminate|].
+      destruct (fst (snd (trs ost msg idx))); [discriminate|].
       inv H8.
       apply rsEdgeUpFrom_rsUpFrom in H4; discriminate.
     - dest.
@@ -1068,4 +1070,3 @@ Section DecValue.
   Qed.
 
 End DecValue.
-
