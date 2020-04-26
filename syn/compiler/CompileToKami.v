@@ -285,45 +285,52 @@ Section Compile.
       Definition compile_Rule_ost_vars :=
         compile_Rule_ost_vars_fix O hostf_ty.
 
-      Variable (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
+      Variables (msgIn: var (Struct KMsg))
+                (uln: string) (ul: var (Struct UpLock))
+                (dln: string) (dl: var (Struct DownLock))
+                (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
 
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
-        match he with
-        | HBConst _ c => Const _ (compile_const c)
-        | HVar _ _ v => Var _ (SyntaxKind _) v
-        | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")%kami_expr
-        | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")%kami_expr
-        | HObjIdxOf midx => (_truncate_ (compile_bexp midx))%kami_expr
-        | HMsgB mid mty mval =>
-          (STRUCT { "id" ::= compile_bexp mid;
-                    "type" ::= compile_bexp mty;
-                    "value" ::= compile_bexp mval })%kami_expr
-        | HMsgId msg => ((compile_bexp msg)!KMsg@."id")%kami_expr
-        | HMsgType msg => ((compile_bexp msg)!KMsg@."type")%kami_expr
-        | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")%kami_expr
-        | @HOstVal _ _ _ _ _ i hbt0 Heq =>
-          Var _ (SyntaxKind _)
-              (eq_rect
-                 hostf_ty[@i]
-                 (fun h => var (kind_of h))
-                 (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
-                          (fun T => T)
-                          (HVector.hvec_ith ostVars i)
-                          (var (kind_of hostf_ty[@i]))
-                          (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
-                 (HBType hbt0)
-                 (hostf_ty_compat i Heq))
-        end.
+        (match he with
+         | HBConst _ c => Const _ (compile_const c)
+         | HVar _ _ v => Var _ (SyntaxKind _) v
+         | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
+         | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
+         | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
+         | HMsgB mid mty mval =>
+           (STRUCT { "id" ::= compile_bexp mid;
+                     "type" ::= compile_bexp mty;
+                     "value" ::= compile_bexp mval })
+         | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
+         | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
+         | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
+         | @HOstVal _ _ _ _ _ i hbt0 Heq =>
+           Var _ (SyntaxKind _)
+               (eq_rect
+                  hostf_ty[@i]
+                  (fun h => var (kind_of h))
+                  (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
+                           (fun T => T)
+                           (HVector.hvec_ith ostVars i)
+                           (var (kind_of hostf_ty[@i]))
+                           (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
+                  (HBType hbt0)
+                  (hostf_ty_compat i Heq))
+         | HUpLockIdxBackI _ => ({$downIdx, #ul!UpLock@."ul_rsbTo"})
+         | HDownLockIdxBackI _ => (#dl!DownLock@."dl_rsbTo")
+         end)%kami_expr.
 
       Class CompExtExp :=
         { compile_eexp:
             forall (var: Kind -> Type) {het},
+              var (Struct UpLock) -> var (Struct DownLock) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
               Expr var (SyntaxKind (kind_of het));
           compile_eoprec:
             forall (var: Kind -> Type),
+              var (Struct UpLock) -> var (Struct DownLock) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heoprec (hvar_of var) ->
               Expr var (SyntaxKind Bool);
@@ -334,12 +341,8 @@ Section Compile.
         : Expr var (SyntaxKind (kind_of ht)) :=
         match he with
         | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var ostVars hee
+        | HEExp _ hee => compile_eexp var ul dl ostVars hee
         end.
-
-      Variables (msgIn: var (Struct KMsg))
-                (uln: string) (ul: var (Struct UpLock))
-                (dln: string) (dl: var (Struct DownLock)).
 
       Definition compile_Rule_uplock
                  (cont: var (Struct UpLock) -> ActionT var Void): ActionT var Void :=
@@ -416,7 +419,7 @@ Section Compile.
          | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
          | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
          | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
-         | HExtP _ ep => compile_eoprec _ ostVars ep
+         | HExtP _ ep => compile_eoprec _ ul dl ostVars ep
          | HNativeP _ _ => $$true
          end)%kami_expr.
 
@@ -585,9 +588,9 @@ Section Compile.
              ul <- compile_Rule_uplock uln;
              dl <- compile_Rule_downlock dln;
              compile_Rule_prec
-               ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
+               msgIn ul dl ostVars (hrule_precond hr (hvar_of var));;
              compile_Rule_trs
-               oidx ostin ostVars msgIn uln ul dln dl (hrule_trs hr))
+               oidx ostin msgIn uln ul dln dl ostVars (hrule_trs hr))
       |}.
 
     Definition compile_Rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):

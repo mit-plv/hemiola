@@ -123,6 +123,9 @@ Section DirExt.
                 hexp_dir var (HBType (HNat 3))
   | HDirGetSh: hexp_dir var (HEType HDir) ->
                hexp_dir var (HBType (HList HIdxO))
+  | HDirRemoveSh: hexp_dir var (HBType (HList HIdxO)) ->
+                  hbexp (bvar var) HIdxO ->
+                  hexp_dir var (HBType (HList HIdxO))
   | HDirAddSharer: hbexp (bvar var) HIdxO ->
                    hexp_dir var (HEType HDir) ->
                    hexp_dir var (HEType HDir)
@@ -148,14 +151,16 @@ Section DirExt.
     | HDirGetSt dir => dir_st (interp_hexp_dir dir ost orq mins)
     | HDirGetExcl dir => dir_excl (interp_hexp_dir dir ost orq mins)
     | HDirGetSh dir => dir_sharers (interp_hexp_dir dir ost orq mins)
-    | HDirGetStO oidx dir => getDir (interpBExp ost oidx) (interp_hexp_dir dir ost orq mins)
+    | HDirRemoveSh sh cidx => remove idx_dec (interpBExp ost orq cidx)
+                                     (interp_hexp_dir sh ost orq mins)
+    | HDirGetStO oidx dir => getDir (interpBExp ost orq oidx) (interp_hexp_dir dir ost orq mins)
     | HDirAddSharer oidx dir =>
-      addSharer (interpBExp ost oidx) (interp_hexp_dir dir ost orq mins)
+      addSharer (interpBExp ost orq oidx) (interp_hexp_dir dir ost orq mins)
     | HDirRemoveSharer oidx dir =>
-      removeSharer (interpBExp ost oidx) (interp_hexp_dir dir ost orq mins)
-    | HDirSetM oidx => setDirM (interpBExp ost oidx)
-    | HDirSetE oidx => setDirE (interpBExp ost oidx)
-    | HDirSetS oinds => setDirS (map (interpBExp ost) oinds)
+      removeSharer (interpBExp ost orq oidx) (interp_hexp_dir dir ost orq mins)
+    | HDirSetM oidx => setDirM (interpBExp ost orq oidx)
+    | HDirSetE oidx => setDirE (interpBExp ost orq oidx)
+    | HDirSetS oinds => setDirS (map (interpBExp ost orq) oinds)
     | HDirSetI _ => setDirI
     | HRqUpFrom oidx => rqUpFrom (interp_hexp_dir oidx ost orq mins)
     | HRsUpFrom oidx => rsUpFrom (interp_hexp_dir oidx ost orq mins)
@@ -168,13 +173,15 @@ Section DirExt.
 
   Inductive OPrecDir (var: htype -> Type): Type :=
   | DirLastSharer: hbexp (bvar var) HIdxO -> OPrecDir var
-  | DirNotLastSharer.
+  | DirNotLastSharer
+  | DirOtherSharerExists: hbexp (bvar var) HIdxO -> OPrecDir var.
 
   Definition interp_OPrecDir (pd: OPrecDir htypeDenote)
              (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)): Prop :=
     match pd with
-    | DirLastSharer cidx => LastSharer (ost#[dir])%hvec (interpBExp ost cidx)
+    | DirLastSharer cidx => LastSharer (ost#[dir])%hvec (interpBExp ost orq cidx)
     | DirNotLastSharer _ => NotLastSharer (ost#[dir])%hvec
+    | DirOtherSharerExists cidx => OtherSharerExists (ost#[dir])%hvec (interpBExp ost orq cidx)
     end.
 
   Instance DirExtExp: ExtExp :=
@@ -270,9 +277,11 @@ Ltac renote_bexp :=
   repeat
     (cbv [rqMsg rsMsg miv_id miv_value];
      try match goal with
-         | |- interpBExp _ _ = ?t =>
+         | |- interpBExp _ _ _ = ?t =>
            match t with
            | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
+           | getUpLockIdxBackI _ => instantiate (1:= HUpLockIdxBackI _); reflexivity
+           | getDownLockIdxBackI _ => instantiate (1:= HDownLockIdxBackI _); reflexivity
            | idOf _ => instantiate (1:= HIdmId _); simpl; f_equal
            | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
            | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
@@ -280,7 +289,6 @@ Ltac renote_bexp :=
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
            | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal
            | msg_value _ => instantiate (1:= HMsgValue _); simpl; f_equal
-           | [_]%list => instantiate (1:= HSingleton _); simpl; f_equal
            | _ =>
              tryif is_var t then fail
              else (instantiate (1:= HBConst _ _); simpl; renote_const)
@@ -291,9 +299,9 @@ Ltac renote_bexp :=
 Ltac renote_list_bexp :=
   repeat
     match goal with
-    | |- map (interpBExp _) _ = (_ :: _)%list =>
+    | |- map (interpBExp _ _) _ = (_ :: _)%list =>
       instantiate (1:= (_ :: _)%list); simpl; f_equal
-    | |- map (interpBExp _) _ = nil =>
+    | |- map (interpBExp _ _) _ = nil =>
       instantiate (1:= nil); reflexivity
     end; renote_bexp.
 
@@ -489,6 +497,7 @@ Ltac renote_eexp_dir :=
       | dir_st _ => instantiate (1:= HDirGetSt _); simpl; f_equal
       | dir_excl _ => instantiate (1:= HDirGetExcl _); simpl; f_equal
       | dir_sharers _ => instantiate (1:= HDirGetSh _); simpl; f_equal
+      | remove _ _ _ => instantiate (1:= HDirRemoveSh _ _); simpl; f_equal; [renote_bexp|]
       | getDir _ _ => instantiate (1:= HDirGetStO _ _); simpl; f_equal; [renote_bexp|]
       | addSharer _ _ =>
         instantiate (1:= HDirAddSharer _ _); simpl; f_equal; [renote_bexp|]
@@ -516,7 +525,9 @@ Ltac renote_OPrec_dir :=
     | NotLastSharer _ =>
       instantiate (1:= DirNotLastSharer _); simpl; apply iff_refl
     | LastSharer _ _ =>
-      instantiate (1:= DirLastSharer _); simpl; apply p_f_equal
+      instantiate (1:= DirLastSharer _); simpl; apply p_f_equal; renote_bexp
+    | OtherSharerExists _ _ =>
+      instantiate (1:= DirOtherSharerExists _); simpl; apply p_f_equal; renote_bexp
     end
   end.
 Ltac renote_OPrec_ext ::= renote_OPrec_dir.

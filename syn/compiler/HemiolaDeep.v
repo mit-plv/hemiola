@@ -78,7 +78,9 @@ Section Reify.
     | HMsgId: hbexp HMsg -> hbexp HIdxM
     | HMsgType: hbexp HMsg -> hbexp HBool
     | HMsgValue: hbexp HMsg -> hbexp hdv_type
-    | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt.
+    | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt
+    | HUpLockIdxBackI: hbexp HIdxQ
+    | HDownLockIdxBackI: hbexp HIdxQ.
 
   End Basis.
 
@@ -248,6 +250,8 @@ Section Reify.
   Arguments HMsgType {var}.
   Arguments HMsgValue {var}.
   Arguments HOstVal {var}.
+  Arguments HUpLockIdxBackI {var}.
+  Arguments HDownLockIdxBackI {var}.
   Arguments HBExp {_ _} {var} {hbt}.
   Arguments HEExp {_ _} {var} {ht}.
   Arguments HORqI {_ _} {var}.
@@ -318,6 +322,8 @@ Section Reify.
           match host_ty_ok_i _ Heq with
           | eq_refl => (ost#[i])%hvec
           end
+        | HUpLockIdxBackI => getUpLockIdxBackI orq
+        | HDownLockIdxBackI => getDownLockIdxBackI orq
         end.
 
       Definition interpExp {ht} (e: hexp htypeDenote ht): htypeDenote ht :=
