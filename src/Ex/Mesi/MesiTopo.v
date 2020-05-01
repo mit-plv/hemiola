@@ -503,9 +503,7 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex; try solve_mesi.
-          f_equal; apply M.add_remove_comm; discriminate.
-        }
+        { clear; solve_rule_conds_ex; try solve_mesi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -522,9 +520,7 @@ Section System.
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_ex; try solve_mesi.
-          f_equal; apply M.add_remove_comm; discriminate.
-        }
+        { clear; solve_rule_conds_ex; try solve_mesi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -541,9 +537,7 @@ Section System.
         { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_ex; try intuition solve_mesi.
-          f_equal; apply M.add_remove_comm; discriminate.
-        }
+        { clear; solve_rule_conds_ex; try intuition solve_mesi. }
 
     - (** L1 cache *)
       apply Forall_forall; intros.
