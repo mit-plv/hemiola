@@ -277,10 +277,6 @@ Section ObjInvOk.
         destruct H22; dest.
         all: solve_MesiUpLockInv oidx.
       }
-      { disc_MesiDownLockInv_internal oidx.
-        destruct H22; dest.
-        all: solve_MesiUpLockInv oidx.
-      }
 
     - (*! Cases for L1 caches *)
 
