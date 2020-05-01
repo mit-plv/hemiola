@@ -64,13 +64,14 @@ Section ObjInv.
                      ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM /\
                      In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
                      map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
-      | mesiDownRqI: DownLockFromParent oidx rqid /\
-                     ((ost#[dir].(dir_st) = mesiS /\
-                       SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                       map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
-                      (mesiE <= ost#[dir].(dir_st) <= mesiM /\
-                       In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                       map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+      | mesiDownRqIS: DownLockFromParent oidx rqid /\
+                      ost#[dir].(dir_st) = mesiS /\
+                      SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+                      map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)
+      | mesiDownRqIM: DownLockFromParent oidx rqid /\
+                      mesiE <= ost#[dir].(dir_st) <= mesiM /\
+                      In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                      map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
       end).
 
   Definition MesiObjInvs (oidx: IdxT): ObjInv :=

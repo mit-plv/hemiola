@@ -15,8 +15,10 @@ Definition mesiDownRsS: IdxT := 0~>6.
 
 Definition mesiRqM: IdxT := 1~>2.
 Definition mesiRsM: IdxT := 1~>3.
-Definition mesiDownRqI: IdxT := 1~>4.
-Definition mesiDownRsI: IdxT := 1~>5.
+Definition mesiDownRqIS: IdxT := 1~>4.
+Definition mesiDownRsIS: IdxT := 1~>5.
+Definition mesiDownRqIM: IdxT := 1~>6.
+Definition mesiDownRsIM: IdxT := 1~>7.
 
 Definition mesiInvRq: IdxT := 2~>4.
 Definition mesiInvWRq: IdxT := 2~>5.

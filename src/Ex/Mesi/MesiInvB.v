@@ -189,7 +189,7 @@ Section ObjInvOk.
 
   Lemma MesiUpLockInv_mutual_step:
     Invariant.MutualInvStep1 impl step_m MesiUpLockInv MesiDownLockInv.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -235,6 +235,10 @@ Section ObjInvOk.
         destruct H17; dest.
         all: solve_MesiUpLockInv oidx.
       }
+      { disc_MesiDownLockInv_internal oidx.
+        destruct H17; dest.
+        all: solve_MesiUpLockInv oidx.
+      }
 
     - (*! Cases for Li caches *)
 
@@ -273,6 +277,10 @@ Section ObjInvOk.
         destruct H22; dest.
         all: solve_MesiUpLockInv oidx.
       }
+      { disc_MesiDownLockInv_internal oidx.
+        destruct H22; dest.
+        all: solve_MesiUpLockInv oidx.
+      }
 
     - (*! Cases for L1 caches *)
 
@@ -283,7 +291,7 @@ Section ObjInvOk.
       all: try (solve_MesiUpLockInv oidx; fail).
       all: solve_MesiUpLockInv oidx; unfold addRqS; mred.
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   (*! [MesiDownLockInv] *)
@@ -370,7 +378,7 @@ Section ObjInvOk.
 
   Lemma MesiDownLockInv_mutual_step:
     Invariant.MutualInvStep2 impl step_m MesiUpLockInv MesiDownLockInv.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -459,7 +467,7 @@ Section ObjInvOk.
       all: try (eapply MesiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem MesiLockInv_ok:
@@ -593,7 +601,7 @@ Section RootChnInv.
 
   Lemma mesi_RootChnInv_step:
     Invariant.InvStep impl step_m (RootChnInv tr 0).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -700,7 +708,7 @@ Section RootChnInv.
       Unshelve.
       all: assumption.
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_RootChnInv_ok:

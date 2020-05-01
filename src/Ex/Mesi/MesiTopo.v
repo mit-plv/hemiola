@@ -423,7 +423,7 @@ Section System.
   Ltac disc_rule_custom ::= disc_mesi_obj_invs.
 
   Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl (MesiObjInvs topo).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     repeat
       match goal with
       | |- RqUpRsUpOkSys _ _ _ => red
@@ -467,12 +467,19 @@ Section System.
           { destruct H17; dest; try solve [congruence|solve_mesi]. }
           { destruct H17; dest; try solve [congruence|solve_mesi]. }
         }
+        { clear; solve_rule_conds_ex.
+          { destruct H17; dest; try solve [congruence|solve_mesi]. }
+          { destruct H17; dest; try solve [congruence|solve_mesi]. }
+        }
+        { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex.
-          { destruct H16; dest; try solve [congruence|solve_mesi]. }
-          { destruct H16; dest; try solve [congruence|solve_mesi].
-            f_equal. apply M.add_remove_comm; discriminate.
-          }
+          { solve_mesi. }
+          { f_equal; apply M.add_remove_comm; discriminate. }
+        }
+        { clear; solve_rule_conds_ex.
+          { solve_mesi. }
+          { f_equal; apply M.add_remove_comm; discriminate. }
         }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
@@ -488,13 +495,16 @@ Section System.
         { clear; solve_rule_conds_ex.
           all: try (destruct H17; dest; try solve [congruence|solve_mesi]).
         }
-        { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex.
-          { destruct H16; dest; try solve [congruence|solve_mesi]. }
-          { destruct H16; dest; try solve [congruence|solve_mesi]. }
-          { destruct H16; dest; try solve [congruence|solve_mesi].
-            f_equal. apply M.add_remove_comm; discriminate.
-          }
+          all: try (destruct H17; dest; try solve [congruence|solve_mesi]).
+        }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
         }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
@@ -508,8 +518,13 @@ Section System.
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -522,8 +537,13 @@ Section System.
         { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try intuition solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
 
     - (** L1 cache *)
       apply Forall_forall; intros.
@@ -538,23 +558,27 @@ Section System.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; solve_mesi. }
         { clear; solve_rule_conds_const. }
+        { clear; solve_rule_conds_const. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const. }
+        { clear; solve_rule_conds_const; solve_mesi. }
         { clear; solve_rule_conds_const; solve_mesi. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi. }
+        { clear; solve_rule_conds_const; try solve_mesi. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_const; try solve_mesi. }
+        { clear; solve_rule_conds_const; try solve_mesi. }
 
-        (* END_SKIP_PROOF_OFF *)
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Ltac solve_GoodExtRssSys :=
@@ -585,7 +609,7 @@ Section System.
       end.
 
   Lemma mesi_GoodExtRssSys: GoodExtRssSys impl.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
@@ -652,7 +676,7 @@ Section System.
       repeat constructor.
       all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma mesi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl (MesiObjInvs topo).

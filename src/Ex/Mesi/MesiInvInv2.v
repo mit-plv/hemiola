@@ -43,7 +43,7 @@ Section InvNotOwned.
     red; intros.
     destruct H as [idm [? ?]].
     do 2 red in H; dest_in.
-  Qed.      
+  Qed.
 
   Lemma mesi_InvNotOwned_ext_in:
     forall oss orqs msgs,
@@ -257,7 +257,7 @@ Section InvNotOwned.
 
   Lemma mesi_InvNotOwned_step:
     Invariant.InvStep impl step_m InvNotOwned.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -310,6 +310,9 @@ Section InvNotOwned.
       { disc_rule_conds_ex.
         simpl_InvNotOwned; solve_InvNotOwned.
       }
+      { disc_rule_conds_ex.
+        simpl_InvNotOwned; solve_InvNotOwned.
+      }
 
     - (*! Cases for Li caches *)
 
@@ -320,7 +323,7 @@ Section InvNotOwned.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H3; destruct H3.
 
@@ -392,7 +395,7 @@ Section InvNotOwned.
         { assumption. }
       }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvNotOwned_ok:
@@ -551,7 +554,7 @@ Section InvDirE.
       simpl; intro Hx; destruct Hx; auto.
     - intros; apply MsgsP_enqMP_inv in H4; auto.
   Qed.
-  
+
   Lemma InvDirE_enqMsgs:
     forall oss orqs msgs,
       InvDirE topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
@@ -766,7 +769,7 @@ Section InvDirE.
 
   Lemma mesi_InvDirE_step:
     Invariant.InvStep impl step_m (InvDirE topo).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -785,7 +788,7 @@ Section InvDirE.
             |].
 
     simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
-    
+
     - (*! Cases for the main memory *)
 
       (** Abstract the root. *)
@@ -819,7 +822,7 @@ Section InvDirE.
             { solve_valid. }
           }
         }
-        
+
         { (* [liGetSImmME] *)
           disc_rule_conds_ex; disc.
           { solve_valid. }
@@ -926,13 +929,21 @@ Section InvDirE.
         { solve_by_diff_dir. }
       }
 
-      { (* [liDownIRsUpDown] *)
+      { (* [liDownIRsUpDownS] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirE_msgs; disc.
         { solve_valid. }
         { solve_by_diff_dir. }
-      }        
+      }
+
+      { (* [liDownIRsUpDownME] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirE_msgs; disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
+      }
 
     - (*! Cases for Li caches *)
 
@@ -1099,7 +1110,7 @@ Section InvDirE.
           specialize (Hdme H31); dest.
 
           solve_by_NoRsSI_false.
-        }          
+        }
         { solve_by_diff_dir. }
         { destruct (idx_dec cidx oidx0); subst.
           { solve_by_idx_false. }
@@ -1202,8 +1213,8 @@ Section InvDirE.
         { solve_by_diff_dir. }
         { solve_valid. }
       }
-      
-      { (* [liDownIRsUpDown] *)
+
+      { (* [liDownIRsUpDownS] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirE_msgs; disc.
@@ -1211,7 +1222,25 @@ Section InvDirE.
         { solve_by_diff_dir. }
       }
 
-      { (* [liDownIImm] *)
+      { (* [liDownIRsUpDownME] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirE_msgs; disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
+      }
+
+      { (* [liDownIImmS] *)
+        disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirE.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
+      }
+
+      { (* [liDownIImmME] *)
         disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
         exfalso.
         subst topo; disc_rule_conds_ex.
@@ -1230,7 +1259,20 @@ Section InvDirE.
         disc_ObjDirE; mred.
       }
 
-      { (* [liDownIRsUpUp] *)
+      { (* [liDownIRsUpUpS] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirE_msgs; disc.
+        { subst topo; disc_rule_conds_ex.
+          disc_ObjDirE.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+          solve_by_child_downlock_to_parent oidx.
+        }
+        { solve_by_diff_dir. }
+      }
+
+      { (* [liDownIRsUpUpME] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirE_msgs; disc.
@@ -1272,7 +1314,7 @@ Section InvDirE.
       { (* [liPushImm] *)
         disc_rule_conds_ex; disc; solve_valid.
       }
-      
+
     - (*! Cases for L1 caches *)
 
       (** Derive some necessary information: each Li has a parent. *)
@@ -1296,7 +1338,7 @@ Section InvDirE.
         red in H16; mred; specialize (H0 H16); dest.
         solve_valid.
       }
-      
+
       { disc_rule_conds_ex; simpl_InvDirE_msgs.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
@@ -1316,7 +1358,7 @@ Section InvDirE.
           specialize (Hdme H30); dest.
 
           solve_by_NoRsSI_false.
-        }          
+        }
         { solve_by_diff_dir. }
       }
 
@@ -1398,6 +1440,15 @@ Section InvDirE.
       }
 
       { disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirE.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
+      }
+
+      { disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
         disc_ObjDirE; solve_mesi.
       }
 
@@ -1419,8 +1470,8 @@ Section InvDirE.
         { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
         { disc_ObjDirE; solve_mesi. }
       }
-      
-      (* END_SKIP_PROOF_OFF *)
+
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvDirE_ok:
@@ -1464,7 +1515,7 @@ Section InvNWB.
     pose proof (mesi_InvNotOwned_ok H) as Hno.
     pose proof (mesi_InvDirE_ok H) as Hde.
     pose proof (mesi_InvWBDir_ok H) as Hwd.
-    
+
     red; intros.
     specialize (Hoin oidx).
     specialize (Hmcf oidx).
@@ -1529,4 +1580,3 @@ Section InvNWB.
   Qed.
 
 End InvNWB.
-

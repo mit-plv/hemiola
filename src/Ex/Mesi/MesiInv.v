@@ -43,9 +43,12 @@ Section CoherenceUnit.
       sigOf idm = (rqUpFrom oidx, (MRq, mesiInvWRq)) ->
       mesiS <= ost#[status] -> msg_value (valOf idm) = ost#[val].
 
+  Definition ObjInvRs :=
+    MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs.
+
   (** 1) Exclusiveness: if a coherence unit is exclusive, then all other units
    * are in an invalid status. *)
-  
+
   Definition ObjExcl0 :=
     mesiE <= ost#[status] /\ NoRsI.
 
@@ -53,22 +56,6 @@ Section CoherenceUnit.
     ObjExcl0 \/
     MsgExistsSig (downTo oidx, (MRs, mesiRsE)) msgs \/
     MsgExistsSig (downTo oidx, (MRs, mesiRsM)) msgs.
-
-  Definition NoCohMsgs :=
-    MsgsNotExist [(downTo oidx, (MRs, mesiRsS));
-                    (downTo oidx, (MRs, mesiRsE));
-                    (downTo oidx, (MRs, mesiRsM));
-                    (rsUpFrom oidx, (MRs, mesiDownRsS));
-                    (rsUpFrom oidx, (MRs, mesiDownRsI))] msgs.
-
-  Definition ObjInvalid0 :=
-    ost#[status] <= mesiI /\ NoCohMsgs.
-
-  Definition ObjInvRs :=
-    MsgExistsSig (downTo oidx, (MRs, mesiInvRs)) msgs.
-  
-  Definition ObjInvalid :=
-    ObjInvalid0 \/ ObjInvRs.
 
   (** 2) Clean "E" in MESI *)
 
@@ -79,7 +66,7 @@ Section CoherenceUnit.
   Definition ObjDirE (cidx: IdxT) :=
     ost#[dir].(dir_st) = mesiE /\ ost#[dir].(dir_excl) = cidx /\
     orq@[downRq] = None.
-  
+
   Definition ObjInvRq :=
     MsgExistsSig (rqUpFrom oidx, (MRq, mesiInvRq)) msgs.
 
@@ -119,7 +106,7 @@ Section Facts.
     eapply H; [|eassumption].
     inv e; auto.
   Qed.
-    
+
   Lemma RootChnInv_root_NoRqI:
     forall tr bidx st,
       RootChnInv tr bidx st ->
@@ -131,7 +118,7 @@ Section Facts.
     do 2 (find_if_inside; [eapply H; [|eassumption]; inv e; auto|]).
     auto.
   Qed.
-  
+
 End Facts.
 
 Ltac disc_bind_true :=
@@ -327,10 +314,9 @@ Ltac derive_parent_downlock_by_RqDown oidx :=
                Hf: FirstMPI ?msgs (?midx, ?msg),
                    Hmt: msg_type ?msg = MRq |- _] =>
         destruct Hmcf as [Hmcf _];
-        specialize (Hmcf (midx, msg) eq_refl 
+        specialize (Hmcf (midx, msg) eq_refl
                          ltac:(simpl; rewrite Hmt; reflexivity)
                                 (FirstMP_InMP Hf))
       end.
 
 Hint Unfold NoRsI ImplOStateMESI: RuleConds.
-

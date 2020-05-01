@@ -408,7 +408,7 @@ Section InvDirME.
 
   Lemma mesi_InvDirME_step:
     Invariant.InvStep impl step_m (InvDirME topo).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -596,7 +596,18 @@ Section InvDirME.
           { solve_valid. }
         }
       }
-
+      { disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        disc_pre.
+        { disc_NoRsME; solve_valid. }
+        { disc_ObjDirME.
+          solve_by_NoRsME_false.
+        }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
+      }
       { disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         disc_pre.
@@ -894,7 +905,7 @@ Section InvDirME.
         { solve_valid. }
       }
 
-      { (* [liDownIRsUpDown] *)
+      { (* [liDownIRsUpDownS] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         disc_pre.
@@ -906,7 +917,29 @@ Section InvDirME.
         }
       }
 
-      { (* [liDownIImm] *)
+      { (* [liDownIRsUpDownME] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        disc_pre.
+        { disc_NoRsME; solve_valid. }
+        { disc_ObjDirME; solve_by_NoRsME_false. }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
+      }
+
+      { (* [liDownIImmS] *)
+        disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirME.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
+      }
+
+      { (* [liDownIImmME] *)
         disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         exfalso.
         subst topo; disc_rule_conds_ex.
@@ -921,13 +954,27 @@ Section InvDirME.
         { solve_valid. }
         { disc_ObjDirME; mred. }
       }
+
       { (* [liDownIRqDownDownDirME] *)
         disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         { solve_valid. }
         { disc_ObjDirME; mred. }
       }
 
-      { (* [liDownIRsUpUp] *)
+      { (* [liDownIRsUpUpS] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirME_msgs; disc.
+        { subst topo; disc_rule_conds_ex.
+          disc_ObjDirME.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+          solve_by_child_downlock_to_parent oidx.
+        }
+        { solve_by_diff_dir. }
+      }
+
+      { (* [liDownIRsUpUpME] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirME_msgs; disc.
@@ -1101,6 +1148,15 @@ Section InvDirME.
       }
 
       { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirME.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
+      }
+
+      { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
         { solve_valid. }
         { disc_ObjDirME; solve_mesi. }
       }
@@ -1110,8 +1166,7 @@ Section InvDirME.
         { disc_ObjDirME; solve_mesi. }
       }
 
-      { (* [liInvRsDownDown] *)
-        disc_rule_conds_ex.
+      { disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
         derive_InvWBDir oidx.
         assert (ObjInvRs oidx msgs) as Hirs.
@@ -1142,7 +1197,7 @@ Section InvDirME.
         { disc_ObjDirME; solve_mesi. }
       }
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem mesi_InvDirME_ok:
