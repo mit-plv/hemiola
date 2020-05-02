@@ -145,7 +145,7 @@ Section ObjInvOk.
   Qed.
 
   Ltac disc_MsiUpLockInv_internal oidx :=
-    repeat 
+    repeat
       match goal with
       | [Hdl: MsiUpLockInv _ |- _] =>
         (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
@@ -155,7 +155,7 @@ Section ObjInvOk.
     disc_msi_obj_invs; dest.
 
   Ltac disc_MsiDownLockInv_internal oidx :=
-    repeat 
+    repeat
       match goal with
       | [Hdl: MsiDownLockInv _ |- _] =>
         (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
@@ -189,7 +189,7 @@ Section ObjInvOk.
 
   Lemma MsiUpLockInv_mutual_step:
     Invariant.MutualInvStep1 impl step_m MsiUpLockInv MsiDownLockInv.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -243,7 +243,7 @@ Section ObjInvOk.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H3).
       destruct H2 as [pidx [? ?]].
       pose proof (Htn _ _ H5); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H4; destruct H4.
 
@@ -282,7 +282,7 @@ Section ObjInvOk.
       all: try (solve_MsiUpLockInv oidx; fail).
       all: solve_MsiUpLockInv oidx; unfold addRqS; mred.
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   (*! [MsiDownLockInv] *)
@@ -369,7 +369,7 @@ Section ObjInvOk.
 
   Lemma MsiDownLockInv_mutual_step:
     Invariant.MutualInvStep2 impl step_m MsiUpLockInv MsiDownLockInv.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -400,7 +400,7 @@ Section ObjInvOk.
         (** Derive that the child has the parent. *)
         assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
           by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-        
+
         dest_in; disc_rule_conds_ex.
         all: try (eapply MsiDownLockInv_update_None; eauto; fail).
         all: try (derive_child_chns cidx; derive_child_idx_in cidx;
@@ -417,7 +417,7 @@ Section ObjInvOk.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H3).
       destruct H2 as [pidx [? ?]].
       pose proof (Htn _ _ H5); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H4; destruct H4.
 
@@ -459,7 +459,7 @@ Section ObjInvOk.
       all: try (eapply MsiDownLockInv_no_update; eauto;
                 unfold addRqS; mred; fail).
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem MsiLockInv_ok:
@@ -503,7 +503,7 @@ Section ObjInvOk.
 End ObjInvOk.
 
 Ltac disc_MsiUpLockInv oidx :=
-  repeat 
+  repeat
     match goal with
     | [Hdl: MsiUpLockInv _ |- _] =>
       (specialize (Hdl oidx); do 2 red in Hdl; simpl in Hdl)
@@ -566,6 +566,7 @@ Section RootChnInv.
   Ltac solve_RootChnInv :=
     repeat
       match goal with
+      | [H: In _ (remove _ _ (dir_sharers _)) |- _] => apply in_remove in H
       | [H1: In _ ?l, H2: SubList ?l (subtreeChildrenIndsOf _ _) |- _] =>
         apply H2 in H1
       | [H: In _ (subtreeChildrenIndsOf _ _) |- _] =>
@@ -592,7 +593,7 @@ Section RootChnInv.
 
   Lemma msi_RootChnInv_step:
     Invariant.InvStep impl step_m (RootChnInv tr 0).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -652,7 +653,7 @@ Section RootChnInv.
       pose proof (c_li_indices_tail_has_parent Htr _ _ H2).
       destruct H1 as [pidx [? ?]].
       pose proof (Htn _ _ H4); dest.
-      
+
       (** Do case analysis per a rule. *)
       apply in_app_or in H3; destruct H3.
 
@@ -699,7 +700,7 @@ Section RootChnInv.
       Unshelve.
       all: assumption.
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem msi_RootChnInv_ok:
@@ -710,6 +711,5 @@ Section RootChnInv.
     - apply msi_RootChnInv_init.
     - apply msi_RootChnInv_step.
   Qed.
-  
-End RootChnInv.
 
+End RootChnInv.

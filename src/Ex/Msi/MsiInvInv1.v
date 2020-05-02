@@ -174,7 +174,7 @@ Section InvDirM.
       destruct Hx; auto.
       destruct H6; auto.
   Qed.
-  
+
   Lemma InvDirM_enqMsgs:
     forall oss orqs msgs,
       InvDirM topo {| st_oss:= oss; st_orqs:= orqs; st_msgs:= msgs |} ->
@@ -267,7 +267,7 @@ Section InvDirM.
       eapply Forall_impl; [|eapply H];
       simpl; intros; split; solve_msg
     end.
-  
+
   Ltac simpl_InvDirM_msgs :=
     try match goal with
         | [Hr: idsOf _ = map fst ?rss |- context [map fst ?rss] ] => rewrite <-Hr
@@ -401,10 +401,10 @@ Section InvDirM.
       specialize (Hp Ho); rewrite Hpo in Hp;
       simpl in Hp; auto
     end.
-  
+
   Lemma msi_InvDirM_step:
     Invariant.InvStep impl step_m (InvDirM topo).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; intros.
     pose proof (footprints_ok
                   (msi_GoodORqsInit Htr)
@@ -421,7 +421,7 @@ Section InvDirM.
             |].
 
     simpl in H2; destruct H2; [subst|apply in_app_or in H1; destruct H1].
-    
+
     - (*! Cases for the main memory *)
 
       (** Abstract the root. *)
@@ -664,7 +664,7 @@ Section InvDirM.
           }
           { solve_by_silent. }
         }
-        
+
         { disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
           { solve_valid. }
           { solve_by_silent. }
@@ -855,14 +855,14 @@ Section InvDirM.
           }
           { (* TODO: automate *)
             red; simpl; intros.
-            destruct H36; [solve_msi|].
+            destruct H37; [solve_msi|].
             dest; mred.
           }
         }
         { disc_ObjDirM; mred. }
         { solve_valid. }
       }
-      
+
       { (* [liDownIRsUpDown] *)
         disc_rule_conds_ex.
         disc_MsiDownLockInv oidx Hmdl.
@@ -964,7 +964,7 @@ Section InvDirM.
         { solve_msi. }
         { congruence. }
       }
-      
+
     - (*! Cases for L1 caches *)
 
       (** Derive some necessary information: each Li has a parent. *)
@@ -991,7 +991,7 @@ Section InvDirM.
         }
         { solve_by_silent. }
       }
-      
+
       { disc_rule_conds_ex; simpl_InvDirM_msgs.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
@@ -1087,8 +1087,8 @@ Section InvDirM.
         }
         { disc_ObjDirM; solve_msi. }
       }
-      
-      (* END_SKIP_PROOF_OFF *)
+
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Theorem msi_InvDirM_ok:
@@ -1099,7 +1099,7 @@ Section InvDirM.
     - apply msi_InvDirM_init.
     - apply msi_InvDirM_step.
   Qed.
-  
+
 End InvDirM.
 
 Definition InvWB (topo: DTree) (st: State): Prop :=
@@ -1161,4 +1161,3 @@ Section InvWB.
   Qed.
 
 End InvWB.
-

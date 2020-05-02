@@ -54,7 +54,9 @@ Section ObjInv.
                 ost#[status] <= msiS /\
                 ((ost#[owned] = true /\ ost#[dir].(dir_st) = msiS /\
                   SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                  map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                  (rsb <+- rqid.(rqi_midx_rsb);
+                  map fst rqid.(rqi_rss) =
+                  map rsUpFrom (remove idx_dec (objIdxOf rsb) ost#[dir].(dir_sharers)))) \/
                  (ost#[dir].(dir_st) = msiM /\
                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
                   map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
@@ -89,4 +91,3 @@ Ltac disc_msi_obj_invs :=
     | [Hmsg: msg_id ?rmsg = _, H: context [msg_id ?rmsg] |- _] =>
       rewrite Hmsg in H; simpl in H
     end.
-

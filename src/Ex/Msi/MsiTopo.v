@@ -31,7 +31,7 @@ Section System.
     rewrite map_app, map_map, map_id; simpl.
     rewrite map_map, map_id; reflexivity.
   Qed.
-  
+
   Lemma msi_GoodORqsInit: GoodORqsInit (initsOf impl).
   Proof.
     apply initORqs_GoodORqsInit.
@@ -65,7 +65,7 @@ Section System.
     eapply tree2Topo_ExtsOnDTree with (tr0:= tr) (bidx:= [0]); try reflexivity.
     destruct (tree2Topo _ _); reflexivity.
   Qed.
-  
+
   Lemma msi_RqRsDTree: RqRsDTree topo impl.
   Proof.
     red; repeat ssplit.
@@ -143,7 +143,7 @@ Section System.
       { rewrite c_li_indices_head_rootOf by assumption.
         left; reflexivity.
       }
-      
+
       simpl.
       repeat
         match goal with
@@ -164,7 +164,7 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
         pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
         rewrite <-msi_indices in H.
-        
+
         rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
         (** [RqUpDownSound] *)
@@ -178,7 +178,7 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
         pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
         rewrite <-msi_indices in H.
-        
+
         rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
         (** [RqUpDownSound] *)
@@ -192,15 +192,19 @@ Section System.
         apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
         pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
         rewrite <-msi_indices in H.
-        
+
         rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
         (** [RqUpDownSound] *)
         red; simpl; intros; dest.
-        repeat ssplit; [assumption| |intuition auto].
-        apply Forall_forall; intros.
-        apply H3 in H7.
-        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        repeat ssplit.
+        { assumption. }
+        { apply Forall_forall; intros.
+          apply in_remove in H7.
+          apply H2 in H7.
+          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        }
+        { apply remove_In. }
       }
 
     - (** Li caches *)
@@ -213,7 +217,7 @@ Section System.
       pose proof (c_li_l1_indices_has_parent
                     Htr _ _ (in_or_app _ _ _ (or_introl H0))).
       destruct H as [pidx ?].
-      
+
       repeat
         match goal with
         | |- Forall _ (_ ++ _) => apply Forall_app
@@ -234,7 +238,7 @@ Section System.
           apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
           pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
           rewrite <-msi_indices in H1.
-          
+
           rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
           (** [RqUpDownSound] *)
@@ -248,7 +252,7 @@ Section System.
           apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
           pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
           rewrite <-msi_indices in H1.
-          
+
           rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
           (** [RqUpDownSound] *)
@@ -262,15 +266,19 @@ Section System.
           apply subtreeChildrenIndsOf_parentIdxOf in H3; [|apply tree2Topo_WfDTree].
           pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H3).
           rewrite <-msi_indices in H1.
-          
+
           rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
 
           (** [RqUpDownSound] *)
           red; simpl; intros; dest.
-          repeat ssplit; [assumption| |intuition auto].
-          apply Forall_forall; intros.
-          apply H5 in H9.
-          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+          repeat ssplit.
+          { assumption. }
+          { apply Forall_forall; intros.
+            apply in_remove in H9.
+            apply H4 in H9.
+            eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+          }
+          { apply remove_In. }
         }
       }
 
@@ -291,14 +299,17 @@ Section System.
         (** [RsDownRqDownSound] *)
         red; simpl; intros; dest.
         red in H1.
+        unfold getUpLockIdxBackI, getUpLockIdxBack in *.
         destruct (orq@[upRq]) as [rqiu|]; simpl in *; auto.
         destruct H1 as [rcidx [rqUp ?]]; dest.
         pose proof (tree2Topo_li_child_li_l1 _ _ _ (tl_In _ _ H0) H1).
-        rewrite <-msi_indices in H8.
-        intros; repeat ssplit.
+        rewrite <-msi_indices in H9.
+        intros; rewrite H11 in *.
+        repeat ssplit.
         { assumption. }
         { apply Forall_forall; intros.
-          apply H3 in H10.
+          apply in_remove in H12.
+          apply H3 in H12.
           eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
         }
         { exists rcidx, rqUp.
@@ -339,7 +350,7 @@ Section System.
       pose proof (c_li_l1_indices_has_parent
                     Htr _ _ (in_or_app _ _ _ (or_intror H0))).
       destruct H as [pidx ?].
-      
+
       repeat
         match goal with
         | |- Forall _ (_ ++ _) => apply Forall_app
@@ -410,9 +421,9 @@ Section System.
     end.
 
   Ltac disc_rule_custom ::= disc_msi_obj_invs.
-  
+
   Lemma msi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl (MsiObjInvs topo).
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     repeat
       match goal with
       | |- RqUpRsUpOkSys _ _ _ => red
@@ -454,14 +465,14 @@ Section System.
         { clear; solve_rule_conds_ex.
           { destruct H17; dest; try solve [congruence|solve_msi]. }
           { destruct H17; dest; try solve [congruence|solve_msi]. }
-        }          
+        }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex.
           { destruct H16; dest; try solve [congruence|solve_msi]. }
           { destruct H16; dest; try solve [congruence|solve_msi].
             f_equal; apply M.add_remove_comm; discriminate.
           }
-        }           
+        }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -498,14 +509,14 @@ Section System.
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
-        
+
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
            apply concat_In in H; dest;
            apply in_map_iff in H; dest; subst;
            dest_in|dest_in].
         all: try (exfalso_RsToUpRule; fail).
-        
+
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
@@ -542,7 +553,7 @@ Section System.
         { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi. }
 
-        (* END_SKIP_PROOF_OFF *)
+        END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Ltac solve_GoodExtRssSys :=
@@ -573,7 +584,7 @@ Section System.
       end.
 
   Lemma msi_GoodExtRssSys: GoodExtRssSys impl.
-  Proof. (* SKIP_PROOF_OFF *)
+  Proof. (* SKIP_PROOF_ON
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
@@ -587,7 +598,8 @@ Section System.
         { (* [liGetMRqUpDownS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
-          apply H5 in H11.
+          apply in_remove in H11.
+          apply H4 in H11.
           simpl in *; solve_GoodExtRssSys.
         }
 
@@ -610,7 +622,8 @@ Section System.
         { (* [liGetMRqUpDownS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H3; dest; subst.
-          apply H6 in H12.
+          apply in_remove in H12.
+          apply H5 in H12.
           simpl in *; solve_GoodExtRssSys.
         }
 
@@ -619,6 +632,7 @@ Section System.
         { (* [liGetMRsDownRqDownDirS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
+          apply in_remove in H5.
           apply H11 in H5.
           simpl in *; solve_GoodExtRssSys.
         }
@@ -637,7 +651,7 @@ Section System.
       repeat constructor.
       all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
 
-      (* END_SKIP_PROOF_OFF *)
+      END_SKIP_PROOF_ON *) admit.
   Qed.
 
   Lemma msi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl (MsiObjInvs topo).
@@ -653,9 +667,8 @@ Section System.
     - apply msi_RqRsDTree.
     - apply msi_GoodRqRsSys.
     - apply msi_GoodRqRsInterfSys.
-  Qed.  
-  
+  Qed.
+
 End System.
 
 Hint Resolve msi_GoodORqsInit msi_WfDTree msi_RqRsDTree msi_RqRsSys.
-

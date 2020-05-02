@@ -36,7 +36,7 @@ Section System.
   Definition dir: Fin.t 4 := F4.
 
   Section Directory.
-    
+
     Record DirT: Set :=
       { dir_st: MSI; (* the summary status of children *)
         dir_excl: IdxT;
@@ -65,7 +65,7 @@ Section System.
       {| dir_st := msiS;
          dir_excl := 0;
          dir_sharers := oinds |}.
-    
+
     Definition setDirI :=
       {| dir_st := msiI;
          dir_excl := 0;
@@ -88,6 +88,9 @@ Section System.
 
     Definition NotLastSharer (dir: DirT) :=
       2 <= List.length dir.(dir_sharers).
+
+    Definition OtherSharerExists (dir: DirT) (cidx: IdxT) :=
+      remove idx_dec cidx dir.(dir_sharers) <> nil.
 
     Section Facts.
 
@@ -152,6 +155,16 @@ Section System.
           apply removeOnce_In_1; assumption.
       Qed.
 
+      Lemma getDir_LastSharer_eq:
+        forall sidx dir,
+          dir_st dir = msiS ->
+          LastSharer dir sidx ->
+          getDir sidx dir = msiS.
+      Proof.
+        unfold LastSharer; dir_crush.
+        rewrite H0 in *; firstorder idtac.
+      Qed.
+
       Lemma getDir_LastSharer_neq:
         forall oidx sidx dir,
           getDir sidx dir = msiS ->
@@ -183,7 +196,7 @@ Section System.
           dir.(dir_st) = msiI ->
           forall oidx, getDir oidx dir = msiI.
       Proof. dir_crush. Qed.
-      
+
       Lemma getDir_st_sound:
         forall dir oidx,
           msiS <= getDir oidx dir ->
@@ -243,7 +256,7 @@ Section System.
       Proof. dir_crush. Qed.
 
     End Facts.
-    
+
   End Directory.
 
   Instance ImplOStateIfc: OStateIfc :=
@@ -519,7 +532,7 @@ Section System.
                      +#[dir <- setDirS [objIdxOf rsbTo; objIdxOf (idOf idm)]],
                  <| msiRsS; msg_value (valOf idm) |>)).
 
-      (** NOTE: 
+      (** NOTE:
        * 1) data should be sent along with [msiDownRsS], even when the status
        * is S, since the parent might not have the up-to-date data (e.g., when
        * the line is evicted).
@@ -567,9 +580,14 @@ Section System.
         rule.immd[1~>0~~cidx]
         :accepts msiRqM
         :from cidx
-        :requires (fun ost orq mins => ost#[status] = msiM)
+        :requires
+           (fun ost orq mins =>
+              ost#[status] = msiM \/
+              (ost#[status] = msiS /\ ost#[owned] = true /\
+               ost#[dir].(dir_st) = msiS /\ LastSharer ost#[dir] cidx))
         :transition
-           (!|ost, msg| --> (ost +#[status <- msiI]
+           (!|ost, msg| --> (ost +#[owned <- false]
+                                 +#[status <- msiI]
                                  +#[dir <- setDirM cidx],
                              <| msiRsM; O |>)).
 
@@ -592,7 +610,11 @@ Section System.
         rule.rsdd[1~>2]
         :accepts msiRsM
         :holding msiRqM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiI)
+        :requires
+           (fun ost orq mins =>
+              ost#[dir].(dir_st) = msiI \/
+              (ost#[dir].(dir_st) = msiS /\
+               LastSharer ost#[dir] (objIdxOf (getUpLockIdxBackI orq))))
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -600,7 +622,7 @@ Section System.
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| msiRsM; O |>)).
 
-      (** This is the case where internal invalidation is required 
+      (** This is the case where internal invalidation is required
        * due to sharers.
        *)
       Definition liGetMRsDownRqDownDirS: Rule :=
@@ -610,14 +632,18 @@ Section System.
         :me oidx
         :requires
            (fun ost orq mins =>
-              RsDownRqDownSoundPrec topo oidx orq ost#[dir].(dir_sharers) /\
+              RsDownRqDownSoundPrec
+                topo oidx orq
+                (remove idx_dec (objIdxOf (getUpLockIdxBackI orq))
+                        ost#[dir].(dir_sharers)) /\
               ost#[dir].(dir_sharers) <> nil /\
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              OtherSharerExists ost#[dir] (objIdxOf (getUpLockIdxBackI orq)) /\
               ost#[dir].(dir_st) = msiS)
         :transition
-           (!|ost, rq| --> (ost +#[owned <- true],
-                            (ost#[dir].(dir_sharers),
-                             <| msiDownRqI; O |>))).
+           (!|ost, rq, rsbTo| --> (ost +#[owned <- true],
+                                   (remove idx_dec (objIdxOf rsbTo) ost#[dir].(dir_sharers),
+                                    <| msiDownRqI; O |>))).
 
       Definition liGetMRqUpDownM: Rule :=
         rule.rqud[1~>4~~cidx]
@@ -639,12 +665,13 @@ Section System.
         :me oidx
         :requires
            (fun ost mins =>
-              ~ In cidx ost#[dir].(dir_sharers) /\
               ost#[dir].(dir_sharers) <> nil /\
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              OtherSharerExists ost#[dir] cidx /\
               ost#[owned] = true /\ ost#[status] <= msiS /\ ost#[dir].(dir_st) = msiS)
         :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| msiDownRqI; O |>)).
+           (!|ost, msg| --> (remove idx_dec cidx ost#[dir].(dir_sharers),
+                             <| msiDownRqI; O |>)).
 
       Definition liDownIRsUpDown: Rule :=
         rule.rsud[1~>6]
@@ -654,7 +681,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- msiI] 
+                     +#[status <- msiI]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| msiRsM; O |>)).
 
@@ -872,7 +899,7 @@ Section System.
                      H2: nth_error (subtreeChildrenIndsOf ?topo ?sidx) ?n2 = Some _ |- _] =>
             eapply TreeTopo_children_inds_disj in Hn; eauto; destruct Hn
           end.
-    
+
     Program Definition li: Object :=
       {| obj_idx := oidx;
          obj_rules :=
@@ -913,7 +940,7 @@ Section System.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.
     Qed.
-    
+
   End Objects.
 
   Program Definition impl: System :=
@@ -940,7 +967,7 @@ Section System.
   Next Obligation.
     apply tree2Topo_WfCIfc.
   Qed.
-  
+
 End System.
 
 Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDown
@@ -957,4 +984,3 @@ Hint Unfold liGetSImmS liGetSImmM
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
      liInvImmWBI liInvImmWBS1 liInvImmWBM liPushImm: MsiRules.
-
