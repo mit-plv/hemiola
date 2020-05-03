@@ -467,12 +467,13 @@ Section System.
           { destruct H17; dest; try solve [congruence|solve_msi]. }
         }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex.
-          { destruct H16; dest; try solve [congruence|solve_msi]. }
-          { destruct H16; dest; try solve [congruence|solve_msi].
-            f_equal; apply M.add_remove_comm; discriminate.
-          }
+          { solve_msi. }
+          { f_equal; apply M.add_remove_comm; discriminate. }
         }
+        { clear; solve_rule_conds_ex; solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -487,14 +488,15 @@ Section System.
         { clear; solve_rule_conds_ex.
           all: try (destruct H17; dest; try solve [congruence|solve_msi]).
         }
-        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex.
-          { destruct H16; dest; try solve [congruence|solve_msi]. }
-          { destruct H16; dest; try solve [congruence|solve_msi]. }
-          { destruct H16; dest; try solve [congruence|solve_msi].
-            f_equal; apply M.add_remove_comm; discriminate.
-          }
+          all: try (destruct H17; dest; try solve [congruence|solve_msi]).
         }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; try solve_msi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
+        { clear; solve_rule_conds_ex; try solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -507,7 +509,10 @@ Section System.
         { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
@@ -521,8 +526,11 @@ Section System.
         { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; try intuition solve_msi. }
 
     - (** L1 cache *)
       apply Forall_forall; intros.
@@ -537,19 +545,23 @@ Section System.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; solve_msi. }
         { clear; solve_rule_conds_const. }
+        { clear; solve_rule_conds_const. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const. }
+        { clear; solve_rule_conds_const; solve_msi. }
         { clear; solve_rule_conds_const; solve_msi. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_const; try solve_msi. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
+        { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi. }
 

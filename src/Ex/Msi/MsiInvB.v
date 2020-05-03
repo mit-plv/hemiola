@@ -232,8 +232,11 @@ Section ObjInvOk.
       }
       { disc_MsiDownLockInv_internal oidx.
         destruct H17; dest.
-        { solve_MsiUpLockInv oidx. }
-        { solve_MsiUpLockInv oidx. }
+        all: solve_MsiUpLockInv oidx.
+      }
+      { disc_MsiDownLockInv_internal oidx.
+        destruct H17; dest.
+        all: solve_MsiUpLockInv oidx.
       }
 
     - (*! Cases for Li caches *)

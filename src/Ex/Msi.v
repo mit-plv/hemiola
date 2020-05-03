@@ -14,8 +14,10 @@ Definition msiDownRsS: IdxT := 0~>6.
 
 Definition msiRqM: IdxT := 1~>2.
 Definition msiRsM: IdxT := 1~>3.
-Definition msiDownRqI: IdxT := 1~>4.
-Definition msiDownRsI: IdxT := 1~>5.
+Definition msiDownRqIS: IdxT := 1~>4.
+Definition msiDownRsIS: IdxT := 1~>5.
+Definition msiDownRqIM: IdxT := 1~>6.
+Definition msiDownRsIM: IdxT := 1~>7.
 
 Definition msiInvRq: IdxT := 2~>4.
 Definition msiInvWRq: IdxT := 2~>5.

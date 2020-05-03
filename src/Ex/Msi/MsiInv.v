@@ -43,9 +43,12 @@ Section CoherenceUnit.
       sigOf idm = (rqUpFrom oidx, (MRq, msiInvWRq)) ->
       msiS <= ost#[status] -> msg_value (valOf idm) = ost#[val].
 
+  Definition ObjInvRs :=
+    MsgExistsSig (downTo oidx, (MRs, msiInvRs)) msgs.
+
   (** 1) Exclusiveness: if a coherence unit is exclusive, then all other units
    * are in an invalid status. *)
-  
+
   Definition ObjExcl0 :=
     msiM <= ost#[status] /\ NoRsI.
 
@@ -53,27 +56,12 @@ Section CoherenceUnit.
     ObjExcl0 \/
     MsgExistsSig (downTo oidx, (MRs, msiRsM)) msgs.
 
-  Definition NoCohMsgs :=
-    MsgsNotExist [(downTo oidx, (MRs, msiRsS));
-                    (downTo oidx, (MRs, msiRsM));
-                    (rsUpFrom oidx, (MRs, msiDownRsS));
-                    (rsUpFrom oidx, (MRs, msiDownRsI))] msgs.
-
-  Definition ObjInvalid0 :=
-    ost#[status] <= msiI /\ NoCohMsgs.
-
-  Definition ObjInvRs :=
-    MsgExistsSig (downTo oidx, (MRs, msiInvRs)) msgs.
-  
-  Definition ObjInvalid :=
-    ObjInvalid0 \/ ObjInvRs.
-
   (** 2) When directory status is M .. *)
 
   Definition ObjDirM (cidx: IdxT) :=
     ost#[dir].(dir_st) = msiM /\ ost#[dir].(dir_excl) = cidx /\
     orq@[downRq] = None.
-  
+
   Definition ObjInvRq :=
     MsgExistsSig (rqUpFrom oidx, (MRq, msiInvRq)) msgs.
 
@@ -113,7 +101,7 @@ Section Facts.
     eapply H; [|eassumption].
     inv e; auto.
   Qed.
-    
+
   Lemma RootChnInv_root_NoRqI:
     forall tr bidx st,
       RootChnInv tr bidx st ->
@@ -125,7 +113,7 @@ Section Facts.
     do 2 (find_if_inside; [eapply H; [|eassumption]; inv e; auto|]).
     auto.
   Qed.
-  
+
 End Facts.
 
 Ltac disc_bind_true :=
@@ -318,10 +306,9 @@ Ltac derive_parent_downlock_by_RqDown oidx :=
                Hf: FirstMPI ?msgs (?midx, ?msg),
                    Hmt: msg_type ?msg = MRq |- _] =>
         destruct Hmcf as [Hmcf _];
-        specialize (Hmcf (midx, msg) eq_refl 
+        specialize (Hmcf (midx, msg) eq_refl
                          ltac:(simpl; rewrite Hmt; reflexivity)
                                 (FirstMP_InMP Hf))
       end.
 
 Hint Unfold NoRsI ImplOStateMSI: RuleConds.
-

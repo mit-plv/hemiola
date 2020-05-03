@@ -415,15 +415,25 @@ Section System.
                      +#[val <- msg_value rq],
                  <| Spec.setRs; O |>)).
 
-      Definition l1DownIImm: Rule :=
-        rule.immu[1~>3]
-        :accepts msiDownRqI
+      Definition l1DownIImmS: Rule :=
+        rule.immu[1~>3~>0]
+        :accepts msiDownRqIS
         :me oidx
-        :requires (fun ost orq mins => msiS <= ost#[status])
+        :requires (fun _ _ _ => True)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- msiI],
-                             <| msiDownRsI; O |>)).
+                             <| msiDownRsIS; O |>)).
+
+      Definition l1DownIImmM: Rule :=
+        rule.immu[1~>3~>1]
+        :accepts msiDownRqIM
+        :me oidx
+        :requires (fun ost orq mins => ost#[status] = msiM)
+        :transition
+           (!|ost, min| --> (ost +#[owned <- false]
+                                 +#[status <- msiI],
+                             <| msiDownRsIM; O |>)).
 
       Definition l1InvRqUpUp: Rule :=
         rule.rqsu[2~>0]
@@ -643,7 +653,7 @@ Section System.
         :transition
            (!|ost, rq, rsbTo| --> (ost +#[owned <- true],
                                    (remove idx_dec (objIdxOf rsbTo) ost#[dir].(dir_sharers),
-                                    <| msiDownRqI; O |>))).
+                                    <| msiDownRqIS; O |>))).
 
       Definition liGetMRqUpDownM: Rule :=
         rule.rqud[1~>4~~cidx]
@@ -656,7 +666,7 @@ Section System.
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
               ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM)
         :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| msiDownRqI; O |>)).
+           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| msiDownRqIM; O |>)).
 
       Definition liGetMRqUpDownS: Rule :=
         rule.rqud[1~>5~~cidx]
@@ -671,13 +681,13 @@ Section System.
               ost#[owned] = true /\ ost#[status] <= msiS /\ ost#[dir].(dir_st) = msiS)
         :transition
            (!|ost, msg| --> (remove idx_dec cidx ost#[dir].(dir_sharers),
-                             <| msiDownRqI; O |>)).
+                             <| msiDownRqIS; O |>)).
 
-      Definition liDownIRsUpDown: Rule :=
-        rule.rsud[1~>6]
-        :accepts msiDownRsI
+      Definition liDownIRsUpDownS: Rule :=
+        rule.rsud[1~>6~>0]
+        :accepts msiDownRsIS
         :holding msiRqM
-        :requires (fun _ _ _ => True)
+        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -685,20 +695,42 @@ Section System.
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| msiRsM; O |>)).
 
-      Definition liDownIImm: Rule :=
-        rule.immu[1~>7]
-        :accepts msiDownRqI
+      Definition liDownIRsUpDownM: Rule :=
+        rule.rsud[1~>6~>1]
+        :accepts msiDownRsIM
+        :holding msiRqM
+        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiM)
+        :transition
+           (!|ost, mins, rq, rsbTo|
+            --> (ost +#[owned <- false]
+                     +#[status <- msiI]
+                     +#[dir <- setDirM (objIdxOf rsbTo)],
+                 <| msiRsM; O |>)).
+
+      Definition liDownIImmS: Rule :=
+        rule.immu[1~>7~>0]
+        :accepts msiDownRqIS
         :me oidx
-        :requires (fun ost orq mins =>
-                     msiS <= ost#[status] /\ ost#[dir].(dir_st) = msiI)
+        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiI)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- msiI],
-                             <| msiDownRsI; O |>)).
+                             <| msiDownRsIS; O |>)).
+
+      Definition liDownIImmM: Rule :=
+        rule.immu[1~>7~>1]
+        :accepts msiDownRqIM
+        :me oidx
+        :requires (fun ost orq mins =>
+                     ost#[status] = msiM /\ ost#[dir].(dir_st) = msiI)
+        :transition
+           (!|ost, min| --> (ost +#[owned <- false]
+                                 +#[status <- msiI],
+                             <| msiDownRsIM; O |>)).
 
       Definition liDownIRqDownDownDirS: Rule :=
         rule.rqdd[1~>9~>0]
-        :accepts msiDownRqI
+        :accepts msiDownRqIS
         :me oidx
         :requires
            (fun ost mins =>
@@ -706,30 +738,42 @@ Section System.
               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
               ost#[dir].(dir_st) = msiS)
         :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| msiDownRqI; O |>)).
+           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| msiDownRqIS; O |>)).
 
       Definition liDownIRqDownDownDirM: Rule :=
         rule.rqdd[1~>9~>1]
-        :accepts msiDownRqI
+        :accepts msiDownRqIM
         :me oidx
         :requires
            (fun ost mins =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
               ost#[dir].(dir_st) = msiM)
         :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| msiDownRqI; O |>)).
+           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| msiDownRqIM; O |>)).
 
-      Definition liDownIRsUpUp: Rule :=
-        rule.rsuu[1~>10]
-        :accepts msiDownRsI
-        :holding msiDownRqI
+      Definition liDownIRsUpUpS: Rule :=
+        rule.rsuu[1~>10~>0]
+        :accepts msiDownRsIS
+        :holding msiDownRqIS
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- msiI]
                      +#[dir <- setDirI],
-                 <| msiDownRsI; O |>)).
+                 <| msiDownRsIS; O |>)).
+
+      Definition liDownIRsUpUpM: Rule :=
+        rule.rsuu[1~>10~>1]
+        :accepts msiDownRsIM
+        :holding msiDownRqIM
+        :requires (fun _ _ _ => True)
+        :transition
+           (!|ost, mins, rq, rsbTo|
+            --> (ost +#[owned <- false]
+                     +#[status <- msiI]
+                     +#[dir <- setDirI],
+                 <| msiDownRsIM; O |>)).
 
       Definition liInvRqUpUp: Rule :=
         rule.rqsu[2~>0]
@@ -868,7 +912,7 @@ Section System.
              (** rules involved with [GetM] *)
              l1GetMImm eidx;
              l1GetMRqUpUp oidx eidx;
-             l1GetMRsDownDown; l1DownIImm oidx;
+             l1GetMRsDownDown; l1DownIImmS oidx; l1DownIImmM oidx;
              (** rules involved with [Put] *)
              l1InvRqUpUp oidx; l1InvRqUpUpWB oidx; l1InvRsDownDown];
            obj_rules_valid := _ |}.
@@ -908,9 +952,11 @@ Section System.
              ++ [liGetSRsDownDown; liDownSRsUpDownM;
                 liDownSImm oidx; liDownSRqDownDownM oidx; liDownSRsUpUp]
              (** rules involved with [GetM] *)
-             ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS oidx; liDownIRsUpDown;
-                liDownIImm oidx; liDownIRqDownDownDirS oidx; liDownIRqDownDownDirM oidx;
-                liDownIRsUpUp]
+             ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS oidx;
+                liDownIRsUpDownS; liDownIRsUpDownM;
+                liDownIImmS oidx; liDownIImmM oidx;
+                liDownIRqDownDownDirS oidx; liDownIRqDownDownDirM oidx;
+                liDownIRsUpUpS; liDownIRsUpUpM]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
          obj_rules_valid := _ |}.
@@ -935,7 +981,7 @@ Section System.
       {| obj_idx := oidx;
          obj_rules :=
            (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
-             ++ [liDownSRsUpDownM; liDownIRsUpDown];
+             ++ [liDownSRsUpDownM; liDownIRsUpDownS; liDownIRsUpDownM];
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.
@@ -972,15 +1018,16 @@ End System.
 
 Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDown
      l1DownSImm l1GetMImm l1GetMRqUpUp l1GetMRsDownDown
-     l1DownIImm l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MsiRules.
+     l1DownIImmS l1DownIImmM l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MsiRules.
 
 Hint Unfold liGetSImmS liGetSImmM
      liGetSRqUpUp liGetSRsDownDown
      liGetSRqUpDownM liDownSRsUpDownM
      liDownSImm liDownSRqDownDownM liDownSRsUpUp
      liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
-     liGetMRqUpDownM liGetMRqUpDownS liDownIRsUpDown
-     liDownIImm liDownIRqDownDownDirS liDownIRqDownDownDirM liDownIRsUpUp
+     liGetMRqUpDownM liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownM
+     liDownIImmS liDownIImmM liDownIRqDownDownDirS liDownIRqDownDownDirM
+     liDownIRsUpUpS liDownIRsUpUpM
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
      liInvImmWBI liInvImmWBS1 liInvImmWBM liPushImm: MsiRules.

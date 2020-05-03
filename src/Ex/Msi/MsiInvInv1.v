@@ -587,7 +587,18 @@ Section InvDirM.
           { solve_valid. }
         }
       }
-
+      { disc_rule_conds_ex.
+        disc_MsiDownLockInv oidx Hmdl.
+        disc_pre.
+        { disc_NoRsM; solve_valid. }
+        { disc_ObjDirM.
+          solve_by_NoRsM_false.
+        }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsM; solve_valid. }
+        }
+      }
       { disc_rule_conds_ex.
         disc_MsiDownLockInv oidx Hmdl.
         disc_pre.
@@ -863,7 +874,7 @@ Section InvDirM.
         { solve_valid. }
       }
 
-      { (* [liDownIRsUpDown] *)
+      { (* [liDownIRsUpDownS] *)
         disc_rule_conds_ex.
         disc_MsiDownLockInv oidx Hmdl.
         disc_pre.
@@ -875,7 +886,29 @@ Section InvDirM.
         }
       }
 
-      { (* [liDownIImm] *)
+      { (* [liDownIRsUpDownM] *)
+        disc_rule_conds_ex.
+        disc_MsiDownLockInv oidx Hmdl.
+        disc_pre.
+        { disc_NoRsM; solve_valid. }
+        { disc_ObjDirM; solve_by_NoRsM_false. }
+        { destruct (idx_dec x oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsM; solve_valid. }
+        }
+      }
+
+      { (* [liDownIImmS] *)
+        disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirM.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
+      }
+
+      { (* [liDownIImmM] *)
         disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
         exfalso.
         subst topo; disc_rule_conds_ex.
@@ -896,7 +929,21 @@ Section InvDirM.
         { disc_ObjDirM; mred. }
       }
 
-      { (* [liDownIRsUpUp] *)
+      { (* [liDownIRsUpUpS] *)
+        disc_rule_conds_ex.
+        disc_MsiDownLockInv oidx Hmdl.
+        simpl_InvDirM_msgs; disc.
+        { subst topo; disc_rule_conds_ex.
+          disc_ObjDirM.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+          solve_by_child_downlock_to_parent oidx.
+        }
+        { solve_by_diff_dir. }
+        { split; [solve_NoRsSI_by_silent|assumption]. }
+      }
+
+      { (* [liDownIRsUpUpM] *)
         disc_rule_conds_ex.
         disc_MsiDownLockInv oidx Hmdl.
         simpl_InvDirM_msgs; disc.
@@ -1035,6 +1082,15 @@ Section InvDirM.
           }
           { disc_NoRsM; solve_valid. }
         }
+      }
+
+      { disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
+        exfalso.
+        subst topo; disc_rule_conds_ex.
+        disc_ObjDirM.
+        remember (dir_excl _) as oidx; clear Heqoidx.
+        derive_parent_downlock_by_RqDown oidx.
+        auto.
       }
 
       { disc_rule_conds_ex; simpl_InvDirM_msgs; disc.

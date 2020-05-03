@@ -532,6 +532,10 @@ Section InvWBDir.
         disc_MsiDownLockInv oidx Hmdl.
         simpl_InvWBDir; solve_InvWBDir.
       }
+      { disc_rule_conds_ex.
+        disc_MsiDownLockInv oidx Hmdl.
+        simpl_InvWBDir; solve_InvWBDir.
+      }
 
     - (*! Cases for Li caches *)
 
@@ -939,6 +943,10 @@ Section InvWBCoh.
       { disc_rule_conds_ex.
         disc_MsiDownLockInv oidx Hmdl.
         derive_InvWBDir oidx.
+        simpl_InvWBCoh; solve_InvWBCoh.
+      }
+      { disc_rule_conds_ex.
+        disc_MsiDownLockInv oidx Hmdl.
         simpl_InvWBCoh; solve_InvWBCoh.
       }
       { disc_rule_conds_ex.

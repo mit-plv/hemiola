@@ -84,7 +84,7 @@ Section Sim.
       - red in H; dest; repeat ssplit.
         + red; intros; solve_msi.
         + do 2 red; intros.
-          specialize (H0 _ H1); red in H0.
+          specialize (H1 _ H2); red in H1.
           red; unfold cohMsgs, map, caseDec, fst in *.
           repeat (find_if_inside; [exfalso; auto; fail|]).
           destruct (sig_dec _ (_, (MRs, msiRsM))); [exfalso; auto|].
@@ -724,7 +724,18 @@ Section Sim.
         destruct (idx_dec lidx (obj_idx upCObj)); subst; solve_MsgsCoh.
       }
 
-      { (* [liDownIRsUpDown] *)
+      { (* [liDownIRsUpDownS] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [|exfalso; subst topo; congruence].
+        derive_child_chns upCIdx.
+        derive_child_idx_in upCIdx.
+        disc_responses_from.
+        disc_rule_conds_ex.
+        solve_sim_msi.
+      }
+
+      { (* [liDownIRsUpDownM] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
           [|exfalso; subst topo; congruence].
@@ -1004,7 +1015,7 @@ Section Sim.
         solve_sim_msi.
       }
 
-      { (* [liDownIRsUpDown] *)
+      { (* [liDownIRsUpDownS] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
           [|disc_MsiDownLockInv oidx H27].
@@ -1015,7 +1026,27 @@ Section Sim.
         solve_sim_msi.
       }
 
-      { (* [liDownIImm] *)
+      { (* [liDownIRsUpDownM] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [|disc_MsiDownLockInv oidx H27].
+        derive_child_chns upCIdx.
+        derive_child_idx_in upCIdx.
+        disc_responses_from.
+        disc_rule_conds_ex.
+        solve_sim_msi.
+      }
+
+      { (* [liDownIImmS] *)
+        disc_rule_conds_ex.
+        spec_case_silent.
+        assert (NoRsI oidx msgs)
+          by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
+        disc_rule_conds_ex.
+        solve_sim_msi.
+      }
+
+      { (* [liDownIImmM] *)
         disc_rule_conds_ex.
         spec_case_silent.
         assert (NoRsI oidx msgs)
@@ -1035,7 +1066,15 @@ Section Sim.
         solve_sim_msi.
       }
 
-      { (* [liDownIRsUpUp] *)
+      { (* [liDownIRsUpUpS] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [disc_MsiDownLockInv oidx H27|].
+        disc_responses_from.
+        solve_sim_msi.
+      }
+
+      { (* [liDownIRsUpUpM] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
           [disc_MsiDownLockInv oidx H27|].
@@ -1225,12 +1264,14 @@ Section Sim.
             solve_MsgsP.
           }
 
-      + (* [l1DownIImm] *)
+      + (* [l1DownIImmS] *)
         disc_rule_conds_ex.
         spec_case_silent.
-        assert (NoRsI oidx msgs)
-          by (solve_NoRsI_base; solve_NoRsI_by_rqDown oidx).
+        solve_sim_msi.
+
+      + (* [l1DownIImmM] *)
         disc_rule_conds_ex.
+        spec_case_silent.
         solve_sim_msi.
 
       + (* [l1InvRqUpUp] *)
@@ -1241,9 +1282,6 @@ Section Sim.
       + (* [l1InvRqUpUpM] *)
         disc_rule_conds_ex.
         spec_case_silent.
-        assert (NoRsI oidx msgs)
-          by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx).
-        disc_rule_conds_ex.
         solve_sim_msi.
 
       + (* [l1InvRsDownDown] *)
