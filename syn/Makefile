@@ -8,13 +8,24 @@ all: Makefile.coq
 Makefile.coq: Makefile $(VS)
 	$(COQBIN)coq_makefile -f _CoqProject $(VS) -o Makefile.coq
 
+MSI_EXT_VO=ex/Msi/MsiExt.vo
 MESI_EXT_VO=ex/Mesi/MesiExt.vo
+
+msi_comp: Makefile.coq
+	$(MAKE) -f Makefile.coq $(MSI_EXT_VO)
 
 mesi_comp: Makefile.coq
 	$(MAKE) -f Makefile.coq $(MESI_EXT_VO)
 
 BSV_EXT ?= kami/Kami/Ext/Ocaml
+MSI_EXT_BSV_NAME ?= Mem.bsv
 MESI_EXT_BSV_NAME ?= Mem.bsv
+
+msi_bsv: msi_comp
+	mv Target.ml* $(BSV_EXT)
+	$(MAKE) -C $(BSV_EXT)
+	cd $(BSV_EXT); ./Main.native -d -top Mem $(MSI_EXT_BSV_NAME)
+	mv $(BSV_EXT)/$(MSI_EXT_BSV_NAME) .
 
 mesi_bsv: mesi_comp
 	mv Target.ml* $(BSV_EXT)
@@ -25,6 +36,6 @@ mesi_bsv: mesi_comp
 clean:
 	$(MAKE) -f Makefile.coq clean || true
 	rm -f Makefile.coq Makefile.coq.conf
-	rm -f .*.aux *.v.d *.glob *.vo *.vos *.vok *~
+	rm -f */.*.aux */*.v.d */*.glob */*.vo */*.vos */*.vok */*~
 	rm -f .coqdeps.d .lia.cache
 
