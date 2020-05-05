@@ -83,7 +83,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
@@ -106,7 +106,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
                  <| mesiDownRsIS; O |>)).
 
@@ -117,7 +117,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
                  <| mesiDownRsIM; O |>)).
 

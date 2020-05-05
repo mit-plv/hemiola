@@ -12,6 +12,7 @@ Definition mesiM {var}: Expr var (SyntaxKind KMesi) := ($4)%kami_expr.
 Definition mesiE {var}: Expr var (SyntaxKind KMesi) := ($3)%kami_expr.
 Definition mesiS {var}: Expr var (SyntaxKind KMesi) := ($2)%kami_expr.
 Definition mesiI {var}: Expr var (SyntaxKind KMesi) := ($1)%kami_expr.
+Definition mesiNP {var}: Expr var (SyntaxKind KMesi) := ($0)%kami_expr.
 
 Section Directory.
   Context `{hconfig}.
@@ -95,6 +96,8 @@ Section DirComp.
      | HRsUpFromM oinds => compile_dir_exp ul dl ostvars oinds
      | HDownToM oinds => compile_dir_exp ul dl ostvars oinds
      | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp ul dl ostvars se))
+     | HInvalidate se =>
+       (IF ((compile_bexp ul dl ostvars se) == mesiNP) then mesiNP else mesiI)
      end)%kami_expr.
 
   Definition compile_dir_OPrec
