@@ -893,7 +893,13 @@ Section InvWBCoh.
         specialize (Hi (or_introl (@ex_intro _ _ _ (conj Hin Hsig))))
       end;
     simpl in *;
-    solve [exfalso; solve_mesi|simpl; intros; intuition solve_mesi].
+    solve [exfalso; solve_mesi|
+           simpl; intros;
+           try match goal with
+               | [H: context [invalidate ?st] |- _] =>
+                 pose proof (invalidate_sound st)
+               end;
+           intuition solve_mesi].
 
   Lemma mesi_InvWBCoh_step:
     Invariant.InvStep impl step_m InvWBCoh.

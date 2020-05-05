@@ -63,8 +63,27 @@ Local Open Scope fmap.
  *   order for the parent to recognize the update is required.
  *)
 
+Section Invalidate.
+  Definition invalidate (st: MESI) :=
+    if eq_nat_dec st mesiNP then mesiNP else mesiI.
+
+  Lemma invalidate_sound:
+    forall st, invalidate st <= mesiI.
+  Proof. unfold invalidate; cbv; intros; find_if_inside; lia. Qed.
+
+  Lemma invalidate_I:
+    forall st, mesiI <= st -> invalidate st = mesiI.
+  Proof. unfold invalidate; cbv; intros; find_if_inside; lia. Qed.
+
+  Lemma invalidate_NP:
+    forall st, st = mesiNP -> invalidate st = mesiNP.
+  Proof. unfold invalidate; cbv; intros; find_if_inside; lia. Qed.
+End Invalidate.
+
+Hint Resolve invalidate_sound.
+
 Ltac solve_mesi :=
-  unfold mesiM, mesiE, mesiS, mesiI, mesiNP in *; lia.
+  unfold mesiM, mesiE, mesiS, mesiI, mesiNP in *; solve [auto|lia].
 
 Section System.
   Variable (tr: tree).
@@ -515,7 +534,7 @@ Section System.
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- mesiI],
+                                 +#[status <- invalidate ost#[status]],
                              <| mesiDownRsIS; O |>)).
 
       Definition l1DownIImmME: Rule :=
@@ -525,7 +544,7 @@ Section System.
         :requires (fun ost orq mins => mesiE <= ost#[status])
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- mesiI],
+                                 +#[status <- invalidate ost#[status]],
                              <| mesiDownRsIM; O |>)).
 
       Definition l1InvRqUpUp: Rule :=
@@ -735,7 +754,7 @@ Section System.
         :transition
            (!|ost, min, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
@@ -798,7 +817,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
@@ -810,7 +829,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| mesiRsM; O |>)).
 
@@ -821,7 +840,7 @@ Section System.
         :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiI)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- mesiI],
+                                 +#[status <- invalidate ost#[status]],
                              <| mesiDownRsIS; O |>)).
 
       Definition liDownIImmME: Rule :=
@@ -866,7 +885,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
                  <| mesiDownRsIS; O |>)).
 
@@ -878,7 +897,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- mesiI]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
                  <| mesiDownRsIM; O |>)).
 

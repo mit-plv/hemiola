@@ -728,7 +728,14 @@ Section InvDirE.
     match goal with
     | [H: ObjCohDirE _ |- _] =>
       red in H; dest; red; simpl in *
-    end; intuition solve_mesi.
+    end;
+    try match goal with
+        | [H: context [invalidate ?st] |- _] =>
+          pose proof (invalidate_sound st)
+        | |- context [invalidate ?st] =>
+          pose proof (invalidate_sound st)
+        end;
+    intuition solve_mesi.
 
   Ltac solve_coh :=
     intros;
@@ -739,6 +746,12 @@ Section InvDirE.
 
   Ltac solve_by_ObjCohDirE_false :=
     intros;
+    try match goal with
+        | [H: context [invalidate ?st] |- _] =>
+          pose proof (invalidate_sound st)
+        | |- context [invalidate ?st] =>
+          pose proof (invalidate_sound st)
+        end;
     match goal with
     | [H: ObjCohDirE _ |- _] =>
       red in H; simpl in *; dest; solve [congruence|solve_mesi]

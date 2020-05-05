@@ -463,24 +463,20 @@ Section System.
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_ex.
+        { clear; solve_rule_conds_ex; auto.
           { destruct H17; dest; try solve [congruence|solve_mesi]. }
           { destruct H17; dest; try solve [congruence|solve_mesi]. }
         }
-        { clear; solve_rule_conds_ex.
+        { clear; solve_rule_conds_ex; auto.
           { destruct H17; dest; try solve [congruence|solve_mesi]. }
           { destruct H17; dest; try solve [congruence|solve_mesi]. }
         }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_ex.
-          { solve_mesi. }
-          { f_equal; apply M.add_remove_comm; discriminate. }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex.
-          { solve_mesi. }
-          { f_equal; apply M.add_remove_comm; discriminate. }
-        }
+        { clear; solve_rule_conds_ex; solve_mesi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -492,10 +488,10 @@ Section System.
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_ex.
+        { clear; solve_rule_conds_ex; try solve_mesi.
           all: try (destruct H17; dest; try solve [congruence|solve_mesi]).
         }
-        { clear; solve_rule_conds_ex.
+        { clear; solve_rule_conds_ex; try solve_mesi.
           all: try (destruct H17; dest; try solve [congruence|solve_mesi]).
         }
         { clear; solve_rule_conds_ex; solve_mesi. }
@@ -503,7 +499,7 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex; try solve_mesi. }
+        { clear; solve_rule_conds_ex; solve_mesi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -513,11 +509,13 @@ Section System.
         all: try (exfalso_RsToUpRule; fail).
 
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_const; try solve_mesi. }
+        { clear; solve_rule_conds_const; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_const; try solve_mesi. }
+        { clear; solve_rule_conds_const.
+          all: rewrite invalidate_I; solve_mesi.
+        }
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; try solve_mesi. }
@@ -534,7 +532,10 @@ Section System.
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
-        { clear; solve_rule_conds_const; try intuition solve_mesi. }
+        { clear; solve_rule_conds_const.
+          rewrite invalidate_I; [|solve_mesi].
+          intuition solve_mesi.
+        }
         { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
         { clear; solve_rule_conds_ex; try intuition solve_mesi. }
@@ -551,8 +552,8 @@ Section System.
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; solve_mesi. }
-        { clear; solve_rule_conds_const. }
-        { clear; solve_rule_conds_const. }
+        { clear; solve_rule_conds_const; auto. }
+        { clear; solve_rule_conds_const; auto. }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
@@ -563,14 +564,22 @@ Section System.
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_mesi. }
-        { clear; solve_rule_conds_const; try solve_mesi. }
-        { clear; solve_rule_conds_const; try solve_mesi. }
+        { clear; solve_rule_conds_const.
+          all: rewrite invalidate_I; solve_mesi.
+        }
+        { clear; solve_rule_conds_const.
+          all: rewrite invalidate_I; solve_mesi.
+        }
 
       + preveal H4; dest_in.
         all: try (exfalso_RsToUpRule; fail).
         { clear; solve_rule_conds_const; try solve_mesi. }
-        { clear; solve_rule_conds_const; try solve_mesi. }
-        { clear; solve_rule_conds_const; try solve_mesi. }
+        { clear; solve_rule_conds_const.
+          rewrite invalidate_I; solve_mesi.
+        }
+        { clear; solve_rule_conds_const.
+          rewrite invalidate_I; solve_mesi.
+        }
 
         END_SKIP_PROOF_ON *) admit.
   Qed.
