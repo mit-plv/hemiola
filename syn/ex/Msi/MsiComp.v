@@ -11,6 +11,7 @@ Definition KMsi: Kind := Bit 3.
 Definition msiM {var}: Expr var (SyntaxKind KMsi) := ($3)%kami_expr.
 Definition msiS {var}: Expr var (SyntaxKind KMsi) := ($2)%kami_expr.
 Definition msiI {var}: Expr var (SyntaxKind KMsi) := ($1)%kami_expr.
+Definition msiNP {var}: Expr var (SyntaxKind KMsi) := ($0)%kami_expr.
 
 Section Directory.
   Context `{hconfig}.
@@ -90,6 +91,8 @@ Section DirComp.
      | HRsUpFromM oinds => compile_dir_exp ul dl ostvars oinds
      | HDownToM oinds => compile_dir_exp ul dl ostvars oinds
      | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp ul dl ostvars se))
+     | HInvalidate se =>
+       (IF ((compile_bexp ul dl ostvars se) == msiNP) then msiNP else msiI)
      end)%kami_expr.
 
   Definition compile_dir_OPrec

@@ -141,7 +141,8 @@ Section DirExt.
   | HRqUpFromM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
   | HRsUpFromM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
   | HDownToM: hexp_dir var (HBType (HList HIdxO)) -> hexp_dir var (HBType (HList HIdxQ))
-  | HSingleton: hexp_dir var (HBType HIdxQ) -> hexp_dir var (HBType (HList HIdxQ)).
+  | HSingleton: hexp_dir var (HBType HIdxQ) -> hexp_dir var (HBType (HList HIdxQ))
+  | HInvalidate: hbexp (bvar var) (HNat 3) -> hexp_dir var (HBType (HNat 3)).
 
   Fixpoint interp_hexp_dir ht (he: hexp_dir htypeDenote ht)
            (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)): htypeDenote ht :=
@@ -167,6 +168,7 @@ Section DirExt.
     | HRsUpFromM oinds => map rsUpFrom (interp_hexp_dir oinds ost orq mins)
     | HDownToM oinds => map downTo (interp_hexp_dir oinds ost orq mins)
     | HSingleton she => [interp_hexp_dir she ost orq mins]%list
+    | HInvalidate st => invalidate (interpBExp ost orq st)
     end.
 
   Inductive OPrecDir (var: htype -> Type): Type :=
@@ -511,6 +513,7 @@ Ltac renote_eexp_dir :=
       | map rsUpFrom _ => instantiate (1:= HRsUpFromM _); simpl; f_equal
       | map downTo _ => instantiate (1:= HDownToM _); simpl; f_equal
       | [_]%list => instantiate (1:= HSingleton _); simpl; f_equal
+      | invalidate _ => instantiate (1:= HInvalidate _); simpl; f_equal; renote_bexp
       end
     end.
 Ltac renote_eexp ::= renote_eexp_dir.
