@@ -716,7 +716,7 @@ Section Facts.
         RsDownConflicts oidx orq msgs ->
         forall cidx (nost: OState) rmsg,
           parentIdxOf topo cidx = Some oidx ->
-          nost#[status] = msiI ->
+          nost#[status] <= msiI ->
           nost#[dir].(dir_st) <> msiS ->
           FirstMPI msgs (downTo oidx, rmsg) ->
           rmsg.(msg_type) = MRs ->
@@ -750,7 +750,7 @@ Section Facts.
         ost#[dir].(dir_st) = msiI ->
         InvDirInv topo cifc oidx ost oss msgs ->
         forall cidx (nost: OState) rmsg,
-          nost#[status] = msiI ->
+          nost#[status] <= msiI ->
           nost#[dir].(dir_st) = msiM ->
           FirstMPI msgs (downTo oidx, rmsg) ->
           rmsg.(msg_type) = MRs ->
@@ -802,7 +802,7 @@ Section Facts.
         NoCohMsgs oidx msgs ->
         forall cidx (nost: OState),
           parentIdxOf topo cidx = Some oidx ->
-          nost#[status] = msiI ->
+          nost#[status] <= msiI ->
           nost#[dir].(dir_st) <> msiS ->
           ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf topo cidx))
                       (oss +[oidx <- nost])
@@ -824,7 +824,7 @@ Section Facts.
         ost#[dir].(dir_st) = msiI ->
         InvDirInv topo cifc oidx ost oss msgs ->
         forall (nost: OState) rqm rsm,
-          nost#[status] = msiI ->
+          nost#[status] <= msiI ->
           nost#[dir].(dir_st) = msiI ->
           FirstMPI msgs (downTo oidx, rqm) ->
           rqm.(msg_type) = MRq ->
@@ -869,7 +869,7 @@ Section Facts.
         ost#[dir].(dir_st) = msiI ->
         InvDirInv topo cifc oidx ost oss msgs ->
         forall (nost: OState) rqm rsm,
-          nost#[status] = msiI ->
+          nost#[status] <= msiI ->
           FirstMPI msgs (downTo oidx, rqm) ->
           rqm.(msg_type) = MRq ->
           rsm.(msg_id) = msiDownRsIM ->
@@ -1378,7 +1378,7 @@ Section InvExcl.
     idOf eout = rsUpFrom oidx ->
     (valOf eout).(msg_type) = MRs ->
     (valOf eout).(msg_id) = msiDownRsIS ->
-    (ost <+- oss@[oidx]; ost#[status] = msiI /\ ost#[owned] = false) /\
+    (ost <+- oss@[oidx]; ost#[status] <= msiI /\ ost#[owned] = false) /\
     ObjsInvalid (fun idx => In idx (subtreeIndsOf topo oidx)) oss msgs.
 
   Definition DownRsIMPred (oidx: IdxT) (eout: Id Msg) (oss: OStates)
@@ -1386,7 +1386,7 @@ Section InvExcl.
     idOf eout = rsUpFrom oidx ->
     (valOf eout).(msg_type) = MRs ->
     (valOf eout).(msg_id) = msiDownRsIM ->
-    (ost <+- oss@[oidx]; ost#[status] = msiI /\
+    (ost <+- oss@[oidx]; ost#[status] <= msiI /\
                          ost#[dir].(dir_st) = msiI /\
                          ost#[owned] = false) /\
     ObjsInvalid
@@ -1634,6 +1634,12 @@ Section InvExcl.
 
   Ltac solve_InvObjExcl0_by_ObjExcl0_false :=
     red; intros; exfalso;
+    try match goal with
+        | [H: context [invalidate ?st] |- _] =>
+          pose proof (invalidate_sound st)
+        | |- context [invalidate ?st] =>
+          pose proof (invalidate_sound st)
+        end;
     match goal with
     | [H: ObjExcl0 _ _ _ |- _] =>
       red in H; dest; simpl in *; solve_msi
@@ -3892,9 +3898,10 @@ Section InvExcl.
                  ObjInvalid0
                    oidx (fst os,
                          (false,
-                          (msiI, (setDirM x, snd (snd (snd (snd os)))))))
+                          (invalidate (fst (snd (snd os))),
+                           (setDirM x, snd (snd (snd (snd os)))))))
                    (enqMP (downTo x) rsTo (deqMsgs (idsOf rins) msgs))) as Hoi.
-      { intros; repeat split; [simpl; reflexivity|discriminate|].
+      { intros; repeat split; [simpl; solve_msi|discriminate|].
         disc_InvExcl oidx.
         destruct H20; simpl in *; dest.
         { specialize (H31 (conj H20 Hrsi)); dest; solve_MsgsP. }
@@ -3917,7 +3924,8 @@ Section InvExcl.
                 (fun idx => ~ In idx (subtreeIndsOf (fst (tree2Topo tr 0)) x))
                 (oss +[oidx <- (fst os,
                                 (false,
-                                 (msiI, (setDirM x, snd (snd (snd (snd os)))))))])
+                                 (invalidate (fst (snd (snd os))),
+                                  (setDirM x, snd (snd (snd (snd os)))))))])
                 (enqMP (downTo x)
                        {| msg_id := msiRsM;
                           msg_type := MRs;
@@ -4162,9 +4170,10 @@ Section InvExcl.
                  ObjInvalid0
                    oidx (fst os,
                          (false,
-                          (msiI, (setDirM x, snd (snd (snd (snd os)))))))
+                          (invalidate (fst (snd (snd os))),
+                           (setDirM x, snd (snd (snd (snd os)))))))
                    (enqMP (downTo x) rsTo (deqMsgs (idsOf rins) msgs))) as Hoi.
-      { intros; repeat split; [simpl; reflexivity|discriminate|].
+      { intros; repeat split; [simpl; solve_msi|discriminate|].
         disc_InvExcl oidx.
         destruct H20; simpl in *; dest.
         { specialize (H31 (conj H20 Hrsi)); dest; solve_MsgsP. }
@@ -4187,7 +4196,8 @@ Section InvExcl.
                 (fun idx => ~ In idx (subtreeIndsOf (fst (tree2Topo tr 0)) x))
                 (oss +[oidx <- (fst os,
                                 (false,
-                                 (msiI, (setDirM x, snd (snd (snd (snd os)))))))])
+                                 (invalidate (fst (snd (snd os))),
+                                  (setDirM x, snd (snd (snd (snd os)))))))])
                 (enqMP (downTo x)
                        {| msg_id := msiRsM;
                           msg_type := MRs;
@@ -5502,7 +5512,10 @@ Section InvExcl.
 
       rename H26 into Hprec. (* the precondition about status and ownership bit *)
       assert (ObjsInvalid (fun idx => ~ In idx (subtreeIndsOf (fst (tree2Topo tr 0)) cidx))
-                          (oss +[oidx <- (fst os, (false, (msiI, (setDirM cidx, snd (snd (snd (snd os)))))))])
+                          (oss +[oidx <- (fst os,
+                                          (false,
+                                           (invalidate (fst (snd (snd os))),
+                                            (setDirM cidx, snd (snd (snd (snd os)))))))])
                           (deqMP (downTo oidx) msgs)) as Hoi.
       { disc_AtomicMsgOutsInv oidx.
         disc_InvExcl oidx.
@@ -5510,6 +5523,7 @@ Section InvExcl.
         { eapply ObjsInvalid_rsM_consumed; eauto.
           { apply tl_In; assumption. }
           { assumption. }
+          { simpl; solve_msi. }
         }
         { eapply ObjsInvalid_out_composed; eauto.
           { solve_ObjsInvalid_trivial.
@@ -5780,9 +5794,10 @@ Section InvExcl.
                  ObjInvalid0
                    oidx (fst os,
                          (false,
-                          (msiI, (setDirM x, snd (snd (snd (snd os)))))))
+                          (invalidate (fst (snd (snd os))),
+                           (setDirM x, snd (snd (snd (snd os)))))))
                    (enqMP (downTo x) rsTo (deqMsgs (idsOf rins) msgs))) as Hoi.
-      { intros; repeat split; [simpl; reflexivity|discriminate|].
+      { intros; repeat split; [simpl; solve_msi|discriminate|].
         disc_InvExcl oidx.
         destruct H28; simpl in *; dest.
         { specialize (H37 (conj H28 Hrsi)); dest; solve_MsgsP. }
@@ -5805,7 +5820,8 @@ Section InvExcl.
                 (fun idx => ~ In idx (subtreeIndsOf (fst (tree2Topo tr 0)) x))
                 (oss +[oidx <- (fst os,
                                 (false,
-                                 (msiI, (setDirM x, snd (snd (snd (snd os)))))))])
+                                 (invalidate (fst (snd (snd os))),
+                                  (setDirM x, snd (snd (snd (snd os)))))))])
                 (enqMP (downTo x)
                        {| msg_id := msiRsM;
                           msg_type := MRs;
@@ -6044,9 +6060,10 @@ Section InvExcl.
                  ObjInvalid0
                    oidx (fst os,
                          (false,
-                          (msiI, (setDirM x, snd (snd (snd (snd os)))))))
+                          (invalidate (fst (snd (snd os))),
+                           (setDirM x, snd (snd (snd (snd os)))))))
                    (enqMP (downTo x) rsTo (deqMsgs (idsOf rins) msgs))) as Hoi.
-      { intros; repeat split; [simpl; reflexivity|discriminate|].
+      { intros; repeat split; [simpl; solve_msi|discriminate|].
         disc_InvExcl oidx.
         destruct H28; simpl in *; dest.
         { specialize (H37 (conj H28 Hrsi)); dest; solve_MsgsP. }
@@ -6069,7 +6086,8 @@ Section InvExcl.
                 (fun idx => ~ In idx (subtreeIndsOf (fst (tree2Topo tr 0)) x))
                 (oss +[oidx <- (fst os,
                                 (false,
-                                 (msiI, (setDirM x, snd (snd (snd (snd os)))))))])
+                                 (invalidate (fst (snd (snd os))),
+                                  (setDirM x, snd (snd (snd (snd os)))))))])
                 (enqMP (downTo x)
                        {| msg_id := msiRsM;
                           msg_type := MRs;
@@ -6209,6 +6227,7 @@ Section InvExcl.
           eapply ObjsInvalid_downRsIS; eauto.
           { apply tl_In; assumption. }
           { assumption. }
+          { simpl; solve_msi. }
         }
       }
 
@@ -6229,16 +6248,19 @@ Section InvExcl.
             split; [|solve_MsgsP].
             solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_state_transition_sound; eauto.
+            simpl; solve_msi.
           }
           { disc_InvObjOwned.
             split; [|solve_MsgsP].
             solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_state_transition_sound; eauto.
+            simpl; solve_msi.
           }
           { split_InvDirInv_apply.
             { case_in_subtree oidx cidx.
               { solve_ObjsInvalid_trivial.
                 eapply ObjsInvalid_state_transition_sound; eauto.
+                simpl; solve_msi.
               }
               { solve_ObjsInvalid_trivial. }
             }
@@ -6246,6 +6268,7 @@ Section InvExcl.
               { solve_ObjsInvalid_trivial. }
               { solve_ObjsInvalid_trivial.
                 eapply ObjsInvalid_state_transition_sound; eauto.
+                simpl; solve_msi.
               }
             }
           }
@@ -6409,11 +6432,14 @@ Section InvExcl.
 
       (** 2-3) The target object itself gets invalid *)
       assert (ObjInvalid0
-                oidx (fst os, (false, (msiI, (setDirI, snd (snd (snd (snd os)))))))
+                oidx (fst os,
+                      (false,
+                       (invalidate (fst (snd (snd os))),
+                        (setDirI, snd (snd (snd (snd os)))))))
                 (enqMP (rsUpFrom oidx)
                        {| msg_id := msiDownRsIS; msg_type := MRs; msg_value := 0 |}
                        (deqMsgs (idsOf rins) msgs))) as Hoi.
-      { intros; repeat split; [simpl; reflexivity|discriminate|].
+      { intros; repeat split; [simpl; solve_msi|discriminate|].
         clear Hpmcf; preveal Hnmcf.
         assert ((orqs +[oidx <- porq -[downRq]])@[oidx] = Some (porq -[downRq]))
           by mred.
@@ -6428,7 +6454,10 @@ Section InvExcl.
       (** 3) Predicate for [msiDownRsIS] *)
       assert (ObjsInvalid
                 (fun idx => In idx (subtreeIndsOf (fst (tree2Topo tr 0)) oidx))
-                (oss +[oidx <- (fst os, (false, (msiI, (setDirI, snd (snd (snd (snd os)))))))])
+                (oss +[oidx <- (fst os,
+                                (false,
+                                 (invalidate (fst (snd (snd os))),
+                                  (setDirI, snd (snd (snd (snd os)))))))])
                 (enqMP (rsUpFrom oidx)
                        {| msg_id := msiDownRsIS; msg_type := MRs; msg_value := 0 |}
                        (deqMsgs (idsOf rins) msgs))) as Hrc.
@@ -7058,16 +7087,19 @@ Section InvExcl.
             split; [|solve_MsgsP].
             solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_state_transition_sound; eauto.
+            simpl; solve_msi.
           }
           { disc_InvObjOwned.
             split; [|solve_MsgsP].
             solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_state_transition_sound; eauto.
+            simpl; solve_msi.
           }
           { split_InvDirInv_apply.
             { case_in_subtree oidx cidx.
               { solve_ObjsInvalid_trivial.
                 eapply ObjsInvalid_state_transition_sound; eauto.
+                simpl; solve_msi.
               }
               { solve_ObjsInvalid_trivial. }
             }
@@ -7075,6 +7107,7 @@ Section InvExcl.
               { solve_ObjsInvalid_trivial. }
               { solve_ObjsInvalid_trivial.
                 eapply ObjsInvalid_state_transition_sound; eauto.
+                simpl; solve_msi.
               }
             }
           }
@@ -7082,7 +7115,7 @@ Section InvExcl.
       }
     }
 
-    { (* [l1DownIImmME] *)
+    { (* [l1DownIImmM] *)
       disc_rule_conds_ex.
       derive_NoRsI_by_rqDown oidx msgs.
 
@@ -7091,8 +7124,8 @@ Section InvExcl.
         solve_AtomicInv_rqDown_rsUp.
         { simpl in *; inv H31; mred; simpl.
           repeat split.
-          disc_InvL1DirI oidx0.
-          assumption.
+          { solve_msi. }
+          { disc_InvL1DirI oidx0; assumption. }
         }
         { simpl in *; inv H31; mred.
           eapply ObjsInvalid_l1_singleton; eauto; mred.
