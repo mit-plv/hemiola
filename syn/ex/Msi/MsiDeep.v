@@ -50,6 +50,7 @@ Definition HMsi := HNat 3.
 
 Instance MsiHConfig: hconfig :=
   {| hcfg_msg_id_sz := (3, 2);
+     hcfg_addr_sz := 32;
      hcfg_value_sz := 32;
      hcfg_children_max_pred := 1; (* #children = 2 *)
   |}.
@@ -285,9 +286,11 @@ Ltac renote_bexp :=
            | idOf _ => instantiate (1:= HIdmId _); simpl; f_equal
            | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
            | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
-           | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _); simpl; f_equal
+           | tt => instantiate (1:= HAddrB _); reflexivity
+           | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _ _); simpl; f_equal
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
            | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal
+           | msg_addr _ => instantiate (1:= HMsgAddr _); simpl; f_equal
            | msg_value _ => instantiate (1:= HMsgValue _); simpl; f_equal
            | _ =>
              tryif is_var t then fail
@@ -334,9 +337,6 @@ Ltac renote_OPrecP :=
       | not (@eq nat _ _) =>
         instantiate (1:= HNe (ht:= HBType (HNat _)) _ _); simpl;
         apply ne_iff_sep; renote_exp
-      (* | not (@eq IdxT _ _) => *)
-      (*   instantiate (1:= HNe (ht:= HBType (HIdx _)) _ _); simpl; *)
-      (*   apply ne_iff_sep; renote_exp *)
       | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl;
                  apply lt_iff_sep; renote_exp
       | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl;

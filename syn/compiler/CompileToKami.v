@@ -116,11 +116,13 @@ Section Compile.
   Definition KQIdx := Bit (hcfg_children_max_lg + 2).
   Definition KCBv := Bit hcfg_children_max. (* as a bitvector *)
   Definition KIdxM := Bit ∘hcfg_msg_id_sz.
+  Definition KAddr := Bit hcfg_addr_sz.
   Definition KValue := Bit hcfg_value_sz.
 
   Definition KMsg :=
     STRUCT { "id" :: KIdxM;
              "type" :: Bool;
+             "addr" :: KAddr;
              "value" :: KValue }.
 
   Definition UpLock :=
@@ -201,6 +203,7 @@ Section Compile.
     | HIdxO => KCIdx
     | HIdxQ => KQIdx
     | HIdxM => Bit ∘hcfg_msg_id_sz
+    | HAddr => Bit hcfg_addr_sz
     | HNat w => Bit w
     | HMsg => Struct KMsg
     | HIdm => Struct KCIdm
@@ -298,12 +301,15 @@ Section Compile.
          | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
          | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
          | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
-         | HMsgB mid mty mval =>
+         | HAddrB _ => $0 (** Used only when making an eviction request with a nondet. addr *)
+         | HMsgB mid mty maddr mval =>
            (STRUCT { "id" ::= compile_bexp mid;
                      "type" ::= compile_bexp mty;
+                     "addr" ::= compile_bexp maddr;
                      "value" ::= compile_bexp mval })
          | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
          | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
+         | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
          | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
          | @HOstVal _ _ _ _ _ i hbt0 Heq =>
            Var _ (SyntaxKind _)

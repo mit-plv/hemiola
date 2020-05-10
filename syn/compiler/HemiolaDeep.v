@@ -10,6 +10,7 @@ Import MonadNotations.
 
 Class hconfig :=
   { hcfg_msg_id_sz: nat (* log of degree *) * nat (* width *);
+    hcfg_addr_sz: nat;
     hcfg_value_sz: nat;
     hcfg_children_max_pred: nat
   }.
@@ -24,6 +25,7 @@ Section Reify.
   Inductive hbtype :=
   | HBool
   | HIdxO | HIdxQ | HIdxM
+  | HAddr
   | HNat (width: nat)
   | HMsg
   | HIdm
@@ -35,6 +37,7 @@ Section Reify.
     | HIdxO
     | HIdxQ
     | HIdxM => IdxT
+    | HAddr => unit
     | HNat _ => nat
     | HMsg => Msg
     | HIdm => IdxT * Msg
@@ -74,9 +77,11 @@ Section Reify.
     | HIdmId: hbexp HIdm -> hbexp HIdxQ
     | HIdmMsg: hbexp HIdm -> hbexp HMsg
     | HObjIdxOf: hbexp HIdxQ -> hbexp HIdxO
-    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp hdv_type -> hbexp HMsg
+    | HAddrB: hbexp HAddr
+    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HAddr -> hbexp hdv_type -> hbexp HMsg
     | HMsgId: hbexp HMsg -> hbexp HIdxM
     | HMsgType: hbexp HMsg -> hbexp HBool
+    | HMsgAddr: hbexp HMsg -> hbexp HAddr
     | HMsgValue: hbexp HMsg -> hbexp hdv_type
     | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt
     | HUpLockIdxBackI: hbexp HIdxQ
@@ -245,9 +250,11 @@ Section Reify.
   Arguments HIdmId {var}.
   Arguments HIdmMsg {var}.
   Arguments HObjIdxOf {var}.
+  Arguments HAddrB {var}.
   Arguments HMsgB {var}.
   Arguments HMsgId {var}.
   Arguments HMsgType {var}.
+  Arguments HMsgAddr {var}.
   Arguments HMsgValue {var}.
   Arguments HOstVal {var}.
   Arguments HUpLockIdxBackI {var}.
@@ -302,18 +309,18 @@ Section Reify.
         | HIdmId idm => idOf (interpBExp idm)
         | HIdmMsg idm => valOf (interpBExp idm)
         | HObjIdxOf midx => objIdxOf (interpBExp midx)
-        (* | HRqUpFrom oidx => rqUpFrom (interpBExp oidx) *)
-        (* | HRsUpFrom oidx => rsUpFrom (interpBExp oidx) *)
-        (* | HDownTo oidx => downTo (interpBExp oidx) *)
-        | HMsgB mid mty mval =>
+        | HAddrB => tt
+        | HMsgB mid mty maddr mval =>
           {| msg_id := interpBExp mid;
              msg_type := interpBExp mty;
+             msg_addr := interpBExp maddr;
              msg_value := match ht_value_ok in (_ = T) return T with
                           | eq_refl => interpBExp mval
                           end
           |}
         | HMsgId msg => msg_id (interpBExp msg)
         | HMsgType msg => msg_type (interpBExp msg)
+        | HMsgAddr msg => msg_addr (interpBExp msg)
         | HMsgValue msg =>
           match eq_sym ht_value_ok in (_ = T) return T with
           | eq_refl => msg_value (interpBExp msg)
