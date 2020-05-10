@@ -33,7 +33,7 @@ Section RssHolder.
       then (midx, Some msg) :: rss'
       else rs :: (putRs midx msg rss')
     end.
-  
+
   Definition addRs (orq: ORq Msg) (cidx: IdxT) (msg: Msg) :=
     (orq@[downRq])
       >>=[orq]
@@ -50,10 +50,10 @@ Section RssHolder.
       | None => retRss rss'
       end
     end.
-  
+
   Definition getRss (orq: ORq Msg) :=
     (orq@[downRq]) >>=[nil] (fun rqid => retRss rqid.(rqi_rss)).
-  
+
   Variables
     (ridx msgId rqId: IdxT)
     (prec: OPrec).
@@ -85,7 +85,7 @@ Section RssHolder.
                    nst ::= trs st.(ost) (getRss st.(orq)) rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
   Definition rsReleaseOne (trs: OState ->
                                 Id Msg (* incoming messages *) ->
@@ -102,7 +102,7 @@ Section RssHolder.
                    nst ::= trs st.(ost) idm rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
 End RssHolder.
 
@@ -114,4 +114,3 @@ Notation "'rule.rsr' '[' RIDX ']' ':holding' RQID ':requires' PREC ':transition'
 
 Notation "'rule.rsro' '[' RIDX ']' ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsReleaseOne RIDX RQID PREC TRS%trs) (at level 5).
-

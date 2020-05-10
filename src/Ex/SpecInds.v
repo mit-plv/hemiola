@@ -92,6 +92,7 @@ Section System.
              (ost, orq,
               [(downTo eidx, {| msg_id := getRs;
                                 msg_type := MRs;
+                                msg_addr := tt;
                                 msg_value := ost#[specValueIdx]
                              |})])
       |}.
@@ -110,6 +111,7 @@ Section System.
               orq,
               [(downTo eidx, {| msg_id := setRs;
                                 msg_type := MRs;
+                                msg_addr := tt;
                                 msg_value := O |})])
       |}.
 
@@ -159,7 +161,7 @@ Section System.
     replace specMerss with (extendInds downIdx (extendInds 0 cinds))
       by (unfold specMerss; clear; induction cinds;
           [reflexivity|simpl; f_equal; assumption]).
-    
+
     apply NoDup_DisjList.
     - do 2 apply extendIdx_NoDup.
       apply NoPrefix_NoDup; assumption.
@@ -285,4 +287,3 @@ Ltac spec_case_silent :=
   [reflexivity
   |econstructor
   |].
-

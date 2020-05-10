@@ -2115,7 +2115,7 @@ Section InvExcl.
     forall oss orqs msgs
            (Hioi: InObjInds tr 0 {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |}),
       InvExcl topo cifc {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
-      forall oidx nost cidx cost,
+      forall oidx nost cidx cost uaddr,
         In cidx (c_li_indices cifc ++ c_l1_indices cifc) ->
         parentIdxOf topo cidx = Some oidx ->
         oss@[cidx] = Some cost ->
@@ -2124,18 +2124,21 @@ Section InvExcl.
                     (oss +[oidx <- nost])
                     (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                             msg_type := MRs;
+                                            msg_addr := uaddr;
                                             msg_value := 0 |}
                            (deqMP (rqUpFrom cidx) msgs)).
   Proof.
     intros.
     disc_InvExcl cidx.
 
-    assert (ObjInvalid cidx cost
-                       (enqMP (downTo cidx) {| msg_id := mesiInvRs;
-                                               msg_type := MRs;
-                                               msg_value := 0 |}
-                              (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-    { right; eexists (_, _); split.
+    assert (forall uaddr,
+               ObjInvalid cidx cost
+                          (enqMP (downTo cidx) {| msg_id := mesiInvRs;
+                                                  msg_type := MRs;
+                                                  msg_addr := uaddr;
+                                                  msg_value := 0 |}
+                                 (deqMP (rqUpFrom cidx) msgs))) as Hoi.
+    { intros; right; eexists (_, _); split.
       { apply InMP_or_enqMP; left; simpl; eauto. }
       { reflexivity. }
     }
@@ -3323,9 +3326,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hci.
-        { disc_AtomicMsgOutsInv cidx.
+        { intros; disc_AtomicMsgOutsInv cidx.
           disc_MsgPred.
           eapply InvExcl_inv_ObjsInvalid; eauto.
         }
@@ -3386,9 +3390,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-        { eapply ObjsInvalid_invRs_composed.
+        { intros; eapply ObjsInvalid_invRs_composed.
           { apply Hoo. }
           { eapply ObjsInvalid_downRsIM_composed; [mred|].
             intros; case_idx_eq rcidx cidx; auto.
@@ -3552,9 +3557,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiE, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hci.
-        { disc_AtomicMsgOutsInv cidx.
+        { intros; disc_AtomicMsgOutsInv cidx.
           disc_MsgPred.
           eapply InvExcl_inv_ObjsInvalid; eauto.
         }
@@ -3573,9 +3579,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiE, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-        { eapply ObjsInvalid_invRs_composed.
+        { intros; eapply ObjsInvalid_invRs_composed.
           { solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_impl; [apply Hcci|].
             simpl; intros.
@@ -3770,9 +3777,10 @@ Section InvExcl.
                   (oss +[oidx <- (msg_value rmsg, (true, (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hci.
-        { disc_AtomicMsgOutsInv cidx.
+        { intros; disc_AtomicMsgOutsInv cidx.
           disc_MsgPred.
           eapply InvExcl_inv_ObjsInvalid; eauto.
         }
@@ -3791,9 +3799,10 @@ Section InvExcl.
                   (oss +[oidx <- (msg_value rmsg, (true, (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-        { eapply ObjsInvalid_invRs_composed.
+        { intros; eapply ObjsInvalid_invRs_composed.
           { solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_impl; [apply Hcci|].
             simpl; intros.
@@ -4193,6 +4202,7 @@ Section InvExcl.
                 (enqMP (downTo x)
                        {| msg_id := mesiRsM;
                           msg_type := MRs;
+                          msg_addr := msg_addr msg;
                           msg_value := 0 |} (deqMsgs (idsOf rins) msgs))) as Hrc.
       { intros.
         eapply ObjsInvalid_out_composed with (oidx:= oidx); eauto.
@@ -4465,6 +4475,7 @@ Section InvExcl.
                 (enqMP (downTo x)
                        {| msg_id := mesiRsM;
                           msg_type := MRs;
+                          msg_addr := msg_addr msg;
                           msg_value := 0 |} (deqMsgs (idsOf rins) msgs))) as Hrc.
       { intros.
         eapply ObjsInvalid_out_composed with (oidx:= oidx); eauto.
@@ -5027,9 +5038,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hci.
-        { disc_AtomicMsgOutsInv cidx.
+        { intros; disc_AtomicMsgOutsInv cidx.
           disc_MsgPred.
           eapply InvExcl_inv_ObjsInvalid; eauto.
         }
@@ -5091,9 +5103,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-        { eapply ObjsInvalid_invRs_composed.
+        { intros; eapply ObjsInvalid_invRs_composed.
           { apply Hoo. }
           { eapply ObjsInvalid_downRsIM_composed; [mred|].
             intros; case_idx_eq rcidx cidx; auto.
@@ -5257,9 +5270,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiE, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hci.
-        { disc_AtomicMsgOutsInv cidx.
+        { intros; disc_AtomicMsgOutsInv cidx.
           disc_MsgPred.
           eapply InvExcl_inv_ObjsInvalid; eauto.
         }
@@ -5278,9 +5292,10 @@ Section InvExcl.
                   (oss +[oidx <- (fst os, (fst (snd os), (mesiE, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-        { eapply ObjsInvalid_invRs_composed.
+        { intros; eapply ObjsInvalid_invRs_composed.
           { solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_impl; [apply Hcci|].
             simpl; intros.
@@ -5475,9 +5490,10 @@ Section InvExcl.
                   (oss +[oidx <- (msg_value rmsg, (true, (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hci.
-        { disc_AtomicMsgOutsInv cidx.
+        { intros; disc_AtomicMsgOutsInv cidx.
           disc_MsgPred.
           eapply InvExcl_inv_ObjsInvalid; eauto.
         }
@@ -5496,9 +5512,10 @@ Section InvExcl.
                   (oss +[oidx <- (msg_value rmsg, (true, (mesiM, (setDirI, snd (snd (snd (snd os)))))))])
                   (enqMP (downTo cidx) {| msg_id := mesiInvRs;
                                           msg_type := MRs;
+                                          msg_addr := msg_addr rmsg;
                                           msg_value := 0 |}
                          (deqMP (rqUpFrom cidx) msgs))) as Hoi.
-        { eapply ObjsInvalid_invRs_composed.
+        { intros; eapply ObjsInvalid_invRs_composed.
           { solve_ObjsInvalid_trivial.
             eapply ObjsInvalid_impl; [apply Hcci|].
             simpl; intros.
@@ -6320,6 +6337,7 @@ Section InvExcl.
                 (enqMP (downTo x)
                        {| msg_id := mesiRsM;
                           msg_type := MRs;
+                          msg_addr := msg_addr msg;
                           msg_value := 0 |} (deqMsgs (idsOf rins) msgs))) as Hrc.
       { intros.
         eapply ObjsInvalid_out_composed with (oidx:= oidx); eauto.
@@ -6586,6 +6604,7 @@ Section InvExcl.
                 (enqMP (downTo x)
                        {| msg_id := mesiRsM;
                           msg_type := MRs;
+                          msg_addr := msg_addr msg;
                           msg_value := 0 |} (deqMsgs (idsOf rins) msgs))) as Hrc.
       { intros.
         eapply ObjsInvalid_out_composed with (oidx:= oidx); eauto.
@@ -6926,7 +6945,10 @@ Section InvExcl.
                        (invalidate (fst (snd (snd os))),
                         (setDirI, snd (snd (snd (snd os)))))))
                 (enqMP (rsUpFrom oidx)
-                       {| msg_id := mesiDownRsIS; msg_type := MRs; msg_value := 0 |}
+                       {| msg_id := mesiDownRsIS;
+                          msg_type := MRs;
+                          msg_addr := msg_addr msg;
+                          msg_value := 0 |}
                        (deqMsgs (idsOf rins) msgs))) as Hoi.
       { intros; repeat split; [simpl; solve_mesi|discriminate|].
         clear Hpmcf; preveal Hnmcf.
@@ -6948,9 +6970,12 @@ Section InvExcl.
                                  (invalidate (fst (snd (snd os))),
                                   (setDirI, snd (snd (snd (snd os)))))))])
                 (enqMP (rsUpFrom oidx)
-                       {| msg_id := mesiDownRsIS; msg_type := MRs; msg_value := 0 |}
+                       {| msg_id := mesiDownRsIS;
+                          msg_type := MRs;
+                          msg_addr := msg_addr msg;
+                          msg_value := 0 |}
                        (deqMsgs (idsOf rins) msgs))) as Hrc.
-      { eapply ObjsInvalid_in_composed; [mred|..].
+      { intros; eapply ObjsInvalid_in_composed; [mred|..].
         { left; apply Hoi. }
         { intros; eapply ObjsInvalid_downRsIM_composed; [mred|eauto]. }
       }

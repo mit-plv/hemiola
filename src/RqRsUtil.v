@@ -38,7 +38,7 @@ Section DecValue.
     fun ost orq mins => hd_error mins <> None.
 
   Definition nilMsg : Msg :=
-    {| msg_id := ii; msg_type := MRq; msg_value := t_default |}.
+    {| msg_id := ii; msg_type := MRq; msg_addr := tt; msg_value := t_default |}.
 
   Definition nilIdMsg : Id Msg := (ii, nilMsg).
   Definition getFirstMsg  (msgs: list (Id Msg)): option Msg :=

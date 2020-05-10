@@ -430,6 +430,12 @@ Section Sim.
 
   Ltac solve_ImplOStateMSI :=
     intros;
+    try match goal with
+        | [H: context [invalidate ?st] |- _] =>
+          pose proof (invalidate_sound st)
+        | |- context [invalidate ?st] =>
+          pose proof (invalidate_sound st)
+        end;
     auto; try solve_msi; (* check if the goal is solved automatically *)
     match goal with
     | [H: _ -> ?P |- ?P] => apply H; auto

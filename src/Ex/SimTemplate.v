@@ -162,7 +162,7 @@ Section SimExtMP.
       do 2 (rewrite findQ_not_In_deqMP by (intro; subst; discriminate)).
       split; assumption.
   Qed.
-  
+
   Lemma SimExtMP_impl_enqMP_indep:
     forall midx msg imsgs (orqs: ORqs Msg) smsgs,
       ~ In midx (erqs ++ erss) ->
@@ -317,10 +317,14 @@ Section SimExtMP.
       + rewrite findQ_not_In_deqMP by (intro; subst; discriminate).
         assumption.
   Qed.
-  
+
 End SimExtMP.
 
 Ltac solve_sim_ext_mp :=
+  repeat match goal with
+         | |- context [{| msg_addr := ?a |}] =>
+           tryif (is_const a) then fail else destruct a
+         end;
   repeat
     (try
        match goal with
@@ -350,4 +354,3 @@ Ltac solve_sim_ext_mp :=
           |- SimExtMP _ _ (_ +[_ <- ?porq -[upRq]]) _] =>
          eapply SimExtMP_impl_silent_unlocked; eauto; mred; fail
        end; try assumption).
-

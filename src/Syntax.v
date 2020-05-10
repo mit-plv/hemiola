@@ -7,7 +7,8 @@ Local Open Scope string.
 Local Open Scope list.
 Local Open Scope fmap.
 
-Definition AddrT := nat.
+(* Design protocols for a single line first *)
+Definition AddrT := unit.
 
 Class DecValue :=
   { t_type: Type;
@@ -22,32 +23,19 @@ Section Msg.
   Record Msg :=
     { msg_id: IdxT;
       msg_type: bool;
+      msg_addr: AddrT;
       msg_value: Value;
     }.
 
   Definition MRq: bool := false.
   Definition MRs: bool := true.
 
-  Definition buildMsg mid ty v :=
-    {| msg_id := mid;
-       msg_type := ty;
-       msg_value := v |}.
-
-  Fixpoint buildMsgs mids vals :=
-    match mids with
-    | nil => nil
-    | mid :: mids' =>
-      match vals with
-      | nil => nil
-      | val :: vals' => (buildMsg mid val) :: (buildMsgs mids' vals')
-      end
-    end.
-
   Definition msg_dec: forall m1 m2: Msg, {m1 = m2} + {m1 <> m2}.
   Proof.
     decide equality.
     - apply t_eq_dec.
     - decide equality.
+    - apply bool_dec.
     - apply idx_dec.
   Defined.
 
@@ -76,7 +64,7 @@ Section Msg.
     unfold sigsOf; intros.
     apply map_app.
   Qed.
-  
+
 End Msg.
 
 Class HasInit (SysT StateT: Type) :=
@@ -108,7 +96,7 @@ Section ORqs.
   Definition ORq (MsgT: Type) := M.t (RqInfo MsgT).
 
   (* Object IdxT |-> ORq *)
-  Definition ORqs (MsgT: Type) := M.t (ORq MsgT). 
+  Definition ORqs (MsgT: Type) := M.t (ORq MsgT).
 
   Definition addRq {MsgT} (orq: ORq MsgT) (rqty: IdxT)
              (msg: MsgT) (mrss: list IdxT) (mrsb: IdxT): ORq MsgT :=
@@ -215,4 +203,3 @@ Global Instance System_OStates_HasInit `{DecValue} `{OStateIfc}
 Global Instance System_ORqs_HasInit `{DecValue} `{OStateIfc}
   : HasInit System (ORqs Msg) :=
   {| initsOf := sys_orqs_inits |}.
-

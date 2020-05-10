@@ -35,7 +35,7 @@ Section System.
       [specIdx <- hvcons 0 hvnil].
     Definition specORqsInit: ORqs Msg :=
       [specIdx <- []].
-    
+
     Section PerChn.
       Variable i: nat.
 
@@ -50,6 +50,7 @@ Section System.
                (ost, orq,
                 [(ers i, {| msg_id := getRs;
                             msg_type := MRs;
+                            msg_addr := tt;
                             msg_value := ost#[specValueIdx]
                          |})])
         |}.
@@ -68,6 +69,7 @@ Section System.
                 orq,
                 [(ers i, {| msg_id := setRs;
                             msg_type := MRs;
+                            msg_addr := tt;
                             msg_value := O |})])
         |}.
 
@@ -82,12 +84,13 @@ Section System.
                (ost, orq,
                 [(ers i, {| msg_id := evictRs;
                             msg_type := MRs;
+                            msg_addr := tt;
                             msg_value := O
                          |})])
         |}.
 
     End PerChn.
-    
+
     Definition specRulesI (i: nat): list (Rule) :=
       [specGetRq i; specSetRq i; specEvictRq i].
 
@@ -108,7 +111,7 @@ Section System.
       apply SubList_cons_right.
       assumption.
     Qed.
-      
+
     Lemma specObj_obj_rules_valid:
       forall i, NoDup (map rule_idx (specRules i)).
     Proof.
@@ -175,4 +178,3 @@ End System.
 Close Scope list.
 Close Scope hvec.
 Close Scope fmap.
-

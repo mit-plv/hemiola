@@ -14,13 +14,15 @@ Record Miv `{DecValue} :=
     miv_value: t_type }.
 Notation "<| MID ; MV |>" := {| miv_id := MID; miv_value := MV |}.
 
-Definition rqMsg `{DecValue} (miv: Miv) :=
+Definition rqMsg `{DecValue} (addr: AddrT) (miv: Miv) :=
   {| msg_id := miv_id miv;
      msg_type := MRq;
+     msg_addr := addr;
      msg_value := miv_value miv |}.
-Definition rsMsg `{DecValue} (miv: Miv) :=
+Definition rsMsg `{DecValue} (addr: AddrT) (miv: Miv) :=
   {| msg_id := miv_id miv;
      msg_type := MRs;
+     msg_addr := addr;
      msg_value := miv_value miv |}.
 
 Section Template.
@@ -43,9 +45,9 @@ Section Template.
                RqAccepting /\ UpLockFree /\ DownLockFree /\ prec)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      nst ::= trs st.(ost) msg;
+                   nst ::= trs st.(ost) msg;
                     return {{ fst nst, st.(orq),
-                              [(downTo cidx, rsMsg (snd nst))] }}))).
+                              [(downTo cidx, rsMsg msg.(msg_addr) (snd nst))] }}))).
 
   Definition immUpRule (oidx: IdxT)
              (prec: OPrec)
@@ -55,9 +57,9 @@ Section Template.
                RqAccepting /\ DownLockFree /\ prec)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      nst ::= trs st.(ost) msg;
+                   nst ::= trs st.(ost) msg;
                     return {{ fst nst, st.(orq),
-                              [(rsUpFrom oidx, rsMsg (snd nst))] }}))).
+                              [(rsUpFrom oidx, rsMsg msg.(msg_addr) (snd nst))] }}))).
 
   Definition rqUpUpRule (cidx oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
@@ -68,10 +70,10 @@ Section Template.
                fun ost _ mins => prec ost mins)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      out ::= trs st.(ost) msg;
+                   out ::= trs st.(ost) msg;
                     return {{ st.(ost),
                               addRq st.(orq) upRq msg [downTo oidx] (downTo cidx),
-                              [(rqUpFrom oidx, rqMsg out)] }}))).
+                              [(rqUpFrom oidx, rqMsg msg.(msg_addr) out)] }}))).
 
   Definition rqUpUpRuleS (oidx: IdxT)
              (prec: OState -> Prop)
@@ -83,7 +85,7 @@ Section Template.
        (do (st --> (out ::= trs st.(ost);
                     return {{ st.(ost),
                               addRqS st.(orq) upRq [downTo oidx],
-                              [(rqUpFrom oidx, rqMsg out)] }}))).
+                              [(rqUpFrom oidx, rqMsg tt out)] }}))).
 
   Definition RqUpDownSound (rcidx oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
@@ -92,7 +94,7 @@ Section Template.
       prec ost [min] ->
       fst (trs ost (valOf min)) <> nil /\
       Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost (valOf min))) /\
-       ~ In rcidx (fst (trs ost (valOf min))).
+      ~ In rcidx (fst (trs ost (valOf min))).
 
   Definition rqUpDownRule (cidx oidx: IdxT)
              (prec: OState -> list (Id Msg) -> Prop)
@@ -104,11 +106,11 @@ Section Template.
     :transition
        (do (st -->
                (msg <-- getFirstMsg st.(msgs);
-                  nst ::= trs st.(ost) msg;
+               nst ::= trs st.(ost) msg;
                 return {{ st.(ost),
                           addRq st.(orq) downRq msg
                                          (map rsUpFrom (fst nst)) (downTo cidx),
-                          map (fun cidx => (downTo cidx, rqMsg (snd nst)))
+                          map (fun cidx => (downTo cidx, rqMsg msg.(msg_addr) (snd nst)))
                               (fst nst) }}))).
 
   Definition RqUpDownSoundS (oidx: IdxT)
@@ -129,7 +131,7 @@ Section Template.
                (nst ::= trs st.(ost);
                 return {{ st.(ost),
                           addRqS st.(orq) downRq (map rsUpFrom (fst nst)),
-                          map (fun cidx => (downTo cidx, rqMsg (snd nst)))
+                          map (fun cidx => (downTo cidx, rqMsg tt (snd nst)))
                               (fst nst) }}))).
 
   Definition RqDownDownSound (oidx: IdxT)
@@ -150,11 +152,11 @@ Section Template.
     :transition
        (do (st -->
                (msg <-- getFirstMsg st.(msgs);
-                  nst ::= trs st.(ost) msg;
+               nst ::= trs st.(ost) msg;
                 return {{ st.(ost),
                           addRq st.(orq) downRq msg
                                          (map rsUpFrom (fst nst)) (rsUpFrom oidx),
-                          map (fun cidx => (downTo cidx, rqMsg (snd nst)))
+                          map (fun cidx => (downTo cidx, rqMsg msg.(msg_addr) (snd nst)))
                               (fst nst) }}))).
 
   Definition rsDownDownRule (rqId: IdxT)
@@ -170,12 +172,12 @@ Section Template.
                RsAccepting /\ DownLockFree /\ prec)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      rq <-- getUpLockMsg st.(orq);
-                      rsbTo <-- getUpLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) msg rq rsbTo;
+                   rq <-- getUpLockMsg st.(orq);
+                   rsbTo <-- getUpLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) msg rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) upRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg msg.(msg_addr) (snd nst))] }}))).
 
   Definition rsDownDownRuleS (prec: OPrec)
              (trs: OState ->
@@ -186,7 +188,7 @@ Section Template.
                UpLockBackNone /\ RsAccepting /\ DownLockFree /\ prec)
     :transition
        (do (st --> (msg <-- getFirstMsg st.(msgs);
-                      nst ::= trs st.(ost) msg;
+                   nst ::= trs st.(ost) msg;
                     return {{ nst, removeRq st.(orq) upRq, nil }}))).
 
   Definition rsUpDownRule (rqId: IdxT)
@@ -202,11 +204,11 @@ Section Template.
                RsAccepting /\ prec)
     :transition
        (do (st --> (rq <-- getDownLockMsg st.(orq);
-                      rsbTo <-- getDownLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) st.(msgs) rq rsbTo;
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) st.(msgs) rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
   Definition rsUpDownRuleOne (rqId: IdxT)
              (prec: OPrec)
@@ -221,12 +223,12 @@ Section Template.
                RsAccepting /\ prec)
     :transition
        (do (st --> (idm <-- getFirstIdMsg st.(msgs);
-                      rq <-- getDownLockMsg st.(orq);
-                      rsbTo <-- getDownLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) idm rq rsbTo;
+                   rq <-- getDownLockMsg st.(orq);
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) idm rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
   Definition rsUpUpRule (rqId: IdxT)
              (prec: OPrec)
@@ -241,11 +243,11 @@ Section Template.
                RsAccepting /\ prec)
     :transition
        (do (st --> (rq <-- getDownLockMsg st.(orq);
-                      rsbTo <-- getDownLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) st.(msgs) rq rsbTo;
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) st.(msgs) rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
   Definition rsUpUpRuleOne (rqId: IdxT)
              (prec: OPrec)
@@ -260,12 +262,12 @@ Section Template.
                RsAccepting /\ prec)
     :transition
        (do (st --> (idm <-- getFirstIdMsg st.(msgs);
-                      rq <-- getDownLockMsg st.(orq);
-                      rsbTo <-- getDownLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) idm rq rsbTo;
+                   rq <-- getDownLockMsg st.(orq);
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) idm rq rsbTo;
                     return {{ fst nst,
                               removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg (snd nst))] }}))).
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
   Definition RsDownRqDownSoundPrec (oidx: IdxT) (orq: ORq Msg)
              (outInds: list IdxT): Prop :=
@@ -306,12 +308,13 @@ Section Template.
                RsAccepting /\ DownLockFree /\ prec)
     :transition
        (do (st --> (rq <-- getUpLockMsg st.(orq);
-                      rsbTo <-- getUpLockIdxBack st.(orq);
-                      nst ::= trs st.(ost) rq rsbTo;
+                   rsbTo <-- getUpLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) rq rsbTo;
                     return {{ fst nst,
                               addRq (removeRq st.(orq) upRq)
                                     downRq rq (map rsUpFrom (fst (snd nst))) rsbTo,
-                              map (fun cidx => (downTo cidx, rqMsg (snd (snd nst))))
+                              map (fun cidx => (downTo cidx,
+                                                rqMsg rq.(msg_addr) (snd (snd nst))))
                                   (fst (snd nst)) }}))).
 
 End Template.
