@@ -205,21 +205,21 @@ Section Reify.
 
         Inductive HORq :=
         | HORqI: HORq
-        | HUpdUpLock: HORq ->
-                      hexp HMsg ->
+        | HUpdUpLock: hexp HMsg ->
                       hexp HIdxQ (* response-from *) ->
                       hexp HIdxQ (* response-back-to *) -> HORq
-        | HUpdUpLockS: HORq -> hexp HIdxQ (* response-from *) -> HORq
-        | HRelUpLock: HORq -> HORq
-        | HUpdDownLock: HORq ->
-                        hexp HMsg ->
+        | HUpdUpLockS: hexp HIdxQ (* response-from *) -> HORq
+        | HRelUpLock: HORq
+        | HUpdDownLock: hexp HMsg ->
                         hexp (HList HIdxQ) (* responses-from *) ->
                         hexp HIdxQ (* response-back-to *) -> HORq
-        | HUpdDownLockS: HORq ->
-                         hexp (HList HIdxQ) (* responses-from *) ->
+        | HUpdDownLockS: hexp (HList HIdxQ) (* responses-from *) ->
                          HORq
-        | HRelDownLock: HORq -> HORq
-        | HAddRs: HORq -> hexp HIdxQ -> hexp HMsg -> HORq.
+        | HRelDownLock: HORq
+        | HTrsfUpDown: hexp HMsg ->
+                       hexp (HList HIdxQ) (* responses-from *) ->
+                       hexp HIdxQ (* response-back-to *) -> HORq
+        | HAddRs: hexp HIdxQ -> hexp HMsg -> HORq.
 
         Inductive HMsgsOut :=
         | HMsgOutNil: HMsgsOut
@@ -268,6 +268,7 @@ Section Reify.
   Arguments HUpdDownLock {_ _} {var}.
   Arguments HUpdDownLockS {_ _} {var}.
   Arguments HRelDownLock {_ _} {var}.
+  Arguments HTrsfUpDown {_ _} {var}.
   Arguments HAddRs {_ _} {var}.
   Arguments HMsgOutNil {_ _} {var}.
   Arguments HMsgOutOne {_ _} {var}.
@@ -405,19 +406,22 @@ Section Reify.
                                         end]
          end)%hvec.
 
-      Fixpoint interpORq (horq: HORq htypeDenote): ORq Msg :=
+      Definition interpORq (horq: HORq htypeDenote): ORq Msg :=
         match horq with
         | HORqI => orq
-        | HUpdUpLock porq rq rsf rsb =>
-          addRq (interpORq porq) upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
-        | HUpdUpLockS porq rsf => addRqS (interpORq porq) upRq [interpExp rsf]
-        | HRelUpLock porq => removeRq (interpORq porq) upRq
-        | HUpdDownLock porq rq rssf rsb =>
-          addRq (interpORq porq) downRq (interpExp rq) (interpExp rssf) (interpExp rsb)
-        | HUpdDownLockS porq rssf =>
-          addRqS (interpORq porq) downRq (interpExp rssf)
-        | HRelDownLock porq => removeRq (interpORq porq) downRq
-        | HAddRs porq midx msg => addRs (interpORq porq) (interpExp midx) (interpExp msg)
+        | HUpdUpLock rq rsf rsb =>
+          addRq orq upRq (interpExp rq) [interpExp rsf] (interpExp rsb)
+        | HUpdUpLockS rsf => addRqS orq upRq [interpExp rsf]
+        | HRelUpLock => removeRq orq upRq
+        | HUpdDownLock rq rssf rsb =>
+          addRq orq downRq (interpExp rq) (interpExp rssf) (interpExp rsb)
+        | HUpdDownLockS rssf =>
+          addRqS orq downRq (interpExp rssf)
+        | HRelDownLock => removeRq orq downRq
+        | HTrsfUpDown rq rssf rsb =>
+          addRq (removeRq orq upRq)
+                downRq (interpExp rq) (interpExp rssf) (interpExp rsb)
+        | HAddRs midx msg => addRs orq (interpExp midx) (interpExp msg)
         end.
 
       Definition interpMsgOuts (houts: HMsgsOut htypeDenote): list (Id Msg) :=

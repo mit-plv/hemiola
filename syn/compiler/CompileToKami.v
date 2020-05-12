@@ -125,20 +125,332 @@ Section Compile.
              "addr" :: KAddr;
              "value" :: KValue }.
 
-  Definition UpLock :=
-    STRUCT { "ul_valid" :: Bool;
-             "ul_rsb" :: Bool;
-             "ul_msg" :: Struct KMsg;
-             "ul_rsbTo" :: KCIdx }.
+  Definition MaybeStr (k: Kind) :=
+    STRUCT { "valid" :: Bool; "data" :: k }.
+  Definition Maybe (k: Kind) := Struct (MaybeStr k).
 
-  Definition DownLock :=
-    STRUCT { "dl_valid" :: Bool;
-             "dl_rsb" :: Bool;
-             "dl_msg" :: Struct KMsg;
-             "dl_rss_from" :: KCBv;
-             "dl_rss_recv" :: KCBv;
-             "dl_rss" :: Array (Struct KMsg) hcfg_children_max;
-             "dl_rsbTo" :: KQIdx }.
+  Section MSHR.
+    Variable oidx: IdxT.
+
+    Definition UL :=
+      STRUCT { "ul_valid" :: Bool;
+               "ul_rsb" :: Bool;
+               "ul_msg" :: Struct KMsg; (* The message contains a line address as well *)
+               "ul_rsbTo" :: KCIdx }.
+
+    Definition DL :=
+      STRUCT { "dl_valid" :: Bool;
+               "dl_rsb" :: Bool;
+               "dl_msg" :: Struct KMsg; (* The message contains a line address as well *)
+               "dl_rss_from" :: KCBv;
+               "dl_rss_recv" :: KCBv;
+               "dl_rss" :: Array (Struct KMsg) hcfg_children_max;
+               "dl_rsbTo" :: KQIdx }.
+
+    (* Uplock free and has an UL slot. *)
+    Definition upLockableN: string := "upLockable" ++ idx_to_string oidx.
+    Definition upLockable: Attribute SignatureT :=
+      {| attrName := upLockableN;
+         attrType := {| arg := KAddr; ret := Bool |} |}.
+
+    (* Downlock free and has a DL slot. *)
+    Definition downLockableN: string := "downLockable" ++ idx_to_string oidx.
+    Definition downLockable: Attribute SignatureT :=
+      {| attrName := downLockableN;
+         attrType := {| arg := KAddr; ret := Bool |} |}.
+
+    Definition upLockGetN: string := "upLockGet" ++ idx_to_string oidx.
+    Definition upLockGet: Attribute SignatureT :=
+      {| attrName := upLockGetN;
+         attrType := {| arg := KAddr; ret := Maybe (Struct UL) |} |}.
+
+    Definition downLockGetN: string := "downLockGet" ++ idx_to_string oidx.
+    Definition downLockGet: Attribute SignatureT :=
+      {| attrName := downLockGetN;
+         attrType := {| arg := KAddr; ret := Maybe (Struct DL) |} |}.
+
+    Definition downLockRssFullN: string := "downLockRssFull" ++ idx_to_string oidx.
+    Definition downLockRssFull: Attribute SignatureT :=
+      {| attrName := downLockRssFullN;
+         attrType := {| arg := KAddr; ret := Maybe (Struct DL) |} |}.
+
+    Definition RegUL :=
+      STRUCT { "r_ul_rsb" :: Bool;
+               "r_ul_msg" :: Struct KMsg; (* contains a line address *)
+               "r_ul_rsbTo" :: KCIdx }.
+    Definition registerULN: string := "registerUL" ++ idx_to_string oidx.
+    Definition registerUL: Attribute SignatureT :=
+      {| attrName := registerULN;
+         attrType := {| arg := Struct RegUL; ret := Void |} |}.
+
+    Definition releaseULN: string := "releaseUL" ++ idx_to_string oidx.
+    Definition releaseUL: Attribute SignatureT :=
+      {| attrName := releaseULN;
+         attrType := {| arg := KAddr; ret := Void |} |}.
+
+    Definition RegDL :=
+      STRUCT { "r_dl_rsb" :: Bool;
+               "r_dl_msg" :: Struct KMsg;
+               "r_dl_rss_from" :: KCBv;
+               "r_dl_rsbTo" :: KQIdx }.
+    Definition registerDLN: string := "registerDL" ++ idx_to_string oidx.
+    Definition registerDL: Attribute SignatureT :=
+      {| attrName := registerDLN;
+         attrType := {| arg := Struct RegDL; ret := Void |} |}.
+
+    Definition releaseDLN: string := "releaseDL" ++ idx_to_string oidx.
+    Definition releaseDL: Attribute SignatureT :=
+      {| attrName := releaseDLN;
+         attrType := {| arg := KAddr; ret := Void |} |}.
+
+    Definition TrsfUpDown :=
+      STRUCT { "r_dl_addr" :: KAddr; "r_dl_rss_from" :: KCBv }.
+    Definition transferUpDownN: string := "transferUpDown" ++ idx_to_string oidx.
+    Definition transferUpDown: Attribute SignatureT :=
+      {| attrName := transferUpDownN;
+         attrType := {| arg := Struct TrsfUpDown; ret := Void |} |}.
+
+    Definition AddRs :=
+      STRUCT { "r_dl_addr" :: KAddr;
+               "r_dl_midx" :: KCIdx;
+               "r_dl_msg" :: Struct KMsg }.
+    Definition addRsN: string := "addRs" ++ idx_to_string oidx.
+    Definition addRs: Attribute SignatureT :=
+      {| attrName := addRsN;
+         attrType := {| arg := Struct AddRs; ret := Void |} |}.
+
+    Variables logNumUls logNumDls: nat.
+
+    Fixpoint ulFix {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind Bool))
+             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+             (n: nat): Expr var (SyntaxKind k) :=
+      (match n with
+       | O => lc
+       | S n' =>
+         let ul := uls@[$(Nat.pow 2 logNumUls - n)] in
+         (IF (cond ul) then tc n ul else ulFix lc tc cond uls n')
+       end)%kami_expr.
+
+    Fixpoint ulIter {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind Bool))
+             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+      : Expr var (SyntaxKind k) :=
+      ulFix lc tc cond uls (Nat.pow 2 logNumUls).
+
+    Fixpoint dlFix {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind Bool))
+             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+             (n: nat): Expr var (SyntaxKind k) :=
+      (match n with
+       | O => lc
+       | S n' =>
+         let dl := dls@[$(Nat.pow 2 logNumDls - n)] in
+         (IF (cond dl) then tc n dl else dlFix lc tc cond dls n')
+       end)%kami_expr.
+
+    Fixpoint dlIter {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind Bool))
+             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind k) :=
+      dlFix lc tc cond dls (Nat.pow 2 logNumDls).
+
+    Definition hasULIter {var}
+               (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+      : Expr var (SyntaxKind Bool) :=
+      (ulIter $$false (fun _ _ => $$true)
+              (fun ul => !(ul!UL@."ul_valid")) uls)%kami_expr.
+
+    Definition hasDLIter {var}
+               (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind Bool) :=
+      (dlIter $$false (fun _ _ => $$true)
+              (fun dl => !(dl!DL@."dl_valid")) dls)%kami_expr.
+
+    Definition upLockedF {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (ul: Expr var (SyntaxKind (Struct UL))): Expr var (SyntaxKind Bool) :=
+      (ul!UL@."ul_valid" && ul!UL@."ul_msg"!KMsg@."addr" == a)%kami_expr.
+
+    Definition upLockFreeIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+      : Expr var (SyntaxKind Bool) :=
+      (ulIter $$true (fun _ _ => $$false) (upLockedF a) uls)%kami_expr.
+
+    Definition downLockedF {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (dl: Expr var (SyntaxKind (Struct DL))): Expr var (SyntaxKind Bool) :=
+      (dl!DL@."dl_valid" && dl!DL@."dl_msg"!KMsg@."addr" == a)%kami_expr.
+
+    Definition downLockFreeIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind Bool) :=
+      (dlIter $$true (fun _ _ => $$false) (downLockedF a) dls)%kami_expr.
+
+    Definition upLockGetIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+      : Expr var (SyntaxKind (Maybe (Struct UL))) :=
+      (ulIter (k:= Maybe (Struct UL)) $$Default
+              (fun _ ul => STRUCT { "valid" ::= $$true; "data" ::= ul })
+              (upLockedF a) uls)%kami_expr.
+
+    Definition downLockGetIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind (Maybe (Struct DL))) :=
+      (dlIter (k:= Maybe (Struct DL)) $$Default
+              (fun _ dl => STRUCT { "valid" ::= $$true; "data" ::= dl })
+              (downLockedF a) dls)%kami_expr.
+
+    Definition downLockRssFullF {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (dl: Expr var (SyntaxKind (Struct DL))): Expr var (SyntaxKind Bool) :=
+      (dl!DL@."dl_valid" &&
+       dl!DL@."dl_msg"!KMsg@."addr" == a &&
+       dl!DL@."dl_rss_recv" == dl!DL@."dl_rss_from")%kami_expr.
+
+    Definition downLockRssFullIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind (Maybe (Struct DL))) :=
+      (dlIter (k:= Maybe (Struct DL)) $$Default
+              (fun _ dl => STRUCT { "valid" ::= $$true; "data" ::= dl })
+              (downLockRssFullF a) dls)%kami_expr.
+
+    Definition getULSlotIter {var}
+               (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+      : Expr var (SyntaxKind (Bit logNumUls)) :=
+      (ulIter $$Default (fun n ul => $(Nat.pow 2 logNumUls - n))
+              (fun ul => !(ul!UL@."ul_valid")) uls)%kami_expr.
+
+    Definition getDLSlotIter {var}
+               (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind (Bit logNumDls)) :=
+      (dlIter $$Default (fun n dl => $(Nat.pow 2 logNumDls - n))
+              (fun dl => !(dl!DL@."dl_valid")) dls)%kami_expr.
+
+    Definition findULIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+      : Expr var (SyntaxKind (Bit logNumUls)) :=
+      (ulIter $$Default (fun n ul => $(Nat.pow 2 logNumUls - n))
+              (fun ul => ul!UL@."ul_valid" && ul!UL@."ul_msg"!KMsg@."addr" == a)
+              uls)%kami_expr.
+
+    Definition findDLIter {var}
+               (a: Expr var (SyntaxKind KAddr))
+               (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+      : Expr var (SyntaxKind (Bit logNumDls)) :=
+      (dlIter $$Default (fun n dl => $(Nat.pow 2 logNumDls - n))
+              (fun dl => dl!DL@."dl_valid" && dl!DL@."dl_msg"!KMsg@."addr" == a)
+              dls)%kami_expr.
+
+    Definition mshrs: Kami.Syntax.Modules :=
+      MODULE {
+        Register "uls" : Vector (Struct UL) logNumUls <- Default
+        with Register "dls" : Vector (Struct DL) logNumDls <- Default
+        with Method upLockableN (a: KAddr): Bool :=
+          Read uls <- "uls";
+          LET hasSlot <- hasULIter #uls;
+          LET ulFree <- upLockFreeIter #a #uls;
+          Ret (#hasSlot && #ulFree)
+        with Method downLockableN (a: KAddr): Bool :=
+          Read dls <- "dls";
+          LET hasSlot <- hasDLIter #dls;
+          LET dlFree <- downLockFreeIter #a #dls;
+          Ret (#hasSlot && #dlFree)
+        with Method upLockGetN (a: KAddr): Maybe (Struct UL) :=
+          Read uls <- "uls";
+          LET retv <- upLockGetIter #a #uls;
+          Ret #retv
+        with Method downLockGetN (a: KAddr): Maybe (Struct DL) :=
+          Read dls <- "dls";
+          LET retv <- downLockGetIter #a #dls;
+          Ret #retv
+        with Method downLockRssFullN (a: KAddr): Maybe (Struct DL) :=
+          Read dls <- "dls";
+          LET retv <- downLockRssFullIter #a #dls;
+          Ret #retv
+
+        with Method registerULN (r: Struct RegUL): Void :=
+          Read uls <- "uls";
+          LET uli <- getULSlotIter #uls;
+          Write "uls" <- #uls@[#uli <- STRUCT { "ul_valid" ::= $$true;
+                                                "ul_rsb" ::= #r!RegUL@."r_ul_rsb";
+                                                "ul_msg" ::= #r!RegUL@."r_ul_msg";
+                                                "ul_rsbTo" ::= #r!RegUL@."r_ul_rsbTo" }];
+          Retv
+        with Method releaseULN (a: KAddr): Void :=
+          Read uls <- "uls";
+          LET uli <- findULIter #a #uls;
+          Write "uls" <- #uls@[#uli <- $$Default];
+          Retv
+
+        with Method registerDLN (r: Struct RegDL): Void :=
+          Read dls <- "dls";
+          LET dli <- getDLSlotIter #dls;
+          Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= $$true;
+                                                "dl_rsb" ::= #r!RegDL@."r_dl_rsb";
+                                                "dl_msg" ::= #r!RegDL@."r_dl_msg";
+                                                "dl_rss_from" ::= #r!RegDL@."r_dl_rss_from";
+                                                "dl_rss_recv" ::= $$Default;
+                                                "dl_rss" ::= $$Default;
+                                                "dl_rsbTo" ::= #r!RegDL@."r_dl_rsbTo" }];
+          Retv
+        with Method releaseDLN (a: KAddr): Void :=
+          Read dls <- "dls";
+          LET dli <- findDLIter #a #dls;
+          Write "dls" <- #dls@[#dli <- $$Default];
+          Retv
+
+        with Method transferUpDownN (r: Struct TrsfUpDown): Void :=
+          Read uls <- "uls";
+          LET oul <- upLockGetIter (#r!TrsfUpDown@."r_dl_addr") #uls;
+          LET ul <- #oul!(MaybeStr (Struct UL))@."data";
+          Read dls <- "dls";
+          LET dli <- getDLSlotIter #dls;
+          Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= $$true;
+                                                "dl_rsb" ::= #ul!UL@."ul_rsb";
+                                                "dl_msg" ::= #ul!UL@."ul_msg";
+                                                "dl_rss_from" ::= #r!TrsfUpDown@."r_dl_rss_from";
+                                                "dl_rss_recv" ::= $$Default;
+                                                "dl_rss" ::= $$Default;
+                                                "dl_rsbTo" ::= {$downIdx, #ul!UL@."ul_rsbTo"} }];
+          Retv
+
+        with Method addRsN (r: Struct AddRs): Void :=
+          Read dls <- "dls";
+          LET dli <- findDLIter (#r!AddRs@."r_dl_addr") #dls;
+          LET odl <- downLockGetIter (#r!AddRs@."r_dl_addr") #dls;
+          LET dl <- #odl!(MaybeStr (Struct DL))@."data";
+          Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= #dl!DL@."dl_valid";
+                                                "dl_rsb" ::= #dl!DL@."dl_rsb";
+                                                "dl_msg" ::= #dl!DL@."dl_msg";
+                                                "dl_rss_from" ::= #dl!DL@."dl_rss_from";
+                                                "dl_rss_recv" ::=
+                                                  bvSet (#dl!DL@."dl_rss_recv")
+                                                        (#r!AddRs@."r_dl_midx");
+                                                "dl_rss" ::=
+                                                  UpdateArray
+                                                    (#dl!DL@."dl_rss")
+                                                    (#r!AddRs@."r_dl_midx")
+                                                    (#r!AddRs@."r_dl_msg");
+                                                "dl_rsbTo" ::= #dl!DL@."dl_rsbTo" }];
+          Retv
+      }.
+
+  End MSHR.
 
   Definition KCIdm :=
     STRUCT { "cidx" :: KQIdx; "msg" :: Struct KMsg }.
@@ -289,8 +601,8 @@ Section Compile.
         compile_Rule_ost_vars_fix O hostf_ty.
 
       Variables (msgIn: var (Struct KMsg))
-                (uln: string) (ul: var (Struct UpLock))
-                (dln: string) (dl: var (Struct DownLock))
+                (uln: string) (ul: var (Struct UL))
+                (dln: string) (dl: var (Struct DL))
                 (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
 
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
@@ -323,20 +635,20 @@ Section Compile.
                            (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
                   (HBType hbt0)
                   (hostf_ty_compat i Heq))
-         | HUpLockIdxBackI _ => ({$downIdx, #ul!UpLock@."ul_rsbTo"})
-         | HDownLockIdxBackI _ => (#dl!DownLock@."dl_rsbTo")
+         | HUpLockIdxBackI _ => ({$downIdx, #ul!UL@."ul_rsbTo"})
+         | HDownLockIdxBackI _ => (#dl!DL@."dl_rsbTo")
          end)%kami_expr.
 
       Class CompExtExp :=
         { compile_eexp:
             forall (var: Kind -> Type) {het},
-              var (Struct UpLock) -> var (Struct DownLock) ->
+              var (Struct UL) -> var (Struct DL) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
               Expr var (SyntaxKind (kind_of het));
           compile_eoprec:
             forall (var: Kind -> Type),
-              var (Struct UpLock) -> var (Struct DownLock) ->
+              var (Struct UL) -> var (Struct DL) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heoprec (hvar_of var) ->
               Expr var (SyntaxKind Bool);
@@ -351,12 +663,12 @@ Section Compile.
         end.
 
       Definition compile_Rule_uplock
-                 (cont: var (Struct UpLock) -> ActionT var Void): ActionT var Void :=
-        (Read ul: Struct UpLock <- uln; cont ul)%kami_action.
+                 (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
+        (Read ul: Struct UL <- uln; cont ul)%kami_action.
 
       Definition compile_Rule_downlock
-                 (cont: var (Struct DownLock) -> ActionT var Void): ActionT var Void :=
-        (Read dl: Struct DownLock <- dln; cont dl)%kami_action.
+                 (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
+        (Read dl: Struct DL <- dln; cont dl)%kami_action.
 
       Definition compile_Rule_msg_from (mf: HMsgFrom)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
@@ -381,32 +693,31 @@ Section Compile.
         (match rrp with
          | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
          | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
-         | HUpLockFree => (Assert (!(#ul!UpLock@."ul_valid")); cont)
-         | HDownLockFree => (Assert (!(#dl!DownLock@."dl_valid")); cont)
-         | HUpLockMsgId mty mid =>
-           (Assert (#ul!UpLock@."ul_valid");
-           Assert (#ul!UpLock@."ul_rsb");
-           Assert (#ul!UpLock@."ul_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#ul!UpLock@."ul_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+         | HUpLockFree =>
+           (Call canUl <- (upLockable oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
+         | HDownLockFree =>
+           (Call canDl <- (downLockable oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
+         | HUpLockMsgId _ _ =>
+           (Call ul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #ul!(MaybeStr (Struct UL))@."valid";
+           Write uln <- #ul!(MaybeStr (Struct UL))@."data";
            cont)
-         | HUpLockMsg =>
-           (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
-         | HUpLockIdxBack =>
-           (Assert (#ul!UpLock@."ul_valid"); Assert (#ul!UpLock@."ul_rsb"); cont)
-         | HUpLockBackNone =>
-           (Assert (#ul!UpLock@."ul_valid"); Assert (!(#ul!UpLock@."ul_rsb")); cont)
-         | HDownLockMsgId mty mid =>
-           (Assert (#dl!DownLock@."dl_valid");
-           Assert (#dl!DownLock@."dl_rsb");
-           Assert (#dl!DownLock@."dl_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#dl!DownLock@."dl_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+         | HUpLockMsg => cont
+         | HUpLockIdxBack => cont
+         | HUpLockBackNone => cont
+         | HDownLockMsgId _ _ =>
+           (Call dl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #dl!(MaybeStr (Struct DL))@."valid";
+           Write dln <- #dl!(MaybeStr (Struct DL))@."data";
            cont)
-         | HDownLockMsg =>
-           (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
-         | HDownLockIdxBack =>
-           (Assert (#dl!DownLock@."dl_valid"); Assert (#dl!DownLock@."dl_rsb"); cont)
-         | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-         | HRssFull => (Assert (#dl!DownLock@."dl_rss_recv" == #dl!DownLock@."dl_rss_from"); cont)
+         | HDownLockMsg => cont
+         | HDownLockIdxBack => cont
+         | HMsgIdFrom msgId => cont
+         | HRssFull =>
+           (Call dl <- (downLockRssFull oidx) (#msgIn!KMsg@."addr");
+           Assert #dl!(MaybeStr (Struct DL))@."valid";
+           Write dln <- #dl!(MaybeStr (Struct DL))@."data";
+           cont)
          end)%kami_action.
 
       Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -444,14 +755,14 @@ Section Compile.
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
         (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
          | HGetFirstMsg => #msgIn
-         | HGetUpLockMsg => (#ul!UpLock@."ul_msg")
-         | HGetDownLockMsg => (#dl!DownLock@."dl_msg")
-         | HGetUpLockIdxBack => {$downIdx, (#ul!UpLock@."ul_rsbTo")}
-         | HGetDownLockIdxBack => (#dl!DownLock@."dl_rsbTo")
+         | HGetUpLockMsg => (#ul!UL@."ul_msg")
+         | HGetDownLockMsg => (#dl!DL@."dl_msg")
+         | HGetUpLockIdxBack => {$downIdx, (#ul!UL@."ul_rsbTo")}
+         | HGetDownLockIdxBack => (#dl!DL@."dl_rsbTo")
          | HGetDownLockFirstRs =>
-           (let fs := bvFirstSet (#dl!DownLock@."dl_rss_from") in
+           (let fs := bvFirstSet (#dl!DL@."dl_rss_from") in
             STRUCT { "cidx" ::= {$rsUpIdx, fs};
-                     "msg" ::= (#dl!DownLock@."dl_rss")#[fs] })
+                     "msg" ::= (#dl!DL@."dl_rss")#[fs] })
          end)%kami_expr.
 
       Fixpoint compile_OState_trs (host: HOState (hvar_of var))
@@ -476,56 +787,48 @@ Section Compile.
                (cont: ActionT var Void): ActionT var Void :=
         (match horq with
          | HORqI _ => cont
-         | HUpdUpLock porq rq rsf rsb =>
-           (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
-                                                 "ul_rsb" ::= $$true;
-                                                 "ul_msg" ::= compile_exp rq;
-                                                 "ul_rsbTo" ::= _truncate_ (compile_exp rsb) };
-           compile_ORq_trs porq cont)
-         | HUpdUpLockS porq rsf =>
-           (Write uln: Struct UpLock <- STRUCT { "ul_valid" ::= $$true;
-                                                 "ul_rsb" ::= $$false;
-                                                 "ul_msg" ::= $$Default;
-                                                 "ul_rsbTo" ::= $$Default };
-           compile_ORq_trs porq cont)
+         | HUpdUpLock rq _ rsb =>
+           (Call (registerUL oidx)
+                 (STRUCT { "r_ul_rsb" ::= $$true;
+                           "r_ul_msg" ::= compile_exp rq;
+                           "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) });
+           cont)
+         | HUpdUpLockS _ =>
+           (Call (registerUL oidx)
+                 (STRUCT { "r_ul_rsb" ::= $$false;
+                           (** FIXME: [msg] should contain a nondet. address *)
+                           "r_ul_msg" ::= $$Default;
+                           "r_ul_rsbTo" ::= $$Default });
+           cont)
          | HRelUpLock _ =>
-           (Write uln: Struct UpLock <- $$Default; cont)
-         | HUpdDownLock porq rq rssf rsb =>
-           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
-                                                   "dl_rsb" ::= $$true;
-                                                   "dl_msg" ::= compile_exp rq;
-                                                   "dl_rss_from" ::= compile_exp rssf;
-                                                   "dl_rss_recv" ::= $$Default;
-                                                   "dl_rss" ::= $$Default;
-                                                   "dl_rsbTo" ::= compile_exp rsb };
-           compile_ORq_trs porq cont)
-         | HUpdDownLockS porq rssf =>
-           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= $$true;
-                                                   "dl_rsb" ::= $$false;
-                                                   "dl_msg" ::= $$Default;
-                                                   "dl_rss_from" ::= compile_exp rssf;
-                                                   "dl_rss_recv" ::= $$Default;
-                                                   "dl_rss" ::= $$Default;
-                                                   "dl_rsbTo" ::= $$Default };
-           compile_ORq_trs porq cont)
-         | HRelDownLock porq =>
-           (Write dln: Struct DownLock <- $$Default;
-           compile_ORq_trs porq cont)
-         | HAddRs porq midx msg =>
-           (Write dln: Struct DownLock <- STRUCT { "dl_valid" ::= #dl!DownLock@."dl_valid";
-                                                   "dl_rsb" ::= #dl!DownLock@."dl_rsb";
-                                                   "dl_msg" ::= #dl!DownLock@."dl_msg";
-                                                   "dl_rss_from" ::= #dl!DownLock@."dl_rss_from";
-                                                   "dl_rss_recv" ::=
-                                                     bvSet (#dl!DownLock@."dl_rss_recv")
-                                                           (_truncate_ (compile_exp midx));
-                                                   "dl_rss" ::=
-                                                     UpdateArray
-                                                       (#dl!DownLock@."dl_rss")
-                                                       (_truncate_ (compile_exp midx))
-                                                       (compile_exp msg);
-                                                   "dl_rsbTo" ::= #dl!DownLock@."dl_rsbTo" };
-           compile_ORq_trs porq cont)
+           (Call (releaseUL oidx) (#msgIn!KMsg@."addr"); cont)
+         | HUpdDownLock rq rssf rsb =>
+           (Call (registerDL oidx)
+                 (STRUCT { "r_dl_rsb" ::= $$true;
+                           "r_dl_msg" ::= compile_exp rq;
+                           "r_dl_rss_from" ::= compile_exp rssf;
+                           "r_dl_rsbTo" ::= compile_exp rsb });
+           cont)
+         | HUpdDownLockS rssf =>
+           (Call (registerDL oidx)
+                 (STRUCT { "r_dl_rsb" ::= $$false;
+                           (** FIXME: [msg] should contain a nondet. address *)
+                           "r_dl_msg" ::= $$Default;
+                           "r_dl_rss_from" ::= compile_exp rssf;
+                           "r_dl_rsbTo" ::= $$Default });
+           cont)
+         | HRelDownLock _ =>
+           (Call (releaseDL oidx) (#msgIn!KMsg@."addr"); cont)
+         | HTrsfUpDown rq rssf rsb =>
+           (Call (transferUpDown oidx)
+                 (STRUCT { "r_dl_addr" ::= #msgIn!KMsg@."addr";
+                           "r_dl_rss_from" ::= compile_exp rssf });
+           cont)
+         | HAddRs midx msg =>
+           (Call (addRs oidx) (STRUCT { "r_dl_addr" ::= #msgIn!KMsg@."addr";
+                                        "r_dl_midx" ::= _truncate_ (compile_exp midx);
+                                        "r_dl_msg" ::= compile_exp msg });
+           cont)
          end)%kami_action.
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
@@ -581,8 +884,10 @@ Section Compile.
     Definition ruleNameI (ridx: IdxT) :=
       (ruleNameBase ++ "_" ++ idx_to_string oidx ++ "_" ++ idx_to_string ridx)%string.
 
-    Local Notation "v <- f ; cont" := (f (fun v => cont)) (at level 99, right associativity).
-    Local Notation "f ;; cont" := (f cont) (at level 60, right associativity).
+    Local Notation "v <- f ; cont" :=
+      (f (fun v => cont)) (at level 99, right associativity, only parsing).
+    Local Notation "f ;; cont" :=
+      (f cont) (at level 60, right associativity, only parsing).
     Definition compile_Rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
@@ -594,9 +899,9 @@ Section Compile.
              ul <- compile_Rule_uplock uln;
              dl <- compile_Rule_downlock dln;
              compile_Rule_prec
-               msgIn ul dl ostVars (hrule_precond hr (hvar_of var));;
+               oidx msgIn uln ul dln dl ostVars (hrule_precond hr (hvar_of var));;
              compile_Rule_trs
-               oidx ostin msgIn uln ul dln dl ostVars (hrule_trs hr))
+               oidx ostin msgIn ul dl ostVars (hrule_trs hr))
       |}.
 
     Definition compile_Rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
@@ -623,9 +928,9 @@ Section Compile.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
     {| attrName := upLockReg oidx;
-       attrType := RegInitDefault (SyntaxKind (Struct UpLock)) |}
+       attrType := RegInitDefault (SyntaxKind (Struct UL)) |}
       :: {| attrName := downLockReg oidx;
-            attrType := RegInitDefault (SyntaxKind (Struct DownLock)) |}
+            attrType := RegInitDefault (SyntaxKind (Struct DL)) |}
       :: compile_inits oidx 0 (Vector.to_list hostf_ty).
 
   Definition build_int_fifos (oidx: IdxT): Modules :=

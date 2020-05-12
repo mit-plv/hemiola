@@ -417,17 +417,19 @@ Ltac renote_ORq :=
     match goal with
     | |- interpORq _ _ _ _ = ?t =>
       match t with
+      | addRq (removeRq _ upRq) downRq _ _ _ =>
+        instantiate (1:= HTrsfUpDown _ _ _); simpl; repeat f_equal; renote_exp
       | addRq _ upRq _ _ _ =>
-        instantiate (1:= HUpdUpLock _ _ _ _); simpl; repeat f_equal; [|renote_exp..]
+        instantiate (1:= HUpdUpLock _ _ _); simpl; repeat f_equal; renote_exp
       | addRqS _ upRq _ =>
-        instantiate (1:= HUpdUpLockS _ _); simpl; repeat f_equal; [|renote_exp..]
+        instantiate (1:= HUpdUpLockS _); simpl; repeat f_equal; renote_exp
       | removeRq _ upRq => instantiate (1:= HRelUpLock _); simpl; f_equal
       | addRq _ downRq _ _ _ =>
-        instantiate (1:= HUpdDownLock _ _ _ _); simpl; repeat f_equal; [|renote_exp..]
+        instantiate (1:= HUpdDownLock _ _ _); simpl; repeat f_equal; renote_exp
       | addRqS _ downRq _ =>
-        instantiate (1:= HUpdDownLockS _ _); simpl; repeat f_equal; [|renote_exp]
+        instantiate (1:= HUpdDownLockS _); simpl; repeat f_equal; renote_exp
       | removeRq _ downRq => instantiate (1:= HRelDownLock _); simpl; f_equal
-      | addRs _ _ _ => instantiate (1:= HAddRs _ _ _); simpl; f_equal; [|renote_exp..]
+      | addRs _ _ _ => instantiate (1:= HAddRs _ _); simpl; f_equal; renote_exp
       | _ => instantiate (1:= HORqI _); reflexivity
       end
     end.

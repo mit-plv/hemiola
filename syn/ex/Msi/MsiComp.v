@@ -45,7 +45,7 @@ Section DirComp.
 
   Fixpoint compile_dir_exp
            (var: Kind -> Type) {het}
-           (ul: var (Struct UpLock)) (dl: var (Struct DownLock))
+           (ul: var (Struct UL)) (dl: var (Struct DL))
            (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
            (he: heexp (hvar_of var) het): Expr var (SyntaxKind (kind_of het)) :=
     (match he in (hexp_dir _ h) return (Expr var (SyntaxKind (kind_of h))) with
@@ -97,7 +97,7 @@ Section DirComp.
 
   Definition compile_dir_OPrec
              (var: Kind -> Type)
-             (ul: var (Struct UpLock)) (dl: var (Struct DownLock))
+             (ul: var (Struct UL)) (dl: var (Struct DL))
              (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
@@ -131,17 +131,21 @@ Definition topo: tree :=
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((compile_Object (existT _ _ (hl1 oidx)))
+     ++ mshrs oidx 1 0
      ++ build_int_fifos oidx
      ++ build_down_forward oidx
      ++ build_ext_fifos oidx)%kami.
 
 Definition klic (oidx: IdxT): Modules :=
   ((compile_Object (existT _ _ (hli topo oidx)))
+     ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
 Definition kmemc :=
-  (compile_Object (existT _ _ (hmem topo [0]%list)) ++ build_broadcaster [0]%list)%kami.
+  ((compile_Object (existT _ _ (hmem topo [0]%list)))
+     ++ mshrs [0] 0 1
+     ++ build_broadcaster [0]%list)%kami.
 
 (* Time Definition kl1c0: Modules := *)
 (*   Eval vm_compute in (kl1c 0~>0~>0). *)
