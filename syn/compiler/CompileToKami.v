@@ -4,7 +4,7 @@ Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
 Require Import Hemiola.Ex.TopoTemplate.
 
 Require Import Compiler.HemiolaDeep. (* source *)
-Require Import Kami.Lib.Struct Kami Kami.PrimFifo. (* target *)
+Require Import Kami.Lib.Struct Kami Kami.PrimFifo Kami.PrimBram. (* target *)
 
 Set Implicit Arguments.
 
@@ -451,6 +451,149 @@ Section Compile.
       }.
 
   End MSHR.
+
+  Section Cache.
+    Variable oidx: IdxT.
+    Variables dataSz tagSz indexSz offsetSz addrSz: nat.
+
+    (* direct-mapped *)
+    Definition tagK := Bit (tagSz + 1). (* msb as a valid bit *)
+    Definition tagBramN: string := "tagBram" ++ idx_to_string oidx.
+    Definition tagBram := bram1 tagBramN indexSz tagK.
+    Definition tagPutRq :=
+      MethodSig (tagBramN -- "putRq")
+                (Struct (BramRq indexSz tagK)): Void.
+    Definition tagGetRs :=
+      MethodSig (tagBramN -- "getRs")(): tagK.
+
+    Definition dataK := Bit dataSz.
+    Definition dataBramN: string := "dataBram" ++ idx_to_string oidx.
+    Definition dataBram := bram1 dataBramN indexSz dataK.
+    Definition dataPutRq :=
+      MethodSig (dataBramN -- "putRq")
+                (Struct (BramRq indexSz dataK)): Void.
+    Definition dataGetRs :=
+      MethodSig (dataBramN -- "getRs")(): dataK.
+
+    Definition CacheRq :=
+      STRUCT { "cache_write" :: Bool; (* write request if [true] *)
+               "cache_addr" :: Bit addrSz;
+               "cache_data" :: dataK }.
+    Definition cacheRqN: string := "cacheRq" ++ idx_to_string oidx.
+    Definition cacheRq :=
+      MethodSig cacheRqN (Struct CacheRq): Void.
+
+    Definition cacheReadRsN: string := "cacheReadRs" ++ idx_to_string oidx.
+    Definition cacheReadRs :=
+      MethodSig cacheReadRsN (): Maybe dataK.
+
+    Definition cacheWriteTagRsN: string := "cacheWriteTagRs" ++ idx_to_string oidx.
+    Definition cacheWriteRsN: string := "cacheWriteRs" ++ idx_to_string oidx.
+    Definition cacheWriteRs :=
+      (* returns the tag of the victim line, if eviction is required. *)
+      MethodSig cacheWriteRsN (): Maybe (Bit tagSz).
+
+    Definition rqStatusN: string := "rqStatus" ++ idx_to_string oidx.
+
+    Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
+                                    Expr ty (SyntaxKind (Bit indexSz)))
+              (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
+                                  Expr ty (SyntaxKind (Bit tagSz)))
+              (readTagMatch: forall ty, fullType ty (SyntaxKind (Bit (tagSz + 1))) ->
+                                        fullType ty (SyntaxKind (Bit tagSz)) ->
+                                        Expr ty (SyntaxKind Bool))
+              (writeTagMatch: forall ty, fullType ty (SyntaxKind (Bit (tagSz + 1))) ->
+                                         fullType ty (SyntaxKind (Bit tagSz)) ->
+                                         Expr ty (SyntaxKind Bool)).
+
+    Definition onRqN: string := "onRq" ++ idx_to_string oidx.
+    Definition rqWriteN: string := "rqWrite" ++ idx_to_string oidx.
+    Definition rqIndexN: string := "rqIndex" ++ idx_to_string oidx.
+    Definition rqTagN: string := "rqTag" ++ idx_to_string oidx.
+    Definition rqDataN: string := "rqData" ++ idx_to_string oidx.
+    Definition victimTagN: string := "victimTag" ++ idx_to_string oidx.
+    Definition onWriteN: string := "onWrite" ++ idx_to_string oidx.
+
+    Definition cache :=
+      MODULE {
+        Register onRqN: Bool <- Default
+        with Register onWriteN: Bool <- Default
+        with Register rqWriteN: Bool <- Default
+        with Register rqIndexN: Bit indexSz <- Default
+        with Register rqTagN: Bit tagSz <- Default
+        with Register rqDataN: Bit dataSz <- Default
+        with Register victimTagN: Bit tagSz <- Default
+
+        with Rule cacheWriteTagRsN :=
+          Read onRq <- onRqN;
+          Read rqWrite <- rqWriteN;
+          Read onWrite <- onWriteN;
+          Assert (#onRq && #rqWrite && !#onWrite);
+          Read rqTag <- rqTagN;
+          Call tag <- tagGetRs ();
+          If (writeTagMatch _ tag rqTag)
+          then (Read rqIndex <- rqIndexN;
+               Read rqData <- rqDataN;
+               Call dataPutRq (STRUCT { "write" ::= $$true;
+                                        "addr" ::= #rqIndex;
+                                        "datain" ::= #rqData });
+               Write onWriteN <- $$true;
+               Retv)
+          else (Write victimTagN <- #tag; Retv);
+          Retv
+
+        with Method cacheRqN (rq: Struct CacheRq): Void :=
+          Read onRq <- onRqN;
+          Assert !#onRq;
+          LET isWrite <- #rq!CacheRq@."cache_write";
+          LET addr <- #rq!CacheRq@."cache_addr";
+          LET index <- getIndex _ addr;
+          LET tag <- getTag _ addr;
+          Call tagPutRq (STRUCT { "write" ::= $$false;
+                                  "addr" ::= #index;
+                                  "datain" ::= $$Default });
+          Write rqWriteN <- #isWrite;
+          Write rqIndexN <- #index;
+          Write rqTagN <- #tag;
+          If #isWrite
+          then (Write rqDataN <- #rq!CacheRq@."cache_data";
+               Retv)
+          else (Call dataPutRq (STRUCT { "write" ::= $$false;
+                                         "addr" ::= #index;
+                                         "datain" ::= $$Default });
+               Retv);
+          Write onRqN <- $$true;
+          Retv
+
+        with Method cacheReadRsN (): Maybe dataK :=
+          Read onRq <- onRqN;
+          Read rqWrite <- rqWriteN;
+          Assert (#onRq && !#rqWrite);
+          Read rqTag <- rqTagN;
+          Call tag <- tagGetRs ();
+          Call data <- dataGetRs ();
+          LET retv: Maybe dataK <- STRUCT { "valid" ::= readTagMatch _ tag rqTag;
+                                            "data" ::= #data };
+          Write onRqN <- $$false;
+          Ret #retv
+
+        with Method cacheWriteRsN (): Maybe (Bit tagSz) :=
+          Read onRq <- onRqN;
+          Read rqWrite <- rqWriteN;
+          Assert (#onRq && #rqWrite);
+
+          Read onWrite <- onWriteN;
+          If #onWrite then (Call dataGetRs ();
+                           Write onWriteN <- $$false;
+                           Retv);
+          Read victimTag <- victimTagN;
+          LET retv: Maybe (Bit tagSz) <- STRUCT { "valid" ::= !#onWrite;
+                                                  "data" ::= #victimTag };
+          Write onRqN <- $$false;
+          Ret #retv
+        }.
+
+  End Cache.
 
   Definition KCIdm :=
     STRUCT { "cidx" :: KQIdx; "msg" :: Struct KMsg }.
