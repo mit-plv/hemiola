@@ -174,76 +174,6 @@ Section Compile.
       Definition compile_rule_ost_vars :=
         compile_rule_ost_vars_fix O hostf_ty.
 
-      Variables (msgIn: var (Struct KMsg))
-                (uln: string) (ul: var (Struct UL))
-                (dln: string) (dl: var (Struct DL))
-                (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty)).
-
-      Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
-        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
-        (match he with
-         | HBConst _ c => Const _ (compile_const c)
-         | HVar _ _ v => Var _ (SyntaxKind _) v
-         | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
-         | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
-         | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
-         | HAddrB _ => $0 (** Used only when making an eviction request with a nondet. addr *)
-         | HMsgB mid mty maddr mval =>
-           (STRUCT { "id" ::= compile_bexp mid;
-                     "type" ::= compile_bexp mty;
-                     "addr" ::= compile_bexp maddr;
-                     "value" ::= compile_bexp mval })
-         | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
-         | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
-         | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
-         | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
-         | @HOstVal _ _ _ _ _ i hbt0 Heq =>
-           Var _ (SyntaxKind _)
-               (eq_rect
-                  hostf_ty[@i]
-                  (fun h => var (kind_of h))
-                  (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
-                           (fun T => T)
-                           (HVector.hvec_ith ostVars i)
-                           (var (kind_of hostf_ty[@i]))
-                           (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
-                  (HBType hbt0)
-                  (hostf_ty_compat i Heq))
-         | HUpLockIdxBackI _ => ({$downIdx, #ul!UL@."ul_rsbTo"})
-         | HDownLockIdxBackI _ => (#dl!DL@."dl_rsbTo")
-         end)%kami_expr.
-
-      Class CompExtExp :=
-        { compile_eexp:
-            forall (var: Kind -> Type) {het},
-              var (Struct UL) -> var (Struct DL) ->
-              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
-              heexp (hvar_of var) het ->
-              Expr var (SyntaxKind (kind_of het));
-          compile_eoprec:
-            forall (var: Kind -> Type),
-              var (Struct UL) -> var (Struct DL) ->
-              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
-              heoprec (hvar_of var) ->
-              Expr var (SyntaxKind Bool);
-        }.
-      Context `{CompExtExp}.
-
-      Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
-        : Expr var (SyntaxKind (kind_of ht)) :=
-        match he with
-        | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var ul dl ostVars hee
-        end.
-
-      Definition compile_rule_uplock
-                 (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
-        (Read ul: Struct UL <- uln; cont ul)%kami_action.
-
-      Definition compile_rule_downlock
-                 (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
-        (Read dl: Struct DL <- dln; cont dl)%kami_action.
-
       (** * Step 1: compile the message-accepting rule *)
 
       (* a local lock *)
@@ -302,11 +232,11 @@ Section Compile.
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
          | None => cont (** FIXME *)
-         | Some None => (Assert (!(#prl!LL@."ll_valid")); cont)
+         | Some None => (Assert !(#prl!LL@."ll_valid"); cont)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | false => (Assert (!(#crsrl!LL@."ll_valid")); cont)
-           | true => (Assert (!(#crqrl!LL@."ll_valid")); cont)
+           | false => (Assert !(#crsrl!LL@."ll_valid"); cont)
+           | true => (Assert !(#crqrl!LL@."ll_valid"); cont)
            end
          end)%kami_action.
 
@@ -331,7 +261,127 @@ Section Compile.
                         cont)
          end)%kami_action.
 
-      (** * Step 2: TODO: implement *)
+      (** * Step 2: compile rules for checking preconditions & requesting transitions *)
+
+      Variables (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                (msgIn: var (Struct KMsg))
+                (uln: string) (ul: var (Struct UL))
+                (dln: string) (dl: var (Struct DL)).
+
+      Definition compile_rule_readlocked
+                 (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None => cont (** FIXME *)
+         | Some (Some _) =>
+           match imt.(imt_rqrs) with
+           | false => (Assert #crsrl!LL@."ll_valid"; cont)
+           | true => (Assert #crqrl!LL@."ll_valid"; cont)
+           end
+         | Some None => (Assert #prl!LL@."ll_valid"; cont)
+         end)%kami_action.
+
+      Definition compile_rule_get_msg_in
+                 (imt: InputMsgType)
+                 (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None => (LET msgIn <- $$Default; cont msgIn) (** FIXME *)
+         | Some (Some _) =>
+           match imt.(imt_rqrs) with
+           | false => (LET msgIn <- #crsrl!LL@."ll_msg"; cont msgIn)
+           | true => (LET msgIn <- #crqrl!LL@."ll_msg"; cont msgIn)
+           end
+         | Some None => (LET msgIn <- #prl!LL@."ll_msg"; cont msgIn)
+         end)%kami_action.
+
+      Definition compile_rule_writelock
+                 (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
+        (Read wl: Struct LL <- wln; cont wl)%kami_action.
+
+      Definition compile_rule_writelock_available
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Assert !(#wl!LL@."ll_valid"); cont)%kami_action.
+
+      Definition compile_rule_get_uplock (imt: InputMsgType)
+                 (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
+        (match imt.(imt_rqrs), imt.(imt_from) with
+         | false, Some None =>
+           (* A response from the parent *)
+           (Call oul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #oul!(MaybeStr (Struct UL))@."valid";
+           LET ul <- #oul!(MaybeStr (Struct UL))@."data";
+           cont ul)
+         | _, _ => (LET ul <- $$Default; cont ul)
+         end)%kami_action.
+
+      Definition compile_rule_get_downlock (imt: InputMsgType)
+                 (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
+        (match imt.(imt_rqrs), imt.(imt_from) with
+         | false, Some (Some _) =>
+           (* A response from a child *)
+           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #odl!(MaybeStr (Struct DL))@."valid";
+           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
+           cont dl)
+         | _, _ => (LET dl <- $$Default; cont dl)
+         end)%kami_action.
+
+      Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
+        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
+        (match he with
+         | HBConst _ c => Const _ (compile_const c)
+         | HVar _ _ v => Var _ (SyntaxKind _) v
+         | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
+         | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
+         | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
+         | HAddrB _ => $0 (* Used only when making an eviction request with a nondet. addr *)
+         | HMsgB mid mty maddr mval =>
+           (STRUCT { "id" ::= compile_bexp mid;
+                     "type" ::= compile_bexp mty;
+                     "addr" ::= compile_bexp maddr;
+                     "value" ::= compile_bexp mval })
+         | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
+         | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
+         | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
+         | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
+         | @HOstVal _ _ _ _ _ i hbt0 Heq =>
+           Var _ (SyntaxKind _)
+               (eq_rect
+                  hostf_ty[@i]
+                  (fun h => var (kind_of h))
+                  (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
+                           (fun T => T)
+                           (HVector.hvec_ith ostVars i)
+                           (var (kind_of hostf_ty[@i]))
+                           (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
+                  (HBType hbt0)
+                  (hostf_ty_compat i Heq))
+         (* The expressions below are used only when dealing with responses. *)
+         | HUpLockIdxBackI _ => ({$downIdx, #ul!UL@."ul_rsbTo"})
+         | HDownLockIdxBackI _ => (#dl!DL@."dl_rsbTo")
+         end)%kami_expr.
+
+      Class CompExtExp :=
+        { compile_eexp:
+            forall (var: Kind -> Type) {het},
+              var (Struct UL) -> var (Struct DL) ->
+              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+              heexp (hvar_of var) het ->
+              Expr var (SyntaxKind (kind_of het));
+          compile_eoprec:
+            forall (var: Kind -> Type),
+              var (Struct UL) -> var (Struct DL) ->
+              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+              heoprec (hvar_of var) ->
+              Expr var (SyntaxKind Bool);
+        }.
+      Context `{CompExtExp}.
+
+      Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
+        : Expr var (SyntaxKind (kind_of ht)) :=
+        match he with
+        | HBExp hbe => compile_bexp hbe
+        | HEExp _ hee => compile_eexp var ul dl ostVars hee
+        end.
 
       Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
         : Expr var (SyntaxKind Bool) :=
@@ -353,23 +403,11 @@ Section Compile.
          | HNativeP _ _ => $$true
          end)%kami_expr.
 
-      (* Only compiles user-defined preconditions, e.g., status/directory checks *)
-      Fixpoint compile_rule_prop_prec_iter (rp: HOPrecT (hvar_of var))
-               (cont: ActionT var Void): ActionT var Void :=
-        match rp with
-        | HOPrecAnd prec1 prec2 =>
-          let crule2 := compile_rule_prop_prec_iter prec2 cont in
-          compile_rule_prop_prec_iter prec1 crule2
-        | HOPrecRqRs _ rrprec => cont
-        | HOPrecProp pprec =>
-          (Assert (compile_rule_prop_prec pprec); cont)%kami_action
-        end.
-
       Definition compile_rule_rqrs_prec (rrp: HOPrecR)
                  (cont: ActionT var Void): ActionT var Void :=
         (match rrp with
-         | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
-         | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
+         | HRqAccepting => cont
+         | HRsAccepting => cont
          | HUpLockFree =>
            (Call canUl <- (upLockable oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
          | HDownLockFree =>
@@ -407,6 +445,8 @@ Section Compile.
         | HOPrecProp pprec =>
           (Assert (compile_rule_prop_prec pprec); cont)%kami_action
         end.
+
+      (** * Step 3: TODO: implement. *)
 
       Definition compile_bval {hbt} (hv: hbval hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
@@ -547,11 +587,11 @@ Section Compile.
          ++ "_" ++ nat_to_string phase)%string.
 
     Local Notation "v <- f ; cont" :=
-      (f (fun v => cont)) (at level 99, right associativity, only parsing).
+      (f (fun v => cont)) (at level 60, right associativity, only parsing).
     Local Notation "f ;; cont" :=
       (f cont) (at level 60, right associativity, only parsing).
 
-    Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rule_0 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
       {| attrName := ruleNameI (rule_idx (projT1 rule)) 0;
@@ -566,6 +606,30 @@ Section Compile.
              compile_rule_accept_message oidx prln crqrln crsrln imt;;
              Retv)%kami_action |}.
 
+    Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+      Attribute (Action Void) :=
+      let hr := projT2 rule in
+      {| attrName := ruleNameI (rule_idx (projT1 rule)) 1;
+         attrType :=
+           fun var =>
+             let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
+                           imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
+             (prl <- compile_rule_readlock_parent prln;
+             crqrl <- compile_rule_readlock_child_rq crqrln;
+             crsrl <- compile_rule_readlock_child_rs crsrln;
+             compile_rule_readlocked prl crqrl crsrl imt;;
+             msgIn <- compile_rule_get_msg_in prl crqrl crsrl imt;
+             wl <- compile_rule_writelock wln;
+             compile_rule_writelock_available wl;;
+             (** TODO: should use values from the status-read response *)
+             ostVars <- compile_rule_ost_vars ostin;
+             ul <- compile_rule_get_uplock oidx msgIn imt;
+             dl <- compile_rule_get_downlock oidx msgIn imt;
+             compile_rule_prec
+               oidx ostVars msgIn uln ul dln dl (hrule_precond hr (hvar_of var));;
+             (** TODO: should make a transition request *)
+             Retv)%kami_action |}.
+
     (* Definition compile_Rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): *)
     (*   Attribute (Action Void) := *)
     (*   let hr := projT2 rule in *)
@@ -574,8 +638,8 @@ Section Compile.
     (*        fun var => *)
     (*          (ostVars <- compile_rule_ost_vars ostin; *)
     (*          msgIn <- compile_rule_msg_from oidx (hrule_msg_from hr); *)
-    (*          ul <- compile_rule_uplock uln; *)
-    (*          dl <- compile_rule_downlock dln; *)
+    (*          ul <- compile_rule_get_uplock uln; *)
+    (*          dl <- compile_rule_get_downlock dln; *)
     (*          compile_rule_prec *)
     (*            oidx msgIn uln ul dln dl ostVars (hrule_precond hr (hvar_of var));; *)
     (*          compile_rule_trs *)
