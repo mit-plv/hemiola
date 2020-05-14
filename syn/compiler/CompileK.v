@@ -157,7 +157,7 @@ Section Compile.
       Definition ostValNameI {sz} (i: Fin.t sz) :=
         ostValNameN (proj1_sig (Fin.to_nat i)).
 
-      Fixpoint compile_Rule_ost_vars_fix (n: nat) {sz} (htys: Vector.t htype sz)
+      Fixpoint compile_rule_ost_vars_fix (n: nat) {sz} (htys: Vector.t htype sz)
                (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) htys) ->
                       ActionT var Void) {struct htys}: ActionT var Void :=
         match htys in Vector.t _ sz
@@ -167,12 +167,12 @@ Section Compile.
         | Vector.cons _ hty _ htys =>
           fun cont =>
             (Read ov: (kind_of hty) <- (ostValNameN n);
-            compile_Rule_ost_vars_fix
+            compile_rule_ost_vars_fix
               (S n) htys (fun vars => cont (HVector.hvcons ov vars)))%kami_action
         end cont.
 
-      Definition compile_Rule_ost_vars :=
-        compile_Rule_ost_vars_fix O hostf_ty.
+      Definition compile_rule_ost_vars :=
+        compile_rule_ost_vars_fix O hostf_ty.
 
       Variables (msgIn: var (Struct KMsg))
                 (uln: string) (ul: var (Struct UL))
@@ -236,33 +236,136 @@ Section Compile.
         | HEExp _ hee => compile_eexp var ul dl ostVars hee
         end.
 
-      Definition compile_Rule_uplock
+      Definition compile_rule_uplock
                  (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
         (Read ul: Struct UL <- uln; cont ul)%kami_action.
 
-      Definition compile_Rule_downlock
+      Definition compile_rule_downlock
                  (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
         (Read dl: Struct DL <- dln; cont dl)%kami_action.
 
-      Definition compile_Rule_msg_from (mf: HMsgFrom)
-                 (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
-        (match mf with
-         | HMsgFromNil =>
-           (* This is a hack, just by feeding a random value to the continuation *)
-           (LET msgIn <- $$Default; cont msgIn)
-         | HMsgFromParent pmidx =>
-           (Call msgIn <- (deqFromParent pmidx)(); cont msgIn)
-         | HMsgFromChild cmidx =>
-           (Call msgIn <- (deqFromChild cmidx)(); cont msgIn)
-         | HMsgFromExt emidx =>
-           (Call msgIn <- (deqFromExt emidx)(); cont msgIn)
-         | HMsgFromUpLock =>
-           (Call msgIn <- (deqFromParent (downTo oidx))(); cont msgIn)
-         | HMsgFromDownLock cidx =>
-           (Call msgIn <- (deqFromChild cidx)(); cont msgIn)
+      (** * Step 1: compile the message-accepting rule *)
+
+      (* a local lock *)
+      Definition LL :=
+        STRUCT { "ll_valid" :: Bool;
+                 (* The message contains a line address as well *)
+                 "ll_msg" :: Struct KMsg }.
+
+      Variables (prln: string) (prl: var (Struct LL))
+                (crqrln: string) (crqrl: var (Struct LL))
+                (crsrln: string) (crsrl: var (Struct LL))
+                (wln: string) (wl: var (Struct LL)).
+
+      Definition compile_rule_readlock_parent
+                 (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
+        (Read prl: Struct LL <- prln; cont prl)%kami_action.
+
+      Definition compile_rule_readlock_child_rq
+                 (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
+        (Read crqrl: Struct LL <- crqrln; cont crqrl)%kami_action.
+
+      Definition compile_rule_readlock_child_rs
+                 (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
+        (Read crsrl: Struct LL <- crsrln; cont crsrl)%kami_action.
+
+      Definition detect_input_msg_rqrs_r (rrp: HOPrecR): bool :=
+        match rrp with
+        | HRqAccepting => true
+        | _ => false
+        end.
+
+      Fixpoint detect_input_msg_rqrs (rp: HOPrecT (hvar_of var)): bool :=
+        match rp with
+        | HOPrecAnd prec1 prec2 =>
+          (detect_input_msg_rqrs prec1) || (detect_input_msg_rqrs prec2)
+        | HOPrecRqRs _ rrprec => detect_input_msg_rqrs_r rrprec
+        | HOPrecProp _ => false
+        end.
+
+      (* [Some None] if from the parent, [Some (Some cmidx)] if from a child,
+       * and [None] if no input message. *)
+      Definition detect_input_msg_from (mf: HMsgFrom): option (option IdxT) :=
+        match mf with
+        | HMsgFromNil => None
+        | HMsgFromParent pmidx => Some None
+        | HMsgFromChild cmidx => Some (Some cmidx)
+        | HMsgFromExt emidx => Some None
+        | HMsgFromUpLock => Some None
+        | HMsgFromDownLock cidx => Some (Some cidx)
+        end.
+
+      Record InputMsgType :=
+        { imt_rqrs: bool; imt_from: option (option IdxT) }.
+
+      Definition compile_rule_readlock_available (imt: InputMsgType)
+                 (cont: ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None => cont (** FIXME *)
+         | Some None => (Assert (!(#prl!LL@."ll_valid")); cont)
+         | Some (Some _) =>
+           match imt.(imt_rqrs) with
+           | false => (Assert (!(#crsrl!LL@."ll_valid")); cont)
+           | true => (Assert (!(#crqrl!LL@."ll_valid")); cont)
+           end
          end)%kami_action.
 
-      Definition compile_Rule_rqrs_prec (rrp: HOPrecR)
+      Definition compile_rule_accept_message (imt: InputMsgType)
+                 (cont: ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None => cont (** FIXME *)
+         | Some (Some cmidx) =>
+           match imt.(imt_rqrs) with
+           | false => (Call msgIn <- (deqFromChild cmidx)();
+                      Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                          "ll_msg" ::= #msgIn };
+                      cont)
+           | true => (Call msgIn <- (deqFromChild cmidx)();
+                     Write crqrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                         "ll_msg" ::= #msgIn };
+                     cont)
+           end
+         | Some None => (Call msgIn <- (deqFromParent (downTo oidx))();
+                        Write prln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                          "ll_msg" ::= #msgIn };
+                        cont)
+         end)%kami_action.
+
+      (** * Step 2: TODO: implement *)
+
+      Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
+        : Expr var (SyntaxKind Bool) :=
+        (match pp with
+         | HTrue _ => $$true
+         | HAnd pp1 pp2 =>
+           (compile_rule_prop_prec pp1) && (compile_rule_prop_prec pp2)
+         | HOr pp1 pp2 =>
+           (compile_rule_prop_prec pp1) || (compile_rule_prop_prec pp2)
+         | HBoolT b => compile_exp b == $$true
+         | HBoolF b => compile_exp b == $$false
+         | HEq v1 v2 => compile_exp v1 == compile_exp v2
+         | HNe v1 v2 => compile_exp v1 != compile_exp v2
+         | HNatLt v1 v2 => compile_exp v1 < compile_exp v2
+         | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
+         | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
+         | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
+         | HExtP _ ep => compile_eoprec _ ul dl ostVars ep
+         | HNativeP _ _ => $$true
+         end)%kami_expr.
+
+      (* Only compiles user-defined preconditions, e.g., status/directory checks *)
+      Fixpoint compile_rule_prop_prec_iter (rp: HOPrecT (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
+        match rp with
+        | HOPrecAnd prec1 prec2 =>
+          let crule2 := compile_rule_prop_prec_iter prec2 cont in
+          compile_rule_prop_prec_iter prec1 crule2
+        | HOPrecRqRs _ rrprec => cont
+        | HOPrecProp pprec =>
+          (Assert (compile_rule_prop_prec pprec); cont)%kami_action
+        end.
+
+      Definition compile_rule_rqrs_prec (rrp: HOPrecR)
                  (cont: ActionT var Void): ActionT var Void :=
         (match rrp with
          | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
@@ -294,35 +397,15 @@ Section Compile.
            cont)
          end)%kami_action.
 
-      Fixpoint compile_Rule_prop_prec (pp: HOPrecP (hvar_of var))
-        : Expr var (SyntaxKind Bool) :=
-        (match pp with
-         | HTrue _ => $$true
-         | HAnd pp1 pp2 =>
-           (compile_Rule_prop_prec pp1) && (compile_Rule_prop_prec pp2)
-         | HOr pp1 pp2 =>
-           (compile_Rule_prop_prec pp1) || (compile_Rule_prop_prec pp2)
-         | HBoolT b => compile_exp b == $$true
-         | HBoolF b => compile_exp b == $$false
-         | HEq v1 v2 => compile_exp v1 == compile_exp v2
-         | HNe v1 v2 => compile_exp v1 != compile_exp v2
-         | HNatLt v1 v2 => compile_exp v1 < compile_exp v2
-         | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
-         | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
-         | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
-         | HExtP _ ep => compile_eoprec _ ul dl ostVars ep
-         | HNativeP _ _ => $$true
-         end)%kami_expr.
-
-      Fixpoint compile_Rule_prec (rp: HOPrecT (hvar_of var))
+      Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
         match rp with
         | HOPrecAnd prec1 prec2 =>
-          let crule2 := compile_Rule_prec prec2 cont in
-          compile_Rule_prec prec1 crule2
-        | HOPrecRqRs _ rrprec => compile_Rule_rqrs_prec rrprec cont
+          let crule2 := compile_rule_prec prec2 cont in
+          compile_rule_prec prec1 crule2
+        | HOPrecRqRs _ rrprec => compile_rule_rqrs_prec rrprec cont
         | HOPrecProp pprec =>
-          (Assert (compile_Rule_prop_prec pprec); cont)%kami_action
+          (Assert (compile_rule_prop_prec pprec); cont)%kami_action
         end.
 
       Definition compile_bval {hbt} (hv: hbval hbt)
@@ -440,7 +523,7 @@ Section Compile.
         | HMTrs mn => compile_Monad mn
         end.
 
-      Definition compile_Rule_trs (rtrs: HOTrs): ActionT var Void :=
+      Definition compile_rule_trs (rtrs: HOTrs): ActionT var Void :=
         match rtrs with
         | HTrsMTrs mtrs => compile_state_trs mtrs
         end.
@@ -452,35 +535,56 @@ Section Compile.
   Context `{CompExtExp}.
 
   Section WithObj.
-    Variables (oidx: IdxT) (uln dln ostin: string).
+    Variables (oidx: IdxT)
+              (prln crqrln crsrln wln: string)
+              (uln dln ostin: string).
 
     Definition ruleNameBase: string := "rule".
-    Definition ruleNameI (ridx: IdxT) :=
-      (ruleNameBase ++ "_" ++ idx_to_string oidx ++ "_" ++ idx_to_string ridx)%string.
+    Definition ruleNameI (ridx: IdxT) (phase: nat) :=
+      (ruleNameBase
+         ++ "_" ++ idx_to_string oidx
+         ++ "_" ++ idx_to_string ridx
+         ++ "_" ++ nat_to_string phase)%string.
 
     Local Notation "v <- f ; cont" :=
       (f (fun v => cont)) (at level 99, right associativity, only parsing).
     Local Notation "f ;; cont" :=
       (f cont) (at level 60, right associativity, only parsing).
-    Definition compile_Rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+
+    Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
-      {| attrName := ruleNameI (rule_idx (projT1 rule));
+      {| attrName := ruleNameI (rule_idx (projT1 rule)) 0;
          attrType :=
            fun var =>
-             (ostVars <- compile_Rule_ost_vars ostin;
-             msgIn <- compile_Rule_msg_from oidx (hrule_msg_from hr);
-             ul <- compile_Rule_uplock uln;
-             dl <- compile_Rule_downlock dln;
-             compile_Rule_prec
-               oidx msgIn uln ul dln dl ostVars (hrule_precond hr (hvar_of var));;
-             compile_Rule_trs
-               oidx ostin msgIn ul dl ostVars (hrule_trs hr))
-      |}.
+             let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
+                           imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
+             (prl <- compile_rule_readlock_parent prln;
+             crqrl <- compile_rule_readlock_child_rq crqrln;
+             crsrl <- compile_rule_readlock_child_rs crsrln;
+             compile_rule_readlock_available prl crqrl crsrl imt;;
+             compile_rule_accept_message oidx prln crqrln crsrln imt;;
+             Retv)%kami_action |}.
 
-    Definition compile_Rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
-      list (Attribute (Action Void)) :=
-      map compile_Rule rules.
+    (* Definition compile_Rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): *)
+    (*   Attribute (Action Void) := *)
+    (*   let hr := projT2 rule in *)
+    (*   {| attrName := ruleNameI (rule_idx (projT1 rule)); *)
+    (*      attrType := *)
+    (*        fun var => *)
+    (*          (ostVars <- compile_rule_ost_vars ostin; *)
+    (*          msgIn <- compile_rule_msg_from oidx (hrule_msg_from hr); *)
+    (*          ul <- compile_rule_uplock uln; *)
+    (*          dl <- compile_rule_downlock dln; *)
+    (*          compile_rule_prec *)
+    (*            oidx msgIn uln ul dln dl ostVars (hrule_precond hr (hvar_of var));; *)
+    (*          compile_rule_trs *)
+    (*            oidx ostin msgIn ul dl ostVars (hrule_trs hr)) *)
+    (*   |}. *)
+
+    (* Definition compile_Rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}): *)
+    (*   list (Attribute (Action Void)) := *)
+    (*   map compile_Rule rules. *)
 
   End WithObj.
 
@@ -568,39 +672,39 @@ Section Compile.
                             hcfg_children_max_pred
     }.
 
-  Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
-    : Modules :=
-    let cregs := compile_OState_init (obj_idx (projT1 obj)) in
-    let crules := compile_Rules (obj_idx (projT1 obj))
-                                (upLockReg (obj_idx (projT1 obj)))
-                                (downLockReg (obj_idx (projT1 obj)))
-                                (ostIReg (obj_idx (projT1 obj)))
-                                (hobj_rules (projT2 obj)) in
-    Mod cregs crules nil.
+  (* Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}) *)
+  (*   : Modules := *)
+  (*   let cregs := compile_OState_init (obj_idx (projT1 obj)) in *)
+  (*   let crules := compile_Rules (obj_idx (projT1 obj)) *)
+  (*                               (upLockReg (obj_idx (projT1 obj))) *)
+  (*                               (downLockReg (obj_idx (projT1 obj))) *)
+  (*                               (ostIReg (obj_idx (projT1 obj))) *)
+  (*                               (hobj_rules (projT2 obj)) in *)
+  (*   Mod cregs crules nil. *)
 
-  Definition compile_Object_with_init
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
-             (kinit: list RegInitT) :=
-    let crules := compile_Rules (obj_idx (projT1 obj))
-                                (upLockReg (obj_idx (projT1 obj)))
-                                (downLockReg (obj_idx (projT1 obj)))
-                                (ostIReg (obj_idx (projT1 obj)))
-                                (hobj_rules (projT2 obj)) in
-    Mod kinit crules nil.
+  (* Definition compile_Object_with_init *)
+  (*            (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}) *)
+  (*            (kinit: list RegInitT) := *)
+  (*   let crules := compile_Rules (obj_idx (projT1 obj)) *)
+  (*                               (upLockReg (obj_idx (projT1 obj))) *)
+  (*                               (downLockReg (obj_idx (projT1 obj))) *)
+  (*                               (ostIReg (obj_idx (projT1 obj))) *)
+  (*                               (hobj_rules (projT2 obj)) in *)
+  (*   Mod kinit crules nil. *)
 
-  Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
-    : option Kami.Syntax.Modules :=
-    match objs with
-    | nil => None
-    | obj :: nil => Some (compile_Object obj)
-    | obj :: objs' =>
-      (let cmod := compile_Object obj in
-       cmods <-- compile_Objects objs';
-      Some (ConcatMod cmod cmods))
-    end.
+  (* Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj}) *)
+  (*   : option Kami.Syntax.Modules := *)
+  (*   match objs with *)
+  (*   | nil => None *)
+  (*   | obj :: nil => Some (compile_Object obj) *)
+  (*   | obj :: objs' => *)
+  (*     (let d := compile_Object obj in *)
+  (*      cmods <-- compile_Objects objs'; *)
+  (*     Some (ConcatMod cmod cmods)) *)
+  (*   end. *)
 
-  Definition compile_System (sys: {ssys: Hemiola.Syntax.System & HSystem ssys})
-    : option Kami.Syntax.Modules :=
-    compile_Objects (hsys_objs (projT2 sys)).
+  (* Definition compile_System (sys: {ssys: Hemiola.Syntax.System & HSystem ssys}) *)
+  (*   : option Kami.Syntax.Modules := *)
+  (*   compile_Objects (hsys_objs (projT2 sys)). *)
 
 End Compile.
