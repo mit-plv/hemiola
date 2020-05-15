@@ -1,7 +1,8 @@
 Require Import List.
 
-Require Import Compiler.Compiler.
+Require Import Compiler.HemiolaDeep.
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
+Require Import Hemiola.Syntax Hemiola.RqRsLang.
 Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate Hemiola.Ex.RuleTransform.
 Require Import Hemiola.Ex.Msi.Msi Hemiola.Ex.Msi.MsiImp.
 

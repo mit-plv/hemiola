@@ -2,7 +2,8 @@ Require Import String List.
 Import ListNotations.
 
 Require Import Kami.Kami.
-Require Import Compiler.Compiler.
+Require Import Hemiola.Index.
+Require Import Compiler.HemiolaDeep Compiler.CompileK.
 Require Import MesiDeep.
 
 Set Implicit Arguments.
@@ -54,36 +55,36 @@ Section DirComp.
      | HDirC _ => #(HVector.hvec_ith ostvars Mesi.dir)
      | HDirGetSt dir => ((compile_dir_exp ul dl ostvars dir)!KDir@."dir_st")
      | HDirGetExcl dir => ((compile_dir_exp ul dl ostvars dir)!KDir@."dir_excl")
-     | HDirGetStO oidx dir => compile_dir_get (compile_bexp ul dl ostvars oidx)
+     | HDirGetStO oidx dir => compile_dir_get (compile_bexp ostvars ul dl oidx)
                                               (compile_dir_exp ul dl ostvars dir)
      | HDirGetSh dir => ((compile_dir_exp ul dl ostvars dir)!KDir@."dir_sharers")
      | HDirRemoveSh sh cidx =>
-       bvUnset (compile_dir_exp ul dl ostvars sh) (compile_bexp ul dl ostvars cidx)
+       bvUnset (compile_dir_exp ul dl ostvars sh) (compile_bexp ostvars ul dl cidx)
      | HDirAddSharer oidx dir =>
        (let kdir := compile_dir_exp ul dl ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
                  "dir_sharers" ::= bvSet (kdir!KDir@."dir_sharers")
-                                         (compile_bexp ul dl ostvars oidx) })
+                                         (compile_bexp ostvars ul dl oidx) })
      | HDirRemoveSharer oidx dir =>
        (let kdir := compile_dir_exp ul dl ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
                  "dir_sharers" ::= bvUnset (kdir!KDir@."dir_sharers")
-                                           (compile_bexp ul dl ostvars oidx) })
+                                           (compile_bexp ostvars ul dl oidx) })
 
      | HDirSetM oidx => (STRUCT { "dir_st" ::= mesiM;
-                                  "dir_excl" ::= compile_bexp ul dl ostvars oidx;
+                                  "dir_excl" ::= compile_bexp ostvars ul dl oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetE oidx => (STRUCT { "dir_st" ::= mesiE;
-                                  "dir_excl" ::= compile_bexp ul dl ostvars oidx;
+                                  "dir_excl" ::= compile_bexp ostvars ul dl oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetS oinds => (STRUCT { "dir_st" ::= mesiS;
                                    "dir_excl" ::= $$Default;
                                    "dir_sharers" ::=
                                      List.fold_left
                                        (fun bv i => bvSet bv i)
-                                       (map (compile_bexp ul dl ostvars) oinds)
+                                       (map (compile_bexp ostvars ul dl) oinds)
                                        $$Default })
      | HDirSetI _ => (STRUCT { "dir_st" ::= mesiI;
                                "dir_excl" ::= $$Default;
@@ -97,7 +98,7 @@ Section DirComp.
      | HDownToM oinds => compile_dir_exp ul dl ostvars oinds
      | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp ul dl ostvars se))
      | HInvalidate se =>
-       (IF ((compile_bexp ul dl ostvars se) == mesiNP) then mesiNP else mesiI)
+       (IF ((compile_bexp ostvars ul dl se) == mesiNP) then mesiNP else mesiI)
      end)%kami_expr.
 
   Definition compile_dir_OPrec
@@ -108,12 +109,12 @@ Section DirComp.
     (match pd with
      | DirLastSharer cidx =>
        bvSingleton (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-                   (compile_bexp ul dl ostvars cidx)
+                   (compile_bexp ostvars ul dl cidx)
      | DirNotLastSharer _ =>
        bvCount (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers") > $1
      | DirOtherSharerExists cidx =>
        bvUnset (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-               (compile_bexp ul dl ostvars cidx) != $0
+               (compile_bexp ostvars ul dl cidx) != $0
      end)%kami_expr.
 
   Instance MesiCompExtExp: CompExtExp :=

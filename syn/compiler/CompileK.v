@@ -157,6 +157,15 @@ Section Compile.
       Definition ostValNameI {sz} (i: Fin.t sz) :=
         ostValNameN (proj1_sig (Fin.to_nat i)).
 
+      Definition compile_midx_to_cidx (midx: IdxT): Expr var (SyntaxKind KCIdx) :=
+        Const _ (compile_midx_to_cidx_const midx).
+
+      Definition compile_midx_to_qidx (midx: IdxT): Expr var (SyntaxKind KQIdx) :=
+        Const _ (compile_midx_to_qidx_const midx).
+
+      Definition compile_oidx_to_cidx (oidx: IdxT): Expr var (SyntaxKind KCIdx) :=
+        Const _ (compile_oidx_to_cidx_const oidx).
+
       Fixpoint compile_rule_ost_vars_fix (n: nat) {sz} (htys: Vector.t htype sz)
                (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) htys) ->
                       ActionT var Void) {struct htys}: ActionT var Void :=
@@ -220,7 +229,7 @@ Section Compile.
         | HMsgFromNil => None
         | HMsgFromParent pmidx => Some None
         | HMsgFromChild cmidx => Some (Some cmidx)
-        | HMsgFromExt emidx => Some None
+        | HMsgFromExt emidx => Some (Some emidx)
         | HMsgFromUpLock => Some None
         | HMsgFromDownLock cidx => Some (Some cidx)
         end.
@@ -496,15 +505,6 @@ Section Compile.
            compile_OState_trs host' cont)
          end)%kami_action.
 
-      Definition compile_midx_to_cidx (midx: IdxT): Expr var (SyntaxKind KCIdx) :=
-        Const _ (compile_midx_to_cidx_const midx).
-
-      Definition compile_midx_to_qidx (midx: IdxT): Expr var (SyntaxKind KQIdx) :=
-        Const _ (compile_midx_to_qidx_const midx).
-
-      Definition compile_oidx_to_cidx (oidx: IdxT): Expr var (SyntaxKind KCIdx) :=
-        Const _ (compile_oidx_to_cidx_const oidx).
-
       Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
         (match horq with
@@ -609,25 +609,21 @@ Section Compile.
               (uln dln ostin: string).
 
     Definition ruleNameBase: string := "rule".
-    Definition ruleNameI (ridx: IdxT) (phase: nat) :=
+    Definition ruleNameI (ridx: IdxT) :=
       (ruleNameBase
-         ++ "_" ++ idx_to_string oidx
-         ++ "_" ++ idx_to_string ridx
-         ++ "_" ++ nat_to_string phase)%string.
+         ++ "__" ++ idx_to_string oidx
+         ++ "__" ++ idx_to_string ridx)%string.
 
     Local Notation "v <- f ; cont" :=
       (f (fun v => cont)) (at level 60, right associativity, only parsing).
     Local Notation "f ;; cont" :=
       (f cont) (at level 60, right associativity, only parsing).
 
-    Definition compile_rule_0 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rule_0 (ridx: IdxT) (imt: InputMsgType):
       Attribute (Action Void) :=
-      let hr := projT2 rule in
-      {| attrName := ruleNameI (rule_idx (projT1 rule)) 0;
+      {| attrName := ruleNameI ridx;
          attrType :=
            fun var =>
-             let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
-                           imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
              (prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
@@ -636,10 +632,20 @@ Section Compile.
              compile_rule_accept_message oidx prln crqrln crsrln imt;;
              Retv)%kami_action |}.
 
+    Definition readlockIdx: IdxT := 1~>2~>3~>4.
+    Definition writelockIdx: IdxT := 5~>6~>7~>8.
+
+    Definition compile_rule_0_parent :=
+      compile_rule_0 (readlockIdx~>0) {| imt_rqrs := false; imt_from := Some None |}.
+    Definition compile_rule_0_child_rq :=
+      compile_rule_0 (readlockIdx~>1) {| imt_rqrs := true; imt_from := Some (Some ii) |}.
+    Definition compile_rule_0_child_rs :=
+      compile_rule_0 (readlockIdx~>2) {| imt_rqrs := false; imt_from := Some (Some ii) |}.
+
     Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
-      {| attrName := ruleNameI (rule_idx (projT1 rule)) 1;
+      {| attrName := ruleNameI (rule_idx (projT1 rule));
          attrType :=
            fun var =>
              let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
@@ -657,37 +663,27 @@ Section Compile.
              dl <- compile_rule_get_downlock oidx msgIn imt;
              compile_rule_prec
                oidx ostVars msgIn uln ul dln dl (hrule_precond hr (hvar_of var));;
-             (** FIXME: should make a transition request *)
              compile_rule_readlock_release prln crqrln crsrln imt;;
              compile_rule_writelock_acquire wln msgIn;;
-             Retv)%kami_action |}.
-
-    Definition compile_rule_2 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
-      Attribute (Action Void) :=
-      let hr := projT2 rule in
-      {| attrName := ruleNameI (rule_idx (projT1 rule)) 2;
-         attrType :=
-           fun var =>
-             let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
-                           imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
-             (wl <- compile_rule_writelock wln;
-             compile_rule_writelocked wl;;
-             (** FIXME: should use values from the status-read response *)
-             ostVars <- compile_rule_ost_vars ostin;
-             msgIn <- compile_rule_get_writelock_msg wl;
-             ul <- compile_rule_get_uplock oidx msgIn imt;
-             dl <- compile_rule_get_downlock oidx msgIn imt;
-             compile_rule_writelock_release wln;;
+             (** FIXME: should make a transition request, not the actual transition *)
              compile_rule_trs
                oidx ostin ostVars msgIn ul dl (hrule_trs hr))%kami_action |}.
 
-    Definition compile_rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
-      list (Attribute (Action Void)) :=
-      [compile_rule_0 rule; compile_rule_1 rule; compile_rule_2 rule].
+    Definition compile_rule_2: Attribute (Action Void) :=
+      {| attrName := ruleNameI writelockIdx;
+         attrType :=
+           fun var =>
+             (wl <- compile_rule_writelock wln;
+             compile_rule_writelocked wl;;
+             (** FIXME: should deal with a transition response *)
+             compile_rule_writelock_release wln;;
+             Retv)%kami_action |}.
 
     Definition compile_rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      concat (map compile_rule rules).
+      [compile_rule_0_parent; compile_rule_0_child_rq; compile_rule_0_child_rs]
+        ++ (map compile_rule_1 rules)
+        ++ [compile_rule_2].
 
   End WithObj.
 

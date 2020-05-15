@@ -2,7 +2,8 @@ Require Import String List.
 Import ListNotations.
 
 Require Import Kami.Kami.
-Require Import Compiler.Compiler.
+Require Import Hemiola.Index.
+Require Import Compiler.HemiolaDeep Compiler.CompileK.
 Require Import MsiDeep.
 
 Set Implicit Arguments.
