@@ -231,7 +231,7 @@ Section Compile.
       Definition compile_rule_readlock_available (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => cont (** FIXME *)
+         | None => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
          | Some None => (Assert !(#prl!LL@."ll_valid"); cont)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -271,7 +271,7 @@ Section Compile.
       Definition compile_rule_readlocked
                  (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => cont (** FIXME *)
+         | None => (Assert $$false; cont) (** FIXME *)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
            | false => (Assert #crsrl!LL@."ll_valid"; cont)
@@ -280,7 +280,7 @@ Section Compile.
          | Some None => (Assert #prl!LL@."ll_valid"; cont)
          end)%kami_action.
 
-      Definition compile_rule_get_msg_in
+      Definition compile_rule_get_readlock_msg
                  (imt: InputMsgType)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
@@ -446,7 +446,32 @@ Section Compile.
           (Assert (compile_rule_prop_prec pprec); cont)%kami_action
         end.
 
-      (** * Step 3: TODO: implement. *)
+      Definition compile_rule_readlock_release
+                 (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None => cont (** FIXME *)
+         | Some (Some _) =>
+           match imt.(imt_rqrs) with
+           | false => (Write crsrln: Struct LL <- $$Default; cont)
+           | true => (Write crqrln: Struct LL <- $$Default; cont)
+           end
+         | Some None => (Write prln: Struct LL <- $$Default; cont)
+         end)%kami_action.
+
+      Definition compile_rule_writelock_acquire
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Write wln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                          "ll_msg" ::= #msgIn };
+        cont)%kami_action.
+
+      (** * Step 3: compile rules for state transitions and output messages *)
+
+      Definition compile_rule_writelocked (cont: ActionT var Void): ActionT var Void :=
+        (Assert #wl!LL@."ll_valid"; cont)%kami_action.
+
+      Definition compile_rule_get_writelock_msg
+                 (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
+        (LET msgIn <- #wl!LL@."ll_msg"; cont msgIn)%kami_action.
 
       Definition compile_bval {hbt} (hv: hbval hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
@@ -568,6 +593,10 @@ Section Compile.
         | HTrsMTrs mtrs => compile_state_trs mtrs
         end.
 
+      Definition compile_rule_writelock_release
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Write wln: Struct LL <- $$Default; cont)%kami_action.
+
     End Phoas.
 
   End ExtComp.
@@ -603,6 +632,7 @@ Section Compile.
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
              compile_rule_readlock_available prl crqrl crsrl imt;;
+             (* NOTE: [compile_rule_accept_message] does acquire a proper readlock. *)
              compile_rule_accept_message oidx prln crqrln crsrln imt;;
              Retv)%kami_action |}.
 
@@ -618,60 +648,70 @@ Section Compile.
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
              compile_rule_readlocked prl crqrl crsrl imt;;
-             msgIn <- compile_rule_get_msg_in prl crqrl crsrl imt;
+             msgIn <- compile_rule_get_readlock_msg prl crqrl crsrl imt;
              wl <- compile_rule_writelock wln;
              compile_rule_writelock_available wl;;
-             (** TODO: should use values from the status-read response *)
+             (** FIXME: should use values from the status-read response *)
              ostVars <- compile_rule_ost_vars ostin;
              ul <- compile_rule_get_uplock oidx msgIn imt;
              dl <- compile_rule_get_downlock oidx msgIn imt;
              compile_rule_prec
                oidx ostVars msgIn uln ul dln dl (hrule_precond hr (hvar_of var));;
-             (** TODO: should make a transition request *)
+             (** FIXME: should make a transition request *)
+             compile_rule_readlock_release prln crqrln crsrln imt;;
+             compile_rule_writelock_acquire wln msgIn;;
              Retv)%kami_action |}.
 
-    (* Definition compile_Rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): *)
-    (*   Attribute (Action Void) := *)
-    (*   let hr := projT2 rule in *)
-    (*   {| attrName := ruleNameI (rule_idx (projT1 rule)); *)
-    (*      attrType := *)
-    (*        fun var => *)
-    (*          (ostVars <- compile_rule_ost_vars ostin; *)
-    (*          msgIn <- compile_rule_msg_from oidx (hrule_msg_from hr); *)
-    (*          ul <- compile_rule_get_uplock uln; *)
-    (*          dl <- compile_rule_get_downlock dln; *)
-    (*          compile_rule_prec *)
-    (*            oidx msgIn uln ul dln dl ostVars (hrule_precond hr (hvar_of var));; *)
-    (*          compile_rule_trs *)
-    (*            oidx ostin msgIn ul dl ostVars (hrule_trs hr)) *)
-    (*   |}. *)
+    Definition compile_rule_2 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+      Attribute (Action Void) :=
+      let hr := projT2 rule in
+      {| attrName := ruleNameI (rule_idx (projT1 rule)) 2;
+         attrType :=
+           fun var =>
+             let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
+                           imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
+             (wl <- compile_rule_writelock wln;
+             compile_rule_writelocked wl;;
+             (** FIXME: should use values from the status-read response *)
+             ostVars <- compile_rule_ost_vars ostin;
+             msgIn <- compile_rule_get_writelock_msg wl;
+             ul <- compile_rule_get_uplock oidx msgIn imt;
+             dl <- compile_rule_get_downlock oidx msgIn imt;
+             compile_rule_writelock_release wln;;
+             compile_rule_trs
+               oidx ostin ostVars msgIn ul dl (hrule_trs hr))%kami_action |}.
 
-    (* Definition compile_Rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}): *)
-    (*   list (Attribute (Action Void)) := *)
-    (*   map compile_Rule rules. *)
+    Definition compile_rule (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+      list (Attribute (Action Void)) :=
+      [compile_rule_0 rule; compile_rule_1 rule; compile_rule_2 rule].
+
+    Definition compile_rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
+      list (Attribute (Action Void)) :=
+      concat (map compile_rule rules).
 
   End WithObj.
 
-  Definition upLockReg (oidx: IdxT): string :=
-    "ul" ++ idx_to_string oidx.
-  Definition downLockReg (oidx: IdxT): string :=
-    "dl" ++ idx_to_string oidx.
-  Definition ostIReg (oidx: IdxT): string :=
-    "ost" ++ idx_to_string oidx.
+  Definition prlReg (oidx: IdxT): string := "prl" ++ idx_to_string oidx.
+  Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
+  Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
+  Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
+  Definition ulReg (oidx: IdxT): string := "ul" ++ idx_to_string oidx.
+  Definition dlReg (oidx: IdxT): string := "dl" ++ idx_to_string oidx.
+  Definition ostInReg (oidx: IdxT): string := "ost" ++ idx_to_string oidx.
 
   Fixpoint compile_inits (oidx: IdxT) (n: nat) (hts: list htype): list RegInitT :=
     match hts with
     | nil => nil
     | ht :: hts' =>
-      {| attrName := ostValNameN (ostIReg oidx) n;
+      {| attrName := ostValNameN (ostInReg oidx) n;
          attrType := RegInitDefault (SyntaxKind (kind_of ht)) |}
         :: compile_inits oidx (S n) hts'
     end.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    {| attrName := upLockReg oidx;
+    {| attrName := ulReg oidx;
        attrType := RegInitDefault (SyntaxKind (Struct UL)) |}
-      :: {| attrName := downLockReg oidx;
+      :: {| attrName := dlReg oidx;
             attrType := RegInitDefault (SyntaxKind (Struct DL)) |}
       :: compile_inits oidx 0 (Vector.to_list hostf_ty).
 
@@ -736,39 +776,29 @@ Section Compile.
                             hcfg_children_max_pred
     }.
 
-  (* Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}) *)
-  (*   : Modules := *)
-  (*   let cregs := compile_OState_init (obj_idx (projT1 obj)) in *)
-  (*   let crules := compile_Rules (obj_idx (projT1 obj)) *)
-  (*                               (upLockReg (obj_idx (projT1 obj))) *)
-  (*                               (downLockReg (obj_idx (projT1 obj))) *)
-  (*                               (ostIReg (obj_idx (projT1 obj))) *)
-  (*                               (hobj_rules (projT2 obj)) in *)
-  (*   Mod cregs crules nil. *)
+  Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
+    : Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    let cregs := compile_OState_init oidx in
+    let crules := compile_rules oidx
+                                (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx) (wlReg oidx)
+                                (ulReg oidx) (dlReg oidx) (ostInReg oidx)
+                                (hobj_rules (projT2 obj)) in
+    Mod cregs crules nil.
 
-  (* Definition compile_Object_with_init *)
-  (*            (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}) *)
-  (*            (kinit: list RegInitT) := *)
-  (*   let crules := compile_Rules (obj_idx (projT1 obj)) *)
-  (*                               (upLockReg (obj_idx (projT1 obj))) *)
-  (*                               (downLockReg (obj_idx (projT1 obj))) *)
-  (*                               (ostIReg (obj_idx (projT1 obj))) *)
-  (*                               (hobj_rules (projT2 obj)) in *)
-  (*   Mod kinit crules nil. *)
+  Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
+    : option Kami.Syntax.Modules :=
+    match objs with
+    | nil => None
+    | obj :: nil => Some (compile_Object obj)
+    | obj :: objs' =>
+      (let cmod := compile_Object obj in
+       cmods <-- compile_Objects objs';
+      Some (ConcatMod cmod cmods))
+    end.
 
-  (* Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj}) *)
-  (*   : option Kami.Syntax.Modules := *)
-  (*   match objs with *)
-  (*   | nil => None *)
-  (*   | obj :: nil => Some (compile_Object obj) *)
-  (*   | obj :: objs' => *)
-  (*     (let d := compile_Object obj in *)
-  (*      cmods <-- compile_Objects objs'; *)
-  (*     Some (ConcatMod cmod cmods)) *)
-  (*   end. *)
-
-  (* Definition compile_System (sys: {ssys: Hemiola.Syntax.System & HSystem ssys}) *)
-  (*   : option Kami.Syntax.Modules := *)
-  (*   compile_Objects (hsys_objs (projT2 sys)). *)
+  Definition compile_System (sys: {ssys: Hemiola.Syntax.System & HSystem ssys})
+    : option Kami.Syntax.Modules :=
+    compile_Objects (hsys_objs (projT2 sys)).
 
 End Compile.
