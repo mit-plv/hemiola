@@ -210,8 +210,9 @@ Section Compile.
 
       Definition detect_input_msg_rqrs_r (rrp: HOPrecR): bool :=
         match rrp with
-        | HRqAccepting => true
-        | _ => false
+        | HRsAccepting => false
+        | HRssFull => false
+        | _ => true
         end.
 
       Fixpoint detect_input_msg_rqrs (rp: HOPrecT (hvar_of var)): bool :=
@@ -240,7 +241,11 @@ Section Compile.
       Definition compile_rule_readlock_available (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+         | None =>
+           match imt.(imt_rqrs) with
+           | false => (Assert !(#crsrl!LL@."ll_valid"); cont)
+           | true => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+           end
          | Some None => (Assert !(#prl!LL@."ll_valid"); cont)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -252,7 +257,13 @@ Section Compile.
       Definition compile_rule_accept_message (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => cont (** FIXME *)
+         | None =>
+           match imt.(imt_rqrs) with
+           | false => (Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                           "ll_msg" ::= $$Default };
+                      cont)
+           | true => cont (** FIXME *)
+           end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
            | false => (Call msgIn <- (deqFromChild cmidx)();
@@ -280,7 +291,11 @@ Section Compile.
       Definition compile_rule_readlocked
                  (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => (Assert $$false; cont) (** FIXME *)
+         | None =>
+           match imt.(imt_rqrs) with
+           | false => (Assert #crsrl!LL@."ll_valid"; cont)
+           | true => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+           end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
            | false => (Assert #crsrl!LL@."ll_valid"; cont)
@@ -458,7 +473,11 @@ Section Compile.
       Definition compile_rule_readlock_release
                  (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => cont (** FIXME *)
+         | None =>
+           match imt.(imt_rqrs) with
+           | false => (Write crsrln: Struct LL <- $$Default; cont)
+           | true => cont
+           end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
            | false => (Write crsrln: Struct LL <- $$Default; cont)
@@ -518,7 +537,7 @@ Section Compile.
          | HUpdUpLockS _ =>
            (Call (registerUL oidx)
                  (STRUCT { "r_ul_rsb" ::= $$false;
-                           (** FIXME: [msg] should contain a nondet. address *)
+                           (** FIXME: [msg] should contain the address when eviction-requested *)
                            "r_ul_msg" ::= $$Default;
                            "r_ul_rsbTo" ::= $$Default });
            cont)
@@ -534,7 +553,7 @@ Section Compile.
          | HUpdDownLockS rssf =>
            (Call (registerDL oidx)
                  (STRUCT { "r_dl_rsb" ::= $$false;
-                           (** FIXME: [msg] should contain a nondet. address *)
+                           (** FIXME: [msg] should contain the address when eviction-requested *)
                            "r_dl_msg" ::= $$Default;
                            "r_dl_rss_from" ::= compile_exp rssf;
                            "r_dl_rsbTo" ::= $$Default });
@@ -637,10 +656,20 @@ Section Compile.
 
     Definition compile_rule_0_parent :=
       compile_rule_0 (readlockIdx~>0) {| imt_rqrs := false; imt_from := Some None |}.
-    Definition compile_rule_0_child_rq :=
-      compile_rule_0 (readlockIdx~>1) {| imt_rqrs := true; imt_from := Some (Some ii) |}.
-    Definition compile_rule_0_child_rs :=
-      compile_rule_0 (readlockIdx~>2) {| imt_rqrs := false; imt_from := Some (Some ii) |}.
+
+    Definition compile_rule_0_child_rq (cmidx: IdxT) :=
+      compile_rule_0 (readlockIdx~>1~~cmidx)
+                     {| imt_rqrs := true; imt_from := Some (Some cmidx) |}.
+    Definition compile_rule_0_children_rq (dtr: Topology.DTree) :=
+      map (fun cidx => compile_rule_0_child_rq (rqUpFrom cidx))
+          (Topology.subtreeChildrenIndsOf dtr oidx).
+
+    Definition compile_rule_0_child_rs (cmidx: IdxT) :=
+      compile_rule_0 (readlockIdx~>2~~cmidx)
+                     {| imt_rqrs := false; imt_from := Some (Some cmidx) |}.
+    Definition compile_rule_0_children_rs (dtr: Topology.DTree) :=
+      map (fun cidx => compile_rule_0_child_rs (rsUpFrom cidx))
+          (Topology.subtreeChildrenIndsOf dtr oidx).
 
     Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
@@ -679,9 +708,12 @@ Section Compile.
              compile_rule_writelock_release wln;;
              Retv)%kami_action |}.
 
-    Definition compile_rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rules (dtr: Topology.DTree)
+               (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      [compile_rule_0_parent; compile_rule_0_child_rq; compile_rule_0_child_rs]
+      compile_rule_0_parent
+        :: (compile_rule_0_children_rq dtr)
+        ++ (compile_rule_0_children_rs dtr)
         ++ (map compile_rule_1 rules)
         ++ [compile_rule_2].
 
@@ -705,10 +737,12 @@ Section Compile.
     end.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    {| attrName := ulReg oidx;
-       attrType := RegInitDefault (SyntaxKind (Struct UL)) |}
-      :: {| attrName := dlReg oidx;
-            attrType := RegInitDefault (SyntaxKind (Struct DL)) |}
+    {| attrName := ulReg oidx; attrType := RegInitDefault (SyntaxKind (Struct UL)) |}
+      :: {| attrName := dlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct DL)) |}
+      :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
+      :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
+      :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
+      :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: compile_inits oidx 0 (Vector.to_list hostf_ty).
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
@@ -772,29 +806,32 @@ Section Compile.
                             hcfg_children_max_pred
     }.
 
-  Definition compile_Object (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
+  Definition compile_Object (dtr: Topology.DTree)
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
     : Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
     let crules := compile_rules oidx
                                 (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx) (wlReg oidx)
                                 (ulReg oidx) (dlReg oidx) (ostInReg oidx)
-                                (hobj_rules (projT2 obj)) in
+                                dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
-  Fixpoint compile_Objects (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
+  Fixpoint compile_Objects (dtr: Topology.DTree)
+           (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
     : option Kami.Syntax.Modules :=
     match objs with
     | nil => None
-    | obj :: nil => Some (compile_Object obj)
+    | obj :: nil => Some (compile_Object dtr obj)
     | obj :: objs' =>
-      (let cmod := compile_Object obj in
-       cmods <-- compile_Objects objs';
+      (let cmod := compile_Object dtr obj in
+       cmods <-- compile_Objects dtr objs';
       Some (ConcatMod cmod cmods))
     end.
 
-  Definition compile_System (sys: {ssys: Hemiola.Syntax.System & HSystem ssys})
+  Definition compile_System (dtr: Topology.DTree)
+             (sys: {ssys: Hemiola.Syntax.System & HSystem ssys})
     : option Kami.Syntax.Modules :=
-    compile_Objects (hsys_objs (projT2 sys)).
+    compile_Objects dtr (hsys_objs (projT2 sys)).
 
 End Compile.

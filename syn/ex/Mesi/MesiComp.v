@@ -131,26 +131,28 @@ Require Import Hemiola.Ex.TopoTemplate.
 
 Definition topo: tree :=
   Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]].
+Definition dtr :=
+  Eval vm_compute in (fst (tree2Topo topo 0)).
 
 (* Time Definition k: Modules := *)
 (*   Eval vm_compute in (compile_System (existT _ _ (@himpl topo ltac:(discriminate)))). *)
 
 Definition kl1c (oidx: IdxT): Modules :=
-  ((compile_Object (existT _ _ (hl1 oidx)))
-     ++ mshrs oidx 1 0
+  ((compile_Object dtr (existT _ _ (hl1 oidx)))
+     ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_down_forward oidx
      ++ build_ext_fifos oidx)%kami.
 
 Definition klic (oidx: IdxT): Modules :=
-  ((compile_Object (existT _ _ (hli topo oidx)))
+  ((compile_Object dtr (existT _ _ (hli topo oidx)))
      ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
 Definition kmemc :=
-  ((compile_Object (existT _ _ (hmem topo [0]%list)))
-     ++ mshrs [0]%list 0 1
+  ((compile_Object dtr (existT _ _ (hmem topo [0]%list)))
+     ++ mshrs [0]%list 1 1
      ++ build_broadcaster [0]%list)%kami.
 
 (* Time Definition kl1c0: Modules := *)
