@@ -188,6 +188,7 @@ Section Compile.
       (* a local lock *)
       Definition LL :=
         STRUCT { "ll_valid" :: Bool;
+                 "ll_cmidx" :: KCIdx;
                  (* The message contains a line address as well *)
                  "ll_msg" :: Struct KMsg }.
 
@@ -210,9 +211,9 @@ Section Compile.
 
       Definition detect_input_msg_rqrs_r (rrp: HOPrecR): bool :=
         match rrp with
-        | HRsAccepting => false
-        | HRssFull => false
-        | _ => true
+        | HRsAccepting => true
+        | HRssFull => true
+        | _ => false
         end.
 
       Fixpoint detect_input_msg_rqrs (rp: HOPrecT (hvar_of var)): bool :=
@@ -243,14 +244,14 @@ Section Compile.
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | false => (Assert !(#crsrl!LL@."ll_valid"); cont)
-           | true => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+           | true => (Assert !(#crsrl!LL@."ll_valid"); cont)
+           | false => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
            end
          | Some None => (Assert !(#prl!LL@."ll_valid"); cont)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | false => (Assert !(#crsrl!LL@."ll_valid"); cont)
-           | true => (Assert !(#crqrl!LL@."ll_valid"); cont)
+           | true => (Assert !(#crsrl!LL@."ll_valid"); cont)
+           | false => (Assert !(#crqrl!LL@."ll_valid"); cont)
            end
          end)%kami_action.
 
@@ -259,24 +260,28 @@ Section Compile.
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | false => (Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
-                                                           "ll_msg" ::= $$Default };
-                      cont)
-           | true => cont (** FIXME *)
+           | true => (Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                          "ll_cmidx" ::= $$Default;
+                                                          "ll_msg" ::= $$Default };
+                     cont)
+           | false => cont (** FIXME *)
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
-           | false => (Call msgIn <- (deqFromChild cmidx)();
-                      Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
-                                                          "ll_msg" ::= #msgIn };
-                      cont)
            | true => (Call msgIn <- (deqFromChild cmidx)();
-                     Write crqrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                     Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                         "ll_cmidx" ::= compile_midx_to_cidx cmidx;
                                                          "ll_msg" ::= #msgIn };
                      cont)
+           | false => (Call msgIn <- (deqFromChild cmidx)();
+                      Write crqrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                          "ll_cmidx" ::= compile_midx_to_cidx cmidx;
+                                                          "ll_msg" ::= #msgIn };
+                      cont)
            end
          | Some None => (Call msgIn <- (deqFromParent (downTo oidx))();
                         Write prln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                          "ll_cmidx" ::= $$Default;
                                                           "ll_msg" ::= #msgIn };
                         cont)
          end)%kami_action.
@@ -285,21 +290,24 @@ Section Compile.
 
       Variables (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
                 (msgIn: var (Struct KMsg))
-                (uln: string) (ul: var (Struct UL))
-                (dln: string) (dl: var (Struct DL)).
+                (ul: var (Struct UL)) (dl: var (Struct DL)).
 
       Definition compile_rule_readlocked
                  (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | false => (Assert #crsrl!LL@."ll_valid"; cont)
-           | true => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+           | true => (Assert #crsrl!LL@."ll_valid"; cont)
+           | false => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
            end
-         | Some (Some _) =>
+         | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
-           | false => (Assert #crsrl!LL@."ll_valid"; cont)
-           | true => (Assert #crqrl!LL@."ll_valid"; cont)
+           | true => (Assert #crsrl!LL@."ll_valid";
+                     Assert (#crsrl!LL@."ll_cmidx" == compile_midx_to_cidx cmidx);
+                     cont)
+           | false => (Assert #crqrl!LL@."ll_valid";
+                      Assert (#crqrl!LL@."ll_cmidx" == compile_midx_to_cidx cmidx);
+                      cont)
            end
          | Some None => (Assert #prl!LL@."ll_valid"; cont)
          end)%kami_action.
@@ -311,8 +319,8 @@ Section Compile.
          | None => (LET msgIn <- $$Default; cont msgIn) (** FIXME *)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | false => (LET msgIn <- #crsrl!LL@."ll_msg"; cont msgIn)
-           | true => (LET msgIn <- #crqrl!LL@."ll_msg"; cont msgIn)
+           | true => (LET msgIn <- #crsrl!LL@."ll_msg"; cont msgIn)
+           | false => (LET msgIn <- #crqrl!LL@."ll_msg"; cont msgIn)
            end
          | Some None => (LET msgIn <- #prl!LL@."ll_msg"; cont msgIn)
          end)%kami_action.
@@ -328,7 +336,7 @@ Section Compile.
       Definition compile_rule_get_uplock (imt: InputMsgType)
                  (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
         (match imt.(imt_rqrs), imt.(imt_from) with
-         | false, Some None =>
+         | true, Some None =>
            (* A response from the parent *)
            (Call oul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
            Assert #oul!(MaybeStr (Struct UL))@."valid";
@@ -340,8 +348,14 @@ Section Compile.
       Definition compile_rule_get_downlock (imt: InputMsgType)
                  (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
         (match imt.(imt_rqrs), imt.(imt_from) with
-         | false, Some (Some _) =>
+         | true, Some (Some _) =>
            (* A response from a child *)
+           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #odl!(MaybeStr (Struct DL))@."valid";
+           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
+           cont dl)
+         | true, None =>
+           (* When [RssFull]: see the definition of [detect_input_msg_rqrs_r] *)
            (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
            Assert #odl!(MaybeStr (Struct DL))@."valid";
            LET dl <- #odl!(MaybeStr (Struct DL))@."data";
@@ -430,33 +444,36 @@ Section Compile.
       Definition compile_rule_rqrs_prec (rrp: HOPrecR)
                  (cont: ActionT var Void): ActionT var Void :=
         (match rrp with
-         | HRqAccepting => cont
-         | HRsAccepting => cont
+         | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
+         | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
          | HUpLockFree =>
            (Call canUl <- (upLockable oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
          | HDownLockFree =>
            (Call canDl <- (downLockable oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
-         | HUpLockMsgId _ _ =>
-           (Call ul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #ul!(MaybeStr (Struct UL))@."valid";
-           Write uln <- #ul!(MaybeStr (Struct UL))@."data";
+         | HUpLockMsgId mty mid =>
+           (Assert (#ul!UL@."ul_valid");
+           Assert (#ul!UL@."ul_rsb");
+           Assert (#ul!UL@."ul_msg"!KMsg@."type" == Const _ (ConstBool mty));
+           Assert (#ul!UL@."ul_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
            cont)
-         | HUpLockMsg => cont
-         | HUpLockIdxBack => cont
-         | HUpLockBackNone => cont
-         | HDownLockMsgId _ _ =>
-           (Call dl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #dl!(MaybeStr (Struct DL))@."valid";
-           Write dln <- #dl!(MaybeStr (Struct DL))@."data";
+         | HUpLockMsg =>
+           (Assert (#ul!UL@."ul_valid"); Assert (#ul!UL@."ul_rsb"); cont)
+         | HUpLockIdxBack =>
+           (Assert (#ul!UL@."ul_valid"); Assert (#ul!UL@."ul_rsb"); cont)
+         | HUpLockBackNone =>
+           (Assert (#ul!UL@."ul_valid"); Assert (!(#ul!UL@."ul_rsb")); cont)
+         | HDownLockMsgId mty mid =>
+           (Assert (#dl!DL@."dl_valid");
+           Assert (#dl!DL@."dl_rsb");
+           Assert (#dl!DL@."dl_msg"!KMsg@."type" == Const _ (ConstBool mty));
+           Assert (#dl!DL@."dl_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
            cont)
-         | HDownLockMsg => cont
-         | HDownLockIdxBack => cont
-         | HMsgIdFrom msgId => cont
-         | HRssFull =>
-           (Call dl <- (downLockRssFull oidx) (#msgIn!KMsg@."addr");
-           Assert #dl!(MaybeStr (Struct DL))@."valid";
-           Write dln <- #dl!(MaybeStr (Struct DL))@."data";
-           cont)
+         | HDownLockMsg =>
+           (Assert (#dl!DL@."dl_valid"); Assert (#dl!DL@."dl_rsb"); cont)
+         | HDownLockIdxBack =>
+           (Assert (#dl!DL@."dl_valid"); Assert (#dl!DL@."dl_rsb"); cont)
+         | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
+         | HRssFull => (Assert (#dl!DL@."dl_rss_recv" == #dl!DL@."dl_rss_from"); cont)
          end)%kami_action.
 
       Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
@@ -475,13 +492,13 @@ Section Compile.
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | false => (Write crsrln: Struct LL <- $$Default; cont)
-           | true => cont
+           | true => (Write crsrln: Struct LL <- $$Default; cont)
+           | false => cont
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | false => (Write crsrln: Struct LL <- $$Default; cont)
-           | true => (Write crqrln: Struct LL <- $$Default; cont)
+           | true => (Write crsrln: Struct LL <- $$Default; cont)
+           | false => (Write crqrln: Struct LL <- $$Default; cont)
            end
          | Some None => (Write prln: Struct LL <- $$Default; cont)
          end)%kami_action.
@@ -489,6 +506,7 @@ Section Compile.
       Definition compile_rule_writelock_acquire
                  (cont: ActionT var Void): ActionT var Void :=
         (Write wln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                          "ll_cmidx" ::= $$Default;
                                           "ll_msg" ::= #msgIn };
         cont)%kami_action.
 
@@ -625,13 +643,13 @@ Section Compile.
   Section WithObj.
     Variables (oidx: IdxT)
               (prln crqrln crsrln wln: string)
-              (uln dln ostin: string).
+              (ostin: string).
 
     Definition ruleNameBase: string := "rule".
     Definition ruleNameI (ridx: IdxT) :=
       (ruleNameBase
-         ++ "__" ++ idx_to_string oidx
-         ++ "__" ++ idx_to_string ridx)%string.
+         ++ "_" ++ idx_to_string oidx
+         ++ "_" ++ idx_to_string ridx)%string.
 
     Local Notation "v <- f ; cont" :=
       (f (fun v => cont)) (at level 60, right associativity, only parsing).
@@ -655,18 +673,19 @@ Section Compile.
     Definition writelockIdx: IdxT := 5~>6~>7~>8.
 
     Definition compile_rule_0_parent :=
-      compile_rule_0 (readlockIdx~>0) {| imt_rqrs := false; imt_from := Some None |}.
+      compile_rule_0 (readlockIdx~>0) {| imt_rqrs := false; (* don't care *)
+                                         imt_from := Some None |}.
 
     Definition compile_rule_0_child_rq (cmidx: IdxT) :=
       compile_rule_0 (readlockIdx~>1~~cmidx)
-                     {| imt_rqrs := true; imt_from := Some (Some cmidx) |}.
+                     {| imt_rqrs := false; imt_from := Some (Some cmidx) |}.
     Definition compile_rule_0_children_rq (dtr: Topology.DTree) :=
       map (fun cidx => compile_rule_0_child_rq (rqUpFrom cidx))
           (Topology.subtreeChildrenIndsOf dtr oidx).
 
     Definition compile_rule_0_child_rs (cmidx: IdxT) :=
       compile_rule_0 (readlockIdx~>2~~cmidx)
-                     {| imt_rqrs := false; imt_from := Some (Some cmidx) |}.
+                     {| imt_rqrs := true; imt_from := Some (Some cmidx) |}.
     Definition compile_rule_0_children_rs (dtr: Topology.DTree) :=
       map (fun cidx => compile_rule_0_child_rs (rsUpFrom cidx))
           (Topology.subtreeChildrenIndsOf dtr oidx).
@@ -691,9 +710,10 @@ Section Compile.
              ul <- compile_rule_get_uplock oidx msgIn imt;
              dl <- compile_rule_get_downlock oidx msgIn imt;
              compile_rule_prec
-               oidx ostVars msgIn uln ul dln dl (hrule_precond hr (hvar_of var));;
+               oidx ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
              compile_rule_readlock_release prln crqrln crsrln imt;;
              compile_rule_writelock_acquire wln msgIn;;
+             (** FIXME: no need to acquire a writelock if no state transition *)
              (** FIXME: should make a transition request, not the actual transition *)
              compile_rule_trs
                oidx ostin ostVars msgIn ul dl (hrule_trs hr))%kami_action |}.
@@ -723,8 +743,6 @@ Section Compile.
   Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
   Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
   Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
-  Definition ulReg (oidx: IdxT): string := "ul" ++ idx_to_string oidx.
-  Definition dlReg (oidx: IdxT): string := "dl" ++ idx_to_string oidx.
   Definition ostInReg (oidx: IdxT): string := "ost" ++ idx_to_string oidx.
 
   Fixpoint compile_inits (oidx: IdxT) (n: nat) (hts: list htype): list RegInitT :=
@@ -737,9 +755,7 @@ Section Compile.
     end.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    {| attrName := ulReg oidx; attrType := RegInitDefault (SyntaxKind (Struct UL)) |}
-      :: {| attrName := dlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct DL)) |}
-      :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
+    {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
@@ -813,7 +829,7 @@ Section Compile.
     let cregs := compile_OState_init oidx in
     let crules := compile_rules oidx
                                 (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx) (wlReg oidx)
-                                (ulReg oidx) (dlReg oidx) (ostInReg oidx)
+                                (ostInReg oidx)
                                 dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
