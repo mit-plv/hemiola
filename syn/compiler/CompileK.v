@@ -283,10 +283,18 @@ Section Compile.
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | true => (Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
-                                                          "ll_cmidx" ::= $$Default;
-                                                          "ll_msg" ::= $$Default }; (*! FIXME: this message should contain address from responses. *)
-                     cont)
+           | true =>
+             (** TODO: [downLockRssFull] is called twice in the first- and
+              * the second-phase rule, which is a bit inefficient. *)
+             (Call odl <- (downLockRssFull oidx) ();
+             Assert #odl!(MaybeStr (Struct DL))@."valid";
+             (* Here setting the original request message to [ll_msg] is
+              * just to use the "addr" field in [KMsg] *)
+             LET msg <- #odl!(MaybeStr (Struct DL))@."data"!DL@."dl_msg";
+             Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                 "ll_cmidx" ::= $$Default;
+                                                 "ll_msg" ::= #msg };
+             cont)
            | false => cont (** FIXME *)
            end
          | Some (Some cmidx) =>
@@ -339,7 +347,11 @@ Section Compile.
                  (imt: InputMsgType)
                  (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
-         | None => (LET msgIn <- $$Default; cont msgIn) (** FIXME *)
+         | None =>
+           match imt.(imt_rqrs) with
+           | true => (LET msgIn <- #crsrl!LL@."ll_msg"; cont msgIn)
+           | false => (LET msgIn <- $$Default; cont msgIn) (** FIXME *)
+           end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
            | true => (LET msgIn <- #crsrl!LL@."ll_msg"; cont msgIn)
@@ -379,7 +391,7 @@ Section Compile.
            cont dl)
          | true, None =>
            (* When [RssFull]: see the definition of [detect_input_msg_rqrs_r] *)
-           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
+           (Call odl <- (downLockRssFull oidx) ();
            Assert #odl!(MaybeStr (Struct DL))@."valid";
            LET dl <- #odl!(MaybeStr (Struct DL))@."data";
            cont dl)
@@ -717,6 +729,10 @@ Section Compile.
       map (fun cidx => compile_rule_0_child_rs (rsUpFrom cidx))
           (Topology.subtreeChildrenIndsOf dtr oidx).
 
+    Definition compile_rule_0_release_rs :=
+      compile_rule_0 (readlockIdx~>3)
+                     {| imt_rqrs := true; imt_from := None |}.
+
     Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
@@ -761,6 +777,7 @@ Section Compile.
       list (Attribute (Action Void)) :=
       compile_rule_rr
         :: compile_rule_0_parent
+        :: compile_rule_0_release_rs
         :: (compile_rule_0_children_rq dtr)
         ++ (compile_rule_0_children_rs dtr)
         ++ (map compile_rule_1 rules)

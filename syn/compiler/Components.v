@@ -149,7 +149,7 @@ Section MSHR.
   Definition downLockRssFullN: string := "downLockRssFull" ++ idx_to_string oidx.
   Definition downLockRssFull: Attribute SignatureT :=
     {| attrName := downLockRssFullN;
-       attrType := {| arg := KAddr; ret := Maybe (Struct DL) |} |}.
+       attrType := {| arg := Void; ret := Maybe (Struct DL) |} |}.
 
   Definition RegUL :=
     STRUCT { "r_ul_rsb" :: Bool;
@@ -291,19 +291,15 @@ Section MSHR.
             (downLockedF a) dls)%kami_expr.
 
   Definition downLockRssFullF {var}
-             (a: Expr var (SyntaxKind KAddr))
              (dl: Expr var (SyntaxKind (Struct DL))): Expr var (SyntaxKind Bool) :=
-    (dl!DL@."dl_valid" &&
-            dl!DL@."dl_msg"!KMsg@."addr" == a &&
-                                            dl!DL@."dl_rss_recv" == dl!DL@."dl_rss_from")%kami_expr.
+    (dl!DL@."dl_valid" && dl!DL@."dl_rss_recv" == dl!DL@."dl_rss_from")%kami_expr.
 
   Definition downLockRssFullIter {var}
-             (a: Expr var (SyntaxKind KAddr))
              (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
     : Expr var (SyntaxKind (Maybe (Struct DL))) :=
     (dlIter (k:= Maybe (Struct DL)) $$Default
             (fun _ dl => STRUCT { "valid" ::= $$true; "data" ::= dl })
-            (downLockRssFullF a) dls)%kami_expr.
+            downLockRssFullF dls)%kami_expr.
 
   Definition getULSlotIter {var}
              (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
@@ -355,9 +351,9 @@ Section MSHR.
         Read dls <- "dls";
         LET retv <- downLockGetIter #a #dls;
         Ret #retv
-      with Method downLockRssFullN (a: KAddr): Maybe (Struct DL) :=
+      with Method downLockRssFullN (): Maybe (Struct DL) :=
         Read dls <- "dls";
-        LET retv <- downLockRssFullIter #a #dls;
+        LET retv <- downLockRssFullIter #dls;
         Ret #retv
 
       with Method registerULN (r: Struct RegUL): Void :=
