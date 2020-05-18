@@ -195,7 +195,8 @@ Section Compile.
       Variables (prln: string) (prl: var (Struct LL))
                 (crqrln: string) (crqrl: var (Struct LL))
                 (crsrln: string) (crsrl: var (Struct LL))
-                (wln: string) (wl: var (Struct LL)).
+                (wln: string) (wl: var (Struct LL))
+                (rrn: string).
 
       Definition compile_rule_readlock_parent
                  (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
@@ -239,6 +240,28 @@ Section Compile.
       Record InputMsgType :=
         { imt_rqrs: bool; imt_from: option (option IdxT) }.
 
+      Definition compile_rule_rr_step: ActionT var Void :=
+        (Read rr: Bit 2 <- rrn;
+        Write rrn <- (IF #rr == $2 then $0 else #rr + $1);
+        Retv)%kami_action.
+
+      (** NOTE: this round robin still has a lot of chances to be optimized. *)
+      Definition compile_rule_rr_check (imt: InputMsgType)
+                 (cont: ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None =>
+           match imt.(imt_rqrs) with
+           | true => (Read rr: Bit 2 <- rrn; Assert #rr == $2; cont)
+           | false => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+           end
+         | Some None => (Read rr: Bit 2 <- rrn; Assert #rr == $0; cont)
+         | Some (Some _) =>
+           match imt.(imt_rqrs) with
+           | true => (Read rr: Bit 2 <- rrn; Assert #rr == $2; cont)
+           | false => (Read rr: Bit 2 <- rrn; Assert #rr == $1; cont)
+           end
+         end)%kami_action.
+
       Definition compile_rule_readlock_available (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
@@ -262,7 +285,7 @@ Section Compile.
            match imt.(imt_rqrs) with
            | true => (Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
                                                           "ll_cmidx" ::= $$Default;
-                                                          "ll_msg" ::= $$Default };
+                                                          "ll_msg" ::= $$Default }; (*! FIXME: this message should contain address from responses. *)
                      cont)
            | false => cont (** FIXME *)
            end
@@ -642,7 +665,7 @@ Section Compile.
 
   Section WithObj.
     Variables (oidx: IdxT)
-              (prln crqrln crsrln wln: string)
+              (rrn prln crqrln crsrln wln: string)
               (ostin: string).
 
     Definition ruleNameBase: string := "rule".
@@ -672,6 +695,10 @@ Section Compile.
     Definition readlockIdx: IdxT := 1~>2~>3~>4.
     Definition writelockIdx: IdxT := 5~>6~>7~>8.
 
+    Definition compile_rule_rr :=
+      {| attrName := "rr_" ++ idx_to_string oidx;
+         attrType := fun var => @compile_rule_rr_step var rrn |}.
+
     Definition compile_rule_0_parent :=
       compile_rule_0 (readlockIdx~>0) {| imt_rqrs := false; (* don't care *)
                                          imt_from := Some None |}.
@@ -698,7 +725,8 @@ Section Compile.
            fun var =>
              let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
                            imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
-             (prl <- compile_rule_readlock_parent prln;
+             (compile_rule_rr_check rrn imt;;
+              prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
              compile_rule_readlocked prl crqrl crsrl imt;;
@@ -731,7 +759,8 @@ Section Compile.
     Definition compile_rules (dtr: Topology.DTree)
                (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      compile_rule_0_parent
+      compile_rule_rr
+        :: compile_rule_0_parent
         :: (compile_rule_0_children_rq dtr)
         ++ (compile_rule_0_children_rs dtr)
         ++ (map compile_rule_1 rules)
@@ -739,6 +768,7 @@ Section Compile.
 
   End WithObj.
 
+  Definition rrReg (oidx: IdxT): string := "rr" ++ idx_to_string oidx.
   Definition prlReg (oidx: IdxT): string := "prl" ++ idx_to_string oidx.
   Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
   Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
@@ -755,7 +785,8 @@ Section Compile.
     end.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
+    {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 2)) |}
+      :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
       :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct LL)) |}
@@ -828,8 +859,8 @@ Section Compile.
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
     let crules := compile_rules oidx
-                                (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx) (wlReg oidx)
-                                (ostInReg oidx)
+                                (rrReg oidx) (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx)
+                                (wlReg oidx) (ostInReg oidx)
                                 dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
