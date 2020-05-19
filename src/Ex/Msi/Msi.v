@@ -770,6 +770,18 @@ Section System.
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| msiDownRqIM; O |>)).
 
+      Definition liDownIRqDownDownDirMS: Rule :=
+        rule.rqdd[1~>9~>2]
+        :accepts msiDownRqIM
+        :me oidx
+        :requires
+           (fun ost mins =>
+              ost#[dir].(dir_sharers) <> nil /\
+              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[dir].(dir_st) = msiS)
+        :transition
+           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| msiDownRqIS; O |>)).
+
       Definition liDownIRsUpUpS: Rule :=
         rule.rsuu[1~>10~>0]
         :accepts msiDownRsIS
@@ -782,11 +794,23 @@ Section System.
                      +#[dir <- setDirI],
                  <| msiDownRsIS; O |>)).
 
+      Definition liDownIRsUpUpMS: Rule :=
+        rule.rsuu[1~>10~>2]
+        :accepts msiDownRsIS
+        :holding msiDownRqIM
+        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiS)
+        :transition
+           (!|ost, mins, rq, rsbTo|
+            --> (ost +#[owned <- false]
+                     +#[status <- invalidate ost#[status]]
+                     +#[dir <- setDirI],
+                 <| msiDownRsIM; O |>)).
+
       Definition liDownIRsUpUpM: Rule :=
         rule.rsuu[1~>10~>1]
         :accepts msiDownRsIM
         :holding msiDownRqIM
-        :requires (fun _ _ _ => True)
+        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiM)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -975,7 +999,8 @@ Section System.
                 liDownIRsUpDownS; liDownIRsUpDownM;
                 liDownIImmS oidx; liDownIImmM oidx;
                 liDownIRqDownDownDirS oidx; liDownIRqDownDownDirM oidx;
-                liDownIRsUpUpS; liDownIRsUpUpM]
+                liDownIRqDownDownDirMS oidx;
+                liDownIRsUpUpS; liDownIRsUpUpM; liDownIRsUpUpMS]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
          obj_rules_valid := _ |}.
@@ -1045,8 +1070,8 @@ Hint Unfold liGetSImmS liGetSImmM
      liDownSImm liDownSRqDownDownM liDownSRsUpUp
      liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
      liGetMRqUpDownM liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownM
-     liDownIImmS liDownIImmM liDownIRqDownDownDirS liDownIRqDownDownDirM
-     liDownIRsUpUpS liDownIRsUpUpM
+     liDownIImmS liDownIImmM liDownIRqDownDownDirS liDownIRqDownDownDirM liDownIRqDownDownDirMS
+     liDownIRsUpUpS liDownIRsUpUpM liDownIRsUpUpMS
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
      liInvImmWBI liInvImmWBS1 liInvImmWBM liPushImm: MsiRules.

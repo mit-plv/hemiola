@@ -928,6 +928,11 @@ Section InvDirM.
         { solve_valid. }
         { disc_ObjDirM; mred. }
       }
+      { (* [liDownIRqDownDownDirMS] *)
+        disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
+        { solve_valid. }
+        { disc_ObjDirM; mred. }
+      }
 
       { (* [liDownIRsUpUpS] *)
         disc_rule_conds_ex.
@@ -944,6 +949,20 @@ Section InvDirM.
       }
 
       { (* [liDownIRsUpUpM] *)
+        disc_rule_conds_ex.
+        disc_MsiDownLockInv oidx Hmdl.
+        simpl_InvDirM_msgs; disc.
+        { subst topo; disc_rule_conds_ex.
+          disc_ObjDirM.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+          solve_by_child_downlock_to_parent oidx.
+        }
+        { solve_by_diff_dir. }
+        { split; [solve_NoRsSI_by_silent|assumption]. }
+      }
+
+      { (* [liDownIRsUpUpMS] *)
         disc_rule_conds_ex.
         disc_MsiDownLockInv oidx Hmdl.
         simpl_InvDirM_msgs; disc.

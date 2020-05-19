@@ -340,6 +340,18 @@ Section System.
         eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
       }
 
+      { (* [liDownIRqDownDownDirMS] *)
+        rule_rqdd.
+        eapply rqDownDownRule_RqFwdRule; eauto.
+
+        (** [RqDownDownSound] *)
+        red; simpl; intros; dest.
+        repeat ssplit; [assumption|].
+        apply Forall_forall; intros.
+        apply H2 in H4.
+        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
     - (** L1 caches *)
       apply Forall_forall; intros.
       apply in_map_iff in H.
@@ -474,6 +486,10 @@ Section System.
           { f_equal; apply M.add_remove_comm; discriminate. }
         }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; auto.
+          { solve_msi. }
+          { f_equal; apply M.add_remove_comm; discriminate. }
+        }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -497,6 +513,9 @@ Section System.
           f_equal; apply M.add_remove_comm; discriminate.
         }
         { clear; solve_rule_conds_ex; try solve_msi. }
+        { clear; solve_rule_conds_ex; try solve_msi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -514,6 +533,7 @@ Section System.
           all: rewrite invalidate_I; solve_msi.
         }
         { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
 
@@ -535,6 +555,7 @@ Section System.
         }
         { clear; solve_rule_conds_const; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; try intuition solve_msi. }
 
     - (** L1 cache *)
@@ -660,6 +681,12 @@ Section System.
           simpl in *; solve_GoodExtRssSys.
         }
         { (* [liDownIRqDownDownDirS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H2; dest; subst.
+          apply H4 in H7.
+          simpl in *; solve_GoodExtRssSys.
+        }
+        { (* [liDownIRqDownDownDirMS] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
           apply H4 in H7.

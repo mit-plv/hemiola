@@ -99,6 +99,12 @@ Section System.
         :holding msiDownRqIM
         :from cidx.
 
+      Definition liDownIRsUpUpMSOne: Rule :=
+        rule.rsuo[1~>10~>0~>2~~cidx]
+        :accepts msiDownRsIS
+        :holding msiDownRqIM
+        :from cidx.
+
       Definition liDownIRsUpUpSRel: Rule :=
         rule.rsr[1~>10~>1~>0]
         :holding msiDownRqIS
@@ -132,7 +138,7 @@ Section System.
       (Msi.liRulesFromChild tr oidx cidx)
         ++ [liDownSRsUpDownOne cidx; liDownSRsUpUpOne cidx;
            liDownIRsUpDownSOne cidx; liDownIRsUpDownMOne cidx;
-           liDownIRsUpUpSOne cidx; liDownIRsUpUpMOne cidx].
+           liDownIRsUpUpSOne cidx; liDownIRsUpUpMOne cidx; liDownIRsUpUpMSOne cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -159,6 +165,7 @@ Section System.
              ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS tr oidx; liDownIRsUpDownRel;
                 liDownIImmS oidx; liDownIImmM oidx;
                 liDownIRqDownDownDirS tr oidx; liDownIRqDownDownDirM tr oidx;
+                liDownIRqDownDownDirMS tr oidx;
                 liDownIRsUpUpSRel; liDownIRsUpUpMRel]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
@@ -219,5 +226,5 @@ Hint Unfold liDownSRsUpDownOne liDownSRsUpDownRel
      liDownSRsUpUpOne liDownSRsUpUpRel
      liDownIRsUpDownSOne liDownIRsUpDownMOne
      liDownIRsUpDownRel
-     liDownIRsUpUpSOne liDownIRsUpUpMOne
+     liDownIRsUpUpSOne liDownIRsUpUpMOne liDownIRsUpUpMSOne
      liDownIRsUpUpSRel liDownIRsUpUpMRel: MsiRules.
