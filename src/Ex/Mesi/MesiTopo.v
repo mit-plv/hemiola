@@ -488,9 +488,7 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex; try solve_mesi.
-          f_equal; apply M.add_remove_comm; discriminate.
-        }
+        { clear; solve_rule_conds_ex; try solve_mesi. }
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
@@ -516,9 +514,7 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex; try solve_mesi.
-          f_equal; apply M.add_remove_comm; discriminate.
-        }
+        { clear; solve_rule_conds_ex; try solve_mesi. }
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }

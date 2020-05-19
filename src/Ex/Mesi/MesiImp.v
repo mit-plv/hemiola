@@ -165,6 +165,7 @@ Section System.
              ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS tr oidx; liDownIRsUpDownRel;
                 liDownIImmS oidx; liDownIImmME oidx;
                 liDownIRqDownDownDirS tr oidx; liDownIRqDownDownDirME tr oidx;
+                liDownIRqDownDownDirMES tr oidx;
                 liDownIRsUpUpSRel; liDownIRsUpUpMERel]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
