@@ -389,10 +389,12 @@ Section MSHR.
 
       with Method transferUpDownN (r: Struct TrsfUpDown): Void :=
         Read uls <- "uls";
-        LET oul <- upLockGetIter (#r!TrsfUpDown@."r_dl_addr") #uls;
-        LET ul <- #oul!(MaybeStr (Struct UL))@."data";
+        LET a <- #r!TrsfUpDown@."r_dl_addr";
+        LET uli <- findULIter #a #uls;
+        LET ul <- #uls@[#uli];
         Read dls <- "dls";
         LET dli <- getDLSlotIter #dls;
+        Write "uls" <- #uls@[#uli <- $$Default];
         Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= $$true;
                                               "dl_rsb" ::= #ul!UL@."ul_rsb";
                                               "dl_msg" ::= #ul!UL@."ul_msg";
