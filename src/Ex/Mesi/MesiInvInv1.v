@@ -961,6 +961,12 @@ Section InvDirME.
         { disc_ObjDirME; mred. }
       }
 
+      { (* [liDownIRqDownDownDirMES] *)
+        disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
+        { solve_valid. }
+        { disc_ObjDirME; mred. }
+      }
+
       { (* [liDownIRsUpUpS] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
@@ -975,6 +981,19 @@ Section InvDirME.
       }
 
       { (* [liDownIRsUpUpME] *)
+        disc_rule_conds_ex.
+        disc_MesiDownLockInv oidx Hmdl.
+        simpl_InvDirME_msgs; disc.
+        { subst topo; disc_rule_conds_ex.
+          disc_ObjDirME.
+          remember (dir_excl _) as oidx; clear Heqoidx.
+          disc_MsgConflictsInv oidx.
+          solve_by_child_downlock_to_parent oidx.
+        }
+        { solve_by_diff_dir. }
+      }
+
+      { (* [liDownIRsUpUpMES] *)
         disc_rule_conds_ex.
         disc_MesiDownLockInv oidx Hmdl.
         simpl_InvDirME_msgs; disc.

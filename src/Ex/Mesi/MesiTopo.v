@@ -340,6 +340,18 @@ Section System.
         eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
       }
 
+      { (* [liDownIRqDownDownDirMES] *)
+        rule_rqdd.
+        eapply rqDownDownRule_RqFwdRule; eauto.
+
+        (** [RqDownDownSound] *)
+        red; simpl; intros; dest.
+        repeat ssplit; [assumption|].
+        apply Forall_forall; intros.
+        apply H2 in H4.
+        eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
     - (** L1 caches *)
       apply Forall_forall; intros.
       apply in_map_iff in H.
@@ -476,7 +488,12 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -499,7 +516,12 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_mesi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
-        { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
+        { clear; solve_rule_conds_ex; try solve_mesi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -518,6 +540,7 @@ Section System.
         }
         { clear; solve_rule_conds_const; try solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try solve_mesi. }
         { clear; solve_rule_conds_ex; try solve_mesi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
@@ -538,6 +561,7 @@ Section System.
         }
         { clear; solve_rule_conds_const; try intuition solve_mesi. }
         { clear; solve_rule_conds_ex; solve_mesi. }
+        { clear; solve_rule_conds_ex; try intuition solve_mesi. }
         { clear; solve_rule_conds_ex; try intuition solve_mesi. }
 
     - (** L1 cache *)
@@ -665,6 +689,12 @@ Section System.
           simpl in *; solve_GoodExtRssSys.
         }
         { (* [liDownIRqDownDownDirS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H2; dest; subst.
+          apply H4 in H7.
+          simpl in *; solve_GoodExtRssSys.
+        }
+        { (* [liDownIRqDownDownDirMES] *)
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
           apply H4 in H7.

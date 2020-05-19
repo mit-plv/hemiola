@@ -877,6 +877,18 @@ Section System.
         :transition
            (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqIM; O |>)).
 
+      Definition liDownIRqDownDownDirMES: Rule :=
+        rule.rqdd[1~>9~>2]
+        :accepts mesiDownRqIM
+        :me oidx
+        :requires
+           (fun ost mins =>
+              ost#[dir].(dir_sharers) <> nil /\
+              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[dir].(dir_st) = mesiS)
+        :transition
+           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqIS; O |>)).
+
       Definition liDownIRsUpUpS: Rule :=
         rule.rsuu[1~>10~>0]
         :accepts mesiDownRsIS
@@ -893,7 +905,19 @@ Section System.
         rule.rsuu[1~>10~>1]
         :accepts mesiDownRsIM
         :holding mesiDownRqIM
-        :requires (fun _ _ _ => True)
+        :requires (fun ost orq mins => mesiE <= ost#[dir].(dir_st))
+        :transition
+           (!|ost, mins, rq, rsbTo|
+            --> (ost +#[owned <- false]
+                     +#[status <- invalidate ost#[status]]
+                     +#[dir <- setDirI],
+                 <| mesiDownRsIM; O |>)).
+
+      Definition liDownIRsUpUpMES: Rule :=
+        rule.rsuu[1~>10~>2]
+        :accepts mesiDownRsIS
+        :holding mesiDownRqIM
+        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -1101,8 +1125,8 @@ Section System.
              (** rules involved with [GetM] *)
              ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS oidx;
                 liDownIRsUpDownS; liDownIRsUpDownME; liDownIImmS oidx; liDownIImmME oidx;
-                liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx;
-                liDownIRsUpUpS; liDownIRsUpUpME]
+                liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx; liDownIRqDownDownDirMES oidx;
+                liDownIRsUpUpS; liDownIRsUpUpME; liDownIRsUpUpMES]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
          obj_rules_valid := _ |}.
@@ -1171,7 +1195,7 @@ Hint Unfold liGetSImmS liGetSImmME
      liDownSImm liDownSRqDownDownME liDownSRsUpUp
      liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
      liGetMRqUpDownME liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownME
-     liDownIImmS liDownIImmME liDownIRqDownDownDirS liDownIRqDownDownDirME
-     liDownIRsUpUpS liDownIRsUpUpME liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
+     liDownIImmS liDownIImmME liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRqDownDownDirMES
+     liDownIRsUpUpS liDownIRsUpUpME liDownIRsUpUpMES liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
      liInvImmWBI liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.

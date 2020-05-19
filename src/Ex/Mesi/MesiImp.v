@@ -99,6 +99,12 @@ Section System.
         :holding mesiDownRqIM
         :from cidx.
 
+      Definition liDownIRsUpUpMESOne: Rule :=
+        rule.rsuo[1~>10~>0~>2~~cidx]
+        :accepts mesiDownRsIS
+        :holding mesiDownRqIM
+        :from cidx.
+
       Definition liDownIRsUpUpSRel: Rule :=
         rule.rsr[1~>10~>1~>0]
         :holding mesiDownRqIS
@@ -132,7 +138,7 @@ Section System.
       (Mesi.liRulesFromChild tr oidx cidx)
         ++ [liDownSRsUpDownOne cidx; liDownSRsUpUpOne cidx;
            liDownIRsUpDownSOne cidx; liDownIRsUpDownMEOne cidx;
-           liDownIRsUpUpSOne cidx; liDownIRsUpUpMEOne cidx].
+           liDownIRsUpUpSOne cidx; liDownIRsUpUpMEOne cidx; liDownIRsUpUpMESOne cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -219,5 +225,5 @@ Hint Unfold liDownSRsUpDownOne liDownSRsUpDownRel
      liDownSRsUpUpOne liDownSRsUpUpRel
      liDownIRsUpDownSOne liDownIRsUpDownMEOne
      liDownIRsUpDownRel
-     liDownIRsUpUpSOne liDownIRsUpUpMEOne
+     liDownIRsUpUpSOne liDownIRsUpUpMEOne liDownIRsUpUpMESOne
      liDownIRsUpUpSRel liDownIRsUpUpMERel: MesiRules.

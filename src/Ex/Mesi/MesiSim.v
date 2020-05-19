@@ -1137,6 +1137,11 @@ Section Sim.
         solve_sim_mesi.
       }
 
+      { (* [liDownIRqDownDownDirMES] *)
+        disc_rule_conds_ex; spec_case_silent.
+        solve_sim_mesi.
+      }
+
       { (* [liDownIRsUpUpS] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
@@ -1146,6 +1151,14 @@ Section Sim.
       }
 
       { (* [liDownIRsUpUpME] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_footprint_info_basis oidx;
+          [disc_MesiDownLockInv oidx H29|].
+        disc_responses_from.
+        solve_sim_mesi.
+      }
+
+      { (* [liDownIRsUpUpMES] *)
         disc_rule_conds_ex; spec_case_silent.
         derive_footprint_info_basis oidx;
           [disc_MesiDownLockInv oidx H29|].
