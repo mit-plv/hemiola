@@ -129,8 +129,17 @@ Existing Instance MesiCompExtExp.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
+(*********************
+ *        Mem        *
+ *         |         *
+ *      LLC(Li)      *
+ *       /   \       *
+ *  L2(Li)   L2(Li)  *
+ *   /  \     /  \   *
+ * L1    L1 L1    L1 *
+ **********************)
 Definition topo: tree :=
-  Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]].
+  Node [Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]].
 Definition dtr :=
   Eval vm_compute in (fst (tree2Topo topo 0)).
 
@@ -150,10 +159,10 @@ Definition klic (oidx: IdxT): Modules :=
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
-Definition kmemc :=
-  ((compile_Object dtr (existT _ _ (hmem topo [0]%list)))
-     ++ mshrs [0]%list 1 1
-     ++ build_broadcaster [0]%list)%kami.
+Definition kmemc (oidx: IdxT): Modules :=
+  ((compile_Object dtr (existT _ _ (hmem topo oidx)))
+     ++ mshrs oidx 1 1
+     ++ build_broadcaster oidx)%kami.
 
 (* Time Definition kl1c0: Modules := *)
 (*   Eval vm_compute in (kl1c 0~>0~>0). *)
@@ -161,8 +170,10 @@ Definition kmemc :=
 (* Eval compute in (tree2Topo topo 0). *)
 Time Definition k: Modules :=
   Eval vm_compute in
-    (kmemc ++ (klic 0~>0 ++ (kl1c 0~>0~>0 ++ kl1c 0~>0~>1))
-           ++ (klic 0~>1 ++ (kl1c 0~>1~>0 ++ kl1c 0~>1~>1)))%kami.
+    ((kmemc 0)
+       ++ (klic 0~>0)
+       ++ (klic 0~>0~>0 ++ (kl1c 0~>0~>0~>0 ++ kl1c 0~>0~>0~>1))
+       ++ (klic 0~>0~>1 ++ (kl1c 0~>0~>1~>0 ++ kl1c 0~>0~>1~>1)))%kami.
 
 (* Time Definition k: Modules := *)
 (*   Eval vm_compute in *)
