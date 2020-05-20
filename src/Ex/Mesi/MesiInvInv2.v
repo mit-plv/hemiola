@@ -286,33 +286,13 @@ Section InvNotOwned.
       remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
-
-      1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-        dest_in; disc_rule_conds_ex.
-
-        all: try (simpl_InvNotOwned; fail).
-        all: try (assert (NoRqI oidx msgs)
-                   by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                  simpl_InvNotOwned).
-      }
-
-      dest_in.
-      { disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        simpl_InvNotOwned; solve_InvNotOwned.
-        derive_InvWBDir oidx.
-        specialize (Hwd (or_intror (or_introl H18))).
-        simpl in Hwd; solve_mesi.
-      }
-      { disc_rule_conds_ex.
-        simpl_InvNotOwned; solve_InvNotOwned.
-      }
-      { disc_rule_conds_ex.
-        simpl_InvNotOwned; solve_InvNotOwned.
-      }
+      apply concat_In in H3; destruct H3 as [crls [? ?]].
+      apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+      dest_in; disc_rule_conds_ex.
+      all: try (simpl_InvNotOwned; fail).
+      all: try (assert (NoRqI oidx msgs)
+                 by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                simpl_InvNotOwned).
 
     - (*! Cases for Li caches *)
 
@@ -814,147 +794,60 @@ Section InvDirE.
       remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
+      apply concat_In in H3; destruct H3 as [crls [? ?]].
+      apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-
-        (** Derive that the child has the parent. *)
-        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
-          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-
-        dest_in.
-
-        { (* [liGetSImmS] *)
-          disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { (* [liGetSImmME] *)
-          disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { disc_ObjDirE.
-            split; intros.
-            { apply MsgsP_enqMP.
-              { derive_child_idx_in oidx0.
-                disc_MsgConflictsInv oidx0.
-                apply MsgsNotExist_MsgsP; simpl.
-                apply MsgsP_deqMP.
-                solve_MsgsNotExist_base.
-                solve_RsDown_by_rqUp oidx0.
-              }
-              { red; unfold map.
-                rewrite caseDec_head_eq by reflexivity.
-                reflexivity.
-              }
-            }
-            { solve_by_NoRsME_false. }
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { (* [liGetSRqUpDownME] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          disc_ObjDirE; mred.
-        }
-
-        { (* [liGetMImm] *)
-          disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { (* [liGetMRqUpDownME] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          disc_ObjDirE; mred.
-        }
-        { (* [liGetMRqUpDownS] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          disc_ObjDirE; mred.
-        }
-
-        { (* [liInvImmI] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-        }
-
-        { (* [liInvImmS00] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-        }
-
-        { (* [liInvImmS01] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
-          { solve_by_diff_dir. }
-        }
-
-        { (* [liInvImmS1] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-        }
-
-        { (* [liInvImmE] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          { split; [solve_MsgsP|disc_getDir; solve_coh]. }
-          { solve_by_diff_dir. }
-        }
-
-        { (* [liInvImmWBI] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-        }
-
-        { (* [liInvImmWBS1] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-        }
-
-        { (* [liInvImmWBME] *)
-          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
-          { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
-          { solve_by_diff_dir. }
-        }
-
-      }
+      (** Derive that the child has the parent. *)
+      assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+        by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
 
       dest_in.
 
-      { (* [liDownSRsUpDownME] *)
-        disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        simpl_InvDirE_msgs; disc.
+      { (* [liGetSImmME] *)
+        disc_rule_conds_ex; disc.
+        { solve_valid. }
+        { disc_ObjDirE.
+          split; intros.
+          { apply MsgsP_enqMP.
+            { derive_child_idx_in oidx0.
+              disc_MsgConflictsInv oidx0.
+              apply MsgsNotExist_MsgsP; simpl.
+              apply MsgsP_deqMP.
+              solve_MsgsNotExist_base.
+              solve_RsDown_by_rqUp oidx0.
+            }
+            { red; unfold map.
+              rewrite caseDec_head_eq by reflexivity.
+              reflexivity.
+            }
+          }
+          { solve_by_NoRsME_false. }
+        }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { solve_valid. }
+        }
+      }
+
+      { (* [liGetMImm] *)
+        disc_rule_conds_ex; disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { solve_valid. }
+        }
+      }
+
+      { (* [liInvImmE] *)
+        disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+        { split; [solve_MsgsP|disc_getDir; solve_coh]. }
+        { solve_by_diff_dir. }
+      }
+
+      { (* [liInvImmWBME] *)
+        disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
         { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
-        { solve_by_diff_dir. }
-      }
-
-      { (* [liDownIRsUpDownS] *)
-        disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        simpl_InvDirE_msgs; disc.
-        { solve_valid. }
-        { solve_by_diff_dir. }
-      }
-
-      { (* [liDownIRsUpDownME] *)
-        disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        simpl_InvDirE_msgs; disc.
-        { solve_valid. }
         { solve_by_diff_dir. }
       }
 

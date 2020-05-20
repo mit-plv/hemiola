@@ -174,30 +174,11 @@ Section System.
       solve_inds_NoDup disc_child_inds_disj.
     Qed.
 
-    Definition memRulesFromChild (cidx: IdxT): list Rule :=
-      (Mesi.memRulesFromChild tr oidx cidx)
-        ++ [liDownSRsUpDownOne cidx; liDownIRsUpDownSOne cidx; liDownIRsUpDownMEOne cidx].
-
-    Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
-      List.concat (map memRulesFromChild coinds).
-
-    Hint Unfold memRulesFromChild memRulesFromChildren: RuleConds.
-
-    Program Definition mem: Object :=
-      {| obj_idx := oidx;
-         obj_rules :=
-           (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
-             ++ [liDownSRsUpDownRel; liDownIRsUpDownRel];
-         obj_rules_valid := _ |}.
-    Next Obligation.
-      solve_inds_NoDup disc_child_inds_disj.
-    Qed.
-
   End Objects.
 
   Program Definition impl: System :=
     {| sys_objs :=
-         ((mem (rootOf topo) :: map li (tl cifc.(c_li_indices)))
+         ((mem tr (rootOf topo) :: map li (tl cifc.(c_li_indices)))
             ++ map l1 cifc.(c_l1_indices));
        sys_oinds_valid := _;
        sys_minds := cifc.(c_minds);

@@ -211,34 +211,15 @@ Section ObjInvOk.
       simpl in *.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H4; destruct H4.
+      apply concat_In in H4; destruct H4 as [crls [? ?]].
+      apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H3; destruct H3 as [crls [? ?]].
-        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
-
-        (** Derive that the child has the parent. *)
-        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
-          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-
-        dest_in; disc_rule_conds_ex.
-        all: try (eapply MesiUpLockInv_update_None; eauto; fail).
-        all: try (eapply MesiUpLockInv_no_update; eauto; mred; fail).
-      }
+      (** Derive that the child has the parent. *)
+      assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+        by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
 
       dest_in; disc_rule_conds_ex.
-
-      { disc_MesiDownLockInv_internal oidx.
-        solve_MesiUpLockInv oidx.
-      }
-      { disc_MesiDownLockInv_internal oidx.
-        destruct H17; dest.
-        all: solve_MesiUpLockInv oidx.
-      }
-      { disc_MesiDownLockInv_internal oidx.
-        destruct H17; dest.
-        all: solve_MesiUpLockInv oidx.
-      }
+      all: try (eapply MesiUpLockInv_update_None; eauto; fail).
 
     - (*! Cases for Li caches *)
 
@@ -396,24 +377,15 @@ Section ObjInvOk.
       simpl in *.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H4; destruct H4.
+      apply concat_In in H4; destruct H4 as [crls [? ?]].
+      apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H3; destruct H3 as [crls [? ?]].
-        apply in_map_iff in H3; destruct H3 as [cidx [? ?]]; subst.
-
-        (** Derive that the child has the parent. *)
-        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
-          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-
-        dest_in; disc_rule_conds_ex.
-        all: try (eapply MesiDownLockInv_update_None; eauto; fail).
-        all: try (derive_child_chns cidx; derive_child_idx_in cidx;
-                  solve_MesiDownLockInv oidx; fail).
-      }
+      (** Derive that the child has the parent. *)
+      assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+        by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
 
       dest_in; disc_rule_conds_ex.
-      all: try (eapply MesiDownLockInv_update_None; eauto; mred).
+      all: try (eapply MesiDownLockInv_update_None; eauto; fail).
 
     - (*! Cases for Li caches *)
 
@@ -636,18 +608,9 @@ Section RootChnInv.
       remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
-
-      1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-        dest_in; try (disc_RootChnInv; solve_RootChnInv; fail).
-      }
-
-      dest_in.
-      all: try (disc_RootChnInv;
-                disc_MesiDownLockInv oidx Hmftinv;
-                solve_RootChnInv; fail).
+      apply concat_In in H3; destruct H3 as [crls [? ?]].
+      apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+      dest_in; try (disc_RootChnInv; solve_RootChnInv; fail).
 
     - (*! Cases for Li caches *)
       unfold RootChnInv in *; simpl in *.

@@ -1135,11 +1135,7 @@ Section System.
     Qed.
 
     Definition memRulesFromChild (cidx: IdxT): list Rule :=
-      [liGetSImmS cidx; liGetSImmME cidx;
-      liGetSRqUpDownME oidx cidx; liGetMImm cidx;
-      liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
-      liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
-      liInvImmE cidx; liInvImmWBI cidx; liInvImmWBS1 cidx; liInvImmWBME cidx].
+      [liGetSImmME cidx; liGetMImm cidx; liInvImmE cidx; liInvImmWBME cidx].
 
     Definition memRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map memRulesFromChild coinds).
@@ -1148,9 +1144,7 @@ Section System.
 
     Program Definition mem: Object :=
       {| obj_idx := oidx;
-         obj_rules :=
-           (memRulesFromChildren (subtreeChildrenIndsOf topo oidx))
-             ++ [liDownSRsUpDownME; liDownIRsUpDownS; liDownIRsUpDownME];
+         obj_rules := (memRulesFromChildren (subtreeChildrenIndsOf topo oidx));
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.

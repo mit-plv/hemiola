@@ -438,186 +438,56 @@ Section InvDirME.
       remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
+      apply concat_In in H3; destruct H3 as [crls [? ?]].
+      apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-
-        (** Derive that the child has the parent. *)
-        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
-          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-
-        dest_in.
-
-        { disc_rule_conds_ex; disc.
-          { split; [solve_NoRsSI_by_silent|].
-
-            (* TODO: automate *)
-            red in H22; red; simpl in *.
-            intros; apply H22.
-            rewrite H14 in *.
-            assert (dir_st (fst (snd (snd (snd os)))) <= mesiI \/
-                    dir_st (fst (snd (snd (snd os)))) = mesiS) by solve_mesi.
-            intuition idtac.
-          }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc_pre.
-          { disc_NoRsME; solve_valid. }
-          { disc_ObjDirME.
-            solve_by_NoRsME_false.
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { disc_NoRsME; solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          { solve_valid. }
-          { disc_ObjDirME; mred. }
-        }
-
-        { disc_rule_conds_ex; disc_pre.
-          { disc_NoRsME; solve_valid. }
-          { disc_ObjDirME.
-            solve_by_NoRsME_false.
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { disc_NoRsME; solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          { solve_valid. }
-          { disc_ObjDirME; mred. }
-        }
-        { disc_rule_conds_ex; simpl_InvDirME_msgs; disc.
-          { solve_valid. }
-          { disc_ObjDirME; mred. }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_dir_I. }
-            { solve_valid. }
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { disc_getDir; solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_dir_I. }
-            { solve_valid. }
-          }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { disc_getDir; solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-        { disc_rule_conds_ex; disc.
-          { solve_valid. }
-          { solve_by_diff_dir. }
-          { destruct (idx_dec cidx oidx0); subst.
-            { solve_by_idx_false. }
-            { solve_valid. }
-          }
-        }
-
-      }
+      (** Derive that the child has the parent. *)
+      assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+        by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
 
       dest_in.
 
-      { disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        disc.
+      { (* [liGetSImmME] *)
+        disc_rule_conds_ex; disc_pre.
+        { disc_NoRsME; solve_valid. }
+        { disc_ObjDirME.
+          solve_by_NoRsME_false.
+        }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
+      }
+
+      { (* [liGetMImm] *)
+        disc_rule_conds_ex; disc_pre.
+        { disc_NoRsME; solve_valid. }
+        { disc_ObjDirME.
+          solve_by_NoRsME_false.
+        }
+        { destruct (idx_dec cidx oidx0); subst.
+          { solve_by_idx_false. }
+          { disc_NoRsME; solve_valid. }
+        }
+      }
+
+      { (* [liInvImmE] *)
+        disc_rule_conds_ex; disc.
         { solve_valid. }
         { solve_by_diff_dir. }
-        { destruct (idx_dec x oidx0); subst.
+        { destruct (idx_dec cidx oidx0); subst.
           { solve_by_idx_false. }
           { solve_valid. }
         }
       }
-      { disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        disc_pre.
-        { disc_NoRsME; solve_valid. }
-        { disc_ObjDirME.
-          solve_by_NoRsME_false.
-        }
-        { destruct (idx_dec x oidx0); subst.
+
+      { (* [liInvImmWBME] *)
+        disc_rule_conds_ex; disc.
+        { solve_valid. }
+        { solve_by_diff_dir. }
+        { destruct (idx_dec cidx oidx0); subst.
           { solve_by_idx_false. }
-          { disc_NoRsME; solve_valid. }
-        }
-      }
-      { disc_rule_conds_ex.
-        disc_MesiDownLockInv oidx Hmdl.
-        disc_pre.
-        { disc_NoRsME; solve_valid. }
-        { disc_ObjDirME.
-          solve_by_NoRsME_false.
-        }
-        { destruct (idx_dec x oidx0); subst.
-          { solve_by_idx_false. }
-          { disc_NoRsME; solve_valid. }
+          { solve_valid. }
         }
       }
 

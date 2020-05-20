@@ -589,195 +589,78 @@ Section Sim.
       disc_rule_conds_ex.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H5; destruct H5.
+      apply concat_In in H5; destruct H5 as [crls [? ?]].
+      apply in_map_iff in H5; destruct H5 as [cidx [? ?]]; subst.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H5; destruct H5 as [crls [? ?]].
-        apply in_map_iff in H5; destruct H5 as [cidx [? ?]]; subst.
-
-        (** Derive that the child has the parent. *)
-        assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
-          by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
-
-        dest_in.
-
-        { (* [liGetSImmS] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          derive_obj_coherent oidx.
-          solve_sim_mesi.
-          destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
-        }
-
-        { (* [liGetSImmME] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          derive_obj_coherent oidx.
-          solve_sim_mesi.
-          destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
-        }
-
-        { (* [liGetSRqUpDownME] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
-          solve_sim_mesi.
-        }
-
-        { (* [liGetMImm] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liGetMRqUpDownME] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
-          solve_sim_mesi.
-        }
-
-        { (* [liGetMRqUpDownS] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmI] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmS00] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmS01] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmS1] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmE] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-
-          solve_sim_mesi_ext_mp.
-          solve_SpecStateCoh.
-          case_ImplStateCoh_mem_me_others lidx.
-          { disc_rule_conds_ex; split.
-            { intros.
-              derive_coherence_of cidx.
-              disc_getDir.
-              derive_ObjDirE oidx cidx.
-              derive_ObjInvRq cidx.
-              match goal with | [H: _ = cidx |- _] => clear H end.
-              disc_InvNWB cidx H23.
-              congruence.
-            }
-            { solve_MsgsCoh. }
-          }
-          { solve_ImplStateCoh_mem_others lidx. }
-        }
-
-        { (* [liInvImmWBI] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmWBS1] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-          solve_sim_mesi.
-        }
-
-        { (* [liInvImmWBME] *)
-          disc_rule_conds_ex; spec_case_silent.
-          derive_child_chns cidx.
-          derive_child_idx_in cidx.
-
-          solve_sim_mesi_ext_mp.
-          solve_SpecStateCoh.
-          case_ImplStateCoh_mem_me_others lidx.
-          { disc_rule_conds_ex; split.
-            { intros.
-              derive_coherence_of cidx.
-              disc_getDir.
-              derive_ObjDirME oidx cidx.
-              derive_ObjInvWRq cidx.
-              match goal with | [H: _ = cidx |- _] => clear H end.
-              assert (NoRsI cidx msgs)
-                by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWB cidx H22.
-              disc_InvWBCoh_inv cidx H21.
-              congruence.
-            }
-            { solve_MsgsCoh. }
-          }
-          { solve_ImplStateCoh_mem_others lidx. }
-        }
-      }
+      (** Derive that the child has the parent. *)
+      assert (parentIdxOf (fst (tree2Topo tr 0)) cidx = Some oidx)
+        by (apply subtreeChildrenIndsOf_parentIdxOf; auto).
 
       dest_in.
 
-      { (* [liDownSRsUpDownME] *)
+      { (* [liGetSImmME] *)
         disc_rule_conds_ex; spec_case_silent.
-        derive_footprint_info_basis oidx;
-          [|exfalso; subst topo; congruence].
-        derive_child_chns upCIdx.
-        derive_child_idx_in upCIdx.
-        disc_responses_from.
         derive_child_chns cidx.
         derive_child_idx_in cidx.
-        derive_coherence_of cidx.
-        derive_input_msg_coherent.
+        derive_obj_coherent oidx.
         solve_sim_mesi.
-        destruct (idx_dec lidx (obj_idx upCObj)); subst; solve_MsgsCoh.
+        destruct (idx_dec lidx cidx); subst; solve_MsgsCoh.
       }
 
-      { (* [liDownIRsUpDownS] *)
+      { (* [liGetMImm] *)
         disc_rule_conds_ex; spec_case_silent.
-        derive_footprint_info_basis oidx;
-          [|exfalso; subst topo; congruence].
-        derive_child_chns upCIdx.
-        derive_child_idx_in upCIdx.
-        disc_responses_from.
-        disc_rule_conds_ex.
+        derive_child_chns cidx.
+        derive_child_idx_in cidx.
         solve_sim_mesi.
       }
 
-      { (* [liDownIRsUpDownME] *)
+      { (* [liInvImmE] *)
         disc_rule_conds_ex; spec_case_silent.
-        derive_footprint_info_basis oidx;
-          [|exfalso; subst topo; congruence].
-        derive_child_chns upCIdx.
-        derive_child_idx_in upCIdx.
-        disc_responses_from.
-        disc_rule_conds_ex.
-        solve_sim_mesi.
+        derive_child_chns cidx.
+        derive_child_idx_in cidx.
+
+        solve_sim_mesi_ext_mp.
+        solve_SpecStateCoh.
+        case_ImplStateCoh_mem_me_others lidx.
+        { disc_rule_conds_ex; split.
+          { intros.
+            derive_coherence_of cidx.
+            disc_getDir.
+            derive_ObjDirE oidx cidx.
+            derive_ObjInvRq cidx.
+            match goal with | [H: _ = cidx |- _] => clear H end.
+            disc_InvNWB cidx H23.
+            congruence.
+          }
+          { solve_MsgsCoh. }
+        }
+        { solve_ImplStateCoh_mem_others lidx. }
+      }
+
+      { (* [liInvImmWBME] *)
+        disc_rule_conds_ex; spec_case_silent.
+        derive_child_chns cidx.
+        derive_child_idx_in cidx.
+
+        solve_sim_mesi_ext_mp.
+        solve_SpecStateCoh.
+        case_ImplStateCoh_mem_me_others lidx.
+        { disc_rule_conds_ex; split.
+          { intros.
+            derive_coherence_of cidx.
+            disc_getDir.
+            derive_ObjDirME oidx cidx.
+            derive_ObjInvWRq cidx.
+            match goal with | [H: _ = cidx |- _] => clear H end.
+            assert (NoRsI cidx msgs)
+              by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
+            disc_InvWB cidx H22.
+            disc_InvWBCoh_inv cidx H21.
+            congruence.
+          }
+          { solve_MsgsCoh. }
+        }
+        { solve_ImplStateCoh_mem_others lidx. }
       }
 
     - (*! Cases for Li caches *)
