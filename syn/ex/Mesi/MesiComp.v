@@ -37,7 +37,7 @@ End Directory.
 
 Existing Instance MesiHOStateIfcFull.
 
-Section DirComp.
+Section Instances.
 
   Instance MesiCompExtType: CompExtType :=
     {| kind_of_hetype :=
@@ -122,10 +122,24 @@ Section DirComp.
        compile_eoprec := compile_dir_OPrec
     |}.
 
-End DirComp.
+  Instance MesiCompInfoRead: CompInfoRead :=
+    {| info_width := 7; (* MSB [owned(1)|status(2)|dir_st(2)|dir_sharers(2)] LSB *)
+       comp_info_to_ostVars :=
+         fun var oi cont =>
+           (LET i <- #oi!(MaybeStr (Bit 7))@."data";
+           LET value <- $$Default; (* don't care *)
+           LET owned <- IF (UniBit (TruncLsb 6 1) #i == $0) then $$false else $$true;
+           LET status: KMesi <- ({$0, UniBit (ConstExtract 4 2 1) #i} + $1);
+           LET dir <- STRUCT { "dir_st" ::= {$0, UniBit (ConstExtract 2 2 3) #i} + $1;
+                               "dir_excl" ::= bvFirstSet (UniBit (Trunc 2 5) #i);
+                               "dir_sharers" ::= UniBit (Trunc 2 5) #i };
+           cont (value, (owned, (status, (dir, tt)))))%kami_action |}.
+
+End Instances.
 
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
+Existing Instance MesiCompInfoRead.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
