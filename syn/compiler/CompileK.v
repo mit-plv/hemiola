@@ -169,22 +169,23 @@ Section Compile.
       (** * Step 1: compile the message-accepting rule:
        * it makes the read request to the info cache as well. *)
 
-      Class CompInfoRead :=
-        { info_width: nat;
+      Class CompCachingInfo :=
+        { info_kind: Kind;
           comp_info_to_ostVars:
             forall (var: Kind -> Type),
-              var (Maybe (Bit info_width)) (* maybe hit *) ->
+              var (Maybe info_kind) (* maybe hit *) ->
               (HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
                ActionT var Void) ->
-              ActionT var Void
+              ActionT var Void;
+          value_ost_idx: Fin.t ost_sz
         }.
-      Context `{CompInfoRead}.
-      Definition InfoK := Bit info_width.
+      Context `{CompCachingInfo}.
 
       (* A local lock:
        * - ll_valid: true if the lock being held
        * - ll_cmidx: a child-queue index where the message comes from
        * - ll_msg: the message that required the lock
+       * - ll_info_valid: true if [ll_info] is valid
        * - ll_info: in case of a readlock, it holds the information
        *            (owned, status, dir, etc.) from the cache.
        *)
@@ -193,13 +194,18 @@ Section Compile.
                  "ll_cmidx" :: KCIdx;
                  (* The message contains a line address as well *)
                  "ll_msg" :: Struct KMsg;
-                 "ll_info" :: InfoK
+                 "ll_info_valid" :: Bool;
+                 "ll_info" :: Maybe info_kind
                }.
 
       Variables (prln: string) (prl: var (Struct LL))
                 (crqrln: string) (crqrl: var (Struct LL))
                 (crsrln: string) (crsrl: var (Struct LL))
+                (* rlc: a two-bit flag saying which readlock is being used;
+                 * p(10), crq(00), crs(01) *)
+                (rlcn: string)
                 (wln: string) (wl: var (Struct LL))
+                (* rr: also a two-bit flag for round-robin *)
                 (rrn: string).
 
       Definition compile_rule_readlock_parent
@@ -282,8 +288,8 @@ Section Compile.
            end
          end)%kami_action.
 
-      Definition infoRq := cacheRq oidx info_width hcfg_addr_sz.
-      Definition InfoRq := CacheRq info_width hcfg_addr_sz.
+      Definition infoRq := cacheRq oidx hcfg_addr_sz info_kind.
+      Definition InfoRq := CacheRq hcfg_addr_sz info_kind.
       Definition compile_rule_request_info
                  (addr: Expr var (SyntaxKind (Bit hcfg_addr_sz)))
                  (cont: ActionT var Void): ActionT var Void :=
@@ -292,6 +298,7 @@ Section Compile.
                                "cache_data" ::= $$Default });
         cont)%kami_action.
 
+      (* TODO: (opt) no need to make an info request if no read *)
       Definition compile_rule_accept_message_and_request_info (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
@@ -308,7 +315,9 @@ Section Compile.
              Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
                                                  "ll_cmidx" ::= $$Default;
                                                  "ll_msg" ::= #msg;
+                                                 "ll_info_valid" ::= $$false;
                                                  "ll_info" ::= $$Default };
+             Write rlcn: Bit 2 <- $1;
              compile_rule_request_info (#msg!KMsg@."addr")%kami_expr cont)
            | false => cont (** FIXME *)
            end
@@ -318,55 +327,86 @@ Section Compile.
                      Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
                                                          "ll_cmidx" ::= compile_midx_to_cidx cmidx;
                                                          "ll_msg" ::= #msgIn;
+                                                         "ll_info_valid" ::= $$false;
                                                          "ll_info" ::= $$Default };
+                     Write rlcn: Bit 2 <- $1;
                      compile_rule_request_info (#msgIn!KMsg@."addr")%kami_expr cont)
            | false => (Call msgIn <- (deqFromChild cmidx)();
                       Write crqrln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
                                                           "ll_cmidx" ::= compile_midx_to_cidx cmidx;
                                                           "ll_msg" ::= #msgIn;
+                                                          "ll_info_valid" ::= $$false;
                                                           "ll_info" ::= $$Default };
+                      Write rlcn: Bit 2 <- $0;
                       compile_rule_request_info (#msgIn!KMsg@."addr")%kami_expr cont)
            end
          | Some None => (Call msgIn <- (deqFromParent (downTo oidx))();
                         Write prln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
                                                           "ll_cmidx" ::= $$Default;
                                                           "ll_msg" ::= #msgIn;
+                                                          "ll_info_valid" ::= $$false;
                                                           "ll_info" ::= $$Default };
+                        Write rlcn: Bit 2 <- $2;
                         compile_rule_request_info (#msgIn!KMsg@."addr")%kami_expr cont)
          end)%kami_action.
 
-      (** * Step 2: compile rules for checking preconditions & requesting transitions:
+      (** * Step 2: take a info-read response, save it in a proper readlock. *)
+
+      Definition infoRs := cacheReadRs oidx info_kind.
+      Definition compile_rule_take_info_resp (cont: ActionT var Void): ActionT var Void :=
+        (Call od <- infoRs ();
+        Read rlc: Bit 2 <- rlcn;
+        If (#rlc == $0) (* crq *)
+        then (Write crqrln: Struct LL <- STRUCT { "ll_valid" ::= #crqrl!LL@."ll_valid";
+                                                  "ll_cmidx" ::= #crqrl!LL@."ll_cmidx";
+                                                  "ll_msg" ::= #crqrl!LL@."ll_msg";
+                                                  "ll_info_valid" ::= $$true;
+                                                  "ll_info" ::= #od }; Retv)
+        else (If (#rlc == $1)
+              then (Write crsrln: Struct LL <- STRUCT { "ll_valid" ::= #crsrl!LL@."ll_valid";
+                                                        "ll_cmidx" ::= #crsrl!LL@."ll_cmidx";
+                                                        "ll_msg" ::= #crsrl!LL@."ll_msg";
+                                                        "ll_info_valid" ::= $$true;
+                                                        "ll_info" ::= #od }; Retv)
+              else (Write prln: Struct LL <- STRUCT { "ll_valid" ::= #prl!LL@."ll_valid";
+                                                      "ll_cmidx" ::= #prl!LL@."ll_cmidx";
+                                                      "ll_msg" ::= #prl!LL@."ll_msg";
+                                                      "ll_info_valid" ::= $$true;
+                                                      "ll_info" ::= #od }; Retv);
+              Retv); cont)%kami_action.
+
+      (** * Step 3: compile rules for checking preconditions & requesting transitions:
        * it takes a info-read response, checks its precondition, and makes
        * the write request to the info/value caches. *)
-
-      Definition infoRs := cacheReadRs oidx info_width.
-      Definition compile_rule_take_info_resp
-                 (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
-                        ActionT var Void): ActionT var Void :=
-        (Call od <- infoRs (); comp_info_to_ostVars od cont)%kami_action.
 
       Variables (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
                 (msgIn: var (Struct KMsg))
                 (ul: var (Struct UL)) (dl: var (Struct DL)).
 
-      Definition compile_rule_readlocked
-                 (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
+      (** 3-1: check there is already a proper readlock and the information is ready. *)
+
+      Definition compile_rule_readlocked_and_info_ready
+                 (imt: InputMsgType)
+                 (cont: var (Maybe info_kind) -> ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | true => (Assert #crsrl!LL@."ll_valid"; cont)
-           | false => (Assert $$false; cont) (** FIXME: block volunteer-eviction rules for now *)
+           | true => (Assert (#crsrl!LL@."ll_valid" && #crsrl!LL@."ll_info_valid");
+                     LET i <- #crsrl!LL@."ll_info"; cont i)
+           | false => (Assert $$false;
+                      LET i: Maybe info_kind <- $$Default;
+                      cont i) (** FIXME: block volunteer-eviction rules for now *)
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
-           | true => (Assert #crsrl!LL@."ll_valid";
+           | true => (Assert (#crsrl!LL@."ll_valid" && #crsrl!LL@."ll_info_valid");
                      Assert (#crsrl!LL@."ll_cmidx" == compile_midx_to_cidx cmidx);
-                     cont)
-           | false => (Assert #crqrl!LL@."ll_valid";
+                     LET i <- #crsrl!LL@."ll_info"; cont i)
+           | false => (Assert (#crqrl!LL@."ll_valid" && #crqrl!LL@."ll_info_valid");
                       Assert (#crqrl!LL@."ll_cmidx" == compile_midx_to_cidx cmidx);
-                      cont)
+                      LET i <- #crqrl!LL@."ll_info"; cont i)
            end
-         | Some None => (Assert #prl!LL@."ll_valid"; cont)
+         | Some None => (Assert #prl!LL@."ll_valid"; LET i <- #prl!LL@."ll_info"; cont i)
          end)%kami_action.
 
       Definition compile_rule_get_readlock_msg
@@ -386,43 +426,7 @@ Section Compile.
          | Some None => (LET msgIn <- #prl!LL@."ll_msg"; cont msgIn)
          end)%kami_action.
 
-      Definition compile_rule_writelock
-                 (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
-        (Read wl: Struct LL <- wln; cont wl)%kami_action.
-
-      Definition compile_rule_writelock_available
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Assert !(#wl!LL@."ll_valid"); cont)%kami_action.
-
-      Definition compile_rule_get_uplock (imt: InputMsgType)
-                 (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
-        (match imt.(imt_rqrs), imt.(imt_from) with
-         | true, Some None =>
-           (* A response from the parent *)
-           (Call oul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #oul!(MaybeStr (Struct UL))@."valid";
-           LET ul <- #oul!(MaybeStr (Struct UL))@."data";
-           cont ul)
-         | _, _ => (LET ul <- $$Default; cont ul)
-         end)%kami_action.
-
-      Definition compile_rule_get_downlock (imt: InputMsgType)
-                 (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
-        (match imt.(imt_rqrs), imt.(imt_from) with
-         | true, Some (Some _) =>
-           (* A response from a child *)
-           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #odl!(MaybeStr (Struct DL))@."valid";
-           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
-           cont dl)
-         | true, None =>
-           (* When [RssFull]: see the definition of [detect_input_msg_rqrs_r] *)
-           (Call odl <- (downLockRssFull oidx) ();
-           Assert #odl!(MaybeStr (Struct DL))@."valid";
-           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
-           cont dl)
-         | _, _ => (LET dl <- $$Default; cont dl)
-         end)%kami_action.
+      (** 3-2: check the precondition using the input message and the information *)
 
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
@@ -548,6 +552,15 @@ Section Compile.
           (Assert (compile_rule_prop_prec pprec); cont)%kami_action
         end.
 
+      (** 3-3: make the rule transition (requests):
+       * 1) read (or write) the line value appropriately from the cache;
+       *    whether read or write depends on what the rule does.
+       * 2) (probably) update (write) the new information to the info cache.
+       *
+       * !) Output messages cannot be built at this moment, since sometimes
+       *    they use the value from the cache. They will be generated in step 4.
+       *)
+
       Definition compile_rule_readlock_release
                  (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
@@ -569,18 +582,47 @@ Section Compile.
         (Write wln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
                                           "ll_cmidx" ::= $$Default;
                                           "ll_msg" ::= #msgIn;
+                                          "ll_info_valid" ::= $$false;
                                           "ll_info" ::= $$Default };
         cont)%kami_action.
 
-      (* Definition valueRq := cacheRq oidx hcfg_value_sz hcfg_addr_sz. *)
-      (* Definition ValueRq := CacheRq hcfg_value_sz hcfg_addr_sz. *)
-      (* Definition compile_rule_request_write *)
-      (*            (addr: Expr var (SyntaxKind (Bit hcfg_addr_sz))) *)
-      (*            (cont: ActionT var Void): ActionT var Void := *)
-      (*   (Call infoRq (STRUCT { "cache_write" ::= $$false; *)
-      (*                          "cache_addr" ::= addr; *)
-      (*                          "cache_data" ::= $$Default }); *)
-      (*   cont)%kami_action. *)
+      Definition compile_rule_writelock
+                 (cont: var (Struct LL) -> ActionT var Void): ActionT var Void :=
+        (Read wl: Struct LL <- wln; cont wl)%kami_action.
+
+      Definition compile_rule_writelock_available
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Assert !(#wl!LL@."ll_valid"); cont)%kami_action.
+
+      Definition compile_rule_get_uplock (imt: InputMsgType)
+                 (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
+        (match imt.(imt_rqrs), imt.(imt_from) with
+         | true, Some None =>
+           (* A response from the parent *)
+           (Call oul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #oul!(MaybeStr (Struct UL))@."valid";
+           LET ul <- #oul!(MaybeStr (Struct UL))@."data";
+           cont ul)
+         | _, _ => (LET ul <- $$Default; cont ul)
+         end)%kami_action.
+
+      Definition compile_rule_get_downlock (imt: InputMsgType)
+                 (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
+        (match imt.(imt_rqrs), imt.(imt_from) with
+         | true, Some (Some _) =>
+           (* A response from a child *)
+           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
+           Assert #odl!(MaybeStr (Struct DL))@."valid";
+           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
+           cont dl)
+         | true, None =>
+           (* When [RssFull]: see the definition of [detect_input_msg_rqrs_r] *)
+           (Call odl <- (downLockRssFull oidx) ();
+           Assert #odl!(MaybeStr (Struct DL))@."valid";
+           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
+           cont dl)
+         | _, _ => (LET dl <- $$Default; cont dl)
+         end)%kami_action.
 
       Definition compile_rule_writelocked (cont: ActionT var Void): ActionT var Void :=
         (Assert #wl!LL@."ll_valid"; cont)%kami_action.
@@ -603,14 +645,85 @@ Section Compile.
                      "msg" ::= (#dl!DL@."dl_rss")#[fs] })
          end)%kami_expr.
 
-      Fixpoint compile_OState_trs (host: HOState (hvar_of var))
+      Definition valueRq := cacheRq oidx hcfg_addr_sz (Bit hcfg_value_sz).
+      Definition ValueRq := CacheRq hcfg_addr_sz (Bit hcfg_value_sz).
+      Definition compile_rule_request_value_read
+                 (addr: Expr var (SyntaxKind (Bit hcfg_addr_sz)))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Call valueRq (STRUCT { "cache_write" ::= $$false;
+                                "cache_addr" ::= addr;
+                                "cache_data" ::= $$Default });
+        cont)%kami_action.
+      Definition compile_rule_request_value_write
+                 (addr: Expr var (SyntaxKind (Bit hcfg_addr_sz)))
+                 (data: Expr var (SyntaxKind (Bit hcfg_value_sz)))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Call valueRq (STRUCT { "cache_write" ::= $$false;
+                                "cache_addr" ::= addr;
+                                "cache_data" ::= data });
+        cont)%kami_action.
+
+      Fixpoint compile_OState_value_write (host: HOState (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
         (match host with
          | HOStateI _ => cont
          | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
-           (Write (ostValNameI i) : (kind_of ht) <- (compile_exp he);
-           compile_OState_trs host' cont)
+           if Fin.eq_dec i value_ost_idx then
+             (** FIXME *)
+             (* compile_rule_request_value_write *)
+             (*   (#msgIn!KMsg@."addr")%kami_expr (compile_exp he) cont *)
+             cont
+           else compile_OState_value_write host' cont
          end)%kami_action.
+
+      Fixpoint compile_OState_info_write (host: HOState (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
+        (match host with
+         | HOStateI _ => cont
+         | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' => (** FIXME *) cont
+         end)%kami_action.
+
+      Fixpoint compile_MonadT_write (hm: HMonadT (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
+        (match hm with
+         | HBind hv mcont =>
+           Let_ (compile_bval hv)
+                (fun x: var (kind_of_hbtype _) => compile_MonadT_write (mcont x) cont)
+         | HRet host horq hmsgs =>
+           compile_OState_value_write
+             host (compile_OState_info_write host cont)
+         end)%kami_action.
+
+      Definition compile_rule_trs_write_rq (trs: HOTrs)
+                 (cont: ActionT var Void): ActionT var Void :=
+        match trs with
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_write (mn (hvar_of var)) cont
+        end.
+
+      Definition compile_MsgsOut_value_read (hmsgs: HMsgsOut (hvar_of var))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (match hmsgs with
+         | HMsgOutNil _ => cont
+         | HMsgOutOne _ msg => cont (** FIXME *) (* compile_exp_value_read msg *)
+         | HMsgsOutDown _ msg => cont (* compile_exp_value_read msg *)
+         end)%kami_action.
+
+      Fixpoint compile_MonadT_read (hm: HMonadT (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
+        (match hm with
+         | HBind hv mcont =>
+           Let_ (compile_bval hv)
+                (fun x: var (kind_of_hbtype _) => compile_MonadT_read (mcont x) cont)
+         | HRet _ _ hmsgs => compile_MsgsOut_value_read hmsgs cont
+         end)%kami_action.
+
+      Definition compile_rule_trs_read_info (trs: HOTrs)
+                 (cont: ActionT var Void): ActionT var Void :=
+        match trs with
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_read (mn (hvar_of var)) cont
+        end.
+
+      (** * Step 4: compile rules for updating MSHRs and outputing messages. *)
 
       Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
@@ -679,29 +792,6 @@ Section Compile.
            cont)
          end)%kami_action.
 
-      Fixpoint compile_MonadT (hm: HMonadT (hvar_of var)): ActionT var Void :=
-        (match hm with
-         | HBind hv cont =>
-           Let_ (compile_bval hv) (fun x: var (kind_of_hbtype _) => compile_MonadT (cont x))
-         | HRet host horq hmsgs =>
-           compile_OState_trs host (compile_ORq_trs horq (compile_MsgsOut_trs hmsgs Retv))
-         end)%kami_action.
-
-      Definition compile_Monad (hm: HMonad): ActionT var Void :=
-        compile_MonadT (hm (hvar_of var)).
-
-      Definition compile_state_trs (mtrs: HStateMTrs): ActionT var Void :=
-        match mtrs with
-        | HMTrs mn => compile_Monad mn
-        end.
-
-      Definition compile_rule_trs (rtrs: HOTrs): ActionT var Void :=
-        match rtrs with
-        | HTrsMTrs mtrs => compile_state_trs mtrs
-        end.
-
-      (** * Step 3: compile rules for state transitions and output messages *)
-
       Definition compile_rule_writelock_release
                  (cont: ActionT var Void): ActionT var Void :=
         (Write wln: Struct LL <- $$Default; cont)%kami_action.
@@ -711,11 +801,11 @@ Section Compile.
   End ExtComp.
 
   Context `{ee: @ExtExp dv oifc het} `{cet: CompExtType}
-          `{@CompExtExp ee cet} `{@CompInfoRead cet}.
+          `{@CompExtExp ee cet} `{@CompCachingInfo cet}.
 
   Section WithObj.
     Variables (oidx: IdxT)
-              (rrn prln crqrln crsrln wln: string)
+              (rrn prln crqrln crsrln rlcn wln: string)
               (ostin: string).
 
     Definition ruleNameBase: string := "rule".
@@ -738,13 +828,13 @@ Section Compile.
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
              compile_rule_readlock_available prl crqrl crsrl imt;;
-             (* NOTE: [compile_rule_accept_message_and_request_info] does acquire a proper readlock. *)
              compile_rule_accept_message_and_request_info
-               oidx prln crqrln crsrln imt;;
+               oidx prln crqrln crsrln rlcn imt;;
              Retv)%kami_action |}.
 
-    Definition readlockIdx: IdxT := 1~>2~>3~>4.
-    Definition writelockIdx: IdxT := 5~>6~>7~>8.
+    Definition readlockIdx: IdxT := 1~>2~>3.
+    Definition infoIdx: IdxT := 4~>5~>6.
+    Definition writelockIdx: IdxT := 7~>8~>9.
 
     Definition compile_rule_rr :=
       {| attrName := "rr_" ++ idx_to_string oidx;
@@ -772,7 +862,17 @@ Section Compile.
       compile_rule_0 (readlockIdx~>3)
                      {| imt_rqrs := true; imt_from := None |}.
 
-    Definition compile_rule_1 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rule_1: Attribute (Action Void) :=
+      {| attrName := ruleNameI infoIdx;
+         attrType :=
+           fun var =>
+             (prl <- compile_rule_readlock_parent prln;
+             crqrl <- compile_rule_readlock_child_rq crqrln;
+             crsrl <- compile_rule_readlock_child_rs crsrln;
+             compile_rule_take_info_resp
+               oidx prln prl crqrln crqrl crsrln crsrl rlcn Retv)%kami_action |}.
+
+    Definition compile_rule_2 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       Attribute (Action Void) :=
       let hr := projT2 rule in
       {| attrName := ruleNameI (rule_idx (projT1 rule));
@@ -781,33 +881,45 @@ Section Compile.
              let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
                            imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
              (compile_rule_rr_check rrn imt;;
+              (* Check the readlock and see if the information is read *)
               prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
-             compile_rule_readlocked prl crqrl crsrl imt;;
+             i <- compile_rule_readlocked_and_info_ready prl crqrl crsrl imt;
+             (* NOTE: only covers info slots;
+              *       we know the value will not be read in this rule. *)
+             ostVars <- comp_info_to_ostVars i;
              msgIn <- compile_rule_get_readlock_msg prl crqrl crsrl imt;
+             (* Check if a writelock is available *)
              wl <- compile_rule_writelock wln;
              compile_rule_writelock_available wl;;
-
-             ostVars <- compile_rule_take_info_resp oidx;
+             (* Check the precondition *)
              ul <- compile_rule_get_uplock oidx msgIn imt;
              dl <- compile_rule_get_downlock oidx msgIn imt;
              compile_rule_prec
                oidx ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
+             (* Release the readlock, acquire the writelock *)
+             (** TODO: (opt) no need to acquire a writelock if no state transition *)
              compile_rule_readlock_release prln crqrln crsrln imt;;
              compile_rule_writelock_acquire wln msgIn;;
-             (** TODO: (opt) no need to acquire a writelock if no state transition *)
-             (** FIXME: should make a transition request, not the actual transition *)
-             compile_rule_trs
-               oidx ostin ostVars msgIn ul dl (hrule_trs hr))%kami_action |}.
+             (* Request to read/write a value/status appropriately *)
+             (** FIXME: when requesting a write,
+              *         need to update [ll_info]s in the other readlocks as well. *)
+             compile_rule_trs_write_rq msgIn ul dl (hrule_trs hr);;
+             compile_rule_trs_read_info msgIn ul dl (hrule_trs hr);;
+             Retv)%kami_action |}.
 
-    Definition compile_rule_2: Attribute (Action Void) :=
+    Definition compile_rule_3: Attribute (Action Void) :=
       {| attrName := ruleNameI writelockIdx;
          attrType :=
            fun var =>
              (wl <- compile_rule_writelock wln;
              compile_rule_writelocked wl;;
-             (** FIXME: should deal with a transition response *)
+             (** FIXME: should do several things here:
+              * 1) (possibly) deal with the read response; plus output messages
+              * 2) (possibly) deal with the write responses (value/status)
+              * 3) (possibly) deal with evictions
+              *)
              compile_rule_writelock_release wln;;
              Retv)%kami_action |}.
 
@@ -819,8 +931,9 @@ Section Compile.
         :: compile_rule_0_release_rs
         :: (compile_rule_0_children_rq dtr)
         ++ (compile_rule_0_children_rs dtr)
-        ++ (map compile_rule_1 rules)
-        ++ [compile_rule_2].
+        ++ [compile_rule_1]
+        ++ (map compile_rule_2 rules)
+        ++ [compile_rule_3].
 
   End WithObj.
 

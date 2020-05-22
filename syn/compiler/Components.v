@@ -428,8 +428,9 @@ Section MSHR.
 End MSHR.
 
 Section Cache.
-  Variable oidx: IdxT.
-  Variables dataSz tagSz indexSz offsetSz addrSz: nat.
+  Variables (oidx: IdxT)
+            (tagSz indexSz offsetSz addrSz: nat)
+            (dataK: Kind).
 
   (* direct-mapped *)
   Definition tagK := Bit (tagSz + 1). (* msb as a valid bit *)
@@ -441,7 +442,6 @@ Section Cache.
   Definition tagGetRs :=
     MethodSig (tagBramN -- "getRs")(): tagK.
 
-  Definition dataK := Bit dataSz.
   Definition dataBramN: string := "dataBram" ++ idx_to_string oidx.
   Definition dataBram := bram1 dataBramN indexSz dataK.
   Definition dataPutRq :=
@@ -496,7 +496,7 @@ Section Cache.
       with Register rqWriteN: Bool <- Default
       with Register rqIndexN: Bit indexSz <- Default
       with Register rqTagN: Bit tagSz <- Default
-      with Register rqDataN: Bit dataSz <- Default
+      with Register rqDataN: dataK <- Default
       with Register victimTagN: Bit tagSz <- Default
 
       with Rule cacheWriteTagRsN :=
