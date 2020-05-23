@@ -715,15 +715,15 @@ Section Compile.
         cont)%kami_action.
 
       Program Fixpoint compile_OState_value_write (host: HOState (hvar_of var))
-              (cont: ActionT var Void): ActionT var Void :=
+              (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         (match host with
-         | HOStateI _ => cont
+         | HOStateI _ => (cont ($$false)%kami_expr)
          | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
            match Fin.eq_dec i value_ost_idx with
            | left Heqi =>
              compile_rule_request_value_write
                (#msgIn!KMsg@."addr")%kami_expr
-               (value_ost_to_value _ _ (compile_exp he)) cont
+               (value_ost_to_value _ _ (compile_exp he)) (cont ($$true)%kami_expr)
            | right _ => compile_OState_value_write host' cont
            end
          end)%kami_action.
@@ -778,37 +778,38 @@ Section Compile.
 
       Definition compile_OState_info_write
                  (host: HOState (hvar_of var)) (imt: InputMsgType)
-                 (cont: ActionT var Void): ActionT var Void :=
+                 (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         let (write, rcont) :=
             compile_OState_info_write_fix
               host false pinfo
               (fun ninfo =>
                  compile_rule_request_info_write
                    (#msgIn!KMsg@."addr")%kami_expr (#ninfo)%kami_expr
-                   (compile_rule_update_info_write_rl ninfo imt cont)) in
-        if write then rcont else cont.
+                   (compile_rule_update_info_write_rl ninfo imt (cont ($$true)%kami_expr))) in
+        if write then rcont else (cont ($$false)%kami_expr).
 
       Definition compile_bexp_value_read {hbt} (he: hbexp (hbvar_of var) hbt)
-                 (cont: ActionT var Void): ActionT var Void :=
+                 (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         (match he with
          | HOstVal _ i _ =>
            if Fin.eq_dec i value_ost_idx
-           then (compile_rule_request_value_read (#msgIn!KMsg@."addr")%kami_expr cont)
-           else cont
-         | _ => cont
+           then (compile_rule_request_value_read
+                   (#msgIn!KMsg@."addr")%kami_expr (cont ($$true)%kami_expr))
+           else (cont ($$false)%kami_expr)
+         | _ => (cont ($$false)%kami_expr)
          end)%kami_action.
 
       Definition compile_exp_value_read {ht} (he: hexp (hvar_of var) ht)
-                 (cont: ActionT var Void): ActionT var Void :=
-        match he with
-        | HBExp hbe => compile_bexp_value_read hbe cont
-        | HEExp _ _ => cont
-        end.
+                 (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
+        (match he with
+         | HBExp hbe => compile_bexp_value_read hbe cont
+         | HEExp _ _ => (cont ($$false)%kami_expr)
+         end)%kami_action.
 
       Definition compile_MsgsOut_value_read (hmsgs: HMsgsOut (hvar_of var))
-                 (cont: ActionT var Void): ActionT var Void :=
+                 (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         (match hmsgs with
-         | HMsgOutNil _ => cont
+         | HMsgOutNil _ => (cont ($$false)%kami_expr)
          | HMsgOutOne _ msg => compile_exp_value_read msg cont
          | HMsgsOutDown _ msg => compile_exp_value_read msg cont
          end)%kami_action.
@@ -904,21 +905,31 @@ Section Compile.
          end)%kami_action.
 
       Fixpoint compile_MonadT_trs (hm: HMonadT (hvar_of var)) (imt: InputMsgType)
-               (cont: var (Struct KMsgsOut) -> ActionT var Void): ActionT var Void :=
+               (cont: var (Struct CacheRqs) -> var (Struct KMsgsOut) -> ActionT var Void)
+        : ActionT var Void :=
         (match hm with
          | HBind hv mcont =>
            Let_ (compile_bval hv)
                 (fun x: var (kind_of_hbtype _) => compile_MonadT_trs (mcont x) imt cont)
          | HRet host horq hmsgs =>
            (compile_MsgsOut_value_read
-              hmsgs (compile_OState_value_write
-                       host (compile_OState_info_write
-                               host imt (compile_ORq_trs
-                                           horq (compile_MsgsOut_build hmsgs cont)))))
+              hmsgs (fun vre =>
+                       compile_OState_value_write
+                         host (fun vwe =>
+                                 compile_OState_info_write
+                                   host imt
+                                   (fun iwe =>
+                                      LET cacheRqs <-
+                                      STRUCT { "rq_value_read" ::= vre;
+                                               "rq_value_write" ::= vwe;
+                                               "rq_info_write" ::= iwe };
+                                   compile_ORq_trs
+                                     horq (compile_MsgsOut_build hmsgs (cont cacheRqs))))))
          end)%kami_action.
 
       Definition compile_rule_trs (trs: HOTrs) (imt: InputMsgType)
-                 (cont: var (Struct KMsgsOut) -> ActionT var Void): ActionT var Void :=
+                 (cont: var (Struct CacheRqs) -> var (Struct KMsgsOut) -> ActionT var Void)
+        : ActionT var Void :=
         match trs with
         | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) imt cont
         end.
@@ -947,6 +958,8 @@ Section Compile.
          ++ "_" ++ idx_to_string oidx
          ++ "_" ++ idx_to_string ridx)%string.
 
+    Local Notation "{{ v1 , v2 }} <- f ; cont" :=
+      (f (fun v1 v2 => cont)) (at level 60, right associativity, only parsing).
     Local Notation "v <- f ; cont" :=
       (f (fun v => cont)) (at level 60, right associativity, only parsing).
     Local Notation "f ;; cont" :=
@@ -1033,21 +1046,14 @@ Section Compile.
                oidx ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
              (* Release the readlock *)
              compile_rule_readlock_release prln crqrln crsrln imt;;
-
              (* Request to read/write a value/status appropriately *)
-             (** FIXME: log what are requested; it will be used in [compile_rule_3]
-              *         to check which response calls should be made;
-              *         maybe better to have a different struct for the writelock. *)
-             msgsOut <- compile_rule_trs
-                          oidx prln crqrln crsrln
-                          pinfo ostVars msgIn ul dl (hrule_trs hr) imt;
-
-             (LET cacheRqs <- $$Default;
-
+             {{ cacheRqs, msgsOut }} <- compile_rule_trs
+                                          oidx prln crqrln crsrln
+                                          pinfo ostVars msgIn ul dl (hrule_trs hr) imt;
              (* Acquire the writelock; save the log about what are requested *)
              (** OPT: no need to acquire a writelock if no state transition *)
-             (compile_rule_writelock_acquire wln msgIn pinfo cacheRqs msgsOut;;
-              Retv)))%kami_action |}.
+             compile_rule_writelock_acquire wln msgIn pinfo cacheRqs msgsOut;;
+             Retv)%kami_action |}.
 
     Definition compile_rule_3: Attribute (Action Void) :=
       {| attrName := ruleNameI writelockIdx;
