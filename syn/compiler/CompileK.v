@@ -729,32 +729,66 @@ Section Compile.
                 snd (compile_OState_info_write_fix host' true ninfo cont))%kami_action
          end)%kami_action.
 
+      Definition update_info_write_rl (rln: string) (ninfo: var info_kind)
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Read rl: Struct LL <- rln;
+        If ((#rl!LL@."ll_valid") && (#rl!LL@."ll_info_valid") &&
+            (#rl!LL@."ll_msg"!KMsg@."addr" == #msgIn!KMsg@."addr"))
+         then (Write rln: Struct LL <- STRUCT { "ll_valid" ::= $$true;
+                                                "ll_cmidx" ::= #rl!LL@."ll_cmidx";
+                                                "ll_msg" ::= #rl!LL@."ll_msg";
+                                                "ll_info_valid" ::= $$true;
+                                                "ll_info" ::=
+                                                  STRUCT { "valid" ::= $$true;
+                                                           "data" ::= #ninfo } };
+              Retv);
+         cont)%kami_action.
+
+      Definition compile_rule_update_info_write_rl
+                 (ninfo: var info_kind) (imt: InputMsgType)
+                 (cont: ActionT var Void): ActionT var Void :=
+        (match imt.(imt_from) with
+         | None =>
+           match imt.(imt_rqrs) with
+           | true => (update_info_write_rl prln ninfo (update_info_write_rl crqrln ninfo cont))
+           | false => cont
+           end
+         | Some (Some _) =>
+           match imt.(imt_rqrs) with
+           | true => (update_info_write_rl prln ninfo (update_info_write_rl crqrln ninfo cont))
+           | false => (update_info_write_rl prln ninfo (update_info_write_rl crsrln ninfo cont))
+           end
+         | Some None =>
+           (update_info_write_rl crqrln ninfo (update_info_write_rl crsrln ninfo cont))
+         end)%kami_action.
+
       Definition compile_OState_info_write
-                 (host: HOState (hvar_of var))
+                 (host: HOState (hvar_of var)) (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         let (write, rcont) :=
             compile_OState_info_write_fix
               host false pinfo
               (fun ninfo =>
                  compile_rule_request_info_write
-                   (#msgIn!KMsg@."addr")%kami_expr (#ninfo)%kami_expr cont) in
+                   (#msgIn!KMsg@."addr")%kami_expr (#ninfo)%kami_expr
+                   (compile_rule_update_info_write_rl ninfo imt cont)) in
         if write then rcont else cont.
 
-      Fixpoint compile_MonadT_write (hm: HMonadT (hvar_of var))
+      Fixpoint compile_MonadT_write (hm: HMonadT (hvar_of var)) (imt: InputMsgType)
                (cont: ActionT var Void): ActionT var Void :=
         (match hm with
          | HBind hv mcont =>
            Let_ (compile_bval hv)
-                (fun x: var (kind_of_hbtype _) => compile_MonadT_write (mcont x) cont)
+                (fun x: var (kind_of_hbtype _) => compile_MonadT_write (mcont x) imt cont)
          | HRet host horq hmsgs =>
            compile_OState_value_write
-             host (compile_OState_info_write host cont)
+             host (compile_OState_info_write host imt cont)
          end)%kami_action.
 
-      Definition compile_rule_trs_write_rq (trs: HOTrs)
+      Definition compile_rule_trs_write_rq (trs: HOTrs) (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         match trs with
-        | HTrsMTrs (HMTrs mn) => compile_MonadT_write (mn (hvar_of var)) cont
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_write (mn (hvar_of var)) imt cont
         end.
 
       Definition compile_bexp_value_read {hbt} (he: hbexp (hbvar_of var) hbt)
@@ -978,9 +1012,8 @@ Section Compile.
              compile_rule_writelock_acquire wln msgIn;;
 
              (* Request to read/write a value/status appropriately *)
-             (** FIXME: when requesting a write,
-              *         need to update [ll_info]s in the other readlocks as well. *)
-             compile_rule_trs_write_rq oidx pinfo ostVars msgIn ul dl (hrule_trs hr);;
+             compile_rule_trs_write_rq
+               oidx prln crqrln crsrln pinfo ostVars msgIn ul dl (hrule_trs hr) imt;;
 
              (** FIXME: log what are requested; it will be used in [compile_rule_3]
               *         to check which response calls should be made. *)
