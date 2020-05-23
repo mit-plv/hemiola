@@ -797,8 +797,6 @@ Section Compile.
         | HTrsMTrs (HMTrs mn) => compile_MonadT_read (mn (hvar_of var)) cont
         end.
 
-      (** * Step 4: compile rules for updating MSHRs and outputing messages. *)
-
       Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
         (match horq with
@@ -846,6 +844,8 @@ Section Compile.
                                         "r_dl_msg" ::= compile_exp msg });
            cont)
          end)%kami_action.
+
+      (** * Step 4: compile rules for updating MSHRs and outputing messages. *)
 
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
@@ -976,12 +976,16 @@ Section Compile.
              (** TODO: (opt) no need to acquire a writelock if no state transition *)
              compile_rule_readlock_release prln crqrln crsrln imt;;
              compile_rule_writelock_acquire wln msgIn;;
+
              (* Request to read/write a value/status appropriately *)
              (** FIXME: when requesting a write,
               *         need to update [ll_info]s in the other readlocks as well. *)
+             compile_rule_trs_write_rq oidx pinfo ostVars msgIn ul dl (hrule_trs hr);;
+
              (** FIXME: log what are requested; it will be used in [compile_rule_3]
               *         to check which response calls should be made. *)
-             compile_rule_trs_write_rq oidx pinfo ostVars msgIn ul dl (hrule_trs hr);;
+             (** FIXME: 1) make the ORq transition;
+              *         2) prebuild message queue indices, which may read info. *)
              compile_rule_trs_read_info oidx msgIn ul dl (hrule_trs hr);;
              Retv)%kami_action |}.
 
