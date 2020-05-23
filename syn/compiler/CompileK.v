@@ -389,9 +389,9 @@ Section Compile.
 
       (** * Step 2: take a info-read response, save it in a proper readlock. *)
 
-      Definition infoRs := cacheReadRs oidx info_kind.
+      Definition infoReadRs := cacheReadRs oidx info_kind.
       Definition compile_rule_take_info_resp (cont: ActionT var Void): ActionT var Void :=
-        (Call od <- infoRs ();
+        (Call od <- infoReadRs ();
         Read rlc: Bit 2 <- rlcn;
         If (#rlc == $0) (* crq *)
         then (Write crqrln: Struct RL <- STRUCT { "rl_valid" ::= #crqrl!RL@."rl_valid";
@@ -938,7 +938,54 @@ Section Compile.
 
       Definition compile_rule_writelock_release
                  (cont: ActionT var Void): ActionT var Void :=
-        (Write wln: Struct RL <- $$Default; cont)%kami_action.
+        (Write wln: Struct WL <- $$Default; cont)%kami_action.
+
+      Definition infoWriteRs := cacheWriteRs oidx.
+      Definition valueWriteRs := cacheWriteRs oidx.
+      Definition compile_rule_take_write_responses (wl: var (Struct WL))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (LET cacheRqs <- #wl!WL@."wl_cache_rqs";
+        If (#cacheRqs!CacheRqs@."rq_info_write")
+         then (Call infoWriteRs (); Retv);
+         If (#cacheRqs!CacheRqs@."rq_value_write")
+         then (Call valueWriteRs (); Retv);
+         cont)%kami_action.
+
+      Definition valueReadRs := cacheReadRs oidx (Bit hcfg_value_sz).
+      Definition compile_rule_take_value_read_response (wl: var (Struct WL))
+                 (cont: var (Bit hcfg_value_sz) -> ActionT var Void): ActionT var Void :=
+        (LET cacheRqs <- #wl!WL@."wl_cache_rqs";
+        If (#cacheRqs!CacheRqs@."rq_value_read")
+         then (Call ov <- valueReadRs ();
+              Ret (#ov!(MaybeStr (Bit hcfg_value_sz))@."data"))
+         else (Ret $$Default)
+          as val;
+        cont val)%kami_action.
+
+      Definition compile_output_messages (wl: var (Struct WL))
+                 (value: var (Bit hcfg_value_sz))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (LET mouts <- #wl!WL@."wl_msgs_out";
+        LET pmsg <- #mouts!KMsgsOut@."mouts_msg";
+        LET nmsg: Struct KMsg <- STRUCT { "id" ::= #pmsg!KMsg@."id";
+                                          "type" ::= #pmsg!KMsg@."type";
+                                          "addr" ::= #pmsg!KMsg@."addr";
+                                          "value" ::= #value };
+        LET mt <- #mouts!KMsgsOut@."mouts_type";
+        (* child(00), children(01), parent rq(10), rs(11) *)
+        If (#mt == $0)
+         then (Call (enqToChild oidx)(STRUCT { "ch_idx" ::= #mouts!KMsgsOut@."mouts_child_idx";
+                                               "ch_msg" ::= #nmsg }); Retv)
+         else (If (#mt == $1)
+               then (Call (broadcastToCs oidx)
+                          (STRUCT { "cs_inds" ::= #mouts!KMsgsOut@."mouts_child_inds";
+                                    "cs_msg" ::= #nmsg }); Retv)
+               else (If (#mt == $2)
+                     then (Call (enqToParent (rqUpFrom oidx))(#nmsg); Retv)
+                     else (Call (enqToParent (rsUpFrom oidx))(#nmsg); Retv);
+                    Retv);
+              Retv);
+        cont)%kami_action.
 
     End Phoas.
 
@@ -1061,11 +1108,10 @@ Section Compile.
            fun var =>
              (wl <- compile_rule_writelock wln;
              compile_rule_writelocked wl;;
-             (** FIXME: should do several things here:
-              * 1) (possibly) deal with the read response; plus output messages
-              * 2) (possibly) deal with the write responses (value/status)
-              * 3) (possibly) deal with evictions
-              *)
+             (** FIXME: deal with possible evictions *)
+             compile_rule_take_write_responses oidx wl;;
+             value <- compile_rule_take_value_read_response oidx wl;
+             compile_output_messages oidx wl value;;
              compile_rule_writelock_release wln;;
              Retv)%kami_action |}.
 

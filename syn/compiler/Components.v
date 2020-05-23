@@ -466,7 +466,7 @@ Section Cache.
   Definition cacheWriteRsN: string := "cacheWriteRs" ++ idx_to_string oidx.
   Definition cacheWriteRs :=
     (* returns the tag of the victim line, if eviction is required. *)
-    MethodSig cacheWriteRsN (): Maybe (Bit tagSz).
+    MethodSig cacheWriteRsN (): Void.
 
   Definition rqStatusN: string := "rqStatus" ++ idx_to_string oidx.
 
@@ -552,7 +552,7 @@ Section Cache.
         Write onRqN <- $$false;
         Ret #retv
 
-      with Method cacheWriteRsN (): Maybe (Bit tagSz) :=
+      with Method cacheWriteRsN (): Void :=
         Read onRq <- onRqN;
         Read rqWrite <- rqWriteN;
         Assert (#onRq && #rqWrite);
@@ -564,7 +564,7 @@ Section Cache.
                          LET retv: Maybe (Bit tagSz) <- STRUCT { "valid" ::= !#onWrite;
                                                                  "data" ::= #victimTag };
                          Write onRqN <- $$false;
-                         Ret #retv
+                         (* Ret #retv *) Retv
     }.
 
 End Cache.
