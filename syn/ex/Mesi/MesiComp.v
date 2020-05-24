@@ -220,9 +220,6 @@ Definition topo: tree :=
 Definition dtr :=
   Eval vm_compute in (fst (tree2Topo topo 0)).
 
-(* Time Definition k: Modules := *)
-(*   Eval vm_compute in (compile_System (existT _ _ (@himpl topo ltac:(discriminate)))). *)
-
 Definition kl1c (oidx: IdxT): Modules :=
   ((compile_Object dtr (existT _ _ (hl1 oidx)))
      ++ mshrs oidx 1 1

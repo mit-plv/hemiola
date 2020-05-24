@@ -706,9 +706,8 @@ Section Compile.
                                 "cache_data" ::= data });
         cont)%kami_action.
 
-      (* TODO: define without [Program] *)
-      Program Fixpoint compile_OState_value_write (host: HOState (hvar_of var))
-              (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
+      Fixpoint compile_OState_value_write (host: HOState (hvar_of var))
+               (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         (match host with
          | HOStateI _ => (cont ($$false)%kami_expr)
          | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
@@ -716,7 +715,9 @@ Section Compile.
            | left Heqi =>
              compile_rule_request_value_write
                (#msgIn!KMsg@."addr")%kami_expr
-               (value_ost_to_value Heq (compile_exp he)) (cont ($$true)%kami_expr)
+               (value_ost_to_value
+                  (eq_rect _ (fun idx => hostf_ty[@idx] = ht) Heq _ Heqi)
+                  (compile_exp he)) (cont ($$true)%kami_expr)
            | right _ => compile_OState_value_write host' cont
            end
          end)%kami_action.
