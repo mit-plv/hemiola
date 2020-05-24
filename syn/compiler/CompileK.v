@@ -9,14 +9,6 @@ Require Export Compiler.Components.
 
 Set Implicit Arguments.
 
-Lemma Vector_nth_map_comp {A B} (f: A -> B) {n} (v: Vector.t A n) (p: Fin.t n):
-  Vector.nth (Vector.map f v) p = f (Vector.nth v p).
-Proof.
-  induction p.
-  - revert n v; refine (@Vector.caseS _ _ _); now simpl.
-  - revert n v p IHp; refine (@Vector.caseS _  _ _); now simpl.
-Defined.
-
 Import MonadNotations.
 
 Section Compile.
@@ -169,7 +161,7 @@ Section Compile.
       (** * Step 1: compile the message-accepting rule:
        * it makes the read request to the info cache as well. *)
 
-      Class CompCachingInfo :=
+      Class CacheInfo :=
         { info_kind: Kind;
           comp_info_to_ostVars:
             forall (var: Kind -> Type),
@@ -181,17 +173,17 @@ Section Compile.
             forall (var: Kind -> Type),
               var info_kind ->
               forall ht (i: Fin.t ost_sz),
-                htypeDenote ht = ost_ty[@i] ->
+                hostf_ty[@i] = ht ->
                 Expr var (SyntaxKind (kind_of ht)) ->
                 Expr var (SyntaxKind info_kind);
           value_ost_idx: Fin.t ost_sz;
           value_ost_to_value:
             forall (var: Kind -> Type) ht,
-              htypeDenote ht = ost_ty[@value_ost_idx] ->
+              hostf_ty[@value_ost_idx] = ht ->
               Expr var (SyntaxKind (kind_of ht)) ->
               Expr var (SyntaxKind (Bit hcfg_value_sz))
         }.
-      Context `{CompCachingInfo}.
+      Context `{CacheInfo}.
 
       (* A readlock:
        * - rl_valid: true if the lock being held
@@ -714,16 +706,17 @@ Section Compile.
                                 "cache_data" ::= data });
         cont)%kami_action.
 
+      (* TODO: define without [Program] *)
       Program Fixpoint compile_OState_value_write (host: HOState (hvar_of var))
               (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         (match host with
          | HOStateI _ => (cont ($$false)%kami_expr)
-         | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
+         | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
            match Fin.eq_dec i value_ost_idx with
            | left Heqi =>
              compile_rule_request_value_write
                (#msgIn!KMsg@."addr")%kami_expr
-               (value_ost_to_value _ _ (compile_exp he)) (cont ($$true)%kami_expr)
+               (value_ost_to_value Heq (compile_exp he)) (cont ($$true)%kami_expr)
            | right _ => compile_OState_value_write host' cont
            end
          end)%kami_action.
@@ -735,11 +728,11 @@ Section Compile.
                (cont: var info_kind -> ActionT var Void): bool * ActionT var Void :=
         (match host with
          | HOStateI _ => (write, cont rinfo)
-         | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
+         | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
            if Fin.eq_dec i value_ost_idx
            then compile_OState_info_write_fix host' write rinfo cont
            else (true,
-                 LET ninfo <- comp_info_update rinfo _ _ Heq (compile_exp he);
+                 LET ninfo <- comp_info_update rinfo _ Heq (compile_exp he);
                 snd (compile_OState_info_write_fix host' true ninfo cont))%kami_action
          end)%kami_action.
 
@@ -992,7 +985,7 @@ Section Compile.
   End ExtComp.
 
   Context `{ee: @ExtExp dv oifc het} `{cet: CompExtType}
-          `{@CompExtExp ee cet} `{@CompCachingInfo cet}.
+          `{@CompExtExp ee cet} `{@CacheInfo cet}.
 
   Section WithObj.
     Variables (oidx: IdxT)

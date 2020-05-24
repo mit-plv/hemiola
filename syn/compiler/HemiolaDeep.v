@@ -6,6 +6,14 @@ Set Implicit Arguments.
 
 Import MonadNotations.
 
+Lemma Vector_nth_map_comp {A B} (f: A -> B) {n} (v: Vector.t A n) (p: Fin.t n):
+  Vector.nth (Vector.map f v) p = f (Vector.nth v p).
+Proof.
+  induction p.
+  - revert n v; refine (@Vector.caseS _ _ _); now simpl.
+  - revert n v p IHp; refine (@Vector.caseS _  _ _); now simpl.
+Defined.
+
 (** Configuration class *)
 
 Class hconfig :=
@@ -127,7 +135,7 @@ Section Reify.
       }.
 
     Section ExpExtended.
-      Context `{ExtExp}.
+      Context `{HOStateIfcFull} `{ExtExp}.
 
       Section ExtPhoas.
         Variables (var: htype -> Type).
@@ -200,7 +208,7 @@ Section Reify.
         | HOStateI: HOState
         | HOstUpdate:
             forall (i: Fin.t ost_sz) {ht},
-              htypeDenote ht = Vector.nth ost_ty i ->
+              Vector.nth hostf_ty i = ht ->
               hexp ht -> HOState -> HOState.
 
         Inductive HORq :=
@@ -287,7 +295,7 @@ Section Reify.
     end.
 
   Section InterpExtended.
-    Context `{het: ExtType} `{@ExtExp het}.
+    Context `{het: ExtType} `{@HOStateIfcFull het} `{@ExtExp het}.
 
     Section WithPreState.
       Variables (ost: OState) (orq: ORq Msg) (mins: list (Id Msg)).
@@ -299,7 +307,7 @@ Section Reify.
       Proof.
         intros.
         pose proof (host_ty_ok i).
-        rewrite H5 in H6.
+        rewrite H6 in H7.
         assumption.
       Defined.
 
@@ -397,11 +405,21 @@ Section Reify.
         | HGetDownLockFirstRs => getFirstIdMsg (getRss orq)
         end.
 
+      Lemma hostf_ty_ok_i:
+        forall (i: Fin.t ost_sz) ht,
+          Vector.nth hostf_ty i = ht ->
+          htypeDenote ht = Vector.nth ost_ty i.
+      Proof.
+        intros; subst ht.
+        rewrite <-hostf_ty_ok.
+        apply eq_sym, Vector_nth_map_comp; reflexivity.
+      Defined.
+
       Fixpoint interpOState (host: HOState htypeDenote): OState :=
         (match host with
          | HOStateI _ => ost
          | HOstUpdate i Heq hval host' =>
-           (interpOState host') +#[i <- match Heq with
+           (interpOState host') +#[i <- match hostf_ty_ok_i _ Heq with
                                         | eq_refl => interpExp hval
                                         end]
          end)%hvec.
@@ -473,7 +491,8 @@ Section HemiolaDeep.
           `{oifc: OStateIfc}
           `{het: ExtType}
           `{ee: @ExtExp dv oifc het}
-          `{hoifc: @HOStateIfc dv oifc}.
+          `{hoifc: @HOStateIfc dv oifc}
+          `{hoifcf: @HOStateIfcFull dv oifc hoifc het}.
 
   Record HRule (sr: Rule) :=
     { hrule_msg_from: HMsgFrom;

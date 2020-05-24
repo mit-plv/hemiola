@@ -122,24 +122,87 @@ Section Instances.
        compile_eoprec := compile_dir_OPrec
     |}.
 
-  Instance MesiCompInfoRead: CompInfoRead :=
-    {| info_width := 7; (* MSB [owned(1)|status(2)|dir_st(2)|dir_sharers(2)] LSB *)
+  Definition MesiInfo :=
+    STRUCT { "mesi_owned" :: Bool;
+             "mesi_status" :: Bit 2;
+             "mesi_dir_st" :: Bit 2;
+             "mesi_dir_sharers" :: Bit hcfg_children_max }.
+
+  Definition compile_mesi_info_update
+             (var: Kind -> Type) (pinfo: var (Struct MesiInfo))
+             ht i (Heq: Vector.nth hostf_ty i = ht)
+             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind (Struct MesiInfo)).
+  Proof.
+    subst ht.
+    generalize dependent i; intros i.
+    refine (match i with | Fin.F1 => _ | Fin.FS _ => _ end).
+    1: { repeat (destruct n; [exact idProp|]).
+         destruct n; [|exact idProp].
+         simpl; intros.
+         exact (#pinfo)%kami_expr.
+    }
+
+    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+    refine (match t with | Fin.F1 => _ | Fin.FS _ => _ end).
+    1: { repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+         simpl; intros.
+         exact (STRUCT { "mesi_owned" ::= ve;
+                         "mesi_status" ::= #pinfo!MesiInfo@."mesi_status";
+                         "mesi_dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+                         "mesi_dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
+    }
+
+    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+    refine (match t0 with | Fin.F1 => _ | Fin.FS _ => _ end).
+    1: { repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+         simpl; intros.
+         exact (STRUCT { "mesi_owned" ::= #pinfo!MesiInfo@."mesi_owned";
+                         "mesi_status" ::= UniBit (Trunc 2 _) (ve - $1);
+                         "mesi_dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+                         "mesi_dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
+    }
+
+    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+    refine (match t1 with | Fin.F1 => _ | Fin.FS _ => _ end).
+    1: { repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+         simpl; intros.
+         exact (STRUCT { "mesi_owned" ::= #pinfo!MesiInfo@."mesi_owned";
+                         "mesi_status" ::= #pinfo!MesiInfo@."mesi_status";
+                         "mesi_dir_st" ::= UniBit (Trunc 2 _) (ve!KDir@."dir_st" - $1);
+                         "mesi_dir_sharers" ::= ve!KDir@."dir_sharers" })%kami_expr.
+    }
+
+    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
+    apply Fin.case0; assumption.
+  Defined.
+
+  Definition compile_mesi_ost_to_value
+             (var: Kind -> Type) ht (Heq: Vector.nth hostf_ty Mesi.val = ht)
+             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind (Bit hcfg_value_sz)).
+  Proof.
+    subst ht; exact ve.
+  Defined.
+
+  Instance MesiCacheInfo: CacheInfo :=
+    {| info_kind := Struct MesiInfo;
        comp_info_to_ostVars :=
-         fun var oi cont =>
-           (LET i <- #oi!(MaybeStr (Bit 7))@."data";
-           LET value <- $$Default; (* don't care *)
-           LET owned <- IF (UniBit (TruncLsb 6 1) #i == $0) then $$false else $$true;
-           LET status: KMesi <- ({$0, UniBit (ConstExtract 4 2 1) #i} + $1);
-           LET dir <- STRUCT { "dir_st" ::= {$0, UniBit (ConstExtract 2 2 3) #i} + $1;
-                               "dir_excl" ::= bvFirstSet (UniBit (Trunc 2 5) #i);
-                               "dir_sharers" ::= UniBit (Trunc 2 5) #i };
-           cont (value, (owned, (status, (dir, tt)))))%kami_action |}.
+         fun var pinfo cont =>
+           (LET value <- $$Default; (* don't care *)
+           LET owned <- #pinfo!MesiInfo@."mesi_owned";
+           LET status: KMesi <- ({$0, #pinfo!MesiInfo@."mesi_status"} + $1);
+           LET dir <- STRUCT { "dir_st" ::= {$0, #pinfo!MesiInfo@."mesi_dir_st"} + $1;
+                               "dir_excl" ::= bvFirstSet (#pinfo!MesiInfo@."mesi_dir_sharers");
+                               "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
+           cont (value, (owned, (status, (dir, tt)))))%kami_action;
+       comp_info_update := compile_mesi_info_update;
+       value_ost_idx := Mesi.val;
+       value_ost_to_value := compile_mesi_ost_to_value |}.
 
 End Instances.
 
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
-Existing Instance MesiCompInfoRead.
+Existing Instance MesiCacheInfo.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
