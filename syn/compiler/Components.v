@@ -619,7 +619,6 @@ Section Cache.
         Assert (#readStage == $0);
         Write readStageN: Bit 2 <- $1;
         Write readAddrN <- #addr;
-
         LET index <- getIndex _ addr;
         LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
                                                                  "addr" ::= #index;
@@ -630,6 +629,13 @@ Section Cache.
         NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
         NCall callDirReadRqs dirRq (Nat.pow 2 dirLgWay);
         Retv
+
+      with Method readRsN (): CacheLineK :=
+        Read readStage: Bit 2 <- readStageN;
+        Assert (#readStage == $3);
+        Write readStageN: Bit 2 <- $0;
+        Read line: Struct CacheLine <- readLineN;
+        Ret #line
 
       with Rule "readTagMatch" :=
         Read readStage: Bit 2 <- readStageN;
