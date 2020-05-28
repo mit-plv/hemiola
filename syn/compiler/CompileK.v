@@ -823,8 +823,6 @@ Section Compile.
          ++ "_" ++ idx_to_string oidx
          ++ "_" ++ idx_to_string ridx)%string.
 
-    Local Notation "{{ v1 , v2 }} <- f ; cont" :=
-      (f (fun v1 v2 => cont)) (at level 60, right associativity, only parsing).
     Local Notation "v <- f ; cont" :=
       (f (fun v => cont)) (at level 60, right associativity, only parsing).
     Local Notation "f ;; cont" :=
