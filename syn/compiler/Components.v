@@ -428,11 +428,6 @@ Section MSHR.
 End MSHR.
 
 Section Cache.
-  (** Implement several caches based on non-inclusiveness:
-   * 1) an information cache: [index -> way -> (tag + info + dir)]
-   * 2) an extended directory cache: [index -> edirWay -> dir]
-   *)
-
   Variables (oidx: IdxT)
             (* MSB                                  LSB
              * |----------------(addr)----------------|
@@ -441,42 +436,28 @@ Section Cache.
              *              (= index + lgWay)
              *)
             (tagSz indexSz offsetSz addrSz: nat)
-            (lgWay edirLgWay: nat)
-            (infoK dirK dataK: Kind).
+            (lgWay: nat)
+            (infoK dataK: Kind).
 
   Local Notation "s '+o'" := (s ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
 
   Definition TagValue (valueK: Kind) :=
-    STRUCT { "tag" :: Bit tagSz; "value" :: valueK }.
+    STRUCT { "valid" :: Bool; "tag" :: Bit tagSz; "value" :: valueK }.
 
-  (** The information cache *)
-  Definition InfoDir := STRUCT { "info" :: infoK; "dir" :: dirK }.
-  Definition InfoDirK := Struct InfoDir.
-  Definition TagInfoDir := TagValue InfoDirK.
-  Definition TagInfoDirK := Struct TagInfoDir.
+  (** The information (= ownership bit + status + dir) cache *)
+  Definition TagInfo := TagValue infoK.
+  Definition TagInfoK := Struct TagInfo.
 
   Definition infoRamN (way: nat): string :=
     "infoRam"+o _++ nat_to_string way.
-  Definition infoRam (way: nat) := bram1 (infoRamN way) indexSz TagInfoDirK.
+  Definition infoRam (way: nat) := bram1 (infoRamN way) indexSz TagInfoK.
   Definition infoPutRq (way: nat) :=
-    MethodSig ((infoRamN way) -- "putRq")(Struct (BramRq indexSz TagInfoDirK)): Void.
+    MethodSig ((infoRamN way) -- "putRq")(Struct (BramRq indexSz TagInfoK)): Void.
   Definition infoGetRs (way: nat) :=
-    MethodSig ((infoRamN way) -- "getRs")(): TagInfoDirK.
+    MethodSig ((infoRamN way) -- "getRs")(): TagInfoK.
 
-  (** The extended directory: edirWay -> index -> (tag + dir) *)
-  Definition TagDir := TagValue dirK.
-  Definition TagDirK := Struct TagDir.
-
-  Definition dirRamN (way: nat): string :=
-    "dirRam"+o _++ nat_to_string way.
-  Definition dirRam (way: nat) := bram1 (dirRamN way) indexSz TagDirK.
-  Definition dirPutRq (way: nat) :=
-    MethodSig ((dirRamN way) -- "putRq")(Struct (BramRq indexSz TagDirK)): Void.
-  Definition dirGetRs (way: nat) :=
-    MethodSig ((dirRamN way) -- "getRs")(): TagDirK.
-
-  (** The data cache: index *)
+  (** The data cache *)
   Definition dataIndexSz := lgWay + indexSz.
   Definition dataRamN: string := "dataRam"+o.
   Definition dataRam := bram1 dataRamN dataIndexSz dataK.
@@ -485,6 +466,9 @@ Section Cache.
               (Struct (BramRq dataIndexSz dataK)): Void.
   Definition dataGetRs :=
     MethodSig (dataRamN -- "getRs")(): dataK.
+
+  (** The replacement-policy module *)
+  Definition repN: string := "rep"+o.
 
   (*! Public interface for the info/data caches *)
 
@@ -501,13 +485,8 @@ Section Cache.
              "info_write" :: Bool; (* is this struct used for writing info? *)
              "info" :: infoK;
              "value_write" :: Bool; (* used for writing a value? *)
-             "value" :: dataK; (* [info_hit] implies value-hit *)
-             (* NOTE: if the cache is inclusive, then below fields for the extended
-              * directory are totally useless. *)
-             "edir_hit" :: Bool;
-             "edir_way" :: Bit edirLgWay;
-             "edir_write" :: Bool; (* used for writing a directory status? *)
-             "dir" :: dirK }.
+             "value" :: dataK (* [info_hit] implies value-hit *)
+           }.
   Definition CacheLineK := Struct CacheLine.
 
   Definition readRqN: string := cacheN _++ "readRq".
@@ -518,19 +497,22 @@ Section Cache.
   Definition writeRqN: string := cacheN _++ "writeRq".
   Definition writeRq := MethodSig writeRqN (CacheLineK): Void.
   Definition writeRsN: string := cacheN _++ "writeRs".
+  Definition writeRs := MethodSig writeRsN (): Void.
+
   Definition Victim :=
     STRUCT { "vc_evicted" :: Bool;
              "vc_addr" :: Bit addrSz;
              "vc_info" :: infoK;
-             "vc_dir" :: dirK;
              "vc_data" :: dataK }.
   Definition VictimK := Struct Victim.
-  Definition writeRs := MethodSig writeRsN (): VictimK.
 
   Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
                                   Expr ty (SyntaxKind (Bit indexSz)))
             (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
-                                Expr ty (SyntaxKind (Bit tagSz))).
+                                Expr ty (SyntaxKind (Bit tagSz)))
+            (buildAddr: forall ty, fullType ty (SyntaxKind (Bit tagSz)) ->
+                                   fullType ty (SyntaxKind (Bit indexSz)) ->
+                                   Expr ty (SyntaxKind (Bit addrSz))).
 
   Local Notation "'NCall' v <- f ; cont" :=
     (f (fun v => cont%kami_action))
@@ -540,24 +522,16 @@ Section Cache.
       (at level 12, right associativity, f at level 15, only parsing): kami_action_scope.
 
   Fixpoint callInfoReadRqs (var: Kind -> Type)
-           (infoRq: var (Struct (BramRq indexSz TagInfoDirK)))
+           (infoRq: var (Struct (BramRq indexSz TagInfoK)))
            (n: nat) (cont: ActionT var Void): ActionT var Void :=
     (match n with
      | O => cont
      | S n' => callInfoReadRqs infoRq n' (Call (infoPutRq n')(#infoRq); cont)
      end)%kami_action.
 
-  Fixpoint callDirReadRqs (var: Kind -> Type)
-           (dirRq: var (Struct (BramRq indexSz TagDirK)))
-           (n: nat) (cont: ActionT var Void): ActionT var Void :=
-    (match n with
-     | O => cont
-     | S n' => callDirReadRqs dirRq n' (Call (dirPutRq n')(#dirRq); cont)
-     end)%kami_action.
-
   Fixpoint callInfoReadRss (var: Kind -> Type)
-           (tis: var (Vector TagInfoDirK lgWay))
-           (n: nat) (cont: var (Vector TagInfoDirK lgWay) -> ActionT var Void)
+           (tis: var (Vector TagInfoK lgWay))
+           (n: nat) (cont: var (Vector TagInfoK lgWay) -> ActionT var Void)
     : ActionT var Void :=
     (match n with
      | O => cont tis
@@ -567,22 +541,14 @@ Section Cache.
                (cont ntis))
      end)%kami_action.
 
-  Fixpoint callDirReadRss (var: Kind -> Type)
-           (tds: var (Vector TagDirK edirLgWay))
-           (n: nat) (cont: var (Vector TagDirK edirLgWay) -> ActionT var Void)
-    : ActionT var Void :=
-    (match n with
-     | O => cont tds
-     | S n' => (NCall ptds <- callDirReadRss tds n';
-               Call ti <- (dirGetRs n')();
-               LET ntds <- UpdateVector #ptds $n' #ti;
-               (cont ntds))
-     end)%kami_action.
-
   Definition readStageN: string := "readStage"+o.
   Definition readAddrN: string := "readAddr"+o.
   Definition readLineN: string := "readLine"+o.
   Definition writeStageN: string := "writeStage"+o.
+  Definition writeLineN: string := "writeLine"+o.
+  Definition victimExN: string := "victimEx"+o.
+  Definition victimN: string := "victim"+o.
+  Definition victimWayN: string := "victimWay"+o.
 
   Definition TagMatch (valueK: Kind) (lw: nat) :=
     STRUCT { "tm_hit" :: Bool;
@@ -596,7 +562,8 @@ Section Cache.
     (match n with
      | O => $$Default
      | S n' =>
-       (IF (#tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."tag" == #tag)
+       (IF (#tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."valid" &&
+            #tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."tag" == #tag)
         then (STRUCT { "tm_hit" ::= $$true;
                        "tm_way" ::= $(Nat.pow 2 lw - n);
                        "tm_value" ::= #tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."value" })
@@ -605,7 +572,7 @@ Section Cache.
 
   Fixpoint infoPutRqWFix (var: Kind -> Type)
            (way: var (Bit lgWay))
-           (rq: var (Struct (BramRq indexSz TagInfoDirK)))
+           (rq: var (Struct (BramRq indexSz TagInfoK)))
            (n: nat) (cont: ActionT var Void): ActionT var Void :=
     match n with
     | O => cont
@@ -617,36 +584,58 @@ Section Cache.
 
   Definition infoPutRqW (var: Kind -> Type)
              (way: var (Bit lgWay))
-             (rq: var (Struct (BramRq indexSz TagInfoDirK)))
+             (rq: var (Struct (BramRq indexSz TagInfoK)))
              (cont: ActionT var Void): ActionT var Void :=
     infoPutRqWFix way rq (Nat.pow 2 lgWay) cont.
 
-  Fixpoint dirPutRqWFix (var: Kind -> Type)
-           (way: var (Bit edirLgWay))
-           (rq: var (Struct (BramRq indexSz TagDirK)))
+  Fixpoint infoGetRsWRdFix (var: Kind -> Type)
+           (way: var (Bit lgWay))
            (n: nat) (cont: ActionT var Void): ActionT var Void :=
     match n with
     | O => cont
     | S n' =>
-      (If (#way == $(Nat.pow 2 edirLgWay - n))
-       then (Call (dirPutRq (Nat.pow 2 edirLgWay - n))(#rq); Retv);
-       dirPutRqWFix way rq n' cont)%kami_action
+      (If (#way == $(Nat.pow 2 lgWay - n))
+       then (Call (infoGetRs (Nat.pow 2 lgWay - n))(); Retv);
+       infoGetRsWRdFix way n' cont)%kami_action
     end.
 
-  Definition dirPutRqW (var: Kind -> Type)
-             (way: var (Bit edirLgWay))
-             (rq: var (Struct (BramRq indexSz TagDirK)))
+  Definition infoGetRsWRd (var: Kind -> Type)
+             (way: var (Bit lgWay))
              (cont: ActionT var Void): ActionT var Void :=
-    dirPutRqWFix way rq (Nat.pow 2 edirLgWay) cont.
+    infoGetRsWRdFix way (Nat.pow 2 lgWay) cont.
+
+  Fixpoint infoGetRsWWrFix (var: Kind -> Type)
+           (way: var (Bit lgWay))
+           (ti: var TagInfoK)
+           (n: nat) (cont: var TagInfoK -> ActionT var Void): ActionT var Void :=
+    match n with
+    | O => cont ti
+    | S n' =>
+      (If (#way == $(Nat.pow 2 lgWay - n))
+       then (Call nti <- (infoGetRs (Nat.pow 2 lgWay - n))(); Ret #nti)
+       else (Ret $$Default)
+        as mti;
+      infoGetRsWWrFix way mti n' cont)%kami_action
+    end.
+
+  Definition infoGetRsWWr (var: Kind -> Type)
+             (way: var (Bit lgWay))
+             (cont: var TagInfoK -> ActionT var Void): ActionT var Void :=
+    (LET tid <- $$Default;
+    infoGetRsWWrFix way tid (Nat.pow 2 lgWay) cont)%kami_action.
 
   Definition ReadStage := Bit 2.
   Definition rsNone {var}: Expr var (SyntaxKind ReadStage) := ($0)%kami_expr.
   Definition rsInfoRq {var}: Expr var (SyntaxKind ReadStage) := ($1)%kami_expr.
   Definition rsValueRq {var}: Expr var (SyntaxKind ReadStage) := ($2)%kami_expr.
-  Definition rsRsOk {var}: Expr var (SyntaxKind ReadStage) := ($3)%kami_expr.
+  Definition rsRsReady {var}: Expr var (SyntaxKind ReadStage) := ($3)%kami_expr.
 
-  Definition WriteStage := Bit 2.
+  Definition WriteStage := Bit 3.
   Definition wsNone {var}: Expr var (SyntaxKind WriteStage) := ($0)%kami_expr.
+  Definition wsRqAcc {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr.
+  Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr.
+  Definition wsWriteRq {var}: Expr var (SyntaxKind WriteStage) := ($4)%kami_expr.
+  Definition wsRsReady {var}: Expr var (SyntaxKind WriteStage) := ($7)%kami_expr.
 
   Definition cacheIfc :=
     MODULE {
@@ -655,7 +644,12 @@ Section Cache.
       with Register readLineN: Struct CacheLine <- Default
 
       with Register writeStageN: WriteStage <- Default
-      (* with Register writeLineN: CacheLineK <- Default *)
+      with Register writeLineN: CacheLineK <- Default
+
+      (** * FIXME: both read and write should check the victim for the value bypass *)
+      with Register victimExN: Bool <- Default
+      with Register victimN: VictimK <- Default
+      with Register victimWayN: Bit lgWay <- Default
 
       with Method readRqN (addr: Bit addrSz): Void :=
         Read readStage: ReadStage <- readStageN;
@@ -663,19 +657,15 @@ Section Cache.
         Write readStageN: ReadStage <- rsInfoRq;
         Write readAddrN <- #addr;
         LET index <- getIndex _ addr;
-        LET infoRq: Struct (BramRq indexSz TagInfoDirK) <- STRUCT { "write" ::= $$false;
+        LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
                                                                  "addr" ::= #index;
                                                                  "datain" ::= $$Default };
-        LET dirRq: Struct (BramRq indexSz TagDirK) <- STRUCT { "write" ::= $$false;
-                                                               "addr" ::= #index;
-                                                               "datain" ::= $$Default };
         NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
-        NCall callDirReadRqs dirRq (Nat.pow 2 edirLgWay);
         Retv
 
       with Method readRsN (): CacheLineK :=
         Read readStage: ReadStage <- readStageN;
-        Assert (#readStage == rsRsOk);
+        Assert (#readStage == rsRsReady);
         Write readStageN: ReadStage <- rsNone;
         Read line: Struct CacheLine <- readLineN;
         Ret #line
@@ -683,78 +673,50 @@ Section Cache.
       with Method writeRqN (line: CacheLineK): Void :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
-        (* Write writeLineN <- #line; *)
-
-        LET addr <- #line!CacheLine@."addr";
-        LET tag <- getTag _ addr;
-        LET index <- getIndex _ addr;
-
-        If (#line!CacheLine@."info_hit")
-        then (LET way <- #line!CacheLine@."info_way";
-             If (#line!CacheLine@."info_write")
-              then (LET rq: Struct (BramRq indexSz TagInfoDirK) <-
-                            STRUCT { "write" ::= $$true;
-                                     "addr" ::= #index;
-                                     "datain" ::=
-                                       STRUCT { "tag" ::= #tag;
-                                                "value" ::=
-                                                  STRUCT { "info" ::= #line!CacheLine@."info";
-                                                           "dir" ::= #line!CacheLine@."dir" }
-                                              }
-                                   };
-                   NCall infoPutRqW way rq; Retv);
-              If (#line!CacheLine@."value_write")
-              then (Call dataPutRq (
-                           STRUCT { "write" ::= $$true;
-                                    "addr" ::= {#index, #way};
-                                    "datain" ::= #line!CacheLine@."value" }); Retv); Retv);
+        Write writeLineN <- #line;
+        Write writeStageN <- wsRqAcc;
         Retv
 
-      with Rule "readTagMatch" :=
+      with Method writeRsN (): Void :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsRsReady);
+        Write writeStageN <- wsNone;
+        Retv
+
+      with Rule "read_tagmatch" :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsInfoRq);
         Read addr: Bit addrSz <- readAddrN;
         LET tag <- getTag _ addr;
         LET index <- getIndex _ addr;
 
-        LET tis: Vector TagInfoDirK lgWay <- $$Default;
+        LET tis: Vector TagInfoK lgWay <- $$Default;
         NCall ntis <- callInfoReadRss tis (Nat.pow 2 lgWay);
-        LET tds: Vector TagDirK edirLgWay <- $$Default;
-        NCall ntds <- callDirReadRss tds (Nat.pow 2 edirLgWay);
-
         LET itm <- doTagMatch _ tag ntis (Nat.pow 2 lgWay);
-        LET dtm <- doTagMatch _ tag ntds (Nat.pow 2 edirLgWay);
 
         Write readLineN: Struct CacheLine <-
           STRUCT { "addr" ::= #addr;
-                   "info_hit" ::= #itm!(TagMatch InfoDirK lgWay)@."tm_hit";
-                   "info_way" ::= #itm!(TagMatch InfoDirK lgWay)@."tm_way";
+                   "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
+                   "info_way" ::= #itm!(TagMatch infoK lgWay)@."tm_way";
                    "info_write" ::= $$false;
-                   "info" ::= #itm!(TagMatch InfoDirK lgWay)@."tm_value"!InfoDir@."info";
+                   "info" ::= #itm!(TagMatch infoK lgWay)@."tm_value";
                    "value_write" ::= $$false;
-                   "value" ::= $$Default; (* if info-hit, then will have it next cycle *)
-                   "edir_hit" ::= #dtm!(TagMatch dirK edirLgWay)@."tm_hit";
-                   "edir_way" ::= #dtm!(TagMatch dirK edirLgWay)@."tm_way";
-                   "edir_write" ::= $$false;
-                   "dir" ::=
-                     (IF #itm!(TagMatch InfoDirK lgWay)@."tm_hit"
-                      then #itm!(TagMatch InfoDirK lgWay)@."tm_value"!InfoDir@."dir"
-                      else #dtm!(TagMatch dirK edirLgWay)@."tm_value") };
+                   "value" ::= $$Default (* if info-hit, then will have it next cycle *) };
 
-        If (#itm!(TagMatch InfoDirK lgWay)@."tm_hit")
+        If (#itm!(TagMatch infoK lgWay)@."tm_hit")
         then (Write readStageN: ReadStage <- rsValueRq;
              Call dataPutRq (STRUCT { "write" ::= $$false;
                                       "addr" ::= {#index,
-                                                  #itm!(TagMatch InfoDirK lgWay)@."tm_way"};
+                                                  #itm!(TagMatch infoK lgWay)@."tm_way"};
                                       "datain" ::= $$Default });
              Retv)
-        else (Write readStageN: ReadStage <- rsRsOk; Retv);
+        else (Write readStageN: ReadStage <- rsRsReady; Retv);
         Retv
 
-      with Rule "readData" :=
+      with Rule "read_data" :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsValueRq);
-        Write readStageN: ReadStage <- rsRsOk;
+        Write readStageN: ReadStage <- rsRsReady;
         Call data <- dataGetRs();
         Read line: Struct CacheLine <- readLineN;
         Write readLineN: Struct CacheLine <-
@@ -764,12 +726,118 @@ Section Cache.
                    "info_write" ::= #line!CacheLine@."info_write";
                    "info" ::= #line!CacheLine@."info";
                    "value_write" ::= $$false;
-                   "value" ::= #data;
-                   "edir_hit" ::= #line!CacheLine@."edir_hit";
-                   "edir_way" ::= #line!CacheLine@."edir_way";
-                   "edir_write" ::= #line!CacheLine@."edir_write";
-                   "dir" ::= #line!CacheLine@."dir" };
+                   "value" ::= #data };
         Retv
-   }.
+
+      with Rule "write_info_hit_rq" :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsRqAcc);
+        Read line: Struct CacheLine <- writeLineN;
+        Assert (#line!CacheLine@."info_hit");
+        Write writeStageN <- wsWriteRq;
+
+        LET addr <- #line!CacheLine@."addr";
+        LET tag <- getTag _ addr;
+        LET index <- getIndex _ addr;
+        LET way <- #line!CacheLine@."info_way";
+
+        (* request write for the new line *)
+        If (#line!CacheLine@."info_write")
+        then (LET rq: Struct (BramRq indexSz TagInfoK) <-
+                      STRUCT { "write" ::= $$true;
+                               "addr" ::= #index;
+                               "datain" ::=
+                                 STRUCT { "valid" ::= $$true;
+                                          "tag" ::= #tag;
+                                          "value" ::= #line!CacheLine@."info" } };
+             NCall infoPutRqW way rq; Retv);
+
+        If (#line!CacheLine@."value_write")
+        then (Call dataPutRq (
+                     STRUCT { "write" ::= $$true;
+                              "addr" ::= {#index, #way};
+                              "datain" ::= #line!CacheLine@."value" }); Retv);
+        Retv
+
+      with Rule "write_info_hit_rs" :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsWriteRq);
+        Read line: Struct CacheLine <- writeLineN;
+        Write writeStageN <- wsRsReady;
+        LET way <- #line!CacheLine@."info_way";
+        If (#line!CacheLine@."info_write")
+        then (NCall infoGetRsWRd way; Retv);
+        If (#line!CacheLine@."value_write")
+        then (Call dataGetRs (); Retv);
+        Retv
+
+      with Rule "write_info_miss_victim_rq" :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsRqAcc);
+        Read line: Struct CacheLine <- writeLineN;
+        Assert (!(#line!CacheLine@."info_hit"));
+        Write writeStageN <- wsVictimRq;
+
+        LET addr <- #line!CacheLine@."addr";
+        LET index <- getIndex _ addr;
+
+        (** * TODO: implement [chooseVictim];
+         * there always should be at least a line whose directory status
+         * is Invalid, and that line should be chosen as a victim. *)
+        (* Call victimWay <- chooseVictim (#index); *)
+        Nondet victimWay: SyntaxKind (Bit lgWay);
+        Write victimWayN <- #victimWay;
+        LET infoRq: Struct (BramRq indexSz TagInfoK) <-
+                    STRUCT { "write" ::= $$false;
+                             "addr" ::= #index;
+                             "datain" ::= $$Default };
+        NCall infoPutRqW victimWay infoRq;
+        Call dataPutRq (STRUCT { "write" ::= $$false;
+                                 "addr" ::= {#index, #victimWay};
+                                 "datain" ::= $$Default });
+        Retv
+
+      with Rule "write_victim_rs" :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsVictimRq);
+        Read line: Struct CacheLine <- writeLineN;
+        Write writeStageN <- wsWriteRq;
+
+        LET addr <- #line!CacheLine@."addr";
+        LET tag <- getTag _ addr;
+        LET index <- getIndex _ addr;
+        Read way <- victimWayN;
+
+        (* handle the responses about the victim line *)
+        Read victimEx <- victimExN;
+        Assert (!#victimEx);
+        Write victimExN <- $$true;
+
+        NCall vtid <- infoGetRsWWr way;
+        LET vtag <- #vtid!(TagValue infoK)@."tag";
+        LET vinfo <- #vtid!(TagValue infoK)@."value";
+        Call vdata <- dataGetRs ();
+        Write victimN: VictimK  <- STRUCT { "vc_evicted" ::= $$true;
+                                            "vc_addr" ::= buildAddr _ vtag index;
+                                            "vc_info" ::= #vinfo;
+                                            "vc_data" ::= #vdata };
+
+        (** request write for the new line; TODO: code duplicated with above *)
+        If (#line!CacheLine@."info_write")
+        then (LET rq: Struct (BramRq indexSz TagInfoK) <-
+                      STRUCT { "write" ::= $$true;
+                               "addr" ::= #index;
+                               "datain" ::=
+                                 STRUCT { "valid" ::= $$true;
+                                          "tag" ::= #tag;
+                                          "value" ::= #line!CacheLine@."info" } };
+             NCall infoPutRqW way rq; Retv);
+        If (#line!CacheLine@."value_write")
+        then (Call dataPutRq (
+                     STRUCT { "write" ::= $$true;
+                              "addr" ::= {#index, #way};
+                              "datain" ::= #line!CacheLine@."value" }); Retv);
+        Retv
+    }.
 
 End Cache.
