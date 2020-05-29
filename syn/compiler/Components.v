@@ -499,12 +499,12 @@ Section Cache.
   Definition writeRsN: string := cacheN _++ "writeRs".
   Definition writeRs := MethodSig writeRsN (): Void.
 
-  Definition Victim :=
-    STRUCT { "vc_evicted" :: Bool;
-             "vc_addr" :: Bit addrSz;
-             "vc_info" :: infoK;
-             "vc_data" :: dataK }.
-  Definition VictimK := Struct Victim.
+  Definition getVictimN: string := cacheN ++ "getVictim".
+  Definition getVictim := MethodSig getVictimN (): CacheLineK.
+  Definition removeVictimN: string := cacheN ++ "removeVictim".
+  Definition removeVictim := MethodSig removeVictimN (): Void.
+
+  (** -- public interface ends *)
 
   Variables (getIndex: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
                                   Expr ty (SyntaxKind (Bit indexSz)))
@@ -641,26 +641,31 @@ Section Cache.
     MODULE {
       Register readStageN: ReadStage <- Default
       with Register readAddrN: Bit addrSz <- Default
-      with Register readLineN: Struct CacheLine <- Default
-
+      with Register readLineN: CacheLineK <- Default
       with Register writeStageN: WriteStage <- Default
       with Register writeLineN: CacheLineK <- Default
-
-      (** * FIXME: both read and write should check the victim for the value bypass *)
       with Register victimExN: Bool <- Default
-      with Register victimN: VictimK <- Default
+      with Register victimN: CacheLineK <- Default
       with Register victimWayN: Bit lgWay <- Default
 
       with Method readRqN (addr: Bit addrSz): Void :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsNone);
-        Write readStageN: ReadStage <- rsInfoRq;
-        Write readAddrN <- #addr;
-        LET index <- getIndex _ addr;
-        LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
-                                                                 "addr" ::= #index;
-                                                                 "datain" ::= $$Default };
-        NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
+
+        Read victimEx <- victimExN;
+        Read victim: CacheLineK <- victimN;
+        If (#victimEx && #victim!CacheLine@."addr" == #addr)
+        then (Write readStageN: ReadStage <- rsRsReady;
+             Write readLineN <- #victim;
+             Retv)
+        else (Write readStageN: ReadStage <- rsInfoRq;
+             Write readAddrN <- #addr;
+             LET index <- getIndex _ addr;
+             LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
+                                                                      "addr" ::= #index;
+                                                                      "datain" ::= $$Default };
+             NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
+             Retv);
         Retv
 
       with Method readRsN (): CacheLineK :=
@@ -673,14 +678,34 @@ Section Cache.
       with Method writeRqN (line: CacheLineK): Void :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
-        Write writeLineN <- #line;
-        Write writeStageN <- wsRqAcc;
+
+        Read victimEx <- victimExN;
+        Read victim: CacheLineK <- victimN;
+        If (#victimEx && #victim!CacheLine@."addr" == #line!CacheLine@."addr")
+        then (Write writeStageN <- wsRsReady;
+             Write victimN <- #line; (* update the victim line *)
+             Retv)
+        else (Write writeStageN <- wsRqAcc;
+             Write writeLineN <- #line;
+             Retv);
         Retv
 
       with Method writeRsN (): Void :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRsReady);
         Write writeStageN <- wsNone;
+        Retv
+
+      with Method getVictimN (): CacheLineK :=
+        Read victimEx <- victimExN;
+        Assert (#victimEx);
+        Read victim <- victimN;
+        Ret #victim
+
+      with Method removeVictimN (): Void :=
+        Read victimEx <- victimExN;
+        Assert (#victimEx);
+        Write victimExN <- $$false;
         Retv
 
       with Rule "read_tagmatch" :=
@@ -781,7 +806,7 @@ Section Cache.
         LET addr <- #line!CacheLine@."addr";
         LET index <- getIndex _ addr;
 
-        (** * TODO: implement [chooseVictim];
+        (** * FIXME: implement [chooseVictim];
          * there always should be at least a line whose directory status
          * is Invalid, and that line should be chosen as a victim. *)
         (* Call victimWay <- chooseVictim (#index); *)
@@ -817,10 +842,13 @@ Section Cache.
         LET vtag <- #vtid!(TagValue infoK)@."tag";
         LET vinfo <- #vtid!(TagValue infoK)@."value";
         Call vdata <- dataGetRs ();
-        Write victimN: VictimK  <- STRUCT { "vc_evicted" ::= $$true;
-                                            "vc_addr" ::= buildAddr _ vtag index;
-                                            "vc_info" ::= #vinfo;
-                                            "vc_data" ::= #vdata };
+        Write victimN: CacheLineK  <- STRUCT { "addr" ::= buildAddr _ vtag index;
+                                               "info_hit" ::= $$false;
+                                               "info_way" ::= $$Default;
+                                               "info_write" ::= $$false;
+                                               "info" ::= #vinfo;
+                                               "value_write" ::= $$false;
+                                               "value" ::= #vdata };
 
         (** request write for the new line; TODO: code duplicated with above *)
         If (#line!CacheLine@."info_write")
