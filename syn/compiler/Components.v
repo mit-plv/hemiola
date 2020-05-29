@@ -502,14 +502,11 @@ Section Cache.
              "info" :: infoK;
              "value_write" :: Bool; (* used for writing a value? *)
              "value" :: dataK; (* [info_hit] implies value-hit *)
-             (* NOTE: in the cache is inclusive, then this interface is redundant
-              * in that always [info_hit = dir_hit] and [lgWay = edirLgWay].
-              * However, in non-inclusive caches, we need to have extended directory
-              * structure that may have different hit and ways.
-              *)
-             "dir_hit" :: Bool;
-             "dir_way" :: Bit edirLgWay;
-             "dir_write" :: Bool; (* used for writing the value? *)
+             (* NOTE: if the cache is inclusive, then below fields for the extended
+              * directory are totally useless. *)
+             "edir_hit" :: Bool;
+             "edir_way" :: Bit edirLgWay;
+             "edir_write" :: Bool; (* used for writing a directory status? *)
              "dir" :: dirK }.
   Definition CacheLineK := Struct CacheLine.
 
@@ -534,12 +531,6 @@ Section Cache.
                                   Expr ty (SyntaxKind (Bit indexSz)))
             (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
                                 Expr ty (SyntaxKind (Bit tagSz))).
-  (* (readTagMatch: forall ty, fullType ty (SyntaxKind (Bit (tagSz + 1))) -> *)
-  (*                           fullType ty (SyntaxKind (Bit tagSz)) -> *)
-  (*                           Expr ty (SyntaxKind Bool)) *)
-  (* (writeTagMatch: forall ty, fullType ty (SyntaxKind (Bit (tagSz + 1))) -> *)
-  (*                            fullType ty (SyntaxKind (Bit tagSz)) -> *)
-  (*                            Expr ty (SyntaxKind Bool)). *)
 
   Local Notation "'NCall' v <- f ; cont" :=
     (f (fun v => cont%kami_action))
@@ -656,9 +647,6 @@ Section Cache.
 
   Definition WriteStage := Bit 2.
   Definition wsNone {var}: Expr var (SyntaxKind WriteStage) := ($0)%kami_expr.
-  (* Definition wsInfoRq {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr. *)
-  (* Definition wsValueRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr. *)
-  (* Definition wsWsOk {var}: Expr var (SyntaxKind WriteStage) := ($3)%kami_expr. *)
 
   Definition cacheIfc :=
     MODULE {
@@ -666,7 +654,7 @@ Section Cache.
       with Register readAddrN: Bit addrSz <- Default
       with Register readLineN: Struct CacheLine <- Default
 
-      (* with Register writeStageN: WriteStage <- Default *)
+      with Register writeStageN: WriteStage <- Default
       (* with Register writeLineN: CacheLineK <- Default *)
 
       with Method readRqN (addr: Bit addrSz): Void :=
@@ -692,6 +680,36 @@ Section Cache.
         Read line: Struct CacheLine <- readLineN;
         Ret #line
 
+      with Method writeRqN (line: CacheLineK): Void :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsNone);
+        (* Write writeLineN <- #line; *)
+
+        LET addr <- #line!CacheLine@."addr";
+        LET tag <- getTag _ addr;
+        LET index <- getIndex _ addr;
+
+        If (#line!CacheLine@."info_hit")
+        then (LET way <- #line!CacheLine@."info_way";
+             If (#line!CacheLine@."info_write")
+              then (LET rq: Struct (BramRq indexSz TagInfoDirK) <-
+                            STRUCT { "write" ::= $$true;
+                                     "addr" ::= #index;
+                                     "datain" ::=
+                                       STRUCT { "tag" ::= #tag;
+                                                "value" ::=
+                                                  STRUCT { "info" ::= #line!CacheLine@."info";
+                                                           "dir" ::= #line!CacheLine@."dir" }
+                                              }
+                                   };
+                   NCall infoPutRqW way rq; Retv);
+              If (#line!CacheLine@."value_write")
+              then (Call dataPutRq (
+                           STRUCT { "write" ::= $$true;
+                                    "addr" ::= {#index, #way};
+                                    "datain" ::= #line!CacheLine@."value" }); Retv); Retv);
+        Retv
+
       with Rule "readTagMatch" :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsInfoRq);
@@ -715,9 +733,9 @@ Section Cache.
                    "info" ::= #itm!(TagMatch InfoDirK lgWay)@."tm_value"!InfoDir@."info";
                    "value_write" ::= $$false;
                    "value" ::= $$Default; (* if info-hit, then will have it next cycle *)
-                   "dir_hit" ::= #dtm!(TagMatch dirK edirLgWay)@."tm_hit";
-                   "dir_way" ::= #dtm!(TagMatch dirK edirLgWay)@."tm_way";
-                   "dir_write" ::= $$false;
+                   "edir_hit" ::= #dtm!(TagMatch dirK edirLgWay)@."tm_hit";
+                   "edir_way" ::= #dtm!(TagMatch dirK edirLgWay)@."tm_way";
+                   "edir_write" ::= $$false;
                    "dir" ::=
                      (IF #itm!(TagMatch InfoDirK lgWay)@."tm_hit"
                       then #itm!(TagMatch InfoDirK lgWay)@."tm_value"!InfoDir@."dir"
@@ -747,9 +765,9 @@ Section Cache.
                    "info" ::= #line!CacheLine@."info";
                    "value_write" ::= $$false;
                    "value" ::= #data;
-                   "dir_hit" ::= #line!CacheLine@."dir_hit";
-                   "dir_way" ::= #line!CacheLine@."dir_way";
-                   "dir_write" ::= #line!CacheLine@."dir_write";
+                   "edir_hit" ::= #line!CacheLine@."edir_hit";
+                   "edir_way" ::= #line!CacheLine@."edir_way";
+                   "edir_write" ::= #line!CacheLine@."edir_write";
                    "dir" ::= #line!CacheLine@."dir" };
         Retv
    }.
