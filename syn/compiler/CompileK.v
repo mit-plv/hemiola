@@ -164,6 +164,9 @@ Section Compile.
       Class CompLineRW :=
         { (* line read/write-related *)
           lineK: Kind;
+          get_line_addr:
+            forall (var: Kind -> Type),
+              var lineK -> Expr var (SyntaxKind KAddr);
           compile_line_to_ostVars:
             forall (var: Kind -> Type),
               var lineK ->
@@ -177,8 +180,6 @@ Section Compile.
                 hostf_ty[@i] = ht ->
                 Expr var (SyntaxKind (kind_of ht)) ->
                 Expr var (SyntaxKind lineK);
-          (* eviction-related *)
-          victimK: Kind;
         }.
       Context `{CompLineRW}.
 
@@ -206,6 +207,7 @@ Section Compile.
         (prln: string) (prl: var (Struct RL))
         (crqrln: string) (crqrl: var (Struct RL))
         (crsrln: string) (crsrl: var (Struct RL))
+        (erln: string) (erl: var Bool)
         (* rlc: a two-bit flag saying which readlock is being used;
          * p(10), crq(00), crs(01) *)
         (rlcn: string)
@@ -224,6 +226,10 @@ Section Compile.
       Definition compile_rule_readlock_child_rs
                  (cont: var (Struct RL) -> ActionT var Void): ActionT var Void :=
         (Read crsrl: Struct RL <- crsrln; cont crsrl)%kami_action.
+
+      Definition compile_rule_readlock_evict
+                 (cont: var Bool -> ActionT var Void): ActionT var Void :=
+        (Read erl: Bool <- erln; cont erl)%kami_action.
 
       Definition detect_input_msg_rqrs_r (rrp: HOPrecR): bool :=
         match rrp with
@@ -257,7 +263,7 @@ Section Compile.
 
       Definition compile_rule_rr_step: ActionT var Void :=
         (Read rr: Bit 2 <- rrn;
-        Write rrn <- (IF #rr == $2 then $0 else #rr + $1);
+        Write rrn <- #rr + $1;
         Retv)%kami_action.
 
       (** NOTE: this round robin still has a lot of chances to be optimized. *)
@@ -267,7 +273,9 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (Read rr: Bit 2 <- rrn; Assert #rr == $2; cont)
-           | false => (Assert $$false; cont) (** FIXME: eviction *)
+           | false =>
+             (* for eviction requests *)
+             (Read rr: Bit 2 <- rrn; Assert #rr == $3; cont)
            end
          | Some None => (Read rr: Bit 2 <- rrn; Assert #rr == $0; cont)
          | Some (Some _) =>
@@ -283,7 +291,7 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (Assert !(#crsrl!RL@."rl_valid"); cont)
-           | false => (Assert $$false; cont) (** FIXME: eviction *)
+           | false => (Assert !#erl; cont)
            end
          | Some None => (Assert !(#prl!RL@."rl_valid"); cont)
          | Some (Some _) =>
@@ -319,7 +327,7 @@ Section Compile.
                                                  "rl_line" ::= $$Default };
              Write rlcn: Bit 2 <- $1;
              compile_rule_request_read (#msg!KMsg@."addr")%kami_expr cont)
-           | false => cont (** FIXME: eviction *)
+           | false => cont (* nothing to do in case of eviction *)
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
@@ -388,6 +396,9 @@ Section Compile.
 
       (** 3-1: check there is already a proper readlock and the information is ready. *)
 
+      (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
+      Definition getVictim := MethodSig (writeRqN oidx) (): lineK.
+
       (* NOTE: should be safe to extract "data" directly from "rl_line",
        *       since the info cache returns the default value in case of miss. *)
       Definition compile_rule_readlocked_and_info_ready
@@ -398,7 +409,7 @@ Section Compile.
            match imt.(imt_rqrs) with
            | true => (Assert (#crsrl!RL@."rl_valid" && #crsrl!RL@."rl_line_valid");
                      LET i <- #crsrl!RL@."rl_line"; cont i)
-           | false => (Assert $$false; LET i: lineK <- $$Default; cont i) (** FIXME: eviction *)
+           | false => (Assert #erl; Call i <- getVictim (); cont i)
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
@@ -419,7 +430,7 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (LET msgIn <- #crsrl!RL@."rl_msg"; cont msgIn)
-           | false => (LET msgIn <- $$Default; cont msgIn) (** FIXME: eviction *)
+           | false => (LET msgIn <- $$Default; cont msgIn)
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -717,8 +728,10 @@ Section Compile.
          | HUpdUpLockS _ =>
            (Call (registerUL oidx)
                  (STRUCT { "r_ul_rsb" ::= $$false;
-                           (** FIXME: eviction *)
-                           "r_ul_msg" ::= $$Default;
+                           "r_ul_msg" ::= STRUCT { "id" ::= $$Default;
+                                                   "type" ::= $$false; (* request *)
+                                                   "addr" ::= get_line_addr _ pline;
+                                                   "value" ::= $$Default };
                            "r_ul_rsbTo" ::= $$Default });
            cont)
          | HRelUpLock _ =>
@@ -731,9 +744,10 @@ Section Compile.
                            "r_dl_rsbTo" ::= compile_exp rsb });
            cont)
          | HUpdDownLockS rssf =>
+           (** NOTE: silent down-requests;
+            * not used in non-inclusive cache-coherence protocols *)
            (Call (registerDL oidx)
                  (STRUCT { "r_dl_rsb" ::= $$false;
-                           (** FIXME: eviction *)
                            "r_dl_msg" ::= $$Default;
                            "r_dl_rss_from" ::= compile_exp rssf;
                            "r_dl_rsbTo" ::= $$Default });
@@ -755,7 +769,9 @@ Section Compile.
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
         (match hmsgs with
-         | HMsgOutNil _ => cont
+         | HMsgOutNil _ =>
+           (* NOTE: assume no output messages as the eviction responses *)
+           (Call (removeVictim oidx)(); cont)
          | HMsgOutOne midx msg =>
            (let kqidx := compile_exp midx in
             If (_truncLsb_ kqidx == $downIdx)
@@ -795,14 +811,11 @@ Section Compile.
                  (cont: ActionT var Void): ActionT var Void :=
         (Write wln: Struct WL <- $$Default; cont)%kami_action.
 
-      (* NOTE: [victimK] should match with [VictimK ..] in [Components.cache]. *)
-      Definition writeRs := MethodSig (writeRsN oidx) (): victimK.
+      Definition writeRs := MethodSig (writeRsN oidx) (): Void.
       Definition compile_rule_take_write_response (wl: var (Struct WL))
                  (cont: ActionT var Void): ActionT var Void :=
         (LET wrq <- #wl!WL@."wl_write_rq";
-        If (#wrq)
-         then ((** FIXME: get the possible victim line here *)
-             Call writeRs (); Retv);
+        If (#wrq) then (Call writeRs (); Retv);
          cont)%kami_action.
 
     End Phoas.
@@ -814,7 +827,7 @@ Section Compile.
 
   Section WithObj.
     Variables (oidx: IdxT)
-              (rrn prln crqrln crsrln rlcn wln: string)
+              (rrn prln crqrln crsrln erln rlcn wln: string)
               (ostin: string).
 
     Definition ruleNameBase: string := "rule".
@@ -836,7 +849,8 @@ Section Compile.
              (prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
-             compile_rule_readlock_available prl crqrl crsrl imt;;
+             erl <- compile_rule_readlock_evict erln;
+             compile_rule_readlock_available prl crqrl crsrl erl imt;;
              compile_rule_accept_message_and_request_read
                oidx prln crqrln crsrln rlcn imt;;
              Retv)%kami_action |}.
@@ -894,7 +908,8 @@ Section Compile.
               prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
-             pline <- compile_rule_readlocked_and_info_ready prl crqrl crsrl imt;
+             erl <- compile_rule_readlock_evict erln;
+             pline <- compile_rule_readlocked_and_info_ready oidx prl crqrl crsrl erl imt;
              (* NOTE: [compile_line_to_ostVars] only covers info slots;
               *       we know the value will not be read in this rule. *)
              ostVars <- compile_line_to_ostVars pline;
@@ -924,7 +939,6 @@ Section Compile.
            fun var =>
              (wl <- compile_rule_writelock wln;
              compile_rule_writelocked wl;;
-             (** FIXME: deal with possible evictions *)
              compile_rule_take_write_response oidx wl;;
              compile_rule_writelock_release wln;;
              Retv)%kami_action |}.
@@ -947,6 +961,7 @@ Section Compile.
   Definition prlReg (oidx: IdxT): string := "prl" ++ idx_to_string oidx.
   Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
   Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
+  Definition erlReg (oidx: IdxT): string := "erl" ++ idx_to_string oidx.
   Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
   Definition ostInReg (oidx: IdxT): string := "ost" ++ idx_to_string oidx.
 
@@ -1035,7 +1050,7 @@ Section Compile.
     let cregs := compile_OState_init oidx in
     let crules := compile_rules oidx
                                 (rrReg oidx) (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx)
-                                (wlReg oidx) (ostInReg oidx)
+                                (erlReg oidx) (wlReg oidx) (ostInReg oidx)
                                 dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
