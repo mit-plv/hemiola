@@ -69,7 +69,10 @@ Section Bitvector.
   Definition bvFirstSet (bv: (Bit sz) @ var): (Bit sz_lg) @ var :=
     bvFirstSetFix bv.
 
-  Definition bvSingleton (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): Bool @ var :=
+  Definition bvSingleton (i: (Bit sz_lg) @ var): (Bit sz) @ var :=
+    ($1 << i)%kami_expr.
+
+  Definition bvIsSingleton (bv: (Bit sz) @ var) (i: (Bit sz_lg) @ var): Bool @ var :=
     (bv == ($1 << i))%kami_expr.
 
   Fixpoint bvCountFix {n} (bv: (Bit n) @ var) {m}: (Bit m) @ var :=

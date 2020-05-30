@@ -103,8 +103,8 @@ Section DirComp.
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
      | DirLastSharer cidx =>
-       bvSingleton (#(HVector.hvec_ith ostvars Msi.dir)!KDir@."dir_sharers")
-                   (compile_bexp ul dl ostvars cidx)
+       bvIsSingleton (#(HVector.hvec_ith ostvars Msi.dir)!KDir@."dir_sharers")
+                     (compile_bexp ul dl ostvars cidx)
      | DirNotLastSharer _ =>
        bvCount (#(HVector.hvec_ith ostvars Msi.dir)!KDir@."dir_sharers") > $1
      | DirOtherSharerExists cidx =>

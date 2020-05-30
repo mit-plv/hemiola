@@ -38,6 +38,7 @@ End Directory.
 Existing Instance MesiHOStateIfcFull.
 
 Section Instances.
+  Variable lgWay: nat.
 
   Instance MesiCompExtType: CompExtType :=
     {| kind_of_hetype :=
@@ -108,8 +109,8 @@ Section Instances.
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
      | DirLastSharer cidx =>
-       bvSingleton (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-                   (compile_bexp ostvars ul dl cidx)
+       bvIsSingleton (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
+                     (compile_bexp ostvars ul dl cidx)
      | DirNotLastSharer _ =>
        bvCount (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers") > $1
      | DirOtherSharerExists cidx =>
@@ -124,85 +125,96 @@ Section Instances.
 
   Definition MesiInfo :=
     STRUCT { "mesi_owned" :: Bool;
-             "mesi_status" :: Bit 2;
-             "mesi_dir_st" :: Bit 2;
+             "mesi_status" :: KMesi;
+             "mesi_dir_st" :: KMesi;
              "mesi_dir_sharers" :: Bit hcfg_children_max }.
 
-  Definition compile_mesi_info_update
-             (var: Kind -> Type) (pinfo: var (Struct MesiInfo))
+  Definition MesiCacheLine := CacheLine hcfg_addr_sz lgWay (Struct MesiInfo) KValue.
+  Definition MesiCacheLineK := CacheLineK hcfg_addr_sz lgWay (Struct MesiInfo) KValue.
+
+  Definition mesi_compile_line_to_ostVars
+             (var: Kind -> Type) (line: var MesiCacheLineK)
+             (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+                    ActionT var Void): ActionT var Void :=
+    (LET value <- #line!MesiCacheLine@."value";
+    LET pinfo <- #line!MesiCacheLine@."info";
+    LET owned <- #pinfo!MesiInfo@."mesi_owned";
+    LET status: KMesi <- #pinfo!MesiInfo@."mesi_status";
+    LET dir <- STRUCT { "dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+                        "dir_excl" ::= bvFirstSet (#pinfo!MesiInfo@."mesi_dir_sharers");
+                        "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
+    cont (value, (owned, (status, (dir, tt)))))%kami_action.
+
+  Definition mesi_compile_line_update
+             (var: Kind -> Type) (line: var MesiCacheLineK)
              ht i (Heq: Vector.nth hostf_ty i = ht)
-             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind (Struct MesiInfo)).
+             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind MesiCacheLineK).
   Proof.
     subst ht.
-    generalize dependent i; intros i.
-    refine (match i with | Fin.F1 => _ | Fin.FS _ => _ end).
-    1: { repeat (destruct n; [exact idProp|]).
-         destruct n; [|exact idProp].
-         simpl; intros.
-         exact (#pinfo)%kami_expr.
-    }
-
-    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-    refine (match t with | Fin.F1 => _ | Fin.FS _ => _ end).
-    1: { repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-         simpl; intros.
-         exact (STRUCT { "mesi_owned" ::= ve;
-                         "mesi_status" ::= #pinfo!MesiInfo@."mesi_status";
-                         "mesi_dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
-                         "mesi_dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
-    }
-
-    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-    refine (match t0 with | Fin.F1 => _ | Fin.FS _ => _ end).
-    1: { repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-         simpl; intros.
-         exact (STRUCT { "mesi_owned" ::= #pinfo!MesiInfo@."mesi_owned";
-                         "mesi_status" ::= UniBit (Trunc 2 _) (ve - $1);
-                         "mesi_dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
-                         "mesi_dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
-    }
-
-    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-    refine (match t1 with | Fin.F1 => _ | Fin.FS _ => _ end).
-    1: { repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-         simpl; intros.
-         exact (STRUCT { "mesi_owned" ::= #pinfo!MesiInfo@."mesi_owned";
-                         "mesi_status" ::= #pinfo!MesiInfo@."mesi_status";
-                         "mesi_dir_st" ::= UniBit (Trunc 2 _) (ve!KDir@."dir_st" - $1);
-                         "mesi_dir_sharers" ::= ve!KDir@."dir_sharers" })%kami_expr.
-    }
-
-    repeat (destruct n; [exact idProp|]); destruct n; [|exact idProp].
-    apply Fin.case0; assumption.
+    refine (if Fin.eq_dec i Mesi.val then _
+            else if Fin.eq_dec i Mesi.owned then _
+                 else if Fin.eq_dec i Mesi.status then _
+                      else if Fin.eq_dec i Mesi.dir then _
+                           else ($$Default)%kami_expr); subst i.
+    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
+                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
+                      "info_way" ::= #line!MesiCacheLine@."info_way";
+                      "info_write" ::= #line!MesiCacheLine@."info_write";
+                      "info" ::= #line!MesiCacheLine@."info";
+                      "value_write" ::= $$true;
+                      "value" ::= ve })%kami_expr.
+    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
+                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
+                      "info_way" ::= #line!MesiCacheLine@."info_way";
+                      "info_write" ::= $$true;
+                      "info" ::= updStruct (#line!MesiCacheLine@."info")%kami_expr
+                                           (VectorFacts.Vector_find (fieldAccessor "mesi_owned") MesiInfo)
+                                           ve;
+                      "value_write" ::= #line!MesiCacheLine@."value_write";
+                      "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
+    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
+                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
+                      "info_way" ::= #line!MesiCacheLine@."info_way";
+                      "info_write" ::= $$true;
+                      "info" ::= updStruct (#line!MesiCacheLine@."info")%kami_expr
+                                           (VectorFacts.Vector_find (fieldAccessor "mesi_status") MesiInfo)
+                                           ve;
+                      "value_write" ::= #line!MesiCacheLine@."value_write";
+                      "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
+    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
+                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
+                      "info_way" ::= #line!MesiCacheLine@."info_way";
+                      "info_write" ::= $$true;
+                      "info" ::=
+                        STRUCT { "mesi_owned" ::= #line!MesiCacheLine@."info"!MesiInfo@."mesi_owned";
+                                 "mesi_status" ::= #line!MesiCacheLine@."info"!MesiInfo@."mesi_status";
+                                 "mesi_dir_st" ::= ve!KDir@."dir_st";
+                                 "mesi_dir_sharers" ::=
+                                   (IF (ve!KDir@."dir_st" == mesiS)
+                                    then (ve!KDir@."dir_sharers")
+                                    else (bvSingleton _ (ve!KDir@."dir_excl"))) };
+                      "value_write" ::= #line!MesiCacheLine@."value_write";
+                      "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
   Defined.
 
-  Definition compile_mesi_ost_to_value
-             (var: Kind -> Type) ht (Heq: Vector.nth hostf_ty Mesi.val = ht)
-             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind (Bit hcfg_value_sz)).
-  Proof.
-    subst ht; exact ve.
-  Defined.
-
-  Instance MesiCacheInfo: CacheInfo :=
-    {| info_kind := Struct MesiInfo;
-       comp_info_to_ostVars :=
-         fun var pinfo cont =>
-           (LET value <- $$Default; (* don't care *)
-           LET owned <- #pinfo!MesiInfo@."mesi_owned";
-           LET status: KMesi <- ({$0, #pinfo!MesiInfo@."mesi_status"} + $1);
-           LET dir <- STRUCT { "dir_st" ::= {$0, #pinfo!MesiInfo@."mesi_dir_st"} + $1;
-                               "dir_excl" ::= bvFirstSet (#pinfo!MesiInfo@."mesi_dir_sharers");
-                               "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
-           cont (value, (owned, (status, (dir, tt)))))%kami_action;
-       comp_info_update := compile_mesi_info_update;
-       value_ost_idx := Mesi.val;
-       value_ost_to_value := compile_mesi_ost_to_value |}.
+  Instance MesiCompLineRW: CompLineRW :=
+    {| lineK := MesiCacheLineK;
+       get_line_addr := fun _ line => (#line!MesiCacheLine@."addr")%kami_expr;
+       compile_line_to_ostVars := mesi_compile_line_to_ostVars;
+       compile_line_update := mesi_compile_line_update |}.
 
 End Instances.
 
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
-Existing Instance MesiCacheInfo.
+
+Definition l1LgWay: nat := 1.
+Definition l2LgWay: nat := 3.
+Definition llcLgWay: nat := 5.
+
+Local Hint Resolve (MesiCompLineRW l1LgWay): typeclass_instances.
+Local Hint Resolve (MesiCompLineRW l2LgWay): typeclass_instances.
+Local Hint Resolve (MesiCompLineRW llcLgWay): typeclass_instances.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
