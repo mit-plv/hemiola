@@ -512,7 +512,9 @@ Section Cache.
                                 Expr ty (SyntaxKind (Bit tagSz)))
             (buildAddr: forall ty, fullType ty (SyntaxKind (Bit tagSz)) ->
                                    fullType ty (SyntaxKind (Bit indexSz)) ->
-                                   Expr ty (SyntaxKind (Bit addrSz))).
+                                   Expr ty (SyntaxKind (Bit addrSz)))
+            (evictF: forall ty, Expr ty (SyntaxKind infoK) ->
+                                Expr ty (SyntaxKind Bool)).
 
   Local Notation "'NCall' v <- f ; cont" :=
     (f (fun v => cont%kami_action))
@@ -568,6 +570,23 @@ Section Cache.
                        "tm_way" ::= $(Nat.pow 2 lw - n);
                        "tm_value" ::= #tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."value" })
         else (doTagMatch _ tag tags n'))
+     end)%kami_expr.
+
+  Definition FindLine :=
+    STRUCT { "fl_empty" :: Bool;
+             "fl_way" :: Bit lgWay }.
+
+  Fixpoint findLine (var: Kind -> Type)
+           (tags: var (Vector (Struct (TagValue infoK)) lgWay))
+           (n: nat): Expr var (SyntaxKind (Struct FindLine)) :=
+    (match n with
+     | O => $$Default (* cannot happen *)
+     | S n' =>
+       (IF ((!(#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."valid")) ||
+            (evictF (#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."value")))
+        then (STRUCT { "fl_empty" ::= !(#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."valid");
+                       "fl_way" ::= $(Nat.pow 2 lgWay - n) })
+        else (findLine _ tags n'))
      end)%kami_expr.
 
   Fixpoint infoPutRqWFix (var: Kind -> Type)
@@ -633,12 +652,14 @@ Section Cache.
   Definition WriteStage := Bit 3.
   Definition wsNone {var}: Expr var (SyntaxKind WriteStage) := ($0)%kami_expr.
   Definition wsRqAcc {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr.
-  Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr.
+  Definition wsRepRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr.
+  Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($3)%kami_expr.
   Definition wsWriteRq {var}: Expr var (SyntaxKind WriteStage) := ($4)%kami_expr.
   Definition wsRsReady {var}: Expr var (SyntaxKind WriteStage) := ($7)%kami_expr.
 
   Definition cacheIfc :=
     MODULE {
+      (** TODO: check whether to check [writeStage] while reading *)
       Register readStageN: ReadStage <- Default
       with Register readAddrN: Bit addrSz <- Default
       with Register readLineN: CacheLineK <- Default
@@ -796,21 +817,37 @@ Section Cache.
         then (Call dataGetRs (); Retv);
         Retv
 
-      with Rule "write_info_miss_victim_rq" :=
+      with Rule "write_info_miss_rep_rq" :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRqAcc);
         Read line: Struct CacheLine <- writeLineN;
         Assert (!(#line!CacheLine@."info_hit"));
-        Write writeStageN <- wsVictimRq;
+        Write writeStageN <- wsRepRq;
 
         LET addr <- #line!CacheLine@."addr";
         LET index <- getIndex _ addr;
 
-        (** * FIXME: implement [chooseVictim];
-         * there always should be at least a line whose directory status
-         * is Invalid, and that line should be chosen as a victim. *)
-        (* Call victimWay <- chooseVictim (#index); *)
-        Nondet victimWay: SyntaxKind (Bit lgWay);
+        LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
+                                                                 "addr" ::= #index;
+                                                                 "datain" ::= $$Default };
+        NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
+        Retv
+
+      with Rule "write_info_miss_rep_rs" :=
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage == wsRepRq);
+        Write writeStageN <- wsVictimRq;
+
+        LET tis: Vector TagInfoK lgWay <- $$Default;
+        NCall ntis <- callInfoReadRss tis (Nat.pow 2 lgWay);
+        LET fl <- findLine _ ntis (Nat.pow 2 lgWay);
+        (** TODO: no need to evict if an empty slot is found *)
+        LET victimWay <- #fl!FindLine@."fl_way";
+
+        Read line: Struct CacheLine <- writeLineN;
+        LET addr <- #line!CacheLine@."addr";
+        LET index <- getIndex _ addr;
+
         Write victimWayN <- #victimWay;
         LET infoRq: Struct (BramRq indexSz TagInfoK) <-
                     STRUCT { "write" ::= $$false;
