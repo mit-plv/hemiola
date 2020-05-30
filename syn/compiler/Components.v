@@ -443,7 +443,7 @@ Section Cache.
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
 
   Definition TagValue (valueK: Kind) :=
-    STRUCT { "valid" :: Bool; "tag" :: Bit tagSz; "value" :: valueK }.
+    STRUCT { "tag" :: Bit tagSz; "value" :: valueK }.
 
   (** The information (= ownership bit + status + dir) cache *)
   Definition TagInfo := TagValue infoK.
@@ -564,28 +564,21 @@ Section Cache.
     (match n with
      | O => $$Default
      | S n' =>
-       (IF (#tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."valid" &&
-            #tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."tag" == #tag)
+       (IF (#tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."tag" == #tag)
         then (STRUCT { "tm_hit" ::= $$true;
                        "tm_way" ::= $(Nat.pow 2 lw - n);
                        "tm_value" ::= #tags@[$(Nat.pow 2 lw - n)]!(TagValue valueK)@."value" })
         else (doTagMatch _ tag tags n'))
      end)%kami_expr.
 
-  Definition FindLine :=
-    STRUCT { "fl_empty" :: Bool;
-             "fl_way" :: Bit lgWay }.
-
   Fixpoint findLine (var: Kind -> Type)
            (tags: var (Vector (Struct (TagValue infoK)) lgWay))
-           (n: nat): Expr var (SyntaxKind (Struct FindLine)) :=
+           (n: nat): Expr var (SyntaxKind (Bit lgWay)) :=
     (match n with
      | O => $$Default (* cannot happen *)
      | S n' =>
-       (IF ((!(#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."valid")) ||
-            (evictF (#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."value")))
-        then (STRUCT { "fl_empty" ::= !(#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."valid");
-                       "fl_way" ::= $(Nat.pow 2 lgWay - n) })
+       (IF (evictF (#tags@[$(Nat.pow 2 lgWay - n)]!(TagValue infoK)@."value"))
+        then $(Nat.pow 2 lgWay - n)
         else (findLine _ tags n'))
      end)%kami_expr.
 
@@ -793,8 +786,7 @@ Section Cache.
                       STRUCT { "write" ::= $$true;
                                "addr" ::= #index;
                                "datain" ::=
-                                 STRUCT { "valid" ::= $$true;
-                                          "tag" ::= #tag;
+                                 STRUCT { "tag" ::= #tag;
                                           "value" ::= #line!CacheLine@."info" } };
              NCall infoPutRqW way rq; Retv);
 
@@ -840,9 +832,7 @@ Section Cache.
 
         LET tis: Vector TagInfoK lgWay <- $$Default;
         NCall ntis <- callInfoReadRss tis (Nat.pow 2 lgWay);
-        LET fl <- findLine _ ntis (Nat.pow 2 lgWay);
-        (** TODO: no need to evict if an empty slot is found *)
-        LET victimWay <- #fl!FindLine@."fl_way";
+        LET victimWay <- findLine _ ntis (Nat.pow 2 lgWay);
 
         Read line: Struct CacheLine <- writeLineN;
         LET addr <- #line!CacheLine@."addr";
@@ -893,8 +883,7 @@ Section Cache.
                       STRUCT { "write" ::= $$true;
                                "addr" ::= #index;
                                "datain" ::=
-                                 STRUCT { "valid" ::= $$true;
-                                          "tag" ::= #tag;
+                                 STRUCT { "tag" ::= #tag;
                                           "value" ::= #line!CacheLine@."info" } };
              NCall infoPutRqW way rq; Retv);
         If (#line!CacheLine@."value_write")
