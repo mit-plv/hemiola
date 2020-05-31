@@ -218,6 +218,36 @@ Local Hint Resolve (MesiCompLineRW llcLgWay): typeclass_instances.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
+(** TODO: move to somewhere else *)
+Section Cache.
+  Variables (oidx: IdxT)
+            (tagSz indexSz offsetSz lgWay: nat).
+
+  Definition getIndex (var: Kind -> Type)
+             (addr: fullType var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
+    : Expr var (SyntaxKind (Bit indexSz)) :=
+    (UniBit (ConstExtract _ _ _) #addr)%kami_expr.
+
+  Definition getTag (var: Kind -> Type)
+             (addr: fullType var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
+    : Expr var (SyntaxKind (Bit tagSz)) :=
+    (_truncLsb_ #addr)%kami_expr.
+
+  Definition buildAddr (var: Kind -> Type)
+             (tag: fullType var (SyntaxKind (Bit tagSz)))
+             (index: fullType var (SyntaxKind (Bit indexSz)))
+    : Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))) :=
+    {#tag, {#index, $0}}%kami_expr.
+
+  Definition evictF (var: Kind -> Type)
+             (minfo: Expr var (SyntaxKind (Struct MesiInfo))): Expr var (SyntaxKind Bool) :=
+    (minfo!MesiInfo@."mesi_dir_st" == mesiI)%kami_expr.
+
+  Definition mesiCache :=
+    cache oidx lgWay (Struct MesiInfo) getIndex getTag buildAddr evictF.
+
+End Cache.
+
 (*********************
  *        Mem        *
  *         |         *
@@ -234,33 +264,35 @@ Definition dtr :=
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((compile_Object dtr (existT _ _ (hl1 oidx)))
+     ++ mesiCache oidx 24 6 2 1
      ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_down_forward oidx
      ++ build_ext_fifos oidx)%kami.
 
-Definition klic (oidx: IdxT): Modules :=
+Definition kl2c (oidx: IdxT): Modules :=
   ((compile_Object dtr (existT _ _ (hli topo oidx)))
+     ++ mesiCache oidx 24 6 2 1 (* [lgWay] should be >=3 for liveness *)
+     ++ mshrs oidx 1 1
+     ++ build_int_fifos oidx
+     ++ build_broadcaster oidx)%kami.
+
+Definition kllc (oidx: IdxT): Modules :=
+  ((compile_Object dtr (existT _ _ (hli topo oidx)))
+     ++ mesiCache oidx 24 6 2 1 (* [lgWay] should be >=5 for liveness *)
      ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
 Definition kmemc (oidx: IdxT): Modules :=
   ((compile_Object dtr (existT _ _ (hmem topo oidx)))
+     ++ mesiCache oidx 24 6 2 1
      ++ mshrs oidx 1 1
      ++ build_broadcaster oidx)%kami.
 
-(* Time Definition kl1c0: Modules := *)
-(*   Eval vm_compute in (kl1c 0~>0~>0). *)
-
-(* Eval compute in (tree2Topo topo 0). *)
 Time Definition k: Modules :=
   Eval vm_compute in
     ((kmemc 0)
-       ++ (klic 0~>0)
-       ++ (klic 0~>0~>0 ++ (kl1c 0~>0~>0~>0 ++ kl1c 0~>0~>0~>1))
-       ++ (klic 0~>0~>1 ++ (kl1c 0~>0~>1~>0 ++ kl1c 0~>0~>1~>1)))%kami.
-
-(* Time Definition k: Modules := *)
-(*   Eval vm_compute in *)
-(*     (kmemc ++ (kl1c 0~>0 ++ kl1c 0~>1))%kami. *)
+       ++ (kllc 0~>0)
+       ++ (kl2c 0~>0~>0 ++ (kl1c 0~>0~>0~>0 ++ kl1c 0~>0~>0~>1))
+       ++ (kl2c 0~>0~>1 ++ (kl1c 0~>0~>1~>0 ++ kl1c 0~>0~>1~>1)))%kami.

@@ -470,9 +470,6 @@ Section Cache.
   Definition dataGetRs :=
     MethodSig (dataRamN -- "getRs")(): dataK.
 
-  (** The replacement-policy module *)
-  Definition repN: string := "rep"+o.
-
   (*! Public interface for the info/data caches *)
 
   Definition cacheN: string := "cache"+o.
@@ -896,5 +893,14 @@ Section Cache.
                               "datain" ::= #line!CacheLine@."value" }); Retv);
         Retv
     }.
+
+  Fixpoint infoRams (w: nat) :=
+    match w with
+    | O => infoRam O
+    | S w' => (infoRam w ++ infoRams w')%kami
+    end.
+
+  Definition cache :=
+    (cacheIfc ++ infoRams (Nat.pow 2 lgWay) ++ dataRam)%kami.
 
 End Cache.
