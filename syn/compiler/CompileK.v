@@ -141,14 +141,6 @@ Section Compile.
       Context {var: Kind -> Type}.
       Variable oidx: IdxT.
 
-      Variable ostin: string.
-
-      Definition ostValNameN (n: nat) :=
-        (ostin ++ "_" ++ nat_to_string n)%string.
-
-      Definition ostValNameI {sz} (i: Fin.t sz) :=
-        ostValNameN (proj1_sig (Fin.to_nat i)).
-
       Definition compile_midx_to_cidx (midx: IdxT): Expr var (SyntaxKind KCIdx) :=
         Const _ (compile_midx_to_cidx_const midx).
 
@@ -397,7 +389,7 @@ Section Compile.
       (** 3-1: check there is already a proper readlock and the information is ready. *)
 
       (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
-      Definition getVictim := MethodSig (writeRqN oidx) (): lineK.
+      Definition getVictim := MethodSig (getVictimN oidx) (): lineK.
 
       (* NOTE: should be safe to extract "data" directly from "rl_line",
        *       since the info cache returns the default value in case of miss. *)
@@ -579,7 +571,7 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (Write crsrln: Struct RL <- $$Default; cont)
-           | false => cont
+           | false => (Write erln: Bool <- $$false; cont)
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -685,7 +677,7 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (bypass_write_rl prln ninfo (bypass_write_rl crqrln ninfo cont))
-           | false => cont
+           | false => cont (* NOTE: the victim line gets up-to-date inside the cache module *)
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -827,8 +819,7 @@ Section Compile.
 
   Section WithObj.
     Variables (oidx: IdxT)
-              (rrn prln crqrln crsrln erln rlcn wln: string)
-              (ostin: string).
+              (rrn prln crqrln crsrln erln rlcn wln: string).
 
     Definition ruleNameBase: string := "rule".
     Definition ruleNameI (ridx: IdxT) :=
@@ -920,7 +911,7 @@ Section Compile.
              compile_rule_prec
                oidx ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
              (* Release the readlock *)
-             compile_rule_readlock_release prln crqrln crsrln imt;;
+             compile_rule_readlock_release prln crqrln crsrln erln imt;;
              (* Request to read/write a value/status appropriately *)
              wrq <- compile_rule_trs
                       oidx prln crqrln crsrln
@@ -962,25 +953,18 @@ Section Compile.
   Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
   Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
   Definition erlReg (oidx: IdxT): string := "erl" ++ idx_to_string oidx.
+  Definition rlcReg (oidx: IdxT): string := "rlc" ++ idx_to_string oidx.
   Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
-  Definition ostInReg (oidx: IdxT): string := "ost" ++ idx_to_string oidx.
-
-  Fixpoint compile_inits (oidx: IdxT) (n: nat) (hts: list htype): list RegInitT :=
-    match hts with
-    | nil => nil
-    | ht :: hts' =>
-      {| attrName := ostValNameN (ostInReg oidx) n;
-         attrType := RegInitDefault (SyntaxKind (kind_of ht)) |}
-        :: compile_inits oidx (S n) hts'
-    end.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
     {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 2)) |}
       :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
       :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
       :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
-      :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
-      :: compile_inits oidx 0 (Vector.to_list hostf_ty).
+      :: {| attrName := erlReg oidx; attrType := RegInitDefault (SyntaxKind Bool) |}
+      :: {| attrName := rlcReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 2)) |}
+      :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct WL)) |}
+      :: nil.
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
     ((fifo primNormalFifoName
@@ -1050,7 +1034,7 @@ Section Compile.
     let cregs := compile_OState_init oidx in
     let crules := compile_rules oidx
                                 (rrReg oidx) (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx)
-                                (erlReg oidx) (wlReg oidx) (ostInReg oidx)
+                                (erlReg oidx) (rlcReg oidx) (wlReg oidx)
                                 dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
