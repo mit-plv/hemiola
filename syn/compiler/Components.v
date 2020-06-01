@@ -600,23 +600,7 @@ Section Cache.
              (cont: ActionT var Void): ActionT var Void :=
     infoPutRqWFix way rq (Nat.pow 2 lgWay) cont.
 
-  Fixpoint infoGetRsWRdFix (var: Kind -> Type)
-           (way: var (Bit lgWay))
-           (n: nat) (cont: ActionT var Void): ActionT var Void :=
-    match n with
-    | O => cont
-    | S n' =>
-      (If (#way == $(Nat.pow 2 lgWay - n))
-       then (Call (infoGetRs (Nat.pow 2 lgWay - n))(); Retv);
-       infoGetRsWRdFix way n' cont)%kami_action
-    end.
-
-  Definition infoGetRsWRd (var: Kind -> Type)
-             (way: var (Bit lgWay))
-             (cont: ActionT var Void): ActionT var Void :=
-    infoGetRsWRdFix way (Nat.pow 2 lgWay) cont.
-
-  Fixpoint infoGetRsWWrFix (var: Kind -> Type)
+  Fixpoint infoGetRsWFix (var: Kind -> Type)
            (way: var (Bit lgWay))
            (ti: var TagInfoK)
            (n: nat) (cont: var TagInfoK -> ActionT var Void): ActionT var Void :=
@@ -627,14 +611,14 @@ Section Cache.
        then (Call nti <- (infoGetRs (Nat.pow 2 lgWay - n))(); Ret #nti)
        else (Ret $$Default)
         as mti;
-      infoGetRsWWrFix way mti n' cont)%kami_action
+      infoGetRsWFix way mti n' cont)%kami_action
     end.
 
-  Definition infoGetRsWWr (var: Kind -> Type)
+  Definition infoGetRsW (var: Kind -> Type)
              (way: var (Bit lgWay))
              (cont: var TagInfoK -> ActionT var Void): ActionT var Void :=
     (LET tid <- $$Default;
-    infoGetRsWWrFix way tid (Nat.pow 2 lgWay) cont)%kami_action.
+    infoGetRsWFix way tid (Nat.pow 2 lgWay) cont)%kami_action.
 
   Definition ReadStage := Bit 2.
   Definition rsNone {var}: Expr var (SyntaxKind ReadStage) := ($0)%kami_expr.
@@ -647,7 +631,6 @@ Section Cache.
   Definition wsRqAcc {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr.
   Definition wsRepRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr.
   Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($3)%kami_expr.
-  Definition wsWriteRq {var}: Expr var (SyntaxKind WriteStage) := ($4)%kami_expr.
   Definition wsRsReady {var}: Expr var (SyntaxKind WriteStage) := ($7)%kami_expr.
 
   Definition cacheIfc :=
@@ -768,12 +751,12 @@ Section Cache.
                    "value" ::= #data };
         Retv
 
-      with Rule "write_info_hit_rq" :=
+      with Rule "write_info_hit" :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRqAcc);
         Read line: Struct CacheLine <- writeLineN;
         Assert (#line!CacheLine@."info_hit");
-        Write writeStageN <- wsWriteRq;
+        Write writeStageN <- wsRsReady;
 
         LET addr <- #line!CacheLine@."addr";
         LET tag <- getTag _ addr;
@@ -795,18 +778,6 @@ Section Cache.
                      STRUCT { "write" ::= $$true;
                               "addr" ::= {#index, #way};
                               "datain" ::= #line!CacheLine@."value" }); Retv);
-        Retv
-
-      with Rule "write_info_hit_rs" :=
-        Read writeStage: WriteStage <- writeStageN;
-        Assert (#writeStage == wsWriteRq);
-        Read line: Struct CacheLine <- writeLineN;
-        Write writeStageN <- wsRsReady;
-        LET way <- #line!CacheLine@."info_way";
-        If (#line!CacheLine@."info_write")
-        then (NCall infoGetRsWRd way; Retv);
-        If (#line!CacheLine@."value_write")
-        then (Call dataGetRs (); Retv);
         Retv
 
       with Rule "write_info_miss_rep_rq" :=
@@ -853,7 +824,7 @@ Section Cache.
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsVictimRq);
         Read line: Struct CacheLine <- writeLineN;
-        Write writeStageN <- wsWriteRq;
+        Write writeStageN <- wsRsReady;
 
         LET addr <- #line!CacheLine@."addr";
         LET tag <- getTag _ addr;
@@ -865,7 +836,7 @@ Section Cache.
         Assert (!#victimEx);
         Write victimExN <- $$true;
 
-        NCall vtid <- infoGetRsWWr way;
+        NCall vtid <- infoGetRsW way;
         LET vtag <- #vtid!(TagValue infoK)@."tag";
         LET vinfo <- #vtid!(TagValue infoK)@."value";
         Call vdata <- dataGetRs ();
