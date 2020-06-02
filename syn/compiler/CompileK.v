@@ -168,10 +168,11 @@ Section Compile.
           compile_line_update:
             forall (var: Kind -> Type),
               var lineK ->
-              forall ht (i: Fin.t ost_sz),
+              forall (i: Fin.t ost_sz) ht,
                 hostf_ty[@i] = ht ->
                 Expr var (SyntaxKind (kind_of ht)) ->
                 Expr var (SyntaxKind lineK);
+          check_inv_response: Fin.t ost_sz -> nat -> bool
         }.
       Context `{CompLineRW}.
 
@@ -591,11 +592,13 @@ Section Compile.
         (Assert !(#wl!WL@."wl_valid"); cont)%kami_action.
 
       Definition compile_rule_writelock_acquire
-                 (wrq: Expr var (SyntaxKind Bool))
+                 (wrq: Expr var (SyntaxKind Bool)) (invRs: bool)
                  (cont: ActionT var Void): ActionT var Void :=
         (Write wln: Struct WL <- STRUCT { "wl_valid" ::= $$true;
                                           "wl_write_rq" ::= wrq };
-        cont)%kami_action.
+        (if invRs
+         then (Call (removeVictim oidx)(); cont)
+         else cont))%kami_action.
 
       Definition compile_rule_get_uplock (imt: InputMsgType)
                  (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
@@ -653,7 +656,7 @@ Section Compile.
       Fixpoint compile_OState_write_fix
                (host: HOState (hvar_of var))
                (rinfo: var lineK)
-               (cont: var lineK -> ActionT var Void): ActionT var Void :=
+               {retK} (cont: var lineK -> ActionT var retK): ActionT var retK :=
         (match host with
          | HOStateI _ => cont rinfo
          | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
@@ -661,55 +664,22 @@ Section Compile.
            compile_OState_write_fix host' ninfo cont)
          end)%kami_action.
 
-      Definition bypass_write_rl (rln: string) (nline: var lineK)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Read rl: Struct RL <- rln;
-        If ((#rl!RL@."rl_valid") && (#rl!RL@."rl_line_valid") &&
-            (#rl!RL@."rl_msg"!KMsg@."addr" == #msgIn!KMsg@."addr"))
-         then (Write rln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
-                                                "rl_cmidx" ::= #rl!RL@."rl_cmidx";
-                                                "rl_msg" ::= #rl!RL@."rl_msg";
-                                                "rl_line_valid" ::= $$true;
-                                                "rl_line" ::= #nline };
-              Retv);
-         cont)%kami_action.
-
-      Definition compile_rule_bypass_write_rl
-                 (ninfo: var lineK) (imt: InputMsgType)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true => (bypass_write_rl prln ninfo (bypass_write_rl crqrln ninfo cont))
-           | false => cont (* NOTE: the victim line gets up-to-date inside the cache module *)
-           end
-         | Some (Some _) =>
-           match imt.(imt_rqrs) with
-           | true => (bypass_write_rl prln ninfo (bypass_write_rl crqrln ninfo cont))
-           | false => (bypass_write_rl prln ninfo (bypass_write_rl crsrln ninfo cont))
-           end
-         | Some None =>
-           (bypass_write_rl crqrln ninfo (bypass_write_rl crsrln ninfo cont))
-         end)%kami_action.
-
       Definition compile_request_write
                  (line: Expr var (SyntaxKind lineK))
-                 (cont: ActionT var Void): ActionT var Void :=
+                 {retK} (cont: ActionT var retK): ActionT var retK :=
         (Call writeRq (line); cont)%kami_action.
 
       Definition compile_OState_request_write
-                 (host: HOState (hvar_of var)) (imt: InputMsgType)
+                 (host: HOState (hvar_of var)) (imt: InputMsgType) (invRs: bool)
                  (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
-        (match host with
-         | HOStateI _ => cont ($$false)%kami_expr
-         | _ =>
-           compile_OState_write_fix
-             host pline
-             (fun nline =>
-                compile_request_write
-                  (#nline)%kami_expr
-                  (compile_rule_bypass_write_rl nline imt (cont ($$true)%kami_expr)))
-         end)%kami_action.
+        if invRs then cont ($$false)%kami_expr
+        else match host with
+             | HOStateI _ => cont ($$false)%kami_expr
+             | _ => compile_OState_write_fix
+                      host pline
+                      (fun nline => compile_request_write
+                                      (#nline)%kami_expr (cont ($$true)%kami_expr))
+             end%kami_action.
 
       Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
@@ -765,9 +735,7 @@ Section Compile.
       Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
         (match hmsgs with
-         | HMsgOutNil _ =>
-           (* NOTE: assume no output messages as the eviction responses *)
-           (Call (removeVictim oidx)(); cont)
+         | HMsgOutNil _ => cont
          | HMsgOutOne midx msg =>
            (let kqidx := compile_exp midx in
             If (_truncLsb_ kqidx == $downIdx)
@@ -783,22 +751,55 @@ Section Compile.
            cont)
          end)%kami_action.
 
-      Fixpoint compile_MonadT_trs (hm: HMonadT (hvar_of var)) (imt: InputMsgType)
+      Fixpoint compile_MonadT_trs (hm: HMonadT (hvar_of var))
+               (imt: InputMsgType) (invRs: bool)
                (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
         (match hm with
          | HBind hv mcont =>
            Let_ (compile_bval hv)
-                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs (mcont x) imt cont)
+                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs (mcont x) imt invRs cont)
          | HRet host horq hmsgs =>
            compile_OState_request_write
-             host imt (fun we => compile_ORq_trs horq (compile_MsgsOut_trs hmsgs (cont we)))
+             host imt invRs
+             (fun we => compile_ORq_trs horq (compile_MsgsOut_trs hmsgs (cont we)))
          end)%kami_action.
 
-      Definition compile_rule_trs (trs: HOTrs) (imt: InputMsgType)
+      Definition compile_rule_trs (trs: HOTrs) (imt: InputMsgType) (invRs: bool)
                  (cont: Expr var (SyntaxKind Bool) -> ActionT var Void)
         : ActionT var Void :=
         match trs with
-        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) imt cont
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) imt invRs cont
+        end.
+
+      Definition htypeU (_: htype) := unit.
+      Definition check_inv_response_exp (i: Fin.t ost_sz)
+                 {ht} (he: hexp htypeU ht): bool :=
+        match he with
+        | HBExp hbe =>
+          match hbe with
+          | HBConst _ (HBConstNat _ n) => check_inv_response i n
+          | _ => false
+          end
+        | _ => false
+        end.
+
+      (* Detect a state update of a form like [status <- NP] *)
+      Fixpoint check_inv_response_OState (host: HOState htypeU): bool :=
+        match host with
+        | HOStateI _ => false
+        | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
+          check_inv_response_exp i he || check_inv_response_OState host'
+        end.
+
+      Fixpoint check_inv_response_MonadT (hm: HMonadT htypeU): bool :=
+        match hm with
+        | HBind hv mcont => check_inv_response_MonadT (mcont tt)
+        | HRet host _ _ => check_inv_response_OState host
+        end.
+
+      Fixpoint check_inv_response_trs (trs: HOTrs): bool :=
+        match trs with
+        | HTrsMTrs (HMTrs mn) => check_inv_response_MonadT (mn htypeU)
         end.
 
       (** * Step 4: compile rules for handling the write response with possible eviction *)
@@ -807,10 +808,34 @@ Section Compile.
                  (cont: ActionT var Void): ActionT var Void :=
         (Write wln: Struct WL <- $$Default; cont)%kami_action.
 
-      Definition writeRs := MethodSig (writeRsN oidx) (): Void.
-      Definition compile_rule_take_write_response
+      Definition bypass_write_rl (rln: string) (nline: var lineK)
                  (cont: ActionT var Void): ActionT var Void :=
-        (Call writeRs (); cont)%kami_action.
+        (Read rl: Struct RL <- rln;
+        If ((#rl!RL@."rl_valid") && (#rl!RL@."rl_line_valid") &&
+            (#rl!RL@."rl_msg"!KMsg@."addr" == get_line_addr _ nline))
+         then (Write rln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
+                                                "rl_cmidx" ::= #rl!RL@."rl_cmidx";
+                                                "rl_msg" ::= #rl!RL@."rl_msg";
+                                                "rl_line_valid" ::= $$true;
+                                                "rl_line" ::= #nline };
+              Retv);
+         cont)%kami_action.
+
+      Definition compile_rule_bypass_write_rl
+                 (nline: var lineK) (cont: ActionT var Void): ActionT var Void :=
+        (bypass_write_rl
+           prln nline
+           (bypass_write_rl
+              crqrln nline
+              (bypass_write_rl
+                 crsrln nline cont))).
+
+      (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
+      Definition writeRs := MethodSig (writeRsN oidx) (): lineK.
+      Definition compile_rule_take_write_response_and_bypass
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Call nline <- writeRs ();
+        compile_rule_bypass_write_rl nline cont)%kami_action.
 
     End Phoas.
 
@@ -896,6 +921,7 @@ Section Compile.
            fun var =>
              let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
                            imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
+             let invRs := check_inv_response_trs (hrule_trs hr) in
              (compile_rule_rr_check rrn imt;;
               (* Check the readlock and see if the information is read *)
               prl <- compile_rule_readlock_parent prln;
@@ -916,14 +942,13 @@ Section Compile.
              compile_rule_readlock_release prln crqrln crsrln erln imt;;
              (* Request to read/write a value/status appropriately *)
              wrq <- compile_rule_trs
-                      oidx prln crqrln crsrln
-                      pline ostVars msgIn ul dl (hrule_trs hr) imt;
+                      oidx pline ostVars msgIn ul dl (hrule_trs hr) imt invRs;
              (** OPT: no need to acquire a writelock if [wrq == $$false] *)
              (* Check if a writelock is available *)
              wl <- compile_rule_writelock wln;
              compile_rule_writelock_available wl;;
              (* Acquire the writelock; save the log about what are requested *)
-             compile_rule_writelock_acquire wln wrq;;
+             compile_rule_writelock_acquire oidx wln wrq invRs;;
              Retv)%kami_action |}.
 
     Definition compile_rule_3_silent: Attribute (Action Void) :=
@@ -941,7 +966,7 @@ Section Compile.
            fun var =>
              (wl <- compile_rule_writelock wln;
              compile_rule_writelocked_rs wl;;
-             compile_rule_take_write_response oidx;;
+             compile_rule_take_write_response_and_bypass oidx prln crqrln crsrln;;
              compile_rule_writelock_release wln;;
              Retv)%kami_action |}.
 

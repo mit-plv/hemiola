@@ -147,7 +147,7 @@ Section Instances.
 
   Definition mesi_compile_line_update
              (var: Kind -> Type) (line: var MesiCacheLineK)
-             ht i (Heq: Vector.nth hostf_ty i = ht)
+             i ht (Heq: Vector.nth hostf_ty i = ht)
              (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind MesiCacheLineK).
   Proof.
     subst ht.
@@ -197,11 +197,18 @@ Section Instances.
                       "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
   Defined.
 
+  Definition mesi_check_inv_response (i: Fin.t Syntax.ost_sz) (st: nat): bool :=
+    if Fin.eq_dec i Mesi.status
+    then (if Peano_dec.eq_nat_dec st Mesi.mesiNP
+          then true else false)
+    else false.
+
   Instance MesiCompLineRW: CompLineRW :=
     {| lineK := MesiCacheLineK;
        get_line_addr := fun _ line => (#line!MesiCacheLine@."addr")%kami_expr;
        compile_line_to_ostVars := mesi_compile_line_to_ostVars;
-       compile_line_update := mesi_compile_line_update |}.
+       compile_line_update := mesi_compile_line_update;
+       check_inv_response := mesi_check_inv_response |}.
 
 End Instances.
 

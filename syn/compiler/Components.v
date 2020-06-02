@@ -497,11 +497,11 @@ Section Cache.
   Definition writeRqN: string := cacheN _++ "writeRq".
   Definition writeRq := MethodSig writeRqN (CacheLineK): Void.
   Definition writeRsN: string := cacheN _++ "writeRs".
-  Definition writeRs := MethodSig writeRsN (): Void.
+  Definition writeRs := MethodSig writeRsN (): CacheLineK.
 
-  Definition getVictimN: string := cacheN ++ "getVictim".
+  Definition getVictimN: string := cacheN _++ "getVictim".
   Definition getVictim := MethodSig getVictimN (): CacheLineK.
-  Definition removeVictimN: string := cacheN ++ "removeVictim".
+  Definition removeVictimN: string := cacheN _++ "removeVictim".
   Definition removeVictim := MethodSig removeVictimN (): Void.
 
   (** -- public interface ends *)
@@ -690,11 +690,12 @@ Section Cache.
              Retv);
         Retv
 
-      with Method writeRsN (): Void :=
+      with Method writeRsN (): CacheLineK :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRsReady);
         Write writeStageN <- wsNone;
-        Retv
+        Read nline: CacheLineK <- writeLineN;
+        Ret #nline
 
       with Method getVictimN (): CacheLineK :=
         Read victimEx <- victimExN;
@@ -755,6 +756,8 @@ Section Cache.
         Retv
 
       with Rule "write_info_hit" :=
+        (* No need to update [writeLineN], which will serve as information
+         * for the new line as well, since it is already the up-to-date info. *)
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRqAcc);
         Read line: Struct CacheLine <- writeLineN;
@@ -812,6 +815,8 @@ Section Cache.
         LET addr <- #line!CacheLine@."addr";
         LET index <- getIndex _ addr;
 
+        Read victimEx <- victimExN;
+        Assert (!#victimEx);
         Write victimWayN <- #victimWay;
         LET vtid <- #ntis@[#victimWay];
         LET vtag <- #vtid!(TagValue infoK)@."tag";
@@ -846,13 +851,25 @@ Section Cache.
 
         Call vdata <- dataGetRs ();
         Read victim: CacheLineK <- victimN;
-        Write victimN: CacheLineK  <- STRUCT { "addr" ::= #victim!CacheLine@."addr";
-                                               "info_hit" ::= #victim!CacheLine@."info_hit";
-                                               "info_way" ::= #victim!CacheLine@."info_way";
-                                               "info_write" ::= #victim!CacheLine@."info_write";
-                                               "info" ::= #victim!CacheLine@."info";
-                                               "value_write" ::= $$false;
-                                               "value" ::= #vdata };
+        Write victimN: CacheLineK <- STRUCT { "addr" ::= #victim!CacheLine@."addr";
+                                              "info_hit" ::= #victim!CacheLine@."info_hit";
+                                              "info_way" ::= #victim!CacheLine@."info_way";
+                                              "info_write" ::= #victim!CacheLine@."info_write";
+                                              "info" ::= #victim!CacheLine@."info";
+                                              "value_write" ::= $$false;
+                                              "value" ::= #vdata };
+
+        (* Should update [writeLineN], which will serve as information
+         * for the new line, with the up-to-date info.
+         * Note that "info_write", "value_write", and "value" can be assigned to
+         * arbitrary values, since it will be updated after the bypass. *)
+        Write writeLineN: CacheLineK <- STRUCT { "addr" ::= #addr;
+                                                 "info_hit" ::= $$true; (* MUST be true! *)
+                                                 "info_way" ::= #way; (* MUST be the new way *)
+                                                 "info_write" ::= $$false;
+                                                 "info" ::= #line!CacheLine@."info";
+                                                 "value_write" ::= $$false;
+                                                 "value" ::= #line!CacheLine@."value" };
 
         (** request write for the new line; TODO: code duplicated with above *)
         If (#line!CacheLine@."info_write")
