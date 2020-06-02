@@ -412,7 +412,8 @@ Section Compile.
                       Assert (#crqrl!RL@."rl_cmidx" == compile_midx_to_cidx cmidx);
                       LET i <- #crqrl!RL@."rl_line"; cont i)
            end
-         | Some None => (Assert #prl!RL@."rl_valid"; LET i <- #prl!RL@."rl_line"; cont i)
+         | Some None => (Assert (#prl!RL@."rl_valid" && #prl!RL@."rl_line_valid");
+                        LET i <- #prl!RL@."rl_line"; cont i)
          end)%kami_action.
 
       Definition compile_rule_get_readlock_msg
@@ -626,8 +627,11 @@ Section Compile.
          | _, _ => (LET dl <- $$Default; cont dl)
          end)%kami_action.
 
-      Definition compile_rule_writelocked (cont: ActionT var Void): ActionT var Void :=
-        (Assert #wl!WL@."wl_valid"; cont)%kami_action.
+      Definition compile_rule_writelocked_silent (cont: ActionT var Void): ActionT var Void :=
+        (Assert (#wl!WL@."wl_valid" && !(#wl!WL@."wl_write_rq")); cont)%kami_action.
+
+      Definition compile_rule_writelocked_rs (cont: ActionT var Void): ActionT var Void :=
+        (Assert (#wl!WL@."wl_valid" && #wl!WL@."wl_write_rq"); cont)%kami_action.
 
       Definition compile_bval {hbt} (hv: hbval hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
@@ -804,11 +808,9 @@ Section Compile.
         (Write wln: Struct WL <- $$Default; cont)%kami_action.
 
       Definition writeRs := MethodSig (writeRsN oidx) (): Void.
-      Definition compile_rule_take_write_response (wl: var (Struct WL))
+      Definition compile_rule_take_write_response
                  (cont: ActionT var Void): ActionT var Void :=
-        (LET wrq <- #wl!WL@."wl_write_rq";
-        If (#wrq) then (Call writeRs (); Retv);
-         cont)%kami_action.
+        (Call writeRs (); cont)%kami_action.
 
     End Phoas.
 
@@ -924,13 +926,22 @@ Section Compile.
              compile_rule_writelock_acquire wln wrq;;
              Retv)%kami_action |}.
 
-    Definition compile_rule_3: Attribute (Action Void) :=
-      {| attrName := ruleNameI writelockIdx;
+    Definition compile_rule_3_silent: Attribute (Action Void) :=
+      {| attrName := ruleNameI (writelockIdx~>0);
          attrType :=
            fun var =>
              (wl <- compile_rule_writelock wln;
-             compile_rule_writelocked wl;;
-             compile_rule_take_write_response oidx wl;;
+             compile_rule_writelocked_silent wl;;
+             compile_rule_writelock_release wln;;
+             Retv)%kami_action |}.
+
+    Definition compile_rule_3_rs: Attribute (Action Void) :=
+      {| attrName := ruleNameI (writelockIdx~>1);
+         attrType :=
+           fun var =>
+             (wl <- compile_rule_writelock wln;
+             compile_rule_writelocked_rs wl;;
+             compile_rule_take_write_response oidx;;
              compile_rule_writelock_release wln;;
              Retv)%kami_action |}.
 
@@ -944,7 +955,7 @@ Section Compile.
         ++ (compile_rule_0_children_rs dtr)
         ++ [compile_rule_1]
         ++ (map compile_rule_2 rules)
-        ++ [compile_rule_3].
+        ++ [compile_rule_3_silent; compile_rule_3_rs].
 
   End WithObj.
 

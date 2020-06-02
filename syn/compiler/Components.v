@@ -635,7 +635,6 @@ Section Cache.
 
   Definition cacheIfc :=
     MODULE {
-      (** TODO: check whether to check [writeStage] while reading *)
       Register readStageN: ReadStage <- Default
       with Register readAddrN: Bit addrSz <- Default
       with Register readLineN: CacheLineK <- Default
@@ -646,6 +645,10 @@ Section Cache.
       with Register victimWayN: Bit lgWay <- Default
 
       with Method readRqN (addr: Bit addrSz): Void :=
+        (* The Bluespec scheduler fails to build a schedule without
+         * the guard below, which is about [writeStage].. *)
+        Read writeStage: WriteStage <- writeStageN;
+        Assert (#writeStage != wsVictimRq);
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsNone);
 
@@ -810,11 +813,16 @@ Section Cache.
         LET index <- getIndex _ addr;
 
         Write victimWayN <- #victimWay;
-        LET infoRq: Struct (BramRq indexSz TagInfoK) <-
-                    STRUCT { "write" ::= $$false;
-                             "addr" ::= #index;
-                             "datain" ::= $$Default };
-        NCall infoPutRqW victimWay infoRq;
+        LET vtid <- #ntis@[#victimWay];
+        LET vtag <- #vtid!(TagValue infoK)@."tag";
+        LET vinfo <- #vtid!(TagValue infoK)@."value";
+        Write victimN: CacheLineK  <- STRUCT { "addr" ::= buildAddr _ vtag index;
+                                               "info_hit" ::= $$false;
+                                               "info_way" ::= $$Default;
+                                               "info_write" ::= $$false;
+                                               "info" ::= #vinfo;
+                                               "value_write" ::= $$false;
+                                               "value" ::= $$Default };
         Call dataPutRq (STRUCT { "write" ::= $$false;
                                  "addr" ::= {#index, #victimWay};
                                  "datain" ::= $$Default });
@@ -836,15 +844,13 @@ Section Cache.
         Assert (!#victimEx);
         Write victimExN <- $$true;
 
-        NCall vtid <- infoGetRsW way;
-        LET vtag <- #vtid!(TagValue infoK)@."tag";
-        LET vinfo <- #vtid!(TagValue infoK)@."value";
         Call vdata <- dataGetRs ();
-        Write victimN: CacheLineK  <- STRUCT { "addr" ::= buildAddr _ vtag index;
-                                               "info_hit" ::= $$false;
-                                               "info_way" ::= $$Default;
-                                               "info_write" ::= $$false;
-                                               "info" ::= #vinfo;
+        Read victim: CacheLineK <- victimN;
+        Write victimN: CacheLineK  <- STRUCT { "addr" ::= #victim!CacheLine@."addr";
+                                               "info_hit" ::= #victim!CacheLine@."info_hit";
+                                               "info_way" ::= #victim!CacheLine@."info_way";
+                                               "info_write" ::= #victim!CacheLine@."info_write";
+                                               "info" ::= #victim!CacheLine@."info";
                                                "value_write" ::= $$false;
                                                "value" ::= #vdata };
 
