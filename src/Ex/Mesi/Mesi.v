@@ -962,9 +962,8 @@ Section System.
         rule.imm[2~>3]
         :requires
            (fun ost orq mins =>
-              mesiI < ost#[dir].(dir_st) /\
-              ((ost#[status] = mesiI /\ ost#[dir].(dir_st) <> mesiE) \/
-               (ost#[status] = mesiS /\ ost#[owned] = false)))
+              (ost#[status] = mesiI /\ ost#[dir].(dir_st) <> mesiE) \/
+              (ost#[status] = mesiS /\ ost#[owned] = false))
         :transition (ost --> ost +#[status <- mesiNP]).
 
       Definition liInvImmI: Rule :=
