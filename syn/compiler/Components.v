@@ -645,10 +645,10 @@ Section Cache.
       with Register victimWayN: Bit lgWay <- Default
 
       with Method readRqN (addr: Bit addrSz): Void :=
-        (* The Bluespec scheduler fails to build a schedule without
-         * the guard below, which is about [writeStage].. *)
+        (* Do not allow reads when a write is in progress;
+         * OPT: no need to block reads for different addresses. *)
         Read writeStage: WriteStage <- writeStageN;
-        Assert (#writeStage != wsVictimRq);
+        Assert (#writeStage == wsNone);
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsNone);
 
@@ -895,6 +895,6 @@ Section Cache.
     end.
 
   Definition cache :=
-    (cacheIfc ++ infoRams (Nat.pow 2 lgWay) ++ dataRam)%kami.
+    (cacheIfc ++ infoRams (Nat.pow 2 lgWay - 1) ++ dataRam)%kami.
 
 End Cache.
