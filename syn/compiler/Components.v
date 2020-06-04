@@ -709,7 +709,7 @@ Section Cache.
         Write victimExN <- $$false;
         Retv
 
-      with Rule "read_tagmatch" :=
+      with Rule "read_tagmatch"+o :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsInfoRq);
         Read addr: Bit addrSz <- readAddrN;
@@ -739,7 +739,7 @@ Section Cache.
         else (Write readStageN: ReadStage <- rsRsReady; Retv);
         Retv
 
-      with Rule "read_data" :=
+      with Rule "read_data"+o :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsValueRq);
         Write readStageN: ReadStage <- rsRsReady;
@@ -755,7 +755,7 @@ Section Cache.
                    "value" ::= #data };
         Retv
 
-      with Rule "write_info_hit" :=
+      with Rule "write_info_hit"+o :=
         (* No need to update [writeLineN], which will serve as information
          * for the new line as well, since it is already the up-to-date info. *)
         Read writeStage: WriteStage <- writeStageN;
@@ -786,7 +786,7 @@ Section Cache.
                               "datain" ::= #line!CacheLine@."value" }); Retv);
         Retv
 
-      with Rule "write_info_miss_rep_rq" :=
+      with Rule "write_info_miss_rep_rq"+o :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRqAcc);
         Read line: Struct CacheLine <- writeLineN;
@@ -802,7 +802,7 @@ Section Cache.
         NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
         Retv
 
-      with Rule "write_info_miss_rep_rs" :=
+      with Rule "write_info_miss_rep_rs"+o :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsRepRq);
         Write writeStageN <- wsVictimRq;
@@ -833,7 +833,7 @@ Section Cache.
                                  "datain" ::= $$Default });
         Retv
 
-      with Rule "write_victim_rs" :=
+      with Rule "write_victim_rs"+o :=
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsVictimRq);
         Read line: Struct CacheLine <- writeLineN;

@@ -200,7 +200,6 @@ Section Compile.
         (prln: string) (prl: var (Struct RL))
         (crqrln: string) (crqrl: var (Struct RL))
         (crsrln: string) (crsrl: var (Struct RL))
-        (erln: string) (erl: var Bool)
         (* rlc: a two-bit flag saying which readlock is being used;
          * p(10), crq(00), crs(01) *)
         (rlcn: string)
@@ -219,10 +218,6 @@ Section Compile.
       Definition compile_rule_readlock_child_rs
                  (cont: var (Struct RL) -> ActionT var Void): ActionT var Void :=
         (Read crsrl: Struct RL <- crsrln; cont crsrl)%kami_action.
-
-      Definition compile_rule_readlock_evict
-                 (cont: var Bool -> ActionT var Void): ActionT var Void :=
-        (Read erl: Bool <- erln; cont erl)%kami_action.
 
       Definition detect_input_msg_rqrs_r (rrp: HOPrecR): bool :=
         match rrp with
@@ -267,7 +262,8 @@ Section Compile.
            match imt.(imt_rqrs) with
            | true => (Read rr: Bit 2 <- rrn; Assert #rr == $2; cont)
            | false =>
-             (* for eviction requests *)
+             (* for eviction requests;
+              * TODO: check if this designated slot is really required. *)
              (Read rr: Bit 2 <- rrn; Assert #rr == $3; cont)
            end
          | Some None => (Read rr: Bit 2 <- rrn; Assert #rr == $0; cont)
@@ -284,7 +280,10 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (Assert !(#crsrl!RL@."rl_valid"); cont)
-           | false => (Assert !#erl; cont)
+           | false =>
+             (* No need to "request" a read for eviction cases;
+              * there is already a victim line immediately available. *)
+             cont
            end
          | Some None => (Assert !(#prl!RL@."rl_valid"); cont)
          | Some (Some _) =>
@@ -402,7 +401,9 @@ Section Compile.
            match imt.(imt_rqrs) with
            | true => (Assert (#crsrl!RL@."rl_valid" && #crsrl!RL@."rl_line_valid");
                      LET i <- #crsrl!RL@."rl_line"; cont i)
-           | false => (Assert #erl; Call i <- getVictim (); cont i)
+           | false =>
+             (* [getVictim] already acts like a readlock *)
+             (Call i <- getVictim (); cont i)
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
@@ -573,7 +574,7 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (Write crsrln: Struct RL <- $$Default; cont)
-           | false => (Write erln: Bool <- $$false; cont)
+           | false => cont
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -846,7 +847,7 @@ Section Compile.
 
   Section WithObj.
     Variables (oidx: IdxT)
-              (rrn prln crqrln crsrln erln rlcn wln: string).
+              (rrn prln crqrln crsrln rlcn wln: string).
 
     Definition ruleNameBase: string := "rule".
     Definition ruleNameI (ridx: IdxT) :=
@@ -867,8 +868,7 @@ Section Compile.
              (prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
-             erl <- compile_rule_readlock_evict erln;
-             compile_rule_readlock_available prl crqrl crsrl erl imt;;
+             compile_rule_readlock_available prl crqrl crsrl imt;;
              compile_rule_accept_message_and_request_read
                oidx prln crqrln crsrln rlcn imt;;
              Retv)%kami_action |}.
@@ -927,8 +927,7 @@ Section Compile.
               prl <- compile_rule_readlock_parent prln;
              crqrl <- compile_rule_readlock_child_rq crqrln;
              crsrl <- compile_rule_readlock_child_rs crsrln;
-             erl <- compile_rule_readlock_evict erln;
-             pline <- compile_rule_readlocked_and_info_ready oidx prl crqrl crsrl erl imt;
+             pline <- compile_rule_readlocked_and_info_ready oidx prl crqrl crsrl imt;
              (* NOTE: [compile_line_to_ostVars] only covers info slots;
               *       we know the value will not be read in this rule. *)
              ostVars <- compile_line_to_ostVars pline;
@@ -939,7 +938,7 @@ Section Compile.
              compile_rule_prec
                oidx ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
              (* Release the readlock *)
-             compile_rule_readlock_release prln crqrln crsrln erln imt;;
+             compile_rule_readlock_release prln crqrln crsrln imt;;
              (* Request to read/write a value/status appropriately *)
              wrq <- compile_rule_trs
                       oidx pline ostVars msgIn ul dl (hrule_trs hr) imt invRs;
@@ -988,7 +987,6 @@ Section Compile.
   Definition prlReg (oidx: IdxT): string := "prl" ++ idx_to_string oidx.
   Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
   Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
-  Definition erlReg (oidx: IdxT): string := "erl" ++ idx_to_string oidx.
   Definition rlcReg (oidx: IdxT): string := "rlc" ++ idx_to_string oidx.
   Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
 
@@ -997,7 +995,6 @@ Section Compile.
       :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
       :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
       :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
-      :: {| attrName := erlReg oidx; attrType := RegInitDefault (SyntaxKind Bool) |}
       :: {| attrName := rlcReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 2)) |}
       :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct WL)) |}
       :: nil.
@@ -1070,7 +1067,7 @@ Section Compile.
     let cregs := compile_OState_init oidx in
     let crules := compile_rules oidx
                                 (rrReg oidx) (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx)
-                                (erlReg oidx) (rlcReg oidx) (wlReg oidx)
+                                (rlcReg oidx) (wlReg oidx)
                                 dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
