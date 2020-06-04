@@ -425,7 +425,11 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (LET msgIn <- #crsrl!RL@."rl_msg"; cont msgIn)
-           | false => (LET msgIn <- $$Default; cont msgIn)
+           | false => (LET msgIn: Struct KMsg <- STRUCT { "id" ::= $$Default;
+                                                          "type" ::= $$MRq;
+                                                          "addr" ::= get_line_addr _ pline;
+                                                          "value" ::= $$Default };
+                      cont msgIn)
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
@@ -445,7 +449,11 @@ Section Compile.
          | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
          | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
          | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
-         | HAddrB _ => $0 (* Used only when making an eviction request with a nondet. addr *)
+         | HAddrB _ =>
+           (* NOTE: [HAddrB] is used only when making an eviction request
+            * with a nondeterministic address. Here we always make the request
+            * with a victim line, and its address is forwarded to [msgIn]. *)
+           #msgIn!KMsg@."addr"
          | HMsgB mid mty maddr mval =>
            (STRUCT { "id" ::= compile_bexp mid;
                      "type" ::= compile_bexp mty;
@@ -475,12 +483,14 @@ Section Compile.
       Class CompExtExp :=
         { compile_eexp:
             forall (var: Kind -> Type) {het},
+              var (Struct KMsg) ->
               var (Struct UL) -> var (Struct DL) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
               Expr var (SyntaxKind (kind_of het));
           compile_eoprec:
             forall (var: Kind -> Type),
+              var (Struct KMsg) ->
               var (Struct UL) -> var (Struct DL) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heoprec (hvar_of var) ->
@@ -492,7 +502,7 @@ Section Compile.
         : Expr var (SyntaxKind (kind_of ht)) :=
         match he with
         | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var ul dl ostVars hee
+        | HEExp _ hee => compile_eexp var msgIn ul dl ostVars hee
         end.
 
       Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -511,7 +521,7 @@ Section Compile.
          | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
          | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
          | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
-         | HExtP _ ep => compile_eoprec _ ul dl ostVars ep
+         | HExtP _ ep => compile_eoprec _ msgIn ul dl ostVars ep
          | HNativeP _ _ => $$true
          end)%kami_expr.
 
@@ -695,10 +705,9 @@ Section Compile.
          | HUpdUpLockS _ =>
            (Call (registerUL oidx)
                  (STRUCT { "r_ul_rsb" ::= $$false;
-                           "r_ul_msg" ::= STRUCT { "id" ::= $$Default;
-                                                   "type" ::= $$false; (* request *)
-                                                   "addr" ::= get_line_addr _ pline;
-                                                   "value" ::= $$Default };
+                           (* already properly set for eviction;
+                            * see [compile_rule_get_readlock_msg]. *)
+                           "r_ul_msg" ::= #msgIn;
                            "r_ul_rsbTo" ::= $$Default });
            cont)
          | HRelUpLock _ =>
@@ -931,7 +940,7 @@ Section Compile.
              (* NOTE: [compile_line_to_ostVars] only covers info slots;
               *       we know the value will not be read in this rule. *)
              ostVars <- compile_line_to_ostVars pline;
-             msgIn <- compile_rule_get_readlock_msg prl crqrl crsrl imt;
+             msgIn <- compile_rule_get_readlock_msg prl crqrl crsrl pline imt;
              (* Check the precondition *)
              ul <- compile_rule_get_uplock oidx msgIn imt;
              dl <- compile_rule_get_downlock oidx msgIn imt;
