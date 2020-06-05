@@ -142,7 +142,9 @@ Section Instances.
     LET pinfo <- #line!MesiCacheLine@."info";
     LET owned <- #pinfo!MesiInfo@."mesi_owned";
     LET status: KMesi <- #pinfo!MesiInfo@."mesi_status";
-    LET dir <- STRUCT { "dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+    LET dir <- STRUCT { "dir_st" ::=
+                          IF (#pinfo!MesiInfo@."mesi_dir_st" == mesiNP)
+                        then mesiI else #pinfo!MesiInfo@."mesi_dir_st";
                         "dir_excl" ::= bvFirstSet (#pinfo!MesiInfo@."mesi_dir_sharers");
                         "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
     cont (value, (owned, (status, (dir, tt)))))%kami_action.
@@ -291,7 +293,7 @@ Definition kllc (oidx: IdxT): Modules :=
 
 Definition kmemc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hmem topo oidx)))
-     ++ mesiCache oidx 24 6 2 1
+     ++ mesiCache oidx 20 10 2 1
      ++ mshrs oidx 1 1
      ++ build_broadcaster oidx)%kami.
 
