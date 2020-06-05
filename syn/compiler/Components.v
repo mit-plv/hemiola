@@ -645,8 +645,7 @@ Section Cache.
       with Register victimWayN: Bit lgWay <- Default
 
       with Method readRqN (addr: Bit addrSz): Void :=
-        (* Do not allow reads when a write is in progress;
-         * OPT: no need to block reads for different addresses. *)
+        (** Do not allow reads when a write is in progress *)
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
         Read readStage: ReadStage <- readStageN;
@@ -676,6 +675,9 @@ Section Cache.
         Ret #line
 
       with Method writeRqN (line: CacheLineK): Void :=
+        (** Do not allow writes when a read is in progress *)
+        Read readStage: ReadStage <- readStageN;
+        Assert (#readStage == rsNone);
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
 
