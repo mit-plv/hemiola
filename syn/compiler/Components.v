@@ -338,7 +338,8 @@ Section MSHR.
       with Register "dls" : Vector (Struct DL) logNumDls <- Default
       with Method upLockableN (a: KAddr): Bool :=
         Read uls <- "uls";
-        LET hasSlot <- hasULIter #uls;
+        LET hasSlot <- !(#uls@[$0]!UL@."ul_valid");
+        (* LET hasSlot <- hasULIter #uls; *)
         LET ulFree <- upLockFreeIter #a #uls;
         Ret (#hasSlot && #ulFree)
       with Method downLockableN (a: KAddr): Bool :=
@@ -499,6 +500,8 @@ Section Cache.
   Definition writeRsN: string := cacheN _++ "writeRs".
   Definition writeRs := MethodSig writeRsN (): CacheLineK.
 
+  Definition hasVictimN: string := cacheN _++ "hasVictim".
+  Definition hasVictim := MethodSig hasVictimN (): Bool.
   Definition getVictimN: string := cacheN _++ "getVictim".
   Definition getVictim := MethodSig getVictimN (): CacheLineK.
   Definition removeVictimN: string := cacheN _++ "removeVictim".
@@ -698,6 +701,10 @@ Section Cache.
         Write writeStageN <- wsNone;
         Read nline: CacheLineK <- writeLineN;
         Ret #nline
+
+      with Method hasVictimN (): Bool :=
+        Read victimEx <- victimExN;
+        Ret #victimEx
 
       with Method getVictimN (): CacheLineK :=
         Read victimEx <- victimExN;

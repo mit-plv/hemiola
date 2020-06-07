@@ -697,10 +697,12 @@ Section Compile.
         (match horq with
          | HORqI _ => cont
          | HUpdUpLock rq _ rsb =>
-           (Call (registerUL oidx)
-                 (STRUCT { "r_ul_rsb" ::= $$true;
-                           "r_ul_msg" ::= compile_exp rq;
-                           "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) });
+           (Call hasV <- (hasVictim oidx)();
+           Assert (!#hasV);
+           Call (registerUL oidx)
+                (STRUCT { "r_ul_rsb" ::= $$true;
+                          "r_ul_msg" ::= compile_exp rq;
+                          "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) });
            cont)
          | HUpdUpLockS _ =>
            (Call (registerUL oidx)
