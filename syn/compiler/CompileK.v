@@ -159,6 +159,9 @@ Section Compile.
           get_line_addr:
             forall (var: Kind -> Type),
               var lineK -> Expr var (SyntaxKind KAddr);
+          compile_line_read:
+            forall (var: Kind -> Type),
+              var lineK -> Expr var (SyntaxKind lineK);
           compile_line_to_ostVars:
             forall (var: Kind -> Type),
               var lineK ->
@@ -400,22 +403,30 @@ Section Compile.
          | None =>
            match imt.(imt_rqrs) with
            | true => (Assert (#crsrl!RL@."rl_valid" && #crsrl!RL@."rl_line_valid");
-                     LET i <- #crsrl!RL@."rl_line"; cont i)
+                     LET i <- #crsrl!RL@."rl_line";
+                     LET ci <- compile_line_read _ i;
+                     cont ci)
            | false =>
              (* [getVictim] already acts like a readlock *)
-             (Call i <- getVictim (); cont i)
+             (Call i <- getVictim (); LET ci <- compile_line_read _ i; cont ci)
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
            | true => (Assert (#crsrl!RL@."rl_valid" && #crsrl!RL@."rl_line_valid");
                      Assert (#crsrl!RL@."rl_cmidx" == compile_midx_to_cidx cmidx);
-                     LET i <- #crsrl!RL@."rl_line"; cont i)
+                     LET i <- #crsrl!RL@."rl_line";
+                     LET ci <- compile_line_read _ i;
+                     cont ci)
            | false => (Assert (#crqrl!RL@."rl_valid" && #crqrl!RL@."rl_line_valid");
                       Assert (#crqrl!RL@."rl_cmidx" == compile_midx_to_cidx cmidx);
-                      LET i <- #crqrl!RL@."rl_line"; cont i)
+                      LET i <- #crqrl!RL@."rl_line";
+                      LET ci <- compile_line_read _ i;
+                      cont ci)
            end
          | Some None => (Assert (#prl!RL@."rl_valid" && #prl!RL@."rl_line_valid");
-                        LET i <- #prl!RL@."rl_line"; cont i)
+                        LET i <- #prl!RL@."rl_line";
+                        LET ci <- compile_line_read _ i;
+                        cont ci)
          end)%kami_action.
 
       Definition compile_rule_get_readlock_msg

@@ -66,8 +66,10 @@ Section Instances.
        (let kdir := compile_dir_exp msgIn ul dl ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
-                 "dir_sharers" ::= bvSet (kdir!KDir@."dir_sharers")
-                                         (compile_bexp ostvars msgIn ul dl oidx) })
+                 "dir_sharers" ::=
+                   IF (kdir!KDir@."dir_st" == mesiS)
+                 then (bvSet (kdir!KDir@."dir_sharers") (compile_bexp ostvars msgIn ul dl oidx))
+                 else (bvSingleton _ (compile_bexp ostvars msgIn ul dl oidx)) })
      | HDirRemoveSharer oidx dir =>
        (let kdir := compile_dir_exp msgIn ul dl ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
@@ -135,6 +137,27 @@ Section Instances.
   Definition MesiCacheLine := CacheLine hcfg_addr_sz lgWay (Struct MesiInfo) KValue.
   Definition MesiCacheLineK := CacheLineK hcfg_addr_sz lgWay (Struct MesiInfo) KValue.
 
+  Definition mesi_compile_info_read
+             (var: Kind -> Type) (pinfo: Expr var (SyntaxKind (Struct MesiInfo)))
+    : Expr var (SyntaxKind (Vector.nth
+                              (Vector.map (Struct.attrType (A:=Kind))
+                                          (CacheLine hcfg_addr_sz lgWay (Struct MesiInfo) KValue))
+                              (MesiCacheLine !! "info"))) :=
+    (STRUCT { "mesi_owned" ::= pinfo!MesiInfo@."mesi_owned";
+              "mesi_status" ::=
+                IF (pinfo!MesiInfo@."mesi_status" == mesiNP)
+              then mesiI else pinfo!MesiInfo@."mesi_status";
+              "mesi_dir_st" ::=
+                IF (pinfo!MesiInfo@."mesi_dir_st" == mesiNP)
+              then mesiI else pinfo!MesiInfo@."mesi_dir_st";
+              "mesi_dir_sharers" ::= pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
+
+  Definition mesi_compile_line_read
+             (var: Kind -> Type) (line: var MesiCacheLineK)
+    : Expr var (SyntaxKind MesiCacheLineK) :=
+    (updStruct (#line) (MesiCacheLine !! "info")
+               (mesi_compile_info_read (#line!MesiCacheLine@."info")))%kami_expr.
+
   Definition mesi_compile_line_to_ostVars
              (var: Kind -> Type) (line: var MesiCacheLineK)
              (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
@@ -143,9 +166,7 @@ Section Instances.
     LET pinfo <- #line!MesiCacheLine@."info";
     LET owned <- #pinfo!MesiInfo@."mesi_owned";
     LET status: KMesi <- #pinfo!MesiInfo@."mesi_status";
-    LET dir <- STRUCT { "dir_st" ::=
-                          IF (#pinfo!MesiInfo@."mesi_dir_st" == mesiNP)
-                        then mesiI else #pinfo!MesiInfo@."mesi_dir_st";
+    LET dir <- STRUCT { "dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
                         "dir_excl" ::= bvFirstSet (#pinfo!MesiInfo@."mesi_dir_sharers");
                         "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
     cont (value, (owned, (status, (dir, tt)))))%kami_action.
@@ -211,6 +232,7 @@ Section Instances.
   Instance MesiCompLineRW: CompLineRW :=
     {| lineK := MesiCacheLineK;
        get_line_addr := fun _ line => (#line!MesiCacheLine@."addr")%kami_expr;
+       compile_line_read := mesi_compile_line_read;
        compile_line_to_ostVars := mesi_compile_line_to_ostVars;
        compile_line_update := mesi_compile_line_update;
        check_inv_response := mesi_check_inv_response |}.
