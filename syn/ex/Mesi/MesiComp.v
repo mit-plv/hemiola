@@ -194,7 +194,7 @@ Section Instances.
                       "info_way" ::= #line!MesiCacheLine@."info_way";
                       "info_write" ::= $$true;
                       "info" ::= updStruct (#line!MesiCacheLine@."info")%kami_expr
-                                           (VectorFacts.Vector_find (fieldAccessor "mesi_owned") MesiInfo)
+                                           (MesiInfo!!"mesi_owned")
                                            ve;
                       "value_write" ::= #line!MesiCacheLine@."value_write";
                       "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
@@ -203,7 +203,7 @@ Section Instances.
                       "info_way" ::= #line!MesiCacheLine@."info_way";
                       "info_write" ::= $$true;
                       "info" ::= updStruct (#line!MesiCacheLine@."info")%kami_expr
-                                           (VectorFacts.Vector_find (fieldAccessor "mesi_status") MesiInfo)
+                                           (MesiInfo!!"mesi_status")
                                            ve;
                       "value_write" ::= #line!MesiCacheLine@."value_write";
                       "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
@@ -232,6 +232,7 @@ Section Instances.
   Instance MesiCompLineRW: CompLineRW :=
     {| lineK := MesiCacheLineK;
        get_line_addr := fun _ line => (#line!MesiCacheLine@."addr")%kami_expr;
+       set_line_addr := fun _ line naddr => updStruct line (MesiCacheLine!!"addr") naddr;
        compile_line_read := mesi_compile_line_read;
        compile_line_to_ostVars := mesi_compile_line_to_ostVars;
        compile_line_update := mesi_compile_line_update;

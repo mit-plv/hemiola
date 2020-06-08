@@ -505,7 +505,7 @@ Section Cache.
   Definition getVictimN: string := cacheN _++ "getVictim".
   Definition getVictim := MethodSig getVictimN (): CacheLineK.
   Definition removeVictimN: string := cacheN _++ "removeVictim".
-  Definition removeVictim := MethodSig removeVictimN (): Void.
+  Definition removeVictim := MethodSig removeVictimN (): Bit addrSz.
 
   (** -- public interface ends *)
 
@@ -688,7 +688,8 @@ Section Cache.
         Read victim: CacheLineK <- victimN;
         If (#victimEx && #victim!CacheLine@."addr" == #line!CacheLine@."addr")
         then (Write writeStageN <- wsRsReady;
-             Write victimN <- #line; (* update the victim line *)
+             LET mline <- updStruct (ls:= CacheLine) (#line) (CacheLine !! "info_hit") ($$false);
+             Write victimN <- #mline; (* update the victim line *)
              Retv)
         else (Write writeStageN <- wsRqAcc;
              Write writeLineN <- #line;
@@ -712,11 +713,12 @@ Section Cache.
         Read victim <- victimN;
         Ret #victim
 
-      with Method removeVictimN (): Void :=
+      with Method removeVictimN (): Bit addrSz :=
         Read victimEx <- victimExN;
         Assert (#victimEx);
         Write victimExN <- $$false;
-        Retv
+        Read victim: CacheLineK <- victimN;
+        Ret (#victim!CacheLine@."addr")
 
       with Rule "read_tagmatch"+o :=
         Read readStage: ReadStage <- readStageN;

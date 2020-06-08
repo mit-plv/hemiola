@@ -159,6 +159,10 @@ Section Compile.
           get_line_addr:
             forall (var: Kind -> Type),
               var lineK -> Expr var (SyntaxKind KAddr);
+          set_line_addr:
+            forall (var: Kind -> Type),
+              Expr var (SyntaxKind lineK) -> Expr var (SyntaxKind KAddr) ->
+              Expr var (SyntaxKind lineK);
           compile_line_read:
             forall (var: Kind -> Type),
               var lineK -> Expr var (SyntaxKind lineK);
@@ -613,13 +617,28 @@ Section Compile.
                  (cont: ActionT var Void): ActionT var Void :=
         (Assert !(#wl!WL@."wl_valid"); cont)%kami_action.
 
+      Definition bypass_inv_rl (rln: string) (iaddr: var KAddr)
+                 (cont: ActionT var Void): ActionT var Void :=
+        (Read rl: Struct RL <- rln;
+        If ((#rl!RL@."rl_valid") && (#rl!RL@."rl_line_valid") &&
+            (#rl!RL@."rl_msg"!KMsg@."addr" == #iaddr))
+         then (Write rln: Struct RL <- (updStruct #rl (RL!!"rl_line")
+                                                  (set_line_addr $$Default #iaddr));
+              Retv);
+         cont)%kami_action.
+
+      Definition compile_rule_bypass_inv_rl
+                 (iaddr: var KAddr) (cont: ActionT var Void): ActionT var Void :=
+        (bypass_inv_rl crqrln iaddr (bypass_inv_rl crsrln iaddr cont)).
+
       Definition compile_rule_writelock_acquire
                  (wrq: Expr var (SyntaxKind Bool)) (invRs: bool)
                  (cont: ActionT var Void): ActionT var Void :=
         (Write wln: Struct WL <- STRUCT { "wl_valid" ::= $$true;
                                           "wl_write_rq" ::= wrq };
         (if invRs
-         then (Call (removeVictim oidx)(); cont)
+         then (Call iaddr <- (removeVictim oidx hcfg_addr_sz)();
+              compile_rule_bypass_inv_rl iaddr cont)
          else cont))%kami_action.
 
       Definition compile_rule_get_uplock (imt: InputMsgType)
@@ -969,7 +988,7 @@ Section Compile.
              wl <- compile_rule_writelock wln;
              compile_rule_writelock_available wl;;
              (* Acquire the writelock; save the log about what are requested *)
-             compile_rule_writelock_acquire oidx wln wrq invRs;;
+             compile_rule_writelock_acquire oidx crqrln crsrln wln wrq invRs;;
              Retv)%kami_action |}.
 
     Definition compile_rule_3_silent: Attribute (Action Void) :=
