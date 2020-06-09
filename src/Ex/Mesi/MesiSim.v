@@ -842,7 +842,21 @@ Section Sim.
           solve_sim_mesi.
         }
 
+        { (* [liInvImmWBS0] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns cidx.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
         { (* [liInvImmWBS1] *)
+          disc_rule_conds_ex; spec_case_silent.
+          derive_child_chns cidx.
+          derive_child_idx_in cidx.
+          solve_sim_mesi.
+        }
+
+        { (* [liInvImmWBS] *)
           disc_rule_conds_ex; spec_case_silent.
           derive_child_chns cidx.
           derive_child_idx_in cidx.

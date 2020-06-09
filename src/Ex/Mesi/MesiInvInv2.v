@@ -979,9 +979,21 @@ Section InvDirE.
           disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
         }
 
+        { (* [liInvImmWBS0] *)
+          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+          { solve_valid. }
+          { solve_by_diff_dir. }
+        }
+
         { (* [liInvImmWBS1] *)
           disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
           { solve_valid. }
+          { solve_by_diff_dir. }
+        }
+
+        { (* [liInvImmWBS] *)
+          disc_rule_conds_ex; simpl_InvDirE_msgs; disc.
+          { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
           { solve_by_diff_dir. }
         }
 
@@ -990,7 +1002,6 @@ Section InvDirE.
           { split; [solve_MsgsP|solve_by_ObjCohDirE_false]. }
           { solve_by_diff_dir. }
         }
-
       }
 
       dest_in.

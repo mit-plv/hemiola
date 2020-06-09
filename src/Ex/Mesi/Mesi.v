@@ -1029,16 +1029,19 @@ Section System.
         :transition
            (!|ost, _| --> (ost, <| mesiInvRs; O |>)).
 
-      (** NOTE: accepting [mesiInvWRq] implies that the requestor is the owner,
-       * which also implies that actually the parent's directory status is
-       * either E or M. Having the directory status of S happens when the parent
-       * requested [mesiDownRqS] to the requestor. After dealing with the down
-       * request the parent can deal with [mesiInvWRq], which implies that
-       * the number of sharers is always larger than 1 (at least the downgraded
-       * requestor and the [mesiRqS] requestor).
-       *)
+      Definition liInvImmWBS0: Rule :=
+        rule.immd[2~>9~>0~~cidx]
+        :accepts mesiInvWRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = false /\
+              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
+        :transition
+           (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>)).
+
       Definition liInvImmWBS1: Rule :=
-        rule.immd[2~>9~~cidx]
+        rule.immd[2~>9~>1~~cidx]
         :accepts mesiInvWRq
         :from cidx
         :requires
@@ -1048,11 +1051,22 @@ Section System.
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            <| mesiInvRs; O |>)).
 
-      (** NOTE: using [mesiInvWRq] to evict an E line implies the line is dirty,
-       * thus the parent should take the value and upgrade its status to M.
-       *)
-      Definition liInvImmWBME: Rule :=
+      Definition liInvImmWBS: Rule :=
         rule.immd[2~>10~~cidx]
+        :accepts mesiInvWRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = true /\ ost#[status] = mesiS /\
+              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
+        :transition
+           (!|ost, msg| --> (ost +#[status <- mesiM]
+                                 +#[dir <- setDirI], <| mesiInvRs; O |>)).
+
+      (** NOTE: using [mesiInvWRq] to evict a line implies the line is dirty,
+       * thus the parent should take the value and upgrade its status to M. *)
+      Definition liInvImmWBME: Rule :=
+        rule.immd[2~>11~~cidx]
         :accepts mesiInvWRq
         :from cidx
         :requires (fun ost orq mins => mesiE <= getDir cidx ost#[dir])
@@ -1097,8 +1111,8 @@ Section System.
       liGetSRqUpDownME oidx cidx; liGetMImm cidx; liGetMRqUpUp oidx cidx;
       liGetMRqUpDownME oidx cidx; liGetMRqUpDownS oidx cidx;
       liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
-      liInvImmE cidx; liInvImmWBI cidx; liInvImmWBS1 cidx;
-      liInvImmWBME cidx].
+      liInvImmE cidx; liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
+      liInvImmWBS cidx; liInvImmWBME cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -1191,4 +1205,4 @@ Hint Unfold liGetSImmS liGetSImmME
      liDownIImmS liDownIImmME liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRqDownDownDirMES
      liDownIRsUpUpS liDownIRsUpUpME liDownIRsUpUpMES liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
-     liInvImmWBI liInvImmWBS1 liInvImmWBME liPushImm: MesiRules.
+     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBME liPushImm: MesiRules.
