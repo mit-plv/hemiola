@@ -1,3 +1,5 @@
+Require Import List FunctionalExtensionality.
+
 Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
 Require Import Hemiola.Topology Hemiola.Syntax.
 Require Import Hemiola.RqRsLang Hemiola.Ex.Template Hemiola.Ex.RuleTransform.
@@ -524,3 +526,290 @@ End HemiolaDeep.
 
 Arguments hvec_ith: simpl never.
 Arguments hvec_upd: simpl never.
+
+(*! Reification *)
+
+(** * Utilities *)
+
+Lemma and_iff_sep: forall A B C D, (A <-> B) -> (C <-> D) -> (A /\ C <-> B /\ D).
+Proof. firstorder. Qed.
+Lemma or_iff_sep: forall A B C D, (A <-> B) -> (C <-> D) -> (A \/ C <-> B \/ D).
+Proof. firstorder. Qed.
+
+Lemma eq_iff_sep: forall {t} (A B C D: t), A = B -> C = D -> (A = C <-> B = D).
+Proof. intuition congruence. Qed.
+Lemma ne_iff_sep: forall {t} (A B C D: t), A = B -> C = D -> (A <> C <-> B <> D).
+Proof. intuition congruence. Qed.
+Lemma lt_iff_sep: forall A B C D, A = B -> C = D -> (A < C <-> B < D).
+Proof. firstorder. Qed.
+Lemma le_iff_sep: forall A B C D, A = B -> C = D -> (A <= C <-> B <= D).
+Proof. firstorder. Qed.
+Lemma gt_iff_sep: forall A B C D, A = B -> C = D -> (A > C <-> B > D).
+Proof. firstorder. Qed.
+Lemma ge_iff_sep: forall A B C D, A = B -> C = D -> (A >= C <-> B >= D).
+Proof. firstorder. Qed.
+
+Lemma p_f_equal: forall {t} (f: t -> Prop) A B, A = B -> (f A <-> f B).
+Proof. intuition congruence. Qed.
+
+Lemma TrsMTrs_ext:
+  forall `{DecValue} `{OStateIfc} (trs1 trs2: StateMTrs),
+    (forall stm, trs1 stm = trs2 stm) ->
+    forall ost orq mins,
+      TrsMTrs trs1 ost orq mins = TrsMTrs trs2 ost orq mins.
+Proof.
+  cbv [TrsMTrs]; intros.
+  rewrite H1; reflexivity.
+Qed.
+
+(** * Tactics *)
+
+Ltac reify_OPrecR t :=
+  match t with
+  | RqAccepting _ _ _ => constr:(HRqAccepting)
+  | RsAccepting _ _ _ => constr:(HRsAccepting)
+  | UpLockFree _ _ _ => constr:(HUpLockFree)
+  | DownLockFree _ _ _ => constr:(HDownLockFree)
+  | UpLockMsgId ?mty ?mid _ _ _ => constr:(HUpLockMsgId mty mid)
+  | UpLockMsg _ _ _ => constr:(HUpLockMsg)
+  | UpLockIdxBack _ _ _ => constr:(HUpLockIdxBack)
+  | UpLockBackNone _ _ _ => constr:(HUpLockBackNone)
+  | DownLockMsgId ?mty ?mid _ _ _ => constr:(HDownLockMsgId mty mid)
+  | DownLockMsg _ _ _ => constr:(HDownLockMsg)
+  | DownLockIdxBack _ _ _ => constr:(HDownLockIdxBack)
+  | MsgIdsFrom [?msgId] _ _ _ => constr:(HMsgIdFrom msgId)
+  | RssFull _ _ _ => constr:(HRssFull)
+  end.
+
+Ltac renote_OPrecRqRs :=
+  match goal with
+  | |- interpOPrec _ _ _ _ <-> ?t =>
+    let r := reify_OPrecR t in
+    instantiate (1:= HOPrecRqRs _ r); apply iff_refl
+  end.
+
+Ltac renote_const :=
+  match goal with
+  | |- interpConst _ = ?t =>
+    match type of t with
+    | bool => instantiate (1:= HBConstBool _); reflexivity
+    | nat => instantiate (1:= HBConstNat _ _); reflexivity
+    | IdxT => instantiate (1:= HBConstIdxO _); reflexivity
+    | IdxT => instantiate (1:= HBConstIdxQ _); reflexivity
+    | IdxT => instantiate (1:= HBConstIdxM _); reflexivity
+    end
+  end.
+
+Ltac renote_bexp :=
+  repeat
+    (cbv [rqMsg rsMsg miv_id miv_value];
+     try match goal with
+         | |- interpBExp _ _ _ = ?t =>
+           match t with
+           | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
+           | getUpLockIdxBackI _ => instantiate (1:= HUpLockIdxBackI _); reflexivity
+           | getDownLockIdxBackI _ => instantiate (1:= HDownLockIdxBackI _); reflexivity
+           | idOf _ => instantiate (1:= HIdmId _); simpl; f_equal
+           | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
+           | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
+           | tt => instantiate (1:= HAddrB _); reflexivity
+           | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _ _); simpl; f_equal
+           | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
+           | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal
+           | msg_addr _ => instantiate (1:= HMsgAddr _); simpl; f_equal
+           | msg_value _ => instantiate (1:= HMsgValue _); simpl; f_equal
+           | _ =>
+             tryif is_var t then fail
+             else (instantiate (1:= HBConst _ _); simpl; renote_const)
+           | _ => instantiate (1:= HVar _ _ _); reflexivity
+           end
+         end).
+
+Ltac renote_list_bexp :=
+  repeat
+    match goal with
+    | |- map (interpBExp _ _) _ = (_ :: _)%list =>
+      instantiate (1:= (_ :: _)%list); simpl; f_equal
+    | |- map (interpBExp _ _) _ = nil =>
+      instantiate (1:= nil); reflexivity
+    end; renote_bexp.
+
+Ltac renote_eexp := idtac "Error: redefine [renote_eexp]".
+
+Ltac renote_exp :=
+  match goal with
+  | |- interpExp _ _ _ _ = _ =>
+    instantiate (1:= HBExp _); simpl; renote_bexp; fail
+  | |- interpExp _ _ _ _ = _ =>
+    instantiate (1:= HEExp _ _); simpl; renote_eexp
+  end.
+
+Ltac renote_OPrec_ext := idtac "Error: redefine [renote_OPrec_ext]".
+
+Ltac renote_OPrecP :=
+  repeat
+    match goal with
+    | |- interpOPrecP _ _ _ _ <-> ?t =>
+      match t with
+      | True => instantiate (1:= HTrue _); simpl; apply iff_refl
+      | _ /\ _ => instantiate (1:= HAnd _ _); simpl; apply and_iff_sep
+      | _ \/ _ => instantiate (1:= HOr _ _); simpl; apply or_iff_sep
+      | _ = true => instantiate (1:= HBoolT _); simpl; apply eq_iff_sep;
+                    [renote_exp|reflexivity]
+      | _ = false => instantiate (1:= HBoolF _); simpl; apply eq_iff_sep;
+                     [renote_exp|reflexivity]
+      | @eq nat _ _ => instantiate (1:= HEq (ht:= HBType (HNat _)) _ _); simpl;
+                       apply eq_iff_sep; renote_exp
+      | not (@eq nat _ _) =>
+        instantiate (1:= HNe (ht:= HBType (HNat _)) _ _); simpl;
+        apply ne_iff_sep; renote_exp
+      | _ < _ => instantiate (1:= HNatLt (w:= _) _ _); simpl;
+                 apply lt_iff_sep; renote_exp
+      | _ <= _ => instantiate (1:= HNatLe (w:= _) _ _); simpl;
+                  apply le_iff_sep; renote_exp
+      | _ > _ => instantiate (1:= HNatGt (w:= _) _ _); simpl;
+                 apply gt_iff_sep; renote_exp
+      | _ >= _ => instantiate (1:= HNatGe (w:= _) _ _); simpl;
+                  apply ge_iff_sep; renote_exp
+      | _ => instantiate (1:= HExtP _ _); simpl; renote_OPrec_ext
+      | _ => instantiate (1:= HNativeP _ (fun ost orq mins => _));
+             simpl; apply iff_refl
+      end
+    end.
+
+Ltac renote_OPrecProp :=
+  match goal with
+  | |- interpOPrec _ _ _ _ <-> ?t =>
+    instantiate (1:= HOPrecProp _); simpl;
+    renote_OPrecP
+  end.
+
+Ltac renote_OPrec :=
+  repeat
+    match goal with
+    | |- interpOPrec (?t htypeDenote) _ _ _ <-> _ =>
+      is_evar t; instantiate (1:= fun var => _); simpl
+    | |- interpOPrec _ _ _ _ <-> (_ /\oprec _) _ _ _ =>
+      instantiate (1:= HOPrecAnd _ _); simpl; apply and_iff_sep
+    | |- _ => renote_OPrecRqRs; fail
+    | |- _ => renote_OPrecProp
+    end.
+
+Ltac reify_MsgFrom t :=
+  match t with
+  | MsgsFrom [] _ _ _ => constr:(HMsgFromNil)
+  | MsgsFrom [?midx] _ _ _ =>
+    match midx with
+    | rqUpFrom (l1ExtOf _) => constr:(HMsgFromExt midx)
+    | downTo _ => constr:(HMsgFromParent midx)
+    | _ => constr:(HMsgFromChild midx)
+    end
+  | MsgsFromORq upRq _ _ _ => constr:(HMsgFromUpLock)
+  end.
+
+Ltac renote_MsgFrom :=
+  match goal with
+  | |- interpMsgFrom _ _ _ _ <-> ?t =>
+    let r := reify_MsgFrom t in
+    instantiate (1:= r); apply iff_refl
+  end.
+
+Ltac reify_bvalue bv :=
+  match bv with
+  | getFirstMsg _ => constr:(HGetFirstMsg)
+  | getUpLockMsg _ => constr:(HGetUpLockMsg)
+  | getDownLockMsg _ => constr:(HGetDownLockMsg)
+  | getUpLockIdxBack _ => constr:(HGetUpLockIdxBack)
+  | getDownLockIdxBack _ => constr:(HGetDownLockIdxBack)
+  | getFirstIdMsg (getRss _) => constr:(HGetDownLockFirstRs)
+  end.
+
+Ltac renote_OState :=
+  repeat
+    match goal with
+    | |- interpOState _ _ _ _ = ?t =>
+      match t with
+      | hvec_upd _ ?i _ =>
+        instantiate (1 := HOstUpdate (ht:= hostf_ty[@i]) i eq_refl _ _);
+        simpl; f_equal; [|renote_exp]
+      | _ => instantiate (1:= HOStateI _); reflexivity
+      end
+    end.
+
+Ltac renote_ORq :=
+  repeat
+    match goal with
+    | |- interpORq _ _ _ _ = ?t =>
+      match t with
+      | addRq (removeRq _ upRq) downRq _ _ _ =>
+        instantiate (1:= HTrsfUpDown _ _ _); simpl; repeat f_equal; renote_exp
+      | addRq _ upRq _ _ _ =>
+        instantiate (1:= HUpdUpLock _ _ _); simpl; repeat f_equal; renote_exp
+      | addRqS _ upRq _ =>
+        instantiate (1:= HUpdUpLockS _); simpl; repeat f_equal; renote_exp
+      | removeRq _ upRq => instantiate (1:= HRelUpLock _); simpl; f_equal
+      | addRq _ downRq _ _ _ =>
+        instantiate (1:= HUpdDownLock _ _ _); simpl; repeat f_equal; renote_exp
+      | addRqS _ downRq _ =>
+        instantiate (1:= HUpdDownLockS _); simpl; repeat f_equal; renote_exp
+      | removeRq _ downRq => instantiate (1:= HRelDownLock _); simpl; f_equal
+      | addRs _ _ _ => instantiate (1:= HAddRs _ _); simpl; f_equal; renote_exp
+      | _ => instantiate (1:= HORqI _); reflexivity
+      end
+    end.
+
+Ltac renote_MsgOuts :=
+  match goal with
+  | |- interpMsgOuts _ _ _ _ = ?t =>
+    match t with
+    | []%list => instantiate (1:= HMsgOutNil _); reflexivity
+    | [(?midx, _)]%list => instantiate (1:= HMsgOutOne _ _); simpl; repeat f_equal; renote_exp
+    | map ?f _ =>
+      match f with
+      | (fun _ => (downTo _, _)) =>
+        instantiate (1:= HMsgsOutDown _ _); simpl;
+        instantiate (1:= HEExp _ _); simpl; renote_eexp
+      end
+    | _ => idtac "FIXME: [renote_MsgOuts]"
+    end
+  end.
+
+Ltac renote_trs_monad :=
+  repeat
+    match goal with
+    | |- interpMonad (?t _) _ = _ =>
+      instantiate (1:= fun _ => _); simpl
+    | |- (fun _ => _) = (fun _ => _) =>
+      apply functional_extensionality; intros
+    | |- interpMonad _ _ = ?bv >>= _ =>
+      let rbv := reify_bvalue bv in
+      instantiate (1:= HBind rbv _); simpl; f_equal
+    | |- interpMonad _ _ = Some _ =>
+      instantiate (1:= HRet _ _ _); simpl;
+      repeat f_equal; [renote_OState|renote_ORq|renote_MsgOuts]
+    end.
+
+Ltac renote_OTrs :=
+  match goal with
+  | |- interpOTrs _ _ _ _ = TrsMTrs _ _ _ _ =>
+    instantiate (1:= HTrsMTrs (HMTrs _)); simpl;
+    apply TrsMTrs_ext; intros;
+    renote_trs_monad
+  end.
+
+Ltac renote_rule_init :=
+  refine {| hrule_msg_from := _ |};
+  intros; repeat autounfold with MesiRules;
+  cbv [immRule immDownRule immUpRule
+               rqUpUpRule rqUpUpRuleS rqUpDownRule rqUpDownRuleS rqDownDownRule
+               rsDownDownRule rsDownDownRuleS rsUpDownRule rsUpDownRuleOne
+               rsUpUpRule rsUpUpRuleOne rsDownRqDownRule];
+  cbv [rsTakeOne rsRelease rsReleaseOne];
+  cbv [rule_precond rule_trs].
+
+Ltac renote_rule :=
+  renote_rule_init;
+  [apply and_iff_sep; [renote_MsgFrom|renote_OPrec]
+  |renote_OTrs].
+
+Tactic Notation "⇑rule" := renote_rule.
