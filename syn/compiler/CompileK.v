@@ -153,9 +153,9 @@ Section Compile.
       (** * Step 1: compile the message-accepting rule:
        * it makes the read request to the info cache as well. *)
 
+      (* line read/write-related *)
       Class CompLineRW :=
-        { (* line read/write-related *)
-          lineK: Kind;
+        { lineK: Kind;
           get_line_addr:
             forall (var: Kind -> Type),
               var lineK -> Expr var (SyntaxKind KAddr);
@@ -637,7 +637,8 @@ Section Compile.
         (Write wln: Struct WL <- STRUCT { "wl_valid" ::= $$true;
                                           "wl_write_rq" ::= wrq };
         (if invRs
-         then (Call iaddr <- (removeVictim oidx hcfg_addr_sz)();
+         then (LET iaddr <- #msgIn!KMsg@."addr";
+              Call (removeVictim oidx hcfg_addr_sz)(#iaddr);
               compile_rule_bypass_inv_rl iaddr cont)
          else cont))%kami_action.
 
@@ -988,7 +989,7 @@ Section Compile.
              wl <- compile_rule_writelock wln;
              compile_rule_writelock_available wl;;
              (* Acquire the writelock; save the log about what are requested *)
-             compile_rule_writelock_acquire oidx crqrln crsrln wln wrq invRs;;
+             compile_rule_writelock_acquire oidx crqrln crsrln wln msgIn wrq invRs;;
              Retv)%kami_action |}.
 
     Definition compile_rule_3_silent: Attribute (Action Void) :=
