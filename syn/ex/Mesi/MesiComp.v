@@ -245,10 +245,13 @@ Existing Instance MesiCompExtExp.
 
 Require Import Hemiola.Ex.TopoTemplate.
 
-(** TODO: move to somewhere else *)
 Section Cache.
   Variables (oidx: IdxT)
-            (tagSz indexSz offsetSz lgWay lgNumVictim: nat).
+            (indexSz lgWay lgNumVictim: nat).
+
+  Definition BitsPerByte := 8.
+  Definition offsetSz := Nat.log2 (Nat.div hcfg_addr_sz BitsPerByte).
+  Definition tagSz := hcfg_addr_sz - indexSz - offsetSz.
 
   Definition getIndex (var: Kind -> Type)
              (addr: fullType var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
@@ -268,8 +271,6 @@ Section Cache.
 
   Definition evictF (var: Kind -> Type)
              (minfo: Expr var (SyntaxKind (Struct MesiInfo))): Expr var (SyntaxKind Bool) :=
-    (* ((minfo!MesiInfo@."mesi_dir_st" == mesiNP) *)
-    (*  || minfo!MesiInfo@."mesi_dir_st" == mesiI)%kami_expr. *)
     (minfo!MesiInfo@."mesi_dir_st" == mesiI)%kami_expr.
 
   Definition mesiCache :=
@@ -277,27 +278,38 @@ Section Cache.
 
 End Cache.
 
-(*********************
- *        Mem        *
- *         |         *
- *      LLC(Li)      *
- *       /   \       *
- *  L2(Li)   L2(Li)  *
- *   /  \     /  \   *
- * L1    L1 L1    L1 *
- **********************)
+(***********************************
+ *               Mem               *
+ *                |                *
+ *          ----LLC(Li)---         *
+ *         /              \        *
+ *      L2(Li)          L2(Li)     *
+ *     //    \\        //    \\    *
+ * (L1,L1) (L1,L1) (L1,L1) (L1,L1) *
+ ***********************************)
 Definition topo: tree :=
-  Node [Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]].
-Definition dtr :=
-  Eval vm_compute in (fst (tree2Topo topo 0)).
+  Node [Node [Node [Node nil; Node nil; Node nil; Node nil];
+             Node [Node nil; Node nil; Node nil; Node nil]]].
+Definition dtr := fst (tree2Topo topo 0).
 
+Definition l1IndexSz: nat := 6.
 Definition l1LgWay: nat := 1.
-Definition l2LgWay: nat := 2.  (* [l2LgWay] should be >=3 for liveness *)
-Definition llLgWay: nat := 3.  (* [llcLgWay] should be >=5 for liveness *)
+Definition l1LgNumVictim: nat := 1.
+Definition l1Cache oidx := mesiCache oidx l1IndexSz l1LgWay l1LgNumVictim.
+
+Definition l2IndexSz: nat := 6.
+Definition l2LgWay: nat := 3.
+Definition l2LgNumVictim: nat := 1.
+Definition l2Cache oidx := mesiCache oidx l2IndexSz l2LgWay l2LgNumVictim.
+
+Definition llIndexSz: nat := 6.
+Definition llLgWay: nat := 4.
+Definition llLgNumVictim: nat := 1.
+Definition llCache oidx := mesiCache oidx llIndexSz llLgWay llLgNumVictim.
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW l1LgWay) dtr (existT _ _ (hl1 oidx)))
-     ++ mesiCache oidx 24 6 2 l1LgWay 1
+     ++ l1Cache oidx
      ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_down_forward oidx
@@ -305,26 +317,34 @@ Definition kl1c (oidx: IdxT): Modules :=
 
 Definition kl2c (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW l2LgWay) dtr (existT _ _ (hli topo oidx)))
-     ++ mesiCache oidx 24 6 2 l2LgWay 1
+     ++ l2Cache oidx
      ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
-     ++ mesiCache oidx 24 6 2 llLgWay 1
+     ++ llCache oidx
      ++ mshrs oidx 1 1
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
 Definition kmemc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW 1) dtr (existT _ _ (hmem topo oidx)))
-     ++ mesiCache oidx 20 10 2 1 1
+     ++ mesiCache oidx 10 1 1
      ++ mshrs oidx 1 1
      ++ build_broadcaster oidx)%kami.
 
 Definition k: Modules :=
   ((kmemc 0)
      ++ (kllc 0~>0)
-     ++ (kl2c 0~>0~>0 ++ (kl1c 0~>0~>0~>0 ++ kl1c 0~>0~>0~>1))
-     ++ (kl2c 0~>0~>1 ++ (kl1c 0~>0~>1~>0 ++ kl1c 0~>0~>1~>1)))%kami.
+     ++ ((kl2c 0~>0~>0)
+           ++ (kl1c 0~>0~>0~>0 ++
+                    kl1c 0~>0~>0~>1 ++
+                    kl1c 0~>0~>0~>2 ++
+                    kl1c 0~>0~>0~>3))
+     ++ ((kl2c 0~>0~>1)
+           ++ (kl1c 0~>0~>1~>0 ++
+                    kl1c 0~>0~>1~>1 ++
+                    kl1c 0~>0~>1~>2 ++
+                    kl1c 0~>0~>1~>3)))%kami.

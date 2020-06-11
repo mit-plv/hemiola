@@ -17,9 +17,9 @@ Definition HMesi := HNat 3.
 
 Instance MesiHConfig: hconfig :=
   {| hcfg_msg_id_sz := (3, 2);
-     hcfg_addr_sz := 32;
-     hcfg_value_sz := 32;
-     hcfg_children_max_pred := 1; (* #children = 2 *)
+     hcfg_addr_sz := 64;
+     hcfg_value_sz := 64;
+     hcfg_children_max_pred := 3; (* max(#children) = 4 *)
   |}.
 
 Instance HNatDecValue: HDecValue :=
