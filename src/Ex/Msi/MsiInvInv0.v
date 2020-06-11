@@ -506,36 +506,17 @@ Section InvWBDir.
       remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
+      apply concat_In in H3; destruct H3 as [crls [? ?]].
+      apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+      dest_in; disc_rule_conds_ex.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-        dest_in; disc_rule_conds_ex.
-
-        all: try (simpl_InvWBDir; fail).
-        all: try (assert (NoRqI oidx msgs)
-                   by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                  assert (NoRsI oidx msgs)
-                    by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx);
-                  simpl_InvWBDir).
-        all: try (eapply InvWBDir_enqMP_rs_valid; eauto;
-                  simpl_InvWBDir; fail).
-      }
-
-      dest_in.
-      { disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvWBDir; solve_InvWBDir.
-      }
-      { disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvWBDir; solve_InvWBDir.
-      }
-      { disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvWBDir; solve_InvWBDir.
-      }
+      all: try (assert (NoRqI oidx msgs)
+                 by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                assert (NoRsI oidx msgs)
+                  by (solve_NoRsI_base; solve_NoRsI_by_no_uplock oidx);
+                simpl_InvWBDir).
+      all: try (eapply InvWBDir_enqMP_rs_valid; eauto;
+                simpl_InvWBDir; fail).
 
     - (*! Cases for Li caches *)
 
@@ -932,33 +913,13 @@ Section InvWBCoh.
       remember (rootOf (fst (tree2Topo tr 0))) as oidx; clear Heqoidx.
 
       (** Do case analysis per a rule. *)
-      apply in_app_or in H3; destruct H3.
+      apply concat_In in H3; destruct H3 as [crls [? ?]].
+      apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
+      dest_in; disc_rule_conds_ex.
 
-      1: { (** Rules per a child *)
-        apply concat_In in H1; destruct H1 as [crls [? ?]].
-        apply in_map_iff in H1; destruct H1 as [cidx [? ?]]; subst.
-        dest_in; disc_rule_conds_ex.
-
-        all: try (simpl_InvWBCoh; fail).
-        all: try (assert (NoRqI oidx msgs)
-                   by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
-                  simpl_InvWBCoh).
-      }
-
-      dest_in.
-      { disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        derive_InvWBDir oidx.
-        simpl_InvWBCoh; solve_InvWBCoh.
-      }
-      { disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvWBCoh; solve_InvWBCoh.
-      }
-      { disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvWBCoh; solve_InvWBCoh.
-      }
+      all: try (assert (NoRqI oidx msgs)
+                 by (solve_NoRqI_base; solve_NoRqI_by_no_locks oidx);
+                simpl_InvWBCoh).
 
     - (*! Cases for Li caches *)
 

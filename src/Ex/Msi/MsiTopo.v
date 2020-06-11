@@ -151,7 +151,6 @@ Section System.
         | |- Forall _ (_ :: _) => constructor
         | |- Forall _ nil => constructor
         end.
-      2-3: try (solve_GoodRqRsRule; fail).
 
       apply Forall_forall; intros.
       unfold liRulesFromChildren in H.
@@ -159,53 +158,6 @@ Section System.
       apply in_map_iff in H; dest; subst.
       dest_in.
       all: try (solve_GoodRqRsRule; fail).
-
-      { (* [liGetSRqUpDownM] *)
-        apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
-        pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
-        rewrite <-msi_indices in H.
-
-        rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
-
-        (** [RqUpDownSound] *)
-        red; simpl; intros; dest.
-        apply subtreeChildrenIndsOf_parentIdxOf in H2; [|apply tree2Topo_WfDTree].
-        repeat ssplit; [discriminate| |intuition auto].
-        repeat constructor; try assumption.
-      }
-
-      { (* [liGetMRqUpDownM] *)
-        apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
-        pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
-        rewrite <-msi_indices in H.
-
-        rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
-
-        (** [RqUpDownSound] *)
-        red; simpl; intros; dest.
-        apply subtreeChildrenIndsOf_parentIdxOf in H2; [|apply tree2Topo_WfDTree].
-        repeat ssplit; [discriminate| |intuition auto].
-        repeat constructor; try assumption.
-      }
-
-      { (* [liGetMRqUpDownS] *)
-        apply subtreeChildrenIndsOf_parentIdxOf in H1; [|apply tree2Topo_WfDTree].
-        pose proof (tree2Topo_li_child_li_l1 _ _ _ Hrin H1).
-        rewrite <-msi_indices in H.
-
-        rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto.
-
-        (** [RqUpDownSound] *)
-        red; simpl; intros; dest.
-        repeat ssplit.
-        { assumption. }
-        { apply Forall_forall; intros.
-          apply in_remove in H7.
-          apply H2 in H7.
-          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
-        }
-        { apply remove_In. }
-      }
 
     - (** Li caches *)
       apply Forall_forall; intros.
@@ -445,11 +397,10 @@ Section System.
 
     - (** The main memory: no RqUp rules *)
       red; intros.
-      simpl in H; apply in_app_or in H; destruct H;
-        [unfold liRulesFromChildren in H;
-         apply concat_In in H; dest;
-         apply in_map_iff in H; dest; subst;
-         dest_in|dest_in].
+      simpl in H; unfold liRulesFromChildren in H.
+      apply concat_In in H; dest.
+      apply in_map_iff in H; dest; subst.
+      dest_in.
       all: try (exfalso_RqToUpRule; fail).
 
     - (** Li cache *)
@@ -632,23 +583,13 @@ Section System.
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
-      red; simpl; apply Forall_app.
-      + apply Forall_forall; intros.
-        unfold memRulesFromChildren in H.
-        apply concat_In in H; dest.
-        apply in_map_iff in H; dest; subst.
-        dest_in.
-        all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
-        { (* [liGetMRqUpDownS] *)
-          red; simpl; disc_rule_conds_ex.
-          apply in_map_iff in H2; dest; subst.
-          apply in_remove in H11.
-          apply H4 in H11.
-          simpl in *; solve_GoodExtRssSys.
-        }
-
-      + repeat constructor.
-        all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
+      red; simpl.
+      apply Forall_forall; intros.
+      unfold memRulesFromChildren in H.
+      apply concat_In in H; dest.
+      apply in_map_iff in H; dest; subst.
+      dest_in.
+      all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
 
     - (** Li cache *)
       apply Forall_forall; intros.
