@@ -890,11 +890,9 @@ Section InvDirM.
         disc_rule_conds_ex; disc.
         split; [solve_NoRsSI_by_silent|].
 
-        red in H24; red; simpl in *; intros; exfalso.
-        specialize (H24 H27).
-        destruct H27; dest.
-        { solve_msi. }
-        { congruence. }
+        red in H23; red; simpl in *; intros; exfalso.
+        specialize (H23 H26); dest.
+        congruence.
       }
 
     - (*! Cases for L1 caches *)

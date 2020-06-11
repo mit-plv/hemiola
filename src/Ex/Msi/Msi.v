@@ -850,9 +850,7 @@ Section System.
       Definition liPushImm: Rule :=
         rule.imm[2~>3]
         :requires
-           (fun ost orq mins =>
-              msiI < ost#[dir].(dir_st) /\
-              ost#[status] = msiS /\ ost#[owned] = false)
+           (fun ost orq mins => ost#[status] = msiS /\ ost#[owned] = false)
         :transition (ost --> ost +#[status <- msiNP]).
 
       Definition liInvImmI: Rule :=
