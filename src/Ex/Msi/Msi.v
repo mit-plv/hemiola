@@ -903,16 +903,19 @@ Section System.
         :transition
            (!|ost, _| --> (ost, <| msiInvRs; O |>)).
 
-      (** NOTE: accepting [msiInvWRq] implies that the requestor is the owner,
-       * which also implies that actually the parent's directory status is
-       * M. Having the directory status of S happens when the parent requested
-       * [msiDownRqS] to the requestor. After dealing with the down request the
-       * parent can deal with [msiInvWRq], which implies that the number of
-       * sharers is always larger than 1 (at least the downgraded requestor and
-       * the [msiRqS] requestor).
-       *)
+      Definition liInvImmWBS0: Rule :=
+        rule.immd[2~>8~>0~~cidx]
+        :accepts msiInvWRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = false /\
+              getDir cidx ost#[dir] = msiS /\ LastSharer ost#[dir] cidx)
+        :transition
+           (!|ost, _| --> (ost +#[dir <- setDirI], <| msiInvRs; O |>)).
+
       Definition liInvImmWBS1: Rule :=
-        rule.immd[2~>8~~cidx]
+        rule.immd[2~>8~>1~~cidx]
         :accepts msiInvWRq
         :from cidx
         :requires
@@ -922,8 +925,20 @@ Section System.
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            <| msiInvRs; O |>)).
 
-      Definition liInvImmWBM: Rule :=
+      Definition liInvImmWBS: Rule :=
         rule.immd[2~>9~~cidx]
+        :accepts msiInvWRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = true /\ ost#[status] = msiS /\
+              getDir cidx ost#[dir] = msiS /\ LastSharer ost#[dir] cidx)
+        :transition
+           (!|ost, msg| --> (ost +#[status <- msiM]
+                                 +#[dir <- setDirI], <| msiInvRs; O |>)).
+
+      Definition liInvImmWBM: Rule :=
+        rule.immd[2~>10~~cidx]
         :accepts msiInvWRq
         :from cidx
         :requires (fun ost orq mins => getDir cidx ost#[dir] = msiM)
@@ -968,8 +983,8 @@ Section System.
       liGetSRqUpDownM oidx cidx; liGetMImm cidx; liGetMRqUpUp oidx cidx;
       liGetMRqUpDownM oidx cidx; liGetMRqUpDownS oidx cidx;
       liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
-      liInvImmWBI cidx; liInvImmWBS1 cidx;
-      liInvImmWBM cidx].
+      liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
+      liInvImmWBS cidx; liInvImmWBM cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -1065,4 +1080,4 @@ Hint Unfold liGetSImmS liGetSImmM
      liDownIRsUpUpS liDownIRsUpUpM liDownIRsUpUpMS
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
-     liInvImmWBI liInvImmWBS1 liInvImmWBM liPushImm: MsiRules.
+     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBM liPushImm: MsiRules.
