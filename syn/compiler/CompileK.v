@@ -305,15 +305,12 @@ Section Compile.
                  (cont: ActionT var Void): ActionT var Void :=
         (Call (readRq oidx hcfg_addr_sz) (addr); cont)%kami_action.
 
-      (* OPT: no need to make an info request if no read *)
       Definition compile_rule_accept_message_and_request_read (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
            | true =>
-             (** TODO: [downLockRssFull] is called twice in the first- and
-              * the second-phase rule, which is a bit inefficient. *)
              (Call odl <- (downLockRssFull oidx) ();
              Assert #odl!(MaybeStr (Struct DL))@."valid";
              (* Here setting the original request message to [rl_msg] is
@@ -665,7 +662,7 @@ Section Compile.
            cont dl)
          | true, None =>
            (* When [RssFull]: see the definition of [detect_input_msg_rqrs_r] *)
-           (Call odl <- (downLockRssFull oidx) ();
+           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
            Assert #odl!(MaybeStr (Struct DL))@."valid";
            LET dl <- #odl!(MaybeStr (Struct DL))@."data";
            cont dl)
