@@ -293,39 +293,45 @@ Definition topo: tree :=
 Definition dtr := fst (tree2Topo topo 0).
 
 Definition l1IndexSz: nat := 6.
-Definition l1LgWay: nat := 1.
-Definition l1LgNumVictim: nat := 1.
+Definition l1LgWay: nat := 2.
+Definition l1LgULs: nat := 1.
+Definition l1LgDLs: nat := 1.
+Definition l1LgNumVictim: nat := l1LgULs.
 Definition l1Cache oidx := mesiCache oidx l1IndexSz l1LgWay l1LgNumVictim.
+Definition l1Mshrs oidx := mshrs oidx l1LgULs l1LgDLs.
 
-Definition l2IndexSz: nat := 6.
+Definition l2IndexSz: nat := 8.
 Definition l2LgWay: nat := 3.
-Definition l2LgNumVictim: nat := 1.
+Definition l2LgULs: nat := 2.
+Definition l2LgDLs: nat := 1.
+Definition l2LgNumVictim: nat := l2LgULs.
 Definition l2Cache oidx := mesiCache oidx l2IndexSz l2LgWay l2LgNumVictim.
+Definition l2Mshrs oidx := mshrs oidx l2LgULs l2LgDLs.
 
-Definition llIndexSz: nat := 6.
+Definition llIndexSz: nat := 10.
 Definition llLgWay: nat := 4.
-Definition llLgNumVictim: nat := 1.
+Definition llLgULs: nat := 3.
+Definition llLgDLs: nat := 1.
+Definition llLgNumVictim: nat := llLgULs.
 Definition llCache oidx := mesiCache oidx llIndexSz llLgWay llLgNumVictim.
+Definition llMshrs oidx := mshrs oidx llLgULs llLgDLs.
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW l1LgWay) dtr (existT _ _ (hl1 oidx)))
-     ++ l1Cache oidx
-     ++ mshrs oidx 1 1
+     ++ l1Cache oidx ++ l1Mshrs oidx
      ++ build_int_fifos oidx
      ++ build_down_forward oidx
      ++ build_ext_fifos oidx)%kami.
 
 Definition kl2c (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW l2LgWay) dtr (existT _ _ (hli topo oidx)))
-     ++ l2Cache oidx
-     ++ mshrs oidx 1 1
+     ++ l2Cache oidx ++ l2Mshrs oidx
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
-     ++ llCache oidx
-     ++ mshrs oidx 1 1
+     ++ llCache oidx ++ llMshrs oidx
      ++ build_int_fifos oidx
      ++ build_broadcaster oidx)%kami.
 
