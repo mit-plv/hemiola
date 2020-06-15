@@ -24,20 +24,11 @@ Section Compile.
   Section QueueIfc.
 
     Definition fifoBaseName: string := "fifo".
-    Definition pcBaseName: string := "parentChildren".
-    Definition enqN: string := "enq".
-    Definition broadcastN: string := "broadcast".
-    Definition deqN: string := "deq".
 
-    Definition enqFn (midx: IdxT) :=
-      (fifoBaseName ++ idx_to_string midx) -- enqN.
+    (* Input messages (deq) *)
+    Definition deqN: string := "deq".
     Definition deqFn (midx: IdxT) :=
       (fifoBaseName ++ idx_to_string midx) -- deqN.
-    Definition enqToChildFn (oidx: IdxT) :=
-      (pcBaseName ++ idx_to_string oidx) -- enqN.
-    Definition broadcastFn (oidx: IdxT) :=
-      (pcBaseName ++ idx_to_string oidx) -- broadcastN.
-
     Definition deqFrom (midx: IdxT): Attribute SignatureT :=
       {| attrName := deqFn midx;
          attrType := {| arg := Void;
@@ -46,22 +37,33 @@ Section Compile.
     Definition deqFromExt := deqFrom.
     Definition deqFromChild := deqFrom.
 
+    (* Output messages (enq) *)
+    Definition enqN: string := "enq".
+    Definition enqFn (midx: IdxT) :=
+      (fifoBaseName ++ idx_to_string midx) -- enqN.
     Definition enqTo (midx: IdxT): Attribute SignatureT :=
       {| attrName := enqFn midx;
          attrType := {| arg := Struct KMsg;
                         ret := Void |} |}.
-    Definition enqToParent := enqTo.
-    Definition enqToExt := enqTo.
 
-    Definition EnqToChild :=
-      STRUCT { "ch_idx" :: KCIdx;
-               "ch_msg" :: Struct KMsg
+    Definition msgOutName: string := "parentChildren".
+    Definition broadcastN: string := "broadcast".
+    Definition broadcastFn (oidx: IdxT) :=
+      (msgOutName ++ idx_to_string oidx) -- broadcastN.
+
+    Definition MakeEnq :=
+      STRUCT { "enq_type" :: Bit 2; (* rqUp(0), rsUp(1), down-to-child(2) *)
+               "enq_ch_idx" :: KCIdx; (* only for down-to-child *)
+               "enq_msg" :: Struct KMsg
              }.
+    Definition MakeEnqK := Struct MakeEnq.
 
-    Definition enqToChild (oidx: IdxT): Attribute SignatureT :=
-      {| attrName := enqToChildFn oidx;
-         attrType := {| arg := Struct EnqToChild;
-                        ret := Void |} |}.
+    Definition makeEnqN: string := "makeEnq".
+    Definition makeEnqFn (oidx: IdxT) :=
+      (msgOutName ++ idx_to_string oidx) -- makeEnqN.
+    Definition makeEnq (oidx: IdxT): Attribute SignatureT :=
+      {| attrName := makeEnqFn oidx;
+         attrType := {| arg := MakeEnqK; ret := Void |} |}.
 
     Definition BroadcastToCs :=
       STRUCT { "cs_inds" :: KCBv;
@@ -778,12 +780,13 @@ Section Compile.
          | HMsgOutNil _ => cont
          | HMsgOutOne midx msg =>
            (let kqidx := compile_exp midx in
-            If (_truncLsb_ kqidx == $downIdx)
-            then Call (enqToChild oidx)(STRUCT { "ch_idx" ::= _truncate_ kqidx;
-                                                 "ch_msg" ::= compile_exp msg }); Retv
-            else (If (_truncLsb_ kqidx == $rqUpIdx)
-                  then Call (enqToParent (rqUpFrom oidx))(compile_exp msg); Retv
-                  else Call (enqToParent (rsUpFrom oidx))(compile_exp msg); Retv; Retv);
+            LET menqv <- STRUCT { "enq_type" ::=
+                                    (IF (_truncLsb_ kqidx == $downIdx) then $2
+                                     else IF (_truncLsb_ kqidx == $rqUpIdx)
+                                     then $0 else $1);
+                                  "enq_ch_idx" ::= _truncate_ kqidx;
+                                  "enq_msg" ::= compile_exp msg };
+           Call (makeEnq oidx)(#menqv);
            cont)
          | HMsgsOutDown minds msg =>
            (Call (broadcastToCs oidx)(STRUCT { "cs_inds" ::= compile_exp minds;
@@ -1056,48 +1059,151 @@ Section Compile.
                 (Struct KMsg))
     )%kami.
 
-  Definition build_down_forward (oidx: IdxT): Modules :=
-    MODULE {
-      Method (enqToChildFn oidx)(e: Struct EnqToChild): Void :=
-        LET msg <- #e!EnqToChild@."ch_msg";
-        Call (enqTo (downTo (l1ExtOf oidx)))(#msg);
-        Retv
-    }.
+  Section MsgOuts.
+    Variable oidx: IdxT.
+    Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
 
-  Fixpoint build_enq_child_fix (oidx: IdxT)
-           {var} (cidx: KCIdx @ var) (msg: (Struct KMsg) @ var) (n: nat)
-    : ActionT var Void :=
-    (match n with
-     | O => (If (cidx == $0) then (Call (enqTo (downTo (oidx~>0)))(msg); Retv); Retv)
-     | S n' => (If (cidx == $n)
-                then (Call (enqTo (downTo (oidx~>n)))(msg); Retv)
-                else (build_enq_child_fix oidx cidx msg n');
-               Retv)
-     end)%kami_action.
+    Definition build_l1_down {var} (msg: (Struct KMsg) @ var): ActionT var Void :=
+      (Call (enqTo (downTo (l1ExtOf oidx)))(msg); Retv)%kami_action.
 
-  Fixpoint build_broadcast_fix (oidx: IdxT)
-           {var} (cinds: KCBv @ var) (msg: (Struct KMsg) @ var) (n: nat)
-    : ActionT var Void :=
-    (match n with
-     | O => (If (bvTest cinds $0) then (Call (enqTo (downTo (oidx~>0)))(msg); Retv); Retv)
-     | S n' => (If (bvTest cinds $n) then (Call (enqTo (downTo (oidx~>n)))(msg); Retv);
-                build_broadcast_fix oidx cinds msg n')
-     end)%kami_action.
+    Fixpoint build_enq_child_fix {var}
+             (cidx: KCIdx @ var) (msg: (Struct KMsg) @ var) (n: nat)
+      : ActionT var Void :=
+      (match n with
+       | O => (If (cidx == $0) then (Call (enqTo (downTo (oidx~>0)))(msg); Retv); Retv)
+       | S n' => (If (cidx == $n)
+                  then (Call (enqTo (downTo (oidx~>n)))(msg); Retv)
+                  else (build_enq_child_fix cidx msg n');
+                 Retv)
+       end)%kami_action.
 
-  Definition build_broadcaster (oidx: IdxT): Modules :=
-    MODULE {
-      Method (enqToChildFn oidx)(e: Struct EnqToChild): Void :=
-        LET cidx <- #e!EnqToChild@."ch_idx";
-        LET msg <- #e!EnqToChild@."ch_msg";
-        build_enq_child_fix oidx (#cidx)%kami_expr (#msg)%kami_expr
-                            hcfg_children_max_pred
-      with Method (broadcastFn oidx)
-           (e: Struct BroadcastToCs): Void :=
-        LET cinds <- #e!BroadcastToCs@."cs_inds";
-        LET msg <- #e!BroadcastToCs@."cs_msg";
-        build_broadcast_fix oidx (#cinds)%kami_expr (#msg)%kami_expr
-                            hcfg_children_max_pred
-    }.
+    Fixpoint build_broadcast_fix {var}
+             (cinds: KCBv @ var) (msg: (Struct KMsg) @ var) (n: nat)
+      : ActionT var Void :=
+      (match n with
+       | O => (If (bvTest cinds $0) then (Call (enqTo (downTo (oidx~>0)))(msg); Retv); Retv)
+       | S n' => (If (bvTest cinds $n) then (Call (enqTo (downTo (oidx~>n)))(msg); Retv);
+                  build_broadcast_fix cinds msg n')
+       end)%kami_action.
+
+    Definition enqRqN := "enqRq"+o.
+    Definition enqValidN := "enqValid"+o.
+
+    Definition enqRqUp {var}: ActionT var Void :=
+      (Read enqValid <- enqValidN;
+      Assert (#enqValid);
+      Write enqValidN <- $$false;
+      Read enqRq: MakeEnqK <- enqRqN;
+      Assert (#enqRq!MakeEnq@."enq_type" == $0);
+      Call (enqTo (rqUpFrom oidx))(#enqRq!MakeEnq@."enq_msg");
+      Retv)%kami_action.
+
+    Definition enqRsUp {var}: ActionT var Void :=
+      (Read enqValid <- enqValidN;
+      Assert (#enqValid);
+      Write enqValidN <- $$false;
+      Read enqRq: MakeEnqK <- enqRqN;
+      Assert (#enqRq!MakeEnq@."enq_type" == $1);
+      Call (enqTo (rsUpFrom oidx))(#enqRq!MakeEnq@."enq_msg");
+      Retv)%kami_action.
+
+    Definition enqDownToL1 {var}: ActionT var Void :=
+      (Read enqValid <- enqValidN;
+      Assert (#enqValid);
+      Write enqValidN <- $$false;
+      Read enqRq: MakeEnqK <- enqRqN;
+      Assert (#enqRq!MakeEnq@."enq_type" == $2);
+      LET msg <- #enqRq!MakeEnq@."enq_msg";
+      build_l1_down (#msg)%kami_expr)%kami_action.
+
+    Definition enqDownToChild {var}: ActionT var Void :=
+      (Read enqValid <- enqValidN;
+      Assert (#enqValid);
+      Write enqValidN <- $$false;
+      Read enqRq: MakeEnqK <- enqRqN;
+      Assert (#enqRq!MakeEnq@."enq_type" == $2);
+      LET cidx <- #enqRq!MakeEnq@."enq_ch_idx";
+      LET msg <- #enqRq!MakeEnq@."enq_msg";
+      build_enq_child_fix (#cidx)%kami_expr (#msg)%kami_expr
+                          hcfg_children_max_pred)%kami_action.
+
+    Definition build_msg_outs_l1_async: Modules :=
+      MODULE {
+        Register enqRqN: MakeEnqK <- Default
+        with Register enqValidN: Bool <- Default
+        with Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
+          Read enqValid <- enqValidN;
+          Assert (!#enqValid);
+          Write enqValidN <- $$true;
+          Write enqRqN <- #e;
+          Retv
+        with Rule "make_enq_rqUp"+o := enqRqUp
+        with Rule "make_enq_rsUp"+o := enqRsUp
+        with Rule "make_enq_down_to_child"+o := enqDownToL1
+      }.
+
+    Definition build_msg_outs_l1: Modules :=
+      MODULE {
+        Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
+          (If (#e!MakeEnq@."enq_type" == $0)
+           then (Call (enqTo (rqUpFrom oidx))(#e!MakeEnq@."enq_msg"); Retv)
+           else (If (#e!MakeEnq@."enq_type" == $1)
+                 then (Call (enqTo (rsUpFrom oidx))(#e!MakeEnq@."enq_msg"); Retv)
+                 else (LET msg <- #e!MakeEnq@."enq_msg";
+                      build_l1_down (#msg)%kami_expr);
+                Retv);
+          Retv)
+      }.
+
+    Definition build_msg_outs_li_async: Modules :=
+      MODULE {
+        Register enqRqN: MakeEnqK <- Default
+        with Register enqValidN: Bool <- Default
+        with Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
+          Read enqValid <- enqValidN;
+          Assert (!#enqValid);
+          Write enqValidN <- $$true;
+          Write enqRqN <- #e;
+          Retv
+        with Method (broadcastFn oidx)(e: Struct BroadcastToCs): Void :=
+          LET cinds <- #e!BroadcastToCs@."cs_inds";
+          LET msg <- #e!BroadcastToCs@."cs_msg";
+          build_broadcast_fix (#cinds)%kami_expr (#msg)%kami_expr
+                              hcfg_children_max_pred
+        with Rule "make_enq_rqUp"+o := enqRqUp
+        with Rule "make_enq_rsUp"+o := enqRsUp
+        with Rule "make_enq_down_to_child"+o := enqDownToChild
+      }.
+
+    Definition build_msg_outs_li: Modules :=
+      MODULE {
+        Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
+          (If (#e!MakeEnq@."enq_type" == $0)
+           then (Call (enqTo (rqUpFrom oidx))(#e!MakeEnq@."enq_msg"); Retv)
+           else (If (#e!MakeEnq@."enq_type" == $1)
+                 then (Call (enqTo (rsUpFrom oidx))(#e!MakeEnq@."enq_msg"); Retv)
+                 else (LET cidx <- #e!MakeEnq@."enq_ch_idx";
+                      LET msg <- #e!MakeEnq@."enq_msg";
+                      build_enq_child_fix (#cidx)%kami_expr (#msg)%kami_expr
+                                          hcfg_children_max_pred);
+                Retv);
+          Retv)
+        with Method (broadcastFn oidx)(e: Struct BroadcastToCs): Void :=
+          LET cinds <- #e!BroadcastToCs@."cs_inds";
+          LET msg <- #e!BroadcastToCs@."cs_msg";
+          build_broadcast_fix (#cinds)%kami_expr (#msg)%kami_expr
+                              hcfg_children_max_pred
+      }.
+
+    Definition build_msg_outs_mem: Modules :=
+      MODULE {
+        Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
+          LET msg <- #e!MakeEnq@."enq_msg";
+          Call (enqTo (downTo (oidx~>0)))(#msg);
+          Retv
+      }.
+
+  End MsgOuts.
 
   Definition compile_Object (dtr: Topology.DTree)
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})

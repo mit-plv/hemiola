@@ -319,27 +319,26 @@ Definition llMshrs oidx := mshrs oidx llLgULs llLgDLs.
 Definition kl1c (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW l1LgWay) dtr (existT _ _ (hl1 oidx)))
      ++ l1Cache oidx ++ l1Mshrs oidx
+     ++ build_msg_outs_l1 oidx
      ++ build_int_fifos oidx
-     ++ build_down_forward oidx
      ++ build_ext_fifos oidx)%kami.
 
 Definition kl2c (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW l2LgWay) dtr (existT _ _ (hli topo oidx)))
      ++ l2Cache oidx ++ l2Mshrs oidx
-     ++ build_int_fifos oidx
-     ++ build_broadcaster oidx)%kami.
+     ++ build_msg_outs_li oidx
+     ++ build_int_fifos oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
      ++ llCache oidx ++ llMshrs oidx
-     ++ build_int_fifos oidx
-     ++ build_broadcaster oidx)%kami.
+     ++ build_msg_outs_li oidx
+     ++ build_int_fifos oidx)%kami.
 
 Definition kmemc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW 1) dtr (existT _ _ (hmem topo oidx)))
-     ++ mesiCache oidx 10 1 1
-     ++ mshrs oidx 1 1
-     ++ build_broadcaster oidx)%kami.
+     ++ mesiCache oidx 10 1 1 ++ mshrs oidx 1 1
+     ++ build_msg_outs_mem oidx)%kami.
 
 Definition k: Modules :=
   ((kmemc 0)
