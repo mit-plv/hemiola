@@ -297,7 +297,11 @@ Section Compile.
          | Some None => (Assert !(#prl!RL@."rl_valid"); cont)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | true => (Assert !(#crsrl!RL@."rl_valid"); cont)
+           | true =>
+             (* No need to "request" a read for taking a response from a child;
+              * it always accepts the message and puts it to the proper downlock,
+              * without any state reads/writes. *)
+             cont
            | false => (Assert !(#crqrl!RL@."rl_valid"); cont)
            end
          end)%kami_action.
@@ -329,14 +333,9 @@ Section Compile.
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
-           | true => (Call msgIn <- (deqFromChild cmidx)();
-                     Write crsrln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
-                                                         "rl_cmidx" ::= compile_midx_to_cidx cmidx;
-                                                         "rl_msg" ::= #msgIn;
-                                                         "rl_line_valid" ::= $$false;
-                                                         "rl_line" ::= $$Default };
-                     Write rlcn: Bit 2 <- $1;
-                     compile_rule_request_read (#msgIn!KMsg@."addr")%kami_expr cont)
+           | true => cont (* nothing to do in case of taking a child response;
+                           * deq is even not performed here.
+                           * See [compile_rule_get_readlock_msg]. *)
            | false => (Call msgIn <- (deqFromChild cmidx)();
                       Write crqrln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
                                                           "rl_cmidx" ::= compile_midx_to_cidx cmidx;
@@ -415,11 +414,7 @@ Section Compile.
            end
          | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
-           | true => (Assert (#crsrl!RL@."rl_valid" && #crsrl!RL@."rl_line_valid");
-                     Assert (#crsrl!RL@."rl_cmidx" == compile_midx_to_cidx cmidx);
-                     LET i <- #crsrl!RL@."rl_line";
-                     LET ci <- compile_line_read _ i;
-                     cont ci)
+           | true => (LET fline <- $$Default; cont fline)
            | false => (Assert (#crqrl!RL@."rl_valid" && #crqrl!RL@."rl_line_valid");
                       Assert (#crqrl!RL@."rl_cmidx" == compile_midx_to_cidx cmidx);
                       LET i <- #crqrl!RL@."rl_line";
@@ -445,9 +440,9 @@ Section Compile.
                                                           "value" ::= $$Default };
                       cont msgIn)
            end
-         | Some (Some _) =>
+         | Some (Some cmidx) =>
            match imt.(imt_rqrs) with
-           | true => (LET msgIn <- #crsrl!RL@."rl_msg"; cont msgIn)
+           | true => (Call msgIn <- (deqFromChild cmidx)(); cont msgIn)
            | false => (LET msgIn <- #crqrl!RL@."rl_msg"; cont msgIn)
            end
          | Some None => (LET msgIn <- #prl!RL@."rl_msg"; cont msgIn)
@@ -602,7 +597,7 @@ Section Compile.
            end
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | true => (Write crsrln: Struct RL <- $$Default; cont)
+           | true => cont
            | false => (Write crqrln: Struct RL <- $$Default; cont)
            end
          | Some None => (Write prln: Struct RL <- $$Default; cont)
@@ -934,16 +929,8 @@ Section Compile.
       map (fun cidx => compile_rule_0_child_rq (rqUpFrom cidx))
           (Topology.subtreeChildrenIndsOf dtr oidx).
 
-    Definition compile_rule_0_child_rs (cmidx: IdxT) :=
-      compile_rule_0 (readlockIdx~>2~~cmidx)
-                     {| imt_rqrs := true; imt_from := Some (Some cmidx) |}.
-    Definition compile_rule_0_children_rs (dtr: Topology.DTree) :=
-      map (fun cidx => compile_rule_0_child_rs (rsUpFrom cidx))
-          (Topology.subtreeChildrenIndsOf dtr oidx).
-
     Definition compile_rule_0_release_rs :=
-      compile_rule_0 (readlockIdx~>3)
-                     {| imt_rqrs := true; imt_from := None |}.
+      compile_rule_0 (readlockIdx~>2) {| imt_rqrs := true; imt_from := None |}.
 
     Definition compile_rule_1: Attribute (Action Void) :=
       {| attrName := ruleNameI infoIdx;
@@ -1018,7 +1005,6 @@ Section Compile.
         :: compile_rule_0_parent
         :: compile_rule_0_release_rs
         :: (compile_rule_0_children_rq dtr)
-        ++ (compile_rule_0_children_rs dtr)
         ++ [compile_rule_1]
         ++ (map compile_rule_2 rules)
         ++ [compile_rule_3_silent; compile_rule_3_rs].
