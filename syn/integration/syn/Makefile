@@ -6,7 +6,8 @@ BSVFILES= Host.bsv
 CPPFILES= SoftwareHost.cpp
 
 CONNECTALFLAGS+= --mainclockperiod=16
-CONNECTALFLAGS+= --bscflags="-aggressive-conditions -p +:../ +RTS -K100M -RTS -steps-max-intervals 10000000"
+CONNECTALFLAGS+= --bscflags="-aggressive-conditions +RTS -K100M -RTS -steps-max-intervals 10000000"
+CONNECTALFLAGS+= --bsvpath=".."
 
 include $(CONNECTALDIR)/Makefile.connectal
 
