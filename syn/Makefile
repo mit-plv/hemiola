@@ -25,14 +25,14 @@ MESI_EXT_BSV_NAME ?= $(BSV_TOP_NAME).bsv
 msi_bsv: msi_comp
 	mv Target.ml* $(BSV_EXT)
 	$(MAKE) -C $(BSV_EXT)
-	cd $(BSV_EXT); ./Main.native -d -top $(BSV_TOP_NAME) $(MSI_EXT_BSV_NAME)
-	mv $(BSV_EXT)/$(MSI_EXT_BSV_NAME) .
+	cd $(BSV_EXT); ./Main.native -top $(BSV_TOP_NAME) $(MSI_EXT_BSV_NAME)
+	mv $(BSV_EXT)/$(MSI_EXT_BSV_NAME) ./integration/
 
 mesi_bsv: mesi_comp
 	mv Target.ml* $(BSV_EXT)
 	$(MAKE) -C $(BSV_EXT)
-	cd $(BSV_EXT); ./Main.native -d -top $(BSV_TOP_NAME) $(MESI_EXT_BSV_NAME)
-	mv $(BSV_EXT)/$(MESI_EXT_BSV_NAME) .
+	cd $(BSV_EXT); ./Main.native -top $(BSV_TOP_NAME) $(MESI_EXT_BSV_NAME)
+	mv $(BSV_EXT)/$(MESI_EXT_BSV_NAME) ./integration/
 
 clean:
 	$(MAKE) -f Makefile.coq clean || true
