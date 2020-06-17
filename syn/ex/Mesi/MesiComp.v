@@ -332,8 +332,8 @@ Definition kl2c (oidx: IdxT): Modules :=
 Definition kllc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
      ++ llCache oidx ++ llMshrs oidx
-     ++ build_msg_outs_li oidx
-     ++ build_int_fifos oidx)%kami.
+     ++ build_msg_outs_li oidx)%kami.
+(* ++ build_int_fifos oidx)%kami. *)
 
 Definition kmemc (oidx: IdxT): Modules :=
   ((compile_Object (H0 := MesiCompLineRW 1) dtr (existT _ _ (hmem topo oidx)))
@@ -341,8 +341,8 @@ Definition kmemc (oidx: IdxT): Modules :=
      ++ build_msg_outs_mem oidx)%kami.
 
 Definition k: Modules :=
-  ((kmemc 0)
-     ++ (kllc 0~>0)
+  (* ((kmemc 0) ++ *)
+  ((kllc 0~>0)
      ++ ((kl2c 0~>0~>0)
            ++ (kl1c 0~>0~>0~>0 ++
                     kl1c 0~>0~>0~>1 ++
