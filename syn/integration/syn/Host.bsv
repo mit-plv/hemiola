@@ -69,36 +69,50 @@ module mkHost#(HostIndication indication) (Host);
         if (rs.id == getRsId) indication.getRs0(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs0(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_1 if (init);
         let rs <- mem.mem_deq_rs_1 ();
         if (rs.id == getRsId) indication.getRs1(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs1(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_2 if (init);
         let rs <- mem.mem_deq_rs_2 ();
         if (rs.id == getRsId) indication.getRs2(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs2(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_3 if (init);
         let rs <- mem.mem_deq_rs_3 ();
         if (rs.id == getRsId) indication.getRs3(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs3(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_4 if (init);
         let rs <- mem.mem_deq_rs_4 ();
         if (rs.id == getRsId) indication.getRs4(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs4(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_5 if (init);
         let rs <- mem.mem_deq_rs_5 ();
         if (rs.id == getRsId) indication.getRs5(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs5(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_6 if (init);
         let rs <- mem.mem_deq_rs_6 ();
         if (rs.id == getRsId) indication.getRs6(False, rs.addr, rs.value);
         else if (rs.id == setRsId) indication.getRs6(True, rs.addr, rs.value);
     endrule
+
+    (* fire_when_enabled *)
     rule get_rs_7 if (init);
         let rs <- mem.mem_deq_rs_7 ();
         if (rs.id == getRsId) indication.getRs7(False, rs.addr, rs.value);
