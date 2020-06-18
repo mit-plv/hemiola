@@ -15,3 +15,4 @@ all: $(TARGET).bsv
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf $(TARGET) $(TARGET).so
