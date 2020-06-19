@@ -6419,143 +6419,160 @@ module mkModule133#(function Action putRq_infoRam_00_15(Struct22 _),
         let x_2 = (writeStage_00);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_00);
-        Struct18 x_4 = ((x_3)[(Bit#(3))'(3'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct18 x_5 = ((x_3)[(Bit#(3))'(3'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_00 <= (Bit#(3))'(3'h7);
-            Struct3 x_5 = (Struct3 {addr : (x_0).addr, info_hit :
+            Struct3 x_6 = (Struct3 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h1)));
+
+            writeLine_00 <= x_6;
             victims_00 <= update (x_3, (Bit#(3))'(3'h0), Struct18
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(3))'(3'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct18 x_6 = ((x_3)[(Bit#(3))'(3'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct18 x_7 = ((x_3)[(Bit#(3))'(3'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_00 <= (Bit#(3))'(3'h7);
-                Struct3 x_7 = (Struct3 {addr : (x_0).addr, info_hit :
+                Struct3 x_8 = (Struct3 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_00 <= x_8;
                 victims_00 <= update (x_3, (Bit#(3))'(3'h1), Struct18
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(3))'(3'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct18 x_8 = ((x_3)[(Bit#(3))'(3'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct18 x_9 = ((x_3)[(Bit#(3))'(3'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_00 <= (Bit#(3))'(3'h7);
-                    Struct3 x_9 = (Struct3 {addr : (x_0).addr, info_hit :
+                    Struct3 x_10 = (Struct3 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_00 <= x_10;
                     victims_00 <= update (x_3, (Bit#(3))'(3'h2), Struct18
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(3))'(3'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct18 x_10 = ((x_3)[(Bit#(3))'(3'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct18 x_11 = ((x_3)[(Bit#(3))'(3'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_00 <= (Bit#(3))'(3'h7);
-                        Struct3 x_11 = (Struct3 {addr : (x_0).addr, info_hit
+                        Struct3 x_12 = (Struct3 {addr : (x_0).addr, info_hit
                         : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_00 <= x_12;
                         victims_00 <= update (x_3, (Bit#(3))'(3'h3), Struct18
-                        {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(3))'(3'h3), victim_line : x_11});
+                        {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h3),
+                        victim_line : x_12});
 
                     end else begin
 
-                        Struct18 x_12 = ((x_3)[(Bit#(3))'(3'h4)]);
-                        if (((x_12).victim_valid) &&
-                        ((((x_12).victim_line).addr) == ((x_0).addr))) begin
+                        Struct18 x_13 = ((x_3)[(Bit#(3))'(3'h4)]);
+                        if (((x_13).victim_valid) &&
+                        ((((x_13).victim_line).addr) == ((x_0).addr))) begin
 
-                            writeStage_00 <= (Bit#(3))'(3'h7);
-                            Struct3 x_13 = (Struct3 {addr : (x_0).addr,
+                            Struct3 x_14 = (Struct3 {addr : (x_0).addr,
                             info_hit : (Bool)'(False), info_way :
                             (x_0).info_way, info_write : (x_0).info_write,
                             info : (x_0).info, value_write :
                             (x_0).value_write, value : (x_0).value});
 
+                            writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                            ((Bit#(3))'(3'h1)));
+                            writeLine_00 <= x_14;
                             victims_00 <= update (x_3, (Bit#(3))'(3'h4),
-                            Struct18 {victim_valid : (Bool)'(True),
-                            victim_idx : (Bit#(3))'(3'h4), victim_line :
-                            x_13});
+                            Struct18 {victim_valid : x_4, victim_idx :
+                            (Bit#(3))'(3'h4), victim_line : x_14});
 
                         end else begin
 
-                            Struct18 x_14 = ((x_3)[(Bit#(3))'(3'h5)]);
-                            if (((x_14).victim_valid) &&
-                            ((((x_14).victim_line).addr) == ((x_0).addr)))
+                            Struct18 x_15 = ((x_3)[(Bit#(3))'(3'h5)]);
+                            if (((x_15).victim_valid) &&
+                            ((((x_15).victim_line).addr) == ((x_0).addr)))
                             begin
 
-                                writeStage_00 <= (Bit#(3))'(3'h7);
-                                Struct3 x_15 = (Struct3 {addr : (x_0).addr,
+                                Struct3 x_16 = (Struct3 {addr : (x_0).addr,
                                 info_hit : (Bool)'(False), info_way :
                                 (x_0).info_way, info_write :
                                 (x_0).info_write, info : (x_0).info,
                                 value_write : (x_0).value_write, value :
                                 (x_0).value});
+                                writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                                ((Bit#(3))'(3'h1)));
+                                writeLine_00 <= x_16;
                                 victims_00 <= update (x_3, (Bit#(3))'(3'h5),
-                                Struct18 {victim_valid : (Bool)'(True),
-                                victim_idx : (Bit#(3))'(3'h5), victim_line :
-                                x_15});
+                                Struct18 {victim_valid : x_4, victim_idx :
+                                (Bit#(3))'(3'h5), victim_line : x_16});
 
                             end else begin
 
-                                Struct18 x_16 = ((x_3)[(Bit#(3))'(3'h6)]);
-                                if (((x_16).victim_valid) &&
-                                ((((x_16).victim_line).addr) ==
+                                Struct18 x_17 = ((x_3)[(Bit#(3))'(3'h6)]);
+                                if (((x_17).victim_valid) &&
+                                ((((x_17).victim_line).addr) ==
                                 ((x_0).addr))) begin
 
-                                    writeStage_00 <= (Bit#(3))'(3'h7);
-                                    Struct3 x_17 = (Struct3 {addr :
+                                    Struct3 x_18 = (Struct3 {addr :
                                     (x_0).addr, info_hit : (Bool)'(False),
                                     info_way : (x_0).info_way, info_write :
                                     (x_0).info_write, info : (x_0).info,
                                     value_write : (x_0).value_write, value :
                                     (x_0).value});
+                                    writeStage_00 <= (x_4 ?
+                                    ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h1)));
+
+                                    writeLine_00 <= x_18;
                                     victims_00 <= update (x_3,
                                     (Bit#(3))'(3'h6), Struct18 {victim_valid
-                                    : (Bool)'(True), victim_idx :
-                                    (Bit#(3))'(3'h6), victim_line : x_17});
+                                    : x_4, victim_idx : (Bit#(3))'(3'h6),
+                                    victim_line : x_18});
 
                                 end else begin
 
-                                    Struct18 x_18 = ((x_3)[(Bit#(3))'(3'h7)]);
+                                    Struct18 x_19 = ((x_3)[(Bit#(3))'(3'h7)]);
 
-                                    if (((x_18).victim_valid) &&
-                                    ((((x_18).victim_line).addr) ==
+                                    if (((x_19).victim_valid) &&
+                                    ((((x_19).victim_line).addr) ==
                                     ((x_0).addr))) begin
 
-                                        writeStage_00 <= (Bit#(3))'(3'h7);
-
-                                        Struct3 x_19 = (Struct3 {addr :
+                                        Struct3 x_20 = (Struct3 {addr :
                                         (x_0).addr, info_hit :
                                         (Bool)'(False), info_way :
                                         (x_0).info_way, info_write :
                                         (x_0).info_write, info : (x_0).info,
                                         value_write : (x_0).value_write,
                                         value : (x_0).value});
+                                        writeStage_00 <= (x_4 ?
+                                        ((Bit#(3))'(3'h7)) :
+                                        ((Bit#(3))'(3'h1)));
+                                        writeLine_00 <= x_20;
                                         victims_00 <= update (x_3,
                                         (Bit#(3))'(3'h7), Struct18
-                                        {victim_valid : (Bool)'(True),
-                                        victim_idx : (Bit#(3))'(3'h7),
-                                        victim_line : x_19});
+                                        {victim_valid : x_4, victim_idx :
+                                        (Bit#(3))'(3'h7), victim_line :
+                                        x_20});
 
                                     end else begin
 
@@ -7365,144 +7382,160 @@ module mkModule135#(function Action putRq_infoRam_000_7(Struct29 _),
         let x_2 = (writeStage_000);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_000);
-        Struct25 x_4 = ((x_3)[(Bit#(3))'(3'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct25 x_5 = ((x_3)[(Bit#(3))'(3'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_000 <= (Bit#(3))'(3'h7);
-            Struct24 x_5 = (Struct24 {addr : (x_0).addr, info_hit :
+            Struct24 x_6 = (Struct24 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_000 <= x_6;
             victims_000 <= update (x_3, (Bit#(3))'(3'h0), Struct25
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(3))'(3'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct25 x_6 = ((x_3)[(Bit#(3))'(3'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct25 x_7 = ((x_3)[(Bit#(3))'(3'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_000 <= (Bit#(3))'(3'h7);
-                Struct24 x_7 = (Struct24 {addr : (x_0).addr, info_hit :
+                Struct24 x_8 = (Struct24 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_000 <= x_8;
                 victims_000 <= update (x_3, (Bit#(3))'(3'h1), Struct25
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(3))'(3'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct25 x_8 = ((x_3)[(Bit#(3))'(3'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct25 x_9 = ((x_3)[(Bit#(3))'(3'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_000 <= (Bit#(3))'(3'h7);
-                    Struct24 x_9 = (Struct24 {addr : (x_0).addr, info_hit :
+                    Struct24 x_10 = (Struct24 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_000 <= x_10;
                     victims_000 <= update (x_3, (Bit#(3))'(3'h2), Struct25
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(3))'(3'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct25 x_10 = ((x_3)[(Bit#(3))'(3'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct25 x_11 = ((x_3)[(Bit#(3))'(3'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_000 <= (Bit#(3))'(3'h7);
-                        Struct24 x_11 = (Struct24 {addr : (x_0).addr,
+                        Struct24 x_12 = (Struct24 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_000 <= x_12;
                         victims_000 <= update (x_3, (Bit#(3))'(3'h3),
-                        Struct25 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(3))'(3'h3), victim_line : x_11});
+                        Struct25 {victim_valid : x_4, victim_idx :
+                        (Bit#(3))'(3'h3), victim_line : x_12});
 
                     end else begin
 
-                        Struct25 x_12 = ((x_3)[(Bit#(3))'(3'h4)]);
-                        if (((x_12).victim_valid) &&
-                        ((((x_12).victim_line).addr) == ((x_0).addr))) begin
+                        Struct25 x_13 = ((x_3)[(Bit#(3))'(3'h4)]);
+                        if (((x_13).victim_valid) &&
+                        ((((x_13).victim_line).addr) == ((x_0).addr))) begin
 
-                            writeStage_000 <= (Bit#(3))'(3'h7);
-                            Struct24 x_13 = (Struct24 {addr : (x_0).addr,
+                            Struct24 x_14 = (Struct24 {addr : (x_0).addr,
                             info_hit : (Bool)'(False), info_way :
                             (x_0).info_way, info_write : (x_0).info_write,
                             info : (x_0).info, value_write :
                             (x_0).value_write, value : (x_0).value});
 
+                            writeStage_000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                            ((Bit#(3))'(3'h1)));
+                            writeLine_000 <= x_14;
                             victims_000 <= update (x_3, (Bit#(3))'(3'h4),
-                            Struct25 {victim_valid : (Bool)'(True),
-                            victim_idx : (Bit#(3))'(3'h4), victim_line :
-                            x_13});
+                            Struct25 {victim_valid : x_4, victim_idx :
+                            (Bit#(3))'(3'h4), victim_line : x_14});
 
                         end else begin
 
-                            Struct25 x_14 = ((x_3)[(Bit#(3))'(3'h5)]);
-                            if (((x_14).victim_valid) &&
-                            ((((x_14).victim_line).addr) == ((x_0).addr)))
+                            Struct25 x_15 = ((x_3)[(Bit#(3))'(3'h5)]);
+                            if (((x_15).victim_valid) &&
+                            ((((x_15).victim_line).addr) == ((x_0).addr)))
                             begin
 
-                                writeStage_000 <= (Bit#(3))'(3'h7);
-                                Struct24 x_15 = (Struct24 {addr : (x_0).addr,
+                                Struct24 x_16 = (Struct24 {addr : (x_0).addr,
                                 info_hit : (Bool)'(False), info_way :
                                 (x_0).info_way, info_write :
                                 (x_0).info_write, info : (x_0).info,
                                 value_write : (x_0).value_write, value :
                                 (x_0).value});
+                                writeStage_000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                                ((Bit#(3))'(3'h1)));
+                                writeLine_000 <= x_16;
                                 victims_000 <= update (x_3, (Bit#(3))'(3'h5),
-                                Struct25 {victim_valid : (Bool)'(True),
-                                victim_idx : (Bit#(3))'(3'h5), victim_line :
-                                x_15});
+                                Struct25 {victim_valid : x_4, victim_idx :
+                                (Bit#(3))'(3'h5), victim_line : x_16});
 
                             end else begin
 
-                                Struct25 x_16 = ((x_3)[(Bit#(3))'(3'h6)]);
-                                if (((x_16).victim_valid) &&
-                                ((((x_16).victim_line).addr) ==
+                                Struct25 x_17 = ((x_3)[(Bit#(3))'(3'h6)]);
+                                if (((x_17).victim_valid) &&
+                                ((((x_17).victim_line).addr) ==
                                 ((x_0).addr))) begin
 
-                                    writeStage_000 <= (Bit#(3))'(3'h7);
-
-                                    Struct24 x_17 = (Struct24 {addr :
+                                    Struct24 x_18 = (Struct24 {addr :
                                     (x_0).addr, info_hit : (Bool)'(False),
                                     info_way : (x_0).info_way, info_write :
                                     (x_0).info_write, info : (x_0).info,
                                     value_write : (x_0).value_write, value :
                                     (x_0).value});
+                                    writeStage_000 <= (x_4 ?
+                                    ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h1)));
+
+                                    writeLine_000 <= x_18;
                                     victims_000 <= update (x_3,
                                     (Bit#(3))'(3'h6), Struct25 {victim_valid
-                                    : (Bool)'(True), victim_idx :
-                                    (Bit#(3))'(3'h6), victim_line : x_17});
+                                    : x_4, victim_idx : (Bit#(3))'(3'h6),
+                                    victim_line : x_18});
 
                                 end else begin
 
-                                    Struct25 x_18 = ((x_3)[(Bit#(3))'(3'h7)]);
+                                    Struct25 x_19 = ((x_3)[(Bit#(3))'(3'h7)]);
 
-                                    if (((x_18).victim_valid) &&
-                                    ((((x_18).victim_line).addr) ==
+                                    if (((x_19).victim_valid) &&
+                                    ((((x_19).victim_line).addr) ==
                                     ((x_0).addr))) begin
 
-                                        writeStage_000 <= (Bit#(3))'(3'h7);
-
-                                        Struct24 x_19 = (Struct24 {addr :
+                                        Struct24 x_20 = (Struct24 {addr :
                                         (x_0).addr, info_hit :
                                         (Bool)'(False), info_way :
                                         (x_0).info_way, info_write :
                                         (x_0).info_write, info : (x_0).info,
                                         value_write : (x_0).value_write,
                                         value : (x_0).value});
+                                        writeStage_000 <= (x_4 ?
+                                        ((Bit#(3))'(3'h7)) :
+                                        ((Bit#(3))'(3'h1)));
+                                        writeLine_000 <= x_20;
                                         victims_000 <= update (x_3,
                                         (Bit#(3))'(3'h7), Struct25
-                                        {victim_valid : (Bool)'(True),
-                                        victim_idx : (Bit#(3))'(3'h7),
-                                        victim_line : x_19});
+                                        {victim_valid : x_4, victim_idx :
+                                        (Bit#(3))'(3'h7), victim_line :
+                                        x_20});
 
                                     end else begin
 
@@ -8139,64 +8172,74 @@ module mkModule137#(function Action putRq_infoRam_0000_3(Struct36 _),
         let x_2 = (writeStage_0000);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0000);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0000 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0000 <= x_6;
             victims_0000 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0000 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0000 <= x_8;
                 victims_0000 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0000 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0000 <= x_10;
                     victims_0000 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0000 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0000 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0000 <= x_12;
                         victims_0000 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -8689,64 +8732,74 @@ module mkModule139#(function Action putRq_infoRam_0001_3(Struct36 _),
         let x_2 = (writeStage_0001);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0001);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0001 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0001 <= x_6;
             victims_0001 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0001 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0001 <= x_8;
                 victims_0001 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0001 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0001 <= x_10;
                     victims_0001 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0001 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0001 <= x_12;
                         victims_0001 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -9239,64 +9292,74 @@ module mkModule141#(function Action putRq_infoRam_0002_3(Struct36 _),
         let x_2 = (writeStage_0002);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0002);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0002 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0002 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0002 <= x_6;
             victims_0002 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0002 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0002 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0002 <= x_8;
                 victims_0002 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0002 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0002 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0002 <= x_10;
                     victims_0002 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0002 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0002 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0002 <= x_12;
                         victims_0002 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -9789,64 +9852,74 @@ module mkModule143#(function Action putRq_infoRam_0003_3(Struct36 _),
         let x_2 = (writeStage_0003);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0003);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0003 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0003 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0003 <= x_6;
             victims_0003 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0003 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0003 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0003 <= x_8;
                 victims_0003 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0003 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0003 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0003 <= x_10;
                     victims_0003 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0003 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0003 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0003 <= x_12;
                         victims_0003 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -10512,144 +10585,160 @@ module mkModule145#(function Action putRq_infoRam_001_7(Struct29 _),
         let x_2 = (writeStage_001);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_001);
-        Struct25 x_4 = ((x_3)[(Bit#(3))'(3'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct25 x_5 = ((x_3)[(Bit#(3))'(3'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_001 <= (Bit#(3))'(3'h7);
-            Struct24 x_5 = (Struct24 {addr : (x_0).addr, info_hit :
+            Struct24 x_6 = (Struct24 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_001 <= x_6;
             victims_001 <= update (x_3, (Bit#(3))'(3'h0), Struct25
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(3))'(3'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct25 x_6 = ((x_3)[(Bit#(3))'(3'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct25 x_7 = ((x_3)[(Bit#(3))'(3'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_001 <= (Bit#(3))'(3'h7);
-                Struct24 x_7 = (Struct24 {addr : (x_0).addr, info_hit :
+                Struct24 x_8 = (Struct24 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_001 <= x_8;
                 victims_001 <= update (x_3, (Bit#(3))'(3'h1), Struct25
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(3))'(3'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct25 x_8 = ((x_3)[(Bit#(3))'(3'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct25 x_9 = ((x_3)[(Bit#(3))'(3'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_001 <= (Bit#(3))'(3'h7);
-                    Struct24 x_9 = (Struct24 {addr : (x_0).addr, info_hit :
+                    Struct24 x_10 = (Struct24 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_001 <= x_10;
                     victims_001 <= update (x_3, (Bit#(3))'(3'h2), Struct25
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(3))'(3'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct25 x_10 = ((x_3)[(Bit#(3))'(3'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct25 x_11 = ((x_3)[(Bit#(3))'(3'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_001 <= (Bit#(3))'(3'h7);
-                        Struct24 x_11 = (Struct24 {addr : (x_0).addr,
+                        Struct24 x_12 = (Struct24 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_001 <= x_12;
                         victims_001 <= update (x_3, (Bit#(3))'(3'h3),
-                        Struct25 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(3))'(3'h3), victim_line : x_11});
+                        Struct25 {victim_valid : x_4, victim_idx :
+                        (Bit#(3))'(3'h3), victim_line : x_12});
 
                     end else begin
 
-                        Struct25 x_12 = ((x_3)[(Bit#(3))'(3'h4)]);
-                        if (((x_12).victim_valid) &&
-                        ((((x_12).victim_line).addr) == ((x_0).addr))) begin
+                        Struct25 x_13 = ((x_3)[(Bit#(3))'(3'h4)]);
+                        if (((x_13).victim_valid) &&
+                        ((((x_13).victim_line).addr) == ((x_0).addr))) begin
 
-                            writeStage_001 <= (Bit#(3))'(3'h7);
-                            Struct24 x_13 = (Struct24 {addr : (x_0).addr,
+                            Struct24 x_14 = (Struct24 {addr : (x_0).addr,
                             info_hit : (Bool)'(False), info_way :
                             (x_0).info_way, info_write : (x_0).info_write,
                             info : (x_0).info, value_write :
                             (x_0).value_write, value : (x_0).value});
 
+                            writeStage_001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                            ((Bit#(3))'(3'h1)));
+                            writeLine_001 <= x_14;
                             victims_001 <= update (x_3, (Bit#(3))'(3'h4),
-                            Struct25 {victim_valid : (Bool)'(True),
-                            victim_idx : (Bit#(3))'(3'h4), victim_line :
-                            x_13});
+                            Struct25 {victim_valid : x_4, victim_idx :
+                            (Bit#(3))'(3'h4), victim_line : x_14});
 
                         end else begin
 
-                            Struct25 x_14 = ((x_3)[(Bit#(3))'(3'h5)]);
-                            if (((x_14).victim_valid) &&
-                            ((((x_14).victim_line).addr) == ((x_0).addr)))
+                            Struct25 x_15 = ((x_3)[(Bit#(3))'(3'h5)]);
+                            if (((x_15).victim_valid) &&
+                            ((((x_15).victim_line).addr) == ((x_0).addr)))
                             begin
 
-                                writeStage_001 <= (Bit#(3))'(3'h7);
-                                Struct24 x_15 = (Struct24 {addr : (x_0).addr,
+                                Struct24 x_16 = (Struct24 {addr : (x_0).addr,
                                 info_hit : (Bool)'(False), info_way :
                                 (x_0).info_way, info_write :
                                 (x_0).info_write, info : (x_0).info,
                                 value_write : (x_0).value_write, value :
                                 (x_0).value});
+                                writeStage_001 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                                ((Bit#(3))'(3'h1)));
+                                writeLine_001 <= x_16;
                                 victims_001 <= update (x_3, (Bit#(3))'(3'h5),
-                                Struct25 {victim_valid : (Bool)'(True),
-                                victim_idx : (Bit#(3))'(3'h5), victim_line :
-                                x_15});
+                                Struct25 {victim_valid : x_4, victim_idx :
+                                (Bit#(3))'(3'h5), victim_line : x_16});
 
                             end else begin
 
-                                Struct25 x_16 = ((x_3)[(Bit#(3))'(3'h6)]);
-                                if (((x_16).victim_valid) &&
-                                ((((x_16).victim_line).addr) ==
+                                Struct25 x_17 = ((x_3)[(Bit#(3))'(3'h6)]);
+                                if (((x_17).victim_valid) &&
+                                ((((x_17).victim_line).addr) ==
                                 ((x_0).addr))) begin
 
-                                    writeStage_001 <= (Bit#(3))'(3'h7);
-
-                                    Struct24 x_17 = (Struct24 {addr :
+                                    Struct24 x_18 = (Struct24 {addr :
                                     (x_0).addr, info_hit : (Bool)'(False),
                                     info_way : (x_0).info_way, info_write :
                                     (x_0).info_write, info : (x_0).info,
                                     value_write : (x_0).value_write, value :
                                     (x_0).value});
+                                    writeStage_001 <= (x_4 ?
+                                    ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h1)));
+
+                                    writeLine_001 <= x_18;
                                     victims_001 <= update (x_3,
                                     (Bit#(3))'(3'h6), Struct25 {victim_valid
-                                    : (Bool)'(True), victim_idx :
-                                    (Bit#(3))'(3'h6), victim_line : x_17});
+                                    : x_4, victim_idx : (Bit#(3))'(3'h6),
+                                    victim_line : x_18});
 
                                 end else begin
 
-                                    Struct25 x_18 = ((x_3)[(Bit#(3))'(3'h7)]);
+                                    Struct25 x_19 = ((x_3)[(Bit#(3))'(3'h7)]);
 
-                                    if (((x_18).victim_valid) &&
-                                    ((((x_18).victim_line).addr) ==
+                                    if (((x_19).victim_valid) &&
+                                    ((((x_19).victim_line).addr) ==
                                     ((x_0).addr))) begin
 
-                                        writeStage_001 <= (Bit#(3))'(3'h7);
-
-                                        Struct24 x_19 = (Struct24 {addr :
+                                        Struct24 x_20 = (Struct24 {addr :
                                         (x_0).addr, info_hit :
                                         (Bool)'(False), info_way :
                                         (x_0).info_way, info_write :
                                         (x_0).info_write, info : (x_0).info,
                                         value_write : (x_0).value_write,
                                         value : (x_0).value});
+                                        writeStage_001 <= (x_4 ?
+                                        ((Bit#(3))'(3'h7)) :
+                                        ((Bit#(3))'(3'h1)));
+                                        writeLine_001 <= x_20;
                                         victims_001 <= update (x_3,
                                         (Bit#(3))'(3'h7), Struct25
-                                        {victim_valid : (Bool)'(True),
-                                        victim_idx : (Bit#(3))'(3'h7),
-                                        victim_line : x_19});
+                                        {victim_valid : x_4, victim_idx :
+                                        (Bit#(3))'(3'h7), victim_line :
+                                        x_20});
 
                                     end else begin
 
@@ -11286,64 +11375,74 @@ module mkModule147#(function Action putRq_infoRam_0010_3(Struct36 _),
         let x_2 = (writeStage_0010);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0010);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0010 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0010 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0010 <= x_6;
             victims_0010 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0010 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0010 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0010 <= x_8;
                 victims_0010 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0010 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0010 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0010 <= x_10;
                     victims_0010 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0010 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0010 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0010 <= x_12;
                         victims_0010 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -11836,64 +11935,74 @@ module mkModule149#(function Action putRq_infoRam_0011_3(Struct36 _),
         let x_2 = (writeStage_0011);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0011);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0011 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0011 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0011 <= x_6;
             victims_0011 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0011 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0011 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0011 <= x_8;
                 victims_0011 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0011 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0011 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0011 <= x_10;
                     victims_0011 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0011 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0011 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0011 <= x_12;
                         victims_0011 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -12386,64 +12495,74 @@ module mkModule151#(function Action putRq_infoRam_0012_3(Struct36 _),
         let x_2 = (writeStage_0012);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0012);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0012 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0012 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0012 <= x_6;
             victims_0012 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0012 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0012 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0012 <= x_8;
                 victims_0012 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0012 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0012 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0012 <= x_10;
                     victims_0012 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0012 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0012 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0012 <= x_12;
                         victims_0012 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 
@@ -12936,64 +13055,74 @@ module mkModule153#(function Action putRq_infoRam_0013_3(Struct36 _),
         let x_2 = (writeStage_0013);
         when ((x_2) == ((Bit#(3))'(3'h0)), noAction);
         let x_3 = (victims_0013);
-        Struct32 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
-        if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
+        Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
+
+        Struct32 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
+        if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
-            writeStage_0013 <= (Bit#(3))'(3'h7);
-            Struct31 x_5 = (Struct31 {addr : (x_0).addr, info_hit :
+            Struct31 x_6 = (Struct31 {addr : (x_0).addr, info_hit :
             (Bool)'(False), info_way : (x_0).info_way, info_write :
             (x_0).info_write, info : (x_0).info, value_write :
             (x_0).value_write, value : (x_0).value});
+            writeStage_0013 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+            ((Bit#(3))'(3'h1)));
+            writeLine_0013 <= x_6;
             victims_0013 <= update (x_3, (Bit#(2))'(2'h0), Struct32
-            {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h0),
-            victim_line : x_5});
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
+            x_6});
 
         end else begin
 
-            Struct32 x_6 = ((x_3)[(Bit#(2))'(2'h1)]);
-            if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
+            Struct32 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
+            if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
-                writeStage_0013 <= (Bit#(3))'(3'h7);
-                Struct31 x_7 = (Struct31 {addr : (x_0).addr, info_hit :
+                Struct31 x_8 = (Struct31 {addr : (x_0).addr, info_hit :
                 (Bool)'(False), info_way : (x_0).info_way, info_write :
                 (x_0).info_write, info : (x_0).info, value_write :
                 (x_0).value_write, value : (x_0).value});
+                writeStage_0013 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                ((Bit#(3))'(3'h1)));
+                writeLine_0013 <= x_8;
                 victims_0013 <= update (x_3, (Bit#(2))'(2'h1), Struct32
-                {victim_valid : (Bool)'(True), victim_idx : (Bit#(2))'(2'h1),
-                victim_line : x_7});
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
+                victim_line : x_8});
 
             end else begin
 
-                Struct32 x_8 = ((x_3)[(Bit#(2))'(2'h2)]);
-                if (((x_8).victim_valid) && ((((x_8).victim_line).addr) ==
+                Struct32 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
+                if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
-                    writeStage_0013 <= (Bit#(3))'(3'h7);
-                    Struct31 x_9 = (Struct31 {addr : (x_0).addr, info_hit :
+                    Struct31 x_10 = (Struct31 {addr : (x_0).addr, info_hit :
                     (Bool)'(False), info_way : (x_0).info_way, info_write :
                     (x_0).info_write, info : (x_0).info, value_write :
                     (x_0).value_write, value : (x_0).value});
+                    writeStage_0013 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                    ((Bit#(3))'(3'h1)));
+                    writeLine_0013 <= x_10;
                     victims_0013 <= update (x_3, (Bit#(2))'(2'h2), Struct32
-                    {victim_valid : (Bool)'(True), victim_idx :
-                    (Bit#(2))'(2'h2), victim_line : x_9});
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
+                    victim_line : x_10});
 
                 end else begin
 
-                    Struct32 x_10 = ((x_3)[(Bit#(2))'(2'h3)]);
-                    if (((x_10).victim_valid) && ((((x_10).victim_line).addr)
+                    Struct32 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
+                    if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
-                        writeStage_0013 <= (Bit#(3))'(3'h7);
-                        Struct31 x_11 = (Struct31 {addr : (x_0).addr,
+                        Struct31 x_12 = (Struct31 {addr : (x_0).addr,
                         info_hit : (Bool)'(False), info_way : (x_0).info_way,
                         info_write : (x_0).info_write, info : (x_0).info,
                         value_write : (x_0).value_write, value :
                         (x_0).value});
+                        writeStage_0013 <= (x_4 ? ((Bit#(3))'(3'h7)) :
+                        ((Bit#(3))'(3'h1)));
+                        writeLine_0013 <= x_12;
                         victims_0013 <= update (x_3, (Bit#(2))'(2'h3),
-                        Struct32 {victim_valid : (Bool)'(True), victim_idx :
-                        (Bit#(2))'(2'h3), victim_line : x_11});
+                        Struct32 {victim_valid : x_4, victim_idx :
+                        (Bit#(2))'(2'h3), victim_line : x_12});
 
                     end else begin
 

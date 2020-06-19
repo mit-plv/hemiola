@@ -2,6 +2,7 @@ import Vector::*;
 import FIFO::*;
 import FIFOF::*;
 import RWBramCore::*;
+import Assert::*;
 
 import CC::*;
 import CCTypes::*;
@@ -36,6 +37,8 @@ module mkMemBankBram(MemBank);
     rule mem_read_rq (rqs.notEmpty && rqs.first.id == readRqId);
         rqs.deq();
         let raddr = rqs.first.addr;
+        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+                      "Address out-of-bound exception in [mem_read_rq]");
         rdAddr <= raddr;
         MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         bram.rdReq(baddr);
@@ -52,7 +55,10 @@ module mkMemBankBram(MemBank);
     rule mem_write (rqs.notEmpty && rqs.first.id == writeRqId);
         // no need to touch memory, just return the response
         rqs.deq();
-        CCMsg rs = CCMsg {id: writeRsId, type_: True, addr: rqs.first.addr, value: 0};
+        let raddr = rqs.first.addr;
+        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+                      "Address out-of-bound exception in [mem_write]");
+        CCMsg rs = CCMsg {id: writeRsId, type_: True, addr: raddr, value: 0};
         rss.enq(rs);
     endrule
 
@@ -60,7 +66,10 @@ module mkMemBankBram(MemBank);
     rule mem_inv (rqs.notEmpty && rqs.first.id == invRqId);
         // no need to touch memory, just return the response
         rqs.deq();
-        CCMsg rs = CCMsg {id: invRsId, type_: True, addr: rqs.first.addr, value: 0};
+        let raddr = rqs.first.addr;
+        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+                      "Address out-of-bound exception in [mem_inv]");
+        CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: 0};
         rss.enq(rs);
     endrule
 
@@ -68,6 +77,8 @@ module mkMemBankBram(MemBank);
     rule mem_wb (rqs.notEmpty && rqs.first.id == invWRqId);
         rqs.deq();
         let raddr = rqs.first.addr;
+        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+                      "Address out-of-bound exception in [mem_wb]");
         MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         CCValue bval = rqs.first.value;
         bram.wrReq(baddr, bval);

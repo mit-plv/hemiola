@@ -6,22 +6,23 @@ import Randomizable::*;
 
 import CC::*;
 import CCWrapper::*;
+import MemBank::*;
 
 typedef 8 L1Num;
+typedef MemBramAddrSz BAddrSz;
 
 (* synthesize *)
 module mkTop(Empty);
     CC mem <- mkCCWrapper ();
     Reg#(Bool) memInit <- mkReg(False);
     Vector#(L1Num, Randomize#(int)) rq_type_rand <- replicateM(mkConstrainedRandomizer(0, 1));
-    Randomize#(Bit#(10)) rq_index_rand <- mkGenericRandomizer;
-    Randomize#(Bit#(1)) rq_tag_rand <- mkGenericRandomizer;
+    Randomize#(Bit#(BAddrSz)) rq_baddr_rand <- mkGenericRandomizer;
     Vector#(L1Num, Reg#(Bool)) rq_type_seed <- replicateM(mkReg(False));
     Reg#(Bit#(64)) rq_addr <- mkReg(0);
     Reg#(Bit#(64)) rq_data <- mkReg(0);
 
-    function Bit#(64) getAddr (Bit#(10) index, Bit#(1) tag);
-        Bit#(64) addr = zeroExtend({tag, index, 3'b000});
+    function Bit#(64) getAddr (Bit#(BAddrSz) baddr);
+        Bit#(64) addr = zeroExtend({baddr, 3'b000});
         return addr;
     endfunction
 
@@ -33,8 +34,7 @@ module mkTop(Empty);
         for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
             rq_type_rand[i].cntrl.init();
         end
-        rq_index_rand.cntrl.init();
-        rq_tag_rand.cntrl.init();
+        rq_baddr_rand.cntrl.init();
     endrule
     rule rq_type_seed_toggle;
         for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
@@ -43,9 +43,8 @@ module mkTop(Empty);
         end
     endrule
     rule rq_addr_toggle;
-        let index <- rq_index_rand.next();
-        let tag <- rq_tag_rand.next();
-        let addr = getAddr(index, tag);
+        let baddr <- rq_baddr_rand.next();
+        let addr = getAddr(baddr);
         rq_addr <= addr;
     endrule
     rule rq_data_inc;

@@ -773,18 +773,25 @@ Section Cache.
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
 
+        (* When writing to a victim which is not evicted yet, need to check
+         * if the new victim is still evictable (by checking [evictF]).
+         * If so, it's fine to overwrite the victim with the new value.
+         * Otherwise, remove the victim (consider it released) and perform an
+         * ordinary write. *)
         Read victims <- victimsN;
+        LET evictable <- evictF (#line!CacheLine@."info");
         victimIterA
           (#victims)%kami_expr (#line!CacheLine@."addr")%kami_expr
           (fun vidx victim =>
-             (Write writeStageN <- wsRsReady;
-             LET mline <- updStruct (ls:= CacheLine) (#line)
-                                    (CacheLine !! "info_hit") ($$false);
-             (* update the victim line *)
+             (LET mline <- updStruct (ls:= CacheLine) (#line)
+                                     (CacheLine !! "info_hit") ($$false);
+             Write writeStageN <- (IF #evictable then wsRsReady else wsRqAcc);
+             Write writeLineN <- #mline; (* meaningless when evictable *)
              Write victimsN <-
-             #victims@[vidx <- STRUCT { "victim_valid" ::= $$true;
+             #victims@[vidx <- STRUCT { "victim_valid" ::= #evictable;
                                         "victim_idx" ::= vidx;
-                                        "victim_line" ::= #mline }];
+                                        "victim_line" ::=
+                                          #mline (* meaningless when not evictable *) }];
              Retv))%kami_action
           (Write writeStageN <- wsRqAcc;
           Write writeLineN <- #line;
