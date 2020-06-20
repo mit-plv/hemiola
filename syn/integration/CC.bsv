@@ -48261,7 +48261,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
 
         llInitIndex <= llInitIndex + 1;
         if (llInitIndex == 10'b1111111111) begin
-            $display ("-- ll: initialization completed");
             llInitDone <= True;
         end
     endrule
@@ -48288,7 +48287,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
 
         l2InitIndex0 <= l2InitIndex0 + 1;
         if (l2InitIndex0 == 8'b11111111) begin
-            $display ("-- l2_0: initialization completed");
             l2InitDone0 <= True;
         end
     endrule
@@ -48305,7 +48303,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
 
         l2InitIndex1 <= l2InitIndex1 + 1;
         if (l2InitIndex1 == 8'b11111111) begin
-            $display ("-- l2_1: initialization completed");
             l2InitDone1 <= True;
         end
     endrule
@@ -48327,7 +48324,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m35.putRq_infoRam_0000_0 (l1DefaultLine(0, l1InitIndex0));
         l1InitIndex0 <= l1InitIndex0 + 1;
         if (l1InitIndex0 == 6'b111111) begin
-            $display ("-- l1_0: initialization completed");
             l1InitDone0 <= True;
         end
     endrule
@@ -48339,7 +48335,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m46.putRq_infoRam_0001_0 (l1DefaultLine(0, l1InitIndex1));
         l1InitIndex1 <= l1InitIndex1 + 1;
         if (l1InitIndex1 == 6'b111111) begin
-            $display ("-- l1_1: initialization completed");
             l1InitDone1 <= True;
         end
     endrule
@@ -48351,7 +48346,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m57.putRq_infoRam_0002_0 (l1DefaultLine(0, l1InitIndex2));
         l1InitIndex2 <= l1InitIndex1 + 1;
         if (l1InitIndex2 == 6'b111111) begin
-            $display ("-- l1_2: initialization completed");
             l1InitDone2 <= True;
         end
     endrule
@@ -48363,7 +48357,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m68.putRq_infoRam_0003_0 (l1DefaultLine(0, l1InitIndex3));
         l1InitIndex3 <= l1InitIndex1 + 1;
         if (l1InitIndex3 == 6'b111111) begin
-            $display ("-- l1_3: initialization completed");
             l1InitDone3 <= True;
         end
     endrule
@@ -48375,7 +48368,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m92.putRq_infoRam_0010_0 (l1DefaultLine(0, l1InitIndex4));
         l1InitIndex4 <= l1InitIndex4 + 1;
         if (l1InitIndex4 == 6'b111111) begin
-            $display ("-- l1_4: initialization completed");
             l1InitDone4 <= True;
         end
     endrule
@@ -48387,7 +48379,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m103.putRq_infoRam_0011_0 (l1DefaultLine(0, l1InitIndex5));
         l1InitIndex5 <= l1InitIndex5 + 1;
         if (l1InitIndex5 == 6'b111111) begin
-            $display ("-- l1_5: initialization completed");
             l1InitDone5 <= True;
         end
     endrule
@@ -48399,7 +48390,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m114.putRq_infoRam_0012_0 (l1DefaultLine(0, l1InitIndex6));
         l1InitIndex6 <= l1InitIndex6 + 1;
         if (l1InitIndex6 == 6'b111111) begin
-            $display ("-- l1_6: initialization completed");
             l1InitDone6 <= True;
         end
     endrule
@@ -48411,7 +48401,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m125.putRq_infoRam_0013_0 (l1DefaultLine(0, l1InitIndex7));
         l1InitIndex7 <= l1InitIndex7 + 1;
         if (l1InitIndex7 == 6'b111111) begin
-            $display ("-- l1_7: initialization completed");
             l1InitDone7 <= True;
         end
     endrule
@@ -48420,7 +48409,6 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
                     l2InitDone0 && l2InitDone1 &&
                     l1InitDone0 && l1InitDone1 && l1InitDone2 && l1InitDone3 &&
                     l1InitDone4 && l1InitDone5 && l1InitDone6 && l1InitDone7);
-        $display ("-- ALL: initialization completed");
         init <= True;
     endrule
 

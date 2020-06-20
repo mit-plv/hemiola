@@ -30,8 +30,11 @@ int main(int argc, const char **argv) {
   HostRequestProxy* hostRequestProxy = new HostRequestProxy(IfcNames_HostRequestS2H);
 
   // Wait for some seconds from connectal to be ready
-  usleep(3 * 1000);
-  hostRequestProxy->start();
+  uint32_t maxCycle;
+  printf ("Set the number of cycles: ");
+  int s = scanf ("%u",&maxCycle); // to avoid [-Werror=unused-result]
+  (void)s; // to avoid [-Werror=unused-variable]
+  hostRequestProxy->start(maxCycle);
 
   while (!toHostIndication.isDone()) { }
 

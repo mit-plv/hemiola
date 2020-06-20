@@ -18,7 +18,7 @@ interface HostIndication;
 endinterface
 
 interface HostRequest;
-    method Action start(CycleCnt maxCycle);
+    method Action start(Bit#(32) maxCycle);
 endinterface
 
 ////////// Connectal interfaces end
@@ -28,18 +28,21 @@ interface Host;
 endinterface
 
 module mkHost#(HostIndication indication) (Host);
-    CC mem <- mkCCWrapper();
+    CC mem <- mkCCBramMem();
     CCTest tester <- mkCCTestRandom(mem);
-    Reg#(Bool) ended <- mkReg(False)
+    Reg#(Bool) started <- mkReg(False);
+    Reg#(Bool) ended <- mkReg(False);
 
-    rule check_end (tester.isEnd && !ended);
+    rule check_end (started && tester.isEnd && !ended);
         let n = tester.getThroughput;
         indication.finish(n);
         ended <= True;
     endrule
 
     interface HostRequest request;
-        method start = tester.start;
-        method getThroughput = tester.getThroughput;
+        method Action start(Bit#(32) maxCycle);
+	    tester.start(maxCycle);
+	    started <= True;
+	endmethod
     endinterface
 endmodule
