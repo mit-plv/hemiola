@@ -5,37 +5,23 @@
 #include "HostRequest.h"
 #include "GeneratedTypes.h"
 
-#include "Tests.h"
-
 class HostIndication : public HostIndicationWrapper
 {
 public:
-  virtual void getRs0(int write, uint64_t a, uint64_t v) {
-    printf("resp 0 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs1(int write, uint64_t a, uint64_t v) {
-    printf("resp 1 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs2(int write, uint64_t a, uint64_t v) {
-    printf("resp 2 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs3(int write, uint64_t a, uint64_t v) {
-    printf("resp 3 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs4(int write, uint64_t a, uint64_t v) {
-    printf("resp 4 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs5(int write, uint64_t a, uint64_t v) {
-    printf("resp 5 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs6(int write, uint64_t a, uint64_t v) {
-    printf("resp 6 %d %lx %lx\n", write, a, v);
-  }
-  virtual void getRs7(int write, uint64_t a, uint64_t v) {
-    printf("resp 7 %d %lx %lx\n", write, a, v);
+  virtual void finish(uint32_t numResps) {
+    printf("Test done, #responses: %d\n", numResps);
+    done = true;
   }
 
-  HostIndication(unsigned int id) : HostIndicationWrapper(id) {}
+  bool isDone() {
+    return done;
+  }
+
+  HostIndication(unsigned int id)
+    : HostIndicationWrapper(id), done(false) {}
+
+private:
+  bool done;
 };
 
 int main(int argc, const char **argv) {
@@ -47,9 +33,7 @@ int main(int argc, const char **argv) {
   usleep(3 * 1000);
   hostRequestProxy->start();
 
-  CCTest* test = new RandomAddrRWTest(hostRequestProxy, 0x1000);
-  test->init();
-  while (1) test->loop();
+  while (!toHostIndication.isDone()) { }
 
   return 0;
 }

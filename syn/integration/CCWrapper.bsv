@@ -25,12 +25,12 @@ module mkIgnoreDeq(IgnoreDeq#(CCMsg));
     endmethod
 endmodule
 
+// CC + BRAM memory
 (* synthesize *)
-module mkCCWrapper(CC);
+module mkCCBramMem(CC);
     MemBank mb <- mkMemBankBram();
     IgnoreEnq#(CCMsg) ige <- mkIgnoreEnq();
     IgnoreDeq#(CCMsg) igd <- mkIgnoreDeq();
     CC mem <- mkCC(mb.getMemRs, ige.ignore_enq, ige.ignore_enq, ige.ignore_enq, mb.putMemRq);
     return mem;
 endmodule
-
