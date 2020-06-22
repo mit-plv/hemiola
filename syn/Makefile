@@ -9,7 +9,8 @@ Makefile.coq: Makefile $(VS)
 	$(COQBIN)coq_makefile -f _CoqProject $(VS) -o Makefile.coq
 
 MSI_EXT_VO=ex/Msi/MsiExt.vo
-MESI_EXT_VO=ex/Mesi/MesiExt.vo
+# MESI_EXT_VO=ex/Mesi/MesiL1L2LLExt.vo
+MESI_EXT_VO=ex/Mesi/MesiL1LLExt.vo
 
 msi_comp: Makefile.coq
 	$(MAKE) -f Makefile.coq $(MSI_EXT_VO)
@@ -27,13 +28,13 @@ msi_bsv: msi_comp
 	mv Target.ml* $(BSV_EXT)
 	$(MAKE) -C $(BSV_EXT)
 	cd $(BSV_EXT); ./Main.native $(BSV_EXT_FLAGS) -top $(BSV_TOP_NAME) $(MSI_EXT_BSV_NAME)
-	mv $(BSV_EXT)/$(MSI_EXT_BSV_NAME) ./integration/
+	mv $(BSV_EXT)/$(MSI_EXT_BSV_NAME) ./
 
 mesi_bsv: mesi_comp
 	mv Target.ml* $(BSV_EXT)
 	$(MAKE) -C $(BSV_EXT)
 	cd $(BSV_EXT); ./Main.native $(BSV_EXT_FLAGS) -top $(BSV_TOP_NAME) $(MESI_EXT_BSV_NAME)
-	mv $(BSV_EXT)/$(MESI_EXT_BSV_NAME) ./integration/
+	mv $(BSV_EXT)/$(MESI_EXT_BSV_NAME) ./
 
 clean:
 	$(MAKE) -f Makefile.coq clean || true

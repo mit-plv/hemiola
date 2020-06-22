@@ -9,3 +9,12 @@
     (* descending_urgency = "rule_0011_20, rule_0011_21" *)
     (* descending_urgency = "rule_0012_20, rule_0012_21" *)
     (* descending_urgency = "rule_0013_20, rule_0013_21" *)
+
+    (* descending_urgency = "rule_000_20, rule_000_21" *)
+    (* descending_urgency = "rule_001_20, rule_001_21" *)
+    (* descending_urgency = "rule_002_20, rule_002_21" *)
+    (* descending_urgency = "rule_003_20, rule_003_21" *)
+    (* descending_urgency = "rule_004_20, rule_004_21" *)
+    (* descending_urgency = "rule_005_20, rule_005_21" *)
+    (* descending_urgency = "rule_006_20, rule_006_21" *)
+    (* descending_urgency = "rule_007_20, rule_007_21" *)

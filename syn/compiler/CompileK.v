@@ -12,7 +12,8 @@ Set Implicit Arguments.
 Import MonadNotations.
 
 Section Compile.
-  Context `{hcfg: hconfig} `{dv: DecValue} `{hdv: @HDecValue dv hcfg}
+  Context `{rcfg: ReifyConfig} `{tcfg: TopoConfig}
+          `{dv: DecValue} `{hdv: @HDecValue dv rcfg}
           `{oifc: OStateIfc}
           `{het: ExtType}
           `{hoifc: @HOStateIfc dv oifc}

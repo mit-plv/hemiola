@@ -6,13 +6,13 @@ Require Import Kami.Kami.
 Require Import Kami.Ext.Extraction.
 
 Require Import Compiler.HemiolaDeep Compiler.Components Compiler.CompileK.
-Require Import MsiDeep MsiComp.
+Require Import MesiDeep MesiComp.
 
-Existing Instance MsiHOStateIfcFull.
-Instance MsiTopoConfig: TopoConfig :=
+Existing Instance MesiHOStateIfcFull.
+Instance MesiTopoConfig: TopoConfig :=
   {| hcfg_children_max_pred := 7 (* max(#children) = 8 *) |}.
-Existing Instance MsiCompExtType.
-Existing Instance MsiCompExtExp.
+Existing Instance MesiCompExtType.
+Existing Instance MesiCompExtExp.
 
 (***********************************
  *               Mem               *
@@ -31,7 +31,7 @@ Definition l1LgWay: nat := 2.
 Definition l1LgULs: nat := 2.
 Definition l1LgDLs: nat := 1.
 Definition l1LgNumVictim: nat := l1LgULs.
-Definition l1Cache oidx := msiCache oidx l1IndexSz l1LgWay l1LgNumVictim.
+Definition l1Cache oidx := mesiCache oidx l1IndexSz l1LgWay l1LgNumVictim.
 Definition l1Mshrs oidx := mshrs oidx l1LgULs l1LgDLs.
 
 Definition llIndexSz: nat := 10.
@@ -39,25 +39,25 @@ Definition llLgWay: nat := 4.
 Definition llLgULs: nat := 3.
 Definition llLgDLs: nat := 3.
 Definition llLgNumVictim: nat := llLgULs.
-Definition llCache oidx := msiCache oidx llIndexSz llLgWay llLgNumVictim.
+Definition llCache oidx := mesiCache oidx llIndexSz llLgWay llLgNumVictim.
 Definition llMshrs oidx := mshrs oidx llLgULs llLgDLs.
 
 Definition kl1c (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MsiCompLineRW l1LgWay) dtr (existT _ _ (hl1 oidx)))
+  ((compile_Object (H0 := MesiCompLineRW l1LgWay) dtr (existT _ _ (hl1 oidx)))
      ++ l1Cache oidx ++ l1Mshrs oidx
      ++ build_msg_outs_l1 oidx
      ++ build_int_fifos oidx
      ++ build_ext_fifos oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MsiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
+  ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
      ++ llCache oidx ++ llMshrs oidx
      ++ build_msg_outs_li oidx)%kami.
 (* ++ build_int_fifos oidx)%kami. *)
 
 Definition kmemc (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MsiCompLineRW 1) dtr (existT _ _ (hmem topo oidx)))
-     ++ msiCache oidx 10 1 1 ++ mshrs oidx 1 1
+  ((compile_Object (H0 := MesiCompLineRW 1) dtr (existT _ _ (hmem topo oidx)))
+     ++ mesiCache oidx 10 1 1 ++ mshrs oidx 1 1
      ++ build_msg_outs_mem oidx)%kami.
 
 Definition k: Modules :=

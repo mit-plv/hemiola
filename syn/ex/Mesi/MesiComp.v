@@ -16,7 +16,7 @@ Definition mesiI {var}: Expr var (SyntaxKind KMesi) := ($1)%kami_expr.
 Definition mesiNP {var}: Expr var (SyntaxKind KMesi) := ($0)%kami_expr.
 
 Section Directory.
-  Context `{hconfig}.
+  Context `{ReifyConfig} `{TopoConfig}.
 
   Definition KDir :=
     STRUCT { "dir_st" :: KMesi;
@@ -35,9 +35,8 @@ Section Directory.
 
 End Directory.
 
-Existing Instance MesiHOStateIfcFull.
-
 Section Instances.
+  Context `{TopoConfig}.
   Variable lgWay: nat.
 
   Instance MesiCompExtType: CompExtType :=
@@ -240,12 +239,10 @@ Section Instances.
 
 End Instances.
 
-Existing Instance MesiCompExtType.
-Existing Instance MesiCompExtExp.
-
 Require Import Hemiola.Ex.TopoTemplate.
 
 Section Cache.
+  Context `{TopoConfig}.
   Variables (oidx: IdxT)
             (indexSz lgWay lgNumVictim: nat).
 
@@ -277,79 +274,3 @@ Section Cache.
     cache oidx lgWay lgNumVictim KValue getIndex getTag buildAddr evictF.
 
 End Cache.
-
-(***********************************
- *               Mem               *
- *                |                *
- *          ----LLC(Li)---         *
- *         /              \        *
- *      L2(Li)          L2(Li)     *
- *     //    \\        //    \\    *
- * (L1,L1) (L1,L1) (L1,L1) (L1,L1) *
- ***********************************)
-Definition topo: tree :=
-  Node [Node [Node [Node nil; Node nil; Node nil; Node nil];
-             Node [Node nil; Node nil; Node nil; Node nil]]].
-Definition dtr := fst (tree2Topo topo 0).
-
-Definition l1IndexSz: nat := 6.
-Definition l1LgWay: nat := 2.
-Definition l1LgULs: nat := 2.
-Definition l1LgDLs: nat := 1.
-Definition l1LgNumVictim: nat := l1LgULs.
-Definition l1Cache oidx := mesiCache oidx l1IndexSz l1LgWay l1LgNumVictim.
-Definition l1Mshrs oidx := mshrs oidx l1LgULs l1LgDLs.
-
-Definition l2IndexSz: nat := 8.
-Definition l2LgWay: nat := 3.
-Definition l2LgULs: nat := 3.
-Definition l2LgDLs: nat := 2.
-Definition l2LgNumVictim: nat := l2LgULs.
-Definition l2Cache oidx := mesiCache oidx l2IndexSz l2LgWay l2LgNumVictim.
-Definition l2Mshrs oidx := mshrs oidx l2LgULs l2LgDLs.
-
-Definition llIndexSz: nat := 10.
-Definition llLgWay: nat := 4.
-Definition llLgULs: nat := 3.
-Definition llLgDLs: nat := 3.
-Definition llLgNumVictim: nat := llLgULs.
-Definition llCache oidx := mesiCache oidx llIndexSz llLgWay llLgNumVictim.
-Definition llMshrs oidx := mshrs oidx llLgULs llLgDLs.
-
-Definition kl1c (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MesiCompLineRW l1LgWay) dtr (existT _ _ (hl1 oidx)))
-     ++ l1Cache oidx ++ l1Mshrs oidx
-     ++ build_msg_outs_l1 oidx
-     ++ build_int_fifos oidx
-     ++ build_ext_fifos oidx)%kami.
-
-Definition kl2c (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MesiCompLineRW l2LgWay) dtr (existT _ _ (hli topo oidx)))
-     ++ l2Cache oidx ++ l2Mshrs oidx
-     ++ build_msg_outs_li oidx
-     ++ build_int_fifos oidx)%kami.
-
-Definition kllc (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MesiCompLineRW llLgWay) dtr (existT _ _ (hli topo oidx)))
-     ++ llCache oidx ++ llMshrs oidx
-     ++ build_msg_outs_li oidx)%kami.
-(* ++ build_int_fifos oidx)%kami. *)
-
-Definition kmemc (oidx: IdxT): Modules :=
-  ((compile_Object (H0 := MesiCompLineRW 1) dtr (existT _ _ (hmem topo oidx)))
-     ++ mesiCache oidx 10 1 1 ++ mshrs oidx 1 1
-     ++ build_msg_outs_mem oidx)%kami.
-
-Definition k: Modules :=
-  (* ((kmemc 0) ++ *)
-  ((kllc 0~>0)
-     ++ ((kl2c 0~>0~>0)
-           ++ (kl1c 0~>0~>0~>0 ++
-                    kl1c 0~>0~>0~>1 ++
-                    kl1c 0~>0~>0~>2 ++
-                    kl1c 0~>0~>0~>3))
-     ++ ((kl2c 0~>0~>1)
-           ++ (kl1c 0~>0~>1~>0 ++
-                    kl1c 0~>0~>1~>1 ++
-                    kl1c 0~>0~>1~>2 ++
-                    kl1c 0~>0~>1~>3)))%kami.

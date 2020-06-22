@@ -15,11 +15,10 @@ Existing Instance Msi.ImplOStateIfc.
 
 Definition HMsi := HNat 3.
 
-Instance MsiHConfig: hconfig :=
+Instance MsiReifyConfig: ReifyConfig :=
   {| hcfg_msg_id_sz := (3, 2);
      hcfg_addr_sz := 64;
      hcfg_value_sz := 64;
-     hcfg_children_max_pred := 3; (* max(#children) = 4 *)
   |}.
 
 Instance HNatDecValue: HDecValue :=

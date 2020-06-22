@@ -90,8 +90,13 @@ Section Bitvector.
 
 End Bitvector.
 
+Class TopoConfig :=
+  { hcfg_children_max_pred: nat }.
+Definition hcfg_children_max `{TopoConfig} := S hcfg_children_max_pred.
+Definition hcfg_children_max_lg `{TopoConfig} := Nat.log2 hcfg_children_max.
+
 Section Kinds.
-  Context `{hcfg: hconfig}.
+  Context `{ReifyConfig} `{TopoConfig}.
 
   Definition KCIdx := Bit hcfg_children_max_lg.
   Definition KQIdx := Bit (hcfg_children_max_lg + 2).
@@ -109,7 +114,7 @@ Section Kinds.
 End Kinds.
 
 Section MSHR.
-  Context `{hcfg: hconfig}.
+  Context `{ReifyConfig} `{TopoConfig}.
   Variable oidx: IdxT.
 
   Definition UL :=

@@ -18,17 +18,14 @@ Defined.
 
 (** Configuration class *)
 
-Class hconfig :=
+Class ReifyConfig :=
   { hcfg_msg_id_sz: nat (* log of degree *) * nat (* width *);
     hcfg_addr_sz: nat;
     hcfg_value_sz: nat;
-    hcfg_children_max_pred: nat
   }.
-Definition hcfg_children_max `{hconfig} := S hcfg_children_max_pred.
-Definition hcfg_children_max_lg `{hconfig} := Nat.log2 hcfg_children_max.
 
 Section Reify.
-  Context `{DecValue} `{OStateIfc} `{hconfig}.
+  Context `{DecValue} `{OStateIfc} `{ReifyConfig}.
 
   (** Reified syntax *)
 
@@ -487,7 +484,7 @@ Section Reify.
 End Reify.
 
 Section HemiolaDeep.
-  Context `{hcfg: hconfig}
+  Context `{hcfg: ReifyConfig}
           `{dv: DecValue}
           `{hdv: @HDecValue dv hcfg}
           `{oifc: OStateIfc}
