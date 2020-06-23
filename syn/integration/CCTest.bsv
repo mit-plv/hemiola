@@ -2,7 +2,8 @@ import Vector::*;
 import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
-import Randomizable::*;
+// import Randomizable::*;
+import LFSR::*;
 
 import CC::*;
 import MemBank::*;
@@ -18,6 +19,8 @@ interface CCTest;
 endinterface
 
 typedef 10000 DeadlockDetectCnt;
+typedef `RQ_TYPE_SEED RqTypeSeed;
+typedef `RQ_BADDR_SEED RqBAddrSeed;
 
 module mkCCTestRandom#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
@@ -27,8 +30,8 @@ module mkCCTestRandom#(CC mem)(CCTest);
     Reg#(Bit#(32)) numResps <- mkReg(0);
     Reg#(Bit#(16)) deadlockDetector <- mkReg(0);
 
-    Vector#(L1Num, Randomize#(int)) rq_type_rand <- replicateM(mkConstrainedRandomizer(0, 1));
-    Randomize#(Bit#(BAddrSz)) rq_baddr_rand <- mkGenericRandomizer;
+    Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
+    LFSR#(Bit#(16)) rq_baddr_rand <- mkLFSR_16;
     Vector#(L1Num, Reg#(Bool)) rq_type_seed <- replicateM(mkReg(False));
     Reg#(Bit#(64)) rq_addr <- mkReg(0);
     Reg#(Bit#(64)) rq_data <- mkReg(0);
@@ -53,20 +56,16 @@ module mkCCTestRandom#(CC mem)(CCTest);
             $display ("Deadlock detected!");
     endrule
 
-    rule rq_type_rand_init;
+    rule rq_type_seed_toggle (onTest);
         for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
-            rq_type_rand[i].cntrl.init();
-        end
-        rq_baddr_rand.cntrl.init();
-    endrule
-    rule rq_type_seed_toggle;
-        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
-            let t <- rq_type_rand[i].next();
-            rq_type_seed[i] <= (t == 1 ? True : False);
+            let t = rq_type_rand[i].value;
+            rq_type_rand[i].next();
+            rq_type_seed[i] <= (t[0] == 1 ? True : False);
         end
     endrule
     rule rq_addr_toggle;
-        let baddr <- rq_baddr_rand.next();
+        Bit#(BAddrSz) baddr = truncate(rq_baddr_rand.value);
+        rq_baddr_rand.next();
         let addr = getAddr(baddr);
         rq_addr <= addr;
     endrule
@@ -180,6 +179,10 @@ module mkCCTestRandom#(CC mem)(CCTest);
     method Action start(CycleCnt _maxCycle) if (!onTest);
         maxCycle <= _maxCycle;
         onTest <= True;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            rq_type_rand[i].seed(fromInteger(valueOf(RqTypeSeed)));
+        end
+        rq_baddr_rand.seed(fromInteger(valueOf(RqBAddrSeed)));
     endmethod
 
     method Bool isEnd();

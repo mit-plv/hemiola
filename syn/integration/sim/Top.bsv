@@ -8,7 +8,7 @@ import CC::*;
 import CCWrapper::*;
 import CCTest::*;
 
-typedef 1000000 TestCycleCnt;
+typedef `TEST_CYCLE_CNT TestCycleCnt;
 
 (* synthesize *)
 module mkTop(Empty);
