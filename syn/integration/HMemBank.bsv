@@ -18,10 +18,7 @@ typedef 12 MemBramAddrSz;
 typedef Bit#(MemBramAddrSz) MemBramAddr;
 typedef 3 AddrOffset;
 
-(* synthesize *)
-module mkMemBankBram(MemBank);
-    FIFOF#(CCMsg) rqs <- mkFIFOF();
-    FIFOF#(CCMsg) rss <- mkFIFOF();
+module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     RWBramCore#(MemBramAddr, CCValue) bram <- mkRWBramCore();
     Reg#(CCAddr) rdAddr <- mkReg(0);
 
@@ -91,5 +88,12 @@ module mkMemBankBram(MemBank);
         rss.deq();
         return rss.first;
     endmethod
+endmodule
 
+(* synthesize *)
+module mkMemBankBram(MemBank);
+    FIFOF#(CCMsg) rqs <- mkFIFOF();
+    FIFOF#(CCMsg) rss <- mkFIFOF();
+    MemBank mb <- mkMemBankBramA(rqs, rss);
+    return mb;
 endmodule

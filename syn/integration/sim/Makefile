@@ -6,6 +6,7 @@ RQ_BADDR_SEED ?= 79
 
 BSC ?= bsc \
 	-aggressive-conditions \
+	-check-assert \
 	-bdir $(BUILD_DIR) \
 	-info-dir $(BUILD_DIR) \
 	-simdir $(BUILD_DIR) \
@@ -16,7 +17,6 @@ BSC ?= bsc \
 	-p +:../
 
 all: $(TARGET).bsv
-	touch $(TARGET).bsv
 	mkdir -p $(BUILD_DIR)
 	$(BSC) -sim -u $(TARGET).bsv
 	$(BSC) -sim -e mkTop -o $(TARGET)
