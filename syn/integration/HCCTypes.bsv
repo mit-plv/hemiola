@@ -3,7 +3,7 @@ import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
 
-import CC::*;
+import HCC::*;
 
 typedef Struct2 CCMsg;
 typedef Bit#(6) CCMsgId;

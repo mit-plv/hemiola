@@ -3,9 +3,9 @@ import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
 
-import CC::*;
-import CCTypes::*;
-import MemBank::*;
+import HCC::*;
+import HCCTypes::*;
+import HMemBank::*;
 
 interface IgnoreEnq#(type elt_t);
     method Action ignore_enq (elt_t v);

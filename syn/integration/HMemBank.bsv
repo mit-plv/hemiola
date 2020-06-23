@@ -4,8 +4,8 @@ import FIFOF::*;
 import RWBramCore::*;
 import Assert::*;
 
-import CC::*;
-import CCTypes::*;
+import HCC::*;
+import HCCTypes::*;
 
 interface MemBank;
     method Action putMemRq(CCMsg _);

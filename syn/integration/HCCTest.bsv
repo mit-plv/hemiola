@@ -5,8 +5,8 @@ import FIFOF::*;
 // import Randomizable::*;
 import LFSR::*;
 
-import CC::*;
-import MemBank::*;
+import HCC::*;
+import HMemBank::*;
 
 typedef 8 L1Num;
 typedef MemBramAddrSz BAddrSz;

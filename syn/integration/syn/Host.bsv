@@ -4,9 +4,9 @@ import RWire::*;
 import FIFO::*;
 import FIFOF::*;
 
-import CC::*;
-import CCWrapper::*;
-import CCTest::*;
+import HCC::*;
+import HCCWrapper::*;
+import HCCTest::*;
 
 ////////// Connectal interfaces
 

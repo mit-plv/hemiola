@@ -4,9 +4,9 @@ import FIFO::*;
 import FIFOF::*;
 import Randomizable::*;
 
-import CC::*;
-import CCWrapper::*;
-import CCTest::*;
+import HCC::*;
+import HCCWrapper::*;
+import HCCTest::*;
 
 typedef `TEST_CYCLE_CNT TestCycleCnt;
 
