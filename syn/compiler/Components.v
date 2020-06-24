@@ -91,7 +91,9 @@ Section Bitvector.
 End Bitvector.
 
 Class TopoConfig :=
-  { hcfg_children_max_pred: nat }.
+  { hcfg_value_sz: nat;
+    hcfg_line_values_lg: nat;
+    hcfg_children_max_pred: nat }.
 Definition hcfg_children_max `{TopoConfig} := S hcfg_children_max_pred.
 Definition hcfg_children_max_lg `{TopoConfig} := Nat.log2 hcfg_children_max.
 
@@ -103,7 +105,7 @@ Section Kinds.
   Definition KCBv := Bit hcfg_children_max. (* as a bitvector *)
   Definition KIdxM := Bit ∘hcfg_msg_id_sz.
   Definition KAddr := Bit hcfg_addr_sz.
-  Definition KValue := Bit hcfg_value_sz.
+  Definition KValue := Vector (Bit hcfg_value_sz) hcfg_line_values_lg.
 
   Definition KMsg :=
     STRUCT { "id" :: KIdxM;

@@ -18,7 +18,6 @@ Definition HMsi := HNat 3.
 Instance MsiReifyConfig: ReifyConfig :=
   {| hcfg_msg_id_sz := (3, 2);
      hcfg_addr_sz := 64;
-     hcfg_value_sz := 64;
   |}.
 
 Instance HNatDecValue: HDecValue :=
@@ -26,7 +25,7 @@ Instance HNatDecValue: HDecValue :=
 
 Lemma MsiHOStateIfc_host_ty_ok:
   forall i: Fin.t ost_sz,
-    match Vector.nth [Some hdv_type; Some HBool; Some HMsi; None]%vector i with
+    match Vector.nth [Some HValue; Some HBool; Some HMsi; None]%vector i with
     | Some hbt => Vector.nth ost_ty i = hbtypeDenote hbt
     | None => True
     end.
@@ -60,7 +59,7 @@ Proof.
 Defined.
 
 Instance MsiHOStateIfc: HOStateIfc :=
-  {| host_ty := [Some hdv_type; Some HBool; Some HMsi; None]%vector;
+  {| host_ty := [Some HValue; Some HBool; Some HMsi; None]%vector;
      host_ty_ok := MsiHOStateIfc_host_ty_ok;
   |}.
 
@@ -166,7 +165,7 @@ Existing Instance DirExtExp.
 Lemma MsiHOStateIfcFull_hostf_ty_compat:
   forall i hbt,
     host_ty[@i] = Some hbt ->
-    [HBType hdv_type; HBType HBool; HBType HMsi; HEType HDir][@i] = HBType hbt.
+    [HBType HValue; HBType HBool; HBType HMsi; HEType HDir][@i] = HBType hbt.
 Proof.
   intros i.
   refine (match i with | Fin.F1 => _ | Fin.FS _ => _ end);
@@ -197,7 +196,7 @@ Proof.
 Defined.
 
 Instance MsiHOStateIfcFull: HOStateIfcFull :=
-  {| hostf_ty := [HBType hdv_type; HBType HBool; HBType HMsi; HEType HDir];
+  {| hostf_ty := [HBType HValue; HBType HBool; HBType HMsi; HEType HDir];
      hostf_ty_ok := eq_refl;
      hostf_ty_compat := MsiHOStateIfcFull_hostf_ty_compat;
   |}.

@@ -10,7 +10,9 @@ Require Import MesiDeep MesiComp.
 
 Existing Instance MesiHOStateIfcFull.
 Instance MesiTopoConfig: TopoConfig :=
-  {| hcfg_children_max_pred := 3 (* max(#children) = 4 *) |}.
+  {| hcfg_value_sz := 64;
+     hcfg_line_values_lg := 3;
+     hcfg_children_max_pred := 3 (* max(#children) = 4 *) |}.
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
 

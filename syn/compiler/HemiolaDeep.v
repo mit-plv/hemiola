@@ -21,7 +21,6 @@ Defined.
 Class ReifyConfig :=
   { hcfg_msg_id_sz: nat (* log of degree *) * nat (* width *);
     hcfg_addr_sz: nat;
-    hcfg_value_sz: nat;
   }.
 
 Section Reify.
@@ -32,7 +31,7 @@ Section Reify.
   Inductive hbtype :=
   | HBool
   | HIdxO | HIdxQ | HIdxM
-  | HAddr
+  | HAddr | HValue
   | HNat (width: nat)
   | HMsg
   | HIdm
@@ -45,6 +44,7 @@ Section Reify.
     | HIdxQ
     | HIdxM => IdxT
     | HAddr => unit
+    | HValue => nat
     | HNat _ => nat
     | HMsg => Msg
     | HIdm => IdxT * Msg
@@ -52,7 +52,7 @@ Section Reify.
     end.
 
   Class HDecValue :=
-    { ht_value_ok: hbtypeDenote (HNat hcfg_value_sz) = t_type }.
+    { ht_value_ok: hbtypeDenote HValue = t_type }.
 
   Class HOStateIfc :=
     { host_ty: Vector.t (option hbtype) ost_sz;
@@ -64,7 +64,6 @@ Section Reify.
           end
     }.
   Context `{HDecValue} `{HOStateIfc}.
-  Definition hdv_type := HNat hcfg_value_sz.
 
   Section Basis.
     Variable var: hbtype -> Type.
@@ -85,11 +84,12 @@ Section Reify.
     | HIdmMsg: hbexp HIdm -> hbexp HMsg
     | HObjIdxOf: hbexp HIdxQ -> hbexp HIdxO
     | HAddrB: hbexp HAddr
-    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HAddr -> hbexp hdv_type -> hbexp HMsg
+    | HValueB: hbexp HValue
+    | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HAddr -> hbexp HValue -> hbexp HMsg
     | HMsgId: hbexp HMsg -> hbexp HIdxM
     | HMsgType: hbexp HMsg -> hbexp HBool
     | HMsgAddr: hbexp HMsg -> hbexp HAddr
-    | HMsgValue: hbexp HMsg -> hbexp hdv_type
+    | HMsgValue: hbexp HMsg -> hbexp HValue
     | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt
     | HUpLockIdxBackI: hbexp HIdxQ
     | HDownLockIdxBackI: hbexp HIdxQ.
@@ -258,6 +258,7 @@ Section Reify.
   Arguments HIdmMsg {var}.
   Arguments HObjIdxOf {var}.
   Arguments HAddrB {var}.
+  Arguments HValueB {var}.
   Arguments HMsgB {var}.
   Arguments HMsgId {var}.
   Arguments HMsgType {var}.
@@ -318,6 +319,7 @@ Section Reify.
         | HIdmMsg idm => valOf (interpBExp idm)
         | HObjIdxOf midx => objIdxOf (interpBExp midx)
         | HAddrB => tt
+        | HValueB => 0
         | HMsgB mid mty maddr mval =>
           {| msg_id := interpBExp mid;
              msg_type := interpBExp mty;
@@ -486,7 +488,7 @@ End Reify.
 Section HemiolaDeep.
   Context `{hcfg: ReifyConfig}
           `{dv: DecValue}
-          `{hdv: @HDecValue dv hcfg}
+          `{hdv: @HDecValue dv}
           `{oifc: OStateIfc}
           `{het: ExtType}
           `{ee: @ExtExp dv oifc het}
@@ -610,6 +612,7 @@ Ltac renote_bexp :=
            | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
            | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
            | tt => instantiate (1:= HAddrB _); reflexivity
+           | 0 => instantiate (1:= HValueB _); reflexivity
            | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _ _); simpl; f_equal
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal
            | msg_type _ => instantiate (1:= HMsgType _); simpl; f_equal

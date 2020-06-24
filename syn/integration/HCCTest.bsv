@@ -6,6 +6,7 @@ import FIFOF::*;
 import LFSR::*;
 
 import HCC::*;
+import HCCTypes::*;
 import HMemBank::*;
 
 typedef 8 L1Num;
@@ -34,10 +35,11 @@ module mkCCTestRandom#(CC mem)(CCTest);
     LFSR#(Bit#(16)) rq_baddr_rand <- mkLFSR_16;
     Vector#(L1Num, Reg#(Bool)) rq_type_seed <- replicateM(mkReg(False));
     Reg#(Bit#(64)) rq_addr <- mkReg(0);
-    Reg#(Bit#(64)) rq_data <- mkReg(0);
+    Reg#(CCValue) rq_data <- mkReg(replicate(0));
 
     function Bit#(64) getAddr (Bit#(BAddrSz) baddr);
-        Bit#(64) addr = zeroExtend({baddr, 3'b000});
+        Bit#(AddrOffset) pad = 0;
+        Bit#(64) addr = zeroExtend({baddr, pad});
         return addr;
     endfunction
 
@@ -70,7 +72,7 @@ module mkCCTestRandom#(CC mem)(CCTest);
         rq_addr <= addr;
     endrule
     rule rq_data_inc;
-        rq_data <= rq_data + 1;
+        rq_data <= update(rq_data, 0, rq_data[0] + 1);
     endrule
 
     let getRqId = 6'b000000;
@@ -78,7 +80,7 @@ module mkCCTestRandom#(CC mem)(CCTest);
     let getRsId = 6'b000001;
     let setRsId = 6'b001001;
 
-    let ldReq = Struct2 { id : getRqId, type_ : False, addr : rq_addr, value : 0 };
+    let ldReq = Struct2 { id : getRqId, type_ : False, addr : rq_addr, value : unpack(0) };
     let stReq = Struct2 { id : setRqId, type_ : False, addr : rq_addr, value : rq_data };
 
     function Action addResp();

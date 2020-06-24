@@ -10,9 +10,6 @@ import HCCTest::*;
 
 ////////// Connectal interfaces
 
-typedef Bit#(64) Addr;
-typedef Bit#(64) Value;
-
 interface HostIndication;
     method Action finish(Bit#(32) numResps);
 endinterface

@@ -13,7 +13,7 @@ Import MonadNotations.
 
 Section Compile.
   Context `{rcfg: ReifyConfig} `{tcfg: TopoConfig}
-          `{dv: DecValue} `{hdv: @HDecValue dv rcfg}
+          `{dv: DecValue} `{hdv: @HDecValue dv}
           `{oifc: OStateIfc}
           `{het: ExtType}
           `{hoifc: @HOStateIfc dv oifc}
@@ -85,6 +85,7 @@ Section Compile.
     | HIdxQ => KQIdx
     | HIdxM => Bit ∘hcfg_msg_id_sz
     | HAddr => Bit hcfg_addr_sz
+    | HValue => KValue
     | HNat w => Bit w
     | HMsg => Struct KMsg
     | HIdm => Struct KCIdm
@@ -464,6 +465,7 @@ Section Compile.
             * with a nondeterministic address. Here we always make the request
             * with a victim line, and its address is forwarded to [msgIn]. *)
            #msgIn!KMsg@."addr"
+         | HValueB _ => $$Default
          | HMsgB mid mty maddr mval =>
            (STRUCT { "id" ::= compile_bexp mid;
                      "type" ::= compile_bexp mty;
@@ -473,7 +475,7 @@ Section Compile.
          | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
          | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
          | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
-         | @HOstVal _ _ _ _ _ i hbt0 Heq =>
+         | @HOstVal _ _ _ _ i hbt0 Heq =>
            Var _ (SyntaxKind _)
                (eq_rect
                   hostf_ty[@i]
@@ -696,7 +698,7 @@ Section Compile.
                {retK} (cont: var lineK -> ActionT var retK): ActionT var retK :=
         (match host with
          | HOStateI _ => cont rinfo
-         | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
+         | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
            (LET ninfo <- compile_line_update rinfo _ Heq (compile_exp he);
            compile_OState_write_fix host' ninfo cont)
          end)%kami_action.
@@ -826,7 +828,7 @@ Section Compile.
       Fixpoint check_inv_response_OState (host: HOState htypeU): bool :=
         match host with
         | HOStateI _ => false
-        | @HOstUpdate _ _ _ _ _ _ _ _ i ht Heq he host' =>
+        | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
           check_inv_response_exp i he || check_inv_response_OState host'
         end.
 

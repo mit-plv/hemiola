@@ -247,7 +247,7 @@ Section Cache.
             (indexSz lgWay lgNumVictim: nat).
 
   Definition BitsPerByte := 8.
-  Definition offsetSz := Nat.log2 (Nat.div hcfg_addr_sz BitsPerByte).
+  Definition offsetSz := Nat.log2 (Nat.div hcfg_addr_sz BitsPerByte) + hcfg_line_values_lg.
   Definition tagSz := hcfg_addr_sz - indexSz - offsetSz.
 
   Definition getIndex (var: Kind -> Type)

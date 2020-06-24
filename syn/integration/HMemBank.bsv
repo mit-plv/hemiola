@@ -16,7 +16,6 @@ endinterface
 
 typedef 12 MemBramAddrSz;
 typedef Bit#(MemBramAddrSz) MemBramAddr;
-typedef 3 AddrOffset;
 
 module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     RWBramCore#(MemBramAddr, CCValue) bram <- mkRWBramCore();
@@ -55,7 +54,7 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         let raddr = rqs.first.addr;
         dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_write]");
-        CCMsg rs = CCMsg {id: writeRsId, type_: True, addr: raddr, value: 0};
+        CCMsg rs = CCMsg {id: writeRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
     endrule
 
@@ -66,7 +65,7 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         let raddr = rqs.first.addr;
         dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_inv]");
-        CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: 0};
+        CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
     endrule
 
@@ -79,7 +78,7 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         CCValue bval = rqs.first.value;
         bram.wrReq(baddr, bval);
-        CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: 0};
+        CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
     endrule
 
