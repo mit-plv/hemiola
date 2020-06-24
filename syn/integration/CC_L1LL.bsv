@@ -40536,7 +40536,8 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     m101.downLockable007, m101.upLockable007, m123.cache_007_readRs,
     m105.deq_fifo00700, m101.downLockRssFull007, m123.cache_007_readRq,
     m104.deq_fifo0072);
-        //// Initialization logic
+
+    //// Initialization logic
 
     Reg#(Bool) init <- mkReg(False);
 
