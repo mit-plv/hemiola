@@ -5,6 +5,18 @@ import FIFOF::*;
 import RWBramCore::*;
 import SpecialFIFOs::*;
 
+typedef 8 L1Num;
+
+interface MemRqRs;
+    method Action mem_enq_rq (Struct2 rq);
+    method ActionValue#(Struct2) mem_deq_rs ();
+endinterface
+
+interface CC;
+    interface Vector#(L1Num, MemRqRs) l1Ifc;
+    method Bool isInit ();
+endinterface
+
 typedef struct { Bool rl_valid; Bit#(3) rl_cmidx; Struct2 rl_msg; Bool rl_line_valid; Struct3 rl_line;  } Struct1 deriving(Eq, Bits);
 typedef struct { Bit#(2) enq_type; Bit#(3) enq_ch_idx; Struct2 enq_msg;  } Struct10 deriving(Eq, Bits);
 typedef struct { Bool r_ul_rsb; Struct2 r_ul_msg; Bit#(3) r_ul_rsbTo;  } Struct11 deriving(Eq, Bits);
@@ -40266,26 +40278,7 @@ module mkModule133#(function ActionValue#(Struct24) cache_007_writeRs(),
 endmodule
 
 
-interface CC;
-    method Action mem_enq_rq_0 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_0 ();
-    method Action mem_enq_rq_1 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_1 ();
-    method Action mem_enq_rq_2 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_2 ();
-    method Action mem_enq_rq_3 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_3 ();
-    method Action mem_enq_rq_4 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_4 ();
-    method Action mem_enq_rq_5 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_5 ();
-    method Action mem_enq_rq_6 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_6 ();
-    method Action mem_enq_rq_7 (Struct2 rq);
-    method ActionValue#(Struct2) mem_deq_rs_7 ();
-
-    method Bool isInit ();
-endinterface
+// The CC interface is defined in the header part (thus in Header.bsv)
 
 module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
   function Action enq_fifo001(Struct2 _),
@@ -40536,8 +40529,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     m101.downLockable007, m101.upLockable007, m123.cache_007_readRs,
     m105.deq_fifo00700, m101.downLockRssFull007, m123.cache_007_readRq,
     m104.deq_fifo0072);
-
-    //// Initialization logic
+        //// Initialization logic
 
     Reg#(Bool) init <- mkReg(False);
 
@@ -40704,26 +40696,27 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         init <= True;
     endrule
 
+    function MemRqRs getMemRqRs (function Action enq_rq (Struct2 _),
+                                 function ActionValue#(Struct2) deq_rs ());
+        return interface MemRqRs;
+                   method mem_enq_rq = enq_rq;
+                   method mem_deq_rs = deq_rs;
+               endinterface;
+    endfunction
+
+    Vector#(L1Num, MemRqRs) _l1Ifc = newVector();
+    _l1Ifc[0] = getMemRqRs(m28.enq_fifo00000, m29.deq_fifo00002);
+    _l1Ifc[1] = getMemRqRs(m39.enq_fifo00100, m40.deq_fifo00102);
+    _l1Ifc[2] = getMemRqRs(m50.enq_fifo00200, m51.deq_fifo00202);
+    _l1Ifc[3] = getMemRqRs(m61.enq_fifo00300, m62.deq_fifo00302);
+    _l1Ifc[4] = getMemRqRs(m72.enq_fifo00400, m73.deq_fifo00402);
+    _l1Ifc[5] = getMemRqRs(m83.enq_fifo00500, m84.deq_fifo00502);
+    _l1Ifc[6] = getMemRqRs(m94.enq_fifo00600, m95.deq_fifo00602);
+    _l1Ifc[7] = getMemRqRs(m105.enq_fifo00700, m106.deq_fifo00702);
+    interface l1Ifc = _l1Ifc;
+
     method Bool isInit ();
         return init;
     endmethod
-
-    //// Interface
-    method mem_enq_rq_0 = m28.enq_fifo00000;
-    method mem_deq_rs_0 = m29.deq_fifo00002;
-    method mem_enq_rq_1 = m39.enq_fifo00100;
-    method mem_deq_rs_1 = m40.deq_fifo00102;
-    method mem_enq_rq_2 = m50.enq_fifo00200;
-    method mem_deq_rs_2 = m51.deq_fifo00202;
-    method mem_enq_rq_3 = m61.enq_fifo00300;
-    method mem_deq_rs_3 = m62.deq_fifo00302;
-    method mem_enq_rq_4 = m72.enq_fifo00400;
-    method mem_deq_rs_4 = m73.deq_fifo00402;
-    method mem_enq_rq_5 = m83.enq_fifo00500;
-    method mem_deq_rs_5 = m84.deq_fifo00502;
-    method mem_enq_rq_6 = m94.enq_fifo00600;
-    method mem_deq_rs_6 = m95.deq_fifo00602;
-    method mem_enq_rq_7 = m105.enq_fifo00700;
-    method mem_deq_rs_7 = m106.deq_fifo00702;
 
 endmodule
