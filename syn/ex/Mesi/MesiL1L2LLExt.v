@@ -12,7 +12,7 @@ Existing Instance MesiHOStateIfcFull.
 Instance MesiTopoConfig: TopoConfig :=
   {| hcfg_value_sz := 64;
      hcfg_line_values_lg := 3;
-     hcfg_children_max_pred := 3 (* max(#children) = 4 *) |}.
+     hcfg_children_max_pred := 1 (* max(#children) = 2 *) |}.
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
 
@@ -22,12 +22,11 @@ Existing Instance MesiCompExtExp.
  *          ----LLC(Li)---         *
  *         /              \        *
  *      L2(Li)          L2(Li)     *
- *     //    \\        //    \\    *
- * (L1,L1) (L1,L1) (L1,L1) (L1,L1) *
+ *     /      \        /      \    *
+ *    L1      L1      L1      L1   *
  ***********************************)
 Definition topo: tree :=
-  Node [Node [Node [Node nil; Node nil; Node nil; Node nil];
-             Node [Node nil; Node nil; Node nil; Node nil]]].
+  Node [Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]].
 Definition dtr := fst (tree2Topo topo 0).
 
 Definition l1IndexSz: nat := 6.
@@ -81,16 +80,8 @@ Definition kmemc (oidx: IdxT): Modules :=
 Definition k: Modules :=
   (* ((kmemc 0) ++ *)
   ((kllc 0~>0)
-     ++ ((kl2c 0~>0~>0)
-           ++ (kl1c 0~>0~>0~>0 ++
-                    kl1c 0~>0~>0~>1 ++
-                    kl1c 0~>0~>0~>2 ++
-                    kl1c 0~>0~>0~>3))
-     ++ ((kl2c 0~>0~>1)
-           ++ (kl1c 0~>0~>1~>0 ++
-                    kl1c 0~>0~>1~>1 ++
-                    kl1c 0~>0~>1~>2 ++
-                    kl1c 0~>0~>1~>3)))%kami.
+     ++ ((kl2c 0~>0~>0) ++ (kl1c 0~>0~>0~>0 ++ kl1c 0~>0~>0~>1))
+     ++ ((kl2c 0~>0~>1) ++ (kl1c 0~>0~>1~>0 ++ kl1c 0~>0~>1~>1)))%kami.
 
 (** Extraction of a compiled Kami design *)
 

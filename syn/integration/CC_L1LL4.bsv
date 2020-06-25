@@ -13,7 +13,7 @@ interface MemRqRs;
 endinterface
 
 interface CC;
-    Vector#(L1Num, MemRqRs) l1Ifc;
+    interface Vector#(L1Num, MemRqRs) l1Ifc;
     method Bool isInit ();
 endinterface
 
@@ -20821,7 +20821,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
                                          value: Struct4 { mesi_owned: False,
                                                          mesi_status: 3'h1,
                                                          mesi_dir_st: 3'h1,
-                                                         mesi_dir_sharers: 8'h0 }}};
+                                                         mesi_dir_sharers: 4'h0 }}};
     endfunction
 
     rule ll_info_do_init (!llInitDone);
@@ -20855,7 +20855,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
                                          value: Struct4 { mesi_owned: False,
                                                          mesi_status: 3'h1,
                                                          mesi_dir_st: 3'h1,
-                                                         mesi_dir_sharers: 8'h0 }}};
+                                                         mesi_dir_sharers: 4'h0 }}};
     endfunction
 
     rule l1_info_do_init_0 (!l1InitDone0);
@@ -20908,18 +20908,19 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     endrule
 
     function MemRqRs getMemRqRs (function Action enq_rq (Struct2 _),
-                                 function ActionValue#(Struct2) deq_rs ())
+                                 function ActionValue#(Struct2) deq_rs ());
         return interface MemRqRs;
                    method mem_enq_rq = enq_rq;
                    method mem_deq_rs = deq_rs;
                endinterface;
     endfunction
 
-    Vector#(L1Num, MemRqRs) l1Ifc = newVector();
-    l1Ifc[0] = getMemRqRs(m28.enq_fifo00000, m29.deq_fifo00002);
-    l1Ifc[1] = getMemRqRs(m39.enq_fifo00100, m40.deq_fifo00102);
-    l1Ifc[2] = getMemRqRs(m50.enq_fifo00200, m51.deq_fifo00202);
-    l1Ifc[3] = getMemRqRs(m61.enq_fifo00300, m62.deq_fifo00302);
+    Vector#(L1Num, MemRqRs) _l1Ifc = newVector();
+    _l1Ifc[0] = getMemRqRs(m28.enq_fifo00000, m29.deq_fifo00002);
+    _l1Ifc[1] = getMemRqRs(m39.enq_fifo00100, m40.deq_fifo00102);
+    _l1Ifc[2] = getMemRqRs(m50.enq_fifo00200, m51.deq_fifo00202);
+    _l1Ifc[3] = getMemRqRs(m61.enq_fifo00300, m62.deq_fifo00302);
+    interface l1Ifc = _l1Ifc;
 
     method Bool isInit ();
         return init;
