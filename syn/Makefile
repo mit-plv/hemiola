@@ -10,7 +10,8 @@ Makefile.coq: Makefile $(VS)
 
 MSI_EXT_VO=ex/Msi/MsiExt.vo
 # MESI_EXT_VO=ex/Mesi/MesiL1L2LLExt.vo
-MESI_EXT_VO=ex/Mesi/MesiL1LLExt.vo
+# MESI_EXT_VO=ex/Mesi/MesiL1LL8Ext.vo
+MESI_EXT_VO=ex/Mesi/MesiL1LL4Ext.vo
 
 msi_comp: Makefile.coq
 	$(MAKE) -f Makefile.coq $(MSI_EXT_VO)

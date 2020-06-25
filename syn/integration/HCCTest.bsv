@@ -9,7 +9,6 @@ import HCC::*;
 import HCCTypes::*;
 import HMemBank::*;
 
-typedef 8 L1Num;
 typedef MemBramAddrSz BAddrSz;
 
 typedef Bit#(32) CycleCnt;
@@ -90,93 +89,22 @@ module mkCCTestRandom#(CC mem)(CCTest);
         endaction
     endfunction
 
-    rule request_load_0 if (memInit && onTest && rq_type_seed[0]);
-        mem.mem_enq_rq_0(ldReq);
-    endrule
-    rule request_store_0 if (memInit && onTest && !rq_type_seed[0]);
-        mem.mem_enq_rq_0(stReq);
-    endrule
-    rule response_0;
-        let rs <- mem.mem_deq_rs_0 ();
-        addResp();
-    endrule
-
-    rule request_load_1 if (memInit && onTest && rq_type_seed[1]);
-        mem.mem_enq_rq_1(ldReq);
-    endrule
-    rule request_store_1 if (memInit && onTest && !rq_type_seed[1]);
-        mem.mem_enq_rq_1(stReq);
-    endrule
-    rule response_1;
-        let rs <- mem.mem_deq_rs_1 ();
-        addResp();
-    endrule
-
-    rule request_load_2 if (memInit && onTest && rq_type_seed[2]);
-        mem.mem_enq_rq_2(ldReq);
-    endrule
-    rule request_store_2 if (memInit && onTest && !rq_type_seed[2]);
-        mem.mem_enq_rq_2(stReq);
-    endrule
-    rule response_2;
-        let rs <- mem.mem_deq_rs_2 ();
-        addResp();
-    endrule
-
-    rule request_load_3 if (memInit && onTest && rq_type_seed[3]);
-        mem.mem_enq_rq_3(ldReq);
-    endrule
-    rule request_store_3 if (memInit && onTest && !rq_type_seed[3]);
-        mem.mem_enq_rq_3(stReq);
-    endrule
-    rule response_3;
-        let rs <- mem.mem_deq_rs_3 ();
-        addResp();
-    endrule
-
-    rule request_load_4 if (memInit && onTest && rq_type_seed[4]);
-        mem.mem_enq_rq_4(ldReq);
-    endrule
-    rule request_store_4 if (memInit && onTest && !rq_type_seed[4]);
-        mem.mem_enq_rq_4(stReq);
-    endrule
-    rule response_4;
-        let rs <- mem.mem_deq_rs_4 ();
-        addResp();
-    endrule
-
-    rule request_load_5 if (memInit && onTest && rq_type_seed[5]);
-        mem.mem_enq_rq_5(ldReq);
-    endrule
-    rule request_store_5 if (memInit && onTest && !rq_type_seed[5]);
-        mem.mem_enq_rq_5(stReq);
-    endrule
-    rule response_5;
-        let rs <- mem.mem_deq_rs_5 ();
-        addResp();
-    endrule
-
-    rule request_load_6 if (memInit && onTest && rq_type_seed[6]);
-        mem.mem_enq_rq_6(ldReq);
-    endrule
-    rule request_store_6 if (memInit && onTest && !rq_type_seed[6]);
-        mem.mem_enq_rq_6(stReq);
-    endrule
-    rule response_6;
-        let rs <- mem.mem_deq_rs_6 ();
-        addResp();
-    endrule
-
-    rule request_load_7 if (memInit && onTest && rq_type_seed[7]);
-        mem.mem_enq_rq_7(ldReq);
-    endrule
-    rule request_store_7 if (memInit && onTest && !rq_type_seed[7]);
-        mem.mem_enq_rq_7(stReq);
-    endrule
-    rule response_7;
-        let rs <- mem.mem_deq_rs_7 ();
-        addResp();
-    endrule
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule request_load if (memInit && onTest && rq_type_seed[i]);
+            mem.l1Ifc[i].mem_enq_rq(ldReq);
+        endrule
+    end
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule request_store if (memInit && onTest && !rq_type_seed[i]);
+            mem.l1Ifc[i].mem_enq_rq(stReq);
+        endrule
+    end
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule response;
+            let rs <- mem.l1Ifc[i].mem_deq_rs ();
+            addResp();
+        endrule
+    end
 
     method Action start(CycleCnt _maxCycle) if (!onTest);
         maxCycle <= _maxCycle;
