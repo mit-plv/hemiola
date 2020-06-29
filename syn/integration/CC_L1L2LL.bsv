@@ -30400,7 +30400,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     endrule
 
     function MemRqRs getMemRqRs (function Action enq_rq (Struct2 _),
-                                 function ActionValue#(Struct2) deq_rs ())
+                                 function ActionValue#(Struct2) deq_rs ());
         return interface MemRqRs;
                    method mem_enq_rq = enq_rq;
                    method mem_deq_rs = deq_rs;
