@@ -27,18 +27,18 @@ typedef struct { Bool valid; Struct9 data;  } Struct15 deriving(Eq, Bits);
 typedef struct { Bit#(4) cidx; Struct2 msg;  } Struct16 deriving(Eq, Bits);
 typedef struct { Bit#(64) r_dl_addr; Bit#(4) r_dl_rss_from;  } Struct17 deriving(Eq, Bits);
 typedef struct { Bool victim_valid; Bit#(3) victim_idx; Struct3 victim_line;  } Struct18 deriving(Eq, Bits);
-typedef struct { Bit#(48) tag; Struct4 value;  } Struct19 deriving(Eq, Bits);
+typedef struct { Bit#(49) tag; Struct4 value;  } Struct19 deriving(Eq, Bits);
 typedef struct { Bit#(6) id; Bool type_; Bit#(64) addr; Vector#(8, Bit#(64)) value;  } Struct2 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(4) tm_way; Struct4 tm_value;  } Struct20 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(14) addr; Vector#(8, Bit#(64)) datain;  } Struct21 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(10) addr; Struct19 datain;  } Struct22 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(13) addr; Vector#(8, Bit#(64)) datain;  } Struct21 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(9) addr; Struct19 datain;  } Struct22 deriving(Eq, Bits);
 typedef struct { Bool rl_valid; Bit#(2) rl_cmidx; Struct2 rl_msg; Bool rl_line_valid; Struct24 rl_line;  } Struct23 deriving(Eq, Bits);
 typedef struct { Bit#(64) addr; Bool info_hit; Bit#(2) info_way; Bool info_write; Struct4 info; Bool value_write; Vector#(8, Bit#(64)) value;  } Struct24 deriving(Eq, Bits);
 typedef struct { Bool victim_valid; Bit#(2) victim_idx; Struct24 victim_line;  } Struct25 deriving(Eq, Bits);
-typedef struct { Bit#(52) tag; Struct4 value;  } Struct26 deriving(Eq, Bits);
+typedef struct { Bit#(51) tag; Struct4 value;  } Struct26 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(2) tm_way; Struct4 tm_value;  } Struct27 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(8) addr; Vector#(8, Bit#(64)) datain;  } Struct28 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(6) addr; Struct26 datain;  } Struct29 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(9) addr; Vector#(8, Bit#(64)) datain;  } Struct28 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(7) addr; Struct26 datain;  } Struct29 deriving(Eq, Bits);
 typedef struct { Bit#(64) addr; Bool info_hit; Bit#(4) info_way; Bool info_write; Struct4 info; Bool value_write; Vector#(8, Bit#(64)) value;  } Struct3 deriving(Eq, Bits);
 typedef struct { Bool mesi_owned; Bit#(3) mesi_status; Bit#(3) mesi_dir_st; Bit#(4) mesi_dir_sharers;  } Struct4 deriving(Eq, Bits);
 typedef struct { Bool wl_valid; Bool wl_write_rq;  } Struct5 deriving(Eq, Bits);
@@ -54,7 +54,7 @@ interface Module1;
 endinterface
 
 module mkModule1 (Module1);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_15 (Struct22 x_0);
 
@@ -81,7 +81,7 @@ interface Module2;
 endinterface
 
 module mkModule2 (Module2);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_14 (Struct22 x_0);
 
@@ -108,7 +108,7 @@ interface Module3;
 endinterface
 
 module mkModule3 (Module3);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_13 (Struct22 x_0);
 
@@ -135,7 +135,7 @@ interface Module4;
 endinterface
 
 module mkModule4 (Module4);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_12 (Struct22 x_0);
 
@@ -162,7 +162,7 @@ interface Module5;
 endinterface
 
 module mkModule5 (Module5);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_11 (Struct22 x_0);
 
@@ -189,7 +189,7 @@ interface Module6;
 endinterface
 
 module mkModule6 (Module6);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_10 (Struct22 x_0);
 
@@ -216,7 +216,7 @@ interface Module7;
 endinterface
 
 module mkModule7 (Module7);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_9 (Struct22 x_0);
 
@@ -243,7 +243,7 @@ interface Module8;
 endinterface
 
 module mkModule8 (Module8);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_8 (Struct22 x_0);
 
@@ -270,7 +270,7 @@ interface Module9;
 endinterface
 
 module mkModule9 (Module9);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_7 (Struct22 x_0);
 
@@ -297,7 +297,7 @@ interface Module10;
 endinterface
 
 module mkModule10 (Module10);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_6 (Struct22 x_0);
 
@@ -324,7 +324,7 @@ interface Module11;
 endinterface
 
 module mkModule11 (Module11);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_5 (Struct22 x_0);
 
@@ -351,7 +351,7 @@ interface Module12;
 endinterface
 
 module mkModule12 (Module12);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_4 (Struct22 x_0);
 
@@ -378,7 +378,7 @@ interface Module13;
 endinterface
 
 module mkModule13 (Module13);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_3 (Struct22 x_0);
 
@@ -405,7 +405,7 @@ interface Module14;
 endinterface
 
 module mkModule14 (Module14);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_2 (Struct22 x_0);
 
@@ -432,7 +432,7 @@ interface Module15;
 endinterface
 
 module mkModule15 (Module15);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_1 (Struct22 x_0);
 
@@ -459,7 +459,7 @@ interface Module16;
 endinterface
 
 module mkModule16 (Module16);
-    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_0 (Struct22 x_0);
 
@@ -486,7 +486,7 @@ interface Module17;
 endinterface
 
 module mkModule17 (Module17);
-    RWBramCore#(Bit#(14), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(13), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_00 (Struct21 x_0);
 
@@ -882,7 +882,7 @@ interface Module19;
 endinterface
 
 module mkModule19 (Module19);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_3 (Struct29 x_0);
 
@@ -909,7 +909,7 @@ interface Module20;
 endinterface
 
 module mkModule20 (Module20);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_2 (Struct29 x_0);
 
@@ -936,7 +936,7 @@ interface Module21;
 endinterface
 
 module mkModule21 (Module21);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_1 (Struct29 x_0);
 
@@ -963,7 +963,7 @@ interface Module22;
 endinterface
 
 module mkModule22 (Module22);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_0 (Struct29 x_0);
 
@@ -990,7 +990,7 @@ interface Module23;
 endinterface
 
 module mkModule23 (Module23);
-    RWBramCore#(Bit#(8), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_000 (Struct28 x_0);
 
@@ -1333,7 +1333,7 @@ interface Module30;
 endinterface
 
 module mkModule30 (Module30);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_3 (Struct29 x_0);
 
@@ -1360,7 +1360,7 @@ interface Module31;
 endinterface
 
 module mkModule31 (Module31);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_2 (Struct29 x_0);
 
@@ -1387,7 +1387,7 @@ interface Module32;
 endinterface
 
 module mkModule32 (Module32);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_1 (Struct29 x_0);
 
@@ -1414,7 +1414,7 @@ interface Module33;
 endinterface
 
 module mkModule33 (Module33);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_0 (Struct29 x_0);
 
@@ -1441,7 +1441,7 @@ interface Module34;
 endinterface
 
 module mkModule34 (Module34);
-    RWBramCore#(Bit#(8), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_001 (Struct28 x_0);
 
@@ -1784,7 +1784,7 @@ interface Module41;
 endinterface
 
 module mkModule41 (Module41);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_3 (Struct29 x_0);
 
@@ -1811,7 +1811,7 @@ interface Module42;
 endinterface
 
 module mkModule42 (Module42);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_2 (Struct29 x_0);
 
@@ -1838,7 +1838,7 @@ interface Module43;
 endinterface
 
 module mkModule43 (Module43);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_1 (Struct29 x_0);
 
@@ -1865,7 +1865,7 @@ interface Module44;
 endinterface
 
 module mkModule44 (Module44);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_0 (Struct29 x_0);
 
@@ -1892,7 +1892,7 @@ interface Module45;
 endinterface
 
 module mkModule45 (Module45);
-    RWBramCore#(Bit#(8), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_002 (Struct28 x_0);
 
@@ -2235,7 +2235,7 @@ interface Module52;
 endinterface
 
 module mkModule52 (Module52);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_3 (Struct29 x_0);
 
@@ -2262,7 +2262,7 @@ interface Module53;
 endinterface
 
 module mkModule53 (Module53);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_2 (Struct29 x_0);
 
@@ -2289,7 +2289,7 @@ interface Module54;
 endinterface
 
 module mkModule54 (Module54);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_1 (Struct29 x_0);
 
@@ -2316,7 +2316,7 @@ interface Module55;
 endinterface
 
 module mkModule55 (Module55);
-    RWBramCore#(Bit#(6), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_0 (Struct29 x_0);
 
@@ -2343,7 +2343,7 @@ interface Module56;
 endinterface
 
 module mkModule56 (Module56);
-    RWBramCore#(Bit#(8), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_003 (Struct28 x_0);
 
@@ -2738,10 +2738,10 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         let x_0 = (readStage_00);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_00);
-        Bit#(48) x_2 = ((x_1)[63:16]);
-        Bit#(10) x_3 = ((x_1)[15:6]);
+        Bit#(49) x_2 = ((x_1)[63:15]);
+        Bit#(9) x_3 = ((x_1)[14:6]);
         Vector#(16, Struct19) x_4 =
-        ((Vector#(16, Struct19))'(vec(Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(16, Struct19))'(vec(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_5 <- getRs_infoRam_00_0();
         Vector#(16, Struct19) x_6 = (update (x_4, (Bit#(4))'(4'h0), x_5));
@@ -2878,8 +2878,8 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         when ((x_1).info_hit, noAction);
         writeStage_00 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(48) x_3 = ((x_2)[63:16]);
-        Bit#(10) x_4 = ((x_2)[15:6]);
+        Bit#(49) x_3 = ((x_2)[63:15]);
+        Bit#(9) x_4 = ((x_2)[14:6]);
         Bit#(4) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -3003,10 +3003,10 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_00 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(10) x_3 = ((x_2)[15:6]);
+        Bit#(9) x_3 = ((x_2)[14:6]);
         Struct22 x_4 = (Struct22 {write : (Bool)'(False), addr : x_3, datain
         :
-        (Struct19)'(Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+        (Struct19)'(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
         let x_5 <- putRq_infoRam_00_0(x_4);
         let x_6 <- putRq_infoRam_00_1(x_4);
@@ -3032,7 +3032,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         when ((x_0) == ((Bit#(3))'(3'h2)), noAction);
         writeStage_00 <= (Bit#(3))'(3'h3);
         Vector#(16, Struct19) x_1 =
-        ((Vector#(16, Struct19))'(vec(Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(16, Struct19))'(vec(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_2 <- getRs_infoRam_00_0();
         Vector#(16, Struct19) x_3 = (update (x_1, (Bit#(4))'(4'h0), x_2));
@@ -3113,9 +3113,9 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         ((Bit#(4))'(4'h0))))))))))))))))))))))))))))))))));
         let x_35 = (writeLine_00);
         Bit#(64) x_36 = ((x_35).addr);
-        Bit#(10) x_37 = ((x_36)[15:6]);
+        Bit#(9) x_37 = ((x_36)[14:6]);
         Struct19 x_38 = ((x_33)[x_34]);
-        Bit#(48) x_39 = ((x_38).tag);
+        Bit#(49) x_39 = ((x_38).tag);
         Struct4 x_40 = ((x_38).value);
         victimWay_00 <= x_34;
         victimLine_00 <= Struct3 {addr :
@@ -3137,8 +3137,8 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         let x_1 = (writeLine_00);
         writeStage_00 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(48) x_3 = ((x_2)[63:16]);
-        Bit#(10) x_4 = ((x_2)[15:6]);
+        Bit#(49) x_3 = ((x_2)[63:15]);
+        Bit#(9) x_4 = ((x_2)[14:6]);
         let x_5 = (victimWay_00);
         let x_6 = (victims_00);
         when ((! (((x_6)[(Bit#(3))'(3'h7)]).victim_valid)) || ((!
@@ -3369,11 +3369,10 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
                                         readStage_00 <= (Bit#(2))'(2'h1);
 
                                         readAddr_00 <= x_0;
-                                        Bit#(10) x_12 = ((x_0)[15:6]);
-
+                                        Bit#(9) x_12 = ((x_0)[14:6]);
                                         Struct22 x_13 = (Struct22 {write :
                                         (Bool)'(False), addr : x_12, datain :
-                                        (Struct19)'(Struct19 {tag: 48'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+                                        (Struct19)'(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
                                         let x_14 <- putRq_infoRam_00_0(x_13);
 
@@ -3908,10 +3907,10 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         let x_0 = (readStage_000);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_000);
-        Bit#(52) x_2 = ((x_1)[63:12]);
-        Bit#(6) x_3 = ((x_1)[11:6]);
+        Bit#(51) x_2 = ((x_1)[63:13]);
+        Bit#(7) x_3 = ((x_1)[12:6]);
         Vector#(4, Struct26) x_4 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_5 <- getRs_infoRam_000_0();
         Vector#(4, Struct26) x_6 = (update (x_4, (Bit#(2))'(2'h0), x_5));
@@ -3976,8 +3975,8 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         when ((x_1).info_hit, noAction);
         writeStage_000 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -4029,10 +4028,10 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_000 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(6) x_3 = ((x_2)[11:6]);
+        Bit#(7) x_3 = ((x_2)[12:6]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
-        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
         let x_5 <- putRq_infoRam_000_0(x_4);
         let x_6 <- putRq_infoRam_000_1(x_4);
@@ -4046,7 +4045,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         when ((x_0) == ((Bit#(3))'(3'h2)), noAction);
         writeStage_000 <= (Bit#(3))'(3'h3);
         Vector#(4, Struct26) x_1 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_2 <- getRs_infoRam_000_0();
         Vector#(4, Struct26) x_3 = (update (x_1, (Bit#(2))'(2'h0), x_2));
@@ -4068,9 +4067,9 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
 
         let x_11 = (writeLine_000);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(6) x_13 = ((x_12)[11:6]);
+        Bit#(7) x_13 = ((x_12)[12:6]);
         Struct26 x_14 = ((x_9)[x_10]);
-        Bit#(52) x_15 = ((x_14).tag);
+        Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_000 <= x_10;
         victimLine_000 <= Struct24 {addr :
@@ -4092,8 +4091,8 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         let x_1 = (writeLine_000);
         writeStage_000 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         let x_5 = (victimWay_000);
         let x_6 = (victims_000);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -4202,10 +4201,10 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
 
                         readStage_000 <= (Bit#(2))'(2'h1);
                         readAddr_000 <= x_0;
-                        Bit#(6) x_8 = ((x_0)[11:6]);
+                        Bit#(7) x_8 = ((x_0)[12:6]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
-                        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+                        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
                         let x_10 <- putRq_infoRam_000_0(x_9);
                         let x_11 <- putRq_infoRam_000_1(x_9);
@@ -4473,10 +4472,10 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         let x_0 = (readStage_001);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_001);
-        Bit#(52) x_2 = ((x_1)[63:12]);
-        Bit#(6) x_3 = ((x_1)[11:6]);
+        Bit#(51) x_2 = ((x_1)[63:13]);
+        Bit#(7) x_3 = ((x_1)[12:6]);
         Vector#(4, Struct26) x_4 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_5 <- getRs_infoRam_001_0();
         Vector#(4, Struct26) x_6 = (update (x_4, (Bit#(2))'(2'h0), x_5));
@@ -4541,8 +4540,8 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         when ((x_1).info_hit, noAction);
         writeStage_001 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -4594,10 +4593,10 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_001 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(6) x_3 = ((x_2)[11:6]);
+        Bit#(7) x_3 = ((x_2)[12:6]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
-        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
         let x_5 <- putRq_infoRam_001_0(x_4);
         let x_6 <- putRq_infoRam_001_1(x_4);
@@ -4611,7 +4610,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         when ((x_0) == ((Bit#(3))'(3'h2)), noAction);
         writeStage_001 <= (Bit#(3))'(3'h3);
         Vector#(4, Struct26) x_1 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_2 <- getRs_infoRam_001_0();
         Vector#(4, Struct26) x_3 = (update (x_1, (Bit#(2))'(2'h0), x_2));
@@ -4633,9 +4632,9 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
 
         let x_11 = (writeLine_001);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(6) x_13 = ((x_12)[11:6]);
+        Bit#(7) x_13 = ((x_12)[12:6]);
         Struct26 x_14 = ((x_9)[x_10]);
-        Bit#(52) x_15 = ((x_14).tag);
+        Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_001 <= x_10;
         victimLine_001 <= Struct24 {addr :
@@ -4657,8 +4656,8 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         let x_1 = (writeLine_001);
         writeStage_001 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         let x_5 = (victimWay_001);
         let x_6 = (victims_001);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -4767,10 +4766,10 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
 
                         readStage_001 <= (Bit#(2))'(2'h1);
                         readAddr_001 <= x_0;
-                        Bit#(6) x_8 = ((x_0)[11:6]);
+                        Bit#(7) x_8 = ((x_0)[12:6]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
-                        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+                        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
                         let x_10 <- putRq_infoRam_001_0(x_9);
                         let x_11 <- putRq_infoRam_001_1(x_9);
@@ -5038,10 +5037,10 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         let x_0 = (readStage_002);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_002);
-        Bit#(52) x_2 = ((x_1)[63:12]);
-        Bit#(6) x_3 = ((x_1)[11:6]);
+        Bit#(51) x_2 = ((x_1)[63:13]);
+        Bit#(7) x_3 = ((x_1)[12:6]);
         Vector#(4, Struct26) x_4 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_5 <- getRs_infoRam_002_0();
         Vector#(4, Struct26) x_6 = (update (x_4, (Bit#(2))'(2'h0), x_5));
@@ -5106,8 +5105,8 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         when ((x_1).info_hit, noAction);
         writeStage_002 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -5159,10 +5158,10 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_002 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(6) x_3 = ((x_2)[11:6]);
+        Bit#(7) x_3 = ((x_2)[12:6]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
-        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
         let x_5 <- putRq_infoRam_002_0(x_4);
         let x_6 <- putRq_infoRam_002_1(x_4);
@@ -5176,7 +5175,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         when ((x_0) == ((Bit#(3))'(3'h2)), noAction);
         writeStage_002 <= (Bit#(3))'(3'h3);
         Vector#(4, Struct26) x_1 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_2 <- getRs_infoRam_002_0();
         Vector#(4, Struct26) x_3 = (update (x_1, (Bit#(2))'(2'h0), x_2));
@@ -5198,9 +5197,9 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
 
         let x_11 = (writeLine_002);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(6) x_13 = ((x_12)[11:6]);
+        Bit#(7) x_13 = ((x_12)[12:6]);
         Struct26 x_14 = ((x_9)[x_10]);
-        Bit#(52) x_15 = ((x_14).tag);
+        Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_002 <= x_10;
         victimLine_002 <= Struct24 {addr :
@@ -5222,8 +5221,8 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         let x_1 = (writeLine_002);
         writeStage_002 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         let x_5 = (victimWay_002);
         let x_6 = (victims_002);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -5332,10 +5331,10 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
 
                         readStage_002 <= (Bit#(2))'(2'h1);
                         readAddr_002 <= x_0;
-                        Bit#(6) x_8 = ((x_0)[11:6]);
+                        Bit#(7) x_8 = ((x_0)[12:6]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
-                        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+                        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
                         let x_10 <- putRq_infoRam_002_0(x_9);
                         let x_11 <- putRq_infoRam_002_1(x_9);
@@ -5603,10 +5602,10 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         let x_0 = (readStage_003);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_003);
-        Bit#(52) x_2 = ((x_1)[63:12]);
-        Bit#(6) x_3 = ((x_1)[11:6]);
+        Bit#(51) x_2 = ((x_1)[63:13]);
+        Bit#(7) x_3 = ((x_1)[12:6]);
         Vector#(4, Struct26) x_4 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_5 <- getRs_infoRam_003_0();
         Vector#(4, Struct26) x_6 = (update (x_4, (Bit#(2))'(2'h0), x_5));
@@ -5671,8 +5670,8 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         when ((x_1).info_hit, noAction);
         writeStage_003 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -5724,10 +5723,10 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_003 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(6) x_3 = ((x_2)[11:6]);
+        Bit#(7) x_3 = ((x_2)[12:6]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
-        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
         let x_5 <- putRq_infoRam_003_0(x_4);
         let x_6 <- putRq_infoRam_003_1(x_4);
@@ -5741,7 +5740,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         when ((x_0) == ((Bit#(3))'(3'h2)), noAction);
         writeStage_003 <= (Bit#(3))'(3'h3);
         Vector#(4, Struct26) x_1 =
-        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
+        ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
         let x_2 <- getRs_infoRam_003_0();
         Vector#(4, Struct26) x_3 = (update (x_1, (Bit#(2))'(2'h0), x_2));
@@ -5763,9 +5762,9 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
 
         let x_11 = (writeLine_003);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(6) x_13 = ((x_12)[11:6]);
+        Bit#(7) x_13 = ((x_12)[12:6]);
         Struct26 x_14 = ((x_9)[x_10]);
-        Bit#(52) x_15 = ((x_14).tag);
+        Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_003 <= x_10;
         victimLine_003 <= Struct24 {addr :
@@ -5787,8 +5786,8 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         let x_1 = (writeLine_003);
         writeStage_003 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(52) x_3 = ((x_2)[63:12]);
-        Bit#(6) x_4 = ((x_2)[11:6]);
+        Bit#(51) x_3 = ((x_2)[63:13]);
+        Bit#(7) x_4 = ((x_2)[12:6]);
         let x_5 = (victimWay_003);
         let x_6 = (victims_003);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -5897,10 +5896,10 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
 
                         readStage_003 <= (Bit#(2))'(2'h1);
                         readAddr_003 <= x_0;
-                        Bit#(6) x_8 = ((x_0)[11:6]);
+                        Bit#(7) x_8 = ((x_0)[12:6]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
-                        (Struct26)'(Struct26 {tag: 52'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
+                        (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
                         let x_10 <- putRq_infoRam_003_0(x_9);
                         let x_11 <- putRq_infoRam_003_1(x_9);
@@ -20793,12 +20792,13 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     m57.downLockable003, m57.upLockable003, m71.cache_003_readRs,
     m61.deq_fifo00300, m57.downLockRssFull003, m71.cache_003_readRq,
     m60.deq_fifo0032);
-        //// Initialization logic
+
+    //// Initialization logic
 
     Reg#(Bool) init <- mkReg(False);
 
     Reg#(Bool) llInitDone <- mkReg(False);
-    Reg#(Bit#(10)) llInitIndex <- mkReg(0);
+    Reg#(Bit#(9)) llInitIndex <- mkReg(0);
 
     Reg#(Bool) l2InitDone0 <- mkReg(False);
     Reg#(Bit#(8)) l2InitIndex0 <- mkReg(0);
@@ -20806,15 +20806,15 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     Reg#(Bit#(8)) l2InitIndex1 <- mkReg(0);
 
     Reg#(Bool) l1InitDone0 <- mkReg(False);
-    Reg#(Bit#(6)) l1InitIndex0 <- mkReg(0);
+    Reg#(Bit#(7)) l1InitIndex0 <- mkReg(0);
     Reg#(Bool) l1InitDone1 <- mkReg(False);
-    Reg#(Bit#(6)) l1InitIndex1 <- mkReg(0);
+    Reg#(Bit#(7)) l1InitIndex1 <- mkReg(0);
     Reg#(Bool) l1InitDone2 <- mkReg(False);
-    Reg#(Bit#(6)) l1InitIndex2 <- mkReg(0);
+    Reg#(Bit#(7)) l1InitIndex2 <- mkReg(0);
     Reg#(Bool) l1InitDone3 <- mkReg(False);
-    Reg#(Bit#(6)) l1InitIndex3 <- mkReg(0);
+    Reg#(Bit#(7)) l1InitIndex3 <- mkReg(0);
 
-    function Struct22 llDefaultLine (Bit#(48) tagValue);
+    function Struct22 llDefaultLine (Bit#(49) tagValue);
       return Struct22 { write: True,
                        addr: llInitIndex,
                        datain: Struct19 { tag: tagValue,
@@ -20843,12 +20843,12 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m16.putRq_infoRam_00_0 (llDefaultLine(0));
 
         llInitIndex <= llInitIndex + 1;
-        if (llInitIndex == 10'b1111111111) begin
+        if (llInitIndex == 9'b111111111) begin
             llInitDone <= True;
         end
     endrule
 
-    function Struct29 l1DefaultLine (Bit#(52) tagValue, Bit#(6) index);
+    function Struct29 l1DefaultLine (Bit#(51) tagValue, Bit#(7) index);
       return Struct29 { write: True,
                        addr: index,
                        datain: Struct26 { tag: tagValue,
@@ -20864,7 +20864,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m21.putRq_infoRam_000_1 (l1DefaultLine(1, l1InitIndex0));
         m22.putRq_infoRam_000_0 (l1DefaultLine(0, l1InitIndex0));
         l1InitIndex0 <= l1InitIndex0 + 1;
-        if (l1InitIndex0 == 6'b111111) begin
+        if (l1InitIndex0 == 7'b1111111) begin
             l1InitDone0 <= True;
         end
     endrule
@@ -20875,7 +20875,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m32.putRq_infoRam_001_1 (l1DefaultLine(1, l1InitIndex1));
         m33.putRq_infoRam_001_0 (l1DefaultLine(0, l1InitIndex1));
         l1InitIndex1 <= l1InitIndex1 + 1;
-        if (l1InitIndex1 == 6'b111111) begin
+        if (l1InitIndex1 == 7'b1111111) begin
             l1InitDone1 <= True;
         end
     endrule
@@ -20886,7 +20886,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m43.putRq_infoRam_002_1 (l1DefaultLine(1, l1InitIndex2));
         m44.putRq_infoRam_002_0 (l1DefaultLine(0, l1InitIndex2));
         l1InitIndex2 <= l1InitIndex1 + 1;
-        if (l1InitIndex2 == 6'b111111) begin
+        if (l1InitIndex2 == 7'b1111111) begin
             l1InitDone2 <= True;
         end
     endrule
@@ -20897,7 +20897,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m54.putRq_infoRam_003_1 (l1DefaultLine(1, l1InitIndex3));
         m55.putRq_infoRam_003_0 (l1DefaultLine(0, l1InitIndex3));
         l1InitIndex3 <= l1InitIndex1 + 1;
-        if (l1InitIndex3 == 6'b111111) begin
+        if (l1InitIndex3 == 7'b1111111) begin
             l1InitDone3 <= True;
         end
     endrule
