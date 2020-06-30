@@ -29,7 +29,7 @@ Definition topo: tree :=
   Node [Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]].
 Definition dtr := fst (tree2Topo topo 0).
 
-Definition l1IndexSz: nat := 6.
+Definition l1IndexSz: nat := 7.
 Definition l1LgWay: nat := 2.
 Definition l1LgULs: nat := 2.
 Definition l1LgDLs: nat := 1.
@@ -45,7 +45,7 @@ Definition l2LgNumVictim: nat := l2LgULs.
 Definition l2Cache oidx := mesiCache oidx l2IndexSz l2LgWay l2LgNumVictim.
 Definition l2Mshrs oidx := mshrs oidx l2LgULs l2LgDLs.
 
-Definition llIndexSz: nat := 10.
+Definition llIndexSz: nat := 9.
 Definition llLgWay: nat := 4.
 Definition llLgULs: nat := 3.
 Definition llLgDLs: nat := 3.

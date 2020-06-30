@@ -215,7 +215,7 @@ Section Compile.
          * p(10), crq(00), crs(01) *)
         (rlcn: string)
         (wln: string) (wl: var (Struct WL))
-        (* rr: also a two-bit flag for round-robin *)
+        (* rr: a single-bit flag for round-robin *)
         (rrn: string).
 
       Definition compile_rule_readlock_parent
@@ -261,27 +261,23 @@ Section Compile.
         { imt_rqrs: bool; imt_from: option (option IdxT) }.
 
       Definition compile_rule_rr_step: ActionT var Void :=
-        (Read rr: Bit 2 <- rrn;
+        (Read rr: Bit 1 <- rrn;
         Write rrn <- #rr + $1;
         Retv)%kami_action.
 
-      (** NOTE: this round robin still has a lot of chances to be optimized. *)
       Definition compile_rule_rr_check (imt: InputMsgType)
                  (cont: ActionT var Void): ActionT var Void :=
         (match imt.(imt_from) with
          | None =>
            match imt.(imt_rqrs) with
-           | true => (Read rr: Bit 2 <- rrn; Assert #rr == $2; cont)
-           | false =>
-             (* for eviction requests;
-              * TODO: check if this designated slot is really required. *)
-             (Read rr: Bit 2 <- rrn; Assert #rr == $3; cont)
+           | true => (Read rr: Bit 1 <- rrn; Assert #rr == $0; cont)
+           | false => (* eviction cases *) cont
            end
-         | Some None => (Read rr: Bit 2 <- rrn; Assert #rr == $0; cont)
+         | Some None => (Read rr: Bit 1 <- rrn; Assert #rr == $0; cont)
          | Some (Some _) =>
            match imt.(imt_rqrs) with
-           | true => (Read rr: Bit 2 <- rrn; Assert #rr == $2; cont)
-           | false => (Read rr: Bit 2 <- rrn; Assert #rr == $1; cont)
+           | true => (* taking-responses cases *) cont
+           | false => (Read rr: Bit 1 <- rrn; Assert #rr == $1; cont)
            end
          end)%kami_action.
 
@@ -1022,7 +1018,7 @@ Section Compile.
   Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 2)) |}
+    {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 1)) |}
       :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
       :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
       :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
