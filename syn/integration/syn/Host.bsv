@@ -26,7 +26,10 @@ endinterface
 
 module mkHost#(HostIndication indication) (Host);
     CC mem <- mkCCBramMem();
-    CCTest tester <- mkCCTestRandom(mem);
+    // CCTest tester <- mkCCTestRandom(mem);
+    // CCTest tester <- mkCCTestRandomSame(mem);
+    // CCTest tester <- mkCCBenchLocality(mem);
+    CCTest tester <- mkCCTestShared(mem);
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
 

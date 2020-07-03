@@ -14,6 +14,8 @@ typedef `TEST_CYCLE_CNT TestCycleCnt;
 module mkTop(Empty);
     CC mem <- mkCCBramMem();
     CCTest tester <- mkCCTestRandom(mem);
+    // CCTest tester <- mkCCTestRandomSame(mem);
+    // CCTest tester <- mkCCBenchLocality(mem);
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
 
