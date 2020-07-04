@@ -8,8 +8,9 @@
 class HostIndication : public HostIndicationWrapper
 {
 public:
-  virtual void finish(uint32_t numResps) {
+  virtual void finish(uint32_t numResps, uint64_t mark) {
     printf("Test done, #responses: %d\n", numResps);
+    printf("Mark: %lx\n", mark);
     done = true;
   }
 
