@@ -1245,7 +1245,7 @@ Section InvDirE.
         { disc_ObjDirE; solve_mesi. }
       }
 
-      { (* [liPushImm] *)
+      { (* [liDropImm] *)
         disc_rule_conds_ex; disc; solve_valid.
       }
 

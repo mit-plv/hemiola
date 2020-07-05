@@ -903,7 +903,7 @@ Section InvDirM.
         { disc_ObjDirM; solve_msi. }
       }
 
-      { (* [liPushImm] *)
+      { (* [liDropImm] *)
         disc_rule_conds_ex; disc.
         split; [solve_NoRsSI_by_silent|].
 

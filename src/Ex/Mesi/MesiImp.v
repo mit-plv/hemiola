@@ -168,7 +168,7 @@ Section System.
                 liDownIRqDownDownDirMES tr oidx;
                 liDownIRsUpUpSRel; liDownIRsUpUpMERel]
              (** rules involved with [Put] *)
-             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
+             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liDropImm];
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.

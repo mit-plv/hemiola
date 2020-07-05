@@ -1081,7 +1081,7 @@ Section Sim.
         solve_sim_mesi.
       }
 
-      { (* [liPushImm] *)
+      { (* [liDropImm] *)
         disc_rule_conds_ex; spec_case_silent.
         solve_sim_mesi_ext_mp.
         solve_SpecStateCoh.

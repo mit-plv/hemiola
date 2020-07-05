@@ -958,7 +958,7 @@ Section System.
         :transition (!|ost, _| --> (ost +#[owned <- false]
                                         +#[status <- mesiNP])).
 
-      Definition liPushImm: Rule :=
+      Definition liDropImm: Rule :=
         rule.imm[2~>3]
         :requires
            (fun ost orq mins =>
@@ -1141,7 +1141,7 @@ Section System.
                 liDownIRqDownDownDirS oidx; liDownIRqDownDownDirME oidx; liDownIRqDownDownDirMES oidx;
                 liDownIRsUpUpS; liDownIRsUpUpME; liDownIRsUpUpMES]
              (** rules involved with [Put] *)
-             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liPushImm];
+             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liDropImm];
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.
@@ -1205,4 +1205,4 @@ Hint Unfold liGetSImmS liGetSImmME
      liDownIImmS liDownIImmME liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRqDownDownDirMES
      liDownIRsUpUpS liDownIRsUpUpME liDownIRsUpUpMES liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
-     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBME liPushImm: MesiRules.
+     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBME liDropImm: MesiRules.

@@ -2407,7 +2407,7 @@ Section InvExcl.
         { solve_InvExcl_trivial. }
       }
 
-      { (* [liPushImm] *)
+      { (* [liDropImm] *)
         disc_rule_conds_ex; split.
         { solve_AtomicInv_init. }
         { eapply InvExcl_state_transition_sound with (porqs:= orqs);
@@ -6022,7 +6022,7 @@ Section InvExcl.
       }
     }
 
-    { (* [liPushImm] *)
+    { (* [liDropImm] *)
       disc_rule_conds_ex; split.
       { exfalso; destruct rins; [auto|discriminate]. }
       { eapply InvExcl_state_transition_sound with (porqs:= orqs);
