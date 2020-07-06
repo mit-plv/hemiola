@@ -12,12 +12,12 @@ typedef `TEST_CYCLE_CNT TestCycleCnt;
 
 (* synthesize *)
 module mkTop(Empty);
-    // CC mem <- mkCCRegFileMem();
-    CC mem <- mkCCBramMem();
+    // CCMem mem <- mkCCRegFileMem();
+    CCMem mem <- mkCCBramMem();
 
     // CCTest tester <- mkCCTestIsolated(mem);
-    // CCTest tester <- mkCCTestShared(mem);
-    CCTest tester <- mkCCTestRandom(mem);
+    CCTest tester <- mkCCTestShared(mem);
+    // CCTest tester <- mkCCTestRandom(mem);
 
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
@@ -29,9 +29,7 @@ module mkTop(Empty);
 
     rule check_end (started && tester.isEnd && !ended);
         let n = tester.getThroughput();
-        let m = tester.getMark();
-        $display ("Test done, throughput: %d / %d, mark: %x",
-           n, fromInteger(valueOf(TestCycleCnt)), m);
+        $display ("Test done, throughput: %d / %d", n, fromInteger(valueOf(TestCycleCnt)));
         ended <= True;
     endrule
 

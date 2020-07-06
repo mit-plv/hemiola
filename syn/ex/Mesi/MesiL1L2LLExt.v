@@ -11,7 +11,7 @@ Require Import MesiDeep MesiComp.
 Existing Instance MesiHOStateIfcFull.
 Instance MesiTopoConfig: TopoConfig :=
   {| hcfg_value_sz := 64;
-     hcfg_line_values_lg := 3;
+     hcfg_line_values_lg := 2; (* 32B line *)
      hcfg_children_max_pred := 1 (* max(#children) = 2 *) |}.
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
@@ -29,7 +29,9 @@ Definition topo: tree :=
   Node [Node [Node [Node nil; Node nil]; Node [Node nil; Node nil]]].
 Definition dtr := fst (tree2Topo topo 0).
 
-Definition l1IndexSz: nat := 7.
+(** Cache size: 2^(IndexSz) * 2^(LgWay) * (LineSz = 32B) *)
+(* 32KB L1: 2^8 * 2^2 * 32B *)
+Definition l1IndexSz: nat := 8.
 Definition l1LgWay: nat := 2.
 Definition l1LgULs: nat := 2.
 Definition l1LgDLs: nat := 1.
@@ -37,18 +39,20 @@ Definition l1LgNumVictim: nat := l1LgULs.
 Definition l1Cache oidx := mesiCache oidx l1IndexSz l1LgWay l1LgNumVictim.
 Definition l1Mshrs oidx := mshrs oidx l1LgULs l1LgDLs.
 
-Definition l2IndexSz: nat := 8.
+(* 128KB L2: 2^9 * 2^3 * 32B *)
+Definition l2IndexSz: nat := 9.
 Definition l2LgWay: nat := 3.
-Definition l2LgULs: nat := 3.
-Definition l2LgDLs: nat := 2.
+Definition l2LgULs: nat := 2.
+Definition l2LgDLs: nat := 1.
 Definition l2LgNumVictim: nat := l2LgULs.
 Definition l2Cache oidx := mesiCache oidx l2IndexSz l2LgWay l2LgNumVictim.
 Definition l2Mshrs oidx := mshrs oidx l2LgULs l2LgDLs.
 
-Definition llIndexSz: nat := 9.
+(* 512KB LL: 2^10 * 2^4 * 32B *)
+Definition llIndexSz: nat := 10.
 Definition llLgWay: nat := 4.
-Definition llLgULs: nat := 3.
-Definition llLgDLs: nat := 3.
+Definition llLgULs: nat := 2.
+Definition llLgDLs: nat := 2.
 Definition llLgNumVictim: nat := llLgULs.
 Definition llCache oidx := mesiCache oidx llIndexSz llLgWay llLgNumVictim.
 Definition llMshrs oidx := mshrs oidx llLgULs llLgDLs.

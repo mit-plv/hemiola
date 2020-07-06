@@ -12,11 +12,16 @@ interface MemRqRs;
     method ActionValue#(Struct2) mem_deq_rs ();
 endinterface
 
-interface CC;
-    interface Vector#(L1Num, MemRqRs) l1Ifc;
-    method Bool isInit ();
+interface DMA;
+    method Action dma_putRq (Struct21 x_0);
+    method ActionValue#(Vector#(4, Bit#(64))) dma_getRs ();
 endinterface
 
+interface CC;
+    interface Vector#(L1Num, MemRqRs) l1Ifc;
+    interface DMA llDma;
+    method Bool isInit ();
+endinterface
 typedef struct { Bool rl_valid; Bit#(2) rl_cmidx; Struct2 rl_msg; Bool rl_line_valid; Struct3 rl_line;  } Struct1 deriving(Eq, Bits);
 typedef struct { Bit#(2) enq_type; Bit#(2) enq_ch_idx; Struct2 enq_msg;  } Struct10 deriving(Eq, Bits);
 typedef struct { Bool r_ul_rsb; Struct2 r_ul_msg; Bit#(2) r_ul_rsbTo;  } Struct11 deriving(Eq, Bits);
@@ -26,20 +31,20 @@ typedef struct { Bit#(64) r_dl_addr; Bit#(2) r_dl_midx; Struct2 r_dl_msg;  } Str
 typedef struct { Bool valid; Struct9 data;  } Struct15 deriving(Eq, Bits);
 typedef struct { Bit#(4) cidx; Struct2 msg;  } Struct16 deriving(Eq, Bits);
 typedef struct { Bit#(64) r_dl_addr; Bit#(4) r_dl_rss_from;  } Struct17 deriving(Eq, Bits);
-typedef struct { Bool victim_valid; Bit#(3) victim_idx; Struct3 victim_line;  } Struct18 deriving(Eq, Bits);
+typedef struct { Bool victim_valid; Bit#(2) victim_idx; Struct3 victim_line;  } Struct18 deriving(Eq, Bits);
 typedef struct { Bit#(49) tag; Struct4 value;  } Struct19 deriving(Eq, Bits);
-typedef struct { Bit#(6) id; Bool type_; Bit#(64) addr; Vector#(8, Bit#(64)) value;  } Struct2 deriving(Eq, Bits);
+typedef struct { Bit#(6) id; Bool type_; Bit#(64) addr; Vector#(4, Bit#(64)) value;  } Struct2 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(4) tm_way; Struct4 tm_value;  } Struct20 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(13) addr; Vector#(8, Bit#(64)) datain;  } Struct21 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(9) addr; Struct19 datain;  } Struct22 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(14) addr; Vector#(4, Bit#(64)) datain;  } Struct21 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(10) addr; Struct19 datain;  } Struct22 deriving(Eq, Bits);
 typedef struct { Bool rl_valid; Bit#(2) rl_cmidx; Struct2 rl_msg; Bool rl_line_valid; Struct24 rl_line;  } Struct23 deriving(Eq, Bits);
-typedef struct { Bit#(64) addr; Bool info_hit; Bit#(2) info_way; Bool info_write; Struct4 info; Bool value_write; Vector#(8, Bit#(64)) value;  } Struct24 deriving(Eq, Bits);
+typedef struct { Bit#(64) addr; Bool info_hit; Bit#(2) info_way; Bool info_write; Struct4 info; Bool value_write; Vector#(4, Bit#(64)) value;  } Struct24 deriving(Eq, Bits);
 typedef struct { Bool victim_valid; Bit#(2) victim_idx; Struct24 victim_line;  } Struct25 deriving(Eq, Bits);
 typedef struct { Bit#(51) tag; Struct4 value;  } Struct26 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(2) tm_way; Struct4 tm_value;  } Struct27 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(9) addr; Vector#(8, Bit#(64)) datain;  } Struct28 deriving(Eq, Bits);
-typedef struct { Bool write; Bit#(7) addr; Struct26 datain;  } Struct29 deriving(Eq, Bits);
-typedef struct { Bit#(64) addr; Bool info_hit; Bit#(4) info_way; Bool info_write; Struct4 info; Bool value_write; Vector#(8, Bit#(64)) value;  } Struct3 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(10) addr; Vector#(4, Bit#(64)) datain;  } Struct28 deriving(Eq, Bits);
+typedef struct { Bool write; Bit#(8) addr; Struct26 datain;  } Struct29 deriving(Eq, Bits);
+typedef struct { Bit#(64) addr; Bool info_hit; Bit#(4) info_way; Bool info_write; Struct4 info; Bool value_write; Vector#(4, Bit#(64)) value;  } Struct3 deriving(Eq, Bits);
 typedef struct { Bool mesi_owned; Bit#(3) mesi_status; Bit#(3) mesi_dir_st; Bit#(4) mesi_dir_sharers;  } Struct4 deriving(Eq, Bits);
 typedef struct { Bool wl_valid; Bool wl_write_rq;  } Struct5 deriving(Eq, Bits);
 typedef struct { Bool valid; Struct7 data;  } Struct6 deriving(Eq, Bits);
@@ -54,7 +59,7 @@ interface Module1;
 endinterface
 
 module mkModule1 (Module1);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_15 (Struct22 x_0);
 
@@ -81,7 +86,7 @@ interface Module2;
 endinterface
 
 module mkModule2 (Module2);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_14 (Struct22 x_0);
 
@@ -108,7 +113,7 @@ interface Module3;
 endinterface
 
 module mkModule3 (Module3);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_13 (Struct22 x_0);
 
@@ -135,7 +140,7 @@ interface Module4;
 endinterface
 
 module mkModule4 (Module4);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_12 (Struct22 x_0);
 
@@ -162,7 +167,7 @@ interface Module5;
 endinterface
 
 module mkModule5 (Module5);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_11 (Struct22 x_0);
 
@@ -189,7 +194,7 @@ interface Module6;
 endinterface
 
 module mkModule6 (Module6);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_10 (Struct22 x_0);
 
@@ -216,7 +221,7 @@ interface Module7;
 endinterface
 
 module mkModule7 (Module7);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_9 (Struct22 x_0);
 
@@ -243,7 +248,7 @@ interface Module8;
 endinterface
 
 module mkModule8 (Module8);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_8 (Struct22 x_0);
 
@@ -270,7 +275,7 @@ interface Module9;
 endinterface
 
 module mkModule9 (Module9);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_7 (Struct22 x_0);
 
@@ -297,7 +302,7 @@ interface Module10;
 endinterface
 
 module mkModule10 (Module10);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_6 (Struct22 x_0);
 
@@ -324,7 +329,7 @@ interface Module11;
 endinterface
 
 module mkModule11 (Module11);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_5 (Struct22 x_0);
 
@@ -351,7 +356,7 @@ interface Module12;
 endinterface
 
 module mkModule12 (Module12);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_4 (Struct22 x_0);
 
@@ -378,7 +383,7 @@ interface Module13;
 endinterface
 
 module mkModule13 (Module13);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_3 (Struct22 x_0);
 
@@ -405,7 +410,7 @@ interface Module14;
 endinterface
 
 module mkModule14 (Module14);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_2 (Struct22 x_0);
 
@@ -432,7 +437,7 @@ interface Module15;
 endinterface
 
 module mkModule15 (Module15);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_1 (Struct22 x_0);
 
@@ -459,7 +464,7 @@ interface Module16;
 endinterface
 
 module mkModule16 (Module16);
-    RWBramCore#(Bit#(9), Struct19) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Struct19) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_00_0 (Struct22 x_0);
 
@@ -481,12 +486,12 @@ endmodule
 
 interface Module17;
     method Action putRq_dataRam_00 (Struct21 x_0);
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_00 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_00 ();
 
 endinterface
 
 module mkModule17 (Module17);
-    RWBramCore#(Bit#(13), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(14), Vector#(4, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_00 (Struct21 x_0);
 
@@ -499,7 +504,7 @@ module mkModule17 (Module17);
 
     endmethod
 
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_00 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_00 ();
     bram.deqRdResp ();
     let data = bram.rdResp ();
     return data;
@@ -523,185 +528,117 @@ interface Module18;
 endinterface
 
 module mkModule18 (Module18);
-    Reg#(Vector#(8, Struct9)) uls <- mkReg(unpack(0));
-    Reg#(Vector#(8, Struct7)) dls <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct9)) uls <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct7)) dls <- mkReg(unpack(0));
 
     // No rules in this module
 
     method ActionValue#(Bool) upLockable00 (Bit#(64) x_0);
         let x_1 = (uls);
-        Bool x_2 = ((! (((x_1)[(Bit#(3))'(3'h0)]).ul_valid) ? ((Bool)'(True))
-        : ((! (((x_1)[(Bit#(3))'(3'h1)]).ul_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h2)]).ul_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h3)]).ul_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h4)]).ul_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h5)]).ul_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h6)]).ul_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h7)]).ul_valid) ? ((Bool)'(True)) :
-        ((Bool)'(False))))))))))))))))));
-        Bool x_3 = (((((x_1)[(Bit#(3))'(3'h0)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h1)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h2)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h3)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h4)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h5)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h6)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h7)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).ul_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : ((Bool)'(True))))))))))))))))));
+        Bool x_2 = ((! (((x_1)[(Bit#(2))'(2'h0)]).ul_valid) ? ((Bool)'(True))
+        : ((! (((x_1)[(Bit#(2))'(2'h1)]).ul_valid) ? ((Bool)'(True)) : ((!
+        (((x_1)[(Bit#(2))'(2'h2)]).ul_valid) ? ((Bool)'(True)) : ((!
+        (((x_1)[(Bit#(2))'(2'h3)]).ul_valid) ? ((Bool)'(True)) :
+        ((Bool)'(False))))))))));
+        Bool x_3 = (((((x_1)[(Bit#(2))'(2'h0)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).ul_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : (((((x_1)[(Bit#(2))'(2'h1)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).ul_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : (((((x_1)[(Bit#(2))'(2'h2)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).ul_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : ((Bool)'(True))))))))));
         return (x_2) && (x_3);
     endmethod
 
     method ActionValue#(Bool) downLockable00 (Bit#(64) x_0);
         let x_1 = (dls);
-        Bool x_2 = ((! (((x_1)[(Bit#(3))'(3'h0)]).dl_valid) ? ((Bool)'(True))
-        : ((! (((x_1)[(Bit#(3))'(3'h1)]).dl_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h2)]).dl_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h3)]).dl_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h4)]).dl_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h5)]).dl_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h6)]).dl_valid) ? ((Bool)'(True)) : ((!
-        (((x_1)[(Bit#(3))'(3'h7)]).dl_valid) ? ((Bool)'(True)) :
-        ((Bool)'(False))))))))))))))))));
-        Bool x_3 = (((((x_1)[(Bit#(3))'(3'h0)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h1)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h2)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h3)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h4)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h5)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h6)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : (((((x_1)[(Bit#(3))'(3'h7)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_msg).addr) == (x_0)) ?
-        ((Bool)'(False)) : ((Bool)'(True))))))))))))))))));
+        Bool x_2 = ((! (((x_1)[(Bit#(2))'(2'h0)]).dl_valid) ? ((Bool)'(True))
+        : ((! (((x_1)[(Bit#(2))'(2'h1)]).dl_valid) ? ((Bool)'(True)) : ((!
+        (((x_1)[(Bit#(2))'(2'h2)]).dl_valid) ? ((Bool)'(True)) : ((!
+        (((x_1)[(Bit#(2))'(2'h3)]).dl_valid) ? ((Bool)'(True)) :
+        ((Bool)'(False))))))))));
+        Bool x_3 = (((((x_1)[(Bit#(2))'(2'h0)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).dl_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : (((((x_1)[(Bit#(2))'(2'h1)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : (((((x_1)[(Bit#(2))'(2'h2)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : (((((x_1)[(Bit#(2))'(2'h3)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_msg).addr) == (x_0)) ?
+        ((Bool)'(False)) : ((Bool)'(True))))))))));
         return (x_2) && (x_3);
     endmethod
 
     method ActionValue#(Struct15) upLockGet00 (Bit#(64) x_0);
         let x_1 = (uls);
-        Struct15 x_2 = (((((x_1)[(Bit#(3))'(3'h0)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h0)]}) :
-        (((((x_1)[(Bit#(3))'(3'h1)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h1)]}) :
-        (((((x_1)[(Bit#(3))'(3'h2)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h2)]}) :
-        (((((x_1)[(Bit#(3))'(3'h3)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h3)]}) :
-        (((((x_1)[(Bit#(3))'(3'h4)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h4)]}) :
-        (((((x_1)[(Bit#(3))'(3'h5)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h5)]}) :
-        (((((x_1)[(Bit#(3))'(3'h6)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h6)]}) :
-        (((((x_1)[(Bit#(3))'(3'h7)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).ul_msg).addr) == (x_0)) ? (Struct15
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h7)]}) :
-        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))))))))))));
+        Struct15 x_2 = (((((x_1)[(Bit#(2))'(2'h0)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).ul_msg).addr) == (x_0)) ? (Struct15
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h0)]}) :
+        (((((x_1)[(Bit#(2))'(2'h1)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).ul_msg).addr) == (x_0)) ? (Struct15
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h1)]}) :
+        (((((x_1)[(Bit#(2))'(2'h2)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).ul_msg).addr) == (x_0)) ? (Struct15
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h2)]}) :
+        (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ? (Struct15
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
+        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
 
         return x_2;
     endmethod
 
     method ActionValue#(Struct6) downLockGet00 (Bit#(64) x_0);
         let x_1 = (dls);
-        Struct6 x_2 = (((((x_1)[(Bit#(3))'(3'h0)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h0)]}) :
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h1)]}) :
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h2)]}) :
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h3)]}) :
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h4)]}) :
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h5)]}) :
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h6)]}) :
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_msg).addr) == (x_0)) ? (Struct6
-        {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h7)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))))))))))))))));
+        Struct6 x_2 = (((((x_1)[(Bit#(2))'(2'h0)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).dl_msg).addr) == (x_0)) ? (Struct6
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h0)]}) :
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_msg).addr) == (x_0)) ? (Struct6
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h1)]}) :
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_msg).addr) == (x_0)) ? (Struct6
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h2)]}) :
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_msg).addr) == (x_0)) ? (Struct6
+        {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))))))));
 
         return x_2;
     endmethod
 
     method ActionValue#(Struct6) downLockRssFull00 ();
         let x_1 = (dls);
-        Struct6 x_2 = (((((x_1)[(Bit#(3))'(3'h0)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h0)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h0)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h0)]}) :
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h1)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h1)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h1)]}) :
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h2)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h2)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h2)]}) :
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h3)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h3)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h3)]}) :
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h4)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h4)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h4)]}) :
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h5)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h5)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h5)]}) :
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h6)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h6)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h6)]}) :
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_valid) &&
-        ((((x_1)[(Bit#(3))'(3'h7)]).dl_rss_recv) ==
-        (((x_1)[(Bit#(3))'(3'h7)]).dl_rss_from)) ? (Struct6 {valid :
-        (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h7)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))))))))))))))));
+        Struct6 x_2 = (((((x_1)[(Bit#(2))'(2'h0)]).dl_valid) &&
+        ((((x_1)[(Bit#(2))'(2'h0)]).dl_rss_recv) ==
+        (((x_1)[(Bit#(2))'(2'h0)]).dl_rss_from)) ? (Struct6 {valid :
+        (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h0)]}) :
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_valid) &&
+        ((((x_1)[(Bit#(2))'(2'h1)]).dl_rss_recv) ==
+        (((x_1)[(Bit#(2))'(2'h1)]).dl_rss_from)) ? (Struct6 {valid :
+        (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h1)]}) :
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_valid) &&
+        ((((x_1)[(Bit#(2))'(2'h2)]).dl_rss_recv) ==
+        (((x_1)[(Bit#(2))'(2'h2)]).dl_rss_from)) ? (Struct6 {valid :
+        (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h2)]}) :
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_valid) &&
+        ((((x_1)[(Bit#(2))'(2'h3)]).dl_rss_recv) ==
+        (((x_1)[(Bit#(2))'(2'h3)]).dl_rss_from)) ? (Struct6 {valid :
+        (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))))))));
 
         return x_2;
     endmethod
 
     method Action registerUL00 (Struct11 x_0);
         let x_1 = (uls);
-        Bit#(3) x_2 = ((! (((x_1)[(Bit#(3))'(3'h0)]).ul_valid) ?
-        ((Bit#(3))'(3'h0)) : ((! (((x_1)[(Bit#(3))'(3'h1)]).ul_valid) ?
-        ((Bit#(3))'(3'h1)) : ((! (((x_1)[(Bit#(3))'(3'h2)]).ul_valid) ?
-        ((Bit#(3))'(3'h2)) : ((! (((x_1)[(Bit#(3))'(3'h3)]).ul_valid) ?
-        ((Bit#(3))'(3'h3)) : ((! (((x_1)[(Bit#(3))'(3'h4)]).ul_valid) ?
-        ((Bit#(3))'(3'h4)) : ((! (((x_1)[(Bit#(3))'(3'h5)]).ul_valid) ?
-        ((Bit#(3))'(3'h5)) : ((! (((x_1)[(Bit#(3))'(3'h6)]).ul_valid) ?
-        ((Bit#(3))'(3'h6)) : ((! (((x_1)[(Bit#(3))'(3'h7)]).ul_valid) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
+        Bit#(2) x_2 = ((! (((x_1)[(Bit#(2))'(2'h0)]).ul_valid) ?
+        ((Bit#(2))'(2'h0)) : ((! (((x_1)[(Bit#(2))'(2'h1)]).ul_valid) ?
+        ((Bit#(2))'(2'h1)) : ((! (((x_1)[(Bit#(2))'(2'h2)]).ul_valid) ?
+        ((Bit#(2))'(2'h2)) : ((! (((x_1)[(Bit#(2))'(2'h3)]).ul_valid) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_2, Struct9 {ul_valid : (Bool)'(True), ul_rsb :
         (x_0).r_ul_rsb, ul_msg : (x_0).r_ul_msg, ul_rsbTo :
         (x_0).r_ul_rsbTo});
@@ -710,69 +647,49 @@ module mkModule18 (Module18);
 
     method Action releaseUL00 (Bit#(64) x_0);
         let x_1 = (uls);
-        Bit#(3) x_2 = (((((x_1)[(Bit#(3))'(3'h0)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h0)) : (((((x_1)[(Bit#(3))'(3'h1)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h1)) : (((((x_1)[(Bit#(3))'(3'h2)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h2)) : (((((x_1)[(Bit#(3))'(3'h3)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h3)) : (((((x_1)[(Bit#(3))'(3'h4)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h4)) : (((((x_1)[(Bit#(3))'(3'h5)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h5)) : (((((x_1)[(Bit#(3))'(3'h6)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h6)) : (((((x_1)[(Bit#(3))'(3'h7)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).ul_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
+        Bit#(2) x_2 = (((((x_1)[(Bit#(2))'(2'h0)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).ul_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h0)) : (((((x_1)[(Bit#(2))'(2'h1)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).ul_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h1)) : (((((x_1)[(Bit#(2))'(2'h2)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).ul_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h2)) : (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_2,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
 
     endmethod
 
     method Action registerDL00 (Struct12 x_0);
         let x_1 = (dls);
-        Bit#(3) x_2 = ((! (((x_1)[(Bit#(3))'(3'h0)]).dl_valid) ?
-        ((Bit#(3))'(3'h0)) : ((! (((x_1)[(Bit#(3))'(3'h1)]).dl_valid) ?
-        ((Bit#(3))'(3'h1)) : ((! (((x_1)[(Bit#(3))'(3'h2)]).dl_valid) ?
-        ((Bit#(3))'(3'h2)) : ((! (((x_1)[(Bit#(3))'(3'h3)]).dl_valid) ?
-        ((Bit#(3))'(3'h3)) : ((! (((x_1)[(Bit#(3))'(3'h4)]).dl_valid) ?
-        ((Bit#(3))'(3'h4)) : ((! (((x_1)[(Bit#(3))'(3'h5)]).dl_valid) ?
-        ((Bit#(3))'(3'h5)) : ((! (((x_1)[(Bit#(3))'(3'h6)]).dl_valid) ?
-        ((Bit#(3))'(3'h6)) : ((! (((x_1)[(Bit#(3))'(3'h7)]).dl_valid) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
+        Bit#(2) x_2 = ((! (((x_1)[(Bit#(2))'(2'h0)]).dl_valid) ?
+        ((Bit#(2))'(2'h0)) : ((! (((x_1)[(Bit#(2))'(2'h1)]).dl_valid) ?
+        ((Bit#(2))'(2'h1)) : ((! (((x_1)[(Bit#(2))'(2'h2)]).dl_valid) ?
+        ((Bit#(2))'(2'h2)) : ((! (((x_1)[(Bit#(2))'(2'h3)]).dl_valid) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         dls <= update (x_1, x_2, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_0).r_dl_rsb, dl_msg : (x_0).r_dl_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : (x_0).r_dl_rsbTo});
 
     endmethod
 
     method Action releaseDL00 (Bit#(64) x_0);
         let x_1 = (dls);
-        Bit#(3) x_2 = (((((x_1)[(Bit#(3))'(3'h0)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h0)) : (((((x_1)[(Bit#(3))'(3'h1)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h1)) : (((((x_1)[(Bit#(3))'(3'h2)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h2)) : (((((x_1)[(Bit#(3))'(3'h3)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h3)) : (((((x_1)[(Bit#(3))'(3'h4)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h4)) : (((((x_1)[(Bit#(3))'(3'h5)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h5)) : (((((x_1)[(Bit#(3))'(3'h6)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h6)) : (((((x_1)[(Bit#(3))'(3'h7)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_msg).addr) == (x_0)) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
+        Bit#(2) x_2 = (((((x_1)[(Bit#(2))'(2'h0)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).dl_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h0)) : (((((x_1)[(Bit#(2))'(2'h1)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h1)) : (((((x_1)[(Bit#(2))'(2'h2)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h2)) : (((((x_1)[(Bit#(2))'(2'h3)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_msg).addr) == (x_0)) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         dls <= update (x_1, x_2,
-        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
 
     endmethod
@@ -780,89 +697,57 @@ module mkModule18 (Module18);
     method Action transferUpDown00 (Struct17 x_0);
         let x_1 = (uls);
         Bit#(64) x_2 = ((x_0).r_dl_addr);
-        Bit#(3) x_3 = (((((x_1)[(Bit#(3))'(3'h0)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h0)) : (((((x_1)[(Bit#(3))'(3'h1)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h1)) : (((((x_1)[(Bit#(3))'(3'h2)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h2)) : (((((x_1)[(Bit#(3))'(3'h3)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h3)) : (((((x_1)[(Bit#(3))'(3'h4)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h4)) : (((((x_1)[(Bit#(3))'(3'h5)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h5)) : (((((x_1)[(Bit#(3))'(3'h6)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h6)) : (((((x_1)[(Bit#(3))'(3'h7)]).ul_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).ul_msg).addr) == (x_2)) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
+        Bit#(2) x_3 = (((((x_1)[(Bit#(2))'(2'h0)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).ul_msg).addr) == (x_2)) ?
+        ((Bit#(2))'(2'h0)) : (((((x_1)[(Bit#(2))'(2'h1)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).ul_msg).addr) == (x_2)) ?
+        ((Bit#(2))'(2'h1)) : (((((x_1)[(Bit#(2))'(2'h2)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).ul_msg).addr) == (x_2)) ?
+        ((Bit#(2))'(2'h2)) : (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_2)) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         Struct9 x_4 = ((x_1)[x_3]);
         let x_5 = (dls);
-        Bit#(3) x_6 = ((! (((x_5)[(Bit#(3))'(3'h0)]).dl_valid) ?
-        ((Bit#(3))'(3'h0)) : ((! (((x_5)[(Bit#(3))'(3'h1)]).dl_valid) ?
-        ((Bit#(3))'(3'h1)) : ((! (((x_5)[(Bit#(3))'(3'h2)]).dl_valid) ?
-        ((Bit#(3))'(3'h2)) : ((! (((x_5)[(Bit#(3))'(3'h3)]).dl_valid) ?
-        ((Bit#(3))'(3'h3)) : ((! (((x_5)[(Bit#(3))'(3'h4)]).dl_valid) ?
-        ((Bit#(3))'(3'h4)) : ((! (((x_5)[(Bit#(3))'(3'h5)]).dl_valid) ?
-        ((Bit#(3))'(3'h5)) : ((! (((x_5)[(Bit#(3))'(3'h6)]).dl_valid) ?
-        ((Bit#(3))'(3'h6)) : ((! (((x_5)[(Bit#(3))'(3'h7)]).dl_valid) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
+        Bit#(2) x_6 = ((! (((x_5)[(Bit#(2))'(2'h0)]).dl_valid) ?
+        ((Bit#(2))'(2'h0)) : ((! (((x_5)[(Bit#(2))'(2'h1)]).dl_valid) ?
+        ((Bit#(2))'(2'h1)) : ((! (((x_5)[(Bit#(2))'(2'h2)]).dl_valid) ?
+        ((Bit#(2))'(2'h2)) : ((! (((x_5)[(Bit#(2))'(2'h3)]).dl_valid) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_3,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         dls <= update (x_5, x_6, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_4).ul_rsb, dl_msg : (x_4).ul_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : {((Bit#(2))'(2'h2)),((x_4).ul_rsbTo)}});
 
     endmethod
 
     method Action addRs00 (Struct14 x_0);
         let x_1 = (dls);
-        Bit#(3) x_2 = (((((x_1)[(Bit#(3))'(3'h0)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h0)) : (((((x_1)[(Bit#(3))'(3'h1)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h1)) : (((((x_1)[(Bit#(3))'(3'h2)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h2)) : (((((x_1)[(Bit#(3))'(3'h3)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h3)) : (((((x_1)[(Bit#(3))'(3'h4)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h4)) : (((((x_1)[(Bit#(3))'(3'h5)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h5)) : (((((x_1)[(Bit#(3))'(3'h6)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h6)) : (((((x_1)[(Bit#(3))'(3'h7)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h0))))))))))))))))));
-        Struct6 x_3 = (((((x_1)[(Bit#(3))'(3'h0)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h0)]}) :
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h1)]}) :
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h2)]}) :
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h3)]}) :
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h4)]}) :
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h5)]}) :
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h6)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h6)]}) :
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_valid) &&
-        (((((x_1)[(Bit#(3))'(3'h7)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
-        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(3))'(3'h7)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))))))))))))))));
+        Bit#(2) x_2 = (((((x_1)[(Bit#(2))'(2'h0)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        ((Bit#(2))'(2'h0)) : (((((x_1)[(Bit#(2))'(2'h1)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        ((Bit#(2))'(2'h1)) : (((((x_1)[(Bit#(2))'(2'h2)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        ((Bit#(2))'(2'h2)) : (((((x_1)[(Bit#(2))'(2'h3)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
+        Struct6 x_3 = (((((x_1)[(Bit#(2))'(2'h0)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h0)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h0)]}) :
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h1)]}) :
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h2)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h2)]}) :
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_valid) &&
+        (((((x_1)[(Bit#(2))'(2'h3)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
+        (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))))))));
 
         Struct7 x_4 = ((x_3).data);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (x_4).dl_valid, dl_rsb :
@@ -882,7 +767,7 @@ interface Module19;
 endinterface
 
 module mkModule19 (Module19);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_3 (Struct29 x_0);
 
@@ -909,7 +794,7 @@ interface Module20;
 endinterface
 
 module mkModule20 (Module20);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_2 (Struct29 x_0);
 
@@ -936,7 +821,7 @@ interface Module21;
 endinterface
 
 module mkModule21 (Module21);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_1 (Struct29 x_0);
 
@@ -963,7 +848,7 @@ interface Module22;
 endinterface
 
 module mkModule22 (Module22);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_000_0 (Struct29 x_0);
 
@@ -985,12 +870,12 @@ endmodule
 
 interface Module23;
     method Action putRq_dataRam_000 (Struct28 x_0);
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_000 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_000 ();
 
 endinterface
 
 module mkModule23 (Module23);
-    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Vector#(4, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_000 (Struct28 x_0);
 
@@ -1003,7 +888,7 @@ module mkModule23 (Module23);
 
     endmethod
 
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_000 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_000 ();
     bram.deqRdResp ();
     let data = bram.rdResp ();
     return data;
@@ -1078,7 +963,7 @@ module mkModule24 (Module24);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ? (Struct15
         {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
-        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
+        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
 
         return x_2;
     endmethod
@@ -1091,7 +976,7 @@ module mkModule24 (Module24);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ? (Struct6
         {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -1106,7 +991,7 @@ module mkModule24 (Module24);
         ((((x_1)[(Bit#(1))'(1'h1)]).dl_rss_recv) ==
         (((x_1)[(Bit#(1))'(1'h1)]).dl_rss_from)) ? (Struct6 {valid :
         (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -1136,7 +1021,7 @@ module mkModule24 (Module24);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ?
         ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_2,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
 
     endmethod
@@ -1149,7 +1034,7 @@ module mkModule24 (Module24);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_0).r_dl_rsb, dl_msg : (x_0).r_dl_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : (x_0).r_dl_rsbTo});
 
     endmethod
@@ -1162,7 +1047,7 @@ module mkModule24 (Module24);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         dls <= update (x_1, x_2,
-        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
 
     endmethod
@@ -1185,12 +1070,12 @@ module mkModule24 (Module24);
         ((Bit#(1))'(1'h0)) : ((! (((x_5)[(Bit#(1))'(1'h1)]).dl_valid) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         uls <= update (x_1, x_3,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         dls <= update (x_5, x_6, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_4).ul_rsb, dl_msg : (x_4).ul_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : {((Bit#(2))'(2'h2)),((x_4).ul_rsbTo)}});
 
     endmethod
@@ -1208,7 +1093,7 @@ module mkModule24 (Module24);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
         (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         Struct7 x_4 = ((x_3).data);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (x_4).dl_valid, dl_rsb :
@@ -1333,7 +1218,7 @@ interface Module30;
 endinterface
 
 module mkModule30 (Module30);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_3 (Struct29 x_0);
 
@@ -1360,7 +1245,7 @@ interface Module31;
 endinterface
 
 module mkModule31 (Module31);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_2 (Struct29 x_0);
 
@@ -1387,7 +1272,7 @@ interface Module32;
 endinterface
 
 module mkModule32 (Module32);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_1 (Struct29 x_0);
 
@@ -1414,7 +1299,7 @@ interface Module33;
 endinterface
 
 module mkModule33 (Module33);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_001_0 (Struct29 x_0);
 
@@ -1436,12 +1321,12 @@ endmodule
 
 interface Module34;
     method Action putRq_dataRam_001 (Struct28 x_0);
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_001 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_001 ();
 
 endinterface
 
 module mkModule34 (Module34);
-    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Vector#(4, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_001 (Struct28 x_0);
 
@@ -1454,7 +1339,7 @@ module mkModule34 (Module34);
 
     endmethod
 
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_001 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_001 ();
     bram.deqRdResp ();
     let data = bram.rdResp ();
     return data;
@@ -1529,7 +1414,7 @@ module mkModule35 (Module35);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ? (Struct15
         {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
-        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
+        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
 
         return x_2;
     endmethod
@@ -1542,7 +1427,7 @@ module mkModule35 (Module35);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ? (Struct6
         {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -1557,7 +1442,7 @@ module mkModule35 (Module35);
         ((((x_1)[(Bit#(1))'(1'h1)]).dl_rss_recv) ==
         (((x_1)[(Bit#(1))'(1'h1)]).dl_rss_from)) ? (Struct6 {valid :
         (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -1587,7 +1472,7 @@ module mkModule35 (Module35);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ?
         ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_2,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
 
     endmethod
@@ -1600,7 +1485,7 @@ module mkModule35 (Module35);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_0).r_dl_rsb, dl_msg : (x_0).r_dl_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : (x_0).r_dl_rsbTo});
 
     endmethod
@@ -1613,7 +1498,7 @@ module mkModule35 (Module35);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         dls <= update (x_1, x_2,
-        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
 
     endmethod
@@ -1636,12 +1521,12 @@ module mkModule35 (Module35);
         ((Bit#(1))'(1'h0)) : ((! (((x_5)[(Bit#(1))'(1'h1)]).dl_valid) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         uls <= update (x_1, x_3,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         dls <= update (x_5, x_6, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_4).ul_rsb, dl_msg : (x_4).ul_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : {((Bit#(2))'(2'h2)),((x_4).ul_rsbTo)}});
 
     endmethod
@@ -1659,7 +1544,7 @@ module mkModule35 (Module35);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
         (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         Struct7 x_4 = ((x_3).data);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (x_4).dl_valid, dl_rsb :
@@ -1784,7 +1669,7 @@ interface Module41;
 endinterface
 
 module mkModule41 (Module41);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_3 (Struct29 x_0);
 
@@ -1811,7 +1696,7 @@ interface Module42;
 endinterface
 
 module mkModule42 (Module42);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_2 (Struct29 x_0);
 
@@ -1838,7 +1723,7 @@ interface Module43;
 endinterface
 
 module mkModule43 (Module43);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_1 (Struct29 x_0);
 
@@ -1865,7 +1750,7 @@ interface Module44;
 endinterface
 
 module mkModule44 (Module44);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_002_0 (Struct29 x_0);
 
@@ -1887,12 +1772,12 @@ endmodule
 
 interface Module45;
     method Action putRq_dataRam_002 (Struct28 x_0);
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_002 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_002 ();
 
 endinterface
 
 module mkModule45 (Module45);
-    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Vector#(4, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_002 (Struct28 x_0);
 
@@ -1905,7 +1790,7 @@ module mkModule45 (Module45);
 
     endmethod
 
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_002 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_002 ();
     bram.deqRdResp ();
     let data = bram.rdResp ();
     return data;
@@ -1980,7 +1865,7 @@ module mkModule46 (Module46);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ? (Struct15
         {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
-        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
+        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
 
         return x_2;
     endmethod
@@ -1993,7 +1878,7 @@ module mkModule46 (Module46);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ? (Struct6
         {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -2008,7 +1893,7 @@ module mkModule46 (Module46);
         ((((x_1)[(Bit#(1))'(1'h1)]).dl_rss_recv) ==
         (((x_1)[(Bit#(1))'(1'h1)]).dl_rss_from)) ? (Struct6 {valid :
         (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -2038,7 +1923,7 @@ module mkModule46 (Module46);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ?
         ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_2,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
 
     endmethod
@@ -2051,7 +1936,7 @@ module mkModule46 (Module46);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_0).r_dl_rsb, dl_msg : (x_0).r_dl_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : (x_0).r_dl_rsbTo});
 
     endmethod
@@ -2064,7 +1949,7 @@ module mkModule46 (Module46);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         dls <= update (x_1, x_2,
-        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
 
     endmethod
@@ -2087,12 +1972,12 @@ module mkModule46 (Module46);
         ((Bit#(1))'(1'h0)) : ((! (((x_5)[(Bit#(1))'(1'h1)]).dl_valid) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         uls <= update (x_1, x_3,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         dls <= update (x_5, x_6, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_4).ul_rsb, dl_msg : (x_4).ul_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : {((Bit#(2))'(2'h2)),((x_4).ul_rsbTo)}});
 
     endmethod
@@ -2110,7 +1995,7 @@ module mkModule46 (Module46);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
         (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         Struct7 x_4 = ((x_3).data);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (x_4).dl_valid, dl_rsb :
@@ -2235,7 +2120,7 @@ interface Module52;
 endinterface
 
 module mkModule52 (Module52);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_3 (Struct29 x_0);
 
@@ -2262,7 +2147,7 @@ interface Module53;
 endinterface
 
 module mkModule53 (Module53);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_2 (Struct29 x_0);
 
@@ -2289,7 +2174,7 @@ interface Module54;
 endinterface
 
 module mkModule54 (Module54);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_1 (Struct29 x_0);
 
@@ -2316,7 +2201,7 @@ interface Module55;
 endinterface
 
 module mkModule55 (Module55);
-    RWBramCore#(Bit#(7), Struct26) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(8), Struct26) bram <- mkRWBramCore();
 
     method Action putRq_infoRam_003_0 (Struct29 x_0);
 
@@ -2338,12 +2223,12 @@ endmodule
 
 interface Module56;
     method Action putRq_dataRam_003 (Struct28 x_0);
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_003 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_003 ();
 
 endinterface
 
 module mkModule56 (Module56);
-    RWBramCore#(Bit#(9), Vector#(8, Bit#(64))) bram <- mkRWBramCore();
+    RWBramCore#(Bit#(10), Vector#(4, Bit#(64))) bram <- mkRWBramCore();
 
     method Action putRq_dataRam_003 (Struct28 x_0);
 
@@ -2356,7 +2241,7 @@ module mkModule56 (Module56);
 
     endmethod
 
-    method ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_003 ();
+    method ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_003 ();
     bram.deqRdResp ();
     let data = bram.rdResp ();
     return data;
@@ -2431,7 +2316,7 @@ module mkModule57 (Module57);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_valid) &&
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ? (Struct15
         {valid : (Bool)'(True), data : (x_1)[(Bit#(2))'(2'h3)]}) :
-        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
+        ((Struct15)'(Struct15 {valid: False, data: Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}}))))))))));
 
         return x_2;
     endmethod
@@ -2444,7 +2329,7 @@ module mkModule57 (Module57);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ? (Struct6
         {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -2459,7 +2344,7 @@ module mkModule57 (Module57);
         ((((x_1)[(Bit#(1))'(1'h1)]).dl_rss_recv) ==
         (((x_1)[(Bit#(1))'(1'h1)]).dl_rss_from)) ? (Struct6 {valid :
         (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         return x_2;
     endmethod
@@ -2489,7 +2374,7 @@ module mkModule57 (Module57);
         (((((x_1)[(Bit#(2))'(2'h3)]).ul_msg).addr) == (x_0)) ?
         ((Bit#(2))'(2'h3)) : ((Bit#(2))'(2'h0))))))))));
         uls <= update (x_1, x_2,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
 
     endmethod
@@ -2502,7 +2387,7 @@ module mkModule57 (Module57);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_0).r_dl_rsb, dl_msg : (x_0).r_dl_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : (x_0).r_dl_rsbTo});
 
     endmethod
@@ -2515,7 +2400,7 @@ module mkModule57 (Module57);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == (x_0)) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         dls <= update (x_1, x_2,
-        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        (Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
 
     endmethod
@@ -2538,12 +2423,12 @@ module mkModule57 (Module57);
         ((Bit#(1))'(1'h0)) : ((! (((x_5)[(Bit#(1))'(1'h1)]).dl_valid) ?
         ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))))));
         uls <= update (x_1, x_3,
-        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        (Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         dls <= update (x_5, x_6, Struct7 {dl_valid : (Bool)'(True), dl_rsb :
         (x_4).ul_rsb, dl_msg : (x_4).ul_msg, dl_rss_from :
         (x_0).r_dl_rss_from, dl_rss_recv : (Bit#(4))'(4'h0), dl_rss :
-        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})),
+        (Vector#(4, Struct2))'(vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})),
         dl_rsbTo : {((Bit#(2))'(2'h2)),((x_4).ul_rsbTo)}});
 
     endmethod
@@ -2561,7 +2446,7 @@ module mkModule57 (Module57);
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_valid) &&
         (((((x_1)[(Bit#(1))'(1'h1)]).dl_msg).addr) == ((x_0).r_dl_addr)) ?
         (Struct6 {valid : (Bool)'(True), data : (x_1)[(Bit#(1))'(1'h1)]}) :
-        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
+        ((Struct6)'(Struct6 {valid: False, data: Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}}))))));
 
         Struct7 x_4 = ((x_3).data);
         dls <= update (x_1, x_2, Struct7 {dl_valid : (x_4).dl_valid, dl_rsb :
@@ -2707,7 +2592,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
   function Action putRq_infoRam_00_2(Struct22 _),
   function Action putRq_infoRam_00_1(Struct22 _),
   function Action putRq_infoRam_00_0(Struct22 _),
-  function ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_00(),
+  function ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_00(),
   function Action putRq_dataRam_00(Struct21 _),
   function ActionValue#(Struct19) getRs_infoRam_00_15(),
   function ActionValue#(Struct19) getRs_infoRam_00_14(),
@@ -2730,7 +2615,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
     Reg#(Struct3) readLine_00 <- mkReg(unpack(0));
     Reg#(Bit#(3)) writeStage_00 <- mkReg(unpack(0));
     Reg#(Struct3) writeLine_00 <- mkReg(unpack(0));
-    Reg#(Vector#(8, Struct18)) victims_00 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct18)) victims_00 <- mkReg(unpack(0));
     Reg#(Struct3) victimLine_00 <- mkReg(unpack(0));
     Reg#(Bit#(4)) victimWay_00 <- mkReg(unpack(0));
 
@@ -2739,7 +2624,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_00);
         Bit#(49) x_2 = ((x_1)[63:15]);
-        Bit#(9) x_3 = ((x_1)[14:6]);
+        Bit#(10) x_3 = ((x_1)[14:5]);
         Vector#(16, Struct19) x_4 =
         ((Vector#(16, Struct19))'(vec(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
@@ -2842,15 +2727,13 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         readLine_00 <= Struct3 {addr : x_1, info_hit : (x_37).tm_hit,
         info_way : (x_37).tm_way, info_write : (Bool)'(False), info :
         (x_37).tm_value, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         if ((x_37).tm_hit) begin
 
             readStage_00 <= (Bit#(2))'(2'h2);
             let x_38 <- putRq_dataRam_00(Struct21 {write : (Bool)'(False),
             addr : {(x_3),((x_37).tm_way)}, datain :
-            (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+            (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
         end else begin
         readStage_00 <= (Bit#(2))'(2'h3);
@@ -2879,7 +2762,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         writeStage_00 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(49) x_3 = ((x_2)[63:15]);
-        Bit#(9) x_4 = ((x_2)[14:6]);
+        Bit#(10) x_4 = ((x_2)[14:5]);
         Bit#(4) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -3003,7 +2886,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_00 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(9) x_3 = ((x_2)[14:6]);
+        Bit#(10) x_3 = ((x_2)[14:5]);
         Struct22 x_4 = (Struct22 {write : (Bool)'(False), addr : x_3, datain
         :
         (Struct19)'(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -3113,21 +2996,19 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         ((Bit#(4))'(4'h0))))))))))))))))))))))))))))))))));
         let x_35 = (writeLine_00);
         Bit#(64) x_36 = ((x_35).addr);
-        Bit#(9) x_37 = ((x_36)[14:6]);
+        Bit#(10) x_37 = ((x_36)[14:5]);
         Struct19 x_38 = ((x_33)[x_34]);
         Bit#(49) x_39 = ((x_38).tag);
         Struct4 x_40 = ((x_38).value);
         victimWay_00 <= x_34;
         victimLine_00 <= Struct3 {addr :
-        {(x_39),({(x_37),((Bit#(6))'(6'h0))})}, info_hit : (Bool)'(False),
+        {(x_39),({(x_37),((Bit#(5))'(5'h0))})}, info_hit : (Bool)'(False),
         info_way : (Bit#(4))'(4'h0), info_write : (Bool)'(False), info :
         x_40, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         let x_41 <- putRq_dataRam_00(Struct21 {write : (Bool)'(False), addr :
         {(x_37),(x_34)}, datain :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
     endrule
 
@@ -3138,27 +3019,18 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         writeStage_00 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(49) x_3 = ((x_2)[63:15]);
-        Bit#(9) x_4 = ((x_2)[14:6]);
+        Bit#(10) x_4 = ((x_2)[14:5]);
         let x_5 = (victimWay_00);
         let x_6 = (victims_00);
-        when ((! (((x_6)[(Bit#(3))'(3'h7)]).victim_valid)) || ((!
-        (((x_6)[(Bit#(3))'(3'h6)]).victim_valid)) || ((!
-        (((x_6)[(Bit#(3))'(3'h5)]).victim_valid)) || ((!
-        (((x_6)[(Bit#(3))'(3'h4)]).victim_valid)) || ((!
-        (((x_6)[(Bit#(3))'(3'h3)]).victim_valid)) || ((!
-        (((x_6)[(Bit#(3))'(3'h2)]).victim_valid)) || ((!
-        (((x_6)[(Bit#(3))'(3'h1)]).victim_valid)) || (!
-        (((x_6)[(Bit#(3))'(3'h0)]).victim_valid)))))))), noAction);
-        Bit#(3) x_7 = ((((x_6)[(Bit#(3))'(3'h7)]).victim_valid ?
-        ((((x_6)[(Bit#(3))'(3'h6)]).victim_valid ?
-        ((((x_6)[(Bit#(3))'(3'h5)]).victim_valid ?
-        ((((x_6)[(Bit#(3))'(3'h4)]).victim_valid ?
-        ((((x_6)[(Bit#(3))'(3'h3)]).victim_valid ?
-        ((((x_6)[(Bit#(3))'(3'h2)]).victim_valid ?
-        ((((x_6)[(Bit#(3))'(3'h1)]).victim_valid ? ((Bit#(3))'(3'h0)) :
-        ((Bit#(3))'(3'h1)))) : ((Bit#(3))'(3'h2)))) : ((Bit#(3))'(3'h3)))) :
-        ((Bit#(3))'(3'h4)))) : ((Bit#(3))'(3'h5)))) : ((Bit#(3))'(3'h6)))) :
-        ((Bit#(3))'(3'h7))));
+        when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
+        (((x_6)[(Bit#(2))'(2'h2)]).victim_valid)) || ((!
+        (((x_6)[(Bit#(2))'(2'h1)]).victim_valid)) || (!
+        (((x_6)[(Bit#(2))'(2'h0)]).victim_valid)))), noAction);
+        Bit#(2) x_7 = ((((x_6)[(Bit#(2))'(2'h3)]).victim_valid ?
+        ((((x_6)[(Bit#(2))'(2'h2)]).victim_valid ?
+        ((((x_6)[(Bit#(2))'(2'h1)]).victim_valid ? ((Bit#(2))'(2'h0)) :
+        ((Bit#(2))'(2'h1)))) : ((Bit#(2))'(2'h2)))) : ((Bit#(2))'(2'h3))));
+
         let x_8 <- getRs_dataRam_00();
         let x_9 = (victimLine_00);
         victims_00 <= update (x_6, x_7, Struct18 {victim_valid :
@@ -3291,7 +3163,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         let x_2 = (readStage_00);
         when ((x_2) == ((Bit#(2))'(2'h0)), noAction);
         let x_3 = (victims_00);
-        Struct18 x_4 = ((x_3)[(Bit#(3))'(3'h0)]);
+        Struct18 x_4 = ((x_3)[(Bit#(2))'(2'h0)]);
         if (((x_4).victim_valid) && ((((x_4).victim_line).addr) == (x_0)))
         begin
         readStage_00 <= (Bit#(2))'(2'h3);
@@ -3299,7 +3171,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
 
         end else begin
 
-            Struct18 x_5 = ((x_3)[(Bit#(3))'(3'h1)]);
+            Struct18 x_5 = ((x_3)[(Bit#(2))'(2'h1)]);
             if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
             (x_0))) begin
 
@@ -3308,7 +3180,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
 
             end else begin
 
-                Struct18 x_6 = ((x_3)[(Bit#(3))'(3'h2)]);
+                Struct18 x_6 = ((x_3)[(Bit#(2))'(2'h2)]);
                 if (((x_6).victim_valid) && ((((x_6).victim_line).addr) ==
                 (x_0))) begin
 
@@ -3317,7 +3189,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
 
                 end else begin
 
-                    Struct18 x_7 = ((x_3)[(Bit#(3))'(3'h3)]);
+                    Struct18 x_7 = ((x_3)[(Bit#(2))'(2'h3)]);
                     if (((x_7).victim_valid) && ((((x_7).victim_line).addr)
                     == (x_0))) begin
 
@@ -3326,94 +3198,29 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
 
                     end else begin
 
-                        Struct18 x_8 = ((x_3)[(Bit#(3))'(3'h4)]);
-                        if (((x_8).victim_valid) &&
-                        ((((x_8).victim_line).addr) == (x_0))) begin
+                        readStage_00 <= (Bit#(2))'(2'h1);
+                        readAddr_00 <= x_0;
+                        Bit#(10) x_8 = ((x_0)[14:5]);
+                        Struct22 x_9 = (Struct22 {write : (Bool)'(False),
+                        addr : x_8, datain :
+                        (Struct19)'(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
 
-                            readStage_00 <= (Bit#(2))'(2'h3);
-                            readLine_00 <= (x_8).victim_line;
-
-                        end else begin
-
-                            Struct18 x_9 = ((x_3)[(Bit#(3))'(3'h5)]);
-                            if (((x_9).victim_valid) &&
-                            ((((x_9).victim_line).addr) == (x_0))) begin
-
-                                readStage_00 <= (Bit#(2))'(2'h3);
-                                readLine_00 <= (x_9).victim_line;
-
-                            end else begin
-
-                                Struct18 x_10 = ((x_3)[(Bit#(3))'(3'h6)]);
-                                if (((x_10).victim_valid) &&
-                                ((((x_10).victim_line).addr) == (x_0))) begin
-
-                                    readStage_00 <= (Bit#(2))'(2'h3);
-
-                                    readLine_00 <= (x_10).victim_line;
-
-                                end else begin
-
-                                    Struct18 x_11 = ((x_3)[(Bit#(3))'(3'h7)]);
-
-                                    if (((x_11).victim_valid) &&
-                                    ((((x_11).victim_line).addr) == (x_0)))
-                                    begin
-
-                                        readStage_00 <= (Bit#(2))'(2'h3);
-
-                                        readLine_00 <= (x_11).victim_line;
-
-                                    end else begin
-
-                                        readStage_00 <= (Bit#(2))'(2'h1);
-
-                                        readAddr_00 <= x_0;
-                                        Bit#(9) x_12 = ((x_0)[14:6]);
-                                        Struct22 x_13 = (Struct22 {write :
-                                        (Bool)'(False), addr : x_12, datain :
-                                        (Struct19)'(Struct19 {tag: 49'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
-
-                                        let x_14 <- putRq_infoRam_00_0(x_13);
-
-                                        let x_15 <- putRq_infoRam_00_1(x_13);
-
-                                        let x_16 <- putRq_infoRam_00_2(x_13);
-
-                                        let x_17 <- putRq_infoRam_00_3(x_13);
-
-                                        let x_18 <- putRq_infoRam_00_4(x_13);
-
-                                        let x_19 <- putRq_infoRam_00_5(x_13);
-
-                                        let x_20 <- putRq_infoRam_00_6(x_13);
-
-                                        let x_21 <- putRq_infoRam_00_7(x_13);
-
-                                        let x_22 <- putRq_infoRam_00_8(x_13);
-
-                                        let x_23 <- putRq_infoRam_00_9(x_13);
-
-                                        let x_24 <-
-                                        putRq_infoRam_00_10(x_13);
-                                        let x_25 <-
-                                        putRq_infoRam_00_11(x_13);
-                                        let x_26 <-
-                                        putRq_infoRam_00_12(x_13);
-                                        let x_27 <-
-                                        putRq_infoRam_00_13(x_13);
-                                        let x_28 <-
-                                        putRq_infoRam_00_14(x_13);
-                                        let x_29 <-
-                                        putRq_infoRam_00_15(x_13);
-
-                                    end
-
-                                end
-
-                            end
-
-                        end
+                        let x_10 <- putRq_infoRam_00_0(x_9);
+                        let x_11 <- putRq_infoRam_00_1(x_9);
+                        let x_12 <- putRq_infoRam_00_2(x_9);
+                        let x_13 <- putRq_infoRam_00_3(x_9);
+                        let x_14 <- putRq_infoRam_00_4(x_9);
+                        let x_15 <- putRq_infoRam_00_5(x_9);
+                        let x_16 <- putRq_infoRam_00_6(x_9);
+                        let x_17 <- putRq_infoRam_00_7(x_9);
+                        let x_18 <- putRq_infoRam_00_8(x_9);
+                        let x_19 <- putRq_infoRam_00_9(x_9);
+                        let x_20 <- putRq_infoRam_00_10(x_9);
+                        let x_21 <- putRq_infoRam_00_11(x_9);
+                        let x_22 <- putRq_infoRam_00_12(x_9);
+                        let x_23 <- putRq_infoRam_00_13(x_9);
+                        let x_24 <- putRq_infoRam_00_14(x_9);
+                        let x_25 <- putRq_infoRam_00_15(x_9);
 
                     end
 
@@ -3441,7 +3248,7 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
         let x_3 = (victims_00);
         Bool x_4 = ((((x_0).info).mesi_dir_st) == ((Bit#(3))'(3'h1)));
 
-        Struct18 x_5 = ((x_3)[(Bit#(3))'(3'h0)]);
+        Struct18 x_5 = ((x_3)[(Bit#(2))'(2'h0)]);
         if (((x_5).victim_valid) && ((((x_5).victim_line).addr) ==
         ((x_0).addr))) begin
 
@@ -3452,13 +3259,13 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
             writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h1)));
 
             writeLine_00 <= x_6;
-            victims_00 <= update (x_3, (Bit#(3))'(3'h0), Struct18
-            {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h0), victim_line :
+            victims_00 <= update (x_3, (Bit#(2))'(2'h0), Struct18
+            {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h0), victim_line :
             x_6});
 
         end else begin
 
-            Struct18 x_7 = ((x_3)[(Bit#(3))'(3'h1)]);
+            Struct18 x_7 = ((x_3)[(Bit#(2))'(2'h1)]);
             if (((x_7).victim_valid) && ((((x_7).victim_line).addr) ==
             ((x_0).addr))) begin
 
@@ -3469,13 +3276,13 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
                 writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
                 ((Bit#(3))'(3'h1)));
                 writeLine_00 <= x_8;
-                victims_00 <= update (x_3, (Bit#(3))'(3'h1), Struct18
-                {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h1),
+                victims_00 <= update (x_3, (Bit#(2))'(2'h1), Struct18
+                {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h1),
                 victim_line : x_8});
 
             end else begin
 
-                Struct18 x_9 = ((x_3)[(Bit#(3))'(3'h2)]);
+                Struct18 x_9 = ((x_3)[(Bit#(2))'(2'h2)]);
                 if (((x_9).victim_valid) && ((((x_9).victim_line).addr) ==
                 ((x_0).addr))) begin
 
@@ -3486,13 +3293,13 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
                     writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
                     ((Bit#(3))'(3'h1)));
                     writeLine_00 <= x_10;
-                    victims_00 <= update (x_3, (Bit#(3))'(3'h2), Struct18
-                    {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h2),
+                    victims_00 <= update (x_3, (Bit#(2))'(2'h2), Struct18
+                    {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h2),
                     victim_line : x_10});
 
                 end else begin
 
-                    Struct18 x_11 = ((x_3)[(Bit#(3))'(3'h3)]);
+                    Struct18 x_11 = ((x_3)[(Bit#(2))'(2'h3)]);
                     if (((x_11).victim_valid) && ((((x_11).victim_line).addr)
                     == ((x_0).addr))) begin
 
@@ -3504,109 +3311,13 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
                         writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
                         ((Bit#(3))'(3'h1)));
                         writeLine_00 <= x_12;
-                        victims_00 <= update (x_3, (Bit#(3))'(3'h3), Struct18
-                        {victim_valid : x_4, victim_idx : (Bit#(3))'(3'h3),
+                        victims_00 <= update (x_3, (Bit#(2))'(2'h3), Struct18
+                        {victim_valid : x_4, victim_idx : (Bit#(2))'(2'h3),
                         victim_line : x_12});
 
                     end else begin
-
-                        Struct18 x_13 = ((x_3)[(Bit#(3))'(3'h4)]);
-                        if (((x_13).victim_valid) &&
-                        ((((x_13).victim_line).addr) == ((x_0).addr))) begin
-
-                            Struct3 x_14 = (Struct3 {addr : (x_0).addr,
-                            info_hit : (Bool)'(False), info_way :
-                            (x_0).info_way, info_write : (x_0).info_write,
-                            info : (x_0).info, value_write :
-                            (x_0).value_write, value : (x_0).value});
-
-                            writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
-                            ((Bit#(3))'(3'h1)));
-                            writeLine_00 <= x_14;
-                            victims_00 <= update (x_3, (Bit#(3))'(3'h4),
-                            Struct18 {victim_valid : x_4, victim_idx :
-                            (Bit#(3))'(3'h4), victim_line : x_14});
-
-                        end else begin
-
-                            Struct18 x_15 = ((x_3)[(Bit#(3))'(3'h5)]);
-                            if (((x_15).victim_valid) &&
-                            ((((x_15).victim_line).addr) == ((x_0).addr)))
-                            begin
-
-                                Struct3 x_16 = (Struct3 {addr : (x_0).addr,
-                                info_hit : (Bool)'(False), info_way :
-                                (x_0).info_way, info_write :
-                                (x_0).info_write, info : (x_0).info,
-                                value_write : (x_0).value_write, value :
-                                (x_0).value});
-                                writeStage_00 <= (x_4 ? ((Bit#(3))'(3'h7)) :
-                                ((Bit#(3))'(3'h1)));
-                                writeLine_00 <= x_16;
-                                victims_00 <= update (x_3, (Bit#(3))'(3'h5),
-                                Struct18 {victim_valid : x_4, victim_idx :
-                                (Bit#(3))'(3'h5), victim_line : x_16});
-
-                            end else begin
-
-                                Struct18 x_17 = ((x_3)[(Bit#(3))'(3'h6)]);
-                                if (((x_17).victim_valid) &&
-                                ((((x_17).victim_line).addr) ==
-                                ((x_0).addr))) begin
-
-                                    Struct3 x_18 = (Struct3 {addr :
-                                    (x_0).addr, info_hit : (Bool)'(False),
-                                    info_way : (x_0).info_way, info_write :
-                                    (x_0).info_write, info : (x_0).info,
-                                    value_write : (x_0).value_write, value :
-                                    (x_0).value});
-                                    writeStage_00 <= (x_4 ?
-                                    ((Bit#(3))'(3'h7)) : ((Bit#(3))'(3'h1)));
-
-                                    writeLine_00 <= x_18;
-                                    victims_00 <= update (x_3,
-                                    (Bit#(3))'(3'h6), Struct18 {victim_valid
-                                    : x_4, victim_idx : (Bit#(3))'(3'h6),
-                                    victim_line : x_18});
-
-                                end else begin
-
-                                    Struct18 x_19 = ((x_3)[(Bit#(3))'(3'h7)]);
-
-                                    if (((x_19).victim_valid) &&
-                                    ((((x_19).victim_line).addr) ==
-                                    ((x_0).addr))) begin
-
-                                        Struct3 x_20 = (Struct3 {addr :
-                                        (x_0).addr, info_hit :
-                                        (Bool)'(False), info_way :
-                                        (x_0).info_way, info_write :
-                                        (x_0).info_write, info : (x_0).info,
-                                        value_write : (x_0).value_write,
-                                        value : (x_0).value});
-                                        writeStage_00 <= (x_4 ?
-                                        ((Bit#(3))'(3'h7)) :
-                                        ((Bit#(3))'(3'h1)));
-                                        writeLine_00 <= x_20;
-                                        victims_00 <= update (x_3,
-                                        (Bit#(3))'(3'h7), Struct18
-                                        {victim_valid : x_4, victim_idx :
-                                        (Bit#(3))'(3'h7), victim_line :
-                                        x_20});
-
-                                    end else begin
-
-                                        writeStage_00 <= (Bit#(3))'(3'h1);
-
-                                        writeLine_00 <= x_0;
-
-                                    end
-
-                                end
-
-                            end
-
-                        end
+                    writeStage_00 <= (Bit#(3))'(3'h1);
+                    writeLine_00 <= x_0;
 
                     end
 
@@ -3628,138 +3339,70 @@ module mkModule63#(function Action putRq_infoRam_00_15(Struct22 _),
 
     method ActionValue#(Bool) cache_00_hasVictimSlot ();
         let x_1 = (victims_00);
-        Bool x_2 = ((((x_1)[(Bit#(3))'(3'h7)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h6)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h5)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h4)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h3)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h2)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h1)]).victim_valid) ||
-        (((x_1)[(Bit#(3))'(3'h0)]).victim_valid))))))));
+        Bool x_2 = ((((x_1)[(Bit#(2))'(2'h3)]).victim_valid) ||
+        ((((x_1)[(Bit#(2))'(2'h2)]).victim_valid) ||
+        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid) ||
+        (((x_1)[(Bit#(2))'(2'h0)]).victim_valid))));
         return x_2;
     endmethod
 
     method ActionValue#(Struct3) cache_00_getVictim ();
         let x_1 = (victims_00);
-        when ((((x_1)[(Bit#(3))'(3'h7)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h6)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h5)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h4)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h3)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h2)]).victim_valid) ||
-        ((((x_1)[(Bit#(3))'(3'h1)]).victim_valid) ||
-        (((x_1)[(Bit#(3))'(3'h0)]).victim_valid))))))), noAction);
-        Struct3 x_2 = ((((x_1)[(Bit#(3))'(3'h7)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h7)]).victim_line) :
-        ((((x_1)[(Bit#(3))'(3'h6)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h6)]).victim_line) :
-        ((((x_1)[(Bit#(3))'(3'h5)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h5)]).victim_line) :
-        ((((x_1)[(Bit#(3))'(3'h4)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h4)]).victim_line) :
-        ((((x_1)[(Bit#(3))'(3'h3)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h3)]).victim_line) :
-        ((((x_1)[(Bit#(3))'(3'h2)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h2)]).victim_line) :
-        ((((x_1)[(Bit#(3))'(3'h1)]).victim_valid ?
-        (((x_1)[(Bit#(3))'(3'h1)]).victim_line) :
-        (((x_1)[(Bit#(3))'(3'h0)]).victim_line)))))))))))))));
+        when ((((x_1)[(Bit#(2))'(2'h3)]).victim_valid) ||
+        ((((x_1)[(Bit#(2))'(2'h2)]).victim_valid) ||
+        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid) ||
+        (((x_1)[(Bit#(2))'(2'h0)]).victim_valid))), noAction);
+        Struct3 x_2 = ((((x_1)[(Bit#(2))'(2'h3)]).victim_valid ?
+        (((x_1)[(Bit#(2))'(2'h3)]).victim_line) :
+        ((((x_1)[(Bit#(2))'(2'h2)]).victim_valid ?
+        (((x_1)[(Bit#(2))'(2'h2)]).victim_line) :
+        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid ?
+        (((x_1)[(Bit#(2))'(2'h1)]).victim_line) :
+        (((x_1)[(Bit#(2))'(2'h0)]).victim_line)))))));
         return x_2;
     endmethod
 
     method Action cache_00_removeVictim (Bit#(64) x_0);
         let x_1 = (victims_00);
-        Struct18 x_2 = ((x_1)[(Bit#(3))'(3'h0)]);
+        Struct18 x_2 = ((x_1)[(Bit#(2))'(2'h0)]);
         if (((x_2).victim_valid) && ((((x_2).victim_line).addr) == (x_0)))
         begin
 
-            victims_00 <= update (x_1, (Bit#(3))'(3'h0),
-            (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+            victims_00 <= update (x_1, (Bit#(2))'(2'h0),
+            (Struct18)'(Struct18 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
         end else begin
 
-            Struct18 x_3 = ((x_1)[(Bit#(3))'(3'h1)]);
+            Struct18 x_3 = ((x_1)[(Bit#(2))'(2'h1)]);
             if (((x_3).victim_valid) && ((((x_3).victim_line).addr) ==
             (x_0))) begin
 
-                victims_00 <= update (x_1, (Bit#(3))'(3'h1),
-                (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                victims_00 <= update (x_1, (Bit#(2))'(2'h1),
+                (Struct18)'(Struct18 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
             end else begin
 
-                Struct18 x_4 = ((x_1)[(Bit#(3))'(3'h2)]);
+                Struct18 x_4 = ((x_1)[(Bit#(2))'(2'h2)]);
                 if (((x_4).victim_valid) && ((((x_4).victim_line).addr) ==
                 (x_0))) begin
 
-                    victims_00 <= update (x_1, (Bit#(3))'(3'h2),
-                    (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                    victims_00 <= update (x_1, (Bit#(2))'(2'h2),
+                    (Struct18)'(Struct18 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                 end else begin
 
-                    Struct18 x_5 = ((x_1)[(Bit#(3))'(3'h3)]);
+                    Struct18 x_5 = ((x_1)[(Bit#(2))'(2'h3)]);
                     if (((x_5).victim_valid) && ((((x_5).victim_line).addr)
                     == (x_0))) begin
 
-                        victims_00 <= update (x_1, (Bit#(3))'(3'h3),
-                        (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                        victims_00 <= update (x_1, (Bit#(2))'(2'h3),
+                        (Struct18)'(Struct18 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                     end else begin
-
-                        Struct18 x_6 = ((x_1)[(Bit#(3))'(3'h4)]);
-                        if (((x_6).victim_valid) &&
-                        ((((x_6).victim_line).addr) == (x_0))) begin
-
-                            victims_00 <= update (x_1, (Bit#(3))'(3'h4),
-                            (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
-
-
-                        end else begin
-
-                            Struct18 x_7 = ((x_1)[(Bit#(3))'(3'h5)]);
-                            if (((x_7).victim_valid) &&
-                            ((((x_7).victim_line).addr) == (x_0))) begin
-
-                                victims_00 <= update (x_1, (Bit#(3))'(3'h5),
-                                (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
-
-
-                            end else begin
-
-                                Struct18 x_8 = ((x_1)[(Bit#(3))'(3'h6)]);
-                                if (((x_8).victim_valid) &&
-                                ((((x_8).victim_line).addr) == (x_0))) begin
-
-                                    victims_00 <= update (x_1,
-                                    (Bit#(3))'(3'h6),
-                                    (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
-
-
-                                end else begin
-
-                                    Struct18 x_9 = ((x_1)[(Bit#(3))'(3'h7)]);
-
-                                    if (((x_9).victim_valid) &&
-                                    ((((x_9).victim_line).addr) == (x_0)))
-                                    begin
-
-                                        victims_00 <= update (x_1,
-                                        (Bit#(3))'(3'h7),
-                                        (Struct18)'(Struct18 {victim_valid: False, victim_idx: 3'h0, victim_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
-
-
-                                    end else begin
-
-                                    end
-
-                                end
-
-                            end
-
-                        end
 
                     end
 
@@ -3888,7 +3531,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
   function Action putRq_infoRam_000_2(Struct29 _),
   function Action putRq_infoRam_000_1(Struct29 _),
   function Action putRq_infoRam_000_0(Struct29 _),
-  function ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_000(),
+  function ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_000(),
   function Action putRq_dataRam_000(Struct28 _),
   function ActionValue#(Struct26) getRs_infoRam_000_3(),
   function ActionValue#(Struct26) getRs_infoRam_000_2(),
@@ -3908,7 +3551,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_000);
         Bit#(51) x_2 = ((x_1)[63:13]);
-        Bit#(7) x_3 = ((x_1)[12:6]);
+        Bit#(8) x_3 = ((x_1)[12:5]);
         Vector#(4, Struct26) x_4 =
         ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
@@ -3938,15 +3581,13 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         readLine_000 <= Struct24 {addr : x_1, info_hit : (x_13).tm_hit,
         info_way : (x_13).tm_way, info_write : (Bool)'(False), info :
         (x_13).tm_value, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         if ((x_13).tm_hit) begin
 
             readStage_000 <= (Bit#(2))'(2'h2);
             let x_14 <- putRq_dataRam_000(Struct28 {write : (Bool)'(False),
             addr : {(x_3),((x_13).tm_way)}, datain :
-            (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+            (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
         end else begin
         readStage_000 <= (Bit#(2))'(2'h3);
@@ -3976,7 +3617,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         writeStage_000 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -4028,7 +3669,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_000 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(7) x_3 = ((x_2)[12:6]);
+        Bit#(8) x_3 = ((x_2)[12:5]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -4067,21 +3708,19 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
 
         let x_11 = (writeLine_000);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(7) x_13 = ((x_12)[12:6]);
+        Bit#(8) x_13 = ((x_12)[12:5]);
         Struct26 x_14 = ((x_9)[x_10]);
         Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_000 <= x_10;
         victimLine_000 <= Struct24 {addr :
-        {(x_15),({(x_13),((Bit#(6))'(6'h0))})}, info_hit : (Bool)'(False),
+        {(x_15),({(x_13),((Bit#(5))'(5'h0))})}, info_hit : (Bool)'(False),
         info_way : (Bit#(2))'(2'h0), info_write : (Bool)'(False), info :
         x_16, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         let x_17 <- putRq_dataRam_000(Struct28 {write : (Bool)'(False), addr
         : {(x_13),(x_10)}, datain :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
     endrule
 
@@ -4092,7 +3731,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         writeStage_000 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         let x_5 = (victimWay_000);
         let x_6 = (victims_000);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -4201,7 +3840,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
 
                         readStage_000 <= (Bit#(2))'(2'h1);
                         readAddr_000 <= x_0;
-                        Bit#(7) x_8 = ((x_0)[12:6]);
+                        Bit#(8) x_8 = ((x_0)[12:5]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
                         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -4358,7 +3997,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
         begin
 
             victims_000 <= update (x_1, (Bit#(2))'(2'h0),
-            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
         end else begin
@@ -4368,7 +4007,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
             (x_0))) begin
 
                 victims_000 <= update (x_1, (Bit#(2))'(2'h1),
-                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
             end else begin
@@ -4378,7 +4017,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
                 (x_0))) begin
 
                     victims_000 <= update (x_1, (Bit#(2))'(2'h2),
-                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                 end else begin
@@ -4388,7 +4027,7 @@ module mkModule65#(function Action putRq_infoRam_000_3(Struct29 _),
                     == (x_0))) begin
 
                         victims_000 <= update (x_1, (Bit#(2))'(2'h3),
-                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                     end else begin
@@ -4453,7 +4092,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
   function Action putRq_infoRam_001_2(Struct29 _),
   function Action putRq_infoRam_001_1(Struct29 _),
   function Action putRq_infoRam_001_0(Struct29 _),
-  function ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_001(),
+  function ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_001(),
   function Action putRq_dataRam_001(Struct28 _),
   function ActionValue#(Struct26) getRs_infoRam_001_3(),
   function ActionValue#(Struct26) getRs_infoRam_001_2(),
@@ -4473,7 +4112,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_001);
         Bit#(51) x_2 = ((x_1)[63:13]);
-        Bit#(7) x_3 = ((x_1)[12:6]);
+        Bit#(8) x_3 = ((x_1)[12:5]);
         Vector#(4, Struct26) x_4 =
         ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
@@ -4503,15 +4142,13 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         readLine_001 <= Struct24 {addr : x_1, info_hit : (x_13).tm_hit,
         info_way : (x_13).tm_way, info_write : (Bool)'(False), info :
         (x_13).tm_value, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         if ((x_13).tm_hit) begin
 
             readStage_001 <= (Bit#(2))'(2'h2);
             let x_14 <- putRq_dataRam_001(Struct28 {write : (Bool)'(False),
             addr : {(x_3),((x_13).tm_way)}, datain :
-            (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+            (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
         end else begin
         readStage_001 <= (Bit#(2))'(2'h3);
@@ -4541,7 +4178,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         writeStage_001 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -4593,7 +4230,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_001 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(7) x_3 = ((x_2)[12:6]);
+        Bit#(8) x_3 = ((x_2)[12:5]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -4632,21 +4269,19 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
 
         let x_11 = (writeLine_001);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(7) x_13 = ((x_12)[12:6]);
+        Bit#(8) x_13 = ((x_12)[12:5]);
         Struct26 x_14 = ((x_9)[x_10]);
         Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_001 <= x_10;
         victimLine_001 <= Struct24 {addr :
-        {(x_15),({(x_13),((Bit#(6))'(6'h0))})}, info_hit : (Bool)'(False),
+        {(x_15),({(x_13),((Bit#(5))'(5'h0))})}, info_hit : (Bool)'(False),
         info_way : (Bit#(2))'(2'h0), info_write : (Bool)'(False), info :
         x_16, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         let x_17 <- putRq_dataRam_001(Struct28 {write : (Bool)'(False), addr
         : {(x_13),(x_10)}, datain :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
     endrule
 
@@ -4657,7 +4292,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         writeStage_001 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         let x_5 = (victimWay_001);
         let x_6 = (victims_001);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -4766,7 +4401,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
 
                         readStage_001 <= (Bit#(2))'(2'h1);
                         readAddr_001 <= x_0;
-                        Bit#(7) x_8 = ((x_0)[12:6]);
+                        Bit#(8) x_8 = ((x_0)[12:5]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
                         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -4923,7 +4558,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
         begin
 
             victims_001 <= update (x_1, (Bit#(2))'(2'h0),
-            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
         end else begin
@@ -4933,7 +4568,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
             (x_0))) begin
 
                 victims_001 <= update (x_1, (Bit#(2))'(2'h1),
-                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
             end else begin
@@ -4943,7 +4578,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
                 (x_0))) begin
 
                     victims_001 <= update (x_1, (Bit#(2))'(2'h2),
-                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                 end else begin
@@ -4953,7 +4588,7 @@ module mkModule67#(function Action putRq_infoRam_001_3(Struct29 _),
                     == (x_0))) begin
 
                         victims_001 <= update (x_1, (Bit#(2))'(2'h3),
-                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                     end else begin
@@ -5018,7 +4653,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
   function Action putRq_infoRam_002_2(Struct29 _),
   function Action putRq_infoRam_002_1(Struct29 _),
   function Action putRq_infoRam_002_0(Struct29 _),
-  function ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_002(),
+  function ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_002(),
   function Action putRq_dataRam_002(Struct28 _),
   function ActionValue#(Struct26) getRs_infoRam_002_3(),
   function ActionValue#(Struct26) getRs_infoRam_002_2(),
@@ -5038,7 +4673,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_002);
         Bit#(51) x_2 = ((x_1)[63:13]);
-        Bit#(7) x_3 = ((x_1)[12:6]);
+        Bit#(8) x_3 = ((x_1)[12:5]);
         Vector#(4, Struct26) x_4 =
         ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
@@ -5068,15 +4703,13 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         readLine_002 <= Struct24 {addr : x_1, info_hit : (x_13).tm_hit,
         info_way : (x_13).tm_way, info_write : (Bool)'(False), info :
         (x_13).tm_value, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         if ((x_13).tm_hit) begin
 
             readStage_002 <= (Bit#(2))'(2'h2);
             let x_14 <- putRq_dataRam_002(Struct28 {write : (Bool)'(False),
             addr : {(x_3),((x_13).tm_way)}, datain :
-            (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+            (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
         end else begin
         readStage_002 <= (Bit#(2))'(2'h3);
@@ -5106,7 +4739,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         writeStage_002 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -5158,7 +4791,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_002 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(7) x_3 = ((x_2)[12:6]);
+        Bit#(8) x_3 = ((x_2)[12:5]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -5197,21 +4830,19 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
 
         let x_11 = (writeLine_002);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(7) x_13 = ((x_12)[12:6]);
+        Bit#(8) x_13 = ((x_12)[12:5]);
         Struct26 x_14 = ((x_9)[x_10]);
         Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_002 <= x_10;
         victimLine_002 <= Struct24 {addr :
-        {(x_15),({(x_13),((Bit#(6))'(6'h0))})}, info_hit : (Bool)'(False),
+        {(x_15),({(x_13),((Bit#(5))'(5'h0))})}, info_hit : (Bool)'(False),
         info_way : (Bit#(2))'(2'h0), info_write : (Bool)'(False), info :
         x_16, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         let x_17 <- putRq_dataRam_002(Struct28 {write : (Bool)'(False), addr
         : {(x_13),(x_10)}, datain :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
     endrule
 
@@ -5222,7 +4853,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         writeStage_002 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         let x_5 = (victimWay_002);
         let x_6 = (victims_002);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -5331,7 +4962,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
 
                         readStage_002 <= (Bit#(2))'(2'h1);
                         readAddr_002 <= x_0;
-                        Bit#(7) x_8 = ((x_0)[12:6]);
+                        Bit#(8) x_8 = ((x_0)[12:5]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
                         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -5488,7 +5119,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
         begin
 
             victims_002 <= update (x_1, (Bit#(2))'(2'h0),
-            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
         end else begin
@@ -5498,7 +5129,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
             (x_0))) begin
 
                 victims_002 <= update (x_1, (Bit#(2))'(2'h1),
-                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
             end else begin
@@ -5508,7 +5139,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
                 (x_0))) begin
 
                     victims_002 <= update (x_1, (Bit#(2))'(2'h2),
-                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                 end else begin
@@ -5518,7 +5149,7 @@ module mkModule69#(function Action putRq_infoRam_002_3(Struct29 _),
                     == (x_0))) begin
 
                         victims_002 <= update (x_1, (Bit#(2))'(2'h3),
-                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                     end else begin
@@ -5583,7 +5214,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
   function Action putRq_infoRam_003_2(Struct29 _),
   function Action putRq_infoRam_003_1(Struct29 _),
   function Action putRq_infoRam_003_0(Struct29 _),
-  function ActionValue#(Vector#(8, Bit#(64))) getRs_dataRam_003(),
+  function ActionValue#(Vector#(4, Bit#(64))) getRs_dataRam_003(),
   function Action putRq_dataRam_003(Struct28 _),
   function ActionValue#(Struct26) getRs_infoRam_003_3(),
   function ActionValue#(Struct26) getRs_infoRam_003_2(),
@@ -5603,7 +5234,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 = (readAddr_003);
         Bit#(51) x_2 = ((x_1)[63:13]);
-        Bit#(7) x_3 = ((x_1)[12:6]);
+        Bit#(8) x_3 = ((x_1)[12:5]);
         Vector#(4, Struct26) x_4 =
         ((Vector#(4, Struct26))'(vec(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}}, Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})));
 
@@ -5633,15 +5264,13 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         readLine_003 <= Struct24 {addr : x_1, info_hit : (x_13).tm_hit,
         info_way : (x_13).tm_way, info_write : (Bool)'(False), info :
         (x_13).tm_value, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         if ((x_13).tm_hit) begin
 
             readStage_003 <= (Bit#(2))'(2'h2);
             let x_14 <- putRq_dataRam_003(Struct28 {write : (Bool)'(False),
             addr : {(x_3),((x_13).tm_way)}, datain :
-            (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+            (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
         end else begin
         readStage_003 <= (Bit#(2))'(2'h3);
@@ -5671,7 +5300,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         writeStage_003 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         Bit#(2) x_5 = ((x_1).info_way);
         if ((x_1).info_write) begin
 
@@ -5723,7 +5352,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         when (! ((x_1).info_hit), noAction);
         writeStage_003 <= (Bit#(3))'(3'h2);
         Bit#(64) x_2 = ((x_1).addr);
-        Bit#(7) x_3 = ((x_2)[12:6]);
+        Bit#(8) x_3 = ((x_2)[12:5]);
         Struct29 x_4 = (Struct29 {write : (Bool)'(False), addr : x_3, datain
         :
         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -5762,21 +5391,19 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
 
         let x_11 = (writeLine_003);
         Bit#(64) x_12 = ((x_11).addr);
-        Bit#(7) x_13 = ((x_12)[12:6]);
+        Bit#(8) x_13 = ((x_12)[12:5]);
         Struct26 x_14 = ((x_9)[x_10]);
         Bit#(51) x_15 = ((x_14).tag);
         Struct4 x_16 = ((x_14).value);
         victimWay_003 <= x_10;
         victimLine_003 <= Struct24 {addr :
-        {(x_15),({(x_13),((Bit#(6))'(6'h0))})}, info_hit : (Bool)'(False),
+        {(x_15),({(x_13),((Bit#(5))'(5'h0))})}, info_hit : (Bool)'(False),
         info_way : (Bit#(2))'(2'h0), info_write : (Bool)'(False), info :
         x_16, value_write : (Bool)'(False), value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))};
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))};
         let x_17 <- putRq_dataRam_003(Struct28 {write : (Bool)'(False), addr
         : {(x_13),(x_10)}, datain :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
 
     endrule
 
@@ -5787,7 +5414,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         writeStage_003 <= (Bit#(3))'(3'h7);
         Bit#(64) x_2 = ((x_1).addr);
         Bit#(51) x_3 = ((x_2)[63:13]);
-        Bit#(7) x_4 = ((x_2)[12:6]);
+        Bit#(8) x_4 = ((x_2)[12:5]);
         let x_5 = (victimWay_003);
         let x_6 = (victims_003);
         when ((! (((x_6)[(Bit#(2))'(2'h3)]).victim_valid)) || ((!
@@ -5896,7 +5523,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
 
                         readStage_003 <= (Bit#(2))'(2'h1);
                         readAddr_003 <= x_0;
-                        Bit#(7) x_8 = ((x_0)[12:6]);
+                        Bit#(8) x_8 = ((x_0)[12:5]);
                         Struct29 x_9 = (Struct29 {write : (Bool)'(False),
                         addr : x_8, datain :
                         (Struct26)'(Struct26 {tag: 51'h0, value: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}})});
@@ -6053,7 +5680,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
         begin
 
             victims_003 <= update (x_1, (Bit#(2))'(2'h0),
-            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+            (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
         end else begin
@@ -6063,7 +5690,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
             (x_0))) begin
 
                 victims_003 <= update (x_1, (Bit#(2))'(2'h1),
-                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
             end else begin
@@ -6073,7 +5700,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
                 (x_0))) begin
 
                     victims_003 <= update (x_1, (Bit#(2))'(2'h2),
-                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                    (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                 end else begin
@@ -6083,7 +5710,7 @@ module mkModule71#(function Action putRq_infoRam_003_3(Struct29 _),
                     == (x_0))) begin
 
                         victims_003 <= update (x_1, (Bit#(2))'(2'h3),
-                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}}));
+                        (Struct25)'(Struct25 {victim_valid: False, victim_idx: 2'h0, victim_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}}));
 
 
                     end else begin
@@ -6186,7 +5813,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         prl00 <= Struct1 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc00 <= (Bit#(2))'(2'h2);
         let x_4 <- cache_00_readRq((x_3).addr);
@@ -6204,7 +5831,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         crsrl00 <= Struct1 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_4, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc00 <= (Bit#(2))'(2'h1);
         let x_5 <- cache_00_readRq((x_4).addr);
@@ -6220,7 +5847,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         crqrl00 <= Struct1 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc00 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_00_readRq((x_3).addr);
@@ -6236,7 +5863,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         crqrl00 <= Struct1 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h1), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc00 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_00_readRq((x_3).addr);
@@ -6252,7 +5879,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         crqrl00 <= Struct1 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h2), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc00 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_00_readRq((x_3).addr);
@@ -6268,7 +5895,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         crqrl00 <= Struct1 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h3), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc00 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_00_readRq((x_3).addr);
@@ -6325,7 +5952,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6342,10 +5969,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6356,7 +5983,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! (((Bit#(3))'(3'h2)) < ((x_10).dir_st))) && ((x_9) ==
         ((Bit#(3))'(3'h2))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -6413,7 +6040,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6430,10 +6057,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6444,7 +6071,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! ((x_9) < ((Bit#(3))'(3'h3)))) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h1))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -6500,7 +6127,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6517,10 +6144,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6530,7 +6157,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -6542,8 +6169,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -6570,7 +6196,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6587,10 +6213,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6600,7 +6226,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -6615,8 +6241,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'h5), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -6643,7 +6268,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6660,10 +6285,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6676,7 +6301,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((((x_10).dir_st) == ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) ==
         (((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -6712,8 +6337,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hb), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren00(x_21);
         let x_23 = (wl00);
         when (! ((x_23).wl_valid), noAction);
@@ -6740,7 +6364,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6757,10 +6381,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6770,7 +6394,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -6782,8 +6406,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -6810,7 +6433,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6827,10 +6450,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6840,7 +6463,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -6855,8 +6478,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'he), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -6883,7 +6505,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6900,10 +6522,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6915,7 +6537,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bool)'(True))) && ((! (((Bit#(3))'(3'h2)) < (x_9))) &&
         (((x_10).dir_st) == ((Bit#(3))'(3'h2))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -6925,8 +6547,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((x_10).dir_sharers) & (~(((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h0)))),
         cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ : (Bool)'(False), addr
         : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 = (wl00);
         when (! ((x_18).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -6952,7 +6573,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -6969,10 +6590,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -6988,7 +6609,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h8))[3:2]) ==
@@ -6996,8 +6617,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -7024,7 +6644,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7041,10 +6661,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7062,7 +6682,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h0))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7084,8 +6704,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -7112,7 +6731,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7129,10 +6748,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7151,7 +6770,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h0)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7180,8 +6799,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -7208,7 +6826,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7225,10 +6843,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7253,7 +6871,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7279,8 +6897,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -7307,7 +6924,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7324,10 +6941,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7343,7 +6960,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h3)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7372,8 +6989,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -7400,7 +7016,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7417,10 +7033,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7436,7 +7052,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h8))[3:2]) ==
@@ -7444,8 +7060,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -7472,7 +7087,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7489,10 +7104,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7510,7 +7125,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h0))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7532,8 +7147,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -7560,7 +7174,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7577,10 +7191,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7605,7 +7219,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7631,8 +7245,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -7659,7 +7272,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7676,10 +7289,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7698,7 +7311,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h0)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7727,8 +7340,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -7755,7 +7367,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -7772,10 +7384,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -7791,7 +7403,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         << ((Bit#(2))'(2'h0)))) == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2))
         : ((Bit#(3))'(3'h1)))))))) < ((Bit#(3))'(3'h3))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -7831,8 +7443,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -7846,9 +7457,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -7865,7 +7476,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -7892,9 +7503,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -7911,7 +7522,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -7938,9 +7549,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -7957,7 +7568,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -7984,9 +7595,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -8003,7 +7614,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -8030,9 +7641,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -8049,7 +7660,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -8076,9 +7687,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -8095,7 +7706,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -8122,9 +7733,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -8141,7 +7752,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0001();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -8181,7 +7792,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8198,10 +7809,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8212,7 +7823,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! (((Bit#(3))'(3'h2)) < ((x_10).dir_st))) && ((x_9) ==
         ((Bit#(3))'(3'h2))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -8269,7 +7880,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8286,10 +7897,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8300,7 +7911,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! ((x_9) < ((Bit#(3))'(3'h3)))) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h1))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -8356,7 +7967,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8373,10 +7984,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8386,7 +7997,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -8398,8 +8009,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -8426,7 +8036,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8443,10 +8053,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8456,7 +8066,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -8471,8 +8081,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'h5), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -8499,7 +8108,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8516,10 +8125,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8532,7 +8141,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((((x_10).dir_st) == ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) ==
         (((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h1))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -8568,8 +8177,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hb), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren00(x_21);
         let x_23 = (wl00);
         when (! ((x_23).wl_valid), noAction);
@@ -8596,7 +8204,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8613,10 +8221,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8626,7 +8234,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -8638,8 +8246,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -8666,7 +8273,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8683,10 +8290,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8696,7 +8303,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -8711,8 +8318,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'he), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -8739,7 +8345,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8756,10 +8362,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8771,7 +8377,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bool)'(True))) && ((! (((Bit#(3))'(3'h2)) < (x_9))) &&
         (((x_10).dir_st) == ((Bit#(3))'(3'h2))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -8781,8 +8387,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((x_10).dir_sharers) & (~(((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h1)))),
         cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ : (Bool)'(False), addr
         : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 = (wl00);
         when (! ((x_18).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -8808,7 +8413,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8825,10 +8430,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8844,7 +8449,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h9))[3:2]) ==
@@ -8852,8 +8457,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -8880,7 +8484,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8897,10 +8501,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -8918,7 +8522,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h1))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -8940,8 +8544,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -8968,7 +8571,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -8985,10 +8588,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9007,7 +8610,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h1)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9036,8 +8639,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -9064,7 +8666,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9081,10 +8683,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9109,7 +8711,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9135,8 +8737,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -9163,7 +8764,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9180,10 +8781,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9199,7 +8800,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h3)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9228,8 +8829,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -9256,7 +8856,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9273,10 +8873,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9292,7 +8892,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h9))[3:2]) ==
@@ -9300,8 +8900,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -9328,7 +8927,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9345,10 +8944,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9366,7 +8965,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h1))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9388,8 +8987,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -9416,7 +9014,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9433,10 +9031,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9461,7 +9059,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9487,8 +9085,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -9515,7 +9112,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9532,10 +9129,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9554,7 +9151,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h1)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9583,8 +9180,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -9611,7 +9207,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -9628,10 +9224,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -9647,7 +9243,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         << ((Bit#(2))'(2'h1)))) == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2))
         : ((Bit#(3))'(3'h1)))))))) < ((Bit#(3))'(3'h3))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -9687,8 +9283,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h9))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -9702,9 +9297,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9721,7 +9316,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -9748,9 +9343,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9767,7 +9362,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -9794,9 +9389,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9813,7 +9408,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -9840,9 +9435,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9859,7 +9454,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -9886,9 +9481,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9905,7 +9500,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -9932,9 +9527,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9951,7 +9546,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -9978,9 +9573,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -9997,7 +9592,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0011();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -10037,7 +9632,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10054,10 +9649,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10068,7 +9663,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! (((Bit#(3))'(3'h2)) < ((x_10).dir_st))) && ((x_9) ==
         ((Bit#(3))'(3'h2))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -10125,7 +9720,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10142,10 +9737,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10156,7 +9751,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! ((x_9) < ((Bit#(3))'(3'h3)))) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h1))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -10212,7 +9807,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10229,10 +9824,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10242,7 +9837,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -10254,8 +9849,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -10282,7 +9876,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10299,10 +9893,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10312,7 +9906,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -10327,8 +9921,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'h5), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -10355,7 +9948,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10372,10 +9965,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10388,7 +9981,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((((x_10).dir_st) == ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) ==
         (((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h2))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -10424,8 +10017,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hb), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren00(x_21);
         let x_23 = (wl00);
         when (! ((x_23).wl_valid), noAction);
@@ -10452,7 +10044,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10469,10 +10061,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10482,7 +10074,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -10494,8 +10086,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -10522,7 +10113,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10539,10 +10130,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10552,7 +10143,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -10567,8 +10158,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'he), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -10595,7 +10185,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10612,10 +10202,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10627,7 +10217,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bool)'(True))) && ((! (((Bit#(3))'(3'h2)) < (x_9))) &&
         (((x_10).dir_st) == ((Bit#(3))'(3'h2))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -10637,8 +10227,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((x_10).dir_sharers) & (~(((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h2)))),
         cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ : (Bool)'(False), addr
         : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 = (wl00);
         when (! ((x_18).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -10664,7 +10253,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10681,10 +10270,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10700,7 +10289,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'ha))[3:2]) ==
@@ -10708,8 +10297,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -10736,7 +10324,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10753,10 +10341,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10774,7 +10362,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h2))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -10796,8 +10384,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -10824,7 +10411,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10841,10 +10428,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10863,7 +10450,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h2)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -10892,8 +10479,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -10920,7 +10506,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -10937,10 +10523,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -10965,7 +10551,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -10991,8 +10577,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -11019,7 +10604,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11036,10 +10621,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11055,7 +10640,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h3)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -11084,8 +10669,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -11112,7 +10696,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11129,10 +10713,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11148,7 +10732,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'ha))[3:2]) ==
@@ -11156,8 +10740,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -11184,7 +10767,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11201,10 +10784,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11222,7 +10805,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h2))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -11244,8 +10827,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -11272,7 +10854,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11289,10 +10871,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11317,7 +10899,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -11343,8 +10925,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -11371,7 +10952,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11388,10 +10969,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11410,7 +10991,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h2)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -11439,8 +11020,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -11467,7 +11047,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11484,10 +11064,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11503,7 +11083,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         << ((Bit#(2))'(2'h2)))) == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2))
         : ((Bit#(3))'(3'h1)))))))) < ((Bit#(3))'(3'h3))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -11543,8 +11123,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'ha))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -11558,9 +11137,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11577,7 +11156,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11604,9 +11183,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11623,7 +11202,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11650,9 +11229,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11669,7 +11248,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11696,9 +11275,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11715,7 +11294,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11742,9 +11321,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11761,7 +11340,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11788,9 +11367,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11807,7 +11386,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11834,9 +11413,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -11853,7 +11432,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0021();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -11893,7 +11472,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11910,10 +11489,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -11924,7 +11503,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! (((Bit#(3))'(3'h2)) < ((x_10).dir_st))) && ((x_9) ==
         ((Bit#(3))'(3'h2))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -11981,7 +11560,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -11998,10 +11577,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12012,7 +11591,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! ((x_9) < ((Bit#(3))'(3'h3)))) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h1))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -12068,7 +11647,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12085,10 +11664,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12098,7 +11677,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -12110,8 +11689,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -12138,7 +11716,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12155,10 +11733,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h2)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12168,7 +11746,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -12183,8 +11761,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'h5), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -12211,7 +11788,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12228,10 +11805,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12244,7 +11821,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((((x_10).dir_st) == ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) ==
         (((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h3))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -12280,8 +11857,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hb), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren00(x_21);
         let x_23 = (wl00);
         when (! ((x_23).wl_valid), noAction);
@@ -12308,7 +11884,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12325,10 +11901,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12338,7 +11914,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_9))) && (! (((Bit#(3))'(3'h2)) < ((x_10).dir_st)))), noAction);
 
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_00_hasVictimSlot();
@@ -12350,8 +11926,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren00(x_18);
         let x_20 = (wl00);
         when (! ((x_20).wl_valid), noAction);
@@ -12378,7 +11953,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12395,10 +11970,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12408,7 +11983,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         < (x_9))) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (!
         (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -12423,8 +11998,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'he), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -12451,7 +12025,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12468,10 +12042,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'ha)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12483,7 +12057,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bool)'(True))) && ((! (((Bit#(3))'(3'h2)) < (x_9))) &&
         (((x_10).dir_st) == ((Bit#(3))'(3'h2))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -12493,8 +12067,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((x_10).dir_sharers) & (~(((Bit#(4))'(4'h1)) << ((Bit#(2))'(2'h3)))),
         cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ : (Bool)'(False), addr
         : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 = (wl00);
         when (! ((x_18).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -12520,7 +12093,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12537,10 +12110,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12556,7 +12129,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'hb))[3:2]) ==
@@ -12564,8 +12137,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -12592,7 +12164,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12609,10 +12181,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12630,7 +12202,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h3))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -12652,8 +12224,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -12680,7 +12251,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12697,10 +12268,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12719,7 +12290,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h3)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -12748,8 +12319,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -12776,7 +12346,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12793,10 +12363,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12821,7 +12391,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -12847,8 +12417,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -12875,7 +12444,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12892,10 +12461,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h14)), noAction);
         when (! ((x_11).type_), noAction);
@@ -12911,7 +12480,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h3)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -12940,8 +12509,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -12968,7 +12536,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -12985,10 +12553,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -13004,7 +12572,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2)) :
         ((Bit#(3))'(3'h1)))))))) == ((Bit#(3))'(3'h1)), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'hb))[3:2]) ==
@@ -13012,8 +12580,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -13040,7 +12607,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13057,10 +12624,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -13078,7 +12645,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h2))) && (((x_10).dir_sharers) == (((Bit#(4))'(4'h1))
         << ((Bit#(2))'(2'h3))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -13100,8 +12667,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -13128,7 +12694,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13145,10 +12711,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -13173,7 +12739,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(1))'(1'h1)) ? ((Bit#(3))'(3'h1)) : ((Bit#(3))'(3'h0)))) +
         ((Bit#(3))'(3'h0))))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -13199,8 +12765,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -13227,7 +12792,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13244,10 +12809,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -13266,7 +12831,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_sharers) == (((Bit#(4))'(4'h1)) <<
         ((Bit#(2))'(2'h3)))))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -13295,8 +12860,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_21 <- makeEnq_parentChildren00(x_20);
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
@@ -13323,7 +12887,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13340,10 +12904,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h15)), noAction);
         when (! ((x_11).type_), noAction);
@@ -13359,7 +12923,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         << ((Bit#(2))'(2'h3)))) == ((x_10).dir_sharers)) ? ((Bit#(3))'(3'h2))
         : ((Bit#(3))'(3'h1)))))))) < ((Bit#(3))'(3'h3))), noAction);
         crqrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct3 x_17 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -13399,8 +12963,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'hb))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -13414,9 +12977,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13433,7 +12996,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13460,9 +13023,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13479,7 +13042,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13506,9 +13069,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13525,7 +13088,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13552,9 +13115,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13571,7 +13134,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13598,9 +13161,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13617,7 +13180,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13644,9 +13207,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13663,7 +13226,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13690,9 +13253,9 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_1 = (crqrl00);
         let x_2 = (crsrl00);
         Struct3 x_3 =
-        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}));
+        ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}));
 
-        Vector#(8, Bit#(64)) x_4 = ((x_3).value);
+        Vector#(4, Bit#(64)) x_4 = ((x_3).value);
         Struct4 x_5 = ((x_3).info);
         Bool x_6 = ((x_5).mesi_owned);
         Bit#(3) x_7 = ((x_5).mesi_status);
@@ -13709,7 +13272,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_5).mesi_dir_sharers});
         let x_9 <- deq_fifo0031();
         Struct9 x_10 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_11 <- downLockGet00((x_9).addr);
         when ((x_11).valid, noAction);
@@ -13748,7 +13311,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13768,7 +13331,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h3)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -13782,7 +13345,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -13859,7 +13422,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13879,7 +13442,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h4)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -13893,7 +13456,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -13962,7 +13525,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -13979,7 +13542,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_3).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_13 <- downLockGet00((x_11).addr);
         when ((x_13).valid, noAction);
@@ -13991,7 +13554,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((x_14).dl_rss_recv) == ((x_14).dl_rss_from), noAction);
         when ((Bool)'(True), noAction);
         crsrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct16 x_15 = (Struct16 {cidx :
         {((Bit#(2))'(2'h1)),(((((x_14).dl_rss_from)[0:0]) ==
@@ -14084,7 +13647,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14101,10 +13664,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h5)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14113,7 +13676,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! ((x_9) < ((Bit#(3))'(3'h2)))) && (! (((Bit#(3))'(3'h2)) <
         ((x_10).dir_st))), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct3 x_16 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -14162,7 +13725,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14179,10 +13742,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h5)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14192,7 +13755,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (((x_10).dir_st) < ((Bit#(3))'(3'h3)))) && (! (((Bit#(3))'(3'h4)) <
         ((x_10).dir_st))))), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -14207,8 +13770,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'h5), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -14234,7 +13796,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14251,7 +13813,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_3).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_13 <- downLockGet00((x_11).addr);
         when ((x_13).valid, noAction);
@@ -14263,7 +13825,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((x_14).dl_rss_recv) == ((x_14).dl_rss_from), noAction);
         when ((Bool)'(True), noAction);
         crsrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct16 x_15 = (Struct16 {cidx :
         {((Bit#(2))'(2'h1)),(((((x_14).dl_rss_from)[0:0]) ==
@@ -14354,7 +13916,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14374,7 +13936,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hb)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -14391,7 +13953,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         << (({((Bit#(2))'(2'h2)),((x_13).ul_rsbTo)})[1:0])))), noAction);
 
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -14430,8 +13992,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_18)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'hb),
         type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_25 <- makeEnq_parentChildren00(x_24);
         let x_26 = (wl00);
         when (! ((x_26).wl_valid), noAction);
@@ -14457,7 +14018,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14477,7 +14038,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hb)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -14495,7 +14056,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(4))'(4'h0)))) && (((x_10).dir_st) == ((Bit#(3))'(3'h2)))))),
         noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = ((x_13).ul_msg);
         Bit#(4) x_17 = ({((Bit#(2))'(2'h2)),((x_13).ul_rsbTo)});
@@ -14514,8 +14075,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((x_10).dir_sharers) & (~(((Bit#(4))'(4'h1)) << ((x_17)[1:0]))),
         cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ : (Bool)'(False), addr
         : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 = (wl00);
         when (! ((x_22).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -14540,7 +14100,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14557,7 +14117,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_3).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_13 <- downLockGet00((x_11).addr);
         when ((x_13).valid, noAction);
@@ -14569,7 +14129,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((x_14).dl_rss_recv) == ((x_14).dl_rss_from), noAction);
         when ((Bool)'(True), noAction);
         crsrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = ((x_14).dl_msg);
         Bit#(4) x_16 = ((x_14).dl_rsbTo);
@@ -14607,8 +14167,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_16)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'hb),
         type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -14634,7 +14193,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14651,10 +14210,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hc)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14662,7 +14221,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (x_14, noAction);
         when (((x_10).dir_st) == ((Bit#(3))'(3'h1)), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct3 x_16 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -14685,8 +14244,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h4))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -14712,7 +14270,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14729,10 +14287,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14741,7 +14299,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((! ((x_9) < ((Bit#(3))'(3'h3)))) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h1))), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct3 x_16 = (Struct3 {addr : (x_5).addr, info_hit :
@@ -14764,8 +14322,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h4))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren00(x_19);
         let x_21 = (wl00);
         when (! ((x_21).wl_valid), noAction);
@@ -14791,7 +14348,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14808,10 +14365,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hc)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14820,7 +14377,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((Bool)'(True)) && (((Bool)'(True)) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h2)))), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -14829,8 +14386,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_17 <- broadcast_parentChildren00(Struct13 {cs_inds :
         (x_10).dir_sharers, cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ :
         (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 = (wl00);
         when (! ((x_18).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -14855,7 +14411,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14872,10 +14428,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14884,7 +14440,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((Bool)'(True)) && ((! (((x_10).dir_st) < ((Bit#(3))'(3'h3))))
         && (! (((Bit#(3))'(3'h4)) < ((x_10).dir_st)))), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -14899,8 +14455,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         enq_ch_idx : ({((Bit#(2))'(2'h2)),((x_10).dir_excl)})[1:0], enq_msg :
         Struct2 {id : (Bit#(6))'(6'he), type_ : (Bool)'(False), addr :
         (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 <- makeEnq_parentChildren00(x_17);
         let x_19 = (wl00);
         when (! ((x_19).wl_valid), noAction);
@@ -14926,7 +14481,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -14943,10 +14498,10 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -14955,7 +14510,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((Bool)'(True)) && (((Bool)'(True)) && (((x_10).dir_st) ==
         ((Bit#(3))'(3'h2)))), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- registerDL00(Struct12 {r_dl_rsb : (Bool)'(True), r_dl_msg
@@ -14964,8 +14519,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         let x_17 <- broadcast_parentChildren00(Struct13 {cs_inds :
         (x_10).dir_sharers, cs_msg : Struct2 {id : (Bit#(6))'(6'hc), type_ :
         (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_18 = (wl00);
         when (! ((x_18).wl_valid), noAction);
         wl00 <= Struct5 {wl_valid : (Bool)'(True), wl_write_rq :
@@ -14990,7 +14544,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15007,7 +14561,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_3).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_13 <- downLockGet00((x_11).addr);
         when ((x_13).valid, noAction);
@@ -15019,7 +14573,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((x_14).dl_rss_recv) == ((x_14).dl_rss_from), noAction);
         when ((Bool)'(True), noAction);
         crsrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = ((x_14).dl_msg);
         Bit#(4) x_16 = ((x_14).dl_rsbTo);
@@ -15057,8 +14611,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_16)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'hd),
         type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -15084,7 +14637,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15101,7 +14654,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_3).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         let x_13 <- downLockGet00((x_11).addr);
         when ((x_13).valid, noAction);
@@ -15113,7 +14666,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (((x_14).dl_rss_recv) == ((x_14).dl_rss_from), noAction);
         when ((Bool)'(True), noAction);
         crsrl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = ((x_14).dl_msg);
         Bit#(4) x_16 = ((x_14).dl_rsbTo);
@@ -15151,8 +14704,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_16)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'hf),
         type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_23 <- makeEnq_parentChildren00(x_22);
         let x_24 = (wl00);
         when (! ((x_24).wl_valid), noAction);
@@ -15175,7 +14727,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -15192,13 +14744,12 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable00((x_10).addr);
@@ -15213,9 +14764,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h14), type_ : (Bool)'(False), addr : (x_10).addr, value
-        :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        : (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_16 <- makeEnq_parentChildren00(x_15);
         let x_17 = (wl00);
         when (! ((x_17).wl_valid), noAction);
@@ -15238,7 +14787,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -15255,13 +14804,12 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable00((x_10).addr);
@@ -15303,7 +14851,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15323,7 +14871,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h16)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -15333,7 +14881,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl00 <=
-        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct1)'(Struct1 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         let x_17 <- releaseUL00((x_11).addr);
@@ -15350,17 +14898,17 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
             crqrl00 <= Struct1 {rl_valid : (x_21).rl_valid, rl_cmidx :
             (x_21).rl_cmidx, rl_msg : (x_21).rl_msg, rl_line_valid :
             (x_21).rl_line_valid, rl_line : Struct3 {addr : x_19, info_hit :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -15373,17 +14921,17 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
             crsrl00 <= Struct1 {rl_valid : (x_23).rl_valid, rl_cmidx :
             (x_23).rl_cmidx, rl_msg : (x_23).rl_msg, rl_line_valid :
             (x_23).rl_line_valid, rl_line : Struct3 {addr : x_19, info_hit :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -15407,7 +14955,7 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -15424,13 +14972,12 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         let x_13 <- upLockable00((x_10).addr);
         when (x_13, noAction);
@@ -15452,17 +14999,17 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
             crqrl00 <= Struct1 {rl_valid : (x_18).rl_valid, rl_cmidx :
             (x_18).rl_cmidx, rl_msg : (x_18).rl_msg, rl_line_valid :
             (x_18).rl_line_valid, rl_line : Struct3 {addr : x_16, info_hit :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -15475,17 +15022,17 @@ module mkModule73#(function ActionValue#(Struct3) cache_00_writeRs(),
             crsrl00 <= Struct1 {rl_valid : (x_20).rl_valid, rl_cmidx :
             (x_20).rl_cmidx, rl_msg : (x_20).rl_msg, rl_line_valid :
             (x_20).rl_line_valid, rl_line : Struct3 {addr : x_16, info_hit :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct3)'(Struct3 {addr: 64'h0, info_hit: False, info_way: 4'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -15586,7 +15133,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         prl000 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc000 <= (Bit#(2))'(2'h2);
         let x_4 <- cache_000_readRq((x_3).addr);
@@ -15604,7 +15151,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         crsrl000 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_4, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc000 <= (Bit#(2))'(2'h1);
         let x_5 <- cache_000_readRq((x_4).addr);
@@ -15620,7 +15167,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         crqrl000 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc000 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_000_readRq((x_3).addr);
@@ -15678,7 +15225,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15695,10 +15242,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -15708,7 +15255,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_15, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         crqrl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h8))[3:2]) ==
@@ -15744,7 +15291,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15761,10 +15308,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -15772,7 +15319,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h1)) < (x_9)), noAction);
         crqrl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_000_hasVictimSlot();
@@ -15784,8 +15331,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren000(x_18);
         let x_20 = (wl000);
         when (! ((x_20).wl_valid), noAction);
@@ -15812,7 +15358,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15832,7 +15378,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h3)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -15846,7 +15392,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -15896,7 +15442,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15916,7 +15462,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h4)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -15930,7 +15476,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -15980,7 +15526,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -15997,10 +15543,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h5)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16008,7 +15554,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -16059,7 +15605,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16076,10 +15622,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16089,7 +15635,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_15, noAction);
         when ((x_9) == ((Bit#(3))'(3'h3)), noAction);
         crqrl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -16116,8 +15662,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren000(x_21);
         let x_23 = (wl000);
         when (! ((x_23).wl_valid), noAction);
@@ -16145,7 +15690,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16162,10 +15707,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16176,7 +15721,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (((x_8) == ((Bool)'(True))) && ((x_9) == ((Bit#(3))'(3'h4))),
         noAction);
         crqrl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -16189,8 +15734,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren000(x_19);
         let x_21 = (wl000);
         when (! ((x_21).wl_valid), noAction);
@@ -16218,7 +15762,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16235,10 +15779,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16246,7 +15790,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h2)) < (x_9)), noAction);
         crqrl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_000_hasVictimSlot();
@@ -16258,8 +15802,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren000(x_18);
         let x_20 = (wl000);
         when (! ((x_20).wl_valid), noAction);
@@ -16286,7 +15829,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16306,7 +15849,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hb)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -16320,7 +15863,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -16350,8 +15893,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_18)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'h9),
         type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_25 <- makeEnq_parentChildren000(x_24);
         let x_26 = (wl000);
         when (! ((x_26).wl_valid), noAction);
@@ -16378,7 +15920,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16395,10 +15937,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hc)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16406,7 +15948,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_14, noAction);
         when ((Bool)'(True), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -16429,8 +15971,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h4))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren000(x_19);
         let x_21 = (wl000);
         when (! ((x_21).wl_valid), noAction);
@@ -16457,7 +15998,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16474,10 +16015,10 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16485,7 +16026,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h3))), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -16508,8 +16049,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h4))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren000(x_19);
         let x_21 = (wl000);
         when (! ((x_21).wl_valid), noAction);
@@ -16533,7 +16073,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -16550,13 +16090,12 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable000((x_10).addr);
@@ -16570,9 +16109,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h0))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h14), type_ : (Bool)'(False), addr : (x_10).addr, value
-        :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        : (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_16 <- makeEnq_parentChildren000(x_15);
         let x_17 = (wl000);
         when (! ((x_17).wl_valid), noAction);
@@ -16597,7 +16134,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -16614,13 +16151,12 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable000((x_10).addr);
@@ -16660,7 +16196,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16680,7 +16216,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h16)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -16690,7 +16226,7 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl000 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         let x_17 <- releaseUL000((x_11).addr);
@@ -16707,17 +16243,17 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
             crqrl000 <= Struct23 {rl_valid : (x_21).rl_valid, rl_cmidx :
             (x_21).rl_cmidx, rl_msg : (x_21).rl_msg, rl_line_valid :
             (x_21).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -16730,17 +16266,17 @@ module mkModule74#(function ActionValue#(Struct24) cache_000_writeRs(),
             crsrl000 <= Struct23 {rl_valid : (x_23).rl_valid, rl_cmidx :
             (x_23).rl_cmidx, rl_msg : (x_23).rl_msg, rl_line_valid :
             (x_23).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -16841,7 +16377,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         prl001 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc001 <= (Bit#(2))'(2'h2);
         let x_4 <- cache_001_readRq((x_3).addr);
@@ -16859,7 +16395,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         crsrl001 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_4, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc001 <= (Bit#(2))'(2'h1);
         let x_5 <- cache_001_readRq((x_4).addr);
@@ -16875,7 +16411,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         crqrl001 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc001 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_001_readRq((x_3).addr);
@@ -16933,7 +16469,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -16950,10 +16486,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -16963,7 +16499,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_15, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         crqrl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h8))[3:2]) ==
@@ -16999,7 +16535,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17016,10 +16552,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17027,7 +16563,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h1)) < (x_9)), noAction);
         crqrl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_001_hasVictimSlot();
@@ -17039,8 +16575,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h1))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren001(x_18);
         let x_20 = (wl001);
         when (! ((x_20).wl_valid), noAction);
@@ -17067,7 +16602,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17087,7 +16622,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h3)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -17101,7 +16636,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -17151,7 +16686,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17171,7 +16706,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h4)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -17185,7 +16720,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -17235,7 +16770,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17252,10 +16787,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h5)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17263,7 +16798,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -17314,7 +16849,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17331,10 +16866,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17344,7 +16879,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_15, noAction);
         when ((x_9) == ((Bit#(3))'(3'h3)), noAction);
         crqrl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -17371,8 +16906,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren001(x_21);
         let x_23 = (wl001);
         when (! ((x_23).wl_valid), noAction);
@@ -17400,7 +16934,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17417,10 +16951,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17431,7 +16965,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (((x_8) == ((Bool)'(True))) && ((x_9) == ((Bit#(3))'(3'h4))),
         noAction);
         crqrl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -17444,8 +16978,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren001(x_19);
         let x_21 = (wl001);
         when (! ((x_21).wl_valid), noAction);
@@ -17473,7 +17006,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17490,10 +17023,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17501,7 +17034,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h2)) < (x_9)), noAction);
         crqrl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_001_hasVictimSlot();
@@ -17513,8 +17046,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h1))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren001(x_18);
         let x_20 = (wl001);
         when (! ((x_20).wl_valid), noAction);
@@ -17541,7 +17073,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17561,7 +17093,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hb)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -17575,7 +17107,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -17605,8 +17137,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_18)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'h9),
         type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_25 <- makeEnq_parentChildren001(x_24);
         let x_26 = (wl001);
         when (! ((x_26).wl_valid), noAction);
@@ -17633,7 +17164,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17650,10 +17181,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hc)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17661,7 +17192,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_14, noAction);
         when ((Bool)'(True), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -17684,8 +17215,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h5))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren001(x_19);
         let x_21 = (wl001);
         when (! ((x_21).wl_valid), noAction);
@@ -17712,7 +17242,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17729,10 +17259,10 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -17740,7 +17270,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h3))), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -17763,8 +17293,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h5))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren001(x_19);
         let x_21 = (wl001);
         when (! ((x_21).wl_valid), noAction);
@@ -17788,7 +17317,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -17805,13 +17334,12 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable001((x_10).addr);
@@ -17825,9 +17353,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h1))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h14), type_ : (Bool)'(False), addr : (x_10).addr, value
-        :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        : (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_16 <- makeEnq_parentChildren001(x_15);
         let x_17 = (wl001);
         when (! ((x_17).wl_valid), noAction);
@@ -17852,7 +17378,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -17869,13 +17395,12 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable001((x_10).addr);
@@ -17915,7 +17440,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -17935,7 +17460,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h16)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -17945,7 +17470,7 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl001 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         let x_17 <- releaseUL001((x_11).addr);
@@ -17962,17 +17487,17 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
             crqrl001 <= Struct23 {rl_valid : (x_21).rl_valid, rl_cmidx :
             (x_21).rl_cmidx, rl_msg : (x_21).rl_msg, rl_line_valid :
             (x_21).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -17985,17 +17510,17 @@ module mkModule75#(function ActionValue#(Struct24) cache_001_writeRs(),
             crsrl001 <= Struct23 {rl_valid : (x_23).rl_valid, rl_cmidx :
             (x_23).rl_cmidx, rl_msg : (x_23).rl_msg, rl_line_valid :
             (x_23).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -18096,7 +17621,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         prl002 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc002 <= (Bit#(2))'(2'h2);
         let x_4 <- cache_002_readRq((x_3).addr);
@@ -18114,7 +17639,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         crsrl002 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_4, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc002 <= (Bit#(2))'(2'h1);
         let x_5 <- cache_002_readRq((x_4).addr);
@@ -18130,7 +17655,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         crqrl002 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc002 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_002_readRq((x_3).addr);
@@ -18188,7 +17713,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18205,10 +17730,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18218,7 +17743,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_15, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         crqrl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h8))[3:2]) ==
@@ -18254,7 +17779,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18271,10 +17796,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18282,7 +17807,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h1)) < (x_9)), noAction);
         crqrl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_002_hasVictimSlot();
@@ -18294,8 +17819,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h2))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren002(x_18);
         let x_20 = (wl002);
         when (! ((x_20).wl_valid), noAction);
@@ -18322,7 +17846,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18342,7 +17866,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h3)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -18356,7 +17880,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -18406,7 +17930,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18426,7 +17950,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h4)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -18440,7 +17964,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -18490,7 +18014,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18507,10 +18031,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h5)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18518,7 +18042,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -18569,7 +18093,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18586,10 +18110,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18599,7 +18123,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_15, noAction);
         when ((x_9) == ((Bit#(3))'(3'h3)), noAction);
         crqrl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -18626,8 +18150,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren002(x_21);
         let x_23 = (wl002);
         when (! ((x_23).wl_valid), noAction);
@@ -18655,7 +18178,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18672,10 +18195,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18686,7 +18209,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (((x_8) == ((Bool)'(True))) && ((x_9) == ((Bit#(3))'(3'h4))),
         noAction);
         crqrl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -18699,8 +18222,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren002(x_19);
         let x_21 = (wl002);
         when (! ((x_21).wl_valid), noAction);
@@ -18728,7 +18250,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18745,10 +18267,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18756,7 +18278,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h2)) < (x_9)), noAction);
         crqrl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_002_hasVictimSlot();
@@ -18768,8 +18290,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h2))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren002(x_18);
         let x_20 = (wl002);
         when (! ((x_20).wl_valid), noAction);
@@ -18796,7 +18317,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18816,7 +18337,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hb)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -18830,7 +18351,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -18860,8 +18381,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_18)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'h9),
         type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_25 <- makeEnq_parentChildren002(x_24);
         let x_26 = (wl002);
         when (! ((x_26).wl_valid), noAction);
@@ -18888,7 +18408,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18905,10 +18425,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hc)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18916,7 +18436,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_14, noAction);
         when ((Bool)'(True), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -18939,8 +18459,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h6))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren002(x_19);
         let x_21 = (wl002);
         when (! ((x_21).wl_valid), noAction);
@@ -18967,7 +18486,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -18984,10 +18503,10 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -18995,7 +18514,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h3))), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -19018,8 +18537,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h6))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren002(x_19);
         let x_21 = (wl002);
         when (! ((x_21).wl_valid), noAction);
@@ -19043,7 +18561,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -19060,13 +18578,12 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable002((x_10).addr);
@@ -19080,9 +18597,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h2))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h14), type_ : (Bool)'(False), addr : (x_10).addr, value
-        :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        : (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_16 <- makeEnq_parentChildren002(x_15);
         let x_17 = (wl002);
         when (! ((x_17).wl_valid), noAction);
@@ -19107,7 +18622,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -19124,13 +18639,12 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable002((x_10).addr);
@@ -19170,7 +18684,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19190,7 +18704,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h16)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -19200,7 +18714,7 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl002 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         let x_17 <- releaseUL002((x_11).addr);
@@ -19217,17 +18731,17 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
             crqrl002 <= Struct23 {rl_valid : (x_21).rl_valid, rl_cmidx :
             (x_21).rl_cmidx, rl_msg : (x_21).rl_msg, rl_line_valid :
             (x_21).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -19240,17 +18754,17 @@ module mkModule76#(function ActionValue#(Struct24) cache_002_writeRs(),
             crsrl002 <= Struct23 {rl_valid : (x_23).rl_valid, rl_cmidx :
             (x_23).rl_cmidx, rl_msg : (x_23).rl_msg, rl_line_valid :
             (x_23).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -19351,7 +18865,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         prl003 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc003 <= (Bit#(2))'(2'h2);
         let x_4 <- cache_003_readRq((x_3).addr);
@@ -19369,7 +18883,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         crsrl003 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_4, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc003 <= (Bit#(2))'(2'h1);
         let x_5 <- cache_003_readRq((x_4).addr);
@@ -19385,7 +18899,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         crqrl003 <= Struct23 {rl_valid : (Bool)'(True), rl_cmidx :
         (Bit#(2))'(2'h0), rl_msg : x_3, rl_line_valid : (Bool)'(False),
         rl_line :
-        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})};
+        (Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})};
 
         rlc003 <= (Bit#(2))'(2'h0);
         let x_4 <- cache_003_readRq((x_3).addr);
@@ -19443,7 +18957,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19460,10 +18974,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -19473,7 +18987,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_15, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         crqrl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct10 x_17 = (Struct10 {enq_type : ((((Bit#(4))'(4'h8))[3:2]) ==
@@ -19509,7 +19023,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19526,10 +19040,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h0)), noAction);
         when (! ((x_11).type_), noAction);
@@ -19537,7 +19051,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h1)) < (x_9)), noAction);
         crqrl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_003_hasVictimSlot();
@@ -19549,8 +19063,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h3))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h2), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren003(x_18);
         let x_20 = (wl003);
         when (! ((x_20).wl_valid), noAction);
@@ -19577,7 +19090,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19597,7 +19110,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h3)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -19611,7 +19124,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -19661,7 +19174,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19681,7 +19194,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h4)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -19695,7 +19208,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -19745,7 +19258,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19762,10 +19275,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h5)), noAction);
         when (! ((x_11).type_), noAction);
@@ -19773,7 +19286,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h2))), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -19824,7 +19337,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19841,10 +19354,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -19854,7 +19367,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_15, noAction);
         when ((x_9) == ((Bit#(3))'(3'h3)), noAction);
         crqrl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -19881,8 +19394,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_22 <- makeEnq_parentChildren003(x_21);
         let x_23 = (wl003);
         when (! ((x_23).wl_valid), noAction);
@@ -19910,7 +19422,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -19927,10 +19439,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -19941,7 +19453,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (((x_8) == ((Bool)'(True))) && ((x_9) == ((Bit#(3))'(3'h4))),
         noAction);
         crqrl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct24 x_17 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -19954,8 +19466,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h8))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren003(x_19);
         let x_21 = (wl003);
         when (! ((x_21).wl_valid), noAction);
@@ -19983,7 +19494,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -20000,10 +19511,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_2).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h8)), noAction);
         when (! ((x_11).type_), noAction);
@@ -20011,7 +19522,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_14, noAction);
         when (! (((Bit#(3))'(3'h2)) < (x_9)), noAction);
         crqrl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         let x_16 <- cache_003_hasVictimSlot();
@@ -20023,8 +19534,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h3))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'ha), type_ : (Bool)'(False), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_19 <- makeEnq_parentChildren003(x_18);
         let x_20 = (wl003);
         when (! ((x_20).wl_valid), noAction);
@@ -20051,7 +19561,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -20071,7 +19581,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hb)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -20085,7 +19595,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         Struct2 x_17 = ((x_13).ul_msg);
@@ -20115,8 +19625,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : (x_18)[1:0], enq_msg : Struct2 {id : (Bit#(6))'(6'h9),
         type_ : (Bool)'(True), addr : (x_16).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_25 <- makeEnq_parentChildren003(x_24);
         let x_26 = (wl003);
         when (! ((x_26).wl_valid), noAction);
@@ -20143,7 +19652,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -20160,10 +19669,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'hc)), noAction);
         when (! ((x_11).type_), noAction);
@@ -20171,7 +19680,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_14, noAction);
         when ((Bool)'(True), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -20194,8 +19703,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h7))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren003(x_19);
         let x_21 = (wl003);
         when (! ((x_21).wl_valid), noAction);
@@ -20222,7 +19730,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -20239,10 +19747,10 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_7).mesi_dir_sharers});
         Struct2 x_11 = ((x_1).rl_msg);
         Struct9 x_12 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_13 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'he)), noAction);
         when (! ((x_11).type_), noAction);
@@ -20250,7 +19758,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_14, noAction);
         when (! ((x_9) < ((Bit#(3))'(3'h3))), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_15 = (x_11);
         Struct24 x_16 = (Struct24 {addr : (x_5).addr, info_hit :
@@ -20273,8 +19781,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h7))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_20 <- makeEnq_parentChildren003(x_19);
         let x_21 = (wl003);
         when (! ((x_21).wl_valid), noAction);
@@ -20298,7 +19805,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -20315,13 +19822,12 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable003((x_10).addr);
@@ -20335,9 +19841,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         == ((Bit#(2))'(2'h0)) ? ((Bit#(2))'(2'h0)) : ((Bit#(2))'(2'h1))))),
         enq_ch_idx : ((Bit#(4))'(4'h3))[1:0], enq_msg : Struct2 {id :
         (Bit#(6))'(6'h14), type_ : (Bool)'(False), addr : (x_10).addr, value
-        :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))}});
-
+        : (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))}});
         let x_16 <- makeEnq_parentChildren003(x_15);
         let x_17 = (wl003);
         when (! ((x_17).wl_valid), noAction);
@@ -20362,7 +19866,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_3).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_3).info).mesi_dir_sharers}, value_write : (x_3).value_write,
         value : (x_3).value});
-        Vector#(8, Bit#(64)) x_5 = ((x_4).value);
+        Vector#(4, Bit#(64)) x_5 = ((x_4).value);
         Struct4 x_6 = ((x_4).info);
         Bool x_7 = ((x_6).mesi_owned);
         Bit#(3) x_8 = ((x_6).mesi_status);
@@ -20379,13 +19883,12 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         (x_6).mesi_dir_sharers});
         Struct2 x_10 = (Struct2 {id : (Bit#(6))'(6'h0), type_ :
         (Bool)'(False), addr : (x_4).addr, value :
-        (Vector#(8, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0))});
-
+        (Vector#(4, Bit#(64)))'(vec(64'h0, 64'h0, 64'h0, 64'h0))});
         Struct9 x_11 =
-        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
+        ((Struct9)'(Struct9 {ul_valid: False, ul_rsb: False, ul_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, ul_rsbTo: 2'h0}));
 
         Struct7 x_12 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (! ((x_10).type_), noAction);
         let x_13 <- upLockable003((x_10).addr);
@@ -20425,7 +19928,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         ((Bit#(3))'(3'h1)) : (((x_4).info).mesi_dir_st)), mesi_dir_sharers :
         ((x_4).info).mesi_dir_sharers}, value_write : (x_4).value_write,
         value : (x_4).value});
-        Vector#(8, Bit#(64)) x_6 = ((x_5).value);
+        Vector#(4, Bit#(64)) x_6 = ((x_5).value);
         Struct4 x_7 = ((x_5).info);
         Bool x_8 = ((x_7).mesi_owned);
         Bit#(3) x_9 = ((x_7).mesi_status);
@@ -20445,7 +19948,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when ((x_12).valid, noAction);
         Struct9 x_13 = ((x_12).data);
         Struct7 x_14 =
-        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
+        ((Struct7)'(Struct7 {dl_valid: False, dl_rsb: False, dl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, dl_rss_from: 4'h0, dl_rss_recv: 4'h0, dl_rss: vec(Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}), dl_rsbTo: 4'h0}));
 
         when (((x_11).id) == ((Bit#(6))'(6'h16)), noAction);
         when ((x_13).ul_valid, noAction);
@@ -20455,7 +19958,7 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
         when (x_15, noAction);
         when ((Bool)'(True), noAction);
         prl003 <=
-        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)}});
+        (Struct23)'(Struct23 {rl_valid: False, rl_cmidx: 2'h0, rl_msg: Struct2 {id: 6'h0, type_: False, addr: 64'h0, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}, rl_line_valid: False, rl_line: Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)}});
 
         Struct2 x_16 = (x_11);
         let x_17 <- releaseUL003((x_11).addr);
@@ -20472,17 +19975,17 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
             crqrl003 <= Struct23 {rl_valid : (x_21).rl_valid, rl_cmidx :
             (x_21).rl_cmidx, rl_msg : (x_21).rl_msg, rl_line_valid :
             (x_21).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -20495,17 +19998,17 @@ module mkModule77#(function ActionValue#(Struct24) cache_003_writeRs(),
             crsrl003 <= Struct23 {rl_valid : (x_23).rl_valid, rl_cmidx :
             (x_23).rl_cmidx, rl_msg : (x_23).rl_msg, rl_line_valid :
             (x_23).rl_line_valid, rl_line : Struct24 {addr : x_19, info_hit :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_hit,
             info_way :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_way,
             info_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info_write,
             info :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).info,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).info,
             value_write :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value_write,
             value :
-            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0, 64'h0)})).value}};
+            ((Struct24)'(Struct24 {addr: 64'h0, info_hit: False, info_way: 2'h0, info_write: False, info: Struct4 {mesi_owned: False, mesi_status: 3'h0, mesi_dir_st: 3'h0, mesi_dir_sharers: 4'h0}, value_write: False, value: vec(64'h0, 64'h0, 64'h0, 64'h0)})).value}};
 
 
         end else begin
@@ -20714,26 +20217,22 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     m57.downLockable003, m57.upLockable003, m71.cache_003_readRs,
     m61.deq_fifo00300, m57.downLockRssFull003, m71.cache_003_readRq,
     m60.deq_fifo0032);
-        //// Initialization logic
+
+    //// Initialization logic
 
     Reg#(Bool) init <- mkReg(False);
 
     Reg#(Bool) llInitDone <- mkReg(False);
-    Reg#(Bit#(9)) llInitIndex <- mkReg(0);
-
-    Reg#(Bool) l2InitDone0 <- mkReg(False);
-    Reg#(Bit#(8)) l2InitIndex0 <- mkReg(0);
-    Reg#(Bool) l2InitDone1 <- mkReg(False);
-    Reg#(Bit#(8)) l2InitIndex1 <- mkReg(0);
+    Reg#(Bit#(10)) llInitIndex <- mkReg(0);
 
     Reg#(Bool) l1InitDone0 <- mkReg(False);
-    Reg#(Bit#(7)) l1InitIndex0 <- mkReg(0);
+    Reg#(Bit#(8)) l1InitIndex0 <- mkReg(0);
     Reg#(Bool) l1InitDone1 <- mkReg(False);
-    Reg#(Bit#(7)) l1InitIndex1 <- mkReg(0);
+    Reg#(Bit#(8)) l1InitIndex1 <- mkReg(0);
     Reg#(Bool) l1InitDone2 <- mkReg(False);
-    Reg#(Bit#(7)) l1InitIndex2 <- mkReg(0);
+    Reg#(Bit#(8)) l1InitIndex2 <- mkReg(0);
     Reg#(Bool) l1InitDone3 <- mkReg(False);
-    Reg#(Bit#(7)) l1InitIndex3 <- mkReg(0);
+    Reg#(Bit#(8)) l1InitIndex3 <- mkReg(0);
 
     function Struct22 llDefaultLine (Bit#(49) tagValue);
       return Struct22 { write: True,
@@ -20764,12 +20263,12 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m16.putRq_infoRam_00_0 (llDefaultLine(0));
 
         llInitIndex <= llInitIndex + 1;
-        if (llInitIndex == 9'b111111111) begin
+        if (llInitIndex == maxBound) begin
             llInitDone <= True;
         end
     endrule
 
-    function Struct29 l1DefaultLine (Bit#(51) tagValue, Bit#(7) index);
+    function Struct29 l1DefaultLine (Bit#(51) tagValue, Bit#(8) index);
       return Struct29 { write: True,
                        addr: index,
                        datain: Struct26 { tag: tagValue,
@@ -20785,7 +20284,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m21.putRq_infoRam_000_1 (l1DefaultLine(1, l1InitIndex0));
         m22.putRq_infoRam_000_0 (l1DefaultLine(0, l1InitIndex0));
         l1InitIndex0 <= l1InitIndex0 + 1;
-        if (l1InitIndex0 == 7'b1111111) begin
+        if (l1InitIndex0 == maxBound) begin
             l1InitDone0 <= True;
         end
     endrule
@@ -20796,7 +20295,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m32.putRq_infoRam_001_1 (l1DefaultLine(1, l1InitIndex1));
         m33.putRq_infoRam_001_0 (l1DefaultLine(0, l1InitIndex1));
         l1InitIndex1 <= l1InitIndex1 + 1;
-        if (l1InitIndex1 == 7'b1111111) begin
+        if (l1InitIndex1 == maxBound) begin
             l1InitDone1 <= True;
         end
     endrule
@@ -20807,7 +20306,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m43.putRq_infoRam_002_1 (l1DefaultLine(1, l1InitIndex2));
         m44.putRq_infoRam_002_0 (l1DefaultLine(0, l1InitIndex2));
         l1InitIndex2 <= l1InitIndex1 + 1;
-        if (l1InitIndex2 == 7'b1111111) begin
+        if (l1InitIndex2 == maxBound) begin
             l1InitDone2 <= True;
         end
     endrule
@@ -20818,7 +20317,7 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
         m54.putRq_infoRam_003_1 (l1DefaultLine(1, l1InitIndex3));
         m55.putRq_infoRam_003_0 (l1DefaultLine(0, l1InitIndex3));
         l1InitIndex3 <= l1InitIndex1 + 1;
-        if (l1InitIndex3 == 7'b1111111) begin
+        if (l1InitIndex3 == maxBound) begin
             l1InitDone3 <= True;
         end
     endrule
@@ -20842,6 +20341,11 @@ module mkCC#(function ActionValue#(Struct2) deq_fifo002(),
     _l1Ifc[2] = getMemRqRs(m50.enq_fifo00200, m51.deq_fifo00202);
     _l1Ifc[3] = getMemRqRs(m61.enq_fifo00300, m62.deq_fifo00302);
     interface l1Ifc = _l1Ifc;
+
+    interface DMA llDma;
+        method dma_putRq = m17.putRq_dataRam_00;
+        method dma_getRs = m17.getRs_dataRam_00;
+    endinterface
 
     method Bool isInit ();
         return init;

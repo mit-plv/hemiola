@@ -11,13 +11,10 @@ Makefile.coq: Makefile $(VS)
 MSI_EXT_VO=ex/Msi/MsiExt.vo
 
 # MESI_EXT_VO=ex/Mesi/MesiL1L2LLExt.vo
-# MESI_EXT_VO=ex/Mesi/MesiL1LL8Ext.vo
 MESI_EXT_VO=ex/Mesi/MesiL1LL4Ext.vo
-
-# BSV_EXT_HEADER=Header8.bsv
-BSV_EXT_HEADER=Header4.bsv
+# BSV_EXT_HEADER=HeaderL1L2LL4.bsv
+BSV_EXT_HEADER=HeaderL1LL4.bsv
 # BSV_EXT_INIT=ImplL1L2LL4.bsv
-# BSV_EXT_INIT=ImplL1LL8.bsv
 BSV_EXT_INIT=ImplL1LL4.bsv
 
 msi_comp: Makefile.coq

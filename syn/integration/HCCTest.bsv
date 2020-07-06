@@ -5,6 +5,7 @@ import FIFOF::*;
 import LFSR::*;
 
 import HCC::*;
+import HCCWrapper::*;
 import HCCTypes::*;
 import HMemBank::*;
 
@@ -15,9 +16,6 @@ interface CCTest;
     method Action start(CycleCnt maxCycle);
     method Bool isEnd();
     method Bit#(32) getThroughput();
-
-    method Action force_rq(Bool wr, Bit#(64) faddr, Vector#(8, Bit#(64)) val);
-    method Bit#(64) getMark();
 endinterface
 
 typedef 10000 DeadlockDetectCnt;
@@ -49,7 +47,7 @@ typedef 2 RqExShSeed;
 // Access ratio between read and write, used throughout all testers
 typedef 2 LgRWRatio; // 1/4 (=1/2^2) accesses of writes
 
-module mkCCTestRandom#(CC mem)(CCTest);
+module mkCCTestRandom#(CCMem mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -64,7 +62,6 @@ module mkCCTestRandom#(CC mem)(CCTest);
 
     Vector#(L1Num, Reg#(Bool)) rq_type <- replicateM(mkReg(False));
     Vector#(L1Num, Reg#(Bit#(64))) rq_addr <- replicateM(mkReg(0));
-    Vector#(L1Num, Reg#(Bit#(64))) marks <- replicateM(mkReg(0));
     Reg#(CCValue) rq_value <- mkReg(replicate(0));
     Reg#(Bit#(3)) rq_value_idx <- mkReg(0);
 
@@ -74,7 +71,7 @@ module mkCCTestRandom#(CC mem)(CCTest);
         return addr;
     endfunction
 
-    rule mem_init_done (!memInit && mem.isInit);
+    rule mem_init_done (!memInit && mem.cc.isInit);
         memInit <= True;
     endrule
 
@@ -133,20 +130,17 @@ module mkCCTestRandom#(CC mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            mem.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
-            let rs <- mem.l1Ifc[i].mem_deq_rs ();
-            marks[i] <= marks[i]
-            + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3]
-            + rs.value[4] + rs.value[5] + rs.value[6] + rs.value[7];
+            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             addResp(i);
         endrule
     end
@@ -173,28 +167,12 @@ module mkCCTestRandom#(CC mem)(CCTest);
         end
         return sum;
     endmethod
-
-    method Action force_rq(Bool wr, Bit#(64) faddr, Vector#(8, Bit#(64)) val);
-        Struct2 frq = Struct2 {id: (wr ? setRqId : getRqId),
-                               type_: False,
-                               addr: faddr,
-                               value: val};
-        mem.l1Ifc[0].mem_enq_rq(frq);
-    endmethod
-
-    method Bit#(64) getMark();
-        Bit#(64) sum = 0;
-        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
-            sum = sum + marks[i];
-        end
-        return sum;
-    endmethod
 endmodule
 
 typedef TLog#(L1Num) LgL1Num;
-typedef 9 LgL1DSz;
+typedef 10 LgL1DSz;
 
-module mkCCTestIsolated#(CC mem)(CCTest);
+module mkCCTestIsolated#(CCMem mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -218,7 +196,7 @@ module mkCCTestIsolated#(CC mem)(CCTest);
         return addr;
     endfunction
 
-    rule mem_init_done (!memInit && mem.isInit);
+    rule mem_init_done (!memInit && mem.cc.isInit);
         memInit <= True;
     endrule
 
@@ -278,17 +256,17 @@ module mkCCTestIsolated#(CC mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            mem.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
-            let rs <- mem.l1Ifc[i].mem_deq_rs ();
+            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             addResp(i);
         endrule
     end
@@ -315,12 +293,6 @@ module mkCCTestIsolated#(CC mem)(CCTest);
         end
         return sum;
     endmethod
-
-    method Action force_rq(Bool wr, Bit#(64) faddr, Vector#(8, Bit#(64)) val);
-    endmethod
-    method Bit#(64) getMark();
-        return 0;
-    endmethod
 endmodule
 
 // There are two additional parameters used in `mkCCTestShared`:
@@ -331,10 +303,12 @@ endmodule
 // Shared   : [0..0][1][0...0][0..0][rand(LgShRange)]
 typedef TAdd#(LgL1Num, 1) ExShIdxSz;
 typedef L1Num ShIdx;
-typedef 4 LgShRange;
-typedef 2 LgExShRatio; // 1/4 (=1/2^2) accesses of shared lines
+typedef LgL1DSz LgShRange;
+// typedef 2 LgExShRatio; // 1/4 (=1/2^2) accesses of shared lines
+// typedef 1 LgExShRatio; // 1/2 (=1/2^1) accesses of shared lines
+typedef 3 LgExShRatio; // 1/8 (=1/2^3) accesses of shared lines
 
-module mkCCTestShared#(CC mem)(CCTest);
+module mkCCTestShared#(CCMem mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -357,7 +331,7 @@ module mkCCTestShared#(CC mem)(CCTest);
         return addr;
     endfunction
 
-    rule mem_init_done (!memInit && mem.isInit);
+    rule mem_init_done (!memInit && mem.cc.isInit);
         memInit <= True;
     endrule
 
@@ -431,17 +405,17 @@ module mkCCTestShared#(CC mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            mem.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
-            let rs <- mem.l1Ifc[i].mem_deq_rs ();
+            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             addResp(i);
         endrule
     end
@@ -466,11 +440,5 @@ module mkCCTestShared#(CC mem)(CCTest);
             sum = sum + numResps[i];
         end
         return sum;
-    endmethod
-
-    method Action force_rq(Bool wr, Bit#(64) faddr, Vector#(8, Bit#(64)) val);
-    endmethod
-    method Bit#(64) getMark();
-        return 0;
     endmethod
 endmodule

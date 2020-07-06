@@ -12,11 +12,12 @@ import HCCTypes::*;
 interface MemBank;
     method Action putMemRq(CCMsg _);
     method ActionValue#(CCMsg) getMemRs();
+    interface DMA memDma;
 endinterface
 
 // Below implements a simple BRAM-based memory
 
-typedef 13 MemBramAddrSz;
+typedef 14 MemBramAddrSz;
 typedef Bit#(MemBramAddrSz) MemBramAddr;
 
 module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
@@ -89,6 +90,17 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         rss.deq();
         return rss.first;
     endmethod
+
+    interface DMA memDma;
+        method Action dma_putRq (DmaRq rq);
+            if (rq.write) bram.wrReq(rq.addr, rq.datain);
+            else bram.rdReq(rq.addr);
+        endmethod
+        method ActionValue#(CCValue) dma_getRs ();
+            bram.deqRdResp();
+            return bram.rdResp;
+        endmethod
+    endinterface
 endmodule
 
 (* synthesize *)
@@ -102,6 +114,7 @@ endmodule
 module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     RegFile#(MemBramAddr, CCValue) bram <- mkRegFileFull;
     FIFOF#(CCAddr) rdAddr <- mkPipelineFIFOF();
+    Reg#(MemBramAddr) dmaRdAddr <- mkReg(0);
 
     CCMsgId readRqId = 6'h2; // [mesiRqS] in Hemiola
     CCMsgId readRsId = 6'h4; // [mesiRsE] in Hemiola
@@ -169,6 +182,17 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         rss.deq();
         return rss.first;
     endmethod
+
+    interface DMA memDma;
+        method Action dma_putRq (DmaRq rq);
+            if (rq.write) bram.upd(rq.addr, rq.datain);
+            else dmaRdAddr <= rq.addr;
+        endmethod
+        method ActionValue#(CCValue) dma_getRs ();
+            let bval = bram.sub(dmaRdAddr);
+            return bval;
+        endmethod
+    endinterface
 endmodule
 
 (* synthesize *)
