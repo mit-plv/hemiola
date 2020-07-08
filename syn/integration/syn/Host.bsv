@@ -12,7 +12,7 @@ import HCCTest::*;
 ////////// Connectal interfaces
 
 interface HostIndication;
-    method Action finish(Bit#(32) numResps);
+    method Action finish(Bit#(32) numResps, Bit#(64) mark);
     method Action dma_getRs_ll(Bit#(64) val);
     method Action dma_getRs_mem(Bit#(64) val);
 endinterface
@@ -45,7 +45,8 @@ module mkHost#(HostIndication indication) (Host);
 
     rule check_end (started && tester.isEnd && !ended);
         let n = tester.getThroughput;
-        indication.finish(n);
+        let m = tester.getMark;
+        indication.finish(n, m);
         ended <= True;
     endrule
 

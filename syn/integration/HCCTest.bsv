@@ -9,13 +9,14 @@ import HCCWrapper::*;
 import HCCTypes::*;
 import HMemBank::*;
 
-typedef MemBramAddrSz BAddrSz;
+typedef MemAddrSz BAddrSz;
 
 typedef Bit#(32) CycleCnt;
 interface CCTest;
     method Action start(CycleCnt maxCycle);
     method Bool isEnd();
     method Bit#(32) getThroughput();
+    method Bit#(64) getMark();
 endinterface
 
 typedef 10000 DeadlockDetectCnt;
@@ -64,6 +65,8 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
     Vector#(L1Num, Reg#(Bit#(64))) rq_addr <- replicateM(mkReg(0));
     Reg#(CCValue) rq_value <- mkReg(replicate(0));
     Reg#(Bit#(3)) rq_value_idx <- mkReg(0);
+
+    Vector#(L1Num, Reg#(Bit#(64))) marks <- replicateM(mkReg(0));
 
     function Bit#(64) getAddr (Bit#(BAddrSz) baddr);
         Bit#(AddrOffset) pad = 0;
@@ -142,6 +145,7 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
         rule response;
             let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             addResp(i);
+            marks[i] <= marks[i] + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3];
         endrule
     end
 
@@ -167,6 +171,13 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
         end
         return sum;
     endmethod
+    method Bit#(64) getMark();
+        Bit#(64) ret = 0;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            ret = ret + marks[i];
+        end
+        return ret;
+    endmethod
 endmodule
 
 typedef TLog#(L1Num) LgL1Num;
@@ -189,6 +200,8 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
     Vector#(L1Num, Reg#(Bit#(64))) rq_addr <- replicateM(mkReg(0));
     Reg#(CCValue) rq_value <- mkReg(replicate(0));
     Reg#(Bit#(3)) rq_value_idx <- mkReg(0);
+
+    Vector#(L1Num, Reg#(Bit#(64))) marks <- replicateM(mkReg(0));
 
     function Bit#(64) getAddr (Bit#(LgL1Num) idx, Bit#(LgL1DSz) l1Addr);
         Bit#(AddrOffset) pad = 0;
@@ -268,6 +281,7 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
         rule response;
             let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             addResp(i);
+            marks[i] <= marks[i] + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3];
         endrule
     end
 
@@ -293,20 +307,27 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
         end
         return sum;
     endmethod
+    method Bit#(64) getMark();
+        Bit#(64) ret = 0;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            ret = ret + marks[i];
+        end
+        return ret;
+    endmethod
 endmodule
 
-// There are two additional parameters used in `mkCCTestShared`:
-// - Size of shared lines (LgShRange)
-// - Access ratio between exclusive and shared lines (LgExShRatio)
 // NOTE:
 // Exclusive: [0..0][0][L1Idx][----rand(LgL1DSz)----]
 // Shared   : [0..0][1][0...0][0..0][rand(LgShRange)]
-typedef TAdd#(LgL1Num, 1) ExShIdxSz;
-typedef L1Num ShIdx;
-typedef LgL1DSz LgShRange;
-// typedef 2 LgExShRatio; // 1/4 (=1/2^2) accesses of shared lines
-// typedef 1 LgExShRatio; // 1/2 (=1/2^1) accesses of shared lines
-typedef 3 LgExShRatio; // 1/8 (=1/2^3) accesses of shared lines
+typedef TAdd#(LgL1Num, 1) ExShIdxSz; // FIXED
+typedef L1Num ShIdx; // FIXED
+
+// There are two additional parameters used in `mkCCTestShared`:
+// - LgShRange: the size of shared lines.
+// - LgExShRatio: access ratio between exclusive and shared lines.
+typedef 5 LgShRange;
+typedef 3 LgExShRatio;
+typedef 32 NumTlCycles;
 
 module mkCCTestShared#(CCMem mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
@@ -318,12 +339,19 @@ module mkCCTestShared#(CCMem mem)(CCTest);
 
     Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
     Vector#(L1Num, LFSR#(Bit#(16))) rq_baddr_rand <- replicateM(mkLFSR_16);
-    Vector#(L1Num, LFSR#(Bit#(4))) rq_ex_sh_rand <- replicateM(mkLFSR_4);
+    Vector#(L1Num, LFSR#(Bit#(8))) rq_ex_sh_rand <- replicateM(mkLFSR_8);
+    LFSR#(Bit#(32)) rq_value_rand_high <- mkLFSR_32;
+    LFSR#(Bit#(32)) rq_value_rand_low <- mkLFSR_32;
 
     Vector#(L1Num, Reg#(Bool)) rq_type <- replicateM(mkReg(False));
     Vector#(L1Num, Reg#(Bit#(64))) rq_addr <- replicateM(mkReg(0));
     Vector#(L1Num, Reg#(Bool)) rq_ex_sh <- replicateM(mkReg(False));
+    // For temporal locality
+    Vector#(L1Num, Reg#(Bit#(8))) rq_tl_cycles <- replicateM(mkReg(0));
     Reg#(CCValue) rq_value <- mkReg(replicate(0));
+    Reg#(Bit#(3)) rq_value_idx <- mkReg(0);
+
+    Vector#(L1Num, Reg#(Bit#(64))) marks <- replicateM(mkReg(0));
 
     function Bit#(64) getAddr (Bit#(ExShIdxSz) idx, Bit#(LgL1DSz) l1Addr);
         Bit#(AddrOffset) pad = 0;
@@ -372,16 +400,19 @@ module mkCCTestShared#(CCMem mem)(CCTest);
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i=i+1) begin
-        rule rq_ex_sh_upd;
+        rule rq_ex_sh_upd (rq_tl_cycles[i] >= fromInteger(valueOf(NumTlCycles)));
             let t = rq_ex_sh_rand[i].value;
             rq_ex_sh_rand[i].next();
             Bit#(LgExShRatio) rz = 0;
             rq_ex_sh[i] <= (truncate(t) == rz? True : False);
+            rq_tl_cycles[i] <= 0; // fill the fuel
         endrule
     end
-
-    rule rq_value_inc;
-        rq_value <= update(rq_value, 0, rq_value[0] + 1);
+    rule rq_value_upd;
+        rq_value[rq_value_idx] <= {rq_value_rand_high.value, rq_value_rand_low.value};
+        rq_value_rand_high.next();
+        rq_value_rand_low.next();
+        rq_value_idx <= rq_value_idx + 1;
     endrule
 
     let getRqId = 6'b000000;
@@ -406,17 +437,20 @@ module mkCCTestShared#(CCMem mem)(CCTest);
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
             mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
+            rq_tl_cycles[i] <= rq_tl_cycles[i] + 1;
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
             mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
+            rq_tl_cycles[i] <= rq_tl_cycles[i] + 1;
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
             let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             addResp(i);
+            marks[i] <= marks[i] + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3];
         endrule
     end
 
@@ -428,6 +462,8 @@ module mkCCTestShared#(CCMem mem)(CCTest);
             rq_baddr_rand[i].seed(fromInteger(valueOf(RqBAddrSeed) + i));
             rq_ex_sh_rand[i].seed(fromInteger(valueOf(RqExShSeed) + i));
         end
+        rq_value_rand_high.seed(fromInteger(valueOf(RqValueSeed)));
+        rq_value_rand_low.seed(fromInteger(valueOf(RqValueSeed) + 1));
     endmethod
 
     method Bool isEnd();
@@ -440,5 +476,12 @@ module mkCCTestShared#(CCMem mem)(CCTest);
             sum = sum + numResps[i];
         end
         return sum;
+    endmethod
+    method Bit#(64) getMark();
+        Bit#(64) ret = 0;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            ret = ret + marks[i];
+        end
+        return ret;
     endmethod
 endmodule

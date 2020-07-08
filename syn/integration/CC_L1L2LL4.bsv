@@ -1229,7 +1229,7 @@ interface Module29;
 endinterface
 
 module mkModule29 (Module29);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo0000 (Struct2 x_0);
     pff.enq(x_0);
@@ -1250,7 +1250,7 @@ interface Module30;
 endinterface
 
 module mkModule30 (Module30);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo0001 (Struct2 x_0);
     pff.enq(x_0);
@@ -1271,7 +1271,7 @@ interface Module31;
 endinterface
 
 module mkModule31 (Module31);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo0002 (Struct2 x_0);
     pff.enq(x_0);
@@ -1638,7 +1638,7 @@ interface Module38;
 endinterface
 
 module mkModule38 (Module38);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00000 (Struct2 x_0);
     pff.enq(x_0);
@@ -1659,7 +1659,7 @@ interface Module39;
 endinterface
 
 module mkModule39 (Module39);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00001 (Struct2 x_0);
     pff.enq(x_0);
@@ -1680,7 +1680,7 @@ interface Module40;
 endinterface
 
 module mkModule40 (Module40);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00002 (Struct2 x_0);
     pff.enq(x_0);
@@ -1701,7 +1701,7 @@ interface Module41;
 endinterface
 
 module mkModule41 (Module41);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo000000 (Struct2 x_0);
     pff.enq(x_0);
@@ -1722,7 +1722,7 @@ interface Module42;
 endinterface
 
 module mkModule42 (Module42);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo000002 (Struct2 x_0);
     pff.enq(x_0);
@@ -2089,7 +2089,7 @@ interface Module49;
 endinterface
 
 module mkModule49 (Module49);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00010 (Struct2 x_0);
     pff.enq(x_0);
@@ -2110,7 +2110,7 @@ interface Module50;
 endinterface
 
 module mkModule50 (Module50);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00011 (Struct2 x_0);
     pff.enq(x_0);
@@ -2131,7 +2131,7 @@ interface Module51;
 endinterface
 
 module mkModule51 (Module51);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00012 (Struct2 x_0);
     pff.enq(x_0);
@@ -2152,7 +2152,7 @@ interface Module52;
 endinterface
 
 module mkModule52 (Module52);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo000100 (Struct2 x_0);
     pff.enq(x_0);
@@ -2173,7 +2173,7 @@ interface Module53;
 endinterface
 
 module mkModule53 (Module53);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo000102 (Struct2 x_0);
     pff.enq(x_0);
@@ -2648,7 +2648,7 @@ interface Module64;
 endinterface
 
 module mkModule64 (Module64);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo0010 (Struct2 x_0);
     pff.enq(x_0);
@@ -2669,7 +2669,7 @@ interface Module65;
 endinterface
 
 module mkModule65 (Module65);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo0011 (Struct2 x_0);
     pff.enq(x_0);
@@ -2690,7 +2690,7 @@ interface Module66;
 endinterface
 
 module mkModule66 (Module66);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo0012 (Struct2 x_0);
     pff.enq(x_0);
@@ -3057,7 +3057,7 @@ interface Module73;
 endinterface
 
 module mkModule73 (Module73);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00100 (Struct2 x_0);
     pff.enq(x_0);
@@ -3078,7 +3078,7 @@ interface Module74;
 endinterface
 
 module mkModule74 (Module74);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00101 (Struct2 x_0);
     pff.enq(x_0);
@@ -3099,7 +3099,7 @@ interface Module75;
 endinterface
 
 module mkModule75 (Module75);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00102 (Struct2 x_0);
     pff.enq(x_0);
@@ -3120,7 +3120,7 @@ interface Module76;
 endinterface
 
 module mkModule76 (Module76);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo001000 (Struct2 x_0);
     pff.enq(x_0);
@@ -3141,7 +3141,7 @@ interface Module77;
 endinterface
 
 module mkModule77 (Module77);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo001002 (Struct2 x_0);
     pff.enq(x_0);
@@ -3508,7 +3508,7 @@ interface Module84;
 endinterface
 
 module mkModule84 (Module84);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00110 (Struct2 x_0);
     pff.enq(x_0);
@@ -3529,7 +3529,7 @@ interface Module85;
 endinterface
 
 module mkModule85 (Module85);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00111 (Struct2 x_0);
     pff.enq(x_0);
@@ -3550,7 +3550,7 @@ interface Module86;
 endinterface
 
 module mkModule86 (Module86);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo00112 (Struct2 x_0);
     pff.enq(x_0);
@@ -3571,7 +3571,7 @@ interface Module87;
 endinterface
 
 module mkModule87 (Module87);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo001100 (Struct2 x_0);
     pff.enq(x_0);
@@ -3592,7 +3592,7 @@ interface Module88;
 endinterface
 
 module mkModule88 (Module88);
-    FIFOF#(Struct2) pff <- mkFIFOF();
+    FIFOF#(Struct2) pff <- mkPipelineFIFOF();
 
     method Action enq_fifo001102 (Struct2 x_0);
     pff.enq(x_0);

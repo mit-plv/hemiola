@@ -15,13 +15,53 @@ interface MemBank;
     interface DMA memDma;
 endinterface
 
+typedef 14 MemAddrSz;
+typedef Bit#(MemAddrSz) MemAddr;
+
+typedef 30 MemLatency; // #cycles to delay
+module mkDelayedBram(RWBramCore#(addrT, dataT)) provisos(
+    Bits#(addrT, addrSz), Bits#(dataT, dataSz)
+);
+    RWBramCore#(addrT, dataT) mem <- mkRWBramCore();
+    Reg#(Bit#(8)) delay <- mkReg(0);
+
+    Reg#(Bool) hasRq <- mkReg(False);
+    Reg#(Bool) rqWrite <- mkReg(False);
+    Reg#(addrT) rqAddr <- mkRegU;
+    Reg#(dataT) rqData <- mkRegU;
+
+    rule dec_delay (hasRq);
+        delay <= delay - 1;
+        if (delay == 0) begin
+            hasRq <= False;
+            if (rqWrite) mem.wrReq(rqAddr, rqData);
+            else mem.rdReq(rqAddr);
+        end
+    endrule
+
+    method Action wrReq(addrT a, dataT d) if (!hasRq);
+        hasRq <= True;
+        delay <= fromInteger(valueOf(MemLatency));
+        rqWrite <= True;
+        rqAddr <= a;
+        rqData <= d;
+    endmethod
+    method Action rdReq(addrT a) if (!hasRq);
+        hasRq <= True;
+        delay <= fromInteger(valueOf(MemLatency));
+        rqWrite <= False;
+        rqAddr <= a;
+    endmethod
+
+    method rdResp = mem.rdResp;
+    method rdRespValid = mem.rdRespValid;
+    method deqRdResp = mem.deqRdResp;
+endmodule
+
 // Below implements a simple BRAM-based memory
-
-typedef 14 MemBramAddrSz;
-typedef Bit#(MemBramAddrSz) MemBramAddr;
-
 module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
-    RWBramCore#(MemBramAddr, CCValue) bram <- mkRWBramCore();
+    RWBramCore#(MemAddr, CCValue) bram <- mkRWBramCore();
+    // RWBramCore#(MemAddr, CCValue) bram <- mkDelayedBram();
     Reg#(CCAddr) rdAddr <- mkReg(0);
 
     CCMsgId readRqId = 6'h2; // [mesiRqS] in Hemiola
@@ -36,10 +76,10 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     rule mem_read_rq (rqs.notEmpty && rqs.first.id == readRqId);
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_read_rq]");
         rdAddr <= raddr;
-        MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
+        MemAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         bram.rdReq(baddr);
     endrule
 
@@ -55,7 +95,7 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         // no need to touch memory, just return the response
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_write]");
         CCMsg rs = CCMsg {id: writeRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
@@ -66,7 +106,7 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         // no need to touch memory, just return the response
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_inv]");
         CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
@@ -76,9 +116,9 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     rule mem_wb (rqs.notEmpty && rqs.first.id == invWRqId);
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_wb]");
-        MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
+        MemAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         CCValue bval = rqs.first.value;
         bram.wrReq(baddr, bval);
         CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: unpack(0)};
@@ -112,9 +152,9 @@ module mkMemBankBram(MemBank);
 endmodule
 
 module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
-    RegFile#(MemBramAddr, CCValue) bram <- mkRegFileFull;
+    RegFile#(MemAddr, CCValue) bram <- mkRegFileFull;
     FIFOF#(CCAddr) rdAddr <- mkPipelineFIFOF();
-    Reg#(MemBramAddr) dmaRdAddr <- mkReg(0);
+    Reg#(MemAddr) dmaRdAddr <- mkReg(0);
 
     CCMsgId readRqId = 6'h2; // [mesiRqS] in Hemiola
     CCMsgId readRsId = 6'h4; // [mesiRsE] in Hemiola
@@ -128,14 +168,14 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     rule mem_read_rq (rqs.notEmpty && rqs.first.id == readRqId);
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_read_rq]");
         rdAddr.enq(raddr);
     endrule
 
     rule mem_read_rs if (rdAddr.notEmpty);
         let raddr = rdAddr.first;
-        MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
+        MemAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         let bval = bram.sub(baddr);
         CCMsg rs = CCMsg {id: readRsId, type_: True, addr: raddr, value: bval};
         rdAddr.deq;
@@ -147,7 +187,7 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         // no need to touch memory, just return the response
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_write]");
         CCMsg rs = CCMsg {id: writeRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
@@ -158,7 +198,7 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         // no need to touch memory, just return the response
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_inv]");
         CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: unpack(0)};
         rss.enq(rs);
@@ -168,9 +208,9 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     rule mem_wb (rqs.notEmpty && rqs.first.id == invWRqId);
         rqs.deq();
         let raddr = rqs.first.addr;
-        dynamicAssert(raddr >> (valueOf(MemBramAddrSz) + valueOf(AddrOffset)) == 0,
+        dynamicAssert(raddr >> (valueOf(MemAddrSz) + valueOf(AddrOffset)) == 0,
                       "Address out-of-bound exception in [mem_wb]");
-        MemBramAddr baddr = truncate (raddr >> valueOf(AddrOffset));
+        MemAddr baddr = truncate (raddr >> valueOf(AddrOffset));
         CCValue bval = rqs.first.value;
         bram.upd(baddr, bval);
         CCMsg rs = CCMsg {id: invRsId, type_: True, addr: raddr, value: unpack(0)};
