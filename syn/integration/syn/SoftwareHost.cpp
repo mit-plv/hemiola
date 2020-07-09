@@ -8,8 +8,8 @@
 class HostIndication : public HostIndicationWrapper
 {
 public:
-  virtual void finish(uint32_t numResps, uint64_t mark) {
-    printf("Test done, #responses: %d\n", numResps);
+  virtual void finish(uint64_t numResps, uint64_t mark) {
+    printf("Test done, #responses: %ld\n", numResps);
     printf("Mark: %lx\n", mark);
     done = true;
   }
@@ -38,9 +38,9 @@ int main(int argc, const char **argv) {
   HostRequestProxy* hostRequestProxy = new HostRequestProxy(IfcNames_HostRequestS2H);
 
   // Wait for some seconds from connectal to be ready
-  uint32_t maxCycle;
+  uint64_t maxCycle;
   printf ("Set the number of cycles: ");
-  int s = scanf ("%u",&maxCycle); // to avoid [-Werror=unused-result]
+  int s = scanf ("%lu",&maxCycle); // to avoid [-Werror=unused-result]
   (void)s; // to avoid [-Werror=unused-variable]
   hostRequestProxy->start(maxCycle);
 

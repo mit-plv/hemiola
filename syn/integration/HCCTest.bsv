@@ -12,11 +12,11 @@ import HMemBank::*;
 
 typedef MemAddrSz BAddrSz;
 
-typedef Bit#(32) CycleCnt;
+typedef Bit#(64) CycleCnt;
 interface CCTest;
     method Action start(CycleCnt maxCycle);
     method Bool isEnd();
-    method Bit#(32) getThroughput();
+    method Bit#(64) getThroughput();
     method Bit#(64) getMark();
 endinterface
 
@@ -97,6 +97,7 @@ module mkCCTestCheck#(CCMem mem)(CCTest);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
+    Vector#(L1Num, Reg#(Bit#(64))) numResps <- replicateM(mkReg(0));
 
     Vector#(L1Num, StoreBuffer) sb <- replicateM(mkStoreBuffer);
     RegFile#(Bit#(ChkAddrSz), CCValue) refMem <- mkRegFileFull;
@@ -183,6 +184,7 @@ module mkCCTestCheck#(CCMem mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
+            numResps[i] <= numResps[i] + 1;
             let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
             if (rs.id == 6'b000001) begin
                 let caddr = getChkAddr(rs.addr);
@@ -227,8 +229,12 @@ module mkCCTestCheck#(CCMem mem)(CCTest);
         return !onTest;
     endmethod
 
-    method Bit#(32) getThroughput();
-        return 0; // invalid in this checker
+    method Bit#(64) getThroughput();
+        Bit#(64) sum = 0;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            sum = sum + numResps[i];
+        end
+        return sum;
     endmethod
     method Bit#(64) getMark();
         return (check_succeed ? 1 : 0);
@@ -243,7 +249,7 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
-    Vector#(L1Num, Reg#(Bit#(32))) numResps <- replicateM(mkReg(0));
+    Vector#(L1Num, Reg#(Bit#(64))) numResps <- replicateM(mkReg(0));
     Reg#(Bit#(16)) deadlockDetector <- mkReg(0);
 
     Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
@@ -354,8 +360,8 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
         return !onTest;
     endmethod
 
-    method Bit#(32) getThroughput();
-        Bit#(32) sum = 0;
+    method Bit#(64) getThroughput();
+        Bit#(64) sum = 0;
         for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
             sum = sum + numResps[i];
         end
@@ -378,7 +384,7 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
-    Vector#(L1Num, Reg#(Bit#(32))) numResps <- replicateM(mkReg(0));
+    Vector#(L1Num, Reg#(Bit#(64))) numResps <- replicateM(mkReg(0));
     Reg#(Bit#(16)) deadlockDetector <- mkReg(0);
 
     Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
@@ -490,8 +496,8 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
         return !onTest;
     endmethod
 
-    method Bit#(32) getThroughput();
-        Bit#(32) sum = 0;
+    method Bit#(64) getThroughput();
+        Bit#(64) sum = 0;
         for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
             sum = sum + numResps[i];
         end
@@ -524,7 +530,7 @@ module mkCCTestShared#(CCMem mem)(CCTest);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
-    Vector#(L1Num, Reg#(Bit#(32))) numResps <- replicateM(mkReg(0));
+    Vector#(L1Num, Reg#(Bit#(64))) numResps <- replicateM(mkReg(0));
     Reg#(Bit#(16)) deadlockDetector <- mkReg(0);
 
     Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
@@ -660,8 +666,8 @@ module mkCCTestShared#(CCMem mem)(CCTest);
         return !onTest;
     endmethod
 
-    method Bit#(32) getThroughput();
-        Bit#(32) sum = 0;
+    method Bit#(64) getThroughput();
+        Bit#(64) sum = 0;
         for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
             sum = sum + numResps[i];
         end

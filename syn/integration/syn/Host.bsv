@@ -12,13 +12,13 @@ import HCCTest::*;
 ////////// Connectal interfaces
 
 interface HostIndication;
-    method Action finish(Bit#(32) numResps, Bit#(64) mark);
+    method Action finish(Bit#(64) numResps, Bit#(64) mark);
     method Action dma_getRs_ll(Bit#(64) val);
     method Action dma_getRs_mem(Bit#(64) val);
 endinterface
 
 interface HostRequest;
-    method Action start(Bit#(32) maxCycle);
+    method Action start(Bit#(64) maxCycle);
     method Action dma_putRq_ll(Bool wr, Bit#(64) faddr,
        Bit#(64) val0, Bit#(64) val1, Bit#(64) val2, Bit#(64) val3);
     method Action dma_getRs_ll_rq(Bit#(2) lineIdx);
@@ -35,11 +35,7 @@ endinterface
 
 module mkHost#(HostIndication indication) (Host);
     CCMem mem <- mkCCBramMem();
-
-    // CCTest tester <- mkCCTestIsolated(mem);
-    CCTest tester <- mkCCTestRandom(mem);
-    // CCTest tester <- mkCCTestShared(mem);
-    // CCTest tester <- mkCCTestCheck(mem);
+    CCTest tester <- mkCCTestCheck(mem);
 
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
@@ -52,7 +48,7 @@ module mkHost#(HostIndication indication) (Host);
     endrule
 
     interface HostRequest request;
-        method Action start(Bit#(32) maxCycle);
+        method Action start(Bit#(64) maxCycle);
 	    tester.start(maxCycle);
 	    started <= True;
 	endmethod
