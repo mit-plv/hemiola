@@ -16,8 +16,9 @@ module mkTop(Empty);
     CCMem mem <- mkCCBramMem();
 
     // CCTest tester <- mkCCTestIsolated(mem);
-    CCTest tester <- mkCCTestShared(mem);
+    // CCTest tester <- mkCCTestShared(mem);
     // CCTest tester <- mkCCTestRandom(mem);
+    CCTest tester <- mkCCTestCheck(mem);
 
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
@@ -29,7 +30,9 @@ module mkTop(Empty);
 
     rule check_end (started && tester.isEnd && !ended);
         let n = tester.getThroughput();
+        let m = tester.getMark();
         $display ("Test done, throughput: %d / %d", n, fromInteger(valueOf(TestCycleCnt)));
+        $display ("Mark: %x", m);
         ended <= True;
     endrule
 

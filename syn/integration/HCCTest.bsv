@@ -1,4 +1,5 @@
 import Vector::*;
+import RegFile::*;
 import BuildVector::*;
 import FIFO::*;
 import FIFOF::*;
@@ -44,6 +45,195 @@ typedef `RQ_EX_SH_SEED RqExShSeed;
 `else
 typedef 2 RqExShSeed;
 `endif
+
+typedef 11 ChkAddrSz;
+
+interface StoreBuffer;
+    method Action set(Bit#(ChkAddrSz) caddr, CCValue value);
+    method ActionValue#(Maybe#(CCValue)) get(Bit#(ChkAddrSz) caddr);
+endinterface
+
+typedef struct { Bool sb_valid;
+                Bit#(ChkAddrSz) sb_caddr;
+                CCValue sb_value; } SBSlot deriving(Eq, Bits);
+typedef 8 SBSize;
+module mkStoreBuffer(StoreBuffer);
+    Vector#(SBSize, Reg#(SBSlot)) slots <- replicateM(mkReg(unpack(0)));
+
+    method Action set(Bit#(ChkAddrSz) caddr, CCValue value);
+        Bool alreadySet = False;
+        for (Integer i = 0; i < valueOf(SBSize); i = i+1) begin
+            alreadySet = alreadySet || (slots[i].sb_valid && slots[i].sb_caddr == caddr);
+        end
+        when (!alreadySet, noAction);
+        Bool hasSlot = False;
+        for (Integer i = 0; i < valueOf(SBSize); i = i+1) begin
+            hasSlot = hasSlot || !slots[i].sb_valid;
+        end
+        when (hasSlot, noAction);
+        Bool added = False;
+        for (Integer i = 0; i < valueOf(SBSize); i = i+1) begin
+            if (!added && !slots[i].sb_valid) begin
+                slots[i] <= SBSlot { sb_valid: True, sb_caddr: caddr, sb_value: value };
+                added = True;
+            end
+        end
+    endmethod
+
+    method ActionValue#(Maybe#(CCValue)) get(Bit#(ChkAddrSz) caddr);
+        Maybe#(CCValue) ret = Invalid;
+        for (Integer i = 0; i < valueOf(SBSize); i = i+1) begin
+            if (slots[i].sb_valid && slots[i].sb_caddr == caddr) begin
+                ret = Valid (slots[i].sb_value);
+                slots[i] <= SBSlot { sb_valid: False, sb_caddr: ?, sb_value: ? };
+            end
+        end
+        return ret;
+    endmethod
+endmodule
+
+module mkCCTestCheck#(CCMem mem)(CCTest);
+    Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bool) onTest <- mkReg(False);
+    Reg#(CycleCnt) maxCycle <- mkReg(0);
+    Reg#(CycleCnt) curCycle <- mkReg(0);
+
+    Vector#(L1Num, StoreBuffer) sb <- replicateM(mkStoreBuffer);
+    RegFile#(Bit#(ChkAddrSz), CCValue) refMem <- mkRegFileFull;
+
+    Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
+    Vector#(L1Num, LFSR#(Bit#(16))) rq_baddr_rand <- replicateM(mkLFSR_16);
+    LFSR#(Bit#(32)) rq_value_rand_high <- mkLFSR_32;
+    LFSR#(Bit#(32)) rq_value_rand_low <- mkLFSR_32;
+
+    Vector#(L1Num, Reg#(Bool)) rq_type <- replicateM(mkReg(False));
+    Vector#(L1Num, Reg#(Bit#(64))) rq_addr <- replicateM(mkReg(0));
+    Reg#(CCValue) rq_value <- mkReg(replicate(0));
+    Reg#(Bit#(3)) rq_value_idx <- mkReg(0);
+
+    Reg#(Bool) check_succeed <- mkReg(True);
+
+    function Bit#(64) getAddr (Bit#(ChkAddrSz) baddr);
+        Bit#(AddrOffset) pad = 0;
+        Bit#(64) addr = zeroExtend({baddr, pad});
+        return addr;
+    endfunction
+
+    function Bit#(ChkAddrSz) getChkAddr (Bit#(64) addr);
+        return truncate(addr >> valueOf(AddrOffset));
+    endfunction
+
+    rule mem_init_done (!memInit && mem.cc.isInit);
+        memInit <= True;
+    endrule
+
+    rule inc_cycle (memInit && onTest);
+        curCycle <= curCycle + 1;
+        if (curCycle == maxCycle) onTest <= False;
+    endrule
+
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule rq_type_upd (onTest);
+            let t = rq_type_rand[i].value;
+            rq_type_rand[i].next();
+            Bit#(LgRWRatio) rz = 0;
+            rq_type[i] <= (truncate(t) == rz ? True : False);
+        endrule
+    end
+    for (Integer i = 0; i < valueOf(L1Num); i=i+1) begin
+        rule rq_addr_upd;
+            Bit#(ChkAddrSz) baddr = truncate(rq_baddr_rand[i].value);
+            rq_baddr_rand[i].next();
+            let addr = getAddr(baddr);
+            rq_addr[i] <= addr;
+        endrule
+    end
+    rule rq_value_upd;
+        rq_value[rq_value_idx] <= {rq_value_rand_high.value, rq_value_rand_low.value};
+        rq_value_rand_high.next();
+        rq_value_rand_low.next();
+        rq_value_idx <= rq_value_idx + 1;
+    endrule
+
+    let getRqId = 6'b000000;
+    let setRqId = 6'b001000;
+    let getRsId = 6'b000001;
+    let setRsId = 6'b001001;
+
+    function Struct2 ldReq(Integer i);
+        return Struct2 { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
+    endfunction
+    function Struct2 stReq(Integer i);
+        return Struct2 { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
+    endfunction
+
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule request_load if (memInit && onTest && !rq_type[i]);
+            // $display ("Load request %d", i);
+            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
+        endrule
+    end
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule request_store if (memInit && onTest && rq_type[i]);
+            // $display ("Store request %d", i);
+            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
+            sb[i].set(getChkAddr(rq_addr[i]), rq_value);
+        endrule
+    end
+
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule response;
+            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
+            if (rs.id == 6'b000001) begin
+                let caddr = getChkAddr(rs.addr);
+                let rvalue = refMem.sub(caddr);
+                // $display ("Load response %d: %x", i, rs.value);
+                if (rvalue != rs.value) begin
+                    $fwrite (stderr, "Verification failed (%d): load(%x,%x) mismatch %x",
+                       i, rs.addr, rs.value, rvalue);
+                    check_succeed <= False;
+                end
+            end
+            else if (rs.id == 6'b001001) begin
+                // $display ("Store response %d", i);
+                let caddr = getChkAddr(rs.addr);
+                let sval <- sb[i].get(caddr);
+                if (sval matches tagged Valid .val) refMem.upd(caddr, val);
+                else begin
+                    $fwrite (stderr, "Verification failed (%d): cannot find a previous store: %x",
+                       i, caddr);
+                    check_succeed <= False;
+                end
+            end
+            else begin
+                $fwrite (stderr, "Verification failed (%d): a wrong response ID: %b", i, rs.id);
+                check_succeed <= False;
+            end
+        endrule
+    end
+
+    method Action start(CycleCnt _maxCycle) if (!onTest);
+        maxCycle <= _maxCycle;
+        onTest <= True;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            rq_type_rand[i].seed(fromInteger(valueOf(RqTypeSeed) + i));
+            rq_baddr_rand[i].seed(fromInteger(valueOf(RqBAddrSeed) + i));
+        end
+        rq_value_rand_high.seed(fromInteger(valueOf(RqValueSeed)));
+        rq_value_rand_low.seed(fromInteger(valueOf(RqValueSeed) + 1));
+    endmethod
+
+    method Bool isEnd();
+        return !onTest;
+    endmethod
+
+    method Bit#(32) getThroughput();
+        return 0; // invalid in this checker
+    endmethod
+    method Bit#(64) getMark();
+        return (check_succeed ? 1 : 0);
+    endmethod
+endmodule
 
 // Access ratio between read and write, used throughout all testers
 typedef 2 LgRWRatio; // 1/4 (=1/2^2) accesses of writes

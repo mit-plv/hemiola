@@ -37,8 +37,9 @@ module mkHost#(HostIndication indication) (Host);
     CCMem mem <- mkCCBramMem();
 
     // CCTest tester <- mkCCTestIsolated(mem);
-    // CCTest tester <- mkCCTestRandom(mem);
-    CCTest tester <- mkCCTestShared(mem);
+    CCTest tester <- mkCCTestRandom(mem);
+    // CCTest tester <- mkCCTestShared(mem);
+    // CCTest tester <- mkCCTestCheck(mem);
 
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
