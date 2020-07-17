@@ -36,6 +36,49 @@ Fixpoint idx_to_string (idx: IdxT): string :=
 Definition MaybeStr (k: Kind) :=
   STRUCT { "valid" :: Bool; "data" :: k }.
 Definition Maybe (k: Kind) := Struct (MaybeStr k).
+Definition MaybeNone {var k}: Expr var (SyntaxKind (Maybe k)) :=
+  (STRUCT { "valid" ::= $$false; "data" ::= $$Default })%kami_expr.
+Definition MaybeSome {var k} (v: Expr var (SyntaxKind k)): Expr var (SyntaxKind (Maybe k)) :=
+  (STRUCT { "valid" ::= $$true; "data" ::= v })%kami_expr.
+
+Section Acceptor4.
+  Variable oidx: IdxT.
+  Variables (dataT: Kind).
+  Variables (forwardN acceptN0 acceptN1 acceptN2 acceptN3: string).
+
+  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+  Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
+
+  Local Notation acceptF0 := (MethodSig acceptN0(): dataT).
+  Local Notation acceptF1 := (MethodSig acceptN1(): dataT).
+  Local Notation acceptF2 := (MethodSig acceptN2(): dataT).
+  Local Notation acceptF3 := (MethodSig acceptN3(): dataT).
+  Local Notation forward := (MethodSig forwardN(dataT): Void).
+
+  Let rrSz := 2.
+
+  Definition acceptor: Kami.Syntax.Modules :=
+    MODULE {
+        Register ("rr"+o): Bit rrSz <- Default
+        with Rule "inc_rr"+o :=
+          Read rr: Bit rrSz <- "rr"+o;
+          Write "rr"+o <- #rr + $1;
+          Retv
+        with Rule "accept0"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $0);
+          Call val <- acceptF0(); Call forward(#val); Retv
+        with Rule "accept1"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $1);
+          Call val <- acceptF1(); Call forward(#val); Retv
+        with Rule "accept2"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $2);
+          Call val <- acceptF2(); Call forward(#val); Retv
+        with Rule "accept3"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $3);
+          Call val <- acceptF3(); Call forward(#val); Retv
+      }.
+
+End Acceptor4.
 
 Section Bitvector.
   Variable sz: nat.
@@ -119,321 +162,222 @@ Section MSHR.
   Context `{ReifyConfig} `{TopoConfig}.
   Variable oidx: IdxT.
 
-  Definition UL :=
-    STRUCT { "ul_valid" :: Bool;
-             "ul_rsb" :: Bool;
-             "ul_msg" :: Struct KMsg; (* The message contains a line address as well *)
-             "ul_rsbTo" :: KCIdx }.
+  Definition MSHR :=
+    STRUCT { "m_valid" :: Bool;
+             "m_is_ul" :: Bool;
+             "m_msg" :: Struct KMsg;
+             "m_rsb" :: Bool;
+             "m_rsbTo" :: KQIdx; (* Use as it is for downlocks; truncate for uplocks *)
+             "m_dl_rss_from" :: KCBv;
+             "m_dl_rss_recv" :: KCBv;
+             "m_dl_rss" :: Array (Struct KMsg) hcfg_children_max }.
 
-  Definition DL :=
-    STRUCT { "dl_valid" :: Bool;
-             "dl_rsb" :: Bool;
-             "dl_msg" :: Struct KMsg; (* The message contains a line address as well *)
-             "dl_rss_from" :: KCBv;
-             "dl_rss_recv" :: KCBv;
-             "dl_rss" :: Array (Struct KMsg) hcfg_children_max;
-             "dl_rsbTo" :: KQIdx }.
+  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+  Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
 
-  (* Uplock free and has an UL slot. *)
-  Definition upLockableN: string := "upLockable" ++ idx_to_string oidx.
-  Definition upLockable: Attribute SignatureT :=
-    {| attrName := upLockableN;
-       attrType := {| arg := KAddr; ret := Bool |} |}.
+  Variable numPRqs numCRqs slotSz: nat.
+  Let numSlots := S (numPRqs + numCRqs - 1).
+  Let MshrId := Bit slotSz.
 
-  (* Downlock free and has a DL slot. *)
-  Definition downLockableN: string := "downLockable" ++ idx_to_string oidx.
-  Definition downLockable: Attribute SignatureT :=
-    {| attrName := downLockableN;
-       attrType := {| arg := KAddr; ret := Bool |} |}.
-
-  Definition upLockGetN: string := "upLockGet" ++ idx_to_string oidx.
-  Definition upLockGet: Attribute SignatureT :=
-    {| attrName := upLockGetN;
-       attrType := {| arg := KAddr; ret := Maybe (Struct UL) |} |}.
-
-  Definition downLockGetN: string := "downLockGet" ++ idx_to_string oidx.
-  Definition downLockGet: Attribute SignatureT :=
-    {| attrName := downLockGetN;
-       attrType := {| arg := KAddr; ret := Maybe (Struct DL) |} |}.
-
-  Definition downLockRssFullN: string := "downLockRssFull" ++ idx_to_string oidx.
-  Definition downLockRssFull: Attribute SignatureT :=
-    {| attrName := downLockRssFullN;
-       attrType := {| arg := Void; ret := Maybe (Struct DL) |} |}.
+  Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(): Maybe MshrId.
+  Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(): Maybe MshrId.
+  Definition canRegUL: Attribute SignatureT := MethodSig ("canRegUL"+o)(KAddr): Bool.
+  Definition canRegDL: Attribute SignatureT := MethodSig ("canRegDL"+o)(KAddr): Bool.
 
   Definition RegUL :=
-    STRUCT { "r_ul_rsb" :: Bool;
+    STRUCT { "r_id" :: MshrId;
              "r_ul_msg" :: Struct KMsg; (* contains a line address *)
+             "r_ul_rsb" :: Bool;
              "r_ul_rsbTo" :: KCIdx }.
-  Definition registerULN: string := "registerUL" ++ idx_to_string oidx.
   Definition registerUL: Attribute SignatureT :=
-    {| attrName := registerULN;
-       attrType := {| arg := Struct RegUL; ret := Void |} |}.
-
-  Definition releaseULN: string := "releaseUL" ++ idx_to_string oidx.
-  Definition releaseUL: Attribute SignatureT :=
-    {| attrName := releaseULN;
-       attrType := {| arg := KAddr; ret := Void |} |}.
+    MethodSig ("registerUL"+o)(Struct RegUL): Void.
 
   Definition RegDL :=
-    STRUCT { "r_dl_rsb" :: Bool;
+    STRUCT { "r_id" :: MshrId;
              "r_dl_msg" :: Struct KMsg;
              "r_dl_rss_from" :: KCBv;
+             "r_dl_rsb" :: Bool;
              "r_dl_rsbTo" :: KQIdx }.
-  Definition registerDLN: string := "registerDL" ++ idx_to_string oidx.
   Definition registerDL: Attribute SignatureT :=
-    {| attrName := registerDLN;
-       attrType := {| arg := Struct RegDL; ret := Void |} |}.
-
-  Definition releaseDLN: string := "releaseDL" ++ idx_to_string oidx.
-  Definition releaseDL: Attribute SignatureT :=
-    {| attrName := releaseDLN;
-       attrType := {| arg := KAddr; ret := Void |} |}.
+    MethodSig ("registerDL"+o)(Struct RegDL): Void.
 
   Definition TrsfUpDown :=
-    STRUCT { "r_dl_addr" :: KAddr; "r_dl_rss_from" :: KCBv }.
-  Definition transferUpDownN: string := "transferUpDown" ++ idx_to_string oidx.
+    STRUCT { "r_id" :: MshrId; "r_dl_rss_from" :: KCBv }.
   Definition transferUpDown: Attribute SignatureT :=
-    {| attrName := transferUpDownN;
-       attrType := {| arg := Struct TrsfUpDown; ret := Void |} |}.
+    MethodSig ("transferUpDown"+o)(Struct TrsfUpDown): Void.
+
+  Definition release: Attribute SignatureT := MethodSig ("release"+o)(MshrId): Void.
 
   Definition AddRs :=
-    STRUCT { "r_dl_addr" :: KAddr;
-             "r_dl_midx" :: KCIdx;
-             "r_dl_msg" :: Struct KMsg }.
-  Definition addRsN: string := "addRs" ++ idx_to_string oidx.
-  Definition addRs: Attribute SignatureT :=
-    {| attrName := addRsN;
-       attrType := {| arg := Struct AddRs; ret := Void |} |}.
+    STRUCT { "r_id" :: MshrId; "r_dl_midx" :: KCIdx; "r_dl_msg" :: Struct KMsg }.
+  Definition addRs: Attribute SignatureT := MethodSig ("addRs"+o)(Struct AddRs): Void.
 
-  Variables logNumUls logNumDls: nat.
-
-  Fixpoint ulFix {var k}
+  Fixpoint rqFix {var k}
            (lc: Expr var (SyntaxKind k))
-           (tc: nat -> Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind k))
-           (cond: Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind Bool))
-           (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
+           (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
+           (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
+           (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots)))
            (n: nat): Expr var (SyntaxKind k) :=
     (match n with
      | O => lc
      | S n' =>
-       let ul := uls@[$(Nat.pow 2 logNumUls - n)] in
-       (IF (cond ul) then tc n ul else ulFix lc tc cond uls n')
+       let ul := rqs#[$$(natToWord slotSz (numSlots - n))] in
+       (IF (cond ul) then tc n ul else rqFix lc tc cond rqs n')
      end)%kami_expr.
 
-  Fixpoint ulIter {var k}
-           (lc: Expr var (SyntaxKind k))
-           (tc: nat -> Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind k))
-           (cond: Expr var (SyntaxKind (Struct UL)) -> Expr var (SyntaxKind Bool))
-           (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
-    : Expr var (SyntaxKind k) :=
-    ulFix lc tc cond uls (Nat.pow 2 logNumUls).
+  Definition rqIter {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
+             (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots))) :=
+    rqFix lc tc cond rqs numSlots.
 
-  Fixpoint dlFix {var k}
+  Fixpoint prqFix {var k}
            (lc: Expr var (SyntaxKind k))
-           (tc: nat -> Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind k))
-           (cond: Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind Bool))
-           (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
+           (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
+           (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
+           (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots)))
            (n: nat): Expr var (SyntaxKind k) :=
     (match n with
      | O => lc
      | S n' =>
-       let dl := dls@[$(Nat.pow 2 logNumDls - n)] in
-       (IF (cond dl) then tc n dl else dlFix lc tc cond dls n')
+       let ul := rqs#[$$(natToWord slotSz (numPRqs - n))] in
+       (IF (cond ul) then tc n ul else prqFix lc tc cond rqs n')
      end)%kami_expr.
 
-  Fixpoint dlIter {var k}
+  Definition prqIter {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
+             (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots))) :=
+    prqFix lc tc cond rqs numPRqs.
+
+  Fixpoint crqFix {var k}
            (lc: Expr var (SyntaxKind k))
-           (tc: nat -> Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind k))
-           (cond: Expr var (SyntaxKind (Struct DL)) -> Expr var (SyntaxKind Bool))
-           (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind k) :=
-    dlFix lc tc cond dls (Nat.pow 2 logNumDls).
+           (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
+           (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
+           (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots)))
+           (n: nat): Expr var (SyntaxKind k) :=
+    (match n with
+     | O => lc
+     | S n' =>
+       let ul := rqs#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
+       (IF (cond ul) then tc n ul else crqFix lc tc cond rqs n')
+     end)%kami_expr.
 
-  Definition hasULIter {var}
-             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
-    : Expr var (SyntaxKind Bool) :=
-    (ulIter $$false (fun _ _ => $$true)
-            (fun ul => !(ul!UL@."ul_valid")) uls)%kami_expr.
+  Definition crqIter {var k}
+             (lc: Expr var (SyntaxKind k))
+             (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
+             (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
+             (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots))) :=
+    crqFix lc tc cond rqs numCRqs.
 
-  Definition hasDLIter {var}
-             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind Bool) :=
-    (dlIter $$false (fun _ _ => $$true)
-            (fun dl => !(dl!DL@."dl_valid")) dls)%kami_expr.
-
-  Definition upLockedF {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (ul: Expr var (SyntaxKind (Struct UL))): Expr var (SyntaxKind Bool) :=
-    (ul!UL@."ul_valid" && ul!UL@."ul_msg"!KMsg@."addr" == a)%kami_expr.
-
-  Definition upLockFreeIter {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
-    : Expr var (SyntaxKind Bool) :=
-    (ulIter $$true (fun _ _ => $$false) (upLockedF a) uls)%kami_expr.
-
-  Definition downLockedF {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (dl: Expr var (SyntaxKind (Struct DL))): Expr var (SyntaxKind Bool) :=
-    (dl!DL@."dl_valid" && dl!DL@."dl_msg"!KMsg@."addr" == a)%kami_expr.
-
-  Definition downLockFreeIter {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind Bool) :=
-    (dlIter $$true (fun _ _ => $$false) (downLockedF a) dls)%kami_expr.
-
-  Definition upLockGetIter {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
-    : Expr var (SyntaxKind (Maybe (Struct UL))) :=
-    (ulIter (k:= Maybe (Struct UL)) $$Default
-            (fun _ ul => STRUCT { "valid" ::= $$true; "data" ::= ul })
-            (upLockedF a) uls)%kami_expr.
-
-  Definition downLockGetIter {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind (Maybe (Struct DL))) :=
-    (dlIter (k:= Maybe (Struct DL)) $$Default
-            (fun _ dl => STRUCT { "valid" ::= $$true; "data" ::= dl })
-            (downLockedF a) dls)%kami_expr.
-
-  Definition downLockRssFullF {var}
-             (dl: Expr var (SyntaxKind (Struct DL))): Expr var (SyntaxKind Bool) :=
-    (dl!DL@."dl_valid" && dl!DL@."dl_rss_recv" == dl!DL@."dl_rss_from")%kami_expr.
-
-  Definition downLockRssFullIter {var}
-             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind (Maybe (Struct DL))) :=
-    (dlIter (k:= Maybe (Struct DL)) $$Default
-            (fun _ dl => STRUCT { "valid" ::= $$true; "data" ::= dl })
-            downLockRssFullF dls)%kami_expr.
-
-  Definition getULSlotIter {var}
-             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
-    : Expr var (SyntaxKind (Bit logNumUls)) :=
-    (ulIter $$Default (fun n ul => $(Nat.pow 2 logNumUls - n))
-            (fun ul => !(ul!UL@."ul_valid")) uls)%kami_expr.
-
-  Definition getDLSlotIter {var}
-             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind (Bit logNumDls)) :=
-    (dlIter $$Default (fun n dl => $(Nat.pow 2 logNumDls - n))
-            (fun dl => !(dl!DL@."dl_valid")) dls)%kami_expr.
-
-  Definition findULIter {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (uls: Expr var (SyntaxKind (Vector (Struct UL) logNumUls)))
-    : Expr var (SyntaxKind (Bit logNumUls)) :=
-    (ulIter $$Default (fun n ul => $(Nat.pow 2 logNumUls - n))
-            (fun ul => ul!UL@."ul_valid" && ul!UL@."ul_msg"!KMsg@."addr" == a)
-            uls)%kami_expr.
-
-  Definition findDLIter {var}
-             (a: Expr var (SyntaxKind KAddr))
-             (dls: Expr var (SyntaxKind (Vector (Struct DL) logNumDls)))
-    : Expr var (SyntaxKind (Bit logNumDls)) :=
-    (dlIter $$Default (fun n dl => $(Nat.pow 2 logNumDls - n))
-            (fun dl => dl!DL@."dl_valid" && dl!DL@."dl_msg"!KMsg@."addr" == a)
-            dls)%kami_expr.
+  (** TODO: move to Kami *)
+  Notation "v '#[' idx <- val ] " := (UpdateArray v idx val) (at level 10) : kami_expr_scope.
 
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
-      Register "uls" : Vector (Struct UL) logNumUls <- Default
-      with Register "dls" : Vector (Struct DL) logNumDls <- Default
-      with Method upLockableN (a: KAddr): Bool :=
-        Read uls <- "uls";
-        LET hasSlot <- hasULIter #uls;
-        LET ulFree <- upLockFreeIter #a #uls;
-        Ret (#hasSlot && #ulFree)
-      with Method downLockableN (a: KAddr): Bool :=
-        Read dls <- "dls";
-        LET hasSlot <- hasDLIter #dls;
-        LET dlFree <- downLockFreeIter #a #dls;
-        Ret (#hasSlot && #dlFree)
-      with Method upLockGetN (a: KAddr): Maybe (Struct UL) :=
-        Read uls <- "uls";
-        LET retv <- upLockGetIter #a #uls;
-        Ret #retv
-      with Method downLockGetN (a: KAddr): Maybe (Struct DL) :=
-        Read dls <- "dls";
-        LET retv <- downLockGetIter #a #dls;
-        Ret #retv
-      with Method downLockRssFullN (): Maybe (Struct DL) :=
-        Read dls <- "dls";
-        LET retv <- downLockRssFullIter #dls;
-        Ret #retv
+        Register ("rqs"+o): Array (Struct MSHR) numSlots <- Default
 
-      with Method registerULN (r: Struct RegUL): Void :=
-        Read uls <- "uls";
-        LET uli <- getULSlotIter #uls;
-        Write "uls" <- #uls@[#uli <- STRUCT { "ul_valid" ::= $$true;
-                                              "ul_rsb" ::= #r!RegUL@."r_ul_rsb";
-                                              "ul_msg" ::= #r!RegUL@."r_ul_msg";
-                                              "ul_rsbTo" ::= #r!RegUL@."r_ul_rsbTo" }];
-        Retv
-      with Method releaseULN (a: KAddr): Void :=
-        Read uls <- "uls";
-        LET uli <- findULIter #a #uls;
-        Write "uls" <- #uls@[#uli <- $$Default];
-        Retv
+        with Method ("getPRqSlot"+o)(): Maybe MshrId :=
+          Read rqs <- "rqs"+o;
+          LET ret <- (prqIter MaybeNone
+                              (fun n _ => MaybeSome $n)
+                              (fun m => !(m!MSHR@."m_valid"))
+                              #rqs);
+          Ret #ret
+        with Method ("getCRqSlot"+o)(): Maybe MshrId :=
+          Read rqs <- "rqs"+o;
+          LET ret <- (crqIter MaybeNone
+                              (fun n _ => MaybeSome $(n + numPRqs))
+                              (fun m => !(m!MSHR@."m_valid"))
+                              #rqs);
+          Ret #ret
 
-      with Method registerDLN (r: Struct RegDL): Void :=
-        Read dls <- "dls";
-        LET dli <- getDLSlotIter #dls;
-        Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= $$true;
-                                              "dl_rsb" ::= #r!RegDL@."r_dl_rsb";
-                                              "dl_msg" ::= #r!RegDL@."r_dl_msg";
-                                              "dl_rss_from" ::= #r!RegDL@."r_dl_rss_from";
-                                              "dl_rss_recv" ::= $$Default;
-                                              "dl_rss" ::= $$Default;
-                                              "dl_rsbTo" ::= #r!RegDL@."r_dl_rsbTo" }];
-        Retv
-      with Method releaseDLN (a: KAddr): Void :=
-        Read dls <- "dls";
-        LET dli <- findDLIter #a #dls;
-        Write "dls" <- #dls@[#dli <- $$Default];
-        Retv
+        with Method ("canRegUL"+o)(addr: KAddr): Bool :=
+          Read rqs <- "rqs"+o;
+          (* PRq cannot make any uplocks *)
+          LET ret <- (crqIter $$true
+                              (fun _ _ => $$false)
+                              (fun m =>
+                                 m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                              #rqs);
+          Ret #ret
+        with Method ("canRegDL"+o)(addr: KAddr): Bool :=
+          Read rqs <- "rqs"+o;
+          LET ret <- (rqIter $$true
+                             (fun _ _ => $$false)
+                             (fun m =>
+                                (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                             #rqs);
+          Ret #ret
 
-      with Method transferUpDownN (r: Struct TrsfUpDown): Void :=
-        Read uls <- "uls";
-        LET a <- #r!TrsfUpDown@."r_dl_addr";
-        LET uli <- findULIter #a #uls;
-        LET ul <- #uls@[#uli];
-        Read dls <- "dls";
-        LET dli <- getDLSlotIter #dls;
-        Write "uls" <- #uls@[#uli <- $$Default];
-        Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= $$true;
-                                              "dl_rsb" ::= #ul!UL@."ul_rsb";
-                                              "dl_msg" ::= #ul!UL@."ul_msg";
-                                              "dl_rss_from" ::= #r!TrsfUpDown@."r_dl_rss_from";
-                                              "dl_rss_recv" ::= $$Default;
-                                              "dl_rss" ::= $$Default;
-                                              "dl_rsbTo" ::= {$downIdx, #ul!UL@."ul_rsbTo"} }];
-        Retv
+        with Method ("registerUL"+o)(ul: Struct RegUL): Void :=
+          LET mid <- #ul!RegUL@."r_id";
+          LET mshr: Struct MSHR <- STRUCT { "m_valid" ::= $$true;
+                                            "m_is_ul" ::= $$true;
+                                            "m_msg" ::= #ul!RegUL@."r_ul_msg";
+                                            "m_rsb" ::= #ul!RegUL@."r_ul_rsb";
+                                            "m_rsbTo" ::= _zeroExtend_ (#ul!RegUL@."r_ul_rsbTo");
+                                            "m_dl_rss_from" ::= $$Default;
+                                            "m_dl_rss_recv" ::= $$Default;
+                                            "m_dl_rss" ::= $$Default };
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          Write "rqs"+o <- #rqs#[#mid <- #mshr];
+          Retv
+        with Method ("registerDL"+o)(dl: Struct RegDL): Void :=
+          LET mid <- #dl!RegDL@."r_id";
+          LET mshr: Struct MSHR <- STRUCT { "m_valid" ::= $$true;
+                                            "m_is_ul" ::= $$false;
+                                            "m_msg" ::= #dl!RegDL@."r_dl_msg";
+                                            "m_rsb" ::= #dl!RegDL@."r_dl_rsb";
+                                            "m_rsbTo" ::= #dl!RegDL@."r_dl_rsbTo";
+                                            "m_dl_rss_from" ::= #dl!RegDL@."r_dl_rss_from";
+                                            "m_dl_rss_recv" ::= $$Default;
+                                            "m_dl_rss" ::= $$Default };
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          Write "rqs"+o <- #rqs#[#mid <- #mshr];
+          Retv
 
-      with Method addRsN (r: Struct AddRs): Void :=
-        Read dls <- "dls";
-        LET dli <- findDLIter (#r!AddRs@."r_dl_addr") #dls;
-        LET odl <- downLockGetIter (#r!AddRs@."r_dl_addr") #dls;
-        LET dl <- #odl!(MaybeStr (Struct DL))@."data";
-        Write "dls" <- #dls@[#dli <- STRUCT { "dl_valid" ::= #dl!DL@."dl_valid";
-                                              "dl_rsb" ::= #dl!DL@."dl_rsb";
-                                              "dl_msg" ::= #dl!DL@."dl_msg";
-                                              "dl_rss_from" ::= #dl!DL@."dl_rss_from";
-                                              "dl_rss_recv" ::=
-                                                bvSet (#dl!DL@."dl_rss_recv")
-                                                      (#r!AddRs@."r_dl_midx");
-                                              "dl_rss" ::=
-                                                UpdateArray
-                                                  (#dl!DL@."dl_rss")
-                                                  (#r!AddRs@."r_dl_midx")
-                                                  (#r!AddRs@."r_dl_msg");
-                                              "dl_rsbTo" ::= #dl!DL@."dl_rsbTo" }];
-        Retv
-    }.
+        with Method ("transferUpDown"+o)(trsf: Struct TrsfUpDown): Void :=
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          LET mid <- #trsf!TrsfUpDown@."r_id";
+          LET pmshr <- #rqs#[#mid];
+          LET nmshr: Struct MSHR <- STRUCT { "m_valid" ::= $$true;
+                                             "m_is_ul" ::= $$false;
+                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                             "m_rsb" ::= #pmshr!MSHR@."m_rsb";
+                                             "m_rsbTo" ::= #pmshr!MSHR@."m_rsbTo";
+                                             "m_dl_rss_from" ::= #trsf!TrsfUpDown@."r_dl_rss_from";
+                                             "m_dl_rss_recv" ::= $$Default;
+                                             "m_dl_rss" ::= $$Default };
+          Write "rqs"+o <- #rqs#[#mid <- #nmshr];
+          Retv
+
+        with Method ("release"+o)(mid: MshrId): Void :=
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          Write "rqs"+o <- #rqs#[#mid <- $$Default];
+          Retv
+
+        with Method ("addRs"+o)(a: Struct AddRs): Void :=
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          LET mid <- #a!AddRs@."r_id";
+          LET pmshr <- #rqs#[#mid];
+          LET nmshr: Struct MSHR <- STRUCT { "m_valid" ::= #pmshr!MSHR@."m_valid";
+                                             "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
+                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                             "m_rsb" ::= #pmshr!MSHR@."m_rsb";
+                                             "m_rsbTo" ::= #pmshr!MSHR@."m_rsbTo";
+                                             "m_dl_rss_from" ::= #pmshr!MSHR@."m_dl_rss_from";
+                                             "m_dl_rss_recv" ::=
+                                                bvSet (#pmshr!MSHR@."m_dl_rss_recv")
+                                                      (#a!AddRs@."r_dl_midx");
+                                             "m_dl_rss" ::=
+                                               (#pmshr!MSHR@."m_dl_rss")
+                                                 #[#a!AddRs@."r_dl_midx" <- #a!AddRs@."r_dl_msg"] };
+          Write "rqs"+o <- #rqs#[#mid <- #nmshr];
+          Retv
+      }.
 
 End MSHR.
 
