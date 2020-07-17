@@ -154,9 +154,6 @@ Section Compile.
       Definition compile_oidx_to_cidx (oidx: IdxT): Expr var (SyntaxKind KCIdx) :=
         Const _ (compile_oidx_to_cidx_const oidx).
 
-      (** * Step 1: compile the message-accepting rule:
-       * it makes the read request to the info cache as well. *)
-
       (* line read/write-related *)
       Class CompLineRW :=
         { lineK: Kind;
@@ -186,6 +183,83 @@ Section Compile.
           check_inv_response: Fin.t ost_sz -> nat -> bool
         }.
       Context `{CompLineRW}.
+
+      (*!-- NEW DESIGN BELOW --*)
+
+      Variable mshrSlotSz: nat.
+      Let MshrId := Bit mshrSlotSz.
+      Definition PPFrom := Bit 2.
+      Definition PPFromPRq: Expr var (SyntaxKind PPFrom) := ($0)%kami_expr.
+      Definition PPFromPRs: Expr var (SyntaxKind PPFrom) := ($1)%kami_expr.
+      Definition PPFromCRq: Expr var (SyntaxKind PPFrom) := ($2)%kami_expr.
+      Definition PPFromCRs: Expr var (SyntaxKind PPFrom) := ($3)%kami_expr.
+      Definition KPipe :=
+        STRUCT { "pp_from" :: PPFrom;
+                 "pp_cidx" :: KCIdx;
+                 "pp_msg" :: Struct KMsg;
+                 "pp_mshr_id" :: MshrId }.
+
+      Section LineReadStage.
+        Variables deqP2LRN deqC2LRN enqLR2EXN: string.
+        Local Notation deqP2LR := (MethodSig deqP2LRN(): Struct KPipe).
+        Local Notation deqC2LR := (MethodSig deqC2LRN(): Struct KPipe).
+        Local Notation getPRqSlot := (getPRqSlot oidx mshrSlotSz).
+        Local Notation getCRqSlot := (getCRqSlot oidx mshrSlotSz).
+        Local Notation enqLR2EX := (MethodSig enqLR2EXN(Struct KPipe): Void).
+
+        Local Notation readRq := (readRq oidx hcfg_addr_sz).
+        Local Notation addRs := (addRs oidx).
+
+        Definition lineReadStageRulePRq: ActionT var Void :=
+          (Call pelt <- deqP2LR();
+          LET msg <- #pelt!KPipe@."pp_msg";
+          Assert !(#msg!KMsg@."type");
+          Call mmid <- getPRqSlot();
+          Assert (#mmid!(MaybeStr MshrId)@."valid");
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          Call readRq(#msg!KMsg@."addr");
+          LET nelt <- STRUCT { "pp_from" ::= #pelt!KPipe@."pp_from";
+                               "pp_cidx" ::= #pelt!KPipe@."pp_cidx";
+                               "pp_msg" ::= #pelt!KPipe@."pp_msg";
+                               "pp_mshr_id" ::= #mid };
+          Call enqLR2EX(#nelt);
+          Retv)%kami_action.
+
+        Definition lineReadStageRulePRs: ActionT var Void :=
+          (Call pelt <- deqP2LR();
+          LET msg <- #pelt!KPipe@."pp_msg";
+          Assert (#msg!KMsg@."type");
+          Call readRq(#msg!KMsg@."addr");
+          Call enqLR2EX(#pelt);
+          Retv)%kami_action.
+
+        Definition lineReadStageRuleCRq: ActionT var Void :=
+          (Call pelt <- deqC2LR();
+          LET msg <- #pelt!KPipe@."pp_msg";
+          Assert !(#msg!KMsg@."type");
+          Call mmid <- getCRqSlot();
+          Assert (#mmid!(MaybeStr MshrId)@."valid");
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          Call readRq(#msg!KMsg@."addr");
+          LET nelt <- STRUCT { "pp_from" ::= #pelt!KPipe@."pp_from";
+                               "pp_cidx" ::= #pelt!KPipe@."pp_cidx";
+                               "pp_msg" ::= #pelt!KPipe@."pp_msg";
+                               "pp_mshr_id" ::= #mid };
+          Call enqLR2EX(#nelt);
+          Retv)%kami_action.
+
+        Definition lineReadStageRuleCRs: ActionT var Void :=
+          (Call pelt <- deqC2LR();
+          LET msg <- #pelt!KPipe@."pp_msg";
+          Assert (#msg!KMsg@."type");
+          Call addRs(STRUCT { "r_dl_midx" ::= #pelt!KPipe@."pp_cidx";
+                              "r_dl_msg" ::= #msg });
+          (* No enq to the next stage *)
+          Retv)%kami_action.
+
+      End LineReadStage.
+
+      (*!-- OLD STUFF BELOW --*)
 
       (* A readlock:
        * - rl_valid: true if the lock being held
@@ -217,6 +291,9 @@ Section Compile.
         (wln: string) (wl: var (Struct WL))
         (* rr: a single-bit flag for round-robin *)
         (rrn: string).
+
+      (** * Step 1: compile the message-accepting rule:
+       * it makes the read request to the info cache as well. *)
 
       Definition compile_rule_readlock_parent
                  (cont: var (Struct RL) -> ActionT var Void): ActionT var Void :=

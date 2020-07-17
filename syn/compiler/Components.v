@@ -209,7 +209,7 @@ Section MSHR.
   Definition release: Attribute SignatureT := MethodSig ("release"+o)(MshrId): Void.
 
   Definition AddRs :=
-    STRUCT { "r_id" :: MshrId; "r_dl_midx" :: KCIdx; "r_dl_msg" :: Struct KMsg }.
+    STRUCT { "r_dl_midx" :: KCIdx; "r_dl_msg" :: Struct KMsg }.
   Definition addRs: Attribute SignatureT := MethodSig ("addRs"+o)(Struct AddRs): Void.
 
   Fixpoint rqFix {var k}
@@ -222,7 +222,7 @@ Section MSHR.
      | O => lc
      | S n' =>
        let ul := rqs#[$$(natToWord slotSz (numSlots - n))] in
-       (IF (cond ul) then tc n ul else rqFix lc tc cond rqs n')
+       (IF (cond ul) then tc (numSlots - n)%nat ul else rqFix lc tc cond rqs n')
      end)%kami_expr.
 
   Definition rqIter {var k}
@@ -242,7 +242,7 @@ Section MSHR.
      | O => lc
      | S n' =>
        let ul := rqs#[$$(natToWord slotSz (numPRqs - n))] in
-       (IF (cond ul) then tc n ul else prqFix lc tc cond rqs n')
+       (IF (cond ul) then tc (numPRqs - n)%nat ul else prqFix lc tc cond rqs n')
      end)%kami_expr.
 
   Definition prqIter {var k}
@@ -262,7 +262,7 @@ Section MSHR.
      | O => lc
      | S n' =>
        let ul := rqs#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
-       (IF (cond ul) then tc n ul else crqFix lc tc cond rqs n')
+       (IF (cond ul) then tc (numCRqs - n + numPRqs)%nat ul else crqFix lc tc cond rqs n')
      end)%kami_expr.
 
   Definition crqIter {var k}
@@ -361,7 +361,13 @@ Section MSHR.
 
         with Method ("addRs"+o)(a: Struct AddRs): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
-          LET mid <- #a!AddRs@."r_id";
+          LET addr <- #a!AddRs@."r_msg"!KMsg@."addr";
+          LET mid: MshrId <- (rqIter $$Default
+                                     (fun n _ => $n)
+                                     (fun m =>
+                                        (!(m!MSHR@."m_is_ul")) &&
+                                        m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                                     #rqs);
           LET pmshr <- #rqs#[#mid];
           LET nmshr: Struct MSHR <- STRUCT { "m_valid" ::= #pmshr!MSHR@."m_valid";
                                              "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
