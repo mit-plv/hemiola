@@ -6,6 +6,9 @@ Require Import Kami.Lib.Struct Kami Kami.PrimFifo Kami.PrimBram. (* target *)
 
 Set Implicit Arguments.
 
+(** TODO: move to Kami *)
+Notation "v '#[' idx <- val ] " := (UpdateArray v idx val) (at level 10) : kami_expr_scope.
+
 Notation "∘ sz" := (snd sz * fst sz) (at level 0).
 
 Definition nat_to_string (n: nat): string :=
@@ -175,8 +178,10 @@ Section MSHR.
   Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
 
-  Variable numPRqs numCRqs slotSz: nat.
-  Let numSlots := S (numPRqs + numCRqs - 1).
+  Variable numPRqs numCRqs: nat.
+  Let predNumSlots := numPRqs + numCRqs - 1.
+  Let numSlots := S predNumSlots.
+  Let slotSz := S (Nat.log2 predNumSlots).
   Let MshrId := Bit slotSz.
 
   Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(): Maybe MshrId.
@@ -271,9 +276,6 @@ Section MSHR.
              (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
              (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots))) :=
     crqFix lc tc cond rqs numCRqs.
-
-  (** TODO: move to Kami *)
-  Notation "v '#[' idx <- val ] " := (UpdateArray v idx val) (at level 10) : kami_expr_scope.
 
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
@@ -391,13 +393,16 @@ Section Cache.
   Variables (oidx: IdxT)
             (* MSB                                  LSB
              * |----------------(addr)----------------|
-             * |--(tag)--|--(index)--|---|--(offset)--|
+             * |--(tag)--|---|--(index)--|--(offset)--|
              * |---------|--(dataIndex)--|------------|
-             *              (= index + lgWay)
+             *              (= lgWay + index)
              *)
             (tagSz indexSz offsetSz addrSz: nat)
-            (lgWay lgNumVictim: nat)
+            (lgWay predNumVictim: nat)
             (infoK dataK: Kind).
+
+  Let numVictim := S predNumVictim.
+  Let victimIdxSz := Nat.log2 predNumVictim.
 
   Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
@@ -429,7 +434,19 @@ Section Cache.
 
   (*! Public interface for the info/data caches *)
 
+  Definition LineInfo :=
+    STRUCT { "info_hit" :: Bool;
+             "info_way" :: Bit lgWay; (* a replaceable way, if miss *)
+             "info" :: infoK
+           }.
+  Let LineInfoK := Struct LineInfo.
+
   Definition cacheN: string := "cache"+o.
+  Definition infoReadRqN: string := cacheN _++ "infoReadRq".
+  Definition infoReadRq := MethodSig infoReadRqN (Bit addrSz): Void.
+  Definition infoReadRsN: string := cacheN _++ "infoReadRs".
+  Definition infoReadRs := MethodSig infoReadRsN (): LineInfoK.
+
   Definition CacheLine :=
     STRUCT { "addr" :: Bit addrSz; (* This [addr] field might not be used at all
                                     * for read responses, but used when requesting
@@ -446,11 +463,6 @@ Section Cache.
            }.
   Definition CacheLineK := Struct CacheLine.
 
-  Definition readRqN: string := cacheN _++ "readRq".
-  Definition readRq := MethodSig readRqN (Bit addrSz): Void.
-  Definition readRsN: string := cacheN _++ "readRs".
-  Definition readRs := MethodSig readRsN (): CacheLineK.
-
   Definition writeRqN: string := cacheN _++ "writeRq".
   Definition writeRq := MethodSig writeRqN (CacheLineK): Void.
   Definition writeRsN: string := cacheN _++ "writeRs".
@@ -461,7 +473,6 @@ Section Cache.
 
   Definition Victim :=
     STRUCT { "victim_valid" :: Bool;
-             "victim_idx" :: Bit lgNumVictim;
              "victim_line" :: CacheLineK }.
   Definition VictimK := Struct Victim.
 
@@ -492,7 +503,7 @@ Section Cache.
 
   Fixpoint callInfoReadRqs (var: Kind -> Type)
            (infoRq: var (Struct (BramRq indexSz TagInfoK)))
-           (n: nat) (cont: ActionT var Void): ActionT var Void :=
+           (n: nat) {retK} (cont: ActionT var retK): ActionT var retK :=
     (match n with
      | O => cont
      | S n' => callInfoReadRqs infoRq n' (Call (infoPutRq n')(#infoRq); cont)
@@ -500,8 +511,8 @@ Section Cache.
 
   Fixpoint callInfoReadRss (var: Kind -> Type)
            (tis: var (Vector TagInfoK lgWay))
-           (n: nat) (cont: var (Vector TagInfoK lgWay) -> ActionT var Void)
-    : ActionT var Void :=
+           (n: nat) {retK} (cont: var (Vector TagInfoK lgWay) -> ActionT var retK)
+    : ActionT var retK :=
     (match n with
      | O => cont tis
      | S n' => (NCall ptis <- callInfoReadRss tis n';
@@ -509,15 +520,6 @@ Section Cache.
                LET ntis <- UpdateVector #ptis $n' #ti;
                (cont ntis))
      end)%kami_action.
-
-  Definition readStageN: string := "readStage"+o.
-  Definition readAddrN: string := "readAddr"+o.
-  Definition readLineN: string := "readLine"+o.
-  Definition writeStageN: string := "writeStage"+o.
-  Definition writeLineN: string := "writeLine"+o.
-  Definition victimsN: string := "victims"+o.
-  Definition victimLineN: string := "victimLine"+o.
-  Definition victimWayN: string := "victimWay"+o.
 
   Definition TagMatch (valueK: Kind) (lw: nat) :=
     STRUCT { "tm_hit" :: Bool;
@@ -587,101 +589,168 @@ Section Cache.
     (LET tid <- $$Default;
     infoGetRsWFix way tid (Nat.pow 2 lgWay) cont)%kami_action.
 
+  Local Notation "$v$ n" :=
+    (Const _ (natToWord victimIdxSz n)) (at level 5): kami_expr_scope.
+
   Fixpoint victimIterAFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
            (addr: Expr var (SyntaxKind (Bit addrSz)))
-           (readF: Expr var (SyntaxKind (Bit lgNumVictim)) ->
-                   Expr var (SyntaxKind VictimK) -> ActionT var Void)
+           (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var Void)
            (cont: ActionT var Void) (n: nat): ActionT var Void :=
     match n with
     | O => cont
     | S n' =>
-      (LET victim: VictimK <- victims@[$(Nat.pow 2 lgWay - n)];
-      If (#victim!Victim@."victim_valid" && #victim!Victim@."victim_line"!CacheLine@."addr" == addr)
-       then (readF ($(Nat.pow 2 lgWay - n))%kami_expr (#victim)%kami_expr)
+      (LET victim: VictimK <- victims#[$v$(Nat.pow 2 lgWay - n)];
+      If ((#victim!Victim@."victim_valid")
+          && #victim!Victim@."victim_line"!CacheLine@."addr" == addr)
+       then (readF (Nat.pow 2 lgWay - n) (#victim)%kami_expr)
        else (victimIterAFix victims addr readF cont n'); Retv)%kami_action
     end.
 
   Definition victimIterA (var: Kind -> Type)
-             (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+             (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
              (addr: Expr var (SyntaxKind (Bit addrSz)))
-             (readF: Expr var (SyntaxKind (Bit lgNumVictim)) ->
-                     Expr var (SyntaxKind VictimK) -> ActionT var Void)
+             (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var Void)
              (cont: ActionT var Void): ActionT var Void :=
-    victimIterAFix victims addr readF cont (Nat.pow 2 lgNumVictim).
+    victimIterAFix victims addr readF cont numVictim.
 
   Fixpoint hasVictimSlotFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
            (n: nat): Expr var (SyntaxKind Bool) :=
     (match n with
-     | O => !(victims@[$0]!Victim@."victim_valid")
+     | O => !(victims#[$v$0]!Victim@."victim_valid")
      | S n' =>
-       ((!(victims@[$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n')
+       ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n')
      end)%kami_expr.
 
   Fixpoint hasVictimSlotF (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
     : Expr var (SyntaxKind Bool) :=
-    hasVictimSlotFix victims (Nat.pow 2 lgNumVictim - 1).
+    hasVictimSlotFix victims (numVictim - 1).
 
   Fixpoint hasVictimFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
            (n: nat): Expr var (SyntaxKind Bool) :=
     (match n with
-     | O => (victims@[$0]!Victim@."victim_valid")
+     | O => (victims#[$v$0]!Victim@."victim_valid")
      | S n' =>
-       ((victims@[$n]!Victim@."victim_valid") || hasVictimFix victims n')
+       ((victims#[$v$n]!Victim@."victim_valid") || hasVictimFix victims n')
      end)%kami_expr.
 
   Fixpoint hasVictimF (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
     : Expr var (SyntaxKind Bool) :=
-    hasVictimFix victims (Nat.pow 2 lgNumVictim - 1).
+    hasVictimFix victims (numVictim - 1).
 
   Fixpoint getVictimSlotFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
-           (n: nat): Expr var (SyntaxKind (Bit lgNumVictim)) :=
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+           (n: nat): Expr var (SyntaxKind (Bit victimIdxSz)) :=
     (match n with
      | O => $0
      | S n' =>
-       (IF (victims@[$n]!Victim@."victim_valid")
+       (IF (victims#[$v$n]!Victim@."victim_valid")
         then getVictimSlotFix victims n'
         else $n)
      end)%kami_expr.
 
   Fixpoint getVictimSlotF (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
-    : Expr var (SyntaxKind (Bit lgNumVictim)) :=
-    getVictimSlotFix victims (Nat.pow 2 lgNumVictim - 1).
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+    : Expr var (SyntaxKind (Bit victimIdxSz)) :=
+    getVictimSlotFix victims (numVictim - 1).
 
   Fixpoint getVictimFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
            (n: nat): Expr var (SyntaxKind CacheLineK) :=
     (match n with
-     | O => (victims@[$0]!Victim@."victim_line")
+     | O => (victims#[$v$0]!Victim@."victim_line")
      | S n' =>
-       (IF (victims@[$n]!Victim@."victim_valid")
-        then victims@[$n]!Victim@."victim_line"
+       (IF (victims#[$v$n]!Victim@."victim_valid")
+        then victims#[$v$n]!Victim@."victim_line"
         else getVictimFix victims n')
      end)%kami_expr.
 
   Fixpoint getVictimF (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Vector VictimK lgNumVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
     : Expr var (SyntaxKind CacheLineK) :=
-    getVictimFix victims (Nat.pow 2 lgNumVictim - 1).
+    getVictimFix victims (numVictim - 1).
 
-  Definition ReadStage := Bit 2.
-  Definition rsNone {var}: Expr var (SyntaxKind ReadStage) := ($0)%kami_expr.
-  Definition rsInfoRq {var}: Expr var (SyntaxKind ReadStage) := ($1)%kami_expr.
-  Definition rsValueRq {var}: Expr var (SyntaxKind ReadStage) := ($2)%kami_expr.
-  Definition rsRsReady {var}: Expr var (SyntaxKind ReadStage) := ($3)%kami_expr.
+  (*!-- NEW DESIGN BELOW --*)
 
-  Definition WriteStage := Bit 3.
-  Definition wsNone {var}: Expr var (SyntaxKind WriteStage) := ($0)%kami_expr.
-  Definition wsRqAcc {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr.
-  Definition wsRepRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr.
-  Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($3)%kami_expr.
-  Definition wsRsReady {var}: Expr var (SyntaxKind WriteStage) := ($7)%kami_expr.
+  Definition irStageN: string := "irStage"+o.
+  Definition irAddrN: string := "irAddr"+o.
+  Definition irInfoN: string := "irLine"+o.
+
+  Definition InfoReadStage := Bit 2.
+  Definition irNone {var}: Expr var (SyntaxKind InfoReadStage) := ($0)%kami_expr.
+  Definition irRequested {var}: Expr var (SyntaxKind InfoReadStage) := ($1)%kami_expr.
+  Definition irReady {var}: Expr var (SyntaxKind InfoReadStage) := ($2)%kami_expr.
+
+  (* Definition writeStageN: string := "writeStage"+o. *)
+  (* Definition writeLineN: string := "writeLine"+o. *)
+  Definition victimsN: string := "victims"+o.
+  Definition victimLineN: string := "victimLine"+o.
+  Definition victimWayN: string := "victimWay"+o.
+
+  (* Definition WriteStage := Bit 3. *)
+  (* Definition wsNone {var}: Expr var (SyntaxKind WriteStage) := ($0)%kami_expr. *)
+  (* Definition wsRqAcc {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr. *)
+  (* Definition wsRepRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr. *)
+  (* Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($3)%kami_expr. *)
+  (* Definition wsRsReady {var}: Expr var (SyntaxKind WriteStage) := ($7)%kami_expr. *)
+
+  Definition cacheIfcNew :=
+    MODULE {
+      Register irStageN: InfoReadStage <- Default
+      with Register irAddrN: Bit addrSz <- Default
+      with Register irInfoN: LineInfoK <- Default
+      with Register victimsN: Array VictimK numVictim <- Default
+
+      with Method infoReadRqN (addr: Bit addrSz): Void :=
+        Read victims <- victimsN;
+        victimIterA
+          (#victims)%kami_expr (#addr)%kami_expr
+          (fun _ victim =>
+             (Write irStageN: InfoReadStage <- irReady;
+             LET vline <- victim!Victim@."victim_line";
+             Write irInfoN: LineInfoK <- STRUCT { "info_hit" ::= $$true;
+                                                  (* [info_way] has no meaning for victim lines *)
+                                                  "info_way" ::= $$Default;
+                                                  "info" ::=
+                                                    victim!Victim@."victim_line"!CacheLine@."info"
+                                                };
+             Retv))%kami_action
+          (Write irStageN: InfoReadStage <- irRequested;
+          Write irAddrN <- #addr;
+          LET index <- getIndex _ addr;
+          LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
+                                                                   "addr" ::= #index;
+                                                                   "datain" ::= $$Default };
+          NCall callInfoReadRqs infoRq (Nat.pow 2 lgWay);
+          Retv)%kami_action
+
+      with Method infoReadRsN (): LineInfoK :=
+        Read readStage: InfoReadStage <- irStageN;
+        Assert (#readStage == irReady || #readStage == irRequested);
+        Write irStageN: InfoReadStage <- irNone;
+        If (#readStage == irReady)
+        then (Read linfo: LineInfoK <- irInfoN; Ret #linfo)
+        else (Read addr: Bit addrSz <- irAddrN;
+             LET tag <- getTag _ addr;
+             LET index <- getIndex _ addr;
+             LET tis: Vector TagInfoK lgWay <- $$Default;
+             NCall ntis <- callInfoReadRss tis (Nat.pow 2 lgWay);
+             LET itm <- doTagMatch _ tag ntis (Nat.pow 2 lgWay);
+             (** * FIXME: info_way should be the replacement way if tagmatch fails (miss)
+              * Furthermore, the replaceable way should be temporarily held in advance. *)
+             LET linfo: LineInfoK <- STRUCT { "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
+                                              "info_way" ::= #itm!(TagMatch infoK lgWay)@."tm_way";
+                                              "info" ::= #itm!(TagMatch infoK lgWay)@."tm_value" };
+             Ret #linfo)
+        as rline;
+        Ret #rline
+      }.
+
+  (*!-- OLD STUFF BELOW --*)
 
   Definition cacheIfc :=
     MODULE {
@@ -699,7 +768,7 @@ Section Cache.
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
         Read readStage: ReadStage <- readStageN;
-        Assert (#readStage == rsNone);
+        Assert (#readStage == irNone);
 
         Read victims <- victimsN;
         victimIterA
@@ -707,7 +776,7 @@ Section Cache.
           (fun _ victim => (Write readStageN: ReadStage <- rsRsReady;
                            Write readLineN <- victim!Victim@."victim_line";
                            Retv))%kami_action
-          (Write readStageN: ReadStage <- rsInfoRq;
+          (Write readStageN: ReadStage <- irRequested;
           Write readAddrN <- #addr;
           LET index <- getIndex _ addr;
           LET infoRq: Struct (BramRq indexSz TagInfoK) <- STRUCT { "write" ::= $$false;
@@ -719,14 +788,14 @@ Section Cache.
       with Method readRsN (): CacheLineK :=
         Read readStage: ReadStage <- readStageN;
         Assert (#readStage == rsRsReady);
-        Write readStageN: ReadStage <- rsNone;
+        Write readStageN: ReadStage <- irNone;
         Read line: Struct CacheLine <- readLineN;
         Ret #line
 
       with Method writeRqN (line: CacheLineK): Void :=
         (** Do not allow writes when a read is in progress *)
         Read readStage: ReadStage <- readStageN;
-        Assert (#readStage == rsNone);
+        Assert (#readStage == irNone);
         Read writeStage: WriteStage <- writeStageN;
         Assert (#writeStage == wsNone);
 
@@ -781,7 +850,7 @@ Section Cache.
 
       with Rule "read_tagmatch"+o :=
         Read readStage: ReadStage <- readStageN;
-        Assert (#readStage == rsInfoRq);
+        Assert (#readStage == irRequested);
         Read addr: Bit addrSz <- readAddrN;
         LET tag <- getTag _ addr;
         LET index <- getIndex _ addr;
@@ -802,8 +871,7 @@ Section Cache.
         If (#itm!(TagMatch infoK lgWay)@."tm_hit")
         then (Write readStageN: ReadStage <- rsValueRq;
              Call dataPutRq (STRUCT { "write" ::= $$false;
-                                      "addr" ::= {#index,
-                                                  #itm!(TagMatch infoK lgWay)@."tm_way"};
+                                      "addr" ::= {#itm!(TagMatch infoK lgWay)@."tm_way", #index};
                                       "datain" ::= $$Default });
              Retv)
         else (Write readStageN: ReadStage <- rsRsReady; Retv);
@@ -852,7 +920,7 @@ Section Cache.
         If (#line!CacheLine@."value_write")
         then (Call dataPutRq (
                      STRUCT { "write" ::= $$true;
-                              "addr" ::= {#index, #way};
+                              "addr" ::= {#way, #index};
                               "datain" ::= #line!CacheLine@."value" }); Retv);
         Retv
 
@@ -898,7 +966,7 @@ Section Cache.
                                                   "value_write" ::= $$false;
                                                   "value" ::= $$Default };
         Call dataPutRq (STRUCT { "write" ::= $$false;
-                                 "addr" ::= {#index, #victimWay};
+                                 "addr" ::= {#victimWay, #index};
                                  "datain" ::= $$Default });
         Retv
 
@@ -956,7 +1024,7 @@ Section Cache.
         If (#line!CacheLine@."value_write")
         then (Call dataPutRq (
                      STRUCT { "write" ::= $$true;
-                              "addr" ::= {#index, #way};
+                              "addr" ::= {#way, #index};
                               "datain" ::= #line!CacheLine@."value" }); Retv);
         Retv
     }.
