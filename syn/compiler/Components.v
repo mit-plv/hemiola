@@ -615,6 +615,28 @@ Section NCID.
   Definition writeRqN: string := cacheN _++ "writeRq".
   Definition writeRq := MethodSig writeRqN (LineWriteK): Void.
 
+  Definition MayVictim :=
+    STRUCT { "mv_index" :: Bit indexSz;
+             "mv_way" :: Bit lgWay;
+             "mv_info" :: infoK;
+             "mv_value" :: dataK }.
+  Let MayVictimK := Struct MayVictim.
+
+  Definition Victim :=
+    STRUCT { "victim_valid" :: Bool;
+             "victim_addr" :: Bit addrSz;
+             "victim_info" :: infoK;
+             "victim_value" :: dataK }.
+  Let VictimK := Struct Victim.
+
+  Definition VictimWrite :=
+    STRUCT { "vw_index" :: Bit victimIdxSz;
+             "vw_victim" :: VictimK }.
+  Let VictimWriteK := Struct VictimWrite.
+
+  Definition victimWriteN: string := cacheN _++ "victimWrite".
+  Definition victimWrite := MethodSig victimWriteN (VictimWriteK): Void.
+
   (* Definition getVictimN: string := cacheN _++ "getVictim". *)
   (* Definition getVictim := MethodSig getVictimN (): VictimK. *)
   (* Definition removeVictimN: string := cacheN _++ "removeVictim". *)
@@ -688,20 +710,6 @@ Section NCID.
 
   (** Victim lines *)
 
-  Definition MayVictim :=
-    STRUCT { "mv_index" :: Bit indexSz;
-             "mv_way" :: Bit lgWay;
-             "mv_info" :: infoK;
-             "mv_value" :: dataK }.
-  Let MayVictimK := Struct MayVictim.
-
-  Definition Victim :=
-    STRUCT { "victim_valid" :: Bool;
-             "victim_addr" :: Bit addrSz;
-             "victim_info" :: infoK;
-             "victim_value" :: dataK }.
-  Let VictimK := Struct Victim.
-
   Local Notation "$v$ n" :=
     (Const _ (natToWord victimIdxSz n)) (at level 5): kami_expr_scope.
 
@@ -727,19 +735,18 @@ Section NCID.
              (cont: ActionT var Void): ActionT var Void :=
     victimIterAFix victims addr readF cont numVictim.
 
-  (* Fixpoint hasVictimSlotFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
-  (*          (n: nat): Expr var (SyntaxKind Bool) := *)
-  (*   (match n with *)
-  (*    | O => !(victims#[$v$0]!Victim@."victim_valid") *)
-  (*    | S n' => *)
-  (*      ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n') *)
-  (*    end)%kami_expr. *)
-
-  (* Fixpoint hasVictimSlotF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
-  (*   : Expr var (SyntaxKind Bool) := *)
-  (*   hasVictimSlotFix victims (numVictim - 1). *)
+  Fixpoint hasVictimSlotFix (var: Kind -> Type)
+           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+           (n: nat): Expr var (SyntaxKind Bool) :=
+    (match n with
+     | O => !(victims#[$v$0]!Victim@."victim_valid")
+     | S n' =>
+       ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n')
+     end)%kami_expr.
+  Definition hasVictimSlot (var: Kind -> Type)
+             (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+    : Expr var (SyntaxKind Bool) :=
+    hasVictimSlotFix victims (numVictim - 1).
 
   (* Fixpoint hasVictimFix (var: Kind -> Type) *)
   (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
@@ -793,25 +800,14 @@ Section NCID.
   Definition irStageN: string := "irStage"+o.
   Definition irAddrN: string := "irAddr"+o.
   Definition irInfoN: string := "irLineWrite"+o.
-  (* Definition writeStageN: string := "writeStage"+o. *)
-  (* Definition writeLineWriteN: string := "writeLineWrite"+o. *)
   Definition mayVictimN: string := "mayVictim"+o.
   Definition victimsN: string := "victims"+o.
-  Definition victimLineWriteN: string := "victimLineWrite"+o.
-  Definition victimWayN: string := "victimWay"+o.
 
   (** Stages *)
   Definition InfoReadStage := Bit 2.
   Definition irNone {var}: Expr var (SyntaxKind InfoReadStage) := ($0)%kami_expr.
   Definition irRequested {var}: Expr var (SyntaxKind InfoReadStage) := ($1)%kami_expr.
   Definition irReady {var}: Expr var (SyntaxKind InfoReadStage) := ($2)%kami_expr.
-
-  (* Definition WriteStage := Bit 3. *)
-  (* Definition wsNone {var}: Expr var (SyntaxKind WriteStage) := ($0)%kami_expr. *)
-  (* Definition wsRqAcc {var}: Expr var (SyntaxKind WriteStage) := ($1)%kami_expr. *)
-  (* Definition wsRepRq {var}: Expr var (SyntaxKind WriteStage) := ($2)%kami_expr. *)
-  (* Definition wsVictimRq {var}: Expr var (SyntaxKind WriteStage) := ($3)%kami_expr. *)
-  (* Definition wsRsReady {var}: Expr var (SyntaxKind WriteStage) := ($7)%kami_expr. *)
 
   Definition cacheIfc :=
     MODULE {
@@ -890,6 +886,7 @@ Section NCID.
         as linfo; Ret #linfo
 
       with Method valueReadRqN (iw: IdxWayK): Void :=
+        (** * FIXME: need to iterate the victims here as well?? *)
         LET index <- #iw!IdxWay@."index";
         LET way <- #iw!IdxWay@."way";
         Call dataRdReq({#way, #index});
@@ -914,7 +911,6 @@ Section NCID.
         Retv
 
       with Method writeRqN (lw: LineWriteK): Void :=
-        (** * FIXME: iterate on victim lines first *)
         LET iway <- #lw!LineWrite@."info_way";
         LET eway <- #lw!LineWrite@."edir_way";
         LET addr <- #lw!LineWrite@."addr";
@@ -949,9 +945,13 @@ Section NCID.
               Retv);
 
         If (!(#lw!LineWrite@."info_hit"))
-        then ((** * FIXME: register the candidate victim line to victims *)
+        then ((** * FIXME: pull out [mayVictim] to the pipeline and let call [victimWrite] *)
             Retv);
+        Retv
 
+      with Method victimWriteN (vw: VictimWriteK): Void :=
+        Read victims: Array VictimK numVictim <- victimsN;
+        Write victimsN <- #victims#[#vw!VictimWrite@."vw_index" <- #vw!VictimWrite@."vw_victim"];
         Retv
       }.
 
@@ -974,4 +974,4 @@ Section NCID.
        ++ edirRams (Nat.pow 2 edirLgWay - 1)
        ++ dataRam)%kami.
 
-End IncCache.
+End NCID.
