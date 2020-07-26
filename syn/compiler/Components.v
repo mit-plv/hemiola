@@ -2,12 +2,20 @@ Require Import Numbers.DecimalString.
 
 Require Import Hemiola.Common Hemiola.Index Hemiola.Ex.TopoTemplate.
 Require Import Compiler.HemiolaDeep. (* source *)
-Require Import Kami.Lib.Struct Kami Kami.PrimFifo Kami.PrimBram. (* target *)
+Require Import Kami.Kami. (* target *)
 
 Set Implicit Arguments.
 
-(** TODO: move to Kami *)
-Notation "v '#[' idx <- val ] " := (UpdateArray v idx val) (at level 10) : kami_expr_scope.
+Notation "'NCall' v <- f ; cont" :=
+  (f (fun v => cont%kami_action))
+    (at level 12, right associativity, v at level 15, f at level 15, only parsing): kami_action_scope.
+Notation "'NCall' f ; cont" :=
+  (f cont%kami_action)
+    (at level 12, right associativity, f at level 15, only parsing): kami_action_scope.
+
+Notation "'NCall2' v1 , v2 <- f ; cont" :=
+  (f (fun v1 v2 => cont%kami_action))
+    (at level 12, right associativity, v1 at level 15, v2 at level 15, f at level 15, only parsing): kami_action_scope.
 
 Notation "∘ sz" := (snd sz * fst sz) (at level 0).
 
@@ -408,13 +416,6 @@ Section NCID.
 
   (*! Private cache interfaces *)
 
-  Local Notation "'NCall' v <- f ; cont" :=
-    (f (fun v => cont%kami_action))
-      (at level 12, right associativity, v at level 15, f at level 15, only parsing): kami_action_scope.
-  Local Notation "'NCall' f ; cont" :=
-    (f cont%kami_action)
-      (at level 12, right associativity, f at level 15, only parsing): kami_action_scope.
-
   Definition TagValue (valueK: Kind) :=
     STRUCT { "tag" :: Bit tagSz; "value" :: valueK }.
 
@@ -548,18 +549,82 @@ Section NCID.
 
   (** Replacement cache *)
 
-  Definition AccType := Bit 2.
-  Definition accValid {var}: Expr var (SyntaxKind AccType) := ($0)%kami_expr.
+  Definition AccType := Bit 1.
+  Definition accTouch {var}: Expr var (SyntaxKind AccType) := ($0)%kami_expr.
   Definition accInvalid {var}: Expr var (SyntaxKind AccType) := ($1)%kami_expr.
-  Definition accTouch {var}: Expr var (SyntaxKind AccType) := ($2)%kami_expr.
-  Definition accReset {var}: Expr var (SyntaxKind AccType) := ($3)%kami_expr.
 
   Definition AccessRec :=
-    STRUCT { "acc_type" :: AccType; "acc_index" :: Bit indexSz; "way" :: Bit lgWay }.
+    STRUCT { "acc_type" :: AccType; "acc_index" :: Bit indexSz; "acc_way" :: Bit lgWay }.
   Let AccessRecK := Struct AccessRec.
 
-  Definition repAccess := MethodSig ("repAccess"+o)(AccessRecK): Void.
-  Definition repGet := MethodSig ("repGet"+o)(Bit indexSz): Bit lgWay.
+  Definition repAccessN := "repAccess"+o.
+  Definition repAccess := MethodSig repAccessN(AccessRecK): Void.
+  Definition repGetN := "repGet"+o.
+  Definition repGet := MethodSig repGetN(Bit indexSz): Bit lgWay.
+
+  Definition repCntSz := 8.
+  Definition RepCntK := Bit repCntSz.
+  Definition repRfN := "repRf"+o.
+  Definition repRf := rf1 repRfN indexSz (Vector RepCntK lgWay).
+  Definition repRfSub := MethodSig (repRfN -- "sub")(Bit indexSz): Vector RepCntK lgWay.
+  Let RepRfUpdK := Struct (RfUpd indexSz (Vector RepCntK lgWay)).
+  Definition repRfUpd := MethodSig (repRfN -- "upd")(RepRfUpdK): Void.
+
+  Fixpoint incRepsFix (var: Kind -> Type)
+           (reps: var (Vector RepCntK lgWay))
+           (n: nat) {retK} (cont: var (Vector RepCntK lgWay) -> ActionT var retK): ActionT var retK :=
+    (match n with
+     | O => cont reps
+     | S n' => (LET irep <- #reps@[$n'] + IF (#reps@[$n'] == $(Nat.pow 2 repCntSz - 1)) then $0 else $1;
+               LET nreps <- #reps@[$n' <- #irep];
+               incRepsFix nreps n' cont)
+     end)%kami_action.
+  Definition incReps (var: Kind -> Type)
+             (reps: var (Vector RepCntK lgWay))
+             {retK} (cont: var (Vector RepCntK lgWay) -> ActionT var retK): ActionT var retK :=
+    incRepsFix reps (Nat.pow 2 lgWay) cont.
+
+  Fixpoint getRepWayFix (var: Kind -> Type)
+           (maxWay: var (Bit lgWay)) (maxAge: var RepCntK)
+           (reps: var (Vector RepCntK lgWay))
+           (n: nat) {retK} (cont: var (Bit lgWay) -> var RepCntK -> ActionT var retK):
+    ActionT var retK :=
+    (match n with
+     | O => cont maxWay maxAge
+     | S n' => (LET nmaxWay <- IF (#maxAge <= #reps@[$n']) then $n' else #maxWay;
+               LET nmaxAge <- IF (#maxAge <= #reps@[$n']) then #reps@[$n'] else #maxAge;
+               getRepWayFix nmaxWay nmaxAge reps n' cont)
+     end)%kami_action.
+  Definition getRepWay (var: Kind -> Type)
+             (maxWay: var (Bit lgWay)) (maxAge: var RepCntK)
+             (reps: var (Vector RepCntK lgWay))
+             {retK} (cont: var (Bit lgWay) -> var RepCntK -> ActionT var retK): ActionT var retK :=
+    getRepWayFix maxWay maxAge reps (Nat.pow 2 lgWay) cont.
+
+  Definition repLRU :=
+    MODULE {
+      Method repAccessN(acc: AccessRecK): Void :=
+        LET index <- #acc!AccessRec@."acc_index";
+        Call reps <- repRfSub(#index);
+        NCall ireps <- incReps reps;
+        If (#acc!AccessRec@."acc_type" == accTouch)
+        then (LET nreps <- #ireps@[#acc!AccessRec@."acc_way" <- $0]; Ret #nreps)
+        else (LET nreps <- #ireps@[#acc!AccessRec@."acc_way" <- $(Nat.pow 2 repCntSz - 1)];
+             Ret #nreps)
+        as nreps;
+        LET rfUpd <- STRUCT { "addr" ::= #index; "datain" ::= #nreps };
+        Call repRfUpd(#rfUpd);
+        Retv
+
+      with Method repGetN(index: Bit indexSz): Bit lgWay :=
+        Call reps <- repRfSub(#index);
+        LET maxWay: Bit lgWay <- $$Default;
+        LET maxAge: RepCntK <- $$Default;
+        NCall2 repWay, _ <- getRepWay maxWay maxAge reps;
+        Ret #repWay
+    }.
+
+  Definition rep := (repLRU ++ repRf)%kami.
 
   (*! Public interface for the info/value caches *)
 
@@ -967,11 +1032,11 @@ Section NCID.
     | S w' => (edirRam w ++ edirRams w')%kami
     end.
 
-  (** * TODO: add the replacement module *)
   Definition ncid :=
     (cacheIfc
        ++ infoRams (Nat.pow 2 lgWay - 1)
        ++ edirRams (Nat.pow 2 edirLgWay - 1)
-       ++ dataRam)%kami.
+       ++ dataRam
+       ++ rep)%kami.
 
 End NCID.
