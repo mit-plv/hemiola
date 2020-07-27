@@ -629,7 +629,8 @@ Section NCID.
   (*! Public interface for the info/value caches *)
 
   Definition InfoRead :=
-    STRUCT { "info_hit" :: Bool;
+    STRUCT { "info_index" :: Bit indexSz;
+             "info_hit" :: Bool;
              "info_way" :: Bit lgWay; (* a replaceable way, if miss *)
              "edir_hit" :: Bool;
              "edir_way" :: Bit edirLgWay;
@@ -889,7 +890,8 @@ Section NCID.
           (fun _ victim =>
              (Write irStageN: InfoReadStage <- irReady;
              LET vline <- victim!Victim@."victim_line";
-             Write irInfoN: InfoReadK <- STRUCT { "info_hit" ::= $$true;
+             Write irInfoN: InfoReadK <- STRUCT { "info_index" ::= getIndex _ addr;
+                                                  "info_hit" ::= $$true;
                                                   (* [info_way] has no meaning for victim lines *)
                                                   "info_way" ::= $$Default;
                                                   "edir_hit" ::= $$false;
@@ -920,7 +922,8 @@ Section NCID.
              If (#itm!(TagMatch infoK lgWay)@."tm_hit")
              then (* cache hit *)
                (LET linfo: InfoReadK <-
-                           STRUCT { "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
+                           STRUCT { "info_index" ::= #index;
+                                    "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
                                     "info_way" ::= #itm!(TagMatch infoK lgWay)@."tm_way";
                                     "edir_hit" ::= $$false;
                                     "edir_way" ::= $$Default;
@@ -940,7 +943,8 @@ Section NCID.
                LET etm <- doTagMatch _ tag ntes (Nat.pow 2 edirLgWay);
                LET edirV <- #etm!(TagMatch edirK edirLgWay)@."tm_value";
                LET linfo: InfoReadK <-
-                          STRUCT { "info_hit" ::= $$false;
+                          STRUCT { "info_index" ::= #index;
+                                   "info_hit" ::= $$false;
                                    (** On cache miss, provide a replacement candidate way *)
                                    "info_way" ::= #repWay;
                                    "edir_hit" ::= #etm!(TagMatch edirK edirLgWay)@."tm_hit";

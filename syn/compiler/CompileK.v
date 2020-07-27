@@ -94,489 +94,259 @@ Section Compile.
     | HList hbt' => KCBv
     end.
 
-  Definition compile_midx_to_qidx_const (midx: IdxT): ConstT KQIdx :=
+  Definition compile_midx_to_qidx (midx: IdxT) {var}: Expr var (SyntaxKind KQIdx) :=
     match midx with
-    | (qidx :: cidx :: _)%list => combine $cidx $qidx
-    | _ => Default
+    | (qidx :: cidx :: _)%list => Const _ (combine $cidx $qidx)
+    | _ => Default _ _
     end.
 
-  Definition compile_midx_to_cidx_const (midx: IdxT): ConstT KCIdx :=
+  Definition compile_midx_to_cidx (midx: IdxT) {var}: Expr var (SyntaxKind KCIdx) :=
     match midx with
-    | (_ :: cidx :: _)%list => $cidx
-    | _ => Default
+    | (_ :: cidx :: _)%list => ($cidx)%kami_expr
+    | _ => Default _ _
     end.
 
-  Definition compile_oidx_to_cidx_const (oidx: IdxT): ConstT KCIdx :=
+  Definition compile_oidx_to_cidx (oidx: IdxT) {var}: Expr var (SyntaxKind KCIdx) :=
     match oidx with
-    | (cidx :: _)%list => $cidx
-    | _ => Default
+    | (cidx :: _)%list => ($cidx)%kami_expr
+    | _ => Default _ _
     end.
 
-  Definition compile_const {hbt} (hc: hbconst hbt)
-    : ConstT (kind_of_hbtype hbt) :=
+  Definition compile_const {hbt} (hc: hbconst hbt) {var}
+    : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
     match hc with
-    | HBConstBool b => ConstBool b
-    | HBConstNat w n => ConstBit (natToWord w n)
-    | HBConstIdxO i => compile_oidx_to_cidx_const i
-    | HBConstIdxQ i => compile_midx_to_qidx_const i
-    | HBConstIdxM i => ConstBit (idx_to_word hcfg_msg_id_sz i)
+    | HBConstBool b => Const _ (ConstBool b)
+    | HBConstNat w n => Const _ (ConstBit (natToWord w n))
+    | HBConstIdxO i => compile_oidx_to_cidx i
+    | HBConstIdxQ i => compile_midx_to_qidx i
+    | HBConstIdxM i => Const _ (ConstBit (idx_to_word hcfg_msg_id_sz i))
     end.
 
-  Section ExtComp.
-    Context `{@ExtExp dv oifc het}.
+  Context `{@ExtExp dv oifc het}.
+  Class CompExtType :=
+    { kind_of_hetype: hetype -> Kind }.
+  Context `{CompExtType}.
 
-    Class CompExtType :=
-      { kind_of_hetype: hetype -> Kind }.
-    Context `{CompExtType}.
+  Definition kind_of (ht: htype): Kind :=
+    match ht with
+    | HBType hbt => kind_of_hbtype hbt
+    | HEType het => kind_of_hetype het
+    end.
 
-    Definition kind_of (ht: htype): Kind :=
-      match ht with
-      | HBType hbt => kind_of_hbtype hbt
-      | HEType het => kind_of_hetype het
-      end.
+  Definition hbvar_of (var: Kind -> Type): hbtype -> Type :=
+    fun hbt => var (kind_of (HBType hbt)).
 
-    Definition hbvar_of (var: Kind -> Type): hbtype -> Type :=
-      fun hbt => var (kind_of (HBType hbt)).
+  Definition hvar_of (var: Kind -> Type): htype -> Type :=
+    fun ht => var (kind_of ht).
 
-    Definition hvar_of (var: Kind -> Type): htype -> Type :=
-      fun ht => var (kind_of ht).
+  Section Pipeline.
+    Context {var: Kind -> Type}.
+    Variable oidx: IdxT.
 
-    Section Phoas.
-      Context {var: Kind -> Type}.
-      Variable oidx: IdxT.
+    Variables indexSz lgWay edirLgWay: nat.
 
-      Definition compile_midx_to_cidx (midx: IdxT): Expr var (SyntaxKind KCIdx) :=
-        Const _ (compile_midx_to_cidx_const midx).
+    Definition LineWrite infoK := LineWrite infoK KValue hcfg_addr_sz lgWay edirLgWay.
+    Let LineWriteK infoK := Struct (LineWrite infoK).
 
-      Definition compile_midx_to_qidx (midx: IdxT): Expr var (SyntaxKind KQIdx) :=
-        Const _ (compile_midx_to_qidx_const midx).
+    (** Information/value read and write *)
+    Class CompLineRW :=
+      { infoK: Kind;
+        (* get_info_addr: *)
+        (*   forall (var: Kind -> Type), *)
+        (*     var infoK -> Expr var (SyntaxKind KAddr); *)
+        (* set_info_addr: *)
+        (*   forall (var: Kind -> Type), *)
+        (*     Expr var (SyntaxKind infoK) -> Expr var (SyntaxKind KAddr) -> *)
+        (*     Expr var (SyntaxKind infoK); *)
+        (* compile_info_read: *)
+        (*   forall (var: Kind -> Type), *)
+        (*     var infoK -> Expr var (SyntaxKind infoK); *)
+        compile_line_to_ostVars:
+          forall (var: Kind -> Type),
+            var infoK -> var KValue ->
+            (HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+             ActionT var Void) ->
+            ActionT var Void;
+        compile_line_update:
+          forall (var: Kind -> Type),
+            var (LineWriteK infoK) ->
+            forall (i: Fin.t ost_sz) ht,
+              hostf_ty[@i] = ht ->
+              Expr var (SyntaxKind (kind_of ht)) ->
+              Expr var (SyntaxKind (LineWriteK infoK));
+        (* check_inv_response: Fin.t ost_sz -> nat -> bool *)
+      }.
+    Context `{CompLineRW}.
 
-      Definition compile_oidx_to_cidx (oidx: IdxT): Expr var (SyntaxKind KCIdx) :=
-        Const _ (compile_oidx_to_cidx_const oidx).
+    (** MSHRs *)
+    Variable mshrNumPRqs mshrNumCRqs: nat.
+    Let predMshrNumSlots := mshrNumPRqs + mshrNumCRqs - 1.
+    Let mshrNumSlots := S predMshrNumSlots.
+    Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
+    Let MshrId := Bit mshrSlotSz.
 
-      (* line read/write-related *)
-      Class CompLineRW :=
-        { lineK: Kind;
-          get_line_addr:
-            forall (var: Kind -> Type),
-              var lineK -> Expr var (SyntaxKind KAddr);
-          set_line_addr:
-            forall (var: Kind -> Type),
-              Expr var (SyntaxKind lineK) -> Expr var (SyntaxKind KAddr) ->
-              Expr var (SyntaxKind lineK);
-          compile_line_read:
-            forall (var: Kind -> Type),
-              var lineK -> Expr var (SyntaxKind lineK);
-          compile_line_to_ostVars:
-            forall (var: Kind -> Type),
-              var lineK ->
-              (HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
-               ActionT var Void) ->
-              ActionT var Void;
-          compile_line_update:
-            forall (var: Kind -> Type),
-              var lineK ->
-              forall (i: Fin.t ost_sz) ht,
-                hostf_ty[@i] = ht ->
-                Expr var (SyntaxKind (kind_of ht)) ->
-                Expr var (SyntaxKind lineK);
-          check_inv_response: Fin.t ost_sz -> nat -> bool
-        }.
-      Context `{CompLineRW}.
+    Variables deqP2LRN deqC2LRN enqIR2LRN: string.
+    Section InfoReadStage.
 
-      (*!-- NEW DESIGN BELOW --*)
-
-      Variable mshrSlotSz: nat.
-      Let MshrId := Bit mshrSlotSz.
       Definition PPFrom := Bit 2.
       Definition PPFromPRq: Expr var (SyntaxKind PPFrom) := ($0)%kami_expr.
       Definition PPFromPRs: Expr var (SyntaxKind PPFrom) := ($1)%kami_expr.
       Definition PPFromCRq: Expr var (SyntaxKind PPFrom) := ($2)%kami_expr.
       Definition PPFromCRs: Expr var (SyntaxKind PPFrom) := ($3)%kami_expr.
-      Definition KPipe :=
-        STRUCT { "pp_from" :: PPFrom;
-                 "pp_cidx" :: KCIdx;
-                 "pp_msg" :: Struct KMsg;
-                 "pp_mshr_id" :: MshrId }.
+      Definition IRPipe :=
+        STRUCT { "ir_from" :: PPFrom;
+                 "ir_cidx" :: KCIdx;
+                 "ir_msg" :: Struct KMsg;
+                 "ir_mshr_id" :: MshrId }.
+      Definition IRPipeK := Struct IRPipe.
+      Definition deqP2LR := MethodSig deqP2LRN(): IRPipeK.
+      Definition deqC2LR := MethodSig deqC2LRN(): IRPipeK.
+      Definition enqIR2LR := MethodSig enqIR2LRN(IRPipeK): Void.
+      Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation infoReadRq := (infoReadRq oidx hcfg_addr_sz).
+      Local Notation addRs := (addRs oidx).
 
-      Section LineReadStage.
-        Variables deqP2LRN deqC2LRN enqLR2EXN: string.
-        Local Notation deqP2LR := (MethodSig deqP2LRN(): Struct KPipe).
-        Local Notation deqC2LR := (MethodSig deqC2LRN(): Struct KPipe).
-        Local Notation getPRqSlot := (getPRqSlot oidx mshrSlotSz).
-        Local Notation getCRqSlot := (getCRqSlot oidx mshrSlotSz).
-        Local Notation enqLR2EX := (MethodSig enqLR2EXN(Struct KPipe): Void).
-
-        Local Notation readRq := (readRq oidx hcfg_addr_sz).
-        Local Notation addRs := (addRs oidx).
-
-        Definition lineReadStageRulePRq: ActionT var Void :=
-          (Call pelt <- deqP2LR();
-          LET msg <- #pelt!KPipe@."pp_msg";
-          Assert !(#msg!KMsg@."type");
-          Call mmid <- getPRqSlot();
-          Assert (#mmid!(MaybeStr MshrId)@."valid");
-          LET mid <- #mmid!(MaybeStr MshrId)@."data";
-          Call readRq(#msg!KMsg@."addr");
-          LET nelt <- STRUCT { "pp_from" ::= #pelt!KPipe@."pp_from";
-                               "pp_cidx" ::= #pelt!KPipe@."pp_cidx";
-                               "pp_msg" ::= #pelt!KPipe@."pp_msg";
-                               "pp_mshr_id" ::= #mid };
-          Call enqLR2EX(#nelt);
-          Retv)%kami_action.
-
-        Definition lineReadStageRulePRs: ActionT var Void :=
-          (Call pelt <- deqP2LR();
-          LET msg <- #pelt!KPipe@."pp_msg";
-          Assert (#msg!KMsg@."type");
-          Call readRq(#msg!KMsg@."addr");
-          Call enqLR2EX(#pelt);
-          Retv)%kami_action.
-
-        Definition lineReadStageRuleCRq: ActionT var Void :=
-          (Call pelt <- deqC2LR();
-          LET msg <- #pelt!KPipe@."pp_msg";
-          Assert !(#msg!KMsg@."type");
-          Call mmid <- getCRqSlot();
-          Assert (#mmid!(MaybeStr MshrId)@."valid");
-          LET mid <- #mmid!(MaybeStr MshrId)@."data";
-          Call readRq(#msg!KMsg@."addr");
-          LET nelt <- STRUCT { "pp_from" ::= #pelt!KPipe@."pp_from";
-                               "pp_cidx" ::= #pelt!KPipe@."pp_cidx";
-                               "pp_msg" ::= #pelt!KPipe@."pp_msg";
-                               "pp_mshr_id" ::= #mid };
-          Call enqLR2EX(#nelt);
-          Retv)%kami_action.
-
-        Definition lineReadStageRuleCRs: ActionT var Void :=
-          (Call pelt <- deqC2LR();
-          LET msg <- #pelt!KPipe@."pp_msg";
-          Assert (#msg!KMsg@."type");
-          Call addRs(STRUCT { "r_dl_midx" ::= #pelt!KPipe@."pp_cidx";
-                              "r_dl_msg" ::= #msg });
-          (* No enq to the next stage *)
-          Retv)%kami_action.
-
-      End LineReadStage.
-
-      (*!-- OLD STUFF BELOW --*)
-
-      (* A readlock:
-       * - rl_valid: true if the lock being held
-       * - rl_cmidx: a child-queue index where the message comes from
-       * - rl_msg: the message that required the lock
-       * - rl_line_valid: true if [rl_line] is valid
-       * - rl_line: holds the information (owned, status, dir, etc.) from the cache.
-       *)
-      Definition RL :=
-        STRUCT { "rl_valid" :: Bool;
-                 "rl_cmidx" :: KCIdx;
-                 (** NOTE: the message contains a line address as well *)
-                 "rl_msg" :: Struct KMsg;
-                 "rl_line_valid" :: Bool;
-                 "rl_line" :: lineK }.
-
-      (* Used to have ["wl_msgs_out" :: Struct KMsgsOut], feat. [KMsgsOut] *)
-      Definition WL :=
-        STRUCT { "wl_valid" :: Bool;
-                 "wl_write_rq" :: Bool }.
-
-      Variables
-        (prln: string) (prl: var (Struct RL))
-        (crqrln: string) (crqrl: var (Struct RL))
-        (crsrln: string) (crsrl: var (Struct RL))
-        (* rlc: a two-bit flag saying which readlock is being used;
-         * p(10), crq(00), crs(01) *)
-        (rlcn: string)
-        (wln: string) (wl: var (Struct WL))
-        (* rr: a single-bit flag for round-robin *)
-        (rrn: string).
-
-      (** * Step 1: compile the message-accepting rule:
-       * it makes the read request to the info cache as well. *)
-
-      Definition compile_rule_readlock_parent
-                 (cont: var (Struct RL) -> ActionT var Void): ActionT var Void :=
-        (Read prl: Struct RL <- prln; cont prl)%kami_action.
-
-      Definition compile_rule_readlock_child_rq
-                 (cont: var (Struct RL) -> ActionT var Void): ActionT var Void :=
-        (Read crqrl: Struct RL <- crqrln; cont crqrl)%kami_action.
-
-      Definition compile_rule_readlock_child_rs
-                 (cont: var (Struct RL) -> ActionT var Void): ActionT var Void :=
-        (Read crsrl: Struct RL <- crsrln; cont crsrl)%kami_action.
-
-      Definition detect_input_msg_rqrs_r (rrp: HOPrecR): bool :=
-        match rrp with
-        | HRsAccepting => true
-        | HRssFull => true
-        | _ => false
-        end.
-
-      Fixpoint detect_input_msg_rqrs (rp: HOPrecT (hvar_of var)): bool :=
-        match rp with
-        | HOPrecAnd prec1 prec2 =>
-          (detect_input_msg_rqrs prec1) || (detect_input_msg_rqrs prec2)
-        | HOPrecRqRs _ rrprec => detect_input_msg_rqrs_r rrprec
-        | HOPrecProp _ => false
-        end.
-
-      (* [Some None] if from the parent, [Some (Some cmidx)] if from a child,
-       * and [None] if no input message. *)
-      Definition detect_input_msg_from (mf: HMsgFrom): option (option IdxT) :=
-        match mf with
-        | HMsgFromNil => None
-        | HMsgFromParent pmidx => Some None
-        | HMsgFromChild cmidx => Some (Some cmidx)
-        | HMsgFromExt emidx => Some (Some emidx)
-        | HMsgFromUpLock => Some None
-        | HMsgFromDownLock cidx => Some (Some cidx)
-        end.
-
-      Record InputMsgType :=
-        { imt_rqrs: bool; imt_from: option (option IdxT) }.
-
-      Definition compile_rule_rr_step: ActionT var Void :=
-        (Read rr: Bit 1 <- rrn;
-        Write rrn <- #rr + $1;
+      Definition infoReadStageRulePRq: ActionT var Void :=
+        (Call pelt <- deqP2LR();
+        LET msg <- #pelt!IRPipe@."ir_msg";
+        Assert !(#msg!KMsg@."type");
+        Call mmid <- getPRqSlot();
+        Assert (#mmid!(MaybeStr MshrId)@."valid");
+        LET mid <- #mmid!(MaybeStr MshrId)@."data";
+        Call infoReadRq(#msg!KMsg@."addr");
+        LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
+                             "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
+                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_mshr_id" ::= #mid };
+        Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
-      Definition compile_rule_rr_check (imt: InputMsgType)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true => (Read rr: Bit 1 <- rrn; Assert #rr == $0; cont)
-           | false => (* eviction cases *) cont
-           end
-         | Some None => (Read rr: Bit 1 <- rrn; Assert #rr == $0; cont)
-         | Some (Some _) =>
-           match imt.(imt_rqrs) with
-           | true => (* taking-responses cases *) cont
-           | false => (Read rr: Bit 1 <- rrn; Assert #rr == $1; cont)
-           end
-         end)%kami_action.
+      Definition infoReadStageRulePRs: ActionT var Void :=
+        (Call pelt <- deqP2LR();
+        LET msg <- #pelt!IRPipe@."ir_msg";
+        Assert (#msg!KMsg@."type");
+        Call infoReadRq(#msg!KMsg@."addr");
+        Call enqIR2LR(#pelt);
+        Retv)%kami_action.
 
-      Definition compile_rule_readlock_available (imt: InputMsgType)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true => (Assert !(#crsrl!RL@."rl_valid"); cont)
-           | false =>
-             (* No need to "request" a read for eviction cases;
-              * there is already a victim line immediately available. *)
-             cont
-           end
-         | Some None => (Assert !(#prl!RL@."rl_valid"); cont)
-         | Some (Some _) =>
-           match imt.(imt_rqrs) with
-           | true =>
-             (* No need to "request" a read for taking a response from a child;
-              * it always accepts the message and puts it to the proper downlock,
-              * without any state reads/writes. *)
-             cont
-           | false => (Assert !(#crqrl!RL@."rl_valid"); cont)
-           end
-         end)%kami_action.
+      Definition infoReadStageRuleCRq: ActionT var Void :=
+        (Call pelt <- deqC2LR();
+        LET msg <- #pelt!IRPipe@."ir_msg";
+        Assert !(#msg!KMsg@."type");
+        Call mmid <- getCRqSlot();
+        Assert (#mmid!(MaybeStr MshrId)@."valid");
+        LET mid <- #mmid!(MaybeStr MshrId)@."data";
+        Call infoReadRq(#msg!KMsg@."addr");
+        LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
+                             "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
+                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_mshr_id" ::= #mid };
+        Call enqIR2LR(#nelt);
+        Retv)%kami_action.
 
-      Definition compile_rule_request_read
-                 (addr: Expr var (SyntaxKind (Bit hcfg_addr_sz)))
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Call (readRq oidx hcfg_addr_sz) (addr); cont)%kami_action.
+      Definition infoReadStageRuleCRs: ActionT var Void :=
+        (Call pelt <- deqC2LR();
+        LET msg <- #pelt!IRPipe@."ir_msg";
+        Assert (#msg!KMsg@."type");
+        Call addRs(STRUCT { "r_dl_midx" ::= #pelt!IRPipe@."ir_cidx";
+                            "r_dl_msg" ::= #msg });
+        (* No enq to the next stage *)
+        Retv)%kami_action.
 
-      Definition compile_rule_accept_message_and_request_read (imt: InputMsgType)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true =>
-             (Call odl <- (downLockRssFull oidx) ();
-             Assert #odl!(MaybeStr (Struct DL))@."valid";
-             (* Here setting the original request message to [rl_msg] is
-              * just to use the "addr" field in [KMsg] *)
-             LET msg <- #odl!(MaybeStr (Struct DL))@."data"!DL@."dl_msg";
-             Write crsrln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
-                                                 "rl_cmidx" ::= $$Default;
-                                                 "rl_msg" ::= #msg;
-                                                 "rl_line_valid" ::= $$false;
-                                                 "rl_line" ::= $$Default };
-             Write rlcn: Bit 2 <- $1;
-             compile_rule_request_read (#msg!KMsg@."addr")%kami_expr cont)
-           | false => cont (* nothing to do in case of eviction *)
-           end
-         | Some (Some cmidx) =>
-           match imt.(imt_rqrs) with
-           | true => cont (* nothing to do in case of taking a child response;
-                           * deq is even not performed here.
-                           * See [compile_rule_get_readlock_msg]. *)
-           | false => (Call msgIn <- (deqFromChild cmidx)();
-                      Write crqrln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
-                                                          "rl_cmidx" ::= compile_midx_to_cidx cmidx;
-                                                          "rl_msg" ::= #msgIn;
-                                                          "rl_line_valid" ::= $$false;
-                                                          "rl_line" ::= $$Default };
-                      Write rlcn: Bit 2 <- $0;
-                      compile_rule_request_read (#msgIn!KMsg@."addr")%kami_expr cont)
-           end
-         | Some None => (Call msgIn <- (deqFromParent (downTo oidx))();
-                        Write prln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
-                                                          "rl_cmidx" ::= $$Default;
-                                                          "rl_msg" ::= #msgIn;
-                                                          "rl_line_valid" ::= $$false;
-                                                          "rl_line" ::= $$Default };
-                        Write rlcn: Bit 2 <- $2;
-                        compile_rule_request_read (#msgIn!KMsg@."addr")%kami_expr cont)
-         end)%kami_action.
+    End InfoReadStage.
 
-      (** * Step 2: take a read response, save it in a proper readlock. *)
+    Variables deqIR2LRN enqLR2EXN: string.
+    Local Notation InfoRead := (InfoRead infoK indexSz lgWay edirLgWay).
 
-      (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
-      Definition readRs := MethodSig (readRsN oidx) (): lineK.
-      Definition compile_rule_take_info_resp (cont: ActionT var Void): ActionT var Void :=
-        (Call od <- readRs ();
-        Read rlc: Bit 2 <- rlcn;
-        If (#rlc == $0) (* crq *)
-        then (Write crqrln: Struct RL <- STRUCT { "rl_valid" ::= #crqrl!RL@."rl_valid";
-                                                  "rl_cmidx" ::= #crqrl!RL@."rl_cmidx";
-                                                  "rl_msg" ::= #crqrl!RL@."rl_msg";
-                                                  "rl_line_valid" ::= $$true;
-                                                  "rl_line" ::= #od }; Retv)
-        else (If (#rlc == $1)
-              then (Write crsrln: Struct RL <- STRUCT { "rl_valid" ::= #crsrl!RL@."rl_valid";
-                                                        "rl_cmidx" ::= #crsrl!RL@."rl_cmidx";
-                                                        "rl_msg" ::= #crsrl!RL@."rl_msg";
-                                                        "rl_line_valid" ::= $$true;
-                                                        "rl_line" ::= #od }; Retv)
-              else (Write prln: Struct RL <- STRUCT { "rl_valid" ::= #prl!RL@."rl_valid";
-                                                      "rl_cmidx" ::= #prl!RL@."rl_cmidx";
-                                                      "rl_msg" ::= #prl!RL@."rl_msg";
-                                                      "rl_line_valid" ::= $$true;
-                                                      "rl_line" ::= #od }; Retv);
-              Retv); cont)%kami_action.
+    Section LineReadStage.
 
-      (** * Step 3: compile rules for checking preconditions & requesting transitions:
-       * it takes a info-read response, checks its precondition, and makes
-       * the write request to the info/value caches. *)
+      Definition LRPipe :=
+        STRUCT { "lr_ir_pp" :: IRPipeK;
+                 "lr_ir" :: Struct InfoRead
+               }.
+      Definition LRPipeK := Struct LRPipe.
+
+      Definition deqIR2LR := MethodSig deqIR2LRN(): IRPipeK.
+      Definition enqLR2EX := MethodSig enqLR2EXN(LRPipeK): Void.
+      Local Notation infoReadRs := (infoReadRs oidx infoK indexSz lgWay edirLgWay).
+      Local Notation valueReadRq := (valueReadRq oidx indexSz lgWay).
+      Local Notation victimValueRq := (victimValueRq oidx).
+
+      Definition lineReadStageRule: ActionT var Void :=
+        (Call ir <- deqIR2LR();
+        Call rinfo <- infoReadRs();
+        If (#rinfo!InfoRead@."info_hit")
+         then (LET iw <- STRUCT { "index" ::= #rinfo!InfoRead@."info_index";
+                                  "way" ::= #rinfo!InfoRead@."info_way" };
+              Call valueReadRq(#iw);
+              Retv)
+         else (Call victimValueRq(); Retv);
+        LET lr <- STRUCT { "lr_ir_pp" ::= #ir; "lr_ir" ::= #rinfo };
+        Call enqLR2EX(#lr);
+        Retv)%kami_action.
+
+    End LineReadStage.
+
+    Section CompileExec.
 
       Variables
-        (pline: var lineK)
-        (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
         (msgIn: var (Struct KMsg))
-        (ul: var (Struct UL)) (dl: var (Struct DL)).
-
-      (** 3-1: check there is already a proper readlock and the information is ready. *)
-
-      (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
-      Definition getVictim := MethodSig (getVictimN oidx) (): lineK.
-
-      (* NOTE: should be safe to extract "data" directly from "rl_line",
-       *       since the info cache returns the default value in case of miss. *)
-      Definition compile_rule_readlocked_and_info_ready
-                 (imt: InputMsgType)
-                 (cont: var lineK -> ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true => (Assert (#crsrl!RL@."rl_valid" && #crsrl!RL@."rl_line_valid");
-                     LET i <- #crsrl!RL@."rl_line";
-                     LET ci <- compile_line_read _ i;
-                     cont ci)
-           | false =>
-             (* [getVictim] already acts like a readlock *)
-             (Call i <- getVictim (); LET ci <- compile_line_read _ i; cont ci)
-           end
-         | Some (Some cmidx) =>
-           match imt.(imt_rqrs) with
-           | true => (LET fline <- $$Default; cont fline)
-           | false => (Assert (#crqrl!RL@."rl_valid" && #crqrl!RL@."rl_line_valid");
-                      Assert (#crqrl!RL@."rl_cmidx" == compile_midx_to_cidx cmidx);
-                      LET i <- #crqrl!RL@."rl_line";
-                      LET ci <- compile_line_read _ i;
-                      cont ci)
-           end
-         | Some None => (Assert (#prl!RL@."rl_valid" && #prl!RL@."rl_line_valid");
-                        LET i <- #prl!RL@."rl_line";
-                        LET ci <- compile_line_read _ i;
-                        cont ci)
-         end)%kami_action.
-
-      Definition compile_rule_get_readlock_msg
-                 (imt: InputMsgType)
-                 (cont: var (Struct KMsg) -> ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true => (LET msgIn <- #crsrl!RL@."rl_msg"; cont msgIn)
-           | false => (LET msgIn: Struct KMsg <- STRUCT { "id" ::= $$Default;
-                                                          "type" ::= $$MRq;
-                                                          "addr" ::= get_line_addr _ pline;
-                                                          "value" ::= $$Default };
-                      cont msgIn)
-           end
-         | Some (Some cmidx) =>
-           match imt.(imt_rqrs) with
-           | true => (Call msgIn <- (deqFromChild cmidx)(); cont msgIn)
-           | false => (LET msgIn <- #crqrl!RL@."rl_msg"; cont msgIn)
-           end
-         | Some None => (LET msgIn <- #prl!RL@."rl_msg"; cont msgIn)
-         end)%kami_action.
-
-      (** 3-2: check the precondition using the input message and the information *)
+        (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+        (mshrId: var MshrId) (mshr: var (Struct MSHR))
+        (pir: var (Struct InfoRead)) (pvalue: var KValue).
 
       Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
         (match he with
-         | HBConst _ c => Const _ (compile_const c)
+         | HBConst _ c => compile_const c
          | HVar _ _ v => Var _ (SyntaxKind _) v
          | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
          | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
          | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
          | HAddrB _ =>
+           (** * FIXME: no use of this hacking *)
            (* NOTE: [HAddrB] is used only when making an eviction request
             * with a nondeterministic address. Here we always make the request
             * with a victim line, and its address is forwarded to [msgIn]. *)
            #msgIn!KMsg@."addr"
-         | HValueB _ => $$Default
-         | HMsgB mid mty maddr mval =>
-           (STRUCT { "id" ::= compile_bexp mid;
-                     "type" ::= compile_bexp mty;
-                     "addr" ::= compile_bexp maddr;
-                     "value" ::= compile_bexp mval })
-         | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
-         | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
-         | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
-         | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
-         | @HOstVal _ _ _ _ i hbt0 Heq =>
-           Var _ (SyntaxKind _)
-               (eq_rect
-                  hostf_ty[@i]
-                  (fun h => var (kind_of h))
-                  (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
-                           (fun T => T)
-                           (HVector.hvec_ith ostVars i)
-                           (var (kind_of hostf_ty[@i]))
-                           (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
-                  (HBType hbt0)
-                  (hostf_ty_compat i Heq))
-         (* The expressions below are used only when dealing with responses. *)
-         | HUpLockIdxBackI _ => ({$downIdx, #ul!UL@."ul_rsbTo"})
-         | HDownLockIdxBackI _ => (#dl!DL@."dl_rsbTo")
+                      | HValueB _ => $$Default
+                      | HMsgB mid mty maddr mval =>
+                        (STRUCT { "id" ::= compile_bexp mid;
+                                  "type" ::= compile_bexp mty;
+                                  "addr" ::= compile_bexp maddr;
+                                  "value" ::= compile_bexp mval })
+                      | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
+                      | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
+                      | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
+                      | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
+                      | @HOstVal _ _ _ _ i hbt0 Heq =>
+                        Var _ (SyntaxKind _)
+                            (eq_rect
+                               hostf_ty[@i]
+                               (fun h => var (kind_of h))
+                               (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
+                                        (fun T => T)
+                                        (HVector.hvec_ith ostVars i)
+                                        (var (kind_of hostf_ty[@i]))
+                                        (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
+                               (HBType hbt0)
+                               (hostf_ty_compat i Heq))
+                      (* The expressions below are used only when dealing with responses. *)
+                      | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")})
+                      | HDownLockIdxBackI _ => (#mshr!MSHR@."m_rsbTo")
          end)%kami_expr.
 
       Class CompExtExp :=
         { compile_eexp:
             forall (var: Kind -> Type) {het},
-              var (Struct KMsg) ->
-              var (Struct UL) -> var (Struct DL) ->
+              var (Struct KMsg) -> var (Struct MSHR) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heexp (hvar_of var) het ->
               Expr var (SyntaxKind (kind_of het));
           compile_eoprec:
             forall (var: Kind -> Type),
-              var (Struct KMsg) ->
-              var (Struct UL) -> var (Struct DL) ->
+              var (Struct KMsg) -> var (Struct MSHR) ->
               HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
               heoprec (hvar_of var) ->
               Expr var (SyntaxKind Bool);
@@ -587,7 +357,7 @@ Section Compile.
         : Expr var (SyntaxKind (kind_of ht)) :=
         match he with
         | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var msgIn ul dl ostVars hee
+        | HEExp _ hee => compile_eexp var msgIn mshr ostVars hee
         end.
 
       Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -606,7 +376,7 @@ Section Compile.
          | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
          | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
          | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
-         | HExtP _ ep => compile_eoprec _ msgIn ul dl ostVars ep
+         | HExtP _ ep => compile_eoprec _ msgIn mshr ostVars ep
          | HNativeP _ _ => $$true
          end)%kami_expr.
 
@@ -615,34 +385,35 @@ Section Compile.
         (match rrp with
          | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
          | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
+         (** * TODO: check [canReg..] for [H..LockFree] makes sense. *)
          | HUpLockFree =>
-           (Call canUl <- (upLockable oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
+           (Call canUl <- (canRegUL oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
          | HDownLockFree =>
-           (Call canDl <- (downLockable oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
+           (Call canDl <- (canRegDL oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
          | HUpLockMsgId mty mid =>
-           (Assert (#ul!UL@."ul_valid");
-           Assert (#ul!UL@."ul_rsb");
-           Assert (#ul!UL@."ul_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#ul!UL@."ul_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+           (Assert (#mshr!MSHR@."m_valid");
+           Assert (#mshr!MSHR@."m_rsb");
+           Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
+           Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
            cont)
          | HUpLockMsg =>
-           (Assert (#ul!UL@."ul_valid"); Assert (#ul!UL@."ul_rsb"); cont)
+           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
          | HUpLockIdxBack =>
-           (Assert (#ul!UL@."ul_valid"); Assert (#ul!UL@."ul_rsb"); cont)
+           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
          | HUpLockBackNone =>
-           (Assert (#ul!UL@."ul_valid"); Assert (!(#ul!UL@."ul_rsb")); cont)
+           (Assert (#mshr!MSHR@."m_valid"); Assert (!(#mshr!MSHR@."m_rsb")); cont)
          | HDownLockMsgId mty mid =>
-           (Assert (#dl!DL@."dl_valid");
-           Assert (#dl!DL@."dl_rsb");
-           Assert (#dl!DL@."dl_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#dl!DL@."dl_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+           (Assert (#mshr!MSHR@."m_valid");
+           Assert (#mshr!MSHR@."m_rsb");
+           Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
+           Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
            cont)
          | HDownLockMsg =>
-           (Assert (#dl!DL@."dl_valid"); Assert (#dl!DL@."dl_rsb"); cont)
+           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
          | HDownLockIdxBack =>
-           (Assert (#dl!DL@."dl_valid"); Assert (#dl!DL@."dl_rsb"); cont)
+           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
          | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-         | HRssFull => (Assert (#dl!DL@."dl_rss_recv" == #dl!DL@."dl_rss_from"); cont)
+         | HRssFull => (Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from"); cont)
          end)%kami_action.
 
       Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
@@ -656,192 +427,91 @@ Section Compile.
           (Assert (compile_rule_prop_prec pprec); cont)%kami_action
         end.
 
-      (** 3-3: make the rule transition (write requests):
-       * 1) [HOState]: (maybe) make a write request to the cache,
-       *    with the new info/line value.
-       * 2) [HORq]: change the MSHR status.
-       * 3) [HMsgsOut]: since the current info/line already being read,
-       *    the output messages can be generated. *)
-
-      Definition compile_rule_readlock_release
-                 (imt: InputMsgType) (cont: ActionT var Void): ActionT var Void :=
-        (match imt.(imt_from) with
-         | None =>
-           match imt.(imt_rqrs) with
-           | true => (Write crsrln: Struct RL <- $$Default; cont)
-           | false => cont
-           end
-         | Some (Some _) =>
-           match imt.(imt_rqrs) with
-           | true => cont
-           | false => (Write crqrln: Struct RL <- $$Default; cont)
-           end
-         | Some None => (Write prln: Struct RL <- $$Default; cont)
-         end)%kami_action.
-
-      Definition compile_rule_writelock
-                 (cont: var (Struct WL) -> ActionT var Void): ActionT var Void :=
-        (Read wl: Struct WL <- wln; cont wl)%kami_action.
-
-      Definition compile_rule_writelock_available
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Assert !(#wl!WL@."wl_valid"); cont)%kami_action.
-
-      Definition bypass_inv_rl (rln: string) (iaddr: var KAddr)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Read rl: Struct RL <- rln;
-        If ((#rl!RL@."rl_valid") && (#rl!RL@."rl_line_valid") &&
-            (#rl!RL@."rl_msg"!KMsg@."addr" == #iaddr))
-         then (Write rln: Struct RL <- (updStruct #rl (RL!!"rl_line")
-                                                  (set_line_addr $$Default #iaddr));
-              Retv);
-         cont)%kami_action.
-
-      Definition compile_rule_bypass_inv_rl
-                 (iaddr: var KAddr) (cont: ActionT var Void): ActionT var Void :=
-        (bypass_inv_rl crqrln iaddr (bypass_inv_rl crsrln iaddr cont)).
-
-      Definition compile_rule_writelock_acquire
-                 (wrq: Expr var (SyntaxKind Bool)) (invRs: bool)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Write wln: Struct WL <- STRUCT { "wl_valid" ::= $$true;
-                                          "wl_write_rq" ::= wrq };
-        (if invRs
-         then (LET iaddr <- #msgIn!KMsg@."addr";
-              Call (removeVictim oidx hcfg_addr_sz)(#iaddr);
-              compile_rule_bypass_inv_rl iaddr cont)
-         else cont))%kami_action.
-
-      Definition compile_rule_get_uplock (imt: InputMsgType)
-                 (cont: var (Struct UL) -> ActionT var Void): ActionT var Void :=
-        (match imt.(imt_rqrs), imt.(imt_from) with
-         | true, Some None =>
-           (* A response from the parent *)
-           (Call oul <- (upLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #oul!(MaybeStr (Struct UL))@."valid";
-           LET ul <- #oul!(MaybeStr (Struct UL))@."data";
-           cont ul)
-         | _, _ => (LET ul <- $$Default; cont ul)
-         end)%kami_action.
-
-      Definition compile_rule_get_downlock (imt: InputMsgType)
-                 (cont: var (Struct DL) -> ActionT var Void): ActionT var Void :=
-        (match imt.(imt_rqrs), imt.(imt_from) with
-         | true, Some (Some _) =>
-           (* A response from a child *)
-           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #odl!(MaybeStr (Struct DL))@."valid";
-           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
-           cont dl)
-         | true, None =>
-           (* When [RssFull]: see the definition of [detect_input_msg_rqrs_r] *)
-           (Call odl <- (downLockGet oidx) (#msgIn!KMsg@."addr");
-           Assert #odl!(MaybeStr (Struct DL))@."valid";
-           LET dl <- #odl!(MaybeStr (Struct DL))@."data";
-           cont dl)
-         | _, _ => (LET dl <- $$Default; cont dl)
-         end)%kami_action.
-
-      Definition compile_rule_writelocked_silent (cont: ActionT var Void): ActionT var Void :=
-        (Assert (#wl!WL@."wl_valid" && !(#wl!WL@."wl_write_rq")); cont)%kami_action.
-
-      Definition compile_rule_writelocked_rs (cont: ActionT var Void): ActionT var Void :=
-        (Assert (#wl!WL@."wl_valid" && #wl!WL@."wl_write_rq"); cont)%kami_action.
-
       Definition compile_bval {hbt} (hv: hbval hbt)
         : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
         (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
          | HGetFirstMsg => #msgIn
-         | HGetUpLockMsg => (#ul!UL@."ul_msg")
-         | HGetDownLockMsg => (#dl!DL@."dl_msg")
-         | HGetUpLockIdxBack => {$downIdx, (#ul!UL@."ul_rsbTo")}
-         | HGetDownLockIdxBack => (#dl!DL@."dl_rsbTo")
+         | HGetUpLockMsg => (#mshr!MSHR@."m_msg")
+         | HGetDownLockMsg => (#mshr!MSHR@."m_msg")
+         | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")}
+         | HGetDownLockIdxBack => (#mshr!MSHR@."m_rsbTo")
          | HGetDownLockFirstRs =>
-           (let fs := bvFirstSet (#dl!DL@."dl_rss_from") in
+           (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
             STRUCT { "cidx" ::= {$rsUpIdx, fs};
-                     "msg" ::= (#dl!DL@."dl_rss")#[fs] })
+                     "msg" ::= (#mshr!MSHR@."m_rss")#[fs] })
          end)%kami_expr.
-
-      (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
-      Definition writeRq := MethodSig (writeRqN oidx) (lineK): Void.
 
       Fixpoint compile_OState_write_fix
                (host: HOState (hvar_of var))
-               (rinfo: var lineK)
-               {retK} (cont: var lineK -> ActionT var retK): ActionT var retK :=
+               (rlw: var (LineWriteK infoK))
+               {retK} (cont: var (LineWriteK infoK) -> ActionT var retK): ActionT var retK :=
         (match host with
-         | HOStateI _ => cont rinfo
+         | HOStateI _ => cont rlw
          | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
-           (LET ninfo <- compile_line_update rinfo _ Heq (compile_exp he);
+           (LET ninfo <- compile_line_update rlw _ Heq (compile_exp he);
            compile_OState_write_fix host' ninfo cont)
          end)%kami_action.
 
-      Definition compile_request_write
-                 (line: Expr var (SyntaxKind lineK))
-                 {retK} (cont: ActionT var retK): ActionT var retK :=
-        (Call writeRq (line); cont)%kami_action.
+      Local Notation writeRq := (writeRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
 
       Definition compile_OState_request_write
-                 (host: HOState (hvar_of var)) (imt: InputMsgType) (invRs: bool)
+                 (host: HOState (hvar_of var)) (pline: var (LineWriteK infoK))
                  (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
-        if invRs then cont ($$false)%kami_expr
-        else match host with
-             | HOStateI _ => cont ($$false)%kami_expr
-             | _ => compile_OState_write_fix
-                      host pline
-                      (fun nline => compile_request_write
-                                      (#nline)%kami_expr (cont ($$true)%kami_expr))
-             end%kami_action.
+        (* if invRs then cont ($$false)%kami_expr else *)
+        match host with
+        | HOStateI _ => cont ($$false)%kami_expr
+        | _ => compile_OState_write_fix
+                 host pline
+                 (fun nline => Call writeRq(#nline); cont ($$true)%kami_expr)
+        end%kami_action.
+
+      Local Notation registerUL := (registerUL oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation registerDL := (registerDL oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation release := (release oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation addRs := (addRs oidx).
 
       Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                (cont: ActionT var Void): ActionT var Void :=
         (match horq with
          | HORqI _ => cont
          | HUpdUpLock rq _ rsb =>
-           (Call hasV <- (hasVictim oidx)();
-           Assert (!#hasV);
-           Call (registerUL oidx)
-                (STRUCT { "r_ul_rsb" ::= $$true;
-                          "r_ul_msg" ::= compile_exp rq;
-                          "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) });
-           cont)
+           (* Call hasV <- (hasVictim oidx)(); Assert (!#hasV); *)
+           (Call registerUL(STRUCT { "r_id" ::= #mshrId;
+                                     "r_ul_msg" ::= compile_exp rq;
+                                     "r_ul_rsb" ::= $$true;
+                                     "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
          | HUpdUpLockS _ =>
-           (Call (registerUL oidx)
-                 (STRUCT { "r_ul_rsb" ::= $$false;
-                           (* already properly set for eviction;
-                            * see [compile_rule_get_readlock_msg]. *)
-                           "r_ul_msg" ::= #msgIn;
-                           "r_ul_rsbTo" ::= $$Default });
-           cont)
-         | HRelUpLock _ =>
-           (Call (releaseUL oidx) (#msgIn!KMsg@."addr"); cont)
+           (Call registerUL(STRUCT { "r_id" ::= #mshrId;
+                                     (* already properly set for eviction;
+                                      * see [compile_rule_get_readlock_msg]. *)
+                                     "r_ul_msg" ::= #msgIn;
+                                     "r_ul_rsb" ::= $$false;
+                                     "r_ul_rsbTo" ::= $$Default }); cont)
+         | HRelUpLock _ => (Call release(#mshrId); cont)
          | HUpdDownLock rq rssf rsb =>
-           (Call (registerDL oidx)
-                 (STRUCT { "r_dl_rsb" ::= $$true;
-                           "r_dl_msg" ::= compile_exp rq;
-                           "r_dl_rss_from" ::= compile_exp rssf;
-                           "r_dl_rsbTo" ::= compile_exp rsb });
-           cont)
+           (Call registerDL(STRUCT { "r_id" ::= #mshrId;
+                                     "r_dl_msg" ::= compile_exp rq;
+                                     "r_dl_rss_from" ::= compile_exp rssf;
+                                     "r_dl_rsb" ::= $$true;
+                                     "r_dl_rsbTo" ::= compile_exp rsb }); cont)
          | HUpdDownLockS rssf =>
            (** NOTE: silent down-requests;
             * not used in non-inclusive cache-coherence protocols *)
-           (Call (registerDL oidx)
-                 (STRUCT { "r_dl_rsb" ::= $$false;
-                           "r_dl_msg" ::= $$Default;
-                           "r_dl_rss_from" ::= compile_exp rssf;
-                           "r_dl_rsbTo" ::= $$Default });
+           (Call registerDL (STRUCT { "r_id" ::= #mshrId;
+                                      "r_dl_msg" ::= $$Default;
+                                      "r_dl_rss_from" ::= compile_exp rssf;
+                                      "r_dl_rsb" ::= $$false;
+                                      "r_dl_rsbTo" ::= $$Default });
            cont)
-         | HRelDownLock _ =>
-           (Call (releaseDL oidx) (#msgIn!KMsg@."addr"); cont)
+         | HRelDownLock _ => (Call release(#mshrId); cont)
          | HTrsfUpDown rq rssf rsb =>
-           (Call (transferUpDown oidx)
-                 (STRUCT { "r_dl_addr" ::= #msgIn!KMsg@."addr";
-                           "r_dl_rss_from" ::= compile_exp rssf });
+           (Call transferUpDown (STRUCT { "r_id" ::= #mshrId;
+                                          "r_dl_rss_from" ::= compile_exp rssf });
            cont)
          | HAddRs midx msg =>
-           (Call (addRs oidx) (STRUCT { "r_dl_addr" ::= #msgIn!KMsg@."addr";
-                                        "r_dl_midx" ::= _truncate_ (compile_exp midx);
-                                        "r_dl_msg" ::= compile_exp msg });
+           (Call addRs (STRUCT { "r_dl_midx" ::= _truncate_ (compile_exp midx);
+                                 "r_dl_msg" ::= compile_exp msg });
            cont)
          end)%kami_action.
 
@@ -866,94 +536,62 @@ Section Compile.
          end)%kami_action.
 
       Fixpoint compile_MonadT_trs (hm: HMonadT (hvar_of var))
-               (imt: InputMsgType) (invRs: bool)
-               (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
+               (cont: Expr var (SyntaxKind Bool) -> ActionT var Void):
+        ActionT var Void :=
         (match hm with
          | HBind hv mcont =>
            Let_ (compile_bval hv)
-                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs (mcont x) imt invRs cont)
+                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs (mcont x) cont)
          | HRet host horq hmsgs =>
+           (LET pline: (LineWriteK infoK) <- STRUCT { "addr" ::= #msgIn!KMsg@."addr";
+                                                      "info_write" ::= $$false;
+                                                      "info_hit" ::= #pir!InfoRead@."info_hit";
+                                                      "info_way" ::= #pir!InfoRead@."info_way";
+                                                      "info" ::= #pir!InfoRead@."info";
+                                                      "edir_write" ::= $$false;
+                                                      "edir_hit" ::= #pir!InfoRead@."edir_hit";
+                                                      "edir_way" ::= #pir!InfoRead@."edir_way";
+                                                      "value_write" ::= $$false;
+                                                      "value" ::= #pvalue };
            compile_OState_request_write
-             host imt invRs
-             (fun we => compile_ORq_trs horq (compile_MsgsOut_trs hmsgs (cont we)))
+             host pline
+             (fun we => compile_ORq_trs horq (compile_MsgsOut_trs hmsgs (cont we))))
          end)%kami_action.
 
-      Definition compile_rule_trs (trs: HOTrs) (imt: InputMsgType) (invRs: bool)
+      Definition compile_rule_trs (trs: HOTrs)
                  (cont: Expr var (SyntaxKind Bool) -> ActionT var Void)
         : ActionT var Void :=
         match trs with
-        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) imt invRs cont
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) cont
         end.
 
-      Definition htypeU (_: htype) := unit.
-      Definition check_inv_response_exp (i: Fin.t ost_sz)
-                 {ht} (he: hexp htypeU ht): bool :=
-        match he with
-        | HBExp hbe =>
-          match hbe with
-          | HBConst _ (HBConstNat _ n) => check_inv_response i n
-          | _ => false
-          end
-        | _ => false
-        end.
+    End CompileExec.
 
-      (* Detect a state update of a form like [status <- NP] *)
-      Fixpoint check_inv_response_OState (host: HOState htypeU): bool :=
-        match host with
-        | HOStateI _ => false
-        | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
-          check_inv_response_exp i he || check_inv_response_OState host'
-        end.
+    Variables deqLR2EXN: string.
 
-      Fixpoint check_inv_response_MonadT (hm: HMonadT htypeU): bool :=
-        match hm with
-        | HBind hv mcont => check_inv_response_MonadT (mcont tt)
-        | HRet host _ _ => check_inv_response_OState host
-        end.
+    Section ExecStage.
 
-      Fixpoint check_inv_response_trs (trs: HOTrs): bool :=
-        match trs with
-        | HTrsMTrs (HMTrs mn) => check_inv_response_MonadT (mn htypeU)
-        end.
+      Definition deqLR2EX := MethodSig deqLR2EXN(): LRPipeK.
+      Local Notation valueReadRs := (valueReadRs oidx KValue).
 
-      (** * Step 4: compile rules for handling the write response with possible eviction *)
+      (** Message-execution cases:
+       * - [execStageRuleHit]: the precondition holds and the MSHR slot is properly lockable
+       * - [execStageRuleWait]: the precondition holds but need to wait another
+       *   lock to be released. Push the message to the waiting queue in the MSHR module.
+       * - [execStageRuleRetry]: pull the message from the waiting queue and retry handling it.
+       * + maybe something more?
+       *)
 
-      Definition compile_rule_writelock_release
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Write wln: Struct WL <- $$Default; cont)%kami_action.
+      (* Definition execStageRuleHit: ActionT var Void := *)
+      (*   (Call lr <- deqLR2EX(); *)
+      (*   LET hit <- #lr!LRPipe@."lr_ir"!InfoRead@."info_hit"; *)
+      (*   Call pval <- valueReadRs(); *)
 
-      Definition bypass_write_rl (rln: string) (nline: var lineK)
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Read rl: Struct RL <- rln;
-        If ((#rl!RL@."rl_valid") && (#rl!RL@."rl_line_valid") &&
-            (#rl!RL@."rl_msg"!KMsg@."addr" == get_line_addr _ nline))
-         then (Write rln: Struct RL <- STRUCT { "rl_valid" ::= $$true;
-                                                "rl_cmidx" ::= #rl!RL@."rl_cmidx";
-                                                "rl_msg" ::= #rl!RL@."rl_msg";
-                                                "rl_line_valid" ::= $$true;
-                                                "rl_line" ::= #nline };
-              Retv);
-         cont)%kami_action.
+    End ExecStage.
 
-      Definition compile_rule_bypass_write_rl
-                 (nline: var lineK) (cont: ActionT var Void): ActionT var Void :=
-        (bypass_write_rl
-           prln nline
-           (bypass_write_rl
-              crqrln nline
-              (bypass_write_rl
-                 crsrln nline cont))).
+  End Pipeline.
 
-      (* NOTE: [lineK] should match with [CacheLineK ..] in [Components.cache]. *)
-      Definition writeRs := MethodSig (writeRsN oidx) (): lineK.
-      Definition compile_rule_take_write_response_and_bypass
-                 (cont: ActionT var Void): ActionT var Void :=
-        (Call nline <- writeRs ();
-        compile_rule_bypass_write_rl nline cont)%kami_action.
-
-    End Phoas.
-
-  End ExtComp.
+  (*! OLD STUFF (DEPRECATED) *)
 
   Context `{ee: @ExtExp dv oifc het} `{cet: CompExtType}
           `{@CompExtExp ee cet} `{@CompLineRW cet}.
