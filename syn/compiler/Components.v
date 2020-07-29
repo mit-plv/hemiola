@@ -651,7 +651,9 @@ Section NCID.
   Let MayVictimK := Struct MayVictim.
 
   Definition cp2 :=
-    STRUCT { "victim_found" :: MviK; "may_victim" :: MayVictimK }.
+    STRUCT { "victim_found" :: MviK;
+             "may_victim" :: MayVictimK;
+             "reps" :: repK }.
   Let cpK2 := Struct cp2.
   Definition cpN2 := "cp_2"+o.
   Definition cpipe2 := fifo primPipelineFifoName cpN2 cpK2.
@@ -735,6 +737,7 @@ Section NCID.
                                     Expr ty (SyntaxKind infoK))
             (edirFromInfo: forall ty, fullType ty (SyntaxKind infoK) -> Expr ty (SyntaxKind edirK))
             (isJustDir: forall ty, fullType ty (SyntaxKind infoK) -> Expr ty (SyntaxKind Bool))
+            (isDirInvalid: forall ty, fullType ty (SyntaxKind infoK) -> Expr ty (SyntaxKind Bool))
             (edirEmptySlot: forall ty, Expr ty (SyntaxKind edirK) -> Expr ty (SyntaxKind Bool)).
 
   Arguments getIndex {_}.
@@ -743,6 +746,8 @@ Section NCID.
   Arguments edirToInfo {_}.
   Arguments edirFromInfo {_}.
   Arguments isJustDir {_}.
+  Arguments isDirInvalid {_}.
+  Arguments edirEmptySlot {_}.
 
   Definition TagMatch (valueK: Kind) (lw: nat) :=
     STRUCT { "tm_hit" :: Bool;
@@ -903,7 +908,8 @@ Section NCID.
                                               "info" ::= #victim!Victim@."victim_info"
                                             };
              Call cpEnq2(STRUCT { "victim_found" ::= #cpipe!cp1@."victim_found";
-                                  "may_victim" ::= $$Default });
+                                  "may_victim" ::= $$Default;
+                                  "reps" ::= $$Default });
              Ret #linfo)
         else (LET tis: Vector TagInfoK lgWay <- $$Default;
              NCall ntis <- makeInfoRdResps tis;
@@ -938,7 +944,8 @@ Section NCID.
              Call cpEnq2(STRUCT { "victim_found" ::= MaybeNone;
                                   "may_victim" ::=
                                     STRUCT { "mv_addr" ::= buildAddr repTag index;
-                                             "mv_info" ::= #repInfo } });
+                                             "mv_info" ::= #repInfo };
+                                  "reps" ::= #reps });
              (** On cache hit, request the line value; otherwise, request the victim line value. *)
              Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
                               then (#itm!(TagMatch infoK lgWay)@."tm_way")
@@ -976,6 +983,7 @@ Section NCID.
              Ret (#pv!Victim@."victim_value"))
         else (Call value <- dataRdResp();
              LET addr <- #lw!LineWrite@."addr";
+             LET index <- getIndex addr;
              LET info_way <- #lw!LineWrite@."info_way";
              LET ninfo <- #lw!LineWrite@."info";
              LET justDir <- isJustDir ninfo;
@@ -985,7 +993,7 @@ Section NCID.
                  (!#justDir) ||
                  ((!(#lw!LineWrite@."edir_hit")) && #justDir))
              then (If (#lw!LineWrite@."info_write")
-                   then (LET irq <- STRUCT { "addr" ::= getIndex addr;
+                   then (LET irq <- STRUCT { "addr" ::= #index;
                                              "datain" ::=
                                                STRUCT { "tag" ::= getTag addr;
                                                         "value" ::= #ninfo } };
@@ -1002,6 +1010,14 @@ Section NCID.
                                                   "victim_addr" ::= #mv!MayVictim@."mv_addr";
                                                   "victim_info" ::= #mv!MayVictim@."mv_info";
                                                   "victim_value" ::= #value }];
+
+                        (** update replacement information *)
+                        Call repAccess(STRUCT { "acc_type" ::=
+                                                  (IF (isDirInvalid ninfo)
+                                                   then accInvalid else accTouch);
+                                                "acc_reps" ::= #cpipe!cp2@."reps";
+                                                "acc_index" ::= #index;
+                                                "acc_way" ::= #info_way });
                         Retv);
                    If (#lw!LineWrite@."value_write")
                    then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
