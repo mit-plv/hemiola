@@ -646,8 +646,7 @@ Section NCID.
 
   (** Pipe from the second stage *)
   Definition MayVictim :=
-    STRUCT { "mv_index" :: Bit indexSz;
-             "mv_way" :: Bit lgWay;
+    STRUCT { "mv_addr" :: Bit addrSz;
              "mv_info" :: infoK }.
   Let MayVictimK := Struct MayVictim.
 
@@ -729,9 +728,9 @@ Section NCID.
                                   Expr ty (SyntaxKind (Bit indexSz)))
             (getTag: forall ty, fullType ty (SyntaxKind (Bit addrSz)) ->
                                 Expr ty (SyntaxKind (Bit tagSz)))
-            (* (buildAddr: forall ty, fullType ty (SyntaxKind (Bit tagSz)) -> *)
-            (*                        fullType ty (SyntaxKind (Bit indexSz)) -> *)
-            (*                        Expr ty (SyntaxKind (Bit addrSz))) *)
+            (buildAddr: forall ty, fullType ty (SyntaxKind (Bit tagSz)) ->
+                                   fullType ty (SyntaxKind (Bit indexSz)) ->
+                                   Expr ty (SyntaxKind (Bit addrSz)))
             (edirToInfo: forall ty, fullType ty (SyntaxKind edirK) ->
                                     Expr ty (SyntaxKind infoK))
             (edirFromInfo: forall ty, fullType ty (SyntaxKind infoK) -> Expr ty (SyntaxKind edirK))
@@ -740,6 +739,7 @@ Section NCID.
 
   Arguments getIndex {_}.
   Arguments getTag {_}.
+  Arguments buildAddr {_}.
   Arguments edirToInfo {_}.
   Arguments edirFromInfo {_}.
   Arguments isJustDir {_}.
@@ -801,18 +801,34 @@ Section NCID.
              (cont: ActionT var Void): ActionT var Void :=
     victimIterAFix victims addr readF cont numVictims.
 
-  Fixpoint hasVictimSlotFix (var: Kind -> Type)
+  Fixpoint getVictimSlotFix (var: Kind -> Type)
            (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-           (n: nat): Expr var (SyntaxKind Bool) :=
+           (n: nat): Expr var (SyntaxKind (Maybe (Bit victimIdxSz))) :=
     (match n with
-     | O => !(victims#[$v$0]!Victim@."victim_valid")
+     | O => MaybeNone
      | S n' =>
-       ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n')
+       (IF (victims#[$v$n]!Victim@."victim_valid")
+        then getVictimSlotFix victims n'
+        else MaybeSome $n)
      end)%kami_expr.
-  Definition hasVictimSlot (var: Kind -> Type)
-             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-    : Expr var (SyntaxKind Bool) :=
-    hasVictimSlotFix victims (numVictims - 1).
+
+  Fixpoint getVictimSlot (var: Kind -> Type)
+           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
+    : Expr var (SyntaxKind (Maybe (Bit victimIdxSz))) :=
+    getVictimSlotFix victims (numVictims - 1).
+
+  (* Fixpoint hasVictimSlotFix (var: Kind -> Type) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
+  (*          (n: nat): Expr var (SyntaxKind Bool) := *)
+  (*   (match n with *)
+  (*    | O => !(victims#[$v$0]!Victim@."victim_valid") *)
+  (*    | S n' => *)
+  (*      ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n') *)
+  (*    end)%kami_expr. *)
+  (* Definition hasVictimSlot (var: Kind -> Type) *)
+  (*            (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
+  (*   : Expr var (SyntaxKind Bool) := *)
+  (*   hasVictimSlotFix victims (numVictims - 1). *)
 
   (* Fixpoint hasVictimFix (var: Kind -> Type) *)
   (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
@@ -827,22 +843,6 @@ Section NCID.
   (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*   : Expr var (SyntaxKind Bool) := *)
   (*   hasVictimFix victims (numVictims - 1). *)
-
-  (* Fixpoint getVictimSlotFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*          (n: nat): Expr var (SyntaxKind (Bit victimIdxSz)) := *)
-  (*   (match n with *)
-  (*    | O => $0 *)
-  (*    | S n' => *)
-  (*      (IF (victims#[$v$n]!Victim@."victim_valid") *)
-  (*       then getVictimSlotFix victims n' *)
-  (*       else $n) *)
-  (*    end)%kami_expr. *)
-
-  (* Fixpoint getVictimSlotF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*   : Expr var (SyntaxKind (Bit victimIdxSz)) := *)
-  (*   getVictimSlotFix victims (numVictims - 1). *)
 
   (* Fixpoint getVictimFix (var: Kind -> Type) *)
   (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
@@ -933,11 +933,11 @@ Section NCID.
                                     else (edirToInfo edirV)) };
 
              LET repTagInfo <- #ntis@[#repWay];
+             LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
              LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
              Call cpEnq2(STRUCT { "victim_found" ::= MaybeNone;
                                   "may_victim" ::=
-                                    STRUCT { "mv_index" ::= #index;
-                                             "mv_way" ::= #repWay;
+                                    STRUCT { "mv_addr" ::= buildAddr repTag index;
                                              "mv_info" ::= #repInfo } });
              (** On cache hit, request the line value; otherwise, request the victim line value. *)
              Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
@@ -958,9 +958,9 @@ Section NCID.
        *)
       with Method valueRsLineRqN (lw: LineWriteK): valueK :=
         Call cpipe <- cpDeq2();
+        Read victims: Array VictimK numVictims <- victimsN;
         If (#cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."valid")
-        then (Read victims: Array VictimK numVictims <- victimsN;
-             LET vi <- #cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."data";
+        then (LET vi <- #cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."data";
              LET pv <- #victims#[#vi];
              LET nv: VictimK <- STRUCT { "victim_valid" ::= $$true;
                                          "victim_addr" ::= #pv!Victim@."victim_addr";
@@ -975,13 +975,10 @@ Section NCID.
              Write victimsN <- #victims#[#vi <- #nv];
              Ret (#pv!Victim@."victim_value"))
         else (Call value <- dataRdResp();
-             LET mv <- #cpipe!cp2@."may_victim";
              LET addr <- #lw!LineWrite@."addr";
              LET info_way <- #lw!LineWrite@."info_way";
              LET ninfo <- #lw!LineWrite@."info";
              LET justDir <- isJustDir ninfo;
-
-             (** * TODO: register [MayVictim] to the victim lines accordingly. *)
 
              (** traditional cache-line write *)
              If ((#lw!LineWrite@."info_hit") ||
@@ -992,7 +989,20 @@ Section NCID.
                                              "datain" ::=
                                                STRUCT { "tag" ::= getTag addr;
                                                         "value" ::= #ninfo } };
-                        NCall makeInfoWrReqs info_way irq; Retv);
+                        NCall makeInfoWrReqs info_way irq;
+
+                        (** register a new victim to the victim array *)
+                        LET mv <- #cpipe!cp2@."may_victim";
+                        LET mvi <- getVictimSlot #victims;
+                        (** * FIXME: this assertion may cause a serious problem *)
+                        Assert (#mvi!(MaybeStr (Bit victimIdxSz))@."valid");
+                        LET vi <- #mvi!(MaybeStr (Bit victimIdxSz))@."data";
+                        Write victimsN <-
+                        #victims#[#vi <- STRUCT { "victim_valid" ::= $$true;
+                                                  "victim_addr" ::= #mv!MayVictim@."mv_addr";
+                                                  "victim_info" ::= #mv!MayVictim@."mv_info";
+                                                  "victim_value" ::= #value }];
+                        Retv);
                    If (#lw!LineWrite@."value_write")
                    then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
                                              "datain" ::= #lw!LineWrite@."value" };
